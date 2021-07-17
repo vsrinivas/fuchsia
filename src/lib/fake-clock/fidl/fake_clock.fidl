@@ -1,43 +1,55 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.testing;
 using zx;
 using fuchsia.testing.deadline;
 
 /// Allows access to fake clocks managed by `FakeClockControl`.
-[Discoverable]
+@discoverable
 protocol FakeClock {
     /// Gets the current time.
-    Get() -> (zx.time time);
+    Get() -> (struct {
+        time zx.time;
+    });
     /// Registers the event handle `event` to be signaled with `ZX_EVENTPAIR_SIGNALED` when the
     /// provided `time` is reached by the fake clock.
     /// The `FakeClock` instance will retain this event (even after it's fired) for as long as the
     /// client-side of the provided event pair `event` is open.
-    RegisterEvent(zx.handle:EVENTPAIR event, zx.time time);
+    RegisterEvent(resource struct {
+        event zx.handle:EVENTPAIR;
+        time zx.time;
+    });
     /// Reschedules an event to be signalled with `ZX_EVENTPAIR_SIGNALED` at the new deadline in
     /// `time`.
     /// `event` is a duplicate of the client-side of the event pair, and it's used to retrieve the
     /// originally registered event through its kernel object identifier.
-    RescheduleEvent(zx.handle:EVENTPAIR event, zx.time time) -> ();
+    RescheduleEvent(resource struct {
+        event zx.handle:EVENTPAIR;
+        time zx.time;
+    }) -> ();
     /// Cancels a previously registered event.
     /// `event` is a duplicate of the client-side of the event pair, and it's used to retrieve the
     /// originally registered event through its kernel object identifier.
-    CancelEvent(zx.handle:EVENTPAIR event) -> ();
+    CancelEvent(resource struct {
+        event zx.handle:EVENTPAIR;
+    }) -> ();
     /// Calculate and set a deadline associated with an id.
     /// The returned `deadline` is calculated as `duration` after the current fake time.
     /// FakeClock emits two events: A `SET` event immediately, and an `EXPIRED` event when the
     /// deadline expires. A test using `FakeClockControl` may reference events related to the
     /// deadline using a matching `id`. See `FakeClockControl.SetStopPoint` for information on how a
     /// test can wait for a deadline event.
-    CreateNamedDeadline(fuchsia.testing.deadline.DeadlineId id, zx.duration duration)
-        -> (zx.time deadline);
+    CreateNamedDeadline(struct {
+        id fuchsia.testing.deadline.DeadlineId;
+        duration zx.duration;
+    }) -> (struct {
+        deadline zx.time;
+    });
 };
 
 /// The type of event related to a deadline.
-enum DeadlineEventType {
+type DeadlineEventType = strict enum {
     /// The deadline was set.
     SET = 1;
     /// The deadline has been reached.
@@ -45,19 +57,19 @@ enum DeadlineEventType {
 };
 
 /// A fake clock increment in a uniform random range.
-struct RandomRange {
+type RandomRange = struct {
     /// The lower bound (inclusive) for the random duration.
-    zx.duration min_rand;
+    min_rand zx.duration;
     /// The upper bound (exclusive) for the random duration.
-    zx.duration max_rand;
+    max_rand zx.duration;
 };
 
 /// A fake clock increment step.
-union Increment {
+type Increment = strict union {
     /// Increments the fake clock by the `determined` duration.
-    1: zx.duration determined;
+    1: determined zx.duration;
     /// Increments the fake clock by a random duration chosen uniformly from the range in `random`.
-    2: RandomRange random;
+    2: random RandomRange;
 };
 
 /// Provides control over fake clocks.
@@ -71,17 +83,22 @@ union Increment {
 ///
 /// The initial time value for every fake clock is read from the corresponding real clock at start
 /// up.
-[Discoverable]
+@discoverable
 protocol FakeClockControl {
     /// Advances the fake clock `increment` once.
     /// Returns `ZX_ERR_INVALID_ARGS` if the provided `increment` is invalid (such as a badly formed
     /// RandomRange). Returns `ZX_ERR_ACCESS_DENIED` if called while the FakeClock is free-running.
-    Advance(Increment increment) -> () error zx.status;
+    Advance(struct {
+        increment Increment;
+    }) -> (struct {}) error zx.status;
     /// Resumes free-running increments on the fake clock.
     /// `real` is the period based on the real monotonic clock over which `increment` is going to be
     /// applied. Returns `ZX_ERR_INVALID_ARGS` if the provided `increment` is invalid (such as a
     /// badly formed RandomRange).
-    ResumeWithIncrements(zx.duration real, Increment increment) -> () error zx.status;
+    ResumeWithIncrements(struct {
+        real zx.duration;
+        increment Increment;
+    }) -> (struct {}) error zx.status;
     /// Registers interest in a deadline event.
     /// `deadline_id` and `event_type` identify the named deadline and the event associated with
     /// the deadline. When the event occurs, FakeClock will signal `EVENTPAIR_SIGNALED` on
@@ -97,10 +114,11 @@ protocol FakeClockControl {
     /// Setting a stop point is only allowed while time is stopped. If time is free running when
     /// this method is invoked `ZX_ERR_ACCESS_DENIED` is returned. If a stop point is already
     /// registered for the same event, `ZX_ALREADY_BOUND` is returned.
-    AddStopPoint(
-        fuchsia.testing.deadline.DeadlineId deadline_id, DeadlineEventType event_type,
-        zx.handle:EVENTPAIR on_stop
-        ) -> () error zx.status;
+    AddStopPoint(resource struct {
+        deadline_id fuchsia.testing.deadline.DeadlineId;
+        event_type DeadlineEventType;
+        on_stop zx.handle:EVENTPAIR;
+    }) -> (struct {}) error zx.status;
     /// Pauses free-running increments on the fake clock.
     Pause() -> ();
 };

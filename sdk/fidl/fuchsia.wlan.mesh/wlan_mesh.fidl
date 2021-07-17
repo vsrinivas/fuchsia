@@ -1,18 +1,16 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.wlan.mesh;
 
 // This file is shared between SME and MLME.
 
-struct MeshPath {
-    array<uint8>:6 dest_address;
-    array<uint8>:6 next_hop;
-    uint32 metric;
+type MeshPath = struct {
+    dest_address array<uint8, 6>;
+    next_hop array<uint8, 6>;
+    metric uint32;
 };
 
-struct MeshPathTable {
-    vector<MeshPath> paths;
+type MeshPathTable = struct {
+    paths vector<MeshPath>;
 };

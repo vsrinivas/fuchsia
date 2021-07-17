@@ -1,19 +1,17 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.castauth;
 
 /// Input hash to be signed by Cast key.
 /// It must be ASN1-encoded SHA1 or SHA256 hash, with sizes 35 or 51 bytes.
-union Asn1EncodedHash {
-    1: array<byte>:35 sha1;
-    2: array<byte>:51 sha256;
+type Asn1EncodedHash = strict union {
+    1: sha1 array<byte, 35>;
+    2: sha256 array<byte, 51>;
 };
 
 /// Error codes for CastKeySigner operations.
-enum ErrorCode {
+type ErrorCode = strict enum {
     /// Key/cert not found in storage.
     FILE_NOT_FOUND = 1;
     /// Error occurred during signing operation.
@@ -23,19 +21,25 @@ enum ErrorCode {
 /// This FIDL interface is used to sign with hardware Cast key.
 /// It is intended for short-term use only and will not be supported on all
 /// devices. It will eventually be replaced by an attestation service.
-[Discoverable]
+@discoverable
 protocol CastKeySigner {
     /// Use Cast key to sign a hash value.
     ///
     /// The input is hash value.
     /// The return value is the error code or the signature if the operation
     /// succeeds. The signature algorithm is RSA-2048-PKCS1.
-    SignHash(Asn1EncodedHash hash) -> (array<byte>:256 signature) error ErrorCode;
+    SignHash(struct {
+        hash Asn1EncodedHash;
+    }) -> (struct {
+        signature array<byte, 256>;
+    }) error ErrorCode;
 
     /// Get the Cast certificate chain.
     ///
     /// The return value is the error code or the certificate chain if
     /// the operation succeeds. The chain contains Cast key cert,
     /// one or more intermediate CA certs and root CA cert.
-    GetCertificateChain() -> (vector<bytes:2048>:16 cert_chain) error ErrorCode;
+    GetCertificateChain() -> (struct {
+        cert_chain vector<bytes:2048>:16;
+    }) error ErrorCode;
 };

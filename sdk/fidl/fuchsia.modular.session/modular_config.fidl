@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.modular.session;
 
 using fuchsia.io;
@@ -11,10 +9,10 @@ using fuchsia.sys;
 
 /// Descriptions and defaults for these configurations are echoed in
 /// peridot/docs/modular/guide/config.md.
-table BasemgrConfig {
+type BasemgrConfig = table {
     /// When set to false, Cobalt statistics are disabled.
     /// Default: true
-    1: bool enable_cobalt;
+    1: enable_cobalt bool;
 
     2: reserved;
 
@@ -22,16 +20,16 @@ table BasemgrConfig {
     /// shell instead of creating separate story shell components. When set,
     /// `story_shell_url` and any story shell args are ignored.
     /// Default: false
-    3: bool use_session_shell_for_story_shell_factory;
+    3: use_session_shell_for_story_shell_factory bool;
 
     /// Launch configurations specific to base shell.
-    4: BaseShellConfig base_shell;
+    4: base_shell BaseShellConfig;
 
     /// A map of launch configurations specific to session shells.
-    5: vector<SessionShellMapEntry> session_shell_map;
+    5: session_shell_map vector<SessionShellMapEntry>;
 
     /// Launch configurations specific to story shell.
-    6: StoryShellConfig story_shell;
+    6: story_shell StoryShellConfig;
 
     7: reserved;
 
@@ -42,78 +40,78 @@ table BasemgrConfig {
     ///
     /// The session launcher component can then use the `Launcher` protocol
     /// to launch sessionmgr with a particular configuration.
-    8: AppConfig session_launcher;
+    8: session_launcher AppConfig;
 };
 
-table BaseShellConfig {
+type BaseShellConfig = table {
     /// Contains the fuchsia package url and arguments to pass to the shell.
-    1: AppConfig app_config;
+    1: app_config AppConfig;
 
     /// When set to true, the base shell is kept alive after a log in. This is
     /// used for testing because current integration tests expect base shell
     /// to always be running.
     /// Optional, if absent presumed to be false.
-    2: bool keep_alive_after_login;
+    2: keep_alive_after_login bool;
 };
 
-table SessionShellMapEntry {
+type SessionShellMapEntry = table {
     /// The name of the session shell represented by its url.
-    1: string:fuchsia.io.MAX_PATH name;
+    1: name string:fuchsia.io.MAX_PATH;
 
     /// The launch configurations for the session shell.
-    2: SessionShellConfig config;
+    2: config SessionShellConfig;
 };
 
-table SessionShellConfig {
+type SessionShellConfig = table {
     /// Contains the fuchsia package url and arguments to pass to the shell.
-    1: AppConfig app_config;
+    1: app_config AppConfig;
 
     /// The display usage policy for this session shell.
     ///
     /// Optional, if absent presumed to be [`fuchsia.ui.policy/DisplayUsage.UNKNOWN`].
-    2: fuchsia.ui.policy.DisplayUsage display_usage;
+    2: display_usage fuchsia.ui.policy.DisplayUsage;
 
     /// The screen height in millimeters for the session shell's display.
     ///
     /// Optional, if absent presumed to be full screen.
-    3: float32 screen_height;
+    3: screen_height float32;
 
     /// The screen width in millimeters for the session shell's display.
     ///
     /// Optional, if absent presumed to be full screen.
-    4: float32 screen_width;
+    4: screen_width float32;
 };
 
-table StoryShellConfig {
+type StoryShellConfig = table {
     /// Contains the fuchsia package url and arguments to pass to the shell.
-    1: AppConfig app_config;
+    1: app_config AppConfig;
 };
 
-table SessionmgrConfig {
+type SessionmgrConfig = table {
     1: reserved;
 
     /// When set to false, Cobalt statistics are disabled. This is used for
     /// testing.
     /// Default: true
-    2: bool enable_cobalt;
+    2: enable_cobalt bool;
 
-    3: bool reserved;
+    3: reserved bool;
 
     4: reserved;
 
     /// A list of fuchsia package urls that specify which agents to launch at
     /// startup.
-    5: vector<string:fuchsia.io.MAX_PATH> startup_agents;
+    5: startup_agents vector<string:fuchsia.io.MAX_PATH>;
 
     /// A list of fuchsia package urls that specify which agents to launch at
     /// startup with PuppetMaster and FocusProvider services.
-    6: vector<string:fuchsia.io.MAX_PATH> session_agents;
+    6: session_agents vector<string:fuchsia.io.MAX_PATH>;
 
     /// The fuchsia package url for which story shell to use.
-    7: string:fuchsia.io.MAX_PATH story_shell_url;
+    7: story_shell_url string:fuchsia.io.MAX_PATH;
 
     /// A map of agents to the arguments they should be started with.
-    8: vector<AppConfig> component_args;
+    8: component_args vector<AppConfig>;
 
     9: reserved;
 
@@ -121,42 +119,42 @@ table SessionmgrConfig {
     /// Valid components to specify here are agents or the session shell.
     /// Services listed here are available in the incoming namespaces for
     /// modules, shells, and agents.
-    10: vector<AgentServiceIndexEntry> agent_service_index;
+   10: agent_service_index vector<AgentServiceIndexEntry>;
 
     /// A list of agent URLs that will cause the session to be restarted
     /// when they terminate. If an agent is not in this list, sessionmgr will
     /// restart it individually, preserving the session.
     ///
     /// The session shell is automatically added to this list.
-    11: vector<string:fuchsia.io.MAX_PATH>:MAX restart_session_on_agent_crash;
+   11: restart_session_on_agent_crash vector<string:fuchsia.io.MAX_PATH>:MAX;
 
     /// If set to true, disables any automatic agent restarts when an agent is
     /// observed to have crashed.
-    12: bool disable_agent_restart_on_crash;
+   12: disable_agent_restart_on_crash bool;
 };
 
 /// Used to pass around configuration references to apps such as base shell,
 /// session shell, story shell, and agents.
-table AppConfig {
+type AppConfig = table {
     /// The fuchsia package url for app.
-    1: string:fuchsia.io.MAX_PATH url;
+    1: url string:fuchsia.io.MAX_PATH;
 
     /// The arguments for the app.
-    2: vector<string> args;
+    2: args vector<string>;
 };
 
 /// A service and the URL of the agent known to provide that service.
-table AgentServiceIndexEntry {
+type AgentServiceIndexEntry = table {
     /// The service name.
-    1: string service_name;
+    1: service_name string;
 
     /// The fuchsia component url for agent.
-    2: fuchsia.sys.component_url agent_url;
+    2: agent_url fuchsia.sys.component_url;
 };
 
 /// Contains the configurations for the modular framework components.
-table ModularConfig {
-    1: BasemgrConfig basemgr_config;
+type ModularConfig = table {
+    1: basemgr_config BasemgrConfig;
 
-    2: SessionmgrConfig sessionmgr_config;
+    2: sessionmgr_config SessionmgrConfig;
 };

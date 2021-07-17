@@ -1,16 +1,16 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.scenic.snapshot;
 
 using fuchsia.mem;
 
 /// Snapshot loader exported by `ViewProvider` to load snapshots into views
 /// created from it.
-[Discoverable]
+@discoverable
 protocol Loader {
     /// Load the snapshot from the Vmo buffer payload.
-    Load(fuchsia.mem.Buffer payload);
+    Load(resource struct {
+        payload fuchsia.mem.Buffer;
+    });
 };

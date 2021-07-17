@@ -1,8 +1,6 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.sys;
 
 using zx;
@@ -10,8 +8,10 @@ using zx;
 /// An interface for providing a job handle. Instances of this interface are
 /// created in the context of an already-identified realm, so there is no need
 /// to explicitly identify the realm below.
-[Discoverable]
+@discoverable
 protocol JobProvider {
     /// Gets the root job associated with the realm.
-    GetJob() -> (zx.handle:JOB job);
+    GetJob() -> (resource struct {
+        job zx.handle:JOB;
+    });
 };

@@ -1,35 +1,33 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.fonts;
 
 using fuchsia.intl;
 using fuchsia.mem;
 
 /// The maximum length of a font family name.
-const uint32 MAX_FAMILY_NAME_LENGTH = 128;
+const MAX_FAMILY_NAME_LENGTH uint32 = 128;
 
 /// The maximum number of code points allowed in a typeface query.
-const uint32 MAX_FACE_QUERY_CODE_POINTS = 128;
+const MAX_FACE_QUERY_CODE_POINTS uint32 = 128;
 
 /// The maximum number of preferred languages allowed in a typeface query.
-const uint32 MAX_FACE_QUERY_LANGUAGES = 8;
+const MAX_FACE_QUERY_LANGUAGES uint32 = 8;
 
 /// The maximum number of styles that will be returned for a font family.
-const uint32 MAX_FAMILY_STYLES = 300;
+const MAX_FAMILY_STYLES uint32 = 300;
 
 /// The name of a family of fonts.
 ///
 /// Examples: "Roboto", "Noto Serif".
-struct FamilyName {
+type FamilyName = struct {
     /// The characters that make up the name.
-    string:MAX_FAMILY_NAME_LENGTH name;
+    name string:MAX_FAMILY_NAME_LENGTH;
 };
 
 /// Boolean flags for `TypefaceRequest`.
-bits TypefaceRequestFlags : uint32 {
+type TypefaceRequestFlags = strict bits : uint32 {
     /// Disables font family fallback. The service won't try to search the fallback font set if the
     /// requested font family doesn't exist or if it doesn't contain the requested code point.
     EXACT_FAMILY = 0x00000001;
@@ -42,7 +40,7 @@ bits TypefaceRequestFlags : uint32 {
 
 /// Options for what the font server should do if the client requests a typeface that is not yet
 /// cached.
-enum CacheMissPolicy {
+type CacheMissPolicy = strict enum {
     /// The server will attempt to load the uncached typeface before providing a response. This is
     /// the *default* behavior.
     ///
@@ -66,12 +64,12 @@ enum CacheMissPolicy {
 };
 
 /// Parameters for requesting a typeface.
-table TypefaceRequest {
+type TypefaceRequest = table {
     /// Parameters for looking up a typeface.
-    1: TypefaceQuery query;
+    1: query TypefaceQuery;
 
     /// Flags for how to process the request, such as which kinds of substitutions are permitted.
-    2: TypefaceRequestFlags flags;
+    2: flags TypefaceRequestFlags;
 
     /// Setting for what to do if the requested typeface exists but is not cached, and therefore
     /// cannot be served immediately.
@@ -82,32 +80,32 @@ table TypefaceRequest {
     /// If the client needs an immediate response, it can choose one of the non-blocking policies.
     /// In this case, clients can also register to be notified when new fonts have been added to the
     /// cache by calling [`fuchsia.fonts/Provider.RegisterFontSetEventListener`].
-    3: CacheMissPolicy cache_miss_policy;
+    3: cache_miss_policy CacheMissPolicy;
 };
 
 /// Parameters for looking up a typeface.
-table TypefaceQuery {
+type TypefaceQuery = table {
     /// Desired font family name, e.g. "Roboto". Font family search is case-insensitive.
     ///
     /// Note: In cases where the specified family doesn't exist, or the specified family doesn't
     /// have a glyph for the requested `code_point`, a face from another family may be returned.
     /// This behavior can be disabled using `TypefaceRequestFlags.EXACT_FAMILY`.
-    1: FamilyName family;
+    1: family FamilyName;
 
     /// Style properties of the desired typeface.
-    2: Style2 style;
+    2: style Style2;
 
     /// Language tags in order of preference. This allows disambiguating code points that map
     /// to different glyphs in different languages (e.g. CJK code points).
     ///
     /// See `fuchsia.intl.LocaleId`.
-    3: vector<fuchsia.intl.LocaleId>:MAX_FACE_QUERY_LANGUAGES languages;
+    3: languages vector<fuchsia.intl.LocaleId>:MAX_FACE_QUERY_LANGUAGES;
 
     /// Optional code points for which glyphs must be present in the returned face.
     ///
     /// Callers that specify this field are expected to extract the character set from the result
     /// and cache it in order to avoid calling the API more than necessary.
-    4: vector<uint32>:MAX_FACE_QUERY_CODE_POINTS code_points;
+    4: code_points vector<uint32>:MAX_FACE_QUERY_CODE_POINTS;
 
     /// A generic font family to fall back to if an exact match is unavailable or does not contain
     /// the requested code point.
@@ -118,38 +116,38 @@ table TypefaceQuery {
     ///
     /// Specifying `fallback_family` in a query allows the client to override the generic family
     /// that would be used as a fallback.
-    5: GenericFontFamily fallback_family;
+    5: fallback_family GenericFontFamily;
 };
 
 /// Response to a TypefaceRequest. Contains the digital font file and metadata corresponding to a
 /// returned typeface. Clients are expected to cache the results if they plan to reuse them.
 ///
 /// If a matching typeface cannot be found, the table will be empty.
-resource table TypefaceResponse {
+type TypefaceResponse = resource table {
     /// A memory buffer containing the bytes of a digital font file.
     /// It is the client's responsibility to identify the type of file and to parse it (usually by
     /// delegating to FreeType or a similar library).
-    1: fuchsia.mem.Buffer buffer;
+    1: buffer fuchsia.mem.Buffer;
 
     /// Identifier for the buffer. Responses with the same `buffer_id` are guaranteed to contain the
     /// same data in the buffer. Clients may use this value to detect if they already have the font
     /// cached in parsed form.
-    2: uint32 buffer_id;
+    2: buffer_id uint32;
 
     /// Index of the returned typeface within `buffer`. Used for digital font formats that may
     /// contain more than one typeface per file, e.g. TTC (TrueType Collection).
-    3: uint32 font_index;
+    3: font_index uint32;
 };
 
 /// Information about a font family that can be requested using `Provider.GetFontFamilyInfo()`.
 ///
 /// If a matching font family is not found, the table will be empty.
-table FontFamilyInfo {
+type FontFamilyInfo = table {
     /// Canonical font family name. Note that this may be different from the value passed to
     /// `GetFontFamilyInfo()` due to the resolution of font aliases, and/or differences in
     /// whitespace and capitalization.
-    1: FamilyName name;
+    1: name FamilyName;
 
     /// Unordered list of all available styles in the family.
-    2: vector<Style2>:MAX_FAMILY_STYLES styles;
+    2: styles vector<Style2>:MAX_FAMILY_STYLES;
 };

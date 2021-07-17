@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.ui.text;
 
 using fuchsia.ui.input;
@@ -12,7 +10,8 @@ using fuchsia.ui.input3;
 /// interface for the currently focused text field. Requests to this TextField
 /// interface are proxied through the TextManager to batch edits together,
 /// and to ensure requests aren't sent to unfocused TextFields.
-[Discoverable, Deprecated]
+@discoverable
+@deprecated
 protocol TextInputContextLegacy {
     /// Tells anyone listening to ImeVisibilityService (usually a shell) to hide
     /// the onscreen keyboard.
@@ -21,19 +20,25 @@ protocol TextInputContextLegacy {
     /// This event fires any time a new text field is focused. It also is sent to
     /// newly connected keyboards when they connect, if there is a focused text
     /// field. If focus is lost, the TextField handle will be closed.
-    -> OnFocus(TextFieldLegacy text_field);
+    -> OnFocus(resource struct {
+        text_field client_end:TextFieldLegacy;
+    });
 
     /// This event fires any time a physical keyboard event is sent to the
     /// TextManager. The keyboard may translate it into an edit on the focused
     /// text field if it so desires. It's expected that this interface will change
     /// as the routing for keyboard events and keymaps evolves.
     /// Deprecated: `OnKey3Event` should be used instead.
-    -> OnInputEvent(fuchsia.ui.input.InputEvent event);
+    -> OnInputEvent(struct {
+        event fuchsia.ui.input.InputEvent;
+    });
 
     /// This event fires any time a physical keyboard event is sent to the
     /// TextManager. The keyboard may translate it into an edit on the focused
     /// text field if it so desires. It's expected that this interface will change
     /// as the routing for keyboard events and keymaps evolves.
-    [Transitional]
-    -> OnKey3Event(fuchsia.ui.input3.KeyEvent event);
+    @transitional
+    -> OnKey3Event(struct {
+        event fuchsia.ui.input3.KeyEvent;
+    });
 };

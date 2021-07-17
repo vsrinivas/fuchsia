@@ -1,35 +1,34 @@
-deprecated_syntax;
 library fidl.test.handlesintypes;
 
 // This is not a reference to library zx to avoid complexity in the test data.
 // A local handle is defined here that contains subtypes that this test cares
 // about.
-enum obj_type : uint32 {
+type obj_type = strict enum : uint32 {
     NONE = 0;
     VMO = 3;
 };
 
 resource_definition handle : uint32 {
     properties {
-        obj_type subtype;
+        subtype obj_type;
     };
 };
 
-resource table TableWithHandle {
-    1: handle:VMO h;
+type TableWithHandle = resource table {
+    1: h handle:VMO;
 };
 
-flexible resource union UnionWithHandle {
-    1: handle:VMO h;
+type UnionWithHandle = flexible resource union {
+    1: h handle:VMO;
 };
 
-resource struct HandlesInTypes {
-    handle:VMO normal_handle;
+type HandlesInTypes = resource struct {
+    normal_handle handle:VMO;
 
-    vector<handle:VMO> handle_in_vec;
-    array<handle:VMO>:5 handle_in_array;
-    vector<array<handle:VMO>:5> handle_in_mixed_vec_array;
+    handle_in_vec vector<handle:VMO>;
+    handle_in_array array<handle:VMO, 5>;
+    handle_in_mixed_vec_array vector<array<handle:VMO, 5>>;
 
-    TableWithHandle table_with_handle;
-    UnionWithHandle union_with_handle;
+    table_with_handle TableWithHandle;
+    union_with_handle UnionWithHandle;
 };

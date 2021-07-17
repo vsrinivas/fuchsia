@@ -1,25 +1,30 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.starnix.developer;
 
 using fuchsia.url;
 using zx;
 
-resource table ShellParams {
-    1: zx.handle:SOCKET stdin;
-    2: zx.handle:SOCKET stdout;
-    3: zx.handle:SOCKET stderr;
+type ShellParams = resource table {
+    1: stdin zx.handle:SOCKET;
+    2: stdout zx.handle:SOCKET;
+    3: stderr zx.handle:SOCKET;
 };
 
 protocol ShellController {
-    -> OnTerminated(int32 return_code);
+    -> OnTerminated(struct {
+        return_code int32;
+    });
 };
 
-[Discoverable]
+@discoverable
 protocol Manager {
-    Start(fuchsia.url.Url url) -> ();
-    StartShell(ShellParams params, request<ShellController> controller);
+    Start(struct {
+        url fuchsia.url.Url;
+    }) -> ();
+    StartShell(resource struct {
+        params ShellParams;
+        controller server_end:ShellController;
+    });
 };

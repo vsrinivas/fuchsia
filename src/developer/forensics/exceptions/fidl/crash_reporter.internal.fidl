@@ -1,8 +1,6 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.exception.internal;
 
 using zx;
@@ -15,7 +13,11 @@ protocol CrashReporter {
     /// a crash report with a minidump and annotations on the thread that crashed.
     ///
     /// Returns the moniker of the component that crashed, if available.
-    Send(zx.handle:EXCEPTION? exception, zx.handle:PROCESS? crashed_process,
-         zx.handle:THREAD? crashed_thread)
-        -> (string:fuchsia.component.MAX_MONIKER_LENGTH? moniker);
+    Send(resource struct {
+        exception zx.handle:<EXCEPTION, optional>;
+        crashed_process zx.handle:<PROCESS, optional>;
+        crashed_thread zx.handle:<THREAD, optional>;
+    }) -> (struct {
+        moniker string:<fuchsia.component.MAX_MONIKER_LENGTH, optional>;
+    });
 };

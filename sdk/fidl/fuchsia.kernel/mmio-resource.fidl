@@ -1,15 +1,15 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.kernel;
 
 using zx;
 
 /// Protocol for providing an MMIO resource with access to all valid ranges.
-[Discoverable]
+@discoverable
 protocol MmioResource {
     /// Get the MMIO resource handle.
-    Get() -> (zx.handle:RESOURCE mmio_resource);
+    Get() -> (resource struct {
+        mmio_resource zx.handle:RESOURCE;
+    });
 };

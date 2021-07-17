@@ -1,17 +1,19 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.device.manager.test;
 
 // Max size of returned metadata
-const uint32 METADATA_MAX_SIZE = 0x1000;
+const METADATA_MAX_SIZE uint32 = 0x1000;
 
 /// Protocol to query a driver's metadata. This is only used to test that the
 /// isolateddevmgr sends test metadata correctly to drivers.
-[ForDeprecatedCBindings]
+@for_deprecated_c_bindings
 protocol Metadata {
     /// Recieves the metadata that the driver has been given.
-    GetMetadata(uint32 type) -> (vector<uint8>:METADATA_MAX_SIZE data);
+    GetMetadata(struct {
+        type uint32;
+    }) -> (struct {
+        data vector<uint8>:METADATA_MAX_SIZE;
+    });
 };

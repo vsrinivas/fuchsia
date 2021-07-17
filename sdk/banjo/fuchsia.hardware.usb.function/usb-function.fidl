@@ -1,78 +1,143 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.usb.function;
 
 using fuchsia.hardware.usb.descriptor;
 using fuchsia.hardware.usb.request;
 using zx;
 
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol UsbFunction {
     /// Registers callbacks to the USB function driver.
-    SetInterface(UsbFunctionInterface interface) -> (zx.status s);
+    SetInterface(resource struct {
+        interface client_end:UsbFunctionInterface;
+    }) -> (struct {
+        s zx.status;
+    });
 
     /// Allocates a unique interface descriptor number.
-    AllocInterface() -> (zx.status s, uint8 intf_num);
+    AllocInterface() -> (struct {
+        s zx.status;
+        intf_num uint8;
+    });
 
     /// Allocates a unique endpoint descriptor number.
-    AllocEp(uint8 direction) -> (zx.status s, uint8 address);
+    AllocEp(struct {
+        direction uint8;
+    }) -> (struct {
+        s zx.status;
+        address uint8;
+    });
 
     /// Configures an endpoint based on provided descriptors.
-    ConfigEp(fuchsia.hardware.usb.descriptor.UsbEndpointDescriptor ep_desc,
-             fuchsia.hardware.usb.descriptor.UsbSsEpCompDescriptor ss_comp_desc) -> (zx.status s);
+    ConfigEp(struct {
+        ep_desc fuchsia.hardware.usb.descriptor.UsbEndpointDescriptor;
+        ss_comp_desc fuchsia.hardware.usb.descriptor.UsbSsEpCompDescriptor;
+    }) -> (struct {
+        s zx.status;
+    });
 
     /// Disables the specified endpoint.
-    DisableEp(uint8 address) -> (zx.status s);
+    DisableEp(struct {
+        address uint8;
+    }) -> (struct {
+        s zx.status;
+    });
 
     /// Adds a string descriptor to the device configuration.
-    AllocStringDesc(string:MAX string) -> (zx.status s, uint8 index);
+    AllocStringDesc(struct {
+        string string:MAX;
+    }) -> (struct {
+        s zx.status;
+        index uint8;
+    });
 
     /// Queues a USB request with the lower level driver.
-    RequestQueue([InOut] fuchsia.hardware.usb.request.UsbRequest usb_request,
-                 [InOut] fuchsia.hardware.usb.request.UsbRequestCompleteCallback complete_cb) -> ();
+    RequestQueue(resource struct {
+        @in_out
+        usb_request fuchsia.hardware.usb.request.UsbRequest;
+        @in_out
+        complete_cb client_end:fuchsia.hardware.usb.request.UsbRequestCompleteCallback;
+    }) -> ();
 
     /// Stalls the specified endpoint.
-    EpSetStall(uint8 ep_address) -> (zx.status s);
+    EpSetStall(struct {
+        ep_address uint8;
+    }) -> (struct {
+        s zx.status;
+    });
 
     /// Clears a stall condition for the specified endpoint.
-    EpClearStall(uint8 ep_address) -> (zx.status s);
+    EpClearStall(struct {
+        ep_address uint8;
+    }) -> (struct {
+        s zx.status;
+    });
 
     /// Returns the size needed for a |usb_request_t|, including private storage needed by the
     /// HCI driver.
-    GetRequestSize() -> (uint64 size);
+    GetRequestSize() -> (struct {
+        size uint64;
+    });
 
     /// Cancels all transactions currently queued on the specified endpoint.
-    CancelAll(uint8 ep_address) -> (zx.status s);
+    CancelAll(struct {
+        ep_address uint8;
+    }) -> (struct {
+        s zx.status;
+    });
 };
 
 /// Interface implemented by the USB function driver.
-[Transport = "Banjo", BanjoLayout = "ddk-interface"]
+@transport("Banjo")
+@banjo_layout("ddk-interface")
 protocol UsbFunctionInterface {
     /// Returns the size of the descriptor list for the function.
-    GetDescriptorsSize() -> (uint64 size);
+    GetDescriptorsSize() -> (struct {
+        size uint64;
+    });
 
     /// Returns the descriptor list for the function.
     /// TODO(voydanoff) - descriptors will likely vary (different max packet sizes, etc)
     /// depending on whether we are in low/full, high or super speed mode.
     /// We will need to add a usb_speed_t argument to this callback.
-    GetDescriptors() -> ([Buffer] vector<uint8>:MAX descriptors);
+    GetDescriptors() -> (struct {
+        @buffer
+        descriptors vector<uint8>:MAX;
+    });
 
     /// Callback for handling ep0 control requests.
-    Control(fuchsia.hardware.usb.descriptor.UsbSetup setup, [Buffer] vector<uint8>:MAX write) -> (zx.status status,
-                                                                                                  [Buffer] vector<uint8>:MAX read);
+    Control(struct {
+        setup fuchsia.hardware.usb.descriptor.UsbSetup;
+        @buffer
+        write vector<uint8>:MAX;
+    }) -> (struct {
+        status zx.status;
+        @buffer
+        read vector<uint8>:MAX;
+    });
     /// Called to inform the function driver when the USB device configured state changes.
     /// Called with configured == true in response to a SET_CONFIGURATION control request
     /// that selects a configuration that contains this function. In this case, the function driver
     /// should call usb_function_config_ep() to configure its endpoints.
     /// Called with configured == false when configuration is disabled or USB is disconnected.
     /// The function driver should then call usb_function_disable_ep() to disable its endpoints.
-    SetConfigured(bool configured, fuchsia.hardware.usb.descriptor.UsbSpeed speed) -> (zx.status s);
+    SetConfigured(struct {
+        configured bool;
+        speed fuchsia.hardware.usb.descriptor.UsbSpeed;
+    }) -> (struct {
+        s zx.status;
+    });
 
     /// Called to set an alternate setting for an interface due to a SET_INTERFACE control request.
     /// The function driver should call usb_function_config_ep() and/or usb_function_config_ep()
     /// to configure or disable the interface's endpoints as appropriate.
-    SetInterface(uint8 interface, uint8 alt_setting) -> (zx.status s);
+    SetInterface(struct {
+        interface uint8;
+        alt_setting uint8;
+    }) -> (struct {
+        s zx.status;
+    });
 };

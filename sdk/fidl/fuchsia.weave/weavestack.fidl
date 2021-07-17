@@ -1,8 +1,6 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.weave;
 
 using fuchsia.net as net;
@@ -10,9 +8,9 @@ using fuchsia.wlan.policy as wlan_policy;
 
 /// The maximum number of HostPorts that Weave can return in a HostPortList, as
 /// weave indexes HostPortLists by a uint8.
-const uint32 MAX_HOST_PORTS = 256;
+const MAX_HOST_PORTS uint32 = 256;
 /// The largest supported size of a QR code encoded in string format may be.
-const uint32 MAX_QR_CODE_SIZE = 256;
+const MAX_QR_CODE_SIZE uint32 = 256;
 
 /// An endpoint ID used for identifying which service endpoints are of interest when
 /// looking up endpoints in the Weave Service Directory.
@@ -22,22 +20,22 @@ alias ServiceEndpointId = uint64;
 /// or factory reset device, all states will be `false`. Outside of an explicit
 /// ResetConfig call or factory reset, the provisioning states will only transition
 /// from `false` to `true` as Weave profiles are provisioned.
-table PairingState {
+type PairingState = table {
     /// Has Weave been fully provisioned? This implies that all provisioning
     /// has been completed as expected as specified in the configuration.
-    1: bool is_weave_fully_provisioned;
+    1: is_weave_fully_provisioned bool;
     /// Has WiFi been provisioned? Defaults to false.
-    2: bool is_wlan_provisioned;
+    2: is_wlan_provisioned bool;
     /// Has Thread been provisioned? Defaults to false.
-    3: bool is_thread_provisioned;
+    3: is_thread_provisioned bool;
     /// Has the fabric been provisioned? Defaults to false.
-    4: bool is_fabric_provisioned;
+    4: is_fabric_provisioned bool;
     /// Has the service been provisioned? Defaults to false.
-    5: bool is_service_provisioned;
+    5: is_service_provisioned bool;
 };
 
 /// ResetConfig flags.
-bits ResetConfigFlags : uint16 {
+type ResetConfigFlags = strict bits : uint16 {
     /// Reset network configuration information.
     NETWORK_CONFIG = 0x0001;
     /// Reset fabric configuration information.
@@ -49,25 +47,25 @@ bits ResetConfigFlags : uint16 {
 };
 
 /// Reset all device configuration information.
-const uint16 RESET_CONFIG_ALL = 0x00FF;
+const RESET_CONFIG_ALL uint16 = 0x00FF;
 
 /// QR Code data for pairing.
-struct QrCode {
+type QrCode = struct {
     /// QR code data in string format, supplying this string in a QR
     /// code should be sufficient for pairing.
-    string:MAX_QR_CODE_SIZE data;
+    data string:MAX_QR_CODE_SIZE;
 };
 
 /// Representation of a host either in the form of a hostname or IP address.
-union Host {
-    1: string:net.MAX_HOSTNAME_SIZE hostname;
-    2: net.IpAddress ip_address;
+type Host = strict union {
+    1: hostname string:net.MAX_HOSTNAME_SIZE;
+    2: ip_address net.IpAddress;
 };
 
 /// A tuple of host and port to represent a connectable endpoint.
-struct HostPort {
-    Host host;
-    uint16 port;
+type HostPort = struct {
+    host Host;
+    port uint16;
 };
 
 /// Watches for changes in Weave Service Directory entries for a particular endpoint
@@ -83,7 +81,9 @@ protocol SvcDirectoryWatcher {
     ///
     /// Calling WatchServiceDirectory when a previous call is still pending will
     /// cause the channel to be closed with `ZX_ERR_BAD_STATE`.
-    WatchServiceDirectory() -> (vector<HostPort>:MAX_HOST_PORTS host_port_list);
+    WatchServiceDirectory() -> (struct {
+        host_port_list vector<HostPort>:MAX_HOST_PORTS;
+    });
 };
 
 /// Watches for changes in pairing state in Weave. Retrieved from
@@ -97,7 +97,9 @@ protocol PairingStateWatcher {
     ///
     /// Calling WatchPairingState when a previous call is still pending will cause
     /// the channel to be closed with `ZX_ERR_BAD_STATE`.
-    WatchPairingState() -> (PairingState state);
+    WatchPairingState() -> (struct {
+        state PairingState;
+    });
 };
 
 /// Component acting as WLAN network configuration provider for WeaveStack need to
@@ -108,29 +110,39 @@ protocol WlanNetworkConfigProvider {
     /// First call returns the current network configuration if available,
     /// otherwise return empty config. WeaveStack consumes network config
     /// and sends another request.
-    WatchConnectedNetwork() -> (wlan_policy.NetworkConfig network_config);
+    WatchConnectedNetwork() -> (struct {
+        network_config wlan_policy.NetworkConfig;
+    });
 };
 
 /// Calls and services available from WeaveStack. These calls are designed to
 /// wrap the Weave adaptation and provide information or capabilities to Weave
 /// applications or components that are interested in information that Weave
 /// exposes.
-[Discoverable]
+@discoverable
 protocol Stack {
     /// Returns a PairingStateWatcher to watch for changes in pairing state.
-    GetPairingStateWatcher(request<PairingStateWatcher> watcher);
+    GetPairingStateWatcher(resource struct {
+        watcher server_end:PairingStateWatcher;
+    });
     /// Returns a SvcDirectoryWatcher to watch changes in the Weave service
     /// directory for a particular endpoint.
-    GetSvcDirectoryWatcher(ServiceEndpointId endpoint_id,
-                           request<SvcDirectoryWatcher> watcher);
+    GetSvcDirectoryWatcher(resource struct {
+        endpoint_id ServiceEndpointId;
+        watcher server_end:SvcDirectoryWatcher;
+    });
     /// Returns a QR code that can be used in the pairing process.
-    GetQrCode() -> (QrCode qr_code) error ErrorCode;
+    GetQrCode() -> (struct {
+        qr_code QrCode;
+    }) error ErrorCode;
     /// Reset the Weave configuration.
-    ResetConfig(ResetConfigFlags flags) -> () error ErrorCode;
+    ResetConfig(struct {
+        flags ResetConfigFlags;
+    }) -> (struct {}) error ErrorCode;
 };
 
 /// Services Provided to WeaveStack by other components.
-[Discoverable]
+@discoverable
 protocol StackProvider {
     /// Registers a WLAN network configuration provider with WeaveStack.
     /// Only one provider can be set at a time.
@@ -141,5 +153,7 @@ protocol StackProvider {
     ///
     /// TODO(fxbug.dev/62322): This interface may be deprecated when current
     /// WLAN network configuration  can be shared amongst multiple components.
-    SetWlanNetworkConfigProvider(WlanNetworkConfigProvider provider);
+    SetWlanNetworkConfigProvider(resource struct {
+        provider client_end:WlanNetworkConfigProvider;
+    });
 };

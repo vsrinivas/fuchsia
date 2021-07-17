@@ -1,33 +1,31 @@
 // Copyright 2014 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.ui.input;
 
 /// Keyboard modifiers
-const uint32 kModifierNone = 0;
-const uint32 kModifierCapsLock = 1;
-const uint32 kModifierLeftShift = 2;
-const uint32 kModifierRightShift = 4;
-const uint32 kModifierShift = 6; // (kModifierLeftShift | kModifierRightShift);
-const uint32 kModifierLeftControl = 8;
-const uint32 kModifierRightControl = 16;
-const uint32 kModifierControl = 24; // (kModifierLeftControl | kModifierRightControl);
-const uint32 kModifierLeftAlt = 32;
-const uint32 kModifierRightAlt = 64;
-const uint32 kModifierAlt = 96; // (kModifierLeftAlt | kModifierRightAlt);
-const uint32 kModifierLeftSuper = 128;
-const uint32 kModifierRightSuper = 256;
-const uint32 kModifierSuper = 384; // (kModifierLeftSuper | kModifierRightSuper);
+const kModifierNone uint32 = 0;
+const kModifierCapsLock uint32 = 1;
+const kModifierLeftShift uint32 = 2;
+const kModifierRightShift uint32 = 4;
+const kModifierShift uint32 = 6; // (kModifierLeftShift | kModifierRightShift);
+const kModifierLeftControl uint32 = 8;
+const kModifierRightControl uint32 = 16;
+const kModifierControl uint32 = 24; // (kModifierLeftControl | kModifierRightControl);
+const kModifierLeftAlt uint32 = 32;
+const kModifierRightAlt uint32 = 64;
+const kModifierAlt uint32 = 96; // (kModifierLeftAlt | kModifierRightAlt);
+const kModifierLeftSuper uint32 = 128;
+const kModifierRightSuper uint32 = 256;
+const kModifierSuper uint32 = 384; // (kModifierLeftSuper | kModifierRightSuper);
 
 /// Mouse buttons
-const uint32 kMousePrimaryButton = 1;
-const uint32 kMouseSecondaryButton = 2;
-const uint32 kMouseTertiaryButton = 4;
+const kMousePrimaryButton uint32 = 1;
+const kMouseSecondaryButton uint32 = 2;
+const kMouseTertiaryButton uint32 = 4;
 
 /// Stylus buttons
-const uint32 kStylusPrimaryButton = 1;
-const uint32 kStylusSecondaryButton = 2;
+const kStylusPrimaryButton uint32 = 1;
+const kStylusSecondaryButton uint32 = 2;
 
 // end-no-format

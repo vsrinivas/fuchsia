@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.sys2;
 
 using fuchsia.component;
@@ -12,13 +10,13 @@ using zx;
 
 /// The maximum string length of a capability ID.
 /// This value is currently set arbitrarily.
-const uint64 MAX_CAPABILITY_ID_LENGTH = 50;
+const MAX_CAPABILITY_ID_LENGTH uint64 = 50;
 
 /// The maximum string length of an error description.
-const uint64 MAX_ERROR_DESCRIPTION_LENGTH = 100;
+const MAX_ERROR_DESCRIPTION_LENGTH uint64 = 100;
 
 /// Describes the consumption mode of an event.
-enum EventMode {
+type EventMode = strict enum {
     /// The event source dispatches the event and doesn't wait for the listener
     /// to handle it.
     ASYNC = 0;
@@ -30,7 +28,7 @@ enum EventMode {
 /// These EventTypes are used for the EventStream protocol.
 /// They are FIDL versions of the EventType enum in hooks.rs and have
 /// the same meaning.
-enum EventType {
+type EventType = strict enum {
     /// A capability provided by this component has been requested. The event
     /// payload carries the request channel.
     CAPABILITY_REQUESTED = 1;
@@ -76,239 +74,228 @@ enum EventType {
 };
 
 /// Describes the result of a state transition.
-flexible resource union EventResult {
+type EventResult = flexible resource union {
     /// The payload of the event if the state transition described by the event
     /// succeeds.
-    1: EventPayload payload;
+    1: payload EventPayload;
 
     /// The error that caused the state transition described by the event to
     /// fail.
-    2: EventError error;
+    2: error EventError;
 };
 
 /// Corresponds to an error that occurred during a state transition.
-table EventError {
+type EventError = table {
     /// A string describing the error that occurred.
     /// TODO(fxbug.dev/49792): We should be sending structured errors, and not simply strings.
     /// This is a placeholder pending further internal component manager refactors.
-    1: string:MAX_ERROR_DESCRIPTION_LENGTH description;
+    1: description string:MAX_ERROR_DESCRIPTION_LENGTH;
 
     /// The error payload of the event if any.
-    2: EventErrorPayload error_payload;
+    2: error_payload EventErrorPayload;
 };
 
 /// Encapsulates additional data for some event errors.
-flexible union EventErrorPayload {
+type EventErrorPayload = flexible union {
     /// Payload for CapabilityRequested events
-    1: CapabilityRequestedError capability_requested;
+    1: capability_requested CapabilityRequestedError;
 
     /// Payload for CapabilityRouted events
-    2: CapabilityRoutedError capability_routed;
+    2: capability_routed CapabilityRoutedError;
 
     /// Payload for Purged events.
-    3: PurgedError purged;
+    3: purged PurgedError;
 
     /// Payload for DirectoryReady events
-    4: DirectoryReadyError directory_ready;
+    4: directory_ready DirectoryReadyError;
 
     /// Payload for Discovered events.
-    5: DiscoveredError discovered;
+    5: discovered DiscoveredError;
 
     /// Payload for Destroyed events.
-    6: DestroyedError destroyed;
+    6: destroyed DestroyedError;
 
     /// Payload for Resolved events
-    7: ResolvedError resolved;
+    7: resolved ResolvedError;
 
     /// Payload for Running events
-    8: RunningError running;
+    8: running RunningError;
 
     /// Payload for Started events
-    9: StartedError started;
+    9: started StartedError;
 
     /// Payload for Stopped events
-    10: StoppedError stopped;
+   10: stopped StoppedError;
 };
 
 /// Error payload for DirectoryReady events
-table DirectoryReadyError {
+type DirectoryReadyError = table {
     /// The name of the capability.
-    1: fuchsia.component.name name;
+    1: name fuchsia.component.name;
 };
 
 /// Error payload for CapabilityRequested events
-table CapabilityRequestedError {
+type CapabilityRequestedError = table {
     /// The name of the capability being requested.
-    1: fuchsia.component.name name;
+    1: name fuchsia.component.name;
 };
 
 /// Error payload for CapabilityRouted events
-table CapabilityRoutedError {
+type CapabilityRoutedError = table {
     /// Name of the capability being requested.
-    1: fuchsia.component.name name;
+    1: name fuchsia.component.name;
 };
 
 /// Error payload for Discovered events.
-table DiscoveredError {
-};
+type DiscoveredError = table {};
 
 /// Error payload for Purged events.
-table PurgedError {
-};
+type PurgedError = table {};
 
 /// Error payload for Resolved events.
-table ResolvedError {
-};
+type ResolvedError = table {};
 
 /// Error payload for Running events.
-table RunningError {
+type RunningError = table {
     /// Time when the component started.
-    1: zx.time started_timestamp;
+    1: started_timestamp zx.time;
 };
 
 /// Error payload for Destroyed events.
-table DestroyedError {
-};
+type DestroyedError = table {};
 
 /// Error payload for Started events.
-table StartedError {
-};
+type StartedError = table {};
 
 /// Error payload for Stopped events.
-table StoppedError {
-};
+type StoppedError = table {};
 
 /// Encapsulates additional data/protocols for some event types.
-flexible resource union EventPayload {
+type EventPayload = flexible resource union {
     /// Payload for CapabilityRequested events
-    1: CapabilityRequestedPayload capability_requested;
+    1: capability_requested CapabilityRequestedPayload;
 
     /// Payload for CapabilityRouted events
-    2: CapabilityRoutedPayload capability_routed;
+    2: capability_routed CapabilityRoutedPayload;
 
     /// Payload for Purged events.
-    3: PurgedPayload purged;
+    3: purged PurgedPayload;
 
     /// Payload for DirectoryReady events
-    4: DirectoryReadyPayload directory_ready;
+    4: directory_ready DirectoryReadyPayload;
 
     /// Payload for Discovered events.
-    5: DiscoveredPayload discovered;
+    5: discovered DiscoveredPayload;
 
     /// Payload for Destroyed events.
-    6: DestroyedPayload destroyed;
+    6: destroyed DestroyedPayload;
 
     /// Payload for Resolved events
-    7: ResolvedPayload resolved;
+    7: resolved ResolvedPayload;
 
     /// Payload for Running events
-    8: RunningPayload running;
+    8: running RunningPayload;
 
     /// Payload for Started events
-    9: StartedPayload started;
+    9: started StartedPayload;
 
     /// Payload for Stopped events
-    10: StoppedPayload stopped;
+   10: stopped StoppedPayload;
 };
 
 /// Payload for DirectoryReady events
-resource table DirectoryReadyPayload {
+type DirectoryReadyPayload = resource table {
     /// The name of the capability.
-    1: fuchsia.component.name name;
+    1: name fuchsia.component.name;
 
     /// Channel to the directory capability.
-    2: fuchsia.io.Node node;
+    2: node client_end:fuchsia.io.Node;
 };
 
 /// Payload for CapabilityRequested events
-resource table CapabilityRequestedPayload {
+type CapabilityRequestedPayload = resource table {
     /// The name of the capability.
-    1: fuchsia.component.name name;
+    1: name fuchsia.component.name;
 
     /// A handle to the server end of the channel to host
     /// capability.
-    2: zx.handle:CHANNEL capability;
+    2: capability zx.handle:CHANNEL;
 };
 
 /// Payload for CapabilityRouted events
-resource table CapabilityRoutedPayload {
+type CapabilityRoutedPayload = resource table {
     /// Name of capability being requested.
-    1: fuchsia.component.name name;
+    1: name fuchsia.component.name;
 };
 
 /// Payload for Purged events.
-table PurgedPayload {
-};
+type PurgedPayload = table {};
 
 /// Payload for Discovered events.
-table DiscoveredPayload {
-};
+type DiscoveredPayload = table {};
 
 /// Payload for Destroyed events.
-table DestroyedPayload {
-};
+type DestroyedPayload = table {};
 
 /// Payload for Resolved events.
-table ResolvedPayload {
-};
+type ResolvedPayload = table {};
 
 /// Payload for Running events.
-table RunningPayload {
+type RunningPayload = table {
     /// Time when the component started.
-    1: zx.time started_timestamp;
+    1: started_timestamp zx.time;
 };
 
 /// Payload for Started events.
-table StartedPayload {
-};
+type StartedPayload = table {};
 
 /// Payload for Stopped events.
-table StoppedPayload {
+type StoppedPayload = table {
     /// The epitaph set on the fuchsia.component.runner/ComponentController
     /// protocol channel. This is the exit status of the component. The
     /// possible status values and their meaning are described in the definition
     /// of the ComponentController protocol.
-    1: zx.status status;
+    1: status zx.status;
 };
 
 /// A head providing metadata about a target component instance.
-table EventHeader {
+type EventHeader = table {
     /// Event type corresponding to the event
-    1: EventType event_type;
+    1: event_type EventType;
 
     /// Relative moniker identifying the component instance. Relative to the scope of the event.
-    2: string:fuchsia.component.MAX_MONIKER_LENGTH moniker;
+    2: moniker string:fuchsia.component.MAX_MONIKER_LENGTH;
 
     /// URL used to resolve the component.
-    3: fuchsia.url.Url component_url;
+    3: component_url fuchsia.url.Url;
 
     /// Time when the event occurred.
-    4: zx.time timestamp;
+    4: timestamp zx.time;
 };
 
 /// Contains all information about a single event
-resource table Event {
+type Event = resource table {
     /// Information about the component for which this event was generated.
-    1: EventHeader header;
+    1: header EventHeader;
 
     /// Optional payload for some event types
-    2: EventResult event_result;
+    2: event_result EventResult;
 
     /// Handler for resuming from event
     /// This will be absent if this is an async event.
-    3: Handler handler;
+    3: handler client_end:Handler;
 };
 
 /// Indicates the event name to subscribe to with a given event mode.
-table EventSubscription {
+type EventSubscription = table {
     // The event names to subscribe to.
-    1: fuchsia.component.name event_name;
+    1: event_name fuchsia.component.name;
     /// The event mode with which to subscribe to the event names above.
-    2: EventMode mode;
+    2: mode EventMode;
 };
 
 /// Subscribe to events in component manager.
-[Discoverable]
+@discoverable
 protocol EventSource {
     /// Subscribes to the events of the provided EventTypes.
     ///
@@ -318,9 +305,10 @@ protocol EventSource {
     /// Errors:
     /// - `RESOURCE_UNAVAILABLE` when the component hasn't been granted the capability to subscribe
     ///   to some event in the requested `events`.
-    Subscribe(vector<EventSubscription>:fuchsia.component.MAX_SUBSCRIPTION_REQUESTS events,
-              EventStream stream)
-        -> () error fuchsia.component.Error;
+    Subscribe(resource struct {
+        events vector<EventSubscription>:fuchsia.component.MAX_SUBSCRIPTION_REQUESTS;
+        stream client_end:EventStream;
+    }) -> (struct {}) error fuchsia.component.Error;
 
     /// Returns the server end of a static EventStream of the provided path if it exists.
     /// If this stream is discarded afterward then all `sync` events on the channel will be
@@ -328,15 +316,20 @@ protocol EventSource {
     /// Errors:
     /// - `RESOURCE_UNAVAILABLE` when an event stream at the requested path is unavailable
     /// or has already been taken.
-    TakeStaticEventStream(string:fuchsia.io.MAX_PATH path)
-        -> (request<EventStream> server_end) error fuchsia.component.Error;
+    TakeStaticEventStream(struct {
+        path string:fuchsia.io.MAX_PATH;
+    }) -> (resource struct {
+        server_end server_end:EventStream;
+    }) error fuchsia.component.Error;
 };
 
 /// Listener for events on the component hierarchy. The server won't wait for the client
 /// to handle the request before sending more events.
-[Discoverable]
+@discoverable
 protocol EventStream {
-    OnEvent(Event event);
+    OnEvent(resource struct {
+        event Event;
+    });
 };
 
 /// Every Event supports this basic handler to allow resumption.

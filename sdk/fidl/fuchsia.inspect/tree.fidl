@@ -1,23 +1,21 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.inspect;
 using fuchsia.mem;
 
 /// Maximum length of an Inspect Tree, specified by the format.
-const uint64 MAX_TREE_NAME_LENGTH = 2040;
+const MAX_TREE_NAME_LENGTH uint64 = 2040;
 
 /// Maximum number of children returned by a single read of the tree name iterator.
-const uint64 MAX_TREE_NAME_LIST_SIZE = 64;
+const MAX_TREE_NAME_LIST_SIZE uint64 = 64;
 
 alias TreeName = string:MAX_TREE_NAME_LENGTH;
 
 /// The content of a specific Inspect Tree.
-resource table TreeContent {
+type TreeContent = resource table {
     /// Buffer containing the bytes of a tree in Inspect format.
-    1: fuchsia.mem.Buffer buffer;
+    1: buffer fuchsia.mem.Buffer;
 };
 
 /// Iterator protocol for listing the names of children of a particular Tree.
@@ -26,7 +24,9 @@ protocol TreeNameIterator {
     ///
     /// Returns an empty vector and closes the channel when no more names are present.
     /// Implementors may eagerly close the channel after sending the last batch.
-    GetNext() -> (vector<TreeName>:MAX_TREE_NAME_LIST_SIZE name);
+    GetNext() -> (struct {
+        name vector<TreeName>:MAX_TREE_NAME_LIST_SIZE;
+    });
 };
 
 /// The Tree protocol represents a hierarchy of Inspect VMOs.
@@ -40,7 +40,7 @@ protocol TreeNameIterator {
 /// in memory. Clients are recommended to traverse the trees in depth-first
 /// order to reduce memory usage. Serving components are free to deny
 /// connections to avoid unbounded memory usage.
-[Discoverable]
+@discoverable
 protocol Tree {
     /// Get the content for the Inspect VMO backing this tree.
     ///
@@ -51,16 +51,23 @@ protocol Tree {
     ///
     /// Serving components may return different buffers to GetContent
     /// requests for the same Tree.
-    GetContent() -> (TreeContent content);
+    GetContent() -> (resource struct {
+        content TreeContent;
+    });
 
     /// Iterate over the names of Trees that are children of this Tree.
     ///
     /// The underlying list of children may change in between calls to
     /// ListChildNames and OpenChild.
-    ListChildNames(request<TreeNameIterator> tree_iterator);
+    ListChildNames(resource struct {
+        tree_iterator server_end:TreeNameIterator;
+    });
 
     /// Open a child Tree by name.
     ///
     /// If the child cannot be opened, the given request is closed.
-    OpenChild(TreeName child_name, request<Tree> tree);
+    OpenChild(resource struct {
+        child_name TreeName;
+        tree server_end:Tree;
+    });
 };

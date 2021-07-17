@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.update.installer;
 
 using fuchsia.pkg;
@@ -13,14 +11,16 @@ alias AttemptId = string:36; // 36 == strlen("01234567-89ab-cdef-0123-456789abcd
 ///
 /// This protocol is intended to be consumed by a component capable of
 /// discovering when to update and what version of the system to install.
-[Discoverable]
+@discoverable
 protocol Installer {
     /// Get the status of the last update attempt. If this device hasn't
     /// attempted an update since the last factory reset, every field in the
     /// result will be absent.
     ///
     /// - response `info` the status of the last update attempt, if available.
-    GetLastUpdateResult() -> (UpdateResult info);
+    GetLastUpdateResult() -> (struct {
+        info UpdateResult;
+    });
 
     /// Get the status of the given update attempt, if it exists. If this device
     /// hasn't attempted an update with the given `attempt_id` or forgotten about
@@ -28,7 +28,11 @@ protocol Installer {
     ///
     /// + request `attempt_id` UUID identifying the requested update attempt.
     /// - response `info` the status of the last update attempt, if available.
-    GetUpdateResult(AttemptId attempt_id) -> (UpdateResult info);
+    GetUpdateResult(struct {
+        attempt_id AttemptId;
+    }) -> (struct {
+        info UpdateResult;
+    });
 
     /// Start an update if one is not running, or attach to a pending update
     /// attempt if one is running and
@@ -49,12 +53,14 @@ protocol Installer {
     ///     updates that require a reboot, components may use this identifier to
     ///     disambiguate the completion of this update attempt from new update
     ///     attempts that start post-reboot.
-    StartUpdate(
-        fuchsia.pkg.PackageUrl url,
-        Options options,
-        Monitor monitor,
-        request<RebootController>? reboot_controller
-        ) -> (AttemptId attempt_id) error UpdateNotStartedReason;
+    StartUpdate(resource struct {
+        url fuchsia.pkg.PackageUrl;
+        options Options;
+        monitor client_end:Monitor;
+        reboot_controller server_end:<RebootController, optional>;
+    }) -> (struct {
+        attempt_id AttemptId;
+    }) error UpdateNotStartedReason;
 
     /// Attempt to monitor a specific update attempt, if it exists. This request
     /// will not start an update if one is not already running.
@@ -66,10 +72,12 @@ protocol Installer {
     /// - response `attached` Whether or not the provided monitor was attached
     ///     to an in-progress update attempt. If false, monitor will be closed
     ///     by the server.
-    MonitorUpdate(
-        AttemptId? attempt_id,
-        Monitor monitor
-        ) -> (bool attached);
+    MonitorUpdate(resource struct {
+        attempt_id AttemptId:optional;
+        monitor client_end:Monitor;
+    }) -> (struct {
+        attached bool;
+    });
 };
 
 /// Controls the timing of the reboot into the updated system.
@@ -93,26 +101,26 @@ protocol RebootController {
 };
 
 /// Metadata about a prior update attempt.
-table UpdateResult {
+type UpdateResult = table {
     /// Unique identifier for this specific update attempt. Always present.
-    1: AttemptId attempt_id;
+    1: attempt_id AttemptId;
 
     /// fuchsia-pkg:// url for the update package associated with this update
     /// attempt. Always present.
-    2: fuchsia.pkg.PackageUrl url;
+    2: url fuchsia.pkg.PackageUrl;
 
     /// Configuration options for this update attempt. Always present.
-    3: Options options;
+    3: options Options;
 
     /// Terminal state of this update attempt. Always present if the update
     /// failed. None if the update succeeded.
-    4: State state;
+    4: state State;
 };
 
 /// Configuration options for an update attempt.
-table Options {
+type Options = table {
     /// What initiated this update attempt. Required.
-    1: Initiator initiator;
+    1: initiator Initiator;
 
     /// If an update is already in progress, it's acceptable to instead attach a
     /// Monitor to that in-progress update instead of failing this request to
@@ -120,15 +128,15 @@ table Options {
     /// that would have resulted in the ALREADY_IN_PROGRESS to be treated as
     /// non-error cases. A controller, if provided, will be ignored if the
     /// running update attempt already has a controller.
-    2: bool allow_attach_to_existing_attempt;
+    2: allow_attach_to_existing_attempt bool;
 
     /// Determines if the installer should update the recovery partition if an
     /// update is available.  Defaults to true.
-    3: bool should_write_recovery;
+    3: should_write_recovery bool;
 };
 
 /// Who or what initiated the update installation.
-enum Initiator {
+type Initiator = strict enum {
     /// The install was initiated by an interactive user, or the user is
     /// otherwise blocked and waiting for the result of this update.
     USER = 0;
@@ -138,7 +146,7 @@ enum Initiator {
 };
 
 /// The set of values that are returned by an request to start an update.
-enum UpdateNotStartedReason {
+type UpdateNotStartedReason = strict enum {
     /// There was already another update attempt in progress when this request was
     /// made.  A new update attempt will not be started.
     ALREADY_IN_PROGRESS = 1;

@@ -1,13 +1,11 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.sys.internal;
 
 using zx;
 
-[Discoverable]
+@discoverable
 // Provides introspection information about crashed threads in appmgr.
 protocol CrashIntrospect {
     // Finds the component whose job contains a process with a thread `thread_koid`.
@@ -16,5 +14,9 @@ protocol CrashIntrospect {
     // Returns component's source identity.
     // Errors:
     // - `ZX_ERR_NOT_FOUND`: If thread_koid is not found in the crashed thread list.
-    FindComponentByThreadKoid(zx.koid thread_koid) -> (SourceIdentity component_info) error zx.status;
+    FindComponentByThreadKoid(struct {
+        thread_koid zx.koid;
+    }) -> (struct {
+        component_info SourceIdentity;
+    }) error zx.status;
 };

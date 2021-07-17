@@ -1,47 +1,157 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library banjo.examples.protocolprimitive;
 
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol SynchronousPrimitive {
-    Bool(bool b) -> (bool b, bool b_2);
-    Int8(int8 i8) -> (int8 i8, int8 i8_2);
-    Int16(int16 i16) -> (int16 i16, int16 i16_2);
-    Int32(int32 i32) -> (int32 i32, int32 i32_2);
-    Int64(int64 i64) -> (int64 i64, int64 i64_2);
-    Uint8(uint8 u8) -> (uint8 u8, uint8 u8_2);
-    Uint16(uint16 u16) -> (uint16 u16, uint16 u16_2);
-    Uint32(uint32 u32) -> (uint32 u32, uint32 u32_2);
-    Uint64(uint64 u64) -> (uint64 u64, uint64 u64_2);
-    Float32(float32 f32) -> (float32 f32, float32 f32_2);
-    Float64(float64 u64) -> (float64 f64, float64 f64_2);
+    Bool(struct {
+        b bool;
+    }) -> (struct {
+        b bool;
+        b_2 bool;
+    });
+    Int8(struct {
+        i8 int8;
+    }) -> (struct {
+        i8 int8;
+        i8_2 int8;
+    });
+    Int16(struct {
+        i16 int16;
+    }) -> (struct {
+        i16 int16;
+        i16_2 int16;
+    });
+    Int32(struct {
+        i32 int32;
+    }) -> (struct {
+        i32 int32;
+        i32_2 int32;
+    });
+    Int64(struct {
+        i64 int64;
+    }) -> (struct {
+        i64 int64;
+        i64_2 int64;
+    });
+    Uint8(struct {
+        u8 uint8;
+    }) -> (struct {
+        u8 uint8;
+        u8_2 uint8;
+    });
+    Uint16(struct {
+        u16 uint16;
+    }) -> (struct {
+        u16 uint16;
+        u16_2 uint16;
+    });
+    Uint32(struct {
+        u32 uint32;
+    }) -> (struct {
+        u32 uint32;
+        u32_2 uint32;
+    });
+    Uint64(struct {
+        u64 uint64;
+    }) -> (struct {
+        u64 uint64;
+        u64_2 uint64;
+    });
+    Float32(struct {
+        f32 float32;
+    }) -> (struct {
+        f32 float32;
+        f32_2 float32;
+    });
+    Float64(struct {
+        u64 float64;
+    }) -> (struct {
+        f64 float64;
+        f64_2 float64;
+    });
 };
 
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol AsyncPrimitive {
-    [Async]
-    Bool(bool b) -> (bool b, bool b_2);
-    [Async]
-    Int8(int8 i8) -> (int8 i8, int8 i8_2);
-    [Async]
-    Int16(int16 i16) -> (int16 i16, int16 i16_2);
-    [Async]
-    Int32(int32 i32) -> (int32 i32, int32 i32_2);
-    [Async]
-    Int64(int64 i64) -> (int64 i64, int64 i64_2);
-    [Async]
-    Uint8(uint8 u8) -> (uint8 u8, uint8 u8_2);
-    [Async]
-    Uint16(uint16 u16) -> (uint16 u16, uint16 u16_2);
-    [Async]
-    Uint32(uint32 u32) -> (uint32 u32, uint32 u32_2);
-    [Async]
-    Uint64(uint64 u64) -> (uint64 u64, uint64 u64_2);
-    [Async]
-    Float32(float32 f32) -> (float32 f32, float32 f32_2);
-    [Async]
-    Float64(float64 u64) -> (float64 f64, float64 f64_2);
+    @async
+    Bool(struct {
+        b bool;
+    }) -> (struct {
+        b bool;
+        b_2 bool;
+    });
+    @async
+    Int8(struct {
+        i8 int8;
+    }) -> (struct {
+        i8 int8;
+        i8_2 int8;
+    });
+    @async
+    Int16(struct {
+        i16 int16;
+    }) -> (struct {
+        i16 int16;
+        i16_2 int16;
+    });
+    @async
+    Int32(struct {
+        i32 int32;
+    }) -> (struct {
+        i32 int32;
+        i32_2 int32;
+    });
+    @async
+    Int64(struct {
+        i64 int64;
+    }) -> (struct {
+        i64 int64;
+        i64_2 int64;
+    });
+    @async
+    Uint8(struct {
+        u8 uint8;
+    }) -> (struct {
+        u8 uint8;
+        u8_2 uint8;
+    });
+    @async
+    Uint16(struct {
+        u16 uint16;
+    }) -> (struct {
+        u16 uint16;
+        u16_2 uint16;
+    });
+    @async
+    Uint32(struct {
+        u32 uint32;
+    }) -> (struct {
+        u32 uint32;
+        u32_2 uint32;
+    });
+    @async
+    Uint64(struct {
+        u64 uint64;
+    }) -> (struct {
+        u64 uint64;
+        u64_2 uint64;
+    });
+    @async
+    Float32(struct {
+        f32 float32;
+    }) -> (struct {
+        f32 float32;
+        f32_2 float32;
+    });
+    @async
+    Float64(struct {
+        u64 float64;
+    }) -> (struct {
+        f64 float64;
+        f64_2 float64;
+    });
 };

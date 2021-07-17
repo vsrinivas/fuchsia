@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.sys.internal;
 
 /// Identifies a component uniquely within the observing realm.
@@ -11,16 +9,16 @@ library fuchsia.sys.internal;
 ///   component_url: "fuchsia-pkg://fuchsia.com/http#meta/http.cmx"
 ///   component_name: "http.cmx"
 ///   instance_id: 19226
-table SourceIdentity {
+type SourceIdentity = table {
     /// The path to the component from the observing realm.
-    1: realm_segments realm_path;
+    1: realm_path realm_segments;
 
     /// The URL from which the component was loaded.
     2: component_url component_url;
 
     /// The name of the component.
-    3: string:COMPONENT_NAME_MAX_LENGTH component_name;
+    3: component_name string:COMPONENT_NAME_MAX_LENGTH;
 
     /// The ID of the component.
-    4: string:LABEL_MAX_LENGTH instance_id;
+    4: instance_id string:LABEL_MAX_LENGTH;
 };

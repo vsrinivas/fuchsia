@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.media.drm;
 
 using fuchsia.media;
@@ -10,12 +8,12 @@ using fuchsia.mem;
 
 // Common initialization data formats. These are defined as strings rather than
 // enums so as to not limit the types a ContentDecryptionModule may support.
-const LicenseInitDataType LICENSE_INIT_DATA_TYPE_CENC = "cenc";
-const LicenseInitDataType LICENSE_INIT_DATA_TYPE_KEYIDS = "keyids";
-const LicenseInitDataType LICENSE_INIT_DATA_TYPE_WEBM = "webm";
-const LicenseInitDataType LICENSE_INIT_DATA_TYPE_HLS = "hls";
+const LICENSE_INIT_DATA_TYPE_CENC LicenseInitDataType = "cenc";
+const LICENSE_INIT_DATA_TYPE_KEYIDS LicenseInitDataType = "keyids";
+const LICENSE_INIT_DATA_TYPE_WEBM LicenseInitDataType = "webm";
+const LICENSE_INIT_DATA_TYPE_HLS LicenseInitDataType = "hls";
 
-enum LicenseSessionType {
+type LicenseSessionType = strict enum {
     /// A session for which the license, keys, and record of the session are not
     /// persisted.
     TEMPORARY = 1;
@@ -25,34 +23,34 @@ enum LicenseSessionType {
     PERSISTENT_LICENSE = 2;
 };
 
-enum LicenseMessageType {
+type LicenseMessageType = strict enum {
     REQUEST = 1;
     RENEWAL = 2;
     RELEASE = 3;
 };
 
-struct LicenseInitData {
+type LicenseInitData = struct {
     /// The type is a string that indicates the format of the accompanying init
     /// data. Common types include "cenc", "keyids", "webm", and "hls". CDMs may
     /// also define their own.
-    LicenseInitDataType type;
-    bytes data;
+    type LicenseInitDataType;
+    data bytes;
 };
 
 /// A message originating from the [`LicenseSession`] that the caller must route
 /// to the license server.
-resource struct LicenseMessage {
-    LicenseMessageType type;
-    fuchsia.mem.Buffer message;
+type LicenseMessage = resource struct {
+    type LicenseMessageType;
+    message fuchsia.mem.Buffer;
 };
 
 /// A message originating from the license server that the caller must provide
 /// to the [`LicenseSession`] via `ProcessLicenseServerMessage`.
-resource struct LicenseServerMessage {
-    fuchsia.mem.Buffer message;
+type LicenseServerMessage = resource struct {
+    message fuchsia.mem.Buffer;
 };
 
-enum KeyStatus {
+type KeyStatus = strict enum {
     /// The key is currently usable for decryption.
     USABLE = 0;
     /// The Key is no longer usable for decryption because it has expired.
@@ -72,9 +70,9 @@ enum KeyStatus {
     INTERNAL_ERROR = 6;
 };
 
-table KeyState {
-    1: fuchsia.media.KeyId key_id;
-    2: KeyStatus status;
+type KeyState = table {
+    1: key_id fuchsia.media.KeyId;
+    2: status KeyStatus;
 };
 
 /// A protocol for exchanging messages pertaining to the establishment of a
@@ -97,7 +95,9 @@ protocol LicenseSession {
     /// + request `init_data` container-specific data that is used to generate a
     ///   [`LicenseMessageType.REQUEST`] `LicenseMessage`.
     /// * error an [`Error`] indicating the reason for failure.
-    GenerateLicenseRequest(LicenseInitData init_data) -> () error Error;
+    GenerateLicenseRequest(struct {
+        init_data LicenseInitData;
+    }) -> (struct {}) error Error;
 
     /// Initiates the release process for the license session.
     ///
@@ -114,7 +114,7 @@ protocol LicenseSession {
     /// the `LicenseSession` channel.
     ///
     /// * error an [`Error`] indicating the reason for failure.
-    GenerateLicenseRelease() -> () error Error;
+    GenerateLicenseRelease() -> (struct {}) error Error;
 
     /// Updates the [`LicenseSession`] with a message from the license server.
     ///
@@ -124,7 +124,9 @@ protocol LicenseSession {
     /// + request `response` a message from the license server to update the
     ///   state of the `LicenseSession`.
     /// * error an [`Error`] indicating the reason for failure.
-    ProcessLicenseResponse(LicenseServerMessage response) -> () error Error;
+    ProcessLicenseResponse(resource struct {
+        response LicenseServerMessage;
+    }) -> (struct {}) error Error;
 
     /// Creates a Decryptor [`fuchsia.media/StreamProcessor`] to be used to
     /// decrypt content.
@@ -135,8 +137,10 @@ protocol LicenseSession {
     /// + request `params` the parameters with which to create the `decryptor`.
     /// + request `decryptor` the server endpoint of the
     ///   `fuchsia.media/StreamProcessor`.
-    CreateDecryptor(DecryptorParams params,
-                    request<fuchsia.media.StreamProcessor> decryptor);
+    CreateDecryptor(resource struct {
+        params DecryptorParams;
+        decryptor server_end:fuchsia.media.StreamProcessor;
+    });
 
     /// Provides a [`LicenseMessage`] that should be sent to the license server.
     ///
@@ -145,7 +149,9 @@ protocol LicenseSession {
     ///
     /// - response `request` a message from the `LicenseSession` that the client
     ///   should send to the license server.
-    -> OnLicenseMessageGenerated(LicenseMessage request);
+    -> OnLicenseMessageGenerated(resource struct {
+        request LicenseMessage;
+    });
 
     /// Provides updated key state information.
     ///
@@ -154,5 +160,7 @@ protocol LicenseSession {
     ///
     /// - response `key_states` a list of the key_ids and their related
     ///   [`KeyStatusCode`]s
-    -> OnKeyStatesChanged(vector<KeyState>:MAX key_states);
+    -> OnKeyStatesChanged(struct {
+        key_states vector<KeyState>:MAX;
+    });
 };

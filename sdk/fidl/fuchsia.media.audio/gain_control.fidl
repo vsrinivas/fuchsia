@@ -1,8 +1,6 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.media.audio;
 
 // fuchsia.media.audio contains definitions relating to audio. Definitions in
@@ -17,7 +15,9 @@ using zx;
 // TODO(35393, 35311, 35309): Deprecate and remove.
 protocol GainControl {
     /// Sets the gain in decibels.
-    SetGain(float32 gain_db);
+    SetGain(struct {
+        gain_db float32;
+    });
 
     /// Smoothly changes gain from its current value to specified value, over the
     /// specified duration (in milliseconds). If 'duration_ns' is 0, gain changes
@@ -56,13 +56,17 @@ protocol GainControl {
     ///         (approx 0.5).
     /// Time 9: Ramp 3 completes; current scale value is now 0.0 (`MUTED_GAIN_DB`).
     ///
-    SetGainWithRamp(float32 gain_db,
-                    zx.duration duration,
-                    RampType rampType);
+    SetGainWithRamp(struct {
+        gain_db float32;
+        duration zx.duration;
+        rampType RampType;
+    });
 
     /// Sets the mute value. Ramping and mute are fully independent, although
     /// they both affect the scaling that is applied.
-    SetMute(bool muted);
+    SetMute(struct {
+        muted bool;
+    });
 
     /// Notifies the client of changes in the current gain/mute values.
     //
@@ -70,22 +74,25 @@ protocol GainControl {
     //
     // TODO(mpuryear): notify upon ramp milestones (not just SetGain/Mute) --
     // upon the start/pause/restart/completion of an active ramp?
-    -> OnGainMuteChanged(float32 gain_db, bool muted);
+    -> OnGainMuteChanged(struct {
+        gain_db float32;
+        muted bool;
+    });
 };
 
 /// Gain value producing silence. Gain values less than this value are permitted,
 /// but produce the same effect as this value.
-const float32 MUTED_GAIN_DB = -160.0;
+const MUTED_GAIN_DB float32 = -160.0;
 
 /// Maximum permitted gain value.
-const float32 MAX_GAIN_DB = 24.0;
+const MAX_GAIN_DB float32 = 24.0;
 
 /// Enumerates gain control ramp types.
-enum RampType : uint16 {
+type RampType = strict enum : uint16 {
     /// Amplitude scale changes at a fixed rate across the ramp duration.
     SCALE_LINEAR = 1;
 
-    // TODO(mpuryear) Additional ramp shapes (easings) may be added in the
-    // future, perhaps including logarithmic (i.e. linear wrt dB), cubic
-    // (in/out/inout) or others.
+// TODO(mpuryear) Additional ramp shapes (easings) may be added in the
+// future, perhaps including logarithmic (i.e. linear wrt dB), cubic
+// (in/out/inout) or others.
 };

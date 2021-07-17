@@ -1,8 +1,6 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.ui.views.accessibility;
 
 using fuchsia.ui.views;
@@ -20,7 +18,9 @@ using fuchsia.ui.views;
 /// The request from the accessibility service assumes that whoever implements
 /// this protocol associates this request with a view that sits high in the view
 /// hierarchy.
-[Discoverable]
+@discoverable
 protocol FocuserRegistry {
-    RegisterFocuser(request<fuchsia.ui.views.Focuser> view_focuser);
+    RegisterFocuser(resource struct {
+        view_focuser server_end:fuchsia.ui.views.Focuser;
+    });
 };

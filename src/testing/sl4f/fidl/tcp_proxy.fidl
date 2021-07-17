@@ -1,8 +1,6 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.testing.proxy;
 
 /// A protocol that enables creating TCP proxies so that host tests may
@@ -12,7 +10,7 @@ library fuchsia.testing.proxy;
 /// [::1]:9999, TcpProxyControl may listen on [::]:10000 and forward requests
 /// to port 9999. The host test then calls port 10000 to access the web browser's
 /// debug service.
-[Discoverable]
+@discoverable
 protocol TcpProxyControl {
     /// Opens a proxy to the given |target_port|. If a proxy is already open
     /// for the specified |target_port|, the existing |open_port| is returned.
@@ -23,12 +21,17 @@ protocol TcpProxyControl {
     /// on remote host needs to reach a local device, its value is 0. This is
     /// only useful when the user has tunneled these ports to the local device
     /// and specified that port number as |proxy_port|.
-    OpenProxy(uint16 target_port, uint16 proxy_port, request<TcpProxy> tcp_proxy) -> (uint16 open_port);
+    OpenProxy(resource struct {
+        target_port uint16;
+        proxy_port uint16;
+        tcp_proxy server_end:TcpProxy;
+    }) -> (struct {
+        open_port uint16;
+    });
 };
 
 /// An empty protocol which serves as a token for a proxy started with
 /// |TcpProxyControl.OpenProxy|. The proxy stays open as long as at least one
 /// |TcpProxy| channel corresponding to the proxy remains open. Note that the
 /// server may close the channel in the case an error is encountered.
-protocol TcpProxy {
-};
+protocol TcpProxy {};

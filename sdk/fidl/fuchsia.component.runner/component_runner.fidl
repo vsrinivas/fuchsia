@@ -1,7 +1,6 @@
 // Copyright 2016 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
 library fuchsia.component.runner;
 
 using fuchsia.component;
@@ -11,8 +10,8 @@ using fuchsia.io;
 using fuchsia.process;
 using fuchsia.url;
 
-const uint32 MAX_NAMESPACE_COUNT = 32;
-const uint32 MAX_HANDLE_COUNT = 128;
+const MAX_NAMESPACE_COUNT uint32 = 32;
+const MAX_HANDLE_COUNT uint32 = 128;
 
 /// A protocol used for running components.
 ///
@@ -21,7 +20,7 @@ const uint32 MAX_HANDLE_COUNT = 128;
 ///
 /// Note: The component manager is the only intended direct client of this
 /// interface.
-[Discoverable]
+@discoverable
 protocol ComponentRunner {
     /// Start running a component instance described by `start_info`.
     ///
@@ -34,33 +33,35 @@ protocol ComponentRunner {
     ///
     /// Errors:
     ///
-    Start(ComponentStartInfo start_info,
-          request<ComponentController> controller);
+    Start(resource struct {
+        start_info ComponentStartInfo;
+        controller server_end:ComponentController;
+    });
 };
 
 /// A single component namespace entry, which describes a namespace mount point
 /// (`path`) and the directory backing it (`directory`). This type is usually
 /// composed inside a vector.  See `ComponentStartInfo.ns` for more details.
-resource table ComponentNamespaceEntry {
+type ComponentNamespaceEntry = resource table {
     /// The mount point for the directory, including a
     /// leading slash. For example: "/pkg", "/svc", or "/config/data".
-    1: string:fuchsia.component.MAX_PATH_LENGTH path;
+    1: path string:fuchsia.component.MAX_PATH_LENGTH;
 
     /// The directory mounted at the above `path`.
-    2: fuchsia.io.Directory directory;
+    2: directory client_end:fuchsia.io.Directory;
 };
 
 /// Parameters for starting a new component instance.
-resource table ComponentStartInfo {
+type ComponentStartInfo = resource table {
     /// The resolved URL of the component.
     ///
     /// This is the canonical URL obtained by the component resolver after
     /// following redirects and resolving relative paths.
-    1: fuchsia.url.Url resolved_url;
+    1: resolved_url fuchsia.url.Url;
 
     /// The component's program declaration.
     /// This information originates from `ComponentDecl.program`.
-    2: fuchsia.data.Dictionary program;
+    2: program fuchsia.data.Dictionary;
 
     /// The namespace to provide to the component instance.
     ///
@@ -82,20 +83,20 @@ resource table ComponentStartInfo {
     /// The mount points specified in each entry must be unique and
     /// non-overlapping. For example, [{"/foo", ..}, {"/foo/bar", ..}] is
     /// invalid.
-    3: vector<ComponentNamespaceEntry>:MAX_NAMESPACE_COUNT ns;
+    3: ns vector<ComponentNamespaceEntry>:MAX_NAMESPACE_COUNT;
 
     /// The directory this component serves.
-    4: request<fuchsia.io.Directory> outgoing_dir;
+    4: outgoing_dir server_end:fuchsia.io.Directory;
 
     /// The directory served by the runner to present runtime information about
     /// the component.
-    5: request<fuchsia.io.Directory> runtime_dir;
+    5: runtime_dir server_end:fuchsia.io.Directory;
 
     /// The numbered handles that were passed to the component.
     ///
     /// If the component does not support numbered handles, the runner is expected
     /// to close the handles.
-    6: vector<fuchsia.process.HandleInfo>:MAX_HANDLE_COUNT numbered_handles;
+    6: numbered_handles vector<fuchsia.process.HandleInfo>:MAX_HANDLE_COUNT;
 };
 
 /// A protocol for binding and controlling the lifetime of a component instance
@@ -177,5 +178,7 @@ protocol ComponentController {
     /// component is publishing diagnostics about the runtime of the
     /// component. The component manager may optionally expose this data
     /// to clients.
-    -> OnPublishDiagnostics(fuchsia.diagnostics.types.ComponentDiagnostics payload);
+    -> OnPublishDiagnostics(resource struct {
+        payload fuchsia.diagnostics.types.ComponentDiagnostics;
+    });
 };

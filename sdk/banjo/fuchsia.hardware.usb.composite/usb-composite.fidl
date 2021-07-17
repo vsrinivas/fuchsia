@@ -1,20 +1,29 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.usb.composite;
 
 using fuchsia.hardware.usb.descriptor;
 using zx;
 
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol UsbComposite {
     /// Returns the length of the additional descriptor list.
-    GetAdditionalDescriptorLength() -> (uint64 length);
+    GetAdditionalDescriptorLength() -> (struct {
+        length uint64;
+    });
     /// Returns the USB descriptors following the interface's existing descriptors.
-    GetAdditionalDescriptorList() -> (zx.status s, vector<uint8>:MAX desc);
+    GetAdditionalDescriptorList() -> (struct {
+        s zx.status;
+        desc vector<uint8>:MAX;
+    });
     /// Marks the interface as claimed and appends the interface descriptor to the
     /// interface's existing descriptors.
-    ClaimInterface(fuchsia.hardware.usb.descriptor.UsbInterfaceDescriptor desc, uint32 length) -> (zx.status s);
+    ClaimInterface(struct {
+        desc fuchsia.hardware.usb.descriptor.UsbInterfaceDescriptor;
+        length uint32;
+    }) -> (struct {
+        s zx.status;
+    });
 };

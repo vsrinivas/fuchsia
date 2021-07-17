@@ -1,22 +1,20 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.terminal;
 
 using fuchsia.fonts;
 using fuchsia.ui.types;
 
-const int32 MAX_PROFILE_NAME_LENGTH = 128;
-const int32 MAX_ALLOWED_PROFILES = 24;
-const int32 MAX_ID_LENGTH = 36;
+const MAX_PROFILE_NAME_LENGTH int32 = 128;
+const MAX_ALLOWED_PROFILES int32 = 24;
+const MAX_ID_LENGTH int32 = 36;
 
 /// An alias to a profile's id.
 alias ProfileId = string:MAX_ID_LENGTH;
 
 /// Common error code used across different settings.
-enum ProfileError {
+type ProfileError = strict enum {
     /// Indicates that the requested profile does not exist.
     NOT_FOUND = 1;
 
@@ -25,38 +23,54 @@ enum ProfileError {
 };
 
 /// A service which provides profile information for the terminal.
-[Discoverable]
+@discoverable
 protocol Profiles {
 
     /// Returns the list of [ProfileEntry] objects.
-    GetProfileList() -> (vector<ProfileEntry>:MAX_ALLOWED_PROFILES profile_list);
+    GetProfileList() -> (struct {
+        profile_list vector<ProfileEntry>:MAX_ALLOWED_PROFILES;
+    });
 
     /// Sets the profile with the given id as the default.
     ///
     /// This method can fail if a profile with the given id does not exist.
-    SetDefault(ProfileId id) -> () error ProfileError;
+    SetDefault(struct {
+        id ProfileId;
+    }) -> (struct {}) error ProfileError;
 
     /// Event which is triggered when the list of profiles have been updated.
     ///
     /// Note: this method will not be called if properties of an individual
     /// profile are updated.
-    -> OnProfileListUpdated(vector<ProfileEntry>:MAX_ALLOWED_PROFILES profile_entries);
+    -> OnProfileListUpdated(struct {
+        profile_entries vector<ProfileEntry>:MAX_ALLOWED_PROFILES;
+    });
 
     /// Returns the profile with the given [id].
     ///
     /// If there is no profile with the given [name] an error will be returned.
-    GetProfile(ProfileId id) -> (Profile profile) error ProfileError;
+    GetProfile(struct {
+        id ProfileId;
+    }) -> (struct {
+        profile Profile;
+    }) error ProfileError;
 
     /// Updates the profile with the given id.
     ///
     /// This method will fail if a profile with the given id does not already
     /// exist. A Profile must be created with a call to [CreateProfile].
-    UpdateProfile(ProfileId id, Profile profile) -> () error ProfileError;
+    UpdateProfile(struct {
+        id ProfileId;
+        profile Profile;
+    }) -> (struct {}) error ProfileError;
 
     /// Creates a new profile.
     ///
     /// After the profile is created it can be updated with a call to [Update].
-    CreateNew() -> (ProfileId id, Profile profile);
+    CreateNew() -> (struct {
+        id ProfileId;
+        profile Profile;
+    });
 
     /// Deletes the profile with the given id.
     ///
@@ -66,76 +80,81 @@ protocol Profiles {
     /// defined and it is up to the implementor to choose. The new default
     /// profile can be retrieved by listening for the OnProfileListUpdated
     /// event.
-    Delete(ProfileId id);
+    Delete(struct {
+        id ProfileId;
+    });
 
     /// Triggered when a given profile is updated.
-    -> OnProfileUpdated(ProfileId id, Profile profile);
+    -> OnProfileUpdated(struct {
+        id ProfileId;
+        profile Profile;
+    });
 };
 
 /// The [ProfileEntry] is a readonly value which represents
 /// a profile that has been saved.
-struct ProfileEntry {
+type ProfileEntry = struct {
 
     /// A unique identifier for this profile represented as a UUID V4 string.
-    ProfileId id;
+    id ProfileId;
 
     /// The user visible name of the profile.
-    string:MAX_PROFILE_NAME_LENGTH name;
+    name string:MAX_PROFILE_NAME_LENGTH;
 
     /// Indicates if this is the users chosen default profile.
-    bool is_default;
+    is_default bool;
 };
 
 /// A table representing the values stored in the profile.
-table Profile {
+type Profile = table {
 
     /// The visible name for this profile.
-    1: string:MAX_PROFILE_NAME_LENGTH name;
+    1: name string:MAX_PROFILE_NAME_LENGTH;
 
     /// The font family used in text rendering.
-    2: fuchsia.fonts.FamilyName font_family;
+    2: font_family fuchsia.fonts.FamilyName;
 
     /// The point size to render text.
-    3: float32 point_size;
+    3: point_size float32;
 
     /// The color to render the background;
-    4: fuchsia.ui.types.ColorRgb background_color;
+    4: background_color fuchsia.ui.types.ColorRgb;
 
     /// The normal text color.
-    5: fuchsia.ui.types.ColorRgb foreground_color;
+    5: foreground_color fuchsia.ui.types.ColorRgb;
 
     /// A color used to render bold text.
-    6: fuchsia.ui.types.ColorRgb bold_color;
+    6: bold_color fuchsia.ui.types.ColorRgb;
 
     /// The color of the selected text.
-    7: fuchsia.ui.types.ColorRgb selected_background_color;
+    7: selected_background_color fuchsia.ui.types.ColorRgb;
 
     /// The color of the selected text.
-    8: fuchsia.ui.types.ColorRgb selected_foreground_color;
+    8: selected_foreground_color fuchsia.ui.types.ColorRgb;
 
     /// If true, bold characters will use the bright color variant as well.
-    9: bool use_bright_for_bold;
+    9: use_bright_for_bold bool;
 
-    10: array<fuchsia.ui.types.ColorRgb>:16 ansi_colors;
+   10: ansi_colors array<fuchsia.ui.types.ColorRgb, 16>;
 
     /// A struct representing the cursor.
-    11: Cursor cursor;
+   11: cursor Cursor;
 };
 
 /// A description of the terminal's cursor.
-struct Cursor {
+type Cursor = struct {
 
     /// The color to render the cursor.
-    fuchsia.ui.types.ColorRgb color;
+    color fuchsia.ui.types.ColorRgb;
 
     /// The cursors style.
-    CursorStyle style;
+    style CursorStyle;
 
     /// whether the cursor should blink or not.
-    bool blink;
+    blink bool;
 };
 
-enum CursorStyle {
+type CursorStyle = strict enum {
     /// Renders the terminal's cursor as a block.
     BLOCK = 1;
 

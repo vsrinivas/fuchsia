@@ -1,36 +1,35 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
 library fuchsia.lowpan;
 
-const uint16 MAX_PROVISION_URL_LEN = 64;
-const uint16 MAX_VENDOR_NAME_LEN = 32;
-const uint16 MAX_VENDOR_MODEL_LEN = 32;
-const uint16 MAX_VENDOR_SW_VER_LEN = 16;
-const uint16 MAX_VENDOR_DATA_LEN = 64;
-const uint16 PSKD_LEN = 32;
+const MAX_PROVISION_URL_LEN uint16 = 64;
+const MAX_VENDOR_NAME_LEN uint16 = 32;
+const MAX_VENDOR_MODEL_LEN uint16 = 32;
+const MAX_VENDOR_SW_VER_LEN uint16 = 16;
+const MAX_VENDOR_DATA_LEN uint16 = 64;
+const PSKD_LEN uint16 = 32;
 
 /// Parameters for joiner commissioning.
 ///
 /// More information:
 /// https://www.threadgroup.org/Portals/0/documents/support/CommissioningWhitePaper_658_2.pdf
-table JoinerCommissioningParams {
+type JoinerCommissioningParams = table {
     /// Commissioning PSKd. Required.
-    1: string:PSKD_LEN pskd;
+    1: pskd string:PSKD_LEN;
 
     /// Provisioning URL. Optional.
-    2: string:MAX_PROVISION_URL_LEN provisioning_url;
+    2: provisioning_url string:MAX_PROVISION_URL_LEN;
 
     /// Vendor name. Optional.
-    3: string:MAX_VENDOR_NAME_LEN vendor_name;
+    3: vendor_name string:MAX_VENDOR_NAME_LEN;
 
     /// Vendor model. Optional.
-    4: string:MAX_VENDOR_MODEL_LEN vendor_model;
+    4: vendor_model string:MAX_VENDOR_MODEL_LEN;
 
     /// Vendor Software Version. Optional.
-    5: string:MAX_VENDOR_SW_VER_LEN vendor_sw_version;
+    5: vendor_sw_version string:MAX_VENDOR_SW_VER_LEN;
 
     /// Vendor data string. Optional.
-    6: string:MAX_VENDOR_DATA_LEN vendor_data_string;
+    6: vendor_data_string string:MAX_VENDOR_DATA_LEN;
 };

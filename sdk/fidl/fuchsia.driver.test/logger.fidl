@@ -1,29 +1,32 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.driver.test;
 
-const uint32 LOG_MESSAGE_MAX = 1024;
-const uint32 TEST_CASE_NAME_MAX = 256;
+const LOG_MESSAGE_MAX uint32 = 1024;
+const TEST_CASE_NAME_MAX uint32 = 256;
 
 /// Contains the counts of test results within the test case.
-[ForDeprecatedCBindings]
-struct TestCaseResult {
+@for_deprecated_c_bindings
+type TestCaseResult = struct {
     /// Number of tests that passed.
-    uint64 passed;
+    passed uint64;
     /// Number of tests that failed.
-    uint64 failed;
+    failed uint64;
     /// Number of tests that were skipped.
-    uint64 skipped;
+    skipped uint64;
 };
 
-[ForDeprecatedCBindings]
+@for_deprecated_c_bindings
 protocol Logger {
     /// Logs a message from the driver unit test.
-    LogMessage(string:LOG_MESSAGE_MAX msg);
+    LogMessage(struct {
+        msg string:LOG_MESSAGE_MAX;
+    });
 
     /// Logs the results of a test case.
-    LogTestCase(string:TEST_CASE_NAME_MAX name, TestCaseResult result);
+    LogTestCase(struct {
+        name string:TEST_CASE_NAME_MAX;
+        result TestCaseResult;
+    });
 };

@@ -1,48 +1,46 @@
 // Copyright 2017 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.modular;
 
 using fuchsia.mem;
 
 /// The Intent struct is a runtime descriptor for an abstract action to be initiated
 /// in Fuchsia. For details please see docs/intent.md.
-resource struct Intent {
+type Intent = resource struct {
     /// The name of the action represented by this Intent.
     ///
     /// This is nullable for backwards compatibility.
     // TODO(fxbug.dev/15983): Make action non-nullable.
-    string:MAX? action;
+    action string:<MAX, optional>;
 
     /// An explicit handler for the Intent. Specified as the component URL of the
     /// module.
-    string:MAX? handler;
+    handler string:<MAX, optional>;
 
     /// NON-FUNCTIONAL: `parameters` is no longer supported but must remain for ABI compatibility.
-    vector<IntentParameter>:MAX? parameters;
+    parameters vector<IntentParameter>:<MAX, optional>;
 };
 
 /// NON-FUNCTIONAL: `IntentParameter` is no longer supported but must remain for ABI compatibility.
 /// A struct representing a parameter that is passed to the handler of an Intent's
 /// Action.
-resource struct IntentParameter {
+type IntentParameter = resource struct {
     /// The name of the parameter. The handler (i.e. selected mod) will be provided
     /// with the data for this parameter under a link called `name`.
-    string:MAX? name;
+    name string:<MAX, optional>;
 
     /// The data that will be passed to the intent handler.
-    IntentParameterData data;
+    data IntentParameterData;
 };
 
 /// NON-FUNCTIONAL: `IntentParameterData` is no longer supported but must remain defined for
 /// `IntentParameter`'s ABI compatibility.
-resource union IntentParameterData {
+type IntentParameterData = strict resource union {
     /// Set this if you already have an Entity reference at runtime.
     /// Entity.getTypes() will be used to set the constraints for this noun during
     /// resolution.
-    1: string:MAX entity_reference;
+    1: entity_reference string:MAX;
 
     /// Set this if you have structured JSON data. Values typically are a JSON
     /// object with a "@type" attribute and other associated data.  TODO(thatguy):
@@ -50,7 +48,7 @@ resource union IntentParameterData {
     /// eventually and move entirely to using Entity references.
     ///
     /// DEPRECATED: Use `entity_reference`.
-    2: fuchsia.mem.Buffer json;
+    2: json fuchsia.mem.Buffer;
 
     /// Set this if you want to explicitly define this noun's allowed types. This
     /// is also useful in the cases where the noun has a 'direction' of type
@@ -60,5 +58,5 @@ resource union IntentParameterData {
     ///
     /// Only one entry in `entity_type` must match the constraint specified by
     /// the Module for the constraint to be considered satisfied.
-    3: vector<string:MAX>:MAX entity_type;
+    3: entity_type vector<string:MAX>:MAX;
 };

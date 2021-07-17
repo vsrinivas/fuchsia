@@ -1,8 +1,6 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.io.test;
 
 using fuchsia.mem;
@@ -37,66 +35,68 @@ using zx;
 /// about the filesystem implementation. For example, setting [`ImmutableFile`]
 /// to true informs the test suites that files hosted by this harness do not
 /// support mutation.
-table Io1Config {
+type Io1Config = table {
     /// Files are read-only.
-    1: bool immutable_file;
+    1: immutable_file bool;
 
     /// Directories are read-only.
-    2: bool immutable_dir;
+    2: immutable_dir bool;
 
     /// The exec right is not supported.
-    3: bool no_exec;
+    3: no_exec bool;
 
     /// Vmofiles are not supported.
-    4: bool no_vmofile;
+    4: no_vmofile bool;
 
     /// Remote directories are not supported.
-    5: bool no_remote_dir;
+    5: no_remote_dir bool;
 
     /// The admin right is not supported.
-    6: bool no_admin;
+    6: no_admin bool;
 
     /// The GetBuffer method is not supported.
-    7: bool no_get_buffer;
+    7: no_get_buffer bool;
 
     /// The Rename method is not supported.
-    8: bool no_rename;
+    8: no_rename bool;
 
     /// The Link and Unlink methods are not supported.
-    9: bool no_link;
+    9: no_link bool;
 
     /// The SetAttr method is not supported.
-    10: bool no_set_attr;
+   10: no_set_attr bool;
 };
 
-resource table Directory {
+type Directory = resource table {
     /// Name not required for root directory.
-    1: string name;
+    1: name string;
 
     /// Nullable to sidestep recursion rules. Don't actually supply nulls.
-    2: vector<DirectoryEntry?> entries;
+    2: entries vector<DirectoryEntry:optional>;
 };
 
-table File {
-    1: string name;
-    2: bytes contents;
+type File = table {
+    1: name string;
+    2: contents bytes;
 };
 
-resource table VmoFile {
-    1: string name;
-    2: fuchsia.mem.Range buffer;
+type VmoFile = resource table {
+    1: name string;
+    2: buffer fuchsia.mem.Range;
 };
 
-resource union DirectoryEntry {
-    1: Directory directory;
-    2: File file;
-    3: VmoFile vmo_file;
+type DirectoryEntry = strict resource union {
+    1: directory Directory;
+    2: file File;
+    3: vmo_file VmoFile;
 };
 
-[Discoverable]
+@discoverable
 protocol Io1Harness {
     /// Returns the list of properties of the filesystem.
-    GetConfig() -> (Io1Config config);
+    GetConfig() -> (struct {
+        config Io1Config;
+    });
 
     /// Serves a directory with the given contents.
     ///
@@ -104,9 +104,11 @@ protocol Io1Harness {
     /// used for the test case. The root directory that is served (returned via
     /// `directory_request`) will have the equivalent contents, served with the
     /// given `flags`.
-    GetDirectory(Directory root,
-                 uint32 flags,
-                 request<fuchsia.io.Directory> directory_request);
+    GetDirectory(resource struct {
+        root Directory;
+        flags uint32;
+        directory_request server_end:fuchsia.io.Directory;
+    });
 
     /// Serves a directory that holds a child `remote_directory` with name
     /// `dir_name`. The `directory_request` connection to the root directory
@@ -122,17 +124,19 @@ protocol Io1Harness {
     ///
     /// TODO(fxbug.dev/33880): Add suppport for remote directories to
     /// GetDirectory and then delete this method.
-    GetDirectoryWithRemoteDirectory(fuchsia.io.Directory remote_directory,
-                                    string name,
-                                    uint32 flags,
-                                    request<fuchsia.io.Directory> directory_request);
+    GetDirectoryWithRemoteDirectory(resource struct {
+        remote_directory client_end:fuchsia.io.Directory;
+        name string;
+        flags uint32;
+        directory_request server_end:fuchsia.io.Directory;
+    });
 };
 
 /// Stub harness api for the io2.fidl protocol.
 /// TODO(fxbug.dev/46082): Add separate io2 test harness api once we come up with a
 /// good enough set of functions that we have enough flexibility to create
 /// variable directory structures to with explicit permission settings for tests.
-[Discoverable]
+@discoverable
 protocol Io2Harness {
     /// Prepares a test case with an empty directory. The directory metadata
     /// and directory entires should be read-only.
@@ -149,5 +153,7 @@ protocol Io2Harness {
     ///     * [`fuchsia.io2/Rights.GET_ATTRIBUTES`].
     ///     * [`fuchsia.io2/Rights.UPDATE_ATTRIBUTES`].
     ///
-    GetEmptyDirectory(zx.handle:CHANNEL directory_request);
+    GetEmptyDirectory(resource struct {
+        directory_request zx.handle:CHANNEL;
+    });
 };

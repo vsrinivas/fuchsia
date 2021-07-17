@@ -1,25 +1,23 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.fonts;
 
 alias Weight = uint16;
 
 // Commonly used constants for font weight.
-const Weight WEIGHT_THIN = 100;
-const Weight WEIGHT_EXTRA_LIGHT = 200;
-const Weight WEIGHT_LIGHT = 300;
-const Weight WEIGHT_NORMAL = 400;
-const Weight WEIGHT_MEDIUM = 500;
-const Weight WEIGHT_SEMI_BOLD = 600;
-const Weight WEIGHT_BOLD = 700;
-const Weight WEIGHT_EXTRA_BOLD = 800;
-const Weight WEIGHT_BLACK = 900;
+const WEIGHT_THIN Weight = 100;
+const WEIGHT_EXTRA_LIGHT Weight = 200;
+const WEIGHT_LIGHT Weight = 300;
+const WEIGHT_NORMAL Weight = 400;
+const WEIGHT_MEDIUM Weight = 500;
+const WEIGHT_SEMI_BOLD Weight = 600;
+const WEIGHT_BOLD Weight = 700;
+const WEIGHT_EXTRA_BOLD Weight = 800;
+const WEIGHT_BLACK Weight = 900;
 
 /// The type of slant of a type face.
-enum Slant {
+type Slant = strict enum {
     /// The default; upright glyphs.
     UPRIGHT = 1;
     /// Specially designed, slanted and slightly calligraphic glyphs.
@@ -32,7 +30,7 @@ enum Slant {
 /// Horizontal width class of the glyphs.
 ///
 /// See https://docs.microsoft.com/en-us/typography/opentype/spec/os2#uswidthclass.
-enum Width {
+type Width = strict enum {
     /// 50% of normal width
     ULTRA_CONDENSED = 1;
     /// 62.5% of normal width
@@ -54,18 +52,18 @@ enum Width {
 };
 
 /// Default weight of a typeface when none is specified.
-const Weight DEFAULT_WEIGHT = WEIGHT_NORMAL;
+const DEFAULT_WEIGHT Weight = WEIGHT_NORMAL;
 
 /// Default slant of a typeface when none is specified.
-const Slant DEFAULT_SLANT = Slant.UPRIGHT;
+const DEFAULT_SLANT Slant = Slant.UPRIGHT;
 
 /// Default width of a typeface when none is specified.
-const Width DEFAULT_WIDTH = Width.NORMAL;
+const DEFAULT_WIDTH Width = Width.NORMAL;
 
 /// Style properties that can be used when requesting or describing a type face.
-table Style2 {
+type Style2 = table {
     /// See `Slant`.
-    1: Slant slant;
+    1: slant Slant;
     /// Weight or thickness of the glyphs. Allowed values are integers in the range [1, 1000], but
     /// most real-world font families only support some integer multiples of 100:
     /// {100, 200, ..., 900}. Normal text (`WEIGHT_NORMAL`) is 400; `WEIGHT_BOLD` is 700.
@@ -73,9 +71,9 @@ table Style2 {
     /// See:
     /// https://developer.mozilla.org/en-US/docs/Web/CSS/font-weight#Common_weight_name_mapping
     /// https://docs.microsoft.com/en-us/typography/opentype/spec/os2#usweightclass
-    2: Weight weight;
+    2: weight Weight;
     /// See `Width`.
-    3: Width width;
+    3: width Width;
 };
 
 /// Generic groups of font families that can serve as fallbacks for a specific family.
@@ -89,7 +87,7 @@ table Style2 {
 ///
 /// See also:
 /// https://www.w3.org/TR/css-fonts-4/#generic-font-families
-enum GenericFontFamily {
+type GenericFontFamily = strict enum {
     /// Glyphs have little "serifs", hooks, or notches at the ends of most strokes.
     /// Examples: Georgia, Noto Serif, Times New Roman.
     SERIF = 1;

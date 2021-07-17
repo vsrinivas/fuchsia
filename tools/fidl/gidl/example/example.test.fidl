@@ -1,34 +1,32 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library example;
 
-struct OneStringOfMaxLengthFive {
-    string:5 the_string;
+type OneStringOfMaxLengthFive = struct {
+    the_string string:5;
 };
 
-struct StructOnlyPrimitives {
-    int32 i;
-    bool b;
-    uint16 u;
+type StructOnlyPrimitives = struct {
+    i int32;
+    b bool;
+    u uint16;
 };
 
-table TableOnlyPrimitives {
-    1: int32 i;
-    2: bool b;
-    3: uint16 u;
+type TableOnlyPrimitives = table {
+    1: i int32;
+    2: b bool;
+    3: u uint16;
 };
 
-flexible union UnionOnlyPrimitives {
-    1: int32 i;
-    2: bool b;
-    3: uint16 u;
+type UnionOnlyPrimitives = flexible union {
+    1: i int32;
+    2: b bool;
+    3: u uint16;
 };
 
-flexible union UnionWithTableStructString {
-    1: StructOnlyPrimitives struct;
-    2: TableOnlyPrimitives table;
-    3: UnionOnlyPrimitives union;
+type UnionWithTableStructString = flexible union {
+    1: struct StructOnlyPrimitives;
+    2: table TableOnlyPrimitives;
+    3: union UnionOnlyPrimitives;
 };

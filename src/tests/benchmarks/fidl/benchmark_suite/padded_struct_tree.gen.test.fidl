@@ -1,49 +1,47 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 // GENERATED FILE: Regen with $(fx get-build-dir)/host-tools/regen_fidl_benchmark_suite
 
 library benchmarkfidl;
 
-struct PaddedStructTree1 {
-    uint8 a;
+type PaddedStructTree1 = struct {
+    a uint8;
     // 3 byte padding
-    uint32 b;
+    b uint32;
 };
 
-struct PaddedStructTree2 {
-    PaddedStructTree1 left;
-    PaddedStructTree1 right;
+type PaddedStructTree2 = struct {
+    left PaddedStructTree1;
+    right PaddedStructTree1;
 };
 
-struct PaddedStructTree3 {
-    PaddedStructTree2 left;
-    PaddedStructTree2 right;
+type PaddedStructTree3 = struct {
+    left PaddedStructTree2;
+    right PaddedStructTree2;
 };
 
-struct PaddedStructTree4 {
-    PaddedStructTree3 left;
-    PaddedStructTree3 right;
+type PaddedStructTree4 = struct {
+    left PaddedStructTree3;
+    right PaddedStructTree3;
 };
 
-struct PaddedStructTree5 {
-    PaddedStructTree4 left;
-    PaddedStructTree4 right;
+type PaddedStructTree5 = struct {
+    left PaddedStructTree4;
+    right PaddedStructTree4;
 };
 
-struct PaddedStructTree6 {
-    PaddedStructTree5 left;
-    PaddedStructTree5 right;
+type PaddedStructTree6 = struct {
+    left PaddedStructTree5;
+    right PaddedStructTree5;
 };
 
-struct PaddedStructTree7 {
-    PaddedStructTree6 left;
-    PaddedStructTree6 right;
+type PaddedStructTree7 = struct {
+    left PaddedStructTree6;
+    right PaddedStructTree6;
 };
 
-struct PaddedStructTree8 {
-    PaddedStructTree7 left;
-    PaddedStructTree7 right;
+type PaddedStructTree8 = struct {
+    left PaddedStructTree7;
+    right PaddedStructTree7;
 };

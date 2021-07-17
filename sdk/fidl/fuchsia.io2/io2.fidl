@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 /// # Library Overview
 ///
 library fuchsia.io2;
@@ -25,7 +23,7 @@ using zx;
 alias Name = string:MAX_NAME_LENGTH;
 
 /// The maximum length, in bytes, of a single filesystem component.
-const uint64 MAX_NAME_LENGTH = 255;
+const MAX_NAME_LENGTH uint64 = 255;
 
 /// A path is a string of one or more components, separated by "/".
 /// E.g. `foo/bar/baz`
@@ -46,7 +44,7 @@ const uint64 MAX_NAME_LENGTH = 255;
 alias Path = string:MAX_PATH_LENGTH;
 
 /// The maximum length, in bytes, of a filesystem path.
-const uint64 MAX_PATH_LENGTH = 4095;
+const MAX_PATH_LENGTH uint64 = 4095;
 
 /// The type to identify a connection to a node.
 /// It represents a capability: a reference to a node with associated rights.

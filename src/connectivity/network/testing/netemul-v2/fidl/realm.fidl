@@ -1,7 +1,6 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
 library fuchsia.netemul;
 
 using fuchsia.component;
@@ -10,85 +9,84 @@ using fuchsia.netemul.network;
 using fuchsia.url;
 using zx;
 
-struct Empty {
-};
+type Empty = struct {};
 
 /// A capability exposed by a component in a [`ManagedRealm`].
-union ExposedCapability {
+type ExposedCapability = strict union {
     /// The name of the exposed service.
-    1: string:fuchsia.component.MAX_PATH_LENGTH service;
+    1: service string:fuchsia.component.MAX_PATH_LENGTH;
 };
 
 /// A dependency of one child component on a capability exposed by another in
 /// the same realm.
-table ChildDep {
+type ChildDep = table {
     /// The name of the child exposing the needed capability. Required.
-    1: fuchsia.component.name name;
+    1: name fuchsia.component.name;
     /// The exposed capability. Required.
-    2: ExposedCapability capability;
+    2: capability ExposedCapability;
 };
 
 /// A capability to be offered to a child component in a [`ManagedRealm`].
-union Capability {
+type Capability = strict union {
     /// The `devfs` instance offered by netemul, where virtual devices are
     /// mounted.
-    1: Empty netemul_devfs;
+    1: netemul_devfs Empty;
     /// The synchronization manager offered by netemul, shared between all the
     /// managed realms in a given sandbox.
-    2: Empty netemul_sync_manager;
+    2: netemul_sync_manager Empty;
     /// The network context offered by netemul, shared between all the managed
     /// realms in a given sandbox.
-    3: Empty netemul_network_context;
+    3: netemul_network_context Empty;
     /// The [`fuchsia.logger/LogSink`] offered by netemul.
     ///
     /// Decorates logs produced by components in the managed realm and forwards
     /// them to syslog.
-    4: Empty log_sink;
+    4: log_sink Empty;
     /// A dependency on a capability exposed by another child component in the
     /// same test realm.
-    5: ChildDep child_dep;
+    5: child_dep ChildDep;
 };
 
 /// The capabilities used by a child component in a [`ManagedRealm`].
-union ChildUses {
+type ChildUses = strict union {
     /// The child will be offered all the capabilities available in the realm,
     /// including all built-in capabilities offered by netemul as well as all
     /// capabilities offered by other child components in the same realm.
-    1: Empty all;
+    1: all Empty;
     /// The child will be offered each of the specified capabilities.
     ///
     /// `capabilities` must be unique.
-    2: vector<Capability>:MAX capabilities;
+    2: capabilities vector<Capability>:MAX;
 };
 
 /// The definition of a child component to be added to a [`ManagedRealm`].
-table ChildDef {
+type ChildDef = table {
     /// The component URL of this child. Required.
-    1: fuchsia.url.Url url;
+    1: url fuchsia.url.Url;
     /// The name of this child local to its containing realm. Required.
-    2: fuchsia.component.name name;
+    2: name fuchsia.component.name;
     /// Services that this child exposes to the realm. Defaults to empty.
-    3: vector<string:fuchsia.component.MAX_PATH_LENGTH>:MAX exposes;
+    3: exposes vector<string:fuchsia.component.MAX_PATH_LENGTH>:MAX;
     /// Services that this child uses. Defaults to
     /// [`fuchsia.netemul/ChildUses.all`].
-    4: ChildUses uses;
+    4: uses ChildUses;
     /// Arguments to be passed to the child at runtime. If specified, overrides
     /// any arguments specified in the manifest. If left unspecified, the
     /// original arguments from the manifest are used.
-    5: vector<string:MAX>:MAX program_args;
+    5: program_args vector<string:MAX>:MAX;
 };
 
 /// Options used to create a [`ManagedRealm`].
-resource table RealmOptions {
+type RealmOptions = resource table {
     /// Realm name. Defaults to an automatically-generated name.
     ///
     /// The realm name is used for attribution and debugging purposes. It is
     /// used to decorate logs that come from its constituent child components.
-    1: string:MAX name;
+    1: name string:MAX;
     /// Child components to dynamically create in this realm. Defaults to empty.
     ///
     /// If empty, no additional services will be registered.
-    2: vector<ChildDef>:MAX children;
+    2: children vector<ChildDef>:MAX;
 };
 
 /// `ManagedRealm` is a netemul-managed realm.
@@ -108,7 +106,9 @@ protocol ManagedRealm {
     ///
     /// - response `moniker` the relative moniker of the root of the generated
     ///     topology that contains this realm's child components.
-    GetMoniker() -> (string:fuchsia.component.MAX_MONIKER_LENGTH moniker);
+    GetMoniker() -> (struct {
+        moniker string:fuchsia.component.MAX_MONIKER_LENGTH;
+    });
     /// Connects to a service named `service_name` provided by a child in this
     /// realm.
     ///
@@ -120,7 +120,11 @@ protocol ManagedRealm {
     ///     the requested service.
     /// + request `req` a channel to be bound to an implementation of the
     ///     service.
-    ConnectToService(string:fuchsia.component.MAX_PATH_LENGTH service_name, fuchsia.component.name? child_name, zx.handle:CHANNEL req);
+    ConnectToService(resource struct {
+        service_name string:fuchsia.component.MAX_PATH_LENGTH;
+        child_name fuchsia.component.name:optional;
+        req zx.handle:CHANNEL;
+    });
     /// Mounts new virtual device `device` on netemul's `devfs` instance within
     /// this realm.
     ///
@@ -133,7 +137,10 @@ protocol ManagedRealm {
     /// * error `ZX_ERR_ALREADY_EXISTS` if `device.path` is already in use.
     /// * error `ZX_ERR_INVALID_ARGS` if an element of `path` exceeds [`fuchsia.io/MAX_FILENAME`]
     //      bytes in length.
-    AddDevice(string:MAX path, fuchsia.netemul.network.DeviceProxy device) -> () error zx.status;
+    AddDevice(resource struct {
+        path string:MAX;
+        device client_end:fuchsia.netemul.network.DeviceProxy;
+    }) -> (struct {}) error zx.status;
     /// Removes virtual device mounted at `path`.
     ///
     /// + request `path` the path to virtual device to be removed from the
@@ -141,9 +148,13 @@ protocol ManagedRealm {
     /// * error `ZX_ERR_NOT_FOUND` if `path` is not currently bound to a device.
     /// * error `ZX_ERR_INVALID_ARGS` if an element of `path` exceeds [`fuchsia.io/MAX_FILENAME`]
     //      bytes in length.
-    RemoveDevice(string:MAX path) -> () error zx.status;
+    RemoveDevice(struct {
+        path string:MAX;
+    }) -> (struct {}) error zx.status;
     /// Connects to netemul's `devfs` instance for this realm.
     ///
     /// + request `devfs` request handle to the `devfs` directory.
-    GetDevfs(request<fuchsia.io.Directory> devfs);
+    GetDevfs(resource struct {
+        devfs server_end:fuchsia.io.Directory;
+    });
 };

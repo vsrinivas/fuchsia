@@ -1,29 +1,27 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.lowpan.device;
 
 using fuchsia.lowpan;
 
 /// Describes the result from one channel of an energy scan.
-table EnergyScanResult {
-    1: ChannelIndex channel_index;
+type EnergyScanResult = table {
+    1: channel_index ChannelIndex;
 
     /// The maximum RSSI detected on this channel.
-    2: int32 max_rssi;
+    2: max_rssi int32;
 
     /// The minimum RSSI detected on this channel.
-    3: int32 min_rssi;
+    3: min_rssi int32;
 };
 
 /// Describes the parameters of an energy scan.
-table EnergyScanParameters {
+type EnergyScanParameters = table {
     /// Subset of channels to scan.
     ///
     /// If unspecified, all channels will be scanned.
-    1: vector<ChannelIndex>:fuchsia.lowpan.MAX_CHANNELS channels;
+    1: channels vector<ChannelIndex>:fuchsia.lowpan.MAX_CHANNELS;
 
     /// Desired dwell time per-channel for the energy scan,
     /// measured in milliseconds.
@@ -43,7 +41,7 @@ table EnergyScanParameters {
     /// device is capable of.
     ///
     /// If unspecified, a dwell time of approximately 500ms will be used.
-    2: uint32 dwell_time_ms;
+    2: dwell_time_ms uint32;
 };
 
 /// Protocol for returning the results of an energy scan operation.
@@ -53,5 +51,7 @@ protocol EnergyScanResultStream {
     /// Called to fetch the next set of energy scan results.
     ///
     /// The last set will have zero items and the protocol will be closed.
-    Next() -> (vector<EnergyScanResult>:MAX_STREAM_SET_SIZE results);
+    Next() -> (struct {
+        results vector<EnergyScanResult>:MAX_STREAM_SET_SIZE;
+    });
 };

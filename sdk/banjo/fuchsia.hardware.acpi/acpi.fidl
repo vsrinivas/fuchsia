@@ -1,36 +1,64 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
 library fuchsia.hardware.acpi;
 
 using zx;
 
-resource struct AcpiMmio {
+type AcpiMmio = resource struct {
     /// Offset from beginning of VMO where the mmio region begins.
-    zx.off offset;
+    offset zx.off;
     /// Size of mmio region.
-    uint64 size;
-    zx.handle:VMO vmo;
+    size uint64;
+    vmo zx.handle:VMO;
 };
 
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol Acpi {
     /// Tells the ACPI driver to start listening for fuchsia.hardware.acpi
     /// messages on server.
     /// See //sdk/fidl/fuchsia.hardware.acpi/device.fidl.
-    ConnectServer(zx.handle:CHANNEL server) -> ();
-    GetPio(uint32 index) -> (zx.status s, zx.handle:RESOURCE pio);
-    GetMmio(uint32 index) -> (zx.status s, AcpiMmio mmio);
-    GetBti(uint32 bdf, uint32 index) -> (zx.status s, zx.handle:BTI bti);
-    ConnectSysmem(zx.handle:CHANNEL connection) -> (zx.status s);
-    RegisterSysmemHeap(uint64 heap, zx.handle:CHANNEL connection) -> (zx.status s);
+    ConnectServer(resource struct {
+        server zx.handle:CHANNEL;
+    }) -> ();
+    GetPio(struct {
+        index uint32;
+    }) -> (resource struct {
+        s zx.status;
+        pio zx.handle:RESOURCE;
+    });
+    GetMmio(struct {
+        index uint32;
+    }) -> (resource struct {
+        s zx.status;
+        mmio AcpiMmio;
+    });
+    GetBti(struct {
+        bdf uint32;
+        index uint32;
+    }) -> (resource struct {
+        s zx.status;
+        bti zx.handle:BTI;
+    });
+    ConnectSysmem(resource struct {
+        connection zx.handle:CHANNEL;
+    }) -> (struct {
+        s zx.status;
+    });
+    RegisterSysmemHeap(resource struct {
+        heap uint64;
+        connection zx.handle:CHANNEL;
+    }) -> (struct {
+        s zx.status;
+    });
 };
 
 /// A generic ACPI device. This will allow devices to query information directly
 /// from ACPI, removing the need for them to be implemented directly in the
 /// board driver.
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol AcpiDevice {
     /// For now, this has a single stub method, since banjo protocols require
     /// at least one method, but we will add methods as the requirements become

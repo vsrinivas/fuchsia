@@ -1,24 +1,22 @@
 // Copyright 2016 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.modular.internal;
 
 using fuchsia.modular;
 
 /// Metadata and summary information about a single story.  Does not contain the
 /// data necessary to run a story: see story_model.fidl for that.
-resource table StoryData {
+type StoryData = resource table {
     /// Metadata available to the SessionShell.
-    1: fuchsia.modular.StoryInfo2 story_info;
+    1: story_info fuchsia.modular.StoryInfo2;
 
     /// A client-supplied name for this story.
-    2: string story_name;
+    2: story_name string;
 
     /// Story metadata and configuration.
-    3: fuchsia.modular.StoryOptions story_options;
+    3: story_options fuchsia.modular.StoryOptions;
 
     /// Page id on the user's ledger which stores story information.
-    4: string story_page_id;
+    4: story_page_id string;
 };

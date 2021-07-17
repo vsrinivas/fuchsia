@@ -1,19 +1,26 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library zx;
 
-[Transport = "Syscall"]
+@transport("Syscall")
 protocol cprng {
-    [internal]
-    cprng_draw_once() -> (status status, vector_void buffer);
+    @internal
+    cprng_draw_once() -> (struct {
+        status status;
+        buffer vector_void;
+    });
 
     /// Draw from the kernel's CPRNG.
-    [vdsocall]
-    cprng_draw() -> (vector_void buffer);
+    @vdsocall
+    cprng_draw() -> (struct {
+        buffer vector_void;
+    });
 
     /// Add entropy to the kernel CPRNG.
-    cprng_add_entropy(vector_void buffer) -> (status status);
+    cprng_add_entropy(struct {
+        buffer vector_void;
+    }) -> (struct {
+        status status;
+    });
 };

@@ -1,8 +1,6 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.auth;
 
 /// A unique identifier for an account with some service provider, comprised of
@@ -12,12 +10,12 @@ library fuchsia.auth;
 // TODO(jsankey): Integrate other parts of the AuthProvider API with this
 // domain-based identity. In general multiple auth_provider_types may exist for
 // the same identity_provider_domain.
-struct ServiceProviderAccount {
+type ServiceProviderAccount = struct {
     /// The primary domain of the identity provider, such as "www.google.com".
-    string identity_provider_domain;
+    identity_provider_domain string;
 
     /// User identifier as supplied by the identity provider. Some identity
     /// providers send verified email address as the identifier, some send an
     /// opaque string.
-    string user_profile_id;
+    user_profile_id string;
 };

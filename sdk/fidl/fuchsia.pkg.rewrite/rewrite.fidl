@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.pkg.rewrite;
 
 using zx;
@@ -32,12 +30,12 @@ using zx;
 ///     path_prefix_replacement: "/rolldice"
 /// }
 /// ```
-struct LiteralRule {
+type LiteralRule = struct {
     /// The exact hostname to match.
-    string host_match;
+    host_match string;
 
     /// The new hostname to replace the matched `host_match` with.
-    string host_replacement;
+    host_replacement string;
 
     /// The absolute path to a package or directory to match against.
     ///
@@ -54,7 +52,7 @@ struct LiteralRule {
     /// "/example/" would match any package under the "example" path at the root
     /// of the repo.  For example, "/example/", "/example/package" would both
     /// match.
-    string path_prefix_match;
+    path_prefix_match string;
 
     /// The absolute path to a single package or a directory to replace the
     /// matched `path_prefix_match` with.
@@ -62,12 +60,12 @@ struct LiteralRule {
     /// `path_prefix_match` and `path_prefix_replacement` must both match
     /// directories or both match exact packages. Mixing the two forms is not
     /// allowed.
-    string path_prefix_replacement;
+    path_prefix_replacement string;
 };
 
 /// A rewrite rule, represented as an xunion for future compatibility.
-flexible union Rule {
-    1: LiteralRule literal;
+type Rule = flexible union {
+    1: literal LiteralRule;
 };
 
 /// This manages fuchsia-pkg:// rewrite rules.
@@ -82,24 +80,30 @@ flexible union Rule {
 ///
 /// This is intended to be implemented by package resolver components,
 /// and used by repository administration tools.
-[Discoverable]
+@discoverable
 protocol Engine {
     /// Begins a rule edit transaction.
     ///
     /// + request `transaction` a request for an [`EditTransaction`].
-    StartEditTransaction(request<EditTransaction> transaction);
+    StartEditTransaction(resource struct {
+        transaction server_end:EditTransaction;
+    });
 
     /// Returns an iterator over all rewrite rules.
     ///
     /// + request `iterator` a request for an iterator.
-    List(request<RuleIterator> iterator);
+    List(resource struct {
+        iterator server_end:RuleIterator;
+    });
 
     /// Returns an iterator over all static (immutable) rewrite rules. These
     /// rules are handled as lower priority than dynamic rules and cannot be
     /// modified (although they can be overridden) by [`EditTransaction`]s.
     ///
     /// + request `iterator` a request for an iterator.
-    ListStatic(request<RuleIterator> iterator);
+    ListStatic(resource struct {
+        iterator server_end:RuleIterator;
+    });
 
     /// Rewrites the given `url` with the current rewrite rule set, returning the
     /// `rewritten` url.  If no rules match or a rule matches but performs an
@@ -117,7 +121,11 @@ protocol Engine {
     ///
     /// [`fuchsia-pkg URL`]:
     ///    https://fuchsia.dev/fuchsia-src/concepts/storage/package_url
-    TestApply(string url) -> (string rewritten) error zx.status;
+    TestApply(struct {
+        url string;
+    }) -> (struct {
+        rewritten string;
+    }) error zx.status;
 };
 
 /// A unit of editing for rewrite rules.
@@ -127,7 +135,9 @@ protocol EditTransaction {
     /// this transaction.
     ///
     /// + request `iterator` a request for an iterator.
-    ListDynamic(request<RuleIterator> iterator);
+    ListDynamic(resource struct {
+        iterator server_end:RuleIterator;
+    });
 
     /// Removes all dynamically configured rewrite rules, leaving only any
     /// statically configured rules.
@@ -143,7 +153,9 @@ protocol EditTransaction {
     ///
     /// [`fuchsia-pkg URL`]:
     ///    https://fuchsia.dev/fuchsia-src/concepts/storage/package_url
-    Add(Rule rule) -> () error zx.status;
+    Add(struct {
+        rule Rule;
+    }) -> (struct {}) error zx.status;
 
     /// Commits this transaction, or detect another transaction that committed
     /// before this one.
@@ -151,7 +163,7 @@ protocol EditTransaction {
     /// * error a zx_status value indicating failure. One of the following:
     ///     * `ZX_ERR_UNAVAILABLE` if another transaction committed before this one.
     ///     * `ZX_ERR_ACCESS_DENIED` if editing dynamic rewrite rules is permanently disabled.
-    Commit() -> () error zx.status;
+    Commit() -> (struct {}) error zx.status;
 };
 
 /// The iterator over all the rewrite rules defined in a [`Engine`].
@@ -160,5 +172,7 @@ protocol RuleIterator {
     ///
     /// - response `rules` a vector of [`Rule`] rules. Will return an empty
     ///    vector and then close the channel when there are no more rules.
-    Next() -> (vector<Rule> rules);
+    Next() -> (struct {
+        rules vector<Rule>;
+    });
 };

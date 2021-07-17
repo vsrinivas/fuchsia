@@ -1,8 +1,6 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.audio;
 
 using fuchsia.media2;
@@ -22,18 +20,20 @@ protocol Capturer {
     ///
     /// Multiple stream sinks may be used sequentially for a given capturer. This method responds
     /// when the connection is ready or the connect attempt fails.
-    ConnectOutputStream(
-        zx.handle:EVENTPAIR buffer_collection_token,
-        fuchsia.mediastreams.AudioFormat format,
-        fuchsia.media2.TimestampUnits timestamp_units,
-        fuchsia.media2.StreamSink stream_sink)
-        -> () error fuchsia.media2.ConnectionError;
+    ConnectOutputStream(resource struct {
+        buffer_collection_token zx.handle:EVENTPAIR;
+        format fuchsia.mediastreams.AudioFormat;
+        timestamp_units fuchsia.media2.TimestampUnits;
+        stream_sink client_end:fuchsia.media2.StreamSink;
+    }) -> (struct {}) error fuchsia.media2.ConnectionError;
 
     /// Disconnects the output stream.
     DisconnectOutputStream();
 
     /// Indicates that the current output stream has been disconnected unexpectedly.
-    -> OnOutputStreamDisconnected(zx.status status);
+    -> OnOutputStreamDisconnected(struct {
+        status zx.status;
+    });
 
     /// Indicates that the stream sink previously created is invalid,
     /// and the client should create another one if it wishes to
@@ -50,7 +50,11 @@ protocol Capturer {
     /// If the capturer is currently running, this method does nothing except return the same value
     /// returned by the previous `Start` call. If a start or stop transition is currently scheduled
     /// when this method is called, that scheduled transition is first cancelled.
-    Start(zx.time reference_time) -> (zx.time reference_time);
+    Start(struct {
+        reference_time zx.time;
+    }) -> (struct {
+        reference_time zx.time;
+    });
 
     /// Stops the capturer.
     ///
@@ -63,19 +67,25 @@ protocol Capturer {
     /// returned by the previous `Stop` call or 0,0 if this capturer has never been started. If a
     /// start or stop transition is currently scheduled when this method is called, that scheduled
     /// transition is first cancelled.
-    Stop(zx.time reference_time) -> (zx.time reference_time);
+    Stop(struct {
+        reference_time zx.time;
+    }) -> (struct {
+        reference_time zx.time;
+    });
 
     /// Sets the reference clock to use for this capturer. All ‘reference time’ values for this
     /// capturer are interprete with respect to this clock. If this method is never called, the
     /// reference clock is the system’s monotonic clock.
     // TODO: Does this belong in the factory method?
-    SetReferenceClock(zx.handle:CLOCK reference_clock);
+    SetReferenceClock(resource struct {
+        reference_clock zx.handle:CLOCK;
+    });
 
-    // Binds the volume control for the capturer.
-    // TODO: Does this belong in the factory method?
-    //BindVolumeControl(request<VolumeControl> request);
+// Binds the volume control for the capturer.
+// TODO: Does this belong in the factory method?
+//BindVolumeControl(request<VolumeControl> request);
 
-    // Binds the gain control for the capturer.
-    // TODO: Does this belong in the factory method?
-    //BindGainControl(request<GainControl> request);
+// Binds the gain control for the capturer.
+// TODO: Does this belong in the factory method?
+//BindGainControl(request<GainControl> request);
 };

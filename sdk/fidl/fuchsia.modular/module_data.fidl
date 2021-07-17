@@ -1,38 +1,36 @@
 // Copyright 2017 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.modular;
 
 using fuchsia.sys;
 
 /// Information about a Module instance in a story.
-resource table ModuleData {
+type ModuleData = resource table {
     /// The URL of the Module binary.
-    1: string:MAX module_url;
+    1: module_url string:MAX;
 
     /// The named path leading up to this Module instance. The last name in this
     /// array is the name by which the Module was started by the parent Module
     /// instance calling StartModule().
-    2: vector<string:MAX>:MAX module_path;
+    2: module_path vector<string:MAX>:MAX;
 
     3: reserved;
 
     /// The way in which this Module instance was first started in the story,
     /// either by request from another Module instance (INTERNAL) or by request
     /// from outside the story (i.e. by suggestion from an agent - EXTERNAL).
-    4: ModuleSource module_source;
+    4: module_source ModuleSource;
 
     /// The `surface_relation` that was used to start this Module instance with.
     /// The same is used when re-inflating the Module instance when the story is
     /// resumed. A SurfaceRelation value of null represents an embedded Module
     /// instance (started by EmbedModule()) that is not managed by the story shell.
-    5: SurfaceRelation surface_relation;
+    5: surface_relation SurfaceRelation;
 
     /// True if this module was removed from its story either through
     /// ModuleController.Stop() or ModuleContext.RemoveSelfFromStory().
-    6: bool module_deleted;
+    6: module_deleted bool;
 
     /// The intent that was issued to start add this Module instance to the story.
     /// Some Module instances may have been added not by an Intent, for example as
@@ -41,25 +39,25 @@ resource table ModuleData {
     /// TODO(thatguy,mesch): This field should now always be set, so make it
     /// required once the framework is cleaned up enough to guarantee this
     /// statement.
-    7: Intent intent;
+    7: intent Intent;
 
     /// If true, this module was started by a parent module using
     /// ModuleContext.EmbedModule(), and its view is not managed by the
     /// StoryShell.
-    8: bool is_embedded;
+    8: is_embedded bool;
 
     /// Collection of user-defined key-value attributes that describe this surface (module).
     ///
     /// The `Annotation.value` field of each `Annotation` is always set.
-    9: vector<Annotation>:MAX_ANNOTATIONS_PER_MODULE annotations;
+    9: annotations vector<Annotation>:MAX_ANNOTATIONS_PER_MODULE;
 
     /// Services passed to the module.
     ///
     /// This is only set for modules that represent elements.
-    10: fuchsia.sys.ServiceList additional_services;
+   10: additional_services fuchsia.sys.ServiceList;
 };
 
-enum ModuleSource {
+type ModuleSource = strict enum {
     /// Module that was added to the story from within the story by another
     /// module using ModuleContext.AddModuleToStory() or
     /// ModuleContext.EmbedModule().

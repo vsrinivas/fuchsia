@@ -1,11 +1,9 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.space;
 
-enum ErrorCode : uint32 {
+type ErrorCode = strict enum : uint32 {
     INTERNAL = 1;
     /// The system is in the process of being updated, and the current system version has not yet
     /// been committed. GC is blocked to protect the blobs required by the previous system version.
@@ -14,8 +12,8 @@ enum ErrorCode : uint32 {
     PENDING_COMMIT = 2;
 };
 
-[Discoverable]
+@discoverable
 protocol Manager {
     /// Trigger a garbage collection.
-    Gc() -> () error ErrorCode;
+    Gc() -> (struct {}) error ErrorCode;
 };

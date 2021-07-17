@@ -1,21 +1,24 @@
 // Copyright 2017 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.ui.input;
 
 /// Service to receive input events.
 ///
 /// Input devices can describe their capabilities using `DeviceDescriptor`
 /// and register themselves with the `InputDeviceRegistry`.
-[Discoverable]
+@discoverable
 protocol InputDeviceRegistry {
     /// Register a device with the capabilities described by `DeviceDescriptor`
-    RegisterDevice(DeviceDescriptor descriptor, request<InputDevice> input_device);
+    RegisterDevice(resource struct {
+        descriptor DeviceDescriptor;
+        input_device server_end:InputDevice;
+    });
 };
 
 protocol InputDevice {
     /// Dispatch an `InputReport` from the device `token`
-    DispatchReport(InputReport report);
+    DispatchReport(struct {
+        report InputReport;
+    });
 };

@@ -1,8 +1,6 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.bluetooth.rfcomm.test;
 
 using fuchsia.bluetooth as bt;
@@ -11,7 +9,7 @@ using fuchsia.bluetooth.bredr as bredr;
 /// The status of the line.
 ///
 /// These are defined in GSM 07.10 Section 5.4.6.3.10.
-enum Status {
+type Status = strict enum {
     OK = 0;
     OVERRUN_ERROR = 1;
     PARITY_ERROR = 2;
@@ -20,14 +18,16 @@ enum Status {
 
 /// Provides additional methods to initiate RFCOMM protocol behavior. These methods
 /// are strictly for testing.
-[Discoverable]
+@discoverable
 protocol RfcommTest {
     /// Disconnect the RFCOMM session with the connected peer.
     ///
     /// This is a no-op if there is no connected peer with identifier `id`.
     ///
     /// + request `id` is the unique identifier associated with the connected RFCOMM peer.
-    Disconnect(bt.PeerId id);
+    Disconnect(struct {
+        id bt.PeerId;
+    });
 
     /// Notify the connected peer of a change in the remote line status.
     ///
@@ -36,5 +36,9 @@ protocol RfcommTest {
     /// + request `id` is the unique identifier associated with the connected RFCOMM peer.
     /// + request `channel_number` is the identifier of the RFCOMM channel whose line status changed.
     /// + request `status` is the status of the line.
-    RemoteLineStatus(bt.PeerId id, bredr.RfcommChannel channel_number, Status status);
+    RemoteLineStatus(struct {
+        id bt.PeerId;
+        channel_number bredr.RfcommChannel;
+        status Status;
+    });
 };

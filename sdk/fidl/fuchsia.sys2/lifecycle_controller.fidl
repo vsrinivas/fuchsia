@@ -1,34 +1,39 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.sys2;
 
 using fuchsia.component;
 
 /// A protocol exposed in a component's hub to allow component tools
 /// to resolve, bind, stop component manifests.
-[Discoverable]
+@discoverable
 protocol LifecycleController {
     /// Resolves the component designated by the provided relative moniker
     /// relative to the component to which the protocol is scoped.
     ///
     /// The function returns once the component successfully resolves, or the
     /// operation fails.
-    Resolve(string:fuchsia.component.MAX_MONIKER_LENGTH moniker) -> () error fuchsia.component.Error;
+    Resolve(struct {
+        moniker string:fuchsia.component.MAX_MONIKER_LENGTH;
+    }) -> (struct {}) error fuchsia.component.Error;
 
     /// Binds to the component designated by the provided relative moniker
     /// relative to the component to which the protocol is scoped.
     ///
     /// The function returns once the component is successfully bound, or the
     /// operation fails.
-    Bind(string:fuchsia.component.MAX_MONIKER_LENGTH moniker) -> () error fuchsia.component.Error;
+    Bind(struct {
+        moniker string:fuchsia.component.MAX_MONIKER_LENGTH;
+    }) -> (struct {}) error fuchsia.component.Error;
 
     /// Stops the component designated by the provided relative moniker
     /// relative to the component to which the protocol is scoped.
     ///
     /// The function returns once the component successfully stops, or the
     /// operation fails.
-    Stop(string:fuchsia.component.MAX_MONIKER_LENGTH moniker, bool is_recursive) -> () error fuchsia.component.Error;
+    Stop(struct {
+        moniker string:fuchsia.component.MAX_MONIKER_LENGTH;
+        is_recursive bool;
+    }) -> (struct {}) error fuchsia.component.Error;
 };

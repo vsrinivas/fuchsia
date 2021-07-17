@@ -1,19 +1,18 @@
-deprecated_syntax;
 library fidl.test.bits;
 
-bits MyBits : uint32 {
+type MyBits = strict bits : uint32 {
     MY_FIRST_BIT = 1;
     MY_OTHER_BIT = 2;
     // check for any collisions between the bitmask and a "mask" member
     MASK = 4;
 };
 
-strict bits StrictBits : uint64 {
+type StrictBits = strict bits : uint64 {
     SMALLEST = 1;
     BIGGEST = 0x8000000000000000;
 };
 
-flexible bits FlexibleBits : uint64 {
+type FlexibleBits = flexible bits : uint64 {
     SMALLEST = 1;
     BIGGEST = 0x8000000000000000;
 };

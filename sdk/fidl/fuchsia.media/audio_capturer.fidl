@@ -1,8 +1,6 @@
 // Copyright 2017 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.media;
 
 using fuchsia.media.audio;
@@ -10,19 +8,18 @@ using zx;
 
 /// Configuration for a capturer which will receive a loopback stream
 /// a system output.
-table LoopbackAudioCapturerConfiguration {
-};
+type LoopbackAudioCapturerConfiguration = table {};
 
 /// Configuration for a capturer which will receive a stream from an
 /// input device.
-table InputAudioCapturerConfiguration {
-    1: AudioCaptureUsage usage;
+type InputAudioCapturerConfiguration = table {
+    1: usage AudioCaptureUsage;
 };
 
 /// Configuration for an audio Capturer.
-union AudioCapturerConfiguration {
-    1: LoopbackAudioCapturerConfiguration loopback;
-    2: InputAudioCapturerConfiguration input;
+type AudioCapturerConfiguration = strict union {
+    1: loopback LoopbackAudioCapturerConfiguration;
+    2: input InputAudioCapturerConfiguration;
 };
 
 // TODO(mpuryear): Routing policy needs to become more capable than this.
@@ -279,18 +276,27 @@ protocol AudioCapturer {
     /// material to be reformatted/resampled if needed in order to produce the
     /// requested stream type. Must be called before the payload buffer is
     /// established.
-    SetPcmStreamType(AudioStreamType stream_type);
+    SetPcmStreamType(struct {
+        stream_type AudioStreamType;
+    });
 
     /// Explicitly specify a region of the shared payload buffer for the audio
     /// input to capture into.
-    CaptureAt(uint32 payload_buffer_id, uint32 payload_offset,
-              uint32 frames) -> (StreamPacket captured_packet);
+    CaptureAt(struct {
+        payload_buffer_id uint32;
+        payload_offset uint32;
+        frames uint32;
+    }) -> (struct {
+        captured_packet StreamPacket;
+    });
 
     /// Place the AudioCapturer into 'async' capture mode and begin to produce
     /// packets of exactly 'frames_per_packet' number of frames each. The
     /// OnPacketProduced event (of StreamSink) will be used to inform the client
     /// of produced packets.
-    StartAsyncCapture(uint32 frames_per_packet);
+    StartAsyncCapture(struct {
+        frames_per_packet uint32;
+    });
 
     /// Stop capturing in 'async' capture mode and (optionally) deliver a callback
     /// that may be used by the client if explicit synchronization is needed.
@@ -298,12 +304,16 @@ protocol AudioCapturer {
     StopAsyncCaptureNoReply();
 
     /// Binds to the gain control for this AudioCapturer.
-    BindGainControl(request<fuchsia.media.audio.GainControl> gain_control_request);
+    BindGainControl(resource struct {
+        gain_control_request server_end:fuchsia.media.audio.GainControl;
+    });
 
     /// Retrieves the stream's reference clock. The returned handle will have READ, DUPLICATE
     /// and TRANSFER rights, and will refer to a zx::clock that is MONOTONIC and CONTINUOUS.
     ///
-    GetReferenceClock() -> (zx.handle:CLOCK reference_clock);
+    GetReferenceClock() -> (resource struct {
+        reference_clock zx.handle:CLOCK;
+    });
 
     /// Sets the reference clock that controls this capturer's playback rate. If the input
     /// parameter is a valid zx::clock, it must have READ, DUPLICATE, TRANSFER rights and
@@ -317,12 +327,16 @@ protocol AudioCapturer {
     /// diverge at some later time, they should create a clone of the monotonic clock, set
     /// this as the stream's reference clock, then rate-adjust it subsequently as needed.
     ///
-    SetReferenceClock(zx.handle:CLOCK? reference_clock);
+    SetReferenceClock(resource struct {
+        reference_clock zx.handle:<CLOCK, optional>;
+    });
 
     /// Sets the usage of the capture stream.  This may be changed on the fly, but
     /// packets in flight may be affected by the new usage.  By default the
     /// Capturer is created with the FOREGROUND usage.
-    SetUsage(AudioCaptureUsage usage);
+    SetUsage(struct {
+        usage AudioCaptureUsage;
+    });
 
     // ////////////////////////////////////////////////////////////////////////
     // StreamBufferSet methods
@@ -349,5 +363,7 @@ protocol AudioCapturer {
     // place to allow users to enumerate the configuration of these bind-able
     // endpoints (and perhaps to exercise control over them), but it will be
     // the user of the AudioCapturer's job to specify the format they want.
-    GetStreamType() -> (StreamType stream_type);
+    GetStreamType() -> (struct {
+        stream_type StreamType;
+    });
 };

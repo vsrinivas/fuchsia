@@ -1,17 +1,16 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
 library fuchsia.stash;
 using fuchsia.mem;
 
 /// Strings over 12 kb will be tossed. This number is chosen arbitrarily, if you
 /// think it should be higher just ask.
-const uint64 MAX_STRING_SIZE = 12000;
-const uint64 MAX_KEY_SIZE = 256;
+const MAX_STRING_SIZE uint64 = 12000;
+const MAX_KEY_SIZE uint64 = 256;
 
 /// ValueType encodes a type for a field in the store
-enum ValueType : uint8 {
+type ValueType = strict enum : uint8 {
     INT_VAL = 1;
     FLOAT_VAL = 2;
     BOOL_VAL = 3;
@@ -20,30 +19,30 @@ enum ValueType : uint8 {
 };
 
 /// ListItem is returned when a series of keys are being listed.
-struct ListItem {
-    string:MAX_KEY_SIZE key;
-    ValueType type;
+type ListItem = struct {
+    key string:MAX_KEY_SIZE;
+    type ValueType;
 };
 
 /// KeyValue is used when a series of keys are being read, or the default state
 /// for the store is being set.
-resource struct KeyValue {
-    string:MAX_KEY_SIZE key;
-    Value val;
+type KeyValue = resource struct {
+    key string:MAX_KEY_SIZE;
+    val Value;
 };
 
 /// Value holds a value for a given key.
-resource union Value {
-    1: int64 intval;
-    2: float64 floatval;
-    3: bool boolval;
-    4: string:MAX_STRING_SIZE stringval;
-    5: fuchsia.mem.Buffer bytesval;
+type Value = strict resource union {
+    1: intval int64;
+    2: floatval float64;
+    3: boolval bool;
+    4: stringval string:MAX_STRING_SIZE;
+    5: bytesval fuchsia.mem.Buffer;
 };
 
 // FlushError enumerates the various ways in which flushing the stash
 // to disk may fail.
-enum FlushError {
+type FlushError = strict enum {
     // Failed to flush because the accessor is read-only.
     READ_ONLY = 1;
 
@@ -54,36 +53,57 @@ enum FlushError {
 /// The iterator returned when a series of keys are being listed. Returns an
 /// empty vector when there are no more remaining ListItems.
 protocol ListIterator {
-    GetNext() -> (vector<ListItem>:MAX keys);
+    GetNext() -> (struct {
+        keys vector<ListItem>:MAX;
+    });
 };
 
 /// The iterator returned when a series of keys are being read. Returns an
 /// empty vector when there are no more remaining KeyValues.
 protocol GetIterator {
-    GetNext() -> (vector<KeyValue>:MAX kvs);
+    GetNext() -> (resource struct {
+        kvs vector<KeyValue>:MAX;
+    });
 };
 
 /// The interface returned when a new accessor is created.
 protocol StoreAccessor {
     /// Gets a single value from the store.
-    GetValue(string:MAX_KEY_SIZE key) -> (Value? val);
+    GetValue(struct {
+        key string:MAX_KEY_SIZE;
+    }) -> (resource struct {
+        val Value:optional;
+    });
 
     /// Sets a single value in the store. Overwrites existing values. Commit()
     /// must be called for this change to take effect.
-    SetValue(string:MAX_KEY_SIZE key, Value val);
+    SetValue(resource struct {
+        key string:MAX_KEY_SIZE;
+        val Value;
+    });
 
     /// Deletes a single value in the store. Does nothing if the value doesn't
     /// exist. Commit() must be called for this change to take effect.
-    DeleteValue(string:MAX_KEY_SIZE key);
+    DeleteValue(struct {
+        key string:MAX_KEY_SIZE;
+    });
 
     /// Lists all keys under a given prefix.
-    ListPrefix(string:MAX_KEY_SIZE prefix, request<ListIterator> it);
+    ListPrefix(resource struct {
+        prefix string:MAX_KEY_SIZE;
+        it server_end:ListIterator;
+    });
 
     /// Reads the values of all keys under a given prefix.
-    GetPrefix(string:MAX_KEY_SIZE prefix, request<GetIterator> it);
+    GetPrefix(resource struct {
+        prefix string:MAX_KEY_SIZE;
+        it server_end:GetIterator;
+    });
 
     /// Deletes the all keys under a given prefix.
-    DeletePrefix(string:MAX_KEY_SIZE prefix);
+    DeletePrefix(struct {
+        prefix string:MAX_KEY_SIZE;
+    });
 
     /// Atomically causes all of the state modifications that happened in this
     /// accessor to take place.
@@ -94,33 +114,38 @@ protocol StoreAccessor {
     /// modifications were written to disk.
     /// This operation is equivalent to Commit.
     /// Returns a FlushError if this operations could not be committed.
-    Flush() -> () error FlushError;
+    Flush() -> (struct {}) error FlushError;
 };
 
 /// Interface used to interact with a given client's key/value store
-[Discoverable]
+@discoverable
 protocol Store {
     /// Identify should be called at the beginning of a connection to identify
     /// which client service's store is to be accessed. In the future this will
     /// be deprecated in favor of component monikers, and each client will only
     /// be able to access its own store.
-    Identify(string:MAX_KEY_SIZE name);
+    Identify(struct {
+        name string:MAX_KEY_SIZE;
+    });
 
     /// Creates a accessor for interacting with the store. The resulting
     /// interface can be used to inspect and modify the state of the store.
-    CreateAccessor(bool read_only, request<StoreAccessor> accessor_request);
+    CreateAccessor(resource struct {
+        read_only bool;
+        accessor_request server_end:StoreAccessor;
+    });
 };
 
 /// A copy of |Store| in all but name. Behaves identically to |Store|.
 /// See: fxbug.dev/48802
-[Discoverable]
+@discoverable
 protocol Store2 {
     compose Store;
 };
 
 /// Interface used to interact with a given client's key/value store. The bytes
 /// type is disabled in this store.
-[Discoverable]
+@discoverable
 protocol SecureStore {
     compose Store;
 };

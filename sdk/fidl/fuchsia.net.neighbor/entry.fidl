@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.net.neighbor;
 
 using fuchsia.net;
@@ -18,21 +16,21 @@ using zx;
 ///   2. Static entries are explicitly added by a user with
 ///      [`Controller.AddStaticEntry`] and have no expiration. Their `state` is
 ///      always [`EntryState.STATIC`].
-table Entry {
+type Entry = table {
     /// Identifier for the interface used for communicating with the neighbor.
-    1: fuchsia.net.interface_id interface;
+    1: interface fuchsia.net.interface_id;
 
     /// IP address of the neighbor.
-    2: fuchsia.net.IpAddress neighbor;
+    2: neighbor fuchsia.net.IpAddress;
 
     /// State of the entry within the Neighbor Unreachability Detection (NUD)
     /// state machine defined by RFC 4861 section 7.3.
-    3: EntryState state;
+    3: state EntryState;
 
     /// MAC address of the neighboring device's network interface controller.
     /// Absent for dynamic entries in [`EntryState.INCOMPLETE`].
-    4: fuchsia.net.MacAddress mac;
+    4: mac fuchsia.net.MacAddress;
 
     /// Timestamp when this entry has changed `state`.
-    5: zx.time updated_at;
+    5: updated_at zx.time;
 };

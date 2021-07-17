@@ -1,13 +1,14 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.ethernet.board;
 
 using zx;
 
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol EthBoard {
-    ResetPhy() -> (zx.status s);
+    ResetPhy() -> (struct {
+        s zx.status;
+    });
 };

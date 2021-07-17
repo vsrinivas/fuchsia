@@ -1,13 +1,11 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.diagnostics;
 
 /// Enum used to specify the output format for
 /// Reader results.
-enum Format {
+type Format = strict enum {
     /// Dump read results per the Diagnostics Json
     /// Schema specifications.
     JSON = 1;

@@ -1,8 +1,6 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.ui.views;
 
 using zx;
@@ -28,8 +26,8 @@ using zx;
 /// Example 2. We use ViewRefs to create a FocusChain, which identifies Views
 /// considered as "in-focus" down the View hierarchy. When a View is destroyed,
 /// Scenic signals to all FocusChain holders that the ViewRef is now invalid.
-resource struct ViewRef {
-    zx.handle:EVENTPAIR reference;
+type ViewRef = resource struct {
+    reference zx.handle:EVENTPAIR;
 };
 
 /// A ViewRefControl is the peer to a ViewRef. Their `reference`s are linked.
@@ -46,6 +44,6 @@ resource struct ViewRef {
 /// described above).  The client must not clone the ViewRefControl. It must
 /// not remove or modify the ViewRefControl's capabilities; otherwise the View
 /// is not created.
-resource struct ViewRefControl {
-    zx.handle:EVENTPAIR reference;
+type ViewRefControl = resource struct {
+    reference zx.handle:EVENTPAIR;
 };

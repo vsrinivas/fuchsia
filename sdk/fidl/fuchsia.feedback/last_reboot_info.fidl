@@ -1,20 +1,21 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
 library fuchsia.feedback;
 using zx;
 
 /// Get information about why a device last shutdown. The term reboot is used instead of shutdown
 /// since many developers phrase their questions about shutdowns in terms of reboots and most
 /// components are interested in knowing why the system just rebooted.
-[Discoverable]
+@discoverable
 protocol LastRebootInfoProvider {
-    Get() -> (LastReboot last_reboot);
+    Get() -> (struct {
+        last_reboot LastReboot;
+    });
 };
 
 /// Information about why a device last rebooted.
-table LastReboot {
+type LastReboot = table {
     /// Whether the last reboot was graceful, i.e. the device didn't reboot in response to an error
     /// and rebooted in a controlled manner.
     ///
@@ -25,17 +26,17 @@ table LastReboot {
     ///
     /// This field is always has a value if |reason| is provided. However, |reason| might not
     /// always have a value this field is provided.
-    1: bool graceful;
+    1: graceful bool;
 
     /// Why a device last rebooted.
-    2: RebootReason reason;
+    2: reason RebootReason;
 
     /// The uptime of the device before it rebooted.
-    3: zx.duration uptime;
+    3: uptime zx.duration;
 };
 
 /// Reasons why a device last rebooted.
-enum RebootReason : uint16 {
+type RebootReason = strict enum : uint16 {
     // ///////////////////////////////////////////////////////////////////////////////////////////
     // Ungraceful reboot reasons
     // |graceful| has a value of false in LastReboot above.

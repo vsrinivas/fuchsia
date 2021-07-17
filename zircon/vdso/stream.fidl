@@ -1,44 +1,80 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library zx;
 
-enum stream_seek_origin : uint32 {
+type stream_seek_origin = strict enum : uint32 {
     START = 0;
     CURRENT = 1;
     END = 2;
 };
 
-[Transport = "Syscall"]
+@transport("Syscall")
 protocol stream {
     /// Create a stream from a VMO.
-    stream_create(uint32 options, handle:VMO vmo, off seek)
-        -> (status status, handle:STREAM out_stream);
+    stream_create(resource struct {
+        options uint32;
+        vmo handle:VMO;
+        seek off;
+    }) -> (resource struct {
+        status status;
+        out_stream handle:STREAM;
+    });
 
     /// Write data to a stream at the current seek offset.
     /// Rights: handle must be of type ZX_OBJ_TYPE_STREAM and have ZX_RIGHT_WRITE.
-    stream_writev(handle:STREAM handle, uint32 options, vector_iovec vector)
-        -> (status status, optional_usize actual);
+    stream_writev(resource struct {
+        handle handle:STREAM;
+        options uint32;
+        vector vector_iovec;
+    }) -> (struct {
+        status status;
+        actual optional_usize;
+    });
 
     /// Write data to a stream at the given offset.
     /// Rights: handle must be of type ZX_OBJ_TYPE_STREAM and have ZX_RIGHT_WRITE.
-    stream_writev_at(handle:STREAM handle, uint32 options, off offset, vector_iovec vector)
-        -> (status status, optional_usize actual);
+    stream_writev_at(resource struct {
+        handle handle:STREAM;
+        options uint32;
+        offset off;
+        vector vector_iovec;
+    }) -> (struct {
+        status status;
+        actual optional_usize;
+    });
 
     /// Read data from a stream at the current seek offset.
     /// Rights: handle must be of type ZX_OBJ_TYPE_STREAM and have ZX_RIGHT_READ.
-    stream_readv(handle:STREAM handle, uint32 options)
-        -> (status status, vector_iovec vector, optional_usize actual);
+    stream_readv(resource struct {
+        handle handle:STREAM;
+        options uint32;
+    }) -> (struct {
+        status status;
+        vector vector_iovec;
+        actual optional_usize;
+    });
 
     /// Read data from a stream at the given offset.
     /// Rights: handle must be of type ZX_OBJ_TYPE_STREAM and have ZX_RIGHT_READ.
-    stream_readv_at(handle:STREAM handle, uint32 options, off offset)
-        -> (status status, vector_iovec vector, optional_usize actual);
+    stream_readv_at(resource struct {
+        handle handle:STREAM;
+        options uint32;
+        offset off;
+    }) -> (struct {
+        status status;
+        vector vector_iovec;
+        actual optional_usize;
+    });
 
     /// Modify the seek offset.
     /// Rights: handle must be of type ZX_OBJ_TYPE_STREAM and have ZX_RIGHT_READ or have ZX_RIGHT_WRITE.
-    stream_seek(handle:STREAM handle, stream_seek_origin whence, int64 offset)
-        -> (status status, optional_off out_seek);
+    stream_seek(resource struct {
+        handle handle:STREAM;
+        whence stream_seek_origin;
+        offset int64;
+    }) -> (struct {
+        status status;
+        out_seek optional_off;
+    });
 };

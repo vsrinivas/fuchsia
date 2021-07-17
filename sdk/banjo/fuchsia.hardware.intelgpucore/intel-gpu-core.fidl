@@ -1,59 +1,110 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.intelgpucore;
 
 using zx;
 
-const uint32 IMAGE_TYPE_X_TILED = 1;
-const uint32 IMAGE_TYPE_Y_LEGACY_TILED = 2;
-const uint32 IMAGE_TYPE_YF_TILED = 3;
+const IMAGE_TYPE_X_TILED uint32 = 1;
+const IMAGE_TYPE_Y_LEGACY_TILED uint32 = 2;
+const IMAGE_TYPE_YF_TILED uint32 = 3;
 
-[Transport = "Banjo", BanjoLayout = "ddk-callback"]
+@transport("Banjo")
+@banjo_layout("ddk-callback")
 protocol IntelGpuCoreInterrupt {
-    Callback(uint32 master_interrupt_control, uint64 timestamp) -> ();
+    Callback(struct {
+        master_interrupt_control uint32;
+        timestamp uint64;
+    }) -> ();
 };
 
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol IntelGpuCore {
     /// Reads 16 bits from pci config space; returned in |value_out|.
-    ReadPciConfig16(uint16 addr) -> (zx.status s, uint16 value);
+    ReadPciConfig16(struct {
+        addr uint16;
+    }) -> (struct {
+        s zx.status;
+        value uint16;
+    });
 
     /// Maps the given |pci_bar|; address returned in |addr_out|, size in bytes returned in
     /// |size_out|.
-    MapPciMmio(uint32 pci_bar) -> (zx.status s, [Buffer, CalleeAllocated] vector<uint8>:MAX buf);
+    MapPciMmio(struct {
+        pci_bar uint32;
+    }) -> (struct {
+        s zx.status;
+        @buffer
+        @callee_allocated
+        buf vector<uint8>:MAX;
+    });
 
     /// Unmaps the given |pci_bar|.
-    UnmapPciMmio(uint32 pci_bar) -> (zx.status s);
+    UnmapPciMmio(struct {
+        pci_bar uint32;
+    }) -> (struct {
+        s zx.status;
+    });
 
     /// Returns a bus transaction initiator.
-    GetPciBti(uint32 index) -> (zx.status s, zx.handle:BTI bti);
+    GetPciBti(struct {
+        index uint32;
+    }) -> (resource struct {
+        s zx.status;
+        bti zx.handle:BTI;
+    });
 
     /// Registers the given |callback| to be invoked with parameter |data| when an interrupt occurs
     /// matching |interrupt_mask|.
-    RegisterInterruptCallback(IntelGpuCoreInterrupt callback,
-                              uint32 interrupt_mask) -> (zx.status s);
+    RegisterInterruptCallback(resource struct {
+        callback client_end:IntelGpuCoreInterrupt;
+        interrupt_mask uint32;
+    }) -> (struct {
+        s zx.status;
+    });
 
     /// Un-registers a previously registered interrupt callback.
-    UnregisterInterruptCallback() -> (zx.status s);
+    UnregisterInterruptCallback() -> (struct {
+        s zx.status;
+    });
 
     /// Returns the size of the GTT (global translation table) in bytes.
-    GttGetSize() -> (uint64 size);
+    GttGetSize() -> (struct {
+        size uint64;
+    });
 
     /// Allocates a region of the GTT of the given |page_count|, returning the page-aligned virtual
     /// address in |addr_out|.
-    GttAlloc(uint64 page_count) -> (zx.status s, uint64 addr);
+    GttAlloc(struct {
+        page_count uint64;
+    }) -> (struct {
+        s zx.status;
+        addr uint64;
+    });
 
     /// Frees the GTT allocation given by |addr|.
-    GttFree(uint64 addr) -> (zx.status s);
+    GttFree(struct {
+        addr uint64;
+    }) -> (struct {
+        s zx.status;
+    });
 
     /// Clears the page table entries for the GTT allocation given by |addr|.
-    GttClear(uint64 addr) -> (zx.status s);
+    GttClear(struct {
+        addr uint64;
+    }) -> (struct {
+        s zx.status;
+    });
 
     /// Inserts page tables entries for the GTT allocation given by |addr| for the vmo represented by
     /// handle |buffer|, at the given |page_offset| and |page_count|. Takes ownership of |buffer|.
-    GttInsert(uint64 addr, zx.handle:VMO buffer, uint64 page_offset,
-              uint64 page_count) -> (zx.status s);
+    GttInsert(resource struct {
+        addr uint64;
+        buffer zx.handle:VMO;
+        page_offset uint64;
+        page_count uint64;
+    }) -> (struct {
+        s zx.status;
+    });
 };

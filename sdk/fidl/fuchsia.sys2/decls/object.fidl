@@ -1,34 +1,32 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.sys2;
 
 /// A value is a boolean, integer, float, string, vector, or object.
-union Value {
-    1: bool bit;
-    2: int64 inum;
-    3: float64 fnum;
-    4: string str;
-    5: Vector vec;
-    6: Object obj;
-    // TODO(fxbug.dev/4051): Consider adding blobs.
+type Value = strict union {
+    1: bit bool;
+    2: inum int64;
+    3: fnum float64;
+    4: str string;
+    5: vec Vector;
+    6: obj Object;
+// TODO(fxbug.dev/4051): Consider adding blobs.
 };
 
 /// A vector is a sequence of values.
-struct Vector {
-    vector<Value?> values;
+type Vector = struct {
+    values vector<Value:optional>;
 };
 
 /// An object is a sequence of key/value pairs.
 /// Keys must be unique and sorted in lexicographically increasing order.
-struct Object {
-    vector<Entry> entries;
+type Object = struct {
+    entries vector<Entry>;
 };
 
 /// A key/value pair in an `Object`.
-struct Entry {
-    string key;
-    Value? value;
+type Entry = struct {
+    key string;
+    value Value:optional;
 };

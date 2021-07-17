@@ -1,15 +1,13 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.update.usb;
 
 using fuchsia.io;
 using fuchsia.pkg;
 
 /// The front door of an OTA via USB.
-[Discoverable]
+@discoverable
 protocol Checker {
 
     /// Triggers a USB OTA.
@@ -26,15 +24,17 @@ protocol Checker {
     ///   newer than the system version, and no update was necessary.
     /// - error - a `CheckError` value, indicating that the `Check` failed and did not complete a
     ///   system update.
-    Check(
-        fuchsia.pkg.PackageUrl update_url,
-        fuchsia.io.Directory? logs_dir,
-        Monitor? monitor
-        ) -> (CheckSuccess response) error CheckError;
+    Check(resource struct {
+        update_url fuchsia.pkg.PackageUrl;
+        logs_dir client_end:<fuchsia.io.Directory, optional>;
+        monitor client_end:<Monitor, optional>;
+    }) -> (struct {
+        response CheckSuccess;
+    }) error CheckError;
 };
 
 /// Success type for [`fuchsia.update.usb/Checker.Check`]
-enum CheckSuccess {
+type CheckSuccess = strict enum {
     /// An update was installed successfully, and the device should be rebooted
     /// now to switch to the updated system.
     UPDATE_PERFORMED = 0;
@@ -52,7 +52,7 @@ protocol Monitor {
 };
 
 /// Error type for [`fuchsia.update.usb/Checker.Check`]
-enum CheckError {
+type CheckError = strict enum {
     /// The `update_url` parameter was an invalid fuchsia-pkg:// url.
     INVALID_UPDATE_URL = 1;
     /// A system update was attempted, but the update failed.

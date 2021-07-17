@@ -1,16 +1,15 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.sysmem;
 
 using zx;
 
+// Needs ForDeprecatedCBindings because used with "FIDL Simple C Bindings".
 /// Allocates system memory buffers.
 ///
-// Needs ForDeprecatedCBindings because used with "FIDL Simple C Bindings".
-[Discoverable, ForDeprecatedCBindings]
+@discoverable
+@for_deprecated_c_bindings
 protocol Allocator {
     /// Allocates a BufferCollection on behalf of a single client (aka initiator)
     /// who is also the only participant (from the point of view of sysmem).
@@ -31,7 +30,9 @@ protocol Allocator {
     /// keep the client end of this channel open while using the
     /// BufferCollection, and should notice when this channel closes and stop
     /// using the BufferCollection ASAP.
-    AllocateNonSharedCollection(request<BufferCollection> collection_request);
+    AllocateNonSharedCollection(resource struct {
+        collection_request server_end:BufferCollection;
+    });
 
     /// Creates a logical BufferCollectionToken which can be shared among
     /// participants (using BufferCollectionToken.Duplicate()), and then
@@ -39,7 +40,9 @@ protocol Allocator {
     ///
     /// Success/failure to populate the BufferCollection with buffers is
     /// determined via the BufferCollection interface.
-    AllocateSharedCollection(request<BufferCollectionToken> token_request);
+    AllocateSharedCollection(resource struct {
+        token_request server_end:BufferCollectionToken;
+    });
 
     /// Convert a BufferCollectionToken into a connection to the logical
     /// BufferCollection.  The BufferCollection hasn't yet been populated with
@@ -61,8 +64,10 @@ protocol Allocator {
     /// BufferCollection channel is a single participant's connection to the
     /// logical BufferCollection.  There typically will be other participants
     /// with their own BufferCollection channel to the logical BufferCollection.
-    BindSharedCollection(BufferCollectionToken token,
-                         request<BufferCollection> buffer_collection_request);
+    BindSharedCollection(resource struct {
+        token client_end:BufferCollectionToken;
+        buffer_collection_request server_end:BufferCollection;
+    });
 
     /// Validate that a BufferCollectionToken is known to the sysmem server.
     ///
@@ -109,7 +114,11 @@ protocol Allocator {
     /// `token_server_koid` the koid of the server end of a channel that might
     /// be a BufferCollectionToken channel.  This can be obtained from
     /// zx_object_get_info() ZX_INFO_HANDLE_BASIC related_koid.
-    ValidateBufferCollectionToken(zx.koid token_server_koid) -> (bool is_known);
+    ValidateBufferCollectionToken(struct {
+        token_server_koid zx.koid;
+    }) -> (struct {
+        is_known bool;
+    });
 
     /// Set information about the current client that can be used by sysmem to
     /// help debug leaking memory and hangs waiting for constraints. |name| can
@@ -121,5 +130,8 @@ protocol Allocator {
     /// BindSharedCollection() or AllocateNonSharedCollection() from this
     /// allocator. It does not affect BufferCollectionTokens, since they are
     /// often passed cross-process and should have their names managed manually.
-    SetDebugClientInfo(string:64 name, uint64 id);
+    SetDebugClientInfo(struct {
+        name string:64;
+        id uint64;
+    });
 };

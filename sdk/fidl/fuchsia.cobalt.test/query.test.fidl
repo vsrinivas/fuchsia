@@ -1,17 +1,15 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.cobalt.test;
 
 using fuchsia.cobalt as cobalt;
 
 /// Maximum number of events returned by a query.
-const uint16 MAX_QUERY_LENGTH = 64;
+const MAX_QUERY_LENGTH uint16 = 64;
 
 /// This is currently not exhaustive.
-enum LogMethod {
+type LogMethod = strict enum {
     LOG_EVENT = 1;
     LOG_EVENT_COUNT = 2;
     LOG_ELAPSED_TIME = 3;
@@ -22,14 +20,14 @@ enum LogMethod {
     LOG_COBALT_EVENTS = 9;
 };
 
-enum QueryError {
+type QueryError = strict enum {
     /// The logger required to complete the current query could not be found.
     LOGGER_NOT_FOUND = 0;
 };
 
 /// LoggerQuerier provides a way to query mock cobalt services to check that
 /// clients of cobalt are logging events as expected.
-[Discoverable]
+@discoverable
 protocol LoggerQuerier {
     /// Returns the _first_ N events that were logged for the logger with the
     /// given `project_id` and a `more` flag indicating whether there were
@@ -42,8 +40,14 @@ protocol LoggerQuerier {
     /// Repeated calls to WatchLogs for a given LogMethod will block until new
     /// events are logged with that method, enabling tests to synchronize
     /// without sleeps or timeouts.
-    [Transitional]
-    WatchLogs2(uint32 project_id, LogMethod method) -> (vector<cobalt.CobaltEvent>:MAX_QUERY_LENGTH events, bool more);
+    @transitional
+    WatchLogs2(struct {
+        project_id uint32;
+        method LogMethod;
+    }) -> (struct {
+        events vector<cobalt.CobaltEvent>:MAX_QUERY_LENGTH;
+        more bool;
+    });
 
     /// Returns the _first_ N events that were logged for the logger with the
     /// given `project_id` and a `more` flag indicating whether there were
@@ -56,8 +60,14 @@ protocol LoggerQuerier {
     /// Repeated calls to WatchLogs for a given LogMethod will block until new
     /// events are logged with that method, enabling tests to synchronize
     /// without sleeps or timeouts.
-    [Deprecated = "use WatchLogs2"]
-    WatchLogs(uint32 project_id, LogMethod method) -> (vector<cobalt.CobaltEvent>:MAX_QUERY_LENGTH events, bool more) error QueryError;
+    @deprecated("use WatchLogs2")
+    WatchLogs(struct {
+        project_id uint32;
+        method LogMethod;
+    }) -> (struct {
+        events vector<cobalt.CobaltEvent>:MAX_QUERY_LENGTH;
+        more bool;
+    }) error QueryError;
 
     /// Clear all logged events by logging `method` for the logger with the
     /// given `project_id`.
@@ -65,5 +75,8 @@ protocol LoggerQuerier {
     /// This is a no-op if a logger for the given `project_id` does not exist.
     /// Notably, it does _not_ create a new logger with `project_id` if one
     /// does not already exist.
-    ResetLogger(uint32 project_id, LogMethod method);
+    ResetLogger(struct {
+        project_id uint32;
+        method LogMethod;
+    });
 };

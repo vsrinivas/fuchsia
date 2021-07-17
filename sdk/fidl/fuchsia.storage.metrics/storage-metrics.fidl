@@ -1,26 +1,24 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.storage.metrics;
 
 /// Stats for calls. These stats track completed calls - they may or may not have
 /// succeeded. Unless specified otherwise , time units are in nanoseconds and
 /// data transferred is in bytes
-[ForDeprecatedCBindings]
-struct CallStatRaw {
+@for_deprecated_c_bindings
+type CallStatRaw = struct {
     /// Minimum time taken by a request to be served.
-    uint64 minimum_latency;
+    minimum_latency uint64;
 
     /// Maximum time taken by a request to be served.
-    uint64 maximum_latency;
+    maximum_latency uint64;
 
     /// Total time spent to serve requests.
-    uint64 total_time_spent;
+    total_time_spent uint64;
 
     /// Total number of calls.
-    uint64 total_calls;
+    total_calls uint64;
 
     /// byte_transferred may mean different things in different context. For
     /// example, read and write may use it for bytes read/written, whereas
@@ -36,44 +34,44 @@ struct CallStatRaw {
     /// On failure:
     ///    On failure, bytes_transferred is the number of bytes requested by the
     ///    caller.
-    uint64 bytes_transferred;
+    bytes_transferred uint64;
 };
 
-[ForDeprecatedCBindings]
-struct CallStat {
+@for_deprecated_c_bindings
+type CallStat = struct {
     /// CallStat keeps track of the successful commands and failed commands
     /// seperately as successful commands may generate completely different stats
     /// than failed commands - a write() to read-only file handle may fail
     /// in nanoseconds and if the stats tracked together, it will skew the
     /// numbers.
-    CallStatRaw success;
-    CallStatRaw failure;
+    success CallStatRaw;
+    failure CallStatRaw;
 };
 
-[ForDeprecatedCBindings]
-struct FsMetrics {
+@for_deprecated_c_bindings
+type FsMetrics = struct {
     /// Call stats for create
-    CallStat create;
+    create CallStat;
 
     /// Call stats for read
-    CallStat read;
+    read CallStat;
 
     /// Call stats for write
-    CallStat write;
+    write CallStat;
 
     /// Call stats for truncate
-    CallStat truncate;
+    truncate CallStat;
 
     /// Call stats for unlink
-    CallStat unlink;
+    unlink CallStat;
 
     /// Call stats for rename
-    CallStat rename;
+    rename CallStat;
 
     /// Call stats for directory lookups
-    CallStat lookup;
+    lookup CallStat;
 
     /// Call stats for open. This may or may
     /// not include directory lookup during open
-    CallStat open;
+    open CallStat;
 };

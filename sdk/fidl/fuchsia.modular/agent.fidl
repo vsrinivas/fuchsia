@@ -1,8 +1,6 @@
 // Copyright 2017 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.modular;
 
 using fuchsia.sys;
@@ -34,7 +32,7 @@ using fuchsia.sys;
 /// For more info see:
 /// - fuchsia.modular.ComponentContext for capabilities an agent has.
 /// - fuchsia.modular.Lifecycle for how Components get lifecycle events.
-[Discoverable] // Created by each agent.
+@discoverable // Created by each agent.
 protocol Agent {
     /// Called when some component tries to connect to this agent. `requestor_url`
     /// identifies the requesting client. Different client roles are identified differently:
@@ -57,5 +55,8 @@ protocol Agent {
     /// StoryCommand.AddMod/surface_relation_parent.
     ///
     /// The full path is encoded into `requestor_url` as escape_colons(module_path).join(':').
-    Connect(string:MAX requestor_url, request<fuchsia.sys.ServiceProvider> services);
+    Connect(resource struct {
+        requestor_url string:MAX;
+        services server_end:fuchsia.sys.ServiceProvider;
+    });
 };

@@ -1,47 +1,70 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fidl.rust.test.compilation;
 
 using zx;
 
-flexible union TestXUnion {
-    1: bool variant;
+type TestXUnion = flexible union {
+    1: variant bool;
 };
 
-enum ErrorReturn : uint32 {
+type ErrorReturn = strict enum : uint32 {
     OK = 0x00;
     CHANGED = 0x0D;
 };
 
-const ErrorReturn ERROR_RETURN_CONST = ErrorReturn.OK;
+const ERROR_RETURN_CONST ErrorReturn = ErrorReturn.OK;
 
 protocol TestInterface {
-    TestMethod(TestXUnion test_x_union) -> (TestXUnion test_x_union);
-    TestNullableXUnion(TestXUnion? test_x_union) -> (TestXUnion? test_x_union);
-    TestErrorMethod(uint16 arg) -> () error ErrorReturn;
+    TestMethod(struct {
+        test_x_union TestXUnion;
+    }) -> (struct {
+        test_x_union TestXUnion;
+    });
+    TestNullableXUnion(struct {
+        test_x_union TestXUnion:optional;
+    }) -> (struct {
+        test_x_union TestXUnion:optional;
+    });
+    TestErrorMethod(struct {
+        arg uint16;
+    }) -> (struct {}) error ErrorReturn;
     // TODO(fxbug.dev/59947): add "responder" and "control_handle"
-    TestNameClashesTwoWay(bytes bytes, vector<zx.handle> handles, string header)
-        -> (bytes bytes, vector<zx.handle> handles, string header);
-    TestNameClashesOneWay(bytes bytes, vector<zx.handle> handles, string header);
-    -> TestNameClashesEvent(bytes bytes, vector<zx.handle> handles, string header);
+    TestNameClashesTwoWay(resource struct {
+        bytes bytes;
+        handles vector<zx.handle>;
+        header string;
+    }) -> (resource struct {
+        bytes bytes;
+        handles vector<zx.handle>;
+        header string;
+    });
+    TestNameClashesOneWay(resource struct {
+        bytes bytes;
+        handles vector<zx.handle>;
+        header string;
+    });
+    -> TestNameClashesEvent(resource struct {
+        bytes bytes;
+        handles vector<zx.handle>;
+        header string;
+    });
 };
 
-struct HasBigArray {
-    array<uint8>:256 big_arr;
+type HasBigArray = struct {
+    big_arr array<uint8, 256>;
 };
 
-union HasStructWithBigArray {
-    1: HasBigArray variant;
-    2: uint8 variant2;
+type HasStructWithBigArray = strict union {
+    1: variant HasBigArray;
+    2: variant2 uint8;
 };
 
-struct Result {
-    string ensure_that_type_named_result_compiles;
+type Result = struct {
+    ensure_that_type_named_result_compiles string;
 };
 
-resource struct HasHostFidlHandleStubbing {
-    zx.handle:LOG log;
+type HasHostFidlHandleStubbing = resource struct {
+    log zx.handle:LOG;
 };

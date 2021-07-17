@@ -1,13 +1,11 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library benchmarkfidl;
 
 // Dart doesn't support recursive type generation.
-[BindingsDenylist = "dart"]
-struct OptionalStructTree {
-    OptionalStructTree? left;
-    OptionalStructTree? right;
+@bindings_denylist("dart")
+type OptionalStructTree = struct {
+    left box<OptionalStructTree>;
+    right box<OptionalStructTree>;
 };

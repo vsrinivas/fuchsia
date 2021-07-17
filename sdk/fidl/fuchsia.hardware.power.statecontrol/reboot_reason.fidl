@@ -1,13 +1,11 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.power.statecontrol;
 
 /// Why the system reboots.
 // Contact OWNERS before adding a new value.
-enum RebootReason {
+type RebootReason = strict enum {
     USER_REQUEST = 1;
 
     /// A new system update has been downloaded.

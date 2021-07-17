@@ -1,11 +1,9 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.camera;
 
-enum BayerPattern : uint8 {
+type BayerPattern = strict enum : uint8 {
     RGGB = 1;
     GRBG = 2;
     GBRG = 3;
@@ -13,39 +11,39 @@ enum BayerPattern : uint8 {
 };
 
 /// Encodes R, Gr, B, Gb pixel values.
-struct ColorVal {
-    uint16 red;
-    uint16 green_r;
-    uint16 blue;
-    uint16 green_b;
+type ColorVal = struct {
+    red uint16;
+    green_r uint16;
+    blue uint16;
+    green_b uint16;
 };
 
 /// Encodes frame rate as separate a separate numerator and denominator.
 /// Decoded via frames_per_sec_numerator / frames_per_sec_denominator.
-struct FrameRate {
-    uint32 frames_per_sec_numerator;
-    uint32 frames_per_sec_denominator;
+type FrameRate = struct {
+    frames_per_sec_numerator uint32;
+    frames_per_sec_denominator uint32;
 };
 
 /// Encodes a pair of width and height values.
 /// For example, for use as a representation of frame resolution
 /// where |x| is width and |y| is height.
-struct Dimensions {
-    float32 x;
-    float32 y;
+type Dimensions = struct {
+    x float32;
+    y float32;
 };
 
 /// Encodes a pair of minimum and maximum values.
 /// For example, for use as sensor constraints for exposure settings.
-struct MinMaxConstraints {
-    uint32 min;
-    uint32 max;
+type MinMaxConstraints = struct {
+    min uint32;
+    max uint32;
 };
 
 /// Encodes information to represent a rectangle on a grid.
-struct Rect {
-    uint32 x;
-    uint32 y;
-    uint32 width;
-    uint32 height;
+type Rect = struct {
+    x uint32;
+    y uint32;
+    width uint32;
+    height uint32;
 };

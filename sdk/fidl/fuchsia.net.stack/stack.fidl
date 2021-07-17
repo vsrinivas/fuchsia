@@ -1,8 +1,6 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.net.stack;
 
 using fuchsia.hardware.ethernet;
@@ -15,8 +13,8 @@ using fuchsia.posix.socket;
 alias device_path = string:255;
 
 // TODO(https://fxbug.dev/75554): Migrate callers and remove this.
-[Deprecated = "Use fuchsia.net.interfaces/Watcher"]
-enum PhysicalStatus {
+@deprecated("Use fuchsia.net.interfaces/Watcher")
+type PhysicalStatus = strict enum {
     /// The link is not attached to the medium.
     DOWN = 1;
     /// The link is attached to the medium.
@@ -24,8 +22,8 @@ enum PhysicalStatus {
 };
 
 // TODO(https://fxbug.dev/75554): Migrate callers and remove this.
-[Deprecated = "Use fuchsia.net.interfaces/Watcher"]
-enum AdministrativeStatus {
+@deprecated("Use fuchsia.net.interfaces/Watcher")
+type AdministrativeStatus = strict enum {
     /// The interface is administratively disabled.
     DISABLED = 1;
     /// The interface is administratively enabled.
@@ -33,70 +31,70 @@ enum AdministrativeStatus {
 };
 
 // TODO(https://fxbug.dev/75554): Migrate callers and remove this.
-[Deprecated = "Use fuchsia.net.interfaces/Watcher"]
-struct InterfaceInfo {
+@deprecated("Use fuchsia.net.interfaces/Watcher")
+type InterfaceInfo = struct {
     /// An opaque identifier for the interface, assigned by the stack.
     /// This identifier will never be 0, and will not be reused even if the device is removed and
     /// subsequently re-added. It is not stable across netstack instances.
-    fuchsia.net.interface_id id;
+    id fuchsia.net.interface_id;
 
     /// All info of an interface except the interface name.
-    InterfaceProperties properties;
+    properties InterfaceProperties;
 };
 
 // TODO(https://fxbug.dev/75554): Migrate callers and remove this.
-[Deprecated = "Use fuchsia.net.interfaces/Watcher"]
-struct InterfaceProperties {
+@deprecated("Use fuchsia.net.interfaces/Watcher")
+type InterfaceProperties = struct {
     /// Human-readable name of the interface. eg. eth001, wlanx35.
-    fuchsia.posix.socket.interface_name name;
+    name fuchsia.posix.socket.interface_name;
 
     /// The topological path to the device, representing a stable identifier for the interface
     /// hardware.
-    device_path topopath;
+    topopath device_path;
 
     /// An unstable file path corresponding to the interface. Used in watching the creation
     /// and destruction of the interface, or in accessing the interface using netdump.
-    device_path filepath;
+    filepath device_path;
 
     /// The MAC address of the interface, if available.
-    fuchsia.hardware.ethernet.MacAddress? mac;
+    mac box<fuchsia.hardware.ethernet.MacAddress>;
 
     /// The maximum transmission unit for the interface in bytes.
-    uint32 mtu;
+    mtu uint32;
 
     /// The features present on the interface.
-    fuchsia.hardware.ethernet.Features features;
+    features fuchsia.hardware.ethernet.Features;
 
     /// The administrative status of the interface.
-    AdministrativeStatus administrative_status;
+    administrative_status AdministrativeStatus;
 
     /// The physical link status of the interface.
-    PhysicalStatus physical_status;
+    physical_status PhysicalStatus;
 
     /// The list of addresses currently assigned to the interface.
-    vector<fuchsia.net.Subnet>:MAX addresses;
+    addresses vector<fuchsia.net.Subnet>:MAX;
 };
 
 /// A ForwardingDestination represents either the device that should transmit a packet or the address
 /// of the next hop in the route.
-union ForwardingDestination {
+type ForwardingDestination = strict union {
     /// The opaque identifier of the device to which packets should be forwarded.
-    1: fuchsia.net.interface_id device_id;
+    1: device_id fuchsia.net.interface_id;
 
     /// The IP address of the next hop, used to look up the next forwarding entry.
-    2: fuchsia.net.IpAddress next_hop;
+    2: next_hop fuchsia.net.IpAddress;
 };
 
 /// An entry in the forwarding table for the network stack.
-struct ForwardingEntry {
+type ForwardingEntry = struct {
     /// The subnet is the key for the entry in the table.
-    fuchsia.net.Subnet subnet;
+    subnet fuchsia.net.Subnet;
 
     /// The destination that will receive the forwarded packet.
-    ForwardingDestination destination;
+    destination ForwardingDestination;
 };
 
-enum Error {
+type Error = strict enum {
     INTERNAL = 1;
     NOT_SUPPORTED = 2;
     INVALID_ARGS = 3;
@@ -110,94 +108,132 @@ enum Error {
 /// An Ethernet device.
 /// The provided `network_device` is expected to support `Ethernet` frames.
 /// Its MAC address and MAC filtering is controlled by the provided `mac` channel.
-resource struct EthernetDeviceDefinition {
+type EthernetDeviceDefinition = resource struct {
     /// The connection to the device's data plane.
-    fuchsia.hardware.network.Device network_device;
+    network_device client_end:fuchsia.hardware.network.Device;
     /// The connection to the device's addressing control plane.
-    fuchsia.hardware.network.MacAddressing mac;
+    mac client_end:fuchsia.hardware.network.MacAddressing;
 };
 
 /// Devices that can be used to back a `Stack` interface.
-resource union DeviceDefinition {
+type DeviceDefinition = strict resource union {
     /// A `fuchsia.hardware.network.Device` that exchanges only IP frames. It either doesn't have a
     /// layer 2 or its layer 2 is irrelevant to the `Stack`.
-    1: fuchsia.hardware.network.Device ip;
+    1: ip client_end:fuchsia.hardware.network.Device;
     /// An Ethernet device.
-    2: EthernetDeviceDefinition ethernet;
+    2: ethernet EthernetDeviceDefinition;
 };
 
 /// Base configuration for `Stack` interfaces.
-table InterfaceConfig {
+type InterfaceConfig = table {
     /// Human-readable name of the interface. eg. eth001, wlanx35.
     /// Will be set to a default generic name if not provided.
-    1: fuchsia.posix.socket.interface_name name;
+    1: name fuchsia.posix.socket.interface_name;
 
     /// The topological path to the device, representing a stable identifier for the interface
     /// hardware.
-    2: device_path topopath;
+    2: topopath device_path;
 
     /// The default metric value used for routes to this interface.
-    3: uint32 metric;
+    3: metric uint32;
 };
 
-[Discoverable]
+@discoverable
 protocol Stack {
     /// Add an Ethernet interface to the network stack. On success, returns the identifier assigned
     /// by the stack for use in subsequent calls.
-    AddEthernetInterface(device_path topological_path, fuchsia.hardware.ethernet.Device device) -> (fuchsia.net.interface_id id) error Error;
+    AddEthernetInterface(resource struct {
+        topological_path device_path;
+        device client_end:fuchsia.hardware.ethernet.Device;
+    }) -> (struct {
+        id fuchsia.net.interface_id;
+    }) error Error;
 
     /// Add a new interface to the network stack backed by the provided `DeviceDefinition`. On
     /// success, returns the identifier assigned by the stack for use in subsequent calls.
-    AddInterface(InterfaceConfig config, DeviceDefinition device) -> (fuchsia.net.interface_id id) error Error;
+    AddInterface(resource struct {
+        config InterfaceConfig;
+        device DeviceDefinition;
+    }) -> (struct {
+        id fuchsia.net.interface_id;
+    }) error Error;
 
     /// Remove an Ethernet interface from the network stack.
-    DelEthernetInterface(fuchsia.net.interface_id id) -> () error Error;
+    DelEthernetInterface(struct {
+        id fuchsia.net.interface_id;
+    }) -> (struct {}) error Error;
 
+    // TODO(https://fxbug.dev/75554): Migrate callers and remove this.
     /// List all the interfaces available in the network stack.
-    // TODO(https://fxbug.dev/75554): Migrate callers and remove this.
-    [Deprecated = "Use fuchsia.net.interfaces/Watcher"]
-    ListInterfaces() -> (vector<InterfaceInfo>:255 ifs);
+    @deprecated("Use fuchsia.net.interfaces/Watcher")
+    ListInterfaces() -> (struct {
+        ifs vector<InterfaceInfo>:255;
+    });
 
-    /// Retrieve info about a specific interface.
     // TODO(https://fxbug.dev/75554): Migrate callers and remove this.
-    [Deprecated = "Use fuchsia.net.interfaces/Watcher"]
-    GetInterfaceInfo(fuchsia.net.interface_id id) -> (InterfaceInfo info) error Error;
+    /// Retrieve info about a specific interface.
+    @deprecated("Use fuchsia.net.interfaces/Watcher")
+    GetInterfaceInfo(struct {
+        id fuchsia.net.interface_id;
+    }) -> (struct {
+        info InterfaceInfo;
+    }) error Error;
 
     /// Enable the interface. Packets may be processed by the stack after this call is processed.
-    EnableInterface(fuchsia.net.interface_id id) -> () error Error;
+    EnableInterface(struct {
+        id fuchsia.net.interface_id;
+    }) -> (struct {}) error Error;
 
     /// Disable the interface. The stack will no longer process packets after this call.
-    DisableInterface(fuchsia.net.interface_id id) -> () error Error;
+    DisableInterface(struct {
+        id fuchsia.net.interface_id;
+    }) -> (struct {}) error Error;
 
     /// Add an address to the interface. If the interface already has an address of a given type that
     /// does not allow duplicates, this method will return an error.
-    AddInterfaceAddress(fuchsia.net.interface_id id, fuchsia.net.Subnet addr) -> () error Error;
+    AddInterfaceAddress(struct {
+        id fuchsia.net.interface_id;
+        addr fuchsia.net.Subnet;
+    }) -> (struct {}) error Error;
 
     /// Remove the address from the interface. If the address is not assigned to the interface, an
     /// error is returned.
-    DelInterfaceAddress(fuchsia.net.interface_id id, fuchsia.net.Subnet addr) -> () error Error;
+    DelInterfaceAddress(struct {
+        id fuchsia.net.interface_id;
+        addr fuchsia.net.Subnet;
+    }) -> (struct {}) error Error;
 
     /// List all the entries in the forwarding table for the network stack.
     // TODO(fxbug.dev/38528): This is unbounded for now, until we change the API to allow for
     // pagination.
-    GetForwardingTable() -> (vector<ForwardingEntry>:MAX table);
+    GetForwardingTable() -> (struct {
+        table vector<ForwardingEntry>:MAX;
+    });
 
     /// Add a new entry to the forwarding table.
     ///
     /// If the table already contains an entry with the same subnet and destination, an already
     /// exists error is returned.
-    AddForwardingEntry(ForwardingEntry entry) -> () error Error;
+    AddForwardingEntry(struct {
+        entry ForwardingEntry;
+    }) -> (struct {}) error Error;
 
     /// Removes the forwarding entry with the given subnet. This will not affect any overlapping
     /// subnets (superset or subset) so the subnet must exactly match an entry in the forwarding
     /// table. If no entry for the subnet exists, an error is returned.
-    DelForwardingEntry(fuchsia.net.Subnet subnet) -> () error Error;
+    DelForwardingEntry(struct {
+        subnet fuchsia.net.Subnet;
+    }) -> (struct {}) error Error;
 
     /// Enable the packet filter on a specific interface.
-    EnablePacketFilter(fuchsia.net.interface_id id) -> () error Error;
+    EnablePacketFilter(struct {
+        id fuchsia.net.interface_id;
+    }) -> (struct {}) error Error;
 
     /// Disable the packet filter on a specific interface.
-    DisablePacketFilter(fuchsia.net.interface_id id) -> () error Error;
+    DisablePacketFilter(struct {
+        id fuchsia.net.interface_id;
+    }) -> (struct {}) error Error;
 
     /// Enable IP Forwarding for all interfaces and IP versions.
     EnableIpForwarding() -> ();
@@ -206,19 +242,32 @@ protocol Stack {
     DisableIpForwarding() -> ();
 
     /// Returns the IP forwarding state for an interface.
-    GetInterfaceIpForwarding(fuchsia.net.interface_id id, fuchsia.net.IpVersion ip_version) -> (bool enabled) error Error;
+    GetInterfaceIpForwarding(struct {
+        id fuchsia.net.interface_id;
+        ip_version fuchsia.net.IpVersion;
+    }) -> (struct {
+        enabled bool;
+    }) error Error;
 
     /// Sets the IP forwarding state for an interface.
-    SetInterfaceIpForwarding(fuchsia.net.interface_id id, fuchsia.net.IpVersion ip_version, bool enabled) -> () error Error;
+    SetInterfaceIpForwarding(struct {
+        id fuchsia.net.interface_id;
+        ip_version fuchsia.net.IpVersion;
+        enabled bool;
+    }) -> (struct {}) error Error;
 
     /// Get a [`fuchsia.net.name/DnsServerWatcher`].
-    GetDnsServerWatcher(request<fuchsia.net.name.DnsServerWatcher> watcher);
+    GetDnsServerWatcher(resource struct {
+        watcher server_end:fuchsia.net.name.DnsServerWatcher;
+    });
 };
 
-[Discoverable]
+@discoverable
 protocol Log {
     /// Dynamically set packet logging.
     // TODO(fxbug.dev/42432): replace with optional packet captures in Inspect
     // output.
-    SetLogPackets(bool enabled) -> ();
+    SetLogPackets(struct {
+        enabled bool;
+    }) -> ();
 };

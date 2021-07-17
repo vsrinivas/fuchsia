@@ -1,8 +1,6 @@
 // Copyright 2017 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.ui.policy;
 
 using fuchsia.ui.input;
@@ -10,15 +8,19 @@ using fuchsia.ui.input;
 /// `Presentation.CapturePointerEvent` will consume this listener interface and
 /// call `OnEvent` when a pointer event occurs.
 protocol PointerCaptureListenerHACK {
-    OnPointerEvent(fuchsia.ui.input.PointerEvent event);
+    OnPointerEvent(struct {
+        event fuchsia.ui.input.PointerEvent;
+    });
 };
 
 /// Allows clients of Presenter.Present() to control a presentation.
 /// Experimental.
-[Discoverable]
+@discoverable
 protocol Presentation {
     /// This call exists so that base shell can capture pointer events.
     // TODO: Figure out the feasibility of this feature and the best place to put
     // it. This call will be replaced by gesture disambiguation system in future.
-    CapturePointerEventsHACK(PointerCaptureListenerHACK listener);
+    CapturePointerEventsHACK(resource struct {
+        listener client_end:PointerCaptureListenerHACK;
+    });
 };

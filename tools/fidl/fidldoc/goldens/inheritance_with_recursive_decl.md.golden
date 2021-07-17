@@ -6,7 +6,7 @@
 ## **PROTOCOLS**
 
 ## Child {#Child}
-*Defined in [fidl.test.inheritancewithrecursivedecl/inheritance_with_recursive_decl.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl;l=8)*
+*Defined in [fidl.test.inheritancewithrecursivedecl/inheritance_with_recursive_decl.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl;l=9)*
 
 
 ### First {#Child.First}
@@ -40,7 +40,7 @@
 
 
 ## Parent {#Parent}
-*Defined in [fidl.test.inheritancewithrecursivedecl/inheritance_with_recursive_decl.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl;l=4)*
+*Defined in [fidl.test.inheritancewithrecursivedecl/inheritance_with_recursive_decl.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl;l=3)*
 
 
 ### First {#Parent.First}

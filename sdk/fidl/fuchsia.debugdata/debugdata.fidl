@@ -1,19 +1,18 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.debugdata;
 
 using zx;
 
 /// The maximum length, in bytes, of data sink or configuration name.
 /// TODO(mcgrathr): Align this with file name limits in some fs protocol.
-const uint64 MAX_NAME = 1024;
+const MAX_NAME uint64 = 1024;
 
 /// DebugData defines the interface for instrumentation configuration and data
 /// publishing.
-[ForDeprecatedCBindings, Discoverable]
+@for_deprecated_c_bindings
+@discoverable
 protocol DebugData {
     /// The program runtime sends a string naming a `data_sink` and transfers
     /// the sole handle to a VMO containing the `data` it wants published
@@ -32,18 +31,25 @@ protocol DebugData {
     /// process the VMO until the `vmo_token` channel is closed. Therefore,
     /// the client should retain the `vmo_token` channel until it has
     /// completed all writes to the VMO.
-    Publish(string:MAX_NAME data_sink, zx.handle:VMO data, request<DebugDataVmoToken> vmo_token);
+    Publish(resource struct {
+        data_sink string:MAX_NAME;
+        data zx.handle:VMO;
+        vmo_token server_end:DebugDataVmoToken;
+    });
 
     /// The program runtime names a `config_name` referring to a debug
     /// configuration of some kind and gets back a VMO to read configuration
     /// data from.  The sanitizer runtimes use this to allow large options
     /// text to be stored in a file rather than passed directly in environment
     /// strings.
-    LoadConfig(string:MAX_NAME config_name) -> (zx.handle:VMO? config);
+    LoadConfig(struct {
+        config_name string:MAX_NAME;
+    }) -> (resource struct {
+        config zx.handle:<VMO, optional>;
+    });
 };
 
 /// DebugDataVmoToken is an empty protocol used by a client calling
 /// `DebugData.Publish` to indicate when the reciever may begin processing a
 /// VMO. See `DebugData.Publish` for more details.
-protocol DebugDataVmoToken {
-};
+protocol DebugDataVmoToken {};

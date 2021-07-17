@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.virtioconsole;
 
 using fuchsia.hardware.pty;
@@ -13,5 +11,7 @@ protocol Device {
     /// fuchsia.hardware.pty.Device composes with that interface.  Once
     /// the devhost stops the behavior, we can remove this interface and
     /// have virtio-console just serve fuchsia.hardware.pty.Device directly.
-    GetChannel(request<fuchsia.hardware.pty.Device> req);
+    GetChannel(resource struct {
+        req server_end:fuchsia.hardware.pty.Device;
+    });
 };

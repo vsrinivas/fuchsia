@@ -1,15 +1,13 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.ui.scenic;
 
 using fuchsia.ui.input;
 using fuchsia.ui.gfx;
 
-resource union Event {
-    1: fuchsia.ui.gfx.Event gfx;
-    2: fuchsia.ui.input.InputEvent input;
-    3: Command unhandled;
+type Event = strict resource union {
+    1: gfx fuchsia.ui.gfx.Event;
+    2: input fuchsia.ui.input.InputEvent;
+    3: unhandled Command;
 };

@@ -1,14 +1,17 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.usb.hub;
 
 using zx;
 
-[Transport = "Banjo", BanjoLayout = "ddk-interface"]
+@transport("Banjo")
+@banjo_layout("ddk-interface")
 protocol UsbHubInterface {
     /// Resets the specified port on the hub.
-    ResetPort(uint32 port) -> (zx.status s);
+    ResetPort(struct {
+        port uint32;
+    }) -> (struct {
+        s zx.status;
+    });
 };

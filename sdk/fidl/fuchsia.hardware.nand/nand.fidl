@@ -1,14 +1,12 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.nand;
 
 // Matches the value of ZBI_PARTITION_GUID_LEN.
-const uint32 GUID_LEN = 16;
+const GUID_LEN uint32 = 16;
 
-enum Class : uint32 {
+type Class = strict enum : uint32 {
     UNKNOWN = 0; // Unknown device.
     PARTMAP = 1; // NAND device contains multiple partitions.
     FTL = 2; // NAND device is a FTL partition.
@@ -16,14 +14,14 @@ enum Class : uint32 {
     TEST = 4; // Test device.
 };
 
-[ForDeprecatedCBindings]
-struct Info {
-    uint32 page_size; // Read/write unit size, in bytes.
-    uint32 pages_per_block; // Erase block size, in pages.
-    uint32 num_blocks; // Device size, in erase blocks.
-    uint32 ecc_bits; // Number of ECC bits (correctable bit flips),
+@for_deprecated_c_bindings
+type Info = struct {
+    page_size uint32; // Read/write unit size, in bytes.
+    pages_per_block uint32; // Erase block size, in pages.
+    num_blocks uint32; // Device size, in erase blocks.
+    ecc_bits uint32; // Number of ECC bits (correctable bit flips),
     // per correction chunk.
-    uint32 oob_size; // Available out of band bytes per page.
-    Class nand_class; // The device purpose.
-    array<uint8>:GUID_LEN partition_guid; // Partition type GUID from partition map.
+    oob_size uint32; // Available out of band bytes per page.
+    nand_class Class; // The device purpose.
+    partition_guid array<uint8, GUID_LEN>; // Partition type GUID from partition map.
 };

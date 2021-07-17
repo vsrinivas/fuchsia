@@ -1,142 +1,143 @@
-deprecated_syntax;
 library fidl.test.union;
 
-struct Pizza {
-    vector<string:16> toppings;
+type Pizza = struct {
+    toppings vector<string:16>;
 };
 
-struct Pasta {
-    string:16 sauce;
+type Pasta = struct {
+    sauce string:16;
 };
 
-union PizzaOrPasta {
-    1: Pizza pizza;
-    2: Pasta pasta;
+type PizzaOrPasta = strict union {
+    1: pizza Pizza;
+    2: pasta Pasta;
 };
 
-union ExplicitPizzaOrPasta {
+type ExplicitPizzaOrPasta = strict union {
     3: reserved;
     2: reserved;
-    1: Pizza pizza;
-    4: Pasta pasta;
+    1: pizza Pizza;
+    4: pasta Pasta;
 };
 
-flexible union FlexiblePizzaOrPasta {
-    1: Pizza pizza;
-    2: Pasta pasta;
+type FlexiblePizzaOrPasta = flexible union {
+    1: pizza Pizza;
+    2: pasta Pasta;
 };
 
-union StrictPizzaOrPasta {
-    1: Pizza pizza;
-    2: Pasta pasta;
+type StrictPizzaOrPasta = strict union {
+    1: pizza Pizza;
+    2: pasta Pasta;
 };
 
-union Union {
-    1: int32 Primitive;
-    2: string StringNeedsConstructor;
-    3: vector<string> VectorStringAlsoNeedsConstructor;
+type Union = strict union {
+    1: Primitive int32;
+    2: StringNeedsConstructor string;
+    3: VectorStringAlsoNeedsConstructor vector<string>;
 };
 
-flexible union FlexibleUnion {
-    1: int32 Primitive;
-    2: string StringNeedsConstructor;
-    3: vector<string> VectorStringAlsoNeedsConstructor;
+type FlexibleUnion = flexible union {
+    1: Primitive int32;
+    2: StringNeedsConstructor string;
+    3: VectorStringAlsoNeedsConstructor vector<string>;
 };
 
-union StrictUnion {
-    1: int32 Primitive;
-    2: string StringNeedsConstructor;
-    3: vector<string> VectorStringAlsoNeedsConstructor;
+type StrictUnion = strict union {
+    1: Primitive int32;
+    2: StringNeedsConstructor string;
+    3: VectorStringAlsoNeedsConstructor vector<string>;
 };
 
-union FieldCollision {
-    1: int32 field_collision_tag;
+type FieldCollision = strict union {
+    1: field_collision_tag int32;
 };
 
-union ExplicitUnion {
+type ExplicitUnion = strict union {
     2: reserved;
-    1: int32 Primitive;
-    3: string StringNeedsConstructor;
+    1: Primitive int32;
+    3: StringNeedsConstructor string;
 };
 
-union ReverseOrdinalUnion {
-    2: uint32 second;
-    1: uint32 first;
+type ReverseOrdinalUnion = strict union {
+    2: second uint32;
+    1: first uint32;
 };
 
-struct NullableUnionStruct {
-    Union? the_union;
+type NullableUnionStruct = struct {
+    the_union Union:optional;
 };
 
-flexible union FlexibleFoo {
-    1: string s;
-    2: int32 i;
+type FlexibleFoo = flexible union {
+    1: s string;
+    2: i int32;
 };
 
-strict union StrictFoo {
-    1: string s;
-    2: int32 i;
+type StrictFoo = strict union {
+    1: s string;
+    2: i int32;
 };
 
-flexible union ExplicitFoo {
-    2: string s;
-    1: int32 i;
+type ExplicitFoo = flexible union {
+    2: s string;
+    1: i int32;
     3: reserved;
 };
 
-strict union ExplicitStrictFoo {
+type ExplicitStrictFoo = strict union {
     1: reserved;
-    3: string s;
-    2: int32 i;
+    3: s string;
+    2: i int32;
 };
 
-flexible union OlderSimpleUnion {
-    1: int64 i;
-    2: float32 f;
+type OlderSimpleUnion = flexible union {
+    1: i int64;
+    2: f float32;
 };
 
-flexible union NewerSimpleUnion {
+type NewerSimpleUnion = flexible union {
     // float f;  // removed
 
-    1: int64 i; // unchanged
-
-    2: string s; // added
-    3: vector<string> v; // added
+    1: i int64; // unchanged
+    2: s string; // added
+    3: v vector<string>; // added
 };
 
 // 1. This xunion is currently unused by code, and for tracking changes in the goldens only.
 // 2. There's no FlexibleSimpleXUnion, since that's covered by OlderSimpleUnion above.
-strict union StrictSimpleXUnion {
-    1: int32 i;
-    2: float32 f;
-    3: string s;
+type StrictSimpleXUnion = strict union {
+    1: i int32;
+    2: f float32;
+    3: s string;
 };
 
-struct Empty {
-};
+type Empty = struct {};
 
-flexible union XUnionContainingEmptyStruct {
+type XUnionContainingEmptyStruct = flexible union {
     // This is a test to prevent regressions for fxbug.dev/8084. Note that we need fxbug.dev/8080 to be resolved
     // to ensure this actually works, since goldens aren't currently compiled.
-    1: Empty empty;
+    1: empty Empty;
 };
 
-strict union StrictBoundedXUnion {
-    1: vector<uint8>:10 v;
+type StrictBoundedXUnion = strict union {
+    1: v vector<uint8>:10;
 };
 
 protocol TestProtocol {
-    StrictXUnionHenceResponseMayBeStackAllocated() -> (StrictBoundedXUnion xu);
-    FlexibleXUnionHenceResponseMustBeHeapAllocated() -> (OlderSimpleUnion xu);
+    StrictXUnionHenceResponseMayBeStackAllocated() -> (struct {
+        xu StrictBoundedXUnion;
+    });
+    FlexibleXUnionHenceResponseMustBeHeapAllocated() -> (struct {
+        xu OlderSimpleUnion;
+    });
 };
 
-struct StructWithNullableXUnion {
-    OlderSimpleUnion? x1;
+type StructWithNullableXUnion = struct {
+    x1 OlderSimpleUnion:optional;
 };
 
-flexible union ExplicitXUnion {
+type ExplicitXUnion = flexible union {
     3: reserved;
     2: reserved;
-    1: int64 i;
-    4: float32 f;
+    1: i int64;
+    4: f float32;
 };

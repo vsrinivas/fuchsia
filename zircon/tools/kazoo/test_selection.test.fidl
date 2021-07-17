@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library zx;
 
 // This file is copies of some syscalls that cover more unusual features (see
@@ -14,49 +12,78 @@ alias mutable_uint32 = uint32;
 alias mutable_vector_void = vector<byte>;
 alias optional_signals = signals;
 alias vector_void_u32size = vector<byte>;
-enum Clock : uint32 {
+type Clock = strict enum : uint32 {
     MONOTONIC = 0;
     UTC = 1;
     THREAD = 2;
 };
 
 
-[Transport="Syscall"]
+@transport("Syscall")
 protocol Selection {
     // Special futex handling.
-    FutexRequeue(const_futexptr value_ptr,
-                 uint32 wake_count,
-                 Futex current_value,
-                 const_futexptr requeue_ptr,
-                 uint32 requeue_count,
-                 handle new_requeue_owner) ->
-        (status status);
+    FutexRequeue(resource struct {
+        value_ptr const_futexptr;
+        wake_count uint32;
+        current_value Futex;
+        requeue_ptr const_futexptr;
+        requeue_count uint32;
+        new_requeue_owner handle;
+    }) -> (struct {
+        status status;
+    });
 
     // Optional output (signals).
-    ObjectWaitOne(handle handle, signals signals, time deadline) ->
-        (status status, optional_signals observed);
+    ObjectWaitOne(resource struct {
+        handle handle;
+        signals signals;
+        deadline time;
+    }) -> (struct {
+        status status;
+        observed optional_signals;
+    });
 
     // Argument reordering.
-    [ArgReorder="handle,data,offset,data_size,actual"]
-    KtraceRead(handle:RESOURCE handle, mutable_vector_void data, uint32 offset) ->
-        (status status, usize actual);
+    @arg_reorder("handle,data,offset,data_size,actual")
+    KtraceRead(resource struct {
+        handle handle:RESOURCE;
+        data mutable_vector_void;
+        offset uint32;
+    }) -> (struct {
+        status status;
+        actual usize;
+    });
 
     // Mutable uint32 in the middle of input parameters (rather than as an
     // output).
-    PciCfgPioRw(handle:RESOURCE handle,
-                uint8 bus,
-                uint8 dev,
-                uint8 func,
-                uint8 offset,
-                mutable_uint32 val,
-                usize width,
-                bool write) ->
-        (status status);
+    PciCfgPioRw(resource struct {
+        handle handle:RESOURCE;
+        bus uint8;
+        dev uint8;
+        func uint8;
+        offset uint8;
+        val mutable_uint32;
+        width usize;
+        write bool;
+    }) -> (struct {
+        status status;
+    });
 
     // uint32_t for size of a "vector".
-    JobSetPolicy(handle:JOB handle, uint32 options, uint32 topic, vector_void_u32size policy) ->
-        (status status);
+    JobSetPolicy(resource struct {
+        handle handle:JOB;
+        options uint32;
+        topic uint32;
+        policy vector_void_u32size;
+    }) -> (struct {
+        status status;
+    });
 
     // Handling of enums.
-    ClockGet(Clock clock_id) -> (status status, time out);
+    ClockGet(struct {
+        clock_id Clock;
+    }) -> (struct {
+        status status;
+        out time;
+    });
 };

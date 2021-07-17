@@ -1,17 +1,15 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.sysmem;
 
 // Describes how a client will access the contents of a buffer.
 // TODO(fxbug.dev/32119): change struct to table
-[ForDeprecatedCBindings]
-struct BufferUsage {
-    uint32 none;
-    uint32 cpu;
-    uint32 vulkan;
-    uint32 display;
-    uint32 video;
+@for_deprecated_c_bindings
+type BufferUsage = struct {
+    none uint32;
+    cpu uint32;
+    vulkan uint32;
+    display uint32;
+    video uint32;
 };

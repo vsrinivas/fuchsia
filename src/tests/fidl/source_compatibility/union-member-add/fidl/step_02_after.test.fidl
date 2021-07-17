@@ -1,13 +1,12 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
 library fidl.test.unionmemberadd;
 
 // [START contents]
-flexible union JsonValue {
-    1: int32 int_value;
-    2: string:MAX string_value;
-    3: float32 float_value;
+type JsonValue = flexible union {
+    1: int_value int32;
+    2: string_value string:MAX;
+    3: float_value float32;
 };
 // [END contents]

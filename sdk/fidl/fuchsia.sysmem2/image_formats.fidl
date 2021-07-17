@@ -1,8 +1,6 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.sysmem2;
 
 // TODO(fxbug.dev/32119): The definitions in this file are not yet ready for use, but
@@ -13,8 +11,8 @@ library fuchsia.sysmem2;
 /// Parametric pixel formats may require additional properties - any such
 /// properties are encoded within the format_modifier_value (for compatibility
 /// reasons).
-table PixelFormat {
-    1: PixelFormatType type;
+type PixelFormat = table {
+    1: type PixelFormatType;
 
     /// The upper 8 bits are a vendor code.  The lower 56 bits are
     /// vendor-defined.  See format_modifier.fidl for potentially-valid values.
@@ -24,7 +22,7 @@ table PixelFormat {
     /// The values are defined this way for compatibility reasons.
     ///
     /// un-set and 0 both mean there is no format modifier.
-    2: uint64 format_modifier_value;
+    2: format_modifier_value uint64;
 };
 
 /// The ordering of the channels in the format name reflects the actual layout
@@ -39,7 +37,7 @@ table PixelFormat {
 //
 // TODO(dustingreen): Add more comment text re. pixel data layout for each of
 // these.
-enum PixelFormatType {
+type PixelFormatType = strict enum {
     INVALID = 0;
 
     /// RGB only, 8 bits per each of R/G/B/A sample
@@ -125,8 +123,8 @@ enum PixelFormatType {
 /// Describes how the pixels within an image are meant to be presented.
 /// Simple color spaces need only a type.
 /// Parametric color spaces may require additional properties.
-table ColorSpace {
-    1: ColorSpaceType type;
+type ColorSpace = table {
+    1: type ColorSpaceType;
 };
 
 /// This list has a separate entry for each variant of a color space standard.
@@ -155,7 +153,7 @@ table ColorSpace {
 /// that's non-standard will cause sysmem to reject the combo and fail to
 /// allocate (intentionally, to strongly discourage specifying
 /// insufficiently-defined combos).
-enum ColorSpaceType {
+type ColorSpaceType = strict enum {
     /// Not a valid color space type.
     INVALID = 0;
     /// sRGB

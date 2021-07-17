@@ -1,8 +1,6 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.netemul.network;
 
 using fuchsia.hardware.ethernet;
@@ -11,51 +9,63 @@ using fuchsia.net;
 using zx;
 
 /// Provides emulated latency configuration.
-struct LatencyConfig {
+type LatencyConfig = struct {
     /// Average latency, in ms.
-    uint64 average;
+    average uint64;
     /// Latency standard deviation, in ms.
-    uint64 std_dev;
+    std_dev uint64;
 };
 
 // Note: Loss config is a union to be able to provide other models of packet loss.
 /// Provides emulated packet loss configuration.
-union LossConfig {
+type LossConfig = strict union {
     /// Rate of packet loss expressed as independent drop probability [0-100].
-    1: uint8 random_rate;
+    1: random_rate uint8;
 };
 
 /// Provides emulated packet reordering configuration.
-struct ReorderConfig {
+type ReorderConfig = struct {
     /// Size of buffer, in packets, to store and forward with randomized order.
-    uint32 store_buff;
+    store_buff uint32;
     /// Tick/deadline in ms to empty buffer, regardless of full state.
     /// 0 will cause buffer to flush only when full (dangerous).
-    uint64 tick;
+    tick uint64;
 };
 
 /// Used to configure a network with emulated adversity conditions.
-table NetworkConfig {
+type NetworkConfig = table {
     /// Latency configuration.
-    1: LatencyConfig latency;
+    1: latency LatencyConfig;
     /// Packet loss configuration.
-    2: LossConfig packet_loss;
+    2: packet_loss LossConfig;
     /// Packet reordering configuration.
-    3: ReorderConfig reorder;
+    3: reorder ReorderConfig;
 };
 
 /// Manages virtual networks.
 protocol NetworkManager {
     /// Lists emulated networks by name.
-    ListNetworks() -> (vector<string:MAX>:MAX nets);
+    ListNetworks() -> (struct {
+        nets vector<string:MAX>:MAX;
+    });
     /// Creates a new network with given name and config.
-    CreateNetwork(string:MAX name, NetworkConfig config) -> (zx.status status, Network? net);
+    CreateNetwork(struct {
+        name string:MAX;
+        config NetworkConfig;
+    }) -> (resource struct {
+        status zx.status;
+        net client_end:<Network, optional>;
+    });
     /// Gets a handle to a network.
-    GetNetwork(string:MAX name) -> (Network? net);
+    GetNetwork(struct {
+        name string:MAX;
+    }) -> (resource struct {
+        net client_end:<Network, optional>;
+    });
 };
 
 /// Backing of an emulated endpoint.
-enum EndpointBacking {
+type EndpointBacking = strict enum {
     /// Endpoint backed by ethertap device.
     ETHERTAP = 1;
     /// Endpoint backed by a network-tun device.
@@ -64,30 +74,44 @@ enum EndpointBacking {
 };
 
 /// Configuration used to create an endpoint.
-struct EndpointConfig {
+type EndpointConfig = struct {
     /// Fake ethernet mtu.
-    uint16 mtu;
+    mtu uint16;
     /// Fake ethernet mac address, if not provided will be set to randomized local mac,
     /// using endpoint name as seed.
-    fuchsia.net.MacAddress? mac;
+    mac box<fuchsia.net.MacAddress>;
     /// Backing type of emulated endpoint.
-    EndpointBacking backing;
+    backing EndpointBacking;
 };
 
 /// Manages virtual endpoints.
 protocol EndpointManager {
     /// Lists endpoints by name.
-    ListEndpoints() -> (vector<string:MAX>:MAX endp);
+    ListEndpoints() -> (struct {
+        endp vector<string:MAX>:MAX;
+    });
     /// Creates endpoint with given name and config.
-    CreateEndpoint(string:MAX name, EndpointConfig config) -> (zx.status status, Endpoint? endpoint);
+    CreateEndpoint(struct {
+        name string:MAX;
+        config EndpointConfig;
+    }) -> (resource struct {
+        status zx.status;
+        endpoint client_end:<Endpoint, optional>;
+    });
     /// Gets a handle to an endpoint.
-    GetEndpoint(string:MAX name) -> (Endpoint? endpoint);
+    GetEndpoint(struct {
+        name string:MAX;
+    }) -> (resource struct {
+        endpoint client_end:<Endpoint, optional>;
+    });
 };
 
 /// Fake endpoint can be added to a network to snoop or inject packets.
 protocol FakeEndpoint {
     /// Writes a frame to the network.
-    Write(vector<uint8>:MAX data) -> ();
+    Write(struct {
+        data vector<uint8>:MAX;
+    }) -> ();
     /// Reads a single frame from the network.
     ///
     /// Blocks until new data is available to be read. FakeEndpoint will keep a limited amount of
@@ -96,92 +120,133 @@ protocol FakeEndpoint {
     ///
     /// Issuing a second `Read` request when the first one is still pending will cause the channel
     /// to be closed with `ZX_ERR_BAD_STATE`.
-    Read() -> (vector<uint8>:MAX data, uint64 dropped_frames);
+    Read() -> (struct {
+        data vector<uint8>:MAX;
+        dropped_frames uint64;
+    });
 };
 
 /// Virtual network.
 protocol Network {
     /// Gets network configuration.
-    GetConfig() -> (NetworkConfig config);
+    GetConfig() -> (struct {
+        config NetworkConfig;
+    });
     /// Gets network name.
-    GetName() -> (string:MAX name);
+    GetName() -> (struct {
+        name string:MAX;
+    });
     /// Updates network configuration.
-    SetConfig(NetworkConfig config) -> (zx.status status);
+    SetConfig(struct {
+        config NetworkConfig;
+    }) -> (struct {
+        status zx.status;
+    });
     /// Attaches endpoint with given name to network.
-    AttachEndpoint(string:MAX name) -> (zx.status status);
+    AttachEndpoint(struct {
+        name string:MAX;
+    }) -> (struct {
+        status zx.status;
+    });
     /// Removes endpoint with given name from network.
-    RemoveEndpoint(string:MAX name) -> (zx.status status);
+    RemoveEndpoint(struct {
+        name string:MAX;
+    }) -> (struct {
+        status zx.status;
+    });
     /// Injects a fake endpoint.
-    CreateFakeEndpoint(request<FakeEndpoint> ep);
+    CreateFakeEndpoint(resource struct {
+        ep server_end:FakeEndpoint;
+    });
 };
 
 /// Simple interface to serve devices over fidl.
 protocol DeviceProxy {
     /// Fulfills the device request.
     /// The fulfilled requests's protocol is defined by the `Endpoint`'s `EndpointBacking`.
-    ServeDevice(zx.handle:CHANNEL req);
+    ServeDevice(resource struct {
+        req zx.handle:CHANNEL;
+    });
 };
 
 /// A connection to an endpoint's underlying protocol.
-resource union DeviceConnection {
+type DeviceConnection = strict resource union {
     /// Set if the endpoint's backing is `ETHERTAP`.
-    1: fuchsia.hardware.ethernet.Device ethernet;
+    1: ethernet client_end:fuchsia.hardware.ethernet.Device;
     /// Set if the endpoint's backing is `NETWORK_DEVICE`.
     // NOTE(brunodalbo) the DeviceInstance protocol is a transient protocol that is exposed by devfs.
     // As documented in its definition, users should avoid passing this forward, but connect to its
     // internal protocols instead.
-    2: fuchsia.hardware.network.DeviceInstance network_device;
+    2: network_device client_end:fuchsia.hardware.network.DeviceInstance;
 };
 
 /// Virtual ethernet endpoint.
 protocol Endpoint {
     // Gets endpoint configuration.
-    GetConfig() -> (EndpointConfig config);
+    GetConfig() -> (struct {
+        config EndpointConfig;
+    });
     /// Gets endpoint name.
-    GetName() -> (string:MAX name);
+    GetName() -> (struct {
+        name string:MAX;
+    });
     /// Sends link up or down signal
-    SetLinkUp(bool up) -> ();
+    SetLinkUp(struct {
+        up bool;
+    }) -> ();
     /// Opens a channel with the underlying device protocol.
     /// The resulting `DeviceConnection` variant is defined by this `Endpoint`'s `EndpointBacking`.
-    GetDevice() -> (DeviceConnection device);
+    GetDevice() -> (resource struct {
+        device DeviceConnection;
+    });
     /// Gets a proxy to open requests with zircon ethernet device.
-    GetProxy(request<DeviceProxy> proxy);
+    GetProxy(resource struct {
+        proxy server_end:DeviceProxy;
+    });
 };
 
 /// Convenience struct for creating entire network setups.
-struct NetworkSetup {
+type NetworkSetup = struct {
     /// Network name, must be unique in network context.
-    string:MAX name;
+    name string:MAX;
     /// NetworkConfig to use when creating network.
-    NetworkConfig config;
+    config NetworkConfig;
     /// Collection of endpoints to create and attach to network.
-    vector<EndpointSetup>:MAX endpoints;
+    endpoints vector<EndpointSetup>:MAX;
 };
 
 /// Convenience struct for creating endpoints along with network setup.
-struct EndpointSetup {
+type EndpointSetup = struct {
     /// Endpoint name, must be unique in network context.
-    string:MAX name;
+    name string:MAX;
     /// Optional endpoint config, if not provided defaults will be used.
     /// Default values are: mtu = 1500, backing = ETHERTAP, mac = randomized.
-    EndpointConfig? config;
+    config box<EndpointConfig>;
     /// Start endpoint with link status up.
-    bool link_up;
+    link_up bool;
 };
 
 /// Handle returned when using NetworkContext.Setup for quick network configuration.
 /// Networks and endpoints created by Setup are tied to the lifecycle of the SetupHandle's channel.
-protocol SetupHandle {
-};
+protocol SetupHandle {};
 
 /// Main entry point to manage virtual networks and endpoints.
-[Discoverable]
+@discoverable
 protocol NetworkContext {
-    GetNetworkManager(request<NetworkManager> net_manager);
-    GetEndpointManager(request<EndpointManager> endp_manager);
+    GetNetworkManager(resource struct {
+        net_manager server_end:NetworkManager;
+    });
+    GetEndpointManager(resource struct {
+        endp_manager server_end:EndpointManager;
+    });
     /// Creates a collection of networks described by `networks`.
     /// `status` is `ZX_OK` for success
     /// `setup_handle` is a resource that references and maintains the lifecycle of
     ///                the created networks and endpoints.
-    Setup(vector<NetworkSetup>:MAX networks) -> (zx.status status, SetupHandle? setup_handle);
+    Setup(struct {
+        networks vector<NetworkSetup>:MAX;
+    }) -> (resource struct {
+        status zx.status;
+        setup_handle client_end:<SetupHandle, optional>;
+    });
 };

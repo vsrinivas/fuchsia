@@ -1,14 +1,12 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.gpio;
 
 using zx;
 
 /// Flags for `ConfigIn`.
-enum GpioFlags : uint32 {
+type GpioFlags = strict enum : uint32 {
     PULL_DOWN = 0x0;
     PULL_UP = 0x1;
     NO_PULL = 0x2;
@@ -17,19 +15,31 @@ enum GpioFlags : uint32 {
 
 protocol Gpio {
     /// Configures a GPIO for input.
-    ConfigIn(GpioFlags flags) -> () error zx.status;
+    ConfigIn(struct {
+        flags GpioFlags;
+    }) -> (struct {}) error zx.status;
 
     /// Configures a GPIO for output.
-    ConfigOut(uint8 initial_value) -> () error zx.status;
+    ConfigOut(struct {
+        initial_value uint8;
+    }) -> (struct {}) error zx.status;
 
     /// Reads the current value of a GPIO (0 or 1).
-    Read() -> (uint8 value) error zx.status;
+    Read() -> (struct {
+        value uint8;
+    }) error zx.status;
 
     /// Sets the current value of the GPIO (any non-zero value maps to 1).
-    Write(uint8 value) -> () error zx.status;
+    Write(struct {
+        value uint8;
+    }) -> (struct {}) error zx.status;
 
     /// Sets the drive strength of the GPIO.
     /// actual_ds_ua is always >= ds_ua. If ds_ua is larger than max value, the drive strength will be set to the max value.
     /// Return error if unable to set drive strength. actual_ds_ua is not set in this case.
-    SetDriveStrength(uint64 ds_ua) -> (uint64 actual_ds_ua) error zx.status;
+    SetDriveStrength(struct {
+        ds_ua uint64;
+    }) -> (struct {
+        actual_ds_ua uint64;
+    }) error zx.status;
 };

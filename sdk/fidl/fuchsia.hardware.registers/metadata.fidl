@@ -1,57 +1,55 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.registers;
 
 using zx;
 
-union Mask {
-    1: uint8 r8;
-    2: uint16 r16;
-    3: uint32 r32;
-    4: uint64 r64;
+type Mask = strict union {
+    1: r8 uint8;
+    2: r16 uint16;
+    3: r32 uint32;
+    4: r64 uint64;
 };
 
-table MaskEntry {
-    1: Mask mask;
+type MaskEntry = table {
+    1: mask Mask;
 
     /// MMIO offset of mask range.
     /// Should be aligned to 4 for 32-bit registers, 8 for 64-bit registers, etc.
-    2: zx.paddr mmio_offset;
+    2: mmio_offset zx.paddr;
 
     /// Number of masks with this mask value.
-    3: uint32 count;
+    3: count uint32;
 
     /// Overlap check.
     /// If true, checks this mask for overlapping bits defined for all registers.
     /// If false, doesn't check.
     /// If absent, interpreted as true.
-    4: bool overlap_check_on;
+    4: overlap_check_on bool;
 };
 
-table RegistersMetadataEntry {
+type RegistersMetadataEntry = table {
     /// ID for binding purposes (BIND_REGISTER_ID device property).
-    1: uint32 bind_id;
+    1: bind_id uint32;
 
     /// MMIO ID for MMIO corresponding to register.
-    2: uint32 mmio_id;
+    2: mmio_id uint32;
 
     /// A run length encoded list of masks.
     /// Should be in order starting from base address. Masks should all be of the same type.
-    3: vector<MaskEntry>:MAX masks;
+    3: masks vector<MaskEntry>:MAX;
 };
 
-table MmioMetadataEntry {
+type MmioMetadataEntry = table {
     /// MMIO ID.
-    1: uint32 id;
+    1: id uint32;
 };
 
-table Metadata {
+type Metadata = table {
     /// Vector of MMIO metadata. One for each MMIO listed.
-    1: vector<MmioMetadataEntry>:MAX mmio;
+    1: mmio vector<MmioMetadataEntry>:MAX;
 
     /// Vector of Registers metadata. One for each register to be published.
-    2: vector<RegistersMetadataEntry>:MAX registers;
+    2: registers vector<RegistersMetadataEntry>:MAX;
 };

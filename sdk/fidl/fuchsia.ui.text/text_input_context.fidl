@@ -1,30 +1,32 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.ui.text;
 using fuchsia.ui.views;
 
 /// Allows clients to receive a `TextField` interface for the currently focused text field.
-[Discoverable]
+@discoverable
 protocol TextInputContext {
     /// Get current focused text field.
     /// Server will not respond until a text field is focused. Server also responds when
     /// a new text field is focused. It also responds to newly connected clients, if
     /// there is a focused text field.
     /// When the text field loses focus, the `TextField` handle will be closed.
-    WatchFocusedTextField() -> (TextField text_field);
+    WatchFocusedTextField() -> (resource struct {
+        text_field client_end:TextField;
+    });
 };
 
 /// Allows clients to manage currently focused `TextField` interface.
 /// When the focused text field changes, `TextInputContext` clients receive a notification.
-[Discoverable]
+@discoverable
 protocol TextInputContextManager {
     /// Reports client's `ViewRef` to the protocol provider.
     /// Server ensures the client is focused prior to handling other methods defined in
     /// this protocol.
-    SetView(fuchsia.ui.views.ViewRef view_ref);
+    SetView(resource struct {
+        view_ref fuchsia.ui.views.ViewRef;
+    });
 
     /// Create a new focused `TextField` handle and binds the `TextField` to the channel
     /// provided, following the recommended pattern for request pipelining.
@@ -33,5 +35,7 @@ protocol TextInputContextManager {
     /// fields are disconnected.
     /// Client must call `SetView` in order to receive responses on this method.
     /// Server will not respond until the client is focused.
-    CreateNewFocusedTextField(request<TextField> text_field);
+    CreateNewFocusedTextField(resource struct {
+        text_field server_end:TextField;
+    });
 };

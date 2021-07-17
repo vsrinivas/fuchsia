@@ -1,12 +1,10 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.modular;
 
-struct StoryOptions {
+type StoryOptions = struct {
     /// Whether or not the story will be hidden on a call to
     /// StoryProvider#GetStories.
-    bool kind_of_proto_story;
+    kind_of_proto_story bool;
 };

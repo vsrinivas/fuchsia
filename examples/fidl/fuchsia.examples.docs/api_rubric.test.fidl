@@ -1,61 +1,69 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
 library fuchsia.examples.docs;
 
 using zx;
 
 // [START ordinals]
 protocol A {
-    [Selector = "C"]
-    B(string s, bool b);
+    @selector("C")
+    B(struct {
+        s string;
+        b bool;
+    });
 };
 // [END ordinals]
 
 // [START semantics]
-struct Ipv4Address {
-    array<uint8>:4 octets;
+type Ipv4Address = struct {
+    octets array<uint8, 4>;
 };
 // [END semantics]
 
-struct SuccessValue {
-};
+type SuccessValue = struct {};
 
 // [START errors]
 // Only erroneous statuses are listed
-enum MyErrorCode {
+type MyErrorCode = strict enum {
     MISSING_FOO = 1; // avoid using 0
     NO_BAR = 2;
 };
 
 protocol Frobinator {
-    Frobinate() -> (SuccessValue value) error MyErrorCode;
+    Frobinate() -> (struct {
+        value SuccessValue;
+    }) error MyErrorCode;
 };
 // [END errors]
 
 // [START optional-error]
-enum MyStatusCode {
+type MyStatusCode = strict enum {
     OK = 0; // The success value should be 0,
     MISSING_FOO = 1; // with erroneous status next.
     NO_BAR = 2;
 };
 
 protocol Frobinator2 {
-    Frobinate() -> (SuccessValue? value, MyStatusCode err);
+    Frobinate() -> (struct {
+        value box<SuccessValue>;
+        err MyStatusCode;
+    });
 };
 // [END optional-error]
 
 // [START constants]
-const int32 MAX_BATCH_SIZE = 128;
+const MAX_BATCH_SIZE int32 = 128;
 
 protocol Sender {
-    Emit(vector<uint8>:MAX_BATCH_SIZE batch);
+    Emit(struct {
+        batch vector<uint8>:MAX_BATCH_SIZE;
+    });
 };
 // [END constants]
 
 // [START bits-hex]
-bits InfoFeaturesHex : uint32 {
+type InfoFeaturesHex = strict bits : uint32 {
     WLAN = 0x00000001; // If present, this device represents WLAN hardware
     SYNTH = 0x00000002; // If present, this device is synthetic (not backed by h/w)
     LOOPBACK = 0x00000004; // If present, this device receives all messages it sends
@@ -63,7 +71,7 @@ bits InfoFeaturesHex : uint32 {
 // [END bits-hex]
 
 // [START bits-binary]
-bits InfoFeaturesBits : uint32 {
+type InfoFeaturesBits = strict bits : uint32 {
     WLAN = 0b00000001; // If present, this device represents WLAN hardware
     SYNTH = 0b00000010; // If present, this device is synthetic (not backed by h/w)
     LOOPBACK = 0b00000100; // If present, this device receives all messages it sends
@@ -73,24 +81,34 @@ bits InfoFeaturesBits : uint32 {
 // [START pipelining-1]
 // GOOD:
 protocol GoodFoo {
-    GetBar(string name, request<Bar> bar);
+    GetBar(resource struct {
+        name string;
+        bar server_end:Bar;
+    });
 };
 
 // BAD:
 protocol BadFoo {
-    GetBar(string name) -> (Bar bar);
+    GetBar(struct {
+        name string;
+    }) -> (resource struct {
+        bar client_end:Bar;
+    });
 };
 // [END pipelining-1]
 
-struct CodecParams {
-};
+type CodecParams = struct {};
 
-protocol Codec {
-};
+protocol Codec {};
 
 // [START pipelining-2]
 protocol CodecProvider {
-    TryToCreateCodec(CodecParams params, request<Codec> codec) -> (bool succeed);
+    TryToCreateCodec(resource struct {
+        params CodecParams;
+        codec server_end:Codec;
+    }) -> (struct {
+        succeed bool;
+    });
 };
 // [END pipelining-2]
 
@@ -100,177 +118,240 @@ protocol Codec2 {
 };
 
 protocol CodecProvider2 {
-    TryToCreateCodec(CodecParams params, request<Codec2> codec);
+    TryToCreateCodec(resource struct {
+        params CodecParams;
+        codec server_end:Codec2;
+    });
 };
 // [END pipelining-3]
 
-struct Args {
-};
+type Args = struct {};
 
 // [START hanging-gets]
 protocol FooProvider {
-    WatchFoo(Args args) -> (Foo foo);
+    WatchFoo(struct {
+        args Args;
+    }) -> (resource struct {
+        foo client_end:Foo;
+    });
 };
 // [END hanging-gets]
 
 // [START throttle-push]
 protocol Listener {
-    OnBar(Args args) -> ();
+    OnBar(struct {
+        args Args;
+    }) -> ();
 };
 // [END throttle-push]
 
 // [START events-1]
 protocol DeathWish {
-    -> OnFatalError(zx.status error_code);
+    -> OnFatalError(struct {
+        error_code zx.status;
+    });
 };
 // [END events-1]
 
 // [START events-2]
 protocol NetworkScanner {
     ScanForNetworks();
-    -> OnNetworkDiscovered(string network);
+    -> OnNetworkDiscovered(struct {
+        network string;
+    });
     -> OnScanFinished();
 };
 // [END events-2]
 
-struct InputEvent {
-};
+type InputEvent = struct {};
 
 // [START ack-1]
 protocol View1 {
-    -> OnInputEvent(InputEvent event);
+    -> OnInputEvent(struct {
+        event InputEvent;
+    });
     NotifyInputEventHandled();
 };
 // [END ack-1]
 
-struct FocusChangedEvent {
-};
+type FocusChangedEvent = struct {};
 
 // [START ack-2]
 protocol View2 {
-    -> OnInputEvent(InputEvent event, uint64 seq);
-    -> OnFocusChangedEvent(FocusChangedEvent event, uint64 seq);
-    NotifyEventsHandled(uint64 last_seq);
+    -> OnInputEvent(struct {
+        event InputEvent;
+        seq uint64;
+    });
+    -> OnFocusChangedEvent(struct {
+        event FocusChangedEvent;
+        seq uint64;
+    });
+    NotifyEventsHandled(struct {
+        last_seq uint64;
+    });
 };
 // [END ack-2]
 
-struct Image {
-};
+type Image = struct {};
 
 // [START feed-forward]
 protocol Canvas {
-    Flush() -> (zx.status code);
+    Flush() -> (struct {
+        code zx.status;
+    });
     Clear();
-    UploadImage(uint32 image_id, Image image);
-    PaintImage(uint32 image_id, float32 x, float32 y);
-    DiscardImage(uint32 image_id);
-    PaintSmileyFace(float32 x, float32 y);
-    PaintMoustache(float32 x, float32 y);
+    UploadImage(struct {
+        image_id uint32;
+        image Image;
+    });
+    PaintImage(struct {
+        image_id uint32;
+        x float32;
+        y float32;
+    });
+    DiscardImage(struct {
+        image_id uint32;
+    });
+    PaintSmileyFace(struct {
+        x float32;
+        y float32;
+    });
+    PaintMoustache(struct {
+        x float32;
+        y float32;
+    });
 };
 // [END feed-forward]
 
-struct MyStatus {
-};
+type MyStatus = struct {};
 
 // [START command-union]
-struct PokeCmd {
-    int32 x;
-    int32 y;
+type PokeCmd = struct {
+    x int32;
+    y int32;
 };
 
-struct ProdCmd {
-    string:64 message;
+type ProdCmd = struct {
+    message string:64;
 };
 
-union MyCommand {
-    1: PokeCmd poke;
-    2: ProdCmd prod;
+type MyCommand = strict union {
+    1: poke PokeCmd;
+    2: prod ProdCmd;
 };
 
 protocol HighVolumeSink {
-    Enqueue(vector<MyCommand> commands);
-    Commit() -> (MyStatus result);
+    Enqueue(struct {
+        commands vector<MyCommand>;
+    });
+    Commit() -> (struct {
+        result MyStatus;
+    });
 };
 // [END command-union]
 
 // [START paginate-write-1]
 protocol Foo1 {
-    AddBars(vector<Bar> bars);
-    UseTheBars() -> (Args args);
+    AddBars(resource struct {
+        bars vector<client_end:Bar>;
+    });
+    UseTheBars() -> (struct {
+        args Args;
+    });
 };
 // [END paginate-write-1]
 
 // [START paginate-write-2]
 protocol BarTransaction {
-    Add(vector<Bar> bars);
-    Commit() -> (Args args);
+    Add(resource struct {
+        bars vector<client_end:Bar>;
+    });
+    Commit() -> (struct {
+        args Args;
+    });
 };
 
 protocol Foo2 {
-    StartBarTransaction(request<BarTransaction> transaction);
+    StartBarTransaction(resource struct {
+        transaction server_end:BarTransaction;
+    });
 };
 // [END paginate-write-2]
 
 // [START paginate-read-1]
 protocol EventBasedGetter {
     GetBars();
-    -> OnBars(vector<Bar> bars);
+    -> OnBars(resource struct {
+        bars vector<client_end:Bar>;
+    });
     -> OnBarsDone();
 };
 // [END paginate-read-1]
 
 // [START paginate-read-2]
 protocol BarIterator {
-    GetNext() -> (vector<Bar> bars);
+    GetNext() -> (resource struct {
+        bars vector<client_end:Bar>;
+    });
 };
 
 protocol ChannelBasedGetter {
-    GetBars(request<BarIterator> iterator);
+    GetBars(resource struct {
+        iterator server_end:BarIterator;
+    });
 };
 // [END paginate-read-2]
 
-struct Entry {
-};
+type Entry = struct {};
 
 // [START paginate-read-3]
-struct Token {
-    array<uint8>:16 opaque;
+type Token = struct {
+    opaque array<uint8, 16>;
 };
 
 protocol TokenBasedGetter {
     // If token is null, fetch the first N entries. If token is not null, return
     // the N items starting at token. Returns as many entries as it can in
     // results and populates next_token if more entries are available.
-    GetEntries(Token? token) -> (vector<Entry> entries, Token? next_token);
+    GetEntries(struct {
+        token box<Token>;
+    }) -> (struct {
+        entries vector<Entry>;
+        next_token box<Token>;
+    });
 };
 // [END paginate-read-3]
 
 // [START eventpair]
 protocol Exporter {
-    ExportThing(uint32 client_assigned_id, zx.handle:EVENTPAIR export_token);
+    ExportThing(resource struct {
+        client_assigned_id uint32;
+        export_token zx.handle:EVENTPAIR;
+    });
 };
 
 protocol Importer {
-    ImportThing(uint32 some_other_client_assigned_id, zx.handle:EVENTPAIR import_token);
+    ImportThing(resource struct {
+        some_other_client_assigned_id uint32;
+        import_token zx.handle:EVENTPAIR;
+    });
 };
 // [END eventpair]
 
 // [START empty]
-protocol FooController {
-};
+protocol FooController {};
 // [END empty]
 
-struct ColorCorrection {
-};
+type ColorCorrection = struct {};
 
 // [START settings]
-table Settings {
-    1: bool magnification_enabled;
-    2: float32 magnification_zoom_factor;
-    3: bool screen_reader_enabled;
-    4: bool color_inversion_enabled;
-    5: ColorCorrection color_correction;
-    6: array<float32>:9 color_adjustment_matrix;
+type Settings = table {
+    1: magnification_enabled bool;
+    2: magnification_zoom_factor float32;
+    3: screen_reader_enabled bool;
+    4: color_inversion_enabled bool;
+    5: color_correction ColorCorrection;
+    6: color_adjustment_matrix array<float32, 9>;
 };
 // [END settings]
 
@@ -279,7 +360,11 @@ protocol TheManagerOfSomeSorts {
     /// Description how the update modifies the behavior.
     ///
     /// Only fields present in the settings value will be changed.
-    Update(Settings settings) -> (Args args);
+    Update(struct {
+        settings Settings;
+    }) -> (struct {
+        args Args;
+    });
 };
 // [END settings-partial]
 
@@ -288,41 +373,49 @@ protocol TheManagerOfOtherSorts {
     /// Description how the override modifies the behavior.
     ///
     /// This replaces the setting.
-    Replace(Settings settings) -> (Args args);
+    Replace(struct {
+        settings Settings;
+    }) -> (struct {
+        args Args;
+    });
 };
 // [END settings-replace]
 
 // [START service-hub-1]
 // BAD
-[Discoverable]
+@discoverable
 protocol ServiceHub {
-    GetFoo(request<Foo> foo);
-    GetBar(request<Bar> bar);
-    GetBaz(request<Baz> baz);
-    GetQux(request<Qux> qux);
+    GetFoo(resource struct {
+        foo server_end:Foo;
+    });
+    GetBar(resource struct {
+        bar server_end:Bar;
+    });
+    GetBaz(resource struct {
+        baz server_end:Baz;
+    });
+    GetQux(resource struct {
+        qux server_end:Qux;
+    });
 };
 // [END service-hub-1]
 
 // [START service-hub-2]
-[Discoverable]
-protocol Foo {
-};
+@discoverable
+protocol Foo {};
 
-[Discoverable]
-protocol Bar {
-};
+@discoverable
+protocol Bar {};
 
-[Discoverable]
-protocol Baz {
-};
+@discoverable
+protocol Baz {};
 
-[Discoverable]
-protocol Qux {
-};
+@discoverable
+protocol Qux {};
 // [END service-hub-2]
 
 // [START boolean-enum]
-enum FileType {
+type FileType = strict enum {
     UNKNOWN = 0;
     GIF = 1;
 };

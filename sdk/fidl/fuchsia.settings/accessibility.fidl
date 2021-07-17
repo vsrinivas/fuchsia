@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.settings;
 
 using fuchsia.ui.types;
@@ -11,7 +9,7 @@ using fuchsia.ui.types;
 ///
 /// Supported SettingsEpitaph enums:
 /// REQUEST_NOT_SUPPORTED, INTERNAL_SERVICE_ERROR, PERSISTENT_STORAGE_ERROR
-[Discoverable]
+@discoverable
 protocol Accessibility {
     /// Gets the current value of all accessibility settings. Returns
     /// immediately on first call; subsequent calls return when any of the
@@ -22,36 +20,40 @@ protocol Accessibility {
     ///
     /// If this call fails, it is considered a fatal error and the channel
     /// will be closed.
-    Watch() -> (AccessibilitySettings settings);
+    Watch() -> (struct {
+        settings AccessibilitySettings;
+    });
 
     /// Sets [AccessibilitySettings] settings. Any field not explicitly set in the table performs a
     /// no-op, and will not make any changes.
-    Set(AccessibilitySettings settings) -> () error Error;
+    Set(struct {
+        settings AccessibilitySettings;
+    }) -> (struct {}) error Error;
 };
 
 /// Supported accessibility settings.
-table AccessibilitySettings {
+type AccessibilitySettings = table {
     /// For videos, use an alternative audio track (akin to changing languages)
     /// that explains what is happening visually while there is no dialogue.
-    1: bool audio_description;
+    1: audio_description bool;
 
     /// Read aloud elements of the screen selected by the user.
-    2: bool screen_reader;
+    2: screen_reader bool;
 
     /// Invert colors on the screen.
-    3: bool color_inversion;
+    3: color_inversion bool;
 
     /// Interpret triple-tap on the touchscreen as a command to zoom in.
-    4: bool enable_magnification;
+    4: enable_magnification bool;
 
     /// What type of color-blindness, if any, to correct for.
-    5: ColorBlindnessType color_correction;
+    5: color_correction ColorBlindnessType;
 
     /// What kind of sources get closed captions, and how they look.
-    6: CaptionsSettings captions_settings;
+    6: captions_settings CaptionsSettings;
 };
 
-enum ColorBlindnessType {
+type ColorBlindnessType = strict enum {
     /// No color blindness.
     NONE = 0;
 
@@ -67,47 +69,47 @@ enum ColorBlindnessType {
 };
 
 /// What kind of sources get closed captions, and how they look.
-table CaptionsSettings {
+type CaptionsSettings = table {
     /// Closed captions enabled for media sources of audio.
-    1: bool for_media;
+    1: for_media bool;
 
     /// Closed captions enabled for Text-To-Speech sources of audio.
-    2: bool for_tts;
+    2: for_tts bool;
 
     /// Font style and color used for the closed captions text.
-    3: CaptionFontStyle font_style;
+    3: font_style CaptionFontStyle;
 
     /// Border color used around the closed captions window.
     ///
     /// Each color channel should be a finite number otherwise will cause
     /// SetAccessibilityInfo to fail with INVALID_VALUE.
-    4: fuchsia.ui.types.ColorRgba window_color;
+    4: window_color fuchsia.ui.types.ColorRgba;
 
     /// Background color of the closed captions window.
     ///
     /// Each color channel should be a finite number otherwise will cause
     /// SetAccessibilityInfo to fail with INVALID_VALUE.
-    5: fuchsia.ui.types.ColorRgba background_color;
+    5: background_color fuchsia.ui.types.ColorRgba;
 };
 
 /// Font, size, and color of closed captions text.
-table CaptionFontStyle {
-    1: CaptionFontFamily family;
+type CaptionFontStyle = table {
+    1: family CaptionFontFamily;
     /// 47 CFR §79.103(c)(2) requires at least 3-bit RGB for user override of
     /// closed-captions color.
     ///
     /// Each color channel should be a finite number otherwise will cause
     /// SetAccessibilityInfo to fail with INVALID_VALUE.
-    2: fuchsia.ui.types.ColorRgba color;
+    2: color fuchsia.ui.types.ColorRgba;
     /// Size of closed captions text relative to the default captions size. A
     /// range of [0.5, 2] is guaranteed to be supported (as 47 CFR §79.103(c)(4)
     /// establishes). Size should be a finite number.
-    3: float32 relative_size;
-    4: EdgeStyle char_edge_style;
+    3: relative_size float32;
+    4: char_edge_style EdgeStyle;
 };
 
 /// Font family groups for closed captions, specified by 47 CFR §79.102(k).
-enum CaptionFontFamily {
+type CaptionFontFamily = strict enum {
     UNKNOWN = 0;
     MONOSPACED_SERIF = 1;
     PROPORTIONAL_SERIF = 2;
@@ -119,7 +121,7 @@ enum CaptionFontFamily {
 };
 
 /// Edge style for fonts as specified in 47 CFR §79.103(c)(7)
-enum EdgeStyle {
+type EdgeStyle = strict enum {
     /// No border around fonts.
     NONE = 0;
 

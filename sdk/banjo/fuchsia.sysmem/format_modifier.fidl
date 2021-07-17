@@ -1,16 +1,14 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.sysmem;
 
-[ForDeprecatedCBindings]
-struct FormatModifier {
+@for_deprecated_c_bindings
+type FormatModifier = struct {
     /// The upper 8 bits are a vendor code as allocated in FormatModifierVendor
     /// enum.  The lower 56 bits are vendor-defined.
     ///
     /// This field and the values that go in this field are defined this way for
     /// compatibility reasons.
-    uint64 value;
+    value uint64;
 };

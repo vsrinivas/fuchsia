@@ -1,8 +1,6 @@
 // Copyright 2017 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.bluetooth.gatt;
 
 using fuchsia.bluetooth as bt;
@@ -12,8 +10,12 @@ protocol LocalServiceDelegate {
     /// Notifies the delegate when a remote device with `peer_id` enables or
     /// disables notifications or indications on the characteristic with the given
     /// `characteristic_id`.
-    OnCharacteristicConfiguration(uint64 characteristic_id, bt.PeerIdString peer_id,
-                                  bool notify, bool indicate);
+    OnCharacteristicConfiguration(struct {
+        characteristic_id uint64;
+        peer_id bt.PeerIdString;
+        notify bool;
+        indicate bool;
+    });
 
     /// Called when a remote device issues a request to read the value of the
     /// of the characteristic or descriptor with given identifier. The delegate
@@ -21,16 +23,32 @@ protocol LocalServiceDelegate {
     /// read request resulted in an error it should be returned in `error_code`.
     /// On success, `error_code` should be set to NO_ERROR and a `value` should be
     /// provided.
-    OnReadValue(uint64 id, int32 offset) -> (bytes? value, ErrorCode status);
+    OnReadValue(struct {
+        id uint64;
+        offset int32;
+    }) -> (struct {
+        value bytes:optional;
+        status ErrorCode;
+    });
 
     /// Called when a remote device issues a request to write the value of the
     /// characteristic or descriptor with the given identifier.
-    OnWriteValue(uint64 id, uint16 offset, bytes value) -> (ErrorCode status);
+    OnWriteValue(struct {
+        id uint64;
+        offset uint16;
+        value bytes;
+    }) -> (struct {
+        status ErrorCode;
+    });
 
     /// Called when a remote device issues a request to write the value of the
     /// characteristic with the given identifier. This can be called on a
     /// characteristic with the WRITE_WITHOUT_RESPONSE property.
-    OnWriteWithoutResponse(uint64 id, uint16 offset, bytes value);
+    OnWriteWithoutResponse(struct {
+        id uint64;
+        offset uint16;
+        value bytes;
+    });
 };
 
 /// Interface for communicating with a published service.
@@ -48,10 +66,15 @@ protocol LocalService {
     ///
     /// This method has no effect if the peer has not enabled notifications or
     /// indications on the requested characteristic.
-    NotifyValue(uint64 characteristic_id, bt.PeerIdString peer_id, bytes value, bool confirm);
+    NotifyValue(struct {
+        characteristic_id uint64;
+        peer_id bt.PeerIdString;
+        value bytes;
+        confirm bool;
+    });
 };
 
-[Discoverable]
+@discoverable
 protocol Server {
     /// Publishes the given service so that it is available to all remote peers.
     /// A LocalServiceDelegate must be provided over which to receive service requests.
@@ -65,5 +88,11 @@ protocol Server {
     ///
     /// Returns the success or failure status of the call and a unique identifier
     /// that can be used to unregister the service.
-    PublishService(ServiceInfo info, LocalServiceDelegate delegate, request<LocalService> service) -> (fuchsia.bluetooth.Status status);
+    PublishService(resource struct {
+        info ServiceInfo;
+        delegate client_end:LocalServiceDelegate;
+        service server_end:LocalService;
+    }) -> (struct {
+        status fuchsia.bluetooth.Status;
+    });
 };

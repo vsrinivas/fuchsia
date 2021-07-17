@@ -1,14 +1,18 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library zx;
 
-[Transport = "Syscall"]
+@transport("Syscall")
 protocol vmo {
     /// Create a VM object.
-    vmo_create(uint64 size, uint32 options) -> (status status, handle:VMO out);
+    vmo_create(struct {
+        size uint64;
+        options uint32;
+    }) -> (resource struct {
+        status status;
+        out handle:VMO;
+    });
 
     // TODO(scottmg): This syscall is very weird, it's currently:
     //    (handle, buffer, offset, buffer_size)
@@ -19,24 +23,46 @@ protocol vmo {
     // error-prone.
     /// Read bytes from the VMO.
     /// Rights: handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_READ.
-    [blocking,
-    ArgReorder = "handle, buffer, offset, buffer_size"]
-    vmo_read(handle:VMO handle, uint64 offset) -> (status status, vector_void buffer);
+    @blocking
+    @arg_reorder("handle, buffer, offset, buffer_size")
+    vmo_read(resource struct {
+        handle handle:VMO;
+        offset uint64;
+    }) -> (struct {
+        status status;
+        buffer vector_void;
+    });
 
     // TODO(scottmg): Same problem as Read() above.
     /// Write bytes to the VMO.
     /// Rights: handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_WRITE.
-    [blocking,
-    ArgReorder = "handle, buffer, offset, buffer_size"]
-    vmo_write(handle:VMO handle, vector_void buffer, uint64 offset) -> (status status);
+    @blocking
+    @arg_reorder("handle, buffer, offset, buffer_size")
+    vmo_write(resource struct {
+        handle handle:VMO;
+        buffer vector_void;
+        offset uint64;
+    }) -> (struct {
+        status status;
+    });
 
     // TODO(fxbug.dev/32803): No rights required?
     /// Read the current size of a VMO object.
-    vmo_get_size(handle:VMO handle) -> (status status, uint64 size);
+    vmo_get_size(resource struct {
+        handle handle:VMO;
+    }) -> (struct {
+        status status;
+        size uint64;
+    });
 
     /// Resize a VMO object.
     /// Rights: handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_WRITE.
-    vmo_set_size(handle:VMO handle, uint64 size) -> (status status);
+    vmo_set_size(resource struct {
+        handle handle:VMO;
+        size uint64;
+    }) -> (struct {
+        status status;
+    });
 
     /// Perform an operation on a range of a VMO.
     /// Rights: If op is ZX_VMO_OP_COMMIT, handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_WRITE.
@@ -45,37 +71,70 @@ protocol vmo {
     /// Rights: If op is ZX_VMO_OP_CACHE_INVALIDATE, handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_WRITE.
     /// Rights: If op is ZX_VMO_OP_CACHE_CLEAN, handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_READ.
     /// Rights: If op is ZX_VMO_OP_CACHE_CLEAN_INVALIDATE, handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_READ.
-    [blocking]
-    vmo_op_range(handle:VMO handle,
-                 uint32 op,
-                 uint64 offset,
-                 uint64 size,
-                 mutable_vector_void buffer)
-        -> (status status);
+    @blocking
+    vmo_op_range(resource struct {
+        handle handle:VMO;
+        op uint32;
+        offset uint64;
+        size uint64;
+        buffer mutable_vector_void;
+    }) -> (struct {
+        status status;
+    });
 
     /// Create a child of a VM Object.
     /// Rights: handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_DUPLICATE and have ZX_RIGHT_READ.
-    vmo_create_child(handle:VMO handle, uint32 options, uint64 offset, uint64 size)
-        -> (status status, handle:VMO out);
+    vmo_create_child(resource struct {
+        handle handle:VMO;
+        options uint32;
+        offset uint64;
+        size uint64;
+    }) -> (resource struct {
+        status status;
+        out handle:VMO;
+    });
 
     /// Set the caching policy for pages held by a VMO.
     /// Rights: handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_MAP.
-    vmo_set_cache_policy(handle:VMO handle, uint32 cache_policy) -> (status status);
+    vmo_set_cache_policy(resource struct {
+        handle handle:VMO;
+        cache_policy uint32;
+    }) -> (struct {
+        status status;
+    });
 
     // TODO(fxbug.dev/32803): handle: No rights required, ZX_RIGHT_EXECUTE added to dup out
     // TODO(fxbug.dev/32803): vmex == ZX_HANDLE_INVALID also accepted.
     /// Add execute rights to a VMO.
     /// Rights: handle must be of type ZX_OBJ_TYPE_VMO.
     /// Rights: vmex must have resource kind ZX_RSRC_KIND_VMEX.
-    vmo_replace_as_executable([Release] handle:VMO handle, handle:RESOURCE vmex)
-        -> (status status, handle:VMO out);
+    vmo_replace_as_executable(resource struct {
+        @release
+        handle handle:VMO;
+        vmex handle:RESOURCE;
+    }) -> (resource struct {
+        status status;
+        out handle:VMO;
+    });
 
     /// Rights: bti must be of type ZX_OBJ_TYPE_BTI and have ZX_RIGHT_MAP.
-    vmo_create_contiguous(handle:BTI bti, usize size, uint32 alignment_log2)
-        -> (status status, handle:VMO out);
+    vmo_create_contiguous(resource struct {
+        bti handle:BTI;
+        size usize;
+        alignment_log2 uint32;
+    }) -> (resource struct {
+        status status;
+        out handle:VMO;
+    });
 
     /// Create a VM object referring to a specific contiguous range of physical memory.
     /// Rights: resource must have resource kind ZX_RSRC_KIND_MMIO.
-    vmo_create_physical(handle:RESOURCE resource, paddr paddr, usize size)
-        -> (status status, handle:VMO out);
+    vmo_create_physical(resource struct {
+        resource handle:RESOURCE;
+        paddr paddr;
+        size usize;
+    }) -> (resource struct {
+        status status;
+        out handle:VMO;
+    });
 };

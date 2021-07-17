@@ -1,13 +1,11 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.session.examples;
 
 /// A protocol which is used by an example element to ping the session it was
 /// added to.
-[Discoverable]
+@discoverable
 protocol ElementPing {
     /// Sends a ping to the example session.
     Ping();

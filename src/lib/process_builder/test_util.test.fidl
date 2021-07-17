@@ -1,22 +1,36 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library test.processbuilder;
 
-struct EnvVar {
-    string key;
-    string value;
+type EnvVar = struct {
+    key string;
+    value string;
 };
 
-[Discoverable]
+@discoverable
 protocol Util {
-    GetArguments() -> (vector<string> args);
-    GetArgumentCount() -> (uint64 count);
-    GetEnvironment() -> (vector<EnvVar> vars);
-    GetEnvironmentCount() -> (uint64 count);
-    DumpNamespace() -> (string contents);
-    ReadFile(string path) -> (string contents);
-    GetLifecycleKoid() -> (uint64 koid);
+    GetArguments() -> (struct {
+        args vector<string>;
+    });
+    GetArgumentCount() -> (struct {
+        count uint64;
+    });
+    GetEnvironment() -> (struct {
+        vars vector<EnvVar>;
+    });
+    GetEnvironmentCount() -> (struct {
+        count uint64;
+    });
+    DumpNamespace() -> (struct {
+        contents string;
+    });
+    ReadFile(struct {
+        path string;
+    }) -> (struct {
+        contents string;
+    });
+    GetLifecycleKoid() -> (struct {
+        koid uint64;
+    });
 };

@@ -1,23 +1,26 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fidl.test.collision;
 
-protocol NameCollision {
+protocol NameCollision {};
+
+type UnionCollision = strict union {
+    1: foo uint32;
 };
 
-union UnionCollision {
-    1: uint32 foo;
-};
-
-union NullableUnionCollision {
-    1: uint32 foo;
+type NullableUnionCollision = strict union {
+    1: foo uint32;
 };
 
 protocol ReturnsCollision {
-    NameCollision() -> (NameCollision collision);
-    UnionCollision(UnionCollision collision) -> ();
-    NullableUnionCollision(NullableUnionCollision? collision) -> ();
+    NameCollision() -> (resource struct {
+        collision client_end:NameCollision;
+    });
+    UnionCollision(struct {
+        collision UnionCollision;
+    }) -> ();
+    NullableUnionCollision(struct {
+        collision NullableUnionCollision:optional;
+    }) -> ();
 };

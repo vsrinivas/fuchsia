@@ -1,8 +1,6 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.ui.pointer;
 
 /// The possible states of a pointer event. These phases of events in a stream
@@ -31,7 +29,7 @@ library fuchsia.ui.pointer;
 ///
 /// For example, touch events are typically observed as a succession of
 /// interactions, as fingers engage and disengage with the display.
-enum EventPhase {
+type EventPhase = strict enum {
     /// The device has started tracking the pointer.
     ADD = 1;
 

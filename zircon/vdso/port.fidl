@@ -1,69 +1,67 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library zx;
 
 // port_packet_t::type ZX_PKT_TYPE_USER.
-union PacketUser {
-    1: array<uint64>:4 u64;
-    2: array<uint32>:8 u32;
-    3: array<uint16>:16 u16;
-    4: array<int8>:32 c8;
+type PacketUser = strict union {
+    1: u64 array<uint64, 4>;
+    2: u32 array<uint32, 8>;
+    3: u16 array<uint16, 16>;
+    4: c8 array<int8, 32>;
 };
 
 // port_packet_t::type ZX_PKT_TYPE_SIGNAL_ONE.
-struct PacketSignal {
-    signals trigger;
-    signals observed;
-    uint64 count;
-    uint64 reserved0;
-    uint64 reserved1;
+type PacketSignal = struct {
+    trigger signals;
+    observed signals;
+    count uint64;
+    reserved0 uint64;
+    reserved1 uint64;
 };
 
-struct PacketException {
-    uint64 pid;
-    uint64 tid;
-    uint64 reserved0;
-    uint64 reserved1;
+type PacketException = struct {
+    pid uint64;
+    tid uint64;
+    reserved0 uint64;
+    reserved1 uint64;
 };
 
-struct PacketGuestBell {
-    gpaddr addr;
-    uint64 reserved0;
-    uint64 reserved1;
-    uint64 reserved2;
+type PacketGuestBell = struct {
+    addr gpaddr;
+    reserved0 uint64;
+    reserved1 uint64;
+    reserved2 uint64;
 };
 
 // TODO(scottmg): Arch-specific definition.
-struct PacketGuestMem {
-    gpaddr addr;
-    //#if __aarch64__
-    //uint8_t access_size;
-    //bool sign_extend;
-    //uint8_t xt;
-    //bool read;
-    //uint64_t data;
-    //uint64_t reserved;
-    //#elif __x86_64__
-    //// NOTE: x86 instructions are guaranteed to be 15 bytes or fewer.
-    //#define X86_MAX_INST_LEN 15u
-    //uint8_t inst_len;
-    //uint8_t inst_buf[X86_MAX_INST_LEN];
-    //// This is the default operand size as determined by the CS and EFER register (Volume 3,
-    //// Section 5.2.1). If operating in 64-bit mode then near branches and all instructions, except
-    //// far branches, that implicitly reference the RSP will actually have a default operand size of
-    //// 64-bits (Volume 2, Section 2.2.1.7), and not the 32-bits that will be given here.
-    //uint8_t default_operand_size;
-    //uint8_t reserved[7];
-    //#endif
+type PacketGuestMem = struct {
+    addr gpaddr;
+//#if __aarch64__
+//uint8_t access_size;
+//bool sign_extend;
+//uint8_t xt;
+//bool read;
+//uint64_t data;
+//uint64_t reserved;
+//#elif __x86_64__
+//// NOTE: x86 instructions are guaranteed to be 15 bytes or fewer.
+//#define X86_MAX_INST_LEN 15u
+//uint8_t inst_len;
+//uint8_t inst_buf[X86_MAX_INST_LEN];
+//// This is the default operand size as determined by the CS and EFER register (Volume 3,
+//// Section 5.2.1). If operating in 64-bit mode then near branches and all instructions, except
+//// far branches, that implicitly reference the RSP will actually have a default operand size of
+//// 64-bits (Volume 2, Section 2.2.1.7), and not the 32-bits that will be given here.
+//uint8_t default_operand_size;
+//uint8_t reserved[7];
+//#endif
 };
 
-struct PacketGuestIo {
-    uint16 port;
-    uint8 access_size;
-    bool input;
+type PacketGuestIo = struct {
+    port uint16;
+    access_size uint8;
+    input bool;
     // TODO(scottmg): Unnamed union.
     //union {
     //  uint8_t u8;
@@ -71,12 +69,12 @@ struct PacketGuestIo {
     //  uint32_t u32;
     //  uint8_t data[4];
     //};
-    uint64 reserved0;
-    uint64 reserved1;
-    uint64 reserved2;
+    reserved0 uint64;
+    reserved1 uint64;
+    reserved2 uint64;
 };
 
-struct PacketGuestVcpu {
+type PacketGuestVcpu = struct {
     // TODO(scottmg): Unnamed union.
     //union {
     //  struct {
@@ -88,59 +86,81 @@ struct PacketGuestVcpu {
     //    zx_gpaddr_t entry;
     //  } startup;
     //};
-    uint8 type;
-    uint64 reserved;
+    type uint8;
+    reserved uint64;
 };
 
-struct PacketInterrupt {
-    time timestamp;
-    uint64 reserved0;
-    uint64 reserved1;
-    uint64 reserved2;
+type PacketInterrupt = struct {
+    timestamp time;
+    reserved0 uint64;
+    reserved1 uint64;
+    reserved2 uint64;
 };
 
-struct PacketPageRequest {
-    uint16 command;
-    uint16 flags;
-    uint32 reserved0;
-    uint64 offset;
-    uint64 length;
-    uint64 reserved1;
+type PacketPageRequest = struct {
+    command uint16;
+    flags uint16;
+    reserved0 uint32;
+    offset uint64;
+    length uint64;
+    reserved1 uint64;
 };
 
-struct PortPacket {
-    uint64 key;
-    uint32 type;
+type PortPacket = struct {
+    key uint64;
+    type uint32;
     status status;
     // TODO(scottmg): Unnamed union.
     // union {
-    PacketUser user;
-    PacketSignal signal;
-    PacketException exception;
-    PacketGuestBell guest_bell;
-    PacketGuestMem guest_mem;
-    PacketGuestIo guest_io;
-    PacketGuestVcpu guest_vcpu;
-    PacketInterrupt interrupt;
-    PacketPageRequest page_request;
-    // };
+    user PacketUser;
+    signal PacketSignal;
+    exception PacketException;
+    guest_bell PacketGuestBell;
+    guest_mem PacketGuestMem;
+    guest_io PacketGuestIo;
+    guest_vcpu PacketGuestVcpu;
+    interrupt PacketInterrupt;
+    page_request PacketPageRequest;
+// };
 };
 
-[Transport = "Syscall"]
+@transport("Syscall")
 protocol port {
     /// Create an IO port.
-    port_create(uint32 options) -> (status status, handle:PORT out);
+    port_create(struct {
+        options uint32;
+    }) -> (resource struct {
+        status status;
+        out handle:PORT;
+    });
 
     /// Queue a packet to a port.
     /// Rights: handle must be of type ZX_OBJ_TYPE_PORT and have ZX_RIGHT_WRITE.
-    port_queue(handle:PORT handle, PortPacket packet) -> (status status);
+    port_queue(resource struct {
+        handle handle:PORT;
+        packet PortPacket;
+    }) -> (struct {
+        status status;
+    });
 
     /// Wait for a packet arrival in a port.
     /// Rights: handle must be of type ZX_OBJ_TYPE_PORT and have ZX_RIGHT_READ.
-    [blocking]
-    port_wait(handle:PORT handle, time deadline) -> (status status, optional_PortPacket packet);
+    @blocking
+    port_wait(resource struct {
+        handle handle:PORT;
+        deadline time;
+    }) -> (struct {
+        status status;
+        packet optional_PortPacket;
+    });
 
     /// Cancels async port notifications on an object.
     /// Rights: handle must be of type ZX_OBJ_TYPE_PORT and have ZX_RIGHT_WRITE.
-    port_cancel(handle:PORT handle, handle source, uint64 key) -> (status status);
+    port_cancel(resource struct {
+        handle handle:PORT;
+        source handle;
+        key uint64;
+    }) -> (struct {
+        status status;
+    });
 };

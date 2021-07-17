@@ -1,14 +1,12 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.accessibility.tts;
 
 using fuchsia.intl;
 
 /// Error codes for TTS operations.
-enum Error {
+type Error = strict enum {
     /// The underlying TTS engine does not support this operation.
     NOT_IMPLEMENTED = 1;
     /// The value is out of range for a particular TTS parameter.
@@ -21,34 +19,36 @@ enum Error {
 
 /// Parameters of a voice.
 /// TODO(fxbug.dev/16795): Add extra voice parameters such as speech rate and  pitch.
-table VoiceParameters {
+type VoiceParameters = table {
     /// The current selected language.
-    1: fuchsia.intl.LocaleId language;
+    1: language fuchsia.intl.LocaleId;
 };
 
 /// An utterance holds information about its message and how it should be spoken.
-table Utterance {
+type Utterance = table {
     /// The message to be spoken.
     /// Clients should pay attention to the FIDL maximum size for a message,
     /// splitting when necessary into several utterances.
-    1: string message;
+    1: message string;
     /// Parameters that control the speech output.
-    2: VoiceParameters params;
+    2: params VoiceParameters;
 };
 
 /// An interface to produce speech output.
 /// Assistive technology use an Engine to start producing speech output and
 /// set configuration parameters that control the speech.
 /// TODO(fxbug.dev/17829): Implement pause, stop and resume.
-[Discoverable]
+@discoverable
 protocol Engine {
     /// Enqueues  an utterance to be spoken. Speech is not started until Speak
     /// is called.
-    Enqueue(Utterance utterance) -> () error Error;
+    Enqueue(struct {
+        utterance Utterance;
+    }) -> (struct {}) error Error;
 
     /// Speaks all enqueued utterances. The method returns the value when they
     /// are all finished playing.
-    Speak() -> () error Error;
+    Speak() -> (struct {}) error Error;
 
     /// Cancels current speech and also empties the queue.
     Cancel() -> ();

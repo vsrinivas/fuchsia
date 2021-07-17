@@ -1,28 +1,30 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.settings;
 
 /// Settings related to input to the device.
 ///
 /// Supported SettingsEpitaph enums:
 /// REQUEST_NOT_SUPPORTED, INTERNAL_SERVICE_ERROR, PERSISTENT_STORAGE_ERROR
-[Discoverable]
+@discoverable
 protocol Input {
     /// Gets the current |InputDeviceSettings|. Returns immediately on first call;
     /// subsequent calls return when the value changes.
     ///
     /// If this call fails, it is considered a fatal error and the channel
     /// will be closed.
-    [Transitional = "Will be deprecated in favor of Watch2"]
-    Watch() -> (InputDeviceSettings settings);
+    @transitional("Will be deprecated in favor of Watch2")
+    Watch() -> (struct {
+        settings InputDeviceSettings;
+    });
 
     /// Sets |InputDeviceSettings|. Any field not explicitly set in the table
     /// performs a no-op, and will not make any changes.
-    [Transitional = "Will be deprecated in favor of SetStates"]
-    Set(InputDeviceSettings settings) -> () error Error;
+    @transitional("Will be deprecated in favor of SetStates")
+    Set(struct {
+        settings InputDeviceSettings;
+    }) -> (struct {}) error Error;
 
     /// Gets the current |InputSettings|. Returns immediately on first call;
     /// subsequent calls return when the value changes. To find the state of a
@@ -33,8 +35,10 @@ protocol Input {
     ///
     /// If this call fails, it is considered a fatal error and the channel
     /// will be closed.
-    [Transitional = "Future replacement for Watch"]
-    Watch2() -> (InputSettings settings);
+    @transitional("Future replacement for Watch")
+    Watch2() -> (struct {
+        settings InputSettings;
+    });
 
     /// Requests software input devices to set their software state. May
     /// not necessarily change the overall state of the device, depending on
@@ -42,12 +46,14 @@ protocol Input {
     /// device if a known device_name and device_type are passed. Otherwise
     /// it will add a new input device. Devices not included in the SetStates
     /// call will not be modified.
-    [Transitional = "Future replacement for Set"]
-    SetStates(vector<InputState>:MAX input_states) -> () error Error;
+    @transitional("Future replacement for Set")
+    SetStates(struct {
+        input_states vector<InputState>:MAX;
+    }) -> (struct {}) error Error;
 };
 
 /// A series of flags determining the state of an input device mute toggle.
-bits ToggleStateFlags : uint64 {
+type ToggleStateFlags = strict bits : uint64 {
     /// The input device exists and is neither muted nor disabled.
     AVAILABLE = 0x01;
     /// The input device is being used.
@@ -60,12 +66,12 @@ bits ToggleStateFlags : uint64 {
     ERROR = 0x10;
 };
 
-enum DeviceType {
+type DeviceType = strict enum {
     MICROPHONE = 1;
     CAMERA = 2;
 };
 
-enum DeviceStateSource {
+type DeviceStateSource = strict enum {
     HARDWARE = 1;
     SOFTWARE = 2;
 };
@@ -77,44 +83,44 @@ enum DeviceStateSource {
 /// differentiated by the device_name. If there is only one device of a certain
 /// [DeviceType], then the name defaults to the same as the device type, e.g.
 /// DeviceType::Microphone -> "microphone".
-table InputSettings {
-    1: vector<InputDevice>:MAX devices;
+type InputSettings = table {
+    1: devices vector<InputDevice>:MAX;
 };
 
 /// Contains the information for an input device. The device is uniquely identified
 /// by the combination of device_name and device_type.
-table InputDevice {
+type InputDevice = table {
     /// Uniquely identifies a device within a device type.
-    1: string:MAX device_name;
+    1: device_name string:MAX;
     /// The type of input device (e.g. camera, microphone).
-    2: DeviceType device_type;
+    2: device_type DeviceType;
     /// The state for each individual [DeviceStateSource].
-    3: vector<SourceState>:MAX source_states;
+    3: source_states vector<SourceState>:MAX;
     /// The software toggle states which are allowed to be changed for a device.
-    4: ToggleStateFlags mutable_toggle_state;
+    4: mutable_toggle_state ToggleStateFlags;
     /// The overall state of the device, considering the combination
     /// of the source states.
-    5: DeviceState state;
+    5: state DeviceState;
 };
 
 /// Holds the state for an |InputDevice|.
-table DeviceState {
+type DeviceState = table {
     /// Controls the on/off state of the input device.
-    1: ToggleStateFlags toggle_flags;
+    1: toggle_flags ToggleStateFlags;
 };
 
 /// Describes what the |source|'s |state| is.
-table SourceState {
-    1: DeviceStateSource source;
-    2: DeviceState state;
+type SourceState = table {
+    1: source DeviceStateSource;
+    2: state DeviceState;
 };
 
 /// A subset of |DeviceState|'s properties that clients may pass to change the
 /// software state of an InputDevice.
-table InputState {
-    1: string:MAX name;
-    2: DeviceType device_type;
-    3: DeviceState state;
+type InputState = table {
+    1: name string:MAX;
+    2: device_type DeviceType;
+    3: state DeviceState;
 };
 
 /////////////////////////////
@@ -122,12 +128,12 @@ table InputState {
 /////////////////////////////
 
 /// Settings related to audio input. Replacement for fuchsia.settings.AudioSettings.input.
-table InputDeviceSettings {
-    1: Microphone microphone;
+type InputDeviceSettings = table {
+    1: microphone Microphone;
 };
 
 /// Settings related to the microphone.
-table Microphone {
+type Microphone = table {
     /// Whether the microphone is muted.
     ///
     /// This is only tracking the software mute state. The service will pick up the hardware state
@@ -135,5 +141,5 @@ table Microphone {
     /// muted, the overall state is muted. The two may be different if the device should not
     /// listen regardless of hardware state, or if the software state is unmuted and the user
     /// turns the microphone off.
-    1: bool muted;
+    1: muted bool;
 };

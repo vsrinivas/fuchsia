@@ -1,14 +1,17 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fidl.test.echo;
 
 using zx;
 
-[ForDeprecatedCBindings]
+@for_deprecated_c_bindings
 protocol Echo {
-    Echo(zx.handle:EVENTPAIR process, zx.handle:EVENTPAIR thread) -> (zx.status status);
+    Echo(resource struct {
+        process zx.handle:EVENTPAIR;
+        thread zx.handle:EVENTPAIR;
+    }) -> (struct {
+        status zx.status;
+    });
     Ping();
 };

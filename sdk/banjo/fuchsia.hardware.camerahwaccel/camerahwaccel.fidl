@@ -1,57 +1,64 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.camerahwaccel;
 
-enum FrameStatus : uint8 {
+type FrameStatus = strict enum : uint8 {
     OK = 0;
     ERROR_FRAME = 1;
     ERROR_BUFFER_FULL = 2;
 };
 
-enum TaskRemoveStatus : uint8 {
+type TaskRemoveStatus = strict enum : uint8 {
     OK = 0;
     ERROR_INVALID = 1;
 };
 
-struct FrameMetadata {
+type FrameMetadata = struct {
     // The value of the system monotonic clock at the time the frame data was received by the
     // driver.
-    uint64 timestamp;
-    uint32 image_format_index;
-    uint32 input_buffer_index;
+    timestamp uint64;
+    image_format_index uint32;
+    input_buffer_index uint32;
     // The value of the system monotonic clock at the time the root frame associated with this frame
     // was received by the ISP driver.
-    uint64 capture_timestamp;
+    capture_timestamp uint64;
 };
 
-struct FrameAvailableInfo {
-    FrameStatus frame_status;
-    uint32 buffer_id;
-    FrameMetadata metadata;
+type FrameAvailableInfo = struct {
+    frame_status FrameStatus;
+    buffer_id uint32;
+    metadata FrameMetadata;
 };
 
-[Transport = "Banjo", BanjoLayout = "ddk-callback"]
+@transport("Banjo")
+@banjo_layout("ddk-callback")
 protocol HwAccelFrameCallback {
     // This is called by the camera HW Accel drivers (gdc, ge2d, ...), every time a
     // frame is ready to be consumed.
-    FrameReady(FrameAvailableInfo info);
+    FrameReady(struct {
+        info FrameAvailableInfo;
+    });
 };
 
 // This is the same signature as the Frame callback above, but separating this, in
 // case we want to change things around later.
-[Transport = "Banjo", BanjoLayout = "ddk-callback"]
+@transport("Banjo")
+@banjo_layout("ddk-callback")
 protocol HwAccelResChangeCallback {
     // This is called by the camera HW Accel drivers (gdc, ge2d, ...), every time a
     // change of resolution completes.
-    FrameResolutionChanged(FrameAvailableInfo info);
+    FrameResolutionChanged(struct {
+        info FrameAvailableInfo;
+    });
 };
 
-[Transport = "Banjo", BanjoLayout = "ddk-callback"]
+@transport("Banjo")
+@banjo_layout("ddk-callback")
 protocol HwAccelRemoveTaskCallback {
     // This is called by the camera HW Accel drivers (gdc, ge2d, ...), every time a
     // task is released.
-    TaskRemoved(TaskRemoveStatus status);
+    TaskRemoved(struct {
+        status TaskRemoveStatus;
+    });
 };

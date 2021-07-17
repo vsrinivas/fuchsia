@@ -1,17 +1,15 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.mockrebootcontroller;
 
-enum RebootError : int32 {
+type RebootError = strict enum : int32 {
     CLIENT_ERROR = 1;
     NO_CLIENT_SET = 2;
 };
 
-[Discoverable]
+@discoverable
 protocol MockRebootController {
-    TriggerReboot() -> () error RebootError;
-    CrashRebootChannel() -> () error RebootError;
+    TriggerReboot() -> (struct {}) error RebootError;
+    CrashRebootChannel() -> (struct {}) error RebootError;
 };

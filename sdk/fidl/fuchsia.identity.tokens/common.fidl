@@ -1,12 +1,10 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.identity.tokens;
 
 /// The maximum length of an account ID string, in bytes.
-const uint32 MAX_ACCOUNT_ID_SIZE = 256;
+const MAX_ACCOUNT_ID_SIZE uint32 = 256;
 
 /// An identifier for the account that a token is issued against, as specified
 /// by the authorization server. Account identifiers are guaranteed to be unique
@@ -14,31 +12,31 @@ const uint32 MAX_ACCOUNT_ID_SIZE = 256;
 alias AccountId = string:MAX_ACCOUNT_ID_SIZE;
 
 /// The maximum length of an OAuth client ID, in bytes.
-const uint32 MAX_CLIENT_ID_SIZE = 256;
+const MAX_CLIENT_ID_SIZE uint32 = 256;
 
 /// An OAuth client ID string.
 alias ClientId = string:MAX_CLIENT_ID_SIZE;
 
 /// The maximum length of an OAuth scope, in bytes.
-const uint32 MAX_SCOPE_SIZE = 256;
+const MAX_SCOPE_SIZE uint32 = 256;
 
 /// An OAuth scope string.
 alias Scope = string:MAX_SCOPE_SIZE;
 
 /// The maximum number of OAuth scopes that may be requested for a single token.
-const uint32 MAX_SCOPE_COUNT = 64;
+const MAX_SCOPE_COUNT uint32 = 64;
 
 /// The maximum length of an OpenID audience string, in bytes.
-const uint32 MAX_AUDIENCE_SIZE = 256;
+const MAX_AUDIENCE_SIZE uint32 = 256;
 
 /// An OpenID audience string.
 alias Audience = string:MAX_AUDIENCE_SIZE;
 
 /// The maximum number of audiences that may be requested for a single ID token.
-const uint32 MAX_AUDIENCE_COUNT = 16;
+const MAX_AUDIENCE_COUNT uint32 = 16;
 
 /// Specifies the reason that a fuchsia.identity.tokens method failed.
-enum Error {
+type Error = strict enum {
     /// Some other problem occurred that cannot be classified using one of the
     /// more specific statuses. Retry is optional.
     UNKNOWN = 1;

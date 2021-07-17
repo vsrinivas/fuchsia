@@ -1,15 +1,13 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.ui.remotewidgets;
 
 using fuchsia.fonts;
 
 /// Defines special actions that are used on Values to control QuickUi
 /// navigation or provide extra semantics to actions associated with them.
-enum QuickAction {
+type QuickAction = strict enum {
     /// Can be set on a button spec. Tells the client to navigate to a details
     /// view reserved exclusively for specs from this server.
     DETAILS = 0x80000000;
@@ -25,109 +23,109 @@ enum QuickAction {
 };
 
 /// The value to hold these numeric types.
-union Number {
-    1: int64 int_value;
-    2: uint64 uint_value;
-    3: float64 double_value;
+type Number = strict union {
+    1: int_value int64;
+    2: uint_value uint64;
+    3: double_value float64;
 };
 
 /// Represents a number type in a ui spec with an associated action.
-struct NumberValue {
-    Number value;
-    int32 action = 0;
+type NumberValue = struct {
+    value Number;
+    action int32 = 0;
 };
 
 /// Represents a string type in a ui spec with an associated action.
-struct TextValue {
-    string:64 text;
-    int32 action = 0;
+type TextValue = struct {
+    text string:64;
+    action int32 = 0;
 };
 
 /// Represents a button type in a ui spec with an associated action.
-struct ButtonValue {
-    string:64 label;
-    int32 action = 0;
+type ButtonValue = struct {
+    label string:64;
+    action int32 = 0;
 };
 
 /// Represents a progress indicator type in a ui spec with an associated action.
-struct ProgressValue {
+type ProgressValue = struct {
     // [0..1] inclusive.
-    float32 value;
-    int32 action = 0;
+    value float32;
+    action int32 = 0;
 };
 
 /// Represents an input type in a ui spec with an associated action.
-struct InputValue {
-    string:1024 text;
+type InputValue = struct {
+    text string:1024;
     // 0 = multiline. 1 = Default.
-    int32 lines = 1;
-    int32 action = 0;
+    lines int32 = 1;
+    action int32 = 0;
 };
 
 /// Represents an icon type in a ui spec with an associated action.
-struct IconValue {
-    int32 code_point;
-    fuchsia.fonts.FamilyName? font_family;
-    int32 action = 0;
+type IconValue = struct {
+    code_point int32;
+    font_family box<fuchsia.fonts.FamilyName>;
+    action int32 = 0;
 };
 
 /// Represents a grid of strings type in a ui spec with an associated action.
-struct GridValue {
-    byte columns;
-    vector<TextValue>:256 values;
+type GridValue = struct {
+    columns byte;
+    values vector<TextValue>:256;
 };
 
 /// Represents a list of strings type in a ui spec.
-struct ListValue {
-    bool multiselect = false;
-    bool popup = false;
-    string:128 title;
-    vector<TextValue>:1024 items;
+type ListValue = struct {
+    multiselect bool = false;
+    popup bool = false;
+    title string:128;
+    items vector<TextValue>:1024;
 };
 
 /// Represents a graph type in a ui spec with an associated action.
-struct GraphValue {
+type GraphValue = struct {
     // [0..1] inclusive.
-    float32 value;
+    value float32;
     // Unit of progress in the x-axis.
-    int32 step;
-    int32 action = 0;
+    step int32;
+    action int32 = 0;
 };
 
 /// Represents a Value that is union of all types.
-union Value {
-    1: NumberValue number;
-    2: TextValue text;
-    3: ProgressValue progress;
-    4: ButtonValue button;
-    5: InputValue input;
-    6: IconValue icon;
-    7: GridValue grid;
-    8: GraphValue graph;
-    9: ListValue list;
+type Value = strict union {
+    1: number NumberValue;
+    2: text TextValue;
+    3: progress ProgressValue;
+    4: button ButtonValue;
+    5: input InputValue;
+    6: icon IconValue;
+    7: grid GridValue;
+    8: graph GraphValue;
+    9: list ListValue;
 };
 
 /// Represents a group of [Value]s with a title.
-table Group {
+type Group = table {
     // The title to show for this group.
-    1: string:128 title;
+    1: title string:128;
     // The icon to show for this spec.
-    2: IconValue icon;
+    2: icon IconValue;
     // List of [Value] objects that form part of this spec.
-    3: vector<Value>:16 values;
+    3: values vector<Value>:16;
 };
 
 /// Describes a specification of quick UI.
-table Spec {
+type Spec = table {
     // The title to show for this spec.
-    1: string:128 title;
+    1: title string:128;
     // List of [Group] objects that form part of this spec.
-    2: vector<Group>:8 groups;
+    2: groups vector<Group>:8;
 };
 
 /// Defines a protocol for a component to provide specs for building UI for
 /// quick settings or notifications, independent of any platform.
-[Discoverable]
+@discoverable
 protocol QuickUi {
     /// Request [Spec] from the provider. The provider should return Spec
     /// whenever it is ready to. Until then this request remains outstanding,
@@ -136,5 +134,9 @@ protocol QuickUi {
     /// to allow the provider to customize the returned UI spec. Typically,
     /// this value was part of previous [Spec] and identifies the part of
     /// [Spec] the user interacted with.
-    GetSpec(Value? value) -> (Spec spec);
+    GetSpec(struct {
+        value Value:optional;
+    }) -> (struct {
+        spec Spec;
+    });
 };

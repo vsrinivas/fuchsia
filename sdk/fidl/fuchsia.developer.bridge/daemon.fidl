@@ -1,16 +1,14 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.developer.bridge;
 using fuchsia.developer.remotecontrol as rc;
 using fuchsia.device;
 using zx;
 
-const uint8 MAX_SERVICE_NAME_SIZE = 255;
+const MAX_SERVICE_NAME_SIZE uint8 = 255;
 
-enum DaemonError {
+type DaemonError = strict enum {
     TARGET_CACHE_ERROR = 1;
     TARGET_STATE_ERROR = 2;
     RCS_CONNECTION_ERROR = 3;
@@ -43,23 +41,33 @@ enum DaemonError {
     TARGET_IN_ZEDBOOT = 13;
 };
 
-[Discoverable]
+@discoverable
 protocol Daemon {
     /// Crashes the daemon. Primarily used for testing.
     Crash() -> ();
 
     /// Returns the input.
-    EchoString(string:256 value) -> (string:256 response);
+    EchoString(struct {
+        value string:256;
+    }) -> (struct {
+        response string:256;
+    });
 
     /// Hang the daemon. Primarily used for testing.
     Hang() -> ();
 
     /// Lists targets by nodename.
     /// TODO(fxbug.dev/52798): Use an iterator instead of a limited vector.
-    ListTargets(string:fuchsia.device.DEVICE_NAME_MAX value) -> (vector<Target>:512 response);
+    ListTargets(struct {
+        value string:fuchsia.device.DEVICE_NAME_MAX;
+    }) -> (struct {
+        response vector<Target>:512;
+    });
 
     /// Make the daemon exit.
-    Quit() -> (bool success);
+    Quit() -> (struct {
+        success bool;
+    });
 
     /// Gets a remote control proxy for the given target.
     /// The target param expects an exact match with a target's
@@ -69,9 +77,10 @@ protocol Daemon {
     /// control instance for the target iff there is only one target in the
     /// cache, else will return an error. If there are no targets in the cache,
     /// will wait until the client chooses to time out.
-    GetRemoteControl(
-        string:fuchsia.device.DEVICE_NAME_MAX? target,
-        request<rc.RemoteControl> remote) -> () error DaemonError;
+    GetRemoteControl(resource struct {
+        target string:<fuchsia.device.DEVICE_NAME_MAX, optional>;
+        remote server_end:rc.RemoteControl;
+    }) -> (struct {}) error DaemonError;
 
     /// Gets a fastboot proxy for the given target.
     /// The target param expects an exact match with a target's
@@ -81,9 +90,10 @@ protocol Daemon {
     /// control instance for the target iff there is only one target in the
     /// cache, else will return an error. If there are no targets in the cache,
     /// will wait until the client chooses to time out.
-    GetFastboot(
-        string:fuchsia.device.DEVICE_NAME_MAX? target,
-        request<Fastboot> fastboot) -> () error DaemonError;
+    GetFastboot(resource struct {
+        target string:<fuchsia.device.DEVICE_NAME_MAX, optional>;
+        fastboot server_end:Fastboot;
+    }) -> (struct {}) error DaemonError;
 
     /// Attempts to get the SSH address for a given target.
     ///
@@ -98,22 +108,36 @@ protocol Daemon {
     /// * Timeout error if steps 1 and 2 don't happen in time.
     /// * Cache error if a target has appeared but suddenly disappears before
     ///   running the function to completion.
-    GetSshAddress(string:fuchsia.device.DEVICE_NAME_MAX? target, zx.duration timeout)
-        -> (TargetAddrInfo ip) error DaemonError;
+    GetSshAddress(struct {
+        target string:<fuchsia.device.DEVICE_NAME_MAX, optional>;
+        timeout zx.duration;
+    }) -> (struct {
+        ip TargetAddrInfo;
+    }) error DaemonError;
 
     // Retrieves version information about this daemon instance.
-    GetVersionInfo() -> (VersionInfo info);
+    GetVersionInfo() -> (struct {
+        info VersionInfo;
+    });
 
     /// Manually add a target that cannot be discovered via MDNS.
-    AddTarget(TargetAddrInfo ip) -> () error DaemonError;
+    AddTarget(struct {
+        ip TargetAddrInfo;
+    }) -> (struct {}) error DaemonError;
 
     /// Manually remove a target from the target list.
     ///
     /// If target_id doesn't match a device name, the daemon will try to interpret it as an IP.
-    RemoveTarget(string:fuchsia.device.DEVICE_NAME_MAX target_id) -> (bool removed) error DaemonError;
+    RemoveTarget(struct {
+        target_id string:fuchsia.device.DEVICE_NAME_MAX;
+    }) -> (struct {
+        removed bool;
+    }) error DaemonError;
 
     // Retrieves a hash of the current binary.
-    GetHash() -> (string:64 response);
+    GetHash() -> (struct {
+        response string:64;
+    });
 
     /// Creates an iterator over diagnostics data. At present, this means cached log data.
     ///
@@ -128,11 +152,11 @@ protocol Daemon {
     /// If the target field is a nodename or log session identifier (e.g. "ffx_daemon"),
     /// then cached logs will be returned for that target even if the target is
     /// currently offline.
-    StreamDiagnostics(
-        string:fuchsia.device.DEVICE_NAME_MAX? target,
-        DaemonDiagnosticsStreamParameters parameters,
-        request<rc.ArchiveIterator> iterator)
-        -> () error DiagnosticsStreamError;
+    StreamDiagnostics(resource struct {
+        target string:<fuchsia.device.DEVICE_NAME_MAX, optional>;
+        parameters DaemonDiagnosticsStreamParameters;
+        iterator server_end:rc.ArchiveIterator;
+    }) -> (struct {}) error DiagnosticsStreamError;
 
     /// Gets a target proxy for the given target.
     /// The target param expects an exact match with a target's
@@ -142,9 +166,10 @@ protocol Daemon {
     /// control instance for the target iff there is only one target in the
     /// cache, else will return an error. If there are no targets in the cache,
     /// will wait until the client chooses to time out.
-    GetTarget(
-        string:fuchsia.device.DEVICE_NAME_MAX? target,
-        request<TargetControl> target_controller) -> () error DaemonError;
+    GetTarget(resource struct {
+        target string:<fuchsia.device.DEVICE_NAME_MAX, optional>;
+        target_controller server_end:TargetControl;
+    }) -> (struct {}) error DaemonError;
 
     /// Connects to a deamon service.
     ///
@@ -156,7 +181,8 @@ protocol Daemon {
     ///
     /// Again for emphasis: if you are a developer and you are invoking this
     /// function directly, you should reconsider your actions.
-    ConnectToService(
-        string:MAX_SERVICE_NAME_SIZE name,
-        zx.handle:CHANNEL server_channel) -> () error DaemonError;
+    ConnectToService(resource struct {
+        name string:MAX_SERVICE_NAME_SIZE;
+        server_channel zx.handle:CHANNEL;
+    }) -> (struct {}) error DaemonError;
 };

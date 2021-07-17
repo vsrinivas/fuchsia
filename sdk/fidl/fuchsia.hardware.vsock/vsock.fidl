@@ -1,8 +1,6 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.vsock;
 
 using zx;
@@ -10,77 +8,120 @@ using zx;
 // Vsock address where 'local' always means the driver and 'remote' always means
 // the device. As such there is no 'local_cid' as it can only ever be the driver cid
 // and so specifying is redundant and a source of errors.
-[ForDeprecatedCBindings]
-struct Addr {
-    uint32 local_port;
-    uint32 remote_cid;
-    uint32 remote_port;
+@for_deprecated_c_bindings
+type Addr = struct {
+    local_port uint32;
+    remote_cid uint32;
+    remote_port uint32;
 };
 
 // Callbacks sent from the device to whomever registered them (typically a service)
 // in response to events from host.
-[ForDeprecatedCBindings]
+@for_deprecated_c_bindings
 protocol Callbacks {
     // Indicates a 'request' op was received from the host. One of Device.SendResponse
     // or Device.SendRst should be done in response to this.
-    Request(Addr addr);
+    Request(struct {
+        addr Addr;
+    });
     // Indicates a response was received for a connection that was trying to be
     // established from Device.SendRequest.
-    Response(Addr addr);
+    Response(struct {
+        addr Addr;
+    });
     // Indicates a 'rst' op was received from the host, and that the driver has
     // has freed the resources for any potential connection relating to `addr`.
-    Rst(Addr addr);
+    Rst(struct {
+        addr Addr;
+    });
     // Indicates a 'shutdown' op was received from the host.
-    Shutdown(Addr addr);
+    Shutdown(struct {
+        addr Addr;
+    });
     // Indicates a 'transport reset' op was received from the host. Responding to
     // this method indicates that you have processed all preceding Callbacks and
     // dropped any active connections.
-    TransportReset(uint32 new_cid) -> ();
+    TransportReset(struct {
+        new_cid uint32;
+    }) -> ();
     // Indicates that a previous Device.SendVmo request has completed.
-    SendVmoComplete(Addr addr);
+    SendVmoComplete(struct {
+        addr Addr;
+    });
 };
 
 // Low level vsock device operations. Users of this interface are responsible for
 // adhering to the vsock protocol and must use ensure they do not reuse addresses
 // for active connections, perform SendRst and SendResponse only when it is correct
 // to do so, etc.
-[ForDeprecatedCBindings]
+@for_deprecated_c_bindings
 protocol Device {
     // Causes the device to start and gives it Callbacks to use for forwarding messages
     // from the host. The rest of the methods on this interface are only valid to use
     // after calling Start and whilst the passed Callbacks remain valid. The device
     // will stop if it detects the other end of the Callbacks channel has closed.
-    Start(Callbacks cb) -> (zx.status status);
+    Start(resource struct {
+        cb client_end:Callbacks;
+    }) -> (struct {
+        status zx.status;
+    });
     // Will send a request to open a connection with the remote specified in the
     // `addr`. The `data` socket is stored and will be used for data transmission
     // should the connection get established successfully, otherwise it will close
     // the handle. The `status` returned indicates whether the request was sent
     // successfully. Callbacks.Response or Callbacks.Rst will be called to indicate
     // if the connection was successfully established or not.
-    SendRequest(Addr addr, zx.handle:SOCKET data) -> (zx.status status);
+    SendRequest(resource struct {
+        addr Addr;
+        data zx.handle:SOCKET;
+    }) -> (struct {
+        status zx.status;
+    });
     // Request a shutdown to begin for the connection indicated by the given `addr`.
     // This immediately stops any data from being sent on the connection, although
     // data may still be received up until Callbacks.Rst is called to indicate the
     // shutdown has complete. This is only valid on a connection established with
     // SendRequest or SendResponse.
-    SendShutdown(Addr addr) -> (zx.status status);
+    SendShutdown(struct {
+        addr Addr;
+    }) -> (struct {
+        status zx.status;
+    });
     // Request a rst be sent to the host. The device will also release the resources
     // for any connection that may exist for `addr`.
-    SendRst(Addr addr) -> (zx.status status);
+    SendRst(struct {
+        addr Addr;
+    }) -> (struct {
+        status zx.status;
+    });
     // Causes a 'response' to get sent to the host, gives the driver a `data` socket
     // to use for sending and receiving data on the established connection. It is
     // only correct to use this in response to a Callbacks.Request.
-    SendResponse(Addr addr, zx.handle:SOCKET data) -> (zx.status status);
+    SendResponse(resource struct {
+        addr Addr;
+        data zx.handle:SOCKET;
+    }) -> (struct {
+        status zx.status;
+    });
     // Query the current context id of the driver. The local CID is never needed
     // in interactions with the same device, and retrieving it is only useful for
     // debugging or if you have some other communication channel to a different host
     // and you would like to send them your CID to then establish a vsock connection on.
-    GetCid() -> (uint32 local_cid);
+    GetCid() -> (struct {
+        local_cid uint32;
+    });
     // Send the contents of a vmo over an already established connection. A
     // connection may only have a single outstanding vmo at a time, and trying
     // to send whilst one is already in progress will generate an error. If there
     // is pending data to transmit in the `data` socket of a connection and there
     // is a vmo pending then it is undefined which one will be sent. Once the vmo
     // contents have finished sending Callbacks.SendVmoComplete will be called.
-    SendVmo(Addr addr, zx.handle:VMO vmo, uint64 off, uint64 len) -> (zx.status status);
+    SendVmo(resource struct {
+        addr Addr;
+        vmo zx.handle:VMO;
+        off uint64;
+        len uint64;
+    }) -> (struct {
+        status zx.status;
+    });
 };

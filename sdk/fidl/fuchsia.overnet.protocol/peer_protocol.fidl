@@ -1,140 +1,134 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.overnet.protocol;
 
 using zx;
 
 // TODO(ctiller): make this fuchsia.io.MAX_FILENAME
-const uint64 MAX_SERVICE_NAME_LENGTH = 255;
+const MAX_SERVICE_NAME_LENGTH uint64 = 255;
 
 /// Peer-to-peer protocol between two Overnet nodes.
 /// Client QUIC connections send this xunion to servers over QUIC stream 0.
-union PeerMessage {
+type PeerMessage = strict union {
     /// Request to create a channel to a service exported by this peer.
-    1: ConnectToService connect_to_service;
+    1: connect_to_service ConnectToService;
     /// Update this peers description on the server.
-    2: PeerDescription update_node_description;
+    2: update_node_description PeerDescription;
     3: reserved;
     /// Open a transfered stream.
-    4: OpenTransfer open_transfer;
+    4: open_transfer OpenTransfer;
     5: reserved;
 };
 
 /// Overall connection configuration request
-table ConfigRequest {
-};
+type ConfigRequest = table {};
 
 /// Overall connection configuration response - sent as the first response
 /// message on the connection stream.
-table ConfigResponse {
-};
+type ConfigResponse = table {};
 
 /// Reply messages for PeerMessage, where appropriate.
 /// The ConfigResponse message must have been sent already.
-union PeerReply {
+type PeerReply = strict union {
     /// Acknowledge an UpdateLinkStatus message
-    1: Empty update_link_status_ack;
+    1: update_link_status_ack Empty;
     2: reserved;
 };
 
-struct Empty {
-};
+type Empty = struct {};
 
 /// Create a new stream, labelled `stream_id`, to communicate with the
 /// advertised service `service_name`.
-struct ConnectToService {
+type ConnectToService = struct {
     /// Which service to connect to.
-    string:MAX_SERVICE_NAME_LENGTH service_name;
+    service_name string:MAX_SERVICE_NAME_LENGTH;
     /// On which QUIC stream will this service connection be formed.
-    StreamRef stream_ref;
+    stream_ref StreamRef;
     /// The channel rights for this connection.
-    ChannelRights rights;
+    rights ChannelRights;
     /// Ancillary options for this connection.
-    ConnectToServiceOptions options;
+    options ConnectToServiceOptions;
 };
 
 /// Options for service connection formation.
-table ConnectToServiceOptions {
-};
+type ConnectToServiceOptions = table {};
 
 /// Create a new stream, labelled `stream_id`, to finalize the transfer
 /// labelled `transfer_key`.
-struct OpenTransfer {
+type OpenTransfer = struct {
     /// On which QUIC stream will this service connection be formed.
-    StreamId stream_id;
+    stream_id StreamId;
     /// Transfer key tracking the transfer.
-    TransferKey transfer_key;
+    transfer_key TransferKey;
 };
 
 /// Description of a single node.
-table PeerDescription {
+type PeerDescription = table {
     /// The set of services published by this node.
-    1: vector<string:MAX_SERVICE_NAME_LENGTH>:MAX services;
+    1: services vector<string:MAX_SERVICE_NAME_LENGTH>:MAX;
 };
 
 /// Stream control message: sent instead of usual stream frames if the frame
 /// type is 1 (StreamControl).
 /// TODO: consider defining the stream framing format in FIDL also.
-union StreamControl {
+type StreamControl = strict union {
     /// A transfer is beginning: the sending node would like to transfer
     /// control.
-    1: BeginTransfer begin_transfer;
+    1: begin_transfer BeginTransfer;
     /// Acknowledge a begin_transfer - the sender has seen a previously sent
     /// begin_transfer, and responded to it.
     /// This should be the last message sent on a regular stream.
-    2: Empty ack_transfer;
+    2: ack_transfer Empty;
     /// End a transfer - signal that a drain stream has finished draining.
     /// This should be the last message sent on a drain stream.
-    3: Empty end_transfer;
+    3: end_transfer Empty;
     /// Shutdown the stream with some status.
-    4: zx.status shutdown;
+    4: shutdown zx.status;
 };
 
 /// Body for [`fuchsia.overnet.protocol/StreamControl.begin_transfer`].
-struct BeginTransfer {
+type BeginTransfer = struct {
     /// The new owner of this stream endpoint.
-    NodeId new_destination_node;
+    new_destination_node NodeId;
     /// A key to identify this transfer of ownership.
-    TransferKey transfer_key;
+    transfer_key TransferKey;
 };
 
 /// A StreamRef identifies a new proxied stream, and details how that stream
 /// will come to be on the receiving node.
-union StreamRef {
+type StreamRef = strict union {
     /// A new proxy is being created, and the other end of the proxy is on the
     /// sending node. This is the simple case, and we just communicate the QUIC
     /// stream ID that will be used to carry traffic.
-    1: StreamId creating;
+    1: creating StreamId;
     /// An existing proxy is being transferred to this node. This node should
     /// initiate communication with the peer.
-    2: TransferInitiator transfer_initiator;
+    2: transfer_initiator TransferInitiator;
     /// An existing proxy is being transferred to this node. This node should
     /// await contact from the peer.
-    3: TransferWaiter transfer_waiter;
+    3: transfer_waiter TransferWaiter;
 };
 
 /// Body for [`fuchsia.overnet.protocol/StreamRef.transfer_initiator`].
-struct TransferInitiator {
+type TransferInitiator = struct {
     /// The drain stream for this transfer. Buffered messages from the old
     /// proxy end will be sent via this unidirectional QUIC stream and should
     /// be processed *prior* to processing any messages from the new endpoint.
-    StreamId stream_id;
+    stream_id StreamId;
     /// The peer node id for this proxy that we should reach out to.
     /// Note that this *may* be the same node that receives this message.
-    NodeId new_destination_node;
+    new_destination_node NodeId;
     /// A key to identify this transfer of ownership.
-    TransferKey transfer_key;
+    transfer_key TransferKey;
 };
 
 /// Body for [`fuchsia.overnet.protocol/StreamRef.transfer_waiter`].
-struct TransferWaiter {
+type TransferWaiter = struct {
     /// The drain stream for this transfer. Buffered messages from the old
     /// proxy end will be sent via this unidirectional QUIC stream and should
     /// be processed *prior* to processing any messages from the new endpoint.
-    StreamId stream_id;
+    stream_id StreamId;
     /// A key to identify this transfer of ownership.
-    TransferKey transfer_key;
+    transfer_key TransferKey;
 };

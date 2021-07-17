@@ -1,39 +1,53 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.test;
 
 using zx;
 
-struct TestReport {
-    uint32 n_tests;
-    uint32 n_success;
-    uint32 n_failed;
+type TestReport = struct {
+    n_tests uint32;
+    n_success uint32;
+    n_failed uint32;
 };
 
-[Transport = "Banjo", BanjoLayout = "ddk-callback"]
+@transport("Banjo")
+@banjo_layout("ddk-callback")
 protocol TestFuncCallback {
-    Callback() -> (zx.status s, TestReport report);
+    Callback() -> (struct {
+        s zx.status;
+        report TestReport;
+    });
 };
 
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol Test {
     /// Sets test output socket.
-    SetOutputSocket(zx.handle:SOCKET handle) -> ();
+    SetOutputSocket(resource struct {
+        handle zx.handle:SOCKET;
+    }) -> ();
 
     /// Gets test output socket.
-    GetOutputSocket() -> (zx.handle:SOCKET h);
+    GetOutputSocket() -> (resource struct {
+        h zx.handle:SOCKET;
+    });
 
     /// Gets test channel.  This has per-test meaning.
-    GetChannel() -> (zx.handle:CHANNEL h);
+    GetChannel() -> (resource struct {
+        h zx.handle:CHANNEL;
+    });
 
     /// Sets test function.
-    SetTestFunc(TestFuncCallback func) -> ();
+    SetTestFunc(resource struct {
+        func client_end:TestFuncCallback;
+    }) -> ();
 
     /// Run tests, calls the function set in |SetTestFunc|.
-    RunTests() -> (zx.status s, TestReport report);
+    RunTests() -> (struct {
+        s zx.status;
+        report TestReport;
+    });
 
     /// Calls `device_remove()`.
     Destroy() -> ();

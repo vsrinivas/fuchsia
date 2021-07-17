@@ -1,8 +1,6 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.legacymetrics;
 
 /// Accepts metrics events and uploads them to UMA servers for analysis. Metrics
@@ -10,13 +8,15 @@ library fuchsia.legacymetrics;
 /// unable to upload events, it will try persisting them for later re-upload.
 /// For similar behavior, see Chromium's MetricsService:
 /// https://chromium.googlesource.com/chromium/src.git/+/HEAD/components/metrics/metrics_service.cc
-[Discoverable]
+@discoverable
 protocol MetricsRecorder {
     /// Processes and enqueues a batch of events for upload. Returns after the
     /// provided metrics are successfully processed by the service. Clients
     /// should wait for a completion callback before sending subsequent Record()
     /// requests.
-    Record(vector<Event>:MAX events) -> ();
+    Record(struct {
+        events vector<Event>:MAX;
+    }) -> ();
 
     /// Indicates that this service will close all connections soon. Upon
     /// receiving this event, each client should call Record() once for any

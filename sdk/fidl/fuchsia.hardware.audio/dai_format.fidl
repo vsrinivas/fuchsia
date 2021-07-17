@@ -1,18 +1,16 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.audio;
 
-const uint32 MAX_COUNT_DAI_SUPPORTED_NUMBER_OF_CHANNELS = 64;
-const uint32 MAX_COUNT_DAI_SUPPORTED_SAMPLE_FORMATS = 4;
-const uint32 MAX_COUNT_DAI_SUPPORTED_FRAME_FORMATS = 64;
-const uint32 MAX_COUNT_DAI_SUPPORTED_RATES = 64;
-const uint32 MAX_COUNT_DAI_SUPPORTED_BITS_PER_SLOT = 8;
-const uint32 MAX_COUNT_DAI_SUPPORTED_BITS_PER_SAMPLE = 8;
+const MAX_COUNT_DAI_SUPPORTED_NUMBER_OF_CHANNELS uint32 = 64;
+const MAX_COUNT_DAI_SUPPORTED_SAMPLE_FORMATS uint32 = 4;
+const MAX_COUNT_DAI_SUPPORTED_FRAME_FORMATS uint32 = 64;
+const MAX_COUNT_DAI_SUPPORTED_RATES uint32 = 64;
+const MAX_COUNT_DAI_SUPPORTED_BITS_PER_SLOT uint32 = 8;
+const MAX_COUNT_DAI_SUPPORTED_BITS_PER_SAMPLE uint32 = 8;
 
-enum DaiSampleFormat : uint8 {
+type DaiSampleFormat = strict enum : uint8 {
     /// Pulse Density Modulation samples.
     PDM = 1;
 
@@ -27,16 +25,16 @@ enum DaiSampleFormat : uint8 {
 };
 
 /// Either a standard or custom frame format.
-union DaiFrameFormat {
+type DaiFrameFormat = strict union {
     /// The format type of all samples in the DAI, listed in `DaiFrameFormatStandard`.
-    1: DaiFrameFormatStandard frame_format_standard;
+    1: frame_format_standard DaiFrameFormatStandard;
 
     /// The format type of all samples in the DAI, specified in `DaiFrameFormatCustom`.
-    2: DaiFrameFormatCustom frame_format_custom;
+    2: frame_format_custom DaiFrameFormatCustom;
 };
 
 /// Standard Frame format.
-enum DaiFrameFormatStandard : uint8 {
+type DaiFrameFormatStandard = strict enum : uint8 {
     /// No frame format as in samples without a frame sync like PDM.
     NONE = 1;
     /// Format as specified in the I2S specification (left justified, 2 channels, 32 bits per
@@ -57,38 +55,38 @@ enum DaiFrameFormatStandard : uint8 {
 };
 
 /// Custom Frame format.
-struct DaiFrameFormatCustom {
+type DaiFrameFormatCustom = struct {
     /// Justification of the samples within a slot.
-    bool left_justified;
+    left_justified bool;
     /// Clocking of data samples and frame sync output on either raising or falling sclk.
-    bool sclk_on_raising;
+    sclk_on_raising bool;
     /// Number of sclks between the beginning of a frame sync change and audio samples.
     /// For example, for I2S set to 1 and for stereo left justified set to 0.
-    int8 frame_sync_sclks_offset;
+    frame_sync_sclks_offset int8;
     /// Number of sclks the frame sync is high within a frame.
     /// For example, for I2S with 32 bits slots set to 32, for TDM usually set to 1.
-    uint8 frame_sync_size;
+    frame_sync_size uint8;
 };
 
 /// DAI format. Frames are made up of `number_of_channels` samples which have `bits_per_sample` bits
 /// of data within `bits_per_slot` arranged in `frame_format`. For more detailed information see
 /// [Digital Audio Interface](//docs/concepts/drivers/driver_interfaces/audio_dai.md).
-struct DaiFormat {
+type DaiFormat = struct {
     /// Number of channels.
-    uint32 number_of_channels;
+    number_of_channels uint32;
     /// Which channels to use.
-    uint64 channels_to_use_bitmask;
+    channels_to_use_bitmask uint64;
     /// The sample format of all samples.
-    DaiSampleFormat sample_format;
+    sample_format DaiSampleFormat;
     /// The frame format of all samples.
-    DaiFrameFormat frame_format;
+    frame_format DaiFrameFormat;
     /// The frame rate for all samples.
-    uint32 frame_rate;
+    frame_rate uint32;
     /// The bits per slot for all channels.
-    uint8 bits_per_slot;
+    bits_per_slot uint8;
     /// The bits per sample for all samples.  Must be smaller than bits per channel for samples to
     /// fit.
-    uint8 bits_per_sample;
+    bits_per_sample uint8;
 };
 
 /// Formats supported by the DAI. Frames are made up of `number_of_channels` samples which have
@@ -98,17 +96,17 @@ struct DaiFormat {
 /// `DaiSupportedFormats` in the returned vector.
 /// For more detailed information see
 /// [Digital Audio Interface](//docs/concepts/drivers/driver_interfaces/audio_dai.md).
-struct DaiSupportedFormats {
+type DaiSupportedFormats = struct {
     /// Possible number of channels supported.
-    vector<uint32>:MAX_COUNT_DAI_SUPPORTED_NUMBER_OF_CHANNELS number_of_channels;
+    number_of_channels vector<uint32>:MAX_COUNT_DAI_SUPPORTED_NUMBER_OF_CHANNELS;
     /// Sample formats supported.
-    vector<DaiSampleFormat>:MAX_COUNT_DAI_SUPPORTED_SAMPLE_FORMATS sample_formats;
+    sample_formats vector<DaiSampleFormat>:MAX_COUNT_DAI_SUPPORTED_SAMPLE_FORMATS;
     /// Frame formats supported.
-    vector<DaiFrameFormat>:MAX_COUNT_DAI_SUPPORTED_FRAME_FORMATS frame_formats;
+    frame_formats vector<DaiFrameFormat>:MAX_COUNT_DAI_SUPPORTED_FRAME_FORMATS;
     /// Rates supported.
-    vector<uint32>:MAX_COUNT_DAI_SUPPORTED_RATES frame_rates;
+    frame_rates vector<uint32>:MAX_COUNT_DAI_SUPPORTED_RATES;
     /// The bits per slot supported.
-    vector<uint8>:MAX_COUNT_DAI_SUPPORTED_BITS_PER_SLOT bits_per_slot;
+    bits_per_slot vector<uint8>:MAX_COUNT_DAI_SUPPORTED_BITS_PER_SLOT;
     /// Bits per sample supported.
-    vector<uint8>:MAX_COUNT_DAI_SUPPORTED_BITS_PER_SAMPLE bits_per_sample;
+    bits_per_sample vector<uint8>:MAX_COUNT_DAI_SUPPORTED_BITS_PER_SAMPLE;
 };

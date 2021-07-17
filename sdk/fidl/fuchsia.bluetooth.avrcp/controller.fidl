@@ -1,27 +1,32 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.bluetooth.avrcp;
 
 using fuchsia.bluetooth as bt;
 using zx;
 
-[Discoverable]
+@discoverable
 protocol PeerManager {
     /// Returns a controller client to a remote target (TG) service at the peer specified by
     /// `peer_id`.
-    GetControllerForTarget(bt.PeerId peer_id, request<Controller> client) -> () error zx.status;
+    GetControllerForTarget(resource struct {
+        peer_id bt.PeerId;
+        client server_end:Controller;
+    }) -> (struct {}) error zx.status;
 
     /// Set the absolute volume handler.  Only one handler may be set  at at time.
     /// If a second handler is registered it will be dropped and an error will
     /// be returned.
-    SetAbsoluteVolumeHandler(AbsoluteVolumeHandler handler) -> () error zx.status;
+    SetAbsoluteVolumeHandler(resource struct {
+        handler client_end:AbsoluteVolumeHandler;
+    }) -> (struct {}) error zx.status;
 
     /// Sets an implementation of target handler that will vend delegates for each incoming
     /// remote TG -> local CT connections to handle the commands being sent by the remote TG.
-    RegisterTargetHandler(TargetHandler handler) -> () error zx.status;
+    RegisterTargetHandler(resource struct {
+        handler client_end:TargetHandler;
+    }) -> (struct {}) error zx.status;
 };
 
 /// Handler for absolute volume requests from a remote peer. See AVRCP v 1.6.2 section 6.13.2.
@@ -32,7 +37,11 @@ protocol AbsoluteVolumeHandler {
     /// Requests that the absolute volume of the player be changed.
     /// `requested_volume` is the requested volume by the peer.
     /// Returns the actual volume set locally by the handler.
-    SetVolume(uint8 requested_volume) -> (uint8 set_volume);
+    SetVolume(struct {
+        requested_volume uint8;
+    }) -> (struct {
+        set_volume uint8;
+    });
 
     /// Returns latest volume of the handler to the AVRCP service. This function should return
     /// immediately on the first call and if the volume has changed since the last call to this
@@ -40,10 +49,14 @@ protocol AbsoluteVolumeHandler {
     /// Multiple outstanding `OnVolumeChanged` requests can be made - all outstanding calls will
     /// return when the volume has been changed.
     // TODO(fxbug.dev/54002): Update docs when addressed.
-    OnVolumeChanged() -> (uint8 new_volume);
+    OnVolumeChanged() -> (struct {
+        new_volume uint8;
+    });
 
     /// Returns the current volume immediately.
-    GetCurrentVolume() -> (uint8 volume);
+    GetCurrentVolume() -> (struct {
+        volume uint8;
+    });
 };
 
 /// Client wrapper for local controller (CT) -> remote target (TG) AVCTP connections between devices.
@@ -54,8 +67,11 @@ protocol Controller {
     /// Returns currently set player application setting values for the `attribute_ids`.
     /// If no `attribute_ids` are provided, this method will query the TG for all valid
     /// attribute ID's, and return the currently set player application setting values.
-    GetPlayerApplicationSettings(vector<PlayerApplicationSettingAttributeId>:MAX_ATTRIBUTES attribute_ids)
-        -> (PlayerApplicationSettings current_settings) error ControllerError;
+    GetPlayerApplicationSettings(struct {
+        attribute_ids vector<PlayerApplicationSettingAttributeId>:MAX_ATTRIBUTES;
+    }) -> (struct {
+        current_settings PlayerApplicationSettings;
+    }) error ControllerError;
 
     /// Sets the player application settings specified by `requested_settings`. Only
     /// settings specified in the input `requested_settings` will be overwritten.
@@ -63,24 +79,37 @@ protocol Controller {
     /// Settings provided in the `requested_settings` that are unsupported or unknown
     /// will not be set; the returned `set_settings` will include only the settings
     /// that were successfully set on the remote target.
-    SetPlayerApplicationSettings(PlayerApplicationSettings requested_settings)
-        -> (PlayerApplicationSettings set_settings) error ControllerError;
+    SetPlayerApplicationSettings(struct {
+        requested_settings PlayerApplicationSettings;
+    }) -> (struct {
+        set_settings PlayerApplicationSettings;
+    }) error ControllerError;
 
     /// Returns the currently playing media attributes.
     /// May send either the GetElementAttributes or GetItemAttributes command depending on what
     /// is supported.
-    GetMediaAttributes() -> (MediaAttributes attributes) error ControllerError;
+    GetMediaAttributes() -> (struct {
+        attributes MediaAttributes;
+    }) error ControllerError;
 
     /// Returns the status of the currently playing media.
-    GetPlayStatus() -> (PlayStatus play_status) error ControllerError;
+    GetPlayStatus() -> (struct {
+        play_status PlayStatus;
+    }) error ControllerError;
 
     /// Request the absolute volume on the peer be changed. Returns the actual volume set by the
     /// peer. Values can range from 0x00 to 0x7F (with 100% volume being 0x7F). You may not get a
     /// volume changed notification event from the remote peer as result of changing this.
-    SetAbsoluteVolume(uint8 requested_volume) -> (uint8 set_volume) error ControllerError;
+    SetAbsoluteVolume(struct {
+        requested_volume uint8;
+    }) -> (struct {
+        set_volume uint8;
+    }) error ControllerError;
 
     /// Inform target of the controller's battery level.
-    InformBatteryStatus(BatteryStatus battery_status) -> () error ControllerError;
+    InformBatteryStatus(struct {
+        battery_status BatteryStatus;
+    }) -> (struct {}) error ControllerError;
 
     /// Filters notifications that will be received with [`OnNotification`]. Not all notifications
     /// are supported by all peers. Resetting the notification filter may trigger all requested
@@ -91,7 +120,10 @@ protocol Controller {
     /// `position_change_interval` is ignored if `TRACK_POS` is not set. The position change interval
     /// is best effort and not a guarantee and events may arrive more frequently or less frequently
     /// than requested.
-    SetNotificationFilter(Notifications notifications, uint32 position_change_interval);
+    SetNotificationFilter(struct {
+        notifications Notifications;
+        position_change_interval uint32;
+    });
 
     /// Incoming notification events from the target peer. `timestamp` is monotonic wall time
     /// of when the event was received by the peer.
@@ -101,14 +133,21 @@ protocol Controller {
     /// Call [`SetNotificationFilter`] to set the notifications that are requested of the peer.
     /// All notifications are discrete state changes except volume change and position change
     /// notifications.
-    -> OnNotification(zx.time timestamp, Notification notification);
+    -> OnNotification(struct {
+        timestamp zx.time;
+        notification Notification;
+    });
 
     /// Call to acknowledge handling of a notification from [`OnNotification`].
     NotifyNotificationHandled();
 
     /// Changes the addressed `player_id` on the target when multiple are supported.
-    SetAddressedPlayer(uint16 player_id) -> () error ControllerError;
+    SetAddressedPlayer(struct {
+        player_id uint16;
+    }) -> (struct {}) error ControllerError;
 
     /// Send an AV\C passthrough key command. Sends both a key down and key up event.
-    SendCommand(AvcPanelCommand command) -> () error ControllerError;
+    SendCommand(struct {
+        command AvcPanelCommand;
+    }) -> (struct {}) error ControllerError;
 };

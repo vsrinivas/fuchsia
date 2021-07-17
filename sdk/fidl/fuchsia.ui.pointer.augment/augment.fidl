@@ -1,8 +1,6 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 /// These augmentation protocols represent powerful introspection capabilities
 /// into the view hierarchy, and must be individually routed to specific target
 /// components. Most clients should not have access to these protocols. Some
@@ -43,7 +41,7 @@ using fuchsia.ui.pointer as pointer;
 using zx;
 
 /// Abnormal conditions for augmentation protocols.
-enum ErrorReason {
+type ErrorReason = strict enum {
     /// The augmentation attempt was denied.
     DENIED = 1;
 };
@@ -51,12 +49,12 @@ enum ErrorReason {
 // GLOBAL MOUSE AUGMENTATION
 
 /// Abnormal return for global mouse.
-resource struct ErrorForGlobalMouse {
+type ErrorForGlobalMouse = resource struct {
     /// Abnormal reason for return.
-    ErrorReason error_reason;
+    error_reason ErrorReason;
 
     /// Original protocol endpoint for client use.
-    pointer.MouseSource original;
+    original client_end:pointer.MouseSource;
 };
 
 /// A method for a client to receive view-global visibility for mouse behavior.
@@ -67,7 +65,12 @@ protocol GlobalMouse {
     /// consumed, and `augmented` is returned for the client's use. Otherwise,
     /// the `error` carries back `original` for the client's use, and
     /// `augmented` is null.
-    Upgrade(pointer.MouseSource original) -> (MouseSourceWithGlobalMouse? augmented, ErrorForGlobalMouse? error);
+    Upgrade(resource struct {
+        original client_end:pointer.MouseSource;
+    }) -> (resource struct {
+        augmented client_end:<MouseSourceWithGlobalMouse, optional>;
+        error box<ErrorForGlobalMouse>;
+    });
 };
 
 /// Like [`fuchsia.ui.pointer.MouseSource`], but with additional information
@@ -77,35 +80,37 @@ protocol GlobalMouse {
 protocol MouseSourceWithGlobalMouse {
     /// Identical usage to [`fuchsia.ui.pointer.MouseSource.Watch`], but with
     /// augmented data.
-    Watch() -> (vector<MouseEventWithGlobalMouse>:pointer.MOUSE_MAX_EVENT events);
+    Watch() -> (struct {
+        events vector<MouseEventWithGlobalMouse>:pointer.MOUSE_MAX_EVENT;
+    });
 };
 
 /// An augmentation of [`fuchsia.ui.pointer.MouseEvent`] to provide view-global
 /// visibility for mouse behavior.
 /// - The augmented data are scoped to the view of the client.
-table MouseEventWithGlobalMouse {
+type MouseEventWithGlobalMouse = table {
     /// Identical usage to [`fuchsia.ui.pointer.MouseEvent`]. In particular, if
     /// the client's view is obscured, `mouse_event` will be empty.
-    1: pointer.MouseEvent mouse_event;
+    1: mouse_event pointer.MouseEvent;
 
     /// Augmented data that describes the position of a `mouse_event` within the
     /// client's view, regardless of obscuring or latching.
-    2: pointer.MousePointerSample global_position;
+    2: global_position pointer.MousePointerSample;
 
     /// Augmented data that describes when the mouse stream enters or exits
     /// the client's view.
-    3: pointer.MouseEventStreamInfo global_stream_info;
+    3: global_stream_info pointer.MouseEventStreamInfo;
 };
 
 // LOCAL HIT AUGMENTATION
 
 // Abnormal return for local hit.
-resource struct ErrorForLocalHit {
+type ErrorForLocalHit = resource struct {
     /// Abnormal reason for return.
-    ErrorReason error_reason;
+    error_reason ErrorReason;
 
     /// Original protocol endpoint for client use.
-    pointer.TouchSource original;
+    original client_end:pointer.TouchSource;
 };
 
 /// A method for a client to upgrade its touch event protocol to additionally
@@ -116,7 +121,12 @@ protocol LocalHit {
     /// consumed, and `augmented` is returned for the client's use. Otherwise,
     /// the `error` carries back `original` for the client's use, and
     /// `augmented` is null.
-    Upgrade(pointer.TouchSource original) -> (TouchSourceWithLocalHit? augmented, ErrorForLocalHit? error);
+    Upgrade(resource struct {
+        original client_end:pointer.TouchSource;
+    }) -> (resource struct {
+        augmented client_end:<TouchSourceWithLocalHit, optional>;
+        error box<ErrorForLocalHit>;
+    });
 };
 
 /// Like [`fuchsia.ui.pointer.TouchSource`], but with additional information
@@ -126,14 +136,21 @@ protocol LocalHit {
 protocol TouchSourceWithLocalHit {
     /// Identical usage to [`fuchsia.ui.pointer.TouchSource.Watch`], but with
     /// augmented data.
-    Watch(vector<pointer.TouchResponse>:pointer.TOUCH_MAX_EVENT responses) -> (vector<TouchEventWithLocalHit>:pointer.TOUCH_MAX_EVENT events);
+    Watch(struct {
+        responses vector<pointer.TouchResponse>:pointer.TOUCH_MAX_EVENT;
+    }) -> (struct {
+        events vector<TouchEventWithLocalHit>:pointer.TOUCH_MAX_EVENT;
+    });
     /// Identical usage to [`fuchsia.ui.pointer.TouchSource.UpdateResponse`].
-    UpdateResponse(pointer.TouchInteractionId interaction, pointer.TouchResponse response) -> ();
+    UpdateResponse(struct {
+        interaction pointer.TouchInteractionId;
+        response pointer.TouchResponse;
+    }) -> ();
 };
 
 /// A floating point two-dimensional point.
 /// - The values are placed in (x, y) order.
-alias Point2 = array<float32>:2;
+alias Point2 = array<float32, 2>;
 
 /// An augmentation of [`fuchsia.ui.pointer.TouchEvent`] to provide local-hit
 /// data for a touch event.
@@ -142,14 +159,14 @@ alias Point2 = array<float32>:2;
 /// graphical content: its "hits" from top to bottom. The "local hit" of `e` is
 /// the location of `e` in the coordinate system of the view in which `e` has
 /// the top-most intersection.
-struct TouchEventWithLocalHit {
+type TouchEventWithLocalHit = struct {
     /// Identical usage to [`fuchsia.ui.pointer.TouchEvent`].
-    pointer.TouchEvent touch_event;
+    touch_event pointer.TouchEvent;
 
     /// Augmented data for `touch_event` that describes the top-most client KOID that it hits.
-    zx.koid local_viewref_koid;
+    local_viewref_koid zx.koid;
 
     /// Augmented data for `touch_event` that describes its local coordinates in
     /// the coordinate space for `local_viewref_koid`.
-    Point2 local_point;
+    local_point Point2;
 };

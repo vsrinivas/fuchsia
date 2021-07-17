@@ -1,49 +1,48 @@
 // Copyright 2021 The Fuchsia Authors.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
 library fuchsia.example.fostr;
 
-bits ExampleBits {
+type ExampleBits = strict bits {
     A = 1;
     B = 2;
     C = 4;
 };
 
-enum ExampleEnum {
+type ExampleEnum = strict enum {
     FOO = 1;
     BAR_BAZ = 2;
 };
 
-struct MyStruct {
-    vector<int32>:10? nums;
-    string foo;
-    MyXunion bar;
-    uint8 my_uint8;
-    int8 my_int8;
+type MyStruct = struct {
+    nums vector<int32>:<10, optional>;
+    foo string;
+    bar MyXunion;
+    my_uint8 uint8;
+    my_int8 int8;
 };
 
-flexible union MyXunion {
-    1: int32 i;
-    2: bool b;
+type MyXunion = flexible union {
+    1: i int32;
+    2: b bool;
     3: reserved;
-    4: uint8 my_uint8;
-    5: int8 my_int8;
+    4: my_uint8 uint8;
+    5: my_int8 int8;
 };
 
-union MyUnion {
-    1: int32 i;
-    2: bool b;
+type MyUnion = strict union {
+    1: i int32;
+    2: b bool;
     3: reserved;
-    4: uint8 my_uint8;
-    5: int8 my_int8;
+    4: my_uint8 uint8;
+    5: my_int8 int8;
 };
 
-table SimpleTable {
-    1: bool x;
+type SimpleTable = table {
+    1: x bool;
     2: reserved;
-    3: MyStruct y;
-    4: int32 z;
-    5: uint8 my_uint8;
-    6: int8 my_int8;
+    3: y MyStruct;
+    4: z int32;
+    5: my_uint8 uint8;
+    6: my_int8 int8;
 };

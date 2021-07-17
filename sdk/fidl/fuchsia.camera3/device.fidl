@@ -1,13 +1,11 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.camera3;
 
-const uint32 MAX_IDENTIFIER_LENGTH = 256;
-const uint32 MAX_CONFIGURATIONS_PER_CAMERA = 256;
-const uint32 MAX_STREAMS_PER_CONFIGURATION = 256;
+const MAX_IDENTIFIER_LENGTH uint32 = 256;
+const MAX_CONFIGURATIONS_PER_CAMERA uint32 = 256;
+const MAX_STREAMS_PER_CONFIGURATION uint32 = 256;
 
 /// A Device represents a unique physical camera present in the system. Only one client may connect
 /// to an unbound physical camera, however the "Rebind" method can be used to create multiple
@@ -18,57 +16,78 @@ protocol Device {
     /// known a priori for a given device apply to the current camera.
     // TODO(fxbug.dev/43247): unify device identification
     // go/unified-device-discovery will eliminate the need for this protocol
-    GetIdentifier() -> (string:MAX_IDENTIFIER_LENGTH? identifier);
+    GetIdentifier() -> (struct {
+        identifier string:<MAX_IDENTIFIER_LENGTH, optional>;
+    });
 
     /// Returns a list of configurations supported by the camera. All cameras will have at least
     /// one configuration. The values returned are immutable - they will not change for the
     /// lifetime of the client's connection to the Camera.
-    [Transitional, Deprecated = "Use GetConfigurations2"]
-    GetConfigurations() -> (vector<Configuration>:MAX_CONFIGURATIONS_PER_CAMERA configurations);
+    @transitional
+    @deprecated("Use GetConfigurations2")
+    GetConfigurations() -> (struct {
+        configurations vector<Configuration>:MAX_CONFIGURATIONS_PER_CAMERA;
+    });
 
     /// Returns a list of configurations supported by the camera. All cameras will have at least
     /// one configuration. The values returned are immutable - they will not change for the
     /// lifetime of the client's connection to the Camera.
-    [Transitional]
-    GetConfigurations2() -> (vector<Configuration2>:MAX_CONFIGURATIONS_PER_CAMERA configurations);
+    @transitional
+    GetConfigurations2() -> (struct {
+        configurations vector<Configuration2>:MAX_CONFIGURATIONS_PER_CAMERA;
+    });
 
     /// Returns the index of the current configuration when it has changed from a previously
     /// returned configuration, or is called by a client for the first time.
-    WatchCurrentConfiguration() -> (uint32 index);
+    WatchCurrentConfiguration() -> (struct {
+        index uint32;
+    });
 
     /// Sets the configuration using the provided index. Calling this method disconnects any
     /// existing Stream clients associated with this camera. An epitaph of ZX_OK
     /// will be sent for any connected Stream clients on closing.
-    SetCurrentConfiguration(uint32 index);
+    SetCurrentConfiguration(struct {
+        index uint32;
+    });
 
     /// Returns the camera's current mute state when it has changed from a previously returned
     /// state, or is called by a client for the first time. A camera may be muted using
     /// SetSoftwareMuteState or by a physical switch. If either muted mode is active, stream
     /// clients associated with this physical camera will stop receiving new frames.
-    WatchMuteState() -> (bool software_muted, bool hardware_muted);
+    WatchMuteState() -> (struct {
+        software_muted bool;
+        hardware_muted bool;
+    });
 
     /// Sets the current camera's software mute state. When transitioning to the muted state, this
     /// method returns when the camera has successfully ceased sending new frames to stream
     /// clients. When transitioning to the unmuted state, this method returns immediately.
-    SetSoftwareMuteState(bool muted) -> ();
+    SetSoftwareMuteState(struct {
+        muted bool;
+    }) -> ();
 
     /// Connects to the Stream at the provided index. If any clients already exist for this stream,
     /// the request is closed with the ZX_ERR_ALREADY_BOUND epitaph.
-    ConnectToStream(uint32 index, request<Stream> request);
+    ConnectToStream(resource struct {
+        index uint32;
+        request server_end:Stream;
+    });
 
     /// Request another connection to this Device. This allows a client to delegate different
     /// operations to different coordinated clients.
-    Rebind(request<Device> request);
+    Rebind(resource struct {
+        request server_end:Device;
+    });
 };
 
 /// Describes a distinct configuration for the camera.
-struct Configuration {
+type Configuration = struct {
     /// Descriptions of streams that are concurrently available in the configuration.
-    vector<StreamProperties>:MAX_STREAMS_PER_CONFIGURATION streams;
+    streams vector<StreamProperties>:MAX_STREAMS_PER_CONFIGURATION;
 };
 
 /// Describes a distinct configuration for the camera.
-table Configuration2 {
+type Configuration2 = table {
     /// Descriptions of streams that are concurrently available in the configuration.
-    1: vector<StreamProperties2>:MAX_STREAMS_PER_CONFIGURATION streams;
+    1: streams vector<StreamProperties2>:MAX_STREAMS_PER_CONFIGURATION;
 };

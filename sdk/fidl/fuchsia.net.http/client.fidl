@@ -1,8 +1,6 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.net.http;
 
 using fuchsia.mem;
@@ -12,7 +10,7 @@ using zx;
 alias Method = string:1024;
 
 /// An error occurred during the HTTP transaction.
-enum Error {
+type Error = strict enum {
     /// Some other problem occurred that cannot be classified using one of the
     /// more specific statuses. Retry is optional.
     INTERNAL = 1;
@@ -31,46 +29,46 @@ enum Error {
 };
 
 /// An HTTP header field.
-struct Header {
+type Header = struct {
     /// The name of the header field.
-    bytes name;
+    name bytes;
 
     /// The value of the header field.
-    bytes value;
+    value bytes;
 };
 
 /// The body of an HTTP request.
-resource union Body {
+type Body = strict resource union {
     /// A buffer that will contain the complete request or response body.
-    1: fuchsia.mem.Buffer buffer;
+    1: buffer fuchsia.mem.Buffer;
 
     /// A socket that will contain the streaming request or response body.
-    2: zx.handle:SOCKET stream;
+    2: stream zx.handle:SOCKET;
 };
 
 /// An HTTP request.
-resource table Request {
+type Request = resource table {
     /// The HTTP method if applicable.
     ///
     /// Defaults to "GET".
-    1: Method method;
+    1: method Method;
 
     /// The URL to load.
     ///
     /// Required.
-    2: fuchsia.url.Url url;
+    2: url fuchsia.url.Url;
 
     /// Additional HTTP request headers.
-    3: vector<Header>:MAX headers;
+    3: headers vector<Header>:MAX;
 
     /// The payload for the request body. For HTTP requests, the method must be
     /// set to "POST" or "PUT". If a buffer is used for the body, a
     /// Content-Length header will automatically be added.
-    4: Body body;
+    4: body Body;
 
     /// Determines when to give up on waiting for a response from the server. If no deadline is
     /// provided, the implementation will provide a reasonable default.
-    5: zx.time deadline;
+    5: deadline zx.time;
 };
 
 /// A description of the redirect the server requested.
@@ -78,40 +76,40 @@ resource table Request {
 /// The semantics of an HTTP redirect vary according to the status code use to
 /// generate the redirect. This structure ensures that the loader and its client
 /// agree on the interpretation of the redirect response from the server.
-table RedirectTarget {
+type RedirectTarget = table {
     /// The HTTP method the server suggested for the redirect.
-    1: Method method;
+    1: method Method;
 
     /// The URL the server suggested for the redirect.
-    2: fuchsia.url.Url url;
+    2: url fuchsia.url.Url;
 
     /// The referrer the server suggested for the redirect.
-    3: fuchsia.url.Url referrer;
+    3: referrer fuchsia.url.Url;
 };
 
 /// A response to an HTTP request.
-resource table Response {
+type Response = resource table {
     /// If the response resulted in a network level error, this field will be
     /// set.
-    1: Error error;
+    1: error Error;
 
     /// The response body.
-    2: zx.handle:SOCKET body;
+    2: body zx.handle:SOCKET;
 
     /// The final URL of the response, after redirects have been followed.
-    3: fuchsia.url.Url final_url;
+    3: final_url fuchsia.url.Url;
 
     /// The HTTP status code.
-    4: uint32 status_code;
+    4: status_code uint32;
 
     /// The HTTP status line.
-    5: bytes status_line;
+    5: status_line bytes;
 
     /// The HTTP response headers.
-    6: vector<Header>:MAX headers;
+    6: headers vector<Header>:MAX;
 
     /// A description of the redirect the server requested, if any.
-    7: RedirectTarget redirect;
+    7: redirect RedirectTarget;
 };
 
 /// An HTTP loader.
@@ -119,7 +117,7 @@ resource table Response {
 /// The loader can service many HTTP requests concurrently. The loader tracks
 /// all the outstanding requests and will cancel them all if the client closes
 /// the loader interface.
-[Discoverable]
+@discoverable
 protocol Loader {
     /// Initiate the given HTTP request, follow redirects, and return the final
     /// response.
@@ -128,7 +126,11 @@ protocol Loader {
     /// and return the final response as a reply to this message. To cancel the
     /// request, either close the loader interface or close the peer to the
     /// `event` included in the `request`.
-    Fetch(Request request) -> (Response response);
+    Fetch(resource struct {
+        request Request;
+    }) -> (resource struct {
+        response Response;
+    });
 
     /// Initiate the given HTTP request and return all intermediate responses to
     /// the given client.
@@ -136,7 +138,10 @@ protocol Loader {
     /// Unlike `Fetch`, `Start` does not automatically follow all redirects.
     /// Instead, each individual response along the redirect chain is delivered
     /// to the `LoaderClient`.
-    Start(Request request, LoaderClient client);
+    Start(resource struct {
+        request Request;
+        client client_end:LoaderClient;
+    });
 };
 
 /// A client interface used with `Loader.Start`.
@@ -149,5 +154,7 @@ protocol LoaderClient {
     /// table will describe the target the server requested. To follow the
     /// redirect, reply to this message. To not follow the redirect, close the
     /// underlying channel.
-    OnResponse(Response response) -> ();
+    OnResponse(resource struct {
+        response Response;
+    }) -> ();
 };

@@ -1,13 +1,11 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.bluetooth.test;
 
 /// Defines the list of HCI protocol error codes that a Bluetooth controller can report. These
 /// values are taken from Bluetooth Core Specification v5.1, Vol 2, Part D.
-enum HciError : uint8 {
+type HciError = strict enum : uint8 {
     SUCCESS = 0x00;
     UNKNOWN_COMMAND = 0x01;
     UNKNOWN_CONNECTION_ID = 0x02;

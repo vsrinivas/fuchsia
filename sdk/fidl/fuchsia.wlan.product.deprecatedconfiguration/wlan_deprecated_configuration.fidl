@@ -1,24 +1,24 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.wlan.product.deprecatedconfiguration;
 
 using fuchsia.net;
 
 /// Represents error statuses returned by
 /// [`fuchsia.wlan.product.deprecatedconfiguration/DeprecatedConfigurator.SuggestAccessPointMacAddress`]
-enum SuggestMacAddressError {
+type SuggestMacAddressError = strict enum {
     NOT_SUPPORTED = 1;
     INVALID_ARGUMENTS = 2;
 };
 
 // NOTE: This FIDL protocol is deprecated.  Please do not add new uses that depend on it.
 /// Allows for the configuration of WLAN devices to support legacy applications.
-[Discoverable]
+@discoverable
 protocol DeprecatedConfigurator {
     /// Suggests a MAC address for [`fuchsia.wlan.policy/AccessPointProvider`] to use when creating
     /// new soft access point interfaces and notifies when the request is complete.
-    SuggestAccessPointMacAddress(fuchsia.net.MacAddress mac) -> () error SuggestMacAddressError;
+    SuggestAccessPointMacAddress(struct {
+        mac fuchsia.net.MacAddress;
+    }) -> (struct {}) error SuggestMacAddressError;
 };

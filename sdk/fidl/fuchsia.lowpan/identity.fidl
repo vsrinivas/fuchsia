@@ -1,11 +1,9 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.lowpan;
 
-table Identity {
+type Identity = table {
     /// The raw bytes for the network name.
     /// This is typically a [StringPrep'd][1] UTF8 encoding.
     ///
@@ -15,10 +13,10 @@ table Identity {
     /// have differing bytecode representations.
     ///
     /// [1]: https://tools.ietf.org/html/rfc3454
-    1: bytes:63 raw_name;
+    1: raw_name bytes:63;
 
     /// Extended PANID.
-    2: bytes:8 xpanid;
+    2: xpanid bytes:8;
 
     /// String identifying the type of network.
     ///
@@ -29,13 +27,13 @@ table Identity {
     /// `fuchsia.lowpan.net_type.802.15.4.pid.XX`, where `XX` is
     /// the value of the protocol id from a 802.14.5 beacon.
     /// This field is optional when joining, forming, or provisioning.
-    3: string:MAX_NET_TYPE_LEN net_type;
+    3: net_type string:MAX_NET_TYPE_LEN;
 
     /// Channel Index.
-    4: ChannelIndex channel;
+    4: channel ChannelIndex;
 
     /// PANID for 802.14.5-based networks (or the equivalent).
-    5: uint16 panid;
+    5: panid uint16;
 
     /// IPv6 Mesh-local prefix.
     ///
@@ -49,5 +47,5 @@ table Identity {
     /// must be ignored when read and zero when set.
     ///
     /// This field is ignored when supplied to `JoinNetwork()`.
-    6: Ipv6Prefix mesh_local_prefix;
+    6: mesh_local_prefix Ipv6Prefix;
 };

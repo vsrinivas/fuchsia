@@ -1,19 +1,17 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.sys.internal;
 
 using fuchsia.logger;
 
 /// An incoming connection for logging from a component, attributed by appmgr.
-resource struct LogConnection {
+type LogConnection = resource struct {
     /// The incoming request for the LogSink.
-    request<fuchsia.logger.LogSink> log_request;
+    log_request server_end:fuchsia.logger.LogSink;
 
     /// What we know about the identity of the requester.
-    SourceIdentity source_identity;
+    source_identity SourceIdentity;
 };
 
 /// `LogConnector` is implemented once per-realm by appmgr. Clients of this protocol call `TakeLogConnectionListener` to
@@ -26,19 +24,23 @@ resource struct LogConnection {
 /// As a result, if a `LogConnectionListener` wishes to consume logs for another component in its realm, the
 /// consumer must be started before other components in the realm. The consumer does not need to
 /// begin executing, just have its namespace constructed.
-[Discoverable]
+@discoverable
 protocol LogConnector {
     /// Removes the `LogConnectionListener` from this realm, returning the request-side if it had not already been taken.
     /// Clients should bind an implementation to the `LogConnectionListener` protocol in order to receive LogSinks.
     ///
     /// This method returns a `request<LogConnectionListener>` instead of accepting a `LogConnectionListener` directly
     /// in order to allow appmgr to construct and buffer `LogConnectionListener` with `LogConnection`s.
-    TakeLogConnectionListener() -> (request<LogConnectionListener>? consumer);
+    TakeLogConnectionListener() -> (resource struct {
+        consumer server_end:<LogConnectionListener, optional>;
+    });
 };
 
 /// `LogConnectorListener` receives attributed log connections from a consumer such as the Archivist.
 /// This protocol is meant to be used with a `LogConnector`.
 protocol LogConnectionListener {
     /// Adds a new connection.
-    OnNewConnection(LogConnection connection);
+    OnNewConnection(resource struct {
+        connection LogConnection;
+    });
 };

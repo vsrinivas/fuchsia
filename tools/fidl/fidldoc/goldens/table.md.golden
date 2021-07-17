@@ -14,7 +14,7 @@
 ### EmptyTable {#EmptyTable}
 
 
-*Defined in [fidl.test.table/table.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/table.test.fidl;l=4)*
+*Defined in [fidl.test.table/table.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/table.test.fidl;l=3)*
 
 
 
@@ -25,7 +25,7 @@
 ### GreaterThan64OrdinalTable {#GreaterThan64OrdinalTable}
 
 
-*Defined in [fidl.test.table/table.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/table.test.fidl;l=38)*
+*Defined in [fidl.test.table/table.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/table.test.fidl;l=36)*
 
 
 
@@ -498,7 +498,7 @@
 ### NewerSimpleTable {#NewerSimpleTable}
 
 
-*Defined in [fidl.test.table/table.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/table.test.fidl;l=20)*
+*Defined in [fidl.test.table/table.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/table.test.fidl;l=18)*
 
 
 
@@ -558,7 +558,7 @@
 ### OlderSimpleTable {#OlderSimpleTable}
 
 
-*Defined in [fidl.test.table/table.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/table.test.fidl;l=15)*
+*Defined in [fidl.test.table/table.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/table.test.fidl;l=13)*
 
 
 
@@ -583,7 +583,7 @@
 ### ReverseOrdinalTable {#ReverseOrdinalTable}
 
 
-*Defined in [fidl.test.table/table.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/table.test.fidl;l=30)*
+*Defined in [fidl.test.table/table.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/table.test.fidl;l=28)*
 
 
 
@@ -615,7 +615,7 @@
 ### SimpleTable {#SimpleTable}
 
 
-*Defined in [fidl.test.table/table.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/table.test.fidl;l=7)*
+*Defined in [fidl.test.table/table.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/table.test.fidl;l=5)*
 
 
 

@@ -1,15 +1,13 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.input.report;
 
 /// The VendorId represents the vendor that created this Input device. If the
 /// Input device is a HID device, the VendorId maps directly to the HID
 /// VendorId. If the Input device is not a HID device, then the VendorId
 /// will be greater than 0xFFFF, which is the max HID VendorId.
-enum VendorId : uint32 {
+type VendorId = strict enum : uint32 {
     /// Below are the HID VendorIds, range 0x0000 - 0xFFFF.
     GOOGLE = 0x000018d1;
 };
@@ -18,7 +16,7 @@ enum VendorId : uint32 {
 /// Input device is a HID device, the ProductId maps directly to the HID
 /// ProductId. If the Input device is not a HID device, then the ProductId
 /// will be greater than 0xFFFF, which is the max HID ProductId.
-enum VendorGoogleProductId : uint32 {
+type VendorGoogleProductId = strict enum : uint32 {
     /// Below are the non-HID VendorIds
     FOCALTECH_TOUCHSCREEN = 0x00010001;
     AMS_LIGHT_SENSOR = 0x00010002;

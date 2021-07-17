@@ -1,17 +1,14 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.i2c;
 
 using zx;
 
-const uint32 MAX_TRANSFER_SIZE = 8196; // More than enough for I2C
-const uint32 MAX_COUNT_SEGMENTS = 8; // Enough for all known transfer configurations.
-const uint32 MAX_I2C_CHANNEL = 128; // Enough for every address to be used in 7-bit mode.
-
-enum SegmentType {
+const MAX_TRANSFER_SIZE uint32 = 8196; // More than enough for I2C
+const MAX_COUNT_SEGMENTS uint32 = 8; // Enough for all known transfer configurations.
+const MAX_I2C_CHANNEL uint32 = 128; // Enough for every address to be used in 7-bit mode.
+type SegmentType = strict enum {
     /// Flags the end of a serialized list of segments.
     END = 1;
     /// Segment to be read from the I2C device.
@@ -21,50 +18,54 @@ enum SegmentType {
 };
 
 /// Used to inform the i2c driver about an attached i2c device.
-table I2CChannel {
+type I2CChannel = table {
     /// ID of the bus that this device is on.
-    1: uint32 bus_id;
+    1: bus_id uint32;
     /// Adress of the device.
-    2: uint16 address;
+    2: address uint16;
     /// Class of the device.
     /// TODO(fxbug.dev/78198): remove this once x86 uses ACPI properly.
-    3: uint32 i2c_class;
+    3: i2c_class uint32;
 
     /// Vendor ID. Used when binding via platform bus device IDs.
-    4: uint32 vid;
+    4: vid uint32;
     /// Product ID. Used when binding via platform bus device IDs.
-    5: uint32 pid;
+    5: pid uint32;
     /// Device ID. Used when binding via platform bus device IDs.
-    6: uint32 did;
+    6: did uint32;
 
     // Bus configuration.
     /// Are we in charge of the bus?
-    7: bool is_bus_controller;
+    7: is_bus_controller bool;
     /// Is this device using 10-bit addressing mode (if false, use 7-bit).
-    8: bool is_ten_bit;
+    8: is_ten_bit bool;
     /// Speed of the bus.
-    9: uint32 bus_speed;
+    9: bus_speed uint32;
 };
 
 /// Passed to the i2c driver in metadata as DEVICE_METADATA_I2C_CHANNELS.
-table I2CBusMetadata {
-    1: vector<I2CChannel>:MAX_I2C_CHANNEL channels;
+type I2CBusMetadata = table {
+    1: channels vector<I2CChannel>:MAX_I2C_CHANNEL;
 };
 
 /// Segment header for a serialized SubordinateTransfer.
 /// TODO(fxbug.dev/32864): Avoid requiring serialization and have SubordinateTransfer take an argument of
 /// `vector<Segment>:MAX_SEGMENTS` instead once we have better support in the C bindings or for C++.
-[ForDeprecatedCBindings]
-struct Segment {
-    uint32 type;
-    uint32 len;
+@for_deprecated_c_bindings
+type Segment = struct {
+    type uint32;
+    len uint32;
 };
 
-[ForDeprecatedCBindings]
+@for_deprecated_c_bindings
 protocol Device {
     /// Send and receive data on the I2C device.
-    SubordinateTransfer(vector<uint8>:MAX_TRANSFER_SIZE in) -> (zx.status s,
-                                                                vector<uint8>:MAX_TRANSFER_SIZE out);
+    SubordinateTransfer(struct {
+        in vector<uint8>:MAX_TRANSFER_SIZE;
+    }) -> (struct {
+        s zx.status;
+        out vector<uint8>:MAX_TRANSFER_SIZE;
+    });
 };
 
 // `Device2` removes the simple layout restriction and fully specifies the format in FIDL instead
@@ -85,9 +86,11 @@ protocol Device2 {
     /// `write_segments_data` would be a vector with 1 element including the 2 bytes address of the
     /// read. Upon success `read_segments_data` would return a vector with one element, the byte
     /// read.
-    Transfer(vector<bool>:MAX_COUNT_SEGMENTS segments_is_write,
-             vector<vector<uint8>:MAX_TRANSFER_SIZE>:MAX_COUNT_SEGMENTS write_segments_data,
-             vector<uint8>:MAX_COUNT_SEGMENTS read_segments_length)
-        -> (vector<vector<uint8>:MAX_TRANSFER_SIZE>:MAX_COUNT_SEGMENTS read_segments_data)
-        error zx.status;
+    Transfer(struct {
+        segments_is_write vector<bool>:MAX_COUNT_SEGMENTS;
+        write_segments_data vector<vector<uint8>:MAX_TRANSFER_SIZE>:MAX_COUNT_SEGMENTS;
+        read_segments_length vector<uint8>:MAX_COUNT_SEGMENTS;
+    }) -> (struct {
+        read_segments_data vector<vector<uint8>:MAX_TRANSFER_SIZE>:MAX_COUNT_SEGMENTS;
+    }) error zx.status;
 };

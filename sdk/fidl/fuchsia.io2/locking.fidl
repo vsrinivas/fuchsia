@@ -1,8 +1,6 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.io2;
 
 using zx;
@@ -43,14 +41,16 @@ protocol AdvisoryLocking {
     /// * `ZX_ERR_NOT_SUPPORTED` This file does not support advisory locking.
     /// * `ZX_ERR_ACCESS_DENIED` This connection does not have sufficient rights
     ///   to acquire the given type of lock.
-    [Transitional]
-    AdvisoryLock(AdvisoryLockRequest request) -> () error zx.status;
+    @transitional
+    AdvisoryLock(struct {
+        request AdvisoryLockRequest;
+    }) -> (struct {}) error zx.status;
 };
 
 /// A type of advisory lock.
 ///
 /// Used with [`AdvisoryLocking.AdvisoryLock`].
-enum AdvisoryLockType : uint32 {
+type AdvisoryLockType = strict enum : uint32 {
     /// Zero or more connections can hold read locks on a file simultaneously.
     READ = 1;
 
@@ -67,13 +67,13 @@ enum AdvisoryLockType : uint32 {
 ///
 /// The range can extend beyond the end of the file but cannot extend beyond
 /// the beginning of the file.
-struct AdvisoryLockRange {
+type AdvisoryLockRange = struct {
     /// The location in the file from which [`offset`] is computed.
-    SeekOrigin origin;
+    origin SeekOrigin;
 
     /// The start of the byte range, expressed as an offset from [`origin`].
     /// Cannot be negative if [`origin`] is [`SeekOrigin.START`].
-    int64 offset;
+    offset int64;
 
     /// The length of the byte range in bytes.
     ///
@@ -83,25 +83,25 @@ struct AdvisoryLockRange {
     /// If the length is negative, the byte range includes the bytes `offset` +
     /// `length` up to, and including, `offset` - 1, provided this range does
     /// not extend beyond the beginning of the file.
-    int64 length;
+    length int64;
 };
 
-table AdvisoryLockRequest {
+type AdvisoryLockRequest = table {
     /// The type of lock to be acquired.
     ///
     /// If this field is absent, the [`AdvisoryLock`] method will fail
     /// with ZX_ERR_INVALID_ARGS.
-    1: AdvisoryLockType type;
+    1: type AdvisoryLockType;
 
     /// The byte range within the file to be locked. See [`AdvisoryLockRange`]
     /// for semantics.
     ///
     /// If this field is absent, the range defaults to the entire file.
-    2: AdvisoryLockRange range;
+    2: range AdvisoryLockRange;
 
     /// Whether the file should wait reply to the [`AdvisoryLock`]
     /// method until the requested lock can be acquired.
     ///
     /// If this field is absent, the file will not wait.
-    3: bool wait;
+    3: wait bool;
 };

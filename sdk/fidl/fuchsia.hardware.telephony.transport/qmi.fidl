@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.telephony.transport;
 
 using zx;
@@ -10,12 +8,18 @@ using fuchsia.telephony.snoop as qmi_snoop;
 
 protocol Qmi {
     /// Give a channel handle that transports bi-directional QMI messages
-    SetChannel(zx.handle:CHANNEL transport) -> () error zx.status;
+    SetChannel(resource struct {
+        transport zx.handle:CHANNEL;
+    }) -> (struct {}) error zx.status;
 
     /// Configure the network used by the transport
     /// Currently only sets network up/down
-    SetNetwork(bool connected) -> ();
+    SetNetwork(struct {
+        connected bool;
+    }) -> ();
 
     /// Pass an interface for QMI message snooping
-    SetSnoopChannel(qmi_snoop.Publisher interface) -> () error zx.status;
+    SetSnoopChannel(resource struct {
+        interface client_end:qmi_snoop.Publisher;
+    }) -> (struct {}) error zx.status;
 };

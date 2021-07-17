@@ -1,16 +1,18 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fidl.service.test;
 
 protocol Echo {
-    EchoString(string? value) -> (string? response);
+    EchoString(struct {
+        value string:optional;
+    }) -> (struct {
+        response string:optional;
+    });
 };
 
 /// A service that provides multiple Echo implementations.
 service EchoService {
-    Echo foo;
-    Echo bar;
+    foo client_end:Echo;
+    bar client_end:Echo;
 };

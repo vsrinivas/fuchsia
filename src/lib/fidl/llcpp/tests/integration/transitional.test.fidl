@@ -1,14 +1,16 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library llcpptest.transitional.test;
 
 /// Protocol with a non-transitional method and transitional method.
 /// Only the non-transitional method should need to be implemented.
 protocol TransitionMethods {
-    ImplementedMethod() -> (string value);
-    [Transitional = "This method should not need to be implemented to build"]
-    UnimplementedMethod() -> (string value);
+    ImplementedMethod() -> (struct {
+        value string;
+    });
+    @transitional("This method should not need to be implemented to build")
+    UnimplementedMethod() -> (struct {
+        value string;
+    });
 };

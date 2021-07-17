@@ -1,15 +1,13 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.lowpan.device;
 
 using fuchsia.lowpan;
 
 /// The maximum number of items that can be returned at one
 /// time by a scan stream.
-const uint16 MAX_STREAM_SET_SIZE = 32;
+const MAX_STREAM_SET_SIZE uint16 = 32;
 
 /// Maximum number of distinct network types that a LoWPAN
 /// device can support.
@@ -18,7 +16,7 @@ const uint16 MAX_STREAM_SET_SIZE = 32;
 /// and maybe one day a device might support two. Sixteen was chosen because it's
 /// large enough to account for any failure of imagination, yet small enough to not
 /// cause system stability issues.
-const uint16 MAX_NETWORK_TYPES = 16;
+const MAX_NETWORK_TYPES uint16 = 16;
 
 /// Type for describing a channel index.
 alias ChannelIndex = fuchsia.lowpan.ChannelIndex;

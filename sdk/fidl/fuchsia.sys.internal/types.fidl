@@ -1,17 +1,15 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.sys.internal;
 
 using fuchsia.sys;
 
-const uint16 MAXIMUM_REALM_PATH_SEGMENTS = 50;
-const uint16 COMPONENT_NAME_MAX_LENGTH = 255;
+const MAXIMUM_REALM_PATH_SEGMENTS uint16 = 50;
+const COMPONENT_NAME_MAX_LENGTH uint16 = 255;
 
 /// Maximum length for an environment label.
-const uint32 LABEL_MAX_LENGTH = 32;
+const LABEL_MAX_LENGTH uint32 = 32;
 
 alias component_url = fuchsia.sys.component_url;
 alias realm_segments = vector<string:LABEL_MAX_LENGTH>:MAXIMUM_REALM_PATH_SEGMENTS;

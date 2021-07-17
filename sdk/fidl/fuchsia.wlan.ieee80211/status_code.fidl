@@ -1,13 +1,11 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.wlan.ieee80211;
 
 /// 802.11 status codes.  These values are common throughout the standard.
 /// IEEE Std 802.11-2016, 9.4.1.9, Table 9-46
-enum StatusCode : uint16 {
+type StatusCode = strict enum : uint16 {
     SUCCESS = 0;
     REFUSED_REASON_UNSPECIFIED = 1;
     TDLS_REJECTED_ALTERNATIVE_PROVIDED = 2;

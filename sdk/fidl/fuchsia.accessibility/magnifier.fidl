@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.accessibility;
 
 /// Exposes a privileged magnifier API for camera control, typically on a
@@ -13,12 +11,18 @@ protocol MagnificationHandler {
     /// about the center of the presentation. The callback indicates when the
     /// update has been presented. The identity transform (0, 0, 1) is the
     /// natural state.
-    SetClipSpaceTransform(float32 x, float32 y, float32 scale) -> ();
+    SetClipSpaceTransform(struct {
+        x float32;
+        y float32;
+        scale float32;
+    }) -> ();
 };
 
-[Discoverable]
+@discoverable
 protocol Magnifier {
     /// Registers the camera control to be used for applying magnification. If
     /// a previous handler had been registered, that handler is dropped.
-    RegisterHandler(MagnificationHandler handler);
+    RegisterHandler(resource struct {
+        handler client_end:MagnificationHandler;
+    });
 };

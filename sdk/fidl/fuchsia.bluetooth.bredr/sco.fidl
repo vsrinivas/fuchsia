@@ -1,21 +1,19 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.bluetooth.bredr;
 
 using fuchsia.hardware.audio;
 using zx;
 
-enum ScoErrorCode {
+type ScoErrorCode = strict enum {
     FAILURE = 1;
     CANCELLED = 2;
     INVALID_ARGUMENTS = 3;
 };
 
 /// Codec parameter sets defined in the Hands-Free Profile specification (v1.8, section 5.7).
-enum HfpParameterSet : uint8 {
+type HfpParameterSet = strict enum : uint8 {
     MSBC_T1 = 1;
     MSBC_T2 = 2;
     CVSD_S1 = 3;
@@ -27,7 +25,7 @@ enum HfpParameterSet : uint8 {
 };
 
 /// The coding format used for synchronous connection data.
-enum CodingFormat : uint8 {
+type CodingFormat = strict enum : uint8 {
     MULAW = 1;
     ALAW = 2;
     CVSD = 3;
@@ -38,7 +36,7 @@ enum CodingFormat : uint8 {
 
 /// Indicates the audio transport that should be used for the data on a synchronous
 /// connection.
-enum DataPath : uint8 {
+type DataPath = strict enum : uint8 {
     /// The HCI transport.
     HOST = 1;
 
@@ -50,63 +48,67 @@ enum DataPath : uint8 {
     TEST = 3;
 };
 
-table ScoConnectionParameters {
+type ScoConnectionParameters = table {
     /// Set of SCO parameters from the Hands-Free Profile specification.
     /// Required.
-    1: HfpParameterSet parameter_set;
+    1: parameter_set HfpParameterSet;
 
     /// The over-the-air coding format used for transmitted and received data.
     /// Required.
-    2: CodingFormat air_coding_format;
+    2: air_coding_format CodingFormat;
 
     /// Frame size produced by the codec in the context of over-the-air coding.
     /// Required.
-    3: uint16 air_frame_size;
+    3: air_frame_size uint16;
 
     /// Host-controller data rate in bytes/second.
     /// Required.
-    4: uint32 io_bandwidth;
+    4: io_bandwidth uint32;
 
     /// The coding format used over the transport.
     /// Required.
-    5: CodingFormat io_coding_format;
+    5: io_coding_format CodingFormat;
 
     /// The number of bits in each sample/frame of data.
     /// Required.
-    6: uint16 io_frame_size;
+    6: io_frame_size uint16;
 
     /// The data format over the transport for linear samples.
     /// Ignored for non-linear coding formats.
     /// Optional.
     /// SIGNED indicates 2's complement sign encoding.
     /// FLOAT is not supported.
-    7: fuchsia.hardware.audio.SampleFormat io_pcm_data_format;
+    7: io_pcm_data_format fuchsia.hardware.audio.SampleFormat;
 
     /// For linear samples, indicates how many bit positions the MSB of the sample is away
     /// from the MSB of the data.
     /// Ignored for non-linear coding formats.
     /// Optional.
     /// Default: 0.
-    8: uint8 io_pcm_sample_payload_msb_position;
+    8: io_pcm_sample_payload_msb_position uint8;
 
     /// The data transport.
     /// Required.
-    9: DataPath path;
+    9: path DataPath;
 };
 
-resource table ScoConnection {
+type ScoConnection = resource table {
     /// Socket for transmitting/receiving data over the synchronous connection.
     /// Closing the socket will close the connection.
     /// If audio is offloaded, data written to the socket will be dropped and reads will fail.
-    1: zx.handle:SOCKET socket;
+    1: socket zx.handle:SOCKET;
 };
 
 /// Represents an active synchronous connection request by a profile.
 /// Either `Connected()` or `Error()` will be called and then server will close the protocol.
 protocol ScoConnectionReceiver {
     /// Called upon successful connection establishment.
-    Connected(ScoConnection connection);
+    Connected(resource struct {
+        connection ScoConnection;
+    });
 
     /// Called when connection establishment fails or is cancelled by the host.
-    Error(ScoErrorCode error);
+    Error(struct {
+        error ScoErrorCode;
+    });
 };

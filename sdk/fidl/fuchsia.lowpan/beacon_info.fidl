@@ -1,20 +1,18 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.lowpan;
 
-const uint32 BEACON_INFO_FLAG_CAN_ASSIST = 1;
+const BEACON_INFO_FLAG_CAN_ASSIST uint32 = 1;
 
-struct BeaconInfo {
+type BeaconInfo = struct {
     /// The identity of the network being advertised by
     /// this beacon.
-    Identity identity;
+    identity Identity;
 
     /// RSSI of the beacon, measured in dBm.
     /// If unspecified, set to -128 (`RSSI_UNSPECIFIED`).
-    int32 rssi;
+    rssi int32;
 
     /// Link Quality Index (LQI) of the beacon.
     ///
@@ -29,13 +27,13 @@ struct BeaconInfo {
     ///   quality levels evenly distributed between the
     ///   worst and best, with lower values always
     ///   indicating a worse quality than higher values.
-    uint8 lqi;
+    lqi uint8;
 
     /// The MAC address associated with this beacon.
-    bytes:16 address;
+    address bytes:16;
 
     /// A collection of integers representing any
     /// flags associated with this beacon, like
     /// `BEACON_INFO_FLAG_CAN_ASSIST`.
-    vector<int32>:32 flags;
+    flags vector<int32>:32;
 };

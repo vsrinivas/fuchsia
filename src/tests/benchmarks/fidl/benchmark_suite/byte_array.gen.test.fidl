@@ -1,21 +1,19 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 // GENERATED FILE: Regen with $(fx get-build-dir)/host-tools/regen_fidl_benchmark_suite
 
 library benchmarkfidl;
 
-struct ByteArray16 {
-    array<uint8>:16 bytes;
+type ByteArray16 = struct {
+    bytes array<uint8, 16>;
 };
 
-struct ByteArray256 {
-    array<uint8>:256 bytes;
+type ByteArray256 = struct {
+    bytes array<uint8, 256>;
 };
 
-[BindingsDenylist = "rust, hlcpp, llcpp, walker"]
-struct ByteArray4096 {
-    array<uint8>:4096 bytes;
+@bindings_denylist("rust, hlcpp, llcpp, walker")
+type ByteArray4096 = struct {
+    bytes array<uint8, 4096>;
 };

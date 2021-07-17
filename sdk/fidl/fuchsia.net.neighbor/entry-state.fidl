@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.net.neighbor;
 
 /// Neighbor table entry state.
@@ -16,7 +14,7 @@ library fuchsia.net.neighbor;
 /// | Reachability Probe        | ARP Request | Neighbor Solicitation  |
 /// | Reachability Confirmation | ARP Reply   | Neighbor Advertisement |
 /// `---------------------------+-------------+------------------------'
-enum EntryState : uint8 {
+type EntryState = strict enum : uint8 {
     /// Reachability is in the process of being confirmed for a newly created,
     /// non-static entry.
     INCOMPLETE = 1;

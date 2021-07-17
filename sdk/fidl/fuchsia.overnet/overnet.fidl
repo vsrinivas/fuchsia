@@ -1,8 +1,6 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.overnet;
 
 // Overnet forms a mesh network of peer devices which can proxy some Zircon objects between
@@ -12,61 +10,78 @@ using fuchsia.overnet.protocol;
 using zx;
 
 /// Interfaces applicable to consuming services from other devices
-[Discoverable]
+@discoverable
 protocol ServiceConsumer {
     /// Returns a list of all peers that are connected to this Overnet.
     /// If this list has not been updated since the last call to this method, it waits until
     /// new data is available.
     /// Concurrent calls to ListPeers will result in channel closure.
-    ListPeers() -> (vector<Peer>:MAX peers);
+    ListPeers() -> (struct {
+        peers vector<Peer>:MAX;
+    });
     /// Connect `chan` to some external service on `node` with name `service_name`.
-    ConnectToService(fuchsia.overnet.protocol.NodeId node,
-                     string:fuchsia.overnet.protocol.MAX_SERVICE_NAME_LENGTH service_name,
-                     zx.handle:CHANNEL chan);
+    ConnectToService(resource struct {
+        node fuchsia.overnet.protocol.NodeId;
+        service_name string:fuchsia.overnet.protocol.MAX_SERVICE_NAME_LENGTH;
+        chan zx.handle:CHANNEL;
+    });
 };
 
 /// Interfaces applicable to sharing services with ServiceConsumer's
-[Discoverable]
+@discoverable
 protocol ServicePublisher {
     /// Register a new service to be exported by Overnet.
     /// If an existing service has the same `service_name`, it's replaced by this service.
-    PublishService(string:fuchsia.overnet.protocol.MAX_SERVICE_NAME_LENGTH service_name,
-                   ServiceProvider provider);
+    PublishService(resource struct {
+        service_name string:fuchsia.overnet.protocol.MAX_SERVICE_NAME_LENGTH;
+        provider client_end:ServiceProvider;
+    });
 };
 
 /// Interfaces applicable to controlling an Overnet mesh
-[Discoverable]
+@discoverable
 protocol MeshController {
     /// Attach a socket as a new link.
-    AttachSocketLink(zx.handle:SOCKET socket);
+    AttachSocketLink(resource struct {
+        socket zx.handle:SOCKET;
+    });
 };
 
 /// A ServiceProvider is a factory for one service.
 protocol ServiceProvider {
     /// Connect `chan` to the service (called in response to Overnet.ConnectToService).
     /// `info` provides additional data about the connection request.
-    ConnectToService(zx.handle:CHANNEL chan, ConnectionInfo info);
+    ConnectToService(resource struct {
+        chan zx.handle:CHANNEL;
+        info ConnectionInfo;
+    });
 };
 
 /// Protocol spoken by the host implementation to access various sub-interfaces.
 protocol HostOvernet {
-    ConnectServiceConsumer(request<ServiceConsumer> svc);
-    ConnectServicePublisher(request<ServicePublisher> svc);
-    ConnectMeshController(request<MeshController> svc);
+    ConnectServiceConsumer(resource struct {
+        svc server_end:ServiceConsumer;
+    });
+    ConnectServicePublisher(resource struct {
+        svc server_end:ServicePublisher;
+    });
+    ConnectMeshController(resource struct {
+        svc server_end:MeshController;
+    });
 };
 
 /// A `Peer` describes one device on the Overnet mesh.
-struct Peer {
+type Peer = struct {
     /// The address of the peer on the Overnet mesh.
-    fuchsia.overnet.protocol.NodeId id;
+    id fuchsia.overnet.protocol.NodeId;
     /// A special peer is returned for this device, and is marked with `is_self` true.
-    bool is_self;
+    is_self bool;
     /// A description of the peer (includes, for example, a service list).
-    fuchsia.overnet.protocol.PeerDescription description;
+    description fuchsia.overnet.protocol.PeerDescription;
 };
 
 /// Information provided to a ServiceProvider about an incoming connection.
-table ConnectionInfo {
+type ConnectionInfo = table {
     /// The peer address initiating this connection.
-    1: fuchsia.overnet.protocol.NodeId peer;
+    1: peer fuchsia.overnet.protocol.NodeId;
 };

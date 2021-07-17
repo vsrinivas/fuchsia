@@ -1,106 +1,104 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.wlan.internal;
 
 using fuchsia.wlan.common;
 
-enum BssTypes {
+type BssTypes = strict enum {
     INFRASTRUCTURE = 1;
     PERSONAL = 2;
     INDEPENDENT = 3;
     MESH = 4;
     ANY_BSS = 5;
-    //LAST = ANY_BSS;
+//LAST = ANY_BSS;
 };
 
 // IEEE Std 802.11-2016, 9.4.1.4
 alias CapabilityInfo = uint16;
 
 // IEEE Std 802.11-2016 9.4.2.56
-const uint8 HT_CAP_LEN = 26;
+const HT_CAP_LEN uint8 = 26;
 // IEEE Std 802.11-2016 9.4.2.57
-const uint8 HT_OP_LEN = 22;
+const HT_OP_LEN uint8 = 22;
 // IEEE Std 802.11-2016 9.5.2.158
-const uint8 VHT_CAP_LEN = 12;
+const VHT_CAP_LEN uint8 = 12;
 // IEEE Std 802.11-2016 9.5.2.159
-const uint8 VHT_OP_LEN = 5;
+const VHT_OP_LEN uint8 = 5;
 // IEEE Std 802.11-2016 defines 12 values in dot11SupportedDataRatesRxTable and
 // 2 values for BSS Membership Selector in Table 9-78. Only these 14 values are valid.
 // But in fxbug.dev/41022, some of these values may be duplicated in both SupportedRates(SR) and
 // ExtendedSupportedRates(ESR). Since the SR element allows 8 bytes, and assuming the ESR element
 // duplicates all the values in the SR element plus contains all the remaining valid values, the
 // maximum is set to 8 + 14 = 22.
-const uint8 RATES_MAX_LEN = 22;
+const RATES_MAX_LEN uint8 = 22;
 
 // IEEE Std 802.11-2016 9.4.2.56
-struct HtCapabilities {
-    array<uint8>:HT_CAP_LEN bytes;
+type HtCapabilities = struct {
+    bytes array<uint8, HT_CAP_LEN>;
 };
 
 // IEEE Std 802.11-2016 9.4.2.57
-struct HtOperation {
-    array<uint8>:HT_OP_LEN bytes;
+type HtOperation = struct {
+    bytes array<uint8, HT_OP_LEN>;
 };
 
 // IEEE Std 802.11-2016 9.5.2.158
-struct VhtCapabilities {
-    array<uint8>:VHT_CAP_LEN bytes;
+type VhtCapabilities = struct {
+    bytes array<uint8, VHT_CAP_LEN>;
 };
 
 // IEEE Std 802.11-2016 9.5.2.159
-struct VhtOperation {
-    array<uint8>:VHT_OP_LEN bytes;
+type VhtOperation = struct {
+    bytes array<uint8, VHT_OP_LEN>;
 };
 
 // IEEE Std 802.11-2016 6.3.3.3.2
-struct BssDescription {
-    array<uint8>:6 bssid;
+type BssDescription = struct {
+    bssid array<uint8, 6>;
 
-    BssTypes bss_type;
-    uint16 beacon_period; // in TU
-    uint64 timestamp;
-    uint64 local_time;
+    bss_type BssTypes;
+    beacon_period uint16; // in TU
+    timestamp uint64;
+    local_time uint64;
 
-    CapabilityInfo cap;
+    cap CapabilityInfo;
 
     /// All info elements present in the beacon or probe response frame.
-    bytes ies;
+    ies bytes;
 
     // List up non-standard, Fuchsia only parameters
-    fuchsia.wlan.common.WlanChan chan;
+    chan fuchsia.wlan.common.WlanChan;
     // The running average of received signal strength indicator in units of dBm. This value is
     // updated periodically when the client is associated to an AP.
-    int8 rssi_dbm; // dBm
+    rssi_dbm int8; // dBm
     // The running average of snr in units of dB. This value is updated periodically when the
     // client is associated to an AP.
-    int8 snr_db;
+    snr_db int8;
 };
 
-struct WmmStatusResponse {
-    bool apsd;
-    WmmAcParams ac_be_params;
-    WmmAcParams ac_bk_params;
-    WmmAcParams ac_vi_params;
-    WmmAcParams ac_vo_params;
+type WmmStatusResponse = struct {
+    apsd bool;
+    ac_be_params WmmAcParams;
+    ac_bk_params WmmAcParams;
+    ac_vi_params WmmAcParams;
+    ac_vo_params WmmAcParams;
 };
 
 /// WFA WMM v1.2, 2.2.2
-struct WmmAcParams {
+type WmmAcParams = struct {
     /// Lower bound of contention window in exponential form
     /// `cw_min = 2^(ecw_min) - 1`. The unit for contention window is "slot time", which
     /// is different for each standard (e.g. 9 microseconds, 13 microseconds, etc.)
-    uint8 ecw_min;
+    ecw_min uint8;
     /// Upper bound of contention window in exponential form
     /// `cw_max = 2^(ecw_max) - 1`. The unit for contention window is "slot time", which
     /// is different for each standard (e.g. 9 microseconds, 13 microseconds, etc.)
-    uint8 ecw_max;
+    ecw_max uint8;
     /// Arbitration Interframe Spacing Number (control wait time between sending each frame)
-    uint8 aifsn;
+    aifsn uint8;
     /// TXOP limit in unit of 32 microseconds
-    uint16 txop_limit;
+    txop_limit uint16;
     /// Whether admission control is mandatory
-    bool acm;
+    acm bool;
 };

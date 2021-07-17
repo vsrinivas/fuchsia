@@ -1,42 +1,40 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.overnet.protocol;
 
 using zx;
 
 /// A single message proxied from a Zircon channel over an Overnet stream.
-struct ZirconChannelMessage {
+type ZirconChannelMessage = struct {
     /// Bytes part of the payload.
-    vector<uint8>:zx.CHANNEL_MAX_MSG_BYTES bytes;
+    bytes vector<uint8>:zx.CHANNEL_MAX_MSG_BYTES;
     /// Handles part of the payload.
-    vector<ZirconHandle>:zx.CHANNEL_MAX_MSG_HANDLES handles;
+    handles vector<ZirconHandle>:zx.CHANNEL_MAX_MSG_HANDLES;
 };
 
 /// A single handle to be proxied.
 /// Not all Zircon types are supported.
-union ZirconHandle {
+type ZirconHandle = strict union {
     /// A proxied channel.
-    1: ChannelHandle channel;
+    1: channel ChannelHandle;
     /// A proxied socket.
-    2: SocketHandle socket;
+    2: socket SocketHandle;
     /// A proxied eventpair.
-    3: EventPairHandle event_pair;
+    3: event_pair EventPairHandle;
 };
 
 /// A proxied channel.
-struct ChannelHandle {
+type ChannelHandle = struct {
     /// The handle rights that are given to this handle.
-    ChannelRights rights;
+    rights ChannelRights;
     /// The Overnet proxy stream that was created to carry this channel.
     /// The protocol over said stream will be a `ZirconChannel`.
-    StreamRef stream_ref;
+    stream_ref StreamRef;
 };
 
 /// The type of socket being communicated via [`fuchsia.overnet.protocol/SocketHandle`].
-enum SocketType {
+type SocketType = strict enum {
     /// A datagram oriented socket.
     DATAGRAM = 0;
     /// A stream oriented socket.
@@ -44,30 +42,30 @@ enum SocketType {
 };
 
 /// A proxied socket.
-struct SocketHandle {
+type SocketHandle = struct {
     /// The handle rights that are given to this handle.
-    SocketRights rights;
+    rights SocketRights;
     /// The Overnet proxy stream that was created to carry this socket.
     /// The protocol over said stream will be a `ZirconSocket`.
-    StreamRef stream_ref;
+    stream_ref StreamRef;
     /// Socket options, per `zx_socket_create`.
-    SocketType socket_type;
+    socket_type SocketType;
 };
 
 /// A proxied eventpair.
-struct EventPairHandle {
+type EventPairHandle = struct {
     /// The handle rights that are given to this handle.
-    EventPairRights rights;
+    rights EventPairRights;
     /// The Overnet proxy stream that was created to carry this eventpair.
     /// No payloads will be sent over this stream, however transport and signal control messages
     /// will be per the normal StreamControl/SignalUpdate protocols used for all handle types.
-    StreamRef stream_ref;
+    stream_ref StreamRef;
 };
 
 /// Channel rights.
 /// Overnet treats rights as per-object type, to reduce the space of things that can be communicated
 /// over its wire format. Transfer rights are always assumed present.
-bits ChannelRights : uint32 {
+type ChannelRights = strict bits : uint32 {
     READ = 0x01;
     WRITE = 0x02;
 };
@@ -75,7 +73,7 @@ bits ChannelRights : uint32 {
 /// Socket rights.
 /// Overnet treats rights as per-object type, to reduce the space of things that can be communicated
 /// over its wire format. Transfer rights are always assumed present.
-bits SocketRights : uint32 {
+type SocketRights = strict bits : uint32 {
     READ = 0x01;
     WRITE = 0x02;
 };
@@ -83,14 +81,14 @@ bits SocketRights : uint32 {
 /// EventPair rights.
 /// Overnet treats rights as per-object type, to reduce the space of things that can be communicated
 /// over its wire format. Transfer rights are always assumed present.
-bits EventPairRights : uint32 {
+type EventPairRights = strict bits : uint32 {
     DO_NOT_USE = 0x80000000;
 };
 
 /// Signals that can be propagated.
 /// These are deliberately chosen to be different bits than defined in Zircon, to force mapping code
 /// to exist, and minimize the chance that Zircon ABI accidentally becomes Overnet protocol.
-bits Signals : uint32 {
+type Signals = strict bits : uint32 {
     USER_0 = 0x01;
     USER_1 = 0x02;
     USER_2 = 0x04;
@@ -103,7 +101,7 @@ bits Signals : uint32 {
 
 /// Signal state updates.
 /// Transported as a side channel for each handle type, these propagate some signal bits.
-table SignalUpdate {
+type SignalUpdate = table {
     /// Update some signals
-    1: Signals assert_signals;
+    1: assert_signals Signals;
 };

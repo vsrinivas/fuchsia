@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.feedback;
 
 using fuchsia.math;
@@ -11,12 +9,16 @@ using zx;
 
 /// Provides data useful to attach to feedback reports, e.g., a crash report filed by the system, a
 /// user feedback report filed by a user or a bug report filed by a developer.
-[Discoverable]
+@discoverable
 protocol DataProvider {
     /// Returns a snapshot of the device's state.
     ///
     /// `snapshot` may be empty if there was an issue generating the snapshot.
-    GetSnapshot(GetSnapshotParameters params) -> (Snapshot snapshot);
+    GetSnapshot(resource struct {
+        params GetSnapshotParameters;
+    }) -> (resource struct {
+        snapshot Snapshot;
+    });
 
     /// Returns an image of the current view encoded in the provided `encoding`.
     ///
@@ -26,7 +28,11 @@ protocol DataProvider {
     /// The screenshot is provided separately from the snapshot as callers might want to block on
     /// this call before changing the view while collecting a snapshot in the background is fine.
     /// There are also a lot of clients that are not interested in the screenshot.
-    GetScreenshot(ImageEncoding encoding) -> (Screenshot? screenshot);
+    GetScreenshot(struct {
+        encoding ImageEncoding;
+    }) -> (resource struct {
+        screenshot box<Screenshot>;
+    });
 
     /// Returns a set of annotations about the device's state.
     ///
@@ -36,24 +42,28 @@ protocol DataProvider {
     /// the annotations while others want both the annotations and the snapshot and generating the
     /// snapshot can take significantly more time than collecting the annotations, e.g., logs are
     /// only part of the snapshot and not part of the annotations and can take some time.
-    GetAnnotations(GetAnnotationsParameters params) -> (Annotations annotations);
+    GetAnnotations(struct {
+        params GetAnnotationsParameters;
+    }) -> (struct {
+        annotations Annotations;
+    });
 };
 
-const uint32 MAX_NUM_ANNOTATIONS_PROVIDED = 64;
+const MAX_NUM_ANNOTATIONS_PROVIDED uint32 = 64;
 
 /// Parameters for the DataProvider::GetAnnotations() method.
-table GetAnnotationsParameters {
+type GetAnnotationsParameters = table {
     /// Annotations are collected in parallel from various places in the platform, each with a
     /// timeout.
     ///
     /// `collection_timeout_per_annotation` allows clients to control how much time is given to
     /// each annotation collection. It enables clients to get a partial set of annotations under a
     /// certain time.
-    1: zx.duration collection_timeout_per_annotation;
+    1: collection_timeout_per_annotation zx.duration;
 };
 
 /// Parameters for the DataProvider::GetSnapshot() method.
-resource table GetSnapshotParameters {
+type GetSnapshotParameters = resource table {
     /// A snapshot aggregates various data from the platform (device uptime, logs, Inspect data,
     /// etc.) that are collected in parallel. Internally, each data collection is done within a
     /// timeout.
@@ -64,28 +74,28 @@ resource table GetSnapshotParameters {
     /// Note that this does not control how much total time the snapshot generation may take,
     /// which is by construction higher than `collection_timeout_per_data`, as clients can control
     /// the total time by using a timeout on the call to GetSnapshot() on their side.
-    1: zx.duration collection_timeout_per_data;
+    1: collection_timeout_per_data zx.duration;
 
     /// If set, the snapshot archive will be sent as a |fuchsia.io.File| over this channel instead
     /// of being set in the |archive| field in the |Snapshot| response. This is typically useful if
     /// the client is on the host and does not support VMOs.
-    2: zx.handle:CHANNEL response_channel;
+    2: response_channel zx.handle:CHANNEL;
 };
 
 /// Annotations about the device's state.
 ///
 /// Clients typically upload the data straight to servers. So the data comes in the form of
 /// arbitrary key-value pairs that clients can directly forward to the servers.
-table Annotations {
+type Annotations = table {
     /// A vector of key-value string pairs. Keys are guaranteed to be unique.
-    1: vector<Annotation>:MAX_NUM_ANNOTATIONS_PROVIDED annotations;
+    1: annotations vector<Annotation>:MAX_NUM_ANNOTATIONS_PROVIDED;
 };
 
 /// Snapshot about the device's state.
 ///
 /// Clients typically upload the data straight to servers. So the data comes in the form of
 /// arbitrary key-value pairs that clients can directly forward to the servers.
-resource table Snapshot {
+type Snapshot = resource table {
     /// A <filename, ZIP archive> pair.
     ///
     /// The ZIP archive contains several files corresponding to the various data it collected from
@@ -93,29 +103,29 @@ resource table Snapshot {
     /// version, etc.) and one file per attachment (logs, Inspect data, etc.).
     ///
     /// Not set if |response_channel| was set in the request.
-    1: Attachment archive;
+    1: archive Attachment;
 
     /// A vector of key-value string pairs. Keys are guaranteed to be unique.
     ///
     /// While the annotations are included in the ZIP archive itself, some clients also want them
     /// separately to index or augment them so we provide them separately as well.
-    2: vector<Annotation>:MAX_NUM_ANNOTATIONS_PROVIDED annotations;
+    2: annotations vector<Annotation>:MAX_NUM_ANNOTATIONS_PROVIDED;
 };
 
 /// The encoding used for the image.
 ///
 /// Today, only PNG is supported, but in the future the screenshot could be
 /// returned in other encodings if need arises.
-enum ImageEncoding {
+type ImageEncoding = strict enum {
     PNG = 0;
 };
 
 /// An encoded image of the screen.
-resource struct Screenshot {
-    fuchsia.mem.Buffer image;
+type Screenshot = resource struct {
+    image fuchsia.mem.Buffer;
 
     // While all encoded images contain their dimensions in their headers, some
     // clients still expect to receive the width and height separately, so we
     // also provide it separately so clients don't need to decode `image`.
-    fuchsia.math.Size dimensions_in_px;
+    dimensions_in_px fuchsia.math.Size;
 };

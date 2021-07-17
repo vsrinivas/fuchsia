@@ -1,25 +1,23 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library zxio;
 
 /// Table where all members are optional.
-table TableWithAllOptional {
+type TableWithAllOptional = table {
     /// foo doc comment.
-    1: uint16 foo;
+    1: foo uint16;
 
     /// bar doc comment.
-    2: uint32 bar;
+    2: bar uint32;
 };
 
 /// Table where some members are required.
-table TableWithSomeRequired {
+type TableWithSomeRequired = table {
     /// foo doc comment.
-    1: uint16 foo;
+    1: foo uint16;
 
     /// bar doc comment. This is required.
-    [Required]
-    2: uint32 bar;
+    @required
+    2: bar uint32;
 };

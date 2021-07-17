@@ -1,14 +1,12 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.power;
 
 using zx;
 
 /// The overall status of the battery, informing its general availability.
-enum BatteryStatus {
+type BatteryStatus = strict enum {
     /// uninitialized battery status
     UNKNOWN = 0;
     /// battery present and available
@@ -20,7 +18,7 @@ enum BatteryStatus {
 };
 
 /// The status of the battery with respect to charging.
-enum ChargeStatus {
+type ChargeStatus = strict enum {
     UNKNOWN = 0;
     NOT_CHARGING = 1;
     CHARGING = 2;
@@ -29,7 +27,7 @@ enum ChargeStatus {
 };
 
 /// The power source for an actively charging battery.
-enum ChargeSource {
+type ChargeSource = strict enum {
     UNKNOWN = 0;
     NONE = 1;
     AC_ADAPTER = 2;
@@ -38,7 +36,7 @@ enum ChargeSource {
 };
 
 /// The general status of the battery level.
-enum LevelStatus {
+type LevelStatus = strict enum {
     UNKNOWN = 0;
     OK = 1;
     WARNING = 2; // OEM defined signal for initial notification UI to charge
@@ -47,7 +45,7 @@ enum LevelStatus {
 };
 
 /// The general status related to the overall health of the battery.
-enum HealthStatus {
+type HealthStatus = strict enum {
     UNKNOWN = 0;
     GOOD = 1;
     COLD = 2;
@@ -58,64 +56,70 @@ enum HealthStatus {
 };
 
 /// The time remaining while actively charging or discharging.
-flexible union TimeRemaining {
+type TimeRemaining = flexible union {
     /// Representation of indeterminate state with zero duration.
-    1: zx.duration indeterminate;
+    1: indeterminate zx.duration;
 
     /// Remaining battery life while discharging
-    2: zx.duration battery_life;
+    2: battery_life zx.duration;
 
     /// Remaining time until full while charging
-    3: zx.duration full_charge;
+    3: full_charge zx.duration;
 };
 
 /// Current battery state information
-table BatteryInfo {
+type BatteryInfo = table {
     /// General battery status with respect to presence & availability
-    1: BatteryStatus status;
+    1: status BatteryStatus;
 
     /// The current state of the battery with respect to charging
-    2: ChargeStatus charge_status;
+    2: charge_status ChargeStatus;
 
     /// The charge source while battery is actively charging.
     /// When not actively charging, this will reflect that the source is
     /// NONE (not charging) or UNKNOWN.
-    3: ChargeSource charge_source;
+    3: charge_source ChargeSource;
 
     /// Battery level in percentage. Level percent is only available if
     /// level status is known.
-    4: float32 level_percent;
+    4: level_percent float32;
 
     /// Battery level as a general status, including low and critical
-    5: LevelStatus level_status;
+    5: level_status LevelStatus;
 
     /// Overall battery health
-    6: HealthStatus health;
+    6: health HealthStatus;
 
     /// Time remaining relative to the current charge status
-    7: TimeRemaining time_remaining;
+    7: time_remaining TimeRemaining;
 
     /// Timestamp to distinguish between latest and stale status
-    8: zx.time timestamp;
+    8: timestamp zx.time;
 };
 
 /// Provider interface used to obtain battery status details
 protocol BatteryInfoProvider {
     /// Gets battery info
-    GetBatteryInfo() -> (BatteryInfo info);
+    GetBatteryInfo() -> (struct {
+        info BatteryInfo;
+    });
 
     /// Registers a watcher for battery info changes
-    Watch(BatteryInfoWatcher watcher);
+    Watch(resource struct {
+        watcher client_end:BatteryInfoWatcher;
+    });
 };
 
 /// Watcher on battery info
 protocol BatteryInfoWatcher {
     /// Callback triggered when battery info changes
-    OnChangeBatteryInfo(BatteryInfo info) -> ();
+    OnChangeBatteryInfo(struct {
+        info BatteryInfo;
+    }) -> ();
 };
 
 /// General manager interface for battery management
-[Discoverable]
+@discoverable
 protocol BatteryManager {
     // Provides battery status information
     compose BatteryInfoProvider;

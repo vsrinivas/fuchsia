@@ -1,26 +1,24 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.diagnostics.types;
 
 using zx;
 
 // Task associated with a running component.
-resource flexible union Task {
-    1: zx.handle:JOB job;
-    2: zx.handle:PROCESS process;
-    3: zx.handle:THREAD thread;
+type Task = flexible resource union {
+    1: job zx.handle:JOB;
+    2: process zx.handle:PROCESS;
+    3: thread zx.handle:THREAD;
 };
 
 // Contains handles for tasks of the running component. This is emitted by
 // runners and handled by component manager to obtain information about the
 // process and record diagnostics.
-resource table ComponentTasks {
+type ComponentTasks = resource table {
     // The Zircon task for the running component.
     // Resource usage for the component is attributed to this task.
-    1: Task component_task;
+    1: component_task Task;
 
     // The container task running the component.
     // This field is set to the task that runs `component_task`. For
@@ -32,11 +30,11 @@ resource table ComponentTasks {
     // usage is shared with another component. If `component_task` owns exactly
     // only those resources used by the component, `parent_task` must be left
     // unset.
-    2: Task parent_task;
+    2: parent_task Task;
 };
 
 // Diagnostics information about a component provided by the runner.
-resource table ComponentDiagnostics {
+type ComponentDiagnostics = resource table {
     // Tasks associated with the running component.
-    1: ComponentTasks tasks;
+    1: tasks ComponentTasks;
 };

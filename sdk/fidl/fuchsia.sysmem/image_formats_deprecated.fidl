@@ -1,61 +1,59 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.sysmem;
 
-/// Describes how an image is represented.
 // TODO(fxbug.dev/32119): change struct to table
-[ForDeprecatedCBindings]
-struct ImageFormat {
+/// Describes how an image is represented.
+@for_deprecated_c_bindings
+type ImageFormat = struct {
     /// Row width in pixels.
-    uint32 width;
+    width uint32;
 
     /// Number of rows.
-    uint32 height;
+    height uint32;
 
     /// Number of layers within a multi-layered image.
     /// Defaults to 1 if not specified.
-    uint32 layers = 1;
+    layers uint32 = 1;
 
     /// Pixel format.
-    PixelFormat pixel_format;
+    pixel_format PixelFormat;
 
     /// Color space.
-    ColorSpace color_space;
+    color_space ColorSpace;
 
-    array<ImagePlane>:4 planes;
+    planes array<ImagePlane, 4>;
 };
 
-[ForDeprecatedCBindings]
-struct ImagePlane {
+@for_deprecated_c_bindings
+type ImagePlane = struct {
     /// Byte offset of the start of the plane from the beginning of the image.
-    uint32 byte_offset;
+    byte_offset uint32;
 
     /// Stride in bytes per row.
     /// Only meaningful for linear buffer formats.
-    uint32 bytes_per_row;
+    bytes_per_row uint32;
 };
 
 /// Describes constraints for allocating images of some desired form.
 // TODO(fxbug.dev/32119): change struct to table
-struct ImageSpec {
+type ImageSpec = struct {
     /// Minimum width in pixels.
-    uint32 min_width;
+    min_width uint32;
 
     /// Minimum height in pixels.
-    uint32 min_height;
+    min_height uint32;
 
     /// Number of layers within a multi-layered image.
     /// Defaults to 1 if not specified.
-    uint32 layers = 1;
+    layers uint32 = 1;
 
     /// Pixel format.
-    PixelFormat pixel_format;
+    pixel_format PixelFormat;
 
     /// Color space.
-    ColorSpace color_space;
+    color_space ColorSpace;
 
-    // TODO(fxbug.dev/32128): Add tiling formats.
+// TODO(fxbug.dev/32128): Add tiling formats.
 };

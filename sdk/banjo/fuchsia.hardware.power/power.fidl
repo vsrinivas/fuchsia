@@ -1,40 +1,73 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.power;
 
 using zx;
 
-enum PowerDomainStatus : uint8 {
+type PowerDomainStatus = strict enum : uint8 {
     DISABLED = 1;
     ENABLED = 2;
 };
 
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol Power {
     /// Register the callee for this power domain. The callee will be registered until
     /// UnregisterPowerDomain is called. Any voltage changes to the power domain will
     /// be made considering the min_needed_voltage(in uV) and max_supported_voltage(in uV) published here.
     /// If voltages mentioned are out of supported voltage range of domain(obtained by calling
     /// GetSupportedVoltageRange), the callee will be registered with the supported voltage range.
-    RegisterPowerDomain(uint32 min_needed_voltage, uint32 max_supported_voltage) -> (zx.status s);
+    RegisterPowerDomain(struct {
+        min_needed_voltage uint32;
+        max_supported_voltage uint32;
+    }) -> (struct {
+        s zx.status;
+    });
     /// Unregister the callee for this power domain. The callee will no longer be considered as
     /// a dependent of this power domain.
-    UnregisterPowerDomain() -> (zx.status s);
+    UnregisterPowerDomain() -> (struct {
+        s zx.status;
+    });
     /// Get Supported Voltage Range. min and max are in micorVolts(uV)
-    GetSupportedVoltageRange() -> (zx.status s, uint32 min, uint32 max);
+    GetSupportedVoltageRange() -> (struct {
+        s zx.status;
+        min uint32;
+        max uint32;
+    });
     /// Request a particular voltage. The actual_voltage is the voltage that the power domain
     /// is transitioned to after considering supported voltage ranges of all the registered
     /// dependents. "voltage" should be in uV.
-    RequestVoltage(uint32 voltage) -> (zx.status s, uint32 actual_voltage);
+    RequestVoltage(struct {
+        voltage uint32;
+    }) -> (struct {
+        s zx.status;
+        actual_voltage uint32;
+    });
     /// Get current voltage in uV.
-    GetCurrentVoltage(uint32 index) -> (zx.status s, uint32 current_voltage);
+    GetCurrentVoltage(struct {
+        index uint32;
+    }) -> (struct {
+        s zx.status;
+        current_voltage uint32;
+    });
     /// Get power domain status
-    GetPowerDomainStatus() -> (zx.status s, PowerDomainStatus status);
+    GetPowerDomainStatus() -> (struct {
+        s zx.status;
+        status PowerDomainStatus;
+    });
     /// Write to ctrl register of PMIC
-    WritePmicCtrlReg(uint32 reg_addr, uint32 value) -> (zx.status s);
+    WritePmicCtrlReg(struct {
+        reg_addr uint32;
+        value uint32;
+    }) -> (struct {
+        s zx.status;
+    });
     /// Read ctrl register of PMIC
-    ReadPmicCtrlReg(uint32 reg_addr) -> (zx.status s, uint32 value);
+    ReadPmicCtrlReg(struct {
+        reg_addr uint32;
+    }) -> (struct {
+        s zx.status;
+        value uint32;
+    });
 };

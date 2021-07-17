@@ -1,8 +1,6 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.tee;
 
 using fuchsia.tee as tee;
@@ -13,12 +11,17 @@ protocol DeviceConnector {
     /// Requests a `DeviceInfo` connection to the TEE driver to enumerate device info.
     ///
     /// The sole caller of this should be the TEE Manager.
-    ConnectToDeviceInfo(request<tee.DeviceInfo> device_info_request);
+    ConnectToDeviceInfo(resource struct {
+        device_info_request server_end:tee.DeviceInfo;
+    });
 
     /// Requests an `Application` connection from the TEE driver while the caller provides a client
     /// channel end to a `Provider` server that supports the driver on any RPCs.
     ///
     /// The sole caller of this should be the TEE Manager.
-    ConnectToApplication(tee.Uuid application_uuid, manager.Provider? service_provider,
-                         request<tee.Application> application_request);
+    ConnectToApplication(resource struct {
+        application_uuid tee.Uuid;
+        service_provider client_end:<manager.Provider, optional>;
+        application_request server_end:tee.Application;
+    });
 };

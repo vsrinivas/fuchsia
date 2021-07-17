@@ -1,23 +1,21 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.acpi;
 using zx;
 
-const uint32 MAX_ACPI_TABLE_ENTRIES = 512;
+const MAX_ACPI_TABLE_ENTRIES uint32 = 512;
 
 /// An ACPI table name signature. This consists of four ASCII characters.
-alias AcpiTableSignature = array<uint8>:4;
+alias AcpiTableSignature = array<uint8, 4>;
 
 /// Metadata about an ACPI table entry.
-struct TableInfo {
+type TableInfo = struct {
     /// Name of the table. There may be multiple tables with the same name.
-    AcpiTableSignature name;
+    name AcpiTableSignature;
 
     /// The size of the table, in bytes.
-    uint32 size;
+    size uint32;
 };
 
 /// Defines access to raw system ACPI data.
@@ -25,7 +23,9 @@ struct TableInfo {
 /// This interface is intended only for low-level debugging tools.
 protocol Acpi {
     /// Return the list of ACPI tables present in the system.
-    ListTableEntries() -> (vector<TableInfo>:MAX_ACPI_TABLE_ENTRIES entries) error zx.status;
+    ListTableEntries() -> (struct {
+        entries vector<TableInfo>:MAX_ACPI_TABLE_ENTRIES;
+    }) error zx.status;
 
     /// Write the raw content of the named ACPI table into the given VMO.
     ///
@@ -36,6 +36,11 @@ protocol Acpi {
     /// |instance| should be 0.
     ///
     /// On success, returns the number of bytes written into result.
-    ReadNamedTable(AcpiTableSignature name, uint32 instance, zx.handle:VMO result)
-        -> (uint32 size) error zx.status;
+    ReadNamedTable(resource struct {
+        name AcpiTableSignature;
+        instance uint32;
+        result zx.handle:VMO;
+    }) -> (struct {
+        size uint32;
+    }) error zx.status;
 };

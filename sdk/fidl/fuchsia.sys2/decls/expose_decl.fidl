@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.sys2;
 
 using fuchsia.io2;
@@ -10,12 +8,12 @@ using fuchsia.component;
 
 /// Declares a capability exposed to either a component's containing realm or to the framework.
 /// For example, a legacy service exposed by the component at runtime.
-flexible union ExposeDecl {
-    1: ExposeServiceDecl service;
-    2: ExposeProtocolDecl protocol;
-    3: ExposeDirectoryDecl directory;
-    4: ExposeRunnerDecl runner;
-    5: ExposeResolverDecl resolver;
+type ExposeDecl = flexible union {
+    1: service ExposeServiceDecl;
+    2: protocol ExposeProtocolDecl;
+    3: directory ExposeDirectoryDecl;
+    4: runner ExposeRunnerDecl;
+    5: resolver ExposeResolverDecl;
 };
 
 /// Declares a service exposed to a component's containing realm, such as a
@@ -23,21 +21,21 @@ flexible union ExposeDecl {
 ///
 /// To learn more about services, see:
 /// https://fuchsia.dev/fuchsia-src/glossary#service
-table ExposeServiceDecl {
+type ExposeServiceDecl = table {
     /// The provider of the capability relative to the component itself. Must
     /// be `self` or `child`.
-    1: Ref source;
+    1: source Ref;
 
     /// Name identifying the service, by which it was presented to this
     /// component.
-    2: fuchsia.component.name source_name;
+    2: source_name fuchsia.component.name;
 
     /// The destination to which the service is exposed: either the component's realm or the
     /// framework.
-    3: Ref target;
+    3: target Ref;
 
     /// The name by which the capability is being exposed.
-    4: fuchsia.component.name target_name;
+    4: target_name fuchsia.component.name;
 };
 
 /// Declares a protocol exposed to a component's containing realm, such as
@@ -45,81 +43,81 @@ table ExposeServiceDecl {
 ///
 /// To learn more about protocols, see:
 /// https://fuchsia.dev/fuchsia-src/glossary#protocol
-table ExposeProtocolDecl {
+type ExposeProtocolDecl = table {
     /// The provider of the capability relative to the component itself. Must
     /// be `self` or `child`.
-    1: Ref source;
+    1: source Ref;
 
     /// Name identifying the protocol, by which it was presented to this
     /// component.
-    2: fuchsia.component.name source_name;
+    2: source_name fuchsia.component.name;
 
     /// The destination to which the protocol is exposed: either the component's
     /// realm or the framework.
-    3: Ref target;
+    3: target Ref;
 
     /// The name by which the capability is being exposed.
-    4: fuchsia.component.name target_name;
+    4: target_name fuchsia.component.name;
 };
 
 /// Declares a directory exposed to a component's containing realm, such as a
 /// directory exposed by the component or one of its children at runtime.
-table ExposeDirectoryDecl {
+type ExposeDirectoryDecl = table {
     /// The provider of the capability relative to the component itself. Must
     /// be `self` or `child`.
-    1: Ref source;
+    1: source Ref;
 
     /// Name identifying the directory, by which it was presented to this
     /// component.
-    2: fuchsia.component.name source_name;
+    2: source_name fuchsia.component.name;
 
     /// The destination to which the directory is exposed: either the component's realm or the
     /// framework.
-    3: Ref target;
+    3: target Ref;
 
     /// The name by which the capability is being exposed.
-    4: fuchsia.component.name target_name;
+    4: target_name fuchsia.component.name;
 
     /// The maximum rights that can be set by a component using this directory,
     /// required iff `source == self`.
-    5: fuchsia.io2.Rights rights;
+    5: rights fuchsia.io2.Rights;
 
     /// The subdirectory of this directory to expose instead of the root. Optional.
-    6: string:fuchsia.component.MAX_PATH_LENGTH subdir;
+    6: subdir string:fuchsia.component.MAX_PATH_LENGTH;
 };
 
 /// Declares a runner exposed to a component's containing realm, such as a
 /// runner exposed by the component or one of its children at runtime.
-table ExposeRunnerDecl {
+type ExposeRunnerDecl = table {
     /// The provider of the capability relative to the component itself. Must
     /// be `self` or `child`.
-    1: Ref source;
+    1: source Ref;
 
     /// The name of the runner, by which it was presented to this component.
-    2: fuchsia.component.name source_name;
+    2: source_name fuchsia.component.name;
 
     /// The destination to which the runner is exposed: either the component's realm or the
     /// framework.
-    3: Ref target;
+    3: target Ref;
 
     /// The name by which the capability is being exposed.
-    4: fuchsia.component.name target_name;
+    4: target_name fuchsia.component.name;
 };
 
 /// Declares a resolver exposed to a component's containing realm, such as a
 /// resolver exposed by the component or one of its children at runtime.
-table ExposeResolverDecl {
+type ExposeResolverDecl = table {
     /// The provider of the capability relative to the component itself. Must
     /// be `self` or `child`.
-    1: Ref source;
+    1: source Ref;
 
     /// The name of the resolver, by which it was presented to this component.
-    2: fuchsia.component.name source_name;
+    2: source_name fuchsia.component.name;
 
     /// The destination to which the resolver is exposed: either the component's realm or the
     /// framework.
-    3: Ref target;
+    3: target Ref;
 
     /// The name by which the capability is being exposed.
-    4: fuchsia.component.name target_name;
+    4: target_name fuchsia.component.name;
 };

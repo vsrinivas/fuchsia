@@ -1,105 +1,103 @@
-deprecated_syntax;
 library fidl.test.table;
 
-table EmptyTable {
-};
+type EmptyTable = table {};
 
-table SimpleTable {
-    1: int64 x;
+type SimpleTable = table {
+    1: x int64;
     2: reserved;
     3: reserved;
     4: reserved;
-    5: int64 y;
+    5: y int64;
 };
 
-table OlderSimpleTable {
-    1: int64 x;
+type OlderSimpleTable = table {
+    1: x int64;
     2: reserved;
 };
 
-table NewerSimpleTable {
-    1: int64 x;
+type NewerSimpleTable = table {
+    1: x int64;
     2: reserved;
     3: reserved;
     4: reserved;
-    5: int64 y;
-    6: int64 z;
+    5: y int64;
+    6: z int64;
     7: reserved;
 };
 
-table ReverseOrdinalTable {
-    3: int64 x;
-    2: int64 y;
-    1: int64 z;
+type ReverseOrdinalTable = table {
+    3: x int64;
+    2: y int64;
+    1: z int64;
 };
 
 // There is one bitmask per 64-entries in the V2 wire format.
 // This tests the cases where there is more than one bitmask.
-table GreaterThan64OrdinalTable {
-    1: int64 v1;
-    2: int64 v2;
-    3: int64 v3;
-    4: int64 v4;
-    5: int64 v5;
-    6: int64 v6;
-    7: int64 v7;
-    8: int64 v8;
-    9: int64 v9;
-    10: int64 v10;
-    11: int64 v11;
-    12: int64 v12;
-    13: int64 v13;
-    14: int64 v14;
-    15: int64 v15;
-    16: int64 v16;
-    17: int64 v17;
-    18: int64 v18;
-    19: int64 v19;
-    20: int64 v20;
-    21: int64 v21;
-    22: int64 v22;
-    23: int64 v23;
-    24: int64 v24;
-    25: int64 v25;
-    26: int64 v26;
-    27: int64 v27;
-    28: int64 v28;
-    29: int64 v29;
-    30: int64 v30;
-    31: int64 v31;
-    32: int64 v32;
-    33: int64 v33;
-    34: int64 v34;
-    35: int64 v35;
-    36: int64 v36;
-    37: int64 v37;
-    38: int64 v38;
-    39: int64 v39;
-    40: int64 v40;
-    41: int64 v41;
-    42: int64 v42;
-    43: int64 v43;
-    44: int64 v44;
-    45: int64 v45;
-    46: int64 v46;
-    47: int64 v47;
-    48: int64 v48;
-    49: int64 v49;
-    50: int64 v50;
-    51: int64 v51;
-    52: int64 v52;
-    53: int64 v53;
-    54: int64 v54;
-    55: int64 v55;
-    56: int64 v56;
-    57: int64 v57;
-    58: int64 v58;
-    59: int64 v59;
-    60: int64 v60;
-    61: int64 v61;
-    62: int64 v62;
-    63: int64 v63;
-    64: int64 v64;
-    65: int64 v65;
-    66: int64 v66;
+type GreaterThan64OrdinalTable = table {
+    1: v1 int64;
+    2: v2 int64;
+    3: v3 int64;
+    4: v4 int64;
+    5: v5 int64;
+    6: v6 int64;
+    7: v7 int64;
+    8: v8 int64;
+    9: v9 int64;
+   10: v10 int64;
+   11: v11 int64;
+   12: v12 int64;
+   13: v13 int64;
+   14: v14 int64;
+   15: v15 int64;
+   16: v16 int64;
+   17: v17 int64;
+   18: v18 int64;
+   19: v19 int64;
+   20: v20 int64;
+   21: v21 int64;
+   22: v22 int64;
+   23: v23 int64;
+   24: v24 int64;
+   25: v25 int64;
+   26: v26 int64;
+   27: v27 int64;
+   28: v28 int64;
+   29: v29 int64;
+   30: v30 int64;
+   31: v31 int64;
+   32: v32 int64;
+   33: v33 int64;
+   34: v34 int64;
+   35: v35 int64;
+   36: v36 int64;
+   37: v37 int64;
+   38: v38 int64;
+   39: v39 int64;
+   40: v40 int64;
+   41: v41 int64;
+   42: v42 int64;
+   43: v43 int64;
+   44: v44 int64;
+   45: v45 int64;
+   46: v46 int64;
+   47: v47 int64;
+   48: v48 int64;
+   49: v49 int64;
+   50: v50 int64;
+   51: v51 int64;
+   52: v52 int64;
+   53: v53 int64;
+   54: v54 int64;
+   55: v55 int64;
+   56: v56 int64;
+   57: v57 int64;
+   58: v58 int64;
+   59: v59 int64;
+   60: v60 int64;
+   61: v61 int64;
+   62: v62 int64;
+   63: v63 int64;
+   64: v64 int64;
+   65: v65 int64;
+   66: v66 int64;
 };

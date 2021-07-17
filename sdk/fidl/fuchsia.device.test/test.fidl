@@ -1,57 +1,62 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.device.test;
 
 using zx;
 
 /// The path which can be used to open the control device
-const string CONTROL_DEVICE = "/dev/test/test";
+const CONTROL_DEVICE string = "/dev/test/test";
 
 /// Returns the result summary of a test run
-[ForDeprecatedCBindings]
-struct TestReport {
+@for_deprecated_c_bindings
+type TestReport = struct {
     /// Total number of tests
-    uint32 test_count;
+    test_count uint32;
     /// Number of successful tests
-    uint32 success_count;
+    success_count uint32;
     /// Number of failed tests
-    uint32 failure_count;
+    failure_count uint32;
 };
 
-[ForDeprecatedCBindings]
+@for_deprecated_c_bindings
 protocol Test {
     /// Execute the tests for this device. Returns the status from the test. If
     /// used as part of the Device protocol then Test output will be streamed to
     /// the socket set by SetOutputSocket().
-    RunTests() -> (zx.status status, TestReport report);
+    RunTests() -> (struct {
+        status zx.status;
+        report TestReport;
+    });
 };
 
 /// Interface for controlling a device created via RootDevice.CreateDevice
-[ForDeprecatedCBindings]
+@for_deprecated_c_bindings
 protocol Device {
     compose Test;
 
     /// Set a socket to stream test output to.
-    SetOutputSocket(zx.handle:SOCKET sock);
+    SetOutputSocket(resource struct {
+        sock zx.handle:SOCKET;
+    });
 
     /// Set a channel for the test to use in a test-specific manner.
-    SetChannel(zx.handle:CHANNEL chan);
+    SetChannel(resource struct {
+        chan zx.handle:CHANNEL;
+    });
 
     /// Unload this device.
     Destroy();
 };
 
 /// Maximum device name len.  This value must match `ZX_DEVICE_NAME_MAX`.
-const uint32 MAX_DEVICE_NAME_LEN = 31;
+const MAX_DEVICE_NAME_LEN uint32 = 31;
 
 /// Maximum device path len
-const uint32 MAX_DEVICE_PATH_LEN = 1024;
+const MAX_DEVICE_PATH_LEN uint32 = 1024;
 
 /// Interface for creating devices within a devhost.
-[ForDeprecatedCBindings]
+@for_deprecated_c_bindings
 protocol RootDevice {
     /// Create a device with the given `name` that is a child of this device.
     /// If `name` contains a trailing ".so", it will be removed.
@@ -59,6 +64,11 @@ protocol RootDevice {
     /// If `device_request` is given, it is connected to the newly created device.
     ///
     /// On success, `path` will be the filesystem path of the new device.
-    CreateDevice(string:MAX_DEVICE_NAME_LEN name, zx.handle:CHANNEL? device_request)
-        -> (zx.status status, string:MAX_DEVICE_PATH_LEN? path);
+    CreateDevice(resource struct {
+        name string:MAX_DEVICE_NAME_LEN;
+        device_request zx.handle:<CHANNEL, optional>;
+    }) -> (struct {
+        status zx.status;
+        path string:<MAX_DEVICE_PATH_LEN, optional>;
+    });
 };

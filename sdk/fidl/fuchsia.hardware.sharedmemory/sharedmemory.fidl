@@ -1,24 +1,22 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.sharedmemory;
 using fuchsia.mem;
 
 using zx;
 
-flexible bits SharedVmoRight : uint32 {
+type SharedVmoRight = flexible bits : uint32 {
     /// The protocol implementation can read from this VMO (used for transmit requests).
     READ = 0x1;
     /// The protocol implementation can write to this VMO (used for receive requests).
     WRITE = 0x2;
 };
 
-struct SharedVmoBuffer {
-    uint32 vmo_id;
-    uint64 offset;
-    uint64 size;
+type SharedVmoBuffer = struct {
+    vmo_id uint32;
+    offset uint64;
+    size uint64;
 };
 
 /// This is a generic protocol for sharing VMOs that drivers may compose.
@@ -29,10 +27,18 @@ protocol SharedVmoRegister {
     /// the offset and size specified here.
     /// rights: A bit field of SharedVmoRight values indicating how this VMO may be used. Callers
     /// should assume that the driver will map and/or pin the VMO using these rights.
-    RegisterVmo(uint32 vmo_id, fuchsia.mem.Range vmo, SharedVmoRight rights) -> () error zx.status;
+    RegisterVmo(resource struct {
+        vmo_id uint32;
+        vmo fuchsia.mem.Range;
+        rights SharedVmoRight;
+    }) -> (struct {}) error zx.status;
 
     /// Unmaps and/or unpins the VMO and returns the handle to the caller.
-    UnregisterVmo(uint32 vmo_id) -> (zx.handle:VMO vmo) error zx.status;
+    UnregisterVmo(struct {
+        vmo_id uint32;
+    }) -> (resource struct {
+        vmo zx.handle:VMO;
+    }) error zx.status;
 };
 
 /// This is a generic protocol for driver IO using shared VMOs. Drivers may compose this protocol
@@ -40,12 +46,19 @@ protocol SharedVmoRegister {
 /// intended for simple use cases.
 protocol SharedVmoIo {
     /// Sends the data in buffer to the device.
-    Transmit(SharedVmoBuffer buffer) -> () error zx.status;
+    Transmit(struct {
+        buffer SharedVmoBuffer;
+    }) -> (struct {}) error zx.status;
 
     /// Receives data from the device into buffer.
-    Receive(SharedVmoBuffer buffer) -> () error zx.status;
+    Receive(struct {
+        buffer SharedVmoBuffer;
+    }) -> (struct {}) error zx.status;
 
     /// Simultaneously transmits and receives data. The size fields of tx_buffer and rx_buffer must
     /// be the same.
-    Exchange(SharedVmoBuffer tx_buffer, SharedVmoBuffer rx_buffer) -> () error zx.status;
+    Exchange(struct {
+        tx_buffer SharedVmoBuffer;
+        rx_buffer SharedVmoBuffer;
+    }) -> (struct {}) error zx.status;
 };

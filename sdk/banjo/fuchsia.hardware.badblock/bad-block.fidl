@@ -1,21 +1,27 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.badblock;
 
 using zx;
 
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol BadBlock {
     /// Fills in |bad_blocks| with a list of bad blocks, up until
     /// |bad_blocks_count|. The order of blocks is undefined.
     /// |bad_blocks_actual| will be filled in with the actual number of bad
     /// blocks. It is recommended to first make call with |bad_blocks_count|
     /// equal to 0 in order to determine how large the |bad_blocks| is.
-    GetBadBlockList() -> (zx.status s, vector<uint32>:MAX bad_blocks);
+    GetBadBlockList() -> (struct {
+        s zx.status;
+        bad_blocks vector<uint32>:MAX;
+    });
 
     /// Sets |block| as bad. If block is already marked bad, it has no effect.
-    MarkBlockBad(uint32 block) -> (zx.status s);
+    MarkBlockBad(struct {
+        block uint32;
+    }) -> (struct {
+        s zx.status;
+    });
 };

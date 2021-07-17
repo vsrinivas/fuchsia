@@ -1,28 +1,26 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.bluetooth.sys;
 
 using fuchsia.bluetooth as bt;
 
 /// Input and Output Capabilities for pairing exchanges.
 /// See Volume 3, Part C, Table 5.3 and 5.4
-enum InputCapability {
+type InputCapability = strict enum {
     NONE = 1;
     CONFIRMATION = 2;
     KEYBOARD = 3;
 };
 
-enum OutputCapability {
+type OutputCapability = strict enum {
     NONE = 1;
     DISPLAY = 2;
 };
 
 /// Different types required by the Security Manager for pairing methods.
 /// Bluetooth SIG has different requirements for different device capabilities.
-enum PairingMethod {
+type PairingMethod = strict enum {
     /// The user is asked to accept or reject pairing.
     CONSENT = 1;
 
@@ -39,7 +37,7 @@ enum PairingMethod {
     PASSKEY_ENTRY = 4;
 };
 
-enum PairingKeypress {
+type PairingKeypress = strict enum {
     /// The user has entered a single digit.
     DIGIT_ENTERED = 1;
 
@@ -67,13 +65,22 @@ protocol PairingDelegate {
     ///
     /// The `entered_passkey` parameter only has meaning if `method` equals
     /// `PairingMethod.PASSKEY_ENTRY`. It will be ignored otherwise.
-    OnPairingRequest(Peer peer, PairingMethod method, uint32 displayed_passkey)
-        -> (bool accept, uint32 entered_passkey);
+    OnPairingRequest(struct {
+        peer Peer;
+        method PairingMethod;
+        displayed_passkey uint32;
+    }) -> (struct {
+        accept bool;
+        entered_passkey uint32;
+    });
 
     /// Called if the pairing procedure for the device with the given ID is completed.
     /// This can be due to successful completion or an error (e.g. due to cancellation
     /// by the peer, a timeout, or disconnection) which is indicated by `success`.
-    OnPairingComplete(bt.PeerId id, bool success);
+    OnPairingComplete(struct {
+        id bt.PeerId;
+        success bool;
+    });
 
     /// Called to notify keypresses from the peer device during pairing using
     /// `PairingMethod.PASSKEY_DISPLAY`.
@@ -81,9 +88,15 @@ protocol PairingDelegate {
     /// This event is used to provide key press events to the delegate for a responsive user
     /// experience as the user types the passkey on the peer device. This event will be called
     /// once for each key-press.
-    OnRemoteKeypress(bt.PeerId id, PairingKeypress keypress);
+    OnRemoteKeypress(struct {
+        id bt.PeerId;
+        keypress PairingKeypress;
+    });
 
     /// The delegate can send this event to notify the peer of local keypresses
     /// during pairing using `PairingMethod.PASSKEY_ENTRY`.
-    -> OnLocalKeypress(bt.PeerId id, PairingKeypress keypress);
+    -> OnLocalKeypress(struct {
+        id bt.PeerId;
+        keypress PairingKeypress;
+    });
 };

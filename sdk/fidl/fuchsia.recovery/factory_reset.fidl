@@ -1,16 +1,16 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.recovery;
 
 using zx;
 
 /// A protocol for intitiating a factory reset.
-[Discoverable]
+@discoverable
 protocol FactoryReset {
     /// Request an immediate factory reset. If unsuccessful will return an
     /// error.
-    Reset() -> (zx.status status);
+    Reset() -> (struct {
+        status zx.status;
+    });
 };

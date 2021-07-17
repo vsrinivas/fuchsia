@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.identity.tokens;
 
 using fuchsia.auth;
@@ -12,7 +10,7 @@ using fuchsia.auth;
 ///
 /// On systems that do include `AccountManager`, that API should be used to
 /// acquire a separate `TokenManager` instance for each system account.
-[Discoverable]
+@discoverable
 protocol TokenManagerFactory {
     /// Connects a new `TokenManager` channel.
     ///
@@ -25,6 +23,8 @@ protocol TokenManagerFactory {
     // once auth providers can acquire their UI resources through the session
     // framework. At this point we may be able to remove the TokenManagerFactory
     // protocol entirely and make the TokenManager protocol discoverable.
-    GetTokenManager(fuchsia.auth.AuthenticationContextProvider
-                    ui_context_provider, request<TokenManager> token_manager);
+    GetTokenManager(resource struct {
+        ui_context_provider client_end:fuchsia.auth.AuthenticationContextProvider;
+        token_manager server_end:TokenManager;
+    });
 };

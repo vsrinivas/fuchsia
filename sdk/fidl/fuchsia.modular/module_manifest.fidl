@@ -1,85 +1,83 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.modular;
 
 /// Metadata that define the runtime properties of a Module.
-struct ModuleManifest {
+type ModuleManifest = struct {
     /// The relative path from the root of the package where the Module executable
     /// file can be found.
     /// TODO(fxbug.dev/16039): Extract a module's URL from its cmx manifest instead of
     /// here.
-    string:MAX binary;
+    binary string:MAX;
 
     /// A human-readable string:MAX that can be used when suggesting this Module.
     /// DEPRECATED.
-    string:MAX? suggestion_headline;
+    suggestion_headline string:<MAX, optional>;
 
     /// A list of intents that this module is able to handle.
-    vector<IntentFilter>:MAX? intent_filters;
+    intent_filters vector<IntentFilter>:<MAX, optional>;
 
     /// Identifies the pattern with which to compose this module with others.
-    string:MAX? composition_pattern;
+    composition_pattern string:<MAX, optional>;
 
     /// Defines the color of the placeholder widget used while the module loads.
-    string:MAX? placeholder_color;
+    placeholder_color string:<MAX, optional>;
 };
 
 /// This struct is used to describe an intent that a module is able to handle.
-struct IntentFilter {
+type IntentFilter = struct {
     /// The action this module is able to handle.
-    string:MAX action;
+    action string:MAX;
 
     /// Includes the name and types of entities for the parameters required to
     /// execute specified [action].
-    vector<ParameterConstraint>:MAX parameter_constraints;
+    parameter_constraints vector<ParameterConstraint>:MAX;
 
     /// Defines presentation properties for suggestions of this action.
-    ActionDisplay action_display;
+    action_display ActionDisplay;
 };
 
-struct ParameterConstraint {
-    string:MAX name;
+type ParameterConstraint = struct {
+    name string:MAX;
     /// The entity type that is valid for this parameter.
-    string:MAX type;
+    type string:MAX;
 };
 
 /// Defines how a suggestion of an action will be presented.
-table ActionDisplay {
+type ActionDisplay = table {
     /// Defines presentation fields for a suggestion. The string:MAX fields might be
     /// templated and will be filled from data in `parameter_mapping`.
     /// For example: "Listen to $artistName"
-    1: DisplayInfo display_info;
+    1: display_info DisplayInfo;
 
     /// Fields to be replaced in the given `display_info` templated strings.
     /// In the example above, we would map name=artistName to the intent field
     /// artist.name where artist is the intent parameter name and name a field
     /// of it.
-    2: vector<ParameterMapping>:MAX parameter_mapping;
+    2: parameter_mapping vector<ParameterMapping>:MAX;
 };
 
 /// Presentation information about the suggestion.
-table DisplayInfo {
+type DisplayInfo = table {
     /// The title of the suggestion.
-    1: string:MAX title;
+    1: title string:MAX;
 
     /// A subtitle for the suggestion.
-    2: string:MAX subtitle;
+    2: subtitle string:MAX;
 
     /// A url from which to fetch the icon of the suggestion.
-    3: string:MAX icon;
+    3: icon string:MAX;
 };
 
 /// Defines pairs that will be replaced in the DisplayInfo.
-table ParameterMapping {
+type ParameterMapping = table {
     /// The name of the variable to be replaced in the template.
-    1: string:MAX name;
+    1: name string:MAX;
 
     /// The path in the intent parameter to get that name.
     /// `PARAMETER_PROPERTY` = string:MAX | string:MAX . `PARAMETER_PROPERTY`
     /// The first string:MAX in the dot-separated string:MAX is the name of the intent
     /// parameter and the following are nested subfields.
-    2: string:MAX parameter_property;
+    2: parameter_property string:MAX;
 };

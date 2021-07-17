@@ -1,14 +1,13 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
 library fuchsia.examples.intl.wisdom;
 
 using fuchsia.intl;
 
 /// Interface for a service that, given a `fuchsia.intl.Profile` and some basic parameters, can
 /// provide pithy strings of wisdom to demonstrate the use of `Profile`.
-[Discoverable]
+@discoverable
 protocol IntlWisdomServer {
     /// Asks for a wisdom string.
     ///
@@ -16,5 +15,10 @@ protocol IntlWisdomServer {
     ///   intl_profile: Provides the i18n context for the request
     ///   timestamp_ms: Timestamp in milliseconds since the epoch. Used as an input for the wisdom
     ///   text.
-    AskForWisdom(fuchsia.intl.Profile intl_profile, int64 timestamp_ms) -> (string? response);
+    AskForWisdom(struct {
+        intl_profile fuchsia.intl.Profile;
+        timestamp_ms int64;
+    }) -> (struct {
+        response string:optional;
+    });
 };

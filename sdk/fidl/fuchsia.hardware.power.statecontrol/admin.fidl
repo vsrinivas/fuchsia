@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.power.statecontrol;
 
 using zx;
@@ -10,17 +8,17 @@ using zx;
 /// All available suspend flags.
 // TODO(fxbug.dev/42257): When all clients start using the system power state
 // these flags can be removed.
-const uint32 SUSPEND_FLAG_REBOOT = 0xdcdc0100;
-const uint32 SUSPEND_FLAG_REBOOT_BOOTLOADER = 0xdcdc0101;
-const uint32 SUSPEND_FLAG_REBOOT_RECOVERY = 0xdcdc0102;
-const uint32 SUSPEND_FLAG_POWEROFF = 0xdcdc0200;
-const uint32 SUSPEND_FLAG_MEXEC = 0xdcdc0300;
-const uint32 SUSPEND_FLAG_SUSPEND_RAM = 0xdcdc0400;
+const SUSPEND_FLAG_REBOOT uint32 = 0xdcdc0100;
+const SUSPEND_FLAG_REBOOT_BOOTLOADER uint32 = 0xdcdc0101;
+const SUSPEND_FLAG_REBOOT_RECOVERY uint32 = 0xdcdc0102;
+const SUSPEND_FLAG_POWEROFF uint32 = 0xdcdc0200;
+const SUSPEND_FLAG_MEXEC uint32 = 0xdcdc0300;
+const SUSPEND_FLAG_SUSPEND_RAM uint32 = 0xdcdc0400;
 
 // TODO(ravoorir): When the system power states are properly defined,
 // remove the suspend flags. For now, treat each suspend flag as a system
 // power state.
-enum SystemPowerState : uint8 {
+type SystemPowerState = strict enum : uint8 {
     FULLY_ON = 1;
     REBOOT = 2;
     REBOOT_BOOTLOADER = 3;
@@ -29,12 +27,12 @@ enum SystemPowerState : uint8 {
     MEXEC = 6;
     SUSPEND_RAM = 7;
 };
-const uint32 MAX_SYSTEM_POWER_STATES = 7;
+const MAX_SYSTEM_POWER_STATES uint32 = 7;
 
 /// The maxium number of seconds the server will wait for responses from all RebootMethodsWatchers
 /// before changing the system power state.
 // TODO(fxbug.dev/52274): Track how long it takes to persist the reboot reason and adjust this value.
-const uint32 MAX_REBOOT_WATCHER_RESPONSE_TIME_SECONDS = 5;
+const MAX_REBOOT_WATCHER_RESPONSE_TIME_SECONDS uint32 = 5;
 
 /// Provides methods to request that the system be transitioned into a supported power state.
 ///
@@ -50,41 +48,45 @@ const uint32 MAX_REBOOT_WATCHER_RESPONSE_TIME_SECONDS = 5;
 /// and [`fuchsia.hardware.power.statecontrol/RebootMethodsWatcher.OnReboot`].
 /// Alternatively, the caller could choose to use an asynchronous FIDL client with this protocol to
 /// avoid blocking their calling thread.
-[Discoverable]
+@discoverable
 protocol Admin {
     /// Asks the device to enter a fully on state.
-    PowerFullyOn() -> () error zx.status;
+    PowerFullyOn() -> (struct {}) error zx.status;
 
     /// Asks the device to reboot.
-    Reboot(RebootReason reason) -> () error zx.status;
+    Reboot(struct {
+        reason RebootReason;
+    }) -> (struct {}) error zx.status;
 
     /// Asks the device to reboot into the bootloader.
-    RebootToBootloader() -> () error zx.status;
+    RebootToBootloader() -> (struct {}) error zx.status;
 
     /// Asks the device to reboot into the recovery partition.
-    RebootToRecovery() -> () error zx.status;
+    RebootToRecovery() -> (struct {}) error zx.status;
 
     /// Asks all devices to enter a powered off state.
-    Poweroff() -> () error zx.status;
+    Poweroff() -> (struct {}) error zx.status;
 
     /// Performs a kernel mexec.
-    Mexec() -> () error zx.status;
+    Mexec() -> (struct {}) error zx.status;
 
-    SuspendToRam() -> () error zx.status;
+    SuspendToRam() -> (struct {}) error zx.status;
 };
 
+// Component Framework's orderly shutdown is tracked with bug 51034.
 /// Allows components to register a callback that will be executed when a Reboot method is called.
 /// The main purpose of this protocol is to be able to track reboot reasons. Consider relying on
 /// Component Framework's orderly shutdown if you're looking at using this protocol.
-// Component Framework's orderly shutdown is tracked with bug 51034.
-[Discoverable]
+@discoverable
 protocol RebootMethodsWatcherRegister {
     /// Register a watcher to be notified when a Reboot method is called. The Register channel
     /// will be used at most once to notify the watcher of an impending reboot and allow it
     /// the chance to respond.
     ///
     /// Watchers can unregister by closing the underlying channel.
-    Register(RebootMethodsWatcher watcher);
+    Register(resource struct {
+        watcher client_end:RebootMethodsWatcher;
+    });
 };
 
 /// Allows components to be notified when Reboot related methods are called. Watchers will be given
@@ -92,5 +94,7 @@ protocol RebootMethodsWatcherRegister {
 /// The channel will be used once to send a notification to the watcher. Once the watcher responds
 /// or the timeout expires, the channel will be closed by the client of RebootMethodsWatcher.
 protocol RebootMethodsWatcher {
-    OnReboot(RebootReason reason) -> ();
+    OnReboot(struct {
+        reason RebootReason;
+    }) -> ();
 };

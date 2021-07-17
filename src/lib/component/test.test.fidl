@@ -1,18 +1,30 @@
 // Copyright 2020 The Go Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
-deprecated_syntax;
-
 library bindingstest;
 
 using zx;
 
 protocol Test1 {
-    Echo(string? in) -> (string? out);
+    Echo(struct {
+        in string:optional;
+    }) -> (struct {
+        out string:optional;
+    });
     NoResponse();
     EmptyResponse() -> ();
-    TooManyBytesInResponse() -> (vector<uint8>:MAX out);
-    TooManyHandlesInResponse() -> (vector<zx.handle>:MAX out);
-    -> Surprise(string foo);
-    EchoHandleRights(zx.handle:<PORT, zx.rights.READ | zx.rights.TRANSFER | zx.rights.DUPLICATE> h) -> (uint32 rights);
+    TooManyBytesInResponse() -> (struct {
+        out vector<uint8>:MAX;
+    });
+    TooManyHandlesInResponse() -> (resource struct {
+        out vector<zx.handle>:MAX;
+    });
+    -> Surprise(struct {
+        foo string;
+    });
+    EchoHandleRights(resource struct {
+        h zx.handle:<PORT, zx.rights.READ | zx.rights.TRANSFER | zx.rights.DUPLICATE>;
+    }) -> (struct {
+        rights uint32;
+    });
 };

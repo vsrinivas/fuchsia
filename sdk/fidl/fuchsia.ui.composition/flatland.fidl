@@ -1,7 +1,6 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
 library fuchsia.ui.composition;
 
 using fuchsia.math;
@@ -10,7 +9,7 @@ using zx;
 
 /// The set of error codes returned in [`OnNextFrameBegin`]. Everything except NO_ERROR, causes
 /// Flatland channel to be closed.
-enum Error {
+type Error = strict enum {
     /// Indicates that the parameters used the function calls are invalid.
     BAD_OPERATION = 1;
     /// Indicates that `additional_present_credits` field was not properly processed and the client
@@ -20,7 +19,7 @@ enum Error {
     BAD_HANGING_GET = 3;
 };
 
-enum Orientation {
+type Orientation = strict enum {
     CCW_0_DEGREES = 1;
     CCW_90_DEGREES = 2;
     CCW_180_DEGREES = 3;
@@ -31,20 +30,20 @@ enum Orientation {
 /// for a client to decide how to layout their content in a Flatland instance. This data may be
 /// provided to the client before the command that creates the Link is presented, so that the client
 /// may lay out content properly before their first call to [`Present`].
-table LayoutInfo {
+type LayoutInfo = table {
     /// The layout size of a Graph in logical pixels, defined by the parent's call to
     /// [`SetLinkProperties`]. Clients should re-layout their content when this value changes.
-    1: fuchsia.math.SizeU logical_size;
+    1: logical_size fuchsia.math.SizeU;
     /// The ratio from physical display pixels to logical pixels, defined by the sizes and scale
     /// transforms of the parent. Clients should not necessarily re-layout their content when this
     /// value changes.
-    2: fuchsia.math.SizeU pixel_scale;
+    2: pixel_scale fuchsia.math.SizeU;
 };
 
 /// GraphLinks will be informed when they are actively attached to a output display (either
 /// directly, or through a chain of parent links) and when they are not. Until they are connected to
 /// a display, some pieces of information (such as pixel scale) may be unavailable.
-enum GraphLinkStatus {
+type GraphLinkStatus = strict enum {
     CONNECTED_TO_DISPLAY = 1;
     DISCONNECTED_FROM_DISPLAY = 2;
 };
@@ -68,7 +67,9 @@ protocol GraphLink {
     ///
     /// It is invalid to call `GetLayout` while a previous call is still pending. Doing so will
     /// cause both this channel and the Flatland channel that handed out GraphLink to be closed.
-    GetLayout() -> (LayoutInfo info);
+    GetLayout() -> (struct {
+        info LayoutInfo;
+    });
 
     /// A hanging get for receiving the status of the Link. This provides global connectivity
     /// information to the child.
@@ -78,10 +79,12 @@ protocol GraphLink {
     ///
     /// It is invalid to call `GetStatus` while a previous call is still pending. Doing so will
     /// cause both this channel and the Flatland channel that handed out GraphLink to be closed.
-    GetStatus() -> (GraphLinkStatus status);
+    GetStatus() -> (struct {
+        status GraphLinkStatus;
+    });
 };
 
-enum ContentLinkStatus {
+type ContentLinkStatus = strict enum {
     /// The underlying Graph has connected its Link, called [`Present`], and the acquisition fences
     /// of the [`Present`] call have all be reached, indicating that it has some content ready to be
     /// displayed.
@@ -100,54 +103,56 @@ protocol ContentLink {
     ///
     /// It is invalid to call `GetStatus` while a previous call is still pending. Doing so will
     /// cause both this channel and the Flatland channel that handed out ContentLink to be closed.
-    GetStatus() -> (ContentLinkStatus status);
+    GetStatus() -> (struct {
+        status ContentLinkStatus;
+    });
 };
 
 /// A typed wrapper for a channel, representing the child endpoint of a Link. No messages will be
 /// sent over this channel, because it is only used as an unclonable object with peer.
-resource struct GraphLinkToken {
-    zx.handle:CHANNEL value;
+type GraphLinkToken = resource struct {
+    value zx.handle:CHANNEL;
 };
 
 /// A typed wrapper for a channel, representing the parent endpoint of a Link. No messages will be
 /// sent over this channel, because it is only used as an unclonable object with peer.
-resource struct ContentLinkToken {
-    zx.handle:CHANNEL value;
+type ContentLinkToken = resource struct {
+    value zx.handle:CHANNEL;
 };
 
 /// The properties of a Link as defined by the parent. This data, along with the set of attached
 /// Transforms, will be used to compute the LayoutInfo for the child of the Link.
-table LinkProperties {
+type LinkProperties = table {
     /// The size of the Link in logical pixels. This maps directly to the logical_size field in
     /// LayoutInfo.
-    1: fuchsia.math.SizeU logical_size;
+    1: logical_size fuchsia.math.SizeU;
 };
 
 /// The properties of an Image as defined by the client. These properties determine how an Image
 /// uses the backing BufferCollection. See [`CreateImage`] for more information.
-table ImageProperties {
+type ImageProperties = table {
     /// The size of the Image in pixels.
-    1: fuchsia.math.SizeU size;
+    1: size fuchsia.math.SizeU;
 };
 
 /// A user-defined identifier for a particular transform. See [`CreateTransform`] and
 /// [`ReleaseTransform`] for more information.
-struct TransformId {
-    uint64 value;
+type TransformId = struct {
+    value uint64;
 };
 
 /// A user-defined identifier for a particular piece of Content. See Content creation functions
 /// (e.g. [`CreateLink`], [`CreateImage`]) for more information.
-struct ContentId {
-    uint64 value;
+type ContentId = struct {
+    value uint64;
 };
 
 // A maximum of 16 fences is enough for the current usage of these APIs.
-const int32 MAX_ACQUIRE_RELEASE_FENCE_COUNT = 16;
+const MAX_ACQUIRE_RELEASE_FENCE_COUNT int32 = 16;
 
 /// Arguments passed into [`Present`]. All arguments are optional, and if an
 /// argument is omitted Flatland will use a reasonable default, specified below.
-resource table PresentArgs {
+type PresentArgs = resource table {
     /// `requested_presentation_time` specifies the time on or after which the client would like the
     /// enqueued operations to take visible effect (light up pixels on the screen), expressed in
     /// nanoseconds in the `CLOCK_MONOTONIC` timebase.
@@ -165,14 +170,14 @@ resource table PresentArgs {
     /// enqueued operations associated with all squashable calls to [`Present`] whose
     /// `requested_presentation_time` is on or before the frame's target presentation time.
     ///
-    1: zx.time requested_presentation_time;
+    1: requested_presentation_time zx.time;
 
     /// Flatland will wait until all of a session's `acquire_fences` are ready before it will
     /// execute the presented commands. Not signaling `acquire_fences` will block the current [`Present`]
     /// as well as the following ones even if their `acquire_fences` are signaled.
     ///
     /// The default `acquire_fences` value is the empty vector.
-    2: vector<zx.handle:EVENT>:MAX_ACQUIRE_RELEASE_FENCE_COUNT acquire_fences;
+    2: acquire_fences vector<zx.handle:EVENT>:MAX_ACQUIRE_RELEASE_FENCE_COUNT;
 
     /// Flatland will signal all `release_fences` when the resources and shared buffers from this
     /// [`Present`] are no longer in use. Callers should not modify shared resources, such as
@@ -182,7 +187,7 @@ resource table PresentArgs {
     /// client's instance at any point.
     ///
     /// The default `release_fences` value is the empty vector.
-    3: vector<zx.handle:EVENT>:MAX_ACQUIRE_RELEASE_FENCE_COUNT release_fences;
+    3: release_fences vector<zx.handle:EVENT>:MAX_ACQUIRE_RELEASE_FENCE_COUNT;
 
     /// If `unsquashable` is true, then the update is guaranteed to be uniquely shown for at
     /// least one vsync interval.
@@ -191,7 +196,7 @@ resource table PresentArgs {
     /// it.
     ///
     /// If absent, `unsquashable` is false.
-    4: bool unsquashable;
+    4: unsquashable bool;
 };
 
 /// A user-defined identifier for future presentation info. A maximum of 8
@@ -200,14 +205,14 @@ alias FuturePresentationInfos = vector<fuchsia.scenic.scheduling.PresentationInf
 
 /// Fields that a client needs in order to produce its next frame, returned in
 /// [`OnNextFrameBegin`]. Each field is guaranteed to be  set and contain valid information.
-table OnNextFrameBeginValues {
+type OnNextFrameBeginValues = table {
     /// The number of *additional* [`Present`] calls allowed to the client so that they
     /// can call [`Present`] further times. This is a delta in the present
     /// credit budget, not the absolute number of present credits.
-    1: uint32 additional_present_credits;
+    1: additional_present_credits uint32;
     /// Information about future presentation and latch times that a client may aim for
     /// precise scheduling behavior.
-    2: FuturePresentationInfos future_presentation_infos;
+    2: future_presentation_infos FuturePresentationInfos;
 };
 
 /// Each Flatland instance contains a Graph, which consists of a set of objects, and the
@@ -221,7 +226,7 @@ table OnNextFrameBeginValues {
 ///
 /// All functions in this protocol are feed-forward. The operations they represent are not fully
 /// executed until [`Present`] is called.
-[Discoverable]
+@discoverable
 protocol Flatland {
     /// Complete execution of all feed-forward operations.
     ///
@@ -254,7 +259,9 @@ protocol Flatland {
     /// See [`fuchsia.ui.composition/PresentArgs`] documentation above for
     /// more detailed information on what arguments are passed in and their
     /// role.
-    Present(PresentArgs args);
+    Present(resource struct {
+        args PresentArgs;
+    });
 
     /// This event is fired when clients should expect minimal resource
     /// contention. Clients may use the timing of this event to begin their
@@ -267,7 +274,9 @@ protocol Flatland {
     ///
     /// - response `values` the table of information a client needs to produce
     /// its next frame. See [`OnNextFrameBeginValues`] for more information.
-    -> OnNextFrameBegin(OnNextFrameBeginValues values);
+    -> OnNextFrameBegin(struct {
+        values OnNextFrameBeginValues;
+    });
 
     /// This event is fired whenever a set of one or more [`Present`]s are
     /// presented simultaneously, and are therefore no longer in flight.
@@ -281,7 +290,9 @@ protocol Flatland {
     /// event.
     ///
     /// TODO(fxbug.dev/63305): remove `num_presents_allowed` from this event.
-    -> OnFramePresented(fuchsia.scenic.scheduling.FramePresentedInfo frame_presented_info);
+    -> OnFramePresented(struct {
+        frame_presented_info fuchsia.scenic.scheduling.FramePresentedInfo;
+    });
 
     /// If an error occurrs after a [`Present`], an `OnError` event will fire
     /// with associated information.
@@ -290,7 +301,9 @@ protocol Flatland {
     ///
     /// - response `error` the error a client may receive after performing some
     /// invalid operations.
-    -> OnError(Error error);
+    -> OnError(struct {
+        error Error;
+    });
 
     // ***** Graph management *****
 
@@ -319,7 +332,10 @@ protocol Flatland {
     ///
     /// Lifecycle note. The lifetime of the GraphLink channel is bound by the peer ContentLinkToken.
     /// When the ContentLinkToken dies, this GraphLink channel is destroyed.
-    LinkToParent(GraphLinkToken token, request<GraphLink> graph_link);
+    LinkToParent(resource struct {
+        token GraphLinkToken;
+        graph_link server_end:GraphLink;
+    });
 
     /// Disconnects this Graph from its parent Graph and returns the GraphLinkToken used to
     /// establish the link. This token can then be used to establish a new link with the Parent
@@ -331,7 +347,9 @@ protocol Flatland {
     /// Despite having a return type, this function is still feed-forward Like [`LinkToParent`] and
     /// requires a call to [`Present`] to be executed. The GraphLinkToken will be returned after the
     /// presented operations have been executed.
-    UnlinkFromParent() -> (GraphLinkToken token);
+    UnlinkFromParent() -> (resource struct {
+        token GraphLinkToken;
+    });
 
     /// This function will reset all state on this interface. This includes destroying all existing
     /// Links without returning the associated Token to the caller.
@@ -358,7 +376,9 @@ protocol Flatland {
     ///
     /// Zero is not a valid transform id. All other values are valid, assuming they are not already
     /// in use (see [`ReleaseTransform`] for more details).
-    CreateTransform(TransformId transform_id);
+    CreateTransform(struct {
+        transform_id TransformId;
+    });
 
     // ***** Transform Attributes *****
 
@@ -370,21 +390,33 @@ protocol Flatland {
     ///
     /// Sets the translation on a Transform. The order of geometric attribute application is
     /// addressed above.
-    SetTranslation(TransformId transform_id, fuchsia.math.Vec translation);
+    SetTranslation(struct {
+        transform_id TransformId;
+        translation fuchsia.math.Vec;
+    });
 
     /// Sets the orientation on a Transform. The order of geometric attribute application is
     /// addressed in the documentation for [`SetTranslation`].
-    SetOrientation(TransformId transform_id, Orientation orientation);
+    SetOrientation(struct {
+        transform_id TransformId;
+        orientation Orientation;
+    });
 
     // ***** Transform management *****
 
     /// Adds a child Transform to a parent Transform. The new child Transform, and any Content
     /// attached to it or its children, will be rendered on top of the parent's Content, as well as
     /// any previously added children.
-    AddChild(TransformId parent_transform_id, TransformId child_transform_id);
+    AddChild(struct {
+        parent_transform_id TransformId;
+        child_transform_id TransformId;
+    });
 
     /// Removes a child Transform from a parent Transform.
-    RemoveChild(TransformId parent_transform_id, TransformId child_transform_id);
+    RemoveChild(struct {
+        parent_transform_id TransformId;
+        child_transform_id TransformId;
+    });
 
     /// Sets the Root Transform for the graph.
     ///
@@ -398,7 +430,9 @@ protocol Flatland {
     /// There is only ever one Root. Since 0 is not a valid transform id (see [`CreateTransform`]),
     /// calling SetRootTransform(0) clears the current Root, destroying any previously released
     /// objects that are not referenced by the new root.
-    SetRootTransform(TransformId transform_id);
+    SetRootTransform(struct {
+        transform_id TransformId;
+    });
 
     /// Sets an opacity in linear space to be applied to a transform and its descendents,
     /// which include other transforms and content. This is meant to support "group opacity",
@@ -409,7 +443,10 @@ protocol Flatland {
     /// the moment |SetOpacity| is only valid when called on a leaf transform. Flatland will
     /// report an error if the opacity is changed to be anything other than 1.0 on a non-leaf
     /// node, or if a child is added to an existing leaf node with an opacity value < 1.0.
-    SetOpacity(TransformId transform_id, float32 val);
+    SetOpacity(struct {
+        transform_id TransformId;
+        val float32;
+    });
 
     // ***** Content *****
     //
@@ -439,8 +476,12 @@ protocol Flatland {
     ///
     /// Lifecycle note. The lifetime of the ContentLink channel is bound by the peer GraphLinkToken.
     /// When the GraphLinkToken dies, this ContentLink channel is destroyed.
-    CreateLink(ContentId link_id, ContentLinkToken token, LinkProperties properties,
-               request<ContentLink> content_link);
+    CreateLink(resource struct {
+        link_id ContentId;
+        token ContentLinkToken;
+        properties LinkProperties;
+        content_link server_end:ContentLink;
+    });
 
     /// An Image is a bitmap backed by a specific VMO in a BufferCollection.
     ///
@@ -454,10 +495,12 @@ protocol Flatland {
     ///
     /// Zero is not a valid Image id. All other values are valid, assuming they are not already in
     /// use for another piece of Content (see [`ReleaseImage`] for more details).
-    CreateImage(ContentId image_id,
-                BufferCollectionImportToken import_token,
-                uint32 vmo_index,
-                ImageProperties properties);
+    CreateImage(resource struct {
+        image_id ContentId;
+        import_token BufferCollectionImportToken;
+        vmo_index uint32;
+        properties ImageProperties;
+    });
 
     /// This function is used to determine the region (in texel space) of an image that will be
     /// used by Flatland when rendering. The image to be sampled is referenced by |image_id| and
@@ -468,12 +511,18 @@ protocol Flatland {
     /// (0, image_width) and (0, image_height). If (rect.x + rect.width > image_width) or
     /// (rect.y + rect.height > image_height) or if any of the values are negative, this will
     /// result in an error.
-    SetImageSampleRegion(ContentId image_id, fuchsia.math.RectF rect);
+    SetImageSampleRegion(struct {
+        image_id ContentId;
+        rect fuchsia.math.RectF;
+    });
 
     /// The content size for an Image is the size of the rectangle in the parent's space that the
     /// image occupies. This combined with the global translation of the transform it is attached
     /// to determines the size and location of where the content is rendered on the display.
-    SetImageDestinationSize(ContentId image_id, fuchsia.math.SizeU size);
+    SetImageDestinationSize(struct {
+        image_id ContentId;
+        size fuchsia.math.SizeU;
+    });
 
     // ***** Content management *****
 
@@ -488,7 +537,10 @@ protocol Flatland {
     ///
     /// Calling this function with a Content id of 0 will remove any Content currently on the
     /// Transform.
-    SetContent(TransformId transform_id, ContentId content_id);
+    SetContent(struct {
+        transform_id TransformId;
+        content_id ContentId;
+    });
 
     // ***** Content mutators *****
 
@@ -497,7 +549,10 @@ protocol Flatland {
     /// using this function.
     ///
     /// The logical_size must have positive X and Y components.
-    SetLinkProperties(ContentId link_id, LinkProperties properties);
+    SetLinkProperties(struct {
+        link_id ContentId;
+        properties LinkProperties;
+    });
 
     // ***** Cleanup operations *****
 
@@ -510,7 +565,9 @@ protocol Flatland {
     ///
     /// It is an error to call functions with a released id (unless that id has been reused to
     /// construct a new Transform).
-    ReleaseTransform(TransformId transform_id);
+    ReleaseTransform(struct {
+        transform_id TransformId;
+    });
 
     /// Releasing a Link removes the attached sub-Graph from the scene, even if the Link is still
     /// connected to a Transform. Unlike other resources, Links are garbage collected by the system
@@ -522,7 +579,11 @@ protocol Flatland {
     /// Despite having a return type, this function is still feed-forward like [`LinkToParent`] and
     /// requires a call to [`Present`] to be executed. The ContentLinkToken will be returned after the
     /// presented operations have been executed.
-    ReleaseLink(ContentId link_id) -> (ContentLinkToken tokid);
+    ReleaseLink(struct {
+        link_id ContentId;
+    }) -> (resource struct {
+        tokid ContentLinkToken;
+    });
 
     /// Released Images will be garbage collected by the system once they are no longer necessary
     /// for rendering. For Images, this means the Image is no longer attached to any Transform and
@@ -535,20 +596,24 @@ protocol Flatland {
     ///
     /// It is an error to call functions with a released id (unless that id has been reused to
     /// construct a new Image).
-    ReleaseImage(ContentId image_id);
+    ReleaseImage(struct {
+        image_id ContentId;
+    });
 
     /// Set debug name of the current client that can be used by Flatland to print as a prefix
     /// to logs to help client distinguish what is theirs. |name| can be an arbitrary string, but
     /// the current process name (see fsl::GetCurrentProcessName()) is a good default.
-    SetDebugName(string:64 name);
+    SetDebugName(struct {
+        name string:64;
+    });
 };
 
-/// This API connects to the singleton "primary display", and allows a tree of Flatland content to
-/// be attached underneath.  Only one FlatlandDisplay client connection is allowed at one time.
 // TODO(fxbug.dev/76643):  In the future this will be replaced with something
 // that allows control over which hardware display to use.  This API is sufficient for the purpose
 // of initial bringup of Flatland.
-[Discoverable]
+/// This API connects to the singleton "primary display", and allows a tree of Flatland content to
+/// be attached underneath.  Only one FlatlandDisplay client connection is allowed at one time.
+@discoverable
 protocol FlatlandDisplay {
     // TODO(fxbug.dev/76643): Consider whether this should be:
     //   SetLink(ContentLinkToken token) -> (ContentLinkToken? previous_content_token);
@@ -556,5 +621,8 @@ protocol FlatlandDisplay {
     // of content, and choose which to display.  OTOH, an argument could be made that this API
     // should be kept as simple as possible, and if one wanted to do this sort of thing they should
     // create their own Flatland instance and do the content management there.
-    SetContent(ContentLinkToken token, request<ContentLink> content_link);
+    SetContent(resource struct {
+        token ContentLinkToken;
+        content_link server_end:ContentLink;
+    });
 };

@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.wlanphyimpl;
 
 using ddk.hw.wlan.wlaninfo;
@@ -10,60 +8,82 @@ using fuchsia.hardware.ethernet.mac;
 using zx;
 
 /// Parameters to create an interface.
-resource struct WlanphyImplCreateIfaceReq {
+type WlanphyImplCreateIfaceReq = resource struct {
     /// The station role for this interface. A device may support multiple roles,
     /// but an interface is instantiated with a single role.
-    ddk.hw.wlan.wlaninfo.WlanInfoMacRole role;
+    role ddk.hw.wlan.wlaninfo.WlanInfoMacRole;
 
     /// A handle to the direct MLME channel, if supported by the driver.
-    zx.handle:CHANNEL mlme_channel;
+    mlme_channel zx.handle:CHANNEL;
 
     /// Whether this iface creation request come with an initial MAC address.
-    bool has_init_mac_addr;
+    has_init_mac_addr bool;
 
     /// The initial mac address set from configuration layer.
-    array<uint8>:fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH init_mac_addr;
+    init_mac_addr array<uint8, fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH>;
 };
 
 /// Info about this WLAN PHY.
-struct WlanphyImplInfo {
+type WlanphyImplInfo = struct {
     /// Bitmask for MAC roles supported. For an interface, this will be a single
     /// value.
-    ddk.hw.wlan.wlaninfo.WlanInfoMacRole supported_mac_roles;
+    supported_mac_roles ddk.hw.wlan.wlaninfo.WlanInfoMacRole;
 };
 
-const uint8 WLANPHY_ALPHA2_LEN = 2;
+const WLANPHY_ALPHA2_LEN uint8 = 2;
 
-[Packed]
-union WlanphyCountry {
+@packed
+type WlanphyCountry = strict union {
     /// ISO Alpha-2 takes two octet alphabet characters.
     /// This needs to be expanded if at least one WLAN device driver or firmware
     /// requires more than two octets.
-    1: array<uint8>:WLANPHY_ALPHA2_LEN alpha2;
-    2: uint16 val;
+    1: alpha2 array<uint8, WLANPHY_ALPHA2_LEN>;
+    2: val uint16;
 };
 
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol WlanphyImpl {
     /// Get information about the capabilities of the physical device.
-    Query() -> (zx.status s, WlanphyImplInfo info);
+    Query() -> (struct {
+        s zx.status;
+        info WlanphyImplInfo;
+    });
 
     /// Create a new interface with the specified role, returning the interface id.
     /// Some common error codes are:
     /// ZX_ERR_NO_RESOURCES: maximum number of interfaces have already been created
     /// ZX_ERR_NOT_SUPPORTED: device does not support the specified role
-    CreateIface(WlanphyImplCreateIfaceReq req) -> (zx.status s, uint16 iface_id);
+    CreateIface(resource struct {
+        req WlanphyImplCreateIfaceReq;
+    }) -> (struct {
+        s zx.status;
+        iface_id uint16;
+    });
 
     /// Destroy the interface with the matching id.
-    DestroyIface(uint16 iface_id) -> (zx.status s);
+    DestroyIface(struct {
+        iface_id uint16;
+    }) -> (struct {
+        s zx.status;
+    });
 
     /// Set country with a WlanphyCountry
-    SetCountry(WlanphyCountry country) -> (zx.status s);
+    SetCountry(struct {
+        country WlanphyCountry;
+    }) -> (struct {
+        s zx.status;
+    });
 
     /// Set device to a world-safe country
-    ClearCountry() -> (zx.status s);
+    ClearCountry() -> (struct {
+        s zx.status;
+    });
 
     /// Read currently configured country. Implementations are advised to read the
     /// country directly from the firmware, where possible.
-    GetCountry() -> (zx.status s, WlanphyCountry country);
+    GetCountry() -> (struct {
+        s zx.status;
+        country WlanphyCountry;
+    });
 };

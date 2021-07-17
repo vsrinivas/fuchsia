@@ -1,33 +1,33 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.media;
 
 using zx;
 using fuchsia.media.audio;
 
 /// Interface for creating audio consumers bound to a session.
-[Discoverable]
+@discoverable
 protocol SessionAudioConsumerFactory {
     /// Creates an `AudioConsumer`, which is an interface for playing audio, bound
     /// to a particular session. `session_id` is the identifier of the media session
     /// for which audio is to be rendered.
     // TODO(dalesat): Can't use fuchsia.media.sessions2.SessionId here, because dependencies.
-    CreateAudioConsumer(
-        uint64 session_id,
-        request<AudioConsumer> audio_consumer_request);
+    CreateAudioConsumer(resource struct {
+        session_id uint64;
+        audio_consumer_request server_end:AudioConsumer;
+    });
 };
 
 /// Interface for creating audio consumers for local rendering.
-[Discoverable]
+@discoverable
 protocol UsageAudioConsumerFactory {
     /// Creates an `AudioConsumer`, which is an interface for playing audio, given a usage value.
     /// Audio submitted to such a consumer is always rendered locally.
-    CreateAudioConsumer(
-        AudioRenderUsage usage,
-        request<AudioConsumer> audio_consumer_request);
+    CreateAudioConsumer(resource struct {
+        usage AudioRenderUsage;
+        audio_consumer_request server_end:AudioConsumer;
+    });
 };
 
 /// Interface for playing and controlling audio.
@@ -43,11 +43,12 @@ protocol AudioConsumer {
     /// If an unsupported compression type is supplied, the
     /// `stream_sink_request` request will be closed with an epitaph value of
     /// `ZX_ERR_INVALID_ARGS`.
-    CreateStreamSink(
-        vector<zx.handle:VMO>:16 buffers,
-        AudioStreamType stream_type,
-        Compression? compression,
-        request<StreamSink> stream_sink_request);
+    CreateStreamSink(resource struct {
+        buffers vector<zx.handle:VMO>:16;
+        stream_type AudioStreamType;
+        compression box<Compression>;
+        stream_sink_request server_end:StreamSink;
+    });
 
     /// Indicates that the last packet prior to the end of the stream has been rendered.
     -> OnEndOfStream();
@@ -75,10 +76,11 @@ protocol AudioConsumer {
     /// specified.
     ///
     /// The actual start time will be reflected in the updated status.
-    Start(
-        AudioConsumerStartFlags flags,
-        zx.time reference_time,
-        int64 media_time);
+    Start(struct {
+        flags AudioConsumerStartFlags;
+        reference_time zx.time;
+        media_time int64;
+    });
 
     /// Stops rendering as soon as possible after this method is called. The actual stop time will
     /// be reflected in the updated status.
@@ -87,20 +89,25 @@ protocol AudioConsumer {
     /// Requests to change the playback rate of the renderer. 1.0 means normal
     /// playback. Negative rates are not supported. The new rate will be
     /// reflected in the updated status. The default rate of any newly created `StreamSink` is 1.0.
-    SetRate(float32 rate);
+    SetRate(struct {
+        rate float32;
+    });
 
     /// Binds to this `AudioConsumer` volume control for control and notifications.
-    BindVolumeControl(
-        request<fuchsia.media.audio.VolumeControl> volume_control_request);
+    BindVolumeControl(resource struct {
+        volume_control_request server_end:fuchsia.media.audio.VolumeControl;
+    });
 
     /// Gets the current status of the consumer using the long get pattern. The consumer responds
     /// to this method when the status changes - initially with respect to the initial status value
     /// and thereafter with respect to the previously-reported status value.
-    WatchStatus() -> (AudioConsumerStatus status);
+    WatchStatus() -> (struct {
+        status AudioConsumerStatus;
+    });
 };
 
 /// Flags passed to `AudioConsumer.Start`.
-bits AudioConsumerStartFlags {
+type AudioConsumerStartFlags = strict bits {
     /// Indicates that latency should be kept as low as possible.
     LOW_LATENCY = 0x01;
 
@@ -113,9 +120,9 @@ bits AudioConsumerStartFlags {
 
 /// Represents the status of the consumer. In the initial status, `error` and
 /// `presentation_timeline` are absent. The lead time fields are always present.
-table AudioConsumerStatus {
+type AudioConsumerStatus = table {
     /// If present, indicates an error condition currently in effect. Absent if no error.
-    1: AudioConsumerError error;
+    1: error AudioConsumerError;
 
     /// If present, indicates the current relationship between the presentation timeline
     /// and local monotonic clock, both in nanosecond units. If not present,
@@ -124,25 +131,24 @@ table AudioConsumerStatus {
     /// 'Presentation timeline' refers to the `pts` (presentation timestamp) values on the packets.
     /// This timeline function can be used to determine the local monotonic clock time that a
     /// packet will be presented based on that packet's `pts` value.
-    2: TimelineFunction presentation_timeline;
+    2: presentation_timeline TimelineFunction;
 
     /// Indicates the minimum lead time in nanoseconds supported by this
     /// `AudioConsumer`.  Or in other words, how small of a gap between the
     /// `media_time` provided to `AudioConsumer.Start` and the pts on the first
     /// packet can be. Values outside this range will be clipped.
-    3: uint64 min_lead_time;
+    3: min_lead_time uint64;
 
     /// Indicates the maximum lead time in nanoseconds supported by this
     /// `AudioConsumer`.  Or in other words, how large of a gap between the
     /// `media_time` provided to `AudioConsumer.Start` and the pts on the first
     /// packet can be. Values outside this range will be clipped.
-    4: uint64 max_lead_time;
+    4: max_lead_time uint64;
 };
 
-struct Void {
-};
+type Void = struct {};
 
 /// Represents a `AudioConsumer` error condition.
-union AudioConsumerError {
-    1: Void place_holder;
+type AudioConsumerError = strict union {
+    1: place_holder Void;
 };

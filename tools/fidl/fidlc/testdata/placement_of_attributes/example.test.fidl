@@ -1,53 +1,54 @@
-deprecated_syntax;
 library fidl.test.placementofattributes;
 
 // TODO: Support placement of an attribute on using.
 using exampleusing;
 
-[OnBits]
-bits ExampleBits {
-    [OnBitsMember]
+@on_bits
+type ExampleBits = strict bits {
+    @on_bits_member
     MEMBER = 1;
 };
 
-[OnConst]
-const uint32 EXAMPLE_CONST = 0;
+@on_const
+const EXAMPLE_CONST uint32 = 0;
 
-[OnEnum]
-enum ExampleEnum {
-    [OnEnumMember]
+@on_enum
+type ExampleEnum = strict enum {
+    @on_enum_member
     MEMBER = 1;
 };
 
-[OnProtocol]
+@on_protocol
 protocol ExampleProtocol {
-    [OnMethod]
-    Method(exampleusing.Empty arg);
+    @on_method
+    Method(struct {
+        arg exampleusing.Empty;
+    });
 };
 
-[OnStruct]
-struct ExampleStruct {
-    [OnStructMember]
-    uint32 member;
+@on_struct
+type ExampleStruct = struct {
+    @on_struct_member
+    member uint32;
 };
 
-[OnTable]
-table ExampleTable {
-    [OnTableMember]
-    1: uint32 member;
+@on_table
+type ExampleTable = table {
+    @on_table_member
+    1: member uint32;
 };
 
-[OnTypeAlias]
+@on_type_alias
 alias TypeAlias = uint32;
 
-[OnUnion]
-union ExampleUnion {
-    [OnUnionMember]
-    1: uint32 variant;
+@on_union
+type ExampleUnion = strict union {
+    @on_union_member
+    1: variant uint32;
 };
 
-[OnXUnion]
-flexible union ExampleXUnion {
-    [OnXUnionMember]
-    1: uint32 variant;
+@on_x_union
+type ExampleXUnion = flexible union {
+    @on_x_union_member
+    1: variant uint32;
 };

@@ -1,78 +1,76 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library conformance;
 
-flexible enum FlexibleEnumInt8 : int8 {
+type FlexibleEnumInt8 = flexible enum : int8 {
     FIRST = 0x01;
     SECOND = 0x11;
 };
 
-flexible enum FlexibleEnumInt16 : int16 {
+type FlexibleEnumInt16 = flexible enum : int16 {
     FIRST = 0x0102;
     SECOND = 0x1112;
 };
 
-flexible enum FlexibleEnumInt32 : int32 {
+type FlexibleEnumInt32 = flexible enum : int32 {
     FIRST = 0x01020304;
     SECOND = 0x11121314;
 };
 
-flexible enum FlexibleEnumInt64 : int64 {
+type FlexibleEnumInt64 = flexible enum : int64 {
     FIRST = 0x0102030405060708;
     SECOND = 0x1112131415161718;
 };
 
-flexible enum FlexibleEnumUint8 : uint8 {
+type FlexibleEnumUint8 = flexible enum : uint8 {
     FIRST = 1;
     SECOND = 2;
 };
 
-flexible enum FlexibleEnumUint16 : uint16 {
+type FlexibleEnumUint16 = flexible enum : uint16 {
     FIRST = 0x0102;
     SECOND = 0x1112;
 };
 
-flexible enum FlexibleEnumUint32 : uint32 {
+type FlexibleEnumUint32 = flexible enum : uint32 {
     FIRST = 0x01020304;
     SECOND = 0x11121314;
 };
 
-flexible enum FlexibleEnumUint64 : uint64 {
+type FlexibleEnumUint64 = flexible enum : uint64 {
     FIRST = 0x0102030405060708;
     SECOND = 0x1112131415161718;
 };
 
-struct FlexibleEnumInt8Struct {
-    FlexibleEnumInt8 e;
+type FlexibleEnumInt8Struct = struct {
+    e FlexibleEnumInt8;
 };
 
-struct FlexibleEnumInt16Struct {
-    FlexibleEnumInt16 e;
+type FlexibleEnumInt16Struct = struct {
+    e FlexibleEnumInt16;
 };
 
-struct FlexibleEnumInt32Struct {
-    FlexibleEnumInt32 e;
+type FlexibleEnumInt32Struct = struct {
+    e FlexibleEnumInt32;
 };
 
-struct FlexibleEnumInt64Struct {
-    FlexibleEnumInt64 e;
+type FlexibleEnumInt64Struct = struct {
+    e FlexibleEnumInt64;
 };
 
-struct FlexibleEnumUint8Struct {
-    FlexibleEnumUint8 e;
+type FlexibleEnumUint8Struct = struct {
+    e FlexibleEnumUint8;
 };
 
-struct FlexibleEnumUint16Struct {
-    FlexibleEnumUint16 e;
+type FlexibleEnumUint16Struct = struct {
+    e FlexibleEnumUint16;
 };
 
-struct FlexibleEnumUint32Struct {
-    FlexibleEnumUint32 e;
+type FlexibleEnumUint32Struct = struct {
+    e FlexibleEnumUint32;
 };
 
-struct FlexibleEnumUint64Struct {
-    FlexibleEnumUint64 e;
+type FlexibleEnumUint64Struct = struct {
+    e FlexibleEnumUint64;
 };

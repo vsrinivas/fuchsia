@@ -1,8 +1,6 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.identity.account;
 
 using fuchsia.auth;
@@ -21,11 +19,15 @@ using fuchsia.io;
 /// acknowledgements" FIDL design pattern.
 protocol AuthListener {
     /// A method that is called when the AccountListener is first connected.
-    OnInitialize(AuthState auth_state) -> ();
+    OnInitialize(struct {
+        auth_state AuthState;
+    }) -> ();
 
     /// A method that is called when the authentication state of the account
     /// changes.
-    OnAuthStateChanged(AuthState auth_state) -> ();
+    OnAuthStateChanged(struct {
+        auth_state AuthState;
+    }) -> ();
 };
 
 /// A protocol that is extended by other protocols defining an entity
@@ -40,7 +42,11 @@ protocol AuthTarget {
     /// `scenario` The scenario to produce the authentication state for.
     ///
     /// Returns: `auth_state` The target's current authentication state.
-    GetAuthState(Scenario scenario) -> (AuthState auth_state) error Error;
+    GetAuthState(struct {
+        scenario Scenario;
+    }) -> (struct {
+        auth_state AuthState;
+    }) error Error;
 
     /// Connects a channel that will receive changes in the authentication
     /// state of the target.
@@ -51,15 +57,15 @@ protocol AuthTarget {
     /// `granularity` An `AuthChangeGranularity` expressing the magnitude of
     ///               change in authentication state than should lead to a
     ///               callback
-    RegisterAuthListener(
-        Scenario scenario,
-        AuthListener listener,
-        bool initial_state,
-        AuthChangeGranularity granularity)
-        -> () error Error;
+    RegisterAuthListener(resource struct {
+        scenario Scenario;
+        listener client_end:AuthListener;
+        initial_state bool;
+        granularity AuthChangeGranularity;
+    }) -> (struct {}) error Error;
 
-    // TODO(fxbug.dev/562): Add methods that request in increase in the authentication
-    //                 state or authentication for a particular event.
+// TODO(fxbug.dev/562): Add methods that request in increase in the authentication
+//                 state or authentication for a particular event.
 };
 
 /// A protocol that exposes information about the personae and recovery account
@@ -77,14 +83,20 @@ protocol Account {
     /// Returns a human readable name for the account. Account names are set by
     /// a human and are not guaranteed to be meaningful or unique, even among
     /// the accounts on a single device.
-    GetAccountName() -> (string:MAX_NAME_SIZE name);
+    GetAccountName() -> (struct {
+        name string:MAX_NAME_SIZE;
+    });
 
     /// Returns the account's lifetime.
-    GetLifetime() -> (Lifetime lifetime);
+    GetLifetime() -> (struct {
+        lifetime Lifetime;
+    });
 
     /// Returns a vector of all the personae defined for the account.
     /// NOTE: Currently all Fuchsia accounts have exactly one persona.
-    GetPersonaIds() -> (vector<LocalPersonaId>:MAX_PERSONAE_PER_ACCOUNT persona_ids);
+    GetPersonaIds() -> (struct {
+        persona_ids vector<LocalPersonaId>:MAX_PERSONAE_PER_ACCOUNT;
+    });
 
     /// Connects a channel to read properties of and access tokens for
     /// the default persona for the account.
@@ -92,15 +104,21 @@ protocol Account {
     /// `persona` The server end of a `Persona` channel
     ///
     /// Returns: `id` The identifier for the default persona
-    GetDefaultPersona(request<Persona> persona)
-        -> (LocalPersonaId id) error Error;
+    GetDefaultPersona(resource struct {
+        persona server_end:Persona;
+    }) -> (struct {
+        id LocalPersonaId;
+    }) error Error;
 
     /// Connects a channel to read properties of and access tokens for
     /// one of the personae for the account.
     ///
     /// `id` The persona's identifier as returned by GetPersonaIds()
     /// `persona` The server end of a `Persona` channel
-    GetPersona(LocalPersonaId id, request<Persona> persona) -> () error Error;
+    GetPersona(resource struct {
+        id LocalPersonaId;
+        persona server_end:Persona;
+    }) -> (struct {}) error Error;
 
     // TODO(fxbug.dev/563): Add methods to create, delete, and manage personae.
 
@@ -109,8 +127,9 @@ protocol Account {
     /// available, provided such an account exists.
     ///
     /// Returns: The `ServiceProviderAccount` used for recovery if one exists
-    GetRecoveryAccount()
-        -> (fuchsia.auth.ServiceProviderAccount? account) error Error;
+    GetRecoveryAccount() -> (struct {
+        account box<fuchsia.auth.ServiceProviderAccount>;
+    }) error Error;
 
     /// Sets the service provider account that can be used to access the Fuchsia
     /// account if more direct methods of authentication are not available.
@@ -118,13 +137,14 @@ protocol Account {
     /// `account` The `ServiceProviderAccount` to use as the recovery account.
     ///           This must be an existing account that has already been
     ///           provisioned on the current device using TokenManager.
-    SetRecoveryAccount(fuchsia.auth.ServiceProviderAccount account)
-        -> () error Error;
+    SetRecoveryAccount(struct {
+        account fuchsia.auth.ServiceProviderAccount;
+    }) -> (struct {}) error Error;
 
     /// Returns all authentication mechanism enrollments.
-    GetAuthMechanismEnrollments()
-        -> (vector<AuthMechanismEnrollmentMetadata>:MAX_AUTH_MECHANISM_ENROLLMENTS enrollments)
-        error Error;
+    GetAuthMechanismEnrollments() -> (struct {
+        enrollments vector<AuthMechanismEnrollmentMetadata>:MAX_AUTH_MECHANISM_ENROLLMENTS;
+    }) error Error;
 
     /// Create a new enrollment of the provided authentication mechanism,
     /// and add it to the account.
@@ -135,15 +155,20 @@ protocol Account {
     /// Returns: The `AuthMechanismEnrollmentId` of the created enrollment.
     // TODO(dnordstrom): Define and document how to authenticate prior to making
     // changes to the enrollment set.
-    CreateAuthMechanismEnrollment(AuthMechanismId auth_mechanism_id)
-        -> (AuthMechanismEnrollmentId enrollment_id) error Error;
+    CreateAuthMechanismEnrollment(struct {
+        auth_mechanism_id AuthMechanismId;
+    }) -> (struct {
+        enrollment_id AuthMechanismEnrollmentId;
+    }) error Error;
 
     /// Remove an authentication mechanism enrollment for the account.
     ///
     /// `enrollment_id` The id of the enrollment to remove.
     // TODO(dnordstrom): Define and document how to authenticate prior to making
     // changes to the enrollment set.
-    RemoveAuthMechanismEnrollment(AuthMechanismEnrollmentId enrollment_id) -> () error Error;
+    RemoveAuthMechanismEnrollment(struct {
+        enrollment_id AuthMechanismEnrollmentId;
+    }) -> (struct {}) error Error;
 
     // TODO(dnordstrom): Add support for modifications and/or replacement of
     // enrollments.
@@ -153,7 +178,7 @@ protocol Account {
     /// enabled for the account, a FailedPrecondition error is returned.
     // TODO(dnordstrom): Document the side effects on underlying storage that
     // may still be in use by the client.
-    Lock() -> () error Error;
+    Lock() -> (struct {}) error Error;
 
     /// Connects a channel to access a data directory of the account. The directory is
     /// writable, and is initially empty for a newly created account. The
@@ -166,8 +191,9 @@ protocol Account {
     ///
     /// `data_directory` The server end of a `fuchsia.io.Directory` channel
     // TODO(fxbug.dev/45799): Support multiple component instance clients.
-    GetDataDirectory(request<fuchsia.io.Directory> data_directory)
-        -> () error Error;
+    GetDataDirectory(resource struct {
+        data_directory server_end:fuchsia.io.Directory;
+    }) -> (struct {}) error Error;
 };
 
 /// A protocol that exposes basic information about a Fuchsia persona and access
@@ -181,7 +207,9 @@ protocol Persona {
     compose AuthTarget;
 
     /// Returns the lifetime of this persona.
-    GetLifetime() -> (Lifetime lifetime);
+    GetLifetime() -> (struct {
+        lifetime Lifetime;
+    });
 
     /// Connects a channel to acquire and revoke authentication tokens for
     /// service provider (aka cloud service) accounts that are visible through
@@ -191,14 +219,14 @@ protocol Persona {
     ///                   used by. Applications are only allowed to access
     ///                   tokens that they created.
     /// `token_manager` The server end of a `TokenManager` channel
-    GetTokenManager(
-        // TODO(fxbug.dev/560): Migrate token manager to a more appropriate form
-        // of software identity. This is likely to be some verifiable
-        // representation of the organization that wrote the software, such as
-        // a URL domain.
-        fuchsia.sys.component_url application_url,
-        request<fuchsia.auth.TokenManager> token_manager)
-        -> () error Error;
+    GetTokenManager // TODO(fxbug.dev/560): Migrate token manager to a more appropriate form
+    // of software identity. This is likely to be some verifiable
+    // representation of the organization that wrote the software, such as
+    // a URL domain.
+    (resource struct {
+        application_url fuchsia.sys.component_url;
+        token_manager server_end:fuchsia.auth.TokenManager;
+    }) -> (struct {}) error Error;
 
     /// Connects a channel to access and manage key material that is consistent
     /// across all devices with access to this persona.
@@ -211,11 +239,11 @@ protocol Persona {
     ///                   used by. Applications are only allowed to access
     ///                   their own keys.
     /// `key_manager` The server end of a `KeyManager` channel
-    GetKeyManager(
-        // TODO(fxbug.dev/560): Migrate key manager to a more appropriate form
-        // of software identity. This might be a set of whitelisted URLs or a
-        // simple enum.
-        fuchsia.sys.component_url application_url,
-        request<fuchsia.identity.keys.KeyManager> key_manager)
-        -> () error Error;
+    GetKeyManager // TODO(fxbug.dev/560): Migrate key manager to a more appropriate form
+    // of software identity. This might be a set of whitelisted URLs or a
+    // simple enum.
+    (resource struct {
+        application_url fuchsia.sys.component_url;
+        key_manager server_end:fuchsia.identity.keys.KeyManager;
+    }) -> (struct {}) error Error;
 };

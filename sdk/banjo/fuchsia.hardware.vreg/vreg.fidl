@@ -1,8 +1,6 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.vreg;
 
 using zx;
@@ -14,25 +12,34 @@ using zx;
 //
 // Where the `step` is programmable by software.
 
-struct VregParams {
+type VregParams = struct {
     // Minimum voltage supported by this voltage regulator.
-    uint32 min_uv;
+    min_uv uint32;
 
     // Voltage increment at each step.
-    uint32 step_size_uv;
+    step_size_uv uint32;
 
     // Max number of steps.
-    uint32 num_steps;
+    num_steps uint32;
 };
 
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol Vreg {
     // Set the step which yields a voltage of min_uv + step_size_uv * step.
-    SetVoltageStep(uint32 step) -> (zx.status st);
+    SetVoltageStep(struct {
+        step uint32;
+    }) -> (struct {
+        st zx.status;
+    });
 
     // Get the current step.
-    GetVoltageStep() -> (uint32 result);
+    GetVoltageStep() -> (struct {
+        result uint32;
+    });
 
     // Obtain the parameters for this voltage regulator.
-    GetRegulatorParams() -> (VregParams params);
+    GetRegulatorParams() -> (struct {
+        params VregParams;
+    });
 };

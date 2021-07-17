@@ -1,18 +1,50 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library zx;
 
-[Transport="Syscall"]
+@transport("Syscall")
 protocol HandleOwnership {
-    fun0(vector<handle> in) -> (vector<handle> out);
-    fun1([Release] vector<handle> in);
-    fun2([Use] vector<handle> in) -> ([Use] vector<handle> out);
-    fun3(vector<handle> in) -> ([Acquire] vector<handle> out);
-    fun4(handle in) -> (status status, handle out);
-    fun5([Release] handle in) -> (status status, [Use] handle out);
-    [HandleUnchecked]
-    fun6(vector<handle> in) -> (vector<handle> out);
+    fun0(resource struct {
+        in vector<handle>;
+    }) -> (resource struct {
+        out vector<handle>;
+    });
+    fun1(resource struct {
+        @release
+        in vector<handle>;
+    });
+    fun2(resource struct {
+        @use
+        in vector<handle>;
+    }) -> (resource struct {
+        @use
+        out vector<handle>;
+    });
+    fun3(resource struct {
+        in vector<handle>;
+    }) -> (resource struct {
+        @acquire
+        out vector<handle>;
+    });
+    fun4(resource struct {
+        in handle;
+    }) -> (resource struct {
+        status status;
+        out handle;
+    });
+    fun5(resource struct {
+        @release
+        in handle;
+    }) -> (resource struct {
+        status status;
+        @use
+        out handle;
+    });
+    @handle_unchecked
+    fun6(resource struct {
+        in vector<handle>;
+    }) -> (resource struct {
+        out vector<handle>;
+    });
 };

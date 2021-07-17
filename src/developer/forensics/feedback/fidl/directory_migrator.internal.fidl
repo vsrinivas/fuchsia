@@ -1,8 +1,6 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.feedback.internal;
 
 using fuchsia.io;
@@ -23,23 +21,26 @@ using fuchsia.io;
 /// and will be deleted after the merge has completed.
 // TODO(fxbug.dev/71830): Delete this protocol once the Feedback component merge has completed.
 protocol DirectoryMigrator {
-    GetDirectories() -> (fuchsia.io.Directory? data_dir, fuchsia.io.Directory? cache_dir);
+    GetDirectories() -> (resource struct {
+        data_dir client_end:<fuchsia.io.Directory, optional>;
+        cache_dir client_end:<fuchsia.io.Directory, optional>;
+    });
 };
 
 /// Protocol for getting handles to "/data" and "/cache" of feedback_data.cmx.
-[Discoverable]
+@discoverable
 protocol FeedbackDataDirectoryMigrator {
     compose DirectoryMigrator;
 };
 
 /// Protocol for getting handles to "/data" and "/cache" of crash_reports.cmx.
-[Discoverable]
+@discoverable
 protocol CrashReportsDirectoryMigrator {
     compose DirectoryMigrator;
 };
 
 /// Protocol for getting handles to "/data" and "/cache" of last_reboot.cm.
-[Discoverable]
+@discoverable
 protocol LastRebootDirectoryMigrator {
     compose DirectoryMigrator;
 };

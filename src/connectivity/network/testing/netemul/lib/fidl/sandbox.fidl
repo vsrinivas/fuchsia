@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.netemul.sandbox;
 
 using fuchsia.netemul.environment;
@@ -18,12 +16,19 @@ using fuchsia.netemul.sync;
 /// services) is bound to the connection to the Sandbox service.
 /// If the channel is closed, all the environments and the
 /// components created within them will be terminated.
-[Discoverable]
+@discoverable
 protocol Sandbox {
     /// Creates a new empty environment `root_env` configured by `options`.
-    CreateEnvironment(request<fuchsia.netemul.environment.ManagedEnvironment> root_env, fuchsia.netemul.environment.EnvironmentOptions options);
+    CreateEnvironment(resource struct {
+        root_env server_end:fuchsia.netemul.environment.ManagedEnvironment;
+        options fuchsia.netemul.environment.EnvironmentOptions;
+    });
     /// Gets this sandbox's NetworkContext.
-    GetNetworkContext(request<fuchsia.netemul.network.NetworkContext> network_context);
+    GetNetworkContext(resource struct {
+        network_context server_end:fuchsia.netemul.network.NetworkContext;
+    });
     /// Gets this sandbox's SyncManager.
-    GetSyncManager(request<fuchsia.netemul.sync.SyncManager> sync_manager);
+    GetSyncManager(resource struct {
+        sync_manager server_end:fuchsia.netemul.sync.SyncManager;
+    });
 };

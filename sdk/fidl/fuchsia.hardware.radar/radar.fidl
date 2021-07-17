@@ -1,17 +1,15 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.radar;
 using zx;
 
 /// Arbitrary limit on the number of VMOs in one call to `RegisterVmos()` or
 /// `UnregisterVmos()`; enough for ten seconds of radar data for the existing
 /// driver.
-const uint32 VMO_VECTOR_MAX_COUNT = 300;
+const VMO_VECTOR_MAX_COUNT uint32 = 300;
 
-enum StatusCode {
+type StatusCode = strict enum {
     /// An unspecified error occurred (generally should not be used).
     UNSPECIFIED = 0;
 
@@ -56,9 +54,9 @@ enum StatusCode {
     SENSOR_ERROR = 12;
 };
 
-struct Burst {
-    uint32 vmo_id;
-    zx.time timestamp;
+type Burst = struct {
+    vmo_id uint32;
+    timestamp zx.time;
 };
 
 protocol RadarBurstReader {
@@ -66,7 +64,9 @@ protocol RadarBurstReader {
     /// should use this size to create VMOs to be registered by the driver.
     ///
     /// - response `burst_size` the size of each radar burst in bytes.
-    GetBurstSize() -> (uint32 burst_size);
+    GetBurstSize() -> (struct {
+        burst_size uint32;
+    });
 
     /// Registers the VMOs for future use and associates them with vmo_ids,
     /// which can be used with `UnregisterVmos()` and `OnBurst()`. vmos will be
@@ -85,9 +85,10 @@ protocol RadarBurstReader {
     /// *     `VMO_ACCESS_DENIED`: A VMO in `vmos` could not be mapped due to
     /// *         insufficient permissions.
     /// *     `VMO_TOO_SMALL`: A VMO in `vmos` was smaller than the burst size.
-    RegisterVmos(vector<uint32>:VMO_VECTOR_MAX_COUNT vmo_ids,
-                 vector<zx.handle:VMO>:VMO_VECTOR_MAX_COUNT vmos)
-        -> () error StatusCode;
+    RegisterVmos(resource struct {
+        vmo_ids vector<uint32>:VMO_VECTOR_MAX_COUNT;
+        vmos vector<zx.handle:VMO>:VMO_VECTOR_MAX_COUNT;
+    }) -> (struct {}) error StatusCode;
 
     /// Removes the associations with the given VMO IDs and returns the VMOs to
     /// the client. The driver will not send any more `OnBurst()` events with
@@ -102,8 +103,11 @@ protocol RadarBurstReader {
     /// * error one of the following `StatusCode` values:
     /// *     `INVALID_ARGS`: `vmo_ids` was too big.
     /// *     `VMO_NOT_FOUND`: An ID in `vmo_ids` was not registered.
-    UnregisterVmos(vector<uint32>:VMO_VECTOR_MAX_COUNT vmo_ids)
-        -> (vector<zx.handle:VMO>:VMO_VECTOR_MAX_COUNT vmos) error StatusCode;
+    UnregisterVmos(struct {
+        vmo_ids vector<uint32>:VMO_VECTOR_MAX_COUNT;
+    }) -> (resource struct {
+        vmos vector<zx.handle:VMO>:VMO_VECTOR_MAX_COUNT;
+    }) error StatusCode;
 
     /// Tells the driver to start sending bursts via `OnBurst()`.
     StartBursts();
@@ -138,13 +142,17 @@ protocol RadarBurstReader {
     /// *         quickly enough.
     /// *     `SENSOR_ERROR`: An unspecified driver or sensor error occurred
     /// *         when trying to read the burst.
-    -> OnBurst(Burst burst) error StatusCode;
+    -> OnBurst(struct {
+        burst Burst;
+    }) error StatusCode;
 
     /// Signals to the driver that the client is no longer reading the VMO. The
     /// client must not access the VMO after calling this.
     ///
     /// + request `vmo_id` the ID of the VMO to return to the driver.
-    UnlockVmo(uint32 vmo_id);
+    UnlockVmo(struct {
+        vmo_id uint32;
+    });
 };
 
 /// The main protocol implemented by radar drivers. Clients use this protocol to
@@ -157,5 +165,7 @@ protocol RadarBurstReaderProvider {
     ///         provided server channel.
     ///     `ALREADY_BOUND`: Another client has already established a
     ///         `RadarBurstReader` connection with the driver.
-    Connect(request<RadarBurstReader> server) -> () error StatusCode;
+    Connect(resource struct {
+        server server_end:RadarBurstReader;
+    }) -> (struct {}) error StatusCode;
 };

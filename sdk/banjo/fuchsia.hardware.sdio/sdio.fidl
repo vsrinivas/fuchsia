@@ -1,27 +1,25 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.sdio;
 
 using fuchsia.hardware.sdmmc;
 using zx;
 
-const uint8 SDIO_FN_1 = 1;
-const uint8 SDIO_FN_2 = 2;
+const SDIO_FN_1 uint8 = 1;
+const SDIO_FN_2 uint8 = 2;
 /// Including func 0
-const uint8 SDIO_MAX_FUNCS = 8;
+const SDIO_MAX_FUNCS uint8 = 8;
 
-struct SdioFuncHwInfo {
-    uint32 manufacturer_id;
-    uint32 product_id;
-    uint32 max_blk_size;
-    uint32 max_tran_speed;
-    uint8 fn_intf_code;
+type SdioFuncHwInfo = struct {
+    manufacturer_id uint32;
+    product_id uint32;
+    max_blk_size uint32;
+    max_tran_speed uint32;
+    fn_intf_code uint8;
 };
 
-enum SdioCard : uint32 {
+type SdioCard = strict enum : uint32 {
     MULTI_BLOCK = 0x1;
     SRW = 0x2;
     DIRECT_COMMAND = 0x4;
@@ -41,66 +39,127 @@ enum SdioCard : uint32 {
     TYPE_D = 0x10000;
 };
 
-struct SdioDeviceHwInfo {
+type SdioDeviceHwInfo = struct {
     /// number of sdio funcs including func 0
-    uint32 num_funcs;
-    uint32 sdio_vsn;
-    uint32 cccr_vsn;
-    uint32 caps;
+    num_funcs uint32;
+    sdio_vsn uint32;
+    cccr_vsn uint32;
+    caps uint32;
 };
 
-struct SdioHwInfo {
-    SdioDeviceHwInfo dev_hw_info;
-    array<SdioFuncHwInfo>:SDIO_MAX_FUNCS funcs_hw_info;
-    uint32 host_max_transfer_size;
+type SdioHwInfo = struct {
+    dev_hw_info SdioDeviceHwInfo;
+    funcs_hw_info array<SdioFuncHwInfo, SDIO_MAX_FUNCS>;
+    host_max_transfer_size uint32;
 };
 
-resource struct SdioRwTxnNew {
-    uint32 addr;
-    bool incr;
-    bool write;
+type SdioRwTxnNew = resource struct {
+    addr uint32;
+    incr bool;
+    write bool;
 
-    vector<fuchsia.hardware.sdmmc.SdmmcBufferRegion>:MAX buffers;
+    buffers vector<fuchsia.hardware.sdmmc.SdmmcBufferRegion>:MAX;
 };
 
-resource struct SdioRwTxn {
-    uint32 addr;
-    uint32 data_size;
-    bool incr;
-    bool write;
-    bool use_dma;
+type SdioRwTxn = resource struct {
+    addr uint32;
+    data_size uint32;
+    incr bool;
+    write bool;
+    use_dma bool;
     /// Used if use_dma is true
-    zx.handle:VMO dma_vmo;
+    dma_vmo zx.handle:VMO;
     /// Used if use_dma is false
-    [Mutable, Buffer] vector<uint8>:MAX virt;
+    @mutable
+    @buffer
+    virt vector<uint8>:MAX;
     /// offset into dma_vmo or virt
-    uint64 buf_offset;
+    buf_offset uint64;
 };
 
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol Sdio {
-    GetDevHwInfo() -> (zx.status s, SdioHwInfo hw_info);
-    EnableFn() -> (zx.status s);
-    DisableFn() -> (zx.status s);
-    EnableFnIntr() -> (zx.status s);
-    DisableFnIntr() -> (zx.status s);
-    UpdateBlockSize(uint16 blk_sz, bool deflt) -> (zx.status s);
-    GetBlockSize() -> (zx.status s, uint16 cur_blk_size);
-    DoRwTxn([InOut] SdioRwTxn txn) -> (zx.status s);
-    DoRwByte(bool write, uint32 addr, uint8 write_byte) -> (zx.status s, uint8 read_byte);
-    GetInBandIntr() -> (zx.status s, zx.handle:INTERRUPT irq);
+    GetDevHwInfo() -> (struct {
+        s zx.status;
+        hw_info SdioHwInfo;
+    });
+    EnableFn() -> (struct {
+        s zx.status;
+    });
+    DisableFn() -> (struct {
+        s zx.status;
+    });
+    EnableFnIntr() -> (struct {
+        s zx.status;
+    });
+    DisableFnIntr() -> (struct {
+        s zx.status;
+    });
+    UpdateBlockSize(struct {
+        blk_sz uint16;
+        deflt bool;
+    }) -> (struct {
+        s zx.status;
+    });
+    GetBlockSize() -> (struct {
+        s zx.status;
+        cur_blk_size uint16;
+    });
+    DoRwTxn(resource struct {
+        @in_out
+        txn SdioRwTxn;
+    }) -> (struct {
+        s zx.status;
+    });
+    DoRwByte(struct {
+        write bool;
+        addr uint32;
+        write_byte uint8;
+    }) -> (struct {
+        s zx.status;
+        read_byte uint8;
+    });
+    GetInBandIntr() -> (resource struct {
+        s zx.status;
+        irq zx.handle:INTERRUPT;
+    });
     /// The following functions access the card common control registers (CCCR) on function 0.
     /// Aborts an I/O operation occurring on the specified function.
-    IoAbort() -> (zx.status s);
+    IoAbort() -> (struct {
+        s zx.status;
+    });
     /// Returns true if an interrupt is pending for function fn_idx, false otherwise.
-    IntrPending() -> (zx.status s, bool pending);
+    IntrPending() -> (struct {
+        s zx.status;
+        pending bool;
+    });
     /// Reads or writes to a vendor CCCR register. addr must be in [0xF0, 0xFF].
-    DoVendorControlRwByte(bool write, uint8 addr, uint8 write_byte) -> (zx.status s, uint8 read_byte);
+    DoVendorControlRwByte(struct {
+        write bool;
+        addr uint8;
+        write_byte uint8;
+    }) -> (struct {
+        s zx.status;
+        read_byte uint8;
+    });
 
     // See fuchsia.hardware.sdmmc.
-    RegisterVmo(uint32 vmo_id, zx.handle:VMO vmo, uint64 offset, uint64 size, uint32 vmo_rights)
-        -> (zx.status status);
-    UnregisterVmo(uint32 vmo_id) -> (zx.status status, zx.handle:VMO vmo);
+    RegisterVmo(resource struct {
+        vmo_id uint32;
+        vmo zx.handle:VMO;
+        offset uint64;
+        size uint64;
+        vmo_rights uint32;
+    }) -> (struct {
+        status zx.status;
+    });
+    UnregisterVmo(struct {
+        vmo_id uint32;
+    }) -> (resource struct {
+        status zx.status;
+        vmo zx.handle:VMO;
+    });
 
     /// Clients are responsible for performing the following cache operations:
     ///
@@ -116,7 +175,11 @@ protocol Sdio {
     /// - Call zx_cache_flush with ZX_CACHE_FLUSH_DATA on buffers that have been mapped by the
     ///   client.
     /// - Call zx_vmo_op_range with ZX_VMO_OP_CACHE_CLEAN on all other buffers.
-    DoRwTxnNew(SdioRwTxnNew txn) -> (zx.status status);
+    DoRwTxnNew(resource struct {
+        txn SdioRwTxnNew;
+    }) -> (struct {
+        status zx.status;
+    });
 
     /// Runs tests and logs the results in order to diagnose issues with the bus. Clients should
     /// call this before shutting down due to unrecoverable errors. This method may block for some

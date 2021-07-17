@@ -1,15 +1,15 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.update.channel;
 
 /// Information about the state of the update system.
-[Discoverable]
+@discoverable
 protocol Provider {
     /// Retrieve the currently active update channel.
     ///
     /// - response `channel` the currently active update channel.
-    GetCurrent() -> (string:128 channel);
+    GetCurrent() -> (struct {
+        channel string:128;
+    });
 };

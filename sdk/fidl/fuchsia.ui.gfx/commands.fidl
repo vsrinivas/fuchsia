@@ -1,115 +1,113 @@
 // Copyright 2017 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.ui.gfx;
 
 using fuchsia.mem;
 using zx;
 
 /// Commands that are used to modify the state of a `Session`.
-resource union Command {
-    1: CreateResourceCmd create_resource;
-    2: ReleaseResourceCmd release_resource;
-    3: ExportResourceCmdDeprecated export_resource;
-    4: ImportResourceCmdDeprecated import_resource;
+type Command = strict resource union {
+    1: create_resource CreateResourceCmd;
+    2: release_resource ReleaseResourceCmd;
+    3: export_resource ExportResourceCmdDeprecated;
+    4: import_resource ImportResourceCmdDeprecated;
 
     /// Tagging commands.
-    5: SetTagCmd set_tag;
+    5: set_tag SetTagCmd;
 
     /// Grouping commands.
-    6: DetachCmd detach;
+    6: detach DetachCmd;
 
     /// Spatial commands.
-    7: SetTranslationCmd set_translation;
-    8: SetScaleCmd set_scale;
-    9: SetRotationCmd set_rotation;
-    10: SetAnchorCmd set_anchor;
-    11: SetSizeCmd set_size;
-    12: SetOpacityCmd set_opacity;
+    7: set_translation SetTranslationCmd;
+    8: set_scale SetScaleCmd;
+    9: set_rotation SetRotationCmd;
+   10: set_anchor SetAnchorCmd;
+   11: set_size SetSizeCmd;
+   12: set_opacity SetOpacityCmd;
 
-    13: SendSizeChangeHintCmdHACK send_size_change_hint_hack;
+   13: send_size_change_hint_hack SendSizeChangeHintCmdHACK;
 
     /// Node-specific commands.
-    14: AddChildCmd add_child; // TODO: Should we require a DetachCmd before
+   14: add_child AddChildCmd; // TODO: Should we require a DetachCmd before
     /// re-parenting?
-    15: AddPartCmd add_part;
-    16: DetachChildrenCmd detach_children;
-    17: SetShapeCmd set_shape;
-    18: SetMaterialCmd set_material;
-    19: SetClipCmd set_clip;
-    20: SetHitTestBehaviorCmd set_hit_test_behavior;
-    21: SetViewPropertiesCmd set_view_properties;
-    22: TakeSnapshotCmdDEPRECATED take_snapshot_cmd;
+   15: add_part AddPartCmd;
+   16: detach_children DetachChildrenCmd;
+   17: set_shape SetShapeCmd;
+   18: set_material SetMaterialCmd;
+   19: set_clip SetClipCmd;
+   20: set_hit_test_behavior SetHitTestBehaviorCmd;
+   21: set_view_properties SetViewPropertiesCmd;
+   22: take_snapshot_cmd TakeSnapshotCmdDEPRECATED;
 
     /// Camera and lighting commands.
-    23: SetCameraCmd set_camera;
-    24: SetCameraTransformCmd set_camera_transform;
-    25: SetCameraProjectionCmd set_camera_projection;
-    26: SetStereoCameraProjectionCmd set_stereo_camera_projection;
-    27: SetCameraPoseBufferCmd set_camera_pose_buffer;
-    28: SetLightColorCmd set_light_color;
-    29: SetLightDirectionCmd set_light_direction;
-    30: AddLightCmd add_light;
-    31: DetachLightCmd detach_light;
-    32: DetachLightsCmd detach_lights;
+   23: set_camera SetCameraCmd;
+   24: set_camera_transform SetCameraTransformCmd;
+   25: set_camera_projection SetCameraProjectionCmd;
+   26: set_stereo_camera_projection SetStereoCameraProjectionCmd;
+   27: set_camera_pose_buffer SetCameraPoseBufferCmd;
+   28: set_light_color SetLightColorCmd;
+   29: set_light_direction SetLightDirectionCmd;
+   30: add_light AddLightCmd;
+   31: detach_light DetachLightCmd;
+   32: detach_lights DetachLightsCmd;
 
-    33: SetTextureCmd set_texture;
-    34: SetColorCmd set_color;
+   33: set_texture SetTextureCmd;
+   34: set_color SetColorCmd;
 
     /// Mesh commands.
-    35: BindMeshBuffersCmd bind_mesh_buffers;
+   35: bind_mesh_buffers BindMeshBuffersCmd;
 
     /// Layer and renderer commands.
-    36: AddLayerCmd add_layer;
-    37: RemoveLayerCmd remove_layer;
-    38: RemoveAllLayersCmd remove_all_layers;
-    39: SetLayerStackCmd set_layer_stack;
-    40: SetRendererCmd set_renderer;
-    41: SetRendererParamCmd set_renderer_param;
+   36: add_layer AddLayerCmd;
+   37: remove_layer RemoveLayerCmd;
+   38: remove_all_layers RemoveAllLayersCmd;
+   39: set_layer_stack SetLayerStackCmd;
+   40: set_renderer SetRendererCmd;
+   41: set_renderer_param SetRendererParamCmd;
 
     /// Events.
-    42: SetEventMaskCmd set_event_mask;
+   42: set_event_mask SetEventMaskCmd;
 
     /// Diagnostic commands.
-    43: SetLabelCmd set_label;
+   43: set_label SetLabelCmd;
 
     /// Debugging commands.
-    44: SetDisableClippingCmd set_disable_clipping;
+   44: set_disable_clipping SetDisableClippingCmd;
 
     // TODO(fxbug.dev/24238): Remove this.
-    45: SetImportFocusCmdDEPRECATED set_import_focus;
+   45: set_import_focus SetImportFocusCmdDEPRECATED;
 
     // TODO(fxbug.dev/24428): Move these where they belong.  They're added to the end of
     // the struct temporarily until we transition to xunions.
-    46: SetClipPlanesCmd set_clip_planes;
-    47: SetPointLightPositionCmd set_point_light_position;
-    48: SetPointLightFalloffCmd set_point_light_falloff;
-    49: SceneAddAmbientLightCmd scene__add_ambient_light;
-    50: SceneAddDirectionalLightCmd scene__add_directional_light;
-    51: SceneAddPointLightCmd scene__add_point_light;
+   46: set_clip_planes SetClipPlanesCmd;
+   47: set_point_light_position SetPointLightPositionCmd;
+   48: set_point_light_falloff SetPointLightFalloffCmd;
+   49: scene__add_ambient_light SceneAddAmbientLightCmd;
+   50: scene__add_directional_light SceneAddDirectionalLightCmd;
+   51: scene__add_point_light SceneAddPointLightCmd;
 
-    52: SetDisplayColorConversionCmdHACK set_display_color_conversion;
+   52: set_display_color_conversion SetDisplayColorConversionCmdHACK;
 
-    53: SetDisplayRotationCmdHACK set_display_rotation;
+   53: set_display_rotation SetDisplayRotationCmdHACK;
 
-    54: SetEnableDebugViewBoundsCmd set_enable_view_debug_bounds;
-    55: SetViewHolderBoundsColorCmd set_view_holder_bounds_color;
+   54: set_enable_view_debug_bounds SetEnableDebugViewBoundsCmd;
+   55: set_view_holder_bounds_color SetViewHolderBoundsColorCmd;
 
-    56: SetCameraClipSpaceTransformCmd set_camera_clip_space_transform;
+   56: set_camera_clip_space_transform SetCameraClipSpaceTransformCmd;
 
-    57: SetDisplayMinimumRgbCmdHACK set_display_minimum_rgb;
+   57: set_display_minimum_rgb SetDisplayMinimumRgbCmdHACK;
 
-    58: SetSemanticVisibilityCmd set_semantic_visibility;
+   58: set_semantic_visibility SetSemanticVisibilityCmd;
 };
 
 /// Instructs the compositor to create the specified `Resource`, and to register
 /// it in a table so that it can be referenced by subsequent commands.
-resource struct CreateResourceCmd {
+type CreateResourceCmd = resource struct {
     /// An ID that is currently not used within the session.
-    uint32 id;
-    ResourceArgs resource;
+    id uint32;
+    resource ResourceArgs;
 };
 
 /// Releases the client's reference to the resource; it is then illegal to use
@@ -119,9 +117,9 @@ resource struct CreateResourceCmd {
 /// resource may be required to render an in-progress frame, or it may be
 /// referred to by another resource).  However, the ID will be immediately
 /// unregistered, and may be reused to create a new resource.
-struct ReleaseResourceCmd {
+type ReleaseResourceCmd = struct {
     /// ID of the resource to be dereferenced.
-    uint32 id;
+    id uint32;
 };
 
 /// Create an external reference to the specified resource, which can then be
@@ -132,9 +130,9 @@ struct ReleaseResourceCmd {
 /// No specific mechanism is provided for transferring a token from an exporter
 /// to an importer; collaborators may choose any out-of-band API they wish to do
 /// so.
-resource struct ExportResourceCmdDeprecated {
-    uint32 id;
-    zx.handle:EVENTPAIR token;
+type ExportResourceCmdDeprecated = resource struct {
+    id uint32;
+    token zx.handle:EVENTPAIR;
 };
 
 /// Import a resource that was exported via ExportResourceCmd().  `token` is
@@ -159,10 +157,10 @@ resource struct ExportResourceCmdDeprecated {
 // TODO: describe how the imported resource behaves if the exported resource
 // isn't yet available, or becomes unavailable (e.g. an imported Material might
 // act as a plain white texture).
-resource struct ImportResourceCmdDeprecated {
-    uint32 id;
-    zx.handle:EVENTPAIR token;
-    ImportSpec spec;
+type ImportResourceCmdDeprecated = resource struct {
+    id uint32;
+    token zx.handle:EVENTPAIR;
+    spec ImportSpec;
 };
 
 /// Sets/clears a node's tag value.
@@ -179,9 +177,9 @@ resource struct ImportResourceCmdDeprecated {
 /// Constraints:
 /// - `node_id` refs a `Node`.
 /// - `tag_value` is the tag value to assign, or 0 to remove the tag.
-struct SetTagCmd {
-    uint32 node_id;
-    uint32 tag_value;
+type SetTagCmd = struct {
+    node_id uint32;
+    tag_value uint32;
 };
 
 /// Detaches a parentable object from its parent (e.g. a node from a parent node,
@@ -194,26 +192,26 @@ struct SetTagCmd {
 /// Discussion:
 /// For nodes, this command will detach a node from its parent, regardless of
 /// whether it is a part or a child of its parent.
-struct DetachCmd {
-    uint32 id;
+type DetachCmd = struct {
+    id uint32;
 };
 
 /// Sets a Resource's (typically a Node's) translation.
 ///
 /// Constraints:
 /// - `id` refs a Resource with the has_transform characteristic.
-struct SetTranslationCmd {
-    uint32 id;
-    Vector3Value value;
+type SetTranslationCmd = struct {
+    id uint32;
+    value Vector3Value;
 };
 
 /// Sets a Resource's (typically a Node's) scale.
 ///
 /// Constraints:
 /// - `id` refs a Resource with the has_transform characteristic.
-struct SetScaleCmd {
-    uint32 id;
-    Vector3Value value;
+type SetScaleCmd = struct {
+    id uint32;
+    value Vector3Value;
 };
 
 /// Sets a Resource's (typically a Node's) rotation.
@@ -226,18 +224,18 @@ struct SetScaleCmd {
 /// [a,b,c,d], [a] represents the amount of rotation that should be applied and
 /// [b,c,d] represents the vector around which the rotation is applied. This
 /// conforms to the semantics of glm::quat.
-struct SetRotationCmd {
-    uint32 id;
-    QuaternionValue value;
+type SetRotationCmd = struct {
+    id uint32;
+    value QuaternionValue;
 };
 
 /// Sets a Resource's (typically a Node's) anchor point.
 ///
 /// Constraints:
 /// - `id` refs a Resource with the has_transform characteristic.
-struct SetAnchorCmd {
-    uint32 id;
-    Vector3Value value;
+type SetAnchorCmd = struct {
+    id uint32;
+    value Vector3Value;
 };
 
 /// Sets an object's size.
@@ -246,9 +244,9 @@ struct SetAnchorCmd {
 /// - `id` refs a resizeable object.
 /// - some objects that support this command may have additional constraints
 ///   (e.g. in some cases `depth` must be zero).
-struct SetSizeCmd {
-    uint32 id;
-    Vector2Value value;
+type SetSizeCmd = struct {
+    id uint32;
+    value Vector2Value;
 };
 
 /// Sets a node's opacity.
@@ -256,9 +254,9 @@ struct SetSizeCmd {
 /// Constraints:
 /// - `node_id` refs a `Node` with the has_opacity characteristic.
 /// - `opacity` is in the range [0, 1].
-struct SetOpacityCmd {
-    uint32 node_id;
-    float32 opacity;
+type SetOpacityCmd = struct {
+    node_id uint32;
+    opacity float32;
 };
 
 /// Sends a hint about a pending size change to the given node and all nodes
@@ -267,10 +265,10 @@ struct SetOpacityCmd {
 /// `width_change_factor` and `height_change_factor` is how much bigger or smaller
 /// the item is expected to be in the near future. This one number encapsulate
 /// both changes in scale, as well as changes to layout width and height.
-struct SendSizeChangeHintCmdHACK {
-    uint32 node_id;
-    float32 width_change_factor;
-    float32 height_change_factor;
+type SendSizeChangeHintCmdHACK = struct {
+    node_id uint32;
+    width_change_factor float32;
+    height_change_factor float32;
 };
 
 /// Add a node as a child to another node.
@@ -282,9 +280,9 @@ struct SendSizeChangeHintCmdHACK {
 /// Discussion:
 /// The child node is first removed from its existing parent, as if DetachCmd
 /// was applied first.
-struct AddChildCmd {
-    uint32 node_id;
-    uint32 child_id;
+type AddChildCmd = struct {
+    node_id uint32;
+    child_id uint32;
 };
 
 /// Add a node as a part of another node.  The implications of being a part
@@ -302,14 +300,14 @@ struct AddChildCmd {
 /// Discussion:
 /// The part node is first removed from its existing parent, as if DetachCmd
 /// was applied first.
-struct AddPartCmd {
-    uint32 node_id;
-    uint32 part_id;
+type AddPartCmd = struct {
+    node_id uint32;
+    part_id uint32;
 };
 
 /// Detaches all of a node's children (but not its parts).
-struct DetachChildrenCmd {
-    uint32 node_id;
+type DetachChildrenCmd = struct {
+    node_id uint32;
 };
 
 // TODO: add "Shape/Material Compatibility section"
@@ -326,9 +324,9 @@ struct DetachChildrenCmd {
 /// In order to be painted, a node requires both a `Shape` and a `Material`.
 /// Without a material, a node can still participate in hit-testing and clipping.
 /// Without a shape, a node cannot do any of the above.
-struct SetShapeCmd {
-    uint32 node_id;
-    uint32 shape_id;
+type SetShapeCmd = struct {
+    node_id uint32;
+    shape_id uint32;
 };
 
 // TODO: add "Shape/Material Compatibility section"
@@ -345,9 +343,9 @@ struct SetShapeCmd {
 /// In order to be painted, a node requires both a `Shape` and a `Material`.
 /// Without a material, a node can still participate in hit-testing and clipping.
 /// Without a shape, a node cannot do any of the above.
-struct SetMaterialCmd {
-    uint32 node_id;
-    uint32 material_id;
+type SetMaterialCmd = struct {
+    node_id uint32;
+    material_id uint32;
 };
 
 /// Sets/clears a node's clip.  DEPRECATED: use SetClipPlanesCmd.
@@ -370,10 +368,10 @@ struct SetMaterialCmd {
 // For example, consider a 3D space that looks through a portal into a 2D space
 // that uses a clip for a circular reveal.  It would not be meaningful to clip
 // objects on the outside (i.e. in the 3D space).
-struct SetClipCmd {
-    uint32 node_id;
-    uint32 clip_id;
-    bool clip_to_self;
+type SetClipCmd = struct {
+    node_id uint32;
+    clip_id uint32;
+    clip_to_self bool;
 };
 
 /// Sets a node's hit test behavior.
@@ -381,9 +379,9 @@ struct SetClipCmd {
 /// Discussion:
 /// By default, hit testing is performed on the node's content, its parts,
 /// and its children.
-struct SetHitTestBehaviorCmd {
-    uint32 node_id;
-    HitTestBehavior hit_test_behavior;
+type SetHitTestBehaviorCmd = struct {
+    node_id uint32;
+    hit_test_behavior HitTestBehavior;
 };
 
 /// Sets a node's semantic visibility.
@@ -391,27 +389,29 @@ struct SetHitTestBehaviorCmd {
 /// Discussion:
 /// By default, all nodes are semantically visible. Semantically invisible nodes and their children
 /// are ignored by hit tests performed for accessibility.
-struct SetSemanticVisibilityCmd {
-    uint32 node_id;
-    bool visible = true;
+type SetSemanticVisibilityCmd = struct {
+    node_id uint32;
+    visible bool = true;
 };
 
 /// Sets the properties for a ViewHolder's attached View.
 ///
 /// Constraints:
 /// - `view_holder_id` refs a `ViewHolder`.
-struct SetViewPropertiesCmd {
-    uint32 view_holder_id;
-    ViewProperties properties;
+type SetViewPropertiesCmd = struct {
+    view_holder_id uint32;
+    properties ViewProperties;
 };
 
 protocol SnapshotCallbackDEPRECATED {
-    OnData(fuchsia.mem.Buffer data);
+    OnData(resource struct {
+        data fuchsia.mem.Buffer;
+    });
 };
 
-resource struct TakeSnapshotCmdDEPRECATED {
-    uint32 node_id;
-    SnapshotCallbackDEPRECATED callback;
+type TakeSnapshotCmdDEPRECATED = resource struct {
+    node_id uint32;
+    callback client_end:SnapshotCallbackDEPRECATED;
 };
 
 /// Sets a renderer's camera.
@@ -420,9 +420,9 @@ resource struct TakeSnapshotCmdDEPRECATED {
 /// - `renderer_id` refs a `Renderer`.
 /// - `camera_id` refs a `Camera`, or stops rendering by passing zero.
 /// - `matrix` is a value or variable of type kMatrix4x4.
-struct SetCameraCmd {
-    uint32 renderer_id;
-    uint32 camera_id;
+type SetCameraCmd = struct {
+    renderer_id uint32;
+    camera_id uint32;
 };
 
 /// Sets a camera's view matrix.
@@ -433,11 +433,11 @@ struct SetCameraCmd {
 /// - `eye_position` is the position of the eye.
 /// - `eye_look_at` is the point is the scene the that eye is pointed at.
 /// - `eye_up` defines the camera's "up" vector.
-struct SetCameraTransformCmd {
-    uint32 camera_id;
-    Vector3Value eye_position;
-    Vector3Value eye_look_at;
-    Vector3Value eye_up;
+type SetCameraTransformCmd = struct {
+    camera_id uint32;
+    eye_position Vector3Value;
+    eye_look_at Vector3Value;
+    eye_up Vector3Value;
 };
 
 /// Sets a camera's projection matrix.
@@ -449,9 +449,9 @@ struct SetCameraTransformCmd {
 ///
 /// NOTE: A default orthographic projection is specified by setting `fovy` to
 /// zero.  In this case, the camera transform is ignored.
-struct SetCameraProjectionCmd {
-    uint32 camera_id;
-    FloatValue fovy; // Y-axis field of view, in radians.
+type SetCameraProjectionCmd = struct {
+    camera_id uint32;
+    fovy FloatValue; // Y-axis field of view, in radians.
 };
 
 /// Sets a StereoCamera's projection matrices.
@@ -464,10 +464,10 @@ struct SetCameraProjectionCmd {
 ///
 /// These projection matrices may also contain a transform in camera space for
 /// their eye if needed.
-struct SetStereoCameraProjectionCmd {
-    uint32 camera_id;
-    Matrix4Value left_projection;
-    Matrix4Value right_projection;
+type SetStereoCameraProjectionCmd = struct {
+    camera_id uint32;
+    left_projection Matrix4Value;
+    right_projection Matrix4Value;
 };
 
 /// Sets a camera's 2D clip-space transform.
@@ -476,10 +476,10 @@ struct SetStereoCameraProjectionCmd {
 /// - `camera_id` refs a `Camera`.
 /// - `translation` is the desired translation, in Vulkan NDC.
 /// - `scale` is the scale factor to apply on the x/y plane before translation.
-struct SetCameraClipSpaceTransformCmd {
-    uint32 camera_id;
-    vec2 translation;
-    float32 scale;
+type SetCameraClipSpaceTransformCmd = struct {
+    camera_id uint32;
+    translation vec2;
+    scale float32;
 };
 
 /// Sets the "pose buffer" for the camera identified by `camera_id`.
@@ -554,43 +554,43 @@ struct SetCameraClipSpaceTransformCmd {
 ///
 /// This commanderation is intended for late latching camera pose to support
 /// low-latency motion-tracked rendering.
-struct SetCameraPoseBufferCmd {
-    uint32 camera_id;
-    uint32 buffer_id;
-    uint32 num_entries;
-    int64 base_time;
-    uint64 time_interval;
+type SetCameraPoseBufferCmd = struct {
+    camera_id uint32;
+    buffer_id uint32;
+    num_entries uint32;
+    base_time int64;
+    time_interval uint64;
 };
 
 /// Sets the color of the Light identified by `light_id`.
-struct SetLightColorCmd {
-    uint32 light_id;
-    ColorRgbValue color;
+type SetLightColorCmd = struct {
+    light_id uint32;
+    color ColorRgbValue;
 };
 
 /// Sets the direction of the DirectionalLight identified by `light_id`.
-struct SetLightDirectionCmd {
-    uint32 light_id;
-    Vector3Value direction;
+type SetLightDirectionCmd = struct {
+    light_id uint32;
+    direction Vector3Value;
 };
 
 /// DEPRECATED
 /// Adds the light specified by `light_id` specified by `light_id` to the scene
 /// identified by `scene_id`.
-struct AddLightCmd {
-    uint32 scene_id;
-    uint32 light_id;
+type AddLightCmd = struct {
+    scene_id uint32;
+    light_id uint32;
 };
 
 /// Detach the light specified by `light_id` from the scene that it is attached
 /// to, if any.
-struct DetachLightCmd {
-    uint32 light_id;
+type DetachLightCmd = struct {
+    light_id uint32;
 };
 
 /// Detach all lights from the scene specified by `scene_id`.
-struct DetachLightsCmd {
-    uint32 scene_id;
+type DetachLightsCmd = struct {
+    scene_id uint32;
 };
 
 /// Sets/clears a material's texture.
@@ -602,9 +602,9 @@ struct DetachLightsCmd {
 /// If no texture is provided (i.e. `texture_id` is zero), a solid color is used.
 /// If a texture is provided, then the value sampled from the texture is
 /// multiplied by the color.
-struct SetTextureCmd {
-    uint32 material_id;
-    uint32 texture_id; // Refers to an Image resource.  May be zero (no texture).
+type SetTextureCmd = struct {
+    material_id uint32;
+    texture_id uint32; // Refers to an Image resource.  May be zero (no texture).
 };
 
 /// Sets a material's color.
@@ -614,9 +614,9 @@ struct SetTextureCmd {
 ///
 /// If a texture is set on the material, then the value sampled from the texture
 /// is multiplied by the color.
-struct SetColorCmd {
-    uint32 material_id;
-    ColorRgbaValue color;
+type SetColorCmd = struct {
+    material_id uint32;
+    color ColorRgbaValue;
 };
 
 /// Set a mesh's indices and vertices.
@@ -640,32 +640,32 @@ struct SetColorCmd {
 ///   - each vertex has a position and UV-coordinates, but no surface normal.
 ///   - the 3D position occupies bytes 0-11 (3 dimensions * 4 bytes per float32).
 ///   - the UV coords occupy bytes 12-19, since no surface normal is provided.
-enum MeshIndexFormat {
+type MeshIndexFormat = strict enum {
     // TODO(fxbug.dev/23519): only kUint32 is currently supported.
     kUint16 = 1;
     kUint32 = 2;
 };
 
-struct MeshVertexFormat {
+type MeshVertexFormat = struct {
     /// kVector2 or kVector3.
-    ValueType position_type;
+    position_type ValueType;
     /// kVector2 or kVector3 (must match position_type), or kNone.
-    ValueType normal_type;
+    normal_type ValueType;
     /// kVector2 or kNone.
-    ValueType tex_coord_type;
+    tex_coord_type ValueType;
 };
 
-struct BindMeshBuffersCmd {
-    uint32 mesh_id;
-    uint32 index_buffer_id;
-    MeshIndexFormat index_format;
-    uint64 index_offset;
-    uint32 index_count;
-    uint32 vertex_buffer_id;
-    MeshVertexFormat vertex_format;
-    uint64 vertex_offset;
-    uint32 vertex_count;
-    BoundingBox bounding_box;
+type BindMeshBuffersCmd = struct {
+    mesh_id uint32;
+    index_buffer_id uint32;
+    index_format MeshIndexFormat;
+    index_offset uint64;
+    index_count uint32;
+    vertex_buffer_id uint32;
+    vertex_format MeshVertexFormat;
+    vertex_offset uint64;
+    vertex_count uint32;
+    bounding_box BoundingBox;
 };
 
 /// Add a layer to a layer stack.
@@ -674,9 +674,9 @@ struct BindMeshBuffersCmd {
 /// - `layer_id` refs a `Layer`.
 /// - The layer must not already belong to a different stack; it must first be
 ///   detached.
-struct AddLayerCmd {
-    uint32 layer_stack_id;
-    uint32 layer_id;
+type AddLayerCmd = struct {
+    layer_stack_id uint32;
+    layer_id uint32;
 };
 
 /// Remove a layer from a layer stack.
@@ -684,43 +684,43 @@ struct AddLayerCmd {
 /// - `layer_stack_id` refs a `LayerStack`.
 /// - `layer_id` refs a `Layer`.
 /// - The layer must belong to this stack.
-struct RemoveLayerCmd {
-    uint32 layer_stack_id;
-    uint32 layer_id;
+type RemoveLayerCmd = struct {
+    layer_stack_id uint32;
+    layer_id uint32;
 };
 
 /// Remove all layers from a layer stack.
 /// Constraints
 /// - `layer_stack_id` refs a `LayerStack`.
-struct RemoveAllLayersCmd {
-    uint32 layer_stack_id;
+type RemoveAllLayersCmd = struct {
+    layer_stack_id uint32;
 };
 
 /// Set a compositor's layer stack, replacing the current stack (if any).
 /// Constraints:
 /// - `compositor_id` refs a `DisplayCompositor` or `ImagePipeCompositor`.
 /// - `layer_stack_id` refs a `LayerStack`.
-struct SetLayerStackCmd {
-    uint32 compositor_id;
-    uint32 layer_stack_id;
+type SetLayerStackCmd = struct {
+    compositor_id uint32;
+    layer_stack_id uint32;
 };
 
 /// Set a layer's renderer, replacing the current renderer (if any).
 /// Constraints:
 /// - `layer_id` refs a `Layer`.
 /// - `renderer_id` refs a `Renderer`.
-struct SetRendererCmd {
-    uint32 layer_id;
-    uint32 renderer_id;
+type SetRendererCmd = struct {
+    layer_id uint32;
+    renderer_id uint32;
 };
 
 /// Sets a parameter that affects how a renderer renders a scene.
 ///
 /// `renderer_id` refs the Renderer that is being modified.
 /// `param` describes the parameter that should be set, and to what.
-struct SetRendererParamCmd {
-    uint32 renderer_id;
-    RendererParam param;
+type SetRendererParamCmd = struct {
+    renderer_id uint32;
+    param RendererParam;
 };
 
 /// Sets which events a resource should deliver to the session listener.
@@ -732,13 +732,13 @@ struct SetRendererParamCmd {
 /// Constraints:
 /// - `resource_id` is a valid resource id
 /// - `event_mask` is zero or a combination of `k*EventMask` bits OR'ed together.
-struct SetEventMaskCmd {
-    uint32 id;
-    uint32 event_mask;
+type SetEventMaskCmd = struct {
+    id uint32;
+    event_mask uint32;
 };
 
 /// Maximum length for a resource label.
-const uint32 kLabelMaxLength = 32;
+const kLabelMaxLength uint32 = 32;
 
 /// Sets/clears a label to help developers identify the purpose of the resource
 /// when using diagnostic tools.
@@ -750,9 +750,9 @@ const uint32 kLabelMaxLength = 32;
 /// Constraints:
 /// - The label's maximum length is `kLabelMaxLength` characters.
 /// - Setting the label to an empty string clears it.
-struct SetLabelCmd {
-    uint32 id;
-    string label;
+type SetLabelCmd = struct {
+    id uint32;
+    label string;
 };
 
 /// Set whether clipping should be disabled for the specified renderer.  For a
@@ -764,29 +764,28 @@ struct SetLabelCmd {
 ///
 /// `renderer_id` refs the target renderer.
 /// `disable_clipping` specifies whether the clipping should be disabled.
-struct SetDisableClippingCmd {
-    uint32 renderer_id;
-    bool disable_clipping;
+type SetDisableClippingCmd = struct {
+    renderer_id uint32;
+    disable_clipping bool;
 };
 
 // TODO(fxbug.dev/24238): Remove this.
-struct SetImportFocusCmdDEPRECATED {
-};
+type SetImportFocusCmdDEPRECATED = struct {};
 
 /// Sets the list of clip planes that apply to a Node and all of its children.  Replaces
 /// the list set by any previous SetClipPlanesCmd.
 ///
 /// - `node_id` refs a `Node` with the has_clip characteristic.
 /// - `clip_planes` is the new list of oriented clip planes.
-struct SetClipPlanesCmd {
-    uint32 node_id;
-    vector<Plane3> clip_planes;
+type SetClipPlanesCmd = struct {
+    node_id uint32;
+    clip_planes vector<Plane3>;
 };
 
 /// Sets the position of the PointLight identified by `light_id`.
-struct SetPointLightPositionCmd {
-    uint32 light_id;
-    Vector3Value position;
+type SetPointLightPositionCmd = struct {
+    light_id uint32;
+    position Vector3Value;
 };
 
 /// Sets the falloff factor of the PointLight identified by `light_id`.
@@ -798,30 +797,30 @@ struct SetPointLightPositionCmd {
 // TODO(fxbug.dev/23755): need to formalize the units of light intensity and distance used
 // to compute fall-off.  Currently the unit is pips; consequently a falloff of 1.0
 // causes light to attenuate far too rapidly.  Meters would be more appropriate.
-struct SetPointLightFalloffCmd {
-    uint32 light_id;
-    FloatValue falloff;
+type SetPointLightFalloffCmd = struct {
+    light_id uint32;
+    falloff FloatValue;
 };
 
 /// Adds the light specified by `light_id` specified by `light_id` to the scene
 /// identified by `scene_id`.
-struct SceneAddAmbientLightCmd {
-    uint32 scene_id;
-    uint32 light_id;
+type SceneAddAmbientLightCmd = struct {
+    scene_id uint32;
+    light_id uint32;
 };
 
 /// Adds the light specified by `light_id` specified by `light_id` to the scene
 /// identified by `scene_id`.
-struct SceneAddDirectionalLightCmd {
-    uint32 scene_id;
-    uint32 light_id;
+type SceneAddDirectionalLightCmd = struct {
+    scene_id uint32;
+    light_id uint32;
 };
 
 /// Adds the light specified by `light_id` specified by `light_id` to the scene
 /// identified by `scene_id`.
-struct SceneAddPointLightCmd {
-    uint32 scene_id;
-    uint32 light_id;
+type SceneAddPointLightCmd = struct {
+    scene_id uint32;
+    light_id uint32;
 };
 
 /// Set the color conversion applied to the compositor's display.
@@ -838,11 +837,11 @@ struct SceneAddPointLightCmd {
 ///   preoffsets = [0 0 0]
 ///   matrix = [1 0 0 0 1 0 0 0 1]
 ///   postoffsets = [0 0 0]
-struct SetDisplayColorConversionCmdHACK {
-    uint32 compositor_id;
-    array<float32>:3 preoffsets;
-    array<float32>:9 matrix;
-    array<float32>:3 postoffsets;
+type SetDisplayColorConversionCmdHACK = struct {
+    compositor_id uint32;
+    preoffsets array<float32, 3>;
+    matrix array<float32, 9>;
+    postoffsets array<float32, 3>;
 };
 
 /// Depending on the device, the display might be rotated
@@ -856,28 +855,28 @@ struct SetDisplayColorConversionCmdHACK {
 /// is orienting the screen. The only legal values for the
 /// rotation are 0, 90, 180, and 270, which are each
 ///  applied counterclockwise.
-struct SetDisplayRotationCmdHACK {
-    uint32 compositor_id;
-    uint32 rotation_degrees;
+type SetDisplayRotationCmdHACK = struct {
+    compositor_id uint32;
+    rotation_degrees uint32;
 };
 
 // Enable (or disable) debug wireframe rendering for the specified
 // view and its immediately embedded views (i.e. any view whose
 // nearest ancestor view is this one).
-struct SetEnableDebugViewBoundsCmd {
-    uint32 view_id;
-    bool enable;
+type SetEnableDebugViewBoundsCmd = struct {
+    view_id uint32;
+    enable bool;
 };
 
 // This command determines the color to be set on a view holders
 // debug wireframe bounding box.
-struct SetViewHolderBoundsColorCmd {
-    uint32 view_holder_id;
-    ColorRgbValue color;
+type SetViewHolderBoundsColorCmd = struct {
+    view_holder_id uint32;
+    color ColorRgbValue;
 };
 
 // This command sets the minimum RGB value for all displays, which
 // all pixel values are clamped to.
-struct SetDisplayMinimumRgbCmdHACK {
-    uint8 min_value;
+type SetDisplayMinimumRgbCmdHACK = struct {
+    min_value uint8;
 };

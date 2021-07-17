@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.tee.manager;
 
 using fuchsia.io as io;
@@ -10,7 +8,9 @@ using fuchsia.io as io;
 /// Provider provides service access and support to the TEE driver
 /// for things like persistent storage, since the TEE may make upward RPC-like
 /// requests to the REE.
-[ForDeprecatedCBindings]
+@for_deprecated_c_bindings
 protocol Provider {
-    RequestPersistentStorage(request<io.Directory> dir);
+    RequestPersistentStorage(resource struct {
+        dir server_end:io.Directory;
+    });
 };

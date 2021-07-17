@@ -1,140 +1,177 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.thermal;
 
 using zx;
 using fuchsia.hardware.temperature;
 
 /// The maximum number of trip points that can be used.
-const uint32 MAX_TRIP_POINTS = 16;
+const MAX_TRIP_POINTS uint32 = 16;
 
 /// The maximum number of DVFS domains a device can support (one for each cluster in a big-little
 /// architecture).
-const uint32 MAX_DVFS_DOMAINS = 2;
+const MAX_DVFS_DOMAINS uint32 = 2;
 
 /// The maximum number of operating points that can be used.
-const uint32 MAX_DVFS_OPPS = 16;
+const MAX_DVFS_OPPS uint32 = 16;
 
 /// Bitmask values for ThermalInfo.state.
-const uint32 THERMAL_STATE_NORMAL = 0;
-const uint32 THERMAL_STATE_TRIP_VIOLATION = 1;
+const THERMAL_STATE_NORMAL uint32 = 0;
+const THERMAL_STATE_TRIP_VIOLATION uint32 = 1;
 
 /// Devices with big-little architecture may have different operating points for each cluster.
 /// Other devices use `BIG_CLUSTER_POWER_DOMAIN` for getting/setting the operating point.
-enum PowerDomain : uint32 {
+type PowerDomain = strict enum : uint32 {
     BIG_CLUSTER_POWER_DOMAIN = 0;
     LITTLE_CLUSTER_POWER_DOMAIN = 1;
 };
 
 /// scpi_opp_t is typedef'd to this.
-[ForDeprecatedCBindings]
-struct OperatingPoint {
+@for_deprecated_c_bindings
+type OperatingPoint = struct {
     /// The device's operating points.
-    array<OperatingPointEntry>:MAX_DVFS_OPPS opp;
+    opp array<OperatingPointEntry, MAX_DVFS_OPPS>;
     /// In microseconds.
-    uint32 latency;
+    latency uint32;
     /// The number of operating points in opp.
-    uint32 count;
+    count uint32;
 };
 
 /// scpi_opp_entry_t is typedef'd to this.
-[ForDeprecatedCBindings]
-struct OperatingPointEntry {
+@for_deprecated_c_bindings
+type OperatingPointEntry = struct {
     /// The operating point frequency in Hz.
-    uint32 freq_hz;
+    freq_hz uint32;
     /// The operating point voltage in microvolts.
-    uint32 volt_uv;
+    volt_uv uint32;
 };
 
 /// Temperature units are degrees Celsius.
-[ForDeprecatedCBindings]
-struct ThermalInfo {
+@for_deprecated_c_bindings
+type ThermalInfo = struct {
     /// State is a bitmask of `THERMAL_STATE_`* values.
-    uint32 state;
+    state uint32;
     /// The sensor temperature at which the system should activate passive cooling policy.
-    float32 passive_temp_celsius;
+    passive_temp_celsius float32;
     /// The sensor temperature at which the system should perform critical shutdown.
-    float32 critical_temp_celsius;
+    critical_temp_celsius float32;
     /// The number of trip points supported.
-    uint32 max_trip_count;
+    max_trip_count uint32;
     /// The currently active trip point.
-    array<float32>:MAX_TRIP_POINTS active_trip;
+    active_trip array<float32, MAX_TRIP_POINTS>;
 };
 
 /// Temperature units are degrees Celsius.
-[ForDeprecatedCBindings]
-struct ThermalTemperatureInfo {
+@for_deprecated_c_bindings
+type ThermalTemperatureInfo = struct {
     /// The temperature must rise to up_temp to get to this trip point.
-    float32 up_temp_celsius;
+    up_temp_celsius float32;
     /// The temperature must fall to down_temp to get to this trip point.
-    float32 down_temp_celsius;
+    down_temp_celsius float32;
     /// The fan level for this trip point.
-    uint32 fan_level;
+    fan_level uint32;
     /// The operating point index of the big cluster.
-    uint16 big_cluster_dvfs_opp;
+    big_cluster_dvfs_opp uint16;
     /// The operating point index of the little cluster.
-    uint16 little_cluster_dvfs_opp;
+    little_cluster_dvfs_opp uint16;
     /// The GPU clock source index.
-    uint32 gpu_clk_freq_source;
+    gpu_clk_freq_source uint32;
 };
 
-[ForDeprecatedCBindings]
-struct ThermalDeviceInfo {
+@for_deprecated_c_bindings
+type ThermalDeviceInfo = struct {
     /// Active cooling support.
-    bool active_cooling;
+    active_cooling bool;
     /// Passive cooling support.
-    bool passive_cooling;
+    passive_cooling bool;
     /// GPU throttling support.
-    bool gpu_throttling;
+    gpu_throttling bool;
     /// Number of trip points.
-    uint32 num_trip_points;
+    num_trip_points uint32;
     /// Big-little architecture.
-    bool big_little;
+    big_little bool;
     /// Critical temperature in degrees Celsius.
-    float32 critical_temp_celsius;
+    critical_temp_celsius float32;
     /// Trip point information.
-    array<ThermalTemperatureInfo>:MAX_TRIP_POINTS trip_point_info;
+    trip_point_info array<ThermalTemperatureInfo, MAX_TRIP_POINTS>;
     /// Operating point information.
-    array<OperatingPoint>:MAX_DVFS_DOMAINS opps;
+    opps array<OperatingPoint, MAX_DVFS_DOMAINS>;
 };
 
-[ForDeprecatedCBindings]
+@for_deprecated_c_bindings
 protocol Device {
     compose fuchsia.hardware.temperature.Device;
 
     /// Get information about the device's current state.
-    GetInfo() -> (zx.status status, ThermalInfo? info);
+    GetInfo() -> (struct {
+        status zx.status;
+        info box<ThermalInfo>;
+    });
 
     /// Get information about the device's thermal capabilities and trip points.
-    GetDeviceInfo() -> (zx.status status, ThermalDeviceInfo? info);
+    GetDeviceInfo() -> (struct {
+        status zx.status;
+        info box<ThermalDeviceInfo>;
+    });
 
     /// Get the device's operating points.
     /// TODO(bradenkell): Can this be removed? GetDeviceInfo() provides the same information.
-    GetDvfsInfo(PowerDomain power_domain) -> (zx.status status, OperatingPoint? info);
+    GetDvfsInfo(struct {
+        power_domain PowerDomain;
+    }) -> (struct {
+        status zx.status;
+        info box<OperatingPoint>;
+    });
 
     /// Get an event to get trip point notifications on. `ZX_USER_SIGNAL_`0 is changed when either
     /// trip point is reached. It is deasserted when the state is read via GetInfo.
-    GetStateChangeEvent() -> (zx.status status, zx.handle:EVENT? handle);
+    GetStateChangeEvent() -> (resource struct {
+        status zx.status;
+        handle zx.handle:<EVENT, optional>;
+    });
 
     /// Get a port to get trip point notification packets.
-    GetStateChangePort() -> (zx.status status, zx.handle:PORT? handle);
+    GetStateChangePort() -> (resource struct {
+        status zx.status;
+        handle zx.handle:<PORT, optional>;
+    });
 
     /// Sets a trip point in degrees Celsius. When the sensor reaches the trip point temperature the
     /// device will notify on an event.
-    SetTripCelsius(uint32 id, float32 temp) -> (zx.status status);
+    SetTripCelsius(struct {
+        id uint32;
+        temp float32;
+    }) -> (struct {
+        status zx.status;
+    });
 
     /// Get the current operating point index.
-    GetDvfsOperatingPoint(PowerDomain power_domain) -> (zx.status status, uint16 op_idx);
+    GetDvfsOperatingPoint(struct {
+        power_domain PowerDomain;
+    }) -> (struct {
+        status zx.status;
+        op_idx uint16;
+    });
 
     /// Set the operating point index.
-    SetDvfsOperatingPoint(uint16 op_idx, PowerDomain power_domain) -> (zx.status status);
+    SetDvfsOperatingPoint(struct {
+        op_idx uint16;
+        power_domain PowerDomain;
+    }) -> (struct {
+        status zx.status;
+    });
 
     /// Get the current fan level.
-    GetFanLevel() -> (zx.status status, uint32 fan_level);
+    GetFanLevel() -> (struct {
+        status zx.status;
+        fan_level uint32;
+    });
 
     /// Set the fan level.
-    SetFanLevel(uint32 fan_level) -> (zx.status status);
+    SetFanLevel(struct {
+        fan_level uint32;
+    }) -> (struct {
+        status zx.status;
+    });
 };

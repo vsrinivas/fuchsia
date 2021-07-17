@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 /// The Inspect VMO Validator program starts and controls a "puppet" program to
 /// exercise each Inspect library. This file defines the protocol to exercise
 /// the library (and report the result of commands). (After executing some
@@ -14,12 +12,12 @@ using fuchsia.inspect as inspect;
 using zx;
 
 /// InitializationParams tells how to initialize the Inspect library.
-table InitializationParams {
-    1: uint64 vmoSize;
+type InitializationParams = table {
+    1: vmoSize uint64;
 };
 
 /// TestResult tells the result of executing an Initialize or Act command.
-enum TestResult {
+type TestResult = strict enum {
     /// The function call completed without error.
     OK = 0;
     /// The Inspect library doesn't implement a requested feature.
@@ -31,245 +29,267 @@ enum TestResult {
 };
 
 // One-to-one mapping flag used in LINK block
-enum LinkDisposition {
+type LinkDisposition = strict enum {
     CHILD = 0;
     INLINE = 1;
 };
 
 /// The data in the VMO is tree-structured, and
 /// ROOT_ID identifies the (virtual) root node.
-const uint32 ROOT_ID = 0;
+const ROOT_ID uint32 = 0;
 
 /// Tells the puppet to create a Node with the given name, parentage, and ID
 /// (the id is specified so other nodes can later be created under it).
-struct CreateNode {
-    uint32 parent;
-    uint32 id;
-    string name;
+type CreateNode = struct {
+    parent uint32;
+    id uint32;
+    name string;
 };
 
 /// Tells the puppet to delete the given node.
-struct DeleteNode {
-    uint32 id;
+type DeleteNode = struct {
+    id uint32;
 };
 
-enum NumberType : uint8 {
+type NumberType = strict enum : uint8 {
     INT = 1;
     UINT = 2;
     DOUBLE = 3;
 };
 
-flexible union Number {
-    1: int64 int_t;
-    2: uint64 uint_t;
-    3: float64 double_t;
+type Number = flexible union {
+    1: int_t int64;
+    2: uint_t uint64;
+    3: double_t float64;
 };
 
 /// Tells the puppet to create a property with the given numeric value.
-struct CreateNumericProperty {
-    uint32 parent;
-    uint32 id;
-    string name;
-    Number value;
+type CreateNumericProperty = struct {
+    parent uint32;
+    id uint32;
+    name string;
+    value Number;
 };
 
 /// Tells the puppet to create a property with the given byte array value.
-struct CreateBytesProperty {
-    uint32 parent;
-    uint32 id;
-    string name;
-    vector<uint8> value;
+type CreateBytesProperty = struct {
+    parent uint32;
+    id uint32;
+    name string;
+    value vector<uint8>;
 };
 
 /// Tells the puppet to create a property with the given string value.
-struct CreateStringProperty {
-    uint32 parent;
-    uint32 id;
-    string name;
-    string value;
+type CreateStringProperty = struct {
+    parent uint32;
+    id uint32;
+    name string;
+    value string;
 };
 
 /// Tells the puppet to create a property with the given bool value.
-struct CreateBoolProperty {
-    uint32 parent;
-    uint32 id;
-    string name;
-    bool value;
+type CreateBoolProperty = struct {
+    parent uint32;
+    id uint32;
+    name string;
+    value bool;
 };
 
 /// Tells the puppet to delete an existing property.
-struct DeleteProperty {
-    uint32 id;
+type DeleteProperty = struct {
+    id uint32;
 };
 
-struct AddNumber {
-    uint32 id;
-    Number value;
+type AddNumber = struct {
+    id uint32;
+    value Number;
 };
 
-struct SubtractNumber {
-    uint32 id;
-    Number value;
+type SubtractNumber = struct {
+    id uint32;
+    value Number;
 };
 
-struct SetNumber {
-    uint32 id;
-    Number value;
+type SetNumber = struct {
+    id uint32;
+    value Number;
 };
 
-struct SetBytes {
-    uint32 id;
-    vector<uint8> value;
+type SetBytes = struct {
+    id uint32;
+    value vector<uint8>;
 };
 
-struct SetString {
-    uint32 id;
-    string value;
+type SetString = struct {
+    id uint32;
+    value string;
 };
 
-struct SetBool {
-    uint32 id;
-    bool value;
+type SetBool = struct {
+    id uint32;
+    value bool;
 };
 
-struct CreateArrayProperty {
-    uint32 parent;
-    uint32 id;
-    string name;
-    uint64 slots;
-    NumberType number_type;
+type CreateArrayProperty = struct {
+    parent uint32;
+    id uint32;
+    name string;
+    slots uint64;
+    number_type NumberType;
 };
 
-struct ArraySet {
-    uint32 id;
-    uint64 index;
-    Number value;
+type ArraySet = struct {
+    id uint32;
+    index uint64;
+    value Number;
 };
 
-struct ArrayAdd {
-    uint32 id;
-    uint64 index;
-    Number value;
+type ArrayAdd = struct {
+    id uint32;
+    index uint64;
+    value Number;
 };
 
-struct ArraySubtract {
-    uint32 id;
-    uint64 index;
-    Number value;
+type ArraySubtract = struct {
+    id uint32;
+    index uint64;
+    value Number;
 };
 
-struct CreateLinearHistogram {
-    uint32 parent;
-    uint32 id;
-    string name;
-    Number floor;
-    Number step_size;
-    uint64 buckets;
+type CreateLinearHistogram = struct {
+    parent uint32;
+    id uint32;
+    name string;
+    floor Number;
+    step_size Number;
+    buckets uint64;
 };
 
-struct CreateExponentialHistogram {
-    uint32 parent;
-    uint32 id;
-    string name;
-    Number floor;
-    Number initial_step;
-    Number step_multiplier;
-    uint64 buckets;
+type CreateExponentialHistogram = struct {
+    parent uint32;
+    id uint32;
+    name string;
+    floor Number;
+    initial_step Number;
+    step_multiplier Number;
+    buckets uint64;
 };
 
-struct Insert {
-    uint32 id;
-    Number value;
+type Insert = struct {
+    id uint32;
+    value Number;
 };
 
-struct InsertMultiple {
-    uint32 id;
-    Number value;
-    uint64 count;
+type InsertMultiple = struct {
+    id uint32;
+    value Number;
+    count uint64;
 };
 
 // Action sent to instruct a Puppet to create a lazy node.
 // TODO(fxbug.dev/49114): This should be modified to allow for creating lazy nodes past 1-level deep.
-struct CreateLazyNode {
+type CreateLazyNode = struct {
     // Unique id for parent block.
-    uint32 parent;
+    parent uint32;
 
     // Unique id used between Controller and Puppet to uniquely identify lazy node.
-    uint32 id;
+    id uint32;
 
     // Name passed in to CreateLazy{Node,Values) method
-    string name;
+    name string;
 
     // Disposition flag that determines appropriate method.
-    LinkDisposition disposition;
+    disposition LinkDisposition;
 
     // Send a sequence of actions to execute within the lambda to create Inspect
     // tree.
-    vector<Action> actions;
+    actions vector<Action>;
 };
 
 // Action sent to instruct a Puppet to delete a lazy node.
-struct DeleteLazyNode {
+type DeleteLazyNode = struct {
     // Unique id used between Controller and Puppet to uniquely identify lazy node.
-    uint32 id;
+    id uint32;
 };
 
 /// Tells the puppet to do something to modify the VMO.
-flexible union Action {
-    1: CreateNode create_node;
-    2: DeleteNode delete_node;
-    3: CreateNumericProperty create_numeric_property;
-    4: CreateBytesProperty create_bytes_property;
-    5: CreateStringProperty create_string_property;
-    6: DeleteProperty delete_property;
-    7: SetNumber set_number;
-    8: SetString set_string;
-    9: SetBytes set_bytes;
-    10: AddNumber add_number;
-    11: SubtractNumber subtract_number;
-    12: CreateArrayProperty create_array_property;
-    13: ArraySet array_set;
-    14: ArrayAdd array_add;
-    15: ArraySubtract array_subtract;
-    16: CreateLinearHistogram create_linear_histogram;
-    17: CreateExponentialHistogram create_exponential_histogram;
-    18: Insert insert;
-    19: InsertMultiple insert_multiple;
-    20: CreateBoolProperty create_bool_property;
-    21: SetBool set_bool;
+type Action = flexible union {
+    1: create_node CreateNode;
+    2: delete_node DeleteNode;
+    3: create_numeric_property CreateNumericProperty;
+    4: create_bytes_property CreateBytesProperty;
+    5: create_string_property CreateStringProperty;
+    6: delete_property DeleteProperty;
+    7: set_number SetNumber;
+    8: set_string SetString;
+    9: set_bytes SetBytes;
+   10: add_number AddNumber;
+   11: subtract_number SubtractNumber;
+   12: create_array_property CreateArrayProperty;
+   13: array_set ArraySet;
+   14: array_add ArrayAdd;
+   15: array_subtract ArraySubtract;
+   16: create_linear_histogram CreateLinearHistogram;
+   17: create_exponential_histogram CreateExponentialHistogram;
+   18: insert Insert;
+   19: insert_multiple InsertMultiple;
+   20: create_bool_property CreateBoolProperty;
+   21: set_bool SetBool;
 };
 
 /// Tells the puppet to do something to modify a lazy node.
-flexible union LazyAction {
-    1: CreateLazyNode create_lazy_node;
-    2: DeleteLazyNode delete_lazy_node;
+type LazyAction = flexible union {
+    1: create_lazy_node CreateLazyNode;
+    2: delete_lazy_node DeleteLazyNode;
 };
 
-[Discoverable]
+@discoverable
 protocol Validate {
     /// Initializes the Inspect library being tested by the puppet.
-    Initialize(InitializationParams params) -> (zx.handle? vmo, TestResult result);
+    Initialize(struct {
+        params InitializationParams;
+    }) -> (resource struct {
+        vmo zx.handle:optional;
+        result TestResult;
+    });
 
     /// Use instead of `Initialize` on puppets which support the Tree / Lazy method of getting VMOs.
     /// The root VMO can be obtained via the returned Tree protocol.
-    [Transitional]
-    InitializeTree(InitializationParams params) -> (inspect.Tree? tree, TestResult result);
+    @transitional
+    InitializeTree(struct {
+        params InitializationParams;
+    }) -> (resource struct {
+        tree client_end:<inspect.Tree, optional>;
+        result TestResult;
+    });
 
     /// Instruct the puppet to expose its current data in its out/diagnostics directory.
     ///
     /// Note: It is an error for more than one Validate connection to
     /// Publish at once. Unpublish must be called to cleanup.
-    [Transitional]
-    Publish() -> (TestResult result);
+    @transitional
+    Publish() -> (struct {
+        result TestResult;
+    });
 
     /// Instruct the puppet to unpublish any data it currently has present in out/diagnostics.
-    [Transitional]
-    Unpublish() -> (TestResult result);
+    @transitional
+    Unpublish() -> (struct {
+        result TestResult;
+    });
 
     /// Modifies the contents of the VMO.
-    Act(Action action) -> (TestResult result);
+    Act(struct {
+        action Action;
+    }) -> (struct {
+        result TestResult;
+    });
 
     /// Modifies the contents of a lazy node.
-    [Transitional]
-    ActLazy(LazyAction lazy_action) -> (TestResult result);
+    @transitional
+    ActLazy(struct {
+        lazy_action LazyAction;
+    }) -> (struct {
+        result TestResult;
+    });
 };

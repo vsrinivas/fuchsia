@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.media.drm;
 
 /// Standard error codes for DRM related protocols. Many of the error code names
@@ -11,7 +9,7 @@ library fuchsia.media.drm;
 ///
 /// [`W3C Encrypted Media Extensions`]:
 ///   https://www.w3.org/TR/encrypted-media
-enum Error {
+type Error = strict enum {
     // Encrypted Media Extension error codes
     /// An error that occurs when the client provides invalid parameter data to
     /// the server, such as an invalid license response message.

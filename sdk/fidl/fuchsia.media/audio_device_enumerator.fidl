@@ -1,46 +1,46 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.media;
 
 using fuchsia.hardware.audio;
 
-bits AudioGainInfoFlags : uint32 {
+type AudioGainInfoFlags = strict bits : uint32 {
     MUTE = 0x01;
     AGC_SUPPORTED = 0x02;
     AGC_ENABLED = 0x04;
 };
 
-struct AudioGainInfo {
-    float32 gain_db;
-    AudioGainInfoFlags flags;
+type AudioGainInfo = struct {
+    gain_db float32;
+    flags AudioGainInfoFlags;
 };
 
-struct AudioDeviceInfo {
-    string name;
-    string unique_id;
-    uint64 token_id;
-    bool is_input;
+type AudioDeviceInfo = struct {
+    name string;
+    unique_id string;
+    token_id uint64;
+    is_input bool;
 
     // We include these during device enumeration to reduce server round-trip
     // calls, and to simplify a user's state machine when determining current
     // device state during initial enumeration.
-    AudioGainInfo gain_info;
-    bool is_default;
+    gain_info AudioGainInfo;
+    is_default bool;
 };
 
-bits AudioGainValidFlags : uint32 {
+type AudioGainValidFlags = strict bits : uint32 {
     GAIN_VALID = 0x01;
     MUTE_VALID = 0x02;
     AGC_VALID = 0x04;
 };
 
-[Discoverable]
+@discoverable
 protocol AudioDeviceEnumerator {
     /// Obtain the list of currently active audio devices.
-    GetDevices() -> (vector<AudioDeviceInfo> devices);
+    GetDevices() -> (struct {
+        devices vector<AudioDeviceInfo>;
+    });
 
     /// Events sent when devices are added or removed, or when properties of a
     /// device change.
@@ -55,12 +55,21 @@ protocol AudioDeviceEnumerator {
     //
     // Con: Having filters like this means that the server needs to maintain a
     // bit more per-client state.
-    -> OnDeviceAdded(AudioDeviceInfo device);
-    -> OnDeviceRemoved(uint64 device_token);
-    -> OnDeviceGainChanged(uint64 device_token, AudioGainInfo gain_info);
-    [Deprecated]
-    -> OnDefaultDeviceChanged(uint64 old_default_token,
-                              uint64 new_default_token);
+    -> OnDeviceAdded(struct {
+        device AudioDeviceInfo;
+    });
+    -> OnDeviceRemoved(struct {
+        device_token uint64;
+    });
+    -> OnDeviceGainChanged(struct {
+        device_token uint64;
+        gain_info AudioGainInfo;
+    });
+    @deprecated
+    -> OnDefaultDeviceChanged(struct {
+        old_default_token uint64;
+        new_default_token uint64;
+    });
 
     /// Gain/Mute/AGC control
     ///
@@ -81,16 +90,18 @@ protocol AudioDeviceEnumerator {
     /// gain_info structure, while passing (SetAudioGainFlag_GainValid |
     /// SetAudioGainFlag_MuteValid) will cause both the mute and the gain
     /// status to be changed simultaneously.
-    GetDeviceGain(uint64 device_token)
-        -> (uint64 device_token, AudioGainInfo gain_info);
-    SetDeviceGain(uint64 device_token,
-                  AudioGainInfo gain_info,
-                  AudioGainValidFlags valid_flags);
+    GetDeviceGain(struct {
+        device_token uint64;
+    }) -> (struct {
+        device_token uint64;
+        gain_info AudioGainInfo;
+    });
+    SetDeviceGain(struct {
+        device_token uint64;
+        gain_info AudioGainInfo;
+        valid_flags AudioGainValidFlags;
+    });
 
-    /// Default Device
-    ///
-    /// Fetch the device ID of the current default input or output device, or
-    /// `ZX_KOID_INVALID` if no such device exists.
     //
     // TODO(mpuryear): solidify the concept of "default" device. Right now, it
     // basically means the device which would be chosen as the destination of an
@@ -104,11 +115,24 @@ protocol AudioDeviceEnumerator {
     // plugged input/output". As the human level logic which drives the audio
     // routing policy evolves and becomes more complicated, this will probably
     // change.
-    [Deprecated, Transitional]
-    GetDefaultInputDevice() -> (uint64 device_token);
-    [Deprecated, Transitional]
-    GetDefaultOutputDevice() -> (uint64 device_token);
+    /// Default Device
+    ///
+    /// Fetch the device ID of the current default input or output device, or
+    /// `ZX_KOID_INVALID` if no such device exists.
+    @deprecated
+    @transitional
+    GetDefaultInputDevice() -> (struct {
+        device_token uint64;
+    });
+    @deprecated
+    @transitional
+    GetDefaultOutputDevice() -> (struct {
+        device_token uint64;
+    });
 
-    AddDeviceByChannel(string:256 device_name, bool is_input,
-                       fuchsia.hardware.audio.StreamConfig channel);
+    AddDeviceByChannel(resource struct {
+        device_name string:256;
+        is_input bool;
+        channel client_end:fuchsia.hardware.audio.StreamConfig;
+    });
 };

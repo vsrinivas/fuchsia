@@ -1,17 +1,15 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.input.report;
 
 /// A hardcoded number of max contacts per report. This should be increased in the future if
 /// we see devices with more than the max amount.
-const uint32 TOUCH_MAX_CONTACTS = 10;
-const uint32 TOUCH_MAX_NUM_BUTTONS = 10;
+const TOUCH_MAX_CONTACTS uint32 = 10;
+const TOUCH_MAX_NUM_BUTTONS uint32 = 10;
 
 /// The device type from which the touch originated.
-enum TouchType : uint32 {
+type TouchType = strict enum : uint32 {
     /// A touch screen has direct finger input associated with a display.
     TOUCHSCREEN = 1;
     /// A touch pad is a pointer device that tracks finger positions.
@@ -19,76 +17,76 @@ enum TouchType : uint32 {
 };
 
 /// `ContactInputDescriptor` describes the fields associated with a touch on a touch device.
-table ContactInputDescriptor {
+type ContactInputDescriptor = table {
     /// Describes the reporting of the x-axis.
-    1: Axis position_x;
+    1: position_x Axis;
 
     /// Describes the reporting of the y-axis.
-    2: Axis position_y;
+    2: position_y Axis;
 
     /// Pressure of the contact.
-    3: Axis pressure;
+    3: pressure Axis;
 
     /// Width of the area of contact.
-    4: Axis contact_width;
+    4: contact_width Axis;
 
     /// Height of the area of contact.
-    5: Axis contact_height;
+    5: contact_height Axis;
 };
 
 /// Describes the format of the input report that will be sent from the keyboard
 /// to the device.
-table TouchInputDescriptor {
+type TouchInputDescriptor = table {
     /// The contact descriptors associated with this touch descriptor.
-    1: vector<ContactInputDescriptor>:TOUCH_MAX_CONTACTS contacts;
+    1: contacts vector<ContactInputDescriptor>:TOUCH_MAX_CONTACTS;
 
     /// The max number of contacts that this touch device can report at once.
-    2: uint32 max_contacts;
+    2: max_contacts uint32;
 
     /// The type of touch device being used.
-    3: TouchType touch_type;
+    3: touch_type TouchType;
 
     /// Identifiers for the physical buttons on a touch device.
-    4: vector<uint8>:TOUCH_MAX_NUM_BUTTONS buttons;
+    4: buttons vector<uint8>:TOUCH_MAX_NUM_BUTTONS;
 };
 
 /// The capabilities of a touch device.
-table TouchDescriptor {
-    1: TouchInputDescriptor input;
+type TouchDescriptor = table {
+    1: input TouchInputDescriptor;
 };
 
 /// `ContactInputReport` describes one touch on a touch device.
-table ContactInputReport {
+type ContactInputReport = table {
     /// Identifier for this contact.
-    1: uint32 contact_id;
+    1: contact_id uint32;
 
     /// A contact's position on the x axis.
-    2: int64 position_x;
+    2: position_x int64;
 
     /// A contact's position on the y axis.
-    3: int64 position_y;
+    3: position_y int64;
 
     /// Pressure of the contact.
-    4: int64 pressure;
+    4: pressure int64;
 
     /// Width of the bounding box around the touch contact. Combined with
     /// `contact_height`, this describes the area of the touch contact.
     /// `contact_width` and `contact_height` should both have units of distance,
     /// and they should be in the same units as `position_x` and `position_y`.
-    5: int64 contact_width;
+    5: contact_width int64;
 
     /// Height of the bounding box around the touch contact. Combined with
     /// `contact_width`, this describes the area of the touch contact.
     /// `contact_width` and `contact_height` should both have units of distance,
     /// and they should be in the same units as `position_x` and `position_y`.
-    6: int64 contact_height;
+    6: contact_height int64;
 };
 
 /// `TouchInputReport` describes the current contacts recorded by the touchscreen.
-table TouchInputReport {
+type TouchInputReport = table {
     /// The contacts currently being reported by the device.
-    1: vector<ContactInputReport>:TOUCH_MAX_CONTACTS contacts;
+    1: contacts vector<ContactInputReport>:TOUCH_MAX_CONTACTS;
 
     /// Identifiers for currently pressed buttons.
-    2: vector<uint8>:TOUCH_MAX_NUM_BUTTONS pressed_buttons;
+    2: pressed_buttons vector<uint8>:TOUCH_MAX_NUM_BUTTONS;
 };

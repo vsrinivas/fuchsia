@@ -1,19 +1,17 @@
 // Copyright 2017 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.ui.input;
 using fuchsia.ui.input3;
 
-enum KeyboardType {
+type KeyboardType = strict enum {
     TEXT = 0;
     NUMBER = 1;
     PHONE = 2;
     DATETIME = 3;
 };
 
-enum InputMethodAction {
+type InputMethodAction = strict enum {
     UNSPECIFIED = 0;
     NONE = 1;
     GO = 2;
@@ -25,33 +23,43 @@ enum InputMethodAction {
 };
 
 /// The current text, selection, and composing state for editing a run of text.
-struct TextInputState {
+type TextInputState = struct {
     /// Current state revision to avoid race conditions.
-    uint32 revision;
+    revision uint32;
 
     /// The current text being edited.
-    string text;
+    text string;
 
     /// The range of text that is currently selected.
-    TextSelection selection;
+    selection TextSelection;
 
     /// The range of text that is still being composed.
-    TextRange composing;
+    composing TextRange;
 };
 
 /// A interface for interacting with a text input control.
 protocol InputMethodEditor {
-    SetKeyboardType(KeyboardType keyboard_type);
-    SetState(TextInputState state);
+    SetKeyboardType(struct {
+        keyboard_type KeyboardType;
+    });
+    SetState(struct {
+        state TextInputState;
+    });
 
     // DEPRECATED: Instead, use `fuchsia.ui.input3.KeyEventInjector`.
     // TODO(fxbug.dev/72752)
-    InjectInput(InputEvent event);
+    InjectInput(struct {
+        event InputEvent;
+    });
 
     // DEPRECATED: Instead, use `fuchsia.ui.input3.KeyEventInjector`.
     // TODO(fxbug.dev/72752)
-    [Transitional]
-    DispatchKey3(fuchsia.ui.input3.KeyEvent event) -> (bool handled);
+    @transitional
+    DispatchKey3(struct {
+        event fuchsia.ui.input3.KeyEvent;
+    }) -> (struct {
+        handled bool;
+    });
 
     // TODO(fxbug.dev/26729): remove these in a later change, after PlatformView has been
     // switched over to open/close on the input_connection_ instead.
@@ -61,6 +69,11 @@ protocol InputMethodEditor {
 
 /// An interface to receive information from `TextInputService`.
 protocol InputMethodEditorClient {
-    DidUpdateState(TextInputState state, InputEvent? event);
-    OnAction(InputMethodAction action);
+    DidUpdateState(struct {
+        state TextInputState;
+        event InputEvent:optional;
+    });
+    OnAction(struct {
+        action InputMethodAction;
+    });
 };

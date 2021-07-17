@@ -1,15 +1,13 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.ui.accessibility.view;
 
 using fuchsia.ui.views;
 
 /// Registry allows a privileged client to create an accessibility ViewHolder
 /// as a child of the root view in the scene graph.
-[Discoverable]
+@discoverable
 protocol Registry {
     /// Creates a new accessibility `ViewHolder` as a child of the root view
     /// in the scene graph. The created ViewHolder holds an accessibility view.
@@ -39,7 +37,10 @@ protocol Registry {
     /// - ZX_ERR_INVALID_ARGS, if the provided `ViewRef` is invalid.
     /// - ZX_ERR_PEER_CLOSED, if Scenic fails creating the accessibility `ViewHolder`.
     ///
-    CreateAccessibilityViewHolder(fuchsia.ui.views.ViewRef a11y_view_ref,
-                                  fuchsia.ui.views.ViewHolderToken a11y_view_token)
-        -> (fuchsia.ui.views.ViewHolderToken client_view_holder_token);
+    CreateAccessibilityViewHolder(resource struct {
+        a11y_view_ref fuchsia.ui.views.ViewRef;
+        a11y_view_token fuchsia.ui.views.ViewHolderToken;
+    }) -> (resource struct {
+        client_view_holder_token fuchsia.ui.views.ViewHolderToken;
+    });
 };

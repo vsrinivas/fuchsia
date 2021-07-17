@@ -1,39 +1,46 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.gpu.mali;
 
 using zx;
 
-struct MaliProperties {
-    bool supports_protected_mode;
+type MaliProperties = struct {
+    supports_protected_mode bool;
 
     /// If true, the driver should use Enter/StartExit/FinishExit protected mode
     /// callbacks rather than entering protected mode directly with register
     /// writes.
-    bool use_protected_mode_callbacks;
+    use_protected_mode_callbacks bool;
 };
 
 /// Low-level protocol between ARM Mali GPU driver and low-level SoC driver.
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol ArmMali {
-    GetProperties() -> (MaliProperties properties);
+    GetProperties() -> (struct {
+        properties MaliProperties;
+    });
 
     /// Cause the GPU to enter protected mode. All buses must be idle and the L2
     /// cache cleared before executing this command.
-    EnterProtectedMode() -> (zx.status status);
+    EnterProtectedMode() -> (struct {
+        status zx.status;
+    });
 
     /// Start the process of exiting protected mode. All buses must be idle and
     /// the L2 cache cleared before executing this command. The GPU will not be
     /// able to access any memory after this command is complete and will be
     /// reset. The driver must wait for the reset to complete then call
     /// FinishExitProtectedMode().
-    StartExitProtectedMode() -> (zx.status status);
+    StartExitProtectedMode() -> (struct {
+        status zx.status;
+    });
 
     /// Allows the GPU to access non-protected memory. Must only be called after
     /// StartExitProtectedMode. The RESET_COMPLETED bit in the GPU_IRQ_RAWSTAT
     /// register must be set while this is called.
-    FinishExitProtectedMode() -> (zx.status status);
+    FinishExitProtectedMode() -> (struct {
+        status zx.status;
+    });
 };

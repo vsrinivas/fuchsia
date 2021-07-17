@@ -1,48 +1,66 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library zx;
 
 // TODO(scottmg): These syscalls don't match the general naming convention of
 // zx_something_name(), they're just zx_name(), so NoProtocolPrefix tells the
 // generator to exclude putting "Misc" in the name.
-[Transport = "Syscall",
-NoProtocolPrefix]
+@transport("Syscall")
+@no_protocol_prefix
 protocol misc {
     /// High resolution sleep.
     /// Rights: None.
-    [blocking]
-    nanosleep(time deadline) -> (status status);
+    @blocking
+    nanosleep(struct {
+        deadline time;
+    }) -> (struct {
+        status status;
+    });
 
     /// Read the number of high-precision timer ticks since boot.
-    [vdsocall]
-    ticks_get() -> (ticks ticks);
+    @vdsocall
+    ticks_get() -> (struct {
+        ticks ticks;
+    });
 
     /// Read the number of high-precision timer ticks in a second.
-    [const,
-    vdsocall]
-    ticks_per_second() -> (ticks ticks);
+    @const
+    @vdsocall
+    ticks_per_second() -> (struct {
+        ticks ticks;
+    });
 
     /// Convert a time relative to now to an absolute deadline.
-    [vdsocall]
-    deadline_after(duration nanoseconds) -> (time time);
+    @vdsocall
+    deadline_after(struct {
+        nanoseconds duration;
+    }) -> (struct {
+        time time;
+    });
 
     /// Unmap memory, close handle, exit.
-    [vdsocall]
-    vmar_unmap_handle_close_thread_exit(handle:VMAR vmar_handle,
-                                        vaddr addr, usize size,
-                                        [Release] handle close_handle)
-        -> (status status);
+    @vdsocall
+    vmar_unmap_handle_close_thread_exit(resource struct {
+        vmar_handle handle:VMAR;
+        addr vaddr;
+        size usize;
+        @release
+        close_handle handle;
+    }) -> (struct {
+        status status;
+    });
 
     /// Write to futex, wake futex, close handle, exit.
-    [noreturn,
-    vdsocall]
-    futex_wake_handle_close_thread_exit(const_futexptr value_ptr,
-                                        uint32 wake_count,
-                                        int32 new_value,
-                                        [Release] handle close_handle);
+    @noreturn
+    @vdsocall
+    futex_wake_handle_close_thread_exit(resource struct {
+        value_ptr const_futexptr;
+        wake_count uint32;
+        new_value int32;
+        @release
+        close_handle handle;
+    });
 
     // Read the number of high-precision timer ticks since boot, but demand
     // that the read be performed using a syscall, instead of a vdso call.
@@ -52,6 +70,8 @@ protocol misc {
     // the proper thing, either directly reading from the hardware register
     // backing the tick counter, or by making a syscall if the register is not
     // accessible from user mode code (for whatever reason).
-    [internal]
-    ticks_get_via_kernel() -> (ticks ticks);
+    @internal
+    ticks_get_via_kernel() -> (struct {
+        ticks ticks;
+    });
 };

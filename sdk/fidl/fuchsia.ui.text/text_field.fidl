@@ -1,8 +1,6 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.ui.text;
 
 /// Current state of the `TextField`.
@@ -14,7 +12,7 @@ library fuchsia.ui.text;
 /// - No cursor support
 /// - No selection support
 /// - No composition/dead key support
-table TextFieldState {
+type TextFieldState = table {
     /// Revision is an opaque identifier of the state. It should not be a subject of assumptions
     /// or manipulations for the client. Client's responsibility is to ensure the revision is
     /// up to date using `ReadableTextField.WatchState()` prior to modifying text contents in
@@ -23,15 +21,15 @@ table TextFieldState {
     /// Examples:
     ///  - content in the text field is changed
     /// Required.
-    1: uint64 revision;
+    1: revision uint64;
 
     /// The start and end of the entire text field.
     /// Required.
-    2: Range document;
+    2: document Range;
 };
 
 /// Indicates errors that can occur with various TextField methods.
-enum Error {
+type Error = strict enum {
     /// Indicates the revision number used is no longer valid.
     BAD_REVISION = 1;
 
@@ -51,7 +49,10 @@ protocol EditableTextField {
     /// As a result of calling this method text field content is updated as well as
     /// `TextFieldState.revision`, which in turn will notify listeners via response to
     /// `ReadableTextField.WatchState()`
-    Replace(Range range, string:MAX new_text);
+    Replace(struct {
+        range Range;
+        new_text string:MAX;
+    });
 };
 
 /// Text retrieving and state monitoring capabilities of the `TextField`.
@@ -61,12 +62,19 @@ protocol ReadableTextField {
     /// It's the caller's responsibility to make sure that text isn't too long for a FIDL
     /// message; if it is, the client should break up the string into separate `GetContents`
     /// calls.
-    GetContents(uint64 revision, Range range) -> (string:MAX contents) error Error;
+    GetContents(struct {
+        revision uint64;
+        range Range;
+    }) -> (struct {
+        contents string:MAX;
+    }) error Error;
 
     /// Returns current state of the `TextField`. First call to this method will be
     /// responded immediately. Responses to subsequent requests are responded as `revision`
     /// number of `TextInputState` changes.
-    WatchState() -> (TextFieldState state);
+    WatchState() -> (struct {
+        state TextFieldState;
+    });
 };
 
 /// Represents a text field or other kind of editing interface that can receive and present

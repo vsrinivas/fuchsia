@@ -1,17 +1,15 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 // GENERATED FILE: Regen with $(fx get-build-dir)/host-tools/regen_fidl_benchmark_suite
 
 library benchmarkfidl;
 
-enum EnumArrayElement {
+type EnumArrayElement = strict enum {
     A = 1;
     B = 2;
 };
 
-struct EnumArray256 {
-    array<EnumArrayElement>:256 values;
+type EnumArray256 = struct {
+    values array<EnumArrayElement, 256>;
 };

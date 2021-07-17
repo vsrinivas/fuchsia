@@ -1,42 +1,60 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library zx;
 
 alias mutable_vector_void = vector<byte>;
 
-[Transport="Syscall"]
+@transport("Syscall")
 protocol Kwrap {
     // Simple out ptr.
-    SimpleCase() -> (time time);
+    SimpleCase() -> (struct {
+        time time;
+    });
 
-    MultipleInHandles(vector<handle> handles) -> (status status);
+    MultipleInHandles(resource struct {
+        handles vector<handle>;
+    }) -> (struct {
+        status status;
+    });
 
     // vdsocall excluded.
-    [vdsocall]
-    TicksGet() -> (ticks ticks);
+    @vdsocall
+    TicksGet() -> (struct {
+        ticks ticks;
+    });
 
     // noreturn handled properly.
-    [noreturn]
+    @noreturn
     ANoRetFunc();
 
     // |buffer| treated as inout parameter.
-    InoutArgs(handle:VMO handle,
-            uint32 op,
-            uint64 offset,
-            uint64 size,
-            mutable_vector_void buffer) ->
-        (status status);
+    InoutArgs(resource struct {
+        handle handle:VMO;
+        op uint32;
+        offset uint64;
+        size uint64;
+        buffer mutable_vector_void;
+    }) -> (struct {
+        status status;
+    });
 
     // Output handle copied properly.
-    OutputHandle() -> (status status, handle:EVENT event);
+    OutputHandle() -> (resource struct {
+        status status;
+        event handle:EVENT;
+    });
 
     // When two output handles, status and copy are verified before any bytes
     // returned.
-    TwoOutputHandle() -> (status status, handle:EVENT out0, handle:EVENT out1);
+    TwoOutputHandle() -> (resource struct {
+        status status;
+        out0 handle:EVENT;
+        out1 handle:EVENT;
+    });
 
-    [testonly]
-    CompiledOut() -> (status status);
+    @testonly
+    CompiledOut() -> (struct {
+        status status;
+    });
 };

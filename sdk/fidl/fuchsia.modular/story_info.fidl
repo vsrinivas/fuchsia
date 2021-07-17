@@ -1,51 +1,49 @@
 // Copyright 2016 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.modular;
 
 /// Information about a story as provided to the SessionShell.
-struct StoryInfo {
+type StoryInfo = struct {
     /// URL of the first module run in this story. This module is free to
     /// run more modules in the story. Used for display purposes only.
     // TODO(thatguy): Remove this. It is not being set any more.
-    string:MAX? url;
+    url string:<MAX, optional>;
 
     /// The ID of the Story, used to reference it in method arguments.
-    string:MAX id;
+    id string:MAX;
 
     /// Wallclock time when the story was last focused. A UTC time in
     /// nanoseconds since UNIX epoch (1970-01-01 00:00).
     ///
     /// A value of zero means the story has never been focused.
-    int64 last_focus_time;
+    last_focus_time int64;
 
     /// Data the SessionShell wants to keep associated with this Story, like
     /// title, a color, or a display rank.
-    vector<StoryInfoExtraEntry>:MAX? extra;
+    extra vector<StoryInfoExtraEntry>:<MAX, optional>;
 };
 
 /// Information about a story as provided to the SessionShell.
 /// For transition purposes only.
-resource table StoryInfo2 {
+type StoryInfo2 = resource table {
     /// The ID of the Story, used to reference it in method arguments.
-    1: string:MAX id;
+    1: id string:MAX;
 
     /// Wallclock time when the story was last focused. A UTC time in
     /// nanoseconds since UNIX epoch (1970-01-01 00:00).
     ///
     /// A value of zero means the story has never been focused.
-    2: int64 last_focus_time;
+    2: last_focus_time int64;
 
     /// Collection of user-defined key-value attributes that describe
     /// this story.
     ///
     /// The `Annotation.value` field of each `Annotation` is always set.
-    3: vector<Annotation>:MAX_ANNOTATIONS_PER_STORY annotations;
+    3: annotations vector<Annotation>:MAX_ANNOTATIONS_PER_STORY;
 };
 
-struct StoryInfoExtraEntry {
-    string:MAX key;
-    string:MAX value;
+type StoryInfoExtraEntry = struct {
+    key string:MAX;
+    value string:MAX;
 };

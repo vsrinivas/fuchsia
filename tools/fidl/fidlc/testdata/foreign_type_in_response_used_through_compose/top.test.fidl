@@ -1,4 +1,3 @@
-deprecated_syntax;
 library fidl.test.foreigntypeinresponseusedthroughcompose;
 
 using middle;

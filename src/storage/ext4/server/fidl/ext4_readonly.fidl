@@ -1,183 +1,180 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.storage.ext4;
 
 using fuchsia.io;
 using fuchsia.mem;
 using zx;
 
-enum OutOfBoundsDirection {
+type OutOfBoundsDirection = strict enum {
     BELOW = 1;
     ABOVE = 2;
 };
 
-struct Success {
-};
+type Success = struct {};
 
-struct InvalidSuperBlock {
+type InvalidSuperBlock = struct {
     /// Byte position in filesystem image.
-    uint64 position;
+    position uint64;
 };
 
-struct InvalidSuperBlockMagic {
+type InvalidSuperBlockMagic = struct {
     /// Magic number.
-    uint16 value;
+    value uint16;
 };
 
-struct BlockNumberOutOfBounds {
+type BlockNumberOutOfBounds = struct {
     /// Block number.
-    uint64 block_number;
+    block_number uint64;
 };
 
-struct BlockSizeInvalid {
+type BlockSizeInvalid = struct {
     /// Block size.
-    uint32 block_size;
+    block_size uint32;
 };
 
-struct InvalidBlockGroupDesc {
+type InvalidBlockGroupDesc = struct {
     /// Byte position in filesystem image.
-    uint64 position;
+    position uint64;
 };
 
-struct InvalidINode {
+type InvalidINode = struct {
     /// INode number.
-    uint32 inode_number;
+    inode_number uint32;
 };
 
-struct InvalidExtentHeader {
-    // This will fill in in a followup change.
-};
+type InvalidExtentHeader = struct {
+        // This will fill in in a followup change.
+        };
 
-struct InvalidExtentHeaderMagic {
+type InvalidExtentHeaderMagic = struct {
     /// Magic number.
-    uint16 value;
+    value uint16;
 };
 
-struct InvalidExtent {
+type InvalidExtent = struct {
     /// Byte position in filesystem image.
-    uint64 position;
+    position uint64;
 };
 
-struct ExtentUnexpectedLength {
+type ExtentUnexpectedLength = struct {
     /// Size received.
-    uint64 size;
+    size uint64;
     /// Size expected.
-    uint64 expected;
+    expected uint64;
 };
 
-struct InvalidDirEntry2 {
+type InvalidDirEntry2 = struct {
     /// Byte position in filesystem image.
-    uint64 position;
+    position uint64;
 };
 
-struct DirEntry2NonUtf8 {
+type DirEntry2NonUtf8 = struct {
     /// Data that was unable to be converted into UTF-8.
     /// Limiting to 255 to match with the max filename length.
-    vector<uint8>:255 data;
+    data vector<uint8>:255;
 };
 
-struct InvalidInputPath {
+type InvalidInputPath = struct {
     /// Not implemented. Will be empty string.
-    string:1024 path;
+    path string:1024;
 };
 
-struct PathNotFound {
+type PathNotFound = struct {
     /// Path given.
-    string:1024 path;
+    path string:1024;
 };
 
 /// Directory entry has bad type value.
-struct BadEntryType {
+type BadEntryType = struct {
     /// Type value.
-    uint8 value;
+    value uint8;
 };
 
 /// Feature Incompatible flag has banned flags.
-struct BannedFeatureIncompat {
+type BannedFeatureIncompat = struct {
     /// Bitwise flags that are banned.
-    uint32 value;
+    value uint32;
 };
 
 /// Feature Incompatible flag has missing flags.
-struct RequiredFeatureIncompat {
+type RequiredFeatureIncompat = struct {
     /// Bitwise flags that are missing.
-    uint32 value;
+    value uint32;
 };
 
-struct Incompatible {
+type Incompatible = struct {
     /// Message stating what is wrong.
-    string:1024 msg;
+    msg string:1024;
 };
 
-struct BadFile {
+type BadFile = struct {
     /// Path of file.
-    string:1024 path;
+    path string:1024;
 };
 
-struct BadDirectory {
+type BadDirectory = struct {
     /// Path of directory.
-    string:1024 path;
+    path string:1024;
 };
 
-struct ReaderReadError {
+type ReaderReadError = struct {
     /// Byte position in filesystem image.
-    uint64 position;
+    position uint64;
 };
 
 /// Use `InvalidAddress` instead.
-[Deprecated]
-struct ReaderOutOfBounds {
+@deprecated
+type ReaderOutOfBounds = struct {
     /// Byte position in filesystem image.
-    uint64 position;
+    position uint64;
     /// Size of image.
-    uint64 size;
+    size uint64;
 };
 
-struct InvalidAddress {
+type InvalidAddress = struct {
     /// Byte position in filesystem image.
-    uint64 position;
+    position uint64;
     /// Direction of out of bounds.
-    OutOfBoundsDirection direction;
+    direction OutOfBoundsDirection;
     /// Boundary that was exceeded.
-    uint64 bound;
+    bound uint64;
 };
 
 /// Sub-result of an [`Ext4Server.MountVmo`] call denoting the actual error
 /// that occurred in the reader.
-flexible union ParseError {
+type ParseError = flexible union {
     // Failures during the initial parsing of the image start below.
     // See ext4_read_only::structs::ParsingError for more info.
-    1: InvalidSuperBlock invalid_super_block;
-    2: InvalidSuperBlockMagic invalid_super_block_magic;
-    3: BlockNumberOutOfBounds block_number_out_of_bounds;
-    4: BlockSizeInvalid block_size_invalid;
-    5: InvalidBlockGroupDesc invalid_block_group_desc;
-    6: InvalidINode invalid_inode;
-    7: InvalidExtentHeader invalid_extent_header;
-    8: InvalidExtentHeaderMagic invalid_extent_header_magic;
-    9: InvalidExtent invalid_extent;
-    10: ExtentUnexpectedLength extent_unexpected_length;
-    11: InvalidDirEntry2 invalid_dir_entry_2;
-    12: DirEntry2NonUtf8 dir_entry_2_non_utf8;
-    13: InvalidInputPath invalid_input_path;
-    14: PathNotFound path_not_found;
-    15: BadEntryType bad_entry_type;
-    16: Incompatible incompatible;
-    17: BadFile bad_file;
-    18: BadDirectory bad_directory;
-    19: ReaderReadError reader_read_error;
-    [Deprecated]
-    20: ReaderOutOfBounds reader_out_of_bounds;
-    21: RequiredFeatureIncompat required_feature_incompat;
-    22: BannedFeatureIncompat banned_feature_incompat;
-    23: InvalidAddress invalid_address;
+    1: invalid_super_block InvalidSuperBlock;
+    2: invalid_super_block_magic InvalidSuperBlockMagic;
+    3: block_number_out_of_bounds BlockNumberOutOfBounds;
+    4: block_size_invalid BlockSizeInvalid;
+    5: invalid_block_group_desc InvalidBlockGroupDesc;
+    6: invalid_inode InvalidINode;
+    7: invalid_extent_header InvalidExtentHeader;
+    8: invalid_extent_header_magic InvalidExtentHeaderMagic;
+    9: invalid_extent InvalidExtent;
+   10: extent_unexpected_length ExtentUnexpectedLength;
+   11: invalid_dir_entry_2 InvalidDirEntry2;
+   12: dir_entry_2_non_utf8 DirEntry2NonUtf8;
+   13: invalid_input_path InvalidInputPath;
+   14: path_not_found PathNotFound;
+   15: bad_entry_type BadEntryType;
+   16: incompatible Incompatible;
+   17: bad_file BadFile;
+   18: bad_directory BadDirectory;
+   19: reader_read_error ReaderReadError;
+    @deprecated
+   20: reader_out_of_bounds ReaderOutOfBounds;
+   21: required_feature_incompat RequiredFeatureIncompat;
+   22: banned_feature_incompat BannedFeatureIncompat;
+   23: invalid_address InvalidAddress;
 };
 
 /// Result of an [`Ext4Server.MountVmo`] call.
-flexible union MountVmoResult {
+type MountVmoResult = flexible union {
     // Note: It would be better to declare `MountVmo` with a result type of
     // `() error MountVmoError`, but FIDL currently does not support error
     // types that are not integers or enums of integers.  And it is nice to be
@@ -185,15 +182,15 @@ flexible union MountVmoResult {
 
     /// The server has managed to read the image far enough to load the
     /// root directory and none of the early validation checks have failed.
-    1: Success success;
+    1: success Success;
 
     /// Error reading the VMO.
-    2: zx.status vmo_read_failure;
+    2: vmo_read_failure zx.status;
 
-    3: ParseError parse_error;
+    3: parse_error ParseError;
 };
 
-[Discoverable]
+@discoverable
 protocol Server {
     /// Read the VMO content as an Ext4 image and return a channel to the
     /// root of the mounted file system.
@@ -214,15 +211,17 @@ protocol Server {
     ///           `root` connection even before received a response.  In
     ///           case of an error one of the other values will be returned
     ///           and the `root` connection will be closed.
-    MountVmo(
-        fuchsia.mem.Buffer source,
-        uint32 flags,
-        request<fuchsia.io.Directory> root
-        ) -> (MountVmoResult result);
+    MountVmo(resource struct {
+        source fuchsia.mem.Buffer;
+        flags uint32;
+        root server_end:fuchsia.io.Directory;
+    }) -> (struct {
+        result MountVmoResult;
+    });
 };
 
 service Service {
     /// An Ext4 server that can parse a file system image and present it
     /// using fuchsia-io FIDL API.
-    Server server;
+    server client_end:Server;
 };

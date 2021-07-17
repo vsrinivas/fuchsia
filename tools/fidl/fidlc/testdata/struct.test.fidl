@@ -1,12 +1,11 @@
-deprecated_syntax;
 library fidl.test.struct;
 
-struct Simple {
-    uint8 f1;
-    bool f2;
+type Simple = struct {
+    f1 uint8;
+    f2 bool;
 };
 
-struct BasicStruct {
-    uint32 x;
-    string y;
+type BasicStruct = struct {
+    x uint32;
+    y string;
 };

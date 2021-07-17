@@ -1,8 +1,6 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.driver.framework;
 
 using fuchsia.component;
@@ -11,34 +9,34 @@ using fuchsia.data;
 using fuchsia.io;
 using fuchsia.url;
 
-const uint8 MAX_CAPABILITY_COUNT = 64;
+const MAX_CAPABILITY_COUNT uint8 = 64;
 
 /// Capabilities for a driver.
-resource table DriverCapabilities {
+type DriverCapabilities = resource table {
     /// Name of the node that provided |offers|.
-    1: string:MAX_NODE_NAME_LENGTH node_name;
+    1: node_name string:MAX_NODE_NAME_LENGTH;
 
     /// Offers provided to a driver. These are names of FIDL protocols that can
     /// be accessed through |exposed_dir|.
-    2: vector<fuchsia.component.name>:MAX_OFFER_COUNT offers;
+    2: offers vector<fuchsia.component.name>:MAX_OFFER_COUNT;
 
     /// Exposed directory through which |offers| can be accessed.
-    3: fuchsia.io.Directory exposed_dir;
+    3: exposed_dir client_end:fuchsia.io.Directory;
 };
 
 /// Arguments for starting a driver.
-resource table DriverStartArgs {
+type DriverStartArgs = resource table {
     /// Node that the driver is bound to.
-    1: Node node;
+    1: node client_end:Node;
 
     /// Symbols provided to the driver, for |node|. These come from the driver
     /// that added |node|, and are filtered to the symbols requested in the bind
     /// program.
-    2: vector<NodeSymbol>:MAX_SYMBOL_COUNT symbols;
+    2: symbols vector<NodeSymbol>:MAX_SYMBOL_COUNT;
 
     /// URL of the package containing the driver. This is purely informational,
     /// used only to provide data for inspect.
-    3: fuchsia.url.Url url;
+    3: url fuchsia.url.Url;
 
     /// Information about the driver to start. Currently, we support the
     /// following entries:
@@ -48,16 +46,17 @@ resource table DriverStartArgs {
     ///      specifying whether the driver should be colocated in the same
     ///      driver host as the driver that added |node|. If not specified, the
     ///      driver will be launched in a new driver host.
-    4: fuchsia.data.Dictionary program;
+    4: program fuchsia.data.Dictionary;
 
     /// Incoming namespace provided to the driver.
-    5: vector<fuchsia.component.runner.ComponentNamespaceEntry>:fuchsia.component.runner.MAX_NAMESPACE_COUNT ns;
+    5: ns
+            vector<fuchsia.component.runner.ComponentNamespaceEntry>:fuchsia.component.runner.MAX_NAMESPACE_COUNT;
 
     /// Outgoing directory served by the driver.
-    6: request<fuchsia.io.Directory> outgoing_dir;
+    6: outgoing_dir server_end:fuchsia.io.Directory;
 
     /// Capabilities provided to the driver, for |node|.
-    7: vector<DriverCapabilities>:MAX_CAPABILITY_COUNT capabilities;
+    7: capabilities vector<DriverCapabilities>:MAX_CAPABILITY_COUNT;
 };
 
 /// Protocol through which a driver's lifecycle can be managed.
@@ -65,12 +64,14 @@ resource table DriverStartArgs {
 /// Closing the protocol's channel is used to signal:
 ///   1. To the driver runner that the driver has stopped.
 ///   2. To the driver host that the driver should stop.
-protocol Driver {
-};
+protocol Driver {};
 
 /// Protocol through which a driver host can be managed.
-[Discoverable]
+@discoverable
 protocol DriverHost {
     /// Start a driver within a driver host.
-    Start(DriverStartArgs start_args, request<Driver> driver);
+    Start(resource struct {
+        start_args DriverStartArgs;
+        driver server_end:Driver;
+    });
 };

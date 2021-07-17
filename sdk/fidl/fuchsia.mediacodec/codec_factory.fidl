@@ -1,8 +1,6 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.mediacodec;
 
 using fuchsia.media;
@@ -21,14 +19,14 @@ using zx;
 /// warnings/errors when a new value is added.
 //
 // Later we can add DYNAMIC, as needed.
-enum SecureMemoryMode : uint32 {
-    // Normal memory.  This is the default if a field of this type is not set.
+type SecureMemoryMode = strict enum : uint32 {
+            // Normal memory.  This is the default if a field of this type is not set.
     OFF = 0;
     // Secure memory.
     ON = 1;
 };
 
-table CreateDecoder_Params {
+type CreateDecoder_Params = table {
     /// Input mime type for a decoder.
     ///
     /// The recognized mime types for now:
@@ -40,7 +38,7 @@ table CreateDecoder_Params {
     /// audio/sbc
     ///   input_details.oob_bytes must be Codec Specific Information Elements
     ///   for SBC as defined by the A2DP spec.
-    1: fuchsia.media.FormatDetails input_details;
+    1: input_details fuchsia.media.FormatDetails;
 
     // The settings below nail down more details.
 
@@ -56,7 +54,7 @@ table CreateDecoder_Params {
     /// channel will close.
     ///
     /// If not set, interpreted as false.
-    2: bool promise_separate_access_units_on_input;
+    2: promise_separate_access_units_on_input bool;
 
     // "require" fields:
     //
@@ -88,7 +86,7 @@ table CreateDecoder_Params {
     /// in the same packet, unless require_can_stream_bytes_input is true.
     ///
     /// If not set, interpreted as false.
-    3: bool require_can_stream_bytes_input;
+    3: require_can_stream_bytes_input bool;
 
     /// A decoder is allowed to be capable of streaming bytes but not capable of
     /// searching for the start of the first usable AU.  To require both, set both
@@ -100,7 +98,7 @@ table CreateDecoder_Params {
     /// send a stream of bytes after that.
     ///
     /// If not set, interpreted as false.
-    4: bool require_can_find_start;
+    4: require_can_find_start bool;
 
     /// On problematic input data, all decoders are expected to at least be able to
     /// close the channel rather than getting stuck in a failed and/or broken
@@ -112,7 +110,7 @@ table CreateDecoder_Params {
     /// require_report_all_detected_errors.
     ///
     /// If not set, interpreted as false.
-    5: bool require_can_re_sync;
+    5: require_can_re_sync bool;
 
     /// Sometimes a client would rather fail an overall use of a decoder than fail
     /// to notice data corruption.  For such scenarios, the client can specify
@@ -146,13 +144,13 @@ table CreateDecoder_Params {
     /// are guaranteed to show up on output.
     ///
     /// If not set, interpreted as false.
-    6: bool require_report_all_detected_errors;
+    6: require_report_all_detected_errors bool;
 
     /// If true, require that the returned codec is HW-accelerated.  See also
     /// `require_sw`.
     ///
     /// If not set, interpreted as false.
-    7: bool require_hw;
+    7: require_hw bool;
 
     /// permit_lack_of_split_header_handling
     ///
@@ -190,7 +188,7 @@ table CreateDecoder_Params {
     // no other suitable codec.  In the long term, fix or work around the header
     // handling behavior of SoftAAC2 when used in ADTS mode (and any other
     // similar issues in other codecs) and remove this field.
-    8: bool permit_lack_of_split_header_handling;
+    8: permit_lack_of_split_header_handling bool;
 
     /// If set to ON, the decoder must support secure buffers on output, and
     /// must reject non-secure buffers on output.
@@ -199,7 +197,7 @@ table CreateDecoder_Params {
     /// on output by closing the StreamProcessor channel.
     ///
     /// If secure_input_mode ON, secure_output_mode must also be ON.
-    9: SecureMemoryMode secure_output_mode;
+    9: secure_output_mode SecureMemoryMode;
 
     /// If set to ON, the decoder must support secure buffers on input and must
     /// reject non-secure buffers on input.
@@ -208,7 +206,7 @@ table CreateDecoder_Params {
     /// on input by closing the StreamProcessor channel.
     ///
     /// If secure_input_mode ON, secure_output_mode must also be ON.
-    10: SecureMemoryMode secure_input_mode;
+   10: secure_input_mode SecureMemoryMode;
 
     /// If true, require that the returned codec is entirely SW-based, not
     /// HW-accelerated (other than possibly using vector CPU instructions).
@@ -218,39 +216,39 @@ table CreateDecoder_Params {
     /// `require_hw`.
     ///
     /// If not set, interpreted as false.
-    11: bool require_sw;
+   11: require_sw bool;
 };
 
 /// Parameters used to request an encoder.
-table CreateEncoder_Params {
+type CreateEncoder_Params = table {
     /// The format of the uncompressed input data.
     ///
     /// This field should be a raw mime_type (e.g. 'video/raw') and uncompressed
     /// format details for the encoder to use when reading buffers.
     ///
     /// To be elibigible an encoder must support the input format.
-    1: fuchsia.media.FormatDetails input_details;
+    1: input_details fuchsia.media.FormatDetails;
 
     /// If true, require that the returned codec is HW-accelerated.
     ///
     /// If not set, interpreted as false.
-    2: bool require_hw;
+    2: require_hw bool;
 };
 
-enum CodecType {
+type CodecType = strict enum {
     DECODER = 0;
     ENCODER = 1;
 };
 
 /// Constrain the mime_type to a size that won't cause problems.
-const uint32 CODEC_FACTORY_MAX_MIME_TYPE_LENGTH = 256;
+const CODEC_FACTORY_MAX_MIME_TYPE_LENGTH uint32 = 256;
 
-struct CodecDescription {
+type CodecDescription = struct {
     /// Decoder or encoder.
-    CodecType codec_type;
+    codec_type CodecType;
     /// The mime type of the compressed format.  For decoders this is the mime
     /// type of the input.  For encoders, this is the mime type of the output.
-    string:CODEC_FACTORY_MAX_MIME_TYPE_LENGTH mime_type;
+    mime_type string:CODEC_FACTORY_MAX_MIME_TYPE_LENGTH;
 
     // TODO(dustingreen): All these fields should be optional.
     //
@@ -259,21 +257,21 @@ struct CodecDescription {
     /// For each of these fields, the default is the most-capable setting, but
     /// if a codec doesn't support the most-capable behavior, then the codec
     /// must override the default.
-    bool can_stream_bytes_input = true;
-    bool can_find_start = true;
-    bool can_re_sync = true;
-    bool will_report_all_detected_errors = true;
-    bool is_hw = true;
-    bool split_header_handling = true;
+    can_stream_bytes_input bool = true;
+    can_find_start bool = true;
+    can_re_sync bool = true;
+    will_report_all_detected_errors bool = true;
+    is_hw bool = true;
+    split_header_handling bool = true;
 };
 
 /// More than this many calls to AttachLifetimeTracking()
 /// without a Create{X}() call will result in CodecFactory channel closing from
 /// the server end.
-const uint32 CODEC_FACTORY_LIFETIME_TRACKING_EVENTPAIR_PER_CREATE_MAX = 16;
+const CODEC_FACTORY_LIFETIME_TRACKING_EVENTPAIR_PER_CREATE_MAX uint32 = 16;
 
 /// Constrain the length of the codec list.
-const uint32 CODEC_FACTORY_CODEC_LIST_SIZE_MAX = 256;
+const CODEC_FACTORY_CODEC_LIST_SIZE_MAX uint32 = 256;
 
 /// CodecFactory
 ///
@@ -282,7 +280,7 @@ const uint32 CODEC_FACTORY_CODEC_LIST_SIZE_MAX = 256;
 ///
 /// The interface methods don't attempt to homogenize all codec types,
 /// preferring to have a separate dedicated message for decoders.
-[Discoverable]
+@discoverable
 protocol CodecFactory {
     /// Driver-based local CodecFactory(s) will send this once shortly after the
     /// main CodecFactory connects to the driver-local CodecFactory.
@@ -292,7 +290,9 @@ protocol CodecFactory {
     /// A SW-based local CodecFactory(s) will not send this event.
     ///
     /// Each codec in the list must be separately-described, for clean aggregation.
-    -> OnCodecList(vector<CodecDescription>:CODEC_FACTORY_CODEC_LIST_SIZE_MAX codecs);
+    -> OnCodecList(struct {
+        codecs vector<CodecDescription>:CODEC_FACTORY_CODEC_LIST_SIZE_MAX;
+    });
 
     // Requests:
 
@@ -316,9 +316,10 @@ protocol CodecFactory {
     /// CreateDecoder(params, decoder_request);
     ///
     /// See use_media_decoder code for more detail.
-    CreateDecoder(
-        CreateDecoder_Params decoder_params,
-        request<fuchsia.media.StreamProcessor> decoder);
+    CreateDecoder(resource struct {
+        decoder_params CreateDecoder_Params;
+        decoder server_end:fuchsia.media.StreamProcessor;
+    });
 
     /// CreateEncoder:
     ///
@@ -331,8 +332,10 @@ protocol CodecFactory {
     /// status here because finding the Codec is allowed to be fully async, so
     /// we don't necessarily yet know on return from this method which Codec
     /// will be selected, if any.
-    CreateEncoder(CreateEncoder_Params encoder_params,
-                  request<fuchsia.media.StreamProcessor> encoder);
+    CreateEncoder(resource struct {
+        encoder_params CreateEncoder_Params;
+        encoder server_end:fuchsia.media.StreamProcessor;
+    });
 
     /// AttachLifetimeTracking:
     ///
@@ -382,6 +385,7 @@ protocol CodecFactory {
     /// The codec_end may lack ZX_RIGHT_SIGNAL or ZX_RIGHT_SIGNAL_PEER, but must
     /// have ZX_RIGHT_DUPLICATE (and must have ZX_RIGHT_TRANSFER to transfer
     /// without causing CodecFactory channel failure).
-    AttachLifetimeTracking(
-        zx.handle:EVENTPAIR codec_end);
+    AttachLifetimeTracking(resource struct {
+        codec_end zx.handle:EVENTPAIR;
+    });
 };

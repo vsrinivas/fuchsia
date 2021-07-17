@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.ui.annotation;
 
 using fuchsia.ui.views;
@@ -10,7 +8,7 @@ using fuchsia.ui.views;
 /// Annotation allows a privileged client service to create an "annotation"
 /// `ViewHolder`, linked with an annotation `View` drawn within the View-space
 /// of the existing client `View`.
-[Discoverable]
+@discoverable
 protocol Registry {
     /// Creates a new annotation `ViewHolder`. The created ViewHolder holds an
     /// annotation `View` which renders within the existing client's View-space
@@ -51,6 +49,8 @@ protocol Registry {
     /// - ZX_ERR_INVALID_ARGS, if the provided `ViewRef` is invalid.
     /// - ZX_ERR_PEER_CLOSED, if Scenic fails creating the annotation `ViewHolder`.
     ///
-    CreateAnnotationViewHolder(fuchsia.ui.views.ViewRef client_view,
-                               fuchsia.ui.views.ViewHolderToken view_holder_token) -> ();
+    CreateAnnotationViewHolder(resource struct {
+        client_view fuchsia.ui.views.ViewRef;
+        view_holder_token fuchsia.ui.views.ViewHolderToken;
+    }) -> ();
 };

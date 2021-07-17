@@ -1,28 +1,44 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.developer.tiles;
 
 using fuchsia.ui.app;
 using fuchsia.ui.gfx;
 
-[Discoverable]
+@discoverable
 protocol Controller {
     /// Instantiates a component by its URL and adds a tile backed by that component's ViewProvider.
     /// Returns a key for the tile that can be used for resizing or removing the tile, or 0 on failure.
-    AddTileFromURL(string url, bool allow_focus, vector<string>? args) -> (uint32 key);
+    AddTileFromURL(struct {
+        url string;
+        allow_focus bool;
+        args vector<string>:optional;
+    }) -> (struct {
+        key uint32;
+    });
 
     /// Adds a tile backed by a view from the view provider.
     /// Returns a key for the tile that can be used for resizing or removing the tile, or 0 on failure.
-    AddTileFromViewProvider(string url, fuchsia.ui.app.ViewProvider provider) -> (uint32 key);
+    AddTileFromViewProvider(resource struct {
+        url string;
+        provider client_end:fuchsia.ui.app.ViewProvider;
+    }) -> (struct {
+        key uint32;
+    });
 
     /// Removes the tile with the given key.
-    RemoveTile(uint32 key);
+    RemoveTile(struct {
+        key uint32;
+    });
 
     /// Returns a list of tiles.
-    ListTiles() -> (vector<uint32> keys, vector<string> urls, vector<fuchsia.ui.gfx.vec3> sizes, vector<bool> focusabilities);
+    ListTiles() -> (struct {
+        keys vector<uint32>;
+        urls vector<string>;
+        sizes vector<fuchsia.ui.gfx.vec3>;
+        focusabilities vector<bool>;
+    });
 
     /// Asks the tiles component to quit.
     Quit();

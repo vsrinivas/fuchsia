@@ -1,8 +1,6 @@
 // Copyright 2016 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.media.playback;
 
 /// Models a problem preventing intended operation.
@@ -15,23 +13,19 @@ library fuchsia.media.playback;
 /// somehow in the resolution. In either case, the problem goes away when the
 /// issue that caused it to be exposed is resolved. By design, there is no
 /// general means of dismissing a problem.
-struct Problem {
+type Problem = struct {
     /// The type of problem. This is a string for extensibility.
-    string type;
+    type string;
 
     /// Type-dependent details.
-    string? details;
+    details string:optional;
 };
 
-const string PROBLEM_INTERNAL =
-    "fuchsia.media.playback.Internal";
-const string PROBLEM_ASSET_NOT_FOUND =
-    "fuchsia.media.playback.AssetNotFound";
-const string PROBLEM_CONTAINER_NOT_SUPPORTED =
-    "fuchsia.media.playback.ContainerNotSupported";
-const string PROBLEM_AUDIO_ENCODING_NOT_SUPPORTED =
-    "fuchsia.media.playback.AudioEncodingNotSupported";
-const string PROBLEM_VIDEO_ENCODING_NOT_SUPPORTED =
-    "fuchsia.media.playback.VideoEncodingNotSupported";
-const string PROBLEM_CONNECTION_FAILED =
-    "fuchsia.media.playback.ConnectionFailed";
+const PROBLEM_INTERNAL string = "fuchsia.media.playback.Internal";
+const PROBLEM_ASSET_NOT_FOUND string = "fuchsia.media.playback.AssetNotFound";
+const PROBLEM_CONTAINER_NOT_SUPPORTED string = "fuchsia.media.playback.ContainerNotSupported";
+const PROBLEM_AUDIO_ENCODING_NOT_SUPPORTED string
+        = "fuchsia.media.playback.AudioEncodingNotSupported";
+const PROBLEM_VIDEO_ENCODING_NOT_SUPPORTED string
+        = "fuchsia.media.playback.VideoEncodingNotSupported";
+const PROBLEM_CONNECTION_FAILED string = "fuchsia.media.playback.ConnectionFailed";

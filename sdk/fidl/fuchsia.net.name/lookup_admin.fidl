@@ -1,15 +1,13 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.net.name;
 
 using fuchsia.net;
 using zx;
 
 /// Provides administration controls over name resolution settings.
-[Discoverable]
+@discoverable
 protocol LookupAdmin {
     /// Sets the DNS servers to `servers`
     ///
@@ -19,9 +17,13 @@ protocol LookupAdmin {
     /// will be deduplicated.
     /// * error Returns `ZX_ERR_INVALID_ARGS` if any of the provided addresses does not meet the
     /// conditions above.
-    SetDnsServers(vector<fuchsia.net.SocketAddress>:MAX servers) -> () error zx.status;
+    SetDnsServers(struct {
+        servers vector<fuchsia.net.SocketAddress>:MAX;
+    }) -> (struct {}) error zx.status;
 
     /// Gets the DNS servers currently in use to resolve name lookups.
     /// - response `servers` The list of servers in use by `LookupAdmin`, in priority order.
-    GetDnsServers() -> (vector<fuchsia.net.SocketAddress>:MAX servers);
+    GetDnsServers() -> (struct {
+        servers vector<fuchsia.net.SocketAddress>:MAX;
+    });
 };

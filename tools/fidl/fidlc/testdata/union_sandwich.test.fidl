@@ -1,4 +1,3 @@
-deprecated_syntax;
 library fidl.test.unionsandwich;
 
 // These are various unions and structs-containing-unions of different sizes and alignments,
@@ -8,47 +7,47 @@ library fidl.test.unionsandwich;
 //
 // See typeshape_tests.cc for furher details.
 
-union UnionSize8Alignment4 {
-    1: uint32 variant;
+type UnionSize8Alignment4 = strict union {
+    1: variant uint32;
 };
 
-struct SandwichUnionSize8Alignment4 {
-    uint32 before;
-    UnionSize8Alignment4 union;
-    uint32 after;
+type SandwichUnionSize8Alignment4 = struct {
+    before uint32;
+    union UnionSize8Alignment4;
+    after uint32;
 };
 
-union UnionSize12Alignment4 {
-    1: array<uint8>:6 variant;
+type UnionSize12Alignment4 = strict union {
+    1: variant array<uint8, 6>;
 };
 
-struct SandwichUnionSize12Alignment4 {
-    uint32 before;
-    UnionSize12Alignment4 union;
-    int32 after;
+type SandwichUnionSize12Alignment4 = struct {
+    before uint32;
+    union UnionSize12Alignment4;
+    after int32;
 };
 
-struct StructSize16Alignment8 {
-    uint64 f1;
-    uint64 f2;
+type StructSize16Alignment8 = struct {
+    f1 uint64;
+    f2 uint64;
 };
 
-union UnionSize24Alignment8 {
-    1: StructSize16Alignment8 variant;
+type UnionSize24Alignment8 = strict union {
+    1: variant StructSize16Alignment8;
 };
 
-struct SandwichUnionSize24Alignment8 {
-    uint32 before;
-    UnionSize24Alignment8 union;
-    uint32 after;
+type SandwichUnionSize24Alignment8 = struct {
+    before uint32;
+    union UnionSize24Alignment8;
+    after uint32;
 };
 
-union UnionSize36Alignment4 {
-    1: array<uint8>:32 variant;
+type UnionSize36Alignment4 = strict union {
+    1: variant array<uint8, 32>;
 };
 
-struct SandwichUnionSize36Alignment4 {
-    uint32 before;
-    UnionSize36Alignment4 union;
-    uint32 after;
+type SandwichUnionSize36Alignment4 = struct {
+    before uint32;
+    union UnionSize36Alignment4;
+    after uint32;
 };

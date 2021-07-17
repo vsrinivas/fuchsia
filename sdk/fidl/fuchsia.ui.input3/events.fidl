@@ -1,15 +1,13 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.ui.input3;
 
 using fuchsia.input;
 using zx;
 
 /// Type of the keyboard key input event.
-enum KeyEventType {
+type KeyEventType = strict enum {
     /// Key is pressed down.
     PRESSED = 1;
 
@@ -31,7 +29,7 @@ enum KeyEventType {
 ///
 /// The definition of each key is derived from W3C named values of a key attribute:
 /// https://www.w3.org/TR/uievents-key/#named-key-attribute-values
-flexible enum NonPrintableKey : uint32 {
+type NonPrintableKey = flexible enum : uint32 {
     // Whitespace keys
     // Reserved range: 0x00000031 - 0x00000040
 
@@ -53,30 +51,30 @@ flexible enum NonPrintableKey : uint32 {
 /// The meaning of the key press. This is typically the Unicode codepoint inserted
 /// by this event, or an enum representing a key that corresponds to whitespace or
 /// is otherwise unprintable.
-strict union KeyMeaning {
+type KeyMeaning = strict union {
     /// The Unicode codepoint representing character typed, if any.
     /// * In Dart and Go, this corresponds to a `rune`.
     /// * In Rust, this corresponds to a `char`.
     /// * In C and C++, this corresponds to ICU's UChar32.
-    1: uint32 codepoint;
+    1: codepoint uint32;
 
     /// The meaning of the key for key events with no corresponding symbol.
-    2: NonPrintableKey non_printable_key;
+    2: non_printable_key NonPrintableKey;
 };
 
 /// A Keyboard event generated to reflect key input. `timestamp` and `type` are required.
 /// At least one of `key` and `key_meaning`  must be set for a valid event.
-table KeyEvent {
+type KeyEvent = table {
     /// Time in nanoseconds when the event was recorded, in the `CLOCK_MONOTONIC` time base.
-    1: zx.time timestamp;
+    1: timestamp zx.time;
 
     /// Type of event.
-    2: KeyEventType type;
+    2: type KeyEventType;
 
     /// Identifies the key ignoring modifiers, layout, prior key events, etc. This is called
     /// the "physical key" on some platforms. In cases where the key event did not originate
     /// from a physical keyboard (e.g. onscreen keyboard) this field may be empty.
-    3: fuchsia.input.Key key;
+    3: key fuchsia.input.Key;
 
     /// Modifiers in effect at the time of the event.
     /// Example:
@@ -92,8 +90,8 @@ table KeyEvent {
     ///  2. type: Pressed, key: A, modifiers: None
     ///  3. type: Released, key: CapsLock, modifiers: None
     ///  4. type: Released, key: A, modifiers: None
-    4: Modifiers modifiers;
+    4: modifiers Modifiers;
 
     /// Meaning of the key.
-    5: KeyMeaning key_meaning;
+    5: key_meaning KeyMeaning;
 };

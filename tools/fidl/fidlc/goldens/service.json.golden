@@ -11,7 +11,7 @@
       "name": "fidl.test.service/FirstProtocol",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/service.test.fidl",
-        "line": 11,
+        "line": 8,
         "column": 10,
         "length": 13
       },
@@ -22,7 +22,7 @@
           "name": "MethodOnFirst",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/service.test.fidl",
-            "line": 12,
+            "line": 9,
             "column": 5,
             "length": 13
           },
@@ -55,7 +55,7 @@
       "name": "fidl.test.service/SecondProtocol",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/service.test.fidl",
-        "line": 19,
+        "line": 16,
         "column": 10,
         "length": 14
       },
@@ -66,7 +66,7 @@
           "name": "MethodOnSecond",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/service.test.fidl",
-            "line": 20,
+            "line": 17,
             "column": 5,
             "length": 14
           },
@@ -101,7 +101,7 @@
       "name": "fidl.test.service/EmptyService",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/service.test.fidl",
-        "line": 8,
+        "line": 6,
         "column": 9,
         "length": 12
       },
@@ -111,7 +111,7 @@
       "name": "fidl.test.service/SingleMemberService",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/service.test.fidl",
-        "line": 15,
+        "line": 12,
         "column": 9,
         "length": 19
       },
@@ -125,8 +125,8 @@
           "name": "single_member",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/service.test.fidl",
-            "line": 16,
-            "column": 19,
+            "line": 13,
+            "column": 5,
             "length": 13
           }
         }
@@ -136,7 +136,7 @@
       "name": "fidl.test.service/MultiHeterogeneousMemberService",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/service.test.fidl",
-        "line": 23,
+        "line": 20,
         "column": 9,
         "length": 31
       },
@@ -150,8 +150,8 @@
           "name": "first_member",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/service.test.fidl",
-            "line": 24,
-            "column": 19,
+            "line": 21,
+            "column": 5,
             "length": 12
           }
         },
@@ -164,8 +164,8 @@
           "name": "second_member",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/service.test.fidl",
-            "line": 25,
-            "column": 20,
+            "line": 22,
+            "column": 5,
             "length": 13
           }
         }
@@ -175,7 +175,7 @@
       "name": "fidl.test.service/MultiHomogeneousMemberService",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/service.test.fidl",
-        "line": 28,
+        "line": 25,
         "column": 9,
         "length": 29
       },
@@ -189,8 +189,8 @@
           "name": "first_member",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/service.test.fidl",
-            "line": 29,
-            "column": 19,
+            "line": 26,
+            "column": 5,
             "length": 12
           }
         },
@@ -203,8 +203,8 @@
           "name": "second_member",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/service.test.fidl",
-            "line": 30,
-            "column": 19,
+            "line": 27,
+            "column": 5,
             "length": 13
           }
         }

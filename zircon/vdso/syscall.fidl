@@ -1,58 +1,156 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-
-deprecated_syntax;
 library zx;
 
-[Transport = "Syscall"]
+@transport("Syscall")
 protocol syscall {
-    [testonly]
-    syscall_test_0() -> (status status);
+    @testonly
+    syscall_test_0() -> (struct {
+        status status;
+    });
 
-    [testonly,
-    test_category1]
-    syscall_test_1(int32 a) -> (status status);
+    @testonly
+    @test_category1
+    syscall_test_1(struct {
+        a int32;
+    }) -> (struct {
+        status status;
+    });
 
-    [testonly,
-    test_category1]
-    syscall_test_2(int32 a, int32 b) -> (status status);
+    @testonly
+    @test_category1
+    syscall_test_2(struct {
+        a int32;
+        b int32;
+    }) -> (struct {
+        status status;
+    });
 
-    [testonly,
-    test_category2]
-    syscall_test_3(int32 a, int32 b, int32 c) -> (status status);
+    @testonly
+    @test_category2
+    syscall_test_3(struct {
+        a int32;
+        b int32;
+        c int32;
+    }) -> (struct {
+        status status;
+    });
 
-    [testonly]
-    syscall_test_4(int32 a, int32 b, int32 c, int32 d) -> (status status);
+    @testonly
+    syscall_test_4(struct {
+        a int32;
+        b int32;
+        c int32;
+        d int32;
+    }) -> (struct {
+        status status;
+    });
 
-    [testonly]
-    syscall_test_5(int32 a, int32 b, int32 c, int32 d, int32 e) -> (status status);
+    @testonly
+    syscall_test_5(struct {
+        a int32;
+        b int32;
+        c int32;
+        d int32;
+        e int32;
+    }) -> (struct {
+        status status;
+    });
 
-    [testonly]
-    syscall_test_6(int32 a, int32 b, int32 c, int32 d, int32 e, int32 f) -> (status status);
+    @testonly
+    syscall_test_6(struct {
+        a int32;
+        b int32;
+        c int32;
+        d int32;
+        e int32;
+        f int32;
+    }) -> (struct {
+        status status;
+    });
 
-    [testonly]
-    syscall_test_7(int32 a, int32 b, int32 c, int32 d, int32 e, int32 f, int32 g) -> (status status);
+    @testonly
+    syscall_test_7(struct {
+        a int32;
+        b int32;
+        c int32;
+        d int32;
+        e int32;
+        f int32;
+        g int32;
+    }) -> (struct {
+        status status;
+    });
 
-    [testonly]
-    syscall_test_8(int32 a, int32 b, int32 c, int32 d, int32 e, int32 f, int32 g, int32 h)
-        -> (status status);
+    @testonly
+    syscall_test_8(struct {
+        a int32;
+        b int32;
+        c int32;
+        d int32;
+        e int32;
+        f int32;
+        g int32;
+        h int32;
+    }) -> (struct {
+        status status;
+    });
 
-    [testonly]
-    syscall_test_wrapper(int32 a, int32 b, int32 c) -> (status status);
+    @testonly
+    syscall_test_wrapper(struct {
+        a int32;
+        b int32;
+        c int32;
+    }) -> (struct {
+        status status;
+    });
 
-    [testonly]
-    syscall_test_handle_create(status return_value) -> (status status, handle:EVENT out);
+    @testonly
+    syscall_test_handle_create(struct {
+        return_value status;
+    }) -> (resource struct {
+        status status;
+        out handle:EVENT;
+    });
 
-    [testonly]
-    syscall_test_widening_unsigned_narrow(uint64 a, uint32 b, uint16 c, uint8 d) -> (uint64 total);
+    @testonly
+    syscall_test_widening_unsigned_narrow(struct {
+        a uint64;
+        b uint32;
+        c uint16;
+        d uint8;
+    }) -> (struct {
+        total uint64;
+    });
 
-    [testonly]
-    syscall_test_widening_signed_narrow(int64 a, int32 b, int16 c, int8 d) -> (int64 total);
+    @testonly
+    syscall_test_widening_signed_narrow(struct {
+        a int64;
+        b int32;
+        c int16;
+        d int8;
+    }) -> (struct {
+        total int64;
+    });
 
-    [testonly]
-    syscall_test_widening_unsigned_wide(uint64 a, uint32 b, uint16 c, uint8 d) -> (uint64 total);
+    @testonly
+    syscall_test_widening_unsigned_wide(struct {
+        a uint64;
+        b uint32;
+        c uint16;
+        d uint8;
+    }) -> (struct {
+        total uint64;
+    });
 
-    [testonly]
-    syscall_test_widening_signed_wide(int64 a, int32 b, int16 c, int8 d) -> (int64 total);
+    @testonly
+    syscall_test_widening_signed_wide(struct {
+        a int64;
+        b int32;
+        c int16;
+        d int8;
+    }) -> (struct {
+        total int64;
+    });
 };

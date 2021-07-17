@@ -1,10 +1,11 @@
-deprecated_syntax;
 library bottom;
 
-struct Foo {
-    int32 a;
+type Foo = struct {
+    a int32;
 };
 
 protocol Bottom {
-    GetFoo() -> (Foo foo);
+    GetFoo() -> (struct {
+        foo Foo;
+    });
 };

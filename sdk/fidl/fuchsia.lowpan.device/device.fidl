@@ -1,8 +1,6 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.lowpan.device;
 
 using fuchsia.lowpan;
@@ -15,18 +13,18 @@ using fuchsia.lowpan;
 /// You will get a snapshot of the current state upon the first
 /// invocation of `WatchDeviceState()`, after which future
 /// invocations of that method will return deltas.
-table DeviceState {
+type DeviceState = table {
     /// LoWPAN Connectivity State
     ///
     /// This field describes the current level of connectivity being
     /// provided by this device.
-    1: fuchsia.lowpan.ConnectivityState connectivity_state;
+    1: connectivity_state fuchsia.lowpan.ConnectivityState;
 
     /// LoWPAN Role
     ///
     /// This field describes the current role this device is taking
     /// on the current network.
-    2: fuchsia.lowpan.Role role;
+    2: role fuchsia.lowpan.Role;
 };
 
 /// LoWPAN Device Protocol.
@@ -63,7 +61,9 @@ protocol Device {
     /// The resulting change in state can be monitored via `WatchDeviceState()`.
     /// Any error that prevents the operation from completing successfully
     /// will result in the protocol being closed.
-    ProvisionNetwork(fuchsia.lowpan.ProvisioningParams params) -> ();
+    ProvisionNetwork(struct {
+        params fuchsia.lowpan.ProvisioningParams;
+    }) -> ();
 
     /// Bring down the network interface and forget
     /// all non-volatile details about the current network.
@@ -96,20 +96,24 @@ protocol Device {
     /// The resulting change in state can be monitored via `WatchDeviceState()`.
     /// Any error that prevents the operation from completing successfully
     /// will result in the protocol being closed.
-    SetActive(bool active) -> ();
+    SetActive(struct {
+        active bool;
+    }) -> ();
 
     /// Returns the types of networks supported by this interface.
     ///
     /// LoWPAN devices typically only support a single network type,
     /// but some devices may support more than one. Up to `MAX_NETWORK_TYPES`
     /// network types may be returned.
-    GetSupportedNetworkTypes()
-        -> (vector<fuchsia.lowpan.NetworkType>:MAX_NETWORK_TYPES network_types);
+    GetSupportedNetworkTypes() -> (struct {
+        network_types vector<fuchsia.lowpan.NetworkType>:MAX_NETWORK_TYPES;
+    });
 
     /// Returns a vector of information about the
     /// channels supported by this interface.
-    GetSupportedChannels()
-        -> (vector<fuchsia.lowpan.ChannelInfo>:fuchsia.lowpan.MAX_CHANNELS channels_info);
+    GetSupportedChannels() -> (struct {
+        channels_info vector<fuchsia.lowpan.ChannelInfo>:fuchsia.lowpan.MAX_CHANNELS;
+    });
 
     /// Observes changes to the `DeviceState`.
     ///
@@ -120,7 +124,9 @@ protocol Device {
     /// Changes are not queued. The returned value always represents
     /// the latest and most accurate state values, even if several changes
     /// had happened in-between calls.
-    WatchDeviceState() -> (DeviceState device_combined_state);
+    WatchDeviceState() -> (struct {
+        device_combined_state DeviceState;
+    });
 };
 
 /// LoWPAN Device "Extra" Protocol.
@@ -155,7 +161,10 @@ protocol DeviceExtra {
     ///
     /// Calling this method will cause any current form, join, or
     /// commission operation to be canceled.
-    FormNetwork(fuchsia.lowpan.ProvisioningParams params, request<ProvisioningMonitor> progress);
+    FormNetwork(resource struct {
+        params fuchsia.lowpan.ProvisioningParams;
+        progress server_end:ProvisioningMonitor;
+    });
 
     /// Attempts to join a pre-existing nearby network
     /// with the given provisioning parameters or joiner parameters.
@@ -171,7 +180,10 @@ protocol DeviceExtra {
     ///
     /// Calling this method will cause any current form, join, or
     /// commission operation to be canceled.
-    JoinNetwork(fuchsia.lowpan.JoinParams params, request<ProvisioningMonitor> progress);
+    JoinNetwork(resource struct {
+        params fuchsia.lowpan.JoinParams;
+        progress server_end:ProvisioningMonitor;
+    });
 
     /// Fetches the current credential.
     ///
@@ -179,7 +191,9 @@ protocol DeviceExtra {
     /// to `ProvisionNetwork`, `JoinNetwork`, or `FormNetwork`. If the
     /// device is not provisioned (for example, by calling `LeaveNetwork()`)
     /// then this method returns nothing.
-    GetCredential() -> (fuchsia.lowpan.Credential? credential);
+    GetCredential() -> (struct {
+        credential fuchsia.lowpan.Credential:optional;
+    });
 
     /// Starts an energy scan operation.
     ///
@@ -201,7 +215,10 @@ protocol DeviceExtra {
     /// Performing energy scans could be used to profile the spectrum
     /// energy for a location and thus be used to determine or refine coarse
     /// location information.
-    StartEnergyScan(EnergyScanParameters params, request<EnergyScanResultStream> stream);
+    StartEnergyScan(resource struct {
+        params EnergyScanParameters;
+        stream server_end:EnergyScanResultStream;
+    });
 
     /// Starts an active network scan operation.
     ///
@@ -222,7 +239,10 @@ protocol DeviceExtra {
     ///
     /// A `NetworkScanner` instance could be used to expose coarse
     /// location information.
-    StartNetworkScan(NetworkScanParameters params, request<BeaconInfoStream> stream);
+    StartNetworkScan(resource struct {
+        params NetworkScanParameters;
+        stream server_end:BeaconInfoStream;
+    });
 
     /// Observes changes to the current network identity.
     ///
@@ -247,5 +267,7 @@ protocol DeviceExtra {
     /// * `Device.LeaveNetwork()`
     /// * `DeviceExtra.JoinNetwork()`
     /// * `DeviceExtra.FormNetwork()`
-    WatchIdentity() -> (fuchsia.lowpan.Identity identity);
+    WatchIdentity() -> (struct {
+        identity fuchsia.lowpan.Identity;
+    });
 };

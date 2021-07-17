@@ -1,8 +1,6 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.ui.pointerinjector;
 
 using fuchsia.input.report;
@@ -10,41 +8,41 @@ using fuchsia.ui.views;
 
 /// A floating-point two-dimensional point.
 /// - The values are placed in (x, y) order.
-alias Point2 = array<float32>:2;
+alias Point2 = array<float32, 2>;
 
 /// A floating-point pair of points, representing minimal and maximal extents.
 /// - The values are placed in (minimal, maximal) order.
-alias Extents = array<Point2>:2;
+alias Extents = array<Point2, 2>;
 
 /// A floating-point 3x3 matrix.
 /// - The values are placed in column-major order.
-alias Mat3 = array<float32>:9;
+alias Mat3 = array<float32, 9>;
 
 /// A specification for an injector |Device|.
 ///
 /// All fields required.
-resource table Config {
+type Config = resource table {
     /// An identifier for the pointer device that issues pointer event streams.
-    1: uint32 device_id;
+    1: device_id uint32;
 
     /// A characterization of the pointer device.
-    2: DeviceType device_type;
+    2: device_type DeviceType;
 
     /// The scope and coordinate system of the injector |Device|.
     ///
     /// Note: To avoid circular injection scenarios, |context| must be a
     ///       strict ancestor of |target|.
-    3: Context context;
+    3: context Context;
 
     /// The region where dispatch is attempted for injected events.
     ///
     /// Note: To avoid circular injection scenarios, |target| must be a strict
     ///       descendant of |context|.
-    4: Target target;
+    4: target Target;
 
     /// The initial viewport for injected events. Subsequent modifications to
     /// the viewport can also be sent synchronously with injected events.
-    5: Viewport viewport;
+    5: viewport Viewport;
 
     /// A specification of the UI clients in |target| that may have injected
     /// events dispatched to them.
@@ -52,20 +50,20 @@ resource table Config {
     /// For example, if |dispatch_policy| is |EXCLUSIVE|, then only |target| may
     /// have injected events dispatched to it, regardless of other factors, such
     /// as surface occlusion by clients inside and outside of |target|.
-    6: DispatchPolicy dispatch_policy;
+    6: dispatch_policy DispatchPolicy;
 
     /// Range of vertical scroll values issued by the device.
-    7: fuchsia.input.report.Axis scroll_v_range;
+    7: scroll_v_range fuchsia.input.report.Axis;
 
     /// Range of horizontal scroll values issued by the device.
-    8: fuchsia.input.report.Axis scroll_h_range;
+    8: scroll_h_range fuchsia.input.report.Axis;
 
     /// Mouse button identifiers issued by the device.
-    9: vector<uint8>:fuchsia.input.report.MOUSE_MAX_NUM_BUTTONS buttons;
+    9: buttons vector<uint8>:fuchsia.input.report.MOUSE_MAX_NUM_BUTTONS;
 };
 
 /// A characterization of a device that issues pointer event streams.
-enum DeviceType {
+type DeviceType = strict enum {
     /// A device intended for manipulation by direct contact over its surface.
     TOUCH = 1;
 
@@ -80,20 +78,20 @@ enum DeviceType {
 ///     ancestor of the target.
 /// (2) Coordinate System. It provides the reference coordinate system to define
 ///     the viewport's position and size, relative to the target.
-resource union Context {
+type Context = strict resource union {
     /// A Scenic view from which injection is attempted for injected events.
     /// - This view must be connected to the scene graph for injection.
     /// - Injected events are confined to this view and its sub-views.
-    1: fuchsia.ui.views.ViewRef view;
+    1: view fuchsia.ui.views.ViewRef;
 };
 
 /// The region in which dispatch is attempted for injected events.
 /// The particular dispatch policy is specified in |Config|.
-resource union Target {
+type Target = strict resource union {
     /// A Scenic view in which dispatch is attempted for injected events.
     /// - This view must be connected to the scene graph for dispatch.
     /// - Injected events are confined to this view and its sub-views.
-    1: fuchsia.ui.views.ViewRef view;
+    1: view fuchsia.ui.views.ViewRef;
 };
 
 /// A rectangular region that directs injected events into a target.
@@ -126,10 +124,10 @@ resource union Target {
 /// viewport coordinate system to the dispatch client's coordinate system.
 ///
 /// All fields required.
-table Viewport {
+type Viewport = table {
     /// The viewport's minimal and maximal extents in the viewport coordinate
     /// system.
-    1: Extents extents;
+    1: extents Extents;
 
     /// A transformation matrix that describes how to map the viewport
     /// coordinate system to the context coordinate system.
@@ -141,7 +139,7 @@ table Viewport {
     /// determinant), which guarantees it describes a bijection between the
     /// viewport coordinate system and the context coordinate system. A
     /// non-invertible matrix is rejected.
-    2: Mat3 viewport_to_context_transform;
+    2: viewport_to_context_transform Mat3;
 };
 
 /// A specification of the UI clients that may have injected events dispatched
@@ -160,7 +158,7 @@ table Viewport {
 ///   surface is owned by a client outside of |Target|. Conversely, these
 ///   occluding clients cannot latch, because latched clients must be in
 ///   |Target|'s view tree.
-enum DispatchPolicy {
+type DispatchPolicy = strict enum {
     /// A single client latches onto a pointer event stream, where:
     /// - the pointer event stream starts within the viewport rectangle,
     /// - the latch happens on the ADD phase of the pointer event stream,

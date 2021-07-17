@@ -1,7 +1,6 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
 library fuchsia.sys2;
 
 using fuchsia.io;
@@ -9,14 +8,14 @@ using fuchsia.component;
 using fuchsia.process;
 
 /// The maximum number of handles that can be passed to a created component.
-const uint32 MAX_HANDLE_COUNT = 128;
+const MAX_HANDLE_COUNT uint32 = 128;
 
 /// A protocol used by a component instance to manage its own realm, such as for
 /// binding to its children.
 ///
 /// The component manager provides this service to components that use
 /// `fuchsia.sys2.Realm`.
-[Discoverable]
+@discoverable
 protocol Realm {
     /// Binds to a child component instance, causing it to start running if it
     /// is not already. When this function successfully returns, `child` is
@@ -43,8 +42,10 @@ protocol Realm {
     ///   starting it.
     /// - `INSTANCE_CANNOT_RESOLVE`: `child`'s component declaration failed to resolve.
     /// - `INSTANCE_DIED`: This realm no longer exists.
-    BindChild(ChildRef child,
-              request<fuchsia.io.Directory> exposed_dir) -> () error fuchsia.component.Error;
+    BindChild(resource struct {
+        child ChildRef;
+        exposed_dir server_end:fuchsia.io.Directory;
+    }) -> (struct {}) error fuchsia.component.Error;
 
     /// Opens the exposed directory of a child component instance. When this
     /// function successfully returns, `exposed_dir` is bound to a directory
@@ -65,8 +66,10 @@ protocol Realm {
     /// - `INSTANCE_NOT_FOUND`: `child` does not exist.
     /// - `INSTANCE_CANNOT_RESOLVE`: `child`'s component declaration failed to resolve.
     /// - `INSTANCE_DIED`: This realm no longer exists.
-    OpenExposedDir(ChildRef child,
-                   request<fuchsia.io.Directory> exposed_dir) -> () error fuchsia.component.Error;
+    OpenExposedDir(resource struct {
+        child ChildRef;
+        exposed_dir server_end:fuchsia.io.Directory;
+    }) -> (struct {}) error fuchsia.component.Error;
 
     /// Creates a child component instance dynamically. When this function
     /// returns successfully, the instance exists, but it may not be running.
@@ -83,7 +86,11 @@ protocol Realm {
     ///   in a `SingleRun` collection.
     /// - `NO_SPACE`: Could not allocate storage for the new instance.
     /// - `INSTANCE_DIED`: This realm no longer exists.
-    CreateChild(CollectionRef collection, ChildDecl decl, CreateChildArgs args) -> () error fuchsia.component.Error;
+    CreateChild(resource struct {
+        collection CollectionRef;
+        decl ChildDecl;
+        args CreateChildArgs;
+    }) -> (struct {}) error fuchsia.component.Error;
 
     /// Destroys a dynamically-created component instance. When this function
     /// returns, the client should assume the instance no longer exists.
@@ -97,7 +104,9 @@ protocol Realm {
     /// - `INSTANCE_NOT_FOUND`: `child` does not exist.
     /// - `COLLECTION_NOT_FOUND`: `collection` does not exist.
     /// - `INSTANCE_DIED`: This realm no longer exists.
-    DestroyChild(ChildRef child) -> () error fuchsia.component.Error;
+    DestroyChild(struct {
+        child ChildRef;
+    }) -> (struct {}) error fuchsia.component.Error;
 
     /// Returns an iterator that lists all instances in a collection.
     ///
@@ -112,11 +121,13 @@ protocol Realm {
     /// - `INSTANCE_DIED`: This realm no longer exists.
     /// - If `iter` does not have standard channel rights, this function may
     ///   return `ACCESS_DENIED` or component manager may close `iter`.
-    ListChildren(CollectionRef collection, request<ChildIterator> iter) -> ()
-        error fuchsia.component.Error;
+    ListChildren(resource struct {
+        collection CollectionRef;
+        iter server_end:ChildIterator;
+    }) -> (struct {}) error fuchsia.component.Error;
 };
 
-resource table CreateChildArgs {
+type CreateChildArgs = resource table {
     /// The numbered handles to pass to the component instance.
     ///
     /// Only PA_FD and PA_USER* handles are valid arguments, and inclusion of any other
@@ -125,7 +136,7 @@ resource table CreateChildArgs {
     ///
     /// If the runner for the component does not support the numbered handles it is
     /// expected to close the handles.
-    1: vector<fuchsia.process.HandleInfo>:MAX_HANDLE_COUNT numbered_handles;
+    1: numbered_handles vector<fuchsia.process.HandleInfo>:MAX_HANDLE_COUNT;
 };
 
 /// A protocol to iterate over the list of children in a realm.
@@ -134,5 +145,7 @@ protocol ChildIterator {
     ///
     /// Returns a vector of `ChildRef`. Returns an empty vector when there are
     /// no more children.
-    Next() -> (vector<ChildRef> children);
+    Next() -> (struct {
+        children vector<ChildRef>;
+    });
 };

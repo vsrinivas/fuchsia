@@ -1,8 +1,6 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.display.controller;
 
 using fuchsia.hardware.audiotypes;
@@ -12,7 +10,7 @@ alias ZxPixelFormat = uint32;
 
 alias ZxUnownedHandle = uint32;
 
-enum ImageType : uint32 {
+type ImageType = strict enum : uint32 {
     /// The image is linear and VMO backed.
     SIMPLE = 0;
 
@@ -23,51 +21,51 @@ enum ImageType : uint32 {
 };
 
 /// A structure containing information about an image.
-struct Image {
+type Image = struct {
     /// The width and height of the image in pixels.
-    uint32 width;
-    uint32 height;
+    width uint32;
+    height uint32;
 
     /// The pixel format of the image.
-    ZxPixelFormat pixel_format;
+    pixel_format ZxPixelFormat;
 
     /// The type conveys information about what is providing the pixel data. If this is not
     /// IMAGE_TYPE_SIMPLE, it is up to the driver and buffer producer to agree on the meaning
     /// of the value through some mechanism outside the scope of this API.
-    uint32 type;
+    type uint32;
 
     /// A driver-defined handle to the image. Each handle must be unique.
-    uint64 handle;
+    handle uint64;
 };
 
-const uint32 INVALID_DISPLAY_ID = 0;
-const uint32 INVALID_ID = 0;
+const INVALID_DISPLAY_ID uint32 = 0;
+const INVALID_ID uint32 = 0;
 
 /// A fallback structure to convey display information without an edid.
-struct DisplayParams {
-    uint32 width;
-    uint32 height;
-    uint32 refresh_rate_e2;
+type DisplayParams = struct {
+    width uint32;
+    height uint32;
+    refresh_rate_e2 uint32;
 };
 
 /// Info about valid cursor configurations.
-struct CursorInfo {
+type CursorInfo = struct {
     /// The width and height of the cursor configuration, in pixels.
-    uint32 width;
-    uint32 height;
-    ZxPixelFormat format;
+    width uint32;
+    height uint32;
+    format ZxPixelFormat;
 };
 
-union Panel {
+type Panel = strict union {
     /// The bus_id to use to read this display's edid from the device's i2c protocol.
-    1: uint32 i2c_bus_id;
+    1: i2c_bus_id uint32;
     /// The display's parameters if an edid is not present.
-    2: DisplayParams params;
+    2: params DisplayParams;
 };
 
 /// A structure containing information a connected display.
-struct AddedDisplayArgs {
-    uint64 display_id;
+type AddedDisplayArgs = struct {
+    display_id uint64;
 
     /// A flag indicating whether or not the display has a valid edid.
     ///
@@ -78,12 +76,12 @@ struct AddedDisplayArgs {
     ///
     /// If no edid is present, then the meaning of display_config's mode structure is
     /// undefined, and drivers should ignore it in check_configuration and apply_configuration.
-    bool edid_present;
-    Panel panel;
+    edid_present bool;
+    panel Panel;
 
     /// A list of pixel formats supported by the display. The first entry is the
     /// preferred pixel format.
-    vector<ZxPixelFormat>:MAX pixel_format;
+    pixel_format vector<ZxPixelFormat>:MAX;
 
     /// A list of cursor configurations most likely to be accepted by the driver. Can
     /// be null if cursor_count is 0.
@@ -91,35 +89,36 @@ struct AddedDisplayArgs {
     /// The driver may reject some of these configurations in some circumstances, and
     /// it may accept other configurations, but at least one of these configurations
     /// should be valid at most times.
-    vector<CursorInfo>:MAX cursor_info;
+    cursor_info vector<CursorInfo>:MAX;
 };
 
 /// Out parameters will be populated before on_displays_changed returns.
-struct AddedDisplayInfo {
-    bool is_hdmi_out;
-    bool is_standard_srgb_out;
+type AddedDisplayInfo = struct {
+    is_hdmi_out bool;
+    is_standard_srgb_out bool;
 
-    uint32 audio_format_count;
+    audio_format_count uint32;
 
     /// All strings are null-terminated. |manufacturer_id| is guaranteed to have
     /// length 3, all other strings may be empty.
-    string:4 manufacturer_id;
+    manufacturer_id string:4;
     /// non-null
-    string:MAX manufacturer_name;
+    manufacturer_name string:MAX;
     /// null-terminated
-    string:14 monitor_name;
+    monitor_name string:14;
     /// null-terminated
-    string:14 monitor_serial;
+    monitor_serial string:14;
 
     // physical horizontal size in millimeters
-    uint32 horizontal_size_mm;
+    horizontal_size_mm uint32;
     // physical vertical size in millimeters
-    uint32 vertical_size_mm;
+    vertical_size_mm uint32;
 };
 
 /// The client will not make any `ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL` calls into the device
 /// during these callbacks.
-[Transport = "Banjo", BanjoLayout = "ddk-interface"]
+@transport("Banjo")
+@banjo_layout("ddk-interface")
 protocol DisplayControllerInterface {
     /// Callbacks which are invoked when displays are added or removed. |added_display_list| and
     /// |removed_display_list| point to arrays of the display ids which were added and removed. If
@@ -129,8 +128,12 @@ protocol DisplayControllerInterface {
     ///
     /// The driver should call this function when the callback is registered if any displays
     /// are present.
-    OnDisplaysChanged(vector<AddedDisplayArgs>:MAX added_display,
-                      vector<uint64>:MAX removed_display) -> (vector<AddedDisplayInfo>:MAX display_info);
+    OnDisplaysChanged(struct {
+        added_display vector<AddedDisplayArgs>:MAX;
+        removed_display vector<uint64>:MAX;
+    }) -> (struct {
+        display_info vector<AddedDisplayInfo>:MAX;
+    });
 
     /// |timestamp| is the ZX_CLOCK_MONOTONIC timestamp at which the vsync occurred.
     /// |handles| points to an array of image handles of each framebuffer being
@@ -138,20 +141,29 @@ protocol DisplayControllerInterface {
     ///
     /// The driver must call this function for all vsync events, even
     /// if the display has no images displayed.
-    OnDisplayVsync(uint64 display_id, zx.time timestamp, vector<uint64>:MAX handle) -> ();
+    OnDisplayVsync(struct {
+        display_id uint64;
+        timestamp zx.time;
+        handle vector<uint64>:MAX;
+    }) -> ();
 
-    GetAudioFormat(uint64 display_id, uint32 fmt_idx)
-        -> (zx.status s, fuchsia.hardware.audiotypes.AudioTypesAudioStreamFormatRange fmt);
+    GetAudioFormat(struct {
+        display_id uint64;
+        fmt_idx uint32;
+    }) -> (struct {
+        s zx.status;
+        fmt fuchsia.hardware.audiotypes.AudioTypesAudioStreamFormatRange;
+    });
 };
 
-enum Alpha : uint8 {
+type Alpha = strict enum : uint8 {
     DISABLE = 0;
     PREMULTIPLIED = 1;
     HW_MULTIPLY = 2;
 };
 
 /// Rotations are applied counter-clockwise, and are applied before reflections.
-enum FrameTransform : uint32 {
+type FrameTransform = strict enum : uint32 {
     IDENTITY = 0;
     REFLECT_X = 1;
     REFLECT_Y = 2;
@@ -162,17 +174,17 @@ enum FrameTransform : uint32 {
     ROT_90_REFLECT_Y = 7;
 };
 
-struct Frame {
+type Frame = struct {
     /// (|x_pos|, |y_pos|) specifies the position of the upper-left corner
     /// of the frame.
-    uint32 x_pos;
-    uint32 y_pos;
-    uint32 width;
-    uint32 height;
+    x_pos uint32;
+    y_pos uint32;
+    width uint32;
+    height uint32;
 };
 
-struct PrimaryLayer {
-    Image image;
+type PrimaryLayer = struct {
+    image Image;
 
     /// An ALPHA_* constant.
     ///
@@ -187,60 +199,60 @@ struct PrimaryLayer {
     /// channel with alpha_layer_val before blending.
     ///
     /// If alpha_layer_val is not NaN, it will be in the range [0, 1].
-    Alpha alpha_mode;
-    float32 alpha_layer_val;
+    alpha_mode Alpha;
+    alpha_layer_val float32;
 
-    FrameTransform transform_mode;
+    transform_mode FrameTransform;
 
     /// The source frame, where (0,0) is the top-left corner of the image. The
     /// client guarantees that src_frame lies entirely within the image.
-    Frame src_frame;
+    src_frame Frame;
 
     /// The destination frame, where (0,0) is the top-left corner of the
     /// composed output. The client guarantees that dest_frame lies entirely
     /// within the composed output.
-    Frame dest_frame;
+    dest_frame Frame;
 };
 
-struct CursorLayer {
-    Image image;
+type CursorLayer = struct {
+    image Image;
 
     /// The position of the top-left corner of the cursor's image. When being
     /// applied to a display, the cursor is guaranteed to have at least one
     /// pixel of overlap with the display.
-    int32 x_pos;
-    int32 y_pos;
+    x_pos int32;
+    y_pos int32;
 };
 
-struct ColorLayer {
-    ZxPixelFormat format;
+type ColorLayer = struct {
+    format ZxPixelFormat;
     /// The color to use for the layer. The color is little-endian, and is
     /// guaranteed to be of the appropriate size.
-    vector<uint8>:MAX color;
+    color vector<uint8>:MAX;
 };
 
 /// Types of layers.
-enum LayerType : uint32 {
+type LayerType = strict enum : uint32 {
     PRIMARY = 0;
     CURSOR = 1;
     COLOR = 2;
 };
 
-union LayerConfig {
-    1: PrimaryLayer primary;
-    2: CursorLayer cursor;
-    3: ColorLayer color;
+type LayerConfig = strict union {
+    1: primary PrimaryLayer;
+    2: cursor CursorLayer;
+    3: color ColorLayer;
 };
 
-struct Layer {
-    LayerType type;
+type Layer = struct {
+    type LayerType;
     /// z_index of the layer. See |check_configuration| and |apply_configuration|.
-    uint32 z_index;
-    LayerConfig cfg;
+    z_index uint32;
+    cfg LayerConfig;
 };
 
 /// constants for display_config's mode_flags field
-enum ModeFlag : uint32 {
+type ModeFlag = strict enum : uint32 {
     VSYNC_POSITIVE = 0x1;
     HSYNC_POSITIVE = 0x2;
     INTERLACED = 0x4;
@@ -249,21 +261,21 @@ enum ModeFlag : uint32 {
 };
 
 /// The video parameters which specify the display mode.
-struct DisplayMode {
-    uint32 pixel_clock_10khz;
-    uint32 h_addressable;
-    uint32 h_front_porch;
-    uint32 h_sync_pulse;
-    uint32 h_blanking;
-    uint32 v_addressable;
-    uint32 v_front_porch;
-    uint32 v_sync_pulse;
-    uint32 v_blanking;
+type DisplayMode = struct {
+    pixel_clock_10khz uint32;
+    h_addressable uint32;
+    h_front_porch uint32;
+    h_sync_pulse uint32;
+    h_blanking uint32;
+    v_addressable uint32;
+    v_front_porch uint32;
+    v_sync_pulse uint32;
+    v_blanking uint32;
     /// A bitmask of MODE_FLAG_* values
-    uint32 flags;
+    flags uint32;
 };
 
-enum ColorConversion : uint32 {
+type ColorConversion = strict enum : uint32 {
     /// If set, use the 0 vector for the color conversion preoffset
     PREOFFSET = 0x1;
     /// If set, use the identity matrix for the color conversion coefficients
@@ -272,36 +284,41 @@ enum ColorConversion : uint32 {
     POSTOFFSET = 0x4;
 };
 
-struct DisplayConfig {
+type DisplayConfig = struct {
     /// the display id to which the configuration applies
-    uint64 display_id;
+    display_id uint64;
 
-    DisplayMode mode;
+    mode DisplayMode;
 
     /// Bitmask of COLOR_CONVERSION_* flags
-    uint32 cc_flags;
+    cc_flags uint32;
     /// Color conversion is applied to each pixel according to the formula:
     ///
     /// (cc_coefficients * (pixel + cc_preoffsets)) + cc_postoffsets
     ///
     /// where pixel is a column vector consisting of the pixel's 3 components.
-    array<float32>:3 cc_preoffsets;
-    array<array<float32>:3>:3 cc_coefficients;
-    array<float32>:3 cc_postoffsets;
+    cc_preoffsets array<float32, 3>;
+    cc_coefficients array<array<float32, 3>, 3>;
+    cc_postoffsets array<float32, 3>;
 
-    [Mutable, OutOfLineContents] vector<Layer>:MAX layer;
+    @mutable
+    @out_of_line_contents
+    layer vector<Layer>:MAX;
 
     /// Flag to indicate valid gamma table
-    bool gamma_table_present;
+    gamma_table_present bool;
     /// Flag to indicate whether display driver should re-apply gamma correction table to hardware
-    bool apply_gamma_table;
+    apply_gamma_table bool;
     /// Gamma Table (Red, Green and Blue)
-    [Mutable] vector<float32>:MAX gamma_red;
-    [Mutable] vector<float32>:MAX gamma_green;
-    [Mutable] vector<float32>:MAX gamma_blue;
+    @mutable
+    gamma_red vector<float32>:MAX;
+    @mutable
+    gamma_green vector<float32>:MAX;
+    @mutable
+    gamma_blue vector<float32>:MAX;
 };
 
-enum ConfigDisplay : uint32 {
+type ConfigDisplay = strict enum : uint32 {
     /// The display mode configuration is valid. Note that this is distinct from
     /// whether or not the layer configuration is valid.
     OK = 0;
@@ -315,7 +332,7 @@ enum ConfigDisplay : uint32 {
     UNSUPPORTED_MODES = 2;
 };
 
-enum Client : uint32 {
+type Client = strict enum : uint32 {
     /// The client should convert the corresponding layer to a primary layer.
     USE_PRIMARY = 0x1;
     /// The client should compose all layers with MERGE_BASE and MERGE_SRC into a new,
@@ -348,25 +365,44 @@ enum Client : uint32 {
 
 /// The client guarantees that check_configuration and apply_configuration are always
 /// made from a single thread. The client makes no other threading guarantees.
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol DisplayControllerImpl {
     /// The function will only be called once, and it will be called before any other
     /// functions are called.
-    SetDisplayControllerInterface(DisplayControllerInterface intf) -> ();
+    SetDisplayControllerInterface(resource struct {
+        intf client_end:DisplayControllerInterface;
+    }) -> ();
 
     /// Imports a VMO backed image into the driver. The driver should set image->handle. The
     /// driver does not own the vmo handle passed to this function.
-    ImportVmoImage([InOut] Image image, zx.handle:VMO vmo, uint64 offset) -> (zx.status s);
+    ImportVmoImage(resource struct {
+        @in_out
+        image Image;
+        vmo zx.handle:VMO;
+        offset uint64;
+    }) -> (struct {
+        s zx.status;
+    });
 
     /// Imports an image from a buffer collection into the driver. The driver should set
     /// image->handle.
-    ImportImage([InOut] Image image, ZxUnownedHandle collection, uint32 index)
-        -> (zx.status s);
+    ImportImage(struct {
+        @in_out
+        image Image;
+        collection ZxUnownedHandle;
+        index uint32;
+    }) -> (struct {
+        s zx.status;
+    });
 
     /// Releases any driver state associated with the given image. The client guarantees that
     /// any images passed to apply_config will not be released until a vsync occurs with a
     /// more recent image.
-    ReleaseImage([InOut] Image image) -> ();
+    ReleaseImage(struct {
+        @in_out
+        image Image;
+    }) -> ();
 
     /// Validates the given configuration.
     ///
@@ -391,8 +427,14 @@ protocol DisplayControllerImpl {
     ///
     /// The driver must not retain references to the configuration after this function returns.
     /// TODO: Fix me...
-    CheckConfiguration([InnerPointer] vector<DisplayConfig>:MAX display_config)
-        -> (uint32 display_cfg_result, [CalleeAllocated] vector<uint32>:MAX layer_cfg_result);
+    CheckConfiguration(struct {
+        @inner_pointer
+        display_config vector<DisplayConfig>:MAX;
+    }) -> (struct {
+        display_cfg_result uint32;
+        @callee_allocated
+        layer_cfg_result vector<uint32>:MAX;
+    });
 
     /// Applies the configuration.
     ///
@@ -410,7 +452,10 @@ protocol DisplayControllerImpl {
     /// callback after doing so.
     ///
     /// The driver must not retain references to the configuration after this function returns.
-    ApplyConfiguration([InnerPointer] vector<DisplayConfig>:MAX display_config) -> ();
+    ApplyConfiguration(struct {
+        @inner_pointer
+        display_config vector<DisplayConfig>:MAX;
+    }) -> ();
 
     /// Set ELD for one display.
     ///
@@ -420,16 +465,32 @@ protocol DisplayControllerImpl {
     /// section 7.3.3.34.1.
     /// https://www.intel.com/content/dam/www/public/us/en/documents/product-specifications/high-definition-audio-specification.pdf
     /// The driver must not retain references to the ELD after this function returns.
-    SetEld(uint64 display_id, vector<uint8>:MAX raw_eld) -> ();
+    SetEld(struct {
+        display_id uint64;
+        raw_eld vector<uint8>:MAX;
+    }) -> ();
 
     // Connects the handle to the sysmem service.
-    GetSysmemConnection(zx.handle:CHANNEL sysmem_handle) -> (zx.status s);
+    GetSysmemConnection(resource struct {
+        sysmem_handle zx.handle:CHANNEL;
+    }) -> (struct {
+        s zx.status;
+    });
 
     // Set sysmem buffer collection contraints needed to ensure an image can be imported with config
     // |config| on the fuchsia.sysmem.BufferCollection handle |collection|.
-    SetBufferCollectionConstraints(Image config, ZxUnownedHandle collection) -> (zx.status s);
+    SetBufferCollectionConstraints(struct {
+        config Image;
+        collection ZxUnownedHandle;
+    }) -> (struct {
+        s zx.status;
+    });
 
     // If the system only supports single-buffered mode with a single framebuffer, then this returns
     // that buffer and its stride. Otherwise it can return ZX_ERR_NOT_SUPPORTED.
-    GetSingleBufferFramebuffer() -> (zx.status res, zx.handle:VMO vmo, uint32 stride);
+    GetSingleBufferFramebuffer() -> (resource struct {
+        res zx.status;
+        vmo zx.handle:VMO;
+        stride uint32;
+    });
 };

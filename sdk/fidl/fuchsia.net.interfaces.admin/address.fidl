@@ -1,17 +1,14 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.net.interfaces.admin;
 
 using zx;
 
-struct Empty {
-};
+type Empty = struct {};
 
 /// Information about the preferred lifetime of an IP address.
-union PreferredLifetimeInfo {
+type PreferredLifetimeInfo = strict union {
     /// The end of the preferred lifetime of the address.
     ///
     /// The address should *not* be considered deprecated if `zx.time` is in
@@ -23,7 +20,7 @@ union PreferredLifetimeInfo {
     ///
     /// Must be greater than 0. If `zx.time.INFINITE`, the preferred lifetime
     /// does not expire.
-    1: zx.time preferred_lifetime_end;
+    1: preferred_lifetime_end zx.time;
 
     /// Set if the address is deprecated.
     ///
@@ -36,16 +33,16 @@ union PreferredLifetimeInfo {
     /// lifetime is extended.
     ///
     /// This field is used to signal that the address should be deprecated.
-    2: Empty deprecated;
+    2: deprecated Empty;
 };
 
 /// Properties of an IP address.
-table AddressProperties {
+type AddressProperties = table {
     /// Information about the preferred lifetime of the address.
     ///
     /// If not set, interpreted as
     /// `PreferredLifetimeInfo.preferred_lifetime_end = zx.time.INFINITE`.
-    1: PreferredLifetimeInfo preferred_lifetime_info;
+    1: preferred_lifetime_info PreferredLifetimeInfo;
 
     /// The end of the valid lifetime of the address.
     ///
@@ -60,11 +57,11 @@ table AddressProperties {
     /// not expire.
     ///
     /// If not set, interpreted as `zx.time.INFINITE`.
-    2: zx.time valid_lifetime_end;
+    2: valid_lifetime_end zx.time;
 };
 
 /// Assignment state of an IP address.
-enum AddressAssignmentState {
+type AddressAssignmentState = strict enum {
     /// Address assignment is in progress, e.g. Duplicate Address Detection
     /// is being performed. The address cannot be used when in this state
     /// (cannot bind to it yet or receive packets destined to it).
@@ -82,7 +79,7 @@ enum AddressAssignmentState {
 };
 
 /// Reasons from IP address removal.
-enum AddressRemovalReason {
+type AddressRemovalReason = strict enum {
     /// Duplicate Address Detection failed.
     ///
     /// A neighbor was found to hold the address.
@@ -105,7 +102,9 @@ protocol AddressStateProvider {
     /// expected to cache address properties.
     ///
     /// + request `address_properties` the updated properties of the address.
-    UpdateAddressProperties(AddressProperties address_properties) -> ();
+    UpdateAddressProperties(struct {
+        address_properties AddressProperties;
+    }) -> ();
 
     /// Hanging get for address assignment state.
     ///
@@ -120,7 +119,9 @@ protocol AddressStateProvider {
     /// still pending. Doing so will cause the channel to be closed.
     ///
     /// - response `assignment_state` the assignment state of the address.
-    WatchAddressAssignmentState() -> (AddressAssignmentState assignment_state);
+    WatchAddressAssignmentState() -> (struct {
+        assignment_state AddressAssignmentState;
+    });
 
     /// Event to signal that the address was removed.
     ///
@@ -128,15 +129,17 @@ protocol AddressStateProvider {
     /// sent prior to channel closure by the server.
     ///
     /// - response `error` the removal reason.
-    -> OnAddressRemoved(AddressRemovalReason error);
+    -> OnAddressRemoved(struct {
+        error AddressRemovalReason;
+    });
 };
 
 /// Address assignment parameters.
-resource table AddressParameters {
+type AddressParameters = resource table {
     /// The initial properties of the address.
     ///
     /// If not set, interpreted as an empty `AddressProperties`.
-    1: AddressProperties initial_properties;
+    1: initial_properties AddressProperties;
 
     /// True if the address is temporary.
     ///
@@ -154,7 +157,7 @@ resource table AddressParameters {
     /// [RFC 6724, section 5](https://tools.ietf.org/html/rfc6724#section-5).
     ///
     /// If not set, interpreted as false.
-    2: bool temporary;
+    2: temporary bool;
 
     /// A handle to an `AddressStateProvider` channel.
     ///
@@ -163,5 +166,5 @@ resource table AddressParameters {
     /// Optional field. If provided, the lifetime of the address is tied to the
     /// lifetime of the channel; closing the channel causes the address to be
     /// removed.
-    3: request<AddressStateProvider> address_state_provider;
+    3: address_state_provider server_end:AddressStateProvider;
 };

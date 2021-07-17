@@ -1,14 +1,16 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.intelhda.codec;
 
 using zx;
 
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol IhdaCodec {
     /// Fetch a zx_handle_t to a channel which can be used to communicate with the codec device.
-    GetDriverChannel() -> (zx.status s, zx.handle:CHANNEL channel);
+    GetDriverChannel() -> (resource struct {
+        s zx.status;
+        channel zx.handle:CHANNEL;
+    });
 };

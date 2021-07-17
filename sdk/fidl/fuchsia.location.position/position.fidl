@@ -1,8 +1,6 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 /// Protocols and types related to positions.
 library fuchsia.location.position;
 
@@ -17,10 +15,10 @@ using fuchsia.location;
 /// Note that only the latitude and longitude are guaranteed
 /// to be present. The remaining fields, if present, are contained
 /// within `extras`.
-struct Position {
-    float64 latitude; // In WGS84 datum
-    float64 longitude; // In WGS84 datum
-    PositionExtras extras;
+type Position = struct {
+    latitude float64; // In WGS84 datum
+    longitude float64; // In WGS84 datum
+    extras PositionExtras;
 };
 
 /// Extra information about a position on Earth.
@@ -31,16 +29,18 @@ struct Position {
 /// motion compensation.
 ///
 /// Note that all extras are optional.
-table PositionExtras {
-    1: float64 accuracy_meters;
-    2: float64 altitude_meters; // Above WGS84 ellipsoid
+type PositionExtras = table {
+    1: accuracy_meters float64;
+    2: altitude_meters float64; // Above WGS84 ellipsoid
 };
 
 /// Provides access to position data for emergency purposes. Implementations
 /// of this service are expected to be subject to different power and privacy
 /// controls than more general location services.
-[Discoverable]
+@discoverable
 protocol EmergencyProvider {
     /// Returns the current position, if available.
-    GetCurrent() -> (Position position) error fuchsia.location.Error;
+    GetCurrent() -> (struct {
+        position Position;
+    }) error fuchsia.location.Error;
 };

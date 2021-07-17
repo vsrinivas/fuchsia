@@ -1,8 +1,6 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 /// This library contains the APIs used to manage and distribute user's
 /// preferences related to keymap choice.
 library fuchsia.input.keymap;
@@ -10,7 +8,7 @@ library fuchsia.input.keymap;
 /// Keymaps that should always be present and selectable.  The fallback keymaps
 /// may be useful on their own but are mainly here to ensure that at least some
 /// keymap is present if no other custom keymaps have been defined or in use.
-flexible enum Id {
+type Id = flexible enum {
     /// The US_QWERTY keymap.  This is also the default if no settings are
     /// ever applied.
     US_QWERTY = 0;
@@ -21,9 +19,11 @@ flexible enum Id {
 };
 
 /// Mutator interface to the keymap configuration.
-[Discoverable]
+@discoverable
 protocol Configuration {
     /// Set a keymap by ID.
     /// If a keymap has never been set before, "US_QWERTY" is the assumed default.
-    SetLayout(Id keymap) -> ();
+    SetLayout(struct {
+        keymap Id;
+    }) -> ();
 };

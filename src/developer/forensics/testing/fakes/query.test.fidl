@@ -1,17 +1,17 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.feedback.testing;
 
 /// FakeCrashReporterQuerier provides a way to query a fake crash reporter component to ensure that
 /// crash reports are being filed as expected.
-[Discoverable]
+@discoverable
 protocol FakeCrashReporterQuerier {
     /// Returns the number of reports that have been filed with the fake crash reporter ever.
     ///
     /// This method follows the hanging-get pattern and won't return a value until the number of
     /// reports filed since the last call has changed.
-    WatchFile() -> (uint64 num_filed);
+    WatchFile() -> (struct {
+        num_filed uint64;
+    });
 };

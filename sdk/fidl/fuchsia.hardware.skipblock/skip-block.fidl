@@ -1,38 +1,36 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.skipblock;
 
 using zx;
 
 // Matches the value of ZBI_PARTITION_GUID_LEN.
-const uint32 GUID_LEN = 16;
+const GUID_LEN uint32 = 16;
 
-[ForDeprecatedCBindings]
-struct PartitionInfo {
+@for_deprecated_c_bindings
+type PartitionInfo = struct {
     /// Partition type GUID.
-    array<uint8>:GUID_LEN partition_guid;
+    partition_guid array<uint8, GUID_LEN>;
     /// Describes the read/write size.
-    uint64 block_size_bytes;
+    block_size_bytes uint64;
     /// Describes size of partition in terms of blocks.
-    uint32 partition_block_count;
+    partition_block_count uint32;
 };
 
-[ForDeprecatedCBindings]
-resource struct ReadWriteOperation {
+@for_deprecated_c_bindings
+type ReadWriteOperation = resource struct {
     /// Memory object describing buffer to read into or write from.
-    zx.handle:VMO vmo;
+    vmo zx.handle:VMO;
     /// VMO offset in bytes.
-    uint64 vmo_offset;
+    vmo_offset uint64;
     /// Block # to begin operation from.
-    uint32 block;
+    block uint32;
     /// Number of blocks to read or write.
-    uint32 block_count;
+    block_count uint32;
 };
 
-enum WriteBytesMode {
+type WriteBytesMode = strict enum {
     /// In this mode, WriteBytes() performs the following steps:
     /// 1. Reads data from the minimum block range that covers the specified write range into a
     /// buffer. (i.e. if 1 block contains 4 pages, then the minimum block range that covers page
@@ -54,19 +52,19 @@ enum WriteBytesMode {
     ERASE_WRITE = 2;
 };
 
-resource struct WriteBytesOperation {
+type WriteBytesOperation = resource struct {
     /// Memory object describing buffer to write from.
-    zx.handle:VMO vmo;
+    vmo zx.handle:VMO;
     /// VMO offset in bytes.
-    uint64 vmo_offset;
+    vmo_offset uint64;
     /// Device offset in bytes to begin operation from.
     /// Must be flash page aligned.
-    uint64 offset;
+    offset uint64;
     /// Number of bytes to write.
     /// Must be flash page aligned.
-    uint64 size;
+    size uint64;
     /// The write mode. This option does not affect WriteBytesWithoutErase().
-    WriteBytesMode mode;
+    mode WriteBytesMode;
 };
 
 /// SkipBlock is a layer on top of a raw NAND device that skips bad blocks, but provides no
@@ -75,16 +73,23 @@ resource struct WriteBytesOperation {
 /// Skip-block partitions are used when data needs to be accessible by the bootloader. The
 /// bootloader doesn't understand the more advanced FTL partitions and this data isn't written
 /// frequently enough for performance or wear-leveling to be an issue.
-[ForDeprecatedCBindings]
+@for_deprecated_c_bindings
 protocol SkipBlock {
     /// Returns information about the skip-block partition.
     ///
     /// The block count can shrink in the event that a bad block is grown. It is
     /// recommended to call this again after a bad block is grown.
-    GetPartitionInfo() -> (zx.status status, PartitionInfo partition_info);
+    GetPartitionInfo() -> (struct {
+        status zx.status;
+        partition_info PartitionInfo;
+    });
 
     /// Reads the specified blocks into the provided vmo.
-    Read(ReadWriteOperation op) -> (zx.status status);
+    Read(resource struct {
+        op ReadWriteOperation;
+    }) -> (struct {
+        status zx.status;
+    });
 
     /// Erases and writes the specified blocks from the provided vmo.
     ///
@@ -93,7 +98,12 @@ protocol SkipBlock {
     /// physical block map to change, all previously written blocks at logical
     /// addresses after the section being written should be considered corrupted,
     /// and rewritten if applicable.
-    Write(ReadWriteOperation op) -> (zx.status status, bool bad_block_grown);
+    Write(resource struct {
+        op ReadWriteOperation;
+    }) -> (struct {
+        status zx.status;
+        bad_block_grown bool;
+    });
 
     /// Erases and writes the specified bytes from the provided vmo. If offset
     /// and size in `op` are not aligned to `block_size_bytes` then the driver will
@@ -105,7 +115,12 @@ protocol SkipBlock {
     /// physical block map to change, all previously written blocks at logical
     /// addresses after the section being written should be considered corrupted,
     /// and rewritten if applicable.
-    WriteBytes(WriteBytesOperation op) -> (zx.status status, bool bad_block_grown);
+    WriteBytes(resource struct {
+        op WriteBytesOperation;
+    }) -> (struct {
+        status zx.status;
+        bad_block_grown bool;
+    });
 
     /// Similar to WriteBytes except that it does not erase before writing
     /// to a block, and it will simply abort when any error, including bad block
@@ -123,5 +138,9 @@ protocol SkipBlock {
     /// block range that covers the write range. If the method returns failure, fall back and
     /// re-write the backed-up data (can be updated with the new data) to the minimal block
     /// range using either WriteBytes or Write method.
-    WriteBytesWithoutErase(WriteBytesOperation op) -> (zx.status status);
+    WriteBytesWithoutErase(resource struct {
+        op WriteBytesOperation;
+    }) -> (struct {
+        status zx.status;
+    });
 };

@@ -1,16 +1,16 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.camera.test;
 
 using fuchsia.hardware.camera;
 
 /// This interface provides manipulation methods for a standard DeviceWatcher. This is intended for
 /// test purposes only.
-[Discoverable]
+@discoverable
 protocol DeviceWatcherTester {
     /// Inserts the given controller implementation as a new device.
-    InjectDevice(fuchsia.hardware.camera.Device camera);
+    InjectDevice(resource struct {
+        camera client_end:fuchsia.hardware.camera.Device;
+    });
 };

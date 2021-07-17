@@ -1,13 +1,12 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.media;
 
 using zx;
 
-[Discoverable, ForDeprecatedCBindings]
+@discoverable
+@for_deprecated_c_bindings
 protocol ProfileProvider {
     /// Register a thread as a media thread. This notifies the media subsystem
     /// that this thread should have an elevated scheduling profile applied to
@@ -18,8 +17,14 @@ protocol ProfileProvider {
     ///
     /// Returns the period and capacity that was applied, if a deadline profile
     /// was selected. Returns 0 if no deadline profile was selected.
-    RegisterHandler(zx.handle:THREAD thread_handle, string:64 name, zx.duration period)
-        -> (zx.duration period, zx.duration capacity);
+    RegisterHandler(resource struct {
+        thread_handle zx.handle:THREAD;
+        name string:64;
+        period zx.duration;
+    }) -> (struct {
+        period zx.duration;
+        capacity zx.duration;
+    });
 
     /// Register a thread as a media thread. This notifies the media subsystem that this thread
     /// should have an elevated scheduling profile applied to it in order to meet audio or video
@@ -34,7 +39,14 @@ protocol ProfileProvider {
     ///
     /// Returns the period and capacity that was applied, if a deadline profile was selected.
     /// Returns 0 if no deadline profile was selected.
-    [Transitional]
-    RegisterHandlerWithCapacity(zx.handle:THREAD thread_handle, string:64 name, zx.duration period, float32 capacity)
-        -> (zx.duration period, zx.duration capacity);
+    @transitional
+    RegisterHandlerWithCapacity(resource struct {
+        thread_handle zx.handle:THREAD;
+        name string:64;
+        period zx.duration;
+        capacity float32;
+    }) -> (struct {
+        period zx.duration;
+        capacity zx.duration;
+    });
 };

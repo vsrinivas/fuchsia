@@ -1,13 +1,11 @@
 // Copyright 2017 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.ui.gfx;
 
 /// Provides information about a display.
-struct DisplayInfo {
+type DisplayInfo = struct {
     /// The size of the display, in physical pixels.
-    uint32 width_in_px;
-    uint32 height_in_px;
+    width_in_px uint32;
+    height_in_px uint32;
 };

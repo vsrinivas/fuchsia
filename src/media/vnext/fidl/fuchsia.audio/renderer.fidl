@@ -1,8 +1,6 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.audio;
 
 using fuchsia.media2;
@@ -32,14 +30,14 @@ protocol Renderer {
     ///
     /// Multiple stream sinks may be used sequentially for a given renderer. This method responds
     /// when the connection is ready or the connect attempt fails.
-    ConnectInputStream(
-        zx.handle:EVENTPAIR buffer_collection_token,
-        fuchsia.mediastreams.AudioFormat format,
-        fuchsia.mediastreams.Compression? compression,
-        fuchsia.media2.TimestampUnits? timestamp_units,
-        fuchsia.media2.StreamTimeline? stream_timeline,
-        request<fuchsia.media2.StreamSink> request)
-        -> () error fuchsia.media2.ConnectionError;
+    ConnectInputStream(resource struct {
+        buffer_collection_token zx.handle:EVENTPAIR;
+        format fuchsia.mediastreams.AudioFormat;
+        compression box<fuchsia.mediastreams.Compression>;
+        timestamp_units box<fuchsia.media2.TimestampUnits>;
+        stream_timeline box<fuchsia.media2.StreamTimeline>;
+        request server_end:fuchsia.media2.StreamSink;
+    }) -> (struct {}) error fuchsia.media2.ConnectionError;
 
     /// Indicates that the current input stream has been disconnected unexpectedly.
     -> OnInputStreamDisconnected();
@@ -67,8 +65,12 @@ protocol Renderer {
     /// If the renderer is currently started, this method does nothing except return the same values
     /// returned by the previous `Start` call. If a start or stop transition is currently scheduled
     /// when this method is called, that scheduled transition is first cancelled.
-    Start(zx.time reference_time, zx.duration presentation_time)
-        -> (zx.time reference_time);
+    Start(struct {
+        reference_time zx.time;
+        presentation_time zx.duration;
+    }) -> (struct {
+        reference_time zx.time;
+    });
 
     /// Stops the renderer's presentation timeline.
     ///
@@ -84,7 +86,12 @@ protocol Renderer {
     /// returned by the previous `Stop` call or 0,0 if this renderer has never started. If a start
     /// or stop transition is currently scheduled when this method is called, that scheduled
     /// transition is first cancelled.
-    Stop(ConsumerStopTime stop_time) -> (zx.time reference_time, zx.duration presentation_time);
+    Stop(struct {
+        stop_time ConsumerStopTime;
+    }) -> (struct {
+        reference_time zx.time;
+        presentation_time zx.duration;
+    });
 
     /// Requests to change the playback rate of the renderer. 1.0 means normal playback.
     ///
@@ -93,7 +100,9 @@ protocol Renderer {
     /// The new rate will be reflected in the updated status. The `rate_supported` field of
     /// `RendererStatus` indicates whether this method is supported. If not, calls to this method
     /// are ignored.
-    SetRate(float32 rate);
+    SetRate(struct {
+        rate float32;
+    });
 
     /// Gets the current status of the renderer using the long get pattern.
     ///
@@ -101,70 +110,74 @@ protocol Renderer {
     ///
     /// The renderer replies immediately to this method when it is first called. The renderer
     /// replies to subsequent calls when the status has changed since the last call.
-    WatchStatus() -> (RendererStatus status);
+    WatchStatus() -> (struct {
+        status RendererStatus;
+    });
 
     /// Sets the reference clock to use for this renderer.
     ///
     /// All ‘reference time’ values for this renderer are interpreted with respect to this clock.
     /// If this method is never called, the reference clock is the system’s monotonic clock.
     // TODO: Does this belong in the factory method?
-    SetReferenceClock(zx.handle:CLOCK reference_clock);
+    SetReferenceClock(resource struct {
+        reference_clock zx.handle:CLOCK;
+    });
 
-    // Binds the volume control for the renderer.
-    // TODO: Does this belong in the factory method?
-    //BindVolumeControl(request<VolumeControl> request);
+// Binds the volume control for the renderer.
+// TODO: Does this belong in the factory method?
+//BindVolumeControl(request<VolumeControl> request);
 
-    // Binds the gain control for the renderer.
-    // TODO: Does this belong in the factory method?
-    //BindGainControl(request<GainControl> request);
+// Binds the gain control for the renderer.
+// TODO: Does this belong in the factory method?
+//BindGainControl(request<GainControl> request);
 };
 
-const uint32 MAX_COMPRESSION_TYPES = 16;
+const MAX_COMPRESSION_TYPES uint32 = 16;
 
 /// Represents the status of the renderer.
-table RendererStatus {
+type RendererStatus = table {
     /// If present, indicates an error condition currently in effect.
     /// Absent if no error.
-    1: RendererError error;
+    1: error RendererError;
 
     /// If present, indicates the current relationship between the
     /// presentation timeline and reference clock. Absent initially.
-    2: fuchsia.media2.PresentationTimeline presentation_timeline;
+    2: presentation_timeline fuchsia.media2.PresentationTimeline;
 
     /// Indicates the minimum lead time supported by this `Renderer`,
     /// that is, the minimum interval ahead of a packet’s effective
     /// presentation time that the packet must be submitted to prevent
     /// underflow.
-    3: zx.duration min_lead_time;
+    3: min_lead_time zx.duration;
 
     /// Indicates the maximum lead time supported by this `Renderer`,
     /// that is, the maximum interval ahead of a packet’s effective
     /// presentation time that the packet may be submitted to prevent
     /// overflow.
-    4: zx.duration max_lead_time;
+    4: max_lead_time zx.duration;
 
     /// Indicates whether rates other than 1.0 are supported.
-    5: bool rate_supported;
+    5: rate_supported bool;
 
     /// The currently-supported compression types. If this value is absent, no compression types
     /// are currently supported.
-    6: vector<fuchsia.mediastreams.CompressionType>:MAX_COMPRESSION_TYPES
-           supported_compression_types;
+    6: supported_compression_types
+            vector<fuchsia.mediastreams.CompressionType>:MAX_COMPRESSION_TYPES;
 };
 
 /// Represents an `Renderer` error condition.
 // TODO: Define
-enum RendererError {
+type RendererError = strict enum {
     INTERNAL = 1;
 };
 
 /// Time at which a consumer should stop given as a reference time or a presentation time.
-union ConsumerStopTime {
+type ConsumerStopTime = strict union {
     /// The reference time at which a consumer should stop. Values less than the current reference
     /// time (such as 0) indicate the consumer should stop as soon as possible.
-    1: zx.time reference_time;
+    1: reference_time zx.time;
 
     /// The presenation time at which a consumer should stop. Values less that the current
     /// presentation time indicate the consumer should stop as soon as possible
-    2: zx.duration presentation_time;
+    2: presentation_time zx.duration;
 };

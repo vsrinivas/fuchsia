@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.bluetooth;
 
 /// The "Class of Device/Service" is a variable-format field that defines the category of a
@@ -12,21 +10,21 @@ library fuchsia.bluetooth;
 /// No assumptions about the specific functionality or characteristics of any application should be
 /// based solely on its inclusion within a Major or Minor device class. For more information, see
 /// https://www.bluetooth.com/specifications/assigned-numbers/baseband.
-struct DeviceClass {
-    uint32 value;
+type DeviceClass = struct {
+    value uint32;
 };
 
 /// Constants for the major device class field. The major device class is defined by bits 12-8.
-const uint32 MAJOR_DEVICE_CLASS_MASK = 0x1f00;
+const MAJOR_DEVICE_CLASS_MASK uint32 = 0x1f00;
 
-const uint32 MAJOR_DEVICE_CLASS_MISCELLANEOUS = 0x0000;
-const uint32 MAJOR_DEVICE_CLASS_COMPUTER = 0x0100;
-const uint32 MAJOR_DEVICE_CLASS_PHONE = 0x0200;
-const uint32 MAJOR_DEVICE_CLASS_LAN = 0x0300;
-const uint32 MAJOR_DEVICE_CLASS_AUDIO_VIDEO = 0x0400;
-const uint32 MAJOR_DEVICE_CLASS_PERIPHERAL = 0x0500;
-const uint32 MAJOR_DEVICE_CLASS_IMAGING = 0x0600;
-const uint32 MAJOR_DEVICE_CLASS_WEARABLE = 0x0700;
-const uint32 MAJOR_DEVICE_CLASS_TOY = 0x0800;
-const uint32 MAJOR_DEVICE_CLASS_HEALTH = 0x0900;
-const uint32 MAJOR_DEVICE_CLASS_UNCATEGORIZED = 0x1f00;
+const MAJOR_DEVICE_CLASS_MISCELLANEOUS uint32 = 0x0000;
+const MAJOR_DEVICE_CLASS_COMPUTER uint32 = 0x0100;
+const MAJOR_DEVICE_CLASS_PHONE uint32 = 0x0200;
+const MAJOR_DEVICE_CLASS_LAN uint32 = 0x0300;
+const MAJOR_DEVICE_CLASS_AUDIO_VIDEO uint32 = 0x0400;
+const MAJOR_DEVICE_CLASS_PERIPHERAL uint32 = 0x0500;
+const MAJOR_DEVICE_CLASS_IMAGING uint32 = 0x0600;
+const MAJOR_DEVICE_CLASS_WEARABLE uint32 = 0x0700;
+const MAJOR_DEVICE_CLASS_TOY uint32 = 0x0800;
+const MAJOR_DEVICE_CLASS_HEALTH uint32 = 0x0900;
+const MAJOR_DEVICE_CLASS_UNCATEGORIZED uint32 = 0x1f00;

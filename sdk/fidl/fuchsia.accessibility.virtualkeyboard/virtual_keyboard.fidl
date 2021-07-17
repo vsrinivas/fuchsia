@@ -1,8 +1,6 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.accessibility.virtualkeyboard;
 
 using fuchsia.ui.views;
@@ -18,7 +16,7 @@ using fuchsia.ui.views;
 /// * Implemented by platform components which implement accessibility.
 ///   For example, a11y_manager.
 /// * Consumed by components which provide a GUI affordance for text input.
-[Discoverable]
+@discoverable
 protocol Registry {
     /// Registers the `View` referenced by `view_ref` as a `View`
     /// which may contain a virtual keyboard.
@@ -38,10 +36,11 @@ protocol Registry {
     /// * If the request would exceed the simultaneous registration limit,
     ///   or when the `ViewRef` receives `ZX_EVENTPAIR_PEER_CLOSED`, the
     ///   implementer should dispose of `listener`.
-    Register(
-        fuchsia.ui.views.ViewRef view_ref,
-        bool is_visible,
-        request<Listener> listener);
+    Register(resource struct {
+        view_ref fuchsia.ui.views.ViewRef;
+        is_visible bool;
+        listener server_end:Listener;
+    });
 };
 
 /// Provides the ability to inform an interested party ("listener") of changes
@@ -62,5 +61,7 @@ protocol Listener {
     ///
     /// Consumers of this protocol should wait for each call to be acknowledged
     /// before calling again, to avoid queueing large numbers of updates.
-    OnVisibilityChanged(bool updated_visibility) -> ();
+    OnVisibilityChanged(struct {
+        updated_visibility bool;
+    }) -> ();
 };

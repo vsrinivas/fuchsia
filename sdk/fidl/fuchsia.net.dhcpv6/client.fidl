@@ -1,8 +1,6 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.net.dhcpv6;
 
 using fuchsia.net.interfaces.admin;
@@ -12,14 +10,14 @@ using zx;
 
 /// Default port a DHCPv6 client should listen to according to [RFC 8415,
 /// Section 7.2](https://tools.ietf.org/html/rfc8415#section-7.2).
-const uint16 DEFAULT_CLIENT_PORT = 546;
+const DEFAULT_CLIENT_PORT uint16 = 546;
 
 /// Configuration for an address type.
-table AddressConfig {
+type AddressConfig = table {
     /// Number of addresses.
     ///
     /// If not set, interpreted as 0 (no addresses will be requested).
-    1: uint8 address_count;
+    1: address_count uint8;
 
     /// Preferred addresses.
     ///
@@ -34,11 +32,11 @@ table AddressConfig {
     ///
     /// Optional field. If not set, or if `preferred_addresses` is empty, no
     /// address hints are provided.
-    2: vector<fuchsia.net.Ipv6Address>:MAX preferred_addresses;
+    2: preferred_addresses vector<fuchsia.net.Ipv6Address>:MAX;
 };
 
 /// Configuration for negotiating addresses.
-table AddressAssignmentConfig {
+type AddressAssignmentConfig = table {
     /// Non-temporary address configuration.
     ///
     /// Configures the client to negotiate non-temporary addresses (IA_NA), as
@@ -47,16 +45,16 @@ table AddressAssignmentConfig {
     ///
     /// It not set, interpreted as an empty `AddressConfig` (no non-temporary
     /// addresses will be negotiated).
-    1: AddressConfig non_temporary_address_config;
+    1: non_temporary_address_config AddressConfig;
 };
 
 /// Configuration for requesting configuration information.
-table InformationConfig {
+type InformationConfig = table {
     /// Request a list of available DNS servers
     /// [RFC 3646](https://tools.ietf.org/html/rfc3646).
     ///
     /// If not set, interpreted as false;
-    1: bool dns_servers;
+    1: dns_servers bool;
 };
 
 /// Configuration for starting the DHCPv6 client.
@@ -70,7 +68,7 @@ table InformationConfig {
 /// If the configuration does not request any information (neither addresses
 /// nor other configuration information), the [`fuchsia.net.dhcpv6/Client`]
 /// creation will fail.
-table ClientConfig {
+type ClientConfig = table {
     /// Configuration for negotiating addresses.
     ///
     /// If set, the client runs in stateful mode, as described in
@@ -78,21 +76,21 @@ table ClientConfig {
     ///
     /// If not set, interpreted as an empty `AddressAssignmentConfig` (no
     /// addresses will be negotiated).
-    1: AddressAssignmentConfig address_assignment_config;
+    1: address_assignment_config AddressAssignmentConfig;
 
     /// Configuration for requesting configuration information.
     ///
     /// If not set, interpreted as an empty `InformationConfig` (no
     /// configuration information will be requested).
-    2: InformationConfig information_config;
+    2: information_config InformationConfig;
 };
 
 /// Parameters for calling [`fuchsia.net.dhcpv6/ClientProvider.NewClient`].
-table NewClientParams {
+type NewClientParams = table {
     /// The ID of the interface the client will run on.
     ///
     /// Required.
-    1: uint64 interface_id;
+    1: interface_id uint64;
 
     /// The socket address to use when communicating with servers.
     ///
@@ -109,7 +107,7 @@ table NewClientParams {
     /// Client creation will fail if it fails to bind a socket to this address.
     ///
     /// Required.
-    2: fuchsia.net.Ipv6SocketAddress address;
+    2: address fuchsia.net.Ipv6SocketAddress;
 
     /// The [`fuchsia.net.dhcpv6/ClientConfig`] the client starts with.
     ///
@@ -117,11 +115,11 @@ table NewClientParams {
     /// information, or if it contains invalid fields.
     ///
     /// Required.
-    3: ClientConfig config;
+    3: config ClientConfig;
 };
 
 /// Provides a method to create new clients.
-[Discoverable]
+@discoverable
 protocol ClientProvider {
     /// Provides a DHCPv6 client.
     ///
@@ -129,7 +127,10 @@ protocol ClientProvider {
     /// + request `request` the channel handle that can be used to control the
     ///     newly created client. Will be closed if a client cannot be created,
     ///     with an epitaph explaining the reason.
-    NewClient(NewClientParams params, request<Client> request);
+    NewClient(resource struct {
+        params NewClientParams;
+        request server_end:Client;
+    });
 };
 
 /// Provides methods to watch for discovered network configurations.
@@ -152,9 +153,10 @@ protocol Client {
     ///
     /// - response `address` the assigned address.
     /// - response `address_parameters` the parameters of the address.
-    WatchAddress()
-        -> (fuchsia.net.Subnet address,
-            fuchsia.net.interfaces.admin.AddressParameters address_parameters);
+    WatchAddress() -> (resource struct {
+        address fuchsia.net.Subnet;
+        address_parameters fuchsia.net.interfaces.admin.AddressParameters;
+    });
 
     /// Shuts down the `Client`.
     ///
@@ -168,5 +170,5 @@ protocol Client {
     /// * error a `zx.status` if any of the addresses were not gracefully
     ///     released, e.g. the client times out waiting for Reply to Release,
     ///     or the interface is down and sending Release fails.
-    Shutdown() -> () error zx.status;
+    Shutdown() -> (struct {}) error zx.status;
 };

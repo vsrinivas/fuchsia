@@ -1,12 +1,10 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.power.profile;
 
 /// System power profiles that may be returned by [Watcher.Watch].
-enum Profile {
+type Profile = strict enum {
     /// There is no active work in the system. On a system that supports it, the device may be put
     /// into a lower-power or suspended state at any time.
     IDLE = 1;
@@ -22,7 +20,7 @@ enum Profile {
 };
 
 /// Protocol for observing changes to the system power profile.
-[Discoverable]
+@discoverable
 protocol Watcher {
     /// Watches for changes to the system power profile.
     ///
@@ -31,5 +29,7 @@ protocol Watcher {
     /// changes. This follows the
     /// [hanging get](https://fuchsia.dev/fuchsia-src/concepts/api/fidl#hanging-get) pattern. Any
     /// errors are considered fatal and will result in the channel being closed.
-    Watch() -> (Profile profile);
+    Watch() -> (struct {
+        profile Profile;
+    });
 };

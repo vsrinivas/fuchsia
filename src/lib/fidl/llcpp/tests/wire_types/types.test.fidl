@@ -1,55 +1,53 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fidl.llcpp.types.test;
 
 using zx;
 
-struct CopyableStruct {
-    int32 x;
+type CopyableStruct = struct {
+    x int32;
 };
 
-resource struct MoveOnlyStruct {
-    zx.handle? h;
+type MoveOnlyStruct = resource struct {
+    h zx.handle:optional;
 };
 
-struct VectorStruct {
-    vector<uint32> v;
+type VectorStruct = struct {
+    v vector<uint32>;
 };
 
 /// Verifies that user code can manipulate these union payloads.
-resource union TestUnion {
-    1: int32 primitive;
-    2: CopyableStruct copyable;
-    3: MoveOnlyStruct move_only;
+type TestUnion = strict resource union {
+    1: primitive int32;
+    2: copyable CopyableStruct;
+    3: move_only MoveOnlyStruct;
 };
 
-flexible resource union TestXUnion {
-    1: int32 primitive;
-    2: CopyableStruct copyable;
-    3: zx.handle h;
+type TestXUnion = flexible resource union {
+    1: primitive int32;
+    2: copyable CopyableStruct;
+    3: h zx.handle;
 };
 
-union TestStrictXUnion {
-    1: int32 primitive;
-    2: CopyableStruct copyable;
+type TestStrictXUnion = strict union {
+    1: primitive int32;
+    2: copyable CopyableStruct;
 };
 
-struct TestStrictXUnionInStruct {
-    TestStrictXUnion xu;
+type TestStrictXUnionInStruct = struct {
+    xu TestStrictXUnion;
 };
 
-flexible union TestNonResourceXUnion {
-    1: int32 primitive;
+type TestNonResourceXUnion = flexible union {
+    1: primitive int32;
 };
 
 /// Verifies that user code can manipulate these bits.
 ///
 /// We use a uint8 since most bitwise operations will cast their operands to
 /// int, and therefore special casting is required to properly compile.
-strict bits StrictBits : uint8 {
+type StrictBits = strict bits : uint8 {
     B = 2;
     D = 4;
     E = 8;
@@ -57,68 +55,75 @@ strict bits StrictBits : uint8 {
 
 /// The members should be kept in sync with those in [`StrictBits`], as we have
 /// tests parameterized on both bits types.
-flexible bits FlexibleBits : uint8 {
+type FlexibleBits = flexible bits : uint8 {
     B = 2;
     D = 4;
     E = 8;
 };
 
 /// Verifies that user code can build and access tables.
-table SampleTable {
-    1: uint8 x;
-    2: uint8 y;
-    3: vector<CopyableStruct> vector_of_struct;
+type SampleTable = table {
+    1: x uint8;
+    2: y uint8;
+    3: vector_of_struct vector<CopyableStruct>;
 };
 
 /// Verifies that an empty table compiles.
-table SampleEmptyTable {
-};
+type SampleEmptyTable = table {};
 
 protocol TestInterface {
-    TestMethod(TestUnion u) -> (TestUnion u);
+    TestMethod(resource struct {
+        u TestUnion;
+    }) -> (resource struct {
+        u TestUnion;
+    });
 };
 
 /// Verifies that method argument types don't conflict with user-defined types.
-struct FooRequest {
-    int32 bar;
+type FooRequest = struct {
+    bar int32;
 };
 
-struct FooResponse {
-    int32 bar;
+type FooResponse = struct {
+    bar int32;
 };
 
 protocol Baz {
-    Foo(FooRequest req) -> (FooResponse res);
+    Foo(struct {
+        req FooRequest;
+    }) -> (struct {
+        res FooResponse;
+    });
 };
 
-table TableWithSubTables {
-    1: SampleTable t;
-    2: vector<SampleTable> vt;
-    3: array<SampleTable>:3 at;
+type TableWithSubTables = table {
+    1: t SampleTable;
+    2: vt vector<SampleTable>;
+    3: at array<SampleTable, 3>;
 };
 
-strict enum StrictEnum : uint32 {
+type StrictEnum = strict enum : uint32 {
     B = 2;
     D = 4;
     E = 8;
 };
 
-flexible enum FlexibleEnum : uint32 {
+type FlexibleEnum = flexible enum : uint32 {
     B = 2;
     D = 4;
     E = 8;
-    [Unknown] CUSTOM = 56;
+    @unknown
+    CUSTOM = 56;
 };
 
-struct EmptyStruct {
+type EmptyStruct = struct {};
+
+type TestTable = table {
+    1: x uint8;
 };
 
-table TestTable {
-    1: uint8 x;
-};
-
-resource table TestResourceTable {
-    1: uint8 x;
+type TestResourceTable = resource table {
+    1: x uint8;
 };
 
 /// Certain traits are only implemented for top level (i.e. request/response struct)
@@ -134,14 +139,28 @@ resource table TestResourceTable {
 ///   - add method `MyUnion() -> (MyUnion result);`
 ///   - write tests in C++ using MsgWrapper::MyUnionResponse
 protocol MsgWrapper {
-    TestXUnion() -> (TestXUnion result);
-    TestNonResourceXUnion() -> (TestNonResourceXUnion result);
-    TestTable() -> (TestTable result);
-    TestResourceTable() -> (TestResourceTable result);
+    TestXUnion() -> (resource struct {
+        result TestXUnion;
+    });
+    TestNonResourceXUnion() -> (struct {
+        result TestNonResourceXUnion;
+    });
+    TestTable() -> (struct {
+        result TestTable;
+    });
+    TestResourceTable() -> (resource struct {
+        result TestResourceTable;
+    });
 };
 
 protocol TypesTest {
-    NonNullableChannel(zx.handle:CHANNEL channel);
-    RequestOf512Bytes(array<byte>:496 value);
-    RequestOf513Bytes(array<byte>:497 value);
+    NonNullableChannel(resource struct {
+        channel zx.handle:CHANNEL;
+    });
+    RequestOf512Bytes(struct {
+        value array<byte, 496>;
+    });
+    RequestOf513Bytes(struct {
+        value array<byte, 497>;
+    });
 };

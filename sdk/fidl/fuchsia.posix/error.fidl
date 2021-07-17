@@ -1,14 +1,12 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.posix;
 
 /// POSIX style errnos.
 ///
 /// See https://pubs.opengroup.org/onlinepubs/9699919799/basedefs/errno.h.html for more information.
-enum Errno : int32 {
+type Errno = strict enum : int32 {
     EPERM = 1;
     ENOENT = 2;
     ESRCH = 3;
@@ -146,8 +144,8 @@ enum Errno : int32 {
 };
 
 /// `EWOULDBLOCK` is aliased to `EAGAIN`.
-const Errno EWOULDBLOCK = Errno.EAGAIN;
+const EWOULDBLOCK Errno = Errno.EAGAIN;
 /// `EDEADLOCK` is aliased to `EDEADLK`.
-const Errno EDEADLOCK = Errno.EDEADLK;
+const EDEADLOCK Errno = Errno.EDEADLK;
 /// `ENOTSUP` is aliased to `EOPNOTSUPP`.
-const Errno ENOTSUP = Errno.EOPNOTSUPP;
+const ENOTSUP Errno = Errno.EOPNOTSUPP;

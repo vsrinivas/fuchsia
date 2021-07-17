@@ -1,8 +1,6 @@
 // Copyright 2017 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.mem;
 
 using zx;
@@ -14,10 +12,10 @@ using zx;
 /// size. As such, VMO alone cannot serve as a buffer for arbitrarly sized
 /// data. `fuchsia.mem.Buffer` is a standard struct that aggregate the VMO
 /// and its size.
-[ForDeprecatedCBindings]
-resource struct Buffer {
+@for_deprecated_c_bindings
+type Buffer = resource struct {
     /// The vmo that contains the buffer.
-    zx.handle:VMO vmo;
+    vmo zx.handle:VMO;
 
     /// The number of bytes in the buffer.
     ///
@@ -26,7 +24,7 @@ resource struct Buffer {
     /// the beginning of the VMO, use `Range` rather than buffer.
     ///
     /// This size must not be greater than the physical size of the VMO.
-    uint64 size;
+    size uint64;
 };
 
 /// Binary data that might be stored inline or in a VMO.
@@ -35,10 +33,10 @@ resource struct Buffer {
 /// amounts of binary data (i.e., which is more efficient to provide using
 /// `bytes`) but also need to support arbitrary amounts of data (i.e., which
 /// need to be provided out-of-line in a `Buffer`).
-flexible resource union Data {
+type Data = flexible resource union {
     /// The binary data provided inline in the message.
     1: bytes bytes;
 
     /// The binary data provided out-of-line in a `Buffer`.
-    2: Buffer buffer;
+    2: buffer Buffer;
 };

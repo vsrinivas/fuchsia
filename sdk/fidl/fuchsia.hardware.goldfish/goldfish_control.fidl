@@ -1,13 +1,11 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.goldfish;
 
 using zx;
 
-enum BufferHandleType : uint32 {
+type BufferHandleType = strict enum : uint32 {
     INVALID = 0;
     BUFFER = 1;
     COLOR_BUFFER = 2;
@@ -18,7 +16,7 @@ enum BufferHandleType : uint32 {
 /// Goldfish control device accepts GL format values as "internalFormat"
 /// argument when creating color buffers. All format types should be
 /// defined using their format definitions in GL headers.
-enum ColorBufferFormatType : uint32 {
+type ColorBufferFormatType = strict enum : uint32 {
     // Equals to GL_LUMINANCE
     LUMINANCE = 0x1909;
     // Equals to GL_RG
@@ -34,39 +32,39 @@ enum ColorBufferFormatType : uint32 {
 /// `MEMORY_PROPERTY_DEVICE_LOCAL` corresponds to Vulkan's memory property
 /// `VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT`. Memory allocated with this type
 /// is the most efficient for device access.
-const uint32 MEMORY_PROPERTY_DEVICE_LOCAL = 0x00000001;
+const MEMORY_PROPERTY_DEVICE_LOCAL uint32 = 0x00000001;
 /// `MEMORY_PROPERTY_HOST_VISIBLE` corresponds to Vulkan's memory property
 /// `VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT`. Memory allocated with this type
 /// can be mapped for host access using `vkMapMemory()`.
-const uint32 MEMORY_PROPERTY_HOST_VISIBLE = 0x00000002;
+const MEMORY_PROPERTY_HOST_VISIBLE uint32 = 0x00000002;
 
 /// Input arguments of `ControlDevice.CreateColorBuffer2()` method.
 /// Includes necessary properties of a Vulkan-backed color buffer.
-table CreateColorBuffer2Params {
+type CreateColorBuffer2Params = table {
     /// Width of the color buffer (unit: pixel).
     ///
     /// This argument is mandatory. `CreateColorBuffer2()` method returns
     /// `ZX_ERR_INVALID_ARGS` if `width` is missing.
-    1: uint32 width;
+    1: width uint32;
 
     /// Height of the color buffer (unit: pixel).
     ///
     /// This argument is mandatory. `CreateColorBuffer2()` method returns
     /// `ZX_ERR_INVALID_ARGS` if `height` is missing.
-    2: uint32 height;
+    2: height uint32;
 
     /// Color format type of the color buffer.
     ///
     /// This argument is mandatory. `CreateColorBuffer2()` method returns
     /// `ZX_ERR_INVALID_ARGS` if `format` is missing.
-    3: ColorBufferFormatType format;
+    3: format ColorBufferFormatType;
 
     /// Memory property flags the color buffer should support. Only bits
     /// from `fuchsia.hardware.goldfish.MEMORY_PROPERTY_*` are allowed.
     ///
     /// This argument is mandatory. `CreateColorBuffer2()` method returns
     /// `ZX_ERR_INVALID_ARGS` if `memory_property` is missing.
-    4: uint32 memory_property;
+    4: memory_property uint32;
 
     /// Goldfish address space device allocates a physical memory address
     /// for each host-visible color buffer. This address is mapped to a
@@ -83,24 +81,24 @@ table CreateColorBuffer2Params {
     ///
     /// If `memory_property` doesn't have the `MEMORY_PROPERTY_HOST_VISIBLE`
     /// bit, this argument is ignored.
-    5: uint64 physical_address;
+    5: physical_address uint64;
 };
 
 /// Input arguments of `ControlDevice.CreateBuffer2()` method.
 /// Includes necessary properties of a Vulkan-backed data buffer.
-table CreateBuffer2Params {
+type CreateBuffer2Params = table {
     /// Size of the buffer (unit: byte).
     ///
     /// This argument is mandatory. `CreateBuffer2()` method returns
     /// `ZX_ERR_INVALID_ARGS` if `size` is missing.
-    1: uint64 size;
+    1: size uint64;
 
     /// Memory property flags the buffer should support. Only bits
     /// from `fuchsia.hardware.goldfish.MEMORY_PROPERTY_*` are allowed.
     ///
     /// This argument is mandatory. `CreateBuffer2()` method returns
     /// `ZX_ERR_INVALID_ARGS` if `memory_property` is missing.
-    2: uint32 memory_property;
+    2: memory_property uint32;
 
     /// Goldfish address space device allocates a physical memory address
     /// for each host-visible buffer. This address is mapped to a
@@ -116,20 +114,20 @@ table CreateBuffer2Params {
     ///
     /// If `memory_property` doesn't have the `MEMORY_PROPERTY_HOST_VISIBLE`
     /// bit, this argument is ignored.
-    3: uint64 physical_address;
+    3: physical_address uint64;
 };
 
 /// Basic info of a control device buffer handle.
-table BufferHandleInfo {
+type BufferHandleInfo = table {
     // The ColorBuffer/Buffer ID.
-    1: uint32 id;
+    1: id uint32;
 
     // Type of the buffer handle.
-    2: BufferHandleType type;
+    2: type BufferHandleType;
 
     // Memory property flags the buffer should support. Only bits
     // from `fuchsia.hardware.goldfish.MEMORY_PROPERTY_*` are allowed.
-    3: uint32 memory_property;
+    3: memory_property uint32;
 };
 
 /// Interface for the Goldfish control driver providing color buffers and
@@ -153,9 +151,13 @@ protocol ControlDevice {
     ///            memory property bits, this value is a non-negative
     ///            integer in [0, 4095]. For non-HOST_VISIBLE memory or
     ///            failed allocation, this value is negative.
-    CreateColorBuffer2(zx.handle:VMO vmo,
-                       CreateColorBuffer2Params create_params)
-        -> (zx.status res, int32 hw_address_page_offset);
+    CreateColorBuffer2(resource struct {
+        vmo zx.handle:VMO;
+        create_params CreateColorBuffer2Params;
+    }) -> (struct {
+        res zx.status;
+        hw_address_page_offset int32;
+    });
 
     /// Create shared data buffer. Buffer is automatically freed when
     /// all references to `vmo` have been closed. Fails if VMO is not
@@ -176,16 +178,25 @@ protocol ControlDevice {
     ///         For buffers with HOST_VISIBLE memory property bits, this
     ///         value is a non-negative integer in [0, 4095]. For
     ///         non-HOST_VISIBLE memory, this value is negative.
-    CreateBuffer2(zx.handle:VMO vmo, CreateBuffer2Params create_params)
-        -> (int32 hw_address_page_offset) error zx.status;
+    CreateBuffer2(resource struct {
+        vmo zx.handle:VMO;
+        create_params CreateBuffer2Params;
+    }) -> (struct {
+        hw_address_page_offset int32;
+    }) error zx.status;
 
     /// Get a buffer handle for VMO and the type of the handle.
     /// Fails if VMO is not associated with neither a color buffer nor a buffer.
     ///
     /// Deprecated. Use `GetBufferHandleInfo()` instead.
-    [Deprecated]
-    GetBufferHandle(zx.handle:VMO vmo)
-        -> (zx.status res, uint32 id, BufferHandleType type);
+    @deprecated
+    GetBufferHandle(resource struct {
+        vmo zx.handle:VMO;
+    }) -> (struct {
+        res zx.status;
+        id uint32;
+        type BufferHandleType;
+    });
 
     /// Get the info of buffer handle from a given VMO.
     ///
@@ -197,7 +208,11 @@ protocol ControlDevice {
     ///
     ///     `info`: a BufferHandleInfo object containing the buffer id, type
     ///             and memory information.
-    GetBufferHandleInfo(zx.handle:VMO vmo) -> (BufferHandleInfo info) error zx.status;
+    GetBufferHandleInfo(resource struct {
+        vmo zx.handle:VMO;
+    }) -> (struct {
+        info BufferHandleInfo;
+    }) error zx.status;
 
     /// Create a sync fence on goldfish control device. Client pass half of an
     /// eventpair to this method, and `event` will signal its peer when all the
@@ -207,5 +222,7 @@ protocol ControlDevice {
     /// Errors:
     ///     - ZX_ERR_INTERNAL if device fail to create the fence or fail to
     ///       trigger the wait.
-    CreateSyncFence(zx.handle:EVENTPAIR event) -> () error zx.status;
+    CreateSyncFence(resource struct {
+        event zx.handle:EVENTPAIR;
+    }) -> (struct {}) error zx.status;
 };

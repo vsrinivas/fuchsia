@@ -1,33 +1,31 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.sys2;
 
 using zx;
 using fuchsia.component;
 
-const uint32 MAX_WORK_ID_LENGTH = 100;
+const MAX_WORK_ID_LENGTH uint32 = 100;
 alias WorkId = string:MAX_WORK_ID_LENGTH;
 
 /// Different ways to specify when to schedule a work item for the first time.
-flexible union Start {
+type Start = flexible union {
     /// A non-negative delay to wait before scheduling work.
-    1: zx.duration delay;
+    1: delay zx.duration;
     /// A fixed point in time to start scheduling work, interpreted like `ZX_CLOCK_MONOTONIC`:
     /// number of nanoseconds since the system was powered on.
-    2: zx.time monotonic_time;
+    2: monotonic_time zx.time;
 };
 
 /// Parameters for a new piece of work to be scheduled.
-table WorkRequest {
+type WorkRequest = table {
     /// Time when corresponding work item should be _first_ scheduled.
-    1: Start start;
+    1: start Start;
     /// Delay between repeated schedulings of corresponding work item. This is left unspecified for
     /// one-shot work that should not repeat. Repeating work items are rescheduled indefinitely
     /// until it is canceled.
-    2: zx.duration period;
+    2: period zx.duration;
 };
 
 /// Framework service: API for scheduling and canceling work. Each component instance can access
@@ -38,15 +36,20 @@ table WorkRequest {
 /// Each scheduled work item is identified by a client-provided `WorkId`. Each scheduled work item
 /// has a `WorkId` that is unique with respect to scheduled work items belonging to the same
 /// component instance.
-[Discoverable]
+@discoverable
 protocol WorkScheduler {
     /// Schedule a new work item identified by `work_id`. The work item is to be scheduled roughly
     /// at the time corresponding to `work_request.start`. When `work_request.period` is specified,
     /// reschedule work roughly every `work_request.period` until the the work item is canceled.
-    ScheduleWork(WorkId work_id, WorkRequest work_request) -> () error fuchsia.component.Error;
+    ScheduleWork(struct {
+        work_id WorkId;
+        work_request WorkRequest;
+    }) -> (struct {}) error fuchsia.component.Error;
 
     /// Cancel the scheduled work item specified by `work_id`.
-    CancelWork(WorkId work_id) -> () error fuchsia.component.Error;
+    CancelWork(struct {
+        work_id WorkId;
+    }) -> (struct {}) error fuchsia.component.Error;
 };
 
 /// Component-exposed service: Work scheduler connects to this service to invoke scheduled work item
@@ -55,9 +58,11 @@ protocol WorkScheduler {
 ///
 /// Note: The intent of exposing this service is to expose it to the `WorkScheduler` service
 /// provider (i.e., the framework) and no one else.
-[Discoverable]
+@discoverable
 protocol Worker {
-    DoWork(WorkId work_id) -> () error fuchsia.component.Error;
+    DoWork(struct {
+        work_id WorkId;
+    }) -> (struct {}) error fuchsia.component.Error;
 };
 
 /// Framework service: Administrative API for controlling parameters of the `WorkScheduler`
@@ -67,14 +72,18 @@ protocol Worker {
 /// would be scheduled in the next `batch_period`, at which point it will go to sleep until the next
 /// deadline. This strategy ensures that each work item is dispatched approximately within
 /// `batch_period` of its deadline.
-[Discoverable]
+@discoverable
 protocol WorkSchedulerControl {
     /// Get the current period between `WorkScheduler` attempts to dispatch a batch of work.
     /// `batch_period` is a non-negative 64-bit integer in the range [0, 2^63-1], representing a
     /// number of nanoseconds between dispatching batches of work.
-    GetBatchPeriod() -> (zx.duration batch_period) error fuchsia.component.Error;
+    GetBatchPeriod() -> (struct {
+        batch_period zx.duration;
+    }) error fuchsia.component.Error;
     /// Set the current period between `WorkScheduler` attempts to batch and dispatch a batch of
     /// work. `batch_period` is a non-negative 64-bit integer in the range [0, 2^63-1], representing
     /// a number of nanoseconds between dispatching batches of work.
-    SetBatchPeriod(zx.duration batch_period) -> () error fuchsia.component.Error;
+    SetBatchPeriod(struct {
+        batch_period zx.duration;
+    }) -> (struct {}) error fuchsia.component.Error;
 };

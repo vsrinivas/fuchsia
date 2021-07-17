@@ -1,111 +1,110 @@
-deprecated_syntax;
 library fidl.test.padding;
 
-struct Padding1ByteEnd {
-    uint16 a;
-    uint8 b;
+type Padding1ByteEnd = struct {
+    a uint16;
+    b uint8;
+// 1 byte padding
+};
+
+type Padding2ByteEnd = struct {
+    a uint32;
+    b uint16;
+// 2 byte padding
+};
+
+type Padding3ByteEnd = struct {
+    a uint32;
+    b uint8;
+// 3 byte padding
+};
+
+type Padding4ByteEnd = struct {
+    a uint64;
+    b uint32;
+// 4 byte padding
+};
+
+type Padding5ByteEnd = struct {
+    a uint64;
+    b uint16;
+    c uint8;
+// 5 byte padding
+};
+
+type Padding6ByteEnd = struct {
+    a uint64;
+    b uint16;
+// 6 byte padding
+};
+
+type Padding7ByteEnd = struct {
+    a uint64;
+    b uint8;
+// 7 byte padding
+};
+
+type Padding1ByteMiddle = struct {
+    a uint8;
     // 1 byte padding
+    b uint16;
 };
 
-struct Padding2ByteEnd {
-    uint32 a;
-    uint16 b;
+type Padding2ByteMiddle = struct {
+    a uint16;
     // 2 byte padding
+    b uint32;
 };
 
-struct Padding3ByteEnd {
-    uint32 a;
-    uint8 b;
+type Padding3ByteMiddle = struct {
+    a uint8;
     // 3 byte padding
+    b uint32;
 };
 
-struct Padding4ByteEnd {
-    uint64 a;
-    uint32 b;
+type Padding4ByteMiddle = struct {
+    a uint32;
     // 4 byte padding
+    b uint64;
 };
 
-struct Padding5ByteEnd {
-    uint64 a;
-    uint16 b;
-    uint8 c;
+type Padding5ByteMiddle = struct {
+    a uint16;
+    b uint8;
     // 5 byte padding
+    c uint64;
 };
 
-struct Padding6ByteEnd {
-    uint64 a;
-    uint16 b;
+type Padding6ByteMiddle = struct {
+    a uint16;
     // 6 byte padding
+    b uint64;
 };
 
-struct Padding7ByteEnd {
-    uint64 a;
-    uint8 b;
+type Padding7ByteMiddle = struct {
+    a uint8;
     // 7 byte padding
-};
-
-struct Padding1ByteMiddle {
-    uint8 a;
-    // 1 byte padding
-    uint16 b;
-};
-
-struct Padding2ByteMiddle {
-    uint16 a;
-    // 2 byte padding
-    uint32 b;
-};
-
-struct Padding3ByteMiddle {
-    uint8 a;
-    // 3 byte padding
-    uint32 b;
-};
-
-struct Padding4ByteMiddle {
-    uint32 a;
-    // 4 byte padding
-    uint64 b;
-};
-
-struct Padding5ByteMiddle {
-    uint16 a;
-    uint8 b;
-    // 5 byte padding
-    uint64 c;
-};
-
-struct Padding6ByteMiddle {
-    uint16 a;
-    // 6 byte padding
-    uint64 b;
-};
-
-struct Padding7ByteMiddle {
-    uint8 a;
-    // 7 byte padding
-    uint64 b;
+    b uint64;
 };
 
 // The following structs test generation of padding masks for bindings that use
 // them. For example, for a 4-byte aligned struct with length 12, two masks
 // might be generated to cover the length - an 8-byte and 4-byte mask.
 
-struct Padding4ByteAlignmentLength12 {
-    uint32 a;
-    uint8 b;
+type Padding4ByteAlignmentLength12 = struct {
+    a uint32;
+    b uint8;
     // 1 byte padding
-    uint16 c;
-    uint16 d;
-    // 2 bytes padding
+    c uint16;
+    d uint16;
+// 2 bytes padding
 };
 
-struct Padding2ByteAlignmentLength6 {
+type Padding2ByteAlignmentLength6 = struct {
     // 4 byte padding mask starts here.
-    uint8 a;
+    a uint8;
     // 1 byte padding
-    uint16 b;
+    b uint16;
     // 2 byte padding mask starts here.
-    uint8 c;
-    // 1 byte padding
+    c uint8;
+// 1 byte padding
 };

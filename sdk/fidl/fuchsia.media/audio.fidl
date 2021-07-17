@@ -1,13 +1,13 @@
 // Copyright 2016 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.media;
 
-[Discoverable]
+@discoverable
 protocol Audio {
-    CreateAudioRenderer(request<AudioRenderer> audio_renderer_request);
+    CreateAudioRenderer(resource struct {
+        audio_renderer_request server_end:AudioRenderer;
+    });
 
     /// Create an AudioCapturer which either captures from the current default
     /// audio input device, or loops-back from the current default audio output
@@ -19,20 +19,32 @@ protocol Audio {
     // Eventually, I suspect that all of this will move up into the audio policy
     // manager and application clients will obtain AudioCapturers from and control
     // through the policy manager.
-    CreateAudioCapturer(request<AudioCapturer> audio_capturer_request,
-                        bool loopback);
+    CreateAudioCapturer(resource struct {
+        audio_capturer_request server_end:AudioCapturer;
+        loopback bool;
+    });
 
     // TODO(fxbug.dev/38104): Remove these methods.
-    [Transitional, Deprecated]
-    SetSystemMute(bool muted);
-    [Transitional, Deprecated]
-    SetSystemGain(float32 gain_db);
-    [Transitional, Deprecated]
-    -> SystemGainMuteChanged(float32 gain_db, bool muted);
+    @transitional
+    @deprecated
+    SetSystemMute(struct {
+        muted bool;
+    });
+    @transitional
+    @deprecated
+    SetSystemGain(struct {
+        gain_db float32;
+    });
+    @transitional
+    @deprecated
+    -> SystemGainMuteChanged(struct {
+        gain_db float32;
+        muted bool;
+    });
 };
 
 /// Permitted ranges for AudioRenderer and AudioCapturer
-const uint32 MIN_PCM_CHANNEL_COUNT = 1;
-const uint32 MAX_PCM_CHANNEL_COUNT = 8;
-const uint32 MIN_PCM_FRAMES_PER_SECOND = 1000;
-const uint32 MAX_PCM_FRAMES_PER_SECOND = 192000;
+const MIN_PCM_CHANNEL_COUNT uint32 = 1;
+const MAX_PCM_CHANNEL_COUNT uint32 = 8;
+const MIN_PCM_FRAMES_PER_SECOND uint32 = 1000;
+const MAX_PCM_FRAMES_PER_SECOND uint32 = 192000;

@@ -1,6 +1,5 @@
-deprecated_syntax;
 library dependent;
 
-enum MyEnum : int32 {
+type MyEnum = strict enum : int32 {
     A = 1;
 };

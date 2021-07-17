@@ -1,76 +1,75 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
 library fuchsia.examples.docs;
 
 using zx;
 
 // [START structs]
-struct CirclePoint {
-    float32 x;
-    float32 y;
+type CirclePoint = struct {
+    x float32;
+    y float32;
 };
 
-struct Color {
-    float32 r;
-    float32 g;
-    float32 b;
+type Color = struct {
+    r float32;
+    g float32;
+    b float32;
 };
 // [END structs]
 
 // [START structs-use]
-struct Circle {
-    bool filled;
-    CirclePoint center; // CirclePoint will be stored in-line
-    float32 radius;
-    Color? color; // Color will be stored out-of-line
-    bool dashed;
+type Circle = struct {
+    filled bool;
+    center CirclePoint; // CirclePoint will be stored in-line
+    radius float32;
+    color box<Color>; // Color will be stored out-of-line
+    dashed bool;
 };
 // [END structs-use]
 
 // [START comments]
 // this is a comment
 /// and this one is too, but it also ends up in the generated code
-struct MyStruct { // plain comment
-    int32 f; // as is this one
+type MyStruct = struct { // plain comment
+    f int32; // as is this one
 }; // and this is the last one!
 // [END comments]
 
 // [START consts]
-const bool ENABLED_FLAG = true;
-const int8 OFFSET = -33;
-const uint16 ANSWER = 42;
-const uint16 ANSWER_IN_BINARY = 0b101010;
-const uint32 POPULATION_USA_2018 = 330000000;
-const uint64 DIAMOND = 0x183c7effff7e3c18;
-const uint64 FUCHSIA = 4054509061583223046;
-const string USERNAME = "squeenze";
-const float32 MIN_TEMP = -273.15;
-const float64 CONVERSION_FACTOR = 1.41421358;
-const Beverage MY_DRINK = Beverage.WATER;
+const ENABLED_FLAG bool = true;
+const OFFSET int8 = -33;
+const ANSWER uint16 = 42;
+const ANSWER_IN_BINARY uint16 = 0b101010;
+const POPULATION_USA_2018 uint32 = 330000000;
+const DIAMOND uint64 = 0x183c7effff7e3c18;
+const FUCHSIA uint64 = 4054509061583223046;
+const USERNAME string = "squeenze";
+const MIN_TEMP float32 = -273.15;
+const CONVERSION_FACTOR float64 = 1.41421358;
+const MY_DRINK Beverage = Beverage.WATER;
 // [END consts]
 
 // [START defaults]
-struct Scene {
-    uint32 background_rgb = 0xFF77FF; // fuchsia is the default background
-    uint32 foreground_rgb; // there is no default foreground color
+type Scene = struct {
+    background_rgb uint32 = 0xFF77FF; // fuchsia is the default background
+    foreground_rgb uint32; // there is no default foreground color
 };
 // [END defaults]
 
 // [START primitives]
 // A record which contains fields of a few primitive types.
-struct Sprite {
-    float32 x;
-    float32 y;
-    uint32 index;
-    uint32 color;
-    bool visible;
+type Sprite = struct {
+    x float32;
+    y float32;
+    index uint32;
+    color uint32;
+    visible bool;
 };
 // [END primitives]
 
 // [START bits]
-strict bits InfoFeatures : uint8 {
+type InfoFeatures = strict bits : uint8 {
     /// If present, this device represents WLAN hardware
     WLAN = 0x01;
     /// If present, this device is synthetic (not backed by h/w)
@@ -80,18 +79,17 @@ strict bits InfoFeatures : uint8 {
 };
 
 // Underlying type is assumed to be uint32.
-flexible bits AllowableSegments {
+type AllowableSegments = flexible bits {
     TOLL_ROADS = 0b001;
     HIGHWAYS = 0b010;
     BIKE_PATHS = 0b100;
 };
 
-const AllowableSegments ROADS = AllowableSegments.TOLL_ROADS |
-    AllowableSegments.HIGHWAYS;
+const ROADS AllowableSegments = AllowableSegments.TOLL_ROADS | AllowableSegments.HIGHWAYS;
 // [END bits]
 
 // [START enums]
-flexible enum Beverage : uint8 {
+type Beverage = flexible enum : uint8 {
     WATER = 0;
     COFFEE = 1;
     TEA = 2;
@@ -99,7 +97,7 @@ flexible enum Beverage : uint8 {
 };
 
 // Underlying type is assumed to be uint32.
-strict enum Vessel {
+type Vessel = strict enum {
     CUP = 0;
     BOWL = 1;
     TUREEN = 2;
@@ -109,156 +107,188 @@ strict enum Vessel {
 
 // [START enum-use]
 // A record which contains two enum fields.
-struct Order {
-    Beverage beverage;
-    Vessel vessel;
+type Order = struct {
+    beverage Beverage;
+    vessel Vessel;
 };
 // [END enum-use]
 
 // [START arrays]
 // A record which contains some arrays.
-struct Arrays {
+type Arrays = struct {
     // array of exactly 16 floating point numbers
-    array<float32>:16 matrix;
+    matrix array<float32, 16>;
 
     // array of exactly 10 arrays of 4 strings each
-    array<array<string>:4>:10 form;
+    form array<array<string, 4>, 10>;
 };
 // [END arrays]
 
 // [START strings]
 // A record which contains some strings.
-struct Document {
+type Document = struct {
     // title string, maximum of 40 bytes long
-    string:40 title;
+    title string:40;
 
     // description string, may be null, no upper bound on size
-    string? description;
+    description string:optional;
 };
 // [END strings]
 
 // [START vectors]
 // A record which contains some vectors.
-struct Vectors {
+type Vectors = struct {
     // a vector of up to 10 integers
-    vector<int32>:10 params;
+    params vector<int32>:10;
 
     // a vector of bytes, no upper bound on size
-    bytes blob;
+    blob bytes;
 
     // a nullable vector of up to 24 strings
-    vector<string>:24? nullable_vector_of_strings;
+    nullable_vector_of_strings vector<string>:<24, optional>;
 
     // a vector of nullable strings, no upper bound on size
-    vector<string?> vector_of_nullable_strings;
+    vector_of_nullable_strings vector<string:optional>;
 
     // a vector of vectors of 16-element arrays of floating point numbers
-    vector<vector<array<float32>:16>> complex;
+    complex vector<vector<array<float32, 16>>>;
 };
 // [END vectors]
 
 // [START handles]
 // A record which contains some handles.
-resource struct Handles {
+type Handles = resource struct {
     // a handle of unspecified type
-    zx.handle h;
+    h zx.handle;
 
     // an optional channel
-    zx.handle:CHANNEL? c;
+    c zx.handle:<CHANNEL, optional>;
 };
 // [END handles]
 
 // [START tables]
-table Profile {
-    1: vector<string> locales;
-    2: vector<string> calendars;
-    3: vector<string> time_zones;
+type Profile = table {
+    1: locales vector<string>;
+    2: calendars vector<string>;
+    3: time_zones vector<string>;
 };
 // [END tables]
 
-struct Left {
-};
+type Left = struct {};
 
-struct Right {
-};
+type Right = struct {};
 
 // [START unions-use]
-union Either {
-    1: Left left;
-    2: Right right;
+type Either = strict union {
+    1: left Left;
+    2: right Right;
 };
 // [END unions-use]
 
 // [START strict-vs-flexible]
-flexible union FlexibleEither {
-    1: Left left;
-    2: Right right;
+type FlexibleEither = flexible union {
+    1: left Left;
+    2: right Right;
 };
 // [END strict-vs-flexible]
 
-protocol RealCalculator {
-};
+protocol RealCalculator {};
 
 // [START endpoints]
 // A record which contains protocol-bound channels.
-resource struct Record {
+type Record = resource struct {
     // client endpoint of a channel bound to the Calculator protocol
-    Calculator c;
+    c client_end:Calculator;
 
     // server endpoint of a channel bound to the Science protocol
-    request<Science> s;
+    s server_end:Science;
 
     // optional client endpoint of a channel bound to the
     // RealCalculator protocol
-    RealCalculator? r;
+    r client_end:<RealCalculator, optional>;
 };
 // [END endpoints]
 
 // [START composition-base]
 protocol SceneryController {
-    SetBackground(Color color);
-    SetForeground(Color color);
+    SetBackground(struct {
+        color Color;
+    });
+    SetForeground(struct {
+        color Color;
+    });
 };
 // [END composition-base]
 
 // [START composition-inherit]
 protocol Drawer {
     compose SceneryController;
-    Circle(int32 x, int32 y, int32 radius);
-    Square(int32 x, int32 y, int32 diagonal);
+    Circle(struct {
+        x int32;
+        y int32;
+        radius int32;
+    });
+    Square(struct {
+        x int32;
+        y int32;
+        diagonal int32;
+    });
 };
 
 protocol Writer {
     compose SceneryController;
-    Text(int32 x, int32 y, string message);
+    Text(struct {
+        x int32;
+        y int32;
+        message string;
+    });
 };
 // [END composition-inherit]
 
 // [START composition-multiple-1]
 protocol FontController {
-    SetPointSize(int32 points);
-    SetFontName(string fontname);
-    Italic(bool onoff);
-    Bold(bool onoff);
-    Underscore(bool onoff);
-    Strikethrough(bool onoff);
+    SetPointSize(struct {
+        points int32;
+    });
+    SetFontName(struct {
+        fontname string;
+    });
+    Italic(struct {
+        onoff bool;
+    });
+    Bold(struct {
+        onoff bool;
+    });
+    Underscore(struct {
+        onoff bool;
+    });
+    Strikethrough(struct {
+        onoff bool;
+    });
 };
 // [END composition-multiple-1]
 
-struct Time {
-};
+type Time = struct {};
 
 // [START layering-clock]
 protocol Clock {
-    Now() -> (Time time);
-    CurrentTimeZone() -> (string timezone);
+    Now() -> (struct {
+        time Time;
+    });
+    CurrentTimeZone() -> (struct {
+        timezone string;
+    });
 };
 // [END layering-clock]
 
 // [START layering-horologist]
 protocol Horologist {
-    SetTime(Time time);
-    SetCurrentTimeZone(string timezone);
+    SetTime(struct {
+        time Time;
+    });
+    SetCurrentTimeZone(struct {
+        timezone string;
+    });
 };
 // [END layering-horologist]
 
@@ -275,45 +305,57 @@ alias Chapters = vector<StoryID>:5;
 // [END aliasing]
 
 // [START aliasing-usage]
-struct Message {
-    StoryID baseline;
-    Chapters chapters;
+type Message = struct {
+    baseline StoryID;
+    chapters Chapters;
 };
 // [END aliasing-usage]
 
 // [START builtin-aliases]
-struct RawBytes {
-    byte head;
-    bytes rest;
+type RawBytes = struct {
+    head byte;
+    rest bytes;
 };
 // [END builtin-aliases]
 
 // [START calculator]
-enum DivisionError : uint32 {
+type DivisionError = strict enum : uint32 {
     DIVIDE_BY_ZERO = 1;
 };
 
 protocol Calculator {
-    Add(int32 a, int32 b) -> (int32 sum);
-    Divide(int32 dividend, int32 divisor)
-        -> (int32 quotient, int32 remainder) error DivisionError;
+    Add(struct {
+        a int32;
+        b int32;
+    }) -> (struct {
+        sum int32;
+    });
+    Divide(struct {
+        dividend int32;
+        divisor int32;
+    }) -> (struct {
+        quotient int32;
+        remainder int32;
+    }) error DivisionError;
     Clear();
-    -> OnError(uint32 status_code);
+    -> OnError(struct {
+        status_code uint32;
+    });
 };
 // [END calculator]
 
 // [START maximum-recursion-depth]
-struct InlineObject {
-    string content_a;
-    vector<OutOfLineStructAtLevel1> vector;
-    TableInlineAtLevel0 table;
+type InlineObject = struct {
+    content_a string;
+    vector vector<OutOfLineStructAtLevel1>;
+    table TableInlineAtLevel0;
 };
 
-struct OutOfLineStructAtLevel1 {
-    string content_b;
+type OutOfLineStructAtLevel1 = struct {
+    content_b string;
 };
 
-table TableInlineAtLevel0 {
-    1: string content_c;
+type TableInlineAtLevel0 = table {
+    1: content_c string;
 };
 // [END maximum-recursion-depth]

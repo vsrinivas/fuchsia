@@ -1,32 +1,77 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.gpioimpl;
 
 using fuchsia.hardware.gpio;
 using zx;
 
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol GpioImpl {
     /// Configures a GPIO for input.
-    ConfigIn(uint32 index, uint32 flags) -> (zx.status s);
+    ConfigIn(struct {
+        index uint32;
+        flags uint32;
+    }) -> (struct {
+        s zx.status;
+    });
     /// Configures a GPIO for output.
-    ConfigOut(uint32 index, uint8 initial_value) -> (zx.status s);
+    ConfigOut(struct {
+        index uint32;
+        initial_value uint8;
+    }) -> (struct {
+        s zx.status;
+    });
     /// Configures the GPIO pin for an alternate function (I2C, SPI, etc)
     /// the interpretation of "function" is platform dependent.
-    SetAltFunction(uint32 index, uint64 function) -> (zx.status s);
+    SetAltFunction(struct {
+        index uint32;
+        function uint64;
+    }) -> (struct {
+        s zx.status;
+    });
     /// Configures the GPIO pin drive strength.
-    SetDriveStrength(uint32 index, uint64 ua) -> (zx.status s, uint64 actual_ua);
+    SetDriveStrength(struct {
+        index uint32;
+        ua uint64;
+    }) -> (struct {
+        s zx.status;
+        actual_ua uint64;
+    });
     /// Reads the current value of a GPIO (0 or 1).
-    Read(uint32 index) -> (zx.status s, uint8 value);
+    Read(struct {
+        index uint32;
+    }) -> (struct {
+        s zx.status;
+        value uint8;
+    });
     /// Sets the current value of the GPIO (any non-zero value maps to 1).
-    Write(uint32 index, uint8 value) -> (zx.status s);
+    Write(struct {
+        index uint32;
+        value uint8;
+    }) -> (struct {
+        s zx.status;
+    });
     /// Gets an interrupt object pertaining to a particular GPIO pin.
-    GetInterrupt(uint32 index, uint32 flags) -> (zx.status s, zx.handle:INTERRUPT irq);
+    GetInterrupt(struct {
+        index uint32;
+        flags uint32;
+    }) -> (resource struct {
+        s zx.status;
+        irq zx.handle:INTERRUPT;
+    });
     /// Release the interrupt.
-    ReleaseInterrupt(uint32 index) -> (zx.status s);
+    ReleaseInterrupt(struct {
+        index uint32;
+    }) -> (struct {
+        s zx.status;
+    });
     /// Set GPIO polarity.
-    SetPolarity(uint32 index, fuchsia.hardware.gpio.GpioPolarity polarity) -> (zx.status s);
+    SetPolarity(struct {
+        index uint32;
+        polarity fuchsia.hardware.gpio.GpioPolarity;
+    }) -> (struct {
+        s zx.status;
+    });
 };

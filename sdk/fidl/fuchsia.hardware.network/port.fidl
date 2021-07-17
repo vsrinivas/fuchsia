@@ -1,15 +1,13 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.network;
 
 /// The maximum number of status samples that can be buffered by a [`StatusWatcher`].
-const uint32 MAX_STATUS_BUFFER = 50;
+const MAX_STATUS_BUFFER uint32 = 50;
 
 /// The maximum number of ports attached to a device at a given time.
-const uint8 MAX_PORTS = 32;
+const MAX_PORTS uint8 = 32;
 
 /// The identifier of a port within a device. Always less than [`MAX_PORTS`].
 alias port_id = uint8;
@@ -17,35 +15,35 @@ alias port_id = uint8;
 /// Network device class.
 // TODO(https://fxbug.dev/76232): Rename to PortClass once we can easily soft transition through
 // aliasing to prevent source breakages.
-enum DeviceClass : uint16 {
+type DeviceClass = strict enum : uint16 {
     UNKNOWN = 0x00;
     ETHERNET = 0x01;
     WLAN = 0x02;
     PPP = 0x03;
     BRIDGE = 0x04;
-    // TODO(https://fxbug.dev/77697): Add WLAN_AP here and make this enum flexible so we don't break
-    // chromium.
+// TODO(https://fxbug.dev/77697): Add WLAN_AP here and make this enum flexible so we don't break
+// chromium.
 };
 
 /// Network port class.
 alias PortClass = DeviceClass;
 
 /// Port status bits, reported in [`PortStatus.flags`].
-bits StatusFlags : uint32 {
+type StatusFlags = strict bits : uint32 {
     /// Port is online, i.e., data path is open and any ongoing sessions may send and receive
     /// frames.
     ONLINE = 0x01;
 };
 
 /// Dynamic port information.
-table PortStatus {
+type PortStatus = table {
     /// Port status flags.
-    1: StatusFlags flags;
+    1: flags StatusFlags;
     /// Maximum transmit unit for this port, in bytes.
     ///
     /// The reported MTU is the size of an entire frame, including any header and trailer bytes for
     /// whatever protocols this port supports.
-    2: uint32 mtu;
+    2: mtu uint32;
 };
 
 /// Provides a way to receive updates on port status changes.
@@ -61,19 +59,21 @@ protocol StatusWatcher {
     /// `WatchStatus`.
     ///
     /// - response `device_status` the most recent port status.
-    WatchStatus() -> (PortStatus port_status);
+    WatchStatus() -> (struct {
+        port_status PortStatus;
+    });
 };
 
 /// Logical port information.
-table PortInfo {
+type PortInfo = table {
     /// Port's identifier. Required.
-    1: port_id id;
+    1: id port_id;
     /// Port's class. Required.
-    2: PortClass class;
+    2: class PortClass;
     /// Supported rx frame types on this port. Required.
     ///
     /// Clients may open sessions subscribing to a subset of `rx_types` frame types on this port.
-    3: vector<FrameType>:MAX_FRAME_TYPES rx_types;
+    3: rx_types vector<FrameType>:MAX_FRAME_TYPES;
     /// Supported tx frame types on this port. Required.
     ///
     /// Frames destined to this port whose frame type is not in `tx_types` are returned with an
@@ -84,7 +84,7 @@ table PortInfo {
     /// per frame type. For example, a device that supports Ethernet frames but needs to convert the
     /// Ethernet header may only support standard Ethernet II frames, and not any "raw" Ethernet
     /// frame.
-    4: vector<FrameTypeSupport>:MAX_FRAME_TYPES tx_types;
+    4: tx_types vector<FrameTypeSupport>:MAX_FRAME_TYPES;
 };
 
 /// A logical port belonging to a [`Device`].
@@ -92,11 +92,15 @@ protocol Port {
     /// Obtain information about port.
     ///
     /// - response `info` port information.
-    GetInfo() -> (PortInfo info);
+    GetInfo() -> (struct {
+        info PortInfo;
+    });
     /// Obtain the operating port status.
     ///
     /// - response `status` snapshot of port's current status.
-    GetStatus() -> (PortStatus status);
+    GetStatus() -> (struct {
+        status PortStatus;
+    });
     /// Connects to a [`StatusWatcher`] to observe port status changes.
     ///
     /// + request `watcher` handle to the status watcher.
@@ -107,10 +111,15 @@ protocol Port {
     /// value larger than 1, so that all edges can be observed. If `StatusWatcher`'s internal queue
     /// is filled and new status changes occur, the oldest samples will be dropped to make room for
     /// new ones.
-    GetStatusWatcher(request<StatusWatcher> watcher, uint32 buffer);
+    GetStatusWatcher(resource struct {
+        watcher server_end:StatusWatcher;
+        buffer uint32;
+    });
     /// Connects to a [`MacAddressing`] associated with the port.
     ///
     /// + request `mac` mac handle. Closed with `ZX_ERR_NOT_SUPPORTED` if this port does not support
     /// mac addressing.
-    GetMac(request<MacAddressing> mac);
+    GetMac(resource struct {
+        mac server_end:MacAddressing;
+    });
 };

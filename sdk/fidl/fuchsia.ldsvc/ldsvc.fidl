@@ -1,35 +1,44 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.ldsvc;
 
 using zx;
 
+// WARNING: This interface is manually implemented in libldmsg.a. Please
+// update that implementation if you change this protocol.
 /// See ///docs/zircon/program_loading.md for a more complete
 /// description of this and related process bootstrapping protocols, and
 /// for specifics about the default global loader service's
 /// interpretation of names, paths, and configurations.
-
-// WARNING: This interface is manually implemented in libldmsg.a. Please
-// update that implementation if you change this protocol.
-
-[ForDeprecatedCBindings]
+@for_deprecated_c_bindings
 protocol Loader {
     /// Cleanly shutdown the connection to the Loader service.
     Done();
 
     /// The dynamic linker sends `object_name` and gets back a VMO
     /// handle containing the file.
-    LoadObject(string:1024 object_name) -> (zx.status rv, zx.handle:VMO? object);
+    LoadObject(struct {
+        object_name string:1024;
+    }) -> (resource struct {
+        rv zx.status;
+        object zx.handle:<VMO, optional>;
+    });
 
     /// The dynamic linker sends a `config` identifying its load
     /// configuration.  This is intended to affect how later
     /// `LoadObject` requests decide what particular implementation
     /// file to supply for a given name.
-    Config(string:1024 config) -> (zx.status rv);
+    Config(struct {
+        config string:1024;
+    }) -> (struct {
+        rv zx.status;
+    });
 
     /// Obtain a new loader service connection.
-    Clone(request<Loader> loader) -> (zx.status rv);
+    Clone(resource struct {
+        loader server_end:Loader;
+    }) -> (struct {
+        rv zx.status;
+    });
 };

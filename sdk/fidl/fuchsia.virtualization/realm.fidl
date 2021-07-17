@@ -1,8 +1,6 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.virtualization;
 
 using fuchsia.sys;
@@ -10,22 +8,37 @@ using fuchsia.sys;
 protocol Realm {
     /// Launch a new guest instance into this environment. The `cid` of the
     /// instance is returned so that it can be uniquely identified.
-    LaunchInstance(fuchsia.sys.component_url url, string:MAX? label, GuestConfig guest_config,
-                   request<Guest> controller)
-        -> (uint32 cid);
+    LaunchInstance(resource struct {
+        url fuchsia.sys.component_url;
+        label string:<MAX, optional>;
+        guest_config GuestConfig;
+        controller server_end:Guest;
+    }) -> (struct {
+        cid uint32;
+    });
 
     /// Query for guests running in this environment.
-    ListInstances() -> (vector<InstanceInfo> instances);
+    ListInstances() -> (struct {
+        instances vector<InstanceInfo>;
+    });
 
     /// Connect to a currently running guest instance identified by `cid`. The
     /// `cid` can be found via the return value of `LaunchInstance` or a call to
     /// `ListInstances`.
-    ConnectToInstance(uint32 cid, request<Guest> controller);
+    ConnectToInstance(resource struct {
+        cid uint32;
+        controller server_end:Guest;
+    });
 
     /// Connect to the memory balloon of a currently running guest instance
     /// identified by `cid`.
-    ConnectToBalloon(uint32 cid, request<BalloonController> controller);
+    ConnectToBalloon(resource struct {
+        cid uint32;
+        controller server_end:BalloonController;
+    });
 
     /// Returns an interface that can be used to access the host vsock endpoint.
-    GetHostVsockEndpoint(request<HostVsockEndpoint> endpoint);
+    GetHostVsockEndpoint(resource struct {
+        endpoint server_end:HostVsockEndpoint;
+    });
 };

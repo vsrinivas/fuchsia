@@ -1,26 +1,24 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.dsiimpl;
 using zx;
 
 /// This enum is used to configure DSI interface in either Video or Command mode
-enum DsiMode : uint8 {
+type DsiMode = strict enum : uint8 {
     VIDEO = 0;
     COMMAND = 1;
 };
 
 // This enum is used to configure the type of video mode
-enum VideoMode : uint8 {
+type VideoMode = strict enum : uint8 {
     NON_BURST_PULSE = 0;
     NON_BURST_EVENT = 1;
     BURST = 2;
 };
 
 // Supported color codes for the DSI interface
-enum ColorCode : uint8 {
+type ColorCode = strict enum : uint8 {
     PACKED_16BIT_565 = 0;
     PACKED_18BIT_666 = 1;
     LOOSE_24BIT_666 = 2;
@@ -29,97 +27,136 @@ enum ColorCode : uint8 {
 
 /// This structure is populated based on hardware/lcd type. Its values come from vendor.
 /// This table is the top level structure used to populated all DSI configuration registers
-struct DisplaySetting {
-    uint32 lane_num;
-    uint32 bit_rate_max;
-    uint32 clock_factor;
-    uint32 lcd_clock;
-    uint32 h_active;
-    uint32 v_active;
-    uint32 h_period;
-    uint32 v_period;
-    uint32 hsync_width;
-    uint32 hsync_bp;
-    uint32 hsync_pol;
-    uint32 vsync_width;
-    uint32 vsync_bp;
-    uint32 vsync_pol;
+type DisplaySetting = struct {
+    lane_num uint32;
+    bit_rate_max uint32;
+    clock_factor uint32;
+    lcd_clock uint32;
+    h_active uint32;
+    v_active uint32;
+    h_period uint32;
+    v_period uint32;
+    hsync_width uint32;
+    hsync_bp uint32;
+    hsync_pol uint32;
+    vsync_width uint32;
+    vsync_bp uint32;
+    vsync_pol uint32;
 };
 
 /// This structure contains designware specific data
-struct DesignwareConfig {
-    uint32 lp_escape_time;
-    uint32 lp_cmd_pkt_size;
-    uint32 phy_timer_clkhs_to_lp;
-    uint32 phy_timer_clklp_to_hs;
-    uint32 phy_timer_hs_to_lp;
-    uint32 phy_timer_lp_to_hs;
-    uint8 auto_clklane;
+type DesignwareConfig = struct {
+    lp_escape_time uint32;
+    lp_cmd_pkt_size uint32;
+    phy_timer_clkhs_to_lp uint32;
+    phy_timer_clklp_to_hs uint32;
+    phy_timer_hs_to_lp uint32;
+    phy_timer_lp_to_hs uint32;
+    auto_clklane uint8;
 };
 
 /// This structure contains information that the DSI block needs from the MIPI D-PHY
-struct DsiConfig {
-    DisplaySetting display_setting;
-    VideoMode video_mode_type;
-    ColorCode color_coding;
-    [Buffer, Mutable] vector<uint8>:MAX vendor_config;
+type DsiConfig = struct {
+    display_setting DisplaySetting;
+    video_mode_type VideoMode;
+    color_coding ColorCode;
+    @buffer
+    @mutable
+    vendor_config vector<uint8>:MAX;
 };
 
 /// This is the generic MIPI-DSI command structure
-struct MipiDsiCmd {
-    uint8 virt_chn_id;
-    uint8 dsi_data_type;
+type MipiDsiCmd = struct {
+    virt_chn_id uint8;
+    dsi_data_type uint8;
 
     // TX Direction
-    vector<uint8>:MAX pld_data;
+    pld_data vector<uint8>:MAX;
 
     // RX Direction
-    [Mutable] vector<uint8>:MAX rsp_data;
+    @mutable
+    rsp_data vector<uint8>:MAX;
 
-    uint32 flags;
+    flags uint32;
 };
 
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol DsiImpl {
     /// This function is used to configure all the DSI parameters needed to operated in both
     /// Command and Video Mode
-    Config(DsiConfig dsi_config) -> (zx.status s);
+    Config(struct {
+        dsi_config DsiConfig;
+    }) -> (struct {
+        s zx.status;
+    });
     /// This function is called to power up the DSI interface
     PowerUp() -> ();
     /// This function is called to power down the DSI interface
     PowerDown() -> ();
     /// This function is used to change modes between Video and Command.
-    SetMode(DsiMode mode) -> ();
+    SetMode(struct {
+        mode DsiMode;
+    }) -> ();
     /// This function is used to send a MIPI-DSI command through the DSI block
-    SendCmd(vector<MipiDsiCmd>:MAX cmd) -> (zx.status s);
+    SendCmd(struct {
+        cmd vector<MipiDsiCmd>:MAX;
+    }) -> (struct {
+        s zx.status;
+    });
     /// This function return true if the DSI block is powered on and not in reset
-    IsPoweredUp() -> (bool on);
+    IsPoweredUp() -> (struct {
+        on bool;
+    });
     /// This function resets the DSI IP block
     Reset() -> ();
 
     /// This function configures the PHY IP (inf within the DSI block)
-    PhyConfig(DsiConfig dsi_config) -> (zx.status s);
+    PhyConfig(struct {
+        dsi_config DsiConfig;
+    }) -> (struct {
+        s zx.status;
+    });
     /// This function is used to power up the MIPI D-PHY block
     PhyPowerUp() -> ();
     /// This function is used to power up the MIPI D-PHY block
     PhyPowerDown() -> ();
     /// This function is used to communicate the MIPI D-PHY
-    PhySendCode(uint32 code, uint32 parameter) -> ();
+    PhySendCode(struct {
+        code uint32;
+        parameter uint32;
+    }) -> ();
     /// This function checks two things in order to decide whether the PHY is
     /// ready or not. LOCK Bit and StopStateClk bit. According to spec, once these
     /// are set, PHY has completed initialization
-    PhyWaitForReady() -> (zx.status s);
+    PhyWaitForReady() -> (struct {
+        s zx.status;
+    });
 
     /// This function allows writing to any register within the DSI block. This could be used
     /// for debug purposes during development stages without needing to modify the DSI IMPL
     /// protocol or to write to registers that don't really belong in the DSI IP block.
-    WriteReg(uint32 reg, uint32 val) -> (zx.status s);
+    WriteReg(struct {
+        reg uint32;
+        val uint32;
+    }) -> (struct {
+        s zx.status;
+    });
 
     /// This function returns the value of any register within the DSI IP block
-    ReadReg(uint32 reg) -> (zx.status s, uint32 val);
+    ReadReg(struct {
+        reg uint32;
+    }) -> (struct {
+        s zx.status;
+        val uint32;
+    });
 
     /// This function enable BIST pattern generation. This is useful during development stages
-    EnableBist(uint32 pattern) -> (zx.status s);
+    EnableBist(struct {
+        pattern uint32;
+    }) -> (struct {
+        s zx.status;
+    });
 
     /// This function prints the value of all DSI registers
     PrintDsiRegisters() -> ();

@@ -1,14 +1,12 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.wlan.product.deprecatedclient;
 
 using fuchsia.wlan.ieee80211 as ieee80211;
 
 /// Represents the current association state of a client interface if one exists.
-enum State {
+type State = strict enum {
     NO_CLIENT = 0;
     DISASSOCIATED = 1;
     ASSOCIATING = 2;
@@ -16,21 +14,23 @@ enum State {
 };
 
 /// Encapsulates information associated with the access point to which a WLAN client is associated.
-struct Ap {
-    string:ieee80211.MAX_SSID_BYTE_LEN ssid;
-    int8 rssi_dbm;
+type Ap = struct {
+    ssid string:ieee80211.MAX_SSID_BYTE_LEN;
+    rssi_dbm int8;
 };
 
 /// Represents the current state of a WLAN client interface.
-struct WlanStatus {
-    State state;
-    Ap? current_ap;
+type WlanStatus = struct {
+    state State;
+    current_ap box<Ap>;
 };
 
 // NOTE: This FIDL protocol is deprecated.  Please do not add new uses that depend on it.
 /// Allows legacy interactions with a WLAN client interface.
-[Discoverable]
+@discoverable
 protocol DeprecatedClient {
     /// Queries the status of the most recently discovered WLAN client interface.
-    Status() -> (WlanStatus status);
+    Status() -> (struct {
+        status WlanStatus;
+    });
 };

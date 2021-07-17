@@ -1,15 +1,13 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.io2;
 
 /// Options for [`Directory.Open`] and [`Node.Reopen`].
-table ConnectionOptions {
+type ConnectionOptions = table {
     /// Flags which can affect the behavior when opening and reopening.
     /// If absent, assumes a default of zero.
-    1: ConnectionFlags flags;
+    1: flags ConnectionFlags;
 
     /// Specifies the set of representations accepted by the client, to support
     /// a form of protocol negotiation on the node being opened.
@@ -40,7 +38,7 @@ table ConnectionOptions {
     ///
     /// If absent, indicates that the caller accepts any type of node, and
     /// the resulting protocol is unspecified.
-    2: NodeProtocols protocols;
+    2: protocols NodeProtocols;
 
     /// Requests rights on the new connection according to the specified rules.
     /// See [`fuchsia.io2/RightsRequest`].
@@ -100,7 +98,7 @@ table ConnectionOptions {
     /// ```
     ///
     /// before forwarding the request to the remote party.
-    3: RightsRequest rights_request;
+    3: rights_request RightsRequest;
 };
 
 /// Options for requesting rights on the new connection. Because opening a
@@ -126,7 +124,7 @@ table ConnectionOptions {
 ///     }
 /// }
 /// ```
-struct RightsRequest {
+type RightsRequest = struct {
     /// Sets an upper bound on the resulting rights. The exact rights will
     /// depend on `resolution`.
     ///
@@ -141,7 +139,7 @@ struct RightsRequest {
     ///   `ZX_ERR_ACCESS_DENIED` epitaph.
     /// * Otherwise, the proxy should forward the `Open` call as usual,
     ///   but update `at_most` with the shrunk rights.
-    Rights at_most;
+    at_most Rights;
 
     /// Sets a lower bound on the resulting rights. The exact rights will
     /// depend on `resolution`.
@@ -164,16 +162,16 @@ struct RightsRequest {
     ///
     /// using the superset (`⊃`), proper superset (`⊋`),
     /// and empty set (`{}`) notations.
-    Rights at_least;
+    at_least Rights;
 
     /// Controls how the rights on the new connection are computed from
     /// `at_most` and `at_least`. See [`fuchsia.io2/RightsResolution`].
-    RightsResolution resolution;
+    resolution RightsResolution;
 };
 
 /// When an `Open`/`Reopen` request reaches its final remote server, it should
 /// assign rights on the new connection based on one of these modes.
-enum RightsResolution : uint32 {
+type RightsResolution = strict enum : uint32 {
     /// The rights will be the intersection between [`RightsRequest.at_most`]
     /// and the connection where the `Open`/`Reopen` request was received,
     /// closing `object_request` with `ZX_ERR_ACCESS_DENIED` if it is empty.
@@ -198,7 +196,7 @@ enum RightsResolution : uint32 {
 };
 
 /// Flags applicable to both [`Directory.Open`] and [`Node.Reopen`].
-bits ConnectionFlags : uint64 {
+type ConnectionFlags = strict bits : uint64 {
     /// Requests that an [`Node.OnConnectionInfo`] event be sent as the first
     /// message on the protocol request. Requests all fields in the
     /// [`ConnectionInfo`] table. Doing so is more efficient than calling

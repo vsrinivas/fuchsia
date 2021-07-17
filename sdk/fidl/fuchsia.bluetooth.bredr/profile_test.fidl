@@ -1,20 +1,18 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.bluetooth.bredr;
 
 using fuchsia.bluetooth;
 using fuchsia.sys;
 
 /// Information used to launch a profile component.
-table LaunchInfo {
+type LaunchInfo = table {
     /// Required. The location from which to retrieve this component.
-    1: fuchsia.sys.component_url component_url;
+    1: component_url fuchsia.sys.component_url;
 
     /// Optional. The arguments to be provided to the component.
-    2: vector<string:MAX>:MAX arguments;
+    2: arguments vector<string:MAX>:MAX;
 };
 
 /// `PeerObserver` provides the integration test client with a way to validate the
@@ -27,21 +25,29 @@ protocol PeerObserver {
     /// + request `protocol` Includes the ProtocolDescriptorList in the service record.
     /// + request `attributes` Contains all attributes requested from the search that
     ///                        are present on the peer record.
-    ServiceFound(fuchsia.bluetooth.PeerId peer_id, ProtocolDescriptorList? protocol,
-                 vector<Attribute>:MAX_ATTRIBUTES attributes) -> ();
+    ServiceFound(struct {
+        peer_id fuchsia.bluetooth.PeerId;
+        protocol ProtocolDescriptorList:optional;
+        attributes vector<Attribute>:MAX_ATTRIBUTES;
+    }) -> ();
 
     /// Called when a peer has connected to a service.
     ///
     /// + request `peer_id` The peer that connected to the service.
     /// + request `protocol` Contains the protocol list of the connection.
-    PeerConnected(fuchsia.bluetooth.PeerId peer_id, ProtocolDescriptorList protocol) -> ();
+    PeerConnected(struct {
+        peer_id fuchsia.bluetooth.PeerId;
+        protocol ProtocolDescriptorList;
+    }) -> ();
 
     /// Called when a component, launched by `MockPeer.LaunchProfile`, has terminated
     /// for any reason. `ComponentTerminated` does not provide information regarding
     /// why a component has terminated and should not be used for debugging.
     ///
     /// + request `component_url` URL of the component that has terminated.
-    ComponentTerminated(fuchsia.sys.component_url component_url) -> ();
+    ComponentTerminated(struct {
+        component_url fuchsia.sys.component_url;
+    }) -> ();
 };
 
 /// `MockPeer` provides an interface for managing the lifetime of a mock peer in the piconet.
@@ -63,14 +69,18 @@ protocol MockPeer {
     /// signaling the failure.
     ///
     /// + request `interface` Interface to drive mock peer behavior.
-    ConnectProxy(request<Profile> interface) -> ();
+    ConnectProxy(resource struct {
+        interface server_end:Profile;
+    }) -> ();
 
     /// Launch a profile specified by the `launch_info`.
     ///
     /// + request `launch_info` Information about the component to be launched.
     /// - response Acknowledgement when the profile has been launched, or an error code
     ///            if the profile could not be launched
-    LaunchProfile(LaunchInfo launch_info) -> () error fuchsia.bluetooth.ErrorCode;
+    LaunchProfile(struct {
+        launch_info LaunchInfo;
+    }) -> (struct {}) error fuchsia.bluetooth.ErrorCode;
 };
 
 /// The `ProfileTest` interface should be used to validate behavior of Bluetooth Profiles
@@ -79,7 +89,8 @@ protocol MockPeer {
 /// The ProfileTest interface is used to create and manage fake peers.
 /// A mock piconet is created in which registered peers can discover and interact with
 /// each other.
-[Discoverable] protocol ProfileTest {
+@discoverable
+protocol ProfileTest {
     /// Creates a new fake peer in the Profile Test Server database. An empty response is
     /// sent to indicate when registration is complete.
     ///
@@ -92,6 +103,9 @@ protocol MockPeer {
     /// + request `peer` Handle that can be used to drive peer behavior using the
     ///                  [`fuchsia.blueooth.bredr.MockPeer`] interface.
     /// + request `observer` Relay for communicating updates from the mock peer.
-    RegisterPeer(fuchsia.bluetooth.PeerId peer_id, request<MockPeer> peer, PeerObserver observer)
-        -> ();
+    RegisterPeer(resource struct {
+        peer_id fuchsia.bluetooth.PeerId;
+        peer server_end:MockPeer;
+        observer client_end:PeerObserver;
+    }) -> ();
 };

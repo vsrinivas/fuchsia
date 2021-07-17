@@ -1,7 +1,6 @@
 // Copyright 2017 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
 library fuchsia.ui.gfx;
 
 using fuchsia.images;
@@ -11,102 +10,102 @@ using zx;
 
 /// These are all of the types of resources that can be created within a
 /// `Session`. Add new fields only to the bottom of the list.
-resource union ResourceArgs {
+type ResourceArgs = strict resource union {
     // Memory resources.
-    1: MemoryArgs memory;
-    2: ImageArgs image;
-    3: ImagePipeArgs image_pipe;
-    4: BufferArgs buffer;
+    1: memory MemoryArgs;
+    2: image ImageArgs;
+    3: image_pipe ImagePipeArgs;
+    4: buffer BufferArgs;
 
     // Views.
-    5: ViewArgs view;
-    6: ViewHolderArgs view_holder;
+    5: view ViewArgs;
+    6: view_holder ViewHolderArgs;
 
     // Shapes (see shapes.fidl).
-    7: RectangleArgs rectangle;
-    8: RoundedRectangleArgs rounded_rectangle;
-    9: CircleArgs circle;
-    10: MeshArgs mesh;
+    7: rectangle RectangleArgs;
+    8: rounded_rectangle RoundedRectangleArgs;
+    9: circle CircleArgs;
+   10: mesh MeshArgs;
 
     // Nodes (see nodes.fidl).
-    11: ShapeNodeArgs shape_node;
-    12: ClipNodeArgs clip_node;
-    13: EntityNodeArgs entity_node;
-    14: OpacityNodeArgsHACK opacity_node;
+   11: shape_node ShapeNodeArgs;
+   12: clip_node ClipNodeArgs;
+   13: entity_node EntityNodeArgs;
+   14: opacity_node OpacityNodeArgsHACK;
 
     // Materials.
-    15: MaterialArgs material;
+   15: material MaterialArgs;
 
     // Layers.
-    16: CompositorArgs compositor;
-    17: DisplayCompositorArgs display_compositor;
-    18: ImagePipeCompositorArgs image_pipe_compositor;
-    19: LayerStackArgs layer_stack;
-    20: LayerArgs layer;
+   16: compositor CompositorArgs;
+   17: display_compositor DisplayCompositorArgs;
+   18: image_pipe_compositor ImagePipeCompositorArgs;
+   19: layer_stack LayerStackArgs;
+   20: layer LayerArgs;
 
     // Scene representation and display.
-    21: SceneArgs scene;
-    22: CameraArgs camera;
-    23: StereoCameraArgs stereo_camera;
-    24: RendererArgs renderer;
+   21: scene SceneArgs;
+   22: camera CameraArgs;
+   23: stereo_camera StereoCameraArgs;
+   24: renderer RendererArgs;
 
     // Lighting.
-    25: AmbientLightArgs ambient_light;
-    26: DirectionalLightArgs directional_light;
+   25: ambient_light AmbientLightArgs;
+   26: directional_light DirectionalLightArgs;
 
     // A value that can be used in place of a constant value.
-    27: VariableArgs variable;
+   27: variable VariableArgs;
 
     // TODO(fxbug.dev/24428): Move these where they belong.  They're added to the end
     // of the struct temporarily until we transition to xunions.
-    28: PointLightArgs point_light;
-    29: reserved;
-    30: reserved;
-    31: ViewArgs3 view3;
-    32: ImagePipe2Args image_pipe2;
-    33: ImageArgs2 image2;
-    34: ImageArgs3 image3;
+   28: point_light PointLightArgs;
+   29: reserved;
+   30: reserved;
+   31: view3 ViewArgs3;
+   32: image_pipe2 ImagePipe2Args;
+   33: image2 ImageArgs2;
+   34: image3 ImageArgs3;
 };
 
-resource struct ImagePipeArgs {
-    request<fuchsia.images.ImagePipe> image_pipe_request;
+type ImagePipeArgs = resource struct {
+    image_pipe_request server_end:fuchsia.images.ImagePipe;
 };
 
 /// `ImagePipe2` is a `Resource` that can be used as a `Texture` for a `Material`.
-resource struct ImagePipe2Args {
-    request<fuchsia.images.ImagePipe2> image_pipe_request;
+type ImagePipe2Args = resource struct {
+    image_pipe_request server_end:fuchsia.images.ImagePipe2;
 };
 
 /// `Memory` is a `Resource` that wraps a client-provided Zircon vmo to register
 /// it with Scenic.
 // TODO: specify resizing behavior.  Who can resize?  Client/Scenic/both/none?
-resource struct MemoryArgs {
-    // The VMO which backs this memory.
-    zx.handle:VMO vmo;
+type MemoryArgs = resource struct {
+            // The VMO which backs this memory.
+    vmo zx.handle:VMO;
 
     // The amount of memory from `vmo` that should be utilized.
-    uint64 allocation_size;
+    allocation_size uint64;
 
     // The type of memory stored in the VMO, namely whether it's GPU memory or
     // host memory.
-    fuchsia.images.MemoryType memory_type;
+    memory_type fuchsia.images.MemoryType;
 };
 
-/// An image mapped to a range of a `Memory` resource.
 // TODO: more precise and extensive docs.
-[Deprecated]
-struct ImageArgs {
-    fuchsia.images.ImageInfo info;
+/// An image mapped to a range of a `Memory` resource.
+@deprecated
+type ImageArgs = struct {
+    info fuchsia.images.ImageInfo;
 
-    uint32 memory_id; // id of a `Memory` resource
-    uint32 memory_offset; // byte offset of image within `Memory` resource
+    memory_id uint32; // id of a `Memory` resource
+    memory_offset uint32; // byte offset of image within `Memory` resource
 };
 
 /// An image mapped to a range of a `Memory` resource.
-[Deprecated]
-struct ImageArgs2 {
-    uint32 width;
-    uint32 height;
+@deprecated
+type ImageArgs2 = struct {
+    width uint32;
+    height uint32;
 
     /// The id of a `BufferCollection`. Before creating this resource, the
     /// buffer collection should be registered on the same `Session` with
@@ -114,31 +113,31 @@ struct ImageArgs2 {
     /// Once the buffers are allocated successfully (e.g. after calling
     /// `WaitForBuffersAllocated`), the collection's id can be used to create
     /// the image resource.
-    uint32 buffer_collection_id;
+    buffer_collection_id uint32;
     /// The index of the VMO from the `BufferCollection` that backs this image.
-    uint32 buffer_collection_index;
+    buffer_collection_index uint32;
 };
 
 /// An image that is backed by a `BufferCollection` registered with `Allocator`.
-resource struct ImageArgs3 {
-    uint32 width;
-    uint32 height;
+type ImageArgs3 = resource struct {
+    width uint32;
+    height uint32;
 
     /// Image creation requires an allocated `BufferCollection` registered with Allocator.
     /// `import_token` should be the other end of a BufferCollectionExportToken that is
     /// successfully registered. All clients of the specified BufferCollection must have set
     /// their constraints and buffers should be allocated before calling.
-    fuchsia.ui.composition.BufferCollectionImportToken import_token;
+    import_token fuchsia.ui.composition.BufferCollectionImportToken;
     /// The index of the VMO from the `BufferCollection` that backs this image.
-    uint32 buffer_collection_index;
+    buffer_collection_index uint32;
 };
 
 /// A buffer mapped to a range of `Memory`.
 // TODO: replace BufferArgs with BufferArgs2 that supports sysmem.
-struct BufferArgs {
-    uint32 memory_id; // id of a `Memory` resource
-    uint32 memory_offset; // byte offset of buffer within `Memory` resource
-    uint32 num_bytes;
+type BufferArgs = struct {
+    memory_id uint32; // id of a `Memory` resource
+    memory_offset uint32; // byte offset of buffer within `Memory` resource
+    num_bytes uint32;
 };
 
 /// Represents the root of a subgraph within a larger scene graph.  Nodes can be
@@ -152,9 +151,9 @@ struct BufferArgs {
 /// Usually the `View` and its associated `ViewHolder` exist in separate
 /// processes.  By combining them, the UI for an entire system can be built
 /// using content contributed from many different processes.
-resource struct ViewArgs {
-    fuchsia.ui.views.ViewToken token;
-    string? debug_name;
+type ViewArgs = resource struct {
+    token fuchsia.ui.views.ViewToken;
+    debug_name string:optional;
 };
 
 /// Represents the root of a subgraph within a larger scene graph.  Nodes can be
@@ -174,14 +173,14 @@ resource struct ViewArgs {
 /// feed-forward style. It is accompanied by a `ViewRefControl`, which Scenic
 /// uses to signal `View` destruction across the system; the `ViewRefControl`
 /// must be unique - do not clone it.
-resource struct ViewArgs3 {
-    fuchsia.ui.views.ViewToken token;
+type ViewArgs3 = resource struct {
+    token fuchsia.ui.views.ViewToken;
     /// `control_ref.reference` must have default eventpair rights (i.e., with
     /// signaling), minus ZX_RIGHT_DUPLICATE.
-    fuchsia.ui.views.ViewRefControl control_ref;
+    control_ref fuchsia.ui.views.ViewRefControl;
     /// `view_ref.reference` must have basic rights (i.e., no signaling).
-    fuchsia.ui.views.ViewRef view_ref;
-    string? debug_name;
+    view_ref fuchsia.ui.views.ViewRef;
+    debug_name string:optional;
 };
 
 /// Represents an attachment point for a subgraph within a larger scene graph.
@@ -193,30 +192,30 @@ resource struct ViewArgs3 {
 /// Usually the `ViewHolder` and its associated `View` exist in separate
 /// processes.  By combining them, the UI for an entire system can be built
 /// using content contributed from many different processes.
-resource struct ViewHolderArgs {
-    fuchsia.ui.views.ViewHolderToken token;
-    string? debug_name;
+type ViewHolderArgs = resource struct {
+    token fuchsia.ui.views.ViewHolderToken;
+    debug_name string:optional;
 };
 
 /// A Compositor draws its `LayerStack` into a framebuffer provided by its
 /// attached `Display`, if any.  If no display is attached, nothing is rendered.
 // TODO(fxbug.dev/23686): there is currently no way to create/attach a display.
-struct CompositorArgs {
-    // TODO(fxbug.dev/23916): Clean up dummy args.
-    uint32 dummy = 0;
+type CompositorArgs = struct {
+            // TODO(fxbug.dev/23916): Clean up dummy args.
+    dummy uint32 = 0;
 };
 
 /// A DisplayCompositor draws its attached `LayerStack` into an image that is
 /// presented on a display.
-struct DisplayCompositorArgs {
+type DisplayCompositorArgs = struct {
     // TODO(fxbug.dev/23916): Clean up dummy args.
-    uint32 dummy = 0;
+    dummy uint32 = 0;
 };
 
 /// An ImagePipeCompositor draws its attached `LayerStack` into an image that is
 /// presented on an image-pipe.
-resource struct ImagePipeCompositorArgs {
-    fuchsia.images.ImagePipe target;
+type ImagePipeCompositorArgs = resource struct {
+    target client_end:fuchsia.images.ImagePipe;
 };
 
 /// A LayerStack is a stack of layers that are attached to a Compositor, which
@@ -226,9 +225,9 @@ resource struct ImagePipeCompositorArgs {
 ///
 /// Supported commands:
 /// - AddLayer
-struct LayerStackArgs {
+type LayerStackArgs = struct {
     // TODO(fxbug.dev/23916): Clean up dummy args.
-    uint32 dummy = 0;
+    dummy uint32 = 0;
 };
 
 /// A Layer is a 2-dimensional image that is drawn by a Compositor.  The
@@ -245,9 +244,9 @@ struct LayerStackArgs {
 /// - SetTranslation (z component determines the relative Z-ordering of layers)
 /// - SetRotation (must rotate around Z-axis)
 /// - SetScale
-struct LayerArgs {
+type LayerArgs = struct {
     // TODO(fxbug.dev/23916): Clean up dummy args.
-    uint32 dummy = 0;
+    dummy uint32 = 0;
 };
 
 /// A Scene is the root of a scene-graph, and defines the rendering environment
@@ -256,9 +255,9 @@ struct LayerArgs {
 /// Supported commands:
 /// - Add/RemoveLight
 /// - AddChild
-struct SceneArgs {
+type SceneArgs = struct {
     // TODO(fxbug.dev/23916): Clean up dummy args.
-    uint32 dummy = 0;
+    dummy uint32 = 0;
 };
 
 /// A Camera is used to render a Scene from a particular viewpoint.  This is
@@ -268,9 +267,9 @@ struct SceneArgs {
 /// - SetCameraTransform
 /// - SetCameraProjection
 /// - SetCameraPoseBuffer
-struct CameraArgs {
+type CameraArgs = struct {
     // The scene that the camera is viewing.
-    uint32 scene_id;
+    scene_id uint32;
 };
 
 /// A StereoCamera is a Camera that renders the scene in side-by-side stereo.
@@ -279,9 +278,9 @@ struct CameraArgs {
 /// StereoCamera.
 /// Additional supported commands:
 /// - SetStereoCameraProjection
-struct StereoCameraArgs {
+type StereoCameraArgs = struct {
     // The scene that the camera is viewing.
-    uint32 scene_id;
+    scene_id uint32;
 };
 
 /// A Renderer renders a Scene via a Camera.
@@ -289,9 +288,9 @@ struct StereoCameraArgs {
 /// Supported commands:
 /// - SetCamera
 /// - SetRendererParam
-struct RendererArgs {
+type RendererArgs = struct {
     // TODO(fxbug.dev/23916): Clean up dummy args.
-    uint32 dummy = 0;
+    dummy uint32 = 0;
 };
 
 /// An AmbientLight is a Light that is is assumed to be everywhere in the scene,
@@ -299,9 +298,9 @@ struct RendererArgs {
 ///
 /// Supported commands:
 /// - SetLightColor
-struct AmbientLightArgs {
+type AmbientLightArgs = struct {
     // TODO(fxbug.dev/23916): Clean up dummy args.
-    uint32 dummy = 0;
+    dummy uint32 = 0;
 };
 
 /// A DirectionalLight is a Light that is emitted from a point at infinity.
@@ -314,9 +313,9 @@ struct AmbientLightArgs {
 /// Supported commands:
 /// - SetLightColor
 /// - SetLightDirection
-struct DirectionalLightArgs {
+type DirectionalLightArgs = struct {
     // TODO(fxbug.dev/23916): Clean up dummy args.
-    uint32 dummy = 0;
+    dummy uint32 = 0;
 };
 
 /// A PointLight is a Light that emits light in all directions.  By default, the
@@ -328,9 +327,9 @@ struct DirectionalLightArgs {
 /// - SetLightColor
 /// - SetPointLightPosition
 /// - SetPointLightFalloff
-struct PointLightArgs {
+type PointLightArgs = struct {
     // TODO(fxbug.dev/23916): Clean up dummy args.
-    uint32 dummy = 0;
+    dummy uint32 = 0;
 };
 
 /// Simple texture-mapped material.
@@ -339,15 +338,15 @@ struct PointLightArgs {
 /// - SetTextureCmd: sets the texture, or it can be left as zero (no texture).
 ///   The texture can be an Image or ImagePipe.
 /// - SetColorCmd: sets the color.
-struct MaterialArgs {
+type MaterialArgs = struct {
     // TODO(fxbug.dev/23916): Clean up dummy args.
-    uint32 dummy = 0;
+    dummy uint32 = 0;
 };
 
 /// Describes a typed, client-modifiable value.
-struct VariableArgs {
-    ValueType type;
-    Value initial_value; // Must match type.  Must not be a variable_id.
+type VariableArgs = struct {
+    type ValueType;
+    initial_value Value; // Must match type.  Must not be a variable_id.
 };
 
 /// Describes an exported resource that is to be imported by an
@@ -355,6 +354,6 @@ struct VariableArgs {
 ///
 /// NOTE: Currently just an enum of importable resource types, but may later be
 /// expanded to express concepts like "meshes with a particular vertex format".
-enum ImportSpec {
+type ImportSpec = strict enum {
     NODE = 0;
 };

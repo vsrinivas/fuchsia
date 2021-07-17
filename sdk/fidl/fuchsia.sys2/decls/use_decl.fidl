@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.sys2;
 
 using fuchsia.component;
@@ -10,33 +8,33 @@ using fuchsia.data;
 using fuchsia.io2;
 
 /// Declares a capability used by a component, which was offered to it.
-flexible union UseDecl {
-    1: UseServiceDecl service;
-    2: UseProtocolDecl protocol;
-    3: UseDirectoryDecl directory;
-    4: UseStorageDecl storage;
-    5: UseEventDecl event;
-    6: UseEventStreamDecl event_stream;
+type UseDecl = flexible union {
+    1: service UseServiceDecl;
+    2: protocol UseProtocolDecl;
+    3: directory UseDirectoryDecl;
+    4: storage UseStorageDecl;
+    5: event UseEventDecl;
+    6: event_stream UseEventStreamDecl;
 };
 
 /// Declares a service used by a component, which was offered to it.
 ///
 /// To learn more about services, see:
 /// https://fuchsia.dev/fuchsia-src/glossary#service
-table UseServiceDecl {
+type UseServiceDecl = table {
     /// The provider of the service relative to the component itself. Must
     /// be `parent` or `framework`.
-    1: Ref source;
+    1: source Ref;
 
     /// Name identifying the service, by which it was presented to this
     /// component.
-    2: fuchsia.component.name source_name;
+    2: source_name fuchsia.component.name;
 
     /// The path where the capability should be installed in the component's
     /// namespace.
     ///
     /// Must be an absolute path starting with /.
-    3: string:fuchsia.component.MAX_PATH_LENGTH target_path;
+    3: target_path string:fuchsia.component.MAX_PATH_LENGTH;
 
     /// The dependency type this use represents.
     ///
@@ -46,27 +44,27 @@ table UseServiceDecl {
     /// any point. Taking a strong dependency on a child's capability will
     /// cause this the child to shut down before its parent. When using a weak
     /// dependency, the parent shuts down before the child.
-    4: DependencyType dependency_type;
+    4: dependency_type DependencyType;
 };
 
 /// Declares a protocol used by a component, which was offered to it.
 ///
 /// A protocol is a service with a single instance, provided by a single FIDL
 /// protocol.
-table UseProtocolDecl {
+type UseProtocolDecl = table {
     /// The provider of the protocol relative to the component itself.
     /// Must be `parent`, `framework`, `debug` or `capability`.
-    1: Ref source;
+    1: source Ref;
 
     /// Name identifying the protocol, by which it was presented to this
     /// component.
-    2: fuchsia.component.name source_name;
+    2: source_name fuchsia.component.name;
 
     /// The path where the capability should be installed in the component's
     /// namespace.
     ///
     /// Must be an absolute path starting with /.
-    3: string:fuchsia.component.MAX_PATH_LENGTH target_path;
+    3: target_path string:fuchsia.component.MAX_PATH_LENGTH;
 
     /// The dependency type this use represents.
     ///
@@ -76,30 +74,30 @@ table UseProtocolDecl {
     /// any point. Taking a strong dependency on a child's capability will
     /// cause this the child to shut down before its parent. When using a weak
     /// dependency, the parent shuts down before the child.
-    4: DependencyType dependency_type;
+    4: dependency_type DependencyType;
 };
 
 /// Declares a directory used by a component, which was offered to it.
-table UseDirectoryDecl {
+type UseDirectoryDecl = table {
     /// The provider of the directory relative to the component itself. Must
     /// be `parent` or `framework`.
-    1: Ref source;
+    1: source Ref;
 
     /// Name identifying the directory, by which it was presented to this
     /// component.
-    2: fuchsia.component.name source_name;
+    2: source_name fuchsia.component.name;
 
     /// The path where the capability should be installed in the component's
     /// namespace.
     ///
     /// Must be an absolute path starting with /.
-    3: string:fuchsia.component.MAX_PATH_LENGTH target_path;
+    3: target_path string:fuchsia.component.MAX_PATH_LENGTH;
 
     /// The rights required by the component to use this directory.
-    4: fuchsia.io2.Rights rights;
+    4: rights fuchsia.io2.Rights;
 
     /// The subdirectory of this directory to use instead of the root. Optional.
-    5: string:fuchsia.component.MAX_PATH_LENGTH subdir;
+    5: subdir string:fuchsia.component.MAX_PATH_LENGTH;
 
     /// The dependency type this use represents.
     ///
@@ -109,39 +107,39 @@ table UseDirectoryDecl {
     /// any point. Taking a strong dependency on a child's capability will
     /// cause this the child to shut down before its parent. When using a weak
     /// dependency, the parent shuts down before the child.
-    6: DependencyType dependency_type;
+    6: dependency_type DependencyType;
 };
 
 /// Declares storage used by a component, which was offered to it.
-table UseStorageDecl {
+type UseStorageDecl = table {
     /// Name identifying the storage, by which it was presented to this
     /// component.
-    1: fuchsia.component.name source_name;
+    1: source_name fuchsia.component.name;
 
     /// The path where the capability should be installed in the component's
     /// namespace.
     ///
     /// Must be an absolute path starting with /.
-    2: string:fuchsia.component.MAX_PATH_LENGTH target_path;
+    2: target_path string:fuchsia.component.MAX_PATH_LENGTH;
 };
 
 /// Declares an event used by a component, which was offered to it.
-table UseEventDecl {
+type UseEventDecl = table {
     /// The provider of the event. Must be |realm| or |framework|.
-    1: Ref source;
+    1: source Ref;
 
     /// Name identifying the event which was presented to this component.
-    2: fuchsia.component.name source_name;
+    2: source_name fuchsia.component.name;
 
     /// The name which the component will use to refer to this event.
-    3: fuchsia.component.name target_name;
+    3: target_name fuchsia.component.name;
 
     /// Filter for the event. The structure of the filter depends on the event type. May be absent
     /// for some events.
-    4: fuchsia.data.Dictionary filter;
+    4: filter fuchsia.data.Dictionary;
 
     /// The mode that the event can use.
-    5: EventMode mode;
+    5: mode EventMode;
 
     /// The dependency type this use represents.
     ///
@@ -151,15 +149,15 @@ table UseEventDecl {
     /// any point. Taking a strong dependency on a child's capability will
     /// cause this the child to shut down before its parent. When using a weak
     /// dependency, the parent shuts down before the child.
-    6: DependencyType dependency_type;
+    6: dependency_type DependencyType;
 };
 
 /// Declares a static EventStream used by a component.
-table UseEventStreamDecl {
+type UseEventStreamDecl = table {
     /// The name of the event stream.
-    1: fuchsia.component.name name;
+    1: name fuchsia.component.name;
 
     /// The set of events to which this EventStream is subscribed.
     /// Note: This vector must be non-empty.
-    2: vector<EventSubscription>:fuchsia.component.MAX_NUM_EVENTS_RECEIVED subscriptions;
+    2: subscriptions vector<EventSubscription>:fuchsia.component.MAX_NUM_EVENTS_RECEIVED;
 };

@@ -1,8 +1,6 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.settings;
 
 /// Modify or watch Night Mode setting. Night mode puts the device in a
@@ -15,22 +13,26 @@ library fuchsia.settings;
 ///
 /// Supported SettingsEpitaph enums:
 /// REQUEST_NOT_SUPPORTED, INTERNAL_SERVICE_ERROR, PERSISTENT_STORAGE_ERROR
-[Discoverable]
+@discoverable
 protocol NightMode {
     /// Gets the current [`NightModeSettings`]. Returns immediately on first
     /// call; subsequent calls return when the values change.
     ///
     /// If this call fails, it is considered a fatal error and the channel
     /// will be closed.
-    Watch() -> (NightModeSettings settings);
+    Watch() -> (struct {
+        settings NightModeSettings;
+    });
 
     /// Sets [`NightModeSettings`] settings. Any field not explicitly set in
     /// the table performs a no-op, and will not make any changes.
-    Set(NightModeSettings settings) -> () error Error;
+    Set(struct {
+        settings NightModeSettings;
+    }) -> (struct {}) error Error;
 };
 
 /// Settings related to Night mode.
-table NightModeSettings {
+type NightModeSettings = table {
     /// If true, the device/user have opted in for NightMode routine.
-    1: bool night_mode_enabled;
+    1: night_mode_enabled bool;
 };

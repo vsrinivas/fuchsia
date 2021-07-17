@@ -1,8 +1,6 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.sys2;
 
 using fuchsia.component;
@@ -15,13 +13,13 @@ using fuchsia.data;
 ///
 /// To learn more about runners, see:
 /// https://fuchsia.dev/fuchsia-src/glossary#runner
-table ProgramDecl {
+type ProgramDecl = table {
     /// The name of the runner to use to run the component. Must match a
     /// `RunnerRegistration` in the component's environment.
     ///
     /// This may be absent if a `UseRunnerDecl` is set instead.
     // TODO(fxbug.dev/68827): Replace `UseRunnerDecl` with this.
-    1: fuchsia.component.name runner;
+    1: runner fuchsia.component.name;
 
     /// Information about the program to run when the component is executed. The
     /// component manager provides the contents of this dictionary to the runner
@@ -29,5 +27,5 @@ table ProgramDecl {
     ///
     /// For instance, this might contain a path to the program's executable
     /// image, or program arguments.
-    2: fuchsia.data.Dictionary info;
+    2: info fuchsia.data.Dictionary;
 };

@@ -1,8 +1,6 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.developer.remotecontrol;
 
 using fuchsia.device;
@@ -10,21 +8,21 @@ using fuchsia.net;
 using fuchsia.hwinfo;
 using fuchsia.buildinfo;
 
-table IdentifyHostResponse {
-    1: vector<fuchsia.net.Subnet>:MAX addresses;
-    2: string:fuchsia.device.DEVICE_NAME_MAX nodename;
+type IdentifyHostResponse = table {
+    1: addresses vector<fuchsia.net.Subnet>:MAX;
+    2: nodename string:fuchsia.device.DEVICE_NAME_MAX;
     // UTC timestamp of the target's time of boot, in nanoseconds.
-    3: uint64 boot_timestamp_nanos;
-    4: string:fuchsia.hwinfo.MAX_VALUE_SIZE serial_number;
-    5: vector<uint64>:MAX ids;
+    3: boot_timestamp_nanos uint64;
+    4: serial_number string:fuchsia.hwinfo.MAX_VALUE_SIZE;
+    5: ids vector<uint64>:MAX;
     // The name of the product as set via `fx set` in-tree. Products can be seen
     // in-tree via `fx list-products`.
-    6: string:fuchsia.buildinfo.MAX_STRING_LENGTH product_config;
+    6: product_config string:fuchsia.buildinfo.MAX_STRING_LENGTH;
     // The board as set via `fx set` in-tree, like `x64` for example.
-    7: string:fuchsia.buildinfo.MAX_STRING_LENGTH board_config;
+    7: board_config string:fuchsia.buildinfo.MAX_STRING_LENGTH;
 };
 
-enum IdentifyHostError : uint32 {
+type IdentifyHostError = strict enum : uint32 {
     // Indicates that the attempt to list device network interfaces failed.
     LIST_INTERFACES_FAILED = 1;
     // Indicates that attempting to get the nodename of the target failed.

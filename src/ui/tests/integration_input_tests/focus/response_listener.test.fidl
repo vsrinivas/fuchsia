@@ -1,24 +1,24 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library test.focus;
 
 using zx;
 
 /// A set of focus-related data that is returned to the test for verification.
-table Data {
+type Data = table {
     /// The monotonic time (ns) the focus data was received by the client.
-    1: zx.time time_received;
+    1: time_received zx.time;
 
     /// The current state of focus for the client.
-    2: bool focus_status;
+    2: focus_status bool;
 };
 
 /// A test-specific scheme to gather signal from  the client-under-test.
-[Discoverable]
+@discoverable
 protocol ResponseListener {
     /// Notify the test that client-under-test has received expected input.
-    Respond(Data focus_data);
+    Respond(struct {
+        focus_data Data;
+    });
 };

@@ -1,82 +1,80 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library conformance;
 
-strict enum StrictEnumInt8 : int8 {
+type StrictEnumInt8 = strict enum : int8 {
     FIRST = 0x01;
     SECOND = 0x11;
 };
 
-strict enum StrictEnumInt16 : int16 {
+type StrictEnumInt16 = strict enum : int16 {
     FIRST = 0x0102;
     SECOND = 0x1112;
 };
 
-strict enum StrictEnumInt32 : int32 {
+type StrictEnumInt32 = strict enum : int32 {
     FIRST = 0x01020304;
     SECOND = 0x11121314;
 };
 
-strict enum StrictEnumInt64 : int64 {
+type StrictEnumInt64 = strict enum : int64 {
     FIRST = 0x0102030405060708;
     SECOND = 0x1112131415161718;
 };
 
-strict enum StrictEnumUint8 : uint8 {
+type StrictEnumUint8 = strict enum : uint8 {
     FIRST = 1;
     SECOND = 2;
 };
 
-strict enum StrictEnumUint16 : uint16 {
+type StrictEnumUint16 = strict enum : uint16 {
     FIRST = 0x0102;
     SECOND = 0x1112;
 };
 
-strict enum StrictEnumUint32 : uint32 {
+type StrictEnumUint32 = strict enum : uint32 {
     FIRST = 0x01020304;
     SECOND = 0x11121314;
 };
 
-strict enum StrictEnumUint64 : uint64 {
+type StrictEnumUint64 = strict enum : uint64 {
     FIRST = 0x0102030405060708;
     SECOND = 0x1112131415161718;
 };
 
-struct StrictEnumInt8Struct {
-    StrictEnumInt8 e;
+type StrictEnumInt8Struct = struct {
+    e StrictEnumInt8;
 };
 
-struct StrictEnumInt16Struct {
-    StrictEnumInt16 e;
+type StrictEnumInt16Struct = struct {
+    e StrictEnumInt16;
 };
 
-struct StrictEnumInt32Struct {
-    StrictEnumInt32 e;
+type StrictEnumInt32Struct = struct {
+    e StrictEnumInt32;
 };
 
-struct StrictEnumInt64Struct {
-    StrictEnumInt64 e;
+type StrictEnumInt64Struct = struct {
+    e StrictEnumInt64;
 };
 
-struct StrictEnumUint8Struct {
-    StrictEnumUint8 e;
+type StrictEnumUint8Struct = struct {
+    e StrictEnumUint8;
 };
 
-struct StrictEnumUint16Struct {
-    StrictEnumUint16 e;
+type StrictEnumUint16Struct = struct {
+    e StrictEnumUint16;
 };
 
-struct StrictEnumUint32Struct {
-    StrictEnumUint32 e;
+type StrictEnumUint32Struct = struct {
+    e StrictEnumUint32;
 };
 
-struct StrictEnumUint64Struct {
-    StrictEnumUint64 e;
+type StrictEnumUint64Struct = struct {
+    e StrictEnumUint64;
 };
 
-struct VectorOfEnumStruct {
-    vector<StrictEnumInt16> v;
+type VectorOfEnumStruct = struct {
+    v vector<StrictEnumInt16>;
 };

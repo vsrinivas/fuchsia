@@ -1,19 +1,17 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.sysmem;
 
 // Describes how a client will access the contents of a buffer.
 // TODO(fxbug.dev/32119): change struct to table
-[ForDeprecatedCBindings]
-struct BufferUsage {
-    uint32 none;
-    uint32 cpu;
-    uint32 vulkan;
-    uint32 display;
-    uint32 video;
+@for_deprecated_c_bindings
+type BufferUsage = struct {
+    none uint32;
+    cpu uint32;
+    vulkan uint32;
+    display uint32;
+    video uint32;
 };
 
 // TODO(fxbug.dev/55935): Consts should use upper snake case per FIDL style guide.
@@ -23,62 +21,62 @@ struct BufferUsage {
 //
 // This bit indicates that there is no direct usage from the participant, and
 // that the participant hasn't forgotten to set usage.
-const uint32 noneUsage = 1;
+const noneUsage uint32 = 1;
 
 // Flags for "cpu" usage.
 // The "often" variants prefer cacheable memory.
-const uint32 cpuUsageRead = 1;
-const uint32 cpuUsageReadOften = 2;
-const uint32 cpuUsageWrite = 4;
-const uint32 cpuUsageWriteOften = 8;
+const cpuUsageRead uint32 = 1;
+const cpuUsageReadOften uint32 = 2;
+const cpuUsageWrite uint32 = 4;
+const cpuUsageWriteOften uint32 = 8;
 
 // Flags for "vulkan" usage.
 
 // Vulkan image usage flags.
 // Based on https://www.khronos.org/registry/vulkan/specs/1.1-extensions/man/html/VkImageUsageFlagBits.html
-const uint32 VULKAN_IMAGE_USAGE_TRANSFER_SRC = 0X0001;
-const uint32 VULKAN_IMAGE_USAGE_TRANSFER_DST = 0X0002;
-const uint32 VULKAN_IMAGE_USAGE_SAMPLED = 0X0004;
-const uint32 VULKAN_IMAGE_USAGE_STORAGE = 0X0008;
-const uint32 VULKAN_IMAGE_USAGE_COLOR_ATTACHMENT = 0X0010;
-const uint32 VULKAN_IMAGE_USAGE_STENCIL_ATTACHMENT = 0X0020;
-const uint32 VULKAN_IMAGE_USAGE_TRANSIENT_ATTACHMENT = 0X0040;
-const uint32 VULKAN_IMAGE_USAGE_INPUT_ATTACHMENT = 0X0080;
+const VULKAN_IMAGE_USAGE_TRANSFER_SRC uint32 = 0X0001;
+const VULKAN_IMAGE_USAGE_TRANSFER_DST uint32 = 0X0002;
+const VULKAN_IMAGE_USAGE_SAMPLED uint32 = 0X0004;
+const VULKAN_IMAGE_USAGE_STORAGE uint32 = 0X0008;
+const VULKAN_IMAGE_USAGE_COLOR_ATTACHMENT uint32 = 0X0010;
+const VULKAN_IMAGE_USAGE_STENCIL_ATTACHMENT uint32 = 0X0020;
+const VULKAN_IMAGE_USAGE_TRANSIENT_ATTACHMENT uint32 = 0X0040;
+const VULKAN_IMAGE_USAGE_INPUT_ATTACHMENT uint32 = 0X0080;
 
 // Deprecated. Use |VULKAN_IMAGE_USAGE_*| instead.
-const uint32 vulkanUsageTransferSrc = 0x0001;
-const uint32 vulkanUsageTransferDst = 0x0002;
-const uint32 vulkanUsageSampled = 0x0004;
-const uint32 vulkanUsageStorage = 0x0008;
-const uint32 vulkanUsageColorAttachment = 0x0010;
-const uint32 vulkanUsageStencilAttachment = 0x0020;
-const uint32 vulkanUsageTransientAttachment = 0x0040;
-const uint32 vulkanUsageInputAttachment = 0x0080;
+const vulkanUsageTransferSrc uint32 = 0x0001;
+const vulkanUsageTransferDst uint32 = 0x0002;
+const vulkanUsageSampled uint32 = 0x0004;
+const vulkanUsageStorage uint32 = 0x0008;
+const vulkanUsageColorAttachment uint32 = 0x0010;
+const vulkanUsageStencilAttachment uint32 = 0x0020;
+const vulkanUsageTransientAttachment uint32 = 0x0040;
+const vulkanUsageInputAttachment uint32 = 0x0080;
 
 // Vulkan buffer usage flags.
 // Based on https://www.khronos.org/registry/vulkan/specs/1.2-extensions/man/html/VkBufferUsageFlagBits.html
-const uint32 VULKAN_BUFFER_USAGE_TRANSFER_SRC = 0X00010000;
-const uint32 VULKAN_BUFFER_USAGE_TRANSFER_DST = 0X00020000;
-const uint32 VULKAN_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER = 0X00040000;
-const uint32 VULKAN_BUFFER_USAGE_STORAGE_TEXEL_BUFFER = 0X00080000;
-const uint32 VULKAN_BUFFER_USAGE_UNIFORM_BUFFER = 0X00100000;
-const uint32 VULKAN_BUFFER_USAGE_STORAGE_BUFFER = 0X00200000;
-const uint32 VULKAN_BUFFER_USAGE_INDEX_BUFFER = 0X00400000;
-const uint32 VULKAN_BUFFER_USAGE_VERTEX_BUFFER = 0X00800000;
-const uint32 VULKAN_BUFFER_USAGE_INDIRECT_BUFFER = 0X01000000;
+const VULKAN_BUFFER_USAGE_TRANSFER_SRC uint32 = 0X00010000;
+const VULKAN_BUFFER_USAGE_TRANSFER_DST uint32 = 0X00020000;
+const VULKAN_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER uint32 = 0X00040000;
+const VULKAN_BUFFER_USAGE_STORAGE_TEXEL_BUFFER uint32 = 0X00080000;
+const VULKAN_BUFFER_USAGE_UNIFORM_BUFFER uint32 = 0X00100000;
+const VULKAN_BUFFER_USAGE_STORAGE_BUFFER uint32 = 0X00200000;
+const VULKAN_BUFFER_USAGE_INDEX_BUFFER uint32 = 0X00400000;
+const VULKAN_BUFFER_USAGE_VERTEX_BUFFER uint32 = 0X00800000;
+const VULKAN_BUFFER_USAGE_INDIRECT_BUFFER uint32 = 0X01000000;
 
 // Flags for "display" usage.
-const uint32 displayUsageLayer = 1;
-const uint32 displayUsageCursor = 2;
+const displayUsageLayer uint32 = 1;
+const displayUsageCursor uint32 = 2;
 
 // Flags for "video" usage.
 // TODO(fxbug.dev/32118): Add more specific HwDecoder flags if needed.
-const uint32 videoUsageHwDecoder = 1;
-const uint32 videoUsageHwEncoder = 2;
+const videoUsageHwDecoder uint32 = 1;
+const videoUsageHwEncoder uint32 = 2;
 // TODO(fxbug.dev/34192): This bit is redundant with secure_required and supported heaps.  This bit will
 // not be carried forward.
-const uint32 videoUsageHwProtected = 4;
-const uint32 videoUsageCapture = 8;
+const videoUsageHwProtected uint32 = 4;
+const videoUsageCapture uint32 = 8;
 // videoUsageDecryptorOutput is for the output of a decryptor; such buffers will contain decrypted
 // encoded access units.  The decryptor output may be in secure memory (controlled separately via
 // secure_required).
@@ -91,8 +89,8 @@ const uint32 videoUsageCapture = 8;
 // We have this as a separate usage because each participant that needs VMO handles needs to specify
 // a usage that isn't nonUsage, and the decryptor output participant shouldn't be specifying
 // videoUsageHwDecoder because the decryptor isn't the decoder.
-const uint32 videoUsageDecryptorOutput = 16;
+const videoUsageDecryptorOutput uint32 = 16;
 // This usage is for a HW video decoder's internal buffers that aren't shared with other
 // particpants.  These are allocated via sysmem becuase sysmem pre-reserves contiguous SYSTEM_RAM
 // as appropriate, and is the only way to allocate secure memory.
-const uint32 videoUsageHwDecoderInternal = 32;
+const videoUsageHwDecoderInternal uint32 = 32;

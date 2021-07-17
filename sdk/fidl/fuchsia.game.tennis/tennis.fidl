@@ -1,31 +1,36 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.game.tennis;
 
-[Discoverable]
+@discoverable
 protocol TennisService {
-    GetState() -> (GameState state);
-    RegisterPaddle(string player_name, Paddle paddle);
+    GetState() -> (struct {
+        state GameState;
+    });
+    RegisterPaddle(resource struct {
+        player_name string;
+        paddle client_end:Paddle;
+    });
 };
 
-struct GameState {
-    float64 ballX;
-    float64 ballY;
-    float64 player_1_y; // player 1 is on the left side of the screen
-    float64 player_2_y;
-    int64 player_1_score;
-    int64 player_2_score;
-    int64 time; // start of each game is zero, represents in-game time steps elapsed
-    int64 game_num; // increments by one any time a new game starts, 0 if not enough players yet
-    string player_1_name;
-    string player_2_name;
+type GameState = struct {
+    ballX float64;
+    ballY float64;
+    player_1_y float64; // player 1 is on the left side of the screen
+    player_2_y float64;
+    player_1_score int64;
+    player_2_score int64;
+    time int64; // start of each game is zero, represents in-game time steps elapsed
+    game_num int64; // increments by one any time a new game starts, 0 if not enough players yet
+    player_1_name string;
+    player_2_name string;
 };
 
 protocol Paddle {
-    NewGame(bool is_player_2);
+    NewGame(struct {
+        is_player_2 bool;
+    });
     -> Up();
     -> Down();
     -> Stop();

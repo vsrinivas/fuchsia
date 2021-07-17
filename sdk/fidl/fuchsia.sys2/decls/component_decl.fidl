@@ -1,8 +1,6 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.sys2;
 
 /// A component declaration.
@@ -10,47 +8,47 @@ library fuchsia.sys2;
 /// This information is typically encoded in the component manifest (.cm file)
 /// if it has one or may be generated at runtime by a component resolver for
 /// those that don't.
-table ComponentDecl {
+type ComponentDecl = table {
     /// Information about the program to run when the component is executed.
     /// Omitted for non-executable components.
-    1: ProgramDecl program;
+    1: program ProgramDecl;
 
     /// List of capabilities used by the component. These consist of
     /// capabilities offered to the component that are installed in its incoming
     /// namespace.
     ///
     /// The used capabilities must be unique and non-overlapping.
-    2: vector<UseDecl> uses;
+    2: uses vector<UseDecl>;
 
     /// List of capabilities exposed by the component. These consist of
     /// capabilities that are made visible to the parent. The parent
     /// may `offer` these capabilities to its children, but not `use` them.
     ///
     /// The exposed capabilities must be unique and non-overlapping.
-    3: vector<ExposeDecl> exposes;
+    3: exposes vector<ExposeDecl>;
 
     /// List of capabilities offered to the component's children. These consist
     /// of capabilities that the given children may `use`, which may come from a
     /// child, the parent, or the component's own outgoing namespace.
     ///
     /// The offered capabilities must be unique and non-overlapping.
-    4: vector<OfferDecl> offers;
+    4: offers vector<OfferDecl>;
 
     /// List of capabilities defined by the component.
-    5: vector<CapabilityDecl> capabilities;
+    5: capabilities vector<CapabilityDecl>;
 
     /// The component's statically instantiated children. The children must have
     /// unique names.
-    6: vector<ChildDecl> children;
+    6: children vector<ChildDecl>;
 
     /// The component's collections. The collections must have unique names.
-    7: vector<CollectionDecl> collections;
+    7: collections vector<CollectionDecl>;
 
     /// List of environments created by this component.
     /// Environments are assigned to children and control aspects of a child component's
     /// runtime.
-    8: vector<EnvironmentDecl> environments;
+    8: environments vector<EnvironmentDecl>;
 
     /// Additional metadata about the component.
-    9: Object facets;
+    9: facets Object;
 };

@@ -1,38 +1,36 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library banjo.examples.alignment;
 
-[Packed]
-struct packing_0 {
-    int16 i16_0;
-    int32 i32_0;
-    int16 i16_1;
+@packed
+type packing_0 = struct {
+    i16_0 int16;
+    i32_0 int32;
+    i16_1 int16;
 };
 
-[Packed]
-struct packing_1 {
-    int16 i16_0;
-    int8 i8_0;
-    int16 i16_1;
-    int8 i8_1;
+@packed
+type packing_1 = struct {
+    i16_0 int16;
+    i8_0 int8;
+    i16_1 int16;
+    i8_1 int8;
 };
 
-[Packed]
-struct packing_2 {
-    int16 i16_0;
-    int8 i8_0;
-    int8 i8_1;
-    int16 i16_1;
+@packed
+type packing_2 = struct {
+    i16_0 int16;
+    i8_0 int8;
+    i8_1 int8;
+    i16_1 int16;
 };
 
-[Packed]
-struct packing_3 {
-    int32 i32_0;
-    int64 i64_0;
-    int16 i16_0;
-    int32 i32_1;
-    int16 i16_1;
+@packed
+type packing_3 = struct {
+    i32_0 int32;
+    i64_0 int64;
+    i16_0 int16;
+    i32_1 int32;
+    i16_1 int16;
 };

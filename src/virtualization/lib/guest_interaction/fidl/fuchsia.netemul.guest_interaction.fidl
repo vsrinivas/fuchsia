@@ -1,59 +1,74 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.netemul.guest;
 
 using fuchsia.io;
 using zx;
 
-const uint32 GUEST_INTERACTION_MAX_LENGTH = 1024;
-const string DEFAULT_REALM = "gis_default";
+const GUEST_INTERACTION_MAX_LENGTH uint32 = 1024;
+const DEFAULT_REALM string = "gis_default";
 
 /// Enables discovery of guest VM's for control in tests.
-[Discoverable]
+@discoverable
 protocol GuestDiscovery {
     /// Finds the guest VM specified by realm name/guest name pair and connects to it to enable
     /// file transfers and execution of commands.  If `realm_name` is null, `DEFAULT_REALM` is
     /// used instead.
-    GetGuest(string:GUEST_INTERACTION_MAX_LENGTH? realm_name,
-             string:GUEST_INTERACTION_MAX_LENGTH guest_name,
-             request<GuestInteraction> guest);
+    GetGuest(resource struct {
+        realm_name string:<GUEST_INTERACTION_MAX_LENGTH, optional>;
+        guest_name string:GUEST_INTERACTION_MAX_LENGTH;
+        guest server_end:GuestInteraction;
+    });
 };
 
 /// Represents a key/value pair to be injected into an environment where a command is executed.
-struct EnvironmentVariable {
-    string:GUEST_INTERACTION_MAX_LENGTH key;
-    string:GUEST_INTERACTION_MAX_LENGTH value;
+type EnvironmentVariable = struct {
+    key string:GUEST_INTERACTION_MAX_LENGTH;
+    value string:GUEST_INTERACTION_MAX_LENGTH;
 };
 
 protocol CommandListener {
     /// Signal to a client that is attempting to exec inside of a guest whether
     /// or not the subprocess was successfully started.
-    -> OnStarted(zx.status status);
+    -> OnStarted(struct {
+        status zx.status;
+    });
 
     /// Signal to a client that the Exec request has completed.
-    -> OnTerminated(zx.status status, int32 return_code);
+    -> OnTerminated(struct {
+        status zx.status;
+        return_code int32;
+    });
 };
 
 protocol GuestInteraction {
     /// Take a local file from the Fuchsia host and transfer it to a destination
     /// location on the guest under test.
-    PutFile(fuchsia.io.File local_file, string:GUEST_INTERACTION_MAX_LENGTH remote_path)
-        -> (zx.status status);
+    PutFile(resource struct {
+        local_file client_end:fuchsia.io.File;
+        remote_path string:GUEST_INTERACTION_MAX_LENGTH;
+    }) -> (struct {
+        status zx.status;
+    });
 
     /// Pull a file from the guest under test and copy it to the specified
     /// location on the Fuchsia host.
-    GetFile(string:GUEST_INTERACTION_MAX_LENGTH remote_path, fuchsia.io.File local_file)
-        -> (zx.status status);
+    GetFile(resource struct {
+        remote_path string:GUEST_INTERACTION_MAX_LENGTH;
+        local_file client_end:fuchsia.io.File;
+    }) -> (struct {
+        status zx.status;
+    });
 
     /// Execute command on the guest under test and return the resulting output,
     /// error, and return code.
-    ExecuteCommand(string:GUEST_INTERACTION_MAX_LENGTH command,
-                   vector<EnvironmentVariable>:GUEST_INTERACTION_MAX_LENGTH env,
-                   zx.handle:SOCKET? stdin,
-                   zx.handle:SOCKET? stdout,
-                   zx.handle:SOCKET? stderr,
-                   request<CommandListener> command_listener);
+    ExecuteCommand(resource struct {
+        command string:GUEST_INTERACTION_MAX_LENGTH;
+        env vector<EnvironmentVariable>:GUEST_INTERACTION_MAX_LENGTH;
+        stdin zx.handle:<SOCKET, optional>;
+        stdout zx.handle:<SOCKET, optional>;
+        stderr zx.handle:<SOCKET, optional>;
+        command_listener server_end:CommandListener;
+    });
 };

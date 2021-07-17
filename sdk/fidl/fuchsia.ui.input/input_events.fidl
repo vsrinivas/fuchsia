@@ -1,11 +1,9 @@
 // Copyright 2014 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.ui.input;
 
-enum KeyboardEventPhase {
+type KeyboardEventPhase = strict enum {
     /// When key is pressed down.
     PRESSED = 0;
     /// When key is released.
@@ -30,31 +28,31 @@ enum KeyboardEventPhase {
 /// available.
 ///
 /// DEPRECATED: Will be removed in favor of `fuchsia.ui.input.KeyEvent`.
-struct KeyboardEvent {
+type KeyboardEvent = struct {
     /// Time the event was delivered. The time is in nanoseconds and corresponds
     /// to the monotonic time as determined by the zx_clock_get_monotonic syscall.
-    uint64 event_time;
+    event_time uint64;
 
-    uint32 device_id;
+    device_id uint32;
 
-    KeyboardEventPhase phase;
+    phase KeyboardEventPhase;
 
     /// Keyboard HID Usage
     /// See https://www.usb.org/sites/default/files/documents/hut1_12v2.pdf
-    uint32 hid_usage;
+    hid_usage uint32;
 
     /// The unicode code point represented by this key event, if any.
     /// Dead keys are represented as Unicode combining characters.
     ///
     /// If there is no unicode code point, this value is zero.
-    uint32 code_point;
+    code_point uint32;
 
     /// Key modifiers as defined by the different kModifier constants such as
     /// `kModifierCapsLock` currently pressed
-    uint32 modifiers;
+    modifiers uint32;
 };
 
-enum PointerEventType {
+type PointerEventType = strict enum {
     /// A touch-based pointer device.
     TOUCH = 0;
 
@@ -68,7 +66,7 @@ enum PointerEventType {
     MOUSE = 3;
 };
 
-enum PointerEventPhase {
+type PointerEventPhase = strict enum {
     /// The device has started tracking the pointer.
     ///
     /// For example, the pointer might be hovering above the device, having not yet
@@ -104,7 +102,7 @@ enum PointerEventPhase {
     /// The input from the pointer is no longer directed towards this receiver.
     CANCEL = 6;
 
-    // TODO: add phases to indicate button press / release
+// TODO: add phases to indicate button press / release
 };
 
 /// Pointers represent raw data about the user's interaction with the screen.
@@ -113,28 +111,28 @@ enum PointerEventPhase {
 /// ADD (-> HOVER) -> DOWN -> MOVE -> UP (-> HOVER) -> REMOVE
 ///
 /// At any point after the initial ADD, a transition to CANCEL is also possible.
-struct PointerEvent {
+type PointerEvent = struct {
     /// Time the event was delivered. The time is in nanoseconds and corresponds
     /// to the monotonic time as determined by the zx_clock_get_monotonic syscall.
-    uint64 event_time;
+    event_time uint64;
 
-    uint32 device_id;
+    device_id uint32;
 
-    uint32 pointer_id;
+    pointer_id uint32;
 
-    PointerEventType type;
+    type PointerEventType;
 
-    PointerEventPhase phase;
+    phase PointerEventPhase;
 
     /// `x` and `y` are in the coordinate system of the View.
-    float32 x;
-    float32 y;
+    x float32;
+    y float32;
 
     // TODO(jpoichet) float32 vx;
     // TODO(jpoichet) float32 vy;
 
-    float32 radius_major = 0.0; // DO NOT USE
-    float32 radius_minor = 0.0; // DO NOT USE
+    radius_major float32 = 0.0; // DO NOT USE
+    radius_minor float32 = 0.0; // DO NOT USE
     // TODO(jpoichet) float32 orientation;
     // TODO(jpoichet) float32 tilt;
     // TODO(jpoichet) float32 altitude;
@@ -142,28 +140,28 @@ struct PointerEvent {
 
     /// Currently pressed buttons as defined the kButton constants such as
     /// `kMousePrimaryButton`
-    uint32 buttons;
+    buttons uint32;
 };
 
-struct FocusEvent {
+type FocusEvent = struct {
     /// Time the event was delivered. The time is in nanoseconds and corresponds
     /// to the monotonic time as determined by the zx_clock_get_monotonic syscall.
-    uint64 event_time;
+    event_time uint64;
 
     /// Whether the view has gained input focused or not.
-    bool focused;
+    focused bool;
 };
 
-table MediaButtonsEvent {
-    1: int8 volume;
-    2: bool mic_mute;
-    3: bool pause;
-    4: bool camera_disable;
+type MediaButtonsEvent = table {
+    1: volume int8;
+    2: mic_mute bool;
+    3: pause bool;
+    4: camera_disable bool;
 };
 
 /// This union does not include MediaButtonsEvent because it's processed differently.
-union InputEvent {
-    1: PointerEvent pointer;
-    2: KeyboardEvent keyboard;
-    3: FocusEvent focus;
+type InputEvent = strict union {
+    1: pointer PointerEvent;
+    2: keyboard KeyboardEvent;
+    3: focus FocusEvent;
 };

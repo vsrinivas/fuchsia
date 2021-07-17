@@ -1,13 +1,13 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.overnet.examples.interfacepassing;
 
 using test.placeholders;
 
-[Discoverable]
+@discoverable
 protocol Example {
-    Request(request<test.placeholders.Echo> iface);
+    Request(resource struct {
+        iface server_end:test.placeholders.Echo;
+    });
 };

@@ -1,8 +1,6 @@
 // Copyright 2016 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.ui.policy;
 
 using fuchsia.ui.views;
@@ -10,24 +8,32 @@ using fuchsia.ui.views;
 /// The Presenter service provides a way for applications to ask that a view be
 /// added to a view tree, leaving any window management concerns up to the
 /// discretion of the presenter implementation.
-[Discoverable]
+@discoverable
 protocol Presenter {
     /// Request that the View's contents be displayed on the screen as a `Presentation`.
     /// Each call to `PresentView` creates a new `Presentation`. Having more than one simultaneous
     /// `Presentation` (i.e. calling `PresentView` more than once) is not allowed and will result
     // in an error and channel closure.
-    PresentView(fuchsia.ui.views.ViewHolderToken view_holder_token, request<Presentation>? presentation_request);
+    PresentView(resource struct {
+        view_holder_token fuchsia.ui.views.ViewHolderToken;
+        presentation_request server_end:<Presentation, optional>;
+    });
 
     /// Request that the View's contents be displayed on the screen as a `Presentation`.
     /// Destroys any existing presentations and replaces them with the new one.
     /// This is true whether the existing view was created by a call to
     /// PresentView, PresentOrReplaceView or PresentOrReplaceView2.
-    PresentOrReplaceView(fuchsia.ui.views.ViewHolderToken view_holder_token, request<Presentation>? presentation_request);
+    PresentOrReplaceView(resource struct {
+        view_holder_token fuchsia.ui.views.ViewHolderToken;
+        presentation_request server_end:<Presentation, optional>;
+    });
 
     // Same as PresentOrReplaceView, except it also takes a ViewRef.
     // The ViewRef should be referring to the same View as the ViewHolderToken.
     // The ViewRef is used for transfering focus the View after initialization.
-    PresentOrReplaceView2(fuchsia.ui.views.ViewHolderToken view_holder_token,
-                          fuchsia.ui.views.ViewRef view_ref,
-                          request<Presentation>? presentation_request);
+    PresentOrReplaceView2(resource struct {
+        view_holder_token fuchsia.ui.views.ViewHolderToken;
+        view_ref fuchsia.ui.views.ViewRef;
+        presentation_request server_end:<Presentation, optional>;
+    });
 };

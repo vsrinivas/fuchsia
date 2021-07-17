@@ -1,12 +1,16 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library zx;
 
-[Transport = "Syscall"]
+@transport("Syscall")
 protocol pc {
     /// Rights: handle must have resource kind ZX_RSRC_KIND_ROOT.
-    pc_firmware_tables(handle:RESOURCE handle) -> (status status, paddr acpi_rsdp, paddr smbios);
+    pc_firmware_tables(resource struct {
+        handle handle:RESOURCE;
+    }) -> (struct {
+        status status;
+        acpi_rsdp paddr;
+        smbios paddr;
+    });
 };

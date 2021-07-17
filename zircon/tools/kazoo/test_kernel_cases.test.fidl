@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library zx;
 
 // This file is copies of some syscalls that were interesting for the kernel
@@ -14,39 +12,55 @@ alias vector_handle_u32size = vector<byte>;
 alias vector_paddr = vector<paddr>;
 alias vector_void_u32size = vector<byte>;
 
-[Transport="Syscall"]
+@transport("Syscall")
 protocol KernelCases {
     // Output vector to out_ptr, and vector<paddr> staying zx_paddr_t (not
     // turning into uint64).
-    BtiPin(handle:BTI handle,
-           uint32 options,
-           handle:VMO vmo,
-           uint64 offset,
-           uint64 size) ->
-        (status status, vector_paddr addrs, handle:PMT pmt);
+    BtiPin(resource struct {
+        handle handle:BTI;
+        options uint32;
+        vmo handle:VMO;
+        offset uint64;
+        size uint64;
+    }) -> (resource struct {
+        status status;
+        addrs vector_paddr;
+        pmt handle:PMT;
+    });
 
     // Still have NORETURN markup for kernel (but only this one).
-    [noreturn]
+    @noreturn
     ThreadExit();
 
     // inout_ptr.
-    MtraceControl(handle:RESOURCE handle,
-            uint32 kind,
-            uint32 action,
-            uint32 options,
-            mutable_vector_void ptr) ->
-        (status status);
+    MtraceControl(resource struct {
+        handle handle:RESOURCE;
+        kind uint32;
+        action uint32;
+        options uint32;
+        ptr mutable_vector_void;
+    }) -> (struct {
+        status status;
+    });
 
     // vector of handles isn't turned into user_out_handle*, rather stays as
     // user_out_ptr<zx_handle_t>, because it's not just one.
-    Read(handle:CHANNEL handle,
-         uint32 options) ->
-        (status status,
-         vector_void_u32size bytes,
-         vector_handle_u32size handles,
-         optional_uint32 actual_bytes,
-         optional_uint32 actual_handles);
+    Read(resource struct {
+        handle handle:CHANNEL;
+        options uint32;
+    }) -> (struct {
+        status status;
+        bytes vector_void_u32size;
+        handles vector_handle_u32size;
+        actual_bytes optional_uint32;
+        actual_handles optional_uint32;
+    });
 
-    [testonly]
-    compiled_out_in_non_test(int32 a, int32 b) -> (status status);
+    @testonly
+    compiled_out_in_non_test(struct {
+        a int32;
+        b int32;
+    }) -> (struct {
+        status status;
+    });
 };

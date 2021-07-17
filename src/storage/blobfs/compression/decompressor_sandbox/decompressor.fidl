@@ -1,14 +1,12 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.blobfs.internal;
 
 using zx;
 
 /// Used to transport the Blobfs CompressionAlgorithm enum.
-enum CompressionAlgorithm {
+type CompressionAlgorithm = strict enum {
     UNCOMPRESSED = 1;
     LZ4 = 2;
     ZSTD = 3;
@@ -20,41 +18,46 @@ enum CompressionAlgorithm {
 };
 
 /// A range of bytes.
-struct Range {
+type Range = struct {
     /// Offset in bytes from the start of the VMO.
-    uint64 offset;
+    offset uint64;
     /// The number of bytes starting at the offset.
-    uint64 size;
+    size uint64;
 };
 
 /// A request sent to the decompressor.
-struct DecompressRequest {
+type DecompressRequest = struct {
     /// The bytes where the decompressed result will be placed.
-    Range decompressed;
+    decompressed Range;
     /// The bytes from the compressed input to extract from.
-    Range compressed;
+    compressed Range;
 
     /// Algorithm to use for decompression.
-    CompressionAlgorithm algorithm;
+    algorithm CompressionAlgorithm;
 };
 
 /// A response from the decompressor after handling a `DecompressRangeRequest`.
-struct DecompressResponse {
+type DecompressResponse = struct {
     /// Decompressed size in bytes.
-    uint64 size;
+    size uint64;
     /// Operation status.
-    zx.status status;
+    status zx.status;
 
     /// Padding out to the same length as `DecompressRangeRequest`. Values must be zero.
-    array<int8>:24 reserved;
+    reserved array<int8, 24>;
 };
 
-[Discoverable]
+@discoverable
 protocol DecompressorCreator {
     /// Takes the server end of a fifo for `DecompressRangeRequest` objects to
     /// handle requests and put `DecopmressRangeResponse` responses on. Data
     /// for requests is read from `compressed_vmo` and results written to
     /// `decompressed_vmo`.
-    Create(zx.handle:FIFO server_end, zx.handle:VMO compressed_vmo,
-           zx.handle:VMO decompressed_vmo) -> (zx.status status);
+    Create(resource struct {
+        server_end zx.handle:FIFO;
+        compressed_vmo zx.handle:VMO;
+        decompressed_vmo zx.handle:VMO;
+    }) -> (struct {
+        status zx.status;
+    });
 };

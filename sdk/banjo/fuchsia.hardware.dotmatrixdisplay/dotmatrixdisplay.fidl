@@ -1,20 +1,18 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.dotmatrixdisplay;
 
 using zx;
 
 /// This describes the format for each pixel in the screen.
-enum PixelFormat : uint32 {
+type PixelFormat = strict enum : uint32 {
     /// Pixels have on or off value (0 or 1). There is one bit per pixel.
     MONOCHROME = 0;
 };
 
 /// Describes the layout of the pixels within the screen vector.
-enum ScreenLayout : uint32 {
+type ScreenLayout = strict enum : uint32 {
     /// The vector is laid out with columns top-to-bottom. The columns
     /// are organized into rows that go left-to-right.
     COLUMN_TB_ROW_LR = 0;
@@ -23,13 +21,13 @@ enum ScreenLayout : uint32 {
     ROW_LR_COLUMN_TB = 1;
 };
 
-struct DotmatrixDisplayConfig {
+type DotmatrixDisplayConfig = struct {
     /// The screen's width in pixels.
-    uint32 width;
+    width uint32;
     /// The screen's height in pixels.
-    uint32 height;
-    PixelFormat format;
-    ScreenLayout layout;
+    height uint32;
+    format PixelFormat;
+    layout ScreenLayout;
 };
 
 /// Protocol for Dotmatrix display drivers. A Dotmatrix display is any
@@ -38,10 +36,17 @@ struct DotmatrixDisplayConfig {
 /// of pixels. The display could be monochromatic or have RGB values. This
 /// protocol is NOT for a display with lots of pixels or extra hardware like an
 /// HDMI or DP display.
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol DotmatrixDisplay {
     /// Get the configuration to display the screen.
-    GetConfig() -> (DotmatrixDisplayConfig config);
+    GetConfig() -> (struct {
+        config DotmatrixDisplayConfig;
+    });
     /// Set the screen memory. Calling this function will update the display.
-    SetScreen(vector<uint8>:MAX screen_buffer) -> (zx.status s);
+    SetScreen(struct {
+        screen_buffer vector<uint8>:MAX;
+    }) -> (struct {
+        s zx.status;
+    });
 };

@@ -1,48 +1,63 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library zx;
 
 alias mutable_vector_void = vector<byte>;
 alias voidptr = uint64;
 
-[Transport = "Syscall"]
+@transport("Syscall")
 protocol Rust {
     // Simple out ptr.
-    SimpleCase() -> (time time);
+    SimpleCase() -> (struct {
+        time time;
+    });
 
-    MultipleInHandles(vector<handle> handles) -> (status status);
+    MultipleInHandles(resource struct {
+        handles vector<handle>;
+    }) -> (struct {
+        status status;
+    });
 
     // noreturn handled properly.
-    [noreturn]
+    @noreturn
     ANoRetFunc();
 
     // Function withot return handled properly too.
-    NoReturnValue(uint32 x);
+    NoReturnValue(struct {
+        x uint32;
+    });
 
     // |buffer| treated mutable.
-    InoutArgs(handle:VMO handle,
-              uint32 op,
-              uint64 offset,
-              uint64 size,
-              mutable_vector_void buffer)
-        -> (status status);
+    InoutArgs(resource struct {
+        handle handle:VMO;
+        op uint32;
+        offset uint64;
+        size uint64;
+        buffer mutable_vector_void;
+    }) -> (struct {
+        status status;
+    });
 
     // |input| treated const
-    ConstInput(vector<byte> input) -> (status status);
+    ConstInput(struct {
+        input vector<byte>;
+    }) -> (struct {
+        status status;
+    });
 
-    VariousBasicTypeNames(bool a,
-                          byte b,
-                          int32 d,
-                          int64 e,
-                          uint16 f,
-                          uint32 g,
-                          uint64 h,
-                          usize i,
-                          uintptr j,
-                          voidptr k,
-                          time l,
-                          ticks m);
+    VariousBasicTypeNames(struct {
+        a bool;
+        b byte;
+        d int32;
+        e int64;
+        f uint16;
+        g uint32;
+        h uint64;
+        i usize;
+        j uintptr;
+        k voidptr;
+        l time;
+        m ticks;
+    });
 };

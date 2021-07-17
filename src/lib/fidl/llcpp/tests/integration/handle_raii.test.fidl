@@ -1,101 +1,206 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library llcpptest.handleraii.test;
 
 using zx;
 
-resource struct HandleStruct {
-    zx.handle:EVENT h;
+type HandleStruct = resource struct {
+    h zx.handle:EVENT;
 };
 
-resource struct HandleStructStruct {
-    HandleStruct s;
+type HandleStructStruct = resource struct {
+    s HandleStruct;
 };
 
-resource struct MultiFieldStruct {
-    zx.handle:EVENT h1;
-    HandleStruct s;
-    zx.handle:EVENT h2;
+type MultiFieldStruct = resource struct {
+    h1 zx.handle:EVENT;
+    s HandleStruct;
+    h2 zx.handle:EVENT;
 };
 
-resource struct HandleStructOptionalStruct {
-    HandleStruct? s;
+type HandleStructOptionalStruct = resource struct {
+    s box<HandleStruct>;
 };
 
-resource struct VectorStruct {
-    vector<HandleStruct> v;
+type VectorStruct = resource struct {
+    v vector<HandleStruct>;
 };
 
-resource struct ArrayStruct {
-    array<HandleStruct>:3 a;
+type ArrayStruct = resource struct {
+    a array<HandleStruct, 3>;
 };
 
-resource union HandleUnion {
-    1: zx.handle:EVENT h1;
-    2: HandleStruct h2;
+type HandleUnion = strict resource union {
+    1: h1 zx.handle:EVENT;
+    2: h2 HandleStruct;
 };
 
-resource struct HandleUnionStruct {
-    HandleUnion u;
+type HandleUnionStruct = resource struct {
+    u HandleUnion;
 };
 
-resource struct HandleUnionOptionalStruct {
-    HandleUnion? u;
+type HandleUnionOptionalStruct = resource struct {
+    u HandleUnion:optional;
 };
 
-resource table HandleTable {
-    1: zx.handle:EVENT h1;
-    2: HandleStruct h2;
+type HandleTable = resource table {
+    1: h1 zx.handle:EVENT;
+    2: h2 HandleStruct;
 };
 
-resource struct HandleTableStruct {
-    HandleTable t;
+type HandleTableStruct = resource struct {
+    t HandleTable;
 };
 
 protocol HandleProvider {
-    GetHandle() -> (zx.handle:EVENT value);
-    GetHandleStruct() -> (HandleStruct value);
-    GetHandleStructStruct() -> (HandleStructStruct value);
-    GetMultiFieldStruct() -> (MultiFieldStruct value);
-    GetMultiArgs() -> (zx.handle:EVENT h1, HandleStruct s, zx.handle:EVENT h2);
-    GetVectorStruct(uint32 count) -> (VectorStruct value);
-    GetArrayStruct() -> (ArrayStruct value);
-    GetHandleUnion(int32 field) -> (HandleUnion value);
-    GetHandleUnionStruct(int32 field) -> (HandleUnionStruct value);
-    GetHandleTable(uint32 fields) -> (HandleTable value);
-    GetHandleTableStruct(uint32 fields) -> (HandleTableStruct value);
+    GetHandle() -> (resource struct {
+        value zx.handle:EVENT;
+    });
+    GetHandleStruct() -> (resource struct {
+        value HandleStruct;
+    });
+    GetHandleStructStruct() -> (resource struct {
+        value HandleStructStruct;
+    });
+    GetMultiFieldStruct() -> (resource struct {
+        value MultiFieldStruct;
+    });
+    GetMultiArgs() -> (resource struct {
+        h1 zx.handle:EVENT;
+        s HandleStruct;
+        h2 zx.handle:EVENT;
+    });
+    GetVectorStruct(struct {
+        count uint32;
+    }) -> (resource struct {
+        value VectorStruct;
+    });
+    GetArrayStruct() -> (resource struct {
+        value ArrayStruct;
+    });
+    GetHandleUnion(struct {
+        field int32;
+    }) -> (resource struct {
+        value HandleUnion;
+    });
+    GetHandleUnionStruct(struct {
+        field int32;
+    }) -> (resource struct {
+        value HandleUnionStruct;
+    });
+    GetHandleTable(struct {
+        fields uint32;
+    }) -> (resource struct {
+        value HandleTable;
+    });
+    GetHandleTableStruct(struct {
+        fields uint32;
+    }) -> (resource struct {
+        value HandleTableStruct;
+    });
 
-    GetOptionalHandleStruct(bool defined) -> (HandleStruct? value);
-    GetOptionalHandleUnion(int32 field) -> (HandleUnion? value);
-    GetOptionalHandleUnionStruct(bool defined, int32 field) -> (HandleUnionStruct? value);
-    GetOptionalHandleTableStruct(bool defined, uint32 fields) -> (HandleTableStruct? value);
+    GetOptionalHandleStruct(struct {
+        defined bool;
+    }) -> (resource struct {
+        value box<HandleStruct>;
+    });
+    GetOptionalHandleUnion(struct {
+        field int32;
+    }) -> (resource struct {
+        value HandleUnion:optional;
+    });
+    GetOptionalHandleUnionStruct(struct {
+        defined bool;
+        field int32;
+    }) -> (resource struct {
+        value box<HandleUnionStruct>;
+    });
+    GetOptionalHandleTableStruct(struct {
+        defined bool;
+        fields uint32;
+    }) -> (resource struct {
+        value box<HandleTableStruct>;
+    });
 
-    GetHandleStructOptionalStruct(bool defined) -> (HandleStructOptionalStruct value);
-    GetHandleUnionOptionalStruct(bool defined, int32 field) -> (HandleUnionOptionalStruct value);
+    GetHandleStructOptionalStruct(struct {
+        defined bool;
+    }) -> (resource struct {
+        value HandleStructOptionalStruct;
+    });
+    GetHandleUnionOptionalStruct(struct {
+        defined bool;
+        field int32;
+    }) -> (resource struct {
+        value HandleUnionOptionalStruct;
+    });
 
-    GetVectorOfHandle(uint32 count) -> (vector<zx.handle:EVENT> value);
-    GetVectorOfVectorOfHandle(uint32 count1, uint32 count2)
-        -> (vector<vector<zx.handle:EVENT>> value);
-    GetVectorOfVectorOfVectorOfHandle(uint32 count1, uint32 count2, uint32 count3)
-        -> (vector<vector<vector<zx.handle:EVENT>>> value);
+    GetVectorOfHandle(struct {
+        count uint32;
+    }) -> (resource struct {
+        value vector<zx.handle:EVENT>;
+    });
+    GetVectorOfVectorOfHandle(struct {
+        count1 uint32;
+        count2 uint32;
+    }) -> (resource struct {
+        value vector<vector<zx.handle:EVENT>>;
+    });
+    GetVectorOfVectorOfVectorOfHandle(struct {
+        count1 uint32;
+        count2 uint32;
+        count3 uint32;
+    }) -> (resource struct {
+        value vector<vector<vector<zx.handle:EVENT>>>;
+    });
 
-    GetVectorOfHandleStruct(uint32 count) -> (vector<HandleStruct> value);
-    GetVectorOfVectorOfHandleStruct(uint32 count1, uint32 count2)
-        -> (vector<vector<HandleStruct>> value);
-    GetVectorOfVectorOfVectorOfHandleStruct(uint32 count1, uint32 count2, uint32 count3)
-        -> (vector<vector<vector<HandleStruct>>> value);
+    GetVectorOfHandleStruct(struct {
+        count uint32;
+    }) -> (resource struct {
+        value vector<HandleStruct>;
+    });
+    GetVectorOfVectorOfHandleStruct(struct {
+        count1 uint32;
+        count2 uint32;
+    }) -> (resource struct {
+        value vector<vector<HandleStruct>>;
+    });
+    GetVectorOfVectorOfVectorOfHandleStruct(struct {
+        count1 uint32;
+        count2 uint32;
+        count3 uint32;
+    }) -> (resource struct {
+        value vector<vector<vector<HandleStruct>>>;
+    });
 
-    GetArrayOfHandle() -> (array<zx.handle:EVENT>:2 value);
-    GetArrayOfArrayOfHandle() -> (array<array<zx.handle:EVENT>:2>:3 value);
-    GetArrayOfArrayOfArrayOfHandle() -> (array<array<array<zx.handle:EVENT>:2>:3>:4 value);
+    GetArrayOfHandle() -> (resource struct {
+        value array<zx.handle:EVENT, 2>;
+    });
+    GetArrayOfArrayOfHandle() -> (resource struct {
+        value array<array<zx.handle:EVENT, 2>, 3>;
+    });
+    GetArrayOfArrayOfArrayOfHandle() -> (resource struct {
+        value array<array<array<zx.handle:EVENT, 2>, 3>, 4>;
+    });
 
-    GetArrayOfHandleStruct() -> (array<HandleStruct>:2 value);
-    GetArrayOfArrayOfHandleStruct() -> (array<array<HandleStruct>:2>:3 value);
-    GetArrayOfArrayOfArrayOfHandleStruct() -> (array<array<array<HandleStruct>:2>:3>:4 value);
+    GetArrayOfHandleStruct() -> (resource struct {
+        value array<HandleStruct, 2>;
+    });
+    GetArrayOfArrayOfHandleStruct() -> (resource struct {
+        value array<array<HandleStruct, 2>, 3>;
+    });
+    GetArrayOfArrayOfArrayOfHandleStruct() -> (resource struct {
+        value array<array<array<HandleStruct, 2>, 3>, 4>;
+    });
 
-    GetMixed1(uint32 count) -> (array<vector<zx.handle:EVENT>>:2 value);
-    GetMixed2(uint32 count) -> (vector<array<zx.handle:EVENT>:2> value);
+    GetMixed1(struct {
+        count uint32;
+    }) -> (resource struct {
+        value array<vector<zx.handle:EVENT>, 2>;
+    });
+    GetMixed2(struct {
+        count uint32;
+    }) -> (resource struct {
+        value vector<array<zx.handle:EVENT, 2>>;
+    });
 };

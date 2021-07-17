@@ -1,45 +1,49 @@
-deprecated_syntax;
 library fidl.test.nullable;
 
 using zx;
 
-struct StructWithNullableString {
-    string? val;
+type StructWithNullableString = struct {
+    val string:optional;
 };
 
-struct StructWithNullableVector {
-    vector<int32>? val;
+type StructWithNullableVector = struct {
+    val vector<int32>:optional;
 };
 
-resource struct StructWithNullableHandle {
-    zx.handle:VMO? val;
+type StructWithNullableHandle = resource struct {
+    val zx.handle:<VMO, optional>;
 };
 
 protocol SimpleProtocol {
-    Add(int32 a, int32 b) -> (int32 sum);
+    Add(struct {
+        a int32;
+        b int32;
+    }) -> (struct {
+        sum int32;
+    });
 };
 
-resource struct StructWithNullableProtocol {
-    SimpleProtocol? val;
+type StructWithNullableProtocol = resource struct {
+    val client_end:<SimpleProtocol, optional>;
 };
 
-resource struct StructWithNullableRequest {
-    request<SimpleProtocol>? val;
+type StructWithNullableRequest = resource struct {
+    val server_end:<SimpleProtocol, optional>;
 };
 
-struct Int32Wrapper {
-    int32 val;
+type Int32Wrapper = struct {
+    val int32;
 };
 
-struct StructWithNullableStruct {
-    Int32Wrapper? val;
+type StructWithNullableStruct = struct {
+    val box<Int32Wrapper>;
 };
 
-union SimpleUnion {
-    1: int32 a;
-    2: float32 b;
+type SimpleUnion = strict union {
+    1: a int32;
+    2: b float32;
 };
 
-struct StructWithNullableUnion {
-    SimpleUnion? val;
+type StructWithNullableUnion = struct {
+    val SimpleUnion:optional;
 };

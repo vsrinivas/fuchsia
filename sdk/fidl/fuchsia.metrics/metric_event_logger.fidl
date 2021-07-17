@@ -1,8 +1,6 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 /// This file contains interfaces that allow clients to log events that are
 /// associated with metrics. These events are collected and later analyzed.
 /// Metrics are organized under a Project, which are associated with a Customer.
@@ -19,23 +17,23 @@ deprecated_syntax;
 library fuchsia.metrics;
 
 /// The maximum size of a single Event is 100 KB.
-const int64 MAX_BYTES_PER_EVENT = 102400;
+const MAX_BYTES_PER_EVENT int64 = 102400;
 
 /// This is intended as a reasonable maximum number of histogram buckets per
 /// event.
-const uint32 MAX_HISTOGRAM_BUCKETS = 500;
+const MAX_HISTOGRAM_BUCKETS uint32 = 500;
 
 /// Maximum number of events that may be logged in a single FIDL call.
-const uint32 MAX_BATCHED_EVENTS = 500;
+const MAX_BATCHED_EVENTS uint32 = 500;
 
 /// String events should not be longer than this.
-const uint32 MAX_STRING_EVENT_SIZE = 256;
+const MAX_STRING_EVENT_SIZE uint32 = 256;
 
 /// Maximum number of event codes that can be associated with a single event.
-const uint32 MAX_METRIC_DIMENSIONS = 10;
+const MAX_METRIC_DIMENSIONS uint32 = 10;
 
 /// Response codes for MetricEventLogger operations.
-enum Status : int32 {
+type Status = strict enum : int32 {
     OK = 0;
 
     /// For example, the supplied metric id is invalid.
@@ -58,22 +56,25 @@ enum Status : int32 {
 };
 
 /// A specification identifying a project to log events for.
-table ProjectSpec {
+type ProjectSpec = table {
     /// The customer ID. If omitted (i.e. set to 0) then it defaults to the
     /// customer ID for the default "fuchsia" customer.
-    1: uint32 customer_id;
+    1: customer_id uint32;
 
     /// The ID of the project.
-    2: uint32 project_id;
+    2: project_id uint32;
 };
 
 /// A factory that is used to create a MetricEventLogger for a specific project.
-[Discoverable]
+@discoverable
 protocol MetricEventLoggerFactory {
     /// Create a MetricEventLogger for the project specified by `project_spec`.
-    CreateMetricEventLogger(ProjectSpec project_spec,
-                            request<MetricEventLogger> logger)
-        -> (Status status);
+    CreateMetricEventLogger(resource struct {
+        project_spec ProjectSpec;
+        logger server_end:MetricEventLogger;
+    }) -> (struct {
+        status Status;
+    });
 };
 
 /// A vector of event codes. When used in one of the Log*() calls below,
@@ -97,8 +98,13 @@ protocol MetricEventLogger {
     /// `event_codes` Ordered list of parameters, one for each of the metric's
     /// dimensions. Occurrence counts with the same event codes are aggregated
     /// based on these parameters.
-    LogOccurrence(uint32 metric_id, uint64 count, event_vector event_codes)
-        -> (Status status);
+    LogOccurrence(struct {
+        metric_id uint32;
+        count uint64;
+        event_codes event_vector;
+    }) -> (struct {
+        status Status;
+    });
 
     /// Logs an integer measurement.
     ///
@@ -109,8 +115,13 @@ protocol MetricEventLogger {
     /// `event_codes` Ordered list of parameters, one for each of the metric's
     /// dimensions. Integer values with the same event codes are aggregated
     /// based on these parameters.
-    LogInteger(uint32 metric_id, int64 value, event_vector event_codes)
-        -> (Status status);
+    LogInteger(struct {
+        metric_id uint32;
+        value int64;
+        event_codes event_vector;
+    }) -> (struct {
+        status Status;
+    });
 
     /// Logs a histogram giving many approximate integer measurements.
     ///
@@ -121,9 +132,13 @@ protocol MetricEventLogger {
     /// `event_codes` Ordered list of parameters, one for each of the metric's
     /// dimensions. Histograms with the same event codes are aggregated together
     /// based on these parameters.
-    LogIntegerHistogram(uint32 metric_id, integer_histogram histogram,
-                        event_vector event_codes)
-        -> (Status status);
+    LogIntegerHistogram(struct {
+        metric_id uint32;
+        histogram integer_histogram;
+        event_codes event_vector;
+    }) -> (struct {
+        status Status;
+    });
 
     /// Logs a string value that was observed.
     ///
@@ -134,14 +149,21 @@ protocol MetricEventLogger {
     /// `event_codes` Ordered list of parameters, one for each of the metric's
     /// dimensions. Counts of logged strings are aggregated separately based on
     /// these parameters.
-    LogString(uint32 metric_id, string:MAX_STRING_EVENT_SIZE string_value,
-              event_vector event_codes)
-        -> (Status status);
+    LogString(struct {
+        metric_id uint32;
+        string_value string:MAX_STRING_EVENT_SIZE;
+        event_codes event_vector;
+    }) -> (struct {
+        status Status;
+    });
 
     /// Bulk logging method, equivalent to making many of the above Log*() calls
     /// at once.
-    LogMetricEvents(vector<MetricEvent>:MAX_BATCHED_EVENTS events)
-        -> (Status status);
+    LogMetricEvents(struct {
+        events vector<MetricEvent>:MAX_BATCHED_EVENTS;
+    }) -> (struct {
+        status Status;
+    });
 
     /// Logs a custom Event.
     ///
@@ -150,63 +172,67 @@ protocol MetricEventLogger {
     /// `event_values` The values for the custom Event. There must be one value
     /// for each dimension of the metric and the types of the values must
     /// be consistent with the dimensions declared in the metric definition.
-    LogCustomEvent(uint32 metric_id, vector<CustomEventValue>:MAX event_values)
-        -> (Status status);
+    LogCustomEvent(struct {
+        metric_id uint32;
+        event_values vector<CustomEventValue>:MAX;
+    }) -> (struct {
+        status Status;
+    });
 };
 
 /// A specification of an event that occurred to be passed to LogMetricEvents().
-struct MetricEvent {
+type MetricEvent = struct {
     /// ID of the metric being logged.
-    uint32 metric_id;
+    metric_id uint32;
 
     /// `event_codes` Ordered list of parameters, one for each of the metric's
     /// dimensions.
-    event_vector event_codes;
+    event_codes event_vector;
 
     /// The metric-type-specific data for the event being logged.
-    MetricEventPayload payload;
+    payload MetricEventPayload;
 };
 
 /// The variadic part of a MetricEvent.
-flexible union MetricEventPayload {
+type MetricEventPayload = flexible union {
     /// The number of times the event has occurred, see LogOccurrence().
-    1: uint64 count;
+    1: count uint64;
 
     /// The integer measured, see LogInteger().
-    2: int64 integer_value;
+    2: integer_value int64;
 
     /// The collection of approximate integer measurements, see
     /// LogIntegerHistogram().
-    3: integer_histogram histogram;
+    3: histogram integer_histogram;
 
     /// The string to log, see LogString().
-    4: string:MAX_STRING_EVENT_SIZE string_value;
+    4: string_value string:MAX_STRING_EVENT_SIZE;
 };
 
 /// A value for a custom event. This is used by the method LogCustomEvent().
-struct CustomEventValue {
+type CustomEventValue = struct {
     /// The name of the metric's dimension this value is for.
-    string:MAX dimension_name;
+    dimension_name string:MAX;
 
     /// The value for that dimension.
-    Value value;
+    value Value;
 };
 
 /// A custom event value that may be a string, int, double, or index.
-union Value {
-    1: string:MAX string_value;
-    2: int64 int_value;
-    3: float64 double_value;
-    4: uint32 index_value;
+type Value = strict union {
+    1: string_value string:MAX;
+    2: int_value int64;
+    3: double_value float64;
+    4: index_value uint32;
 };
 
 /// One bucket of a histogram, used by the method LogIntegerHistogram.
-struct HistogramBucket {
+type HistogramBucket = struct {
     /// The index of the bucket. The metric includes a specification
     /// of a sequence of N+1 integer-range buckets that are indexed from
     /// 0, the underflow bucket, to N, the overflow bucket.
-    uint32 index;
+    index uint32;
 
     /// The number of values in that bucket.
-    uint64 count;
+    count uint64;
 };

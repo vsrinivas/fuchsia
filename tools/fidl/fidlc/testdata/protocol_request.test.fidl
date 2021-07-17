@@ -1,12 +1,18 @@
-deprecated_syntax;
 library fidl.test.protocolrequest;
 
-protocol Child {
-};
+protocol Child {};
 
 protocol Parent {
-    GetChild() -> (Child c);
-    GetChildRequest() -> (request<Child> r);
-    TakeChild(Child c);
-    TakeChildRequest(request<Child> r);
+    GetChild() -> (resource struct {
+        c client_end:Child;
+    });
+    GetChildRequest() -> (resource struct {
+        r server_end:Child;
+    });
+    TakeChild(resource struct {
+        c client_end:Child;
+    });
+    TakeChildRequest(resource struct {
+        r server_end:Child;
+    });
 };

@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.netemul.devmgr;
 
 using fuchsia.io;
@@ -13,7 +11,7 @@ using fuchsia.io;
 /// an isolated devmgr component instance (//src/lib/isolated_devmgr). It is exposed by
 /// isolated devmgr instances launched by netemul and it represents the devfs that is
 /// served by devmgr.
-[Discoverable]
+@discoverable
 protocol IsolatedDevmgr {
     compose fuchsia.io.Directory;
 };

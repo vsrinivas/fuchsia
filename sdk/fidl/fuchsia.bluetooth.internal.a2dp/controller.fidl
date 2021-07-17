@@ -1,8 +1,6 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.bluetooth.internal.a2dp;
 
 using fuchsia.bluetooth;
@@ -15,7 +13,7 @@ protocol StreamSuspender {
 };
 
 /// Service provides clients a way to manage the state of media in A2DP.
-[Discoverable]
+@discoverable
 protocol Controller {
     /// Request to suspend the A2DP media stream.
     ///
@@ -37,5 +35,8 @@ protocol Controller {
     ///
     /// If the suspend request cannot be processed due to an internal error, the server will close
     /// the `token` channel with the zx::Status::INTERNAL signal and the method will resolve.
-    Suspend(fuchsia.bluetooth.PeerId? peer_id, request<StreamSuspender> token) -> ();
+    Suspend(resource struct {
+        peer_id box<fuchsia.bluetooth.PeerId>;
+        token server_end:StreamSuspender;
+    }) -> ();
 };

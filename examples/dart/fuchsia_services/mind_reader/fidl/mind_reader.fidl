@@ -1,20 +1,23 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
 library fuchsia.services.examples;
 
-[Discoverable]
+@discoverable
 protocol MindReader {
     /// When this method is called the service will attempt to guess
     /// what the calling process is thinking.
-    ReadMind() -> (string response);
+    ReadMind() -> (struct {
+        response string;
+    });
 };
 
-[Discoverable]
+@discoverable
 protocol ThoughtLeaker {
     /// This service is used to leak the current thought of the process.
     /// If this service is exposed to the [MindReader] it will connect
     /// to it to extract the current thought.
-    CurrentThought() -> (string response);
+    CurrentThought() -> (struct {
+        response string;
+    });
 };

@@ -1,18 +1,22 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.fakeclock.test;
 using zx;
 
 /// An example protocol for demonstrating fake time.
-[Discoverable]
+@discoverable
 protocol Example {
     /// Gets the current monotonic time.
-    GetMonotonic() -> (zx.time time);
+    GetMonotonic() -> (struct {
+        time zx.time;
+    });
     /// Wait until the given absolute time, then return.
-    WaitUntil(zx.time timeout) -> ();
+    WaitUntil(struct {
+        timeout zx.time;
+    }) -> ();
     /// Wait for `duration` time, then return.
-    WaitFor(zx.duration duration) -> ();
+    WaitFor(struct {
+        duration zx.duration;
+    }) -> ();
 };

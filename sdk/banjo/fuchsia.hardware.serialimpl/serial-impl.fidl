@@ -1,14 +1,12 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.serialimpl;
 
 using zx;
 using fuchsia.hardware.serial;
 
-enum SerialState : uint32 {
+type SerialState = strict enum : uint32 {
     READABLE = 0x1;
     WRITABLE = 0x2;
 };
@@ -17,18 +15,48 @@ enum SerialState : uint32 {
 /// This may be called from an interrupt thread it should just signal another thread
 /// and return as soon as possible. In particular, it may not be safe to make protocol calls
 /// from these callbacks.
-[Transport = "Banjo", BanjoLayout = "ddk-callback"]
+@transport("Banjo")
+@banjo_layout("ddk-callback")
 protocol SerialNotify {
-    Callback(SerialState state) -> ();
+    Callback(struct {
+        state SerialState;
+    }) -> ();
 };
 
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol SerialImpl {
-    GetInfo() -> (zx.status s, fuchsia.hardware.serial.SerialPortInfo info);
+    GetInfo() -> (struct {
+        s zx.status;
+        info fuchsia.hardware.serial.SerialPortInfo;
+    });
     /// Configures the given serial port.
-    Config(uint32 baud_rate, uint32 flags) -> (zx.status s);
-    Enable(bool enable) -> (zx.status s);
-    Read() -> (zx.status s, [Buffer] vector<uint8>:MAX buf);
-    Write([Buffer] vector<uint8>:MAX buf) -> (zx.status s, uint64 actual);
-    SetNotifyCallback(SerialNotify cb) -> (zx.status s);
+    Config(struct {
+        baud_rate uint32;
+        flags uint32;
+    }) -> (struct {
+        s zx.status;
+    });
+    Enable(struct {
+        enable bool;
+    }) -> (struct {
+        s zx.status;
+    });
+    Read() -> (struct {
+        s zx.status;
+        @buffer
+        buf vector<uint8>:MAX;
+    });
+    Write(struct {
+        @buffer
+        buf vector<uint8>:MAX;
+    }) -> (struct {
+        s zx.status;
+        actual uint64;
+    });
+    SetNotifyCallback(resource struct {
+        cb client_end:SerialNotify;
+    }) -> (struct {
+        s zx.status;
+    });
 };

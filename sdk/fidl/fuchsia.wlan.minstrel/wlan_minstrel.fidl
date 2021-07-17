@@ -1,35 +1,33 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.wlan.minstrel;
 
-struct Peers {
-    vector<bytes:6> peers;
+type Peers = struct {
+    peers vector<bytes:6>;
 };
 
 // LINT.IfChange
-struct StatsEntry {
-    uint16 tx_vector_idx;
-    string tx_vec_desc;
-    uint64 success_cur;
-    uint64 attempts_cur;
-    float32 probability;
-    float32 cur_tp;
-    uint64 success_total;
-    uint64 attempts_total;
-    uint64 probes_total;
-    uint8 probe_cycles_skipped;
+type StatsEntry = struct {
+    tx_vector_idx uint16;
+    tx_vec_desc string;
+    success_cur uint64;
+    attempts_cur uint64;
+    probability float32;
+    cur_tp float32;
+    success_total uint64;
+    attempts_total uint64;
+    probes_total uint64;
+    probe_cycles_skipped uint8;
 };
 
-struct Peer {
-    array<uint8>:6 mac_addr;
-    uint16 max_tp;
-    uint16 max_probability;
-    uint16 basic_highest;
-    uint16 basic_max_probability;
-    uint64 probes;
-    vector<StatsEntry> entries;
+type Peer = struct {
+    mac_addr array<uint8, 6>;
+    max_tp uint16;
+    max_probability uint16;
+    basic_highest uint16;
+    basic_max_probability uint16;
+    probes uint64;
+    entries vector<StatsEntry>;
 };
 // LINT.ThenChange(//garnet/drivers/wlan/wlan/minstrel.h)

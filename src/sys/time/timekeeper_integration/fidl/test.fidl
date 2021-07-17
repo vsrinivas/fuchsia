@@ -1,8 +1,6 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library test.time;
 
 using fuchsia.time.external;
@@ -11,10 +9,12 @@ using fuchsia.time.external;
 /// launches and establishes a time source channel to the dev time source. This protocol allows
 /// the dev time source to pass a channel to delegate the implementation of the connection to the
 /// test component.
-[Discoverable]
+@discoverable
 protocol TimeSourceControl {
     /// Forward a PushSource connection.
     /// TODO(satsukiu): possibly add an enum signifying the role (primary, monitor) of the
     /// connecting PushSource.
-    ConnectPushSource(request<fuchsia.time.external.PushSource> push_source);
+    ConnectPushSource(resource struct {
+        push_source server_end:fuchsia.time.external.PushSource;
+    });
 };

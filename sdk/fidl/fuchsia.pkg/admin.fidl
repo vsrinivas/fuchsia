@@ -1,12 +1,10 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.pkg;
 
 /// This configures a package resolver.
-[Discoverable]
+@discoverable
 protocol PackageResolverAdmin {
     /// Sets an experiment toggle to a specific state (on or off).
     ///
@@ -15,13 +13,16 @@ protocol PackageResolverAdmin {
     ///
     /// + request `experiment_id` the experiment to enable or disable.
     /// + request `state` the state the experiment should be set to.
-    SetExperimentState(ExperimentToggle experiment_id, bool state) -> ();
+    SetExperimentState(struct {
+        experiment_id ExperimentToggle;
+        state bool;
+    }) -> ();
 };
 
 /// List of known experiment toggles.
-enum ExperimentToggle : uint64 {
+type ExperimentToggle = strict enum : uint64 {
     /// This does nothing, but is visible in inspect.
     LIGHTBULB = 0;
 
-    // Next unused experiment id: 3
+// Next unused experiment id: 3
 };

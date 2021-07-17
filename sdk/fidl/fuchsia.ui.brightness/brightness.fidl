@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.ui.brightness;
 
 using zx;
@@ -12,7 +10,7 @@ using zx;
 alias brightness = float32;
 
 /// Control provides an interface to manage the brightness component.
-[Discoverable]
+@discoverable
 protocol Control {
     /// Turns the auto-brightness mode on.
     /// SetManualBrightness will turn it off.
@@ -20,52 +18,69 @@ protocol Control {
 
     /// Requests the current auto-brightness mode.
     /// This call implements the Hanging Get protocol.
-    WatchAutoBrightness() -> (bool enabled);
+    WatchAutoBrightness() -> (struct {
+        enabled bool;
+    });
 
     /// Turns auto-brightness mode off.
     /// Used by e.g. Settings to set manual brightness using a slider
     /// Value is in the range 0.0 to 1.0 representing min to max and
     /// will be clamped if out of range.
-    SetManualBrightness(brightness value);
+    SetManualBrightness(struct {
+        value brightness;
+    });
 
     /// Set manual brightness specifying the duration over which the
     /// target brightness will be set.
-    SetManualBrightnessSmooth(brightness value, zx.duration duration);
+    SetManualBrightnessSmooth(struct {
+        value brightness;
+        duration zx.duration;
+    });
 
     /// Gets the current brightness in the range 0.0 to 1.0.
     /// This result is valid for both manual and auto-brightness modes
     /// and is typically used to show the current brightness on a slider.
     /// This call implements the Hanging Get protocol.
-    WatchCurrentBrightness() -> (brightness value);
+    WatchCurrentBrightness() -> (struct {
+        value brightness;
+    });
 
     /// Sets the brightness adjustment.
     /// This will change the brightness curve by the factor of the adjustment.
     /// The adjustment is in the range of -1.0 to 1.0.
-    SetAutoBrightnessAdjustment(float32 adjustment);
+    SetAutoBrightnessAdjustment(struct {
+        adjustment float32;
+    });
 
     /// Gets the current auto brightness adjustment.
     /// This call implements the Hanging Get protocol.
-    WatchAutoBrightnessAdjustment() -> (float32 adjustment);
+    WatchAutoBrightnessAdjustment() -> (struct {
+        adjustment float32;
+    });
 
     /// Sets the brightness curve as a set of points.
     /// This will override the built-in brightness curve.
     /// The default brightness curve will be used if the table is empty.
     /// The connection will be closed if table errors are detected.
-    SetBrightnessTable(BrightnessTable table);
+    SetBrightnessTable(struct {
+        table BrightnessTable;
+    });
 
     /// Gets the maximum supported backlight brightness in nits, if known.
-    GetMaxAbsoluteBrightness() -> (float64 max_brightness) error zx.status;
+    GetMaxAbsoluteBrightness() -> (struct {
+        max_brightness float64;
+    }) error zx.status;
 };
 
 /// A tuple representing a point on the auto-brightness curve
 /// Ambient_lux and nits must be positive values.
-struct BrightnessPoint {
-    float32 ambient_lux;
-    float32 display_nits;
+type BrightnessPoint = struct {
+    ambient_lux float32;
+    display_nits float32;
 };
 
 /// A set of points defining the auto-brightness curve.
 /// The ambient_lux values must be monotonically increasing.
-struct BrightnessTable {
-    vector<BrightnessPoint>:50 points;
+type BrightnessTable = struct {
+    points vector<BrightnessPoint>:50;
 };

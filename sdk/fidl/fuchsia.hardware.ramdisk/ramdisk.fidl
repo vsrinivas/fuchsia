@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.ramdisk;
 
 using zx;
@@ -10,78 +8,113 @@ using zx;
 /// Identifies if requests which are sent ot the ramdisk while it is
 /// considered "asleep" should be processed when the ramdisk wakes up.
 /// If this flag is not set, those requests are failed immediately.
-const uint32 RAMDISK_FLAG_RESUME_ON_WAKE = 0x00000001;
+const RAMDISK_FLAG_RESUME_ON_WAKE uint32 = 0x00000001;
 
 // If set, blocks written after the last flush are filled with an
 // indeterminate value when waking after sleeping.
-const uint32 RAMDISK_FLAG_DISCARD_NOT_FLUSHED_ON_WAKE = 0x00000002;
+const RAMDISK_FLAG_DISCARD_NOT_FLUSHED_ON_WAKE uint32 = 0x00000002;
 
 // If set, blocks written after the last flush are filled at random
 // rather than all blocks.  This can be used to simulate out-of-order
 // writes.
-const uint32 RAMDISK_FLAG_DISCARD_RANDOM = 0x00000004;
+const RAMDISK_FLAG_DISCARD_RANDOM uint32 = 0x00000004;
 
 /// Counters for the number of write requests since the last call to either
 /// "SleepAfter" or "Wake". All units are in individual blocks.
-[ForDeprecatedCBindings]
-struct BlockWriteCounts {
-    uint64 received;
-    uint64 successful;
-    uint64 failed;
+@for_deprecated_c_bindings
+type BlockWriteCounts = struct {
+    received uint64;
+    successful uint64;
+    failed uint64;
 };
 
 /// The protocol for interacting with a instance of a ramdisk.
-[ForDeprecatedCBindings]
+@for_deprecated_c_bindings
 protocol Ramdisk {
     /// Sets any of the `RAMDISK_FLAG_*` flags.
-    SetFlags(uint32 flags) -> (zx.status s);
+    SetFlags(struct {
+        flags uint32;
+    }) -> (struct {
+        s zx.status;
+    });
 
     /// Wakes a ramdisk, if it was sleeping.
     ///
     /// Resets the block counts being stored by the ramdisk.
-    Wake() -> (zx.status s);
+    Wake() -> (struct {
+        s zx.status;
+    });
 
     /// Causes the ramdisk to sleep after `count` blocks are written successfully.
     /// After `count` blocks are written, requests either wait for the ramdisk to
     /// be awoken (if RESUME_ON_WAKE has been set), or begin failing immediately.
     ///
     /// Resets the block counts being stored by the ramdisk.
-    SleepAfter(uint64 count) -> (zx.status s);
+    SleepAfter(struct {
+        count uint64;
+    }) -> (struct {
+        s zx.status;
+    });
 
     /// Returns the number of write requests since the last call to either
     /// "SleepAfter" or "Wake".
-    GetBlockCounts() -> (zx.status s, BlockWriteCounts? counts);
+    GetBlockCounts() -> (struct {
+        s zx.status;
+        counts box<BlockWriteCounts>;
+    });
 
     /// Causes the ramdisk size to grow to `required_size` in bytes.
     /// If `required_size` is smaller than the current size an error will be
     /// returned. `required_size` must be a multiple of `block_size`.
-    Grow(uint64 new_size) -> (zx.status s);
+    Grow(struct {
+        new_size uint64;
+    }) -> (struct {
+        s zx.status;
+    });
 };
 
 // TODO(smklein): Deduplicate GUID declarations with other FIDL interfaces.
 
 /// Matches the value of ZBI_PARTITION_GUID_LEN.
-const uint32 GUID_LEN = 16;
+const GUID_LEN uint32 = 16;
 
 /// An array of bytes interpreted as a GUID. Wrapped in a struct to
 /// allow optional GUIDs.
-[ForDeprecatedCBindings]
-struct GUID {
-    array<uint8>:GUID_LEN value;
+@for_deprecated_c_bindings
+type GUID = struct {
+    value array<uint8, GUID_LEN>;
 };
 
-const uint32 MAX_NAME_LENGTH = 32;
+const MAX_NAME_LENGTH uint32 = 32;
 
-[ForDeprecatedCBindings]
+@for_deprecated_c_bindings
 protocol RamdiskController {
     /// Initializes a new Ramdisk instance with the provided block size and block count.
     /// Takes an optional `type_guid`, which may be queried from the ramdisk instance.
-    Create(uint64 block_size, uint64 block_count, GUID? type_guid) -> (zx.status s, string:MAX_NAME_LENGTH? name);
+    Create(struct {
+        block_size uint64;
+        block_count uint64;
+        type_guid box<GUID>;
+    }) -> (struct {
+        s zx.status;
+        name string:<MAX_NAME_LENGTH, optional>;
+    });
 
     /// Initializes a new Ramdisk instance from a VMO. Uses a block size of `PAGE_SIZE`,
     /// and derives the block count from the size of the VMO.
-    CreateFromVmo(zx.handle:VMO vmo) -> (zx.status s, string:MAX_NAME_LENGTH? name);
+    CreateFromVmo(resource struct {
+        vmo zx.handle:VMO;
+    }) -> (struct {
+        s zx.status;
+        name string:<MAX_NAME_LENGTH, optional>;
+    });
 
     // Same as previous, but with the given block size.
-    CreateFromVmoWithBlockSize(zx.handle:VMO vmo, uint64 block_size) -> (zx.status s, string:MAX_NAME_LENGTH? name);
+    CreateFromVmoWithBlockSize(resource struct {
+        vmo zx.handle:VMO;
+        block_size uint64;
+    }) -> (struct {
+        s zx.status;
+        name string:<MAX_NAME_LENGTH, optional>;
+    });
 };

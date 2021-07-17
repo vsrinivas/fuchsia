@@ -1,74 +1,71 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
 library fuchsia.examples.docs;
 
 // [START wire-format-traversal-order]
-struct Cart {
-    vector<Item> items;
+type Cart = struct {
+    items vector<Item>;
 };
 
-struct Item {
-    Product product;
-    uint32 quantity;
+type Item = struct {
+    product Product;
+    quantity uint32;
 };
 
-struct Product {
-    string sku;
-    string name;
-    string? description;
-    uint32 price;
+type Product = struct {
+    sku string;
+    name string;
+    description string:optional;
+    price uint32;
 };
 // [END wire-format-traversal-order]
 
 // [START wire-format-inlined-objects]
-struct Region {
-    vector<Rect> rects;
+type Region = struct {
+    rects vector<Rect>;
 };
 
-struct Rect {
-    Point top_left;
-    Point bottom_right;
+type Rect = struct {
+    top_left Point;
+    bottom_right Point;
 };
 
-struct Point {
-    uint32 x;
-    uint32 y;
+type Point = struct {
+    x uint32;
+    y uint32;
 };
 // [END wire-format-inlined-objects]
 
 // [START wire-format-tables]
-table Value {
-    1: int16 command;
-    2: Circle data;
-    3: float64 offset;
+type Value = table {
+    1: command int16;
+    2: data Circle;
+    3: offset float64;
 };
 // [END wire-format-tables]
 
 // [START wire-format-unions]
-union UnionValue {
-    1: int16 command;
-    2: Circle data;
-    3: float64 offset;
+type UnionValue = strict union {
+    1: command int16;
+    2: data Circle;
+    3: offset float64;
 };
 // [END wire-format-unions]
 
-struct CreateResource {
-};
+type CreateResource = struct {};
 
-struct ReleaseResource {
-};
+type ReleaseResource = struct {};
 
 // [START command]
-union Command {
-    1: CreateResource create_resource;
-    2: ReleaseResource release_resource;
+type Command = strict union {
+    1: create_resource CreateResource;
+    2: release_resource ReleaseResource;
 };
 // [END command]
 
 // [START mode]
-bits Mode {
+type Mode = strict bits {
     READ = 1;
     WRITE = 2;
 };
@@ -76,14 +73,18 @@ bits Mode {
 
 // [START hasher]
 protocol Hasher {
-    Hash(string value) -> (array<uint8>:10 result);
+    Hash(struct {
+        value string;
+    }) -> (struct {
+        result array<uint8, 10>;
+    });
 };
 // [END hasher]
 
 // [START example-struct]
-struct MyRequest {
-    uint32 serial;
-    string key;
-    vector<uint32> options;
+type MyRequest = struct {
+    serial uint32;
+    key string;
+    options vector<uint32>;
 };
 // [END example-struct]

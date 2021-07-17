@@ -1,46 +1,44 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library conformance;
 
 // TODO(fxbug.dev/36441): Allow bindings to compile on host with handles.
 
-resource struct SingleHandle {
-    handle h;
+type SingleHandle = resource struct {
+    h handle;
 };
 
-resource struct SingleOptionalHandle {
-    handle? h;
+type SingleOptionalHandle = resource struct {
+    h handle:optional;
 };
 
-resource struct ArrayOfHandles {
-    array<handle>:3 a;
+type ArrayOfHandles = resource struct {
+    a array<handle, 3>;
 };
 
-resource struct ArrayOfOptionalHandles {
-    array<handle?>:3 a;
+type ArrayOfOptionalHandles = resource struct {
+    a array<handle:optional, 3>;
 };
 
-resource struct VectorOfHandles {
-    vector<handle> v;
+type VectorOfHandles = resource struct {
+    v vector<handle>;
 };
 
-resource struct VectorOfOptionalHandles {
-    vector<handle?> v;
+type VectorOfOptionalHandles = resource struct {
+    v vector<handle:optional>;
 };
 
 // This is not a reference to library zx to avoid complexity in the test data.
 // A local handle is defined here that contains subtypes that this test cares
 // about.
-enum obj_type : uint32 {
+type obj_type = strict enum : uint32 {
     NONE = 0;
     CHANNEL = 4;
     EVENT = 5;
 };
 
-bits rights : uint32 {
+type rights = strict bits : uint32 {
     DUPLICATE = 0x00000001;
     TRANSFER = 0x00000002;
     WAIT = 0x00004000;
@@ -48,98 +46,98 @@ bits rights : uint32 {
     SIGNAL = 0x00001000;
 };
 
-const rights RIGHTS_BASIC = rights.TRANSFER | rights.DUPLICATE | rights.WAIT | rights.INSPECT;
-const rights DEFAULT_EVENT_RIGHTS = RIGHTS_BASIC | rights.SIGNAL;
+const RIGHTS_BASIC rights = rights.TRANSFER | rights.DUPLICATE | rights.WAIT | rights.INSPECT;
+const DEFAULT_EVENT_RIGHTS rights = RIGHTS_BASIC | rights.SIGNAL;
 
 resource_definition handle : uint32 {
     properties {
-        obj_type subtype;
+        subtype obj_type;
         rights rights;
     };
 };
 
-resource struct MultipleHandleSubtypes {
-    handle untyped;
-    handle:EVENT event;
-    handle:CHANNEL channel;
+type MultipleHandleSubtypes = resource struct {
+    untyped handle;
+    event handle:EVENT;
+    channel handle:CHANNEL;
 };
 
-resource table ReservedFieldTable {
+type ReservedFieldTable = resource table {
     1: reserved;
 };
 
-resource struct ReservedFieldTableStruct {
-    ReservedFieldTable table;
+type ReservedFieldTableStruct = resource struct {
+    table ReservedFieldTable;
 };
 
-resource struct EventWithDefaultRights {
-    handle:<EVENT, DEFAULT_EVENT_RIGHTS> h;
+type EventWithDefaultRights = resource struct {
+    h handle:<EVENT, DEFAULT_EVENT_RIGHTS>;
 };
 
-resource struct EventWithReducedRights {
-    handle:<EVENT, RIGHTS_BASIC> h;
+type EventWithReducedRights = resource struct {
+    h handle:<EVENT, RIGHTS_BASIC>;
 };
 
-resource struct ArrayOfVectorOfEventInStructWithReducedRights {
-    array<vector<handle:<EVENT, RIGHTS_BASIC>>:1>:1 h;
+type ArrayOfVectorOfEventInStructWithReducedRights = resource struct {
+    h array<vector<handle:<EVENT, RIGHTS_BASIC>>:1, 1>;
 };
 
-resource struct VectorOfArrayOfEventInStructWithReducedRights {
-    vector<array<handle:<EVENT, RIGHTS_BASIC>>:1>:1 h;
+type VectorOfArrayOfEventInStructWithReducedRights = resource struct {
+    h vector<array<handle:<EVENT, RIGHTS_BASIC>, 1>>:1;
 };
 
-resource table ArrayOfVectorOfEventInTableWithReducedRights {
-    1: array<vector<handle:<EVENT, RIGHTS_BASIC>>:1>:1 h;
+type ArrayOfVectorOfEventInTableWithReducedRights = resource table {
+    1: h array<vector<handle:<EVENT, RIGHTS_BASIC>>:1, 1>;
 };
 
-resource struct ArrayOfVectorOfEventInTableWithReducedRightsStruct {
-    ArrayOfVectorOfEventInTableWithReducedRights t;
+type ArrayOfVectorOfEventInTableWithReducedRightsStruct = resource struct {
+    t ArrayOfVectorOfEventInTableWithReducedRights;
 };
 
-resource table VectorOfArrayOfEventInTableWithReducedRights {
-    1: vector<array<handle:<EVENT, RIGHTS_BASIC>>:1>:1 h;
+type VectorOfArrayOfEventInTableWithReducedRights = resource table {
+    1: h vector<array<handle:<EVENT, RIGHTS_BASIC>, 1>>:1;
 };
 
-resource struct VectorOfArrayOfEventInTableWithReducedRightsStruct {
-    VectorOfArrayOfEventInTableWithReducedRights t;
+type VectorOfArrayOfEventInTableWithReducedRightsStruct = resource struct {
+    t VectorOfArrayOfEventInTableWithReducedRights;
 };
 
-resource union ArrayOfVectorOfEventInUnionWithReducedRights {
-    1: array<vector<handle:<EVENT, RIGHTS_BASIC>>:1>:1 h;
+type ArrayOfVectorOfEventInUnionWithReducedRights = strict resource union {
+    1: h array<vector<handle:<EVENT, RIGHTS_BASIC>>:1, 1>;
 };
 
-resource struct ArrayOfVectorOfEventInUnionWithReducedRightsStruct {
-    ArrayOfVectorOfEventInUnionWithReducedRights u;
+type ArrayOfVectorOfEventInUnionWithReducedRightsStruct = resource struct {
+    u ArrayOfVectorOfEventInUnionWithReducedRights;
 };
 
-resource union VectorOfArrayOfEventInUnionWithReducedRights {
-    1: vector<array<handle:<EVENT, RIGHTS_BASIC>>:1>:1 h;
+type VectorOfArrayOfEventInUnionWithReducedRights = strict resource union {
+    1: h vector<array<handle:<EVENT, RIGHTS_BASIC>, 1>>:1;
 };
 
-resource struct VectorOfArrayOfEventInUnionWithReducedRightsStruct {
-    VectorOfArrayOfEventInUnionWithReducedRights u;
+type VectorOfArrayOfEventInUnionWithReducedRightsStruct = resource struct {
+    u VectorOfArrayOfEventInUnionWithReducedRights;
 };
 
-resource struct ArrayOfVectorOfEventInStructWithDefaultRights {
-    array<vector<handle:<EVENT, DEFAULT_EVENT_RIGHTS>>:1>:1 h;
+type ArrayOfVectorOfEventInStructWithDefaultRights = resource struct {
+    h array<vector<handle:<EVENT, DEFAULT_EVENT_RIGHTS>>:1, 1>;
 };
 
-resource struct VectorOfArrayOfEventInStructWithDefaultRights {
-    vector<array<handle:<EVENT, DEFAULT_EVENT_RIGHTS>>:1>:1 h;
+type VectorOfArrayOfEventInStructWithDefaultRights = resource struct {
+    h vector<array<handle:<EVENT, DEFAULT_EVENT_RIGHTS>, 1>>:1;
 };
 
-resource table ArrayOfVectorOfEventInTableWithDefaultRights {
-    1: array<vector<handle:<EVENT, DEFAULT_EVENT_RIGHTS>>:1>:1 h;
+type ArrayOfVectorOfEventInTableWithDefaultRights = resource table {
+    1: h array<vector<handle:<EVENT, DEFAULT_EVENT_RIGHTS>>:1, 1>;
 };
 
-resource struct ArrayOfVectorOfEventInTableWithDefaultRightsStruct {
-    ArrayOfVectorOfEventInTableWithDefaultRights t;
+type ArrayOfVectorOfEventInTableWithDefaultRightsStruct = resource struct {
+    t ArrayOfVectorOfEventInTableWithDefaultRights;
 };
 
-resource union ArrayOfVectorOfEventInUnionWithDefaultRights {
-    1: array<vector<handle:<EVENT, DEFAULT_EVENT_RIGHTS>>:1>:1 h;
+type ArrayOfVectorOfEventInUnionWithDefaultRights = strict resource union {
+    1: h array<vector<handle:<EVENT, DEFAULT_EVENT_RIGHTS>>:1, 1>;
 };
 
-resource struct ArrayOfVectorOfEventInUnionWithDefaultRightsStruct {
-    ArrayOfVectorOfEventInUnionWithDefaultRights u;
+type ArrayOfVectorOfEventInUnionWithDefaultRightsStruct = resource struct {
+    u ArrayOfVectorOfEventInUnionWithDefaultRights;
 };

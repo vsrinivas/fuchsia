@@ -1,21 +1,19 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.sysmem;
 
+// TODO(fxbug.dev/32119): change struct to table
 /// Describes how the pixels within an image are represented.
 /// Simple formats need only a type.
 /// Parametric pixel formats may require additional properties.
-// TODO(fxbug.dev/32119): change struct to table
-[ForDeprecatedCBindings]
-struct PixelFormat {
-    PixelFormatType type;
+@for_deprecated_c_bindings
+type PixelFormat = struct {
+    type PixelFormatType;
     /// This bool effectively makes format_modifier optional, to satisfy
     /// 'ForDeprecatedCBindings', to satisfy "FIDL Simple C Bindings".
-    bool has_format_modifier;
-    FormatModifier format_modifier;
+    has_format_modifier bool;
+    format_modifier FormatModifier;
 };
 
 // TODO(fxbug.dev/32128): add more formats.
@@ -29,7 +27,7 @@ struct PixelFormat {
 //
 // TODO(dustingreen): Add more comment text re. pixel data layout for each of
 // these.
-enum PixelFormatType {
+type PixelFormatType = strict enum {
     INVALID = 0;
 
     /// RGB only, 8 bits per each of R/G/B/A sample
@@ -112,13 +110,13 @@ enum PixelFormatType {
     A2B10G10R10 = 116;
 };
 
+// TODO(fxbug.dev/32119): change struct to table
 /// Describes how the pixels within an image are meant to be presented.
 /// Simple color spaces need only a type.
 /// Parametric color spaces may require additional properties.
-// TODO(fxbug.dev/32119): change struct to table
-[ForDeprecatedCBindings]
-struct ColorSpace {
-    ColorSpaceType type;
+@for_deprecated_c_bindings
+type ColorSpace = struct {
+    type ColorSpaceType;
 };
 
 /// This list has a separate entry for each variant of a color space standard.
@@ -147,7 +145,7 @@ struct ColorSpace {
 /// that's non-standard will cause sysmem to reject the combo and fail to
 /// allocate (intentionally, to strongly discourage specifying
 /// insufficiently-defined combos).
-enum ColorSpaceType {
+type ColorSpaceType = strict enum {
     /// Not a valid color space type.
     INVALID = 0;
     /// sRGB

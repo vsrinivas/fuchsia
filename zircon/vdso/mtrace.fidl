@@ -1,17 +1,18 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library zx;
 
-[Transport = "Syscall"]
+@transport("Syscall")
 protocol mtrace {
     /// Rights: handle must have resource kind ZX_RSRC_KIND_ROOT.
-    mtrace_control(handle:RESOURCE handle,
-                   uint32 kind,
-                   uint32 action,
-                   uint32 options,
-                   mutable_vector_void ptr)
-        -> (status status);
+    mtrace_control(resource struct {
+        handle handle:RESOURCE;
+        kind uint32;
+        action uint32;
+        options uint32;
+        ptr mutable_vector_void;
+    }) -> (struct {
+        status status;
+    });
 };

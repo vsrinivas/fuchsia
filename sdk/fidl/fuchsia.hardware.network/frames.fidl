@@ -1,12 +1,10 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.network;
 
 /// Types of frames.
-enum FrameType : uint8 {
+type FrameType = strict enum : uint8 {
     ETHERNET = 0x01;
     IPV4 = 0x02;
     IPV6 = 0x03;
@@ -16,10 +14,10 @@ enum FrameType : uint8 {
 ///
 /// Devices that do not perform any sort of parsing of outbound traffic should define
 /// `FRAME_FEATURES_RAW` in the [`FrameTypeSupport`] entry.
-const uint32 FRAME_FEATURES_RAW = 1;
+const FRAME_FEATURES_RAW uint32 = 1;
 
 /// Ethernet frame sub-types and features.
-bits EthernetFeatures : uint32 {
+type EthernetFeatures = strict bits : uint32 {
     /// Device supports any type of ethernet frame.
     ///
     /// Same as specifying all other flags. Used by devices that do not inspect or parse outbound
@@ -47,20 +45,20 @@ bits EthernetFeatures : uint32 {
 /// enumeration that lists FrameType-specific features that may or may not be supported. Devices
 /// that do not perform parsing are encouraged to just use the [`FRAME_FEATURES_RAW`] bit in
 /// `features`, which informs the client that all frame features are allowed.
-struct FrameTypeSupport {
+type FrameTypeSupport = struct {
     /// The frame type this support entry refers to.
-    FrameType type;
+    type FrameType;
     /// The frame type-specific features supported.
-    uint32 features;
+    features uint32;
     /// The flags supported for the given frame type.
-    TxFlags supported_flags;
+    supported_flags TxFlags;
 };
 
 /// Maximum number of chained descriptors that describe a single frame.
-const uint8 MAX_DESCRIPTOR_CHAIN = 4;
+const MAX_DESCRIPTOR_CHAIN uint8 = 4;
 
 /// The type of metadata information appended to a frame.
-enum InfoType : uint32 {
+type InfoType = strict enum : uint32 {
     /// No extra information is available.
     NO_INFO = 0x00;
 };
@@ -69,7 +67,7 @@ enum InfoType : uint32 {
 ///
 /// Features are mapped to the `RX_ACCEL_*` bits in descriptors by the available values reported in
 /// [`Info.rx_accel`].
-enum RxAcceleration : uint8 {
+type RxAcceleration = strict enum : uint8 {
     /// Inbound rx frame validated the Ethernet Frame Check Sequence.
     VALIDATED_ETHERNET_FCS = 0;
     /// Inbound rx frame validated the IPv4 checksum.
@@ -84,7 +82,7 @@ enum RxAcceleration : uint8 {
 ///
 /// Features are mapped to the `TX_ACCEL_*` bits in descriptors by the available values reported in
 /// [`Info.tx_accel`].
-enum TxAcceleration : uint8 {
+type TxAcceleration = strict enum : uint8 {
     /// Request that device calculate the Ethernet Frame Check Sequence and write it in place.
     COMPUTE_ETHERNET_FCS = 0;
     /// Request that the device calculate the IPv4 checksum and write it in place.
@@ -93,13 +91,13 @@ enum TxAcceleration : uint8 {
     COMPUTE_TCP_CHECKSUM = 2;
     /// Request that the device calculate the UDP checksum and write it in place.
     COMPUTE_UDP_CHECKSUM = 3;
-    // Future expansions: TCP segmentation acceleration
+// Future expansions: TCP segmentation acceleration
 };
 
 /// Flags set by a Device when handing a buffer to a client on the rx path.
 ///
 /// Set by devices on the `inbound_flags` field of an rx descriptor.
-bits RxFlags : uint32 {
+type RxFlags = strict bits : uint32 {
     /// Acceleration flag 0.
     ///
     /// Acceleration flags are mapped to the acceleration features reported by the [`Device`] in
@@ -146,7 +144,7 @@ bits RxFlags : uint32 {
 /// Flags set by a Client when handing a buffer to a client on the tx path.
 ///
 /// Set by Clients on the `inbound_flags` field of a tx descriptor.
-bits TxFlags : uint32 {
+type TxFlags = strict bits : uint32 {
     /// Acceleration flag 0.
     ///
     /// Acceleration flags are mapped to the acceleration features reported by the [`Device`] in
@@ -172,7 +170,7 @@ bits TxFlags : uint32 {
 /// Flags set by a Device when returning a tx buffer back to a client.
 ///
 /// Set by Devices on the `return_flags` field of a tx descriptor.
-bits TxReturnFlags : uint32 {
+type TxReturnFlags = strict bits : uint32 {
     /// Requested operation in `inbound_flags` is not supported; the frame was not sent.
     ///
     /// Always set in conjunction with `TX_RET_ERROR`.

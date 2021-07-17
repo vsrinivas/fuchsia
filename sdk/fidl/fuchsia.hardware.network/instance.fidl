@@ -1,8 +1,6 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.network;
 
 /// An instance of a network device exposed on devfs.
@@ -17,5 +15,7 @@ protocol DeviceInstance {
     /// Connects to the [`Device`] implementation.
     ///
     /// + request `device` device handle.
-    GetDevice(request<Device> device);
+    GetDevice(resource struct {
+        device server_end:Device;
+    });
 };

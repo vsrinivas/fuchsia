@@ -1,12 +1,11 @@
-deprecated_syntax;
 library fidl.test.bitsconstants;
 
-bits BitsType : uint32 {
+type BitsType = strict bits : uint32 {
     A = 0x00000001;
     B = 0x80;
     C = 0x2;
 };
 
-const BitsType Const1 = BitsType.A;
-const BitsType Const2 = BitsType.A | BitsType.B;
-const BitsType Const3 = BitsType.A | BitsType.B | BitsType.C;
+const Const1 BitsType = BitsType.A;
+const Const2 BitsType = BitsType.A | BitsType.B;
+const Const3 BitsType = BitsType.A | BitsType.B | BitsType.C;

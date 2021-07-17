@@ -1,22 +1,20 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 // GENERATED FILE: Regen with $(fx get-build-dir)/host-tools/regen_fidl_benchmark_suite
 
 library benchmarkfidl;
 
 using zx;
 
-resource struct HandleArrayPlain1 {
-    array<zx.handle>:1 handles;
+type HandleArrayPlain1 = resource struct {
+    handles array<zx.handle, 1>;
 };
 
-resource struct HandleArrayPlain16 {
-    array<zx.handle>:16 handles;
+type HandleArrayPlain16 = resource struct {
+    handles array<zx.handle, 16>;
 };
 
-resource struct HandleArrayPlain64 {
-    array<zx.handle>:64 handles;
+type HandleArrayPlain64 = resource struct {
+    handles array<zx.handle, 64>;
 };

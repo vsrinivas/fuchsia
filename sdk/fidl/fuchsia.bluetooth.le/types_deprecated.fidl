@@ -1,101 +1,99 @@
 // Copyright 2017 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.bluetooth.le;
 
 using fuchsia.bluetooth as bt;
 
-[Deprecated = "Use ServiceData instead"]
-struct ServiceDataEntry {
-    bt.UuidString uuid;
-    bytes data;
+@deprecated("Use ServiceData instead")
+type ServiceDataEntry = struct {
+    uuid bt.UuidString;
+    data bytes;
 };
 
-[Deprecated = "Use ManufacturerData instead"]
-struct ManufacturerSpecificDataEntry {
-    uint16 company_id;
-    bytes data;
+@deprecated("Use ManufacturerData instead")
+type ManufacturerSpecificDataEntry = struct {
+    company_id uint16;
+    data bytes;
 };
 
 /// Represents advertising and scan response data advertised by a broadcaster or peripheral.
-[Deprecated = "Use AdvertisingData instead"]
-struct AdvertisingDataDeprecated {
+@deprecated("Use AdvertisingData instead")
+type AdvertisingDataDeprecated = struct {
     /// Name of the device.
-    bt.DeviceName? name;
+    name bt.DeviceName:optional;
 
     /// The radio transmission power level reported in the advertisement.
-    fuchsia.bluetooth.Int8? tx_power_level;
+    tx_power_level box<fuchsia.bluetooth.Int8>;
 
     /// The appearance reported in the advertisemet.
-    fuchsia.bluetooth.UInt16? appearance;
+    appearance box<fuchsia.bluetooth.UInt16>;
 
     /// List of service UUIDs reported in the advertisement.
-    vector<bt.UuidString>:MAX? service_uuids;
+    service_uuids vector<bt.UuidString>:<MAX, optional>;
 
     /// Service data included in the advertisement.
-    vector<ServiceDataEntry>:MAX? service_data;
+    service_data vector<ServiceDataEntry>:<MAX, optional>;
 
     /// Manufacturer specific data entries.
-    vector<ManufacturerSpecificDataEntry>:MAX? manufacturer_specific_data;
+    manufacturer_specific_data vector<ManufacturerSpecificDataEntry>:<MAX, optional>;
 
     /// Service UUIDs that were solicited in the advertisement. Peripherals can invite centrals that
     /// expose certain services to connect to them using service solicitation.
-    vector<bt.UuidString>:MAX? solicited_service_uuids;
+    solicited_service_uuids vector<bt.UuidString>:<MAX, optional>;
 
     /// URIs included in the advertising packet.
     /// These are full URIs (they are encoded/decoded automatically)
-    vector<string:MAX>:MAX? uris;
+    uris vector<string:MAX>:<MAX, optional>;
 };
 
 /// Represents a remote Bluetooth Low Energy device. A RemoteDevice can represent a central,
 /// broadcaster, or peripheral based on the API from which it was received.
-[Deprecated = "Use Peer instead"]
-struct RemoteDevice {
+@deprecated("Use Peer instead")
+type RemoteDevice = struct {
     /// Identifier that uniquely identifies this device on the current system.
-    bt.PeerIdString identifier;
+    identifier bt.PeerIdString;
 
     /// Whether or not this device is connectable. Non-connectable devices are typically acting in the
     /// LE broadcaster role.
-    bool connectable;
+    connectable bool;
 
     /// The last known RSSI of this device, if known.
-    fuchsia.bluetooth.Int8? rssi;
+    rssi box<fuchsia.bluetooth.Int8>;
 
     /// Advertising data broadcast by this device if this device is a broadcaster or peripheral.
-    AdvertisingDataDeprecated? advertising_data;
+    advertising_data box<AdvertisingDataDeprecated>;
 };
 
 /// Filter parameters for use during a scan. A discovered peripheral or broadcaster will be reported
 /// to applications only if it satisfies all of the provided filter parameters. Null fields will be
 /// ignored.
-[Deprecated = "Use Filter instead"]
-struct ScanFilter {
+@deprecated("Use Filter instead")
+type ScanFilter = struct {
     /// Filter based on advertised service UUIDs. A peripheral that advertises at least one of the
     /// entries in `service_uuids` will satisfy this filter.
-    vector<bt.UuidString>:MAX? service_uuids;
+    service_uuids vector<bt.UuidString>:<MAX, optional>;
 
     /// Filter based on service data containing one of the given UUIDs.
-    vector<bt.UuidString>:MAX? service_data_uuids;
+    service_data_uuids vector<bt.UuidString>:<MAX, optional>;
 
     /// Filter based on a company identifier present in the manufacturer data. If this filter parameter
     /// is set, then the advertising payload must contain manufacturer specific data with the provided
     /// company identifier to satisfy this filter.
-    fuchsia.bluetooth.UInt16? manufacturer_identifier;
+    manufacturer_identifier box<fuchsia.bluetooth.UInt16>;
 
     /// Filter based on whether or not a device is connectable. For example, a client that is only
     /// interested in peripherals that it can connect to can set this to true. Similarly a client can
     /// scan only for braodcasters by setting this to false.
-    fuchsia.bluetooth.Bool? connectable;
+    connectable box<fuchsia.bluetooth.Bool>;
 
     /// Filter results based on a portion of the advertised device name.
-    bt.DeviceName? name_substring;
+    name_substring bt.DeviceName:optional;
 
     /// Filter results based on the path loss of the radio wave. A device that matches this filter must
     /// satisfy the following:
     ///   1. Radio transmission power level and received signal strength must be available for the path
     ///      loss calculation;
     ///   2. The calculated path loss value must be less than, or equal to, `max_path_loss`.
-    fuchsia.bluetooth.Int8? max_path_loss;
+    max_path_loss box<fuchsia.bluetooth.Int8>;
 };

@@ -1,17 +1,15 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.sys.index;
 
 /// Errors that the FuzzySearch interface presents.
-enum FuzzySearchError : uint32 {
+type FuzzySearchError = strict enum : uint32 {
     MALFORMED_INPUT = 1;
 };
 
 /// ComponentIndex provides search and indexing interfaces for components.
-[Discoverable]
+@discoverable
 protocol ComponentIndex {
     /// Returns a list of fuchsia-pkg URL components that matches the input
     /// string based on fuzzy matching.
@@ -24,5 +22,9 @@ protocol ComponentIndex {
     /// There is no support for globbing.
     ///
     /// Returns an empty list if there are no matches, or if needle is empty.
-    FuzzySearch(string needle) -> (vector<string> uris) error FuzzySearchError;
+    FuzzySearch(struct {
+        needle string;
+    }) -> (struct {
+        uris vector<string>;
+    }) error FuzzySearchError;
 };

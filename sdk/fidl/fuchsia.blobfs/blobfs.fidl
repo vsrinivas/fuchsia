@@ -1,31 +1,39 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.blobfs;
 
 using zx;
 
 /// Describes contiguous run of allocated blocks.
-[ForDeprecatedCBindings]
-struct BlockRegion {
-    uint64 offset;
-    uint64 length;
+@for_deprecated_c_bindings
+type BlockRegion = struct {
+    offset uint64;
+    length uint64;
 };
 
-[ForDeprecatedCBindings]
+@for_deprecated_c_bindings
 protocol Blobfs {
     /// Retrieve information about allocated regions on the filesystem.
-    GetAllocatedRegions() -> (zx.status status, zx.handle:VMO? regions, uint64 count);
+    GetAllocatedRegions() -> (resource struct {
+        status zx.status;
+        regions zx.handle:<VMO, optional>;
+        count uint64;
+    });
 
     /// Assign the handler for blob corruption callbacks. Only one handler will receive callbacks at
     /// any given time.
-    SetCorruptBlobHandler(CorruptBlobHandler handler) -> (zx.status status);
+    SetCorruptBlobHandler(resource struct {
+        handler client_end:CorruptBlobHandler;
+    }) -> (struct {
+        status zx.status;
+    });
 };
 
-[ForDeprecatedCBindings]
+@for_deprecated_c_bindings
 protocol CorruptBlobHandler {
     /// Notify that a particular blob is corrupted to the CorruptBlobHandler service.
-    CorruptBlob(vector<uint8>:64 merkleroot);
+    CorruptBlob(struct {
+        merkleroot vector<uint8>:64;
+    });
 };

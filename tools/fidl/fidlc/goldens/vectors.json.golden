@@ -13,8 +13,8 @@
       "name": "fidl.test.vectors/ExampleUseOfVectors",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/vectors.test.fidl",
-        "line": 8,
-        "column": 8,
+        "line": 6,
+        "column": 6,
         "length": 19
       },
       "anonymous": false,
@@ -31,8 +31,8 @@
           "name": "vector_of_uint8",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/vectors.test.fidl",
-            "line": 9,
-            "column": 11,
+            "line": 7,
+            "column": 5,
             "length": 15
           },
           "field_shape_v1": {
@@ -60,8 +60,8 @@
           "name": "vector_of_vector_of_bool",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/vectors.test.fidl",
-            "line": 10,
-            "column": 34,
+            "line": 8,
+            "column": 5,
             "length": 24
           },
           "field_shape_v1": {

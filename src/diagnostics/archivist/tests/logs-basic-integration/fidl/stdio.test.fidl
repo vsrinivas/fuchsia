@@ -1,18 +1,20 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library test.log.stdio;
 
 /// `StdioPuppet` is a test interface through which a test controller commands
 /// a puppet to write logs to stdio. This allows the controller to verify stdio
 /// piping.
-[Discoverable]
+@discoverable
 protocol StdioPuppet {
     /// Writes |line| to stdout, appending a newline character.
-    WritelnStdout(string:1024 line);
+    WritelnStdout(struct {
+        line string:1024;
+    });
 
     /// Writes |line| to stderr, appending a newline character.
-    WritelnStderr(string:1024 line);
+    WritelnStderr(struct {
+        line string:1024;
+    });
 };

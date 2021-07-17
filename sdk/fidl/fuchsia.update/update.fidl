@@ -1,8 +1,6 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.update;
 
 /// The Manager protocol is used by a client that wishes to either check for an
@@ -10,7 +8,7 @@ library fuchsia.update;
 ///
 /// The Manager provides a mechanism for checking for updates via the
 /// [`Manager.CheckNow`] message.
-[Discoverable]
+@discoverable
 protocol Manager {
     /// Immediately check for an update, and optionally track the state and
     /// progress of that update check.
@@ -29,8 +27,10 @@ protocol Manager {
     ///
     /// * error If an update check cannot be started, an error will be returned.
     ///         The [`Monitor`], if provided, will not receive any notifications.
-    CheckNow(CheckOptions options, Monitor? monitor)
-        -> () error CheckNotStartedReason;
+    CheckNow(resource struct {
+        options CheckOptions;
+        monitor client_end:<Monitor, optional>;
+    }) -> (struct {}) error CheckNotStartedReason;
 
     /// Performs any pending reboot of the system into an updated OS, if an
     /// update has been staged for the next system startup.
@@ -50,27 +50,29 @@ protocol Manager {
     ///
     /// - response `rebooting` true if the system is rebooting, false if no
     ///                        update was pending reboot.
-    PerformPendingReboot() -> (bool rebooting);
+    PerformPendingReboot() -> (struct {
+        rebooting bool;
+    });
 };
 
 /// Configuration options for an update check.
-table CheckOptions {
+type CheckOptions = table {
     /// Who or what initiated this update attempt.  This is taken as input to
     /// Policy, and may influence how the update check is performed.
     ///
     /// **This is a required field.**
-    1: Initiator initiator;
+    1: initiator Initiator;
 
     /// If an update check is already in progress, it's acceptable to instead
     /// attach a Monitor to that in-progress update instead of failing this
     /// request to check for updates.  This may convert situations that would
     /// have resulted in the ALREADY_IN_PROGRESS to be treated as non-error
     /// cases.
-    2: bool allow_attaching_to_existing_update_check;
+    2: allow_attaching_to_existing_update_check bool;
 };
 
 /// Who or what initiated the update check.
-enum Initiator {
+type Initiator = strict enum {
     /// The update check was initiated by an interactive user, or the user is
     /// otherwise blocked and waiting for the result of this update check.  This
     /// SHOULD only be used when there is a UI element or flow that a user has
@@ -107,7 +109,9 @@ protocol Monitor {
     /// + request `state` The new state of the update check.
     /// - response        The implementation is ready to receive the next
     ///                   [`State`] from the [`Manager`].
-    OnState(State state) -> ();
+    OnState(struct {
+        state State;
+    }) -> ();
 };
 
 /// The set of states that a [`Monitor`] can receive during an update check.
@@ -139,7 +143,7 @@ protocol Monitor {
 ///                +---------------->|       waiting_for_reboot        |
 ///                                  +---------------------------------+
 /// ```
-union State {
+type State = strict union {
 
     /// The Manager is currently checking for an update.
     ///
@@ -147,34 +151,34 @@ union State {
     /// * `installing_update` update is available and allowed by policy
     /// * `error_checking_for_update` on error
     /// * `update_deferred_by_policy` update is available but deferred by policy
-    1: CheckingForUpdatesData checking_for_updates;
+    1: checking_for_updates CheckingForUpdatesData;
 
     /// The Manager encountered an error while checking for the existence of a
     /// a new update.
     ///
     /// **This is a terminal state**
     ///
-    2: ErrorCheckingForUpdateData error_checking_for_update;
+    2: error_checking_for_update ErrorCheckingForUpdateData;
 
     /// There is not update available at this time.
     ///
     /// **This is a terminal state**
     ///
-    3: NoUpdateAvailableData no_update_available;
+    3: no_update_available NoUpdateAvailableData;
 
     /// The Manager has found an available update but is not acting on it at
     /// this time due to policy restrictions.
     ///
     /// **This is a terminal state**
     ///
-    4: InstallationDeferredData installation_deferred_by_policy;
+    4: installation_deferred_by_policy InstallationDeferredData;
 
     /// The Manager is installing the available update.
     ///
     /// Next states:
     /// * `waiting_for_reboot` on success
     /// * `installation_error` on error
-    5: InstallingData installing_update;
+    5: installing_update InstallingData;
 
     /// The update has been installed, and the device is waiting to be rebooted.
     ///
@@ -183,78 +187,75 @@ union State {
     ///
     /// **This is a terminal state**
     ///
-    6: InstallingData waiting_for_reboot;
+    6: waiting_for_reboot InstallingData;
 
     /// The Manager encountered an update in the installation of the update.
     ///
     /// **This is a terminal state**
     ///
-    7: InstallationErrorData installation_error;
+    7: installation_error InstallationErrorData;
 };
 
 /// This is the set of data associated with `checking_for_updates`.
 /// (currently none)
-table CheckingForUpdatesData {
-};
+type CheckingForUpdatesData = table {};
 
 /// This is the set of data associated with the `error_checking_for_update`
 /// state.
 /// (currently none)
-table ErrorCheckingForUpdateData {
-};
+type ErrorCheckingForUpdateData = table {};
 
 /// This is the set of data associated with the `no_update_available` state.
 /// (currently none)
-table NoUpdateAvailableData {
-};
+type NoUpdateAvailableData = table {};
 
 /// This is the set of data associated with the
 /// `installation_deferred_by_policy` state.
-table InstallationDeferredData {
-    1: UpdateInfo update;
-    2: InstallationDeferralReason deferral_reason;
+type InstallationDeferredData = table {
+    1: update UpdateInfo;
+    2: deferral_reason InstallationDeferralReason;
 };
 
 /// This is the set of data associated with the states involved with installing
 /// an update:
 /// * `installing_update`
 /// * `waiting_for_reboot`
-table InstallingData {
-    1: UpdateInfo update;
-    2: InstallationProgress installation_progress;
+type InstallingData = table {
+    1: update UpdateInfo;
+    2: installation_progress InstallationProgress;
 };
 
 /// This is the set of data associated with the `installation_error` state.
 /// (currently none)
-table InstallationErrorData {
-    1: UpdateInfo update;
-    2: InstallationProgress installation_progress;
+type InstallationErrorData = table {
+    1: update UpdateInfo;
+    2: installation_progress InstallationProgress;
 };
 
 /// This describes the update that is available to be installed.
-table UpdateInfo {
+type UpdateInfo = table {
     /// A string that describes the version that is available.  This may be
     /// either a semantic version (A.B.C.D) or an opaque hash.  Clients MUST
     /// not attempt to inspect this value, it is for display purposes only.
-    1: string:MAX_VERSION_STRING_SIZE version_available;
+    1: version_available string:MAX_VERSION_STRING_SIZE;
 
     /// The total number of bytes that may be downloaded to apply this update.
-    2: uint64 download_size;
+    2: download_size uint64;
 };
 
 /// This is the maximum length of a version string that will be returned by the
 /// protocol
-const uint32 MAX_VERSION_STRING_SIZE = 128;
+const MAX_VERSION_STRING_SIZE uint32 = 128;
 
 /// This describes the progress installing the update that has been made so far.
-table InstallationProgress {
+type InstallationProgress = table {
     /// The fraction [0-1.0f] of the installation that has been completed.
-    1: float32 fraction_completed;
+    1: fraction_completed float32;
 };
 
 /// This is the set of values that are returned by an request to immediately
 /// check for an update.
-enum CheckNotStartedReason {
+type CheckNotStartedReason = strict enum {
 
     /// There was an internal error in starting the update check.  The client
     /// is not expected to be able to do something meaningful about this error,
@@ -284,7 +285,7 @@ enum CheckNotStartedReason {
 
 /// This is the set of values that are provided when an update installation
 /// is deferred.
-flexible enum InstallationDeferralReason {
+type InstallationDeferralReason = flexible enum {
 
     /// The update was not installed because the currently booted system is not
     /// committed. Consumers are encouraged to use the [`CommitStatusProvider`]

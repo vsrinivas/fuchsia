@@ -1,14 +1,12 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.pkg;
 
 using fuchsia.io;
 
 /// A collection of TUF repositories contained in an attached storage device.
-[Discoverable]
+@discoverable
 protocol LocalMirror {
     /// Obtains and returns a named TUF metadata file from an attached storage
     /// device.
@@ -22,11 +20,11 @@ protocol LocalMirror {
     ///     directory exists but the requested file does not, the client end
     ///     will receive an OnOpen with `Status::NOT_FOUND`.
     /// * error a `GetMetadataError` value
-    GetMetadata(
-        RepositoryUrl repo_url,
-        string:fuchsia.io.MAX_PATH path,
-        request<fuchsia.io.File> metadata
-        ) -> () error GetMetadataError;
+    GetMetadata(resource struct {
+        repo_url RepositoryUrl;
+        path string:fuchsia.io.MAX_PATH;
+        metadata server_end:fuchsia.io.File;
+    }) -> (struct {}) error GetMetadataError;
 
     /// Obtains and returns a blob from an attached storage device.
     ///
@@ -36,21 +34,21 @@ protocol LocalMirror {
     ///     directory exists but the requested file does not, the client end
     ///     will receive an OnOpen with `Status::NOT_FOUND`.
     /// * error a `GetBlobError` value
-    GetBlob(
-        BlobId blob_id,
-        request<fuchsia.io.File> blob
-        ) -> () error GetBlobError;
+    GetBlob(resource struct {
+        blob_id BlobId;
+        blob server_end:fuchsia.io.File;
+    }) -> (struct {}) error GetBlobError;
 };
 
 /// Error type for [`fuchsia.pkg/LocalMirror.GetMetadata`].
-enum GetMetadataError {
+type GetMetadataError = strict enum {
     /// An error occurred when opening the requested metadata file. This may (though
     /// does not necessarily) indicate the metadata directory does not exist.
     ERROR_OPENING_METADATA = 1;
 };
 
 /// Error type for [`fuchsia.pkg/LocalMirror.GetBlob`].
-enum GetBlobError {
+type GetBlobError = strict enum {
     /// An error occurred when opening the requested blob. This may (though
     /// does not necessarily) indicate the blobs directory does not exist.
     ERROR_OPENING_BLOB = 1;

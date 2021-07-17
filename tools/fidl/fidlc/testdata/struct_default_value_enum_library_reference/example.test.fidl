@@ -1,8 +1,7 @@
-deprecated_syntax;
 library fidl.test.structdefaultvalueenumlibraryreference;
 
 using dependent;
 
-struct Foo {
-    dependent.MyEnum field = dependent.MyEnum.A;
+type Foo = struct {
+    field dependent.MyEnum = dependent.MyEnum.A;
 };

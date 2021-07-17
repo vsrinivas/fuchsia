@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fidl.difl.test;
 
 // Before
@@ -14,7 +12,7 @@ protocol ProtocolRemoved {
 
 protocol MethodRemoved {
     Method();
-//!DeclRemoved
+    //!DeclRemoved
     OldMethod();
 };
 
@@ -24,8 +22,8 @@ protocol MethodAdded {
 
 protocol MethodRemovedTransitional {
     Method();
-    [Transitional]
-//!DeclRemoved
+    @transitional
+    //!DeclRemoved
     OldMethod();
 };
 
@@ -34,50 +32,74 @@ protocol MethodAddedTransitional {
 };
 
 protocol MethodOrdinalChanged {
-//!MethodOrdinalChanged
+    //!MethodOrdinalChanged
     Method();
 };
 
 protocol MethodBecameEvent {
-//!MethodBecameEvent
+    //!MethodBecameEvent
     WasMethod();
 };
 
 protocol EventBecameMethod {
-//!EventBecameMethod
+    //!EventBecameMethod
     -> WasEvent();
 };
 
 protocol MethodGainedResponse {
-//!MethodGainedResponse
+    //!MethodGainedResponse
     Method();
 };
 
 protocol MethodLostResponse {
-//!MethodLostResponse
+    //!MethodLostResponse
     Method() -> ();
 };
 
 protocol MethodArgumentCount {
-//!StructMemberAdded
-    MethodRequestArgumentsAdded(bool foo);
-//!StructMemberAdded
-    MethodResponseArgumentsAdded() -> (bool foo);
-//!StructMemberAdded
-    -> EventArgumentsAdded(bool foo);
-//!StructMemberRemoved
-    MethodRequestArgumentsRemoved(bool foo, bool bar);
-//!StructMemberRemoved
-    MethodResponseArgumentsRemoved() -> (bool foo, bool bar);
-//!StructMemberRemoved
-    -> EventArgumentsRemoved(bool foo, bool bar);
+    //!StructMemberAdded
+    MethodRequestArgumentsAdded(struct {
+        foo bool;
+    });
+    //!StructMemberAdded
+    MethodResponseArgumentsAdded() -> (struct {
+        foo bool;
+    });
+    //!StructMemberAdded
+    -> EventArgumentsAdded(struct {
+        foo bool;
+    });
+    //!StructMemberRemoved
+    MethodRequestArgumentsRemoved(struct {
+        foo bool;
+        bar bool;
+    });
+    //!StructMemberRemoved
+    MethodResponseArgumentsRemoved() -> (struct {
+        foo bool;
+        bar bool;
+    });
+    //!StructMemberRemoved
+    -> EventArgumentsRemoved(struct {
+        foo bool;
+        bar bool;
+    });
 };
 
 protocol MethodArgumentRenamed {
-//!StructMemberRenamed
-    RequestArgument(bool arg, bool before);
-//!StructMemberRenamed
-    ResponseArgument() -> (bool arg, bool before);
-//!StructMemberRenamed
-    -> EventArgument(bool arg, bool before);
+    //!StructMemberRenamed
+    RequestArgument(struct {
+        arg bool;
+        before bool;
+    });
+    //!StructMemberRenamed
+    ResponseArgument() -> (struct {
+        arg bool;
+        before bool;
+    });
+    //!StructMemberRenamed
+    -> EventArgument(struct {
+        arg bool;
+        before bool;
+    });
 };

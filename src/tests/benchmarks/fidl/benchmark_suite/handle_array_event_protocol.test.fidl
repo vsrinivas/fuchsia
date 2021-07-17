@@ -1,14 +1,18 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library benchmarkfidl;
 
 protocol HandleArrayEvent64EventProtocol {
-    -> Send(HandleArrayEvent64 val);
+    -> Send(resource struct {
+        val HandleArrayEvent64;
+    });
 };
 
 protocol HandleArrayEvent64EchoCall {
-    Echo(HandleArrayEvent64 val) -> (HandleArrayEvent64 val);
+    Echo(resource struct {
+        val HandleArrayEvent64;
+    }) -> (resource struct {
+        val HandleArrayEvent64;
+    });
 };

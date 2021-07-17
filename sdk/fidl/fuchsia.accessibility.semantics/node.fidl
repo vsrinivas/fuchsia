@@ -1,17 +1,15 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.accessibility.semantics;
 
 using fuchsia.ui.gfx;
 
 /// Max number of elements in a semantic set.
-const uint32 MAX_SET_ELEMENTS = 100;
+const MAX_SET_ELEMENTS uint32 = 100;
 
 /// Represents actions that can be applied to Nodes.
-enum Action {
+type Action = strict enum {
     /// The default action associated with the element.
     DEFAULT = 1;
     /// The secondary action associated with the element. This may correspond to a long press
@@ -36,7 +34,7 @@ enum Action {
 };
 
 /// Represents a role of an element on a UI.
-enum Role {
+type Role = strict enum {
     /// Role used to represent elements which role is not currently supported.
     UNKNOWN = 1;
     /// Something on screen that can be clicked/activated, that has a single function.
@@ -94,7 +92,7 @@ enum Role {
 };
 
 /// The possible origins of a label.
-enum LabelOrigin {
+type LabelOrigin = strict enum {
     /// The node does not have a label yet.
     UNITIALIZED = 1;
     /// An attribute of this element in the runtime UI explicitly sets its
@@ -127,84 +125,84 @@ enum LabelOrigin {
 };
 
 /// Slider / range control attributes.
-table RangeAttributes {
+type RangeAttributes = table {
     /// The minimum value a range control element can take.
-    1: float32 min_value;
+    1: min_value float32;
     /// The maximum value a range control element can take.
-    2: float32 max_value;
+    2: max_value float32;
     /// The step delta the element applies when the action DECREMENT or
     /// INCREMENT are invoked.
-    3: float32 step_delta;
+    3: step_delta float32;
 };
 
 /// Set attributes that control how an element is connected to others in the
 /// same set. For example, a group of radio buttons in html containing the same
 /// name attribute are part of the same set.
-table SetAttributes {
+type SetAttributes = table {
     /// Size of the set.
-    1: uint32 size;
+    1: size uint32;
     /// Element index in the set, starting from one.
-    2: uint32 index;
+    2: index uint32;
     /// Node ids of other elements in this set.
-    3: vector<uint32>:MAX_SET_ELEMENTS set_element_ids;
+    3: set_element_ids vector<uint32>:MAX_SET_ELEMENTS;
 };
 
 /// Attributes that control how a cell inside of a table behaves.
-table TableAttributes {
+type TableAttributes = table {
     /// The number of columns this table cell spans.
-    1: uint32 column_span;
+    1: column_span uint32;
     /// The number of rows this table cell spans.
-    2: uint32 row_span;
+    2: row_span uint32;
 };
 
 /// An attribute is an essential property to describe an element. Unlike states, attributes do not
 /// change over the life of an element.
 /// Example: A button with a label attribute 'ok' should never change to 'cancel', as this is not
 /// the same element.
-table Attributes {
+type Attributes = table {
     /// The primary label for an element. If longer than MAX_LABEL_SIZE the client is responsible
     /// for truncating the label.
-    1: string:MAX_LABEL_SIZE label;
+    1: label string:MAX_LABEL_SIZE;
 
     /// The secondary label for an element. If longer than MAX_LABEL_SIZE the client is responsible
     /// for truncating the label.
-    2: string:MAX_LABEL_SIZE secondary_label;
+    2: secondary_label string:MAX_LABEL_SIZE;
 
     /// A description of what the secondary action on a node (equivalent to long press or right click) should do.
-    3: string:MAX_LABEL_SIZE secondary_action_description;
+    3: secondary_action_description string:MAX_LABEL_SIZE;
 
     /// The range attributes are filled if the element is a slider / a range
     /// control.
-    4: RangeAttributes range;
+    4: range RangeAttributes;
 
     /// Set attributes are filled if the element is part of some type of set.
     /// For example, radio buttons that are related are part of the same set.
-    5: SetAttributes set;
+    5: set SetAttributes;
 
     /// The list attributes are filled iff the node is a list.
     /// Note that only the size and set_element_ids may be filled for a list node.
-    6: SetAttributes list_attributes;
+    6: list_attributes SetAttributes;
 
     /// The list element attributes are filled iff the node is a child of a list node.
-    7: SetAttributes list_element_attributes;
+    7: list_element_attributes SetAttributes;
 
     /// The hierarchical level of an element. For example, a header can be of
     /// level 1 to 6 in html or markdown.
-    8: uint32 hierarchical_level;
+    8: hierarchical_level uint32;
 
     /// The table attributes are filled when the element is a cell.
-    9: TableAttributes table_attributes;
+    9: table_attributes TableAttributes;
 
     /// The origin of the label of this element.
-    10: LabelOrigin label_origin;
+   10: label_origin LabelOrigin;
 
     /// Whether the element is part of a virtual keyboard. For example, a key
     /// on an onscreen keyboard.
-    11: bool is_keyboard_key;
+   11: is_keyboard_key bool;
 };
 
 /// Represents the state of a UI checkbox.
-enum CheckedState {
+type CheckedState = strict enum {
     /// Used when no data is entered or the element is not a check box.
     NONE = 1;
     /// Checked
@@ -216,7 +214,7 @@ enum CheckedState {
 };
 
 /// Represents the state of a UI toggle switch.
-enum ToggledState {
+type ToggledState = strict enum {
     /// Toggle switch is on.
     ON = 1;
     /// Toggle switch is off.
@@ -228,79 +226,79 @@ enum ToggledState {
 /// A state is a dynamic property of an element that may change in response to
 /// user action or automated processes. Thus, they are different from attributes
 /// in an important point, which is frequency of change.
-table States {
+type States = table {
     /// DEPRECATED
-    1: bool checked;
+    1: checked bool;
 
     /// State of a checkbox.
     /// This field is mutually exclusive with ToggledState.
-    2: CheckedState checked_state;
+    2: checked_state CheckedState;
 
     /// Whether the element is currently selected.
-    3: bool selected;
+    3: selected bool;
 
     /// Whether the element is currently hidden or marked invisible by the framework.
-    4: bool hidden;
+    4: hidden bool;
 
     /// The user-entered value of the element, if applicable. If longer than MAX_VALUE_SIZE the
     /// client is responsible for truncating.
-    5: string:MAX_VALUE_SIZE value;
+    5: value string:MAX_VALUE_SIZE;
 
     /// If the element is a slider or a range control, this field contains the
     /// current value. Note that this is not the same as the value field above,
     /// as this is generated by the client and just adjusted by the user.
-    6: float32 range_value;
+    6: range_value float32;
 
     // If the element is a scrollable viewport, this field contains the x and
     // y offsets within this node's coordinate space to apply to the children.
     // This offsetting is used to position the children within the viewport to
     // reflect the current scrolling of the element.   There are no constraints
     // on these values other than they must be finite.
-    7: fuchsia.ui.gfx.vec2 viewport_offset;
+    7: viewport_offset fuchsia.ui.gfx.vec2;
 
     /// State of a toggle switch.
     /// This field must only be set if the element is a toggle switch element
     /// and is mutually exclusive with CheckedState.
-    8: ToggledState toggled_state;
+    8: toggled_state ToggledState;
 
     /// Whether this element is focusable in the UI. Note that this is not the
     /// a11y focus, but the input focus.
-    9: bool focusable;
+    9: focusable bool;
 
     /// Whether this element has the input focus. This corresponds to the
     /// system focus. Only one element can have this value set. The behavior is
     /// undetermined if more than one node sets this value to 'true'.
-    10: bool has_input_focus;
+   10: has_input_focus bool;
 };
 
 /// The Node represents a semantic element on an interface. This may
 /// be a button, a text field, a checkbox or any element that has a relevant
 /// semantic meaning so that assistive technology can understand the current UI.
-table Node {
+type Node = table {
     /// Unique ID that represents a node in a particular UI.
     /// Zero is assumed to be the root node and the only entry point to the tree.
     /// No forest is allowed.
-    1: uint32 node_id;
+    1: node_id uint32;
 
     /// Role of this element, e.g. button, checkbox, etc.
-    2: Role role;
+    2: role Role;
 
     /// A table of states of this object, e.g. checked, editable, etc.
-    3: States states;
+    3: states States;
 
     /// A table of attributes of this node.
-    4: Attributes attributes;
+    4: attributes Attributes;
 
     /// A list of actions that can be performed on this node.
-    5: vector<Action>:100 actions;
+    5: actions vector<Action>:100;
 
     /// The list of child IDs of this node, in traversal order. Runtimes supplying semantic tree
     /// information are responsible for ensuring the tree does not contain cycles. Each node may
     /// have only one parent.
-    6: vector<uint32>:MAX_FAN_OUT child_ids;
+    6: child_ids vector<uint32>:MAX_FAN_OUT;
 
     /// Local bounding box of this element.
-    7: fuchsia.ui.gfx.BoundingBox location;
+    7: location fuchsia.ui.gfx.BoundingBox;
 
     /// Transform from this node's coordinate space to its container's space. 4x4 for compatibility
     /// with scenic.  This matrix is required to have the form
@@ -312,9 +310,9 @@ table Node {
     ///
     ///  where Sx, Sy, and Sz are scale factors and Tx, Ty, Tz are the translation factors for
     ///  the x, y, and z components
-    8: fuchsia.ui.gfx.mat4 transform;
+    8: transform fuchsia.ui.gfx.mat4;
 
     /// Node ID of the ancestor of this node that is used as the target of |transform|.
     /// If not present, this is interpreted as this node's parent.
-    9: uint32 container_id;
+    9: container_id uint32;
 };

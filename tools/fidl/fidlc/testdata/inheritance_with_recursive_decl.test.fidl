@@ -1,11 +1,14 @@
-deprecated_syntax;
 library fidl.test.inheritancewithrecursivedecl;
 
 protocol Parent {
-    First(request<Parent> request);
+    First(resource struct {
+        request server_end:Parent;
+    });
 };
 
 protocol Child {
     compose Parent;
-    Second(request<Parent> request);
+    Second(resource struct {
+        request server_end:Parent;
+    });
 };

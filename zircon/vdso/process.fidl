@@ -1,38 +1,64 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library zx;
 
-[Transport = "Syscall"]
+@transport("Syscall")
 protocol process {
     /// Exits the currently running process.
-    [noreturn]
-    process_exit(int64 retcode);
+    @noreturn
+    process_exit(struct {
+        retcode int64;
+    });
 
     // TODO(fxbug.dev/32803): job with ZX_RIGHT_WRITE is also accepted.
     /// Create a new process.
     /// Rights: job must be of type ZX_OBJ_TYPE_JOB and have ZX_RIGHT_MANAGE_PROCESS.
-    process_create(handle:JOB job, string name, uint32 options)
-        -> (status status, handle:PROCESS proc_handle, handle:VMAR vmar_handle);
+    process_create(resource struct {
+        job handle:JOB;
+        name string;
+        options uint32;
+    }) -> (resource struct {
+        status status;
+        proc_handle handle:PROCESS;
+        vmar_handle handle:VMAR;
+    });
 
     /// Start execution on a process.
     /// Rights: handle must be of type ZX_OBJ_TYPE_PROCESS and have ZX_RIGHT_WRITE.
     /// Rights: thread must be of type ZX_OBJ_TYPE_THREAD and have ZX_RIGHT_WRITE.
     /// Rights: arg1 must have ZX_RIGHT_TRANSFER.
-    process_start(handle:PROCESS handle, handle:THREAD thread,
-                  vaddr entry, vaddr stack,
-                  [Release] handle arg1, uintptr arg2)
-        -> (status status);
+    process_start(resource struct {
+        handle handle:PROCESS;
+        thread handle:THREAD;
+        entry vaddr;
+        stack vaddr;
+        @release
+        arg1 handle;
+        arg2 uintptr;
+    }) -> (struct {
+        status status;
+    });
 
     /// Read from the given process's address space.
     /// Rights: handle must be of type ZX_OBJ_TYPE_PROCESS and have ZX_RIGHT_READ and have ZX_RIGHT_WRITE.
-    process_read_memory(handle:PROCESS handle, vaddr vaddr)
-        -> (status status, vector_void buffer, usize actual);
+    process_read_memory(resource struct {
+        handle handle:PROCESS;
+        vaddr vaddr;
+    }) -> (struct {
+        status status;
+        buffer vector_void;
+        actual usize;
+    });
 
     /// Write into the given process's address space.
     /// Rights: handle must be of type ZX_OBJ_TYPE_PROCESS and have ZX_RIGHT_WRITE.
-    process_write_memory(handle:PROCESS handle, vaddr vaddr, vector_void buffer)
-        -> (status status, usize actual);
+    process_write_memory(resource struct {
+        handle handle:PROCESS;
+        vaddr vaddr;
+        buffer vector_void;
+    }) -> (struct {
+        status status;
+        actual usize;
+    });
 };

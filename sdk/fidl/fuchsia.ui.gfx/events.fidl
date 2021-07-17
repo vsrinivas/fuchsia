@@ -1,33 +1,31 @@
 // Copyright 2017 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.ui.gfx;
 
 /// Reports metrics information.
 /// This event type is only reported for node resources.
-const uint32 kMetricsEventMask = 1;
-const uint32 kSizeChangeHintEventMask = 2;
+const kMetricsEventMask uint32 = 1;
+const kSizeChangeHintEventMask uint32 = 2;
 
 /// These are all of the types of events which can be reported by a `Session`.
 /// Use `SetEventMaskCmd` to enable event delivery for a resource.
-union Event {
+type Event = strict union {
     /// Events which are controlled by a mask.
-     1: MetricsEvent metrics;
+    1: metrics MetricsEvent;
 
-     2: SizeChangeHintEvent size_change_hint;
+    2: size_change_hint SizeChangeHintEvent;
 
     /// Events which are always delivered, regardless of mask.
-     3: ImportUnboundEvent import_unbound;
-     4: ViewConnectedEvent view_connected;
-     5: ViewDisconnectedEvent view_disconnected;
-     6: ViewHolderDisconnectedEvent view_holder_disconnected;
-     7: ViewAttachedToSceneEvent view_attached_to_scene;
-     8: ViewDetachedFromSceneEvent view_detached_from_scene;
-     9: ViewPropertiesChangedEvent view_properties_changed;
-    10: ViewStateChangedEvent view_state_changed;
-    11: ViewHolderConnectedEvent view_holder_connected;
+    3: import_unbound ImportUnboundEvent;
+    4: view_connected ViewConnectedEvent;
+    5: view_disconnected ViewDisconnectedEvent;
+    6: view_holder_disconnected ViewHolderDisconnectedEvent;
+    7: view_attached_to_scene ViewAttachedToSceneEvent;
+    8: view_detached_from_scene ViewDetachedFromSceneEvent;
+    9: view_properties_changed ViewPropertiesChangedEvent;
+   10: view_state_changed ViewStateChangedEvent;
+   11: view_holder_connected ViewHolderConnectedEvent;
 };
 
 /// Provides rendering target metrics information about the specified node.
@@ -40,9 +38,9 @@ union Event {
 ///
 /// Subscribe to this event to receive information about the scale factors you
 /// should apply when generating textures for your nodes.
-struct MetricsEvent {
-    uint32 node_id;
-    Metrics metrics;
+type MetricsEvent = struct {
+    node_id uint32;
+    metrics Metrics;
 };
 
 /// Delivered in response to a size change hint from a parent node
@@ -55,22 +53,22 @@ struct MetricsEvent {
 /// Subscribe to this event to receive information about how large textures you
 /// will need in the near future for your nodes. The canonical use case is to
 /// pre-allocate memory to avoid repeated re-allocations.
-struct SizeChangeHintEvent {
-    uint32 node_id;
-    float32 width_change_factor;
-    float32 height_change_factor;
+type SizeChangeHintEvent = struct {
+    node_id uint32;
+    width_change_factor float32;
+    height_change_factor float32;
 };
 
 /// Delivered when the imported resource with the given ID is no longer bound to
 /// its host resource, or if the imported resource can not be bound because
 /// the host resource is not available.
-struct ImportUnboundEvent {
-    uint32 resource_id;
+type ImportUnboundEvent = struct {
+    resource_id uint32;
 };
 
 /// Delivered to a ViewHolder's Session when its peer View is connected.
-struct ViewConnectedEvent {
-    uint32 view_holder_id;
+type ViewConnectedEvent = struct {
+    view_holder_id uint32;
 };
 
 /// Delivered to a ViewHolder's Session when its peer View is disconnected or
@@ -78,8 +76,8 @@ struct ViewConnectedEvent {
 ///
 /// If the View is destroyed before the connection is established, then this
 /// event will be delivered immediately when the ViewHolder attempts to connect.
-struct ViewDisconnectedEvent {
-    uint32 view_holder_id;
+type ViewDisconnectedEvent = struct {
+    view_holder_id uint32;
 };
 
 /// Delivered to a View's Session when its peer ViewHolder is disconnected or
@@ -87,16 +85,16 @@ struct ViewDisconnectedEvent {
 ///
 /// If the ViewHolder is destroyed before the connection is established, then
 /// this event will be delivered immediately when the View attempts to connect.
-struct ViewHolderDisconnectedEvent {
-    uint32 view_id;
+type ViewHolderDisconnectedEvent = struct {
+    view_id uint32;
 };
 
 /// Delivered to a View's Session when its peer ViewHolder is connected.
 ///
 /// If the ViewHolder is destroyed before the connection is established, then
 /// this event will not be delivered.
-struct ViewHolderConnectedEvent {
-    uint32 view_id;
+type ViewHolderConnectedEvent = struct {
+    view_id uint32;
 };
 
 /// Delivered to a View's Session when the parent ViewHolder for the given View
@@ -105,9 +103,9 @@ struct ViewHolderConnectedEvent {
 /// A ViewHolder is considered to be part of a Scene if there is an unbroken
 /// chain of parent-child relationships between the Scene node and the
 /// ViewHolder node.
-struct ViewAttachedToSceneEvent {
-    uint32 view_id;
-    ViewProperties properties;
+type ViewAttachedToSceneEvent = struct {
+    view_id uint32;
+    properties ViewProperties;
 };
 
 /// Delivered to a View's Session when the parent ViewHolder for the given View
@@ -119,19 +117,19 @@ struct ViewAttachedToSceneEvent {
 /// A ViewHolder is considered to be part of a Scene if there is an unbroken
 /// chain of parent-child relationships between the Scene node and the
 /// ViewHolder node.
-struct ViewDetachedFromSceneEvent {
-    uint32 view_id;
+type ViewDetachedFromSceneEvent = struct {
+    view_id uint32;
 };
 
 /// Delivered when the parent ViewHolder for the given View makes a change to
 /// the View's properties.
-struct ViewPropertiesChangedEvent {
-    uint32 view_id;
-    ViewProperties properties;
+type ViewPropertiesChangedEvent = struct {
+    view_id uint32;
+    properties ViewProperties;
 };
 
 /// Delivered to a ViewHolder's Session when its peer View's state has changed.
-struct ViewStateChangedEvent {
-    uint32 view_holder_id;
-    ViewState state;
+type ViewStateChangedEvent = struct {
+    view_holder_id uint32;
+    state ViewState;
 };

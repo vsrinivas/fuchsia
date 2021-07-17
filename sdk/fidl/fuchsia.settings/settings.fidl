@@ -1,18 +1,16 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.settings;
 
 /// Common error code used across different settings.
-enum Error {
+type Error = strict enum {
     FAILED = 1;
     UNSUPPORTED = 2;
 };
 
 /// Common epitaph messages used across different settings.
-enum SettingsEpitaph {
+type SettingsEpitaph = strict enum {
     // The request to the service is not supported. The client should not try to reconnect.
     REQUEST_NOT_SUPPORTED = 1;
     // There was an unexpected error in the underlying service. The client may try to

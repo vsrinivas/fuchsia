@@ -1,8 +1,6 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.media;
 
 using fuchsia.sysmem;
@@ -19,7 +17,7 @@ using fuchsia.sysmem;
 ///
 /// For uncompressed video, separate and complete frames in their
 /// separate buffers (buffer-per-packet mode) are always a requirement.
-table StreamBufferConstraints {
+type StreamBufferConstraints = table {
     /// This is a version number the server sets on the constraints to allow the
     /// server to determine when the client has caught up with the latest
     /// constraints sent by the server.  The server won't emit output data until
@@ -34,32 +32,32 @@ table StreamBufferConstraints {
     /// are allowed (in contrast to the stream_lifetime_ordinal, neither the
     /// client nor server ever has a reason to consider the latest version to be
     /// stale, so there would be no benefit to disallowing even values).
-    1: uint64 buffer_constraints_version_ordinal;
+    1: buffer_constraints_version_ordinal uint64;
 
-    [Deprecated = "Ignore. Obsolete."]
-    12: bool single_buffer_mode_allowed;
-    [Deprecated = "Ignore. Use fuchsia.sysmem.BufferCollection.SetConstraints() "]
-    2: StreamBufferSettings default_settings;
-    [Deprecated = "Ignore. Use fuchsia.sysmem.BufferCollection.SetConstraints() "]
-    3: uint32 per_packet_buffer_bytes_min;
-    [Deprecated = "Ignore. Use fuchsia.sysmem.BufferCollection.SetConstraints() "]
-    4: uint32 per_packet_buffer_bytes_recommended;
-    [Deprecated = "Ignore. Use fuchsia.sysmem.BufferCollection.SetConstraints() "]
-    5: uint32 per_packet_buffer_bytes_max;
-    [Deprecated = "Ignore. Use fuchsia.sysmem.BufferCollection.SetConstraints() "]
-    6: uint32 packet_count_for_server_min;
-    [Deprecated = "Ignore. Use fuchsia.sysmem.BufferCollection.SetConstraints() "]
-    7: uint32 packet_count_for_server_recommended;
-    [Deprecated = "Ignore. Use fuchsia.sysmem.BufferCollection.SetConstraints() "]
-    8: uint32 packet_count_for_server_recommended_max;
-    [Deprecated = "Ignore. Use fuchsia.sysmem.BufferCollection.SetConstraints() "]
-    9: uint32 packet_count_for_server_max;
-    [Deprecated = "Ignore. Use fuchsia.sysmem.BufferCollection.SetConstraints() "]
-    10: uint32 packet_count_for_client_min;
-    [Deprecated = "Ignore. Use fuchsia.sysmem.BufferCollection.SetConstraints() "]
-    11: uint32 packet_count_for_client_max;
-    [Deprecated = "Ignore. Use fuchsia.sysmem.BufferCollection.SetConstraints() "]
-    13: bool is_physically_contiguous_required;
+    @deprecated("Ignore. Obsolete.")
+   12: single_buffer_mode_allowed bool;
+    @deprecated("Ignore. Use fuchsia.sysmem.BufferCollection.SetConstraints() ")
+    2: default_settings StreamBufferSettings;
+    @deprecated("Ignore. Use fuchsia.sysmem.BufferCollection.SetConstraints() ")
+    3: per_packet_buffer_bytes_min uint32;
+    @deprecated("Ignore. Use fuchsia.sysmem.BufferCollection.SetConstraints() ")
+    4: per_packet_buffer_bytes_recommended uint32;
+    @deprecated("Ignore. Use fuchsia.sysmem.BufferCollection.SetConstraints() ")
+    5: per_packet_buffer_bytes_max uint32;
+    @deprecated("Ignore. Use fuchsia.sysmem.BufferCollection.SetConstraints() ")
+    6: packet_count_for_server_min uint32;
+    @deprecated("Ignore. Use fuchsia.sysmem.BufferCollection.SetConstraints() ")
+    7: packet_count_for_server_recommended uint32;
+    @deprecated("Ignore. Use fuchsia.sysmem.BufferCollection.SetConstraints() ")
+    8: packet_count_for_server_recommended_max uint32;
+    @deprecated("Ignore. Use fuchsia.sysmem.BufferCollection.SetConstraints() ")
+    9: packet_count_for_server_max uint32;
+    @deprecated("Ignore. Use fuchsia.sysmem.BufferCollection.SetConstraints() ")
+   10: packet_count_for_client_min uint32;
+    @deprecated("Ignore. Use fuchsia.sysmem.BufferCollection.SetConstraints() ")
+   11: packet_count_for_client_max uint32;
+    @deprecated("Ignore. Use fuchsia.sysmem.BufferCollection.SetConstraints() ")
+   13: is_physically_contiguous_required bool;
 };
 
 /// The stream-processor-controlled output configuration, including both
@@ -70,7 +68,7 @@ table StreamBufferConstraints {
 // It's different than output buffer settings, which the client does get to
 // control to some extent.  It's different than any configurable output
 // settings the client might specify for output of an encoder.
-table StreamOutputConstraints {
+type StreamOutputConstraints = table {
     /// A client which always immediately re-configures output buffers on
     /// receipt of OnOutputConstraints() with buffer_constraints_action_required
     /// true can safely ignore this field.
@@ -84,7 +82,7 @@ table StreamOutputConstraints {
     /// buffer_constraints_action_required true, if the most recent completed
     /// server-side output config isn't what the server wants/needs yet for the
     /// new stream.
-    1: uint64 stream_lifetime_ordinal;
+    1: stream_lifetime_ordinal uint64;
 
     /// When the buffer constraints are delivered, they indicate whether action
     /// is required.  A false value here permits delivery of constraints which
@@ -114,11 +112,11 @@ table StreamOutputConstraints {
     /// If buffer_constraints_action_required is true, the server _must_ not
     /// deliver more output data until after output buffers have been configured
     /// (or re-configured) by the client.
-    2: bool buffer_constraints_action_required;
-    3: StreamBufferConstraints buffer_constraints;
+    2: buffer_constraints_action_required bool;
+    3: buffer_constraints StreamBufferConstraints;
 };
 
-table StreamOutputFormat {
+type StreamOutputFormat = table {
     /// A client is permitted to ignore an OnOutputFormat() message even with
     /// buffer_constraints_action_required true if the client knows the server
     /// has already been told to discard the remainder of the stream with the
@@ -131,7 +129,7 @@ table StreamOutputFormat {
     ///
     /// The server is required to send an OnOutputFormat() before the first
     /// output packet of a stream.
-    1: uint64 stream_lifetime_ordinal;
+    1: stream_lifetime_ordinal uint64;
 
     /// If format_details.format_details_version_ordinal changes, the client
     /// should inspect the new format details and determine if it must adjust to
@@ -189,12 +187,12 @@ table StreamOutputFormat {
     /// technically supports mid-stream format change, but the client happens to
     /// know that none of the streams the client intends to process will ever
     /// have a mid-stream format change.
-    2: FormatDetails format_details;
+    2: format_details FormatDetails;
 };
 
 // TODO(dustingreen): Consider renaming this to StreamBufferSettings once that's
 // an option.
-resource table StreamBufferPartialSettings {
+type StreamBufferPartialSettings = resource table {
     /// The containing message starts a new buffer_lifetime_ordinal.
     ///
     /// There is a separate buffer_lifetime_ordinal for input vs. output.
@@ -207,7 +205,7 @@ resource table StreamBufferPartialSettings {
     /// CloseCurrentStream() with release_input_buffers/release_output_buffers
     /// set or SetOutputBufferSettings() with new buffer_lifetime_ordinal in the
     /// case of mid-stream output config change.
-    1: uint64 buffer_lifetime_ordinal;
+    1: buffer_lifetime_ordinal uint64;
 
     /// This value indicates which version of constraints the client is/was aware
     /// of so far.
@@ -221,7 +219,7 @@ resource table StreamBufferPartialSettings {
     ///
     /// When there is no active stream, a client is permitted to re-configure
     /// buffers again using the same buffer_constraints_version_ordinal.
-    2: uint64 buffer_constraints_version_ordinal;
+    2: buffer_constraints_version_ordinal uint64;
 
     /// The client end of a BufferCollectionToken channel, which the
     /// StreamProcessor will use to deliver constraints to sysmem and learn of
@@ -230,14 +228,14 @@ resource table StreamBufferPartialSettings {
     /// The client guarantees that the token is already known to sysmem (via
     /// BufferCollectionToken.Sync(), BufferCollection.Sync(), or
     /// BufferCollectionEvents.OnDuplicatedTokensKnownByServer()).
-    6: fuchsia.sysmem.BufferCollectionToken sysmem_token;
+    6: sysmem_token client_end:fuchsia.sysmem.BufferCollectionToken;
 
-    [Deprecated = "Ignore. Obsolete."]
-    3: bool single_buffer_mode;
-    [Deprecated = "Ignore. Use fuchsia.sysmem.BufferCollection.SetConstraints() "]
-    4: uint32 packet_count_for_server;
-    [Deprecated = "Ignore. Use fuchsia.sysmem.BufferCollection.SetConstraints() "]
-    5: uint32 packet_count_for_client;
+    @deprecated("Ignore. Obsolete.")
+    3: single_buffer_mode bool;
+    @deprecated("Ignore. Use fuchsia.sysmem.BufferCollection.SetConstraints() ")
+    4: packet_count_for_server uint32;
+    @deprecated("Ignore. Use fuchsia.sysmem.BufferCollection.SetConstraints() ")
+    5: packet_count_for_client uint32;
 };
 
 /// PacketHeader
@@ -247,7 +245,7 @@ resource table StreamBufferPartialSettings {
 /// offset or length etc.
 ///
 /// A populated Packet also has a PacketHeader.
-table PacketHeader {
+type PacketHeader = table {
     /// This is which buffer configuration lifetime this header is referring to.
     ///
     /// A packet_index is only really meaningful with respect to a particular
@@ -260,7 +258,7 @@ table PacketHeader {
     ///
     /// For OnFreeInputPacket() and RecycleOutputPacket(), the receiver (client
     /// or server) must ignore a message with stale buffer_lifetime_ordinal.
-    1: uint64 buffer_lifetime_ordinal;
+    1: buffer_lifetime_ordinal uint64;
 
     /// The overall set of packet_index values is densely packed from 0..count-1
     /// for input and output separately.  They can be queued in any order.
@@ -281,7 +279,7 @@ table PacketHeader {
     /// should validate that a client isn't double-using a packet and clients
     /// should validate as necessary to avoid undefined or unexpected client
     /// behavior.
-    2: uint32 packet_index;
+    2: packet_index uint32;
 };
 
 /// A Packet represents a chunk of input or output data to or from a stream
@@ -300,8 +298,8 @@ table PacketHeader {
 /// gets packet_index(s) that are again ready to fill via OnFreeInputPacket().
 /// The client must not modify the referenced data in between QueueInputPacket()
 /// and OnFreeInputPacket().
-table Packet {
-    1: PacketHeader header;
+type Packet = table {
+    1: header PacketHeader;
 
     /// Which buffer this packet refers to.  For single-buffer mode this will
     /// always be 0, but for multi-buffer mode, a given in-flight interval of a
@@ -317,7 +315,7 @@ table Packet {
     /// complain about !has when accessing the field.  For now the default
     /// specified here does nothing.
     // TODO(fxbug.dev/7932): Default to 0x80000000.
-    2: uint32 buffer_index;
+    2: buffer_index uint32;
 
     /// The value 1 is the lowest permitted value after stream processor
     /// creation.  Values sent by the client must be odd.  Values must only
@@ -327,7 +325,7 @@ table Packet {
     /// messages that are specific to a stream have the stream_lifetime_ordinal
     /// value and the value is the same for all messages relating to a given
     /// stream.
-    3: uint64 stream_lifetime_ordinal;
+    3: stream_lifetime_ordinal uint64;
 
     /// Which part of the relevant buffer is this packet using.  These are valid
     /// for input data that's in-flight to the stream processor, and are valid
@@ -355,7 +353,7 @@ table Packet {
     // Or more likely, it may just be that these tend to refer to the whole
     // size of an uncompressed buffer, with format_details taking care of
     // specifying which bytes are actually relevant.
-    4: uint32 start_offset;
+    4: start_offset uint32;
 
     /// This must be > 0.
     ///
@@ -379,7 +377,7 @@ table Packet {
     ///
     /// compressed data output - The stream processor is not required to fully
     /// fill each output packet's buffer.
-    5: uint32 valid_length_bytes;
+    5: valid_length_bytes uint32;
 
     /// This value is not strictly speaking a timestamp.  It is an arbitrary
     /// unsigned 64-bit number that, under some circumstances, will be passed by
@@ -400,7 +398,7 @@ table Packet {
     ///    should be written to accommodate timestamp_ish values that are fed on
     ///    input but never show up on output, at least to a reasonable degree
     ///    (not crashing, not treating as an error).
-    6: uint64 timestamp_ish;
+    6: timestamp_ish uint64;
 
     /// If promise_separate_access_units_on_input (TODO(dustingreen): or any
     /// similar mode for output) is true, this bool must be set appropriately
@@ -412,7 +410,7 @@ table Packet {
     ///
     /// If promise_separate_access_units_on_input is false, this boolean is
     /// ignored.
-    7: bool start_access_unit;
+    7: start_access_unit bool;
 
     /// A client is never required to set this boolean to true.
     ///
@@ -425,12 +423,12 @@ table Packet {
     ///
     /// If promise_separate_access_units_on_input is false, this boolean is
     /// ignored.
-    8: bool known_end_access_unit;
+    8: known_end_access_unit bool;
 
     /// Used for compressed video packets. If not present should be assumed to
     /// be unknown. If false, indicates the packet is not part of a key frame. If
     /// true, indicates the packet is part of a key frame.
-    9: bool key_frame;
+    9: key_frame bool;
 };
 
 /// Overview of operation:
@@ -541,7 +539,10 @@ protocol StreamProcessor {
     /// No further messages will arrive from the server regarding the failed
     /// stream.  This includes any OnOutputEndOfStream() that the client would
     /// have otherwise expected.
-    -> OnStreamFailed(uint64 stream_lifetime_ordinal, StreamError error);
+    -> OnStreamFailed(struct {
+        stream_lifetime_ordinal uint64;
+        error StreamError;
+    });
 
     /// The server sends this shortly after StreamProcessor creation to indicate
     /// input buffer constraints.  The "min" and "max" input constraints don't
@@ -574,7 +575,9 @@ protocol StreamProcessor {
     // "recommended" values for input, maybe only on request rather than via
     // this event, to keep things simpler for simpler clients.  Maybe separate
     // the recommendations from the constraints.
-    -> OnInputConstraints(StreamBufferConstraints input_constraints);
+    -> OnInputConstraints(struct {
+        input_constraints StreamBufferConstraints;
+    });
 
     /// This is the replacement for SetInputBufferSettings().
     ///
@@ -599,7 +602,9 @@ protocol StreamProcessor {
     /// server can expect that allocation is in fact complete and can expect to
     /// get the allocation information from sysmem immediately upon requesting
     /// the information from sysmem.
-    SetInputBufferPartialSettings(StreamBufferPartialSettings input_settings);
+    SetInputBufferPartialSettings(resource struct {
+        input_settings StreamBufferPartialSettings;
+    });
 
     /// This event informs the client of new output constraints.
     ///
@@ -675,7 +680,9 @@ protocol StreamProcessor {
     ///
     /// This message is ordered with respect to output packets, and with respect
     /// to OnOutputFormat().
-    -> OnOutputConstraints(StreamOutputConstraints output_config);
+    -> OnOutputConstraints(struct {
+        output_config StreamOutputConstraints;
+    });
 
     /// This message is sent by the server before the first output packet of any
     /// stream, and potentially mid-stream between output packets of the stream,
@@ -728,7 +735,9 @@ protocol StreamProcessor {
     /// with buffer_constraints_action_required true hasn't been processed by the
     /// client (by configuring output buffers using
     /// SetOutputBufferPartialSettings() etc).
-    -> OnOutputFormat(StreamOutputFormat output_format);
+    -> OnOutputFormat(struct {
+        output_format StreamOutputFormat;
+    });
 
     /// This is the replacement for SetOutputBufferSettings().
     ///
@@ -753,7 +762,9 @@ protocol StreamProcessor {
     /// client knows that there's no longer a current stream.
     ///
     /// See also CompleteOutputBufferPartialSettings().
-    SetOutputBufferPartialSettings(StreamBufferPartialSettings output_settings);
+    SetOutputBufferPartialSettings(resource struct {
+        output_settings StreamBufferPartialSettings;
+    });
 
     /// After SetOutputBufferPartialSettings(), the server won't send
     /// OnOutputConstraints(), OnOutputFormat(), OnOutputPacket(), or
@@ -770,7 +781,9 @@ protocol StreamProcessor {
     ///
     /// Other clients may first wait for sysmem to allocate, prepare to receive
     /// output, and then send CompleteOutputBufferPartialSettings().
-    CompleteOutputBufferPartialSettings(uint64 buffer_lifetime_ordinal);
+    CompleteOutputBufferPartialSettings(struct {
+        buffer_lifetime_ordinal uint64;
+    });
 
     /// This message is optional.
     ///
@@ -812,7 +825,9 @@ protocol StreamProcessor {
     /// is done. The client will know the stream_lifetime_ordinal is done when
     /// OnOutputEndOfStream(), OnStreamFailed(), or the StreamProcessor channel
     /// closes.
-    FlushEndOfStreamAndCloseStream(uint64 stream_lifetime_ordinal);
+    FlushEndOfStreamAndCloseStream(struct {
+        stream_lifetime_ordinal uint64;
+    });
 
     /// This "closes" the current stream, leaving no current stream.  In
     /// addition, this message can optionally release input buffers or output
@@ -834,10 +849,11 @@ protocol StreamProcessor {
     /// buffers and new buffers (not all clients are).
     ///
     /// See also Sync().
-    CloseCurrentStream(
-        uint64 stream_lifetime_ordinal,
-        bool release_input_buffers,
-        bool release_output_buffers);
+    CloseCurrentStream(struct {
+        stream_lifetime_ordinal uint64;
+        release_input_buffers bool;
+        release_output_buffers bool;
+    });
 
     /// On completion, all previous StreamProcessor calls have done what they're
     /// going to do server-side, _except_ for processing of data queued using
@@ -901,10 +917,11 @@ protocol StreamProcessor {
     ///
     /// The scope of error_detected_during is from the start to the end of this
     /// output_packet.
-    -> OnOutputPacket(
-           Packet output_packet,
-           bool error_detected_before,
-           bool error_detected_during);
+    -> OnOutputPacket(struct {
+        output_packet Packet;
+        error_detected_before bool;
+        error_detected_during bool;
+    });
 
     /// After the client is done with an output packet, the client needs to tell
     /// the stream processor that the output packet can be re-used for more
@@ -916,7 +933,9 @@ protocol StreamProcessor {
     /// explicit or implicit output buffer de-configuration().  See
     /// buffer_lifetime_ordinal for more on that. A server must ignore any such
     /// stale RecycleOutputPacket() calls.
-    RecycleOutputPacket(PacketHeader available_output_packet);
+    RecycleOutputPacket(struct {
+        available_output_packet PacketHeader;
+    });
 
     /// After QueueInputEndOfStream() is sent by the StreamProcessor client,
     /// within a reasonable duration the corresponding OnOutputEndOfStream()
@@ -946,9 +965,10 @@ protocol StreamProcessor {
     ///
     /// The error_detected_before bool has the same semantics as the
     /// error_detected_before bool in OnOutputPacket().
-    -> OnOutputEndOfStream(
-           uint64 stream_lifetime_ordinal,
-           bool error_detected_before);
+    -> OnOutputEndOfStream(struct {
+        stream_lifetime_ordinal uint64;
+        error_detected_before bool;
+    });
 
     // TODO(dustingreen): Rename from QueueInputFormatDetails() to
     // QueueInputFormat().
@@ -979,8 +999,10 @@ protocol StreamProcessor {
     /// the start of any stream).  The format specified need not match what was
     /// specified during stream processor creation, but if it doesn't match, the
     /// StreamProcessor channel might close as described above.
-    QueueInputFormatDetails(
-        uint64 stream_lifetime_ordinal, FormatDetails format_details);
+    QueueInputFormatDetails(struct {
+        stream_lifetime_ordinal uint64;
+        format_details FormatDetails;
+    });
 
     /// This message queues input data to the stream processor for processing.
     ///
@@ -995,7 +1017,9 @@ protocol StreamProcessor {
     /// previously-queued input packets.  The input data must continue as long
     /// as there are free packets to be assured that the server will ever
     /// generate the first OnOutputConstraints().
-    QueueInputPacket(Packet packet);
+    QueueInputPacket(struct {
+        packet Packet;
+    });
 
     /// The server sends this message when the stream processor is done
     /// consuming the data in this packet (but not necessarily done processing
@@ -1042,7 +1066,9 @@ protocol StreamProcessor {
     /// properly even if the order of OnFreeInputPacket() messages is
     /// intentionally scrambled with respect to each other (but not scrambled
     /// across OnStreamFailed(), for now).
-    -> OnFreeInputPacket(PacketHeader free_input_packet);
+    -> OnFreeInputPacket(struct {
+        free_input_packet PacketHeader;
+    });
 
     /// Inform the server that all QueueInputPacket() messages for this stream
     /// have been sent.
@@ -1080,23 +1106,25 @@ protocol StreamProcessor {
     /// QueueInputEndOfStream() for this stream after the first
     /// QueueInputEndOfStream() for this stream, a server should close the
     /// StreamProcessor channel.
-    QueueInputEndOfStream(uint64 stream_lifetime_ordinal);
+    QueueInputEndOfStream(struct {
+        stream_lifetime_ordinal uint64;
+    });
 };
 
 /// Deprecated.  Use SetStreamBufferPartialSettings() and
 /// StreamBufferPartialSettings instead.
-[Deprecated = "Ignore. Use SetStreamBufferPartialSettings instead."]
-table StreamBufferSettings {
-    [Deprecated = "Ignore. Use SetStreamBufferPartialSettings instead."]
-    1: uint64 buffer_lifetime_ordinal;
-    [Deprecated = "Ignore. Use SetStreamBufferPartialSettings instead."]
-    2: uint64 buffer_constraints_version_ordinal;
-    [Deprecated = "Ignore. Use SetStreamBufferPartialSettings instead."]
-    3: uint32 packet_count_for_server;
-    [Deprecated = "Ignore. Use SetStreamBufferPartialSettings instead."]
-    4: uint32 packet_count_for_client;
-    [Deprecated = "Ignore. Use SetStreamBufferPartialSettings instead."]
-    5: uint32 per_packet_buffer_bytes;
-    [Deprecated = "Ignore. Use SetStreamBufferPartialSettings instead."]
-    6: bool single_buffer_mode;
+@deprecated("Ignore. Use SetStreamBufferPartialSettings instead.")
+type StreamBufferSettings = table {
+    @deprecated("Ignore. Use SetStreamBufferPartialSettings instead.")
+    1: buffer_lifetime_ordinal uint64;
+    @deprecated("Ignore. Use SetStreamBufferPartialSettings instead.")
+    2: buffer_constraints_version_ordinal uint64;
+    @deprecated("Ignore. Use SetStreamBufferPartialSettings instead.")
+    3: packet_count_for_server uint32;
+    @deprecated("Ignore. Use SetStreamBufferPartialSettings instead.")
+    4: packet_count_for_client uint32;
+    @deprecated("Ignore. Use SetStreamBufferPartialSettings instead.")
+    5: per_packet_buffer_bytes uint32;
+    @deprecated("Ignore. Use SetStreamBufferPartialSettings instead.")
+    6: single_buffer_mode bool;
 };

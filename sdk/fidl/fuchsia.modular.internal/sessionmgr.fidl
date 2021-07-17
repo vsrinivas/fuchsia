@@ -1,8 +1,6 @@
 // Copyright 2016 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.modular.internal;
 
 using fuchsia.sys;
@@ -11,7 +9,7 @@ using fuchsia.ui.views;
 
 /// The basemgr application (there is no `Basemgr` service) requests
 /// an instance of this service in order to launch and display a `Sessionmgr`.
-[Discoverable] // Created by sessionmgr application.
+@discoverable // Created by sessionmgr application.
 protocol Sessionmgr {
     /// Launches a sessionmgr instance identified by a unique device-local
     /// `session_id`. The uniqueness of `session_id` must be guaranteed by the
@@ -22,12 +20,14 @@ protocol Sessionmgr {
     ///
     // TODO(fxbug.dev/16221): Address issues around client-generated session_id and
     // initialization pattern of sessionmgr.
-    Initialize(string session_id,
-               SessionContext session_context,
-               fuchsia.sys.ServiceList additional_services_for_agents,
-               fuchsia.ui.views.ViewToken view_token,
-               fuchsia.ui.views.ViewRefControl control_ref,
-               fuchsia.ui.views.ViewRef view_ref);
+    Initialize(resource struct {
+        session_id string;
+        session_context client_end:SessionContext;
+        additional_services_for_agents fuchsia.sys.ServiceList;
+        view_token fuchsia.ui.views.ViewToken;
+        control_ref fuchsia.ui.views.ViewRefControl;
+        view_ref fuchsia.ui.views.ViewRef;
+    });
 };
 
 /// This interface is provided by basemgr to `Sessionmgr`.
@@ -39,5 +39,7 @@ protocol SessionContext {
     /// device.
     RestartDueToCriticalFailure();
 
-    GetPresentation(request<fuchsia.ui.policy.Presentation> presentation);
+    GetPresentation(resource struct {
+        presentation server_end:fuchsia.ui.policy.Presentation;
+    });
 };

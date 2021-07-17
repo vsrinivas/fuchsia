@@ -1,108 +1,106 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 // This file contains FIDL definitions used in GIDL goldens.
 
 library conformance;
 
-struct GoldenBoolStruct {
-    bool v;
+type GoldenBoolStruct = struct {
+    v bool;
 };
 
-struct GoldenIntStruct {
-    int16 v;
+type GoldenIntStruct = struct {
+    v int16;
 };
 
-struct GoldenUintStruct {
-    uint16 v;
+type GoldenUintStruct = struct {
+    v uint16;
 };
 
-struct GoldenFloatStruct {
-    float32 v;
+type GoldenFloatStruct = struct {
+    v float32;
 };
 
-struct GoldenDoubleStruct {
-    float64 v;
+type GoldenDoubleStruct = struct {
+    v float64;
 };
 
-struct GoldenStringStruct {
-    string v;
+type GoldenStringStruct = struct {
+    v string;
 };
 
-struct GoldenNullableStringStruct {
-    string? v;
+type GoldenNullableStringStruct = struct {
+    v string:optional;
 };
 
-enum GoldenEnum : uint16 {
+type GoldenEnum = strict enum : uint16 {
     A = 1;
 };
 
-struct GoldenEnumStruct {
-    GoldenEnum v;
+type GoldenEnumStruct = struct {
+    v GoldenEnum;
 };
 
-bits GoldenBits : uint16 {
+type GoldenBits = strict bits : uint16 {
     A = 1;
 };
 
-struct GoldenBitsStruct {
-    GoldenBits v;
+type GoldenBitsStruct = struct {
+    v GoldenBits;
 };
 
-table GoldenTable {
-    1: int16 v;
+type GoldenTable = table {
+    1: v int16;
 };
 
-struct GoldenTableStruct {
-    GoldenTable v;
+type GoldenTableStruct = struct {
+    v GoldenTable;
 };
 
-union GoldenUnion {
-    1: int16 v;
+type GoldenUnion = strict union {
+    1: v int16;
 };
 
-struct GoldenUnionStruct {
-    GoldenUnion v;
+type GoldenUnionStruct = struct {
+    v GoldenUnion;
 };
 
-struct GoldenNullableUnionStruct {
-    GoldenUnion? v;
+type GoldenNullableUnionStruct = struct {
+    v GoldenUnion:optional;
 };
 
-struct GoldenByteArrayStruct {
-    array<byte>:4 v;
+type GoldenByteArrayStruct = struct {
+    v array<byte, 4>;
 };
 
-struct GoldenStructArrayStruct {
-    array<GoldenIntStruct>:2 v;
+type GoldenStructArrayStruct = struct {
+    v array<GoldenIntStruct, 2>;
 };
 
-struct GoldenByteVectorStruct {
-    vector<byte> v;
+type GoldenByteVectorStruct = struct {
+    v vector<byte>;
 };
 
-struct GoldenNullableByteVectorStruct {
-    vector<byte>? v;
+type GoldenNullableByteVectorStruct = struct {
+    v vector<byte>:optional;
 };
 
-struct GoldenStructVectorStruct {
-    vector<GoldenIntStruct> v;
+type GoldenStructVectorStruct = struct {
+    v vector<GoldenIntStruct>;
 };
 
-struct GoldenNullableStruct {
-    GoldenBoolStruct? v;
+type GoldenNullableStruct = struct {
+    v box<GoldenBoolStruct>;
 };
 
-resource struct GoldenHandleBasicRightsStruct {
-    handle:<EVENT, RIGHTS_BASIC> v;
+type GoldenHandleBasicRightsStruct = resource struct {
+    v handle:<EVENT, RIGHTS_BASIC>;
 };
 
-resource struct GoldenNullableHandleStruct {
-    handle? v;
+type GoldenNullableHandleStruct = resource struct {
+    v handle:optional;
 };
 
-struct GoldenStringWithMaxSize2 {
-    string:2 s;
+type GoldenStringWithMaxSize2 = struct {
+    s string:2;
 };

@@ -1,8 +1,6 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.goldfish;
 
 using zx;
@@ -21,7 +19,9 @@ protocol SyncDevice {
     /// A protocol request `timeline_req` provides an interface to the
     /// `SyncTimeline`. Each device can have multiple timelines at the same
     /// time.
-    CreateTimeline(request<SyncTimeline> timeline_req) -> ();
+    CreateTimeline(resource struct {
+        timeline_req server_end:SyncTimeline;
+    }) -> ();
 };
 
 /// Timelines can run "guest->host" commands and notifies Fuchsia once a
@@ -33,7 +33,9 @@ protocol SyncTimeline {
     /// Runs `CMD_TRIGGER_HOST_WAIT` command: Starts a wait on the sync device
     /// ("host") with the given GlSync object and sync thread handles.
     /// Once the command ends, `event` will signal its peer.
-    TriggerHostWait(uint64 host_glsync_handle,
-                    uint64 host_syncthread_handle,
-                    zx.handle:EVENTPAIR event);
+    TriggerHostWait(resource struct {
+        host_glsync_handle uint64;
+        host_syncthread_handle uint64;
+        event zx.handle:EVENTPAIR;
+    });
 };

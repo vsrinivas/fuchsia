@@ -1,13 +1,11 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.media2;
 
 /// Errors that may be returned by `ConnectInputStream` or `ConnectOutputStream` methods. This is a
 /// superset of `fuchsia.mem2.BufferProviderError`.
-enum ConnectionError {
+type ConnectionError = strict enum {
     /// Participants have submitted constraints to the buffer provider that cannot be collectively
     /// satisfied.
     OVERCONSTRAINED = 1;

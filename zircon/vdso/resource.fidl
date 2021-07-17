@@ -1,18 +1,20 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library zx;
 
-[Transport = "Syscall"]
+@transport("Syscall")
 protocol resource {
     /// Create a resource object.
     /// Rights: parent_rsrc must be of type ZX_OBJ_TYPE_RESOURCE and have ZX_RIGHT_WRITE.
-    resource_create(handle:RESOURCE parent_rsrc,
-                    uint32 options,
-                    uint64 base,
-                    usize size,
-                    string name)
-        -> (status status, handle:RESOURCE resource_out);
+    resource_create(resource struct {
+        parent_rsrc handle:RESOURCE;
+        options uint32;
+        base uint64;
+        size usize;
+        name string;
+    }) -> (resource struct {
+        status status;
+        resource_out handle:RESOURCE;
+    });
 };

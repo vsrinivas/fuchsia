@@ -1,22 +1,42 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fidl.test.frobinator;
 
 using zx;
 
-protocol EmptyProtocol {
-};
+protocol EmptyProtocol {};
 
 protocol Frobinator {
-    Frob(string value);
-    Grob(string value) -> (string value);
-    -> Hrob(string value);
-    Fail(bool fail) -> () error uint32;
-    FailHard(bool fail) -> (string froyo) error uint32;
-    FailHardest(bool fail) -> (string fro, string yo) error uint32;
-    SendEventHandle(zx.handle:<EVENT, zx.DEFAULT_EVENT_RIGHTS> event);
-    SendProtocol(EmptyProtocol ep);
+    Frob(struct {
+        value string;
+    });
+    Grob(struct {
+        value string;
+    }) -> (struct {
+        value string;
+    });
+    -> Hrob(struct {
+        value string;
+    });
+    Fail(struct {
+        fail bool;
+    }) -> (struct {}) error uint32;
+    FailHard(struct {
+        fail bool;
+    }) -> (struct {
+        froyo string;
+    }) error uint32;
+    FailHardest(struct {
+        fail bool;
+    }) -> (struct {
+        fro string;
+        yo string;
+    }) error uint32;
+    SendEventHandle(resource struct {
+        event zx.handle:<EVENT, zx.DEFAULT_EVENT_RIGHTS>;
+    });
+    SendProtocol(resource struct {
+        ep client_end:EmptyProtocol;
+    });
 };

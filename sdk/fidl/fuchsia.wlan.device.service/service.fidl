@@ -1,8 +1,6 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.wlan.device.service;
 
 using fuchsia.wlan.common;
@@ -11,121 +9,228 @@ using fuchsia.wlan.minstrel;
 using fuchsia.wlan.sme;
 using fuchsia.wlan.stats;
 
-struct PhyListItem {
-    uint16 phy_id;
-    string path;
+type PhyListItem = struct {
+    phy_id uint16;
+    path string;
 };
 
-struct ListPhysResponse {
-    vector<PhyListItem> phys;
+type ListPhysResponse = struct {
+    phys vector<PhyListItem>;
 };
 
-struct QueryPhyRequest {
-    uint16 phy_id;
+type QueryPhyRequest = struct {
+    phy_id uint16;
 };
 
-struct QueryPhyResponse {
-    fuchsia.wlan.device.PhyInfo info;
+type QueryPhyResponse = struct {
+    info fuchsia.wlan.device.PhyInfo;
 };
 
-struct IfaceListItem {
-    uint16 iface_id;
+type IfaceListItem = struct {
+    iface_id uint16;
 };
 
-struct QueryIfaceResponse {
+type QueryIfaceResponse = struct {
     /// The role the iface is currently operating in, e.g., client role.
-    fuchsia.wlan.device.MacRole role;
+    role fuchsia.wlan.device.MacRole;
     /// The iface's global ID.
-    uint16 id;
+    id uint16;
     /// Iface's PHY ID.
-    uint16 phy_id;
+    phy_id uint16;
     /// Local ID assigned by this iface's PHY.
-    uint16 phy_assigned_id;
+    phy_assigned_id uint16;
     /// The iface's MAC.
-    array<uint8>:6 mac_addr;
+    mac_addr array<uint8, 6>;
     /// The driver features supported on this iface.
-    vector<fuchsia.wlan.common.DriverFeature>:32 driver_features;
+    driver_features vector<fuchsia.wlan.common.DriverFeature>:32;
 };
 
-struct ListIfacesResponse {
-    vector<IfaceListItem> ifaces;
+type ListIfacesResponse = struct {
+    ifaces vector<IfaceListItem>;
 };
 
-struct CreateIfaceRequest {
-    uint16 phy_id;
-    fuchsia.wlan.device.MacRole role;
-    bytes:6? mac_addr;
+type CreateIfaceRequest = struct {
+    phy_id uint16;
+    role fuchsia.wlan.device.MacRole;
+    mac_addr bytes:<6, optional>;
 };
 
-struct CreateIfaceResponse {
-    uint16 iface_id;
+type CreateIfaceResponse = struct {
+    iface_id uint16;
 };
 
-struct DestroyIfaceRequest {
-    uint16 iface_id;
+type DestroyIfaceRequest = struct {
+    iface_id uint16;
 };
 
-struct GetCountryResponse {
-    array<byte>:2 alpha2;
+type GetCountryResponse = struct {
+    alpha2 array<byte, 2>;
 };
 
-struct SetCountryRequest {
-    uint16 phy_id;
-    array<byte>:2 alpha2;
+type SetCountryRequest = struct {
+    phy_id uint16;
+    alpha2 array<byte, 2>;
 };
 
-struct ClearCountryRequest {
-    uint16 phy_id;
+type ClearCountryRequest = struct {
+    phy_id uint16;
 };
 
 protocol DeviceWatcher {
-    -> OnPhyAdded(uint16 phy_id);
-    -> OnPhyRemoved(uint16 phy_id);
-    -> OnIfaceAdded(uint16 iface_id);
-    -> OnIfaceRemoved(uint16 iface_id);
+    -> OnPhyAdded(struct {
+        phy_id uint16;
+    });
+    -> OnPhyRemoved(struct {
+        phy_id uint16;
+    });
+    -> OnIfaceAdded(struct {
+        iface_id uint16;
+    });
+    -> OnIfaceRemoved(struct {
+        iface_id uint16;
+    });
 };
 
-[Discoverable]
+@discoverable
 protocol DeviceService {
     // Phy methods
-    ListPhys() -> (ListPhysResponse resp);
-    QueryPhy(QueryPhyRequest req) -> (int32 status, QueryPhyResponse? resp);
+    ListPhys() -> (struct {
+        resp ListPhysResponse;
+    });
+    QueryPhy(struct {
+        req QueryPhyRequest;
+    }) -> (struct {
+        status int32;
+        resp box<QueryPhyResponse>;
+    });
     // 3-15: reserved
 
     // Iface methods
-    ListIfaces() -> (ListIfacesResponse resp);
-    QueryIface(uint16 iface_id) -> (int32 status, QueryIfaceResponse? resp);
-    CreateIface(CreateIfaceRequest req) -> (int32 status, CreateIfaceResponse? resp);
+    ListIfaces() -> (struct {
+        resp ListIfacesResponse;
+    });
+    QueryIface(struct {
+        iface_id uint16;
+    }) -> (struct {
+        status int32;
+        resp box<QueryIfaceResponse>;
+    });
+    CreateIface(struct {
+        req CreateIfaceRequest;
+    }) -> (struct {
+        status int32;
+        resp box<CreateIfaceResponse>;
+    });
     // 19: reserved for StartIface
     // 20: reserved for StopIface
-    DestroyIface(DestroyIfaceRequest req) -> (int32 status);
-    GetClientSme(uint16 iface_id, request<fuchsia.wlan.sme.ClientSme> sme) -> (int32 status);
-    GetApSme(uint16 iface_id, request<fuchsia.wlan.sme.ApSme> sme) -> (int32 status);
-    GetMeshSme(uint16 iface_id, request<fuchsia.wlan.sme.MeshSme> sme) -> (int32 status);
-    GetIfaceStats(uint16 iface_id) -> (int32 status, fuchsia.wlan.stats.IfaceStats? stats);
-    GetMinstrelList(uint16 iface_id) -> (int32 status, fuchsia.wlan.minstrel.Peers peers);
-    GetMinstrelStats(uint16 iface_id, array<uint8>:6 peer_addr)
-        -> (int32 status, fuchsia.wlan.minstrel.Peer? peer);
+    DestroyIface(struct {
+        req DestroyIfaceRequest;
+    }) -> (struct {
+        status int32;
+    });
+    GetClientSme(resource struct {
+        iface_id uint16;
+        sme server_end:fuchsia.wlan.sme.ClientSme;
+    }) -> (struct {
+        status int32;
+    });
+    GetApSme(resource struct {
+        iface_id uint16;
+        sme server_end:fuchsia.wlan.sme.ApSme;
+    }) -> (struct {
+        status int32;
+    });
+    GetMeshSme(resource struct {
+        iface_id uint16;
+        sme server_end:fuchsia.wlan.sme.MeshSme;
+    }) -> (struct {
+        status int32;
+    });
+    GetIfaceStats(struct {
+        iface_id uint16;
+    }) -> (struct {
+        status int32;
+        stats box<fuchsia.wlan.stats.IfaceStats>;
+    });
+    GetMinstrelList(struct {
+        iface_id uint16;
+    }) -> (struct {
+        status int32;
+        peers fuchsia.wlan.minstrel.Peers;
+    });
+    GetMinstrelStats(struct {
+        iface_id uint16;
+        peer_addr array<uint8, 6>;
+    }) -> (struct {
+        status int32;
+        peer box<fuchsia.wlan.minstrel.Peer>;
+    });
 
-    WatchDevices(request<DeviceWatcher> watcher);
-    GetCountry(uint16 phy_id) -> (GetCountryResponse resp) error int32;
-    SetCountry(SetCountryRequest req) -> (int32 status);
-    ClearCountry(ClearCountryRequest req) -> (int32 status);
+    WatchDevices(resource struct {
+        watcher server_end:DeviceWatcher;
+    });
+    GetCountry(struct {
+        phy_id uint16;
+    }) -> (struct {
+        resp GetCountryResponse;
+    }) error int32;
+    SetCountry(struct {
+        req SetCountryRequest;
+    }) -> (struct {
+        status int32;
+    });
+    ClearCountry(struct {
+        req ClearCountryRequest;
+    }) -> (struct {
+        status int32;
+    });
 };
 
-[Discoverable]
+@discoverable
 protocol DeviceMonitor {
     // Phy methods
-    ListPhys() -> (vector<uint16> phy_list);
-    GetDevPath(uint16 phy_id) -> (string? dev_path);
-    GetSupportedMacRoles(uint16 phy_id)
-        -> (vector<fuchsia.wlan.device.MacRole>:8? supported_mac_roles);
-    WatchDevices(request<DeviceWatcher> watcher);
-    GetCountry(uint16 phy_id) -> (GetCountryResponse resp) error int32;
-    SetCountry(SetCountryRequest req) -> (int32 status);
-    ClearCountry(ClearCountryRequest req) -> (int32 status);
+    ListPhys() -> (struct {
+        phy_list vector<uint16>;
+    });
+    GetDevPath(struct {
+        phy_id uint16;
+    }) -> (struct {
+        dev_path string:optional;
+    });
+    GetSupportedMacRoles(struct {
+        phy_id uint16;
+    }) -> (struct {
+        supported_mac_roles vector<fuchsia.wlan.device.MacRole>:<8, optional>;
+    });
+    WatchDevices(resource struct {
+        watcher server_end:DeviceWatcher;
+    });
+    GetCountry(struct {
+        phy_id uint16;
+    }) -> (struct {
+        resp GetCountryResponse;
+    }) error int32;
+    SetCountry(struct {
+        req SetCountryRequest;
+    }) -> (struct {
+        status int32;
+    });
+    ClearCountry(struct {
+        req ClearCountryRequest;
+    }) -> (struct {
+        status int32;
+    });
 
     // Iface methods
-    CreateIface(CreateIfaceRequest req) -> (int32 status, CreateIfaceResponse? resp);
-    DestroyIface(DestroyIfaceRequest req) -> (int32 status);
+    CreateIface(struct {
+        req CreateIfaceRequest;
+    }) -> (struct {
+        status int32;
+        resp box<CreateIfaceResponse>;
+    });
+    DestroyIface(struct {
+        req DestroyIfaceRequest;
+    }) -> (struct {
+        status int32;
+    });
 };

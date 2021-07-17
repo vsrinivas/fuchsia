@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.wlan.policy;
 
 using fuchsia.wlan.common;
@@ -16,22 +14,27 @@ using zx;
 /// The second aim of this API design is to eliminate the "last-caller wins"
 /// paradigm by limiting the number of controlling applications.  A single caller
 /// at a time is permitted to make API calls that impact wlan state.
-[Discoverable]
+@discoverable
 protocol ClientProvider {
     /// Control channel used by a single caller to trigger wlan client mode state
     /// changes.  The caller also provides a channel to receive wlan updates.
     /// Only one caller can have the control channel open at a time.  Attempts to
     /// register as a controller while there is an active control registration
     /// will result in the new caller's provided channel being closed.
-    GetController(request<ClientController> requests, ClientStateUpdates updates);
+    GetController(resource struct {
+        requests server_end:ClientController;
+        updates client_end:ClientStateUpdates;
+    });
 };
 
 /// The ClientListener API provides a mechanism for callers to receive state change
 /// updates about wlan operation.
-[Discoverable]
+@discoverable
 protocol ClientListener {
     /// Registration for callers to receive wlan client mode state updates.
-    GetListener(ClientStateUpdates updates);
+    GetListener(resource struct {
+        updates client_end:ClientStateUpdates;
+    });
 };
 
 /// ClientControllers allow the caller to trigger wlan state changes.  This includes
@@ -45,11 +48,15 @@ protocol ClientController {
     /// to saved networks or acting on incoming calls triggering connections).
     /// Depending on the underlying capabilities of the device, this call may impact
     /// other device operation (for example, acting as an access point).
-    StartClientConnections() -> (fuchsia.wlan.common.RequestStatus status);
+    StartClientConnections() -> (struct {
+        status fuchsia.wlan.common.RequestStatus;
+    });
 
     /// Tears down any existing connections to wlan networks and disables initiation of
     /// new connections.
-    StopClientConnections() -> (fuchsia.wlan.common.RequestStatus status);
+    StopClientConnections() -> (struct {
+        status fuchsia.wlan.common.RequestStatus;
+    });
 
     /// Triggers a network scan.  Note, even in normal operation, some scan requests
     /// may be rejected due to timing with connection establishment or other critical
@@ -57,22 +64,30 @@ protocol ClientController {
     /// notified via a status update in the ScanResultIterator.
     /// In the current implementation, client connections must be started for a scan
     /// to be performed.
-    ScanForNetworks(request<ScanResultIterator> iterator);
+    ScanForNetworks(resource struct {
+        iterator server_end:ScanResultIterator;
+    });
 
     /// Saves a network and any credential information needed to connect.  Multiple
     /// entries for the same NetworkIdentifier can exist if the credentials are
     /// different.  If a caller attempts to save a NetworkConfig with the same
     /// NetworkIdentifier and same Credentials as a previously saved network
     /// the method will effectively be a no-op.
-    SaveNetwork(NetworkConfig config) -> () error NetworkConfigChangeError;
+    SaveNetwork(struct {
+        config NetworkConfig;
+    }) -> (struct {}) error NetworkConfigChangeError;
 
     /// Removes a saved network configuration, if one exists.  This method will
     /// automatically trigger a disconnection if the NetworkConfig was used to
     /// establish the connection.
-    RemoveNetwork(NetworkConfig config) -> () error NetworkConfigChangeError;
+    RemoveNetwork(struct {
+        config NetworkConfig;
+    }) -> (struct {}) error NetworkConfigChangeError;
 
     /// Retrieve the currently saved networks using the provided iterator.
-    GetSavedNetworks(request<NetworkConfigIterator> iterator);
+    GetSavedNetworks(resource struct {
+        iterator server_end:NetworkConfigIterator;
+    });
 
     /// Request to attempt a connection to the specified network.  The target of the
     /// connect call must already be a saved network.  This call is not a
@@ -82,7 +97,11 @@ protocol ClientController {
     /// to the connection status are disseminated via the ClientStateUpdates protocol.
     /// If the connect attempt fails, the service will fall back to default behavior
     /// with scanning and connecting via network selection.
-    Connect(NetworkIdentifier id) -> (fuchsia.wlan.common.RequestStatus status);
+    Connect(struct {
+        id NetworkIdentifier;
+    }) -> (struct {
+        status fuchsia.wlan.common.RequestStatus;
+    });
 };
 
 /// Iterator used to send back scan results to the caller.  The corresponding channel
@@ -93,11 +112,13 @@ protocol ScanResultIterator {
     /// have been handled, GetNext will return an empty vector and the channel will
     /// be closed.  If an error is encountered during the scan, it will be returned
     /// after all scan results have been retrieved.
-    GetNext() -> (vector<ScanResult> scan_results) error ScanErrorCode;
+    GetNext() -> (struct {
+        scan_results vector<ScanResult>;
+    }) error ScanErrorCode;
 };
 
 /// Wlan scan error codes.
-enum ScanErrorCode {
+type ScanErrorCode = strict enum {
     /// Unexpected scan error without a specific cause.
     GENERAL_ERROR = 1;
     /// Scan was cancelled and stopped.  This can happen due to operating state changes,
@@ -108,38 +129,40 @@ enum ScanErrorCode {
 /// Information from an observed wlan network.  This includes the
 /// network name, security type, detected access point information and network
 /// compatibility information.
-table ScanResult {
+type ScanResult = table {
     /// Network properties used to distinguish between networks and to group
     /// individual APs.
-    1: NetworkIdentifier id;
+    1: id NetworkIdentifier;
 
     /// Individual access points offering the specified network.
-    2: vector<Bss> entries;
+    2: entries vector<Bss>;
 
     /// Indication if the detected network is supported by the implementation.
-    3: Compatibility compatibility;
+    3: compatibility Compatibility;
 };
 
 /// Information for a particular ScanResult entry.
-table Bss {
+type Bss = table {
     /// MAC address for the AP interface.
-    1: array<uint8>:6 bssid;
+    1: bssid array<uint8, 6>;
 
     /// Calculated received signal strength for the beacon/probe response.
-    2: int8 rssi;
+    2: rssi int8;
 
     /// Operating frequency for this network (in MHz).
-    3: uint32 frequency;
+    3: frequency uint32;
 
     /// Realtime timestamp for this scan result entry.
-    4: zx.time timestamp_nanos;
+    4: timestamp_nanos zx.time;
 };
 
 /// Iterator used by callers to retrieve saved network information.
 protocol NetworkConfigIterator {
 
     /// Method allowing the next block of saved networks to be handled.
-    GetNext() -> (vector<NetworkConfig> configs);
+    GetNext() -> (struct {
+        configs vector<NetworkConfig>;
+    });
 };
 
 /// Wlan status changes for client connections and the associated network state.
@@ -155,34 +178,36 @@ protocol ClientStateUpdates {
     /// This will be called when there is any change to the state and the
     /// registered listeners are responsible for deciding what information has
     /// changed (since this is dependent on when they last acknowledged the update).
-    OnClientStateUpdate(ClientStateSummary summary) -> ();
+    OnClientStateUpdate(struct {
+        summary ClientStateSummary;
+    }) -> ();
 };
 
 /// Information about the current client state for the device.  This includes if the
 /// device will attempt to connect to access points (when applicable), any existing
 /// connections and active connection attempts and their outcomes.
-table ClientStateSummary {
+type ClientStateSummary = table {
     /// State indicating whether wlan will attempt to connect to networks or not.
-    1: WlanClientState state;
+    1: state WlanClientState;
 
     /// Active connections, connection attempts or failed connections.
-    2: vector<NetworkState> networks;
+    2: networks vector<NetworkState>;
 };
 
 /// Information about current network connections and attempts.
-table NetworkState {
+type NetworkState = table {
     /// Network id for the current connection (or attempt).
-    1: NetworkIdentifier id;
+    1: id NetworkIdentifier;
 
     /// Current state for the connection.
-    2: ConnectionState state;
+    2: state ConnectionState;
 
     /// Extra information for debugging or Settings display
-    3: DisconnectStatus status;
+    3: status DisconnectStatus;
 };
 
 /// Wlan operating state for client connections
-enum WlanClientState {
+type WlanClientState = strict enum {
     CONNECTIONS_DISABLED = 1;
     CONNECTIONS_ENABLED = 2;
 };
@@ -191,7 +216,7 @@ enum WlanClientState {
 /// are supported.  New protocols may be detected before they are connectable
 /// and deprecated protocols may explicitly be unsupported due to security and
 /// privacy concerns.
-enum Compatibility {
+type Compatibility = strict enum {
     /// Denotes that the network is supported and connections can be attempted (given
     /// appropriate credentials when required).
     SUPPORTED = 1;
@@ -205,12 +230,12 @@ enum Compatibility {
 
 /// Potential error cases for saving and removing network configurations.  This is
 /// intentionally sparse and will be expanded as use cases develop.
-enum NetworkConfigChangeError {
+type NetworkConfigChangeError = strict enum {
     GENERAL_ERROR = 1;
 };
 
 /// Connection states used to update registered wlan observers.
-enum ConnectionState {
+type ConnectionState = strict enum {
     /// The connection attempt was terminated due to an error.
     FAILED = 1;
 
@@ -226,7 +251,7 @@ enum ConnectionState {
 };
 
 /// Disconnect and connection attempt failure status codes
-enum DisconnectStatus {
+type DisconnectStatus = strict enum {
     /// The requested connection attempt failed due to timeout.
     TIMED_OUT = 1;
 

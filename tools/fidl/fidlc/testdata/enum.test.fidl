@@ -1,18 +1,18 @@
-deprecated_syntax;
 library fidl.test.enum;
 
-strict enum MyStrictEnum : uint32 {
+type MyStrictEnum = strict enum : uint32 {
     FOO = 1;
     BAR = 2;
 };
 
-flexible enum MyFlexibleEnum : uint32 {
+type MyFlexibleEnum = flexible enum : uint32 {
     FOO = 1;
     BAR = 2;
 };
 
-flexible enum MyFlexibleEnumWithCustomUnknown : uint32 {
+type MyFlexibleEnumWithCustomUnknown = flexible enum : uint32 {
     FOO = 1;
     BAR = 2;
-    [Unknown] CUSTOM_UNKNOWN = 3;
+    @unknown
+    CUSTOM_UNKNOWN = 3;
 };

@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.identity.prototype;
 
 using fuchsia.identity.account;
@@ -14,7 +12,7 @@ using fuchsia.overnet.protocol;
 /// AccountManager interface.  This interface is intended only for use by
 /// development tools to manually initiate an account transfer, and should
 /// generally not be used.
-[Discoverable]
+@discoverable
 protocol PrototypeAccountTransferControl {
     // TODO(satsukiu): Add additional error types such as USER_CANCELED,
     // DEVICE_NOT_FOUND...
@@ -30,8 +28,9 @@ protocol PrototypeAccountTransferControl {
     /// Returns successfully if the account is provisioned on the remote device
     /// successfully.  Fails with an UNSUPPORTED_OPERATION error if the account
     /// is already present on the remote device.
-    TransferAccount(fuchsia.identity.account.LocalAccountId account_id,
-                    fuchsia.overnet.protocol.NodeId target_device,
-                    fuchsia.identity.account.Lifetime target_lifetime)
-        -> () error fuchsia.identity.account.Error;
+    TransferAccount(struct {
+        account_id fuchsia.identity.account.LocalAccountId;
+        target_device fuchsia.overnet.protocol.NodeId;
+        target_lifetime fuchsia.identity.account.Lifetime;
+    }) -> (struct {}) error fuchsia.identity.account.Error;
 };

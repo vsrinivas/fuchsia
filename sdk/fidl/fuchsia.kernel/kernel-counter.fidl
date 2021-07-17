@@ -1,22 +1,26 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.kernel;
 
 using fuchsia.mem;
 using zx;
 
 /// Protocol for retrieving kcounter information.
-[Discoverable, ForDeprecatedCBindings]
+@discoverable
+@for_deprecated_c_bindings
 protocol Counter {
     /// Retrives a VMO containining summarized kcounter data. The vmo returned
     /// in `buffer` is in "inspect-vmo" format, documented elsewhere.
-    GetInspectVmo() -> (zx.status status, fuchsia.mem.Buffer buffer);
+    GetInspectVmo() -> (resource struct {
+        status zx.status;
+        buffer fuchsia.mem.Buffer;
+    });
 
     /// Request that the previously-returned VMO buffer's data be updated. The
     /// data may not be updated if it was already recently updated (updates are
     /// limited to an unspecified rate, but approximately every few seconds).
-    UpdateInspectVmo() -> (zx.status status);
+    UpdateInspectVmo() -> (struct {
+        status zx.status;
+    });
 };

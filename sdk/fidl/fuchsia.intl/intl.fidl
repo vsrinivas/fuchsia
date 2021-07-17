@@ -1,22 +1,20 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.intl;
 
 /// Typed identifier for a regulatory domain as specified in the IEEE 802.11 standard.
-table RegulatoryDomain {
+type RegulatoryDomain = table {
     /// ISO 3166-1 alpha-2, a two-letter code representing a domain of operation.
     /// (https://www.iso.org/publication/PUB500001.html)
-    1: string country_code;
+    1: country_code string;
 };
 
 /// Typed identifier for a single Locale, which is a set of internationalization-related properties.
 ///
 /// Most APIs that consume locales will probably want to accept a vector of locales to account for
 /// priority.
-struct LocaleId {
+type LocaleId = struct {
     /// Unicode BCP-47 Locale Identifier
     /// (http://www.unicode.org/reports/tr35/#BCP_47_Conformance).
     ///
@@ -33,11 +31,11 @@ struct LocaleId {
     ///     French, with 12-hour clock
     ///   "ar-EG-u-fw-mon-nu-latn"
     ///     Egyptian Arabic with "Latin" numerals and first day of week on Monday
-    string id;
+    id string;
 };
 
 /// Typed identifier for a single calendar system. Currently consists only of a calendar ID.
-struct CalendarId {
+type CalendarId = struct {
     /// Unicode BCP-47 Locale Identifier with an undefined language tag and a single extension
     /// specifying the calendar ID (from
     /// https://unicode.org/repos/cldr/trunk/common/bcp47/calendar.xml).
@@ -45,20 +43,20 @@ struct CalendarId {
     /// Examples:
     ///   "und-u-ca-gregory"
     ///   "und-u-ca-islamic"
-    string id;
+    id string;
 };
 
 /// This is the time zone reported when no time zones have been set.
-const string DEFAULT_TIME_ZONE_ID = "UTC";
+const DEFAULT_TIME_ZONE_ID string = "UTC";
 
 /// Typed identifier for a time zone.
-struct TimeZoneId {
+type TimeZoneId = struct {
     /// Time zone ID from tzdata, e.g. "America/New_York". See https://www.iana.org/time-zones.
-    string id;
+    id string;
 };
 
 /// Selection of [temperature units](https://en.wikipedia.org/wiki/Degree_(temperature)).
-enum TemperatureUnit {
+type TemperatureUnit = strict enum {
     /// The temperature should be formatted to show temperature in degrees Celsius.
     CELSIUS = 0;
     /// The temperature should be formatted to show temperature in degrees Fahrenheit.
@@ -72,11 +70,11 @@ enum TemperatureUnit {
 ///
 /// Language-independent properties that are supported by Unicode BCP-47 Locale IDs (e.g.
 /// first-day-of-week, time zone) are denormalized into the locale IDs in `locales`.
-table Profile {
+type Profile = table {
     /// Ranked list of locales (in descending order of preference).  The vector will always 
     /// be set, and always contain at least one element. For example,
     /// locales = [ LocaleId("en-US") ] is valid, but locales = [], or locales = <unset> is not.
-    1: vector<LocaleId> locales;
+    1: locales vector<LocaleId>;
 
     /// Ranked list of calendars (in descending order of preference).
     /// The first entry is the primary calendar, and will be equal to the calendar indicated
@@ -84,7 +82,7 @@ table Profile {
     /// The vector will always be set, and always contain at least one element.
     /// The list allows multiple ranked preferences, and is intended for use
     /// by applications that can display multiple calendar systems.
-    2: vector<CalendarId> calendars;
+    2: calendars vector<CalendarId>;
 
     /// Ranked list of time zones (in descending order). The first entry is the primary time zone,
     /// which should be used by default for formatting dates and times; it will be equal to the
@@ -94,15 +92,15 @@ table Profile {
     /// The vector will always be set, and always contain at least one element.
     /// On Fuchsia, the default time zone is always `DEFAULT_TIME_ZONE_ID` when
     /// no more specific time zones have been defined or selected.
-    3: vector<TimeZoneId> time_zones;
+    3: time_zones vector<TimeZoneId>;
 
     /// Selected temperature unit. The unit is always reported: if there is no
     /// setting in the current environment, the default value of CELSIUS is
     /// used.
-    4: TemperatureUnit temperature_unit;
+    4: temperature_unit TemperatureUnit;
 
-    // TODO(fxbug.dev/4065): Other properties that don't fit into locale IDs. Examples:
-    // - User date format overrides, like d/mmm/y
-    // - User currency overrides
-    // - User number overrides (grouping, decimal point)
+// TODO(fxbug.dev/4065): Other properties that don't fit into locale IDs. Examples:
+// - User date format overrides, like d/mmm/y
+// - User currency overrides
+// - User number overrides (grouping, decimal point)
 };

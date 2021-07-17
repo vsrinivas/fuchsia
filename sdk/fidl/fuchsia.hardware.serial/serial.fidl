@@ -1,14 +1,12 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.serial;
 
 using zx;
 
 /// Description of what type of serial device this is
-enum Class : uint8 {
+type Class = strict enum : uint8 {
     GENERIC = 1;
     /// A Bluetooth host controller
     BLUETOOTH_HCI = 2;
@@ -19,7 +17,7 @@ enum Class : uint8 {
 };
 
 /// Number of bits per character
-enum CharacterWidth : uint8 {
+type CharacterWidth = strict enum : uint8 {
     BITS_5 = 1;
     BITS_6 = 2;
     BITS_7 = 3;
@@ -27,41 +25,47 @@ enum CharacterWidth : uint8 {
 };
 
 /// Number of stop bits
-enum StopWidth : uint8 {
+type StopWidth = strict enum : uint8 {
     BITS_1 = 1;
     BITS_2 = 2;
 };
 
 /// Which parity computation to use, if any.
-enum Parity : uint8 {
+type Parity = strict enum : uint8 {
     NONE = 1;
     EVEN = 2;
     ODD = 3;
 };
 
 /// What flow control mechanism to use
-enum FlowControl : uint8 {
+type FlowControl = strict enum : uint8 {
     NONE = 1;
     /// Clear To Send/Request To Send
     CTS_RTS = 2;
 };
 
-struct Config {
-    CharacterWidth character_width;
-    StopWidth stop_width;
-    Parity parity;
-    FlowControl control_flow;
-    uint32 baud_rate;
+type Config = struct {
+    character_width CharacterWidth;
+    stop_width StopWidth;
+    parity Parity;
+    control_flow FlowControl;
+    baud_rate uint32;
 };
 
 /// Legacy synchronous device interface.
 /// New drivers should implement NewDevice instead.
 protocol Device {
     /// Lookup what type of serial device this is.
-    GetClass() -> (Class device_class);
+    GetClass() -> (struct {
+        device_class Class;
+    });
 
     /// Set the configuration of this serial device.
-    SetConfig(Config config) -> (zx.status s);
+    SetConfig(struct {
+        config Config;
+    }) -> (struct {
+        s zx.status;
+    });
 };
 
 /// FIDL device utilizing the new asynchronous serial driver
@@ -71,13 +75,19 @@ protocol NewDevice {
     compose Device;
 
     /// Reads data from the serial port
-    Read() -> (vector<uint8>:MAX data) error zx.status;
+    Read() -> (struct {
+        data vector<uint8>:MAX;
+    }) error zx.status;
 
     /// Writes data to the serial port
-    Write(vector<uint8>:MAX data) -> () error zx.status;
+    Write(struct {
+        data vector<uint8>:MAX;
+    }) -> (struct {}) error zx.status;
 };
 
-[Discoverable]
+@discoverable
 protocol NewDeviceProxy {
-    GetChannel(request<NewDevice> req);
+    GetChannel(resource struct {
+        req server_end:NewDevice;
+    });
 };

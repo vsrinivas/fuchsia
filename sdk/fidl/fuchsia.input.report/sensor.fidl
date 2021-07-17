@@ -1,17 +1,15 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.input.report;
 
 /// A hardcoded number of max sensor values. This should be increased in the future
 /// if we ever see a sensor with more values.
-const uint32 SENSOR_MAX_VALUES = 100;
+const SENSOR_MAX_VALUES uint32 = 100;
 
 /// Each sensor value has a corresponding SensorType, which explains what the
 /// value is measuring in the world.
-enum SensorType : uint32 {
+type SensorType = strict enum : uint32 {
     /// Acceleration on the X axis.
     ACCELEROMETER_X = 1;
     /// Acceleration on the Y axis.
@@ -42,21 +40,21 @@ enum SensorType : uint32 {
 
 /// A `SensorAxis` is a normal `Axis` with an additional `SensorType` to describe what the
 /// axis is measuring.
-struct SensorAxis {
-    Axis axis;
-    SensorType type;
+type SensorAxis = struct {
+    axis Axis;
+    type SensorType;
 };
 
 /// Describes the format of the input report that will be sent from the sensor
 /// to the device.
-table SensorInputDescriptor {
+type SensorInputDescriptor = table {
     /// Each `SensorAxis` in `values` describes what a sensor is measuring and its range.
     /// These will directly correspond to the values in `SensorReport`.
-    1: vector<SensorAxis>:SENSOR_MAX_VALUES values;
+    1: values vector<SensorAxis>:SENSOR_MAX_VALUES;
 };
 
 /// `SensorReportingState` determines when a sensor will send reports.
-enum SensorReportingState : uint32 {
+type SensorReportingState = strict enum : uint32 {
     /// No events will be sent from the sensor.
     REPORT_NO_EVENTS = 1;
     /// All events will be sent from the sensor. For most sensors, this
@@ -68,50 +66,50 @@ enum SensorReportingState : uint32 {
 
 /// Describes the format of the sensor's feature report. Feature reports can be
 /// requested from the sensor, or sent to the sensor.
-table SensorFeatureDescriptor {
+type SensorFeatureDescriptor = table {
     /// Describes the minimum and maximum reporting interval this sensor
     /// supports.
-    1: Axis report_interval;
+    1: report_interval Axis;
     /// If this is true then SensorFeatureReport supports setting a
     /// SensorReportingState.
-    3: bool supports_reporting_state;
+    3: supports_reporting_state bool;
     /// Sets the sensitivity for the given `SensorType`.
-    2: vector<SensorAxis>:SENSOR_MAX_VALUES sensitivity;
+    2: sensitivity vector<SensorAxis>:SENSOR_MAX_VALUES;
     /// Sets the high threshold values for the given `SensorType`.
-    4: vector<SensorAxis>:SENSOR_MAX_VALUES threshold_high;
+    4: threshold_high vector<SensorAxis>:SENSOR_MAX_VALUES;
     /// Sets the low threshold values for the given `SensorType`.
-    5: vector<SensorAxis>:SENSOR_MAX_VALUES threshold_low;
+    5: threshold_low vector<SensorAxis>:SENSOR_MAX_VALUES;
 };
 
 /// The capabilities of a sensor device.
-table SensorDescriptor {
-    1: SensorInputDescriptor input;
-    2: SensorFeatureDescriptor feature;
+type SensorDescriptor = table {
+    1: input SensorInputDescriptor;
+    2: feature SensorFeatureDescriptor;
 };
 
 /// `SensorReport` gives the values measured by a sensor at a given point in time.
-table SensorInputReport {
+type SensorInputReport = table {
     /// The ordering of `values` will always directly correspond to the ordering of
     /// the values in `SensorDescriptor`.
-    1: vector<int64>:SENSOR_MAX_VALUES values;
+    1: values vector<int64>:SENSOR_MAX_VALUES;
 };
 
 /// A SensorFeatureReport describes the features of a given sensor. If a
 /// FeatureReport is sent to the Input Device it sets the configuration of the device.
 /// If a FeatureReport is requested from the Input Device it shows the device's
 /// current configuration.
-table SensorFeatureReport {
+type SensorFeatureReport = table {
     /// The time between reports sent by the sensor.
-    1: int64 report_interval;
+    1: report_interval int64;
     /// This determines when the sensor will send reports.
-    3: SensorReportingState reporting_state;
+    3: reporting_state SensorReportingState;
     /// The sensitivity for various `SensorType`. This vector must be given in
     /// the order of the descriptor's `sensitivity` vector.
-    2: vector<int64>:SENSOR_MAX_VALUES sensitivity;
+    2: sensitivity vector<int64>:SENSOR_MAX_VALUES;
     /// The high thresholds for various `SensorType`. This vector must be given in
     /// the order of the descriptor's `threshold_high` vector.
-    4: vector<int64>:SENSOR_MAX_VALUES threshold_high;
+    4: threshold_high vector<int64>:SENSOR_MAX_VALUES;
     /// The low thresholds for various `SensorType`. This vector must be given in
     /// the order of the descriptor's `threshold_low` vector.
-    5: vector<int64>:SENSOR_MAX_VALUES threshold_low;
+    5: threshold_low vector<int64>:SENSOR_MAX_VALUES;
 };

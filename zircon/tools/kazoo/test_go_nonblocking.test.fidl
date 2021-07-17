@@ -1,18 +1,24 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library zx;
 
-[Transport="Syscall", NoProtocolPrefix]
+@transport("Syscall")
+@no_protocol_prefix
 protocol SpecialNonBlocking {
     // The go runtime needs these not to be marked nonblocking, even when tagged
     // blocking.
+    @blocking
+    FutexWait(struct {
+        a uint32;
+    }) -> (struct {
+        status status;
+    });
 
-    [blocking]
-    FutexWait(uint32 a) -> (status status);
-
-    [blocking]
-    Nanosleep(uint32 a) -> (status status);
+    @blocking
+    Nanosleep(struct {
+        a uint32;
+    }) -> (struct {
+        status status;
+    });
 };

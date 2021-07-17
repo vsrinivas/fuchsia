@@ -1,8 +1,6 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.bluetooth.avrcp;
 
 // Types are intended match how they are defined in the BT AVRCP 1.6.2 spec
@@ -10,7 +8,7 @@ library fuchsia.bluetooth.avrcp;
 // Deviations are called out in comments.
 
 /// Status codes for commands sent as the controller.
-enum ControllerError : uint32 {
+type ControllerError = strict enum : uint32 {
     UNKOWN_FAILURE = 1;
     TIMED_OUT = 2;
     REMOTE_NOT_CONNECTED = 3;
@@ -25,7 +23,7 @@ enum ControllerError : uint32 {
 };
 
 /// Status codes for passthrough responses received from the target.
-enum TargetPassthroughError {
+type TargetPassthroughError = strict enum {
     COMMAND_NOT_IMPLEMENTED = 1;
     COMMAND_REJECTED = 2;
 };
@@ -33,7 +31,7 @@ enum TargetPassthroughError {
 /// Status codes for AVRCP specific AV/C commands.
 /// Defined in AVRCP 1.6.2 section 6.15.3, Table 6.49.
 /// Style note: named exactly as they are in Table 6.49 with the "REJECTED_" prefix.
-enum TargetAvcError : uint32 {
+type TargetAvcError = strict enum : uint32 {
     REJECTED_INVALID_COMMAND = 0x00;
     REJECTED_INVALID_PARAMETER = 0x01;
     REJECTED_PARAMETER_CONTENT_ERROR = 0x02;
@@ -49,18 +47,18 @@ enum TargetAvcError : uint32 {
 /// identification created, assigned, or used by MediaSession or any other API surfaces.
 ///
 /// Defined in AVRCP 1.6, Section 6.10.2.1.
-struct AddressedPlayerId {
-    uint16 id;
+type AddressedPlayerId = struct {
+    id uint16;
 };
 
 /// The maximum number of Notification Event IDs that can be supported by the TG.
 /// 0x0E to 0xFF are reserved for future use.
 /// Defined by AVRCP 1.6.2 Appendix H.
-const uint8 MAX_NOTIFICATIONS = 255;
+const MAX_NOTIFICATIONS uint8 = 255;
 
 /// Defined by AVRCP 1.6.2 section 6.7.2 (RegisterNotification) and Appendix H.
 /// Style note: named exactly as they are in the specification with the "EVENT_" prefix.
-enum NotificationEvent : uint8 {
+type NotificationEvent = strict enum : uint8 {
     PLAYBACK_STATUS_CHANGED = 0x01;
     TRACK_CHANGED = 0x02;
     TRACK_REACHED_END = 0x03;
@@ -77,7 +75,7 @@ enum NotificationEvent : uint8 {
 };
 
 /// Change notifications that a controller client can register.
-bits Notifications : uint32 {
+type Notifications = strict bits : uint32 {
     // AVRCP native notifications
 
     /// AVRCP `EVENT_PLAYBACK_STATUS_CHANGED` Notification
@@ -112,38 +110,38 @@ bits Notifications : uint32 {
 
 /// Event data from incoming target notifications.
 /// Defined by AVRCP 1.6.2 Sec 6.7.2.
-table Notification {
+type Notification = table {
     /// `EVENT_PLAYBACK_STATUS_CHANGED` event data
-    1: PlaybackStatus status;
+    1: status PlaybackStatus;
 
     /// `EVENT_TRACK_CHANGED` event data
-    2: uint64 track_id;
+    2: track_id uint64;
 
     /// `EVENT_TRACK_POS_CHANGED` event data
-    3: uint32 pos;
+    3: pos uint32;
 
     /// `EVENT_BATT_STATUS_CHANGED` event data
-    4: BatteryStatus battery_status;
+    4: battery_status BatteryStatus;
 
     /// `EVENT_SYSTEM_STATUS_CHANGED` event data
-    5: SystemStatus system_status;
+    5: system_status SystemStatus;
 
     /// `EVENT_PLAYER_APPLICATION_SETTINGS_CHANGED` event data
-    6: PlayerApplicationSettings application_settings;
+    6: application_settings PlayerApplicationSettings;
 
     /// `EVENT_ADDRESSED_PLAYER_CHANGED` event data
-    7: uint16 player_id;
+    7: player_id uint16;
 
     /// `EVENT_VOLUME_CHANGED` event data
-    8: uint8 volume;
+    8: volume uint8;
 
     /// `CONNECTION_CHANGE` event data
-    9: bool device_connected;
+    9: device_connected bool;
 };
 
 /// Defined by AVRCP 1.6.2 section 6.7.2 (RegisterNotification).
 /// Format for `EVENT_SYSTEM_STATUS_CHANGED`.
-enum SystemStatus : uint8 {
+type SystemStatus = strict enum : uint8 {
     POWER_ON = 0x00;
     POWER_OFF = 0x01;
     UNPLUGGED = 0x02;
@@ -151,7 +149,7 @@ enum SystemStatus : uint8 {
 
 /// Defined by AVRCP 1.6.2 section 6.7.2 (RegisterNotification).
 /// Format for `EVENT_PLAYBACK_STATUS_CHANGED`.
-enum PlaybackStatus : uint8 {
+type PlaybackStatus = strict enum : uint8 {
     STOPPED = 0x00;
     PLAYING = 0x01;
     PAUSED = 0x02;
@@ -163,7 +161,7 @@ enum PlaybackStatus : uint8 {
 /// Defined by AVRCP 1.6.2 section 6.7.2 (RegisterNotification).
 /// Format for `EVENT_BATT_STATUS_CHANGED`.
 /// Same encoding also defined by 6.5.8 (InformBatteryStatusOfCT).
-enum BatteryStatus : uint8 {
+type BatteryStatus = strict enum : uint8 {
     NORMAL = 0x00;
     WARNING = 0x01;
     CRITICAL = 0x02;
@@ -173,7 +171,7 @@ enum BatteryStatus : uint8 {
 };
 
 /// Defined by AVRCP 1.6.2 Appendix F (player application settings).
-enum RepeatStatusMode : uint8 {
+type RepeatStatusMode = strict enum : uint8 {
     OFF = 0x01;
     SINGLE_TRACK_REPEAT = 0x02;
     ALL_TRACK_REPEAT = 0x03;
@@ -181,40 +179,40 @@ enum RepeatStatusMode : uint8 {
 };
 
 /// Defined by AVRCP 1.6.2 Appendix F (player application settings).
-enum ShuffleMode : uint8 {
+type ShuffleMode = strict enum : uint8 {
     OFF = 0x01;
     ALL_TRACK_SHUFFLE = 0x02;
     GROUP_SHUFFLE = 0x03;
 };
 
 /// Defined by AVRCP 1.6.2 Appendix F (player application settings).
-enum ScanMode : uint8 {
+type ScanMode = strict enum : uint8 {
     OFF = 0x01;
     ALL_TRACK_SCAN = 0x02;
     GROUP_SCAN = 0x03;
 };
 
 /// Defined by AVRCP 1.6.2 Appendix F (player application settings).
-enum Equalizer : uint8 {
+type Equalizer = strict enum : uint8 {
     OFF = 0x01;
     ON = 0x02;
 };
 
 /// The maximum number of custom attributes that can be used.
 /// Defined by AVRCP 1.6.2 Appendix F.
-const uint64 MAX_CUSTOM_ATTRIBUTES = 127;
+const MAX_CUSTOM_ATTRIBUTES uint64 = 127;
 
 /// The maximum number of possible values an attribute can take on.
 /// Defined by AVRCP 1.6.2 Sec 6.5.2
-const uint64 MAX_ATTRIBUTE_VALUES = 255;
+const MAX_ATTRIBUTE_VALUES uint64 = 255;
 
 /// The total number of attributes that can be set. The custom attributes + the 4
 /// defined attributes, `PlayerApplicationSettingAttributeId`. 4 + 127 = 131.
-const uint64 MAX_ATTRIBUTES = 131;
+const MAX_ATTRIBUTES uint64 = 131;
 
 /// 0x80 - 0xFF is reserved for custom player application settings.
 /// Defined by AVRCP 1.6.2 Appendix F (player application settings).
-enum PlayerApplicationSettingAttributeId : uint8 {
+type PlayerApplicationSettingAttributeId = strict enum : uint8 {
     EQUALIZER = 0x01;
     REPEAT_STATUS_MODE = 0x02;
     SHUFFLE_MODE = 0x03;
@@ -222,94 +220,94 @@ enum PlayerApplicationSettingAttributeId : uint8 {
 };
 
 /// The custom attribute value and its description.
-struct CustomAttributeValue {
-    string:255 description;
-    uint8 value;
+type CustomAttributeValue = struct {
+    description string:255;
+    value uint8;
 };
 
 /// Specification allowed player application settings.
 /// Defined by AVRCP 1.6.2 Appendix F (player application settings).
-table CustomPlayerApplicationSetting {
+type CustomPlayerApplicationSetting = table {
     /// The attribute id for the custom setting. Must be between 0x80-0xFF, as
     /// defined in AVRCP 1.6.2 Appendix F.
-    1: uint8 attribute_id;
+    1: attribute_id uint8;
 
     /// The string descriptor of the custom attribute.
-    2: string:255 attribute_name;
+    2: attribute_name string:255;
 
     /// The possible values the custom attribute can take.
-    3: vector<CustomAttributeValue>:MAX_ATTRIBUTE_VALUES possible_values;
+    3: possible_values vector<CustomAttributeValue>:MAX_ATTRIBUTE_VALUES;
 
     /// The current value that the custom setting is set to.
-    4: uint8 current_value;
+    4: current_value uint8;
 };
 
 /// Defined by AVRCP 1.6.2 Appendix F (player application settings).
-table PlayerApplicationSettings {
+type PlayerApplicationSettings = table {
     /// The equalizer status of the remote target.
-    1: Equalizer equalizer;
+    1: equalizer Equalizer;
 
     /// The repeat mode status of the remote target.
-    2: RepeatStatusMode repeat_status_mode;
+    2: repeat_status_mode RepeatStatusMode;
 
     /// The shuffle mode status of the remote target.
-    3: ShuffleMode shuffle_mode;
+    3: shuffle_mode ShuffleMode;
 
     /// The scan mode status of the remote target.
-    4: ScanMode scan_mode;
+    4: scan_mode ScanMode;
 
     /// Custom settings that are specification allowed.
-    5: vector<CustomPlayerApplicationSetting>:MAX_CUSTOM_ATTRIBUTES custom_settings;
+    5: custom_settings vector<CustomPlayerApplicationSetting>:MAX_CUSTOM_ATTRIBUTES;
 };
 
 /// The maximum length of an attribute value in the media attributes.
 /// Defined by AVRCP 1.6.2 Sec 6.6.1.
-const uint64 MAX_ATTRIBUTE_VALUE_LENGTH = 65535;
+const MAX_ATTRIBUTE_VALUE_LENGTH uint64 = 65535;
 
 /// Defined by AVRCP 1.6.2 Appendix E (media attributes).
-table MediaAttributes {
+type MediaAttributes = table {
     /// The title, song name, or content description.
-    1: string:MAX_ATTRIBUTE_VALUE_LENGTH title;
+    1: title string:MAX_ATTRIBUTE_VALUE_LENGTH;
     /// The artist, performer, or group.
-    2: string:MAX_ATTRIBUTE_VALUE_LENGTH artist_name;
+    2: artist_name string:MAX_ATTRIBUTE_VALUE_LENGTH;
     /// The title of the source of media.
-    3: string:MAX_ATTRIBUTE_VALUE_LENGTH album_name;
+    3: album_name string:MAX_ATTRIBUTE_VALUE_LENGTH;
     /// The order number of the media on its original recording.
-    4: string:MAX_ATTRIBUTE_VALUE_LENGTH track_number;
+    4: track_number string:MAX_ATTRIBUTE_VALUE_LENGTH;
     /// The total number of tracks in the media.
-    5: string:MAX_ATTRIBUTE_VALUE_LENGTH total_number_of_tracks;
+    5: total_number_of_tracks string:MAX_ATTRIBUTE_VALUE_LENGTH;
     /// The category of composition of the media,
-    6: string:MAX_ATTRIBUTE_VALUE_LENGTH genre;
+    6: genre string:MAX_ATTRIBUTE_VALUE_LENGTH;
     /// The length of the media in milliseconds (ms).
-    7: string:MAX_ATTRIBUTE_VALUE_LENGTH playing_time;
-    // TODO(fxbug.dev/1322): Add BIP cover art handle.
+    7: playing_time string:MAX_ATTRIBUTE_VALUE_LENGTH;
+// TODO(fxbug.dev/1322): Add BIP cover art handle.
 };
 
 /// Status of currently playing media on the TG.
 /// Defined by AVRCP 1.6.2 section 6.7.1, Table 6.29.
-table PlayStatus {
+type PlayStatus = table {
     /// The total length of the currently playing media, in milliseconds.
     /// Optional, if the TG does not support song length.
-    1: uint32 song_length;
+    1: song_length uint32;
 
     /// The current position of the playing media, in milliseconds elapsed.
     /// Optional, if the TG does not support song position.
-    2: uint32 song_position;
+    2: song_position uint32;
 
     /// The playback status of the currently playing media.
     /// Mandatory, the TG must respond with a PlaybackStatus.
-    3: PlaybackStatus playback_status;
+    3: playback_status PlaybackStatus;
 };
 
 /// The maximum number of MediaPlayerItems that can be returned from a call to
 /// GetMediaPlayerItems.
 /// This value is arbitrary and is meant to limit the number of items that can be returned.
 /// AVRCP 1.6.2, Section 6.10.4.2.2 defines the `Number of Items` parameter as a uint16.
-const uint16 MAX_MEDIA_PLAYER_ITEMS = 16;
+const MAX_MEDIA_PLAYER_ITEMS uint16 = 16;
 
 /// The Major Player Type associated with a media player.
 /// Defined by AVRCP 1.6.2 section 6.10.2.1.
-bits MajorPlayerType : uint8 {
+type MajorPlayerType = strict bits : uint8 {
     AUDIO = 0x01;
 
     VIDEO = 0x02;
@@ -318,35 +316,35 @@ bits MajorPlayerType : uint8 {
 
     BROADCASTING_VIDEO = 0x08;
 
-    // Bits 4 - 7 are reserved.
+// Bits 4 - 7 are reserved.
 };
 
 /// The Player Sub Type associated with a media player.
 /// Defined by AVRCP 1.6.2 section 6.10.2.1.
-bits PlayerSubType : uint32 {
+type PlayerSubType = strict bits : uint32 {
     AUDIO_BOOK = 0x01;
 
     PODCAST = 0x02;
 
-    // Bits 2 - 31 are reserved.
+// Bits 2 - 31 are reserved.
 };
 
 /// Response data for the browseable items associated with a media player.
 /// Defined by AVRCP 1.6.2 section 6.10.2.1.
-table MediaPlayerItem {
-    1: uint16 player_id;
+type MediaPlayerItem = table {
+    1: player_id uint16;
 
-    2: MajorPlayerType major_type;
+    2: major_type MajorPlayerType;
 
-    3: PlayerSubType sub_type;
+    3: sub_type PlayerSubType;
 
-    4: PlaybackStatus playback_status;
+    4: playback_status PlaybackStatus;
 
-    5: string:255 displayable_name;
+    5: displayable_name string:255;
 };
 
 /// Defined by AV\C Panel specification.
-enum AvcPanelCommand : uint8 {
+type AvcPanelCommand = strict enum : uint8 {
     SELECT = 0x00;
     UP = 0x01;
     DOWN = 0x02;

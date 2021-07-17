@@ -1,8 +1,6 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.media;
 
 using zx;
@@ -21,14 +19,19 @@ protocol StreamBufferSet {
     ///
     /// A buffer with ID `id` must not be in the current set when this method is
     /// invoked, otherwise the service will close the connection.
-    AddPayloadBuffer(uint32 id, zx.handle:VMO payload_buffer);
+    AddPayloadBuffer(resource struct {
+        id uint32;
+        payload_buffer zx.handle:VMO;
+    });
 
     /// Removes a payload buffer from the current buffer set associated with the
     /// connection.
     ///
     /// A buffer with ID `id` must exist in the current set when this method is
     /// invoked, otherwise the service will will close the connection.
-    RemovePayloadBuffer(uint32 id);
+    RemovePayloadBuffer(struct {
+        id uint32;
+    });
 };
 
 /// Consumes a stream of packets. This interface is typically inherited along
@@ -40,7 +43,9 @@ protocol StreamSink {
     ///
     /// `packet` must be valid for the current buffer set, otherwise the service
     /// will close the connection.
-    SendPacket(StreamPacket packet) -> ();
+    SendPacket(struct {
+        packet StreamPacket;
+    }) -> ();
 
     /// Sends a packet to the service. This interface doesn't define how the
     /// client knows when the sink is done with the associated payload memory.
@@ -48,7 +53,9 @@ protocol StreamSink {
     ///
     /// `packet` must be valid for the current buffer set, otherwise the service
     /// will close the connection.
-    SendPacketNoReply(StreamPacket packet);
+    SendPacketNoReply(struct {
+        packet StreamPacket;
+    });
 
     /// Indicates the stream has ended. The precise semantics of this method are
     /// determined by the inheriting interface.
@@ -71,14 +78,18 @@ protocol StreamSource {
     /// Delivers a packet produced by the service. When the client is done with
     /// the payload memory, the client must call `ReleasePacket` to release the
     /// payload memory.
-    -> OnPacketProduced(StreamPacket packet);
+    -> OnPacketProduced(struct {
+        packet StreamPacket;
+    });
 
     /// Indicates that the stream has ended.
     -> OnEndOfStream();
 
     /// Releases payload memory associated with a packet previously delivered
     /// via `OnPacketProduced`.
-    ReleasePacket(StreamPacket packet);
+    ReleasePacket(struct {
+        packet StreamPacket;
+    });
 
     // These methods were mistakenly copied from `StreamSink` and are intended
     // to be analogs of the `StreamSink` methods. In order to function as
@@ -100,10 +111,10 @@ protocol SimpleStreamSink {
 };
 
 /// Describes a packet consumed by `StreamSink` or produced by `StreamSource`.
-struct StreamPacket {
+type StreamPacket = struct {
     /// Time at which the packet is to be presented, according to the
     /// presentation clock.
-    int64 pts = NO_TIMESTAMP;
+    pts int64 = NO_TIMESTAMP;
 
     /// ID of the payload buffer used for this packet.
     ///
@@ -111,23 +122,23 @@ struct StreamPacket {
     /// a payload buffer provided via `StreamBufferSet.AddPayloadBuffer`. In
     /// that case, this value must identify a payload buffer in the current set.
     /// Other interfaces may define different semantics for this field.
-    uint32 payload_buffer_id;
+    payload_buffer_id uint32;
 
     /// Offset of the packet payload in the payload buffer.
     ///
     /// This value plus the `payload_size` value must be less than or equal to
     /// the size of the referenced payload buffer.
-    uint64 payload_offset;
+    payload_offset uint64;
 
     /// Size in bytes of the payload.
     ///
     /// This value plus the `payload_offest` value must be less than or equal to
     /// the size of the referenced payload buffer.
-    uint64 payload_size;
+    payload_size uint64;
 
     /// An bitwise-or'ed set of flags (see constants below) describing
     /// properties of this packet.
-    uint32 flags = 0;
+    flags uint32 = 0;
 
     /// The buffer configuration associated with this packet. The semantics of
     /// this field depend on the interface with which this struct is used.
@@ -136,35 +147,35 @@ struct StreamPacket {
     /// are explicitly identified. In such cases, the `payload_buffer_id` refers
     /// to a payload buffer in the buffer configuration identified by this
     /// field.
-    uint64 buffer_config = 0;
+    buffer_config uint64 = 0;
 
     /// The stream segment associated with this packet. The semantics of this
     /// field depend on the interface with which this struct is used. In many
     /// contexts, this field is not used. This field is intended to distinguish
     /// contiguous segments of the stream where stream properties (e.g.
     /// encoding) may differ from segment to segment.
-    uint64 stream_segment_id = 0;
+    stream_segment_id uint64 = 0;
 };
 
 /// When used as a `StreamPacket.pts` value, indicates that the packet has no
 /// specific presentation timestamp. The effective presentation time of such a
 /// packet depends on the context in which the `StreamPacket` is used.
-const int64 NO_TIMESTAMP = 0x7fffffffffffffff;
+const NO_TIMESTAMP int64 = 0x7fffffffffffffff;
 
 // `StreamPacket.flags` values.
 //
 /// Indicates that the packet can be understood without reference to other
 /// packets in the stream. This is typically used in compressed streams to
 /// identify packets that contain key frames.
-const uint32 STREAM_PACKET_FLAG_KEY_FRAME = 0x01;
+const STREAM_PACKET_FLAG_KEY_FRAME uint32 = 0x01;
 
 /// Indicates that all other packets in the stream can be understood without
 /// reference to this packet. This is typically used in compressed streams to
 /// identify packets containing frames that may be discarded without affecting
 /// other frames.
-const uint32 STREAM_PACKET_FLAG_DROPPABLE = 0x02;
+const STREAM_PACKET_FLAG_DROPPABLE uint32 = 0x02;
 
 /// Indicates a discontinuity in an otherwise continuous-in-time sequence of
 /// packets. The precise semantics of this flag depend on the context in which
 /// the `StreamPacket` is used.
-const uint32 STREAM_PACKET_FLAG_DISCONTINUITY = 0x04;
+const STREAM_PACKET_FLAG_DISCONTINUITY uint32 = 0x04;

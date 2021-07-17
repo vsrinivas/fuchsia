@@ -1,43 +1,62 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.boot;
 
-const uint8 MAX_ARGS_NAME_LENGTH = 64;
-const uint8 MAX_ARGS_VALUE_LENGTH = 128;
+const MAX_ARGS_NAME_LENGTH uint8 = 64;
+const MAX_ARGS_VALUE_LENGTH uint8 = 128;
 // MAX_ARGS_NAME_LENGTH + MAX_ARGS_VALUE_LENGTH + 1 (for '=')
-const uint8 MAX_ARGS_COLLECT_LENGTH = 193;
-const uint8 MAX_ARGS_VECTOR_LENGTH = 32;
+const MAX_ARGS_COLLECT_LENGTH uint8 = 193;
+const MAX_ARGS_VECTOR_LENGTH uint8 = 32;
 
-struct BoolPair {
-    string:MAX_ARGS_NAME_LENGTH key;
-    bool defaultval;
+type BoolPair = struct {
+    key string:MAX_ARGS_NAME_LENGTH;
+    defaultval bool;
 };
 
 /// Protocol for retrieving boot arguments.
-[Discoverable]
+@discoverable
 protocol Arguments {
     /// Get the value of a boot argument `key`.
-    GetString(string:MAX_ARGS_NAME_LENGTH key) -> (string:MAX_ARGS_VALUE_LENGTH? value);
+    GetString(struct {
+        key string:MAX_ARGS_NAME_LENGTH;
+    }) -> (struct {
+        value string:<MAX_ARGS_VALUE_LENGTH, optional>;
+    });
 
     /// Get the values of a list of arguments specified in `keys`.
-    GetStrings(vector<string:MAX_ARGS_NAME_LENGTH>:MAX_ARGS_VECTOR_LENGTH keys) -> (vector<string:MAX_ARGS_VALUE_LENGTH?>:MAX_ARGS_COLLECT_LENGTH values);
+    GetStrings(struct {
+        keys vector<string:MAX_ARGS_NAME_LENGTH>:MAX_ARGS_VECTOR_LENGTH;
+    }) -> (struct {
+        values vector<string:<MAX_ARGS_VALUE_LENGTH, optional>>:MAX_ARGS_COLLECT_LENGTH;
+    });
 
     /// Get the boolean value of a boot argument `keys`,
     /// or return `defaultval` if the argument is not present.
     /// A key is considered to be false if its string value is exactly
     /// "off", "0", or "false". Any other value (including empty) is returned
     /// as true.
-    GetBool(string:MAX_ARGS_NAME_LENGTH key, bool defaultval) -> (bool value);
+    GetBool(struct {
+        key string:MAX_ARGS_NAME_LENGTH;
+        defaultval bool;
+    }) -> (struct {
+        value bool;
+    });
 
     /// Get the boolean values of a list of boot arguments `keys.key`,
     /// or return `keys.defaultval` for each if not present.
-    GetBools(vector<BoolPair>:MAX_ARGS_VECTOR_LENGTH keys) -> (vector<bool>:MAX_ARGS_VECTOR_LENGTH values);
+    GetBools(struct {
+        keys vector<BoolPair>:MAX_ARGS_VECTOR_LENGTH;
+    }) -> (struct {
+        values vector<bool>:MAX_ARGS_VECTOR_LENGTH;
+    });
 
     /// Get all boot arguments with keys starting with
     /// `prefix`. Returns a vector with strings of the form 'key=value'.
     /// TODO(fxbug.dev/33460) - remove Collect once boot arguments have been componentised.
-    Collect(string:MAX_ARGS_NAME_LENGTH prefix) -> (vector<string:MAX_ARGS_COLLECT_LENGTH>:MAX_ARGS_VECTOR_LENGTH results);
+    Collect(struct {
+        prefix string:MAX_ARGS_NAME_LENGTH;
+    }) -> (struct {
+        results vector<string:MAX_ARGS_COLLECT_LENGTH>:MAX_ARGS_VECTOR_LENGTH;
+    });
 };

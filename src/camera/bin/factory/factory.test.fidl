@@ -1,19 +1,17 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.factory.camera;
 
 using fuchsia.images;
 using zx;
 
-enum WhiteBalanceMode : uint8 {
+type WhiteBalanceMode = strict enum : uint8 {
     AUTO = 0;
     MANUAL = 1;
 };
 
-enum ExposureMode : uint8 {
+type ExposureMode = strict enum : uint8 {
     AUTO = 0;
     FULL_MANUAL = 1;
     MANUAL_GAIN = 2;
@@ -21,13 +19,15 @@ enum ExposureMode : uint8 {
 };
 
 /// This interface provides access to factory-only functionality in the ISP driver.
-[Discoverable]
+@discoverable
 protocol Controller {
     /// Instructs the controller to switch its stream format based on the ISP's output.
     /// + request `on` The ISP's streaming mode:
     ///                 `True` 16-bit portable grey map format.
     ///                 `False` 10-bit RGB format.
-    IsIspBypassModeEnabled(bool enabled);
+    IsIspBypassModeEnabled(struct {
+        enabled bool;
+    });
 
     /// Instructs the device to capture a frame from the stream, and write it to disk.
     ///
@@ -40,8 +40,12 @@ protocol Controller {
     ///                                  not a directory.
     /// - response `image_info` A struct outlining the image's properties, e.g.
     ///                         width/height, pixel format, etc.
-    CaptureFrames(string dir_path)
-        -> (zx.status s, fuchsia.images.ImageInfo image_info);
+    CaptureFrames(struct {
+        dir_path string;
+    }) -> (struct {
+        s zx.status;
+        image_info fuchsia.images.ImageInfo;
+    });
 
     /// Displays a single stream the DUT's screen.
     ///
@@ -51,11 +55,15 @@ protocol Controller {
     ///                 `ZX_OK` if the operation succeeded.
     ///                 `ZX_ERR_UNAVAILABLE` if there are no active streams to display from.
     ///                 `ZX_ERR_NOT_SUPPORTED` if the DUT does not have a screen.
-    DisplayToScreen(uint32 stream_index) -> (zx.status s);
+    DisplayToScreen(struct {
+        stream_index uint32;
+    }) -> (struct {
+        s zx.status;
+    });
 };
 
 /// This interface provides access to factory-only functionality in the ISP driver.
-[Discoverable]
+@discoverable
 protocol Isp {
     // Getters
 
@@ -67,7 +75,11 @@ protocol Isp {
     ///                             unavailable.
     ///                 `ZX_ERR_NOT_SUPPORTED` if the camera module does not have an OTP.
     /// - response `otp_data` A handle to a VMO containing the requested OTP data.
-    GetOtpData() -> (zx.status s, uint64 byte_count, zx.handle:VMO otp_data);
+    GetOtpData() -> (resource struct {
+        s zx.status;
+        byte_count uint64;
+        otp_data zx.handle:VMO;
+    });
 
     /// Retrieves the sensor's temperature.
     ///
@@ -76,7 +88,10 @@ protocol Isp {
     ///                 `ZX_ERR_IO` if the sensor is not initialized or is otherwise unavailable.
     ///                 `ZX_ERR_NOT_SUPPORTED` if the sensor does not support this feature.
     /// - response `temp` The sensor's operating temperature (in degrees Celsius).
-    GetSensorTemperature() -> (zx.status s, int32 temp);
+    GetSensorTemperature() -> (struct {
+        s zx.status;
+        temp int32;
+    });
 
     // Setters
 
@@ -85,12 +100,17 @@ protocol Isp {
     /// + request `mode` An AWB mode.
     /// + request `temp` The white balance temperature to use (in degrees Kelvin).
     ///                  Has no effect if the mode is not set to MANUAL.
-    SetAWBMode(WhiteBalanceMode mode, uint32 temp) -> ();
+    SetAWBMode(struct {
+        mode WhiteBalanceMode;
+        temp uint32;
+    }) -> ();
 
     /// Enables or disables the ISP's Auto Exposure feature.
     ///
     /// + request `mode` An AE mode.
-    SetAEMode(ExposureMode mode) -> ();
+    SetAEMode(struct {
+        mode ExposureMode;
+    }) -> ();
 
     /// Sets the parameters for the sensor's manual exposure settings.
     ///
@@ -106,8 +126,11 @@ protocol Isp {
     ///
     /// * See [`camera-sensor.banjo`] for more information on these params:
     ///     //sdk/banjo/fuchsia.hardware.camera.sensor/camera-sensor.banjo
-    SetExposure(float32 integration_time, float32 analog_gain, float32 digital_gain)
-        -> ();
+    SetExposure(struct {
+        integration_time float32;
+        analog_gain float32;
+        digital_gain float32;
+    }) -> ();
 
     /// Selects the sensor mode.
     ///
@@ -116,7 +139,9 @@ protocol Isp {
     ///
     /// * See [`camera-sensor.banjo`] for more information on this param:
     ///     //sdk/banjo/fuchsia.hardware.camera.sensor/camera-sensor.banjo
-    SetSensorMode(uint32 mode) -> ();
+    SetSensorMode(struct {
+        mode uint32;
+    }) -> ();
 
     /// Selects the sensor test pattern mode.
     ///
@@ -124,10 +149,14 @@ protocol Isp {
     ///
     /// * See [`camera-sensor.banjo`] for more information on this param:
     ///     //sdk/banjo/fuchsia.hardware.camera.sensor/camera-sensor.banjo
-    SetTestPatternMode(uint16 mode) -> ();
+    SetTestPatternMode(struct {
+        mode uint16;
+    }) -> ();
 
     /// Sets the bypass mode.
     ///
     /// + request `on` True to enable 19:4 (16-bit) bypass mode, outputting raw sensor bits
-    SetBypassMode(bool on) -> ();
+    SetBypassMode(struct {
+        on bool;
+    }) -> ();
 };

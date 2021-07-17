@@ -1,127 +1,189 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library zx;
 
 // TODO(cja): This makes some assumptions that anything in an arch's PIO region
 // is going to be defined as a base address and size. This will need to be
 // updated to a per-platform structure in the event that doesn't pan out
 // in the future.
-struct PciBar {
-    uint32 id;
-    uint32 type;
-    usize size;
-    // TODO(scottmg): Unnamed union.
-    //union {
-    //    uintptr_t addr;
-    //    zx_handle_t handle;
-    //};
+type PciBar = struct {
+    id uint32;
+    type uint32;
+    size usize;
+// TODO(scottmg): Unnamed union.
+//union {
+//    uintptr_t addr;
+//    zx_handle_t handle;
+//};
 };
 
 // Defines and structures related to zx_pci_*()
 // Info returned to dev manager for PCIe devices when probing.
-struct PcieDeviceInfo {
-    uint16 vendor_id;
-    uint16 device_id;
+type PcieDeviceInfo = struct {
+    vendor_id uint16;
+    device_id uint16;
 
-    uint8 base_class;
-    uint8 sub_class;
-    uint8 program_interface;
-    uint8 revision_id;
+    base_class uint8;
+    sub_class uint8;
+    program_interface uint8;
+    revision_id uint8;
 
-    uint8 bus_id;
-    uint8 dev_id;
-    uint8 func_id;
+    bus_id uint8;
+    dev_id uint8;
+    func_id uint8;
 };
 
 // TODO(scottmg): Lots of constants here.
 
 // TODO(scottmg): This one is hard.
-struct PciInitArg {
+type PciInitArg = struct {
     // TODO(scottmg): [][][] array.
     // zx_pci_irq_swizzle_lut_t dev_pin_to_global_irq;
 
-    uint32 num_irqs;
+    num_irqs uint32;
     //struct {
     //  uint32_t global_irq;
     //  bool level_triggered;
     //  bool active_high;
     //} irqs[ZX_PCI_MAX_IRQS];
 
-    uint32 addr_window_count;
-    // TODO(scottmg): struct-hack sized.
-    //struct {
-    //  uint64_t base;
-    //  size_t size;
-    //  uint8_t bus_start;
-    //  uint8_t bus_end;
-    //  uint8_t cfg_space_type;
-    //  bool has_ecam;
-    //} addr_windows[];
+    addr_window_count uint32;
+// TODO(scottmg): struct-hack sized.
+//struct {
+//  uint64_t base;
+//  size_t size;
+//  uint8_t bus_start;
+//  uint8_t bus_end;
+//  uint8_t cfg_space_type;
+//  bool has_ecam;
+//} addr_windows[];
 };
 
-[Transport = "Syscall"]
+@transport("Syscall")
 protocol pci {
     /// Rights: handle must have resource kind ZX_RSRC_KIND_ROOT.
-    pci_get_nth_device(handle:RESOURCE handle, uint32 index)
-        -> (status status, PcieDeviceInfo out_info, handle out_handle);
+    pci_get_nth_device(resource struct {
+        handle handle:RESOURCE;
+        index uint32;
+    }) -> (resource struct {
+        status status;
+        out_info PcieDeviceInfo;
+        out_handle handle;
+    });
 
     /// Rights: handle must be of type ZX_OBJ_TYPE_PCI_DEVICE and have ZX_RIGHT_WRITE.
-    pci_enable_bus_master(handle:PCI_DEVICE handle, uint32 enable) -> (status status);
+    pci_enable_bus_master(resource struct {
+        handle handle:PCI_DEVICE;
+        enable uint32;
+    }) -> (struct {
+        status status;
+    });
 
     /// Rights: handle must be of type ZX_OBJ_TYPE_PCI_DEVICE and have ZX_RIGHT_WRITE.
-    pci_reset_device(handle:PCI_DEVICE handle) -> (status status);
+    pci_reset_device(resource struct {
+        handle handle:PCI_DEVICE;
+    }) -> (struct {
+        status status;
+    });
 
     // TODO(scottmg): In banjo/abigen out_val wasn't optional, but was an input
     // OUT, so didn't get the __NONNULL() tag, so we match by making it optional
     // here. I think this is probably not the intention, and it should be
     // non-optional.
     /// Rights: handle must be of type ZX_OBJ_TYPE_PCI_DEVICE and have ZX_RIGHT_READ and have ZX_RIGHT_WRITE.
-    pci_config_read(handle:PCI_DEVICE handle, uint16 offset, usize width)
-        -> (status status, optional_uint32 out_val);
+    pci_config_read(resource struct {
+        handle handle:PCI_DEVICE;
+        offset uint16;
+        width usize;
+    }) -> (struct {
+        status status;
+        out_val optional_uint32;
+    });
 
     /// Rights: handle must be of type ZX_OBJ_TYPE_PCI_DEVICE and have ZX_RIGHT_READ and have ZX_RIGHT_WRITE.
-    pci_config_write(handle:PCI_DEVICE handle, uint16 offset, usize width, uint32 val)
-        -> (status status);
+    pci_config_write(resource struct {
+        handle handle:PCI_DEVICE;
+        offset uint16;
+        width usize;
+        val uint32;
+    }) -> (struct {
+        status status;
+    });
 
     /// Rights: handle must have resource kind ZX_RSRC_KIND_ROOT.
-    pci_cfg_pio_rw(handle:RESOURCE handle,
-                   uint8 bus,
-                   uint8 dev,
-                   uint8 func,
-                   uint8 offset,
-                   mutable_uint32 val,
-                   usize width,
-                   uint32 write)
-        -> (status status);
+    pci_cfg_pio_rw(resource struct {
+        handle handle:RESOURCE;
+        bus uint8;
+        dev uint8;
+        func uint8;
+        offset uint8;
+        val mutable_uint32;
+        width usize;
+        write uint32;
+    }) -> (struct {
+        status status;
+    });
 
     // TODO(scottmg): type of out_handle?
     // TODO(scottmg): In banjo/abigen out_bar wasn't optional, but was an input
     // OUT, so has no __NONNULL(). I think this is probably not the intention.
     /// Rights: handle must be of type ZX_OBJ_TYPE_PCI_DEVICE and have ZX_RIGHT_READ and have ZX_RIGHT_WRITE.
-    pci_get_bar(handle:PCI_DEVICE handle, uint32 bar_num)
-        -> (status status, optional_PciBar out_bar, handle out_handle);
+    pci_get_bar(resource struct {
+        handle handle:PCI_DEVICE;
+        bar_num uint32;
+    }) -> (resource struct {
+        status status;
+        out_bar optional_PciBar;
+        out_handle handle;
+    });
 
     /// Rights: handle must be of type ZX_OBJ_TYPE_PCI_DEVICE and have ZX_RIGHT_READ.
-    pci_map_interrupt(handle:PCI_DEVICE handle, int32 which_irq)
-        -> (status status, handle out_handle);
+    pci_map_interrupt(resource struct {
+        handle handle:PCI_DEVICE;
+        which_irq int32;
+    }) -> (resource struct {
+        status status;
+        out_handle handle;
+    });
 
     /// Rights: handle must be of type ZX_OBJ_TYPE_PCI_DEVICE and have ZX_RIGHT_READ.
-    pci_query_irq_mode(handle:PCI_DEVICE handle, uint32 mode)
-        -> (status status, uint32 out_max_irqs);
+    pci_query_irq_mode(resource struct {
+        handle handle:PCI_DEVICE;
+        mode uint32;
+    }) -> (struct {
+        status status;
+        out_max_irqs uint32;
+    });
 
     /// Rights: handle must be of type ZX_OBJ_TYPE_PCI_DEVICE and have ZX_RIGHT_WRITE.
-    pci_set_irq_mode(handle:PCI_DEVICE handle, uint32 mode, uint32 requested_irq_count)
-        -> (status status);
+    pci_set_irq_mode(resource struct {
+        handle handle:PCI_DEVICE;
+        mode uint32;
+        requested_irq_count uint32;
+    }) -> (struct {
+        status status;
+    });
 
     // Note that init_buf isn't a vector of PciInitArg, it's a variable sized
     // structure starting with a zx_pci_init_arg_t.
     /// Rights: handle must have resource kind ZX_RSRC_KIND_ROOT.
-    pci_init(handle:RESOURCE handle, PciInitArg init_buf, uint32 len) -> (status status);
+    pci_init(resource struct {
+        handle handle:RESOURCE;
+        init_buf PciInitArg;
+        len uint32;
+    }) -> (struct {
+        status status;
+    });
 
     /// Rights: handle must have resource kind ZX_RSRC_KIND_ROOT.
-    pci_add_subtract_io_range(handle:RESOURCE handle, uint32 mmio, uint64 base, uint64 len, uint32 add)
-        -> (status status);
+    pci_add_subtract_io_range(resource struct {
+        handle handle:RESOURCE;
+        mmio uint32;
+        base uint64;
+        len uint64;
+        add uint32;
+    }) -> (struct {
+        status status;
+    });
 };

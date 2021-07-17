@@ -1,7 +1,6 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
 library fidl.test.tablememberremove;
 
 // placeholder types that are easy to print
@@ -9,8 +8,8 @@ alias Timezone = string:50;
 alias TemperatureUnit = string:50;
 
 // [START contents]
-table Profile {
-    1: Timezone timezone;
-    2: TemperatureUnit temperature_unit;
+type Profile = table {
+    1: timezone Timezone;
+    2: temperature_unit TemperatureUnit;
 };
 // [END contents]

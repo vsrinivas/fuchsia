@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.clockimpl;
 
 using zx;
@@ -14,20 +12,65 @@ using zx;
 /// Conversely, each instance of ZX_PROTOCOL_CLOCK pertains to only one clock
 /// in the system.
 /// See clock.banjo for documentation for each method.
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol ClockImpl {
     /// Clock Gating Control.
-    Enable(uint32 id) -> (zx.status s);
-    Disable(uint32 id) -> (zx.status s);
-    IsEnabled(uint32 id) -> (zx.status s, bool enabled);
+    Enable(struct {
+        id uint32;
+    }) -> (struct {
+        s zx.status;
+    });
+    Disable(struct {
+        id uint32;
+    }) -> (struct {
+        s zx.status;
+    });
+    IsEnabled(struct {
+        id uint32;
+    }) -> (struct {
+        s zx.status;
+        enabled bool;
+    });
 
     /// Clock Frequency Scaling Control.
-    SetRate(uint32 id, uint64 hz) -> (zx.status s);
-    QuerySupportedRate(uint32 id, uint64 hz) -> (zx.status s, uint64 hz);
-    GetRate(uint32 id) -> (zx.status s, uint64 hz);
+    SetRate(struct {
+        id uint32;
+        hz uint64;
+    }) -> (struct {
+        s zx.status;
+    });
+    QuerySupportedRate(struct {
+        id uint32;
+        hz uint64;
+    }) -> (struct {
+        s zx.status;
+        hz uint64;
+    });
+    GetRate(struct {
+        id uint32;
+    }) -> (struct {
+        s zx.status;
+        hz uint64;
+    });
 
     /// Clock input control.
-    SetInput(uint32 id, uint32 idx) -> (zx.status s);
-    GetNumInputs(uint32 id) -> (zx.status s, uint32 n);
-    GetInput(uint32 id) -> (zx.status s, uint32 index);
+    SetInput(struct {
+        id uint32;
+        idx uint32;
+    }) -> (struct {
+        s zx.status;
+    });
+    GetNumInputs(struct {
+        id uint32;
+    }) -> (struct {
+        s zx.status;
+        n uint32;
+    });
+    GetInput(struct {
+        id uint32;
+    }) -> (struct {
+        s zx.status;
+        index uint32;
+    });
 };

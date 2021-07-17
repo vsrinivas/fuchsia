@@ -1,8 +1,6 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.ui.policy;
 
 /// Manipulates global policy for display backlight. Serves as the main "front
@@ -19,7 +17,7 @@ library fuchsia.ui.policy;
 /// manipulate display backlight functionality.
 ///
 /// Reference. Related to fuchsia.hardware.display.Controller.
-[Discoverable]
+@discoverable
 protocol DisplayBacklight {
     /// Submits a new minimum color channel value for display backlight.
     ///
@@ -29,5 +27,7 @@ protocol DisplayBacklight {
     /// Flow control: The caller is allowed at most one in-flight
     /// |SetMinimumRgb| at at time. Subsequent calls must wait until the
     /// acknowledgment returns. Non-compliance results in channel closure.
-    SetMinimumRgb(uint8 minimum_rgb) -> ();
+    SetMinimumRgb(struct {
+        minimum_rgb uint8;
+    }) -> ();
 };

@@ -1,21 +1,21 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.ffx.test;
 
-[Discoverable]
+@discoverable
 protocol Noop {
     /// Does a noop.
     DoNoop() -> ();
 };
 
-[Discoverable]
+@discoverable
 protocol Counter {
     /// Adds one to the internal state.
     AddOne() -> ();
 
     /// Gets the internal state.
-    GetCount() -> (uint64 count);
+    GetCount() -> (struct {
+        count uint64;
+    });
 };

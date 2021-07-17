@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.session;
 
 using fuchsia.sys;
@@ -23,7 +21,7 @@ using fuchsia.url;
 /// element to the session via the `ElementManager` protocol. Similarly,
 /// the element proposer may be part of an interactive user interface that
 /// proposes elements based on user input.
-[Discoverable]
+@discoverable
 protocol ElementManager {
     /// Proposes to add an element to the session.
     ///
@@ -59,8 +57,10 @@ protocol ElementManager {
     ///   does not have a valid [`fuchsia.sys/ServiceList.host_directory`]
     /// * error `ProposeElementError.REJECTED` if `spec.additional_services`
     ///   contains a non-null [`fuchsia.sys/ServiceList.provider`]
-    ProposeElement(ElementSpec spec, request<ElementController>? element_controller)
-        -> () error ProposeElementError;
+    ProposeElement(resource struct {
+        spec ElementSpec;
+        element_controller server_end:<ElementController, optional>;
+    }) -> (struct {}) error ProposeElementError;
 };
 
 /// An interface that gives clients of `ElementManager` (element proposers) control
@@ -87,16 +87,20 @@ protocol ElementController {
     /// * error `AnnotationError.REJECTED` if the `annotations` could not be set
     ///   (the exact reason depends on the session implementation;
     ///   see [`AnnotationError.REJECTED`] for some specific examples)
-    SetAnnotations(Annotations annotations) -> () error AnnotationError;
+    SetAnnotations(resource struct {
+        annotations Annotations;
+    }) -> (struct {}) error AnnotationError;
 
     /// Returns the current `Annotations` for the element.
     ///
     /// * error `AnnotationError.NOT_FOUND` if the annotations could not be read.
-    GetAnnotations() -> (Annotations annotations) error AnnotationError;
+    GetAnnotations() -> (resource struct {
+        annotations Annotations;
+    }) error AnnotationError;
 };
 
 /// Errors that can be returned when attempting to add elements to a session.
-enum ProposeElementError {
+type ProposeElementError = strict enum {
     /// The element's component URL could not be resolved.
     NOT_FOUND = 1;
 
@@ -107,13 +111,13 @@ enum ProposeElementError {
 };
 
 /// Description of an element to be added to a session.
-resource table ElementSpec {
+type ElementSpec = resource table {
     /// The component URL of the element. Required.
-    1: fuchsia.url.Url component_url;
+    1: component_url fuchsia.url.Url;
 
     /// Initial annotations on the element. Optional.
-    2: Annotations annotations;
+    2: annotations Annotations;
 
     /// A list of services passed to the Element. Optional.
-    3: fuchsia.sys.ServiceList additional_services;
+    3: additional_services fuchsia.sys.ServiceList;
 };

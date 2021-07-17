@@ -1,8 +1,6 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.sys2;
 
 using fuchsia.io;
@@ -10,13 +8,13 @@ using fuchsia.io;
 /// A package is a signed collection of immutable files.
 ///
 /// This object provides access to a package's content and relevant metadata.
-resource table Package {
+type Package = resource table {
     /// The URL of the package itself.
-    1: string package_url;
+    1: package_url string;
 
     /// The package's content directory.
-    2: fuchsia.io.Directory package_dir;
+    2: package_dir client_end:fuchsia.io.Directory;
 
-    // TODO(fxbug.dev/4051): Add more metadata for the package such as its
-    // code signing information.
+// TODO(fxbug.dev/4051): Add more metadata for the package such as its
+// code signing information.
 };

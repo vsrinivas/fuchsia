@@ -1,22 +1,20 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.vsock;
 
 using zx;
 using fuchsia.hardware.vsock;
 
 /// Collection of objects that represent an open connection.
-resource struct ConnectionTransport {
+type ConnectionTransport = resource struct {
     /// `data` socket that is ultimately given to the underlying vsock driver and
     /// is where all incoming data can be received from.
-    zx.handle:SOCKET data;
+    data zx.handle:SOCKET;
     /// `Connection` interface that is retained by a vsock service that can be
     /// used to manipulate the state of a connection or perform more complex
     /// operations than just sending and receiving on a socket.
-    request<Connection> con;
+    con server_end:Connection;
 };
 
 /// Interface for manipulating the state of an active connection.
@@ -27,25 +25,47 @@ protocol Connection {
     Shutdown();
     /// Send a VMO. The reply indicates that the VMO send has finished and that
     /// data may be queued on the socket again without causing races.
-    SendVmo(zx.handle:VMO vmo, uint64 off, uint64 len) -> (zx.status status);
+    SendVmo(resource struct {
+        vmo zx.handle:VMO;
+        off uint64;
+        len uint64;
+    }) -> (struct {
+        status zx.status;
+    });
 };
 
 /// Interface presented by a listener to accept or reject connections
 protocol Acceptor {
     /// The response is either a `ConnectionTransport` to indicate that the connection
     /// is accepted, or none to indicate that it should be rejected.
-    Accept(fuchsia.hardware.vsock.Addr addr) -> (ConnectionTransport? con);
+    Accept(struct {
+        addr fuchsia.hardware.vsock.Addr;
+    }) -> (resource struct {
+        con box<ConnectionTransport>;
+    });
 };
 
 /// Exposed by a service that can act as a bridge to the underlying vsock driver and
 /// provides the ability for listeners to be multiplexed by port and manages dynamic
 /// port allocation for outbound connections.
-[Discoverable]
+@discoverable
 protocol Connector {
     /// Attempt to establish a connection to the specified remote cid/port pair.
     /// No local port is specified as an ephemeral one will automatically be allocated.
-    Connect(uint32 remote_cid, uint32 remote_port, ConnectionTransport con) -> (zx.status status, uint32 local_port);
+    Connect(resource struct {
+        remote_cid uint32;
+        remote_port uint32;
+        con ConnectionTransport;
+    }) -> (struct {
+        status zx.status;
+        local_port uint32;
+    });
     /// Registers a listener for a local port. There can only be one listener for
     /// a single port at a time.
-    Listen(uint32 local_port, Acceptor acceptor) -> (zx.status status);
+    Listen(resource struct {
+        local_port uint32;
+        acceptor client_end:Acceptor;
+    }) -> (struct {
+        status zx.status;
+    });
 };

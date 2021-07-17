@@ -1,51 +1,58 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 // DEPRECATED: This library is being replaced. Do not add new dependencies
 // to this interface.
 
 library fuchsia.inspect.deprecated;
 
-union PropertyValue {
-    1: string:MAX str;
-    2: vector<uint8>:MAX bytes;
+type PropertyValue = strict union {
+    1: str string:MAX;
+    2: bytes vector<uint8>:MAX;
 };
 
 // A string property on an `Object`. Consisting of a key and value.
-struct Property {
-    string:MAX key;
-    PropertyValue value;
+type Property = struct {
+    key string:MAX;
+    value PropertyValue;
 };
 
 // The value of a metric is one of these numeric types.
-union MetricValue {
-    1: int64 int_value;
-    2: uint64 uint_value;
-    3: float64 double_value;
+type MetricValue = strict union {
+    1: int_value int64;
+    2: uint_value uint64;
+    3: double_value float64;
 };
 
 // A Metric is a string key and the associated numeric value.
-struct Metric {
-    string:MAX key;
-    MetricValue value;
+type Metric = struct {
+    key string:MAX;
+    value MetricValue;
 };
 
 // An `Object` has a name and 0 or more properties and metrics.
-struct Object {
-    string:MAX name;
-    vector<Property>:MAX properties;
-    vector<Metric>:MAX metrics;
+type Object = struct {
+    name string:MAX;
+    properties vector<Property>:MAX;
+    metrics vector<Metric>:MAX;
 };
 
 // The `Inspect` interface provides a point for Components to expose
 // structured Objects for inspection. An Object may have 0 or more children.
-[Discoverable]
+@discoverable
 protocol Inspect {
-    ReadData() -> (Object object);
-    ListChildren() -> (vector<string:MAX>:MAX children_names);
+    ReadData() -> (struct {
+        object Object;
+    });
+    ListChildren() -> (struct {
+        children_names vector<string:MAX>:MAX;
+    });
     // Open a child of this Object by name.
     // The name should match what is returned by ListChildren.
-    OpenChild(string:MAX child_name, request<Inspect> child_channel) -> (bool success);
+    OpenChild(resource struct {
+        child_name string:MAX;
+        child_channel server_end:Inspect;
+    }) -> (struct {
+        success bool;
+    });
 };

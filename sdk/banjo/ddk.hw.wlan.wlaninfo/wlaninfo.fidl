@@ -1,14 +1,12 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library ddk.hw.wlan.wlaninfo;
 
 using ddk.hw.wlan.ieee80211;
 
 /// Role of a WLAN device.
-enum WlanInfoMacRole : uint8 {
+type WlanInfoMacRole = strict enum : uint8 {
     /// Device operating as a non-AP station (i.e., a client of an AP).
     CLIENT = 0x1;
 
@@ -19,7 +17,7 @@ enum WlanInfoMacRole : uint8 {
     MESH = 0x4;
 };
 
-enum WlanInfoPhyType {
+type WlanInfoPhyType = strict enum {
     /// IEEE 802.11 for 1, 2 Mbps.
     DSSS = 0x01;
 
@@ -45,9 +43,9 @@ enum WlanInfoPhyType {
     HEW = 0x20;
 };
 
-const uint32 WLAN_INFO_PHY_TYPE_OFDM = 0x4;
+const WLAN_INFO_PHY_TYPE_OFDM uint32 = 0x4;
 
-enum WlanInfoDriverFeature : uint32 {
+type WlanInfoDriverFeature = strict enum : uint32 {
     /// Device or driver implements scanning.
     SCAN_OFFLOAD = 0x00000001;
 
@@ -81,7 +79,7 @@ enum WlanInfoDriverFeature : uint32 {
 };
 
 /// IEEE Std 802.11-206 Section 9.4.1.4 Capability Information Field
-enum WlanInfoHardwareCapability : uint32 {
+type WlanInfoHardwareCapability = strict enum : uint32 {
     /// Short packet preamble.
     SHORT_PREAMBLE = 0x0020;
 
@@ -106,7 +104,7 @@ enum WlanInfoHardwareCapability : uint32 {
 
 /// This is a simplified expression of channel starting frequencies. Expand this
 /// list as Fuchsia evolves.
-enum WlanInfoBand {
+type WlanInfoBand = strict enum {
     /// Channel starting frequency: 2.407 GHz.
     TWO_GHZ = 0;
 
@@ -117,11 +115,11 @@ enum WlanInfoBand {
     COUNT = 2;
 };
 
-const uint32 WLAN_INFO_BAND_2GHZ = 0;
-const uint32 WLAN_INFO_BAND_5GHZ = 1;
+const WLAN_INFO_BAND_2GHZ uint32 = 0;
+const WLAN_INFO_BAND_5GHZ uint32 = 1;
 
 /// The maximum number of supported channels in a WlanInfoChannelList.
-const uint32 WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS = 64;
+const WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS uint32 = 64;
 
 /// A list of channels in a band. Channels are numbered as in IEEE Std 802.11-2016,
 /// 17.3.8.4.2, where each channel is defined as:
@@ -134,40 +132,40 @@ const uint32 WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS = 64;
 ///   Standard 2.4GHz channels:
 ///     base_freq = 2407 MHz
 ///     n = 1-14
-struct WlanInfoChannelList {
+type WlanInfoChannelList = struct {
     /// The base frequency in this band.
-    uint16 base_freq;
+    base_freq uint16;
 
     /// A list of channel center frequencies, as multiples of 5 MHz above base_freq.
-    array<uint8>:WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS channels;
+    channels array<uint8, WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS>;
 };
 
 /// The maximum number of rates in WlanInfoBandInfo.
 // IEEE Std 802.11-2016 defines 12 values in dot11SupportedDataRatesRxTable
-const uint32 WLAN_INFO_BAND_INFO_MAX_RATES = 12;
+const WLAN_INFO_BAND_INFO_MAX_RATES uint32 = 12;
 
 /// Information about a particular WLAN band. Capabilities are grouped by band, by
 /// de facto industry standard.
-struct WlanInfoBandInfo {
+type WlanInfoBandInfo = struct {
     /// The supported band.
-    WlanInfoBand band;
+    band WlanInfoBand;
 
     /// HT PHY capabilities, if supported.
-    bool ht_supported;
-    ddk.hw.wlan.ieee80211.Ieee80211HtCapabilities ht_caps;
+    ht_supported bool;
+    ht_caps ddk.hw.wlan.ieee80211.Ieee80211HtCapabilities;
 
     /// VHT PHY capabilities, if supported.
-    bool vht_supported;
-    ddk.hw.wlan.ieee80211.Ieee80211VhtCapabilities vht_caps;
+    vht_supported bool;
+    vht_caps ddk.hw.wlan.ieee80211.Ieee80211VhtCapabilities;
 
     /// Rates supported in this band, in units of 500 kbit/s (as defined in
     /// IEEE Std 802.11-2016, 9.4.2.3). For example, 1 Mbit/s is represented as 0x02.
-    array<uint8>:WLAN_INFO_BAND_INFO_MAX_RATES rates;
+    rates array<uint8, WLAN_INFO_BAND_INFO_MAX_RATES>;
 
     /// Channels supported in this band.
-    WlanInfoChannelList supported_channels;
+    supported_channels WlanInfoChannelList;
 };
 
 /// The maximum number of bands supported in a WlanInfo struct. For now this is 2
 /// to keep the struct a small, fixed size.
-const uint32 WLAN_INFO_MAX_BANDS = 2;
+const WLAN_INFO_MAX_BANDS uint32 = 2;

@@ -1,7 +1,6 @@
 // Copyright 2013 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
 library fuchsia.netstack;
 
 using fuchsia.hardware.ethernet;
@@ -10,7 +9,7 @@ using fuchsia.net;
 using fuchsia.posix.socket;
 using zx;
 
-enum Status {
+type Status = strict enum {
     OK = 0;
     UNKNOWN_ERROR = 1;
     DNS_ERROR = 2;
@@ -19,73 +18,121 @@ enum Status {
     UNKNOWN_INTERFACE = 5;
 };
 
-struct NetErr {
-    Status status;
-    string:MAX message;
+type NetErr = struct {
+    status Status;
+    message string:MAX;
 };
 
-struct InterfaceConfig {
-    fuchsia.posix.socket.interface_name name;
+type InterfaceConfig = struct {
+    name fuchsia.posix.socket.interface_name;
 
     /// An unstable file path corresponding to the interface. Used in watching the creation
     /// and destruction of the interface, or in accessing the interface using netdump.
-    string:MAX filepath;
+    filepath string:MAX;
 
-    uint32 metric;
+    metric uint32;
 };
 
-struct RouteTableEntry {
-    fuchsia.net.Subnet destination;
-    fuchsia.net.IpAddress? gateway;
-    uint32 nicid;
-    uint32 metric;
+type RouteTableEntry = struct {
+    destination fuchsia.net.Subnet;
+    gateway fuchsia.net.IpAddress:optional;
+    nicid uint32;
+    metric uint32;
 };
 
-struct SocketAddress {
-    fuchsia.net.IpAddress addr;
-    uint16 port;
+type SocketAddress = struct {
+    addr fuchsia.net.IpAddress;
+    port uint16;
 };
 
-[Discoverable]
+@discoverable
 protocol Netstack {
     /// Returns current route table.
-    GetRouteTable() -> (vector<RouteTableEntry>:MAX rt);
+    GetRouteTable() -> (struct {
+        rt vector<RouteTableEntry>:MAX;
+    });
 
     /// Sets the status (up or down) for the interface with the given nicid.
-    SetInterfaceStatus(uint32 nicid, bool enabled);
+    SetInterfaceStatus(struct {
+        nicid uint32;
+        enabled bool;
+    });
 
     /// Sets the address for the interface with the given nicid.
     /// Masks off addr.PrefixLen bits from addr.Addr to set the subnet.
-    SetInterfaceAddress(uint32 nicid, fuchsia.net.IpAddress addr, uint8 prefix_len) -> (NetErr result);
+    SetInterfaceAddress(struct {
+        nicid uint32;
+        addr fuchsia.net.IpAddress;
+        prefix_len uint8;
+    }) -> (struct {
+        result NetErr;
+    });
 
     /// Removes the address for the interface with the given nicid.
     /// Masks off addr.PrefixLen bits from addr.Addr to set the subnet.
-    RemoveInterfaceAddress(uint32 nicid, fuchsia.net.IpAddress addr, uint8 prefix_len) -> (NetErr result);
+    RemoveInterfaceAddress(struct {
+        nicid uint32;
+        addr fuchsia.net.IpAddress;
+        prefix_len uint8;
+    }) -> (struct {
+        result NetErr;
+    });
 
     /// Sets the route metric for the interface with the given nicid.
-    SetInterfaceMetric(uint32 nicid, uint32 metric) -> (NetErr result);
+    SetInterfaceMetric(struct {
+        nicid uint32;
+        metric uint32;
+    }) -> (struct {
+        result NetErr;
+    });
 
     /// Creates a bridge and returns the newly created nicid or an
     /// error if the creation fails.
-    BridgeInterfaces(vector<uint32>:MAX nicids) -> (NetErr result, uint32 nicid);
+    BridgeInterfaces(struct {
+        nicids vector<uint32>:MAX;
+    }) -> (struct {
+        result NetErr;
+        nicid uint32;
+    });
 
     /// Adds a new interface backed by the given ethernet device.
-    AddEthernetDevice(string:MAX topological_path, InterfaceConfig interface_config, fuchsia.hardware.ethernet.Device device) -> (uint32 nicid) error zx.status;
+    AddEthernetDevice(resource struct {
+        topological_path string:MAX;
+        interface_config InterfaceConfig;
+        device client_end:fuchsia.hardware.ethernet.Device;
+    }) -> (struct {
+        nicid uint32;
+    }) error zx.status;
 
     // TODO(stijlist): re-home this protocol. GetDhcpClient should be a member
     // of the protocol that eventually owns network interface management
     // in general.
-    GetDhcpClient(uint32 nicid, request<fuchsia.net.dhcp.Client> client) -> () error zx.status;
+    GetDhcpClient(resource struct {
+        nicid uint32;
+        client server_end:fuchsia.net.dhcp.Client;
+    }) -> (struct {}) error zx.status;
 
     /// Begin a route transaction to synchronize updates to the route table.
     ///
     /// Returns `ZX_OK` if a transaction can be started; `ZX_ERR_SHOULD_WAIT` if a transaction is
     /// currently in progress.
-    StartRouteTableTransaction(request<RouteTableTransaction> route_table_transaction) -> (zx.status status);
+    StartRouteTableTransaction(resource struct {
+        route_table_transaction server_end:RouteTableTransaction;
+    }) -> (struct {
+        status zx.status;
+    });
 };
 
-[Discoverable]
+@discoverable
 protocol RouteTableTransaction {
-    AddRoute(RouteTableEntry r) -> (zx.status status);
-    DelRoute(RouteTableEntry r) -> (zx.status status);
+    AddRoute(struct {
+        r RouteTableEntry;
+    }) -> (struct {
+        status zx.status;
+    });
+    DelRoute(struct {
+        r RouteTableEntry;
+    }) -> (struct {
+        status zx.status;
+    });
 };

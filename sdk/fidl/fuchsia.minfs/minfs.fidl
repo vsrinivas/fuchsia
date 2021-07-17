@@ -1,77 +1,89 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.minfs;
 
 using zx;
 using fuchsia.storage.metrics;
 
 /// Describes metrics about the running Minfs instance.
-[ForDeprecatedCBindings]
-struct Metrics {
-    fuchsia.storage.metrics.FsMetrics fs_metrics;
+@for_deprecated_c_bindings
+type Metrics = struct {
+    fs_metrics fuchsia.storage.metrics.FsMetrics;
 
     /// Minfs initializes entire VMOs at once.
     /// The following fields track this information.
-    uint64 initialized_vmos;
+    initialized_vmos uint64;
     /// Top-level direct blocks only
-    uint32 init_dnum_count;
+    init_dnum_count uint32;
     /// Top-level indirect blocks only
-    uint32 init_inum_count;
-    uint32 init_dinum_count;
-    uint64 init_user_data_size;
-    uint64 init_user_data_ticks;
+    init_inum_count uint32;
+    init_dinum_count uint32;
+    init_user_data_size uint64;
+    init_user_data_ticks uint64;
 
     /// Minfs looks up Vnodes by ino internally (using "VnodeGet").
     /// The following fields track this information.
-    uint64 vnodes_opened_cache_hit;
+    vnodes_opened_cache_hit uint64;
 
     /// The number of bytes in dirty cache for which we have not issued writes yet.
     /// The number is filesystem block aligned.
-    uint64 dirty_bytes;
+    dirty_bytes uint64;
 };
 
-struct MountState {
+type MountState = struct {
     /// True if the fileystem is operational in readonly state. There may have been
     /// writes during mount or during replaying journal.
-    bool readonly_after_initialization;
+    readonly_after_initialization bool;
 
     /// True if the mounted filesystem is collecting metrics.
-    bool collect_metrics;
+    collect_metrics bool;
 
     /// True if the mounted filesystem is in verbose mode.
-    bool verbose;
+    verbose bool;
 
     /// True if the journalled writes were allowed during mount.
-    bool repair_filesystem;
+    repair_filesystem bool;
 
     /// True if the journaling is enabled.
-    bool use_journal;
+    use_journal bool;
 
     /// True is dirty cache is enabled for minfs.
-    bool dirty_cache_enabled;
+    dirty_cache_enabled bool;
 };
 
 /// Describes a contiguous run of allocated blocks.
-[ForDeprecatedCBindings]
-struct BlockRegion {
-    uint64 offset;
-    uint64 length;
+@for_deprecated_c_bindings
+type BlockRegion = struct {
+    offset uint64;
+    length uint64;
 };
 
-[ForDeprecatedCBindings]
+@for_deprecated_c_bindings
 protocol Minfs {
     /// Acquires metrics about the currently running filesystem.
-    GetMetrics() -> (zx.status status, Metrics? metrics);
+    GetMetrics() -> (struct {
+        status zx.status;
+        metrics box<Metrics>;
+    });
 
     /// Toggle the metrics collection system on or off.
-    ToggleMetrics(bool enable) -> (zx.status status);
+    ToggleMetrics(struct {
+        enable bool;
+    }) -> (struct {
+        status zx.status;
+    });
 
     /// Retrieve information about allocated regions on the filesystem.
-    GetAllocatedRegions() -> (zx.status status, zx.handle:VMO? regions, uint64 count);
+    GetAllocatedRegions() -> (resource struct {
+        status zx.status;
+        regions zx.handle:<VMO, optional>;
+        count uint64;
+    });
 
     /// Get mount state.
-    GetMountState() -> (zx.status status, MountState? mount_state);
+    GetMountState() -> (struct {
+        status zx.status;
+        mount_state box<MountState>;
+    });
 };

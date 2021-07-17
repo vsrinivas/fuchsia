@@ -1,68 +1,82 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.ethertap;
 
 using zx;
 using fuchsia.hardware.ethernet;
 
 /// Enables tracing of the ethertap device itself.
-const uint32 OPT_TRACE = 0x00000001;
+const OPT_TRACE uint32 = 0x00000001;
 /// Enables tracing of individual packets.
-const uint32 OPT_TRACE_PACKETS = 0x00000002;
+const OPT_TRACE_PACKETS uint32 = 0x00000002;
 /// Report EthernetImplSetParam() over EthertapController, and return success from
 /// EthernetImplSetParam().  If this option is not set, EthernetImplSetParam() will return
 /// `ZX_ERR_NOT_SUPPORTED`.
-const uint32 OPT_REPORT_PARAM = 0x00000004;
+const OPT_REPORT_PARAM uint32 = 0x00000004;
 /// Starts ethertap device with link online.
-const uint32 OPT_ONLINE = 0x00000008;
+const OPT_ONLINE uint32 = 0x00000008;
 
 /// Maximum MTU supported by ethertap driver.
-const uint32 MAX_MTU = 2000;
+const MAX_MTU uint32 = 2000;
 /// Maximum size of trailing data on params report.
-const uint32 MAX_PARAM_DATA = 64;
+const MAX_PARAM_DATA uint32 = 64;
 /// Maximum length of tap device name.
-const uint32 MAX_NAME_LENGTH = 30;
+const MAX_NAME_LENGTH uint32 = 30;
 
 /// Configuration of an ethertap device.
-[ForDeprecatedCBindings]
-struct Config {
+@for_deprecated_c_bindings
+type Config = struct {
     /// Ethertap options, a bit mask of OPT_* constants.
-    uint32 options;
+    options uint32;
     /// Features that will be reported to Ethernet protocol.
-    uint32 features;
+    features uint32;
     /// Ethertap device mtu. If a value greater than `MAX_MTU` is provided, creating an ethertap
     /// device will fail.
-    uint32 mtu;
+    mtu uint32;
     /// MAC address to report.
-    fuchsia.hardware.ethernet.MacAddress mac;
+    mac fuchsia.hardware.ethernet.MacAddress;
 };
 
 /// Provides control over the created tap device. The lifetime of the device itself is tied to the
 /// channel over which this protocol is served, closing a `TapDevice` channel will trigger the
 /// destruction and deallocation of the underlying tap device.
-[ForDeprecatedCBindings]
+@for_deprecated_c_bindings
 protocol TapDevice {
     /// Writes data to the tap device. If device is offline, data will just be discarded.
-    WriteFrame(vector<uint8>:MAX_MTU data);
+    WriteFrame(struct {
+        data vector<uint8>:MAX_MTU;
+    });
     /// Triggered when data is sent on this tap device.
     // TODO(brunodalbo) consider adding flow control mechanisms for the data passing.
-    -> OnFrame(vector<uint8>:MAX_MTU data);
+    -> OnFrame(struct {
+        data vector<uint8>:MAX_MTU;
+    });
     /// Sets online status of ethertap device.
-    SetOnline(bool online);
+    SetOnline(struct {
+        online bool;
+    });
     /// If `OPT_REPORT_PARAM` is set on `options`, calls to EthernetImplcSetParam will be routed to
     /// this event, containing the set parameters request arguments.
-    -> OnReportParams(uint32 param, int32 value, vector<uint8>:MAX_PARAM_DATA? data);
+    -> OnReportParams(struct {
+        param uint32;
+        value int32;
+        data vector<uint8>:<MAX_PARAM_DATA, optional>;
+    });
 };
 
 /// Ethertap driver interface.
-[ForDeprecatedCBindings]
+@for_deprecated_c_bindings
 protocol TapControl {
     /// Opens a named device with given `name` and `config`.
     /// `name` is only used for debugging purposes.
     /// If `config` is not valid or the tap device could not be created, an error status is returned
     /// and no `device` is created.
-    OpenDevice(string:MAX_NAME_LENGTH name, Config config, request<TapDevice> device) -> (zx.status s);
+    OpenDevice(resource struct {
+        name string:MAX_NAME_LENGTH;
+        config Config;
+        device server_end:TapDevice;
+    }) -> (struct {
+        s zx.status;
+    });
 };

@@ -1,56 +1,73 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.block.volume;
 
 using zx;
 
 /// Information about the parent device of the current volume.
-struct ParentVolumeInfo {
+type ParentVolumeInfo = struct {
     /// The size of a single slice, in bytes.
-    uint64 slice_size;
+    slice_size uint64;
     /// The number of addressable slices within a volume.
-    uint64 virtual_slice_count;
+    virtual_slice_count uint64;
     /// The total number of slices which are allocatable.
-    uint64 physical_slice_count_total;
+    physical_slice_count_total uint64;
     /// The total number of slices which are allocated.
-    uint64 physical_slice_count_used;
+    physical_slice_count_used uint64;
 };
 
 /// Describes an region within a Volume. Both units are in "slices".
-struct SliceExtent {
-    uint64 offset;
-    uint64 length;
+type SliceExtent = struct {
+    offset uint64;
+    length uint64;
 };
 
-const uint32 MAX_SLICE_QUERY_REQUESTS = 16;
+const MAX_SLICE_QUERY_REQUESTS uint32 = 16;
 
 /// Information about an extent of virtual slices.
-struct SliceRegion {
+type SliceRegion = struct {
     /// True if the virtual slices are allocated, false otherwise.
-    bool allocated;
+    allocated bool;
     /// The number of contiguous virtual slices.
-    uint64 count;
+    count uint64;
 };
 
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol BlockVolume {
     /// Attempts to extend a virtual partition.
-    Extend(SliceExtent extent) -> (zx.status status);
+    Extend(struct {
+        extent SliceExtent;
+    }) -> (struct {
+        status zx.status;
+    });
 
     /// Shrinks a virtual Partition.
-    Shrink(SliceExtent extent) -> (zx.status status);
+    Shrink(struct {
+        extent SliceExtent;
+    }) -> (struct {
+        status zx.status;
+    });
 
     /// Acquire slice size information about the parent volume.
-    Query() -> (zx.status status, ParentVolumeInfo info);
+    Query() -> (struct {
+        status zx.status;
+        info ParentVolumeInfo;
+    });
 
     /// Returns the number of contiguous slices from a collection
     /// of start offsets.
-    QuerySlices(vector<uint64>:MAX_SLICE_QUERY_REQUESTS start) -> (zx.status status, vector<SliceRegion>:MAX_SLICE_QUERY_REQUESTS responses);
+    QuerySlices(struct {
+        start vector<uint64>:MAX_SLICE_QUERY_REQUESTS;
+    }) -> (struct {
+        status zx.status;
+        responses vector<SliceRegion>:MAX_SLICE_QUERY_REQUESTS;
+    });
 
     /// Destroys the current partition, removing it from the Volume Manager, and
     /// freeing all underlying storage.
-    Destroy() -> (zx.status status);
+    Destroy() -> (struct {
+        status zx.status;
+    });
 };

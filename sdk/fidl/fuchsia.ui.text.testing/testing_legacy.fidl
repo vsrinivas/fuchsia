@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.ui.text.testing;
 using fuchsia.ui.text;
 
@@ -10,15 +8,23 @@ using fuchsia.ui.text;
 /// If you maintain a TextField implementation, you should ensure to spin up the
 /// text_test_suite package and call RunTest in your integration tests. Each call to
 /// RunTest should contain a fresh TextField handle that points to an empty text field.
-[Discoverable]
+@discoverable
 protocol TextFieldTestSuite {
-    RunTest(fuchsia.ui.text.TextFieldLegacy field, uint64 test_id) -> (bool passed, string:MAX message);
-    ListTests() -> (vector<TestInfo>:MAX results);
+    RunTest(resource struct {
+        field client_end:fuchsia.ui.text.TextFieldLegacy;
+        test_id uint64;
+    }) -> (struct {
+        passed bool;
+        message string:MAX;
+    });
+    ListTests() -> (struct {
+        results vector<TestInfo>:MAX;
+    });
 };
 
 /// Indicates if the tests passed, and a human-readable message indicating test failures
 /// if not.
-struct TestInfo {
-    uint64 id;
-    string:MAX name;
+type TestInfo = struct {
+    id uint64;
+    name string:MAX;
 };

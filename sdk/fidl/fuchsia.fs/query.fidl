@@ -1,7 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
 library fuchsia.fs;
 
 using fuchsia.io2;
@@ -9,7 +8,7 @@ using zx;
 
 /// `Query` exposes objective filesystem information independent of specific
 /// files and directories.
-[Discoverable]
+@discoverable
 protocol Query {
     /// Queries the filesystem.
     ///
@@ -17,59 +16,67 @@ protocol Query {
     ///   interested in.
     /// - `info` see [`fuchsia.fs/FilesystemInfo`] for details on the fields.
     ///
-    GetInfo(FilesystemInfoQuery query) -> (FilesystemInfo info) error zx.status;
+    GetInfo(struct {
+        query FilesystemInfoQuery;
+    }) -> (resource struct {
+        info FilesystemInfo;
+    }) error zx.status;
 
     /// Checks if a node is associated with this filesystem, given some token
     /// representing a connection to that node.
-    IsNodeInFilesystem(zx.handle:EVENT token) -> (bool is_in_filesystem);
+    IsNodeInFilesystem(resource struct {
+        token zx.handle:EVENT;
+    }) -> (struct {
+        is_in_filesystem bool;
+    });
 };
 
 /// Information about a filesystem.
 ///
 /// If a particular field is not applicable or not supported, implementations
 /// should leave it absent.
-resource table FilesystemInfo {
+type FilesystemInfo = resource table {
     /// The number of data bytes which may be stored in the filesystem.
-    1: uint64 total_bytes;
+    1: total_bytes uint64;
 
     /// The number of data bytes which are in use by the filesystem.
     /// Note that this value may change in the mean time.
-    2: uint64 used_bytes;
+    2: used_bytes uint64;
 
     /// The number of nodes which may be stored in the filesystem.
-    3: uint64 total_nodes;
+    3: total_nodes uint64;
 
     /// The number of nodes used by the filesystem.
     /// Note that this value may change in the mean time.
-    4: uint64 used_nodes;
+    4: used_nodes uint64;
 
     /// The amount of space which may be allocated from the underlying
     /// volume manager. Note that this value may change in the mean time.
-    5: uint64 free_shared_pool_bytes;
+    5: free_shared_pool_bytes uint64;
 
     /// A globally unique identifier for this filesystem instance.
-    6: zx.handle:EVENT fs_id;
+    6: fs_id zx.handle:EVENT;
 
     /// The size of a single filesystem block.
-    7: uint32 block_size;
+    7: block_size uint32;
 
     /// The maximum length of a filesystem name.
-    8: uint32 max_node_name_size;
+    8: max_node_name_size uint32;
 
     /// A unique identifier for the type of the underlying filesystem.
-    9: FsType fs_type;
+    9: fs_type FsType;
 
     /// The name of the filesystem.
-    10: string:MAX_FS_NAME_LENGTH name;
+   10: name string:MAX_FS_NAME_LENGTH;
 
     /// Path to the device backing this filesystem.
-    11: fuchsia.io2.Path device_path;
+   11: device_path fuchsia.io2.Path;
 };
 
 /// When calling [`Query.GetInfo`], set the corresponding bit to one
 /// to query a particular field.
 /// The elements here correspond one-to-one with [`FilesystemInfo`].
-bits FilesystemInfoQuery : uint64 {
+type FilesystemInfoQuery = strict bits : uint64 {
     /// Requests [`FilesystemInfoQuery.total_bytes`].
     TOTAL_BYTES = 0x1;
 
@@ -105,12 +112,12 @@ bits FilesystemInfoQuery : uint64 {
 };
 
 /// The maximum length of the name of a filesystem.
-const uint64 MAX_FS_NAME_LENGTH = 32;
+const MAX_FS_NAME_LENGTH uint64 = 32;
 
 /// The type of the filesystem.
 ///
 /// This enum should be flexible, to accommodate future additions.
-enum FsType : uint32 {
+type FsType = strict enum : uint32 {
     BLOBFS = 0x9e694d21;
     FACTORYFS = 0x1e694d21;
     FATFS = 0xce694d21;

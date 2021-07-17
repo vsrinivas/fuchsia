@@ -1,21 +1,28 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.bt.hci;
 
 using zx;
 
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol BtHci {
     /// Open the two-way HCI command channel for sending HCI commands and
     /// receiving event packets.  Returns ZX_ERR_ALREADY_BOUND if the channel
     /// is already open.
-    OpenCommandChannel(zx.handle:CHANNEL channel) -> (zx.status s);
+    OpenCommandChannel(resource struct {
+        channel zx.handle:CHANNEL;
+    }) -> (struct {
+        s zx.status;
+    });
     /// Open the two-way HCI ACL data channel.
     /// Returns ZX_ERR_ALREADY_BOUND if the channel is already open.
-    OpenAclDataChannel(zx.handle:CHANNEL channel) -> (zx.status s);
+    OpenAclDataChannel(resource struct {
+        channel zx.handle:CHANNEL;
+    }) -> (struct {
+        s zx.status;
+    });
     /// Open an output-only channel for monitoring HCI traffic.
     /// The format of each message is: [1-octet flags] [n-octet payload]
     /// The flags octet is a bitfield with the following values defined:
@@ -23,5 +30,9 @@ protocol BtHci {
     ///          controller.
     ///  - 0x01: The payload represents an event packet sent by the controller.
     /// Returns ZX_ERR_ALREADY_BOUND if the channel is already open.
-    OpenSnoopChannel(zx.handle:CHANNEL channel) -> (zx.status s);
+    OpenSnoopChannel(resource struct {
+        channel zx.handle:CHANNEL;
+    }) -> (struct {
+        s zx.status;
+    });
 };

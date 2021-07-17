@@ -1,28 +1,26 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.overnet.protocol;
 
 /// Identifies a single overnet stream between two processes on the Overnet
 /// mesh.
-struct StreamId {
-    uint64 id;
+type StreamId = struct {
+    id uint64;
 };
 
 /// Address of a node on the overlay network.
-struct NodeId {
-    uint64 id;
+type NodeId = struct {
+    id uint64;
 };
 
 /// Node-local link label.
 alias LinkId = uint64;
 
 /// Length of a transfer key.
-const uint32 TRANSFER_KEY_LENGTH = 16;
+const TRANSFER_KEY_LENGTH uint32 = 16;
 
 /// A transfer key is used when moving a stream endpoint from one node to
 /// another. It identifies a single transfer, should be unique (so, made from
 /// random bytes), and should be discarded at the end of the transfer.
-alias TransferKey = array<uint8>:TRANSFER_KEY_LENGTH;
+alias TransferKey = array<uint8, TRANSFER_KEY_LENGTH>;

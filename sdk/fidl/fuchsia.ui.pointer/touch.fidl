@@ -1,13 +1,11 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.ui.pointer;
 
 using zx;
 
-const uint32 TOUCH_MAX_EVENT = 128;
+const TOUCH_MAX_EVENT uint32 = 128;
 
 /// A method for a client to receive touch events and respond in a global
 /// gesture disambiguation protocol.
@@ -63,7 +61,11 @@ protocol TouchSource {
     ///
     /// [1] The hanging get pattern enables straightforward API evolution, but
     /// unfortunately does not admit an idiomatic matching of response to event.
-    Watch(vector<TouchResponse>:TOUCH_MAX_EVENT responses) -> (vector<TouchEvent>:TOUCH_MAX_EVENT events);
+    Watch(struct {
+        responses vector<TouchResponse>:TOUCH_MAX_EVENT;
+    }) -> (struct {
+        events vector<TouchEvent>:TOUCH_MAX_EVENT;
+    });
 
     /// The gesture protocol allows a client to enact a "hold" on an open
     /// interaction of touch events; it prevents resolution of interaction
@@ -81,48 +83,51 @@ protocol TouchSource {
     ///
     /// Validity. This TouchResponse must not be another "hold" response, and
     /// the overwritten response is expected to be a "hold" response.
-    UpdateResponse(TouchInteractionId interaction, TouchResponse response) -> ();
+    UpdateResponse(struct {
+        interaction TouchInteractionId;
+        response TouchResponse;
+    }) -> ();
 };
 
 /// The self-sufficient, self-consistent collection of pointer-related data,
 /// sent from server to client.
-table TouchEvent {
+type TouchEvent = table {
     /// The time this event was observed.
     /// Required.
-    1: zx.time timestamp;
+    1: timestamp zx.time;
 
     /// The parameters of the associated view and viewport, sufficient to
     /// correctly interpret the position, orientation, magnitude, and
     /// inter-event distance of touch events dispatched to a view.
     /// - It is issued on connection and on change.
-    2: ViewParameters view_parameters;
+    2: view_parameters ViewParameters;
 
     /// A description of the pointer device, sufficient to correctly interpret
     /// the capabilities and usage intent of the device.
     /// - It is issued once per device.
-    3: TouchDeviceInfo device_info;
+    3: device_info TouchDeviceInfo;
 
     /// A description of each sampled data point in an interaction of touch
     /// events.
     /// - It is issued on every sample in the interaction.
-    4: TouchPointerSample pointer_sample;
+    4: pointer_sample TouchPointerSample;
 
     /// The result of gesture disambiguation for a interaction of touch events.
     /// - It is issued once per interaction.
-    5: TouchInteractionResult interaction_result;
+    5: interaction_result TouchInteractionResult;
 
     /// An identifier to correlate this event's send/receive occurrence across
     /// component boundaries or abstraction layers.
-    6: uint64 trace_flow_id;
+    6: trace_flow_id uint64;
 };
 
 /// Information about a device that issues touch event streams.
-table TouchDeviceInfo {
+type TouchDeviceInfo = table {
     /// An identifier for the touch device that issues touch event streams.
     /// A device may own multiple pointers, each with its own pointer id and its
     /// own touch event stream.
     /// Required.
-    1: uint32 id;
+    1: id uint32;
 };
 
 /// A unique identifier for a "interaction" of touch events in an event stream.
@@ -145,46 +150,46 @@ table TouchDeviceInfo {
 /// well as an open interaction.
 ///
 /// Also see `EventPhase` for a discussion on event streams by mice.
-struct TouchInteractionId {
+type TouchInteractionId = struct {
     /// An identifier for the pointer device that issues touch event streams.
     /// A device may own multiple pointers, each with its own |pointer_id|.
-    uint32 device_id;
+    device_id uint32;
 
     /// An identifier of the pointer that issued this event. It is unique only
     /// to a specific |device_id|. Each (device_id, pointer_id) pair issues at
     /// most one open interaction at a time.
-    uint32 pointer_id;
+    pointer_id uint32;
 
     /// An identifier of the interaction. It is unique only to a specific
     /// (device_id, pointer_id) pair.
-    uint32 interaction_id;
+    interaction_id uint32;
 };
 
 /// A description of each sampled data point in a touch event stream.
 /// All fields are required.
-table TouchPointerSample {
+type TouchPointerSample = table {
     /// The interaction that this pointer sample belongs to.
-    1: TouchInteractionId interaction;
+    1: interaction TouchInteractionId;
 
     /// The state of this event in the interaction's state machine.
-    2: EventPhase phase;
+    2: phase EventPhase;
 
     /// The position of this event, in the viewport's coordinate system.
-    3: Point2 position_in_viewport;
+    3: position_in_viewport Point2;
 };
 
 /// The result of gesture disambiguation for a interaction of touch events, sent
 /// from server to client.
-struct TouchInteractionResult {
+type TouchInteractionResult = struct {
     /// The interaction that this pointer sample belongs to.
-    TouchInteractionId interaction;
+    interaction TouchInteractionId;
 
     /// The interaction's disposition, sent from server to client.
-    TouchInteractionStatus status;
+    status TouchInteractionStatus;
 };
 
 /// A description of the interaction's relationship to this client.
-enum TouchInteractionStatus {
+type TouchInteractionStatus = strict enum {
     /// The client has been denied ownership of the interaction.
     DENIED = 1;
 
@@ -196,14 +201,14 @@ enum TouchInteractionStatus {
 ///
 /// Only |TouchPointerSample| requires a |TouchResponseType|; for other events,
 /// the server expects an empty |TouchResponse| table.
-table TouchResponse {
+type TouchResponse = table {
     /// The interaction disposition that a client responds with for a given
     /// |TouchPointerSample|.
-    1: TouchResponseType response_type;
+    1: response_type TouchResponseType;
 
     /// An identifier to correlate this response's send/receive occurrence across
     /// component boundaries or abstraction layers.
-    2: uint64 trace_flow_id;
+    2: trace_flow_id uint64;
 };
 
 /// The possible interaction dispositions that a client can respond with to a
@@ -212,7 +217,7 @@ table TouchResponse {
 /// The responses are based on the idea of an ownership claim on a interaction.
 /// Clients may assert a claim of ownership on an open interaction, but only one
 /// client's claim is granted by the server; other clients' claims are denied.
-enum TouchResponseType {
+type TouchResponseType = strict enum {
     /// The client has no further interest in this interaction; it declines
     /// ownership of the interaction. The client will stop receiving events for
     /// this interaction.

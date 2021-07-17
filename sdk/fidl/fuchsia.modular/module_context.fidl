@@ -1,13 +1,11 @@
 // Copyright 2016 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.modular;
 
 /// This interface is exposed to all Module instances in a story. It allows to
 /// create Link instances and run more Module instances.
-[Discoverable]
+@discoverable
 protocol ModuleContext {
     /// When a module calls [RemoveSelfFromStory()] the framework will stop the
     /// module and remove it from the story. If there are no more running modules
@@ -18,10 +16,9 @@ protocol ModuleContext {
 /// This interface defines the protocol over which a Module can communicate about
 /// an ongoing activity to the framework. It is provided to Modules via
 /// ModuleContext.StartOngoingActivity().
-protocol OngoingActivity {
-};
+protocol OngoingActivity {};
 
-enum OngoingActivityType {
+type OngoingActivityType = strict enum {
     UNSPECIFIED = 0;
     VIDEO = 1;
     AUDIO = 2;

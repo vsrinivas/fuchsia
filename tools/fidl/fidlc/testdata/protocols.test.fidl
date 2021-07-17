@@ -1,22 +1,21 @@
-deprecated_syntax;
 library fidl.test.protocols;
 
 // This is not a reference to library zx to avoid complexity in the test data.
 // A local handle is defined here that contains subtypes that this test cares
 // about.
-enum obj_type : uint32 {
+type obj_type = strict enum : uint32 {
     NONE = 0;
     SOCKET = 14;
 };
 
-bits rights : uint32 {
+type rights = strict bits : uint32 {
     TRANSFER = 1;
     DUPLICATE = 2;
 };
 
 resource_definition handle : uint32 {
     properties {
-        obj_type subtype;
+        subtype obj_type;
         rights rights;
     };
 };
@@ -24,71 +23,137 @@ resource_definition handle : uint32 {
 protocol WithAndWithoutRequestResponse {
     NoRequestNoResponse();
     NoRequestEmptyResponse() -> ();
-    NoRequestWithResponse() -> (string ret);
-    WithRequestNoResponse(string arg);
-    WithRequestEmptyResponse(string arg) -> ();
-    WithRequestWithResponse(string arg) -> (string ret);
+    NoRequestWithResponse() -> (struct {
+        ret string;
+    });
+    WithRequestNoResponse(struct {
+        arg string;
+    });
+    WithRequestEmptyResponse(struct {
+        arg string;
+    }) -> ();
+    WithRequestWithResponse(struct {
+        arg string;
+    }) -> (struct {
+        ret string;
+    });
     -> OnEmptyResponse();
-    -> OnWithResponse(string ret);
+    -> OnWithResponse(struct {
+        ret string;
+    });
 };
 
-enum ErrorEnum {
+type ErrorEnum = strict enum {
     ERR_FOO = 1;
     ERR_BAR = 2;
 };
 
 protocol WithErrorSyntax {
-    ResponseAsStruct() -> (int64 a, int64 b, int64 c) error uint32;
-    ErrorAsPrimitive() -> () error uint32;
-    ErrorAsEnum() -> () error ErrorEnum;
-    HandleInResult() -> (handle h) error uint32;
+    ResponseAsStruct() -> (struct {
+        a int64;
+        b int64;
+        c int64;
+    }) error uint32;
+    ErrorAsPrimitive() -> (struct {}) error uint32;
+    ErrorAsEnum() -> (struct {}) error ErrorEnum;
+    HandleInResult() -> (resource struct {
+        h handle;
+    }) error uint32;
 };
 
-[Transport = "Channel"]
+@transport("Channel")
 protocol ChannelProtocol {
-    MethodA(int64 a, int64 b);
-    -> EventA(int64 a, int64 b);
-    MethodB(int64 a, int64 b) -> (int64 result);
-    TakeHandle(handle h) -> ();
-    MutateSocket(handle:SOCKET a) -> (handle:SOCKET b);
+    MethodA(struct {
+        a int64;
+        b int64;
+    });
+    -> EventA(struct {
+        a int64;
+        b int64;
+    });
+    MethodB(struct {
+        a int64;
+        b int64;
+    }) -> (struct {
+        result int64;
+    });
+    TakeHandle(resource struct {
+        h handle;
+    }) -> ();
+    MutateSocket(resource struct {
+        a handle:SOCKET;
+    }) -> (resource struct {
+        b handle:SOCKET;
+    });
 };
 
-[Transport = "Syscall"]
+@transport("Syscall")
 protocol SyscallProtocol {
-    MethodC(int64 a, int64 b);
+    MethodC(struct {
+        a int64;
+        b int64;
+    });
 };
 
 protocol Transitional {
-    [Transitional]
-    Request(int64 x) -> (int64 y);
+    @transitional
+    Request(struct {
+        x int64;
+    }) -> (struct {
+        y int64;
+    });
 
-    [transitional]
-    OneWay(int64 x);
+    @transitional
+    OneWay(struct {
+        x int64;
+    });
 
-    [Transitional]
-    -> Event(int64 x);
+    @transitional
+    -> Event(struct {
+        x int64;
+    });
 };
 
-[Discoverable]
+@discoverable
 protocol DiscoverableProtocol {
     Method();
 };
 
 protocol HandleRightsProtocol {
-    NoResponseMethod(handle:<SOCKET, rights.TRANSFER | rights.DUPLICATE> h);
-    ResponseMethod(handle:<SOCKET, rights.TRANSFER | rights.DUPLICATE> h) -> (handle:<SOCKET, rights.TRANSFER> h);
-    -> AnEvent(handle:<SOCKET, rights.TRANSFER | rights.DUPLICATE> h);
+    NoResponseMethod(resource struct {
+        h handle:<SOCKET, rights.TRANSFER | rights.DUPLICATE>;
+    });
+    ResponseMethod(resource struct {
+        h handle:<SOCKET, rights.TRANSFER | rights.DUPLICATE>;
+    }) -> (resource struct {
+        h handle:<SOCKET, rights.TRANSFER>;
+    });
+    -> AnEvent(resource struct {
+        h handle:<SOCKET, rights.TRANSFER | rights.DUPLICATE>;
+    });
 };
 
-resource struct ProtocolEnds {
-    DiscoverableProtocol client;
-    request<DiscoverableProtocol> server;
-    DiscoverableProtocol? client_opt;
-    request<DiscoverableProtocol>? server_opt;
+type ProtocolEnds = resource struct {
+    client client_end:DiscoverableProtocol;
+    server server_end:DiscoverableProtocol;
+    client_opt client_end:<DiscoverableProtocol, optional>;
+    server_opt server_end:<DiscoverableProtocol, optional>;
 };
 
 protocol WithProtocolEnds {
-    ClientEnds(DiscoverableProtocol in) -> (DiscoverableProtocol? out);
-    ServerEnds(request<DiscoverableProtocol>? in) -> (request<DiscoverableProtocol> out);
-    StructContainingEnds(ProtocolEnds in) -> (ProtocolEnds out);
+    ClientEnds(resource struct {
+        in client_end:DiscoverableProtocol;
+    }) -> (resource struct {
+        out client_end:<DiscoverableProtocol, optional>;
+    });
+    ServerEnds(resource struct {
+        in server_end:<DiscoverableProtocol, optional>;
+    }) -> (resource struct {
+        out server_end:DiscoverableProtocol;
+    });
+    StructContainingEnds(resource struct {
+        in ProtocolEnds;
+    }) -> (resource struct {
+        out ProtocolEnds;
+    });
 };

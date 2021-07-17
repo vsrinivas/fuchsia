@@ -6,11 +6,11 @@
 ## **PROTOCOLS**
 
 ## OnlyCppAndDeps {#OnlyCppAndDeps}
-*Defined in [fidl.test.bindingsdenylist/bindings_denylist.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/bindings_denylist.test.fidl;l=46)*
+*Defined in [fidl.test.bindingsdenylist/bindings_denylist.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/bindings_denylist.test.fidl;l=42)*
 
 
 ## OnlyLibfuzzerAndDeps {#OnlyLibfuzzerAndDeps}
-*Defined in [fidl.test.bindingsdenylist/bindings_denylist.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/bindings_denylist.test.fidl;l=39)*
+*Defined in [fidl.test.bindingsdenylist/bindings_denylist.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/bindings_denylist.test.fidl;l=35)*
 
 
 ### LibfuzzerNeedsNonemptyProtocol {#OnlyLibfuzzerAndDeps.LibfuzzerNeedsNonemptyProtocol}
@@ -32,7 +32,7 @@
 ## **STRUCTS**
 
 ### OnlyGo {#OnlyGo}
-*Defined in [fidl.test.bindingsdenylist/bindings_denylist.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/bindings_denylist.test.fidl;l=24)*
+*Defined in [fidl.test.bindingsdenylist/bindings_denylist.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/bindings_denylist.test.fidl;l=22)*
 
 
 
@@ -47,7 +47,7 @@
 ### OnlyDart {#OnlyDart}
 Type: <code>uint32</code>
 
-*Defined in [fidl.test.bindingsdenylist/bindings_denylist.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/bindings_denylist.test.fidl;l=19)*
+*Defined in [fidl.test.bindingsdenylist/bindings_denylist.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/bindings_denylist.test.fidl;l=17)*
 
 
 
@@ -65,7 +65,7 @@ Type: <code>uint32</code>
 ### OnlyRust {#OnlyRust}
 
 
-*Defined in [fidl.test.bindingsdenylist/bindings_denylist.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/bindings_denylist.test.fidl;l=28)*
+*Defined in [fidl.test.bindingsdenylist/bindings_denylist.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/bindings_denylist.test.fidl;l=25)*
 
 
 
@@ -78,7 +78,7 @@ Type: <code>uint32</code>
 ## **UNIONS**
 
 ### OnlyLlcpp {#OnlyLlcpp}
-*Defined in [fidl.test.bindingsdenylist/bindings_denylist.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/bindings_denylist.test.fidl;l=32)*
+*Defined in [fidl.test.bindingsdenylist/bindings_denylist.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/bindings_denylist.test.fidl;l=28)*
 
 
 <table>
@@ -97,7 +97,7 @@ Type: <code>uint32</code>
 ### OnlySyzkaller {#OnlySyzkaller}
 Type: <code>uint32</code>
 
-*Defined in [fidl.test.bindingsdenylist/bindings_denylist.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/bindings_denylist.test.fidl;l=14)*
+*Defined in [fidl.test.bindingsdenylist/bindings_denylist.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/bindings_denylist.test.fidl;l=12)*
 
 
 
@@ -114,7 +114,7 @@ Type: <code>uint32</code>
 
 <table>
     <tr><th>Name</th><th>Value</th><th>Type</th><th>Description</th></tr><tr id="AllBindings">
-            <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/bindings_denylist.test.fidl;l=11">AllBindings</a></td>
+            <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/bindings_denylist.test.fidl;l=9">AllBindings</a></td>
             <td>
                     <code>0</code>
                 </td>

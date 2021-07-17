@@ -1,13 +1,12 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
 library fuchsia.bluetooth.sys;
 
 /// Represents the Bluetooth Host Subsystem parameters available for configuration. Each parameter
 /// is set to a default upon Bluetooth system initialization. The default values for each parameter
 /// can be found in //src/connectivity/bluetooth/core/bt-gap/config/default.js.
-table Settings {
+type Settings = table {
     /// If true then enable the LE Privacy feature, if false disable it. If not present, leaves the
     /// current value unchanged. When enabled, all BLE procedures that broadcast the local device
     /// address (active scanning, connection initiation, and advertising) use a Resolvable Private
@@ -15,24 +14,24 @@ table Settings {
     /// assigned to the controller.
     ///
     /// Enabling this feature is highly recommended on products.
-    1: bool le_privacy;
+    1: le_privacy bool;
 
     /// If true then enable LE background-scan feature, if false disable it. If not present, leaves
     /// the current value unchanged. When enabled, the system maintains an on-going passive scan
     /// and establishes connections to bonded peers that are in "Connectable" or "Directed
     /// Connectable" mode.
-    2: bool le_background_scan;
+    2: le_background_scan bool;
 
     /// If true then enable BR/EDR connectable mode, if false disable it. If not present, leaves
     /// the current value unchanged. When enabled, bt-host devices are put into BR/EDR page scan
     /// mode and accept connections.
-    3: bool bredr_connectable_mode;
+    3: bredr_connectable_mode bool;
 
     /// If present then sets the LE Security mode of the Host Subsystem, if not present leaves the
     /// current value unchanged. See BT Core Spec v5.2 Vol. 3 Part C 10.2 for more details. If
     /// present and set to Secure Connections Only mode, any active connections not meeting the
     /// requirements of Secure Connections Only mode are disconnected.
-    4: LeSecurityMode le_security_mode;
+    4: le_security_mode LeSecurityMode;
 };
 
 /// Protocol to configure parameters and features for the core Bluetooth system. These settings
@@ -40,7 +39,7 @@ table Settings {
 ///
 /// This protocol should only be exposed to highly privileged components (e.g. Bluetooth developer
 /// tools in a testing/qualification environment).
-[Discoverable]
+@discoverable
 protocol Configuration {
     /// Applies the fields present in `settings` to all bt-host drivers known to the system. Any
     /// fields not present in `settings` will remain unchanged.
@@ -49,5 +48,9 @@ protocol Configuration {
     ///   need be present.
     /// - response `result` A fully-populated table with the resultant settings after the new
     ///   settings are applied.
-    Update(Settings settings) -> (Settings result);
+    Update(struct {
+        settings Settings;
+    }) -> (struct {
+        result Settings;
+    });
 };

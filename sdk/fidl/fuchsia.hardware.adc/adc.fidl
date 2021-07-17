@@ -1,18 +1,22 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.adc;
 using zx;
 
 protocol Device {
     /// Get adc resolution in number of bits
-    GetResolution() -> (uint8 resolution) error zx.status;
+    GetResolution() -> (struct {
+        resolution uint8;
+    }) error zx.status;
 
     /// Get sample - raw count from adc
-    GetSample() -> (uint32 value) error zx.status;
+    GetSample() -> (struct {
+        value uint32;
+    }) error zx.status;
 
     /// Get sample normalized to [0.0-1.0]
-    GetNormalizedSample() -> (float32 value) error zx.status;
+    GetNormalizedSample() -> (struct {
+        value float32;
+    }) error zx.status;
 };

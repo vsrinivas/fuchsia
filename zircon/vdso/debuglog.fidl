@@ -1,26 +1,41 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library zx;
 
-[Transport = "Syscall"]
+@transport("Syscall")
 protocol debuglog {
     // TODO(fxbug.dev/32803): handle == ZX_HANDLE_INVALID accepted.
     /// Create an object allowing access to the kernel debuglog.
     ///
     /// Rights: resource must have resource kind ZX_RSRC_KIND_ROOT.
-    debuglog_create(handle:RESOURCE resource, uint32 options)
-        -> (status status, handle:LOG out);
+    debuglog_create(resource struct {
+        resource handle:RESOURCE;
+        options uint32;
+    }) -> (resource struct {
+        status status;
+        out handle:LOG;
+    });
 
     /// Write a message to the kernel debuglog.
     ///
     /// Rights: handle must be of type ZX_OBJ_TYPE_LOG and have ZX_RIGHT_WRITE.
-    debuglog_write(handle:LOG handle, uint32 options, vector_void buffer) -> (status status);
+    debuglog_write(resource struct {
+        handle handle:LOG;
+        options uint32;
+        buffer vector_void;
+    }) -> (struct {
+        status status;
+    });
 
     /// Read a single log record from the kernel debuglog.
     ///
     /// Rights: handle must be of type ZX_OBJ_TYPE_LOG and have ZX_RIGHT_READ.
-    debuglog_read(handle:LOG handle, uint32 options) -> (status status, vector_void buffer);
+    debuglog_read(resource struct {
+        handle handle:LOG;
+        options uint32;
+    }) -> (struct {
+        status status;
+        buffer vector_void;
+    });
 };

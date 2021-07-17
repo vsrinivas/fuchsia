@@ -1,17 +1,17 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.bluetooth;
 
 using zx;
 
-[ForDeprecatedCBindings]
+@for_deprecated_c_bindings
 protocol Host {
     /// Connects to the host driver on the provided handle. The zircon channel
     /// is closed in the event of an error connecting to the driver. This
     /// channel speaks the "/src/connectivity/bluetooth/fidl/fuchsia.bluetooth.host.Host"
     /// protocol.
-    Open(zx.handle:CHANNEL channel);
+    Open(resource struct {
+        channel zx.handle:CHANNEL;
+    });
 };

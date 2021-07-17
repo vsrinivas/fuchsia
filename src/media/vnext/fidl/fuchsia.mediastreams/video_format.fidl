@@ -1,8 +1,6 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.mediastreams;
 
 using fuchsia.math;
@@ -10,34 +8,34 @@ using fuchsia.math;
 /// Describes a format used for video elementary streams without
 /// reference to compression. Where compression is supported, this
 /// type should be combined with a `Compression` struct.
-struct VideoFormat {
+type VideoFormat = struct {
     /// Describes the manner in which pixels are encoded.
-    PixelFormat pixel_format;
+    pixel_format PixelFormat;
 
     /// Indicates the color space used to interpret pixel values.
-    ColorSpace color_space;
+    color_space ColorSpace;
 
     /// The size of a frame in terms of the number of pixels that
     /// are represented in a frame payload.
-    fuchsia.math.Size coded_size;
+    coded_size fuchsia.math.Size;
 
     /// The size of a frame in terms of the number of pixels that
     /// should be displayed. These values will always be less than
     /// or equal to the corresponding `coded_size` values.
-    fuchsia.math.Size display_size;
+    display_size fuchsia.math.Size;
 
     /// Aspect ratio of a single pixel as the video is intended to
     /// be displayed.
-    fuchsia.math.Size? aspect_ratio;
+    aspect_ratio box<fuchsia.math.Size>;
 
-    // TODO: fuchsia.sysmem2.ImageFormat has bytes_per_row, but
-    // that’s a function of pixel_format and coded_size. Do we
-    // need that?
+// TODO: fuchsia.sysmem2.ImageFormat has bytes_per_row, but
+// that’s a function of pixel_format and coded_size. Do we
+// need that?
 };
 
 /// Expresses the manner in which video pixels are encoded.
 // TODO: Do we need a pixel format modifier?
-enum PixelFormat {
+type PixelFormat = strict enum {
     INVALID = 0;
     R8G8B8A8 = 1;
     BGRA32 = 101;
@@ -57,7 +55,7 @@ enum PixelFormat {
 };
 
 /// Expresses the color space used to interpret video pixel values.
-enum ColorSpace {
+type ColorSpace = strict enum {
     INVALID = 0;
     SRGB = 1;
     REC601_NTSC = 2;

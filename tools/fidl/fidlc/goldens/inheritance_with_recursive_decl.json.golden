@@ -11,7 +11,7 @@
       "name": "fidl.test.inheritancewithrecursivedecl/Parent",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl",
-        "line": 4,
+        "line": 3,
         "column": 10,
         "length": 6
       },
@@ -22,7 +22,7 @@
           "name": "First",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl",
-            "line": 5,
+            "line": 4,
             "column": 5,
             "length": 5
           },
@@ -38,7 +38,7 @@
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl",
                 "line": 5,
-                "column": 27,
+                "column": 9,
                 "length": 7
               },
               "field_shape_v1": {
@@ -79,7 +79,7 @@
       "name": "fidl.test.inheritancewithrecursivedecl/Child",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl",
-        "line": 8,
+        "line": 9,
         "column": 10,
         "length": 5
       },
@@ -88,7 +88,7 @@
           "name": "fidl.test.inheritancewithrecursivedecl/Parent",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl",
-            "line": 9,
+            "line": 10,
             "column": 13,
             "length": 6
           }
@@ -100,7 +100,7 @@
           "name": "First",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl",
-            "line": 5,
+            "line": 4,
             "column": 5,
             "length": 5
           },
@@ -116,7 +116,7 @@
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl",
                 "line": 5,
-                "column": 27,
+                "column": 9,
                 "length": 7
               },
               "field_shape_v1": {
@@ -156,7 +156,7 @@
           "name": "Second",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl",
-            "line": 10,
+            "line": 11,
             "column": 5,
             "length": 6
           },
@@ -171,8 +171,8 @@
               "name": "request",
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl",
-                "line": 10,
-                "column": 28,
+                "line": 12,
+                "column": 9,
                 "length": 7
               },
               "field_shape_v1": {
@@ -220,9 +220,9 @@
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl",
-        "line": 5,
-        "column": 10,
-        "length": 25
+        "line": 4,
+        "column": 11,
+        "length": 58
       },
       "anonymous": true,
       "members": [
@@ -236,7 +236,7 @@
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl",
             "line": 5,
-            "column": 27,
+            "column": 9,
             "length": 7
           },
           "field_shape_v1": {
@@ -277,9 +277,9 @@
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl",
-        "line": 10,
-        "column": 11,
-        "length": 25
+        "line": 11,
+        "column": 12,
+        "length": 58
       },
       "anonymous": true,
       "members": [
@@ -292,8 +292,8 @@
           "name": "request",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl",
-            "line": 10,
-            "column": 28,
+            "line": 12,
+            "column": 9,
             "length": 7
           },
           "field_shape_v1": {
@@ -334,9 +334,9 @@
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl",
-        "line": 5,
-        "column": 10,
-        "length": 25
+        "line": 4,
+        "column": 11,
+        "length": 58
       },
       "anonymous": true,
       "members": [
@@ -350,7 +350,7 @@
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl",
             "line": 5,
-            "column": 27,
+            "column": 9,
             "length": 7
           },
           "field_shape_v1": {

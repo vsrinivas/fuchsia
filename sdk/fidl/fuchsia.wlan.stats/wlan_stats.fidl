@@ -1,66 +1,64 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.wlan.stats;
 
-struct Counter {
-    uint64 count;
-    string name;
+type Counter = struct {
+    count uint64;
+    name string;
 };
 
-struct PacketCounter {
-    Counter in;
-    Counter out;
-    Counter drop;
-    Counter in_bytes;
-    Counter out_bytes;
-    Counter drop_bytes;
+type PacketCounter = struct {
+    in Counter;
+    out Counter;
+    drop Counter;
+    in_bytes Counter;
+    out_bytes Counter;
+    drop_bytes Counter;
 };
 
 // LINT.IfChange
-struct DispatcherStats {
-    PacketCounter any_packet;
-    PacketCounter mgmt_frame;
-    PacketCounter ctrl_frame;
-    PacketCounter data_frame;
+type DispatcherStats = struct {
+    any_packet PacketCounter;
+    mgmt_frame PacketCounter;
+    ctrl_frame PacketCounter;
+    data_frame PacketCounter;
 };
 
-const uint8 RSSI_BINS = 129;
+const RSSI_BINS uint8 = 129;
 
 /// RssiStats count the occurrence of the RSSIs.
 /// RSSI value r's occurrence is counted in the bin[-r],
 /// where r is defined in [-128, 0] in dBm.
-struct RssiStats {
+type RssiStats = struct {
     // TODO(alexandrew): Change this to array.
-    vector<uint64>:RSSI_BINS hist;
+    hist vector<uint64>:RSSI_BINS;
 };
 
 // LINT.IfChange
 /// Histogram bucket.
-struct HistBucket {
+type HistBucket = struct {
     /// Index into a lookup table for each histogram type. The lookup table for each type is
     /// described below in the comments for each type.
-    uint16 bucket_index;
+    bucket_index uint16;
     /// The count of samples in the bucket.
-    uint64 num_samples;
+    num_samples uint64;
 };
 
 /// All histograms have a fixed number of buckets. To save space, each histogram type
 /// uses a vector to hold only non-empty buckets (a sparse histogram), with these constants as the
 /// max size of each vector.
 /// Noise floor values range from -255 to -1 dBm.
-const uint8 MAX_NOISE_FLOOR_SAMPLES = 255;
+const MAX_NOISE_FLOOR_SAMPLES uint8 = 255;
 /// Size of RxRateIndexHistogram lookup table (see comments in RxRateIndexHistogram).
-const uint8 MAX_RX_RATE_INDEX_SAMPLES = 196;
+const MAX_RX_RATE_INDEX_SAMPLES uint8 = 196;
 /// RSSI values range from -255 to -1 dBm.
-const uint8 MAX_RSSI_SAMPLES = 255;
+const MAX_RSSI_SAMPLES uint8 = 255;
 /// SNR values range from 0 to 255 dB.
-const uint16 MAX_SNR_SAMPLES = 256;
+const MAX_SNR_SAMPLES uint16 = 256;
 
 /// Antenna frequency.
-enum AntennaFreq : uint8 {
+type AntennaFreq = strict enum : uint8 {
     /// 2.4 GHz.
     ANTENNA_2_G = 1;
     /// 5 GHz.
@@ -68,38 +66,38 @@ enum AntennaFreq : uint8 {
 };
 
 /// Identifier for antenna.
-struct AntennaId {
-    AntennaFreq freq;
+type AntennaId = struct {
+    freq AntennaFreq;
     /// 0 indexed antenna number of freq.
-    uint8 index;
+    index uint8;
 };
 
 /// The scope of the histogram, e.g. if the histogram contains data for the entire station, or has
 /// data for just a single antenna.
-enum HistScope : uint8 {
+type HistScope = strict enum : uint8 {
     STATION = 1;
     PER_ANTENNA = 2;
 };
 
 /// Histogram for noise floor samples.
-struct NoiseFloorHistogram {
-    HistScope hist_scope;
+type NoiseFloorHistogram = struct {
+    hist_scope HistScope;
     /// If hist_scope is PER_ANTENNA, antenna_id must be provided.
-    AntennaId? antenna_id;
+    antenna_id box<AntennaId>;
     /// Sparse histogram of noise floor of current channel in dBm. Each sample's bucket_index is an
     /// index into this list of dBm values: [-255, -254, ... -1]. For example, if
     /// noise_floor_samples contains a HistBucket with bucket_index = 165 and num_samples = 50, that
     /// means there were 50 frames counted that had a noise floor of -90 dBm.
-    vector<HistBucket>:MAX_NOISE_FLOOR_SAMPLES noise_floor_samples;
+    noise_floor_samples vector<HistBucket>:MAX_NOISE_FLOOR_SAMPLES;
     /// Count of invalid samples encountered, if any.
-    uint64 invalid_samples = 0;
+    invalid_samples uint64 = 0;
 };
 
 /// Histogram for received data rate.
-struct RxRateIndexHistogram {
-    HistScope hist_scope;
+type RxRateIndexHistogram = struct {
+    hist_scope HistScope;
     /// If hist_scope is PER_ANTENNA, antenna_id must be provided.
-    AntennaId? antenna_id;
+    antenna_id box<AntennaId>;
     /// Sparse histogram of count of received frames for each rate. Each sample's bucket_index is an
     /// index into this lookup table:
     /// 0-3: B-MCS 0-3
@@ -124,75 +122,75 @@ struct RxRateIndexHistogram {
     /// For example, if rx_rate_index_samples contains a HistBucket with bucket_index = 75
     /// and num_samples = 50, that means there were 50 frames counted that had a rate corresponding
     /// to N-MCS 15 (BW40:SGI).
-    vector<HistBucket>:MAX_RX_RATE_INDEX_SAMPLES rx_rate_index_samples;
+    rx_rate_index_samples vector<HistBucket>:MAX_RX_RATE_INDEX_SAMPLES;
     /// Count of invalid samples encountered, if any.
-    uint64 invalid_samples = 0;
+    invalid_samples uint64 = 0;
 };
 
 /// Histogram for received signal strength indicator (RSSI).
-struct RssiHistogram {
-    HistScope hist_scope;
+type RssiHistogram = struct {
+    hist_scope HistScope;
     /// If hist_scope is PER_ANTENNA, antenna_id must be provided.
-    AntennaId? antenna_id;
+    antenna_id box<AntennaId>;
     /// Sparse histogram of RSSI of AP in dBm. Each sample's bucket_index is an index
     /// into this list of dBm values: [-255, -254, ... -1]. For example, if rssi_samples
     /// contains a HistBucket with bucket_index = 225 and num_samples = 50, that means
     /// there were 50 frames counted that had a signal level of -30 dBm.
-    vector<HistBucket>:MAX_RSSI_SAMPLES rssi_samples;
+    rssi_samples vector<HistBucket>:MAX_RSSI_SAMPLES;
     /// Count of invalid samples encountered, if any.
-    uint64 invalid_samples = 0;
+    invalid_samples uint64 = 0;
 };
 
 /// Histogram for signal to noise ratio (SNR).
-struct SnrHistogram {
-    HistScope hist_scope;
+type SnrHistogram = struct {
+    hist_scope HistScope;
     /// If hist_scope is PER_ANTENNA, antenna_id must be provided.
-    AntennaId? antenna_id;
+    antenna_id box<AntennaId>;
     /// Sparse histogram of signal to noise ratio in dB. Each sample's bucket_index is an index
     /// into this list of dB values: [0, 1, ... 255]. For example, if snr_samples contains a
     /// HistBucket with value = 60 and num_samples = 50, that means there were 50 frames
     /// counted that had a SNR of 60 dB.
-    vector<HistBucket>:MAX_SNR_SAMPLES snr_samples;
+    snr_samples vector<HistBucket>:MAX_SNR_SAMPLES;
     /// Count of invalid samples encountered, if any.
-    uint64 invalid_samples;
+    invalid_samples uint64;
 };
 
 /// For each histogram type (e.g. RSSI), there can be multiple histograms up to this limit. For
 /// example, an interface might have 1 histogram for station-wide RSSI, but also 1 for each of the
 /// antennas used by the interface.
-const uint8 MAX_HISTOGRAMS_PER_TYPE = 8;
+const MAX_HISTOGRAMS_PER_TYPE uint8 = 8;
 // LINT.ThenChange(//sdk/banjo/fuchsia.hardware.wlanif/wlanif.banjo)
 
-struct ClientMlmeStats {
-    PacketCounter svc_msg;
-    PacketCounter data_frame;
-    PacketCounter mgmt_frame;
-    PacketCounter tx_frame;
-    PacketCounter rx_frame;
-    RssiStats assoc_data_rssi;
-    RssiStats beacon_rssi;
+type ClientMlmeStats = struct {
+    svc_msg PacketCounter;
+    data_frame PacketCounter;
+    mgmt_frame PacketCounter;
+    tx_frame PacketCounter;
+    rx_frame PacketCounter;
+    assoc_data_rssi RssiStats;
+    beacon_rssi RssiStats;
     /// Noise floor histogram(s).
-    vector<NoiseFloorHistogram>:MAX_HISTOGRAMS_PER_TYPE noise_floor_histograms;
+    noise_floor_histograms vector<NoiseFloorHistogram>:MAX_HISTOGRAMS_PER_TYPE;
     /// Received signal strength indicator (RSSI) histogram(s).
-    vector<RssiHistogram>:MAX_HISTOGRAMS_PER_TYPE rssi_histograms;
+    rssi_histograms vector<RssiHistogram>:MAX_HISTOGRAMS_PER_TYPE;
     /// Received rate index histogram(s).
-    vector<RxRateIndexHistogram>:MAX_HISTOGRAMS_PER_TYPE rx_rate_index_histograms;
+    rx_rate_index_histograms vector<RxRateIndexHistogram>:MAX_HISTOGRAMS_PER_TYPE;
     /// Signal to noise ratio (SNR) histogram(s).
-    vector<SnrHistogram>:MAX_HISTOGRAMS_PER_TYPE snr_histograms;
+    snr_histograms vector<SnrHistogram>:MAX_HISTOGRAMS_PER_TYPE;
 };
 
-struct ApMlmeStats {
-    PacketCounter not_used;
+type ApMlmeStats = struct {
+    not_used PacketCounter;
 };
 
 // LINT.ThenChange(//src/connectivity/wlan/lib/common/cpp/include/wlan/common/stats.h)
 
-union MlmeStats {
-    1: ClientMlmeStats client_mlme_stats;
-    2: ApMlmeStats ap_mlme_stats;
+type MlmeStats = strict union {
+    1: client_mlme_stats ClientMlmeStats;
+    2: ap_mlme_stats ApMlmeStats;
 };
 
-struct IfaceStats {
-    DispatcherStats dispatcher_stats;
-    MlmeStats? mlme_stats;
+type IfaceStats = struct {
+    dispatcher_stats DispatcherStats;
+    mlme_stats MlmeStats:optional;
 };

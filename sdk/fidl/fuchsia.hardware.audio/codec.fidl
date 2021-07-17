@@ -1,25 +1,24 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
 library fuchsia.hardware.audio;
 
 using zx;
 
 /// Textual information about the codec.
-struct CodecInfo {
+type CodecInfo = struct {
     /// Unique identifier for the codec.
-    string:UNIQUE_ID_SIZE unique_id;
+    unique_id string:UNIQUE_ID_SIZE;
 
     /// Name of the codec manufacturer.
-    string:MAX_UI_STRING_SIZE manufacturer;
+    manufacturer string:MAX_UI_STRING_SIZE;
 
     /// Product name of the codec.
-    string:MAX_UI_STRING_SIZE product_name;
+    product_name string:MAX_UI_STRING_SIZE;
 };
 
 /// Gain type of representation.
-enum GainType : uint8 {
+type GainType = strict enum : uint8 {
     /// Gain specified in dB, for example -103.0dB or +3.2dB.
     DECIBELS = 1;
 
@@ -28,41 +27,41 @@ enum GainType : uint8 {
 };
 
 /// Gain format/parameters.
-table GainFormat {
+type GainFormat = table {
     /// Specifies what the numbers for gain represent, e.g. a percentage.
-    1: GainType type;
+    1: type GainType;
 
     /// Minimum gain. Must be included.
-    2: float32 min_gain;
+    2: min_gain float32;
 
     /// Maximum gain. Must be included.
-    3: float32 max_gain;
+    3: max_gain float32;
 
     /// Gain step in decibels, this value must not be negative, but may be zero to convey an
     /// effectively continuous range of values. Must not exceed `max_gain_db` - `min_gain_db`.
     /// Must be included.
-    4: float32 gain_step;
+    4: gain_step float32;
 
     /// Gain mute capability. If not included, mute is not supported.
-    5: bool can_mute;
+    5: can_mute bool;
 
     /// Automatic Gain Control (AGC) capability. If not included, AGC is not supported.
-    6: bool can_agc;
+    6: can_agc bool;
 };
 
 /// Codec format information.
-table CodecFormatInfo {
+type CodecFormatInfo = table {
     /// The driver's best estimate of the external delay (in nanoseconds) present in the pipeline
     /// for the chosen format. When precisely synchronizing presentation across multiple entities
     /// (e.g. devices), the external delay should be taken into account. Optional.
-    1: zx.duration external_delay;
+    1: external_delay zx.duration;
 
     /// The driver's best estimate of the amount of time (in nanoseconds) it takes the hardware to
     /// actually start playback/capture after a `Start` command is issued.
     /// It may take some time for the hardware to get into fully operational mode, for example due
     /// a power state change. This delay must be taken into account if not getting the initial audio
     /// samples played or captured is not acceptable. Optional.
-    2: zx.duration turn_on_delay;
+    2: turn_on_delay zx.duration;
 };
 
 /// For an overview see
@@ -75,7 +74,9 @@ protocol Codec {
     Reset() -> ();
 
     /// Retrieves textual information about the codec.
-    GetInfo() -> (CodecInfo info);
+    GetInfo() -> (struct {
+        info CodecInfo;
+    });
 
     /// Stops the codec operation.
     /// `Stop` returns when stopping the codec is completed. If the driver can't successfully stop
@@ -91,44 +92,65 @@ protocol Codec {
     /// the codec to start is completed.
     /// If the driver can't successfully start the codec it will close the codec protocol channel,
     /// in this case the client may obtain a new codec protocol channel and retry.
-    Start() -> (zx.time start_time);
+    Start() -> (struct {
+        start_time zx.time;
+    });
 
     /// Retrieves bridgeable mode from a codec.
-    IsBridgeable() -> (bool supports_bridged_mode);
+    IsBridgeable() -> (struct {
+        supports_bridged_mode bool;
+    });
 
     /// Sets a codec's bridged mode.  Only required if the codec supports bridged mode as specified
     /// by IsBridgeable's reply.
-    SetBridgedMode(bool enable_bridged_mode);
+    SetBridgedMode(struct {
+        enable_bridged_mode bool;
+    });
 
     /// Retrieves the DAI formats supported by the codec, if not available at the time the codec
     /// may reply with an error status and the controller may retry at a later time.
     /// Retrieving multiple DaiSupportedFormats allows for cases where exclusive
     /// combinations of the parameters in DaiSupportedFormats may be supported.
-    GetDaiFormats() -> (vector<DaiSupportedFormats>:MAX_COUNT_FORMATS formats)
-        error zx.status;
+    GetDaiFormats() -> (struct {
+        formats vector<DaiSupportedFormats>:MAX_COUNT_FORMATS;
+    }) error zx.status;
 
     /// Sets the DAI format to be used in the interface between the controller and codec, if
     /// the codec is not able to support the DAI format anymore, e.g. for a removable component
     /// then the function may return an error status.
-    SetDaiFormat(DaiFormat format) -> (CodecFormatInfo state) error zx.status;
+    SetDaiFormat(struct {
+        format DaiFormat;
+    }) -> (struct {
+        state CodecFormatInfo;
+    }) error zx.status;
 
     /// Retrieves gain format.
-    GetGainFormat() -> (GainFormat gain_format);
+    GetGainFormat() -> (struct {
+        gain_format GainFormat;
+    });
 
     /// Retrieves Plug Detect Capabilities.
-    GetPlugDetectCapabilities() -> (PlugDetectCapabilities plug_detect_capabilities);
+    GetPlugDetectCapabilities() -> (struct {
+        plug_detect_capabilities PlugDetectCapabilities;
+    });
 
     /// Get the gain state via a hanging get. The driver will reply to the first `WatchGainState`
     /// sent by the client and this reply must include a `gain_db` set to 0dB or lower. The driver
     /// will not respond to subsequent client `WatchGainState` calls until the gain state changes
     /// from what was most recently reported.
-    WatchGainState() -> (GainState gain_state);
+    WatchGainState() -> (struct {
+        gain_state GainState;
+    });
 
     /// Client update of the gain state.
-    SetGainState(GainState target_state);
+    SetGainState(struct {
+        target_state GainState;
+    });
 
     /// Get the plug detect state via a hanging get. The driver will reply to the first
     /// `WatchPlugState` sent by the client. The driver will not respond to subsequent client
     /// `WatchPlugState` calls until the plug state changes from what was most recently reported.
-    WatchPlugState() -> (PlugState plug_state);
+    WatchPlugState() -> (struct {
+        plug_state PlugState;
+    });
 };

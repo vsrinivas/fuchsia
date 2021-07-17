@@ -1,8 +1,6 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.device.manager;
 
 using zx;
@@ -10,7 +8,7 @@ using fuchsia.hardware.power.statecontrol;
 
 /// Provides protocol for managing driver manager and all the devices during a
 /// system state transition.
-[Discoverable]
+@discoverable
 protocol SystemStateTransition {
     /// Sets and updates the termination SystemPowerState of driver_manager.
     /// On Success, the system power state is cached. The next time
@@ -20,5 +18,7 @@ protocol SystemStateTransition {
     /// state(POWEROFF, REBOOT, REBOOT_BOOTLOADER, REBOOT_RECOVERY, MEXEC)
     /// Returns ZX_ERR_BAD_STATE if driver_manager is unable to save the state.
     /// Each time the api is called the termination state is updated and cached.
-    SetTerminationSystemState(fuchsia.hardware.power.statecontrol.SystemPowerState state) -> () error zx.status;
+    SetTerminationSystemState(struct {
+        state fuchsia.hardware.power.statecontrol.SystemPowerState;
+    }) -> (struct {}) error zx.status;
 };

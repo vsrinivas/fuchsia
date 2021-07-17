@@ -1,71 +1,69 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.kernel;
 
 using zx;
 
 // The zx library does not include zx_info_kmem_stats_t, so this table is mirroring it.
 // See zircon/system/public/zircon/syscalls/object.h for more details.
-table MemoryStats {
-    1: uint64 total_bytes;
-    2: uint64 free_bytes;
-    3: uint64 wired_bytes;
-    4: uint64 total_heap_bytes;
-    5: uint64 free_heap_bytes;
-    6: uint64 vmo_bytes;
-    7: uint64 mmu_overhead_bytes;
-    8: uint64 ipc_bytes;
-    9: uint64 other_bytes;
+type MemoryStats = table {
+    1: total_bytes uint64;
+    2: free_bytes uint64;
+    3: wired_bytes uint64;
+    4: total_heap_bytes uint64;
+    5: free_heap_bytes uint64;
+    6: vmo_bytes uint64;
+    7: mmu_overhead_bytes uint64;
+    8: ipc_bytes uint64;
+    9: other_bytes uint64;
 };
 
 // Similarly, this table mirrors zx_info_kmem_stats_extended_t.
 // See zircon/system/public/zircon/syscalls/object.h for more details.
-table MemoryStatsExtended {
-    1: uint64 total_bytes;
-    2: uint64 free_bytes;
-    3: uint64 wired_bytes;
-    4: uint64 total_heap_bytes;
-    5: uint64 free_heap_bytes;
-    6: uint64 vmo_bytes;
-    7: uint64 vmo_pager_total_bytes;
-    8: uint64 vmo_pager_newest_bytes;
-    9: uint64 vmo_pager_oldest_bytes;
-    10: uint64 vmo_discardable_locked_bytes;
-    11: uint64 vmo_discardable_unlocked_bytes;
-    12: uint64 mmu_overhead_bytes;
-    13: uint64 ipc_bytes;
-    14: uint64 other_bytes;
+type MemoryStatsExtended = table {
+    1: total_bytes uint64;
+    2: free_bytes uint64;
+    3: wired_bytes uint64;
+    4: total_heap_bytes uint64;
+    5: free_heap_bytes uint64;
+    6: vmo_bytes uint64;
+    7: vmo_pager_total_bytes uint64;
+    8: vmo_pager_newest_bytes uint64;
+    9: vmo_pager_oldest_bytes uint64;
+   10: vmo_discardable_locked_bytes uint64;
+   11: vmo_discardable_unlocked_bytes uint64;
+   12: mmu_overhead_bytes uint64;
+   13: ipc_bytes uint64;
+   14: other_bytes uint64;
 };
 
 // Similarly, this table mirrors zx_info_cpu_stats_t.
 // See zircon/system/public/zircon/syscalls/object.h for more details.
-table PerCpuStats {
-    1: uint32 cpu_number;
-    2: uint32 flags;
-    3: zx.duration idle_time;
-    4: uint64 reschedules;
-    5: uint64 context_switches;
-    6: uint64 irq_preempts;
-    7: uint64 yields;
-    8: uint64 ints;
-    9: uint64 timer_ints;
-    10: uint64 timers;
-    11: uint64 page_faults;
-    12: uint64 exceptions;
-    13: uint64 syscalls;
-    14: uint64 reschedule_ipis;
-    15: uint64 generic_ipis;
+type PerCpuStats = table {
+    1: cpu_number uint32;
+    2: flags uint32;
+    3: idle_time zx.duration;
+    4: reschedules uint64;
+    5: context_switches uint64;
+    6: irq_preempts uint64;
+    7: yields uint64;
+    8: ints uint64;
+    9: timer_ints uint64;
+   10: timers uint64;
+   11: page_faults uint64;
+   12: exceptions uint64;
+   13: syscalls uint64;
+   14: reschedule_ipis uint64;
+   15: generic_ipis uint64;
 };
 
-struct CpuStats {
+type CpuStats = struct {
     /// This is the total number of CPUs on the actual device. This may not be the same as the length
     /// of the vector `per_cpu_stats` as it is possible the underlying syscall will not return stats
     /// for all CPUs.
-    uint64 actual_num_cpus;
-    vector<PerCpuStats>:zx.MAX_CPUS? per_cpu_stats;
+    actual_num_cpus uint64;
+    per_cpu_stats vector<PerCpuStats>:<zx.MAX_CPUS, optional>;
 };
 
 /// Protocol for providing kernel stats. This is roughly a wrapper around zx_object_get_info for
@@ -74,18 +72,28 @@ struct CpuStats {
 /// capability, programs that just want stats should use this service instead. If for some reason
 /// the protocol fails to retrieve stats, which will be an un-recoverable error, it will close the
 /// channel.
-[Discoverable]
+@discoverable
 protocol Stats {
-    GetMemoryStats() -> (MemoryStats stats);
+    GetMemoryStats() -> (struct {
+        stats MemoryStats;
+    });
 
-    GetMemoryStatsExtended() -> (MemoryStatsExtended stats);
+    GetMemoryStatsExtended() -> (struct {
+        stats MemoryStatsExtended;
+    });
 
-    GetCpuStats() -> (CpuStats stats);
+    GetCpuStats() -> (struct {
+        stats CpuStats;
+    });
 
     /// Gets the average load as a percentage (0.0 - 100.0) from each CPU over the specified
     /// duration.
     ///
     /// Load is calculated as (100 - %idle), where %idle is the percentage value of idle_time (from
     /// PerCpuStats) over a time duration.
-    GetCpuLoad(zx.duration duration) -> (vector<float32>:zx.MAX_CPUS per_cpu_load);
+    GetCpuLoad(struct {
+        duration zx.duration;
+    }) -> (struct {
+        per_cpu_load vector<float32>:zx.MAX_CPUS;
+    });
 };

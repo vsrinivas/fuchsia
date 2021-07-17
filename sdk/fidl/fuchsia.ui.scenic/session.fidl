@@ -1,7 +1,6 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
 library fuchsia.ui.scenic;
 
 using zx;
@@ -10,7 +9,7 @@ using fuchsia.scenic.scheduling;
 using fuchsia.sysmem;
 
 /// Arguments passed into Present2(). Note that every argument is mandatory.
-resource table Present2Args {
+type Present2Args = resource table {
     /// `requested_presentation_time` specifies the time on or after which the
     /// client would like the enqueued operations to take visible effect
     /// (light up pixels on the screen), expressed in nanoseconds in the
@@ -30,29 +29,31 @@ resource table Present2Args {
     /// the scene manager applies all enqueued operations associated with all
     /// prior calls to Present2 whose `requested_presentation_time` is on or
     /// before the frame's target presentation time.
-    1: zx.time requested_presentation_time;
+    1: requested_presentation_time zx.time;
 
     /// Scenic will wait until all of a session's `acquire_fences` are ready
     /// before it will execute the presented commands.
-    2: vector<zx.handle:EVENT> acquire_fences;
+    2: acquire_fences vector<zx.handle:EVENT>;
 
     /// `release_fences` is the list of events that will be signalled by Scenic when
     /// the following Present2 call's `acquire_fences` has been signalled, and
     /// the updated session state has been fully committed: future frames will be
     /// rendered using this state, and all frames generated using previous session
     /// states have been fully-rendered and presented to the display.
-    3: vector<zx.handle:EVENT> release_fences;
+    3: release_fences vector<zx.handle:EVENT>;
 
     /// `requested_prediction_span` is the amount of time into the future Scenic
     /// will provide predictions for. A span of 0 is guaranteed to provide at
     /// least one future time.
-    4: zx.duration requested_prediction_span;
+    4: requested_prediction_span zx.duration;
 };
 
 /// Client use Sessions to interact with a Scenic instance by enqueuing commands
 /// that create or modify resources.
 protocol Session {
-    Enqueue(vector<Command> cmds);
+    Enqueue(resource struct {
+        cmds vector<Command>;
+    });
 
     // TODO(jeffbrown): Defining presentation time in terms of `CLOCK_MONOTONIC`
     // simplifies synchronization across subsystems but it might be too simple.
@@ -163,10 +164,14 @@ protocol Session {
     /// Note: `acquire_fences` and `release_fences` are only necessary to synchronize
     /// access to memory (and other external resources).  Any modification to
     /// resources made via the Session API are automatically synchronized.
-    [Transitional]
-    Present(uint64 presentation_time,
-            vector<zx.handle:EVENT> acquire_fences, vector<zx.handle:EVENT> release_fences)
-        -> (fuchsia.images.PresentationInfo presentation_info);
+    @transitional
+    Present(resource struct {
+        presentation_time uint64;
+        acquire_fences vector<zx.handle:EVENT>;
+        release_fences vector<zx.handle:EVENT>;
+    }) -> (struct {
+        presentation_info fuchsia.images.PresentationInfo;
+    });
 
     /// Present all previously enqueued operations. In order to pipeline the
     /// preparation of the resources required to render the scene, two lists of
@@ -189,12 +194,17 @@ protocol Session {
     ///
     /// See `Present2Args` documentation above for more detailed information on
     /// what arguments are passed in and their role.
-    Present2(Present2Args args)
-        -> (fuchsia.scenic.scheduling.FuturePresentationTimes request_presentation_times_info);
+    Present2(resource struct {
+        args Present2Args;
+    }) -> (struct {
+        request_presentation_times_info fuchsia.scenic.scheduling.FuturePresentationTimes;
+    });
 
     /// This event is fired whenever a set of one or more Present2s are
     /// presented simultaenously, and are therefore no longer in flight.
-    -> OnFramePresented(fuchsia.scenic.scheduling.FramePresentedInfo frame_presented_info);
+    -> OnFramePresented(struct {
+        frame_presented_info fuchsia.scenic.scheduling.FramePresentedInfo;
+    });
 
     /// Returns information about future presentation times, and their
     /// respective latch points. Clients can use the returned information to
@@ -206,8 +216,11 @@ protocol Session {
     /// `requested_prediction_span`, up to a limit.
     ///
     /// A value of 0 is guaranteed to give at least one future presentation info.
-    RequestPresentationTimes(zx.duration requested_prediction_span)
-        -> (fuchsia.scenic.scheduling.FuturePresentationTimes request_presentation_times_info);
+    RequestPresentationTimes(struct {
+        requested_prediction_span zx.duration;
+    }) -> (struct {
+        request_presentation_times_info fuchsia.scenic.scheduling.FuturePresentationTimes;
+    });
 
     /// Registers BufferCollection referenced by the `token` and sets contraints on it.
     /// It does not block on the buffers being allocated until content backed by one of the
@@ -215,25 +228,36 @@ protocol Session {
     ///
     /// A value of 0 for the `buffer_id` is invalid. All other values are valid as long as they
     /// are not currently in use.
-    RegisterBufferCollection(uint32 buffer_id, fuchsia.sysmem.BufferCollectionToken token);
+    RegisterBufferCollection(resource struct {
+        buffer_id uint32;
+        token client_end:fuchsia.sysmem.BufferCollectionToken;
+    });
 
     /// Deregisters the BufferCollection previously registered with the `buffer_id` and sets it
     /// to be garbage collected as soon as it is no longer referenced by any resources.
     ///
     /// Only `buffer_id` that have been previously registered and not yet deregistered are valid.
-    DeregisterBufferCollection(uint32 buffer_id);
+    DeregisterBufferCollection(struct {
+        buffer_id uint32;
+    });
 
     /// Set an optional debug name for the session. The debug name will be
     /// output in things such as logging and trace events.
-    SetDebugName(string debug_name);
+    SetDebugName(struct {
+        debug_name string;
+    });
 };
 
 /// Listens for events which occur within the session.
 protocol SessionListener {
     /// Called when an error has occurred and the session will be torn down.
-    OnScenicError(string error);
+    OnScenicError(struct {
+        error string;
+    });
 
     /// Called to deliver a batch of one or more events to the listener.
     /// Use `SetEventMaskCmd` to enable event delivery for a resource.
-    OnScenicEvent(vector<Event> events);
+    OnScenicEvent(resource struct {
+        events vector<Event>;
+    });
 };

@@ -1,15 +1,13 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.images;
 
 using fuchsia.sysmem;
 using zx;
 
 // A maximum of 16 fences is enough for the current usage of these APIs.
-const int32 MAX_ACQUIRE_RELEASE_FENCE_COUNT = 16;
+const MAX_ACQUIRE_RELEASE_FENCE_COUNT int32 = 16;
 
 /// ImagePipe is a mechanism for streaming shared images between a producer
 /// and a consumer which may be running in different processes.
@@ -82,8 +80,10 @@ protocol ImagePipe2 {
     ///
     /// The following errors will cause the connection to be closed:
     /// - `buffer_collection_id` is already registered
-    AddBufferCollection(uint32 buffer_collection_id,
-                        fuchsia.sysmem.BufferCollectionToken buffer_collection_token);
+    AddBufferCollection(resource struct {
+        buffer_collection_id uint32;
+        buffer_collection_token client_end:fuchsia.sysmem.BufferCollectionToken;
+    });
 
     /// Adds an image resource to image pipe.
     ///
@@ -104,8 +104,12 @@ protocol ImagePipe2 {
     /// - `buffer_collection_index` points to a resource index out of the initialized
     ///     BufferCollection bounds
     /// - No resource is allocated in the registered BufferCollection.
-    AddImage(uint32 image_id, uint32 buffer_collection_id, uint32 buffer_collection_index,
-             fuchsia.sysmem.ImageFormat_2 image_format);
+    AddImage(struct {
+        image_id uint32;
+        buffer_collection_id uint32;
+        buffer_collection_index uint32;
+        image_format fuchsia.sysmem.ImageFormat_2;
+    });
 
     /// Removes a BufferCollection resource from the pipe.
     ///
@@ -119,7 +123,9 @@ protocol ImagePipe2 {
     ///
     /// The following errors will cause the connection to be closed:
     /// - `buffer_collection_id` does not reference a currently registered BufferCollection
-    RemoveBufferCollection(uint32 buffer_collection_id);
+    RemoveBufferCollection(struct {
+        buffer_collection_id uint32;
+    });
 
     /// Removes an image resource from the pipe.
     ///
@@ -135,7 +141,9 @@ protocol ImagePipe2 {
     ///
     /// The following errors will cause the connection to be closed:
     /// - `image_id` does not reference a currently registered image resource
-    RemoveImage(uint32 image_id);
+    RemoveImage(struct {
+        image_id uint32;
+    });
 
     /// Enqueues the specified image for presentation by the consumer.
     ///
@@ -163,8 +171,12 @@ protocol ImagePipe2 {
     ///
     /// The following errors will cause the connection to be closed:
     /// - `image_id` does not reference a currently registered image resource
-    PresentImage(uint32 image_id, uint64 presentation_time,
-                 vector<zx.handle:EVENT>:MAX_ACQUIRE_RELEASE_FENCE_COUNT acquire_fences,
-                 vector<zx.handle:EVENT>:MAX_ACQUIRE_RELEASE_FENCE_COUNT release_fences)
-        -> (PresentationInfo presentation_info);
+    PresentImage(resource struct {
+        image_id uint32;
+        presentation_time uint64;
+        acquire_fences vector<zx.handle:EVENT>:MAX_ACQUIRE_RELEASE_FENCE_COUNT;
+        release_fences vector<zx.handle:EVENT>:MAX_ACQUIRE_RELEASE_FENCE_COUNT;
+    }) -> (struct {
+        presentation_info PresentationInfo;
+    });
 };

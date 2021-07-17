@@ -1,7 +1,6 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
 library fuchsia.device.fs;
 
 using fuchsia.io;
@@ -9,10 +8,13 @@ using fuchsia.io;
 using zx;
 
 /// Protocol through which a driver can export services to devfs.
-[Discoverable]
+@discoverable
 protocol Exporter {
     /// Export `service_node` to `devfs_path`. If `protocol_id` matches a known
     /// protocol, `service_node` will also be accessible through a class path.
-    Export(fuchsia.io.Node service_node, string:fuchsia.io.MAX_PATH devfs_path,
-           uint32 protocol_id) -> () error zx.status;
+    Export(resource struct {
+        service_node client_end:fuchsia.io.Node;
+        devfs_path string:fuchsia.io.MAX_PATH;
+        protocol_id uint32;
+    }) -> (struct {}) error zx.status;
 };

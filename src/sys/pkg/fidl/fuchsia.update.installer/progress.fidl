@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.update.installer;
 
 /// Monitors a single update installation attempt.
@@ -31,7 +29,9 @@ protocol Monitor {
     /// + request `state` The new state of the update installation attempt.
     /// - response        The implementation is ready to receive the next
     ///                   [`State`] from the [`Installer`].
-    OnState(State state) -> ();
+    OnState(struct {
+        state State;
+    }) -> ();
 };
 
 /// The set of states that a [`Monitor`] can receive during an update
@@ -70,21 +70,21 @@ protocol Monitor {
 ///             +------------->|     reboot     |
 ///                            +----------------+
 /// ```
-union State {
+type State = strict union {
     /// Fetching required metadata to begin the update and verifying system
     /// state.
     ///
     /// Next States:
     /// * `fetch` system is ready to install the update.
     /// * `fail_prepare` on error.
-    1: PrepareData prepare;
+    1: prepare PrepareData;
 
     /// Fetching packages and kernel images.
     ///
     /// Next States:
     /// * `stage` required assets are ready to be staged for next boot.
     /// * `fail_fetch` on error.
-    2: FetchData fetch;
+    2: fetch FetchData;
 
     /// Writing kernel images and preparing to switch over to the new system.
     ///
@@ -92,7 +92,7 @@ union State {
     /// * `wait_to_reboot` if a reboot is necessary to complete the update.
     /// * `complete` if no reboot is necessary to complete the update.
     /// * `fail_stage` on error.
-    3: StageData stage;
+    3: stage StageData;
 
     /// The system is configured to boot the updated OS on next boot, and the
     /// installer is waiting for the trigger to reboot the system.
@@ -101,125 +101,124 @@ union State {
     /// * `reboot` when the installer decides it is time to initiate the reboot.
     /// * `defer_reboot` if the initiator specifically requests to not reboot.
     ///
-    4: WaitToRebootData wait_to_reboot;
+    4: wait_to_reboot WaitToRebootData;
 
     /// The installer has initiated a system reboot into the updated OS.
     ///
     /// **This is a terminal state**
     ///
-    5: RebootData reboot;
+    5: reboot RebootData;
 
     /// The initiator specifically requested to skip the reboot, but a reboot is
     /// still required to complete the update.
     ///
     /// **This is a terminal state**
     ///
-    6: DeferRebootData defer_reboot;
+    6: defer_reboot DeferRebootData;
 
     /// The update is complete and no reboot was required.
     ///
     /// **This is a terminal state**
     ///
-    7: CompleteData complete;
+    7: complete CompleteData;
 
     /// An error occured while preparing the install.
     ///
     /// **This is a terminal state**
     ///
-    8: FailPrepareData fail_prepare;
+    8: fail_prepare FailPrepareData;
 
     /// An error occured while fetching the required artifacts.
     ///
     /// **This is a terminal state**
     ///
-    9: FailFetchData fail_fetch;
+    9: fail_fetch FailFetchData;
 
     /// An error occured while staging the new OS.
     ///
     /// **This is a terminal state**
     ///
-    10: FailStageData fail_stage;
+   10: fail_stage FailStageData;
 };
 
 /// Data associated with [`State.prepare`].
-table PrepareData {
-};
+type PrepareData = table {};
 
 /// Data associated with [`State.fetch`].
-table FetchData {
-    1: UpdateInfo info;
-    2: InstallationProgress progress;
+type FetchData = table {
+    1: info UpdateInfo;
+    2: progress InstallationProgress;
 };
 
 /// Data associated with [`State.stage`].
-table StageData {
-    1: UpdateInfo info;
-    2: InstallationProgress progress;
+type StageData = table {
+    1: info UpdateInfo;
+    2: progress InstallationProgress;
 };
 
 /// Data associated with [`State.wait_to_reboot`].
-table WaitToRebootData {
-    1: UpdateInfo info;
-    2: InstallationProgress progress;
+type WaitToRebootData = table {
+    1: info UpdateInfo;
+    2: progress InstallationProgress;
 };
 
 /// Data associated with [`State.reboot`].
-table RebootData {
-    1: UpdateInfo info;
-    2: InstallationProgress progress;
+type RebootData = table {
+    1: info UpdateInfo;
+    2: progress InstallationProgress;
 };
 
 /// Data associated with [`State.defer_reboot`].
-table DeferRebootData {
-    1: UpdateInfo info;
-    2: InstallationProgress progress;
+type DeferRebootData = table {
+    1: info UpdateInfo;
+    2: progress InstallationProgress;
 };
 
 /// Data associated with [`State.complete`].
-table CompleteData {
-    1: UpdateInfo info;
-    2: InstallationProgress progress;
+type CompleteData = table {
+    1: info UpdateInfo;
+    2: progress InstallationProgress;
 };
 
 /// Data associated with [`State.fail_prepare`].
-table FailPrepareData {
-    1: PrepareFailureReason reason;
+type FailPrepareData = table {
+    1: reason PrepareFailureReason;
 };
 
 /// Data associated with [`State.fail_fetch`].
-table FailFetchData {
-    1: UpdateInfo info;
-    2: InstallationProgress progress;
-    3: FetchFailureReason reason;
+type FailFetchData = table {
+    1: info UpdateInfo;
+    2: progress InstallationProgress;
+    3: reason FetchFailureReason;
 };
 
 /// Data associated with [`State.fail_stage`].
-table FailStageData {
-    1: UpdateInfo info;
-    2: InstallationProgress progress;
+type FailStageData = table {
+    1: info UpdateInfo;
+    2: progress InstallationProgress;
 };
 
 /// Metadata for an update.  Once a field is populated during an installation
 /// attempt, the value will not change.
-table UpdateInfo {
+type UpdateInfo = table {
     /// The total number of bytes that may be downloaded to apply this update.
     /// Optional, the installer may not be able to provide this value.
-    1: uint64 download_size;
+    1: download_size uint64;
 };
 
 /// Current progress for an installation attempt.
-table InstallationProgress {
+type InstallationProgress = table {
     /// The fraction [0-1.0f] of the installation that has been completed.
-    1: float32 fraction_completed;
+    1: fraction_completed float32;
 
     /// The number of bytes downloaded during this installation attempt. Less
     /// than or equal to [`UpdateInfo.download_size`] and only present if that
     /// field is also present.
-    2: uint64 bytes_downloaded;
+    2: bytes_downloaded uint64;
 };
 
 /// The set of values provided when an installation attempt fails on [`State.prepare`].
-enum PrepareFailureReason {
+type PrepareFailureReason = strict enum {
     /// The prepare failed because of some other reason.
     INTERNAL = 0;
 
@@ -234,7 +233,7 @@ enum PrepareFailureReason {
 };
 
 /// The set of values provided when an installation attempt fails on [`State.fetch`].
-enum FetchFailureReason {
+type FetchFailureReason = strict enum {
     /// The fetch failed because of some other reason.
     INTERNAL = 0;
 

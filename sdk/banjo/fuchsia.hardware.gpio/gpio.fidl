@@ -1,43 +1,77 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.gpio;
 
 using zx;
 
 /// Flags for `ConfigIn`.
-const uint32 GPIO_PULL_DOWN = 0x0;
-const uint32 GPIO_PULL_UP = 0x1;
-const uint32 GPIO_NO_PULL = 0x2;
-const uint32 GPIO_PULL_MASK = 0x3;
+const GPIO_PULL_DOWN uint32 = 0x0;
+const GPIO_PULL_UP uint32 = 0x1;
+const GPIO_NO_PULL uint32 = 0x2;
+const GPIO_PULL_MASK uint32 = 0x3;
 
 /// Values for `SetPolarity`.
-enum GpioPolarity : uint32 {
+type GpioPolarity = strict enum : uint32 {
     LOW = 0x0;
     HIGH = 0x1;
 };
 
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol Gpio {
     /// Configures a GPIO for input.
-    ConfigIn(uint32 flags) -> (zx.status s);
+    ConfigIn(struct {
+        flags uint32;
+    }) -> (struct {
+        s zx.status;
+    });
     /// Configures a GPIO for output.
-    ConfigOut(uint8 initial_value) -> (zx.status s);
+    ConfigOut(struct {
+        initial_value uint8;
+    }) -> (struct {
+        s zx.status;
+    });
     /// Configures the GPIO pin for an alternate function (I2C, SPI, etc)
     /// the interpretation of "function" is platform dependent.
-    SetAltFunction(uint64 function) -> (zx.status s);
+    SetAltFunction(struct {
+        function uint64;
+    }) -> (struct {
+        s zx.status;
+    });
     /// Reads the current value of a GPIO (0 or 1).
-    Read() -> (zx.status s, uint8 value);
+    Read() -> (struct {
+        s zx.status;
+        value uint8;
+    });
     /// Sets the current value of the GPIO (any non-zero value maps to 1).
-    Write(uint8 value) -> (zx.status s);
+    Write(struct {
+        value uint8;
+    }) -> (struct {
+        s zx.status;
+    });
     /// Gets an interrupt object pertaining to a particular GPIO pin.
-    GetInterrupt(uint32 flags) -> (zx.status s, zx.handle:INTERRUPT irq);
+    GetInterrupt(struct {
+        flags uint32;
+    }) -> (resource struct {
+        s zx.status;
+        irq zx.handle:INTERRUPT;
+    });
     /// Release the interrupt.
-    ReleaseInterrupt() -> (zx.status s);
+    ReleaseInterrupt() -> (struct {
+        s zx.status;
+    });
     /// Set GPIO polarity.
-    SetPolarity(GpioPolarity polarity) -> (zx.status s);
+    SetPolarity(struct {
+        polarity GpioPolarity;
+    }) -> (struct {
+        s zx.status;
+    });
     /// Set GPIO drive strength.
-    SetDriveStrength(uint64 ds_ua) -> (zx.status s, uint64 actual_ds_ua);
+    SetDriveStrength(struct {
+        ds_ua uint64;
+    }) -> (struct {
+        s zx.status;
+        actual_ds_ua uint64;
+    });
 };

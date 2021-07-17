@@ -1,8 +1,6 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 /// A library of cross-process fuzzing protocols.
 ///
 /// A fuzzer can be described in three parts:
@@ -41,12 +39,12 @@ using zx;
 ///
 /// See also:
 ///   https://github.com/llvm/llvm-project/blob/main/compiler-rt/lib/fuzzer/FuzzerRemoteInterface.h
-const int32 MAX_OPTIONS_SIZE = 64;
+const MAX_OPTIONS_SIZE int32 = 64;
 alias FuzzerProxiedOptions = bytes:MAX_OPTIONS_SIZE;
 
 // These errors correspond to the subset of libFuzzer's error callback that are expected to be
 // detected in a remote process.
-enum FuzzerError : uint8 {
+type FuzzerError = strict enum : uint8 {
     CRASH = 1;
     DEATH = 2;
     EXIT = 3;
@@ -62,7 +60,7 @@ enum FuzzerError : uint8 {
 /// only be used during set-up (Connect, AddCoverage) or tear-down (HandleError). All other
 /// coordination between processes during fuzzing should use the objects shared during set-up, e.g.
 /// the eventpair and VMOs.
-[Discoverable]
+@discoverable
 protocol Proxy {
     /// Registers the remote process with the fuzzing engine.
     ///
@@ -72,7 +70,12 @@ protocol Proxy {
     /// are needed by the remote process.
     ///
     /// The channel is closed on error. Clients should not attempt to reconnect.
-    Connect(uint64 pid, zx.handle:EVENTPAIR paired) -> (FuzzerProxiedOptions options);
+    Connect(resource struct {
+        pid uint64;
+        paired zx.handle:EVENTPAIR;
+    }) -> (struct {
+        options FuzzerProxiedOptions;
+    });
 
     /// Registers the provided VMOs to be used for inline 8-bit edge counters and PC tables.
     ///
@@ -85,7 +88,10 @@ protocol Proxy {
     /// See also:
     ///   https://clang.llvm.org/docs/SanitizerCoverage.html#inline-8bit-counters
     ///   https://clang.llvm.org/docs/SanitizerCoverage.html#pc-table
-    AddCoverage(fuchsia.mem.Buffer inline_8bit_counters, fuchsia.mem.Buffer pcs) -> ();
+    AddCoverage(resource struct {
+        inline_8bit_counters fuchsia.mem.Buffer;
+        pcs fuchsia.mem.Buffer;
+    }) -> ();
 
     /// Reports detection of a monitored error condition.
     ///
@@ -100,7 +106,11 @@ protocol Proxy {
     ///
     /// See also:
     ///   https://github.com/llvm/llvm-project/blob/main/compiler-rt/lib/fuzzer/FuzzerMonitor.h
-    HandleError(FuzzerError error, uint64 param, RemoteDiagnostics diagnostics);
+    HandleError(resource struct {
+        error FuzzerError;
+        param uint64;
+        diagnostics client_end:RemoteDiagnostics;
+    });
 };
 
 /// Tear-off protocol for requesting diagnostics from a remote process.
@@ -122,7 +132,7 @@ protocol RemoteDiagnostics {
 };
 
 // Maximum data consumer label length.
-const int32 MAX_LABEL_SIZE = 128;
+const MAX_LABEL_SIZE int32 = 128;
 
 /// Splits the engine process's fuzzer test input between multiple remote processes.
 ///
@@ -138,7 +148,7 @@ const int32 MAX_LABEL_SIZE = 128;
 /// Implementations should split the single test input between the different consumers in a way that
 /// is "fuzzer-stable", i.e. most mutations such as adding or removing bytes shouldn't radically
 /// alter what data the consumers receive.
-[Discoverable]
+@discoverable
 protocol DataProvider {
     /// Associates a shared VMO with a partition label.
     ///
@@ -150,5 +160,9 @@ protocol DataProvider {
     /// data is available.
     ///
     /// The channel is closed on error. Clients should not attempt to reconnect.
-    Register(string:MAX_LABEL_SIZE label, zx.handle:EVENTPAIR ep, fuchsia.mem.Buffer buf) -> ();
+    Register(resource struct {
+        label string:MAX_LABEL_SIZE;
+        ep zx.handle:EVENTPAIR;
+        buf fuchsia.mem.Buffer;
+    }) -> ();
 };

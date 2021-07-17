@@ -1,25 +1,23 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.io2;
 
 /// Information about an immediate child node of a directory.
 ///
 /// If a particular attribute is not applicable or not supported,
 /// implementations should leave the corresponding field absent.
-table DirectoryEntry {
+type DirectoryEntry = table {
     /// Name of the node. This field must be present.
-    1: Name name;
+    1: name Name;
 
     /// Describes the kinds of representations supported by the node.
-    2: NodeProtocols protocols;
+    2: protocols NodeProtocols;
 
     /// Describes the kinds of operations supported by the node.
-    3: Abilities abilities;
+    3: abilities Abilities;
 
     /// An ID for the node. See [`fuchsia.io2/Id`].
     /// This `id` should be unique among all entries of a directory.
-    4: Id id;
+    4: id Id;
 };

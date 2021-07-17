@@ -1,14 +1,12 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.lowpan.device;
 
 using fuchsia.lowpan.test;
 using fuchsia.lowpan.thread;
 
-const uint32 MAX_LOWPAN_DEVICES = 8;
+const MAX_LOWPAN_DEVICES uint32 = 8;
 
 /// Type describing the name of the network interface.
 ///
@@ -18,7 +16,7 @@ const uint32 MAX_LOWPAN_DEVICES = 8;
 ///
 alias InterfaceName = string:32;
 
-enum ServiceError : int32 {
+type ServiceError = strict enum : int32 {
     /// One of the arguments to this method was invalid.
     ///
     /// This error is only returned if none of the other
@@ -42,42 +40,49 @@ enum ServiceError : int32 {
 
 /// Table of protocol requests that is passed into `Lookup.Lookup()`
 /// and `Driver.GetProtocols()`.
-resource table Protocols {
-    1: request<Device> device;
-    2: request<DeviceExtra> device_extra;
-    3: request<fuchsia.lowpan.test.DeviceTest> device_test;
-    4: request<DeviceRoute> device_route;
-    5: request<DeviceRouteExtra> device_route_extra;
-    6: request<Counters> counters;
-    7: request<fuchsia.lowpan.thread.LegacyJoining> thread_legacy_joining;
+type Protocols = resource table {
+    1: device server_end:Device;
+    2: device_extra server_end:DeviceExtra;
+    3: device_test server_end:fuchsia.lowpan.test.DeviceTest;
+    4: device_route server_end:DeviceRoute;
+    5: device_route_extra server_end:DeviceRouteExtra;
+    6: counters server_end:Counters;
+    7: thread_legacy_joining server_end:fuchsia.lowpan.thread.LegacyJoining;
 };
 
 /// Struct describing changes to the devices being managed
 /// by the LoWPAN service.
-struct DeviceChanges {
-    vector<InterfaceName>:MAX_LOWPAN_DEVICES removed;
-    vector<InterfaceName>:MAX_LOWPAN_DEVICES added;
+type DeviceChanges = struct {
+    removed vector<InterfaceName>:MAX_LOWPAN_DEVICES;
+    added vector<InterfaceName>:MAX_LOWPAN_DEVICES;
 };
 
 /// Protocol representing a LoWPAN driver instance.
-[Discoverable]
+@discoverable
 protocol Driver {
     /// Request protocols to control this device.
     /// Unsupported protocols are closed.
-    GetProtocols(Protocols protocols);
+    GetProtocols(resource struct {
+        protocols Protocols;
+    });
 };
 
 /// Protocol for discovering and resolving LoWPAN interfaces and their
 /// associated control protocol instances.
-[Discoverable]
+@discoverable
 protocol Lookup {
     /// Looks up the LoWPAN `Device` for the given interface name.
     ///
     /// The name of the interface can be learned by calling `GetDevices()`.
-    LookupDevice(InterfaceName name, Protocols protocols) -> () error ServiceError;
+    LookupDevice(resource struct {
+        name InterfaceName;
+        protocols Protocols;
+    }) -> (struct {}) error ServiceError;
 
     /// Returns the list of all registered LoWPAN device interface names.
-    GetDevices() -> (vector<InterfaceName>:MAX_LOWPAN_DEVICES device_names);
+    GetDevices() -> (struct {
+        device_names vector<InterfaceName>:MAX_LOWPAN_DEVICES;
+    });
 
     /// Observes when devices are added or removed.
     ///
@@ -101,14 +106,19 @@ protocol Lookup {
     /// removed and a new device instance started in its place. However, while
     /// the client should be able to handle this condition, it should not depend
     /// on the server will always have this behavior.
-    WatchDevices() -> (DeviceChanges device_changes);
+    WatchDevices() -> (struct {
+        device_changes DeviceChanges;
+    });
 };
 
 /// Protocol for registering LoWPAN interfaces and their
 /// associated control protocols with the LoWPAN service.
-[Discoverable]
+@discoverable
 protocol Register {
     /// Registers the given LoWPAN device with the LoWPAN Service
     /// using the given interface name.
-    RegisterDevice(InterfaceName name, Driver driver) -> () error ServiceError;
+    RegisterDevice(resource struct {
+        name InterfaceName;
+        driver client_end:Driver;
+    }) -> (struct {}) error ServiceError;
 };

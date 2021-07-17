@@ -1,8 +1,6 @@
 // Copyright 2017 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.modular;
 
 /// This interface is used by the caller of ComponentContext::DeprecatedConnectToAgent() to
@@ -10,5 +8,4 @@ library fuchsia.modular;
 ///
 /// The system counts AgentController connections and terminates this Agent if
 /// the count goes to zero.
-protocol AgentController {
-};
+protocol AgentController {};

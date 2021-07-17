@@ -1,13 +1,13 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.overnet.eventpairexample;
 
 using zx;
 
-[Discoverable]
+@discoverable
 protocol Example {
-    Pass(zx.handle:EVENTPAIR event_pair) -> ();
+    Pass(resource struct {
+        event_pair zx.handle:EVENTPAIR;
+    }) -> ();
 };

@@ -1,8 +1,6 @@
 // Copyright 2016 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.sys;
 
 using fuchsia.mem;
@@ -12,49 +10,49 @@ using zx;
 ///
 /// For ELF binaries, this information is provided in the initialization
 /// message given to `libc` by `fuchsia.process.Launcher`.
-resource struct StartupInfo {
+type StartupInfo = resource struct {
     /// The launch info for the component to start.
-    LaunchInfo launch_info;
+    launch_info LaunchInfo;
 
     /// The namespace in which to run the component.
-    FlatNamespace flat_namespace;
+    flat_namespace FlatNamespace;
 
     /// Key string value string map of the component's program metadata,
     /// obtained from its component manifest.
-    vector<ProgramMetadata>? program_metadata;
+    program_metadata vector<ProgramMetadata>:optional;
 
-    // TODO(abarth): Add more fields to this struct relating to component and
-    // environment identity.
+// TODO(abarth): Add more fields to this struct relating to component and
+// environment identity.
 };
 
 /// Program information about a component.
-struct ProgramMetadata {
+type ProgramMetadata = struct {
     /// Key for program metadata pair. E.g. "binary" for an ELF binary
     /// component, or "data" for a flutter/dart component.
-    string key;
+    key string;
 
     /// Value for program metadata pair. E.g. "bin/app" for a "binary" key, or
     /// "data/foo" for a flutter/dart component.
-    string value;
+    value string;
 };
 
 /// A binary representation of a component.
 ///
 /// Typically provided to `Runner.StartComponent` when starting a component.
-resource struct Package {
+type Package = resource struct {
     /// A read-only binary representation of the component. For example, if the
     /// component is intended to run in the Dart virtual machine, this data
     /// might contain a dartx package.
-    fuchsia.mem.Buffer? data;
+    data box<fuchsia.mem.Buffer>;
 
     /// A directory containing the contents of the package. For example, if the
     /// component is stored in pkgfs, this directory will be the pkgfs
     /// directory containing the package.
-    zx.handle:CHANNEL? directory;
+    directory zx.handle:<CHANNEL, optional>;
 
     /// Resolved URL of the component. This is the url specified in
     /// `startup_info` after following redirects and resolving relative paths.
-    component_url resolved_url;
+    resolved_url component_url;
 };
 
 /// An interface for running components.
@@ -62,7 +60,7 @@ resource struct Package {
 /// Typically exposed by components that provide execution environments for
 /// particular classes of programs. For example, the Dart virtual machine
 /// exposes this interface to run Dart programs.
-[Discoverable]
+@discoverable
 protocol Runner {
     /// Execute the given component.
     ///
@@ -73,7 +71,9 @@ protocol Runner {
     /// The `controller` interface request typically originates from the
     /// `Launcher.CreateComponent` message that caused this component to be
     /// started.
-    StartComponent(Package package,
-                   StartupInfo startup_info,
-                   request<ComponentController>? controller);
+    StartComponent(resource struct {
+        package Package;
+        startup_info StartupInfo;
+        controller server_end:<ComponentController, optional>;
+    });
 };

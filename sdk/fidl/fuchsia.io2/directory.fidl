@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.io2;
 
 using zx;
@@ -38,10 +36,12 @@ protocol Directory {
     /// * error `ZX_ERR_ACCESS_DENIED` if the requested rights exceeds
     ///   what is allowed.
     /// * error `ZX_ERR_BAD_PATH` if `path` is invalid.
-    Open(Path path,
-         OpenMode mode,
-         ConnectionOptions options,
-         zx.handle:CHANNEL object_request);
+    Open(resource struct {
+        path Path;
+        mode OpenMode;
+        options ConnectionOptions;
+        object_request zx.handle:CHANNEL;
+    });
 
     /// Adds a new inotify filter for an object relative to this directory object.
     ///
@@ -70,8 +70,12 @@ protocol Directory {
     /// * error `ZX_ERR_ACCESS_DENIED` if the requested rights exceeds
     ///   what is allowed.
     /// * error `ZX_ERR_BAD_PATH` if `path` is invalid.
-    AddInotifyFilter(Path path, InotifyWatchMask filter, uint32 watch_descriptor,
-                     zx.handle:SOCKET socket) -> ();
+    AddInotifyFilter(resource struct {
+        path Path;
+        filter InotifyWatchMask;
+        watch_descriptor uint32;
+        socket zx.handle:SOCKET;
+    }) -> ();
 
     /// Removes a child node from the this directory's list of entries.
     ///
@@ -97,17 +101,24 @@ protocol Directory {
     ///
     /// * [`Rights.ENUMERATE`]
     /// * [`Rights.MODIFY_DIRECTORY`]
-    Unlink(Path path) -> () error zx.status;
-    [Transitional]
-    Unlink2(Name name, UnlinkOptions options) -> () error zx.status;
+    Unlink(struct {
+        path Path;
+    }) -> (struct {}) error zx.status;
+    @transitional
+    Unlink2(struct {
+        name Name;
+        options UnlinkOptions;
+    }) -> (struct {}) error zx.status;
 
     /// Initiates a directory listing operation over the input channel,
     /// starting at seek offset 0.
     ///
     /// This method requires the [`Rights.ENUMERATE`] right. If this right is
     /// absent, `iterator` will be closed with a `ZX_ERR_ACCESS_DENIED` epitaph.
-    Enumerate(DirectoryEnumerateOptions options,
-              request<DirectoryIterator> iterator);
+    Enumerate(resource struct {
+        options DirectoryEnumerateOptions;
+        iterator server_end:DirectoryIterator;
+    });
 
     /// Renames a node named `src` to the name `dst`, in a directory represented
     /// by `dst_parent_token`.
@@ -122,9 +133,11 @@ protocol Directory {
     /// * [`Rights.MODIFY_DIRECTORY`]
     ///
     /// * error `ZX_ERR_INVALID_ARGS` if `src` or `dst` is invalid.
-    Rename(Name src,
-           Token dst_parent_token,
-           Name dst) -> () error zx.status;
+    Rename(resource struct {
+        src Name;
+        dst_parent_token Token;
+        dst Name;
+    }) -> (struct {}) error zx.status;
 
     /// Creates a link to a node named `src` by the name `dst`,
     /// in a directory represented by `dst_parent_token`.
@@ -142,9 +155,11 @@ protocol Directory {
     ///
     /// * error `ZX_ERR_INVALID_ARGS` if `src` or `dst` is invalid.
     /// * error `ZX_ERR_INVALID_ARGS` if `src` is a directory.
-    Link(Name src,
-         Token dst_parent_token,
-         Name dst) -> () error zx.status;
+    Link(resource struct {
+        src Name;
+        dst_parent_token Token;
+        dst Name;
+    }) -> (struct {}) error zx.status;
 
     /// Watches a directory, monitoring events for children being added or
     /// removed on the server end of the `watcher` channel.
@@ -153,13 +168,15 @@ protocol Directory {
     ///
     /// This method requires the [`Rights.ENUMERATE`] right. If this right is
     /// absent, `watcher` will be closed with a `ZX_ERR_ACCESS_DENIED` epitaph.
-    Watch(DirectoryWatchMask mask,
-          DirectoryWatchOptions options,
-          request<DirectoryWatcher> watcher);
+    Watch(resource struct {
+        mask DirectoryWatchMask;
+        options DirectoryWatchOptions;
+        watcher server_end:DirectoryWatcher;
+    });
 };
 
 /// Options related to node creation during [`Directory.Open`].
-enum OpenMode : uint32 {
+type OpenMode = strict enum : uint32 {
     /// Only succeed if the object exists.
     OPEN_EXISTING = 1;
 
@@ -175,23 +192,22 @@ enum OpenMode : uint32 {
     /// instead of forwarding the request. The object must be a directory.
     ///
     /// This option implies the behavior of `OPEN_EXISTING`.
-    [Deprecated = "Mount points will be replaced by components."]
+    @deprecated("Mount points will be replaced by components.")
     OPEN_MOUNT_POINT = 0x10000000;
 };
 
 /// Auxiliary data for the directory representation of a node.
 /// The selection of this variant in [`Representation`] implies that the
 /// connection speaks the [`fuchsia.io2/Directory`] protocol.
-table DirectoryInfo {
-};
+type DirectoryInfo = table {};
 
 /// Options for [`Directory.Unlink`].
-table UnlinkOptions {
-    1: UnlinkFlags flags;
+type UnlinkOptions = table {
+    1: flags UnlinkFlags;
 };
 
 /// Flags for [`Directory.Unlink`].
-bits UnlinkFlags : uint64 {
+type UnlinkFlags = strict bits : uint64 {
     /// If set, the unlink will fail (with ZX_ERR_NOT_DIR) if the object is not a directory.
     MUST_BE_DIRECTORY = 0x01;
 };

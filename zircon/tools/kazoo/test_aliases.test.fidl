@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library zx;
 
 // Mirrors alias_workarounds[.test].fidl. We don't want to pull real syscalls
@@ -10,11 +8,11 @@ library zx;
 // will eventually go away when we can make this test pull in a zx.fidl that
 // contains them.
 
-struct HandleDisposition {};
-struct HandleInfo {};
-struct PciBar {};
-struct PortPacket {};
-struct WaitItem {};
+type HandleDisposition = struct {};
+type HandleInfo = struct {};
+type PciBar = struct {};
+type PortPacket = struct {};
+type WaitItem = struct {};
 
 alias charptr = uint64;
 alias const_futexptr = int32;
@@ -42,32 +40,35 @@ alias vector_void_u32size = vector<byte>;
 alias voidptr = uint64;
 alias string_view = uint64;
 
-[Transport="Syscall"]
+@transport("Syscall")
 protocol Aliases {
-    SomeFunc(charptr a,
-             const_futexptr b,
-             const_voidptr c,
-             mutable_string d,
-             mutable_uint32 e,
-             mutable_usize f,
-             mutable_vector_HandleDisposition_u32size g,
-             mutable_vector_WaitItem h,
-             mutable_vector_handle_u32size i,
-             mutable_vector_void j,
-             mutable_vector_void_u32size k,
-             vector_HandleInfo_u32size l,
-             vector_handle_u32size m,
-             vector_paddr n,
-             vector_void o,
-             vector_void_u32size p,
-             voidptr q) ->
-        (status status,
-         optional_PciBar r,
-         optional_PortPacket s,
-         optional_koid t,
-         optional_signals u,
-         optional_time v,
-         optional_uint32 w,
-         optional_usize x,
-         string_view y);
+    SomeFunc(resource struct {
+        a charptr;
+        b const_futexptr;
+        c const_voidptr;
+        d mutable_string;
+        e mutable_uint32;
+        f mutable_usize;
+        g mutable_vector_HandleDisposition_u32size;
+        h mutable_vector_WaitItem;
+        i mutable_vector_handle_u32size;
+        j mutable_vector_void;
+        k mutable_vector_void_u32size;
+        l vector_HandleInfo_u32size;
+        m vector_handle_u32size;
+        n vector_paddr;
+        o vector_void;
+        p vector_void_u32size;
+        q voidptr;
+    }) -> (struct {
+        status status;
+        r optional_PciBar;
+        s optional_PortPacket;
+        t optional_koid;
+        u optional_signals;
+        v optional_time;
+        w optional_uint32;
+        x optional_usize;
+        y string_view;
+    });
 };

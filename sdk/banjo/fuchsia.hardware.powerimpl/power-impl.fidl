@@ -1,30 +1,70 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.powerimpl;
 
 using zx;
 using fuchsia.hardware.power;
 
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol PowerImpl {
     /// Get status of a power domain
-    GetPowerDomainStatus(uint32 index) -> (zx.status s,
-                                           fuchsia.hardware.power.PowerDomainStatus status);
+    GetPowerDomainStatus(struct {
+        index uint32;
+    }) -> (struct {
+        s zx.status;
+        status fuchsia.hardware.power.PowerDomainStatus;
+    });
     /// Enable a power domain
-    EnablePowerDomain(uint32 index) -> (zx.status s);
+    EnablePowerDomain(struct {
+        index uint32;
+    }) -> (struct {
+        s zx.status;
+    });
     /// Disable a power domain
-    DisablePowerDomain(uint32 index) -> (zx.status s);
+    DisablePowerDomain(struct {
+        index uint32;
+    }) -> (struct {
+        s zx.status;
+    });
     /// Get Supported Voltage Range. min and max are in uV.
-    GetSupportedVoltageRange(uint32 index) -> (zx.status s, uint32 min, uint32 max);
+    GetSupportedVoltageRange(struct {
+        index uint32;
+    }) -> (struct {
+        s zx.status;
+        min uint32;
+        max uint32;
+    });
     /// Request for a particular voltage. "voltage" and actual_voltage are in microvolts(uV)
-    RequestVoltage(uint32 index, uint32 voltage) -> (zx.status s, uint32 actual_voltage);
+    RequestVoltage(struct {
+        index uint32;
+        voltage uint32;
+    }) -> (struct {
+        s zx.status;
+        actual_voltage uint32;
+    });
     /// Get current voltage in uV.
-    GetCurrentVoltage(uint32 index) -> (zx.status s, uint32 current_voltage);
+    GetCurrentVoltage(struct {
+        index uint32;
+    }) -> (struct {
+        s zx.status;
+        current_voltage uint32;
+    });
     /// Write to ctrl register of PMIC
-    WritePmicCtrlReg(uint32 index, uint32 reg_addr, uint32 value) -> (zx.status s);
+    WritePmicCtrlReg(struct {
+        index uint32;
+        reg_addr uint32;
+        value uint32;
+    }) -> (struct {
+        s zx.status;
+    });
     /// Read ctrl register of PMIC
-    ReadPmicCtrlReg(uint32 index, uint32 reg_addr) -> (zx.status s, uint32 value);
+    ReadPmicCtrlReg(struct {
+        index uint32;
+        reg_addr uint32;
+    }) -> (struct {
+        s zx.status;
+        value uint32;
+    });
 };

@@ -1,8 +1,6 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.wlan.sme;
 
 using fuchsia.wlan.common;
@@ -11,7 +9,7 @@ using fuchsia.wlan.internal;
 using fuchsia.wlan.mesh;
 
 /// Security protection which should mirror the Protection enum defined in wlan lib common
-enum Protection {
+type Protection = strict enum {
     UNKNOWN = 0;
     OPEN = 1;
     WEP = 2;
@@ -26,7 +24,7 @@ enum Protection {
     WPA3_ENTERPRISE = 11;
 };
 
-enum UserDisconnectReason {
+type UserDisconnectReason = strict enum {
     UNKNOWN = 0;
     FAILED_TO_CONNECT = 1;
     FIDL_CONNECT_REQUEST = 2;
@@ -45,52 +43,55 @@ enum UserDisconnectReason {
     WLAN_DEV_TOOL = 127;
 };
 
-struct BssInfo {
-    array<uint8>:6 bssid;
-    vector<uint8>:ieee80211.MAX_SSID_BYTE_LEN ssid;
-    int8 rssi_dbm;
-    int8 snr_db;
-    fuchsia.wlan.common.WlanChan channel;
-    Protection protection;
-    bool compatible;
-    fuchsia.wlan.internal.BssDescription bss_desc;
+type BssInfo = struct {
+    bssid array<uint8, 6>;
+    ssid vector<uint8>:ieee80211.MAX_SSID_BYTE_LEN;
+    rssi_dbm int8;
+    snr_db int8;
+    channel fuchsia.wlan.common.WlanChan;
+    protection Protection;
+    compatible bool;
+    bss_desc fuchsia.wlan.internal.BssDescription;
 };
 
-enum ScanErrorCode {
+type ScanErrorCode = strict enum {
     NOT_SUPPORTED = 1;
     INTERNAL_ERROR = 2;
     SHOULD_WAIT = 3;
     CANCELED_BY_DRIVER_OR_FIRMWARE = 4;
 };
 
-struct ScanError {
-    ScanErrorCode code;
-    string message;
+type ScanError = struct {
+    code ScanErrorCode;
+    message string;
 };
 
 protocol ScanTransaction {
     // Can be called several times to deliver incremental scan results
-    -> OnResult(vector<BssInfo> aps);
+    -> OnResult(struct {
+        aps vector<BssInfo>;
+    });
     -> OnFinished();
-    -> OnError(ScanError error);
+    -> OnError(struct {
+        error ScanError;
+    });
 };
 
-union ScanRequest {
-    1: ActiveScanRequest active;
-    2: PassiveScanRequest passive;
+type ScanRequest = strict union {
+    1: active ActiveScanRequest;
+    2: passive PassiveScanRequest;
 };
 
-struct PassiveScanRequest {
-};
+type PassiveScanRequest = struct {};
 
-struct ActiveScanRequest {
+type ActiveScanRequest = struct {
     // The SSIDs to scan for. Leave empty for a wildcard active scan.
-    vector<vector<uint8>:ieee80211.MAX_SSID_BYTE_LEN>:16 ssids;
+    ssids vector<vector<uint8>:ieee80211.MAX_SSID_BYTE_LEN>:16;
     // Channels to scan on. Leave empty for all supported channels.
-    vector<uint8>:500 channels;
+    channels vector<uint8>:500;
 };
 
-enum ConnectResultCode {
+type ConnectResultCode = strict enum {
     // Connected successfully
     SUCCESS = 0;
     // The request was superseded by another connect or disconnect command
@@ -103,69 +104,82 @@ enum ConnectResultCode {
 
 protocol ConnectTransaction {
     // Could add more events here to notify the client of the progress
-    -> OnFinished(ConnectResultCode code);
+    -> OnFinished(struct {
+        code ConnectResultCode;
+    });
 };
 
-struct RadioConfig {
-    bool override_phy;
-    fuchsia.wlan.common.PHY phy;
-    bool override_cbw;
-    fuchsia.wlan.common.CBW cbw;
-    bool override_primary_chan;
-    uint8 primary_chan;
+type RadioConfig = struct {
+    override_phy bool;
+    phy fuchsia.wlan.common.PHY;
+    override_cbw bool;
+    cbw fuchsia.wlan.common.CBW;
+    override_primary_chan bool;
+    primary_chan uint8;
 };
 
 /// Empty struct used as credential value for open networks.
-struct Empty {
-};
+type Empty = struct {};
 
 /// Information required to connect to a protected network.
-flexible union Credential {
+type Credential = flexible union {
     /// The network does not use credentials (open networks).
-    1: Empty none;
+    1: none Empty;
 
     /// Plaintext password (handled as binary data).
-    2: bytes password;
+    2: password bytes;
 
     /// Hash representation of the network passphrase (handled as binary data).
-    3: bytes psk;
+    3: psk bytes;
 };
 
-struct ConnectRequest {
-    vector<uint8>:ieee80211.MAX_SSID_BYTE_LEN ssid;
-    fuchsia.wlan.internal.BssDescription bss_desc;
+type ConnectRequest = struct {
+    ssid vector<uint8>:ieee80211.MAX_SSID_BYTE_LEN;
+    bss_desc fuchsia.wlan.internal.BssDescription;
     /// Informs SME whether multiple candidates were available, for metrics.
-    bool multiple_bss_candidates;
-    Credential credential;
+    multiple_bss_candidates bool;
+    credential Credential;
 
-    RadioConfig radio_cfg;
+    radio_cfg RadioConfig;
     /// Deprecated. SME makes internal decision on whether to perform a passive or active
     /// scan during connect. Setting this field will not affect anything for FullMAC, but
     /// currently SoftMAC still honor this argument.
-    fuchsia.wlan.common.ScanType deprecated_scan_type;
+    deprecated_scan_type fuchsia.wlan.common.ScanType;
 };
 
-struct ClientStatusResponse {
-    BssInfo? connected_to;
+type ClientStatusResponse = struct {
+    connected_to box<BssInfo>;
     // If non-empty, this is the SSID we are currently trying to connect to
-    vector<uint8>:ieee80211.MAX_SSID_BYTE_LEN connecting_to_ssid;
+    connecting_to_ssid vector<uint8>:ieee80211.MAX_SSID_BYTE_LEN;
 };
 
 protocol ClientSme {
-    Scan(ScanRequest req, request<ScanTransaction> txn);
-    Connect(ConnectRequest req, request<ConnectTransaction>? txn);
-    Disconnect(UserDisconnectReason reason) -> ();
-    Status() -> (ClientStatusResponse resp);
-    WmmStatus() -> (fuchsia.wlan.internal.WmmStatusResponse resp) error int32;
+    Scan(resource struct {
+        req ScanRequest;
+        txn server_end:ScanTransaction;
+    });
+    Connect(resource struct {
+        req ConnectRequest;
+        txn server_end:<ConnectTransaction, optional>;
+    });
+    Disconnect(struct {
+        reason UserDisconnectReason;
+    }) -> ();
+    Status() -> (struct {
+        resp ClientStatusResponse;
+    });
+    WmmStatus() -> (struct {
+        resp fuchsia.wlan.internal.WmmStatusResponse;
+    }) error int32;
 };
 
-struct ApConfig {
-    vector<uint8>:ieee80211.MAX_SSID_BYTE_LEN ssid;
-    vector<uint8>:64 password;
-    RadioConfig radio_cfg;
+type ApConfig = struct {
+    ssid vector<uint8>:ieee80211.MAX_SSID_BYTE_LEN;
+    password vector<uint8>:64;
+    radio_cfg RadioConfig;
 };
 
-enum StartApResultCode {
+type StartApResultCode = strict enum {
     // TODO(porce): Fix naming style.
     SUCCESS = 0;
     ALREADY_STARTED = 1;
@@ -177,34 +191,42 @@ enum StartApResultCode {
     DFS_UNSUPPORTED = 7;
 };
 
-enum StopApResultCode {
+type StopApResultCode = strict enum {
     SUCCESS = 0;
     INTERNAL_ERROR = 1;
     TIMED_OUT = 2;
 };
 
-struct Ap {
-    vector<uint8>:ieee80211.MAX_SSID_BYTE_LEN ssid;
-    uint8 channel;
-    uint16 num_clients;
+type Ap = struct {
+    ssid vector<uint8>:ieee80211.MAX_SSID_BYTE_LEN;
+    channel uint8;
+    num_clients uint16;
 };
 
-struct ApStatusResponse {
-    Ap? running_ap;
+type ApStatusResponse = struct {
+    running_ap box<Ap>;
 };
 
 protocol ApSme {
-    Start(ApConfig config) -> (StartApResultCode code);
-    Stop() -> (StopApResultCode code);
-    Status() -> (ApStatusResponse resp);
+    Start(struct {
+        config ApConfig;
+    }) -> (struct {
+        code StartApResultCode;
+    });
+    Stop() -> (struct {
+        code StopApResultCode;
+    });
+    Status() -> (struct {
+        resp ApStatusResponse;
+    });
 };
 
-struct MeshConfig {
-    vector<uint8>:32 mesh_id;
-    uint8 channel;
+type MeshConfig = struct {
+    mesh_id vector<uint8>:32;
+    channel uint8;
 };
 
-enum JoinMeshResultCode {
+type JoinMeshResultCode = strict enum {
     SUCCESS = 0;
     CANCELED = 1;
     INTERNAL_ERROR = 2;
@@ -212,18 +234,27 @@ enum JoinMeshResultCode {
     DFS_UNSUPPORTED = 4;
 };
 
-enum LeaveMeshResultCode {
+type LeaveMeshResultCode = strict enum {
     SUCCESS = 0;
     INTERNAL_ERROR = 1;
 };
 
-enum GetMeshPathTableResultCode {
+type GetMeshPathTableResultCode = strict enum {
     SUCCESS = 0;
     INTERNAL_ERROR = 1;
 };
 
 protocol MeshSme {
-    Join(MeshConfig config) -> (JoinMeshResultCode code);
-    Leave() -> (LeaveMeshResultCode code);
-    GetMeshPathTable() -> (GetMeshPathTableResultCode code, fuchsia.wlan.mesh.MeshPathTable path);
+    Join(struct {
+        config MeshConfig;
+    }) -> (struct {
+        code JoinMeshResultCode;
+    });
+    Leave() -> (struct {
+        code LeaveMeshResultCode;
+    });
+    GetMeshPathTable() -> (struct {
+        code GetMeshPathTableResultCode;
+        path fuchsia.wlan.mesh.MeshPathTable;
+    });
 };

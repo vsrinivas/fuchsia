@@ -1,45 +1,86 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.usb.dci;
 
 using fuchsia.hardware.usb.descriptor;
 using fuchsia.hardware.usb.request;
 using zx;
 
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol UsbDci {
     /// Queues a USB request with the DCI driver.
-    RequestQueue([InOut] fuchsia.hardware.usb.request.UsbRequest usb_request,
-                 [InOut] fuchsia.hardware.usb.request.UsbRequestCompleteCallback complete_cb) -> ();
+    RequestQueue(resource struct {
+        @in_out
+        usb_request fuchsia.hardware.usb.request.UsbRequest;
+        @in_out
+        complete_cb client_end:fuchsia.hardware.usb.request.UsbRequestCompleteCallback;
+    }) -> ();
     /// Registers callback interface with the DCI driver.
-    SetInterface(UsbDciInterface interface) -> (zx.status s);
+    SetInterface(resource struct {
+        interface client_end:UsbDciInterface;
+    }) -> (struct {
+        s zx.status;
+    });
     /// Configures an endpoint based on provided descriptors.
-    ConfigEp(fuchsia.hardware.usb.descriptor.UsbEndpointDescriptor ep_desc,
-             fuchsia.hardware.usb.descriptor.UsbSsEpCompDescriptor ss_comp_desc) -> (zx.status s);
+    ConfigEp(struct {
+        ep_desc fuchsia.hardware.usb.descriptor.UsbEndpointDescriptor;
+        ss_comp_desc fuchsia.hardware.usb.descriptor.UsbSsEpCompDescriptor;
+    }) -> (struct {
+        s zx.status;
+    });
     /// Disables the specified endpoint.
-    DisableEp(uint8 ep_address) -> (zx.status s);
+    DisableEp(struct {
+        ep_address uint8;
+    }) -> (struct {
+        s zx.status;
+    });
     /// Stalls the specified endpoint.
-    EpSetStall(uint8 ep_address) -> (zx.status s);
+    EpSetStall(struct {
+        ep_address uint8;
+    }) -> (struct {
+        s zx.status;
+    });
     /// Clears a stall condition for the specified endpoint.
-    EpClearStall(uint8 ep_address) -> (zx.status s);
+    EpClearStall(struct {
+        ep_address uint8;
+    }) -> (struct {
+        s zx.status;
+    });
     /// Returns the size needed for a |usb_request_t|, including private storage needed by the
     /// HCI driver.
-    GetRequestSize() -> (uint64 size);
+    GetRequestSize() -> (struct {
+        size uint64;
+    });
     /// Cancels all transactions currently queued on the specified endpoint.
-    CancelAll(uint8 ep_address) -> (zx.status s);
+    CancelAll(struct {
+        ep_address uint8;
+    }) -> (struct {
+        s zx.status;
+    });
 };
 
 /// Interface for use by the DCI controller to call into the USB peripheral driver.
-[Transport = "Banjo", BanjoLayout = "ddk-interface"]
+@transport("Banjo")
+@banjo_layout("ddk-interface")
 protocol UsbDciInterface {
     /// Callback for handling ep0 control requests.
-    Control(fuchsia.hardware.usb.descriptor.UsbSetup setup, [Buffer] vector<uint8>:MAX write) -> (zx.status status,
-                                                                                                  [Buffer] vector<uint8>:MAX read);
+    Control(struct {
+        setup fuchsia.hardware.usb.descriptor.UsbSetup;
+        @buffer
+        write vector<uint8>:MAX;
+    }) -> (struct {
+        status zx.status;
+        @buffer
+        read vector<uint8>:MAX;
+    });
     /// Notifies change in USB connected state.
-    SetConnected(bool connected) -> ();
+    SetConnected(struct {
+        connected bool;
+    }) -> ();
     /// Notifies current USB speed..
-    SetSpeed(fuchsia.hardware.usb.descriptor.UsbSpeed speed) -> ();
+    SetSpeed(struct {
+        speed fuchsia.hardware.usb.descriptor.UsbSpeed;
+    }) -> ();
 };

@@ -1,41 +1,39 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.mediastreams;
 
 /// The maximum size of an `EncryptionScheme` string.
-const int64 MAX_ENCRYPTION_SCHEME_SIZE = 4;
+const MAX_ENCRYPTION_SCHEME_SIZE int64 = 4;
 
 /// The maximum size of a `EncryptionKeyId` blob.
-const int64 MAX_KEY_ID_SIZE = 16;
+const MAX_KEY_ID_SIZE int64 = 16;
 
 /// The maximum size of a `EncryptionInitVector` blob.
-const int64 MAX_INIT_VECTOR_SIZE = 16;
+const MAX_INIT_VECTOR_SIZE int64 = 16;
 
 /// Identifies an encryption scheme.
 alias EncryptionScheme = string:MAX_ENCRYPTION_SCHEME_SIZE;
-const string ENCRYPTION_SCHEME_CENC = "cenc";
-const string ENCRYPTION_SCHEME_CBC1 = "cbc1";
-const string ENCRYPTION_SCHEME_CENS = "cens";
-const string ENCRYPTION_SCHEME_CBCS = "cbcs";
+const ENCRYPTION_SCHEME_CENC string = "cenc";
+const ENCRYPTION_SCHEME_CBC1 string = "cbc1";
+const ENCRYPTION_SCHEME_CENS string = "cens";
+const ENCRYPTION_SCHEME_CBCS string = "cbcs";
 alias EncryptionKeyId = bytes:MAX_KEY_ID_SIZE;
 alias EncryptionInitVector = bytes:MAX_INIT_VECTOR_SIZE;
 
-struct EncryptionSubsampleEntry {
-    uint32 clear_bytes;
-    uint32 encrypted_bytes;
+type EncryptionSubsampleEntry = struct {
+    clear_bytes uint32;
+    encrypted_bytes uint32;
 };
 
-struct EncryptionPattern {
-    uint32 clear_blocks;
-    uint32 encrypted_blocks;
+type EncryptionPattern = struct {
+    clear_blocks uint32;
+    encrypted_blocks uint32;
 };
 
-struct Encryption {
-    EncryptionScheme scheme;
-    EncryptionKeyId? default_key_id;
-    EncryptionInitVector? default_init_vector;
-    EncryptionPattern? default_pattern;
+type Encryption = struct {
+    scheme EncryptionScheme;
+    default_key_id EncryptionKeyId:optional;
+    default_init_vector EncryptionInitVector:optional;
+    default_pattern box<EncryptionPattern>;
 };

@@ -14,8 +14,8 @@
       "name": "fidl.test.table/EmptyTable",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-        "line": 4,
-        "column": 7,
+        "line": 3,
+        "column": 6,
         "length": 10
       },
       "members": [],
@@ -44,8 +44,8 @@
       "name": "fidl.test.table/SimpleTable",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-        "line": 7,
-        "column": 7,
+        "line": 5,
+        "column": 6,
         "length": 11
       },
       "members": [
@@ -59,8 +59,8 @@
           "name": "x",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 8,
-            "column": 14,
+            "line": 6,
+            "column": 8,
             "length": 1
           }
         },
@@ -69,7 +69,7 @@
           "reserved": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 9,
+            "line": 7,
             "column": 5,
             "length": 11
           }
@@ -79,7 +79,7 @@
           "reserved": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 10,
+            "line": 8,
             "column": 5,
             "length": 11
           }
@@ -89,7 +89,7 @@
           "reserved": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 11,
+            "line": 9,
             "column": 5,
             "length": 11
           }
@@ -104,8 +104,8 @@
           "name": "y",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 12,
-            "column": 14,
+            "line": 10,
+            "column": 8,
             "length": 1
           }
         }
@@ -135,8 +135,8 @@
       "name": "fidl.test.table/OlderSimpleTable",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-        "line": 15,
-        "column": 7,
+        "line": 13,
+        "column": 6,
         "length": 16
       },
       "members": [
@@ -150,8 +150,8 @@
           "name": "x",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 16,
-            "column": 14,
+            "line": 14,
+            "column": 8,
             "length": 1
           }
         },
@@ -160,7 +160,7 @@
           "reserved": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 17,
+            "line": 15,
             "column": 5,
             "length": 11
           }
@@ -191,8 +191,8 @@
       "name": "fidl.test.table/NewerSimpleTable",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-        "line": 20,
-        "column": 7,
+        "line": 18,
+        "column": 6,
         "length": 16
       },
       "members": [
@@ -206,8 +206,8 @@
           "name": "x",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 21,
-            "column": 14,
+            "line": 19,
+            "column": 8,
             "length": 1
           }
         },
@@ -216,7 +216,7 @@
           "reserved": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 22,
+            "line": 20,
             "column": 5,
             "length": 11
           }
@@ -226,7 +226,7 @@
           "reserved": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 23,
+            "line": 21,
             "column": 5,
             "length": 11
           }
@@ -236,7 +236,7 @@
           "reserved": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 24,
+            "line": 22,
             "column": 5,
             "length": 11
           }
@@ -251,8 +251,8 @@
           "name": "y",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 25,
-            "column": 14,
+            "line": 23,
+            "column": 8,
             "length": 1
           }
         },
@@ -266,8 +266,8 @@
           "name": "z",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 26,
-            "column": 14,
+            "line": 24,
+            "column": 8,
             "length": 1
           }
         },
@@ -276,7 +276,7 @@
           "reserved": true,
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 27,
+            "line": 25,
             "column": 5,
             "length": 11
           }
@@ -307,8 +307,8 @@
       "name": "fidl.test.table/ReverseOrdinalTable",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-        "line": 30,
-        "column": 7,
+        "line": 28,
+        "column": 6,
         "length": 19
       },
       "members": [
@@ -322,8 +322,8 @@
           "name": "x",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 31,
-            "column": 14,
+            "line": 29,
+            "column": 8,
             "length": 1
           }
         },
@@ -337,8 +337,8 @@
           "name": "y",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 32,
-            "column": 14,
+            "line": 30,
+            "column": 8,
             "length": 1
           }
         },
@@ -352,8 +352,8 @@
           "name": "z",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 33,
-            "column": 14,
+            "line": 31,
+            "column": 8,
             "length": 1
           }
         }
@@ -383,8 +383,8 @@
       "name": "fidl.test.table/GreaterThan64OrdinalTable",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-        "line": 38,
-        "column": 7,
+        "line": 36,
+        "column": 6,
         "length": 25
       },
       "members": [
@@ -398,8 +398,8 @@
           "name": "v1",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 39,
-            "column": 14,
+            "line": 37,
+            "column": 8,
             "length": 2
           }
         },
@@ -413,8 +413,8 @@
           "name": "v2",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 40,
-            "column": 14,
+            "line": 38,
+            "column": 8,
             "length": 2
           }
         },
@@ -428,8 +428,8 @@
           "name": "v3",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 41,
-            "column": 14,
+            "line": 39,
+            "column": 8,
             "length": 2
           }
         },
@@ -443,8 +443,8 @@
           "name": "v4",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 42,
-            "column": 14,
+            "line": 40,
+            "column": 8,
             "length": 2
           }
         },
@@ -458,8 +458,8 @@
           "name": "v5",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 43,
-            "column": 14,
+            "line": 41,
+            "column": 8,
             "length": 2
           }
         },
@@ -473,8 +473,8 @@
           "name": "v6",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 44,
-            "column": 14,
+            "line": 42,
+            "column": 8,
             "length": 2
           }
         },
@@ -488,8 +488,8 @@
           "name": "v7",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 45,
-            "column": 14,
+            "line": 43,
+            "column": 8,
             "length": 2
           }
         },
@@ -503,8 +503,8 @@
           "name": "v8",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 46,
-            "column": 14,
+            "line": 44,
+            "column": 8,
             "length": 2
           }
         },
@@ -518,8 +518,8 @@
           "name": "v9",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 47,
-            "column": 14,
+            "line": 45,
+            "column": 8,
             "length": 2
           }
         },
@@ -533,8 +533,8 @@
           "name": "v10",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 48,
-            "column": 15,
+            "line": 46,
+            "column": 8,
             "length": 3
           }
         },
@@ -548,8 +548,8 @@
           "name": "v11",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 49,
-            "column": 15,
+            "line": 47,
+            "column": 8,
             "length": 3
           }
         },
@@ -563,8 +563,8 @@
           "name": "v12",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 50,
-            "column": 15,
+            "line": 48,
+            "column": 8,
             "length": 3
           }
         },
@@ -578,8 +578,8 @@
           "name": "v13",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 51,
-            "column": 15,
+            "line": 49,
+            "column": 8,
             "length": 3
           }
         },
@@ -593,8 +593,8 @@
           "name": "v14",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 52,
-            "column": 15,
+            "line": 50,
+            "column": 8,
             "length": 3
           }
         },
@@ -608,8 +608,8 @@
           "name": "v15",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 53,
-            "column": 15,
+            "line": 51,
+            "column": 8,
             "length": 3
           }
         },
@@ -623,8 +623,8 @@
           "name": "v16",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 54,
-            "column": 15,
+            "line": 52,
+            "column": 8,
             "length": 3
           }
         },
@@ -638,8 +638,8 @@
           "name": "v17",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 55,
-            "column": 15,
+            "line": 53,
+            "column": 8,
             "length": 3
           }
         },
@@ -653,8 +653,8 @@
           "name": "v18",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 56,
-            "column": 15,
+            "line": 54,
+            "column": 8,
             "length": 3
           }
         },
@@ -668,8 +668,8 @@
           "name": "v19",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 57,
-            "column": 15,
+            "line": 55,
+            "column": 8,
             "length": 3
           }
         },
@@ -683,8 +683,8 @@
           "name": "v20",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 58,
-            "column": 15,
+            "line": 56,
+            "column": 8,
             "length": 3
           }
         },
@@ -698,8 +698,8 @@
           "name": "v21",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 59,
-            "column": 15,
+            "line": 57,
+            "column": 8,
             "length": 3
           }
         },
@@ -713,8 +713,8 @@
           "name": "v22",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 60,
-            "column": 15,
+            "line": 58,
+            "column": 8,
             "length": 3
           }
         },
@@ -728,8 +728,8 @@
           "name": "v23",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 61,
-            "column": 15,
+            "line": 59,
+            "column": 8,
             "length": 3
           }
         },
@@ -743,8 +743,8 @@
           "name": "v24",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 62,
-            "column": 15,
+            "line": 60,
+            "column": 8,
             "length": 3
           }
         },
@@ -758,8 +758,8 @@
           "name": "v25",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 63,
-            "column": 15,
+            "line": 61,
+            "column": 8,
             "length": 3
           }
         },
@@ -773,8 +773,8 @@
           "name": "v26",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 64,
-            "column": 15,
+            "line": 62,
+            "column": 8,
             "length": 3
           }
         },
@@ -788,8 +788,8 @@
           "name": "v27",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 65,
-            "column": 15,
+            "line": 63,
+            "column": 8,
             "length": 3
           }
         },
@@ -803,8 +803,8 @@
           "name": "v28",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 66,
-            "column": 15,
+            "line": 64,
+            "column": 8,
             "length": 3
           }
         },
@@ -818,8 +818,8 @@
           "name": "v29",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 67,
-            "column": 15,
+            "line": 65,
+            "column": 8,
             "length": 3
           }
         },
@@ -833,8 +833,8 @@
           "name": "v30",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 68,
-            "column": 15,
+            "line": 66,
+            "column": 8,
             "length": 3
           }
         },
@@ -848,8 +848,8 @@
           "name": "v31",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 69,
-            "column": 15,
+            "line": 67,
+            "column": 8,
             "length": 3
           }
         },
@@ -863,8 +863,8 @@
           "name": "v32",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 70,
-            "column": 15,
+            "line": 68,
+            "column": 8,
             "length": 3
           }
         },
@@ -878,8 +878,8 @@
           "name": "v33",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 71,
-            "column": 15,
+            "line": 69,
+            "column": 8,
             "length": 3
           }
         },
@@ -893,8 +893,8 @@
           "name": "v34",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 72,
-            "column": 15,
+            "line": 70,
+            "column": 8,
             "length": 3
           }
         },
@@ -908,8 +908,8 @@
           "name": "v35",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 73,
-            "column": 15,
+            "line": 71,
+            "column": 8,
             "length": 3
           }
         },
@@ -923,8 +923,8 @@
           "name": "v36",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 74,
-            "column": 15,
+            "line": 72,
+            "column": 8,
             "length": 3
           }
         },
@@ -938,8 +938,8 @@
           "name": "v37",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 75,
-            "column": 15,
+            "line": 73,
+            "column": 8,
             "length": 3
           }
         },
@@ -953,8 +953,8 @@
           "name": "v38",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 76,
-            "column": 15,
+            "line": 74,
+            "column": 8,
             "length": 3
           }
         },
@@ -968,8 +968,8 @@
           "name": "v39",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 77,
-            "column": 15,
+            "line": 75,
+            "column": 8,
             "length": 3
           }
         },
@@ -983,8 +983,8 @@
           "name": "v40",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 78,
-            "column": 15,
+            "line": 76,
+            "column": 8,
             "length": 3
           }
         },
@@ -998,8 +998,8 @@
           "name": "v41",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 79,
-            "column": 15,
+            "line": 77,
+            "column": 8,
             "length": 3
           }
         },
@@ -1013,8 +1013,8 @@
           "name": "v42",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 80,
-            "column": 15,
+            "line": 78,
+            "column": 8,
             "length": 3
           }
         },
@@ -1028,8 +1028,8 @@
           "name": "v43",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 81,
-            "column": 15,
+            "line": 79,
+            "column": 8,
             "length": 3
           }
         },
@@ -1043,8 +1043,8 @@
           "name": "v44",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 82,
-            "column": 15,
+            "line": 80,
+            "column": 8,
             "length": 3
           }
         },
@@ -1058,8 +1058,8 @@
           "name": "v45",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 83,
-            "column": 15,
+            "line": 81,
+            "column": 8,
             "length": 3
           }
         },
@@ -1073,8 +1073,8 @@
           "name": "v46",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 84,
-            "column": 15,
+            "line": 82,
+            "column": 8,
             "length": 3
           }
         },
@@ -1088,8 +1088,8 @@
           "name": "v47",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 85,
-            "column": 15,
+            "line": 83,
+            "column": 8,
             "length": 3
           }
         },
@@ -1103,8 +1103,8 @@
           "name": "v48",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 86,
-            "column": 15,
+            "line": 84,
+            "column": 8,
             "length": 3
           }
         },
@@ -1118,8 +1118,8 @@
           "name": "v49",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 87,
-            "column": 15,
+            "line": 85,
+            "column": 8,
             "length": 3
           }
         },
@@ -1133,8 +1133,8 @@
           "name": "v50",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 88,
-            "column": 15,
+            "line": 86,
+            "column": 8,
             "length": 3
           }
         },
@@ -1148,8 +1148,8 @@
           "name": "v51",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 89,
-            "column": 15,
+            "line": 87,
+            "column": 8,
             "length": 3
           }
         },
@@ -1163,8 +1163,8 @@
           "name": "v52",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 90,
-            "column": 15,
+            "line": 88,
+            "column": 8,
             "length": 3
           }
         },
@@ -1178,8 +1178,8 @@
           "name": "v53",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 91,
-            "column": 15,
+            "line": 89,
+            "column": 8,
             "length": 3
           }
         },
@@ -1193,8 +1193,8 @@
           "name": "v54",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 92,
-            "column": 15,
+            "line": 90,
+            "column": 8,
             "length": 3
           }
         },
@@ -1208,8 +1208,8 @@
           "name": "v55",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 93,
-            "column": 15,
+            "line": 91,
+            "column": 8,
             "length": 3
           }
         },
@@ -1223,8 +1223,8 @@
           "name": "v56",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 94,
-            "column": 15,
+            "line": 92,
+            "column": 8,
             "length": 3
           }
         },
@@ -1238,8 +1238,8 @@
           "name": "v57",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 95,
-            "column": 15,
+            "line": 93,
+            "column": 8,
             "length": 3
           }
         },
@@ -1253,8 +1253,8 @@
           "name": "v58",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 96,
-            "column": 15,
+            "line": 94,
+            "column": 8,
             "length": 3
           }
         },
@@ -1268,8 +1268,8 @@
           "name": "v59",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 97,
-            "column": 15,
+            "line": 95,
+            "column": 8,
             "length": 3
           }
         },
@@ -1283,8 +1283,8 @@
           "name": "v60",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 98,
-            "column": 15,
+            "line": 96,
+            "column": 8,
             "length": 3
           }
         },
@@ -1298,8 +1298,8 @@
           "name": "v61",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 99,
-            "column": 15,
+            "line": 97,
+            "column": 8,
             "length": 3
           }
         },
@@ -1313,8 +1313,8 @@
           "name": "v62",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 100,
-            "column": 15,
+            "line": 98,
+            "column": 8,
             "length": 3
           }
         },
@@ -1328,8 +1328,8 @@
           "name": "v63",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 101,
-            "column": 15,
+            "line": 99,
+            "column": 8,
             "length": 3
           }
         },
@@ -1343,8 +1343,8 @@
           "name": "v64",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 102,
-            "column": 15,
+            "line": 100,
+            "column": 8,
             "length": 3
           }
         },
@@ -1358,8 +1358,8 @@
           "name": "v65",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 103,
-            "column": 15,
+            "line": 101,
+            "column": 8,
             "length": 3
           }
         },
@@ -1373,8 +1373,8 @@
           "name": "v66",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/table.test.fidl",
-            "line": 104,
-            "column": 15,
+            "line": 102,
+            "column": 8,
             "length": 3
           }
         }

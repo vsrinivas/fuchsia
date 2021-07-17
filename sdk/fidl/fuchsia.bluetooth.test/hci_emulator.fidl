@@ -1,21 +1,19 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.bluetooth.test;
 
 using fuchsia.bluetooth as bt;
 using fuchsia.bluetooth.bredr as bredr;
 
 /// Error codes that can be generated for emulator-wide configurations.
-enum EmulatorError {
+type EmulatorError = strict enum {
     FAILED = 1;
     HCI_ALREADY_PUBLISHED = 2;
 };
 
 /// Error codes that are generated for functions that manipulate fake peers.
-enum EmulatorPeerError {
+type EmulatorPeerError = strict enum {
     ADDRESS_REPEATED = 1;
     PARAMETERS_INVALID = 2;
     NOT_FOUND = 3;
@@ -27,7 +25,7 @@ enum EmulatorPeerError {
 // TODO(armansito): Add ability to specify Bluetooth HCI version.
 
 /// Pre-set HCI configurations.
-enum HciConfig {
+type HciConfig = strict enum {
     /// Support both BR/EDR and LE in LMP features.
     DUAL_MODE = 1;
 
@@ -36,79 +34,79 @@ enum HciConfig {
 };
 
 /// The HCI ACL data flow-control parameters.
-struct AclBufferSettings {
+type AclBufferSettings = struct {
     /// ACL frame MTU in bytes.
-    uint16 data_packet_length;
+    data_packet_length uint16;
 
     /// The maximum number of ACL frames that the controller can buffer.
-    uint8 total_num_data_packets;
+    total_num_data_packets uint8;
 };
 
 /// Controller settings used by the emulator.
-table EmulatorSettings {
+type EmulatorSettings = table {
     /// The `BD_ADDR` (BR/EDR) or LE Public Device Address. Defaults to "00:00:00:00:00:00".
-    1: bt.Address address;
+    1: address bt.Address;
 
     /// Supported HCI command configuration. Defaults to "`DUAL_MODE`".
-    2: HciConfig hci_config;
+    2: hci_config HciConfig;
 
     /// True if the 5.0 extended advertising features are supported. Defaults to "false".
-    3: bool extended_advertising;
+    3: extended_advertising bool;
 
     /// The ACL-U data buffer settings. Defaults to
     ///    data_packet_length: 1024
     ///    total_num_data_packets: 5
     /// IF `hci_config` is set to `DUAL_MODE`. Defaults to null otherwise.
-    4: AclBufferSettings acl_buffer_settings;
+    4: acl_buffer_settings AclBufferSettings;
 
     /// The LE-U ACL data buffer settings. Defaults to
     ///    data_packet_length: 251
     ///    total_num_data_packets: 5
-    5: AclBufferSettings le_acl_buffer_settings;
+    5: le_acl_buffer_settings AclBufferSettings;
 };
 
-struct AdvertisingData {
-    bytes:MAX_LEGACY_ADVERTISING_DATA_LENGTH data;
+type AdvertisingData = struct {
+    data bytes:MAX_LEGACY_ADVERTISING_DATA_LENGTH;
 };
 
 /// Parameters used to emulate a peer's behavior over the Low Energy transport.
-table LowEnergyPeerParameters {
+type LowEnergyPeerParameters = table {
     /// The LE identity address of the peer. This field is mandatory.
-    1: bt.Address address;
+    1: address bt.Address;
 
     /// When present and true, the peer will send connectable advertisements and accept connection
     /// requests. The peer will ignore connection requests if not connectable.
-    2: bool connectable;
+    2: connectable bool;
 
     /// The advertising data contents. If not present, the advertising data sent by this peer will
     /// be empty.
-    3: AdvertisingData advertisement;
+    3: advertisement AdvertisingData;
 
     /// The scan response data contents. When present, the fake controller will generate scannable
     /// advertising packets and scan response events.
-    4: AdvertisingData scan_response;
+    4: scan_response AdvertisingData;
 };
 
 /// Maximum service records that can be advertised at once.
-const uint8 MAX_PEER_SERVICES = 32;
+const MAX_PEER_SERVICES uint8 = 32;
 
 /// Parameters used to emulate a peer's behavior over the BR/EDR transport.
-table BredrPeerParameters {
+type BredrPeerParameters = table {
     /// The BD_ADDR of the peer. This field is mandatory.
-    1: bt.Address address;
+    1: address bt.Address;
 
     /// When present and true, the peer will accept connection requests. The peer will ignore
     /// connection requests if not connectable.
-    2: bool connectable;
+    2: connectable bool;
 
     /// The device class reported in the inquiry response for this peer during device discovery.
-    3: bt.DeviceClass device_class;
+    3: device_class bt.DeviceClass;
 
     // The peer's services that will be discoverable via Service Discovery Protocol.
-    4: vector<bredr.ServiceDefinition>:MAX_PEER_SERVICES service_definition;
+    4: service_definition vector<bredr.ServiceDefinition>:MAX_PEER_SERVICES;
 };
 
-enum ConnectionState {
+type ConnectionState = strict enum {
     CONNECTED = 1;
     DISCONNECTED = 2;
 };
@@ -118,11 +116,15 @@ protocol Peer {
     /// Assign a HCI `status` for the controller to generate in response to connection requests.
     /// Applies to all successive HCI_Create_Connection and HCI_LE_Create_Connection commands. The
     /// procedure is acknowledged with an empty response.
-    AssignConnectionStatus(HciError status) -> ();
+    AssignConnectionStatus(struct {
+        status HciError;
+    }) -> ();
 
     /// Emulates a LE connection event. Does nothing if the peer is already connected. The
     /// `role` parameter determines the link layer connection role.
-    EmulateLeConnectionComplete(bt.ConnectionRole role);
+    EmulateLeConnectionComplete(struct {
+        role bt.ConnectionRole;
+    });
 
     /// Emulate disconnection. Does nothing if the peer is not connected.
     EmulateDisconnectionComplete();
@@ -134,16 +136,20 @@ protocol Peer {
     ///
     /// Multiple calls to this method can be outstanding at a given time. All calls will resolve in
     /// a response as soon as there is a change to the connection state.
-    WatchConnectionStates() -> (vector<ConnectionState>:MAX states);
+    WatchConnectionStates() -> (struct {
+        states vector<ConnectionState>:MAX;
+    });
 };
 
 /// Protocol used to emulate a Bluetooth controller that supports the standard Bluetooth HCI.
-[Discoverable]
+@discoverable
 protocol HciEmulator {
     /// Publish a bt-hci device using the provided `settings`. Each HciEmulator instance can only
     /// manage a single bt-hci device. Returns Emulator.`HCI_ALREADY_PUBLISHED` if the device has
     /// already been published.
-    Publish(EmulatorSettings settings) -> () error EmulatorError;
+    Publish(struct {
+        settings EmulatorSettings;
+    }) -> (struct {}) error EmulatorError;
 
     /// Inserts a new LE peer device to be emulated by this controller. Once registered, the state
     /// of the fake peer can be driven and observed using the `peer` handle.
@@ -157,7 +163,10 @@ protocol HciEmulator {
     /// configuration as long as the `peer` channel is open. The emulator stops emulating this peer
     /// when the channel gets closed, which makes it no longer discoverable and not respond to any
     /// requests.
-    AddLowEnergyPeer(LowEnergyPeerParameters parameters, request<Peer> peer) -> () error EmulatorPeerError;
+    AddLowEnergyPeer(resource struct {
+        parameters LowEnergyPeerParameters;
+        peer server_end:Peer;
+    }) -> (struct {}) error EmulatorPeerError;
 
     /// Inserts a new BR/EDR peer device to be emulated by this controller. Once registered, the state
     /// of the fake peer can be driven and observed using the `peer` handle.
@@ -171,13 +180,18 @@ protocol HciEmulator {
     /// configuration as long as the `peer` channel is open. The emulator stops emulating this peer
     /// when the channel gets closed, which makes it no longer discoverable and not respond to any
     /// requests.
-    AddBredrPeer(BredrPeerParameters parameters, request<Peer> peer) -> () error EmulatorPeerError;
+    AddBredrPeer(resource struct {
+        parameters BredrPeerParameters;
+        peer server_end:Peer;
+    }) -> (struct {}) error EmulatorPeerError;
 
     /// Returns the current controller parameter state. If the parameters have not changed since the
     /// last time this message was received, then this method does not return until there is a
     /// change.
     /// (see [hanging get pattern](//docs/development/api/fidl.md#delay-responses-using-hanging-gets))
-    WatchControllerParameters() -> (ControllerParameters parameters);
+    WatchControllerParameters() -> (struct {
+        parameters ControllerParameters;
+    });
 
     /// Returns the most recent set of state transitions for the link layer LE scan procedure. This
     /// method returns when there has been a state change since the last invocation of this method
@@ -186,7 +200,9 @@ protocol HciEmulator {
     /// Multiple calls to this method can be outstanding at a given time. All calls will resolve in
     /// a response as soon as there is a change to the scan state.
     /// (see [hanging get pattern](//docs/development/api/fidl.md#delay-responses-using-hanging-gets))
-    WatchLeScanStates() -> (vector<LeScanState>:MAX states);
+    WatchLeScanStates() -> (struct {
+        states vector<LeScanState>:MAX;
+    });
 
     /// Returns the most recent set of state transitions for the link layer LE legacy advertising
     /// procedure. This method returns when there has been a state change since the last invocation
@@ -196,5 +212,7 @@ protocol HciEmulator {
     /// [`fuchsia.bluetooth.test/HciEmulator`] channel will be closed if a call received when one is
     /// already pending.
     /// (see [hanging get pattern](//docs/development/api/fidl.md#delay-responses-using-hanging-gets))
-    WatchLegacyAdvertisingStates() -> (vector<LegacyAdvertisingState>:MAX states);
+    WatchLegacyAdvertisingStates() -> (struct {
+        states vector<LegacyAdvertisingState>:MAX;
+    });
 };

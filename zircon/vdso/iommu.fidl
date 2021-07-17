@@ -1,14 +1,18 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library zx;
 
-[Transport = "Syscall"]
+@transport("Syscall")
 protocol iommu {
     /// Create a new IOMMU object in the kernel.
     /// Rights: resource must have resource kind ZX_RSRC_KIND_ROOT.
-    iommu_create(handle:RESOURCE resource, uint32 type, vector_void desc)
-        -> (status status, handle:IOMMU out);
+    iommu_create(resource struct {
+        resource handle:RESOURCE;
+        type uint32;
+        desc vector_void;
+    }) -> (resource struct {
+        status status;
+        out handle:IOMMU;
+    });
 };

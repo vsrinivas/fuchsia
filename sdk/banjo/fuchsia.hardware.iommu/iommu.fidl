@@ -1,13 +1,18 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.iommu;
 
 using zx;
 
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol Iommu {
-    GetBti(uint32 iommu_index, uint32 bti_id) -> (zx.status s, zx.handle:BTI handle);
+    GetBti(struct {
+        iommu_index uint32;
+        bti_id uint32;
+    }) -> (resource struct {
+        s zx.status;
+        handle zx.handle:BTI;
+    });
 };

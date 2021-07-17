@@ -1,73 +1,71 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.identity.tokens;
 
 using zx;
 
 /// A long-lived OAuth 2.0 Refresh Token.
-table OauthRefreshToken {
+type OauthRefreshToken = table {
     /// The content of the token.
     // Note no maximum size is defined. The OAuth spec states clients should
     // avoid making assumptions about token sizes. No max size is guaranteed to
     // accomodate all implementations but we do not know of any implementation
     // where token size exceeds a few kilobytes so exceeding the maximum size of
     // a FIDL message is very unlikely.
-    1: string content;
+    1: content string;
     /// A unique identifier for the account that the token refers to, as
     /// specified by the authorization server.
-    2: AccountId account_id;
+    2: account_id AccountId;
 };
 
 /// An OAuth 2.0 Access Token.
-table OauthAccessToken {
+type OauthAccessToken = table {
     /// The content of the token.
     // Note no maximum size is defined. The OAuth spec states clients should
     // avoid making assumptions about token sizes. No max size is guaranteed to
     // accomodate all implementations but we do not know of any implementation
     // where token size exceeds a few kilobytes so exceeding the maximum size of
     // a FIDL message is very unlikely.
-    1: string content;
+    1: content string;
     /// The UTC time at which the token will expire. If the field is absent the
     /// token does not have a fixed expiry time.
-    2: zx.time expiry_time;
+    2: expiry_time zx.time;
 };
 
 /// An OpenID Connect ID Token.
-table OpenIdToken {
+type OpenIdToken = table {
     /// The content of the JSON Web Token.
     // Note no maximum size is defined. The OpenID Connect spec does not provide
     // an upper bound but we do not know of any implementation where size
     // exceeds a few kilobytes so exceeding the maximum size of a FIDL message
     // is very unlikely.
-    1: string content;
+    1: content string;
     /// The UTC time at which the token will expire. If the field is absent the
     /// token does not have a fixed expiry time.
-    2: zx.time expiry_time;
+    2: expiry_time zx.time;
 };
 
 /// The reponse from an OpenID Connect UserInfo endpoint.
-table OpenIdUserInfo {
+type OpenIdUserInfo = table {
     /// The subject to which this info applies.
-    1: string:255 subject;
+    1: subject string:255;
     /// The user's full name.
     // Note no maximum size is defined. The OpenID Connect spec does not provide
     // an upper bound but we do not know of any implementation where size
     // exceeds a few hundred bytes so exceeding the maximum size of a FIDL
     // message is very unlikely.
-    2: string name;
+    2: name string;
     /// The user's email address.
     // Note no maximum size is defined. The OpenID Connect spec does not provide
     // an upper bound but we do not know of any implementation where size
     // exceeds a few kilobytes so exceeding the maximum size of a FIDL message
     // is very unlikely.
-    3: string email;
+    3: email string;
     /// A URL to a profile picture for the user.
     // Note no maximum size is defined. The OpenID Connect spec does not provide
     // an upper bound but we do not know of any implementation where size
     // exceeds a few kilobytes so exceeding the maximum size of a FIDL message
     // is very unlikely.
-    4: string picture;
+    4: picture string;
 };

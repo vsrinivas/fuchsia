@@ -1,8 +1,6 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 // A set of structs and interface methods designed to exercise fidl_encode,
 // fidl_decode, and fidl_validate.
 
@@ -12,128 +10,208 @@ using zx;
 
 protocol Handles {
     // Starting easy: just a handle.
-    NonnullableHandle(zx.handle h0);
+    NonnullableHandle(resource struct {
+        h0 zx.handle;
+    });
 
     // Multiple handles!
-    MultipleNonnullableHandles(uint32 data0, zx.handle h0, uint64 data1, zx.handle h1, zx.handle h2, uint64 data2);
-    MultipleNullableHandles(uint32 data0, zx.handle? h0, uint64 data1, zx.handle? h1, zx.handle? h2, uint64 data2);
+    MultipleNonnullableHandles(resource struct {
+        data0 uint32;
+        h0 zx.handle;
+        data1 uint64;
+        h1 zx.handle;
+        h2 zx.handle;
+        data2 uint64;
+    });
+    MultipleNullableHandles(resource struct {
+        data0 uint32;
+        h0 zx.handle:optional;
+        data1 uint64;
+        h1 zx.handle:optional;
+        h2 zx.handle:optional;
+        data2 uint64;
+    });
 };
 
-resource struct NonnullableHandleArray {
-    array<zx.handle>:4 handles;
+type NonnullableHandleArray = resource struct {
+    handles array<zx.handle, 4>;
 };
 
 protocol Arrays {
-    ArrayOfNonnullableHandles(array<zx.handle>:4 handles);
-    ArrayOfNullableHandles(array<zx.handle?>:4 handles);
-    ArrayOfArrayOfNonnullableHandles(array<array<zx.handle>:3>:4 handles);
-    OutOfLineArrayOfNonnullableHandles(NonnullableHandleArray? handles);
+    ArrayOfNonnullableHandles(resource struct {
+        handles array<zx.handle, 4>;
+    });
+    ArrayOfNullableHandles(resource struct {
+        handles array<zx.handle:optional, 4>;
+    });
+    ArrayOfArrayOfNonnullableHandles(resource struct {
+        handles array<array<zx.handle, 3>, 4>;
+    });
+    OutOfLineArrayOfNonnullableHandles(resource struct {
+        handles box<NonnullableHandleArray>;
+    });
 };
 
 protocol Strings {
-    UnboundedNonnullableString(string s0);
-    UnboundedNullableString(string? s0);
-    Bounded32NonnullableString(string:32 s0);
-    Bounded32NullableString(string:32? s0);
-    MultipleNonnullableStrings(string s0, string s1);
-    MultipleNullableStrings(string? s0, string? s1);
+    UnboundedNonnullableString(struct {
+        s0 string;
+    });
+    UnboundedNullableString(struct {
+        s0 string:optional;
+    });
+    Bounded32NonnullableString(struct {
+        s0 string:32;
+    });
+    Bounded32NullableString(struct {
+        s0 string:<32, optional>;
+    });
+    MultipleNonnullableStrings(struct {
+        s0 string;
+        s1 string;
+    });
+    MultipleNullableStrings(struct {
+        s0 string:optional;
+        s1 string:optional;
+    });
 };
 
 protocol Vectors {
-    UnboundedNonnullableVectorOfHandles(vector<zx.handle> vh0);
-    UnboundedNullableVectorOfHandles(vector<zx.handle>? vh0);
-    Bounded32NonnullableVectorOfHandles(vector<zx.handle>:32 vh0);
-    Bounded32NullableVectorOfHandles(vector<zx.handle>:32? vh0);
-    MultipleNonnullableVectorsOfHandles(vector<zx.handle> vh0, vector<zx.handle> vh1);
-    MultipleNullableVectorsOfHandles(vector<zx.handle>? vh0, vector<zx.handle>? vh1);
-    UnboundedNonnullableVectorOfUint32s(vector<uint32> vu0);
-    UnboundedNullableVectorOfUint32s(vector<uint32>? vu0);
-    Bounded32NonnullableVectorOfUint32s(vector<uint32>:32 vu0);
-    Bounded32NullableVectorOfUint32s(vector<uint32>:32? vu0);
-    MultipleNonnullableVectorsOfUint32s(vector<uint32> vu0, vector<uint32> vu1);
-    MultipleNullableVectorsOfUint32s(vector<uint32>? vu0, vector<uint32>? vu1);
+    UnboundedNonnullableVectorOfHandles(resource struct {
+        vh0 vector<zx.handle>;
+    });
+    UnboundedNullableVectorOfHandles(resource struct {
+        vh0 vector<zx.handle>:optional;
+    });
+    Bounded32NonnullableVectorOfHandles(resource struct {
+        vh0 vector<zx.handle>:32;
+    });
+    Bounded32NullableVectorOfHandles(resource struct {
+        vh0 vector<zx.handle>:<32, optional>;
+    });
+    MultipleNonnullableVectorsOfHandles(resource struct {
+        vh0 vector<zx.handle>;
+        vh1 vector<zx.handle>;
+    });
+    MultipleNullableVectorsOfHandles(resource struct {
+        vh0 vector<zx.handle>:optional;
+        vh1 vector<zx.handle>:optional;
+    });
+    UnboundedNonnullableVectorOfUint32s(struct {
+        vu0 vector<uint32>;
+    });
+    UnboundedNullableVectorOfUint32s(struct {
+        vu0 vector<uint32>:optional;
+    });
+    Bounded32NonnullableVectorOfUint32s(struct {
+        vu0 vector<uint32>:32;
+    });
+    Bounded32NullableVectorOfUint32s(struct {
+        vu0 vector<uint32>:<32, optional>;
+    });
+    MultipleNonnullableVectorsOfUint32s(struct {
+        vu0 vector<uint32>;
+        vu1 vector<uint32>;
+    });
+    MultipleNullableVectorsOfUint32s(struct {
+        vu0 vector<uint32>:optional;
+        vu1 vector<uint32>:optional;
+    });
 };
 
-resource union SingleHandleUnion {
-    1: zx.handle h0;
+type SingleHandleUnion = strict resource union {
+    1: h0 zx.handle;
 };
 
-resource union MultipleHandlesUnion {
-    1: zx.handle h;
-    2: array<zx.handle>:2 hs;
-    3: array<array<zx.handle>:2>:2 hss;
+type MultipleHandlesUnion = strict resource union {
+    1: h zx.handle;
+    2: hs array<zx.handle, 2>;
+    3: hss array<array<zx.handle, 2>, 2>;
 };
 
-resource union MaybeRecurse {
-    1: zx.handle h;
-    2: MaybeRecurseHelper more;
+type MaybeRecurse = strict resource union {
+    1: h zx.handle;
+    2: more MaybeRecurseHelper;
 };
 
 // Unions cannot have nullable fields, so wrap it in a struct.
-resource struct MaybeRecurseHelper {
-    MaybeRecurse? more;
+type MaybeRecurseHelper = resource struct {
+    more MaybeRecurse:optional;
 };
 
 protocol Unions {
-    SingleHandleUnion(SingleHandleUnion u);
-    SingleHandleUnionPointer(SingleHandleUnion u);
-    MultipleHandlesUnion(MultipleHandlesUnion u);
-    MultipleHandlesUnionPointer(MultipleHandlesUnion? u);
-    Recursion(MaybeRecurse u);
+    SingleHandleUnion(resource struct {
+        u SingleHandleUnion;
+    });
+    SingleHandleUnionPointer(resource struct {
+        u SingleHandleUnion;
+    });
+    MultipleHandlesUnion(resource struct {
+        u MultipleHandlesUnion;
+    });
+    MultipleHandlesUnionPointer(resource struct {
+        u MultipleHandlesUnion:optional;
+    });
+    Recursion(resource struct {
+        u MaybeRecurse;
+    });
 };
 
-resource struct Inline3 {
-    uint32 padding;
-    zx.handle h;
+type Inline3 = resource struct {
+    padding uint32;
+    h zx.handle;
 };
 
-resource struct Inline2 {
-    uint64 padding;
-    Inline3 l3;
-    zx.handle h;
+type Inline2 = resource struct {
+    padding uint64;
+    l3 Inline3;
+    h zx.handle;
 };
 
-resource struct Inline1 {
-    zx.handle h;
-    Inline2 l2;
-    uint64 padding;
+type Inline1 = resource struct {
+    h zx.handle;
+    l2 Inline2;
+    padding uint64;
 };
 
-resource struct Inline0 {
-    uint64 padding;
-    Inline1 L1;
-    zx.handle h;
+type Inline0 = resource struct {
+    padding uint64;
+    L1 Inline1;
+    h zx.handle;
 };
 
-resource struct OutOfLine3 {
-    uint32 padding;
-    zx.handle h;
+type OutOfLine3 = resource struct {
+    padding uint32;
+    h zx.handle;
 };
 
-resource struct OutOfLine2 {
-    uint64 padding;
-    OutOfLine3? l3_present;
-    OutOfLine3? l3_absent;
-    OutOfLine3 l3_inline;
+type OutOfLine2 = resource struct {
+    padding uint64;
+    l3_present box<OutOfLine3>;
+    l3_absent box<OutOfLine3>;
+    l3_inline OutOfLine3;
 };
 
-resource struct OutOfLine1 {
-    zx.handle h;
-    OutOfLine2? l2_present;
-    OutOfLine2 l2_inline;
-    OutOfLine2? l2_absent;
-    uint64 padding;
+type OutOfLine1 = resource struct {
+    h zx.handle;
+    l2_present box<OutOfLine2>;
+    l2_inline OutOfLine2;
+    l2_absent box<OutOfLine2>;
+    padding uint64;
 };
 
-resource struct OutOfLine0 {
-    uint64 padding;
-    OutOfLine1? l1_absent;
-    OutOfLine1 l1_inline;
-    zx.handle h;
-    OutOfLine1? l1_present;
+type OutOfLine0 = resource struct {
+    padding uint64;
+    l1_absent box<OutOfLine1>;
+    l1_inline OutOfLine1;
+    h zx.handle;
+    l1_present box<OutOfLine1>;
 };
 
 protocol Structs {
-    Inline(Inline0 l0);
-    OutOfLine(OutOfLine0 l0);
+    Inline(resource struct {
+        l0 Inline0;
+    });
+    OutOfLine(resource struct {
+        l0 OutOfLine0;
+    });
 };

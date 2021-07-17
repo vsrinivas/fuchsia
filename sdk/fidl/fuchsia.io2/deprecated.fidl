@@ -1,14 +1,12 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.io2;
 
 using zx;
 
-[Deprecated = "devices will be services in the future"]
-bits DeviceSignal : uint32 {
+@deprecated("devices will be services in the future")
+type DeviceSignal = strict bits : uint32 {
     /// Indicates the device is ready for reading.
     READABLE = 0x01000000; // ZX_USER_SIGNAL_0
     /// Indicates the device is ready for writing.
@@ -22,19 +20,19 @@ bits DeviceSignal : uint32 {
 };
 
 /// The object may be cast to the shared interface of devices.
-[Deprecated = "devices will be services in the future"]
-resource table DeviceInfo {
+@deprecated("devices will be services in the future")
+type DeviceInfo = resource table {
     /// An optional event which transmits information about a device's state.
     ///
     /// The [`DeviceSignal`] values may be observed on this event.
-    1: zx.handle:EVENTPAIR event;
+    1: event zx.handle:EVENTPAIR;
 };
 
 /// The object may be cast to a Tty interface.
-[Deprecated = "tty functionalities may be covered by a tty service"]
-resource table TtyInfo {
+@deprecated("tty functionalities may be covered by a tty service")
+type TtyInfo = resource table {
     /// An optional event which transmits information about a device's state.
     ///
     /// The [`DeviceSignal`] values may be observed on this event.
-    1: zx.handle:EVENTPAIR event;
+    1: event zx.handle:EVENTPAIR;
 };

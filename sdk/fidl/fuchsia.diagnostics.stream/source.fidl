@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.diagnostics.stream;
 using zx;
 
@@ -26,20 +24,26 @@ using zx;
 /// records that are generated while the retriever drains the buffer. Double buffering is
 /// recommended to prevent excessive blocking, but this protocol does not mandate a specific
 /// approach to handling records generated while buffers are full.
-[Discoverable]
+@discoverable
 protocol Source {
     /// Notifies the connected retriever of a new stream buffer. Should be emitted as soon as each
     /// buffer is (re)initialized.
     ///
     /// `latest` should be read-only.
-    -> OnBufferInit(zx.handle:VMO latest);
+    -> OnBufferInit(resource struct {
+        latest zx.handle:VMO;
+    });
 
     /// Asks the connected retriever to finish working with `buffer`, usually because the `Source`
     /// does not intend to write further records.
-    -> OnBufferDone(zx.koid buffer);
+    -> OnBufferDone(struct {
+        buffer zx.koid;
+    });
 
     /// Notifies the `Source` that the retriever is done reading from the buffer. If the `Source`
     /// wishes it should zero the buffer's contents and recycle it for future records. Buffers must
     /// be re-sent via `OnBufferInit` after they're zeroed.
-    RetireBuffer(zx.koid buffer);
+    RetireBuffer(struct {
+        buffer zx.koid;
+    });
 };

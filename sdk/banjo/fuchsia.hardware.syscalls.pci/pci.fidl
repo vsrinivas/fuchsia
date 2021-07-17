@@ -1,31 +1,29 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.syscalls.pci;
 
 using zx;
 
 // Defines and structures related to zx_pci_*()
 // Info returned to dev manager for PCIe devices when probing.
-struct PcieDeviceInfo {
-    uint16 vendor_id;
-    uint16 device_id;
+type PcieDeviceInfo = struct {
+    vendor_id uint16;
+    device_id uint16;
 
-    uint8 base_class;
-    uint8 sub_class;
-    uint8 program_interface;
-    uint8 revision_id;
+    base_class uint8;
+    sub_class uint8;
+    program_interface uint8;
+    revision_id uint8;
 
-    uint8 bus_id;
-    uint8 dev_id;
-    uint8 func_id;
+    bus_id uint8;
+    dev_id uint8;
+    func_id uint8;
 
-    uint8 padding1;
+    padding1 uint8;
 };
 
-enum PciIrqMode : uint8 {
+type PciIrqMode = strict enum : uint8 {
     DISABLED = 0;
     LEGACY = 1;
     LEGACY_NOACK = 2;
@@ -33,10 +31,10 @@ enum PciIrqMode : uint8 {
     MSI_X = 4;
 };
 
-resource struct PciBar {
-    uint32 id;
-    uint32 type;
-    uint64 size;
-    uint64 address;
-    zx.handle:VMO handle;
+type PciBar = resource struct {
+    id uint32;
+    type uint32;
+    size uint64;
+    address uint64;
+    handle zx.handle:VMO;
 };

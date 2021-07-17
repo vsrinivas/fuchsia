@@ -1,86 +1,109 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fidl.test.spaceship;
 
 using zx;
 
 // Having a service should not break C bindings.
 service Galaxy {
-    AstrometricsListener astrometrics_listener;
-    SpaceShip ship1;
-    UssEnterprise ship2;
+    astrometrics_listener client_end:AstrometricsListener;
+    ship1 client_end:SpaceShip;
+    ship2 client_end:UssEnterprise;
 };
 
 // StarData is 16 bytes, all inline.
-struct StarData {
-    array<uint8>:16 data;
+type StarData = struct {
+    data array<uint8, 16>;
 };
 
 // PlanetData is 4 bytes, all inline.
-struct PlanetData {
-    array<uint8>:4 data;
+type PlanetData = struct {
+    data array<uint8, 4>;
 };
 
-[ForDeprecatedCBindings]
+@for_deprecated_c_bindings
 protocol AstrometricsListener {
     OnNova();
 };
 
-enum Alert {
+type Alert = strict enum {
     GREEN = 1;
     YELLOW = 2;
     RED = 3;
 };
 
-bits Shields : uint8 {
+type Shields = strict bits : uint8 {
     PORT = 1;
     STARBOARD = 2;
     FORE = 4;
     AFT = 8;
 };
 
-[ForDeprecatedCBindings]
-struct FuelLevel {
-    uint32 reaction_mass;
+@for_deprecated_c_bindings
+type FuelLevel = struct {
+    reaction_mass uint32;
 };
 
-struct ZxTypes {
-    zx.status a;
-    zx.time b;
-    zx.duration c;
-    zx.koid d;
-    zx.vaddr e;
-    zx.paddr f;
-    zx.paddr32 g;
-    zx.off h;
+type ZxTypes = struct {
+    a zx.status;
+    b zx.time;
+    c zx.duration;
+    d zx.koid;
+    e zx.vaddr;
+    f zx.paddr;
+    g zx.paddr32;
+    h zx.off;
 };
 
-const uint32 MaxStarsAdjustHeading = 64;
-const uint32 MaxStarsScanForLifeforms = 64;
+const MaxStarsAdjustHeading uint32 = 64;
+const MaxStarsScanForLifeforms uint32 = 64;
 
-[ForDeprecatedCBindings]
+@for_deprecated_c_bindings
 protocol SpaceShip {
-    AdjustHeading(vector<uint32>:MaxStarsAdjustHeading stars) -> (int8 result);
-    ScanForLifeforms() -> (vector<uint32>:MaxStarsScanForLifeforms lifesigns);
-    SetAstrometricsListener(AstrometricsListener listener);
-    SetDefenseCondition(Alert alert);
-    GetFuelRemaining(zx.handle:EVENTPAIR? cancel) -> (zx.status status, FuelLevel? level);
-    AddFuelTank(FuelLevel? level) -> (uint32 consumed);
-    ScanForTensorLifeforms() -> (array<array<array<uint32>:3>:5>:8 lifesigns);
-    ActivateShields(Shields shields);
+    AdjustHeading(struct {
+        stars vector<uint32>:MaxStarsAdjustHeading;
+    }) -> (struct {
+        result int8;
+    });
+    ScanForLifeforms() -> (struct {
+        lifesigns vector<uint32>:MaxStarsScanForLifeforms;
+    });
+    SetAstrometricsListener(resource struct {
+        listener client_end:AstrometricsListener;
+    });
+    SetDefenseCondition(struct {
+        alert Alert;
+    });
+    GetFuelRemaining(resource struct {
+        cancel zx.handle:<EVENTPAIR, optional>;
+    }) -> (struct {
+        status zx.status;
+        level box<FuelLevel>;
+    });
+    AddFuelTank(struct {
+        level box<FuelLevel>;
+    }) -> (struct {
+        consumed uint32;
+    });
+    ScanForTensorLifeforms() -> (struct {
+        lifesigns array<array<array<uint32, 3>, 5>, 8>;
+    });
+    ActivateShields(struct {
+        shields Shields;
+    });
 };
 
 // Captain Kirk can do many things, possibly all at once.
-table CaptainKirkWhereabouts {
-    1: bool is_exploring_new_worlds;
-    2: bool is_exploring_new_civilizations;
-    3: bool is_boldly_going_where_no_man_has_gone_before;
+type CaptainKirkWhereabouts = table {
+    1: is_exploring_new_worlds bool;
+    2: is_exploring_new_civilizations bool;
+    3: is_boldly_going_where_no_man_has_gone_before bool;
 };
 
 /// The USS Enterprise is far from simple.
 protocol UssEnterprise {
-    WhereIsCaptainKirk() -> (CaptainKirkWhereabouts whereabouts);
+    WhereIsCaptainKirk() -> (struct {
+        whereabouts CaptainKirkWhereabouts;
+    });
 };

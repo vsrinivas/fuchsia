@@ -1,8 +1,6 @@
 // Copyright 2016 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.modular;
 
 /// Sessionmgr passes a connection to this service to the SessionShell so it can
@@ -10,33 +8,54 @@ library fuchsia.modular;
 ///
 /// Closing a `StoryProvider` connection has no effect on the state of the
 /// framework.
-[Discoverable]
+@discoverable
 protocol StoryProvider {
     /// Returns a list of existing stories. If `watcher` is provided, the client will
     /// be notified of story changes (new stories, deleted stories, runtime
     /// state changes).
-    [Transitional = "Use GetStories2 instead"]
-    GetStories(StoryProviderWatcher? watcher) -> (vector<StoryInfo>:MAX story_infos);
+    @transitional("Use GetStories2 instead")
+    GetStories(resource struct {
+        watcher client_end:<StoryProviderWatcher, optional>;
+    }) -> (struct {
+        story_infos vector<StoryInfo>:MAX;
+    });
     /// For transition purposes only.
-    [Transitional = "Only use while GetStories is transitional"]
-    GetStories2(StoryProviderWatcher? watcher) -> (vector<StoryInfo2>:MAX story_infos);
+    @transitional("Only use while GetStories is transitional")
+    GetStories2(resource struct {
+        watcher client_end:<StoryProviderWatcher, optional>;
+    }) -> (resource struct {
+        story_infos vector<StoryInfo2>:MAX;
+    });
 
     /// Requests detailed information about the given story. If the story doesn't
     /// exist, returns null.
-    [Transitional = "Use GetStoryInfo2 instead"]
-    GetStoryInfo(string:MAX story_id) -> (StoryInfo? story_info);
+    @transitional("Use GetStoryInfo2 instead")
+    GetStoryInfo(struct {
+        story_id string:MAX;
+    }) -> (struct {
+        story_info box<StoryInfo>;
+    });
     /// For transition purposes only.
-    [Transitional = "Use only while GetStoryInfo is transitional"]
-    GetStoryInfo2(string:MAX story_id) -> (StoryInfo2 story_info);
+    @transitional("Use only while GetStoryInfo is transitional")
+    GetStoryInfo2(struct {
+        story_id string:MAX;
+    }) -> (resource struct {
+        story_info StoryInfo2;
+    });
 
     /// Obtains a controller for a previously created story identified by its story
     /// ID. Obtaining the controller doesn't run it yet. If the story doesn't
     /// exist, the interface request is closed.
-    GetController(string:MAX story_id, request<StoryController> request);
+    GetController(resource struct {
+        story_id string:MAX;
+        request server_end:StoryController;
+    });
 
     /// Registers a watcher for changes in the story collection.
     /// DEPRECATED: In favor of GetStories().
-    Watch(StoryProviderWatcher watcher);
+    Watch(resource struct {
+        watcher client_end:StoryProviderWatcher;
+    });
 };
 
 /// Implemented by clients of StoryProvider.
@@ -58,24 +77,32 @@ protocol StoryProviderWatcher {
     /// when the story is started on the current device.
     ///
     /// `story_visibility_state` is deprecated and will always have a value of DEFAULT.
-    [Transitional = "Implement OnChange2 instead"]
-    OnChange(StoryInfo story_info, StoryState story_state,
-             StoryVisibilityState story_visibility_state);
+    @transitional("Implement OnChange2 instead")
+    OnChange(struct {
+        story_info StoryInfo;
+        story_state StoryState;
+        story_visibility_state StoryVisibilityState;
+    });
     /// For transition purposes only.
-    [Transitional = "Implement only while OnChange is transitional"]
-    OnChange2(StoryInfo2 story_info, StoryState story_state,
-              StoryVisibilityState story_visibility_state);
+    @transitional("Implement only while OnChange is transitional")
+    OnChange2(resource struct {
+        story_info StoryInfo2;
+        story_state StoryState;
+        story_visibility_state StoryVisibilityState;
+    });
 
     /// Called when a story record is permanently deleted. The deletion could
     /// have originated on this or on another device.
     ///
     /// If the story is running on this device at the time it is deleted,
     /// OnChange() will not be called first.
-    OnDelete(string:MAX story_id);
+    OnDelete(struct {
+        story_id string:MAX;
+    });
 };
 
 // Deprecated.
-enum StoryVisibilityState {
+type StoryVisibilityState = strict enum {
     DEFAULT = 1;
     IMMERSIVE = 2;
 };

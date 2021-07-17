@@ -1,8 +1,6 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.update;
 
 using zx;
@@ -17,7 +15,7 @@ using zx;
 /// Until the update is committed, the system retains the prior version of the OS.
 /// That way, if we discover the newly written version is bad (e.g. it cannot itself
 /// update), then the system can fall back to the previous committed version.
-[Discoverable]
+@discoverable
 protocol CommitStatusProvider {
     /// Determines whether the currently booted system is committed, and immediately
     /// returns an EventPair.
@@ -33,5 +31,7 @@ protocol CommitStatusProvider {
     ///     EventPairs will observe the `ZX_EVENTPAIR_PEER_CLOSED` signal.
     ///
     /// - response `event` an EventPair with rights `ZX_RIGHTS_BASIC`.
-    IsCurrentSystemCommitted() -> (zx.handle:EVENTPAIR event);
+    IsCurrentSystemCommitted() -> (resource struct {
+        event zx.handle:EVENTPAIR;
+    });
 };

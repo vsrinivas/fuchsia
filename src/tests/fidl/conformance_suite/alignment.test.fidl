@@ -1,45 +1,43 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library conformance;
 
-struct ThreeByte {
-    uint8 elem1;
-    uint8 elem2;
-    uint8 elem3;
+type ThreeByte = struct {
+    elem1 uint8;
+    elem2 uint8;
+    elem3 uint8;
 };
 
-struct FiveByte {
-    uint32 elem1;
-    uint8 elem2;
+type FiveByte = struct {
+    elem1 uint32;
+    elem2 uint8;
 };
 
-struct ThreeByteInStruct {
-  ThreeByte elem1;
-  ThreeByte elem2;
-  ThreeByte elem3;
+type ThreeByteInStruct = struct {
+    elem1 ThreeByte;
+    elem2 ThreeByte;
+    elem3 ThreeByte;
 };
 
-struct FiveByteInStruct {
-  FiveByte elem1;
-  FiveByte elem2;
-  FiveByte elem3;
+type FiveByteInStruct = struct {
+    elem1 FiveByte;
+    elem2 FiveByte;
+    elem3 FiveByte;
 };
 
-struct ThreeByteInVector {
-    vector<ThreeByte> elems;
+type ThreeByteInVector = struct {
+    elems vector<ThreeByte>;
 };
 
-struct FiveByteInVector {
-    vector<FiveByte> elems;
+type FiveByteInVector = struct {
+    elems vector<FiveByte>;
 };
 
-struct ThreeByteInArray {
-    array<ThreeByte>:3 elems;
+type ThreeByteInArray = struct {
+    elems array<ThreeByte, 3>;
 };
 
-struct FiveByteInArray {
-    array<FiveByte>:3 elems;
+type FiveByteInArray = struct {
+    elems array<FiveByte, 3>;
 };

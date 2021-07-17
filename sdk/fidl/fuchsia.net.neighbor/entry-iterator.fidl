@@ -1,14 +1,12 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.net.neighbor;
 
 /// Options for modifying the behavior of an [`EntryIterator`].
-table EntryIteratorOptions {
-    // Reserved for future expansions, like filtering per-interface.
-};
+type EntryIteratorOptions = table {
+        // Reserved for future expansions, like filtering per-interface.
+        };
 
 /// Returns entries and events from the neighbor table. Clients can open an
 /// iterator using the [`fuchsia.net.neighbor/View.EntryIterator`] method.
@@ -36,32 +34,33 @@ protocol EntryIterator {
     ///
     /// - response `events` a list of events that occurred since the last
     ///     invocation of this method.
-    GetNext() -> (vector<EntryIteratorItem>:MAX_ITEM_BATCH_SIZE events);
+    GetNext() -> (struct {
+        events vector<EntryIteratorItem>:MAX_ITEM_BATCH_SIZE;
+    });
 };
 
 /// Items returned from [`EntryIterator.GetNext`].
-union EntryIteratorItem {
+type EntryIteratorItem = strict union {
     /// An existing entry in the neighbor table. Does not indicate that an event
     /// occurred.
-    1: Entry existing;
+    1: existing Entry;
 
     /// Event indicating the iterator will no longer return `existing` items.
-    2: IdleEvent idle;
+    2: idle IdleEvent;
 
     /// Event indicating an entry has been added into the neighbor table.
-    3: Entry added;
+    3: added Entry;
 
     /// Event indicating an entry has changed.
-    4: Entry changed;
+    4: changed Entry;
 
     /// Event indicating an entry has been removed from the neighbor table.
-    5: Entry removed;
+    5: removed Entry;
 };
 
 /// Empty event for indicating there are no more [`EntryIteratorItem.existing`]
 /// items to yield.
-struct IdleEvent {
-};
+type IdleEvent = struct {};
 
 /// The maximum number of [`EntryIteratorItem`] returned in a
 /// [`EntryIterator.GetNext`] response.
@@ -78,4 +77,4 @@ struct IdleEvent {
 // It's rounded down to the next power of two for aesthetics and decreased
 // sensitivity to changes to the underlying data structures.
 // This value will need to be recomputed if any of the above numbers change.
-const uint64 MAX_ITEM_BATCH_SIZE = 256;
+const MAX_ITEM_BATCH_SIZE uint64 = 256;

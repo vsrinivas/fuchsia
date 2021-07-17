@@ -1,8 +1,6 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.ui.scenic;
 
 using fuchsia.images;
@@ -15,42 +13,45 @@ using zx;
 /// Scenic.TakeScreenshot() returns a raw BGRA formatted image in
 /// sRGB color space and with a non-linear transfer function in this
 /// struct.
-resource struct ScreenshotData {
-    fuchsia.images.ImageInfo info;
-    fuchsia.mem.Buffer data;
+type ScreenshotData = resource struct {
+    info fuchsia.images.ImageInfo;
+    data fuchsia.mem.Buffer;
 };
 
 /// The protocol endpoints used in creating a Scenic Session.
-resource table SessionEndpoints {
+type SessionEndpoints = resource table {
     /// Enqueue commands and present content.
     /// Required.
-    1: request<Session> session;
+    1: session server_end:Session;
 
     /// Receive session-related events.
     /// Optional.
-    2: SessionListener session_listener;
+    2: session_listener client_end:SessionListener;
 
     /// Change view focus, within the session view's subtree.
     /// Optional.
-    3: request<fuchsia.ui.views.Focuser> view_focuser;
+    3: view_focuser server_end:fuchsia.ui.views.Focuser;
 
     /// Learn when this session view receives or loses view focus.
     /// Optional.
-    4: request<fuchsia.ui.views.ViewRefFocused> view_ref_focused;
+    4: view_ref_focused server_end:fuchsia.ui.views.ViewRefFocused;
 
     /// Ask for touch events and negotiate for gesture ownership.
     /// Optional.
-    5: request<fuchsia.ui.pointer.TouchSource> touch_source;
+    5: touch_source server_end:fuchsia.ui.pointer.TouchSource;
 
     /// Ask for mouse events.
     /// Optional.
-    6: request<fuchsia.ui.pointer.MouseSource> mouse_source;
+    6: mouse_source server_end:fuchsia.ui.pointer.MouseSource;
 };
 
-[Discoverable]
+@discoverable
 protocol Scenic {
     /// Create a new Session, which is the primary way to interact with Scenic.
-    CreateSession(request<Session> session, SessionListener? listener);
+    CreateSession(resource struct {
+        session server_end:Session;
+        listener client_end:<SessionListener, optional>;
+    });
 
     /// Create a new Session, which is the primary way to interact with Scenic.
     ///
@@ -58,9 +59,12 @@ protocol Scenic {
     /// The `view_focuser`'s client is coupled to the requested `session`, and
     /// this coupling acts as a security boundary: the ViewRef used as the basis
     /// for authority by `view_focuser` must come from `session`.
-    [Transitional]
-    CreateSession2(request<Session> session, SessionListener? listener,
-                   request<fuchsia.ui.views.Focuser>? view_focuser);
+    @transitional
+    CreateSession2(resource struct {
+        session server_end:Session;
+        listener client_end:<SessionListener, optional>;
+        view_focuser server_end:<fuchsia.ui.views.Focuser, optional>;
+    });
 
     /// Create a new Session, which is the primary way to interact with Scenic.
     ///
@@ -72,23 +76,32 @@ protocol Scenic {
     ///
     /// The response acknowledges the request to create a Session, but actual
     /// creation may happen later.
-    [Transitional]
-    CreateSessionT(SessionEndpoints endpoints) -> ();
+    @transitional
+    CreateSessionT(resource struct {
+        endpoints SessionEndpoints;
+    }) -> ();
 
     /// Get information about the Scenic's primary display.
     // TODO(fxbug.dev/23687): in the future there will probably be a DisplayManager, and
     // info about which displays to use will be provided to the Scenic.
-    GetDisplayInfo() -> (fuchsia.ui.gfx.DisplayInfo info);
+    GetDisplayInfo() -> (struct {
+        info fuchsia.ui.gfx.DisplayInfo;
+    });
     /// Gets an event signaled with displayOwnedSignal or displayNotOwnedSignal
     /// when display ownership changes.
-    GetDisplayOwnershipEvent() -> (zx.handle:EVENT ownership_event);
+    GetDisplayOwnershipEvent() -> (resource struct {
+        ownership_event zx.handle:EVENT;
+    });
 
     /// Take a screenshot and return the data in `img_data`. `img_data` will
     /// not contain BGRA data if `success` is false.
     // TODO(fxbug.dev/23901): The permissions here are too wide (anyone can take a
     // screenshot), we should narrow them.
-    TakeScreenshot() -> (ScreenshotData img_data, bool success);
+    TakeScreenshot() -> (resource struct {
+        img_data ScreenshotData;
+        success bool;
+    });
 };
 
-const uint32 displayOwnedSignal = 0x02000000;
-const uint32 displayNotOwnedSignal = 0x01000000;
+const displayOwnedSignal uint32 = 0x02000000;
+const displayNotOwnedSignal uint32 = 0x01000000;

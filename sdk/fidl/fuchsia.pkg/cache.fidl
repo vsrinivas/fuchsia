@@ -1,7 +1,6 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
 library fuchsia.pkg;
 
 using fuchsia.io;
@@ -11,7 +10,7 @@ using zx;
 ///
 /// This is intended to be implemented by the package manager component and used by
 /// package resolver components.
-[Discoverable]
+@discoverable
 protocol PackageCache {
     /// Gets the package directory if it is present on the local system. If it is not, the
     /// `missing_blobs` iterator will provide all the blobs in the package that are missing from
@@ -32,12 +31,12 @@ protocol PackageCache {
     /// * error a zx_status value indicating failure. One of the following:
     ///     * `ZX_ERR_UNAVAILABLE` if the client closed `needed_blobs` handles before
     ///       all the missing blobs were downloaded to the system.
-    Get(
-        BlobInfo meta_far_blob,
-        vector<string> selectors,
-        request<NeededBlobs> needed_blobs,
-        request<fuchsia.io.Directory>? dir
-        ) -> () error zx.status;
+    Get(resource struct {
+        meta_far_blob BlobInfo;
+        selectors vector<string>;
+        needed_blobs server_end:NeededBlobs;
+        dir server_end:<fuchsia.io.Directory, optional>;
+    }) -> (struct {}) error zx.status;
 
     /// Opens the package, or errors out if it is not present on the local system.
     ///
@@ -47,27 +46,29 @@ protocol PackageCache {
     ///   successfully cached.
     /// * error a zx_status value indicating failure. One of the following:
     ///     * `ZX_ERR_NOT_FOUND` if the package does not exist.
-    Open(
-        BlobId meta_far_blob_id,
-        vector<string> selectors,
-        request<fuchsia.io.Directory> dir
-        ) -> () error zx.status;
+    Open(resource struct {
+        meta_far_blob_id BlobId;
+        selectors vector<string>;
+        dir server_end:fuchsia.io.Directory;
+    }) -> (struct {}) error zx.status;
 
     /// Retrieves a chunk iterator to the base package index.
     ///
     /// + request `iterator` a request for the `PackageIndexIterator` that will return sets of
     ///   `PackageIndexEntry` objects until all packages in the base index have been iterated.
-    BasePackageIndex(request<PackageIndexIterator> iterator);
+    BasePackageIndex(resource struct {
+        iterator server_end:PackageIndexIterator;
+    });
 
     /// Synchronizes updates to the cached packages to the underlying persistent storage.
     ///
     /// * error a zx_status value indicating failure. One of the following:
     ///     * `ZX_ERR_INTERNAL` if the sync fails.
-    Sync() -> () error zx.status;
+    Sync() -> (struct {}) error zx.status;
 };
 
 /// Error type for [`NeededBlobs.OpenMetaBlob`] and [`NeededBlobs.OpenBlob`].
-enum OpenBlobError {
+type OpenBlobError = strict enum {
     /// There is insufficient storage space available to persist this blob.
     OUT_OF_SPACE = 1;
 
@@ -121,7 +122,11 @@ protocol NeededBlobs {
     /// * error an OpenBlobError indicating failure. Clients may retry this
     ///   request, though the server end may abort this cache operation on
     ///   errors it considers to be fatal.
-    OpenMetaBlob(request<fuchsia.io.File> file) -> (bool needed) error OpenBlobError;
+    OpenMetaBlob(resource struct {
+        file server_end:fuchsia.io.File;
+    }) -> (struct {
+        needed bool;
+    }) error OpenBlobError;
 
     /// Returns an iterator of blobs that are not present on the system that
     /// must be written using the `OpenBlob` request before the package will be
@@ -136,7 +141,9 @@ protocol NeededBlobs {
     ///
     /// + request `iterator` a request for an iterator of [`BlobInfo`] of blobs
     ///   that the client should try to write.
-    GetMissingBlobs(request<BlobInfoIterator> iterator);
+    GetMissingBlobs(resource struct {
+        iterator server_end:BlobInfoIterator;
+    });
 
     /// Opens a content blob for writing.
     ///
@@ -153,10 +160,12 @@ protocol NeededBlobs {
     /// * error an OpenBlobError indicating failure. Clients may retry this
     ///   request, though the server end may abort this cache operation on
     ///   errors it considers to be fatal.
-    OpenBlob(
-        BlobId blob_id,
-        request<fuchsia.io.File> file
-        ) -> (bool needed) error OpenBlobError;
+    OpenBlob(resource struct {
+        blob_id BlobId;
+        file server_end:fuchsia.io.File;
+    }) -> (struct {
+        needed bool;
+    }) error OpenBlobError;
 
     /// Aborts this caching operation for the package.
     ///
@@ -177,7 +186,9 @@ protocol BlobInfoIterator {
     /// exhausted, responds with an empty vector and closes the connection.
     ///
     /// - response `blobs` the next chunk of [`BlobInfo`]s.
-    Next() -> (vector<BlobInfo>:MAX blobs);
+    Next() -> (struct {
+        blobs vector<BlobInfo>:MAX;
+    });
 };
 
 /// A chunk iterator for the package index. This is required because it is possible for the
@@ -187,7 +198,9 @@ protocol PackageIndexIterator {
     /// this returns an empty vector.
     ///
     /// - response `entries` the next chunk of entries in the package index.
-    Next() -> (vector<PackageIndexEntry>:MAX entries);
+    Next() -> (struct {
+        entries vector<PackageIndexEntry>:MAX;
+    });
 };
 
 /// Manages the set of retained packages.
@@ -200,7 +213,7 @@ protocol PackageIndexIterator {
 /// https://fuchsia.dev/fuchsia-src/concepts/packages/garbage_collection) contains
 /// details on various types of package indexes (static, retained, etc) and
 /// describes when a package will be garbage collected or retained.
-[Discoverable]
+@discoverable
 protocol RetainedPackages {
     /// Atomically clear the retained package set, releasing any previously
     /// retained packages.
@@ -213,7 +226,9 @@ protocol RetainedPackages {
     ///
     /// + request `iterator` an iterator of package blob IDs that should be
     ///   retained.
-    Replace(BlobIdIterator iterator) -> ();
+    Replace(resource struct {
+        iterator client_end:BlobIdIterator;
+    }) -> ();
 };
 
 /// A chunked iterator of blob IDs, allowing transfer of more blob IDs that can
@@ -223,5 +238,7 @@ protocol BlobIdIterator {
     /// exhausted, responds with an empty vector and closes the connection.
     ///
     /// - response `blobs` the next chunk of blob IDs.
-    Next() -> (vector<BlobId>:MAX blobs);
+    Next() -> (struct {
+        blobs vector<BlobId>:MAX;
+    });
 };

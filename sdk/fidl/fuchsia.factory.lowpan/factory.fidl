@@ -1,8 +1,6 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.factory.lowpan;
 
 using fuchsia.lowpan.device;
@@ -27,17 +25,24 @@ protocol FactoryDevice {
     ///
     /// When finished sending manufacturing commands, call `fuchsia.lowpan.test.DeviceTest.reset()`
     /// to return the device to normal behavior.
-    SendMfgCommand(string:2000 command) -> (string:2000 response);
+    SendMfgCommand(struct {
+        command string:2000;
+    }) -> (struct {
+        response string:2000;
+    });
 };
 
 /// Protocol for looking up the LoWPAN factory protocol for a LoWPAN interface.
 ///
 /// This protocol is implemented by the LoWPAN service and used by client tools that need to issue
 /// factory commands.
-[Discoverable]
+@discoverable
 protocol FactoryLookup {
     /// Connects the the associated `FactoryDevice` API for the given LoWPAN interface name.
-    Lookup(InterfaceName name, request<FactoryDevice> device_factory) -> () error ServiceError;
+    Lookup(resource struct {
+        name InterfaceName;
+        device_factory server_end:FactoryDevice;
+    }) -> (struct {}) error ServiceError;
 };
 
 /// Protocol representing a LoWPAN driver instance that can serve `FactoryDevice` instances.
@@ -49,18 +54,23 @@ protocol FactoryLookup {
 /// a call to `FactoryRegister.Register()`.
 protocol FactoryDriver {
     /// Used to obtain a `FactoryDevice` protocol instance.
-    GetFactoryDevice(request<FactoryDevice> device_factory);
+    GetFactoryDevice(resource struct {
+        device_factory server_end:FactoryDevice;
+    });
 };
 
 /// Protocol for registering the factory instance of a LoWPAN driver with the LoWPAN service.
 ///
 /// This protocol is implemented by the LoWPAN service and used by LoWPAN drivers.
-[Discoverable]
+@discoverable
 protocol FactoryRegister {
     /// Registers the given LoWPAN device factory API with the LoWPAN Service
     /// using the given interface name.
     ///
     /// The provided `FactoryDriver` will be used to connect requests made via
     /// `FactoryLookup.Lookup()` for `FactoryDevice`.
-    Register(InterfaceName name, FactoryDriver driver) -> () error ServiceError;
+    Register(resource struct {
+        name InterfaceName;
+        driver client_end:FactoryDriver;
+    }) -> (struct {}) error ServiceError;
 };

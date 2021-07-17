@@ -1,8 +1,6 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.device.instancelifecycle.test;
 
 using zx;
@@ -10,13 +8,17 @@ using zx;
 protocol TestDevice {
     /// Creates a new device that will return instance devices on open().
     /// |lifecycle| will provide a stream of lifecycle events for the device itself.
-    CreateDevice(request<Lifecycle> lifecycle, zx.handle:CHANNEL? client_remote)
-        -> () error zx.status;
+    CreateDevice(resource struct {
+        lifecycle server_end:Lifecycle;
+        client_remote zx.handle:<CHANNEL, optional>;
+    }) -> (struct {}) error zx.status;
 };
 
 protocol InstanceDevice {
     /// Get a stream of lifecycle events for this instance device
-    SubscribeToLifecycle(request<Lifecycle> lifecycle) -> () error zx.status;
+    SubscribeToLifecycle(resource struct {
+        lifecycle server_end:Lifecycle;
+    }) -> (struct {}) error zx.status;
 
     /// Request the asynchronous removal of the main device, rather than the instance devices.
     RemoveDevice();

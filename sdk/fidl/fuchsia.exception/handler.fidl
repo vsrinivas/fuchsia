@@ -1,15 +1,13 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.exception;
 
 using zx;
 
 /// Protocol meant for clients interested in handling exceptions for a
 /// particular service.
-[Discoverable]
+@discoverable
 protocol Handler {
     /// This exception mirrors closely the information provided by exception
     /// channels. The design is to have clients of this API behave as closely as
@@ -21,7 +19,10 @@ protocol Handler {
     ///
     /// `info` represents basic exception information as provided by the
     /// exception channel.
-    OnException(zx.handle:EXCEPTION exception, ExceptionInfo info) -> ();
+    OnException(resource struct {
+        exception zx.handle:EXCEPTION;
+        info ExceptionInfo;
+    }) -> ();
 };
 
 /// Basic exception information associated with a particular exception.
@@ -29,30 +30,30 @@ protocol Handler {
 // TODO(fxbug.dev/7755): Currently there is no good support for tables within the
 //                 llcpp bindings, which would make this API very cumbersome to
 //                 use. When better support lands, move this to a table.
-struct ExceptionInfo {
-    // Process ID or pid.
-    zx.koid process_koid;
+type ExceptionInfo = struct {
+            // Process ID or pid.
+    process_koid zx.koid;
 
     // Thread ID or tid.
-    zx.koid thread_koid;
+    thread_koid zx.koid;
 
-    ExceptionType type;
+    type ExceptionType;
 };
 
 /// Generic wrapper over a thread exception. Mirrors closely the information
 /// given by an exception channel.
 /// Both |process| and |thread| will be valid if present.
-resource table ProcessException {
+type ProcessException = resource table {
     /// `exception` is guaranteed to be valid.
-    1: zx.handle:EXCEPTION exception;
-    2: ExceptionInfo info;
+    1: exception zx.handle:EXCEPTION;
+    2: info ExceptionInfo;
 
     /// Both `process` and `thread` will be valid if present.
-    3: zx.handle:PROCESS process;
+    3: process zx.handle:PROCESS;
 
     /// The thread that generated the exception.
     /// The process may have other threads that are not reflected here.
-    4: zx.handle:THREAD thread;
+    4: thread zx.handle:THREAD;
 };
 
 /// What type of exception was triggered.
@@ -61,7 +62,7 @@ resource table ProcessException {
 /// reflect that.
 // TODO(fxbug.dev/7802): Once there is a way to better generate zx bindings, move this
 //                 definitions to a common library.
-enum ExceptionType : uint32 {
+type ExceptionType = strict enum : uint32 {
     GENERAL = 0x8;
     FATAL_PAGE_FAULT = 0x108;
     UNDEFINED_INSTRUCTION = 0x208;

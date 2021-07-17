@@ -1,15 +1,13 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.power.manager;
 
 using fuchsia.device.manager;
 using fuchsia.io;
 
 /// Error codes for the DriverManagerRegistration protocol.
-enum RegistrationError {
+type RegistrationError = strict enum {
     /// The component encountered an unspecified error while performing the operation.
     INTERNAL = 0;
 
@@ -19,7 +17,7 @@ enum RegistrationError {
 
 /// Protocol for the Driver Manager to register the required protocol instances with the
 /// Power Manager.
-[Discoverable]
+@discoverable
 protocol DriverManagerRegistration {
     /// Registers a [fuchsia.device.manager/SystemStateTransition] and [fuchsia.io.Directory] with
     /// the Power Manager. The Power Manager expects to receive this call exactly once and it will
@@ -44,6 +42,8 @@ protocol DriverManagerRegistration {
     // that during shutdown, the Driver Manager will be stopped before the Power Manager, allowing
     // the Power Manager to observe and react to any potential failures during the shutdown
     // process.
-    Register(fuchsia.device.manager.SystemStateTransition system_state_transition,
-             fuchsia.io.Directory dir) -> () error RegistrationError;
+    Register(resource struct {
+        system_state_transition client_end:fuchsia.device.manager.SystemStateTransition;
+        dir client_end:fuchsia.io.Directory;
+    }) -> (struct {}) error RegistrationError;
 };

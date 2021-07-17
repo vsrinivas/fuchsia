@@ -1,48 +1,46 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 // GENERATED FILE: Regen with $(fx get-build-dir)/host-tools/regen_fidl_benchmark_suite
 
 library benchmarkfidl;
 
-struct StructTree1 {
-    uint8 a;
-    uint8 b;
+type StructTree1 = struct {
+    a uint8;
+    b uint8;
 };
 
-struct StructTree2 {
-    StructTree1 left;
-    StructTree1 right;
+type StructTree2 = struct {
+    left StructTree1;
+    right StructTree1;
 };
 
-struct StructTree3 {
-    StructTree2 left;
-    StructTree2 right;
+type StructTree3 = struct {
+    left StructTree2;
+    right StructTree2;
 };
 
-struct StructTree4 {
-    StructTree3 left;
-    StructTree3 right;
+type StructTree4 = struct {
+    left StructTree3;
+    right StructTree3;
 };
 
-struct StructTree5 {
-    StructTree4 left;
-    StructTree4 right;
+type StructTree5 = struct {
+    left StructTree4;
+    right StructTree4;
 };
 
-struct StructTree6 {
-    StructTree5 left;
-    StructTree5 right;
+type StructTree6 = struct {
+    left StructTree5;
+    right StructTree5;
 };
 
-struct StructTree7 {
-    StructTree6 left;
-    StructTree6 right;
+type StructTree7 = struct {
+    left StructTree6;
+    right StructTree6;
 };
 
-struct StructTree8 {
-    StructTree7 left;
-    StructTree7 right;
+type StructTree8 = struct {
+    left StructTree7;
+    right StructTree7;
 };

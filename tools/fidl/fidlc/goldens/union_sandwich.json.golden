@@ -13,8 +13,8 @@
       "name": "fidl.test.unionsandwich/SandwichUnionSize8Alignment4",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/union_sandwich.test.fidl",
-        "line": 15,
-        "column": 8,
+        "line": 14,
+        "column": 6,
         "length": 28
       },
       "anonymous": false,
@@ -27,8 +27,8 @@
           "name": "before",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/union_sandwich.test.fidl",
-            "line": 16,
-            "column": 12,
+            "line": 15,
+            "column": 5,
             "length": 6
           },
           "field_shape_v1": {
@@ -49,8 +49,8 @@
           "name": "union",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/union_sandwich.test.fidl",
-            "line": 17,
-            "column": 26,
+            "line": 16,
+            "column": 5,
             "length": 5
           },
           "field_shape_v1": {
@@ -70,8 +70,8 @@
           "name": "after",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/union_sandwich.test.fidl",
-            "line": 18,
-            "column": 12,
+            "line": 17,
+            "column": 5,
             "length": 5
           },
           "field_shape_v1": {
@@ -108,8 +108,8 @@
       "name": "fidl.test.unionsandwich/SandwichUnionSize12Alignment4",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/union_sandwich.test.fidl",
-        "line": 25,
-        "column": 8,
+        "line": 24,
+        "column": 6,
         "length": 29
       },
       "anonymous": false,
@@ -122,8 +122,8 @@
           "name": "before",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/union_sandwich.test.fidl",
-            "line": 26,
-            "column": 12,
+            "line": 25,
+            "column": 5,
             "length": 6
           },
           "field_shape_v1": {
@@ -144,8 +144,8 @@
           "name": "union",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/union_sandwich.test.fidl",
-            "line": 27,
-            "column": 27,
+            "line": 26,
+            "column": 5,
             "length": 5
           },
           "field_shape_v1": {
@@ -165,8 +165,8 @@
           "name": "after",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/union_sandwich.test.fidl",
-            "line": 28,
-            "column": 11,
+            "line": 27,
+            "column": 5,
             "length": 5
           },
           "field_shape_v1": {
@@ -203,8 +203,8 @@
       "name": "fidl.test.unionsandwich/StructSize16Alignment8",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/union_sandwich.test.fidl",
-        "line": 31,
-        "column": 8,
+        "line": 30,
+        "column": 6,
         "length": 22
       },
       "anonymous": false,
@@ -217,8 +217,8 @@
           "name": "f1",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/union_sandwich.test.fidl",
-            "line": 32,
-            "column": 12,
+            "line": 31,
+            "column": 5,
             "length": 2
           },
           "field_shape_v1": {
@@ -238,8 +238,8 @@
           "name": "f2",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/union_sandwich.test.fidl",
-            "line": 33,
-            "column": 12,
+            "line": 32,
+            "column": 5,
             "length": 2
           },
           "field_shape_v1": {
@@ -276,8 +276,8 @@
       "name": "fidl.test.unionsandwich/SandwichUnionSize24Alignment8",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/union_sandwich.test.fidl",
-        "line": 40,
-        "column": 8,
+        "line": 39,
+        "column": 6,
         "length": 29
       },
       "anonymous": false,
@@ -290,8 +290,8 @@
           "name": "before",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/union_sandwich.test.fidl",
-            "line": 41,
-            "column": 12,
+            "line": 40,
+            "column": 5,
             "length": 6
           },
           "field_shape_v1": {
@@ -312,8 +312,8 @@
           "name": "union",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/union_sandwich.test.fidl",
-            "line": 42,
-            "column": 27,
+            "line": 41,
+            "column": 5,
             "length": 5
           },
           "field_shape_v1": {
@@ -333,8 +333,8 @@
           "name": "after",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/union_sandwich.test.fidl",
-            "line": 43,
-            "column": 12,
+            "line": 42,
+            "column": 5,
             "length": 5
           },
           "field_shape_v1": {
@@ -371,8 +371,8 @@
       "name": "fidl.test.unionsandwich/SandwichUnionSize36Alignment4",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/union_sandwich.test.fidl",
-        "line": 50,
-        "column": 8,
+        "line": 49,
+        "column": 6,
         "length": 29
       },
       "anonymous": false,
@@ -385,8 +385,8 @@
           "name": "before",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/union_sandwich.test.fidl",
-            "line": 51,
-            "column": 12,
+            "line": 50,
+            "column": 5,
             "length": 6
           },
           "field_shape_v1": {
@@ -407,8 +407,8 @@
           "name": "union",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/union_sandwich.test.fidl",
-            "line": 52,
-            "column": 27,
+            "line": 51,
+            "column": 5,
             "length": 5
           },
           "field_shape_v1": {
@@ -428,8 +428,8 @@
           "name": "after",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/union_sandwich.test.fidl",
-            "line": 53,
-            "column": 12,
+            "line": 52,
+            "column": 5,
             "length": 5
           },
           "field_shape_v1": {
@@ -469,8 +469,8 @@
       "name": "fidl.test.unionsandwich/UnionSize8Alignment4",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/union_sandwich.test.fidl",
-        "line": 11,
-        "column": 7,
+        "line": 10,
+        "column": 6,
         "length": 20
       },
       "members": [
@@ -484,8 +484,8 @@
           },
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/union_sandwich.test.fidl",
-            "line": 12,
-            "column": 15,
+            "line": 11,
+            "column": 8,
             "length": 7
           }
         }
@@ -515,8 +515,8 @@
       "name": "fidl.test.unionsandwich/UnionSize12Alignment4",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/union_sandwich.test.fidl",
-        "line": 21,
-        "column": 7,
+        "line": 20,
+        "column": 6,
         "length": 21
       },
       "members": [
@@ -534,8 +534,8 @@
           },
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/union_sandwich.test.fidl",
-            "line": 22,
-            "column": 23,
+            "line": 21,
+            "column": 8,
             "length": 7
           }
         }
@@ -565,8 +565,8 @@
       "name": "fidl.test.unionsandwich/UnionSize24Alignment8",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/union_sandwich.test.fidl",
-        "line": 36,
-        "column": 7,
+        "line": 35,
+        "column": 6,
         "length": 21
       },
       "members": [
@@ -581,8 +581,8 @@
           },
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/union_sandwich.test.fidl",
-            "line": 37,
-            "column": 31,
+            "line": 36,
+            "column": 8,
             "length": 7
           }
         }
@@ -612,8 +612,8 @@
       "name": "fidl.test.unionsandwich/UnionSize36Alignment4",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/union_sandwich.test.fidl",
-        "line": 46,
-        "column": 7,
+        "line": 45,
+        "column": 6,
         "length": 21
       },
       "members": [
@@ -631,8 +631,8 @@
           },
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/union_sandwich.test.fidl",
-            "line": 47,
-            "column": 24,
+            "line": 46,
+            "column": 8,
             "length": 7
           }
         }

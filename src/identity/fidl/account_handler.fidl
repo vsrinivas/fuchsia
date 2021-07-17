@@ -1,8 +1,6 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.identity.internal;
 
 using fuchsia.auth;
@@ -11,11 +9,12 @@ using fuchsia.identity.authentication;
 using fuchsia.identity.external;
 using fuchsia.kms;
 
-const uint32 HASH_SIZE = 32;
-const uint32 HASH_SALT_SIZE = 32;
-alias GlobalIdHash = array<byte>:HASH_SIZE;
-alias HashSalt = array<byte>:HASH_SALT_SIZE;
+const HASH_SIZE uint32 = 32;
+const HASH_SALT_SIZE uint32 = 32;
+alias GlobalIdHash = array<byte, HASH_SIZE>;
+alias HashSalt = array<byte, HASH_SALT_SIZE>;
 
+// TODO(fxbug.dev/42836): Supply UI for system authentication.
 /// The control channel for an AccountHandler component.
 ///
 /// This interface is intended only for use by the AccountManager component that
@@ -79,8 +78,7 @@ alias HashSalt = array<byte>:HASH_SALT_SIZE;
 /// persistent on this device, then it is saved to disk.
 /// * `Finished` - the handler is in the process of shutting down and will soon
 /// terminate.
-// TODO(fxbug.dev/42836): Supply UI for system authentication.
-[Discoverable]
+@discoverable
 protocol AccountHandlerControl {
     /// Creates a completely new Fuchsia account, optionally protecting the
     /// account with a single enrollment of an authentication mechanism.
@@ -93,9 +91,9 @@ protocol AccountHandlerControl {
     ///
     /// Fails with FAILED_PRECONDITION if the AccountHandler is not in the `Uninitialized`
     /// state.
-    CreateAccount(
-        fuchsia.identity.account.AuthMechanismId? auth_mechanism_id)
-        -> () error fuchsia.identity.account.Error;
+    CreateAccount(struct {
+        auth_mechanism_id fuchsia.identity.account.AuthMechanismId:optional;
+    }) -> (struct {}) error fuchsia.identity.account.Error;
 
     /// Loads pre-auth data, which allows the account to be unlocked later.
     ///
@@ -103,7 +101,7 @@ protocol AccountHandlerControl {
     ///
     /// Fails with FAILED_PRECONDITION if the AccountHandler is not in the `Uninitialized`
     /// state.
-    Preload() -> () error fuchsia.identity.account.Error;
+    Preload() -> (struct {}) error fuchsia.identity.account.Error;
 
     /// Reach the `Initialized` state, attempting authentication and unlocking the account where
     /// necessary.
@@ -111,14 +109,13 @@ protocol AccountHandlerControl {
     /// Fails with
     /// - FAILED_PRECONDITION if the AccountHandler is not in the `Locked` or `Initialized` state.
     /// - FAILED_AUTH_ATTEMPT if the authentication attempt failed.
-    UnlockAccount()
-        -> () error fuchsia.identity.account.Error;
+    UnlockAccount() -> (struct {}) error fuchsia.identity.account.Error;
 
     /// Reach the `Locked` state, closing any open `Account` and `Persona` channels for the account.
     ///
     /// Fails with FAILED_PRECONDITION if the AccountHandler is not in the `Initialized` or
     /// `Locked` state.
-    LockAccount() -> () error fuchsia.identity.account.Error;
+    LockAccount() -> (struct {}) error fuchsia.identity.account.Error;
 
     /// Prepares the AccountHandler to receive an account from another device through
     /// direct transfer.  This moves the AccountHandler from the `Uninitialized`
@@ -143,7 +140,7 @@ protocol AccountHandlerControl {
     ///
     /// Fails with FAILED_PRECONDITION if the AccountHandler is not in the `Uninitialized`
     /// state.
-    PrepareForAccountTransfer() -> () error fuchsia.identity.account.Error;
+    PrepareForAccountTransfer() -> (struct {}) error fuchsia.identity.account.Error;
 
     // TODO(satsukiu): investigate using VMOs or pagination over Overnet for
     // when account size exceeds what FIDL can handle.
@@ -162,8 +159,9 @@ protocol AccountHandlerControl {
     ///
     /// Fails with FAILED_PRECONDITION if the AccountHandler is not in the
     /// `PendingTransfer` state.
-    PerformAccountTransfer(EncryptedAccountData encrypted_account_data)
-        -> () error fuchsia.identity.account.Error;
+    PerformAccountTransfer(struct {
+        encrypted_account_data EncryptedAccountData;
+    }) -> (struct {}) error fuchsia.identity.account.Error;
 
     /// Completes the account transfer started through
     /// `PrepareForAccountTransfer` and `PerformAccountTransfer`.  This saves
@@ -175,8 +173,7 @@ protocol AccountHandlerControl {
     ///
     /// Fails with FAILED_PRECONDITION if the AccountHandler is not in the `Transferred`
     /// state.
-    FinalizeAccountTransfer()
-        -> () error fuchsia.identity.account.Error;
+    FinalizeAccountTransfer() -> (struct {}) error fuchsia.identity.account.Error;
 
     // TODO(fxr/37227) - update encrypt/decrypt APIs to handle data given by KMS.
 
@@ -192,8 +189,11 @@ protocol AccountHandlerControl {
     ///
     /// Fails with FAILED_PRECONDITION if the AccountHandler is not in the `Initialized`
     /// state.
-    EncryptAccountData(fuchsia.kms.PublicKey target_public_key)
-        -> (EncryptedAccountData encrypted_account_data) error fuchsia.identity.account.Error;
+    EncryptAccountData(struct {
+        target_public_key fuchsia.kms.PublicKey;
+    }) -> (struct {
+        encrypted_account_data EncryptedAccountData;
+    }) error fuchsia.identity.account.Error;
 
     /// Deletes all persistent information about the Fuchsia account handled by
     /// this handler, including all credentials and global identifiers.
@@ -206,7 +206,9 @@ protocol AccountHandlerControl {
     ///         credentials fails. If false, any revocation failure will result
     ///         in an error and the account will remain. In this case, a subset
     ///         of the credentials may have been deleted.
-    RemoveAccount(bool force) -> () error fuchsia.identity.account.Error;
+    RemoveAccount(struct {
+        force bool;
+    }) -> (struct {}) error fuchsia.identity.account.Error;
 
     // TODO(jsankey): Add methods to cover adding an existing account and
     // handling an account where the disk is not yet decrypted.
@@ -222,10 +224,10 @@ protocol AccountHandlerControl {
     ///
     /// Fails with FAILED_PRECONDITION if the AccountHandler is not in the `Initialized`
     /// state.
-    GetAccount(
-        fuchsia.auth.AuthenticationContextProvider auth_context_provider,
-        request<fuchsia.identity.account.Account> account)
-        -> () error fuchsia.identity.account.Error;
+    GetAccount(resource struct {
+        auth_context_provider client_end:fuchsia.auth.AuthenticationContextProvider;
+        account server_end:fuchsia.identity.account.Account;
+    }) -> (struct {}) error fuchsia.identity.account.Error;
 
     /// Retrieves the public key associated with this account on this device.
     /// The public key is exposed so that the target AccountHandler's key can
@@ -238,7 +240,9 @@ protocol AccountHandlerControl {
     ///
     /// Fails with FAILED_PRECONDITION is the AccountHandler is not in one of
     /// `PendingTransfer`, `Transferred`, or `Initialized` states.
-    GetPublicKey() -> (fuchsia.kms.PublicKey public_key) error fuchsia.identity.account.Error;
+    GetPublicKey() -> (struct {
+        public_key fuchsia.kms.PublicKey;
+    }) error fuchsia.identity.account.Error;
 
     /// Generates a hash of the global account ID using the provided salt.
     /// Returning a hash of the global ID lets the account system determine
@@ -255,7 +259,11 @@ protocol AccountHandlerControl {
     ///
     /// Fails with FAILED_PRECONDITION if the AccountHandler is not in one of
     /// `Transferred` or `Initialized` states.
-    GetGlobalIdHash(HashSalt salt) -> (GlobalIdHash id_hash) error fuchsia.identity.account.Error;
+    GetGlobalIdHash(struct {
+        salt HashSalt;
+    }) -> (struct {
+        id_hash GlobalIdHash;
+    }) error fuchsia.identity.account.Error;
 
     /// Signals that the AccountHandler should tear itself down. After the
     /// receiver responds by closing its handle, the caller may terminate the
@@ -268,7 +276,7 @@ protocol AccountHandlerControl {
 ///
 /// This service is supplied into the namespace of AccountHandler by the
 /// component that launches it (i.e. the AccountManager).
-[Discoverable]
+@discoverable
 protocol AccountHandlerContext {
     /// Connects to the `Oauth` implementation for a particular service provider,
     /// launching it if necessary.
@@ -276,9 +284,10 @@ protocol AccountHandlerContext {
     /// `auth_provider_type` An OAuth identity provider matching a configuration
     ///                      set in an AuthProviderConfig.auth_provider_type
     /// `oauth` The server end of an `Oauth` channel
-    GetOauth(string auth_provider_type,
-             request<fuchsia.identity.external.Oauth> oauth)
-        -> () error fuchsia.identity.account.Error;
+    GetOauth(resource struct {
+        auth_provider_type string;
+        oauth server_end:fuchsia.identity.external.Oauth;
+    }) -> (struct {}) error fuchsia.identity.account.Error;
 
     /// Connects to the `OpenIdConnect` implementation for a particular service
     /// provider, launching it if necessary.
@@ -287,9 +296,10 @@ protocol AccountHandlerContext {
     ///                      configuration set in an
     ///                      AuthProviderConfig.auth_provider_type
     /// `open_id_connect` The server end of an `OpenIDConnect` channel
-    GetOpenIdConnect(string auth_provider_type,
-                     request<fuchsia.identity.external.OpenIdConnect> open_id_connect)
-        -> () error fuchsia.identity.account.Error;
+    GetOpenIdConnect(resource struct {
+        auth_provider_type string;
+        open_id_connect server_end:fuchsia.identity.external.OpenIdConnect;
+    }) -> (struct {}) error fuchsia.identity.account.Error;
 
     /// Connects to the `OauthOpenIdConnect` implementation for a particular
     /// service provider, launching it if necessary.
@@ -298,10 +308,10 @@ protocol AccountHandlerContext {
     ///                      configuration set in an
     ///                      AuthProviderConfig.auth_provider_type
     /// `oauth_open_id_connect` The server end of an `OauthOpenIDConnect` channel
-    GetOauthOpenIdConnect(string auth_provider_type,
-                          request<fuchsia.identity.external.OauthOpenIdConnect> 
-                          oauth_open_id_connect)
-        -> () error fuchsia.identity.account.Error;
+    GetOauthOpenIdConnect(resource struct {
+        auth_provider_type string;
+        oauth_open_id_connect server_end:fuchsia.identity.external.OauthOpenIdConnect;
+    }) -> (struct {}) error fuchsia.identity.account.Error;
 
     /// Connects to a `StorageUnlockMechanism` implementation identified by its
     /// auth mechanism ID, launching the associated Authenticator if necessary.
@@ -309,16 +319,16 @@ protocol AccountHandlerContext {
     /// `auth_mechanism_id` An identifier matching an authentication mechanism
     ///                     configured by the account system.
     /// `storage_unlock_mechanism` The server end of an `StorageUnlockMechanism` channel
-    GetStorageUnlockAuthMechanism(
-        fuchsia.identity.account.AuthMechanismId auth_mechanism_id,
-        request<fuchsia.identity.authentication.StorageUnlockMechanism> storage_unlock_mechanism)
-        -> () error fuchsia.identity.account.Error;
+    GetStorageUnlockAuthMechanism(resource struct {
+        auth_mechanism_id fuchsia.identity.account.AuthMechanismId;
+        storage_unlock_mechanism server_end:fuchsia.identity.authentication.StorageUnlockMechanism;
+    }) -> (struct {}) error fuchsia.identity.account.Error;
 };
 
 /// Contents of an account, used for serialization during account transfer.
-table AccountData {
+type AccountData = table {
     /// A globally unique identifier for the account.
-    1: fuchsia.identity.account.GlobalAccountId global_id;
+    1: global_id fuchsia.identity.account.GlobalAccountId;
 };
 
 /// Encrypted form of AccountData.

@@ -1,94 +1,92 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library measuretape;
 
 using zx;
 
 // 24 bytes + selected member size
-resource union TopLevelUnion {
-    1: uint64 primitive;
-    2: zx.handle handle;
-    3: StructWithString struct_with_string;
-    4: StructWithOptString struct_with_opt_string;
-    5: Table table;
-    6: array<byte>:12 array_of_twelve_bytes;
-    7: array<string>:3 array_of_three_strings;
-    8: array<zx.handle>:3 array_of_three_handles;
-    9: array<Table>:2 array_of_two_tables;
-    10: array<Union>:2 array_of_two_unions;
-    11: StructWithTwoArrays struct_with_two_arrays;
-    12: array<StructWithOneHandle>:3 array_of_three_structs_with_one_handle;
-    21: array<StructWithTwoHandles>:3 array_of_three_structs_with_two_handles;
-    13: vector<byte> vector_of_bytes;
-    14: vector<string> vector_of_strings;
-    15: vector<zx.handle> vector_of_handles;
-    16: vector<Table> vector_of_tables;
-    17: vector<Union> vector_of_unions;
-    18: StructWithTwoVectors struct_with_two_vectors;
-    19: vector<StructWithOneHandle> vector_of_structs_with_one_handle;
-    20: vector<StructWithTwoHandles> vector_of_structs_with_two_handles;
-    22: FlexibleUnion flexible_union;
-    23: StructWithAVector struct_with_a_vector;
+type TopLevelUnion = strict resource union {
+    1: primitive uint64;
+    2: handle zx.handle;
+    3: struct_with_string StructWithString;
+    4: struct_with_opt_string StructWithOptString;
+    5: table Table;
+    6: array_of_twelve_bytes array<byte, 12>;
+    7: array_of_three_strings array<string, 3>;
+    8: array_of_three_handles array<zx.handle, 3>;
+    9: array_of_two_tables array<Table, 2>;
+   10: array_of_two_unions array<Union, 2>;
+   11: struct_with_two_arrays StructWithTwoArrays;
+   12: array_of_three_structs_with_one_handle array<StructWithOneHandle, 3>;
+   21: array_of_three_structs_with_two_handles array<StructWithTwoHandles, 3>;
+   13: vector_of_bytes vector<byte>;
+   14: vector_of_strings vector<string>;
+   15: vector_of_handles vector<zx.handle>;
+   16: vector_of_tables vector<Table>;
+   17: vector_of_unions vector<Union>;
+   18: struct_with_two_vectors StructWithTwoVectors;
+   19: vector_of_structs_with_one_handle vector<StructWithOneHandle>;
+   20: vector_of_structs_with_two_handles vector<StructWithTwoHandles>;
+   22: flexible_union FlexibleUnion;
+   23: struct_with_a_vector StructWithAVector;
 };
 
 // 16 bytes + FIDL_ALIGN(string length)
-struct StructWithString {
+type StructWithString = struct {
     string string;
 };
 
 // 16 bytes + FIDL_ALIGN(string length)
-struct StructWithOptString {
-    string? opt_string;
+type StructWithOptString = struct {
+    opt_string string:optional;
 };
 
 // 16 bytes + max_set_ordinal * 16 + sum of all set members
-resource table Table {
-    5: uint32 primitive;
+type Table = resource table {
+    5: primitive uint32;
     2: reserved;
     1: reserved;
     3: string string;
-    4: zx.handle handle;
+    4: handle zx.handle;
 };
 
 // 24 bytes + selected member size
-union Union {
-    1: uint64 primitive;
+type Union = strict union {
+    1: primitive uint64;
 };
 
-flexible union FlexibleUnion {
-    1: uint64 primitive;
+type FlexibleUnion = flexible union {
+    1: primitive uint64;
 };
 
 // 64 bytes, i.e. 12 + 4 (padding) + 3 * 16
-struct StructWithTwoArrays {
-    array<byte>:12 array_of_twelve_bytes;
-    array<string>:3 array_of_three_strings;
+type StructWithTwoArrays = struct {
+    array_of_twelve_bytes array<byte, 12>;
+    array_of_three_strings array<string, 3>;
 };
 
 // 9 bytes
-resource struct StructWithOneHandle {
-    uint8 tiny1;
-    zx.handle:VMO vmo;
-    uint8 tiny2;
+type StructWithOneHandle = resource struct {
+    tiny1 uint8;
+    vmo zx.handle:VMO;
+    tiny2 uint8;
 };
 
 // 12 bytes
-resource struct StructWithTwoHandles {
-    uint8 tiny1;
-    zx.handle:VMO vmo1;
-    zx.handle:VMO vmo2;
+type StructWithTwoHandles = resource struct {
+    tiny1 uint8;
+    vmo1 zx.handle:VMO;
+    vmo2 zx.handle:VMO;
 };
 
 // 32 bytes
-struct StructWithTwoVectors {
-    vector<byte>? vector_of_bytes;
-    vector<string>? vector_of_strings;
+type StructWithTwoVectors = struct {
+    vector_of_bytes vector<byte>:optional;
+    vector_of_strings vector<string>:optional;
 };
 
 // 16 bytes
-struct StructWithAVector {
-    vector<string:3>:5 vector_of_strings;
+type StructWithAVector = struct {
+    vector_of_strings vector<string:3>:5;
 };

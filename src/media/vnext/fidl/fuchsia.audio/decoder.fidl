@@ -1,8 +1,6 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.audio;
 
 using fuchsia.media2;
@@ -10,7 +8,7 @@ using fuchsia.mediastreams;
 using zx;
 
 /// The maximum number of VMO handles allowed per buffer collection.
-const int64 MAX_PAYLOAD_RANGES = 16;
+const MAX_PAYLOAD_RANGES int64 = 16;
 
 /// Represents an audio decoder.
 protocol Decoder {
@@ -28,19 +26,21 @@ protocol Decoder {
     /// * error reason for connection failiure.
     ///
     /// This method responds when the connection is ready or the connect attempt fails.
-    ConnectInputStream(
-        zx.handle:EVENTPAIR buffer_collection_token,
-        fuchsia.mediastreams.AudioFormat? format,
-        fuchsia.mediastreams.Compression? compression,
-        request<fuchsia.media2.StreamSink> request)
-        -> () error fuchsia.media2.ConnectionError;
+    ConnectInputStream(resource struct {
+        buffer_collection_token zx.handle:EVENTPAIR;
+        format box<fuchsia.mediastreams.AudioFormat>;
+        compression box<fuchsia.mediastreams.Compression>;
+        request server_end:fuchsia.media2.StreamSink;
+    }) -> (struct {}) error fuchsia.media2.ConnectionError;
 
     /// Indicates that the current input stream has been disconnected unexpectedly.
     -> OnInputStreamDisconnected();
 
     /// Indicates that a new output stream is available with the specified format. The client is
     /// expected to call `ConnectOutputStream` immediately after this event is signaled.
-    -> OnNewOutputStreamAvailable(fuchsia.mediastreams.AudioFormat format);
+    -> OnNewOutputStreamAvailable(struct {
+        format fuchsia.mediastreams.AudioFormat;
+    });
 
     /// Connects an output stream in response to a `OnNewOutputStreamAvailable` event.
     ///
@@ -50,15 +50,17 @@ protocol Decoder {
     /// * error reason for connection failiure.
     ///
     /// This method responds when the connection is ready or the connect attempt fails.
-    ConnectOutputStream(
-        zx.handle:EVENTPAIR buffer_collection_token,
-        fuchsia.media2.StreamSink stream_sink)
-        -> () error fuchsia.media2.ConnectionError;
+    ConnectOutputStream(resource struct {
+        buffer_collection_token zx.handle:EVENTPAIR;
+        stream_sink client_end:fuchsia.media2.StreamSink;
+    }) -> (struct {}) error fuchsia.media2.ConnectionError;
 
     /// Disconnects the output stream.
     DisconnectOutputStream();
 
     /// Indicates that the current output stream has been disconnected unexpectedly. The
     /// `status` parameter indicates the epitaph for the connection.
-    -> OnOutputStreamDisconnected(zx.status status);
+    -> OnOutputStreamDisconnected(struct {
+        status zx.status;
+    });
 };

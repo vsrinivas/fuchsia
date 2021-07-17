@@ -1,8 +1,6 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.block;
 
 using zx;
@@ -11,12 +9,16 @@ using zx;
 protocol InspectVmoProvider {
     /// Requests the inspect vmo from the entity.
     ///  - |vmo| has |ZX_RIGHTS_DUPLICATE|, |ZX_RIGHTS_TRANSFER|, |ZX_RIGHTS_READ|
-    GetVmo() -> (zx.handle:VMO vmo) error zx.status;
+    GetVmo() -> (resource struct {
+        vmo zx.handle:VMO;
+    }) error zx.status;
 };
 
 protocol Ftl {
     compose InspectVmoProvider;
 
     /// Discards previous contents and reinitializes the device.
-    Format() -> (zx.status status);
+    Format() -> (struct {
+        status zx.status;
+    });
 };

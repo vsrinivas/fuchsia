@@ -1,18 +1,16 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.exception;
 
 using zx;
 
 /// The maximum amount of exceptions that will be listed at any given time by a
 /// call to `ListProcessesWaitingOnException`.
-const uint64 MAX_EXCEPTIONS_PER_CALL = 32;
+const MAX_EXCEPTIONS_PER_CALL uint64 = 32;
 
-const uint64 MAX_FILTER_LENGTH = 32;
-const uint64 MAX_FILTERS_PER_CALL = 32;
+const MAX_FILTER_LENGTH uint64 = 32;
+const MAX_FILTERS_PER_CALL uint64 = 32;
 
 /// Protocol meant for clients interested in obtaining processes that are
 /// suspended waiting for an exception handler (in limbo). This is the core
@@ -23,7 +21,7 @@ const uint64 MAX_FILTERS_PER_CALL = 32;
 /// limbo, meaning that the system is now ready to capture crashing processes.
 /// As the debugger got a notification that the limbo is now active, it can
 /// correctly handle newly excepted processes and do its normal workflow.
-[Discoverable]
+@discoverable
 protocol ProcessLimbo {
     /// Set the active state of the limbo. Will trigger the `WatchActive` event
     /// if there was a change, meaning that any listening components will receive
@@ -32,13 +30,17 @@ protocol ProcessLimbo {
     /// When a limbo is inactive, there will not be any processes waiting on it,
     /// meaning that any waiting processes will be freed upon deactivating the
     /// limbo.
-    SetActive(bool active) -> ();
+    SetActive(struct {
+        active bool;
+    }) -> ();
 
     /// Watchs for changes determining whether the limbo is currently active,
     /// using a Hanging Get pattern. An active limbo could be empty (not have
     /// any processes waiting on an exception).
     /// When a limbo is inactive, there will not be any processes waiting on it.
-    WatchActive() -> (bool is_active);
+    WatchActive() -> (struct {
+        is_active bool;
+    });
 
     /// Watch for processes that are waiting on exceptions, using a Hanging Get
     /// Pattern.
@@ -54,7 +56,9 @@ protocol ProcessLimbo {
     ///
     /// NOTE: The `process` and `thread` handle will only have the ZX_RIGHT_READ
     ///       right, so no modification will be able to be done on them.
-    WatchProcessesWaitingOnException() -> (vector<ProcessExceptionMetadata>:MAX_EXCEPTIONS_PER_CALL exception_list) error zx.status;
+    WatchProcessesWaitingOnException() -> (resource struct {
+        exception_list vector<ProcessExceptionMetadata>:MAX_EXCEPTIONS_PER_CALL;
+    }) error zx.status;
 
     /// Removes the process from limbo and retrieves the exception handle and
     /// associated metadata from an exception.
@@ -64,12 +68,18 @@ protocol ProcessLimbo {
     ///
     /// Returns ZX_ERR_NOT_FOUND if the process is not waiting on an exception.
     /// Returns ZX_ERR_UNAVAILABLE if limbo is not active.
-    RetrieveException(zx.koid process_koid) -> (ProcessException process_exception) error zx.status;
+    RetrieveException(struct {
+        process_koid zx.koid;
+    }) -> (resource struct {
+        process_exception ProcessException;
+    }) error zx.status;
 
     /// Removes the process from limbo, releasing the exception. This will make
     /// it "bubble up" beyond the scope of of this limbo, making it
     /// unretrievable in the future from here.
-    ReleaseProcess(zx.koid process_koid) -> () error zx.status;
+    ReleaseProcess(struct {
+        process_koid zx.koid;
+    }) -> (struct {}) error zx.status;
 
     /// Adds filters to the limbo. Filters determine what processes the limbo
     /// will store when receiving an exception. Repeated filters will be
@@ -93,17 +103,23 @@ protocol ProcessLimbo {
     /// the limbo.
     ///
     /// Returns ZX_ERR_UNAVAILABLE if limbo is not active.
-    AppendFilters(vector<string:MAX_FILTER_LENGTH>:MAX_FILTERS_PER_CALL filters) -> () error zx.status;
+    AppendFilters(struct {
+        filters vector<string:MAX_FILTER_LENGTH>:MAX_FILTERS_PER_CALL;
+    }) -> (struct {}) error zx.status;
 
     /// Removes filters to the limbo. Any filters that are not currently present
     /// on the limbo will be ignored.
     ///
     /// Returns ZX_ERR_UNAVAILABLE if limbo is not active.
-    RemoveFilters(vector<string:MAX_FILTER_LENGTH>:MAX_FILTERS_PER_CALL filters) -> () error zx.status;
+    RemoveFilters(struct {
+        filters vector<string:MAX_FILTER_LENGTH>:MAX_FILTERS_PER_CALL;
+    }) -> (struct {}) error zx.status;
 
     /// Returns filters that are currently active within the limbo. If the limbo
     /// is inactive, it will return an empty vector.
-    GetFilters() -> (vector<string:MAX_FILTER_LENGTH>:MAX_FILTERS_PER_CALL filters);
+    GetFilters() -> (struct {
+        filters vector<string:MAX_FILTER_LENGTH>:MAX_FILTERS_PER_CALL;
+    });
 };
 
 /// Intended to be read only metadada associated with an exception waiting in
@@ -111,14 +127,14 @@ protocol ProcessLimbo {
 /// so no modification can be done to them.
 ///
 /// NOTE: Both `process` and `thread` will be valid if present.
-resource table ProcessExceptionMetadata {
-    1: ExceptionInfo info;
+type ProcessExceptionMetadata = resource table {
+    1: info ExceptionInfo;
 
     /// Only has ZX_RIGHT_READ and ZX_RIGHT_GET_PROPERTY rights.
-    2: zx.handle:PROCESS process;
+    2: process zx.handle:PROCESS;
 
     /// The thread that generated the exception.
     /// The process may have other threads that are not reflected here.
     /// Only has ZX_RIGHT_READ and ZX_RIGHT_GET_PROPERTY rights.
-    3: zx.handle:THREAD thread;
+    3: thread zx.handle:THREAD;
 };

@@ -1,13 +1,11 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.light;
 
-const uint8 LIGHT_NAME_LEN = 32;
+const LIGHT_NAME_LEN uint8 = 32;
 
-enum Capability {
+type Capability = strict enum {
     /// This capability indicates that the light supports setting brightness to a uint8_t value.
     /// If this capability is not supported, the light only supports off and on state.
     BRIGHTNESS = 1;
@@ -17,89 +15,122 @@ enum Capability {
     SIMPLE = 3;
 };
 
-struct Rgb {
-    float64 red;
-    float64 green;
-    float64 blue;
+type Rgb = struct {
+    red float64;
+    green float64;
+    blue float64;
 };
 
-struct Info {
-    string:LIGHT_NAME_LEN name;
-    Capability capability;
+type Info = struct {
+    name string:LIGHT_NAME_LEN;
+    capability Capability;
 };
 
-struct GroupInfo {
-    string:LIGHT_NAME_LEN name;
-    uint32 count;
-    Capability capability;
+type GroupInfo = struct {
+    name string:LIGHT_NAME_LEN;
+    count uint32;
+    capability Capability;
 };
 
-enum LightError {
+type LightError = strict enum {
     OK = 0;
     NOT_SUPPORTED = 1;
     INVALID_INDEX = 2;
     FAILED = 3;
 };
 
-[Discoverable]
+@discoverable
 protocol Light {
     /// Returns the total number of physical lights.
     /// This will typically be 1 for a simple LED light, but may be greater than one for an array of
     /// lights or a more complicated lighting device.
     /// The multiple lights are addressed using "index" parameter in the calls below.
-    GetNumLights() -> (uint32 count);
+    GetNumLights() -> (struct {
+        count uint32;
+    });
 
     /// Returns the total number of light groups (does not count single lights).
     /// The light groups are addressed using "group_id" parameter in the calls below.
-    GetNumLightGroups() -> (uint32 count);
+    GetNumLightGroups() -> (struct {
+        count uint32;
+    });
 
     /// Returns info for the single light.
     /// index: Index of the light defined by board. Must be less than value returned by GetNumLights.
-    GetInfo(uint32 index) -> (Info info) error LightError;
+    GetInfo(struct {
+        index uint32;
+    }) -> (struct {
+        info Info;
+    }) error LightError;
 
     /// Returns the current value. If the light is ON, the value is True. If the light is OFF,
     /// the value is False.
     /// If the capability 'SIMPLE' is not supported by this light, returns NOT_SUPPORTED.
     /// Use GetInfo to check if light supports this operation.
     /// index: a number between 0 inclusive and the count received from GetNumLights.
-    GetCurrentSimpleValue(uint32 index) -> (bool value) error LightError;
+    GetCurrentSimpleValue(struct {
+        index uint32;
+    }) -> (struct {
+        value bool;
+    }) error LightError;
 
     /// Sets the current value. Value should be set to 'TRUE' to turn on the light. Value should be
     /// set to 'FALSE' to turn off the light.
     /// If the capability 'SIMPLE' is not supported by this light, returns NOT_SUPPORTED.
     /// Use GetInfo to check if light supports this operation.
     /// index: a number between 0 inclusive and the count received from GetNumLights.
-    SetSimpleValue(uint32 index, bool value) -> () error LightError;
+    SetSimpleValue(struct {
+        index uint32;
+        value bool;
+    }) -> (struct {}) error LightError;
 
     /// Returns the current brightness value (0.0 - 1.0) of the light indicated by index, where 0.0
     /// is minimum brightness and 1.0 is maximum.
     /// If the capability 'BRIGHTNESS' is not supported by this light, returns NOT_SUPPORTED.
     /// Use GetInfo to check if light supports this operation.
     /// index: a number between 0 inclusive and the count received from GetNumLights.
-    GetCurrentBrightnessValue(uint32 index) -> (float64 value) error LightError;
+    GetCurrentBrightnessValue(struct {
+        index uint32;
+    }) -> (struct {
+        value float64;
+    }) error LightError;
 
     /// Sets the current brightness value (0.0 - 1.0), where 0.0 is minimum brightness and 1.0 is
     /// maximum.
     /// If the capability 'BRIGHTNESS' is not supported by this light, returns NOT_SUPPORTED.
     /// Use GetInfo to check if light supports this operation.
     /// index: a number between 0 inclusive and the count received from GetNumLights.
-    SetBrightnessValue(uint32 index, float64 value) -> () error LightError;
+    SetBrightnessValue(struct {
+        index uint32;
+        value float64;
+    }) -> (struct {}) error LightError;
 
     /// Returns the current RGB value for the single light.
     /// If the capability 'RGB' is not supported by this light, returns NOT_SUPPORTED.
     /// Use GetInfo to check if light supports this operation.
     /// index: a number between 0 inclusive and the count received from GetNumLights.
-    GetCurrentRgbValue(uint32 index) -> (Rgb value) error LightError;
+    GetCurrentRgbValue(struct {
+        index uint32;
+    }) -> (struct {
+        value Rgb;
+    }) error LightError;
 
     /// Sets the current RGB value.
     /// If the capability 'RGB' is not supported by this light, returns NOT_SUPPORTED.
     /// Use GetInfo to check if light supports this operation.
     /// index: a number between 0 inclusive and the count received from GetNumLights.
-    SetRgbValue(uint32 index, Rgb value) -> () error LightError;
+    SetRgbValue(struct {
+        index uint32;
+        value Rgb;
+    }) -> (struct {}) error LightError;
 
     /// Returns group info for the light group.
     /// group_id: a number between 0 inclusive and the count received from GetNumLightGroups.
-    GetGroupInfo(uint32 group_id) -> (GroupInfo info) error LightError;
+    GetGroupInfo(struct {
+        group_id uint32;
+    }) -> (struct {
+        info GroupInfo;
+    }) error LightError;
 
     /// Returns an array of the current values.If the light is ON, the value is True. If the light
     /// is OFF, the value is False.
@@ -107,7 +138,11 @@ protocol Light {
     /// If the capability 'SIMPLE' is not supported by this group, returns NOT_SUPPORTED.
     /// Use GetGroupInfo to check if group supports this operation.
     /// group_id: a number between 0 inclusive and the count received from GetNumLightGroups.
-    GetGroupCurrentSimpleValue(uint32 group_id) -> (vector<bool>:MAX? values) error LightError;
+    GetGroupCurrentSimpleValue(struct {
+        group_id uint32;
+    }) -> (struct {
+        values vector<bool>:<MAX, optional>;
+    }) error LightError;
 
     /// Sets the current values through the values array. Value should be set to 'TRUE' to turn on
     /// the light. Value should be set to 'FALSE' to turn off the light.
@@ -115,7 +150,10 @@ protocol Light {
     /// If the capability 'SIMPLE' is not supported by this group, returns NOT_SUPPORTED.
     /// Use GetGroupInfo to check if group supports this operation.
     /// group_id: a number between 0 inclusive and the count received from GetNumLightGroups.
-    SetGroupSimpleValue(uint32 group_id, vector<bool>:MAX values) -> () error LightError;
+    SetGroupSimpleValue(struct {
+        group_id uint32;
+        values vector<bool>:MAX;
+    }) -> (struct {}) error LightError;
 
     /// Returns an array of the current brightness values (0.0 - 1.0) for the light group, where 0.0
     /// is minimum brightness and 1.0 is maximum.
@@ -123,7 +161,11 @@ protocol Light {
     /// If the capability 'BRIGHTNESS' is not supported by this group, returns NOT_SUPPORTED.
     /// Use GetGroupInfo to check if group supports this operation.
     /// group_id: a number between 0 inclusive and the count received from GetNumLightGroups.
-    GetGroupCurrentBrightnessValue(uint32 group_id) -> (vector<float64>:MAX? values) error LightError;
+    GetGroupCurrentBrightnessValue(struct {
+        group_id uint32;
+    }) -> (struct {
+        values vector<float64>:<MAX, optional>;
+    }) error LightError;
 
     /// Sets the current brightness values (0.0 - 1.0) for the light group through the values array,
     /// where 0.0 is minimum brightness and 1.0 is maximum.
@@ -131,22 +173,32 @@ protocol Light {
     /// If the capability 'BRIGHTNESS' is not supported by this group, returns NOT_SUPPORTED.
     /// Use GetGroupInfo to check if group supports this operation.
     /// group_id: a number between 0 inclusive and the count received from GetNumLightGroups.
-    SetGroupBrightnessValue(uint32 group_id, vector<float64>:MAX values) -> () error LightError;
+    SetGroupBrightnessValue(struct {
+        group_id uint32;
+        values vector<float64>:MAX;
+    }) -> (struct {}) error LightError;
 
     /// Returns an array of the current RGB values for the light group.
     /// If group_id is invalid, INVALID_INDEX will be returned.
     /// If the capability 'RGB' is not supported by this group, returns NOT_SUPPORTED.
     /// Use GetGroupInfo to check if group supports this operation.
     /// group_id: a number between 0 inclusive and the count received from GetNumLightGroups.
-    GetGroupCurrentRgbValue(uint32 group_id) -> (vector<Rgb>:MAX? values) error LightError;
+    GetGroupCurrentRgbValue(struct {
+        group_id uint32;
+    }) -> (struct {
+        values vector<Rgb>:<MAX, optional>;
+    }) error LightError;
 
     /// Sets the current RGB value for the light group.
     /// If group_id is invalid, INVALID_INDEX will be returned.
     /// If the capability 'RGB' is not supported by this group, returns NOT_SUPPORTED.
     /// Use GetGroupInfo to check if group supports this operation.
     /// group_id: a number between 0 inclusive and the count received from GetNumLightGroups.
-    SetGroupRgbValue(uint32 group_id, vector<Rgb>:MAX values) -> () error LightError;
+    SetGroupRgbValue(struct {
+        group_id uint32;
+        values vector<Rgb>:MAX;
+    }) -> (struct {}) error LightError;
 
-    // TODO: Ideas for future expansion
-    // - Hardware blinking configuration, for lights that have hardware or MCU support for blinking.
+// TODO: Ideas for future expansion
+// - Hardware blinking configuration, for lights that have hardware or MCU support for blinking.
 };

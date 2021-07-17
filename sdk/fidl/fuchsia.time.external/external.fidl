@@ -1,8 +1,6 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 /// Defines the protocols used to sample UTC time using time synchronization
 /// protocols such as NTP.
 ///
@@ -24,11 +22,13 @@ using zx;
 protocol TimeSource {
     /// Notifies the time source of changes to global properties of the device
     /// that it may use to increase accuracy of time measurements.
-    UpdateDeviceProperties(Properties properties);
+    UpdateDeviceProperties(struct {
+        properties Properties;
+    });
 };
 
 /// A protocol for time sources that produce time samples on demand.
-[Discoverable]
+@discoverable
 protocol PullSource {
     compose TimeSource;
     /// Produce a new time sample.
@@ -37,12 +37,16 @@ protocol PullSource {
     /// another sample. For example, this can occur if a server requests that the
     /// source make less frequent requests. In this case, the client should call
     /// `NextSampleTime` to retrieve the next time it may request a sample.
-    Sample() -> (TimeSample sample) error Error;
+    Sample() -> (struct {
+        sample TimeSample;
+    }) error Error;
 
     /// Returns the monotonic time at which the PullSource is willing to produce
     /// another sample. If the PullSource is not rate limited it may return the
     /// current monotonic time or earlier.
-    NextPossibleSampleTime() -> (zx.time next_possible_time);
+    NextPossibleSampleTime() -> (struct {
+        next_possible_time zx.time;
+    });
 };
 
 /// A protocol for time sources that produce time samples on a schedule that it
@@ -50,7 +54,7 @@ protocol PullSource {
 /// for handling them internally. Instead, a PushSource reports a general health
 /// indication through the `WatchHealth` method to reflect whether or not it
 /// expects to successfully produce time samples.
-[Discoverable]
+@discoverable
 protocol PushSource {
     compose TimeSource;
     /// Watch for new time samples from the time source. This method is a hanging
@@ -65,7 +69,9 @@ protocol PushSource {
     /// In the case a client sends a second WatchSample request while another
     /// request is active, the channel is closed with a ZX_ERR_BAD_STATE
     /// epitaph.
-    WatchSample() -> (TimeSample sample);
+    WatchSample() -> (struct {
+        sample TimeSample;
+    });
 
     /// Watch for changes in the status of the time source.
     ///
@@ -75,23 +81,25 @@ protocol PushSource {
     /// In the case a client sends a second WatchStatus request while another
     /// request is active, the channel is closed with a ZX_ERR_BAD_STATE
     /// epitaph.
-    WatchStatus() -> (Status status);
+    WatchStatus() -> (struct {
+        status Status;
+    });
 };
 
 /// A correspondence pair that describes a UTC time and the monotonic time at
 /// which the time was measured.
-table TimeSample {
+type TimeSample = table {
     /// The UTC time sample. Must always be provided.
-    1: zx.time utc;
+    1: utc zx.time;
     /// The monotonic time at which the sample was most valid. Must always be provided.
-    2: zx.time monotonic;
+    2: monotonic zx.time;
     /// The standard deviation representing the error distribution of the UTC measurement.
     /// Must always be provided.
-    3: zx.duration standard_deviation;
+    3: standard_deviation zx.duration;
 };
 
 /// Enum of states a PullSource may be in.
-enum Status {
+type Status = strict enum {
     /// The time source is performing setup steps or waiting for dependencies such
     /// as network to become available.
     INITIALIZING = 0;
@@ -114,7 +122,7 @@ enum Status {
 };
 
 /// Enum of reasons why producing a time sample failed.
-enum Error {
+type Error = strict enum {
     /// An error occurred that cannot be classified as one of the more specific
     /// error statuses.
     UNKNOWN = 1;
@@ -140,5 +148,4 @@ enum Error {
 };
 
 /// Device global properties a time source may use to help it sample time.
-table Properties {
-};
+type Properties = table {};

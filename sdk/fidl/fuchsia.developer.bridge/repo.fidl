@@ -1,111 +1,132 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
 library fuchsia.developer.bridge;
 
 using fuchsia.device;
 
-const uint64 MAX_NAME = 255;
-const uint64 MAX_PATH = 4095;
-const uint64 MAX_REPOS = 512;
-const uint64 MAX_ALIASES = 32;
+const MAX_NAME uint64 = 255;
+const MAX_PATH uint64 = 4095;
+const MAX_REPOS uint64 = 512;
+const MAX_ALIASES uint64 = 32;
 
 /// Describes all the possible repositories that could be managed by this service.
-flexible union RepositorySpec {
-    1: FileSystemRepositorySpec file_system;
-    2: PmRepositorySpec pm;
+type RepositorySpec = flexible union {
+    1: file_system FileSystemRepositorySpec;
+    2: pm PmRepositorySpec;
 };
 
 /// [FileSystemRepositorySpec] describes a TUF repository found on the local filesystem.
-table FileSystemRepositorySpec {
+type FileSystemRepositorySpec = table {
     /// File system path to the location of the repository.
-    1: string:MAX_PATH path;
+    1: path string:MAX_PATH;
 };
 
 /// [PmRepositorySpec] describes a TUF repository created by pm found on the local filesystem.
-table PmRepositorySpec {
+type PmRepositorySpec = table {
     /// File system path to the location of the pm repository.
-    1: string:MAX_PATH path;
+    1: path string:MAX_PATH;
 };
 
-[Discoverable]
+@discoverable
 protocol RepositoryRegistry {
     /// Add a repository named `name` that has the following [RepositorySpec].
-    AddRepository(string:MAX_NAME name, RepositorySpec repository) -> () error RepositoryError;
+    AddRepository(struct {
+        name string:MAX_NAME;
+        repository RepositorySpec;
+    }) -> (struct {}) error RepositoryError;
 
     /// Returns true if the repository was removed, or false if there is no
     /// repository named `name`.
-    RemoveRepository(string:MAX_NAME name) -> (bool found);
+    RemoveRepository(struct {
+        name string:MAX_NAME;
+    }) -> (struct {
+        found bool;
+    });
 
-    ListRepositories(request<RepositoryIterator> iterator);
+    ListRepositories(resource struct {
+        iterator server_end:RepositoryIterator;
+    });
 
     /// Registers a repository on a target.
     ///
     /// `target_info`: Metadata describing the repository registration.
-    RegisterTarget(RepositoryTarget target_info) -> () error RepositoryError;
+    RegisterTarget(struct {
+        target_info RepositoryTarget;
+    }) -> (struct {}) error RepositoryError;
 
     /// Deregisters a repository from a target.
     ///
     /// `repo_name`: The configured name of the repository.
     /// `target_identifier`: The target from which to deregister this repository.
-    DeregisterTarget(
-        string:MAX_NAME repository_name,
-        string:fuchsia.device.DEVICE_NAME_MAX? target_identifier
-        ) -> () error RepositoryError;
+    DeregisterTarget(struct {
+        repository_name string:MAX_NAME;
+        target_identifier string:<fuchsia.device.DEVICE_NAME_MAX, optional>;
+    }) -> (struct {}) error RepositoryError;
 
     /// List the packages in the repository named `name`.
-    ListPackages(string:MAX_NAME name, request<RepositoryPackagesIterator> iterator) -> () error RepositoryError;
+    ListPackages(resource struct {
+        name string:MAX_NAME;
+        iterator server_end:RepositoryPackagesIterator;
+    }) -> (struct {}) error RepositoryError;
 
     /// Get a list associating repositories with the targets they have been registered to.
-    ListRegisteredTargets(request<RepositoryTargetsIterator> iterator);
+    ListRegisteredTargets(resource struct {
+        iterator server_end:RepositoryTargetsIterator;
+    });
 };
 
-struct RepositoryConfig {
-    string:MAX_NAME name;
-    RepositorySpec spec;
+type RepositoryConfig = struct {
+    name string:MAX_NAME;
+    spec RepositorySpec;
 };
 
 protocol RepositoryIterator {
-    Next() -> (vector<RepositoryConfig>:MAX_REPOS repos);
+    Next() -> (struct {
+        repos vector<RepositoryConfig>:MAX_REPOS;
+    });
 };
 
 protocol RepositoryPackagesIterator {
-    Next() -> (vector<RepositoryPackage>:MAX packages);
+    Next() -> (struct {
+        packages vector<RepositoryPackage>:MAX;
+    });
 };
 
 protocol RepositoryTargetsIterator {
-    Next() -> (vector<RepositoryTarget>:MAX registrations);
+    Next() -> (struct {
+        registrations vector<RepositoryTarget>:MAX;
+    });
 };
 
-table RepositoryPackage {
+type RepositoryPackage = table {
     /// Package name
-    1: string:2048 name;
+    1: name string:2048;
     /// Package's merkle hash
-    2: string:2048 hash;
+    2: hash string:2048;
     /// Size in bytes of all blobs in this package.
-    3: uint64 size;
+    3: size uint64;
     /// Last modification timestamp (seconds since UNIX epoch). May be null depending on repository
     /// source.
-    4: uint64 modified;
-    // TODO: add `components` here.
+    4: modified uint64;
+// TODO: add `components` here.
 };
 
-table RepositoryTarget {
+type RepositoryTarget = table {
     /// The configured name of the repository
-    1: string:MAX_NAME repo_name;
+    1: repo_name string:MAX_NAME;
     /// The target on which to configure this repository
-    2: string:fuchsia.device.DEVICE_NAME_MAX target_identifier;
+    2: target_identifier string:fuchsia.device.DEVICE_NAME_MAX;
     /// An optional list of hostnames. A rewrite rule will be added
     /// for each hostname in this list to resolve to this repository.
-    3: vector<string:MAX_NAME>:MAX_ALIASES aliases;
+    3: aliases vector<string:MAX_NAME>:MAX_ALIASES;
     /// Controls how repository metadata is persisted across reboots. Optional, if absent presumed
     /// to be EPHEMERAL.
-    4: RepositoryStorageType storage_type;
+    4: storage_type RepositoryStorageType;
 };
 
 /// Where the repository storage is written to.
-enum RepositoryStorageType {
+type RepositoryStorageType = strict enum {
     /// Ephemeral, or in-memory storage. This repository metadata will be lost
     /// when the process or device is restarted. The default type.
     EPHEMERAL = 1;
@@ -115,7 +136,7 @@ enum RepositoryStorageType {
     PERSISTENT = 2;
 };
 
-enum RepositoryError : uint32 {
+type RepositoryError = strict enum : uint32 {
     /// Repository "name" is missing in an API where it is required.
     MISSING_REPOSITORY_NAME = 1;
     /// No repository matches the provided name.

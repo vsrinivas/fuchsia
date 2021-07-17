@@ -1,27 +1,29 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.ui.policy;
 
 using fuchsia.ui.input;
 
 /// Service for exposing state and events of devices, such as media buttons.
-[Discoverable]
+@discoverable
 protocol DeviceListenerRegistry {
+    // TODO(fxbug.dev/41384): Remove when no longer used.
     /// Registers a listener to receive media button related events, such as
     /// changes from volume buttons and mute switches.
-    // TODO(fxbug.dev/41384): Remove when no longer used.
-    [Deprecated = "Use RegisterListener() "]
-    RegisterMediaButtonsListener(MediaButtonsListener listener);
+    @deprecated("Use RegisterListener() ")
+    RegisterMediaButtonsListener(resource struct {
+        listener client_end:MediaButtonsListener;
+    });
 
     /// Registers a listener to receive media button related events, such as
     /// changes from volume buttons and mute switches.
     /// On registration, the `listener` receives the last media button event that
     /// occured, if one exists, and all media button events going forward.
-    [Transitional]
-    RegisterListener(MediaButtonsListener listener) -> ();
+    @transitional
+    RegisterListener(resource struct {
+        listener client_end:MediaButtonsListener;
+    }) -> ();
 };
 
 /// A listener for media buttons events. `DeviceListenerRegistry.RegisterMediaButtonsListener`
@@ -29,9 +31,13 @@ protocol DeviceListenerRegistry {
 /// registered media buttons event occurs.
 protocol MediaButtonsListener {
     // TODO(fxbug.dev/41384): Remove when no longer used.
-    [Deprecated = "Use OnEvent() "]
-    OnMediaButtonsEvent(fuchsia.ui.input.MediaButtonsEvent event);
+    @deprecated("Use OnEvent() ")
+    OnMediaButtonsEvent(struct {
+        event fuchsia.ui.input.MediaButtonsEvent;
+    });
 
-    [Transitional]
-    OnEvent(fuchsia.ui.input.MediaButtonsEvent event) -> ();
+    @transitional
+    OnEvent(struct {
+        event fuchsia.ui.input.MediaButtonsEvent;
+    }) -> ();
 };

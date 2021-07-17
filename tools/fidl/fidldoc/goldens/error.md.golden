@@ -6,7 +6,7 @@
 ## **PROTOCOLS**
 
 ## Example {#Example}
-*Defined in [fidl.test.error/error.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/error.test.fidl;l=4)*
+*Defined in [fidl.test.error/error.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/error.test.fidl;l=3)*
 
 
 ### foo {#Example.foo}
@@ -38,7 +38,7 @@
 ## **STRUCTS**
 
 ### Example_foo_Response {#Example_foo_Response}
-*Defined in [fidl.test.error/error.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/error.test.fidl;l=5)*
+*Defined in [fidl.test.error/error.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/error.test.fidl;l=6)*
 
 
 
@@ -62,7 +62,7 @@
 ## **UNIONS**
 
 ### Example_foo_Result {#Example_foo_Result}
-*Defined in [fidl.test.error/error.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/error.test.fidl;l=5)*
+*Defined in [fidl.test.error/error.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/error.test.fidl;l=6)*
 
 
 <table>

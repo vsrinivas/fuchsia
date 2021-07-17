@@ -1,17 +1,23 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library zx;
 
-[Transport = "Syscall"]
+@transport("Syscall")
 protocol RightsTest {
     /// Create an exception channel for a given job, process, or thread.
     /// Rights: handle must have ZX_RIGHT_INSPECT and have ZX_RIGHT_DUPLICATE and have ZX_RIGHT_TRANSFER and have ZX_RIGHT_MANAGE_THREAD.
     /// Rights: If handle is of type ZX_OBJ_TYPE_JOB or ZX_OBJ_TYPE_PROCESS, it must have ZX_RIGHT_ENUMERATE.
-    DoThing(handle handle, uint32 options) -> (status status, handle:CHANNEL out);
+    DoThing(resource struct {
+        handle handle;
+        options uint32;
+    }) -> (resource struct {
+        status status;
+        out handle:CHANNEL;
+    });
 
     /// Rights: handle must have ZX_RIGHT_DESTROY.
-    NoShortDesc(handle handle) -> ();
+    NoShortDesc(resource struct {
+        handle handle;
+    }) -> ();
 };

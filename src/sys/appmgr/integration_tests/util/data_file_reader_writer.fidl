@@ -1,21 +1,28 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library test.appmgr.integration;
 
 using zx;
 
 // A simple interface implemented by isolated_storage_test_util and used to test persistent storage
 // isolation.
-[Discoverable]
+@discoverable
 protocol DataFileReaderWriter {
     // Read the file at /data/<path> in the util's namespace and return its contents. If the file
     // does not exist, returns null.
-    ReadFile(string path) -> (string? contents);
+    ReadFile(struct {
+        path string;
+    }) -> (struct {
+        contents string:optional;
+    });
 
     // Write the provided contents to a file at /data/<path> in the util's namespace, overwriting
     // any existing files.
-    WriteFile(string path, string contents) -> (zx.status status);
+    WriteFile(struct {
+        path string;
+        contents string;
+    }) -> (struct {
+        status zx.status;
+    });
 };

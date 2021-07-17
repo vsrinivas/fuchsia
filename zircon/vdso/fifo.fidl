@@ -1,23 +1,41 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library zx;
 
-[Transport = "Syscall"]
+@transport("Syscall")
 protocol fifo {
     /// Create a fifo.
-    fifo_create(usize elem_count, usize elem_size, uint32 options)
-        -> (status status, handle:FIFO out0, handle:FIFO out1);
+    fifo_create(struct {
+        elem_count usize;
+        elem_size usize;
+        options uint32;
+    }) -> (resource struct {
+        status status;
+        out0 handle:FIFO;
+        out1 handle:FIFO;
+    });
 
     /// Read data from a fifo.
     /// Rights: handle must be of type ZX_OBJ_TYPE_FIFO and have ZX_RIGHT_READ.
-    fifo_read(handle:FIFO handle, usize elem_size)
-        -> (status status, vector_void data, optional_usize actual_count);
+    fifo_read(resource struct {
+        handle handle:FIFO;
+        elem_size usize;
+    }) -> (struct {
+        status status;
+        data vector_void;
+        actual_count optional_usize;
+    });
 
     /// Write data to a fifo.
     /// Rights: handle must be of type ZX_OBJ_TYPE_FIFO and have ZX_RIGHT_WRITE.
-    fifo_write(handle:FIFO handle, usize elem_size, const_voidptr data, usize count)
-        -> (status status, optional_usize actual_count);
+    fifo_write(resource struct {
+        handle handle:FIFO;
+        elem_size usize;
+        data const_voidptr;
+        count usize;
+    }) -> (struct {
+        status status;
+        actual_count optional_usize;
+    });
 };

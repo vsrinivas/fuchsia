@@ -1,16 +1,13 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.sysmem;
 
 /// "SyM"
-const uint32 SYSMEM_METADATA_TYPE = 0x53794d64; // 0x53794d00 | DEVICE_METADATA_PRIVATE
-
-struct SysmemMetadata {
-    uint32 vid;
-    uint32 pid;
+const SYSMEM_METADATA_TYPE uint32 = 0x53794d64; // 0x53794d00 | DEVICE_METADATA_PRIVATE
+type SysmemMetadata = struct {
+    vid uint32;
+    pid uint32;
 
     // protected_memory_size
     // contiguous_memory_size
@@ -27,7 +24,7 @@ struct SysmemMetadata {
     // interpreted.
     //
     // 0 means there is no protected memory pool.
-    int64 protected_memory_size;
+    protected_memory_size int64;
 
     // contiguous_memory_size
     //
@@ -41,5 +38,5 @@ struct SysmemMetadata {
     //
     // There is no fallback from pre-reserved to zx::vmo::create_contiguous().
     // If we're pre-reserving memory, we should reserve enough.
-    int64 contiguous_memory_size;
+    contiguous_memory_size int64;
 };

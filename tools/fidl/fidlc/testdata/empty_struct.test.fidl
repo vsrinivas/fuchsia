@@ -1,11 +1,17 @@
-deprecated_syntax;
 library fidl.test.emptystruct;
 
-struct Empty {
-};
+type Empty = struct {};
 
 protocol EmptyProtocol {
-    Send(Empty e);
-    -> Receive(Empty e);
-    SendAndReceive(Empty e) -> (Empty e);
+    Send(struct {
+        e Empty;
+    });
+    -> Receive(struct {
+        e Empty;
+    });
+    SendAndReceive(struct {
+        e Empty;
+    }) -> (struct {
+        e Empty;
+    });
 };

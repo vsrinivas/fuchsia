@@ -1,8 +1,6 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.media2;
 
 using zx;
@@ -10,26 +8,26 @@ using zx;
 /// Expresses presentation time as a linear function of reference
 /// time. The reference timeline is typically the system monotonic
 /// clock, but may be another clock.
-struct PresentationTimeline {
+type PresentationTimeline = struct {
     /// Initial presentation time of this piece of the piecewise-
     /// linear presentation timeline.
-    zx.duration initial_presentation_time = 0;
+    initial_presentation_time zx.duration = 0;
 
     /// Initial reference time of this piece of the piecewise-
     /// linear presentation timeline.
-    zx.time initial_reference_time = 0;
+    initial_reference_time zx.time = 0;
 
     /// Presentation rate, typically 1.0. Non-positive values are
     /// not permitted. This field gives the rate at which the
     /// presentation progresses if `progressing` is true. If
     /// `progressing` is false, the effective rate is zero.
-    float32 rate = 1.0;
+    rate float32 = 1.0;
 
     /// Indicates whether presentation is progressing. If this
     /// value is true, presentation is progressing at the rate
     /// given by the `rate` field. If this value is false, the
     /// effective presentation rate is zero.
-    bool progressing = false;
+    progressing bool = false;
 };
 
 /// Expresses the relationship between the timeline represented by
@@ -45,13 +43,13 @@ struct PresentationTimeline {
 /// compressed video stream, the decoder needs to start processing
 /// the stream at an I-framee. Based on the initial stream time given
 /// to the decoder, it knows what output frames to discard.
-struct StreamTimeline {
+type StreamTimeline = struct {
     /// Timestamp of the start of the desired segment of the stream.
-    int64 initial_timestamp = 0;
+    initial_timestamp int64 = 0;
 
     /// Presentation time of the start of the desired segment of the
     /// stream.
-    zx.duration initial_presentation_time = 0;
+    initial_presentation_time zx.duration = 0;
 };
 
 /// Describes units used in packet timestamps.
@@ -64,12 +62,12 @@ struct StreamTimeline {
 /// 44,100, and `presentation_interval` would be 1,000,000,000.
 /// The intervals constitute a ratio, so the values 441 and
 /// 10,000,000 would do just as well for the second example.
-struct TimestampUnits {
+type TimestampUnits = struct {
     /// Duration in the stream timeline corresponding to
     /// `presentation_interval`.
-    uint64 timestamp_interval = 1000000000;
+    timestamp_interval uint64 = 1000000000;
 
     /// Duration in the presentation timeline corresponding to
     /// `timestamp_interval`.
-    zx.duration presentation_interval = 1000000000;
+    presentation_interval zx.duration = 1000000000;
 };

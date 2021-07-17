@@ -1,45 +1,43 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.bt.vendor;
 
 using zx;
 
 /// The maximum buffer length an encoded command might require.
 /// Update when adding new commands that might require a larger buffer.
-const uint16 BT_VENDOR_MAX_COMMAND_BUFFER_LEN = 16;
+const BT_VENDOR_MAX_COMMAND_BUFFER_LEN uint16 = 16;
 
 /// Bitmask of features supported by the vendor.
-enum BtVendorFeatures : uint32 {
+type BtVendorFeatures = strict enum : uint32 {
     SET_ACL_PRIORITY_COMMAND = 0x1;
-    // Bits 1-31 reserved.
+// Bits 1-31 reserved.
 };
 
-enum BtVendorAclPriority : uint8 {
+type BtVendorAclPriority = strict enum : uint8 {
     NORMAL = 0;
     HIGH = 1;
 };
 
-enum BtVendorAclDirection : uint8 {
+type BtVendorAclDirection = strict enum : uint8 {
     SOURCE = 0;
     SINK = 1;
 };
 
-struct BtVendorSetAclPriorityParams {
-    uint16 connection_handle;
-    BtVendorAclPriority priority;
+type BtVendorSetAclPriorityParams = struct {
+    connection_handle uint16;
+    priority BtVendorAclPriority;
     /// The direction data should be prioritized in. May not be supported by all
     /// vendors. Ignored when priority is normal.
-    BtVendorAclDirection direction;
+    direction BtVendorAclDirection;
 };
 
-union BtVendorParams {
-    1: BtVendorSetAclPriorityParams set_acl_priority;
+type BtVendorParams = strict union {
+    1: set_acl_priority BtVendorSetAclPriorityParams;
 };
 
-enum BtVendorCommand {
+type BtVendorCommand = strict enum {
     /// Marks a connection as normal or high priority.
     /// Parameters: `BtVendorSetAclPriorityParams`
     SET_ACL_PRIORITY = 0;
@@ -47,15 +45,24 @@ enum BtVendorCommand {
 
 /// The BtVendor protocol may be implemented by vendor drivers to support feature interrogation
 /// and vendor command encoding.
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol BtVendor {
     /// Returns bitmask of the features the vendor supports.
-    GetFeatures() -> (BtVendorFeatures features);
+    GetFeatures() -> (struct {
+        features BtVendorFeatures;
+    });
 
     /// Encodes the vendor HCI command `command` using `params` and returns the encoded command as
     /// a buffer. `params` must contain the parameter struct for the specified command, as
     /// documented in `BtVendorCommand`.
     /// Returns an error status if the command is not supported or the paramaters are invalid.
-    EncodeCommand(BtVendorCommand command, BtVendorParams params)
-        -> (zx.status status, [Buffer] vector<uint8>:BT_VENDOR_MAX_COMMAND_BUFFER_LEN encoded);
+    EncodeCommand(struct {
+        command BtVendorCommand;
+        params BtVendorParams;
+    }) -> (struct {
+        status zx.status;
+        @buffer
+        encoded vector<uint8>:BT_VENDOR_MAX_COMMAND_BUFFER_LEN;
+    });
 };

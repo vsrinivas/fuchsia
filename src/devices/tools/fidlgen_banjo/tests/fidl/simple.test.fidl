@@ -1,32 +1,47 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library banjo.examples.simple;
 
 using zx;
 
-struct Point {
-    int32 x;
-    int32 y;
+type Point = struct {
+    x int32;
+    y int32;
 };
 
-struct StructWithZxField {
-    zx.status status;
+type StructWithZxField = struct {
+    status zx.status;
 };
 
-enum Direction : uint32 {
+type Direction = strict enum : uint32 {
     Up = 0;
     Down = 1;
     Left = 2;
     Right = 3;
 };
 
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol Drawing {
-    Draw(Point p, Direction d) -> ();
-    DrawLots(zx.handle:VMO commands) -> (zx.status result, Point p);
-    DrawArray(array<Point>:4 points) -> (zx.status rv);
-    Describe(string:64 one) -> (string:128 two);
+    Draw(struct {
+        p Point;
+        d Direction;
+    }) -> ();
+    DrawLots(resource struct {
+        commands zx.handle:VMO;
+    }) -> (struct {
+        result zx.status;
+        p Point;
+    });
+    DrawArray(struct {
+        points array<Point, 4>;
+    }) -> (struct {
+        rv zx.status;
+    });
+    Describe(struct {
+        one string:64;
+    }) -> (struct {
+        two string:128;
+    });
 };

@@ -1,94 +1,108 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.usb.tester;
 
 using zx;
 
-const uint32 MAX_SG_SEGMENTS = 256;
-const uint64 MAX_PACKETS = 256;
+const MAX_SG_SEGMENTS uint32 = 256;
+const MAX_PACKETS uint64 = 256;
 
-enum DataPatternType : uint8 {
+type DataPatternType = strict enum : uint8 {
     CONSTANT = 1;
     RANDOM = 2;
 };
 
-[ForDeprecatedCBindings]
-struct BulkTestParams {
+@for_deprecated_c_bindings
+type BulkTestParams = struct {
     /// The type of data to transfer.
-    DataPatternType data_pattern;
+    data_pattern DataPatternType;
     /// Total number of bytes to transfer.
-    uint64 len;
+    len uint64;
 };
 
-[ForDeprecatedCBindings]
-struct PacketOptions {
+@for_deprecated_c_bindings
+type PacketOptions = struct {
     /// Whether to request a callback for the transfer.
-    bool set_cb;
+    set_cb bool;
     /// Whether we want the transfer to fail with an error.
-    bool set_error;
+    set_error bool;
     /// Whether to expect a callback for the transfer.
-    bool expect_cb;
+    expect_cb bool;
 };
 
-[ForDeprecatedCBindings]
-struct IsochTestParams {
+@for_deprecated_c_bindings
+type IsochTestParams = struct {
     /// The type of data to transfer.
-    DataPatternType data_pattern;
+    data_pattern DataPatternType;
     /// The number of packets to send.
-    uint64 num_packets;
+    num_packets uint64;
     /// Number of bytes in each packet.
-    uint16 packet_size;
+    packet_size uint16;
 
     /// Optional array of additional options for the OUT packets.
     // TODO(jocelyndang): A vector would break the current requirement for a simple C binding.
-    array<PacketOptions>:MAX_PACKETS packet_opts;
+    packet_opts array<PacketOptions, MAX_PACKETS>;
     /// Number of entries in `packet_opts`. This can be less than `num_packets`,
     /// in which case defaults will be chosen for the remaining packets.
     /// Any entries provided after `num_packets` will be ignored.
-    uint64 packet_opts_len;
+    packet_opts_len uint64;
 };
 
-[ForDeprecatedCBindings]
-struct SgEntry {
+@for_deprecated_c_bindings
+type SgEntry = struct {
     /// Number of bytes in the scatter gather entry.
-    uint64 length;
+    length uint64;
     /// Offset in bytes from the start of the data buffer.
-    uint64 offset;
+    offset uint64;
 };
 
-[ForDeprecatedCBindings]
-struct SgList {
+@for_deprecated_c_bindings
+type SgList = struct {
     // A vector would break the current requirement for a simple C binding.
-    array<SgEntry>:MAX_SG_SEGMENTS entries;
+    entries array<SgEntry, MAX_SG_SEGMENTS>;
     /// Number of entries in the scatter gather list.
-    uint64 len;
+    len uint64;
 };
 
-[ForDeprecatedCBindings]
-struct IsochResult {
+@for_deprecated_c_bindings
+type IsochResult = struct {
     /// Number of packets loopbacked successfully.
-    uint64 num_passed;
+    num_passed uint64;
     /// Number of packets transferred to each EP.
-    uint64 num_packets;
+    num_packets uint64;
 };
 
-[ForDeprecatedCBindings]
+@for_deprecated_c_bindings
 protocol Device {
     /// Resets the device to firmware loader mode.
-    SetModeFwloader() -> (zx.status s);
+    SetModeFwloader() -> (struct {
+        s zx.status;
+    });
 
     /// Performs a data loopback on the bulk endpoint of the test device.
     /// Returns `ZX_OK` if the loopback succeeded.
-    BulkLoopback(BulkTestParams params, SgList? out_ep_sg, SgList? in_ep_sg) -> (zx.status s);
+    BulkLoopback(struct {
+        params BulkTestParams;
+        out_ep_sg box<SgList>;
+        in_ep_sg box<SgList>;
+    }) -> (struct {
+        s zx.status;
+    });
 
     /// Performs a data loopback on the isochronous endpoint of the test device.
     /// Returns `ZX_OK` if no fatal error occurred during the loopback, and also returns the result
     /// of the transfers. Isochronous transfers are not guaranteed to all succeed.
-    IsochLoopback(IsochTestParams params) -> (zx.status s, IsochResult result);
+    IsochLoopback(struct {
+        params IsochTestParams;
+    }) -> (struct {
+        s zx.status;
+        result IsochResult;
+    });
 
     /// Returns the test firmware version in the form major_version.minor_version.
-    GetVersion() -> (uint8 major_version, uint8 minor_version);
+    GetVersion() -> (struct {
+        major_version uint8;
+        minor_version uint8;
+    });
 };

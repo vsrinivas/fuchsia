@@ -1,13 +1,11 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.wlan.ieee80211;
 
 /// 802.11 reason codes.  These values are common throughout the standard.
 /// IEEE Std 802.11-2016, 9.4.1.7, Table 9-45
-enum ReasonCode : uint16 {
+type ReasonCode = strict enum : uint16 {
     RESERVED_0 = 0;
 
     UNSPECIFIED_REASON = 1;

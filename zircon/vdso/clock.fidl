@@ -1,45 +1,71 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library zx;
 
-enum clock : uint32 {
+type clock = strict enum : uint32 {
     MONOTONIC = 0;
     UTC = 1;
     THREAD = 2;
 };
 
-[Transport = "Syscall", NoProtocolPrefix]
+@transport("Syscall")
+@no_protocol_prefix
 protocol clockfuncs {
     /// Acquire the current monotonic time.
-    [vdsocall]
-    clock_get_monotonic() -> (time time);
+    @vdsocall
+    clock_get_monotonic() -> (struct {
+        time time;
+    });
 
     // Read clock monotonic, but demand that the read be performed using a
     // syscall, instead of a vdso call.
     //
     // See the notes for ticks_get_via_kernel; this is not a syscall meant
     // to be used by application code.
-    [internal]
-    clock_get_monotonic_via_kernel() -> (time time);
+    @internal
+    clock_get_monotonic_via_kernel() -> (struct {
+        time time;
+    });
 
     // TODO: handle:CLOCK for all of these.
 
     /// Create a new clock object.
     /// Rights: None.
-    clock_create(uint64 options, const_voidptr args) -> (status status, handle out);
+    clock_create(struct {
+        options uint64;
+        args const_voidptr;
+    }) -> (resource struct {
+        status status;
+        out handle;
+    });
 
     /// Perform a basic read of the clock.
     /// Rights: handle must be of type ZX_OBJ_TYPE_CLOCK and have ZX_RIGHT_READ.
-    clock_read(handle handle) -> (status status, time now);
+    clock_read(resource struct {
+        handle handle;
+    }) -> (struct {
+        status status;
+        now time;
+    });
 
     /// Fetch all of the low level details of the clock's current status.
     /// Rights: handle must be of type ZX_OBJ_TYPE_CLOCK and have ZX_RIGHT_READ.
-    clock_get_details(handle handle, uint64 options) -> (status status, voidptr details);
+    clock_get_details(resource struct {
+        handle handle;
+        options uint64;
+    }) -> (struct {
+        status status;
+        details voidptr;
+    });
 
     /// Make adjustments to a clock object.
     /// Rights: handle must be of type ZX_OBJ_TYPE_CLOCK and have ZX_RIGHT_WRITE.
-    clock_update(handle handle, uint64 options, const_voidptr args) -> (status status);
+    clock_update(resource struct {
+        handle handle;
+        options uint64;
+        args const_voidptr;
+    }) -> (struct {
+        status status;
+    });
 };

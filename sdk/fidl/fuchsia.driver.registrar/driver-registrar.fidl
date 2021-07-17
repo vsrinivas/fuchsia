@@ -1,15 +1,13 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.driver.registrar;
 
 using fuchsia.pkg;
 using zx;
 
 /// Protocol for registering additional driver packages with the driver manager.
-[Discoverable]
+@discoverable
 protocol DriverRegistrar {
     /// Informs the driver manager that a new driver package is available.
     /// The driver manager will cache a copy of the driver.
@@ -23,5 +21,7 @@ protocol DriverRegistrar {
     ///     * `ZX_ERR_NO_SPACE` if the device is out of space.
     ///     * `ZX_ERR_UNAVAILABLE` if the package resolver could not be reached.
     ///     * `ZX_ERR_INTERNAL` if an unspecified error was encountered.
-    Register(fuchsia.pkg.PackageUrl package_url) -> () error zx.status;
+    Register(struct {
+        package_url fuchsia.pkg.PackageUrl;
+    }) -> (struct {}) error zx.status;
 };

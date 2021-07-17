@@ -1,13 +1,15 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fidl.test.echo;
 
-const uint64 MAX_LENGTH = 1024;
+const MAX_LENGTH uint64 = 1024;
 
-[ForDeprecatedCBindings]
+@for_deprecated_c_bindings
 protocol Echo {
-    EchoString(string:MAX_LENGTH value) -> (string:MAX_LENGTH response);
+    EchoString(struct {
+        value string:MAX_LENGTH;
+    }) -> (struct {
+        response string:MAX_LENGTH;
+    });
 };

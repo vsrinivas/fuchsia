@@ -1,16 +1,14 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fidl.test.example.codingtablesdeps;
 
-flexible union MyXUnionA {
-    1: uint64 a;
-    2: MyXUnionB b;
+type MyXUnionA = flexible union {
+    1: a uint64;
+    2: b MyXUnionB;
 };
 
-flexible union MyXUnionB {
-    1: uint32 foo;
-    2: bool bar;
+type MyXUnionB = flexible union {
+    1: foo uint32;
+    2: bar bool;
 };

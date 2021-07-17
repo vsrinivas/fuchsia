@@ -1,14 +1,12 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.ultrasound;
 
 using fuchsia.media;
 using zx;
 
-[Discoverable]
+@discoverable
 protocol Factory {
     /// Creates a new `fuchsia.media.AudioCapturer` that is capable of capturing audio in
     /// the ultrasonic frequency range.
@@ -30,8 +28,12 @@ protocol Factory {
     ///
     /// - `SetReferenceClock` is disallowed. The reference clock of an ultrasound capturer is not
     /// configurable, but instead returned from `CreateCapturer`.
-    CreateCapturer(request<fuchsia.media.AudioCapturer> request)
-        -> (zx.handle:CLOCK reference_clock, fuchsia.media.AudioStreamType stream_type);
+    CreateCapturer(resource struct {
+        request server_end:fuchsia.media.AudioCapturer;
+    }) -> (resource struct {
+        reference_clock zx.handle:CLOCK;
+        stream_type fuchsia.media.AudioStreamType;
+    });
 
     /// Creates a new `fuchsia.media.AudioRenderer` that is capable of producing audio in
     /// the ultrasonic frequency range.
@@ -53,6 +55,10 @@ protocol Factory {
     ///
     /// - `SetReferenceClock` is disallowed. The reference clock of an ultrasound renderer is not
     /// configurable, but instead returned from `CreateRenderer`.
-    CreateRenderer(request<fuchsia.media.AudioRenderer> renderer)
-        -> (zx.handle:CLOCK reference_clock, fuchsia.media.AudioStreamType stream_type);
+    CreateRenderer(resource struct {
+        renderer server_end:fuchsia.media.AudioRenderer;
+    }) -> (resource struct {
+        reference_clock zx.handle:CLOCK;
+        stream_type fuchsia.media.AudioStreamType;
+    });
 };

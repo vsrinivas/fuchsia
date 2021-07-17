@@ -1,8 +1,6 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.time;
 
 using zx;
@@ -12,8 +10,10 @@ using zx;
 ///
 /// The client does not own the UTC clock, but is given
 /// a lease in order to keep the time synchronized.
-[Discoverable]
+@discoverable
 protocol Maintenance {
     /// Retrieve a UTC clock handle with write rights.
-    GetWritableUtcClock() -> (zx.handle:CLOCK utc_clock);
+    GetWritableUtcClock() -> (resource struct {
+        utc_clock zx.handle:CLOCK;
+    });
 };

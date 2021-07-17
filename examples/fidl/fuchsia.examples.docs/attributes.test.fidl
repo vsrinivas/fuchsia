@@ -1,48 +1,51 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
 library fuchsia.examples.docs;
 
 // [START attribute-one]
-[MaxBytes = "64"]
-struct MyType {
-    // [END attribute-one]
-};
+@max_bytes("64")
+type MyType = struct {
+        // [END attribute-one]
+        };
 
 // [START attribute-many]
-[Discoverable, Transport = "Channel"]
+@discoverable
+@transport("Channel")
 // [END attribute-many]
-protocol MyProtocol {
-};
+protocol MyProtocol {};
 
 // [START doc-with-slashes]
 /// Foo
-struct WithThreeSlashes {
-    // [END doc-with-slashes]
-};
+type WithThreeSlashes = struct {
+        // [END doc-with-slashes]
+        };
 
 // [START doc-with-attributes]
-[Doc = "Foo"]
-struct WithAttribute {
-    // [END doc-with-attributes]
-};
+@doc("Foo")
+type WithAttribute = struct {
+        // [END doc-with-attributes]
+        };
 
 // [START layout-simple]
-[ForDeprecatedCBindings]
+@for_deprecated_c_bindings
 protocol SimpleProtocol {
-    DynamicCountOfFixedArguments(vector<uint8>:1024 inputs);
+    DynamicCountOfFixedArguments(struct {
+        inputs vector<uint8>:1024;
+    });
 };
 // [END layout-simple]
 
 // [START selector-simple]
 protocol Science {
-    [Selector = "Investigate"] Experiment();
+    @selector("Investigate")
+    Experiment();
 };
 // [END selector-simple]
 
 // [START selector-fq-name]
 protocol Org {
-    [Selector = "purple.examples.docs/Area120.Discover"] Productionize();
+    @selector("purple.examples.docs/Area120.Discover")
+    Productionize();
 };
 // [END selector-fq-name]

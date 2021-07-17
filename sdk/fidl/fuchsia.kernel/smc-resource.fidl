@@ -1,15 +1,15 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.kernel;
 
 using zx;
 
 /// Protocol for providing an SMC resource with access to all valid ranges.
-[Discoverable]
+@discoverable
 protocol SmcResource {
     /// Get the SMC resource handle.
-    Get() -> (zx.handle:RESOURCE smc_resource);
+    Get() -> (resource struct {
+        smc_resource zx.handle:RESOURCE;
+    });
 };

@@ -1,41 +1,46 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.settings;
 
 /// Settings that influence the device's setup behavior.
 ///
 /// Supported SettingsEpitaph enums:
 /// REQUEST_NOT_SUPPORTED, INTERNAL_SERVICE_ERROR, PERSISTENT_STORAGE_ERROR
-[Discoverable]
+@discoverable
 protocol Setup {
     /// Gets the current [SetupSettings]. Returns immediately on first call;
     /// subsequent calls return when the value changes.
     ///
     /// If this call fails, it is considered a fatal error and the channel
     /// will be closed.
-    Watch() -> (SetupSettings settings);
+    Watch() -> (struct {
+        settings SetupSettings;
+    });
 
     /// Changes the settings specified in [SetupSettings]. Any field not set in
     /// the table will not perform any system operation. An error will be
     /// returned if the provided settings is an invalid change (for example, if
     /// it is empty).
-    [Transitional = "Changes network interfaces configuration with reboot"]
-    Set(SetupSettings settings) -> () error Error;
+    @transitional("Changes network interfaces configuration with reboot")
+    Set(struct {
+        settings SetupSettings;
+    }) -> (struct {}) error Error;
 
-    [Transitional = "Changes network interfaces configuration with optional reboot"]
-    Set2(SetupSettings settings, bool reboot_device) -> () error Error;
+    @transitional("Changes network interfaces configuration with optional reboot")
+    Set2(struct {
+        settings SetupSettings;
+        reboot_device bool;
+    }) -> (struct {}) error Error;
 };
 
-table SetupSettings {
+type SetupSettings = table {
     /// Specifies the network interfaces that the device can be configured
     /// over during setup.
-    1: ConfigurationInterfaces enabled_configuration_interfaces;
+    1: enabled_configuration_interfaces ConfigurationInterfaces;
 };
 
-bits ConfigurationInterfaces : uint32 {
+type ConfigurationInterfaces = strict bits : uint32 {
     // Configuration over ethernet.
     ETHERNET = 0x1;
     // Configuration over WiFi.

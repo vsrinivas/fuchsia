@@ -1,32 +1,50 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fidl.test.coding.fuchsia;
 
 using zx;
 
-enum TestEnum : uint32 {
+type TestEnum = strict enum : uint32 {
     ONE = 1;
 };
 
 protocol Llcpp {
-    Action() -> (int32 v);
-    EnumAction() -> (TestEnum v);
+    Action() -> (struct {
+        v int32;
+    });
+    EnumAction() -> (struct {
+        v TestEnum;
+    });
 };
 
 protocol Example {
-    TwoWay(string in) -> (string out);
-    OneWay(string in);
-    -> OnEvent(string out);
-    -> OnResourceEvent(zx.handle h);
+    TwoWay(struct {
+        in string;
+    }) -> (struct {
+        out string;
+    });
+    OneWay(struct {
+        in string;
+    });
+    -> OnEvent(struct {
+        out string;
+    });
+    -> OnResourceEvent(resource struct {
+        h zx.handle;
+    });
 };
 
 protocol Simple {
     /// Replies with the value requested.
-    Echo(int32 request) -> (int32 reply);
+    Echo(struct {
+        request int32;
+    }) -> (struct {
+        reply int32;
+    });
 
     /// Never actually replies.  Just closes instead.
-    Close() -> (int32 v);
+    Close() -> (struct {
+        v int32;
+    });
 };

@@ -1,8 +1,6 @@
 // Copyright 2017 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.ui.input;
 
 // Descriptors are used to describe the capabilities of an input device.
@@ -17,161 +15,161 @@ library fuchsia.ui.input;
 // `KeyboardReport` when a key is pressed on the keyboard.
 
 // Describe a `Range` of values
-struct Range {
-    int32 min;
-    int32 max;
+type Range = struct {
+    min int32;
+    max int32;
 };
 
-struct RangeF {
-    float32 min;
-    float32 max;
+type RangeF = struct {
+    min float32;
+    max float32;
 };
 
-enum AxisScale {
+type AxisScale = strict enum {
     LINEAR = 0;
     LOGARITHMIC = 1;
 };
 
 // An `Axis` is defined as a `range` and `resolution`.
-struct Axis {
-    Range range;
-    int32 resolution = 1;
-    AxisScale scale = AxisScale.LINEAR;
+type Axis = struct {
+    range Range;
+    resolution int32 = 1;
+    scale AxisScale = AxisScale.LINEAR;
 };
 
-struct AxisF {
-    RangeF range;
-    float32 resolution = 1.0;
-    AxisScale scale = AxisScale.LINEAR;
+type AxisF = struct {
+    range RangeF;
+    resolution float32 = 1.0;
+    scale AxisScale = AxisScale.LINEAR;
 };
 
 // `MediaButtonsDescriptor` describes the media buttons.
-struct MediaButtonsDescriptor {
+type MediaButtonsDescriptor = struct {
     // A bitmask that represents the list of media buttons available.
     // The mask bit values are located in usages.fidl.
-    uint32 buttons;
+    buttons uint32;
 };
 
 // Keyboards
 
 // `KeyboardDescriptor` describes the capabilities of a keyboard.
-struct KeyboardDescriptor {
+type KeyboardDescriptor = struct {
     // The list of HID keyboard usages that this keyboard can generate.
-    vector<uint32> keys;
+    keys vector<uint32>;
 };
 
 // `KeyboardReport` lists the keys currently pressed down.
-struct KeyboardReport {
+type KeyboardReport = struct {
     // `pressed_keys` is the list of HID usage that are currently pressed down on
     // the keyboard.
-    vector<uint32> pressed_keys;
+    pressed_keys vector<uint32>;
 };
 
 // Mouse
 
 // `MouseDescriptor` describes the capabilities of a mouse.
-struct MouseDescriptor {
+type MouseDescriptor = struct {
     // The range of relative X and Y movement which can be described by a mouse
     // report.
-    Axis rel_x;
-    Axis rel_y;
+    rel_x Axis;
+    rel_y Axis;
 
     // The range of relative vertical and horizontal scroll which can be
     // described by a mouse report.
-    Axis? vscroll;
-    Axis? hscroll;
+    vscroll box<Axis>;
+    hscroll box<Axis>;
 
     // The list of HID mouse usages that this mouse can generate.
-    uint32 buttons;
+    buttons uint32;
 };
 
 // `MouseReport` gives the relative mouvement of the mouse and currently
 // pressed buttons.
-struct MouseReport {
+type MouseReport = struct {
     // Relative X and Y positional displacement.
-    int32 rel_x;
-    int32 rel_y;
+    rel_x int32;
+    rel_y int32;
 
     // Relative horizontal and vertical scrolling displacement.
-    int32 rel_hscroll;
-    int32 rel_vscroll;
+    rel_hscroll int32;
+    rel_vscroll int32;
 
     // buttons currently down
-    uint32 pressed_buttons;
+    pressed_buttons uint32;
 };
 
 // Stylus
 
 // `Stylus` describes the capabilities of a stylus.
-struct StylusDescriptor {
+type StylusDescriptor = struct {
     // Ranges for the `x` and `y` axis of the stylus.
-    Axis x;
-    Axis y;
+    x Axis;
+    y Axis;
 
     // Range for the pressure of the tip
-    Axis? pressure;
+    pressure box<Axis>;
 
-    bool is_invertible = false;
+    is_invertible bool = false;
 
     // The list of HID button usages that this stylus can generate.
-    uint32 buttons;
+    buttons uint32;
 };
 
 // `StylusReport` describes the current state of the stylus.
-struct StylusReport {
+type StylusReport = struct {
     // Current position of the stylus within the range described in
     // `StylusDescriptor`
-    int32 x;
-    int32 y;
+    x int32;
+    y int32;
 
     // Pressure applied on the stylus tip
-    uint32 pressure;
+    pressure uint32;
 
     // Whether the stylus has made contact with the surface.
-    bool is_in_contact;
+    is_in_contact bool;
 
     // Whether the stylus is within range. If `is_in_contact` is false, then the stylus
     // is hovering.
-    bool in_range;
+    in_range bool;
 
     // Whether the stylus is thought to be inverted.
-    bool is_inverted;
+    is_inverted bool;
 
     // List of buttons currently pressed down.
-    uint32 pressed_buttons;
+    pressed_buttons uint32;
 };
 
 // Touchscreen
 
 // `TouchscreenDescriptor` describes the capabilities of a touchscreen.
-struct TouchscreenDescriptor {
+type TouchscreenDescriptor = struct {
     // Ranges of the `x` and `y` axis.
-    Axis x;
-    Axis y;
-    uint32 max_finger_id;
+    x Axis;
+    y Axis;
+    max_finger_id uint32;
 };
 
 // `Touch` describes one touch on a touchscreen, which should correspond to
 // one finger.
-struct Touch {
+type Touch = struct {
     // Identifier for a finger that is down.
     // Note: `finger_id` might not be sequential and will range from 0 to
     // `max_finger_id`
-    uint32 finger_id;
+    finger_id uint32;
 
     // Location within the axis defined in `TouchscreenDescriptor`
-    int32 x;
-    int32 y;
+    x int32;
+    y int32;
 
     // Area pressed.
-    uint32 width;
-    uint32 height;
+    width uint32;
+    height uint32;
 };
 
 // `TouchscreenReport` describes the current touches recorded by the touchscreen
 // and holds a `Touch` per finger down.
-struct TouchscreenReport {
-    vector<Touch> touches;
+type TouchscreenReport = struct {
+    touches vector<Touch>;
 };
 
 // Motion Sensors
@@ -179,14 +177,14 @@ struct TouchscreenReport {
 // Descriptive categories for sensor devices.
 // We assume that each (SensorType,SensorLocation) pair is unique to the system.
 
-enum SensorType {
+type SensorType = strict enum {
     ACCELEROMETER = 0;
     GYROSCOPE = 1;
     MAGNETOMETER = 2;
     LIGHTMETER = 3;
 };
 
-enum SensorLocation {
+type SensorLocation = strict enum {
     UNKNOWN = 0;
     BASE = 1;
     LID = 2;
@@ -195,74 +193,74 @@ enum SensorLocation {
 // `SensorDescriptor` describes the capabilities of a sensor device.  It does
 // not capture properties that can be changed after initialization, such as the
 // current sampling frequency.
-struct SensorDescriptor {
-    SensorType type;
-    SensorLocation loc;
+type SensorDescriptor = struct {
+    type SensorType;
+    loc SensorLocation;
 
     // Min and max sampling frequencies for a sensor.
-    uint32 min_sampling_freq;
-    uint32 max_sampling_freq;
+    min_sampling_freq uint32;
+    max_sampling_freq uint32;
     // Max number of sensor events that could be in hardware FIFO.
-    uint32 fifo_max_event_count;
+    fifo_max_event_count uint32;
 
     // Physical range of a specific sensor.
     // Accelerometer ranges are given in Gs.
     // Gyroscope ranges are given in deg/s.
     // Magnetometer ranges are given in multiples of 1/16 uT.
     // Light meter ranges can be given in Lux or units not specified.
-    int32 phys_min;
-    int32 phys_max;
+    phys_min int32;
+    phys_max int32;
 };
 
 // `SensorReport` describes the sensor event delivered from the event stream.
-union SensorReport {
-    1: array<int16>:3 vector;
-    2: uint16 scalar;
+type SensorReport = strict union {
+    1: vector array<int16, 3>;
+    2: scalar uint16;
 };
 
 /// `MediaButtonsReport` describes the media buttons event delivered from the event stream.
 /// Each bool in the report represents a single button where true means the button
 /// is being pressed. A single report should be sent on every state change.
-struct MediaButtonsReport {
-    bool volume_up;
-    bool volume_down;
-    bool mic_mute;
-    bool reset;
-    bool pause;
-    bool camera_disable;
+type MediaButtonsReport = struct {
+    volume_up bool;
+    volume_down bool;
+    mic_mute bool;
+    reset bool;
+    pause bool;
+    camera_disable bool;
 };
 
 // Device and Report
 
-struct DeviceInfo {
-    uint32 vendor_id;
-    uint32 product_id;
-    uint32 version;
-    string name;
+type DeviceInfo = struct {
+    vendor_id uint32;
+    product_id uint32;
+    version uint32;
+    name string;
 };
 
 // `DeviceDescriptor` describes one input device.
-struct DeviceDescriptor {
-    DeviceInfo? device_info;
-    KeyboardDescriptor? keyboard;
-    MediaButtonsDescriptor? media_buttons;
-    MouseDescriptor? mouse;
-    StylusDescriptor? stylus;
-    TouchscreenDescriptor? touchscreen;
-    SensorDescriptor? sensor;
+type DeviceDescriptor = struct {
+    device_info box<DeviceInfo>;
+    keyboard box<KeyboardDescriptor>;
+    media_buttons box<MediaButtonsDescriptor>;
+    mouse box<MouseDescriptor>;
+    stylus box<StylusDescriptor>;
+    touchscreen box<TouchscreenDescriptor>;
+    sensor box<SensorDescriptor>;
 };
 
 // `InputReport` is an input `report` triggered by an input device.
-struct InputReport {
+type InputReport = struct {
     // `event_time` is in nanoseconds when the event was recorded.
-    uint64 event_time;
+    event_time uint64;
 
-    KeyboardReport? keyboard;
-    MediaButtonsReport? media_buttons;
-    MouseReport? mouse;
-    StylusReport? stylus;
-    TouchscreenReport? touchscreen;
-    SensorReport? sensor;
+    keyboard box<KeyboardReport>;
+    media_buttons box<MediaButtonsReport>;
+    mouse box<MouseReport>;
+    stylus box<StylusReport>;
+    touchscreen box<TouchscreenReport>;
+    sensor SensorReport:optional;
 
-    uint64 trace_id = 0; // Unique ID to connect trace async begin/end events.
+    trace_id uint64 = 0; // Unique ID to connect trace async begin/end events.
 };

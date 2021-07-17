@@ -1,22 +1,20 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.block.verified;
 
 using zx;
 
 /// Hash function to use in the Merkle tree that verifies content.  At present,
 /// the only supported value for this field is SHA256.
-enum HashFunction : uint8 {
+type HashFunction = strict enum : uint8 {
     SHA256 = 0x01;
 };
 
 /// The block size this device is expected to see in its backing storage, which
 /// impacts hash tree layout and total available data size.  At present, the only
 /// supported block size is blocks of 4096 bytes.
-enum BlockSize : uint8 {
+type BlockSize = strict enum : uint8 {
     /// Blocks of 4096 bytes each
     SIZE_4096 = 0x01;
 };
@@ -28,27 +26,27 @@ enum BlockSize : uint8 {
 /// affects the number of hashes that fit into a block, which affects the
 /// number of blocks needed to store integrity information, which affects overall
 /// on-disk layout.
-table Config {
+type Config = table {
     /// Which hash function to use throughout the Merkle tree and when generating
     /// a Seal over the superblock.
-    1: HashFunction hash_function;
+    1: hash_function HashFunction;
 
     /// Size of each block in the Merkle tree.
-    2: BlockSize block_size;
+    2: block_size BlockSize;
 };
 
 /// A cryptographic seal of the superblock generated with the SHA256 hash function
-struct Sha256Seal {
+type Sha256Seal = struct {
     /// SHA256 hash of superblock
-    array<uint8>:32 superblock_hash;
+    superblock_hash array<uint8, 32>;
 };
 
 /// Data representing a cryptographic seal of the contents of the device.
 /// This currently contains the hash of the superblock, and the superblock
 /// contains the expected dimensions of the device and the root hash of the
 /// integrity information Merkle tree
-union Seal {
-    1: Sha256Seal sha256;
+type Seal = strict union {
+    1: sha256 Sha256Seal;
 };
 
 /// An interface to the block-verified driver, as bound to a single block
@@ -75,7 +73,9 @@ protocol DeviceManager {
     /// On success, the driver will enter `authoring` mode, expose a child
     /// device named `mutable` which speaks the `fuchsia.hardware.block`
     /// protocol in the device tree, then return.
-    OpenForWrite(Config config) -> () error zx.status;
+    OpenForWrite(struct {
+        config Config;
+    }) -> (struct {}) error zx.status;
 
     /// Requests that the device in `authoring` mode:
     /// * unbind the child device named `mutable`
@@ -97,7 +97,9 @@ protocol DeviceManager {
     /// On success, the returned `seal` will contain a hash of the device
     /// superblock that should be stored in tamper-proof storage, so it can be
     /// retrieved and presented in a future `OpenForVerifiedRead` call.
-    CloseAndGenerateSeal() -> (Seal seal) error zx.status;
+    CloseAndGenerateSeal() -> (struct {
+        seal Seal;
+    }) error zx.status;
 
     /// Requests that the device verify that the provided `config` matches the
     /// one on disk, and that the given `seal` covers the content of the
@@ -124,7 +126,10 @@ protocol DeviceManager {
     ///
     /// On success, the device binds a child device `verified`, enters
     /// `verified-read` mode, and returns from this call.
-    OpenForVerifiedRead(Config config, Seal seal) -> () error zx.status;
+    OpenForVerifiedRead(struct {
+        config Config;
+        seal Seal;
+    }) -> (struct {}) error zx.status;
 
     /// Requests that the device in either `authoring` mode or `verified-read` mode
     /// unbind any child devices and return to `closed` mode.
@@ -135,5 +140,5 @@ protocol DeviceManager {
     /// * If the device was in `verified-read` mode, removes the child `verified` device
     /// * Enters `closed` mode.
     /// * Returns from this call
-    Close() -> () error zx.status;
+    Close() -> (struct {}) error zx.status;
 };

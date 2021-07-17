@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.ui.app;
 
 using zx;
@@ -44,7 +42,7 @@ using zx;
 ///   and `fuchsia.ui.SessionListener`.
 ///
 ///  TODO(fxbug.dev/24402): Migrate all implementations of `ViewProvider` to use `View`.
-[Discoverable]
+@discoverable
 protocol View {
     /// Updates the View's configuration.
     ///
@@ -53,12 +51,16 @@ protocol View {
     /// `AttachView()` unless the default is adequate.
     ///
     /// May be called again at any time to modify the view's configuration.
-    SetConfig(ViewConfig config);
+    SetConfig(struct {
+        config ViewConfig;
+    });
 
     /// Attaches the View to Scenic's scene graph. Must only be called once per
     /// `View` lifetime.
     ///
     /// The View's implementation should pass the `view_token` to Scenic
     /// using a `fuchsia.ui.view.CreateViewCmd`.
-    Attach(zx.handle:EVENTPAIR view_token);
+    Attach(resource struct {
+        view_token zx.handle:EVENTPAIR;
+    });
 };

@@ -1,54 +1,52 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library conformance;
 
-struct MyBool {
-    bool value;
+type MyBool = struct {
+    value bool;
 };
 
-struct MyByte {
-    byte value;
+type MyByte = struct {
+    value byte;
 };
 
-struct MyInt8 {
-    int8 value;
+type MyInt8 = struct {
+    value int8;
 };
 
-struct MyInt16 {
-    int16 value;
+type MyInt16 = struct {
+    value int16;
 };
 
-struct MyInt32 {
-    int32 value;
+type MyInt32 = struct {
+    value int32;
 };
 
-struct MyInt64 {
-    int64 value;
+type MyInt64 = struct {
+    value int64;
 };
 
-struct MyUint8 {
-    uint8 value;
+type MyUint8 = struct {
+    value uint8;
 };
 
-struct MyUint16 {
-    uint16 value;
+type MyUint16 = struct {
+    value uint16;
 };
 
-struct MyUint32 {
-    uint32 value;
+type MyUint32 = struct {
+    value uint32;
 };
 
-struct MyUint64 {
-    uint64 value;
+type MyUint64 = struct {
+    value uint64;
 };
 
-struct MyFloat32 {
-    float32 value;
+type MyFloat32 = struct {
+    value float32;
 };
 
-struct MyFloat64 {
-    float64 value;
+type MyFloat64 = struct {
+    value float64;
 };

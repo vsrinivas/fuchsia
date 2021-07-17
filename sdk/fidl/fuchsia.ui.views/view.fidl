@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.ui.views;
 
 /// A View is an interface that a component implements to offer Scenic view(s)
@@ -76,7 +74,7 @@ library fuchsia.ui.views;
 /// See also: `fuchsia.intl.PropertyProvider`, `fuchsia.accessibility.PropertyProvider`.
 ///
 /// TODO(fxbug.dev/24402): Migrate all implementations of `ViewProvider` to use `View`.
-[Discoverable]
+@discoverable
 protocol View {
 
     /// Provides the View with an attachment point to Scenic's scene graph.
@@ -93,6 +91,8 @@ protocol View {
     /// with an error.
     ///
     /// TODO(fxbug.dev/24470): Allow re-parenting `View`s with a new `Present()` call.
-    [Transitional]
-    Present(ViewToken view_token);
+    @transitional
+    Present(resource struct {
+        view_token ViewToken;
+    });
 };

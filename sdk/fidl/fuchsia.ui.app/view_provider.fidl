@@ -1,8 +1,6 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.ui.app;
 
 using fuchsia.sys;
@@ -18,7 +16,7 @@ using zx;
 /// eventpair token, and use this to create the linked ViewHolder/View.
 /// ViewProvider is given for the convenience of clients that don't require
 /// a more complex implementation.
-[Discoverable]
+@discoverable
 protocol ViewProvider {
     /// Creates a new View under the control of the ViewProvider.
     ///
@@ -39,9 +37,11 @@ protocol ViewProvider {
     ///
     /// Modules can use these mechanisms to establish a distributed,
     /// inter-process scene graph.
-    CreateView(zx.handle:EVENTPAIR token,
-               request<fuchsia.sys.ServiceProvider>? incoming_services,
-               fuchsia.sys.ServiceProvider? outgoing_services);
+    CreateView(resource struct {
+        token zx.handle:EVENTPAIR;
+        incoming_services server_end:<fuchsia.sys.ServiceProvider, optional>;
+        outgoing_services client_end:<fuchsia.sys.ServiceProvider, optional>;
+    });
 
     /// Creates a new View under the control of the ViewProvider.
     ///
@@ -56,8 +56,10 @@ protocol ViewProvider {
     ///
     /// `view_ref_control` must not have the ZX_RIGHT_DUPLICATE set, or view creation
     /// will fail.
-    [Transitional]
-    CreateViewWithViewRef(zx.handle:EVENTPAIR token,
-                          fuchsia.ui.views.ViewRefControl view_ref_control,
-                          fuchsia.ui.views.ViewRef view_ref);
+    @transitional
+    CreateViewWithViewRef(resource struct {
+        token zx.handle:EVENTPAIR;
+        view_ref_control fuchsia.ui.views.ViewRefControl;
+        view_ref fuchsia.ui.views.ViewRef;
+    });
 };

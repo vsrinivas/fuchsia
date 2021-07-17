@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 /// Generic Network Device interface.
 ///
 /// The definitions herein provide the API surface to expose a hardware device as a network device
@@ -78,25 +76,25 @@ using fuchsia.hardware.network.mac;
 ///
 /// Devices that disable auto-snooping SHOULD use the [`NetworkDeviceIfc.Snoop`] interface method to
 /// expose any tx frames they receive.
-const uint32 FEATURE_NO_AUTO_SNOOP = 0x01;
+const FEATURE_NO_AUTO_SNOOP uint32 = 0x01;
 
 /// Maximum number of disjoint parts a buffer may have.
 // NOTE: the number 4 should cover the most common use case for split buffers: 1 contiguous buffer
 // for header, 1 contiguous buffer for data, 0 or 1 contiguous buffer for trailer. Rounded up to
 // nearest power of two.
-const uint32 MAX_BUFFER_PARTS = 4;
+const MAX_BUFFER_PARTS uint32 = 4;
 
 /// The maximum number of concurrent shared VMOs that may exist.
 // NOTE: The expected number of VMOs in use is going to be between 1 and 3 with common client usage.
 // This value is chosen to be larger than that to account for possible transitions between clients
 // (there may be an overlap of one client shutting of a data session as one comes online) and also
 // not limit too harshly the number of clients.
-const uint8 MAX_VMOS = 32;
+const MAX_VMOS uint8 = 32;
 
 /// The maximum number of ports a device can have at once.
 // NOTE: Chosen arbitrarily to allow for static memory allocation for port information. Expectation
 // is that devices are not going to have more than 4 ports in typical use cases.
-const uint8 MAX_PORTS = 32;
+const MAX_PORTS uint8 = 32;
 
 /// VMO identifier.
 ///
@@ -120,102 +118,102 @@ alias port_id = uint8;
 ///
 /// Note that a `BufferRegion` is only contiguous in terms of the VMO it references, it does not
 /// necessarily translate into contiguous physical memory.
-struct BufferRegion {
+type BufferRegion = struct {
     /// VMO backing this region.
-    vmo_id vmo;
+    vmo vmo_id;
     /// Offset, in bytes, of data chunk in VMO.
-    uint64 offset;
+    offset uint64;
     /// Length, in bytes, of data chunk in VMO.
-    uint64 length;
+    length uint64;
 };
 
 /// No extra frame metadata, [`FrameInfo.info_type`] must be
 /// [`fuchsia.hardware.network/InfoType.NO_INFO`].
-struct NoInfo {
+type NoInfo = struct {
     // TODO(brunodalbo) remove this dummy field once banjo supports it. Currently banjo uses empty
     // structs to allow forward-declaration from FIDL.
-    uint8 nothing;
+    nothing uint8;
 };
 
 /// Extra frame sidecar metadata stored in [`BufferMetadata`].
-union FrameInfo {
+type FrameInfo = strict union {
     /// No extra frame metadata.
-    1: NoInfo no_info;
+    1: no_info NoInfo;
 };
 
 /// Metadata associated with a [`TxBuffer`] or an [`RxBuffer`].
-struct BufferMetadata {
+type BufferMetadata = struct {
     /// Destination or source port identifier for this buffer.
-    port_id port;
+    port port_id;
     /// Extra frame metadata information. The type of the
     /// [`FrameInfo`] union is defined by the value in `info_type`.
-    FrameInfo info;
+    info FrameInfo;
     /// Type of data in `info`, as defined in [`fuchsia.hardware.network/InfoType`].
-    uint32 info_type;
+    info_type uint32;
     /// Frame tx or rx flags, as defined in [`fuchsia.hardware.network/RxFlags`],
     /// [`fuchsia.hardware.network/TxFlags`], and [`fuchsia.hardware.network/TxReturnFlags`].
-    uint32 flags;
+    flags uint32;
     /// Type of frame contained in this buffer, as defined in
     /// [`fuchsia.hardware.network/FrameType`].
-    uint8 frame_type;
+    frame_type uint8;
 };
 
 /// A transmit buffer containing a single frame.
-struct TxBuffer {
+type TxBuffer = struct {
     /// Unique buffer identifier.
-    buffer_id id;
+    id buffer_id;
     /// Regions of VMO holding frame data.
-    vector<BufferRegion>:MAX_BUFFER_PARTS data;
+    data vector<BufferRegion>:MAX_BUFFER_PARTS;
     /// Metadata associated with this buffer.
-    BufferMetadata meta;
+    meta BufferMetadata;
     /// Length of header bytes in the data contained in this buffer. Will always be either 0 or the
     /// requested [`DeviceInfo.tx_head_length`] value. The head bytes are always at the beginning of
     /// the buffer.
-    uint16 head_length;
+    head_length uint16;
     /// Length of tail bytes in the data contained in this buffer. Will always be either 0 or the
     /// requested [`DeviceInfo.tx_tail_length`] value. The tail bytes are always at the end of the
     /// buffer.
-    uint16 tail_length;
+    tail_length uint16;
 };
 
 /// A buffer with allocated space to receive frames in. An `RxSpaceBuffer` must always be returned
 /// as an [`RxBufferPart`] within an [`RxBuffer`].
-struct RxSpaceBuffer {
+type RxSpaceBuffer = struct {
     /// Unique buffer identifier.
-    buffer_id id;
+    id buffer_id;
     /// VMO region where buffer space is located.
-    BufferRegion region;
+    region BufferRegion;
 };
 
 /// A single contiguous part of an [`RxBuffer`], created from an [`RxSpaceBuffer`].
-struct RxBufferPart {
+type RxBufferPart = struct {
     /// The buffer identifier informed in the [`RxSpaceBuffer`] that originated this `RxBuffer`.
-    buffer_id id;
+    id buffer_id;
     /// Offset in bytes from [`RxSpaceBuffer`]'s start where inbound data begins.
     ///
     /// This is a relative offset within the region defined by the originating space, not an
     /// absolute offset in the space's VMO.
-    uint32 offset;
+    offset uint32;
     /// The total length in bytes written in the [`RxSpaceBuffer`] referenced by `id`, excluding any
     /// `offset` bytes.
-    uint32 length;
+    length uint32;
 };
 
 /// A buffer containing a single frame received by the device.
-struct RxBuffer {
+type RxBuffer = struct {
     /// Metadata associated with buffer.
-    BufferMetadata meta;
+    meta BufferMetadata;
     /// Fulfilled rx buffer space comprising this frame.
     ///
     /// Must have at least one part.
-    vector<RxBufferPart>:MAX_BUFFER_PARTS data;
+    data vector<RxBufferPart>:MAX_BUFFER_PARTS;
 };
 
 /// The result of a tx operation, reported to [`NetworkDeviceIfc`] through
 /// [`NetworkDeviceIfc.CompleteTx`].
-struct TxResult {
+type TxResult = struct {
     /// The buffer identifier informed in the [`TxBuffer`] that originated this `TxResult`.
-    buffer_id id;
+    id buffer_id;
     /// The result status to report.
     ///
     /// Error results map to their equivalents in [`fuchsia.hardware.network/TxReturnFlags`].
@@ -228,23 +226,28 @@ struct TxResult {
     /// confirmation that the frame was sent) or stopped.
     /// - `ZX_ERR_INTERNAL` or any other unlisted errors will be reported as a generic
     /// [`fuchsia.hardware.network/TxReturnFlags.TX_RET_ERROR`].
-    zx.status status;
+    status zx.status;
 };
 
-[Transport = "Banjo", BanjoLayout = "ddk-interface"]
+@transport("Banjo")
+@banjo_layout("ddk-interface")
 protocol NetworkPort {
     /// Gets information about the port.
     ///
     /// Port information must not change over the port's lifetime.
     ///
     /// - response `info` port information.
-    GetInfo() -> (PortInfo info);
+    GetInfo() -> (struct {
+        info PortInfo;
+    });
     /// Gets operational status of the port.
     ///
     /// Changes to operational status must be reported via [`NetworkDeviceIfc.StatusChanged`]
     ///
     /// - response `status` snapshot of port's operational status.
-    GetStatus() -> (PortStatus status);
+    GetStatus() -> (struct {
+        status PortStatus;
+    });
     /// Notifies the port that there are sessions interested in it.
     ///
     /// An active port has sessions attached to it. Implementations may employ power saving or other
@@ -255,7 +258,9 @@ protocol NetworkPort {
     /// All ports are inactive on creation.
     ///
     /// + request `active` `true` if port has sessions attached to it, `false` otherwise.
-    SetActive(bool active);
+    SetActive(struct {
+        active bool;
+    });
     /// Gets an interface to the MAC addressing layer of the port.
     ///
     /// Ports that do not support MAC addressing must return an empty interface. That means the
@@ -263,14 +268,17 @@ protocol NetworkPort {
     ///
     /// - response `mac_ifc` mac addressing handle.
     // TODO(https://fxbug.dev/67196): Make this an optional interface return once this is FIDL.
-    GetMac() -> (fuchsia.hardware.network.mac.MacAddr mac_ifc);
+    GetMac() -> (resource struct {
+        mac_ifc client_end:fuchsia.hardware.network.mac.MacAddr;
+    });
     /// Notifies this port has been removed from the interface.
     ///
     /// Resources associated with the port must only be freed upon receiving the `Removed` call.
     Removed();
 };
 
-[Transport = "Banjo", BanjoLayout = "ddk-interface"]
+@transport("Banjo")
+@banjo_layout("ddk-interface")
 protocol NetworkDeviceIfc {
     /// Notifies the interface of status changes on port with `id`.
     ///
@@ -279,7 +287,10 @@ protocol NetworkDeviceIfc {
     ///
     /// + request `id` port identifier.
     /// + request `new_status` new port's status.
-    PortStatusChanged(port_id id, PortStatus new_status);
+    PortStatusChanged(struct {
+        id port_id;
+        new_status PortStatus;
+    });
     /// Instantiates a new port with `id`.
     ///
     /// `id` must not be currently in use by any other ports. `id`s may be reused once the provided
@@ -290,14 +301,19 @@ protocol NetworkDeviceIfc {
     ///
     /// + request `id` new port identifier.
     /// + request `port` handle to network port implementation.
-    AddPort(port_id id, NetworkPort port);
+    AddPort(resource struct {
+        id port_id;
+        port client_end:NetworkPort;
+    });
     /// Destroys port with `id`.
     ///
     /// NOTE: Resources associated with the port must not be freed until [`NetworkPort.Removed`] is
     /// called.
     ///
     /// + request `id` removed port identifier.
-    RemovePort(port_id id);
+    RemovePort(struct {
+        id port_id;
+    });
     /// Notifies interface of incoming rx data, contained in [`RxBuffer`].
     ///
     /// Callers should attempt to batch as many buffers as possible in a single call. Number of
@@ -312,7 +328,9 @@ protocol NetworkDeviceIfc {
     /// marked as complete.
     ///
     /// + request `rx` buffers containing incoming data.
-    CompleteRx(vector<RxBuffer>:MAX rx);
+    CompleteRx(struct {
+        rx vector<RxBuffer>:MAX;
+    });
     /// Notifies interface of complete transmit buffers.
     ///
     /// Callers should attempt to batch as many buffers as possible in a single call.
@@ -324,7 +342,9 @@ protocol NetworkDeviceIfc {
     /// returned.
     ///
     /// + request `tx` transmit results.
-    CompleteTx(vector<TxResult>:MAX tx);
+    CompleteTx(struct {
+        tx vector<TxResult>:MAX;
+    });
     /// Notifies interface of a snooped tx frame.
     ///
     /// Typically used by implementations that have the [`FEATURE_NO_AUTO_SNOOP`] bit set in
@@ -337,41 +357,43 @@ protocol NetworkDeviceIfc {
     /// `Snoop` will be ignored.
     ///
     /// + request `rx` snooped transmit frames to be looped back as incoming data.
-    Snoop(vector<RxBuffer>:MAX rx);
+    Snoop(struct {
+        rx vector<RxBuffer>:MAX;
+    });
 };
 
 /// Supported tx frame types.
 // NOTE(brunodalbo): TxSupport has exactly the same structure as
 // `fuchsia.hardware.network.FrameTypeSupport`, but importing FIDL types into banjo is not yet
 // supported.
-struct TxSupport {
+type TxSupport = struct {
     /// The frame type this support entry refers to.
-    uint8 type;
+    type uint8;
     /// The frame type-specific features supported.
-    uint32 features;
+    features uint32;
     /// The flags supported for the given frame type.
-    uint32 supported_flags;
+    supported_flags uint32;
 };
 
 /// Static port information.
-struct PortInfo {
+type PortInfo = struct {
     /// Port class, as defined in [`fuchsia.hardware.network/PortClass`].
-    uint8 port_class;
+    port_class uint8;
     /// Supported rx frame types, as defined by [`fuchsia.hardware.network/FrameType`].
-    vector<uint8>:MAX rx_types;
+    rx_types vector<uint8>:MAX;
     /// Supported tx frame types.
-    vector<TxSupport>:MAX tx_types;
+    tx_types vector<TxSupport>:MAX;
 };
 
 /// Static device information.
 /// `DeviceInfo` must not change for the entire lifetime of a device.
-struct DeviceInfo {
+type DeviceInfo = struct {
     /// Device features
-    uint32 device_features;
+    device_features uint32;
     /// Maximum depth of tx frames in device's outgoing queue.
-    uint16 tx_depth;
+    tx_depth uint16;
     /// Maximum number of rx frames in a device's incoming queue.
-    uint16 rx_depth;
+    rx_depth uint16;
     /// Rx depth threshold at which the device should be fed new rx buffers.
     ///
     /// New buffer notifications from [`NetworkDeviceIfc`] may be skipped while the number of rx
@@ -382,71 +404,72 @@ struct DeviceInfo {
     /// A large value (close to `rx_depth`) may cause considerable CPU thrash for small rx
     /// completion transaction sizes, while a small value may cause the implementation to be starved
     /// of buffers. The typical choice of value is `rx_depth / 2`.
-    uint16 rx_threshold;
+    rx_threshold uint16;
     /// Maximum virtual discontiguous buffer parts accepted by the device.
     ///
     /// Devices that can't perform scatter-gather operations must set `max_buffer_parts` to 1.
     ///
     /// Must be in the range [1, `MAX_BUFFER_PARTS`].
-    uint8 max_buffer_parts;
+    max_buffer_parts uint8;
     /// Maximum total length of buffers. May be set to zero for no maximum.
     ///
     /// Devices that do not support scatter-gather DMA may set this to a value smaller than a
     /// page size to guarantee compatibility.
     ///
     /// Can't be larger than `MAX_PHYSICAL_PARTS` pages.
-    uint32 max_buffer_length;
+    max_buffer_length uint32;
     /// Alignment requirement for buffers relative to the start of VMOs.
     ///
     /// Must be greater than zero.
-    uint32 buffer_alignment;
+    buffer_alignment uint32;
     /// The minimum rx buffer length for correct operation, in bytes.
-    uint32 min_rx_buffer_length;
+    min_rx_buffer_length uint32;
     /// The minimum tx buffer length for correct operation, in bytes.
     ///
     /// This length accounts only for the buffer's body, and should not account for `tx_head_length`
     /// or `tx_tail_length`.
-    uint32 min_tx_buffer_length;
+    min_tx_buffer_length uint32;
     /// Number of bytes requested as header bytes on tx buffers.
     ///
     /// If set to zero, tx buffers will never contain header space. Otherwise, tx buffers will start
     /// at the beginning of the header space, and the header region will be informed.
-    uint16 tx_head_length;
+    tx_head_length uint16;
     /// Number of bytes requested as tail bytes on tx buffers.
     ///
     /// If set to zero, tx buffers will never contain tail space. Otherwise, tx buffers will end at
     /// the end of the tail space, and the tail region will be informed.
-    uint16 tx_tail_length;
+    tx_tail_length uint16;
     /// Available Rx acceleration flags for this device, as defined in
     /// [`fuchsia.hardware.network/RxAcceleration`].
     ///
     /// `rx_accel` maps the `RX_ACCEL_*` flags in the frame descriptors with semantic acceleration
     /// features described by `RxAcceleration`. Position `n` of `rx_accel` conveys the meaning of
     /// the `RX_ACCEL_n` flag.
-    vector<uint8>:MAX rx_accel;
+    rx_accel vector<uint8>:MAX;
     /// Available tx acceleration flags for this device, as defined in
     /// [`fuchsia.hardware.network/TxAcceleration`].
     ///
     /// `tx_accel` maps the `TX_ACCEL_*` flags in the frame descriptors with semantic acceleration
     /// features described by `TxAcceleration`. Position `n` of `tx_accel` conveys the meaning of
     /// the `TX_ACCEL_n` flag.
-    vector<uint8>:MAX tx_accel;
+    tx_accel vector<uint8>:MAX;
 };
 
 /// Dynamic port information.
 ///
 /// `PortStatus` reflects the operational status of a port, changes to status are reported through
 /// [`NetworkDeviceIfc.StatusChanged`].
-struct PortStatus {
+type PortStatus = struct {
     /// Port's maximum transmission unit, in bytes.
-    uint32 mtu;
+    mtu uint32;
     /// Port status flags.
     ///
     /// Status flags, as defined in [`fuchsia.hardware.network/Status`].
-    uint32 flags;
+    flags uint32;
 };
 
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol NetworkDeviceImpl {
     /// Initializes the network device.
     ///
@@ -459,7 +482,11 @@ protocol NetworkDeviceImpl {
     /// + request `iface` handle to the device interface.
     /// - response `s` initialization status. A value other than `ZX_OK` will cause the device
     /// to unbind.
-    Init(NetworkDeviceIfc iface) -> (zx.status s);
+    Init(resource struct {
+        iface client_end:NetworkDeviceIfc;
+    }) -> (struct {
+        s zx.status;
+    });
     /// Starts the device's data path.
     ///
     /// `start` signals to the device implementation that it should bring up its data path and be
@@ -469,7 +496,7 @@ protocol NetworkDeviceImpl {
     /// guarantees that no other data-path calls will be made to the device (`QueueTx`,
     /// `RxAvailable`, `Stop`), implementers can safely assume or assert that this contract is
     /// upheld.
-    [Async]
+    @async
     Start() -> ();
     /// Stops the network device.
     ///
@@ -479,14 +506,16 @@ protocol NetworkDeviceImpl {
     /// [`NetworkDeviceIfc.CompleteRx`] for details.
     ///
     /// The device implementation may perform any power saving measures after observing stop.
-    [Async]
+    @async
     Stop() -> ();
     /// Gets information about the device.
     ///
     /// Device information must not change over the course of the lifetime of the device.
     ///
     /// - response `info` device information.
-    GetInfo() -> (DeviceInfo info);
+    GetInfo() -> (struct {
+        info DeviceInfo;
+    });
     /// Enqueues a list of buffers for transmission on the network device.
     ///
     /// The driver takes ownership of the buffer and must complete the tx transaction by using
@@ -502,7 +531,9 @@ protocol NetworkDeviceImpl {
     /// error codes.
     ///
     /// + request `buffers` tx buffers to enqueue for sending.
-    QueueTx(vector<TxBuffer>:MAX buffers);
+    QueueTx(struct {
+        buffers vector<TxBuffer>:MAX;
+    });
     /// Enqueues a list of rx buffer space on the network device.
     ///
     /// The driver takes ownership of the buffer and must complete the transaction (once network
@@ -516,7 +547,9 @@ protocol NetworkDeviceImpl {
     /// length.
     ///
     /// + request `buffers` rx space buffers to be filled with network data when it arrives.
-    QueueRxSpace(vector<RxSpaceBuffer>:MAX buffers);
+    QueueRxSpace(struct {
+        buffers vector<RxSpaceBuffer>:MAX;
+    });
     /// Informs device that a new VMO is being used to store frame data.
     ///
     /// Implementers must store the VMO handle referenced by `id` until
@@ -524,7 +557,10 @@ protocol NetworkDeviceImpl {
     ///
     /// + request `id` identifier used to reference this VMO.
     /// + request `vmo` VMO where frame data will be stored.
-    PrepareVmo(vmo_id id, zx.handle:VMO vmo);
+    PrepareVmo(resource struct {
+        id vmo_id;
+        vmo zx.handle:VMO;
+    });
     /// Device may dispose of all references to the VMO referenced by `id`.
     ///
     /// No more buffers will be sent with this `id`.
@@ -533,11 +569,15 @@ protocol NetworkDeviceImpl {
     /// reference that `id`.
     ///
     /// + request `id` VMO identifier.
-    ReleaseVmo(vmo_id id);
+    ReleaseVmo(struct {
+        id vmo_id;
+    });
     /// Informs the device that it should start or stop reporting snooped transmit frames through
     /// [`NetworkDeviceIfc.Snoop`].
     ///
     /// + request `snoop` if `true` device should start reporting snooping frames. If `false` device
     /// should stop reporting snooped frames. Upon initialization, device assumes `snop` is `false`.
-    SetSnoop(bool snoop);
+    SetSnoop(struct {
+        snoop bool;
+    });
 };

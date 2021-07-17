@@ -1,624 +1,620 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library conformance;
 
-struct TransactionHeader {
-    uint32 tx_id;
-    array<uint8>:3 flags;
-    uint8 magic_number;
-    uint64 ordinal;
+type TransactionHeader = struct {
+    tx_id uint32;
+    flags array<uint8, 3>;
+    magic_number uint8;
+    ordinal uint64;
 };
 
-union UnionSize8Align4 {
-    1: uint8 unused1;
-    2: uint8 unused2;
-    3: uint32 variant;
+type UnionSize8Align4 = strict union {
+    1: unused1 uint8;
+    2: unused2 uint8;
+    3: variant uint32;
 };
 
-union UnionSize12Align4 {
-    1: uint8 unused1;
-    2: uint8 unused2;
-    3: uint8 unused3;
-    4: array<uint8>:6 variant;
+type UnionSize12Align4 = strict union {
+    1: unused1 uint8;
+    2: unused2 uint8;
+    3: unused3 uint8;
+    4: variant array<uint8, 6>;
 };
 
-struct StructSize16Align8 {
-    uint64 f1;
-    uint64 f2;
+type StructSize16Align8 = struct {
+    f1 uint64;
+    f2 uint64;
 };
 
-union UnionSize24Align8 {
-    1: uint8 unused1;
-    2: uint8 unused2;
-    3: uint8 unused3;
-    4: StructSize16Align8 variant;
+type UnionSize24Align8 = strict union {
+    1: unused1 uint8;
+    2: unused2 uint8;
+    3: unused3 uint8;
+    4: variant StructSize16Align8;
 };
 
-struct Sandwich1 {
-    uint32 before;
-    UnionSize8Align4 the_union;
-    uint32 after;
+type Sandwich1 = struct {
+    before uint32;
+    the_union UnionSize8Align4;
+    after uint32;
 };
 
-struct Sandwich1Message {
-    TransactionHeader header;
-    Sandwich1 body;
+type Sandwich1Message = struct {
+    header TransactionHeader;
+    body Sandwich1;
 };
 
-struct Sandwich1WithOptUnion {
-    uint32 before;
-    UnionSize8Align4? opt_union;
-    uint32 after;
+type Sandwich1WithOptUnion = struct {
+    before uint32;
+    opt_union UnionSize8Align4:optional;
+    after uint32;
 };
 
-struct Sandwich2 {
-    uint32 before;
-    UnionSize12Align4 the_union;
-    uint32 after;
+type Sandwich2 = struct {
+    before uint32;
+    the_union UnionSize12Align4;
+    after uint32;
 };
 
-struct Sandwich3 {
-    uint32 before;
-    UnionSize24Align8 the_union;
-    uint32 after;
+type Sandwich3 = struct {
+    before uint32;
+    the_union UnionSize24Align8;
+    after uint32;
 };
 
-union UnionSize36Align4 {
-    1: uint8 unused1;
-    2: uint8 unused2;
-    3: uint8 unused3;
-    4: array<uint8>:32 variant;
+type UnionSize36Align4 = strict union {
+    1: unused1 uint8;
+    2: unused2 uint8;
+    3: unused3 uint8;
+    4: variant array<uint8, 32>;
 };
 
-struct Sandwich4 {
-    uint32 before;
-    UnionSize36Align4 the_union;
-    uint32 after;
+type Sandwich4 = struct {
+    before uint32;
+    the_union UnionSize36Align4;
+    after uint32;
 };
 
-struct Sandwich4Message {
-    TransactionHeader header;
-    Sandwich4 body;
+type Sandwich4Message = struct {
+    header TransactionHeader;
+    body Sandwich4;
 };
 
-union UnionOfUnion {
-    1: uint8 unused1;
-    2: UnionSize8Align4 size8align4; // used in Sandwich5Case1, Sandwich8Case1
-    3: UnionSize12Align4 size12align4;
-    4: uint8 unused2;
-    5: UnionSize24Align8 size24align8; // used in Sandwich5Case2
+type UnionOfUnion = strict union {
+    1: unused1 uint8;
+    2: size8align4 UnionSize8Align4; // used in Sandwich5Case1, Sandwich8Case1
+    3: size12align4 UnionSize12Align4;
+    4: unused2 uint8;
+    5: size24align8 UnionSize24Align8; // used in Sandwich5Case2
 };
 
-struct Sandwich5 {
-    uint32 before;
-    UnionOfUnion union_of_union;
-    uint32 after;
+type Sandwich5 = struct {
+    before uint32;
+    union_of_union UnionOfUnion;
+    after uint32;
 };
 
-struct Sandwich5Message {
-    TransactionHeader header;
-    Sandwich5 body;
+type Sandwich5Message = struct {
+    header TransactionHeader;
+    body Sandwich5;
 };
 
-struct StructSize3Align1 {
-    array<uint8>:3 three_bytes;
+type StructSize3Align1 = struct {
+    three_bytes array<uint8, 3>;
 };
 
-struct StructSize3Align2 {
-    uint16 f1;
-    uint8 f2;
+type StructSize3Align2 = struct {
+    f1 uint16;
+    f2 uint8;
 };
 
-union UnionWithVector {
-    1: uint8 unused;
-    2: vector<uint8> vector_of_uint8;
-    3: string s;
-    4: vector<StructSize3Align1> vector_s3_a1;
-    5: vector<StructSize3Align2> vector_s3_a2;
+type UnionWithVector = strict union {
+    1: unused uint8;
+    2: vector_of_uint8 vector<uint8>;
+    3: s string;
+    4: vector_s3_a1 vector<StructSize3Align1>;
+    5: vector_s3_a2 vector<StructSize3Align2>;
     // 6: vector<handle> handles;  // TODO(fxbug.dev/36441): Support handles in GIDL.
-    6: vector<uint32> handles;
-    7: array<StructSize3Align1>:2 array_s3_a1;
-    8: array<StructSize3Align2>:2 array_s3_a2;
-    9: vector<UnionSize8Align4> vector_union;
+    6: handles vector<uint32>;
+    7: array_s3_a1 array<StructSize3Align1, 2>;
+    8: array_s3_a2 array<StructSize3Align2, 2>;
+    9: vector_union vector<UnionSize8Align4>;
 };
 
-struct Sandwich6 {
-    uint32 before;
-    UnionWithVector the_union;
-    uint32 after;
+type Sandwich6 = struct {
+    before uint32;
+    the_union UnionWithVector;
+    after uint32;
 };
 
-struct Sandwich7 {
-    uint32 before;
-    Sandwich1? opt_sandwich1;
-    uint32 after;
+type Sandwich7 = struct {
+    before uint32;
+    opt_sandwich1 box<Sandwich1>;
+    after uint32;
 };
 
-struct Sandwich7Message {
-    TransactionHeader header;
-    Sandwich7 body;
+type Sandwich7Message = struct {
+    header TransactionHeader;
+    body Sandwich7;
 };
 
 // Same as Sandwich5 except `before` is uint64 (so no padding before the union).
-struct Sandwich8 {
-    uint64 before;
-    UnionOfUnion union_of_union;
-    uint32 after;
+type Sandwich8 = struct {
+    before uint64;
+    union_of_union UnionOfUnion;
+    after uint32;
 };
 
-struct Regression1 {
-    uint8 f1;
-    uint32 f2;
-    uint8 f3;
-    uint16 f4;
-    uint64 f5;
-    uint8 f6;
+type Regression1 = struct {
+    f1 uint8;
+    f2 uint32;
+    f3 uint8;
+    f4 uint16;
+    f5 uint64;
+    f6 uint8;
 };
 
-struct Regression2 {
-    Regression1 head;
-    uint8 f7;
+type Regression2 = struct {
+    head Regression1;
+    f7 uint8;
 };
 
-struct Regression3 {
-    Regression2? opt_value;
+type Regression3 = struct {
+    opt_value box<Regression2>;
 };
 
-table Table_NoFields {
+type Table_NoFields = table {};
+
+type Struct_Table_NoFields = struct {
+    t Table_NoFields;
 };
 
-struct Struct_Table_NoFields {
-    Table_NoFields t;
-};
-
-table Table_TwoReservedFields {
+type Table_TwoReservedFields = table {
     1: reserved;
     2: reserved;
 };
 
-struct Struct_Table_TwoReservedFields {
-    Table_TwoReservedFields t;
+type Struct_Table_TwoReservedFields = struct {
+    t Table_TwoReservedFields;
 };
 
-table Table_StructWithReservedSandwich {
+type Table_StructWithReservedSandwich = table {
     1: reserved;
-    2: StructSize3Align1 s1;
-    3: StructSize3Align1 s2;
+    2: s1 StructSize3Align1;
+    3: s2 StructSize3Align1;
     4: reserved;
 };
 
-struct Table_StructWithReservedSandwichStruct {
-    Table_StructWithReservedSandwich table;
+type Table_StructWithReservedSandwichStruct = struct {
+    table Table_StructWithReservedSandwich;
 };
 
-table Table_StructWithUint32Sandwich {
-    1: uint32 i;
-    2: StructSize3Align1 s1;
-    3: StructSize3Align1 s2;
-    4: uint32 i2;
+type Table_StructWithUint32Sandwich = table {
+    1: i uint32;
+    2: s1 StructSize3Align1;
+    3: s2 StructSize3Align1;
+    4: i2 uint32;
 };
 
-struct Table_StructWithUint32SandwichStruct {
-    Table_StructWithUint32Sandwich table;
+type Table_StructWithUint32SandwichStruct = struct {
+    table Table_StructWithUint32Sandwich;
 };
 
-table Table_UnionWithVector_ReservedSandwich {
+type Table_UnionWithVector_ReservedSandwich = table {
     1: reserved;
-    2: UnionWithVector uv;
+    2: uv UnionWithVector;
     3: reserved;
 };
 
-struct Table_UnionWithVector_ReservedSandwichStruct {
-    Table_UnionWithVector_ReservedSandwich table;
+type Table_UnionWithVector_ReservedSandwichStruct = struct {
+    table Table_UnionWithVector_ReservedSandwich;
 };
 
-table Table_UnionWithVector_StructSandwich {
-    1: StructSize3Align1 s1;
-    2: UnionWithVector uv;
-    3: StructSize3Align1 s2;
+type Table_UnionWithVector_StructSandwich = table {
+    1: s1 StructSize3Align1;
+    2: uv UnionWithVector;
+    3: s2 StructSize3Align1;
 };
 
-struct Table_UnionWithVector_StructSandwichStruct {
-    Table_UnionWithVector_StructSandwich table;
+type Table_UnionWithVector_StructSandwichStruct = struct {
+    table Table_UnionWithVector_StructSandwich;
 };
 
-flexible union XUnionWithStruct {
-    1: StructSize3Align1 s;
+type XUnionWithStruct = flexible union {
+    1: s StructSize3Align1;
 };
 
-struct XUnionWithStructStruct {
-    XUnionWithStruct xu;
+type XUnionWithStructStruct = struct {
+    xu XUnionWithStruct;
 };
 
-flexible union XUnionWithXUnion {
-    1: XUnionWithStruct xu;
+type XUnionWithXUnion = flexible union {
+    1: xu XUnionWithStruct;
 };
 
-struct XUnionWithXUnionStruct {
-    XUnionWithXUnion xu;
+type XUnionWithXUnionStruct = struct {
+    xu XUnionWithXUnion;
 };
 
-flexible union XUnionWithUnions {
-    1: UnionSize8Align4 u1;
-    2: UnionSize12Align4 u2;
+type XUnionWithUnions = flexible union {
+    1: u1 UnionSize8Align4;
+    2: u2 UnionSize12Align4;
 };
 
-struct Size5Alignment1 {
-    array<uint8>:5 data;
+type Size5Alignment1 = struct {
+    data array<uint8, 5>;
 };
 
-struct Size5Alignment4 {
-    uint32 four;
-    uint8 one;
+type Size5Alignment4 = struct {
+    four uint32;
+    one uint8;
 };
 
-struct Size5Alignment1Vector {
-    vector<Size5Alignment1> v;
+type Size5Alignment1Vector = struct {
+    v vector<Size5Alignment1>;
 };
 
-struct Size5Alignment4Vector {
-    vector<Size5Alignment4> v;
+type Size5Alignment4Vector = struct {
+    v vector<Size5Alignment4>;
 };
 
-struct Size5Alignment1Array {
-    array<Size5Alignment1>:3 a;
+type Size5Alignment1Array = struct {
+    a array<Size5Alignment1, 3>;
 };
 
-struct Size5Alignment4Array {
-    array<Size5Alignment4>:3 a;
+type Size5Alignment4Array = struct {
+    a array<Size5Alignment4, 3>;
 };
 
-union StringUnion {
-    1: uint8 unused;
-    2: string s;
-    3: uint8 u8;
+type StringUnion = strict union {
+    1: unused uint8;
+    2: s string;
+    3: u8 uint8;
 };
 
-struct ArrayStruct {
-    array<StringUnion>:3 unions;
-    array<StringUnion?>:3 optional_unions;
+type ArrayStruct = struct {
+    unions array<StringUnion, 3>;
+    optional_unions array<StringUnion:optional, 3>;
 };
 
-struct TransformerEmptyStruct {
+type TransformerEmptyStruct = struct {};
+
+type EmptyStructUnion = strict union {
+    1: unused uint8; // force the union tag to be non-zero
+    2: es TransformerEmptyStruct;
 };
 
-union EmptyStructUnion {
-    1: uint8 unused; // force the union tag to be non-zero
-    2: TransformerEmptyStruct es;
+type EmptyStructUnionStruct = struct {
+    u EmptyStructUnion;
 };
 
-struct EmptyStructUnionStruct {
-    EmptyStructUnion u;
+type Size8Align8 = struct {
+    data uint64;
 };
 
-struct Size8Align8 {
-    uint64 data;
+type NoCodingTablesStressor = struct {
+    f1 uint64;
+    f2 uint64;
+    u1 UnionSize36Align4;
+    f3 uint64;
+    f4 uint64;
+    u2 UnionSize36Align4;
+    f5 uint64;
+    f6 uint64;
+    u3 UnionSize36Align4;
+    f7 uint64;
+    p1 box<Size8Align8>;
+    f8 uint64;
+    p2 box<Size8Align8>;
+    f9 uint64;
 };
 
-struct NoCodingTablesStressor {
-    uint64 f1;
-    uint64 f2;
-    UnionSize36Align4 u1;
-    uint64 f3;
-    uint64 f4;
-    UnionSize36Align4 u2;
-    uint64 f5;
-    uint64 f6;
-    UnionSize36Align4 u3;
-    uint64 f7;
-    Size8Align8? p1;
-    uint64 f8;
-    Size8Align8? p2;
-    uint64 f9;
+type OutOfLineSandwich1 = struct {
+    before string;
+    v vector<Sandwich1>:1;
+    after string;
 };
 
-struct OutOfLineSandwich1 {
-    string before;
-    vector<Sandwich1>:1 v;
-    string after;
-};
-
-struct OutOfLineSandwich1WithOptUnion {
-    string before;
-    vector<Sandwich1WithOptUnion>:1 v;
-    string after;
+type OutOfLineSandwich1WithOptUnion = struct {
+    before string;
+    v vector<Sandwich1WithOptUnion>:1;
+    after string;
 };
 
 // Regression1, but has at least one non primitive field
-struct Regression4 {
-    uint8 f1;
-    uint32 f2;
-    StructSize3Align1 s1;
-    uint8 f3;
-    uint16 f4;
-    uint64 f5;
-    uint8 f6;
+type Regression4 = struct {
+    f1 uint8;
+    f2 uint32;
+    s1 StructSize3Align1;
+    f3 uint8;
+    f4 uint16;
+    f5 uint64;
+    f6 uint8;
 };
 
-enum EnumUint32 : uint32 {
+type EnumUint32 = strict enum : uint32 {
     MEMBER = 0x3231302F;
 };
 
-enum EnumUint8 : uint8 {
+type EnumUint8 = strict enum : uint8 {
     MEMBER = 0x08;
 };
 
 // Regression1, but with enums.
-struct Regression5 {
-    uint8 f1;
-    EnumUint32 f2;
-    EnumUint8 f3;
-    uint16 f4;
-    uint64 f5;
-    uint8 f6;
+type Regression5 = struct {
+    f1 uint8;
+    f2 EnumUint32;
+    f3 EnumUint8;
+    f4 uint16;
+    f5 uint64;
+    f6 uint8;
 };
 
-bits BitsUint32 : uint32 {
+type BitsUint32 = strict bits : uint32 {
     MEMBER_LOW_1 = 0x00000001;
     MEMBER_LOW_2 = 0x00000002;
     MEMBER_HIG_1 = 0x10000000;
     MEMBER_HIG_2 = 0x20000000;
 };
 
-bits BitsUint8 : uint8 {
+type BitsUint8 = strict bits : uint8 {
     MEMBER = 0x08;
 };
 
 // Regression1, but with bits.
-struct Regression6 {
-    uint8 f1;
-    BitsUint32 f2;
-    BitsUint8 f3;
-    uint16 f4;
-    uint64 f5;
-    uint8 f6;
+type Regression6 = struct {
+    f1 uint8;
+    f2 BitsUint32;
+    f3 BitsUint8;
+    f4 uint16;
+    f5 uint64;
+    f6 uint8;
 };
 
-union UnionAtTheBottom {
-    1: uint8 unused1;
-    2: uint8 unused2;
-    3: uint8 tiny;
+type UnionAtTheBottom = strict union {
+    1: unused1 uint8;
+    2: unused2 uint8;
+    3: tiny uint8;
 };
 
-flexible union XUnionOfUnion {
-    1: UnionAtTheBottom variant; // 0x5F67105B
+type XUnionOfUnion = flexible union {
+    1: variant UnionAtTheBottom; // 0x5F67105B
 };
 
-table TableOfXUnionThenUnion {
+type TableOfXUnionThenUnion = table {
     1: reserved;
-    2: XUnionOfUnion member;
+    2: member XUnionOfUnion;
 };
 
-flexible union XUnionOfTableThenXUnionThenUnion {
-    1: TableOfXUnionThenUnion variant; //0x5B15934E
+type XUnionOfTableThenXUnionThenUnion = flexible union {
+    1: variant TableOfXUnionThenUnion; //0x5B15934E
 };
 
-union UnionOfXUnionThenTableThenXUnionThenUnion {
-    1: uint8 unused1; // avoid tag 0
+type UnionOfXUnionThenTableThenXUnionThenUnion = strict union {
+    1: unused1 uint8; // avoid tag 0
     2: reserved; // no tag correspondance
-    3: XUnionOfTableThenXUnionThenUnion variant; // tag = 1
+    3: variant XUnionOfTableThenXUnionThenUnion; // tag = 1
 };
 
-table TableOfUnionThenXUnionThenTableThenXUnionThenUnion {
+type TableOfUnionThenXUnionThenTableThenXUnionThenUnion = table {
     1: reserved;
     2: reserved;
-    3: UnionOfXUnionThenTableThenXUnionThenUnion member;
+    3: member UnionOfXUnionThenTableThenXUnionThenUnion;
 };
 
-struct Regression7TableUnionXUnion {
-    TableOfUnionThenXUnionThenTableThenXUnionThenUnion value;
+type Regression7TableUnionXUnion = struct {
+    value TableOfUnionThenXUnionThenTableThenXUnionThenUnion;
 };
 
-struct Regression8OptUnionSize12Align4 {
-    UnionSize12Align4? opt_union1;
-    UnionSize12Align4? opt_union2;
-    UnionSize12Align4? opt_union3;
+type Regression8OptUnionSize12Align4 = struct {
+    opt_union1 UnionSize12Align4:optional;
+    opt_union2 UnionSize12Align4:optional;
+    opt_union3 UnionSize12Align4:optional;
 };
 
-struct Regression8VectorOfOptUnionSize12Align4 {
-    vector<UnionSize12Align4?> value;
+type Regression8VectorOfOptUnionSize12Align4 = struct {
+    value vector<UnionSize12Align4:optional>;
 };
 
-table TableWithUnionSize12Align4 {
-    1: uint8 before;
+type TableWithUnionSize12Align4 = table {
+    1: before uint8;
     2: reserved;
-    3: UnionSize12Align4 member;
+    3: member UnionSize12Align4;
     4: reserved;
-    5: uint8 after;
+    5: after uint8;
 };
 
-struct Regression8TableWithUnionSize12Align4 {
-    TableWithUnionSize12Align4 value;
+type Regression8TableWithUnionSize12Align4 = struct {
+    value TableWithUnionSize12Align4;
 };
 
-union StringBoolUnion {
-    1: string s;
-    2: bool b;
+type StringBoolUnion = strict union {
+    1: s string;
+    2: b bool;
 };
 
-struct StringUnionStruct {
-    StringBoolUnion u;
-    StringBoolUnion? nullable_u;
+type StringUnionStruct = struct {
+    u StringBoolUnion;
+    nullable_u StringBoolUnion:optional;
 };
 
-struct StringUnionStructWrapper {
-    StringUnionStruct sus;
+type StringUnionStructWrapper = struct {
+    sus StringUnionStruct;
 };
 
-struct StringUnionStructWrapperResponse {
-    TransactionHeader header;
-    StringUnionStructWrapper body;
+type StringUnionStructWrapperResponse = struct {
+    header TransactionHeader;
+    body StringUnionStructWrapper;
 };
 
-struct Regression9Value {
-    StringBoolUnion u;
-    StringBoolUnion? nullable_u;
+type Regression9Value = struct {
+    u StringBoolUnion;
+    nullable_u StringBoolUnion:optional;
 };
 
 // Simulate an error result type.
-union Regression9Result {
-    1: Regression9Value ok;
-    2: uint32 error;
+type Regression9Result = strict union {
+    1: ok Regression9Value;
+    2: error uint32;
 };
 
-struct Regression9Message {
-    TransactionHeader header;
-    Regression9Result body;
+type Regression9Message = struct {
+    header TransactionHeader;
+    body Regression9Result;
 };
 
 // At first, only one member.
-table Regression10TableV1 {
-    1: uint64 member1;
+type Regression10TableV1 = table {
+    1: member1 uint64;
 };
 
 // Then, we add a second member in 5th position.
-table Regression10TableV2 {
-    1: uint64 member1;
+type Regression10TableV2 = table {
+    1: member1 uint64;
     2: reserved;
     3: reserved;
     4: reserved;
-    5: uint64 member2;
+    5: member2 uint64;
 };
 
 // Third, we add a third member in 6th position, and reserve the 7th.
-table Regression10TableV3 {
-    1: int64 x;
+type Regression10TableV3 = table {
+    1: x int64;
     2: reserved;
     3: reserved;
     4: reserved;
-    5: int64 y;
-    6: int64 z;
+    5: y int64;
+    6: z int64;
     7: reserved;
 };
 
-struct Regression10V1 {
-    Regression10TableV1 table;
+type Regression10V1 = struct {
+    table Regression10TableV1;
 };
 
-struct Regression10V2 {
-    Regression10TableV2 table;
+type Regression10V2 = struct {
+    table Regression10TableV2;
 };
 
-struct Regression10V3 {
-    Regression10TableV3 table;
+type Regression10V3 = struct {
+    table Regression10TableV3;
 };
 
-union UnionWithRegression10Table {
-    1: uint8 unused; // avoid tag 0
+type UnionWithRegression10Table = strict union {
+    1: unused uint8; // avoid tag 0
     2: reserved;
-    3: Regression10TableV2 at_v2; // but consider the evolution v1, v2, v3, ...
+    3: at_v2 Regression10TableV2; // but consider the evolution v1, v2, v3, ...
 };
 
-struct Regression11 {
-    UnionWithRegression10Table table_of_table;
+type Regression11 = struct {
+    table_of_table UnionWithRegression10Table;
 };
 
-struct Sandwich4Align8 {
-    Sandwich4 sandwich4;
-    uint64 alignment8_enforcement;
+type Sandwich4Align8 = struct {
+    sandwich4 Sandwich4;
+    alignment8_enforcement uint64;
 };
 
-struct Sandwich4Align8WithPointer {
-    Sandwich4 sandwich4;
-    Size8Align8? alignment8_enforcement;
+type Sandwich4Align8WithPointer = struct {
+    sandwich4 Sandwich4;
+    alignment8_enforcement box<Size8Align8>;
 };
 
 // This is designed to test out-of-line handling.
-union UnionWithVectorOfVectors {
-    1: vector<vector<StructSize3Align1?>> v;
+type UnionWithVectorOfVectors = strict union {
+    1: v vector<vector<box<StructSize3Align1>>>;
 };
 
-struct Sandwich9 {
-    uint16 before;
-    UnionWithVectorOfVectors the_union;
-    uint16 after;
+type Sandwich9 = struct {
+    before uint16;
+    the_union UnionWithVectorOfVectors;
+    after uint16;
 };
 
-table TransformerSimpleTable {
-    1: uint32 value;
+type TransformerSimpleTable = table {
+    1: value uint32;
 };
 
-struct SimpleTableArrayStruct {
-    array<TransformerSimpleTable>:2 the_array;
+type SimpleTableArrayStruct = struct {
+    the_array array<TransformerSimpleTable, 2>;
 };
 
-struct StringUnionVector {
-    vector<StringUnion?>:3 the_vector;
+type StringUnionVector = struct {
+    the_vector vector<StringUnion:optional>:3;
 };
 
-struct LaunchInfo {
-    string:200 url;
-    vector<string>? arguments;
-    TransformerEmptyStruct? out;
-    TransformerEmptyStruct? err;
+type LaunchInfo = struct {
+    url string:200;
+    arguments vector<string>:optional;
+    out box<TransformerEmptyStruct>;
+    err box<TransformerEmptyStruct>;
     // zx.handle:CHANNEL? directory_request; // TODO(fxbug.dev/36441): Support handles in GIDL.
-    uint32 directory_request;
-    TransformerEmptyStruct? flat_namespace;
-    TransformerEmptyStruct? additional_services;
+    directory_request uint32;
+    flat_namespace box<TransformerEmptyStruct>;
+    additional_services box<TransformerEmptyStruct>;
 };
 
-struct CreateComponentRequest {
-    LaunchInfo launch_info;
+type CreateComponentRequest = struct {
+    launch_info LaunchInfo;
     // request<ComponentController>? controller;  // TODO(fxbug.dev/36441): Support handles in GIDL.
-    uint32 controller;
+    controller uint32;
 };
 
-union CompatUnion {
-    1: string s;
-    2: bool b;
+type CompatUnion = strict union {
+    1: s string;
+    2: b bool;
 };
 
-table CompatTableString {
-    1: string s;
+type CompatTableString = table {
+    1: s string;
 };
 
-union UnionOfTable {
+type UnionOfTable = strict union {
     // Test out-of-line sizing via a table contained inside a union.
-    1: SimpleTable t;
+    1: t SimpleTable;
 };
 
-struct StructOfUnionOfTable {
-    UnionOfTable u;
+type StructOfUnionOfTable = struct {
+    u UnionOfTable;
 };
 
-flexible union CompatXUnion {
-    1: string s; // hashed ordinal 0x5af8efa8
-    2: bool b;
+type CompatXUnion = flexible union {
+    1: s string; // hashed ordinal 0x5af8efa8
+    2: b bool;
 };
 
-table CompatTableValue {
-    1: CompatUnion union_member;
-    2: array<uint32>:3 array_member;
-    3: CompatTableString table_member;
-    4: CompatXUnion xunion_member;
+type CompatTableValue = table {
+    1: union_member CompatUnion;
+    2: array_member array<uint32, 3>;
+    3: table_member CompatTableString;
+    4: xunion_member CompatXUnion;
 };
 
-struct CompatTable {
-    CompatTableValue value;
-    string empty;
+type CompatTable = struct {
+    value CompatTableValue;
+    empty string;
 };
 
-struct MixedFieldsBody {
-    uint32 before;
-    UnionSize8Align4 first_union;
-    uint16 middle_start;
-    uint64 middle_end;
-    UnionSize8Align4 second_union;
-    uint32 after;
+type MixedFieldsBody = struct {
+    before uint32;
+    first_union UnionSize8Align4;
+    middle_start uint16;
+    middle_end uint64;
+    second_union UnionSize8Align4;
+    after uint32;
 };
 
-struct MixedFieldsMessage {
-    TransactionHeader header;
-    MixedFieldsBody body;
+type MixedFieldsMessage = struct {
+    header TransactionHeader;
+    body MixedFieldsBody;
 };
 
-table TableWithXUnion {
-    1: CompatXUnion member;
+type TableWithXUnion = table {
+    1: member CompatXUnion;
 };
 
-struct StructOfTableWithXUnion {
-    TableWithXUnion value;
+type StructOfTableWithXUnion = struct {
+    value TableWithXUnion;
 };

@@ -1,28 +1,33 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.media.audio;
 
 /// The volume value representing the maximum loudness.
-const float32 MAX_VOLUME = 1.0;
+const MAX_VOLUME float32 = 1.0;
 
 /// The volume value representing silence.
-const float32 MIN_VOLUME = 0.0;
+const MIN_VOLUME float32 = 0.0;
 
 /// A protocol for controlling volume.
 protocol VolumeControl {
     /// Sets the volume of the audio element to the given value in
     /// [0.0, 1.0]. If the value is provided is outside of [0.0, 1.0],
     /// the value is clamped before application.
-    SetVolume(float32 volume);
+    SetVolume(struct {
+        volume float32;
+    });
     /// Sets whether the controlled element is muted. Mute is not the same
     /// as setting volume to 0.0; volume will persist for the duration of
     /// a mute. If volume was 0.5 before mute, volume will resume at 0.5
     /// following unmute.
-    SetMute(bool mute);
+    SetMute(struct {
+        mute bool;
+    });
 
     /// Emitted when the volume or mute state of the audio element changes.
-    -> OnVolumeMuteChanged(float32 new_volume, bool new_muted);
+    -> OnVolumeMuteChanged(struct {
+        new_volume float32;
+        new_muted bool;
+    });
 };

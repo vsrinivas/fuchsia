@@ -1,6 +1,5 @@
-deprecated_syntax;
 library bottom;
 
-struct Foo {
-    int32 a;
+type Foo = struct {
+    a int32;
 };

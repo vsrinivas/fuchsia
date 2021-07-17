@@ -1,15 +1,13 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.media;
 
 using fuchsia.media.audio;
 using zx;
 
 /// The maximum number of frames that may be contained within a single StreamPacket.
-const int64 MAX_FRAMES_PER_RENDERER_PACKET = 0x3ffff;
+const MAX_FRAMES_PER_RENDERER_PACKET int64 = 0x3ffff;
 
 ///
 /// AudioRenderers can be in one of two states at any time: _configurable_ or _operational_. A
@@ -29,13 +27,17 @@ protocol AudioRenderer {
     compose StreamSink;
 
     /// Binds to the gain control for this AudioRenderer.
-    BindGainControl(request<fuchsia.media.audio.GainControl> gain_control_request);
+    BindGainControl(resource struct {
+        gain_control_request server_end:fuchsia.media.audio.GainControl;
+    });
 
     /// Sets the units used by the presentation (media) timeline. By default, PTS units are
     /// nanoseconds (as if this were called with numerator of 1e9 and denominator of 1).
     /// This ratio must lie between 1/60 (1 tick per minute) and 1e9/1 (1ns per tick).
-    SetPtsUnits(uint32 tick_per_second_numerator,
-                uint32 tick_per_second_denominator);
+    SetPtsUnits(struct {
+        tick_per_second_numerator uint32;
+        tick_per_second_denominator uint32;
+    });
 
     /// Sets the maximum threshold (in seconds) between explicit user-provided PTS
     /// and expected PTS (determined using interpolation). Beyond this threshold,
@@ -103,12 +105,16 @@ protocol AudioRenderer {
     /// the frame rate (or NOT calling SetPtsUnits, which accepts the default PTS
     /// unit of 1 nanosec) will result in a default continuity threshold of zero.
     ///
-    SetPtsContinuityThreshold(float32 threshold_seconds);
+    SetPtsContinuityThreshold(struct {
+        threshold_seconds float32;
+    });
 
     /// Retrieves the stream's reference clock. The returned handle will have READ, DUPLICATE
     /// and TRANSFER rights, and will refer to a zx::clock that is MONOTONIC and CONTINUOUS.
     ///
-    GetReferenceClock() -> (zx.handle:CLOCK reference_clock);
+    GetReferenceClock() -> (resource struct {
+        reference_clock zx.handle:CLOCK;
+    });
 
     /// Sets the reference clock that controls this renderer's playback rate. If the input
     /// parameter is a valid zx::clock, it must have READ, DUPLICATE, TRANSFER rights and
@@ -122,11 +128,15 @@ protocol AudioRenderer {
     /// diverge at some later time, they should create a clone of the monotonic clock, set
     /// this as the stream's reference clock, then rate-adjust it subsequently as needed.
     ///
-    SetReferenceClock(zx.handle:CLOCK? reference_clock);
+    SetReferenceClock(resource struct {
+        reference_clock zx.handle:<CLOCK, optional>;
+    });
 
     /// Sets the usage of the render stream. This method may not be called after
     /// `SetPcmStreamType` is called. The default usage is `MEDIA`.
-    SetUsage(AudioRenderUsage usage);
+    SetUsage(struct {
+        usage AudioRenderUsage;
+    });
 
     /// Sets the type of the stream to be delivered by the client. Using this method implies
     /// that the stream encoding is `AUDIO_ENCODING_LPCM`.
@@ -134,7 +144,9 @@ protocol AudioRenderer {
     /// This must be called before `Play` or `PlayNoReply`. After a call to `SetPcmStreamType`,
     /// the client must then send an `AddPayloadBuffer` request, then the various `StreamSink`
     /// methods such as `SendPacket`/`SendPacketNoReply`.
-    SetPcmStreamType(AudioStreamType type);
+    SetPcmStreamType(struct {
+        type AudioStreamType;
+    });
 
     /// Enable or disable notifications about changes to the minimum clock lead
     /// time (in nanoseconds) for this AudioRenderer. Calling this method with
@@ -171,8 +183,12 @@ protocol AudioRenderer {
     // handle draining and dropping any lead time changed events that were
     // already in flight when the disable message was sent.
     //
-    EnableMinLeadTimeEvents(bool enabled);
-    -> OnMinLeadTimeChanged(int64 min_lead_time_nsec);
+    EnableMinLeadTimeEvents(struct {
+        enabled bool;
+    });
+    -> OnMinLeadTimeChanged(struct {
+        min_lead_time_nsec int64;
+    });
 
     // TODO(mpuryear): Eliminate this method when possible. Right now, it is
     // used by code requiring synchronous FIDL interfaces to talk to
@@ -184,7 +200,9 @@ protocol AudioRenderer {
     /// If min lead time events are enabled before `SetPcmStreamType` (with
     /// `EnableMinLeadTimeEvents(true)`), then an event will be generated in
     /// response to `SetPcmStreamType`.
-    GetMinLeadTime() -> (int64 min_lead_time_nsec);
+    GetMinLeadTime() -> (struct {
+        min_lead_time_nsec int64;
+    });
 
     /// Immediately put the AudioRenderer into a playing state. Start the advance
     /// of the media timeline, using specific values provided by the caller (or
@@ -297,9 +315,17 @@ protocol AudioRenderer {
     // relationship), in which case we should introduce a discontinuity.
     //
     // TODO(mpuryear): Collapse these if we ever have optional retvals in FIDL
-    Play(int64 reference_time, int64 media_time)
-        -> (int64 reference_time, int64 media_time);
-    PlayNoReply(int64 reference_time, int64 media_time);
+    Play(struct {
+        reference_time int64;
+        media_time int64;
+    }) -> (struct {
+        reference_time int64;
+        media_time int64;
+    });
+    PlayNoReply(struct {
+        reference_time int64;
+        media_time int64;
+    });
 
     /// Immediately put the AudioRenderer into the paused state and then report
     /// the relationship between the media and reference timelines which was
@@ -309,17 +335,20 @@ protocol AudioRenderer {
     /// the previously-established timeline values are returned (if requested).
     //
     // TODO(mpuryear): Remove NoReply variants if FIDL gets optional retvals.
-    Pause() -> (int64 reference_time, int64 media_time);
+    Pause() -> (struct {
+        reference_time int64;
+        media_time int64;
+    });
     PauseNoReply();
 
-    // TODO(mpuryear): Spec methods/events which can be used for unintentional
-    // discontinuity/underflow detection.
-    //
-    // TODO(mpuryear): Spec methods/events which can be used to report routing
-    // changes. (Presuming that they belong at this level at all; they may
-    // belong on some sort of policy object).
-    //
-    // TODO(mpuryear): Spec methods/events which can be used to report policy
-    // induced gain/ducking changes. (Presuming that they belong at this level
-    // at all; they may belong on some sort of policy object).
+// TODO(mpuryear): Spec methods/events which can be used for unintentional
+// discontinuity/underflow detection.
+//
+// TODO(mpuryear): Spec methods/events which can be used to report routing
+// changes. (Presuming that they belong at this level at all; they may
+// belong on some sort of policy object).
+//
+// TODO(mpuryear): Spec methods/events which can be used to report policy
+// induced gain/ducking changes. (Presuming that they belong at this level
+// at all; they may belong on some sort of policy object).
 };

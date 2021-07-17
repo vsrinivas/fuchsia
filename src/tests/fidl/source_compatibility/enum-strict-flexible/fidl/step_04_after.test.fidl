@@ -1,11 +1,10 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
 library fidl.test.enumstrictflexible;
 
 // [START contents]
-flexible enum Color : int32 {
+type Color = flexible enum : int32 {
     RED = 1;
     BLUE = 2;
 };

@@ -1,8 +1,6 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.net.name;
 
 /// Provides a hanging get interface to watch for DNS servers configuration.
@@ -20,5 +18,7 @@ protocol DnsServerWatcher {
     /// cause the `DnsServerWatcher` channel to be closed.
     ///
     /// - response `servers` The list of servers to use for DNS resolution, in priority order.
-    WatchServers() -> (vector<DnsServer>:MAX servers);
+    WatchServers() -> (struct {
+        servers vector<DnsServer>:MAX;
+    });
 };

@@ -1,20 +1,18 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.netemul.sync;
 
 using zx;
 
 /// Simple data structure passed on netemul bus.
-table Event {
+type Event = table {
     /// User-defined event code.
-    1: int32 code;
+    1: code int32;
     /// string:MAX message.
-    2: string:MAX message;
+    2: message string:MAX;
     /// serialized arguments.
-    3: vector<uint8>:MAX arguments;
+    3: arguments vector<uint8>:MAX;
 };
 
 /// Represents a named bus:
@@ -22,46 +20,79 @@ table Event {
 ///    Events are not stored, only forwarded to attached clients.
 protocol Bus {
     /// Publishes event on the bus.
-    Publish(Event data);
+    Publish(struct {
+        data Event;
+    });
     /// Publishes data on bus and only returns when data has been dispatched.
     /// Use this if you need guarantees that the data was broadcast before continuing.
     /// Note that this ensures that the data will be *published* to all listening clients,
     /// but it cannot guarantee that all clients will have observed the event before it returns.
-    EnsurePublish(Event data) -> ();
+    EnsurePublish(struct {
+        data Event;
+    }) -> ();
     /// Notifies client of new event.
-    -> OnBusData(Event data);
+    -> OnBusData(struct {
+        data Event;
+    });
     /// Get list of named clients.
-    GetClients() -> (vector<string:MAX>:MAX clients);
+    GetClients() -> (struct {
+        clients vector<string:MAX>:MAX;
+    });
     /// Notifies a client is now attached.
     /// Upon subscribing to a bus, a client will always receive an `OnClientAttached` event for each
     /// client present on the bus at the moment it joined.
-    -> OnClientAttached(string:MAX client);
+    -> OnClientAttached(struct {
+        client string:MAX;
+    });
     /// Notifies a client was detached.
-    -> OnClientDetached(string:MAX client);
+    -> OnClientDetached(struct {
+        client string:MAX;
+    });
     /// Waits for up to `timeout` (nsec) for all the clients in `clients`.
     /// Returns true if all clients are present on the bus before timeout expired.
     /// If `result` is false, `absent` will contain the entries in `clients` that still weren't
     /// present on the bus when the timout expired.
     /// Use `timeout` <= 0 for indefinite wait.
-    WaitForClients(vector<string:MAX>:MAX clients, zx.duration timeout) -> (bool result, vector<string:MAX>:MAX? absent);
+    WaitForClients(struct {
+        clients vector<string:MAX>:MAX;
+        timeout zx.duration;
+    }) -> (struct {
+        result bool;
+        absent vector<string:MAX>:<MAX, optional>;
+    });
     /// Waits for up to `timeout` (nsec) for an event that matches `data`.
     /// Event equality is performed by comparing *all* set fields in `data`.
     /// Returns true if event was received before timeout expired.
     /// Use `timeout` <= 0 for indefinite wait.
-    WaitForEvent(Event data, zx.duration timeout) -> (bool result);
+    WaitForEvent(struct {
+        data Event;
+        timeout zx.duration;
+    }) -> (struct {
+        result bool;
+    });
 };
 
 /// The SyncManager is the entry point to attach a client to a bus or use other synchronization
 /// primitives.
 /// The client's 'ticket' to remain on the bus is the channel obtained through the 'BusSubscribe' call.
-[Discoverable]
+@discoverable
 protocol SyncManager {
     /// Subscribes to bus 'busName' with a given client name.
     /// Duplicate client names are disallowed and will cause the request to return unfulfilled.
-    BusSubscribe(string:MAX bus_name, string:MAX client_name, request<Bus> bus);
+    BusSubscribe(resource struct {
+        bus_name string:MAX;
+        client_name string:MAX;
+        bus server_end:Bus;
+    });
     /// Waits on a named counter barrier with name `barrierName`.
     /// Functon will return true if the number of waits pending on the barrier matches or exceeds
     /// `threshold` before  `timeout` (nsec) expires.
     /// Use `timeout` <= 0 for indefinite wait.
-    WaitForBarrierThreshold(string:MAX barrier_name, uint32 threshold, zx.duration timeout) -> (bool result);
+    WaitForBarrierThreshold(struct {
+        barrier_name string:MAX;
+        threshold uint32;
+        timeout zx.duration;
+    }) -> (struct {
+        result bool;
+    });
 };

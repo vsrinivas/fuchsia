@@ -1,74 +1,250 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library banjo.examples.protocolhandle;
 
 // TODO(surajmalhotra): Reference for handles.
 
 using zx;
 
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol SynchronousHandle {
-    Handle(zx.handle h) -> (zx.handle h, zx.handle h2);
-    Process(zx.handle:PROCESS h) -> (zx.handle:PROCESS h, zx.handle:PROCESS h2);
-    Thread(zx.handle:THREAD h) -> (zx.handle:THREAD h, zx.handle:THREAD h2);
-    Vmo(zx.handle:VMO h) -> (zx.handle:VMO h, zx.handle:VMO h2);
-    Channel(zx.handle:CHANNEL h) -> (zx.handle:CHANNEL h, zx.handle:CHANNEL h2);
-    Event(zx.handle:EVENT h) -> (zx.handle:EVENT h, zx.handle:EVENT h2);
-    Port(zx.handle:PORT h) -> (zx.handle:PORT h, zx.handle:PORT h2);
-    Interrupt(zx.handle:INTERRUPT h) -> (zx.handle:INTERRUPT h, zx.handle:INTERRUPT h2);
-    Socket(zx.handle:SOCKET h) -> (zx.handle:SOCKET h, zx.handle:SOCKET h2);
-    Resource(zx.handle:RESOURCE h) -> (zx.handle:RESOURCE h, zx.handle:RESOURCE h2);
-    EventPair(zx.handle:EVENTPAIR h) -> (zx.handle:EVENTPAIR h, zx.handle:EVENTPAIR h2);
-    Job(zx.handle:JOB h) -> (zx.handle:JOB h, zx.handle:JOB h2);
-    Vmar(zx.handle:VMAR h) -> (zx.handle:VMAR h, zx.handle:VMAR h2);
-    Fifo(zx.handle:FIFO h) -> (zx.handle:FIFO h, zx.handle:FIFO h2);
-    Guest(zx.handle:GUEST h) -> (zx.handle:GUEST h, zx.handle:GUEST h2);
-    Timer(zx.handle:TIMER h) -> (zx.handle:TIMER h, zx.handle:TIMER h2);
-    Profile(zx.handle:PROFILE h) -> (zx.handle:PROFILE h, zx.handle:PROFILE h2);
+    Handle(resource struct {
+        h zx.handle;
+    }) -> (resource struct {
+        h zx.handle;
+        h2 zx.handle;
+    });
+    Process(resource struct {
+        h zx.handle:PROCESS;
+    }) -> (resource struct {
+        h zx.handle:PROCESS;
+        h2 zx.handle:PROCESS;
+    });
+    Thread(resource struct {
+        h zx.handle:THREAD;
+    }) -> (resource struct {
+        h zx.handle:THREAD;
+        h2 zx.handle:THREAD;
+    });
+    Vmo(resource struct {
+        h zx.handle:VMO;
+    }) -> (resource struct {
+        h zx.handle:VMO;
+        h2 zx.handle:VMO;
+    });
+    Channel(resource struct {
+        h zx.handle:CHANNEL;
+    }) -> (resource struct {
+        h zx.handle:CHANNEL;
+        h2 zx.handle:CHANNEL;
+    });
+    Event(resource struct {
+        h zx.handle:EVENT;
+    }) -> (resource struct {
+        h zx.handle:EVENT;
+        h2 zx.handle:EVENT;
+    });
+    Port(resource struct {
+        h zx.handle:PORT;
+    }) -> (resource struct {
+        h zx.handle:PORT;
+        h2 zx.handle:PORT;
+    });
+    Interrupt(resource struct {
+        h zx.handle:INTERRUPT;
+    }) -> (resource struct {
+        h zx.handle:INTERRUPT;
+        h2 zx.handle:INTERRUPT;
+    });
+    Socket(resource struct {
+        h zx.handle:SOCKET;
+    }) -> (resource struct {
+        h zx.handle:SOCKET;
+        h2 zx.handle:SOCKET;
+    });
+    Resource(resource struct {
+        h zx.handle:RESOURCE;
+    }) -> (resource struct {
+        h zx.handle:RESOURCE;
+        h2 zx.handle:RESOURCE;
+    });
+    EventPair(resource struct {
+        h zx.handle:EVENTPAIR;
+    }) -> (resource struct {
+        h zx.handle:EVENTPAIR;
+        h2 zx.handle:EVENTPAIR;
+    });
+    Job(resource struct {
+        h zx.handle:JOB;
+    }) -> (resource struct {
+        h zx.handle:JOB;
+        h2 zx.handle:JOB;
+    });
+    Vmar(resource struct {
+        h zx.handle:VMAR;
+    }) -> (resource struct {
+        h zx.handle:VMAR;
+        h2 zx.handle:VMAR;
+    });
+    Fifo(resource struct {
+        h zx.handle:FIFO;
+    }) -> (resource struct {
+        h zx.handle:FIFO;
+        h2 zx.handle:FIFO;
+    });
+    Guest(resource struct {
+        h zx.handle:GUEST;
+    }) -> (resource struct {
+        h zx.handle:GUEST;
+        h2 zx.handle:GUEST;
+    });
+    Timer(resource struct {
+        h zx.handle:TIMER;
+    }) -> (resource struct {
+        h zx.handle:TIMER;
+        h2 zx.handle:TIMER;
+    });
+    Profile(resource struct {
+        h zx.handle:PROFILE;
+    }) -> (resource struct {
+        h zx.handle:PROFILE;
+        h2 zx.handle:PROFILE;
+    });
 };
 
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol AnotherSynchronousHandle {
-    Handle(zx.handle h) -> (zx.handle h, zx.handle h2);
+    Handle(resource struct {
+        h zx.handle;
+    }) -> (resource struct {
+        h zx.handle;
+        h2 zx.handle;
+    });
 };
 
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol AsyncHandle {
-    [Async]
-    Handle(zx.handle h) -> (zx.handle h, zx.handle h2);
-    [Async]
-    Process(zx.handle:PROCESS h) -> (zx.handle:PROCESS h, zx.handle:PROCESS h2);
-    [Async]
-    Thread(zx.handle:THREAD h) -> (zx.handle:THREAD h, zx.handle:THREAD h2);
-    [Async]
-    Vmo(zx.handle:VMO h) -> (zx.handle:VMO h, zx.handle:VMO h2);
-    [Async]
-    Channel(zx.handle:CHANNEL h) -> (zx.handle:CHANNEL h, zx.handle:CHANNEL h2);
-    [Async]
-    Event(zx.handle:EVENT h) -> (zx.handle:EVENT h, zx.handle:EVENT h2);
-    [Async]
-    Port(zx.handle:PORT h) -> (zx.handle:PORT h, zx.handle:PORT h2);
-    [Async]
-    Interrupt(zx.handle:INTERRUPT h) -> (zx.handle:INTERRUPT h, zx.handle:INTERRUPT h2);
-    [Async]
-    Socket(zx.handle:SOCKET h) -> (zx.handle:SOCKET h, zx.handle:SOCKET h2);
-    [Async]
-    Resource(zx.handle:RESOURCE h) -> (zx.handle:RESOURCE h, zx.handle:RESOURCE h2);
-    [Async]
-    EventPair(zx.handle:EVENTPAIR h) -> (zx.handle:EVENTPAIR h, zx.handle:EVENTPAIR h2);
-    [Async]
-    Job(zx.handle:JOB h) -> (zx.handle:JOB h, zx.handle:JOB h2);
-    [Async]
-    Vmar(zx.handle:VMAR h) -> (zx.handle:VMAR h, zx.handle:VMAR h2);
-    [Async]
-    Fifo(zx.handle:FIFO h) -> (zx.handle:FIFO h, zx.handle:FIFO h2);
-    [Async]
-    Guest(zx.handle:GUEST h) -> (zx.handle:GUEST h, zx.handle:GUEST h2);
-    [Async]
-    Timer(zx.handle:TIMER h) -> (zx.handle:TIMER h, zx.handle:TIMER h2);
-    [Async]
-    Profile(zx.handle:PROFILE h) -> (zx.handle:PROFILE h, zx.handle:PROFILE h2);
+    @async
+    Handle(resource struct {
+        h zx.handle;
+    }) -> (resource struct {
+        h zx.handle;
+        h2 zx.handle;
+    });
+    @async
+    Process(resource struct {
+        h zx.handle:PROCESS;
+    }) -> (resource struct {
+        h zx.handle:PROCESS;
+        h2 zx.handle:PROCESS;
+    });
+    @async
+    Thread(resource struct {
+        h zx.handle:THREAD;
+    }) -> (resource struct {
+        h zx.handle:THREAD;
+        h2 zx.handle:THREAD;
+    });
+    @async
+    Vmo(resource struct {
+        h zx.handle:VMO;
+    }) -> (resource struct {
+        h zx.handle:VMO;
+        h2 zx.handle:VMO;
+    });
+    @async
+    Channel(resource struct {
+        h zx.handle:CHANNEL;
+    }) -> (resource struct {
+        h zx.handle:CHANNEL;
+        h2 zx.handle:CHANNEL;
+    });
+    @async
+    Event(resource struct {
+        h zx.handle:EVENT;
+    }) -> (resource struct {
+        h zx.handle:EVENT;
+        h2 zx.handle:EVENT;
+    });
+    @async
+    Port(resource struct {
+        h zx.handle:PORT;
+    }) -> (resource struct {
+        h zx.handle:PORT;
+        h2 zx.handle:PORT;
+    });
+    @async
+    Interrupt(resource struct {
+        h zx.handle:INTERRUPT;
+    }) -> (resource struct {
+        h zx.handle:INTERRUPT;
+        h2 zx.handle:INTERRUPT;
+    });
+    @async
+    Socket(resource struct {
+        h zx.handle:SOCKET;
+    }) -> (resource struct {
+        h zx.handle:SOCKET;
+        h2 zx.handle:SOCKET;
+    });
+    @async
+    Resource(resource struct {
+        h zx.handle:RESOURCE;
+    }) -> (resource struct {
+        h zx.handle:RESOURCE;
+        h2 zx.handle:RESOURCE;
+    });
+    @async
+    EventPair(resource struct {
+        h zx.handle:EVENTPAIR;
+    }) -> (resource struct {
+        h zx.handle:EVENTPAIR;
+        h2 zx.handle:EVENTPAIR;
+    });
+    @async
+    Job(resource struct {
+        h zx.handle:JOB;
+    }) -> (resource struct {
+        h zx.handle:JOB;
+        h2 zx.handle:JOB;
+    });
+    @async
+    Vmar(resource struct {
+        h zx.handle:VMAR;
+    }) -> (resource struct {
+        h zx.handle:VMAR;
+        h2 zx.handle:VMAR;
+    });
+    @async
+    Fifo(resource struct {
+        h zx.handle:FIFO;
+    }) -> (resource struct {
+        h zx.handle:FIFO;
+        h2 zx.handle:FIFO;
+    });
+    @async
+    Guest(resource struct {
+        h zx.handle:GUEST;
+    }) -> (resource struct {
+        h zx.handle:GUEST;
+        h2 zx.handle:GUEST;
+    });
+    @async
+    Timer(resource struct {
+        h zx.handle:TIMER;
+    }) -> (resource struct {
+        h zx.handle:TIMER;
+        h2 zx.handle:TIMER;
+    });
+    @async
+    Profile(resource struct {
+        h zx.handle:PROFILE;
+    }) -> (resource struct {
+        h zx.handle:PROFILE;
+        h2 zx.handle:PROFILE;
+    });
 };

@@ -1,8 +1,6 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.lowpan.device;
 
 using fuchsia.lowpan;
@@ -10,7 +8,7 @@ using fuchsia.lowpan;
 /// LoWPAN Provisioning Error
 ///
 /// Returned by `ProvisioningMonitor.WatchProgress()`.
-enum ProvisionError : int32 {
+type ProvisionError = strict enum : int32 {
     /// Provisioning did not successfully complete because the
     /// credential was rejected. For example, the key was incorrect.
     ///
@@ -33,12 +31,12 @@ enum ProvisionError : int32 {
 /// Indicates the current status of the form/join operation.
 ///
 /// Returned by `ProvisioningMonitor.WatchProgress()`.
-union ProvisioningProgress {
+type ProvisioningProgress = strict union {
     /// Approximate percent complete indication for a user interface.
-    1: float32 progress;
+    1: progress float32;
 
     /// The final Identity when the operation has completed successfully.
-    2: fuchsia.lowpan.Identity identity;
+    2: identity fuchsia.lowpan.Identity;
 };
 
 /// Reports the progress of a provisioning operation like Join or Form.
@@ -57,5 +55,7 @@ protocol ProvisioningMonitor {
     ///
     /// Once the method has either returned an identity or indicated a `ProvisionError`,
     /// the ProvisioningMonitor will close with `ZX_OK`.
-    WatchProgress() -> (ProvisioningProgress progress) error ProvisionError;
+    WatchProgress() -> (struct {
+        progress ProvisioningProgress;
+    }) error ProvisionError;
 };

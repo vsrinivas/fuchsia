@@ -1,11 +1,9 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library test.peridot.lib.fidl.jsonxdr;
 
-struct RequiredData {
+type RequiredData = struct {
     string string;
     bool bool;
     int8 int8;
@@ -18,108 +16,108 @@ struct RequiredData {
     uint64 uint64;
     float32 float32;
     float64 float64;
-    Struct struct;
-    Enum enum;
-    Union union;
+    struct Struct;
+    enum Enum;
+    union Union;
 };
 
-struct OptionalData {
-    string? string;
-    Struct? struct;
-    Union? union;
+type OptionalData = struct {
+    string string:optional;
+    struct box<Struct>;
+    union Union:optional;
 };
 
-struct RequiredRepeatedRequiredData {
-    vector<string> string;
-    vector<bool> bool;
-    vector<int8> int8;
-    vector<int16> int16;
-    vector<int32> int32;
-    vector<int64> int64;
-    vector<uint8> uint8;
-    vector<uint16> uint16;
-    vector<uint32> uint32;
-    vector<uint64> uint64;
-    vector<float32> float32;
-    vector<float64> float64;
-    vector<Struct> struct;
-    vector<Enum> enum;
-    vector<Union> union;
+type RequiredRepeatedRequiredData = struct {
+    string vector<string>;
+    bool vector<bool>;
+    int8 vector<int8>;
+    int16 vector<int16>;
+    int32 vector<int32>;
+    int64 vector<int64>;
+    uint8 vector<uint8>;
+    uint16 vector<uint16>;
+    uint32 vector<uint32>;
+    uint64 vector<uint64>;
+    float32 vector<float32>;
+    float64 vector<float64>;
+    struct vector<Struct>;
+    enum vector<Enum>;
+    union vector<Union>;
 };
 
-struct RequiredRepeatedOptionalData {
-    vector<string?> string;
-    vector<Struct?> struct;
-    vector<Union?> union;
+type RequiredRepeatedOptionalData = struct {
+    string vector<string:optional>;
+    struct vector<box<Struct>>;
+    union vector<Union:optional>;
 };
 
 // NOTE(mesch): According to jeffbrown, optional vector typed fields are going
 // away.
 
-struct OptionalRepeatedRequiredData {
-    vector<string>? string;
-    vector<bool>? bool;
-    vector<int8>? int8;
-    vector<int16>? int16;
-    vector<int32>? int32;
-    vector<int64>? int64;
-    vector<uint8>? uint8;
-    vector<uint16>? uint16;
-    vector<uint32>? uint32;
-    vector<uint64>? uint64;
-    vector<float32>? float32;
-    vector<float64>? float64;
-    vector<Struct>? struct;
-    vector<Enum>? enum;
-    vector<Union>? union;
+type OptionalRepeatedRequiredData = struct {
+    string vector<string>:optional;
+    bool vector<bool>:optional;
+    int8 vector<int8>:optional;
+    int16 vector<int16>:optional;
+    int32 vector<int32>:optional;
+    int64 vector<int64>:optional;
+    uint8 vector<uint8>:optional;
+    uint16 vector<uint16>:optional;
+    uint32 vector<uint32>:optional;
+    uint64 vector<uint64>:optional;
+    float32 vector<float32>:optional;
+    float64 vector<float64>:optional;
+    struct vector<Struct>:optional;
+    enum vector<Enum>:optional;
+    union vector<Union>:optional;
 };
 
-struct OptionalRepeatedOptionalData {
-    vector<string?>? string;
-    vector<Struct?>? struct;
-    vector<Union?>? union;
+type OptionalRepeatedOptionalData = struct {
+    string vector<string:optional>:optional;
+    struct vector<box<Struct>>:optional;
+    union vector<Union:optional>:optional;
 };
 
-struct ArrayData {
-    array<string>:10 string;
-    array<bool>:10 bool;
-    array<int8>:10 int8;
-    array<int16>:10 int16;
-    array<int32>:10 int32;
-    array<int64>:10 int64;
-    array<uint8>:10 uint8;
-    array<uint16>:10 uint16;
-    array<uint32>:10 uint32;
-    array<uint64>:10 uint64;
-    array<float32>:10 float32;
-    array<float64>:10 float64;
-    array<Struct>:10 struct;
-    array<Enum>:10 enum;
-    array<Union>:10 union;
+type ArrayData = struct {
+    string array<string, 10>;
+    bool array<bool, 10>;
+    int8 array<int8, 10>;
+    int16 array<int16, 10>;
+    int32 array<int32, 10>;
+    int64 array<int64, 10>;
+    uint8 array<uint8, 10>;
+    uint16 array<uint16, 10>;
+    uint32 array<uint32, 10>;
+    uint64 array<uint64, 10>;
+    float32 array<float32, 10>;
+    float64 array<float64, 10>;
+    struct array<Struct, 10>;
+    enum array<Enum, 10>;
+    union array<Union, 10>;
 };
 
 // The purpose of this struct is coverage for struct valued fields above. The
 // field exists only so we have something to be checked to be there. Other types
 // of fields of structs are covered above, not here.
-struct Struct {
-    int32 item;
+type Struct = struct {
+    item int32;
 };
 
-enum Enum {
+type Enum = strict enum {
     ZERO = 0;
     ONE = 1;
     TWO = 2;
 };
 
 // NOTE(mesch): Can't use struct, fxbug.dev/7467.
-union Union {
+type Union = strict union {
     1: int32 int32;
     2: string string;
 };
 
 // Used to test that FieldWithDefault() and ValueWithDefault() fill in default
 // values as expected for the types in this table.
-table FillWithDefaultValues {
+type FillWithDefaultValues = table {
     1: string string;
     2: bool bool;
     3: int8 int8;
@@ -129,21 +127,21 @@ table FillWithDefaultValues {
     7: uint8 uint8;
     8: uint16 uint16;
     9: uint32 uint32;
-    10: uint64 uint64;
-    11: float32 float32;
-    12: float64 float64;
-    13: Enum enum;
-    14: vector<string> vector_of_strings;
+   10: uint64 uint64;
+   11: float32 float32;
+   12: float64 float64;
+   13: enum Enum;
+   14: vector_of_strings vector<string>;
 };
 
 // Used to test that HasField() and the pattern documented in the json_xdr.h
 // header for that method work as expected, preserving the set/unset state of
 // FIDL table optional fields between the FIDL table data representation and
 // the JSON representation.
-table ObjectWithOptionalFields {
+type ObjectWithOptionalFields = table {
     1: string string;
     2: bool bool;
     3: int32 int32;
-    4: Enum enum;
-    5: vector<string> vector_of_strings;
+    4: enum Enum;
+    5: vector_of_strings vector<string>;
 };

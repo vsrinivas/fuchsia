@@ -1,15 +1,13 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.io2;
 
 /// The common members definition behind [`Rights`] and [`Abilities`].
 /// Note that Directory operations are distinct from File operations, with the
 /// exception of some common operations (e.g. `GET_ATTRIBUTES`) defined on the
 /// underlying [`fuchsia.io2/Node`].
-bits Operations : uint64 {
+type Operations = strict bits : uint64 {
     /// Connecting to a service.
     CONNECT = 0x01;
 
@@ -52,28 +50,24 @@ bits Operations : uint64 {
 };
 
 /// Alias for directory permission alias r*
-const Operations R_STAR_DIR = Operations.CONNECT | Operations.ENUMERATE |
-    Operations.TRAVERSE | Operations.READ_BYTES | Operations.GET_ATTRIBUTES;
+const R_STAR_DIR Operations
+        = Operations.CONNECT | Operations.ENUMERATE | Operations.TRAVERSE | Operations.READ_BYTES | Operations.GET_ATTRIBUTES;
 
 /// Alias for directory permission alias rw*
-const Operations RW_STAR_DIR = Operations.CONNECT | Operations.ENUMERATE |
-    Operations.TRAVERSE | Operations.READ_BYTES | Operations.WRITE_BYTES |
-    Operations.MODIFY_DIRECTORY | Operations.GET_ATTRIBUTES |
-    Operations.UPDATE_ATTRIBUTES;
+const RW_STAR_DIR Operations
+        = Operations.CONNECT | Operations.ENUMERATE | Operations.TRAVERSE | Operations.READ_BYTES | Operations.WRITE_BYTES | Operations.MODIFY_DIRECTORY | Operations.GET_ATTRIBUTES | Operations.UPDATE_ATTRIBUTES;
 
 /// Alias for directory permission alias rx*
-const Operations RX_STAR_DIR = Operations.CONNECT | Operations.ENUMERATE |
-    Operations.TRAVERSE | Operations.READ_BYTES | Operations.GET_ATTRIBUTES |
-    Operations.EXECUTE;
+const RX_STAR_DIR Operations
+        = Operations.CONNECT | Operations.ENUMERATE | Operations.TRAVERSE | Operations.READ_BYTES | Operations.GET_ATTRIBUTES | Operations.EXECUTE;
 
 /// Alias for directory permission alias w*
-const Operations W_STAR_DIR = Operations.CONNECT | Operations.ENUMERATE |
-    Operations.TRAVERSE | Operations.WRITE_BYTES | Operations.MODIFY_DIRECTORY |
-    Operations.UPDATE_ATTRIBUTES;
+const W_STAR_DIR Operations
+        = Operations.CONNECT | Operations.ENUMERATE | Operations.TRAVERSE | Operations.WRITE_BYTES | Operations.MODIFY_DIRECTORY | Operations.UPDATE_ATTRIBUTES;
 
 /// Alias for directory permission alias x*
-const Operations X_STAR_DIR = Operations.CONNECT | Operations.ENUMERATE |
-    Operations.TRAVERSE | Operations.EXECUTE;
+const X_STAR_DIR Operations
+        = Operations.CONNECT | Operations.ENUMERATE | Operations.TRAVERSE | Operations.EXECUTE;
 
 /// Rights are properties specific to a connection. They limit which operations
 /// are allowed on a connection.

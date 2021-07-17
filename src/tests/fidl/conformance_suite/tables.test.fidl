@@ -1,74 +1,71 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library conformance;
 
-table EmptyTable {
+type EmptyTable = table {};
+
+type StructOfEmptyTable = struct {
+    table EmptyTable;
 };
 
-struct StructOfEmptyTable {
-    EmptyTable table;
-};
-
-table SimpleTable {
-    1: int64 x;
+type SimpleTable = table {
+    1: x int64;
     2: reserved;
     3: reserved;
     4: reserved;
-    5: int64 y;
+    5: y int64;
 };
 
-struct StructOfSimpleTable {
-    SimpleTable table;
+type StructOfSimpleTable = struct {
+    table SimpleTable;
 };
 
-resource table SimpleResourceTable {
-    1: int64 x;
+type SimpleResourceTable = resource table {
+    1: x int64;
     2: reserved;
     3: reserved;
     4: reserved;
-    5: int64 y;
+    5: y int64;
 };
 
-resource struct StructOfSimpleResourceTable {
-    SimpleResourceTable table;
+type StructOfSimpleResourceTable = resource struct {
+    table SimpleResourceTable;
 };
 
-struct SimpleTableThenUint64 {
-    SimpleTable table;
-    uint64 number;
+type SimpleTableThenUint64 = struct {
+    table SimpleTable;
+    number uint64;
 };
 
-table TableWithStringAndVector {
-    1: string foo;
-    2: int32 bar;
-    3: vector<uint8> baz;
+type TableWithStringAndVector = table {
+    1: foo string;
+    2: bar int32;
+    3: baz vector<uint8>;
 };
 
-struct StructOfTableWithStringAndVector {
-    TableWithStringAndVector table;
+type StructOfTableWithStringAndVector = struct {
+    table TableWithStringAndVector;
 };
 
-table ReverseOrdinalTable {
-    4: int64 x;
+type ReverseOrdinalTable = table {
+    4: x int64;
     3: reserved;
-    2: int64 y;
-    1: int64 z;
+    2: y int64;
+    1: z int64;
 };
 
-struct StructOfReverseOrdinalTable {
-    ReverseOrdinalTable table;
+type StructOfReverseOrdinalTable = struct {
+    table ReverseOrdinalTable;
 };
 
-table TableWithGaps {
+type TableWithGaps = table {
     1: reserved;
-    2: int32 second;
+    2: second int32;
     3: reserved;
-    4: int32 fourth;
+    4: fourth int32;
 };
 
-struct StructOfTableWithGaps {
-    TableWithGaps table;
+type StructOfTableWithGaps = struct {
+    table TableWithGaps;
 };

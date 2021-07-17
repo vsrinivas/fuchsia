@@ -1,11 +1,13 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library test.modular.dart;
 
-[Discoverable]
+@discoverable
 protocol Server {
-    echo(string? value) -> (string? response);
+    echo(struct {
+        value string:optional;
+    }) -> (struct {
+        response string:optional;
+    });
 };

@@ -1,16 +1,14 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.testing.deadline;
 
-const uint32 IDENTIFIER_SIZE = 256;
+const IDENTIFIER_SIZE uint32 = 256;
 
 /// An identifier for a specific deadline.
-struct DeadlineId {
+type DeadlineId = struct {
     /// A string indicating which component registered a deadline.
-    string:IDENTIFIER_SIZE component_id;
+    component_id string:IDENTIFIER_SIZE;
     /// A string indicating the specific deadline reached.
-    string:IDENTIFIER_SIZE code;
+    code string:IDENTIFIER_SIZE;
 };

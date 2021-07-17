@@ -1,32 +1,30 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.developer.bridge;
 using fuchsia.device;
 using fuchsia.net;
 using fuchsia.buildinfo;
 
-struct TargetIp {
-    fuchsia.net.IpAddress ip;
-    uint32 scope_id;
+type TargetIp = struct {
+    ip fuchsia.net.IpAddress;
+    scope_id uint32;
 };
 
-struct TargetIpPort {
-    fuchsia.net.IpAddress ip;
-    uint32 scope_id;
-    uint16 port;
+type TargetIpPort = struct {
+    ip fuchsia.net.IpAddress;
+    scope_id uint32;
+    port uint16;
 };
 
 // TODO(awdavies): Add serial number.
-union TargetAddrInfo {
-    1: TargetIp ip;
-    2: TargetIpPort ip_port;
+type TargetAddrInfo = strict union {
+    1: ip TargetIp;
+    2: ip_port TargetIpPort;
 };
 
 // TODO(awdavies): Add more target states once they're more well defined.
-enum TargetState {
+type TargetState = strict enum {
     UNKNOWN = 1;
     DISCONNECTED = 2;
     PRODUCT = 3;
@@ -35,38 +33,38 @@ enum TargetState {
 };
 
 // TODO(awdavies): Add more target types. Hardware? Product state?
-enum TargetType {
+type TargetType = strict enum {
     UNKNOWN = 1;
 };
 
 /// Current known state of the remote control
-enum RemoteControlState {
+type RemoteControlState = strict enum {
     UP = 1;
     DOWN = 2;
     UNKNOWN = 3;
 };
 
-table Target {
-    1: string:fuchsia.device.DEVICE_NAME_MAX nodename;
-    2: vector<TargetAddrInfo>:256 addresses;
-    3: uint64 age_ms;
-    4: RemoteControlState rcs_state;
-    5: TargetType target_type;
-    6: TargetState target_state;
+type Target = table {
+    1: nodename string:fuchsia.device.DEVICE_NAME_MAX;
+    2: addresses vector<TargetAddrInfo>:256;
+    3: age_ms uint64;
+    4: rcs_state RemoteControlState;
+    5: target_type TargetType;
+    6: target_state TargetState;
     // Contains the string used for the product in `fx set`, for example
     // `fx set core.x64` would make this value "core".
-    7: string:fuchsia.buildinfo.MAX_STRING_LENGTH product_config;
+    7: product_config string:fuchsia.buildinfo.MAX_STRING_LENGTH;
     // Contains the string used for the board in `fx set`, for example
     // `fx set core.x64` would make this value "x64".
-    8: string:fuchsia.buildinfo.MAX_STRING_LENGTH board_config;
-    9: string:256 serial_number;
+    8: board_config string:fuchsia.buildinfo.MAX_STRING_LENGTH;
+    9: serial_number string:256;
     /// ssh_address is the preferred address to use to connect to the
     /// device over SSH, and will include a port number if a custom SSH
     /// port number has been set.
-    10: TargetAddrInfo ssh_address;
+   10: ssh_address TargetAddrInfo;
 };
 
-enum TargetRebootError {
+type TargetRebootError = strict enum {
     UNKNOWN = 1;
     /// Cannot reboot from fastboot to recovery.
     FASTBOOT_TO_RECOVERY = 2;
@@ -77,13 +75,15 @@ enum TargetRebootError {
     FASTBOOT_COMMUNICATION = 4;
 };
 
-enum TargetRebootState {
+type TargetRebootState = strict enum {
     PRODUCT = 1;
     BOOTLOADER = 2;
     RECOVERY = 3;
 };
 
-[Discoverable]
+@discoverable
 protocol TargetControl {
-    Reboot(TargetRebootState state) -> () error TargetRebootError;
+    Reboot(struct {
+        state TargetRebootState;
+    }) -> (struct {}) error TargetRebootError;
 };

@@ -1,31 +1,29 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.sys2;
 
 using fuchsia.component;
 
 /// Statically declares a component instance collection.
-table CollectionDecl {
+type CollectionDecl = table {
     /// The name of the collection. Instances created in the collection are
     /// scoped to this name.
-    1: fuchsia.component.name name;
+    1: name fuchsia.component.name;
 
     /// The durability of instances in the collection.
-    2: Durability durability;
+    2: durability Durability;
 
     /// The environment assigned to child instances in this collection.
     ///
     /// Must be non-empty, reference an environment defined in the containing
     /// `ComponentDecl`, and contain only the following characters:
     /// [a-z0-9-_.].
-    3: fuchsia.component.name environment;
+    3: environment fuchsia.component.name;
 };
 
 /// The durability of component instances created in a collection.
-enum Durability {
+type Durability = strict enum {
     /// An instance exists until either it or its parent is destroyed.
     PERSISTENT = 1;
     /// An instance exists until either its parent instance is stopped

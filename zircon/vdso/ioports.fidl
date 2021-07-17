@@ -1,15 +1,25 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library zx;
 
-[Transport = "Syscall"]
+@transport("Syscall")
 protocol ioports {
     /// Rights: resource must have resource kind ZX_RSRC_KIND_IOPORT.
-    ioports_request(handle:RESOURCE resource, uint16 io_addr, uint32 len) -> (status status);
+    ioports_request(resource struct {
+        resource handle:RESOURCE;
+        io_addr uint16;
+        len uint32;
+    }) -> (struct {
+        status status;
+    });
 
     /// Rights: resource must have resource kind ZX_RSRC_KIND_IOPORT.
-    ioports_release(handle:RESOURCE resource, uint16 io_addr, uint32 len) -> (status status);
+    ioports_release(resource struct {
+        resource handle:RESOURCE;
+        io_addr uint16;
+        len uint32;
+    }) -> (struct {
+        status status;
+    });
 };

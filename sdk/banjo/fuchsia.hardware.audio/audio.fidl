@@ -1,21 +1,28 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.audio;
 using zx;
 
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol Codec {
     /// This method connects a channel in order to serve FIDL over it outside the driver host
     /// control.
-    Connect(zx.handle:CHANNEL channel) -> (zx.status status);
+    Connect(resource struct {
+        channel zx.handle:CHANNEL;
+    }) -> (struct {
+        status zx.status;
+    });
 };
 
-[Transport = "Banjo"]
+@transport("Banjo")
 protocol Dai {
     /// This method connects a channel in order to serve FIDL over it outside the driver host
     /// control.
-    Connect(zx.handle:CHANNEL channel) -> (zx.status status);
+    Connect(resource struct {
+        channel zx.handle:CHANNEL;
+    }) -> (struct {
+        status zx.status;
+    });
 };

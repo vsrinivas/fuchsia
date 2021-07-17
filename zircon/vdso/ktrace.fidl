@@ -1,26 +1,43 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library zx;
 
-[Transport = "Syscall"]
+@transport("Syscall")
 protocol ktrace {
     // TODO(scottmg): This is another one where it's:
     //   (handle, data, offset, data_size)
     // rather than:
     //   (handle, data, data_size, offset).
     /// Rights: handle must have resource kind ZX_RSRC_KIND_ROOT.
-    [ArgReorder = "handle, data, offset, data_size, actual"]
-    ktrace_read(handle:RESOURCE handle, uint32 offset)
-        -> (status status, vector_void data, usize actual);
+    @arg_reorder("handle, data, offset, data_size, actual")
+    ktrace_read(resource struct {
+        handle handle:RESOURCE;
+        offset uint32;
+    }) -> (struct {
+        status status;
+        data vector_void;
+        actual usize;
+    });
 
     // TODO(scottmg): syscalls.banjo had the length of |ptr| being |action|?
     /// Rights: handle must have resource kind ZX_RSRC_KIND_ROOT.
-    ktrace_control(handle:RESOURCE handle, uint32 action, uint32 options, voidptr ptr)
-        -> (status status);
+    ktrace_control(resource struct {
+        handle handle:RESOURCE;
+        action uint32;
+        options uint32;
+        ptr voidptr;
+    }) -> (struct {
+        status status;
+    });
 
     /// Rights: handle must have resource kind ZX_RSRC_KIND_ROOT.
-    ktrace_write(handle:RESOURCE handle, uint32 id, uint32 arg0, uint32 arg1) -> (status status);
+    ktrace_write(resource struct {
+        handle handle:RESOURCE;
+        id uint32;
+        arg0 uint32;
+        arg1 uint32;
+    }) -> (struct {
+        status status;
+    });
 };

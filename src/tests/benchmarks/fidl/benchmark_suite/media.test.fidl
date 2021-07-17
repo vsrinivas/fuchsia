@@ -1,26 +1,30 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library benchmarkfidl;
 
 // Based on fuchsia.media.StreamSource.StreamPacket, used in
 // AudioCapturerOnPacketProducedEvent:
-struct StreamPacket {
-    int64 pts = 0x7fffffffffffffff;
-    uint32 payload_buffer_id;
-    uint64 payload_offset;
-    uint64 payload_size;
-    uint32 flags = 0;
-    uint64 buffer_config = 0;
-    uint64 stream_segment_id = 0;
+type StreamPacket = struct {
+    pts int64 = 0x7fffffffffffffff;
+    payload_buffer_id uint32;
+    payload_offset uint64;
+    payload_size uint64;
+    flags uint32 = 0;
+    buffer_config uint64 = 0;
+    stream_segment_id uint64 = 0;
 };
 
 protocol StreamPacketEventProtocol {
-    -> Send(StreamPacket val);
+    -> Send(struct {
+        val StreamPacket;
+    });
 };
 
 protocol StreamPacketEchoCall {
-    Echo(StreamPacket val) -> (StreamPacket val);
+    Echo(struct {
+        val StreamPacket;
+    }) -> (struct {
+        val StreamPacket;
+    });
 };

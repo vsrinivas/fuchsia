@@ -1,24 +1,25 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.i2c;
 
 using zx;
 
-const uint32 I2C_10_BIT_ADDR_MASK = 0xF000;
-const uint32 I2C_MAX_RW_OPS = 8;
-const uint32 I2C_MAX_TOTAL_TRANSFER = 4096;
+const I2C_10_BIT_ADDR_MASK uint32 = 0xF000;
+const I2C_MAX_RW_OPS uint32 = 8;
+const I2C_MAX_TOTAL_TRANSFER uint32 = 4096;
 
 /// See `Transact` below for usage.
-struct I2cOp {
-    [Buffer] vector<uint8>:MAX data;
-    bool is_read;
-    bool stop;
+type I2cOp = struct {
+    @buffer
+    data vector<uint8>:MAX;
+    is_read bool;
+    stop bool;
 };
 
-[Transport = "Banjo", BanjoLayout = "ddk-protocol", HandleWrappers]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
+@handle_wrappers
 protocol I2c {
     /// Writes and reads data on an i2c channel. Up to I2C_MAX_RW_OPS operations can be passed in
     /// with a maximum of I2C_MAX_TOTAL_TRANSFER total bytes transfered.
@@ -27,9 +28,22 @@ protocol I2c {
     /// reads and writes can be specified.  At least the last op must have the stop flag set.
     /// The results of the operations are returned asynchronously via the transact_cb.
     /// The cookie parameter can be used to pass your own private data to the transact_cb callback.
-    [Async]
-    Transact(vector<I2cOp>:MAX op) -> (zx.status status, vector<I2cOp>:MAX op);
+    @async
+    Transact(struct {
+        op vector<I2cOp>:MAX;
+    }) -> (struct {
+        status zx.status;
+        op vector<I2cOp>:MAX;
+    });
     /// Returns the maximum transfer size for read and write operations on the channel.
-    GetMaxTransferSize() -> (zx.status s, uint64 size);
-    GetInterrupt(uint32 flags) -> (zx.status s, zx.handle:INTERRUPT irq);
+    GetMaxTransferSize() -> (struct {
+        s zx.status;
+        size uint64;
+    });
+    GetInterrupt(struct {
+        flags uint32;
+    }) -> (resource struct {
+        s zx.status;
+        irq zx.handle:INTERRUPT;
+    });
 };

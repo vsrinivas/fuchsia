@@ -1,26 +1,28 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.test.hub;
 
 using fuchsia.io;
 
 /// The maximum number of entries to report within a directory in tests.
 /// This capacity is currently set somewhat arbitrarily.
-const uint64 MAX_NUM_ENTRIES = 100;
+const MAX_NUM_ENTRIES uint64 = 100;
 
 /// A protocol used in testing by a component instance to propagate its view of
 /// hub directory to the integration test.
-[Discoverable]
+@discoverable
 protocol HubReport {
     /// Returns a list of the entiries within the directories specified by the
     /// provided path.
-    ListDirectory(string:fuchsia.io.MAX_PATH path,
-                  vector<string:fuchsia.io.MAX_FILENAME>:MAX_NUM_ENTRIES entries) -> ();
+    ListDirectory(struct {
+        path string:fuchsia.io.MAX_PATH;
+        entries vector<string:fuchsia.io.MAX_FILENAME>:MAX_NUM_ENTRIES;
+    }) -> ();
 
     /// Returns the content of the file specified by the provided path.
-    ReportFileContent(string:fuchsia.io.MAX_PATH path,
-                      string:fuchsia.io.MAX_BUF content) -> ();
+    ReportFileContent(struct {
+        path string:fuchsia.io.MAX_PATH;
+        content string:fuchsia.io.MAX_BUF;
+    }) -> ();
 };

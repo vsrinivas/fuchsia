@@ -1,14 +1,16 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.ax88179;
 
 using zx;
 
 /// Test helper for asix-88179-function to explicitly control online.
-[ForDeprecatedCBindings]
+@for_deprecated_c_bindings
 protocol Hooks {
-    SetOnline(bool online) -> (zx.status status);
+    SetOnline(struct {
+        online bool;
+    }) -> (struct {
+        status zx.status;
+    });
 };

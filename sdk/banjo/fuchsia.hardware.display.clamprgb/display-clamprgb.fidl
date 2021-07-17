@@ -1,8 +1,6 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.display.clamprgb;
 
 using zx;
@@ -11,8 +9,13 @@ using zx;
 /// clamped in order to reduce backlight bleeding. This API is not guaranteed to be stable
 /// and future support for this API is not guaranteed. This protocol should not be included as
 /// part of the SDK.
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol DisplayClampRgbImpl {
     /// Set the minimum value of rgb channels. Value range [0 255] inclusive
-    SetMinimumRgb(uint8 minimum_rgb) -> (zx.status s);
+    SetMinimumRgb(struct {
+        minimum_rgb uint8;
+    }) -> (struct {
+        s zx.status;
+    });
 };

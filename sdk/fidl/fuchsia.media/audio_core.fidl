@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.media;
 
 using fuchsia.media.audio;
@@ -11,7 +9,7 @@ using fuchsia.media.audio;
 /// An AudioRenderer's usage cannot be changed after creation.  The
 /// AudioRenderUsage is used by audio policy to dictate how audio streams
 /// interact with each other.
-enum AudioRenderUsage {
+type AudioRenderUsage = strict enum {
     /// Stream is intended to be used for ambient or background sound. Streams
     /// that can be interrupted without consequence should use this.
     BACKGROUND = 0;
@@ -33,12 +31,12 @@ enum AudioRenderUsage {
     /// communication. Voice/Video chat should use this.
     COMMUNICATION = 4;
 };
-const uint8 RENDER_USAGE_COUNT = 5;
+const RENDER_USAGE_COUNT uint8 = 5;
 
 /// Usages annotating the purpose of the stream being used to capture audio. The
 /// AudioCaptureUsage is used by audio policy to dictate how audio streams
 /// interact with each other.
-enum AudioCaptureUsage {
+type AudioCaptureUsage = strict enum {
     /// Stream is used to capture audio while in the background.  These streams
     /// may be active at any the time and are considered privileged.
     /// Example: Listening for Hotwords
@@ -60,10 +58,10 @@ enum AudioCaptureUsage {
     /// communication. Voice/Video chat should use this.
     COMMUNICATION = 3;
 };
-const uint8 CAPTURE_USAGE_COUNT = 4;
+const CAPTURE_USAGE_COUNT uint8 = 4;
 
 /// The behaviors applied to streams when multiple are active.
-enum Behavior {
+type Behavior = strict enum {
     /// Mix the streams.
     NONE = 0;
 
@@ -74,15 +72,17 @@ enum Behavior {
     MUTE = 2;
 };
 
-union Usage {
-    1: AudioRenderUsage render_usage;
-    2: AudioCaptureUsage capture_usage;
+type Usage = strict union {
+    1: render_usage AudioRenderUsage;
+    2: capture_usage AudioCaptureUsage;
 };
 
-[Discoverable]
+@discoverable
 protocol AudioCore {
     /// Create an AudioRenderer which outputs audio to the default device.
-    CreateAudioRenderer(request<AudioRenderer> audio_out_request);
+    CreateAudioRenderer(resource struct {
+        audio_out_request server_end:AudioRenderer;
+    });
 
     /// Create a new Audio Capturer according to the given requirements.
     ///
@@ -97,11 +97,12 @@ protocol AudioCore {
     /// can be created.
     ///
     /// TODO(fxbug.dev/45240): Implement
-    [Transitional]
-    CreateAudioCapturerWithConfiguration(
-        AudioStreamType stream_type,
-        AudioCapturerConfiguration configuration,
-        request<AudioCapturer> audio_capturer_request);
+    @transitional
+    CreateAudioCapturerWithConfiguration(resource struct {
+        stream_type AudioStreamType;
+        configuration AudioCapturerConfiguration;
+        audio_capturer_request server_end:AudioCapturer;
+    });
 
     /// Create an AudioCapturer which either captures from the current default
     /// audio input device, or loops-back from the current default audio output
@@ -112,7 +113,10 @@ protocol AudioCore {
     // This is a placeholder until we have a design in place. Eventually, this
     // should move up to an audio policy layer, where application clients obtain
     // and control AudioCapturers.
-    CreateAudioCapturer(bool loopback, request<AudioCapturer> audio_in_request);
+    CreateAudioCapturer(resource struct {
+        loopback bool;
+        audio_in_request server_end:AudioCapturer;
+    });
 
     // TODO(fxbug.dev/34948): remove these systemwide settings, once device-centric
     // settings are plumbed into the system UI. Also, device-centric and
@@ -135,21 +139,31 @@ protocol AudioCore {
     /// the range -160 db to 0 db, inclusive. This setting is applied to all
     /// audio output devices. Audio input devices are unaffected.
     /// Does not affect System Mute.
-    [Transitional, Deprecated]
-    SetSystemGain(float32 gain_db);
+    @transitional
+    @deprecated
+    SetSystemGain(struct {
+        gain_db float32;
+    });
 
     /// Sets/clears the systemwide 'Mute' state for audio output devices.
     /// Audio input devices are unaffected. Changes to the System Mute state do
     /// not affect the value of System Gain.
-    [Transitional, Deprecated]
-    SetSystemMute(bool muted);
+    @transitional
+    @deprecated
+    SetSystemMute(struct {
+        muted bool;
+    });
 
     /// Provides current values for systemwide Gain and Mute. When a client
     /// connects to AudioCore, the system immediately sends that client a
     /// SystemGainMuteChanged event with the current system Gain|Mute settings.
     /// Subsequent events will be sent when these Gain|Mute values change.
-    [Transitional, Deprecated]
-    -> SystemGainMuteChanged(float32 gain_db, bool muted);
+    @transitional
+    @deprecated
+    -> SystemGainMuteChanged(struct {
+        gain_db float32;
+        muted bool;
+    });
 
     // By default, reading and writing device settings files is enabled. This
     // method (which has impact across the entire audio subsystem) allows a test
@@ -157,25 +171,41 @@ protocol AudioCore {
     // TODO(fxbug.dev/13578): Move this to the hub, instead of FIDL API. Alternately,
     // simply remove; going forward, HermeticTestEnvironment accepts a
     // parameter that disables device settings writeback during testing.
-    [Transitional, Deprecated]
-    EnableDeviceSettings(bool enabled);
+    @transitional
+    @deprecated
+    EnableDeviceSettings(struct {
+        enabled bool;
+    });
 
     /// Set the Usage gain applied to Renderers. By default, the gain for all
     /// render usages is set to Unity (0 db).
-    SetRenderUsageGain(AudioRenderUsage usage, float32 gain_db);
+    SetRenderUsageGain(struct {
+        usage AudioRenderUsage;
+        gain_db float32;
+    });
 
     /// Set the Usage gain applied to Capturers. By default, the gain for all
     /// capture usages is set to Unity (0 db).
-    SetCaptureUsageGain(AudioCaptureUsage usage, float32 gain_db);
+    SetCaptureUsageGain(struct {
+        usage AudioCaptureUsage;
+        gain_db float32;
+    });
 
     /// Binds to a volume control protocol for the given usage.
-    BindUsageVolumeControl(Usage usage, request<fuchsia.media.audio.VolumeControl> volume_control);
+    BindUsageVolumeControl(resource struct {
+        usage Usage;
+        volume_control server_end:fuchsia.media.audio.VolumeControl;
+    });
 
     /// SetInteraction allows changing how audio_core handles interactions of multiple active
     /// streams simultaneously.  If streams of Usage `active` are processing audio, and streams of
     /// Usage `affected` are as well, the Behavior specified will be applied to the streams of Usage
     /// `affected`.
-    SetInteraction(Usage active, Usage affected, Behavior behavior);
+    SetInteraction(struct {
+        active Usage;
+        affected Usage;
+        behavior Behavior;
+    });
 
     /// Re-initializes the set of rules that are currently governing the interaction of streams in
     /// audio_core.  The default behavior is 'NONE'.
@@ -188,7 +218,7 @@ protocol AudioCore {
 
 // Placeholder for routing policies.
 // TODO(fxbug.dev/34922): Replace, when routing is handled by a central policy manager.
-enum AudioOutputRoutingPolicy {
+type AudioOutputRoutingPolicy = strict enum {
     // AudioRenderers are always connected to all audio outputs which currently
     // in the plugged state (eg; have a connector attached to them)
     ALL_PLUGGED_OUTPUTS = 0;

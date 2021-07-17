@@ -1,28 +1,30 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.fshost;
 
 using zx;
 
 /// Manages the block watcher.
-[Discoverable]
+@discoverable
 protocol BlockWatcher {
     /// Pauses the block watcher. This causes the block watcher to drop all
     /// new block device events.
     /// Returns ZX_ERR_UNAVAILABLE if the watcher has been paused too many times.
-    Pause() -> (zx.status status);
+    Pause() -> (struct {
+        status zx.status;
+    });
 
     /// Resumes the block watcher. The block watcher won't resume until every
     /// Pause() call has had a corresponding Resume().
     /// Returns ZX_ERR_BAD_STATE if the watcher isn't paused.
-    Resume() -> (zx.status status);
+    Resume() -> (struct {
+        status zx.status;
+    });
 };
 
 /// Manages fshost lifecycle
-[Discoverable]
+@discoverable
 protocol Admin {
     /// Causes fshost to unmount all filesystems and exit. Fshost has
     /// successfully unmounted all filesystems when this function returns, and

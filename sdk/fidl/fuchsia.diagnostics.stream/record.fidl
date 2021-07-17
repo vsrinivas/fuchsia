@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.diagnostics.stream;
 using fuchsia.diagnostics;
 using zx;
@@ -10,44 +8,44 @@ using zx;
 /// Maximum number of arguments that can be encoded per record, as specified by the tracing format:
 ///
 /// https://fuchsia.dev/fuchsia-src/development/tracing/trace-format#arguments
-const uint32 MAX_ARGS = 15;
+const MAX_ARGS uint32 = 15;
 
 /// A small(ish) limit on the length of argument names is used because argument names are expected
 /// to be used repeatedly, many times.
-const uint32 MAX_ARG_NAME_LENGTH = 256;
+const MAX_ARG_NAME_LENGTH uint32 = 256;
 
 /// The maximum string length which we can encode into the tracing format.
-const uint32 MAX_TEXT_ARG_LENGTH = 32768;
+const MAX_TEXT_ARG_LENGTH uint32 = 32768;
 
 /// A record in the diagnostic stream.
-[MaxHandles = "0"]
-struct Record {
+@max_handles("0")
+type Record = struct {
     /// The monotonic time at which the record was generated.
-    zx.time timestamp;
+    timestamp zx.time;
     /// Severity of the record.
-    fuchsia.diagnostics.Severity severity;
+    severity fuchsia.diagnostics.Severity;
     /// The key-value pairs which make up this record.
-    vector<Argument>:MAX_ARGS arguments;
+    arguments vector<Argument>:MAX_ARGS;
 };
 
 /// A named key-value pair in the diagnostic record.
-[MaxHandles = "0"]
-struct Argument {
+@max_handles("0")
+type Argument = struct {
     /// The name of the argument.
-    string:MAX_ARG_NAME_LENGTH name;
+    name string:MAX_ARG_NAME_LENGTH;
     /// The value of the argument.
-    Value value;
+    value Value;
 };
 
 /// An argument value which can be one of several types.
-[MaxHandles = "0"]
-flexible union Value {
+@max_handles("0")
+type Value = flexible union {
     /// A signed integral argument.
-    1: int64 signed_int;
+    1: signed_int int64;
     /// An unsigned integral argument.
-    2: uint64 unsigned_int;
+    2: unsigned_int uint64;
     /// A double-precision floating-point argument.
-    3: float64 floating;
+    3: floating float64;
     /// A UTF8 text argument.
-    4: string:MAX_TEXT_ARG_LENGTH text;
+    4: text string:MAX_TEXT_ARG_LENGTH;
 };

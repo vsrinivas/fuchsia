@@ -1,15 +1,15 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library banjo.examples.order3;
 
-enum Foo {
+type Foo = strict enum {
     hello = 1;
 };
 
-[Transport = "Banjo"]
+@transport("Banjo")
 protocol Bar {
-    World(Foo foo) -> ();
+    World(struct {
+        foo Foo;
+    }) -> ();
 };

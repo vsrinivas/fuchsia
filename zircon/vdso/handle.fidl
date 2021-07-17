@@ -1,25 +1,47 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library zx;
 
-[Transport = "Syscall", NoProtocolPrefix]
+@transport("Syscall")
+@no_protocol_prefix
 protocol handlefuncs {
     /// Close a handle.
     /// Rights: None.
-    handle_close([Release] handle handle) -> (status status);
+    handle_close(resource struct {
+        @release
+        handle handle;
+    }) -> (struct {
+        status status;
+    });
 
     /// Close a number of handles.
     /// Rights: None.
-    handle_close_many([Release] vector<handle> handles) -> (status status);
+    handle_close_many(resource struct {
+        @release
+        handles vector<handle>;
+    }) -> (struct {
+        status status;
+    });
 
     /// Duplicate a handle.
     /// Rights: handle must have ZX_RIGHT_DUPLICATE.
-    handle_duplicate(handle handle, rights rights) -> (status status, handle out);
+    handle_duplicate(resource struct {
+        handle handle;
+        rights rights;
+    }) -> (resource struct {
+        status status;
+        out handle;
+    });
 
     /// Replace a handle.
     /// Rights: None.
-    handle_replace([Release] handle handle, rights rights) -> (status status, handle out);
+    handle_replace(resource struct {
+        @release
+        handle handle;
+        rights rights;
+    }) -> (resource struct {
+        status status;
+        out handle;
+    });
 };

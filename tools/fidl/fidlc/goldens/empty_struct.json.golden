@@ -11,7 +11,7 @@
       "name": "fidl.test.emptystruct/EmptyProtocol",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/empty_struct.test.fidl",
-        "line": 7,
+        "line": 5,
         "column": 10,
         "length": 13
       },
@@ -22,7 +22,7 @@
           "name": "Send",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/empty_struct.test.fidl",
-            "line": 8,
+            "line": 6,
             "column": 5,
             "length": 4
           },
@@ -37,8 +37,8 @@
               "name": "e",
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/empty_struct.test.fidl",
-                "line": 8,
-                "column": 16,
+                "line": 7,
+                "column": 9,
                 "length": 1
               },
               "field_shape_v1": {
@@ -94,8 +94,8 @@
               "name": "e",
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/empty_struct.test.fidl",
-                "line": 9,
-                "column": 22,
+                "line": 10,
+                "column": 9,
                 "length": 1
               },
               "field_shape_v1": {
@@ -134,7 +134,7 @@
           "name": "SendAndReceive",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/empty_struct.test.fidl",
-            "line": 10,
+            "line": 12,
             "column": 5,
             "length": 14
           },
@@ -149,8 +149,8 @@
               "name": "e",
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/empty_struct.test.fidl",
-                "line": 10,
-                "column": 26,
+                "line": 13,
+                "column": 9,
                 "length": 1
               },
               "field_shape_v1": {
@@ -193,8 +193,8 @@
               "name": "e",
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/empty_struct.test.fidl",
-                "line": 10,
-                "column": 39,
+                "line": 15,
+                "column": 9,
                 "length": 1
               },
               "field_shape_v1": {
@@ -241,9 +241,9 @@
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/empty_struct.test.fidl",
-        "line": 8,
-        "column": 9,
-        "length": 9
+        "line": 6,
+        "column": 10,
+        "length": 31
       },
       "anonymous": true,
       "members": [
@@ -256,8 +256,8 @@
           "name": "e",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/empty_struct.test.fidl",
-            "line": 8,
-            "column": 16,
+            "line": 7,
+            "column": 9,
             "length": 1
           },
           "field_shape_v1": {
@@ -299,8 +299,8 @@
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/empty_struct.test.fidl",
         "line": 9,
-        "column": 15,
-        "length": 9
+        "column": 16,
+        "length": 31
       },
       "anonymous": true,
       "members": [
@@ -313,8 +313,8 @@
           "name": "e",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/empty_struct.test.fidl",
-            "line": 9,
-            "column": 22,
+            "line": 10,
+            "column": 9,
             "length": 1
           },
           "field_shape_v1": {
@@ -355,9 +355,9 @@
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/empty_struct.test.fidl",
-        "line": 10,
-        "column": 19,
-        "length": 9
+        "line": 12,
+        "column": 20,
+        "length": 31
       },
       "anonymous": true,
       "members": [
@@ -370,8 +370,8 @@
           "name": "e",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/empty_struct.test.fidl",
-            "line": 10,
-            "column": 26,
+            "line": 13,
+            "column": 9,
             "length": 1
           },
           "field_shape_v1": {
@@ -412,9 +412,9 @@
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/empty_struct.test.fidl",
-        "line": 10,
-        "column": 32,
-        "length": 9
+        "line": 14,
+        "column": 12,
+        "length": 31
       },
       "anonymous": true,
       "members": [
@@ -427,8 +427,8 @@
           "name": "e",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/empty_struct.test.fidl",
-            "line": 10,
-            "column": 39,
+            "line": 15,
+            "column": 9,
             "length": 1
           },
           "field_shape_v1": {
@@ -465,8 +465,8 @@
       "name": "fidl.test.emptystruct/Empty",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/empty_struct.test.fidl",
-        "line": 4,
-        "column": 8,
+        "line": 3,
+        "column": 6,
         "length": 5
       },
       "anonymous": false,

@@ -1,16 +1,21 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library zx;
 
-[Transport = "Syscall"]
+@transport("Syscall")
 protocol bti {
     /// Create a new bus transaction initiator.
     /// Rights: iommu must be of type ZX_OBJ_TYPE_IOMMU and have ZX_RIGHT_NONE.
     // TODO(fxbug.dev/32803): This is an unusual rights spec.
-    bti_create(handle:IOMMU iommu, uint32 options, uint64 bti_id) -> (status status, handle:BTI out);
+    bti_create(resource struct {
+        iommu handle:IOMMU;
+        options uint32;
+        bti_id uint64;
+    }) -> (resource struct {
+        status status;
+        out handle:BTI;
+    });
 
     /// Pin pages and grant devices access to them.
     /// Rights: handle must be of type ZX_OBJ_TYPE_BTI and have ZX_RIGHT_MAP.
@@ -19,14 +24,23 @@ protocol bti {
     /// Rights: If options & ZX_BTI_PERM_WRITE, vmo must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_WRITE.
     /// Rights: If options & ZX_BTI_PERM_EXECUTE, vmo must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_READ.
     // READ is intentional in the EXECUTE condition.
-    bti_pin(handle:BTI handle,
-            uint32 options,
-            handle:VMO vmo,
-            uint64 offset,
-            uint64 size)
-        -> (status status, vector_paddr addrs, handle:PMT pmt);
+    bti_pin(resource struct {
+        handle handle:BTI;
+        options uint32;
+        vmo handle:VMO;
+        offset uint64;
+        size uint64;
+    }) -> (resource struct {
+        status status;
+        addrs vector_paddr;
+        pmt handle:PMT;
+    });
 
     /// Releases all quarantined PMTs.
     /// Rights: handle must be of type ZX_OBJ_TYPE_BTI and have ZX_RIGHT_WRITE.
-    bti_release_quarantine(handle:BTI handle) -> (status status);
+    bti_release_quarantine(resource struct {
+        handle handle:BTI;
+    }) -> (struct {
+        status status;
+    });
 };

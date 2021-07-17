@@ -1,8 +1,6 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.pkg;
 
 using zx;
@@ -11,7 +9,7 @@ using zx;
 ///
 /// This is intended to be implemented by package resolver components, and used by
 /// repository administration tools.
-[Discoverable]
+@discoverable
 protocol RepositoryManager {
     /// Adds a repository. This will overwrite the repository if it already exists.
     ///
@@ -20,7 +18,9 @@ protocol RepositoryManager {
     ///     * `ZX_ERR_ACCESS_DENIED` if editing repositories is permanently disabled.
     ///     * `ZX_ERR_ALREADY_EXISTS` if the repository already exists.
     ///     * `ZX_ERR_INVALID_ARGS` if the repository is malformed.
-    Add(RepositoryConfig repo) -> () error zx.status;
+    Add(struct {
+        repo RepositoryConfig;
+    }) -> (struct {}) error zx.status;
 
     /// Removes a repository.
     ///
@@ -33,7 +33,9 @@ protocol RepositoryManager {
     ///       `repo_url` matches a static repository.
     ///     * `ZX_ERR_INVALID_ARGS` if the `repo_url` is malformed.
     ///     * `ZX_ERR_NOT_FOUND` if the repository does not exist.
-    Remove(string repo_url) -> () error zx.status;
+    Remove(struct {
+        repo_url string;
+    }) -> (struct {}) error zx.status;
 
     /// Adds a mirror to a repository. This will overwrite the mirror if it already exists.
     ///
@@ -43,7 +45,10 @@ protocol RepositoryManager {
     ///     * `ZX_ERR_ALREADY_EXISTS` if the mirror for this repository already exists.
     ///     * `ZX_ERR_INVALID_ARGS` if the `repo_url` or the `mirror` is malformed.
     ///     * `ZX_ERR_NOT_FOUND` if the repository does not exist.
-    AddMirror(string repo_url, MirrorConfig mirror) -> () error zx.status;
+    AddMirror(struct {
+        repo_url string;
+        mirror MirrorConfig;
+    }) -> (struct {}) error zx.status;
 
     /// Removes a mirror from a repository.
     ///
@@ -55,34 +60,39 @@ protocol RepositoryManager {
     /// * error a zx_status value indicating failure. One of the following:
     ///     * `ZX_ERR_INVALID_ARGS` if the `repo_url` or the `mirror_url` is malformed.
     ///     * `ZX_ERR_NOT_FOUND` if the repository or mirror does not exist.
-    RemoveMirror(string repo_url, string mirror_url) -> () error zx.status;
+    RemoveMirror(struct {
+        repo_url string;
+        mirror_url string;
+    }) -> (struct {}) error zx.status;
 
     /// Returns an iterator over all repositories.
     ///
     /// + request `iterator` a request for an iterator.
-    List(request<RepositoryIterator> iterator);
+    List(resource struct {
+        iterator server_end:RepositoryIterator;
+    });
 };
 
 /// The configuration necessary to connect to a repository and its mirrors.
-table RepositoryConfig {
+type RepositoryConfig = table {
     /// A fuchsia-pkg URL identifying the repository. Required.
     ///
     /// Example: fuchsia-pkg://example.com/
-    1: string repo_url;
+    1: repo_url string;
 
     /// A vector of public keys that have signed the initial trusted root
     /// metadata. Required.
     ///
     /// These keys must match one of the trusted keys known to the system.
-    2: vector<RepositoryKeyConfig> root_keys;
+    2: root_keys vector<RepositoryKeyConfig>;
 
     /// The repository mirrors that serve the package contents. Required.
-    3: vector<MirrorConfig> mirrors;
+    3: mirrors vector<MirrorConfig>;
 
     /// The package URL of the system update package. Optional.
     ///
     /// Only used for the fuchsia-pkg://fuchsia.com/ repo.
-    4: string update_package_url;
+    4: update_package_url string;
 
     /// The initial trusted root metadata version. Optional, if absent presumed
     /// to be 1.
@@ -96,32 +106,32 @@ table RepositoryConfig {
     /// kept reasonably in sync with the most recent published version of the
     /// root metadata, as that avoids the risk of an old and unused root key
     /// being used to compromise resolvers during the trust initialization.
-    5: uint32 root_version;
+    5: root_version uint32;
 
     /// The number of `root_keys` that need to have signed the root metadata for it
     /// to be considered trusted. This value must be greater than or equal to 1.
     /// Optional, if absent presumed to be 1.
-    6: uint32 root_threshold;
+    6: root_threshold uint32;
 
     /// Whether the package resolver should check attached storage for blobs and
     /// repository metadata. Optional, if absent presumed to be false.
-    7: bool use_local_mirror;
+    7: use_local_mirror bool;
 
     /// Controls how repository metadata is persisted across reboots. Optional, if absent presumed
     /// to be EPHEMERAL.
-    8: RepositoryStorageType storage_type;
+    8: storage_type RepositoryStorageType;
 };
 
 /// The keys used by the repository to authenticate its packages.
 ///
 /// The only supported algorithm at the moment is ed25519.
-flexible union RepositoryKeyConfig {
+type RepositoryKeyConfig = flexible union {
     /// The raw ed25519 public key as binary data.
-    1: bytes ed25519_key;
+    1: ed25519_key bytes;
 };
 
 /// Where the repository storage is written to.
-enum RepositoryStorageType {
+type RepositoryStorageType = strict enum {
     /// Ephemeral, or in-memory storage. This repository metadata will be lost
     /// when the process or device is restarted. The default type.
     EPHEMERAL = 1;
@@ -132,12 +142,12 @@ enum RepositoryStorageType {
 };
 
 /// The configuration necessary to connect to a mirror.
-table MirrorConfig {
+type MirrorConfig = table {
     /// The base URL of the TUF metadata on this mirror. Required.
-    1: string mirror_url;
+    1: mirror_url string;
 
     /// Whether or not to automatically monitor the mirror for updates. Required.
-    2: bool subscribe;
+    2: subscribe bool;
 
     // TODO(fxbug.dev/75789): Turn comment below into doc-comment.
     //
@@ -146,7 +156,7 @@ table MirrorConfig {
 
     /// The URL where blobs from this mirror should be fetched.  Optional.
     /// If absent presumed to be `mirror_url + "/blobs"`.
-    4: string blob_mirror_url;
+    4: blob_mirror_url string;
 };
 
 /// The iterator over all the repositories defined in a `PackageResolver`.
@@ -155,5 +165,7 @@ protocol RepositoryIterator {
     ///
     /// - response `repos` a vector of `RepositoryConfig` repositories.
     ///   Will return an empty vector when there are no more repositories.
-    Next() -> (vector<RepositoryConfig> repos);
+    Next() -> (struct {
+        repos vector<RepositoryConfig>;
+    });
 };

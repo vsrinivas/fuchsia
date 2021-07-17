@@ -1,8 +1,6 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.driver.framework;
 
 using fuchsia.component;
@@ -14,46 +12,46 @@ alias NodePropertyValueString = string:256;
 alias NodePropertyValueBool = bool;
 alias NodePropertyValueEnum = string:256;
 
-const uint8 MAX_OFFER_COUNT = 64;
-const uint8 MAX_SYMBOL_COUNT = 64;
-const uint8 MAX_PROPERTY_COUNT = 64;
+const MAX_OFFER_COUNT uint8 = 64;
+const MAX_SYMBOL_COUNT uint8 = 64;
+const MAX_PROPERTY_COUNT uint8 = 64;
 
-const uint8 MAX_NODE_NAME_LENGTH = 128;
-const uint8 MAX_SYMBOL_NAME_LENGTH = 128;
+const MAX_NODE_NAME_LENGTH uint8 = 128;
+const MAX_SYMBOL_NAME_LENGTH uint8 = 128;
 
 /// Definition of a symbol provided by a driver for a node. A symbol is local to
 /// a driver host.
-table NodeSymbol {
+type NodeSymbol = table {
     /// Name of the symbol.
-    1: string:MAX_SYMBOL_NAME_LENGTH name;
+    1: name string:MAX_SYMBOL_NAME_LENGTH;
 
     /// Virtual address of the symbol, within a driver host's process.
-    2: zx.vaddr address;
+    2: address zx.vaddr;
 };
 
 /// Definition of a property for a node. A property is commonly used to match a
 /// node to a driver for driver binding.
-table NodeProperty {
+type NodeProperty = table {
     /// Key for the property.
-    1: uint32 key;
+    1: key uint32;
 
     /// Value for the property.
-    2: uint32 value;
+    2: value uint32;
 };
 
 /// Arguments for adding a node.
-table NodeAddArgs {
+type NodeAddArgs = table {
     /// Name of the node.
-    1: string:MAX_NODE_NAME_LENGTH name;
+    1: name string:MAX_NODE_NAME_LENGTH;
 
     /// FIDL services to offer to the driver that is bound to this node.
-    2: vector<fuchsia.component.name>:MAX_OFFER_COUNT offers;
+    2: offers vector<fuchsia.component.name>:MAX_OFFER_COUNT;
 
     /// Functions to provide to the driver that is bound to this node.
-    3: vector<NodeSymbol>:MAX_SYMBOL_COUNT symbols;
+    3: symbols vector<NodeSymbol>:MAX_SYMBOL_COUNT;
 
     /// Properties of the node.
-    4: vector<NodeProperty>:MAX_PROPERTY_COUNT properties;
+    4: properties vector<NodeProperty>:MAX_PROPERTY_COUNT;
 };
 
 /// Protocol through which a parent node controls one of its children.
@@ -66,7 +64,7 @@ protocol NodeController {
 };
 
 /// Error codes for the Node protocol.
-enum NodeError {
+type NodeError = strict enum {
     // The Node was removed from the topology.
     NODE_REMOVED = 1;
     // The Node's name is missing.
@@ -93,7 +91,9 @@ protocol Node {
     /// If `node` is present, this driver takes responsibility for binding to
     /// the newly created child. Otherwise, the driver framework will locate an
     /// appropriate driver to bind the child to.
-    AddChild(NodeAddArgs args,
-             request<NodeController> controller,
-             request<Node>? node) -> () error NodeError;
+    AddChild(resource struct {
+        args NodeAddArgs;
+        controller server_end:NodeController;
+        node server_end:<Node, optional>;
+    }) -> (struct {}) error NodeError;
 };

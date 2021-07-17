@@ -1,23 +1,21 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.goldfish;
 
 using zx;
 
 /// Signal that will be active on event handle if the Read() method
 /// will return data.
-const uint32 SIGNAL_READABLE = 0x01000000; // ZX_USER_SIGNAL_0
+const SIGNAL_READABLE uint32 = 0x01000000; // ZX_USER_SIGNAL_0
 
 /// Signal that will be active on event handle if the Write() method
 /// will accept data.
-const uint32 SIGNAL_WRITABLE = 0x02000000; // ZX_USER_SIGNAL_1
+const SIGNAL_WRITABLE uint32 = 0x02000000; // ZX_USER_SIGNAL_1
 
 /// Signal that will be active on event handle if the device has been
 /// disconnected.
-const uint32 SIGNAL_HANGUP = 0x04000000; // ZX_USER_SIGNAL_2
+const SIGNAL_HANGUP uint32 = 0x04000000; // ZX_USER_SIGNAL_2
 
 /// Interface for the Goldfish pipe driver.
 protocol PipeDevice {
@@ -25,30 +23,53 @@ protocol PipeDevice {
     /// to the pipe. Multiple pipes can be opened for a single device.
     /// Closing the device connection will also close all pipe connections.
     /// TODO(fxbug.dev/6547): Unify `device` and `pipe`.
-    OpenPipe(request<Pipe> pipe_request);
+    OpenPipe(resource struct {
+        pipe_request server_end:Pipe;
+    });
 };
 
 protocol Pipe {
     /// Request new IO buffer size. Can fail if out of memory. Discards
     /// contents of existing buffer on success. Leaves existing buffer
     /// intact on failure.
-    SetBufferSize(uint64 size) -> (zx.status res);
+    SetBufferSize(struct {
+        size uint64;
+    }) -> (struct {
+        res zx.status;
+    });
 
     /// Set event used to signal device state. Discards existing event
     /// after having transferred device state to the new event.
-    SetEvent(zx.handle:EVENT event);
+    SetEvent(resource struct {
+        event zx.handle:EVENT;
+    });
 
     /// Acquire VMO for IO buffer. Can be called multiple times. Each call
     /// returns a new handle to the VMO.
-    GetBuffer() -> (zx.status res, zx.handle:VMO? vmo);
+    GetBuffer() -> (resource struct {
+        res zx.status;
+        vmo zx.handle:<VMO, optional>;
+    });
 
     /// Attempt to read up to count bytes into IO buffer at specified offset.
     /// Returns `ZX_ERR_SHOULD_WAIT` if pipe device is not readable.
-    Read(uint64 count, uint64 offset) -> (zx.status res, uint64 actual);
+    Read(struct {
+        count uint64;
+        offset uint64;
+    }) -> (struct {
+        res zx.status;
+        actual uint64;
+    });
 
     /// Writes up to count bytes from the IO buffer at specified offset.
     /// Returns `ZX_ERR_SHOULD_WAIT` if pipe device is not writable.
-    Write(uint64 count, uint64 offset) -> (zx.status res, uint64 actual);
+    Write(struct {
+        count uint64;
+        offset uint64;
+    }) -> (struct {
+        res zx.status;
+        actual uint64;
+    });
 
     /// Writes `count` bytes from the IO buffer at specified write
     /// `offset`. Returns `ZX_ERR_SHOULD_WAIT` if pipe device is not writable.
@@ -63,6 +84,13 @@ protocol Pipe {
     /// The name "DoCall" (instead of "Call") is to avoid collision with LLCPP
     /// generated code "class Call" (generated per protocol).  We don't want
     /// this method attempting to compile as if it were a constructor.
-    DoCall(uint64 count, uint64 offset, uint64 read_count, uint64 read_offset)
-        -> (zx.status res, uint64 actual);
+    DoCall(struct {
+        count uint64;
+        offset uint64;
+        read_count uint64;
+        read_offset uint64;
+    }) -> (struct {
+        res zx.status;
+        actual uint64;
+    });
 };

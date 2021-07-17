@@ -1,8 +1,6 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.netemul;
 
 using fuchsia.netemul.network;
@@ -19,7 +17,7 @@ using fuchsia.netemul.sync;
 /// The lifetime of the created realms (and the context services) is bound to
 /// the connection to the `Sandbox` service. If the channel is closed, all the
 /// realms and the components created within them will be terminated.
-[Discoverable]
+@discoverable
 protocol Sandbox {
     /// Creates a new realm configured by `options`.
     ///
@@ -31,13 +29,20 @@ protocol Sandbox {
     /// * error `ZX_ERR_INVALID_ARGS` if `options` was invalid.
     /// * error `ZX_ERR_INTERNAL` for internal errors, including failures to
     ///     build the requested component topology.
-    CreateRealm(request<ManagedRealm> realm, RealmOptions options);
+    CreateRealm(resource struct {
+        realm server_end:ManagedRealm;
+        options RealmOptions;
+    });
     /// Gets this sandbox's network context.
     ///
     /// + request `network_context` request handle to the network context.
-    GetNetworkContext(request<fuchsia.netemul.network.NetworkContext> network_context);
+    GetNetworkContext(resource struct {
+        network_context server_end:fuchsia.netemul.network.NetworkContext;
+    });
     /// Gets this sandbox's synchronization manager.
     ///
     /// + request `sync_manager` request handle to the synchronization manager.
-    GetSyncManager(request<fuchsia.netemul.sync.SyncManager> sync_manager);
+    GetSyncManager(resource struct {
+        sync_manager server_end:fuchsia.netemul.sync.SyncManager;
+    });
 };

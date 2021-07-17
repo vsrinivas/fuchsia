@@ -1,17 +1,15 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.ui.scenic;
 
 using fuchsia.ui.gfx;
 using fuchsia.ui.input;
 using fuchsia.ui.views;
 
-resource union Command {
-    1: fuchsia.ui.gfx.Command gfx;
+type Command = strict resource union {
+    1: gfx fuchsia.ui.gfx.Command;
     2: reserved;
-    3: fuchsia.ui.views.Command views;
-    4: fuchsia.ui.input.Command input;
+    3: views fuchsia.ui.views.Command;
+    4: input fuchsia.ui.input.Command;
 };

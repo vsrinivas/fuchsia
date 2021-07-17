@@ -1,18 +1,18 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.intel.hda;
 
 using zx;
 
-[ForDeprecatedCBindings]
+@for_deprecated_c_bindings
 protocol CodecDevice {
     // Note: this method obtains a channel to the codec device which
     // communicates using a legcy custom binary serialized format.  Once the
     // system has been updated to use FIDL as its serialization format instead
     // of the legacy custom format, this method can be updated to use an
     // interface request instead of returning a channel.
-    GetChannel() -> (zx.handle:CHANNEL ch);
+    GetChannel() -> (resource struct {
+        ch zx.handle:CHANNEL;
+    });
 };

@@ -13,8 +13,8 @@
       "name": "fidl.test.padding/Padding1ByteEnd",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-        "line": 4,
-        "column": 8,
+        "line": 3,
+        "column": 6,
         "length": 15
       },
       "anonymous": false,
@@ -27,8 +27,8 @@
           "name": "a",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-            "line": 5,
-            "column": 12,
+            "line": 4,
+            "column": 5,
             "length": 1
           },
           "field_shape_v1": {
@@ -48,8 +48,8 @@
           "name": "b",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-            "line": 6,
-            "column": 11,
+            "line": 5,
+            "column": 5,
             "length": 1
           },
           "field_shape_v1": {
@@ -86,8 +86,8 @@
       "name": "fidl.test.padding/Padding2ByteEnd",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-        "line": 10,
-        "column": 8,
+        "line": 9,
+        "column": 6,
         "length": 15
       },
       "anonymous": false,
@@ -100,8 +100,8 @@
           "name": "a",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-            "line": 11,
-            "column": 12,
+            "line": 10,
+            "column": 5,
             "length": 1
           },
           "field_shape_v1": {
@@ -121,8 +121,8 @@
           "name": "b",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-            "line": 12,
-            "column": 12,
+            "line": 11,
+            "column": 5,
             "length": 1
           },
           "field_shape_v1": {
@@ -159,8 +159,8 @@
       "name": "fidl.test.padding/Padding3ByteEnd",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-        "line": 16,
-        "column": 8,
+        "line": 15,
+        "column": 6,
         "length": 15
       },
       "anonymous": false,
@@ -173,8 +173,8 @@
           "name": "a",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-            "line": 17,
-            "column": 12,
+            "line": 16,
+            "column": 5,
             "length": 1
           },
           "field_shape_v1": {
@@ -194,8 +194,8 @@
           "name": "b",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-            "line": 18,
-            "column": 11,
+            "line": 17,
+            "column": 5,
             "length": 1
           },
           "field_shape_v1": {
@@ -232,8 +232,8 @@
       "name": "fidl.test.padding/Padding4ByteEnd",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-        "line": 22,
-        "column": 8,
+        "line": 21,
+        "column": 6,
         "length": 15
       },
       "anonymous": false,
@@ -246,8 +246,8 @@
           "name": "a",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-            "line": 23,
-            "column": 12,
+            "line": 22,
+            "column": 5,
             "length": 1
           },
           "field_shape_v1": {
@@ -267,8 +267,8 @@
           "name": "b",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-            "line": 24,
-            "column": 12,
+            "line": 23,
+            "column": 5,
             "length": 1
           },
           "field_shape_v1": {
@@ -305,8 +305,8 @@
       "name": "fidl.test.padding/Padding5ByteEnd",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-        "line": 28,
-        "column": 8,
+        "line": 27,
+        "column": 6,
         "length": 15
       },
       "anonymous": false,
@@ -319,8 +319,8 @@
           "name": "a",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-            "line": 29,
-            "column": 12,
+            "line": 28,
+            "column": 5,
             "length": 1
           },
           "field_shape_v1": {
@@ -340,8 +340,8 @@
           "name": "b",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-            "line": 30,
-            "column": 12,
+            "line": 29,
+            "column": 5,
             "length": 1
           },
           "field_shape_v1": {
@@ -361,8 +361,8 @@
           "name": "c",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-            "line": 31,
-            "column": 11,
+            "line": 30,
+            "column": 5,
             "length": 1
           },
           "field_shape_v1": {
@@ -399,8 +399,8 @@
       "name": "fidl.test.padding/Padding6ByteEnd",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-        "line": 35,
-        "column": 8,
+        "line": 34,
+        "column": 6,
         "length": 15
       },
       "anonymous": false,
@@ -413,8 +413,8 @@
           "name": "a",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-            "line": 36,
-            "column": 12,
+            "line": 35,
+            "column": 5,
             "length": 1
           },
           "field_shape_v1": {
@@ -434,8 +434,8 @@
           "name": "b",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-            "line": 37,
-            "column": 12,
+            "line": 36,
+            "column": 5,
             "length": 1
           },
           "field_shape_v1": {
@@ -472,8 +472,8 @@
       "name": "fidl.test.padding/Padding7ByteEnd",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-        "line": 41,
-        "column": 8,
+        "line": 40,
+        "column": 6,
         "length": 15
       },
       "anonymous": false,
@@ -486,8 +486,8 @@
           "name": "a",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-            "line": 42,
-            "column": 12,
+            "line": 41,
+            "column": 5,
             "length": 1
           },
           "field_shape_v1": {
@@ -507,8 +507,8 @@
           "name": "b",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-            "line": 43,
-            "column": 11,
+            "line": 42,
+            "column": 5,
             "length": 1
           },
           "field_shape_v1": {
@@ -545,8 +545,8 @@
       "name": "fidl.test.padding/Padding1ByteMiddle",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-        "line": 47,
-        "column": 8,
+        "line": 46,
+        "column": 6,
         "length": 18
       },
       "anonymous": false,
@@ -559,8 +559,8 @@
           "name": "a",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-            "line": 48,
-            "column": 11,
+            "line": 47,
+            "column": 5,
             "length": 1
           },
           "field_shape_v1": {
@@ -580,8 +580,8 @@
           "name": "b",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-            "line": 50,
-            "column": 12,
+            "line": 49,
+            "column": 5,
             "length": 1
           },
           "field_shape_v1": {
@@ -618,8 +618,8 @@
       "name": "fidl.test.padding/Padding2ByteMiddle",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-        "line": 53,
-        "column": 8,
+        "line": 52,
+        "column": 6,
         "length": 18
       },
       "anonymous": false,
@@ -632,8 +632,8 @@
           "name": "a",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-            "line": 54,
-            "column": 12,
+            "line": 53,
+            "column": 5,
             "length": 1
           },
           "field_shape_v1": {
@@ -653,8 +653,8 @@
           "name": "b",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-            "line": 56,
-            "column": 12,
+            "line": 55,
+            "column": 5,
             "length": 1
           },
           "field_shape_v1": {
@@ -691,8 +691,8 @@
       "name": "fidl.test.padding/Padding3ByteMiddle",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-        "line": 59,
-        "column": 8,
+        "line": 58,
+        "column": 6,
         "length": 18
       },
       "anonymous": false,
@@ -705,8 +705,8 @@
           "name": "a",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-            "line": 60,
-            "column": 11,
+            "line": 59,
+            "column": 5,
             "length": 1
           },
           "field_shape_v1": {
@@ -726,8 +726,8 @@
           "name": "b",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-            "line": 62,
-            "column": 12,
+            "line": 61,
+            "column": 5,
             "length": 1
           },
           "field_shape_v1": {
@@ -764,8 +764,8 @@
       "name": "fidl.test.padding/Padding4ByteMiddle",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-        "line": 65,
-        "column": 8,
+        "line": 64,
+        "column": 6,
         "length": 18
       },
       "anonymous": false,
@@ -778,8 +778,8 @@
           "name": "a",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-            "line": 66,
-            "column": 12,
+            "line": 65,
+            "column": 5,
             "length": 1
           },
           "field_shape_v1": {
@@ -799,8 +799,8 @@
           "name": "b",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-            "line": 68,
-            "column": 12,
+            "line": 67,
+            "column": 5,
             "length": 1
           },
           "field_shape_v1": {
@@ -837,8 +837,8 @@
       "name": "fidl.test.padding/Padding5ByteMiddle",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-        "line": 71,
-        "column": 8,
+        "line": 70,
+        "column": 6,
         "length": 18
       },
       "anonymous": false,
@@ -851,8 +851,8 @@
           "name": "a",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-            "line": 72,
-            "column": 12,
+            "line": 71,
+            "column": 5,
             "length": 1
           },
           "field_shape_v1": {
@@ -872,8 +872,8 @@
           "name": "b",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-            "line": 73,
-            "column": 11,
+            "line": 72,
+            "column": 5,
             "length": 1
           },
           "field_shape_v1": {
@@ -893,8 +893,8 @@
           "name": "c",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-            "line": 75,
-            "column": 12,
+            "line": 74,
+            "column": 5,
             "length": 1
           },
           "field_shape_v1": {
@@ -931,8 +931,8 @@
       "name": "fidl.test.padding/Padding6ByteMiddle",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-        "line": 78,
-        "column": 8,
+        "line": 77,
+        "column": 6,
         "length": 18
       },
       "anonymous": false,
@@ -945,8 +945,8 @@
           "name": "a",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-            "line": 79,
-            "column": 12,
+            "line": 78,
+            "column": 5,
             "length": 1
           },
           "field_shape_v1": {
@@ -966,8 +966,8 @@
           "name": "b",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-            "line": 81,
-            "column": 12,
+            "line": 80,
+            "column": 5,
             "length": 1
           },
           "field_shape_v1": {
@@ -1004,8 +1004,8 @@
       "name": "fidl.test.padding/Padding7ByteMiddle",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-        "line": 84,
-        "column": 8,
+        "line": 83,
+        "column": 6,
         "length": 18
       },
       "anonymous": false,
@@ -1018,8 +1018,8 @@
           "name": "a",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-            "line": 85,
-            "column": 11,
+            "line": 84,
+            "column": 5,
             "length": 1
           },
           "field_shape_v1": {
@@ -1039,8 +1039,8 @@
           "name": "b",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-            "line": 87,
-            "column": 12,
+            "line": 86,
+            "column": 5,
             "length": 1
           },
           "field_shape_v1": {
@@ -1077,8 +1077,8 @@
       "name": "fidl.test.padding/Padding4ByteAlignmentLength12",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-        "line": 94,
-        "column": 8,
+        "line": 93,
+        "column": 6,
         "length": 29
       },
       "anonymous": false,
@@ -1091,8 +1091,8 @@
           "name": "a",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-            "line": 95,
-            "column": 12,
+            "line": 94,
+            "column": 5,
             "length": 1
           },
           "field_shape_v1": {
@@ -1112,8 +1112,8 @@
           "name": "b",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-            "line": 96,
-            "column": 11,
+            "line": 95,
+            "column": 5,
             "length": 1
           },
           "field_shape_v1": {
@@ -1133,8 +1133,8 @@
           "name": "c",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-            "line": 98,
-            "column": 12,
+            "line": 97,
+            "column": 5,
             "length": 1
           },
           "field_shape_v1": {
@@ -1154,8 +1154,8 @@
           "name": "d",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-            "line": 99,
-            "column": 12,
+            "line": 98,
+            "column": 5,
             "length": 1
           },
           "field_shape_v1": {
@@ -1192,8 +1192,8 @@
       "name": "fidl.test.padding/Padding2ByteAlignmentLength6",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-        "line": 103,
-        "column": 8,
+        "line": 102,
+        "column": 6,
         "length": 28
       },
       "anonymous": false,
@@ -1206,8 +1206,8 @@
           "name": "a",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-            "line": 105,
-            "column": 11,
+            "line": 104,
+            "column": 5,
             "length": 1
           },
           "field_shape_v1": {
@@ -1227,8 +1227,8 @@
           "name": "b",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-            "line": 107,
-            "column": 12,
+            "line": 106,
+            "column": 5,
             "length": 1
           },
           "field_shape_v1": {
@@ -1248,8 +1248,8 @@
           "name": "c",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
-            "line": 109,
-            "column": 11,
+            "line": 108,
+            "column": 5,
             "length": 1
           },
           "field_shape_v1": {

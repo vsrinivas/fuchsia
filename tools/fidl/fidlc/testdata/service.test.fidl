@@ -1,19 +1,16 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fidl.test.service;
 
-service EmptyService {
-};
+service EmptyService {};
 
 protocol FirstProtocol {
     MethodOnFirst();
 };
 
 service SingleMemberService {
-    FirstProtocol single_member;
+    single_member client_end:FirstProtocol;
 };
 
 protocol SecondProtocol {
@@ -21,11 +18,11 @@ protocol SecondProtocol {
 };
 
 service MultiHeterogeneousMemberService {
-    FirstProtocol first_member;
-    SecondProtocol second_member;
+    first_member client_end:FirstProtocol;
+    second_member client_end:SecondProtocol;
 };
 
 service MultiHomogeneousMemberService {
-    FirstProtocol first_member;
-    FirstProtocol second_member;
+    first_member client_end:FirstProtocol;
+    second_member client_end:FirstProtocol;
 };

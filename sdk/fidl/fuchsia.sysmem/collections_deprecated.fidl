@@ -1,22 +1,20 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.sysmem;
 
 using zx;
 
-/// Information about a buffer collection and its buffers.
 // TODO(fxbug.dev/32119): change struct to table
-[ForDeprecatedCBindings]
-resource struct BufferCollectionInfo {
+/// Information about a buffer collection and its buffers.
+@for_deprecated_c_bindings
+type BufferCollectionInfo = resource struct {
     /// The number of buffers in the collection.
-    uint32 buffer_count;
+    buffer_count uint32;
 
     /// Describes how the contents of buffers are represented.
     /// All buffers within the collection have the same format.
-    BufferFormat format;
+    format BufferFormat;
 
     /// VMO handles for each buffer in the collection.
     /// The VMOs are only present when the buffers are backed by VMOs.
@@ -27,9 +25,9 @@ resource struct BufferCollectionInfo {
     /// client specified when allocating the buffer collection.  For example,
     /// a client which expressed a read-only usage will receive VMOs without
     /// write rights.
-    array<zx.handle:VMO?>:64 vmos;
+    vmos array<zx.handle:<VMO, optional>, 64>;
 
     /// The size of each VMO provided.
     /// This property is only present when the buffers are backed by VMOs.
-    uint64 vmo_size = 0;
+    vmo_size uint64 = 0;
 };

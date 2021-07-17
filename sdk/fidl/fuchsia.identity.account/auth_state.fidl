@@ -1,12 +1,10 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.identity.account;
 
 /// An assessment of whether the account owner is present.
-enum Presence {
+type Presence = strict enum {
     /// The account itself is locked and inaccessible.
     LOCKED = 1;
 
@@ -22,7 +20,7 @@ enum Presence {
 };
 
 /// An assessment of whether the account owner is engaged.
-enum Engagement {
+type Engagement = strict enum {
     /// The account itself is locked and inaccessible.
     LOCKED = 1;
 
@@ -38,7 +36,7 @@ enum Engagement {
 };
 
 /// A type of attacker to consider when creating authentication states.
-enum ThreatScenario {
+type ThreatScenario = strict enum {
     /// No attackers are considered.
     NONE = 1;
 
@@ -61,20 +59,20 @@ enum ThreatScenario {
 };
 
 /// Defines the context to consider when creating authentication states.
-[MaxHandles = "0"]
-struct Scenario {
+@max_handles("0")
+type Scenario = struct {
     /// If true, experimental or test authenticators are included when creating
     /// authentication states and MUST NOT be used to hand out sensitive user
     /// information.
-    bool include_test;
+    include_test bool;
 
     /// Defines the threat scenario to consider when creating
     /// authentication states.
-    ThreatScenario threat_scenario;
+    threat_scenario ThreatScenario;
 };
 
 /// A high level assessment of whether the account owner is present and engaged.
-enum AuthStateSummary {
+type AuthStateSummary = strict enum {
 
     /// The account itself is locked and inaccessible.
     LOCKED = 1;
@@ -95,39 +93,39 @@ enum AuthStateSummary {
 /// An assessment of the current presence and engagement of an account owner,
 /// under the provided scenario, including the system's confidence in that
 /// assessment and its timeliness.
-[MaxHandles = "0"]
-struct AuthState {
+@max_handles("0")
+type AuthState = struct {
     /// The scenario that was considered when creating this authentication
     /// state.
-    Scenario scenario;
+    scenario Scenario;
 
     /// A high level assessment of whether the account owner is present and
     /// engaged.
-    AuthStateSummary summary;
+    summary AuthStateSummary;
 
     /// An assessment of whether the account owner is present.
-    Presence presence;
+    presence Presence;
 
     /// An assessment of whether the account owner is engaged.
-    Engagement engagement;
+    engagement Engagement;
 
-    // TODO(jsankey): Add additional fields to express timeliness and
-    // confidence.
+// TODO(jsankey): Add additional fields to express timeliness and
+// confidence.
 };
 
 /// An expression of the types of changes to an auth state that should be
 /// reported over listener interfaces. By default no changes will be reported.
-[MaxHandles = "0"]
-struct AuthChangeGranularity {
+@max_handles("0")
+type AuthChangeGranularity = struct {
     /// If true, any changes in the `AuthStateSummary` enumeration will be
     /// reported.
-    bool summary_changes;
+    summary_changes bool;
 
     /// If true, any changes in the `AuthState.presence` enumeration will
     /// be reported.
-    bool presence_changes;
+    presence_changes bool;
 
     /// If true, any changes in the `AuthState.engagement` enumeration will
     /// be reported.
-    bool engagement_changes;
+    engagement_changes bool;
 };

@@ -1,83 +1,81 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library banjo.examples.rustderive;
 
-const uint32 SMALL_ARRAY_SIZE = 8;
-const uint32 LARGE_ARRAY_SIZE = 2048;
+const SMALL_ARRAY_SIZE uint32 = 8;
+const LARGE_ARRAY_SIZE uint32 = 2048;
 
 // Next three data structures intended for checking that type that doesn't derive
 // PartialEq causes type depending on it to not auto-derive PartialEq
-union SomeUnion {
-    1: array<uint8>:8 bytes1;
-    2: array<uint8>:16 bytes2;
+type SomeUnion = strict union {
+    1: bytes1 array<uint8, 8>;
+    2: bytes2 array<uint8, 16>;
 };
 
-struct UnionParentStruct {
-    SomeUnion some_union;
+type UnionParentStruct = struct {
+    some_union SomeUnion;
 };
 
-struct UnionGrandParentStruct {
-    UnionParentStruct field;
+type UnionGrandParentStruct = struct {
+    field UnionParentStruct;
 };
 
 // Next three data structures are to sanity test that types still derive PartialEq/Debug
-enum SomeEnum {
+type SomeEnum = strict enum {
     v1 = 1;
     v2 = 2;
 };
 
-struct EnumParentStruct {
-    SomeEnum some_enum;
+type EnumParentStruct = struct {
+    some_enum SomeEnum;
 };
 
-struct EnumGrandParentStruct {
-    EnumParentStruct field;
+type EnumGrandParentStruct = struct {
+    field EnumParentStruct;
 };
 
 // Small array should auto-derive Debug/PartialEq
-struct SmallArrayStruct {
-    array<uint8>:SMALL_ARRAY_SIZE small_array;
+type SmallArrayStruct = struct {
+    small_array array<uint8, SMALL_ARRAY_SIZE>;
 };
 
 // Big array should not auto-derive Debug/PartialEq
-struct BigArrayStruct {
-    array<uint8>:LARGE_ARRAY_SIZE big_array;
+type BigArrayStruct = struct {
+    big_array array<uint8, LARGE_ARRAY_SIZE>;
 };
 
 // Next three data structures have circular reference. Should still be able to derive
 // Debug and PartialEq
-struct Foo {
-    Bar bar;
+type Foo = struct {
+    bar Bar;
 };
 
-struct Bar {
-    Foo? bar;
-    Baz? baz;
+type Bar = struct {
+    bar box<Foo>;
+    baz box<Baz>;
 };
 
-struct Baz {
-    Foo? foo;
-    Bar? bar;
-    Baz? baz;
+type Baz = struct {
+    foo box<Foo>;
+    bar box<Bar>;
+    baz box<Baz>;
 };
 
 // Next three data structures have circular reference. Unlike the above case, one struct
 // cannot derive PartialEq, hence other structs cannot, either.
-struct Foo2 {
-    Bar2 bar;
+type Foo2 = struct {
+    bar Bar2;
 };
 
-struct Bar2 {
-    Foo2? bar;
-    Baz2? baz;
+type Bar2 = struct {
+    bar box<Foo2>;
+    baz box<Baz2>;
 };
 
-struct Baz2 {
-    Foo2? foo;
-    Bar2? bar;
-    Baz2? baz;
-    SomeUnion some_union;
+type Baz2 = struct {
+    foo box<Foo2>;
+    bar box<Bar2>;
+    baz box<Baz2>;
+    some_union SomeUnion;
 };

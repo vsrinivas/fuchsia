@@ -1,7 +1,6 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
 library fuchsia.modular.session;
 
 using fuchsia.mem;
@@ -10,7 +9,7 @@ using fuchsia.sys;
 /// A protocol used to launch sessionmgr.
 ///
 /// basemgr serves this protocol to session components.
-[Discoverable]
+@discoverable
 protocol Launcher {
     /// Launches an instance of sessionmgr with the given Modular configuration.
     ///
@@ -32,7 +31,9 @@ protocol Launcher {
     ///     basemgr is shutting down.
     ///
     /// * `config` Modular configuration serialized as UTF-8 JSON
-    LaunchSessionmgr(fuchsia.mem.Buffer config);
+    LaunchSessionmgr(resource struct {
+        config fuchsia.mem.Buffer;
+    });
 
     /// Launches an instance of sessionmgr with the given Modular configuration and
     /// a list of services to be provided to agents in
@@ -40,6 +41,8 @@ protocol Launcher {
     ///
     /// |additional_services.host_directory| is required. The channel will close with
     /// ZX_ERR_INVALID_ARGS if not present.
-    LaunchSessionmgrWithServices(fuchsia.mem.Buffer config,
-                                 fuchsia.sys.ServiceList additional_services);
+    LaunchSessionmgrWithServices(resource struct {
+        config fuchsia.mem.Buffer;
+        additional_services fuchsia.sys.ServiceList;
+    });
 };

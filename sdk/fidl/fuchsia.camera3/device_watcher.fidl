@@ -1,11 +1,9 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.camera3;
 
-const uint32 MAX_WATCH_DEVICES_EVENTS = 256;
+const MAX_WATCH_DEVICES_EVENTS uint32 = 256;
 
 alias DeviceId = uint64;
 
@@ -14,7 +12,7 @@ alias DeviceId = uint64;
 /// which will allow multiple instances of the same protocol to exist side-by-side. Clients are
 /// not required to maintain a connection to the Watcher in order to use established Camera
 /// connections.
-[Discoverable]
+@discoverable
 protocol DeviceWatcher {
     /// Returns a list of available camera IDs when it has changed from the previously returned
     /// list of IDs, or when it is called by a client for the first time. The returned list may be
@@ -30,20 +28,25 @@ protocol DeviceWatcher {
     ///
     /// Camera applications should tolerate an empty list returned, and attempt to retry the
     /// `WatchDevices()` call.
-    WatchDevices() -> (vector<WatchDevicesEvent>:MAX_WATCH_DEVICES_EVENTS events);
+    WatchDevices() -> (struct {
+        events vector<WatchDevicesEvent>:MAX_WATCH_DEVICES_EVENTS;
+    });
 
     /// Acquires a camera interface for the given ID. If any clients already exist for this camera,
     /// the request is closed with the ZX_ERR_ALREADY_BOUND epitaph.
-    ConnectToDevice(DeviceId id, request<Device> request);
+    ConnectToDevice(resource struct {
+        id DeviceId;
+        request server_end:Device;
+    });
 };
 
-union WatchDevicesEvent {
+type WatchDevicesEvent = strict union {
     /// Indicates an existing camera with the provided ID is still available.
-    1: DeviceId existing;
+    1: existing DeviceId;
 
     /// Indicates a new camera with the provided ID is now available.
-    2: DeviceId added;
+    2: added DeviceId;
 
     /// Indicates an existing camera with the provided ID is no longer available.
-    3: DeviceId removed;
+    3: removed DeviceId;
 };

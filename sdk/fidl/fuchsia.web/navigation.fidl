@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.web;
 
 using fuchsia.mem;
@@ -17,19 +15,24 @@ protocol NavigationEventListener {
     /// will be left unset in `change`.
     ///
     /// Implementer must call the acknowledgement callback to receive new navigation events.
-    OnNavigationStateChanged(NavigationState change) -> ();
+    OnNavigationStateChanged(resource struct {
+        change NavigationState;
+    }) -> ();
 };
 
 protocol NavigationPolicyProvider {
     /// Called when the [`Frame`] is processing a navigation request in one of the phase(s)
     /// specified in [`NavigationPolicyProviderParams`]. Navigation is paused until the result is
     /// received. The returned [`NavigationDecision`] defines how the navigation should proceed.
-    EvaluateRequestedNavigation(RequestedNavigation requested_navigation)
-        -> (NavigationDecision decision);
+    EvaluateRequestedNavigation(struct {
+        requested_navigation RequestedNavigation;
+    }) -> (resource struct {
+        decision NavigationDecision;
+    });
 };
 
 /// Represents the return status of a [`NavigationController`] method.
-enum NavigationControllerError : int32 {
+type NavigationControllerError = strict enum : int32 {
     /// The provided URL is invalid.
     INVALID_URL = 1;
 
@@ -48,8 +51,10 @@ protocol NavigationController {
     /// If an error occured, the [`NavigationControllerError`] will be set to one of these values:
     /// - `INVALID_URL`: The `url` parameter is invalid.
     /// - `INVALID_HEADER`: At least one of the headers in [`LoadUrlParams.headers`] is invalid.
-    LoadUrl(Url url, LoadUrlParams params)
-        -> () error NavigationControllerError;
+    LoadUrl(resource struct {
+        url Url;
+        params LoadUrlParams;
+    }) -> (struct {}) error NavigationControllerError;
 
     /// Tells the [`Frame`] to navigate to the previous page in its history, if any.
     GoBack();
@@ -61,59 +66,63 @@ protocol NavigationController {
     Stop();
 
     /// Tells the [`Frame`] to reload the current page.
-    Reload(ReloadType type);
+    Reload(struct {
+        type ReloadType;
+    });
 
     /// Returns information for the currently visible content regardless of loading state, or an
     /// empty entry if no content is being displayed.
-    GetVisibleEntry() -> (NavigationState entry);
+    GetVisibleEntry() -> (resource struct {
+        entry NavigationState;
+    });
 };
 
 /// Additional parameters for modifying the behavior of [`NavigationController.LoadUrl`].
-resource table LoadUrlParams {
+type LoadUrlParams = resource table {
     /// Provides a hint to the browser UI about how [`NavigationController.LoadUrl`] was triggered.
-    1: LoadUrlReason type;
+    1: type LoadUrlReason;
 
     /// The URL that linked to the resource being requested.
-    2: Url referrer_url;
+    2: referrer_url Url;
 
     /// Should be set to true to propagate user activation to the frame. User activation implies
     /// that the user is interacting with the web frame. It enables some web features that are not
     /// available otherwise. For example, autoplay will work only when this flag is set to true.
-    3: bool was_user_activated;
+    3: was_user_activated bool;
 
     /// Custom HTTP headers. RFC7540 does not specify a limit on the number nor
     /// size of headers.
-    4: vector<fuchsia.net.http.Header>:MAX headers;
+    4: headers vector<fuchsia.net.http.Header>:MAX;
 };
 
 /// Contains information about the [`Frame`]'s navigation state.
-resource table NavigationState {
+type NavigationState = resource table {
     /// The page's URL.
-    1: Url url;
+    1: url Url;
 
     /// The user-visible page title. While W3C style recommendation is that HTML
     /// TITLE tags not exceed 64 characters in length, there is no actual limit.
-    2: string:MAX title;
+    2: title string:MAX;
 
     /// Indicates whether this was a navigation to an error page.
-    3: PageType page_type;
+    3: page_type PageType;
 
     /// Indicates if there is a following navigation.
-    4: bool can_go_forward;
+    4: can_go_forward bool;
 
     /// Indicates if there is a previous navigation.
-    5: bool can_go_back;
+    5: can_go_back bool;
 
     /// Indicates that the main document's statically declared resources have been loaded.
-    6: bool is_main_document_loaded;
+    6: is_main_document_loaded bool;
 
     /// Current favicon for the page. The field is set only when the `FAVICON` flag is set for the
     /// `NavigationEventListener` and the favicon has changed.
-    7: Favicon favicon;
+    7: favicon Favicon;
 };
 
 /// Characterizes the type of reload.
-enum ReloadType : uint32 {
+type ReloadType = strict enum : uint32 {
     /// Reloads the current entry, bypassing the cache for the main resource.
     PARTIAL_CACHE = 0;
 
@@ -122,7 +131,7 @@ enum ReloadType : uint32 {
 };
 
 /// Characterizes the origin of a [`NavigationController.LoadUrl`] request.
-enum LoadUrlReason : uint32 {
+type LoadUrlReason = strict enum : uint32 {
     /// Navigation was initiated by the user following a link.
     LINK = 0;
 
@@ -131,7 +140,7 @@ enum LoadUrlReason : uint32 {
 };
 
 /// Characterizes the page type in a [`NavigationState`].
-enum PageType {
+type PageType = strict enum {
     /// Regular web page.
     NORMAL = 0;
 
@@ -144,7 +153,7 @@ enum PageType {
 alias NavigationId = uint64;
 
 /// Identifies a navigation phase.
-bits NavigationPhase : uint32 {
+type NavigationPhase = strict bits : uint32 {
     /// Navigation is being started.
     START = 0x1;
 
@@ -160,67 +169,66 @@ bits NavigationPhase : uint32 {
 };
 
 /// Used to specify which navigation events should be delegated to [`NavigationPolicyProvider`].
-table NavigationPolicyProviderParams {
+type NavigationPolicyProviderParams = table {
     /// Specifies the set of navigation phases in the main frame that should be evaluated.
-    1: NavigationPhase main_frame_phases;
+    1: main_frame_phases NavigationPhase;
 
     /// Specifies the set of navigation phases in subframes that should be evaluated.
-    2: NavigationPhase subframe_phases;
+    2: subframe_phases NavigationPhase;
 };
 
-table RequestedNavigation {
+type RequestedNavigation = table {
     /// Unique ID of the navigation.
-    1: NavigationId id;
+    1: id NavigationId;
 
     /// Current navigation phase. Exactly one bit will be set.
-    2: NavigationPhase phase;
+    2: phase NavigationPhase;
 
     /// Whether the navigation is taking place in the main frame versus in a subframe.
-    3: bool is_main_frame;
+    3: is_main_frame bool;
 
     /// Whether the navigation happened without changing the document.
-    4: bool is_same_document;
+    4: is_same_document bool;
 
     /// Whether the navigation is a POST request.
-    5: bool is_http_post;
+    5: is_http_post bool;
 
     /// The current target URL of the navigation. This may change for the same navigation after
     /// encountering a server redirect.
-    6: Url url;
+    6: url Url;
 
     /// Whether the navigation was initiated by a user gesture.
-    7: bool has_gesture;
+    7: has_gesture bool;
 
     /// Whether the navigation has encountered a server redirect or not.
-    8: bool was_server_redirect;
+    8: was_server_redirect bool;
 };
 
 /// Empty struct used in NavigationDecision for actions that don't hav any arguments.
 // TODO: fxbug.dev/7913
-struct NoArgumentsAction {
-};
+type NoArgumentsAction = struct {};
 
 /// Navigation action that should be taken in response to a navigation request. Returned from
 /// [`NavigationPolicyProvider.EvaluateRequestedNavigation`].
-resource union NavigationDecision {
+type NavigationDecision = strict resource union {
     /// Navigation should proceed normally.
-    1: NoArgumentsAction proceed;
+    1: proceed NoArgumentsAction;
 
     /// Navigation should be aborted. The frame should stay on the current page.
-    2: NoArgumentsAction abort;
+    2: abort NoArgumentsAction;
 };
 
 /// Used to represent a favicon for a page. An empty table (all fields are unset) is used to indicate
 /// that the page doesn't have a favicon.
-resource table Favicon {
+type Favicon = resource table {
     /// The image content encoded as an RGBA bitmap with premultiplied alpha channel. The data is
     /// densely packed, so the stride is always `4 * width` and the total size is
     /// `4 * width * height`.
-    1: fuchsia.mem.Buffer data;
+    1: data fuchsia.mem.Buffer;
 
     /// The width of the image.
-    2: uint32 width;
+    2: width uint32;
 
     /// The height of the image.
-    3: uint32 height;
+    3: height uint32;
 };

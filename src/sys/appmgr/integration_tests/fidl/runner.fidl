@@ -1,48 +1,66 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library test.component.mockrunner;
 
 using fuchsia.sys;
 using zx;
 
-struct ComponentInfo {
-    uint64 unique_id;
-    string url;
+type ComponentInfo = struct {
+    unique_id uint64;
+    url string;
 };
 
 // interface to control the fake component created by MockRunner.
 protocol MockComponent {
-    Kill(uint64 errorcode);
-    ConnectToService(string service_name, zx.handle:CHANNEL channel);
+    Kill(struct {
+        errorcode uint64;
+    });
+    ConnectToService(resource struct {
+        service_name string;
+        channel zx.handle:CHANNEL;
+    });
 
     // Set backend service directory which can be used by `PublishService` to
     // publish mock services.
-    SetServiceDirectory(zx.handle:CHANNEL channel);
+    SetServiceDirectory(resource struct {
+        channel zx.handle:CHANNEL;
+    });
 
     // Publishes `service_name` and connects to |backend service directory| when
     // request comes in.
-    PublishService(string service_name) -> ();
+    PublishService(struct {
+        service_name string;
+    }) -> ();
 
     // Gets program metadata for that particular component.
-    GetProgramMetadata() -> (vector<fuchsia.sys.ProgramMetadata>:20 metadata);
+    GetProgramMetadata() -> (struct {
+        metadata vector<fuchsia.sys.ProgramMetadata>:20;
+    });
 };
 
 protocol MockRunner {
     Crash();
-    ConnectToComponent(uint64 id, request<MockComponent> req);
+    ConnectToComponent(resource struct {
+        id uint64;
+        req server_end:MockComponent;
+    });
 
-    -> OnComponentCreated(ComponentInfo info);
-    -> OnComponentKilled(uint64 id);
+    -> OnComponentCreated(struct {
+        info ComponentInfo;
+    });
+    -> OnComponentKilled(struct {
+        id uint64;
+    });
 };
 
 // This interface will help mock runners register themselves so that tests can
 // inspect and control them.
 //
 // Mock runners should register to this service when started.
-[Discoverable]
+@discoverable
 protocol MockRunnerRegistry {
-    Register(MockRunner runner);
+    Register(resource struct {
+        runner client_end:MockRunner;
+    });
 };

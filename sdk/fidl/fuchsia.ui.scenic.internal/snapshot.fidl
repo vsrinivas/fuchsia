@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.ui.scenic.internal;
 
 using fuchsia.mem;
@@ -10,17 +8,19 @@ using fuchsia.mem;
 // A snapshot result contains a buffer containing the snapshotted
 // data as well as a boolean to check whether the snapshot of that
 // compositor was successful or not.
-resource struct SnapshotResult {
-    bool success;
-    fuchsia.mem.Buffer buffer;
+type SnapshotResult = resource struct {
+    success bool;
+    buffer fuchsia.mem.Buffer;
 };
 
 /// Defines an internal interface to take snapshots of the entire scene graph. This
 /// is only to be used by trusted clients.
-[Discoverable]
+@discoverable
 protocol Snapshot {
     /// Takes a snapshot of the entire scene-graph, starting with the first
     /// compositor found. A separate buffer is returned for each compositor,
     /// with an empty array being returned if no compositors were found at all.
-    TakeSnapshot() -> (vector<SnapshotResult> snapshots);
+    TakeSnapshot() -> (resource struct {
+        snapshots vector<SnapshotResult>;
+    });
 };

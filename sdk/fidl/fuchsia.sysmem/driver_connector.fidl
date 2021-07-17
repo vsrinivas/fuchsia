@@ -1,10 +1,10 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.sysmem;
 
+//
+// Needs ForDeprecatedCBindings because used with "FIDL Simple C Bindings".
 /// Once a channel with this interface is established to a driver (typically in
 /// advance), this interface allows asynchronously sending the server end of an
 /// Allocator channel which will be served by the driver.
@@ -21,13 +21,14 @@ library fuchsia.sysmem;
 /// for proper functioning of at least the BufferCollection interface since
 /// that interface has requests that don't complete until the devhost has
 /// constraints from other participants.
-//
-// Needs ForDeprecatedCBindings because used with "FIDL Simple C Bindings".
-[Discoverable, ForDeprecatedCBindings]
+@discoverable
+@for_deprecated_c_bindings
 protocol DriverConnector {
     /// This one-way message sends in the server end of an Allocator channel.
     ///
     /// `allocator_request` will be served by the sysmem driver (or the channel
     /// will close).
-    Connect(request<Allocator> allocator_request);
+    Connect(resource struct {
+        allocator_request server_end:Allocator;
+    });
 };

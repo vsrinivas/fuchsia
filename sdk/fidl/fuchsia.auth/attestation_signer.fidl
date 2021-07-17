@@ -1,8 +1,6 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.auth;
 
 /// This file contains an interface to cryptographically sign any plain text data
@@ -10,7 +8,7 @@ library fuchsia.auth;
 /// attestation based authentication.
 ///
 /// Specifies the success/failure status from the attestation signer.
-enum AttestationSignerStatus {
+type AttestationSignerStatus = strict enum {
     /// The command completed successfully
     OK = 0;
     /// The command referred to a missing, or an invalid argument.
@@ -27,6 +25,10 @@ protocol AttestationSigner {
     ///
     /// Returns the raw bytes of the `signature` string on success. Otherwise,
     /// an error status is returned.
-    SignData(bytes plaintext)
-        -> (AttestationSignerStatus status, bytes? signature);
+    SignData(struct {
+        plaintext bytes;
+    }) -> (struct {
+        status AttestationSignerStatus;
+        signature bytes:optional;
+    });
 };

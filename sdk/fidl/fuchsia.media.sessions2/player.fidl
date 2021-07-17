@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.media.sessions2;
 
 using zx;
@@ -39,7 +37,9 @@ protocol PlayerControl {
     /// enter an error state if the position is out of bounds. `position`
     /// is an offset from the beginning of the media. If this method is not supported as indicated
     /// by the absence of the `SEEK` flag in `PlayerCapabilities`, this method does nothing.
-    Seek(zx.duration position);
+    Seek(struct {
+        position zx.duration;
+    });
 
     /// Skips forward in media by the player's default skip amount. If this method is not supported
     /// as indicated by the absence of the `SKIP_FORWARD` flag in `PlayerCapabilities`, this method
@@ -64,30 +64,37 @@ protocol PlayerControl {
     /// Sets the playback rate of the media. This will not change the playback mode. If this method
     /// is not supported as indicated by the absense of the `SET_PLAYBACK_RATE` flag in
     /// `PlayerCapabilities`, this method does nothing.
-    SetPlaybackRate(float32 playback_rate);
+    SetPlaybackRate(struct {
+        playback_rate float32;
+    });
 
     /// Sets repeat mode to any of the supported repeat modes.
     /// Whether this method takes effect depends on the `PlayerCapabilities` and `repeat_mode`:
     ///   * [`OFF`] is always supported.
     ///   * [`GROUP`] requires the `REPEAT_GROUPS` capability, and is otherwise ignored.
     ///   * [`SINGLE`] requires the `REPEAT_SINGLE` capability, and is otherwise ignored.
-    SetRepeatMode(RepeatMode repeat_mode);
+    SetRepeatMode(struct {
+        repeat_mode RepeatMode;
+    });
 
     /// Sets shuffle mode. If this method is not supported as indicated by the absence of the
     /// `SHUFFLE` flag in `PlayerCapabilities`, this method does nothing.
-    SetShuffleMode(bool shuffle_on);
+    SetShuffleMode(struct {
+        shuffle_on bool;
+    });
 
     /// Binds to the session's volume control for control and notifications. If this method is not
     /// supported as indicated by the absence of the `HAS_GAIN_CONTROL` flag in
     /// `PlayerCapabilities`, the channel handle passed as `volume_control_request` is closed
     /// by the service.
-    BindVolumeControl(
-        request<fuchsia.media.audio.VolumeControl> volume_control_request);
+    BindVolumeControl(resource struct {
+        volume_control_request server_end:fuchsia.media.audio.VolumeControl;
+    });
 };
 
 /// The type of content playing back, which should be set to the largest
 /// applicable value.
-enum ContentType {
+type ContentType = strict enum {
     /// Content does not qualify for any of the other values.
     OTHER = 1;
 
@@ -109,54 +116,54 @@ enum ContentType {
 
 /// Status of a media player.
 // Next Id: 9
-table PlayerStatus {
+type PlayerStatus = table {
     /// Total duration of playing media.
     ///
     /// If this value is omitted, the duration is unknown, not applicable or unchanged. Initially,
     /// the duration is assumed to be unknown.
-    1: zx.duration duration;
+    1: duration zx.duration;
 
     /// Whether the playing media is live (such as television or a live stream).
     ///
     /// If this field is omitted, the value is unchanged. Initially, the value is false.
-    8: bool is_live;
+    8: is_live bool;
 
     /// State of the player.
     ///
     /// If this field is omitted, the value is unchanged. Initially, the value is `IDLE`.
-    2: PlayerState player_state;
+    2: player_state PlayerState;
 
     /// A playback function that describes the position and rate of
     /// play through the media as a function of `CLOCK_MONOTONIC`.
     ///
     /// If this field is omitted, the value is unchanged. Initially, `reference_delta` is 1 and
     /// the remaining constituent fields are 0.
-    3: fuchsia.media.TimelineFunction timeline_function;
+    3: timeline_function fuchsia.media.TimelineFunction;
 
     /// Repeat mode of the player.
     ///
     /// If this field is omitted, the value is unchanged. Initially, the value is `NONE`.
-    4: RepeatMode repeat_mode;
+    4: repeat_mode RepeatMode;
 
     /// Shuffle mode of the player.
     ///
     /// If this field is omitted, the value is unchanged. Initially, the value is false.
-    5: bool shuffle_on;
+    5: shuffle_on bool;
 
     /// The type of content playing back.
     ///
     /// If this field is omitted, the value is unchanged. Initially, the value is `OTHER`.
-    6: ContentType content_type;
+    6: content_type ContentType;
 
     /// An error the player may have encountered.
     ///
     /// This field is omitted unless there is an error. Once an error is indicated, it cannot
     /// be rescinded.
-    7: Error error;
+    7: error Error;
 };
 
 /// State of a media player.
-enum PlayerState {
+type PlayerState = strict enum {
     /// The initial state of a session if there is no associated media.
     IDLE = 0;
 
@@ -174,12 +181,12 @@ enum PlayerState {
 };
 
 // TODO(dalesat): Add error codes for frontends as they are discovered to be useful.
-enum Error {
+type Error = strict enum {
     OTHER = 1;
 };
 
 /// Modes of repeating playback of the current media.
-enum RepeatMode {
+type RepeatMode = strict enum {
     /// No repeat.
     OFF = 0;
 
@@ -190,7 +197,7 @@ enum RepeatMode {
     SINGLE = 2;
 };
 
-bits PlayerCapabilityFlags : uint32 {
+type PlayerCapabilityFlags = strict bits : uint32 {
     /// If set, the player can `Play()`.
     PLAY = 0x1;
 
@@ -229,10 +236,10 @@ bits PlayerCapabilityFlags : uint32 {
 };
 
 /// Describes the capabilities of a player.
-table PlayerCapabilities {
+type PlayerCapabilities = table {
     /// Indicates which capabilities are supported by the player. See `PlayerControl` for
     /// details.
-    1: PlayerCapabilityFlags flags;
+    1: flags PlayerCapabilityFlags;
 };
 
 /// The behavior enforced on the player when it is
@@ -241,7 +248,7 @@ table PlayerCapabilities {
 /// Interruptions are detected using the player's usage.
 ///
 /// By default the interruption behavior is `NONE`.
-enum InterruptionBehavior {
+type InterruptionBehavior = strict enum {
     /// Interruptions have no effect on the player
     /// and it may continue in spite of reduced audibility.
     NONE = 0;
@@ -254,44 +261,44 @@ enum InterruptionBehavior {
 
 /// When emitted, fields that have changed should be set.
 /// The first emission to a new client should be a snapshot.
-table PlayerInfoDelta {
+type PlayerInfoDelta = table {
     /// Whether the entry point for the media into our device network is the
     /// local machine; this should be true if this is the device streaming
     /// from a music service, but false or omitted if this machine is just
     /// receiving an audio stream to act as a speaker.
     ///
     /// If omitted, the value is unchanged. Initially, this value is `true`.
-    1: bool local;
+    1: local bool;
 
     /// The status of the player.
     ///
     /// If omitted, all constituent values are unchanged. If a field within `PlayerStatus` is
     /// omitted, its value is unchanged. Initial values are indicated for each field in
     /// `player_status`.
-    2: PlayerStatus player_status;
+    2: player_status PlayerStatus;
 
     /// The metadata of the playing media.
     ///
     /// If omitted, the metadata is unchanged. Initially, there is no metadata.
-    3: fuchsia.media.Metadata metadata;
+    3: metadata fuchsia.media.Metadata;
 
     /// The images associated with the playing media.
     ///
     /// If omitted, the media images are unchanged. An empty
     /// vector indicates that there are no media images, which is also the initial state.
-    4: vector<MediaImage>:16 media_images;
+    4: media_images vector<MediaImage>:16;
 
     /// The capabilities of the player.
     ///
     /// If omitted, the capabilities are unchanged. Initially, the player is assumed to have no
     /// capabilities.
-    5: PlayerCapabilities player_capabilities;
+    5: player_capabilities PlayerCapabilities;
 
     /// The behavior the player would like to engage in when interrupted
     /// by something, such as an alarm.
     ///
     /// If omitted, the behavior is unchanged. Initially, the value is `NONE`.
-    6: InterruptionBehavior interruption_behavior;
+    6: interruption_behavior InterruptionBehavior;
 };
 
 /// `Player` is a handle for a media player. Unsupported commands are
@@ -301,5 +308,7 @@ protocol Player {
     compose PlayerControl;
 
     /// Gets the net player info change using the hanging get pattern.
-    WatchInfoChange() -> (PlayerInfoDelta player_info_delta);
+    WatchInfoChange() -> (struct {
+        player_info_delta PlayerInfoDelta;
+    });
 };

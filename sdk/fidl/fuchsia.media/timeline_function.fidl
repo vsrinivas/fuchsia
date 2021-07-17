@@ -1,8 +1,6 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.media;
 
 /// A TimelineFunction represents a relationship between a subject timeline and a
@@ -40,17 +38,17 @@ library fuchsia.media;
 /// this with a TimelineFunction whose `subject_time` is the time to skip to,
 /// `reference_time` is now plus some epsilon, and delta ratio is 1/1 for normal
 /// playback rate.
-struct TimelineFunction {
+type TimelineFunction = struct {
     /// A value from the subject timeline that correlates to reference_time.
-    int64 subject_time = 0;
+    subject_time int64 = 0;
 
     /// A value from the reference timeline that correlates to subject_time.
-    int64 reference_time = 0;
+    reference_time int64 = 0;
 
     /// The change in the subject timeline corresponding to reference_delta.
-    uint32 subject_delta = 0;
+    subject_delta uint32 = 0;
 
     /// The change in the reference timeline corresponding to subject_delta.
     /// Cannot be zero.
-    uint32 reference_delta = 1;
+    reference_delta uint32 = 1;
 };

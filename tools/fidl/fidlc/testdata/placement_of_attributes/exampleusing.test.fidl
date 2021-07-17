@@ -1,5 +1,3 @@
-deprecated_syntax;
 library exampleusing;
 
-struct Empty {
-};
+type Empty = struct {};

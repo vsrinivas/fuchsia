@@ -1,13 +1,17 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
 library fuchsia.wayland;
 
 using fuchsia.ui.app;
 
-[Discoverable]
+@discoverable
 protocol ViewProducer {
-    -> OnNewView(fuchsia.ui.app.ViewProvider view_provider, uint32 id);
-    -> OnShutdownView(uint32 id);
+    -> OnNewView(resource struct {
+        view_provider client_end:fuchsia.ui.app.ViewProvider;
+        id uint32;
+    });
+    -> OnShutdownView(struct {
+        id uint32;
+    });
 };

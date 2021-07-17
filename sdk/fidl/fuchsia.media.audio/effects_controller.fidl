@@ -1,18 +1,16 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.media.audio;
 
-enum UpdateEffectError {
+type UpdateEffectError = strict enum {
     INVALID_CONFIG = 1;
     NOT_FOUND = 2;
 };
 
-const uint32 MAX_EFFECT_NAME_LENGTH = 128;
+const MAX_EFFECT_NAME_LENGTH uint32 = 128;
 
-[Discoverable]
+@discoverable
 protocol EffectsController {
     /// Sends the `config` message to an audio effect named `effect_name`. If the
     /// server closes the `EffectsController` connection for any reason, that
@@ -31,6 +29,8 @@ protocol EffectsController {
     ///
     /// Returns `UpdateEffectError.NOT_FOUND` if no effect with name `effect_name`
     /// could be located.
-    UpdateEffect(string:MAX_EFFECT_NAME_LENGTH effect_name, string:MAX config)
-        -> () error UpdateEffectError;
+    UpdateEffect(struct {
+        effect_name string:MAX_EFFECT_NAME_LENGTH;
+        config string:MAX;
+    }) -> (struct {}) error UpdateEffectError;
 };

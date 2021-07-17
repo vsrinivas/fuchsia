@@ -1,18 +1,16 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.audio;
 
 using zx;
 
 /// Properties of the ring buffer. These values don't change once the ring buffer is created.
-table RingBufferProperties {
+type RingBufferProperties = table {
     /// The driver's best estimate of the external delay present in the presentation pipeline for
     /// the chosen format. When precisely synchronizing presentation across multiple entities
     /// (e.g. devices), the external delay should be taken into account.
-    1: zx.duration external_delay;
+    1: external_delay zx.duration;
 
     /// Size (in bytes) representing a temporary buffer used by the driver in order to consume or
     /// generate the ring buffer contents. The ring buffer contents must be produced and consumed
@@ -43,12 +41,12 @@ table RingBufferProperties {
     /// delays added by any software interfacing with the audio hardware do not occur under most
     /// scenarios, and must detect and report underruns. How an underrun is reported is not defined
     /// in this API.
-    2: uint32 fifo_depth;
+    2: fifo_depth uint32;
 
     /// When set to true, indicates that clients need to make sure that their data has been flushed
     /// all the way to physical memory (in the case of playback) or that their view of the ring
     /// buffer will need to be invalidated before read (in the case of capture).
-    3: bool needs_cache_flush_or_invalidate;
+    3: needs_cache_flush_or_invalidate bool;
 
     /// The driver's best estimate of the amount of time it takes the hardware to actually start
     /// playback/capture after a `Start` command is completed as defined by the returned
@@ -58,22 +56,22 @@ table RingBufferProperties {
     /// as in a Bluetooth driver. This delay must be taken into account if not getting the initial
     /// audio samples played or captured is not acceptable. If not included, turn_on_delay is
     /// considered 0.
-    4: zx.duration turn_on_delay;
+    4: turn_on_delay zx.duration;
 };
 
-struct RingBufferPositionInfo {
+type RingBufferPositionInfo = struct {
     /// The driver's best estimate of the time (in the CLOCK_MONOTONIC timeline) at which the
     /// playback/capture pointer reached the position indicated by `position`.
     /// external_delay impact should not be incorporated into 'timestamp'.
     /// turn_on_delay impact should not be incorporated into 'timestamp'.
-    zx.time timestamp;
+    timestamp zx.time;
 
     /// The playback/capture pointer position (in bytes) in the ring buffer at time
     /// `timestamp` as estimated by the driver.
-    uint32 position;
+    position uint32;
 };
 
-enum GetVmoError {
+type GetVmoError = strict enum {
     /// The ring buffer setup failed due to an invalid argument, e.g. min_frames is too big.
     INVALID_ARGS = 1;
 
@@ -85,7 +83,9 @@ enum GetVmoError {
 /// [Audio Driver Streaming Interface](//docs/concepts/drivers/driver_interfaces/audio_streaming.md)
 protocol RingBuffer {
     /// Accessor for top level static properties.
-    GetProperties() -> (RingBufferProperties properties);
+    GetProperties() -> (struct {
+        properties RingBufferProperties;
+    });
 
     /// Gets the ring buffer current position via a hanging get. The driver must respond to a
     /// client's first `WatchClockRecoveryPositionInfo` call, but will not respond to subsequent
@@ -98,7 +98,9 @@ protocol RingBuffer {
     /// `WatchClockRecoveryPositionInfo` may only be called after `GetVmo` was called, hence a
     /// `clock_recovery_notifications_per_ring` was specified.
     /// Must be delivered with timestamps that are monotonically increasing.
-    WatchClockRecoveryPositionInfo() -> (RingBufferPositionInfo position_info);
+    WatchClockRecoveryPositionInfo() -> (struct {
+        position_info RingBufferPositionInfo;
+    });
 
     /// Requests a shared buffer to be used for moving bulk audio data. Requests the buffer size to
     /// fit at least `min_frames`, and returns the actual `num_frames` allocated in
@@ -109,14 +111,20 @@ protocol RingBuffer {
     /// `clock_recovery_notifications_per_ring` frequency. These notifications are meant to be used
     /// for clock recovery.
     ///
-    GetVmo(uint32 min_frames, uint32 clock_recovery_notifications_per_ring)
-        -> (uint32 num_frames, zx.handle:VMO ring_buffer)
-        error GetVmoError;
+    GetVmo(struct {
+        min_frames uint32;
+        clock_recovery_notifications_per_ring uint32;
+    }) -> (resource struct {
+        num_frames uint32;
+        ring_buffer zx.handle:VMO;
+    }) error GetVmoError;
 
     /// Start the ring buffer. The `start_time` value (in the CLOCK_MONOTONIC timeline) indicates
     /// when position began moving, starting at the beginning of the ring buffer.
     /// external_delay impact should not be incorporated into 'start_time'.
-    Start() -> (zx.time start_time);
+    Start() -> (struct {
+        start_time zx.time;
+    });
 
     /// Stop the ring buffer. Once this call's response is received, no further position
     /// notifications will be sent until `Start` is called again.

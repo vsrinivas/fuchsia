@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.ui.focus;
 
 using fuchsia.ui.views;
@@ -11,7 +9,7 @@ using fuchsia.ui.views;
 ///
 /// Reception. Only certain components may receive a FocusChain, as it
 /// captures global information about the scene graph.
-resource table FocusChain {
+type FocusChain = resource table {
     /// The `focus_chain` is reported in order of dominance in the View
     /// hierarchy; each adjacent pair of elements represents a
     /// parent-child relationship.
@@ -33,7 +31,7 @@ resource table FocusChain {
     ///
     /// A FocusChain is invalid if any one if its ViewRefs is
     /// invalid.
-    1: vector<fuchsia.ui.views.ViewRef> focus_chain;
+    1: focus_chain vector<fuchsia.ui.views.ViewRef>;
 };
 
 /// A FocusChainListener receives an updated FocusChain when focus changes.
@@ -41,11 +39,15 @@ protocol FocusChainListener {
     /// Sent when a focus change occurs.  Since `focus_chain` may contain an
     /// empty update, every handler MUST respond to the message even
     /// if its contents are not immediately useful.
-    OnFocusChange(FocusChain focus_chain) -> ();
+    OnFocusChange(resource struct {
+        focus_chain FocusChain;
+    }) -> ();
 };
 
 /// A FocusChainListenerRegistry allows listening to FocusChain updates.
-[Discoverable]
+@discoverable
 protocol FocusChainListenerRegistry {
-    Register(FocusChainListener listener);
+    Register(resource struct {
+        listener client_end:FocusChainListener;
+    });
 };

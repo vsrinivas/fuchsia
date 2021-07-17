@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.wlan.policy;
 
 using fuchsia.wlan.ieee80211 as ieee80211;
@@ -12,7 +10,7 @@ using fuchsia.wlan.ieee80211 as ieee80211;
 /// High level protection type for the network.  This does not convey all details needed
 /// for the mechanism of the connection, but is primarily used to map the target network
 /// to proper scan results.
-enum SecurityType {
+type SecurityType = strict enum {
     NONE = 1;
     WEP = 2;
     WPA = 3;
@@ -23,37 +21,37 @@ enum SecurityType {
 /// Primary means of distinguishing between available networks - the combination of
 /// the (mostly) human recognizable name and the security type.  The security type is used
 /// to distinguish between different network protection (or lack thereof) types.
-struct NetworkIdentifier {
+type NetworkIdentifier = struct {
     /// Network name, often used by users to choose between networks in the UI.
-    bytes:ieee80211.MAX_SSID_BYTE_LEN ssid;
+    ssid bytes:ieee80211.MAX_SSID_BYTE_LEN;
 
     /// Protection type (or not) for the network.
-    SecurityType type;
+    type SecurityType;
 };
 
 /// Network information used to establish a connection.
-table NetworkConfig {
+type NetworkConfig = table {
     /// Identifier used to represent a specific network. No guarantee for uniqueness.
-    1: NetworkIdentifier id;
+    1: id NetworkIdentifier;
 
     /// Information needed to join a network.
-    2: Credential credential;
+    2: credential Credential;
 };
 
 /// Information used to verify access to a target network.
-flexible union Credential {
+type Credential = flexible union {
     /// The network does not use credentials (open networks).
-    1: Empty none;
+    1: none Empty;
 
     /// Plaintext password (handled as binary data).
-    2: bytes password;
+    2: password bytes;
 
     /// Hash representation of the network passphrase (handled as binary data).
-    3: bytes psk;
+    3: psk bytes;
 };
 
 /// Operating band for wlan control request and status updates.
-enum OperatingBand {
+type OperatingBand = strict enum {
     /// Allows for band switching depending on device operating mode and environment.
     ANY = 1;
 
@@ -66,5 +64,4 @@ enum OperatingBand {
 
 /// Empty struct used in place of optional values.
 // TODO: fxbug.dev/7913
-struct Empty {
-};
+type Empty = struct {};

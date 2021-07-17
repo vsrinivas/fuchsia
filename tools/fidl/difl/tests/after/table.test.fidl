@@ -1,67 +1,64 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fidl.difl.test;
 
 // After
 
 //!DeclAdded
-table TableAdded {
-    1: int32 field;
+type TableAdded = table {
+    1: field int32;
 };
 
 // Attributes
-
-[Attribute]
-table TableAttributeAdded {
-    1: int32 field;
+@attribute
+type TableAttributeAdded = table {
+    1: field int32;
 };
 
-table TableAttributeRemoved {
-    1: int32 field;
+type TableAttributeRemoved = table {
+    1: field int32;
 };
 
-[Attribute="after"]
-table TableAttributeChanged {
-    1: int32 field;
+@attribute("after")
+type TableAttributeChanged = table {
+    1: field int32;
 };
 
 // Members
 
-table TableMemberAdded {
-    1: int32 one;
-//!TableMemberAdded
-    2: int32 two;
+type TableMemberAdded = table {
+    1: one int32;
+    //!TableMemberAdded
+    2: two int32;
 };
 
 //!TableMemberRemoved
-table TableMemberRemoved {
-    1: int32 one;
+type TableMemberRemoved = table {
+    1: one int32;
 };
 
-table TableMemberReserved {
-//!TableMemberReserved
+type TableMemberReserved = table {
+    //!TableMemberReserved
     1: reserved;
 };
 
-table TableMemberUnreserved {
-//!TableMemberUnreserved
-    1: int32 member;
+type TableMemberUnreserved = table {
+    //!TableMemberUnreserved
+    1: member int32;
 };
 
-table TableMemberRenamed {
-//!TableMemberRenamed
-    1: int32 new_name;
+type TableMemberRenamed = table {
+    //!TableMemberRenamed
+    1: new_name int32;
 };
 
-table TableMemberSoftTypeChange {
-//!TableMemberTypeChanged
-    1: uint32 member;
+type TableMemberSoftTypeChange = table {
+    //!TableMemberTypeChanged
+    1: member uint32;
 };
 
-table TableMemberHardTypeChange {
-//!TableMemberTypeChanged
-    1: string member;
+type TableMemberHardTypeChange = table {
+    //!TableMemberTypeChanged
+    1: member string;
 };

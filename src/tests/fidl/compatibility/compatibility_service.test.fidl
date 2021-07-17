@@ -1,14 +1,12 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fidl.test.compatibility;
 
 // This is not a reference to library zx to avoid complexity in the test data.
 // A local handle is defined here that contains subtypes that this test cares
 // about.
-enum obj_type : uint32 {
+type obj_type = strict enum : uint32 {
     NONE = 0;
     PROCESS = 1;
     THREAD = 2;
@@ -28,303 +26,302 @@ enum obj_type : uint32 {
 
 resource_definition handle : uint32 {
     properties {
-        obj_type subtype;
+        subtype obj_type;
     };
 };
 
-struct this_is_a_struct {
-    string s;
+type this_is_a_struct = struct {
+    s string;
 };
 
-struct this_is_an_empty_struct {
+type this_is_an_empty_struct = struct {};
+
+type this_is_a_union = strict union {
+    1: s string;
+    2: b bool;
 };
 
-union this_is_a_union {
-    1: string s;
-    2: bool b;
+type this_is_a_table = table {
+    1: s string;
 };
 
-table this_is_a_table {
-    1: string s;
+type this_is_a_xunion = flexible union {
+    1: s string;
+    2: b bool;
 };
 
-flexible union this_is_a_xunion {
-    1: string s;
-    2: bool b;
+type primitive_types = struct {
+    b bool;
+    i8 int8;
+    i16 int16;
+    i32 int32;
+    i64 int64;
+    u8 uint8;
+    u16 uint16;
+    u32 uint32;
+    u64 uint64;
+    f32 float32;
+    f64 float64;
 };
 
-struct primitive_types {
-    bool b;
-    int8 i8;
-    int16 i16;
-    int32 i32;
-    int64 i64;
-    uint8 u8;
-    uint16 u16;
-    uint32 u32;
-    uint64 u64;
-    float32 f32;
-    float64 f64;
-};
-
-struct default_values {
-    bool b1 = true;
-    bool b2 = false;
-    int8 i8 = -23;
-    int16 i16 = 34;
-    int32 i32 = -34595;
-    int64 i64 = 3948038;
-    uint8 u8 = 0;
-    uint16 u16 = 348;
-    uint32 u32 = 9038;
-    uint64 u64 = 19835;
-    float32 f32 = 1.30;
-    float64 f64 = 0.0000054;
-    string s = "hello";
-};
-
-// Arbitrary, but must be small enough such that a single message doesn't exceed
-// kMaxMessageSize or kMaxMessageHandles.
-const uint32 arrays_size = 3;
-
-resource struct arrays {
-    array<bool>:1 b_0;
-    array<int8>:1 i8_0;
-    array<int16>:1 i16_0;
-    array<int32>:1 i32_0;
-    array<int64>:1 i64_0;
-    array<uint8>:1 u8_0;
-    array<uint16>:1 u16_0;
-    array<uint32>:1 u32_0;
-    array<uint64>:1 u64_0;
-    array<float32>:1 f32_0;
-    array<float64>:1 f64_0;
-    array<handle>:1 handle_0;
-    array<bool>:arrays_size b_1;
-    array<int8>:arrays_size i8_1;
-    array<int16>:arrays_size i16_1;
-    array<int32>:arrays_size i32_1;
-    array<int64>:arrays_size i64_1;
-    array<uint8>:arrays_size u8_1;
-    array<uint16>:arrays_size u16_1;
-    array<uint32>:arrays_size u32_1;
-    array<uint64>:arrays_size u64_1;
-    array<float32>:arrays_size f32_1;
-    array<float64>:arrays_size f64_1;
-    array<handle>:arrays_size handle_1;
-};
-
-resource struct arrays_2d {
-    array<array<bool>:2>:arrays_size b;
-    array<array<int8>:2>:arrays_size i8;
-    array<array<int16>:2>:arrays_size i16;
-    array<array<int32>:2>:arrays_size i32;
-    array<array<int64>:2>:arrays_size i64;
-    array<array<uint8>:2>:arrays_size u8;
-    array<array<uint16>:2>:arrays_size u16;
-    array<array<uint32>:2>:arrays_size u32;
-    array<array<uint64>:2>:arrays_size u64;
-    array<array<float32>:2>:arrays_size f32;
-    array<array<float64>:2>:arrays_size f64;
-    array<array<handle>:2>:arrays_size handle_handle;
+type default_values = struct {
+    b1 bool = true;
+    b2 bool = false;
+    i8 int8 = -23;
+    i16 int16 = 34;
+    i32 int32 = -34595;
+    i64 int64 = 3948038;
+    u8 uint8 = 0;
+    u16 uint16 = 348;
+    u32 uint32 = 9038;
+    u64 uint64 = 19835;
+    f32 float32 = 1.30;
+    f64 float64 = 0.0000054;
+    s string = "hello";
 };
 
 // Arbitrary, but must be small enough such that a single message doesn't exceed
 // kMaxMessageSize or kMaxMessageHandles.
-const uint32 vectors_size = 3;
+const arrays_size uint32 = 3;
 
-resource struct vectors {
-    vector<bool> b_0;
-    vector<int8> i8_0;
-    vector<int16> i16_0;
-    vector<int32> i32_0;
-    vector<int64> i64_0;
-    vector<uint8> u8_0;
-    vector<uint16> u16_0;
-    vector<uint32> u32_0;
-    vector<uint64> u64_0;
-    vector<float32> f32_0;
-    vector<float64> f64_0;
-    vector<handle> handle_0;
-    vector<vector<bool>:2> b_1;
-    vector<vector<int8>:2> i8_1;
-    vector<vector<int16>:2> i16_1;
-    vector<vector<int32>:2> i32_1;
-    vector<vector<int64>:2> i64_1;
-    vector<vector<uint8>:2> u8_1;
-    vector<vector<uint16>:2> u16_1;
-    vector<vector<uint32>:2> u32_1;
-    vector<vector<uint64>:2> u64_1;
-    vector<vector<float32>:2> f32_1;
-    vector<vector<float64>:2> f64_1;
-    vector<vector<handle>:2> handle_1;
-    vector<bool>:1 b_sized_0;
-    vector<int8>:1 i8_sized_0;
-    vector<int16>:1 i16_sized_0;
-    vector<int32>:1 i32_sized_0;
-    vector<int64>:1 i64_sized_0;
-    vector<uint8>:1 u8_sized_0;
-    vector<uint16>:1 u16_sized_0;
-    vector<uint32>:1 u32_sized_0;
-    vector<uint64>:1 u64_sized_0;
-    vector<float32>:1 f32_sized_0;
-    vector<float64>:1 f64_sized_0;
-    vector<handle>:1 handle_sized_0;
-    vector<bool>:vectors_size b_sized_1;
-    vector<int8>:vectors_size i8_sized_1;
-    vector<int16>:vectors_size i16_sized_1;
-    vector<int32>:vectors_size i32_sized_1;
-    vector<int64>:vectors_size i64_sized_1;
-    vector<uint8>:vectors_size u8_sized_1;
-    vector<uint16>:vectors_size u16_sized_1;
-    vector<uint32>:vectors_size u32_sized_1;
-    vector<uint64>:vectors_size u64_sized_1;
-    vector<float32>:vectors_size f32_sized_1;
-    vector<float64>:vectors_size f64_sized_1;
-    vector<handle>:vectors_size handle_sized_1;
-    vector<vector<bool>:2>:vectors_size b_sized_2;
-    vector<vector<int8>:2>:vectors_size i8_sized_2;
-    vector<vector<int16>:2>:vectors_size i16_sized_2;
-    vector<vector<int32>:2>:vectors_size i32_sized_2;
-    vector<vector<int64>:2>:vectors_size i64_sized_2;
-    vector<vector<uint8>:2>:vectors_size u8_sized_2;
-    vector<vector<uint16>:2>:vectors_size u16_sized_2;
-    vector<vector<uint32>:2>:vectors_size u32_sized_2;
-    vector<vector<uint64>:2>:vectors_size u64_sized_2;
-    vector<vector<float32>:2>:vectors_size f32_sized_2;
-    vector<vector<float64>:2>:vectors_size f64_sized_2;
-    vector<vector<handle>:2>:vectors_size handle_sized_2;
-    vector<bool>:1? b_nullable_0;
-    vector<int8>:1? i8_nullable_0;
-    vector<int16>:1? i16_nullable_0;
-    vector<int32>:1? i32_nullable_0;
-    vector<int64>:1? i64_nullable_0;
-    vector<uint8>:1? u8_nullable_0;
-    vector<uint16>:1? u16_nullable_0;
-    vector<uint32>:1? u32_nullable_0;
-    vector<uint64>:1? u64_nullable_0;
-    vector<float32>:1? f32_nullable_0;
-    vector<float64>:1? f64_nullable_0;
-    vector<handle>:1? handle_nullable_0;
-    vector<vector<bool>:2>? b_nullable_1;
-    vector<vector<int8>:2>? i8_nullable_1;
-    vector<vector<int16>:2>? i16_nullable_1;
-    vector<vector<int32>:2>? i32_nullable_1;
-    vector<vector<int64>:2>? i64_nullable_1;
-    vector<vector<uint8>:2>? u8_nullable_1;
-    vector<vector<uint16>:2>? u16_nullable_1;
-    vector<vector<uint32>:2>? u32_nullable_1;
-    vector<vector<uint64>:2>? u64_nullable_1;
-    vector<vector<float32>:2>? f32_nullable_1;
-    vector<vector<float64>:2>? f64_nullable_1;
-    vector<vector<handle>:2>? handle_nullable_1;
-    vector<bool>:1? b_nullable_sized_0;
-    vector<int8>:1? i8_nullable_sized_0;
-    vector<int16>:1? i16_nullable_sized_0;
-    vector<int32>:1? i32_nullable_sized_0;
-    vector<int64>:1? i64_nullable_sized_0;
-    vector<uint8>:1? u8_nullable_sized_0;
-    vector<uint16>:1? u16_nullable_sized_0;
-    vector<uint32>:1? u32_nullable_sized_0;
-    vector<uint64>:1? u64_nullable_sized_0;
-    vector<float32>:1? f32_nullable_sized_0;
-    vector<float64>:1? f64_nullable_sized_0;
-    vector<handle>:1? handle_nullable_sized_0;
-    vector<bool>:vectors_size? b_nullable_sized_1;
-    vector<int8>:vectors_size? i8_nullable_sized_1;
-    vector<int16>:vectors_size? i16_nullable_sized_1;
-    vector<int32>:vectors_size? i32_nullable_sized_1;
-    vector<int64>:vectors_size? i64_nullable_sized_1;
-    vector<uint8>:vectors_size? u8_nullable_sized_1;
-    vector<uint16>:vectors_size? u16_nullable_sized_1;
-    vector<uint32>:vectors_size? u32_nullable_sized_1;
-    vector<uint64>:vectors_size? u64_nullable_sized_1;
-    vector<float32>:vectors_size? f32_nullable_sized_1;
-    vector<float64>:vectors_size? f64_nullable_sized_1;
-    vector<handle>:vectors_size? handle_nullable_sized_1;
-    vector<vector<bool>:2>:vectors_size? b_nullable_sized_2;
-    vector<vector<int8>:2>:vectors_size? i8_nullable_sized_2;
-    vector<vector<int16>:2>:vectors_size? i16_nullable_sized_2;
-    vector<vector<int32>:2>:vectors_size? i32_nullable_sized_2;
-    vector<vector<int64>:2>:vectors_size? i64_nullable_sized_2;
-    vector<vector<uint8>:2>:vectors_size? u8_nullable_sized_2;
-    vector<vector<uint16>:2>:vectors_size? u16_nullable_sized_2;
-    vector<vector<uint32>:2>:vectors_size? u32_nullable_sized_2;
-    vector<vector<uint64>:2>:vectors_size? u64_nullable_sized_2;
-    vector<vector<float32>:2>:vectors_size? f32_nullable_sized_2;
-    vector<vector<float64>:2>:vectors_size? f64_nullable_sized_2;
-    vector<vector<handle>:2>:vectors_size? handle_nullable_sized_2;
+type arrays = resource struct {
+    b_0 array<bool, 1>;
+    i8_0 array<int8, 1>;
+    i16_0 array<int16, 1>;
+    i32_0 array<int32, 1>;
+    i64_0 array<int64, 1>;
+    u8_0 array<uint8, 1>;
+    u16_0 array<uint16, 1>;
+    u32_0 array<uint32, 1>;
+    u64_0 array<uint64, 1>;
+    f32_0 array<float32, 1>;
+    f64_0 array<float64, 1>;
+    handle_0 array<handle, 1>;
+    b_1 array<bool, arrays_size>;
+    i8_1 array<int8, arrays_size>;
+    i16_1 array<int16, arrays_size>;
+    i32_1 array<int32, arrays_size>;
+    i64_1 array<int64, arrays_size>;
+    u8_1 array<uint8, arrays_size>;
+    u16_1 array<uint16, arrays_size>;
+    u32_1 array<uint32, arrays_size>;
+    u64_1 array<uint64, arrays_size>;
+    f32_1 array<float32, arrays_size>;
+    f64_1 array<float64, arrays_size>;
+    handle_1 array<handle, arrays_size>;
+};
+
+type arrays_2d = resource struct {
+    b array<array<bool, 2>, arrays_size>;
+    i8 array<array<int8, 2>, arrays_size>;
+    i16 array<array<int16, 2>, arrays_size>;
+    i32 array<array<int32, 2>, arrays_size>;
+    i64 array<array<int64, 2>, arrays_size>;
+    u8 array<array<uint8, 2>, arrays_size>;
+    u16 array<array<uint16, 2>, arrays_size>;
+    u32 array<array<uint32, 2>, arrays_size>;
+    u64 array<array<uint64, 2>, arrays_size>;
+    f32 array<array<float32, 2>, arrays_size>;
+    f64 array<array<float64, 2>, arrays_size>;
+    handle_handle array<array<handle, 2>, arrays_size>;
+};
+
+// Arbitrary, but must be small enough such that a single message doesn't exceed
+// kMaxMessageSize or kMaxMessageHandles.
+const vectors_size uint32 = 3;
+
+type vectors = resource struct {
+    b_0 vector<bool>;
+    i8_0 vector<int8>;
+    i16_0 vector<int16>;
+    i32_0 vector<int32>;
+    i64_0 vector<int64>;
+    u8_0 vector<uint8>;
+    u16_0 vector<uint16>;
+    u32_0 vector<uint32>;
+    u64_0 vector<uint64>;
+    f32_0 vector<float32>;
+    f64_0 vector<float64>;
+    handle_0 vector<handle>;
+    b_1 vector<vector<bool>:2>;
+    i8_1 vector<vector<int8>:2>;
+    i16_1 vector<vector<int16>:2>;
+    i32_1 vector<vector<int32>:2>;
+    i64_1 vector<vector<int64>:2>;
+    u8_1 vector<vector<uint8>:2>;
+    u16_1 vector<vector<uint16>:2>;
+    u32_1 vector<vector<uint32>:2>;
+    u64_1 vector<vector<uint64>:2>;
+    f32_1 vector<vector<float32>:2>;
+    f64_1 vector<vector<float64>:2>;
+    handle_1 vector<vector<handle>:2>;
+    b_sized_0 vector<bool>:1;
+    i8_sized_0 vector<int8>:1;
+    i16_sized_0 vector<int16>:1;
+    i32_sized_0 vector<int32>:1;
+    i64_sized_0 vector<int64>:1;
+    u8_sized_0 vector<uint8>:1;
+    u16_sized_0 vector<uint16>:1;
+    u32_sized_0 vector<uint32>:1;
+    u64_sized_0 vector<uint64>:1;
+    f32_sized_0 vector<float32>:1;
+    f64_sized_0 vector<float64>:1;
+    handle_sized_0 vector<handle>:1;
+    b_sized_1 vector<bool>:vectors_size;
+    i8_sized_1 vector<int8>:vectors_size;
+    i16_sized_1 vector<int16>:vectors_size;
+    i32_sized_1 vector<int32>:vectors_size;
+    i64_sized_1 vector<int64>:vectors_size;
+    u8_sized_1 vector<uint8>:vectors_size;
+    u16_sized_1 vector<uint16>:vectors_size;
+    u32_sized_1 vector<uint32>:vectors_size;
+    u64_sized_1 vector<uint64>:vectors_size;
+    f32_sized_1 vector<float32>:vectors_size;
+    f64_sized_1 vector<float64>:vectors_size;
+    handle_sized_1 vector<handle>:vectors_size;
+    b_sized_2 vector<vector<bool>:2>:vectors_size;
+    i8_sized_2 vector<vector<int8>:2>:vectors_size;
+    i16_sized_2 vector<vector<int16>:2>:vectors_size;
+    i32_sized_2 vector<vector<int32>:2>:vectors_size;
+    i64_sized_2 vector<vector<int64>:2>:vectors_size;
+    u8_sized_2 vector<vector<uint8>:2>:vectors_size;
+    u16_sized_2 vector<vector<uint16>:2>:vectors_size;
+    u32_sized_2 vector<vector<uint32>:2>:vectors_size;
+    u64_sized_2 vector<vector<uint64>:2>:vectors_size;
+    f32_sized_2 vector<vector<float32>:2>:vectors_size;
+    f64_sized_2 vector<vector<float64>:2>:vectors_size;
+    handle_sized_2 vector<vector<handle>:2>:vectors_size;
+    b_nullable_0 vector<bool>:<1, optional>;
+    i8_nullable_0 vector<int8>:<1, optional>;
+    i16_nullable_0 vector<int16>:<1, optional>;
+    i32_nullable_0 vector<int32>:<1, optional>;
+    i64_nullable_0 vector<int64>:<1, optional>;
+    u8_nullable_0 vector<uint8>:<1, optional>;
+    u16_nullable_0 vector<uint16>:<1, optional>;
+    u32_nullable_0 vector<uint32>:<1, optional>;
+    u64_nullable_0 vector<uint64>:<1, optional>;
+    f32_nullable_0 vector<float32>:<1, optional>;
+    f64_nullable_0 vector<float64>:<1, optional>;
+    handle_nullable_0 vector<handle>:<1, optional>;
+    b_nullable_1 vector<vector<bool>:2>:optional;
+    i8_nullable_1 vector<vector<int8>:2>:optional;
+    i16_nullable_1 vector<vector<int16>:2>:optional;
+    i32_nullable_1 vector<vector<int32>:2>:optional;
+    i64_nullable_1 vector<vector<int64>:2>:optional;
+    u8_nullable_1 vector<vector<uint8>:2>:optional;
+    u16_nullable_1 vector<vector<uint16>:2>:optional;
+    u32_nullable_1 vector<vector<uint32>:2>:optional;
+    u64_nullable_1 vector<vector<uint64>:2>:optional;
+    f32_nullable_1 vector<vector<float32>:2>:optional;
+    f64_nullable_1 vector<vector<float64>:2>:optional;
+    handle_nullable_1 vector<vector<handle>:2>:optional;
+    b_nullable_sized_0 vector<bool>:<1, optional>;
+    i8_nullable_sized_0 vector<int8>:<1, optional>;
+    i16_nullable_sized_0 vector<int16>:<1, optional>;
+    i32_nullable_sized_0 vector<int32>:<1, optional>;
+    i64_nullable_sized_0 vector<int64>:<1, optional>;
+    u8_nullable_sized_0 vector<uint8>:<1, optional>;
+    u16_nullable_sized_0 vector<uint16>:<1, optional>;
+    u32_nullable_sized_0 vector<uint32>:<1, optional>;
+    u64_nullable_sized_0 vector<uint64>:<1, optional>;
+    f32_nullable_sized_0 vector<float32>:<1, optional>;
+    f64_nullable_sized_0 vector<float64>:<1, optional>;
+    handle_nullable_sized_0 vector<handle>:<1, optional>;
+    b_nullable_sized_1 vector<bool>:<vectors_size, optional>;
+    i8_nullable_sized_1 vector<int8>:<vectors_size, optional>;
+    i16_nullable_sized_1 vector<int16>:<vectors_size, optional>;
+    i32_nullable_sized_1 vector<int32>:<vectors_size, optional>;
+    i64_nullable_sized_1 vector<int64>:<vectors_size, optional>;
+    u8_nullable_sized_1 vector<uint8>:<vectors_size, optional>;
+    u16_nullable_sized_1 vector<uint16>:<vectors_size, optional>;
+    u32_nullable_sized_1 vector<uint32>:<vectors_size, optional>;
+    u64_nullable_sized_1 vector<uint64>:<vectors_size, optional>;
+    f32_nullable_sized_1 vector<float32>:<vectors_size, optional>;
+    f64_nullable_sized_1 vector<float64>:<vectors_size, optional>;
+    handle_nullable_sized_1 vector<handle>:<vectors_size, optional>;
+    b_nullable_sized_2 vector<vector<bool>:2>:<vectors_size, optional>;
+    i8_nullable_sized_2 vector<vector<int8>:2>:<vectors_size, optional>;
+    i16_nullable_sized_2 vector<vector<int16>:2>:<vectors_size, optional>;
+    i32_nullable_sized_2 vector<vector<int32>:2>:<vectors_size, optional>;
+    i64_nullable_sized_2 vector<vector<int64>:2>:<vectors_size, optional>;
+    u8_nullable_sized_2 vector<vector<uint8>:2>:<vectors_size, optional>;
+    u16_nullable_sized_2 vector<vector<uint16>:2>:<vectors_size, optional>;
+    u32_nullable_sized_2 vector<vector<uint32>:2>:<vectors_size, optional>;
+    u64_nullable_sized_2 vector<vector<uint64>:2>:<vectors_size, optional>;
+    f32_nullable_sized_2 vector<vector<float32>:2>:<vectors_size, optional>;
+    f64_nullable_sized_2 vector<vector<float64>:2>:<vectors_size, optional>;
+    handle_nullable_sized_2 vector<vector<handle>:2>:<vectors_size, optional>;
 };
 
 // We don't test handle types that don't support duplication
 // (supports_duplication in zx/object_traits.h) or that require special
 // privileges to create.
-resource struct handles {
-    handle handle_handle;
-    handle:PROCESS process_handle;
-    handle:THREAD thread_handle;
-    handle:VMO vmo_handle;
-    handle:EVENT event_handle;
-    handle:PORT port_handle;
-    handle:SOCKET socket_handle;
-    handle:EVENTPAIR eventpair_handle;
-    handle:JOB job_handle;
-    handle:VMAR vmar_handle;
-    handle:FIFO fifo_handle;
-    handle:TIMER timer_handle;
-    handle? nullable_handle_handle;
-    handle:PROCESS? nullable_process_handle;
-    handle:THREAD? nullable_thread_handle;
-    handle:VMO? nullable_vmo_handle;
-    handle:CHANNEL? nullable_channel_handle;
-    handle:EVENT? nullable_event_handle;
-    handle:PORT? nullable_port_handle;
-    handle:INTERRUPT? nullable_interrupt_handle;
-    handle:LOG? nullable_log_handle;
-    handle:SOCKET? nullable_socket_handle;
-    handle:EVENTPAIR? nullable_eventpair_handle;
-    handle:JOB? nullable_job_handle;
-    handle:VMAR? nullable_vmar_handle;
-    handle:FIFO? nullable_fifo_handle;
-    handle:TIMER? nullable_timer_handle;
+type handles = resource struct {
+    handle_handle handle;
+    process_handle handle:PROCESS;
+    thread_handle handle:THREAD;
+    vmo_handle handle:VMO;
+    event_handle handle:EVENT;
+    port_handle handle:PORT;
+    socket_handle handle:SOCKET;
+    eventpair_handle handle:EVENTPAIR;
+    job_handle handle:JOB;
+    vmar_handle handle:VMAR;
+    fifo_handle handle:FIFO;
+    timer_handle handle:TIMER;
+    nullable_handle_handle handle:optional;
+    nullable_process_handle handle:<PROCESS, optional>;
+    nullable_thread_handle handle:<THREAD, optional>;
+    nullable_vmo_handle handle:<VMO, optional>;
+    nullable_channel_handle handle:<CHANNEL, optional>;
+    nullable_event_handle handle:<EVENT, optional>;
+    nullable_port_handle handle:<PORT, optional>;
+    nullable_interrupt_handle handle:<INTERRUPT, optional>;
+    nullable_log_handle handle:<LOG, optional>;
+    nullable_socket_handle handle:<SOCKET, optional>;
+    nullable_eventpair_handle handle:<EVENTPAIR, optional>;
+    nullable_job_handle handle:<JOB, optional>;
+    nullable_vmar_handle handle:<VMAR, optional>;
+    nullable_fifo_handle handle:<FIFO, optional>;
+    nullable_timer_handle handle:<TIMER, optional>;
 };
 
 // Arbitrary.
-const uint32 strings_size = 32;
+const strings_size uint32 = 32;
 
-struct strings {
-    string s;
-    string? nullable_s;
-    string:2 size_0_s;
-    string:strings_size size_1_s;
-    string:2? nullable_size_0_s;
-    string:strings_size? nullable_size_1_s;
+type strings = struct {
+    s string;
+    nullable_s string:optional;
+    size_0_s string:2;
+    size_1_s string:strings_size;
+    nullable_size_0_s string:<2, optional>;
+    nullable_size_1_s string:<strings_size, optional>;
 };
 
-enum default_enum {
+type default_enum = strict enum {
     kZero = 0;
     kOne = 1;
 };
 
-enum i8_enum : int8 {
+type i8_enum = strict enum : int8 {
     kNegativeOne = -1;
     kOne = 1;
 };
 
-enum i16_enum : int16 {
+type i16_enum = strict enum : int16 {
     kNegativeOne = -1;
     kOne = 1;
     kTwo = 2;
 };
 
-enum i32_enum : int32 {
+type i32_enum = strict enum : int32 {
     kNegativeOne = -1;
     kOne = 1;
     kTwo = 2;
     kThree = 3;
 };
 
-enum i64_enum : int64 {
+type i64_enum = strict enum : int64 {
     kNegativeOne = -1;
     kOne = 1;
     kTwo = 2;
@@ -332,7 +329,7 @@ enum i64_enum : int64 {
     kFour = 4;
 };
 
-enum u8_enum : uint8 {
+type u8_enum = strict enum : uint8 {
     kOne = 1;
     kTwo = 2;
     kThree = 3;
@@ -340,7 +337,7 @@ enum u8_enum : uint8 {
     kFive = 5;
 };
 
-enum u16_enum : uint16 {
+type u16_enum = strict enum : uint16 {
     kOne = 1;
     kTwo = 2;
     kThree = 3;
@@ -349,7 +346,7 @@ enum u16_enum : uint16 {
     kSix = 6;
 };
 
-enum u32_enum : uint32 {
+type u32_enum = strict enum : uint32 {
     kOne = 1;
     kTwo = 2;
     kThree = 3;
@@ -359,7 +356,7 @@ enum u32_enum : uint32 {
     kSeven = 7;
 };
 
-enum u64_enum : uint64 {
+type u64_enum = strict enum : uint64 {
     kOne = 1;
     kTwo = 2;
     kThree = 3;
@@ -370,12 +367,12 @@ enum u64_enum : uint64 {
     kEight = 8;
 };
 
-bits default_bits {
+type default_bits = strict bits {
     kOne = 1;
     kTwo = 2;
 };
 
-bits u8_bits : uint8 {
+type u8_bits = strict bits : uint8 {
     kOne = 1;
     kTwo = 2;
     kThree = 4;
@@ -383,7 +380,7 @@ bits u8_bits : uint8 {
     kFive = 16;
 };
 
-bits u16_bits : uint16 {
+type u16_bits = strict bits : uint16 {
     kOne = 1;
     kTwo = 2;
     kThree = 4;
@@ -392,7 +389,7 @@ bits u16_bits : uint16 {
     kSix = 32;
 };
 
-bits u32_bits : uint32 {
+type u32_bits = strict bits : uint32 {
     kOne = 1;
     kTwo = 2;
     kThree = 4;
@@ -402,7 +399,7 @@ bits u32_bits : uint32 {
     kSeven = 64;
 };
 
-bits u64_bits : uint64 {
+type u64_bits = strict bits : uint64 {
     kOne = 1;
     kTwo = 2;
     kThree = 4;
@@ -413,19 +410,19 @@ bits u64_bits : uint64 {
     kEight = 128;
 };
 
-struct structs {
-    this_is_a_struct s;
-    this_is_a_struct? nullable_s;
-    this_is_an_empty_struct es;
+type structs = struct {
+    s this_is_a_struct;
+    nullable_s box<this_is_a_struct>;
+    es this_is_an_empty_struct;
 };
 
-struct unions {
-    this_is_a_union u;
-    this_is_a_union? nullable_u;
+type unions = struct {
+    u this_is_a_union;
+    nullable_u this_is_a_union:optional;
 };
 
 // This struct is meant to exercise almost all features of FIDL.
-resource struct Struct {
+type Struct = resource struct {
     primitive_types primitive_types;
     default_values default_values;
     arrays arrays;
@@ -449,127 +446,127 @@ resource struct Struct {
     u64_bits u64_bits;
     structs structs;
     unions unions;
-    this_is_a_table table;
-    this_is_a_xunion xunion;
-    bool b;
+    table this_is_a_table;
+    xunion this_is_a_xunion;
+    b bool;
 };
 
 // This struct contains arrays of all different kinds of FIDL types.
-resource struct ArraysStruct {
-    array<bool>:arrays_size bools;
-    array<int8>:arrays_size int8s;
-    array<int16>:arrays_size int16s;
-    array<int32>:arrays_size int32s;
-    array<int64>:arrays_size int64s;
-    array<uint8>:arrays_size uint8s;
-    array<uint16>:arrays_size uint16s;
-    array<uint32>:arrays_size uint32s;
-    array<uint64>:arrays_size uint64s;
-    array<float32>:arrays_size float32s;
-    array<float64>:arrays_size float64s;
-    array<default_enum>:arrays_size enums;
-    array<default_bits>:arrays_size bits;
-    array<handle>:arrays_size handles;
-    array<handle?>:arrays_size nullable_handles;
-    array<string>:arrays_size strings;
-    array<string?>:arrays_size nullable_strings;
-    array<this_is_a_struct>:arrays_size structs;
-    array<this_is_a_struct?>:arrays_size nullable_structs;
-    array<this_is_a_union>:arrays_size unions;
-    array<this_is_a_union?>:arrays_size nullable_unions;
-    array<array<uint32>:arrays_size>:arrays_size arrays;
-    array<vector<uint32>>:arrays_size vectors;
-    array<vector<uint32>?>:arrays_size nullable_vectors;
-    array<this_is_a_table>:arrays_size tables;
-    array<this_is_a_xunion>:arrays_size xunions;
+type ArraysStruct = resource struct {
+    bools array<bool, arrays_size>;
+    int8s array<int8, arrays_size>;
+    int16s array<int16, arrays_size>;
+    int32s array<int32, arrays_size>;
+    int64s array<int64, arrays_size>;
+    uint8s array<uint8, arrays_size>;
+    uint16s array<uint16, arrays_size>;
+    uint32s array<uint32, arrays_size>;
+    uint64s array<uint64, arrays_size>;
+    float32s array<float32, arrays_size>;
+    float64s array<float64, arrays_size>;
+    enums array<default_enum, arrays_size>;
+    bits array<default_bits, arrays_size>;
+    handles array<handle, arrays_size>;
+    nullable_handles array<handle:optional, arrays_size>;
+    strings array<string, arrays_size>;
+    nullable_strings array<string:optional, arrays_size>;
+    structs array<this_is_a_struct, arrays_size>;
+    nullable_structs array<box<this_is_a_struct>, arrays_size>;
+    unions array<this_is_a_union, arrays_size>;
+    nullable_unions array<this_is_a_union:optional, arrays_size>;
+    arrays array<array<uint32, arrays_size>, arrays_size>;
+    vectors array<vector<uint32>, arrays_size>;
+    nullable_vectors array<vector<uint32>:optional, arrays_size>;
+    tables array<this_is_a_table, arrays_size>;
+    xunions array<this_is_a_xunion, arrays_size>;
 };
 
 // This struct contains vectors of all different kinds of FIDL types.
-resource struct VectorsStruct {
-    vector<bool>:vectors_size bools;
-    vector<int8>:vectors_size int8s;
-    vector<int16>:vectors_size int16s;
-    vector<int32>:vectors_size int32s;
-    vector<int64>:vectors_size int64s;
-    vector<uint8>:vectors_size uint8s;
-    vector<uint16>:vectors_size uint16s;
-    vector<uint32>:vectors_size uint32s;
-    vector<uint64>:vectors_size uint64s;
-    vector<float32>:vectors_size float32s;
-    vector<float64>:vectors_size float64s;
-    vector<default_enum>:vectors_size enums;
-    vector<default_bits>:vectors_size bits;
-    vector<handle>:vectors_size handles;
-    vector<handle?>:vectors_size nullable_handles;
-    vector<string>:vectors_size strings;
-    vector<string?>:vectors_size nullable_strings;
-    vector<this_is_a_struct>:vectors_size structs;
-    vector<this_is_a_struct?>:vectors_size nullable_structs;
-    vector<this_is_a_union>:vectors_size unions;
-    vector<this_is_a_union?>:vectors_size nullable_unions;
-    vector<array<uint32>:vectors_size>:vectors_size arrays;
-    vector<vector<uint32>>:vectors_size vectors;
-    vector<vector<uint32>?>:vectors_size nullable_vectors;
-    vector<this_is_a_table>:vectors_size tables;
-    vector<this_is_a_xunion>:vectors_size xunions;
+type VectorsStruct = resource struct {
+    bools vector<bool>:vectors_size;
+    int8s vector<int8>:vectors_size;
+    int16s vector<int16>:vectors_size;
+    int32s vector<int32>:vectors_size;
+    int64s vector<int64>:vectors_size;
+    uint8s vector<uint8>:vectors_size;
+    uint16s vector<uint16>:vectors_size;
+    uint32s vector<uint32>:vectors_size;
+    uint64s vector<uint64>:vectors_size;
+    float32s vector<float32>:vectors_size;
+    float64s vector<float64>:vectors_size;
+    enums vector<default_enum>:vectors_size;
+    bits vector<default_bits>:vectors_size;
+    handles vector<handle>:vectors_size;
+    nullable_handles vector<handle:optional>:vectors_size;
+    strings vector<string>:vectors_size;
+    nullable_strings vector<string:optional>:vectors_size;
+    structs vector<this_is_a_struct>:vectors_size;
+    nullable_structs vector<box<this_is_a_struct>>:vectors_size;
+    unions vector<this_is_a_union>:vectors_size;
+    nullable_unions vector<this_is_a_union:optional>:vectors_size;
+    arrays vector<array<uint32, vectors_size>>:vectors_size;
+    vectors vector<vector<uint32>>:vectors_size;
+    nullable_vectors vector<vector<uint32>:optional>:vectors_size;
+    tables vector<this_is_a_table>:vectors_size;
+    xunions vector<this_is_a_xunion>:vectors_size;
 };
 
 // This table has members all different FIDL types.
-resource table AllTypesTable {
-    1: bool bool_member;
-    2: int8 int8_member;
-    3: int16 int16_member;
-    4: int32 int32_member;
-    5: int64 int64_member;
-    6: uint8 uint8_member;
-    7: uint16 uint16_member;
-    8: uint32 uint32_member;
-    9: uint64 uint64_member;
-    10: float32 float32_member;
-    11: float64 float64_member;
-    12: default_enum enum_member;
-    13: default_bits bits_member;
-    14: handle handle_member;
-    15: string string_member;
-    16: this_is_a_struct struct_member;
-    17: this_is_a_union union_member;
-    18: array<uint32>:arrays_size array_member;
-    19: vector<uint32> vector_member;
-    20: this_is_a_table table_member;
-    21: this_is_a_xunion xunion_member;
+type AllTypesTable = resource table {
+    1: bool_member bool;
+    2: int8_member int8;
+    3: int16_member int16;
+    4: int32_member int32;
+    5: int64_member int64;
+    6: uint8_member uint8;
+    7: uint16_member uint16;
+    8: uint32_member uint32;
+    9: uint64_member uint64;
+   10: float32_member float32;
+   11: float64_member float64;
+   12: enum_member default_enum;
+   13: bits_member default_bits;
+   14: handle_member handle;
+   15: string_member string;
+   16: struct_member this_is_a_struct;
+   17: union_member this_is_a_union;
+   18: array_member array<uint32, arrays_size>;
+   19: vector_member vector<uint32>;
+   20: table_member this_is_a_table;
+   21: xunion_member this_is_a_xunion;
 };
 
 // This xunion has members all different FIDL types.
-flexible resource union AllTypesXunion {
-     1: bool bool_member;
-     2: int8 int8_member;
-     3: int16 int16_member;
-     4: int32 int32_member;
-     5: int64 int64_member;
-     6: uint8 uint8_member;
-     7: uint16 uint16_member;
-     8: uint32 uint32_member;
-     9: uint64 uint64_member;
-    10: float32 float32_member;
-    11: float64 float64_member;
-    12: default_enum enum_member;
-    13: default_bits bits_member;
-    14: handle handle_member;
-    15: string string_member;
-    16: this_is_a_struct struct_member;
-    17: this_is_a_union union_member;
-    18: array<uint32>:arrays_size array_member;
-    19: vector<uint32> vector_member;
-    20: this_is_a_table table_member;
-    21: this_is_a_xunion xunion_member;
+type AllTypesXunion = flexible resource union {
+    1: bool_member bool;
+    2: int8_member int8;
+    3: int16_member int16;
+    4: int32_member int32;
+    5: int64_member int64;
+    6: uint8_member uint8;
+    7: uint16_member uint16;
+    8: uint32_member uint32;
+    9: uint64_member uint64;
+   10: float32_member float32;
+   11: float64_member float64;
+   12: enum_member default_enum;
+   13: bits_member default_bits;
+   14: handle_member handle;
+   15: string_member string;
+   16: struct_member this_is_a_struct;
+   17: union_member this_is_a_union;
+   18: array_member array<uint32, arrays_size>;
+   19: vector_member vector<uint32>;
+   20: table_member this_is_a_table;
+   21: xunion_member this_is_a_xunion;
 };
 
-enum RespondWith {
+type RespondWith = strict enum {
     SUCCESS = 1;
     ERR = 2;
 };
 
-[Discoverable]
+@discoverable
 protocol Echo {
     // If `forward_to_server` is empty, just returns `value`.
     // If `forward_to_server` is not empty, it is treated as the URL of a server
@@ -577,32 +574,87 @@ protocol Echo {
     // `forward_to_server` arg acts as a proxy for that other server.
     // For the error variants: if should_error is true, the provided err result
     // error is sent, otherwise the response variant is sent.
-    EchoStruct(Struct value, string forward_to_server) -> (Struct value);
-    EchoStructWithError(
-        Struct value, default_enum result_err, string forward_to_server, RespondWith result_variant)
-        -> (Struct value) error default_enum;
+    EchoStruct(resource struct {
+        value Struct;
+        forward_to_server string;
+    }) -> (resource struct {
+        value Struct;
+    });
+    EchoStructWithError(resource struct {
+        value Struct;
+        result_err default_enum;
+        forward_to_server string;
+        result_variant RespondWith;
+    }) -> (resource struct {
+        value Struct;
+    }) error default_enum;
 
     // Same as the above, but the server should use the event to return the
     // response, rather than a return value.
-    EchoStructNoRetVal(Struct value, string forward_to_server);
-    -> EchoEvent(Struct value);
-    EchoArrays(ArraysStruct value, string forward_to_server) -> (ArraysStruct value);
-    EchoArraysWithError(
-        ArraysStruct value, default_enum result_err, string forward_to_server, RespondWith result_variant)
-        -> (ArraysStruct value) error default_enum;
+    EchoStructNoRetVal(resource struct {
+        value Struct;
+        forward_to_server string;
+    });
+    -> EchoEvent(resource struct {
+        value Struct;
+    });
+    EchoArrays(resource struct {
+        value ArraysStruct;
+        forward_to_server string;
+    }) -> (resource struct {
+        value ArraysStruct;
+    });
+    EchoArraysWithError(resource struct {
+        value ArraysStruct;
+        result_err default_enum;
+        forward_to_server string;
+        result_variant RespondWith;
+    }) -> (resource struct {
+        value ArraysStruct;
+    }) error default_enum;
 
-    EchoVectors(VectorsStruct value, string forward_to_server) -> (VectorsStruct value);
-    EchoVectorsWithError(
-        VectorsStruct value, default_enum result_err, string forward_to_server, RespondWith result_variant)
-        -> (VectorsStruct value) error default_enum;
+    EchoVectors(resource struct {
+        value VectorsStruct;
+        forward_to_server string;
+    }) -> (resource struct {
+        value VectorsStruct;
+    });
+    EchoVectorsWithError(resource struct {
+        value VectorsStruct;
+        result_err default_enum;
+        forward_to_server string;
+        result_variant RespondWith;
+    }) -> (resource struct {
+        value VectorsStruct;
+    }) error default_enum;
 
-    EchoTable(AllTypesTable value, string forward_to_server) -> (AllTypesTable value);
-    EchoTableWithError(
-        AllTypesTable value, default_enum result_err, string forward_to_server, RespondWith result_variant)
-        -> (AllTypesTable value) error default_enum;
+    EchoTable(resource struct {
+        value AllTypesTable;
+        forward_to_server string;
+    }) -> (resource struct {
+        value AllTypesTable;
+    });
+    EchoTableWithError(resource struct {
+        value AllTypesTable;
+        result_err default_enum;
+        forward_to_server string;
+        result_variant RespondWith;
+    }) -> (resource struct {
+        value AllTypesTable;
+    }) error default_enum;
 
-    EchoXunions(vector<AllTypesXunion> value, string forward_to_server) -> (vector<AllTypesXunion> value);
-    EchoXunionsWithError(
-        vector<AllTypesXunion> value, default_enum result_err, string forward_to_server, RespondWith result_variant)
-        -> (vector<AllTypesXunion> value) error default_enum;
+    EchoXunions(resource struct {
+        value vector<AllTypesXunion>;
+        forward_to_server string;
+    }) -> (resource struct {
+        value vector<AllTypesXunion>;
+    });
+    EchoXunionsWithError(resource struct {
+        value vector<AllTypesXunion>;
+        result_err default_enum;
+        forward_to_server string;
+        result_variant RespondWith;
+    }) -> (resource struct {
+        value vector<AllTypesXunion>;
+    }) error default_enum;
 };

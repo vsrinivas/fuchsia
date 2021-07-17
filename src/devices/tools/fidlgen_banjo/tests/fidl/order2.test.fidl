@@ -1,16 +1,16 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library banjo.examples.order2;
 
-[Transport = "Banjo"]
+@transport("Banjo")
 protocol Foo {
     Hello() -> ();
 };
 
-[Transport = "Banjo"]
+@transport("Banjo")
 protocol Bar {
-    World(Foo foo) -> ();
+    World(resource struct {
+        foo client_end:Foo;
+    }) -> ();
 };

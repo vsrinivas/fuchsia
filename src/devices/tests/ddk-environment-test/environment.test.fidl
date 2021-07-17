@@ -1,11 +1,11 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.device.environment.test;
 
 protocol TestDevice {
     /// Returns a list of all services available under /svc/.
-    GetServiceList() -> (vector<string> services);
+    GetServiceList() -> (struct {
+        services vector<string>;
+    });
 };

@@ -1,40 +1,38 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.identity.account;
 using fuchsia.sys;
 
 /// The maximum number of Fuchsia accounts that may be simultaneously
 /// provisioned on a device. This number may be increased in the future.
-const uint32 MAX_ACCOUNTS_PER_DEVICE = 128;
+const MAX_ACCOUNTS_PER_DEVICE uint32 = 128;
 
 /// The maximum number of personae that may be simultaneously defined within a
 /// Fuchsia account. This number may be increased in the future.
-const uint32 MAX_PERSONAE_PER_ACCOUNT = 128;
+const MAX_PERSONAE_PER_ACCOUNT uint32 = 128;
 
 /// The maximum length of the global Fuchsia account and persona identifiers,
 /// in bytes.
-const uint32 MAX_ID_SIZE = 256;
+const MAX_ID_SIZE uint32 = 256;
 
 /// The maximum length of the (UTF-8 encoded) human readable names, in bytes.
-const uint32 MAX_NAME_SIZE = 128;
+const MAX_NAME_SIZE uint32 = 128;
 
 /// The maximum length of an (UTF-8 encoded) auth provider type, in bytes.
-const uint32 MAX_AUTH_PROVIDER_TYPE_SIZE = 128;
+const MAX_AUTH_PROVIDER_TYPE_SIZE uint32 = 128;
 
 /// The maximum number of authentication mechanisms that can be registered
 /// for a device.
-const uint32 MAX_AUTH_MECHANISMS = 16;
+const MAX_AUTH_MECHANISMS uint32 = 16;
 
 /// The maximum number of authentication mechanism enrollments that may be
 /// simultaneously defined within a Fuchsia account.
-const uint32 MAX_AUTH_MECHANISM_ENROLLMENTS = 32;
+const MAX_AUTH_MECHANISM_ENROLLMENTS uint32 = 32;
 
 /// Provides an upper bound to how long a Fuchsia account can live on the
 /// current device.
-enum Lifetime : uint8 {
+type Lifetime = strict enum : uint8 {
     /// The account lives at the longest to the end of the power cycle it
     /// was created in.
     EPHEMERAL = 1;
@@ -63,7 +61,7 @@ alias LocalAccountId = uint64;
 alias LocalPersonaId = uint64;
 
 /// Specifies the reason that a fuchsia.identity.account method failed.
-enum Error {
+type Error = strict enum {
     /// Some other problem occurred that cannot be classified using one of the
     /// more specific statuses. Retry is optional.
     UNKNOWN = 1;
@@ -107,9 +105,9 @@ enum Error {
     /// attempt. User consent or input is required before any retry.
     FAILED_AUTHENTICATION = 10;
 
-    // This enumeration may expand to include additional statuses in the future.
-    // Examples are likely to include: MAX_LISTENERS, NO_SUITABLE_AUTHENTICATOR,
-    // INVALID_AUTH_PROVIDER,
+// This enumeration may expand to include additional statuses in the future.
+// Examples are likely to include: MAX_LISTENERS, NO_SUITABLE_AUTHENTICATOR,
+// INVALID_AUTH_PROVIDER,
 };
 
 /// A fuchsia component URI pointing to a component containing an authentication
@@ -120,14 +118,14 @@ enum Error {
 alias AuthMechanismId = fuchsia.sys.component_url;
 
 /// Properties describing the authentication mechanism.
-struct AuthMechanismProperties {
+type AuthMechanismProperties = struct {
     /// A unique identifier for the authentication mechanism.
-    AuthMechanismId id;
+    id AuthMechanismId;
 
     /// If true, the authentication mechanism can be used for storage unlock.
-    bool storage_unlock;
+    storage_unlock bool;
 
-    // TODO(dnordstrom): Add more properties as they become useful to clients.
+// TODO(dnordstrom): Add more properties as they become useful to clients.
 };
 
 /// An identifier for an enrollment of an authentication mechanism. It is
@@ -135,13 +133,13 @@ struct AuthMechanismProperties {
 alias AuthMechanismEnrollmentId = uint64;
 
 /// Metadata about an enrollment, such as a human readable name.
-struct AuthMechanismEnrollmentMetadata {
+type AuthMechanismEnrollmentMetadata = struct {
     /// A unique identifier associated with the enrollment.
-    AuthMechanismEnrollmentId id;
+    id AuthMechanismEnrollmentId;
 
     /// A short text describing the enrollment, e.g. "right thumb" for a
     /// fingerprint authenticator.
-    string:MAX_NAME_SIZE name;
+    name string:MAX_NAME_SIZE;
 
-    // TODO(dnordstrom): Add field for date created.
+// TODO(dnordstrom): Add field for date created.
 };

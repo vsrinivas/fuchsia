@@ -1,14 +1,12 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.input.virtualkeyboard;
 
 using fuchsia.ui.views;
 
 /// Describes the type of text expected to be input by a virtual keyboard.
-flexible enum TextType {
+type TextType = flexible enum {
     /// The text is likely to contain both alphabetic and numeric
     /// characters. This is the enum's default (zero-value), so that
     /// uninitialized enum instances provide the keyboard user the most
@@ -25,7 +23,7 @@ flexible enum TextType {
 
 /// Describes reasons that the virtual keyboard might be added to, or
 /// removed from, the interface rendered to the user.
-flexible enum VisibilityChangeReason {
+type VisibilityChangeReason = flexible enum {
     /// Visibility changed due to a programmatic request. E.g., the GUI
     /// component's call to `WatchTypeAndVisibility()` returned a new
     /// value for `is_visible`.
@@ -52,7 +50,7 @@ flexible enum VisibilityChangeReason {
 /// * Implemented by platform components which control UI policy.
 ///   For example, Root Presenter, or the Workstation Session.
 /// * Consumed by application runtimes. For example, Flutter, Chromium.
-[Discoverable]
+@discoverable
 protocol ControllerCreator {
     /// Requests that the `Controller` at the other end of the
     /// `request<Controller>` channel be associated with the `View`
@@ -70,10 +68,11 @@ protocol ControllerCreator {
     ///
     /// Consumers of `ControllerCreator` may freely drop their Creator
     /// connection, without affecting their Controller(s).
-    Create(
-        fuchsia.ui.views.ViewRef view_ref,
-        TextType text_type,
-        request<Controller> controller_request);
+    Create(resource struct {
+        view_ref fuchsia.ui.views.ViewRef;
+        text_type TextType;
+        controller_request server_end:Controller;
+    });
 };
 
 /// Provides the ability to control a virtual keyboard.
@@ -121,7 +120,9 @@ protocol Controller {
     ///   focus.
     /// * If the callee receives multiple calls before the `View` regains
     ///   focus, the  callee will apply the value from the most recent call.
-    SetTextType(TextType text_type);
+    SetTextType(struct {
+        text_type TextType;
+    });
 
     /// Requests that the keyboard be made visible.
     ///
@@ -164,7 +165,9 @@ protocol Controller {
     ///      be visible due to a request from this Controller (this
     ///      does not guarantee that the keyboard is visible on screen)
     ///    * `false` otherwise
-    WatchVisibility() -> (bool is_visible);
+    WatchVisibility() -> (struct {
+        is_visible bool;
+    });
 };
 
 /// Enables the virtual keyboard UI to synchronize state with the platform.
@@ -174,7 +177,7 @@ protocol Controller {
 /// * Implemented by platform components which control UI policy.
 ///   For example, Root Presenter, or the Workstation Session.
 /// * Consumed by components which provide a GUI affordance for text input.
-[Discoverable]
+@discoverable
 protocol Manager {
     /// Waits for a change in intended `text_type` or visibility, then
     /// reports the new value. In response to a status change, the caller
@@ -187,12 +190,18 @@ protocol Manager {
     /// In the event that `text_type` is not supported, the caller should
     /// implement a fallback that provides as many of the necessary keys
     /// as possible.
-    WatchTypeAndVisibility() -> (TextType text_type, bool is_visible);
+    WatchTypeAndVisibility() -> (struct {
+        text_type TextType;
+        is_visible bool;
+    });
 
     /// Informs the callee that the visibility of the virtual keyboard has
     /// changed, and what triggered the change.
     ///
     /// The caller _should_ wait for a result before invoking invoking this
     /// method again, to avoid overloading the callee.
-    Notify(bool is_visible, VisibilityChangeReason reason) -> ();
+    Notify(struct {
+        is_visible bool;
+        reason VisibilityChangeReason;
+    }) -> ();
 };

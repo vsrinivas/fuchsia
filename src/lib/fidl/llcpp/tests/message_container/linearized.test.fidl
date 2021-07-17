@@ -1,18 +1,16 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fidl.llcpp.linearized.test;
 
-struct NoOpLinearizedStruct {
-    int64 x;
+type NoOpLinearizedStruct = struct {
+    x int64;
 };
 
-struct InnerStruct {
-    int32 x;
+type InnerStruct = struct {
+    x int32;
 };
 
-struct FullyLinearizedStruct {
-    InnerStruct? ptr;
+type FullyLinearizedStruct = struct {
+    ptr box<InnerStruct>;
 };

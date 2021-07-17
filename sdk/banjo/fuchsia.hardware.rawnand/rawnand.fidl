@@ -1,28 +1,50 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.rawnand;
 
 using fuchsia.hardware.nandinfo;
 using zx;
 
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol RawNand {
     /// Read one NAND page and its out-of-band data with hardware ECC.
-    ReadPageHwecc(uint32 nandpage) -> (zx.status s, [Buffer] vector<uint8>:MAX data, [Buffer] vector<uint8>:MAX oob,
-                                       uint32 ecc_correct);
+    ReadPageHwecc(struct {
+        nandpage uint32;
+    }) -> (struct {
+        s zx.status;
+        @buffer
+        data vector<uint8>:MAX;
+        @buffer
+        oob vector<uint8>:MAX;
+        ecc_correct uint32;
+    });
 
     /// Write one NAND page and its out-of-band data with hardware ECC.
     ///
     /// Should return ZX_ERR_IO *only* when an error ocurred due to underlying hardware.
-    WritePageHwecc([Buffer] vector<uint8>:MAX data, [Buffer] vector<uint8>:MAX oob, uint32 nandpage) -> (zx.status s);
+    WritePageHwecc(struct {
+        @buffer
+        data vector<uint8>:MAX;
+        @buffer
+        oob vector<uint8>:MAX;
+        nandpage uint32;
+    }) -> (struct {
+        s zx.status;
+    });
 
     /// Erase NAND block.
     ///
     /// Should return ZX_ERR_IO *only* when error ocurred due to underlying hardware.
-    EraseBlock(uint32 nandpage) -> (zx.status s);
+    EraseBlock(struct {
+        nandpage uint32;
+    }) -> (struct {
+        s zx.status;
+    });
 
-    GetNandInfo() -> (zx.status s, fuchsia.hardware.nandinfo.NandInfo info);
+    GetNandInfo() -> (struct {
+        s zx.status;
+        info fuchsia.hardware.nandinfo.NandInfo;
+    });
 };

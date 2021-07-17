@@ -1,20 +1,18 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.identity.authentication;
 
 using zx;
 
 /// The maxium size of the prekey material in bytes.
-const uint32 PREKEY_MATERIAL_MAX_SIZE = 32;
+const PREKEY_MATERIAL_MAX_SIZE uint32 = 32;
 
 /// The maxium size of enrollment data in bytes.
-const uint32 ENROLLMENT_DATA_MAX_SIZE = 256;
+const ENROLLMENT_DATA_MAX_SIZE uint32 = 256;
 
 /// Specifies the reason that a fuchsia.identity.authentication method failed.
-enum Error {
+type Error = strict enum {
     /// Some other problem occurred that cannot be classified using one of the
     /// more specific statuses. Retry is optional.
     UNKNOWN = 1;
@@ -47,30 +45,30 @@ enum Error {
     /// An interactive authentication operation was cancelled by the user.
     ABORTED = 8;
 
-    // This enumeration may expand to include additional statuses in the future.
-    // Examples are likely to include: MECHANISM_NOT_FOUND,
-    // MECHANISM_NOT_AVAILABLE.
+// This enumeration may expand to include additional statuses in the future.
+// Examples are likely to include: MECHANISM_NOT_FOUND,
+// MECHANISM_NOT_AVAILABLE.
 };
 
 /// The maximum number of active enrollments per authentication mechanism and
 /// account.
-const uint32 MAX_ENROLLMENTS = 16;
+const MAX_ENROLLMENTS uint32 = 16;
 
 /// Enrollments allow some authentication mechanisms to produce authentication
 /// events. An enrollment must first be created in order to be authenticated
 /// against. Both creation and authentication may involve user interaction.
 /// An enrollment is typically tied to a user controlled authentication factor,
 /// such as a fingerprint, a password or a security key.
-[MaxHandles = "0"]
-struct Enrollment {
+@max_handles("0")
+type Enrollment = struct {
     /// A unique identifier associated with the enrollment.
-    EnrollmentId id;
+    id EnrollmentId;
 
     /// Data associated with the enrollment.
-    EnrollmentData data;
+    data EnrollmentData;
 
-    // TODO(dnordstrom): We might want to version label all persistent data in
-    // the future.
+// TODO(dnordstrom): We might want to version label all persistent data in
+// the future.
 };
 
 /// A unique identifier for an `Enrollment` within an account and an
@@ -94,44 +92,44 @@ alias PrekeyMaterial = bytes:PREKEY_MATERIAL_MAX_SIZE;
 /// on the properties of the authentication mechanism which created it.
 /// A positive authentication event may contribute to an increase in
 /// authentication state.
-[MaxHandles = "0"]
-struct PositiveEvent {
+@max_handles("0")
+type PositiveEvent = struct {
     /// The UTC time when the event completed.
-    zx.time timestamp;
+    timestamp zx.time;
 
-    // TODO(dnordstrom): Add fields for account, confidence, range, engagement
-    // and mobility.
+// TODO(dnordstrom): Add fields for account, confidence, range, engagement
+// and mobility.
 };
 
 /// A negative authentication event may contribute to a decrease in
 /// authentication state.
-[MaxHandles = "0"]
-struct NegativeEvent {
+@max_handles("0")
+type NegativeEvent = struct {
     /// The UTC time when the event completed.
-    zx.time timestamp;
+    timestamp zx.time;
 
-    // TODO(dnordstrom): Add fields for account, range and disengagement.
+// TODO(dnordstrom): Add fields for account, range and disengagement.
 };
 
 /// A attempted authentication event may contribute to an increase in
 /// authentication state if and only if the pre-key material is correct.
 /// Otherwise, it does not affect the authentication state.
-[MaxHandles = "0"]
-struct AttemptedEvent {
+@max_handles("0")
+type AttemptedEvent = struct {
     /// The UTC time when the event completed.
-    zx.time timestamp;
+    timestamp zx.time;
 
     /// The id of the enrollment used to produce this attempt.
-    EnrollmentId enrollment_id;
+    enrollment_id EnrollmentId;
 
     /// Enrollment data which should should replace the old enrollment data upon
     /// successful authentication. This field is only populated if a
     /// change in enrollment data is required.
-    EnrollmentData? updated_enrollment_data;
+    updated_enrollment_data EnrollmentData:optional;
 
     /// Pre-key material produced during the authentication attempt.
-    PrekeyMaterial prekey_material;
+    prekey_material PrekeyMaterial;
 
-    // TODO(dnordstrom): Add fields for account, confidence, range, engagement
-    // and mobility (or a shared type with PositiveEvent).
+// TODO(dnordstrom): Add fields for account, confidence, range, engagement
+// and mobility (or a shared type with PositiveEvent).
 };

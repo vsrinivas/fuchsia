@@ -1,17 +1,25 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library zx;
 
-[Transport = "Syscall"]
+@transport("Syscall")
 protocol exception {
     /// Create a handle for the exception's thread.
     /// Rights: handle must be of type ZX_OBJ_TYPE_EXCEPTION.
-    exception_get_thread(handle:EXCEPTION handle) -> (status status, handle:THREAD out);
+    exception_get_thread(resource struct {
+        handle handle:EXCEPTION;
+    }) -> (resource struct {
+        status status;
+        out handle:THREAD;
+    });
 
     /// Create a handle for the exception's process.
     /// Rights: handle must be of type ZX_OBJ_TYPE_EXCEPTION.
-    exception_get_process(handle:EXCEPTION handle) -> (status status, handle:PROCESS out);
+    exception_get_process(resource struct {
+        handle handle:EXCEPTION;
+    }) -> (resource struct {
+        status status;
+        out handle:PROCESS;
+    });
 };

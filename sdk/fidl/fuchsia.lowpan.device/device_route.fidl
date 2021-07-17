@@ -1,17 +1,15 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.lowpan.device;
 
 using fuchsia.lowpan;
 
-const uint32 MAX_ON_MESH_PREFIXES = 32;
-const uint32 MAX_EXTERNAL_ROUTES = 32;
+const MAX_ON_MESH_PREFIXES uint32 = 32;
+const MAX_EXTERNAL_ROUTES uint32 = 32;
 
 /// Route preference, as described in RFC4191.
-enum RoutePreference : int8 {
+type RoutePreference = strict enum : int8 {
     /// Low route preference.
     LOW = -1;
 
@@ -25,9 +23,9 @@ enum RoutePreference : int8 {
 /// LoWPAN On-Mesh Prefix.
 ///
 /// Informed by the Thread 1.1.1 Specification, section 5.13.2.
-table OnMeshPrefix {
+type OnMeshPrefix = table {
     /// Subnet to advertise for devices to use on the network. Required.
-    1: fuchsia.lowpan.Ipv6Subnet subnet;
+    1: subnet fuchsia.lowpan.Ipv6Subnet;
 
     /// If present, indicates that this device is offering a default route
     /// as well as indicating the what preference this default
@@ -36,7 +34,7 @@ table OnMeshPrefix {
     ///
     /// Based on `P_default` and `P_preference` from Section 5.13.2 of the
     /// Thread 1.1.1 Specification.
-    2: RoutePreference default_route_preference;
+    2: default_route_preference RoutePreference;
 
     /// True if the route is expected to be available for at least Thread's
     /// `MIN_STABLE_LIFETIME`; otherwise `false`. If not present, assumed to
@@ -46,7 +44,7 @@ table OnMeshPrefix {
     ///
     /// Based on `P_stable` from Section 5.13.2 of the
     /// Thread 1.1.1 Specification.
-    3: bool stable;
+    3: stable bool;
 
     /// True if network devices are allowed to use previously configured
     /// addresses using this prefix. If not present, assumed to be `false`.
@@ -56,7 +54,7 @@ table OnMeshPrefix {
     ///
     /// Based on `P_slaac_preferred` from Section 5.13.2 of the
     /// Thread 1.1.1 Specification.
-    4: bool slaac_preferred;
+    4: slaac_preferred bool;
 
     /// True if network devices are allowed to autoconfigure addresses using
     /// this prefix. If not present, assumed to be `false`.
@@ -66,15 +64,15 @@ table OnMeshPrefix {
     ///
     /// Based on `P_slaac_valid` from Section 5.13.2 of the
     /// Thread 1.1.1 Specification.
-    5: bool slaac_valid;
+    5: slaac_valid bool;
 };
 
 /// LoWPAN External Route.
 ///
 /// Informed by the Thread 1.1.1 Specification, section 5.13.3.
-table ExternalRoute {
+type ExternalRoute = table {
     /// Subnet for route. Required.
-    1: fuchsia.lowpan.Ipv6Subnet subnet;
+    1: subnet fuchsia.lowpan.Ipv6Subnet;
 
     /// Indicates the what preference this route should be given relative
     /// to other devices offering the same external route. If not present,
@@ -82,7 +80,7 @@ table ExternalRoute {
     ///
     /// Based on `R_preference` from Section 5.13.3 of the Thread 1.1.1
     /// Specification.
-    2: RoutePreference route_preference;
+    2: route_preference RoutePreference;
 
     /// True if the route is expected to be available for at least Thread's
     /// `MIN_STABLE_LIFETIME`; otherwise, `false`. If not present, assumed to
@@ -92,7 +90,7 @@ table ExternalRoute {
     ///
     /// Based on `R_stable` from Section 5.13.3 of the Thread 1.1.1
     /// Specification.
-    3: bool stable;
+    3: stable bool;
 };
 
 /// LoWPAN protocol for IPv6 route and prefix management methods that
@@ -118,7 +116,9 @@ protocol DeviceRoute {
     /// If registering a new on-mesh prefix and the maximum number of
     /// on-mesh prefixes has already been registered, this channel will
     /// be closed with the epitaph `ZX_ERR_NO_RESOURCES`.
-    RegisterOnMeshPrefix(OnMeshPrefix prefix) -> ();
+    RegisterOnMeshPrefix(struct {
+        prefix OnMeshPrefix;
+    }) -> ();
 
     /// Unregisters any on-mesh prefix that was previously registered with
     /// `RegisterOnMeshPrefix`.  It returns once the on-mesh prefix has
@@ -126,7 +126,9 @@ protocol DeviceRoute {
     ///
     /// If the given mesh prefix was not previously registered,
     /// no action is taken.
-    UnregisterOnMeshPrefix(fuchsia.lowpan.Ipv6Subnet subnet) -> ();
+    UnregisterOnMeshPrefix(struct {
+        subnet fuchsia.lowpan.Ipv6Subnet;
+    }) -> ();
 
     /// Registers an external route to be advertised on the
     /// current network.
@@ -145,7 +147,9 @@ protocol DeviceRoute {
     /// If registering a new external route and the maximum number of
     /// external routes has already been registered, this channel will
     /// be closed with the epitaph `ZX_ERR_NO_RESOURCES`.
-    RegisterExternalRoute(ExternalRoute external_route) -> ();
+    RegisterExternalRoute(struct {
+        external_route ExternalRoute;
+    }) -> ();
 
     /// Unregisters any external route that was previously registered with
     /// `RegisterExternalRoute`. It returns once the external route has
@@ -153,7 +157,9 @@ protocol DeviceRoute {
     ///
     /// If the given external route was not previously registered,
     /// no action is taken.
-    UnregisterExternalRoute(fuchsia.lowpan.Ipv6Subnet subnet) -> ();
+    UnregisterExternalRoute(struct {
+        subnet fuchsia.lowpan.Ipv6Subnet;
+    }) -> ();
 };
 
 /// LoWPAN protocol for IPv6 route and prefix management methods that
@@ -163,8 +169,12 @@ protocol DeviceRoute {
 /// `DeviceRoute` protocol.
 protocol DeviceRouteExtra {
     /// Returns a vector containing all of the locally added on-mesh prefixes.
-    GetLocalOnMeshPrefixes() -> (vector<OnMeshPrefix>:MAX_ON_MESH_PREFIXES prefixes);
+    GetLocalOnMeshPrefixes() -> (struct {
+        prefixes vector<OnMeshPrefix>:MAX_ON_MESH_PREFIXES;
+    });
 
     /// Returns a vector containing all of the locally added external routes.
-    GetLocalExternalRoutes() -> (vector<ExternalRoute>:MAX_EXTERNAL_ROUTES external_routes);
+    GetLocalExternalRoutes() -> (struct {
+        external_routes vector<ExternalRoute>:MAX_EXTERNAL_ROUTES;
+    });
 };

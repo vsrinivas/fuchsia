@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.intl.merge;
 
 using fuchsia.intl;
@@ -11,13 +9,13 @@ using fuchsia.settings;
 /// Raw inputs for producing a `fuchsia.intl.Profile`. This is only used
 /// internally in `IntlPropertyProviderImpl`, for keeping track of incoming
 /// settings before assembling a `fuchsia.intl.Profile`.
-table Data {
+type Data = table {
     // Just language, region, script, and variant; no extensions.
-    1: vector<fuchsia.intl.LocaleId>:10 language_tags;
-    2: vector<fuchsia.intl.TimeZoneId>:10 time_zone_ids;
-    3: vector<fuchsia.intl.CalendarId>:10 calendar_ids;
-    4: fuchsia.intl.TemperatureUnit temperature_unit;
+    1: language_tags vector<fuchsia.intl.LocaleId>:10;
+    2: time_zone_ids vector<fuchsia.intl.TimeZoneId>:10;
+    3: calendar_ids vector<fuchsia.intl.CalendarId>:10;
+    4: temperature_unit fuchsia.intl.TemperatureUnit;
     // If set, the hour cycle is taken from this setting, and is otherwise defaulted from the
     // locale.
-    5: fuchsia.settings.HourCycle hour_cycle;
+    5: hour_cycle fuchsia.settings.HourCycle;
 };

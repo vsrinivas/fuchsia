@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.net.dhcp;
 
 using zx;
@@ -18,7 +16,7 @@ protocol Client {
     ///
     /// Start returns no other errors currently, but callers should check the error
     /// value in case new errors are returned in the future.
-    Start() -> () error zx.status;
+    Start() -> (struct {}) error zx.status;
 
     /// Stops the DHCP client (if it is running).
     ///
@@ -29,5 +27,5 @@ protocol Client {
     ///
     /// Stop returns no other errors currently, but callers should check the error
     /// value in case new errors are returned in the future.
-    Stop() -> () error zx.status;
+    Stop() -> (struct {}) error zx.status;
 };

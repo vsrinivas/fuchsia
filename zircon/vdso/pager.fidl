@@ -1,47 +1,69 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library zx;
 
-[Transport = "Syscall"]
+@transport("Syscall")
 protocol pager {
     /// Create a new pager object.
     /// Rights: None.
-    pager_create(uint32 options) -> (status status, handle:PAGER out);
+    pager_create(struct {
+        options uint32;
+    }) -> (resource struct {
+        status status;
+        out handle:PAGER;
+    });
 
     /// Create a pager owned vmo.
     /// Rights: pager must be of type ZX_OBJ_TYPE_PAGER.
     /// Rights: port must be of type ZX_OBJ_TYPE_PORT and have ZX_RIGHT_WRITE.
-    pager_create_vmo(handle:PAGER pager, uint32 options, handle:PORT port, uint64 key, uint64 size)
-        -> (status status, handle:VMO out);
+    pager_create_vmo(resource struct {
+        pager handle:PAGER;
+        options uint32;
+        port handle:PORT;
+        key uint64;
+        size uint64;
+    }) -> (resource struct {
+        status status;
+        out handle:VMO;
+    });
 
     /// Detaches a vmo from a pager.
     /// Rights: pager must be of type ZX_OBJ_TYPE_PAGER.
     /// Rights: vmo must be of type ZX_OBJ_TYPE_VMO.
-    pager_detach_vmo(handle:PAGER pager, handle:VMO vmo) -> (status status);
+    pager_detach_vmo(resource struct {
+        pager handle:PAGER;
+        vmo handle:VMO;
+    }) -> (struct {
+        status status;
+    });
 
     /// Supply pages into a pager owned vmo.
     /// Rights: pager must be of type ZX_OBJ_TYPE_PAGER.
     /// Rights: pager_vmo must be of type ZX_OBJ_TYPE_VMO.
     /// Rights: aux_vmo must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_READ and have ZX_RIGHT_WRITE.
-    pager_supply_pages(handle:PAGER pager,
-                       handle:VMO pager_vmo,
-                       uint64 offset,
-                       uint64 length,
-                       handle:VMO aux_vmo,
-                       uint64 aux_offset)
-        -> (status status);
+    pager_supply_pages(resource struct {
+        pager handle:PAGER;
+        pager_vmo handle:VMO;
+        offset uint64;
+        length uint64;
+        aux_vmo handle:VMO;
+        aux_offset uint64;
+    }) -> (struct {
+        status status;
+    });
 
     /// Perform an operation on a range of a pager owned vmo.
     /// Rights: pager must be of type ZX_OBJ_TYPE_PAGER.
     /// Rights: pager_vmo must be of type ZX_OBJ_TYPE_VMO.
-    pager_op_range(handle:PAGER pager,
-                   uint32 op,
-                   handle:VMO pager_vmo,
-                   uint64 offset,
-                   uint64 length,
-                   uint64 data)
-        -> (status status);
+    pager_op_range(resource struct {
+        pager handle:PAGER;
+        op uint32;
+        pager_vmo handle:VMO;
+        offset uint64;
+        length uint64;
+        data uint64;
+    }) -> (struct {
+        status status;
+    });
 };

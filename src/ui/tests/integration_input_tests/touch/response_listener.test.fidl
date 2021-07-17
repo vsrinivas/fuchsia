@@ -1,30 +1,30 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library test.touch;
 
 using zx;
 
 /// A set of pointer event-related data that is returned to the test for verification.
-table PointerData {
+type PointerData = table {
     /// The horizontal coordinate reported in the client's coordinate system.
-    1: float64 local_x;
+    1: local_x float64;
 
     /// The vertical coordinate reported in the client's coordinate system.
-    2: float64 local_y;
+    2: local_y float64;
 
     /// The monotonic time (ns) the pointer data was received by the client.
-    3: zx.time time_received;
+    3: time_received zx.time;
 
     /// The number of physical pixels, per logical pixel, as reported by the client.
-    4: float64 device_pixel_ratio;
+    4: device_pixel_ratio float64;
 };
 
 /// A test-specific scheme to gather signal from the client-under-test.
-[Discoverable]
+@discoverable
 protocol ResponseListener {
     /// Notify the test that client-under-test has received expected input.
-    Respond(PointerData pointer_data);
+    Respond(struct {
+        pointer_data PointerData;
+    });
 };

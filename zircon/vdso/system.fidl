@@ -1,69 +1,107 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library zx;
 
-struct SystemPowerctlArg {
-    // TODO(scottmg): More unnamed unions.
-    //union {
-    //  struct {
-    //    uint8_t target_s_state; // Value between 1 and 5 indicating which S-state
-    //    uint8_t sleep_type_a;   // Value from ACPI VM (SLP_TYPa)
-    //    uint8_t sleep_type_b;   // Value from ACPI VM (SLP_TYPb)
-    //  } acpi_transition_s_state;
-    //  struct {
-    //    uint32_t power_limit; // PL1 value in milliwatts
-    //    uint32_t time_window; // PL1 time window in microseconds
-    //    uint8_t clamp;        // PL1 clamping enable
-    //    uint8_t enable;       // PL1 enable
-    //  } x86_power_limit;
-    //};
-};
+type SystemPowerctlArg = struct {
+        // TODO(scottmg): More unnamed unions.
+        //union {
+        //  struct {
+        //    uint8_t target_s_state; // Value between 1 and 5 indicating which S-state
+        //    uint8_t sleep_type_a;   // Value from ACPI VM (SLP_TYPa)
+        //    uint8_t sleep_type_b;   // Value from ACPI VM (SLP_TYPb)
+        //  } acpi_transition_s_state;
+        //  struct {
+        //    uint32_t power_limit; // PL1 value in milliwatts
+        //    uint32_t time_window; // PL1 time window in microseconds
+        //    uint8_t clamp;        // PL1 clamping enable
+        //    uint8_t enable;       // PL1 enable
+        //  } x86_power_limit;
+        //};
+        };
 
-[Transport = "Syscall"]
+@transport("Syscall")
 protocol system {
-    [const, vdsocall]
-    system_get_dcache_line_size() -> (uint32 size);
+    @const
+    @vdsocall
+    system_get_dcache_line_size() -> (struct {
+        size uint32;
+    });
 
     /// Get number of logical processors on the system.
-    [const, vdsocall]
-    system_get_num_cpus() -> (uint32 count);
+    @const
+    @vdsocall
+    system_get_num_cpus() -> (struct {
+        count uint32;
+    });
 
     /// Get version string for system.
-    [const, vdsocall]
-    system_get_version_string() -> (string_view version);
+    @const
+    @vdsocall
+    system_get_version_string() -> (struct {
+        version string_view;
+    });
 
     /// Get the page size for the system.
-    [const, vdsocall]
-    system_get_page_size() -> (uint32 size);
+    @const
+    @vdsocall
+    system_get_page_size() -> (struct {
+        size uint32;
+    });
 
     /// Get amount of physical memory on the system.
-    [vdsocall]
-    system_get_physmem() -> (uint64 physmem);
+    @vdsocall
+    system_get_physmem() -> (struct {
+        physmem uint64;
+    });
 
     // TODO(scottmg): "features" has a features attribute. I'm not sure if/how it's used.
     /// Get supported hardware capabilities.
-    [vdsocall]
-    system_get_features(uint32 kind) -> (status status, uint32 features);
+    @vdsocall
+    system_get_features(struct {
+        kind uint32;
+    }) -> (struct {
+        status status;
+        features uint32;
+    });
 
     /// Retrieve a handle to a system event.
     /// Rights: None.
-    system_get_event(handle:JOB root_job, uint32 kind) -> (status status, handle:EVENT event);
+    system_get_event(resource struct {
+        root_job handle:JOB;
+        kind uint32;
+    }) -> (resource struct {
+        status status;
+        event handle:EVENT;
+    });
 
     /// Soft reboot the system with a new kernel and bootimage.
     /// Rights: resource must have resource kind ZX_RSRC_KIND_ROOT.
     /// Rights: kernel_vmo must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_READ.
     /// Rights: bootimage_vmo must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_READ.
-    system_mexec(handle:RESOURCE resource, handle:VMO kernel_vmo, handle:VMO bootimage_vmo)
-        -> (status status);
+    system_mexec(resource struct {
+        resource handle:RESOURCE;
+        kernel_vmo handle:VMO;
+        bootimage_vmo handle:VMO;
+    }) -> (struct {
+        status status;
+    });
 
     /// Return a ZBI containing ZBI entries necessary to boot this system.
     /// Rights: resource must have resource kind ZX_RSRC_KIND_ROOT.
-    system_mexec_payload_get(handle:RESOURCE resource) -> (status status, vector_void buffer);
+    system_mexec_payload_get(resource struct {
+        resource handle:RESOURCE;
+    }) -> (struct {
+        status status;
+        buffer vector_void;
+    });
 
     /// Rights: resource must have resource kind ZX_RSRC_KIND_ROOT.
-    system_powerctl(handle:RESOURCE resource, uint32 cmd, SystemPowerctlArg arg)
-        -> (status status);
+    system_powerctl(resource struct {
+        resource handle:RESOURCE;
+        cmd uint32;
+        arg SystemPowerctlArg;
+    }) -> (struct {
+        status status;
+    });
 };

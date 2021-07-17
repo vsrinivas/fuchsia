@@ -1,30 +1,28 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.bluetooth.sys;
 
 using fuchsia.bluetooth as bt;
 
-struct SecurityProperties {
-    bool authenticated;
-    bool secure_connections;
-    uint8 encryption_key_size;
+type SecurityProperties = struct {
+    authenticated bool;
+    secure_connections bool;
+    encryption_key_size uint8;
 };
 
 /// Represents a 128-bit secret key.
-struct Key {
-    array<uint8>:16 value;
+type Key = struct {
+    value array<uint8, 16>;
 };
 
 /// Represents a key that was received from a peer.
-struct PeerKey {
+type PeerKey = struct {
     /// The security properties of this link under which this key was received.
-    SecurityProperties security;
+    security SecurityProperties;
 
     /// The contents of the key.
-    Key data;
+    data Key;
 };
 
 /// Represents a locally generated key that is distributed across one or more bonds.
@@ -32,87 +30,87 @@ alias LocalKey = Key;
 
 /// Represents a LE Long-Term peer key used for link encyrption. The `ediv` and `rand`
 /// fields are zero if distributed using LE Secure Connections pairing.
-struct Ltk {
-    PeerKey key;
-    uint16 ediv;
-    uint64 rand;
+type Ltk = struct {
+    key PeerKey;
+    ediv uint16;
+    rand uint64;
 };
 
 /// The preferred LE connection parameters of the peer.
-struct LeConnectionParameters {
-    uint16 connection_interval;
-    uint16 connection_latency;
-    uint16 supervision_timeout;
+type LeConnectionParameters = struct {
+    connection_interval uint16;
+    connection_latency uint16;
+    supervision_timeout uint16;
 };
 
-table LeBondData {
+type LeBondData = table {
     /// The peer's preferred connection parameters, if known.
-    1: LeConnectionParameters connection_parameters;
+    1: connection_parameters LeConnectionParameters;
 
     /// Known GATT service UUIDs.
-    2: vector<bt.Uuid>:MAX_PEER_SERVICES services;
+    2: services vector<bt.Uuid>:MAX_PEER_SERVICES;
 
     /// Identity Resolving RemoteKey used to generate and resolve random addresses.
-    3: PeerKey irk;
+    3: irk PeerKey;
 
     /// Connection Signature Resolving RemoteKey used for data signing without encryption.
-    4: PeerKey csrk;
+    4: csrk PeerKey;
 
     /// LE long-term key used to encrypt a connection when the peer is in the LE Peripheral role.
     ///
     /// In legacy pairing (`peer_ltk.security.secure_connections` is false),  this key corresponds
     /// to the key distributed by the peer. In Secure Connections pairing there is only one LTK and
     /// `peer_ltk` is the same as `local_ltk`.
-    5: Ltk peer_ltk;
+    5: peer_ltk Ltk;
 
     /// LE long-term key used to encrypt a connection when the peer is in the LE Central role.
     ///
     /// In legacy pairing (`local_ltk.security.secure_connections` is false), this key corresponds
     /// to the key distributed by the local device. In Secure Connections pairing there is only one
     /// LTK and `local_ltk` is the same as `peer_ltk`.
-    6: Ltk local_ltk;
+    6: local_ltk Ltk;
 };
 
-table BredrBondData {
+type BredrBondData = table {
     /// The peer's preferred piconet role. This is determined by role switch procedures. Paging and
     /// connecting from a peer does not automatically set this flag. If absent, the peer has not
     /// expressed a preference.
-    1: bt.ConnectionRole role_preference;
+    1: role_preference bt.ConnectionRole;
 
     /// Known service UUIDs obtained from EIR data or SDP.
-    2: vector<bt.Uuid>:MAX_PEER_SERVICES services;
+    2: services vector<bt.Uuid>:MAX_PEER_SERVICES;
 
     /// The semi-permanent BR/EDR key. Present if link was paired with Secure Simple Pairing or
     /// stronger.
-    3: PeerKey link_key;
+    3: link_key PeerKey;
 };
 
 /// Represents the bonding data for a single peer.
-table BondingData {
+type BondingData = table {
     /// The identifier that uniquely identifies this peer.
-    1: bt.PeerId identifier;
+    1: identifier bt.PeerId;
 
     /// The local Bluetooth identity address that this bond is associated with.
-    2: bt.Address local_address;
+    2: local_address bt.Address;
 
     /// The name of the peer, if known.
-    3: bt.DeviceName name;
+    3: name bt.DeviceName;
 
     4: reserved;
     5: reserved;
 
     /// The identity address of the peer.
-    6: bt.Address address;
+    6: address bt.Address;
 
     /// Bonding data that is present when this peer is paired on the LE transport.
-    7: LeBondData le_bond;
+    7: le_bond LeBondData;
 
     /// Bonding data that is present when this peer is paired on the BR/EDR transport.
-    8: BredrBondData bredr_bond;
+    8: bredr_bond BredrBondData;
 };
 
 /// Represents persistent local host data.
-table HostData {
+type HostData = table {
     /// The local Identity Resolving Key used by a bt-host device to generate Resolvable Private
     /// Addresses when privacy is enabled.
     ///
@@ -122,7 +120,7 @@ table HostData {
     /// NOTE: This key is distributed to LE peers during pairing procedures. The client must take
     /// care to assign an IRK that consistent with the local bt-host identity.
     // TODO(fxbug.dev/1408): Document behavior once there is a better privacy policy when `irk` is null.
-    1: LocalKey irk;
+    1: irk LocalKey;
 };
 
 /// Represents the persistent configuration of a single host-subsystem instance. This is used for
@@ -134,9 +132,9 @@ table HostData {
 ///
 /// Each Identity instance that supports LE privacy should have an Identity Resolving Key (IRK) that
 /// is consistent with that distributed to its bonded peers.
-table Identity {
-    1: HostData host;
+type Identity = table {
+    1: host HostData;
 
     /// All bonds that use a public identity address must contain the same local address.
-    2: vector<BondingData>:MAX bonds;
+    2: bonds vector<BondingData>:MAX;
 };

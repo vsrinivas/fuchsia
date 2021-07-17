@@ -1,29 +1,37 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.camera.debug;
 using zx;
 
 /// Maximum number of test pattern modes.
-const uint8 MAX_TEST_PATTERN_MODES = 64;
+const MAX_TEST_PATTERN_MODES uint8 = 64;
 /// Maximum number of test pattern data parameters.
-const uint16 MAX_TEST_PATTERN_DATA = 128;
+const MAX_TEST_PATTERN_DATA uint16 = 128;
 
 /// This interface can be attached to various blocks in the camera stack to expose debug-only
 /// functionality. Not all blocks will implement all methods in this protocol and may instead
 /// choose to return ZX_ERR_NOT_SUPPORTED.
-[Discoverable]
+@discoverable
 protocol Debug {
     /// Retrieves the available test pattern modes supported by the block.
-    GetAvailableTestPatternModes() -> (vector<uint32>:MAX_TEST_PATTERN_MODES modes) error zx.status;
+    GetAvailableTestPatternModes() -> (struct {
+        modes vector<uint32>:MAX_TEST_PATTERN_MODES;
+    }) error zx.status;
     /// Retrieves the test pattern mode the block is currently set to.
-    GetCurrentTestPatternMode() -> (uint16 value) error zx.status;
+    GetCurrentTestPatternMode() -> (struct {
+        value uint16;
+    }) error zx.status;
     /// Changes the block's test pattern mode.
-    SetTestPatternMode(uint16 mode) -> () error zx.status;
+    SetTestPatternMode(struct {
+        mode uint16;
+    }) -> (struct {}) error zx.status;
     /// Retrieves the test pattern data being used.
-    GetTestPatternData() -> (vector<uint32>:MAX_TEST_PATTERN_DATA data) error zx.status;
+    GetTestPatternData() -> (struct {
+        data vector<uint32>:MAX_TEST_PATTERN_DATA;
+    }) error zx.status;
     /// Changes data passed into the test pattern. Only used by certain modes.
-    SetTestPatternData(vector<uint32>:MAX_TEST_PATTERN_DATA data) -> () error zx.status;
+    SetTestPatternData(struct {
+        data vector<uint32>:MAX_TEST_PATTERN_DATA;
+    }) -> (struct {}) error zx.status;
 };

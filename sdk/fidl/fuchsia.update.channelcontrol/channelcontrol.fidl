@@ -1,14 +1,12 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.update.channelcontrol;
 
 using fuchsia.update.channel;
 
 /// Control the target update channel, this is the channel we will use on the next update check.
-[Discoverable]
+@discoverable
 protocol ChannelControl {
     compose fuchsia.update.channel.Provider;
 
@@ -20,7 +18,9 @@ protocol ChannelControl {
     /// valid.
     ///
     /// + request `channel` the new target channel name (name used by the updater)
-    SetTarget(string:128 channel) -> ();
+    SetTarget(struct {
+        channel string:128;
+    }) -> ();
 
     /// Get the current tentative target channel for updates.
     /// This returns the channel that the update client is using to perform update
@@ -30,9 +30,13 @@ protocol ChannelControl {
     ///    - a new target that's different, but hasn't been OTA'd from yet.
     ///
     /// - response `channel` the current target channel.
-    GetTarget() -> (string:128 channel);
+    GetTarget() -> (struct {
+        channel string:128;
+    });
 
     /// Get the list of well-known target channels that can be passed to SetTarget().
     /// There may be other, unlisted channels.
-    GetTargetList() -> (vector<string:128>:100 channels);
+    GetTargetList() -> (struct {
+        channels vector<string:128>:100;
+    });
 };

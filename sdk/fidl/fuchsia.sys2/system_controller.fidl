@@ -1,13 +1,11 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.sys2;
 
 /// An interface implemented by ComponentManager that requests the
 /// ComponentManager stop all components and exit.
-[Discoverable]
+@discoverable
 protocol SystemController {
     /// Stop all components, return an empty result, close this protocol's
     /// channel, and exit ComponentManager. If this is the root ComponentManager

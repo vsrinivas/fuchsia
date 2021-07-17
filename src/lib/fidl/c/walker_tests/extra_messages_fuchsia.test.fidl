@@ -1,8 +1,6 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 /// This library is for types only supported on fuchsia.
 /// Where possible, new definitions should go into extra_messages.test.fidl
 /// instead.
@@ -11,27 +9,31 @@ library fidl.test.coding.fuchsia;
 using zx;
 
 protocol LinearizerTest {
-    VectorOfUint32(vector<uint32> v);
-    VectorOfString(vector<string> v);
+    VectorOfUint32(struct {
+        v vector<uint32>;
+    });
+    VectorOfString(struct {
+        v vector<string>;
+    });
 };
 
-resource struct StructWithHandle {
-    zx.handle h;
-    int32 foo;
+type StructWithHandle = resource struct {
+    h zx.handle;
+    foo int32;
 };
 
-resource struct StructWithManyHandles {
-    zx.handle h1;
-    zx.handle h2;
-    vector<zx.handle>:2 hs;
+type StructWithManyHandles = resource struct {
+    h1 zx.handle;
+    h2 zx.handle;
+    hs vector<zx.handle>:2;
 };
 
-resource table TableOfStructWithHandle {
-    1: StructWithHandle a;
-    2: StructWithManyHandles b;
+type TableOfStructWithHandle = resource table {
+    1: a StructWithHandle;
+    2: b StructWithManyHandles;
 };
 
-resource table SmallerTableOfStructWithHandle {
+type SmallerTableOfStructWithHandle = resource table {
     1: reserved;
-    2: StructWithManyHandles b;
+    2: b StructWithManyHandles;
 };

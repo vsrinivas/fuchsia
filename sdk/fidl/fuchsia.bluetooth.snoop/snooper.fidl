@@ -1,27 +1,25 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.bluetooth.snoop;
 
 using fuchsia.bluetooth as bt;
 using fuchsia.io as io;
 
 /// Timestamp represents the number of seconds and nanoseconds since the Unix epoch.
-struct Timestamp {
+type Timestamp = struct {
     /// Valid values for `subsec_nanos` can be greater than 10^9-1. Therefore the total
     /// seconds elapsed since the epoch is defined by the value of `seconds` plus
     /// `subsec_nanos` / 10^9 - the value of `seconds` alone may not be sufficient.
     ///
     /// It is invalid for the carry from `subsec_nanos` to overflow the `seconds` field.
     /// A client or server should reject such data as malformed.
-    uint32 subsec_nanos;
-    uint64 seconds;
+    subsec_nanos uint32;
+    seconds uint64;
 };
 
 /// Messages coming through the Host Controller Interface can be one of three types.
-enum PacketType {
+type PacketType = strict enum {
     /// Command sent from the host to the controller.
     CMD = 0;
     /// Event sent from the controller to the host.
@@ -30,23 +28,23 @@ enum PacketType {
     DATA = 2;
 };
 
-struct SnoopPacket {
+type SnoopPacket = struct {
     /// true if this packet is sent from the controller to the host.
-    bool is_received;
-    PacketType type;
+    is_received bool;
+    type PacketType;
     /// Timestamp that the bt-snoop service received the packet from a snoop channel as measured
     /// by the host system.
-    Timestamp timestamp;
+    timestamp Timestamp;
     /// Original length of the packet before truncation.
-    uint32 original_len;
+    original_len uint32;
     /// Payload sent over the HCI.
-    bytes payload;
+    payload bytes;
 };
 
 /// Interface to receive packets recorded as received or transmitted for a Bluetooth host.
 /// Packets are received by the client as datagrams through the fidl channel as `OnPacket`
 /// events.
-[Discoverable]
+@discoverable
 protocol Snoop {
     /// Subscribe to receive packets from the server. Packets that have been recorded are sent
     /// first.
@@ -62,9 +60,17 @@ protocol Snoop {
     ///   `Start` can only be called once per connection. After the first request, subsequent requests
     ///   always return an error.
     ///   `host_device` values that are not recognized by the server return an error.
-    Start(bool follow, string:io.MAX_FILENAME? host_device) -> (bt.Status status);
+    Start(struct {
+        follow bool;
+        host_device string:<io.MAX_FILENAME, optional>;
+    }) -> (struct {
+        status bt.Status;
+    });
 
     /// An event containing a packet that the client has registered interest in receiving and the
     /// `host_device` which generated the packet.
-    -> OnPacket(string:io.MAX_FILENAME host_device, SnoopPacket packet);
+    -> OnPacket(struct {
+        host_device string:io.MAX_FILENAME;
+        packet SnoopPacket;
+    });
 };

@@ -1,16 +1,14 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.bluetooth;
 
 /// 64-bit unique value used by the system to identify host adapters.
-struct HostId {
-    uint64 value;
+type HostId = struct {
+    value uint64;
 };
 
 /// 64-bit unique value used by the system to identify peer devices.
-struct PeerId {
-    uint64 value;
+type PeerId = struct {
+    value uint64;
 };

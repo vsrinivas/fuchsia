@@ -1,56 +1,56 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.feedback;
 
 using fuchsia.mem;
 using zx;
 
 /// Provides the ability to file crash reports.
-[Discoverable]
+@discoverable
 protocol CrashReporter {
     /// Files a crash `report`.
     ///
     /// This could mean generating a crash report in a local crash report database or uploading the
     /// crash report to a remote crash server depending on the FIDL server's configuration.
-    File(CrashReport report) -> () error zx.status;
+    File(resource struct {
+        report CrashReport;
+    }) -> (struct {}) error zx.status;
 };
 
-const uint32 MAX_PROGRAM_NAME_LENGTH = 1024;
-const uint32 MAX_NUM_ANNOTATIONS_PER_CRASH_REPORT = 32;
-const uint32 MAX_NUM_ATTACHMENTS_PER_CRASH_REPORT = 16;
-const uint32 MAX_EVENT_ID_LENGTH = 128;
-const uint32 MAX_CRASH_SIGNATURE_LENGTH = 128;
+const MAX_PROGRAM_NAME_LENGTH uint32 = 1024;
+const MAX_NUM_ANNOTATIONS_PER_CRASH_REPORT uint32 = 32;
+const MAX_NUM_ATTACHMENTS_PER_CRASH_REPORT uint32 = 16;
+const MAX_EVENT_ID_LENGTH uint32 = 128;
+const MAX_CRASH_SIGNATURE_LENGTH uint32 = 128;
 
 /// Represents a crash report.
-resource table CrashReport {
+type CrashReport = resource table {
     /// The name of the program that crashed, e.g., the process or component's name.
-    1: string:MAX_PROGRAM_NAME_LENGTH program_name;
+    1: program_name string:MAX_PROGRAM_NAME_LENGTH;
 
     /// How long the program was running before it crashed.
-    6: zx.duration program_uptime;
+    6: program_uptime zx.duration;
 
     /// The specific report that depends on the type of crashes.
     ///
     /// This field should be set if additional information about the crashing program needs to be
     /// sent, e.g., a minidump.
-    2: SpecificCrashReport specific_report;
+    2: specific_report SpecificCrashReport;
 
     /// A vector of key-value string pairs representing arbitrary data that should be attached to a
     /// crash report.
     ///
     /// Keys should be unique as only the latest value for a given key in the vector will be
     /// considered.
-    3: vector<Annotation>:MAX_NUM_ANNOTATIONS_PER_CRASH_REPORT annotations;
+    3: annotations vector<Annotation>:MAX_NUM_ANNOTATIONS_PER_CRASH_REPORT;
 
     /// A vector of key-value string-to-VMO pairs representing arbitrary data that should be
     /// attached to a crash report.
     ///
     /// Keys should be unique as only the latest value for a given key in the vector will be
     /// considered.
-    4: vector<Attachment>:MAX_NUM_ATTACHMENTS_PER_CRASH_REPORT attachments;
+    4: attachments vector<Attachment>:MAX_NUM_ATTACHMENTS_PER_CRASH_REPORT;
 
     /// A text ID that the crash server can use to group multiple crash reports related to the
     /// same event.
@@ -58,7 +58,7 @@ resource table CrashReport {
     /// Unlike the crash signature, crash reports sharing the same ID correspond to different
     /// crashes, but can be considered as belonging to the same event, e.g., a crash in a low-level
     /// server causing a crash in a high-level UI widget.
-    5: string:MAX_EVENT_ID_LENGTH event_id;
+    5: event_id string:MAX_EVENT_ID_LENGTH;
 
     /// A text signature that the crash server can use to track the same crash over time, e.g.,
     /// "kernel-panic" or "oom". This signature will take precedence over any automated signature
@@ -70,7 +70,7 @@ resource table CrashReport {
     ///
     /// Must match [a-z][a-z\-]* i.e. only lowercase letters and hyphens or this will result in a
     /// ZX_ERR_INVALID_ARGS epitaph.
-    7: string:MAX_CRASH_SIGNATURE_LENGTH crash_signature;
+    7: crash_signature string:MAX_CRASH_SIGNATURE_LENGTH;
 
     /// Indicates whether the crash report is for the atypical stop of a running process, component,
     /// or the system itself.
@@ -90,55 +90,55 @@ resource table CrashReport {
     ///
     /// This field is primarily used for grouping crashes by fatal, not fatal, and unknown,
     /// each corresponding to the field being set to true, set to false, or not set respectively.
-    8: bool is_fatal;
+    8: is_fatal bool;
 };
 
 /// Represents a specific crash report.
 ///
 /// Add a new member when the server needs to special case how it handles certain annotations and
 /// attachments for a given type of crashes, e.g., a `RuntimeCrashReport` for Javascript.
-flexible resource union SpecificCrashReport {
+type SpecificCrashReport = flexible resource union {
     1: reserved;
 
     /// Intended for a native exception.
-    2: NativeCrashReport native;
+    2: native NativeCrashReport;
 
     /// Intended for a Dart exception.
-    3: RuntimeCrashReport dart;
+    3: dart RuntimeCrashReport;
 };
 
-const uint32 MAX_PROCESS_NAME_LENGTH = 64;
-const uint32 MAX_THREAD_NAME_LENGTH = 64;
+const MAX_PROCESS_NAME_LENGTH uint32 = 64;
+const MAX_THREAD_NAME_LENGTH uint32 = 64;
 
 /// Represents a crash report for a native exception out of which the client has built a minidump.
-resource table NativeCrashReport {
+type NativeCrashReport = resource table {
     /// The core dump in the Minidump format.
-    1: fuchsia.mem.Buffer minidump;
+    1: minidump fuchsia.mem.Buffer;
 
     /// The name of the crashed process.
-    2: string:MAX_PROCESS_NAME_LENGTH process_name;
+    2: process_name string:MAX_PROCESS_NAME_LENGTH;
 
     /// The kernel object id of the crashed process.
-    3: zx.koid process_koid;
+    3: process_koid zx.koid;
 
     /// The name of the crashed thread.
-    4: string:MAX_THREAD_NAME_LENGTH thread_name;
+    4: thread_name string:MAX_THREAD_NAME_LENGTH;
 
     /// The kernel object id of the crashed thread.
-    5: zx.koid thread_koid;
+    5: thread_koid zx.koid;
 };
 
-const uint32 MAX_EXCEPTION_TYPE_LENGTH = 128;
-const uint32 MAX_EXCEPTION_MESSAGE_LENGTH = 2048;
+const MAX_EXCEPTION_TYPE_LENGTH uint32 = 128;
+const MAX_EXCEPTION_MESSAGE_LENGTH uint32 = 2048;
 
 /// Represents a crash report for a runtime exception, applicable to most languages.
-resource table RuntimeCrashReport {
+type RuntimeCrashReport = resource table {
     /// The exception type, e.g., "FileSystemException".
-    1: string:MAX_EXCEPTION_TYPE_LENGTH exception_type;
+    1: exception_type string:MAX_EXCEPTION_TYPE_LENGTH;
 
     /// The exception message, e.g., "cannot open file".
-    2: string:MAX_EXCEPTION_MESSAGE_LENGTH exception_message;
+    2: exception_message string:MAX_EXCEPTION_MESSAGE_LENGTH;
 
     /// The text representation of the exception stack trace.
-    3: fuchsia.mem.Buffer exception_stack_trace;
+    3: exception_stack_trace fuchsia.mem.Buffer;
 };

@@ -1,20 +1,21 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library test.fidlcodec.examples;
 
 protocol FidlCodecXUnion {
-    SendAfterMigration(NowAsXUnion u, int32 i);
+    SendAfterMigration(struct {
+        u NowAsXUnion;
+        i int32;
+    });
 };
 
-flexible union NowAsXUnion {
-    1: uint8 variant_u8;
-    2: uint16 variant_u16;
+type NowAsXUnion = flexible union {
+    1: variant_u8 uint8;
+    2: variant_u16 uint16;
 };
 
-union OriginalUnion {
-    1: uint8 variant_u8;
-    2: uint16 variant_u16;
+type OriginalUnion = strict union {
+    1: variant_u8 uint8;
+    2: variant_u16 uint16;
 };

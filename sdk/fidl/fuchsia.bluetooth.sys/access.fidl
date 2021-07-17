@@ -1,13 +1,11 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.bluetooth.sys;
 
 using fuchsia.bluetooth as bt;
 
-enum Error {
+type Error = strict enum {
     /// Operation could not be performed.
     FAILED = 1;
 
@@ -35,8 +33,7 @@ enum Error {
 ///
 ///   1. Closing a token handle ends the procedure that it is attached to.
 ///   2. The system closes a token handle to communicate that a procedure was internally terminated.
-protocol ProcedureToken {
-};
+protocol ProcedureToken {};
 
 /// Protocol that abstracts the operational modes and procedures defined in the Bluetooth Generic
 /// Access Profile (see Core Specification v5.1, Vol 3, Part C).
@@ -46,7 +43,7 @@ protocol ProcedureToken {
 ///
 /// The procedures initiated by an Access protocol instance are terminated when the underlying
 /// channel is closed.
-[Discoverable]
+@discoverable
 protocol Access {
     /// Assign a PairingDelegate to respond to drive pairing procedures. The delegate will be
     /// configured to use the provided I/O capabilities to determine the pairing method.
@@ -58,19 +55,27 @@ protocol Access {
     /// + request `input` Bluetooth input capability
     /// + request `output` Bluetooth output capability
     /// + request `delegate` The client end of a PairingDelegate channel.
-    SetPairingDelegate(InputCapability input, OutputCapability output, PairingDelegate delegate);
+    SetPairingDelegate(resource struct {
+        input InputCapability;
+        output OutputCapability;
+        delegate client_end:PairingDelegate;
+    });
 
     /// Assign a local name for the Bluetooth system. This name will be visible to nearby peers
     /// when the system is in discoverable mode and during name discovery procedures.
     ///
     /// + request `name` The complete local name to assign to the system.
-    SetLocalName(bt.DeviceName name);
+    SetLocalName(struct {
+        name bt.DeviceName;
+    });
 
     /// Set the local device class that will be visible to nearby peers when the system is in
     /// discoverable mode.
     ///
     /// + request `device_class` The device class to assign to the system.
-    SetDeviceClass(bt.DeviceClass device_class);
+    SetDeviceClass(struct {
+        device_class bt.DeviceClass;
+    });
 
     /// Put the system into the "General Discoverable" mode on the BR/EDR transport. The active
     /// host will respond to general inquiry (by regularly entering the inquiry scan mode).
@@ -79,7 +84,9 @@ protocol Access {
     ///   discoverable mode session is active. NOTE: The system may remain discoverable until all
     ///   [`fuchsia.bluetooth.sys/Access`] clients drop their tokens.
     /// * error Reports Error.FAILED if inquiry mode cannot be entered.
-    MakeDiscoverable(request<ProcedureToken> token) -> () error Error;
+    MakeDiscoverable(resource struct {
+        token server_end:ProcedureToken;
+    }) -> (struct {}) error Error;
 
     /// Start a general discovery procedure. All general discoverable BR/EDR, LE,
     /// and BR/EDR/LE devices will appear in the peer list, which can be observed by calling
@@ -89,7 +96,9 @@ protocol Access {
     ///   discovery is in progress. NOTE: The radio will continue performing discovery until all
     ///   [`fuchsia.bluetooth.sys/Access`] drop their tokens.
     /// * error Reports Error.FAILED if discovery on either transport cannot be initiated.
-    StartDiscovery(request<ProcedureToken> token) -> () error Error;
+    StartDiscovery(resource struct {
+        token server_end:ProcedureToken;
+    }) -> (struct {}) error Error;
 
     /// Returns a list of all peers (connectable Bluetooth devices) known to the system. The first
     /// call results in a snapshot of all known peers to be sent immediately in the `updated` return
@@ -102,7 +111,10 @@ protocol Access {
     // vectors bounds. MAX will likely not prevent this method from overfilling a FIDL message if
     // the client falls behind. This can happen during device discovery as it can involve high
     // volume of peer updates.
-    WatchPeers() -> (vector<Peer>:MAX updated, vector<bt.PeerId>:MAX removed);
+    WatchPeers() -> (struct {
+        updated vector<Peer>:MAX;
+        removed vector<bt.PeerId>:MAX;
+    });
 
     /// Initiate a connection to the peer with the given `id`. This method connects both BR/EDR and
     /// LE transports depending on the technologies that the peer is known to support.
@@ -110,7 +122,9 @@ protocol Access {
     /// + request `id` The id of the peer to connect.
     /// * error Reports `Error.FAILED` if a connection to the peer cannot be initiated.
     /// * error Reports `Error.PEER_NOT_FOUND` if `id` is not recognized.
-    Connect(bt.PeerId id) -> () error Error;
+    Connect(struct {
+        id bt.PeerId;
+    }) -> (struct {}) error Error;
 
     /// Disconnect all logical links to the peer with the given `id`. This includes LE and
     /// BR/EDR links that have been initiated using all Access and fuchsia.bluetooth.le protocol
@@ -118,7 +132,9 @@ protocol Access {
     ///
     /// + request `id` The id of the peer to disconnect.
     /// * error Reports `Error.PEER_NOT_FOUND` if `id` is not recognized.
-    Disconnect(bt.PeerId id) -> () error Error;
+    Disconnect(struct {
+        id bt.PeerId;
+    }) -> (struct {}) error Error;
 
     /// Initiate a pairing to the remote `id` with the given `options`.
     /// This call completes only once the pairing procedure has completed or aborted.
@@ -138,12 +154,17 @@ protocol Access {
     ///   connected on the requested transport.
     /// * error Reports `Error.INVALID_ARGUMENTS` if ill-formed options are passed
     /// * error Reports `Error.FAILED` if an error occurs during pairing
-    Pair(bt.PeerId id, PairingOptions options) -> () error Error;
+    Pair(struct {
+        id bt.PeerId;
+        options PairingOptions;
+    }) -> (struct {}) error Error;
 
     /// Removes all bonding information and disconnects any existing links with the peer with the
     /// given `id`.
     ///
     /// + request `id` The id of the peer to forget.
     /// * error Reports `Error.PEER_NOT_FOUND` if `id` is not recognized.
-    Forget(bt.PeerId id) -> () error Error;
+    Forget(struct {
+        id bt.PeerId;
+    }) -> (struct {}) error Error;
 };

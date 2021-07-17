@@ -1,25 +1,26 @@
 // Copyright 2017 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.bluetooth.gatt;
 
 using fuchsia.bluetooth as bt;
 
-table ReadByTypeResult {
+type ReadByTypeResult = table {
     /// Characteristic or descriptor id.
-    1: uint64 id;
+    1: id uint64;
     /// Truncated value of characteristic or descriptor, if it was read successfully.
-    2: bytes:MAX_READ_BY_TYPE_VALUE_LENGTH value;
+    2: value bytes:MAX_READ_BY_TYPE_VALUE_LENGTH;
     /// Reason the value could not be read, if reading it resulted in an error.
-    3: Error error;
+    3: error Error;
 };
 
 protocol RemoteService {
     /// Returns the characteristics and characteristic descriptors that belong to
     /// this service.
-    DiscoverCharacteristics() -> (fuchsia.bluetooth.Status status, vector<Characteristic>:MAX_CHARACTERISTIC_COUNT characteristics);
+    DiscoverCharacteristics() -> (struct {
+        status fuchsia.bluetooth.Status;
+        characteristics vector<Characteristic>:MAX_CHARACTERISTIC_COUNT;
+    });
 
     /// Reads the value of the characteristic with `id` and returns it in the
     /// reply. If `status` indicates an error `value` will be empty.
@@ -28,7 +29,12 @@ protocol RemoteService {
     /// this method will return only the first (MTU - 1) bytes of the value. Use
     /// ReadLongCharacteristic() to read larger values or starting at a non-zero
     /// offset.
-    ReadCharacteristic(uint64 id) -> (fuchsia.bluetooth.Status status, bytes value);
+    ReadCharacteristic(struct {
+        id uint64;
+    }) -> (struct {
+        status fuchsia.bluetooth.Status;
+        value bytes;
+    });
 
     /// Reads the complete value of a characteristic with the given `id`. This
     /// procedure should be used if the characteristic is known to have a value
@@ -42,14 +48,26 @@ protocol RemoteService {
     ///   b. The `offset` is invalid;
     ///   c. The characteristic does not have a long value;
     ///   d. The server does not support the long read procedure.
-    ReadLongCharacteristic(uint64 id, uint16 offset, uint16 max_bytes) -> (fuchsia.bluetooth.Status status, bytes:MAX_VALUE_LENGTH value);
+    ReadLongCharacteristic(struct {
+        id uint64;
+        offset uint16;
+        max_bytes uint16;
+    }) -> (struct {
+        status fuchsia.bluetooth.Status;
+        value bytes:MAX_VALUE_LENGTH;
+    });
 
     /// Writes `value` to the characteristic with `id`. This operation may return
     /// an error if:
     ///   a. The size of `value` exceeds the current MTU.
     ///   b. The characteristic referred to by `id` does not have the 'write'
     ///      property.
-    WriteCharacteristic(uint64 id, bytes value) -> (fuchsia.bluetooth.Status status);
+    WriteCharacteristic(struct {
+        id uint64;
+        value bytes;
+    }) -> (struct {
+        status fuchsia.bluetooth.Status;
+    });
 
     /// Writes `value` to the characteristic with `id`, beginning at `offset` using
     /// the provided `write_options`.
@@ -65,13 +83,22 @@ protocol RemoteService {
     /// while a long write is in process to the same id and data range. The order
     /// of the responses from this function signify the order in which the remote
     /// service received them, not necessarily the order in which it is called.
-    WriteLongCharacteristic(uint64 id, uint16 offset, bytes:MAX_VALUE_LENGTH value, WriteOptions write_options)
-        -> (fuchsia.bluetooth.Status status);
+    WriteLongCharacteristic(struct {
+        id uint64;
+        offset uint16;
+        value bytes:MAX_VALUE_LENGTH;
+        write_options WriteOptions;
+    }) -> (struct {
+        status fuchsia.bluetooth.Status;
+    });
 
     /// Writes `value` to the characteristic with `id` without soliciting an
     /// acknowledgement from the peer. This method has no response and its delivery
     /// cannot be confirmed.
-    WriteCharacteristicWithoutResponse(uint64 id, bytes value);
+    WriteCharacteristicWithoutResponse(struct {
+        id uint64;
+        value bytes;
+    });
 
     /// Reads the value of the characteristic descriptor with `id` and returns it
     /// in the reply. If `status` indicates an error, `value` can be ignored.
@@ -80,7 +107,12 @@ protocol RemoteService {
     /// this method will return only the first (MTU - 1) bytes of the value. Use
     /// ReadLongDescriptor() to read larger values or starting at a non-zero
     /// offset.
-    ReadDescriptor(uint64 id) -> (fuchsia.bluetooth.Status status, bytes value);
+    ReadDescriptor(struct {
+        id uint64;
+    }) -> (struct {
+        status fuchsia.bluetooth.Status;
+        value bytes;
+    });
 
     /// Reads the complete value of a characteristic descriptor with the given `id`.
     /// This procedure should be used if the descriptor is known to have a value
@@ -93,14 +125,26 @@ protocol RemoteService {
     ///   a. `max_bytes` is 0;
     ///   b. The `offset` is invalid;
     ///   c. The server does not support the long read procedure.
-    ReadLongDescriptor(uint64 id, uint16 offset, uint16 max_bytes) -> (fuchsia.bluetooth.Status status, bytes value);
+    ReadLongDescriptor(struct {
+        id uint64;
+        offset uint16;
+        max_bytes uint16;
+    }) -> (struct {
+        status fuchsia.bluetooth.Status;
+        value bytes;
+    });
 
     /// Writes `value` to the characteristic descriptor with `id`. This operation
     /// may return an error if:
     ///   a. The size of `value` exceeds the current MTU.
     ///   b. `id` refers to an internally reserved descriptor type (e.g. the Client
     ///      Characteristic Configuration descriptor).
-    WriteDescriptor(uint64 id, bytes value) -> (fuchsia.bluetooth.Status status);
+    WriteDescriptor(struct {
+        id uint64;
+        value bytes;
+    }) -> (struct {
+        status fuchsia.bluetooth.Status;
+    });
 
     /// Writes `value` to the characteristic descriptor with `id`, beginning at
     /// `offset`. This procedure should be used if the value to be written is too
@@ -116,7 +160,13 @@ protocol RemoteService {
     /// while a long write is in process to the same id and data range. The order
     /// of the responses from this function signify the order in which the remote
     /// service received them, not necessarily the order in which it is called.
-    WriteLongDescriptor(uint64 id, uint16 offset, bytes:MAX_VALUE_LENGTH value) -> (fuchsia.bluetooth.Status status);
+    WriteLongDescriptor(struct {
+        id uint64;
+        offset uint16;
+        value bytes:MAX_VALUE_LENGTH;
+    }) -> (struct {
+        status fuchsia.bluetooth.Status;
+    });
 
     /// Reads characteristics and descriptors with the given `uuid`. If no values are
     /// read, `results` will be empty. If reading a value results in a permission error,
@@ -128,8 +178,11 @@ protocol RemoteService {
     ///
     /// This method is useful for reading values before discovery has completed, thereby
     /// reducing latency.
-    ReadByType(fuchsia.bluetooth.Uuid uuid)
-        -> (vector<ReadByTypeResult>:MAX_READ_BY_TYPE_RESULTS results) error Error;
+    ReadByType(struct {
+        uuid fuchsia.bluetooth.Uuid;
+    }) -> (struct {
+        results vector<ReadByTypeResult>:MAX_READ_BY_TYPE_RESULTS;
+    }) error Error;
 
     /// Subscribe or unsubscribe to notifications/indications from the characteristic with
     /// the given `id`. Notifications or indications will be enabled if `enable` is
@@ -150,11 +203,19 @@ protocol RemoteService {
     /// On success, the OnCharacteristicValueUpdated event will be sent whenever
     /// the peer sends a notification or indication. The local host will
     /// automically confirm indications.
-    NotifyCharacteristic(uint64 id, bool enable) -> (fuchsia.bluetooth.Status status);
+    NotifyCharacteristic(struct {
+        id uint64;
+        enable bool;
+    }) -> (struct {
+        status fuchsia.bluetooth.Status;
+    });
 
     /// Events:
     /// Called when a characteristic value notification or indication is received.
-    -> OnCharacteristicValueUpdated(uint64 id, bytes value);
+    -> OnCharacteristicValueUpdated(struct {
+        id uint64;
+        value bytes;
+    });
 };
 
 protocol Client {
@@ -165,8 +226,16 @@ protocol Client {
     ///
     /// To further interact with services, clients must obtain a RemoteService
     /// handle by calling ConnectToService().
-    ListServices(vector<bt.UuidString>:MAX? uuids) -> (fuchsia.bluetooth.Status status, vector<ServiceInfo>:MAX_SERVICE_COUNT services);
+    ListServices(struct {
+        uuids vector<bt.UuidString>:<MAX, optional>;
+    }) -> (struct {
+        status fuchsia.bluetooth.Status;
+        services vector<ServiceInfo>:MAX_SERVICE_COUNT;
+    });
 
     /// Connects the RemoteService with the given identifier.
-    ConnectToService(uint64 id, request<RemoteService> service);
+    ConnectToService(resource struct {
+        id uint64;
+        service server_end:RemoteService;
+    });
 };

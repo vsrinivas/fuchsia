@@ -1,12 +1,10 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.ui.lifecycle;
 
 /// An interface implemented by system UI components that wish to terminate gracefully.
-[Discoverable]
+@discoverable
 protocol LifecycleController {
     /// The controller of this component has requested that this component terminate gracefully.
     /// If the component does not terminate itself in a timely manner, the client may forcibly

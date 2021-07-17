@@ -1,15 +1,13 @@
 // Copyright 2017 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.modular;
 
 using fuchsia.sys;
 using zx;
 
 /// Provided to all component instances in their incoming namespace.
-[Discoverable]
+@discoverable
 protocol ComponentContext {
     /// DEPRECATED: use the component's incoming namespace (for C++, see sys.ComponentContext)
     /// to connect to services provided by agents. See
@@ -17,10 +15,12 @@ protocol ComponentContext {
     ///
     /// Used to start an agent in the user scope if it isn't already running, and
     /// connect to it.
-    [Transitional]
-    DeprecatedConnectToAgent(string:MAX url,
-                             request<fuchsia.sys.ServiceProvider> incoming_services,
-                             request<AgentController> controller);
+    @transitional
+    DeprecatedConnectToAgent(resource struct {
+        url string:MAX;
+        incoming_services server_end:fuchsia.sys.ServiceProvider;
+        controller server_end:AgentController;
+    });
 
     /// DEPRECATED: use the component's incoming namespace (for C++, see sys.ComponentContext)
     /// to connect to services provided by agents. See
@@ -35,24 +35,26 @@ protocol ComponentContext {
     ///     specified, and an agent for the `request.service_name` is not found
     ///   * `ZX_ERR_PEER_CLOSED` -- if `request.service_name` is not available from
     ///     the agent (either specified or discovered)
-    [Transitional]
-    DeprecatedConnectToAgentService(AgentServiceRequest request);
+    @transitional
+    DeprecatedConnectToAgentService(resource struct {
+        request AgentServiceRequest;
+    });
 };
 
 /// Used by ComponentContext.ConnectToAgentService
-resource table AgentServiceRequest {
+type AgentServiceRequest = resource table {
     /// The name of the requested service.
-    1: string:MAX service_name;
+    1: service_name string:MAX;
 
     /// The channel that will be used to communicate with the requested service.
-    2: zx.handle:CHANNEL channel;
+    2: channel zx.handle:CHANNEL;
 
     /// The component URL of the Agent that is to provide the specified service.
     /// If no handler is specified, the framework will perform resolution to
     /// find an appropriate handler.
-    3: fuchsia.sys.component_url handler;
+    3: handler fuchsia.sys.component_url;
 
     /// The AgentController handle is optional. If provided, the channel
     /// will be kept open until the agent providing `service_name` is terminated.
-    4: request<AgentController> agent_controller;
+    4: agent_controller server_end:AgentController;
 };

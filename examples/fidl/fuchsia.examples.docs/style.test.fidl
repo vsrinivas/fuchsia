@@ -1,8 +1,6 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 // [START library-overview]
 /// Library containing example FIDL used throughout the Fuchsia documentation.
 library fuchsia.examples.docs;
@@ -16,21 +14,20 @@ alias vaddr = uint64;
 // [END primitive-alias]
 
 // [START constants]
-const uint64 MAX_NAMES = 32;
+const MAX_NAMES uint64 = 32;
 // [END constants]
 
 // [START good-docs]
 /// A representation of violins displayed on the screen.
-struct Widget {
+type Widget = struct {
     /// A monotonically increasing id, uniquely identifying the widget.
-    uint64 id;
+    id uint64;
     /// Location of the top left corner of the widget.
-    Point location;
+    location Point;
 };
 // [END good-docs]
 
-protocol Node {
-};
+protocol Node {};
 
 // [START good-docs-2]
 /// An abstract representation of a [`fuchsia.io/Node`] whose layout is flat.
@@ -57,18 +54,21 @@ protocol File {
     /// * see [`fuchsia.mem/Buffer`]
     /// [`fuchsia.mem/Buffer`]:
     ///    https://fuchsia.googlesource.com/fuchsia/+/9853fad50ca70256f0e86201c0e20424f1c25ab5/zircon/system/fidl/fuchsia-io/io.fidl
-    GetBuffer(uint32 flags)
-        -> (fuchsia.mem.Buffer? buffer) error zx.status;
+    GetBuffer(struct {
+        flags uint32;
+    }) -> (resource struct {
+        buffer box<fuchsia.mem.Buffer>;
+    }) error zx.status;
 };
 // [END good-docs-2]
 
 // [START comments-combined]
 /// A widget displaying violins on the screen.
 // TODO -- widgets should use UUIDs instead of sequential ids
-struct ViolinWidget {
+type ViolinWidget = struct {
     /// A monotonically increasing id, uniquely identifying the widget.
-    uint64 id;
+    id uint64;
     /// Location of the top left corner of the widget.
-    Point location;
+    location Point;
 };
 // [END comments-combined]

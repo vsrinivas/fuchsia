@@ -1,11 +1,17 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library banjo.examples.paramattr;
 
 protocol Foo {
-  Bar(uint16 param_one, [VeryGood] bool param_two);
-  Blah() -> ([EvenBetter="this one"] int64 out_one, string out_two);
+    Bar(struct {
+        param_one uint16;
+        @very_good
+        param_two bool;
+    });
+    Blah() -> (struct {
+        @even_better("this one")
+        out_one int64;
+        out_two string;
+    });
 };

@@ -1,6 +1,9 @@
-deprecated_syntax;
 library fidl.test.error;
 
 protocol Example {
-    foo(string s) -> (int64 y) error uint32;
+    foo(struct {
+        s string;
+    }) -> (struct {
+        y int64;
+    }) error uint32;
 };

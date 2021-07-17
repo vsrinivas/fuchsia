@@ -1,39 +1,43 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.telephony.snoop;
 
 using zx;
 
-enum Direction {
+type Direction = strict enum {
     FROM_MODEM = 1;
     TO_MODEM = 2;
 };
 
-struct QmiMessage {
-    zx.time timestamp;
-    Direction direction;
-    bool is_partial_copy;
-    array<uint8>:256 opaque_bytes;
+type QmiMessage = struct {
+    timestamp zx.time;
+    direction Direction;
+    is_partial_copy bool;
+    opaque_bytes array<uint8, 256>;
 };
 
 //TODO(jiamingw): change it to xunion after transport driver is converted to LLCPP
-union Message {
-    1: QmiMessage qmi_message;
+type Message = strict union {
+    1: qmi_message QmiMessage;
 };
 
 /// Protocol for forwarding messages to Snooper.
 protocol Publisher {
-    SendMessage(Message msg);
+    SendMessage(struct {
+        msg Message;
+    });
 };
 
 /// Protocol for forwarding Message from Snooper.
-[Discoverable]
+@discoverable
 protocol Snooper {
     /// Get number of devices that connect to Snooper.
-    GetDeviceNum() -> (uint32 device_num);
+    GetDeviceNum() -> (struct {
+        device_num uint32;
+    });
     /// Snoop message which receives by Snooper client.
-    -> OnMessage(Message msg);
+    -> OnMessage(struct {
+        msg Message;
+    });
 };

@@ -1,31 +1,30 @@
-deprecated_syntax;
 library fidl.test.consts;
 
-const bool ENABLED_FLAG = true;
-const int8 OFFSET = -33;
-const uint16 ANSWER = 42;
-const uint16 ANSWER_IN_BINARY = 0b101010;
-const uint32 POPULATION_USA_2018 = 330000000;
-const uint64 DIAMOND = 0x183c7effff7e3c18;
-const uint64 FUCHSIA = 4054509061583223046;
-const string USERNAME = "\"squeenze\"";
-const float32 MIN_TEMP = -273.15;
-const float64 CONVERSION_FACTOR = 1.41421358;
+const ENABLED_FLAG bool = true;
+const OFFSET int8 = -33;
+const ANSWER uint16 = 42;
+const ANSWER_IN_BINARY uint16 = 0b101010;
+const POPULATION_USA_2018 uint32 = 330000000;
+const DIAMOND uint64 = 0x183c7effff7e3c18;
+const FUCHSIA uint64 = 4054509061583223046;
+const USERNAME string = "\"squeenze\"";
+const MIN_TEMP float32 = -273.15;
+const CONVERSION_FACTOR float64 = 1.41421358;
 
-enum EnumType : int32 {
+type EnumType = strict enum : int32 {
     VALUE = 1;
     true = 2;
 };
-const EnumType enumVal = EnumType.VALUE;
-const int32 enumPrimitiveVal = EnumType.VALUE;
-const EnumType enumTrue = EnumType.true;
-const int32 enumPrimitiveTrue = EnumType.true;
+const enumVal EnumType = EnumType.VALUE;
+const enumPrimitiveVal int32 = EnumType.VALUE;
+const enumTrue EnumType = EnumType.true;
+const enumPrimitiveTrue int32 = EnumType.true;
 
-bits BitsType : uint32 {
+type BitsType = strict bits : uint32 {
     VALUE = 0x00000001;
     true = 2;
 };
-const BitsType bitsVal = BitsType.VALUE;
-const int32 bitsPrimitiveVal = BitsType.VALUE;
-const BitsType bitsTrue = BitsType.true;
-const int32 bitsPrimitiveTrue = BitsType.true;
+const bitsVal BitsType = BitsType.VALUE;
+const bitsPrimitiveVal int32 = BitsType.VALUE;
+const bitsTrue BitsType = BitsType.true;
+const bitsPrimitiveTrue int32 = BitsType.true;

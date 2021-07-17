@@ -1,55 +1,78 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.hiddevice;
 
 using zx;
 
-enum HidReportType : uint8 {
+type HidReportType = strict enum : uint8 {
     INPUT = 1;
     OUTPUT = 2;
     FEATURE = 3;
 };
 
-const uint16 HID_MAX_DESC_LEN = 8192;
-const uint16 HID_MAX_REPORT_LEN = 8192;
-const uint16 HID_MAX_REPORT_IDS = 256;
+const HID_MAX_DESC_LEN uint16 = 8192;
+const HID_MAX_REPORT_LEN uint16 = 8192;
+const HID_MAX_REPORT_IDS uint16 = 256;
 
-[Transport = "Banjo", BanjoLayout = "ddk-interface"]
+@transport("Banjo")
+@banjo_layout("ddk-interface")
 protocol HidReportListener {
     /// Sends a single report to the listener. This comes with a timestamp that was gotten
     /// from the computer's monotonic clock.
-    ReceiveReport(vector<uint8>:HID_MAX_REPORT_LEN report, zx.time report_time);
+    ReceiveReport(struct {
+        report vector<uint8>:HID_MAX_REPORT_LEN;
+        report_time zx.time;
+    });
 };
 
-struct HidDeviceInfo {
-    uint32 vendor_id;
-    uint32 product_id;
-    uint32 version;
+type HidDeviceInfo = struct {
+    vendor_id uint32;
+    product_id uint32;
+    version uint32;
 };
 
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol HidDevice {
     /// Register a listener to begin receiving HID Reports. At the moment only a single listener
     /// is supported. It is an error to call this without unregistering.
-    RegisterListener(HidReportListener listener) -> (zx.status s);
+    RegisterListener(resource struct {
+        listener client_end:HidReportListener;
+    }) -> (struct {
+        s zx.status;
+    });
 
     /// Unregister the listener.
     UnregisterListener();
 
-    GetHidDeviceInfo() -> (HidDeviceInfo info);
+    GetHidDeviceInfo() -> (struct {
+        info HidDeviceInfo;
+    });
 
-    GetDescriptor() -> (zx.status s, vector<uint8>:HID_MAX_DESC_LEN descriptor);
+    GetDescriptor() -> (struct {
+        s zx.status;
+        descriptor vector<uint8>:HID_MAX_DESC_LEN;
+    });
 
     /// Request a given report. Can be used to get FEATURE and INPUT reports. Getting an OUTPUT
     /// report is an error. This should be used most frequently to get FEATURE reports,
     /// since most devices will send normal INPUT reports through the Listener API.
-    GetReport(HidReportType rpt_type, uint8 rpt_id) -> (zx.status s, vector<uint8>:HID_MAX_REPORT_LEN
-                                                        report);
+    GetReport(struct {
+        rpt_type HidReportType;
+        rpt_id uint8;
+    }) -> (struct {
+        s zx.status;
+        report vector<uint8>:HID_MAX_REPORT_LEN;
+    });
 
     /// Set a given report. Only FEATURE and OUTPUT type reports can be set. Setting an INPUT
     /// report is an error.
-    SetReport(HidReportType rpt_type, uint8 rpt_id, vector<uint8>:HID_MAX_REPORT_LEN report) -> (zx.status s);
+    SetReport(struct {
+        rpt_type HidReportType;
+        rpt_id uint8;
+        report vector<uint8>:HID_MAX_REPORT_LEN;
+    }) -> (struct {
+        s zx.status;
+    });
 };

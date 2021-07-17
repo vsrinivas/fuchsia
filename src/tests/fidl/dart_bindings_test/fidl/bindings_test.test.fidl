@@ -1,175 +1,289 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fidl.test.dartbindingstest;
 
 using zx;
 
-resource struct HandleStruct {
-    string foo;
-    int32 bar;
-    zx.handle baz;
+type HandleStruct = resource struct {
+    foo string;
+    bar int32;
+    baz zx.handle;
 };
 
-struct NoHandleStruct {
-    string foo;
-    int32 bar;
-    vector<uint8> baz;
+type NoHandleStruct = struct {
+    foo string;
+    bar int32;
+    baz vector<uint8>;
 };
 
-resource struct NumberHandleNumber {
-    uint32 n1;
-    zx.handle h;
-    uint32 n2;
+type NumberHandleNumber = resource struct {
+    n1 uint32;
+    h zx.handle;
+    n2 uint32;
 };
 
-struct ExampleStruct {
-    string foo;
-    int32 bar;
-    vector<uint8>? baz;
+type ExampleStruct = struct {
+    foo string;
+    bar int32;
+    baz vector<uint8>:optional;
 };
 
-table ExampleTable {
-    1: string foo;
-    2: int32 bar;
-    3: vector<uint8> baz;
+type ExampleTable = table {
+    1: foo string;
+    2: bar int32;
+    3: baz vector<uint8>;
 };
 
-flexible resource union ExampleXunion {
-    1: string foo;
-    2: int32 bar;
-    3: vector<uint8> baz;
-    4: NumberHandleNumber with_handle;
+type ExampleXunion = flexible resource union {
+    1: foo string;
+    2: bar int32;
+    3: baz vector<uint8>;
+    4: with_handle NumberHandleNumber;
 };
 
-resource union ExampleStrictXunion {
-    1: string foo;
-    2: int32 bar;
-    3: vector<uint8> baz;
-    4: NumberHandleNumber with_handle;
+type ExampleStrictXunion = strict resource union {
+    1: foo string;
+    2: bar int32;
+    3: baz vector<uint8>;
+    4: with_handle NumberHandleNumber;
 };
 
-bits ExampleBits {
+type ExampleBits = strict bits {
     MEMBER_A = 2;
     MEMBER_B = 4;
     MEMBER_C = 8;
 };
 
-flexible bits FlexibleBits {
+type FlexibleBits = flexible bits {
     ONE = 0b01;
     TWO = 0b10;
 };
 
-[Discoverable]
+@discoverable
 protocol TestServer {
     OneWayNoArgs();
-    ReceivedOneWayNoArgs() -> (bool received);
+    ReceivedOneWayNoArgs() -> (struct {
+        received bool;
+    });
 
-    OneWayStringArg(string value);
-    ReceivedOneWayString() -> (string value);
+    OneWayStringArg(struct {
+        value string;
+    });
+    ReceivedOneWayString() -> (struct {
+        value string;
+    });
 
-    OneWayThreeArgs(int32 x, uint64 y, NoHandleStruct z);
-    ReceivedOneWayThreeArgs() -> (int32 x, uint64 y, NoHandleStruct z);
+    OneWayThreeArgs(struct {
+        x int32;
+        y uint64;
+        z NoHandleStruct;
+    });
+    ReceivedOneWayThreeArgs() -> (struct {
+        x int32;
+        y uint64;
+        z NoHandleStruct;
+    });
 
-    OneWayExampleTable(ExampleTable value);
-    ReceivedOneWayExampleTable() -> (ExampleTable received);
+    OneWayExampleTable(struct {
+        value ExampleTable;
+    });
+    ReceivedOneWayExampleTable() -> (struct {
+        received ExampleTable;
+    });
 
     TwoWayNoArgs() -> ();
-    TwoWayStringArg(string value) -> (string value);
-    TwoWayThreeArgs(int32 x, uint64 y, NoHandleStruct z) -> (int32 x, uint64 y, NoHandleStruct z);
-    TwoWayOneHandleArg(HandleStruct h1) -> (HandleStruct h1);
-    TwoWayTwoHandleArgs(HandleStruct h1, HandleStruct h2) -> (HandleStruct h1, HandleStruct h2);
+    TwoWayStringArg(struct {
+        value string;
+    }) -> (struct {
+        value string;
+    });
+    TwoWayThreeArgs(struct {
+        x int32;
+        y uint64;
+        z NoHandleStruct;
+    }) -> (struct {
+        x int32;
+        y uint64;
+        z NoHandleStruct;
+    });
+    TwoWayOneHandleArg(resource struct {
+        h1 HandleStruct;
+    }) -> (resource struct {
+        h1 HandleStruct;
+    });
+    TwoWayTwoHandleArgs(resource struct {
+        h1 HandleStruct;
+        h2 HandleStruct;
+    }) -> (resource struct {
+        h1 HandleStruct;
+        h2 HandleStruct;
+    });
 
-    OneWayExampleXunion(ExampleXunion value);
-    ReceivedOneWayExampleXunion() -> (ExampleXunion received);
+    OneWayExampleXunion(resource struct {
+        value ExampleXunion;
+    });
+    ReceivedOneWayExampleXunion() -> (resource struct {
+        received ExampleXunion;
+    });
 
-    OneWayExampleBits(ExampleBits value);
-    ReceivedOneWayExampleBits() -> (ExampleBits received);
+    OneWayExampleBits(struct {
+        value ExampleBits;
+    });
+    ReceivedOneWayExampleBits() -> (struct {
+        received ExampleBits;
+    });
 
     SendEmptyEvent();
     -> EmptyEvent();
 
-    SendStringEvent(string value);
-    -> StringEvent(string value);
+    SendStringEvent(struct {
+        value string;
+    });
+    -> StringEvent(struct {
+        value string;
+    });
 
-    SendThreeArgEvent(int32 x, uint64 y, NoHandleStruct z);
-    -> ThreeArgEvent(int32 x, uint64 y, NoHandleStruct z);
+    SendThreeArgEvent(struct {
+        x int32;
+        y uint64;
+        z NoHandleStruct;
+    });
+    -> ThreeArgEvent(struct {
+        x int32;
+        y uint64;
+        z NoHandleStruct;
+    });
 
-    SendMultipleEvents(int32 count, float64 intervalSeconds);
-    -> MultipleEvent(int32 index);
+    SendMultipleEvents(struct {
+        count int32;
+        intervalSeconds float64;
+    });
+    -> MultipleEvent(struct {
+        index int32;
+    });
 
-    ReplySlowly(string value, float64 delaySeconds) -> (string value);
+    ReplySlowly(struct {
+        value string;
+        delaySeconds float64;
+    }) -> (struct {
+        value string;
+    });
 
-    ReplyWithErrorZero(bool with_error) -> () error uint32;
-    ReplyWithErrorOne(bool with_error, string value) -> (string value) error uint32;
-    ReplyWithErrorMore(bool with_error, string value, bool other_value) -> (string value, bool other_value) error uint32;
+    ReplyWithErrorZero(struct {
+        with_error bool;
+    }) -> (struct {}) error uint32;
+    ReplyWithErrorOne(struct {
+        with_error bool;
+        value string;
+    }) -> (struct {
+        value string;
+    }) error uint32;
+    ReplyWithErrorMore(struct {
+        with_error bool;
+        value string;
+        other_value bool;
+    }) -> (struct {
+        value string;
+        other_value bool;
+    }) error uint32;
 
-    ReplyWithErrorEnumZero(bool with_error) -> () error EnumOne;
-    ReplyWithErrorEnumOne(bool with_error, string value) -> (string value) error EnumOne;
-    ReplyWithErrorEnumMore(bool with_error, string value, bool other_value) -> (string value, bool other_value) error EnumOne;
+    ReplyWithErrorEnumZero(struct {
+        with_error bool;
+    }) -> (struct {}) error EnumOne;
+    ReplyWithErrorEnumOne(struct {
+        with_error bool;
+        value string;
+    }) -> (struct {
+        value string;
+    }) error EnumOne;
+    ReplyWithErrorEnumMore(struct {
+        with_error bool;
+        value string;
+        other_value bool;
+    }) -> (struct {
+        value string;
+        other_value bool;
+    }) error EnumOne;
 
-    CloseConnection(float64 delaySeconds);
-    CloseConnectionWithEpitaph(int32 status, float64 delaySeconds);
+    CloseConnection(struct {
+        delaySeconds float64;
+    });
+    CloseConnectionWithEpitaph(struct {
+        status int32;
+        delaySeconds float64;
+    });
 
     -> NeverEvent();
 
-    SendEvent(zx.handle:EVENT h);
-    EchoChannelAsEvent(zx.handle:CHANNEL h) -> (zx.handle:EVENT h);
-    EventEvent(zx.handle:EVENT h);
+    SendEvent(resource struct {
+        h zx.handle:EVENT;
+    });
+    EchoChannelAsEvent(resource struct {
+        h zx.handle:CHANNEL;
+    }) -> (resource struct {
+        h zx.handle:EVENT;
+    });
+    EventEvent(resource struct {
+        h zx.handle:EVENT;
+    });
 };
 
 protocol HandleRightsTestServer {
-    SendEvent(zx.handle:EVENT h);
-    SendChannel(zx.handle:CHANNEL h);
+    SendEvent(resource struct {
+        h zx.handle:EVENT;
+    });
+    SendChannel(resource struct {
+        h zx.handle:CHANNEL;
+    });
 };
 
-strict enum EnumOne {
+type EnumOne = strict enum {
     ONE = 1;
     TWO = 2;
     THREE = 3;
 };
 
-strict enum EnumTwo {
+type EnumTwo = strict enum {
     ONE = 1;
     TWO = 2;
     THREE = 3;
 };
 
-flexible enum FlexibleEnumThree : uint64 {
+type FlexibleEnumThree = flexible enum : uint64 {
     ONE = 1;
     TWO = 2;
     THREE = 3;
 };
 
-flexible enum FlexibleEnumFour : int32 {
+type FlexibleEnumFour = flexible enum : int32 {
     ONE = 1;
     TWO = 2;
     THREE = 3;
-    [Unknown] CUSTOM_UNKNOWN = -123;
+    @unknown
+    CUSTOM_UNKNOWN = -123;
 };
 
-union UnionOne {
-    1: string foo;
-    2: string bar;
-    3: uint32 baz;
+type UnionOne = strict union {
+    1: foo string;
+    2: bar string;
+    3: baz uint32;
 };
 
-union UnionTwo {
-    1: string foo;
-    2: string bar;
-    3: uint32 baz;
+type UnionTwo = strict union {
+    1: foo string;
+    2: bar string;
+    3: baz uint32;
 };
 
 protocol SimpleServer {
     Ping() -> ();
 };
 
-resource struct ChannelWithDefaultRights {
-    zx.handle:<CHANNEL, zx.DEFAULT_CHANNEL_RIGHTS> c;
+type ChannelWithDefaultRights = resource struct {
+    c zx.handle:<CHANNEL, zx.DEFAULT_CHANNEL_RIGHTS>;
 };
 
-resource struct ChannelWithReducedRights {
-    zx.handle:<CHANNEL, zx.rights.TRANSFER> c;
+type ChannelWithReducedRights = resource struct {
+    c zx.handle:<CHANNEL, zx.rights.TRANSFER>;
 };

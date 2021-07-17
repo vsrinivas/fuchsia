@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.bluetooth;
 
 /// Possible values for the LE Appearance property which describes the external
@@ -11,7 +9,7 @@ library fuchsia.bluetooth;
 /// https://www.bluetooth.com/specifications/gatt/viewer?attributeXmlFile=org.bluetooth.characteristic.gap.appearance.xml)
 /// This enum is flexible as newer devices may use new appearance values and in the future the
 /// assigned numbers document may have additional entries.
-flexible enum Appearance : uint16 {
+type Appearance = flexible enum : uint16 {
     UNKNOWN = 0;
     PHONE = 64;
     COMPUTER = 128;

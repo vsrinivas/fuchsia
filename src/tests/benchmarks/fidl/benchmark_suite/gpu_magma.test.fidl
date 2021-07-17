@@ -1,15 +1,13 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library benchmarkfidl;
 
 alias koid = uint64;
 
 // Based on fuchsia.gpu.magma.Primary.ExecuteImmediateCommand.
-struct ExecuteImmediateCommandsRequest {
-    uint32 context_id;
-    bytes:2048 command_data;
-    vector<koid> semaphores;
+type ExecuteImmediateCommandsRequest = struct {
+    context_id uint32;
+    command_data bytes:2048;
+    semaphores vector<koid>;
 };

@@ -1,27 +1,30 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 // This API is deprecated. Use https://cs.corp.google.com/fuchsia/fuchsia-mirror/sdk/fidl/fuchsia.hardware.power.statecontrol/admin.fidl
 // instead.Bug:fxbug.dev/42257
 library fuchsia.device.manager;
 
 using zx;
 /// All available suspend flags
-const uint32 SUSPEND_FLAG_REBOOT = 0xdcdc0100;
-const uint32 SUSPEND_FLAG_REBOOT_BOOTLOADER = 0xdcdc0101;
-const uint32 SUSPEND_FLAG_REBOOT_RECOVERY = 0xdcdc0102;
-const uint32 SUSPEND_FLAG_POWEROFF = 0xdcdc0200;
-const uint32 SUSPEND_FLAG_MEXEC = 0xdcdc0300;
-const uint32 SUSPEND_FLAG_SUSPEND_RAM = 0xdcdc0400;
+const SUSPEND_FLAG_REBOOT uint32 = 0xdcdc0100;
+const SUSPEND_FLAG_REBOOT_BOOTLOADER uint32 = 0xdcdc0101;
+const SUSPEND_FLAG_REBOOT_RECOVERY uint32 = 0xdcdc0102;
+const SUSPEND_FLAG_POWEROFF uint32 = 0xdcdc0200;
+const SUSPEND_FLAG_MEXEC uint32 = 0xdcdc0300;
+const SUSPEND_FLAG_SUSPEND_RAM uint32 = 0xdcdc0400;
 
 /// Provides administration services for the device manager service and the device tree it controls.
-[Discoverable, ForDeprecatedCBindings]
+@discoverable
+@for_deprecated_c_bindings
 protocol Administrator {
     /// Ask all devices to enter the suspend state indicated by `flags`. Flags should be some
     /// combination of `DEVICE_SUSPEND_FLAG_*` from the DDK.
-    Suspend(uint32 flags) -> (zx.status status);
+    Suspend(struct {
+        flags uint32;
+    }) -> (struct {
+        status zx.status;
+    });
 
     // TODO(fxbug.dev/68529): Remove this API.
     /// This is a temporary API until DriverManager can ensure that base drivers
@@ -35,5 +38,7 @@ protocol Administrator {
     /// the exited fshost. This function will not return until the devices are
     /// suspended. If there are no devices that live in storage, this function
     /// will immediatetly return.
-    UnregisterSystemStorageForShutdown() -> (zx.status status);
+    UnregisterSystemStorageForShutdown() -> (struct {
+        status zx.status;
+    });
 };

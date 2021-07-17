@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.settings;
 
 using fuchsia.intl;
@@ -13,23 +11,27 @@ using fuchsia.intl;
 /// Supported SettingsEpitaph enums:
 /// REQUEST_NOT_SUPPORTED, INTERNAL_SERVICE_ERROR, PERSISTENT_STORAGE_ERROR,
 /// FILE_READ_ERROR
-[Discoverable]
+@discoverable
 protocol Intl {
     /// Gets the current [IntlSettings]. Returns immediately on first call;
     /// subsequent calls return when the value changes.
     ///
     /// If this call fails, it is considered a fatal error and the channel
     /// will be closed.
-    Watch() -> (IntlSettings settings);
+    Watch() -> (struct {
+        settings IntlSettings;
+    });
 
     /// Sets [IntlSettings] settings. Any field not explicitly set in the table performs a
     /// no-op, and will not make any changes.
-    Set(IntlSettings settings) -> () error Error;
+    Set(struct {
+        settings IntlSettings;
+    }) -> (struct {}) error Error;
 };
 
 /// Whether if the time format should be using 12 hour or 24 hour clock. H indicates the
 /// maximum number that the hour indicator will ever show.
-enum HourCycle {
+type HourCycle = strict enum {
     UNKNOWN = 0;
 
     /// 12-hour clock, 0:10am after midnight.
@@ -46,16 +48,16 @@ enum HourCycle {
 };
 
 /// Collection of internationalization-related settings.
-table IntlSettings {
+type IntlSettings = table {
     /// An ordered list of preferred locales.
-    1: vector<fuchsia.intl.LocaleId>:10 locales;
+    1: locales vector<fuchsia.intl.LocaleId>:10;
 
     /// The preferred temperature unit.
-    2: fuchsia.intl.TemperatureUnit temperature_unit;
+    2: temperature_unit fuchsia.intl.TemperatureUnit;
 
     /// The currently set time zone.
-    3: fuchsia.intl.TimeZoneId time_zone_id;
+    3: time_zone_id fuchsia.intl.TimeZoneId;
 
     /// The preferred hour cycle.
-    4: HourCycle hour_cycle;
+    4: hour_cycle HourCycle;
 };

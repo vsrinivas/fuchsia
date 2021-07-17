@@ -1,44 +1,72 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library zx;
 
 // TODO(scottmg): Apply rights spec from WaitMany on |items| to |handle| here,
 // somehow.
-resource struct WaitItem {
+type WaitItem = resource struct {
     handle handle;
-    signals waitfor;
-    signals pending;
+    waitfor signals;
+    pending signals;
 };
 
-[Transport = "Syscall"]
+@transport("Syscall")
 protocol object {
     /// Wait for signals on an object.
     /// Rights: handle must have ZX_RIGHT_WAIT.
-    [blocking]
-    object_wait_one(handle handle, signals signals, time deadline)
-        -> (status status, optional_signals observed);
+    @blocking
+    object_wait_one(resource struct {
+        handle handle;
+        signals signals;
+        deadline time;
+    }) -> (struct {
+        status status;
+        observed optional_signals;
+    });
 
     /// Wait for signals on multiple objects.
     /// Rights: Every entry of items must have a handle field with ZX_RIGHT_WAIT.
-    [blocking]
-    object_wait_many(mutable_vector_WaitItem items, time deadline) -> (status status);
+    @blocking
+    object_wait_many(resource struct {
+        items mutable_vector_WaitItem;
+        deadline time;
+    }) -> (struct {
+        status status;
+    });
 
     /// Subscribe for signals on an object.
     /// Rights: handle must have ZX_RIGHT_WAIT.
     /// Rights: port must be of type ZX_OBJ_TYPE_PORT and have ZX_RIGHT_WRITE.
-    object_wait_async(handle handle, handle:PORT port, uint64 key, signals signals, uint32 options)
-        -> (status status);
+    object_wait_async(resource struct {
+        handle handle;
+        port handle:PORT;
+        key uint64;
+        signals signals;
+        options uint32;
+    }) -> (struct {
+        status status;
+    });
 
     /// Signal an object.
     /// Rights: handle must have ZX_RIGHT_SIGNAL.
-    object_signal(handle handle, uint32 clear_mask, uint32 set_mask) -> (status status);
+    object_signal(resource struct {
+        handle handle;
+        clear_mask uint32;
+        set_mask uint32;
+    }) -> (struct {
+        status status;
+    });
 
     /// Signal an object's peer.
     /// Rights: handle must have ZX_RIGHT_SIGNAL_PEER.
-    object_signal_peer(handle handle, uint32 clear_mask, uint32 set_mask) -> (status status);
+    object_signal_peer(resource struct {
+        handle handle;
+        clear_mask uint32;
+        set_mask uint32;
+    }) -> (struct {
+        status status;
+    });
 
     /// Ask for various properties of various kernel objects.
     /// Rights: handle must have ZX_RIGHT_GET_PROPERTY.
@@ -47,7 +75,13 @@ protocol object {
     /// Rights: If property is ZX_PROP_PROCESS_VDSO_BASE_ADDRESS, handle must be of type ZX_OBJ_TYPE_PROCESS.
     /// Rights: If property is ZX_PROP_SOCKET_RX_THRESHOLD, handle must be of type ZX_OBJ_TYPE_SOCKET.
     /// Rights: If property is ZX_PROP_SOCKET_TX_THRESHOLD, handle must be of type ZX_OBJ_TYPE_SOCKET.
-    object_get_property(handle handle, uint32 property) -> (status status, vector_void value);
+    object_get_property(resource struct {
+        handle handle;
+        property uint32;
+    }) -> (struct {
+        status status;
+        value vector_void;
+    });
 
     /// Set various properties of various kernel objects.
     /// Rights: handle must have ZX_RIGHT_SET_PROPERTY.
@@ -56,7 +90,13 @@ protocol object {
     /// Rights: If property is ZX_PROP_SOCKET_RX_THRESHOLD, handle must be of type ZX_OBJ_TYPE_SOCKET.
     /// Rights: If property is ZX_PROP_SOCKET_TX_THRESHOLD, handle must be of type ZX_OBJ_TYPE_SOCKET.
     /// Rights: If property is ZX_PROP_JOB_KILL_ON_OOM, handle must be of type ZX_OBJ_TYPE_JOB.
-    object_set_property(handle handle, uint32 property, vector_void value) -> (status status);
+    object_set_property(resource struct {
+        handle handle;
+        property uint32;
+        value vector_void;
+    }) -> (struct {
+        status status;
+    });
 
     /// Query information about an object.
     /// Rights: If topic is ZX_INFO_PROCESS, handle must be of type ZX_OBJ_TYPE_PROCESS and have ZX_RIGHT_INSPECT.
@@ -82,16 +122,35 @@ protocol object {
     /// Rights: If topic is ZX_INFO_SOCKET, handle must be of type ZX_OBJ_TYPE_SOCKET and have ZX_RIGHT_INSPECT.
     /// Rights: If topic is ZX_INFO_MSI, handle must be of type ZX_OBJ_TYPE_MSI and have ZX_RIGHT_INSPECT.
     /// Rights: If topic is ZX_INFO_TASK_RUNTIME, handle must be of type ZX_OBJ_TYPE_THREAD, ZX_OBJ_TYPE_PROCESS, or ZX_OBJ_TYPE_JOB, and have ZX_RIGHT_INSPECT.
-    object_get_info(handle handle, uint32 topic)
-        -> (status status, vector_void buffer, optional_usize actual, optional_usize avail);
+    object_get_info(resource struct {
+        handle handle;
+        topic uint32;
+    }) -> (struct {
+        status status;
+        buffer vector_void;
+        actual optional_usize;
+        avail optional_usize;
+    });
 
     /// Given a kernel object with children objects, obtain a handle to the child specified by the provided kernel object id.
     /// Rights: handle must have ZX_RIGHT_ENUMERATE.
-    object_get_child(handle handle, uint64 koid, rights rights) -> (status status, handle out);
+    object_get_child(resource struct {
+        handle handle;
+        koid uint64;
+        rights rights;
+    }) -> (resource struct {
+        status status;
+        out handle;
+    });
 
     /// Apply a scheduling profile to a thread.
     /// Rights: handle must be of type ZX_OBJ_TYPE_THREAD and have ZX_RIGHT_MANAGE_THREAD.
     /// Rights: profile must be of type ZX_OBJ_TYPE_PROFILE and have ZX_RIGHT_APPLY_PROFILE.
-    object_set_profile(handle:THREAD handle, handle:PROFILE profile, uint32 options)
-        -> (status status);
+    object_set_profile(resource struct {
+        handle handle:THREAD;
+        profile handle:PROFILE;
+        options uint32;
+    }) -> (struct {
+        status status;
+    });
 };

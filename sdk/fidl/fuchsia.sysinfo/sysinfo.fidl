@@ -1,40 +1,51 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.sysinfo;
 
 using zx;
 
-const uint8 BOARD_NAME_LEN = 32;
-const uint8 BOOTLOADER_VENDOR_LEN = 32;
+const BOARD_NAME_LEN uint8 = 32;
+const BOOTLOADER_VENDOR_LEN uint8 = 32;
 
-enum InterruptControllerType {
+type InterruptControllerType = strict enum {
     UNKNOWN = 0;
     APIC = 1;
     GIC_V2 = 2;
     GIC_V3 = 3;
 };
 
-struct InterruptControllerInfo {
-    InterruptControllerType type;
+type InterruptControllerInfo = struct {
+    type InterruptControllerType;
 };
 
-[Discoverable, ForDeprecatedCBindings]
+@discoverable
+@for_deprecated_c_bindings
 protocol SysInfo {
     /// Return the board name for the platform we are running on.
-    GetBoardName() -> (zx.status status, string:BOARD_NAME_LEN? name);
+    GetBoardName() -> (struct {
+        status zx.status;
+        name string:<BOARD_NAME_LEN, optional>;
+    });
 
-    /// Return the board revision for the board we are running on.
     // TODO (nealo):  Remove Transitional qualifier after all board bootloaders
     // provide board serial number, mac address and revision.
-    [Transitional = "Adding Board Revision"]
-    GetBoardRevision() -> (zx.status status, uint32 revision);
+    /// Return the board revision for the board we are running on.
+    @transitional("Adding Board Revision")
+    GetBoardRevision() -> (struct {
+        status zx.status;
+        revision uint32;
+    });
 
     /// Return the bootloader vendor for the platform we are running on.
-    GetBootloaderVendor() -> (zx.status status, string:BOOTLOADER_VENDOR_LEN? vendor);
+    GetBootloaderVendor() -> (struct {
+        status zx.status;
+        vendor string:<BOOTLOADER_VENDOR_LEN, optional>;
+    });
 
     /// Return interrupt controller information.
-    GetInterruptControllerInfo() -> (zx.status status, InterruptControllerInfo? info);
+    GetInterruptControllerInfo() -> (struct {
+        status zx.status;
+        info box<InterruptControllerInfo>;
+    });
 };

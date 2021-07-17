@@ -1,7 +1,6 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
 library fuchsia.io;
 
 using fuchsia.io2;
@@ -11,135 +10,133 @@ using zx;
 /// Connection information.
 ///
 /// Refer to [`Node.Describe`] and [`Node.OnOpen`] for usage.
-resource union NodeInfo {
+type NodeInfo = strict resource union {
     /// No protocol information was supplied by the connection.
-    1: Service service;
+    1: service Service;
     /// The connection composes [`File`].
-    2: FileObject file;
+    2: file FileObject;
     /// The connection composes [`Directory`].
-    3: DirectoryObject directory;
-    4: Pipe pipe;
+    3: directory DirectoryObject;
+    4: pipe Pipe;
     /// The connection composes [`File`]. Its implementation is backed by a VMO.
-    5: Vmofile vmofile;
-    6: Device device;
-    7: Tty tty;
+    5: vmofile Vmofile;
+    6: device Device;
+    7: tty Tty;
     8: reserved;
     /// The connection composes [`fuchsia.posix.socket/DatagramSocket`].
-    9: DatagramSocket datagram_socket;
+    9: datagram_socket DatagramSocket;
     /// The connection composes [`fuchsia.posix.socket/StreamSocket`].
-    10: StreamSocket stream_socket;
+   10: stream_socket StreamSocket;
 };
 
 /// A [`NodeInfo`] variant.
 // TODO(https://fxbug.dev/74683): replace with an anonymous struct inline.
-struct Service {
-};
+type Service = struct {};
 
 /// Indicates the file is ready for reading.
-const uint32 FILE_SIGNAL_READABLE = 0x01000000; // ZX_USER_SIGNAL_0
+const FILE_SIGNAL_READABLE uint32 = 0x01000000; // ZX_USER_SIGNAL_0
 /// Indicates the file is ready for writing.
-const uint32 FILE_SIGNAL_WRITABLE = 0x02000000; // ZX_USER_SIGNAL_1
+const FILE_SIGNAL_WRITABLE uint32 = 0x02000000; // ZX_USER_SIGNAL_1
 
 /// A [`NodeInfo`] variant.
 // TODO(https://fxbug.dev/74683): replace with an anonymous struct inline.
-resource struct FileObject {
+type FileObject = resource struct {
     /// An optional event which transmits information about an object's readability
     /// or writability. This event relays information about the underlying object, not
     /// the capability granted to client: this event may be signalled "readable" on a
     /// connection that does not have the capability to read.
     ///
     /// The "`FILE_SIGNAL_`" values may be observed on this event.
-    zx.handle:EVENT? event;
+    event zx.handle:<EVENT, optional>;
 
     /// A placeholder for future stream support.
     ///
     /// Currently, servers are required not to send a handle in this field.
-    zx.handle:STREAM? stream;
+    stream zx.handle:<STREAM, optional>;
 };
 
 /// A [`NodeInfo`] variant.
 // TODO(https://fxbug.dev/74683): replace with an anonymous struct inline.
-struct DirectoryObject {
+type DirectoryObject = struct {};
+
+/// A [`NodeInfo`] variant.
+// TODO(https://fxbug.dev/74683): replace with an anonymous struct inline.
+type Pipe = resource struct {
+    socket zx.handle:SOCKET;
 };
 
 /// A [`NodeInfo`] variant.
 // TODO(https://fxbug.dev/74683): replace with an anonymous struct inline.
-resource struct Pipe {
-    zx.handle:SOCKET socket;
-};
-
-/// A [`NodeInfo`] variant.
-// TODO(https://fxbug.dev/74683): replace with an anonymous struct inline.
-resource struct Vmofile {
+type Vmofile = resource struct {
     /// The VMO which backs this file.
-    zx.handle:VMO vmo;
+    vmo zx.handle:VMO;
     /// The index into `vmo` which represents the first byte of the file.
-    uint64 offset;
+    offset uint64;
     /// The number of bytes, starting at `offset`, which may be used to represent this file.
-    uint64 length;
+    length uint64;
 };
 
 /// Indicates the device is ready for reading.
-const uint32 DEVICE_SIGNAL_READABLE = 0x01000000; // ZX_USER_SIGNAL_0
+const DEVICE_SIGNAL_READABLE uint32 = 0x01000000; // ZX_USER_SIGNAL_0
 /// Indicates an out-of-band state transition has occurred.
-const uint32 DEVICE_SIGNAL_OOB = 0x02000000; // ZX_USER_SIGNAL_1
+const DEVICE_SIGNAL_OOB uint32 = 0x02000000; // ZX_USER_SIGNAL_1
 /// Indicates the device is ready for writing.
-const uint32 DEVICE_SIGNAL_WRITABLE = 0x04000000; // ZX_USER_SIGNAL_2
+const DEVICE_SIGNAL_WRITABLE uint32 = 0x04000000; // ZX_USER_SIGNAL_2
 /// Indicates the device has encountered an error state.
-const uint32 DEVICE_SIGNAL_ERROR = 0x08000000; // ZX_USER_SIGNAL_3
+const DEVICE_SIGNAL_ERROR uint32 = 0x08000000; // ZX_USER_SIGNAL_3
 /// Indicates the device has hung up on the current connection.
-const uint32 DEVICE_SIGNAL_HANGUP = 0x10000000; // ZX_USER_SIGNAL_4
+const DEVICE_SIGNAL_HANGUP uint32 = 0x10000000; // ZX_USER_SIGNAL_4
 
 /// A [`NodeInfo`] variant.
 // TODO(https://fxbug.dev/74683): replace with an anonymous struct inline.
-resource struct Device {
+type Device = resource struct {
     /// An optional event which transmits information about a device's state.
     ///
     /// The "`DEVICE_SIGNAL_`" values may be observed on this event.
-    zx.handle:EVENTPAIR? event;
+    event zx.handle:<EVENTPAIR, optional>;
 };
 
 /// A [`NodeInfo`] variant.
 // TODO(https://fxbug.dev/74683): replace with an anonymous struct inline.
-resource struct Tty {
-    zx.handle:EVENTPAIR? event;
+type Tty = resource struct {
+    event zx.handle:<EVENTPAIR, optional>;
 };
 
 /// A [`NodeInfo`] variant.
 // TODO(https://fxbug.dev/74683): replace with an anonymous struct inline.
-resource struct DatagramSocket {
+type DatagramSocket = resource struct {
     /// See [`fuchsia.posix.socket.DatagramSocket`] for details.
-    zx.handle:EVENTPAIR event;
+    event zx.handle:EVENTPAIR;
 };
 
 /// A [`NodeInfo`] variant.
 // TODO(https://fxbug.dev/74683): replace with an anonymous struct inline.
-resource struct StreamSocket {
-    zx.handle:SOCKET socket;
+type StreamSocket = resource struct {
+    socket zx.handle:SOCKET;
 };
 
 /// Can read from target object.
-const uint32 OPEN_RIGHT_READABLE = 0x00000001;
+const OPEN_RIGHT_READABLE uint32 = 0x00000001;
 /// Can write to target object.
-const uint32 OPEN_RIGHT_WRITABLE = 0x00000002;
+const OPEN_RIGHT_WRITABLE uint32 = 0x00000002;
 /// Connection can mount/umount filesystem.
-const uint32 OPEN_RIGHT_ADMIN = 0x00000004;
+const OPEN_RIGHT_ADMIN uint32 = 0x00000004;
 /// Connection can map target object executable.
-const uint32 OPEN_RIGHT_EXECUTABLE = 0x00000008;
+const OPEN_RIGHT_EXECUTABLE uint32 = 0x00000008;
 
 /// Create the object if it doesn't exist.
-const uint32 OPEN_FLAG_CREATE = 0x00010000;
+const OPEN_FLAG_CREATE uint32 = 0x00010000;
 /// (with Create) Fail if the object already exists.
-const uint32 OPEN_FLAG_CREATE_IF_ABSENT = 0x00020000;
+const OPEN_FLAG_CREATE_IF_ABSENT uint32 = 0x00020000;
 /// Truncate the object before usage.
-const uint32 OPEN_FLAG_TRUNCATE = 0x00040000;
+const OPEN_FLAG_TRUNCATE uint32 = 0x00040000;
 /// Assert that the object to be opened is a directory.
 /// Return an error if the target object is not a directory.
-const uint32 OPEN_FLAG_DIRECTORY = 0x00080000;
+const OPEN_FLAG_DIRECTORY uint32 = 0x00080000;
 /// Seek to the end of the object before all writes.
-const uint32 OPEN_FLAG_APPEND = 0x00100000;
+const OPEN_FLAG_APPEND uint32 = 0x00100000;
 /// If the object is a mount point, open the local directory.
-const uint32 OPEN_FLAG_NO_REMOTE = 0x00200000;
+const OPEN_FLAG_NO_REMOTE uint32 = 0x00200000;
 /// Open a reference to the object, not the object itself.
 /// It is ONLY valid to pass the following flags together with `OPEN_FLAG_NODE_REFERENCE`:
 /// - `OPEN_FLAG_DIRECTORY`
@@ -150,13 +147,13 @@ const uint32 OPEN_FLAG_NO_REMOTE = 0x00200000;
 /// any permission flags.
 /// The resulting node allows a limited set of operations: `GetAttr`, `Clone`, `Close`, `Describe`,
 /// and, if the node is a file, these extra operations: `GetFlags`, `SetFlags`.
-const uint32 OPEN_FLAG_NODE_REFERENCE = 0x00400000;
+const OPEN_FLAG_NODE_REFERENCE uint32 = 0x00400000;
 /// Binary OR of `OPEN_FLAG_DIRECTORY`, OPEN_FLAG_NOT_DIRECTORY, OPEN_FLAG_DESCRIBE, and
 /// `OPEN_FLAG_NODE_REFERENCE`. Flags used when opening a node reference must fall within this mask.
-const uint32 OPEN_FLAGS_ALLOWED_WITH_NODE_REFERENCE = 0x02c80000;
+const OPEN_FLAGS_ALLOWED_WITH_NODE_REFERENCE uint32 = 0x02c80000;
 /// Requests that an "OnOpen" event is sent to the interface request.
 /// The event will contain a non-null NodeInfo if the open/clone is successful.
-const uint32 OPEN_FLAG_DESCRIBE = 0x00800000;
+const OPEN_FLAG_DESCRIBE uint32 = 0x00800000;
 /// Specify this flag to request POSIX-compatibility. Currently, it affects permission handling.
 /// During Open:
 /// - If the target path is a directory, the rights on the new connection expand to include
@@ -174,14 +171,14 @@ const uint32 OPEN_FLAG_DESCRIBE = 0x00800000;
 /// may be ignored by the server, and is not forwarded downstream. This is an implementation detail,
 /// necessary to enforce hierarchical permissions across mount points, and should have no effect
 /// on the expected behavior for clients.
-const uint32 OPEN_FLAG_POSIX = 0x01000000;
+const OPEN_FLAG_POSIX uint32 = 0x01000000;
 /// Assert that the object to be opened is not a directory.
 /// Return an error if the target object is a directory.
-const uint32 OPEN_FLAG_NOT_DIRECTORY = 0x02000000;
+const OPEN_FLAG_NOT_DIRECTORY uint32 = 0x02000000;
 /// When used during clone, the new connection inherits the rights on the source connection,
 /// regardless if it is a file or directory. Otherwise, clone attempts to use the requested rights.
 /// It is invalid to pass any of the `OPEN_RIGHT_*` flags together with `CLONE_FLAG_SAME_RIGHTS`.
-const uint32 CLONE_FLAG_SAME_RIGHTS = 0x04000000;
+const CLONE_FLAG_SAME_RIGHTS uint32 = 0x04000000;
 
 /// Node defines the minimal interface for entities which can be accessed in a filesystem.
 protocol Node {
@@ -204,50 +201,73 @@ protocol Node {
     /// Alternatively, pass `CLONE_FLAG_SAME_RIGHTS` to inherit the rights on the source connection.
     /// It is invalid to pass any of the `OPEN_RIGHT_*` flags together with
     /// `CLONE_FLAG_SAME_RIGHTS`.
-    Clone(uint32 flags, request<Node> object);
+    Clone(resource struct {
+        flags uint32;
+        object server_end:Node;
+    });
 
     /// Terminates connection with object.
     ///
     /// This method does not require any rights.
-    Close() -> (zx.status s);
+    Close() -> (struct {
+        s zx.status;
+    });
 
     /// Returns extra information about the type of the object.
     /// If the `Describe` operation fails, the connection is closed.
     ///
     /// This method does not require any rights.
-    Describe() -> (NodeInfo info);
+    Describe() -> (resource struct {
+        info NodeInfo;
+    });
 
     /// An event produced eagerly by a FIDL server if requested by `OPEN_FLAG_DESCRIBE`.
     ///
     /// Indicates the success or failure of the open operation, and optionally describes the
     /// object. If the status is `ZX_OK`, `info` contains descriptive information about the object
     /// (the same as would be returned by `Describe`).
-    -> OnOpen(zx.status s, NodeInfo? info);
+    -> OnOpen(resource struct {
+        s zx.status;
+        info NodeInfo:optional;
+    });
 
     /// Synchronizes updates to the node to the underlying media, if it exists.
     ///
     /// This method does not require any rights.
-    Sync() -> (zx.status s);
+    Sync() -> (struct {
+        s zx.status;
+    });
 
     /// Acquires information about the node.
     ///
     /// This method does not require any rights.
-    GetAttr() -> (zx.status s, NodeAttributes attributes);
+    GetAttr() -> (struct {
+        s zx.status;
+        attributes NodeAttributes;
+    });
 
     /// Updates information about the node.
     /// `flags` may be any of `NODE_ATTRIBUTE_FLAG_*`.
     ///
     /// This method requires following rights: `OPEN_RIGHT_WRITABLE`, otherwise returns
     /// `ZX_ERR_BAD_HANDLE`.
-    SetAttr(uint32 flags, NodeAttributes attributes) -> (zx.status s);
+    SetAttr(struct {
+        flags uint32;
+        attributes NodeAttributes;
+    }) -> (struct {
+        s zx.status;
+    });
 
     /// Acquires the `Directory.Open` rights and flags used to access this file.
     ///
     /// This method does not require any rights.
     /// This method has the same functionality as GetFlags for File and is
     /// meant as an in-progress replacement.
-    [Transitional]
-    NodeGetFlags() -> (zx.status s, uint32 flags);
+    @transitional
+    NodeGetFlags() -> (struct {
+        s zx.status;
+        flags uint32;
+    });
 
     /// Changes the `Directory.Open` flags used to access the file.
     /// Supported flags which can be turned on / off:
@@ -256,60 +276,64 @@ protocol Node {
     /// This method does not require any rights.
     /// This method has the same functionality as SetFlags for File and is
     /// meant as an in-progress replacement.
-    [Transitional]
-    NodeSetFlags(uint32 flags) -> (zx.status s);
+    @transitional
+    NodeSetFlags(struct {
+        flags uint32;
+    }) -> (struct {
+        s zx.status;
+    });
 };
 
 /// Bits reserved for posix protections. Native fuchsia filesystems
 /// are not required to set bits contained within `MODE_PROTECTION_MASK`,
 /// but filesystems that wish to do so may refer to sys/stat.h for their
 /// definitions.
-const uint32 MODE_PROTECTION_MASK = 0x00FFF;
+const MODE_PROTECTION_MASK uint32 = 0x00FFF;
 /// Bits indicating node type. The canonical mechanism to check
 /// for a node type is to take 'mode', bitwise AND it with the
 /// `MODE_TYPE_MASK`, and check exact equality against a mode type.
-const uint32 MODE_TYPE_MASK = 0xFF000;
-const uint32 MODE_TYPE_DIRECTORY = 0x04000;
-const uint32 MODE_TYPE_BLOCK_DEVICE = 0x06000;
-const uint32 MODE_TYPE_FILE = 0x08000;
-const uint32 MODE_TYPE_SOCKET = 0x0C000;
-const uint32 MODE_TYPE_SERVICE = 0x10000;
+const MODE_TYPE_MASK uint32 = 0xFF000;
+const MODE_TYPE_DIRECTORY uint32 = 0x04000;
+const MODE_TYPE_BLOCK_DEVICE uint32 = 0x06000;
+const MODE_TYPE_FILE uint32 = 0x08000;
+const MODE_TYPE_SOCKET uint32 = 0x0C000;
+const MODE_TYPE_SERVICE uint32 = 0x10000;
 
 /// NodeAttributes defines generic information about a filesystem node.
-struct NodeAttributes {
+type NodeAttributes = struct {
     /// Protection bits and node type information describe in 'mode'.
-    uint32 mode;
+    mode uint32;
     /// A filesystem-unique ID.
-    uint64 id;
+    id uint64;
     /// Node size, in bytes.
-    uint64 content_size;
+    content_size uint64;
     /// Space needed to store node (possibly larger than size), in bytes.
-    uint64 storage_size;
+    storage_size uint64;
     /// Hard link count.
-    uint64 link_count;
+    link_count uint64;
     /// Time of creation (may be updated manually after creation) in ns since Unix epoch, UTC.
-    uint64 creation_time;
+    creation_time uint64;
     /// Time of last modification in ns since Unix epoch, UTC.
-    uint64 modification_time;
+    modification_time uint64;
 };
 
 /// The maximal buffer size which can be transmitted for buffered operations.
 /// This capacity is currently set somewhat arbitrarily.
-const uint64 MAX_BUF = 8192;
+const MAX_BUF uint64 = 8192;
 /// The maximum length, in bytes, of a filesystem string.
 // TODO(smklein): Update to 4095. +1 is for null-terminator, which shouldn't be
 // part of the FIDL length.
-const uint64 MAX_PATH = 4096;
+const MAX_PATH uint64 = 4096;
 /// The maximum length, in bytes, of a single filesystem component.
-const uint64 MAX_FILENAME = 255;
+const MAX_FILENAME uint64 = 255;
 
 /// The fields of 'attributes' which are used to update the Node are indicated
 /// by the 'flags' argument.
-const uint32 NODE_ATTRIBUTE_FLAG_CREATION_TIME = 0x00000001;
-const uint32 NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME = 0x00000002;
+const NODE_ATTRIBUTE_FLAG_CREATION_TIME uint32 = 0x00000001;
+const NODE_ATTRIBUTE_FLAG_MODIFICATION_TIME uint32 = 0x00000002;
 
 /// Update the Seek offset.
-enum SeekOrigin : uint32 {
+type SeekOrigin = strict enum : uint32 {
     /// Seek from the start of the file.
     START = 0;
     /// Seek from the current position in the file.
@@ -319,23 +343,23 @@ enum SeekOrigin : uint32 {
 };
 
 /// Requests that the VMO be readable.
-const uint32 VMO_FLAG_READ = 0x00000001;
+const VMO_FLAG_READ uint32 = 0x00000001;
 
 /// Requests that the VMO be writable.
-const uint32 VMO_FLAG_WRITE = 0x00000002;
+const VMO_FLAG_WRITE uint32 = 0x00000002;
 
 /// Requests that the VMO be executable.
-const uint32 VMO_FLAG_EXEC = 0x00000004;
+const VMO_FLAG_EXEC uint32 = 0x00000004;
 
 /// Require a copy-on-write clone of the underlying VMO.
 /// The request should fail if the VMO is not cloned.
 /// May not be supplied with fuchsia_io_`VMO_FLAG_EXACT`.
-const uint32 VMO_FLAG_PRIVATE = 0x00010000;
+const VMO_FLAG_PRIVATE uint32 = 0x00010000;
 
 /// Require an exact (non-cloned) handle to the underlying VMO.
 /// The request should fail if a handle to the exact VMO is not returned.
 /// May not be supplied with `VMO_FLAG_PRIVATE`.
-const uint32 VMO_FLAG_EXACT = 0x00020000;
+const VMO_FLAG_EXACT uint32 = 0x00020000;
 
 /// File defines the interface of a node which contains a flat layout of data.
 protocol File {
@@ -347,52 +371,91 @@ protocol File {
     ///
     /// This method requires following rights: `OPEN_RIGHT_READABLE`, otherwise returns
     /// `ZX_ERR_BAD_HANDLE`.
-    Read(uint64 count) -> (zx.status s, vector<uint8>:MAX_BUF data);
+    Read(struct {
+        count uint64;
+    }) -> (struct {
+        s zx.status;
+        data vector<uint8>:MAX_BUF;
+    });
 
     /// Reads `count` bytes at the provided offset.
     /// Does not affect the seek offset.
     ///
     /// This method requires following rights: `OPEN_RIGHT_READABLE`, otherwise returns
     /// `ZX_ERR_BAD_HANDLE`.
-    ReadAt(uint64 count, uint64 offset) -> (zx.status s, vector<uint8>:MAX_BUF data);
+    ReadAt(struct {
+        count uint64;
+        offset uint64;
+    }) -> (struct {
+        s zx.status;
+        data vector<uint8>:MAX_BUF;
+    });
 
     /// Writes data at the seek offset.
     /// The seek offset is moved forward by the number of bytes written.
     ///
     /// This method requires following rights: `OPEN_RIGHT_WRITABLE`, otherwise returns
     /// `ZX_ERR_BAD_HANDLE`.
-    Write(vector<uint8>:MAX_BUF data) -> (zx.status s, uint64 actual);
+    Write(struct {
+        data vector<uint8>:MAX_BUF;
+    }) -> (struct {
+        s zx.status;
+        actual uint64;
+    });
 
     /// Writes data to the provided offset.
     /// Does not affect the seek offset.
     ///
     /// This method requires following rights: `OPEN_RIGHT_WRITABLE`, otherwise returns
     /// `ZX_ERR_BAD_HANDLE`.
-    WriteAt(vector<uint8>:MAX_BUF data, uint64 offset) -> (zx.status s, uint64 actual);
+    WriteAt(struct {
+        data vector<uint8>:MAX_BUF;
+        offset uint64;
+    }) -> (struct {
+        s zx.status;
+        actual uint64;
+    });
 
     /// Moves the offset at which the next invocation of `Read()` or `Write()` will
     /// occur.
     ///
     /// This method does not require any rights.
-    Seek(int64 offset, SeekOrigin start) -> (zx.status s, uint64 offset);
+    Seek(struct {
+        offset int64;
+        start SeekOrigin;
+    }) -> (struct {
+        s zx.status;
+        offset uint64;
+    });
 
     /// Shrinks the file size to 'length' bytes.
     ///
     /// This method requires following rights: `OPEN_RIGHT_WRITABLE`, otherwise returns
     /// `ZX_ERR_BAD_HANDLE`.
-    Truncate(uint64 length) -> (zx.status s);
+    Truncate(struct {
+        length uint64;
+    }) -> (struct {
+        s zx.status;
+    });
 
     /// Acquires the `Directory.Open` rights and flags used to access this file.
     ///
     /// This method does not require any rights.
-    GetFlags() -> (zx.status s, uint32 flags);
+    GetFlags() -> (struct {
+        s zx.status;
+        flags uint32;
+    });
 
     /// Changes the `Directory.Open` flags used to access the file.
     /// Supported flags which can be turned on / off:
     /// - `OPEN_FLAG_APPEND`
     ///
     /// This method does not require any rights.
-    SetFlags(uint32 flags) -> (zx.status s);
+    SetFlags(struct {
+        flags uint32;
+    }) -> (struct {
+        s zx.status;
+    });
 
     /// Acquires a buffer representing this file, if there is one, with the
     /// requested access rights.
@@ -403,59 +466,64 @@ protocol File {
     ///
     /// - `OPEN_RIGHT_WRITABLE` if `flags` includes `VMO_FLAG_WRITE`.
     /// - `OPEN_RIGHT_READABLE` if `flags` includes `VMO_FLAG_READ` or `VMO_FLAG_EXEC`.
-    GetBuffer(uint32 flags) -> (zx.status s, fuchsia.mem.Buffer? buffer);
+    GetBuffer(struct {
+        flags uint32;
+    }) -> (resource struct {
+        s zx.status;
+        buffer box<fuchsia.mem.Buffer>;
+    });
 };
 
 // Dirent type information associated with the results of ReadDirents.
 // The following values are aligned with the values from libc's "dirent.h" "DT_...".
 
 /// A dirent with an unknown type.
-const uint8 DIRENT_TYPE_UNKNOWN = 0;
+const DIRENT_TYPE_UNKNOWN uint8 = 0;
 /// A dirent representing a directory object.
-const uint8 DIRENT_TYPE_DIRECTORY = 4;
+const DIRENT_TYPE_DIRECTORY uint8 = 4;
 /// A dirent representing a block device object.
-const uint8 DIRENT_TYPE_BLOCK_DEVICE = 6;
+const DIRENT_TYPE_BLOCK_DEVICE uint8 = 6;
 /// A dirent representing a file object.
-const uint8 DIRENT_TYPE_FILE = 8;
+const DIRENT_TYPE_FILE uint8 = 8;
 /// A dirent representing a socket object.
-const uint8 DIRENT_TYPE_SOCKET = 12;
+const DIRENT_TYPE_SOCKET uint8 = 12;
 /// A dirent representing a service object.
-const uint8 DIRENT_TYPE_SERVICE = 16;
+const DIRENT_TYPE_SERVICE uint8 = 16;
 
 /// Nodes which do not have ino values should return this value
 /// from Readdir and GetAttr.
-const uint64 INO_UNKNOWN = 0xFFFFFFFFFFFFFFFF;
+const INO_UNKNOWN uint64 = 0xFFFFFFFFFFFFFFFF;
 
 /// Indicates the directory being watched has been deleted.
-const uint8 WATCH_EVENT_DELETED = 0;
+const WATCH_EVENT_DELETED uint8 = 0;
 /// Indicates a node has been created (either new or moved) into a directory.
-const uint8 WATCH_EVENT_ADDED = 1;
+const WATCH_EVENT_ADDED uint8 = 1;
 /// Identifies a node has been removed (either deleted or moved) from the directory.
-const uint8 WATCH_EVENT_REMOVED = 2;
+const WATCH_EVENT_REMOVED uint8 = 2;
 /// Identifies a node already existed in the directory when watching started.
-const uint8 WATCH_EVENT_EXISTING = 3;
+const WATCH_EVENT_EXISTING uint8 = 3;
 /// Identifies that no more `WATCH_EVENT_EXISTING` events will be sent.
-const uint8 WATCH_EVENT_IDLE = 4;
+const WATCH_EVENT_IDLE uint8 = 4;
 
 /// Used by `Directory.Watch`. Requests transmission of `WATCH_EVENT_DELETED`.
-const uint32 WATCH_MASK_DELETED = 0x00000001;
+const WATCH_MASK_DELETED uint32 = 0x00000001;
 /// Used by `Directory.Watch`. Requests transmission of `WATCH_EVENT_ADDED`.
-const uint32 WATCH_MASK_ADDED = 0x00000002;
+const WATCH_MASK_ADDED uint32 = 0x00000002;
 /// Used by `Directory.Watch`. Requests transmission of `WATCH_EVENT_REMOVED`.
-const uint32 WATCH_MASK_REMOVED = 0x00000004;
+const WATCH_MASK_REMOVED uint32 = 0x00000004;
 /// Used by `Directory.Watch`. Requests transmission of `WATCH_EVENT_EXISTING`.
-const uint32 WATCH_MASK_EXISTING = 0x00000008;
+const WATCH_MASK_EXISTING uint32 = 0x00000008;
 /// Used by `Directory.Watch`. Requests transmission of `WATCH_EVENT_IDLE`.
-const uint32 WATCH_MASK_IDLE = 0x00000010;
+const WATCH_MASK_IDLE uint32 = 0x00000010;
 /// Used by `Directory.Watch`. Requests transmission of all watcher events.
-const uint32 WATCH_MASK_ALL = 0x0000001F;
+const WATCH_MASK_ALL uint32 = 0x0000001F;
 
 // TODO(fxbug.dev/7903): Unused.
 /// WatchedEvent describes events returned from a DirectoryWatcher.
-struct WatchedEvent {
-    uint8 event;
-    uint8 len;
-    vector<uint8>:MAX_FILENAME name;
+type WatchedEvent = struct {
+    event uint8;
+    len uint8;
+    name vector<uint8>:MAX_FILENAME;
 };
 
 // TODO(fxbug.dev/7903): Unused.
@@ -465,7 +533,9 @@ struct WatchedEvent {
 /// filter which events they want to receive notifications for.
 protocol DirectoryWatcher {
     // TODO(smklein): Convert this to a vector of WatchedEvents, when possible.
-    OnEvent(vector<uint8>:MAX_BUF events);
+    OnEvent(struct {
+        events vector<uint8>:MAX_BUF;
+    });
 };
 
 /// Directory defines a node which is capable of containing other Objects.
@@ -497,7 +567,12 @@ protocol Directory {
     /// The caller must specify either one or more of the `OPEN_RIGHT_*` flags, or
     /// the `OPEN_FLAG_NODE_REFERENCE` flag.
     // TODO(smklein): Who uses mode? Can it be removed?
-    Open(uint32 flags, uint32 mode, string:MAX_PATH path, request<Node> object);
+    Open(resource struct {
+        flags uint32;
+        mode uint32;
+        path string:MAX_PATH;
+        object server_end:Node;
+    });
 
     /// Adds a new inotify filter for an object relative to this directory object.
     ///
@@ -518,8 +593,12 @@ protocol Directory {
     ///   have a different server end of the socket and there will be a single client end per
     ///   inotify instance on inotify init.
     ///
-    AddInotifyFilter(fuchsia.io2.Path path, fuchsia.io2.InotifyWatchMask filter,
-                     uint32 watch_descriptor, zx.handle:SOCKET socket) -> ();
+    AddInotifyFilter(resource struct {
+        path fuchsia.io2.Path;
+        filter fuchsia.io2.InotifyWatchMask;
+        watch_descriptor uint32;
+        socket zx.handle:SOCKET;
+    }) -> ();
 
     /// Detaches an object from this directory object.
     ///
@@ -549,7 +628,11 @@ protocol Directory {
     ///
     /// This method requires following rights: `OPEN_RIGHT_WRITABLE`, otherwise returns
     /// `ZX_ERR_BAD_HANDLE`.
-    Unlink(string:MAX_PATH path) -> (zx.status s);
+    Unlink(struct {
+        path string:MAX_PATH;
+    }) -> (struct {
+        s zx.status;
+    });
 
     /// Removes a child node from the this directory's list of entries.
     ///
@@ -575,8 +658,12 @@ protocol Directory {
     ///
     /// * [`Rights.ENUMERATE`]
     /// * [`Rights.MODIFY_DIRECTORY`]
-    [Selector = "fuchsia.io/Directory.Unlink", Transitional]
-    Unlink2(fuchsia.io2.Name name, fuchsia.io2.UnlinkOptions options) -> () error zx.status;
+    @selector("fuchsia.io/Directory.Unlink")
+    @transitional
+    Unlink2(struct {
+        name fuchsia.io2.Name;
+        options fuchsia.io2.UnlinkOptions;
+    }) -> (struct {}) error zx.status;
 
     /// Reads a collection of variably sized dirents into a buffer.
     /// The number of dirents in a directory may be very large: akin to
@@ -604,19 +691,29 @@ protocol Directory {
     // llcpp arrives.
     // TODO(smklein): Get rid of "max_bytes".
     // TODO(smklein): Document the behavior when the seek pointer reaches the end of the directory.
-    ReadDirents(uint64 max_bytes) -> (zx.status s, vector<uint8>:MAX_BUF dirents);
+    ReadDirents(struct {
+        max_bytes uint64;
+    }) -> (struct {
+        s zx.status;
+        dirents vector<uint8>:MAX_BUF;
+    });
 
     /// Resets the directory seek offset.
     ///
     /// This method does not require any rights, similar to ReadDirents.
-    Rewind() -> (zx.status s);
+    Rewind() -> (struct {
+        s zx.status;
+    });
 
     /// Acquires a token to a Directory which can be used to identify
     /// access to it at a later point in time.
     ///
     /// This method requires following rights: `OPEN_RIGHT_WRITABLE`, otherwise returns
     /// `ZX_ERR_BAD_HANDLE`.
-    GetToken() -> (zx.status s, zx.handle? token);
+    GetToken() -> (resource struct {
+        s zx.status;
+        token zx.handle:optional;
+    });
 
     /// Renames an object named src to the name dst, in a directory represented by token.
     ///
@@ -627,8 +724,14 @@ protocol Directory {
     ///
     /// This method requires following rights: `OPEN_RIGHT_WRITABLE`, otherwise returns
     /// `ZX_ERR_BAD_HANDLE`.
-    [Transitional] // Rename is being removed, use Rename2 instead.
-    Rename(string:MAX_PATH src, zx.handle dst_parent_token, string:MAX_PATH dst) -> (zx.status s);
+    @transitional // Rename is being removed, use Rename2 instead.
+    Rename(resource struct {
+        src string:MAX_PATH;
+        dst_parent_token zx.handle;
+        dst string:MAX_PATH;
+    }) -> (struct {
+        s zx.status;
+    });
 
     /// Renames a node named `src` to the name `dst`, in a directory represented
     /// by `dst_parent_token`.
@@ -643,10 +746,12 @@ protocol Directory {
     /// * [`Rights.MODIFY_DIRECTORY`]
     ///
     /// * error `ZX_ERR_INVALID_ARGS` if `src` or `dst` is invalid.
-    [Selector = "fuchsia.io/Directory.Rename"]
-    Rename2(fuchsia.io2.Name src,
-            fuchsia.io2.Token dst_parent_token,
-            fuchsia.io2.Name dst) -> () error zx.status;
+    @selector("fuchsia.io/Directory.Rename")
+    Rename2(resource struct {
+        src fuchsia.io2.Name;
+        dst_parent_token fuchsia.io2.Token;
+        dst fuchsia.io2.Name;
+    }) -> (struct {}) error zx.status;
 
     /// Creates a link to an object named src by the name dst, within a directory represented by
     /// token.
@@ -659,7 +764,13 @@ protocol Directory {
     ///
     /// This method requires following rights: `OPEN_RIGHT_WRITABLE`, otherwise returns
     /// `ZX_ERR_BAD_HANDLE`.
-    Link(string:MAX_PATH src, zx.handle dst_parent_token, string:MAX_PATH dst) -> (zx.status s);
+    Link(resource struct {
+        src string:MAX_PATH;
+        dst_parent_token zx.handle;
+        dst string:MAX_PATH;
+    }) -> (struct {
+        s zx.status;
+    });
 
     // TODO(smklein): When stablized, remove the "This API is unstable" comment
     /// Watches a directory, receiving events of added messages on the
@@ -681,39 +792,45 @@ protocol Directory {
     /// Options must be zero; it is reserved.
     ///
     /// This method does not require any rights, similar to ReadDirents.
-    Watch(uint32 mask, uint32 options, zx.handle:CHANNEL watcher) -> (zx.status s);
+    Watch(resource struct {
+        mask uint32;
+        options uint32;
+        watcher zx.handle:CHANNEL;
+    }) -> (struct {
+        s zx.status;
+    });
 };
 
-const uint32 MOUNT_CREATE_FLAG_REPLACE = 0x00000001;
+const MOUNT_CREATE_FLAG_REPLACE uint32 = 0x00000001;
 
-const uint64 MAX_FS_NAME_BUFFER = 32;
+const MAX_FS_NAME_BUFFER uint64 = 32;
 
-struct FilesystemInfo {
+type FilesystemInfo = struct {
     /// The number of data bytes which may be stored in a filesystem.
-    uint64 total_bytes;
+    total_bytes uint64;
     /// The number of data bytes which are in use by the filesystem.
-    uint64 used_bytes;
+    used_bytes uint64;
     /// The number of nodes which may be stored in the filesystem.
-    uint64 total_nodes;
+    total_nodes uint64;
     /// The number of nodes used by the filesystem.
-    uint64 used_nodes;
+    used_nodes uint64;
     /// The amount of space which may be allocated from the underlying
     /// volume manager. If unsupported, this will be zero.
-    uint64 free_shared_pool_bytes;
+    free_shared_pool_bytes uint64;
     /// A unique identifier for this filesystem instance. Will not be preserved
     /// across reboots.
-    uint64 fs_id;
+    fs_id uint64;
     /// The size of a single filesystem block.
-    uint32 block_size;
+    block_size uint32;
     /// The maximum length of a filesystem name.
-    uint32 max_filename_size;
+    max_filename_size uint32;
     /// A unique identifier for the type of the underlying filesystem.
-    uint32 fs_type;
-    uint32 padding;
+    fs_type uint32;
+    padding uint32;
     // TODO(smklein): Replace this field with a string when supported
     // by the "Simple" interface. At the moment, name is a fixed-size,
     // null-terminated buffer.
-    array<int8>:MAX_FS_NAME_BUFFER name;
+    name array<int8, MAX_FS_NAME_BUFFER>;
 };
 
 /// DirectoryAdmin defines a directory which is capable of handling
@@ -725,23 +842,44 @@ protocol DirectoryAdmin {
     /// All future requests to this node will be forwarded to the remote filesystem.
     /// To re-open a node without forwarding to the remote target, the node
     /// should be opened with `OPEN_FLAG_NO_REMOTE`.
-    Mount(Directory remote) -> (zx.status s);
+    Mount(resource struct {
+        remote client_end:Directory;
+    }) -> (struct {
+        s zx.status;
+    });
 
     /// Atomically create a directory with a provided path, and mount the
     /// remote handle to the newly created directory.
-    MountAndCreate(Directory remote, string:MAX_FILENAME name, uint32 flags) -> (zx.status s);
+    MountAndCreate(resource struct {
+        remote client_end:Directory;
+        name string:MAX_FILENAME;
+        flags uint32;
+    }) -> (struct {
+        s zx.status;
+    });
 
     /// Unmount this filesystem. After this function returns successfully,
     /// all connections to the filesystem will be terminated.
-    Unmount() -> (zx.status s);
+    Unmount() -> (struct {
+        s zx.status;
+    });
 
     /// Detach a node which was previously attached to this directory
     /// with Mount.
-    UnmountNode() -> (zx.status s, Directory? remote);
+    UnmountNode() -> (resource struct {
+        s zx.status;
+        remote client_end:<Directory, optional>;
+    });
 
     /// Query the filesystem for filesystem-specific information.
-    QueryFilesystem() -> (zx.status s, FilesystemInfo? info);
+    QueryFilesystem() -> (struct {
+        s zx.status;
+        info box<FilesystemInfo>;
+    });
 
     /// Acquire the path to the device backing this filesystem, if there is one.
-    GetDevicePath() -> (zx.status s, string:MAX_PATH? path);
+    GetDevicePath() -> (struct {
+        s zx.status;
+        path string:<MAX_PATH, optional>;
+    });
 };

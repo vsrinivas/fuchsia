@@ -1,67 +1,65 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.bluetooth.le;
 
 using fuchsia.bluetooth as bt;
 
 // The size of the BT-encoded ServiceData field must fit into a uint8, so the max allowed data
 // size is 255 (uint8::MAX) - 1 byte (field type) - 2 bytes (minimum possible encoded UUID size).
-const uint8 MAX_SERVICE_DATA_LENGTH = 252;
+const MAX_SERVICE_DATA_LENGTH uint8 = 252;
 
 // The size of the BT-encoded ServiceData field must fit into a uint8, so the max allowed data size
 // is 255 (uint8::MAX) - 1 byte (field type) - 2 bytes (company ID size).
-const uint8 MAX_MANUFACTURER_DATA_LENGTH = 252;
+const MAX_MANUFACTURER_DATA_LENGTH uint8 = 252;
 
 // The size of each BT-encoded URI must fit into a uint8. Recognized encoding schemes are compressed
 // to 1 encoded byte, so encoded URIs are |original length| - (|encoding scheme| + 1) bytes. This
 // leads to a formula for the maximum URI length of |longest_scheme_str| - 1 byte (encoding) +
 // uint8::MAX - 1 byte (field type). The longest_scheme_str is "ms-settings-cloudstorage:", of
 // length 25, leading to a limit of 25 - 1 + 255 - 1 = 278.
-const uint16 MAX_URI_LENGTH = 278;
+const MAX_URI_LENGTH uint16 = 278;
 
 /// Entry in the `service_data` field of a [`fuchsia.bluetooth.le/AdvertisingData`].
-struct ServiceData {
-    bt.Uuid uuid;
-    bytes:MAX_SERVICE_DATA_LENGTH data;
+type ServiceData = struct {
+    uuid bt.Uuid;
+    data bytes:MAX_SERVICE_DATA_LENGTH;
 };
 
 /// Entry in the `manufacturer_data` field of a [`fuchsia.bluetooth.le/AdvertisingData`].
-struct ManufacturerData {
-    uint16 company_id;
-    bytes:MAX_MANUFACTURER_DATA_LENGTH data;
+type ManufacturerData = struct {
+    company_id uint16;
+    data bytes:MAX_MANUFACTURER_DATA_LENGTH;
 };
 
 /// Represents advertising and scan response data that are transmitted by a LE peripheral or
 /// broadcaster.
-table AdvertisingData {
+type AdvertisingData = table {
     /// Long or short name of the device.
-    1: bt.DeviceName name;
+    1: name bt.DeviceName;
 
     /// The appearance of the device.
-    2: bt.Appearance appearance;
+    2: appearance bt.Appearance;
 
-    [Deprecated = "Use include_tx_power_level instead. This value will be ignored."]
-    3: int8 tx_power_level;
+    @deprecated("Use include_tx_power_level instead. This value will be ignored.")
+    3: tx_power_level int8;
 
     /// Service UUIDs.
-    4: vector<bt.Uuid>:MAX service_uuids;
+    4: service_uuids vector<bt.Uuid>:MAX;
 
     /// Service data entries.
-    5: vector<ServiceData>:MAX service_data;
+    5: service_data vector<ServiceData>:MAX;
 
     /// Manufacturer-specific data entries.
-    6: vector<ManufacturerData>:MAX manufacturer_data;
+    6: manufacturer_data vector<ManufacturerData>:MAX;
 
     /// String representing a URI to be advertised, as defined in [IETF STD 66](https://tools.ietf.org/html/std66).
     /// Each entry should be a UTF-8 string including the scheme. For more information, see:
     /// - https://www.iana.org/assignments/uri-schemes/uri-schemes.xhtml for allowed schemes;
     /// - https://www.bluetooth.com/specifications/assigned-numbers/uri-scheme-name-string-mapping
     ///   for code-points used by the system to compress the scheme to save space in the payload.
-    7: vector<string:MAX_URI_LENGTH>:MAX uris;
+    7: uris vector<string:MAX_URI_LENGTH>:MAX;
 
     /// Indicates whether the current TX power level should be included in the advertising data.
-    8: bool include_tx_power_level;
+    8: include_tx_power_level bool;
 };

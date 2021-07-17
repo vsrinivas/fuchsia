@@ -1,19 +1,33 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library llcpptest.handlerights.test;
 
 using zx;
 
 protocol HandleRights {
-    SyncGetHandleWithTooFewRights() -> (zx.handle:<EVENT, zx.rights.TRANSFER | zx.rights.SIGNAL> h);
-    AsyncGetHandleWithTooFewRights() -> (zx.handle:<EVENT, zx.rights.TRANSFER | zx.rights.SIGNAL> h);
-    SyncGetHandleWithTooManyRights() -> (zx.handle:<EVENT, zx.rights.TRANSFER | zx.rights.SIGNAL> h);
-    AsyncGetHandleWithTooManyRights() -> (zx.handle:<EVENT, zx.rights.TRANSFER | zx.rights.SIGNAL> h);
-    SyncGetHandleWithWrongType() -> (zx.handle:CHANNEL h);
-    AsyncGetHandleWithWrongType() -> (zx.handle:CHANNEL h);
-    SendEventWithTransferAndSignal(zx.handle:<EVENT, zx.rights.TRANSFER | zx.rights.SIGNAL> h);
-    SendChannel(zx.handle:CHANNEL h);
+    SyncGetHandleWithTooFewRights() -> (resource struct {
+        h zx.handle:<EVENT, zx.rights.TRANSFER | zx.rights.SIGNAL>;
+    });
+    AsyncGetHandleWithTooFewRights() -> (resource struct {
+        h zx.handle:<EVENT, zx.rights.TRANSFER | zx.rights.SIGNAL>;
+    });
+    SyncGetHandleWithTooManyRights() -> (resource struct {
+        h zx.handle:<EVENT, zx.rights.TRANSFER | zx.rights.SIGNAL>;
+    });
+    AsyncGetHandleWithTooManyRights() -> (resource struct {
+        h zx.handle:<EVENT, zx.rights.TRANSFER | zx.rights.SIGNAL>;
+    });
+    SyncGetHandleWithWrongType() -> (resource struct {
+        h zx.handle:CHANNEL;
+    });
+    AsyncGetHandleWithWrongType() -> (resource struct {
+        h zx.handle:CHANNEL;
+    });
+    SendEventWithTransferAndSignal(resource struct {
+        h zx.handle:<EVENT, zx.rights.TRANSFER | zx.rights.SIGNAL>;
+    });
+    SendChannel(resource struct {
+        h zx.handle:CHANNEL;
+    });
 };

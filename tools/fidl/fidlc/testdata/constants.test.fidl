@@ -1,48 +1,47 @@
-deprecated_syntax;
 library fidl.test.constants;
 
-const uint8 UINT8 = 0b100;
-const uint16 UINT16 = 0b100;
-const uint32 UINT32 = 0b100;
-const uint64 UINT64 = 0b100;
-const int8 INT8 = 0b100;
-const int16 INT16 = 0b100;
-const int32 INT32 = 0b100;
-const int64 INT64 = 0b100;
-const float32 FLOAT32 = 3.14159;
-const float64 FLOAT64 = 3.14159;
-const bool BOOL = true;
-const string STRING = "string";
+const UINT8 uint8 = 0b100;
+const UINT16 uint16 = 0b100;
+const UINT32 uint32 = 0b100;
+const UINT64 uint64 = 0b100;
+const INT8 int8 = 0b100;
+const INT16 int16 = 0b100;
+const INT32 int32 = 0b100;
+const INT64 int64 = 0b100;
+const FLOAT32 float32 = 3.14159;
+const FLOAT64 float64 = 3.14159;
+const BOOL bool = true;
+const STRING string = "string";
 
-enum EnumType : int32 {
+type EnumType = strict enum : int32 {
     VALUE = 1;
 };
-const EnumType enumVal = EnumType.VALUE;
-const int32 enumPrimitiveVal = EnumType.VALUE;
+const enumVal EnumType = EnumType.VALUE;
+const enumPrimitiveVal int32 = EnumType.VALUE;
 
-bits BitsType : uint32 {
+type BitsType = strict bits : uint32 {
     VALUE = 0x00000001;
     SECOND_VALUE = 0x80;
     THIRD_VALUE = 0x2;
 };
-const BitsType bitsVal = BitsType.VALUE;
-const int32 bitsPrimitiveVal = BitsType.VALUE;
+const bitsVal BitsType = BitsType.VALUE;
+const bitsPrimitiveVal int32 = BitsType.VALUE;
 
-const BitsType orResult = BitsType.VALUE | BitsType.SECOND_VALUE | BitsType.THIRD_VALUE;
-const int32 orResultPrimitiveVal = BitsType.VALUE | BitsType.SECOND_VALUE;
+const orResult BitsType = BitsType.VALUE | BitsType.SECOND_VALUE | BitsType.THIRD_VALUE;
+const orResultPrimitiveVal int32 = BitsType.VALUE | BitsType.SECOND_VALUE;
 
-enum Enum {
+type Enum = strict enum {
     E = 0b10101010;
 };
 
-bits Bits {
+type Bits = strict bits {
     B = 0x8;
 };
 
-struct Struct {
-    int64 int64_with_default = 007;
-    string string_with_default = "stuff";
-    bool bool_with_default = true;
-    Enum enum_with_default = Enum.E;
-    Bits bits_with_default = Bits.B;
+type Struct = struct {
+    int64_with_default int64 = 007;
+    string_with_default string = "stuff";
+    bool_with_default bool = true;
+    enum_with_default Enum = Enum.E;
+    bits_with_default Bits = Bits.B;
 };

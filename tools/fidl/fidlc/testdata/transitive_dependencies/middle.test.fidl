@@ -1,8 +1,7 @@
-deprecated_syntax;
 library middle;
 
 using bottom;
 
-struct Bar {
-    bottom.Foo f;
+type Bar = struct {
+    f bottom.Foo;
 };

@@ -1,8 +1,6 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.power.test;
 
 using fuchsia.power;
@@ -13,37 +11,53 @@ protocol BatterySimulatorController {
 
     /// Gets battery info. This should be called after
     /// DisconnectRealBattery
-    GetBatteryInfo() -> (fuchsia.power.BatteryInfo info);
+    GetBatteryInfo() -> (struct {
+        info fuchsia.power.BatteryInfo;
+    });
 
     /// Sets Battery Status. This should be called after
     /// DisconnectRealBattery
-    SetBatteryStatus(fuchsia.power.BatteryStatus battery_status);
+    SetBatteryStatus(struct {
+        battery_status fuchsia.power.BatteryStatus;
+    });
 
     /// Sets Charge Status. This should be called after
     /// DisconnectRealBattery
-    SetChargeStatus(fuchsia.power.ChargeStatus charge_status);
+    SetChargeStatus(struct {
+        charge_status fuchsia.power.ChargeStatus;
+    });
 
     /// Sets Charge Source. This should be called after
     /// DisconnectRealBattery
-    SetChargeSource(fuchsia.power.ChargeSource charge_source);
+    SetChargeSource(struct {
+        charge_source fuchsia.power.ChargeSource;
+    });
 
     /// Sets Battery Percentage. This should be called after
     /// DisconnectRealBattery
-    SetBatteryPercentage(float32 percent);
+    SetBatteryPercentage(struct {
+        percent float32;
+    });
 
     /// Sets Level Status. This should be called after
     /// DisconnectRealBattery
-    SetLevelStatus(fuchsia.power.LevelStatus level_status);
+    SetLevelStatus(struct {
+        level_status fuchsia.power.LevelStatus;
+    });
 
     /// Sets Time Remaining to full charge / depletion
     /// This should be called after DisconnectRealBattery
-    SetTimeRemaining(zx.duration duration);
+    SetTimeRemaining(struct {
+        duration zx.duration;
+    });
 
     /// Disconnect the real battery connection
     DisconnectRealBattery();
 
     /// Gets Simulation State
-    IsSimulating() -> (bool simulation_state);
+    IsSimulating() -> (struct {
+        simulation_state bool;
+    });
 
     /// Reconnect to the real battery
     /// This should be called after DisconnectRealBattery
@@ -51,7 +65,7 @@ protocol BatterySimulatorController {
 };
 
 /// Simulator interface for battery simulation
-[Discoverable]
+@discoverable
 protocol BatterySimulator {
     // Provides commands to modify battery state
     compose BatterySimulatorController;

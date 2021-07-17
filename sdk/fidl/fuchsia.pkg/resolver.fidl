@@ -1,8 +1,6 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.pkg;
 
 using fuchsia.io;
@@ -10,7 +8,7 @@ using zx;
 
 /// Error codes for PackageResolver operations.
 // TODO(fxb/46003): Use this instead of zx.status for `Resolve` and `GetHash`
-enum ResolveError : int32 {
+type ResolveError = strict enum : int32 {
     /// The resolver encountered an otherwise unspecified error while handling the request.
     INTERNAL = 1;
 
@@ -46,7 +44,7 @@ enum ResolveError : int32 {
 ///
 /// This is intended to be implemented by package resolver components, and used by
 /// repository administration tools.
-[Discoverable]
+@discoverable
 protocol PackageResolver {
     /// Populates or updates the cache of a package with the given selectors.
     ///
@@ -61,11 +59,11 @@ protocol PackageResolver {
     ///   been successfully cached.
     /// * error indicates failure. See `ResolveError` for values and error scenarios.
     // TODO(fxbug.dev/45811) change `package_url` from string to PackageUrl
-    Resolve(
-        string package_url,
-        vector<string> selectors,
-        request<fuchsia.io.Directory> dir
-        ) -> () error ResolveError;
+    Resolve(resource struct {
+        package_url string;
+        selectors vector<string>;
+        dir server_end:fuchsia.io.Directory;
+    }) -> (struct {}) error ResolveError;
 
     /// Determines the hash of a package.
     ///
@@ -78,7 +76,9 @@ protocol PackageResolver {
     ///       `package_url`.
     ///     * `ZX_ERR_BAD_STATE` if the resolver does not know about the repository specified by
     ///       `package_url`.
-    GetHash(
-        PackageUrl package_url
-        ) -> (BlobId meta_far_blob_id) error zx.status;
+    GetHash(struct {
+        package_url PackageUrl;
+    }) -> (struct {
+        meta_far_blob_id BlobId;
+    }) error zx.status;
 };

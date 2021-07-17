@@ -1,22 +1,25 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.usb.modeswitch;
 
 using zx;
 
 /// Values for `SetMode`.
-enum UsbMode : uint32 {
+type UsbMode = strict enum : uint32 {
     NONE = 0;
     HOST = 1;
     PERIPHERAL = 2;
     OTG = 3;
 };
 
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol UsbModeSwitch {
     /// Sets the current USB mode.
-    SetMode(UsbMode mode) -> (zx.status s);
+    SetMode(struct {
+        mode UsbMode;
+    }) -> (struct {
+        s zx.status;
+    });
 };

@@ -1,8 +1,6 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 //! A simple mDNS service for the daemon. Includes an API for subscribing to
 //! events, as well as inspecting cached info.
 //!
@@ -12,36 +10,40 @@ deprecated_syntax;
 library fuchsia.developer.bridge;
 
 /// Contains information about the socket bound during mDNS setup.
-table MdnsBindEvent {
-    1: uint16 port;
+type MdnsBindEvent = table {
+    1: port uint16;
 };
 
-union MdnsEventType {
+type MdnsEventType = strict union {
     /// Sent to subscribers when a new target is found on the network. This
     /// is only propagated when the target is either seen for the first time,
     /// or if the target has previously expired.
-    1: Target target_found;
+    1: target_found Target;
     /// Sent to subscribers when a target has been discovered after having
     /// alreaady been stored in the cache. This can often be treated the same
     /// as `target_found`.
-    2: Target target_rediscovered;
+    2: target_rediscovered Target;
     /// Sent to subscribers when a target has expired (the target has not been
     /// rediscovered after the TTL has been reached). The target can be
     /// rediscovered later. If this happens a `target_found` event will be sent.
-    3: Target target_expired;
+    3: target_expired Target;
     /// An event propagated when the multicast listener is bound. Primarily
     /// for testing.
-    4: MdnsBindEvent socket_bound;
+    4: socket_bound MdnsBindEvent;
 };
 
-[Discoverable]
+@discoverable
 protocol Mdns {
     /// Gets the next event from the protocol. There is only ever meant to be
     /// one event ready at a time on the service side, so it is important that
     /// the client call this frequently.
-    GetNextEvent() -> (MdnsEventType? event);
+    GetNextEvent() -> (struct {
+        event MdnsEventType:optional;
+    });
 
     /// Gets full cache of targets. It is advised to call this before
     /// `GetNextEvent()`.
-    GetTargets() -> (vector<Target>:512 targets);
+    GetTargets() -> (struct {
+        targets vector<Target>:512;
+    });
 };

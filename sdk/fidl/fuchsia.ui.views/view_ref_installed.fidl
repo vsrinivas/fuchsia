@@ -1,12 +1,10 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.ui.views;
 
 /// A collection of error codes related to |ViewRefInstalled|.
-enum ViewRefInstalledError {
+type ViewRefInstalledError = strict enum {
     /// The ViewRef being watched is invalid, or has become invalid.
     INVALID_VIEW_REF = 1;
 };
@@ -22,7 +20,7 @@ enum ViewRefInstalledError {
 ///       depending on view tree topology.  As such, "installed" cannot imply
 ///       "currently connected to view tree"; even a hypothetical
 ///       "ViewRefConnected" protocol is fundamentally racy.
-[Discoverable]
+@discoverable
 protocol ViewRefInstalled {
     /// Sets up a callback to fire when the requested |view_ref| is installed.
     /// - If |view_ref| has not already been installed, the |Watch| response
@@ -39,5 +37,7 @@ protocol ViewRefInstalled {
     ///
     /// Note: Prior to installation, this |Watch| call is kept alive as long as
     ///       the ViewRef is valid.
-    Watch(ViewRef view_ref) -> () error ViewRefInstalledError;
+    Watch(resource struct {
+        view_ref ViewRef;
+    }) -> (struct {}) error ViewRefInstalledError;
 };

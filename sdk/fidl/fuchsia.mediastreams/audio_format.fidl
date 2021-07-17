@@ -1,39 +1,38 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
 library fuchsia.mediastreams;
 
 /// Describes a format used for audio elementary streams without
 /// reference to compression. Where compression is supported, this
 /// type should be combined with a `Compression` struct.
-struct AudioFormat {
+type AudioFormat = struct {
     /// The type of individual samples.
-    AudioSampleFormat sample_format;
+    sample_format AudioSampleFormat;
 
     /// The number of samples per frame.
-    uint32 channel_count;
+    channel_count uint32;
 
     /// The number of frames per second.
-    uint32 frames_per_second;
+    frames_per_second uint32;
 
     /// The spatial assignment of each channel.
-    AudioChannelLayout channel_layout;
+    channel_layout AudioChannelLayout;
 
-    // TODO: Maybe add bytes_per_frame for convenience. It’s
-    // a function of sample_format and channel_count.
+// TODO: Maybe add bytes_per_frame for convenience. It’s
+// a function of sample_format and channel_count.
 };
 
 /// Expresses the format of individual audio samples.
-enum AudioSampleFormat {
+type AudioSampleFormat = strict enum {
     UNSIGNED_8 = 1;
     SIGNED_16 = 2;
     SIGNED_24_IN_32 = 3;
     FLOAT = 4;
 };
 
-union AudioChannelLayout {
-    1: uint8 placeholder;
+type AudioChannelLayout = strict union {
+    1: placeholder uint8;
 };
 
 // TODO: Define AudioChannelLayout

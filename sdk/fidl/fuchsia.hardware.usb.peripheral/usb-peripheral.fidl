@@ -1,49 +1,47 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.usb.peripheral;
 
 using zx;
 
-const uint32 MAX_FUNCTION_DESCRIPTORS = 32;
-const uint32 MAX_CONFIG_DESCRIPTORS = 5;
-const uint32 MAX_STRING_DESCRIPTORS = 255;
+const MAX_FUNCTION_DESCRIPTORS uint32 = 32;
+const MAX_CONFIG_DESCRIPTORS uint32 = 5;
+const MAX_STRING_DESCRIPTORS uint32 = 255;
 
-const uint32 MAX_STRING_LENGTH = 127;
+const MAX_STRING_LENGTH uint32 = 127;
 
-[ForDeprecatedCBindings]
-struct FunctionDescriptor {
-    uint8 interface_class;
-    uint8 interface_subclass;
-    uint8 interface_protocol;
+@for_deprecated_c_bindings
+type FunctionDescriptor = struct {
+    interface_class uint8;
+    interface_subclass uint8;
+    interface_protocol uint8;
 };
 
 alias ConfigurationDescriptor = vector<FunctionDescriptor>:MAX_FUNCTION_DESCRIPTORS;
 
 /// The fields in DeviceDescriptor match those in usb_descriptor_t in the USB specification,
 /// except for the string fields.
-struct DeviceDescriptor {
-    uint16 bcd_usb;
-    uint8 b_device_class;
-    uint8 b_device_sub_class;
-    uint8 b_device_protocol;
-    uint8 b_max_packet_size0;
-    uint16 id_vendor;
-    uint16 id_product;
-    uint16 bcd_device;
-    string:MAX_STRING_LENGTH manufacturer;
-    string:MAX_STRING_LENGTH product;
-    string:MAX_STRING_LENGTH serial;
-    uint8 b_num_configurations;
+type DeviceDescriptor = struct {
+    bcd_usb uint16;
+    b_device_class uint8;
+    b_device_sub_class uint8;
+    b_device_protocol uint8;
+    b_max_packet_size0 uint8;
+    id_vendor uint16;
+    id_product uint16;
+    bcd_device uint16;
+    manufacturer string:MAX_STRING_LENGTH;
+    product string:MAX_STRING_LENGTH;
+    serial string:MAX_STRING_LENGTH;
+    b_num_configurations uint8;
 };
 
 /// Events protocol that is used as a callback to inform the client
 /// of the completion of various server-side events.
 /// This callback interface can be registered using the SetStateChangeListener
 /// method on the Device protocol.
-[ForDeprecatedCBindings]
+@for_deprecated_c_bindings
 protocol Events {
     /// Invoked when a function registers
     FunctionRegistered() -> ();
@@ -55,14 +53,17 @@ protocol Device {
     /// Sets the device's descriptors, adds the functions and creates the child devices for the
     /// configuration's interfaces.
     /// At least one function descriptor must be provided.
-    SetConfiguration(DeviceDescriptor device_desc,
-                     vector<ConfigurationDescriptor>:MAX_CONFIG_DESCRIPTORS config_descriptors)
-        -> () error zx.status;
+    SetConfiguration(struct {
+        device_desc DeviceDescriptor;
+        config_descriptors vector<ConfigurationDescriptor>:MAX_CONFIG_DESCRIPTORS;
+    }) -> (struct {}) error zx.status;
 
     /// Tells the device to remove the child devices for the configuration's interfaces
     /// and reset the list of functions to empty.
     /// The caller should wait for the `FunctionsCleared` event.
     ClearFunctions() -> ();
     /// Adds a state change listener that is invoked when a state change completes.
-    SetStateChangeListener(request<Events> listener);
+    SetStateChangeListener(resource struct {
+        listener server_end:Events;
+    });
 };

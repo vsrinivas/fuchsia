@@ -1,37 +1,44 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.block.partition;
 using zx;
 using fuchsia.hardware.block as block;
 
-const uint32 GUID_LENGTH = 16;
-const uint32 NAME_LENGTH = 128;
+const GUID_LENGTH uint32 = 16;
+const NAME_LENGTH uint32 = 128;
 
 /// A Globally Unique IDentifier, which may be utilized to identify
 /// a partition.
-[ForDeprecatedCBindings]
-struct GUID {
-    array<uint8>:GUID_LENGTH value;
+@for_deprecated_c_bindings
+type GUID = struct {
+    value array<uint8, GUID_LENGTH>;
 };
 
 /// Partition describes a region of one or more block devices, labelled
 /// with distinguishing identifiers.
-[ForDeprecatedCBindings]
+@for_deprecated_c_bindings
 protocol Partition {
     compose block.Block;
 
     /// Gets the type GUID of the partition (if one exists).
     /// If the partition has no type GUID, ZX_ERR_NOT_SUPPORTED is returned.
-    GetTypeGuid() -> (zx.status status, GUID? guid);
+    GetTypeGuid() -> (struct {
+        status zx.status;
+        guid box<GUID>;
+    });
 
     /// Gets the instance GUID of the partition (if one exists).
     /// If the partition has no instance GUID, ZX_ERR_NOT_SUPPORTED is returned.
-    GetInstanceGuid() -> (zx.status status, GUID? guid);
+    GetInstanceGuid() -> (struct {
+        status zx.status;
+        guid box<GUID>;
+    });
 
     /// Gets the name of the partition (if one exists).
     /// If the partition has no name, ZX_ERR_NOT_SUPPORTED is returned.
-    GetName() -> (zx.status status, string:NAME_LENGTH? name);
+    GetName() -> (struct {
+        status zx.status;
+        name string:<NAME_LENGTH, optional>;
+    });
 };

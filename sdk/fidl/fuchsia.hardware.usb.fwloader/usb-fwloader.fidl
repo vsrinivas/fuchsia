@@ -1,14 +1,12 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.usb.fwloader;
 
 using fuchsia.mem;
 using zx;
 
-enum PrebuiltType : uint8 {
+type PrebuiltType = strict enum : uint8 {
     /// Test firmware that can be loaded onto the USB test device for running USB tests.
     TESTER = 1;
     /// Flash programmer used for loading a new bootloader onto the USB test device I2C EEPROM.
@@ -17,11 +15,19 @@ enum PrebuiltType : uint8 {
     BOOT = 3;
 };
 
-[ForDeprecatedCBindings]
+@for_deprecated_c_bindings
 protocol Device {
     /// Loads the prebuilt firmware onto the USB test device, and renumerates as the new device.
-    LoadPrebuiltFirmware(PrebuiltType prebuilt_type) -> (zx.status s);
+    LoadPrebuiltFirmware(struct {
+        prebuilt_type PrebuiltType;
+    }) -> (struct {
+        s zx.status;
+    });
 
     /// Loads the firmware onto the USB test device, and renumerates as the new device.
-    LoadFirmware(fuchsia.mem.Buffer firmware) -> (zx.status s);
+    LoadFirmware(resource struct {
+        firmware fuchsia.mem.Buffer;
+    }) -> (struct {
+        s zx.status;
+    });
 };

@@ -1,8 +1,6 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.device.manager;
 
 using zx;
@@ -14,5 +12,7 @@ protocol DeviceWatcher {
     /// there is a new device available. Call this repeatedly to get all devices.
     /// If there is already an outstanding request then calling this again will return
     /// ZX_ERR_ALREADY_BOUND.
-    NextDevice() -> (zx.handle:CHANNEL device) error zx.status;
+    NextDevice() -> (resource struct {
+        device zx.handle:CHANNEL;
+    }) error zx.status;
 };

@@ -1,13 +1,11 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.sysmem2;
 
-const uint32 MAX_COUNT_BUFFER_COLLECTION_CONSTRAINTS_IMAGE_FORMAT_CONSTRAINTS = 64;
-const uint32 MAX_COUNT_BUFFER_MEMORY_CONSTRAINTS_HEAP_PERMITTED = 64;
-const uint32 MAX_COUNT_IMAGE_FORMAT_CONSTRAINTS_COLOR_SPACES = 32;
+const MAX_COUNT_BUFFER_COLLECTION_CONSTRAINTS_IMAGE_FORMAT_CONSTRAINTS uint32 = 64;
+const MAX_COUNT_BUFFER_MEMORY_CONSTRAINTS_HEAP_PERMITTED uint32 = 64;
+const MAX_COUNT_IMAGE_FORMAT_CONSTRAINTS_COLOR_SPACES uint32 = 32;
 
 // The contents of this file are not final.  Incompatible changes are still
 // being made to this file.  Do not rely on the contents of this file to provide
@@ -25,7 +23,7 @@ const uint32 MAX_COUNT_IMAGE_FORMAT_CONSTRAINTS_COLOR_SPACES = 32;
 /// Constraints on BufferCollection parameters.  These constraints can be
 /// specified per-participant.  The sysmem service implements aggregation of
 /// constraints from multiple participants.
-table BufferCollectionConstraints {
+type BufferCollectionConstraints = table {
     /// The usage is only meant as a hint to help sysmem choose a more optimal
     /// PixelFormat or similar when multiple compatible options exist.
     ///
@@ -33,7 +31,7 @@ table BufferCollectionConstraints {
     ///
     /// At least one usage bit must be specified unless the whole
     /// BufferCollectionConstraints is logically null (no fields set).
-    1: BufferUsage usage;
+    1: usage BufferUsage;
 
     /// Per-participant minimum number of buffers that are needed for camping
     /// purposes.  A participant should specify a number for min_buffer_count
@@ -52,7 +50,7 @@ table BufferCollectionConstraints {
     /// significant duration may (ideally will) be flagged as a failure.  In
     /// testing scenarios, the participant may not be provided with more buffers
     /// than this concurrently.
-    2: uint32 min_buffer_count_for_camping;
+    2: min_buffer_count_for_camping uint32;
 
     /// Per-participant minimum number of buffers that are needed for slack
     /// reasons, for better overlap of processing / better performance.
@@ -70,7 +68,7 @@ table BufferCollectionConstraints {
     /// participants are expected to continue to work without getting stuck.  If
     /// a buffer is needed for forward progress reasons, that buffer should be
     /// accounted for in min_buffer_count_for_camping.
-    3: uint32 min_buffer_count_for_dedicated_slack;
+    3: min_buffer_count_for_dedicated_slack uint32;
 
     /// Similar to min_buffer_count_for_dedicated_slack, except when aggregating
     /// these values max (instead of add).  The value here is not shared with
@@ -87,7 +85,7 @@ table BufferCollectionConstraints {
     /// participants are expected to continue to work without getting stuck.  If
     /// a buffer is needed for forward progress reasons, that buffer should be
     /// accounted for in min_buffer_count_for_camping.
-    4: uint32 min_buffer_count_for_shared_slack;
+    4: min_buffer_count_for_shared_slack uint32;
 
     /// A particularly-picky participant may unfortunately need to demand a tight
     /// range of buffer_count, or even a specific buffer_count.  This field
@@ -96,7 +94,7 @@ table BufferCollectionConstraints {
     /// participant should still fill out the min_buffer_count_for_* fields.
     ///
     /// If this field is un-set, the logical min_buffer_count is 1.
-    5: uint32 min_buffer_count;
+    5: min_buffer_count uint32;
     /// A particularly-picky participant may unfortunately need to demand a tight
     /// range of buffer_count, or even a specific buffer_count.  This field
     /// should remain 0 unless a participant really must set this field to
@@ -104,7 +102,7 @@ table BufferCollectionConstraints {
     /// participant should still fill out the min_buffer_count_for_* fields.
     ///
     /// If this field is un-set, the logical max_buffer_count is 0xFFFFFFFF.
-    6: uint32 max_buffer_count;
+    6: max_buffer_count uint32;
 
     /// Optional constraints on BufferCollectionSettings.buffer_settings.
     ///
@@ -115,7 +113,7 @@ table BufferCollectionConstraints {
     ///
     /// If un-set, the client is specifying "don't care" re. any buffer memory
     /// constraints.
-    7: BufferMemoryConstraints buffer_memory_constraints;
+    7: buffer_memory_constraints BufferMemoryConstraints;
 
     /// Optional constraints on the image format parameters of an image stored
     /// in a buffer of the BufferCollection.  This includes pixel format and
@@ -128,7 +126,8 @@ table BufferCollectionConstraints {
     ///
     /// un-set means no image format constraints.  set but zero length is an
     /// error.
-    8: vector<ImageFormatConstraints>:MAX_COUNT_BUFFER_COLLECTION_CONSTRAINTS_IMAGE_FORMAT_CONSTRAINTS image_format_constraints;
+    8: image_format_constraints
+            vector<ImageFormatConstraints>:MAX_COUNT_BUFFER_COLLECTION_CONSTRAINTS_IMAGE_FORMAT_CONSTRAINTS;
 
     /// If true, a secure heap may only be selected if all participants with
     /// BufferMemoryConstraints specify allow_clear_aux_buffers_for_secure.  If
@@ -137,7 +136,7 @@ table BufferCollectionConstraints {
     /// If false (or unset), the participant can still work, potentially even
     /// with secure memory (depending on supported heaps), without clear aux
     /// buffers.
-    9: bool need_clear_aux_buffers_for_secure;
+    9: need_clear_aux_buffers_for_secure bool;
 
     /// If true, the participant will use clear aux buffers, if they are
     /// allocated, as appropriate to the participant's role.  If the participant
@@ -152,13 +151,13 @@ table BufferCollectionConstraints {
     /// If un-set from a participant with write usage, or false, the buffer
     /// collection won't be able to allocate if any participant specifies
     /// need_clear_aux_buffers_for_secure true.
-    10: bool allow_clear_aux_buffers_for_secure;
+   10: allow_clear_aux_buffers_for_secure bool;
 };
 
 /// Known heap types.
 /// Device specific types should have bit 60 set. Top order bit is reserved
 /// and should not be set.
-enum HeapType : uint64 {
+type HeapType = strict enum : uint64 {
     SYSTEM_RAM = 0x0000000000000000;
 
     /// Heap used for amlogic protected memory.
@@ -174,17 +173,17 @@ enum HeapType : uint64 {
     GOLDFISH_HOST_VISIBLE = 0x1000000000020001;
 };
 
-table BufferMemoryConstraints {
-    1: uint32 min_size_bytes;
+type BufferMemoryConstraints = table {
+    1: min_size_bytes uint32;
     /// un-set is treated as 0xFFFFFFFF.
-    2: uint32 max_size_bytes;
+    2: max_size_bytes uint32;
 
-    3: bool physically_contiguous_required;
+    3: physically_contiguous_required bool;
 
     /// If true, at least one participant requires secure memory.
     ///
     /// When aggregating BufferCollectionConstraints, these values boolean-OR.
-    4: bool secure_required;
+    4: secure_required bool;
 
     /// By default, participants must ensure the CPU can read or write data to
     /// the buffer without cache operations. If they support using the RAM
@@ -193,13 +192,13 @@ table BufferMemoryConstraints {
     /// incorrect data to RAM), and a consumer reading using the CPU must
     /// invalidate CPU cache before reading (the producer doesn't guarantee
     /// zero stale "clean" cache lines)
-    5: bool cpu_domain_supported;
-    6: bool ram_domain_supported;
-    7: bool inaccessible_domain_supported;
+    5: cpu_domain_supported bool;
+    6: ram_domain_supported bool;
+    7: inaccessible_domain_supported bool;
 
     /// Optional heap constraints. Participants that don't care which heap
     /// memory is allocated on should leave this field un-set.
-    8: vector<HeapType>:MAX_COUNT_BUFFER_MEMORY_CONSTRAINTS_HEAP_PERMITTED heap_permitted;
+    8: heap_permitted vector<HeapType>:MAX_COUNT_BUFFER_MEMORY_CONSTRAINTS_HEAP_PERMITTED;
 };
 
 /// Inaccessible is only for cases where there is no CPU-based access to the
@@ -209,7 +208,7 @@ table BufferMemoryConstraints {
 /// memory that isn't reachable from the CPU is CoherencyDomain Inaccessible,
 /// even if it's possible to cause a device (physical or virtual) to copy the
 /// data from the Inaccessible buffers to buffers that are visible to the CPU.
-enum CoherencyDomain {
+type CoherencyDomain = strict enum {
     CPU = 0;
     RAM = 1;
     INACCESSIBLE = 2;
@@ -217,18 +216,18 @@ enum CoherencyDomain {
 
 /// Describes constraints on layout of image data in buffers.
 // TODO(fxbug.dev/32119): change struct to table
-table ImageFormatConstraints {
+type ImageFormatConstraints = table {
     /// The PixelFormat for which the following constraints apply.  A
     /// participant may have more than one PixelFormat that's supported, in
     /// which case that participant can use a list of ImageFormatConstraints
     /// with an entry per PixelFormat.  It's not uncommon for the other fields
     /// of ImageFormatConstraints to vary by PixelFormat - for example for a
     /// linear format to support smaller max size than a tiled format.
-    1: PixelFormat pixel_format;
+    1: pixel_format PixelFormat;
 
     /// Empty is an error.  Redundant entries are an error.  Arbitrary ordering
     /// is not an error.
-    2: vector<ColorSpace>:MAX_COUNT_IMAGE_FORMAT_CONSTRAINTS_COLOR_SPACES color_spaces;
+    2: color_spaces vector<ColorSpace>:MAX_COUNT_IMAGE_FORMAT_CONSTRAINTS_COLOR_SPACES;
 
     /// Minimum permitted width in pixels.
     ///
@@ -240,57 +239,57 @@ table ImageFormatConstraints {
     /// min.
     ///
     /// See also required_min_coded_width.
-    3: uint32 min_coded_width;
+    3: min_coded_width uint32;
     /// Maximum width in pixels.  For example Scenic may set this field
     /// (directly or via sub-participants) to the maximum width that can be
     /// composited.
     /// un-set is treated as 0xFFFFFFFF.
-    4: uint32 max_coded_width;
+    4: max_coded_width uint32;
 
     /// Minimum height in pixels.  For example a video decoder participant may
     /// set this field to the coded_height specified by a stream.
-    5: uint32 min_coded_height;
+    5: min_coded_height uint32;
     /// Maximum height in pixels.  For example Scenic may set this field
     /// (directly or via sub-participants) to the maximum height that can be
     /// composited.
     /// un-set is treated as 0xFFFFFFFF.
-    6: uint32 max_coded_height;
+    6: max_coded_height uint32;
 
     /// Must be >= the value implied by min_coded_width for plane 0.
-    7: uint32 min_bytes_per_row;
+    7: min_bytes_per_row uint32;
     /// Must be >= the value implied by max_coded_width for plane 0.
     /// un-set is treated as 0xFFFFFFFF.
-    8: uint32 max_bytes_per_row;
+    8: max_bytes_per_row uint32;
 
     /// The max image area in pixels is limited indirectly via
     /// BufferSettings.size_bytes, and can also be enforced directly via this
     /// field.
     /// un-set is treated as 0xFFFFFFFF.
-    9: uint32 max_coded_width_times_coded_height;
+    9: max_coded_width_times_coded_height uint32;
 
     /// coded_width % width_divisor must be 0.
     /// un-set is treated as 1.
-    10: uint32 coded_width_divisor;
+   10: coded_width_divisor uint32;
 
     /// coded_height % height_divisor must be 0.
     /// un-set is treated as 1.
-    11: uint32 coded_height_divisor;
+   11: coded_height_divisor uint32;
 
     /// bytes_per_row % bytes_per_row_divisor must be 0.
     /// un-set is treated as 1.
-    12: uint32 bytes_per_row_divisor;
+   12: bytes_per_row_divisor uint32;
 
     /// vmo_usable_start % start_offset_divisor must be 0.
     /// un-set is treated as 1.
-    13: uint32 start_offset_divisor;
+   13: start_offset_divisor uint32;
 
     /// display_width % display_width_divisor must be 0.
     /// un-set is treated as 1.
-    14: uint32 display_width_divisor;
+   14: display_width_divisor uint32;
 
     /// display_height % display_height_divisor must be 0.
     /// un-set is treated as 1.
-    15: uint32 display_height_divisor;
+   15: display_height_divisor uint32;
 
     /// required_ dimension bounds.
     ///
@@ -327,44 +326,44 @@ table ImageFormatConstraints {
     /// that can (optionally) also handle 90 degree rotated version of the max
     /// dimensions / alternate required bounds for another main aspect ratio.
     /// un-set is treated as 0xFFFFFFFF.
-    16: uint32 required_min_coded_width;
-    17: uint32 required_max_coded_width;
+   16: required_min_coded_width uint32;
+   17: required_max_coded_width uint32;
     /// un-set is treated as 0xFFFFFFFF.
-    18: uint32 required_min_coded_height;
-    19: uint32 required_max_coded_height;
+   18: required_min_coded_height uint32;
+   19: required_max_coded_height uint32;
     /// un-set is treated as 0xFFFFFFFF.
-    20: uint32 required_min_bytes_per_row;
-    21: uint32 required_max_bytes_per_row;
+   20: required_min_bytes_per_row uint32;
+   21: required_max_bytes_per_row uint32;
 };
 
 /// Describes how an image is represented.
 // TODO(fxbug.dev/32119): Currently this table is not considered ready for use between
 // processes, but should be fairly soon.
-table ImageFormat {
+type ImageFormat = table {
     /// Pixel format.
-    1: PixelFormat pixel_format;
+    1: pixel_format PixelFormat;
 
     /// Row width in pixels that exist in the buffer.  Must be >= display_width.
     /// Can be < the width implied by stride_bytes.
-    2: uint32 coded_width;
+    2: coded_width uint32;
 
     /// Number of rows.  Must be >= display_height.
-    3: uint32 coded_height;
+    3: coded_height uint32;
 
     // Stride in bytes of plane 0.  Planes beyond plane 0 (if any, depending on
     // pixel_format) have a known fixed relationship with plane 0's stride.
-    4: uint32 bytes_per_row;
+    4: bytes_per_row uint32;
 
     /// Row width in pixels that are to be displayed.  This can be <=
     /// coded_width.  Any cropping occurs on the right of the image (not left).
-    5: uint32 display_width;
+    5: display_width uint32;
 
     /// Number of rows to be displayed.  This can be <= coded_height, with any
     /// cropping on the bottom (not top).
-    6: uint32 display_height;
+    6: display_height uint32;
 
     /// Color space.
-    7: ColorSpace color_space;
+    7: color_space ColorSpace;
 
     /// The pixel_aspect_ratio_width : pixel_aspect_ratio_height is the pixel
     /// aspect ratio (AKA sample aspect ratio aka SAR) for the luma (AKA Y)
@@ -380,6 +379,6 @@ table ImageFormat {
     /// unknown pixel_aspect_ratio.  A default of 1:1 can be appropriate in some
     /// cases, but a consumer may determine the actual pixel_aspect_ratio by OOB
     /// means.
-    8: uint32 pixel_aspect_ratio_width;
-    9: uint32 pixel_aspect_ratio_height;
+    8: pixel_aspect_ratio_width uint32;
+    9: pixel_aspect_ratio_height uint32;
 };

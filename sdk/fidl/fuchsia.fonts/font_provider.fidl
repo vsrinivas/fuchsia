@@ -1,8 +1,6 @@
 // Copyright 2016 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 // NOTE: This file is deprecated and will soon be removed in favor of provider.fidl.
 
 library fuchsia.fonts;
@@ -10,8 +8,8 @@ library fuchsia.fonts;
 using fuchsia.mem;
 
 /// Deprecated. See `GenericFontFamily`.
-[Transitional]
-enum FallbackGroup {
+@transitional
+type FallbackGroup = strict enum {
     NONE = 0;
     SERIF = 1;
     SANS_SERIF = 2;
@@ -24,95 +22,99 @@ enum FallbackGroup {
 /// Disables font fallback. The service won't try to search fallback font set if
 /// there is no requested font family or if it doesn't contain requested
 /// character.
-const uint32 REQUEST_FLAG_NO_FALLBACK = 1;
+const REQUEST_FLAG_NO_FALLBACK uint32 = 1;
 
 /// Deprecated. See `FaceRequestFlags`.
 /// Disables approximate style matching. The service will only return font that
 /// matches the requested style exactly.
-const uint32 REQUEST_FLAG_EXACT_MATCH = 2;
+const REQUEST_FLAG_EXACT_MATCH uint32 = 2;
 
 /// Deprecated. See `FaceRequest`.
-struct Request {
+type Request = struct {
     /// Desired font family name, e.g. "Roboto". Font family search is
     /// case-insensitive. In case when there is no specified family or the
     /// specified family doesn't have glyph for the requested `character` then
     /// a font from another family may be returned. This behavior can be disabled
     /// using `REQUEST_FLAG_NO_FALLBACK`.
-    string:MAX_FAMILY_NAME_LENGTH? family;
+    family string:<MAX_FAMILY_NAME_LENGTH, optional>;
 
     /// For example, 400 is normal, 700 is bold.
-    uint32 weight = 400;
+    weight uint32 = 400;
 
     /// Numeric values matching OS/2 & Windows Metrics usWidthClass table.
     /// https://www.microsoft.com/typography/otspec/os2.htm
     /// For example, 5 is normal.
-    uint32 width = 5;
+    width uint32 = 5;
 
-    Slant slant = Slant.UPRIGHT;
+    slant Slant = Slant.UPRIGHT;
 
     /// BCP47 language tags in order of preference. See
     /// https://tools.ietf.org/html/bcp47 .
-    vector<string:35>:8? language;
+    language vector<string:35>:<8, optional>;
 
     /// Codepoint for the character that must be present in the returned font or 0.
     /// Caller that specify this field are expected to extract character set from
     /// the result and cache it in order to avoid calling the API more than
     /// necessary.
-    uint32 character = 0;
+    character uint32 = 0;
 
     /// Fallback group preference. Caller can leave this field set to NONE. In
     /// that case the font provider will use fallback group of the specified font
     /// family.
-    FallbackGroup fallback_group = FallbackGroup.NONE;
+    fallback_group FallbackGroup = FallbackGroup.NONE;
 
-    uint32 flags = 0;
+    flags uint32 = 0;
 };
 
-resource struct Response {
-    fuchsia.mem.Buffer buffer;
+type Response = resource struct {
+    buffer fuchsia.mem.Buffer;
 
     /// Buffer identifier for the buffer. Responses with the same buffer_id are
     /// guaranteed to contain the same data in the buffer. Clients may use this
     /// value to detect if they already have the font cached in parsed form.
-    uint32 buffer_id;
+    buffer_id uint32;
 
     /// Font index within `buffer`. Used for font formats that may contain more
     /// than one font per file, e.g. TTC (TrueType Collection).
-    uint32 font_index;
+    font_index uint32;
 };
 
 /// Deprecated.
 /// See `Style2`.
-struct Style {
-    uint32 weight;
-    uint32 width;
-    Slant slant;
+type Style = struct {
+    weight uint32;
+    width uint32;
+    slant Slant;
 };
 
 /// Deprecated. See `FontFamilyInfo`.
 ///
 /// Information about font family that can be requested using GetFamilyInfo().
-struct FamilyInfo {
+type FamilyInfo = struct {
     /// Canonical font family name. Note that this may be different from the
     /// value passed to GetFamilyInfo() because GetFamilyInfo() also resolves
     /// font aliases and ignores case. For example GetFamilyInfo("robotoslab")
     /// will FamilyInfo.name = "Robot Slab".
-    string:MAX_FAMILY_NAME_LENGTH name;
+    name string:MAX_FAMILY_NAME_LENGTH;
 
     /// Unordered list of all available styles in the family.
-    vector<Style>:MAX_FAMILY_STYLES styles;
+    styles vector<Style>:MAX_FAMILY_STYLES;
 };
 
 /// Provider of digital font files and metadata.
 ///
 /// TODO(fxbug.dev/8903): Remove deprecated methods and move to provider.fidl.
-[Discoverable]
+@discoverable
 protocol Provider {
 
     /// Deprecated. See `GetTypeface`.
     ///
     /// Returns font that matches specified `request`.
-    GetFont(Request request) -> (Response? response);
+    GetFont(struct {
+        request Request;
+    }) -> (resource struct {
+        response box<Response>;
+    });
 
     /// Deprecated. See `GetFontFamilyInfo`.
     ///
@@ -120,12 +122,20 @@ protocol Provider {
     /// no family with the specified name. This function respects family name
     /// aliases and ignores case, so request for "robotoSLAB" will return
     /// FamilyInfo for "Roboto Slab".
-    GetFamilyInfo(string:MAX_FAMILY_NAME_LENGTH family) -> (FamilyInfo? family_info);
+    GetFamilyInfo(struct {
+        family string:MAX_FAMILY_NAME_LENGTH;
+    }) -> (struct {
+        family_info box<FamilyInfo>;
+    });
 
     /// Returns a typeface that matches the specified `request`, or an empty table if no matching
     /// face is found. (The latter is more likely to happen if `TypefaceRequestFlags.EXACT_FAMILY`
     /// is used to disable fallbacks.)
-    GetTypeface(TypefaceRequest request) -> (TypefaceResponse response);
+    GetTypeface(struct {
+        request TypefaceRequest;
+    }) -> (resource struct {
+        response TypefaceResponse;
+    });
 
     /// Returns information for the specified font family, or an empty table if there is no family
     /// with the specified name.
@@ -133,11 +143,17 @@ protocol Provider {
     /// This function respects family name aliases and ignores case. For example, "RobotoSlab" is an
     /// alias for the canonical name "Roboto Slab". A request for "robotoSLAB" would return the
     /// `FontFamilyInfo` for "Roboto Slab" due to the case-insensitivity and alias resolution.
-    GetFontFamilyInfo(FamilyName family) -> (FontFamilyInfo family_info);
+    GetFontFamilyInfo(struct {
+        family FamilyName;
+    }) -> (struct {
+        family_info FontFamilyInfo;
+    });
 
     /// Register a listener to be notified when the set of available fonts or mappings has changed.
     /// A client can register as many listeners as it wishes.
     ///
     /// To unregister, close the channel.
-    RegisterFontSetEventListener(FontSetEventListener listener) -> ();
+    RegisterFontSetEventListener(resource struct {
+        listener client_end:FontSetEventListener;
+    }) -> ();
 };

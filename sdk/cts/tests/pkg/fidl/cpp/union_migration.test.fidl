@@ -1,47 +1,45 @@
 // Copyright 2019 The Go Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
-deprecated_syntax;
-
 // Types useful for tests for the 2019 migration from
 // unions to xunions.
 
 library fidl.test.unionmigration;
 
-flexible union BasicXUnion {
-    1: int32 i32;
+type BasicXUnion = flexible union {
+    1: i32 int32;
 };
 
-flexible resource union BasicResourceXUnion {
-    1: int32 i32;
+type BasicResourceXUnion = flexible resource union {
+    1: i32 int32;
 };
 
-union BasicUnion {
-    1: int32 i32;
+type BasicUnion = strict union {
+    1: i32 int32;
 };
 
-struct BasicXUnionStruct {
-    BasicXUnion val;
+type BasicXUnionStruct = struct {
+    val BasicXUnion;
 };
 
-resource struct BasicResourceXUnionStruct {
-    BasicResourceXUnion val;
+type BasicResourceXUnionStruct = resource struct {
+    val BasicResourceXUnion;
 };
 
-struct BasicUnionStruct {
-    BasicUnion val;
+type BasicUnionStruct = struct {
+    val BasicUnion;
 };
 
-union SingleVariantUnion {
-    1: uint32 x;
+type SingleVariantUnion = strict union {
+    1: x uint32;
 };
 
-struct SingleVariantUnionStruct {
-    SingleVariantUnion u;
+type SingleVariantUnionStruct = struct {
+    u SingleVariantUnion;
 };
 
-struct SingleVariantUnionStructWithHeader {
+type SingleVariantUnionStructWithHeader = struct {
     // Header exists to emulate the shape of the transaction header.
-    array<uint8>:16 header;
-    SingleVariantUnionStruct body;
+    header array<uint8, 16>;
+    body SingleVariantUnionStruct;
 };

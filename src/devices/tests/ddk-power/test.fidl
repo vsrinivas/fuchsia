@@ -1,36 +1,47 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.device.power.test;
 
 using zx;
 using fuchsia.device;
 
-struct TestStatusInfo {
+type TestStatusInfo = struct {
     /// Driver will respond to suspend hook with this status.
-    zx.status suspend_status;
+    suspend_status zx.status;
     /// Driver will respond to resume hook with this status.
-    zx.status resume_status;
+    resume_status zx.status;
     /// This is the out_power_state we want as a reply.
-    uint8 out_power_state;
+    out_power_state uint8;
     /// This is the out_perf_state we want as a reply.
-    uint8 out_performance_state;
+    out_performance_state uint8;
 };
 
 protocol TestDevice {
     /// Add Test Device with some powerargs
-    AddDeviceWithPowerArgs(vector<fuchsia.device.DevicePowerStateInfo> info,
-                           vector<fuchsia.device.DevicePerformanceStateInfo> perf_state_info, bool make_visible) -> () error zx.status;
+    AddDeviceWithPowerArgs(struct {
+        info vector<fuchsia.device.DevicePowerStateInfo>;
+        perf_state_info vector<fuchsia.device.DevicePerformanceStateInfo>;
+        make_visible bool;
+    }) -> (struct {}) error zx.status;
     /// Get current power state of the device
-    GetCurrentDevicePowerState() -> (fuchsia.device.DevicePowerState cur_state) error zx.status;
+    GetCurrentDevicePowerState() -> (struct {
+        cur_state fuchsia.device.DevicePowerState;
+    }) error zx.status;
     /// Get the suspend reason of the last suspend call
-    GetCurrentSuspendReason() -> (uint8 cur_suspend_reason) error zx.status;
+    GetCurrentSuspendReason() -> (struct {
+        cur_suspend_reason uint8;
+    }) error zx.status;
     /// Get current auto suspend status and deepest_sleep_state
-    GetCurrentDeviceAutoSuspendConfig() -> (bool enabled,
-                                            fuchsia.device.DevicePowerState deepest_sleep_state) error zx.status;
-    SetTestStatusInfo(TestStatusInfo test_info) -> () error zx.status;
+    GetCurrentDeviceAutoSuspendConfig() -> (struct {
+        enabled bool;
+        deepest_sleep_state fuchsia.device.DevicePowerState;
+    }) error zx.status;
+    SetTestStatusInfo(struct {
+        test_info TestStatusInfo;
+    }) -> (struct {}) error zx.status;
 
-    GetSuspendCompletionEvent() -> (zx.handle:EVENT event) error zx.status;
+    GetSuspendCompletionEvent() -> (resource struct {
+        event zx.handle:EVENT;
+    }) error zx.status;
 };

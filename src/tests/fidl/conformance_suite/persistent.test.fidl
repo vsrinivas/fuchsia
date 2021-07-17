@@ -1,20 +1,18 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library conformance;
 
-struct Persistent1Message {
-    PersistentHeader header;
-    Table_PersistentMessage body;
+type Persistent1Message = struct {
+    header PersistentHeader;
+    body Table_PersistentMessage;
 };
 
-struct PersistentHeader {
-    array<uint8>:3 flags;
-    uint8 magic_number;
+type PersistentHeader = struct {
+    flags array<uint8, 3>;
+    magic_number uint8;
 };
 
-table Table_PersistentMessage {
-    1: uint32 i;
+type Table_PersistentMessage = table {
+    1: i uint32;
 };

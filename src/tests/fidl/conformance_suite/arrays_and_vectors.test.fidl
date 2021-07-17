@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 // This is intended to ensure that the GIDL-generated test code produces the
 // correct syntax for C++ bindings, which needs to distinguish between e.g.
 // using "Foo foo;" vs "std::unique_ptr<Foo> foo;" for optional (nullable)
@@ -10,31 +8,31 @@ deprecated_syntax;
 
 library conformance;
 
-struct StructWithInt {
-    int32 x;
+type StructWithInt = struct {
+    x int32;
 };
 
-struct StructWithArrays {
-    array<int32>:2 arr_int;
-    array<string>:2 arr_string;
-    array<string?>:2 arr_nullable_string;
-    array<StructWithInt>:2 arr_struct;
-    array<StructWithInt?>:2 arr_nullable_struct;
-    array<array<int32>:3>:2 arr_arr_int;
+type StructWithArrays = struct {
+    arr_int array<int32, 2>;
+    arr_string array<string, 2>;
+    arr_nullable_string array<string:optional, 2>;
+    arr_struct array<StructWithInt, 2>;
+    arr_nullable_struct array<box<StructWithInt>, 2>;
+    arr_arr_int array<array<int32, 3>, 2>;
 };
 
-struct StructWithVectors {
-    vector<int32> vec_empty;
-    vector<int32> vec_int;
-    vector<string> vec_string;
-    vector<string?> vec_nullable_string;
-    vector<StructWithInt> vec_struct;
-    vector<StructWithInt?> vec_nullable_struct;
-    vector<vector<int32>> vec_vec_int;
+type StructWithVectors = struct {
+    vec_empty vector<int32>;
+    vec_int vector<int32>;
+    vec_string vector<string>;
+    vec_nullable_string vector<string:optional>;
+    vec_struct vector<StructWithInt>;
+    vec_nullable_struct vector<box<StructWithInt>>;
+    vec_vec_int vector<vector<int32>>;
 };
 
-struct LargeArrays {
-    array<string?>:33 a33;
-    array<uint8>:100 a100;
-    vector<array<array<string>:100>:200> nested;
+type LargeArrays = struct {
+    a33 array<string:optional, 33>;
+    a100 array<uint8, 100>;
+    nested vector<array<array<string, 100>, 200>>;
 };

@@ -1,23 +1,21 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.lowpan;
 
 using fuchsia.net;
 
-const uint8 LQI_UNSPECIFIED = 0;
-const int8 RSSI_UNSPECIFIED = -128;
-const uint16 CHANNEL_UNSPECIFIED = 65535;
+const LQI_UNSPECIFIED uint8 = 0;
+const RSSI_UNSPECIFIED int8 = -128;
+const CHANNEL_UNSPECIFIED uint16 = 65535;
 
-const uint16 MAX_CHANNELS = 100;
-const uint16 MAX_NET_TYPE_LEN = 64;
+const MAX_CHANNELS uint16 = 100;
+const MAX_NET_TYPE_LEN uint16 = 64;
 
-const string NET_TYPE_THREAD_1_X = "org.threadgroup.std.thread.1";
-const string NET_TYPE_ZIGBEE_IP_1_X = "org.zigbee.std.zigbee-ip.1";
-const string NET_TYPE_UNKNOWN_802_15_4_PID = "fuchsia.lowpan.net_type.802.15.4.pid";
-const string NET_TYPE_RAW_6LOWPAN = "fuchsia.lowpan.net_type.6lowpan";
+const NET_TYPE_THREAD_1_X string = "org.threadgroup.std.thread.1";
+const NET_TYPE_ZIGBEE_IP_1_X string = "org.zigbee.std.zigbee-ip.1";
+const NET_TYPE_UNKNOWN_802_15_4_PID string = "fuchsia.lowpan.net_type.802.15.4.pid";
+const NET_TYPE_RAW_6LOWPAN string = "fuchsia.lowpan.net_type.6lowpan";
 
 alias NetworkType = string:MAX_NET_TYPE_LEN;
 
@@ -25,11 +23,11 @@ alias ChannelIndex = uint16;
 
 alias Ipv6Prefix = fuchsia.net.Ipv6Address;
 
-struct Ipv6Subnet {
+type Ipv6Subnet = struct {
     /// The IPv6 address of the subnet.
-    fuchsia.net.Ipv6Address addr;
+    addr fuchsia.net.Ipv6Address;
 
     /// The length of the IPv6 prefix for the subnet.
     /// Must be between 0 and 128, inclusive.
-    uint8 prefix_len;
+    prefix_len uint8;
 };

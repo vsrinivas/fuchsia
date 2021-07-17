@@ -1,13 +1,11 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.firebase.messaging;
 
 /// From FIRMessagingError at
 /// https://github.com/firebase/firebase-ios-sdk/blob/HEAD/Firebase/Messaging/Public/FIRMessaging.h
-enum MessagingErrorCode {
+type MessagingErrorCode = strict enum {
     /// Couldn't validate request from this client.
     AUTHENTICATION = 1;
 
@@ -31,7 +29,7 @@ enum MessagingErrorCode {
 };
 
 /// From https://github.com/grpc/grpc/blob/HEAD/doc/statuscodes.md.
-enum CoreErrorCode {
+type CoreErrorCode = strict enum {
     /// Not an error; returned on success.
     OK = 0;
 
@@ -112,25 +110,25 @@ enum CoreErrorCode {
     DATA_LOSS = 15;
 };
 
-struct ServiceError {
-    string domain;
-    string code;
-    string? message;
+type ServiceError = struct {
+    domain string;
+    code string;
+    message string:optional;
 };
 
-flexible union ErrorValue {
-    1: MessagingErrorCode messaging;
-    2: CoreErrorCode core;
-    3: uint32 http;
-    4: ServiceError service;
+type ErrorValue = flexible union {
+    1: messaging MessagingErrorCode;
+    2: core CoreErrorCode;
+    3: http uint32;
+    4: service ServiceError;
 };
 
-struct Error {
-    ErrorValue error;
+type Error = struct {
+    error ErrorValue;
 
     /// This error may be caused by an error in the local infrastructure,
     /// reachability, firebase service, the backend service, or any other layer
     /// of the operation. In this case, a higher layer may wrap a lower level
     /// error with its own error to provide more information.
-    Error? inner;
+    inner box<Error>;
 };

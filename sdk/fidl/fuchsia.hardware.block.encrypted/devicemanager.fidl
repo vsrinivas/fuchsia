@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.block.encrypted;
 
 using zx;
@@ -10,7 +8,7 @@ using zx;
 /// We require simple layout to use the simple C bindings, and simple layout
 /// requires that we have non-maximal length bounds, so give some excessively
 /// large key length here so we can use the simple layout.
-const uint32 MAX_KEY_SIZE = 256;
+const MAX_KEY_SIZE uint32 = 256;
 
 /// An interface to the zxcrypt driver, as bound to a single block device with
 /// a zxcrypt superblock.  zxcrypt devices are encrypted, and before their
@@ -18,7 +16,7 @@ const uint32 MAX_KEY_SIZE = 256;
 /// This protocol allows the caller to make requests to unseal the device (by
 /// providing the appropriate key) and to seal the device (rendering its
 /// contents inaccessible).
-[ForDeprecatedCBindings]
+@for_deprecated_c_bindings
 protocol DeviceManager {
     /// Attempts to unseal the device by using the provided master key to unwrap
     /// the data key wrapped in the specified key slot.  If the key provided was
@@ -29,14 +27,21 @@ protocol DeviceManager {
     /// Returns `ZX_ERR_BAD_STATE` and keeps the device open if the device is already unsealed.
     /// Returns other errors if operations on the underlying block device return errors.
     /// Returns `ZX_OK` on success.
-    Unseal(bytes:MAX_KEY_SIZE key, uint8 slot) -> (zx.status status);
+    Unseal(struct {
+        key bytes:MAX_KEY_SIZE;
+        slot uint8;
+    }) -> (struct {
+        status zx.status;
+    });
 
     /// Seals the device, causing any previously-created child zxcrypt Device to
     /// be removed some time later.  (Someday we'd like this to only return once
     /// the unsealed child device is removed, but that's not straightforward today.)
     /// Returns `ZX_ERR_BAD_STATE` if the device is already sealed.
     /// Returns `ZX_OK` on success.
-    Seal() -> (zx.status status);
+    Seal() -> (struct {
+        status zx.status;
+    });
 
     /// Shreds the device, permanently overwriting the keys that would allow
     /// `Unseal()`ing the device again in the future.  This call does *not*
@@ -45,5 +50,7 @@ protocol DeviceManager {
     /// or the device is unbound.
     /// Returns `ZX_OK` on success.
     /// Returns other errors if operations on the underlying block device return errors.
-    Shred() -> (zx.status status);
+    Shred() -> (struct {
+        status zx.status;
+    });
 };

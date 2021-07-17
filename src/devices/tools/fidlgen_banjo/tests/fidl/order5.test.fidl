@@ -1,21 +1,19 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library banjo.examples.order5;
 
 using zx;
 
 alias GreatType = uint16;
 
-struct BlablaSomethingRequest {
-    uint32 opcode;
-    GreatType g_one;
+type BlablaSomethingRequest = struct {
+    opcode uint32;
+    g_one GreatType;
 };
 
-struct BlablaSomethingResponse {
-    zx.status status;
-    uint64 value;
-    GreatType g_two;
+type BlablaSomethingResponse = struct {
+    status zx.status;
+    value uint64;
+    g_two GreatType;
 };

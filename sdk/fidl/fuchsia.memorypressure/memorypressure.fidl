@@ -1,11 +1,10 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
 library fuchsia.memorypressure;
 
 /// Indicates the memory pressure level.
-enum Level {
+type Level = strict enum {
     /// The memory pressure level is healthy.
     ///
     /// Registered clients are free to hold on to caches and allocate memory
@@ -43,7 +42,7 @@ enum Level {
 };
 
 /// Registration protocol
-[Discoverable]
+@discoverable
 protocol Provider {
     /// Used to register for memory pressure level changes.
     /// `watcher`: memory pressure `Watcher` channel that the `Provider` will use to send
@@ -58,7 +57,9 @@ protocol Provider {
     /// memory pressure messages in transit at the same time.
     /// Also, the more context a job has, the better equipped it will be to react to
     /// memory pressure by controlling the behavior of children jobs in its tree.
-    RegisterWatcher(Watcher watcher);
+    RegisterWatcher(resource struct {
+        watcher client_end:Watcher;
+    });
 };
 
 /// Watcher protocol
@@ -96,5 +97,7 @@ protocol Watcher {
     /// On a similar note, the provider may decide to send repeated messages at the
     /// same pressure level, particularly CRITICAL, to indicate that further action
     /// needs to be taken.
-    OnLevelChanged(Level level) -> ();
+    OnLevelChanged(struct {
+        level Level;
+    }) -> ();
 };

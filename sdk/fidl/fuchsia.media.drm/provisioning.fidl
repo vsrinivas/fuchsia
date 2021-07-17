@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.media.drm;
 
 using fuchsia.mem;
@@ -10,27 +8,27 @@ using fuchsia.url;
 
 /// Message passed to a [`ProvisioningFetcher`] by a DRM system, to pass on to
 /// the provisioning server.
-resource struct ProvisioningRequest {
+type ProvisioningRequest = resource struct {
     /// A suggested server to send the `message` to.
-    fuchsia.url.Url? default_provisioning_server_url;
+    default_provisioning_server_url fuchsia.url.Url:optional;
 
     /// The DRM system specific provisioning request message body to be
     /// delivered to the provisioning server. The VMO must at least have the
     /// following rights:
     ///   ZX_RIGHT_READ
     ///   ZX_RIGHT_TRANSFER
-    fuchsia.mem.Buffer message;
+    message fuchsia.mem.Buffer;
 };
 
 /// Message originating from the provisioning server that the
 /// [`ProvisioningFetcher`] must pass back to the DRM system.
-resource struct ProvisioningResponse {
+type ProvisioningResponse = resource struct {
     /// The DRM system specific provisioning response message body received from
     /// the provisioning server. The VMO must at least have the following
     /// rights:
     ///   ZX_RIGHT_READ
     ///   ZX_RIGHT_TRANSFER
-    fuchsia.mem.Buffer message;
+    message fuchsia.mem.Buffer;
 };
 
 /// Fetches provisioning from a server.
@@ -51,5 +49,9 @@ protocol ProvisioningFetcher {
     ///   a provisioning server.
     /// - response `response` a [`ProvisioningResponse`] message from the
     ///   provisioning server.
-    Fetch(ProvisioningRequest request) -> (ProvisioningResponse response);
+    Fetch(resource struct {
+        request ProvisioningRequest;
+    }) -> (resource struct {
+        response ProvisioningResponse;
+    });
 };

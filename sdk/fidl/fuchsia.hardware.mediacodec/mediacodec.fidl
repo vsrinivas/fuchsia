@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.mediacodec;
 
 using fuchsia.io;
@@ -10,12 +8,16 @@ using zx;
 
 protocol Device {
     /// This method connects the caller with a fuchsia.mediacodec.CodecFactory.
-    GetCodecFactory(zx.handle:CHANNEL request);
+    GetCodecFactory(resource struct {
+        request zx.handle:CHANNEL;
+    });
 
     /// This method hands a service directory to the codec.  Currently the only service available
     /// via this service directory is fuchsia.cobalt.LoggerFactory.  Any services available via this
     /// service directory are services we'd prefer to get via the DDK.  A device can simply close
     /// this channel if the device doesn't need to use any services available via this service
     /// directory.
-    SetAuxServiceDirectory(fuchsia.io.Directory service_directory);
+    SetAuxServiceDirectory(resource struct {
+        service_directory client_end:fuchsia.io.Directory;
+    });
 };

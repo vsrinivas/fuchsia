@@ -1,4 +1,3 @@
-deprecated_syntax;
 /// library comment #1
 ///
 /// library comment #2
@@ -7,7 +6,7 @@ library fidl.test.doccomments;
 /// strict bits comment #1
 ///
 /// strict bits comment #2
-strict bits MyStrictBits : uint32 {
+type MyStrictBits = strict bits : uint32 {
     /// MY_FIRST_BIT member comment #1
     ///
     /// MY_FIRST_BIT member comment #3
@@ -21,7 +20,7 @@ strict bits MyStrictBits : uint32 {
 /// flexible bits comment #1
 ///
 /// flexible bits comment #2
-flexible bits MyFlexibleBits : uint32 {
+type MyFlexibleBits = flexible bits : uint32 {
     /// MY_FIRST_BIT member comment #1
     ///
     /// MY_FIRST_BIT member comment #3
@@ -35,12 +34,12 @@ flexible bits MyFlexibleBits : uint32 {
 /// const comment #1
 ///
 /// const comment #3
-const int32 C = 4;
+const C int32 = 4;
 
 /// strict enum comment #1.
 ///
 /// strict enum comment #2.
-strict enum MyStrictEnum : uint32 {
+type MyStrictEnum = strict enum : uint32 {
     /// FOO member comment #1
     ///
     /// FOO member comment #3
@@ -55,7 +54,7 @@ strict enum MyStrictEnum : uint32 {
 /// flexible enum comment #1.
 ///
 /// flexible enum comment #2.
-flexible enum MyFlexibleEnum : uint32 {
+type MyFlexibleEnum = flexible enum : uint32 {
     /// FOO member comment #1
     ///
     /// FOO member comment #3
@@ -70,41 +69,41 @@ flexible enum MyFlexibleEnum : uint32 {
 /// struct comment #1
 ///
 /// struct comment #3
-struct Struct {
+type Struct = struct {
     /// struct member comment #1
     ///
     /// struct member comment #3
-    int32 Field;
+    Field int32;
 };
 
 /// strict union comment #1
 ///
 /// strict union comment #3
-strict union StrictUnion {
+type StrictUnion = strict union {
     /// union member comment #1
     ///
     /// union member comment #3
-    1: int32 Field;
+    1: Field int32;
 };
 
 /// flexible union comment #1
 ///
 /// flexible union comment #3
-flexible union FlexibleUnion {
+type FlexibleUnion = flexible union {
     /// union member comment #1
     ///
     /// union member comment #3
-    1: int32 Field;
+    1: Field int32;
 };
 
 /// table comment #1
 ///
 /// table comment #3
-table Table {
+type Table = table {
     /// table field comment #1
     ///
     /// table field comment #3
-    1: int32 Field;
+    1: Field int32;
 };
 
 /// interface comment #1
@@ -129,5 +128,5 @@ service Service {
     /// member comment #1
     ///
     /// member comment #3
-    Interface interface;
+    interface client_end:Interface;
 };

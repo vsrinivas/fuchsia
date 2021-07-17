@@ -1,18 +1,15 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library benchmarkfidl;
 
-struct EmptyStruct {
-};
+type EmptyStruct = struct {};
 
 // Message header for a FIDL transaction.
 // See fidl_message_header_t.
-struct MessageHeader {
-    uint32 txid;
-    array<uint8>:3 flags;
-    uint8 magic_number;
-    uint64 ordinal;
+type MessageHeader = struct {
+    txid uint32;
+    flags array<uint8, 3>;
+    magic_number uint8;
+    ordinal uint64;
 };

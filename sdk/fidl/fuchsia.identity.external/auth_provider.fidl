@@ -1,94 +1,109 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.identity.external;
 
 using fuchsia.auth;
 using fuchsia.identity.tokens as tokens;
 
 /// The request format used to create a new OAuth 2.0 Refresh Token.
-resource table OauthRefreshTokenRequest {
+type OauthRefreshTokenRequest = resource table {
     /// The account to create the token for, if known. If omitted, the user will
     /// be prompted to specify an account.
-    1: tokens.AccountId account_id;
+    1: account_id tokens.AccountId;
     /// A UI Context used to overlay a view in which the user can interactively
     /// authenticate. This field is required.
-    2: fuchsia.auth.AuthenticationUIContext ui_context;
+    2: ui_context client_end:fuchsia.auth.AuthenticationUIContext;
 };
 
 /// The request format used to exchange an OAuth 2.0 Refresh Token for an
 /// Access Token.
-table OauthAccessTokenFromOauthRefreshTokenRequest {
+type OauthAccessTokenFromOauthRefreshTokenRequest = table {
     /// The Refresh token to exchange. This field is required.
-    1: tokens.OauthRefreshToken refresh_token;
+    1: refresh_token tokens.OauthRefreshToken;
     /// The OAuth ClientID for the component requesting the token. If absent, a
     /// default ClientID defined by the implementation will be used.
-    2: tokens.ClientId client_id;
+    2: client_id tokens.ClientId;
     /// The list of OAuth scope strings to request. If absent or empty, a
     /// default set of scopes defined by the implementation will be used.
-    3: vector<tokens.Scope>:tokens.MAX_SCOPE_COUNT scopes;
+    3: scopes vector<tokens.Scope>:tokens.MAX_SCOPE_COUNT;
 };
 
 /// A protocol to request the creation, exchange, and revokation of Oauth 2.0
 /// tokens.
-[Discoverable]
+@discoverable
 protocol Oauth {
     /// Creates a new refresh token. If this request is successful
     /// the refresh token will be returned. Optionally an access token with
     /// the default client ID and scope may also be returned (if no token is
     /// available the fields in access_token will be unpopulated).
-    CreateRefreshToken(OauthRefreshTokenRequest request) -> (
-        tokens.OauthRefreshToken refresh_token,
-        tokens.OauthAccessToken access_token
-        ) error Error;
+    CreateRefreshToken(resource struct {
+        request OauthRefreshTokenRequest;
+    }) -> (struct {
+        refresh_token tokens.OauthRefreshToken;
+        access_token tokens.OauthAccessToken;
+    }) error Error;
 
     /// Exchanges a refresh token for an access token.
-    GetAccessTokenFromRefreshToken(OauthAccessTokenFromOauthRefreshTokenRequest request)
-        -> (tokens.OauthAccessToken access_token) error Error;
+    GetAccessTokenFromRefreshToken(struct {
+        request OauthAccessTokenFromOauthRefreshTokenRequest;
+    }) -> (struct {
+        access_token tokens.OauthAccessToken;
+    }) error Error;
 
     /// Attempts to revoke the supplied refresh token.
-    RevokeRefreshToken(tokens.OauthRefreshToken refresh_token) -> () error Error;
+    RevokeRefreshToken(struct {
+        refresh_token tokens.OauthRefreshToken;
+    }) -> (struct {}) error Error;
 
     /// Attempts to revoke the supplied access token.
-    RevokeAccessToken(tokens.OauthAccessToken access_token) -> () error Error;
+    RevokeAccessToken(struct {
+        access_token tokens.OauthAccessToken;
+    }) -> (struct {}) error Error;
 };
 
 /// A protocol to request the creation, exchange, and revokation of OpenID
 /// Connect tokens.
-[Discoverable]
+@discoverable
 protocol OpenIdConnect {
     /// Attempts to revoke the supplied ID token.
-    RevokeIdToken(tokens.OpenIdToken id_token) -> () error Error;
+    RevokeIdToken(struct {
+        id_token tokens.OpenIdToken;
+    }) -> (struct {}) error Error;
 };
 
 /// The request format used to exchange an OAuth 2.0 Refresh Token for an
 /// OpenID Connect ID token.
-table OpenIdTokenFromOauthRefreshTokenRequest {
+type OpenIdTokenFromOauthRefreshTokenRequest = table {
     /// The refresh token to exchange. This field is required.
-    1: tokens.OauthRefreshToken refresh_token;
+    1: refresh_token tokens.OauthRefreshToken;
     /// The OpenID audience strings that the ID token should be issued to. If
     /// absent or empty, a default set of scopes defined by the implementation
     /// will be used.
-    2: vector<tokens.Audience>:tokens.MAX_AUDIENCE_COUNT audiences;
+    2: audiences vector<tokens.Audience>:tokens.MAX_AUDIENCE_COUNT;
 };
 
 /// The request format used to exchange an OAuth 2.0 Access Token for a User
 /// Info response as defined by OpenID Connect.
-table OpenIdUserInfoFromOauthAccessTokenRequest {
+type OpenIdUserInfoFromOauthAccessTokenRequest = table {
     /// The Access token to exchange. This field is required.
-    1: tokens.OauthAccessToken access_token;
+    1: access_token tokens.OauthAccessToken;
 };
 
 /// A protocol to perform exchanges between Oauth 2.0 and OpenID Connect tokens.
-[Discoverable]
+@discoverable
 protocol OauthOpenIdConnect {
     /// Exchanges an OAuth refresh token for an OpenID Connect ID token.
-    GetIdTokenFromRefreshToken(OpenIdTokenFromOauthRefreshTokenRequest request)
-        -> (tokens.OpenIdToken id_token) error Error;
+    GetIdTokenFromRefreshToken(struct {
+        request OpenIdTokenFromOauthRefreshTokenRequest;
+    }) -> (struct {
+        id_token tokens.OpenIdToken;
+    }) error Error;
 
     /// Exchanges an OAuth access token for an OpenID Connect UserInfo.
-    GetUserInfoFromAccessToken(OpenIdUserInfoFromOauthAccessTokenRequest request)
-        -> (tokens.OpenIdUserInfo user_info) error Error;
+    GetUserInfoFromAccessToken(struct {
+        request OpenIdUserInfoFromOauthAccessTokenRequest;
+    }) -> (struct {
+        user_info tokens.OpenIdUserInfo;
+    }) error Error;
 };

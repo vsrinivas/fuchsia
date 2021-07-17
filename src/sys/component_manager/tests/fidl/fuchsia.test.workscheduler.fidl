@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.test.workscheduler;
 
 using fuchsia.sys2;
@@ -18,8 +16,10 @@ using fuchsia.sys2;
 ///
 /// This protocol enables `integration-test` to confirm that the `DoWork` invocation reached
 /// `client`.
-[Discoverable]
+@discoverable
 protocol WorkSchedulerDispatchReporter {
     /// Report that `WorkScheduler.DoWork(work_id)` was successfully invoked on a component.
-    OnDoWorkCalled(string:fuchsia.sys2.MAX_WORK_ID_LENGTH work_id) -> ();
+    OnDoWorkCalled(struct {
+        work_id string:fuchsia.sys2.MAX_WORK_ID_LENGTH;
+    }) -> ();
 };

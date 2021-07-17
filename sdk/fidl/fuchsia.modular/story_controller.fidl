@@ -1,8 +1,6 @@
 // Copyright 2016 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.modular;
 
 /// Used by the clients of StoryProvider (SessionShell) to interact with a single
@@ -12,11 +10,17 @@ library fuchsia.modular;
 /// does not change.
 protocol StoryController {
     /// Gets information associated with the story.
-    [Transitional = "Use GetInfo2 instead"]
-    GetInfo() -> (StoryInfo info, StoryState state);
+    @transitional("Use GetInfo2 instead")
+    GetInfo() -> (struct {
+        info StoryInfo;
+        state StoryState;
+    });
     /// For transition purposes only.
-    [Transitional = "Only use while GetInfo2 is transitional"]
-    GetInfo2() -> (StoryInfo2 info, StoryState state);
+    @transitional("Only use while GetInfo2 is transitional")
+    GetInfo2() -> (resource struct {
+        info StoryInfo2;
+        state StoryState;
+    });
 
     /// Requests to run the story controlled by this `StoryController` instance.
     /// When the story starts, if not yet running, the view of the newly started
@@ -33,24 +37,33 @@ protocol StoryController {
     ///
     /// Note that stories can stop themselves at any time and it is advisable
     /// for the holder of a StoryController to provide a watcher.
-    Watch(StoryWatcher watcher);
+    Watch(resource struct {
+        watcher client_end:StoryWatcher;
+    });
 
     /// Attach the `annotations` to the story.
     ///
     /// Existing annotations with the same key will be overwritten.
-    Annotate(vector<Annotation>:MAX_ANNOTATIONS_PER_UPDATE annotations)
-        -> () error AnnotationError;
+    Annotate(resource struct {
+        annotations vector<Annotation>:MAX_ANNOTATIONS_PER_UPDATE;
+    }) -> (struct {}) error AnnotationError;
 };
 
 /// Implemented by the client calling StoryController.Watch().
 protocol StoryWatcher {
     /// Called with the current state right after registration, and subsequently
     /// when the state changes.
-    OnStateChange(StoryState new_state);
+    OnStateChange(struct {
+        new_state StoryState;
+    });
 
     /// DEPRECATED
-    OnModuleAdded(ModuleData module_data);
+    OnModuleAdded(resource struct {
+        module_data ModuleData;
+    });
 
     /// DEPRECATED
-    OnModuleFocused(vector<string:MAX>:MAX module_path);
+    OnModuleFocused(struct {
+        module_path vector<string:MAX>:MAX;
+    });
 };

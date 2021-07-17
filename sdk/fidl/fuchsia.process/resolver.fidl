@@ -1,15 +1,13 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.process;
 
 using fuchsia.ldsvc;
 using zx;
 
 /// The maximum size for a name used by `Resolver`.
-const uint32 MAX_RESOLVE_NAME_SIZE = 2048;
+const MAX_RESOLVE_NAME_SIZE uint32 = 2048;
 
 /// An interface for resolving names to executables and library loaders.
 ///
@@ -26,7 +24,8 @@ const uint32 MAX_RESOLVE_NAME_SIZE = 2048;
 /// This interface is rarely used directly. Instead, `fdio_spawn` and
 /// `fdio_spawn_etc` use this interface internally when they try to run a file
 /// with a `#!resolve` directive.
-[Discoverable, ForDeprecatedCBindings]
+@discoverable
+@for_deprecated_c_bindings
 protocol Resolver {
     /// Resolves the given `name` to an `executable` and an shared library
     /// loader.
@@ -39,7 +38,11 @@ protocol Resolver {
     /// For example, the resolver might locate the given `name` inside a package
     /// and return the executable binary from the package as well as a shared
     /// library loader scoped to that package.
-    Resolve(string:MAX_RESOLVE_NAME_SIZE name) -> (zx.status status,
-                                                   zx.handle:VMO? executable,
-                                                   fuchsia.ldsvc.Loader? ldsvc);
+    Resolve(struct {
+        name string:MAX_RESOLVE_NAME_SIZE;
+    }) -> (resource struct {
+        status zx.status;
+        executable zx.handle:<VMO, optional>;
+        ldsvc client_end:<fuchsia.ldsvc.Loader, optional>;
+    });
 };

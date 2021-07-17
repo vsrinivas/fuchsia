@@ -1,52 +1,84 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library zx;
 
 alias VmOption = uint32;
 
 // TODO(scottmg): bits for ZX_VM_xyz flags, and const for ZX_VM_ALIGN_xyz.
-
-[Transport = "Syscall"]
+@transport("Syscall")
 protocol vmar {
     /// Allocate a new subregion.
     /// Rights: If options & ZX_VM_CAN_MAP_READ, parent_vmar must be of type ZX_OBJ_TYPE_VMAR and have ZX_RIGHT_READ.
     /// Rights: If options & ZX_VM_CAN_MAP_WRITE, parent_vmar must be of type ZX_OBJ_TYPE_VMAR and have ZX_RIGHT_WRITE.
     /// Rights: If options & ZX_VM_CAN_MAP_EXECUTE, parent_vmar must be of type ZX_OBJ_TYPE_VMAR and have ZX_RIGHT_EXECUTE.
-    vmar_allocate(handle:VMAR parent_vmar, VmOption options, usize offset, usize size)
-        -> (status status, handle:VMAR child_vmar, vaddr child_addr);
+    vmar_allocate(resource struct {
+        parent_vmar handle:VMAR;
+        options VmOption;
+        offset usize;
+        size usize;
+    }) -> (resource struct {
+        status status;
+        child_vmar handle:VMAR;
+        child_addr vaddr;
+    });
 
     // TODO(fxbug.dev/32803): handle No rights required?
     /// Destroy a virtual memory address region.
-    vmar_destroy(handle:VMAR handle) -> (status status);
+    vmar_destroy(resource struct {
+        handle handle:VMAR;
+    }) -> (struct {
+        status status;
+    });
 
     // TODO(fxbug.dev/32253): TODO handle and vmo and options must all match, and options can't specify them.
     /// Add a memory mapping.
     /// Rights: handle must be of type ZX_OBJ_TYPE_VMAR.
     /// Rights: vmo must be of type ZX_OBJ_TYPE_VMO.
-    vmar_map(handle:VMAR handle, VmOption options, usize vmar_offset,
-             handle:VMO vmo, uint64 vmo_offset,
-             usize len)
-        -> (status status, vaddr mapped_addr);
+    vmar_map(resource struct {
+        handle handle:VMAR;
+        options VmOption;
+        vmar_offset usize;
+        vmo handle:VMO;
+        vmo_offset uint64;
+        len usize;
+    }) -> (struct {
+        status status;
+        mapped_addr vaddr;
+    });
 
     // TODO(fxbug.dev/32803): handle No rights required?
     /// Unmap virtual memory pages.
-    vmar_unmap(handle:VMO handle, vaddr addr, usize len) -> (status status);
+    vmar_unmap(resource struct {
+        handle handle:VMO;
+        addr vaddr;
+        len usize;
+    }) -> (struct {
+        status status;
+    });
 
     /// Set protection of virtual memory pages.
     /// Rights: If options & ZX_VM_PERM_READ, handle must be of type ZX_OBJ_TYPE_VMAR and have ZX_RIGHT_READ.
     /// Rights: If options & ZX_VM_PERM_WRITE, handle must be of type ZX_OBJ_TYPE_VMAR and have ZX_RIGHT_WRITE.
     /// Rights: If options & ZX_VM_PERM_EXECUTE, handle must be of type ZX_OBJ_TYPE_VMAR and have ZX_RIGHT_EXECUTE.
-    vmar_protect(handle:VMO handle, VmOption options, vaddr addr, usize len) -> (status status);
+    vmar_protect(resource struct {
+        handle handle:VMO;
+        options VmOption;
+        addr vaddr;
+        len usize;
+    }) -> (struct {
+        status status;
+    });
 
     /// Perform an operation on VMOs mapped into this VMAR.
     /// Rights: If op is ZX_VMO_OP_DECOMMIT, affected mappings must be writable.
-    vmar_op_range(handle:VMAR handle,
-                  uint32 op,
-                  vaddr address,
-                  usize size,
-                  mutable_vector_void buffer)
-        -> (status status);
+    vmar_op_range(resource struct {
+        handle handle:VMAR;
+        op uint32;
+        address vaddr;
+        size usize;
+        buffer mutable_vector_void;
+    }) -> (struct {
+        status status;
+    });
 };

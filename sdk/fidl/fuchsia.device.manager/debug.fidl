@@ -1,7 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
 library fuchsia.device.manager;
 
 using zx;
@@ -11,15 +10,34 @@ using zx;
 /// All methods dump ascii text into a VMO, this allows the caller the flexibility to decide
 /// how much data they want. Use the returned `written` value to read the data, no string
 /// termination is guaranteed.
-[Discoverable, ForDeprecatedCBindings]
+@discoverable
+@for_deprecated_c_bindings
 protocol DebugDumper {
     /// Print device tree into `output`, returns bytes `written` and bytes `available` to write.
-    DumpTree(zx.handle:VMO output) -> (zx.status status, uint64 written, uint64 available);
+    DumpTree(resource struct {
+        output zx.handle:VMO;
+    }) -> (struct {
+        status zx.status;
+        written uint64;
+        available uint64;
+    });
 
     /// Print information about all drivers into `output`, returns bytes `written` and bytes `available` to write.
-    DumpDrivers(zx.handle:VMO output) -> (zx.status status, uint64 written, uint64 available);
+    DumpDrivers(resource struct {
+        output zx.handle:VMO;
+    }) -> (struct {
+        status zx.status;
+        written uint64;
+        available uint64;
+    });
 
     /// Print all devices and their binding properties into `output`, returns bytes `written`
     /// and bytes `available` to write.
-    DumpBindingProperties(zx.handle:VMO output) -> (zx.status status, uint64 written, uint64 available);
+    DumpBindingProperties(resource struct {
+        output zx.handle:VMO;
+    }) -> (struct {
+        status zx.status;
+        written uint64;
+        available uint64;
+    });
 };

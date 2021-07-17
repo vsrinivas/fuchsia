@@ -1,26 +1,24 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.ui.activity;
 
 /// DiscreteActivity is an activity which occurs at a point in time.
-flexible union DiscreteActivity {
+type DiscreteActivity = flexible union {
     /// Activities that require no special handling.
-    1: GenericActivity generic;
+    1: generic GenericActivity;
 };
 
 /// OngoingActivity is an activity which has a definite start and end time.
-flexible union OngoingActivity {
+type OngoingActivity = flexible union {
     /// Activities that require no special handling.
-    1: GenericActivity generic;
+    1: generic GenericActivity;
 };
 
 /// GenericActivity is a user or system activity of unspecified type, e.g.
 /// a keyboard press or an alarm going off.
-table GenericActivity {
+type GenericActivity = table {
     /// Brief human-readable label for the activity, for logging/debugging.
     /// e.g. "cursor", "key", "video"
-    1: string label;
+    1: label string;
 };

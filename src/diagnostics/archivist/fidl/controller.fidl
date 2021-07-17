@@ -1,13 +1,11 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.diagnostics.test;
 
 /// Controller for an embedded Archivist.
 /// This is only to be used from tests.
-[Discoverable]
+@discoverable
 protocol Controller {
     /// Consume/Drain all the pending messages and connection requests and clean exit.
     /// Clients should check for observer to die as this connection would be closed as

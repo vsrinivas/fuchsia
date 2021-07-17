@@ -1,7 +1,6 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
 library fuchsia.audio.effects;
 
 using fuchsia.mediastreams;
@@ -11,8 +10,8 @@ using zx;
 /// The maximum number of input and output streams.
 /// These bounds are somewhat arbitrary; in practice we don't expect more than 1
 /// or 2 inputs and outputs in the vast majority of cases.
-const uint32 MAX_INPUT_STREAMS = 8;
-const uint32 MAX_OUTPUT_STREAMS = 8;
+const MAX_INPUT_STREAMS uint32 = 8;
+const MAX_OUTPUT_STREAMS uint32 = 8;
 
 /// An audio effect processor. Consumes one or more input streams, producing one
 /// or more output streams. On creation, this protocol must be tied to a
@@ -42,11 +41,14 @@ protocol Processor {
     /// * `num_frames` the number of frames to process
     /// * `options` extra options
     /// * error a zx.status value indicating success or failure
-    Process(uint64 num_frames, ProcessOptions options) -> () error zx.status;
+    Process(struct {
+        num_frames uint64;
+        options ProcessOptions;
+    }) -> (struct {}) error zx.status;
 };
 
 /// An extensible container of options for Processor.Process.
-table ProcessOptions {
+type ProcessOptions = table {
     /// The total gain that has been applied to each input stream by prior
     /// processing steps. For example, given an audio pipeline of the form input ->
     /// ProcessorA -> ProcessorB, if input is a sine wave with unity amplitude and
@@ -55,21 +57,21 @@ table ProcessOptions {
     /// should contain a sine wave with amplitude -5.0dB.
     ///
     /// If not specified, the applied gain is 0 dB for each input.
-    1: vector<float32>:MAX_INPUT_STREAMS total_applied_gain_db_per_input;
+    1: total_applied_gain_db_per_input vector<float32>:MAX_INPUT_STREAMS;
 };
 
 /// Configures a Processor.
-resource table ProcessorConfiguration {
+type ProcessorConfiguration = resource table {
     /// Dedicated FIDL channel for this processor.
     /// Required.
-    1: Processor processor;
+    1: processor client_end:Processor;
 
     /// A description of all input streams for this processor.
     /// Must have at least one input.
     ///
     /// Each input stream can have a different sample format or channel count, but
     /// all inputs must have the same frame rate.
-    2: vector<InputConfiguration>:MAX_INPUT_STREAMS inputs;
+    2: inputs vector<InputConfiguration>:MAX_INPUT_STREAMS;
 
     /// A description of all output streams for this processor.
     /// Must have at least one output.
@@ -78,39 +80,39 @@ resource table ProcessorConfiguration {
     /// but all outputs must have the same frame rate as the input(s) -- effects
     /// are allowed to perform sample format conversion and rechannelization as
     /// long as the frame rate does not change.
-    3: vector<OutputConfiguration>:MAX_OUTPUT_STREAMS outputs;
+    3: outputs vector<OutputConfiguration>:MAX_OUTPUT_STREAMS;
 
     /// The maximum number of frames that may be processed per call to
     /// [`fuchsia.audio.effects/Processor.Process`]. The default limit is the
     /// number of frames that can fit in the smallest input buffer. If specified,
     /// this must be smaller than the default limit.
-    4: uint64 max_frames_per_call;
+    4: max_frames_per_call uint64;
 
     /// If specified, all calls to [`fuchsia.audio.effects/Processor.Process`].
     /// must set `num_frames` to a multiple of this number. Must be less than or
     /// equal to `max_frames_per_call`. If not specified, then any block size is
     /// allowed.
-    5: uint64 block_size_frames;
+    5: block_size_frames uint64;
 };
 
 /// Configures a single input stream.
-resource table InputConfiguration {
+type InputConfiguration = resource table {
     /// Format of this input stream.
     /// Required.
-    1: fuchsia.mediastreams.AudioFormat format;
+    1: format fuchsia.mediastreams.AudioFormat;
 
     /// Buffer for this input stream. Must provide write access and must have
     /// enough space for `ProcessorConfiguration.max_frames_per_call`.
     ///
     /// Required.
-    2: fuchsia.mem.Range buffer;
+    2: buffer fuchsia.mem.Range;
 };
 
 /// Configures a single output stream.
-resource table OutputConfiguration {
+type OutputConfiguration = resource table {
     /// Format of this output stream.
     /// Required.
-    1: fuchsia.mediastreams.AudioFormat format;
+    1: format fuchsia.mediastreams.AudioFormat;
 
     /// Buffer for this input stream. Must provide read access and must have
     /// enough space for `ProcessorConfiguration.max_frames_per_call`.
@@ -119,12 +121,12 @@ resource table OutputConfiguration {
     /// range as an input buffer.
     ///
     /// Required.
-    2: fuchsia.mem.Range buffer;
+    2: buffer fuchsia.mem.Range;
 
     /// If specified, the output signal is shifted by this many frames.
     /// If not specified, this is zero.
     /// See the explanation at `[fuchsia.audio.effects/Processor.Process]`.
-    3: uint64 latency_frames;
+    3: latency_frames uint64;
 
     /// If specified, then input frame F will affect the output stream up through
     /// frame F + `ring_out_frames`. If not specified, this is zero.
@@ -132,5 +134,5 @@ resource table OutputConfiguration {
     /// Put differently, if the effect is given an input stream with N non-silent
     /// frames followed by infinite silence, the effect will produce up to N +
     /// `ring_out_frames` non-silent frames before emitting silence.
-    4: uint64 ring_out_frames;
+    4: ring_out_frames uint64;
 };

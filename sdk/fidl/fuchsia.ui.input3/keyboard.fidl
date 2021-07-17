@@ -1,15 +1,13 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.ui.input3;
 
 using fuchsia.ui.views;
 
 /// Components may request this service from their namespace to be notified of
 /// physical key events.
-[Discoverable]
+@discoverable
 protocol Keyboard {
     /// Add a key event listener for the specified View.
     /// If multiple listeners are added, each will receive key events independently and
@@ -18,7 +16,10 @@ protocol Keyboard {
     /// The client calling `AddListener` should keep the connection to `Keyboard` alive
     /// for as long as the events from `KeyboardListener` need to be received.  Dropping the
     /// connection to the `Keyboard` protocol will terminate `KeyboardListener` as well.
-    AddListener(fuchsia.ui.views.ViewRef view_ref, KeyboardListener listener) -> ();
+    AddListener(resource struct {
+        view_ref fuchsia.ui.views.ViewRef;
+        listener client_end:KeyboardListener;
+    }) -> ();
 };
 
 /// Client should implement this protocol to get notified of key events.
@@ -32,7 +33,11 @@ protocol KeyboardListener {
     /// Notification is only dispatched when the View is focused (ViewRef is on FocusChain).
     /// Parent Views receive the notification first, child Views last.
     /// Returning `HANDLED` will stop event propagation to other clients and listeners.
-    OnKeyEvent(KeyEvent event) -> (KeyEventStatus status);
+    OnKeyEvent(struct {
+        event KeyEvent;
+    }) -> (struct {
+        status KeyEventStatus;
+    });
 };
 
 /// Provides the ability to inject `KeyEvent`s into the keyboard subsystem.
@@ -56,7 +61,7 @@ protocol KeyboardListener {
 /// # Notes
 /// Products should take care to limit access to this protocol, as events injected
 /// with this protocol are indistinguishable from those coming from physical devices.
-[Discoverable]
+@discoverable
 protocol KeyEventInjector {
     /// Inject an event into the keyboard subsystem.
     ///
@@ -65,11 +70,15 @@ protocol KeyEventInjector {
     ///   and the consumer reported that it `HANDLED` the event
     /// * `NOT_HANDLED` if the keyboard subsystem did not deliever the event to
     ///   any consumers, or no consumer reported that it `HANDLED` the event.
-    Inject(KeyEvent key_event) -> (KeyEventStatus status);
+    Inject(struct {
+        key_event KeyEvent;
+    }) -> (struct {
+        status KeyEventStatus;
+    });
 };
 
 /// Return type for clients key events listener.
-enum KeyEventStatus {
+type KeyEventStatus = strict enum {
     /// The key event was handled and its further propagation should be stopped.
     HANDLED = 1;
 

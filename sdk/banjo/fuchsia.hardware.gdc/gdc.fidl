@@ -1,19 +1,18 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.gdc;
 using zx;
 using fuchsia.hardware.camerahwaccel;
 using fuchsia.sysmem;
 
-resource struct GdcConfigInfo {
-    zx.handle:VMO config_vmo;
-    uint32 size;
+type GdcConfigInfo = resource struct {
+    config_vmo zx.handle:VMO;
+    size uint32;
 };
 
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol Gdc {
     // Registers the buffer collections and configuration which the GDC will be using
     // for this task and also the callback functions for a particular task and
@@ -23,35 +22,55 @@ protocol Gdc {
     // |config_vmos| : Static configuration for GDC is stored in this vmo for this task.
     // |callback| : This function is called when GDC is done processing the task.
     // @Returns: |task_index| : Task ID for this task.
-    InitTask(fuchsia.sysmem.BufferCollectionInfo_2 input_buffer_collection,
-             fuchsia.sysmem.BufferCollectionInfo_2 output_buffer_collection,
-             fuchsia.sysmem.ImageFormat_2	input_image_format,
-             vector<fuchsia.sysmem.ImageFormat_2>:MAX output_image_format_table,
-             uint32 output_image_format_index,
-             vector<GdcConfigInfo>:MAX config_vmos,
-             fuchsia.hardware.camerahwaccel.HwAccelFrameCallback frame_callback,
-             fuchsia.hardware.camerahwaccel.HwAccelResChangeCallback res_callback,
-             fuchsia.hardware.camerahwaccel.HwAccelRemoveTaskCallback task_remove_callback)
-        -> (zx.status s, uint32 task_index);
+    InitTask(resource struct {
+        input_buffer_collection fuchsia.sysmem.BufferCollectionInfo_2;
+        output_buffer_collection fuchsia.sysmem.BufferCollectionInfo_2;
+        input_image_format fuchsia.sysmem.ImageFormat_2;
+        output_image_format_table vector<fuchsia.sysmem.ImageFormat_2>:MAX;
+        output_image_format_index uint32;
+        config_vmos vector<GdcConfigInfo>:MAX;
+        frame_callback client_end:fuchsia.hardware.camerahwaccel.HwAccelFrameCallback;
+        res_callback client_end:fuchsia.hardware.camerahwaccel.HwAccelResChangeCallback;
+        task_remove_callback client_end:fuchsia.hardware.camerahwaccel.HwAccelRemoveTaskCallback;
+    }) -> (struct {
+        s zx.status;
+        task_index uint32;
+    });
 
     // De-registers the task.
     // NOTE: Ensure that after calling RemoveTask() on a particular |task_index|,
     //       no other tasks pertaining to this |task_index| are queued up.
-    RemoveTask(uint32 task_index);
+    RemoveTask(struct {
+        task_index uint32;
+    });
 
     // Processes the frame at |input_buffer_index| within |input_buffer_collection|
     // in the task corresponding to |task_index| and stores the ouput in the
     // |output_buffer_collection| after applying the correct configuration.
     // After processing we call the callback registered for this task with the
     // output buffer index. |capture_timestamp| is forwarded to derived frames.
-    ProcessFrame(uint32 task_index, uint32 input_buffer_index, uint64 capture_timestamp) -> (zx.status s);
+    ProcessFrame(struct {
+        task_index uint32;
+        input_buffer_index uint32;
+        capture_timestamp uint64;
+    }) -> (struct {
+        s zx.status;
+    });
 
     // Releases the frame |buffer_index| from the |output_buffer_collection| to be
     // used again by GDC driver again later.
-    ReleaseFrame(uint32 task_index, uint32 buffer_index);
+    ReleaseFrame(struct {
+        task_index uint32;
+        buffer_index uint32;
+    });
 
     // Set the output resolution.This operation is queued to the worker thread to be
     // performed in sequence. Once the output resolution for this Task has changed,
     // callback using the HwAccelCallback, returning the new index of the Image Format.
-    SetOutputResolution(uint32 task_index, uint32 new_output_image_format_index) -> (zx.status s);
+    SetOutputResolution(struct {
+        task_index uint32;
+        new_output_image_format_index uint32;
+    }) -> (struct {
+        s zx.status;
+    });
 };

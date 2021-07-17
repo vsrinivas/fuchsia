@@ -1,8 +1,6 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 /// A library of protocols for routing media between devices.
 ///
 /// This library is based on "targets", which are devices or groups of devices
@@ -25,7 +23,7 @@ alias Id = uint64;
 alias DisplayName = string:200;
 
 /// A protocol for discovering media targets.
-[Discoverable]
+@discoverable
 protocol Discovery {
     compose Group;
     compose Selector;
@@ -36,28 +34,33 @@ protocol Discovery {
     ///
     /// Bindings are returned as deltas between the watch calls, leave a
     /// request hanging to get the latest updates.
-    WatchSessionBindings() -> (SessionBindingsWatchEvent event);
+    WatchSessionBindings() -> (struct {
+        event SessionBindingsWatchEvent;
+    });
 
     /// Connects to a target by id. Drops the given channel if no such
     /// target exists.
-    ConnectToTarget(Id target_id, request<Target> target_request);
+    ConnectToTarget(resource struct {
+        target_id Id;
+        target_request server_end:Target;
+    });
 };
 
 /// A binding between a session and a target, indicating the media session
 /// is rendered on the target.
-struct SessionBinding {
-    fuchsia.media.sessions2.SessionId session_id;
-    Id target_id;
+type SessionBinding = struct {
+    session_id fuchsia.media.sessions2.SessionId;
+    target_id Id;
 };
 
-table SessionBindingsWatchEvent {
+type SessionBindingsWatchEvent = table {
     /// A list of active session bindings added or updated in the network
     /// at any point in time.
-    1: vector<SessionBinding>:MAX updated;
+    1: updated vector<SessionBinding>:MAX;
 
     /// A list of session bindings that are removed in the network since
     /// notified.
-    2: vector<SessionBinding>:MAX removed;
+    2: removed vector<SessionBinding>:MAX;
 };
 
 /// A target is a device or group of devices on which media can be rendered,
@@ -68,8 +71,8 @@ protocol Target {
     compose VolumeControl;
 };
 
-struct TargetChange {
-    Id new_target_id;
+type TargetChange = struct {
+    new_target_id Id;
 };
 
 /// A protocol for adding and removing members of a group target.
@@ -81,11 +84,19 @@ protocol GroupEditor {
     ///
     /// Returns the id of the new target if a new group was created to fulfill this
     /// request.
-    AddTarget(Id target_id) -> (TargetChange? target_change) error Error;
+    AddTarget(struct {
+        target_id Id;
+    }) -> (struct {
+        target_change box<TargetChange>;
+    }) error Error;
 
     /// Removes a target from this group. Returns the id of the new target
     /// if a new group was created to fulfill this request.
-    RemoveTarget(Id target_id) -> (TargetChange? target_change) error Error;
+    RemoveTarget(struct {
+        target_id Id;
+    }) -> (struct {
+        target_change box<TargetChange>;
+    }) error Error;
 };
 
 /// A protocol for watching the members of a group.
@@ -95,15 +106,17 @@ protocol Group {
     /// up with the state of the world.
     ///
     /// Targets are returned as deltas between the watch calls.
-    WatchTargets() -> (TargetsWatchEvent targets_watch_event);
+    WatchTargets() -> (struct {
+        targets_watch_event TargetsWatchEvent;
+    });
 };
 
-table TargetsWatchEvent {
+type TargetsWatchEvent = table {
     /// Targets added or updated on the network at any point in time.
-    1: vector<Description>:MAX updated;
+    1: updated vector<Description>:MAX;
 
     /// Targets that are removed since last notified.
-    2: vector<Id>:MAX removed;
+    2: removed vector<Id>:MAX;
 };
 
 /// A protocol to control the volume of target.
@@ -111,7 +124,9 @@ protocol VolumeControl {
     /// Binds to the target's volume control. If this target is a group,
     /// all member volumes are influenced. These settings persist
     /// for the lifetime of the target.
-    BindVolumeControl(request<fuchsia.media.audio.VolumeControl> volume_control_request);
+    BindVolumeControl(resource struct {
+        volume_control_request server_end:fuchsia.media.audio.VolumeControl;
+    });
 
     /// Binds to the target's volume control as a member of the given group.
     /// The request channel is dropped if the target is not a member of the group.
@@ -120,23 +135,24 @@ protocol VolumeControl {
     /// participating as a member of the group. This is used to adjust the balance
     /// of volume among members of a group. These settings persist for the lifetime
     /// of the target
-    BindMemberVolumeControl(
-        Id group,
-        request<fuchsia.media.audio.VolumeControl> volume_control_request);
+    BindMemberVolumeControl(resource struct {
+        group Id;
+        volume_control_request server_end:fuchsia.media.audio.VolumeControl;
+    });
 };
 
 /// A description of a target.
-table Description {
+type Description = table {
     /// Identifies the target.
-    1: Id target_id;
+    1: target_id Id;
     /// Enumerates of the interoperability features the device supports.
-    2: CapabilityFlags capability_flags;
-    3: DisplayName display_name;
-    4: fuchsia.media.Metadata metadata;
+    2: capability_flags CapabilityFlags;
+    3: display_name DisplayName;
+    4: metadata fuchsia.media.Metadata;
 };
 
 /// Capabilities of the target.
-bits CapabilityFlags : uint64 {
+type CapabilityFlags = strict bits : uint64 {
     /// Indicates the target can receive a transfer of a
     /// media session from another target.
     TRANSFER_TO = 0x01;
@@ -155,9 +171,10 @@ bits CapabilityFlags : uint64 {
 protocol Selector {
     /// Renders the media session specified by `session_id` on the target
     /// specified by `target_id`.
-    BindTarget(
-        fuchsia.media.sessions2.SessionId session_id,
-        Id target_id) -> () error Error;
+    BindTarget(struct {
+        session_id fuchsia.media.sessions2.SessionId;
+        target_id Id;
+    }) -> (struct {}) error Error;
 
     /// Renders the media session specified by `session_id` on the set of
     /// targets specified by `target_ids`.
@@ -166,13 +183,15 @@ protocol Selector {
     /// targets as members, if one does not exist. The group target may be
     /// temporary, only existing for the lifetime of playback, and not
     /// discoverable through `Discovery`.
-    BindGroupTarget(
-        fuchsia.media.sessions2.SessionId session_id,
-        vector<Id>:100 target_ids
-        ) -> (Id target_id) error Error;
+    BindGroupTarget(struct {
+        session_id fuchsia.media.sessions2.SessionId;
+        target_ids vector<Id>:100;
+    }) -> (struct {
+        target_id Id;
+    }) error Error;
 };
 
-enum Error {
+type Error = strict enum {
     NOT_A_GROUP = 0;
     UNKNOWN_ON_DOMAIN = 1;
     CANNOT_BE_GROUPED = 2;

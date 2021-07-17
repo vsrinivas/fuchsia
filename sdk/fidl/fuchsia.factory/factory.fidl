@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.factory;
 using fuchsia.io;
 
@@ -17,13 +15,15 @@ using fuchsia.io;
 /// protocol that depends on it) are expected to be validated for consistency
 /// before being exposed to clients.
 protocol FactoryStoreProvider {
-    GetFactoryStore(request<fuchsia.io.Directory> dir);
+    GetFactoryStore(resource struct {
+        dir server_end:fuchsia.io.Directory;
+    });
 };
 
 /// This protocol exposes a method to connect to a directory containing
 /// Cast-specific factory data: public certificates and keys for
 /// authentication with Cast servers.
-[Discoverable]
+@discoverable
 protocol CastCredentialsFactoryStoreProvider {
     compose FactoryStoreProvider;
 };
@@ -31,7 +31,7 @@ protocol CastCredentialsFactoryStoreProvider {
 /// This protocol exposes a method to connect to a directory containing
 /// Widevine-specific factory data: public certificates and keys for
 /// authentication with Widevine systems.
-[Discoverable]
+@discoverable
 protocol WidevineFactoryStoreProvider {
     compose FactoryStoreProvider;
 };
@@ -39,7 +39,7 @@ protocol WidevineFactoryStoreProvider {
 /// This protocol exposes a method to connect to a directory containing
 /// PlayReady-specific factory data: public certificates and keys for
 /// authentication with PlayReady systems.
-[Discoverable]
+@discoverable
 protocol PlayReadyFactoryStoreProvider {
     compose FactoryStoreProvider;
 };
@@ -47,7 +47,7 @@ protocol PlayReadyFactoryStoreProvider {
 /// This protocol  exposes a method to connect to a directory containing
 /// Weave-specific factory data: public certificates, signing keys, and
 /// identity files for interoperation with a Weave-based home-area-network.
-[Discoverable]
+@discoverable
 protocol WeaveFactoryStoreProvider {
     compose FactoryStoreProvider;
 };
@@ -57,12 +57,12 @@ protocol WeaveFactoryStoreProvider {
 /// audio files, factory process metadata files, and more. Any raw files not
 /// covered by other FactoryStoreProviders or methods in fuchsia.hwinfo will
 /// appear here.
-[Discoverable]
+@discoverable
 protocol MiscFactoryStoreProvider {
     compose FactoryStoreProvider;
 };
 
-[Discoverable]
+@discoverable
 protocol AlphaFactoryStoreProvider {
     compose FactoryStoreProvider;
 };

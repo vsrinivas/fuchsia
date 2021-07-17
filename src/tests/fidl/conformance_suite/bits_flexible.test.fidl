@@ -1,42 +1,40 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library conformance;
 
-flexible bits FlexibleBitsUint8 : uint8 {
+type FlexibleBitsUint8 = flexible bits : uint8 {
     A = 0x1;
     B = 0x2;
 };
 
-flexible bits FlexibleBitsUint16 : uint16 {
+type FlexibleBitsUint16 = flexible bits : uint16 {
     A = 0x1;
     B = 0x2;
 };
 
-flexible bits FlexibleBitsUint32 : uint32 {
+type FlexibleBitsUint32 = flexible bits : uint32 {
     A = 0x1;
     B = 0x2;
 };
 
-flexible bits FlexibleBitsUint64 : uint64 {
+type FlexibleBitsUint64 = flexible bits : uint64 {
     A = 0x1;
     B = 0x2;
 };
 
-struct FlexibleBitsUint8Struct {
-    FlexibleBitsUint8 b;
+type FlexibleBitsUint8Struct = struct {
+    b FlexibleBitsUint8;
 };
 
-struct FlexibleBitsUint16Struct {
-    FlexibleBitsUint16 b;
+type FlexibleBitsUint16Struct = struct {
+    b FlexibleBitsUint16;
 };
 
-struct FlexibleBitsUint32Struct {
-    FlexibleBitsUint32 b;
+type FlexibleBitsUint32Struct = struct {
+    b FlexibleBitsUint32;
 };
 
-struct FlexibleBitsUint64Struct {
-    FlexibleBitsUint64 b;
+type FlexibleBitsUint64Struct = struct {
+    b FlexibleBitsUint64;
 };

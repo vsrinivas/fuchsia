@@ -1,20 +1,18 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.bt.gattsvc;
 
 using zx;
 
 alias BtGattId = uint64;
 
-struct BtGattUuid {
-    array<uint8>:16 bytes;
+type BtGattUuid = struct {
+    bytes array<uint8, 16>;
 };
 
 /// ATT protocol error codes.
-enum BtGattErr : uint8 {
+type BtGattErr = strict enum : uint8 {
     NO_ERROR = 0x00;
     INVALID_HANDLE = 0x01;
     READ_NOT_PERMITTED = 0x02;
@@ -36,16 +34,16 @@ enum BtGattErr : uint8 {
 };
 
 /// Represents the status of a GATT operation.
-struct BtGattStatus {
+type BtGattStatus = struct {
     /// Represents errors reported by the host (i.e. not over ATT).
-    zx.status status;
+    status zx.status;
 
     /// ATT protocol error.
-    BtGattErr att_ecode;
+    att_ecode BtGattErr;
 };
 
 /// Possible values for the characteristic properties bitfield.
-enum BtGattChrPropr : uint8 {
+type BtGattChrPropr = strict enum : uint8 {
     BROADCAST = 0x01;
     READ = 0x02;
     WRITE_WITHOUT_RESPONSE = 0x04;
@@ -56,65 +54,97 @@ enum BtGattChrPropr : uint8 {
     EXTENDED_PROPERTIES = 0x80;
 };
 
-enum BtGattChrExtProp : uint16 {
+type BtGattChrExtProp = strict enum : uint16 {
     RELIABLE_WRITE = 0x0100;
     WRITABLE_AUXILIARIES = 0x0200;
 };
 
 /// Represents a GATT characteristic descriptor.
-struct BtGattDescriptor {
-    BtGattId id;
-    BtGattUuid type;
+type BtGattDescriptor = struct {
+    id BtGattId;
+    type BtGattUuid;
 };
 
 /// Represents a GATT characteristic.
-struct BtGattChr {
-    BtGattId id;
-    BtGattUuid type;
+type BtGattChr = struct {
+    id BtGattId;
+    type BtGattUuid;
 
     /// The bitmask of characteristic properties. The |extended_properties| field
     /// is populated if the "Characteristic Extended Properties" descriptor is
     /// present.
     ///
     /// See enums |BtGattChrProp| and |BtGattChrExtProp| for possible bit values.
-    uint8 properties;
-    uint16 extended_properties;
+    properties uint8;
+    extended_properties uint16;
 
-    [Mutable] vector<BtGattDescriptor>:MAX descriptor;
+    @mutable
+    descriptor vector<BtGattDescriptor>:MAX;
 };
 
 /// Value change notification callback of the |EnableNotifications| function.
-[Transport = "Banjo", BanjoLayout = "ddk-callback"]
+@transport("Banjo")
+@banjo_layout("ddk-callback")
 protocol BtGattNotificationValue {
-    Callback(BtGattId id, [Buffer] vector<uint8>:MAX value) -> ();
+    Callback(struct {
+        id BtGattId;
+        @buffer
+        value vector<uint8>:MAX;
+    }) -> ();
 };
 
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol BtGattSvc {
     /// Connects to and starts characteristic discovery on the remote service.
     ///
     /// |status| will contain the result of the characteristic discovery procedure if it was
     /// initiated by |connect|. The service will be ready to receive further requests once this
     /// has been called successfully and the |status| callback has been called with success.
-    [Async]
-    Connect() -> (BtGattStatus status, vector<BtGattChr>:MAX characteristic);
+    @async
+    Connect() -> (struct {
+        status BtGattStatus;
+        characteristic vector<BtGattChr>:MAX;
+    });
 
     /// Stops this service and unregisters previously registered callbacks.
     Stop() -> ();
 
     /// Reads the value of the characteristic with the given ID.
-    [Async]
-    ReadCharacteristic(BtGattId id) -> (BtGattStatus status, BtGattId id, [Buffer] vector<uint8>:MAX value);
+    @async
+    ReadCharacteristic(struct {
+        id BtGattId;
+    }) -> (struct {
+        status BtGattStatus;
+        id BtGattId;
+        @buffer
+        value vector<uint8>:MAX;
+    });
 
     /// Reads the long value of the characteristic with the given ID.
-    [Async]
-    ReadLongCharacteristic(BtGattId id, uint16 offset, uint64 max_bytes)
-        -> (BtGattStatus status, BtGattId id, [Buffer] vector<uint8>:MAX value);
+    @async
+    ReadLongCharacteristic(struct {
+        id BtGattId;
+        offset uint16;
+        max_bytes uint64;
+    }) -> (struct {
+        status BtGattStatus;
+        id BtGattId;
+        @buffer
+        value vector<uint8>:MAX;
+    });
 
     /// Writes a characteristic with the given ID. Automatically handles long writes
     /// if required by the mtu size.
-    [Async]
-    WriteCharacteristic(BtGattId id, [Buffer] vector<uint8>:MAX buf) -> (BtGattStatus status, BtGattId id);
+    @async
+    WriteCharacteristic(struct {
+        id BtGattId;
+        @buffer
+        buf vector<uint8>:MAX;
+    }) -> (struct {
+        status BtGattStatus;
+        id BtGattId;
+    });
 
     /// Enables notifications from the characteristic with the given ID. Returns
     /// `ZX_ERR_BAD_STATE` if the service has not been started yet.
@@ -123,7 +153,12 @@ protocol BtGattSvc {
     ///
     /// The async callback will be called to asynchronously report the result
     /// of this operation.
-    [Async]
-    EnableNotifications(BtGattId id, BtGattNotificationValue value_cb)
-        -> (BtGattStatus status, BtGattId id);
+    @async
+    EnableNotifications(resource struct {
+        id BtGattId;
+        value_cb client_end:BtGattNotificationValue;
+    }) -> (struct {
+        status BtGattStatus;
+        id BtGattId;
+    });
 };

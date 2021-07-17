@@ -1,8 +1,6 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.netemul.environment;
 
 using fuchsia.logger;
@@ -11,76 +9,88 @@ using fuchsia.sys;
 using zx;
 
 /// A single service to be launched in managed environment.
-struct LaunchService {
+type LaunchService = struct {
     /// Service name.
-    string:MAX name;
+    name string:MAX;
     /// Service launch url (fuchsia component url).
-    string:MAX url;
+    url string:MAX;
     /// Service launch arguments
-    vector<string:MAX>:MAX arguments;
+    arguments vector<string:MAX>:MAX;
 };
 
 /// A single virtual device to make available for child processes.
 /// Virtual devices are mounted on /vdev.
-resource struct VirtualDevice {
+type VirtualDevice = resource struct {
     /// Relative path to /vdev.
-    string:MAX path;
+    path string:MAX;
     /// Virtual device server.
-    fuchsia.netemul.network.DeviceProxy device;
+    device client_end:fuchsia.netemul.network.DeviceProxy;
 };
 
 /// Logger specific options for a created environment
-table LoggerOptions {
+type LoggerOptions = table {
     /// Enable printing logs.
-    1: bool enabled;
+    1: enabled bool;
     /// Enable kernel logs (no effect if `enabled` is false).
-    2: bool klogs_enabled;
+    2: klogs_enabled bool;
     /// LogFilter Options straight from fuchsia.logger.LogFilter.
     /// The LogFilterOptions will be passed directly to the `Listen`
     /// function of the fuchsia.logger.Log service without any
     /// modification. If none provided, assume null. See `Listen` of
     /// fuchsia.logger.Log for more information.
-    3: fuchsia.logger.LogFilterOptions filter_options;
+    3: filter_options fuchsia.logger.LogFilterOptions;
     /// Use the parent environment's syslog for output, only enriching
     /// tags with environment names. If false or not provided,
     /// environment logs are printed to stdout.
-    4: bool syslog_output;
+    4: syslog_output bool;
 };
 
 /// Options used to create environment.
-resource table EnvironmentOptions {
+type EnvironmentOptions = resource table {
     /// Environment name, for debugging purposes.
     /// If none provided, a random name will be generated.
-    1: string:MAX name;
+    1: name string:MAX;
     /// Services to register on environment.
     /// If none provided, no additional services will be registered.
     /// However, a ManagedEnvironment may still register some default
     /// services.
-    2: vector<LaunchService>:MAX services;
+    2: services vector<LaunchService>:MAX;
     /// Devices to make available.
     /// If none provided, no devices will be made available.
-    3: vector<VirtualDevice>:MAX devices;
+    3: devices vector<VirtualDevice>:MAX;
     /// Whether to inherit service launch options from parent environment.
     /// If none provided, assume false.
-    4: bool inherit_parent_launch_services;
+    4: inherit_parent_launch_services bool;
     /// Logger Options.
     /// If none provided, log printing is disabled by default.
-    5: LoggerOptions logger_options;
+    5: logger_options LoggerOptions;
 };
 
 /// Managed environment is made available on netemul runners.
 /// Typically this interface will be used by the root runner
 /// to setup the testing environment.
-[Discoverable]
+@discoverable
 protocol ManagedEnvironment {
     /// Gets the managed launcher for the environment.
-    GetLauncher(request<fuchsia.sys.Launcher> launcher);
+    GetLauncher(resource struct {
+        launcher server_end:fuchsia.sys.Launcher;
+    });
     /// Creates a nested managed environment.
-    CreateChildEnvironment(request<ManagedEnvironment> child_env, EnvironmentOptions options);
+    CreateChildEnvironment(resource struct {
+        child_env server_end:ManagedEnvironment;
+        options EnvironmentOptions;
+    });
     /// Connects to a service named `name` provided by this environment.
-    ConnectToService(string:MAX name, zx.handle:CHANNEL req);
+    ConnectToService(resource struct {
+        name string:MAX;
+        req zx.handle:CHANNEL;
+    });
     /// Exposes new virtual device `device` for all components within this environment
-    AddDevice(VirtualDevice device);
+    AddDevice(resource struct {
+        device VirtualDevice;
+    });
     /// Removes virtual device mounted at `path` (relative to /vdev)
-    RemoveDevice(string:MAX path);
+    RemoveDevice(struct {
+        path string:MAX;
+    });
 };

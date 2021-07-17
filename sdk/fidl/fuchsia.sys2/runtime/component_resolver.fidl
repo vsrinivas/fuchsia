@@ -1,8 +1,6 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.sys2;
 
 /// An interface for resolving a URL to a component.
@@ -17,7 +15,7 @@ library fuchsia.sys2;
 ///
 /// Note: The component manager is the only intended direct client of this
 /// interface.
-[Discoverable]
+@discoverable
 protocol ComponentResolver {
     /// Resolves a component with the given URL.
     ///
@@ -27,13 +25,16 @@ protocol ComponentResolver {
     /// that was resolved.
     ///
     /// On failure, returns a `ResolverError` error.
-    Resolve(string component_url)
-        -> (Component component) error ResolverError;
+    Resolve(struct {
+        component_url string;
+    }) -> (resource struct {
+        component Component;
+    }) error ResolverError;
 };
 
 /// The possible error conditions returned by ComponentResolver.
 // TODO(fxbug.dev/72139): API review of ResolverError.
-enum ResolverError {
+type ResolverError = strict enum {
     /// An unexpected error occurred.
     INTERNAL = 1;
     /// A general IO error occurred.

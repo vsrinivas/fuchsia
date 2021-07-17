@@ -1,29 +1,47 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library zx;
 
-[Transport = "Syscall"]
+@transport("Syscall")
 protocol task {
     // TODO(scottmg): Need something like handle:TASK in this file to mean {job, process, thread}.
     // Or otherwise some way to express multiple options for constraints on inputs in this protocol.
 
     /// Suspend the given task. Currently only thread or process handles may be suspended.
     /// Rights: handle must be of type ZX_OBJ_TYPE_THREAD or ZX_OBJ_TYPE_PROCESS and have ZX_RIGHT_WRITE.
-    task_suspend(handle handle) -> (status status, handle token);
+    task_suspend(resource struct {
+        handle handle;
+    }) -> (resource struct {
+        status status;
+        token handle;
+    });
 
     /// Suspend the given task. Currently only thread or process handles may be suspended.
     /// Rights: handle must be of type ZX_OBJ_TYPE_THREAD or ZX_OBJ_TYPE_PROCESS and have ZX_RIGHT_WRITE.
-    task_suspend_token(handle handle) -> (status status, handle token);
+    task_suspend_token(resource struct {
+        handle handle;
+    }) -> (resource struct {
+        status status;
+        token handle;
+    });
 
     /// Create an exception channel for a given job, process, or thread.
     /// Rights: handle must have ZX_RIGHT_INSPECT and have ZX_RIGHT_DUPLICATE and have ZX_RIGHT_TRANSFER and have ZX_RIGHT_MANAGE_THREAD.
     /// Rights: If handle is of type ZX_OBJ_TYPE_JOB or ZX_OBJ_TYPE_PROCESS, it must have ZX_RIGHT_ENUMERATE.
-    task_create_exception_channel(handle handle, uint32 options) -> (status status, handle:CHANNEL out);
+    task_create_exception_channel(resource struct {
+        handle handle;
+        options uint32;
+    }) -> (resource struct {
+        status status;
+        out handle:CHANNEL;
+    });
 
     /// Kill the provided task (job, process, or thread).
     /// Rights: handle must have ZX_RIGHT_DESTROY.
-    task_kill(handle handle) -> (status status);
+    task_kill(resource struct {
+        handle handle;
+    }) -> (struct {
+        status status;
+    });
 };

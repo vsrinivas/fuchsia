@@ -1,8 +1,6 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.validate.logs;
 
 using zx;
@@ -10,43 +8,49 @@ using fuchsia.diagnostics.stream;
 
 /// A small(ish) limit on the length of argument names is used because argument names are expected
 /// to be used repeatedly, many times.
-const uint32 MAX_ARG_NAME_LENGTH = 256;
+const MAX_ARG_NAME_LENGTH uint32 = 256;
 
-struct PuppetInfo {
-    string? tag;
-    zx.koid pid;
-    zx.koid tid;
+type PuppetInfo = struct {
+    tag string:optional;
+    pid zx.koid;
+    tid zx.koid;
 };
 
-union PrintfValue {
-    1: uint64 unsigned_integer_value;
-    2: string string_value;
-    3: float64 float_value;
-    4: int64 integer_value;
+type PrintfValue = strict union {
+    1: unsigned_integer_value uint64;
+    2: string_value string;
+    3: float_value float64;
+    4: integer_value int64;
 };
 
-struct RecordSpec {
-    string:MAX_ARG_NAME_LENGTH file;
-    uint32 line;
-    fuchsia.diagnostics.stream.Record record;
+type RecordSpec = struct {
+    file string:MAX_ARG_NAME_LENGTH;
+    line uint32;
+    record fuchsia.diagnostics.stream.Record;
 };
 
-struct PrintfRecordSpec {
-    RecordSpec record;
-    vector<PrintfValue>:MAX printf_arguments;
-    string:MAX_ARG_NAME_LENGTH msg;
+type PrintfRecordSpec = struct {
+    record RecordSpec;
+    printf_arguments vector<PrintfValue>:MAX;
+    msg string:MAX_ARG_NAME_LENGTH;
 };
 
-[Discoverable]
+@discoverable
 protocol LogSinkPuppet {
     /// Returns the information the puppet knows about itself.
-    GetInfo() -> (PuppetInfo info);
+    GetInfo() -> (struct {
+        info PuppetInfo;
+    });
 
     /// Logs a record.
-    EmitLog(RecordSpec spec) -> ();
+    EmitLog(struct {
+        spec RecordSpec;
+    }) -> ();
 
     /// Logs a printf record.
-    EmitPrintfLog(PrintfRecordSpec spec) -> ();
+    EmitPrintfLog(struct {
+        spec PrintfRecordSpec;
+    }) -> ();
 
     /// Disables the interest listener
     StopInterestListener() -> ();

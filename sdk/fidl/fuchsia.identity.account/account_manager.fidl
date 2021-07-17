@@ -1,8 +1,6 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.identity.account;
 
 using fuchsia.auth;
@@ -14,11 +12,12 @@ using fuchsia.auth;
 ///
 /// The AccountManager is the most powerful protocol in the authentication
 /// system and is intended only for use by the most trusted parts of the system.
-[Discoverable]
+@discoverable
 protocol AccountManager {
     /// Returns a vector of all accounts provisioned on the current device.
-    GetAccountIds()
-        -> (vector<LocalAccountId>:MAX_ACCOUNTS_PER_DEVICE account_ids);
+    GetAccountIds() -> (struct {
+        account_ids vector<LocalAccountId>:MAX_ACCOUNTS_PER_DEVICE;
+    });
 
     /// Returns a vector of all accounts provisioned on the current
     /// device and the current authentication state for each.
@@ -27,9 +26,11 @@ protocol AccountManager {
     ///
     /// Returns: `account_auth_states` The current authentication state for each
     ///                                account given the provided scenario.
-    GetAccountAuthStates(Scenario scenario)
-        -> (vector<AccountAuthState>:MAX_ACCOUNTS_PER_DEVICE
-            account_auth_states) error Error;
+    GetAccountAuthStates(struct {
+        scenario Scenario;
+    }) -> (struct {
+        account_auth_states vector<AccountAuthState>:MAX_ACCOUNTS_PER_DEVICE;
+    }) error Error;
 
     /// Connects a channel to read properties of and perform operations on
     /// one account. If the account is locked, an interactive authentication
@@ -40,11 +41,11 @@ protocol AccountManager {
     ///                    supplying UI contexts used for interactive
     ///                    authentication on this account
     /// `account` The server end of an `Account` channel
-    GetAccount(
-        LocalAccountId id,
-        fuchsia.auth.AuthenticationContextProvider context_provider,
-        request<Account> account)
-        -> () error Error;
+    GetAccount(resource struct {
+        id LocalAccountId;
+        context_provider client_end:fuchsia.auth.AuthenticationContextProvider;
+        account server_end:Account;
+    }) -> (struct {}) error Error;
 
     // TODO(dnordstrom): Add option to retrieve an account non-interactively.
 
@@ -56,10 +57,10 @@ protocol AccountManager {
     /// `listener` The client end of an `AccountListener` channel
     /// `options` An `AccountListenerOptions` that defines the set of events to
     ///           be sent to the listener.
-    RegisterAccountListener(
-        AccountListener listener,
-        AccountListenerOptions options)
-        -> () error Error;
+    RegisterAccountListener(resource struct {
+        listener client_end:AccountListener;
+        options AccountListenerOptions;
+    }) -> (struct {}) error Error;
 
     // TODO(fxbug.dev/561): Define methods to managed locked accounts, i.e. those
     // where data decryption keys are not currently available.
@@ -72,7 +73,10 @@ protocol AccountManager {
     ///         credentials fails. If false, any revocation failure will result
     ///         in an error and the account will remain. In this case, a subset
     ///         of the credentials may have been deleted.
-    RemoveAccount(LocalAccountId id, bool force) -> () error Error;
+    RemoveAccount(struct {
+        id LocalAccountId;
+        force bool;
+    }) -> (struct {}) error Error;
 
     /// Adds a Fuchsia account to the current device based on authenticating
     /// to a service provider (such as Google). If the service provider account
@@ -95,12 +99,14 @@ protocol AccountManager {
     ///                     unlock.
     ///
     /// Returns: `account_id` The identifier of the newly added account
-    ProvisionFromAuthProvider(
-        fuchsia.auth.AuthenticationContextProvider auth_context_provider,
-        string:MAX_AUTH_PROVIDER_TYPE_SIZE auth_provider_type,
-        Lifetime lifetime,
-        AuthMechanismId? auth_mechanism_id)
-        -> (LocalAccountId account_id) error Error;
+    ProvisionFromAuthProvider(resource struct {
+        auth_context_provider client_end:fuchsia.auth.AuthenticationContextProvider;
+        auth_provider_type string:MAX_AUTH_PROVIDER_TYPE_SIZE;
+        lifetime Lifetime;
+        auth_mechanism_id AuthMechanismId:optional;
+    }) -> (struct {
+        account_id LocalAccountId;
+    }) error Error;
 
     /// Adds a new, initially empty, Fuchsia account to the current device. If a
     /// storage unlock-capable authentication mechanism is provided, a single
@@ -114,58 +120,61 @@ protocol AccountManager {
     ///                     unlock.
     ///
     /// Returns: `account_id` The identifier of the newly added account
-    ProvisionNewAccount(
-        Lifetime lifetime,
-        AuthMechanismId? auth_mechanism_id)
-        -> (LocalAccountId account_id) error Error;
+    ProvisionNewAccount(struct {
+        lifetime Lifetime;
+        auth_mechanism_id AuthMechanismId:optional;
+    }) -> (struct {
+        account_id LocalAccountId;
+    }) error Error;
 
     /// Returns all available authentication mechanisms.
-    GetAuthenticationMechanisms()
-        -> (vector<AuthMechanismProperties>:MAX_AUTH_MECHANISMS auth_mechanisms) error Error;
+    GetAuthenticationMechanisms() -> (struct {
+        auth_mechanisms vector<AuthMechanismProperties>:MAX_AUTH_MECHANISMS;
+    }) error Error;
 };
 
 /// An `AuthState` along with the account that it applies to.
-[MaxHandles = "0"]
-struct AccountAuthState {
+@max_handles("0")
+type AccountAuthState = struct {
     /// A unique identifier for the Fuchsia account on the current device.
-    LocalAccountId account_id;
+    account_id LocalAccountId;
     /// An authentication state for the Fuchsia account.
-    AuthState auth_state;
+    auth_state AuthState;
 };
 
 /// The initial state of an account, reported through an `AccountListener`.
-[MaxHandles = "0"]
-struct InitialAccountState {
+@max_handles("0")
+type InitialAccountState = struct {
     /// A unique identifier for the Fuchsia account on the current device.
-    LocalAccountId account_id;
+    account_id LocalAccountId;
     /// An authentication state for the Fuchsia account. It is only populated if
     /// `AccountListenerOptions.scenario` was specified when the listener was
     /// created.
-    AuthState? auth_state;
+    auth_state box<AuthState>;
 };
 
 /// The configuration for an AccountListener, defining the set of events that it
 /// will receive.
-[MaxHandles = "0"]
-struct AccountListenerOptions {
+@max_handles("0")
+type AccountListenerOptions = struct {
     /// If true, the listener will receive an event containing the initial state
     /// for all accounts. The initial auth states will be populated in this
     /// event iff the scenario option is set.
-    bool initial_state;
+    initial_state bool;
     /// If true, the listener will receive events when a new account is added
     /// to the device.
-    bool add_account;
+    add_account bool;
     /// If true, the listener will receive events when an account is removed
     /// from the device.
-    bool remove_account;
+    remove_account bool;
     /// The scenario to use for all AuthState data sent to the listener. If
     /// scenario is not supplied no AuthState data will be populated.
-    Scenario? scenario;
+    scenario box<Scenario>;
     /// An `AuthChangeGranularity` expressing the magnitude of change in
     /// authentication state that will lead to AuthStateChange events.
     /// If granularity is not populated AuthStateChange events will not be
     /// sent. May only be populated if a scenario is provided.
-    AuthChangeGranularity? granularity;
+    granularity box<AuthChangeGranularity>;
 };
 
 /// A protocol to receive events when the set of accounts on a device or the
@@ -187,23 +196,29 @@ protocol AccountListener {
     /// empty.
     ///
     /// `account_states` The set of initial states.
-    OnInitialize(
-        vector<InitialAccountState>:MAX_ACCOUNTS_PER_DEVICE account_states)
-        -> ();
+    OnInitialize(struct {
+        account_states vector<InitialAccountState>:MAX_ACCOUNTS_PER_DEVICE;
+    }) -> ();
 
     /// A method that is called when a new account is added to the device.
     /// This method is only called if AccountListenerOptions.add_account was
     /// set when creating the AccountListener.
     ///
     /// `account_state` The initial state for the newly added account.
-    OnAccountAdded(InitialAccountState account_state) -> ();
+    OnAccountAdded(struct {
+        account_state InitialAccountState;
+    }) -> ();
 
     /// A method that is called when a provisioned account is removed.
     /// This method is only called if AccountListenerOptions.remove_account was
     /// set when creating the AccountListener.
-    OnAccountRemoved(LocalAccountId account_id) -> ();
+    OnAccountRemoved(struct {
+        account_id LocalAccountId;
+    }) -> ();
 
     /// A method that is called when the authentication state of any provisioned
     /// account changes.
-    OnAuthStateChanged(AccountAuthState account_auth_state) -> ();
+    OnAuthStateChanged(struct {
+        account_auth_state AccountAuthState;
+    }) -> ();
 };

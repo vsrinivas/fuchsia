@@ -1,8 +1,6 @@
 // Copyright 2017 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.net.mdns;
 
 using fuchsia.net;
@@ -52,7 +50,7 @@ alias subtype_name = string:63;
 alias txt_string = string:255;
 
 /// Discoverable protocol for resolving host names to IP addresses.
-[Discoverable]
+@discoverable
 protocol Resolver {
     /// Gets the addresses for the specified host. `timeout` specifies how long
     /// the service should wait before giving up when waiting for a response to
@@ -61,27 +59,38 @@ protocol Resolver {
     ///
     /// A successful resolution may return one or both addresses. An
     /// unsuccessful resolution is indicated when both addresses are null.
-    ResolveHostName(host_name host, zx.duration timeout)
-        -> (fuchsia.net.Ipv4Address? v4_address,
-            fuchsia.net.Ipv6Address? v6_address);
+    ResolveHostName(struct {
+        host host_name;
+        timeout zx.duration;
+    }) -> (struct {
+        v4_address box<fuchsia.net.Ipv4Address>;
+        v6_address box<fuchsia.net.Ipv6Address>;
+    });
 };
 
 /// Discoverable protocol for finding service instances.
-[Discoverable]
+@discoverable
 protocol Subscriber {
     /// Subscribes to a service. The subscription lasts until `subscriber` is
     /// unbound.
-    [Transitional]
-    SubscribeToService(service_name service, ServiceSubscriber subscriber);
+    @transitional
+    SubscribeToService(resource struct {
+        service service_name;
+        subscriber client_end:ServiceSubscriber;
+    });
 
     /// Subscribes to a service. The subscription lasts until `subscriber` is
     /// unbound.
-    [Transitional, Deprecated]
-    SubscribeToService2(service_name service, ServiceSubscriber2 subscriber);
+    @transitional
+    @deprecated
+    SubscribeToService2(resource struct {
+        service service_name;
+        subscriber client_end:ServiceSubscriber2;
+    });
 };
 
 /// Discoverable protocol for publishing service instances.
-[Discoverable]
+@discoverable
 protocol Publisher {
     /// Publishes a service instance. `publication_responder` is consulted via its
     /// `OnPublication` method for initial announcements and to answer queries.
@@ -95,12 +104,14 @@ protocol Publisher {
     /// If a service with the same service and instance names is already published, the
     /// old publication will be terminated, and the responder channel for the old
     /// publication will be closed.
-    [Transitional]
-    PublishServiceInstance(service_name service,
-                           instance_name instance,
-                           Media media,
-                           bool perform_probe,
-                           PublicationResponder publication_responder) -> () error Error;
+    @transitional
+    PublishServiceInstance(resource struct {
+        service service_name;
+        instance instance_name;
+        media Media;
+        perform_probe bool;
+        publication_responder client_end:PublicationResponder;
+    }) -> (struct {}) error Error;
 
     /// Publishes a service instance. `publication_responder` is consulted via its
     /// `OnPublication` method for initial announcements and to answer queries.
@@ -114,15 +125,18 @@ protocol Publisher {
     /// If a service with the same service and instance names is already published, the
     /// old publication will be terminated, and the responder channel for the old
     /// publication will be closed.
-    [Transitional, Deprecated]
-    PublishServiceInstance2(service_name service,
-                            instance_name instance,
-                            bool perform_probe,
-                            PublicationResponder2 publication_responder) -> () error Error;
+    @transitional
+    @deprecated
+    PublishServiceInstance2(resource struct {
+        service service_name;
+        instance instance_name;
+        perform_probe bool;
+        publication_responder client_end:PublicationResponder2;
+    }) -> (struct {}) error Error;
 };
 
 /// Specifies network media on which a service instance should be published.
-bits Media : uint32 {
+type Media = strict bits : uint32 {
     /// Specifies wired interfaces.
     WIRED = 1;
 
@@ -131,7 +145,7 @@ bits Media : uint32 {
 };
 
 /// Error values for instance publishing.
-enum Error : int32 {
+type Error = strict enum : int32 {
     /// The specified service name is invalid.
     INVALID_SERVICE_NAME = 1;
 
@@ -152,17 +166,26 @@ enum Error : int32 {
 /// calling another method.
 protocol ServiceSubscriber {
     /// Notifies the subscriber that a service instance has been discovered.
-    OnInstanceDiscovered(ServiceInstance instance) -> ();
+    OnInstanceDiscovered(struct {
+        instance ServiceInstance;
+    }) -> ();
 
     /// Notifies the subscriber that addresses or text for a known service
     /// instance have changed.
-    OnInstanceChanged(ServiceInstance instance) -> ();
+    OnInstanceChanged(struct {
+        instance ServiceInstance;
+    }) -> ();
 
     /// Notifies the subscriber that a known service instance has been lost.
-    OnInstanceLost(service_name service, instance_name instance) -> ();
+    OnInstanceLost(struct {
+        service service_name;
+        instance instance_name;
+    }) -> ();
 
     /// Notifies the subscriber that a PTR query has been sent.
-    OnQuery(ResourceType resource_type) -> ();
+    OnQuery(struct {
+        resource_type ResourceType;
+    }) -> ();
 };
 
 /// Client-implemented interface for subscribers. Method replies are used to
@@ -170,21 +193,30 @@ protocol ServiceSubscriber {
 /// calling another method.
 protocol ServiceSubscriber2 {
     /// Notifies the subscriber that a service instance has been discovered.
-    OnInstanceDiscovered(ServiceInstance2 instance) -> ();
+    OnInstanceDiscovered(struct {
+        instance ServiceInstance2;
+    }) -> ();
 
     /// Notifies the subscriber that addresses or text for a known service
     /// instance have changed.
-    OnInstanceChanged(ServiceInstance2 instance) -> ();
+    OnInstanceChanged(struct {
+        instance ServiceInstance2;
+    }) -> ();
 
     /// Notifies the subscriber that a known service instance has been lost.
-    OnInstanceLost(service_name service, instance_name instance) -> ();
+    OnInstanceLost(struct {
+        service service_name;
+        instance instance_name;
+    }) -> ();
 
     /// Notifies the subscriber that a PTR query has been sent.
-    OnQuery(ResourceType resource_type) -> ();
+    OnQuery(struct {
+        resource_type ResourceType;
+    }) -> ();
 };
 
 /// DNS resource types.
-enum ResourceType {
+type ResourceType = strict enum {
     /// Domain name pointer.
     PTR = 12;
     /// Any (wildcard) type.
@@ -192,55 +224,55 @@ enum ResourceType {
 };
 
 /// Describes a service instance.
-table ServiceInstance {
+type ServiceInstance = table {
     /// The name of the service.
-    1: service_name service;
+    1: service service_name;
 
     /// The name of the service instance.
-    2: instance_name instance;
+    2: instance instance_name;
 
     /// IPv4 socket address for the service. May be unset.
-    3: fuchsia.net.Ipv4SocketAddress ipv4_endpoint;
+    3: ipv4_endpoint fuchsia.net.Ipv4SocketAddress;
 
     /// IPv6 socket address for the service. May be unset.
-    4: fuchsia.net.Ipv6SocketAddress ipv6_endpoint;
+    4: ipv6_endpoint fuchsia.net.Ipv6SocketAddress;
 
     /// Text strings describing the instance.
-    5: vector<txt_string>:MAX_TEXT_STRINGS text;
+    5: text vector<txt_string>:MAX_TEXT_STRINGS;
 
     /// The priority of the SRV resource record for this publication. See
     /// [RFC6763](https://tools.ietf.org/html/rfc6763) for details.
-    6: uint16 srv_priority;
+    6: srv_priority uint16;
 
     /// The weight of the SRV resource record for this publication. See
     /// [RFC6763](https://tools.ietf.org/html/rfc6763) for details.
-    7: uint16 srv_weight;
+    7: srv_weight uint16;
 };
 
 /// Describes a service instance.
-table ServiceInstance2 {
+type ServiceInstance2 = table {
     /// The name of the service.
-    1: service_name service;
+    1: service service_name;
 
     /// The name of the service instance.
-    2: instance_name instance;
+    2: instance instance_name;
 
     /// IPv4 socket address for the service. May be unset.
-    3: fuchsia.net.Ipv4SocketAddress ipv4_endpoint;
+    3: ipv4_endpoint fuchsia.net.Ipv4SocketAddress;
 
     /// IPv6 socket address for the service. May be unset.
-    4: fuchsia.net.Ipv6SocketAddress ipv6_endpoint;
+    4: ipv6_endpoint fuchsia.net.Ipv6SocketAddress;
 
     /// Text strings describing the instance.
-    5: vector<txt_string>:MAX_TEXT_STRINGS text;
+    5: text vector<txt_string>:MAX_TEXT_STRINGS;
 
     /// The priority of the SRV resource record for this publication. See
     /// [RFC6763](https://tools.ietf.org/html/rfc6763) for details.
-    6: uint16 srv_priority;
+    6: srv_priority uint16;
 
     /// The weight of the SRV resource record for this publication. See
     /// [RFC6763](https://tools.ietf.org/html/rfc6763) for details.
-    7: uint16 srv_weight;
+    7: srv_weight uint16;
 };
 
 /// Client-supplied publication responder interface.
@@ -251,16 +283,20 @@ protocol PublicationResponder {
     /// subtype of the service, `subtype` contains the subtype, otherwise
     /// it is null. If `publication` is null, no announcement or response is
     /// transmitted. Strings in `text` are transmitted in the TXT record.
-    OnPublication(
-        PublicationCause publication_cause,
-        subtype_name? subtype,
-        vector<fuchsia.net.IpAddress>:64 source_addresses)
-        -> (Publication? publication);
+    OnPublication(struct {
+        publication_cause PublicationCause;
+        subtype subtype_name:optional;
+        source_addresses vector<fuchsia.net.IpAddress>:64;
+    }) -> (struct {
+        publication box<Publication>;
+    });
 
     /// Sets the subtypes for the service instance. The specified subtypes will
     /// be announced subject to filtering through the responder. The initial
     /// subtype collection is empty.
-    -> SetSubtypes(vector<subtype_name>:MAX_SUBTYPES subtypes);
+    -> SetSubtypes(struct {
+        subtypes vector<subtype_name>:MAX_SUBTYPES;
+    });
 
     /// Initiates reannouncement of the service instance due to a change in the
     /// instance's port number or text strings. All announcements are filtered
@@ -270,7 +306,7 @@ protocol PublicationResponder {
 };
 
 /// Describes the cause of a publication.
-enum PublicationCause : int32 {
+type PublicationCause = strict enum : int32 {
     /// Indicates the publication is part of an initial announcement.
     ANNOUNCEMENT = 1;
 
@@ -293,14 +329,20 @@ protocol PublicationResponder2 {
     /// `subtype` contains the subtype, otherwise it is null. If `publication`
     /// is null, no announcement or response is transmitted. Strings in `text`
     /// are transmitted in the TXT record.
-    OnPublication(
-        bool query, subtype_name? subtype, vector<fuchsia.net.IpAddress>:64 source_addresses)
-        -> (Publication? publication);
+    OnPublication(struct {
+        query bool;
+        subtype subtype_name:optional;
+        source_addresses vector<fuchsia.net.IpAddress>:64;
+    }) -> (struct {
+        publication box<Publication>;
+    });
 
     /// Sets the subtypes for the service instance. The specified subtypes will
     /// be announced subject to filtering through the responder. The initial
     /// subtype collection is empty.
-    -> SetSubtypes(vector<subtype_name>:MAX_SUBTYPES subtypes);
+    -> SetSubtypes(struct {
+        subtypes vector<subtype_name>:MAX_SUBTYPES;
+    });
 
     /// Initiates reannouncement of the service instance due to a change in the
     /// instance's port number or text strings. All announcements are filtered
@@ -314,35 +356,35 @@ protocol PublicationResponder2 {
 /// values are rounded down to the nearest second. TTL values less than one
 /// second are not permitted and will result in the `PublicationResponder`
 /// channel being closed.
-struct Publication {
+type Publication = struct {
     /// The port at which the service instance is addressable.
-    uint16 port;
+    port uint16;
 
     /// Text strings describing the instance.
-    vector<txt_string>:MAX_TEXT_STRINGS text;
+    text vector<txt_string>:MAX_TEXT_STRINGS;
 
     /// The priority of the SRV resource record for this publication. See
     /// [RFC6763](https://tools.ietf.org/html/rfc6763) for details.
-    uint16 srv_priority = DEFAULT_SRV_PRIORITY;
+    srv_priority uint16 = DEFAULT_SRV_PRIORITY;
 
     /// The weight of the SRV resource record for this publication. See
     /// [RFC6763](https://tools.ietf.org/html/rfc6763) for details.
-    uint16 srv_weight = DEFAULT_SRV_WEIGHT;
+    srv_weight uint16 = DEFAULT_SRV_WEIGHT;
 
     /// Time-to-live for PTR resource records.
-    zx.duration ptr_ttl = DEFAULT_PTR_TTL;
+    ptr_ttl zx.duration = DEFAULT_PTR_TTL;
 
     /// Time-to-live for SRV resource records.
-    zx.duration srv_ttl = DEFAULT_SRV_TTL;
+    srv_ttl zx.duration = DEFAULT_SRV_TTL;
 
     /// Time-to-live for TXT resource records.
-    zx.duration txt_ttl = DEFAULT_TXT_TTL;
+    txt_ttl zx.duration = DEFAULT_TXT_TTL;
 };
 
-const uint16 DEFAULT_SRV_PRIORITY = 0;
-const uint16 DEFAULT_SRV_WEIGHT = 0;
-const zx.duration DEFAULT_PTR_TTL = 120000000000; // 2 minutes
-const zx.duration DEFAULT_SRV_TTL = 120000000000; // 2 minutes
-const zx.duration DEFAULT_TXT_TTL = 4500000000000; // 75 minutes
-const uint32 MAX_TEXT_STRINGS = 256;
-const uint32 MAX_SUBTYPES = 256;
+const DEFAULT_SRV_PRIORITY uint16 = 0;
+const DEFAULT_SRV_WEIGHT uint16 = 0;
+const DEFAULT_PTR_TTL zx.duration = 120000000000; // 2 minutes
+const DEFAULT_SRV_TTL zx.duration = 120000000000; // 2 minutes
+const DEFAULT_TXT_TTL zx.duration = 4500000000000; // 75 minutes
+const MAX_TEXT_STRINGS uint32 = 256;
+const MAX_SUBTYPES uint32 = 256;

@@ -1,14 +1,12 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.fs;
 
 using fuchsia.io;
 
 /// Administration functionality for filesystems.
-[Discoverable]
+@discoverable
 protocol Admin {
     /// Shuts down the filesystem. Once the filesystem recieves the shutdown request, it will
     /// complete any active requests before terminating, but will not respond to new requests. This
@@ -20,5 +18,7 @@ protocol Admin {
     /// Opens the given handle to the root directory of the filesystem.
     /// If the open fails, the handle will be closed with an epitaph indicating
     /// what went wrong.
-    GetRoot(request<fuchsia.io.Directory> dir);
+    GetRoot(resource struct {
+        dir server_end:fuchsia.io.Directory;
+    });
 };

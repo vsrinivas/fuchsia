@@ -1,12 +1,10 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.thermal.test;
 
 /// Errors associated with TemperatureLogger methods.
-enum TemperatureLoggerError : uint32 {
+type TemperatureLoggerError = strict enum : uint32 {
     /// Indicates that an invalid argument was provided.
     INVALID_ARGUMENT = 1;
     /// Requests to start logging will fail if logging is already active.
@@ -14,7 +12,7 @@ enum TemperatureLoggerError : uint32 {
 };
 
 /// A protocol for managing on-demand temperature logging.
-[Discoverable]
+@discoverable
 protocol TemperatureLogger {
     /// Initiates logging at the specified interval, for the provided duration. Logging may be
     /// terminated early with a call to `StopLogging`.
@@ -30,7 +28,10 @@ protocol TemperatureLogger {
     ///     than `interval_ms`. After this duration, temperature polling and logging will cease.
     /// + error a [fuchsia.thermal.test/TemperatureLoggerError] value indicating why the request
     ///     failed.
-    StartLogging(uint32 interval_ms, uint32 duration_ms) -> () error TemperatureLoggerError;
+    StartLogging(struct {
+        interval_ms uint32;
+        duration_ms uint32;
+    }) -> (struct {}) error TemperatureLoggerError;
 
     /// Initiates logging at the specifed interval. Logging will only end upon a `StopLogging` call.
     ///
@@ -42,7 +43,9 @@ protocol TemperatureLogger {
     ///     this interval.
     /// + error a [fuchsia.thermal.test/TemperatureLoggerError] value indicating why the request
     ///     failed.
-    StartLoggingForever(uint32 interval_ms) -> () error TemperatureLoggerError;
+    StartLoggingForever(struct {
+        interval_ms uint32;
+    }) -> (struct {}) error TemperatureLoggerError;
 
     /// Terminates logging if active. It is valid to call this method when logging is inactive.
     StopLogging() -> ();

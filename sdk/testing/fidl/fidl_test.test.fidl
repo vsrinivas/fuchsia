@@ -1,16 +1,14 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fidl.test.misc;
 
-bits Uint32Bits : uint32 {
+type Uint32Bits = strict bits : uint32 {
     ONE = 0x1;
     TWO = 0x2;
 };
 
-strict bits StrictBits : uint8 {
+type StrictBits = strict bits : uint8 {
     B = 2;
     D = 4;
     E = 8;
@@ -18,134 +16,138 @@ strict bits StrictBits : uint8 {
 
 /// The members should be kept in sync with those in [`StrictBits`], as we have
 /// tests parameterized on both bits types.
-flexible bits FlexibleBits : uint8 {
+type FlexibleBits = flexible bits : uint8 {
     B = 2;
     D = 4;
     E = 8;
 };
 
-struct Int64Struct {
-    int64 x;
+type Int64Struct = struct {
+    x int64;
 };
 
-struct HasOptionalFieldStruct {
-    Int64Struct? x;
+type HasOptionalFieldStruct = struct {
+    x box<Int64Struct>;
 };
 
-struct Has2OptionalFieldStruct {
-    Int64Struct? x;
-    Int64Struct? y;
+type Has2OptionalFieldStruct = struct {
+    x box<Int64Struct>;
+    y box<Int64Struct>;
 };
 
-struct Empty {
+type Empty = struct {};
+
+type XUnionContainingEmptyStruct = flexible union {
+    1: empty Empty;
 };
 
-flexible union XUnionContainingEmptyStruct {
-    1: Empty empty;
+type EmptyStructSandwich = struct {
+    before string;
+    e Empty;
+    after string;
 };
 
-struct EmptyStructSandwich {
-    string before;
-    Empty e;
-    string after;
+type SimpleUnion = strict union {
+    1: i32 int32;
+    2: i64 int64;
+    3: s Int64Struct;
+    4: reserved_ordinal_3 uint64;
+    5: str string;
 };
 
-union SimpleUnion {
-    1: int32 i32;
-    2: int64 i64;
-    3: Int64Struct s;
-    4: uint64 reserved_ordinal_3;
-    5: string str;
-};
-
-table SimpleTable {
-    1: int64 x;
+type SimpleTable = table {
+    1: x int64;
     2: reserved;
     3: reserved;
     4: reserved;
-    5: int64 y;
+    5: y int64;
 };
 
 // A variant of SimpleTable that has just the first few fields.
 // Think of this as an older variant of that type!
-table OlderSimpleTable {
-    1: int64 x;
+type OlderSimpleTable = table {
+    1: x int64;
     2: reserved;
 };
 
 // A variant of SimpleTable that has some additional new fields.
 // Think of this as an newer variant of that type!
-table NewerSimpleTable {
-    1: int64 x;
+type NewerSimpleTable = table {
+    1: x int64;
     2: reserved;
     3: reserved;
     4: reserved;
-    5: int64 y;
-    6: int64 z;
+    5: y int64;
+    6: z int64;
     7: reserved;
 };
 
-table ComplexTable {
-    1: SimpleTable simple;
-    2: SampleXUnion u;
-    3: vector<string> strings;
+type ComplexTable = table {
+    1: simple SimpleTable;
+    2: u SampleXUnion;
+    3: strings vector<string>;
 };
 
-flexible union SampleXUnion {
-    1: int32 i;
-    2: SimpleUnion su;
-    3: SimpleTable st;
+type SampleXUnion = flexible union {
+    1: i int32;
+    2: su SimpleUnion;
+    3: st SimpleTable;
 };
 
-struct SampleXUnionInStruct {
-    SampleXUnion xu;
+type SampleXUnionInStruct = struct {
+    xu SampleXUnion;
 };
 
-struct InlineXUnionInStruct {
-    string before;
-    SampleXUnion xu;
-    string after;
+type InlineXUnionInStruct = struct {
+    before string;
+    xu SampleXUnion;
+    after string;
 };
 
-struct OptionalXUnionInStruct {
-    string before;
-    SampleXUnion? xu;
-    string after;
+type OptionalXUnionInStruct = struct {
+    before string;
+    xu SampleXUnion:optional;
+    after string;
 };
 
-table XUnionInTable {
-    1: string before;
-    2: SampleXUnion xu;
-    3: string after;
+type XUnionInTable = table {
+    1: before string;
+    2: xu SampleXUnion;
+    3: after string;
 };
 
-table PrimitiveArrayInTable {
-    1: string before;
-    2: array<int32>:9 arr;
-    3: string after;
+type PrimitiveArrayInTable = table {
+    1: before string;
+    2: arr array<int32, 9>;
+    3: after string;
 };
 
-strict enum StrictEnum {
+type StrictEnum = strict enum {
     MEMBER_A = 23;
     MEMBER_B = 34;
     MEMBER_C = 45;
 };
 
-flexible enum FlexibleEnum {
+type FlexibleEnum = flexible enum {
     MEMBER_A = 23;
     MEMBER_B = 34;
     MEMBER_C = 45;
-    [Unknown] MEMBER_CUSTOM_UNKNOWN = 89;
+    @unknown
+    MEMBER_CUSTOM_UNKNOWN = 89;
 };
 
-struct VariousDefaults {
-    int64 int64_with_default = 5;
-    string string_with_default = "stuff";
-    StrictEnum strict_enum_with_default = StrictEnum.MEMBER_B;
-    FlexibleEnum flexible_enum_with_default = FlexibleEnum.MEMBER_B;
-    bool bool_with_default = true;
+type VariousDefaults = struct {
+    int64_with_default int64 = 5;
+    string_with_default string = "stuff";
+    strict_enum_with_default StrictEnum = StrictEnum.MEMBER_B;
+    flexible_enum_with_default FlexibleEnum = FlexibleEnum.MEMBER_B;
+    bool_with_default bool = true;
 };
 
 protocol Echo {
-    EchoString(string? value) -> (string? response);
+    EchoString(struct {
+        value string:optional;
+    }) -> (struct {
+        response string:optional;
+    });
 };

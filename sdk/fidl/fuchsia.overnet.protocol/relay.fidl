@@ -1,8 +1,6 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.overnet.protocol;
 
 using fuchsia.net;
@@ -14,11 +12,13 @@ using fuchsia.net;
 ///   UDP based link.
 /// * Using an intermediate UDP based node to discover and connect directly to other UDP based
 ///   nodes.
-[Discoverable]
+@discoverable
 protocol UdpReachable {
     /// Hanging-get style returns the latest list of socket addresses that this node *may* be
     /// reachable from.
     /// This can change over time as extra sockets are added or removed, or NAT-ed addresses
     /// for existing sockets are learned, or indeed as connected networks change.
-    GetPossibleAddressList() -> (vector<fuchsia.net.SocketAddress>:MAX address);
+    GetPossibleAddressList() -> (struct {
+        address vector<fuchsia.net.SocketAddress>:MAX;
+    });
 };

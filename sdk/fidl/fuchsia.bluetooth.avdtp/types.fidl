@@ -1,16 +1,14 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.bluetooth.avdtp;
 
 /// Maximum number of peers that can be connected to a node.
 /// (Core Spec 5.0, Vol 2, Part B, Section 1)
-const uint64 MAX_PICONET_SIZE = 8;
+const MAX_PICONET_SIZE uint64 = 8;
 
 /// Represents the return status of a [`fuchsia.bluetooth.avdtp.Peer`] method
-enum PeerError : uint32 {
+type PeerError = strict enum : uint32 {
     /// Failure reason is not known
     UNKNOWN_FAILURE = 1;
 

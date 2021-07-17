@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.io2;
 
 using zx;
@@ -17,7 +15,7 @@ protocol Debuglog {
 /// The debuglog representation of a node.
 /// The selection of this variant in [`Representation`] implies that the
 /// connection speaks the [`fuchsia.io2/Debuglog`] protocol.
-resource table DebuglogInfo {
+type DebuglogInfo = resource table {
     /// The backing debuglog kernel object.
-    1: zx.handle:LOG debuglog;
+    1: debuglog zx.handle:LOG;
 };

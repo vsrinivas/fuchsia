@@ -1,8 +1,6 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.ui.keyboard.focus;
 
 using fuchsia.ui.views;
@@ -19,7 +17,7 @@ using fuchsia.ui.views;
 /// # Related protocols
 /// * `fuchsia.ui.input3.Keyboard` (for receiving keystrokes)
 /// * `fuchsia.ui.input.InputMethodEditor` (for text editing)
-[Discoverable]
+@discoverable
 protocol Controller {
     /// Informs the implementer of `Controller` that further keyboard
     /// data should be routed to the keystroke/text consumer
@@ -35,5 +33,7 @@ protocol Controller {
     /// * The caller should wait for each call to be acknowledged
     ///   before calling again, to avoid queueing large numbers of
     ///   of updates.
-    Notify(fuchsia.ui.views.ViewRef view_ref) -> ();
+    Notify(resource struct {
+        view_ref fuchsia.ui.views.ViewRef;
+    }) -> ();
 };

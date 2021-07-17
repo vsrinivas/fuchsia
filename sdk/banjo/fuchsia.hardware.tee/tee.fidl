@@ -1,20 +1,19 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.tee;
 
 using zx;
 
-struct Uuid {
-    uint32 time_low;
-    uint16 time_mid;
-    uint16 time_hi_and_version;
-    array<uint8>:8 clock_seq_and_node;
+type Uuid = struct {
+    time_low uint32;
+    time_mid uint16;
+    time_hi_and_version uint16;
+    clock_seq_and_node array<uint8, 8>;
 };
 
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol Tee {
     /// Takes the server end of a FIDL connection that'll serve fuchsia.tee.Application for the
     /// given application_uuid.
@@ -25,7 +24,11 @@ protocol Tee {
     /// The service_provider can be ZX_HANDLE_INVALID if the connection won't be used for any
     /// requests that'll result in filesystem requests from the TEE.  If not ZX_HANDLE_INVALID, the
     /// service provider will be used in serving filesystem requests from the TEE.
-    ConnectToApplication(Uuid application_uuid,
-                         zx.handle:CHANNEL tee_app_request,
-                         zx.handle:CHANNEL service_provider) -> (zx.status s);
+    ConnectToApplication(resource struct {
+        application_uuid Uuid;
+        tee_app_request zx.handle:CHANNEL;
+        service_provider zx.handle:CHANNEL;
+    }) -> (struct {
+        s zx.status;
+    });
 };

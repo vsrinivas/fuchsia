@@ -1,14 +1,12 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.hdmi;
 using zx;
 
 /// constants for display_config's mode_flags field
 /// Should be the same as display-controller.banjo
-flexible bits ModeFlag : uint32 {
+type ModeFlag = flexible bits : uint32 {
     VSYNC_POSITIVE = 0x1;
     HSYNC_POSITIVE = 0x2;
     INTERLACED = 0x4;
@@ -18,22 +16,22 @@ flexible bits ModeFlag : uint32 {
 
 /// The video parameters which specify the display mode.
 /// Should be the same as display-controller.banjo
-struct StandardDisplayMode {
-    uint32 pixel_clock_10khz;
-    uint32 h_addressable;
-    uint32 h_front_porch;
-    uint32 h_sync_pulse;
-    uint32 h_blanking;
-    uint32 v_addressable;
-    uint32 v_front_porch;
-    uint32 v_sync_pulse;
-    uint32 v_blanking;
+type StandardDisplayMode = struct {
+    pixel_clock_10khz uint32;
+    h_addressable uint32;
+    h_front_porch uint32;
+    h_sync_pulse uint32;
+    h_blanking uint32;
+    v_addressable uint32;
+    v_front_porch uint32;
+    v_sync_pulse uint32;
+    v_blanking uint32;
     /// A bitmask of MODE_FLAG_* values
-    uint32 flags;
+    flags uint32;
 };
 
 /// supported color depth values for color_param's input_color_format and output_color format fields
-enum ColorDepth : uint8 {
+type ColorDepth = strict enum : uint8 {
     CD_24B = 4;
     CD_30B = 5;
     CD_36B = 6;
@@ -41,44 +39,56 @@ enum ColorDepth : uint8 {
 };
 
 /// supported color format values for color_param's color_depth field
-enum ColorFormat : uint8 {
+type ColorFormat = strict enum : uint8 {
     CF_RGB = 0;
     CF_444 = 1;
 };
 
-struct ColorParam {
-    ColorFormat input_color_format;
-    ColorFormat output_color_format;
-    ColorDepth color_depth;
+type ColorParam = struct {
+    input_color_format ColorFormat;
+    output_color_format ColorFormat;
+    color_depth ColorDepth;
 };
 
-table DisplayMode {
-    1: StandardDisplayMode mode;
-    2: ColorParam color;
+type DisplayMode = table {
+    1: mode StandardDisplayMode;
+    2: color ColorParam;
 };
 
-const uint32 MAX_TRANSFER_SIZE = 8196; // More than enough for I2C
-const uint32 MAX_COUNT_SEGMENTS = 8; // Enough for all known transfer configurations.
-
-struct EdidOp {
-    uint32 address;
-    bool is_write;
+const MAX_TRANSFER_SIZE uint32 = 8196; // More than enough for I2C
+const MAX_COUNT_SEGMENTS uint32 = 8; // Enough for all known transfer configurations.
+type EdidOp = struct {
+    address uint32;
+    is_write bool;
 };
 
 protocol Hdmi {
     /// This function is called to power up the HDMI interface
     /// Should be called once on boot. Any future calls should do nothing.
-    PowerUp(uint8 display_id) -> () error zx.status;
+    PowerUp(struct {
+        display_id uint8;
+    }) -> (struct {}) error zx.status;
     /// This function is called to power down the HDMI interface
     /// Should be called only once on shut down.
-    PowerDown(uint8 display_id) -> ();
+    PowerDown(struct {
+        display_id uint8;
+    }) -> ();
     /// This function return true if the HDMI block is powered on and not in reset
-    IsPoweredUp(uint8 display_id) -> (bool on);
+    IsPoweredUp(struct {
+        display_id uint8;
+    }) -> (struct {
+        on bool;
+    });
     /// This function resets the HDMI IP block
-    Reset(uint8 display_id) -> () error zx.status;
+    Reset(struct {
+        display_id uint8;
+    }) -> (struct {}) error zx.status;
 
     /// This function is called upon HDMI display change
-    ModeSet(uint8 display_id, DisplayMode mode) -> () error zx.status;
+    ModeSet(struct {
+        display_id uint8;
+        mode DisplayMode;
+    }) -> (struct {}) error zx.status;
 
     /// Similar to I2C FIDL.
     /// Write and read segments of data for EDID.
@@ -96,22 +106,34 @@ protocol Hdmi {
     /// `write_segments_data` would be a vector with 1 element including the 2 bytes address of the
     /// read. Upon success `read_segments_data` would return a vector with one element, the byte
     /// read.
-    EdidTransfer(vector<EdidOp>:MAX_COUNT_SEGMENTS ops,
-                 vector<vector<uint8>:MAX_TRANSFER_SIZE>:MAX_COUNT_SEGMENTS write_segments_data,
-                 vector<uint8>:MAX_COUNT_SEGMENTS read_segments_length)
-        -> (vector<vector<uint8>:MAX_TRANSFER_SIZE>:MAX_COUNT_SEGMENTS read_segments_data)
-        error zx.status;
+    EdidTransfer(struct {
+        ops vector<EdidOp>:MAX_COUNT_SEGMENTS;
+        write_segments_data vector<vector<uint8>:MAX_TRANSFER_SIZE>:MAX_COUNT_SEGMENTS;
+        read_segments_length vector<uint8>:MAX_COUNT_SEGMENTS;
+    }) -> (struct {
+        read_segments_data vector<vector<uint8>:MAX_TRANSFER_SIZE>:MAX_COUNT_SEGMENTS;
+    }) error zx.status;
 
     /// This function allows writing to any register within the HDMI block. This could be used
     /// for debug purposes during development stages without needing to modify the HDMI IMPL
     /// protocol or to write to registers that don't really belong in the HDMI IP block.
-    WriteReg(uint32 reg, uint32 val) -> ();
+    WriteReg(struct {
+        reg uint32;
+        val uint32;
+    }) -> ();
 
     /// This function returns the value of any register within the HDMI IP block
-    ReadReg(uint32 reg) -> (uint32 val);
+    ReadReg(struct {
+        reg uint32;
+    }) -> (struct {
+        val uint32;
+    });
 
     /// This function enable BIST pattern generation. This is useful during development stages
-    EnableBist(uint8 display_id, uint32 pattern) -> () error zx.status;
+    EnableBist(struct {
+        display_id uint8;
+        pattern uint32;
+    }) -> (struct {}) error zx.status;
 
     /// This function prints the value of all HDMI registers
     PrintHdmiRegisters() -> ();

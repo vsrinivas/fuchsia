@@ -1,39 +1,50 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fidl.test.llcpp.dirent;
 
 using zx;
 
-const uint32 TEST_MAX_PATH = 10;
+const TEST_MAX_PATH uint32 = 10;
 
 /// Fake dirent structure to exercise linearization codepaths.
-struct DirEnt {
-    bool is_dir;
-    string:TEST_MAX_PATH name;
-    int32 some_flags;
+type DirEnt = struct {
+    is_dir bool;
+    name string:TEST_MAX_PATH;
+    some_flags int32;
 };
 
-const uint32 SMALL_DIR_VECTOR_SIZE = 3;
+const SMALL_DIR_VECTOR_SIZE uint32 = 3;
 
 /// Test interface implemented by LLCPP, with a manually written server,
 /// since types with more than one level of indirections are not handled by the C binding.
 protocol DirEntTestInterface {
     /// Iterate over the dirents and return the number of directories within them.
-    CountNumDirectories(vector<DirEnt>:1000 dirents) -> (int64 num_dir);
+    CountNumDirectories(struct {
+        dirents vector<DirEnt>:1000;
+    }) -> (struct {
+        num_dir int64;
+    });
 
     /// Return a vector of dirents. Empty request. Response may stack-allocate.
-    ReadDir() -> (vector<DirEnt>:SMALL_DIR_VECTOR_SIZE dirents);
+    ReadDir() -> (struct {
+        dirents vector<DirEnt>:SMALL_DIR_VECTOR_SIZE;
+    });
 
     /// Consume dirents. Empty response. Request may stack-allocate.
-    ConsumeDirectories(vector<DirEnt>:SMALL_DIR_VECTOR_SIZE dirents) -> ();
+    ConsumeDirectories(struct {
+        dirents vector<DirEnt>:SMALL_DIR_VECTOR_SIZE;
+    }) -> ();
 
     /// Event
-    -> OnDirents(vector<DirEnt>:1000 dirents);
+    -> OnDirents(struct {
+        dirents vector<DirEnt>:1000;
+    });
 
     /// Binding will not wait for response.
     /// But here we send an eventpair which the server will signal upon receipt of message.
-    OneWayDirents(vector<DirEnt>:1000 dirents, zx.handle:EVENTPAIR ep);
+    OneWayDirents(resource struct {
+        dirents vector<DirEnt>:1000;
+        ep zx.handle:EVENTPAIR;
+    });
 };

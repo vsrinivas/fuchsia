@@ -1,13 +1,11 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library ddk.hw.physiter;
 
-struct SgEntry {
+type SgEntry = struct {
     /// length starting at the scatter gather entry offset, must be non zero
-    uint64 length;
+    length uint64;
     /// offset relative to the buffer's vmo_offset
-    uint64 offset;
+    offset uint64;
 };

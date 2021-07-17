@@ -1,32 +1,58 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library zx;
 
-[Transport = "Syscall"]
+@transport("Syscall")
 protocol vcpu {
     /// Create a VCPU.
     /// Rights: guest must be of type ZX_OBJ_TYPE_GUEST and have ZX_RIGHT_MANAGE_PROCESS.
-    vcpu_create(handle:GUEST guest, uint32 options, vaddr entry)
-        -> (status status, handle:VCPU out);
+    vcpu_create(resource struct {
+        guest handle:GUEST;
+        options uint32;
+        entry vaddr;
+    }) -> (resource struct {
+        status status;
+        out handle:VCPU;
+    });
 
     // See port.fidl for definition of PortPacket.
     /// Resume execution of a VCPU.
     /// Rights: handle must be of type ZX_OBJ_TYPE_VCPU and have ZX_RIGHT_EXECUTE.
-    [blocking]
-    vcpu_resume(handle:VCPU handle) -> (status status, PortPacket packet);
+    @blocking
+    vcpu_resume(resource struct {
+        handle handle:VCPU;
+    }) -> (struct {
+        status status;
+        packet PortPacket;
+    });
 
     /// Raise an interrupt on a VCPU.
     /// Rights: handle must be of type ZX_OBJ_TYPE_VCPU and have ZX_RIGHT_SIGNAL.
-    vcpu_interrupt(handle:VCPU handle, uint32 vector) -> (status status);
+    vcpu_interrupt(resource struct {
+        handle handle:VCPU;
+        vector uint32;
+    }) -> (struct {
+        status status;
+    });
 
     /// Read the state of a VCPU.
     /// Rights: handle must be of type ZX_OBJ_TYPE_VCPU and have ZX_RIGHT_READ.
-    vcpu_read_state(handle:VCPU handle, uint32 kind) -> (status status, vector_void buffer);
+    vcpu_read_state(resource struct {
+        handle handle:VCPU;
+        kind uint32;
+    }) -> (struct {
+        status status;
+        buffer vector_void;
+    });
 
     /// Write the state of a VCPU.
     /// Rights: handle must be of type ZX_OBJ_TYPE_VCPU and have ZX_RIGHT_WRITE.
-    vcpu_write_state(handle:VCPU handle, uint32 kind, vector_void buffer) -> (status status);
+    vcpu_write_state(resource struct {
+        handle handle:VCPU;
+        kind uint32;
+        buffer vector_void;
+    }) -> (struct {
+        status status;
+    });
 };

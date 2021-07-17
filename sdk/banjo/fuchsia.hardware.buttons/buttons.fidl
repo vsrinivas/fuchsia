@@ -1,16 +1,19 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.buttons;
 
 using zx;
 
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol Buttons {
     /// Gets a channel for FIDL protocol.
     /// |chan| : Channel for FIDL protocol.
     /// @Returns: |status| : ZX_OK if succeeds.
-    GetChannel(zx.handle:CHANNEL chan) -> (zx.status status);
+    GetChannel(resource struct {
+        chan zx.handle:CHANNEL;
+    }) -> (struct {
+        status zx.status;
+    });
 };

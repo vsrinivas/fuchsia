@@ -1,14 +1,13 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
 library fuchsia.gpu.magma;
 
 using fuchsia.url;
 using zx;
 using fuchsia.memorypressure;
 
-enum QueryId {
+type QueryId = strict enum {
     VENDOR_ID = 0;
     DEVICE_ID = 1;
     IS_TEST_RESTART_SUPPORTED = 2;
@@ -20,7 +19,7 @@ enum QueryId {
     VENDOR_QUERY_0 = 10000;
 };
 
-enum Status {
+type Status = strict enum {
     INTERNAL_ERROR = 1;
     INVALID_ARGS = 2;
     ACCESS_DENIED = 3;
@@ -33,12 +32,12 @@ enum Status {
     BAD_STATE = 9;
 };
 
-enum ObjectType {
+type ObjectType = strict enum {
     SEMAPHORE = 10;
     BUFFER = 11;
 };
 
-enum BufferOp {
+type BufferOp = strict enum {
     /// Eagerly populate GPU page tables with the pages mapping in this range, committing pages as
     /// needed. This is not needed for MAGMA_GPU_MAP_FLAG_GROWABLE allocations, since the page
     /// tables will be populated on demand.
@@ -48,49 +47,68 @@ enum BufferOp {
     DEPOPULATE_TABLES = 2;
 };
 
-const uint64 MAX_ICD_COUNT = 8;
+const MAX_ICD_COUNT uint64 = 8;
 
-flexible bits IcdFlags : uint32 {
+type IcdFlags = flexible bits : uint32 {
     SUPPORTS_VULKAN = 1;
 };
 
 /// Information about an ICD implementation that can be used with a magma device.
-table IcdInfo {
+type IcdInfo = table {
     /// URL of the component implementation that provides the ICD.
-    1: fuchsia.url.Url component_url;
+    1: component_url fuchsia.url.Url;
 
     /// Flags describing the basic capabilities of the ICD, including what APIs it supports.
-    2: IcdFlags flags;
+    2: flags IcdFlags;
 };
 
 protocol Device {
     /// Returns a parameter, or an error.
-    Query2(uint64 query_id) -> (uint64 result) error Status;
+    Query2(struct {
+        query_id uint64;
+    }) -> (struct {
+        result uint64;
+    }) error Status;
 
     /// Returns a buffer, or an error.
-    QueryReturnsBuffer(uint64 query_id) -> (zx.handle:VMO buffer) error Status;
+    QueryReturnsBuffer(struct {
+        query_id uint64;
+    }) -> (resource struct {
+        buffer zx.handle:VMO;
+    }) error Status;
 
     /// Get the magma ipc channels.
-    Connect(uint64 client_id) -> (zx.handle:CHANNEL primary_channel, zx.handle:CHANNEL notification_channel);
+    Connect(struct {
+        client_id uint64;
+    }) -> (resource struct {
+        primary_channel zx.handle:CHANNEL;
+        notification_channel zx.handle:CHANNEL;
+    });
 
     /// Dumps driver and hardware state.
-    DumpState(uint32 dump_type);
+    DumpState(struct {
+        dump_type uint32;
+    });
 
     /// Gets a list of ICDs that can be used with this magma device. The list is sorted in descending
     /// order of preference.
-    GetIcdList() -> (vector<IcdInfo>:MAX_ICD_COUNT icd_list);
+    GetIcdList() -> (struct {
+        icd_list vector<IcdInfo>:MAX_ICD_COUNT;
+    });
 
     /// For testing only.
     TestRestart();
 
     /// For testing only - on non-test drivers this will close the channel.
-    GetUnitTestStatus() -> (zx.status status);
+    GetUnitTestStatus() -> (struct {
+        status zx.status;
+    });
 };
 
 /// The batch size used to send multiple immediate commands in a single message.
-const uint32 MAX_IMMEDIATE_COMMANDS_DATA_SIZE = 2048;
+const MAX_IMMEDIATE_COMMANDS_DATA_SIZE uint32 = 2048;
 
-flexible bits MapFlags : uint64 {
+type MapFlags = flexible bits : uint64 {
     READ = 0x1;
     WRITE = 0x2;
     EXECUTE = 0x4;
@@ -99,32 +117,32 @@ flexible bits MapFlags : uint64 {
     VENDOR_FLAG_0 = 0x10000;
 };
 
-struct Resource {
-    zx.koid buffer;
-    uint64 offset;
-    uint64 length;
+type Resource = struct {
+    buffer zx.koid;
+    offset uint64;
+    length uint64;
 };
 
 /// Deprecated
-struct CommandBuffer {
+type CommandBuffer = struct {
     /// Index of the resource containing instructions to start the command buffer.
-    uint32 batch_buffer_resource_index;
+    batch_buffer_resource_index uint32;
     /// Starting offset within the resource.
-    uint64 batch_start_offset;
+    batch_start_offset uint64;
 };
 
-flexible bits CommandBufferFlags : uint64 {
+type CommandBufferFlags = flexible bits : uint64 {
     /// Vendor specific definitions start here
     VENDOR_FLAG_0 = 0x10000;
 };
 
-struct CommandBuffer2 {
+type CommandBuffer2 = struct {
     /// Index of the resource containing instructions to start the command buffer.
-    uint32 batch_buffer_resource_index;
+    batch_buffer_resource_index uint32;
     /// Starting offset within the resource.
-    uint64 batch_start_offset;
+    batch_start_offset uint64;
     /// Flags.
-    CommandBufferFlags flags;
+    flags CommandBufferFlags;
 };
 
 /// Performance counter pools contain byte ranges of buffers. Whenever a performance counter dump is
@@ -133,54 +151,68 @@ struct CommandBuffer2 {
 /// are arbitrary uint64 values that are allocated by the client.
 alias PerfCountPoolId = uint64;
 
-bits ResultFlags {
+type ResultFlags = strict bits {
     /// This bit is set in result_flags if the performance counters missed some samples, e.g. due to
     /// the GPU being in protected mode for part of the time.
     DISCONTINUITY = 1;
 };
 
-struct BufferOffset {
-    zx.koid buffer_id;
-    uint64 offset;
-    uint64 size;
+type BufferOffset = struct {
+    buffer_id zx.koid;
+    offset uint64;
+    size uint64;
 };
 
 /// If a system driver error occurs, the connection will be closed and a Status sent via epitaph.
 /// If negative, the Epitaph represents a Zircon error.
 protocol Primary {
     /// Imports an object for use in the system driver.
-    ImportObject(zx.handle object, ObjectType object_type);
+    ImportObject(resource struct {
+        object zx.handle;
+        object_type ObjectType;
+    });
 
     /// Destroys the object with `object_id` within this connection.
-    ReleaseObject(zx.koid object_id, ObjectType object_type);
+    ReleaseObject(struct {
+        object_id zx.koid;
+        object_type ObjectType;
+    });
 
     /// Creates context `context_id`.
-    CreateContext(uint32 context_id);
+    CreateContext(struct {
+        context_id uint32;
+    });
 
     /// Destroys context `context_id`.
-    DestroyContext(uint32 context_id);
+    DestroyContext(struct {
+        context_id uint32;
+    });
 
     /// Deprecated:
     /// Submits a command buffer for execution on the GPU, with associated resources.
-    ExecuteCommandBufferWithResources(
-        uint32 context_id,
-        CommandBuffer command_buffer,
-        vector<Resource>:MAX resources,
-        vector<zx.koid>:MAX wait_semaphores,
-        vector<zx.koid>:MAX signal_semaphores);
+    ExecuteCommandBufferWithResources(struct {
+        context_id uint32;
+        command_buffer CommandBuffer;
+        resources vector<Resource>:MAX;
+        wait_semaphores vector<zx.koid>:MAX;
+        signal_semaphores vector<zx.koid>:MAX;
+    });
 
     /// Submits a command buffer for execution on the GPU, with associated resources.
-    ExecuteCommandBufferWithResources2(
-        uint32 context_id,
-        CommandBuffer2 command_buffer,
-        vector<Resource>:MAX resources,
-        vector<zx.koid>:MAX wait_semaphores,
-        vector<zx.koid>:MAX signal_semaphores);
+    ExecuteCommandBufferWithResources2(struct {
+        context_id uint32;
+        command_buffer CommandBuffer2;
+        resources vector<Resource>:MAX;
+        wait_semaphores vector<zx.koid>:MAX;
+        signal_semaphores vector<zx.koid>:MAX;
+    });
 
     /// Submits a series of commands for execution on the GPU without using a command buffer.
-    ExecuteImmediateCommands(uint32 context_id,
-                             bytes:MAX_IMMEDIATE_COMMANDS_DATA_SIZE command_data,
-                             vector<zx.koid>:MAX semaphores);
+    ExecuteImmediateCommands(struct {
+        context_id uint32;
+        command_data bytes:MAX_IMMEDIATE_COMMANDS_DATA_SIZE;
+        semaphores vector<zx.koid>:MAX;
+    });
 
     /// Incurs a round-trip to the system driver, used to ensure all previous messages are seen.
     Sync() -> ();
@@ -188,29 +220,50 @@ protocol Primary {
     /// Maps `page_count` pages of `buffer` from `page_offset` onto the GPU in the connection's
     /// address space at `gpu_va`.  `flags` is a set of flags from `MAGMA_GPU_MAP_FLAGS` that
     /// specify how the GPU can access the buffer.
-    MapBufferGpu(zx.koid buffer_id, uint64 gpu_va, uint64 page_offset,
-                 uint64 page_count, MapFlags flags);
+    MapBufferGpu(struct {
+        buffer_id zx.koid;
+        gpu_va uint64;
+        page_offset uint64;
+        page_count uint64;
+        flags MapFlags;
+    });
 
     /// Releases the mapping at `gpu_va` from the GPU.
     /// Buffers will also be implicitly unmapped when released.
-    UnmapBufferGpu(zx.koid buffer_id, uint64 gpu_va);
+    UnmapBufferGpu(struct {
+        buffer_id zx.koid;
+        gpu_va uint64;
+    });
 
     /// DEPRECATED and replaced by BufferOp.POPULATE_TABLES. Ensures that `page_count` pages
     /// starting at `page_offset` from the beginning of the buffer are backed by physical memory.
-    [Deprecated]
-    CommitBuffer(zx.koid buffer_id, uint64 page_offset, uint64 page_count);
+    @deprecated
+    CommitBuffer(struct {
+        buffer_id zx.koid;
+        page_offset uint64;
+        page_count uint64;
+    });
 
     /// Perform an operation on a range of the buffer, starting at `start_bytes` and `length` bytes
     /// long.
-    BufferRangeOp(zx.koid buffer_id, BufferOp op, uint64 start_bytes, uint64 length);
+    BufferRangeOp(struct {
+        buffer_id zx.koid;
+        op BufferOp;
+        start_bytes uint64;
+        length uint64;
+    });
 
     /// Tries to enable performance counter FIDL messages. To be successful, |access_token| must
     /// have been returned by PerformanceCounterAccess.GetPerformanceCountToken() from the matching
     /// device.
-    AccessPerformanceCounters(zx.handle:EVENT access_token);
+    AccessPerformanceCounters(resource struct {
+        access_token zx.handle:EVENT;
+    });
 
     /// Returns true if any AccessPerformanceCounters message has succeeded.
-    IsPerformanceCounterAccessEnabled() -> (bool enabled);
+    IsPerformanceCounterAccessEnabled() -> (struct {
+        enabled bool;
+    });
 
     /// Enables the events OnNotifyMessagesConsumed and OnNotifyMemoryImported.
     EnableFlowControl();
@@ -220,7 +273,9 @@ protocol Primary {
     /// (messages sent - server consumed) <= Max (see QueryId::MAXIMUM_INFLIGHT_PARAMS).
     /// Messages are actually consumed by the server as quickly as possible, however this event
     /// is sent by the server only when the consumed count reaches half the maximum.
-    -> OnNotifyMessagesConsumed(uint64 count);
+    -> OnNotifyMessagesConsumed(struct {
+        count uint64;
+    });
 
     /// Indicates the given number of buffer memory bytes were imported by the server.
     /// The caller should limit the amount of memory from inflight ImportBuffer messages:
@@ -231,23 +286,31 @@ protocol Primary {
     /// is sent only when the consumed byte count reaches half the maximum; therefore,
     /// if the client's count of inflight bytes is less than max/2, the client should send the
     /// ImportBuffer message regardless of its size.
-    -> OnNotifyMemoryImported(uint64 bytes);
+    -> OnNotifyMemoryImported(struct {
+        bytes uint64;
+    });
 
     /// Enables a set of performance counters (the precise definition depends on the GPU driver).
     /// Disables enabled performance counters that are not in the new set. Performance counters will
     /// also be automatically disabled on connection close. Performance counter access must have
     /// been enabled using AccessPerformanceCounters before calling this method.
-    EnablePerformanceCounters(vector<uint64>:64 counters);
+    EnablePerformanceCounters(struct {
+        counters vector<uint64>:64;
+    });
 
     /// Creates a pool of buffers that performance counters can be dumped into. |pool| can be an
     /// arbitrary integer that's currently not in use. Performance counter access must have been
     /// enabled using AccessPerformanceCounters before calling this method.
-    CreatePerformanceCounterBufferPool(
-        PerfCountPoolId pool, request<PerformanceCounterEvents> event_channel);
+    CreatePerformanceCounterBufferPool(resource struct {
+        pool PerfCountPoolId;
+        event_channel server_end:PerformanceCounterEvents;
+    });
 
     /// Releases a pool of performance counter buffers. Performance counter access must have been
     /// enabled using AccessPerformanceCounters before calling this method.
-    ReleasePerformanceCounterBufferPool(PerfCountPoolId pool);
+    ReleasePerformanceCounterBufferPool(struct {
+        pool PerfCountPoolId;
+    });
 
     /// Adds set of a offsets into buffers to the pool. |offsets[n].buffer_id| is the koid of a
     /// buffer that was previously imported using ImportBuffer(). The same buffer may be added to
@@ -257,39 +320,56 @@ protocol Primary {
     /// |offsets[n].buffer_size|. |offsets[n].buffer_size| must be large enough to fit all enabled
     /// counters. Performance counter access must have been enabled using AccessPerformanceCounters
     /// before calling this method.
-    AddPerformanceCounterBufferOffsetsToPool(
-        PerfCountPoolId pool, vector<BufferOffset>:64 offsets);
+    AddPerformanceCounterBufferOffsetsToPool(struct {
+        pool PerfCountPoolId;
+        offsets vector<BufferOffset>:64;
+    });
 
     /// Removes every offset of a buffer from the pool. Once this is method is finished being
     /// handled on the server, no more dumps will be processed into this buffer. In-flight dumps
     /// into this buffer may be lost.  Performance counter access must have been enabled using
     /// AccessPerformanceCounters before calling this method.
-    RemovePerformanceCounterBufferFromPool(PerfCountPoolId pool, zx.koid buffer_id);
+    RemovePerformanceCounterBufferFromPool(struct {
+        pool PerfCountPoolId;
+        buffer_id zx.koid;
+    });
 
     /// Triggers dumping of the performance counters into a buffer pool. May fail silently if there
     /// are no buffers in the pool. |trigger_id| is an arbitrary ID assigned by the client that can
     /// be returned in OnPerformanceCounterReadCompleted. Performance counter access must have been
     /// enabled using AccessPerformanceCounters before calling this method.
-    DumpPerformanceCounters(PerfCountPoolId pool, uint32 trigger_id);
+    DumpPerformanceCounters(struct {
+        pool PerfCountPoolId;
+        trigger_id uint32;
+    });
 
     /// Sets the values of all listed performance counters to 0. May not be supported by some
     /// hardware. Performance counter access must have been enabled using AccessPerformanceCounters
     /// before calling this method.
-    ClearPerformanceCounters(vector<uint64>:64 counters);
+    ClearPerformanceCounters(struct {
+        counters vector<uint64>:64;
+    });
 };
 
 /// This protocol is implemented by ZX_PROTOCOL_GPU_PERFORMANCE_COUNTERS devices.
 protocol PerformanceCounterAccess {
     /// This access token is not used as an event, but is instead passed to
     /// Primary.EnablePerformanceCounterAccess.
-    GetPerformanceCountToken() -> (zx.handle:EVENT access_token);
+    GetPerformanceCountToken() -> (resource struct {
+        access_token zx.handle:EVENT;
+    });
 };
 
 protocol PerformanceCounterEvents {
     /// Signals that a performance counter buffer has data. These will be output in the order of
     /// when the reads are completed.
-    -> OnPerformanceCounterReadCompleted(uint32 trigger_id, zx.koid buffer_id, uint32 buffer_offset,
-                                         zx.time timestamp, ResultFlags flags);
+    -> OnPerformanceCounterReadCompleted(struct {
+        trigger_id uint32;
+        buffer_id zx.koid;
+        buffer_offset uint32;
+        timestamp zx.time;
+        flags ResultFlags;
+    });
 };
 
 /// This protocol is implemented by ZX_PROTOCOL_GPU_DEPENDENCY_INJECTION devices. It's used
@@ -297,5 +377,7 @@ protocol PerformanceCounterEvents {
 /// only by a privileged process.
 protocol DependencyInjection {
     /// Provides a `fuchsia.memorypressure.Provider` implementation to the MSD.
-    SetMemoryPressureProvider(fuchsia.memorypressure.Provider provider);
+    SetMemoryPressureProvider(resource struct {
+        provider client_end:fuchsia.memorypressure.Provider;
+    });
 };

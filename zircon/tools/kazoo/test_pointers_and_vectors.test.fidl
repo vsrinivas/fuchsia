@@ -1,13 +1,20 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library zx;
 
-[Transport="Syscall"]
+@transport("Syscall")
 protocol TypeMappings {
-    Func0(vector<byte> bytes, string str) -> (status status);
-    Func1(vector<handle> ins) -> (status status);
+    Func0(struct {
+        bytes vector<byte>;
+        str string;
+    }) -> (struct {
+        status status;
+    });
+    Func1(resource struct {
+        ins vector<handle>;
+    }) -> (struct {
+        status status;
+    });
     Func2();
 };

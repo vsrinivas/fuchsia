@@ -1,84 +1,89 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.nand;
 
 using zx;
 
-const uint32 MAX_PARTITIONS = 10;
-const uint32 NAME_LEN = 32;
+const MAX_PARTITIONS uint32 = 10;
+const NAME_LEN uint32 = 32;
 
-[ForDeprecatedCBindings]
-struct Partition {
+@for_deprecated_c_bindings
+type Partition = struct {
     /// GUID specifying the format and use of data stored in the partition.
-    array<uint8>:GUID_LEN type_guid;
+    type_guid array<uint8, GUID_LEN>;
 
     /// GUID unique to this partition.
-    array<uint8>:GUID_LEN unique_guid;
+    unique_guid array<uint8, GUID_LEN>;
 
     /// First and last block occupied by this partition.
-    uint32 first_block;
-    uint32 last_block;
+    first_block uint32;
+    last_block uint32;
 
     /// The number of data copies and offset between each data copy (if relevant).
-    uint32 copy_count;
-    uint32 copy_byte_offset;
+    copy_count uint32;
+    copy_byte_offset uint32;
 
     // A string would break the current requirement for a simple C binding.
-    array<uint8>:NAME_LEN name;
+    name array<uint8, NAME_LEN>;
 
     /// Not a user-visible partition.
-    bool hidden;
+    hidden bool;
 
     /// Contains a legacy bad block table.
-    bool bbt;
+    bbt bool;
 };
 
-[ForDeprecatedCBindings]
-struct PartitionMap {
-    array<uint8>:GUID_LEN device_guid;
+@for_deprecated_c_bindings
+type PartitionMap = struct {
+    device_guid array<uint8, GUID_LEN>;
 
     /// Number of partitions in the map.
-    uint32 partition_count;
-    array<Partition>:MAX_PARTITIONS partitions;
+    partition_count uint32;
+    partitions array<Partition, MAX_PARTITIONS>;
 };
 
 /// Defines how a newly created ram-nand volume should operate.
-[ForDeprecatedCBindings]
-resource struct RamNandInfo {
+@for_deprecated_c_bindings
+type RamNandInfo = resource struct {
     /// VMO to use as backing store for nand device. Size should match size of `nand_info`.
     /// If a vmo is not provided, the device will create its own buffer and initialize it to be
     /// empty (all 1s).
-    zx.handle:VMO? vmo;
+    vmo zx.handle:<VMO, optional>;
 
     /// The desired "chip" configuration.
-    Info nand_info;
+    nand_info Info;
 
     /// Partition map for the device. This can be left fully empty (as in default-initialized),
     /// as long as no metadata has to be exported by the device. If any metadata is required,
     /// it will be extracted from this map.
-    PartitionMap partition_map;
+    partition_map PartitionMap;
 
     /// If true, export "extra" partition configuration as metadata.
-    bool export_nand_config;
+    export_nand_config bool;
     /// if true, export a boot partition map as metadata.
-    bool export_partition_map;
+    export_partition_map bool;
 
     /// If non-zero, fail after `fail_after` writes.
-    uint32 fail_after;
+    fail_after uint32;
 };
 
-[ForDeprecatedCBindings]
+@for_deprecated_c_bindings
 protocol RamNandCtl {
     /// Creates a new ram-nand device. On success, returns the device's name (not the full
     /// topological name, just the last component).
-    CreateDevice(RamNandInfo info) -> (zx.status status, string:NAME_LEN name);
+    CreateDevice(resource struct {
+        info RamNandInfo;
+    }) -> (struct {
+        status zx.status;
+        name string:NAME_LEN;
+    });
 };
 
-[ForDeprecatedCBindings]
+@for_deprecated_c_bindings
 protocol RamNand {
     /// Removes the device.
-    Unlink() -> (zx.status status);
+    Unlink() -> (struct {
+        status zx.status;
+    });
 };

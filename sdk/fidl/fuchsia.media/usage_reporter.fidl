@@ -1,31 +1,26 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 //TODO(fxbug.dev/36191): Move to fuchsia.media.audio
 
 library fuchsia.media;
 
 /// A state of audio usages in which no policy actions are taken on any streams with the usage.
-table UsageStateUnadjusted {
-};
+type UsageStateUnadjusted = table {};
 
 /// A state of audio usages in which a policy decision has been made to temporarily
 /// lower the volume of all streams with this usage.
-table UsageStateDucked {
-};
+type UsageStateDucked = table {};
 
 /// A state of audio usages in which a policy decision has been made to temporarily
 /// mute the volume of all streams with this usage.
-table UsageStateMuted {
-};
+type UsageStateMuted = table {};
 
 /// The state of audio policy enforcement on a stream or set of streams.
-flexible union UsageState {
-    1: UsageStateUnadjusted unadjusted;
-    2: UsageStateDucked ducked;
-    3: UsageStateMuted muted;
+type UsageState = flexible union {
+    1: unadjusted UsageStateUnadjusted;
+    2: ducked UsageStateDucked;
+    3: muted UsageStateMuted;
 };
 
 /// A protocol for listening to changes to the policy state of an audio usage.
@@ -39,19 +34,23 @@ protocol UsageWatcher {
     ///
     /// Clients must respond to acknowledge the event. Clients that do not acknowledge their
     /// events will eventually be disconnected.
-    OnStateChanged(Usage usage, UsageState state) -> ();
+    OnStateChanged(struct {
+        usage Usage;
+        state UsageState;
+    }) -> ();
 };
 
 /// A protocol for setting up watchers of audio usages.
-[Discoverable]
+@discoverable
 protocol UsageReporter {
-    Watch(
-        Usage usage,
-        UsageWatcher usage_watcher);
+    Watch(resource struct {
+        usage Usage;
+        usage_watcher client_end:UsageWatcher;
+    });
 };
 
 /// A protocol for setting up watchers of usage gain.
-[Discoverable]
+@discoverable
 protocol UsageGainReporter {
     // TODO(fxbug.dev/71946): Only report volume-to-gain translation, without
     // including muting/ducking gain adjustments. Determine whether separate
@@ -69,10 +68,11 @@ protocol UsageGainReporter {
     /// `AudioDeviceEnumerator` provides programmatic access to devices
     /// and their unique ids if it is necessary for a client to select
     /// an id at runtime.
-    RegisterListener(
-        string:36 device_unique_id,
-        Usage usage,
-        UsageGainListener usage_gain_listener);
+    RegisterListener(resource struct {
+        device_unique_id string:36;
+        usage Usage;
+        usage_gain_listener client_end:UsageGainListener;
+    });
 };
 
 /// A protocol for watching changes to usage gain settings.
@@ -87,5 +87,8 @@ protocol UsageGainListener {
     ///
     /// Note: This API does not have mute reporting implemented; `muted` is always false.
     // TODO(fxbug.dev/54949): Update implementation to report on mute state.
-    OnGainMuteChanged(bool muted, float32 gain_dbfs) -> ();
+    OnGainMuteChanged(struct {
+        muted bool;
+        gain_dbfs float32;
+    }) -> ();
 };

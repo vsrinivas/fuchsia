@@ -1,41 +1,47 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.security.codelabsmartdoor;
 
-const uint8 MAX_NAME_SIZE = 8;
-const uint8 MAX_PASSPHRASE_SIZE = 32;
+const MAX_NAME_SIZE uint8 = 8;
+const MAX_PASSPHRASE_SIZE uint8 = 32;
 
-enum Error {
+type Error = strict enum {
     INTERNAL = 1;
     USER_EXISTS = 2;
     INVALID_INPUT = 3;
     WRONG_PASSPHRASE = 4;
 };
 
-enum UserGroup {
+type UserGroup = strict enum {
     REGULAR = 1;
     ADMIN = 2;
 };
 
-[Discoverable]
+@discoverable
 protocol Access {
     // Add a home member with the given name and set the passphrase for the
     // member. The new member would be in the regular user group.
-    AddHomeMember(string:MAX_NAME_SIZE name,
-                  bytes:MAX_PASSPHRASE_SIZE passphrase) -> () error Error;
+    AddHomeMember(struct {
+        name string:MAX_NAME_SIZE;
+        passphrase bytes:MAX_PASSPHRASE_SIZE;
+    }) -> (struct {}) error Error;
     // Open the door with the given name and the given passphrase.
-    Open(string:MAX_NAME_SIZE name, bytes:MAX_PASSPHRASE_SIZE passphrase)
-        -> (UserGroup group) error Error;
+    Open(struct {
+        name string:MAX_NAME_SIZE;
+        passphrase bytes:MAX_PASSPHRASE_SIZE;
+    }) -> (struct {
+        group UserGroup;
+    }) error Error;
     // Close the door, which does nothing haha :).
     Close();
     // Enable debug information.
-    SetDebugFlag(bool enable) -> ();
+    SetDebugFlag(struct {
+        enable bool;
+    }) -> ();
 };
 
-[Discoverable]
+@discoverable
 protocol AccessReset {
     // Reset the smart door to its initial state.
     Reset() -> ();

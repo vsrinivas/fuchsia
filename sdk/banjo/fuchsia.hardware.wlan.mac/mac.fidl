@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.wlan.mac;
 
 using ddk.hw.wlan.wlaninfo;
@@ -10,68 +8,68 @@ using fuchsia.hardware.ethernet;
 using fuchsia.hardware.wlan.info;
 using zx;
 
-struct WlanmacInfo {
+type WlanmacInfo = struct {
     /// MAC address.
-    array<uint8>:6 mac_addr;
+    mac_addr array<uint8, 6>;
 
     /// MAC role
-    ddk.hw.wlan.wlaninfo.WlanInfoMacRole mac_role;
+    mac_role ddk.hw.wlan.wlaninfo.WlanInfoMacRole;
 
     /// Bitmask indicating WlanInfoPhyType values supported by the hardware.
-    ddk.hw.wlan.wlaninfo.WlanInfoPhyType supported_phys;
+    supported_phys ddk.hw.wlan.wlaninfo.WlanInfoPhyType;
 
     /// Bitmask indicating enabled WlanInfoDriverFeature values.
-    ddk.hw.wlan.wlaninfo.WlanInfoDriverFeature driver_features;
+    driver_features ddk.hw.wlan.wlaninfo.WlanInfoDriverFeature;
 
     /// Bitmask indicating enabled WlanInfoHardwareCapability values.
-    ddk.hw.wlan.wlaninfo.WlanInfoHardwareCapability caps;
+    caps ddk.hw.wlan.wlaninfo.WlanInfoHardwareCapability;
 
     /// Supported bands.
-    array<ddk.hw.wlan.wlaninfo.WlanInfoBandInfo>:ddk.hw.wlan.wlaninfo.WLAN_INFO_MAX_BANDS bands;
-    uint32 bands_count;
+    bands array<ddk.hw.wlan.wlaninfo.WlanInfoBandInfo, ddk.hw.wlan.wlaninfo.WLAN_INFO_MAX_BANDS>;
+    bands_count uint32;
 };
 
-enum WlanRxInfoFlags : uint32 {
+type WlanRxInfoFlags = strict enum : uint32 {
     /// The FCS for the received frame was invalid.
     FCS_INVALID = 0x1;
     /// Padding was added after the MAC header to align the frame body to 4 bytes.
     FRAME_BODY_PADDING_4 = 0x2;
-    // Bits 2-31 reserved
+// Bits 2-31 reserved
 };
 
-const int8 WLAN_RSSI_DBM_MIN = -97;
-const int8 WLAN_RSSI_DBM_MAX = -10;
-const int8 WLAN_RSSI_DBM_INVALID = 0;
+const WLAN_RSSI_DBM_MIN int8 = -97;
+const WLAN_RSSI_DBM_MAX int8 = -10;
+const WLAN_RSSI_DBM_INVALID int8 = 0;
 
-const int16 WLAN_SNR_DBH_MIN = 1;
-const int16 WLAN_SNR_DBH_MAX = 120; // 60 * 2
-const int16 WLAN_SNR_DBH_INVALID = 0;
+const WLAN_SNR_DBH_MIN int16 = 1;
+const WLAN_SNR_DBH_MAX int16 = 120; // 60 * 2
+const WLAN_SNR_DBH_INVALID int16 = 0;
 
-struct WlanRxInfo {
+type WlanRxInfo = struct {
     /// Receive flags. These represent boolean flags as opposed to enums or value-based info which
     /// are represented below. Values should be taken from the WLAN_RX_INFO_FLAGS_* enum.
-    uint32 rx_flags;
+    rx_flags uint32;
 
     /// Bitmask indicating which of the following fields are valid in this struct. Reserved flags
     /// must be zero.
-    uint32 valid_fields;
+    valid_fields uint32;
     /// The PHY format of the device at the time of the operation.
-    uint16 phy;
+    phy uint16;
     /// The data rate of the device, measured in units of 0.5 Mb/s.
-    uint32 data_rate;
+    data_rate uint32;
     /// The channel of the device at the time of the operation. This field must be included.
-    fuchsia.hardware.wlan.info.WlanChannel chan;
+    chan fuchsia.hardware.wlan.info.WlanChannel;
     /// The modulation and coding scheme index of the device at the time of the operation. Depends
     /// on the PHY format and channel width.
-    uint8 mcs;
+    mcs uint8;
 
     /// Received Signal Strength Indicator.
-    int8 rssi_dbm;
+    rssi_dbm int8;
     /// Signal-to-Noise Ratio, in 0.5 dB.
-    int16 snr_dbh;
+    snr_dbh int16;
 };
 
-enum WlanTxInfoFlags : uint8 {
+type WlanTxInfoFlags = strict enum : uint8 {
     PROTECTED = 0x1;
     /// For rate control: indicate an important data frame, such as EAPOL, which should be sent
     /// _reliably_ rather than fast, and is exempt from rate probing
@@ -81,159 +79,168 @@ enum WlanTxInfoFlags : uint8 {
     QOS = 0x4;
 };
 
-enum WlanTxInfoValid : uint8 {
+type WlanTxInfoValid = strict enum : uint8 {
     DATA_RATE = 0x1;
     TX_VECTOR_IDX = 0x2;
     PHY = 0x4;
     //CHAN_WIDTH = 0x4;
     MCS = 0x8;
-    // Bits 5-31 reserved
+// Bits 5-31 reserved
 };
 
-const uint8 WLAN_TX_INFO_VALID_CHAN_WIDTH = 0x4;
+const WLAN_TX_INFO_VALID_CHAN_WIDTH uint8 = 0x4;
 
-struct WlanTxInfo {
+type WlanTxInfo = struct {
     /// Transmit flags. These represent boolean options as opposed to enums or other value-based
     /// info which are represented below. Values should be taken from the WLAN_TX_INFO_FLAGS_* enum.
-    uint32 tx_flags;
+    tx_flags uint32;
 
     /// Bitmask indicating which of the following fields are valid in this struct. Reserved flags
     /// must be zero. Values for fields not indicated by a flag may be chosen at the discretion of
     /// the wlanmac driver.
-    uint32 valid_fields;
+    valid_fields uint32;
     // Will be sent back in wlan_tx_status_t if Minstrel is enabled for the device, indicated by
     // WLAN_TX_INFO_VALID_TX_VECTOR_IDX.
-    uint16 tx_vector_idx;
+    tx_vector_idx uint16;
     // The PHY format to be used to transmit this packet.
-    uint16 phy;
+    phy uint16;
     // The channel width to be used to transmit this packet.
-    fuchsia.hardware.wlan.info.WlanChannelBandwidth cbw;
+    cbw fuchsia.hardware.wlan.info.WlanChannelBandwidth;
     /// The modulation and coding scheme index for this packet. Depends on the PHY format and
     /// channel width.
-    uint8 mcs;
+    mcs uint8;
 };
 
-const uint16 WLAN_TX_VECTOR_IDX_INVALID = 0;
-const uint32 WLAN_TX_STATUS_MAX_ENTRY = 8;
+const WLAN_TX_VECTOR_IDX_INVALID uint16 = 0;
+const WLAN_TX_STATUS_MAX_ENTRY uint32 = 8;
 
-struct WlanTxStatusEntry {
-    uint16 tx_vector_idx;
+type WlanTxStatusEntry = struct {
+    tx_vector_idx uint16;
     /// Number of total attempts with this specific tx vector, including successful attempts.
     /// DDK assumes the number of attempts per packet will not exceed 255. (usually <= 8)
-    uint8 attempts;
+    attempts uint8;
 };
 
-struct WlanTxStatus {
+type WlanTxStatus = struct {
     /// up to 8 different tx_vector for one PPDU frame.
     /// WLAN_TX_VECTOR_IDX_INVALID indicates no more entries.
-    array<WlanTxStatusEntry>:WLAN_TX_STATUS_MAX_ENTRY tx_status_entry;
+    tx_status_entry array<WlanTxStatusEntry, WLAN_TX_STATUS_MAX_ENTRY>;
     /// Destination mac address, or addr1 in packet header.
-    array<uint8>:6 peer_addr;
+    peer_addr array<uint8, 6>;
     /// Outcome of packet transmission. True iff ACK was received from peer.
-    bool success;
+    success bool;
 };
 
-enum WlanProtection : uint8 {
+type WlanProtection = strict enum : uint8 {
     NONE = 0;
     RX = 1;
     TX = 2;
     RX_TX = 3;
 };
 
-struct WlanKeyConfig {
+type WlanKeyConfig = struct {
     /// The BSSID for which this key is relevant.
-    uint8 bssid;
+    bssid uint8;
     /// Which path to protect: None, TX, RX, or TX and RX.
-    WlanProtection protection;
+    protection WlanProtection;
     /// IEEE Cipher suite selector.
     /// See IEEE Std 802.11-2016, 9.4.2.25.2, Table 9-131
-    array<uint8>:3 cipher_oui;
-    uint8 cipher_type;
+    cipher_oui array<uint8, 3>;
+    cipher_type uint8;
     /// Whether this key is a pairwise, group or peer key.
-    fuchsia.hardware.wlan.info.WlanKeyType key_type;
+    key_type fuchsia.hardware.wlan.info.WlanKeyType;
     /// The peer MAC address for pairwise and peer keys.
     /// For group keys this value is always the broadcast address.
-    array<uint8>:6 peer_addr;
+    peer_addr array<uint8, 6>;
     /// Index for rotating keys, e.g. group keys.
     /// This value is always 0 for key types which aren't rotating, e.g. pairwise keys.
-    uint8 key_idx;
+    key_idx uint8;
     // Length of the supplied key.
-    uint8 key_len;
+    key_len uint8;
     // They key's actual bytes.
-    array<uint8>:32 key;
+    key array<uint8, 32>;
     /// Receive Sequence Counter for group keys only.
     /// In all other cases the RSC will be 0.
-    uint64 rsc;
+    rsc uint64;
 };
 
-struct WlanTxPacket {
+type WlanTxPacket = struct {
     /// Leading bytes of the packet to transmit. Any 802.11 frame headers must be in the packet_head.
-    fuchsia.hardware.ethernet.EthernetNetbuf packet_head;
+    packet_head fuchsia.hardware.ethernet.EthernetNetbuf;
     /// Trailing bytes of the packet to transmit. May be NULL if all bytes to be transmitted are in
     /// the packet_head. Typically used to transport ethernet frames from a higher layer.
-    [Mutable] vector<fuchsia.hardware.ethernet.EthernetNetbuf>:MAX packet_tail;
+    @mutable
+    packet_tail vector<fuchsia.hardware.ethernet.EthernetNetbuf>:MAX;
     /// If packet_tail is not NULL, the offset into the packet tail that should be used before
     /// transmitting. The ethernet_netbuf_t len field will reflect the original packet length without
     /// the offset.
-    uint16 tail_offset;
+    tail_offset uint16;
     /// Additional data needed to transmit the packet.
-    WlanTxInfo info;
+    info WlanTxInfo;
 };
 
-enum WlanIndication : uint8 {
+type WlanIndication = strict enum : uint8 {
     PRE_TBTT = 1;
     BCN_TX_COMPLETE = 2;
     HW_SCAN_COMPLETE = 3;
     HW_SCAN_ABORTED = 4;
 };
 
-enum WlanHwScanType : uint8 {
+type WlanHwScanType = strict enum : uint8 {
     ACTIVE = 1;
     PASSIVE = 2;
 };
 
-struct WlanHwScanConfig {
-    WlanHwScanType scan_type;
+type WlanHwScanConfig = struct {
+    scan_type WlanHwScanType;
     /// Number of channels in the |channels| array. Must be at least 1
-    uint8 num_channels;
+    num_channels uint8;
     /// Channel numbers to scan
-    array<uint8>:ddk.hw.wlan.wlaninfo.WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS channels;
+    channels array<uint8, ddk.hw.wlan.wlaninfo.WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS>;
     /// SSID for directed probe requests
-    fuchsia.hardware.wlan.info.WlanSsid ssid;
+    ssid fuchsia.hardware.wlan.info.WlanSsid;
 };
 
-enum WlanHwScan : uint8 {
+type WlanHwScan = strict enum : uint8 {
     SUCCESS = 0;
     ABORTED = 1;
 };
 
-struct WlanHwScanResult {
-    WlanHwScan code;
+type WlanHwScanResult = struct {
+    code WlanHwScan;
 };
 
 /// Includes the information about beacon template.
-struct WlanBcnConfig {
+type WlanBcnConfig = struct {
     /// Points to the beacon template. Since this is just the template, some packet content can
     /// contain only minimum valid info. They will be changed later by hardware/firmware or software.
     /// Note that the driver must copy the packet content into its own memory and cannot rely on
     /// the pointers in the struct.
-    WlanTxPacket tmpl;
+    tmpl WlanTxPacket;
 
     /// TIM offset (in bytes) to the start of |bcn_tmpl|. This points to the first byte of TIM IE,
     /// which is the tag ID.
-    uint64 tim_ele_offset;
+    tim_ele_offset uint64;
 
     /// in TU
-    uint16 beacon_interval;
+    beacon_interval uint16;
 };
 
-[Transport = "Banjo", BanjoLayout = "ddk-interface"]
+@transport("Banjo")
+@banjo_layout("ddk-interface")
 protocol WlanmacIfc {
     /// Report the status of the wlanmac device.
-    Status(uint32 status) -> ();
+    Status(struct {
+        status uint32;
+    }) -> ();
 
     /// Submit received data to the next driver. info must not be NULL.
-    Recv(uint32 flags, [Buffer] vector<uint8>:MAX data, WlanRxInfo info);
+    Recv(struct {
+        flags uint32;
+        @buffer
+        data vector<uint8>:MAX;
+        info WlanRxInfo;
+    });
 
     /// complete_tx() is called to return ownership of a packet to the wlan driver.
     /// Return status indicates queue state:
@@ -242,28 +249,49 @@ protocol WlanmacIfc {
     ///
     /// Upon a return of ZX_OK, the packet has been enqueued, but no information is returned as to
     /// the completion state of the transmission itself.
-    CompleteTx([InOut] WlanTxPacket packet, zx.status status) -> ();
+    CompleteTx(struct {
+        @in_out
+        packet WlanTxPacket;
+        status zx.status;
+    }) -> ();
 
     /// Reports an indication of a status, state or action to the wlan driver.
-    Indication(uint32 ind);
+    Indication(struct {
+        ind uint32;
+    });
 
     /// Reports the status of an attempted transmission.
     /// |tx_status|: contains status info of one transmitted packet to one peer at one specific rate.
-    ReportTxStatus(WlanTxStatus tx_status);
+    ReportTxStatus(struct {
+        tx_status WlanTxStatus;
+    });
 
     /// Reports completion of a hardware scan
-    HwScanComplete(WlanHwScanResult result);
+    HwScanComplete(struct {
+        result WlanHwScanResult;
+    });
 };
 
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol Wlanmac {
     /// Obtain information about the device and supported features
     /// Safe to call at any time.
-    Query(uint32 options) -> (zx.status status, WlanmacInfo info);
+    Query(struct {
+        options uint32;
+    }) -> (struct {
+        status zx.status;
+        info WlanmacInfo;
+    });
 
     /// Start wlanmac running with ifc_virt
     /// Callbacks on ifc may be invoked from now until stop() is called
-    Start(WlanmacIfc ifc) -> (zx.status status, zx.handle:CHANNEL sme_channel);
+    Start(resource struct {
+        ifc client_end:WlanmacIfc;
+    }) -> (resource struct {
+        status zx.status;
+        sme_channel zx.handle:CHANNEL;
+    });
 
     /// Shut down a running wlanmac
     /// Safe to call if the wlanmac is already stopped.
@@ -281,31 +309,72 @@ protocol Wlanmac {
     ///
     /// queue_tx() may be called at any time after start() is called including from multiple threads
     /// simultaneously.
-    QueueTx(uint32 options, [InOut] WlanTxPacket pkt) -> (zx.status status);
+    QueueTx(struct {
+        options uint32;
+        @in_out
+        pkt WlanTxPacket;
+    }) -> (struct {
+        status zx.status;
+    });
 
     // Set the radio channel
-    SetChannel(uint32 options, fuchsia.hardware.wlan.info.WlanChannel chan) -> (zx.status status);
+    SetChannel(struct {
+        options uint32;
+        chan fuchsia.hardware.wlan.info.WlanChannel;
+    }) -> (struct {
+        status zx.status;
+    });
 
     // Configures a BSS which the STA is either joining or managing.
-    ConfigureBss(uint32 options, fuchsia.hardware.wlan.info.WlanBssConfig config) -> (zx.status st);
+    ConfigureBss(struct {
+        options uint32;
+        config fuchsia.hardware.wlan.info.WlanBssConfig;
+    }) -> (struct {
+        st zx.status;
+    });
 
     // Enables or disables hardware Beaconing.
     // * |bcn_cfg|: Pass `nullptr` to disable hardware Beacons. Used by hardware beacon offload.
-    EnableBeaconing(uint32 options, WlanBcnConfig bcn_cfg) -> (zx.status st);
+    EnableBeaconing(struct {
+        options uint32;
+        bcn_cfg WlanBcnConfig;
+    }) -> (struct {
+        st zx.status;
+    });
 
     /// Configures a Beacon frame in hardware to announce the BSS' existence.
     /// * pkt: Pass `nullptr` to disable hardware Beacons. Used by software generated beacon.
     /// TODO(fxbug.dev/29298): Rename to update_beacon.
-    ConfigureBeacon(uint32 options, WlanTxPacket pkt) -> (zx.status st);
+    ConfigureBeacon(struct {
+        options uint32;
+        pkt WlanTxPacket;
+    }) -> (struct {
+        st zx.status;
+    });
 
     /// Specify a key for frame protection.
-    SetKey(uint32 options, WlanKeyConfig key_config) -> (zx.status st);
+    SetKey(struct {
+        options uint32;
+        key_config WlanKeyConfig;
+    }) -> (struct {
+        st zx.status;
+    });
 
     /// Notifies MAC and PHY parameters negotiated through a successful association
-    ConfigureAssoc(uint32 options, fuchsia.hardware.wlan.info.WlanAssocCtx assoc_ctx) -> (zx.status st);
+    ConfigureAssoc(struct {
+        options uint32;
+        assoc_ctx fuchsia.hardware.wlan.info.WlanAssocCtx;
+    }) -> (struct {
+        st zx.status;
+    });
 
     /// Notifies MAC and PHY that the peer has been de-associated.
-    ClearAssoc(uint32 options, vector<uint8>:MAX peer_addr) -> (zx.status st);
+    ClearAssoc(struct {
+        options uint32;
+        peer_addr vector<uint8>:MAX;
+    }) -> (struct {
+        st zx.status;
+    });
 
     /// Initiate a hardware scan
     ///
@@ -314,11 +383,17 @@ protocol Wlanmac {
     ///
     /// Unless an error is returned immediately, the driver will eventually
     /// call wlanmac_ifc->hw_scan_complete()
-    StartHwScan(WlanHwScanConfig scan_config) -> (zx.status st);
+    StartHwScan(struct {
+        scan_config WlanHwScanConfig;
+    }) -> (struct {
+        st zx.status;
+    });
 
     /// Notifies change of WMM parameters for specified AC
-    UpdateWmmParams(
-        fuchsia.hardware.wlan.info.WlanAc ac,
-        fuchsia.hardware.wlan.info.WlanWmmParams params
-        ) -> (zx.status st);
+    UpdateWmmParams(struct {
+        ac fuchsia.hardware.wlan.info.WlanAc;
+        params fuchsia.hardware.wlan.info.WlanWmmParams;
+    }) -> (struct {
+        st zx.status;
+    });
 };

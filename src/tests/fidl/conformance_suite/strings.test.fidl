@@ -1,14 +1,12 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library conformance;
 
-struct Length2StringWrapper {
-    string:2 length_2_string;
+type Length2StringWrapper = struct {
+    length_2_string string:2;
 };
 
-struct StringWrapper {
-    string str;
+type StringWrapper = struct {
+    str string;
 };

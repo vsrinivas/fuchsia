@@ -1,21 +1,21 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.device;
 
 using zx;
 
-const string DEFAULT_DEVICE_NAME = "fuchsia";
+const DEFAULT_DEVICE_NAME string = "fuchsia";
 
 /// Maximum length of a device name (without a null byte), based on
 /// HOST_NAME_MAX as defined by <limits.h>.
-const uint32 DEVICE_NAME_MAX = 255;
+const DEVICE_NAME_MAX uint32 = 255;
 
 /// Interface for getting device names.
-[Discoverable]
+@discoverable
 protocol NameProvider {
     /// Return the name of this Fuchsia device.
-    GetDeviceName() -> (string:DEVICE_NAME_MAX name) error zx.status;
+    GetDeviceName() -> (struct {
+        name string:DEVICE_NAME_MAX;
+    }) error zx.status;
 };

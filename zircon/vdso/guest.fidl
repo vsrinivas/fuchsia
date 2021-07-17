@@ -1,25 +1,32 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library zx;
 
-[Transport = "Syscall"]
+@transport("Syscall")
 protocol guest {
     /// Create a guest.
     /// Rights: resource must have resource kind ZX_RSRC_KIND_HYPERVISOR.
-    guest_create(handle:RESOURCE resource, uint32 options)
-        -> (status status, handle:GUEST guest_handle, handle:VMAR vmar_handle);
+    guest_create(resource struct {
+        resource handle:RESOURCE;
+        options uint32;
+    }) -> (resource struct {
+        status status;
+        guest_handle handle:GUEST;
+        vmar_handle handle:VMAR;
+    });
 
     /// Sets a trap within a guest.
     /// Rights: handle must be of type ZX_OBJ_TYPE_GUEST and have ZX_RIGHT_WRITE.
     /// Rights: port_handle must be of type ZX_OBJ_TYPE_PORT and have ZX_RIGHT_WRITE.
-    guest_set_trap(handle:GUEST handle,
-                   uint32 kind,
-                   vaddr addr,
-                   usize size,
-                   handle:PORT port_handle,
-                   uint64 key)
-        -> (status status);
+    guest_set_trap(resource struct {
+        handle handle:GUEST;
+        kind uint32;
+        addr vaddr;
+        size usize;
+        port_handle handle:PORT;
+        key uint64;
+    }) -> (struct {
+        status status;
+    });
 };

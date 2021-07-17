@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.io2;
 
 /// Objective information about a filesystem node.
@@ -13,53 +11,53 @@ library fuchsia.io2;
 ///
 /// If a particular attribute is not applicable or not supported,
 /// filesystems should leave the corresponding field absent.
-table NodeAttributes {
+type NodeAttributes = table {
     /// Describes the kinds of representations supported by the node.
     /// Note: This is not the result of the connection-time negotiation,
     /// which is conveyed via `representation`.
     ///
     /// This attribute is read-only.
-    1: NodeProtocols protocols;
+    1: protocols NodeProtocols;
 
     /// Describes the kinds of operations supported by the node.
     /// Note: This is distinct from the rights used at connection time.
     ///
     /// This attribute is read-only.
-    2: Abilities abilities;
+    2: abilities Abilities;
 
     /// Node size, in bytes.
     ///
     /// This attribute is read-only.
-    3: uint64 content_size;
+    3: content_size uint64;
 
     /// Space needed to store the node (possibly larger than size), in bytes.
     ///
     /// This attribute is read-only.
-    4: uint64 storage_size;
+    4: storage_size uint64;
 
     /// Number of hard links to the node. It must be at least one.
     ///
     /// This attribute is read-only.
-    5: uint64 link_count;
+    5: link_count uint64;
 
     /// Time of creation in nanoseconds since the Unix epoch, UTC.
     /// It may be updated manually after creation.
-    6: uint64 creation_time;
+    6: creation_time uint64;
 
     /// Time of last modification in nanoseconds since the Unix epoch, UTC.
-    7: uint64 modification_time;
+    7: modification_time uint64;
 
     /// An ID for the node. See [`fuchsia.io2/Id`].
     /// This `id` should be unique among all entries of a directory.
     ///
     /// This attribute is read-only.
-    8: Id id;
+    8: id Id;
 };
 
 /// When calling [`Node.GetAttributes`], set the corresponding bit to one
 /// to query that particular attribute.
 /// The elements here correspond one-to-one with [`NodeAttributes`].
-bits NodeAttributesQuery : uint64 {
+type NodeAttributesQuery = strict bits : uint64 {
     /// Requests [`NodeAttributes.protocols`].
     PROTOCOLS = 0x1;
 

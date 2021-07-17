@@ -1,11 +1,9 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.audiotypes;
 
-enum AudioTypesAudioSampleFormat : uint32 {
+type AudioTypesAudioSampleFormat = strict enum : uint32 {
     BITSTREAM = 0x1; // 1 << 0
     EIGHT_BIT = 0x2; // 1 << 1
     SIXTEEN_BIT = 0x4; // 1 << 2
@@ -15,18 +13,17 @@ enum AudioTypesAudioSampleFormat : uint32 {
     TWENTY_FOUR_BIT_IN32 = 0x80; // 1 << 7
     THIRTY_TWO_BIT = 0x100; // 1 << 8
     THIRTY_TWO_BIT_FLOAT = 0x200; // 1 << 9
-
     FLAG_UNSIGNED = 0x4000; // 1 << 30
     FLAG_INVERT_ENDIAN = 0x8000; // 1 << 31
     FLAG_MASK = 0xC000; // FLAG_UNSIGNED | FLAG_INVERT_ENDIAN
 };
 
-[Packed]
-struct AudioTypesAudioStreamFormatRange {
-    AudioTypesAudioSampleFormat sample_formats;
-    uint32 min_frames_per_second;
-    uint32 max_frames_per_second;
-    uint8 min_channels;
-    uint8 max_channels;
-    uint16 flags;
+@packed
+type AudioTypesAudioStreamFormatRange = struct {
+    sample_formats AudioTypesAudioSampleFormat;
+    min_frames_per_second uint32;
+    max_frames_per_second uint32;
+    min_channels uint8;
+    max_channels uint8;
+    flags uint16;
 };

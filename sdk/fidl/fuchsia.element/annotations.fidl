@@ -1,21 +1,19 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.element;
 
 using fuchsia.mem;
 
 /// Maximum length of `AnnotationKey.namespace`.
-const uint32 MAX_ANNOTATION_KEY_NAMESPACE_SIZE = 128;
+const MAX_ANNOTATION_KEY_NAMESPACE_SIZE uint32 = 128;
 /// Maximum length of `AnnotationKey.value`.
-const uint32 MAX_ANNOTATION_KEY_VALUE_SIZE = 128;
+const MAX_ANNOTATION_KEY_VALUE_SIZE uint32 = 128;
 /// Maximum number of annotations for a single element or view.
-const uint32 MAX_ANNOTATIONS_PER_ELEMENT = 1024;
+const MAX_ANNOTATIONS_PER_ELEMENT uint32 = 1024;
 
 /// The key of an [`fuchsia.element/Annotation`].
-struct AnnotationKey {
+type AnnotationKey = struct {
     /// A namespace that disambiguates groups of keys across clients.
     ///
     /// This is intended to group related keys together under the same
@@ -30,19 +28,19 @@ struct AnnotationKey {
     ///
     /// To ensure compatibility, clients should use a unique namespace,
     /// like a UUID or the client's component URL, when introducing new keys.
-    string:MAX_ANNOTATION_KEY_NAMESPACE_SIZE namespace;
+    namespace string:MAX_ANNOTATION_KEY_NAMESPACE_SIZE;
 
     /// An identifier for this annotation, uniquely identifying the annotation
     /// within `namespace`.
-    string:MAX_ANNOTATION_KEY_VALUE_SIZE value;
+    value string:MAX_ANNOTATION_KEY_VALUE_SIZE;
 };
 
 /// The value of an [`fuchsia.element/Annotation`].
 ///
 /// The actual field used depends on the type of annotation.
-resource union AnnotationValue {
-    1: string:MAX text;
-    2: fuchsia.mem.Buffer buffer;
+type AnnotationValue = strict resource union {
+    1: text string:MAX;
+    2: buffer fuchsia.mem.Buffer;
 };
 
 /// An annotation defined dynamically by key/value pair.
@@ -50,12 +48,12 @@ resource union AnnotationValue {
 /// The Session Framework does not constrain the contents of `key` and `value`
 /// in any way. Cooperating components that exchange annotations must define
 /// and validate annotation entries based on their own conventions.
-resource struct Annotation {
+type Annotation = resource struct {
     /// An identfier for this annotation.
-    AnnotationKey key;
+    key AnnotationKey;
 
     /// The content of this annotation.
-    AnnotationValue value;
+    value AnnotationValue;
 };
 
 /// A list of annotations on an element.
@@ -88,17 +86,21 @@ protocol AnnotationController {
     ///   `annotations_to_set` could not be read.
     /// * error `UpdateAnnotationsError.TOO_MANY_ANNOTATIONS` if the operation results
     ///   in more than `MAX_ANNOTATIONS_PER_ELEMENT` annotations existing.
-    UpdateAnnotations(Annotations annotations_to_set, AnnotationKeys annotations_to_delete)
-        -> () error UpdateAnnotationsError;
+    UpdateAnnotations(resource struct {
+        annotations_to_set Annotations;
+        annotations_to_delete AnnotationKeys;
+    }) -> (struct {}) error UpdateAnnotationsError;
 
     /// Returns the current `Annotations` for the element.
     ///
     /// * error `GetAnnotationsError` if the annotations could not be returned.
-    GetAnnotations() -> (Annotations annotations) error GetAnnotationsError;
+    GetAnnotations() -> (resource struct {
+        annotations Annotations;
+    }) error GetAnnotationsError;
 };
 
 /// An error returned from `AnnotationController/UpdateAnnotations`
-enum UpdateAnnotationsError {
+type UpdateAnnotationsError = strict enum {
     /// The arguments passed to `UpdateAnnotations` are malformed.
     INVALID_ARGS = 1;
 
@@ -108,7 +110,7 @@ enum UpdateAnnotationsError {
 };
 
 /// An error returned from `ElementController/GetAnnotations`.
-enum GetAnnotationsError {
+type GetAnnotationsError = strict enum {
     /// The `AnnotationValue.buffer` of an annotation could not be read.
     BUFFER_READ_FAILED = 1;
 };

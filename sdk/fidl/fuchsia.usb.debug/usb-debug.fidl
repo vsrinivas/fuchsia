@@ -1,16 +1,18 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.usb.debug;
 
 using zx;
 
-const uint32 DEBUG_STREAM_ID_RESERVED = 0;
+const DEBUG_STREAM_ID_RESERVED uint32 = 0;
 
-[ForDeprecatedCBindings]
+@for_deprecated_c_bindings
 protocol Device {
     /// Sets the device instance stream ID for reading and writing from. The ID must be non-zero.
-    SetStream(uint32 stream_id) -> (zx.status s);
+    SetStream(struct {
+        stream_id uint32;
+    }) -> (struct {
+        s zx.status;
+    });
 };

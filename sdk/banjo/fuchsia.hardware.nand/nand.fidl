@@ -1,8 +1,6 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 /// NandOperation's are submitted for processing via the queue() method of the
 /// Nand Protocol. Once submitted, the contents of the NandOperation may be modified
 /// while it's being processed.
@@ -22,7 +20,7 @@ using zx;
 
 /// NOTE: The protocol can be extended with barriers to support controllers that
 /// may issue multiple simultaneous request to the IO chips.
-enum NandOp : uint32 {
+type NandOp = strict enum : uint32 {
     READ = 0x1;
     WRITE = 0x2;
     ERASE = 0x3;
@@ -53,77 +51,91 @@ enum NandOp : uint32 {
 ///
 /// will transfer pages [20, 24] to the first 2048 * 5 bytes of the vmo,
 /// followed by 16 * 5 bytes of OOB data starting at offset 2048 * 5.
-resource struct NandReadWrite {
+type NandReadWrite = resource struct {
     /// Command.
-    NandOp command;
+    command NandOp;
 
     /// vmo of data to read or write.
-    zx.handle:VMO data_vmo;
+    data_vmo zx.handle:VMO;
 
     /// vmo of OOB data to read or write.
-    zx.handle:VMO oob_vmo;
+    oob_vmo zx.handle:VMO;
 
     /// Number of pages to access.
     /// (0 is invalid).
-    uint32 length;
+    length uint32;
 
     /// Offset into nand, in pages.
-    uint32 offset_nand;
+    offset_nand uint32;
 
     /// Data vmo offset in (nand) pages.
-    uint64 offset_data_vmo;
+    offset_data_vmo uint64;
 
     /// OOB vmo offset in (nand) pages.
-    uint64 offset_oob_vmo;
+    offset_oob_vmo uint64;
 
     /// Return value from READ_DATA, max corrected bit flips in any
     /// underlying ECC chunk read. The caller can compare this value
     /// against ecc_bits to decide whether the nand erase block needs to
     /// be recycled.
-    uint32 corrected_bit_flips;
+    corrected_bit_flips uint32;
 };
 
-struct NandErase {
+type NandErase = struct {
     /// Command.
-    NandOp command;
+    command NandOp;
 
     /// Offset into nand, in erase blocks.
-    uint32 first_block;
+    first_block uint32;
 
     /// Number of blocks to erase. (0 is invalid).
-    uint32 num_blocks;
+    num_blocks uint32;
 };
 
-resource union NandOperation {
+type NandOperation = strict resource union {
     /// All Commands.
-    1: NandOp command;
+    1: command NandOp;
 
     /// NAND_OP_READ, NAND_OP_WRITE.
-    2: NandReadWrite rw;
+    2: rw NandReadWrite;
 
     /// NAND_OP_ERASE.
-    3: NandErase erase;
+    3: erase NandErase;
 };
 
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol Nand {
     /// Obtains the parameters of the nand device and the required
     /// size of |NandOperation|. The |NandOperation| submitted via Queue() must have
     /// `nand_op_size - sizeof(NandOperation)` bytes available at the end of the
     /// structure for the use of the driver.
-    Query() -> (fuchsia.hardware.nandinfo.NandInfo info, uint64 nand_op_size);
+    Query() -> (struct {
+        info fuchsia.hardware.nandinfo.NandInfo;
+        nand_op_size uint64;
+    });
 
     /// Submits an IO request for processing. Success or failure will be reported
     /// via the callback. The callback may be called before the Queue() method returns.
     /// Should return ZX_ERR_IO *only* when error ocurred due to underlying hardware.
     /// When the hardware is not able to correct all bitflips for a page, the
     /// driver should return ZX_ERR_IO_DATA_INTEGRITY.
-    [Async]
-    Queue([InOut] NandOperation op) -> (zx.status status, [Mutable] NandOperation op);
+    @async
+    Queue(resource struct {
+        @in_out
+        op NandOperation;
+    }) -> (resource struct {
+        status zx.status;
+        @mutable
+        op NandOperation;
+    });
 
     /// Gets the list of bad erase blocks, as reported by the nand manufacturer.
     /// This should only be called before writing any data to the nand, and the
     /// returned data should be saved somewhere else, along blocks that become
     /// bad after they've been in use.
-    GetFactoryBadBlockList() -> (zx.status status, vector<uint32>:MAX bad_blocks);
+    GetFactoryBadBlockList() -> (struct {
+        status zx.status;
+        bad_blocks vector<uint32>:MAX;
+    });
 };

@@ -1,219 +1,217 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library conformance;
 
-struct PaddingBetweenFieldsInt8Int16 {
-    int8 a;
-    int16 b;
+type PaddingBetweenFieldsInt8Int16 = struct {
+    a int8;
+    b int16;
 };
 
-struct PaddingBetweenFieldsInt8Int32 {
-    int8 a;
-    int32 b;
+type PaddingBetweenFieldsInt8Int32 = struct {
+    a int8;
+    b int32;
 };
 
-struct PaddingBetweenFieldsInt8Int64 {
-    int8 a;
-    int64 b;
+type PaddingBetweenFieldsInt8Int64 = struct {
+    a int8;
+    b int64;
 };
 
-struct PaddingBetweenFieldsInt16Int32 {
-    int16 a;
-    int32 b;
+type PaddingBetweenFieldsInt16Int32 = struct {
+    a int16;
+    b int32;
 };
 
-struct PaddingBetweenFieldsInt16Int64 {
-    int16 a;
-    int64 b;
+type PaddingBetweenFieldsInt16Int64 = struct {
+    a int16;
+    b int64;
 };
 
-struct PaddingBetweenFieldsInt32Int64 {
-    int32 a;
-    int64 b;
+type PaddingBetweenFieldsInt32Int64 = struct {
+    a int32;
+    b int64;
 };
 
-struct Struct1Byte {
-    int8 a;
+type Struct1Byte = struct {
+    a int8;
 };
 
-struct Struct2Byte {
-    int16 a;
+type Struct2Byte = struct {
+    a int16;
 };
 
-struct Struct3Byte {
-    int16 a;
-    int8 b;
+type Struct3Byte = struct {
+    a int16;
+    b int8;
 };
 
-struct Struct4Byte {
-    int32 a;
+type Struct4Byte = struct {
+    a int32;
 };
 
-struct Struct5Byte {
-    int32 a;
-    int8 b;
+type Struct5Byte = struct {
+    a int32;
+    b int8;
 };
 
-struct Struct6Byte {
-    int32 a;
-    int16 b;
+type Struct6Byte = struct {
+    a int32;
+    b int16;
 };
 
-struct Struct7Byte {
-    int32 a;
-    int16 b;
-    int8 c;
+type Struct7Byte = struct {
+    a int32;
+    b int16;
+    c int8;
 };
 
-struct Struct8Byte {
-    int64 a;
+type Struct8Byte = struct {
+    a int64;
 };
 
-struct PaddingEndOfInlineObject1Byte {
-    Struct1Byte a;
+type PaddingEndOfInlineObject1Byte = struct {
+    a Struct1Byte;
 };
 
-struct PaddingEndOfInlineObject2Byte {
-    Struct2Byte a;
+type PaddingEndOfInlineObject2Byte = struct {
+    a Struct2Byte;
 };
 
-struct PaddingEndOfInlineObject3Byte {
-    Struct3Byte a;
+type PaddingEndOfInlineObject3Byte = struct {
+    a Struct3Byte;
 };
 
-struct PaddingEndOfInlineObject4Byte {
-    Struct4Byte a;
+type PaddingEndOfInlineObject4Byte = struct {
+    a Struct4Byte;
 };
 
-struct PaddingEndOfInlineObject5Byte {
-    Struct5Byte a;
+type PaddingEndOfInlineObject5Byte = struct {
+    a Struct5Byte;
 };
 
-struct PaddingEndOfInlineObject6Byte {
-    Struct6Byte a;
+type PaddingEndOfInlineObject6Byte = struct {
+    a Struct6Byte;
 };
 
-struct PaddingEndOfInlineObject7Byte {
-    Struct7Byte a;
+type PaddingEndOfInlineObject7Byte = struct {
+    a Struct7Byte;
 };
 
-struct PaddingEndOfInlineObjectBeforeNextObject1Byte {
-    Struct8Byte? out_of_line;
-    Struct1Byte in_line;
+type PaddingEndOfInlineObjectBeforeNextObject1Byte = struct {
+    out_of_line box<Struct8Byte>;
+    in_line Struct1Byte;
 };
 
-struct PaddingEndOfInlineObjectBeforeNextObject2Byte {
-    Struct8Byte? out_of_line;
-    Struct2Byte in_line;
+type PaddingEndOfInlineObjectBeforeNextObject2Byte = struct {
+    out_of_line box<Struct8Byte>;
+    in_line Struct2Byte;
 };
 
-struct PaddingEndOfInlineObjectBeforeNextObject3Byte {
-    Struct8Byte? out_of_line;
-    Struct3Byte in_line;
+type PaddingEndOfInlineObjectBeforeNextObject3Byte = struct {
+    out_of_line box<Struct8Byte>;
+    in_line Struct3Byte;
 };
 
-struct PaddingEndOfInlineObjectBeforeNextObject4Byte {
-    Struct8Byte? out_of_line;
-    Struct4Byte in_line;
+type PaddingEndOfInlineObjectBeforeNextObject4Byte = struct {
+    out_of_line box<Struct8Byte>;
+    in_line Struct4Byte;
 };
 
-struct PaddingEndOfInlineObjectBeforeNextObject5Byte {
-    Struct8Byte? out_of_line;
-    Struct5Byte in_line;
+type PaddingEndOfInlineObjectBeforeNextObject5Byte = struct {
+    out_of_line box<Struct8Byte>;
+    in_line Struct5Byte;
 };
 
-struct PaddingEndOfInlineObjectBeforeNextObject6Byte {
-    Struct8Byte? out_of_line;
-    Struct6Byte in_line;
+type PaddingEndOfInlineObjectBeforeNextObject6Byte = struct {
+    out_of_line box<Struct8Byte>;
+    in_line Struct6Byte;
 };
 
-struct PaddingEndOfInlineObjectBeforeNextObject7Byte {
-    Struct8Byte? out_of_line;
-    Struct7Byte in_line;
+type PaddingEndOfInlineObjectBeforeNextObject7Byte = struct {
+    out_of_line box<Struct8Byte>;
+    in_line Struct7Byte;
 };
 
-struct PaddingEndOfOutOfLineObject1Byte {
-    Struct1Byte? out_of_line;
+type PaddingEndOfOutOfLineObject1Byte = struct {
+    out_of_line box<Struct1Byte>;
 };
 
-struct PaddingEndOfOutOfLineObject2Byte {
-    Struct2Byte? out_of_line;
+type PaddingEndOfOutOfLineObject2Byte = struct {
+    out_of_line box<Struct2Byte>;
 };
 
-struct PaddingEndOfOutOfLineObject3Byte {
-    Struct3Byte? out_of_line;
+type PaddingEndOfOutOfLineObject3Byte = struct {
+    out_of_line box<Struct3Byte>;
 };
 
-struct PaddingEndOfOutOfLineObject4Byte {
-    Struct4Byte? out_of_line;
+type PaddingEndOfOutOfLineObject4Byte = struct {
+    out_of_line box<Struct4Byte>;
 };
 
-struct PaddingEndOfOutOfLineObject5Byte {
-    Struct5Byte? out_of_line;
+type PaddingEndOfOutOfLineObject5Byte = struct {
+    out_of_line box<Struct5Byte>;
 };
 
-struct PaddingEndOfOutOfLineObject6Byte {
-    Struct6Byte? out_of_line;
+type PaddingEndOfOutOfLineObject6Byte = struct {
+    out_of_line box<Struct6Byte>;
 };
 
-struct PaddingEndOfOutOfLineObject7Byte {
-    Struct7Byte? out_of_line;
+type PaddingEndOfOutOfLineObject7Byte = struct {
+    out_of_line box<Struct7Byte>;
 };
 
-struct PaddingInBetweenOutOfLineObjects1Byte {
-    Struct1Byte? first;
-    Struct8Byte? second;
+type PaddingInBetweenOutOfLineObjects1Byte = struct {
+    first box<Struct1Byte>;
+    second box<Struct8Byte>;
 };
 
-struct PaddingInBetweenOutOfLineObjects2Byte {
-    Struct2Byte? first;
-    Struct8Byte? second;
+type PaddingInBetweenOutOfLineObjects2Byte = struct {
+    first box<Struct2Byte>;
+    second box<Struct8Byte>;
 };
 
-struct PaddingInBetweenOutOfLineObjects3Byte {
-    Struct3Byte? first;
-    Struct8Byte? second;
+type PaddingInBetweenOutOfLineObjects3Byte = struct {
+    first box<Struct3Byte>;
+    second box<Struct8Byte>;
 };
 
-struct PaddingInBetweenOutOfLineObjects4Byte {
-    Struct4Byte? first;
-    Struct8Byte? second;
+type PaddingInBetweenOutOfLineObjects4Byte = struct {
+    first box<Struct4Byte>;
+    second box<Struct8Byte>;
 };
 
-struct PaddingInBetweenOutOfLineObjects5Byte {
-    Struct5Byte? first;
-    Struct8Byte? second;
+type PaddingInBetweenOutOfLineObjects5Byte = struct {
+    first box<Struct5Byte>;
+    second box<Struct8Byte>;
 };
 
-struct PaddingInBetweenOutOfLineObjects6Byte {
-    Struct6Byte? first;
-    Struct8Byte? second;
+type PaddingInBetweenOutOfLineObjects6Byte = struct {
+    first box<Struct6Byte>;
+    second box<Struct8Byte>;
 };
 
-struct PaddingInBetweenOutOfLineObjects7Byte {
-    Struct7Byte? first;
-    Struct8Byte? second;
+type PaddingInBetweenOutOfLineObjects7Byte = struct {
+    first box<Struct7Byte>;
+    second box<Struct8Byte>;
 };
 
 // In case unions use a different out-of-line implementation than structs,
 // spot check padding.
-union PaddedUnion {
-    1: int8 field;
+type PaddedUnion = strict union {
+    1: field int8;
 };
 
-struct PaddedUnionStruct {
-    PaddedUnion u;
+type PaddedUnionStruct = struct {
+    u PaddedUnion;
 };
 
 // In case tables use a different out-of-line implementation than structs,
 // spot check padding.
-table PaddedTable {
-    1: int8 field;
+type PaddedTable = table {
+    1: field int8;
 };
 
-struct PaddedTableStruct {
-    PaddedTable t;
+type PaddedTableStruct = struct {
+    t PaddedTable;
 };

@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.sysmem2;
 
 using zx;
@@ -13,23 +11,23 @@ using zx;
 ///
 /// Each member property should correspond to a coherency domain defined
 /// in the CoherencyDomain enum.
-table CoherencyDomainSupport {
-    1: bool cpu_supported;
-    2: bool ram_supported;
-    3: bool inaccessible_supported;
+type CoherencyDomainSupport = table {
+    1: cpu_supported bool;
+    2: ram_supported bool;
+    3: inaccessible_supported bool;
 };
 
 /// Memory properties for a sysmem Heap.
 /// Heaps send its properties to sysmem device at registration time based
 /// on which sysmem can select the correct Heap to use.
-table HeapProperties {
+type HeapProperties = table {
     /// Status of support for coherency domains.
-    1: CoherencyDomainSupport coherency_domain_support;
+    1: coherency_domain_support CoherencyDomainSupport;
     /// Indicates whether sysmem needs to clear VMOs allocated by the Heap.
-    2: bool need_clear;
+    2: need_clear bool;
     /// Some heaps provide pre-cleared allocations, but haven't flushed the
     /// zeroes to RAM yet.  Flush is also performed if need_clear is true.
-    3: bool need_flush;
+    3: need_flush bool;
 };
 
 /// Manages resources on a specific sysmem heap.
@@ -48,7 +46,12 @@ protocol Heap {
     ///
     /// The caller guarantees that CreateResource() will be called prior
     /// to the returned VMO or any associated child VMO being used.
-    AllocateVmo(uint64 size) -> (zx.status s, zx.handle:VMO? vmo);
+    AllocateVmo(struct {
+        size uint64;
+    }) -> (resource struct {
+        s zx.status;
+        vmo zx.handle:<VMO, optional>;
+    });
 
     /// Create resources and associate heap-specific resources with the
     /// passed-in VMO. Resources can be hardware specific and their
@@ -70,11 +73,18 @@ protocol Heap {
     /// VMO, or any VMAR mapping to VMO, as any of those would keep VMO
     /// alive beyond all sysmem participant usages of the vmo; instead
     /// the heap can get the vmo's koid for the heap's mapping.
-    CreateResource(zx.handle:VMO vmo, SingleBufferSettings buffer_settings)
-        -> (zx.status s, uint64 id);
+    CreateResource(resource struct {
+        vmo zx.handle:VMO;
+        buffer_settings SingleBufferSettings;
+    }) -> (struct {
+        s zx.status;
+        id uint64;
+    });
 
     /// Destroy previously created resources.
-    DestroyResource(uint64 id) -> ();
+    DestroyResource(struct {
+        id uint64;
+    }) -> ();
 
     /// This event is triggered when the Heap is registered. Properties
     /// of this Heap will be sent to the sysmem device in the event.
@@ -85,5 +95,7 @@ protocol Heap {
     // TODO(fxbug.dev/57690): Remove this event and pass in HeapProperties when
     // registering sysmem Heaps after we migrate sysmem banjo proxying
     // to FIDL.
-    -> OnRegister(HeapProperties properties);
+    -> OnRegister(struct {
+        properties HeapProperties;
+    });
 };

@@ -1,12 +1,15 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library zx;
 
-[Transport = "Syscall"]
+@transport("Syscall")
 protocol event {
     /// Create an event.
-    event_create(uint32 options) -> (status status, handle:EVENT out);
+    event_create(struct {
+        options uint32;
+    }) -> (resource struct {
+        status status;
+        out handle:EVENT;
+    });
 };

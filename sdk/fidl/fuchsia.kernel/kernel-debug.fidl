@@ -1,22 +1,29 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.kernel;
 
 using zx;
 
 /// Maximum number of bytes in a command string
-const uint32 DEBUG_COMMAND_MAX = 1024;
+const DEBUG_COMMAND_MAX uint32 = 1024;
 
 /// Acts on behalf of the caller to interact with privileged debug system calls.
-[Discoverable, ForDeprecatedCBindings]
+@discoverable
+@for_deprecated_c_bindings
 protocol DebugBroker {
     /// Pass debug command through to the kernel shell.
     /// Look at zx_debug_send_command syscall handling to find valid values.
-    SendDebugCommand(string:DEBUG_COMMAND_MAX command) -> (zx.status status);
+    SendDebugCommand(struct {
+        command string:DEBUG_COMMAND_MAX;
+    }) -> (struct {
+        status zx.status;
+    });
 
     /// Sets whether kernel tracing (ktrace) is enabled or disabled.
-    SetTracingEnabled(bool enabled) -> (zx.status status);
+    SetTracingEnabled(struct {
+        enabled bool;
+    }) -> (struct {
+        status zx.status;
+    });
 };

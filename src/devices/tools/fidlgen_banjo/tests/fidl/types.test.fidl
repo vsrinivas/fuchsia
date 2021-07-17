@@ -1,384 +1,388 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library banjo.examples.types;
 
 using zx;
 
-struct this_is_a_struct {
-    string s;
+type this_is_a_struct = struct {
+    s string;
 };
 
-union this_is_a_union {
-    1: string s;
+type this_is_a_union = strict union {
+    1: s string;
 };
 
-[Transport = "Banjo"]
+@transport("Banjo")
 protocol this_is_an_interface {
-    [SomeAttrib, another_attrib = "Value containing, a comma"]
-    Copy(string s, uint32 count) -> (string s);
+    @some_attrib
+    @another_attrib("Value containing, a comma")
+    Copy(struct {
+        s string;
+        count uint32;
+    }) -> (struct {
+        s string;
+    });
 };
 
-resource struct interfaces {
-    this_is_an_interface nonnullable_interface;
-    this_is_an_interface? nullable_interface;
+type interfaces = resource struct {
+    nonnullable_interface client_end:this_is_an_interface;
+    nullable_interface client_end:<this_is_an_interface, optional>;
 };
 
-struct primitive_types {
-    bool b;
-    int8 i8;
-    int16 i16;
-    int32 i32;
-    int64 i64;
-    uint8 u8;
-    uint16 u16;
-    uint32 u32;
-    uint64 u64;
-    float32 f32;
-    float64 f64;
+type primitive_types = struct {
+    b bool;
+    i8 int8;
+    i16 int16;
+    i32 int32;
+    i64 int64;
+    u8 uint8;
+    u16 uint16;
+    u32 uint32;
+    u64 uint64;
+    f32 float32;
+    f64 float64;
 };
 
-struct zx_types {
-    zx.status status;
-    zx.time time;
-    zx.duration duration;
-    zx.ticks ticks;
-    zx.koid koid;
-    zx.vaddr vaddr;
-    zx.paddr paddr;
-    zx.paddr32 paddr32;
-    zx.gpaddr gpaddr;
-    zx.off offset;
-    zx.procarg procarg;
-    zx.signals signals;
+type zx_types = struct {
+    status zx.status;
+    time zx.time;
+    duration zx.duration;
+    ticks zx.ticks;
+    koid zx.koid;
+    vaddr zx.vaddr;
+    paddr zx.paddr;
+    paddr32 zx.paddr32;
+    gpaddr zx.gpaddr;
+    offset zx.off;
+    procarg zx.procarg;
+    signals zx.signals;
 };
 
-struct default_values {
-    bool b1 = true;
-    bool b2 = false;
-    int8 i8 = -23;
-    int16 i16 = 34;
-    int32 i32 = -34595;
-    int64 i64 = 3948038;
-    uint8 u8 = 0;
-    uint16 u16 = 348;
-    uint32 u32 = 9038;
-    uint64 u64 = 19835;
-    string s = "hello-_/., '() &*0123456789";
+type default_values = struct {
+    b1 bool = true;
+    b2 bool = false;
+    i8 int8 = -23;
+    i16 int16 = 34;
+    i32 int32 = -34595;
+    i64 int64 = 3948038;
+    u8 uint8 = 0;
+    u16 uint16 = 348;
+    u32 uint32 = 9038;
+    u64 uint64 = 19835;
+    s string = "hello-_/., '() &*0123456789";
 };
 
-const uint32 arrays_size = 32;
+const arrays_size uint32 = 32;
 
-resource struct arrays {
-    array<bool>:1 b_0;
-    array<int8>:1 i8_0;
-    array<int16>:1 i16_0;
-    array<int32>:1 i32_0;
-    array<int64>:1 i64_0;
-    array<uint8>:1 u8_0;
-    array<uint16>:1 u16_0;
-    array<uint32>:1 u32_0;
-    array<uint64>:1 u64_0;
-    array<float32>:1 f32_0;
-    array<float64>:1 f64_0;
-    array<zx.handle>:1 handle_0;
+type arrays = resource struct {
+    b_0 array<bool, 1>;
+    i8_0 array<int8, 1>;
+    i16_0 array<int16, 1>;
+    i32_0 array<int32, 1>;
+    i64_0 array<int64, 1>;
+    u8_0 array<uint8, 1>;
+    u16_0 array<uint16, 1>;
+    u32_0 array<uint32, 1>;
+    u64_0 array<uint64, 1>;
+    f32_0 array<float32, 1>;
+    f64_0 array<float64, 1>;
+    handle_0 array<zx.handle, 1>;
 
-    array<bool>:arrays_size b_1;
-    array<int8>:arrays_size i8_1;
-    array<int16>:arrays_size i16_1;
-    array<int32>:arrays_size i32_1;
-    array<int64>:arrays_size i64_1;
-    array<uint8>:arrays_size u8_1;
-    array<uint16>:arrays_size u16_1;
-    array<uint32>:arrays_size u32_1;
-    array<uint64>:arrays_size u64_1;
-    array<float32>:arrays_size f32_1;
-    array<float64>:arrays_size f64_1;
-    array<zx.handle>:arrays_size handle_1;
+    b_1 array<bool, arrays_size>;
+    i8_1 array<int8, arrays_size>;
+    i16_1 array<int16, arrays_size>;
+    i32_1 array<int32, arrays_size>;
+    i64_1 array<int64, arrays_size>;
+    u8_1 array<uint8, arrays_size>;
+    u16_1 array<uint16, arrays_size>;
+    u32_1 array<uint32, arrays_size>;
+    u64_1 array<uint64, arrays_size>;
+    f32_1 array<float32, arrays_size>;
+    f64_1 array<float64, arrays_size>;
+    handle_1 array<zx.handle, arrays_size>;
 
-    array<array<bool>:4>:arrays_size b_2;
-    array<array<int8>:4>:arrays_size i8_2;
-    array<array<int16>:4>:arrays_size i16_2;
-    array<array<int32>:4>:arrays_size i32_2;
-    array<array<int64>:4>:arrays_size i64_2;
-    array<array<uint8>:4>:arrays_size u8_2;
-    array<array<uint16>:4>:arrays_size u16_2;
-    array<array<uint32>:4>:arrays_size u32_2;
-    array<array<uint64>:4>:arrays_size u64_2;
-    array<array<float32>:4>:arrays_size f32_2;
-    array<array<float64>:4>:arrays_size f64_2;
-    array<array<zx.handle>:4>:arrays_size handle_2;
+    b_2 array<array<bool, 4>, arrays_size>;
+    i8_2 array<array<int8, 4>, arrays_size>;
+    i16_2 array<array<int16, 4>, arrays_size>;
+    i32_2 array<array<int32, 4>, arrays_size>;
+    i64_2 array<array<int64, 4>, arrays_size>;
+    u8_2 array<array<uint8, 4>, arrays_size>;
+    u16_2 array<array<uint16, 4>, arrays_size>;
+    u32_2 array<array<uint32, 4>, arrays_size>;
+    u64_2 array<array<uint64, 4>, arrays_size>;
+    f32_2 array<array<float32, 4>, arrays_size>;
+    f64_2 array<array<float64, 4>, arrays_size>;
+    handle_2 array<array<zx.handle, 4>, arrays_size>;
 };
 
-const uint32 vectors_size = 32;
+const vectors_size uint32 = 32;
 
-resource struct vectors {
-    vector<bool> b_0;
-    vector<int8> i8_0;
-    vector<int16> i16_0;
-    vector<int32> i32_0;
-    vector<int64> i64_0;
-    vector<uint8> u8_0;
-    vector<uint16> u16_0;
-    vector<uint32> u32_0;
-    vector<uint64> u64_0;
-    vector<float32> f32_0;
-    vector<float64> f64_0;
-    vector<zx.handle> handle_0;
+type vectors = resource struct {
+    b_0 vector<bool>;
+    i8_0 vector<int8>;
+    i16_0 vector<int16>;
+    i32_0 vector<int32>;
+    i64_0 vector<int64>;
+    u8_0 vector<uint8>;
+    u16_0 vector<uint16>;
+    u32_0 vector<uint32>;
+    u64_0 vector<uint64>;
+    f32_0 vector<float32>;
+    f64_0 vector<float64>;
+    handle_0 vector<zx.handle>;
 
-    vector<vector<bool>:4> b_1;
-    vector<vector<int8>:4> i8_1;
-    vector<vector<int16>:4> i16_1;
-    vector<vector<int32>:4> i32_1;
-    vector<vector<int64>:4> i64_1;
-    vector<vector<uint8>:4> u8_1;
-    vector<vector<uint16>:4> u16_1;
-    vector<vector<uint32>:4> u32_1;
-    vector<vector<uint64>:4> u64_1;
-    vector<vector<float32>:4> f32_1;
-    vector<vector<float64>:4> f64_1;
-    vector<vector<zx.handle>:4> handle_1;
+    b_1 vector<vector<bool>:4>;
+    i8_1 vector<vector<int8>:4>;
+    i16_1 vector<vector<int16>:4>;
+    i32_1 vector<vector<int32>:4>;
+    i64_1 vector<vector<int64>:4>;
+    u8_1 vector<vector<uint8>:4>;
+    u16_1 vector<vector<uint16>:4>;
+    u32_1 vector<vector<uint32>:4>;
+    u64_1 vector<vector<uint64>:4>;
+    f32_1 vector<vector<float32>:4>;
+    f64_1 vector<vector<float64>:4>;
+    handle_1 vector<vector<zx.handle>:4>;
 
-    vector<bool>:1 b_sized_0;
-    vector<int8>:1 i8_sized_0;
-    vector<int16>:1 i16_sized_0;
-    vector<int32>:1 i32_sized_0;
-    vector<int64>:1 i64_sized_0;
-    vector<uint8>:1 u8_sized_0;
-    vector<uint16>:1 u16_sized_0;
-    vector<uint32>:1 u32_sized_0;
-    vector<uint64>:1 u64_sized_0;
-    vector<float32>:1 f32_sized_0;
-    vector<float64>:1 f64_sized_0;
-    vector<zx.handle>:1 handle_sized_0;
+    b_sized_0 vector<bool>:1;
+    i8_sized_0 vector<int8>:1;
+    i16_sized_0 vector<int16>:1;
+    i32_sized_0 vector<int32>:1;
+    i64_sized_0 vector<int64>:1;
+    u8_sized_0 vector<uint8>:1;
+    u16_sized_0 vector<uint16>:1;
+    u32_sized_0 vector<uint32>:1;
+    u64_sized_0 vector<uint64>:1;
+    f32_sized_0 vector<float32>:1;
+    f64_sized_0 vector<float64>:1;
+    handle_sized_0 vector<zx.handle>:1;
 
-    vector<bool>:vectors_size b_sized_1;
-    vector<int8>:vectors_size i8_sized_1;
-    vector<int16>:vectors_size i16_sized_1;
-    vector<int32>:vectors_size i32_sized_1;
-    vector<int64>:vectors_size i64_sized_1;
-    vector<uint8>:vectors_size u8_sized_1;
-    vector<uint16>:vectors_size u16_sized_1;
-    vector<uint32>:vectors_size u32_sized_1;
-    vector<uint64>:vectors_size u64_sized_1;
-    vector<float32>:vectors_size f32_sized_1;
-    vector<float64>:vectors_size f64_sized_1;
-    vector<zx.handle>:vectors_size handle_sized_1;
+    b_sized_1 vector<bool>:vectors_size;
+    i8_sized_1 vector<int8>:vectors_size;
+    i16_sized_1 vector<int16>:vectors_size;
+    i32_sized_1 vector<int32>:vectors_size;
+    i64_sized_1 vector<int64>:vectors_size;
+    u8_sized_1 vector<uint8>:vectors_size;
+    u16_sized_1 vector<uint16>:vectors_size;
+    u32_sized_1 vector<uint32>:vectors_size;
+    u64_sized_1 vector<uint64>:vectors_size;
+    f32_sized_1 vector<float32>:vectors_size;
+    f64_sized_1 vector<float64>:vectors_size;
+    handle_sized_1 vector<zx.handle>:vectors_size;
 
-    vector<vector<bool>:4>:vectors_size b_sized_2;
-    vector<vector<int8>:4>:vectors_size i8_sized_2;
-    vector<vector<int16>:4>:vectors_size i16_sized_2;
-    vector<vector<int32>:4>:vectors_size i32_sized_2;
-    vector<vector<int64>:4>:vectors_size i64_sized_2;
-    vector<vector<uint8>:4>:vectors_size u8_sized_2;
-    vector<vector<uint16>:4>:vectors_size u16_sized_2;
-    vector<vector<uint32>:4>:vectors_size u32_sized_2;
-    vector<vector<uint64>:4>:vectors_size u64_sized_2;
-    vector<vector<float32>:4>:vectors_size f32_sized_2;
-    vector<vector<float64>:4>:vectors_size f64_sized_2;
-    vector<vector<zx.handle>:4>:vectors_size handle_sized_2;
+    b_sized_2 vector<vector<bool>:4>:vectors_size;
+    i8_sized_2 vector<vector<int8>:4>:vectors_size;
+    i16_sized_2 vector<vector<int16>:4>:vectors_size;
+    i32_sized_2 vector<vector<int32>:4>:vectors_size;
+    i64_sized_2 vector<vector<int64>:4>:vectors_size;
+    u8_sized_2 vector<vector<uint8>:4>:vectors_size;
+    u16_sized_2 vector<vector<uint16>:4>:vectors_size;
+    u32_sized_2 vector<vector<uint32>:4>:vectors_size;
+    u64_sized_2 vector<vector<uint64>:4>:vectors_size;
+    f32_sized_2 vector<vector<float32>:4>:vectors_size;
+    f64_sized_2 vector<vector<float64>:4>:vectors_size;
+    handle_sized_2 vector<vector<zx.handle>:4>:vectors_size;
 
-    vector<bool>:1? b_nullable_0;
-    vector<int8>:1? i8_nullable_0;
-    vector<int16>:1? i16_nullable_0;
-    vector<int32>:1? i32_nullable_0;
-    vector<int64>:1? i64_nullable_0;
-    vector<uint8>:1? u8_nullable_0;
-    vector<uint16>:1? u16_nullable_0;
-    vector<uint32>:1? u32_nullable_0;
-    vector<uint64>:1? u64_nullable_0;
-    vector<float32>:1? f32_nullable_0;
-    vector<float64>:1? f64_nullable_0;
-    vector<zx.handle>:1? handle_nullable_0;
+    b_nullable_0 vector<bool>:<1, optional>;
+    i8_nullable_0 vector<int8>:<1, optional>;
+    i16_nullable_0 vector<int16>:<1, optional>;
+    i32_nullable_0 vector<int32>:<1, optional>;
+    i64_nullable_0 vector<int64>:<1, optional>;
+    u8_nullable_0 vector<uint8>:<1, optional>;
+    u16_nullable_0 vector<uint16>:<1, optional>;
+    u32_nullable_0 vector<uint32>:<1, optional>;
+    u64_nullable_0 vector<uint64>:<1, optional>;
+    f32_nullable_0 vector<float32>:<1, optional>;
+    f64_nullable_0 vector<float64>:<1, optional>;
+    handle_nullable_0 vector<zx.handle>:<1, optional>;
 
-    vector<vector<bool>:4>? b_nullable_1;
-    vector<vector<int8>:4>? i8_nullable_1;
-    vector<vector<int16>:4>? i16_nullable_1;
-    vector<vector<int32>:4>? i32_nullable_1;
-    vector<vector<int64>:4>? i64_nullable_1;
-    vector<vector<uint8>:4>? u8_nullable_1;
-    vector<vector<uint16>:4>? u16_nullable_1;
-    vector<vector<uint32>:4>? u32_nullable_1;
-    vector<vector<uint64>:4>? u64_nullable_1;
-    vector<vector<float32>:4>? f32_nullable_1;
-    vector<vector<float64>:4>? f64_nullable_1;
-    vector<vector<zx.handle>:4>? handle_nullable_1;
+    b_nullable_1 vector<vector<bool>:4>:optional;
+    i8_nullable_1 vector<vector<int8>:4>:optional;
+    i16_nullable_1 vector<vector<int16>:4>:optional;
+    i32_nullable_1 vector<vector<int32>:4>:optional;
+    i64_nullable_1 vector<vector<int64>:4>:optional;
+    u8_nullable_1 vector<vector<uint8>:4>:optional;
+    u16_nullable_1 vector<vector<uint16>:4>:optional;
+    u32_nullable_1 vector<vector<uint32>:4>:optional;
+    u64_nullable_1 vector<vector<uint64>:4>:optional;
+    f32_nullable_1 vector<vector<float32>:4>:optional;
+    f64_nullable_1 vector<vector<float64>:4>:optional;
+    handle_nullable_1 vector<vector<zx.handle>:4>:optional;
 
-    vector<bool>:1? b_nullable_sized_0;
-    vector<int8>:1? i8_nullable_sized_0;
-    vector<int16>:1? i16_nullable_sized_0;
-    vector<int32>:1? i32_nullable_sized_0;
-    vector<int64>:1? i64_nullable_sized_0;
-    vector<uint8>:1? u8_nullable_sized_0;
-    vector<uint16>:1? u16_nullable_sized_0;
-    vector<uint32>:1? u32_nullable_sized_0;
-    vector<uint64>:1? u64_nullable_sized_0;
-    vector<float32>:1? f32_nullable_sized_0;
-    vector<float64>:1? f64_nullable_sized_0;
-    vector<zx.handle>:1? handle_nullable_sized_0;
+    b_nullable_sized_0 vector<bool>:<1, optional>;
+    i8_nullable_sized_0 vector<int8>:<1, optional>;
+    i16_nullable_sized_0 vector<int16>:<1, optional>;
+    i32_nullable_sized_0 vector<int32>:<1, optional>;
+    i64_nullable_sized_0 vector<int64>:<1, optional>;
+    u8_nullable_sized_0 vector<uint8>:<1, optional>;
+    u16_nullable_sized_0 vector<uint16>:<1, optional>;
+    u32_nullable_sized_0 vector<uint32>:<1, optional>;
+    u64_nullable_sized_0 vector<uint64>:<1, optional>;
+    f32_nullable_sized_0 vector<float32>:<1, optional>;
+    f64_nullable_sized_0 vector<float64>:<1, optional>;
+    handle_nullable_sized_0 vector<zx.handle>:<1, optional>;
 
-    vector<bool>:vectors_size? b_nullable_sized_1;
-    vector<int8>:vectors_size? i8_nullable_sized_1;
-    vector<int16>:vectors_size? i16_nullable_sized_1;
-    vector<int32>:vectors_size? i32_nullable_sized_1;
-    vector<int64>:vectors_size? i64_nullable_sized_1;
-    vector<uint8>:vectors_size? u8_nullable_sized_1;
-    vector<uint16>:vectors_size? u16_nullable_sized_1;
-    vector<uint32>:vectors_size? u32_nullable_sized_1;
-    vector<uint64>:vectors_size? u64_nullable_sized_1;
-    vector<float32>:vectors_size? f32_nullable_sized_1;
-    vector<float64>:vectors_size? f64_nullable_sized_1;
-    vector<zx.handle>:vectors_size? handle_nullable_sized_1;
+    b_nullable_sized_1 vector<bool>:<vectors_size, optional>;
+    i8_nullable_sized_1 vector<int8>:<vectors_size, optional>;
+    i16_nullable_sized_1 vector<int16>:<vectors_size, optional>;
+    i32_nullable_sized_1 vector<int32>:<vectors_size, optional>;
+    i64_nullable_sized_1 vector<int64>:<vectors_size, optional>;
+    u8_nullable_sized_1 vector<uint8>:<vectors_size, optional>;
+    u16_nullable_sized_1 vector<uint16>:<vectors_size, optional>;
+    u32_nullable_sized_1 vector<uint32>:<vectors_size, optional>;
+    u64_nullable_sized_1 vector<uint64>:<vectors_size, optional>;
+    f32_nullable_sized_1 vector<float32>:<vectors_size, optional>;
+    f64_nullable_sized_1 vector<float64>:<vectors_size, optional>;
+    handle_nullable_sized_1 vector<zx.handle>:<vectors_size, optional>;
 
-    vector<vector<bool>:4>:vectors_size? b_nullable_sized_2;
-    vector<vector<int8>:4>:vectors_size? i8_nullable_sized_2;
-    vector<vector<int16>:4>:vectors_size? i16_nullable_sized_2;
-    vector<vector<int32>:4>:vectors_size? i32_nullable_sized_2;
-    vector<vector<int64>:4>:vectors_size? i64_nullable_sized_2;
-    vector<vector<uint8>:4>:vectors_size? u8_nullable_sized_2;
-    vector<vector<uint16>:4>:vectors_size? u16_nullable_sized_2;
-    vector<vector<uint32>:4>:vectors_size? u32_nullable_sized_2;
-    vector<vector<uint64>:4>:vectors_size? u64_nullable_sized_2;
-    vector<vector<float32>:4>:vectors_size? f32_nullable_sized_2;
-    vector<vector<float64>:4>:vectors_size? f64_nullable_sized_2;
-    vector<vector<zx.handle>:4>:vectors_size? handle_nullable_sized_2;
+    b_nullable_sized_2 vector<vector<bool>:4>:<vectors_size, optional>;
+    i8_nullable_sized_2 vector<vector<int8>:4>:<vectors_size, optional>;
+    i16_nullable_sized_2 vector<vector<int16>:4>:<vectors_size, optional>;
+    i32_nullable_sized_2 vector<vector<int32>:4>:<vectors_size, optional>;
+    i64_nullable_sized_2 vector<vector<int64>:4>:<vectors_size, optional>;
+    u8_nullable_sized_2 vector<vector<uint8>:4>:<vectors_size, optional>;
+    u16_nullable_sized_2 vector<vector<uint16>:4>:<vectors_size, optional>;
+    u32_nullable_sized_2 vector<vector<uint32>:4>:<vectors_size, optional>;
+    u64_nullable_sized_2 vector<vector<uint64>:4>:<vectors_size, optional>;
+    f32_nullable_sized_2 vector<vector<float32>:4>:<vectors_size, optional>;
+    f64_nullable_sized_2 vector<vector<float64>:4>:<vectors_size, optional>;
+    handle_nullable_sized_2 vector<vector<zx.handle>:4>:<vectors_size, optional>;
 };
 
-[Awesome]
-resource struct handles {
-    zx.handle handle_handle;
-    zx.handle:PROCESS process_handle;
-    zx.handle:THREAD thread_handle;
-    zx.handle:VMO vmo_handle;
-    zx.handle:CHANNEL channel_handle;
-    zx.handle:EVENT event_handle;
-    zx.handle:PORT port_handle;
-    zx.handle:INTERRUPT interrupt_handle;
-    zx.handle:SOCKET socket_handle;
-    zx.handle:RESOURCE resource_handle;
-    zx.handle:EVENTPAIR eventpair_handle;
-    zx.handle:JOB job_handle;
-    zx.handle:VMAR vmar_handle;
-    zx.handle:FIFO fifo_handle;
-    zx.handle:GUEST guest_handle;
-    zx.handle:TIMER timer_handle;
-    zx.handle:PROFILE profile_handle;
-    zx.handle:VCPU vcpu_handle;
-    zx.handle:IOMMU iommu_handle;
-    zx.handle:PAGER pager_handle;
-    zx.handle:PMT pmt_handle;
-    zx.handle:CLOCK clock_handle;
+@awesome
+type handles = resource struct {
+    handle_handle zx.handle;
+    process_handle zx.handle:PROCESS;
+    thread_handle zx.handle:THREAD;
+    vmo_handle zx.handle:VMO;
+    channel_handle zx.handle:CHANNEL;
+    event_handle zx.handle:EVENT;
+    port_handle zx.handle:PORT;
+    interrupt_handle zx.handle:INTERRUPT;
+    socket_handle zx.handle:SOCKET;
+    resource_handle zx.handle:RESOURCE;
+    eventpair_handle zx.handle:EVENTPAIR;
+    job_handle zx.handle:JOB;
+    vmar_handle zx.handle:VMAR;
+    fifo_handle zx.handle:FIFO;
+    guest_handle zx.handle:GUEST;
+    timer_handle zx.handle:TIMER;
+    profile_handle zx.handle:PROFILE;
+    vcpu_handle zx.handle:VCPU;
+    iommu_handle zx.handle:IOMMU;
+    pager_handle zx.handle:PAGER;
+    pmt_handle zx.handle:PMT;
+    clock_handle zx.handle:CLOCK;
 
-    zx.handle? nullable_handle_handle;
-    zx.handle:PROCESS? nullable_process_handle;
-    zx.handle:THREAD? nullable_thread_handle;
-    zx.handle:VMO? nullable_vmo_handle;
-    zx.handle:CHANNEL? nullable_channel_handle;
-    zx.handle:EVENT? nullable_event_handle;
-    zx.handle:PORT? nullable_port_handle;
-    zx.handle:INTERRUPT? nullable_interrupt_handle;
-    zx.handle:SOCKET? nullable_socket_handle;
-    zx.handle:RESOURCE? nullable_resource_handle;
-    zx.handle:EVENTPAIR? nullable_eventpair_handle;
-    zx.handle:JOB? nullable_job_handle;
-    zx.handle:VMAR? nullable_vmar_handle;
-    zx.handle:FIFO? nullable_fifo_handle;
-    zx.handle:GUEST? nullable_guest_handle;
-    zx.handle:TIMER? nullable_timer_handle;
-    zx.handle:PROFILE? nullable_profile_handle;
-    zx.handle:VCPU? nullable_vcpu_handle;
-    zx.handle:IOMMU? nullable_iommu_handle;
-    zx.handle:PAGER? nullable_pager_handle;
-    zx.handle:PMT? nullable_pmt_handle;
-    zx.handle:CLOCK? nullable_clock_handle;
+    nullable_handle_handle zx.handle:optional;
+    nullable_process_handle zx.handle:<PROCESS, optional>;
+    nullable_thread_handle zx.handle:<THREAD, optional>;
+    nullable_vmo_handle zx.handle:<VMO, optional>;
+    nullable_channel_handle zx.handle:<CHANNEL, optional>;
+    nullable_event_handle zx.handle:<EVENT, optional>;
+    nullable_port_handle zx.handle:<PORT, optional>;
+    nullable_interrupt_handle zx.handle:<INTERRUPT, optional>;
+    nullable_socket_handle zx.handle:<SOCKET, optional>;
+    nullable_resource_handle zx.handle:<RESOURCE, optional>;
+    nullable_eventpair_handle zx.handle:<EVENTPAIR, optional>;
+    nullable_job_handle zx.handle:<JOB, optional>;
+    nullable_vmar_handle zx.handle:<VMAR, optional>;
+    nullable_fifo_handle zx.handle:<FIFO, optional>;
+    nullable_guest_handle zx.handle:<GUEST, optional>;
+    nullable_timer_handle zx.handle:<TIMER, optional>;
+    nullable_profile_handle zx.handle:<PROFILE, optional>;
+    nullable_vcpu_handle zx.handle:<VCPU, optional>;
+    nullable_iommu_handle zx.handle:<IOMMU, optional>;
+    nullable_pager_handle zx.handle:<PAGER, optional>;
+    nullable_pmt_handle zx.handle:<PMT, optional>;
+    nullable_clock_handle zx.handle:<CLOCK, optional>;
 };
 
-const uint32 strings_size = 32;
+const strings_size uint32 = 32;
 
-struct strings {
-    string s;
-    string? nullable_s;
-    string:4 size_0_s;
-    string:strings_size size_1_s;
-    string:4? nullable_size_0_s;
-    string:strings_size? nullable_size_1_s;
+type strings = struct {
+    s string;
+    nullable_s string:optional;
+    size_0_s string:4;
+    size_1_s string:strings_size;
+    nullable_size_0_s string:<4, optional>;
+    nullable_size_1_s string:<strings_size, optional>;
 };
 
-enum default_enum {
+type default_enum = strict enum {
     x = 23;
 };
 
-enum i8_enum : int8 {
+type i8_enum = strict enum : int8 {
     x = 23;
 };
 
-enum i16_enum : int16 {
+type i16_enum = strict enum : int16 {
     x = 23;
 };
 
-enum i32_enum : int32 {
+type i32_enum = strict enum : int32 {
     x = 23;
 };
 
-enum i64_enum : int64 {
+type i64_enum = strict enum : int64 {
     x = 23;
 };
 
-enum u8_enum : uint8 {
+type u8_enum = strict enum : uint8 {
     x = 23;
 };
 
-enum u16_enum : uint16 {
+type u16_enum = strict enum : uint16 {
     x = 23;
 };
 
-enum u32_enum : uint32 {
+type u32_enum = strict enum : uint32 {
     x = 23;
 };
 
-enum u64_enum : uint64 {
+type u64_enum = strict enum : uint64 {
     x = 23;
 };
 
-struct structs {
-    this_is_a_struct s;
-    this_is_a_struct? nullable_s;
+type structs = struct {
+    s this_is_a_struct;
+    nullable_s box<this_is_a_struct>;
 };
 
-struct unions {
-    this_is_a_union s;
-    this_is_a_union? nullable_u;
+type unions = struct {
+    s this_is_a_union;
+    nullable_u this_is_a_union:optional;
 };
 
-resource union union_types {
-    1: bool b;
-    2: int8 i8;
-    3: int16 i16;
-    4: int32 i32;
-    5: int64 i64;
-    6: uint8 u8;
-    7: uint16 u16;
-    8: uint32 u32;
-    9: uint64 u64;
-    10: float32 f32;
-    11: float64 f64;
+type union_types = strict resource union {
+    1: b bool;
+    2: i8 int8;
+    3: i16 int16;
+    4: i32 int32;
+    5: i64 int64;
+    6: u8 uint8;
+    7: u16 uint16;
+    8: u32 uint32;
+    9: u64 uint64;
+   10: f32 float32;
+   11: f64 float64;
 
-    12: array<bool>:1 b_0;
-    13: array<int8>:1 i8_0;
-    14: array<int16>:1 i16_0;
-    15: array<int32>:1 i32_0;
-    16: array<int64>:1 i64_0;
-    17: array<uint8>:1 u8_0;
-    18: array<uint16>:1 u16_0;
-    19: array<uint32>:1 u32_0;
-    20: array<uint64>:1 u64_0;
-    21: array<float32>:1 f32_0;
-    22: array<float64>:1 f64_0;
-    23: array<zx.handle>:1 handle_0;
+   12: b_0 array<bool, 1>;
+   13: i8_0 array<int8, 1>;
+   14: i16_0 array<int16, 1>;
+   15: i32_0 array<int32, 1>;
+   16: i64_0 array<int64, 1>;
+   17: u8_0 array<uint8, 1>;
+   18: u16_0 array<uint16, 1>;
+   19: u32_0 array<uint32, 1>;
+   20: u64_0 array<uint64, 1>;
+   21: f32_0 array<float32, 1>;
+   22: f64_0 array<float64, 1>;
+   23: handle_0 array<zx.handle, 1>;
 
-    24: string str;
-    25: this_is_a_struct s;
-    26: this_is_a_union u;
+   24: str string;
+   25: s this_is_a_struct;
+   26: u this_is_a_union;
 };

@@ -1,8 +1,6 @@
 // Copyright 2019 The Chromium Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library test.fidlcodec.sys;
 
 using zx;
@@ -17,16 +15,16 @@ using zx;
 /// size. As such, VMO alone cannot serve as a buffer for arbitrarly sized
 /// data. `fuchsia.mem.Buffer` is a standard struct that aggregate the VMO
 /// and its size.
-resource struct Buffer {
+type Buffer = resource struct {
     /// The vmo.
-    zx.handle:VMO vmo;
+    vmo zx.handle:VMO;
 
     /// The size of the data in the vmo in bytes. This size must be smaller
     /// than the physical size of the vmo.
-    uint64 size;
+    size uint64;
 };
 
-enum TerminationReason {
+type TerminationReason = strict enum {
     // The channel closed without giving a termination reason.
     UNKNOWN = 0;
     // Component ran and exited with a given return_code.
@@ -77,7 +75,10 @@ protocol ComponentController {
     // its termination. The return_code is only valid if the termination
     // reason is EXITED. If the termination reason is not EXITED, the
     // return code is guaranteed not to be 0.
-    -> OnTerminated(int64 return_code, TerminationReason termination_reason);
+    -> OnTerminated(struct {
+        return_code int64;
+        termination_reason TerminationReason;
+    });
 
     // Event that is triggered when the component's output directory is mounted.
     //
@@ -113,30 +114,30 @@ protocol EnvironmentController {
 };
 
 // Maximum length for an environment label.
-const uint32 LABEL_MAX_LENGTH = 32;
+const LABEL_MAX_LENGTH uint32 = 32;
 
-struct EnvironmentOptions {
+type EnvironmentOptions = struct {
     // True if this environment should inherit services provided by the
     // parent environment.
-    bool inherit_parent_services;
+    inherit_parent_services bool;
     // True if components in this environment can share a runner provided
     // by the parent environment. If false, a new runner will be started
     // in this environment for components.
-    bool allow_parent_runners;
+    allow_parent_runners bool;
     // True if this environment should be killed first in out of memory
     // situations by setting the ZX_PROP_JOB_KILL_ON_OOM property on this
     // environment's job.
-    bool kill_on_oom;
+    kill_on_oom bool;
     // True if "persistent" storage requested by components in this environment should not actually
     // be persistent, and instead be deleted when this environment is killed.
-    bool delete_storage_on_death;
+    delete_storage_on_death bool;
 };
 
 // An interface for managing a set of applications.
 //
 // Applications run inside environments, which provide ambient services and
 // support for their lifecycle.
-[Discoverable]
+@discoverable
 protocol Environment {
     // Creates a new environment nested inside this environment.
     //
@@ -163,117 +164,127 @@ protocol Environment {
     //
     // `options` provides additional options, see `EnvironmentOptions` for
     // details.
-    CreateNestedEnvironment(request<Environment> environment,
-                            request<EnvironmentController> controller,
-                            string label,
-                            ServiceList? additional_services,
-                            EnvironmentOptions options);
+    CreateNestedEnvironment(resource struct {
+        environment server_end:Environment;
+        controller server_end:EnvironmentController;
+        label string;
+        additional_services box<ServiceList>;
+        options EnvironmentOptions;
+    });
 
     // Gets the Launcher associated with this environment.
     //
     // Applications created using this application launcher will be given the
     // environment services provided by this environment's `host_directory`.
-    GetLauncher(request<Launcher> launcher);
+    GetLauncher(resource struct {
+        launcher server_end:Launcher;
+    });
 
     // Gets a superset of services provided by this environment's
     // `host_directory`.
-    GetServices(request<Provider> services);
+    GetServices(resource struct {
+        services server_end:Provider;
+    });
 
     // Gets a superset of services provided by this environment's
     // `host_directory`.
-    GetDirectory(zx.handle:CHANNEL directory_request);
+    GetDirectory(resource struct {
+        directory_request zx.handle:CHANNEL;
+    });
 };
 
-resource struct FlatNamespace {
+type FlatNamespace = resource struct {
     // The mount point for each of the directories below.
     //
     // For example, ["/pkg", "/svc"].
-    vector<string> paths;
+    paths vector<string>;
 
     // The directories mounted at each path in the namespace.
-    vector<zx.handle:CHANNEL> directories;
+    directories vector<zx.handle:CHANNEL>;
 };
 
 // An interface for providing a job handle. Instances of this interface are
 // created in the context of an already-identified realm, so there is no need
 // to explicitly identify the realm below.
-[Discoverable]
+@discoverable
 protocol JobProvider {
     // Gets the root job associated with the realm.
-    GetJob() -> (zx.handle:JOB job);
+    GetJob() -> (resource struct {
+        job zx.handle:JOB;
+    });
 };
 
 // An FDIO file descriptor.
 // TODO(abarth): Use the real FDIO declaration once FDIO converts to FIDL2.
-resource struct FileDescriptor {
+type FileDescriptor = resource struct {
     // The FDIO types of the handle (e.g., FA_FDIO_REMOTE).
-    int32 type0;
-    int32 type1;
-    int32 type2;
+    type0 int32;
+    type1 int32;
+    type2 int32;
 
     // The handles for the file descriptor (e.g., a channel).
-    zx.handle? handle0;
-    zx.handle? handle1;
-    zx.handle? handle2;
+    handle0 zx.handle:optional;
+    handle1 zx.handle:optional;
+    handle2 zx.handle:optional;
 };
 
 // Information used to create an instance of a component and obtain
 // services from it.
-resource struct LaunchInfo {
+type LaunchInfo = resource struct {
     // The location from which to retrieve this component.
     //
     // This field will probably be replaced with a stronger notion of identity,
     // such as an unforgeable token. This field is included in this iteration to
     // ease the transition from the previous component interfaces.
-    string url;
+    url string;
 
     // The arguments to be provided to the component.
-    vector<string>? arguments;
+    arguments vector<string>:optional;
 
     // The file descriptor to use for stdout.
     //
     // If null, the component will use the default stdout for the environment.
-    FileDescriptor? out;
+    out box<FileDescriptor>;
 
     // The file descriptor to use for stderr.
     //
     // If null, the component will use the default stderr for the environment.
-    FileDescriptor? err;
+    err box<FileDescriptor>;
 
     // The interface request for a Directory that is passed through to the
     // component and arrives in the component as its `directory_request`
     // interface request.
-    zx.handle:CHANNEL? directory_request;
+    directory_request zx.handle:<CHANNEL, optional>;
 
     // A custom namespace that can be appended to the namespace generated by
     // appmgr and provided to this component.
     // Adding a mount point at standard paths like 'pkg' or 'svc' will be ignored.
     // HACK(alhaad): Adding mount points for deprecated default directories like
     // '/data' will override the default.
-    FlatNamespace? flat_namespace;
+    flat_namespace box<FlatNamespace>;
 
     // A list of services to be added to this component's svc namespace. These
     // services are in addition to those coming from Environment.
-    ServiceList? additional_services;
+    additional_services box<ServiceList>;
 };
 
-resource struct ServiceList {
+type ServiceList = resource struct {
     // A list of services that can be requested from `provider`.
-    vector<string> names;
+    names vector<string>;
 
     // A service provider to get the services listed in `names` from.
-    Provider? provider;
+    provider client_end:<Provider, optional>;
 
     // A channel to the directory hosting the services in `names`.
     // TODO(fxbug.dev/31262): Support `host_directory` for CreateComponent and deprecate
     // `provider`.
-    zx.handle:CHANNEL? host_directory;
+    host_directory zx.handle:<CHANNEL, optional>;
 };
 
 // An interface for creating component instances.
 //
 // Typically obtained via `Environment.GetLauncher`.
-[Discoverable]
+@discoverable
 protocol Launcher {
     // Creates a new instance of the component described by `launch_info`.
     //
@@ -285,65 +296,71 @@ protocol Launcher {
     // The `controller` can be used to control the lifecycle of the created
     // component instance. If an `ComponentController`'s interface is
     // requested, the component instance is killed when the interface is closed.
-    CreateComponent(LaunchInfo launch_info,
-                    request<ComponentController>? controller);
+    CreateComponent(resource struct {
+        launch_info LaunchInfo;
+        controller server_end:<ComponentController, optional>;
+    });
 };
 
 // An interface for loading from packages.
-[Discoverable]
+@discoverable
 protocol Loader {
     // LoadUrl a package by url.
-    LoadUrl(string url) -> (Package? package);
+    LoadUrl(struct {
+        url string;
+    }) -> (resource struct {
+        package box<Package>;
+    });
 };
 
 // Information given to components at startup.
 //
 // For ELF binaries, this information is provided in the initialization message
 // given to libc by fuchsia.process.Launcher.
-resource struct StartupInfo {
+type StartupInfo = resource struct {
     // The launch info for the to start.
-    LaunchInfo launch_info;
+    launch_info LaunchInfo;
 
     // The namespace in which to run the component.
-    FlatNamespace flat_namespace;
+    flat_namespace FlatNamespace;
 
     // Key string value string map of the component's program metadata, obtained
     // from its component manifest.
-    vector<ProgramMetadata>? program_metadata;
+    program_metadata vector<ProgramMetadata>:optional;
 
-    // TODO(abarth): Add more fields to this struct relating to component and
-    // environment identity.
+// TODO(abarth): Add more fields to this struct relating to component and
+// environment identity.
 };
 
 // Program information about a component.
-struct ProgramMetadata {
+type ProgramMetadata = struct {
     // Key for program metadata pair. E.g. "binary" for an ELF binary component,
     // or "data" for a flutter/dart component.
-    string key;
+    key string;
 
     // Value for program metadata pair. E.g. "bin/app" for a "binary" key, or
     // "data/foo" for a flutter/dart component.
-    string value;
+    value string;
 };
 
 // A binary representation of a component.
 //
 // Typically provided to `Runner.StartComponent` when starting a
 // component.
-resource struct Package {
+type Package = resource struct {
     // A read-only binary representation of the component. For example, if the
     // component is intended to run in the Dart virtual machine, this data might
     // contain a dartx package.
-    Buffer? data;
+    data box<Buffer>;
 
     // A directory containing the contents of the package. For example, if the
     // component is stored in pkgfs, this directory will be the pkgfs directory
     // containing the package.
-    zx.handle:CHANNEL? directory;
+    directory zx.handle:<CHANNEL, optional>;
 
     // Resolved URL of the component. This is the url specified in startup_info
     // after following redirects and resolving relative paths.
-    string resolved_url;
+    resolved_url string;
 };
 
 // An interface for running components.
@@ -351,7 +368,7 @@ resource struct Package {
 // Typically exposed by components that provide execution environments for
 // particular classes of programs. For example, the Dart virtual machine exposes
 // this interface to run Dart programs.
-[Discoverable]
+@discoverable
 protocol Runner {
     // Execute the given component.
     //
@@ -362,9 +379,11 @@ protocol Runner {
     // The `controller` interface request typically originates from the
     // `Launcher.CreateComponent` message that caused this
     // component to be started.
-    StartComponent(Package package,
-                   StartupInfo startup_info,
-                   request<ComponentController>? controller);
+    StartComponent(resource struct {
+        package Package;
+        startup_info StartupInfo;
+        controller server_end:<ComponentController, optional>;
+    });
 };
 
 // An interface through which a client may request services from a host.
@@ -379,5 +398,8 @@ protocol Provider {
     // Asks the host to provide the service identified by `service_name` through
     // the `channel` endpoint supplied by the caller. If the host is not willing
     // or able to provide the requested service, it should close the `channel`.
-    ConnectToService(string service_name, zx.handle:CHANNEL channel);
+    ConnectToService(resource struct {
+        service_name string;
+        channel zx.handle:CHANNEL;
+    });
 };

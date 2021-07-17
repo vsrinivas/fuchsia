@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 // NOTE: This file is unstable and should not be depended on.
 // TODO(seancuff): Convert doc comments to markdown.
 
@@ -13,15 +11,15 @@ using fuchsia.intl;
 
 /// The maximum number of font families that can be returned in a
 /// `TypefaceInfoResponse`.
-const uint32 MAX_TYPEFACE_RESULTS = 16;
+const MAX_TYPEFACE_RESULTS uint32 = 16;
 
-enum Error {
+type Error = strict enum {
     NOT_FOUND = 1;
     INTERNAL = 2;
 };
 
 /// Experimental additions to `Provider`.
-[Discoverable]
+@discoverable
 protocol Provider {
     /// Get an exact font by asset ID. This would typically be called
     /// after `ListTypefaces`, e.g. as part of a font selection interface.
@@ -33,14 +31,21 @@ protocol Provider {
     /// `INTERNAL` if the requested `id` exists, but the asset failed to load.
     ///
     /// Eventually this should probably be folded into `GetTypeface`.
-    GetTypefaceById(uint32 id) -> (ff.TypefaceResponse response) error Error;
+    GetTypefaceById(struct {
+        id uint32;
+    }) -> (resource struct {
+        response ff.TypefaceResponse;
+    }) error Error;
 
     /// Creates a `ListTypefacesIterator` instance that will return a paginated
     /// list of fonts matching `request`.
     ///
     /// Possible errors:
     /// `INTERNAL` if something bad happens.
-    ListTypefaces(ListTypefacesRequest request, request<ListTypefacesIterator> iterator) -> () error Error;
+    ListTypefaces(resource struct {
+        request ListTypefacesRequest;
+        iterator server_end:ListTypefacesIterator;
+    }) -> (struct {}) error Error;
 
     /// Returns a `TypefaceInfo` for each font in the requested `family`. The
     /// results' `family` fields will hold the canonical family name, even if
@@ -52,52 +57,58 @@ protocol Provider {
     ///
     /// Possible errors:
     /// `NOT_FOUND` if no family name or alias matches the requested `family`.
-    GetTypefacesByFamily(ff.FamilyName family) -> (TypefaceInfoResponse response) error Error;
+    GetTypefacesByFamily(struct {
+        family ff.FamilyName;
+    }) -> (struct {
+        response TypefaceInfoResponse;
+    }) error Error;
 };
 
 protocol ListTypefacesIterator {
     /// Returns the next chunk of `TypefaceInfo` for all typefaces that match
     /// the bound `ListTypefacesRequest`. If `response.results` is empty, no
     /// results remain.
-    GetNext() -> (TypefaceInfoResponse response);
+    GetNext() -> (struct {
+        response TypefaceInfoResponse;
+    });
 };
 
 /// Query parameters for `ListTypefaces`. Results must match all included
 /// fields. All fields are optional; omitted fields will match any font.
-table ListTypefacesRequest {
+type ListTypefacesRequest = table {
     /// Optional flags to modify matching behavior. Ignored if no other fields
     /// are set.
-    1: ListTypefacesFlags flags;
+    1: flags ListTypefacesFlags;
 
     /// The name or alias of a font family. By default, families whose name
     /// exactly matches `family`. For substring matching, set the request's
     /// `MATCH_FAMILY_NAME_SUBSTRING` flag.
-    2: ff.FamilyName family;
+    2: family ff.FamilyName;
 
     /// Results must have a slant within this inclusive range.
-    3: SlantRange slant;
+    3: slant SlantRange;
 
     /// Results must have a weight within this inclusive range.
-    4: WeightRange weight;
+    4: weight WeightRange;
 
     /// Results must have a width within this inclusive range.
-    5: WidthRange width;
+    5: width WidthRange;
 
     /// Languages that results must support.
     /// Each result must support all requested languages.
-    6: vector<fuchsia.intl.LocaleId>:ff.MAX_FACE_QUERY_LANGUAGES languages;
+    6: languages vector<fuchsia.intl.LocaleId>:ff.MAX_FACE_QUERY_LANGUAGES;
 
     /// Code points that results must include.
     /// Each result must include all requested code points.
-    7: vector<uint32> code_points;
+    7: code_points vector<uint32>;
 
     /// Generic font family which results must belong to. If a font's generic
     /// family is not set, it will only be matched if this field is also not
     /// set. However, omitting this field will still cause it to match any font.
-    8: ff.GenericFontFamily generic_family;
+    8: generic_family ff.GenericFontFamily;
 };
 
-bits ListTypefacesFlags : uint32 {
+type ListTypefacesFlags = strict bits : uint32 {
     /// Match families whose name or alias exactly contains the requested
     /// `FamilyName`. If not set, match families whose name or alias exactly
     /// matches `FamilyName`.
@@ -107,41 +118,41 @@ bits ListTypefacesFlags : uint32 {
 };
 
 /// Represents a range of acceptable `Slant`s. Both bounds are inclusive.
-struct SlantRange {
-    ff.Slant lower;
-    ff.Slant upper;
+type SlantRange = struct {
+    lower ff.Slant;
+    upper ff.Slant;
 };
 
 /// Represents a range of acceptable `Weight`s. Both bounds are inclusive.
-struct WeightRange {
-    ff.Weight lower;
-    ff.Weight upper;
+type WeightRange = struct {
+    lower ff.Weight;
+    upper ff.Weight;
 };
 
 /// Represents a range of acceptable `Width`s. Both bounds are inclusive.
-struct WidthRange {
-    ff.Width lower;
-    ff.Width upper;
+type WidthRange = struct {
+    lower ff.Width;
+    upper ff.Width;
 };
 
-table TypefaceInfoResponse {
-    1: vector<TypefaceInfo>:MAX_TYPEFACE_RESULTS results;
+type TypefaceInfoResponse = table {
+    1: results vector<TypefaceInfo>:MAX_TYPEFACE_RESULTS;
 };
 
 /// Collection of typeface metadata that should be sufficient for clients to
 /// perform some kind of selection (likely via human) and request an exact font.
-table TypefaceInfo {
+type TypefaceInfo = table {
     /// Identifier for the font asset. This ID is valid for the lifetime of the
     /// font service. May be used in conjunction with `font_index` to directly
     /// request this font.
-    1: uint32 asset_id;
+    1: asset_id uint32;
 
     /// Index of the font within its parent asset. May be used in conjunction
     /// with `asset_id` to directly request this font.
-    2: uint32 font_index;
+    2: font_index uint32;
 
-    3: ff.FamilyName family;
-    4: ff.Style2 style;
-    5: vector<fuchsia.intl.LocaleId> languages;
-    6: ff.GenericFontFamily generic_family;
+    3: family ff.FamilyName;
+    4: style ff.Style2;
+    5: languages vector<fuchsia.intl.LocaleId>;
+    6: generic_family ff.GenericFontFamily;
 };

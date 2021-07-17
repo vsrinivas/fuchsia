@@ -1,8 +1,6 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.net.routes;
 
 using fuchsia.net;
@@ -11,31 +9,31 @@ using zx;
 /// Collection of addresses and identifiers describing a network destination.
 ///
 /// A `Destination` is the "next-hop" for a routed packet.
-table Destination {
+type Destination = table {
     /// The IP address of the destination.
-    1: fuchsia.net.IpAddress address;
+    1: address fuchsia.net.IpAddress;
     /// The MAC address of the destination. Only set if the destination is on a link that requires a
     /// MAC address.
-    2: fuchsia.net.MacAddress mac;
+    2: mac fuchsia.net.MacAddress;
     /// The interface identifier over which the destination can be reached.
-    3: fuchsia.net.interface_id interface_id;
+    3: interface_id fuchsia.net.interface_id;
     /// The preferred local IP address used to communicate with the destination.
-    4: fuchsia.net.IpAddress source_address;
+    4: source_address fuchsia.net.IpAddress;
 };
 
 /// A resolved route.
 ///
 /// Contains the information for the "next-hop" or immediate-destination that is the result of a
 /// route resolution. A resolved route is only meaningful in the context of a requested destination.
-union Resolved {
+type Resolved = strict union {
     /// The requested destination is directly reachable.
-    1: Destination direct;
+    1: direct Destination;
     /// The requested destination is reachable through a gateway, thus the next hop is the gateway.
-    2: Destination gateway;
+    2: gateway Destination;
 };
 
 /// Provides access to the system's routing state.
-[Discoverable]
+@discoverable
 protocol State {
     /// Resolves the route to a destination.
     ///
@@ -48,5 +46,9 @@ protocol State {
     // TODO(brunodalbo) In the future we may have multiple tables and we may want to let the caller
     // specify which table to use. Alternatively, if multiple tables are accessed through scoped
     // objects, a `Resolve` call in a table would have the same effect.
-    Resolve(fuchsia.net.IpAddress destination) -> (Resolved result) error zx.status;
+    Resolve(struct {
+        destination fuchsia.net.IpAddress;
+    }) -> (struct {
+        result Resolved;
+    }) error zx.status;
 };

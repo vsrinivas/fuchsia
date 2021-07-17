@@ -1,22 +1,20 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 // GENERATED FILE: Regen with $(fx get-build-dir)/host-tools/regen_fidl_benchmark_suite
 
 library benchmarkfidl;
 
 using zx;
 
-resource struct HandleArrayEvent1 {
-    array<zx.handle:EVENT>:1 handles;
+type HandleArrayEvent1 = resource struct {
+    handles array<zx.handle:EVENT, 1>;
 };
 
-resource struct HandleArrayEvent16 {
-    array<zx.handle:EVENT>:16 handles;
+type HandleArrayEvent16 = resource struct {
+    handles array<zx.handle:EVENT, 16>;
 };
 
-resource struct HandleArrayEvent64 {
-    array<zx.handle:EVENT>:64 handles;
+type HandleArrayEvent64 = resource struct {
+    handles array<zx.handle:EVENT, 64>;
 };

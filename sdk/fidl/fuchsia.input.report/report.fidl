@@ -1,43 +1,41 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.input.report;
 
 using zx;
 
 /// `InputReport` is a single report that is created by an input device.
-table InputReport {
+type InputReport = table {
     /// `event_time` is in nanoseconds when the event was recorded.
-    1: zx.time event_time;
+    1: event_time zx.time;
     /// `mouse` is the report generated if the device contains a mouse.
-    2: MouseInputReport mouse;
+    2: mouse MouseInputReport;
     /// `sensor` is the report generated if the device contains a sensor.
-    4: SensorInputReport sensor;
+    4: sensor SensorInputReport;
     /// `touch` is the report generated if the device contains a touch device.
-    5: TouchInputReport touch;
+    5: touch TouchInputReport;
     /// `keyboard` is the report generated if the device contains a keyboard.
-    6: KeyboardInputReport keyboard;
+    6: keyboard KeyboardInputReport;
     /// `consumer_controls` is the report generated if the device contains a
     /// ConsumerControl device.
-    7: ConsumerControlInputReport consumer_control;
+    7: consumer_control ConsumerControlInputReport;
 
     /// Unique ID to connect trace async begin/end events.
-    3: uint64 trace_id;
+    3: trace_id uint64;
 };
 
 /// A single report containing output information for an input device.
 /// Output information typically represents device output to the user
 /// (E.g: LEDs, tactile feedback, etc).
-table OutputReport {
-    1: KeyboardOutputReport keyboard;
+type OutputReport = table {
+    1: keyboard KeyboardOutputReport;
 };
 
 /// A single report containing the feature information for an input device.
 /// Feature reports obtained from the device show the current state of the
 /// device. Sending a feature report to the device sets the device in that
 /// state.
-table FeatureReport {
-    1: SensorFeatureReport sensor;
+type FeatureReport = table {
+    1: sensor SensorFeatureReport;
 };

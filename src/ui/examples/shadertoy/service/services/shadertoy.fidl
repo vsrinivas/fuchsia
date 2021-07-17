@@ -1,8 +1,6 @@
 // Copyright 2017 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.examples.shadertoy;
 
 using fuchsia.images;
@@ -24,15 +22,24 @@ using fuchsia.ui.gfx;
 // which is used to create Shadertoy instances.
 protocol Shadertoy {
     // Set whether rendering is paused or not.
-    SetPaused(bool paused);
+    SetPaused(struct {
+        paused bool;
+    });
 
     // Set the GLSL shader code for the Shadertoy.  Return true if compilation was
     // successful and false otherwise.
     // TODO: provide better error reporting when compilation fails.
-    SetShaderCode(string glsl) -> (bool successful);
+    SetShaderCode(struct {
+        glsl string;
+    }) -> (struct {
+        successful bool;
+    });
 
     // Corresponds to Shadertoy's 'iResolution' shader parameter.
-    SetResolution(uint32 width, uint32 height);
+    SetResolution(struct {
+        width uint32;
+        height uint32;
+    });
 
     // Corresponds to Shadertoy's 'iMouse' shader parameter.  The value is
     // interpreted as follows:
@@ -41,10 +48,15 @@ protocol Shadertoy {
     // i_mouse.zw
     //   - (when mouse is down) the current position of the mouse
     //   - (when mouse is up) the position of the last mouse-up event
-    SetMouse(fuchsia.ui.gfx.vec4 i_mouse);
+    SetMouse(struct {
+        i_mouse fuchsia.ui.gfx.vec4;
+    });
 
     // Corresponds to Shadertoy's 'iChannel0..3' parameters.  Currently only 2D
     // samplers are supported (no cubemaps).  `channel` must be one of 0, 1, 2, 3.
     // TODO: implement cubemap support.
-    SetImage(uint32 channel, request<fuchsia.images.ImagePipe> image_pipe);
+    SetImage(resource struct {
+        channel uint32;
+        image_pipe server_end:fuchsia.images.ImagePipe;
+    });
 };

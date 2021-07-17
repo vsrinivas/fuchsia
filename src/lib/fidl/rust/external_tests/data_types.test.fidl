@@ -1,65 +1,63 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fidl.rust.test.external;
 
-strict bits StrictButtons : uint32 {
+type StrictButtons = strict bits : uint32 {
     PLAY = 0b001;
     PAUSE = 0b010;
     STOP = 0b100;
 };
 
-flexible bits FlexibleButtons : uint32 {
+type FlexibleButtons = flexible bits : uint32 {
     PLAY = 0b001;
     PAUSE = 0b010;
     STOP = 0b100;
 };
 
-strict enum StrictAnimal : int32 {
+type StrictAnimal = strict enum : int32 {
     DOG = 0;
     CAT = 1;
     FROG = 2;
 };
 
-flexible enum FlexibleAnimal : int32 {
+type FlexibleAnimal = flexible enum : int32 {
     DOG = 0;
     CAT = 1;
     FROG = 2;
 };
 
-struct Coordinate {
-    uint8 x;
-    uint8 y;
+type Coordinate = struct {
+    x uint8;
+    y uint8;
 };
 
-strict union StrictValueThing {
-    1: uint32 number;
-    2: string name;
+type StrictValueThing = strict union {
+    1: number uint32;
+    2: name string;
 };
 
-flexible union FlexibleValueThing {
-    1: uint32 number;
-    2: string name;
+type FlexibleValueThing = flexible union {
+    1: number uint32;
+    2: name string;
 };
 
-strict resource union StrictResourceThing {
-    1: uint32 number;
-    2: string name;
+type StrictResourceThing = strict resource union {
+    1: number uint32;
+    2: name string;
 };
 
-flexible resource union FlexibleResourceThing {
-    1: uint32 number;
-    2: string name;
+type FlexibleResourceThing = flexible resource union {
+    1: number uint32;
+    2: name string;
 };
 
-table ValueRecord {
-    1: string name;
-    2: uint8 age;
+type ValueRecord = table {
+    1: name string;
+    2: age uint8;
 };
 
-resource table ResourceRecord {
-    1: string name;
-    2: uint8 age;
+type ResourceRecord = resource table {
+    1: name string;
+    2: age uint8;
 };

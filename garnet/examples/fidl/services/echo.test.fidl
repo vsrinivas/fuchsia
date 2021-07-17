@@ -1,8 +1,6 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 // NOTE: The comments that have [START/END ...] in them are used to identify
 // code snippets that  appear in the documentation.  Please be aware that
 // changes in these blocks will affect the documentation on fuchsia.dev.
@@ -10,16 +8,20 @@ deprecated_syntax;
 library fidl.examples.echo;
 
 // [START protocol]
-[Discoverable]
+@discoverable
 protocol Echo {
-    EchoString(string? value) -> (string? response);
+    EchoString(struct {
+        value string:optional;
+    }) -> (struct {
+        response string:optional;
+    });
 };
 // [END protocol]
 
 /// A service with multiple Echo protocol implementations.
 service EchoService {
     /// An implementation of `Echo` that prefixes its output with "foo: ".
-    Echo foo;
+    foo client_end:Echo;
     /// An implementation of `Echo` that prefixes its output with "bar: ".
-    Echo bar;
+    bar client_end:Echo;
 };

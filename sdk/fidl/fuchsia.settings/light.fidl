@@ -1,16 +1,14 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.settings;
 
 using fuchsia.ui.types;
 
-const uint8 MAX_LIGHT_NAME_LENGTH = 32;
+const MAX_LIGHT_NAME_LENGTH uint8 = 32;
 
 /// Enum describing the possible types of values for controlling a light.
-enum LightType {
+type LightType = strict enum {
     /// This type of light supports setting brightness to a uint8_t value.
     BRIGHTNESS = 1;
 
@@ -22,51 +20,51 @@ enum LightType {
 };
 
 /// State of a given light.
-table LightState {
-    1: LightValue value;
+type LightState = table {
+    1: value LightValue;
 };
 
 /// Value of a light. Only one of the three values in the union will be present,
 /// depending on the light's LightType.
-union LightValue {
+type LightValue = strict union {
     /// Lights with LightType.SIMPLE will have this value.
-    1: bool on;
+    1: on bool;
 
     /// Lights with LightType.BRIGHTNESS will have this value, a floating point
     /// value 0.0 to 1.0 inclusive, where 0.0 means the light is off. Not a
     /// number (NaN), infinity or negative infinity will cause SetLightGroup to
     /// fail with INVALID_VALUE.
-    2: float64 brightness;
+    2: brightness float64;
 
     /// Lights with LightType.RGB will have this value.
     ///
     /// Each color channel should be a value between 0.0 and 1.0 inclusive.
     /// Values outside this range will cause SetLightGroup to fail with
     /// INVALID_VALUE.
-    3: fuchsia.ui.types.ColorRgb color;
+    3: color fuchsia.ui.types.ColorRgb;
 };
 
 /// Information about a controllable light group. A group may have one or more
 /// lights.
-table LightGroup {
+type LightGroup = table {
     /// Identifier for this light group, clients should pass this back into the
     /// service to set the group's light values.
-    1: string:MAX_LIGHT_NAME_LENGTH name;
+    1: name string:MAX_LIGHT_NAME_LENGTH;
 
     /// True if the light group is enabled and changes will be visible to the
     /// user. False if the light group is forced off by hardware. If the light
     /// group is disabled, its value can still be set, but the change may not be
     /// visible until the light group is back on.
-    2: bool enabled;
+    2: enabled bool;
 
     /// Defines the acceptable value type for controlling this light group.
-    3: LightType type;
+    3: type LightType;
 
     /// States of the lights in this group.
-    4: vector<LightState>:MAX lights;
+    4: lights vector<LightState>:MAX;
 };
 
-enum LightError {
+type LightError = strict enum {
     /// Call failed for unspecified reasons.
     FAILED = 1;
 
@@ -81,7 +79,7 @@ enum LightError {
     INVALID_VALUE = 4;
 };
 
-[Discoverable]
+@discoverable
 protocol Light {
     /// Fetches information on the controllable light groups on the device.
     /// Returns immediately on first call; subsequent calls return when the
@@ -89,7 +87,9 @@ protocol Light {
     ///
     /// If this call fails, it is considered a fatal error and the channel
     /// will be closed.
-    WatchLightGroups() -> (vector<LightGroup>:MAX groups);
+    WatchLightGroups() -> (struct {
+        groups vector<LightGroup>:MAX;
+    });
 
     /// Fetches information on an individual light group on the device with the
     /// given name. Returns immediately on first call; subsequent calls return
@@ -97,7 +97,11 @@ protocol Light {
     ///
     /// If this call fails, it is considered a fatal error and the channel
     /// will be closed.
-    WatchLightGroup(string:MAX_LIGHT_NAME_LENGTH name) -> (LightGroup group);
+    WatchLightGroup(struct {
+        name string:MAX_LIGHT_NAME_LENGTH;
+    }) -> (struct {
+        group LightGroup;
+    });
 
     /// Sets the values for the lights in the group with the given name.
     ///
@@ -107,5 +111,8 @@ protocol Light {
     /// The requested changes may not take immediate effect if
     /// the light is forced to a certain state by the device's hardware. This
     /// call will still succeed, but the light's value may not change.
-    SetLightGroupValues(string:MAX_LIGHT_NAME_LENGTH name, vector<LightState>:MAX state) -> () error LightError;
+    SetLightGroupValues(struct {
+        name string:MAX_LIGHT_NAME_LENGTH;
+        state vector<LightState>:MAX;
+    }) -> (struct {}) error LightError;
 };

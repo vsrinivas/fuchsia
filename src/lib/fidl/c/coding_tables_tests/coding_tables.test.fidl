@@ -1,120 +1,144 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fidl.test.example.codingtables;
 
 using fidl.test.example.codingtablesdeps as deplib;
 
-struct SomeStruct {
-    bool foo;
-    int32 bar;
+type SomeStruct = struct {
+    foo bool;
+    bar int32;
 };
 
 // Tested in StructWithSomeFieldsRemoved.
 // All fields in this struct don't have actions in coding tables.
-struct StructWithAllFieldsRemovedFromCodingTables {
-    int8 a;
-    int8 b;
-    int16 c;
+type StructWithAllFieldsRemovedFromCodingTables = struct {
+    a int8;
+    b int8;
+    c int16;
 };
 
 // Tested in StructWithSomeFieldsRemoved.
-struct StructWithPadding {
-    int8 a;
-    int64 c;
+type StructWithPadding = struct {
+    a int8;
+    c int64;
 };
 
-struct PaddingAtEndStruct {
-    uint16 a;
-    uint8 b;
+type PaddingAtEndStruct = struct {
+    a uint16;
+    b uint8;
 };
 
 // Some fields in this struct should be removed from coding tables because
 // they have no action and the walker can skip over them.
-struct StructWithSomeFieldsRemovedFromCodingTables {
-    StructWithPadding padding_struct; // not removed
+type StructWithSomeFieldsRemovedFromCodingTables = struct {
+    padding_struct StructWithPadding; // not removed
     // PaddingAtEndStruct contains 3 bytes with 1 final byte of padding
     // When the struct is flattened, this becomes 5 bytes of padding.
-    PaddingAtEndStruct padding_at_end_struct;
-    uint64 reset_alignment;
-    int8 foo; // removed
+    padding_at_end_struct PaddingAtEndStruct;
+    reset_alignment uint64;
+    foo int8; // removed
     // 3 bytes padding.
-    array<StructWithAllFieldsRemovedFromCodingTables>:1 arr; // removed
-    array<bool>:1 bool_array; // not removed
+    arr array<StructWithAllFieldsRemovedFromCodingTables, 1>; // removed
+    bool_array array<bool, 1>; // not removed
     // 1 byte padding.
-    uint16 bar; // removed
+    bar uint16; // removed
 };
 
-flexible union MyXUnion {
-    1: bool foo;
-    2: int32 bar;
+type MyXUnion = flexible union {
+    1: foo bool;
+    2: bar int32;
 };
 
-union MyStrictXUnion {
-    1: bool foo;
-    2: int32 bar;
+type MyStrictXUnion = strict union {
+    1: foo bool;
+    2: bar int32;
 };
 
-table MyTable {
-    1: bool foo;
-    2: int32 bar;
+type MyTable = table {
+    1: foo bool;
+    2: bar int32;
     3: reserved;
-    4: array<uint64>:42 baz;
-    5: vector<uint64>:42 qux;
+    4: baz array<uint64, 42>;
+    5: qux vector<uint64>:42;
 };
 
-bits MyBits : uint8 {
+type MyBits = strict bits : uint8 {
     HELLO = 0x1;
     WORLD = 0x10;
 };
 
-enum MyEnum : uint32 {
+type MyEnum = strict enum : uint32 {
     FOO = 1;
     BAR = 42;
 };
 
 // Types defined to detect collisions in the mangled coding table output.
-struct A {
-};
+type A = struct {};
 
-struct A1 {
-};
+type A1 = struct {};
 
-struct NumberCollision {
-    array<A>:11 a;
-    array<A1>:1 b;
-    vector<A>:11 c;
-    vector<A1>:1 d;
-    string:11 e;
-    string:1 f;
+type NumberCollision = struct {
+    a array<A, 11>;
+    b array<A1, 1>;
+    c vector<A>:11;
+    d vector<A1>:1;
+    e string:11;
+    f string:1;
 };
 
 // fidlc will only expose coding tables for message types.
 // However, we can obtain the coding tables for SomeStruct/MyXUnion etc. via the coding table
 // for request message types, by defining dummy methods which take a single desired argument.
 protocol Coding {
-    SomeStruct(SomeStruct s);
-    StructWithSomeFieldsRemovedFromCodingTables(StructWithSomeFieldsRemovedFromCodingTables s);
+    SomeStruct(struct {
+        s SomeStruct;
+    });
+    StructWithSomeFieldsRemovedFromCodingTables(struct {
+        s StructWithSomeFieldsRemovedFromCodingTables;
+    });
 
     // Various trickery to avoid directly refering a xunion/table inline,
     // which is not supported in the C bindings.
-    MyXUnion(MyXUnion? x);
-    MyStrictXUnion(MyStrictXUnion? x);
+    MyXUnion(struct {
+        x MyXUnion:optional;
+    });
+    MyStrictXUnion(struct {
+        x MyStrictXUnion:optional;
+    });
 
     // Ensuring support for multiple uses of the same nullable type.
-    MyXUnion2(MyXUnion? x);
-    MyStrictXUnion2(MyStrictXUnion? x);
+    MyXUnion2(struct {
+        x MyXUnion:optional;
+    });
+    MyStrictXUnion2(struct {
+        x MyStrictXUnion:optional;
+    });
 
-    VectorOfMyTable(vector<MyTable> t);
-    VectorOfMyXUnion(vector<MyXUnion> x);
-    VectorOfMyStrictXUnion(vector<MyStrictXUnion> x);
+    VectorOfMyTable(struct {
+        t vector<MyTable>;
+    });
+    VectorOfMyXUnion(struct {
+        x vector<MyXUnion>;
+    });
+    VectorOfMyStrictXUnion(struct {
+        x vector<MyStrictXUnion>;
+    });
 
-    MyBits(MyBits b);
-    MyEnum(MyEnum e);
+    MyBits(struct {
+        b MyBits;
+    });
+    MyEnum(struct {
+        e MyEnum;
+    });
 
-    NumberCollision(NumberCollision x);
+    NumberCollision(struct {
+        x NumberCollision;
+    });
 
-    ForeignXUnions(deplib.MyXUnionA tx) -> (deplib.MyXUnionA? rx);
+    ForeignXUnions(struct {
+        tx deplib.MyXUnionA;
+    }) -> (struct {
+        rx deplib.MyXUnionA:optional;
+    });
 };

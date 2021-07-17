@@ -1,13 +1,11 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.sdhci;
 
 using zx;
 
-enum SdhciQuirk : uint64 {
+type SdhciQuirk = strict enum : uint64 {
     /// This is a BCM28xx specific quirk. The bottom 8 bits of the 136
     /// bit response are normally filled by 7 CRC bits and 1 reserved bit.
     /// The BCM controller checks the CRC for us and strips it off in the
@@ -35,20 +33,38 @@ enum SdhciQuirk : uint64 {
     USE_DMA_BOUNDARY_ALIGNMENT = 0x20;
 };
 
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol Sdhci {
     // TODO: should be replaced with a generic busdev mechanism
-    GetInterrupt() -> (zx.status s, zx.handle:INTERRUPT irq);
+    GetInterrupt() -> (resource struct {
+        s zx.status;
+        irq zx.handle:INTERRUPT;
+    });
     /// mmio size minus offset must be at least 512 bytes as per the SDHCI specification.
-    GetMmio() -> (zx.status s, zx.handle:VMO mmio, zx.off offset);
+    GetMmio() -> (resource struct {
+        s zx.status;
+        mmio zx.handle:VMO;
+        offset zx.off;
+    });
     /// Gets a handle to the bus transaction initiator for the device. The caller
     /// receives ownership of the handle.
-    GetBti(uint32 index) -> (zx.status s, zx.handle:BTI bti);
+    GetBti(struct {
+        index uint32;
+    }) -> (resource struct {
+        s zx.status;
+        bti zx.handle:BTI;
+    });
 
-    GetBaseClock() -> (uint32 clock);
+    GetBaseClock() -> (struct {
+        clock uint32;
+    });
 
     /// returns device quirks
-    GetQuirks() -> (uint64 quirks, uint64 dma_boundary_alignment);
+    GetQuirks() -> (struct {
+        quirks uint64;
+        dma_boundary_alignment uint64;
+    });
     /// platform specific HW reset
     HwReset() -> ();
 };

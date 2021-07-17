@@ -1,13 +1,11 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.factory.wlan;
 
 using zx;
 
-const uint64 MAX_BUFFER_SIZE = 16384;
+const MAX_BUFFER_SIZE uint64 = 16384;
 
 /// Allows the factory testing tool to communicate to the firmware via the driver using
 /// a pre-formatted command buffer to observe and/or control the WLAN hardware's behavior.
@@ -18,11 +16,21 @@ protocol Iovar {
     /// + request `request` additional data associated with the command
     /// - response `result` pre-formatted response data retrieved from firmware
     /// * error a status code indicating why the request could not be completed.
-    Get(int32 iface_idx, int32 cmd, bytes:MAX_BUFFER_SIZE request) -> (bytes:MAX_BUFFER_SIZE result) error zx.status;
+    Get(struct {
+        iface_idx int32;
+        cmd int32;
+        request bytes:MAX_BUFFER_SIZE;
+    }) -> (struct {
+        result bytes:MAX_BUFFER_SIZE;
+    }) error zx.status;
 
     /// + request `iface_idx` interface index in the firmware
     /// + request `cmd` pre-defined command index specified by the manufacturer
     /// + request `request` additional data associated with the command
     /// * error a status code indicating why the request could not be completed.
-    Set(int32 iface_idx, int32 cmd, bytes:MAX_BUFFER_SIZE request) -> () error zx.status;
+    Set(struct {
+        iface_idx int32;
+        cmd int32;
+        request bytes:MAX_BUFFER_SIZE;
+    }) -> (struct {}) error zx.status;
 };

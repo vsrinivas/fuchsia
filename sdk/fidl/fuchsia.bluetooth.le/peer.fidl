@@ -1,87 +1,86 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
 library fuchsia.bluetooth.le;
 
 using fuchsia.bluetooth as bt;
 using zx;
 
 /// Information obtained from advertising and scan response data broadcast by a peer.
-table ScanData {
+type ScanData = table {
     /// The radio transmit power level reported by an advertising and/or scannable peer.
     ///
     /// NOTE: This field should NOT be confused with the "connection TX Power Level" of a peer that
     /// is currently connected to the system obtained via the "Transmit Power reporting" feature.
-    1: int8 tx_power;
+    1: tx_power int8;
 
     /// The appearance of the device.
-    2: bt.Appearance appearance;
+    2: appearance bt.Appearance;
 
     /// Service UUIDs.
-    3: vector<bt.Uuid>:MAX service_uuids;
+    3: service_uuids vector<bt.Uuid>:MAX;
 
     /// Service data entries.
-    4: vector<ServiceData>:MAX service_data;
+    4: service_data vector<ServiceData>:MAX;
 
     /// Manufacturer-specific data entries.
-    5: vector<ManufacturerData>:MAX manufacturer_data;
+    5: manufacturer_data vector<ManufacturerData>:MAX;
 
     /// String representing a URI to be advertised, as defined in [IETF STD 66](https://tools.ietf.org/html/std66).
     /// Each entry should be a UTF-8 string including the scheme. For more information, see
     /// https://www.iana.org/assignments/uri-schemes/uri-schemes.xhtml for allowed schemes;
     /// NOTE: Bluetooth advertising compresses schemas over the air to save space. See
     /// https://www.bluetooth.com/specifications/assigned-numbers/uri-scheme-name-string-mapping.
-    6: vector<string:MAX_URI_LENGTH>:MAX uris;
+    6: uris vector<string:MAX_URI_LENGTH>:MAX;
 
     /// The monotonic time when this scan data was received.
-    7: zx.time timestamp;
+    7: timestamp zx.time;
 };
 
 /// Represents a Bluetooth Low Energy peer that may act in the broadcaster, peripheral, or central
 /// role. The peer's role depends on whether it is obtained from the Central or Peripheral protocol.
-table Peer {
+type Peer = table {
     /// Uniquely identifies this peer on the current system.
     ///
     /// This field is always present.
-    1: bt.PeerId id;
+    1: id bt.PeerId;
 
     /// Whether or not this peer is connectable. Non-connectable peers are typically in the LE
     /// broadcaster role.
     ///
     /// This field is always present.
-    2: bool connectable;
+    2: connectable bool;
 
     /// The last observed signal strength of this peer. This field is only present for a peer that
     /// is broadcasting. The RSSI can be stale if the peer has not been advertising.
     ///
     /// NOTE: This field should NOT be confused with the "connection RSSI" of a peer that is currently
     /// connected to the system.
-    3: int8 rssi;
+    3: rssi int8;
 
-    [Deprecated = "Use `data` instead"]
-    4: AdvertisingData advertising_data;
+    @deprecated("Use `data` instead")
+    4: advertising_data AdvertisingData;
 
     /// The name of this peer. The name is often obtained during a scan procedure and can get
     /// updated during the name discovery procedure following a connection.
     ///
     /// This field is present if the name is known.
-    5: bt.DeviceName name;
+    5: name bt.DeviceName;
 
     /// Information from advertising and scan response data broadcast by this peer. When present,
     /// this contains the advertising data last received from the peer.
-    6: ScanData data;
+    6: data ScanData;
 
     /// Whether or not this peer is bonded.
     ///
     /// This field is always present.
-    7: bool bonded;
+    7: bonded bool;
 
     /// The value of the system monotonic clock, measured at the time this peer
     /// was last updated (e.g. due to reception of an advertisement).
     ///
     /// This field is always present.
-    8: zx.time last_updated;
+    8: last_updated zx.time;
 };
 
 /// Protocol that represents the connection to a peer. This can be used to interact with GATT
@@ -90,5 +89,5 @@ table Peer {
 /// This lifetime of this capability is tied to that of the LE connection it represents. Closing the
 /// channel results in a disconnection if no other clients hold a Connection to the same peer.
 protocol Connection {
-    // TODO(fxbug.dev/1432): Support requesting a fuchsia.bluetooth.gatt/Client handle.
-};
+        // TODO(fxbug.dev/1432): Support requesting a fuchsia.bluetooth.gatt/Client handle.
+        };

@@ -1,13 +1,16 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library zx;
 
 alias voidptr = uint64;
 
-[Transport = "Syscall"]
+@transport("Syscall")
 protocol Ovp {
-    ovp_void_pointer_out(handle handle) -> (status status, voidptr details);
+    ovp_void_pointer_out(resource struct {
+        handle handle;
+    }) -> (struct {
+        status status;
+        details voidptr;
+    });
 };

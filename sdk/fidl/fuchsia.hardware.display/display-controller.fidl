@@ -1,60 +1,58 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.display;
 
 using fuchsia.sysmem;
 using zx;
 
 // Invalid id for displays, images, and events.
-const uint64 INVALID_DISP_ID = 0;
+const INVALID_DISP_ID uint64 = 0;
 
-enum VirtconMode : uint8 {
+type VirtconMode = strict enum : uint8 {
     INACTIVE = 0; // the virtcon is never visible.
     FALLBACK = 1; // the virtcon is visible if there is no primary client.
     FORCED = 2; // the virtcon is visible even if there is a primary client.
 };
 
 // A display mode configuration.
-struct Mode {
+type Mode = struct {
     // Resolution in pixels.
-    uint32 horizontal_resolution;
-    uint32 vertical_resolution;
+    horizontal_resolution uint32;
+    vertical_resolution uint32;
     // Vertical refresh rate in units of (Hz / 100).
-    uint32 refresh_rate_e2;
+    refresh_rate_e2 uint32;
 
     // Bitfield of flags defined below which further specify the mode.
-    uint32 flags;
+    flags uint32;
 };
 
 // === Mode flags ===
 
 // Flag for interlaced display modes.
-const int32 MODE_INTERLACED = 0x1;
+const MODE_INTERLACED int32 = 0x1;
 
 // Info about valid cursor configurations.
-struct CursorInfo {
+type CursorInfo = struct {
     // The width and height of the cursor configuration, in pixels.
-    uint32 width;
-    uint32 height;
+    width uint32;
+    height uint32;
 
-    uint32 pixel_format;
+    pixel_format uint32;
 };
 
-const uint32 IDENTIFIER_MAX_LEN = 128;
+const IDENTIFIER_MAX_LEN uint32 = 128;
 
 // Info contains the information about a particular attached display.
-struct Info {
-    uint64 id;
+type Info = struct {
+    id uint64;
 
     // Modes supported by the attached display. The first entry is the
     // preferred mode.
-    vector<Mode>:MAX modes;
+    modes vector<Mode>:MAX;
     // zx_pixel_format_t constants supported by the attached display. The
     // first entry is the preferred mode.
-    vector<uint32>:MAX pixel_format;
+    pixel_format vector<uint32>:MAX;
 
     // A list of cursor configurations most likely to be accepted by the
     // driver. Maybe be empty if there is no hardware support for cursors.
@@ -62,44 +60,44 @@ struct Info {
     // The driver may reject some of these configurations in some
     // circumstances, and it may accept other configurations, but at least
     // one of these configurations should be valid at most times.
-    vector<CursorInfo>:MAX cursor_configs;
+    cursor_configs vector<CursorInfo>:MAX;
 
-    string:IDENTIFIER_MAX_LEN manufacturer_name;
-    string:IDENTIFIER_MAX_LEN monitor_name;
-    string:IDENTIFIER_MAX_LEN monitor_serial;
+    manufacturer_name string:IDENTIFIER_MAX_LEN;
+    monitor_name string:IDENTIFIER_MAX_LEN;
+    monitor_serial string:IDENTIFIER_MAX_LEN;
 
     /// Physical horizontal size in millimeters.
     /// If this value is not available, set to a best guess value and set the flag
-    uint32 horizontal_size_mm;
+    horizontal_size_mm uint32;
     /// Physical vertical size in millimeters
     /// If this value is not available, set to a best guess value and set the flag
-    uint32 vertical_size_mm;
+    vertical_size_mm uint32;
     /// This flag is set if fallback horizontal and vertical sizes were used as opposed
     /// to actual values reported by the display.
-    bool using_fallback_size;
+    using_fallback_size bool;
 };
 
 // An ImageConfig accompanies image data and defines how to interpret that data.
-struct ImageConfig {
+type ImageConfig = struct {
     // The width and height of the image in pixels.
-    uint32 width;
-    uint32 height;
+    width uint32;
+    height uint32;
 
     // A zx_pixel_format_t constant that defines the pixel format of the data.
-    uint32 pixel_format;
+    pixel_format uint32;
 
     // Type conveys information about what is providing the pixel data. If this
     // is not TYPE_SIMPLE, it is up to the driver and image producer to
     // agree on the meaning of the value through some mechanism outside the scope
     // of this API.
-    uint32 type = TYPE_SIMPLE;
+    type uint32 = TYPE_SIMPLE;
 };
-const uint32 TYPE_SIMPLE = 0;
+const TYPE_SIMPLE uint32 = 0;
 // Intentionally left some gap between Simple and Capture types.
-const uint32 TYPE_CAPTURE = 10; //The image is used for capture
+const TYPE_CAPTURE uint32 = 10; //The image is used for capture
 
 // Rotations are applied counter-clockwise, and are applied before reflections.
-enum Transform : uint8 {
+type Transform = strict enum : uint8 {
     IDENTITY = 0;
     REFLECT_X = 1;
     REFLECT_Y = 2;
@@ -110,7 +108,7 @@ enum Transform : uint8 {
     ROT_90_REFLECT_Y = 7;
 };
 
-enum AlphaMode : uint8 {
+type AlphaMode = strict enum : uint8 {
     // Alpha is disabled for the plane (default).
     DISABLE = 0;
     // Plane alpha is premultiplied.
@@ -119,16 +117,16 @@ enum AlphaMode : uint8 {
     HW_MULTIPLY = 2;
 };
 
-struct Frame {
+type Frame = struct {
     // (x_pos, y_pos) specifies the position of the upper-left corner
     // of the frame.
-    uint32 x_pos;
-    uint32 y_pos;
-    uint32 width;
-    uint32 height;
+    x_pos uint32;
+    y_pos uint32;
+    width uint32;
+    height uint32;
 };
 
-enum ClientCompositionOpcode : uint8 {
+type ClientCompositionOpcode = strict enum : uint8 {
     // The client should convert the corresponding layer to a primary layer.
     CLIENT_USE_PRIMARY = 0;
     // The client should compose all layers with CLIENT_MERGE_BASE and CLIENT_MERGE_SRC
@@ -161,7 +159,7 @@ enum ClientCompositionOpcode : uint8 {
     CLIENT_GAMMA = 8;
 };
 
-enum ConfigResult : uint32 {
+type ConfigResult = strict enum : uint32 {
     OK = 0;
     // The requested layer configuration is invalid.
     INVALID_CONFIG = 1;
@@ -175,31 +173,31 @@ enum ConfigResult : uint32 {
     UNSUPPORTED_DISPLAY_MODES = 4;
 };
 
-struct ClientCompositionOp {
+type ClientCompositionOp = struct {
     /// display_id and layer_id uniquely identify the subject of the
     /// opcode.
-    uint64 display_id;
+    display_id uint64;
     /// layer_id is 0 for whole-display issues like unsupported color
     /// conversion and gamma tables.
-    uint64 layer_id;
-    ClientCompositionOpcode opcode;
+    layer_id uint64;
+    opcode ClientCompositionOpcode;
 };
 
-resource struct DisplayFence {
+type DisplayFence = resource struct {
     /// The internal event object to signal.
-    zx.handle:EVENT event;
+    event zx.handle:EVENT;
 
     /// A bitmap indicating the scope of displays the event will affect.
     /// Each bit in `displays` represents a display in an array defined
     /// elsewhere (e.g. for ApplyConfig2(), the array is `display_ids`.)
-    uint64 displays;
+    displays uint64;
 };
 
 /// Maximum number of `displays` supported in an ApplyConfig2() call.
-const uint64 APPLY_CONFIG_MAX_DISPLAYS = 32;
+const APPLY_CONFIG_MAX_DISPLAYS uint64 = 32;
 
 /// Maximum number of `signal_fences` supported in an ApplyConfig2() call.
-const uint64 APPLY_CONFIG_MAX_SIGNAL_FENCES = 32;
+const APPLY_CONFIG_MAX_SIGNAL_FENCES uint64 = 32;
 
 /// Provider for display controllers.
 ///
@@ -207,7 +205,8 @@ const uint64 APPLY_CONFIG_MAX_SIGNAL_FENCES = 32;
 /// client.  In some cases, the provider service may provide access to only one or
 /// the other; if the client tries to open the other then `ZX_ERR_NOT_SUPPORTED` will
 /// be returned.
-[Discoverable, ForDeprecatedCBindings]
+@discoverable
+@for_deprecated_c_bindings
 protocol Provider {
     /// Open a virtcon client. `device` should be a handle to one endpoint of a
     /// channel that (on success) will become an open connection to a new
@@ -218,7 +217,12 @@ protocol Provider {
     /// will return `ZX_ERR_ALREADY_BOUND`.
     // TODO(fxbug.dev/33675): Once llcpp is supported in Zircon, unify `device` and
     // `controller`.
-    OpenVirtconController(zx.handle:CHANNEL device, request<Controller> controller) -> (zx.status s);
+    OpenVirtconController(resource struct {
+        device zx.handle:CHANNEL;
+        controller server_end:Controller;
+    }) -> (struct {
+        s zx.status;
+    });
 
     /// Open a primary client. `device` should be a handle to one endpoint of a
     /// channel that (on success) will become an open connection to a new
@@ -229,7 +233,12 @@ protocol Provider {
     /// will return `ZX_ERR_ALREADY_BOUND`.
     // TODO(fxbug.dev/33675): Once llcpp is supported in Zircon, unify `device` and
     // `controller`.
-    OpenController(zx.handle:CHANNEL device, request<Controller> controller) -> (zx.status s);
+    OpenController(resource struct {
+        device zx.handle:CHANNEL;
+        controller server_end:Controller;
+    }) -> (struct {
+        s zx.status;
+    });
 };
 
 /// Interface for accessing the display hardware.
@@ -253,7 +262,10 @@ protocol Controller {
     // A display change always invalidates the current configuration. When a
     // client receives this event, they must either apply a new configuration
     // or revalidate and reapply their current configuration.
-    -> OnDisplaysChanged(vector<Info>:MAX added, vector<uint64>:MAX removed);
+    -> OnDisplaysChanged(struct {
+        added vector<Info>:MAX;
+        removed vector<uint64>:MAX;
+    });
 
     // Imports a VMO backed image. If tiling is not TYPE_SIMPLE, it is up to
     // the driver and client to agree on its meaning through some mechanism
@@ -261,15 +273,28 @@ protocol Controller {
     //
     // DEPRECATED: This should not be used with buffer collections - ImportImage
     // should be used instead.
-    ImportVmoImage(ImageConfig image_config, zx.handle:VMO vmo, int32 offset) -> (zx.status res, uint64 image_id);
+    ImportVmoImage(resource struct {
+        image_config ImageConfig;
+        vmo zx.handle:VMO;
+        offset int32;
+    }) -> (struct {
+        res zx.status;
+        image_id uint64;
+    });
 
     // Imports a Buffer-Collection backed image. If tiling is not TYPE_SIMPLE,
     // it is up to the driver and client to agree on its meaning through some
     // mechanism outside the scope of this API. The ImageConfig must be
     // compatible with that passed through SetBufferCollectionConstraints on
     // the collection id.
-    ImportImage(ImageConfig image_config, uint64 collection_id, uint32 index)
-        -> (zx.status res, uint64 image_id);
+    ImportImage(struct {
+        image_config ImageConfig;
+        collection_id uint64;
+        index uint32;
+    }) -> (struct {
+        res zx.status;
+        image_id uint64;
+    });
 
     // Releases an image.
     //
@@ -278,7 +303,9 @@ protocol Controller {
     // and any fences associated with the image are dropped. The resources
     // associated with the image will be released as soon as the image is
     // no longer in use.
-    ReleaseImage(uint64 image_id);
+    ReleaseImage(struct {
+        image_id uint64;
+    });
 
     /// Imports an event into the driver and associates it with the given id.
     ///
@@ -288,7 +315,10 @@ protocol Controller {
     ///
     /// If a client is reusing events, they must clear the signal
     /// before referencing the id again.
-    ImportEvent(zx.handle:EVENT event, uint64 id);
+    ImportEvent(resource struct {
+        event zx.handle:EVENT;
+        id uint64;
+    });
 
     /// Releases the event imported with the given id.
     ///
@@ -296,7 +326,9 @@ protocol Controller {
     /// will still be waited up or signaled as appropriate before its
     /// resources are released. It is an error to reuse an ID while the
     /// active config has references to it.
-    ReleaseEvent(uint64 id);
+    ReleaseEvent(struct {
+        id uint64;
+    });
 
     // Creates a new layer.
     //
@@ -305,12 +337,17 @@ protocol Controller {
     // use from the time it is passed to SetDisplayLayers until a subsequent
     // configuration is applied which does not include the layer or until its
     // display is removed.
-    CreateLayer() -> (zx.status res, uint64 layer_id);
+    CreateLayer() -> (struct {
+        res zx.status;
+        layer_id uint64;
+    });
 
     // Destroys the given layer.
     //
     // It is illegal to destroy a layer which does not exist or which is in use.
-    DestroyLayer(uint64 layer_id);
+    DestroyLayer(struct {
+        layer_id uint64;
+    });
 
     /// Import a gamma table for display calibration.
     ///
@@ -324,10 +361,12 @@ protocol Controller {
     /// It is an error to use output luminances outside of [0.0, 1.0]. Hardware
     /// drivers may either clamp such values or disconnect a client that
     /// provides invalid tables.
-    ImportGammaTable(uint64 gamma_table_id,
-                     array<float32>:256 r,
-                     array<float32>:256 g,
-                     array<float32>:256 b);
+    ImportGammaTable(struct {
+        gamma_table_id uint64;
+        r array<float32, 256>;
+        g array<float32, 256>;
+        b array<float32, 256>;
+    });
 
     /// Release an imported gamma table.
     ///
@@ -335,12 +374,17 @@ protocol Controller {
     /// table. It is legal to re-use the gamma_table_id after making
     /// this call. Releasing a table while it is set on a display is
     /// safe, and will not modify the output of the display.
-    ReleaseGammaTable(uint64 gamma_table_id);
+    ReleaseGammaTable(struct {
+        gamma_table_id uint64;
+    });
 
     // Sets the display mode for the given display.
     //
     // It is illegal to pass a display mode which was not part of the display's Info.
-    SetDisplayMode(uint64 display_id, Mode mode);
+    SetDisplayMode(struct {
+        display_id uint64;
+        mode Mode;
+    });
 
     // Set the color conversion applied to the display. The conversion is applied to
     // to each pixel according to the formula:
@@ -363,17 +407,22 @@ protocol Controller {
     //
     // Clients are encouraged to use the CheckConfig API to confirm support for correction and to
     // validate their color correction input values.
-    SetDisplayColorConversion(uint64 display_id,
-                              array<float32>:3 preoffsets,
-                              array<float32>:9 coefficients,
-                              array<float32>:3 postoffsets);
+    SetDisplayColorConversion(struct {
+        display_id uint64;
+        preoffsets array<float32, 3>;
+        coefficients array<float32, 9>;
+        postoffsets array<float32, 3>;
+    });
 
     /// Set the gamma correction table for a display.
     ///
     /// gamma_table_id must be a table registered with ImportGammaTable. It is
     /// safe to release a gamma table after using it here, and will not modify
     /// display output.
-    SetDisplayGammaTable(uint64 display_id, uint64 gamma_table_id);
+    SetDisplayGammaTable(struct {
+        display_id uint64;
+        gamma_table_id uint64;
+    });
 
     // Sets which layers are on a display. The list is in increasing z-order.
     //
@@ -381,7 +430,10 @@ protocol Controller {
     // needs to be moved between displays, it must be removed from the first display's
     // pending config before being added to the second display's pending config. It
     // is also illegal to pass an invalid layer id.
-    SetDisplayLayers(uint64 display_id, vector<uint64>:MAX layer_ids);
+    SetDisplayLayers(struct {
+        display_id uint64;
+        layer_ids vector<uint64>:MAX;
+    });
 
     // Configures the layer as a primary layer with no image and the default
     // config (no src_frame cropping, the identity transform, positioned in the
@@ -391,7 +443,10 @@ protocol Controller {
     // affects the layer's contents.
     //
     // It is illegal to pass an invalid layer id.
-    SetLayerPrimaryConfig(uint64 layer_id, ImageConfig image_config);
+    SetLayerPrimaryConfig(struct {
+        layer_id uint64;
+        image_config ImageConfig;
+    });
 
     // Sets the layer transform, scaling, and positioning.
     //
@@ -402,7 +457,12 @@ protocol Controller {
     //
     // Calling this on a non-primary layer or passing an invalid transform
     // is illegal.
-    SetLayerPrimaryPosition(uint64 layer_id, Transform transform, Frame src_frame, Frame dest_frame);
+    SetLayerPrimaryPosition(struct {
+        layer_id uint64;
+        transform Transform;
+        src_frame Frame;
+        dest_frame Frame;
+    });
 
     // Sets the alpha mode of the plane.
     //
@@ -419,7 +479,11 @@ protocol Controller {
     // It is illegal to call this on a non-primary layer, to pass an
     // invalid mode, or to pass a value of `val` which is not NaN or
     // in the range [0, 1].
-    SetLayerPrimaryAlpha(uint64 layer_id, AlphaMode mode, float32 val);
+    SetLayerPrimaryAlpha(struct {
+        layer_id uint64;
+        mode AlphaMode;
+        val float32;
+    });
 
     // Configures the layer as a cursor layer with the given config. The
     // default position is (0, 0).
@@ -428,7 +492,10 @@ protocol Controller {
     // affects the layer's contents.
     //
     // It is illegal to call this on an invalid layer.
-    SetLayerCursorConfig(uint64 layer_id, ImageConfig image_config);
+    SetLayerCursorConfig(struct {
+        layer_id uint64;
+        image_config ImageConfig;
+    });
 
     // Updates the cursor position.
     //
@@ -436,7 +503,11 @@ protocol Controller {
     // will clamp y to [-cursor_height + 1, display_height - 1].
     //
     // It is illegal to call this on a non-cursor layer.
-    SetLayerCursorPosition(uint64 layer_id, int32 x, int32 y);
+    SetLayerCursorPosition(struct {
+        layer_id uint64;
+        x int32;
+        y int32;
+    });
 
     // Configures the layer as a color layer with the given color. The
     // color_bytes vector is little-endian and must have length appropriate
@@ -444,7 +515,11 @@ protocol Controller {
     //
     // It is illegal to call this on an invalid layer or for the length of
     // color_bytes to mismatch the size of the supplied format.
-    SetLayerColorConfig(uint64 layer_id, uint32 pixel_format, vector<uint8>:MAX color_bytes);
+    SetLayerColorConfig(struct {
+        layer_id uint64;
+        pixel_format uint32;
+        color_bytes vector<uint8>:MAX;
+    });
 
     // Sets the image for the layer.
     //
@@ -479,7 +554,12 @@ protocol Controller {
     // with an image layer that has no image (note that is is not illegal to
     // validate such a configuration). It is illegal to reuse a wait event which
     // another layer that has not been presented is waiting on.
-    SetLayerImage(uint64 layer_id, uint64 image_id, uint64 wait_event_id, uint64 signal_event_id);
+    SetLayerImage(struct {
+        layer_id uint64;
+        image_id uint64;
+        wait_event_id uint64;
+        signal_event_id uint64;
+    });
 
     // Attempts to validate the current configuration.
     //
@@ -492,7 +572,12 @@ protocol Controller {
     // modify the configuration in a way which requires revalidation.
     //
     // If discard is true, the pending changes will be discarded after validation.
-    CheckConfig(bool discard) -> (ConfigResult res, vector<ClientCompositionOp>:MAX ops);
+    CheckConfig(struct {
+        discard bool;
+    }) -> (struct {
+        res ConfigResult;
+        ops vector<ClientCompositionOp>:MAX;
+    });
 
     // Applies any pending changes to the current configuration. This will
     // not apply pending changes to layers which are not on any display.
@@ -529,20 +614,25 @@ protocol Controller {
     ///     or the pending configuration cannot be applied, this call will
     ///     silently fail, so the client should ensure its configuration is
     ///     valid with CheckConfig().
-    [Transitional]
-    ApplyConfig2(
-        vector<uint64>:APPLY_CONFIG_MAX_DISPLAYS display_ids,
-        vector<DisplayFence>:APPLY_CONFIG_MAX_SIGNAL_FENCES signal_fences);
+    @transitional
+    ApplyConfig2(resource struct {
+        display_ids vector<uint64>:APPLY_CONFIG_MAX_DISPLAYS;
+        signal_fences vector<DisplayFence>:APPLY_CONFIG_MAX_SIGNAL_FENCES;
+    });
 
     // Sets whether or not vsync events will be given to this client. Defaults
     // to false.
-    EnableVsync(bool enable);
+    EnableVsync(struct {
+        enable bool;
+    });
 
     // This API is used by the client to acknowledge receipt of vsync messages.
     // The cookie sent should match the cookie received via vsync message (OnVsync).
     // A cookie can only be acknowledged once. Using invalid cookies, or previously
     // acknowledged cookies will not be accepted by the driver.
-    AcknowledgeVsync(uint64 cookie);
+    AcknowledgeVsync(struct {
+        cookie uint64;
+    });
 
     // Event sent for every vsync.
     //
@@ -560,37 +650,62 @@ protocol Controller {
     // hardware-generated vsyncs in a circular buffer and send them
     // to the client once it resumes acknowledgement. Due to limited size of buffer, only the most
     // recently received vsyncs will be stored and older ones will be dropped.
-    -> OnVsync(uint64 display_id, uint64 timestamp, vector<uint64>:MAX images, uint64 cookie);
+    -> OnVsync(struct {
+        display_id uint64;
+        timestamp uint64;
+        images vector<uint64>:MAX;
+        cookie uint64;
+    });
 
     // Sets the visibility behavior of the virtcon. It is illegal to call this
     // from the primary client.
-    SetVirtconMode(uint8 mode);
+    SetVirtconMode(struct {
+        mode uint8;
+    });
 
     // Event fired when the client gains or loses ownership of the displays.
     //
     // New clients should assume they do not have ownership of the display
     // until this event informs them otherwise.
-    -> OnClientOwnershipChange(bool has_ownership);
+    -> OnClientOwnershipChange(struct {
+        has_ownership bool;
+    });
 
     // Import a sysmem buffer collection token. `collection_id` must not
     // already be in use.
-    ImportBufferCollection(uint64 collection_id,
-                           fuchsia.sysmem.BufferCollectionToken collection_token)
-        -> (zx.status res);
+    ImportBufferCollection(resource struct {
+        collection_id uint64;
+        collection_token client_end:fuchsia.sysmem.BufferCollectionToken;
+    }) -> (struct {
+        res zx.status;
+    });
 
     // Release an imported buffer collection.
-    ReleaseBufferCollection(uint64 collection_id);
+    ReleaseBufferCollection(struct {
+        collection_id uint64;
+    });
 
     // Takes an imported buffer collection and sets the constraints
     // on it so that it can be imported with a specific config.
-    SetBufferCollectionConstraints(uint64 collection_id, ImageConfig config) -> (zx.status res);
+    SetBufferCollectionConstraints(struct {
+        collection_id uint64;
+        config ImageConfig;
+    }) -> (struct {
+        res zx.status;
+    });
 
     // If the system only supports single-buffered mode with a single framebuffer, then this returns
     // that buffer and its stride. Otherwise it can return ZX_ERR_NOT_SUPPORTED.
-    GetSingleBufferFramebuffer() -> (zx.status res, zx.handle:VMO? vmo, uint32 stride);
+    GetSingleBufferFramebuffer() -> (resource struct {
+        res zx.status;
+        vmo zx.handle:<VMO, optional>;
+        stride uint32;
+    });
 
     /// Returns true if Capture is supported on the platform.
-    IsCaptureSupported() -> (bool supported) error zx.status;
+    IsCaptureSupported() -> (struct {
+        supported bool;
+    }) error zx.status;
 
     /// Imports a buffer collection backed VMO into the display controller. The VMO
     /// will be used by display controller to capture the image being displayed.
@@ -598,19 +713,29 @@ protocol Controller {
     /// image_id must be used by the client to start capture and/or release
     /// resources allocated for capture.
     /// Returns ZX_ERR_NOT_SUPPORTED if controller does not support capture
-    ImportImageForCapture(ImageConfig image_config, uint64 collection_id,
-                          uint32 index) -> (uint64 image_id) error zx.status;
+    ImportImageForCapture(struct {
+        image_config ImageConfig;
+        collection_id uint64;
+        index uint32;
+    }) -> (struct {
+        image_id uint64;
+    }) error zx.status;
 
     /// Starts capture. Client must provide a valid signal_event_id and
     /// image_id. signal_event_id must have been imported into the driver
     /// using ImportEvent FIDL API. Image_id is the id from ImportImageForCapture.
     /// The client will get notified once capture is complete via signal_event_id.
     /// Returns ZX_ERR_NOT_SUPPORTED if controller does not support capture
-    StartCapture(uint64 signal_event_id, uint64 image_id) -> () error zx.status;
+    StartCapture(struct {
+        signal_event_id uint64;
+        image_id uint64;
+    }) -> (struct {}) error zx.status;
 
     /// Releases resources allocated for capture.
     /// Returns ZX_ERR_NOT_SUPPORTED if controller does not support capture
-    ReleaseCapture(uint64 image_id) -> () error zx.status;
+    ReleaseCapture(struct {
+        image_id uint64;
+    }) -> (struct {}) error zx.status;
 
     /// Set the minimum value of rgb channels. Valid range [0 255] inclusive. Returns
     /// ZX_ERR_NOT_SUPPORTED when the display hardware does not support this feature.
@@ -619,5 +744,7 @@ protocol Controller {
     /// API is highly hardware and product dependant and therefore as products evolve, this
     /// API may change or support for this API may become non-existent. Therefore, this
     /// API should be used with caution.
-    SetMinimumRgb(uint8 minimum_rgb) -> () error zx.status;
+    SetMinimumRgb(struct {
+        minimum_rgb uint8;
+    }) -> (struct {}) error zx.status;
 };

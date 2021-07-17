@@ -1,18 +1,22 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library benchmarkfidl;
 
-struct ByteVector {
-    vector<uint8> bytes;
+type ByteVector = struct {
+    bytes vector<uint8>;
 };
 
 protocol ByteVectorEventProtocol {
-    -> Send(ByteVector val);
+    -> Send(struct {
+        val ByteVector;
+    });
 };
 
 protocol ByteVectorEchoCall {
-    Echo(ByteVector val) -> (ByteVector val);
+    Echo(struct {
+        val ByteVector;
+    }) -> (struct {
+        val ByteVector;
+    });
 };

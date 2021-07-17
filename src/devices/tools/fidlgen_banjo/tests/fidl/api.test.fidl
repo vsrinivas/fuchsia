@@ -1,54 +1,244 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library banjo.examples.api;
 
 using zx;
 
-[Transport = "Banjo"]
+@transport("Banjo")
 protocol Api {
-    bool(zx.handle handle, bool data) -> (zx.status status);
-    int8(zx.handle handle, int8 data) -> (zx.status status);
-    int16(zx.handle handle, int16 data) -> (zx.status status);
-    int32(zx.handle handle, int32 data) -> (zx.status status);
-    int64(zx.handle handle, int64 data) -> (zx.status status);
-    uint8(zx.handle handle, uint8 data) -> (zx.status status);
-    uint16(zx.handle handle, uint16 data) -> (zx.status status);
-    uint32(zx.handle handle, uint32 data) -> (zx.status status);
-    uint64(zx.handle handle, uint64 data) -> (zx.status status);
-    float32(zx.handle handle, float32 data) -> (zx.status status);
-    float64(zx.handle handle, float64 data) -> (zx.status status);
-    duration(zx.handle handle, zx.duration data) -> (zx.status status);
-    koid(zx.handle handle, zx.koid data) -> (zx.status status);
-    paddr(zx.handle handle, zx.paddr data) -> (zx.status status);
-    signals(zx.handle handle, zx.signals data) -> (zx.status status);
-    time(zx.handle handle, zx.time data) -> (zx.status status);
-    vaddr(zx.handle handle, zx.vaddr data) -> (zx.status status);
+    bool(resource struct {
+        handle zx.handle;
+        data bool;
+    }) -> (struct {
+        status zx.status;
+    });
+    int8(resource struct {
+        handle zx.handle;
+        data int8;
+    }) -> (struct {
+        status zx.status;
+    });
+    int16(resource struct {
+        handle zx.handle;
+        data int16;
+    }) -> (struct {
+        status zx.status;
+    });
+    int32(resource struct {
+        handle zx.handle;
+        data int32;
+    }) -> (struct {
+        status zx.status;
+    });
+    int64(resource struct {
+        handle zx.handle;
+        data int64;
+    }) -> (struct {
+        status zx.status;
+    });
+    uint8(resource struct {
+        handle zx.handle;
+        data uint8;
+    }) -> (struct {
+        status zx.status;
+    });
+    uint16(resource struct {
+        handle zx.handle;
+        data uint16;
+    }) -> (struct {
+        status zx.status;
+    });
+    uint32(resource struct {
+        handle zx.handle;
+        data uint32;
+    }) -> (struct {
+        status zx.status;
+    });
+    uint64(resource struct {
+        handle zx.handle;
+        data uint64;
+    }) -> (struct {
+        status zx.status;
+    });
+    float32(resource struct {
+        handle zx.handle;
+        data float32;
+    }) -> (struct {
+        status zx.status;
+    });
+    float64(resource struct {
+        handle zx.handle;
+        data float64;
+    }) -> (struct {
+        status zx.status;
+    });
+    duration(resource struct {
+        handle zx.handle;
+        data zx.duration;
+    }) -> (struct {
+        status zx.status;
+    });
+    koid(resource struct {
+        handle zx.handle;
+        data zx.koid;
+    }) -> (struct {
+        status zx.status;
+    });
+    paddr(resource struct {
+        handle zx.handle;
+        data zx.paddr;
+    }) -> (struct {
+        status zx.status;
+    });
+    signals(resource struct {
+        handle zx.handle;
+        data zx.signals;
+    }) -> (struct {
+        status zx.status;
+    });
+    time(resource struct {
+        handle zx.handle;
+        data zx.time;
+    }) -> (struct {
+        status zx.status;
+    });
+    vaddr(resource struct {
+        handle zx.handle;
+        data zx.vaddr;
+    }) -> (struct {
+        status zx.status;
+    });
 
-    output_bool(zx.handle handle) -> (zx.status status, bool result);
-    output_int8(zx.handle handle) -> (zx.status status, int8 result);
-    output_int16(zx.handle handle) -> (zx.status status, int16 result);
-    output_int32(zx.handle handle) -> (zx.status status, int32 result);
-    output_int64(zx.handle handle) -> (zx.status status, int64 result);
-    output_uint8(zx.handle handle) -> (zx.status status, uint8 result);
-    output_uint16(zx.handle handle) -> (zx.status status, uint16 result);
-    output_uint32(zx.handle handle) -> (zx.status status, uint32 result);
-    output_uint64(zx.handle handle) -> (zx.status status, uint64 result);
-    output_float32(zx.handle handle) -> (zx.status status, float32 result);
-    output_float64(zx.handle handle) -> (zx.status status, float64 result);
-    output_duration(zx.handle handle) -> (zx.status status, zx.duration result);
-    output_koid(zx.handle handle) -> (zx.status status, zx.koid result);
-    output_paddr(zx.handle handle) -> (zx.status status, zx.paddr result);
-    output_signals(zx.handle handle) -> (zx.status status, zx.signals result);
-    output_time(zx.handle handle) -> (zx.status status, zx.time result);
-    output_vaddr(zx.handle handle) -> (zx.status status, zx.vaddr result);
+    output_bool(resource struct {
+        handle zx.handle;
+    }) -> (struct {
+        status zx.status;
+        result bool;
+    });
+    output_int8(resource struct {
+        handle zx.handle;
+    }) -> (struct {
+        status zx.status;
+        result int8;
+    });
+    output_int16(resource struct {
+        handle zx.handle;
+    }) -> (struct {
+        status zx.status;
+        result int16;
+    });
+    output_int32(resource struct {
+        handle zx.handle;
+    }) -> (struct {
+        status zx.status;
+        result int32;
+    });
+    output_int64(resource struct {
+        handle zx.handle;
+    }) -> (struct {
+        status zx.status;
+        result int64;
+    });
+    output_uint8(resource struct {
+        handle zx.handle;
+    }) -> (struct {
+        status zx.status;
+        result uint8;
+    });
+    output_uint16(resource struct {
+        handle zx.handle;
+    }) -> (struct {
+        status zx.status;
+        result uint16;
+    });
+    output_uint32(resource struct {
+        handle zx.handle;
+    }) -> (struct {
+        status zx.status;
+        result uint32;
+    });
+    output_uint64(resource struct {
+        handle zx.handle;
+    }) -> (struct {
+        status zx.status;
+        result uint64;
+    });
+    output_float32(resource struct {
+        handle zx.handle;
+    }) -> (struct {
+        status zx.status;
+        result float32;
+    });
+    output_float64(resource struct {
+        handle zx.handle;
+    }) -> (struct {
+        status zx.status;
+        result float64;
+    });
+    output_duration(resource struct {
+        handle zx.handle;
+    }) -> (struct {
+        status zx.status;
+        result zx.duration;
+    });
+    output_koid(resource struct {
+        handle zx.handle;
+    }) -> (struct {
+        status zx.status;
+        result zx.koid;
+    });
+    output_paddr(resource struct {
+        handle zx.handle;
+    }) -> (struct {
+        status zx.status;
+        result zx.paddr;
+    });
+    output_signals(resource struct {
+        handle zx.handle;
+    }) -> (struct {
+        status zx.status;
+        result zx.signals;
+    });
+    output_time(resource struct {
+        handle zx.handle;
+    }) -> (struct {
+        status zx.status;
+        result zx.time;
+    });
+    output_vaddr(resource struct {
+        handle zx.handle;
+    }) -> (struct {
+        status zx.status;
+        result zx.vaddr;
+    });
 
-    return_void(zx.handle handle) -> ();
-    return_status(zx.handle handle) -> (zx.status status);
-    return_ticks(zx.handle handle) -> (zx.ticks result);
-    return_time(zx.handle handle) -> (zx.time result);
-    return_uint32(zx.handle handle) -> (uint32 result);
-    return_uint64(zx.handle handle) -> (uint64 result);
+    return_void(resource struct {
+        handle zx.handle;
+    }) -> ();
+    return_status(resource struct {
+        handle zx.handle;
+    }) -> (struct {
+        status zx.status;
+    });
+    return_ticks(resource struct {
+        handle zx.handle;
+    }) -> (struct {
+        result zx.ticks;
+    });
+    return_time(resource struct {
+        handle zx.handle;
+    }) -> (struct {
+        result zx.time;
+    });
+    return_uint32(resource struct {
+        handle zx.handle;
+    }) -> (struct {
+        result uint32;
+    });
+    return_uint64(resource struct {
+        handle zx.handle;
+    }) -> (struct {
+        result uint64;
+    });
 };

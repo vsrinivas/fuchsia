@@ -1,22 +1,20 @@
 // Copyright 2017 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.ui.input;
 
 /// Common mouse buttons report constants
-const uint32 kMouseButtonPrimary = 1;
-const uint32 kMouseButtonSecondary = 2;
-const uint32 kMouseButtonTertiary = 4;
+const kMouseButtonPrimary uint32 = 1;
+const kMouseButtonSecondary uint32 = 2;
+const kMouseButtonTertiary uint32 = 4;
 
 /// Common stylus buttons report constants
-const uint32 kStylusBarrel = 1;
+const kStylusBarrel uint32 = 1;
 
 /// Used as mask bits (2^N) against ButtonDescriptor.buttons.
-const uint32 kVolumeUp = 1;
-const uint32 kVolumeDown = 2;
-const uint32 kMicMute = 4;
-const uint32 kReset = 8;
-const uint32 kPause = 16;
-const uint32 kCameraDisable = 32;
+const kVolumeUp uint32 = 1;
+const kVolumeDown uint32 = 2;
+const kMicMute uint32 = 4;
+const kReset uint32 = 8;
+const kPause uint32 = 16;
+const kCameraDisable uint32 = 32;

@@ -1,26 +1,25 @@
-deprecated_syntax;
 library fidl.test.arrays;
 
-struct StructSmallArray {
-    array<uint32>:2 a;
+type StructSmallArray = struct {
+    a array<uint32, 2>;
 };
 
-struct StructLargeArray {
-    array<uint32>:100 a;
+type StructLargeArray = struct {
+    a array<uint32, 100>;
 };
 
-table TableSmallArray {
-    1: array<uint32>:2 a;
+type TableSmallArray = table {
+    1: a array<uint32, 2>;
 };
 
-table TableLargeArray {
-    1: array<uint32>:100 a;
+type TableLargeArray = table {
+    1: a array<uint32, 100>;
 };
 
-union UnionSmallArray {
-    1: array<uint32>:2 a;
+type UnionSmallArray = strict union {
+    1: a array<uint32, 2>;
 };
 
-union UnionLargeArray {
-    1: array<uint32>:100 a;
+type UnionLargeArray = strict union {
+    1: a array<uint32, 100>;
 };

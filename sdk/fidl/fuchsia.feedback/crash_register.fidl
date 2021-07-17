@@ -1,8 +1,6 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.feedback;
 
 using fuchsia.sys;
@@ -13,7 +11,7 @@ using fuchsia.sys;
 /// By default, all crashes detected by the platform are filed under a single product on the crash
 /// server. This API allows components to choose their own product while still benefiting from the
 /// platform's exception handling and crash reporting.
-[Discoverable]
+@discoverable
 protocol CrashReportingProductRegister {
     /// Upserts, i.e. updates or inserts, a crash reporting product for a given component URL.
     ///
@@ -24,25 +22,31 @@ protocol CrashReportingProductRegister {
     /// UpsertWithAck should be preferred if the client manually files crash reports because a
     /// fire-and-forget is racy and client cannot know if their crash reports will successfully be
     /// attributed to the product they specify.
-    Upsert(fuchsia.sys.component_url component_url, CrashReportingProduct product);
+    Upsert(struct {
+        component_url fuchsia.sys.component_url;
+        product CrashReportingProduct;
+    });
 
     /// Upsert and notify the client when the operation is complete.
     ///
     /// This allows clients to prevent races between filing crash reports and calls to Upsert.
     /// Otherwise if a crash report is filed before the upsert completes, the crash report will be
     /// attriburted to the wrong product, leading to potentially incorrect crash data.
-    [Transitional]
-    UpsertWithAck(fuchsia.sys.component_url component_url, CrashReportingProduct product) -> ();
+    @transitional
+    UpsertWithAck(struct {
+        component_url fuchsia.sys.component_url;
+        product CrashReportingProduct;
+    }) -> ();
 };
 
 /// Product release information to report to the crash server.
-table CrashReportingProduct {
+type CrashReportingProduct = table {
     /// The product name on the crash server.
     /// * The first character has to be alphanumeric. The remaining characters must be printable,
     ///   but cannot be a space, which leaves values 33 to 127 in the ASCII table. Any other
     ///   characters will result in a ZX_ERR_INVALID_ARGS epitaph.
     /// * Missing this required field will result in a ZX_ERR_INVALID_ARGS epitaph.
-    1: string:MAX name;
+    1: name string:MAX;
 
     /// Optional product version of the component.
     /// * The first character has to be alphanumeric. The remaining characters must be printable,
@@ -50,10 +54,10 @@ table CrashReportingProduct {
     ///   characters will result in a ZX_ERR_INVALID_ARGS epitaph.
     ///
     /// If no version is specified then none is reported to the crash server.
-    2: string:MAX version;
+    2: version string:MAX;
 
     /// Optional product release channel for the component, e.g., "canary", "beta", "stable".
     ///
     /// If no channel is specified then none is reported to the crash server.
-    3: string:MAX channel;
+    3: channel string:MAX;
 };

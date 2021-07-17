@@ -1,7 +1,6 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
 library fuchsia.component.internal;
 
 using fuchsia.component;
@@ -9,9 +8,9 @@ using fuchsia.sys2;
 
 /// The maximum size of the JobPolicyAllowlists entries.
 /// This value is currently set arbitrarily.
-const uint64 MAX_ALLOWLIST_SIZE = 128;
+const MAX_ALLOWLIST_SIZE uint64 = 128;
 
-table Config {
+type Config = table {
     /// If true, component manager will be in debug mode. In this mode, component manager
     /// provides the `EventSource` protocol and exposes this protocol. Component
     /// manager will not start until it is resumed by a call to
@@ -19,16 +18,16 @@ table Config {
     ///
     /// This is done so that an external component (say an integration test) can subscribe
     /// to events before the root component has started.
-    1: bool debug;
+    1: debug bool;
 
     /// How many children, maximum, are returned by a call to `Realm.ChildIterator.next()`.
-    2: uint32 list_children_batch_size;
+    2: list_children_batch_size uint32;
 
     /// Security policy configuration.
-    3: SecurityPolicy security_policy;
+    3: security_policy SecurityPolicy;
 
     /// Capabilities offered from component manager's namespace.
-    4: vector<fuchsia.sys2.CapabilityDecl>:MAX namespace_capabilities;
+    4: namespace_capabilities vector<fuchsia.sys2.CapabilityDecl>:MAX;
 
     /// If true, component_manager will serve an instance of fuchsia.process.Launcher and use this
     /// launcher for the built-in ELF component runner. The root component can additionally
@@ -38,45 +37,45 @@ table Config {
     /// job. Otherwise, the component_manager process cannot directly create process through
     /// zx_process_create. When we run component_manager elsewhere, like in test environments, it
     /// has to use the fuchsia.process.Launcher service provided through its namespace instead.
-    5: bool use_builtin_process_launcher;
+    5: use_builtin_process_launcher bool;
 
     /// If true, component_manager will maintain a UTC kernel clock and vend write handles through
     /// an instance of `fuchsia.time.Maintenance`. This flag should only be used with the top-level
     /// component_manager.
-    6: bool maintain_utc_clock;
+    6: maintain_utc_clock bool;
 
     /// The number of threads to use for running component_manager's executor.
     /// If not present, interpreted as 1.
-    7: uint32 num_threads;
+    7: num_threads uint32;
 
     /// Which builtin resolver to use for the fuchsia-pkg scheme.
     /// If not present, interpreted as BuiltinPkgResolver.NONE.
-    8: BuiltinPkgResolver builtin_pkg_resolver;
+    8: builtin_pkg_resolver BuiltinPkgResolver;
 
     /// Determine what content to expose through the component manager's
     /// outgoing directory.
     /// If not present, interpreted as OutDirContents.NONE.
-    9: OutDirContents out_dir_contents;
+    9: out_dir_contents OutDirContents;
 
     /// URL of the root component to launch. This field is used if the no URL
     /// is passed to component manager. If value is passed in both places, then
     /// an error is raised.
-    10: string:fuchsia.component.MAX_URL_SCHEME_LENGTH root_component_url;
+   10: root_component_url string:fuchsia.component.MAX_URL_SCHEME_LENGTH;
 
     /// Path to the component ID index. An empty value defaults to an empty index.
     /// An invalid index causes component_manager to abort.
-    11: string:fuchsia.component.MAX_PATH_LENGTH component_id_index_path;
+   11: component_id_index_path string:fuchsia.component.MAX_PATH_LENGTH;
 
     /// If true, component manager will log all events dispatched in the topology.
-    12: bool log_all_events;
+   12: log_all_events bool;
 
     /// Which builtin resolver to use for the fuchsia-boot scheme.
     /// If not present, interpreted as BuiltinBootResolver.NONE.
-    13: BuiltinBootResolver builtin_boot_resolver;
+   13: builtin_boot_resolver BuiltinBootResolver;
 };
 
 /// The builtin resolver to use for the fuchsia-pkg scheme, if any.
-enum BuiltinPkgResolver : uint8 {
+type BuiltinPkgResolver = strict enum : uint8 {
     /// No builtin package resolver is used. Products supply a package resolver as a component, or
     /// can opt to not include one at all.
     NONE = 1;
@@ -87,7 +86,7 @@ enum BuiltinPkgResolver : uint8 {
 };
 
 /// The builtin resolver to use for the fuchsia-boot scheme, if any.
-enum BuiltinBootResolver : uint8 {
+type BuiltinBootResolver = strict enum : uint8 {
     /// No builtin boot resolver is used.
     NONE = 1;
 
@@ -101,13 +100,13 @@ enum BuiltinBootResolver : uint8 {
 };
 
 /// Runtime security policy.
-table SecurityPolicy {
+type SecurityPolicy = table {
     /// Allowlists for Zircon job policy.
-    1: JobPolicyAllowlists job_policy;
+    1: job_policy JobPolicyAllowlists;
     /// Capability access policy.
-    2: CapabilityPolicyAllowlists capability_policy;
+    2: capability_policy CapabilityPolicyAllowlists;
     /// Debug capability registration policy.
-    3: DebugRegistrationPolicyAllowlists debug_registration_policy;
+    3: debug_registration_policy DebugRegistrationPolicyAllowlists;
 };
 
 /// A single entry in an allowlist, expressed in one of three forms:
@@ -125,33 +124,33 @@ table SecurityPolicy {
 alias AllowlistEntryMoniker = string:fuchsia.component.MAX_MONIKER_LENGTH;
 
 /// Allowlists for Zircon job policy.
-table JobPolicyAllowlists {
+type JobPolicyAllowlists = table {
     /// Allowlist entry monikers for components allowed to be given the
     /// ZX_POL_AMBIENT_MARK_VMO_EXEC job policy.
     ///
     /// Components must request this policy by including "job_policy_ambient_mark_vmo_exec: true" in
     /// their CML's `program` section and must be using the ELF runner.
     /// This is equivalent to the v1 'deprecated-ambient-replace-as-executable' feature.
-    1: vector<AllowlistEntryMoniker>:MAX_ALLOWLIST_SIZE ambient_mark_vmo_exec;
+    1: ambient_mark_vmo_exec vector<AllowlistEntryMoniker>:MAX_ALLOWLIST_SIZE;
 
     /// Allowlist entry monikers for components allowed to have their original process
     /// marked as critical to component_manager's job.
     ///
     /// Components must request this critical marking by including "main_process_critical: true" in
     /// their CML's `program` section and must be using the ELF runner.
-    2: vector<AllowlistEntryMoniker>:MAX_ALLOWLIST_SIZE main_process_critical;
+    2: main_process_critical vector<AllowlistEntryMoniker>:MAX_ALLOWLIST_SIZE;
 
     /// Allowlist entry monikers for components allowed to call zx_process_create directly
     /// (e.g., do not have ZX_POL_NEW_PROCESS set to ZX_POL_ACTION_DENY).
     ///
     /// Components must request this policy by including "job_policy_create_raw_processes: true" in
     /// their manifest's program object and must be using the ELF runner.
-    3: vector<AllowlistEntryMoniker>:MAX_ALLOWLIST_SIZE create_raw_processes;
+    3: create_raw_processes vector<AllowlistEntryMoniker>:MAX_ALLOWLIST_SIZE;
 };
 
 /// Determine what content to expose through component manager's outgoing
 /// directory.
-enum OutDirContents : uint8 {
+type OutDirContents = strict enum : uint8 {
     /// Don't expose anything through the outgoing directory.
     NONE = 1;
 
@@ -163,93 +162,86 @@ enum OutDirContents : uint8 {
 };
 
 /// Represents the class of capabilities supported to be allowlisted.
-flexible union AllowlistedCapability {
-    1: AllowlistedDirectory directory;
-    2: AllowlistedEvent event;
-    3: AllowlistedProtocol protocol;
-    4: AllowlistedService service;
-    5: AllowlistedStorage storage;
-    6: AllowlistedRunner runner;
-    7: AllowlistedResolver resolver;
+type AllowlistedCapability = flexible union {
+    1: directory AllowlistedDirectory;
+    2: event AllowlistedEvent;
+    3: protocol AllowlistedProtocol;
+    4: service AllowlistedService;
+    5: storage AllowlistedStorage;
+    6: runner AllowlistedRunner;
+    7: resolver AllowlistedResolver;
 };
 
-table AllowlistedDirectory {
-};
+type AllowlistedDirectory = table {};
 
-table AllowlistedEvent {
-};
+type AllowlistedEvent = table {};
 
-table AllowlistedProtocol {
-};
+type AllowlistedProtocol = table {};
 
-table AllowlistedService {
-};
+type AllowlistedService = table {};
 
-table AllowlistedStorage {
-};
+type AllowlistedStorage = table {};
 
-table AllowlistedRunner {
-};
+type AllowlistedRunner = table {};
 
-table AllowlistedResolver {
-};
+type AllowlistedResolver = table {};
 
 /// Defines a single capability policy entry in the set of capability policy
 /// allowlists.
-table CapabilityAllowlistEntry {
+type CapabilityAllowlistEntry = table {
     /// The `source_moniker` represents the origin of a capability. The
     /// `source_moniker` is either an absolute moniker or '<component_manager>'.
-    1: string:fuchsia.component.MAX_MONIKER_LENGTH source_moniker;
+    1: source_moniker string:fuchsia.component.MAX_MONIKER_LENGTH;
 
     /// The source name of this particular capability.
-    2: string:fuchsia.component.MAX_NAME_LENGTH source_name;
+    2: source_name string:fuchsia.component.MAX_NAME_LENGTH;
 
     /// Represents the type of capability that is being restricted along
     /// with any other properties required by a particular capability type.
-    3: AllowlistedCapability capability;
+    3: capability AllowlistedCapability;
 
     /// The set of components, described by either exact absolute monikers, realm, or collection,
     /// that are allowed to use this specific capability.
-    4: vector<AllowlistEntryMoniker>:MAX_ALLOWLIST_SIZE target_monikers;
+    4: target_monikers vector<AllowlistEntryMoniker>:MAX_ALLOWLIST_SIZE;
 
     /// The original source type of this capability, self or framework.
-    5: fuchsia.sys2.Ref source;
+    5: source fuchsia.sys2.Ref;
 };
 
 /// Defines the total set of capability allowlists. Each
 /// `source_moniker` + `capability` pair must be unique in the vector.
-table CapabilityPolicyAllowlists {
-    1: vector<CapabilityAllowlistEntry>:MAX_ALLOWLIST_SIZE allowlist;
+type CapabilityPolicyAllowlists = table {
+    1: allowlist vector<CapabilityAllowlistEntry>:MAX_ALLOWLIST_SIZE;
 };
 
 /// Represents the class of capabilities supported to be allowlisted.
-flexible union AllowlistedDebugRegistration {
-    1: AllowlistedProtocol protocol;
+type AllowlistedDebugRegistration = flexible union {
+    1: protocol AllowlistedProtocol;
 };
 
 /// Defines a capability policy entry in the set of debug capability policy
 /// allowlists.
-table DebugRegistrationAllowlistEntry {
+type DebugRegistrationAllowlistEntry = table {
     /// The `source_moniker` represents the origin of a capability. The
     /// `source_moniker` is absolute moniker.
-    1: string:fuchsia.component.MAX_MONIKER_LENGTH source_moniker;
+    1: source_moniker string:fuchsia.component.MAX_MONIKER_LENGTH;
 
     /// The source name of this particular capability.
-    2: string:fuchsia.component.MAX_NAME_LENGTH source_name;
+    2: source_name string:fuchsia.component.MAX_NAME_LENGTH;
 
     /// Represents the type of capability that is being restricted along
     /// with any other properties required by a particular capability type.
-    3: AllowlistedDebugRegistration debug;
+    3: debug AllowlistedDebugRegistration;
 
     /// The `target_moniker` represents the component which is allowed to register
     /// this capability in its environment's debug sction.
-    4: string:fuchsia.component.MAX_MONIKER_LENGTH target_moniker;
+    4: target_moniker string:fuchsia.component.MAX_MONIKER_LENGTH;
 
     /// Name of the environment where this capability can be registered.
-    5: fuchsia.component.name environment_name;
+    5: environment_name fuchsia.component.name;
 };
 
 /// Defines the total set of debug capability allowlists.
-table DebugRegistrationPolicyAllowlists {
-    1: vector<DebugRegistrationAllowlistEntry>:MAX_ALLOWLIST_SIZE allowlist;
+type DebugRegistrationPolicyAllowlists = table {
+    1: allowlist vector<DebugRegistrationAllowlistEntry>:MAX_ALLOWLIST_SIZE;
 };

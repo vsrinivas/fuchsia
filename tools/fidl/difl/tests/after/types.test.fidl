@@ -1,43 +1,41 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fidl.difl.test;
 
 // After
 
 //!DeclAdded
-enum UsingToEnum : uint32 {
+type UsingToEnum = strict enum : uint32 {
     VALUE = 1;
 };
 
-struct EnumToStruct {
-    int32 member;
+type EnumToStruct = struct {
+    member int32;
 };
 
 //!StructSizeChanged
-struct StructThatChanges {
-    int32 foo;
-    int32 bar;
-//!StructMemberAdded
-    int32 baz;
+type StructThatChanges = struct {
+    foo int32;
+    bar int32;
+    //!StructMemberAdded
+    baz int32;
 };
 
-struct UnchangedStruct {
-    int32 foo;
-    int32 bar;
+type UnchangedStruct = struct {
+    foo int32;
+    bar int32;
 };
 
-table DefinitionsChange {
+type DefinitionsChange = table {
     //!TableMemberTypeChanged
-    1: UsingToEnum using_to_enum;
+    1: using_to_enum UsingToEnum;
 
     //!TableMemberTypeChanged
-    2: EnumToStruct enum_to_struct;
+    2: enum_to_struct EnumToStruct;
 
     //!TableMemberTypeChanged
-    3: StructThatChanges struct_that_changes;
+    3: struct_that_changes StructThatChanges;
 
-    4: UnchangedStruct unchanged_struct;
+    4: unchanged_struct UnchangedStruct;
 };

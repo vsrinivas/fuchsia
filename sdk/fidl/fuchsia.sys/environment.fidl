@@ -1,37 +1,35 @@
 // Copyright 2016 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.sys;
 
 using zx;
 
 /// Maximum length for an environment label.
-const uint32 kLabelMaxLength = 32;
+const kLabelMaxLength uint32 = 32;
 
-struct EnvironmentOptions {
+type EnvironmentOptions = struct {
     /// True if this environment should inherit services provided by the
     /// parent environment.
-    bool inherit_parent_services;
+    inherit_parent_services bool;
     /// True if components in this environment will share a runner provided
     /// by the parent environment. If false, a new runner will be started
     /// in this environment for components.
-    bool use_parent_runners;
+    use_parent_runners bool;
     /// True if this environment should be killed first in out of memory
     /// situations by setting the `ZX_PROP_JOB_KILL_ON_OOM` property on this
     /// environment's job.
-    bool kill_on_oom;
+    kill_on_oom bool;
     /// True if "persistent" storage requested by components in this environment should not actually
     /// be persistent, and instead be deleted when this environment is killed.
-    bool delete_storage_on_death;
+    delete_storage_on_death bool;
 };
 
 /// An interface for managing a set of applications.
 ///
 /// Applications run inside environments, which provide ambient services and
 /// support for their lifecycle.
-[Discoverable]
+@discoverable
 protocol Environment {
     /// Creates a new environment nested inside this environment.
     ///
@@ -58,23 +56,31 @@ protocol Environment {
     ///
     /// `options` provides additional options, see `EnvironmentOptions` for
     /// details.
-    CreateNestedEnvironment(request<Environment> environment,
-                            request<EnvironmentController> controller,
-                            string label,
-                            ServiceList? additional_services,
-                            EnvironmentOptions options);
+    CreateNestedEnvironment(resource struct {
+        environment server_end:Environment;
+        controller server_end:EnvironmentController;
+        label string;
+        additional_services box<ServiceList>;
+        options EnvironmentOptions;
+    });
 
     /// Gets the Launcher associated with this environment.
     ///
     /// Applications created using this application launcher will be given the
     /// environment services provided by this environment's `host_directory`.
-    GetLauncher(request<Launcher> launcher);
+    GetLauncher(resource struct {
+        launcher server_end:Launcher;
+    });
 
     /// Gets a superset of services provided by this environment's
     /// `host_directory`.
-    GetServices(request<ServiceProvider> services);
+    GetServices(resource struct {
+        services server_end:ServiceProvider;
+    });
 
     /// Gets a superset of services provided by this environment's
     /// `host_directory`.
-    GetDirectory(zx.handle:CHANNEL directory_request);
+    GetDirectory(resource struct {
+        directory_request zx.handle:CHANNEL;
+    });
 };

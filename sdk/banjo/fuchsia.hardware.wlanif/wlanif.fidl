@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.wlanif;
 
 using ddk.hw.wlan.ieee80211;
@@ -12,192 +10,192 @@ using fuchsia.hardware.ethernet.mac;
 using fuchsia.hardware.wlan.info;
 using zx;
 
-enum WlanScanType : uint8 {
+type WlanScanType = strict enum : uint8 {
     ACTIVE = 1;
     PASSIVE = 2;
 };
 
-const uint32 WLAN_SCAN_MAX_SSIDS_PER_REQUEST = 32;
+const WLAN_SCAN_MAX_SSIDS_PER_REQUEST uint32 = 32;
 
 // LINT.IfChange
 /// WFA WMM v1.2, 2.2.2 Table 5
 /// Length of the WMM Parameter Element body. This does not include IE and vendor IE headers,
 /// and only includes the QoS Info, reserved, and AC parameters fields.
-const uint32 WLAN_WMM_PARAM_LEN = 18;
+const WLAN_WMM_PARAM_LEN uint32 = 18;
 // LINT.ThenChange(//sdk/fidl/fuchsia.wlan.mlme/wlan_mlme.fidl)
 
-struct WlanifSsid {
-    uint8 len;
-    array<uint8>:ddk.hw.wlan.ieee80211.IEEE80211_MAX_SSID_LEN data;
+type WlanifSsid = struct {
+    len uint8;
+    data array<uint8, ddk.hw.wlan.ieee80211.IEEE80211_MAX_SSID_LEN>;
 };
 
-struct WlanifScanReq {
-    uint64 txn_id;
-    fuchsia.hardware.wlan.info.WlanBssType bss_type;
-    array<uint8>:fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH bssid;
-    WlanifSsid ssid;
-    WlanScanType scan_type;
-    uint32 probe_delay;
-    uint64 num_channels;
-    array<uint8>:ddk.hw.wlan.wlaninfo.WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS channel_list;
-    uint32 min_channel_time;
-    uint32 max_channel_time;
-    uint64 num_ssids;
-    array<WlanifSsid>:WLAN_SCAN_MAX_SSIDS_PER_REQUEST ssid_list;
+type WlanifScanReq = struct {
+    txn_id uint64;
+    bss_type fuchsia.hardware.wlan.info.WlanBssType;
+    bssid array<uint8, fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH>;
+    ssid WlanifSsid;
+    scan_type WlanScanType;
+    probe_delay uint32;
+    num_channels uint64;
+    channel_list array<uint8, ddk.hw.wlan.wlaninfo.WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS>;
+    min_channel_time uint32;
+    max_channel_time uint32;
+    num_ssids uint64;
+    ssid_list array<WlanifSsid, WLAN_SCAN_MAX_SSIDS_PER_REQUEST>;
 };
 
 /// IEEE Std 802.11-2016, Table 9-19
-const uint32 WLAN_MSDU_MAX_LEN = 2304;
+const WLAN_MSDU_MAX_LEN uint32 = 2304;
 
 /// IEEE Std 802.11-2016, 9.4.2.25.1
 /// IEEE mentions that an element body maximum length is 255 octets in the RSN element
 /// section, but not in a dedicated section.
-const uint32 WLAN_IE_BODY_MAX_LEN = 255;
+const WLAN_IE_BODY_MAX_LEN uint32 = 255;
 
-const uint32 WLAN_VIE_MAX_LEN = 510; // max length for two elements (WPA and WSC)
+const WLAN_VIE_MAX_LEN uint32 = 510; // max length for two elements (WPA and WSC)
+type WlanifBssDescription = struct {
+    bssid array<uint8, fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH>;
+    bss_type fuchsia.hardware.wlan.info.WlanBssType;
+    beacon_period uint32;
+    timestamp uint64;
+    local_time uint64;
+    cap uint16;
 
-struct WlanifBssDescription {
-    array<uint8>:fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH bssid;
-    fuchsia.hardware.wlan.info.WlanBssType bss_type;
-    uint32 beacon_period;
-    uint64 timestamp;
-    uint64 local_time;
-    uint16 cap;
+    ies_bytes vector<uint8>:MAX;
 
-    vector<uint8>:MAX ies_bytes;
-
-    fuchsia.hardware.wlan.info.WlanChannel chan;
-    int8 rssi_dbm;
-    int8 snr_db;
+    chan fuchsia.hardware.wlan.info.WlanChannel;
+    rssi_dbm int8;
+    snr_db int8;
 };
 
-const uint32 WLAN_MAX_OP_RATES = 12;
+const WLAN_MAX_OP_RATES uint32 = 12;
 
-struct WlanifJoinReq {
-    WlanifBssDescription selected_bss;
-    uint32 join_failure_timeout;
-    uint32 nav_sync_delay;
-    uint64 num_op_rates;
-    array<uint8>:WLAN_MAX_OP_RATES op_rates;
+type WlanifJoinReq = struct {
+    selected_bss WlanifBssDescription;
+    join_failure_timeout uint32;
+    nav_sync_delay uint32;
+    num_op_rates uint64;
+    op_rates array<uint8, WLAN_MAX_OP_RATES>;
 };
 
-enum WlanAuthType : uint8 {
+type WlanAuthType = strict enum : uint8 {
     OPEN_SYSTEM = 1;
     SHARED_KEY = 2;
     FAST_BSS_TRANSITION = 3;
     SAE = 4;
 };
 
-struct WlanifAuthReq {
-    array<uint8>:fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH peer_sta_address;
-    WlanAuthType auth_type;
-    uint32 auth_failure_timeout;
+type WlanifAuthReq = struct {
+    peer_sta_address array<uint8, fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH>;
+    auth_type WlanAuthType;
+    auth_failure_timeout uint32;
 
     // Used to pass an SAE password when SAE_DRIVER_AUTH is in use.
-    [Mutable] vector<uint8>:MAX sae_password;
+    @mutable
+    sae_password vector<uint8>:MAX;
 };
 
-struct WlanifAuthInd {
-    array<uint8>:fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH peer_sta_address;
-    WlanAuthType auth_type;
+type WlanifAuthInd = struct {
+    peer_sta_address array<uint8, fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH>;
+    auth_type WlanAuthType;
 };
 
-struct WlanifDeauthReq {
-    array<uint8>:fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH peer_sta_address;
-    ddk.hw.wlan.ieee80211.ReasonCode reason_code;
+type WlanifDeauthReq = struct {
+    peer_sta_address array<uint8, fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH>;
+    reason_code ddk.hw.wlan.ieee80211.ReasonCode;
 };
 
-struct WlanifAssocReq {
-    array<uint8>:fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH peer_sta_address;
-    uint64 rsne_len;
-    array<uint8>:WLAN_IE_BODY_MAX_LEN rsne;
-    uint64 vendor_ie_len;
-    array<uint8>:WLAN_VIE_MAX_LEN vendor_ie;
+type WlanifAssocReq = struct {
+    peer_sta_address array<uint8, fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH>;
+    rsne_len uint64;
+    rsne array<uint8, WLAN_IE_BODY_MAX_LEN>;
+    vendor_ie_len uint64;
+    vendor_ie array<uint8, WLAN_VIE_MAX_LEN>;
 };
 
-struct WlanifAssocInd {
-    array<uint8>:fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH peer_sta_address;
-    uint16 listen_interval;
-    WlanifSsid ssid;
-    uint64 rsne_len;
-    array<uint8>:WLAN_IE_BODY_MAX_LEN rsne;
-    uint64 vendor_ie_len;
-    array<uint8>:WLAN_VIE_MAX_LEN vendor_ie;
+type WlanifAssocInd = struct {
+    peer_sta_address array<uint8, fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH>;
+    listen_interval uint16;
+    ssid WlanifSsid;
+    rsne_len uint64;
+    rsne array<uint8, WLAN_IE_BODY_MAX_LEN>;
+    vendor_ie_len uint64;
+    vendor_ie array<uint8, WLAN_VIE_MAX_LEN>;
 };
 
-struct WlanifDisassocReq {
-    array<uint8>:fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH peer_sta_address;
-    uint16 reason_code;
+type WlanifDisassocReq = struct {
+    peer_sta_address array<uint8, fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH>;
+    reason_code uint16;
 };
 
-struct WlanifResetReq {
-    array<uint8>:fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH sta_address;
-    bool set_default_mib;
+type WlanifResetReq = struct {
+    sta_address array<uint8, fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH>;
+    set_default_mib bool;
 };
 
-struct WlanifStartReq {
-    WlanifSsid ssid;
-    fuchsia.hardware.wlan.info.WlanBssType bss_type;
-    uint32 beacon_period;
-    uint32 dtim_period;
-    uint8 channel;
-    uint64 rsne_len;
-    array<uint8>:WLAN_IE_BODY_MAX_LEN rsne;
-    uint64 vendor_ie_len;
-    array<uint8>:WLAN_VIE_MAX_LEN vendor_ie;
+type WlanifStartReq = struct {
+    ssid WlanifSsid;
+    bss_type fuchsia.hardware.wlan.info.WlanBssType;
+    beacon_period uint32;
+    dtim_period uint32;
+    channel uint8;
+    rsne_len uint64;
+    rsne array<uint8, WLAN_IE_BODY_MAX_LEN>;
+    vendor_ie_len uint64;
+    vendor_ie array<uint8, WLAN_VIE_MAX_LEN>;
 };
 
-struct WlanifStopReq {
-    WlanifSsid ssid;
+type WlanifStopReq = struct {
+    ssid WlanifSsid;
 };
 
-struct SetKeyDescriptor {
-    vector<uint8>:MAX key;
-    uint16 key_id;
-    fuchsia.hardware.wlan.info.WlanKeyType key_type;
-    array<uint8>:fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH address;
-    uint64 rsc;
-    array<uint8>:3 cipher_suite_oui;
-    uint8 cipher_suite_type;
+type SetKeyDescriptor = struct {
+    key vector<uint8>:MAX;
+    key_id uint16;
+    key_type fuchsia.hardware.wlan.info.WlanKeyType;
+    address array<uint8, fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH>;
+    rsc uint64;
+    cipher_suite_oui array<uint8, 3>;
+    cipher_suite_type uint8;
 };
 
-const uint32 WLAN_MAX_KEYLIST_SIZE = 4;
+const WLAN_MAX_KEYLIST_SIZE uint32 = 4;
 
-struct WlanifSetKeysReq {
-    uint64 num_keys;
-    array<SetKeyDescriptor>:WLAN_MAX_KEYLIST_SIZE keylist;
+type WlanifSetKeysReq = struct {
+    num_keys uint64;
+    keylist array<SetKeyDescriptor, WLAN_MAX_KEYLIST_SIZE>;
 };
 
-struct DeleteKeyDescriptor {
-    uint16 key_id;
-    fuchsia.hardware.wlan.info.WlanKeyType key_type;
-    array<uint8>:fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH address;
+type DeleteKeyDescriptor = struct {
+    key_id uint16;
+    key_type fuchsia.hardware.wlan.info.WlanKeyType;
+    address array<uint8, fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH>;
 };
 
-struct WlanifDelKeysReq {
-    uint64 num_keys;
-    array<DeleteKeyDescriptor>:WLAN_MAX_KEYLIST_SIZE keylist;
+type WlanifDelKeysReq = struct {
+    num_keys uint64;
+    keylist array<DeleteKeyDescriptor, WLAN_MAX_KEYLIST_SIZE>;
 };
 
-struct WlanifEapolReq {
-    array<uint8>:fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH src_addr;
-    array<uint8>:fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH dst_addr;
-    vector<uint8>:MAX data;
+type WlanifEapolReq = struct {
+    src_addr array<uint8, fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH>;
+    dst_addr array<uint8, fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH>;
+    data vector<uint8>:MAX;
 };
 
 /// This struct is sent from SME to wlanif, indicating the result of SAE handshake process.
-struct WlanifSaeHandshakeResp {
-    array<uint8>:fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH peer_sta_address;
-    ddk.hw.wlan.ieee80211.StatusCode status_code;
+type WlanifSaeHandshakeResp = struct {
+    peer_sta_address array<uint8, fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH>;
+    status_code ddk.hw.wlan.ieee80211.StatusCode;
 };
 
 /// This struct is sent in both directions, containing the information of SAE authentication
 /// frames, sae_fields maps to challenge text, see IEEE Std 802.11-2016, 9.3.3.12.
-struct WlanifSaeFrame {
-    array<uint8>:fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH peer_sta_address;
-    ddk.hw.wlan.ieee80211.StatusCode status_code;
-    uint16 seq_num;
-    vector<uint8>:MAX sae_fields;
+type WlanifSaeFrame = struct {
+    peer_sta_address array<uint8, fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH>;
+    status_code ddk.hw.wlan.ieee80211.StatusCode;
+    seq_num uint16;
+    sae_fields vector<uint8>:MAX;
 };
 
 /// Bits used to request management frame subtypes to be captured. Also used by driver to indicate
@@ -205,7 +203,7 @@ struct WlanifSaeFrame {
 ///
 /// These values are set at `1 << MgmtFrameSubtypeValue`
 /// See IEEE Std 802.11-2016, 9.2.4.1.3, for value of each management frame subtype
-enum WlanMgmtCaptureFlag : uint32 {
+type WlanMgmtCaptureFlag = strict enum : uint32 {
     ASSOC_REQ = 0x1;
     ASSOC_RESP = 0x2;
     REASSOC_REQ = 0x4;
@@ -223,21 +221,21 @@ enum WlanMgmtCaptureFlag : uint32 {
     ACTION_NO_ACK = 0x4000;
 };
 
-struct WlanifStartCaptureFramesReq {
-    uint32 mgmt_frame_flags;
+type WlanifStartCaptureFramesReq = struct {
+    mgmt_frame_flags uint32;
 };
 
-struct WlanifStartCaptureFramesResp {
-    int32 status;
-    uint32 supported_mgmt_frames;
+type WlanifStartCaptureFramesResp = struct {
+    status int32;
+    supported_mgmt_frames uint32;
 };
 
-struct WlanifScanResult {
-    uint64 txn_id;
-    WlanifBssDescription bss;
+type WlanifScanResult = struct {
+    txn_id uint64;
+    bss WlanifBssDescription;
 };
 
-enum WlanScanResult : uint8 {
+type WlanScanResult = strict enum : uint8 {
     SUCCESS = 0;
     NOT_SUPPORTED = 1;
     INVALID_ARGS = 2;
@@ -246,22 +244,22 @@ enum WlanScanResult : uint8 {
     CANCELED_BY_DRIVER_OR_FIRMWARE = 5;
 };
 
-struct WlanifScanEnd {
-    uint64 txn_id;
-    WlanScanResult code;
+type WlanifScanEnd = struct {
+    txn_id uint64;
+    code WlanScanResult;
 };
 
-enum WlanJoinResult : uint8 {
+type WlanJoinResult = strict enum : uint8 {
     SUCCESS = 0;
     FAILURE_TIMEOUT = 1;
     INTERNAL_ERROR = 2;
 };
 
-struct WlanifJoinConfirm {
-    WlanJoinResult result_code;
+type WlanifJoinConfirm = struct {
+    result_code WlanJoinResult;
 };
 
-enum WlanAuthResult : uint8 {
+type WlanAuthResult = strict enum : uint8 {
     SUCCESS = 0;
     REFUSED = 1;
     ANTI_CLOGGING_TOKEN_REQUIRED = 2;
@@ -270,30 +268,30 @@ enum WlanAuthResult : uint8 {
     FAILURE_TIMEOUT = 5;
 };
 
-struct WlanifAuthConfirm {
-    array<uint8>:fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH peer_sta_address;
-    WlanAuthType auth_type;
-    WlanAuthResult result_code;
+type WlanifAuthConfirm = struct {
+    peer_sta_address array<uint8, fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH>;
+    auth_type WlanAuthType;
+    result_code WlanAuthResult;
 };
 
-struct WlanifAuthResp {
-    array<uint8>:fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH peer_sta_address;
-    WlanAuthResult result_code;
+type WlanifAuthResp = struct {
+    peer_sta_address array<uint8, fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH>;
+    result_code WlanAuthResult;
 };
 
-struct WlanifDeauthConfirm {
-    array<uint8>:fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH peer_sta_address;
+type WlanifDeauthConfirm = struct {
+    peer_sta_address array<uint8, fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH>;
 };
 
-struct WlanifDeauthIndication {
-    array<uint8>:fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH peer_sta_address;
-    ddk.hw.wlan.ieee80211.ReasonCode reason_code;
+type WlanifDeauthIndication = struct {
+    peer_sta_address array<uint8, fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH>;
+    reason_code ddk.hw.wlan.ieee80211.ReasonCode;
     /// locally_initiated is true if deauth is initiated from the device,
     /// and is false if it's initiated remotely (e.g. due to deauth frame)
-    bool locally_initiated;
+    locally_initiated bool;
 };
 
-enum WlanAssocResult : uint8 {
+type WlanAssocResult = strict enum : uint8 {
     SUCCESS = 0;
     REFUSED_REASON_UNSPECIFIED = 1;
     REFUSED_NOT_AUTHENTICATED = 2;
@@ -305,162 +303,162 @@ enum WlanAssocResult : uint8 {
     REFUSED_TEMPORARILY = 8;
 };
 
-struct WlanifAssocConfirm {
-    WlanAssocResult result_code;
-    uint16 association_id;
-    bool wmm_param_present;
-    array<uint8>:WLAN_WMM_PARAM_LEN wmm_param;
+type WlanifAssocConfirm = struct {
+    result_code WlanAssocResult;
+    association_id uint16;
+    wmm_param_present bool;
+    wmm_param array<uint8, WLAN_WMM_PARAM_LEN>;
 };
 
-struct WlanifAssocResp {
-    array<uint8>:fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH peer_sta_address;
-    WlanAssocResult result_code;
-    uint16 association_id;
+type WlanifAssocResp = struct {
+    peer_sta_address array<uint8, fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH>;
+    result_code WlanAssocResult;
+    association_id uint16;
 };
 
-struct WlanifDisassocConfirm {
-    int32 status;
+type WlanifDisassocConfirm = struct {
+    status int32;
 };
 
-struct WlanifDisassocIndication {
-    array<uint8>:fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH peer_sta_address;
-    ddk.hw.wlan.ieee80211.ReasonCode reason_code;
+type WlanifDisassocIndication = struct {
+    peer_sta_address array<uint8, fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH>;
+    reason_code ddk.hw.wlan.ieee80211.ReasonCode;
     /// locally_initiated is true if diassoc is initiated from the device,
     /// and is false if it's initiated remotely (e.g. due to disassoc frame)
-    bool locally_initiated;
+    locally_initiated bool;
 };
 
-enum WlanStartResult : uint8 {
+type WlanStartResult = strict enum : uint8 {
     SUCCESS = 0;
     BSS_ALREADY_STARTED_OR_JOINED = 1;
     RESET_REQUIRED_BEFORE_START = 2;
     NOT_SUPPORTED = 3;
 };
 
-struct WlanifStartConfirm {
-    WlanStartResult result_code;
+type WlanifStartConfirm = struct {
+    result_code WlanStartResult;
 };
 
-enum WlanStopResult : uint8 {
+type WlanStopResult = strict enum : uint8 {
     SUCCESS = 0;
     BSS_ALREADY_STOPPED = 1;
     INTERNAL_ERROR = 2;
 };
 
-struct WlanifStopConfirm {
-    WlanStopResult result_code;
+type WlanifStopConfirm = struct {
+    result_code WlanStopResult;
 };
 
-enum WlanEapolResult : uint8 {
+type WlanEapolResult = strict enum : uint8 {
     SUCCESS = 0;
     TRANSMISSION_FAILURE = 1;
 };
 
-struct WlanifEapolConfirm {
-    WlanEapolResult result_code;
+type WlanifEapolConfirm = struct {
+    result_code WlanEapolResult;
     /// This value corresponds to the dst_addr in the EapolRequest we're confirming.
     /// IEEE 802.11-2016 does not include this field, but we need it to disambiguate
     /// if multiple EAPoL handshakes are ongoing.
-    array<uint8>:fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH dst_addr;
+    dst_addr array<uint8, fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH>;
 };
 
-struct WlanifSignalReportIndication {
-    int8 rssi_dbm;
-    int8 snr_db;
+type WlanifSignalReportIndication = struct {
+    rssi_dbm int8;
+    snr_db int8;
 };
 
-struct WlanifEapolIndication {
-    array<uint8>:fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH src_addr;
-    array<uint8>:fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH dst_addr;
-    vector<uint8>:MAX data;
+type WlanifEapolIndication = struct {
+    src_addr array<uint8, fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH>;
+    dst_addr array<uint8, fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH>;
+    data vector<uint8>:MAX;
 };
 
-struct WlanifSaeHandshakeInd {
-    array<uint8>:fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH peer_sta_address;
+type WlanifSaeHandshakeInd = struct {
+    peer_sta_address array<uint8, fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH>;
 };
 
-struct WlanifBandCapabilities {
+type WlanifBandCapabilities = struct {
     /// Values from enum Band (WLAN_BAND_*)
-    uint8 band_id;
-    uint64 num_rates;
-    array<uint16>:ddk.hw.wlan.wlaninfo.WLAN_INFO_BAND_INFO_MAX_RATES rates;
-    uint16 base_frequency;
-    uint64 num_channels;
-    array<uint8>:ddk.hw.wlan.wlaninfo.WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS channels;
-    bool ht_supported;
-    ddk.hw.wlan.ieee80211.Ieee80211HtCapabilities ht_caps;
-    bool vht_supported;
-    ddk.hw.wlan.ieee80211.Ieee80211VhtCapabilities vht_caps;
+    band_id uint8;
+    num_rates uint64;
+    rates array<uint16, ddk.hw.wlan.wlaninfo.WLAN_INFO_BAND_INFO_MAX_RATES>;
+    base_frequency uint16;
+    num_channels uint64;
+    channels array<uint8, ddk.hw.wlan.wlaninfo.WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS>;
+    ht_supported bool;
+    ht_caps ddk.hw.wlan.ieee80211.Ieee80211HtCapabilities;
+    vht_supported bool;
+    vht_caps ddk.hw.wlan.ieee80211.Ieee80211VhtCapabilities;
 };
 
-enum WlanifFeature : uint32 {
+type WlanifFeature = strict enum : uint32 {
     /// Supports DMA buffer transfer protocol
     DMA = 0x1;
     /// Synthetic (i.e., non-physical) device
     SYNTH = 0x2;
 };
 
-struct WlanifQueryInfo {
-    array<uint8>:fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH mac_addr;
+type WlanifQueryInfo = struct {
+    mac_addr array<uint8, fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH>;
     /// WLAN_MAC_ROLE_*
-    ddk.hw.wlan.wlaninfo.WlanInfoMacRole role;
+    role ddk.hw.wlan.wlaninfo.WlanInfoMacRole;
     /// WLANIF_FEATURE_*
-    uint32 features;
-    uint64 num_bands;
-    array<WlanifBandCapabilities>:ddk.hw.wlan.wlaninfo.WLAN_INFO_MAX_BANDS bands;
+    features uint32;
+    num_bands uint64;
+    bands array<WlanifBandCapabilities, ddk.hw.wlan.wlaninfo.WLAN_INFO_MAX_BANDS>;
     /// WLAN_DRIVER_FEATURE_*
-    uint32 driver_features;
+    driver_features uint32;
 };
 
-struct WlanifCounter {
-    uint64 count;
-    string:MAX name;
+type WlanifCounter = struct {
+    count uint64;
+    name string:MAX;
 };
 
-struct WlanifPacketCounter {
-    WlanifCounter in;
-    WlanifCounter out;
-    WlanifCounter drop;
-    WlanifCounter in_bytes;
-    WlanifCounter out_bytes;
-    WlanifCounter drop_bytes;
+type WlanifPacketCounter = struct {
+    in WlanifCounter;
+    out WlanifCounter;
+    drop WlanifCounter;
+    in_bytes WlanifCounter;
+    out_bytes WlanifCounter;
+    drop_bytes WlanifCounter;
 };
 
-struct WlanifDispatcherStats {
-    WlanifPacketCounter any_packet;
-    WlanifPacketCounter mgmt_frame;
-    WlanifPacketCounter ctrl_frame;
-    WlanifPacketCounter data_frame;
+type WlanifDispatcherStats = struct {
+    any_packet WlanifPacketCounter;
+    mgmt_frame WlanifPacketCounter;
+    ctrl_frame WlanifPacketCounter;
+    data_frame WlanifPacketCounter;
 };
 
-struct WlanifRssiStats {
-    vector<uint64>:MAX hist;
+type WlanifRssiStats = struct {
+    hist vector<uint64>:MAX;
 };
 
 // LINT.IfChange
 /// Histogram bucket.
-struct WlanifHistBucket {
+type WlanifHistBucket = struct {
     /// Index into a lookup table for each histogram type. The lookup table for each type is
     /// described below in the comments for each type.
-    uint16 bucket_index;
+    bucket_index uint16;
     /// The count of samples in the bucket.
-    uint64 num_samples;
+    num_samples uint64;
 };
 
 /// All histograms have a fixed number of buckets. To save space, each histogram type
 /// uses a vector to hold only non-empty buckets (a sparse histogram), with these constants as the
 /// max size of each vector.
 /// Noise floor values range from -255 to -1 dBm.
-const uint8 WLANIF_MAX_NOISE_FLOOR_SAMPLES = 255;
+const WLANIF_MAX_NOISE_FLOOR_SAMPLES uint8 = 255;
 /// Size of RX_RATE_INDEX lookup table (see comments in RxRateIndexHistogram).
-const uint8 WLANIF_MAX_RX_RATE_INDEX_SAMPLES = 196;
+const WLANIF_MAX_RX_RATE_INDEX_SAMPLES uint8 = 196;
 /// RSSI values range from -255 to -1 dBm.
-const uint8 WLANIF_MAX_RSSI_SAMPLES = 255;
+const WLANIF_MAX_RSSI_SAMPLES uint8 = 255;
 /// SNR values range from 0 to 255 dB.
-const uint16 WLANIF_MAX_SNR_SAMPLES = 256;
+const WLANIF_MAX_SNR_SAMPLES uint16 = 256;
 
 /// Antenna frequency.
-enum WlanifAntennaFreq : uint8 {
+type WlanifAntennaFreq = strict enum : uint8 {
     /// 2.4 GHz.
     ANTENNA_2_G = 1;
     /// 5 GHz.
@@ -468,38 +466,38 @@ enum WlanifAntennaFreq : uint8 {
 };
 
 /// Identifier for antenna.
-struct WlanifAntennaId {
-    WlanifAntennaFreq freq;
+type WlanifAntennaId = struct {
+    freq WlanifAntennaFreq;
     /// 0 indexed antenna number of freq.
-    uint8 index;
+    index uint8;
 };
 
 /// The scope of the histogram, e.g. if the histogram contains data for the entire station, or has
 /// data for just a single antenna.
-enum WlanifHistScope : uint8 {
+type WlanifHistScope = strict enum : uint8 {
     STATION = 1;
     PER_ANTENNA = 2;
 };
 
 /// Histogram for noise floor samples.
-struct WlanifNoiseFloorHistogram {
-    WlanifHistScope hist_scope;
+type WlanifNoiseFloorHistogram = struct {
+    hist_scope WlanifHistScope;
     /// If hist_scope is PER_ANTENNA, antenna_id must be provided.
-    WlanifAntennaId antenna_id;
+    antenna_id WlanifAntennaId;
     /// Sparse histogram of noise floor of current channel in dBm. Each sample's bucket_index is an
     /// index into this list of dBm values: [-255, -254, ... -1]. For example, if
     /// noise_floor_samples contains a WlanifHistBucket with bucket_index = 165 and num_samples =
     /// 50, that means there were 50 frames counted that had a noise floor of -90 dBm.
-    vector<WlanifHistBucket>:WLANIF_MAX_NOISE_FLOOR_SAMPLES noise_floor_samples;
+    noise_floor_samples vector<WlanifHistBucket>:WLANIF_MAX_NOISE_FLOOR_SAMPLES;
     /// Count of invalid samples encountered, if any.
-    uint64 invalid_samples = 0;
+    invalid_samples uint64 = 0;
 };
 
 /// Histogram for received data rate.
-struct WlanifRxRateIndexHistogram {
-    WlanifHistScope hist_scope;
+type WlanifRxRateIndexHistogram = struct {
+    hist_scope WlanifHistScope;
     /// If hist_scope is PER_ANTENNA, antenna_id must be provided.
-    WlanifAntennaId antenna_id;
+    antenna_id WlanifAntennaId;
     /// Sparse histogram of count of received frames for each rate. Each sample's bucket_index is an
     /// index into this lookup table:
     /// 0-3: B-MCS 0-3
@@ -524,184 +522,291 @@ struct WlanifRxRateIndexHistogram {
     /// For example, if rx_rate_index_samples contains a WlanifHistBucket with bucket_index = 75
     /// and num_samples = 50, that means there were 50 frames counted that had a rate corresponding
     /// to N-MCS 15 (BW40:SGI).
-    vector<WlanifHistBucket>:WLANIF_MAX_RX_RATE_INDEX_SAMPLES rx_rate_index_samples;
+    rx_rate_index_samples vector<WlanifHistBucket>:WLANIF_MAX_RX_RATE_INDEX_SAMPLES;
     /// Count of invalid samples encountered, if any.
-    uint64 invalid_samples = 0;
+    invalid_samples uint64 = 0;
 };
 
 /// Histogram for received signal strength indicator (RSSI).
-struct WlanifRssiHistogram {
-    WlanifHistScope hist_scope;
+type WlanifRssiHistogram = struct {
+    hist_scope WlanifHistScope;
     /// If hist_scope is PER_ANTENNA, antenna_id must be provided.
-    WlanifAntennaId antenna_id;
+    antenna_id WlanifAntennaId;
     /// Sparse histogram of RSSI of AP in dBm. Each sample's bucket_index is an index
     /// into this list of dBm values: [-255, -254, ... -1]. For example, if rssi_samples
     /// contains a WlanifHistBucket with bucket_index = 225 and num_samples = 50, that means
     /// there were 50 frames counted that had a signal level of -30 dBm.
-    vector<WlanifHistBucket>:WLANIF_MAX_RSSI_SAMPLES rssi_samples;
+    rssi_samples vector<WlanifHistBucket>:WLANIF_MAX_RSSI_SAMPLES;
     /// Count of invalid samples encountered, if any.
-    uint64 invalid_samples = 0;
+    invalid_samples uint64 = 0;
 };
 
 /// Histogram for signal to noise ratio (SNR).
-struct WlanifSnrHistogram {
-    WlanifHistScope hist_scope;
+type WlanifSnrHistogram = struct {
+    hist_scope WlanifHistScope;
     /// If hist_scope is PER_ANTENNA, antenna_id must be provided.
-    WlanifAntennaId antenna_id;
+    antenna_id WlanifAntennaId;
     /// Sparse histogram of signal to noise ratio in dB. Each sample's bucket_index is an index
     /// into this list of dB values: [0, 1, ... 255]. For example, if snr_samples contains a
     /// WlanifHistBucket with value = 60 and num_samples = 50, that means there were 50 frames
     /// counted that had a SNR of 60 dB.
-    vector<WlanifHistBucket>:WLANIF_MAX_SNR_SAMPLES snr_samples;
+    snr_samples vector<WlanifHistBucket>:WLANIF_MAX_SNR_SAMPLES;
     /// Count of invalid samples encountered, if any.
-    uint64 invalid_samples = 0;
+    invalid_samples uint64 = 0;
 };
 
 /// For each histogram type (e.g. RSSI), there can be multiple histograms up to this limit. For
 /// example, an interface might have 1 histogram for station-wide RSSI, but also 1 for each of the
 /// antennas used by the interface.
-const uint8 WLANIF_MAX_HISTOGRAMS_PER_TYPE = 8;
+const WLANIF_MAX_HISTOGRAMS_PER_TYPE uint8 = 8;
 // LINT.ThenChange(//sdk/fidl/fuchsia.wlan.stats/wlan_stats.fidl)
 
 /// The number of 802.11B rates in the WlanifRxRateIndexHistogram lookup table.
-const uint8 WLANIF_NUM_RATES_B = 4;
+const WLANIF_NUM_RATES_B uint8 = 4;
 /// The number of 802.11G rates in the WlanifRxRateIndexHistogram lookup table.
-const uint8 WLANIF_NUM_RATES_G = 8;
+const WLANIF_NUM_RATES_G uint8 = 8;
 /// The number of 802.11N rates in the WlanifRxRateIndexHistogram lookup table.
-const uint8 WLANIF_NUM_RATES_N = 64;
+const WLANIF_NUM_RATES_N uint8 = 64;
 /// The number of 802.11AC rates in the WlanifRxRateIndexHistogram lookup table.
-const uint8 WLANIF_NUM_RATES_AC = 120;
+const WLANIF_NUM_RATES_AC uint8 = 120;
 
-enum WlanifMlmeStatsType : uint8 {
+type WlanifMlmeStatsType = strict enum : uint8 {
     CLIENT = 0;
     AP = 1;
 };
 
-struct WlanifClientMlmeStats {
-    WlanifPacketCounter svc_msg;
-    WlanifPacketCounter data_frame;
-    WlanifPacketCounter mgmt_frame;
-    WlanifPacketCounter tx_frame;
-    WlanifPacketCounter rx_frame;
-    WlanifRssiStats assoc_data_rssi;
-    WlanifRssiStats beacon_rssi;
+type WlanifClientMlmeStats = struct {
+    svc_msg WlanifPacketCounter;
+    data_frame WlanifPacketCounter;
+    mgmt_frame WlanifPacketCounter;
+    tx_frame WlanifPacketCounter;
+    rx_frame WlanifPacketCounter;
+    assoc_data_rssi WlanifRssiStats;
+    beacon_rssi WlanifRssiStats;
     /// Noise floor histogram(s).
-    vector<WlanifNoiseFloorHistogram>:WLANIF_MAX_HISTOGRAMS_PER_TYPE noise_floor_histograms;
+    noise_floor_histograms vector<WlanifNoiseFloorHistogram>:WLANIF_MAX_HISTOGRAMS_PER_TYPE;
     /// Received signal strength indicator (RSSI) histogram(s).
-    vector<WlanifRssiHistogram>:WLANIF_MAX_HISTOGRAMS_PER_TYPE rssi_histograms;
+    rssi_histograms vector<WlanifRssiHistogram>:WLANIF_MAX_HISTOGRAMS_PER_TYPE;
     /// Received rate index histogram(s).
-    vector<WlanifRxRateIndexHistogram>:WLANIF_MAX_HISTOGRAMS_PER_TYPE rx_rate_index_histograms;
+    rx_rate_index_histograms vector<WlanifRxRateIndexHistogram>:WLANIF_MAX_HISTOGRAMS_PER_TYPE;
     /// Signal to noise ratio (SNR) histogram(s).
-    vector<WlanifSnrHistogram>:WLANIF_MAX_HISTOGRAMS_PER_TYPE snr_histograms;
+    snr_histograms vector<WlanifSnrHistogram>:WLANIF_MAX_HISTOGRAMS_PER_TYPE;
 };
 
-struct WlanifApMlmeStats {
-    WlanifPacketCounter not_used;
+type WlanifApMlmeStats = struct {
+    not_used WlanifPacketCounter;
 };
 
-union StatsUnion {
-    1: WlanifClientMlmeStats client_mlme_stats;
-    2: WlanifApMlmeStats ap_mlme_stats;
+type StatsUnion = strict union {
+    1: client_mlme_stats WlanifClientMlmeStats;
+    2: ap_mlme_stats WlanifApMlmeStats;
 };
 
-struct WlanifMlmeStats {
-    WlanifMlmeStatsType tag;
-    StatsUnion stats;
+type WlanifMlmeStats = struct {
+    tag WlanifMlmeStatsType;
+    stats StatsUnion;
 };
 
-struct WlanifStats {
-    WlanifDispatcherStats dispatcher_stats;
-    vector<WlanifMlmeStats>:MAX mlme_stats;
+type WlanifStats = struct {
+    dispatcher_stats WlanifDispatcherStats;
+    mlme_stats vector<WlanifMlmeStats>:MAX;
 };
 
-struct WlanifStatsQueryResponse {
-    WlanifStats stats;
+type WlanifStatsQueryResponse = struct {
+    stats WlanifStats;
 };
 
-struct WlanifCapturedFrameResult {
-    vector<uint8>:MAX data;
+type WlanifCapturedFrameResult = struct {
+    data vector<uint8>:MAX;
 };
 
-struct WlanifChannelSwitchInfo {
-    uint8 new_channel;
+type WlanifChannelSwitchInfo = struct {
+    new_channel uint8;
 };
 
-struct WlanifPmkInfo {
-    vector<uint8>:MAX pmk;
-    vector<uint8>:MAX pmkid;
+type WlanifPmkInfo = struct {
+    pmk vector<uint8>:MAX;
+    pmkid vector<uint8>:MAX;
 };
 
-[Transport = "Banjo", BanjoLayout = "ddk-interface"]
+@transport("Banjo")
+@banjo_layout("ddk-interface")
 protocol WlanifImplIfc {
     // MLME operations
-    OnScanResult(WlanifScanResult result) -> ();
-    OnScanEnd(WlanifScanEnd end) -> ();
-    JoinConf(WlanifJoinConfirm resp) -> ();
-    AuthConf(WlanifAuthConfirm resp) -> ();
-    AuthInd(WlanifAuthInd resp) -> ();
-    DeauthConf(WlanifDeauthConfirm resp) -> ();
-    DeauthInd(WlanifDeauthIndication ind) -> ();
-    AssocConf(WlanifAssocConfirm resp) -> ();
-    AssocInd(WlanifAssocInd resp) -> ();
-    DisassocConf(WlanifDisassocConfirm resp) -> ();
-    DisassocInd(WlanifDisassocIndication ind) -> ();
-    StartConf(WlanifStartConfirm resp) -> ();
-    StopConf(WlanifStopConfirm resp) -> ();
-    EapolConf(WlanifEapolConfirm resp) -> ();
-    OnChannelSwitch(WlanifChannelSwitchInfo ind) -> ();
+    OnScanResult(struct {
+        result WlanifScanResult;
+    }) -> ();
+    OnScanEnd(struct {
+        end WlanifScanEnd;
+    }) -> ();
+    JoinConf(struct {
+        resp WlanifJoinConfirm;
+    }) -> ();
+    AuthConf(struct {
+        resp WlanifAuthConfirm;
+    }) -> ();
+    AuthInd(struct {
+        resp WlanifAuthInd;
+    }) -> ();
+    DeauthConf(struct {
+        resp WlanifDeauthConfirm;
+    }) -> ();
+    DeauthInd(struct {
+        ind WlanifDeauthIndication;
+    }) -> ();
+    AssocConf(struct {
+        resp WlanifAssocConfirm;
+    }) -> ();
+    AssocInd(struct {
+        resp WlanifAssocInd;
+    }) -> ();
+    DisassocConf(struct {
+        resp WlanifDisassocConfirm;
+    }) -> ();
+    DisassocInd(struct {
+        ind WlanifDisassocIndication;
+    }) -> ();
+    StartConf(struct {
+        resp WlanifStartConfirm;
+    }) -> ();
+    StopConf(struct {
+        resp WlanifStopConfirm;
+    }) -> ();
+    EapolConf(struct {
+        resp WlanifEapolConfirm;
+    }) -> ();
+    OnChannelSwitch(struct {
+        ind WlanifChannelSwitchInfo;
+    }) -> ();
 
     // MLME extensions
-    SignalReport(WlanifSignalReportIndication ind) -> ();
-    EapolInd(WlanifEapolIndication ind) -> ();
-    StatsQueryResp(WlanifStatsQueryResponse resp) -> ();
-    RelayCapturedFrame(WlanifCapturedFrameResult result) -> ();
-    OnPmkAvailable(WlanifPmkInfo info) -> ();
-    SaeHandshakeInd(WlanifSaeHandshakeInd ind) -> ();
-    SaeFrameRx(WlanifSaeFrame frame) -> ();
-    OnWmmStatusResp(zx.status s, fuchsia.hardware.wlan.info.WlanWmmParams wmm_params) -> ();
+    SignalReport(struct {
+        ind WlanifSignalReportIndication;
+    }) -> ();
+    EapolInd(struct {
+        ind WlanifEapolIndication;
+    }) -> ();
+    StatsQueryResp(struct {
+        resp WlanifStatsQueryResponse;
+    }) -> ();
+    RelayCapturedFrame(struct {
+        result WlanifCapturedFrameResult;
+    }) -> ();
+    OnPmkAvailable(struct {
+        info WlanifPmkInfo;
+    }) -> ();
+    SaeHandshakeInd(struct {
+        ind WlanifSaeHandshakeInd;
+    }) -> ();
+    SaeFrameRx(struct {
+        frame WlanifSaeFrame;
+    }) -> ();
+    OnWmmStatusResp(struct {
+        s zx.status;
+        wmm_params fuchsia.hardware.wlan.info.WlanWmmParams;
+    }) -> ();
 
     // Data operations
-    DataRecv([Buffer] vector<uint8>:MAX data, uint32 flags) -> ();
+    DataRecv(struct {
+        @buffer
+        data vector<uint8>:MAX;
+        flags uint32;
+    }) -> ();
 };
 
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol WlanifImpl {
     // Lifecycle operations
-    Start(WlanifImplIfc ifc) -> (zx.status status, zx.handle:CHANNEL sme_channel);
+    Start(resource struct {
+        ifc client_end:WlanifImplIfc;
+    }) -> (resource struct {
+        status zx.status;
+        sme_channel zx.handle:CHANNEL;
+    });
     Stop() -> ();
 
     // State operation
-    Query() -> (WlanifQueryInfo info);
+    Query() -> (struct {
+        info WlanifQueryInfo;
+    });
 
     // MLME operations
-    StartScan(WlanifScanReq req) -> ();
-    JoinReq(WlanifJoinReq req) -> ();
-    AuthReq(WlanifAuthReq req) -> ();
-    AuthResp(WlanifAuthResp resp) -> ();
-    DeauthReq(WlanifDeauthReq req) -> ();
-    AssocReq(WlanifAssocReq req) -> ();
-    AssocResp(WlanifAssocResp resp) -> ();
-    DisassocReq(WlanifDisassocReq req) -> ();
-    ResetReq(WlanifResetReq req) -> ();
-    StartReq(WlanifStartReq req) -> ();
-    StopReq(WlanifStopReq req) -> ();
-    SetKeysReq(WlanifSetKeysReq req) -> ();
-    DelKeysReq(WlanifDelKeysReq req) -> ();
-    EapolReq(WlanifEapolReq req) -> ();
+    StartScan(struct {
+        req WlanifScanReq;
+    }) -> ();
+    JoinReq(struct {
+        req WlanifJoinReq;
+    }) -> ();
+    AuthReq(struct {
+        req WlanifAuthReq;
+    }) -> ();
+    AuthResp(struct {
+        resp WlanifAuthResp;
+    }) -> ();
+    DeauthReq(struct {
+        req WlanifDeauthReq;
+    }) -> ();
+    AssocReq(struct {
+        req WlanifAssocReq;
+    }) -> ();
+    AssocResp(struct {
+        resp WlanifAssocResp;
+    }) -> ();
+    DisassocReq(struct {
+        req WlanifDisassocReq;
+    }) -> ();
+    ResetReq(struct {
+        req WlanifResetReq;
+    }) -> ();
+    StartReq(struct {
+        req WlanifStartReq;
+    }) -> ();
+    StopReq(struct {
+        req WlanifStopReq;
+    }) -> ();
+    SetKeysReq(struct {
+        req WlanifSetKeysReq;
+    }) -> ();
+    DelKeysReq(struct {
+        req WlanifDelKeysReq;
+    }) -> ();
+    EapolReq(struct {
+        req WlanifEapolReq;
+    }) -> ();
 
     // MLME extensions
     StatsQueryReq() -> ();
-    StartCaptureFrames(WlanifStartCaptureFramesReq req) -> (WlanifStartCaptureFramesResp resp);
+    StartCaptureFrames(struct {
+        req WlanifStartCaptureFramesReq;
+    }) -> (struct {
+        resp WlanifStartCaptureFramesResp;
+    });
     StopCaptureFrames() -> ();
-    SaeHandshakeResp(WlanifSaeHandshakeResp resp) -> ();
-    SaeFrameTx(WlanifSaeFrame frame) -> ();
+    SaeHandshakeResp(struct {
+        resp WlanifSaeHandshakeResp;
+    }) -> ();
+    SaeFrameTx(struct {
+        frame WlanifSaeFrame;
+    }) -> ();
     WmmStatusReq() -> ();
 
     // Configuration operations
-    SetMulticastPromisc(bool enable) -> (zx.status status);
+    SetMulticastPromisc(struct {
+        enable bool;
+    }) -> (struct {
+        status zx.status;
+    });
 
     // Data operations
-    [Async]
-    DataQueueTx(uint32 options, [InOut] fuchsia.hardware.ethernet.EthernetNetbuf netbuf)
-        -> (zx.status status, [Mutable] fuchsia.hardware.ethernet.EthernetNetbuf netbuf);
+    @async
+    DataQueueTx(struct {
+        options uint32;
+        @in_out
+        netbuf fuchsia.hardware.ethernet.EthernetNetbuf;
+    }) -> (struct {
+        status zx.status;
+        @mutable
+        netbuf fuchsia.hardware.ethernet.EthernetNetbuf;
+    });
 };

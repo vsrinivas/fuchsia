@@ -1,28 +1,26 @@
 // Copyright 2017 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.cobalt;
 
 /// A specification to identify a single Cobalt report.
-table ReportSpec {
+type ReportSpec = table {
     /// The customer ID, as specified in Cobalt's metrics registry.
-    1: uint32 customer_id;
+    1: customer_id uint32;
 
     /// The ID of the project, as specified in Cobalt's metrics registry.
-    2: uint32 project_id;
+    2: project_id uint32;
 
     /// The ID of the metric, as specified in Cobalt's metrics registry.
-    3: uint32 metric_id;
+    3: metric_id uint32;
 
     /// The ID of the report, as specified in Cobalt's metrics registry.
-    4: uint32 report_id;
+    4: report_id uint32;
 };
 
 /// The Controller is primarily useful for testing the Cobalt service.
 /// Cobalt clients should use the Logger.
-[Discoverable]
+@discoverable
 protocol Controller {
     /// Requests that the collection of Observations that are currently cached
     /// locally be sent to the Cobalt server soon. Cobalt will send the
@@ -30,7 +28,9 @@ protocol Controller {
     /// failure. The response occurs only after that procedure is completed. A
     /// return value of true indicates that all Observations were successfully
     /// sent. A return value of false indicates otherwise.
-    RequestSendSoon() -> (bool success);
+    RequestSendSoon() -> (struct {
+        success bool;
+    });
 
     /// The Cobalt FIDL service will block, not processing any further FIDL
     /// requests or responses, on either this interface or the Logger interface,
@@ -41,14 +41,24 @@ protocol Controller {
     /// is possible that the worker thread is currently waiting for the next
     /// scheduled send time and so the empty state will not be achieved prior
     /// that time.
-    BlockUntilEmpty(uint32 max_wait_seconds) -> ();
+    BlockUntilEmpty(struct {
+        max_wait_seconds uint32;
+    }) -> ();
 
     /// These diagnostic stats are mostly useful in a testing environment but
     /// may possibly prove useful in production also.
-    GetNumSendAttempts() -> (uint32 num);
-    GetFailedSendAttempts() -> (uint32 num);
-    GetNumObservationsAdded() -> (uint64 num_obs);
-    GetNumEventAggregatorRuns() -> (uint64 num_runs);
+    GetNumSendAttempts() -> (struct {
+        num uint32;
+    });
+    GetFailedSendAttempts() -> (struct {
+        num uint32;
+    });
+    GetNumObservationsAdded() -> (struct {
+        num_obs uint64;
+    });
+    GetNumEventAggregatorRuns() -> (struct {
+        num_runs uint64;
+    });
 
     /// Triggers Cobalt to generate Observations based on locally aggregated
     /// event data and write them to the local ObservationStore. In a non-test
@@ -66,9 +76,12 @@ protocol Controller {
     /// Returns a vector whose k-th element is the number of observations
     /// generated for the k-th element of `report_specs`. If `report_specs`
     /// is the empty vector, then an empty vector is returned.
-    GenerateAggregatedObservations(uint32 day_index,
-                                   vector<ReportSpec>:MAX report_specs)
-        -> (vector<uint64>:MAX num_obs);
+    GenerateAggregatedObservations(struct {
+        day_index uint32;
+        report_specs vector<ReportSpec>:MAX;
+    }) -> (struct {
+        num_obs vector<uint64>:MAX;
+    });
 
     /// Requests that the caller be notified after the Cobalt FIDL service
     /// is in the fully-initialized state.

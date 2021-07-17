@@ -1,62 +1,60 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.overnet.protocol;
 
 using fuchsia.net;
 
 /// Control frame sent over a link.
-union LinkControlFrame {
-    1: uint64 ack;
-    2: LinkControlMessage message;
+type LinkControlFrame = strict union {
+    1: ack uint64;
+    2: message LinkControlMessage;
 };
 
 /// Control message sent over a link.
-struct LinkControlMessage {
-    uint64 seq;
-    LinkControlPayload payload;
+type LinkControlMessage = struct {
+    seq uint64;
+    payload LinkControlPayload;
 };
 
 /// Control message payload.
-union LinkControlPayload {
+type LinkControlPayload = strict union {
     /// Initial message.
-    1: LinkIntroduction introduction;
+    1: introduction LinkIntroduction;
     /// Configure some routes.
     /// Since the complete routing table might be longer than can fit in one frame, it may take
     /// multiple set_route messages to update a routing table. is_end will be set on the last frame
     /// of a given update round to signify that the update is done.
-    2: SetRoute set_route;
+    2: set_route SetRoute;
 };
 
 /// Partial send of new routes.
-struct SetRoute {
+type SetRoute = struct {
     /// Is this the last SetRoute frame in an update?
-    bool is_end;
+    is_end bool;
     /// Routes to add to the route map being sent.
-    vector<Route>:MAX routes;
+    routes vector<Route>:MAX;
 };
 
 /// Update route visibility via a node.
-struct Route {
+type Route = struct {
     /// Target node id that can be routed to via this peer.
-    NodeId destination;
+    destination NodeId;
     /// Metrics associated with this route.
-    RouteMetrics route_metrics;
+    route_metrics RouteMetrics;
 };
 
 /// Metrics that may be used to determine the optimimum route for a packet.
-table RouteMetrics {
+type RouteMetrics = table {
     /// Intermediate proposed path to the destination (used for loop prevention).
-    1: vector<NodeId>:MAX intermediate_hops;
+    1: intermediate_hops vector<NodeId>:MAX;
     /// Round trip time to the destination and back (in microseconds).
-    2: uint64 round_trip_time_us;
+    2: round_trip_time_us uint64;
 };
 
 /// Introduction data for a link - basic configuration stuff will go here.
-table LinkIntroduction {
+type LinkIntroduction = table {
     /// For IP based link protocols: the address of the receiver of this introduction, as observed
     /// by the sender.
-    1: fuchsia.net.SocketAddress you_are;
+    1: you_are fuchsia.net.SocketAddress;
 };

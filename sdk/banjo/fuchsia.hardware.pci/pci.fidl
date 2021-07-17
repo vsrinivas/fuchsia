@@ -1,14 +1,12 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.pci;
 
 using fuchsia.hardware.syscalls.pci;
 using zx;
 
-enum PciCfg : uint16 {
+type PciCfg = strict enum : uint16 {
     VENDOR_ID = 0x00;
     DEVICE_ID = 0x02;
     COMMAND = 0x04;
@@ -33,7 +31,7 @@ enum PciCfg : uint16 {
     MAX_LATENCY = 0x3f;
 };
 
-enum PciCapId : uint8 {
+type PciCapId = strict enum : uint8 {
     NULL = 0x00;
     PCI_PWR_MGMT = 0x01;
     AGP = 0x02;
@@ -58,7 +56,7 @@ enum PciCapId : uint8 {
     FLATTENING_PORTAL_BRIDGE = 0x15;
 };
 
-enum PciExtCapId : uint16 {
+type PciExtCapId = strict enum : uint16 {
     NULL = 0x00;
     ADVANCED_ERROR_REPORTING = 0x01;
     VIRTUAL_CHANNEL_NO_MFVC = 0x02;
@@ -106,7 +104,7 @@ enum PciExtCapId : uint16 {
     SYSTEM_FIRMWARE_INTERMEDIARY = 0x2c;
 };
 
-enum PciIrqMode : uint8 {
+type PciIrqMode = strict enum : uint8 {
     DISABLED = 0;
     LEGACY = 1;
     LEGACY_NOACK = 2;
@@ -116,26 +114,120 @@ enum PciIrqMode : uint8 {
 };
 
 /// fxbug.dev/33713: Remove the zx_pcie types and implement them here
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol Pci {
-    GetBar(uint32 bar_id) -> (zx.status s, fuchsia.hardware.syscalls.pci.PciBar res);
-    EnableBusMaster(bool enable) -> (zx.status s);
-    ResetDevice() -> (zx.status s);
-    AckInterrupt() -> (zx.status s);
-    MapInterrupt(uint32 which_irq) -> (zx.status s, zx.handle:INTERRUPT handle);
-    QueryIrqMode(fuchsia.hardware.syscalls.pci.PciIrqMode mode) -> (zx.status s, uint32 max_irqs);
-    SetIrqMode(fuchsia.hardware.syscalls.pci.PciIrqMode mode, uint32 requested_irq_count) -> (zx.status s);
-    ConfigureIrqMode(uint32 requested_irq_count) -> (zx.status s, PciIrqMode mode);
-    GetDeviceInfo() -> (zx.status s, fuchsia.hardware.syscalls.pci.PcieDeviceInfo info);
-    ConfigRead8(uint16 offset) -> (zx.status s, uint8 value);
-    ConfigRead16(uint16 offset) -> (zx.status s, uint16 value);
-    ConfigRead32(uint16 offset) -> (zx.status s, uint32 value);
-    ConfigWrite8(uint16 offset, uint8 value) -> (zx.status s);
-    ConfigWrite16(uint16 offset, uint16 value) -> (zx.status s);
-    ConfigWrite32(uint16 offset, uint32 value) -> (zx.status s);
-    GetFirstCapability(uint8 id) -> (zx.status s, uint8 offset);
-    GetNextCapability(uint8 id, uint8 offset) -> (zx.status s, uint8 offset);
-    GetFirstExtendedCapability(uint16 id) -> (zx.status s, uint16 offset);
-    GetNextExtendedCapability(uint16 id, uint16 offset) -> (zx.status s, uint16 offset);
-    GetBti(uint32 index) -> (zx.status s, zx.handle:BTI bti);
+    GetBar(struct {
+        bar_id uint32;
+    }) -> (resource struct {
+        s zx.status;
+        res fuchsia.hardware.syscalls.pci.PciBar;
+    });
+    EnableBusMaster(struct {
+        enable bool;
+    }) -> (struct {
+        s zx.status;
+    });
+    ResetDevice() -> (struct {
+        s zx.status;
+    });
+    AckInterrupt() -> (struct {
+        s zx.status;
+    });
+    MapInterrupt(struct {
+        which_irq uint32;
+    }) -> (resource struct {
+        s zx.status;
+        handle zx.handle:INTERRUPT;
+    });
+    QueryIrqMode(struct {
+        mode fuchsia.hardware.syscalls.pci.PciIrqMode;
+    }) -> (struct {
+        s zx.status;
+        max_irqs uint32;
+    });
+    SetIrqMode(struct {
+        mode fuchsia.hardware.syscalls.pci.PciIrqMode;
+        requested_irq_count uint32;
+    }) -> (struct {
+        s zx.status;
+    });
+    ConfigureIrqMode(struct {
+        requested_irq_count uint32;
+    }) -> (struct {
+        s zx.status;
+        mode PciIrqMode;
+    });
+    GetDeviceInfo() -> (struct {
+        s zx.status;
+        info fuchsia.hardware.syscalls.pci.PcieDeviceInfo;
+    });
+    ConfigRead8(struct {
+        offset uint16;
+    }) -> (struct {
+        s zx.status;
+        value uint8;
+    });
+    ConfigRead16(struct {
+        offset uint16;
+    }) -> (struct {
+        s zx.status;
+        value uint16;
+    });
+    ConfigRead32(struct {
+        offset uint16;
+    }) -> (struct {
+        s zx.status;
+        value uint32;
+    });
+    ConfigWrite8(struct {
+        offset uint16;
+        value uint8;
+    }) -> (struct {
+        s zx.status;
+    });
+    ConfigWrite16(struct {
+        offset uint16;
+        value uint16;
+    }) -> (struct {
+        s zx.status;
+    });
+    ConfigWrite32(struct {
+        offset uint16;
+        value uint32;
+    }) -> (struct {
+        s zx.status;
+    });
+    GetFirstCapability(struct {
+        id uint8;
+    }) -> (struct {
+        s zx.status;
+        offset uint8;
+    });
+    GetNextCapability(struct {
+        id uint8;
+        offset uint8;
+    }) -> (struct {
+        s zx.status;
+        offset uint8;
+    });
+    GetFirstExtendedCapability(struct {
+        id uint16;
+    }) -> (struct {
+        s zx.status;
+        offset uint16;
+    });
+    GetNextExtendedCapability(struct {
+        id uint16;
+        offset uint16;
+    }) -> (struct {
+        s zx.status;
+        offset uint16;
+    });
+    GetBti(struct {
+        index uint32;
+    }) -> (resource struct {
+        s zx.status;
+        bti zx.handle:BTI;
+    });
 };

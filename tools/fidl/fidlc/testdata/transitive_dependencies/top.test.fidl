@@ -1,8 +1,7 @@
-deprecated_syntax;
 library fidl.test.transitivedependencies;
 
 using middle;
 
-struct Baz {
-    middle.Bar g;
+type Baz = struct {
+    g middle.Bar;
 };

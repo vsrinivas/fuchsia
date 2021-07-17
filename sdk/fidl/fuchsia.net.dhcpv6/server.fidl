@@ -1,16 +1,14 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.net.dhcpv6;
 
 /// The link-local multicast address used by a client to communicate with
 /// neighboring (i.e. on-link) DHCPv6 relay agents and servers, as per
 /// [RFC 8415, section 7.1](https://tools.ietf.org/html/rfc8415#section-7.1).
 /// All servers and relay agents are members of this multicast group.
-const string RELAY_AGENT_AND_SERVER_LINK_LOCAL_MULTICAST_ADDRESS = "ff02::1:2";
+const RELAY_AGENT_AND_SERVER_LINK_LOCAL_MULTICAST_ADDRESS string = "ff02::1:2";
 
 /// The port a DHCPv6 server or relay agent listens to according to [RFC 8415,
 /// Section 7.2](https://tools.ietf.org/html/rfc8415#section-7.2).
-const uint16 RELAY_AGENT_AND_SERVER_PORT = 547;
+const RELAY_AGENT_AND_SERVER_PORT uint16 = 547;

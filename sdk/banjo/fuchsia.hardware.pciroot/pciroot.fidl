@@ -1,26 +1,24 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.pciroot;
 using zx;
 
-struct PciBdf {
-    uint8 bus_id;
-    uint8 device_id;
-    uint8 function_id;
+type PciBdf = struct {
+    bus_id uint8;
+    device_id uint8;
+    function_id uint8;
 };
 
-const uint8 DEVICES_PER_BUS = 64;
-const uint8 FUNCTIONS_PER_DEVICE = 8;
-const uint8 PINS_PER_FUNCTION = 4;
+const DEVICES_PER_BUS uint8 = 64;
+const FUNCTIONS_PER_DEVICE uint8 = 8;
+const PINS_PER_FUNCTION uint8 = 4;
 
 /// Used to indicate within a routing entry that there is no parent bridge/port
 /// device, it is connected directly at the root.
-const uint8 PCI_IRQ_ROUTING_NO_PARENT = 0xFF;
+const PCI_IRQ_ROUTING_NO_PARENT uint8 = 0xFF;
 /// An entry corresponds to all functions for the given device.
-const uint8 PCI_IRQ_ROUTING_ALL_FUNCTIONS = 0xF;
+const PCI_IRQ_ROUTING_ALL_FUNCTIONS uint8 = 0xF;
 
 /// A protocol representation of a routing entry.
 /// It is intentionally very similar to an ACPI _PRT entry to reduce the complexity of
@@ -28,20 +26,20 @@ const uint8 PCI_IRQ_ROUTING_ALL_FUNCTIONS = 0xF;
 /// directly connected to a root complex will have port device and function_ids
 /// of PCI_IRQ_ROUTING_NO_PARENT. For other endpoints hanging off root ports or
 /// bridges their upstream port address will be contained in these fields.
-struct PciIrqRoutingEntry {
-    uint8 port_device_id;
-    uint8 port_function_id;
-    uint8 device_id;
-    array<uint8>:PINS_PER_FUNCTION pins;
+type PciIrqRoutingEntry = struct {
+    port_device_id uint8;
+    port_function_id uint8;
+    device_id uint8;
+    pins array<uint8, PINS_PER_FUNCTION>;
 };
 
 /// This represents one of the vectors wired up for PCI legacy interrupts. How
 /// the bus driver uses them depends on the irq routing table provided to them.
 /// The vector is supplied because interrupt objects cannot be inspected with
 /// zx_get_object_info.
-resource struct PciLegacyIrq {
-    zx.handle:INTERRUPT interrupt;
-    uint32 vector;
+type PciLegacyIrq = resource struct {
+    interrupt zx.handle:INTERRUPT;
+    vector uint32;
 };
 
 /// This structure is the primary means of passing PCI platform information from
@@ -49,50 +47,98 @@ resource struct PciLegacyIrq {
 /// for this segment group then a handle to a VMO for it will be provided via
 /// |ecam_vmo|. The VMO's start address will correspond to the base address of
 /// the bus number specified by |start_bus_num|.
-resource struct PciPlatformInfo {
-    string:8 name;
-    uint8 start_bus_num;
-    uint8 end_bus_num;
-    uint16 segment_group;
-    zx.handle:VMO ecam_vmo;
-    vector<PciLegacyIrq>:MAX legacy_irqs;
-    vector<PciIrqRoutingEntry>:MAX irq_routing;
+type PciPlatformInfo = resource struct {
+    name string:8;
+    start_bus_num uint8;
+    end_bus_num uint8;
+    segment_group uint16;
+    ecam_vmo zx.handle:VMO;
+    legacy_irqs vector<PciLegacyIrq>:MAX;
+    irq_routing vector<PciIrqRoutingEntry>:MAX;
     /// A vector of PciBdfs that are known to ACPI.
     /// For each BDF in this list, the composite device published by the PCI bus
     /// driver will bind to an ACPI device with ACPI_BUS_TYPE == PCI and a
     /// matching PCI_BIND_TOPO.
-    vector<PciBdf>:MAX acpi_bdfs;
+    acpi_bdfs vector<PciBdf>:MAX;
 };
 
-enum PciAddressSpace : uint8 {
+type PciAddressSpace = strict enum : uint8 {
     MEMORY = 0;
     IO = 0x1;
 };
 
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol Pciroot {
     /// Legacy methods
-    GetBti(uint32 bdf, uint32 index) -> (zx.status s, zx.handle:BTI bti);
+    GetBti(struct {
+        bdf uint32;
+        index uint32;
+    }) -> (resource struct {
+        s zx.status;
+        bti zx.handle:BTI;
+    });
     /// Get the platform information structure from the pciroot protocol to be used for bus init.
-    GetPciPlatformInfo() -> (zx.status s, PciPlatformInfo info);
+    GetPciPlatformInfo() -> (resource struct {
+        s zx.status;
+        info PciPlatformInfo;
+    });
 
     /// Contemporary methods:
     /// Returns true if the bus driver should proxy all device config access to pciroot. This is
     /// necessary in cases of IO config on x86, or for controllers that require configuration to
     /// map in device config headers.
-    DriverShouldProxyConfig() -> (bool use_proxy);
+    DriverShouldProxyConfig() -> (struct {
+        use_proxy bool;
+    });
     /// Read 8 bytes from config space for device at bdf address |address|:we, offset |offset|.
-    ConfigRead8(PciBdf address, uint16 offset) -> (zx.status s, uint8 value);
+    ConfigRead8(struct {
+        address PciBdf;
+        offset uint16;
+    }) -> (struct {
+        s zx.status;
+        value uint8;
+    });
     /// Read 16 bytes from config space for device at bdf address |address|, offset |offset|.
-    ConfigRead16(PciBdf address, uint16 offset) -> (zx.status s, uint16 value);
+    ConfigRead16(struct {
+        address PciBdf;
+        offset uint16;
+    }) -> (struct {
+        s zx.status;
+        value uint16;
+    });
     /// Read 32 bytes from config space for device at bdf address |address|, offset |offset|.
-    ConfigRead32(PciBdf address, uint16 offset) -> (zx.status s, uint32 value);
+    ConfigRead32(struct {
+        address PciBdf;
+        offset uint16;
+    }) -> (struct {
+        s zx.status;
+        value uint32;
+    });
     /// Write 8 bytes to config space for device at bdf |address| offset |offset|.
-    ConfigWrite8(PciBdf address, uint16 offset, uint8 value) -> (zx.status s);
+    ConfigWrite8(struct {
+        address PciBdf;
+        offset uint16;
+        value uint8;
+    }) -> (struct {
+        s zx.status;
+    });
     /// Write 16 bytes to config space for device at bdf |address| offset |offset|.
-    ConfigWrite16(PciBdf address, uint16 offset, uint16 value) -> (zx.status s);
+    ConfigWrite16(struct {
+        address PciBdf;
+        offset uint16;
+        value uint16;
+    }) -> (struct {
+        s zx.status;
+    });
     /// Write 32 bytes to config space for device at bdf |address| offset |offset|.
-    ConfigWrite32(PciBdf address, uint16 offset, uint32 value) -> (zx.status s);
+    ConfigWrite32(struct {
+        address PciBdf;
+        offset uint16;
+        value uint32;
+    }) -> (struct {
+        s zx.status;
+    });
     /// Request address space reservations from platform bus to use for mapping bars / bridges
     /// |in_base| is an optional requested start address which should otherwise be 0. |size| is the
     /// size of the request in bytes. |low| dictates whether the allocation should be an address
@@ -102,8 +148,23 @@ protocol Pciroot {
     ///
     /// An error will be returned if |size| cannot be fulfilled, |low| is set with |in_base|+|size|
     /// being >=4GB, or if a requested |in_base| cannot be provided.
-    GetAddressSpace(zx.paddr in_base, uint64 size, PciAddressSpace type, bool low)
-        -> (zx.status s, zx.paddr base, zx.handle:RESOURCE resource, zx.handle:EVENTPAIR token);
+    GetAddressSpace(struct {
+        in_base zx.paddr;
+        size uint64;
+        type PciAddressSpace;
+        low bool;
+    }) -> (resource struct {
+        s zx.status;
+        base zx.paddr;
+        resource zx.handle:RESOURCE;
+        token zx.handle:EVENTPAIR;
+    });
     /// Allocate |msi_count| MSIs and return a handle to the backing MsiAllocation.
-    AllocateMsi(uint32 msi_count, bool can_target_64bit) -> (zx.status s, zx.handle:MSI_ALLOCATION allocation);
+    AllocateMsi(struct {
+        msi_count uint32;
+        can_target_64bit bool;
+    }) -> (resource struct {
+        s zx.status;
+        allocation zx.handle:MSI_ALLOCATION;
+    });
 };

@@ -1,41 +1,39 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.mediastreams;
 
 /// An identifier for compression types.
 alias CompressionType = string:256;
 
 /// Describes the compression applied to a stream.
-struct Compression {
+type Compression = struct {
     /// The type of compression applied to the stream.
-    CompressionType type;
+    type CompressionType;
 
     /// Opaque ‘out-of-band’ parameters describing the compression
     /// of the stream.
-    bytes? parameters;
+    parameters bytes:optional;
 };
 
 // TODO: Use mimetypes for these?
-const string AUDIO_COMPRESSION_AAC = "fuchsia.streams.aac";
-const string AUDIO_COMPRESSION_AACLATM = "fuchsia.streams.aaclatm";
-const string AUDIO_COMPRESSION_AMRNB = "fuchsia.streams.amrnb";
-const string AUDIO_COMPRESSION_AMRWB = "fuchsia.streams.amrwb";
-const string AUDIO_COMPRESSION_APTX = "fuchsia.streams.aptx";
-const string AUDIO_COMPRESSION_FLAC = "fuchsia.streams.flac";
-const string AUDIO_COMPRESSION_GSMMS = "fuchsia.streams.gsmms";
-const string AUDIO_COMPRESSION_MP3 = "fuchsia.streams.mp3";
-const string AUDIO_COMPRESSION_PCMALAW = "fuchsia.streams.pcmalaw";
-const string AUDIO_COMPRESSION_PCMMULAW = "fuchsia.streams.pcmmulaw";
-const string AUDIO_COMPRESSION_SBC = "fuchsia.streams.sbc";
-const string AUDIO_COMPRESSION_VORBIS = "fuchsia.streams.vorbis";
+const AUDIO_COMPRESSION_AAC string = "fuchsia.streams.aac";
+const AUDIO_COMPRESSION_AACLATM string = "fuchsia.streams.aaclatm";
+const AUDIO_COMPRESSION_AMRNB string = "fuchsia.streams.amrnb";
+const AUDIO_COMPRESSION_AMRWB string = "fuchsia.streams.amrwb";
+const AUDIO_COMPRESSION_APTX string = "fuchsia.streams.aptx";
+const AUDIO_COMPRESSION_FLAC string = "fuchsia.streams.flac";
+const AUDIO_COMPRESSION_GSMMS string = "fuchsia.streams.gsmms";
+const AUDIO_COMPRESSION_MP3 string = "fuchsia.streams.mp3";
+const AUDIO_COMPRESSION_PCMALAW string = "fuchsia.streams.pcmalaw";
+const AUDIO_COMPRESSION_PCMMULAW string = "fuchsia.streams.pcmmulaw";
+const AUDIO_COMPRESSION_SBC string = "fuchsia.streams.sbc";
+const AUDIO_COMPRESSION_VORBIS string = "fuchsia.streams.vorbis";
 
-const string VIDEO_COMPRESSION_H263 = "fuchsia.streams.h263";
-const string VIDEO_COMPRESSION_H264 = "fuchsia.streams.h264";
-const string VIDEO_COMPRESSION_MPEG4 = "fuchsia.streams.mpeg4";
-const string VIDEO_COMPRESSION_THEORA = "fuchsia.streams.theora";
-const string VIDEO_COMPRESSION_VP3 = "fuchsia.streams.vp3";
-const string VIDEO_COMPRESSION_VP8 = "fuchsia.streams.vp8";
-const string VIDEO_COMPRESSION_VP9 = "fuchsia.streams.vp9";
+const VIDEO_COMPRESSION_H263 string = "fuchsia.streams.h263";
+const VIDEO_COMPRESSION_H264 string = "fuchsia.streams.h264";
+const VIDEO_COMPRESSION_MPEG4 string = "fuchsia.streams.mpeg4";
+const VIDEO_COMPRESSION_THEORA string = "fuchsia.streams.theora";
+const VIDEO_COMPRESSION_VP3 string = "fuchsia.streams.vp3";
+const VIDEO_COMPRESSION_VP8 string = "fuchsia.streams.vp8";
+const VIDEO_COMPRESSION_VP9 string = "fuchsia.streams.vp9";

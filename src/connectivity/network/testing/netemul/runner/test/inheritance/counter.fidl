@@ -1,13 +1,13 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.netemul.example;
 
 /// Sample interface that keeps a stateful integer counter starting at zero
-[Discoverable]
+@discoverable
 protocol Counter {
     /// Increments internal counter by one and returns new counter value
-    Increment() -> (uint32 value);
+    Increment() -> (struct {
+        value uint32;
+    });
 };

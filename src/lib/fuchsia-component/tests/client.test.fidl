@@ -1,25 +1,22 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.component.client.test;
 
 /// A discoverable service.
-[Discoverable]
+@discoverable
 protocol ServiceA {
     /// Does nothing.
     Foo() -> ();
 };
 
 /// Yet another discoverable service.
-[Discoverable]
+@discoverable
 protocol ServiceB {
     /// Does nothing.
     Foo() -> ();
 };
 
 /// An empty protocol.
-[Discoverable]
-protocol EmptyProtocol {
-};
+@discoverable
+protocol EmptyProtocol {};

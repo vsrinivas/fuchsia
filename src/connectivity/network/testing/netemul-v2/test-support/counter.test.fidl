@@ -1,22 +1,28 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.netemul.test;
 
 using fuchsia.component;
 using zx;
 
 /// Sample interface that keeps a stateful integer counter starting at zero.
-[Discoverable]
+@discoverable
 protocol Counter {
     /// Increments internal counter by one and returns new counter value.
-    Increment() -> (uint32 value);
+    Increment() -> (struct {
+        value uint32;
+    });
     /// Connects `request` to a service named `service_name`.
-    ConnectToService(string:fuchsia.component.MAX_PATH_LENGTH service_name, zx.handle:CHANNEL request);
+    ConnectToService(resource struct {
+        service_name string:fuchsia.component.MAX_PATH_LENGTH;
+        request zx.handle:CHANNEL;
+    });
     /// Connects `request` to a service found at `path`.
     ///
     /// `path` is the absolute path from the server's namespace.
-    ConnectToServiceAt(string:fuchsia.component.MAX_PATH_LENGTH path, zx.handle:CHANNEL request);
+    ConnectToServiceAt(resource struct {
+        path string:fuchsia.component.MAX_PATH_LENGTH;
+        request zx.handle:CHANNEL;
+    });
 };

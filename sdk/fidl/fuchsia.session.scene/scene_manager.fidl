@@ -1,8 +1,6 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.session.scene;
 
 using fuchsia.ui.app;
@@ -14,7 +12,7 @@ using fuchsia.ui.views;
 /// This protocol is exposed by the `scene_manager` component. The `scene_manager`
 /// component configures and constructs a scene graph in Scenic. A product may
 /// use the `scene_manager` to reduce Scenic-related configuration code in their session.
-[Discoverable]
+@discoverable
 protocol Manager {
     /// Sets the root view of the scene graph to the view provided by `view_provider`.
     ///
@@ -23,17 +21,25 @@ protocol Manager {
     /// of `Manager`.
     ///
     /// Returns a `fuchsia.ui.views.ViewRef` to the view provided by `view_provider`.
-    SetRootView(fuchsia.ui.app.ViewProvider view_provider) -> (fuchsia.ui.views.ViewRef view_ref);
+    SetRootView(resource struct {
+        view_provider client_end:fuchsia.ui.app.ViewProvider;
+    }) -> (resource struct {
+        view_ref fuchsia.ui.views.ViewRef;
+    });
 
     /// Focuses the provided `view_ref`.
     ///
     /// Returns once the view associated with `view_ref` has been focused, or if there
     /// was an error focusing the specified view.
-    RequestFocus(fuchsia.ui.views.ViewRef view_ref) -> () error fuchsia.ui.views.Error;
+    RequestFocus(resource struct {
+        view_ref fuchsia.ui.views.ViewRef;
+    }) -> (struct {}) error fuchsia.ui.views.Error;
 
     /// Adds a listener for "raw" pointer events.
     ///
     /// This exists to support legacy clients, and new uses are discouraged. This method
     /// will be removed prior to the inclusion of `Manager` in the SDK.
-    CapturePointerEvents(fuchsia.ui.policy.PointerCaptureListenerHACK listener);
+    CapturePointerEvents(resource struct {
+        listener client_end:fuchsia.ui.policy.PointerCaptureListenerHACK;
+    });
 };

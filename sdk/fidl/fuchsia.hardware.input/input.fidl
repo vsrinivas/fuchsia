@@ -1,26 +1,24 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.input;
 
 using zx;
 
 alias ReportId = uint8;
 
-enum BootProtocol : uint32 {
+type BootProtocol = strict enum : uint32 {
     NONE = 0;
     KBD = 1;
     MOUSE = 2;
 };
 
-const uint16 MAX_DESC_LEN = 8192;
-const uint16 MAX_REPORT_LEN = 8192;
-const uint16 MAX_REPORT_DATA = 8192;
-const uint32 MAX_REPORTS_COUNT = 50;
+const MAX_DESC_LEN uint16 = 8192;
+const MAX_REPORT_LEN uint16 = 8192;
+const MAX_REPORT_DATA uint16 = 8192;
+const MAX_REPORTS_COUNT uint32 = 50;
 
-enum ReportType : uint8 {
+type ReportType = strict enum : uint8 {
     INPUT = 1;
     OUTPUT = 2;
     FEATURE = 3;
@@ -31,18 +29,18 @@ enum ReportType : uint8 {
 /// will come from the device itself. Mock HID devices may assign the
 /// ids in the driver. If the mock HID driver does not assign ids, zeros
 /// will be used instead.
-struct DeviceIds {
-    uint32 vendor_id;
-    uint32 product_id;
-    uint32 version;
+type DeviceIds = struct {
+    vendor_id uint32;
+    product_id uint32;
+    version uint32;
 };
 
 /// A single HID Report.
-struct Report {
+type Report = struct {
     /// The time the report was created, from the view of the monotonic clock.
-    zx.time time;
+    time zx.time;
     /// The HID report data. This is guaranteed to always be a full HID report.
-    vector<uint8>:MAX_REPORT_DATA data;
+    data vector<uint8>:MAX_REPORT_DATA;
 };
 
 /// Each `DeviceReportsReader` has its own FIFO of reports in the driver.
@@ -54,32 +52,46 @@ protocol DeviceReportsReader {
     /// report available.
     /// If there is already one outstanding Hanging-Get, calling this
     /// again will return ZX_ERR_ALREADY_BOUND.
-    ReadReports() -> (vector<Report>:MAX_REPORTS_COUNT reports) error zx.status;
+    ReadReports() -> (struct {
+        reports vector<Report>:MAX_REPORTS_COUNT;
+    }) error zx.status;
 };
 
 // TODO(fxbug.dev/49329): This API doesn't follow best practices and needs to be
 // cleaned up.
 protocol Device {
     /// Get the HID boot interface protocol this device supports
-    GetBootProtocol() -> (BootProtocol protocol);
+    GetBootProtocol() -> (struct {
+        protocol BootProtocol;
+    });
 
     /// Get the Device's IDs. If this is a real HID device, the IDs will come from the device.
     /// If it is a mock HID decice, the IDs will either be 0's or user defined.
-    GetDeviceIds() -> (DeviceIds ids);
+    GetDeviceIds() -> (struct {
+        ids DeviceIds;
+    });
 
     /// Get the report descriptor
-    GetReportDesc() -> (vector<uint8>:MAX_DESC_LEN desc);
+    GetReportDesc() -> (struct {
+        desc vector<uint8>:MAX_DESC_LEN;
+    });
 
     /// Open a new DeviceReportsReader on this device. Opening a DeviceReportsReader
     /// allocates a new FIFO for receiving input reports.
-    GetDeviceReportsReader(request<DeviceReportsReader> reader) -> () error zx.status;
+    GetDeviceReportsReader(resource struct {
+        reader server_end:DeviceReportsReader;
+    }) -> (struct {}) error zx.status;
 
     /// Read one report out of the report FIFO. Only a single report will be
     /// returned in this API. `time` is the time the report was created, from
     /// the view of the monotonic clock.
     /// If status is ZX_ERR_SHOULD_WAIT the client can wait on the event
     /// from `GetReportsEvent`.
-    ReadReport() -> (zx.status status, vector<uint8>:MAX_REPORT_DATA data, zx.time time);
+    ReadReport() -> (struct {
+        status zx.status;
+        data vector<uint8>:MAX_REPORT_DATA;
+        time zx.time;
+    });
 
     /// Read up to MAX_REPORT_DATA bytes of reports that have been sent from a device.
     /// This is the interface that is supposed to be used for continuous polling.
@@ -88,22 +100,42 @@ protocol Device {
     /// It is guaranteed that only whole reports will be sent.
     /// If there are no reports, this will return ZX_ERR_SHOULD_WAIT, and the client can
     /// wait on the event from `GetReportsEvent`.
-    ReadReports() -> (zx.status status, vector<uint8>:MAX_REPORT_DATA data);
+    ReadReports() -> (struct {
+        status zx.status;
+        data vector<uint8>:MAX_REPORT_DATA;
+    });
 
     /// Receive an event that will signal on `ZX_USER_SIGNAL_0` when there are reports in the
     /// Device's report FIFO. This signal will be de-asserted when there are no
     /// reports in the Device's report FIFO. This event can be re-used each time
     /// the client wishes to know if there are reports in the FIFO.
-    GetReportsEvent() -> (zx.status status, zx.handle:EVENT event);
+    GetReportsEvent() -> (resource struct {
+        status zx.status;
+        event zx.handle:EVENT;
+    });
 
     /// Send a request to the hardware for a given report described by type and id.
     /// Returns the hardware's response. This interface is not intended
     /// to be used for continuous polling of the reports.
-    GetReport(ReportType type, ReportId id) -> (zx.status status, vector<uint8>:MAX_REPORT_LEN report);
+    GetReport(struct {
+        type ReportType;
+        id ReportId;
+    }) -> (struct {
+        status zx.status;
+        report vector<uint8>:MAX_REPORT_LEN;
+    });
 
     /// Set a single report of the given (type, id) pair.
-    SetReport(ReportType type, ReportId id, vector<uint8>:MAX_REPORT_LEN report) -> (zx.status status);
+    SetReport(struct {
+        type ReportType;
+        id ReportId;
+        report vector<uint8>:MAX_REPORT_LEN;
+    }) -> (struct {
+        status zx.status;
+    });
 
     /// Set the trace ID that is used for HID report flow events.
-    SetTraceId(uint32 id);
+    SetTraceId(struct {
+        id uint32;
+    });
 };

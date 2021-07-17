@@ -1,26 +1,30 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.developer.bridge;
 
-enum FastbootError {
+type FastbootError = strict enum {
     PROTOCOL_ERROR = 1;
     COMMUNICATION_ERROR = 2;
     REDISCOVERED_ERROR = 3;
-    [Deprecated]
+    @deprecated
     TARGET_ERROR = 4;
-    [Deprecated]
+    @deprecated
     NON_FASTBOOT_DEVICE = 5;
     REBOOT_FAILED = 6;
 };
 
 /// Callback event listener for upload progress.
 protocol UploadProgressListener {
-    OnError(string:MAX error);
-    OnStarted(uint64 size);
-    OnProgress(uint64 bytes_written);
+    OnError(struct {
+        error string:MAX;
+    });
+    OnStarted(struct {
+        size uint64;
+    });
+    OnProgress(struct {
+        bytes_written uint64;
+    });
     OnFinished();
 };
 
@@ -30,16 +34,37 @@ protocol RebootListener {
     OnReboot();
 };
 
-[Discoverable]
+@discoverable
 protocol Fastboot {
-    Prepare(RebootListener listener) -> () error FastbootError;
-    GetVar(string:64 name) -> (string:64 value) error FastbootError;
-    Flash(string:64 partition_name, string:256 path, UploadProgressListener listener) -> () error FastbootError;
-    Erase(string:64 partition_name) -> () error FastbootError;
-    Reboot() -> () error FastbootError;
-    RebootBootloader(RebootListener listener) -> () error FastbootError;
-    ContinueBoot() -> () error FastbootError;
-    Stage(string:256 path, UploadProgressListener listener) -> () error FastbootError;
-    SetActive(string:64 slot) -> () error FastbootError;
-    Oem(string:64 command) -> () error FastbootError;
+    Prepare(resource struct {
+        listener client_end:RebootListener;
+    }) -> (struct {}) error FastbootError;
+    GetVar(struct {
+        name string:64;
+    }) -> (struct {
+        value string:64;
+    }) error FastbootError;
+    Flash(resource struct {
+        partition_name string:64;
+        path string:256;
+        listener client_end:UploadProgressListener;
+    }) -> (struct {}) error FastbootError;
+    Erase(struct {
+        partition_name string:64;
+    }) -> (struct {}) error FastbootError;
+    Reboot() -> (struct {}) error FastbootError;
+    RebootBootloader(resource struct {
+        listener client_end:RebootListener;
+    }) -> (struct {}) error FastbootError;
+    ContinueBoot() -> (struct {}) error FastbootError;
+    Stage(resource struct {
+        path string:256;
+        listener client_end:UploadProgressListener;
+    }) -> (struct {}) error FastbootError;
+    SetActive(struct {
+        slot string:64;
+    }) -> (struct {}) error FastbootError;
+    Oem(struct {
+        command string:64;
+    }) -> (struct {}) error FastbootError;
 };

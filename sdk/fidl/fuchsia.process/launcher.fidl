@@ -1,8 +1,6 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.process;
 
 using fuchsia.io;
@@ -16,15 +14,15 @@ using zx;
 ///
 /// This structure represents one such handle and its associated zx.procarg
 /// identifier.
-resource struct HandleInfo {
+type HandleInfo = resource struct {
     /// The handle to use for this process argument.
-    zx.handle handle;
+    handle zx.handle;
 
     /// Process argument identifier.
     ///
     /// See <zircon/processargs.h> for definitions of well-known process
     /// arguments.
-    zx.procarg id;
+    id zx.procarg;
 };
 
 /// A namespace entry provided to a process at startup.
@@ -34,73 +32,73 @@ resource struct HandleInfo {
 /// their intended use by the new process as namespace entries.
 ///
 /// This structure represents one such handle and its associated namespace path.
-resource struct NameInfo {
+type NameInfo = resource struct {
     /// Path at which to install the associated directory.
     ///
     /// Must be an absolute path (i.e., start with '/').
-    string:fuchsia.io.MAX_PATH path;
+    path string:fuchsia.io.MAX_PATH;
 
     /// The associated directory.
-    fuchsia.io.Directory directory;
+    directory client_end:fuchsia.io.Directory;
 };
 
 /// The information needed to launch a process.
-resource struct LaunchInfo {
+type LaunchInfo = resource struct {
     /// The executable to run in the process.
-    zx.handle:VMO executable;
+    executable zx.handle:VMO;
 
     /// The job in which to create the process.
-    zx.handle:JOB job;
+    job zx.handle:JOB;
 
     /// The name to assign to the created process.
-    string:zx.MAX_NAME_LEN name;
+    name string:zx.MAX_NAME_LEN;
 };
 
 /// The information required to start a process.
 ///
 /// To start the process, call `zx_process_start` with the arguments provided.
-resource struct ProcessStartData {
+type ProcessStartData = resource struct {
     /// The process that was created.
-    zx.handle:PROCESS process;
+    process zx.handle:PROCESS;
 
     /// The vmar object that was created when the process was created.
     ///
     /// See <https://fuchsia.dev/fuchsia-src/reference/syscalls/process_create.md>.
-    zx.handle:VMAR root_vmar;
+    root_vmar zx.handle:VMAR;
 
     /// The initial thread for the process.
     ///
     /// Should be passed to `zx_process_start` when starting the process.
-    zx.handle:THREAD thread;
+    thread zx.handle:THREAD;
 
     /// The address of the initial entry point in the process.
     ///
     /// Should be passed to `zx_process_start` when starting the process.
-    zx.vaddr entry;
+    entry zx.vaddr;
 
     /// The stack pointer value for the initial thread of the process.
     ///
     /// Should be passed to `zx_process_start` when starting the process.
-    zx.vaddr stack;
+    stack zx.vaddr;
 
     /// The bootstrap channel to pass to the process on startup.
     ///
     /// Should be passed to `zx_process_start` when starting the process.
-    zx.handle:CHANNEL bootstrap;
+    bootstrap zx.handle:CHANNEL;
 
     /// The base address of the vDSO to pass to the process on startup.
     ///
     /// Should be passed to `zx_process_start` when starting the process.
-    zx.vaddr vdso_base;
+    vdso_base zx.vaddr;
 
     /// The base load address of the ELF file loaded.
     ///
     /// Most often used by debuggers or other tools that inspect the process.
-    zx.vaddr base;
+    base zx.vaddr;
 };
 
 // TODO(fxbug.dev/37281): replace with built-in constant
-const uint32 MAX = 0xFFFFFFFF;
+const MAX uint32 = 0xFFFFFFFF;
 
 /// A low-level interface for launching processes.
 ///
@@ -115,7 +113,7 @@ const uint32 MAX = 0xFFFFFFFF;
 /// state often use this interface directly. These clients use the
 /// `CreateWithoutStarting` method to create the process without actually
 /// starting it.
-[Discoverable]
+@discoverable
 protocol Launcher {
     /// Creates and starts the process described by `info`.
     ///
@@ -123,7 +121,12 @@ protocol Launcher {
     /// state and is ready to launch another process.
     ///
     /// `process` is present if, and only if, `status` is `ZX_OK`.
-    Launch(LaunchInfo info) -> (zx.status status, zx.handle:PROCESS? process);
+    Launch(resource struct {
+        info LaunchInfo;
+    }) -> (resource struct {
+        status zx.status;
+        process zx.handle:<PROCESS, optional>;
+    });
 
     /// Creates the process described by `info` but does not start it.
     ///
@@ -134,18 +137,26 @@ protocol Launcher {
     /// in `ProcessStartData` to actually start the process.
     ///
     /// `data` is present if, and only if, `status` is `ZX_OK`.
-    CreateWithoutStarting(LaunchInfo info) -> (zx.status status,
-                                               ProcessStartData? data);
+    CreateWithoutStarting(resource struct {
+        info LaunchInfo;
+    }) -> (resource struct {
+        status zx.status;
+        data box<ProcessStartData>;
+    });
 
     /// Adds the given arguments to the command-line for the process.
     ///
     /// Calling this method multiple times concatenates the arguments.
-    AddArgs(vector<vector<uint8>:MAX>:MAX args);
+    AddArgs(struct {
+        args vector<vector<uint8>:MAX>:MAX;
+    });
 
     /// Adds the given variables to the environment variables for the process.
     ///
     /// Calling this method multiple times concatenates the variables.
-    AddEnvirons(vector<vector<uint8>:MAX>:MAX environ);
+    AddEnvirons(struct {
+        environ vector<vector<uint8>:MAX>:MAX;
+    });
 
     /// Adds the given names to the namespace for the process.
     ///
@@ -153,10 +164,14 @@ protocol Launcher {
     /// <https://fuchsia.dev/fuchsia-src/concepts/framework/namespaces> for details.
     ///
     /// Calling this method multiple times concatenates the names.
-    AddNames(vector<NameInfo>:MAX names);
+    AddNames(resource struct {
+        names vector<NameInfo>:MAX;
+    });
 
     /// Adds the given handles to the startup handles for the process.
     ///
     /// Calling this method multiple times concatenates the handles.
-    AddHandles(vector<HandleInfo>:MAX handles);
+    AddHandles(resource struct {
+        handles vector<HandleInfo>:MAX;
+    });
 };

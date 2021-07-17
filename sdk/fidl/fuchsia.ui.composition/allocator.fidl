@@ -1,30 +1,29 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
 library fuchsia.ui.composition;
 
 using fuchsia.sysmem;
 using zx;
 
 /// The set of error codes returned by Allocator::RegisterBufferCollection().
-enum RegisterBufferCollectionError {
+type RegisterBufferCollectionError = strict enum {
     BAD_OPERATION = 1;
 };
 
 /// A typed wrapper for an eventpair, representing the registry endpoint of a buffer collection.
-resource struct BufferCollectionExportToken {
-    zx.handle:EVENTPAIR value;
+type BufferCollectionExportToken = resource struct {
+    value zx.handle:EVENTPAIR;
 };
 
 /// A typed wrapper for an eventpair, representing the Image import endpoint of a buffer
 /// collection.
-resource struct BufferCollectionImportToken {
-    zx.handle:EVENTPAIR value;
+type BufferCollectionImportToken = resource struct {
+    value zx.handle:EVENTPAIR;
 };
 
 /// The possible usages for registered buffer collection.
-enum RegisterBufferCollectionUsage {
+type RegisterBufferCollectionUsage = strict enum {
     /// DEFAULT means that the specified buffer collection will be used for
     /// Flatland and gfx image creation.
     ///
@@ -38,7 +37,7 @@ enum RegisterBufferCollectionUsage {
 
 /// The table of arguments for [`RegisterBufferCollection`]. Note that some
 /// fields below are REQUIRED.
-resource table RegisterBufferCollectionArgs {
+type RegisterBufferCollectionArgs = resource table {
     /// Clients can send [`export_token`] to register buffer collections with Allocator to be used
     /// later in [`fuchsia.ui.composition/Flatland`] instances or other Scenic APIs, such as
     /// Screenshot.
@@ -50,7 +49,7 @@ resource table RegisterBufferCollectionArgs {
     /// Clients should wait for the response before using `import_token`.
     ///
     /// This field is REQUIRED.
-    1: BufferCollectionExportToken export_token;
+    1: export_token BufferCollectionExportToken;
 
     /// Flatland participates in the allocation of buffers by setting constraints on the
     /// BufferCollection referenced by `buffer_collection_token`. It will not block on buffers
@@ -62,23 +61,24 @@ resource table RegisterBufferCollectionArgs {
     /// are released.
     ///
     /// This field is REQUIRED.
-    2: fuchsia.sysmem.BufferCollectionToken buffer_collection_token;
+    2: buffer_collection_token client_end:fuchsia.sysmem.BufferCollectionToken;
 
     /// The client can register a buffer collection for various uses, each
     /// coming with their own unique constraints.
     ///
     /// This field is OPTIONAL. If `usage` is omitted it will be treated as if
     /// it has the DEFAULT option.
-    3: RegisterBufferCollectionUsage usage;
+    3: usage RegisterBufferCollectionUsage;
 };
 
-[Discoverable]
+@discoverable
 protocol Allocator {
     /// A BufferCollection is a set of VMOs created by Sysmem and shared by a number of
     /// participants, one of which is the Flatland Renderer. Some content, such as Images, use a
     /// BufferCollection as their backing memory.
     ///
     /// See [`RegisterBufferCollectionArgs`] for information on each argument.
-    RegisterBufferCollection(RegisterBufferCollectionArgs args)
-        -> () error RegisterBufferCollectionError;
+    RegisterBufferCollection(resource struct {
+        args RegisterBufferCollectionArgs;
+    }) -> (struct {}) error RegisterBufferCollectionError;
 };

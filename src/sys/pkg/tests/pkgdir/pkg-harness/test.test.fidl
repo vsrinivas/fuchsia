@@ -1,20 +1,18 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library test.fidl.pkg;
 
 using fuchsia.io;
 
 /// Packages can either be backed by pkgfs (SWD v1) or pkgdir (SWD v2).
-strict enum Backing {
+type Backing = strict enum {
     PKGFS = 0;
     PKGDIR = 1;
 };
 
 /// Error codes for `ConnectPackage`.
-strict enum ConnectError {
+type ConnectError = strict enum {
     /// The harness encountered an otherwise unspecified error while handling the request.
     INTERNAL = 1;
 
@@ -23,7 +21,7 @@ strict enum ConnectError {
 };
 
 /// This protocol can be used to connect to a package.
-[Discoverable]
+@discoverable
 protocol Harness {
     /// Connects to a package backed by either pkgfs or pkg-dir. A package is a directory tree with
     /// additional constraints: e.g. there is a meta/ subdirectory, meta/contents and meta/package
@@ -34,5 +32,8 @@ protocol Harness {
     /// + request `backing` is the source of package we want (e.g. pkgfs or pkg-dir backed).
     /// + request `dir` is the server end of directory to connect the package to.
     /// * error a `ConnectError` value indicating failure reason.
-    ConnectPackage(Backing backing, request<fuchsia.io.Directory> dir) -> () error ConnectError;
+    ConnectPackage(resource struct {
+        backing Backing;
+        dir server_end:fuchsia.io.Directory;
+    }) -> (struct {}) error ConnectError;
 };

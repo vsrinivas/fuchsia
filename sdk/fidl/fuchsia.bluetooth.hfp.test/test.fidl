@@ -1,26 +1,28 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.bluetooth.hfp.test;
 
 /// Configure behavior for connections to remote peers.
-table ConnectionBehavior {
+type ConnectionBehavior = table {
     /// When true, HFP will immediately conenct to peers when they are
     /// discovered. Defaults to true if missing.
-    1: bool autoconnect;
+    1: autoconnect bool;
 };
 
 /// Provides additional methods not in `Hfp` that are strictly for testing.
-[Discoverable]
+@discoverable
 protocol HfpTest {
     /// Set the value of the AG battery indicator.
     ///
     /// `level` must be within the range 0-5 inclusive. Values outside of this
     /// range cause the channel to close.
-    BatteryIndicator(uint8 level);
+    BatteryIndicator(struct {
+        level uint8;
+    });
 
     /// Configure the connection behavior when the component discovers new peers.
-    SetConnectionBehavior(ConnectionBehavior behavior);
+    SetConnectionBehavior(struct {
+        behavior ConnectionBehavior;
+    });
 };

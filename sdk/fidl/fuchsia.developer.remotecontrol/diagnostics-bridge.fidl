@@ -1,7 +1,6 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
 library fuchsia.developer.remotecontrol;
 
 using fuchsia.io2 as io2;
@@ -9,9 +8,9 @@ using fuchsia.logger as logger;
 using fuchsia.diagnostics as diagnostics;
 using zx;
 
-const int32 MAX_ENTRIES = 1;
+const MAX_ENTRIES int32 = 1;
 
-enum StreamError : uint32 {
+type StreamError = strict enum : uint32 {
     // Indicates an error that doesn't fall into any of the below types.
     GENERIC_ERROR = 1;
     // Indicates a required parameter is missing
@@ -22,47 +21,51 @@ enum StreamError : uint32 {
     SETUP_SUBSCRIPTION_FAILED = 4;
 };
 
-table BridgeStreamParameters {
-    1: diagnostics.StreamMode stream_mode;
-    2: diagnostics.DataType data_type;
-    3: diagnostics.ClientSelectorConfiguration client_selector_configuration;
-    4: io2.Path accessor_path;
+type BridgeStreamParameters = table {
+    1: stream_mode diagnostics.StreamMode;
+    2: data_type diagnostics.DataType;
+    3: client_selector_configuration diagnostics.ClientSelectorConfiguration;
+    4: accessor_path io2.Path;
 };
 
-resource table ArchiveIteratorEntry {
-    1: string:logger.MAX_DATAGRAM_LEN_BYTES data;
-    2: uint32 truncated_chars;
-    3: DiagnosticsData diagnostics_data;
+type ArchiveIteratorEntry = resource table {
+    1: data string:logger.MAX_DATAGRAM_LEN_BYTES;
+    2: truncated_chars uint32;
+    3: diagnostics_data DiagnosticsData;
 };
 
-struct InlineData {
-    string:logger.MAX_DATAGRAM_LEN_BYTES data;
-    uint32 truncated_chars;
+type InlineData = struct {
+    data string:logger.MAX_DATAGRAM_LEN_BYTES;
+    truncated_chars uint32;
 };
 
-resource union DiagnosticsData {
-    1: InlineData inline;
-    2: zx.handle:SOCKET socket;
+type DiagnosticsData = strict resource union {
+    1: inline InlineData;
+    2: socket zx.handle:SOCKET;
 };
 
-enum ArchiveIteratorError : uint32 {
+type ArchiveIteratorError = strict enum : uint32 {
     GENERIC_ERROR = 1;
     DATA_READ_FAILED = 2;
     TRUNCATION_FAILED = 3;
 };
 
 protocol ArchiveIterator {
-    GetNext() -> (vector<ArchiveIteratorEntry>:MAX_ENTRIES entry) error ArchiveIteratorError;
+    GetNext() -> (resource struct {
+        entry vector<ArchiveIteratorEntry>:MAX_ENTRIES;
+    }) error ArchiveIteratorError;
 };
 
-[Discoverable]
+@discoverable
 protocol RemoteDiagnosticsBridge {
-    StreamDiagnostics(BridgeStreamParameters parameters, request<ArchiveIterator> iterator)
-        -> () error StreamError;
+    StreamDiagnostics(resource struct {
+        parameters BridgeStreamParameters;
+        iterator server_end:ArchiveIterator;
+    }) -> (struct {}) error StreamError;
 
     // This is a workaround to ensure the bridge is started by the framework
     // before the frontend attempts to connect to it.
     // TODO: remove this once fxbug.dev/60910 has been fixed.
-    [Deprecated = "Hack method - will be removed shortly."]
+    @deprecated("Hack method - will be removed shortly.")
     Hello() -> ();
 };

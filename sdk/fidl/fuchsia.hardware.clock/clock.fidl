@@ -1,20 +1,24 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.clock;
 
-const uint32 NAME_LEN = 30;
+const NAME_LEN uint32 = 30;
 
-[ForDeprecatedCBindings]
-struct FrequencyInfo {
-    array<uint8>:NAME_LEN name;
-    uint64 frequency;
+@for_deprecated_c_bindings
+type FrequencyInfo = struct {
+    name array<uint8, NAME_LEN>;
+    frequency uint64;
 };
 
-[ForDeprecatedCBindings]
+@for_deprecated_c_bindings
 protocol Device {
-    Measure(uint32 clock) -> (FrequencyInfo info);
-    GetCount() -> (uint32 count);
+    Measure(struct {
+        clock uint32;
+    }) -> (struct {
+        info FrequencyInfo;
+    });
+    GetCount() -> (struct {
+        count uint32;
+    });
 };

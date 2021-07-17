@@ -1,31 +1,28 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.bluetooth;
 
 // DEPRECATED. Do not use these types in new code.
 
 // TODO(fxbug.dev/44616): Remove all usage of the following types and delete them.
-
-[Deprecated]
-struct Bool {
-    bool value;
+@deprecated
+type Bool = struct {
+    value bool;
 };
 
-[Deprecated]
-struct Int8 {
-    int8 value;
+@deprecated
+type Int8 = struct {
+    value int8;
 };
 
-[Deprecated]
-struct UInt16 {
-    uint16 value;
+@deprecated
+type UInt16 = struct {
+    value uint16;
 };
 
-[Deprecated = "Use protocol specific error enums and zx.status instead"]
-enum ErrorCode {
+@deprecated("Use protocol specific error enums and zx.status instead")
+type ErrorCode = strict enum {
     UNKNOWN = 0;
     FAILED = 1;
     CANCELED = 2;
@@ -40,37 +37,37 @@ enum ErrorCode {
     PROTOCOL_ERROR = 11;
 };
 
-[Deprecated = "Use protocol specific error enums instead"]
+@deprecated("Use protocol specific error enums instead")
 // Represents an error result returned from an asynchronous operation.
-struct Error {
-    // Represents a high-level error code. If this is set to ErrorCode.PROTOCOL_ERROR, then
-    // `protocol_error_code` will represent a Bluetooth protocol error code. The specific
-    // protocol that caused the error will be context-specific, e.g. GATT interfaces will
-    // return ATT protocol error codes.
-    ErrorCode error_code;
+type Error = struct {
+            // Represents a high-level error code. If this is set to ErrorCode.PROTOCOL_ERROR, then
+            // `protocol_error_code` will represent a Bluetooth protocol error code. The specific
+            // protocol that caused the error will be context-specific, e.g. GATT interfaces will
+            // return ATT protocol error codes.
+    error_code ErrorCode;
 
     // Protocol error code. The value of this field is relevant only if `error_code` is set to
     // ErrorCode.PROTOCOL_ERROR.
-    uint32 protocol_error_code;
+    protocol_error_code uint32;
 
     // Debug descriptioon of an error. This provides additional debugging information for an error
     // and is not intended to be displayed in user interfaces.
-    string:MAX? description;
+    description string:<MAX, optional>;
 };
 
-[Deprecated = "Use protocol specific error enums and the 'error' syntax instead"]
+@deprecated("Use protocol specific error enums and the 'error' syntax instead")
 // Represents the result of an asynchronous operation.
-struct Status {
-    // `error` will be null if this represents a "success" status, i.e. no error has occurred.
-    Error? error;
+type Status = struct {
+            // `error` will be null if this represents a "success" status, i.e. no error has occurred.
+    error box<Error>;
 };
 
 /// The size of the standard string representation for a UUID. This value is based on the canonical
 /// 36-character 8-4-4-4-12 format defined in IETF RFC4122 Section 3.
-const uint8 UUID_STRING_REPRESENTATION_LENGTH = 36;
+const UUID_STRING_REPRESENTATION_LENGTH uint8 = 36;
 
-[Deprecated = "Use fuchsia.bluetooth/Uuid instead"]
+@deprecated("Use fuchsia.bluetooth/Uuid instead")
 alias UuidString = string:UUID_STRING_REPRESENTATION_LENGTH;
 
-[Deprecated = "Use fuchsia.bluetooth/PeerId instead"]
+@deprecated("Use fuchsia.bluetooth/PeerId instead")
 alias PeerIdString = string:16;

@@ -1,40 +1,40 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
 library fuchsia.driver.development;
 
 using fuchsia.device.manager;
 using fuchsia.url;
 using zx;
 
-union BindRulesBytecode {
+type BindRulesBytecode = strict union {
     /// Bind rules in the old bytecode format.
-    1: vector<fuchsia.device.manager.BindInstruction>:fuchsia.device.manager.BIND_RULES_INSTRUCTIONS_MAX bytecode_v1;
+    1: bytecode_v1
+            vector<fuchsia.device.manager.BindInstruction>:fuchsia.device.manager.BIND_RULES_INSTRUCTIONS_MAX;
 
     /// Bind rules in the new bytecode format.
-    2: vector<uint8>:MAX bytecode_v2;
+    2: bytecode_v2 vector<uint8>:MAX;
 };
 
-table DriverInfo {
+type DriverInfo = table {
     /// Path to the driver shared library.
-    1: string:fuchsia.device.manager.DEVICE_PATH_MAX libname;
+    1: libname string:fuchsia.device.manager.DEVICE_PATH_MAX;
 
     /// Name of the driver, taken from the first field of the `ZIRCON_DRIVER`
     /// macro in the driver.
-    2: string:MAX name;
+    2: name string:MAX;
 
     /// URL of the driver component's manifest. This will only be populated if
     /// the driver is a component.
-    3: string:fuchsia.url.MAX_URL_LENGTH url;
+    3: url string:fuchsia.url.MAX_URL_LENGTH;
 
     /// Bind rules which declare set of constraints to evaluate in order to
     /// determine whether the driver indexer should bind this driver to a
     /// device.
-    4: BindRulesBytecode bind_rules;
+    4: bind_rules BindRulesBytecode;
 };
 
-bits DeviceFlags : uint32 {
+type DeviceFlags = strict bits : uint32 {
     //// This device is never destroyed
     IMMORTAL = 0x0001;
     /// This device requires that children are created in a
@@ -68,42 +68,43 @@ bits DeviceFlags : uint32 {
     SKIP_AUTOBIND = 0x0100;
 };
 
-table DeviceInfo {
+type DeviceInfo = table {
     /// Unique ID identifying the device.
-    1: uint64 id;
+    1: id uint64;
 
     /// List of ids representing parents. If more than one, this device is a
     /// composite device node.
-    2: vector<uint64>:MAX parent_ids;
+    2: parent_ids vector<uint64>:MAX;
 
     /// List of ids representing children.
-    3: vector<uint64>:MAX child_ids;
+    3: child_ids vector<uint64>:MAX;
 
     /// The process KOID of the driver host the driver resides within.
-    4: zx.koid driver_host_koid;
+    4: driver_host_koid zx.koid;
 
     /// The topological path of the driver. Once drivers are components, this
     /// will also be the collection relative moniker.
-    5: string:fuchsia.device.manager.DEVICE_PATH_MAX topological_path;
+    5: topological_path string:fuchsia.device.manager.DEVICE_PATH_MAX;
 
     /// Path to the driver shared library.
-    6: string:fuchsia.device.manager.DEVICE_PATH_MAX bound_driver_libname;
+    6: bound_driver_libname string:fuchsia.device.manager.DEVICE_PATH_MAX;
 
-    7: string:fuchsia.url.MAX_URL_LENGTH bound_driver_url;
+    7: bound_driver_url string:fuchsia.url.MAX_URL_LENGTH;
 
-    8: fuchsia.device.manager.DevicePropertyList property_list;
+    8: property_list fuchsia.device.manager.DevicePropertyList;
 
-    9: DeviceFlags flags;
+    9: flags DeviceFlags;
 };
 
 /// Interface for developing and debugging drivers.
 /// This interface should only be used for development and disabled in release builds.
-[Discoverable]
+@discoverable
 protocol DriverDevelopment {
     /// Restart all Driver Hosts containing the driver specified by `driver path`.
     /// ZX_ERR_NOT_FOUND indicates that there is no driver matching the given path.
-    RestartDriverHosts(string:fuchsia.device.manager.DEVICE_PATH_MAX driver_path)
-        -> () error zx.status;
+    RestartDriverHosts(struct {
+        driver_path string:fuchsia.device.manager.DEVICE_PATH_MAX;
+    }) -> (struct {}) error zx.status;
 
     /// Returns a list of all drivers that are known to the system.
     /// If a |driver_filter| is provided, the returned list will be filtered to
@@ -112,8 +113,11 @@ protocol DriverDevelopment {
     /// one driver in |driver_filter|.
     /// ZX_ERR_BUFFER_TOO_SMALL indicates that the driver's bind program is longer than the
     /// maximum number of instructions (BIND_PROGRAM_INSTRUCTIONS_MAX).
-    GetDriverInfo(vector<string:MAX>:MAX driver_filter)
-        -> (vector<DriverInfo>:MAX drivers) error zx.status;
+    GetDriverInfo(struct {
+        driver_filter vector<string:MAX>:MAX;
+    }) -> (struct {
+        drivers vector<DriverInfo>:MAX;
+    }) error zx.status;
 
     /// Returns the list of devices that are running on the system.
     /// If a |device_filter| is provided, the returned list will be filtered to
@@ -123,6 +127,9 @@ protocol DriverDevelopment {
     /// ZX_ERR_BAD_PATH indicates that the given path is not valid.
     /// ZX_ERR_BUFFER_TOO_SMALL indicates either that the given path is too long,
     /// or that the device has more than the maximum number of properties (PROPERTIES_MAX).
-    GetDeviceInfo(vector<string:MAX>:MAX device_filter)
-        -> (vector<DeviceInfo>:MAX devices) error zx.status;
+    GetDeviceInfo(struct {
+        device_filter vector<string:MAX>:MAX;
+    }) -> (struct {
+        devices vector<DeviceInfo>:MAX;
+    }) error zx.status;
 };

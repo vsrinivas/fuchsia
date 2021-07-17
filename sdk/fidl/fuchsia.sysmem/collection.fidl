@@ -1,12 +1,11 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
 library fuchsia.sysmem;
 
 using zx;
 
-const uint32 MAX_COUNT_DUPLICATES = 64;
+const MAX_COUNT_DUPLICATES uint32 = 64;
 
 /// A BufferCollectionToken is not a BufferCollection, but rather a way to
 /// identify a potential shared BufferCollection prior to the BufferCollection
@@ -34,8 +33,11 @@ protocol BufferCollectionToken {
     /// participant to gain rights that the participant doesn't already have.
     /// The value ZX_RIGHT_SAME_RIGHTS can be used to specify that no
     /// attenuation should be applied.
-    DuplicateSync(vector<zx.rights>:MAX_COUNT_DUPLICATES rights_attenuation_masks)
-        -> (vector<BufferCollectionToken>:MAX_COUNT_DUPLICATES tokens);
+    DuplicateSync(struct {
+        rights_attenuation_masks vector<zx.rights>:MAX_COUNT_DUPLICATES;
+    }) -> (resource struct {
+        tokens vector<client_end:BufferCollectionToken>:MAX_COUNT_DUPLICATES;
+    });
 
     /// This method can be used to add a participant prior to creating a shared
     /// BufferCollection. It should only be used instead of DuplicateSync in
@@ -78,8 +80,10 @@ protocol BufferCollectionToken {
     /// `token_request` is the server end of a BufferCollectionToken channel.
     /// The client end of this channel acts as another participant in creating the
     /// shared BufferCollection.
-    Duplicate(uint32 rights_attenuation_mask,
-              request<BufferCollectionToken> token_request);
+    Duplicate(resource struct {
+        rights_attenuation_mask uint32;
+        token_request server_end:BufferCollectionToken;
+    });
 
     /// Ensure that previous Duplicate() messages have been received server side,
     /// so that it's safe to send the client end of token_request to another
@@ -122,7 +126,10 @@ protocol BufferCollectionToken {
     /// Set a name for VMOs in this buffer collection. The name may be truncated shorter. The name
     /// only affects VMOs allocated after it's set - this call does not rename existing VMOs. If
     /// multiple clients set different names then the larger priority value will win.
-    SetName(uint32 priority, string:64 name);
+    SetName(struct {
+        priority uint32;
+        name string:64;
+    });
 
     /// Set information about the current client that can be used by sysmem to
     /// help debug leaking memory and hangs waiting for constraints. |name| can
@@ -130,13 +137,18 @@ protocol BufferCollectionToken {
     /// fsl::GetCurrentProcessName()) is a good default. |id| can be an arbitrary
     /// id, but the current process ID (see fsl::GetCurrentProcessKoid()) is a
     /// good default.
-    SetDebugClientInfo(string:64 name, uint64 id);
+    SetDebugClientInfo(struct {
+        name string:64;
+        id uint64;
+    });
 
     /// Sysmem logs a warning if not all clients have set constraints 5 seconds
     /// after creating a collection. Clients can call this method to change
     /// when the log is printed. If multiple client set the deadline, it's
     /// unspecified which deadline will take effect.
-    SetDebugTimeoutLogDeadline(zx.time deadline);
+    SetDebugTimeoutLogDeadline(struct {
+        deadline zx.time;
+    });
 
     /// A dispensable token can fail after buffers are logically allocated
     /// without causing failure of its parent (if any).
@@ -209,7 +221,7 @@ protocol BufferCollectionToken {
 /// memory fragmentation and avoid overlap of buffer allocation lifetimes for
 /// the old and new collections. Collections can be large enough that it's worth
 /// avoiding allocation overlap (in time).
-[ForDeprecatedCBindings]
+@for_deprecated_c_bindings
 protocol BufferCollection {
     /// See comments on BufferCollectionToken::Sync().
     Sync() -> ();
@@ -243,8 +255,10 @@ protocol BufferCollection {
     /// buffer_index.
     ///
     /// `constraints` are constraints on the buffer collection.
-    SetConstraints(bool has_constraints,
-                   BufferCollectionConstraints constraints);
+    SetConstraints(struct {
+        has_constraints bool;
+        constraints BufferCollectionConstraints;
+    });
 
     /// This request completes when buffers have been allocated, responds with
     /// some failure detail if allocation has been attempted but failed.
@@ -265,13 +279,17 @@ protocol BufferCollection {
     /// satisfied, perhaps due to hardware limitations.
     ///
     /// `buffer_collection_info` has the VMO handles and other related info.
-    WaitForBuffersAllocated()
-        -> (zx.status status, BufferCollectionInfo_2 buffer_collection_info);
+    WaitForBuffersAllocated() -> (resource struct {
+        status zx.status;
+        buffer_collection_info BufferCollectionInfo_2;
+    });
 
     /// This returns the same result code as WaitForBuffersAllocated if the
     /// buffer collection has been allocated or failed, or `ZX_ERR_UNAVAILABLE`
     /// if WaitForBuffersAllocated would block.
-    CheckBuffersAllocated() -> (zx.status status);
+    CheckBuffersAllocated() -> (struct {
+        status zx.status;
+    });
 
     /// The CloseBuffer() doesn't immediately force all VMO handles to that
     /// buffer to close, but it does close any handle held by sysmem, and does
@@ -283,7 +301,9 @@ protocol BufferCollection {
     ///
     /// `buffer_index` indicates which buffer to close.  If the buffer is already
     /// closed this has no effect (idempotent).
-    CloseSingleBuffer(uint64 buffer_index);
+    CloseSingleBuffer(struct {
+        buffer_index uint64;
+    });
 
     /// This allocates a new buffer that is consistent with the most recent call
     /// to SetConstraints(), if possible.  If not possible, this indicates the
@@ -294,13 +314,19 @@ protocol BufferCollection {
     ///
     /// The participant is (intentionally) never informed of other participant's
     /// constraints.
-    AllocateSingleBuffer(uint64 buffer_index);
+    AllocateSingleBuffer(struct {
+        buffer_index uint64;
+    });
 
     /// Completes when AllocateBuffer is done.  Callers who wish to avoid
     /// blocking a thread while waiting can use OnAllocateSingleBufferDone()
     /// instead.
-    WaitForSingleBufferAllocated(uint64 buffer_index)
-        -> (zx.status status, SingleBufferInfo buffer_info);
+    WaitForSingleBufferAllocated(struct {
+        buffer_index uint64;
+    }) -> (resource struct {
+        status zx.status;
+        buffer_info SingleBufferInfo;
+    });
 
     /// A participant can use this message to have sysmem verify that this
     /// buffer_index exists.  This message is intentionally ignored by the
@@ -313,7 +339,9 @@ protocol BufferCollection {
     /// buffer_index that the participant doesn't yet know about, to ensure that
     /// the participant won't be waiting forever for the
     /// OnAllocateSingleBufferDone() message regarding this buffer_index.
-    CheckSingleBufferAllocated(uint64 buffer_index);
+    CheckSingleBufferAllocated(struct {
+        buffer_index uint64;
+    });
 
     /// The server handles unexpected failure of a BufferCollection by failing
     /// the whole logical buffer collection.  Partly this is to expedite closing
@@ -327,18 +355,25 @@ protocol BufferCollection {
     /// Set a name for VMOs in this buffer collection. The name may be truncated shorter. The name
     /// only affects VMOs allocated after it's set - this call does not rename existing VMOs. If
     /// multiple clients set different names then the larger priority value will win.
-    SetName(uint32 priority, string:64 name);
+    SetName(struct {
+        priority uint32;
+        name string:64;
+    });
 
     /// See BufferCollectionToken.SetClientDebugInfo.
-    SetDebugClientInfo(string:64 name, uint64 id);
+    SetDebugClientInfo(struct {
+        name string:64;
+        id uint64;
+    });
 
     /// Optionally sent before SetConstraints() to set constraints related to
     /// clear (not encrypted, not in protected/secure memory) aux buffers.  This
     /// is only valid when sent before SetConstraints().  Invalid settings may
     /// not result in channel closure until SetConstraints() is received by
     /// sysmem.
-    SetConstraintsAuxBuffers(
-        BufferCollectionConstraintsAuxBuffers constraints);
+    SetConstraintsAuxBuffers(struct {
+        constraints BufferCollectionConstraintsAuxBuffers;
+    });
 
     /// Allows getting any aux buffers allocated after using
     /// SetConstraintsAuxBuffers().
@@ -362,9 +397,10 @@ protocol BufferCollection {
     /// It's legal for a participant that set
     /// "allow_clear_aux_buffers_for_secure" false to call GetAuxBuffers(), in
     /// which case buffer[0].vmo will not be set.
-    GetAuxBuffers()
-        -> (zx.status status,
-            BufferCollectionInfo_2 buffer_collection_info_aux_buffers);
+    GetAuxBuffers() -> (resource struct {
+        status zx.status;
+        buffer_collection_info_aux_buffers BufferCollectionInfo_2;
+    });
 
     /// Create a new token, for trying to add a new participant to an existing
     /// collection, if the existing collection's buffer counts, constraints,
@@ -431,8 +467,10 @@ protocol BufferCollection {
     /// to help diagnose the bug in client code):
     ///   * ZX_RIGHT_SAME_RIGHTS (preferred)
     ///   * 0xFFFFFFFF (this is reasonable when an attenuation mask is computed)
-    AttachToken(uint32 rights_attenuation_mask,
-                request<BufferCollectionToken> token_request);
+    AttachToken(resource struct {
+        rights_attenuation_mask uint32;
+        token_request server_end:BufferCollectionToken;
+    });
 
     /// AttachLifetimeTracking:
     ///
@@ -500,6 +538,8 @@ protocol BufferCollection {
     /// The server_end may lack ZX_RIGHT_SIGNAL or ZX_RIGHT_SIGNAL_PEER, but
     /// must have ZX_RIGHT_DUPLICATE (and must have ZX_RIGHT_TRANSFER to
     /// transfer without causing CodecFactory channel failure).
-    AttachLifetimeTracking(
-        zx.handle:EVENTPAIR server_end, uint32 buffers_remaining);
+    AttachLifetimeTracking(resource struct {
+        server_end zx.handle:EVENTPAIR;
+        buffers_remaining uint32;
+    });
 };

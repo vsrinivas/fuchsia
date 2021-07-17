@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.io2;
 
 using zx;
@@ -20,9 +18,9 @@ protocol Pipe {
 /// There is no universal requirement as to if it is uni- or bi-directional.
 /// The selection of this variant in [`Representation`] implies that the
 /// connection speaks the [`fuchsia.io2/Pipe`] protocol.
-resource table PipeInfo {
+type PipeInfo = resource table {
     /// The backing socket transport for the pipe.
     /// The rights on this socket should correspond to the rights on the
     /// node connection.
-    1: zx.handle:SOCKET socket;
+    1: socket zx.handle:SOCKET;
 };

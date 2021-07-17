@@ -1,111 +1,109 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.overnet.protocol;
 
 using fuchsia.net;
 
 /// Diagnostic data on a single peer connection.
-table PeerConnectionDiagnosticInfo {
+type PeerConnectionDiagnosticInfo = table {
     /// Source address.
-    1: NodeId source;
+    1: source NodeId;
     /// Destination address.
-    2: NodeId destination;
+    2: destination NodeId;
     /// Whether this connection is a client.
-    3: bool is_client;
+    3: is_client bool;
     /// True if the connection established and ready to send traffic.
-    4: bool is_established;
+    4: is_established bool;
     /// Number of packets received.
-    5: uint64 received_packets;
+    5: received_packets uint64;
     /// Number of packets sent.
-    6: uint64 sent_packets;
+    6: sent_packets uint64;
     /// Number of packets lost.
-    7: uint64 lost_packets;
+    7: lost_packets uint64;
     /// Round trip time for the connection in microseconds.
-    8: uint64 round_trip_time_microseconds;
+    8: round_trip_time_microseconds uint64;
     /// Current congestion window in bytes.
-    9: uint64 congestion_window_bytes;
+    9: congestion_window_bytes uint64;
     /// Number of overnet messages sent.
-    10: uint64 messages_sent;
+   10: messages_sent uint64;
     /// Number of bytes sent due to overnet messages.
-    11: uint64 bytes_sent;
+   11: bytes_sent uint64;
     /// Number of connect to service requests.
-    12: uint64 connect_to_service_sends;
+   12: connect_to_service_sends uint64;
     /// Number of bytes sent due to connect to service requests.
-    13: uint64 connect_to_service_send_bytes;
+   13: connect_to_service_send_bytes uint64;
     /// Number of node description updates.
-    14: uint64 update_node_description_sends;
+   14: update_node_description_sends uint64;
     /// Number of bytes sent due to node description updates.
-    15: uint64 update_node_description_send_bytes;
+   15: update_node_description_send_bytes uint64;
     /// Number of link status updates.
-    16: uint64 update_link_status_sends;
+   16: update_link_status_sends uint64;
     /// Number of bytes sent due to link status updates.
-    17: uint64 update_link_status_send_bytes;
+   17: update_link_status_send_bytes uint64;
     /// Number of link status update acknowledgements sent.
-    18: uint64 update_link_status_ack_sends;
+   18: update_link_status_ack_sends uint64;
     /// Number of bytes sent due to link status update acknowledgements.
-    19: uint64 update_link_status_ack_send_bytes;
+   19: update_link_status_ack_send_bytes uint64;
 };
 
 /// Diagnostic data on a single link.
-table LinkDiagnosticInfo {
+type LinkDiagnosticInfo = table {
     /// Source address.
-    1: NodeId source;
+    1: source NodeId;
     /// Destination address.
-    2: NodeId destination;
+    2: destination NodeId;
     /// Source identifier for this link.
-    3: uint64 source_local_id;
+    3: source_local_id uint64;
     /// Number of packets received.
-    4: uint64 received_packets;
+    4: received_packets uint64;
     /// Number of packets sent.
-    5: uint64 sent_packets;
+    5: sent_packets uint64;
     /// Number of bytes received.
-    6: uint64 received_bytes;
+    6: received_bytes uint64;
     /// Number of bytes sent.
-    7: uint64 sent_bytes;
+    7: sent_bytes uint64;
     /// Round trip time for the connection in microseconds.
-    8: uint64 round_trip_time_microseconds;
+    8: round_trip_time_microseconds uint64;
     /// Number of ping requests sent.
-    9: uint64 pings_sent;
+    9: pings_sent uint64;
     /// Number of packets forwarded.
-    10: uint64 packets_forwarded;
+   10: packets_forwarded uint64;
     /// Type of link & configuration data.
-    11: LinkConfig config;
+   11: config LinkConfig;
 };
 
 /// A description of the configuration of a given link.
-union LinkConfig {
+type LinkConfig = strict union {
     /// A link configured via fuchsia.overnet.MeshController/AttachSocket - these are links
     /// that are implemented externally to Overnet.
-    7: Empty socket;
+    7: socket Empty;
     1: reserved;
     /// A link using overnetstack's UDP protocol.
     /// The content of this config is the address of the peer.
-    2: fuchsia.net.Ipv6SocketAddress udp;
+    2: udp fuchsia.net.Ipv6SocketAddress;
     /// A link using Overnet's serial protocol acting as a server.
     /// The text is the canonicalized unparsed serial descriptor for this serial port.
-    3: string:256 serial_server;
+    3: serial_server string:256;
     /// A link using Overnet's serial protocol acting as a client.
     /// The text is the canonicalized unparsed serial descriptor for this serial port.
-    4: string:256 serial_client;
+    4: serial_client string:256;
     /// Ascendd server link. The text is the path to the ascendd socket.
-    5: AscenddLinkConfig ascendd_server;
+    5: ascendd_server AscenddLinkConfig;
     /// A host binary connecting to ascendd. Text is the path to the ascendd socket.
-    6: AscenddLinkConfig ascendd_client;
+    6: ascendd_client AscenddLinkConfig;
 };
 
 /// An ascendd link configuration.
-table AscenddLinkConfig {
+type AscenddLinkConfig = table {
     /// Path to the ascendd socket.
-    1: string:1024 path;
+    1: path string:1024;
     /// Connection label for this link.
-    2: string:32 connection_label;
+    2: connection_label string:32;
 };
 
 /// The operating system running a node.
-enum OperatingSystem {
+type OperatingSystem = strict enum {
     /// Fuchsia
     FUCHSIA = 0;
     /// Linux
@@ -115,7 +113,7 @@ enum OperatingSystem {
 };
 
 /// The implementation of a node that's running.
-enum Implementation {
+type Implementation = strict enum {
     /// Some unit test... shouldn't be seen in the wild.
     UNIT_TEST = 0;
     /// The overnetstack daemon on Fuchsia.
@@ -129,32 +127,32 @@ enum Implementation {
 };
 
 /// Diagnostic data on a single node.
-table NodeDescription {
+type NodeDescription = table {
     /// A string saying something about what operating system this node is running on
     /// Currently used: 'fuchsia', 'linux', 'mac'
-    1: OperatingSystem operating_system;
+    1: operating_system OperatingSystem;
     /// A string saying something about the runtime environment of a node
-    2: Implementation implementation;
+    2: implementation Implementation;
     /// The name of the binary containing Overnet
-    3: string:32 binary;
+    3: binary string:32;
     /// The hostname of the device running Overnet
-    4: string:32 hostname;
+    4: hostname string:32;
 };
 
 /// Composition of results from Diagnostic/Probe.
-table ProbeResult {
+type ProbeResult = table {
     /// Node description, obtained by probing ProbeSelector.NODE_DESCRIPTION
-    1: NodeDescription node_description;
+    1: node_description NodeDescription;
     /// Peer connections list, obtained by probing ProbeSelector.PEER_CONNECTIONS
-    2: vector<PeerConnectionDiagnosticInfo>:MAX peer_connections;
+    2: peer_connections vector<PeerConnectionDiagnosticInfo>:MAX;
     /// Link list, obtained by probing ProbeSelector.LINKS
-    3: vector<LinkDiagnosticInfo>:MAX links;
+    3: links vector<LinkDiagnosticInfo>:MAX;
     /// Count of how many links are still negotiating, obtained by probing ProbeSelector.CONNECTING_LINK_COUNT
-    4: uint64 connecting_link_count;
+    4: connecting_link_count uint64;
 };
 
 /// Selector bits for what to probe during Diagnostic/Probe.
-bits ProbeSelector : uint64 {
+type ProbeSelector = strict bits : uint64 {
     /// Request ProbeResult.node_description is present in the result
     NODE_DESCRIPTION = 0x01;
     /// Request ProbeResult.peer_connections is present in the result
@@ -167,8 +165,12 @@ bits ProbeSelector : uint64 {
 
 /// Diagnostic information exported by Overnet peers.
 /// This interface is additionally exported to the Overnet mesh.
-[Discoverable]
+@discoverable
 protocol Diagnostic {
     /// Probe some basic statistics from this node
-    Probe(ProbeSelector selector) -> (ProbeResult result);
+    Probe(struct {
+        selector ProbeSelector;
+    }) -> (struct {
+        result ProbeResult;
+    });
 };

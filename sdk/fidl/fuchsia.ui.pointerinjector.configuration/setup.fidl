@@ -1,8 +1,6 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.ui.pointerinjector.configuration;
 
 using fuchsia.ui.pointerinjector;
@@ -11,14 +9,17 @@ using fuchsia.ui.views;
 /// A service used by an input pipeline to set up pointer injection into Scenic.
 /// This should be implemented by the component that configures the scene
 /// (Root Presenter or Scene Manager).
-[Discoverable]
+@discoverable
 protocol Setup {
     /// Returns the viewrefs for injection authority (`Config.context`) and injection
     /// destination (`Config.target`).
     ///
     /// This only returns when valid context and target views exist.
     /// Typically called just once.
-    GetViewRefs() -> (fuchsia.ui.views.ViewRef context, fuchsia.ui.views.ViewRef target);
+    GetViewRefs() -> (resource struct {
+        context fuchsia.ui.views.ViewRef;
+        target fuchsia.ui.views.ViewRef;
+    });
 
     /// Returns the current viewport. Follows the hanging get pattern.
     ///
@@ -28,5 +29,7 @@ protocol Setup {
     /// Flow control: There should only be one outstanding call to this function.
     /// The channel will be closed if an additional call to this function is made
     /// while a call is outstanding.
-    WatchViewport() -> (fuchsia.ui.pointerinjector.Viewport viewport);
+    WatchViewport() -> (struct {
+        viewport fuchsia.ui.pointerinjector.Viewport;
+    });
 };

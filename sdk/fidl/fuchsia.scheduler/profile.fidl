@@ -1,42 +1,63 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.scheduler;
 
 using zx;
 
 // Corresponds to zx_cpu_set_t.
-[ForDeprecatedCBindings]
-struct CpuSet {
-    array<uint64>:8 mask;
+@for_deprecated_c_bindings
+type CpuSet = struct {
+    mask array<uint64, 8>;
 };
 
-[Discoverable, ForDeprecatedCBindings]
+@discoverable
+@for_deprecated_c_bindings
 protocol ProfileProvider {
     /// Obtain a profile handle.
     ///
     /// TODO(fxbug.dev/40858): This API will be deprecated and removed in the future, use
     /// SetProfileByRole instead.
-    GetProfile(uint32 priority, string:64 name) -> (zx.status status, zx.handle:PROFILE? profile);
+    GetProfile(struct {
+        priority uint32;
+        name string:64;
+    }) -> (resource struct {
+        status zx.status;
+        profile zx.handle:<PROFILE, optional>;
+    });
 
     /// Obtain a deadline profile handle.
     ///
     /// TODO(fxbug.dev/40858): This API will be deprecated and removed in the future, use
     /// SetProfileByRole instead.
-    GetDeadlineProfile(uint64 capacity, uint64 deadline, uint64 period, string:64 name)
-        -> (zx.status status, zx.handle:PROFILE? profile);
+    GetDeadlineProfile(struct {
+        capacity uint64;
+        deadline uint64;
+        period uint64;
+        name string:64;
+    }) -> (resource struct {
+        status zx.status;
+        profile zx.handle:<PROFILE, optional>;
+    });
 
     /// Obtain a handle for a profile that sets CPU affinity.
     ///
     /// TODO(fxbug.dev/40858): This API will be deprecated and removed in the future, use
     /// SetProfileByRole instead.
-    GetCpuAffinityProfile(CpuSet cpu_mask) -> (zx.status status, zx.handle:PROFILE? profile);
+    GetCpuAffinityProfile(struct {
+        cpu_mask CpuSet;
+    }) -> (resource struct {
+        status zx.status;
+        profile zx.handle:<PROFILE, optional>;
+    });
 
     /// Sets the given thread's profile based on the requested role. The exact
     /// parameters of the profile are system dependent and may vary based on
     /// device-specific tuning and/or runtime system goals.
-    SetProfileByRole(zx.handle:THREAD thread, string:2048 role)
-        -> (zx.status status);
+    SetProfileByRole(resource struct {
+        thread zx.handle:THREAD;
+        role string:2048;
+    }) -> (struct {
+        status zx.status;
+    });
 };

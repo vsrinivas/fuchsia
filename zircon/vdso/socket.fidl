@@ -1,26 +1,47 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library zx;
 
-[Transport = "Syscall"]
+@transport("Syscall")
 protocol socket {
     /// Create a socket.
-    socket_create(uint32 options) -> (status status, handle out0, handle out1);
+    socket_create(struct {
+        options uint32;
+    }) -> (resource struct {
+        status status;
+        out0 handle;
+        out1 handle;
+    });
 
     /// Write data to a socket.
     /// Rights: handle must be of type ZX_OBJ_TYPE_SOCKET and have ZX_RIGHT_WRITE.
-    socket_write(handle:SOCKET handle, uint32 options, vector_void buffer)
-        -> (status status, optional_usize actual);
+    socket_write(resource struct {
+        handle handle:SOCKET;
+        options uint32;
+        buffer vector_void;
+    }) -> (struct {
+        status status;
+        actual optional_usize;
+    });
 
     /// Read data from a socket.
     /// Rights: handle must be of type ZX_OBJ_TYPE_SOCKET and have ZX_RIGHT_READ.
-    socket_read(handle:SOCKET handle, uint32 options)
-        -> (status status, vector_void buffer, optional_usize actual);
+    socket_read(resource struct {
+        handle handle:SOCKET;
+        options uint32;
+    }) -> (struct {
+        status status;
+        buffer vector_void;
+        actual optional_usize;
+    });
 
     /// Prevent reading or writing.
     /// Rights: handle must be of type ZX_OBJ_TYPE_SOCKET and have ZX_RIGHT_WRITE.
-    socket_shutdown(handle:SOCKET handle, uint32 options) -> (status status);
+    socket_shutdown(resource struct {
+        handle handle:SOCKET;
+        options uint32;
+    }) -> (struct {
+        status status;
+    });
 };

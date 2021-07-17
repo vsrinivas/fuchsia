@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.camera;
 
 using zx;
@@ -16,6 +14,10 @@ protocol Device {
     /// Additionally, while the camera stack is migrating from camera to
     /// camera2, two methods are available, corresponding to the two
     /// versions of the protocol.
-    GetChannel(zx.handle:CHANNEL ch);
-    GetChannel2(request<fuchsia.camera2.hal.Controller> server_end);
+    GetChannel(resource struct {
+        ch zx.handle:CHANNEL;
+    });
+    GetChannel2(resource struct {
+        server_end server_end:fuchsia.camera2.hal.Controller;
+    });
 };

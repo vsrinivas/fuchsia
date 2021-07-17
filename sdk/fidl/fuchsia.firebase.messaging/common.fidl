@@ -1,21 +1,19 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.firebase.messaging;
 
-struct Application {
+type Application = struct {
     /// Full package name of the application.
-    string name;
+    name string;
     /// Sender ID associated with the firebase project.
-    string sender;
+    sender string;
     /// Application-defined string.
-    string version;
+    version string;
 };
 
 /// Connectivity events to sign up for.
-bits ConnectivityEvent:uint8 {
+type ConnectivityEvent = strict bits : uint8 {
     /// Indicates that the client has signed up for connectivity notifications.
     START = 1;
 
@@ -26,18 +24,18 @@ bits ConnectivityEvent:uint8 {
     HEARTBEAT = 4;
 };
 
-struct Pair {
-    string:4096 key;
-    string:4096 val;
+type Pair = struct {
+    key string:4096;
+    val string:4096;
 };
 
-enum Priority {
+type Priority = strict enum {
     NORMAL = 5;
     HIGH = 10;
 };
 
 /// Data wrapper for FCM.
-table Message {
+type Message = table {
     /// This parameter specifies the recipient of a message.
     ///
     /// For example it can be a registration token, a topic name, a IID or
@@ -45,43 +43,43 @@ table Message {
     ///
     /// For upstream messages, `PROJECT_ID@gcm.googleapis.com` or the more general
     /// IID format are accepted.
-    1: string to;
+    1: to string;
 
     /// The metadata, including all original key/value pairs. Includes some of
     /// the HTTP headers used when sending the message. `gcm`, `google` and
     /// `goog` prefixes are reserved for internal use.
-    2: vector<Pair>:4096 metadata;
+    2: metadata vector<Pair>:4096;
 
     /// Binary payload. For webpush and non-json messages, this is the body of
     /// the request entity.
-    3: bytes:4096 payload;
+    3: payload bytes:4096;
 
     /// Message ID. This can be specified by sender. Internally a hash of the
     /// message ID and other elements will be used for storage. The ID must be
     /// unique for each topic subscription - using the same ID may result in
     /// overriding the original message or duplicate delivery.
-    4: string id;
+    4: id string;
 };
 
-table DownstreamMessage {
-    1: Message message;
+type DownstreamMessage = table {
+    1: message Message;
 
     /// Authenticated ID of the sender. This is a project number in most cases.
-    2: string from;
+    2: from string;
 
     /// The collapse key used for collapsible messages.
-    3: string collapse_key;
+    3: collapse_key string;
 
     /// Equivalent with a content-type.
     /// Special types:
     /// "ack" and "nack" are used for flow control and error handling.
     /// "control" is used for connection control.
-    4: string type;
+    4: type string;
 
     /// Priority level. If absent, indicates normal priority (i.e.
     /// Priority.NORMAL).
-    5: Priority priority;
+    5: priority Priority;
 
     /// Time to live, in seconds.
-    6: uint32 time_to_live;
+    6: time_to_live uint32;
 };

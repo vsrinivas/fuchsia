@@ -1,35 +1,46 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.usb.device;
 
 using zx;
 
 /// sizeof(usb_device_descriptor_t)
-const uint32 DEVICE_DESC_SIZE = 18;
+const DEVICE_DESC_SIZE uint32 = 18;
 
 /// UINT16_MAX
-const uint32 MAX_CONFIG_DESC_SIZE = 65536;
+const MAX_CONFIG_DESC_SIZE uint32 = 65536;
 
 /// See GetStringDescriptor description below
-const uint32 MAX_STRING_DESC_SIZE = 384;
+const MAX_STRING_DESC_SIZE uint32 = 384;
 
-[ForDeprecatedCBindings]
+@for_deprecated_c_bindings
 protocol Device {
     /// Returns the speed of the USB device as a usb_speed_t value.
-    GetDeviceSpeed() -> (uint32 speed);
+    GetDeviceSpeed() -> (struct {
+        speed uint32;
+    });
 
     /// Returns the device's USB device descriptor.
-    GetDeviceDescriptor() -> (array<uint8>:DEVICE_DESC_SIZE desc);
+    GetDeviceDescriptor() -> (struct {
+        desc array<uint8, DEVICE_DESC_SIZE>;
+    });
 
     /// Returns the total size of the USB configuration descriptor for the given configuration.
-    GetConfigurationDescriptorSize(uint8 config) -> (zx.status s, uint16 size);
+    GetConfigurationDescriptorSize(struct {
+        config uint8;
+    }) -> (struct {
+        s zx.status;
+        size uint16;
+    });
 
     /// Returns the device's USB configuration descriptor for the given configuration.
-    GetConfigurationDescriptor(uint8 config) -> (zx.status s,
-                                                 vector<uint8>:MAX_CONFIG_DESC_SIZE desc);
+    GetConfigurationDescriptor(struct {
+        config uint8;
+    }) -> (struct {
+        s zx.status;
+        desc vector<uint8>:MAX_CONFIG_DESC_SIZE;
+    });
 
     /// Fetches a string descriptor from the USB device.
     ///
@@ -49,24 +60,44 @@ protocol Device {
     ///
     /// The worst case size for a UTF-8 encoded string descriptor payload should be
     /// 378 bytes (126 UTF-16 code units with a worst case expansion factor of 3)
-    GetStringDescriptor(uint8 desc_id, uint16 lang_id) -> (zx.status s,
-                                                           string:MAX_STRING_DESC_SIZE desc,
-                                                           uint16 actual_lang_id);
+    GetStringDescriptor(struct {
+        desc_id uint8;
+        lang_id uint16;
+    }) -> (struct {
+        s zx.status;
+        desc string:MAX_STRING_DESC_SIZE;
+        actual_lang_id uint16;
+    });
 
     /// Selects an alternate setting for an interface on a USB device.
-    SetInterface(uint8 interface_number, uint8 alt_setting) -> (zx.status s);
+    SetInterface(struct {
+        interface_number uint8;
+        alt_setting uint8;
+    }) -> (struct {
+        s zx.status;
+    });
 
     /// Returns an implementation specific device ID for a USB device.
     /// For informational purposes only.
-    GetDeviceId() -> (uint32 device_id);
+    GetDeviceId() -> (struct {
+        device_id uint32;
+    });
 
     /// Returns the implementation specific device ID for the hub that a USB device is connected to.
     /// For informational purposes only.
-    GetHubDeviceId() -> (uint32 hub_device_id);
+    GetHubDeviceId() -> (struct {
+        hub_device_id uint32;
+    });
 
     /// Returns the device's current configuration.
-    GetConfiguration() -> (uint8 configuration);
+    GetConfiguration() -> (struct {
+        configuration uint8;
+    });
 
     /// Sets the device's current configuration.
-    SetConfiguration(uint8 configuration) -> (zx.status s);
+    SetConfiguration(struct {
+        configuration uint8;
+    }) -> (struct {
+        s zx.status;
+    });
 };

@@ -1,11 +1,9 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.wlan.common;
 
-enum RequestStatus {
+type RequestStatus = strict enum {
     ACKNOWLEDGED = 0;
     REJECTED_NOT_SUPPORTED = 1;
     REJECTED_INCOMPATIBLE_MODE = 2;
@@ -16,7 +14,7 @@ enum RequestStatus {
 // LINT analyzer keyword intended for humans:
 // LINT.IfChange
 
-enum PHY {
+type PHY = strict enum {
     /// IEEE 802.11b, used for DSSS, HR/DSSS, ERP-DSSS/CCK
     HR = 1;
     /// IEEE 802.11a/g, used for ERP-OFDM
@@ -29,7 +27,7 @@ enum PHY {
     HEW = 5;
 };
 
-enum CBW {	// Channel Bandwidth
+type CBW = strict enum { // Channel Bandwidth
     CBW20 = 0;
     CBW40 = 1;
     //CBW40ABOVE = CBW40;
@@ -39,13 +37,13 @@ enum CBW {	// Channel Bandwidth
     CBW80P80 = 5;
 };
 
-struct WlanChan {
-    uint8 primary;
-    CBW cbw;
-    uint8 secondary80;
+type WlanChan = struct {
+    primary uint8;
+    cbw CBW;
+    secondary80 uint8;
 };
 
-enum Band : uint8 {
+type Band = strict enum : uint8 {
     WLAN_BAND_2GHZ = 0;
     WLAN_BAND_5GHZ = 1;
     WLAN_BAND_COUNT = 2;
@@ -53,12 +51,12 @@ enum Band : uint8 {
 
 // LINT.ThenChange(//zircon/system/banjo/fuchsia.hardware.wlan.info/info.banjo)
 
-enum ScanType {
+type ScanType = strict enum {
     ACTIVE = 1;
     PASSIVE = 2;
 };
 
-enum DriverFeature {
+type DriverFeature = strict enum {
     SCAN_OFFLOAD = 0;
     RATE_SELECTION = 1;
     SYNTH = 2;
@@ -76,7 +74,7 @@ enum DriverFeature {
 
 /// HT and VHT guard interval.
 /// See IEEE 802.11-2016 Table 19-1 and Table 21-1.
-enum GuardInterval : uint8 {
+type GuardInterval = strict enum : uint8 {
     LONG_GI = 1; // 800 ns
     SHORT_GI = 2; // 400 ns
 };

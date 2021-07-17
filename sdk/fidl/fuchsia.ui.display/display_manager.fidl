@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.ui.display;
 
 using fuchsia.hardware.display;
@@ -12,50 +10,56 @@ using zx;
 /// Also serves as a capability, enabling the owner to perform certain
 /// operations on displays in the DisplayManager protocol and other protocols
 /// (like Scenic).
-resource struct DisplayRef {
-    zx.handle:EVENT reference;
+type DisplayRef = resource struct {
+    reference zx.handle:EVENT;
 };
 
 // === Mode flags ===
 
-const int32 MODES_MAX_LEN = 256;
+const MODES_MAX_LEN int32 = 256;
 
 // Flag for interlaced display modes.
-const int32 MODE_INTERLACED = 0x1;
+const MODE_INTERLACED int32 = 0x1;
 
-const uint32 IDENTIFIER_MAX_LEN = 128;
+const IDENTIFIER_MAX_LEN uint32 = 128;
 alias DisplayIdentifier = string:IDENTIFIER_MAX_LEN;
 
-resource table Info {
+type Info = resource table {
     // Unique identifier for the display.
-    1: DisplayRef display_ref;
+    1: display_ref DisplayRef;
 
     // Modes supported by the attached display. The first entry is the
     // preferred mode.
-    2: vector<fuchsia.hardware.display.Mode>:MODES_MAX_LEN modes;
+    2: modes vector<fuchsia.hardware.display.Mode>:MODES_MAX_LEN;
 
-    3: DisplayIdentifier manufacturer_name;
-    4: DisplayIdentifier monitor_name;
+    3: manufacturer_name DisplayIdentifier;
+    4: monitor_name DisplayIdentifier;
 };
 
-const int32 DISPLAYS_MAX_LEN = 1024;
+const DISPLAYS_MAX_LEN int32 = 1024;
 
 /// Display Listener protocol implemented by clients.
 protocol DisplayListener {
     /// Called when displays are added. This method will also be called when
     /// the listener is registered for any connected displays.
-    OnDisplayAdded(Info display);
+    OnDisplayAdded(resource struct {
+        display Info;
+    });
 
     /// Called when displays are removed.
-    OnDisplayRemoved(DisplayRef display);
+    OnDisplayRemoved(resource struct {
+        display DisplayRef;
+    });
 
     /// Called when the client gains or loses ownership of the displays.
     ///
     /// New clients should assume they do not have ownership of the display
     /// until informed otherwise by this method. Ownership can be lost and
     /// gained more than once.
-    OnDisplayOwnershipChanged(vector<DisplayRef>:DISPLAYS_MAX_LEN displays,
-                              bool owned_by_display_controller);
+    OnDisplayOwnershipChanged(resource struct {
+        displays vector<DisplayRef>:DISPLAYS_MAX_LEN;
+        owned_by_display_controller bool;
+    });
 };
 
 /// `DisplayManager` is a service that informs the client of new or removed
@@ -63,5 +67,7 @@ protocol DisplayListener {
 /// associated with a DisplayRef which can also be used as a parameter to other
 /// apis (e.g. Scenic).
 protocol DisplayManager {
-    AddDisplayListener(DisplayListener listener);
+    AddDisplayListener(resource struct {
+        listener client_end:DisplayListener;
+    });
 };

@@ -1,22 +1,26 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.boot;
 
 using zx;
 
 /// Protocol for providing the kernel log, readable.
-[Discoverable, ForDeprecatedCBindings]
+@discoverable
+@for_deprecated_c_bindings
 protocol ReadOnlyLog {
     /// Get read-only handle to the kernel `log`.
-    Get() -> (zx.handle:LOG log);
+    Get() -> (resource struct {
+        log zx.handle:LOG;
+    });
 };
 
 /// Protocol for providing the kernel log, writable.
-[Discoverable, ForDeprecatedCBindings]
+@discoverable
+@for_deprecated_c_bindings
 protocol WriteOnlyLog {
     /// Get write-only handle to the kernel `log`.
-    Get() -> (zx.handle:LOG log);
+    Get() -> (resource struct {
+        log zx.handle:LOG;
+    });
 };

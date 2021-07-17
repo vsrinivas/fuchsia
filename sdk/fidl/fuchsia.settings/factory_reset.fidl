@@ -1,12 +1,10 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.settings;
 
 /// Settings related to factory reset.
-[Discoverable]
+@discoverable
 protocol FactoryReset {
     /// Notifies of a change in information about the factory reset settings.
     ///
@@ -16,16 +14,20 @@ protocol FactoryReset {
     ///
     /// If this call fails, it is considered a fatal error and the channel will
     /// be closed.
-    Watch() -> (FactoryResetSettings settings);
+    Watch() -> (struct {
+        settings FactoryResetSettings;
+    });
 
     /// Sets factory reset settings. Any field not explicitly set in the table
     /// performs a no-op, and will not make any changes.
-    Set(FactoryResetSettings settings) -> () error Error;
+    Set(struct {
+        settings FactoryResetSettings;
+    }) -> (struct {}) error Error;
 };
 
 /// Information about the factory reset settings.
-table FactoryResetSettings {
+type FactoryResetSettings = table {
     /// When set to true, a user is able to physically perform a factory reset.
     /// When false, that functionality is disabled.
-    1: bool is_local_reset_allowed;
+    1: is_local_reset_allowed bool;
 };

@@ -1,17 +1,21 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.goldfish.control;
 
 using zx;
 
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol GoldfishControl {
     /// Get color buffer for VMO. Fails if VMO is not associated with a color
     /// buffer.
-    GetColorBuffer(zx.handle:VMO vmo) -> (zx.status ret, uint32 cb);
+    GetColorBuffer(resource struct {
+        vmo zx.handle:VMO;
+    }) -> (struct {
+        ret zx.status;
+        cb uint32;
+    });
 
     /// Create a sync fence on goldfish control device. The fence `event`
     /// argument will signal its peer once all the graphics work already queued
@@ -19,5 +23,9 @@ protocol GoldfishControl {
     /// has finished.
     /// Returns ZX_ERR_INTERNAL if the device cannot create a fence or cannot
     /// trigger the wait.
-    CreateSyncFence(zx.handle:EVENTPAIR event) -> (zx.status ret);
+    CreateSyncFence(resource struct {
+        event zx.handle:EVENTPAIR;
+    }) -> (struct {
+        ret zx.status;
+    });
 };

@@ -1,36 +1,49 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library banjo.examples.passcallback;
 
 using zx;
 
-struct Point {
-    int64 x;
-    int64 y;
+type Point = struct {
+    x int64;
+    y int64;
 };
 
-enum Direction: uint8 {
+type Direction = strict enum : uint8 {
     UP = 1;
     DOWN = 2;
     LEFT = 3;
     RIGHT = 4;
 };
 
-enum Action : uint32 {
+type Action = strict enum : uint32 {
     START = 0x1;
     STOP = 0x2;
 };
 
-[Transport = "Banjo", BanjoLayout = "ddk-callback"]
+@transport("Banjo")
+@banjo_layout("ddk-callback")
 protocol ActionNotify {
-    Callback(Point p, Direction d) -> ();
+    Callback(struct {
+        p Point;
+        d Direction;
+    }) -> ();
 };
 
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol ActionProtocol {
-    RegisterCallback(uint32 id, ActionNotify cb) -> (zx.status s);
-    GetCallback(uint32 id) -> (zx.status s, ActionNotify cb);
+    RegisterCallback(resource struct {
+        id uint32;
+        cb client_end:ActionNotify;
+    }) -> (struct {
+        s zx.status;
+    });
+    GetCallback(struct {
+        id uint32;
+    }) -> (resource struct {
+        s zx.status;
+        cb client_end:ActionNotify;
+    });
 };

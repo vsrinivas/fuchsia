@@ -1,199 +1,196 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library conformance;
 
 using zx;
 
-table XUnionInTable {
-    1: string before;
-    2: SampleXUnion xu;
-    3: string after;
+type XUnionInTable = table {
+    1: before string;
+    2: xu SampleXUnion;
+    3: after string;
 };
 
-struct TestXUnionInTable {
-    XUnionInTable value;
+type TestXUnionInTable = struct {
+    value XUnionInTable;
 };
 
-union IpAddressConfig {
-    1: array<uint32>:6 padding_size_24_align_4;
-    2: bool dhcp;
+type IpAddressConfig = strict union {
+    1: padding_size_24_align_4 array<uint32, 6>;
+    2: dhcp bool;
 };
 
-struct InterfaceConfig {
-    string name;
-    IpAddressConfig ip_address_config;
+type InterfaceConfig = struct {
+    name string;
+    ip_address_config IpAddressConfig;
 };
 
-struct TestAddEthernetDeviceRequest {
-    string topological_path;
-    InterfaceConfig config;
+type TestAddEthernetDeviceRequest = struct {
+    topological_path string;
+    config InterfaceConfig;
     // TODO(fxbug.dev/7947): Use 'EthernetDevice device;' instead.
-    uint32 this_should_be_a_handle;
+    this_should_be_a_handle uint32;
 };
 
-struct NodeAttributes {
-    uint32 mode;
-    uint64 id;
-    uint64 content_size;
-    uint64 storage_size;
-    uint64 link_count;
-    uint64 creation_time;
-    uint64 modification_time;
+type NodeAttributes = struct {
+    mode uint32;
+    id uint64;
+    content_size uint64;
+    storage_size uint64;
+    link_count uint64;
+    creation_time uint64;
+    modification_time uint64;
 };
 
-struct FileGetAttrResponse {
-    zx.status s;
-    NodeAttributes attributes;
+type FileGetAttrResponse = struct {
+    s zx.status;
+    attributes NodeAttributes;
 };
 
-struct Int64Struct {
-    int64 x;
+type Int64Struct = struct {
+    x int64;
 };
 
-union SimpleUnion {
-    1: int32 i32;
-    2: int64 i64;
-    3: Int64Struct s;
-    4: string str;
+type SimpleUnion = strict union {
+    1: i32 int32;
+    2: i64 int64;
+    3: s Int64Struct;
+    4: str string;
 };
 
-flexible union SampleXUnion {
-    1: uint32 u;
-    2: SimpleUnion su;
-    3: SimpleTable st;
+type SampleXUnion = flexible union {
+    1: u uint32;
+    2: su SimpleUnion;
+    3: st SimpleTable;
 };
 
-flexible resource union SampleResourceXUnion {
-    1: uint32 u;
-    2: SimpleUnion su;
-    3: SimpleTable st;
+type SampleResourceXUnion = flexible resource union {
+    1: u uint32;
+    2: su SimpleUnion;
+    3: st SimpleTable;
 };
 
-union SampleStrictXUnion {
-    1: uint32 u;
-    2: SimpleUnion su;
-    3: SimpleTable st;
+type SampleStrictXUnion = strict union {
+    1: u uint32;
+    2: su SimpleUnion;
+    3: st SimpleTable;
 };
 
-resource union SampleStrictResourceXUnion {
-    1: uint32 u;
-    2: SimpleUnion su;
-    3: SimpleTable st;
+type SampleStrictResourceXUnion = strict resource union {
+    1: u uint32;
+    2: su SimpleUnion;
+    3: st SimpleTable;
 };
 
-struct TestInlineXUnionInStruct {
-    string before;
-    SampleXUnion xu;
-    string after;
+type TestInlineXUnionInStruct = struct {
+    before string;
+    xu SampleXUnion;
+    after string;
 };
 
-struct TestOptionalXUnionInStruct {
-    string before;
-    SampleXUnion? xu;
-    string after;
+type TestOptionalXUnionInStruct = struct {
+    before string;
+    xu SampleXUnion:optional;
+    after string;
 };
 
-struct TestStrictXUnionInStruct {
-    SampleStrictXUnion xu;
+type TestStrictXUnionInStruct = struct {
+    xu SampleStrictXUnion;
 };
 
-resource struct TestStrictResourceXUnionInStruct {
-    SampleStrictResourceXUnion xu;
+type TestStrictResourceXUnionInStruct = resource struct {
+    xu SampleStrictResourceXUnion;
 };
 
-struct TestFlexibleXUnionInStruct {
-    SampleXUnion xu;
+type TestFlexibleXUnionInStruct = struct {
+    xu SampleXUnion;
 };
 
-resource struct TestFlexibleResourceXUnionInStruct {
-    SampleResourceXUnion xu;
+type TestFlexibleResourceXUnionInStruct = resource struct {
+    xu SampleResourceXUnion;
 };
 
-struct TestOptionalStrictXUnionInStruct {
-    SampleStrictXUnion? xu;
+type TestOptionalStrictXUnionInStruct = struct {
+    xu SampleStrictXUnion:optional;
 };
 
-resource struct TestOptionalStrictResourceXUnionInStruct {
-    SampleStrictResourceXUnion? xu;
+type TestOptionalStrictResourceXUnionInStruct = resource struct {
+    xu SampleStrictResourceXUnion:optional;
 };
 
-struct TestOptionalFlexibleXUnionInStruct {
-    SampleXUnion? xu;
+type TestOptionalFlexibleXUnionInStruct = struct {
+    xu SampleXUnion:optional;
 };
 
-resource struct TestOptionalFlexibleResourceXUnionInStruct {
-    SampleResourceXUnion? xu;
+type TestOptionalFlexibleResourceXUnionInStruct = resource struct {
+    xu SampleResourceXUnion:optional;
 };
 
 // TODO(fxbug.dev/36441): Allow bindings to compile on host with handles.
 // TODO(fxbug.dev/72247): Encode libfuzzer dependency on HLCPP and LLCPP.
-[BindingsDenylist = "llcpp, libfuzzer"]
-resource struct FidlvizDemo {
-    uint8 f1;
-    int8 f2;
-    uint16 f3;
-    uint32 f4;
-    uint64 f5;
-    uint8 f6;
-    uint8 f7;
-    uint16 f8;
-    float32 f9;
-    float64 f10;
-    bool f11;
-    bool f12;
-    string f13;
-    string? f14;
-    string f15;
-    handle? f16;
-    handle f17;
-    array<uint8>:3 f18;
-    vector<float64> f19;
-    vector<uint8>? f20;
-    vector<uint8> f21;
-    FidlvizBits f22;
-    FidlvizEnum f23;
-    FidlvizStruct1 f24;
-    FidlvizStruct2 f25;
-    FidlvizStruct1? f26;
-    FidlvizStruct2? f27;
-    FidlvizTable f28;
-    FidlvizTable f29;
-    FidlvizUnion? f30;
-    FidlvizUnion f31;
+@bindings_denylist("llcpp, libfuzzer")
+type FidlvizDemo = resource struct {
+    f1 uint8;
+    f2 int8;
+    f3 uint16;
+    f4 uint32;
+    f5 uint64;
+    f6 uint8;
+    f7 uint8;
+    f8 uint16;
+    f9 float32;
+    f10 float64;
+    f11 bool;
+    f12 bool;
+    f13 string;
+    f14 string:optional;
+    f15 string;
+    f16 handle:optional;
+    f17 handle;
+    f18 array<uint8, 3>;
+    f19 vector<float64>;
+    f20 vector<uint8>:optional;
+    f21 vector<uint8>;
+    f22 FidlvizBits;
+    f23 FidlvizEnum;
+    f24 FidlvizStruct1;
+    f25 FidlvizStruct2;
+    f26 box<FidlvizStruct1>;
+    f27 box<FidlvizStruct2>;
+    f28 FidlvizTable;
+    f29 FidlvizTable;
+    f30 FidlvizUnion:optional;
+    f31 FidlvizUnion;
 };
 
-bits FidlvizBits : uint8 {
+type FidlvizBits = strict bits : uint8 {
     A = 1;
     B = 2;
     C = 4;
 };
 
-enum FidlvizEnum : uint8 {
+type FidlvizEnum = strict enum : uint8 {
     A = 42;
 };
 
-struct FidlvizStruct1 {
+type FidlvizStruct1 = struct {};
+
+type FidlvizStruct2 = struct {
+    x uint64;
 };
 
-struct FidlvizStruct2 {
-    uint64 x;
-};
-
-table FidlvizTable {
-    1: bool f1;
+type FidlvizTable = table {
+    1: f1 bool;
     2: reserved;
-    3: bool f3;
+    3: f3 bool;
 };
 
-union FidlvizUnion {
+type FidlvizUnion = strict union {
     1: reserved;
     2: reserved;
     3: reserved;
     4: reserved;
     5: reserved;
     6: reserved;
-    7: string f7;
+    7: f7 string;
 };

@@ -1,15 +1,13 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.lowpan;
 
-struct ProvisioningParams {
+type ProvisioningParams = struct {
     /// The identity of the network.
-    Identity identity;
+    identity Identity;
 
     /// The credential used to authenticate to
     /// the network.
-    Credential? credential;
+    credential Credential:optional;
 };

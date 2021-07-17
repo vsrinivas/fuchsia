@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.input.report;
 
 /// DeviceInfo provides more information about the device and lets a client
@@ -11,40 +9,40 @@ library fuchsia.input.report;
 /// will come from the device itself. Other, non-HID devices may assign the
 /// ids in the driver, so it will be the driver author's responsibility to
 /// assign sensible ids.
-struct DeviceInfo {
-    uint32 vendor_id;
-    uint32 product_id;
-    uint32 version;
+type DeviceInfo = struct {
+    vendor_id uint32;
+    product_id uint32;
+    version uint32;
 };
 
 /// `DeviceDescriptor` describes a physical input device. Some physical devices may
 /// send multiple types of reports (E.g: a physical touchscreen can send touch and
 /// stylus reports, so it will have both a TouchDescriptor and a StylusDescriptor).
-table DeviceDescriptor {
+type DeviceDescriptor = table {
     /// `device_info` should always be present to help distinguish between physical devices.
-    1: DeviceInfo device_info;
+    1: device_info DeviceInfo;
 
     /// When `mouse` is present the device has a mouse.
-    2: MouseDescriptor mouse;
+    2: mouse MouseDescriptor;
 
     /// When `sensor` is present the device has a sensor.
-    3: SensorDescriptor sensor;
+    3: sensor SensorDescriptor;
 
     /// When `touch` is present the device has a touch device.
     /// (E.g: Touchscreen, touchpad).
-    4: TouchDescriptor touch;
+    4: touch TouchDescriptor;
 
     /// When `keyboard` is present the device has a keyboard.
-    5: KeyboardDescriptor keyboard;
+    5: keyboard KeyboardDescriptor;
 
     /// When `consumer_control` is present the device has a ConsumerControl
     /// device.
-    6: ConsumerControlDescriptor consumer_control;
+    6: consumer_control ConsumerControlDescriptor;
 };
 
 /// Describes the output reports that a physical input device will accept.
 /// Output information typically represents device output to the user
 /// (E.g: LEDs, tactile feedback, etc).
-table OutputDescriptor {
-    1: KeyboardOutputDescriptor keyboard;
+type OutputDescriptor = table {
+    1: keyboard KeyboardOutputDescriptor;
 };

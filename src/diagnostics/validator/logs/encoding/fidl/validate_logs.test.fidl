@@ -1,20 +1,22 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.validate.logs;
 
 using fuchsia.mem;
 using fuchsia.diagnostics.stream;
 
-enum PuppetError {
+type PuppetError = strict enum {
     UnsupportedRecord = 1;
 };
 
-[Discoverable]
+@discoverable
 protocol EncodingPuppet {
     /// Log takes a record and converts it into a buffer.
     /// Returns an error if record contains unsupported type
-    Encode(fuchsia.diagnostics.stream.Record record) -> (fuchsia.mem.Buffer result) error PuppetError;
+    Encode(struct {
+        record fuchsia.diagnostics.stream.Record;
+    }) -> (resource struct {
+        result fuchsia.mem.Buffer;
+    }) error PuppetError;
 };

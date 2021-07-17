@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.ui.views;
 
 using zx;
@@ -14,8 +12,8 @@ using zx;
 /// A Scenic client can reference contents from another client by creating a
 /// `ViewHolder` resource using this token.  The other client must also create
 /// a `View` resource using the corresponding `ViewToken`.
-resource struct ViewHolderToken {
-    zx.handle:EVENTPAIR value;
+type ViewHolderToken = resource struct {
+    value zx.handle:EVENTPAIR;
 };
 
 /// Token that uniquely identifies a `View`, which is the root point for a
@@ -25,6 +23,6 @@ resource struct ViewHolderToken {
 /// A Scenic client can have its contents referenced from another client by
 /// creating a `View` resource using this token.  The other client must also
 /// create a `ViewHolder` resource using the corresponding `ViewHolderToken`.
-resource struct ViewToken {
-    zx.handle:EVENTPAIR value;
+type ViewToken = resource struct {
+    value zx.handle:EVENTPAIR;
 };

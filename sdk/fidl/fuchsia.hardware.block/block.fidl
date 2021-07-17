@@ -1,99 +1,113 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.block;
 using zx;
 using fuchsia.storage.metrics as storage_metrics;
 
 /// All writes to the block device will fail.
-const uint32 FLAG_READONLY = 0x00000001;
+const FLAG_READONLY uint32 = 0x00000001;
 
 /// The block device may be removed from the device during operation.
-const uint32 FLAG_REMOVABLE = 0x00000002;
+const FLAG_REMOVABLE uint32 = 0x00000002;
 
 /// The device has a bootdata partition map.
-const uint32 FLAG_BOOTPART = 0x00000004;
+const FLAG_BOOTPART uint32 = 0x00000004;
 
 /// The device provides trim support.
-const uint32 FLAG_TRIM_SUPPORT = 0x00000008;
+const FLAG_TRIM_SUPPORT uint32 = 0x00000008;
 
 /// The maximum value for a transfer size, identifying that there
 /// effectively exists no maximum for a single operation.
-const uint32 MAX_TRANSFER_UNBOUNDED = 0xFFFFFFFF;
+const MAX_TRANSFER_UNBOUNDED uint32 = 0xFFFFFFFF;
 
 /// Describes metatadata about a block device.
-[ForDeprecatedCBindings]
-struct BlockInfo {
+@for_deprecated_c_bindings
+type BlockInfo = struct {
     /// The number of blocks in this block device.
-    uint64 block_count;
+    block_count uint64;
 
     /// The size of a single block.
-    uint32 block_size;
+    block_size uint32;
 
     /// The maximum size, in bytes, of a transfer.
     /// Set to MAX_TRANSFER_UNBOUNDED if no such maximum exists.
-    uint32 max_transfer_size;
+    max_transfer_size uint32;
 
     /// Identifiers about the device; refer to the "FLAG_*" documentation above.
-    uint32 flags;
+    flags uint32;
 
-    uint32 reserved;
+    reserved uint32;
 };
 
 /// Describes statistics about the operations on the block device since boot.
 /// storage_metrics.CallStat.bytes_transferred is number of bytes requested
 /// to be transferred.
-[ForDeprecatedCBindings]
-struct BlockStats {
+@for_deprecated_c_bindings
+type BlockStats = struct {
     /// The stats about read from the device.
-    storage_metrics.CallStat read;
+    read storage_metrics.CallStat;
 
     /// The stats about write to the device.
-    storage_metrics.CallStat write;
+    write storage_metrics.CallStat;
 
     /// The stats about trim commands.
-    storage_metrics.CallStat trim;
+    trim storage_metrics.CallStat;
 
     /// The stats about flush commands.
-    storage_metrics.CallStat flush;
+    flush storage_metrics.CallStat;
 
     /// The stats about barrier before commands.
-    storage_metrics.CallStat barrier_before;
+    barrier_before storage_metrics.CallStat;
 
     /// The stats about barrier after commands.
-    storage_metrics.CallStat barrier_after;
+    barrier_after storage_metrics.CallStat;
 };
 
 /// A client-identifier to a VMO.
 /// This value may be utilized by clients to refer to a VMO which is being held
 /// by a block device server.
-[ForDeprecatedCBindings]
-struct VmoId {
-    uint16 id;
+@for_deprecated_c_bindings
+type VmoId = struct {
+    id uint16;
 };
 
 /// Value reserved for "invalid" VmoId. Will never be allocated by the server,
 /// and may be utilized as a local value for an unallocated ID.
-const uint16 VMOID_INVALID = 0;
+const VMOID_INVALID uint16 = 0;
 
 /// Defines access to a device which is accessible in block-granularity chunks
 /// for reading and writing.
-[ForDeprecatedCBindings]
+@for_deprecated_c_bindings
 protocol Block {
     /// Get information about the underlying block device.
-    GetInfo() -> (zx.status status, BlockInfo? info);
+    GetInfo() -> (struct {
+        status zx.status;
+        info box<BlockInfo>;
+    });
 
     /// Returns stats about the block device on the provided buffer and optionally
     /// clears the counters.
-    GetStats(bool clear) -> (zx.status status, BlockStats? stats);
+    GetStats(struct {
+        clear bool;
+    }) -> (struct {
+        status zx.status;
+        stats box<BlockStats>;
+    });
 
     /// Sets up a FIFO-based server on the block device; acquire the handle to it.
-    GetFifo() -> (zx.status status, zx.handle:FIFO? fifo);
+    GetFifo() -> (resource struct {
+        status zx.status;
+        fifo zx.handle:<FIFO, optional>;
+    });
 
     /// Attaches a VMO to the currently running FIFO server.
-    AttachVmo(zx.handle:VMO vmo) -> (zx.status status, VmoId? vmoid);
+    AttachVmo(resource struct {
+        vmo zx.handle:VMO;
+    }) -> (struct {
+        status zx.status;
+        vmoid box<VmoId>;
+    });
 
     /// Shuts down the fifo server, waiting for it to be ready to be started again.
     ///
@@ -105,11 +119,15 @@ protocol Block {
     /// the server automatically cleans up all resources anyway. In this case,
     /// however, the client will have no guarantee that the next invocation of
     /// "GetFifo" will return a connection successfully.
-    CloseFifo() -> (zx.status status);
+    CloseFifo() -> (struct {
+        status zx.status;
+    });
 
     /// Rebinds the block device (if supported).
     ///
     /// WARNING: This is only added for parity with block device ioctls;
     /// this is going to move into the device FIDL API.
-    RebindDevice() -> (zx.status status);
+    RebindDevice() -> (struct {
+        status zx.status;
+    });
 };

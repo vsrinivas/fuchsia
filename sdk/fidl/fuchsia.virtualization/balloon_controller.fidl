@@ -1,23 +1,23 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.virtualization;
 
 using zx;
 
 /// Contains a memory statistic for the balloon device.
-struct MemStat {
-    uint16 tag;
-    uint64 val;
+type MemStat = struct {
+    tag uint16;
+    val uint64;
 };
 
 /// A `BalloonController` controls a guest instance's memory balloon.
-[Discoverable]
+@discoverable
 protocol BalloonController {
     /// Get the number of pages in the memory balloon.
-    GetNumPages() -> (uint32 num_pages);
+    GetNumPages() -> (struct {
+        num_pages uint32;
+    });
 
     /// Request a number of pages to be supplied to the memory balloon.
     ///
@@ -25,8 +25,13 @@ protocol BalloonController {
     /// provide additional pages to the memory balloon. If `num_pages` is less
     /// than the current value, the guest instance is free to reclaim pages from
     /// the memory balloon.
-    RequestNumPages(uint32 num_pages);
+    RequestNumPages(struct {
+        num_pages uint32;
+    });
 
     /// Get memory statistics of the guest instance.
-    GetMemStats() -> (zx.status status, vector<MemStat>? mem_stats);
+    GetMemStats() -> (struct {
+        status zx.status;
+        mem_stats vector<MemStat>:optional;
+    });
 };

@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.net.neighbor;
 
 using zx;
@@ -20,7 +18,7 @@ using zx;
 /// | Reachability Probe        | ARP Request  | Neighbor Solicitation  |
 /// | Reachability Confirmation | ARP Reply    | Neighbor Advertisement |
 /// `---------------------------+--------------+------------------------'
-table UnreachabilityConfig {
+type UnreachabilityConfig = table {
     /// A base duration for computing the random reachable time.
     ///
     /// Reachable time is the duration for which a neighbor is considered
@@ -36,11 +34,11 @@ table UnreachabilityConfig {
     /// Referred to as "BaseReachableTime" by RFC 4861.
     ///
     /// Must be greater than 0.
-    1: zx.duration base_reachable_time;
+    1: base_reachable_time zx.duration;
 
     /// Learn [`base_reachable_time`] during runtime from the neighbor discovery
     /// protocol, if supported.
-    2: bool learn_base_reachable_time;
+    2: learn_base_reachable_time bool;
 
     /// The minimum value of the random factor used for computing reachable
     /// time.
@@ -49,7 +47,7 @@ table UnreachabilityConfig {
     /// reachable time.
     ///
     /// Must be greater than 0.
-    3: float32 min_random_factor;
+    3: min_random_factor float32;
 
     /// The maximum value of the random factor used for computing reachable
     /// time.
@@ -58,7 +56,7 @@ table UnreachabilityConfig {
     /// reachable time.
     ///
     /// Must be greater than or equal to [`min_random_factor`].
-    4: float32 max_random_factor;
+    4: max_random_factor float32;
 
     /// Duration between retransmissions of reachability probes in the PROBE
     /// state.
@@ -66,11 +64,11 @@ table UnreachabilityConfig {
     /// Referred to as "RetransTimer" by RFC 4861.
     ///
     /// Must be greater than 0.
-    5: zx.duration retransmit_timer;
+    5: retransmit_timer zx.duration;
 
     /// Learn [`retransmit_timer`] during runtime from the neighbor discovery
     /// protocol, if supported.
-    6: bool learn_retransmit_timer;
+    6: learn_retransmit_timer bool;
 
     /// Duration to wait for a non-Neighbor-Discovery related protocol to
     /// reconfirm reachability after entering the DELAY state. After this time,
@@ -78,7 +76,7 @@ table UnreachabilityConfig {
     /// PROBE state.
     ///
     /// Must be greater than 0.
-    7: zx.duration delay_first_probe_time;
+    7: delay_first_probe_time zx.duration;
 
     /// The number of reachability probes to send before concluding negative
     /// reachability and deleting the entry from the INCOMPLETE state.
@@ -86,7 +84,7 @@ table UnreachabilityConfig {
     /// Referred to as "MAX_MULTICAST_SOLICIT" by RFC 4861.
     ///
     /// Must be greater than 0.
-    8: uint32 max_multicast_probes;
+    8: max_multicast_probes uint32;
 
     /// The number of reachability probes to send before concluding
     /// retransmissions from within the PROBE state should cease and the entry
@@ -95,53 +93,53 @@ table UnreachabilityConfig {
     /// Referred to as "MAX_UNICAST_SOLICIT" by RFC 4861.
     ///
     /// Must be greater than 0.
-    9: uint32 max_unicast_probes;
+    9: max_unicast_probes uint32;
 
     /// If the target address is an anycast address, the stack SHOULD delay
     /// sending a response for a random time between 0 and this duration.
-    10: zx.duration max_anycast_delay_time;
+   10: max_anycast_delay_time zx.duration;
 
     /// A node MAY send up to this amount of unsolicited reachability
     /// confirmations messages to all-nodes multicast address when a node
     /// determines its link-layer address has changed.
     ///
     /// Referred to as "MAX_NEIGHBOR_ADVERTISEMENT" by RFC 4861.
-    11: uint32 max_reachability_confirmations;
+   11: max_reachability_confirmations uint32;
 };
 
 /// Default value for [`UnreachabilityConfig.base_reachable_time`] as
 /// recommended by RFC 4861 section 10.
-const zx.duration DEFAULT_BASE_REACHABLE_TIME = 30000000000; // 30 seconds
+const DEFAULT_BASE_REACHABLE_TIME zx.duration = 30000000000; // 30 seconds
 
 /// Default value for [`UnreachabilityConfig.retransmit_timer`] as recommended
 /// by RFC 4861 section 10.
-const zx.duration DEFAULT_RETRANSMIT_TIMER = 1000000000; // 1 second
+const DEFAULT_RETRANSMIT_TIMER zx.duration = 1000000000; // 1 second
 
 /// Default value for [`UnreachabilityConfig.delay_first_probe_time`] as
 /// recommended by RFC
 /// 4861 section 10.
-const zx.duration DEFAULT_DELAY_FIRST_PROBE_TIME = 5000000000; // 5 seconds
+const DEFAULT_DELAY_FIRST_PROBE_TIME zx.duration = 5000000000; // 5 seconds
 
 /// Default value for [`UnreachabilityConfig.max_anycast_delay_time`] as
 /// recommended by RFC 4861 section 10.
-const zx.duration DEFAULT_MAX_ANYCAST_DELAY_TIME = 1000000000; // 1 second
+const DEFAULT_MAX_ANYCAST_DELAY_TIME zx.duration = 1000000000; // 1 second
 
 /// Default value for [`UnreachabilityConfig.min_random_factor`] as recommended
 /// by RFC 4861 section 10.
-const float32 DEFAULT_MIN_RANDOM_FACTOR = 0.5;
+const DEFAULT_MIN_RANDOM_FACTOR float32 = 0.5;
 
 /// Default value for [`UnreachabilityConfig.max_random_factor`] as recommended
 /// by RFC 4861 section 10.
-const float32 DEFAULT_MAX_RANDOM_FACTOR = 1.5;
+const DEFAULT_MAX_RANDOM_FACTOR float32 = 1.5;
 
 /// Default value for [`UnreachabilityConfig.max_multicast_probes`] as
 /// recommended by RFC 4861 section 10.
-const uint32 DEFAULT_MAX_MULTICAST_PROBES = 3;
+const DEFAULT_MAX_MULTICAST_PROBES uint32 = 3;
 
 /// Default value for [`UnreachabilityConfig.max_unicast_probes`] as
 /// recommended by RFC 4861 section 10.
-const uint32 DEFAULT_MAX_UNICAST_PROBES = 3;
+const DEFAULT_MAX_UNICAST_PROBES uint32 = 3;
 
 /// Default value for [`UnreachabilityConfig.max_reachability_confirmations`] as
 /// recommended by RFC 4861 section 10.
-const uint32 DEFAULT_MAX_REACHABILITY_CONFIRMATIONS = 3;
+const DEFAULT_MAX_REACHABILITY_CONFIRMATIONS uint32 = 3;

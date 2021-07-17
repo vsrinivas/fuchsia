@@ -1,15 +1,15 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.kernel;
 
 using zx;
 
 /// Protocol for providing the hypervisor resource.
-[Discoverable]
+@discoverable
 protocol HypervisorResource {
     /// Get the hypervisor resource handle.
-    Get() -> (zx.handle:RESOURCE hypervisor_resource);
+    Get() -> (resource struct {
+        hypervisor_resource zx.handle:RESOURCE;
+    });
 };

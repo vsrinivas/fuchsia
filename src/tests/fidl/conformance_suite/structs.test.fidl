@@ -1,28 +1,26 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library conformance;
 
-struct EmptyStruct {};
+type EmptyStruct = struct {};
 
-struct EmptyStructSandwich {
-    string before;
-    EmptyStruct es;
-    string after;
+type EmptyStructSandwich = struct {
+    before string;
+    es EmptyStruct;
+    after string;
 };
 
-struct Uint8Uint16Uint32Uint64 {
-    uint8 f1;
-    uint16 f2;
-    uint32 f3;
-    uint64 f4;
+type Uint8Uint16Uint32Uint64 = struct {
+    f1 uint8;
+    f2 uint16;
+    f3 uint32;
+    f4 uint64;
 };
 
-struct Uint64Uint32Uint16Uint8 {
-    uint64 f1;
-    uint32 f2;
-    uint16 f3;
-    uint8 f4;
+type Uint64Uint32Uint16Uint8 = struct {
+    f1 uint64;
+    f2 uint32;
+    f3 uint16;
+    f4 uint8;
 };

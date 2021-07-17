@@ -1,8 +1,6 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.serial;
 
 using zx;
@@ -10,50 +8,62 @@ using zx;
 // Flags that can be passed to Serial/Config()
 
 // Select the character width
-const uint32 SERIAL_DATA_BITS_5 = 0x0;
-const uint32 SERIAL_DATA_BITS_6 = 0x1;
-const uint32 SERIAL_DATA_BITS_7 = 0x2;
-const uint32 SERIAL_DATA_BITS_8 = 0x3;
-const uint32 SERIAL_DATA_BITS_MASK = 0x3;
+const SERIAL_DATA_BITS_5 uint32 = 0x0;
+const SERIAL_DATA_BITS_6 uint32 = 0x1;
+const SERIAL_DATA_BITS_7 uint32 = 0x2;
+const SERIAL_DATA_BITS_8 uint32 = 0x3;
+const SERIAL_DATA_BITS_MASK uint32 = 0x3;
 
 // Select the number of stop bits
-const uint32 SERIAL_STOP_BITS_1 = 0x0;
-const uint32 SERIAL_STOP_BITS_2 = 0x4;
-const uint32 SERIAL_STOP_BITS_MASK = 0x4;
+const SERIAL_STOP_BITS_1 uint32 = 0x0;
+const SERIAL_STOP_BITS_2 uint32 = 0x4;
+const SERIAL_STOP_BITS_MASK uint32 = 0x4;
 
 // Select the parity mechanism
-const uint32 SERIAL_PARITY_NONE = 0x00;
-const uint32 SERIAL_PARITY_EVEN = 0x08;
-const uint32 SERIAL_PARITY_ODD = 0x10;
-const uint32 SERIAL_PARITY_MASK = 0x18;
+const SERIAL_PARITY_NONE uint32 = 0x00;
+const SERIAL_PARITY_EVEN uint32 = 0x08;
+const SERIAL_PARITY_ODD uint32 = 0x10;
+const SERIAL_PARITY_MASK uint32 = 0x18;
 
 // Select the flow control mechanism
-const uint32 SERIAL_FLOW_CTRL_NONE = 0x00;
-const uint32 SERIAL_FLOW_CTRL_CTS_RTS = 0x20;
-const uint32 SERIAL_FLOW_CTRL_MASK = 0x20;
+const SERIAL_FLOW_CTRL_NONE uint32 = 0x00;
+const SERIAL_FLOW_CTRL_CTS_RTS uint32 = 0x20;
+const SERIAL_FLOW_CTRL_MASK uint32 = 0x20;
 
 // Set this flag to change baud rate but leave other properties unchanged
-const uint32 SERIAL_SET_BAUD_RATE_ONLY = 0x80000000;
+const SERIAL_SET_BAUD_RATE_ONLY uint32 = 0x80000000;
 
-struct SerialPortInfo {
+type SerialPortInfo = struct {
     /// Values from the FIDL enum fuchsia.hardware.serial.Class
-    uint32 serial_class;
+    serial_class uint32;
     /// Vendor and product ID of hardware attached to this serial port,
     /// or zero if not applicable.
-    uint32 serial_vid;
-    uint32 serial_pid;
+    serial_vid uint32;
+    serial_pid uint32;
 };
 
 /// High level serial protocol for use by client drivers.
 /// When used with the platform device protocol, "port" will be relative to
 /// the list of serial ports assigned to your device rather than the global
 /// list of serial ports.
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol Serial {
-    GetInfo() -> (zx.status s, SerialPortInfo info);
+    GetInfo() -> (struct {
+        s zx.status;
+        info SerialPortInfo;
+    });
     /// Configures the given serial port.
-    Config(uint32 baud_rate, uint32 flags) -> (zx.status s);
+    Config(struct {
+        baud_rate uint32;
+        flags uint32;
+    }) -> (struct {
+        s zx.status;
+    });
     /// Returns a socket that can be used for reading and writing data
     /// from the given serial port.
-    OpenSocket() -> (zx.status s, zx.handle:SOCKET handle);
+    OpenSocket() -> (resource struct {
+        s zx.status;
+        handle zx.handle:SOCKET;
+    });
 };

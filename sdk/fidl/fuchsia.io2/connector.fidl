@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.io2;
 
 /// Auxiliary data for the connector representation of a node, used for
@@ -10,5 +8,4 @@ library fuchsia.io2;
 ///
 /// It supports connecting to arbitrary protocols exported by the filesystem
 /// server at a path, including ones that do not compose [`fuchsia.io2/Node`].
-table ConnectorInfo {
-};
+type ConnectorInfo = table {};

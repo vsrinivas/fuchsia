@@ -1,14 +1,12 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.bluetooth.le;
 
 using fuchsia.bluetooth as bt;
 using fuchsia.bluetooth.gatt;
 
-enum CentralError {
+type CentralError = strict enum {
     /// The request was aborted.
     ABORTED = 1;
 
@@ -24,29 +22,29 @@ enum CentralError {
 
 /// Filter parameters for use during a scan. A discovered peer only matches the
 /// filter if it satisfies all of the present filter parameters.
-table Filter {
+type Filter = table {
     /// Filter based on advertised service UUID.
-    1: bt.Uuid service_uuid;
+    1: service_uuid bt.Uuid;
 
     /// Filter based on service data containing the given UUID.
-    2: bt.Uuid service_data_uuid;
+    2: service_data_uuid bt.Uuid;
 
     /// Filter based on a manufacturer identifier present in the manufacturer
     /// data. If this filter parameter is set, then the advertising payload must
     /// contain manufacturer specific data with the provided company identifier
     /// to satisfy this filter. Manufacturer identifiers can be found at
     /// https://www.bluetooth.com/specifications/assigned-numbers/company-identifiers/
-    3: uint16 manufacturer_id;
+    3: manufacturer_id uint16;
 
     /// Filter based on whether or not a device is connectable. For example, a
     /// client that is only interested in peripherals that it can connect to can
     /// set this to true. Similarly a client can scan only for broadcasters by
     /// setting this to false.
-    4: bool connectable;
+    4: connectable bool;
 
     /// Filter results based on a portion of the advertised device name.
     /// Substring matches are allowed.
-    5: bt.DeviceName name;
+    5: name bt.DeviceName;
 
     /// Filter results based on the path loss of the radio wave. A device that
     /// matches this filter must satisfy the following:
@@ -59,16 +57,16 @@ table Filter {
     /// obtained from advertising and scan response data during a scan procedure.
     /// It should NOT be confused with information for an active connection
     /// obtained using the "Path Loss Reporting" feature.
-    6: int8 max_path_loss;
+    6: max_path_loss int8;
 };
 
 /// Parameters used during a scan.
-table ScanOptions {
+type ScanOptions = table {
     /// List of filters for use during a scan. A peripheral that satisfies any
     /// of these filters will be reported. At least 1 filter must be specified.
     /// While not recommended, clients that require that all peripherals be
     /// reported can specify an empty filter.
-    1: vector<Filter>:MAX filters;
+    1: filters vector<Filter>:MAX;
 };
 
 /// Represents an active scan procedure. This protocol remains valid for the
@@ -86,10 +84,12 @@ protocol ScanResultWatcher {
     ///
     /// - response `updated` Peers that were added or updated since the last
     ///   call to Watch().
-    Watch() -> (vector<Peer>:MAX updated);
+    Watch() -> (struct {
+        updated vector<Peer>:MAX;
+    });
 };
 
-[Discoverable]
+@discoverable
 protocol Central {
     /// Scans for nearby LE peripherals and broadcasters. If the scan cannot be
     /// initiated, then `result_watcher` will be closed with an epitaph.
@@ -117,7 +117,10 @@ protocol Central {
     ///   `ScanOptions` documentation.
     /// * error `INTERNAL`: An internal error occurred and a scan could not be
     ///   started.
-    Scan(ScanOptions options, request<ScanResultWatcher> result_watcher) -> ();
+    Scan(resource struct {
+        options ScanOptions;
+        result_watcher server_end:ScanResultWatcher;
+    }) -> ();
 
     /// Connect to the peer with the given identifier.
     ///
@@ -137,24 +140,36 @@ protocol Central {
     /// + request `options` Options used to configure the connection.
     /// + request `handle` Handle that remains valid for the duration of this
     ///   connection.
-    [Transitional = "Not yet implemented"]
-    Connect(bt.PeerId id, ConnectionOptions options, request<Connection> handle);
+    @transitional("Not yet implemented")
+    Connect(resource struct {
+        id bt.PeerId;
+        options ConnectionOptions;
+        handle server_end:Connection;
+    });
 
     /// Returns the list of peripherals that are known to the system from previous scan, connection,
     /// and/or bonding procedures. The results can be filtered based on service UUIDs that are known to
     /// be present on the peripheral.
     ///
     /// This method only returns peripherals (i.e. connectable devices).
-    [Deprecated]
-    GetPeripherals(vector<bt.UuidString>:MAX? service_uuids) -> (vector<RemoteDevice>:MAX peripherals);
+    @deprecated
+    GetPeripherals(struct {
+        service_uuids vector<bt.UuidString>:<MAX, optional>;
+    }) -> (struct {
+        peripherals vector<RemoteDevice>:MAX;
+    });
 
     /// **This method is not implemented by the Fuchsia core stack- TODO(fxbug.dev/1424)**
     ///
     /// Returns information about a single peripheral that is known to the system from previous scan,
     /// connection, and/or bonding procedures based on its unique identifier. Returns null if
     /// `identifier` is not recognized.
-    [Deprecated]
-    GetPeripheral(bt.PeerIdString identifier) -> (RemoteDevice? peripheral);
+    @deprecated
+    GetPeripheral(struct {
+        identifier bt.PeerIdString;
+    }) -> (struct {
+        peripheral box<RemoteDevice>;
+    });
 
     /// Initiates a scan session for nearby peripherals and broadcasters. Discovered devices will be
     /// reported via CentralDelegate.OnDeviceDiscovered(). If a scan session is already in progress,
@@ -164,11 +179,15 @@ protocol Central {
     /// will be notified for all discoverable devices that are found. This is not recommended; clients
     /// should generally filter results by at least one of `filter.service_uuids`,
     /// `filter.service_data`, and/or `filter.manufacturer_identifier`.
-    [Deprecated = "Use Scan instead"]
-    StartScan(ScanFilter? filter) -> (fuchsia.bluetooth.Status status);
+    @deprecated("Use Scan instead")
+    StartScan(struct {
+        filter box<ScanFilter>;
+    }) -> (struct {
+        status fuchsia.bluetooth.Status;
+    });
 
     /// Terminate a previously started scan session.
-    [Deprecated]
+    @deprecated
     StopScan();
 
     /// Creates a connection to the peripheral device with the given identifier.
@@ -177,27 +196,41 @@ protocol Central {
     /// On success, `gatt_client` will be bound and can be used for GATT client
     /// role procedures. On failure, `gatt_client` will be closed and `status` will
     /// indicate an error.
-    [Deprecated = "Use Connect instead"]
-    ConnectPeripheral(bt.PeerIdString identifier, ConnectionOptions options,
-                      request<fuchsia.bluetooth.gatt.Client> gatt_client)
-        -> (fuchsia.bluetooth.Status status);
+    @deprecated("Use Connect instead")
+    ConnectPeripheral(resource struct {
+        identifier bt.PeerIdString;
+        options ConnectionOptions;
+        gatt_client server_end:fuchsia.bluetooth.gatt.Client;
+    }) -> (struct {
+        status fuchsia.bluetooth.Status;
+    });
 
     /// Disconnects this Central's connection to the peripheral with the given identifier.
-    [Deprecated]
-    DisconnectPeripheral(bt.PeerIdString identifier) -> (fuchsia.bluetooth.Status status);
+    @deprecated
+    DisconnectPeripheral(struct {
+        identifier bt.PeerIdString;
+    }) -> (struct {
+        status fuchsia.bluetooth.Status;
+    });
 
     /// Called when the scan state changes, e.g. when a scan session terminates due to a call to
     /// Central.StopScan() or another unexpected condition.
-    [Deprecated]
-    -> OnScanStateChanged(bool scanning);
+    @deprecated
+    -> OnScanStateChanged(struct {
+        scanning bool;
+    });
 
     /// Called for each peripheral/broadcaster that is discovered during a scan session. `rssi`
     /// contains the received signal strength of the advertising packet that generated this event, if
     /// available.
-    [Deprecated]
-    -> OnDeviceDiscovered(RemoteDevice device);
+    @deprecated
+    -> OnDeviceDiscovered(struct {
+        device RemoteDevice;
+    });
 
     /// Called when this Central's connection to a peripheral with the given identifier is terminated.
-    [Deprecated]
-    -> OnPeripheralDisconnected(bt.PeerIdString identifier);
+    @deprecated
+    -> OnPeripheralDisconnected(struct {
+        identifier bt.PeerIdString;
+    });
 };

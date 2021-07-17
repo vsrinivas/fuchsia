@@ -1,8 +1,6 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.logger;
 
 using zx;
@@ -13,16 +11,16 @@ using fuchsia.diagnostics;
 /// minimum severity level - with any log equal to or
 /// greater than the threshold being included in the
 /// printable logs.
-enum LogLevelFilter : int8 {
-    [Deprecated = "Use NONE instead"]
+type LogLevelFilter = strict enum : int8 {
+    @deprecated("Use NONE instead")
     DEPRECATED_NONE = -1;
-    [Deprecated = "Use INFO instead"]
+    @deprecated("Use INFO instead")
     DEPRECATED_INFO = 0;
-    [Deprecated = "Use WARN instead"]
+    @deprecated("Use WARN instead")
     DEPRECATED_WARN = 1;
-    [Deprecated = "Use ERROR instead"]
+    @deprecated("Use ERROR instead")
     DEPRECATED_ERROR = 2;
-    [Deprecated = "Use FATAL instead"]
+    @deprecated("Use FATAL instead")
     DEPRECATED_FATAL = 3;
     ALL = -0x7F;
     TRACE = 0x10;
@@ -35,143 +33,171 @@ enum LogLevelFilter : int8 {
 };
 
 /// The interval between discrete log severity levels
-const uint8 LOG_SEVERITY_STEP_SIZE = 0x10;
+const LOG_SEVERITY_STEP_SIZE uint8 = 0x10;
 
 /// Maximum available log severity.
-const uint8 LOG_SEVERITY_MAX_STEP = 6;
+const LOG_SEVERITY_MAX_STEP uint8 = 6;
 
 /// The interval between discrete log verbosity levels
-const uint8 LOG_VERBOSITY_STEP_SIZE = 0x1;
+const LOG_VERBOSITY_STEP_SIZE uint8 = 0x1;
 
 /// Default log level used to initialize loggers.
-const uint8 LOG_LEVEL_DEFAULT = 0x30; // LogLevel.INFO
+const LOG_LEVEL_DEFAULT uint8 = 0x30; // LogLevel.INFO
 
 /// Max number of tags that can be passed to filter by listener.
-const uint8 MAX_TAGS = 16;
+const MAX_TAGS uint8 = 16;
 
 /// Max tag length that can be passed to filter by listener.
-const uint8 MAX_TAG_LEN_BYTES = 63;
+const MAX_TAG_LEN_BYTES uint8 = 63;
 
 /// A placeholder tag which indicates to a `LogSink` that the tag should be replaced with
 /// the actual name of the logging component. If that name is unavailable, `LogSink`
 /// implementations should replace this value with `UNKNOWN`.
-const string COMPONENT_NAME_PLACEHOLDER_TAG = "COMPONENT_NAME";
+const COMPONENT_NAME_PLACEHOLDER_TAG string = "COMPONENT_NAME";
 
-struct LogFilterOptions {
-    bool filter_by_pid;
-    uint64 pid;
+type LogFilterOptions = struct {
+    filter_by_pid bool;
+    pid uint64;
 
-    bool filter_by_tid;
-    uint64 tid;
+    filter_by_tid bool;
+    tid uint64;
 
     /// If more than zero, logs would be filtered based on verbosity and
     /// `min_severity` would be ignored.
-    uint8 verbosity;
+    verbosity uint8;
 
     /// Severity used as threshold to determine logging level.
-    LogLevelFilter min_severity;
+    min_severity LogLevelFilter;
 
     /// If non-empty, return all messages which contain at least one specified
     /// tag.  If empty, messages will not be filtered by tag.
     /// Passed tags should not be more than `MAX_TAG_LEN_BYTES` bytes in length
     /// and max tags can be `MAX_TAGS`.
     /// Listener would be discarded if the limit is not followed.
-    vector<string:MAX_TAG_LEN_BYTES>:MAX_TAGS tags;
+    tags vector<string:MAX_TAG_LEN_BYTES>:MAX_TAGS;
 };
 
 /// Max number of LogInterestSelectors that can be specified via a listener.
-const uint8 MAX_LOG_SELECTORS = 5;
+const MAX_LOG_SELECTORS uint8 = 5;
 
 /// Conveyance to couple a specified Interest with its designated target,
 /// specified via a ComponentSelector.
-struct LogInterestSelector {
-    fuchsia.diagnostics.ComponentSelector selector;
-    fuchsia.diagnostics.Interest interest;
+type LogInterestSelector = struct {
+    selector fuchsia.diagnostics.ComponentSelector;
+    interest fuchsia.diagnostics.Interest;
 };
 
 /// Max tags that will be attached to a LogMessage.
-const uint8 MAX_TAGS_PER_LOG_MESSAGE = 5;
+const MAX_TAGS_PER_LOG_MESSAGE uint8 = 5;
 
 /// Max byte size for message payload.
-const uint32 MAX_DATAGRAM_LEN_BYTES = 32768;
+const MAX_DATAGRAM_LEN_BYTES uint32 = 32768;
 
-struct LogMessage {
-    uint64 pid;
-    uint64 tid;
+type LogMessage = struct {
+    pid uint64;
+    tid uint64;
     /// https://fuchsia.dev/fuchsia-src/reference/syscalls/clock_get_monotonic.md
-    zx.time time;
-    int32 severity;
+    time zx.time;
+    severity int32;
 
     /// See //zircon/system/ulib/syslog/include/lib/syslog/wire_format.h. As messages
     /// can be served out of order, this should only be logged if more than last
     /// count.
-    uint32 dropped_logs;
-    vector<string:MAX_TAG_LEN_BYTES>:MAX_TAGS_PER_LOG_MESSAGE tags;
-    string:MAX_DATAGRAM_LEN_BYTES msg;
+    dropped_logs uint32;
+    tags vector<string:MAX_TAG_LEN_BYTES>:MAX_TAGS_PER_LOG_MESSAGE;
+    msg string:MAX_DATAGRAM_LEN_BYTES;
 };
 
 /// Interface for LogListenerSafe to register to listen to logs.
-[Discoverable]
+@discoverable
 protocol Log {
-    [Deprecated]
-    Listen(LogListener log_listener, LogFilterOptions? options);
+    @deprecated
+    Listen(resource struct {
+        log_listener client_end:LogListener;
+        options box<LogFilterOptions>;
+    });
 
-    [Deprecated]
-    DumpLogs(LogListener log_listener, LogFilterOptions? options);
+    @deprecated
+    DumpLogs(resource struct {
+        log_listener client_end:LogListener;
+        options box<LogFilterOptions>;
+    });
 
     /// Dumps all cached logs by calling LogMany() in batches followed by Log() for each new log
     /// message.
     /// A null `options` indicates no filtering is requested.
-    [Transitional]
-    ListenSafe(LogListenerSafe log_listener, LogFilterOptions? options);
+    @transitional
+    ListenSafe(resource struct {
+        log_listener client_end:LogListenerSafe;
+        options box<LogFilterOptions>;
+    });
 
     /// Dumps all cached logs by calling LogMany() followed by Done() on `log_listener`.
     /// A null `options` indicates no filtering is requested.
-    [Transitional]
-    DumpLogsSafe(LogListenerSafe log_listener, LogFilterOptions? options);
+    @transitional
+    DumpLogsSafe(resource struct {
+        log_listener client_end:LogListenerSafe;
+        options box<LogFilterOptions>;
+    });
 
     /// Listens to new log entries by calling Log() on `log_listener`.
     /// A null `options` indicates no filtering is requested.
-    [Transitional]
-    ListenSafeWithSelectors(LogListenerSafe log_listener, LogFilterOptions? options, vector<LogInterestSelector>:MAX_LOG_SELECTORS selectors);
+    @transitional
+    ListenSafeWithSelectors(resource struct {
+        log_listener client_end:LogListenerSafe;
+        options box<LogFilterOptions>;
+        selectors vector<LogInterestSelector>:MAX_LOG_SELECTORS;
+    });
 };
 
 /// Drains a program's logs.
-[Discoverable]
+@discoverable
 protocol LogSink {
     /// Send this socket to be drained.
     ///
     /// See //zircon/system/ulib/syslog/include/lib/syslog/wire_format.h for what is expected to be
     /// received over the socket.
-    Connect(zx.handle:SOCKET socket);
+    Connect(resource struct {
+        socket zx.handle:SOCKET;
+    });
 
     /// Send this socket to be drained, using the structured logs format.
     ///
     /// See //docs/reference/diagnostics/logs/encoding.md for what is expected to be recieved over
     /// the socket.
-    [Transitional]
-    ConnectStructured(zx.handle:SOCKET socket);
+    @transitional
+    ConnectStructured(resource struct {
+        socket zx.handle:SOCKET;
+    });
 
     /// LogSink implementers emit this event whenever the scope of their
     /// interest changes. Clients are expected to emit messages based on
     /// the registered Interest. In the event that an empty interest is
     /// conveyed, clients should emit messages based on their default
     /// (compile time) configuration.
-    -> OnRegisterInterest(fuchsia.diagnostics.Interest interest);
+    -> OnRegisterInterest(struct {
+        interest fuchsia.diagnostics.Interest;
+    });
 
     /// Use OnRegisterInterest instead.
-    [Deprecated]
-    -> OnInterestChanged(fuchsia.diagnostics.Interest interest);
+    @deprecated
+    -> OnInterestChanged(struct {
+        interest fuchsia.diagnostics.Interest;
+    });
 };
 
 /// Max log bytes per call to a listener.
-const uint64 MAX_LOG_MANY_SIZE_BYTES = 16384;
+const MAX_LOG_MANY_SIZE_BYTES uint64 = 16384;
 
 /// Included temporarily for backwards compatiblity. Use `LogListenerSafe`.
-[Deprecated]
+@deprecated
 protocol LogListener {
-    Log(LogMessage log);
-    LogMany(vector<LogMessage>:MAX log);
+    Log(struct {
+        log LogMessage;
+    });
+    LogMany(struct {
+        log vector<LogMessage>:MAX;
+    });
     Done();
 };
 
@@ -181,7 +207,9 @@ protocol LogListenerSafe {
     ///
     /// The return value is used for flow control, and implementers should acknowledge receipt of
     /// each message in order to continue receiving future messages.
-    Log(LogMessage log) -> ();
+    Log(struct {
+        log LogMessage;
+    }) -> ();
 
     /// Called when serving cached logs.
     ///
@@ -189,7 +217,9 @@ protocol LogListenerSafe {
     ///
     /// The return value is used for flow control, and implementers should acknowledge receipt of
     /// each batch in order to continue receiving future messages.
-    LogMany(vector<LogMessage>:MAX log) -> ();
+    LogMany(struct {
+        log vector<LogMessage>:MAX;
+    }) -> ();
 
     /// Called when this listener was passed to `DumpLogsSafe()` and all cached logs have been sent.
     Done();

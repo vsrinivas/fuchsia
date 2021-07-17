@@ -1,14 +1,12 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.bluetooth.gatt2;
 
 using fuchsia.bluetooth as bt;
 
 /// Errors that are returned by bluetooth.gatt2 methods.
-enum Error {
+type Error = strict enum {
     /// A general error occurred that can not be classified as one of the more
     /// specific errors.
     FAILURE = 1;
@@ -46,36 +44,36 @@ enum Error {
 };
 
 // A Handle uniquely identifies a service, characteristic, or descriptor.
-struct Handle {
-    uint64 value;
+type Handle = struct {
+    value uint64;
 };
 
 /// Represents encryption, authentication, and authorization permissions that can
 /// be assigned to a specific access permission.
-table SecurityRequirements {
+type SecurityRequirements = table {
     /// If true, the physical link must be encrypted to access this attribute.
-    1: bool encryption_required;
+    1: encryption_required bool;
 
     /// If true, the physical link must be authenticated to access this
     /// attribute.
-    2: bool authentication_required;
+    2: authentication_required bool;
 
     /// If true, the client needs to be authorized before accessing this
     /// attribute.
-    3: bool authorization_required;
+    3: authorization_required bool;
 };
 
 /// Specifies the access permissions for a specific attribute value.
-table AttributePermissions {
+type AttributePermissions = table {
     /// Specifies whether or not an attribute has the read permission. If null,
     /// then the attribute value cannot be read. Otherwise, it can be read only if
     /// the permissions specified in the SecurityRequirements table are satisfied.
-    1: SecurityRequirements read;
+    1: read SecurityRequirements;
 
     /// Specifies whether or not an attribute has the write permission. If null,
     /// then the attribute value cannot be written. Otherwise, it be written only
     /// if the permissions specified in the SecurityRequirements table are satisfied.
-    2: SecurityRequirements write;
+    2: write SecurityRequirements;
 
     /// Specifies the security requirements for a client to subscribe to
     /// notifications or indications on a characteristic. A characteristic's
@@ -85,12 +83,12 @@ table AttributePermissions {
     /// must be left as null.
     ///
     /// This field is ignored for Descriptors.
-    3: SecurityRequirements update;
+    3: update SecurityRequirements;
 };
 
 /// Possible values for the characteristic properties bitfield. These specify the
 /// GATT procedures that are allowed for a particular characteristic.
-bits CharacteristicPropertyBits : uint16 {
+type CharacteristicPropertyBits = strict bits : uint16 {
     BROADCAST = 0x1;
     READ = 0x2;
     WRITE_WITHOUT_RESPONSE = 0x4;
@@ -103,92 +101,92 @@ bits CharacteristicPropertyBits : uint16 {
 };
 
 /// Represents a local or remote GATT service.
-table ServiceInfo {
+type ServiceInfo = table {
     /// Uniquely identifies this GATT service. Always present if this represents
     /// a remote service. Ignored if present for local services.
-    1: Handle handle;
+    1: handle Handle;
 
     /// Indicates whether this is a primary or secondary service.
     /// Always present for remote services. Optional for local services
     /// Default: true
-    2: bool primary;
+    2: primary bool;
 
     /// The UUID that identifies the type of this service.
     /// Always present for remote services. Required for local services.
-    3: bt.Uuid type;
+    3: type bt.Uuid;
 
     /// The characteristics of this service.
     /// Always present for remote services. Required for local services.
-    4: vector<Characteristic>:MAX_CHARACTERISTIC_COUNT characteristics;
+    4: characteristics vector<Characteristic>:MAX_CHARACTERISTIC_COUNT;
 
     /// Handles of other services that are included by this service.
     /// Only present for remote services if non-empty. Optional for local
     /// services.
-    5: vector<Handle>:MAX_SERVICE_COUNT includes;
+    5: includes vector<Handle>:MAX_SERVICE_COUNT;
 };
 
 /// Represents a local or remote GATT characteristic.
-table Characteristic {
+type Characteristic = table {
     /// Uniquely identifies this characteristic within a service.
     /// For local characteristics, the specified handle must be unique across
     /// all characteristic and descriptor handles in this service.
     ///
     /// Always present. For local characteristics, this value is mandatory.
-    1: Handle handle;
+    1: handle Handle;
 
     /// The UUID that identifies the type of this characteristic.
     /// Always present. Mandatory for local characteristics.
-    2: bt.Uuid type;
+    2: type bt.Uuid;
 
     /// The characteristic properties bitfield. See `CharacteristicPropertyBits`
     /// above for possible values.
     /// Always present. Mandatory for local characteristics.
-    3: uint32 properties;
+    3: properties uint32;
 
     /// The attribute permissions of this characteristic. For remote
     /// characteristics, this value will be null until the permissions are
     /// discovered via read and write requests.
     ///
     /// For local characteristics, this value is mandatory.
-    4: AttributePermissions permissions;
+    4: permissions AttributePermissions;
 
     /// The descriptors of this characteristic.
     /// Present only if non-empty. Optional for local characteristics.
-    5: vector<Descriptor>:MAX_DESCRIPTOR_COUNT descriptors;
+    5: descriptors vector<Descriptor>:MAX_DESCRIPTOR_COUNT;
 };
 
 /// Represents a local or remote GATT characteristic descriptor.
-table Descriptor {
+type Descriptor = table {
     /// Uniquely identifies this descriptor within a service.
     /// For local descriptors, the specified handle must be unique
     /// across all characteristic and descriptor handles in this service.
     ///
     /// Always present. For local descriptors, this value is mandatory.
-    1: Handle handle;
+    1: handle Handle;
 
     /// The UUID that identifies the type of this descriptor.
     /// Always present. For local descriptors, this value is mandatory.
-    2: bt.Uuid type;
+    2: type bt.Uuid;
 
     /// The attribute permissions of this descriptor. For remote
     /// descriptors, this value will be null until the permissions are
     /// discovered via read and write requests.
     ///
     /// For local descriptors, this value is mandatory.
-    3: AttributePermissions permissions;
+    3: permissions AttributePermissions;
 };
 
 /// Represents the supported options to read a characteristic or descriptor
 /// value from a server.
-table ReadOptions {
+type ReadOptions = table {
     /// The byte to start the read at. Must be less than the length of the value.
     /// Optional.
     /// Default: 0
-    1: uint16 offset;
+    1: offset uint16;
     /// The maximum number of bytes to read.
     /// Optional.
     /// Default: `MAX_VALUE_LENGTH`
-    2: uint16 max_bytes;
+    2: max_bytes uint16;
     /// If true, read the complete value of the characteristic/descriptor. This
     /// may require many messages, and therefore cause high latency.
     ///
@@ -200,11 +198,11 @@ table ReadOptions {
     ///
     /// Optional.
     /// Default: true
-    3: bool read_complete_value;
+    3: read_complete_value bool;
 };
 
 /// Represents the supported options to write a characteristic value to a server.
-table WriteOptions {
+type WriteOptions = table {
     /// If true, wait for acknowledgement from the peer before returning.
     ///
     /// If false, delivery will not be confirmed before returning. Writing
@@ -215,9 +213,9 @@ table WriteOptions {
     ///
     /// Optional.
     /// Default: true
-    1: bool with_response;
+    1: with_response bool;
     /// Request a write starting at the byte indicated.
     /// Optional.
     /// Default: 0
-    2: uint16 offset;
+    2: offset uint16;
 };

@@ -1,11 +1,9 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.media.drm;
 
-bits Features : uint32 {
+type Features = strict bits : uint32 {
     /// All key management and crypto operations are performed in a hardware
     /// based trusted execution environment. If not set, a software
     /// implementation is used.
@@ -14,32 +12,32 @@ bits Features : uint32 {
     SECURE_OUTPUT = 0x02;
 };
 
-enum Requirement {
+type Requirement = strict enum {
     NOT_SUPPORTED = 1;
     OPTIONAL = 2;
     REQUIRED = 3;
 };
 
-table KeySystemProperties {
+type KeySystemProperties = table {
     /// Various flags indicating supported features of the [`KeySystem`]. This
     /// field is required.
-    1: Features features;
+    1: features Features;
 
     /// Indicates the data store requirements of the [`KeySystem`].
     ///
     /// See [`KeySystem.ContentDecryptionModule2`] for implications of different
     /// values. This field is required.
-    2: Requirement data_store_requirement;
+    2: data_store_requirement Requirement;
 
     /// Indicates the supported license session types. This field is required
     /// and the list must not be empty.
-    3: vector<LicenseSessionType>:MAX license_session_types;
+    3: license_session_types vector<LicenseSessionType>:MAX;
 
     /// Indicates the supported init data types. This field is required and the
     /// list must not be empty.
-    4: vector<LicenseInitDataType>:MAX init_data_types;
+    4: init_data_types vector<LicenseInitDataType>:MAX;
 
     /// Indicates the supported encryption schemes. This field is required and
     /// the list must not be empty.
-    5: vector<EncryptionScheme>:MAX encryption_schemes;
+    5: encryption_schemes vector<EncryptionScheme>:MAX;
 };

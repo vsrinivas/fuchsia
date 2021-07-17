@@ -1,13 +1,17 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library zx;
 
-[Transport = "Syscall"]
+@transport("Syscall")
 protocol cache {
     /// Flush CPU data and/or instruction caches.
-    [vdsocall]
-    cache_flush(const_voidptr addr, usize size, uint32 options) -> (status status);
+    @vdsocall
+    cache_flush(struct {
+        addr const_voidptr;
+        size usize;
+        options uint32;
+    }) -> (struct {
+        status status;
+    });
 };

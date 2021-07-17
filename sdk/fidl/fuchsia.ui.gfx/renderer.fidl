@@ -1,24 +1,21 @@
 // Copyright 2017 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.ui.gfx;
 
 /// These are all of the types of parameters that can be set to configure a
 /// `Renderer`.
-union RendererParam {
-    1: ShadowTechnique shadow_technique;
+type RendererParam = strict union {
+    1: shadow_technique ShadowTechnique;
 
-    [Deprecated]
-    2: RenderFrequency reserved; // No longer supported.
-
-    3: bool enable_debugging;
+    @deprecated
+    2: reserved RenderFrequency; // No longer supported.
+    3: enable_debugging bool;
 };
 
 /// Represents the shadow algorithm that the `Renderer` should use when lighting
 /// the scene.
-enum ShadowTechnique {
+type ShadowTechnique = strict enum {
     /// No shadows.
     UNSHADOWED = 0;
     /// Default.  Screen-space, depth-buffer based shadows; SSDO-ish.
@@ -31,8 +28,8 @@ enum ShadowTechnique {
     STENCIL_SHADOW_VOLUME = 4;
 };
 
-[Deprecated]
-enum RenderFrequency {
+@deprecated
+type RenderFrequency = strict enum {
     WHEN_REQUESTED = 0;
     CONTINUOUSLY = 1;
 };

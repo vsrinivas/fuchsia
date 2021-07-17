@@ -1,42 +1,44 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.buildinfo;
 
 using zx;
 
-const uint64 MAX_STRING_LENGTH = 100;
+const MAX_STRING_LENGTH uint64 = 100;
 
-table BuildInfo {
+type BuildInfo = table {
     /// A description of the product configuration used at build time, determined
     /// by the value passed as PRODUCT in 'fx set'. See 'fx list-products' for a
     /// list of possible values.
-    1: string:MAX_STRING_LENGTH product_config;
+    1: product_config string:MAX_STRING_LENGTH;
 
     /// A description of the board configuration used at build time, determined by
     /// the value passed as BOARD in 'fx set'.
-    2: string:MAX_STRING_LENGTH board_config;
+    2: board_config string:MAX_STRING_LENGTH;
 
     /// A description of the version of the build. Defaults to the same string as
     /// latest_commit_date.
-    3: string:MAX_STRING_LENGTH version;
+    3: version string:MAX_STRING_LENGTH;
 
     /// The timestamp of the most recent commit to the integration repository
     /// (specifically, the "CommitDate" field) formatted in strict ISO 8601 format in
     /// the UTC timezone. Example: "2019-03-28T15:42:20+00:00"
-    4: string:MAX_STRING_LENGTH latest_commit_date;
+    4: latest_commit_date string:MAX_STRING_LENGTH;
 };
 
 /// Returns build information about a Fuchsia system.
-[Discoverable]
+@discoverable
 protocol Provider {
     /// Returns a table of build information.
-    GetBuildInfo() -> (BuildInfo build_info);
+    GetBuildInfo() -> (struct {
+        build_info BuildInfo;
+    });
 
     /// Returns a vmo containing the jiri snapshot of the most recent
     /// 'jiri update'. Returned as a vmo because snapshots are typically
     /// much longer than the maximum FIDL message size.
-    GetSnapshotInfo() -> (zx.handle:VMO snapshot);
+    GetSnapshotInfo() -> (resource struct {
+        snapshot zx.handle:VMO;
+    });
 };

@@ -1,30 +1,44 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.sysmem;
 
 using zx;
 
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol Sysmem {
     /// Takes the server end of a FIDL connection that'll serve
     /// fuchsia.sysmem.Allocator.  If the connection fails, the channel will
     /// close.
-    Connect(zx.handle:CHANNEL allocator_request) -> (zx.status s);
+    Connect(resource struct {
+        allocator_request zx.handle:CHANNEL;
+    }) -> (struct {
+        s zx.status;
+    });
 
     /// Takes the client end of a FIDL connection that'll serve
     /// fuchsia.sysmem.Heap.
-    RegisterHeap(uint64 heap, zx.handle:CHANNEL heap_connection) -> (zx.status s);
+    RegisterHeap(resource struct {
+        heap uint64;
+        heap_connection zx.handle:CHANNEL;
+    }) -> (struct {
+        s zx.status;
+    });
 
     /// Takes the client end of a FIDL connection that'll serve
     /// fuchsia.sysmem.SecureMem, which is a protocol that's specific to
     /// sysmem<->securemem concerns.
-    RegisterSecureMem(zx.handle:CHANNEL secure_mem_connection) -> (zx.status s);
+    RegisterSecureMem(resource struct {
+        secure_mem_connection zx.handle:CHANNEL;
+    }) -> (struct {
+        s zx.status;
+    });
 
     /// Informs sysmem that the channel previously passed to RegisterSecureMem()
     /// will be closing soon, and that this channel closure should not be
     /// considered an error.
-    UnregisterSecureMem() -> (zx.status s);
+    UnregisterSecureMem() -> (struct {
+        s zx.status;
+    });
 };

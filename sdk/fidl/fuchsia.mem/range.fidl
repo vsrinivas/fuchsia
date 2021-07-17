@@ -1,23 +1,21 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.mem;
 
 using zx;
 
 /// A range of bytes within a VMO.
-resource struct Range {
+type Range = resource struct {
     /// The vmo that contains the bytes.
-    zx.handle:VMO vmo;
+    vmo zx.handle:VMO;
 
     /// The offset of the first byte within the range relative to the start of
     /// the VMO.
     ///
     /// For example, if `offset` is zero, then the first byte in the range is
     /// the first byte in the VMO.
-    uint64 offset;
+    offset uint64;
 
     /// The number of bytes in the range.
     ///
@@ -26,5 +24,5 @@ resource struct Range {
     ///
     /// The sum of the offset and the size must not be greater than the
     /// physical size of the VMO.
-    uint64 size;
+    size uint64;
 };

@@ -1,26 +1,24 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.media;
 
 using fuchsia.sysmem;
 
-const uint32 MAX_KEY_ID_SIZE = 16;
-const uint32 MAX_INIT_VECTOR_SIZE = 16;
-const uint32 MAX_ENCRYPTION_SCHEME_SIZE = 100;
+const MAX_KEY_ID_SIZE uint32 = 16;
+const MAX_INIT_VECTOR_SIZE uint32 = 16;
+const MAX_ENCRYPTION_SCHEME_SIZE uint32 = 100;
 
 /// Value
 ///
 /// Generic "value" for use within generic "Parameter" struct.
-union Value {
-    1: bool bool_value;
-    2: uint64 uint64_value;
-    3: int64 int64_value;
-    4: string string_value;
+type Value = strict union {
+    1: bool_value bool;
+    2: uint64_value uint64;
+    3: int64_value int64;
+    4: string_value string;
     // Prefer using oob_bytes instead.
-    5: bytes bytes_value;
+    5: bytes_value bytes;
 };
 
 /// Parameter
@@ -32,13 +30,13 @@ union Value {
 ///
 // TODO: When possible, describe the very limited scenarios in which it would
 // still be reasonable to use a generic Parameter.
-struct Parameter {
-    // Some indication of the scope of applicability of this Parameter.
-    string scope;
+type Parameter = struct {
+            // Some indication of the scope of applicability of this Parameter.
+    scope string;
     // Specific name of this parameter, without the scope prefix.
-    string name;
+    name string;
     // The particular value of this parameter.
-    Value value;
+    value Value;
 };
 
 /// StreamError
@@ -46,7 +44,7 @@ struct Parameter {
 /// This error code encapsulates various errors that might emanate from a
 /// StreamProcessor server. It can be sent either as an OnStreamFailed event or
 /// as an epitaph for the channel.
-enum StreamError : uint32 {
+type StreamError = strict enum : uint32 {
     // Common errors 0x00
     /// An internal error with an unspecified reason.
     UNKNOWN = 0x00000001;
@@ -81,12 +79,12 @@ enum StreamError : uint32 {
     DECRYPTOR_NO_KEY = 0x03000002;
 };
 
-flexible union AudioCompressedFormat {
-    1: AudioCompressedFormatAac aac;
-    2: AudioCompressedFormatSbc sbc;
+type AudioCompressedFormat = flexible union {
+    1: aac AudioCompressedFormatAac;
+    2: sbc AudioCompressedFormatSbc;
 };
 
-enum AudioBitrateMode {
+type AudioBitrateMode = strict enum {
     // Used mainly when a client is configuring an encoder's output format.  May
     // also be present in an OnOutputConstraints() message from an encoder, but
     // should not be relied upon to be present by any consumer downstream of an
@@ -96,20 +94,18 @@ enum AudioBitrateMode {
     VBR = 2;
 };
 
-struct AudioCompressedFormatAac {
-};
+type AudioCompressedFormatAac = struct {};
 
-struct AudioCompressedFormatSbc {
-};
+type AudioCompressedFormatSbc = struct {};
 
 /// AudioPcmMode
 ///
 // TODO(dustingreen): Keep or discard any non-linear formats for purposes of the
 // Codec interface?
-enum AudioPcmMode {
-    // 16 bit signed int linear or 32 bit float linear, for now
-    // 1-N channels ok, with "A.B" channels designated as A+B channel_count -
-    // the channel map is separately specified.  So 5.1 becomes channel_count 6.
+type AudioPcmMode = strict enum {
+            // 16 bit signed int linear or 32 bit float linear, for now
+            // 1-N channels ok, with "A.B" channels designated as A+B channel_count -
+            // the channel map is separately specified.  So 5.1 becomes channel_count 6.
     LINEAR = 0;
     // G.711 8 bit format-defined waveform semantics
     // 1 channel
@@ -130,7 +126,7 @@ enum AudioPcmMode {
 // LR/RR - probably LR/RR being first would make more sense re. how channels
 // get added incrementally, but changing the order would no longer match
 // Android's ordering.
-enum AudioChannelId {
+type AudioChannelId = strict enum {
     SKIP = 0; // unused channel
     LF = 1; // left front
     RF = 2; // right front
@@ -158,13 +154,13 @@ enum AudioChannelId {
 ///
 // TODO(dustingreen): Discuss with mpuryear@ re. where definitions for these
 // details go and make sure the common details can specify at least this much.
-struct PcmFormat {
-    // Implicit details:
-    //   * For bits_per_sample > 8, host-endian is implied.
-    //   * At least for now, for channel_count >= 2, interleaved layout is
-    //     implied.
+type PcmFormat = struct {
+            // Implicit details:
+            //   * For bits_per_sample > 8, host-endian is implied.
+            //   * At least for now, for channel_count >= 2, interleaved layout is
+            //     implied.
 
-    AudioPcmMode pcm_mode;
+    pcm_mode AudioPcmMode;
 
     // bits_per_sample
     //
@@ -172,13 +168,13 @@ struct PcmFormat {
     //
     // For example, CD quality is 16.  See PcmMode comments, as the mode
     // constrains this value.
-    uint32 bits_per_sample;
+    bits_per_sample uint32;
 
     // frames_per_second
     //
     // A "frame" is one datapoint (one "sample") for each channel.  Each channel
     // is sampled this many times per second.  For example, CD quality is 44100.
-    uint32 frames_per_second;
+    frames_per_second uint32;
 
     // channel_map
     //
@@ -189,26 +185,26 @@ struct PcmFormat {
     //
     // If a channel has no suitable AudioChannelId, an ad-hoc value can be used
     // in a range starting from AudioChannel_ExtendedChannelIdBase.
-    vector<AudioChannelId>:16 channel_map;
+    channel_map vector<AudioChannelId>:16;
 
-    // TODO(dustingreen): Add unsigned 8 bit, float 32 bit, maybe others. FWIW,
-    // AOSP appears to support signed 16 bit, unsigned 8 bit, and float 32 bit
-    // under "Pcm", AFAICT based on OMX_NUMERICALDATATYPE and ACodec.cpp code.
+// TODO(dustingreen): Add unsigned 8 bit, float 32 bit, maybe others. FWIW,
+// AOSP appears to support signed 16 bit, unsigned 8 bit, and float 32 bit
+// under "Pcm", AFAICT based on OMX_NUMERICALDATATYPE and ACodec.cpp code.
 };
 
 /// AudioUncompressedFormat
 ///
 // Uncompressed audio format details.
-union AudioUncompressedFormat {
-    1: PcmFormat pcm;
+type AudioUncompressedFormat = strict union {
+    1: pcm PcmFormat;
 };
 
 /// AudioFormat
 ///
 // Audio format details.
-union AudioFormat {
-    1: AudioCompressedFormat compressed;
-    2: AudioUncompressedFormat uncompressed;
+type AudioFormat = strict union {
+    1: compressed AudioCompressedFormat;
+    2: uncompressed AudioUncompressedFormat;
 };
 
 /// VideoCompressedFormat
@@ -218,16 +214,16 @@ union AudioFormat {
 // If a compressed video format has no fields here, it's because it's a good
 // format and is already self-describing given the mime_type + format-defined
 // oob_bytes as appropriate + in-band data.
-union VideoCompressedFormat {
-    // TODO(dustingreen): Any compressed video formats that aren't sufficiently
-    // self-describing to select and create a Codec instance to decode it?
+type VideoCompressedFormat = strict union {
+            // TODO(dustingreen): Any compressed video formats that aren't sufficiently
+            // self-describing to select and create a Codec instance to decode it?
 
-    // TODO(dustingreen): temp field to make the compiler happy until we have at
-    // least one real field.
-    1: uint32 temp_field_todo_remove;
+            // TODO(dustingreen): temp field to make the compiler happy until we have at
+            // least one real field.
+    1: temp_field_todo_remove uint32;
 };
 
-enum VideoColorSpace {
+type VideoColorSpace = strict enum {
     // TODO(dustingreen): add to this list
     INVALID = 0;
 };
@@ -239,10 +235,10 @@ enum VideoColorSpace {
 // TODO(dustingreen): Integrate with a system-wide structure for this purpose.
 // In progress - see image_format field below which will take the place of this
 // struct/table.
-struct VideoUncompressedFormat {
-    // TODO(dustingreen): This will replace VideoUncompressedFormat (after
-    // struct to table change merges).
-    fuchsia.sysmem.ImageFormat_2 image_format;
+type VideoUncompressedFormat = struct {
+            // TODO(dustingreen): This will replace VideoUncompressedFormat (after
+            // struct to table change merges).
+    image_format fuchsia.sysmem.ImageFormat_2;
 
     // fourcc
     //
@@ -263,44 +259,44 @@ struct VideoUncompressedFormat {
     // transmission format stores these bytes, a human-readable fourcc should
     // have its human-read first ascii character value in the low order byte of
     // this field.
-    uint32 fourcc;
+    fourcc uint32;
 
     // For formats with different planes having different resolution, this is
     // the resolution of the highest-resolution plane(s).  Else it's the
     // resolution of all the planes.
-    uint32 primary_width_pixels;
-    uint32 primary_height_pixels;
+    primary_width_pixels uint32;
+    primary_height_pixels uint32;
 
     // For formats where the secondary planes are the same resolution, these
     // fields will be the same as primary_width_pixels and
     // primary_height_pixels.  For formats with smaller secondary resolutions,
     // these indicate that resolution.
-    uint32 secondary_width_pixels;
-    uint32 secondary_height_pixels;
+    secondary_width_pixels uint32;
+    secondary_height_pixels uint32;
 
     // Planar means the various planes are separately stored in their own chunks
     // of memory.
-    bool planar;
+    planar bool;
 
     // If a format is swizzled, the swizzling parameters are not directly here.
-    bool swizzled;
+    swizzled bool;
 
-    uint32 primary_line_stride_bytes;
+    primary_line_stride_bytes uint32;
     // Formats with the same stride for all planes will have this field equal to
     // primary_line_stride_bytes.
-    uint32 secondary_line_stride_bytes;
+    secondary_line_stride_bytes uint32;
 
     // R or Y
-    uint32 primary_start_offset;
+    primary_start_offset uint32;
     // G or U
-    uint32 secondary_start_offset;
+    secondary_start_offset uint32;
     // B or V
-    uint32 tertiary_start_offset;
+    tertiary_start_offset uint32;
 
-    uint32 primary_pixel_stride;
+    primary_pixel_stride uint32;
     // For formats with the same pixel stride for all planes, this field will be
     // equal to primary_pixel_stride.
-    uint32 secondary_pixel_stride;
+    secondary_pixel_stride uint32;
 
     // These override the primary_width_pixels and primary_height_pixels for
     // purposes of display (but not for purposes of determining the pixel layout
@@ -308,9 +304,9 @@ struct VideoUncompressedFormat {
     // the corresponding coded dimension.
     //
     // This value must be <= primary_width_pixels.
-    uint32 primary_display_width_pixels;
+    primary_display_width_pixels uint32;
     // This value must be <= primary_height_pixels.
-    uint32 primary_display_height_pixels;
+    primary_display_height_pixels uint32;
 
     // The pixel_aspect_ratio_width : pixel_aspect_ratio_height is the pixel
     // aspect ratio (AKA sample aspect ratio aka SAR) for the luma (AKA Y)
@@ -327,9 +323,9 @@ struct VideoUncompressedFormat {
     // authoritative. In this case (or in any case really) the receiver of this
     // message may have other OOB means to determine the actual
     // pixel_aspect_ratio.
-    bool has_pixel_aspect_ratio = false;
-    uint32 pixel_aspect_ratio_width = 1;
-    uint32 pixel_aspect_ratio_height = 1;
+    has_pixel_aspect_ratio bool = false;
+    pixel_aspect_ratio_width uint32 = 1;
+    pixel_aspect_ratio_height uint32 = 1;
 };
 
 /// VideoFormat
@@ -337,9 +333,9 @@ struct VideoUncompressedFormat {
 /// Video (compress or uncompressed) format details.  In this context,
 /// "uncompressed" can include block-based image compression formats that still
 /// permit fairly fast random access to image data.
-union VideoFormat {
-    1: VideoCompressedFormat compressed;
-    2: VideoUncompressedFormat uncompressed;
+type VideoFormat = strict union {
+    1: compressed VideoCompressedFormat;
+    2: uncompressed VideoUncompressedFormat;
 };
 
 // Encryption schemes as defined by ISO 23001-7: Common encryption in ISO base
@@ -347,11 +343,11 @@ union VideoFormat {
 // to not limit the encryption schemes that an implementation supports to the
 // constants that are defined here.
 alias EncryptionScheme = string:MAX_ENCRYPTION_SCHEME_SIZE;
-const string ENCRYPTION_SCHEME_UNENCRYPTED = "unencrypted";
-const string ENCRYPTION_SCHEME_CENC = "cenc";
-const string ENCRYPTION_SCHEME_CBC1 = "cbc1";
-const string ENCRYPTION_SCHEME_CENS = "cens";
-const string ENCRYPTION_SCHEME_CBCS = "cbcs";
+const ENCRYPTION_SCHEME_UNENCRYPTED string = "unencrypted";
+const ENCRYPTION_SCHEME_CENC string = "cenc";
+const ENCRYPTION_SCHEME_CBC1 string = "cbc1";
+const ENCRYPTION_SCHEME_CENS string = "cens";
+const ENCRYPTION_SCHEME_CBCS string = "cbcs";
 
 alias KeyId = bytes:MAX_KEY_ID_SIZE;
 alias InitVector = bytes:MAX_INIT_VECTOR_SIZE;
@@ -361,9 +357,9 @@ alias InitVector = bytes:MAX_INIT_VECTOR_SIZE;
 /// A subsample is a byte range within a sample consisting of a clear byte range
 /// followed by an encrypted byte range. This structure specifies the size of
 /// each range in the subsample.
-struct SubsampleEntry {
-    uint32 clear_bytes;
-    uint32 encrypted_bytes;
+type SubsampleEntry = struct {
+    clear_bytes uint32;
+    encrypted_bytes uint32;
 };
 
 /// EncryptionPattern
@@ -372,9 +368,9 @@ struct SubsampleEntry {
 /// over the protected range of a subsample (the encrypted_bytes of a
 /// `SubsampleEntry`). This structure specifies the number of encrypted data
 /// blocks followed by the number of clear data blocks.
-struct EncryptionPattern {
-    uint32 clear_blocks;
-    uint32 encrypted_blocks;
+type EncryptionPattern = struct {
+    clear_blocks uint32;
+    encrypted_blocks uint32;
 };
 
 /// EncryptedFormat
@@ -383,7 +379,7 @@ struct EncryptionPattern {
 /// a sparsely populated table to specify parameters necessary for decryption
 /// other than the data stream. It is only necessary to update fields if they
 /// changed, but not an error if the same value is repeated.
-table EncryptedFormat {
+type EncryptedFormat = table {
     1: reserved;
     2: reserved;
     7: reserved;
@@ -397,7 +393,7 @@ table EncryptedFormat {
     ///    only be set to `fuchsia.media.ENCRYPTION_SCHEME_UNENCRYPTED` or that
     ///    same initial encrypted scheme. The scheme may be set to
     ///    `fuchsia.media.ENCRYPTION_SCHEME_UNENCRYPTED` at any point.
-    6: string scheme;
+    6: scheme string;
 
     /// `key_id` identifies the key that should be used for decrypting
     /// subsequent data.
@@ -405,7 +401,7 @@ table EncryptedFormat {
     ///  - It is required to be set prior to delivery of input packets to a
     ///    decryptor.
     ///  - This may be changed multiple times during a data stream.
-    8: KeyId key_id;
+    8: key_id KeyId;
 
     /// `init_vector` is used in combination with a key and a block of content
     /// to create the first cipher block in a chain and derive subsequent cipher
@@ -414,14 +410,14 @@ table EncryptedFormat {
     ///  - It is required to be set prior to the delivery of input packets to a
     ///    decryptor.
     ///  - This may be changed multiple times during a data stream.
-    3: InitVector init_vector;
+    3: init_vector InitVector;
 
     /// `subsamples` is used to identify the clear and encrypted portions of a
     /// subsample.
     /// Usage:
     ///  - For whole sample encryption, this parameter should not be sent.
     ///  - This may be changed multiple times during a data stream.
-    4: vector<SubsampleEntry> subsamples;
+    4: subsamples vector<SubsampleEntry>;
 
     /// `pattern` is used to identify the clear and encrypted blocks for pattern
     /// based encryption.
@@ -430,7 +426,7 @@ table EncryptedFormat {
     /// - If required, it must be set prior to the delivery of input packets to
     ///   a decryptor.
     /// - This may be changed multiple times during a data stream.
-    5: EncryptionPattern pattern;
+    5: pattern EncryptionPattern;
 };
 
 /// DecryptedFormat
@@ -438,49 +434,49 @@ table EncryptedFormat {
 /// This describes the format of the decrypted content. It is required to be
 /// sent by the StreamProcessor server prior to the delivery of output packets.
 /// Currently, there is no additional format details for decrypted output.
-table DecryptedFormat {
+type DecryptedFormat = table {
     // TODO(fxbug.dev/8031): Empty tables cause dart analysis error. Remove this
     // unused field once the issue is resolved.
-    1: bool ignore_this_field;
+    1: ignore_this_field bool;
 };
 
 /// CryptoFormat
 ///
 /// Crypto (encrypted or decrypted) format details.
-flexible union CryptoFormat {
-    1: EncryptedFormat encrypted;
-    2: DecryptedFormat decrypted;
+type CryptoFormat = flexible union {
+    1: encrypted EncryptedFormat;
+    2: decrypted DecryptedFormat;
 };
 
 /// DomainFormat
 ///
 // Domain-specific format details (audio or video, compressed or uncompressed).
-union DomainFormat {
-    1: AudioFormat audio;
-    2: VideoFormat video;
-    3: CryptoFormat crypto;
+type DomainFormat = strict union {
+    1: audio AudioFormat;
+    2: video VideoFormat;
+    3: crypto CryptoFormat;
 };
 
-const uint64 kMaxOobBytesSize = 8192;
+const kMaxOobBytesSize uint64 = 8192;
 
-enum SbcSubBands {
+type SbcSubBands = strict enum {
     SUB_BANDS_4 = 4;
     SUB_BANDS_8 = 8;
 };
 
-enum SbcBlockCount {
+type SbcBlockCount = strict enum {
     BLOCK_COUNT_4 = 4;
     BLOCK_COUNT_8 = 8;
     BLOCK_COUNT_12 = 12;
     BLOCK_COUNT_16 = 16;
 };
 
-enum SbcAllocation {
+type SbcAllocation = strict enum {
     ALLOC_LOUDNESS = 0;
     ALLOC_SNR = 1;
 };
 
-enum SbcChannelMode {
+type SbcChannelMode = strict enum {
     MONO = 0;
     DUAL = 1;
     STEREO = 2;
@@ -494,50 +490,48 @@ enum SbcChannelMode {
 /// `sub_bands * block_count` PCM frames. This encoder will accept PCM data on
 /// arbitrary frame boundaries, but the output flushed when EOS is queued may be
 /// zero-padded to make a full batch for encoding.
-struct SbcEncoderSettings {
-    SbcSubBands sub_bands = SbcSubBands.SUB_BANDS_8;
-    SbcAllocation allocation = SbcAllocation.ALLOC_LOUDNESS;
-    SbcBlockCount block_count = SbcBlockCount.BLOCK_COUNT_4;
-    SbcChannelMode channel_mode;
+type SbcEncoderSettings = struct {
+    sub_bands SbcSubBands = SbcSubBands.SUB_BANDS_8;
+    allocation SbcAllocation = SbcAllocation.ALLOC_LOUDNESS;
+    block_count SbcBlockCount = SbcBlockCount.BLOCK_COUNT_4;
+    channel_mode SbcChannelMode;
     /// SBC bit pool value.
-    uint64 bit_pool;
+    bit_pool uint64;
 };
 
 /// Raw AAC access units.
-struct AacTransportRaw {
-};
+type AacTransportRaw = struct {};
 
 /// AAC inside LATM
-struct AacTransportLatm {
+type AacTransportLatm = struct {
     /// Whether MuxConfiguration stream element is present
-    bool mux_config_present;
+    mux_config_present bool;
 };
 
 /// AAC inside ADTS
-struct AacTransportAdts {
+type AacTransportAdts = struct {};
+
+type AacTransport = flexible union {
+    1: raw AacTransportRaw;
+    2: latm AacTransportLatm;
+    3: adts AacTransportAdts;
 };
 
-flexible union AacTransport {
-    1: AacTransportRaw raw;
-    2: AacTransportLatm latm;
-    3: AacTransportAdts adts;
-};
-
-enum AacChannelMode {
+type AacChannelMode = strict enum {
     MONO = 0;
     STEREO = 2;
 };
 
-struct AacConstantBitRate {
+type AacConstantBitRate = struct {
     /// Bits per second
-    uint32 bit_rate;
+    bit_rate uint32;
 };
 
 /// Variable bit rate modes. The actual resulting bitrate
 /// varies based on input signal and other encoding settings.
 ///
 /// See https://wiki.hydrogenaud.io/index.php?title=Fraunhofer_FDK_AAC#Bitrate_Modes
-enum AacVariableBitRate {
+type AacVariableBitRate = strict enum {
     V1 = 1;
     V2 = 2;
     V3 = 3;
@@ -545,23 +539,23 @@ enum AacVariableBitRate {
     V5 = 5;
 };
 
-union AacBitRate {
-    1: AacConstantBitRate constant;
-    2: AacVariableBitRate variable;
+type AacBitRate = strict union {
+    1: constant AacConstantBitRate;
+    2: variable AacVariableBitRate;
 };
 
-enum AacAudioObjectType {
+type AacAudioObjectType = strict enum {
     /// MPEG-2 Low Complexity
     MPEG2_AAC_LC = 0;
     /// MPEG-4 Low Complexity
     MPEG4_AAC_LC = 1;
 };
 
-struct AacEncoderSettings {
-    AacTransport transport;
-    AacChannelMode channel_mode;
-    AacBitRate bit_rate;
-    AacAudioObjectType aot;
+type AacEncoderSettings = struct {
+    transport AacTransport;
+    channel_mode AacChannelMode;
+    bit_rate AacBitRate;
+    aot AacAudioObjectType;
 };
 
 /// Customization of h264 encoder parameters for macroblock quantization. The values
@@ -572,66 +566,66 @@ struct AacEncoderSettings {
 /// own defaults. If the targeted bitrate can't be achieved with the specified values,
 /// then the user should expect the resulting encoded stream bitrate to differ from
 /// the requested bitrate.
-table H264QuantizationParameters {
+type H264QuantizationParameters = table {
     /// Starting value for quantization of key frames.
-    1: uint32 i_base;
+    1: i_base uint32;
     /// Smallest allowed value for quantization of key frames.
-    2: uint32 i_min;
+    2: i_min uint32;
     /// Largest allowed value for quantization of key frames.
-    3: uint32 i_max;
+    3: i_max uint32;
     /// Starting value for quantization of predicted frames.
-    4: uint32 p_base;
+    4: p_base uint32;
     /// Smallest allowed value for quantization of predicted frames.
-    5: uint32 p_min;
+    5: p_min uint32;
     /// Largest allowed value for quantization of predicted frames.
-    6: uint32 p_max;
+    6: p_max uint32;
 };
 
 /// Settings for H264 Encoders.
-table H264EncoderSettings {
+type H264EncoderSettings = table {
     /// Target bits per second for encoded stream.
     /// If omitted, interpreted as 200,000.
-    1: uint32 bit_rate;
+    1: bit_rate uint32;
     /// Target frames per second for encoded stream.
     /// If omitted, interpreted as 30.
-    2: uint32 frame_rate;
+    2: frame_rate uint32;
     /// Number of pictures per keyframe.  Setting to 0 will disable key frame
     /// encoding, except for if force_key_frame is set to true.
     /// If omitted, interpreted as 8.
-    3: uint32 gop_size;
+    3: gop_size uint32;
     /// Whether to enable frame rate adjustments in order to meet target bitrate.
     /// If omitted, interpreted as false.
-    4: bool variable_frame_rate;
+    4: variable_frame_rate bool;
     /// Lowest frame rate allowed if `variable_frame_rate` is enabled. If
     /// omitted, interpreted as 10.
-    5: uint32 min_frame_rate;
+    5: min_frame_rate uint32;
     /// If true, next frame encoded will be a key frame. If omitted, interpreted
     /// as false.
-    6: bool force_key_frame;
+    6: force_key_frame bool;
     /// Allow customization of quantization parameters for encoding. Each frame
     /// submitted after setting this will use the new values. If omitted, no
     /// change from encoder defaults is made.
-    7: H264QuantizationParameters quantization_params;
+    7: quantization_params H264QuantizationParameters;
 };
 
 /// Settings for HEVC/H265 Encoders.
-table HevcEncoderSettings {
+type HevcEncoderSettings = table {
     /// Target bits per second for encoded stream. Defaults to 200,000 if
     /// omitted.
-    1: uint32 bit_rate;
+    1: bit_rate uint32;
     /// Target frames per second for encoded stream. Defaults to 30 if omitted.
-    2: uint32 frame_rate;
+    2: frame_rate uint32;
     /// Number of pictures per keyframe. Defaults to 8 if omitted.
-    3: uint32 gop_size;
+    3: gop_size uint32;
 };
 
 /// Settings for encoders that tell them how to encode raw
 /// formats.
-flexible union EncoderSettings {
-    1: SbcEncoderSettings sbc;
-    2: AacEncoderSettings aac;
-    3: H264EncoderSettings h264;
-    4: HevcEncoderSettings hevc;
+type EncoderSettings = flexible union {
+    1: sbc SbcEncoderSettings;
+    2: aac AacEncoderSettings;
+    3: h264 H264EncoderSettings;
+    4: hevc HevcEncoderSettings;
 };
 
 /// FormatDetails
@@ -659,11 +653,11 @@ flexible union EncoderSettings {
 // conveyed in oob_bytes.
 //
 // Most decoders can have FormatDetails.domain null.
-table FormatDetails {
-    // Particular instances of FormatDetails will set this field to make it
-    // easier for a receiver to determine if any part of the format has changed
-    // vs. the last FormatDetails received for the same context.
-    1: uint64 format_details_version_ordinal;
+type FormatDetails = table {
+            // Particular instances of FormatDetails will set this field to make it
+            // easier for a receiver to determine if any part of the format has changed
+            // vs. the last FormatDetails received for the same context.
+    1: format_details_version_ordinal uint64;
 
     // "mime_type" strings used by particular decoders / encoders so far:
     //
@@ -685,7 +679,7 @@ table FormatDetails {
     // TODO(dustingreen): Consider "pseudo_mime_type", or an enum, + "domain"
     // details as needed instead, since calling this "mime_type" could lead to
     // confusion.
-    2: string mime_type;
+    2: mime_type string;
 
     // Some streams have their own binary configuration structure.  For those
     // streams we allow that binary structure to be directly conveyed to the
@@ -706,7 +700,7 @@ table FormatDetails {
     // bytes here, we could potentially increase this restriction some, but
     // this interface isn't designed to support OOB config blobs that approach
     // ZX_CHANNEL_MAX_MSG_BYTES.
-    3: bytes oob_bytes;
+    3: oob_bytes bytes;
 
     // Decoder input format:
     //
@@ -736,7 +730,7 @@ table FormatDetails {
     //
     // This field contains fairly detailed information re. uncompressed data
     // format details, which tends to _not_ be self-describing in-band.
-    4: DomainFormat domain;
+    4: domain DomainFormat;
 
     // See comments above on Parameter.  At the time we lock relevant FIDL
     // interfaces, there should be zero use of this field outside tests, but
@@ -750,13 +744,13 @@ table FormatDetails {
     //
     // For streams that define their own stream-specific config/OOB data, put
     // that in oob_bytes above instead of this field.
-    5: vector<Parameter> pass_through_parameters;
+    5: pass_through_parameters vector<Parameter>;
 
     /// Instructs an encoder on how to encode raw data.
     ///
     /// Decoders may ignore this field but are entitled to rejected requests with
     /// this field set because it doesn't make sense.
-    6: EncoderSettings encoder_settings;
+    6: encoder_settings EncoderSettings;
 
     /// The number of ticks of the timebase of input packet timestamp_ish values
     /// per second.
@@ -771,5 +765,5 @@ table FormatDetails {
     /// encoder's input chunk size (based on the encoder settings and calculated
     /// independently by the client).  Set if timestamp extrapolation is known to be
     /// needed or known to be acceptable to the client.
-    7: uint64 timebase;
+    7: timebase uint64;
 };

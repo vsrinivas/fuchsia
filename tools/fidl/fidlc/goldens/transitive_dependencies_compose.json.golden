@@ -36,7 +36,7 @@
       "name": "fidl.test.transitivedependenciescompose/Top",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/transitive_dependencies_compose/top.test.fidl",
-        "line": 6,
+        "line": 5,
         "column": 10,
         "length": 3
       },
@@ -45,7 +45,7 @@
           "name": "middle/Middle",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/transitive_dependencies_compose/top.test.fidl",
-            "line": 7,
+            "line": 6,
             "column": 20,
             "length": 6
           }
@@ -57,7 +57,7 @@
           "name": "GetFoo",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/transitive_dependencies_compose/bottom.test.fidl",
-            "line": 9,
+            "line": 8,
             "column": 5,
             "length": 6
           },
@@ -93,7 +93,7 @@
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/transitive_dependencies_compose/bottom.test.fidl",
                 "line": 9,
-                "column": 22,
+                "column": 9,
                 "length": 3
               },
               "field_shape_v1": {
@@ -140,9 +140,9 @@
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/transitive_dependencies_compose/bottom.test.fidl",
-        "line": 9,
-        "column": 17,
-        "length": 9
+        "line": 8,
+        "column": 18,
+        "length": 31
       },
       "anonymous": true,
       "members": [
@@ -156,7 +156,7 @@
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/transitive_dependencies_compose/bottom.test.fidl",
             "line": 9,
-            "column": 22,
+            "column": 9,
             "length": 3
           },
           "field_shape_v1": {

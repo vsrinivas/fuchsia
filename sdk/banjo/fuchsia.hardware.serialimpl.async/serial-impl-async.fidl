@@ -1,37 +1,57 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.serialimpl.async;
 
 using zx;
 using fuchsia.hardware.serial;
 
-enum SerialState : uint32 {
+type SerialState = strict enum : uint32 {
     READABLE = 0x1;
     WRITABLE = 0x2;
 };
 
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol SerialImplAsync {
-    GetInfo() -> (zx.status s, fuchsia.hardware.serial.SerialPortInfo info);
+    GetInfo() -> (struct {
+        s zx.status;
+        info fuchsia.hardware.serial.SerialPortInfo;
+    });
     /// Configures the given serial port.
-    Config(uint32 baud_rate, uint32 flags) -> (zx.status s);
-    Enable(bool enable) -> (zx.status s);
+    Config(struct {
+        baud_rate uint32;
+        flags uint32;
+    }) -> (struct {
+        s zx.status;
+    });
+    Enable(struct {
+        enable bool;
+    }) -> (struct {
+        s zx.status;
+    });
     /// Queues a receive operation. It is an error to queue
     /// more than one receive operation at a time.
     /// The callback will be invoked on the interrupt thread or the calling thread
     /// if the write completes immediately.
     /// ZX_ERR_NOT_SUPPORTED will be returned if a read is already pending.
-    [Async]
-    ReadAsync() -> (zx.status s, [Buffer] vector<uint8>:MAX buf);
+    @async
+    ReadAsync() -> (struct {
+        s zx.status;
+        @buffer
+        buf vector<uint8>:MAX;
+    });
     /// Queues a packet for transmission. It is an error to queue
     /// more than one transmit at a time. The callback will be invoked
     /// on the interrupt thread, or the calling thread if data is available.
     /// ZX_ERR_NOT_SUPPORTED will be returned if a write is already pending.
-    [Async]
-    WriteAsync([Buffer] vector<uint8>:MAX buf) -> (zx.status s);
+    @async
+    WriteAsync(struct {
+        @buffer
+        buf vector<uint8>:MAX;
+    }) -> (struct {
+        s zx.status;
+    });
     /// Immediately cancels all outstanding asynchronous I/O
     CancelAll() -> ();
 };

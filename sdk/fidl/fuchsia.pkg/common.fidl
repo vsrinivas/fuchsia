@@ -1,37 +1,35 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.pkg;
 
 /// A content-addressed merkle root that describes an artifact that is tracked by the
 /// packaging system.
-struct BlobId {
-    array<uint8>:32 merkle_root;
+type BlobId = struct {
+    merkle_root array<uint8, 32>;
 };
 
 /// A tuple of the content-addressed merkle root for an artifact, along with that
 /// artifact's length in bytes.
-struct BlobInfo {
-    BlobId blob_id;
-    uint64 length;
+type BlobInfo = struct {
+    blob_id BlobId;
+    length uint64;
 };
 
 /// A fuchsia-pkg:// URL indicating a package.
 /// https://fuchsia.dev/fuchsia-src/concepts/packages/package_url#package_identity
-struct PackageUrl {
-    string:2048 url;
+type PackageUrl = struct {
+    url string:2048;
 };
 
 /// A fuchsia-pkg:// URL indicating a repository.
 /// https://fuchsia.dev/fuchsia-src/concepts/packages/package_url#repository_identity
-struct RepositoryUrl {
-    string:2048 url;
+type RepositoryUrl = struct {
+    url string:2048;
 };
 
 /// A single entry in the package index.
-struct PackageIndexEntry {
-    PackageUrl package_url;
-    BlobId meta_far_blob_id;
+type PackageIndexEntry = struct {
+    package_url PackageUrl;
+    meta_far_blob_id BlobId;
 };

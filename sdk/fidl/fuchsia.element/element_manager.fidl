@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.element;
 
 using fuchsia.sys;
@@ -23,7 +21,7 @@ using fuchsia.url;
 /// element to the session via the `Manager` protocol. Similarly,
 /// the element proposer may be part of an interactive user interface that
 /// proposes elements based on user input.
-[Discoverable]
+@discoverable
 protocol Manager {
     /// Proposes to add an element to the session.
     ///
@@ -58,24 +56,26 @@ protocol Manager {
     ///   - is specified for a CFv2 `spec.component_url`, or
     ///   - does not have a valid [`fuchsia.sys/ServiceList.host_directory`], or
     ///   - contains a non-null [`fuchsia.sys/ServiceList.provider`]
-    ProposeElement(Spec spec, request<Controller>? controller)
-        -> () error ProposeElementError;
+    ProposeElement(resource struct {
+        spec Spec;
+        controller server_end:<Controller, optional>;
+    }) -> (struct {}) error ProposeElementError;
 };
 
 /// Description of an element to be added to a session.
-resource table Spec {
+type Spec = resource table {
     /// The component URL of the element. Required.
-    1: fuchsia.url.Url component_url;
+    1: component_url fuchsia.url.Url;
 
     /// Initial annotations on the element. Required, but can be an empty vector.
-    2: Annotations annotations;
+    2: annotations Annotations;
 
     /// A list of services passed to the Element. Optional.
-    3: fuchsia.sys.ServiceList additional_services;
+    3: additional_services fuchsia.sys.ServiceList;
 };
 
 /// Errors that can be returned when attempting to add elements to a session.
-enum ProposeElementError {
+type ProposeElementError = strict enum {
     /// The element spec was malformed.
     INVALID_ARGS = 1;
 

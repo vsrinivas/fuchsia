@@ -1,39 +1,53 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.nand;
 using fuchsia.hardware.nand;
 using zx;
 
 // Defines a Read/Write/Erase request to be sent to the nand driver.
-[ForDeprecatedCBindings]
-resource struct BrokerRequest {
-    zx.handle:VMO? vmo; // Only used for read and write.
-    uint32 length; // In pages (read / write) or blocks (erase).
-    uint32 offset_nand; // In pages (read / write) or blocks (erase).
-    uint64 offset_data_vmo; // In pages.
-    uint64 offset_oob_vmo; // In pages.
-    bool data_vmo; // True to read or write data.
-    bool oob_vmo; // True to read or write OOB data.
+@for_deprecated_c_bindings
+type BrokerRequest = resource struct {
+    vmo zx.handle:<VMO, optional>; // Only used for read and write.
+    length uint32; // In pages (read / write) or blocks (erase).
+    offset_nand uint32; // In pages (read / write) or blocks (erase).
+    offset_data_vmo uint64; // In pages.
+    offset_oob_vmo uint64; // In pages.
+    data_vmo bool; // True to read or write data.
+    oob_vmo bool; // True to read or write OOB data.
 };
 
 /// The Broker allows for serialized entry to the raw nand, which ensures only a single client is
 /// ever talking to the nand device, and all higher level clients have disconnected. In addition,
 /// access to raw nand is restricted from the system during production where nand-broker is not
 /// present.
-[ForDeprecatedCBindings]
+@for_deprecated_c_bindings
 protocol Broker {
     // Retrieves the nand info from the underlying device.
-    GetInfo() -> (zx.status status, fuchsia.hardware.nand.Info? info);
+    GetInfo() -> (struct {
+        status zx.status;
+        info box<fuchsia.hardware.nand.Info>;
+    });
 
     // Reads from the nand device.
-    Read(BrokerRequest request) -> (zx.status status, uint32 corrected_bit_flips);
+    Read(resource struct {
+        request BrokerRequest;
+    }) -> (struct {
+        status zx.status;
+        corrected_bit_flips uint32;
+    });
 
     // Writes to the nand device.
-    Write(BrokerRequest request) -> (zx.status status);
+    Write(resource struct {
+        request BrokerRequest;
+    }) -> (struct {
+        status zx.status;
+    });
 
     // Erases part of the nand device.
-    Erase(BrokerRequest request) -> (zx.status status);
+    Erase(resource struct {
+        request BrokerRequest;
+    }) -> (struct {
+        status zx.status;
+    });
 };

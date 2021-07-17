@@ -1,57 +1,55 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.ethernet;
 
 using zx;
 
-[ForDeprecatedCBindings]
-struct MacAddress {
-    array<uint8>:6 octets;
+@for_deprecated_c_bindings
+type MacAddress = struct {
+    octets array<uint8, 6>;
 };
 
 /// Features distinguishes between NICs with different features.
-bits Features : uint32 {
+type Features = strict bits : uint32 {
     WLAN = 0x01;
     SYNTHETIC = 0x02;
     LOOPBACK = 0x04;
 };
 
-[ForDeprecatedCBindings]
-struct Info {
-    Features features;
-    uint32 mtu;
-    MacAddress mac;
+@for_deprecated_c_bindings
+type Info = struct {
+    features Features;
+    mtu uint32;
+    mac MacAddress;
 };
 
-[ForDeprecatedCBindings]
-resource struct Fifos {
+@for_deprecated_c_bindings
+type Fifos = resource struct {
     // handles for the rx and tx fifo
-    zx.handle:FIFO rx;
-    zx.handle:FIFO tx;
+    rx zx.handle:FIFO;
+    tx zx.handle:FIFO;
 
     // maximum number of items in rx and tx fifo
-    uint32 rx_depth;
-    uint32 tx_depth;
+    rx_depth uint32;
+    tx_depth uint32;
 };
 
 /// Signal that is asserted on the RX fifo whenever the Device has a status
 /// change.  This is ZX_USER_SIGNAL_0.
 // TODO(teisenbe/kulakowski): find a better way to represent this
-const uint32 SIGNAL_STATUS = 0x01000000;
+const SIGNAL_STATUS uint32 = 0x01000000;
 
-bits DeviceStatus : uint32 {
+type DeviceStatus = strict bits : uint32 {
     ONLINE = 1;
 };
 
 /// Max client name length
-const uint32 MAX_CLIENT_NAME_LEN = 15;
+const MAX_CLIENT_NAME_LEN uint32 = 15;
 
 /// For compatibility with a past revision, allow one extra byte for an optional
 /// null-terminator.
-const uint32 SET_CLIENT_NAME_MAX_LEN = 16;
+const SET_CLIENT_NAME_MAX_LEN uint32 = 16;
 
 /// Operation
 ///
@@ -75,46 +73,85 @@ const uint32 SET_CLIENT_NAME_MAX_LEN = 16;
 ///
 /// See //zircon/system/public/zircon/device/ethernet.h for fifo entry layout
 /// and request / response message bits.
-[ForDeprecatedCBindings]
+@for_deprecated_c_bindings
 protocol Device {
     /// Obtain information about device
-    GetInfo() -> (Info info);
+    GetInfo() -> (struct {
+        info Info;
+    });
 
     /// Obtain a pair of fifos for queueing tx and rx operations
-    GetFifos() -> (zx.status status, Fifos? info);
+    GetFifos() -> (resource struct {
+        status zx.status;
+        info box<Fifos>;
+    });
 
     /// Set the IO Buffer that will provide the data buffers for tx and rx operations
-    SetIOBuffer(zx.handle:VMO h) -> (zx.status status);
+    SetIOBuffer(resource struct {
+        h zx.handle:VMO;
+    }) -> (struct {
+        status zx.status;
+    });
 
     /// Start transferring packets
     /// Start will not succeed (ZX_ERR_BAD_STATE) until the fifos have been
     /// obtained and an io buffer vmo has been registered.
-    Start() -> (zx.status status);
+    Start() -> (struct {
+        status zx.status;
+    });
 
     /// Stop transferring packets
     Stop() -> ();
 
     /// Start listening to the packets that we're transmitting
     /// as well as the packets we're receiving.
-    ListenStart() -> (zx.status status);
+    ListenStart() -> (struct {
+        status zx.status;
+    });
 
     /// Stop listening to the packets that we're transmitting.
     ListenStop() -> ();
 
-    SetClientName(string:SET_CLIENT_NAME_MAX_LEN name) -> (zx.status status);
+    SetClientName(struct {
+        name string:SET_CLIENT_NAME_MAX_LEN;
+    }) -> (struct {
+        status zx.status;
+    });
 
     /// Obtain the device status bits
     /// When these change, the signal SIGNAL_STATUS is asserted on the rx fifo.
     /// When these are read, the signal is deasserted.
-    GetStatus() -> (DeviceStatus device_status);
+    GetStatus() -> (struct {
+        device_status DeviceStatus;
+    });
 
-    SetPromiscuousMode(bool enabled) -> (zx.status status);
+    SetPromiscuousMode(struct {
+        enabled bool;
+    }) -> (struct {
+        status zx.status;
+    });
 
-    ConfigMulticastAddMac(MacAddress addr) -> (zx.status status);
-    ConfigMulticastDeleteMac(MacAddress addr) -> (zx.status status);
-    ConfigMulticastSetPromiscuousMode(bool enabled) -> (zx.status status);
+    ConfigMulticastAddMac(struct {
+        addr MacAddress;
+    }) -> (struct {
+        status zx.status;
+    });
+    ConfigMulticastDeleteMac(struct {
+        addr MacAddress;
+    }) -> (struct {
+        status zx.status;
+    });
+    ConfigMulticastSetPromiscuousMode(struct {
+        enabled bool;
+    }) -> (struct {
+        status zx.status;
+    });
 
     // TODO(teisenbe): We should probably remove these?  They are only used for testing.
-    ConfigMulticastTestFilter() -> (zx.status status);
-    DumpRegisters() -> (zx.status status);
+    ConfigMulticastTestFilter() -> (struct {
+        status zx.status;
+    });
+    DumpRegisters() -> (struct {
+        status zx.status;
+    });
 };

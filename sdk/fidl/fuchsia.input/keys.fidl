@@ -1,8 +1,6 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.input;
 
 /// A Fuchsia key represents a control that can be pressed or released such as a key or
@@ -15,7 +13,7 @@ library fuchsia.input;
 ///
 /// The descriptions for each value in the enum assume a US English keyboard layout.
 /// Actual behavior varies by layout.
-enum Key : uint32 {
+type Key = strict enum : uint32 {
     /// Keyboard a and A
     A = 0x00070004;
 

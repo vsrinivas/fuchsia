@@ -1,11 +1,9 @@
 // Copyright 2016 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.sys;
 
-enum TerminationReason {
+type TerminationReason = strict enum {
     /// The channel closed without giving a termination reason.
     UNKNOWN = 0;
     /// Component ran and exited with a given return_code.
@@ -60,7 +58,10 @@ protocol ComponentController {
     /// its termination. The return_code is only valid if the termination
     /// reason is EXITED. If the termination reason is not EXITED, the
     /// return code is guaranteed not to be 0.
-    -> OnTerminated(int64 return_code, TerminationReason termination_reason);
+    -> OnTerminated(struct {
+        return_code int64;
+        termination_reason TerminationReason;
+    });
 
     /// Event that is triggered when the component's output directory is mounted.
     ///

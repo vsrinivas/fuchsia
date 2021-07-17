@@ -1,8 +1,6 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.modular;
 
 /// StoryCommands are POD structures that describe the set of operations that
@@ -13,15 +11,15 @@ library fuchsia.modular;
 ///   (3) Symmetrical with observation: the same structures are used to describe
 ///       operations to watchers of a story (through SessionWatcher) as are used
 ///       to control a story.
-resource union StoryCommand {
+type StoryCommand = strict resource union {
     // Deprecated operation: set_focus_state.
     1: reserved;
 
     /// Adds a Mod.
-    2: AddMod add_mod;
+    2: add_mod AddMod;
 
     /// Removes an existing Mod.
-    3: RemoveMod remove_mod;
+    3: remove_mod RemoveMod;
 
     // Deprecated operation: set_link_value.
     4: reserved;
@@ -35,7 +33,7 @@ resource union StoryCommand {
 
 /// Adds a mod described by `intent` to the story with name `mod_name`. If
 /// `mod_name` already exists in the story, the mod is updated.
-resource struct AddMod {
+type AddMod = resource struct {
     /// The name of the mod within the story. The mod's name acts as the unique
     /// ID of the mod, scoped to the story in which it is contained. Since
     /// AddMod is reused for observation and mod names are vector<string:MAX>
@@ -47,37 +45,37 @@ resource struct AddMod {
     /// If both are provided, `mod_name` is ignored.
     ///
     // TODO(fxbug.dev/16089): Convert to string
-    vector<string:MAX>:MAX mod_name;
+    mod_name vector<string:MAX>:MAX;
 
     /// The name of the mod within the story. This should be used instead of
     /// `mod_name`. If provided, it is equivalent to passing `mod_name` with
     /// a single item. If both are provided, `mod_name` is ignored.
     ///
     // TODO(fxbug.dev/16089): Remove
-    string:MAX? mod_name_transitional;
+    mod_name_transitional string:<MAX, optional>;
 
-    Intent intent;
+    intent Intent;
 
     /// `surface_relation` defines the visual relationship between this mod and the
     /// mod at `surface_parent_mod_name`.
-    SurfaceRelation surface_relation;
-    vector<string:MAX>:MAX? surface_parent_mod_name;
+    surface_relation SurfaceRelation;
+    surface_parent_mod_name vector<string:MAX>:<MAX, optional>;
 };
 
 /// Removes the mod under `mod_name` from the story.
-struct RemoveMod {
+type RemoveMod = struct {
     /// The name of the mod within the story.
     ///
     /// Clients should provide `mod_name_transitional` instead.
     /// If both are provided, `mod_name` is ignored.
     ///
     // TODO(fxbug.dev/16089): Convert to string
-    vector<string:MAX>:MAX mod_name;
+    mod_name vector<string:MAX>:MAX;
 
     /// The name of the mod within the story. This should be used instead of
     /// `mod_name`. If provided, it is equivalent to passing `mod_name` with
     /// a single item. If both are provided, `mod_name` is ignored.
     ///
     // TODO(fxbug.dev/16089): Remove
-    string:MAX? mod_name_transitional;
+    mod_name_transitional string:<MAX, optional>;
 };

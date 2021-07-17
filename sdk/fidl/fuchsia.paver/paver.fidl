@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.paver;
 
 using fuchsia.hardware.block;
@@ -12,7 +10,7 @@ using fuchsia.mem;
 using zx;
 
 /// Describes the version of an asset.
-enum Configuration {
+type Configuration = strict enum {
     A = 1;
     B = 2;
     RECOVERY = 3;
@@ -20,7 +18,7 @@ enum Configuration {
 
 /// Describes assets which may be updated. Each asset has 3 versions, each tied to a particular
 /// configuration.
-enum Asset {
+type Asset = strict enum {
     /// Zircon Boot Image (ZBI) containing the kernel image as well as bootfs.
     KERNEL = 1;
     /// Metadata used for verified boot purposes.
@@ -28,7 +26,7 @@ enum Asset {
 };
 
 /// Set of states configuration may be in.
-enum ConfigurationStatus {
+type ConfigurationStatus = strict enum {
     /// Bootable and health checked.
     HEALTHY = 1;
     /// Bootable but not yet marked healthy.
@@ -37,25 +35,25 @@ enum ConfigurationStatus {
     UNBOOTABLE = 3;
 };
 
-struct ReadInfo {
+type ReadInfo = struct {
     /// Offset into VMO where read data starts.
-    zx.off offset;
+    offset zx.off;
     /// Size of read data.
-    uint64 size;
+    size uint64;
 };
 
-union ReadResult {
+type ReadResult = strict union {
     /// Error encountered while reading data.
-    1: zx.status err;
+    1: err zx.status;
     /// End of file reached.
-    2: bool eof;
+    2: eof bool;
     /// Information about location of successfully read data within pre-registered VMO.
-    3: ReadInfo info;
+    3: info ReadInfo;
 };
 
-union WriteFirmwareResult {
+type WriteFirmwareResult = strict union {
     /// The result status if a write was attempted.
-    1: zx.status status;
+    1: status zx.status;
 
     /// True if a write was not attempted due to unsupported firmware. This could
     /// be either unsupported content type or unsupported A/B configuration.
@@ -63,7 +61,7 @@ union WriteFirmwareResult {
     /// Callers must not treat this as a fatal error, but instead ignore it and
     /// continue to update the device. This is important to be able to add new
     /// items to an update package without breaking updates on older devices.
-    2: bool unsupported;
+    2: unsupported bool;
 };
 
 /// Protocol for streaming the FVM payload.
@@ -72,20 +70,28 @@ protocol PayloadStream {
     ///
     /// This can be called once per PayloadStream.
     /// Any subsequent calls will return ZX_ERR_ALREADY_BOUND.
-    RegisterVmo(zx.handle:VMO vmo) -> (zx.status status);
+    RegisterVmo(resource struct {
+        vmo zx.handle:VMO;
+    }) -> (struct {
+        status zx.status;
+    });
 
     /// Reads data into the pre-registered vmo.
-    ReadData() -> (ReadResult result);
+    ReadData() -> (struct {
+        result ReadResult;
+    });
 };
 
-[Discoverable]
+@discoverable
 protocol Paver {
     /// Attempts to auto-discover the data sink where assets and volumes will get paved to.
     /// On devices with GPT, the partition must have a valid FVM partition in order for
     /// auto-discovery to find it. If multiple devices are found suitable, error is returned.
     ///
     /// `data_sink` will be closed on error, with an epitaph provided on failure reason.
-    FindDataSink(request<DataSink> data_sink);
+    FindDataSink(resource struct {
+        data_sink server_end:DataSink;
+    });
 
     /// Provide a block device to use as a data sink. Assets and volumes will be paved to
     /// partitions within this block device.
@@ -93,17 +99,23 @@ protocol Paver {
     /// It assumes that channel backing `block_device` also implements `fuchsia.io.Node` for now.
     ///
     /// `data_sink` will be closed on error, with an epitaph provided on failure reason.
-    UseBlockDevice(fuchsia.hardware.block.Block block_device,
-                   request<DynamicDataSink> data_sink);
+    UseBlockDevice(resource struct {
+        block_device client_end:fuchsia.hardware.block.Block;
+        data_sink server_end:DynamicDataSink;
+    });
 
     /// Attempts to auto-discover the boot manager.
     ///
     /// `boot_manager` will be closed on error, with an epitaph provided on failure reason.
     /// ZX_ERR_NOT_SUPPORTED indicates lack of support and configuration A is always booted from.
-    FindBootManager(request<BootManager> boot_manager);
+    FindBootManager(resource struct {
+        boot_manager server_end:BootManager;
+    });
 
     /// Find Sysconfig service.
-    FindSysconfig(request<Sysconfig> sysconfig);
+    FindSysconfig(resource struct {
+        sysconfig server_end:Sysconfig;
+    });
 };
 
 /// Protocol for reading and writing boot partitions.
@@ -127,8 +139,12 @@ protocol Paver {
 protocol DataSink {
     /// Reads partition corresponding to `configuration` and `asset` into a
     /// vmo and returns it.
-    ReadAsset(Configuration configuration, Asset asset)
-        -> (fuchsia.mem.Buffer asset) error zx.status;
+    ReadAsset(struct {
+        configuration Configuration;
+        asset Asset;
+    }) -> (resource struct {
+        asset fuchsia.mem.Buffer;
+    }) error zx.status;
 
     /// Writes partition corresponding to `configuration` and `asset` with data from `payload`.
     /// `payload` may need to be resized to the partition size, so the provided vmo must have
@@ -138,8 +154,13 @@ protocol DataSink {
     ///
     ///
     /// Returns `ZX_ERR_INVALID_ARGS` if `configuration` specifies active configuration.
-    WriteAsset(Configuration configuration, Asset asset, fuchsia.mem.Buffer payload)
-        -> (zx.status status);
+    WriteAsset(resource struct {
+        configuration Configuration;
+        asset Asset;
+        payload fuchsia.mem.Buffer;
+    }) -> (struct {
+        status zx.status;
+    });
 
     /// Writes firmware data from `payload`.
     ///
@@ -155,25 +176,42 @@ protocol DataSink {
     /// `payload` may need to be resized to the partition size, so the provided
     /// vmo must have been created with `ZX_VMO_RESIZABLE` or must be a child
     /// VMO that was created with `ZX_VMO_CHILD_RESIZABLE`.
-    WriteFirmware(Configuration configuration, string:256 type, fuchsia.mem.Buffer payload)
-        -> (WriteFirmwareResult result);
+    WriteFirmware(resource struct {
+        configuration Configuration;
+        type string:256;
+        payload fuchsia.mem.Buffer;
+    }) -> (struct {
+        result WriteFirmwareResult;
+    });
 
     /// Writes FVM with data from streamed via `payload`. This potentially affects all
     /// configurations.
-    WriteVolumes(PayloadStream payload) -> (zx.status status);
+    WriteVolumes(resource struct {
+        payload client_end:PayloadStream;
+    }) -> (struct {
+        status zx.status;
+    });
 
+    // TODO(fxbug.dev/45606): transition users to `WriteFirmware()` and delete this.
     /// Writes bootloader partition with data from `payload`.
     ///
     /// `payload` may need to be resized to the partition size, so the provided vmo must have
     /// been created with `ZX_VMO_RESIZABLE` or must be a child VMO that was created with
     /// `ZX_VMO_CHILD_RESIZABLE`.
-    // TODO(fxbug.dev/45606): transition users to `WriteFirmware()` and delete this.
-    [Deprecated]
-    WriteBootloader(fuchsia.mem.Buffer payload) -> (zx.status status);
+    @deprecated
+    WriteBootloader(resource struct {
+        payload fuchsia.mem.Buffer;
+    }) -> (struct {
+        status zx.status;
+    });
 
     /// Writes /data/`filename` with data from `payload`. Overwrites file if it already exists.
-    WriteDataFile(string:fuchsia.io.MAX_PATH filename, fuchsia.mem.Buffer payload)
-        -> (zx.status status);
+    WriteDataFile(resource struct {
+        filename string:fuchsia.io.MAX_PATH;
+        payload fuchsia.mem.Buffer;
+    }) -> (struct {
+        status zx.status;
+    });
 
     /// Wipes the FVM partition from the device. Should not be confused with factory reset, which
     /// is less intrusive. The result is that the default FVM volumes are re-created, but empty.
@@ -187,10 +225,14 @@ protocol DataSink {
     /// `fuchsia.io.Node` for now.
     ///
     /// On success, returns a channel to the initialized FVM volume.
-    WipeVolume() -> (fuchsia.hardware.block.volume.VolumeManager volume) error zx.status;
+    WipeVolume() -> (resource struct {
+        volume client_end:fuchsia.hardware.block.volume.VolumeManager;
+    }) error zx.status;
 
     /// Flush all previously buffered writes to persistent storage.
-    Flush() -> (zx.status status);
+    Flush() -> (struct {
+        status zx.status;
+    });
 };
 
 /// Specialized DataSink with dynamic partition tables.
@@ -198,14 +240,18 @@ protocol DynamicDataSink {
     compose DataSink;
 
     /// Initializes partitions on given block device.
-    InitializePartitionTables() -> (zx.status status);
+    InitializePartitionTables() -> (struct {
+        status zx.status;
+    });
 
     /// Wipes all entries from the partition table of the specified block device.
     /// Currently only supported on devices with a GPT.
     ///
     /// *WARNING*: This API may destructively remove non-fuchsia maintained partitions from
     /// the block device.
-    WipePartitionTables() -> (zx.status status);
+    WipePartitionTables() -> (struct {
+        status zx.status;
+    });
 };
 
 /// Protocol for managing boot configurations.
@@ -218,27 +264,38 @@ protocol BootManager {
     ///
     /// Returns `ZX_ERR_NOT_SUPPORTED` if the `zvb.current_slot` boot argument cannot be read
     /// or is an unexpected value.
-    QueryCurrentConfiguration() -> (Configuration configuration) error zx.status;
+    QueryCurrentConfiguration() -> (struct {
+        configuration Configuration;
+    }) error zx.status;
 
     /// Queries the configuration which will be used as the default boot choice on a normal cold
     /// boot, which may differ from the currently running configuration. `Configuration::RECOVERY`
     /// should never be active.
     ///
     /// Returns `ZX_ERR_NOT_SUPPORTED` if `Configuration.RECOVERY` is active.
-    QueryActiveConfiguration() -> (Configuration configuration) error zx.status;
+    QueryActiveConfiguration() -> (struct {
+        configuration Configuration;
+    }) error zx.status;
 
     /// Queries status of `configuration`.
     ///
     /// Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via `configuration`.
-    QueryConfigurationStatus(Configuration configuration)
-        -> (ConfigurationStatus status) error zx.status;
+    QueryConfigurationStatus(struct {
+        configuration Configuration;
+    }) -> (struct {
+        status ConfigurationStatus;
+    }) error zx.status;
 
     /// Updates persistent metadata identifying which configuration should be selected as 'primary'
     /// for booting purposes. Should only be called after `KERNEL` as well as optional
     /// `VERIFIED_BOOT_METADATA` assets for specified `configuration` were written successfully.
     ///
     /// Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via `configuration`.
-    SetConfigurationActive(Configuration configuration) -> (zx.status status);
+    SetConfigurationActive(struct {
+        configuration Configuration;
+    }) -> (struct {
+        status zx.status;
+    });
 
     /// Updates persistent metadata identifying whether `configuration` is bootable.
     /// Should only be called in the following situations:
@@ -252,7 +309,11 @@ protocol BootManager {
     /// If the configuration is unbootable, no action is taken.
     ///
     /// Returns `ZX_ERR_INVALID_ARGS` if `Configuration.RECOVERY` is passed in via `configuration`.
-    SetConfigurationUnbootable(Configuration configuration) -> (zx.status status);
+    SetConfigurationUnbootable(struct {
+        configuration Configuration;
+    }) -> (struct {
+        status zx.status;
+    });
 
     /// Updates persistent metadata to mark a [`fuchsia.paver/Configuration`]
     /// as successful.
@@ -274,10 +335,16 @@ protocol BootManager {
     /// + request `configuration` the `Configuration` to mark as healthy. Must
     ///   not be `RECOVERY`.
     /// - response `status` a zx_status value indicating success or failure.
-    SetConfigurationHealthy(Configuration configuration) -> (zx.status status);
+    SetConfigurationHealthy(struct {
+        configuration Configuration;
+    }) -> (struct {
+        status zx.status;
+    });
 
     /// Flush all previously buffered writes to persistent storage.
-    Flush() -> (zx.status status);
+    Flush() -> (struct {
+        status zx.status;
+    });
 };
 
 /// Protocol that provides access to sysconfig-data sub-partition in sysconfig partition.
@@ -285,17 +352,29 @@ protocol BootManager {
 /// read/write sysconfig-data channel.
 protocol Sysconfig {
     /// Read from the sub-partition
-    Read() -> (fuchsia.mem.Buffer data) error zx.status;
+    Read() -> (resource struct {
+        data fuchsia.mem.Buffer;
+    }) error zx.status;
 
     /// Writes to the sub-partition
-    Write(fuchsia.mem.Buffer payload) -> (zx.status status);
+    Write(resource struct {
+        payload fuchsia.mem.Buffer;
+    }) -> (struct {
+        status zx.status;
+    });
 
     /// Get sub-partition size.
-    GetPartitionSize() -> (uint64 size) error zx.status;
+    GetPartitionSize() -> (struct {
+        size uint64;
+    }) error zx.status;
 
     /// Flush all previously buffered data to persistent storage.
-    Flush() -> (zx.status status);
+    Flush() -> (struct {
+        status zx.status;
+    });
 
     /// Wipe all data in the sub-partition (write 0 to all bytes).
-    Wipe() -> (zx.status status);
+    Wipe() -> (struct {
+        status zx.status;
+    });
 };

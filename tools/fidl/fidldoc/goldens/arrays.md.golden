@@ -8,7 +8,7 @@
 ## **STRUCTS**
 
 ### StructLargeArray {#StructLargeArray}
-*Defined in [fidl.test.arrays/arrays.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/arrays.test.fidl;l=8)*
+*Defined in [fidl.test.arrays/arrays.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/arrays.test.fidl;l=7)*
 
 
 
@@ -24,7 +24,7 @@
 </table>
 
 ### StructSmallArray {#StructSmallArray}
-*Defined in [fidl.test.arrays/arrays.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/arrays.test.fidl;l=4)*
+*Defined in [fidl.test.arrays/arrays.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/arrays.test.fidl;l=3)*
 
 
 
@@ -48,7 +48,7 @@
 ### TableLargeArray {#TableLargeArray}
 
 
-*Defined in [fidl.test.arrays/arrays.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/arrays.test.fidl;l=16)*
+*Defined in [fidl.test.arrays/arrays.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/arrays.test.fidl;l=15)*
 
 
 
@@ -66,7 +66,7 @@
 ### TableSmallArray {#TableSmallArray}
 
 
-*Defined in [fidl.test.arrays/arrays.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/arrays.test.fidl;l=12)*
+*Defined in [fidl.test.arrays/arrays.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/arrays.test.fidl;l=11)*
 
 
 
@@ -86,7 +86,7 @@
 ## **UNIONS**
 
 ### UnionLargeArray {#UnionLargeArray}
-*Defined in [fidl.test.arrays/arrays.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/arrays.test.fidl;l=24)*
+*Defined in [fidl.test.arrays/arrays.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/arrays.test.fidl;l=23)*
 
 
 <table>
@@ -99,7 +99,7 @@
         </tr></table>
 
 ### UnionSmallArray {#UnionSmallArray}
-*Defined in [fidl.test.arrays/arrays.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/arrays.test.fidl;l=20)*
+*Defined in [fidl.test.arrays/arrays.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/arrays.test.fidl;l=19)*
 
 
 <table>

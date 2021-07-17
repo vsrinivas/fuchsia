@@ -1,14 +1,18 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fidl.test.simple;
 
 protocol Simple {
     /// Replies with the value requested.
-    Echo(int32 request) -> (int32 reply);
+    Echo(struct {
+        request int32;
+    }) -> (struct {
+        reply int32;
+    });
 
     /// Never actually replies.  Just closes instead.
-    Close() -> (int32 v);
+    Close() -> (struct {
+        v int32;
+    });
 };

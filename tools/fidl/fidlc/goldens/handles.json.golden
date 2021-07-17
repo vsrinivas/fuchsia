@@ -90,7 +90,7 @@
       "name": "fidl.test.handles/obj_type",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-        "line": 9,
+        "line": 8,
         "column": 6,
         "length": 8
       },
@@ -100,7 +100,7 @@
           "name": "NONE",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 10,
+            "line": 9,
             "column": 5,
             "length": 4
           },
@@ -119,7 +119,7 @@
           "name": "PROCESS",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 11,
+            "line": 10,
             "column": 5,
             "length": 7
           },
@@ -138,7 +138,7 @@
           "name": "THREAD",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 12,
+            "line": 11,
             "column": 5,
             "length": 6
           },
@@ -157,7 +157,7 @@
           "name": "VMO",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 13,
+            "line": 12,
             "column": 5,
             "length": 3
           },
@@ -176,7 +176,7 @@
           "name": "CHANNEL",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 14,
+            "line": 13,
             "column": 5,
             "length": 7
           },
@@ -195,7 +195,7 @@
           "name": "EVENT",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 15,
+            "line": 14,
             "column": 5,
             "length": 5
           },
@@ -214,7 +214,7 @@
           "name": "PORT",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 16,
+            "line": 15,
             "column": 5,
             "length": 4
           },
@@ -233,7 +233,7 @@
           "name": "INTERRUPT",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 17,
+            "line": 16,
             "column": 5,
             "length": 9
           },
@@ -252,7 +252,7 @@
           "name": "PCI_DEVICE",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 18,
+            "line": 17,
             "column": 5,
             "length": 10
           },
@@ -271,7 +271,7 @@
           "name": "LOG",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 19,
+            "line": 18,
             "column": 5,
             "length": 3
           },
@@ -290,7 +290,7 @@
           "name": "SOCKET",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 20,
+            "line": 19,
             "column": 5,
             "length": 6
           },
@@ -309,7 +309,7 @@
           "name": "RESOURCE",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 21,
+            "line": 20,
             "column": 5,
             "length": 8
           },
@@ -328,7 +328,7 @@
           "name": "EVENTPAIR",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 22,
+            "line": 21,
             "column": 5,
             "length": 9
           },
@@ -347,7 +347,7 @@
           "name": "JOB",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 23,
+            "line": 22,
             "column": 5,
             "length": 3
           },
@@ -366,7 +366,7 @@
           "name": "VMAR",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 24,
+            "line": 23,
             "column": 5,
             "length": 4
           },
@@ -385,7 +385,7 @@
           "name": "FIFO",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 25,
+            "line": 24,
             "column": 5,
             "length": 4
           },
@@ -404,7 +404,7 @@
           "name": "GUEST",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 26,
+            "line": 25,
             "column": 5,
             "length": 5
           },
@@ -423,7 +423,7 @@
           "name": "VCPU",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 27,
+            "line": 26,
             "column": 5,
             "length": 4
           },
@@ -442,7 +442,7 @@
           "name": "TIMER",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 28,
+            "line": 27,
             "column": 5,
             "length": 5
           },
@@ -461,7 +461,7 @@
           "name": "IOMMU",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 29,
+            "line": 28,
             "column": 5,
             "length": 5
           },
@@ -480,7 +480,7 @@
           "name": "BTI",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 30,
+            "line": 29,
             "column": 5,
             "length": 3
           },
@@ -499,7 +499,7 @@
           "name": "PROFILE",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 31,
+            "line": 30,
             "column": 5,
             "length": 7
           },
@@ -518,7 +518,7 @@
           "name": "PMT",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 32,
+            "line": 31,
             "column": 5,
             "length": 3
           },
@@ -537,7 +537,7 @@
           "name": "SUSPEND_TOKEN",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 33,
+            "line": 32,
             "column": 5,
             "length": 13
           },
@@ -556,7 +556,7 @@
           "name": "PAGER",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 34,
+            "line": 33,
             "column": 5,
             "length": 5
           },
@@ -575,7 +575,7 @@
           "name": "EXCEPTION",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 35,
+            "line": 34,
             "column": 5,
             "length": 9
           },
@@ -594,7 +594,7 @@
           "name": "CLOCK",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 36,
+            "line": 35,
             "column": 5,
             "length": 5
           },
@@ -613,7 +613,7 @@
           "name": "STREAM",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 37,
+            "line": 36,
             "column": 5,
             "length": 6
           },
@@ -632,7 +632,7 @@
           "name": "MSI_ALLOCATION",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 38,
+            "line": 37,
             "column": 5,
             "length": 14
           },
@@ -651,7 +651,7 @@
           "name": "MSI_INTERRUPT",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 39,
+            "line": 38,
             "column": 5,
             "length": 13
           },
@@ -675,7 +675,7 @@
       "name": "fidl.test.handles/handle",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-        "line": 42,
+        "line": 41,
         "column": 21,
         "length": 6
       },
@@ -688,8 +688,8 @@
           "name": "subtype",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 44,
-            "column": 18,
+            "line": 43,
+            "column": 9,
             "length": 7
           },
           "type": {
@@ -702,8 +702,8 @@
           "name": "rights",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 45,
-            "column": 19,
+            "line": 44,
+            "column": 9,
             "length": 6
           },
           "type": {
@@ -720,7 +720,7 @@
       "name": "fidl.test.handles/SomeProtocol",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-        "line": 49,
+        "line": 48,
         "column": 10,
         "length": 12
       },
@@ -734,8 +734,8 @@
       "name": "fidl.test.handles/Handles",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-        "line": 56,
-        "column": 17,
+        "line": 54,
+        "column": 6,
         "length": 7
       },
       "anonymous": false,
@@ -751,8 +751,8 @@
           "name": "plain_handle",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 57,
-            "column": 12,
+            "line": 55,
+            "column": 5,
             "length": 12
           },
           "field_shape_v1": {
@@ -775,8 +775,8 @@
           "name": "bti_handle",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 59,
-            "column": 16,
+            "line": 57,
+            "column": 5,
             "length": 10
           },
           "field_shape_v1": {
@@ -799,8 +799,8 @@
           "name": "channel_handle",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 60,
-            "column": 20,
+            "line": 58,
+            "column": 5,
             "length": 14
           },
           "field_shape_v1": {
@@ -823,8 +823,8 @@
           "name": "clock_handle",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 61,
-            "column": 18,
+            "line": 59,
+            "column": 5,
             "length": 12
           },
           "field_shape_v1": {
@@ -847,8 +847,8 @@
           "name": "debuglog_handle",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 62,
-            "column": 16,
+            "line": 60,
+            "column": 5,
             "length": 15
           },
           "field_shape_v1": {
@@ -871,8 +871,8 @@
           "name": "event_handle",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 63,
-            "column": 18,
+            "line": 61,
+            "column": 5,
             "length": 12
           },
           "field_shape_v1": {
@@ -895,8 +895,8 @@
           "name": "eventpair_handle",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 64,
-            "column": 22,
+            "line": 62,
+            "column": 5,
             "length": 16
           },
           "field_shape_v1": {
@@ -919,8 +919,8 @@
           "name": "exception_handle",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 65,
-            "column": 22,
+            "line": 63,
+            "column": 5,
             "length": 16
           },
           "field_shape_v1": {
@@ -943,8 +943,8 @@
           "name": "fifo_handle",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 66,
-            "column": 17,
+            "line": 64,
+            "column": 5,
             "length": 11
           },
           "field_shape_v1": {
@@ -967,8 +967,8 @@
           "name": "guest_handle",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 67,
-            "column": 18,
+            "line": 65,
+            "column": 5,
             "length": 12
           },
           "field_shape_v1": {
@@ -991,8 +991,8 @@
           "name": "interrupt_handle",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 68,
-            "column": 22,
+            "line": 66,
+            "column": 5,
             "length": 16
           },
           "field_shape_v1": {
@@ -1015,8 +1015,8 @@
           "name": "iommu_handle",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 69,
-            "column": 18,
+            "line": 67,
+            "column": 5,
             "length": 12
           },
           "field_shape_v1": {
@@ -1039,8 +1039,8 @@
           "name": "job_handle",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 70,
-            "column": 16,
+            "line": 68,
+            "column": 5,
             "length": 10
           },
           "field_shape_v1": {
@@ -1063,8 +1063,8 @@
           "name": "pager_handle",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 71,
-            "column": 18,
+            "line": 69,
+            "column": 5,
             "length": 12
           },
           "field_shape_v1": {
@@ -1087,8 +1087,8 @@
           "name": "pcidevice_handle",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 72,
-            "column": 23,
+            "line": 70,
+            "column": 5,
             "length": 16
           },
           "field_shape_v1": {
@@ -1111,8 +1111,8 @@
           "name": "pmt_handle",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 73,
-            "column": 16,
+            "line": 71,
+            "column": 5,
             "length": 10
           },
           "field_shape_v1": {
@@ -1135,8 +1135,8 @@
           "name": "port_handle",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 74,
-            "column": 17,
+            "line": 72,
+            "column": 5,
             "length": 11
           },
           "field_shape_v1": {
@@ -1159,8 +1159,8 @@
           "name": "process_handle",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 75,
-            "column": 20,
+            "line": 73,
+            "column": 5,
             "length": 14
           },
           "field_shape_v1": {
@@ -1183,8 +1183,8 @@
           "name": "profile_handle",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 76,
-            "column": 20,
+            "line": 74,
+            "column": 5,
             "length": 14
           },
           "field_shape_v1": {
@@ -1207,8 +1207,8 @@
           "name": "resource_handle",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 77,
-            "column": 21,
+            "line": 75,
+            "column": 5,
             "length": 15
           },
           "field_shape_v1": {
@@ -1231,8 +1231,8 @@
           "name": "socket_handle",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 78,
-            "column": 19,
+            "line": 76,
+            "column": 5,
             "length": 13
           },
           "field_shape_v1": {
@@ -1255,8 +1255,8 @@
           "name": "suspendtoken_handle",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 79,
-            "column": 26,
+            "line": 77,
+            "column": 5,
             "length": 19
           },
           "field_shape_v1": {
@@ -1279,8 +1279,8 @@
           "name": "thread_handle",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 80,
-            "column": 19,
+            "line": 78,
+            "column": 5,
             "length": 13
           },
           "field_shape_v1": {
@@ -1303,8 +1303,8 @@
           "name": "timer_handle",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 81,
-            "column": 18,
+            "line": 79,
+            "column": 5,
             "length": 12
           },
           "field_shape_v1": {
@@ -1327,8 +1327,8 @@
           "name": "vcpu_handle",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 82,
-            "column": 17,
+            "line": 80,
+            "column": 5,
             "length": 11
           },
           "field_shape_v1": {
@@ -1351,8 +1351,8 @@
           "name": "vmar_handle",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 83,
-            "column": 17,
+            "line": 81,
+            "column": 5,
             "length": 11
           },
           "field_shape_v1": {
@@ -1375,8 +1375,8 @@
           "name": "vmo_handle",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 84,
-            "column": 16,
+            "line": 82,
+            "column": 5,
             "length": 10
           },
           "field_shape_v1": {
@@ -1399,8 +1399,8 @@
           "name": "rights_handle",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 86,
-            "column": 56,
+            "line": 84,
+            "column": 5,
             "length": 13
           },
           "field_shape_v1": {
@@ -1428,8 +1428,8 @@
           "name": "aliased_plain_handle_field",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 88,
-            "column": 26,
+            "line": 86,
+            "column": 5,
             "length": 26
           },
           "field_shape_v1": {
@@ -1457,8 +1457,8 @@
           "name": "aliased_subtype_handle_field",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 89,
-            "column": 28,
+            "line": 87,
+            "column": 5,
             "length": 28
           },
           "field_shape_v1": {
@@ -1486,8 +1486,8 @@
           "name": "aliased_rights_handle_field",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 90,
-            "column": 27,
+            "line": 88,
+            "column": 5,
             "length": 27
           },
           "field_shape_v1": {
@@ -1508,8 +1508,8 @@
           "name": "some_protocol",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 92,
-            "column": 18,
+            "line": 90,
+            "column": 5,
             "length": 13
           },
           "field_shape_v1": {
@@ -1530,8 +1530,8 @@
           "name": "request_some_protocol",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-            "line": 93,
-            "column": 27,
+            "line": 91,
+            "column": 5,
             "length": 21
           },
           "field_shape_v1": {
@@ -1572,7 +1572,7 @@
       "name": "fidl.test.handles/aliased_plain_handle",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-        "line": 52,
+        "line": 50,
         "column": 7,
         "length": 20
       },
@@ -1586,7 +1586,7 @@
       "name": "fidl.test.handles/aliased_subtype_handle",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-        "line": 53,
+        "line": 51,
         "column": 7,
         "length": 22
       },
@@ -1600,7 +1600,7 @@
       "name": "fidl.test.handles/aliased_rights_handle",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/handles.test.fidl",
-        "line": 54,
+        "line": 52,
         "column": 7,
         "length": 21
       },

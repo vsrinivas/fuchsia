@@ -1,8 +1,6 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 /// Cobalt is the Fuchsia service used to log, collect and analyze metrics.
 /// The two main pillars of Cobalt are protecting user privacy and providing
 /// high-quality, aggregate metrics to serve system and component software
@@ -36,32 +34,32 @@ deprecated_syntax;
 library fuchsia.cobalt;
 
 /// The maximum size of a single Event is 100 KB.
-const int64 MAX_BYTES_PER_EVENT = 102400;
+const MAX_BYTES_PER_EVENT int64 = 102400;
 
 /// This is intended as a reasonable maximum number of histogram buckets per event.
-const uint32 MAX_HISTOGRAM_BUCKETS = 500;
+const MAX_HISTOGRAM_BUCKETS uint32 = 500;
 
 /// Maximum number of Cobalt events that may be logged in a single
 /// FIDL call.
-const uint32 MAX_BATCHED_EVENTS = 500;
+const MAX_BATCHED_EVENTS uint32 = 500;
 
 /// Component strings should not be longer than this.
-const uint32 MAX_COMPONENT_LENGTH = 64;
+const MAX_COMPONENT_LENGTH uint32 = 64;
 
 /// Timer ids should not be longer than this.
-const uint32 MAX_TIMER_ID_LENGTH = 64;
+const MAX_TIMER_ID_LENGTH uint32 = 64;
 
 /// We only support up to 5 event_codes
-const uint32 MAX_EVENT_CODE_COUNT = 5;
+const MAX_EVENT_CODE_COUNT uint32 = 5;
 
 /// Channels should not be longer than this.
-const uint32 MAX_CHANNEL_NAME_LENGTH = 256;
+const MAX_CHANNEL_NAME_LENGTH uint32 = 256;
 
 /// Realm names should not be longer than this.
-const uint32 MAX_REALM_NAME_LENGTH = 256;
+const MAX_REALM_NAME_LENGTH uint32 = 256;
 
 /// Response codes for Logger operations.
-enum Status : int32 {
+type Status = strict enum : int32 {
     OK = 0;
 
     /// For example the supplied metric id is invalid.
@@ -84,7 +82,8 @@ enum Status : int32 {
 };
 
 /// LoggerFactory creates Loggers.
-[Discoverable, ForDeprecatedCBindings]
+@discoverable
+@for_deprecated_c_bindings
 protocol LoggerFactory {
     /// Creates a Logger for the project with the given ID, using the state of
     /// the metrics registry that is bundled with Cobalt. The project must be in
@@ -96,9 +95,12 @@ protocol LoggerFactory {
     /// creating new loggers, or INVALID_ARGUMENTS if there is no project with
     /// the given ID in the version of the metrics registry that is bundled
     /// with Cobalt.
-    CreateLoggerFromProjectId(uint32 project_id,
-                              request<Logger> logger)
-        -> (Status status);
+    CreateLoggerFromProjectId(resource struct {
+        project_id uint32;
+        logger server_end:Logger;
+    }) -> (struct {
+        status Status;
+    });
 
     /// Creates a LoggerSimple for the project with the given ID, using the
     /// state of the metrics registry that is bundled with Cobalt. The project
@@ -109,9 +111,12 @@ protocol LoggerFactory {
     /// `status` Returns OK on success or INVALID_ARGUMENTS if there is no
     /// project with the given ID in the version of the metrics registry that
     /// is bundled with Cobalt.
-    CreateLoggerSimpleFromProjectId(uint32 project_id,
-                                    request<LoggerSimple> logger)
-        -> (Status status);
+    CreateLoggerSimpleFromProjectId(resource struct {
+        project_id uint32;
+        logger server_end:LoggerSimple;
+    }) -> (struct {
+        status Status;
+    });
 
     /// Creates a Logger for the project specified, using the state of the
     /// metrics registry that is bundled with Cobalt.
@@ -123,9 +128,13 @@ protocol LoggerFactory {
     /// `status` Returns OK on success or INVALID_ARGUMENTS if there is no
     /// project with the given IDs in the version of the metrics registry that
     /// is bundled with Cobalt.
-    CreateLoggerFromProjectSpec(uint32 customer_id, uint32 project_id,
-                                request<Logger> logger)
-        -> (Status status);
+    CreateLoggerFromProjectSpec(resource struct {
+        customer_id uint32;
+        project_id uint32;
+        logger server_end:Logger;
+    }) -> (struct {
+        status Status;
+    });
 };
 
 /////////////////////////////////////////////////////////////////////
@@ -146,7 +155,7 @@ protocol LoggerFactory {
 /// This interface conforms to the Simple layout so that Simple bindings
 /// may be generated for it. For the full interfaces, see Logger and LoggerSimple
 /// below.
-[ForDeprecatedCBindings]
+@for_deprecated_c_bindings
 protocol LoggerBase {
     /// Logs the fact that an event has occurred.
     ///
@@ -156,8 +165,12 @@ protocol LoggerBase {
     ///
     /// `event_code` The index of the event that occurred. The indexed set of all
     /// event codes and their labels is specified in the metric definition.
-    LogEvent(uint32 metric_id, uint32 event_code)
-        -> (Status status);
+    LogEvent(struct {
+        metric_id uint32;
+        event_code uint32;
+    }) -> (struct {
+        status Status;
+    });
 
     /// Logs that an event has occurred a given number of times.
     ///
@@ -182,9 +195,15 @@ protocol LoggerBase {
     ///
     /// `period_duration_micros` to 0 in order to achieve a semantics similar to
     /// the LogEventOccurred() method, but with a `component`.
-    LogEventCount(uint32 metric_id, uint32 event_code, string:MAX_COMPONENT_LENGTH component,
-                  int64 period_duration_micros, int64 count)
-        -> (Status status);
+    LogEventCount(struct {
+        metric_id uint32;
+        event_code uint32;
+        component string:MAX_COMPONENT_LENGTH;
+        period_duration_micros int64;
+        count int64;
+    }) -> (struct {
+        status Status;
+    });
 
     /// Logs that an event lasted a given amount of time.
     ///
@@ -201,9 +220,14 @@ protocol LoggerBase {
     ///
     /// `elapsed_micros` The elapsed time of the event, specified as a number of
     /// microseconds.
-    LogElapsedTime(uint32 metric_id, uint32 event_code, string:MAX_COMPONENT_LENGTH component,
-                   int64 elapsed_micros)
-        -> (Status status);
+    LogElapsedTime(struct {
+        metric_id uint32;
+        event_code uint32;
+        component string:MAX_COMPONENT_LENGTH;
+        elapsed_micros int64;
+    }) -> (struct {
+        status Status;
+    });
 
     /// Logs a measured average frame rate.
     ///
@@ -221,9 +245,14 @@ protocol LoggerBase {
     /// component.
     ///
     /// `fps` The average-frame rate in frames-per-second.
-    LogFrameRate(uint32 metric_id, uint32 event_code, string:MAX_COMPONENT_LENGTH component,
-                 float32 fps)
-        -> (Status status);
+    LogFrameRate(struct {
+        metric_id uint32;
+        event_code uint32;
+        component string:MAX_COMPONENT_LENGTH;
+        fps float32;
+    }) -> (struct {
+        status Status;
+    });
 
     /// Logs a measured memory usage.
     ///
@@ -240,9 +269,14 @@ protocol LoggerBase {
     /// use the empty string if there is no natural notion of component.
     ///
     /// `bytes` The memory used, in bytes.
-    LogMemoryUsage(uint32 metric_id, uint32 event_code, string:MAX_COMPONENT_LENGTH component,
-                   int64 bytes)
-        -> (Status status);
+    LogMemoryUsage(struct {
+        metric_id uint32;
+        event_code uint32;
+        component string:MAX_COMPONENT_LENGTH;
+        bytes int64;
+    }) -> (struct {
+        status Status;
+    });
 
     /// This method is part of Cobalt's helper service for measuring the time
     /// delta between two events that occur in different processes. This starts
@@ -303,9 +337,16 @@ protocol LoggerBase {
     ///        will be forgotten.
     ///     Any error returned by LogElapsedTime() may also be returned by this
     ///     method.
-    StartTimer(uint32 metric_id, uint32 event_code, string:MAX_COMPONENT_LENGTH component,
-               string:MAX_TIMER_ID_LENGTH timer_id, uint64 timestamp, uint32 timeout_s)
-        -> (Status status);
+    StartTimer(struct {
+        metric_id uint32;
+        event_code uint32;
+        component string:MAX_COMPONENT_LENGTH;
+        timer_id string:MAX_TIMER_ID_LENGTH;
+        timestamp uint64;
+        timeout_s uint32;
+    }) -> (struct {
+        status Status;
+    });
 
     /// This method is part of Cobalt's helper service for measuring the time
     /// delta between two events that occur in different processes. This ends
@@ -356,10 +397,15 @@ protocol LoggerBase {
     ///        will be forgotten.
     ///     Any error returned by LogElapsedTime() may also be returned by this
     ///     method.
-    EndTimer(string:MAX_TIMER_ID_LENGTH timer_id, uint64 timestamp, uint32 timeout_s)
-        -> (Status status);
+    EndTimer(struct {
+        timer_id string:MAX_TIMER_ID_LENGTH;
+        timestamp uint64;
+        timeout_s uint32;
+    }) -> (struct {
+        status Status;
+    });
 
-    // Method ordinals >= 100 are reserved for sub-interfaces.
+// Method ordinals >= 100 are reserved for sub-interfaces.
 };
 
 /////////////////////////////////////////////////////////////////////
@@ -368,71 +414,70 @@ protocol LoggerBase {
 /////////////////////////////////////////////////////////////////////
 
 /// A value for a custom Event. This is used by the method LogCustomEvent().
-struct CustomEventValue {
+type CustomEventValue = struct {
     /// The name of the Metric dimension this value is for.
-    string:MAX dimension_name;
+    dimension_name string:MAX;
 
     /// The value for that dimension.
-    Value value;
+    value Value;
 };
 
 /// A value that may be a string, int, double, or index.
-union Value {
-    1: string:MAX string_value;
-    2: int64 int_value;
-    3: float64 double_value;
-    4: uint32 index_value;
+type Value = strict union {
+    1: string_value string:MAX;
+    2: int_value int64;
+    3: double_value float64;
+    4: index_value uint32;
 };
 
 /// One bucket of histogram. This is used by the methods LogIntHistogram() from
 /// Cobalt 1.0 and LogIntegerHistogram from Cobalt 1.1.
-struct HistogramBucket {
+type HistogramBucket = struct {
     /// The index of the bucket. The MetricDefinition includes a specification
     /// of a sequence of N+1 integer-range buckets that are indexed from
     /// 0, the underflow bucket, to N, the overflow bucket.
-    uint32 index;
+    index uint32;
 
     /// The number of values in that bucket.
-    uint64 count;
+    count uint64;
 };
 
 /// Used to log that an event has occurred a given number of times. Using this
 /// struct with LogCobaltEvent() is equivalent to invoking LogEventCount().
-struct CountEvent {
+type CountEvent = struct {
     /// The number of microseconds over which this count was observed.
-    int64 period_duration_micros;
+    period_duration_micros int64;
 
     /// The number of times the event occurred
-    int64 count;
+    count int64;
 };
 
 /// Used to log an event that has no extra fields. Using this struct with
 /// LogCobaltEvent() is equivalent to invoking LogEvent().
-struct Event {
-};
+type Event = struct {};
 
 /// The variadic part of a CobaltEvent.
-union EventPayload {
+type EventPayload = strict union {
     /// This maps to a call to LogEvent().
-    1: Event event;
+    1: event Event;
 
     /// This maps to a call to LogEventCount().
-    2: CountEvent event_count;
+    2: event_count CountEvent;
 
     /// This maps to a call to LogElapsedTime().
-    3: int64 elapsed_micros;
+    3: elapsed_micros int64;
 
     /// This maps to a call to LogFrameRate().
-    4: float32 fps;
+    4: fps float32;
 
     /// This maps to a call to LogMemoryUsage().
-    5: int64 memory_bytes_used;
+    5: memory_bytes_used int64;
 
     // Previously mapped to a call to LogString() (deprecated).
     6: reserved;
 
     /// This maps to a call to LogIntHistogram().
-    7: vector<HistogramBucket>:MAX_HISTOGRAM_BUCKETS int_histogram;
+    7: int_histogram vector<HistogramBucket>:MAX_HISTOGRAM_BUCKETS;
 };
 
 /// A specification of an event that occurred to be passed to LogCobaltEvent().
@@ -440,23 +485,23 @@ union EventPayload {
 /// variadic parameter instead of the multiple methods above. This technique
 /// allows multiple event codes to be passed whereas the methods above support
 /// only a single event code.
-struct CobaltEvent {
+type CobaltEvent = struct {
     /// ID of the metric to use. It must be one of the Metrics from the
     /// ProjectProfile used to obtain this Logger, and its type must match the
     /// `payload` type.
-    uint32 metric_id;
+    metric_id uint32;
 
     /// The event codes for the event that occurred. There must be one event code
     /// given for each dimension specified in the metric definition.
-    vector<uint32>:MAX_EVENT_CODE_COUNT event_codes;
+    event_codes vector<uint32>:MAX_EVENT_CODE_COUNT;
 
     /// Optionally, a component associated with the event that occurred may also
     /// be logged also be logged. Any notion of component that makes sense may be
     /// used or use the empty string if there is no natural notion of component.
-    string:MAX_COMPONENT_LENGTH? component;
+    component string:<MAX_COMPONENT_LENGTH, optional>;
 
     /// The event-specific information for the event to be logged.
-    EventPayload payload;
+    payload EventPayload;
 };
 
 /// Logger is an extension of the LoggerBase interface that adds some additional
@@ -493,9 +538,14 @@ protocol Logger {
     /// `histogram` The histogram to log. Each HistogramBucket gives the count
     /// for one bucket of the histogram. The definitions of the buckets is given
     /// in the Metric definition.
-    LogIntHistogram(uint32 metric_id, uint32 event_code,
-                    string:MAX_COMPONENT_LENGTH component, vector<HistogramBucket>:MAX_HISTOGRAM_BUCKETS histogram)
-        -> (Status status);
+    LogIntHistogram(struct {
+        metric_id uint32;
+        event_code uint32;
+        component string:MAX_COMPONENT_LENGTH;
+        histogram vector<HistogramBucket>:MAX_HISTOGRAM_BUCKETS;
+    }) -> (struct {
+        status Status;
+    });
 
     /// Logs a custom Event. The semantics of the Metric are specified in the
     /// Metric definition.
@@ -507,20 +557,32 @@ protocol Logger {
     /// `event_values` The values for the custom Event. There is one value for
     /// each dimension of the Metric. The number and types of the values must
     /// be consistent with the dimensions declared in the Metric definition.
-    LogCustomEvent(uint32 metric_id, vector<CustomEventValue>:MAX event_values)
-        -> (Status status);
+    LogCustomEvent(struct {
+        metric_id uint32;
+        event_values vector<CustomEventValue>:MAX;
+    }) -> (struct {
+        status Status;
+    });
 
     /// Logs a CobaltEvent. This method offers an alternative API to Cobalt that
     /// uses a single method with a variadic parameter instead of the multiple
     /// methods defined above. The reason to use this method is that a
     /// CobaltEvent allows multiple event codes to be specified whereas the
     /// methods above allow only a single event code.
-    LogCobaltEvent(CobaltEvent event) -> (Status status);
+    LogCobaltEvent(struct {
+        event CobaltEvent;
+    }) -> (struct {
+        status Status;
+    });
 
     /// Logs a list of CobaltEvents. This method is equivalent to invoking
     /// LogCobaltEvent() multiple times but is more efficient as it requires only
     /// a single FIDL call.
-    LogCobaltEvents(vector<CobaltEvent>:MAX_BATCHED_EVENTS events) -> (Status status);
+    LogCobaltEvents(struct {
+        events vector<CobaltEvent>:MAX_BATCHED_EVENTS;
+    }) -> (struct {
+        status Status;
+    });
 };
 
 /////////////////////////////////////////////////////////////////////
@@ -533,7 +595,7 @@ protocol Logger {
 ///
 /// This interface conforms to the Simple layout so that Simple bindings
 /// may be generated for it.
-[ForDeprecatedCBindings]
+@for_deprecated_c_bindings
 protocol LoggerSimple {
     compose LoggerBase;
 
@@ -545,11 +607,15 @@ protocol LoggerSimple {
     /// requirements of Simple layout. Instead of a vector of HistogramBucekts
     /// this version takes two parallel vectors of bucket indices and the
     /// corresponding bucket counts.
-    LogIntHistogram(uint32 metric_id, uint32 event_code,
-                    string:MAX_COMPONENT_LENGTH component,
-                    vector<uint32>:MAX_HISTOGRAM_BUCKETS bucket_indices,
-                    vector<uint64>:MAX_HISTOGRAM_BUCKETS bucket_counts)
-        -> (Status status);
+    LogIntHistogram(struct {
+        metric_id uint32;
+        event_code uint32;
+        component string:MAX_COMPONENT_LENGTH;
+        bucket_indices vector<uint32>:MAX_HISTOGRAM_BUCKETS;
+        bucket_counts vector<uint64>:MAX_HISTOGRAM_BUCKETS;
+    }) -> (struct {
+        status Status;
+    });
 };
 
 /////////////////////////////////////////////////////////////////////
@@ -558,29 +624,29 @@ protocol LoggerSimple {
 /////////////////////////////////////////////////////////////////////
 
 /// The state of a single experiment on a device or binary.
-struct Experiment {
+type Experiment = struct {
     /// The id of the experiment as defined by the A/B Experiment framework.
-    uint64 experiment_id;
+    experiment_id uint64;
     /// The id of the experiment arm as defined by the A/B Experiment framework.
-    uint32 arm_id;
+    arm_id uint32;
 };
 
 /// A collection of fields describing a system's software distribution.
-table SoftwareDistributionInfo {
+type SoftwareDistributionInfo = table {
     /// The channel that the device last used as an update source. This value
     /// may be empty to indicate that the device is not currently associated
     /// with any channel.
-    1: string:MAX_CHANNEL_NAME_LENGTH current_channel;
+    1: current_channel string:MAX_CHANNEL_NAME_LENGTH;
     /// The realm of the device represented by the Omaha App ID. This value
     /// may be empty to indicate that the device is not currently associated
     /// with any realm.
-    2: string:MAX_REALM_NAME_LENGTH current_realm;
+    2: current_realm string:MAX_REALM_NAME_LENGTH;
 };
 
 /// The SystemDataUpdater interface allows callers to update the state of
 /// the System Data in Cobalt. This includes the SystemProfile and experiment
 /// state. The changes are global and affect all loggers running on the device.
-[Discoverable]
+@discoverable
 protocol SystemDataUpdater {
     /// Resets Cobalt's view of the system-wide experiment state and replaces it
     /// with the given values.
@@ -588,12 +654,19 @@ protocol SystemDataUpdater {
     /// `experiments`  All experiments the device has a notion of and the arms
     /// the device belongs to for each of them. These are the only experiments
     /// the device can collect data for.
-    SetExperimentState(vector<Experiment>:MAX experiments)
-        -> (Status status);
+    SetExperimentState(struct {
+        experiments vector<Experiment>:MAX;
+    }) -> (struct {
+        status Status;
+    });
 
     /// Sets Cobalt's view of the system-wide distribution information replacing the
     /// existing values.
     ///
     /// `info` The specifications of the current system's software distribution.
-    SetSoftwareDistributionInfo(SoftwareDistributionInfo info) -> (Status status);
+    SetSoftwareDistributionInfo(struct {
+        info SoftwareDistributionInfo;
+    }) -> (struct {
+        status Status;
+    });
 };

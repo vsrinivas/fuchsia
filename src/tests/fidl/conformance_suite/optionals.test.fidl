@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 // This is intended to ensure that the GIDL-generated test code produces the
 // correct syntax for C++ bindings, which needs to distinguish between e.g.
 // using "Foo foo;" vs "std::unique_ptr<Foo> foo;" for optional (nullable)
@@ -10,57 +8,57 @@ deprecated_syntax;
 
 library conformance;
 
-table TableWithEmptyStruct {
-    1: EmptyStruct s;
+type TableWithEmptyStruct = table {
+    1: s EmptyStruct;
 };
 
-flexible union XUnionWithEmptyStruct {
-    1: EmptyStruct s;
+type XUnionWithEmptyStruct = flexible union {
+    1: s EmptyStruct;
 };
 
-union UnionWithEmptyStruct {
-    1: EmptyStruct s;
-    2: uint64 force_alignment_of_8;
+type UnionWithEmptyStruct = strict union {
+    1: s EmptyStruct;
+    2: force_alignment_of_8 uint64;
 };
 
-struct StructWithOptionals {
-    EmptyStruct s;
-    EmptyStruct? s2;
-    TableWithEmptyStruct t;
+type StructWithOptionals = struct {
+    s EmptyStruct;
+    s2 box<EmptyStruct>;
+    t TableWithEmptyStruct;
     // nullable tables are not allowed.
-    XUnionWithEmptyStruct xu;
-    XUnionWithEmptyStruct? xu2;
-    UnionWithEmptyStruct u;
-    UnionWithEmptyStruct? u2;
+    xu XUnionWithEmptyStruct;
+    xu2 XUnionWithEmptyStruct:optional;
+    u UnionWithEmptyStruct;
+    u2 UnionWithEmptyStruct:optional;
 };
 
-struct Uint8Struct {
-    uint8 val;
+type Uint8Struct = struct {
+    val uint8;
 };
 
-struct Uint16Struct {
-    uint16 val;
+type Uint16Struct = struct {
+    val uint16;
 };
 
-struct Uint32Struct {
-    uint32 val;
+type Uint32Struct = struct {
+    val uint32;
 };
 
-struct Uint64Struct {
-    uint64 val;
+type Uint64Struct = struct {
+    val uint64;
 };
 
-struct OutOfLinePaddingZeroed7 {
-    Uint8Struct? a;
-    Uint64Struct? b;
+type OutOfLinePaddingZeroed7 = struct {
+    a box<Uint8Struct>;
+    b box<Uint64Struct>;
 };
 
-struct OutOfLinePaddingZeroed6 {
-    Uint16Struct? a;
-    Uint64Struct? b;
+type OutOfLinePaddingZeroed6 = struct {
+    a box<Uint16Struct>;
+    b box<Uint64Struct>;
 };
 
-struct OutOfLinePaddingZeroed4 {
-    Uint32Struct? a;
-    Uint64Struct? b;
+type OutOfLinePaddingZeroed4 = struct {
+    a box<Uint32Struct>;
+    b box<Uint64Struct>;
 };

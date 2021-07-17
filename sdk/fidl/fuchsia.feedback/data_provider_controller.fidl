@@ -1,13 +1,11 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.feedback;
 
 /// Used to externally control the data provider, say when disk space is becoming scarce or user
 /// privacy settings change.
-[Discoverable]
+@discoverable
 protocol DataProviderController {
     /// Disables persistent logging for the remainder of the boot and drops any logs that have been
     /// persisted. Returns when both have completed. Persistent logging cannot

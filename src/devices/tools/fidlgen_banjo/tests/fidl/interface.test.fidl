@@ -1,14 +1,12 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library banjo.examples.interface;
 
 using zx;
 
 /// Types of cookies CookieMaker can prep.
-enum CookieKind {
+type CookieKind = strict enum {
     /// Universal favorite.
     Chocolate = 0;
     /// Holiday favorite.
@@ -18,25 +16,42 @@ enum CookieKind {
 };
 
 /// An interface for a device that's able to create and deliver cookies!
-[Transport = "Banjo", BanjoLayout = "ddk-interface"]
+@transport("Banjo")
+@banjo_layout("ddk-interface")
 protocol CookieMaker {
     /// Asynchonously preps a cookie.
-    [Async]
-    Prep(CookieKind cookie) -> (uint64 token);
+    @async
+    Prep(struct {
+        cookie CookieKind;
+    }) -> (struct {
+        token uint64;
+    });
     /// Asynchonously bakes a cookie.
     /// Must only be called after preping finishes.
-    [async]
-    Bake(uint64 token, zx.time time) -> (zx.status s);
+    @async
+    Bake(struct {
+        token uint64;
+        time zx.time;
+    }) -> (struct {
+        s zx.status;
+    });
     /// Synchronously deliver a cookie.
     /// Must be called only after Bake finishes.
-    Deliver(uint64 token) -> (zx.status s);
+    Deliver(struct {
+        token uint64;
+    }) -> (struct {
+        s zx.status;
+    });
 };
 
 /// Protocol for a baker who outsources all of it's baking duties to others.
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol Baker {
     /// Registers a cookie maker device which the baker can use.
-    Register(CookieMaker intf) -> ();
+    Register(resource struct {
+        intf client_end:CookieMaker;
+    }) -> ();
     /// De-registers a cookie maker device when it's no longer available.
     DeRegister() -> ();
 };

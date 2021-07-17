@@ -1,21 +1,26 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.virtualconsole;
 
 using zx;
 using fuchsia.hardware.pty;
 
 /// Manages virtual console sessions.
-[Discoverable, ForDeprecatedCBindings]
+@discoverable
+@for_deprecated_c_bindings
 protocol SessionManager {
     /// Create a new virtual console session.
     // TODO(fxbug.dev/33204): Remove response status and debug why this doesn't work async when we switch
     // to new pty impl.
-    CreateSession(request<fuchsia.hardware.pty.Device> session) -> (zx.status status);
+    CreateSession(resource struct {
+        session server_end:fuchsia.hardware.pty.Device;
+    }) -> (struct {
+        status zx.status;
+    });
 
     /// Returns true if virtcon currently has a display that it can display something on.
-    HasPrimaryConnected() -> (bool connected);
+    HasPrimaryConnected() -> (struct {
+        connected bool;
+    });
 };

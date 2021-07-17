@@ -1,12 +1,11 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.dsi;
 using zx;
 
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol Dsi {
     /// This function takes the server end of a FIDL connection that will serve
     /// fuchsia.hardware.dsi.
@@ -16,5 +15,9 @@ protocol Dsi {
     ///
     /// The protocol only accepts one client at a time.
     /// Returns ZX_OK upon successful connection.
-    Connect(zx.handle:CHANNEL server) -> (zx.status status);
+    Connect(resource struct {
+        server zx.handle:CHANNEL;
+    }) -> (struct {
+        status zx.status;
+    });
 };

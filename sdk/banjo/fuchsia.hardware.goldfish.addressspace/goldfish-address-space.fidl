@@ -1,13 +1,11 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.goldfish.addressspace;
 
 using zx;
 
-enum AddressSpaceChildDriverType : uint32 {
+type AddressSpaceChildDriverType = strict enum : uint32 {
     /// The DEFAULT child driver type is for graphics.
     DEFAULT = 0;
 };
@@ -15,8 +13,13 @@ enum AddressSpaceChildDriverType : uint32 {
 /// Interface for the Goldfish address space driver.
 /// See //sdk/fidl/fuchsia.hardware.goldfish for details.
 ///
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol GoldfishAddressSpace {
-    OpenChildDriver(AddressSpaceChildDriverType type, zx.handle:CHANNEL req)
-        -> (zx.status status);
+    OpenChildDriver(resource struct {
+        type AddressSpaceChildDriverType;
+        req zx.handle:CHANNEL;
+    }) -> (struct {
+        status zx.status;
+    });
 };

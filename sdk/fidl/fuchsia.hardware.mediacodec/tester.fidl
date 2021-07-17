@@ -1,18 +1,20 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.mediacodec;
 
 using zx;
 
 /// This protocol is used by a client to run the amlogic video decoder tests.
-[ForDeprecatedCBindings]
+@for_deprecated_c_bindings
 protocol Tester {
     /// Takes a directory handle from the client and installs that as /tmp in the driver so that debugging files can be written there.
-    SetOutputDirectoryHandle(zx.handle:CHANNEL handle);
+    SetOutputDirectoryHandle(resource struct {
+        handle zx.handle:CHANNEL;
+    });
 
     /// Runs the full suite of tests. Test output will go to klog.
-    RunTests() -> (zx.status result);
+    RunTests() -> (struct {
+        result zx.status;
+    });
 };

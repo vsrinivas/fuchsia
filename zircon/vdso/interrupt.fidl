@@ -1,43 +1,77 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library zx;
 
-[Transport = "Syscall"]
+@transport("Syscall")
 protocol interrupt {
     /// Create an interrupt object.
     /// Rights: src_obj must have resource kind ZX_RSRC_KIND_IRQ.
-    interrupt_create(handle:RESOURCE src_obj, uint32 src_num, uint32 options)
-        -> (status status, handle:INTERRUPT out_handle);
+    interrupt_create(resource struct {
+        src_obj handle:RESOURCE;
+        src_num uint32;
+        options uint32;
+    }) -> (resource struct {
+        status status;
+        out_handle handle:INTERRUPT;
+    });
 
     /// Bind an interrupt object to a port.
     /// Rights: handle must be of type ZX_OBJ_TYPE_INTERRUPT and have ZX_RIGHT_READ.
     /// Rights: port_handle must be of type ZX_OBJ_TYPE_PORT and have ZX_RIGHT_WRITE.
-    interrupt_bind(handle:INTERRUPT handle, handle:PORT port_handle, uint64 key, uint32 options)
-        -> (status status);
+    interrupt_bind(resource struct {
+        handle handle:INTERRUPT;
+        port_handle handle:PORT;
+        key uint64;
+        options uint32;
+    }) -> (struct {
+        status status;
+    });
 
     /// Wait for an interrupt.
     /// Rights: handle must be of type ZX_OBJ_TYPE_INTERRUPT and have ZX_RIGHT_WAIT.
-    [blocking]
-    interrupt_wait(handle:INTERRUPT handle) -> (status status, optional_time out_timestamp);
+    @blocking
+    interrupt_wait(resource struct {
+        handle handle:INTERRUPT;
+    }) -> (struct {
+        status status;
+        out_timestamp optional_time;
+    });
 
     // TODO(fxbug.dev/32803): No DESTROY rights here.
     /// Destroys an interrupt object.
-    interrupt_destroy(handle:INTERRUPT handle) -> (status status);
+    interrupt_destroy(resource struct {
+        handle handle:INTERRUPT;
+    }) -> (struct {
+        status status;
+    });
 
     /// Acknowledge an interrupt and re-arm it.
     /// Rights: handle must be of type ZX_OBJ_TYPE_INTERRUPT and have ZX_RIGHT_WRITE.
-    interrupt_ack(handle:INTERRUPT handle) -> (status status);
+    interrupt_ack(resource struct {
+        handle handle:INTERRUPT;
+    }) -> (struct {
+        status status;
+    });
 
     /// Triggers a virtual interrupt object.
     /// Rights: handle must be of type ZX_OBJ_TYPE_INTERRUPT and have ZX_RIGHT_SIGNAL.
-    interrupt_trigger(handle:INTERRUPT handle, uint32 options, time timestamp) -> (status status);
+    interrupt_trigger(resource struct {
+        handle handle:INTERRUPT;
+        options uint32;
+        timestamp time;
+    }) -> (struct {
+        status status;
+    });
 
     /// Bind an interrupt object to a VCPU.
     /// Rights: handle must be of type ZX_OBJ_TYPE_INTERRUPT and have ZX_RIGHT_READ.
     /// Rights: vcpu must be of type ZX_OBJ_TYPE_VCPU and have ZX_RIGHT_WRITE.
-    interrupt_bind_vcpu(handle:INTERRUPT handle, handle:VCPU vcpu, uint32 options)
-        -> (status status);
+    interrupt_bind_vcpu(resource struct {
+        handle handle:INTERRUPT;
+        vcpu handle:VCPU;
+        options uint32;
+    }) -> (struct {
+        status status;
+    });
 };

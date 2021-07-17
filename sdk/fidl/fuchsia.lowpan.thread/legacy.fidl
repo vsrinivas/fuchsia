@@ -1,8 +1,6 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.lowpan.thread;
 
 using zx;
@@ -35,5 +33,8 @@ protocol LegacyJoining {
     ///
     /// `port` specifies the local port that TCP or UDP commissioning traffic
     /// will be directed to.
-    MakeJoinable(zx.duration duration, uint16 port) -> ();
+    MakeJoinable(struct {
+        duration zx.duration;
+        port uint16;
+    }) -> ();
 };

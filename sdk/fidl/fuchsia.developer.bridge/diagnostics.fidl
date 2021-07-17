@@ -1,18 +1,16 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.developer.bridge;
 
-enum StreamMode : uint32 {
+type StreamMode = strict enum : uint32 {
     SNAPSHOT_ALL = 1;
     SNAPSHOT_RECENT_THEN_SUBSCRIBE = 2;
     SNAPSHOT_ALL_THEN_SUBSCRIBE = 3;
     SUBSCRIBE = 4;
 };
 
-enum DiagnosticsStreamError : uint32 {
+type DiagnosticsStreamError = strict enum : uint32 {
     // Indicates an error that doesn't fall into any of the below types.
     GENERIC_ERROR = 1;
     // Indicates a required parameter is missing
@@ -32,8 +30,8 @@ enum DiagnosticsStreamError : uint32 {
     NO_MATCHING_OFFLINE_TARGETS = 6;
 };
 
-table DaemonDiagnosticsStreamParameters {
-    1: StreamMode stream_mode;
+type DaemonDiagnosticsStreamParameters = table {
+    1: stream_mode StreamMode;
     // Sets the earliest time (in monotonic nanoseconds) of logs that will be returned.
-    2: uint64 min_target_timestamp_nanos;
+    2: min_target_timestamp_nanos uint64;
 };

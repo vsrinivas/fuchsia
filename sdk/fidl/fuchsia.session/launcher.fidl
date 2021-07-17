@@ -1,14 +1,12 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.session;
 
 using fuchsia.url;
 
 /// A protocol used to launch sessions.
-[Discoverable]
+@discoverable
 protocol Launcher {
     /// Launches the session detailed in `configuration`.
     ///
@@ -23,11 +21,13 @@ protocol Launcher {
     ///   could not be destroyed. The existing session remains running at this point.
     /// * error `LaunchError.CREATE_COMPONENT_FAILED` if the session component
     ///   could not be started. No session will be running at this point.
-    Launch(LaunchConfiguration configuration) -> () error LaunchError;
+    Launch(struct {
+        configuration LaunchConfiguration;
+    }) -> (struct {}) error LaunchError;
 };
 
 /// An error that occurs when launching a session.
-enum LaunchError {
+type LaunchError = strict enum {
     /// The session's `LaunchConfiguration` is malformed.
     INVALID_ARGS = 1;
 
@@ -42,7 +42,7 @@ enum LaunchError {
 };
 
 /// A protocol used to restart the currently running session.
-[Discoverable]
+@discoverable
 protocol Restarter {
     /// Restarts the session.
     ///
@@ -52,11 +52,11 @@ protocol Restarter {
     ///   could not be destroyed. The existing session remains running at this point.
     /// * error `RestartError.CREATE_COMPONENT_FAILED` if the session component
     ///   could not be started. No session will be running at this point.
-    Restart() -> () error RestartError;
+    Restart() -> (struct {}) error RestartError;
 };
 
 /// An error that occurs when restarting a session.
-enum RestartError {
+type RestartError = strict enum {
     /// There is no currently running session to restart.
     NOT_RUNNING = 1;
 
@@ -71,7 +71,7 @@ enum RestartError {
 };
 
 /// Describes a session to launch.
-table LaunchConfiguration {
+type LaunchConfiguration = table {
     /// The component URL of the session.
-    1: string:fuchsia.url.MAX_URL_LENGTH session_url;
+    1: session_url string:fuchsia.url.MAX_URL_LENGTH;
 };

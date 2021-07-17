@@ -1,62 +1,60 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.legacymetrics;
 
 using zx;
 
 /// A single metric event to be recorded and sent to the UMA backend.
-union Event {
-    1: UserActionEvent user_action_event;
-    2: Histogram histogram;
-    3: ImplementationDefinedEvent impl_defined_event;
+type Event = strict union {
+    1: user_action_event UserActionEvent;
+    2: histogram Histogram;
+    3: impl_defined_event ImplementationDefinedEvent;
 };
 
 /// Event that occurs in response to a user action. See
 /// https://chromium.googlesource.com/chromium/src.git/+/HEAD/tools/metrics/actions/README.md
-table UserActionEvent {
-    1: string:MAX name;
+type UserActionEvent = table {
+    1: name string:MAX;
 
     /// Required timestamp of the event occurrence. See TimeTicks in
     /// https://cs.chromium.org/chromium/src/base/time/time.h
-    2: zx.time time;
+    2: time zx.time;
 };
 
-table Histogram {
+type Histogram = table {
     /// Required histogram identifier. See these guidelines for more info:
     /// https://chromium.googlesource.com/chromium/src.git/+/HEAD/tools/metrics/histograms/README.md#naming-your-histogram
-    1: string:MAX name;
+    1: name string:MAX;
 
-    2: vector<HistogramBucket>:MAX buckets;
+    2: buckets vector<HistogramBucket>:MAX;
 
     // The sum of all the sample values.
     // Together with the total count of the sample values, this allows us to
     // compute the average value.  The count of all sample values is just the sum
     // of the counts of all the buckets.
-    3: int64 sum;
+    3: sum int64;
 };
 
-struct HistogramBucket {
+type HistogramBucket = struct {
     // Each bucket's range is bounded by min <= x < max.
-    int64 min;
-    int64 max;
+    min int64;
+    max int64;
 
     // The number of entries in this bucket.
-    int64 count;
+    count int64;
 };
 
 /// A custom event defined by the MetricsRecorder service. Refer to your
 /// MetricsRecorder implementation for more details on the payload structure.
-table ImplementationDefinedEvent {
+type ImplementationDefinedEvent = table {
     /// Custom binary payload whose structure is defined by the MetricsRecorder
     /// implementation. For example, it can represent a custom event protocol
     /// buffer serialized to its wire format.
-    1: bytes data;
+    1: data bytes;
 
     /// Event identifier required if it's not already included in binary `data`.
     /// This field takes precedence over any equivalent name included in binary
     /// `data`, if both are provided.
-    2: string:MAX name;
+    2: name string:MAX;
 };

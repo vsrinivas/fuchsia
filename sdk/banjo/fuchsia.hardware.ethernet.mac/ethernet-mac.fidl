@@ -1,22 +1,40 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.ethernet.mac;
 
 using zx;
 
-const uint32 MAC_ARRAY_LENGTH = 6;
+const MAC_ARRAY_LENGTH uint32 = 6;
 
-[Transport = "Banjo", BanjoLayout = "ddk-callback"]
+@transport("Banjo")
+@banjo_layout("ddk-callback")
 protocol EthMacCallbacks {
-    ConfigPhy(array<uint8>:MAC_ARRAY_LENGTH mac) -> (zx.status s);
+    ConfigPhy(struct {
+        mac array<uint8, MAC_ARRAY_LENGTH>;
+    }) -> (struct {
+        s zx.status;
+    });
 };
 
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol EthMac {
-    MdioRead(uint32 reg) -> (zx.status s, uint32 val);
-    MdioWrite(uint32 reg, uint32 val) -> (zx.status s);
-    RegisterCallbacks(EthMacCallbacks cb) -> (zx.status s);
+    MdioRead(struct {
+        reg uint32;
+    }) -> (struct {
+        s zx.status;
+        val uint32;
+    });
+    MdioWrite(struct {
+        reg uint32;
+        val uint32;
+    }) -> (struct {
+        s zx.status;
+    });
+    RegisterCallbacks(resource struct {
+        cb client_end:EthMacCallbacks;
+    }) -> (struct {
+        s zx.status;
+    });
 };

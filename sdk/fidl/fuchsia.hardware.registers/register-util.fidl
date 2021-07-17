@@ -1,8 +1,6 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.registers;
 
 using zx;
@@ -16,10 +14,30 @@ protocol Device {
     /// |mask| : Mask of bits to read. For example, to read the lower 2 bytes of data in a 32 bit
     ///          register, mask should be 0x0000FFFF.
     /// @Returns: |value| : Value of register at the specified address.
-    ReadRegister8(uint64 offset, uint8 mask) -> (uint8 value) error zx.status;
-    ReadRegister16(uint64 offset, uint16 mask) -> (uint16 value) error zx.status;
-    ReadRegister32(uint64 offset, uint32 mask) -> (uint32 value) error zx.status;
-    ReadRegister64(uint64 offset, uint64 mask) -> (uint64 value) error zx.status;
+    ReadRegister8(struct {
+        offset uint64;
+        mask uint8;
+    }) -> (struct {
+        value uint8;
+    }) error zx.status;
+    ReadRegister16(struct {
+        offset uint64;
+        mask uint16;
+    }) -> (struct {
+        value uint16;
+    }) error zx.status;
+    ReadRegister32(struct {
+        offset uint64;
+        mask uint32;
+    }) -> (struct {
+        value uint32;
+    }) error zx.status;
+    ReadRegister64(struct {
+        offset uint64;
+        mask uint64;
+    }) -> (struct {
+        value uint64;
+    }) error zx.status;
 
     /// Writes to the register at the specified MMIO offset in register width equal to 8, 16, 32, and
     /// 64 bit variants
@@ -29,8 +47,24 @@ protocol Device {
     /// |mask| : Mask of bits to write. For example, to write to the lower 2 bytes of data in a 32
     ///          bit register, mask should be 0x0000FFFF.
     /// |value| : Value of register at the specified address.
-    WriteRegister8(uint64 offset, uint8 mask, uint8 value) -> () error zx.status;
-    WriteRegister16(uint64 offset, uint16 mask, uint16 value) -> () error zx.status;
-    WriteRegister32(uint64 offset, uint32 mask, uint32 value) -> () error zx.status;
-    WriteRegister64(uint64 offset, uint64 mask, uint64 value) -> () error zx.status;
+    WriteRegister8(struct {
+        offset uint64;
+        mask uint8;
+        value uint8;
+    }) -> (struct {}) error zx.status;
+    WriteRegister16(struct {
+        offset uint64;
+        mask uint16;
+        value uint16;
+    }) -> (struct {}) error zx.status;
+    WriteRegister32(struct {
+        offset uint64;
+        mask uint32;
+        value uint32;
+    }) -> (struct {}) error zx.status;
+    WriteRegister64(struct {
+        offset uint64;
+        mask uint64;
+        value uint64;
+    }) -> (struct {}) error zx.status;
 };

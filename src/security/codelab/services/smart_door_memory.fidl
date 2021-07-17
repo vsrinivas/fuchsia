@@ -1,43 +1,55 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.security.codelabsmartdoor;
 
-const uint8 TOKEN_ID_SIZE = 32;
+const TOKEN_ID_SIZE uint8 = 32;
 
-table Token {
-    1: string:TOKEN_ID_SIZE id;
+type Token = table {
+    1: id string:TOKEN_ID_SIZE;
 };
 
-[Discoverable]
+@discoverable
 protocol Memory {
     // Generate a random token that could be used to initialize a reader/writer.
-    GenerateToken() -> (Token token) error Error;
+    GenerateToken() -> (struct {
+        token Token;
+    }) error Error;
     // Get a reader to read from smart door memory. The memory must have been
     // previously written to using a writer obtained with the same token.
-    GetReader(Token token, request<Reader> request) -> () error Error;
+    GetReader(resource struct {
+        token Token;
+        request server_end:Reader;
+    }) -> (struct {}) error Error;
     // Get a writer to write to smart door memory. The token would be used to
     // identify the storage that could be written to.
-    GetWriter(Token token, request<Writer> request) -> () error Error;
+    GetWriter(resource struct {
+        token Token;
+        request server_end:Writer;
+    }) -> (struct {}) error Error;
 };
 
-[Discoverable]
+@discoverable
 protocol MemoryReset {
     // Reset all the smart door memory state. For test purposes.
     Reset() -> ();
 };
 
-[Discoverable]
+@discoverable
 protocol Reader {
     // Read all content in the smart door memory.
-    Read() -> (bytes:MAX bytes) error Error;
+    Read() -> (struct {
+        bytes bytes:MAX;
+    }) error Error;
 };
 
-[Discoverable]
+@discoverable
 protocol Writer {
     // Write the bytes into the smart door memory.
     // If success, following reads should read the same bytes out.
-    Write(bytes:MAX bytes) -> (uint32 bytes_written) error Error;
+    Write(struct {
+        bytes bytes:MAX;
+    }) -> (struct {
+        bytes_written uint32;
+    }) error Error;
 };

@@ -1,24 +1,23 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
 library fuchsia.diagnostics;
 
 //  The size bound of 100 is a reasonably low limit chosen based on observed
 //  strings used as identifiers.
-const uint16 MAX_STRING_SELECTOR_LENGTH = 100;
+const MAX_STRING_SELECTOR_LENGTH uint16 = 100;
 
 //  The size bound of 25 is a reasonably low limit chosen based on observed
 //  component hierarchy depths, and awareness of maximum zircon message sizes.
-const uint16 MAX_MONIKER_SEGMENTS = 25;
+const MAX_MONIKER_SEGMENTS uint16 = 25;
 
 //  The size bound of 100 is a reasonably low limit chosen based on observed Inspect
 //  hierarchy use cases.
-const uint16 MAX_DATA_HIERARCHY_DEPTH = 100;
+const MAX_DATA_HIERARCHY_DEPTH uint16 = 100;
 
 /// StringSelector is an union defining different ways to describe a pattern to match
 /// strings against.
-flexible union StringSelector {
+type StringSelector = flexible union {
     ///   This is a provided string that defines a pattern to
     ///   match against. The parser treats asterisks (*), colons (:) and backslashes
     ///   (\) as special characters.
@@ -38,11 +37,11 @@ flexible union StringSelector {
     ///   In addition, the "**" literal is treated as a special sequence that may match
     ///   multiple levels in a component selector only. See |ComponentSelector| for
     ///   details.
-    1: string:MAX_STRING_SELECTOR_LENGTH string_pattern;
+    1: string_pattern string:MAX_STRING_SELECTOR_LENGTH;
 
     ///  This is a provided string that defines an exact string to match against. No
     ///  characters are treated as special, or carry special syntax.
-    2: string:MAX_STRING_SELECTOR_LENGTH exact_match;
+    2: exact_match string:MAX_STRING_SELECTOR_LENGTH;
 };
 
 /// Specifies a pattern of component relative monikers which
@@ -63,7 +62,7 @@ flexible union StringSelector {
 ///    core
 ///    core/**
 /// The recursive wildcard is only allowed as the final segment of the selector.
-table ComponentSelector {
+type ComponentSelector = table {
     /// Vector encoding the a pattern for monikers of components being selected for.
     /// These monikers are child-monikers relative to a "root" hierarchy that the archivist
     /// is aware of.
@@ -71,12 +70,12 @@ table ComponentSelector {
     /// There must be at least one StringSelector provided, which
     /// specifies the component names that are matched by
     /// the current selector.
-    1: vector<StringSelector>:MAX_MONIKER_SEGMENTS moniker_segments;
+    1: moniker_segments vector<StringSelector>:MAX_MONIKER_SEGMENTS;
 };
 
 /// A selector defining a set of nodes to match, for which the entire subtree including
 /// those nodes are selected.
-struct SubtreeSelector {
+type SubtreeSelector = struct {
     /// A vector of StringSelectors which serve as a pattern matcher
     ///   for paths through a hierarchy of named nodes. Each entry in the vector
     ///   is a selector for a single named node in a data hierarchy. The vector
@@ -89,12 +88,12 @@ struct SubtreeSelector {
     /// will match all nodes named d which are below some child of node b.
     ///    root/a/b/c*
     /// will match all nodes below b which start with the character "c".
-    vector<StringSelector>:MAX_DATA_HIERARCHY_DEPTH node_path;
+    node_path vector<StringSelector>:MAX_DATA_HIERARCHY_DEPTH;
 };
 
 /// A selector defining a set of nodes to match, and on those matched nodes a set of named
 /// properties to match.
-struct PropertySelector {
+type PropertySelector = struct {
     /// A vector of StringSelectors which serve as a pattern matcher
     ///   for paths through a hierarchy of named nodes. Each entry in the vector
     ///   is a selector for a single named node in a data hierarchy. The vector
@@ -107,26 +106,26 @@ struct PropertySelector {
     /// will match all nodes named d which are below some child of node b.
     ///    root/a/b/c*
     /// will match all nodes below b which start with the character "c".
-    vector<StringSelector>:MAX_DATA_HIERARCHY_DEPTH node_path;
+    node_path vector<StringSelector>:MAX_DATA_HIERARCHY_DEPTH;
 
     /// A StringSelector which serves as a pattern matcher for
     ///   string-named properties on a node in a data hierarchy.
     ///
     /// target_properties supports wildcarding, which will match against all properties
     /// on any node matched by node_path.
-    StringSelector target_properties;
+    target_properties StringSelector;
 };
 
 /// TreeSelector represents a selection request on a hierarchy of named nodes, with
 /// named properties on those nodes.
-flexible union TreeSelector {
+type TreeSelector = flexible union {
     /// A selector defining a set of nodes to match, for which the entire subtree including
     /// those nodes are selected.
-    1: SubtreeSelector subtree_selector;
+    1: subtree_selector SubtreeSelector;
 
     /// A selector defining a set of nodes to match, and on those matched nodes a set of named
     /// propperties to match.
-    2: PropertySelector property_selector;
+    2: property_selector PropertySelector;
 };
 
 /// Structured selector containing all required information for pattern-matching onto
@@ -142,13 +141,13 @@ flexible union TreeSelector {
 ///
 ///    Subtree selection:
 ///         realm1/realm2/echo.cmx:root/active_users
-table Selector {
+type Selector = table {
     /// The selector defining a pattern of component monikers to match
     /// against.
-    1: ComponentSelector component_selector;
+    1: component_selector ComponentSelector;
 
     /// The selector defining data hierarchy properties to match against
     /// within the data hierarchies owned by components matched by
     /// `component_selector`.
-    2: TreeSelector tree_selector;
+    2: tree_selector TreeSelector;
 };

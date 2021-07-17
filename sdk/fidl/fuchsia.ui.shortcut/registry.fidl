@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.ui.shortcut;
 
 using fuchsia.input;
@@ -11,26 +9,31 @@ using fuchsia.ui.views;
 /// The maximum number of shortcut keys, excluding the trigger key, that is required
 /// to activate a shortcut.
 /// Currently a low bound based on current use-cases.
-const uint64 MAX_REQUIRED_KEYS = 2;
+const MAX_REQUIRED_KEYS uint64 = 2;
 
 /// Components may request this service from their namespace to
 /// register and be notified of shortcuts.
 /// Registry supports multiple registrations simultaneously.
-[Discoverable]
+@discoverable
 protocol Registry {
     /// Set shortcut activation listener.
-    SetView(fuchsia.ui.views.ViewRef view_ref, Listener listener);
+    SetView(resource struct {
+        view_ref fuchsia.ui.views.ViewRef;
+        listener client_end:Listener;
+    });
 
     /// Register new shortcut. Upon activation, `Listener` is invoked.
     /// Only focused ViewRefs will be notified of matching shortcut activations.
     /// For the full disambiguation procedure, see package-level documentation.
-    RegisterShortcut(Shortcut shortcut) -> ();
+    RegisterShortcut(struct {
+        shortcut Shortcut;
+    }) -> ();
 };
 
 /// Shortcut descriptor.
-table Shortcut {
+type Shortcut = table {
     /// Client-generated identifier, to distinguish activated shortcuts.
-    1: uint32 id;
+    1: id uint32;
 
     // Was used for input2 modifiers field.
     2: reserved;
@@ -41,7 +44,7 @@ table Shortcut {
     /// Optional: When set to true, parent's shortcuts take priority
     /// and are matched before those of its children.
     /// When use_priority is not set, shortcut uses use_priority == false.
-    4: bool use_priority;
+    4: use_priority bool;
 
     /// Optional: Shortcut activation trigger.
     /// When trigger is not set, shortcuts are activated on Trigger.KEY_PRESSED.
@@ -54,10 +57,10 @@ table Shortcut {
     ///     2. Key.LEFT_META with Trigger.KEY_PRESSED_AND_RELEASED
     ///   In this case, pressing Left Meta + Q will activate only shortcut (1), while
     ///   pressing and releasing Meta key alone will activate shortcut (2).
-    5: Trigger trigger;
+    5: trigger Trigger;
 
     /// Key to be pressed to activate the shortcut.
-    6: fuchsia.input.Key key3;
+    6: key3 fuchsia.input.Key;
 
     /// Keys that should be pressed to activate the shortcut.
     ///
@@ -69,26 +72,30 @@ table Shortcut {
     ///     - `Tab` is the trigger key, therefore `key3 = Key.TAB`
     ///    Result:
     ///     Shortcut is activated on Tab key press if Left Alt and Left Shift are held down.
-    7: vector<fuchsia.input.Key>:MAX_REQUIRED_KEYS keys_required;
+    7: keys_required vector<fuchsia.input.Key>:MAX_REQUIRED_KEYS;
 };
 
 /// Shortcut activation variations.
 /// Enumerates keyboard interaction options for shortcuts' activations.
-enum Trigger {
+type Trigger = strict enum {
     /// Activate shortcut on key press.
     KEY_PRESSED = 1;
 
     /// Activate shortcut on key release which is preceded by a key press.
     KEY_PRESSED_AND_RELEASED = 2;
 
-    // TODO: add later when needed
-    // KEY_LONG_PRESSED = 3;
-    // KEY_PRESSED_REPEATEDLY = 4;
+// TODO: add later when needed
+// KEY_LONG_PRESSED = 3;
+// KEY_PRESSED_REPEATEDLY = 4;
 };
 
 /// Client should implement this protocol to get notified of shortcut activation.
 /// Only focused ViewRefs will be notified of matching shortcut activations.
 /// For the full disambiguation procedure, see package-level documentation.
 protocol Listener {
-    OnShortcut(uint32 id) -> (bool handled);
+    OnShortcut(struct {
+        id uint32;
+    }) -> (struct {
+        handled bool;
+    });
 };

@@ -1,15 +1,13 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.lowpan;
 
 /// LoWPAN Connectivity State
 ///
 /// This enum describes the level of connectivity being provided
 /// by a device.
-enum ConnectivityState : int32 {
+type ConnectivityState = strict enum : int32 {
     /// Inactive state.
     ///
     /// In this state the device is unprovisioned and administratively

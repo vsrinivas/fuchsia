@@ -1,13 +1,12 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
 library fuchsia.virtualization;
 
 using zx;
 
 /// A `Guest` provides access to services of a guest instance.
-[Discoverable]
+@discoverable
 protocol Guest {
     /// Get a guest console.
     ///
@@ -16,12 +15,16 @@ protocol Guest {
     /// with a shell.
     ///
     /// Returns ZX_ERR_UNAVAILABLE if the guest has no configured console.
-    GetConsole() -> (zx.handle:SOCKET socket) error zx.status;
+    GetConsole() -> (resource struct {
+        socket zx.handle:SOCKET;
+    }) error zx.status;
 
     /// Get the socket for low-level guest debug logs.
     ///
     /// The details regarding what output is produced and what input is accepted
     /// are determined by each guest, but will typically be a read-only socket
     /// with the guest kernel's serial logs.
-    GetSerial() -> (zx.handle:SOCKET socket);
+    GetSerial() -> (resource struct {
+        socket zx.handle:SOCKET;
+    });
 };

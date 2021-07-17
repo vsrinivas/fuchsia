@@ -1,8 +1,6 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.wlan.tap;
 
 using fuchsia.wlan.device;
@@ -10,102 +8,107 @@ using fuchsia.wlan.common;
 using zx;
 
 /// Describes the capabilities of the fake wlantap-phy device to be created.
-struct WlantapPhyConfig {
+type WlantapPhyConfig = struct {
     // TODO(fxbug.dev/64628): wlantap will configure all of its ifaces to use the same MAC address
-    array<uint8>:6 iface_mac_addr;
-    fuchsia.wlan.device.MacRole mac_role;
-    vector<fuchsia.wlan.device.SupportedPhy>:8 supported_phys;
-    vector<fuchsia.wlan.common.DriverFeature>:8 driver_features;
-    vector<fuchsia.wlan.device.Capability>:8 caps;
-    vector<fuchsia.wlan.device.BandInfo>:8 bands;
-    string:32 name; // Arbitrary maximum size of 32 chosen to satisfy FidlLint
-    bool quiet;
+    iface_mac_addr array<uint8, 6>;
+    mac_role fuchsia.wlan.device.MacRole;
+    supported_phys vector<fuchsia.wlan.device.SupportedPhy>:8;
+    driver_features vector<fuchsia.wlan.common.DriverFeature>:8;
+    caps vector<fuchsia.wlan.device.Capability>:8;
+    bands vector<fuchsia.wlan.device.BandInfo>:8;
+    name string:32; // Arbitrary maximum size of 32 chosen to satisfy FidlLint
+    quiet bool;
 };
 
 /// Instruct the wlantap-ctl device to creates a fake wlantap-phy device based on the
 /// `WlantapPhyConfig` passed in. The newly created wlantap-phy device will use the channel to
 /// allow a `WlantapPhy` client to observe and control its behavior.
 protocol WlantapCtl {
-    CreatePhy(WlantapPhyConfig config, request<WlantapPhy> proxy) -> (zx.status status);
+    CreatePhy(resource struct {
+        config WlantapPhyConfig;
+        proxy server_end:WlantapPhy;
+    }) -> (struct {
+        status zx.status;
+    });
 };
 
 /// Information pertaining to incoming packets. One WlanRxInfo is associated with each packet.
 /// You are encouraged to use the default value in //src/connectivity/wlan/testing/hw-sim/src/lib.rs
 /// See wlan_rx_info_t for details about each field.
-struct WlanRxInfo {
-    uint32 rx_flags;
-    uint32 valid_fields;
-    uint16 phy;
-    uint32 data_rate;
-    fuchsia.wlan.common.WlanChan chan;
-    uint8 mcs;
-    int8 rssi_dbm;
-    int16 snr_dbh;
+type WlanRxInfo = struct {
+    rx_flags uint32;
+    valid_fields uint32;
+    phy uint16;
+    data_rate uint32;
+    chan fuchsia.wlan.common.WlanChan;
+    mcs uint8;
+    rssi_dbm int8;
+    snr_dbh int16;
 };
 
 /// Instruction from generic WLAN driver on how to send a packet. One WlanTxInfo per packet.
 /// These values are populated by the wlantap driver and should not be specified manually.
 /// See wlan_tx_info_t for details about each field.
-struct WlanTxInfo {
-    uint32 tx_flags;
-    uint32 valid_fields;
-    uint16 tx_vector_idx;
-    uint16 phy;
-    uint8 cbw;
-    uint8 mcs;
+type WlanTxInfo = struct {
+    tx_flags uint32;
+    valid_fields uint32;
+    tx_vector_idx uint16;
+    phy uint16;
+    cbw uint8;
+    mcs uint8;
 };
 
 /// An outgoing packet that is to be "sent" by the wlantap device. `data` contains the packet
 /// in its wire format.
-struct WlanTxPacket {
-    vector<uint8> data;
-    WlanTxInfo info;
+type WlanTxPacket = struct {
+    data vector<uint8>;
+    info WlanTxInfo;
 };
 
 /// BSS that is to be configured, or "remembered", by the wlantap device.
 /// These values are populated by the wlantap driver and should not be specified manually.
 /// See wlan_bss_config_t for details about each field.
-struct WlanBssConfig {
-    array<uint8>:6 bssid;
-    uint8 bss_type;
-    bool remote;
+type WlanBssConfig = struct {
+    bssid array<uint8, 6>;
+    bss_type uint8;
+    remote bool;
 };
 
 /// Configuration pertaining to security keys, often used by RSN and other secure authentication.
 /// These values are populated by the wlantap driver and should not be specified manually.
 /// See wlan_key_config_t for details about each field.
-struct WlanKeyConfig {
-    uint8 protection;
-    array<uint8>:3 cipher_oui;
-    uint8 cipher_type;
-    uint8 key_type;
-    array<uint8>:6 peer_addr;
-    uint8 key_idx;
-    vector<uint8>:32 key;
+type WlanKeyConfig = struct {
+    protection uint8;
+    cipher_oui array<uint8, 3>;
+    cipher_type uint8;
+    key_type uint8;
+    peer_addr array<uint8, 6>;
+    key_idx uint8;
+    key vector<uint8>:32;
 };
 
 /// One entry in a WlanTxStatus report, 1 report can contain up to 8 entries (see below).
 /// These values are populated by the wlantap driver and should not be specified manually.
 /// See wlan_tx_status_entry_t for details about each field.
-struct WlanTxStatusEntry {
-    uint16 tx_vec_idx;
-    uint8 attempts;
+type WlanTxStatusEntry = struct {
+    tx_vec_idx uint16;
+    attempts uint8;
 };
 
 /// TX status report used by Minstrel rate selection algorithm. One report per packet.
 /// You are encouraged to use the default value in //src/connectivity/wlan/testing/hw-sim/src/lib.rs
 /// See wlan_tx_status_t for details about each field.
-struct WlanTxStatus {
-    array<uint8>:6 peer_addr;
-    array<WlanTxStatusEntry>:8 tx_status_entries;
-    bool success;
+type WlanTxStatus = struct {
+    peer_addr array<uint8, 6>;
+    tx_status_entries array<WlanTxStatusEntry, 8>;
+    success bool;
 };
 
 /// Country code the device is to switch to.
 /// These values are populated by the wlantap driver and should not be specified manually.
 /// See also phy.fidl CountryCode.
-struct SetCountryArgs {
-    array<uint8>:2 alpha2;
+type SetCountryArgs = struct {
+    alpha2 array<uint8, 2>;
 };
 
 /// Allow the test program to observe and control the behavior of the wlantap-phy device.
@@ -125,61 +128,83 @@ protocol WlantapPhy {
     // simulating events happening at the devices side that are passed up to the driver.
 
     /// The device "receives" a frame "over the air" and pass it up to driver.
-    Rx(uint16 wlanmac_id, vector<uint8> data, WlanRxInfo info);
+    Rx(struct {
+        wlanmac_id uint16;
+        data vector<uint8>;
+        info WlanRxInfo;
+    });
     /// The device report its status to the driver. (Not used).
-    Status(uint16 wlanmac_id, uint32 st);
+    Status(struct {
+        wlanmac_id uint16;
+        st uint32;
+    });
     /// For rate selection (Minstrel), the device's last frame transmission is a success/failure,
     /// with a certain number of retries.
-    ReportTxStatus(uint16 wlanmac_id, WlanTxStatus txs);
+    ReportTxStatus(struct {
+        wlanmac_id uint16;
+        txs WlanTxStatus;
+    });
 
     // wlanmac_protocol_ops_t
     // events indicating that the wlanmac device received interface request calls from the driver.
 
     /// The device is to send a frame "over the air".
-    -> Tx(TxArgs args);
+    -> Tx(struct {
+        args TxArgs;
+    });
     /// The device created by its parent device (wlantap-phy: wlanphy) is
     /// detected and being connected by wlanstack/wlancfg.
     /// The device is to enter the "running" state.
-    -> WlanmacStart(WlanmacStartArgs args);
+    -> WlanmacStart(struct {
+        args WlanmacStartArgs;
+    });
     /// The device is to switch to the specified channel.
-    -> SetChannel(SetChannelArgs args);
+    -> SetChannel(struct {
+        args SetChannelArgs;
+    });
     /// AP: The device is to use args.config as a template for beacon frames.
     /// Client: The device is to be configured with this BSS as it peer.
-    -> ConfigureBss(ConfigureBssArgs args);
+    -> ConfigureBss(struct {
+        args ConfigureBssArgs;
+    });
 
     // TODO: ConfigureBeacon
 
     /// The device is to install the keys (often coming from RSN, exceptions apply).
-    -> SetKey(SetKeyArgs args);
+    -> SetKey(struct {
+        args SetKeyArgs;
+    });
 
     // WlantaphyImpl (defined in banjo)
     // events indicating that the wlanphy device received interface rquest calls from the driver.
 
     /// The device is to change its radio and power settings to conform to the regulation of the
     /// specified country.
-    -> SetCountry(SetCountryArgs args);
+    -> SetCountry(struct {
+        args SetCountryArgs;
+    });
 };
 
-struct TxArgs {
-    uint16 wlanmac_id;
-    WlanTxPacket packet;
+type TxArgs = struct {
+    wlanmac_id uint16;
+    packet WlanTxPacket;
 };
 
-struct SetChannelArgs {
-    uint16 wlanmac_id;
-    fuchsia.wlan.common.WlanChan chan;
+type SetChannelArgs = struct {
+    wlanmac_id uint16;
+    chan fuchsia.wlan.common.WlanChan;
 };
 
-struct ConfigureBssArgs {
-    uint16 wlanmac_id;
-    WlanBssConfig config;
+type ConfigureBssArgs = struct {
+    wlanmac_id uint16;
+    config WlanBssConfig;
 };
 
-struct SetKeyArgs {
-    uint16 wlanmac_id;
-    WlanKeyConfig config;
+type SetKeyArgs = struct {
+    wlanmac_id uint16;
+    config WlanKeyConfig;
 };
 
-struct WlanmacStartArgs {
-    uint16 wlanmac_id;
+type WlanmacStartArgs = struct {
+    wlanmac_id uint16;
 };

@@ -1,22 +1,20 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.net.icmp;
 
 using fuchsia.net;
 using zx;
 
 /// Configuration for an ICMP echo socket.
-table EchoSocketConfig {
+type EchoSocketConfig = table {
     /// Local IPv4 or IPv6 address used as the source for ICMP echo requests
     /// sent through this EchoSocket.
     ///
     /// This field is currently ignored and has no effect, but may have an
     /// effect in the future for source-based routing. It is highly encouraged
     /// to specify this field, if possible.
-    1: fuchsia.net.IpAddress local;
+    1: local fuchsia.net.IpAddress;
 
     /// Remote IPv4 or IPv6 address used as the destination for ICMP echo
     /// requests sent through this EchoSocket.
@@ -28,16 +26,19 @@ table EchoSocketConfig {
     /// In other words, `source` and `remote` can either both be IPv4 or IPv6.
     /// Having `source` as IPv4 and `remote` as IPv6, or vice versa, will result
     /// in error.
-    2: fuchsia.net.IpAddress remote;
+    2: remote fuchsia.net.IpAddress;
 };
 
 /// Provides clients access to ICMP echo sockets through EchoSockets.
-[Discoverable]
+@discoverable
 protocol Provider {
     /// Open an ICMP socket soley for sending ICMP echo requests and receiving
     /// ICMP echo replies. A protocol request `socket` provides an interface to
     /// the EchoSocket for the new ICMP echo socket.
-    OpenEchoSocket(EchoSocketConfig config, request<EchoSocket> socket);
+    OpenEchoSocket(resource struct {
+        config EchoSocketConfig;
+        socket server_end:EchoSocket;
+    });
 };
 
 /// EchoSocket is a socket that allows sending ICMP echo requests and receiving
@@ -53,7 +54,9 @@ protocol EchoSocket {
     /// The source address on the packet is chosen purely based on the remote
     /// address for the time being. The configured local address from
     /// `EchoSocketConfig` is ignored.
-    SendRequest(EchoPacket request);
+    SendRequest(struct {
+        request EchoPacket;
+    });
 
     /// Watch for an ICMP echo reply or error. If a reply or error hasn't been
     /// received yet, block until one arrives; otherwise, return immediately.
@@ -65,24 +68,28 @@ protocol EchoSocket {
     /// Returns status:
     ///  - `ADDRESS_UNREACHABLE` when the remote host is unreachable
     ///  - `OUT_OF_RANGE` when the packet is larger than the MTU
-    Watch() -> (EchoPacket reply) error zx.status;
+    Watch() -> (struct {
+        reply EchoPacket;
+    }) error zx.status;
 
     /// Triggers when the socket opens. Indicates the success or failure of the
     /// open operation.
     ///
     /// Returns status `INVALID_ARUGMENT` when the `local` and `remote` IP
     /// addresses do not match IP versions.
-    -> OnOpen(zx.status s);
+    -> OnOpen(struct {
+        s zx.status;
+    });
 };
 
 /// EchoPacket specifies ICMP fields for an echo request or reply. IP fields
 /// are set and verified upon `OpenEchoSocket`.
-struct EchoPacket {
+type EchoPacket = struct {
     /// Sequence numbers are used to match requests and replies.
-    uint16 sequence_num;
+    sequence_num uint16;
 
     /// The payload can be of arbitrary length and content. The size, including IP
     /// and ICMP headers, must be less than the Maximum Transmission Limit (MTU)
     /// of the network to avoid being fragmented.
-    bytes payload;
+    payload bytes;
 };

@@ -1,29 +1,43 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
 library fuchsia.examples;
 
-const uint64 MAX_STRING_LENGTH = 32;
+const MAX_STRING_LENGTH uint64 = 32;
 
 // [START echo]
-[Discoverable]
+@discoverable
 protocol Echo {
-    EchoString(string:MAX_STRING_LENGTH value) -> (string:MAX_STRING_LENGTH response);
-    SendString(string:MAX_STRING_LENGTH value);
-    -> OnString(string:MAX_STRING_LENGTH response);
+    EchoString(struct {
+        value string:MAX_STRING_LENGTH;
+    }) -> (struct {
+        response string:MAX_STRING_LENGTH;
+    });
+    SendString(struct {
+        value string:MAX_STRING_LENGTH;
+    });
+    -> OnString(struct {
+        response string:MAX_STRING_LENGTH;
+    });
 };
 // [END echo]
 
 // [START launcher]
-[Discoverable]
+@discoverable
 protocol EchoLauncher {
-    GetEcho(string:MAX_STRING_LENGTH echo_prefix) -> (Echo response);
-    GetEchoPipelined(string:MAX_STRING_LENGTH echo_prefix, request<Echo> request);
+    GetEcho(struct {
+        echo_prefix string:MAX_STRING_LENGTH;
+    }) -> (resource struct {
+        response client_end:Echo;
+    });
+    GetEchoPipelined(resource struct {
+        echo_prefix string:MAX_STRING_LENGTH;
+        request server_end:Echo;
+    });
 };
 // [END launcher]
 
 service EchoService {
-    Echo regular_echo;
-    Echo reversed_echo;
+    regular_echo client_end:Echo;
+    reversed_echo client_end:Echo;
 };

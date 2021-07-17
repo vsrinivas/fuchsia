@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.modular.testing;
 
 using fuchsia.mem;
@@ -28,7 +26,7 @@ using zx;
 /// * `ZX_ERR_ALREADY_BOUND`: Run() was already called.
 /// * `ZX_ERR_ALREADY_EXISTS`: The same environment service is being provided
 ///   twice.
-[Discoverable]
+@discoverable
 protocol TestHarness {
     /// Initializes an instance of the modular runtime in an enclosed
     /// environment, configured with parameters provided in `spec`. Closing the
@@ -40,7 +38,9 @@ protocol TestHarness {
     ///  * `ZX_ERR_ALREADY_EXISTS`: The same environment service is being provided
     ///    twice in `spec.env_services`
     ///  * `ZX_ERR_ALREADY_BOUND`: Run() was already called.
-    Run(TestHarnessSpec spec);
+    Run(resource struct {
+        spec TestHarnessSpec;
+    });
 
     /// This event is sent when a component specified in
     /// `TestHarnessSpec.components_to_intercept` is created.
@@ -49,8 +49,10 @@ protocol TestHarness {
     /// Closing `intercepted_component` will signal to the component manager
     /// that this component has exited unexpectedly. Prefer to use
     /// InterceptedComponent/Exit to provide exit code and reason.
-    -> OnNewComponent(fuchsia.sys.StartupInfo startup_info,
-                      InterceptedComponent intercepted_component);
+    -> OnNewComponent(resource struct {
+        startup_info fuchsia.sys.StartupInfo;
+        intercepted_component client_end:InterceptedComponent;
+    });
 
     /// Tests may use this method to connect to services provided by the modular
     /// runtime. These services share the same component namespace for any
@@ -61,25 +63,33 @@ protocol TestHarness {
     ///  * `ZX_ERR_BAD_STATE`: if `ConnectToModularService()` is called before
     ///   `Run()`.
     ///  * `ZX_ERR_INVALID_ARGS`: if `service` is not set to a value.
-    ConnectToModularService(ModularService service);
+    ConnectToModularService(resource struct {
+        service ModularService;
+    });
 
     /// Connects to environment services injected into the TestHarness
     /// environment.
-    ConnectToEnvironmentService(string service_name, zx.handle:CHANNEL request);
+    ConnectToEnvironmentService(resource struct {
+        service_name string;
+        request zx.handle:CHANNEL;
+    });
 
     /// Parses a JSON modular configuration string into BasemgrConfig and
     /// SessionmgrConfig. This method may be called before `Run()` is called.
-    ParseConfig(string config)
-        -> (fuchsia.modular.session.BasemgrConfig basemgr_config,
-            fuchsia.modular.session.SessionmgrConfig sessionmgr_config);
+    ParseConfig(struct {
+        config string;
+    }) -> (struct {
+        basemgr_config fuchsia.modular.session.BasemgrConfig;
+        sessionmgr_config fuchsia.modular.session.SessionmgrConfig;
+    });
 };
 
 /// Describes which service to connect to using `ConnectToModularService()`.
-resource union ModularService {
-    1: request<fuchsia.modular.PuppetMaster> puppet_master;
-    2: request<fuchsia.modular.ComponentContext> component_context;
+type ModularService = strict resource union {
+    1: puppet_master server_end:fuchsia.modular.PuppetMaster;
+    2: component_context server_end:fuchsia.modular.ComponentContext;
     3: reserved;
-    4: request<fuchsia.element.Manager> element_manager;
+    4: element_manager server_end:fuchsia.element.Manager;
 };
 
 /// InterceptedComponent represents an intercepted component's lifecycle.
@@ -90,7 +100,10 @@ protocol InterceptedComponent {
     /// values here are bubbled up to the
     /// `fuchsia.sys.ComponentController.OnTerminated` event. The `OnKill` event
     /// is sent, and this InterceptedComponent handle is closed.
-    Exit(int64 exit_code, fuchsia.sys.TerminationReason reason);
+    Exit(struct {
+        exit_code int64;
+        reason fuchsia.sys.TerminationReason;
+    });
 
     /// The event is sent when the component is killed by the associated
     /// `fuchsia.sys.ComponentController`, or when `Exit()` is called.
@@ -110,7 +123,7 @@ protocol InterceptedComponent {
 /// `TestHarnessSpec.env_services_to_inherit` and
 /// `TestHarnessSpec.injected_services`. Additional services override the
 /// default services listed above.
-resource table TestHarnessSpec {
+type TestHarnessSpec = resource table {
     /// Configuration for basemgr. See `fuchsia.modular.session.BasemgrConfig`
     /// for a description of the defaults.
     ///
@@ -129,21 +142,21 @@ resource table TestHarnessSpec {
     /// To intercept and mock the shells, users may provide fake URLs for the
     /// shells and specify that the fake URL be intercepted using
     /// `components_to_intercept`.
-    1: fuchsia.modular.session.BasemgrConfig basemgr_config;
+    1: basemgr_config fuchsia.modular.session.BasemgrConfig;
 
     /// Configuration for sessionmgr. See
     /// `fuchsia.modular.session.SessionmgrConfig` for a description of the
     /// defaults.
-    2: fuchsia.modular.session.SessionmgrConfig sessionmgr_config;
+    2: sessionmgr_config fuchsia.modular.session.SessionmgrConfig;
 
     /// List of component URLs (and additional .cmx contents) to intercept.
-    4: vector<InterceptSpec> components_to_intercept;
+    4: components_to_intercept vector<InterceptSpec>;
 
     /// Options to configure the test harness environment. Use this to inject
     /// services into the environment.
     ///
     /// Optional.
-    6: EnvironmentServicesSpec env_services;
+    6: env_services EnvironmentServicesSpec;
 
     /// Suffix to the environment name.
     /// The default environment name is 'mth_{random number from 0 to 99999}'.
@@ -152,11 +165,11 @@ resource table TestHarnessSpec {
     /// truncated at 32 characters.
     ///
     /// Optional.
-    7: string environment_suffix;
+    7: environment_suffix string;
 
     /// DEPRECATED. Use `env_services.service_dir` to pass through services from
     /// parent environment.
-    3: vector<string> env_services_to_inherit;
+    3: env_services_to_inherit vector<string>;
 
     5: reserved;
 };
@@ -165,11 +178,11 @@ resource table TestHarnessSpec {
 ///
 /// If the same service is provided in more than one place, `TestHarness`
 /// connection is closed with a `ZX_ERR_ALREADY_EXISTS` epitaph.
-resource table EnvironmentServicesSpec {
+type EnvironmentServicesSpec = resource table {
     /// A directory of services to be provided to the test harness environment.
     ///
     /// Optional.
-    1: zx.handle:CHANNEL service_dir;
+    1: service_dir zx.handle:CHANNEL;
 
     /// A list of services provided by components to inject into the test
     /// harness environment. Multiple services may be provided by the same
@@ -179,25 +192,25 @@ resource table EnvironmentServicesSpec {
     /// environment's life.
     ///
     /// Optional.
-    2: vector<ComponentService> services_from_components;
+    2: services_from_components vector<ComponentService>;
 };
 
 /// Describes a service to be provided by a component instance.
-struct ComponentService {
+type ComponentService = struct {
     /// Name of the service.
-    string name;
+    name string;
 
     /// URL of the component which will provide the service.
     /// The service is retrieved from this component's /out/svc namespace.
-    fuchsia.sys.component_url url;
+    url fuchsia.sys.component_url;
 };
 
 /// Describes a component to intercept. Malformed parameters result in closing
 /// `TestHarness` with a `ZX_ERR_INVALID_ARGS` epitaph.
-resource table InterceptSpec {
+type InterceptSpec = resource table {
     /// Required. Must be a valid component URL (e.g., fuchsia-pkg://..), or is
     /// considered malformed.
-    1: fuchsia.sys.component_url component_url;
+    1: component_url fuchsia.sys.component_url;
 
     /// The .cmx contents of this component's manifest. A minimal manifest is
     /// constructed by default. If set, the contents of `extra_cmx_contents`
@@ -213,5 +226,5 @@ resource table InterceptSpec {
     ///     ]
     ///   }
     /// }
-    2: fuchsia.mem.Buffer extra_cmx_contents;
+    2: extra_cmx_contents fuchsia.mem.Buffer;
 };

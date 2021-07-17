@@ -1,23 +1,23 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.ui.brightness;
 
 /// Handler implemented by the owner of the presentation.
 /// The UI component that controls brightness and screen tint uses this protocol to request changes
 /// to the screen's color adjustment matrix.
-[Discoverable]
+@discoverable
 protocol ColorAdjustmentHandler {
     /// Called when the color adjustment  has changed.
-    SetColorAdjustment(ColorAdjustmentTable color_adjustment);
+    SetColorAdjustment(struct {
+        color_adjustment ColorAdjustmentTable;
+    });
 };
 
 /// The table for screen color tint adjustments.
-table ColorAdjustmentTable {
+type ColorAdjustmentTable = table {
     /// 3x3 Matrix in row-major form which will be used by root presenter
     /// to apply color adjustment.
     /// This field may be omitted to disable color adjustment.
-    1: array<float32>:9 matrix;
+    1: matrix array<float32, 9>;
 };

@@ -1,31 +1,29 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library llcpptest.protocol.test;
 
 using zx;
 
-enum MyError : int32 {
+type MyError = strict enum : int32 {
     BAD_ERROR = 1;
     REALLY_BAD_ERROR = 2;
 };
 
-resource struct HandleStruct {
-    zx.handle:EVENT h;
+type HandleStruct = resource struct {
+    h zx.handle:EVENT;
 };
 
-resource struct VectorStruct {
-    vector<HandleStruct> v;
+type VectorStruct = resource struct {
+    v vector<HandleStruct>;
 };
 
-resource union HandleUnion {
-    1: zx.handle:EVENT h;
+type HandleUnion = strict resource union {
+    1: h zx.handle:EVENT;
 };
 
-resource struct HandleUnionStruct {
-    HandleUnion u;
+type HandleUnionStruct = resource struct {
+    u HandleUnion;
 };
 
 /// Protocol for testing methods with error types.
@@ -33,26 +31,53 @@ resource struct HandleUnionStruct {
 /// success or the error case. This should follow the naming of the method,
 /// e.g. ReturnPrimitiveError will always return the error case.
 protocol ErrorMethods {
-    NoArgsPrimitiveError(bool should_error) -> () error int32;
-    ManyArgsCustomError(bool should_error) -> (int32 a, int32 b, int32 c) error MyError;
+    NoArgsPrimitiveError(struct {
+        should_error bool;
+    }) -> (struct {}) error int32;
+    ManyArgsCustomError(struct {
+        should_error bool;
+    }) -> (struct {
+        a int32;
+        b int32;
+        c int32;
+    }) error MyError;
 };
 
 protocol Frobinator {
-    Frob(string value);
-    Grob(string value) -> (string value);
-    -> Hrob(string value);
+    Frob(struct {
+        value string;
+    });
+    Grob(struct {
+        value string;
+    }) -> (struct {
+        value string;
+    });
+    -> Hrob(struct {
+        value string;
+    });
 };
 
 protocol HandleProvider {
-    GetHandle() -> (HandleStruct value);
-    GetHandleVector(uint32 count) -> (vector<HandleStruct> value);
-    GetHandleUnion() -> (HandleUnionStruct value);
+    GetHandle() -> (resource struct {
+        value HandleStruct;
+    });
+    GetHandleVector(struct {
+        count uint32;
+    }) -> (resource struct {
+        value vector<HandleStruct>;
+    });
+    GetHandleUnion() -> (resource struct {
+        value HandleUnionStruct;
+    });
 };
 
 protocol EnumMethods {
-    SendEnum(MyError e);
-    GetEnum() -> (MyError e);
+    SendEnum(struct {
+        e MyError;
+    });
+    GetEnum() -> (struct {
+        e MyError;
+    });
 };
 
-protocol Empty {
-};
+protocol Empty {};

@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.identity.transfer;
 
 using fuchsia.identity.account;
@@ -14,14 +12,16 @@ using fuchsia.kms;
 /// Note: this is a sensitive interface and connections should only be created
 /// between AccountManagers on remotely attested devices.  No components on
 /// the same device should connect over this protocol.
-[Discoverable]
+@discoverable
 protocol AccountManagerPeer {
     /// Requests an account transfer.
     /// `lifetime` The lifetime that the transferred account should have
     ///   on the target device.
     /// `account_transfer` The server end of an `AccountTransfer` channel.
-    ReceiveAccount(fuchsia.identity.account.Lifetime lifetime,
-                   request<AccountTransfer> account_transfer);
+    ReceiveAccount(resource struct {
+        lifetime fuchsia.identity.account.Lifetime;
+        account_transfer server_end:AccountTransfer;
+    });
 };
 
 /// The control channel through which AccountManager components on different
@@ -41,7 +41,9 @@ protocol AccountTransfer {
     /// preparing to receive an account.  The event contains a `target_key`
     /// which should be used to encrypt the account data sent through
     /// `CompleteAccountTransfer`.
-    -> OnTransferReady(fuchsia.kms.PublicKey target_key);
+    -> OnTransferReady(struct {
+        target_key fuchsia.kms.PublicKey;
+    });
 
     /// Completes the account transfer by sending the transfered data.
     /// The data is opaque to the AccountManager binary, and should be
@@ -50,6 +52,7 @@ protocol AccountTransfer {
     ///
     /// If the account is already present on the target device this fails
     /// with UNSUPPORTED_OPERATION.
-    CompleteAccountTransfer(bytes encrypted_account_data)
-        -> () error fuchsia.identity.account.Error;
+    CompleteAccountTransfer(struct {
+        encrypted_account_data bytes;
+    }) -> (struct {}) error fuchsia.identity.account.Error;
 };

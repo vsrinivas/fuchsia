@@ -1,12 +1,10 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.ui.activity;
 
 /// State is an enumeration of the activity states the system may be in.
-enum State {
+type State = strict enum {
     UNKNOWN = 0;
     /// IDLE implies that the system is not currently being used by a user.
     /// In other words, the system is not ACTIVE.

@@ -1,13 +1,15 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.gpu.clock;
 
 using zx;
 
-[ForDeprecatedCBindings]
+@for_deprecated_c_bindings
 protocol Clock {
-    SetFrequencySource(uint32 source) -> (zx.status s);
+    SetFrequencySource(struct {
+        source uint32;
+    }) -> (struct {
+        s zx.status;
+    });
 };

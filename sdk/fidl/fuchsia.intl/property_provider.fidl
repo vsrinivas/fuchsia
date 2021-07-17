@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.intl;
 
 /// Provides internationalization properties.
@@ -13,10 +11,12 @@ library fuchsia.intl;
 /// override it and apply additional customizations.
 ///
 /// See also `fuchsia.ui.views.View`.
-[Discoverable]
+@discoverable
 protocol PropertyProvider {
     /// Gets the user's internationalization profile.
-    GetProfile() -> (Profile profile);
+    GetProfile() -> (struct {
+        profile Profile;
+    });
 
     /// Indicates that the properties may have changed and the client should query them again.
     -> OnChange();

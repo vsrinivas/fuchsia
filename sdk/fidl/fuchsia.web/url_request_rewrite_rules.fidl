@@ -1,30 +1,28 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.web;
 
 using fuchsia.net.http;
 
-table UrlRequestRewriteRule {
+type UrlRequestRewriteRule = table {
     /// Set of hosts to apply the rules to. If not set, the rule will apply to every request,
     /// independent of host.
-    1: vector<UrlHostName>:MAX_RULE_COUNT hosts_filter;
+    1: hosts_filter vector<UrlHostName>:MAX_RULE_COUNT;
 
     /// Set of schemes to apply the rules to. If not set, the rule will apply to every request,
     /// independent of scheme.
-    2: vector<UrlSchemeName>:MAX_RULE_COUNT schemes_filter;
+    2: schemes_filter vector<UrlSchemeName>:MAX_RULE_COUNT;
 
     /// URL request rewrites to apply.
-    3: vector<UrlRequestRewrite>:MAX_RULE_COUNT rewrites;
+    3: rewrites vector<UrlRequestRewrite>:MAX_RULE_COUNT;
 
     /// Specifies the action to take for requests matching the filter criteria.
     /// Requests are allowed by default.
-    4: UrlRequestAction action;
+    4: action UrlRequestAction;
 };
 
-enum UrlRequestAction : int32 {
+type UrlRequestAction = strict enum : int32 {
     /// Allow the request to be processed.
     ALLOW = 1;
 
@@ -32,21 +30,21 @@ enum UrlRequestAction : int32 {
     DENY = 2;
 };
 
-flexible union UrlRequestRewrite {
+type UrlRequestRewrite = flexible union {
     /// Adds a set of headers to a URL request.
-    1: UrlRequestRewriteAddHeaders add_headers;
+    1: add_headers UrlRequestRewriteAddHeaders;
 
     /// Removes a header based on the presence of a pattern in the URL query.
-    2: UrlRequestRewriteRemoveHeader remove_header;
+    2: remove_header UrlRequestRewriteRemoveHeader;
 
     /// Substitutes a pattern in the URL query.
-    3: UrlRequestRewriteSubstituteQueryPattern substitute_query_pattern;
+    3: substitute_query_pattern UrlRequestRewriteSubstituteQueryPattern;
 
     /// Replaces a URL if the original URL ends with a pattern.
-    4: UrlRequestRewriteReplaceUrl replace_url;
+    4: replace_url UrlRequestRewriteReplaceUrl;
 
     /// Appends to the URL query.
-    5: UrlRequestRewriteAppendToQuery append_to_query;
+    5: append_to_query UrlRequestRewriteAppendToQuery;
 };
 
 /// Adds `headers` to the URL request. If a header is already present in the original URL request,
@@ -54,8 +52,8 @@ flexible union UrlRequestRewrite {
 /// - `headers` must be set.
 /// - Each [`fuchsia.net.http/Header`] in `headers` must have a valid HTTP header name and value,
 ///   per [RFC 7230 section  3.2](https://tools.ietf.org/html/rfc7230#section-3.2).
-table UrlRequestRewriteAddHeaders {
-    1: vector<fuchsia.net.http.Header>:MAX_HEADERS_COUNT headers;
+type UrlRequestRewriteAddHeaders = table {
+    1: headers vector<fuchsia.net.http.Header>:MAX_HEADERS_COUNT;
 };
 
 /// If `query_pattern` in the URL query, removes `header_name` from the list of headers. If
@@ -63,18 +61,18 @@ table UrlRequestRewriteAddHeaders {
 /// - `header_name` must be set.
 /// - `header_name` must be a valid HTTP header name, per
 ///   [RFC 7230 section 3.2](https://tools.ietf.org/html/rfc7230#section-3.2).
-table UrlRequestRewriteRemoveHeader {
-    1: Url query_pattern;
-    2: bytes:MAX_HEADERS_COUNT header_name;
+type UrlRequestRewriteRemoveHeader = table {
+    1: query_pattern Url;
+    2: header_name bytes:MAX_HEADERS_COUNT;
 };
 
 /// If `pattern` is found in the URL request query, replaces it with `substitution`.
 /// - `pattern` and `substitution` must be set.
 /// - `substitution` must be a valid
 ///   [URL-query string](https://url.spec.whatwg.org/#url-query-string).
-table UrlRequestRewriteSubstituteQueryPattern {
-    1: Url pattern;
-    2: Url substitution;
+type UrlRequestRewriteSubstituteQueryPattern = table {
+    1: pattern Url;
+    2: substitution Url;
 };
 
 /// If the URL in the URL request ends with `url_ends_with`, rewrites the URL to `new_url`.
@@ -82,15 +80,15 @@ table UrlRequestRewriteSubstituteQueryPattern {
 /// - `url_ends_with` must be a valid
 ///   [path-relative-URL string](https://url.spec.whatwg.org/#path-relative-url-string).
 /// - `new_url` must be a [valid URL string](https://url.spec.whatwg.org/#valid-url-string).
-table UrlRequestRewriteReplaceUrl {
-    1: Url url_ends_with;
-    2: Url new_url;
+type UrlRequestRewriteReplaceUrl = table {
+    1: url_ends_with Url;
+    2: new_url Url;
 };
 
 /// Appends `query` to the URL query. If the URL request already has a query, `query` will be
 /// appended to it, preceded by `&`. Otherwise, the URL's query will be set to `query`.
 /// - `query` must be set.
 /// - `query` must be a valid [URL-query string](https://url.spec.whatwg.org/#url-query-string).
-table UrlRequestRewriteAppendToQuery {
-    1: Url query;
+type UrlRequestRewriteAppendToQuery = table {
+    1: query Url;
 };

@@ -1,43 +1,47 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library zx;
 
-enum ProfileInfoType {
+type ProfileInfoType = strict enum {
     ZX_PROFILE_INFO_SCHEDULER = 1;
 };
 
-union ProfileScheduler {
-    1: int32 priority;
-    2: uint32 boost;
-    3: uint32 deboost;
-    4: uint32 quantum;
+type ProfileScheduler = strict union {
+    1: priority int32;
+    2: boost uint32;
+    3: deboost uint32;
+    4: quantum uint32;
 };
 
-const int32 ZX_PRIORITY_LOWEST = 0;
-const int32 ZX_PRIORITY_LOW = 8;
-const int32 ZX_PRIORITY_DEFAULT = 16;
-const int32 ZX_PRIORITY_HIGH = 24;
-const int32 ZX_PRIORITY_HIGHEST = 31;
+const ZX_PRIORITY_LOWEST int32 = 0;
+const ZX_PRIORITY_LOW int32 = 8;
+const ZX_PRIORITY_DEFAULT int32 = 16;
+const ZX_PRIORITY_HIGH int32 = 24;
+const ZX_PRIORITY_HIGHEST int32 = 31;
 
-union ProfileInfoData {
-    1: ProfileScheduler scheduler;
+type ProfileInfoData = strict union {
+    1: scheduler ProfileScheduler;
 };
 
-struct ProfileInfo {
-    ProfileInfoType type;
+type ProfileInfo = struct {
+    type ProfileInfoType;
     // TODO(scottmg): This needs to be presented as an unnamed union in C, and
     // ProfileInfoData doesn't really need a name. Not sure if the semantics of
     // fidl unions make sense here.
-    ProfileInfoData unnamed;
+    unnamed ProfileInfoData;
 };
 
-[Transport = "Syscall"]
+@transport("Syscall")
 protocol profile {
     /// Create a scheduler profile.
     /// Rights: root_job must be of type ZX_OBJ_TYPE_JOB and have ZX_RIGHT_MANAGE_PROCESS.
-    profile_create(handle:JOB root_job, uint32 options, ProfileInfo profile)
-        -> (status status, handle:PROFILE out);
+    profile_create(resource struct {
+        root_job handle:JOB;
+        options uint32;
+        profile ProfileInfo;
+    }) -> (resource struct {
+        status status;
+        out handle:PROFILE;
+    });
 };

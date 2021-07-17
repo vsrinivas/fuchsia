@@ -1,13 +1,11 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.castremotecontrol;
 
 // LaunchError enumerates the various ways in which launching a
 // remote control app may fail.
-enum LaunchError {
+type LaunchError = strict enum {
     // The media session to control for the provided device could not be found.
     NOT_FOUND = 1;
 
@@ -15,9 +13,11 @@ enum LaunchError {
     INTERNAL = 2;
 };
 
-[Discoverable]
+@discoverable
 protocol Launcher {
     /// Launches the Cast remote control application for the device
     /// identified by |device_id|.
-    Launch(string:MAX device_id) -> () error LaunchError;
+    Launch(struct {
+        device_id string:MAX;
+    }) -> (struct {}) error LaunchError;
 };

@@ -1,12 +1,10 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library test.componentmanager.stresstests;
 
 /// The way for parent to conrtol lifecycle of its child in a stress test.
-[Discoverable]
+@discoverable
 protocol ChildRealm {
     /// Component will gracefully exit.
     Stop();
@@ -17,7 +15,10 @@ protocol ChildRealm {
     /// `direct_children` - Num of direct children of this realm.
     /// `tree_height` - Height of the realm tree to create.
     /// Returns once all children are running.
-    CreateChildren(uint16 direct_children, uint16 tree_height) -> ();
+    CreateChildren(struct {
+        direct_children uint16;
+        tree_height uint16;
+    }) -> ();
 
     /// Fired when the server is connected
     -> OnConnected();

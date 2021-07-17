@@ -1,8 +1,6 @@
 // Copyright 2017 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.modular;
 
 using fuchsia.ui.views;
@@ -17,9 +15,11 @@ using fuchsia.ui.views;
 ///
 /// Teardown may occur via the session shell calling StoryController.Stop(), the
 /// sessionmgr being terminated, or by the system shutting down.
-[Discoverable] // Created by story shell applications.
+@discoverable // Created by story shell applications.
 protocol StoryShell {
-    Initialize(StoryShellContext story_shell_context);
+    Initialize(resource struct {
+        story_shell_context client_end:StoryShellContext;
+    });
 
     /// Adds a new Surface and its corresponding view to be displayed by the
     /// StoryShell. More context that allows the story shell to decide how
@@ -27,32 +27,49 @@ protocol StoryShell {
     /// focus is obviously missing.
     /// `view_connection` the new view and the associated Surface ID.
     /// `surface_info` metadata relating to the Surface.
-    [Transitional = "Implement AddSurface3 instead"]
-    AddSurface(ViewConnection view_connection, SurfaceInfo surface_info);
+    @transitional("Implement AddSurface3 instead")
+    AddSurface(resource struct {
+        view_connection ViewConnection;
+        surface_info SurfaceInfo;
+    });
     /// DEPRECATED.  For transition purposes only.
-    [Transitional = "Implement AddSurface3 instead"]
-    AddSurface2(ViewConnection2 view_connection, SurfaceInfo surface_info);
+    @transitional("Implement AddSurface3 instead")
+    AddSurface2(resource struct {
+        view_connection ViewConnection2;
+        surface_info SurfaceInfo;
+    });
     /// For transition purposes only.
-    [Transitional = "Only implement while AddSurface is transitional"]
-    AddSurface3(ViewConnection view_connection, SurfaceInfo2 surface_info);
+    @transitional("Only implement while AddSurface is transitional")
+    AddSurface3(resource struct {
+        view_connection ViewConnection;
+        surface_info SurfaceInfo2;
+    });
 
     /// Focuses the surface with surface_id, bringing it to the foreground.
-    FocusSurface(string:MAX surface_id);
+    FocusSurface(struct {
+        surface_id string:MAX;
+    });
 
     /// Defocuses the surface with surface_id, dismissing it to the background.
-    DefocusSurface(string:MAX surface_id) -> ();
+    DefocusSurface(struct {
+        surface_id string:MAX;
+    }) -> ();
 
     /// Notify when a Surface is focused in the story. The focus could be from
     /// a user interaction or requested by the framework through
     /// StoryController#FocusModule.
     /// EXPERIMENTAL
-    -> OnSurfaceFocused(string:MAX surface_id);
+    -> OnSurfaceFocused(struct {
+        surface_id string:MAX;
+    });
 
     /// Remove the Surface with surface_id from the StoryShell entirely. This is
     /// final. The Surface is removed from the graph. If necessary, the
     /// associated Surface is defocused. There is no expectation that
     /// DefocusSurface is called before this.
-    RemoveSurface(string:MAX surface_id);
+    RemoveSurface(struct {
+        surface_id string:MAX;
+    });
 
     /// Update the surface
     /// This is called when the intent is to update the surface metadata in the
@@ -62,82 +79,90 @@ protocol StoryShell {
     ///
     /// E.g called when an intent resolves to a module that is known by the
     /// caller to already be running, to update associated metadata.
-    [Transitional = "Implement UpdateSurface3 instead"]
-    UpdateSurface(ViewConnection view_connection, SurfaceInfo surface_info);
+    @transitional("Implement UpdateSurface3 instead")
+    UpdateSurface(resource struct {
+        view_connection ViewConnection;
+        surface_info SurfaceInfo;
+    });
     /// DEPRECATED.  For transition purposes only.
-    [Transitional = "Implement UpdateSurface3 instead"]
-    UpdateSurface2(ViewConnection2 view_connection, SurfaceInfo surface_info);
+    @transitional("Implement UpdateSurface3 instead")
+    UpdateSurface2(resource struct {
+        view_connection ViewConnection2;
+        surface_info SurfaceInfo;
+    });
     /// For transition purposes only.
-    [Transitional = "Only implement while UpdateSurface is transitional"]
-    UpdateSurface3(ViewConnection view_connection, SurfaceInfo2 surface_info);
+    @transitional("Only implement while UpdateSurface is transitional")
+    UpdateSurface3(resource struct {
+        view_connection ViewConnection;
+        surface_info SurfaceInfo2;
+    });
 };
 
 /// A pair mapping a surface ID to a view (via `view_holder_token`).
-resource struct ViewConnection {
+type ViewConnection = resource struct {
     /// The ID for the surface
-    string:MAX surface_id;
+    surface_id string:MAX;
 
     /// Token for embedding the new view corresponding to the surface.
-    fuchsia.ui.views.ViewHolderToken view_holder_token;
+    view_holder_token fuchsia.ui.views.ViewHolderToken;
 };
 
 /// DEPRECATED, for transition purposes only.
-resource struct ViewConnection2 {
+type ViewConnection2 = resource struct {
     /// The ID for the surface
-    string:MAX surface_id;
+    surface_id string:MAX;
 
     /// Token for embedding the new view corresponding to the surface.
-    fuchsia.ui.views.ViewHolderToken view_holder_token;
+    view_holder_token fuchsia.ui.views.ViewHolderToken;
 };
 
 /// Contains metadata for a Surface.
-struct SurfaceInfo {
+type SurfaceInfo = struct {
     /// ID of the view that is parent of this Surface.
-    string:MAX parent_id;
+    parent_id string:MAX;
 
     /// The relationship between the parent Surface and this new Surface. Used
     /// for layout optimization.
-    SurfaceRelation? surface_relation;
+    surface_relation box<SurfaceRelation>;
 
     /// Information about the module populates the view.
-    ModuleManifest? module_manifest;
+    module_manifest box<ModuleManifest>;
 
     /// How the Surface was generated. By an action internal to the story or by
     /// an external action.
-    ModuleSource module_source;
+    module_source ModuleSource;
 };
 
 /// Contains metadata for a Surface.
-resource table SurfaceInfo2 {
+type SurfaceInfo2 = resource table {
     /// ID of the view that is parent of this Surface.
-    1: string:MAX parent_id;
+    1: parent_id string:MAX;
 
     /// The relationship between the parent Surface and this new Surface. Used
     /// for layout optimization.
-    2: SurfaceRelation surface_relation;
+    2: surface_relation SurfaceRelation;
 
     /// Information about the module populates the view.
-    3: ModuleManifest module_manifest;
+    3: module_manifest ModuleManifest;
 
     /// How the Surface was generated. By an action internal to the story or by
     /// an external action.
-    4: ModuleSource module_source;
+    4: module_source ModuleSource;
 
     /// Collection of user-defined key-value attributes that describe this surface (module).
     ///
     /// The `Annotation.value` field of each `Annotation` is always set.
-    5: vector<Annotation>:MAX_ANNOTATIONS_PER_MODULE annotations;
+    5: annotations vector<Annotation>:MAX_ANNOTATIONS_PER_MODULE;
 
     /// The view ref associated with the surface, if one is present.
-    6: fuchsia.ui.views.ViewRef view_ref;
+    6: view_ref fuchsia.ui.views.ViewRef;
 };
 
 /// The story shell receives this protocol upon initialization.
-protocol StoryShellContext {
-};
+protocol StoryShellContext {};
 
 /// Defines the visual state of the Story shell.
-enum StoryVisualState {
+type StoryVisualState = strict enum {
     MINIMIZED = 0;
     MAXIMIZED = 1;
     MAXIMIZED_OVERLAYED = 2;

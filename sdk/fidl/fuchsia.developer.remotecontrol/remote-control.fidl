@@ -1,18 +1,16 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.developer.remotecontrol;
 
 using fuchsia.diagnostics as diagnostics;
 using fuchsia.io as io;
 using zx;
 
-const uint16 MAX_NUM_MATCHES = 250;
-const uint16 MAX_CONNECT_MATCHES = 5;
+const MAX_NUM_MATCHES uint16 = 250;
+const MAX_CONNECT_MATCHES uint16 = 5;
 
-enum RebootType {
+type RebootType = strict enum {
     // Standard reboot.
     REBOOT = 1;
     // Reboots into recovery mode.
@@ -21,28 +19,36 @@ enum RebootType {
     BOOTLOADER = 3;
 };
 
-[Discoverable]
+@discoverable
 protocol RemoteControl {
     // Connects to the Hub root directory. The server side will be connected to
     // a fuchsia.io.Directory handle, which can then be connected to on the
     // client side via a Directory proxy.
     //
     // This is, currently, a read-only view into the hub.
-    OpenHub(request<io.Directory> server) -> () error zx.status;
+    OpenHub(resource struct {
+        server server_end:io.Directory;
+    }) -> (struct {}) error zx.status;
 
-    IdentifyHost() -> (IdentifyHostResponse response) error IdentifyHostError;
+    IdentifyHost() -> (struct {
+        response IdentifyHostResponse;
+    }) error IdentifyHostError;
 
     // Connects a channel to a service, given a selector and a channel iff the selector
     // matches exactly one service on the system.
     // If successful, returns information about the service connected to.
-    Connect(
-        diagnostics.Selector selector,
-        zx.handle:CHANNEL service_chan) -> (ServiceMatch match)
-        error ConnectError;
+    Connect(resource struct {
+        selector diagnostics.Selector;
+        service_chan zx.handle:CHANNEL;
+    }) -> (struct {
+        match ServiceMatch;
+    }) error ConnectError;
 
-    Select(diagnostics.Selector selector)
-        -> (vector<ServiceMatch>:MAX_NUM_MATCHES matches)
-        error SelectError;
+    Select(struct {
+        selector diagnostics.Selector;
+    }) -> (struct {
+        matches vector<ServiceMatch>:MAX_NUM_MATCHES;
+    }) error SelectError;
 
     // AddId adds an identifier that can be recovered from IdentifyHost in order
     // to match this peer against a list of possible source peers. Callers are
@@ -50,5 +56,7 @@ protocol RemoteControl {
     // IDs to help identify transport or physical layer topologies. ffx uses
     // this API to pair an RCS instance discovered on Overnet to a device that
     // was discovered over mdns, for example.
-    AddId(uint64 id) -> ();
+    AddId(struct {
+        id uint64;
+    }) -> ();
 };

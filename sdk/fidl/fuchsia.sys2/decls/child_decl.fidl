@@ -1,48 +1,47 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
 library fuchsia.sys2;
 
 using fuchsia.component;
 using fuchsia.url;
 
 /// Statically declares a child component instance.
-table ChildDecl {
+type ChildDecl = table {
     /// The name assigned to the child by its parent.
     ///
     /// Must be non-empty, unique among all siblings, and contain only the
     /// following characters: [a-z0-9-_.].
-    1: fuchsia.component.name name;
+    1: name fuchsia.component.name;
 
     /// The child component's URL.
     ///
     /// Must be non-empty and a well-formed URL.
-    2: fuchsia.url.Url url;
+    2: url fuchsia.url.Url;
 
     /// The startup mode for the component instance.
-    3: StartupMode startup;
+    3: startup StartupMode;
 
     /// The environment assigned to this child.
     ///
     /// Must be non-empty, reference an environment defined in the containing
     /// `ComponentDecl`, and contain only the following characters:
     /// [a-z0-9-_.].
-    4: fuchsia.component.name environment;
+    4: environment fuchsia.component.name;
 
     /// The action to take if this component instance terminates unexpectedly.
     ///
     /// May be unset, in which case defaults to `NONE`.
-    5: OnTerminate on_terminate;
+    5: on_terminate OnTerminate;
 
-    // TODO(fxbug.dev/4051): Provide a way to supply parameters to the child, possibly
-    // as command-line arguments, by URL, or maybe in some other way which is
-    // orthogonal to other inputs to mitigate confused deputy issues.  Perhaps
-    // as a dictionary like we do for runners?
+// TODO(fxbug.dev/4051): Provide a way to supply parameters to the child, possibly
+// as command-line arguments, by URL, or maybe in some other way which is
+// orthogonal to other inputs to mitigate confused deputy issues.  Perhaps
+// as a dictionary like we do for runners?
 };
 
 /// Describes under what conditions the component may be started.
-enum StartupMode {
+type StartupMode = strict enum {
     /// Start component instance only when another instance binds to it.
     LAZY = 0;
     /// Start component instance as soon as parent starts. This mode is only
@@ -53,7 +52,7 @@ enum StartupMode {
 
 /// Describes the action to take if this component instance terminates
 /// unexpectedly.
-enum OnTerminate {
+type OnTerminate = strict enum {
     /// No action, the default
     NONE = 0;
 

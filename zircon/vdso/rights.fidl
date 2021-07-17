@@ -1,12 +1,10 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library zx;
 
 // TODO(scottmg): (1 << 4) notation or something else for bits would be nice.
-bits rights : uint32 {
+type rights = strict bits : uint32 {
     // TODO(scottmg): "bits members must be powers of two"
     // NONE =           0x00000000;
     DUPLICATE = 0x00000001;
@@ -32,10 +30,11 @@ bits rights : uint32 {
     SAME_RIGHTS = 0x80000000;
 };
 
-const rights RIGHTS_BASIC = rights.TRANSFER | rights.DUPLICATE | rights.WAIT | rights.INSPECT;
-const rights RIGHTS_IO = rights.READ | rights.WRITE;
-const rights RIGHTS_PROPERTY = rights.GET_PROPERTY | rights.SET_PROPERTY;
-const rights RIGHTS_POLICY = rights.GET_POLICY | rights.SET_POLICY;
+const RIGHTS_BASIC rights = rights.TRANSFER | rights.DUPLICATE | rights.WAIT | rights.INSPECT;
+const RIGHTS_IO rights = rights.READ | rights.WRITE;
+const RIGHTS_PROPERTY rights = rights.GET_PROPERTY | rights.SET_PROPERTY;
+const RIGHTS_POLICY rights = rights.GET_POLICY | rights.SET_POLICY;
 
-const rights DEFAULT_CHANNEL_RIGHTS = rights.TRANSFER | rights.WAIT | rights.INSPECT | RIGHTS_IO | rights.SIGNAL | rights.SIGNAL_PEER;
-const rights DEFAULT_EVENT_RIGHTS = RIGHTS_BASIC | rights.SIGNAL;
+const DEFAULT_CHANNEL_RIGHTS rights
+        = rights.TRANSFER | rights.WAIT | rights.INSPECT | RIGHTS_IO | rights.SIGNAL | rights.SIGNAL_PEER;
+const DEFAULT_EVENT_RIGHTS rights = RIGHTS_BASIC | rights.SIGNAL;

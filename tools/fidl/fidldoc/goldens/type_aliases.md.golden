@@ -8,7 +8,7 @@
 ## **STRUCTS**
 
 ### ExampleOfUseOfAliases {#ExampleOfUseOfAliases}
-*Defined in [fidl.test.typealiases/example.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/type_aliases/example.test.fidl;l=26)*
+*Defined in [fidl.test.typealiases/example.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/type_aliases/example.test.fidl;l=25)*
 
 
 
@@ -79,7 +79,7 @@
 ### obj_type {#obj_type}
 Type: <code>uint32</code>
 
-*Defined in [fidl.test.typealiases/example.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/type_aliases/example.test.fidl;l=9)*
+*Defined in [fidl.test.typealiases/example.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/type_aliases/example.test.fidl;l=8)*
 
 
 
@@ -108,27 +108,27 @@ Type: <code>uint32</code>
 
 <table>
     <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="alias_of_channel">
-            <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/type_aliases/example.test.fidl;l=24">alias_of_channel</a></td>
+            <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/type_aliases/example.test.fidl;l=23">alias_of_channel</a></td>
             <td>
                 <code>handle</code></td>
             <td></td>
         </tr><tr id="channel">
-            <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/type_aliases/example.test.fidl;l=23">channel</a></td>
+            <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/type_aliases/example.test.fidl;l=22">channel</a></td>
             <td>
                 <code>handle</code></td>
             <td></td>
         </tr><tr id="u32">
-            <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/type_aliases/example.test.fidl;l=20">u32</a></td>
+            <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/type_aliases/example.test.fidl;l=19">u32</a></td>
             <td>
                 <code>uint32</code></td>
             <td></td>
         </tr><tr id="vec_of_strings">
-            <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/type_aliases/example.test.fidl;l=21">vec_of_strings</a></td>
+            <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/type_aliases/example.test.fidl;l=20">vec_of_strings</a></td>
             <td>
                 <code>vector</code></td>
             <td></td>
         </tr><tr id="vec_of_strings_at_most_5">
-            <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/type_aliases/example.test.fidl;l=22">vec_of_strings_at_most_5</a></td>
+            <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/type_aliases/example.test.fidl;l=21">vec_of_strings_at_most_5</a></td>
             <td>
                 <code>vector</code>[<code>5</code>]</td>
             <td></td>

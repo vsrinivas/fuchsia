@@ -8,7 +8,7 @@
 ## **STRUCTS**
 
 ### ArrayInt16Int8 {#ArrayInt16Int8}
-*Defined in [fidl.test.encapsulatedstructs/encapsulated_structs.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/encapsulated_structs.test.fidl;l=18)*
+*Defined in [fidl.test.encapsulatedstructs/encapsulated_structs.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/encapsulated_structs.test.fidl;l=17)*
 
 
 
@@ -24,7 +24,7 @@
 </table>
 
 ### Int16Int8 {#Int16Int8}
-*Defined in [fidl.test.encapsulatedstructs/encapsulated_structs.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/encapsulated_structs.test.fidl;l=12)*
+*Defined in [fidl.test.encapsulatedstructs/encapsulated_structs.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/encapsulated_structs.test.fidl;l=11)*
 
 
 
@@ -47,7 +47,7 @@
 </table>
 
 ### Int8Int32 {#Int8Int32}
-*Defined in [fidl.test.encapsulatedstructs/encapsulated_structs.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/encapsulated_structs.test.fidl;l=6)*
+*Defined in [fidl.test.encapsulatedstructs/encapsulated_structs.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/encapsulated_structs.test.fidl;l=5)*
 
 
 
@@ -70,7 +70,7 @@
 </table>
 
 ### NonInlineStructTestStruct {#NonInlineStructTestStruct}
-*Defined in [fidl.test.encapsulatedstructs/encapsulated_structs.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/encapsulated_structs.test.fidl;l=34)*
+*Defined in [fidl.test.encapsulatedstructs/encapsulated_structs.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/encapsulated_structs.test.fidl;l=33)*
 
 
 
@@ -93,7 +93,7 @@
 </table>
 
 ### StructPaddingTestStruct {#StructPaddingTestStruct}
-*Defined in [fidl.test.encapsulatedstructs/encapsulated_structs.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/encapsulated_structs.test.fidl;l=23)*
+*Defined in [fidl.test.encapsulatedstructs/encapsulated_structs.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/encapsulated_structs.test.fidl;l=22)*
 
 
 
@@ -123,7 +123,7 @@
 </table>
 
 ### TopLevelStruct {#TopLevelStruct}
-*Defined in [fidl.test.encapsulatedstructs/encapsulated_structs.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/encapsulated_structs.test.fidl;l=40)*
+*Defined in [fidl.test.encapsulatedstructs/encapsulated_structs.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/encapsulated_structs.test.fidl;l=39)*
 
 
 

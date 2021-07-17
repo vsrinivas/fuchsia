@@ -1,8 +1,6 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.virtualization;
 
 using zx;
@@ -11,7 +9,7 @@ using zx;
 ///
 /// CIDs for guests are assigned by the Manager and can be found in the
 /// corresponding `InstanceInfo` structure.
-const uint32 HOST_CID = 2;
+const HOST_CID uint32 = 2;
 
 /// Exposed by guests capable of listening via vsocks. On a request to establish
 /// a connection, the `Accept` method will be called. If the port is open and
@@ -19,8 +17,14 @@ const uint32 HOST_CID = 2;
 ///
 /// Also see `GuestVsockEndpoint`.
 protocol GuestVsockAcceptor {
-    Accept(uint32 src_cid, uint32 src_port, uint32 port, zx.handle? handle)
-        -> (zx.status status);
+    Accept(resource struct {
+        src_cid uint32;
+        src_port uint32;
+        port uint32;
+        handle zx.handle:optional;
+    }) -> (struct {
+        status zx.status;
+    });
 };
 
 /// Exposed by a host capable of listening via vsocks. A variant of a
@@ -28,8 +32,14 @@ protocol GuestVsockAcceptor {
 /// to communicate. The `handle` will be either a socket or a channel, depending
 /// on the current configuration.
 protocol HostVsockAcceptor {
-    Accept(uint32 src_cid, uint32 src_port, uint32 port)
-        -> (zx.status status, zx.handle? handle);
+    Accept(struct {
+        src_cid uint32;
+        src_port uint32;
+        port uint32;
+    }) -> (resource struct {
+        status zx.status;
+        handle zx.handle:optional;
+    });
 };
 
 /// Exposed by a host capable of connecting via vsocks. This allows a guest to
@@ -38,8 +48,15 @@ protocol HostVsockAcceptor {
 /// to communicate. The `handle` will be either a socket or a channel, depending
 /// on the current configuration.
 protocol HostVsockConnector {
-    Connect(uint32 src_cid, uint32 src_port, uint32 cid, uint32 port)
-        -> (zx.status status, zx.handle? handle);
+    Connect(struct {
+        src_cid uint32;
+        src_port uint32;
+        cid uint32;
+        port uint32;
+    }) -> (resource struct {
+        status zx.status;
+        handle zx.handle:optional;
+    });
 };
 
 /// Exposed by guests capable of handling vsock traffic. During
@@ -47,22 +64,39 @@ protocol HostVsockConnector {
 /// provide a `HostVsockConnector` that can be used to establish outbound
 /// connections. The implementation should provide a `GuestVsockAcceptor`
 /// implementation that can handle any inbound connection requests.
-[Discoverable]
+@discoverable
 protocol GuestVsockEndpoint {
-    SetContextId(uint32 cid, HostVsockConnector connector,
-                 request<GuestVsockAcceptor> acceptor);
-    -> OnShutdown(uint32 src_cid, uint32 src_port, uint32 dst_cid, uint32 dst_port);
+    SetContextId(resource struct {
+        cid uint32;
+        connector client_end:HostVsockConnector;
+        acceptor server_end:GuestVsockAcceptor;
+    });
+    -> OnShutdown(struct {
+        src_cid uint32;
+        src_port uint32;
+        dst_cid uint32;
+        dst_port uint32;
+    });
 };
 
 /// Exposed by a host to provide the ability for listeners to be multiplexed by
 /// port and to manage dynamic port allocation for outbound connections.
 protocol HostVsockEndpoint {
     /// Register `acceptor` to be invoked for any connection requests to `port`.
-    Listen(uint32 port, HostVsockAcceptor acceptor)
-        -> (zx.status status);
+    Listen(resource struct {
+        port uint32;
+        acceptor client_end:HostVsockAcceptor;
+    }) -> (struct {
+        status zx.status;
+    });
 
     /// Similar to `HostVsockConnector.Connect` except the `src_cid` is
     /// `HOST_CID` and `src_port` is generated automatically.
-    Connect(uint32 cid, uint32 port, zx.handle? handle)
-        -> (zx.status status);
+    Connect(resource struct {
+        cid uint32;
+        port uint32;
+        handle zx.handle:optional;
+    }) -> (struct {
+        status zx.status;
+    });
 };

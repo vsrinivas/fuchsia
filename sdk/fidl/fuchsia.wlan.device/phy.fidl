@@ -1,15 +1,13 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.wlan.device;
 
 using fuchsia.wlan.common;
 using fuchsia.wlan.internal;
 using zx;
 
-enum SupportedPhy {
+type SupportedPhy = strict enum {
     DSSS = 1;
     CCK = 2;
     OFDM = 3;
@@ -17,14 +15,14 @@ enum SupportedPhy {
     VHT = 5;
 };
 
-enum MacRole {
+type MacRole = strict enum {
     CLIENT = 1;
     AP = 2;
     MESH = 3;
 };
 
 /// IEEE Std 802.11-206 Section 9.4.1.4 Capability Information Field
-enum Capability : uint32 {
+type Capability = strict enum : uint32 {
     SHORT_PREAMBLE = 0x0020;
     SPECTRUM_MGMT = 0x0100;
     QOS = 0x0200;
@@ -37,79 +35,99 @@ enum Capability : uint32 {
     SIMULTANEOUS_CLIENT_AP = 0x10000;
 };
 
-struct ChannelList {
-    uint16 base_freq;
-    vector<uint8>:200 channels;
+type ChannelList = struct {
+    base_freq uint16;
+    channels vector<uint8>:200;
 };
 
 // IEEE Std 802.11-2016 defines 12 values in dot11SupportedDataRatesRxTable
-const uint8 MAX_NUM_RATES = 12;
+const MAX_NUM_RATES uint8 = 12;
 
 // BandInfo groups capabilities defined per band.
 // This grouping is the industry's de factor standard.
-struct BandInfo {
-    fuchsia.wlan.common.Band band_id;
-    fuchsia.wlan.internal.HtCapabilities? ht_caps;
-    fuchsia.wlan.internal.VhtCapabilities? vht_caps;
-    vector<uint8>:MAX_NUM_RATES rates;
-    ChannelList supported_channels;
+type BandInfo = struct {
+    band_id fuchsia.wlan.common.Band;
+    ht_caps box<fuchsia.wlan.internal.HtCapabilities>;
+    vht_caps box<fuchsia.wlan.internal.VhtCapabilities>;
+    rates vector<uint8>:MAX_NUM_RATES;
+    supported_channels ChannelList;
 };
 
-struct PhyInfo {
+type PhyInfo = struct {
     // The following fields are not set by the phy itself, but by the service that monitors them.
     // The phy id. This is not a stable identifier, but will not change while this phy's device node
     // remains.
-    uint16 id;
+    id uint16;
     // The topological path of the phy in the device tree.
-    string? dev_path;
+    dev_path string:optional;
 
-    vector<MacRole>:8 supported_mac_roles;
+    supported_mac_roles vector<MacRole>:8;
 };
 
-struct QueryResponse {
-    int32 status;
-    PhyInfo info;
+type QueryResponse = struct {
+    status int32;
+    info PhyInfo;
 };
 
-resource struct CreateIfaceRequest {
-    MacRole role;
+type CreateIfaceRequest = resource struct {
+    role MacRole;
     // TODO(fxbug.dev/29547): Make `mlme_channel` mandatory once all drivers support the channel.
-    zx.handle:CHANNEL? mlme_channel;
-    bytes:6? init_mac_addr;
+    mlme_channel zx.handle:<CHANNEL, optional>;
+    init_mac_addr bytes:<6, optional>;
 };
 
-struct CreateIfaceResponse {
-    int32 status;
-    uint16 iface_id;
+type CreateIfaceResponse = struct {
+    status int32;
+    iface_id uint16;
 };
 
-struct DestroyIfaceRequest {
-    uint16 id;
+type DestroyIfaceRequest = struct {
+    id uint16;
 };
 
-struct DestroyIfaceResponse {
-    int32 status;
+type DestroyIfaceResponse = struct {
+    status int32;
 };
 
 /// The country code for a target WLAN PHY device.
 /// alpha2 is ISO 3166-1 code to indicate a country. eg. AF for Afghanistan.
-struct CountryCode {
-    array<byte>:2 alpha2;
+type CountryCode = struct {
+    alpha2 array<byte, 2>;
 };
 
 protocol Phy {
-    Query() -> (QueryResponse resp);
-    CreateIface(CreateIfaceRequest req) -> (CreateIfaceResponse resp);
-    DestroyIface(DestroyIfaceRequest req) -> (DestroyIfaceResponse resp);
-    SetCountry(CountryCode req) -> (int32 status);
-    GetCountry() -> (CountryCode resp) error int32;
-    ClearCountry() -> (int32 status);
+    Query() -> (struct {
+        resp QueryResponse;
+    });
+    CreateIface(resource struct {
+        req CreateIfaceRequest;
+    }) -> (struct {
+        resp CreateIfaceResponse;
+    });
+    DestroyIface(struct {
+        req DestroyIfaceRequest;
+    }) -> (struct {
+        resp DestroyIfaceResponse;
+    });
+    SetCountry(struct {
+        req CountryCode;
+    }) -> (struct {
+        status int32;
+    });
+    GetCountry() -> (struct {
+        resp CountryCode;
+    }) error int32;
+    ClearCountry() -> (struct {
+        status int32;
+    });
 };
 
 // Temporary interface for bridging between the devhost-owned channel model and
 // the driver-owned channel model of connection management.
 /// This protocol is used to connect to the real Phy protocol underlying this device.
-[ForDeprecatedCBindings]
+@for_deprecated_c_bindings
 protocol Connector {
-    Connect(request<Phy> request);
+    Connect(resource struct {
+        request server_end:Phy;
+    });
 };

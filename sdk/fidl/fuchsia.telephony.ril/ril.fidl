@@ -1,21 +1,19 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.telephony.ril;
 
 using zx;
 
 /// Power State of the radio
-enum RadioPowerState : uint8 {
+type RadioPowerState = strict enum : uint8 {
     OFF = 0x00;
     ON = 0x01;
 };
 
 /// Errors that the Radio Interface Layer presents to modem
 /// management interfaces
-enum RilError : uint32 {
+type RilError = strict enum : uint32 {
     /// The radio on this interface is unavailable.
     NO_RADIO = 0x01;
     /// The request required a SIM card and none are unavailable.
@@ -30,20 +28,22 @@ enum RilError : uint32 {
 };
 
 protocol NetworkConnection {
-    Stop() -> (bool success);
+    Stop() -> (struct {
+        success bool;
+    });
 };
 
 // currently only ipv4 stuff, to drastically change
-struct NetworkSettings {
-    uint32 ip_v4_addr;
-    uint32 ip_v4_subnet;
-    uint32 ip_v4_gateway;
-    uint32 ip_v4_dns;
-    uint32 mtu;
+type NetworkSettings = struct {
+    ip_v4_addr uint32;
+    ip_v4_subnet uint32;
+    ip_v4_gateway uint32;
+    ip_v4_dns uint32;
+    mtu uint32;
 };
 
 /// The Standard Fuchsia RIL (FRIL)
-[Discoverable]
+@discoverable
 protocol Setup {
     /// Hand a transport `channel` to the RIL service connecting it to the modem. Most
     /// modems will require this to be the first method called, since they are dependent
@@ -54,27 +54,45 @@ protocol Setup {
     ///
     /// Implementation Detail: current services speak QMI but others will most likely speak other
     /// binary formats.
-    ConnectTransport(zx.handle:CHANNEL channel) -> () error RilError;
+    ConnectTransport(resource struct {
+        channel zx.handle:CHANNEL;
+    }) -> (struct {}) error RilError;
 };
 
 /// The Standard Fuchsia RIL (FRIL)
-[Discoverable]
+@discoverable
 protocol RadioInterfaceLayer {
     /// Retrieve the identity of the modem (currently `imei` only).
-    GetDeviceIdentity() -> (string imei) error RilError;
+    GetDeviceIdentity() -> (struct {
+        imei string;
+    }) error RilError;
 
     /// Power state of the radio. Currently on On or Off.
-    RadioPowerStatus() -> (RadioPowerState state) error RilError;
+    RadioPowerStatus() -> (struct {
+        state RadioPowerState;
+    }) error RilError;
 
     /// Activate a network connection.
-    StartNetwork(string apn) -> (NetworkConnection conn) error RilError;
+    StartNetwork(struct {
+        apn string;
+    }) -> (resource struct {
+        conn client_end:NetworkConnection;
+    }) error RilError;
 
     /// Network settings known to the modem.
-    GetNetworkSettings() -> (NetworkSettings settings) error RilError;
+    GetNetworkSettings() -> (struct {
+        settings NetworkSettings;
+    }) error RilError;
 
     /// Signal Strength (dBm) for LTE networks (total received wideband power).
-    GetSignalStrength() -> (float32 dbm) error RilError;
+    GetSignalStrength() -> (struct {
+        dbm float32;
+    }) error RilError;
 
     /// Raw string to send to modem for development.
-    RawCommand(string command) -> (string result) error RilError;
+    RawCommand(struct {
+        command string;
+    }) -> (struct {
+        result string;
+    }) error RilError;
 };

@@ -1,8 +1,6 @@
 // Copyright 2016 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.math;
 
 /// An integer position in a 2D cartesian space.
@@ -10,12 +8,12 @@ library fuchsia.math;
 /// This type does not specify units. Protocols that use this type should
 /// specify the characteristics of the vector space, including orientation and
 /// units.
-struct Point {
+type Point = struct {
     /// The number of units along the x-axis.
-    int32 x;
+    x int32;
 
     /// The number of units along the y-axis.
-    int32 y;
+    y int32;
 };
 
 /// A floating point position in a 2D cartesian space.
@@ -23,12 +21,12 @@ struct Point {
 /// This type does not specify units. Protocols that use this type should
 /// specify the characteristics of the vector space, including orientation and
 /// units.
-struct PointF {
+type PointF = struct {
     /// The number of units along the x-axis.
-    float32 x;
+    x float32;
 
     /// The number of units along the y-axis.
-    float32 y;
+    y float32;
 };
 
 /// A floating point position in a 3D cartesian space.
@@ -36,15 +34,15 @@ struct PointF {
 /// This type does not specify units. Protocols that use this type should
 /// specify the characteristics of the vector space, including orientation and
 /// units.
-struct Point3F {
+type Point3F = struct {
     /// The number of units along the x-axis.
-    float32 x;
+    x float32;
 
     /// The number of units along the y-axis.
-    float32 y;
+    y float32;
 
     /// The number of units along the z-axis.
-    float32 z;
+    z float32;
 };
 
 /// The integer dimensions of a rectangular region in a 2D cartesian space.
@@ -56,12 +54,12 @@ struct Point3F {
 /// This type allows for negative dimensions, to which protocols can give
 /// semantics. Protocols that use this type should specify whether negative
 /// dimensions are meaningful, and, if they are meaningful, what they mean.
-struct Size {
+type Size = struct {
     /// The distance along the x-axis.
-    int32 width;
+    width int32;
 
     /// The distance along the y-axis.
-    int32 height;
+    height int32;
 };
 
 /// The floating point dimensions of a rectangular region in a 2D cartesian
@@ -74,12 +72,12 @@ struct Size {
 /// This type allows for negative dimensions, to which protocols can give
 /// semantics. Protocols that use this type should specify whether negative
 /// dimensions are meaningful, and, if they are meaningful, what they mean.
-struct SizeF {
+type SizeF = struct {
     /// The distance along the x-axis.
-    float32 width;
+    width float32;
 
     /// The distance along the y-axis.
-    float32 height;
+    height float32;
 };
 
 /// The unsigned integer dimensions of a rectangular region in a 2D cartesian
@@ -88,12 +86,12 @@ struct SizeF {
 /// This type does not specify units. Protocols that use this type should
 /// specify the characteristics of the vector space, including orientation and
 /// units.
-struct SizeU {
+type SizeU = struct {
     /// The distance along the x-axis.
-    uint32 width;
+    width uint32;
 
     /// The distance along the y-axis.
-    uint32 height;
+    height uint32;
 };
 
 /// Representes a 2D vector with integer coordinates.
@@ -101,12 +99,12 @@ struct SizeU {
 /// This type does not specify units. Protocols that use this type should
 /// specify the characteristics of the vector space, including orientation and
 /// units.
-struct Vec {
+type Vec = struct {
     // The direction along the x-axis.
-    int32 x;
+    x int32;
 
     // The direction along the y-axis.
-    int32 y;
+    y int32;
 };
 
 /// An integral, rectangular, axis-aligned region in a 2D cartesian
@@ -115,26 +113,26 @@ struct Vec {
 /// This type does not specify units. Protocols that use this type should
 /// specify the characteristics of the vector space, including orientation and
 /// units.
-struct Rect {
+type Rect = struct {
     /// The location of the origin of the rectangle in the x-axis.
-    int32 x;
+    x int32;
 
     /// The location of the origin of the rectangle in the y-axis.
-    int32 y;
+    y int32;
 
     /// The distance along the x-axis.
     ///
     /// If `width` is positive, the region includes x values starting at `x` and
     /// increasing along the x-axis. If `width` is negative, the region includes
     /// x values starting at `x` and decreasing along the x-axis.
-    int32 width;
+    width int32;
 
     /// The distance along the y-axis.
     ///
     /// If `height` is positive, the region includes y values starting at `y`
     /// and increasing along the y-axis. If `height` is negative, the region
     /// includes y values starting at `y` and decreasing along the y-axis.
-    int32 height;
+    height int32;
 };
 
 /// A floating point, rectangular, axis-aligned region in a 2D cartesian
@@ -143,26 +141,26 @@ struct Rect {
 /// This type does not specify units. Protocols that use this type should
 /// specify the characteristics of the vector space, including orientation and
 /// units.
-struct RectF {
+type RectF = struct {
     /// The location of the origin of the rectangle in the x-axis.
-    float32 x;
+    x float32;
 
     /// The location of the origin of the rectangle in the y-axis.
-    float32 y;
+    y float32;
 
     /// The distance along the x-axis.
     ///
     /// If `width` is positive, the region includes x values starting at `x` and
     /// increasing along the x-axis. If `width` is negative, the region includes
     /// x values starting at `x` and decreasing along the x-axis.
-    float32 width;
+    width float32;
 
     /// The distance along the y-axis.
     ///
     /// If `height` is positive, the region includes y values starting at `y`
     /// and increasing along the y-axis. If `height` is negative, the region
     /// includes y values starting at `y` and decreasing along the y-axis.
-    float32 height;
+    height float32;
 };
 
 /// A floating point rounded rectangle with the custom radii for all four
@@ -177,74 +175,74 @@ struct RectF {
 /// This type does not specify units. Protocols that use this type should
 /// specify the characteristics of the vector space, including orientation and
 /// units.
-struct RRectF {
+type RRectF = struct {
     /// The location of the origin of the region in the x-axis.
-    float32 x;
+    x float32;
 
     /// The location of the origin of the region in the y-axis.
-    float32 y;
+    y float32;
 
     /// The distance along the x-axis.
     ///
     /// If `width` is positive, the region includes x values starting at `x` and
     /// increasing along the x-axis. If `width` is negative, the region includes
     /// x values starting at `x` and decreasing along the x-axis.
-    float32 width;
+    width float32;
 
     /// The distance along the y-axis.
     ///
     /// If `height` is positive, the region includes y values starting at `y`
     /// and increasing along the y-axis. If `height` is negative, the region
     /// includes y values starting at `y` and decreasing along the y-axis.
-    float32 height;
+    height float32;
 
     /// The radius of the quarter ellipse in the top-left corner along the
     /// x-axis.
     ///
     /// Must not be negative.
-    float32 top_left_radius_x;
+    top_left_radius_x float32;
 
     /// The radius of the quarter ellipse in the top-left corner along the
     /// y-axis.
     ///
     /// Must not be negative.
-    float32 top_left_radius_y;
+    top_left_radius_y float32;
 
     /// The radius of the quarter ellipse in the top-right corner along the
     /// x-axis.
     ///
     /// Must not be negative.
-    float32 top_right_radius_x;
+    top_right_radius_x float32;
 
     /// The radius of the quarter ellipse in the top-right corner along the
     /// y-axis.
     ///
     /// Must not be negative.
-    float32 top_right_radius_y;
+    top_right_radius_y float32;
 
     /// The radius of the quarter ellipse in the bottom-left corner along the
     /// x-axis.
     ///
     /// Must not be negative.
-    float32 bottom_left_radius_x;
+    bottom_left_radius_x float32;
 
     /// The radius of the quarter ellipse in the bottom-left corner along the
     /// y-axis.
     ///
     /// Must not be negative.
-    float32 bottom_left_radius_y;
+    bottom_left_radius_y float32;
 
     /// The radius of the quarter ellipse in the bottom-right corner along the
     /// x-axis.
     ///
     /// Must not be negative.
-    float32 bottom_right_radius_x;
+    bottom_right_radius_x float32;
 
     /// The radius of the quarter ellipse in the bottom-right corner along the
     /// y-axis.
     ///
     /// Must not be negative.
-    float32 bottom_right_radius_y;
+    bottom_right_radius_y float32;
 };
 
 /// A projective transformation of a 3D cartesian space.
@@ -253,7 +251,7 @@ struct RRectF {
 /// coordinates. For example, a point located at (x, y, z) in the cartesian
 /// space is transformed by `M` to a point located at (x'/w', y'/w', z'/w'),
 /// where `(x', y', z', w') = M (x, y, z, 1)`.
-struct Transform {
+type Transform = struct {
     /// The entries in the transformation matrix in row major order.
     ///
     /// Specifically, if the matrix is as follows:
@@ -267,7 +265,7 @@ struct Transform {
     ///
     /// then the entries in this array are
     /// `(a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p)`.
-    array<float32>:16 matrix;
+    matrix array<float32, 16>;
 };
 
 /// An integer offset to apply to each edge of a rectangle.
@@ -275,22 +273,22 @@ struct Transform {
 /// This type does not specify units. Protocols that use this type should
 /// specify the characteristics of the vector space, including orientation and
 /// units.
-struct Inset {
+type Inset = struct {
     /// The amount to move the top edge of the rectangle towards the center of
     /// the rectangle.
-    int32 top;
+    top int32;
 
     /// The amount to move the right edge of the rectangle towards the center of
     /// the rectangle.
-    int32 right;
+    right int32;
 
     /// The amount to move the bottom edge of the rectangle towards the center
     /// of the rectangle.
-    int32 bottom;
+    bottom int32;
 
     /// The amount to move the left edge of the rectangle towards the center of
     /// the rectangle.
-    int32 left;
+    left int32;
 };
 
 /// A floating point offset to apply to each edge of a rectangle.
@@ -298,20 +296,20 @@ struct Inset {
 /// This type does not specify units. Protocols that use this type should
 /// specify the characteristics of the vector space, including orientation and
 /// units.
-struct InsetF {
+type InsetF = struct {
     /// The amount to move the top edge of the rectangle towards the center of
     /// the rectangle.
-    float32 top;
+    top float32;
 
     /// The amount to move the right edge of the rectangle towards the center of
     /// the rectangle.
-    float32 right;
+    right float32;
 
     /// The amount to move the bottom edge of the rectangle towards the center
     /// of the rectangle.
-    float32 bottom;
+    bottom float32;
 
     /// The amount to move the left edge of the rectangle towards the center of
     /// the rectangle.
-    float32 left;
+    left float32;
 };

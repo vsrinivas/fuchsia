@@ -1,14 +1,12 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.media.tuning;
 
 using zx;
 
 /// Usage annotating the purpose of the stream that may be processed in tuning.
-enum StreamType {
+type StreamType = strict enum {
     /// Stream is intended to be used for ambient or background renderer audio.
     RENDER_BACKGROUND = 0;
     /// Stream is intended to be used for normal renderer functionality.
@@ -30,11 +28,11 @@ enum StreamType {
 ///
 /// A valid `AudioEffectType` includes a specific module and audio effect name,
 /// such as module 'google_audio_effects.so' with name 'equalizer'.
-table AudioEffectType {
+type AudioEffectType = table {
     /// Library module associated with the effect, such as 'my_audio_effects.so'.
-    1: string:64 module_name;
+    1: module_name string:64;
     /// Name of the effect type within the module.
-    2: string:255 effect_name;
+    2: effect_name string:255;
 };
 
 /// Details of an audio effect and its configuration to be applied to an audio stream(s).
@@ -42,76 +40,94 @@ table AudioEffectType {
 /// An audio effect type can be instantiated multiple times, differentiable by its unique
 /// name. For example, an 'equalizer' effect type can be instantiated twice as
 /// 'equalizer1' and 'equalizer2'.
-table AudioEffectConfig {
+type AudioEffectConfig = table {
     /// Unique identifier of the audio effect instance.
-    1: string:64 instance_name;
+    1: instance_name string:64;
     /// Detailed specification of the audio effect type.
-    2: AudioEffectType type;
+    2: type AudioEffectType;
     /// JSON string of the audio effect configuration to be applied to an audio stream(s).
-    3: string:4096 configuration;
+    3: configuration string:4096;
     /// Rechannelization defined by the effect and applied to the audio stream output; this 
     /// is in addition to channelization provided by the AudioMixGroup.
-    4: uint16 output_channels;
+    4: output_channels uint16;
 };
 
 /// Association of a volume level with its decibel value.
-struct Volume {
+type Volume = struct {
     /// Specific volume level identifier in the range [0.0, 1.0].
-    float32 level;
+    level float32;
     /// Decibel value of the associated volume level in the range [-120.0, 0.0].
-    float32 decibel;
+    decibel float32;
 };
 
 /// Audio effects configuration details applied to audio streams within
 /// a device's media pipeline.
-struct AudioMixGroup {
+type AudioMixGroup = struct {
     /// Identifier of the audio effects mix detailed in this object.
-    string:32 name;
+    name string:32;
     /// True if the device profile is eligible for loopback capture.
-    bool loopback;
+    loopback bool;
     /// Audio effect configurations applied to the specified `streams`.
-    vector<AudioEffectConfig>:16 effects;
+    effects vector<AudioEffectConfig>:16;
     /// Set of audio effect mixes, each of which consist of various effects configurations.
-    vector<AudioMixGroup?>:16 inputs;
+    inputs vector<box<AudioMixGroup>>:16;
     /// Names of the audio streams to which the `effects` are applied.
-    vector<StreamType>:8 streams;
+    streams vector<StreamType>:8;
     /// Framerate of the mix stage output, which can accommodate upsampling and downsampling.
     /// A different rate may be chosen if the specified rate cannot be accommodated by hardware.
-    uint32 output_rate;
+    output_rate uint32;
     /// Channelization of the mix stream output before any effects are applied; effects can apply
     /// additional rechannelization.
-    uint16 output_channels;
+    output_channels uint16;
 };
 
 /// Specification of the audio effects mixes and volume curve for a device.
-table AudioDeviceTuningProfile {
+type AudioDeviceTuningProfile = table {
     /// Details of the media pipeline effects configuration.
-    1: AudioMixGroup pipeline;
+    1: pipeline AudioMixGroup;
     /// Set of associations between volume level and decibel value.
-    2: vector<Volume>:16 volume_curve;
+    2: volume_curve vector<Volume>:16;
 };
 
-[Discoverable]
+@discoverable
 protocol AudioTuner {
     /// Provides names of audio effects classes available for tuning.
-    GetAvailableAudioEffects() -> (vector<AudioEffectType>:16 effects);
+    GetAvailableAudioEffects() -> (struct {
+        effects vector<AudioEffectType>:16;
+    });
 
     /// Provides the current, tunable audio effects configuration and
     /// volume settings for the given device.
-    GetAudioDeviceProfile(string:32 device_id) -> (AudioDeviceTuningProfile profile);
+    GetAudioDeviceProfile(struct {
+        device_id string:32;
+    }) -> (struct {
+        profile AudioDeviceTuningProfile;
+    });
 
     /// Provides the device's current default audio effects configuration and
     /// volume settings, which are read-only and unaffected by the audio tuner.
-    GetDefaultAudioDeviceProfile(string:32 device_id) -> (AudioDeviceTuningProfile profile);
+    GetDefaultAudioDeviceProfile(struct {
+        device_id string:32;
+    }) -> (struct {
+        profile AudioDeviceTuningProfile;
+    });
 
     /// Updates the audio effects configuration and volume settings of the given
     /// device with the provided profile.
-    SetAudioDeviceProfile(string:32 device_id, AudioDeviceTuningProfile profile)
-        -> (zx.status status);
+    SetAudioDeviceProfile(struct {
+        device_id string:32;
+        profile AudioDeviceTuningProfile;
+    }) -> (struct {
+        status zx.status;
+    });
 
     /// Deletes the current, tunable audio effects configuration and volume settings
     /// for the given device.
-    DeleteAudioDeviceProfile(string:32 device_id) -> (zx.status status);
+    DeleteAudioDeviceProfile(struct {
+        device_id string:32;
+    }) -> (struct {
+        status zx.status;
+    });
 
     /// Applies the provided `AudioEffectConfig` to the specified device's tuning profile in the media
     /// pipeline.
@@ -122,5 +138,10 @@ protocol AudioTuner {
     ///
     /// For example, two 'equalizer' effect instances named 'equalizer1' and 'equalizer2'
     /// can be applied to the same media pipeline.
-    SetAudioEffectConfig(string:32 device_id, AudioEffectConfig effect) -> (zx.status status);
+    SetAudioEffectConfig(struct {
+        device_id string:32;
+        effect AudioEffectConfig;
+    }) -> (struct {
+        status zx.status;
+    });
 };

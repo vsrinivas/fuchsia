@@ -1,11 +1,9 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.modular;
 
-enum ExecuteStatus {
+type ExecuteStatus = strict enum {
     OK = 0;
 
     // Encountered an invalid command.
@@ -30,15 +28,15 @@ enum ExecuteStatus {
     INTERNAL_ERROR = 6;
 };
 
-enum ConfigureStoryError : int32 {
+type ConfigureStoryError = strict enum : int32 {
     /// The story cannot be (re)configured because it was already created.
     ERR_STORY_ALREADY_CREATED = 1;
 };
 
-struct ExecuteResult {
-    ExecuteStatus status;
-    string:MAX? story_id;
-    string:MAX? error_message;
+type ExecuteResult = struct {
+    status ExecuteStatus;
+    story_id string:<MAX, optional>;
+    error_message string:<MAX, optional>;
 };
 
 // Enables control of a session. A session, conceptually, is a single
@@ -49,7 +47,7 @@ struct ExecuteResult {
 // A session, concretely, is a collection of stories, their state, the modules
 // within them, any agents that run to support the mods and the various UI
 // shells (session and story shells).
-[Discoverable]
+@discoverable
 protocol PuppetMaster {
     // Requests a capability to control a story by name. The name acts as the
     // story's unique ID.  Calling ControlStory() for the same story name will
@@ -63,14 +61,21 @@ protocol PuppetMaster {
     // `request` is closed if control cannot be granted.
     //
     // TODO(thatguy): We want story names to be scoped to the client's namespace.
-    ControlStory(string:MAX story_name, request<StoryPuppetMaster> request);
+    ControlStory(resource struct {
+        story_name string:MAX;
+        request server_end:StoryPuppetMaster;
+    });
 
     // Deletes a story associated to `story_name`.
     // Any active StoryPuppetMaster connections to the Story will be closed.
-    DeleteStory(string:MAX story_name) -> ();
+    DeleteStory(struct {
+        story_name string:MAX;
+    }) -> ();
 
     // Returns a list of all the names of stories in the session.
-    GetStories() -> (vector<string:MAX>:MAX story_names);
+    GetStories() -> (struct {
+        story_names vector<string:MAX>:MAX;
+    });
 };
 
 protocol StoryPuppetMaster {
@@ -79,22 +84,27 @@ protocol StoryPuppetMaster {
     // set of changes to the story.
     //
     // To execute all enqueued commands, call Execute().
-    Enqueue(vector<StoryCommand>:MAX commands);
+    Enqueue(resource struct {
+        commands vector<StoryCommand>:MAX;
+    });
 
     // Executes the commands enqueued so far by Enqueue() in order and as
     // a batch: no other commands from other clients will be interleaved.
     //
     // If an error occurs, execution is stopped and an error code
     // and message are returned in `result`.
-    Execute() -> (ExecuteResult result);
+    Execute() -> (struct {
+        result ExecuteResult;
+    });
 
     /// Attach the `annotations` to the story. If the story does not yet exist,
     /// it will be created.
     ///
     /// Existing annotations with the same key will be overwritten, or
     /// deleted if new value is null.
-    Annotate(vector<Annotation>:MAX_ANNOTATIONS_PER_UPDATE annotations)
-        -> () error AnnotationError;
+    Annotate(resource struct {
+        annotations vector<Annotation>:MAX_ANNOTATIONS_PER_UPDATE;
+    }) -> (struct {}) error AnnotationError;
 
     /// Returns the annotations attached to this story.
     ///
@@ -103,5 +113,7 @@ protocol StoryPuppetMaster {
     /// annotations once they are updated.
     ///
     /// Returns AnnotationError.NOT_FOUND if the story does not exist.
-    WatchAnnotations() -> (vector<Annotation>:MAX_ANNOTATIONS_PER_STORY annotations) error AnnotationError;
+    WatchAnnotations() -> (resource struct {
+        annotations vector<Annotation>:MAX_ANNOTATIONS_PER_STORY;
+    }) error AnnotationError;
 };

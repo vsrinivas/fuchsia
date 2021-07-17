@@ -1,123 +1,125 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.lowpan.device;
 
 protocol Counters {
     /// Returns a snapshot of the counters without resetting the counters.
-    Get() -> (AllCounters counters);
+    Get() -> (struct {
+        counters AllCounters;
+    });
 
     /// Resets all of the counters to zero returning the counter values
     /// immediately prior.
-    Reset() -> (AllCounters counters);
+    Reset() -> (struct {
+        counters AllCounters;
+    });
 };
 
 /// Table describing all counters.
 ///
 /// May be empty if no counters are supported.
-table AllCounters {
+type AllCounters = table {
     /// MAC Counters for TX
-    1: MacCounters mac_tx;
+    1: mac_tx MacCounters;
 
     /// MAC Counters for RX
-    2: MacCounters mac_rx;
+    2: mac_rx MacCounters;
 };
 
 /// Counters associated with the MAC layer.
 ///
 /// Some counters are only valid for RX or TX.
-table MacCounters {
+type MacCounters = table {
     /// The total number of frames
-    1: uint32 total;
+    1: total uint32;
 
     /// The total number of unicast frames
-    2: uint32 unicast;
+    2: unicast uint32;
 
     /// The total number of broadcast frames
-    3: uint32 broadcast;
+    3: broadcast uint32;
 
     /// The number of frames with ack request
-    4: uint32 ack_requested;
+    4: ack_requested uint32;
 
     /// The number of frames that were acked
-    5: uint32 acked;
+    5: acked uint32;
 
     /// The number of frames without ack request
-    6: uint32 no_ack_requested;
+    6: no_ack_requested uint32;
 
     /// The number of data frames
-    7: uint32 data;
+    7: data uint32;
 
     /// The number of data poll frames
-    8: uint32 data_poll;
+    8: data_poll uint32;
 
     /// The number of beacon frames
-    9: uint32 beacon;
+    9: beacon uint32;
 
     /// The number of beacon request frames
-    10: uint32 beacon_request;
+   10: beacon_request uint32;
 
     /// The number of other types of frames
-    11: uint32 other;
+   11: other uint32;
 
     /// The number of frames filtered by address filter (allowlist
     /// or denylist).
-    12: uint32 address_filtered;
+   12: address_filtered uint32;
 
     /// The number of retransmission attempts.
     /// TX only.
-    13: uint32 retries;
+   13: retries uint32;
 
     /// The number of expired retransmission retries for direct message.
     /// TX only.
-    14: uint32 direct_max_retry_expiry;
+   14: direct_max_retry_expiry uint32;
 
     /// The number of expired retransmission retries for indirect message
     /// TX only.
-    15: uint32 indirect_max_retry_expiry;
+   15: indirect_max_retry_expiry uint32;
 
     /// The number of received frames filtered by destination check.
     /// RX only.
-    16: uint32 dest_addr_filtered;
+   16: dest_addr_filtered uint32;
 
     /// The number of received duplicated frames.
     /// RX only.
-    17: uint32 duplicated;
+   17: duplicated uint32;
 
     /// The number of received frames with no or malformed content.
     /// RX only.
-    18: uint32 err_no_frame;
+   18: err_no_frame uint32;
 
     /// The number of received frames from unknown neighbor.
     /// RX only.
-    19: uint32 err_unknown_neighbor;
+   19: err_unknown_neighbor uint32;
 
     /// The number of received frames whose source address is invalid.
     /// RX only.
-    20: uint32 err_invalid_src_addr;
+   20: err_invalid_src_addr uint32;
 
     /// The number of received frames with security error.
     /// RX only.
-    21: uint32 err_sec;
+   21: err_sec uint32;
 
     /// The number of received frames with FCS error.
     /// RX only.
-    22: uint32 err_fcs;
+   22: err_fcs uint32;
 
     /// The number of CCA failures.
     /// TX only.
-    23: uint32 err_cca;
+   23: err_cca uint32;
 
     /// The number of frame transmission failures due to abort error.
     /// TX only.
-    24: uint32 err_abort;
+   24: err_abort uint32;
 
     /// The number of frames that were dropped due to a busy channel.
     /// TX only.
-    25: uint32 err_busy_channel;
+   25: err_busy_channel uint32;
 
     /// The number of frames that encountered some other error.
-    26: uint32 err_other;
+   26: err_other uint32;
 };

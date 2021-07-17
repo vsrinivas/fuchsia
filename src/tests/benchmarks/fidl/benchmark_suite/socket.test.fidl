@@ -1,53 +1,51 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library benchmarkfidl;
 
 // The following are based on fuchsia.posix.socket.DatagramSocket.RecvMsg:
 
-struct DatagramSocketRecvMsgRequest {
-    uint32 addr_len;
-    uint32 data_len;
-    uint32 control_len;
-    int16 flags;
+type DatagramSocketRecvMsgRequest = struct {
+    addr_len uint32;
+    data_len uint32;
+    control_len uint32;
+    flags int16;
 };
 
-struct DatagramSocketRecvMsgResponse {
-    bytes:128 addr;
-    bytes data;
-    bytes control;
-    uint32 truncated;
+type DatagramSocketRecvMsgResponse = struct {
+    addr bytes:128;
+    data bytes;
+    control bytes;
+    truncated uint32;
 };
 
-union DatagramSocketRecvMsgResult {
-    1: DatagramSocketRecvMsgResponse response;
-    2: uint32 err;
+type DatagramSocketRecvMsgResult = strict union {
+    1: response DatagramSocketRecvMsgResponse;
+    2: err uint32;
 };
 
-struct DatagramSocketRecvMsgResultStruct {
-    DatagramSocketRecvMsgResult result;
+type DatagramSocketRecvMsgResultStruct = struct {
+    result DatagramSocketRecvMsgResult;
 };
 
 // The following are based on fuchsia.posix.socket.DatagramSocket.SendMsg2:
 
-struct DatagramSocketSendMsg2Request {
-    bytes:128 addr;
-    bytes:MAX data;
-    bytes control;
-    int16 flags;
+type DatagramSocketSendMsg2Request = struct {
+    addr bytes:128;
+    data bytes:MAX;
+    control bytes;
+    flags int16;
 };
 
-struct DatagramSocketSendMsg2Response {
-    int64 len;
+type DatagramSocketSendMsg2Response = struct {
+    len int64;
 };
 
-union DatagramSocketSendMsg2Result {
-    1: DatagramSocketSendMsg2Response response;
-    2: uint32 err;
+type DatagramSocketSendMsg2Result = strict union {
+    1: response DatagramSocketSendMsg2Response;
+    2: err uint32;
 };
 
-struct DatagramSocketSendMsg2ResultStruct {
-    DatagramSocketSendMsg2Result result;
+type DatagramSocketSendMsg2ResultStruct = struct {
+    result DatagramSocketSendMsg2Result;
 };

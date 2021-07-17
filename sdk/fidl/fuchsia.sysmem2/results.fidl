@@ -1,8 +1,6 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.sysmem2;
 
 using zx;
@@ -19,18 +17,18 @@ using zx;
 // fuchsia.sysmem2.BufferCollection.SetConstraints() which will accept
 // constraints as defined here.
 
-resource table VmoBuffer {
+type VmoBuffer = resource table {
     /// The same VMO can be used by more than one CodecBuffer (only of the same
     /// buffer_lifetime_ordinal), but each vmo handle must be a separate handle.
     ///
     /// |vmo| can be un-set if a participant has no usage which requires a
     /// VMO handle.
-    1: zx.handle:VMO vmo;
+    1: vmo zx.handle:VMO;
 
     /// Offset within the VMO of the first usable byte.  Must be < the VMO's
     /// size in bytes, and leave sufficient room for
     /// BufferMemorySettings.size_bytes before the end of the VMO.
-    2: uint64 vmo_usable_start;
+    2: vmo_usable_start uint64;
 
     /// In some cases, we have a physically separate aux buffer that is a
     /// logical shadow of the main buffer.  The main use case so far is DRM L1
@@ -41,18 +39,18 @@ resource table VmoBuffer {
     ///
     /// |aux_vmo| will be un-set if there are no aux buffers, or in the same
     /// cases that |vmo| can be un-set.
-    3: zx.handle:VMO aux_vmo;
+    3: aux_vmo zx.handle:VMO;
 };
 
-const uint32 MAX_COUNT_BUFFER_COLLECTION_INFO_BUFFERS = 128;
+const MAX_COUNT_BUFFER_COLLECTION_INFO_BUFFERS uint32 = 128;
 
 /// Information about a buffer collection and its buffers.
 // TODO(fxbug.dev/32119): provide a way for clients to receive this table instead of the
 // struct fuchsia.sysmem.BufferCollectionInfo_2.
-resource table BufferCollectionInfo {
+type BufferCollectionInfo = resource table {
     /// These settings apply to all the buffers in the inital buffer allocation.
     /// This must be set.
-    1: SingleBufferSettings settings;
+    1: settings SingleBufferSettings;
 
     /// VMO handles (and vmo_usable_start offset) for each buffer in the
     /// collection.
@@ -73,12 +71,12 @@ resource table BufferCollectionInfo {
     /// specifies usage whieh does not require VMO handles.  This permits such
     /// a participant to know the vmo_usable_start values, in case that's of any
     /// use to the participant.
-    2: vector<VmoBuffer>:MAX_COUNT_BUFFER_COLLECTION_INFO_BUFFERS buffers;
+    2: buffers vector<VmoBuffer>:MAX_COUNT_BUFFER_COLLECTION_INFO_BUFFERS;
 };
 
 /// These settings and constraints apply to all the buffers in the collection.
-table SingleBufferSettings {
-    1: BufferMemorySettings buffer_settings;
+type SingleBufferSettings = table {
+    1: buffer_settings BufferMemorySettings;
 
     /// Buffers holding data that is not uncompressed image data will not have
     /// this field set.  Buffers holding data that is uncompressed image data
@@ -88,16 +86,16 @@ table SingleBufferSettings {
     /// buffers.
     ///
     /// If un-set, there are no image format constraints.
-    2: ImageFormatConstraints image_format_constraints;
+    2: image_format_constraints ImageFormatConstraints;
 };
 
 /// These are memory-related settings for all buffers of a buffer collection.
-table BufferMemorySettings {
-    1: uint32 size_bytes;
-    2: bool is_physically_contiguous;
-    3: bool is_secure;
-    4: CoherencyDomain coherency_domain;
+type BufferMemorySettings = table {
+    1: size_bytes uint32;
+    2: is_physically_contiguous bool;
+    3: is_secure bool;
+    4: coherency_domain CoherencyDomain;
     /// The specific heap from which buffers are allocated.
     /// See above in this file for heap identifier values.
-    5: HeapType heap;
+    5: heap HeapType;
 };

@@ -1,34 +1,38 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.ssh;
 
 using zx;
 
 /// Maximum length of a single SSH key. See sshd(8).
-const uint32 MAX_SSH_KEY_LENGTH = 8192;
+const MAX_SSH_KEY_LENGTH uint32 = 8192;
 
-struct SshAuthorizedKeyEntry {
+type SshAuthorizedKeyEntry = struct {
     /// The entry in authorized_keys.
-    string:MAX_SSH_KEY_LENGTH key;
+    key string:MAX_SSH_KEY_LENGTH;
 };
 
 /// Protocol for managing SSH keys on a device.
-[Discoverable]
+@discoverable
 protocol AuthorizedKeys {
     /// Add a key to the device's authorized key list.
-    AddKey(SshAuthorizedKeyEntry key) -> () error zx.status;
+    AddKey(struct {
+        key SshAuthorizedKeyEntry;
+    }) -> (struct {}) error zx.status;
 
     /// Watch for keys by sending events to the given KeyWatcher.
-    WatchKeys(request<KeyWatcher> watcher);
+    WatchKeys(resource struct {
+        watcher server_end:KeyWatcher;
+    });
 
     /// Remove the given key. |key| should be a value returned by |KeyIterator|.
-    RemoveKey(SshAuthorizedKeyEntry key) -> () error zx.status;
+    RemoveKey(struct {
+        key SshAuthorizedKeyEntry;
+    }) -> (struct {}) error zx.status;
 };
 
-enum KeyEventType {
+type KeyEventType = strict enum {
     /// This key already existed when WatchKeys was called.
     EXISTING = 1;
     /// This key was added after WatchKeys was called.
@@ -40,15 +44,17 @@ enum KeyEventType {
 };
 
 /// Event for an SSH key being added or removed.
-struct KeyEvent {
+type KeyEvent = struct {
     /// What is happening to this key?
-    KeyEventType event;
+    event KeyEventType;
     /// The key. Present for all KeyEventType except FINISHED_EXISTING.
-    SshAuthorizedKeyEntry? key;
+    key box<SshAuthorizedKeyEntry>;
 };
 
 /// Used to send updates about the authorized key list from server to client.
 protocol KeyWatcher {
     /// Blocks until the next event is ready.
-    Next() -> (KeyEvent event);
+    Next() -> (struct {
+        event KeyEvent;
+    });
 };

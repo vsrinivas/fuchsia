@@ -1,33 +1,31 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.media;
 
 // Describes media.
-struct Metadata {
-    vector<Property> properties;
+type Metadata = struct {
+    properties vector<Property>;
 };
 
-struct Property {
-    string label;
-    string value;
+type Property = struct {
+    label string;
+    value string;
 };
 
-const string METADATA_LABEL_TITLE = "fuchsia.media.title";
-const string METADATA_LABEL_ARTIST = "fuchsia.media.artist";
-const string METADATA_LABEL_ALBUM = "fuchsia.media.album";
-const string METADATA_LABEL_TRACK_NUMBER = "fuchsia.media.track_number";
-const string METADATA_LABEL_PUBLISHER = "fuchsia.media.publisher";
-const string METADATA_LABEL_GENRE = "fuchsia.media.genre";
-const string METADATA_LABEL_COMPOSER = "fuchsia.media.composer";
-const string METADATA_LABEL_SUBTITLE = "fuchsia.media.subtitle";
-const string METADATA_LABEL_RELEASE_DATE = "fuchsia.media.release_date";
-const string METADATA_LABEL_EPISODE = "fuchsia.media.episode";
-const string METADATA_LABEL_SEASON = "fuchsia.media.season";
-const string METADATA_LABEL_STUDIO = "fuchsia.media.studio";
+const METADATA_LABEL_TITLE string = "fuchsia.media.title";
+const METADATA_LABEL_ARTIST string = "fuchsia.media.artist";
+const METADATA_LABEL_ALBUM string = "fuchsia.media.album";
+const METADATA_LABEL_TRACK_NUMBER string = "fuchsia.media.track_number";
+const METADATA_LABEL_PUBLISHER string = "fuchsia.media.publisher";
+const METADATA_LABEL_GENRE string = "fuchsia.media.genre";
+const METADATA_LABEL_COMPOSER string = "fuchsia.media.composer";
+const METADATA_LABEL_SUBTITLE string = "fuchsia.media.subtitle";
+const METADATA_LABEL_RELEASE_DATE string = "fuchsia.media.release_date";
+const METADATA_LABEL_EPISODE string = "fuchsia.media.episode";
+const METADATA_LABEL_SEASON string = "fuchsia.media.season";
+const METADATA_LABEL_STUDIO string = "fuchsia.media.studio";
 
 /// The title of the source of the media, e.g. a player, streaming service, or
 /// website.
-const string METADATA_SOURCE_TITLE = "fuchsia.media.source_title";
+const METADATA_SOURCE_TITLE string = "fuchsia.media.source_title";

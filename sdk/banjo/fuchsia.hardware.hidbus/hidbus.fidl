@@ -1,74 +1,124 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.hidbus;
 
 using zx;
 
-const uint16 HID_MAX_DESC_LEN = 8192;
+const HID_MAX_DESC_LEN uint16 = 8192;
 
-enum HidDescriptionType : uint8 {
+type HidDescriptionType = strict enum : uint8 {
     REPORT = 0x22;
 };
 
-enum HidReportType : uint8 {
+type HidReportType = strict enum : uint8 {
     INPUT = 1;
     OUTPUT = 2;
     FEATURE = 3;
 };
 
-enum HidProtocol : uint8 {
+type HidProtocol = strict enum : uint8 {
     BOOT = 0;
     REPORT = 1;
 };
 
-enum HidDeviceClass : uint8 {
+type HidDeviceClass = strict enum : uint8 {
     OTHER = 0;
     KBD = 1;
     POINTER = 2;
     KBD_POINTER = 3;
 };
 
-const uint8 HID_DEVICE_CLASS_FIRST = 0;
-const uint8 HID_DEVICE_CLASS_LAS = 3;
+const HID_DEVICE_CLASS_FIRST uint8 = 0;
+const HID_DEVICE_CLASS_LAS uint8 = 3;
 
-struct HidInfo {
-    uint8 dev_num;
-    HidDeviceClass device_class;
-    bool boot_device;
+type HidInfo = struct {
+    dev_num uint8;
+    device_class HidDeviceClass;
+    boot_device bool;
 
-    uint32 vendor_id;
-    uint32 product_id;
-    uint32 version;
+    vendor_id uint32;
+    product_id uint32;
+    version uint32;
 };
 
-[Transport = "Banjo", BanjoLayout = "ddk-interface"]
+@transport("Banjo")
+@banjo_layout("ddk-interface")
 protocol HidbusIfc {
     /// Queues a report received by the hidbus device.
     /// Timestamp should be whenever the report was created. Ideally it should
     /// come from the driver's IRQ callback. If the driver doesn't have
     /// something like that it should fill this with `zx_clock_get_monotonic()`
-    IoQueue([Buffer] vector<uint8>:MAX buf, zx.time timestamp) -> ();
+    IoQueue(struct {
+        @buffer
+        buf vector<uint8>:MAX;
+        timestamp zx.time;
+    }) -> ();
 };
 
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol Hidbus {
     /// Obtain information about the hidbus device and supported features.
     /// Safe to call at any time.
-    Query(uint32 options) -> (zx.status s, HidInfo info);
+    Query(struct {
+        options uint32;
+    }) -> (struct {
+        s zx.status;
+        info HidInfo;
+    });
     /// Start the hidbus device. The device may begin queueing hid reports via
     /// ifc->io_queue before this function returns. It is an error to start an
     /// already-started hidbus device.
-    Start(HidbusIfc ifc) -> (zx.status s);
+    Start(resource struct {
+        ifc client_end:HidbusIfc;
+    }) -> (struct {
+        s zx.status;
+    });
     /// Stop the hidbus device. Safe to call if the hidbus is already stopped.
     Stop() -> ();
-    GetDescriptor(HidDescriptionType desc_type) -> (zx.status s, [Buffer] vector<uint8>:MAX data);
-    GetReport(HidReportType rpt_type, uint8 rpt_id) -> (zx.status s, [Buffer] vector<uint8>:MAX data);
-    SetReport(HidReportType rpt_type, uint8 rpt_id, [Buffer] vector<uint8>:MAX data) -> (zx.status s);
-    GetIdle(uint8 rpt_id) -> (zx.status s, uint8 duration);
-    SetIdle(uint8 rpt_id, uint8 duration) -> (zx.status s);
-    GetProtocol() -> (zx.status s, HidProtocol protocol);
-    SetProtocol(HidProtocol protocol) -> (zx.status s);
+    GetDescriptor(struct {
+        desc_type HidDescriptionType;
+    }) -> (struct {
+        s zx.status;
+        @buffer
+        data vector<uint8>:MAX;
+    });
+    GetReport(struct {
+        rpt_type HidReportType;
+        rpt_id uint8;
+    }) -> (struct {
+        s zx.status;
+        @buffer
+        data vector<uint8>:MAX;
+    });
+    SetReport(struct {
+        rpt_type HidReportType;
+        rpt_id uint8;
+        @buffer
+        data vector<uint8>:MAX;
+    }) -> (struct {
+        s zx.status;
+    });
+    GetIdle(struct {
+        rpt_id uint8;
+    }) -> (struct {
+        s zx.status;
+        duration uint8;
+    });
+    SetIdle(struct {
+        rpt_id uint8;
+        duration uint8;
+    }) -> (struct {
+        s zx.status;
+    });
+    GetProtocol() -> (struct {
+        s zx.status;
+        protocol HidProtocol;
+    });
+    SetProtocol(struct {
+        protocol HidProtocol;
+    }) -> (struct {
+        s zx.status;
+    });
 };

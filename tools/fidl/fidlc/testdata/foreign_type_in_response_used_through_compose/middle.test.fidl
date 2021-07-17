@@ -1,8 +1,9 @@
-deprecated_syntax;
 library middle;
 
 using bottom;
 
 protocol Middle {
-    GetFoo() -> (bottom.Foo foo);
+    GetFoo() -> (struct {
+        foo bottom.Foo;
+    });
 };

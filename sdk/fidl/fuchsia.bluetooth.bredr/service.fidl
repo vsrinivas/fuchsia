@@ -1,8 +1,6 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.bluetooth.bredr;
 
 using fuchsia.bluetooth;
@@ -11,14 +9,14 @@ using fuchsia.url;
 /// The maximum length that a sequence or set of alternatives supported in a
 /// DataElement list. If a list is provided that is longer than this from a
 /// peer, it is truncated.
-const uint8 MAX_SEQUENCE_LENGTH = 255;
+const MAX_SEQUENCE_LENGTH uint8 = 255;
 /// Maximum length of a string that is alowed in a DataElement.  If a
 /// DataElement string longer than this is sent by a peer it will be truncated.
-const uint16 MAX_STRING_LENGTH = 1024;
+const MAX_STRING_LENGTH uint16 = 1024;
 
 /// A DataElement is one element in a SDP record. SDP attributes and other parameters are
 /// expresssed in DataElements.
-union DataElement {
+type DataElement = strict union {
     1: int8 int8;
     2: int16 int16;
     3: int32 int32;
@@ -27,19 +25,19 @@ union DataElement {
     6: uint16 uint16;
     7: uint32 uint32;
     8: uint64 uint64;
-    9: string:MAX_STRING_LENGTH str;
-    10: fuchsia.url.Url url;
-    11: fuchsia.bluetooth.Uuid uuid;
-    12: bool b;
-    13: vector<DataElement?>:MAX_SEQUENCE_LENGTH sequence;
-    14: vector<DataElement?>:MAX_SEQUENCE_LENGTH alternatives;
+    9: str string:MAX_STRING_LENGTH;
+   10: url fuchsia.url.Url;
+   11: uuid fuchsia.bluetooth.Uuid;
+   12: b bool;
+   13: sequence vector<DataElement:optional>:MAX_SEQUENCE_LENGTH;
+   14: alternatives vector<DataElement:optional>:MAX_SEQUENCE_LENGTH;
 };
 
 /// Defined Protocol Identifiers for the Protocol Descriptor
 /// We intentionally omit deprecated profile identifiers.
 /// From Bluetooth Assigned Numbers:
 /// https://www.bluetooth.com/specifications/assigned-numbers/service-discovery
-enum ProtocolIdentifier : uint16 {
+type ProtocolIdentifier = strict enum : uint16 {
     SDP = 1;
     RFCOMM = 3;
     ATT = 7;
@@ -59,26 +57,26 @@ enum ProtocolIdentifier : uint16 {
 /// Defined PSMs from the Bluetooth Assigned Numbers
 /// https://www.bluetooth.com/specifications/assigned-numbers/logical-link-control
 /// Used in DataElement as protocol parameters for L2CAP.
-const uint16 PSM_SDP = 1;
-const uint16 PSM_RFCOMM = 3;
-const uint16 PSM_TCSBIN = 5; // Telephony Control Specification
-const uint16 PSM_TCSBIN_CORDLESS = 7;
-const uint16 PSM_BNEP = 15; // Bluetooth Network Encapsulation Protocol
-const uint16 PSM_HID_CONTROL = 17; // Human Interface Device
-const uint16 PSM_HID_INTERRUPT = 19; // Human Interface Device
-const uint16 PSM_AVCTP = 23; // Audio/Video Control Transport Protocol
-const uint16 PSM_AVDTP = 25; // Audio/Video Distribution Transport Protocol
-const uint16 PSM_AVCTP_BROWSE = 27; // Audio/Video Remote Control Profile (Browsing)
-const uint16 PSM_ATT = 31; // ATT
-const uint16 PSM_3DSP = 33; // 3D Synchronization Profile
-const uint16 PSM_LE_IPSP = 35; // Internet Protocol Support Profile
-const uint16 PSM_OTS = 37; // Object Transfer Service
+const PSM_SDP uint16 = 1;
+const PSM_RFCOMM uint16 = 3;
+const PSM_TCSBIN uint16 = 5; // Telephony Control Specification
+const PSM_TCSBIN_CORDLESS uint16 = 7;
+const PSM_BNEP uint16 = 15; // Bluetooth Network Encapsulation Protocol
+const PSM_HID_CONTROL uint16 = 17; // Human Interface Device
+const PSM_HID_INTERRUPT uint16 = 19; // Human Interface Device
+const PSM_AVCTP uint16 = 23; // Audio/Video Control Transport Protocol
+const PSM_AVDTP uint16 = 25; // Audio/Video Distribution Transport Protocol
+const PSM_AVCTP_BROWSE uint16 = 27; // Audio/Video Remote Control Profile (Browsing)
+const PSM_ATT uint16 = 31; // ATT
+const PSM_3DSP uint16 = 33; // 3D Synchronization Profile
+const PSM_LE_IPSP uint16 = 35; // Internet Protocol Support Profile
+const PSM_OTS uint16 = 37; // Object Transfer Service
 
 /// Identifies a communications protocol along with protocol-specific parameters.
 /// Usually used to describe a protocol endpoint in a ProtocolDescriptorList
-struct ProtocolDescriptor {
-    ProtocolIdentifier protocol;
-    vector<DataElement>:MAX_SEQUENCE_LENGTH params;
+type ProtocolDescriptor = struct {
+    protocol ProtocolIdentifier;
+    params vector<DataElement>:MAX_SEQUENCE_LENGTH;
 };
 
 /// A ProtocolDescriptorList is a list of protocols in a "stack" from lowest to highest,
@@ -90,7 +88,7 @@ alias ProtocolDescriptorList = vector<ProtocolDescriptor>:MAX_SEQUENCE_LENGTH;
 /// or reserved for use by Fuchsia Bluetooth.
 /// These numbers are sourced from the Bluetooth Assigned Numbers for SDP.
 /// https://www.bluetooth.com/specifications/assigned-numbers/service-discovery
-enum ServiceClassProfileIdentifier : uint16 {
+type ServiceClassProfileIdentifier = strict enum : uint16 {
     // ServiceDiscoveryService and BrowseGroupDescriptorService claimed by Fuchsia
     /// Serial Port Profile (SPP)
     SERIAL_PORT = 0x1101;
@@ -164,85 +162,85 @@ enum ServiceClassProfileIdentifier : uint16 {
 
 /// A description of a profile that this service conforms to.
 /// See Bluetooth Specification v5.2 Vol 3, Part B, Section 5.1.11
-struct ProfileDescriptor {
-    ServiceClassProfileIdentifier profile_id;
-    uint8 major_version;
-    uint8 minor_version;
+type ProfileDescriptor = struct {
+    profile_id ServiceClassProfileIdentifier;
+    major_version uint8;
+    minor_version uint8;
 };
 
 /// Maximum number of languages that are supported by SDP at the moment.
 // Note: all informations must be within 0x0100 - 0x01FF per Spec Vol 3, Part B,
 // Sec 5.1.8.  Since each information consumes three spaces, this means there is
 // a max of 256 / 3 = 85 supported.
-const uint8 MAX_INFORMATION_COUNT = 85;
+const MAX_INFORMATION_COUNT uint8 = 85;
 
 /// Human-readable information about a service. Strings are encoded in UTF-8.
 /// See Bluetooth Specification v5.2 Vol 3, Part B, Sections 5.1.15 through 5.1.17
-table Information {
+type Information = table {
     /// Language that the other fields in this table are in.
     /// Must be two characters long and a valid ICO 639:1988 identifier.
     /// Must be present.
-    1: string:2 language;
+    1: language string:2;
 
     /// Service name
-    2: string:MAX_STRING_LENGTH name;
+    2: name string:MAX_STRING_LENGTH;
 
     /// A human-readable description
-    3: string:MAX_STRING_LENGTH description;
+    3: description string:MAX_STRING_LENGTH;
 
     /// The provider of this service (person or organization)
-    4: string:MAX_STRING_LENGTH provider;
+    4: provider string:MAX_STRING_LENGTH;
 };
 
 /// A generic attribute, used for protocol information;
-struct Attribute {
-    uint16 id;
-    DataElement element;
+type Attribute = struct {
+    id uint16;
+    element DataElement;
 };
 
 /// Universal attribute IDs.
 /// From the Bluetooth Specification v5.2, Vol 3, Part B
-const uint16 ATTR_SERVICE_RECORD_HANDLE = 0x0000;
-const uint16 ATTR_SERVICE_CLASS_ID_LIST = 0x0001;
-const uint16 ATTR_SERVICE_RECORD_STATE = 0x0002;
-const uint16 ATTR_SERVICE_ID = 0x0003;
-const uint16 ATTR_PROTOCOL_DESCRIPTOR_LIST = 0x0004;
-const uint16 ATTR_ADDITIONAL_PROTOCOL_DESCRIPTOR_LIST = 0x000D;
-const uint16 ATTR_BROWSE_GROUP_LIST = 0x0005;
-const uint16 ATTR_LANGUAGE_BASE_ATTRIBUTE_ID_LIST = 0x0006;
-const uint16 ATTR_SERVICE_INFO_TIME_TO_LIVE = 0x0007;
-const uint16 ATTR_SERVICE_AVAILABILITY = 0x0008;
-const uint16 ATTR_BLUETOOTH_PROFILE_DESCRIPTOR_LIST = 0x0009;
+const ATTR_SERVICE_RECORD_HANDLE uint16 = 0x0000;
+const ATTR_SERVICE_CLASS_ID_LIST uint16 = 0x0001;
+const ATTR_SERVICE_RECORD_STATE uint16 = 0x0002;
+const ATTR_SERVICE_ID uint16 = 0x0003;
+const ATTR_PROTOCOL_DESCRIPTOR_LIST uint16 = 0x0004;
+const ATTR_ADDITIONAL_PROTOCOL_DESCRIPTOR_LIST uint16 = 0x000D;
+const ATTR_BROWSE_GROUP_LIST uint16 = 0x0005;
+const ATTR_LANGUAGE_BASE_ATTRIBUTE_ID_LIST uint16 = 0x0006;
+const ATTR_SERVICE_INFO_TIME_TO_LIVE uint16 = 0x0007;
+const ATTR_SERVICE_AVAILABILITY uint16 = 0x0008;
+const ATTR_BLUETOOTH_PROFILE_DESCRIPTOR_LIST uint16 = 0x0009;
 
 /// Maximum additional attributes as defined by the spec. All attributes
 /// must be above 0x0200 per the Bluetooth Specfication, Ver 5.2 Vol 3, Part B,
 /// Section 5
-const uint16 MAX_ADDITIONAL_ATTRIBUTES = 0xFDFF;
+const MAX_ADDITIONAL_ATTRIBUTES uint16 = 0xFDFF;
 
 /// Definition for a service that is to be advertised as available via Bluetooth BR/EDR.
-table ServiceDefinition {
+type ServiceDefinition = table {
     /// UUIDs of service classes that this service record conforms to.
     /// This field is required - all advertised services must have at least one service class.
-    1: vector<fuchsia.bluetooth.Uuid>:MAX_SEQUENCE_LENGTH service_class_uuids;
+    1: service_class_uuids vector<fuchsia.bluetooth.Uuid>:MAX_SEQUENCE_LENGTH;
 
     /// Specification for the primary protocol that can be used to gain access to this
     /// service, with their protocol-specific identifiers.
     /// This is ordered from lowest level (typically L2CAP) to highest.
-    2: ProtocolDescriptorList protocol_descriptor_list;
+    2: protocol_descriptor_list ProtocolDescriptorList;
 
     /// Additional protocol descriptor lists, if the service requires more channels
     /// in addition to the main service.
-    3: vector<ProtocolDescriptorList>:MAX_SEQUENCE_LENGTH additional_protocol_descriptor_lists;
+    3: additional_protocol_descriptor_lists vector<ProtocolDescriptorList>:MAX_SEQUENCE_LENGTH;
 
     /// Bluetooth profiles that are supported by this service.
-    4: vector<ProfileDescriptor>:MAX_SEQUENCE_LENGTH profile_descriptors;
+    4: profile_descriptors vector<ProfileDescriptor>:MAX_SEQUENCE_LENGTH;
 
     /// Human-readable service information, in one or more languages.
     /// The first set of information is considered the primary language.
-    5: vector<Information>:MAX_INFORMATION_COUNT information;
+    5: information vector<Information>:MAX_INFORMATION_COUNT;
 
     /// Additional attributes to be included in the Service Definition for specific
     /// services or profiles.
     /// All of these attributes should have an Attribute ID above 0x0200.
-    6: vector<Attribute>:MAX_ADDITIONAL_ATTRIBUTES additional_attributes;
+    6: additional_attributes vector<Attribute>:MAX_ADDITIONAL_ATTRIBUTES;
 };

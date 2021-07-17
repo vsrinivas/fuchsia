@@ -1,63 +1,73 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.spi;
 
 using fuchsia.hardware.sharedmemory;
 using zx;
 
-const uint32 MAX_TRANSFER_SIZE = 8196; // arbitrary - to be removed
-const uint32 MAX_SPI_CHANNEL = 32; // arbitrary.
-
-flexible enum SpiClockPhase {
+const MAX_TRANSFER_SIZE uint32 = 8196; // arbitrary - to be removed
+const MAX_SPI_CHANNEL uint32 = 32; // arbitrary.
+type SpiClockPhase = flexible enum {
     CLOCK_PHASE_FIRST = 0;
     CLOCK_PHASE_SECOND = 1;
 };
 
 /// Represents a single device on a SPI bus.
-table SpiChannel {
+type SpiChannel = table {
     /// ID of the bus that this device is on.
-    1: uint32 bus_id;
+    1: bus_id uint32;
     /// Chip select number for the device.
-    2: uint32 cs;
+    2: cs uint32;
 
     /// Vendor ID. Used when binding via platform bus device IDs.
-    3: uint32 vid;
+    3: vid uint32;
     /// Product ID. Used when binding via platform bus device IDs.
-    4: uint32 pid;
+    4: pid uint32;
     /// Device ID. Used when binding via platform bus device IDs.
-    5: uint32 did;
+    5: did uint32;
 
     // Bus configuration.
     /// Chip select polarity: true == high, false == low.
-    6: bool cs_polarity_high;
+    6: cs_polarity_high bool;
     /// Size in bits of a single word on the SPI bus.
-    7: uint8 word_length_bits;
+    7: word_length_bits uint8;
 
     /// Are we in charge of the bus?
-    8: bool is_bus_controller;
+    8: is_bus_controller bool;
     /// Clock polarity. true == high, false == low.
-    9: bool clock_polarity_high;
+    9: clock_polarity_high bool;
     ///  Clock phase.
-    10: SpiClockPhase clock_phase;
+   10: clock_phase SpiClockPhase;
 };
 
 /// Passed to the spi driver in metadata as DEVICE_METADATA_SPI_CHANNELS.
-table SpiBusMetadata {
-    1: vector<SpiChannel>:MAX_SPI_CHANNEL channels;
+type SpiBusMetadata = table {
+    1: channels vector<SpiChannel>:MAX_SPI_CHANNEL;
 };
 
 protocol Device {
     /// Half-duplex transmit data to a SPI device; always transmits the entire buffer on success.
-    TransmitVector(vector<uint8>:MAX_TRANSFER_SIZE data) -> (zx.status status);
+    TransmitVector(struct {
+        data vector<uint8>:MAX_TRANSFER_SIZE;
+    }) -> (struct {
+        status zx.status;
+    });
     /// Half-duplex receive data from a SPI device; always reads the full size requested.
-    ReceiveVector(uint32 size) -> (zx.status status, vector<uint8>:MAX_TRANSFER_SIZE data);
+    ReceiveVector(struct {
+        size uint32;
+    }) -> (struct {
+        status zx.status;
+        data vector<uint8>:MAX_TRANSFER_SIZE;
+    });
     /// Full-duplex SPI transaction. Received data will exactly equal the length of the transmit
     /// buffer.
-    ExchangeVector(vector<uint8>:MAX_TRANSFER_SIZE txdata)
-        -> (zx.status status, vector<uint8>:MAX_TRANSFER_SIZE rxdata);
+    ExchangeVector(struct {
+        txdata vector<uint8>:MAX_TRANSFER_SIZE;
+    }) -> (struct {
+        status zx.status;
+        rxdata vector<uint8>:MAX_TRANSFER_SIZE;
+    });
 
     compose fuchsia.hardware.sharedmemory.SharedVmoIo;
     compose fuchsia.hardware.sharedmemory.SharedVmoRegister;

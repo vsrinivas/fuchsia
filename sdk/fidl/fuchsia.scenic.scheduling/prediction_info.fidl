@@ -1,48 +1,46 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.scenic.scheduling;
 
 using zx;
 
 /// The times we predict for a future presentation, expressed in nanoseconds in
 /// the `CLOCK_MONOTONIC` timebase.
-table PresentationInfo {
+type PresentationInfo = table {
     /// The time where Scenic processes all pending updates to its scene graph
     /// and render a new frame. Clients should aim to have all  commands sent
     /// and acquire fences reached in order to have their  content be
     /// presented at the corresponding `presentation_time`. The `latch_point`
     /// is guaranteed to be less than `presentation_time`.
-    1: zx.time latch_point;
+    1: latch_point zx.time;
 
     /// The time in which the enqueued operations submitted before `latch_point`
     /// take visible effect. This time is usually but not necessarily vsync.
-    2: zx.time presentation_time;
+    2: presentation_time zx.time;
 };
 
 /// The times we record for each Present2, expressed in nanoseconds in the
 /// `CLOCK_MONOTONIC` timebase.
-table PresentReceivedInfo {
+type PresentReceivedInfo = table {
     /// The time Scenic receives the Present2 call.
-    1: zx.time present_received_time;
+    1: present_received_time zx.time;
 
     /// The time Scenic latched the Present2 call to. This is guaranteed to be
     /// greater than the `present_received_time`.
-    2: zx.time latched_time;
+    2: latched_time zx.time;
 };
 
 /// The data type returned in `fuchsia.ui.scenic::RequestPresentationTimes`. See
 /// that method description for more information.
-struct FuturePresentationTimes {
+type FuturePresentationTimes = struct {
     /// The future estimated presentation times. They represent the times Scenic
     /// intends to let the client's work be presented over the next few frames.
     /// These values may change after they are queried.
     ///
     /// Clients who wish to minimize latency should use these values to schedule
     /// their work accordingly.
-    vector<PresentationInfo>:8 future_presentations;
+    future_presentations vector<PresentationInfo>:8;
 
     /// The amount of Present() calls the client is currently allowed. If the
     /// client calls Present() when this number is zero, the session will be
@@ -50,19 +48,19 @@ struct FuturePresentationTimes {
     ///
     /// This value is decremented every Present() call, and is incremented every
     /// OnFramePresented() event.
-    int64 remaining_presents_in_flight_allowed;
+    remaining_presents_in_flight_allowed int64;
 };
 
-struct FramePresentedInfo {
+type FramePresentedInfo = struct {
     /// The time the frame was presented to the user. This value was captured
     /// after the fact, differentiating it from the `presentation_time`s
     /// included in `FuturePresentationTimes`.
-    zx.time actual_presentation_time;
+    actual_presentation_time zx.time;
 
     /// The presentation informations for each Present2() that comprised the
     /// content of this frame. These are ordered by present submission order.
-    vector<PresentReceivedInfo>:32 presentation_infos;
+    presentation_infos vector<PresentReceivedInfo>:32;
 
     /// The number of times remaining that the client can call `Present2`.
-    uint64 num_presents_allowed;
+    num_presents_allowed uint64;
 };

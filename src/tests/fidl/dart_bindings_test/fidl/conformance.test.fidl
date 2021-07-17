@@ -1,85 +1,82 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fidl.test.dartbindingstest;
 
-struct EmptyStruct {
+type EmptyStruct = struct {};
+
+type TestEmptyStructSandwich = struct {
+    before string;
+    es EmptyStruct;
+    after string;
 };
 
-struct TestEmptyStructSandwich {
-    string before;
-    EmptyStruct es;
-    string after;
-};
-
-table SimpleTable {
-    1: int64 x;
+type SimpleTable = table {
+    1: x int64;
     2: reserved;
     3: reserved;
     4: reserved;
-    5: int64 y;
+    5: y int64;
 };
 
-struct TestSimpleTable {
-    SimpleTable table;
+type TestSimpleTable = struct {
+    table SimpleTable;
 };
 
-table TableWithStringAndVector {
-    1: string foo;
-    2: int32 bar;
-    3: vector<uint8> baz;
+type TableWithStringAndVector = table {
+    1: foo string;
+    2: bar int32;
+    3: baz vector<uint8>;
 };
 
-struct TestTableWithStringAndVector {
-    TableWithStringAndVector table;
+type TestTableWithStringAndVector = struct {
+    table TableWithStringAndVector;
 };
 
-union SimpleUnion {
-    1: int32 i32;
-    2: int64 i64;
-    3: Int64Struct s;
-    4: string str;
+type SimpleUnion = strict union {
+    1: i32 int32;
+    2: i64 int64;
+    3: s Int64Struct;
+    4: str string;
 };
 
-struct Int64Struct {
-    int64 x;
+type Int64Struct = struct {
+    x int64;
 };
 
-flexible union SampleXUnion {
-    1: uint32 u;
-    2: SimpleUnion su;
-    3: SimpleTable st;
+type SampleXUnion = flexible union {
+    1: u uint32;
+    2: su SimpleUnion;
+    3: st SimpleTable;
 };
 
-struct TestInlineXUnionInStruct {
-    string before;
-    SampleXUnion xu;
-    string after;
+type TestInlineXUnionInStruct = struct {
+    before string;
+    xu SampleXUnion;
+    after string;
 };
 
-struct TestOptionalXUnionInStruct {
-    string before;
-    SampleXUnion? xu;
-    string after;
+type TestOptionalXUnionInStruct = struct {
+    before string;
+    xu SampleXUnion:optional;
+    after string;
 };
 
-table XUnionInTable {
-    1: string before;
-    2: SampleXUnion xu;
-    3: string after;
+type XUnionInTable = table {
+    1: before string;
+    2: xu SampleXUnion;
+    3: after string;
 };
 
-struct TestXUnionInTable {
-    XUnionInTable value;
+type TestXUnionInTable = struct {
+    value XUnionInTable;
 };
 
-struct TestString3 {
-    array<string:4>:2 a;
-    array<string:4?>:2 b;
+type TestString3 = struct {
+    a array<string:4, 2>;
+    b array<string:<4, optional>, 2>;
 };
 
-struct TestStringWithBound {
-    string:8 a;
+type TestStringWithBound = struct {
+    a string:8;
 };

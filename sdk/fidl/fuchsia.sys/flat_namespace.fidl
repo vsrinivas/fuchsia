@@ -1,18 +1,16 @@
 // Copyright 2017 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.sys;
 
 using zx;
 
-resource struct FlatNamespace {
-  /// The mount point for each of the directories below.
-  ///
-  /// For example, ["/pkg", "/svc"].
-  vector<string> paths;
+type FlatNamespace = resource struct {
+    /// The mount point for each of the directories below.
+    ///
+    /// For example, ["/pkg", "/svc"].
+    paths vector<string>;
 
-  /// The directories mounted at each path in the namespace.
-  vector<zx.handle:CHANNEL> directories;
+    /// The directories mounted at each path in the namespace.
+    directories vector<zx.handle:CHANNEL>;
 };

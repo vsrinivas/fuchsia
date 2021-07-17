@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.wlan.policy;
 
 using fuchsia.wlan.common;
@@ -15,22 +13,27 @@ using fuchsia.wlan.common;
 /// The second aim of this API design is to eliminate the "last-caller wins"
 /// paradigm by limiting the number of controlling applications.  A single caller
 /// at a time is permitted to make API calls that impact wlan state.
-[Discoverable]
+@discoverable
 protocol AccessPointProvider {
     /// Control channel used by a single caller to trigger wlan access point (ap) mode
     /// state changes.  The caller also provides a channel to receive wlan ap updates.
     /// Only one caller can have the control channel open at a time.  Attempts to
     /// register as a controller while there is an active control registration
     /// will result in the new caller's provided channel being closed.
-    GetController(request<AccessPointController> requests, AccessPointStateUpdates updates);
+    GetController(resource struct {
+        requests server_end:AccessPointController;
+        updates client_end:AccessPointStateUpdates;
+    });
 };
 
 /// The AccessPointListener API provides a mechanism for callers to receive state change
 /// updates about wlan access point operation.
-[Discoverable]
+@discoverable
 protocol AccessPointListener {
     /// Registration for callers to receive wlan access point (ap) mode state updates.
-    GetListener(AccessPointStateUpdates updates);
+    GetListener(resource struct {
+        updates client_end:AccessPointStateUpdates;
+    });
 };
 
 /// AccessPointControllers allow the caller to trigger wlan state changes.  This
@@ -39,11 +42,20 @@ protocol AccessPointListener {
 protocol AccessPointController {
     /// Enables wlan to initiate AccessPoint operation using the provided network
     /// configuration, connectivity mode and band.
-    StartAccessPoint(NetworkConfig config, ConnectivityMode mode, OperatingBand band)
-        -> (fuchsia.wlan.common.RequestStatus status);
+    StartAccessPoint(struct {
+        config NetworkConfig;
+        mode ConnectivityMode;
+        band OperatingBand;
+    }) -> (struct {
+        status fuchsia.wlan.common.RequestStatus;
+    });
 
     /// Deactivate AccessPoint operation for a specified network configuration.
-    StopAccessPoint(NetworkConfig config) -> (fuchsia.wlan.common.RequestStatus status);
+    StopAccessPoint(struct {
+        config NetworkConfig;
+    }) -> (struct {
+        status fuchsia.wlan.common.RequestStatus;
+    });
 
     /// Deactivates all AccessPoints currently operating on the device.
     StopAllAccessPoints();
@@ -58,33 +70,35 @@ protocol AccessPointStateUpdates {
     /// what information has changed (this is dependent on when they last
     /// acknowledged the update).
     // NOLINTNEXTLINE vector-bounds-not-specified
-    OnAccessPointStateUpdate(vector<AccessPointState> access_points) -> ();
+    OnAccessPointStateUpdate(struct {
+        access_points vector<AccessPointState>;
+    }) -> ();
 };
 
 /// Information about the individual operating access points.  This includes limited
 /// information about any connected clients.
-table AccessPointState {
+type AccessPointState = table {
     /// Current access point operating state
-    1: OperatingState state;
+    1: state OperatingState;
 
     /// Requested operating connectivity mode
-    2: ConnectivityMode mode;
+    2: mode ConnectivityMode;
 
     /// Access point operating band.
-    3: OperatingBand band;
+    3: band OperatingBand;
 
     /// Access point operating frequency (in MHz).
-    4: uint32 frequency;
+    4: frequency uint32;
 
     /// Information about connected clients
-    5: ConnectedClientInformation clients;
+    5: clients ConnectedClientInformation;
 
     /// Identifying information of the access point whose state has changed.
-    6: NetworkIdentifier id;
+    6: id NetworkIdentifier;
 };
 
 /// Connectivity operating mode for the access point.
-enum ConnectivityMode {
+type ConnectivityMode = strict enum {
     /// Allows for connectivity between co-located devices.  Local only access points do not
     /// forward traffic to other network connections.
     LOCAL_ONLY = 1;
@@ -95,7 +109,7 @@ enum ConnectivityMode {
 };
 
 /// Current detailed operating state for an access point.
-enum OperatingState {
+type OperatingState = strict enum {
     /// Access point operation failed.  Access points that enter the failed state will
     /// have one update informing registered listeners of the failure and then an
     /// additional update with the access point removed from the list.
@@ -110,7 +124,7 @@ enum OperatingState {
 
 /// Connected client information.  This is initially limited to the number of
 /// connected clients.
-table ConnectedClientInformation {
+type ConnectedClientInformation = table {
     /// Number of connected clients
-    1: uint8 count;
+    1: count uint8;
 };

@@ -1,14 +1,12 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.ui.pointer;
 
 using fuchsia.input.report as device;
 using zx;
 
-const uint32 MOUSE_MAX_EVENT = 128;
+const MOUSE_MAX_EVENT uint32 = 128;
 
 /// A method for a client to receive mouse pointer events.
 ///
@@ -49,26 +47,28 @@ protocol MouseSource {
     /// notifying the client. If a |MouseEvent| carries |ViewParameters|, these
     /// parameters apply to successive |MousePointerSample|s until the next
     /// |ViewParameters|.
-    Watch() -> (vector<MouseEvent>:MOUSE_MAX_EVENT events);
+    Watch() -> (struct {
+        events vector<MouseEvent>:MOUSE_MAX_EVENT;
+    });
 };
 
 /// The self-sufficient, self-consistent collection of pointer-related data,
 /// sent from server to client.
-table MouseEvent {
+type MouseEvent = table {
     /// The time this event was observed.
     /// Required.
-    1: zx.time timestamp;
+    1: timestamp zx.time;
 
     /// The parameters of the associated view and viewport, sufficient to
     /// correctly interpret the position, orientation, magnitude, and
     /// inter-event distance of pointer events dispatched to a view.
     /// - It is issued on connection and on change.
-    2: ViewParameters view_parameters;
+    2: view_parameters ViewParameters;
 
     /// A description of the mouse device, sufficient to correctly interpret
     /// the capabilities and usage intent of the device.
     /// - It is issued once per device.
-    3: MouseDeviceInfo device_info;
+    3: device_info MouseDeviceInfo;
 
     /// A description of each sampled data point in a mouse event stream.
     ///
@@ -78,51 +78,51 @@ table MouseEvent {
     /// the stream to a single client (regardless of view boundary) until
     /// unlatched. Latched mode is typically toggled when the user presses the
     /// primary mouse button, but is ultimately a product-specific policy.
-    4: MousePointerSample pointer_sample;
+    4: pointer_sample MousePointerSample;
 
     /// The signal for view entry/exit in hover mode.
     /// - It is issued on hover entry into a view, and hover exit from a view.
-    5: MouseEventStreamInfo stream_info;
+    5: stream_info MouseEventStreamInfo;
 
     /// An identifier to correlate this event's send/receive occurrence across
     /// component boundaries or abstraction layers.
-    6: uint64 trace_flow_id;
+    6: trace_flow_id uint64;
 };
 
 /// Information about a device that issues a mouse event stream.
-table MouseDeviceInfo {
+type MouseDeviceInfo = table {
     /// An identifier for the mouse device that issues a mouse event stream.
     /// Required.
-    1: uint32 id;
+    1: id uint32;
 
     /// Range of vertical scroll values issued by the device.
-    2: device.Axis scroll_v_range;
+    2: scroll_v_range device.Axis;
 
     /// Range of horizontal scroll values issued by the device.
-    3: device.Axis scroll_h_range;
+    3: scroll_h_range device.Axis;
 
     /// Button identifiers issued by the device.
-    4: vector<uint8>:device.MOUSE_MAX_NUM_BUTTONS buttons;
+    4: buttons vector<uint8>:device.MOUSE_MAX_NUM_BUTTONS;
 };
 
 /// A description of each sampled data point in a mouse event stream.
-table MousePointerSample {
+type MousePointerSample = table {
     /// An identifier for the mouse device that issues a mouse event stream.
     /// Required.
-    1: uint32 device_id;
+    1: device_id uint32;
 
     /// The position of this event, in the viewport's coordinate system.
     /// Required.
-    2: Point2 position_in_viewport;
+    2: position_in_viewport Point2;
 
     /// Relative vertical scrolling displacement.
-    3: int64 scroll_v;
+    3: scroll_v int64;
 
     /// Relative horizontal scrolling displacement.
-    4: int64 scroll_h;
+    4: scroll_h int64;
 
     /// Identifiers of currently pressed buttons.
-    5: vector<uint8>:device.MOUSE_MAX_NUM_BUTTONS pressed_buttons;
+    5: pressed_buttons vector<uint8>:device.MOUSE_MAX_NUM_BUTTONS;
 };
 
 /// The status of a mouse event stream, sent from server to client.
@@ -130,16 +130,16 @@ table MousePointerSample {
 /// Invariant: a client's mouse events are bracketed by
 /// [`MouseViewStatus.ENTERED`] and [`MouseViewStatus.EXITED`].
 ///
-struct MouseEventStreamInfo {
+type MouseEventStreamInfo = struct {
     /// An identifier for the mouse device that issues a mouse event stream.
-    uint32 device_id;
+    device_id uint32;
 
     /// The mouse event stream's enter/exit status, sent from server to client.
-    MouseViewStatus status;
+    status MouseViewStatus;
 };
 
 /// A description of mouse event stream's relationship to this view.
-enum MouseViewStatus {
+type MouseViewStatus = strict enum {
     /// The stream is directed towards this view.
     ENTERED = 1;
 

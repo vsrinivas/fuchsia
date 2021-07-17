@@ -1,41 +1,39 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library conformance;
 
-struct RecursiveOptionalStruct {
-    RecursiveOptionalStruct? inner;
+type RecursiveOptionalStruct = struct {
+    inner box<RecursiveOptionalStruct>;
 };
 
 // Wrap with an extra layer of struct and array which should not add any more
 // out of line recursion depth.
-struct RecursiveOptionalStructArrayWrapper {
-    array<RecursiveOptionalStruct>:1 arr;
+type RecursiveOptionalStructArrayWrapper = struct {
+    arr array<RecursiveOptionalStruct, 1>;
 };
 
-union RecursiveOptionalAndUnion {
-    1: RecursiveOptionalStruct recursive_optional;
+type RecursiveOptionalAndUnion = strict union {
+    1: recursive_optional RecursiveOptionalStruct;
 };
 
-struct RecursiveOptionalAndUnionStruct {
-    RecursiveOptionalAndUnion u;
+type RecursiveOptionalAndUnionStruct = struct {
+    u RecursiveOptionalAndUnion;
 };
 
-table RecursiveOptionalAndTable {
-    1: RecursiveOptionalStruct recursive_optional;
+type RecursiveOptionalAndTable = table {
+    1: recursive_optional RecursiveOptionalStruct;
 };
 
-struct RecursiveOptionalAndTableStruct {
-    RecursiveOptionalAndTable t;
+type RecursiveOptionalAndTableStruct = struct {
+    t RecursiveOptionalAndTable;
 };
 
-struct RecursiveOptionalAndVectorStruct {
-    vector<RecursiveOptionalStruct> vec;
+type RecursiveOptionalAndVectorStruct = struct {
+    vec vector<RecursiveOptionalStruct>;
 };
 
-struct RecursiveOptionalStructWithString {
-    RecursiveOptionalStructWithString? inner;
-    string? str;
+type RecursiveOptionalStructWithString = struct {
+    inner box<RecursiveOptionalStructWithString>;
+    str string:optional;
 };

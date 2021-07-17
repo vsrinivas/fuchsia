@@ -9,8 +9,6 @@
 //
 // Since the FIDL compiler does not support splitting definitions per-transport
 // yet, we split definitions by file.
-deprecated_syntax;
-
 library zx;
 
 // zx_status_t and errors.h.
@@ -53,12 +51,12 @@ alias signals = uint32;
 // TODO(fxbug.dev/51002): These are currently duplicated with zircon/types.h.
 // Eventually the definitions in zircon/types.h will be generated from this
 // source.
-const uint64 CHANNEL_MAX_MSG_BYTES = 65536;
-const uint64 CHANNEL_MAX_MSG_HANDLES = 64;
-const uint64 MAX_NAME_LEN = 32;
-const uint64 MAX_CPUS = 512;
+const CHANNEL_MAX_MSG_BYTES uint64 = 65536;
+const CHANNEL_MAX_MSG_HANDLES uint64 = 64;
+const MAX_NAME_LEN uint64 = 32;
+const MAX_CPUS uint64 = 512;
 
-enum obj_type : uint32 {
+type obj_type = strict enum : uint32 {
     NONE = 0;
     PROCESS = 1;
     THREAD = 2;
@@ -93,7 +91,7 @@ enum obj_type : uint32 {
 
 resource_definition handle : uint32 {
     properties {
-        obj_type subtype;
+        subtype obj_type;
         rights rights;
     };
 };

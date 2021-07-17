@@ -1,13 +1,10 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.gpu.amlogic;
 
 /// "AMM"
-const uint32 MALI_METADATA = 0x414d4d64; // 0x414d4d00 | DEVICE_METADATA_PRIVATE
-
-table Metadata {
-    1: bool supports_protected_mode;
+const MALI_METADATA uint32 = 0x414d4d64; // 0x414d4d00 | DEVICE_METADATA_PRIVATE
+type Metadata = table {
+    1: supports_protected_mode bool;
 };

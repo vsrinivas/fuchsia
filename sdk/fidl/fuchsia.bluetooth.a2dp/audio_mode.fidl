@@ -1,13 +1,11 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.bluetooth.a2dp;
 
 /// Enum corresponding to the A2DP SRC/SNK roles as defined in the
 /// A2DP v1.3.2 profile specification, section 2.2.
-enum Role {
+type Role = strict enum {
     /// Act as a source of digital audio streams, sending audio to peers.
     SOURCE = 1;
     /// Act as a sink of digital audio streams and play audio sent from peers.
@@ -15,7 +13,7 @@ enum Role {
 };
 
 /// A protocol for specifying which A2DP role this device should operate.
-[Discoverable]
+@discoverable
 protocol AudioMode {
     /// Switch the device to act as the specified A2DP Role. If the device is already
     /// set to the requested role, calling this method is a no-op.
@@ -28,5 +26,7 @@ protocol AudioMode {
     ///
     /// If the role cannot be set due to an internal error, the server will close
     /// the channel.
-    SetRole(Role role) -> ();
+    SetRole(struct {
+        role Role;
+    }) -> ();
 };

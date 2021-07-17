@@ -1,8 +1,6 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.media;
 
 // fuchsia.media contains definitions shared by the various fuchsia.media.*
@@ -12,66 +10,66 @@ library fuchsia.media;
 using fuchsia.images;
 
 /// Describes the type of an elementary stream.
-struct StreamType {
+type StreamType = struct {
     /// Medium-specific type information.
-    MediumSpecificStreamType medium_specific;
+    medium_specific MediumSpecificStreamType;
 
     /// Encoding (see constants below). This value is represented as a string
     /// so that new encodings can be introduced without modifying this file.
-    string:255 encoding;
+    encoding string:255;
 
     /// Encoding-specific parameters, sometimes referred to as 'out-of-band
     /// data'. Typically, this data is associated with a compressed stream and
     /// provides parameters required to decompress the stream. This data is
     /// generally opaque to all parties except the producer and consumer of the
     /// stream.
-    vector<uint8>? encoding_parameters;
+    encoding_parameters vector<uint8>:optional;
 };
 
 /// A union of all medium-specific stream type structs.
-union MediumSpecificStreamType {
-    1: AudioStreamType audio;
-    2: VideoStreamType video;
-    3: TextStreamType text;
-    4: SubpictureStreamType subpicture;
+type MediumSpecificStreamType = strict union {
+    1: audio AudioStreamType;
+    2: video VideoStreamType;
+    3: text TextStreamType;
+    4: subpicture SubpictureStreamType;
 };
 
 /// Audio encodings.
-const string AUDIO_ENCODING_AAC = "fuchsia.media.aac";
-const string AUDIO_ENCODING_AACLATM = "fuchsia.media.aaclatm";
-const string AUDIO_ENCODING_AMRNB = "fuchsia.media.amrnb";
-const string AUDIO_ENCODING_AMRWB = "fuchsia.media.amrwb";
-const string AUDIO_ENCODING_APTX = "fuchsia.media.aptx";
-const string AUDIO_ENCODING_FLAC = "fuchsia.media.flac";
-const string AUDIO_ENCODING_GSMMS = "fuchsia.media.gsmms";
-const string AUDIO_ENCODING_LPCM = "fuchsia.media.lpcm";
-const string AUDIO_ENCODING_MP3 = "fuchsia.media.mp3";
-const string AUDIO_ENCODING_PCMALAW = "fuchsia.media.pcmalaw";
-const string AUDIO_ENCODING_PCMMULAW = "fuchsia.media.pcmmulaw";
-const string AUDIO_ENCODING_SBC = "fuchsia.media.sbc";
-const string AUDIO_ENCODING_VORBIS = "fuchsia.media.vorbis";
-const string AUDIO_ENCODING_OPUS = "fuchsia.media.opus";
+const AUDIO_ENCODING_AAC string = "fuchsia.media.aac";
+const AUDIO_ENCODING_AACLATM string = "fuchsia.media.aaclatm";
+const AUDIO_ENCODING_AMRNB string = "fuchsia.media.amrnb";
+const AUDIO_ENCODING_AMRWB string = "fuchsia.media.amrwb";
+const AUDIO_ENCODING_APTX string = "fuchsia.media.aptx";
+const AUDIO_ENCODING_FLAC string = "fuchsia.media.flac";
+const AUDIO_ENCODING_GSMMS string = "fuchsia.media.gsmms";
+const AUDIO_ENCODING_LPCM string = "fuchsia.media.lpcm";
+const AUDIO_ENCODING_MP3 string = "fuchsia.media.mp3";
+const AUDIO_ENCODING_PCMALAW string = "fuchsia.media.pcmalaw";
+const AUDIO_ENCODING_PCMMULAW string = "fuchsia.media.pcmmulaw";
+const AUDIO_ENCODING_SBC string = "fuchsia.media.sbc";
+const AUDIO_ENCODING_VORBIS string = "fuchsia.media.vorbis";
+const AUDIO_ENCODING_OPUS string = "fuchsia.media.opus";
 
 /// Video encodings.
-const string VIDEO_ENCODING_H263 = "fuchsia.media.h263";
-const string VIDEO_ENCODING_H264 = "fuchsia.media.h264";
-const string VIDEO_ENCODING_MPEG4 = "fuchsia.media.mpeg4";
-const string VIDEO_ENCODING_THEORA = "fuchsia.media.theora";
-const string VIDEO_ENCODING_UNCOMPRESSED = "fuchsia.media.uncompressed_video";
-const string VIDEO_ENCODING_VP3 = "fuchsia.media.vp3";
-const string VIDEO_ENCODING_VP8 = "fuchsia.media.vp8";
-const string VIDEO_ENCODING_VP9 = "fuchsia.media.vp9";
+const VIDEO_ENCODING_H263 string = "fuchsia.media.h263";
+const VIDEO_ENCODING_H264 string = "fuchsia.media.h264";
+const VIDEO_ENCODING_MPEG4 string = "fuchsia.media.mpeg4";
+const VIDEO_ENCODING_THEORA string = "fuchsia.media.theora";
+const VIDEO_ENCODING_UNCOMPRESSED string = "fuchsia.media.uncompressed_video";
+const VIDEO_ENCODING_VP3 string = "fuchsia.media.vp3";
+const VIDEO_ENCODING_VP8 string = "fuchsia.media.vp8";
+const VIDEO_ENCODING_VP9 string = "fuchsia.media.vp9";
 
 /// Describes the compression applied to a stream. This type can be used in conjunction with
 /// `AudioStreamType` or `VideoStreamType` to represent a medium-specific compressed type.
-struct Compression {
+type Compression = struct {
     /// The type of compression applied to the stream. This is generally one of the *_ENCODING_*
     /// values, though `AUDIO_ENCODING_LPCM` and `VIDEO_ENCODING_UNCOMPRESSED` must not be used,
     /// because those encodings are regarded as uncompressed.
-    CompressionType type;
+    type CompressionType;
 
     /// Type-specific, opaque 'out-of-band' parameters describing the compression of the stream.
-    bytes:8192? parameters;
+    parameters bytes:<8192, optional>;
 };
 
 /// An identifier for compression types.
@@ -81,15 +79,15 @@ alias CompressionType = string:256;
 // Audio
 
 /// Describes the type of an audio elementary stream.
-struct AudioStreamType {
-    AudioSampleFormat sample_format;
-    uint32 channels;
-    uint32 frames_per_second;
-    // TODO(mpuryear): Add channel config.
+type AudioStreamType = struct {
+    sample_format AudioSampleFormat;
+    channels uint32;
+    frames_per_second uint32;
+// TODO(mpuryear): Add channel config.
 };
 
 /// Enumerates the supported audio sample formats.
-enum AudioSampleFormat {
+type AudioSampleFormat = strict enum {
     /// 8-bit unsigned samples, sample size 1 byte.
     UNSIGNED_8 = 1;
 
@@ -107,31 +105,31 @@ enum AudioSampleFormat {
 // Video
 
 /// Describes the type of a video elementary stream.
-struct VideoStreamType {
-    fuchsia.images.PixelFormat pixel_format;
+type VideoStreamType = struct {
+    pixel_format fuchsia.images.PixelFormat;
     // TODO(dalesat): Use fuchsia.images.ColorSpace.
-    ColorSpace color_space;
+    color_space ColorSpace;
 
     /// Dimensions of the video frames as displayed in pixels.
-    uint32 width;
-    uint32 height;
+    width uint32;
+    height uint32;
 
     /// Dimensions of the video frames as encoded in pixels. These values must
     /// be equal to or greater than the respective width/height values.
-    uint32 coded_width;
-    uint32 coded_height;
+    coded_width uint32;
+    coded_height uint32;
 
     /// The aspect ratio of a single pixel as frames are intended to be
     /// displayed.
-    uint32 pixel_aspect_ratio_width;
-    uint32 pixel_aspect_ratio_height;
+    pixel_aspect_ratio_width uint32;
+    pixel_aspect_ratio_height uint32;
 
     /// The number of bytes per 'coded' row in the primary video plane.
-    uint32 stride;
+    stride uint32;
 };
 
 // TODO(dalesat): Replace with fuchsia.images.ColorSpace.
-enum ColorSpace {
+type ColorSpace = strict enum {
     UNKNOWN = 0;
     NOT_APPLICABLE = 1;
     JPEG = 2;
@@ -143,14 +141,14 @@ enum ColorSpace {
 // Text
 
 /// Describes the type of a text elementary stream.
-struct TextStreamType {
-    // TODO(dalesat): Define.
-};
+type TextStreamType = struct {
+        // TODO(dalesat): Define.
+        };
 
 // /////////////////////////////////////////////////////////////////////////////
 // Subpicture
 
 /// Describes the type of a subpicture elementary stream.
-struct SubpictureStreamType {
-    // TODO(dalesat): Define.
-};
+type SubpictureStreamType = struct {
+        // TODO(dalesat): Define.
+        };

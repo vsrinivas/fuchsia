@@ -1,20 +1,22 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.testing.appmgr;
 
 // An interface for a test service.
-[Discoverable]
+@discoverable
 protocol TestService {
     // Returns a nice message.
-    GetMessage() -> (string message);
+    GetMessage() -> (struct {
+        message string;
+    });
 };
 
 // Another interface for a test service.
-[Discoverable]
+@discoverable
 protocol TestService2 {
     // Returns a nice message.
-    GetMessage() -> (string message);
+    GetMessage() -> (struct {
+        message string;
+    });
 };

@@ -1,8 +1,6 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.settings.policy;
 
 using fuchsia.media;
@@ -14,11 +12,13 @@ alias PolicyId = uint32;
 ///
 /// Policies are automatically persisted across reboots and take effect again on
 /// boot.
-[Discoverable]
+@discoverable
 protocol VolumePolicyController {
     /// Gets a list of volume policy properties, including possible transforms
     /// and active policies for the property.
-    GetProperties() -> (vector<Property>:MAX properties);
+    GetProperties() -> (struct {
+        properties vector<Property>:MAX;
+    });
 
     /// Adds a policy for the given target.
     ///
@@ -36,33 +36,40 @@ protocol VolumePolicyController {
     /// Adding a policy will immediately adjust the audio setting values if they
     /// don't yet conform to the policy, such as reducing the volume if it's
     /// greater than a specified maximum volume.
-    AddPolicy(Target target, PolicyParameters parameters) -> (PolicyId policy_id) error Error;
+    AddPolicy(struct {
+        target Target;
+        parameters PolicyParameters;
+    }) -> (struct {
+        policy_id PolicyId;
+    }) error Error;
 
     /// Removes a policy with the given policy id.
     ///
     /// Any client of this API can remove policies set by any other client.
-    RemovePolicy(PolicyId policy_id) -> () error Error;
+    RemovePolicy(struct {
+        policy_id PolicyId;
+    }) -> (struct {}) error Error;
 };
 
 /// A controllable property of the fuchsia.settings.Audio API that can have
 /// transforms applied to it.
-table Property {
+type Property = table {
     /// Unique aspect of settings that this property controls.
     ///
     /// Only one property may control any given target.
-    1: Target target;
+    1: target Target;
 
     /// List of available transform types for this property.
-    2: vector<Transform>:MAX available_transforms;
+    2: available_transforms vector<Transform>:MAX;
 
     /// List of active policies for this property.
-    3: vector<Policy>:MAX active_policies;
+    3: active_policies vector<Policy>:MAX;
 };
 
 /// Specifies what aspect of the settings a property controls.
-union Target {
+type Target = strict union {
     /// An audio stream that can have policies applied to it.
-    1: fuchsia.media.AudioRenderUsage stream;
+    1: stream fuchsia.media.AudioRenderUsage;
 };
 
 /// Possible transforms for a policy target.
@@ -70,7 +77,7 @@ union Target {
 /// A transform is an operation that is applied to a policy property when the
 /// fuchsia.settings.Audio API is used. Multiple transforms of the same time can
 /// be active for a single property.
-enum Transform : uint8 {
+type Transform = strict enum : uint8 {
     /// Limits the maximum value of an audio stream to a certain level.
     ///
     /// Max volume limits are transparent to clients of fuchsia.settings.Audio.
@@ -107,31 +114,31 @@ enum Transform : uint8 {
 };
 
 /// Definition for a policy that is applied to the fuchsia.settings.Audio API.
-table Policy {
+type Policy = table {
     /// Unique identifier for this policy.
     ///
     /// Returned from AddPolicy and also used by RemovePolicy.
-    1: PolicyId policy_id;
+    1: policy_id PolicyId;
 
     /// Parameters for this policy.
-    2: PolicyParameters parameters;
+    2: parameters PolicyParameters;
 };
 
 /// Specifies the type of policy transform and its arguments.
 ///
 /// The chosen union field implies the type of transform that the arguments
 /// apply to.
-union PolicyParameters {
+type PolicyParameters = strict union {
     /// This parameter should be included for the MIN transform and specifies
     /// the volume level to clamp the audio stream to.
-    1: Volume min;
+    1: min Volume;
 
     /// This parameter should be included for the MAX transform and specifies
     /// the volume level to clamp the audio stream to.
-    2: Volume max;
+    2: max Volume;
 };
 
-table Volume {
+type Volume = table {
     /// A volume between 0.0 and 1.0 inclusive.
-    1: float32 volume;
+    1: volume float32;
 };

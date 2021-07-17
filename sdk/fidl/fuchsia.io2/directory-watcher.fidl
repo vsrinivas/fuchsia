@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.io2;
 
 /// DirectoryWatcher transmits messages from a filesystem server about
@@ -25,33 +23,33 @@ protocol DirectoryWatcher {
     /// with a `ZX_ERR_UNAVAILABLE` epitaph.
     /// When the filesystem server is dying, this connection will be closed
     /// with a `ZX_ERR_PEER_CLOSED` epitaph.
-    GetNext()
-        -> (vector<DirectoryWatchedEvent>:MAX_DIRECTORY_BATCH_SIZE events);
+    GetNext() -> (struct {
+        events vector<DirectoryWatchedEvent>:MAX_DIRECTORY_BATCH_SIZE;
+    });
 };
 
-table DirectoryWatchOptions {
-};
+type DirectoryWatchOptions = table {};
 
 /// Events returned from [`DirectoryWatcher.GetNext`].
-flexible union DirectoryWatchedEvent {
+type DirectoryWatchedEvent = flexible union {
     /// Indicates a node already existed in the directory when watching started.
-    1: DirectoryEntry existing;
+    1: existing DirectoryEntry;
 
     /// Indicates that no more `existing` events will be sent.
-    2: IdleEvent idle;
+    2: idle IdleEvent;
 
     /// Indicates a node has been created (either new or moved) into a
     /// directory.
-    3: DirectoryEntry added;
+    3: added DirectoryEntry;
 
     /// Indicates a node has been removed (either deleted or moved) from the
     /// directory.
-    4: Name removed;
+    4: removed Name;
 };
 
 /// Used by [`fuchsia.io2/Directory.Watch`] to indicate the types of events
 /// interested by a watcher.
-bits DirectoryWatchMask : uint64 {
+type DirectoryWatchMask = strict bits : uint64 {
     /// Requests transmission of `existing` events.
     EXISTING = 0x01;
 
@@ -65,5 +63,4 @@ bits DirectoryWatchMask : uint64 {
     REMOVED = 0x08;
 };
 
-struct IdleEvent {
-};
+type IdleEvent = struct {};

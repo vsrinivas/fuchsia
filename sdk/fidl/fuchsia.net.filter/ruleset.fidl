@@ -1,25 +1,23 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.net.filter;
 
 using fuchsia.net;
 
 /// Direction is which way (Incoming or Outgoing) a packet is moving in the stack.
-enum Direction {
+type Direction = strict enum {
     INCOMING = 0;
     OUTGOING = 1;
 };
 
-enum Action {
+type Action = strict enum {
     PASS = 0;
     DROP = 1;
     DROP_RESET = 2;
 };
 
-enum SocketProtocol {
+type SocketProtocol = strict enum {
     ANY = 0;
     ICMP = 1;
     TCP = 2;
@@ -28,45 +26,45 @@ enum SocketProtocol {
 };
 
 /// PortRange specifies an inclusive range of port numbers.
-struct PortRange {
-    uint16 start;
-    uint16 end;
+type PortRange = struct {
+    start uint16;
+    end uint16;
 };
 
 /// Rule describes the conditions and the action of a rule.
-struct Rule {
-    Action action;
-    Direction direction;
-    SocketProtocol proto;
-    fuchsia.net.Subnet? src_subnet;
+type Rule = struct {
+    action Action;
+    direction Direction;
+    proto SocketProtocol;
+    src_subnet box<fuchsia.net.Subnet>;
     /// If true, matches any address that is NOT contained in the subnet.
-    bool src_subnet_invert_match;
-    PortRange src_port_range;
-    fuchsia.net.Subnet? dst_subnet;
+    src_subnet_invert_match bool;
+    src_port_range PortRange;
+    dst_subnet box<fuchsia.net.Subnet>;
     /// If true, matches any address that is NOT contained in the subnet.
-    bool dst_subnet_invert_match;
-    PortRange dst_port_range;
-    uint32 nic;
-    bool log;
-    bool keep_state;
+    dst_subnet_invert_match bool;
+    dst_port_range PortRange;
+    nic uint32;
+    log bool;
+    keep_state bool;
 };
 
 /// NAT is a special rule for Network Address Translation, which rewrites
 /// the address of an outgoing packet.
-struct Nat {
-    SocketProtocol proto;
-    fuchsia.net.Subnet src_subnet;
-    fuchsia.net.IpAddress new_src_addr;
-    uint32 nic;
+type Nat = struct {
+    proto SocketProtocol;
+    src_subnet fuchsia.net.Subnet;
+    new_src_addr fuchsia.net.IpAddress;
+    nic uint32;
 };
 
 /// RDR is a special rule for Redirector, which forwards an incoming packet
 /// to a machine inside the firewall.
-struct Rdr {
-    SocketProtocol proto;
-    fuchsia.net.IpAddress dst_addr;
-    PortRange dst_port_range;
-    fuchsia.net.IpAddress new_dst_addr;
-    PortRange new_dst_port_range;
-    uint32 nic;
+type Rdr = struct {
+    proto SocketProtocol;
+    dst_addr fuchsia.net.IpAddress;
+    dst_port_range PortRange;
+    new_dst_addr fuchsia.net.IpAddress;
+    new_dst_port_range PortRange;
+    nic uint32;
 };

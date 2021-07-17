@@ -1,7 +1,6 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
 library fuchsia.virtualization.hardware;
 
 using fuchsia.io;
@@ -17,183 +16,237 @@ using zx;
 // The value 0 is `ZX_USER_SIGNAL_0`, 1 is `ZX_USER_SIGNAL_1` etc.
 
 /// Set a flag to inspect queues on the next interrupt.
-const uint32 EVENT_SET_QUEUE = 0;
+const EVENT_SET_QUEUE uint32 = 0;
 /// Set a flag to inspect configs on the next interrupt.
-const uint32 EVENT_SET_CONFIG = 1;
+const EVENT_SET_CONFIG uint32 = 1;
 /// If a flag is set, send an interrupt to the device.
-const uint32 EVENT_SET_INTERRUPT = 2;
+const EVENT_SET_INTERRUPT uint32 = 2;
 
 /// Contains the details of a device trap.
-struct Trap {
+type Trap = struct {
     /// The address of the device trap. This must be page-aligned.
-    zx.gpaddr addr;
+    addr zx.gpaddr;
 
     /// The size of the device trap. This must be a multiple of the page size.
-    uint64 size;
+    size uint64;
 };
 
 /// Contains the basic information required to start execution of a device.
-resource struct StartInfo {
+type StartInfo = resource struct {
     /// The trap associated with a device. It is up to the device to set this
     /// trap during device setup.
-    Trap trap;
+    trap Trap;
 
     /// The guest associated with a device. This handle should be used to setup
     /// device traps, and then be released before device operation begins.
-    zx.handle:GUEST? guest;
+    guest zx.handle:<GUEST, optional>;
 
     /// The event associated with a device interrupt. This is how the device will
     /// notify the guest of events it should process.
     ///
     /// The meaning of the different signals that can be raised on the event are
     /// documented by the EVENT_* constants above.
-    zx.handle:EVENT event;
+    event zx.handle:EVENT;
 
     /// The VMO used to represent guest physical memory.
-    zx.handle:VMO vmo;
+    vmo zx.handle:VMO;
 };
 
 protocol VirtioDevice {
     /// Configure a `queue` for the device. This specifies the `size` and the
     /// guest physical addresses of the queue: `desc`, `avail`, and `used`.
-    ConfigureQueue(uint16 queue, uint16 size, zx.gpaddr desc, zx.gpaddr avail,
-                   zx.gpaddr used) -> ();
+    ConfigureQueue(struct {
+        queue uint16;
+        size uint16;
+        desc zx.gpaddr;
+        avail zx.gpaddr;
+        used zx.gpaddr;
+    }) -> ();
 
     /// Notify a `queue` for the device. Primarily used for black-box testing.
-    NotifyQueue(uint16 queue);
+    NotifyQueue(struct {
+        queue uint16;
+    });
 
     /// Ready a device. This provides the set of `negotiated_features` that the
     /// driver and device have agreed upon.
-    Ready(uint32 negotiated_features) -> ();
+    Ready(struct {
+        negotiated_features uint32;
+    }) -> ();
 };
 
-[Discoverable]
+@discoverable
 protocol VirtioBalloon {
     compose VirtioDevice;
 
     /// Start the balloon device.
-    Start(StartInfo start_info) -> ();
+    Start(resource struct {
+        start_info StartInfo;
+    }) -> ();
 
     /// Get memory statistics from the balloon device.
-    GetMemStats() -> (zx.status status,
-                      vector<fuchsia.virtualization.MemStat>? mem_stats);
+    GetMemStats() -> (struct {
+        status zx.status;
+        mem_stats vector<fuchsia.virtualization.MemStat>:optional;
+    });
 };
 
-[Discoverable]
+@discoverable
 protocol VirtioBlock {
     compose VirtioDevice;
 
     /// Start the block device.
-    Start(StartInfo start_info,
-          string:fuchsia.virtualization.MAX_BLOCK_DEVICE_ID id,
-          fuchsia.virtualization.BlockMode mode, fuchsia.virtualization.BlockFormat format,
-          fuchsia.io.File file) -> (uint64 size);
+    Start(resource struct {
+        start_info StartInfo;
+        id string:fuchsia.virtualization.MAX_BLOCK_DEVICE_ID;
+        mode fuchsia.virtualization.BlockMode;
+        format fuchsia.virtualization.BlockFormat;
+        file client_end:fuchsia.io.File;
+    }) -> (struct {
+        size uint64;
+    });
 };
 
-[Discoverable]
+@discoverable
 protocol VirtioConsole {
     compose VirtioDevice;
 
     /// Start the console device. This uses `socket` to handle input and output.
-    Start(StartInfo start_info, zx.handle:SOCKET socket) -> ();
+    Start(resource struct {
+        start_info StartInfo;
+        socket zx.handle:SOCKET;
+    }) -> ();
 };
 
 /// Provides a way for VirtioInput to listen to keyboard events.
-[Discoverable]
+@discoverable
 protocol KeyboardListener {
     /// Called when a view receives keyboard events.
-    OnKeyboardEvent(fuchsia.ui.input.KeyboardEvent event);
+    OnKeyboardEvent(struct {
+        event fuchsia.ui.input.KeyboardEvent;
+    });
 };
 
 /// Provides a way for VirtioInput to listen to pointer events.
-[Discoverable]
+@discoverable
 protocol PointerListener {
     /// Called when a view's size changes.
-    OnSizeChanged(fuchsia.ui.gfx.vec3 size);
+    OnSizeChanged(struct {
+        size fuchsia.ui.gfx.vec3;
+    });
 
     /// Called when a view receives pointer events.
-    OnPointerEvent(fuchsia.ui.input.PointerEvent event);
+    OnPointerEvent(struct {
+        event fuchsia.ui.input.PointerEvent;
+    });
 };
 
-[Discoverable]
+@discoverable
 protocol VirtioGpu {
     compose VirtioDevice;
 
     /// Start the GPU device.
-    Start(StartInfo start_info, KeyboardListener? keyboard_listener,
-          PointerListener? pointer_listener) -> ();
+    Start(resource struct {
+        start_info StartInfo;
+        keyboard_listener client_end:<KeyboardListener, optional>;
+        pointer_listener client_end:<PointerListener, optional>;
+    }) -> ();
 
     /// Called when a device's configuration is changed.
     -> OnConfigChanged();
 };
 
-[Discoverable]
+@discoverable
 protocol VirtioInput {
     compose VirtioDevice;
 
     /// Start the input device.
-    Start(StartInfo start_info) -> ();
+    Start(resource struct {
+        start_info StartInfo;
+    }) -> ();
 };
 
-[Discoverable]
+@discoverable
 protocol VirtioMagma {
     compose VirtioDevice;
 
     /// Start the magma device.
-    Start(StartInfo start_info,
-          zx.handle:VMAR vmar,
-          VirtioWaylandImporter? wayland_importer) -> (zx.status status);
+    Start(resource struct {
+        start_info StartInfo;
+        vmar zx.handle:VMAR;
+        wayland_importer client_end:<VirtioWaylandImporter, optional>;
+    }) -> (struct {
+        status zx.status;
+    });
 };
 
-[Discoverable]
+@discoverable
 protocol VirtioNet {
     compose VirtioDevice;
 
     /// Start the net device.
-    Start(StartInfo start_info, fuchsia.hardware.ethernet.MacAddress mac_address,
-          bool enable_bridge) -> ();
+    Start(resource struct {
+        start_info StartInfo;
+        mac_address fuchsia.hardware.ethernet.MacAddress;
+        enable_bridge bool;
+    }) -> ();
 };
 
-[Discoverable]
+@discoverable
 protocol VirtioRng {
     compose VirtioDevice;
 
     /// Start the RNG device.
-    Start(StartInfo start_info) -> ();
+    Start(resource struct {
+        start_info StartInfo;
+    }) -> ();
 };
 
 /// Sufficient to contain the opaque image info.
-const uint32 VIRTIO_WAYLAND_MAX_IMAGE_INFO_SIZE = 128;
+const VIRTIO_WAYLAND_MAX_IMAGE_INFO_SIZE uint32 = 128;
 
 /// VirtioImages are shared with VirtioMagma, enabling guest clients to allocate
 /// GBM and Vulkan compatible images and share them with Sommelier as dma-bufs.
 /// An image corresponds to a single buffer collection, and also contains some
 /// opaque image info needed by VirtioMagma.
-resource struct VirtioImage {
-    zx.handle:VMO vmo;
-    zx.handle:EVENTPAIR? token;
-    bytes:VIRTIO_WAYLAND_MAX_IMAGE_INFO_SIZE info;
+type VirtioImage = resource struct {
+    vmo zx.handle:VMO;
+    token zx.handle:<EVENTPAIR, optional>;
+    info bytes:VIRTIO_WAYLAND_MAX_IMAGE_INFO_SIZE;
 };
 
-const uint32 VIRTIO_WAYLAND_INVALID_VFD_ID = 0;
+const VIRTIO_WAYLAND_INVALID_VFD_ID uint32 = 0;
 
 // Provides an interface to import images into the wayland device.
 protocol VirtioWaylandImporter {
-    ImportImage(VirtioImage image) -> (uint32 vfd_id);
-    ExportImage(uint32 vfd_id) -> (zx.status status, VirtioImage? image);
+    ImportImage(resource struct {
+        image VirtioImage;
+    }) -> (struct {
+        vfd_id uint32;
+    });
+    ExportImage(struct {
+        vfd_id uint32;
+    }) -> (resource struct {
+        status zx.status;
+        image box<VirtioImage>;
+    });
 };
 
-[Discoverable]
+@discoverable
 protocol VirtioWayland {
     compose VirtioDevice;
 
     /// Start the wayland device.
-    Start(StartInfo start_info,
-          zx.handle:VMAR vmar,
-          fuchsia.virtualization.WaylandDispatcher dispatcher,
-          fuchsia.sysmem.Allocator sysmem_allocator,
-          fuchsia.ui.composition.Allocator scenic_allocator) -> ();
+    Start(resource struct {
+        start_info StartInfo;
+        vmar zx.handle:VMAR;
+        dispatcher client_end:fuchsia.virtualization.WaylandDispatcher;
+        sysmem_allocator client_end:fuchsia.sysmem.Allocator;
+        scenic_allocator client_end:fuchsia.ui.composition.Allocator;
+    }) -> ();
 
     // Get the VMO importer for this wayland device.
-    GetImporter(request<VirtioWaylandImporter> importer);
+    GetImporter(resource struct {
+        importer server_end:VirtioWaylandImporter;
+    });
 };

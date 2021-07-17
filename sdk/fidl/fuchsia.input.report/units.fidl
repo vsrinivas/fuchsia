@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.input.report;
 
 /// This provides an easy, standardized way to specify units. New units can
@@ -11,7 +9,7 @@ library fuchsia.input.report;
 /// DISTANCE). More complicated units that need to be differentiated should
 /// begin with SI_ (for Internation System of Units) or ENGLISH_ (for English
 /// System of Units).
-enum UnitType : uint32 {
+type UnitType = strict enum : uint32 {
     /// The device did not specify units.
     NONE = 0;
 
@@ -54,19 +52,19 @@ enum UnitType : uint32 {
 
 /// Describes a given unit by giving the unit and the unit's exponent.
 /// E.g: Nanometers would have type METERS and exponent -9.
-struct Unit {
-    UnitType type;
-    int32 exponent;
+type Unit = struct {
+    type UnitType;
+    exponent int32;
 };
 
 /// Describe a `Range` of values.
-struct Range {
-    int64 min;
-    int64 max;
+type Range = struct {
+    min int64;
+    max int64;
 };
 
 /// An `Axis` is defined as a `range` and a `unit`.
-struct Axis {
-    Range range;
-    Unit unit;
+type Axis = struct {
+    range Range;
+    unit Unit;
 };

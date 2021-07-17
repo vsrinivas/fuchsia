@@ -1,8 +1,6 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.rpmb;
 
 using zx;
@@ -13,19 +11,19 @@ using fuchsia.mem;
 // https://optee.readthedocs.io/en/latest/architecture/secure_storage.html#rpmb-secure-storage
 
 /// The RPMB frame size in bytes.
-const uint32 FRAME_SIZE = 512;
+const FRAME_SIZE uint32 = 512;
 
-struct EmmcDeviceInfo {
+type EmmcDeviceInfo = struct {
     /// The device's CID register.
-    array<uint8>:16 cid;
+    cid array<uint8, 16>;
     /// RPMB_SIZE_MULT from the device's EXT_CSD register.
-    uint8 rpmb_size;
+    rpmb_size uint8;
     /// REL_WR_SEC_C from the device's EXT_CSD register.
-    uint8 reliable_write_sector_count;
+    reliable_write_sector_count uint8;
 };
 
-flexible union DeviceInfo {
-    1: EmmcDeviceInfo emmc_info;
+type DeviceInfo = flexible union {
+    1: emmc_info EmmcDeviceInfo;
 };
 
 /// Represents an RPMB operation, which consists of sending one or more frames then receiving zero
@@ -36,17 +34,21 @@ flexible union DeviceInfo {
 /// not be performed if the write operation failed. Invalid parameters passed through tx_frames or
 /// rx_frames will cause an error to be returned immediately, without either operation having been
 /// performed.
-resource struct Request {
+type Request = resource struct {
     /// May not be null as all operations involve sending at least one frame. tx_frames.size must be
     /// a multiple of and at least FRAME_SIZE.
-    fuchsia.mem.Range tx_frames;
+    tx_frames fuchsia.mem.Range;
 
     /// May be null if no frames need to be received. rx_frames.size must be a multiple of
     /// FRAME_SIZE if rx_frames is not null.
-    fuchsia.mem.Range? rx_frames;
+    rx_frames box<fuchsia.mem.Range>;
 };
 
 protocol Rpmb {
-    GetDeviceInfo() -> (DeviceInfo info);
-    Request(Request request) -> () error zx.status;
+    GetDeviceInfo() -> (struct {
+        info DeviceInfo;
+    });
+    Request(resource struct {
+        request Request;
+    }) -> (struct {}) error zx.status;
 };

@@ -1,30 +1,40 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library test.policy;
 
-[Discoverable]
+@discoverable
 protocol Restricted {
     // Returns the string restricted.
-    GetRestricted() -> (string response);
+    GetRestricted() -> (struct {
+        response string;
+    });
 };
 
-[Discoverable]
+@discoverable
 protocol Unrestricted {
     // Returns the string unrestricted
-    GetUnrestricted() -> (string response);
+    GetUnrestricted() -> (struct {
+        response string;
+    });
 };
 
-[Discoverable]
+@discoverable
 protocol Access {
     // Attempts to access the restricted protocol.
-    AccessRestrictedProtocol() -> (bool response);
+    AccessRestrictedProtocol() -> (struct {
+        response bool;
+    });
     // Attempt to access the unrestricted protocol
-    AccessUnrestrictedProtocol() -> (bool response);
+    AccessUnrestrictedProtocol() -> (struct {
+        response bool;
+    });
     // Attempts to access the restricted directory.
-    AccessRestrictedDirectory() -> (bool response);
+    AccessRestrictedDirectory() -> (struct {
+        response bool;
+    });
     // Attempt to access the unrestricted directory
-    AccessUnrestrictedDirectory() -> (bool response);
+    AccessUnrestrictedDirectory() -> (struct {
+        response bool;
+    });
 };

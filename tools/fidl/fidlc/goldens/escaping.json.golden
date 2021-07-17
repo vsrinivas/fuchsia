@@ -13,8 +13,8 @@
       "name": "fidl.test.escaping/DocCommentWithQuotes",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/escaping.test.fidl",
-        "line": 5,
-        "column": 8,
+        "line": 4,
+        "column": 6,
         "length": 20
       },
       "anonymous": false,
@@ -37,7 +37,7 @@
               },
               "location": {
                 "filename": "../../tools/fidl/fidlc/testdata/escaping.test.fidl",
-                "line": 4,
+                "line": 3,
                 "column": 1,
                 "length": 39
               }
@@ -45,7 +45,7 @@
           ],
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/escaping.test.fidl",
-            "line": 4,
+            "line": 3,
             "column": 1,
             "length": 39
           }

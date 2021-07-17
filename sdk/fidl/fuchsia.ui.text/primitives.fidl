@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.ui.text;
 
 /// Indicates a character position in a text field, either between two unicode code points
@@ -17,24 +15,24 @@ library fuchsia.ui.text;
 /// When the TextField's revision number increments, all existing Positions
 /// become invalid. TextField should take care never reuse position IDs, even across
 /// revisions.
-struct Position {
-    uint64 id;
+type Position = struct {
+    id uint64;
 };
 
 /// A range is the unicode code points between `start` and `end`. When sending
 /// ranges to clients, TextField must ensure `start` is always upstream of
 /// `end`. However, when receiving ranges from clients, it should accept
 /// `start` and `end` in any order.
-struct Range {
-    Position start;
-    Position end;
+type Range = struct {
+    start Position;
+    end Position;
 };
 
 /// Selection anchor states which edge of the selection is the anchor, and which
 /// is the focus. While holding down shift and using the arrow keys, or while
 /// dragging across some text to select it, the anchor is the edge that stays in
 /// place, and the focus is the edge that moves around.
-enum SelectionAnchor {
+type SelectionAnchor = strict enum {
     ANCHORED_AT_START = 1;
     ANCHORED_AT_END = 2;
 };
@@ -45,7 +43,7 @@ enum SelectionAnchor {
 /// two visual positions, UPSTREAM (at the end of the first line) and DOWNSTREAM
 /// (at the start of the second line). A text affinity disambiguates between those
 /// cases. (Something similar happens with between runs of bidirectional text.)
-enum Affinity {
+type Affinity = strict enum {
     UPSTREAM = 0;
     DOWNSTREAM = 1;
 };
@@ -59,8 +57,8 @@ enum Affinity {
 /// string-wise slice between `focus` and `anchor` — graphical representations
 /// of selections flip directions when crossing the RTL/LTR boundary, but no
 /// special code is needed to handle crossing the boundary in the model.
-struct Selection {
-    Range range;
-    SelectionAnchor anchor;
-    Affinity affinity;
+type Selection = struct {
+    range Range;
+    anchor SelectionAnchor;
+    affinity Affinity;
 };

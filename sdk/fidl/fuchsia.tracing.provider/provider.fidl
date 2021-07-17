@@ -1,20 +1,18 @@
 // Copyright 2016 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.tracing.provider;
 
 using zx;
 
 /// The maximum length of a provider's name.
-const uint32 MAX_PROVIDER_NAME_LENGTH = 100;
+const MAX_PROVIDER_NAME_LENGTH uint32 = 100;
 
 /// The maximum number of categories supported.
-const uint32 MAX_NUM_CATEGORIES = 100;
+const MAX_NUM_CATEGORIES uint32 = 100;
 
 /// The maximum length of a category name.
-const uint32 MAX_CATEGORY_NAME_LENGTH = 100;
+const MAX_CATEGORY_NAME_LENGTH uint32 = 100;
 
 /// The provider interface which applications must implement and register
 /// with the `TraceRegistry` to participate in tracing.
@@ -29,7 +27,9 @@ protocol Provider {
     ///
     /// At most one trace can be active at a time. Subsequent `Initialize()`
     /// requests received prior to a `Terminate()` call must be ignored.
-    Initialize(ProviderConfig config);
+    Initialize(resource struct {
+        config ProviderConfig;
+    });
 
     /// Begin tracing.
     ///
@@ -37,7 +37,9 @@ protocol Provider {
     ///
     /// There is no result. The provider must send a `TRACE_PROVIDER_STARTED`
     /// packet on `fifo` to indicate success/failure of starting.
-    Start(StartOptions options);
+    Start(struct {
+        options StartOptions;
+    });
 
     /// Stop tracing.
     ///
@@ -62,7 +64,8 @@ protocol Provider {
 /// the tracing system.
 /// Note that one property of this interface is that once registration is made
 /// the provider can drop this connection.
-[Discoverable, ForDeprecatedCBindings]
+@discoverable
+@for_deprecated_c_bindings
 protocol Registry {
     /// Registers the trace provider.
     /// Note: Registration is asynchronous, it's only at some point after this
@@ -70,7 +73,11 @@ protocol Registry {
     /// To unregister, simply close the Provider pipe.
     /// `pid` is the process id of the provider, `name` is the name of the
     /// provider. Both of these are used in logging and diagnostic messages.
-    RegisterProvider(Provider provider, zx.koid pid, string:MAX_PROVIDER_NAME_LENGTH name);
+    RegisterProvider(resource struct {
+        provider client_end:Provider;
+        pid zx.koid;
+        name string:MAX_PROVIDER_NAME_LENGTH;
+    });
 
     /// Registers the trace provider synchronously. The call doesn't return
     /// until the provider is registered.
@@ -81,11 +88,18 @@ protocol Registry {
     /// To unregister, simply close the Provider pipe.
     /// `pid` is the process id of the provider, `name` is the name of the
     /// provider. Both of these are used in logging and diagnostic messages.
-    RegisterProviderSynchronously(Provider provider, zx.koid pid, string:MAX_PROVIDER_NAME_LENGTH name) -> (zx.status s, bool started);
+    RegisterProviderSynchronously(resource struct {
+        provider client_end:Provider;
+        pid zx.koid;
+        name string:MAX_PROVIDER_NAME_LENGTH;
+    }) -> (struct {
+        s zx.status;
+        started bool;
+    });
 };
 
 /// The trace buffering mode.
-enum BufferingMode : uint8 {
+type BufferingMode = strict enum : uint8 {
     /// In oneshot mode there is only one buffer that is not reused. When the
     /// buffer fills the provider just keeps dropping records, keeping a count,
     /// and then when tracing stops the header is updated to record final
@@ -111,21 +125,21 @@ enum BufferingMode : uint8 {
 // add configuration data without changing the method signature. Structs still
 // introduce ABI compatibility issues, this will be switched to a table when
 // tables are ready for use in zircon.
-resource struct ProviderConfig {
+type ProviderConfig = resource struct {
     /// `buffering_mode` specifies what happens when the buffer fills.
-    BufferingMode buffering_mode;
+    buffering_mode BufferingMode;
 
     /// The buffer to write trace records into.
-    zx.handle:VMO buffer;
+    buffer zx.handle:VMO;
 
     /// When the trace provider observes `ZX_FIFO_PEER_CLOSED` on `fifo`, it
     /// must assume the trace manager has terminated abnormally (since `Stop`
     /// was not received as usual) and stop tracing automatically, discarding
     /// any in-flight trace data.
-    zx.handle:FIFO fifo;
+    fifo zx.handle:FIFO;
 
     /// What trace categories to collect data for.
-    vector<string:MAX_CATEGORY_NAME_LENGTH>:MAX_NUM_CATEGORIES categories;
+    categories vector<string:MAX_CATEGORY_NAME_LENGTH>:MAX_NUM_CATEGORIES;
 };
 
 /// Choices for clearing/retaining trace buffer contents at Start.
@@ -136,7 +150,7 @@ resource struct ProviderConfig {
 /// trace_encoded_thread_ref_t). The non-durable portion contains the rest of
 /// the trace data like events); this is the portion that, for example, is
 /// discarded in circular buffering mode when the (non-durable) buffer fills.
-enum BufferDisposition : uint8 {
+type BufferDisposition = strict enum : uint8 {
     /// Clear the entire buffer, including durable buffer contents.
     /// N.B. If this is done mid-session, then string and thread references
     /// from prior to this point will become invalid - the underlying data
@@ -162,13 +176,13 @@ enum BufferDisposition : uint8 {
 };
 
 /// Additional options to control tracing at start.
-struct StartOptions {
+type StartOptions = struct {
     /// Whether and how to clear the buffer when starting data collection.
     /// This allows, for example, multiple Start/Stop trace runs to be
     /// collected in the same buffer.
-    BufferDisposition buffer_disposition;
+    buffer_disposition BufferDisposition;
 
     /// The trace categories to add to the initial set provided in
     /// `ProviderConfig`.
-    vector<string:MAX_CATEGORY_NAME_LENGTH>:MAX_NUM_CATEGORIES additional_categories;
+    additional_categories vector<string:MAX_CATEGORY_NAME_LENGTH>:MAX_NUM_CATEGORIES;
 };

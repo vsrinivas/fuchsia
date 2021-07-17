@@ -1,14 +1,12 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.goldfish;
 
 using zx;
 
 /// Interface for the Goldfish address space driver.
-enum AddressSpaceChildDriverType : uint32 {
+type AddressSpaceChildDriverType = strict enum : uint32 {
     /// The `DEFAULT` child driver type is for graphics.
     DEFAULT = 0;
 };
@@ -35,8 +33,10 @@ enum AddressSpaceChildDriverType : uint32 {
 /// permanently associate a particular goldfish address space driver connection
 /// with a particular type of child driver, discussed next.
 protocol AddressSpaceDevice {
-    OpenChildDriver(AddressSpaceChildDriverType type,
-                    request<AddressSpaceChildDriver> req);
+    OpenChildDriver(resource struct {
+        type AddressSpaceChildDriverType;
+        req server_end:AddressSpaceChildDriver;
+    });
 };
 
 /// Child driver protocol
@@ -61,35 +61,59 @@ protocol AddressSpaceDevice {
 /// It's common for child drivers to refer to offset/size plus a metadata field.
 /// We also provide extra data fields for other use cases in particular child
 /// drivers.
-struct AddressSpaceChildDriverPingMessage {
-    uint64 offset;
-    uint64 size;
-    uint64 metadata;
-    uint64 data0;
-    uint64 data1;
-    uint32 data2;
-    uint32 data3;
+type AddressSpaceChildDriverPingMessage = struct {
+    offset uint64;
+    size uint64;
+    metadata uint64;
+    data0 uint64;
+    data1 uint64;
+    data2 uint32;
+    data3 uint32;
 };
 
 protocol AddressSpaceChildDriver {
     /// Allocates goldfish address space of given size.
-    AllocateBlock(uint64 size) -> (zx.status res, uint64 paddr, zx.handle:VMO? vmo);
+    AllocateBlock(struct {
+        size uint64;
+    }) -> (resource struct {
+        res zx.status;
+        paddr uint64;
+        vmo zx.handle:<VMO, optional>;
+    });
     /// Free goldfish address space associated with given ID.
-    DeallocateBlock(uint64 paddr) -> (zx.status res);
+    DeallocateBlock(struct {
+        paddr uint64;
+    }) -> (struct {
+        res zx.status;
+    });
 
     /// Claim a region at `[offset, offset + size)` that is a subregion of a
     /// larger region managed by hardware.  It is possible to share the same
     /// regions across different connections, but within a connection, we
     /// require the claimed regions to be disjoint. Otherwise,
     /// `ZX_ERROR_INVALID_ARGS1` is returned.
-    ClaimSharedBlock(uint64 offset, uint64 size) -> (zx.status res, zx.handle:VMO? vmo);
+    ClaimSharedBlock(struct {
+        offset uint64;
+        size uint64;
+    }) -> (resource struct {
+        res zx.status;
+        vmo zx.handle:<VMO, optional>;
+    });
 
     /// Unclaim a hardware-shared region. This must correspond to an existing 
     /// claimed region in the current connection. Otherwise,
     /// `ZX_ERROR_INVALID_ARGS` is returned.
-    UnclaimSharedBlock(uint64 offset) -> (zx.status res);
+    UnclaimSharedBlock(struct {
+        offset uint64;
+    }) -> (struct {
+        res zx.status;
+    });
 
     /// Ping (General notification for child drivers)
-    Ping(AddressSpaceChildDriverPingMessage ping)
-        -> (zx.status res, AddressSpaceChildDriverPingMessage ping);
+    Ping(struct {
+        ping AddressSpaceChildDriverPingMessage;
+    }) -> (struct {
+        res zx.status;
+        ping AddressSpaceChildDriverPingMessage;
+    });
 };

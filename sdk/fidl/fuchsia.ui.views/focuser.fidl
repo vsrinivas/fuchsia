@@ -1,12 +1,10 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.ui.views;
 
 /// Problematic situations that occur on Focuser.RequestFocus.
-enum Error {
+type Error = strict enum {
     /// Value returned when RequestFocus is denied.
     DENIED = 1;
 };
@@ -35,5 +33,7 @@ protocol Focuser {
     /// - if the requestor ViewRef lacks authority over `view_ref`'s view
     /// - if `view_ref`'s view is not hittable or may not receive focus
     /// etc. A denied request is indicated with a Error.
-    RequestFocus(ViewRef view_ref) -> () error Error;
+    RequestFocus(resource struct {
+        view_ref ViewRef;
+    }) -> (struct {}) error Error;
 };

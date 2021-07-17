@@ -1,8 +1,6 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.usb.hci;
 
 using zx;
@@ -11,38 +9,99 @@ using fuchsia.hardware.usb.descriptor;
 using fuchsia.hardware.usb.hubdescriptor;
 using fuchsia.hardware.usb.request;
 
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol UsbHci {
     /// Queues a USB request with the HCI driver.
-    RequestQueue([InOut] fuchsia.hardware.usb.request.UsbRequest usb_request,
-                 [InOut] fuchsia.hardware.usb.request.UsbRequestCompleteCallback complete_cb) -> ();
+    RequestQueue(resource struct {
+        @in_out
+        usb_request fuchsia.hardware.usb.request.UsbRequest;
+        @in_out
+        complete_cb client_end:fuchsia.hardware.usb.request.UsbRequestCompleteCallback;
+    }) -> ();
     /// Registers callbacks to the USB bus driver with the HCI driver.
-    SetBusInterface(fuchsia.hardware.usb.bus.UsbBusInterface bus_intf) -> ();
+    SetBusInterface(resource struct {
+        bus_intf client_end:fuchsia.hardware.usb.bus.UsbBusInterface;
+    }) -> ();
     /// Returns the maximum number of USB devices that might be connected to the controller.
-    GetMaxDeviceCount() -> (uint64 count);
+    GetMaxDeviceCount() -> (struct {
+        count uint64;
+    });
     /// Enables or disables an endpoint using parameters derived from |ep_desc|.
-    EnableEndpoint(uint32 device_id, fuchsia.hardware.usb.descriptor.UsbEndpointDescriptor ep_desc,
-                   fuchsia.hardware.usb.descriptor.UsbSsEpCompDescriptor ss_com_desc, bool enable) -> (zx.status s);
+    EnableEndpoint(struct {
+        device_id uint32;
+        ep_desc fuchsia.hardware.usb.descriptor.UsbEndpointDescriptor;
+        ss_com_desc fuchsia.hardware.usb.descriptor.UsbSsEpCompDescriptor;
+        enable bool;
+    }) -> (struct {
+        s zx.status;
+    });
     /// Returns the current frame (in milliseconds), used for isochronous transfers.
-    GetCurrentFrame() -> (uint64 frame);
+    GetCurrentFrame() -> (struct {
+        frame uint64;
+    });
     /// Used by the USB hub driver to configure a newly enumerated USB hub.
-    ConfigureHub(uint32 device_id, fuchsia.hardware.usb.descriptor.UsbSpeed speed,
-                 fuchsia.hardware.usb.hubdescriptor.UsbHubDescriptor desc, bool multi_tt) -> (zx.status s);
+    ConfigureHub(struct {
+        device_id uint32;
+        speed fuchsia.hardware.usb.descriptor.UsbSpeed;
+        desc fuchsia.hardware.usb.hubdescriptor.UsbHubDescriptor;
+        multi_tt bool;
+    }) -> (struct {
+        s zx.status;
+    });
     /// Used by the USB hub driver to notify the HCI driver when a new device is attached.
-    HubDeviceAdded(uint32 device_id, uint32 port, fuchsia.hardware.usb.descriptor.UsbSpeed speed) -> (zx.status s);
+    HubDeviceAdded(struct {
+        device_id uint32;
+        port uint32;
+        speed fuchsia.hardware.usb.descriptor.UsbSpeed;
+    }) -> (struct {
+        s zx.status;
+    });
     /// Used by the USB hub driver to notify the HCI driver when a device has been removed.
-    HubDeviceRemoved(uint32 device_id, uint32 port) -> (zx.status s);
+    HubDeviceRemoved(struct {
+        device_id uint32;
+        port uint32;
+    }) -> (struct {
+        s zx.status;
+    });
     /// Used by the USB hub driver to notify the HCI driver when a device has been reset.
-    HubDeviceReset(uint32 device_id, uint32 port) -> (zx.status s);
+    HubDeviceReset(struct {
+        device_id uint32;
+        port uint32;
+    }) -> (struct {
+        s zx.status;
+    });
     /// Resets an endpoint on the specified device.
-    ResetEndpoint(uint32 device_id, uint8 ep_address) -> (zx.status s);
+    ResetEndpoint(struct {
+        device_id uint32;
+        ep_address uint8;
+    }) -> (struct {
+        s zx.status;
+    });
     /// Resets the specified device.
-    ResetDevice(uint32 hub_address, uint32 device_id) -> (zx.status s);
+    ResetDevice(struct {
+        hub_address uint32;
+        device_id uint32;
+    }) -> (struct {
+        s zx.status;
+    });
     /// Returns the maximum size of a packet that can be queued on the specified endpoint.
-    GetMaxTransferSize(uint32 device_id, uint8 ep_address) -> (uint64 size);
+    GetMaxTransferSize(struct {
+        device_id uint32;
+        ep_address uint8;
+    }) -> (struct {
+        size uint64;
+    });
     /// Cancels all transactions currently queued on the specified endpoint.
-    CancelAll(uint32 device_id, uint8 ep_address) -> (zx.status s);
+    CancelAll(struct {
+        device_id uint32;
+        ep_address uint8;
+    }) -> (struct {
+        s zx.status;
+    });
     /// Returns the size needed for a |usb_request_t|, including private storage needed by the
     /// HCI driver.
-    GetRequestSize() -> (uint64 size);
+    GetRequestSize() -> (struct {
+        size uint64;
+    });
 };

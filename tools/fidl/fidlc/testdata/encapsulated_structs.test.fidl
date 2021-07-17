@@ -1,43 +1,42 @@
-deprecated_syntax;
 library fidl.test.encapsulatedstructs;
 
 using zx;
 
-struct Int8Int32 {
-    int8 a;
+type Int8Int32 = struct {
+    a int8;
     // padding of 3 bytes.
-    int32 b;
+    b int32;
 };
 
-struct Int16Int8 {
-    int16 a;
-    int8 b;
-    // padding of 1 byte.
+type Int16Int8 = struct {
+    a int16;
+    b int8;
+// padding of 1 byte.
 };
 
-struct ArrayInt16Int8 {
-    array<Int16Int8>:3 arr;
-    // inner padding plus 3 bytes padding at the end.
+type ArrayInt16Int8 = struct {
+    arr array<Int16Int8, 3>;
+// inner padding plus 3 bytes padding at the end.
 };
 
-struct StructPaddingTestStruct {
-    Int16Int8 trailing;
+type StructPaddingTestStruct = struct {
+    trailing Int16Int8;
     // padding of 4 bytes.
     // after flattening the FourByteAlignedTrailingPaddingStruct into this
     // struct for the coding tables, there will be 5 bytes of padding.
-    Int8Int32 inner;
-    ArrayInt16Int8 array;
-    // after flattening, there should be 3 bytes of padding after the array
-    // elements.
+    inner Int8Int32;
+    array ArrayInt16Int8;
+// after flattening, there should be 3 bytes of padding after the array
+// elements.
 };
 
-resource struct NonInlineStructTestStruct {
-    Int16Int8? element; // 8-byte alignment
-    zx.handle h;
-    // 4-byte padding after handle.
+type NonInlineStructTestStruct = resource struct {
+    element box<Int16Int8>; // 8-byte alignment
+    h zx.handle;
+// 4-byte padding after handle.
 };
 
-resource struct TopLevelStruct {
-    StructPaddingTestStruct a;
-    NonInlineStructTestStruct b;
+type TopLevelStruct = resource struct {
+    a StructPaddingTestStruct;
+    b NonInlineStructTestStruct;
 };

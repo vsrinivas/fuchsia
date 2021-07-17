@@ -1,63 +1,62 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
 library conformance;
 
-union UnionWithBoundString {
-    1: string:5 boundFiveStr;
+type UnionWithBoundString = strict union {
+    1: boundFiveStr string:5;
 };
 
-struct UnionWithBoundStringStruct {
-    UnionWithBoundString v;
+type UnionWithBoundStringStruct = struct {
+    v UnionWithBoundString;
 };
 
-union SingleVariantUnion {
-    1: uint32 x;
+type SingleVariantUnion = strict union {
+    1: x uint32;
 };
 
-struct SingleVariantUnionStruct {
-    SingleVariantUnion u;
+type SingleVariantUnionStruct = struct {
+    u SingleVariantUnion;
 };
 
 // Union tags follow the explicit ordinal order, not source order.
-union ReverseOrdinalUnion {
-    4: int64 x; // tag 2
+type ReverseOrdinalUnion = strict union {
+    4: x int64; // tag 2
     3: reserved;
-    2: bool y; // tag 1
-    1: uint32 z; // tag 0
+    2: y bool; // tag 1
+    1: z uint32; // tag 0
 };
 
-struct ReverseOrdinalUnionStruct {
-    ReverseOrdinalUnion u;
+type ReverseOrdinalUnionStruct = struct {
+    u ReverseOrdinalUnion;
 };
 
-[BindingsDenylist = "dart"]
-union RecursiveVectorUnion {
-    1: vector<RecursiveVectorUnion?> vec;
+@bindings_denylist("dart")
+type RecursiveVectorUnion = strict union {
+    1: vec vector<RecursiveVectorUnion:optional>;
 };
 
-[BindingsDenylist = "dart"]
-struct RecursiveVectorUnionStruct {
-    RecursiveVectorUnion u;
+@bindings_denylist("dart")
+type RecursiveVectorUnionStruct = struct {
+    u RecursiveVectorUnion;
 };
 
-[BindingsDenylist = "dart"]
-union MutualRecursionUnion {
-    1: MutualRecursionUnionStruct s;
+@bindings_denylist("dart")
+type MutualRecursionUnion = strict union {
+    1: s MutualRecursionUnionStruct;
 };
 
-[BindingsDenylist = "dart"]
-struct MutualRecursionUnionStruct {
-    MutualRecursionUnion? u;
+@bindings_denylist("dart")
+type MutualRecursionUnionStruct = struct {
+    u MutualRecursionUnion:optional;
 };
 
-resource union EnvelopeInliningTestUnion {
-    1: uint32 small;
-    2: uint64 large;
+type EnvelopeInliningTestUnion = strict resource union {
+    1: small uint32;
+    2: large uint64;
     3: handle handle;
 };
 
-resource struct EnvelopeInliningTestUnionStruct {
-    EnvelopeInliningTestUnion u;
+type EnvelopeInliningTestUnionStruct = resource struct {
+    u EnvelopeInliningTestUnion;
 };

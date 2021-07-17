@@ -1,30 +1,28 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.sdmmc;
 
 using zx;
 
 /// The max value of client_id fields below. There is no known need for more than eight clients at
 /// the moment, however if that changes later this value will be increased.
-const uint8 SDMMC_MAX_CLIENT_ID = 7;
+const SDMMC_MAX_CLIENT_ID uint8 = 7;
 
-enum SdmmcVoltage : uint8 {
+type SdmmcVoltage = strict enum : uint8 {
     V330 = 0;
     V180 = 1;
     MAX = 2;
 };
 
-enum SdmmcBusWidth : uint8 {
+type SdmmcBusWidth = strict enum : uint8 {
     ONE = 0;
     FOUR = 1;
     EIGHT = 2;
     MAX = 3;
 };
 
-enum SdmmcTiming : uint8 {
+type SdmmcTiming = strict enum : uint8 {
     LEGACY = 0;
     HS = 1;
     HSDDR = 2;
@@ -38,78 +36,80 @@ enum SdmmcTiming : uint8 {
     MAX = 10;
 };
 
-resource union SdmmcBuffer {
+type SdmmcBuffer = strict resource union {
     /// The ID of a VMO that was previously registered.
-    1: uint32 vmo_id;
+    1: vmo_id uint32;
     /// An unregistered VMO of which the protocol implementation does not take ownership. The VMO is
     /// pinned upon entering Request and is unpinned before returning.
-    2: zx.handle:VMO vmo;
+    2: vmo zx.handle:VMO;
 };
 
-enum SdmmcBufferType : uint32 {
+type SdmmcBufferType = strict enum : uint32 {
     VMO_ID = 1;
     VMO_HANDLE = 2;
 };
 
-resource struct SdmmcBufferRegion {
-    SdmmcBuffer buffer;
-    SdmmcBufferType type;
+type SdmmcBufferRegion = resource struct {
+    buffer SdmmcBuffer;
+    type SdmmcBufferType;
     /// Offset into the VMO to start reading or writing. This is relative to the offset passed to
     /// RegisterVmo if type is VMO_ID.
-    uint64 offset;
+    offset uint64;
     /// Number of bytes to read from or write to this buffer region.
-    uint64 size;
+    size uint64;
 };
 
-resource struct SdmmcReqNew {
-    uint32 cmd_idx;
-    uint32 cmd_flags;
-    uint32 arg;
+type SdmmcReqNew = resource struct {
+    cmd_idx uint32;
+    cmd_flags uint32;
+    arg uint32;
 
-    uint32 blocksize;
+    blocksize uint32;
 
     /// If true, the SDMMC driver should not print any error messages for this request. This is used
     /// for initialization and tuning, when some requests are expected to fail.
-    bool probe_tuning_cmd;
+    probe_tuning_cmd bool;
 
     /// The client ID for this request. Only VMOs registered with this client may be present in
     /// buffers below.
-    uint8 client_id;
-    vector<SdmmcBufferRegion>:MAX buffers;
+    client_id uint8;
+    buffers vector<SdmmcBufferRegion>:MAX;
 };
 
 /// number of pages per request - 2M per request
 /// matches DMA_DESC_COUNT in dev/block/sdhci
 /// (PAGE_SIZE / sizeof(zx_paddr_t))
-const uint64 SDMMC_PAGES_COUNT = 512;
+const SDMMC_PAGES_COUNT uint64 = 512;
 
 /// sdmmc requests. one per command
-resource struct SdmmcReq {
-    uint32 cmd_idx;
-    uint32 cmd_flags;
-    uint32 arg;
+type SdmmcReq = resource struct {
+    cmd_idx uint32;
+    cmd_flags uint32;
+    arg uint32;
 
     /// data command parameters
-    uint16 blockcount;
-    uint16 blocksize;
-    bool use_dma;
+    blockcount uint16;
+    blocksize uint16;
+    use_dma bool;
     /// Used if use_dma is true
-    zx.handle:VMO dma_vmo;
+    dma_vmo zx.handle:VMO;
     /// Used if use_dma is false
-    [Mutable, Buffer] vector<uint8>:MAX virt;
+    @mutable
+    @buffer
+    virt vector<uint8>:MAX;
     /// offset into dma_vmo or virt
-    uint64 buf_offset;
-    zx.handle pmt;
-    bool probe_tuning_cmd;
+    buf_offset uint64;
+    pmt zx.handle;
+    probe_tuning_cmd bool;
 
     /// response data
-    array<uint32>:4 response;
+    response array<uint32, 4>;
 
     /// status
-    zx.status status;
+    status zx.status;
 };
 
-enum SdmmcHostCap : uint64 {
+type SdmmcHostCap = strict enum : uint64 {
     BUS_WIDTH_8 = 0x1;
     DMA = 0x2;
     VOLTAGE_330 = 0x4;
@@ -121,53 +121,88 @@ enum SdmmcHostCap : uint64 {
     NO_TUNING_SDR50 = 0x80;
 };
 
-enum SdmmcHostPrefs : uint64 {
+type SdmmcHostPrefs = strict enum : uint64 {
     DISABLE_HS400 = 0x1;
     DISABLE_HS200 = 0x2;
     DISABLE_HSDDR = 0x4;
 };
 
-struct SdmmcHostInfo {
+type SdmmcHostInfo = struct {
     /// Controller capabilities
-    uint64 caps;
+    caps uint64;
     /// Maximum data request size
-    uint64 max_transfer_size;
-    uint64 max_transfer_size_non_dma;
+    max_transfer_size uint64;
+    max_transfer_size_non_dma uint64;
     /// The number of buffer regions that may be used in a single request.
-    uint64 max_buffer_regions;
+    max_buffer_regions uint64;
     /// Host specific preferences
-    uint64 prefs;
+    prefs uint64;
 };
 
-enum SdmmcVmoRight : uint32 {
+type SdmmcVmoRight = strict enum : uint32 {
     READ = 0x1; // The protocol implementation can read from this VMO (used for write requests).
     WRITE = 0x2; // The protocol implementation can write to this VMO (used for read requests).
 };
 
-[Transport = "Banjo", BanjoLayout = "ddk-interface"]
+@transport("Banjo")
+@banjo_layout("ddk-interface")
 protocol InBandInterrupt {
     Callback() -> ();
 };
 
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol Sdmmc {
     /// Get host info.
-    HostInfo() -> (zx.status s, SdmmcHostInfo info);
+    HostInfo() -> (struct {
+        s zx.status;
+        info SdmmcHostInfo;
+    });
     /// Set signal voltage.
-    SetSignalVoltage(SdmmcVoltage voltage) -> (zx.status s);
+    SetSignalVoltage(struct {
+        voltage SdmmcVoltage;
+    }) -> (struct {
+        s zx.status;
+    });
     /// Set bus width.
-    SetBusWidth(SdmmcBusWidth bus_width) -> (zx.status s);
+    SetBusWidth(struct {
+        bus_width SdmmcBusWidth;
+    }) -> (struct {
+        s zx.status;
+    });
     /// Set bus frequency, zero means disable the clock to the card.
-    SetBusFreq(uint32 bus_freq) -> (zx.status s);
+    SetBusFreq(struct {
+        bus_freq uint32;
+    }) -> (struct {
+        s zx.status;
+    });
     /// Set mmc timing.
-    SetTiming(SdmmcTiming timing) -> (zx.status s);
+    SetTiming(struct {
+        timing SdmmcTiming;
+    }) -> (struct {
+        s zx.status;
+    });
     /// Issue a hw reset.
     HwReset() -> ();
     /// Perform tuning.
-    PerformTuning(uint32 cmd_idx) -> (zx.status s);
+    PerformTuning(struct {
+        cmd_idx uint32;
+    }) -> (struct {
+        s zx.status;
+    });
     /// Issue a request.
-    Request([InOut] SdmmcReq req) -> (zx.status s);
-    RegisterInBandInterrupt([InOut] InBandInterrupt interrupt_cb) -> (zx.status s);
+    Request(resource struct {
+        @in_out
+        req SdmmcReq;
+    }) -> (struct {
+        s zx.status;
+    });
+    RegisterInBandInterrupt(resource struct {
+        @in_out
+        interrupt_cb client_end:InBandInterrupt;
+    }) -> (struct {
+        s zx.status;
+    });
 
     /// In the methods below, vmo_id is used to uniquely identify a VMO that will be passed to
     /// Request in an SdmmcBufferRegion. VMO IDs are chosen by the caller, and may be any uint32
@@ -179,10 +214,24 @@ protocol Sdmmc {
     /// unregistered. client_id may be in [0, SDMMC_MAX_CLIENT_ID] and identifies the ID space for
     /// this VMO to be registered in (that is, two different VMOs may use the same ID if they are
     /// registered for different clients).
-    RegisterVmo(uint32 vmo_id, uint8 client_id, zx.handle:VMO vmo, uint64 offset,
-                uint64 size, uint32 vmo_rights) -> (zx.status status);
+    RegisterVmo(resource struct {
+        vmo_id uint32;
+        client_id uint8;
+        vmo zx.handle:VMO;
+        offset uint64;
+        size uint64;
+        vmo_rights uint32;
+    }) -> (struct {
+        status zx.status;
+    });
     /// The callee unmaps/unpins the VMO and returns ownership to the caller.
-    UnregisterVmo(uint32 vmo_id, uint8 client_id) -> (zx.status status, zx.handle:VMO vmo);
+    UnregisterVmo(struct {
+        vmo_id uint32;
+        client_id uint8;
+    }) -> (resource struct {
+        status zx.status;
+        vmo zx.handle:VMO;
+    });
 
     /// Perform the request. The protocol implementation chooses whether or not to use DMA depending
     /// on the properties of the request and the capabilities of the controller.
@@ -201,5 +250,10 @@ protocol Sdmmc {
     /// - Call zx_cache_flush with ZX_CACHE_FLUSH_DATA on buffers that have been mapped by the
     ///   client.
     /// - Call zx_vmo_op_range with ZX_VMO_OP_CACHE_CLEAN on all other buffers.
-    RequestNew(SdmmcReqNew req) -> (zx.status status, array<uint32>:4 response);
+    RequestNew(resource struct {
+        req SdmmcReqNew;
+    }) -> (struct {
+        status zx.status;
+        response array<uint32, 4>;
+    });
 };

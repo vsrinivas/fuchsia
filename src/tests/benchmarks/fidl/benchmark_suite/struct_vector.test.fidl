@@ -1,16 +1,14 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library benchmarkfidl;
 
-struct StructVectorElement{
-	uint8 a;
-	// 8 byte padding.
-	uint16 b;
+type StructVectorElement = struct{
+    a uint8;
+    // 8 byte padding.
+    b uint16;
 };
 
-struct StructVector {
-	vector<StructVectorElement> elems;
+type StructVector = struct {
+    elems vector<StructVectorElement>;
 };

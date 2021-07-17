@@ -1,17 +1,15 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.developer.remotecontrol;
 
 using fuchsia.diagnostics as diagnostics;
 
-const uint16 MAX_COMPONENT_SUBDIR_LEN = 10;
-const uint16 MAX_SERVICE_NAME_LEN = 150;
-const uint16 MAX_MONIKER_SEGMENT_LENGTH = 100;
+const MAX_COMPONENT_SUBDIR_LEN uint16 = 10;
+const MAX_SERVICE_NAME_LEN uint16 = 150;
+const MAX_MONIKER_SEGMENT_LENGTH uint16 = 100;
 
-enum ConnectError : uint32 {
+type ConnectError = strict enum : uint32 {
     // Selector did not match any services.
     NO_MATCHING_SERVICES = 1;
     // Selector matched multiple services.
@@ -22,13 +20,13 @@ enum ConnectError : uint32 {
     SERVICE_CONNECT_FAILED = 4;
 };
 
-enum SelectError : uint32 {
+type SelectError = strict enum : uint32 {
     // There was an error when trying to find matching services.
     SERVICE_DISCOVERY_FAILED = 1;
 };
 
-struct ServiceMatch {
-    vector<string:diagnostics.MAX_STRING_SELECTOR_LENGTH>:diagnostics.MAX_MONIKER_SEGMENTS moniker;
-    string:MAX_COMPONENT_SUBDIR_LEN subdir;
-    string:MAX_SERVICE_NAME_LEN service;
+type ServiceMatch = struct {
+    moniker vector<string:diagnostics.MAX_STRING_SELECTOR_LENGTH>:diagnostics.MAX_MONIKER_SEGMENTS;
+    subdir string:MAX_COMPONENT_SUBDIR_LEN;
+    service string:MAX_SERVICE_NAME_LEN;
 };

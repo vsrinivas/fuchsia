@@ -1,15 +1,13 @@
 // Copyright 2016 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.testing.runner;
 
-struct TestResult {
-    string name;
-    int64 elapsed;
-    bool failed;
-    string message;
+type TestResult = struct {
+    name string;
+    elapsed int64;
+    failed bool;
+    message string;
 };
 
 /// This service is included in the Environment of multi-process tests
@@ -17,21 +15,27 @@ struct TestResult {
 /// this service to log failures, signal crashes, and signal completion.
 /// The empty return acknowledges that the connection to TestRunner was
 /// successful.
-[Discoverable]
+@discoverable
 protocol TestRunner {
     /// Tells the test runner how to identify this test program.
-    Identify(string program_name) -> ();
+    Identify(struct {
+        program_name string;
+    }) -> ();
 
     /// Tells the test runner that a paritcular test case finished. May be called
     /// multiple times.
-    ReportResult(TestResult result);
+    ReportResult(struct {
+        result TestResult;
+    });
 
     /// Tells the test runner that a particular test case failed, with the supplied
     /// message. May be called multiple times. When `Teardown()` is called, the
     /// test program ends as a failure.
     ///
     /// `Fail()` is deprecated in favor of `ReportResult`.
-    Fail(string log_message);
+    Fail(struct {
+        log_message string;
+    });
 
     /// Either this method, `Teardown()` or `WillTerminate()` must be invoked
     /// before closing the connection to this interface; otherwise the TestRunner
@@ -50,10 +54,14 @@ protocol TestRunner {
     /// Signals that this process expects to be terminated within the time
     /// specified. If it is not killed that is a failure. A test that calls this
     /// should not call `Done()` or `Teardown()`.
-    WillTerminate(float64 withinSeconds);
+    WillTerminate(struct {
+        withinSeconds float64;
+    });
 
     /// Declare how many test points this test is expected to pass to complete.
-    SetTestPointCount(int64 count);
+    SetTestPointCount(struct {
+        count int64;
+    });
 
     /// Signals that a test point has been passed.
     PassTestPoint();
@@ -76,14 +84,21 @@ protocol TestRunner {
 /// An test agent can Put() a "connected" key when it receives a connection, and
 /// a test module that requested the agent can Get() that "connected" key to
 /// assert that it was able to connect to the right agent.
-[Discoverable]
+@discoverable
 protocol TestRunnerStore {
     /// This will store `key` with value `value` and respond back. Subsequent
     /// Put()s to `key` are queued up until they are read by a `Get()`.
-    Put(string key, string value) -> ();
+    Put(struct {
+        key string;
+        value string;
+    }) -> ();
 
     /// Get() will return the next queued value associated with the `key`. If there
     /// are no values queued for key, this method will not return until one has
     /// been Put().
-    Get(string key) -> (string value);
+    Get(struct {
+        key string;
+    }) -> (struct {
+        value string;
+    });
 };

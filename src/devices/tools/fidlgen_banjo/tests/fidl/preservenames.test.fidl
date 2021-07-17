@@ -1,13 +1,11 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library banjo.examples.preservenames;
 
-[PreserveCNames]
-struct SomeData {
-  uint32 HELLO_WORLD;
-  uint32 kSomeValue;
-  string one_more_field;
+@preserve_c_names
+type SomeData = struct {
+    HELLO_WORLD uint32;
+    kSomeValue uint32;
+    one_more_field string;
 };

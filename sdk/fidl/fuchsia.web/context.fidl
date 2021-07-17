@@ -1,21 +1,19 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.web;
 
 using fuchsia.io;
 using fuchsia.mem;
 
-enum ContextError : int32 {
+type ContextError = strict enum : int32 {
     /// The remote debugging service was not opened.
     REMOTE_DEBUGGING_PORT_NOT_OPENED = 1;
 };
 
-/// The top-level service interface which allows for the creation of Context resources.
 // TODO(fxbug.dev/29926): Remove ContextProvider in favor of launching Context instances directly.
-[Discoverable]
+/// The top-level service interface which allows for the creation of Context resources.
+@discoverable
 protocol ContextProvider {
     /// Creates a new browser [`Context`] whose state is wholly independent and isolated from other
     /// [`Context`](`Contexts`).
@@ -23,7 +21,10 @@ protocol ContextProvider {
     /// - `params`: The configuration used to create the [`Context`].
     /// - `context`: An interface request which will receive a bound [`Context`]
     ///   service.
-    Create(CreateContextParams params, request<Context> context);
+    Create(resource struct {
+        params CreateContextParams;
+        context server_end:Context;
+    });
 };
 
 /// Defines a provider which hosts resources from a [`fuchsia.io/Directory`]. Content can `GET`
@@ -46,19 +47,19 @@ protocol ContextProvider {
 ///   "mime": "text/html"
 /// }
 /// ```
-resource table ContentDirectoryProvider {
+type ContentDirectoryProvider = resource table {
     /// Name of the provider. Must be non-empty and composed solely of alphanumerics, dots, and
     /// dashes.
-    1: string:255 name;
+    1: name string:255;
 
     /// Directory containing the files served by this provider.
-    2: fuchsia.io.Directory directory;
+    2: directory client_end:fuchsia.io.Directory;
 };
 
 /// Feature flags that allow augmenting Context behavior. Some features require additional services
 /// in the service directory provided during context initialization. See
 /// [`CreateContextParams.service_directory`].
-bits ContextFeatureFlags : uint64 {
+type ContextFeatureFlags = strict bits : uint64 {
     /// Enables network access. Requires the following services:
     /// - [`fuchsia.net/NameLookup`]
     /// - [`fuchsia.net.interfaces/State`]
@@ -109,7 +110,7 @@ bits ContextFeatureFlags : uint64 {
 };
 
 /// Parameters specifying the configuration for a new [`Context`].
-resource table CreateContextParams {
+type CreateContextParams = resource table {
     /// Service directory to be used by the context. The following services must be present in the
     /// directory:
     /// - [`fuchsia.device/NameProvider`]
@@ -126,7 +127,7 @@ resource table CreateContextParams {
     /// - [`fuchsia.ui.input/ImeService`]
     /// - [`fuchsia.ui.input/ImeVisibilityService`]
     /// - [`fuchsia.ui.scenic/Scenic`]
-    1: fuchsia.io.Directory service_directory;
+    1: service_directory client_end:fuchsia.io.Directory;
 
     /// Handle to the directory that will contain the [`Context`]'s persistent data. If it is left
     /// unset, then the created [`Context`] will be stateless, with all of its data discarded upon
@@ -135,30 +136,30 @@ resource table CreateContextParams {
     /// If set, `data_directory` must not be shared with any other [`Context`].
     // TODO(fxbug.dev/29925): Provide an API to inform the caller when the `data_directory` can be safely
     // removed.
-    2: fuchsia.io.Directory data_directory;
+    2: data_directory client_end:fuchsia.io.Directory;
 
     /// Optional string describing the embedding product to append to the User-Agent string.
     /// See the specification for the
     /// [HTTP User-Agent header](https://tools.ietf.org/html/rfc7231#section-5.5.3).
     /// Requires that `user_agent_version` is also specified.
-    3: string:128 user_agent_product;
+    3: user_agent_product string:128;
 
     /// Optional version for the embedding product to append to the User-Agent string.
     ///
     /// Requires that `user_agent_product` is also specified.
-    4: string:128 user_agent_version;
+    4: user_agent_version string:128;
 
     /// Enables Frames to be created with remote debugging enabled using the DevTools protocol. If
     /// `port` is 0, then an ephemeral port will be used, which can be queried via the
     /// [`Context.GetRemoteDebuggingPort`] API.
-    5: uint16 remote_debugging_port;
+    5: remote_debugging_port uint16;
 
     /// List of providers whose contents will be served by `fuchsia-dir://` URLs.
-    6: vector<ContentDirectoryProvider>:100 content_directories;
+    6: content_directories vector<ContentDirectoryProvider>:100;
 
     /// Optional features that should be enabled for this context. Some features may also require
     /// additional services in `service_directory`.
-    7: ContextFeatureFlags features;
+    7: features ContextFeatureFlags;
 
     /// Enables PlayReady CDM for the Context using the specified string as a key system
     /// string. The string should be a reverse domain name, as required by
@@ -166,18 +167,18 @@ resource table CreateContextParams {
     ///
     /// - Requires [`fuchsia.media.drm/PlayReady`] service.
     /// - Requires that a `cdm_data_directory` be specified in [`CreateContextParams`].
-    8: string:128 playready_key_system;
+    8: playready_key_system string:128;
 
     /// Treat given insecure origins as secure origins. For the definition of secure contexts, see
     /// [Secure Contexts](https://w3c.github.io/webappsec-secure-contexts/) and
     /// [origin trustworthiness](https://www.w3.org/TR/powerful-features/#is-origin-trustworthy).
     ///
     /// Example value: `{"http://a.com", "http://b.com"}`.
-    9: vector<UrlSchemeAndHostName>:100 unsafely_treat_insecure_origins_as_secure;
+    9: unsafely_treat_insecure_origins_as_secure vector<UrlSchemeAndHostName>:100;
 
     /// Specifies a set of header names for which [Cross-Origin Resource Sharing
     /// (CORS)](https://www.w3.org/TR/cors/) checks should not be enforced.
-    10: vector<bytes:MAX>:MAX cors_exempt_headers;
+   10: cors_exempt_headers vector<bytes:MAX>:MAX;
 
     /// Specifies the storage to use to persistent content licensing related data (e.g.
     /// provisioning data, persistent session data). By default these data will be placed under the
@@ -189,28 +190,30 @@ resource table CreateContextParams {
     ///
     /// Note that not all content licensing systems support persistent sessions, regardless of
     /// whether persistent storage is provided.
-    11: fuchsia.io.Directory cdm_data_directory;
+   11: cdm_data_directory client_end:fuchsia.io.Directory;
 
     /// Specifies a target maximum size for `cdm_data_directory` contents, in bytes. If the amount
     /// of persisted CDM data exceeds this threshold, then the [`Context`] will attempt to purge
     /// some data to meet the specified quota.
-    12: uint64 cdm_data_quota_bytes;
+   12: cdm_data_quota_bytes uint64;
 
     /// Specifies a target maximum size for `data_directory` contents, in bytes.
     /// The [`Context`] will attempt to limit browsing state (e.g. cookies, LocalStorage) to
     /// not exceed the specified size.
-    13: uint64 data_quota_bytes;
+   13: data_quota_bytes uint64;
 };
 
 /// Manages browsing state (e.g. LocalStorage, cookies, etc) associated with a set of [`Frame`].
-[Discoverable]
+@discoverable
 protocol Context {
     /// Creates a new [`Frame`] under this [`Context`]. Destruction of a [`Context`] triggers the
     /// destruction of all of its associated [`Frame`]. [`Frame`] can be transferred to another
     /// component but cannot be shared across multiple components.
     ///
     /// - `frame`: An interface request that will be bound to the created [`Frame`].
-    CreateFrame(request<Frame> frame);
+    CreateFrame(resource struct {
+        frame server_end:Frame;
+    });
 
     /// Similar to [`Context.CreateFrame`], with extra parameters.
     ///
@@ -219,10 +222,15 @@ protocol Context {
     /// - `frame`: An interface request that will be bound to the created [`Frame`].
     // TODO(fxbug.dev/65750): Consider removing the clonable params restriction if clients
     // become responsible for providing parameters for [each] popup.
-    CreateFrameWithParams(CreateFrameParams params, request<Frame> frame);
+    CreateFrameWithParams(resource struct {
+        params CreateFrameParams;
+        frame server_end:Frame;
+    });
 
     /// Used to observe cookies for sites hosted under this Context.
-    GetCookieManager(request<CookieManager> manager);
+    GetCookieManager(resource struct {
+        manager server_end:CookieManager;
+    });
 
     /// Waits until debugging is available on one or more Frames, and returns the DevTools port
     /// number. Multiple calls may be queued to received the port number.
@@ -230,27 +238,29 @@ protocol Context {
     /// If an error occured, the [`ContextError`] will be set to this value:
     /// - `REMOTE_DEBUGGING_PORT_NOT_OPENED`: `remote_debugging_port` was not set in
     ///   [`CreateContextParams`] or the remote debugging service failed to start.
-    GetRemoteDebuggingPort() -> (uint16 port) error ContextError;
+    GetRemoteDebuggingPort() -> (struct {
+        port uint16;
+    }) error ContextError;
 };
 
 /// Parameters specifying the configuration for a new [`Frame`].
-resource table CreateFrameParams {
+type CreateFrameParams = resource table {
     /// Set to true to enable remote debugging. The [`Frame`] will be closed with
     /// `ERR_INVALID_ARGS` if `remote_debugging_port` was not set in
     /// [`CreateContextParams`].
-    1: bool enable_remote_debugging;
+    1: enable_remote_debugging bool;
 
     /// Set to give the Frame a name to help distinguish it in debug contexts , such as system log
     /// output. For example, the name may be added to messages from web content when they are logged
     /// to the system logger. The name does not affect user- or web-visible behavior.
     /// Popup Frames created by the Frame will have a name derived from the parent Frame's name.
-    2: string:MAX debug_name;
+    2: debug_name string:MAX;
 
     /// Sets the autoplay policy for the Frame. If omitted, the default policy is
     /// `REQUIRE_USER_ACTIVATION`.
     /// [`CreateFrame`] will fail with `ZX_ERR_NOT_SUPPORTED` if the value specified is not
     /// supported by the [`Context`].
-    3: AutoplayPolicy autoplay_policy;
+    3: autoplay_policy AutoplayPolicy;
 
     /// Enables automatic blocking of navigations to explicit sites, and specifies the error page
     /// content, in HTML, to be loaded in the Frame when a navigation is canceled by the filter.
@@ -260,18 +270,21 @@ resource table CreateFrameParams {
     /// If set to an empty buffer, a default error message will be displayed.
     /// If set and such filtering is not supported, the [`Frame`] will disconnect with
     /// `ZX_ERR_NOT_SUPPORTED`.
-    4: fuchsia.mem.Data explicit_sites_filter_error_page;
+    4: explicit_sites_filter_error_page fuchsia.mem.Data;
 };
 
 /// Used by [`Context`] clients to delegate [`Frame`] hosting capabilities to selected peers.
-[Discoverable]
+@discoverable
 protocol FrameHost {
     /// Behaves identically to [`Context.CreateFrameWithParams`].
-    CreateFrameWithParams(CreateFrameParams params, request<Frame> frame);
+    CreateFrameWithParams(resource struct {
+        params CreateFrameParams;
+        frame server_end:Frame;
+    });
 };
 
 /// Specifies the policy for automatic (non user-initiated) playback of video and audio content.
-enum AutoplayPolicy : int32 {
+type AutoplayPolicy = strict enum : int32 {
     /// All media is permitted to autoplay.
     ALLOW = 1;
 

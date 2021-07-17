@@ -1,28 +1,26 @@
 // Copyright 2017 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 // This file contains the definition of SurfaceRelation and its properties.
 
 library fuchsia.modular;
 
 /// Describes the relationship between two Surfaces.
 /// Provides information to the StoryShell for layout optimization.
-struct SurfaceRelation {
+type SurfaceRelation = struct {
     /// Advice on arranging these surfaces on the screen together.
-    SurfaceArrangement arrangement = SurfaceArrangement.NONE;
+    arrangement SurfaceArrangement = SurfaceArrangement.NONE;
 
     /// Advice for dismissal of surfaces to be linked.
-    SurfaceDependency dependency = SurfaceDependency.NONE;
+    dependency SurfaceDependency = SurfaceDependency.NONE;
 
     /// Relative emphasis of the child surface, relative to the parent.
     /// Influences relative areas of surfaces on screen.
-    float32 emphasis = 1.0;
+    emphasis float32 = 1.0;
 };
 
 /// Expresses arrangement type.
-enum SurfaceArrangement {
+type SurfaceArrangement = strict enum {
     /// No arrangement specified.
     NONE = 0;
 
@@ -40,7 +38,7 @@ enum SurfaceArrangement {
 };
 
 /// Links surface dismissal.
-enum SurfaceDependency {
+type SurfaceDependency = strict enum {
     /// No dependency specified.
     NONE = 0;
 

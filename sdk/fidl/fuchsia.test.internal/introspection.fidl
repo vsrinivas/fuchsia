@@ -1,8 +1,6 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.test.internal;
 
 using fuchsia.url;
@@ -10,7 +8,7 @@ using fuchsia.component;
 using zx;
 
 /// Introspection API to get information about a test.
-[Discoverable]
+@discoverable
 protocol Info {
     /// Returns the URL of the test running in the realm designated by the 
     /// `moniker`. The moniker should be relative to test manager.
@@ -20,5 +18,9 @@ protocol Info {
     /// `ZX_ERR_NOT_FOUND`: moniker matches no test realm.
     /// `ZX_ERR_NOT_SUPPORTED`: Moniker is not relative to test_manager and
     /// doesn't pertain to a test realm.
-    GetTestUrl(string:fuchsia.component.MAX_MONIKER_LENGTH moniker) -> (fuchsia.url.Url url) error zx.status;
+    GetTestUrl(struct {
+        moniker string:fuchsia.component.MAX_MONIKER_LENGTH;
+    }) -> (struct {
+        url fuchsia.url.Url;
+    }) error zx.status;
 };

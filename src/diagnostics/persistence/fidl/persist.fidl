@@ -1,13 +1,11 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.diagnostics.persist;
 
-const uint64 MAX_NAME_SIZE = 100;
+const MAX_NAME_SIZE uint64 = 100;
 
-enum PersistResult {
+type PersistResult = strict enum {
     // The persistence request was scheduled to
     // a fetcher's queue.
     QUEUED = 1;
@@ -23,10 +21,14 @@ enum PersistResult {
 
 /// Stores limited amounts of Inspect-formatted data till the next boot and publishes it in
 /// the "diagnostics-persistence" component's inspect tree.
-[Discoverable]
+@discoverable
 protocol DataPersistence {
     /// Schedule the persistence the selected data associated with this
     /// tag in diagnostics-persistence config files.  Fetching the selected
     /// data may be delayed if there is other work in a given service's queue.
-    Persist(string:MAX_NAME_SIZE tag) -> (PersistResult result);
+    Persist(struct {
+        tag string:MAX_NAME_SIZE;
+    }) -> (struct {
+        result PersistResult;
+    });
 };

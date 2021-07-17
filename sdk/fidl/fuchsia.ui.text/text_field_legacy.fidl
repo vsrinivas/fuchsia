@@ -1,31 +1,29 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.ui.text;
 
 /// Lists the Positions for selection and other related ranges, at a particular
 /// revision number. Any time the revision number is incremented, all these Positions
 /// become invalid, and a new TextFieldStateLegacy is sent through OnUpdate.
-[Deprecated]
-table TextFieldStateLegacy {
+@deprecated
+type TextFieldStateLegacy = table {
     /// (required) The start and end of the entire text field.
-    1: Range document;
+    1: document Range;
 
     /// (required) The currently selected range of text.
-    2: Selection selection;
+    2: selection Selection;
 
     /// The range that indicates the text that is being composed, or currently
     /// receiving suggestions from the keyboard. It should be displayed in some
     /// distinct way, such as underlined.
-    3: Range composition;
+    3: composition Range;
 
     /// Some keyboards, notably Japanese, give the user buttons to highlight just a
     /// subset of the composition string for suggestions. It must be equal to or a subset
     /// of the composition range. If the composition range changes, the TextFieldLegacy may
     /// discard this and require the keyboard to create a new one.
-    4: Range composition_highlight;
+    4: composition_highlight Range;
 
     /// A dead key is a key combination you press before another key to add diacritical
     /// marks, accents, or other changes to the second key. After the first key, a
@@ -33,18 +31,18 @@ table TextFieldStateLegacy {
     /// range is that highlighted character. If the selection moves away from this
     /// highlight range, or if the contents of the highlight range change, the TextFieldLegacy
     /// may discard this and require the keyboard to create a new one.
-    5: Range dead_key_highlight;
+    5: dead_key_highlight Range;
 
     /// (required) This number is increased any time content in the text field is changed,
     /// if the selection is changed, or if anything else about the state is changed.
-    6: uint64 revision;
+    6: revision uint64;
 };
 
 /// Indicates errors that can occur with various TextFieldLegacy methods. Until FIDL supports
 /// result return types, if Error has any value except OK, the client must ignore
 /// all other return data from that method.
-[Deprecated]
-enum ErrorLegacy {
+@deprecated
+type ErrorLegacy = strict enum {
     // Once FIDL supports Result return types, this option can be removed.
     OK = 0;
 
@@ -77,37 +75,63 @@ enum ErrorLegacy {
 /// number passed to BeginEdit is still valid. TextFieldLegacy implementations can
 /// assume that there will only be one client at a time; they don't need to
 /// keep track of a separate transaction list for each client.
-[Deprecated]
+@deprecated
 protocol TextFieldLegacy {
     /// Any time the revision number increments, this event fires, with the latest version of
     /// the state. It also fires when a new client connects to the service, so it can get an
     /// initial state without waiting for an edit.
-    -> OnUpdate(TextFieldStateLegacy state);
+    -> OnUpdate(struct {
+        state TextFieldStateLegacy;
+    });
 
     // READ METHODS
 
     /// Returns a new position that is `offset` unicode code points away from `old_position`
-    PositionOffset(Position old_position, int64 offset, uint64 revision) -> (Position new_position, ErrorLegacy error);
+    PositionOffset(struct {
+        old_position Position;
+        offset int64;
+        revision uint64;
+    }) -> (struct {
+        new_position Position;
+        error ErrorLegacy;
+    });
 
     /// Returns number of unicode code points between two positions. If the position range.start is after
     /// range.end, then the range is considered `inverted` and distance will be negative.
     /// For all positions A and B, PositionOffset(A, Distance(A, B)) == B
-    Distance(Range range, uint64 revision) -> (int64 distance, ErrorLegacy error);
+    Distance(struct {
+        range Range;
+        revision uint64;
+    }) -> (struct {
+        distance int64;
+        error ErrorLegacy;
+    });
 
     /// Returns string of unicode code points between two positions
-    Contents(Range range, uint64 revision) -> (string:MAX contents, Position start, ErrorLegacy error);
+    Contents(struct {
+        range Range;
+        revision uint64;
+    }) -> (struct {
+        contents string:MAX;
+        start Position;
+        error ErrorLegacy;
+    });
 
     // TRANSACTION METHODS
 
     /// Starts a transaction. If it's called a second time with no CommitEdit()
     /// call, the changes from the first uncommitted transaction are discarded as
     /// though AbortEdit() was called.
-    BeginEdit(uint64 revision);
+    BeginEdit(struct {
+        revision uint64;
+    });
 
     /// If the transaction's revision number (from BeginEdit) is still current,
     /// runs all edit commands queued in this transaction. If not, returns
     /// `BAD_REVISION`.
-    CommitEdit() -> (ErrorLegacy error);
+    CommitEdit() -> (struct {
+        error ErrorLegacy;
+    });
 
     /// Discards the current transaction.
     AbortEdit();
@@ -118,20 +142,30 @@ protocol TextFieldLegacy {
     /// responsibility to make sure new_text isn't too long for a FIDL message;
     /// if it is, the client should break up the string into separate replace
     /// calls.
-    Replace(Range range, string new_text);
+    Replace(struct {
+        range Range;
+        new_text string;
+    });
 
     /// Sets the selection range.
-    SetSelection(Selection selection);
+    SetSelection(struct {
+        selection Selection;
+    });
 
     /// Sets the composition range and the composition highlight range. For more info,
     /// see TextState's comments.
-    SetComposition(Range composition_range, Range? highlight_range);
+    SetComposition(struct {
+        composition_range Range;
+        highlight_range box<Range>;
+    });
 
     /// Clears both the composition range, and the composition highlight range.
     ClearComposition();
 
     /// Sets the dead key highlight range. For more info, see TextState's comments.
-    SetDeadKeyHighlight(Range range);
+    SetDeadKeyHighlight(struct {
+        range Range;
+    });
 
     /// Clears the dead key highlight range.
     ClearDeadKeyHighlight();

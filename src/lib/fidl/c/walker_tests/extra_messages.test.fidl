@@ -1,8 +1,6 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 // A set of structs and interface methods designed to exercise FIDL code.
 // For now covering fidl_linearize.
 
@@ -10,97 +8,97 @@ deprecated_syntax;
 
 library fidl.test.coding;
 
-struct IntStruct {
-    int64 v;
+type IntStruct = struct {
+    v int64;
 };
 
-table SimpleTable {
-    1: IntStruct x;
+type SimpleTable = table {
+    1: x IntStruct;
     2: reserved;
     3: reserved;
     4: reserved;
-    5: IntStruct y;
+    5: y IntStruct;
 };
 
-resource table ResourceSimpleTable {
-    1: IntStruct x;
+type ResourceSimpleTable = resource table {
+    1: x IntStruct;
     2: reserved;
     3: reserved;
     4: reserved;
-    5: IntStruct y;
+    5: y IntStruct;
 };
 
-table OlderSimpleTable {
-    1: IntStruct x;
+type OlderSimpleTable = table {
+    1: x IntStruct;
     2: reserved;
 };
 
-table NewerSimpleTable {
-    1: IntStruct x;
+type NewerSimpleTable = table {
+    1: x IntStruct;
     2: reserved;
     3: reserved;
     4: reserved;
-    5: IntStruct y;
-    6: IntStruct z;
+    5: y IntStruct;
+    6: z IntStruct;
     7: reserved;
 };
 
-union SampleUnion {
-    1: IntStruct i;
-    2: SimpleTable st;
-    3: int32 raw_int;
+type SampleUnion = strict union {
+    1: i IntStruct;
+    2: st SimpleTable;
+    3: raw_int int32;
 };
 
-flexible union SampleXUnion {
-    1: IntStruct i;
-    2: SimpleTable st;
-    3: int32 raw_int;
+type SampleXUnion = flexible union {
+    1: i IntStruct;
+    2: st SimpleTable;
+    3: raw_int int32;
 };
 
-union SampleStrictXUnion {
-    1: IntStruct i;
-    2: SimpleTable st;
-    3: int32 raw_int;
+type SampleStrictXUnion = strict union {
+    1: i IntStruct;
+    2: st SimpleTable;
+    3: raw_int int32;
 };
 
-struct SampleStrictXUnionStruct {
-    SampleStrictXUnion xu;
+type SampleStrictXUnionStruct = struct {
+    xu SampleStrictXUnion;
 };
 
-struct SampleXUnionStruct {
-    SampleXUnion xu;
+type SampleXUnionStruct = struct {
+    xu SampleXUnion;
 };
 
-struct SampleNullableXUnionStruct {
-    SampleXUnion? opt_xu;
+type SampleNullableXUnionStruct = struct {
+    opt_xu SampleXUnion:optional;
 };
 
-flexible union LLCPPStyleUnion {
-    1: int32 primitive;
+type LLCPPStyleUnion = flexible union {
+    1: primitive int32;
 };
 
-struct LLCPPStyleUnionStruct {
-    LLCPPStyleUnion u;
+type LLCPPStyleUnionStruct = struct {
+    u LLCPPStyleUnion;
 };
 
-bits Int16Bits : uint16 {
+type Int16Bits = strict bits : uint16 {
     BIT_1 = 1;
     BIT_3 = 4;
     BIT_5 = 16;
 };
 
-struct Int16BitsStruct {
-    Int16Bits bits;
+type Int16BitsStruct = struct {
+    bits Int16Bits;
 };
 
-bits Int32Bits : uint32 {
+type Int32Bits = strict bits : uint32 {
     BIT_7 = 64;
     BIT_12 = 2048;
     BIT_27 = 67108864;
 };
 
-struct Int32BitsStruct {
-    Int32Bits bits;
+type Int32BitsStruct = struct {
+    bits Int32Bits;
 };
 
 // For the enum validation tests, we will define enums of all the possible
@@ -108,106 +106,106 @@ struct Int32BitsStruct {
 // - std::numeric_limits<UnderlyingType>::min()
 // - std::numeric_limits<UnderlyingType>::max()
 // - 42
-enum Int8Enum : int8 {
+type Int8Enum = strict enum : int8 {
     VALID_MIN = -128;
     VALID_MAX = 127;
     VALID_42 = 42;
 };
 
-struct Int8EnumStruct {
-    Int8Enum e;
+type Int8EnumStruct = struct {
+    e Int8Enum;
 };
 
-enum Uint8Enum : uint8 {
+type Uint8Enum = strict enum : uint8 {
     VALID_MIN = 0;
     VALID_MAX = 255;
     VALID_42 = 42;
 };
 
-struct Uint8EnumStruct {
-    Uint8Enum e;
+type Uint8EnumStruct = struct {
+    e Uint8Enum;
 };
 
-enum Int16Enum : int16 {
+type Int16Enum = strict enum : int16 {
     VALID_MIN = -32768;
     VALID_MAX = 32767;
     VALID_42 = 42;
 };
 
-struct Int16EnumStruct {
-    Int16Enum e;
+type Int16EnumStruct = struct {
+    e Int16Enum;
 };
 
-enum Uint16Enum : uint16 {
+type Uint16Enum = strict enum : uint16 {
     VALID_MIN = 0;
     VALID_MAX = 65535;
     VALID_42 = 42;
 };
 
-struct Uint16EnumStruct {
-    Uint16Enum e;
+type Uint16EnumStruct = struct {
+    e Uint16Enum;
 };
 
-enum Int32Enum : int32 {
+type Int32Enum = strict enum : int32 {
     VALID_MIN = -2147483648;
     VALID_MAX = 2147483647;
     VALID_42 = 42;
 };
 
-struct Int32EnumStruct {
-    Int32Enum e;
+type Int32EnumStruct = struct {
+    e Int32Enum;
 };
 
-enum Uint32Enum : uint32 {
+type Uint32Enum = strict enum : uint32 {
     VALID_MIN = 0;
     VALID_MAX = 4294967295;
     VALID_42 = 42;
 };
 
-struct Uint32EnumStruct {
-    Uint32Enum e;
+type Uint32EnumStruct = struct {
+    e Uint32Enum;
 };
 
-enum Int64Enum : int64 {
+type Int64Enum = strict enum : int64 {
     VALID_MIN = -9223372036854775808;
     VALID_MAX = 9223372036854775807;
     VALID_42 = 42;
 };
 
-struct Int64EnumStruct {
-    Int64Enum e;
+type Int64EnumStruct = struct {
+    e Int64Enum;
 };
 
-enum Uint64Enum : uint64 {
+type Uint64Enum = strict enum : uint64 {
     VALID_MIN = 0;
     VALID_MAX = 18446744073709551615;
     VALID_42 = 42;
 };
 
-struct Uint64EnumStruct {
-    Uint64Enum e;
+type Uint64EnumStruct = struct {
+    e Uint64Enum;
 };
 
-struct Uint32VectorStruct {
-    vector<uint32> vec;
+type Uint32VectorStruct = struct {
+    vec vector<uint32>;
 };
 
-struct StringStruct {
-    string str;
+type StringStruct = struct {
+    str string;
 };
 
-struct RecursiveOptional {
-    RecursiveOptional? inner;
+type RecursiveOptional = struct {
+    inner box<RecursiveOptional>;
 };
 
-table RecursiveTable {
-    1: RecursiveOptional inner;
+type RecursiveTable = table {
+    1: inner RecursiveOptional;
 };
 
-struct BoolStruct {
-    bool val;
+type BoolStruct = struct {
+    val bool;
 };
 
-struct OptionalBoolStruct {
-    BoolStruct? inner;
+type OptionalBoolStruct = struct {
+    inner box<BoolStruct>;
 };

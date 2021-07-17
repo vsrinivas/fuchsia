@@ -1,15 +1,13 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.media.drm;
 
 using fuchsia.io;
 
 /// A sentinel value for use with [`KeySystem.CreateContentDecryptionModule2`]
 /// to create a [`ContentDecryptionModule`] without a client data store.
-const uint32 NO_DATA_STORE = 0;
+const NO_DATA_STORE uint32 = 0;
 
 protocol KeySystem {
     /// Get various static properties of the `KeySystem` implementation.
@@ -20,7 +18,9 @@ protocol KeySystem {
     ///
     /// - response `properties` the properties of the `KeySystem`
     ///   implementation.
-    GetProperties() -> (KeySystemProperties properties);
+    GetProperties() -> (struct {
+        properties KeySystemProperties;
+    });
 
     /// Adds a client data store to the `KeySystem`.
     ///
@@ -36,8 +36,10 @@ protocol KeySystem {
     ///   added `data_store_id` and the server should close the channel.
     /// + request `data_store_params` the parameters to be used for this data
     ///   store.
-    AddDataStore(uint32 data_store_id,
-                 DataStoreParams data_store_params) -> () error Error;
+    AddDataStore(resource struct {
+        data_store_id uint32;
+        data_store_params DataStoreParams;
+    }) -> (struct {}) error Error;
 
     /// Destroys the client data store.
     ///
@@ -49,7 +51,9 @@ protocol KeySystem {
     ///  store to be removed. It is invalid for the client to provide
     ///  [`NO_DATA_STORE`] or a `data_store_id` value that has not previously
     ///  been added or has been previously destroyed.
-    DestroyDataStoreAndConfirm(uint32 data_store_id) -> ();
+    DestroyDataStoreAndConfirm(struct {
+        data_store_id uint32;
+    }) -> ();
 
     /// Creates a new [`ContentDecryptionModule`].
     ///
@@ -69,24 +73,26 @@ protocol KeySystem {
     /// + request `data_store_id` the data store that should be used by the
     ///   `ContentDecryptionModule`.
     /// + request `cdm` the server endpoint of the `ContentDecryptionModule`.
-    CreateContentDecryptionModule2(uint32 data_store_id,
-                                   request<ContentDecryptionModule> cdm);
+    CreateContentDecryptionModule2(resource struct {
+        data_store_id uint32;
+        cdm server_end:ContentDecryptionModule;
+    });
 };
 
-resource table DataStoreParams {
+type DataStoreParams = resource table {
     /// Directory into which this data store should write persistent
     /// provisioning and licenses, or their proxy. This field is required.
-    1: fuchsia.io.Directory data_directory;
+    1: data_directory client_end:fuchsia.io.Directory;
 
     /// Certificate to use for encrypting provisioning messages. This field is
     /// optional.
-    2: bytes provision_server_certificate;
+    2: provision_server_certificate bytes;
 
     /// The client endpoint of the [`ProvisioningFetcher`] to be used when this
     /// data store requires provisioning. If the DRM system requires data store
     /// provisioning, then this field is required to be set. Otherwise, it is
     /// optional.
-    3: ProvisioningFetcher provisioning_fetcher;
+    3: provisioning_fetcher client_end:ProvisioningFetcher;
 };
 
 // TODO(fxbug.dev/13674): Convert these protocols to services once available.
@@ -100,7 +106,7 @@ resource table DataStoreParams {
 ///
 /// [`W3C Encrypted Media Extensions`]:
 ///   https://www.w3.org/TR/encrypted-media
-[Discoverable]
+@discoverable
 protocol ClearKey {
     compose KeySystem;
 };
@@ -109,7 +115,7 @@ protocol ClearKey {
 ///
 /// If the client closes the `Widevine` channel, derived
 /// `ContentDecryptionModule`s will remain active.
-[Discoverable]
+@discoverable
 protocol Widevine {
     compose KeySystem;
 };
@@ -118,7 +124,7 @@ protocol Widevine {
 ///
 /// If the client closes the `PlayReady` channel, derived
 /// `ContentDecryptionModule`s will remain active.
-[Discoverable]
+@discoverable
 protocol PlayReady {
     compose KeySystem;
 };

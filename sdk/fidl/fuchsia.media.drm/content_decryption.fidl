@@ -1,19 +1,17 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.media.drm;
 
 using fuchsia.media;
 
-table DecryptorParams {
+type DecryptorParams = table {
     /// Requires the decryptor [`fuchsia.media/StreamProcessor`] to only output
     /// to secure buffers.
-    1: bool require_secure_mode;
+    1: require_secure_mode bool;
 
     /// Initial format details for the [`fuchsia.media/StreamProcessor`].
-    2: fuchsia.media.FormatDetails input_details;
+    2: input_details fuchsia.media.FormatDetails;
 };
 
 /// A protocol for managing content license sessions and providing decryption of
@@ -48,7 +46,9 @@ protocol ContentDecryptionModule {
     ///
     /// + request `certificate` a buffer containing the certificate to be used.
     /// * error an [`Error`] indicating the reason for failure.
-    SetServerCertificate(bytes certificate) -> () error Error;
+    SetServerCertificate(struct {
+        certificate bytes;
+    }) -> (struct {}) error Error;
 
     /// Creates a new session for the given type.
     ///
@@ -64,9 +64,12 @@ protocol ContentDecryptionModule {
     ///   [`LicenseSession`]
     /// - response `session_id` an identifier that can be used to reload the
     ///   session later (if persistent).
-    CreateLicenseSession(LicenseSessionType session_type,
-                         request<LicenseSession> license_session)
-        -> (SessionId session_id);
+    CreateLicenseSession(resource struct {
+        session_type LicenseSessionType;
+        license_session server_end:LicenseSession;
+    }) -> (struct {
+        session_id SessionId;
+    });
 
     /// Loads an existing session from storage using the given `session_id`.
     ///
@@ -76,8 +79,10 @@ protocol ContentDecryptionModule {
     ///   loaded from storage.
     /// + request `license_session` the server endpoint of the
     ///   [`LicenseSession`].
-    LoadLicenseSession(SessionId session_id,
-                       request<LicenseSession> license_session);
+    LoadLicenseSession(resource struct {
+        session_id SessionId;
+        license_session server_end:LicenseSession;
+    });
 
     /// Creates a Decryptor [`fuchsia.media/StreamProcessor`] to be used to
     /// decrypt content.
@@ -88,8 +93,10 @@ protocol ContentDecryptionModule {
     /// + request `params` the parameters with which to create the `decryptor`.
     /// + request `decryptor` the server endpoint of the
     ///   `fuchsia.media/StreamProcessor`.
-    CreateDecryptor(DecryptorParams params,
-                    request<fuchsia.media.StreamProcessor> decryptor);
+    CreateDecryptor(resource struct {
+        params DecryptorParams;
+        decryptor server_end:fuchsia.media.StreamProcessor;
+    });
 
     /// Queries the status of a hypothetical key associated with an HDCP policy.
     ///
@@ -102,7 +109,11 @@ protocol ContentDecryptionModule {
     ///   such as "1.2" or "2.0".
     /// - response `key_status` a field indicating what the status of a
     ///   hypothetical key would be for this device if one could be licensed.
-    GetKeyStatusForHdcpVersion(HdcpVersion hdcp_version) -> (KeyStatus key_status);
+    GetKeyStatusForHdcpVersion(struct {
+        hdcp_version HdcpVersion;
+    }) -> (struct {
+        key_status KeyStatus;
+    });
 
     /// Queries for the list of supported encryption schemes.
     ///
@@ -114,5 +125,7 @@ protocol ContentDecryptionModule {
     ///
     /// - response `encryption_schemes` a list of the supported encryption
     ///   schemes.
-    GetSupportedEncryptionSchemes() -> (vector<EncryptionScheme>:MAX encryption_schemes);
+    GetSupportedEncryptionSchemes() -> (struct {
+        encryption_schemes vector<EncryptionScheme>:MAX;
+    });
 };

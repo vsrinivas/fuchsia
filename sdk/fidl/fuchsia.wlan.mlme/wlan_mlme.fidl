@@ -1,8 +1,6 @@
 // Copyright 2017 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.wlan.mlme;
 
 using fuchsia.wlan.common;
@@ -17,32 +15,32 @@ using fuchsia.wlan.internal as internal;
 
 // MLME-SCAN.request (IEEE Std 802.11-2016 6.3.3.2)
 
-enum ScanTypes {
+type ScanTypes = strict enum {
     ACTIVE = 1;
     PASSIVE = 2;
-    //LAST = PASSIVE;
+//LAST = PASSIVE;
 };
 
-const uint32 MAX_SSIDS_PER_SCAN_REQUEST = 32;
+const MAX_SSIDS_PER_SCAN_REQUEST uint32 = 32;
 
-struct ScanRequest {
-    uint64 txn_id;
-    internal.BssTypes bss_type;
-    array<uint8>:6 bssid;
-    bytes:ieee80211.MAX_SSID_BYTE_LEN ssid;
-    ScanTypes scan_type;
-    uint32 probe_delay; // in TimeUnits
-    vector<uint8>? channel_list;
-    uint32 min_channel_time; // in TimeUnits
-    uint32 max_channel_time; // in TimeUnits
+type ScanRequest = struct {
+    txn_id uint64;
+    bss_type internal.BssTypes;
+    bssid array<uint8, 6>;
+    ssid bytes:ieee80211.MAX_SSID_BYTE_LEN;
+    scan_type ScanTypes;
+    probe_delay uint32; // in TimeUnits
+    channel_list vector<uint8>:optional;
+    min_channel_time uint32; // in TimeUnits
+    max_channel_time uint32; // in TimeUnits
     // RequestInformation
-    vector<bytes:ieee80211.MAX_SSID_BYTE_LEN>:MAX_SSIDS_PER_SCAN_REQUEST? ssid_list;
-    // ChannelUsage
-    // AccessNetworkType
-    // HESSID
-    // Mesh ID
-    // DiscoveryMode
-    // VendorSpecificInfo
+    ssid_list vector<bytes:ieee80211.MAX_SSID_BYTE_LEN>:<MAX_SSIDS_PER_SCAN_REQUEST, optional>;
+// ChannelUsage
+// AccessNetworkType
+// HESSID
+// Mesh ID
+// DiscoveryMode
+// VendorSpecificInfo
 };
 
 // MLME-SCAN.confirm (IEEE Std 802.11-2016 6.3.3.3)
@@ -52,18 +50,18 @@ struct ScanRequest {
 /// WFA WMM v1.2, 2.2.2 Table 5
 /// Length of the WMM Parameter Element body. This does not include IE and vendor IE headers,
 /// and only includes the QoS Info, reserved, and AC parameters fields.
-const uint8 WMM_PARAM_LEN = 18;
+const WMM_PARAM_LEN uint8 = 18;
 
 // LINT.ThenChange(//sdk/banjo/fuchsia.hardware.wlanif/wlanif.banjo)
 
 /// WFA WMM v1.2, 2.2.1
 alias QosInfo = uint8;
 
-struct WmmParameter {
-    array<uint8>:WMM_PARAM_LEN bytes;
+type WmmParameter = struct {
+    bytes array<uint8, WMM_PARAM_LEN>;
 };
 
-enum ScanResultCode {
+type ScanResultCode = strict enum {
     SUCCESS = 0;
     NOT_SUPPORTED = 1;
     INVALID_ARGS = 2;
@@ -72,23 +70,23 @@ enum ScanResultCode {
     CANCELED_BY_DRIVER_OR_FIRMWARE = 5;
 };
 
-struct ScanResult {
-    uint64 txn_id;
-    internal.BssDescription bss;
+type ScanResult = struct {
+    txn_id uint64;
+    bss internal.BssDescription;
 };
 
-struct ScanEnd {
-    uint64 txn_id;
-    ScanResultCode code;
+type ScanEnd = struct {
+    txn_id uint64;
+    code ScanResultCode;
 };
 
 // MLME-JOIN.request (IEEE Std 802.11-2016, 6.3.4.2)
 
-struct JoinRequest {
-    internal.BssDescription selected_bss;
-    uint32 join_failure_timeout;
-    uint32 nav_sync_delay;
-    bytes:internal.RATES_MAX_LEN op_rates;
+type JoinRequest = struct {
+    selected_bss internal.BssDescription;
+    join_failure_timeout uint32;
+    nav_sync_delay uint32;
+    op_rates bytes:internal.RATES_MAX_LEN;
 
     // Combined with what MLME knows about the device capabilities,
     // following parameters determine what to be advertised to the peer
@@ -98,46 +96,46 @@ struct JoinRequest {
     // - HT Capabilities
     // - VHT Capabilities
     // - Extended Capabilities
-    fuchsia.wlan.common.PHY phy;
-    fuchsia.wlan.common.CBW cbw;
+    phy fuchsia.wlan.common.PHY;
+    cbw fuchsia.wlan.common.CBW;
 };
 
 // MLME-JOIN.confirm (IEEE Std 802.11-2016, 6.3.4.3)
 
-enum JoinResultCode {
+type JoinResultCode = strict enum {
     SUCCESS = 0;
     JOIN_FAILURE_TIMEOUT = 1;
-    //LAST = JOIN_FAILURE_TIMEOUT;
+//LAST = JOIN_FAILURE_TIMEOUT;
 };
 
-struct JoinConfirm {
-    JoinResultCode result_code;
+type JoinConfirm = struct {
+    result_code JoinResultCode;
 };
 
 // MLME-AUTHENTICATE.request (IEEE Std 802.11-2016, 6.3.5.2)
 
-enum AuthenticationTypes {
+type AuthenticationTypes = strict enum {
     OPEN_SYSTEM = 1;
     SHARED_KEY = 2;
     FAST_BSS_TRANSITION = 3;
     SAE = 4;
-    //LAST = SAE;
+//LAST = SAE;
 };
 
-struct AuthenticateRequest {
-    array<uint8>:6 peer_sta_address;
-    AuthenticationTypes auth_type;
-    uint32 auth_failure_timeout;
+type AuthenticateRequest = struct {
+    peer_sta_address array<uint8, 6>;
+    auth_type AuthenticationTypes;
+    auth_failure_timeout uint32;
 
     // If populated, use this password to perform SAE in the driver/firmware.
-    vector<uint8>? sae_password;
+    sae_password vector<uint8>:optional;
 
-    // etc
+// etc
 };
 
 // MLME-AUTHENTICATE.confirm (IEEE Std 802.11-2016, 6.3.5.3)
 
-enum AuthenticateResultCode {
+type AuthenticateResultCode = strict enum {
     SUCCESS = 0;
     REFUSED = 1;
     ANTI_CLOGGING_TOKEN_REQUIRED = 2;
@@ -146,77 +144,77 @@ enum AuthenticateResultCode {
     AUTH_FAILURE_TIMEOUT = 5;
 };
 
-struct AuthenticateConfirm {
-    array<uint8>:6 peer_sta_address;
-    AuthenticationTypes auth_type;
-    AuthenticateResultCode result_code;
+type AuthenticateConfirm = struct {
+    peer_sta_address array<uint8, 6>;
+    auth_type AuthenticationTypes;
+    result_code AuthenticateResultCode;
 
-    // etc
+// etc
 };
 
 // MLME-AUTHENTICATE.indication (IEEE Std 802.11-2016, 6.3.5.4)
 
-struct AuthenticateIndication {
-    array<uint8>:6 peer_sta_address;
-    AuthenticationTypes auth_type;
+type AuthenticateIndication = struct {
+    peer_sta_address array<uint8, 6>;
+    auth_type AuthenticationTypes;
 
-    // etc
+// etc
 };
 
 // MLME-AUTHENTICATE.response (IEEE Std 802.11-2016, 6.3.5.5)
 
-struct AuthenticateResponse {
-    array<uint8>:6 peer_sta_address;
-    AuthenticateResultCode result_code;
+type AuthenticateResponse = struct {
+    peer_sta_address array<uint8, 6>;
+    result_code AuthenticateResultCode;
 
-    // etc
+// etc
 };
 
 // MLME-DEAUTHENTICATE.request (IEEE Std 802.11-2016, 6.3.6.2)
 
-struct DeauthenticateRequest {
-    array<uint8>:6 peer_sta_address;
-    ieee80211.ReasonCode reason_code;
-    // VendorSpecificInfo
+type DeauthenticateRequest = struct {
+    peer_sta_address array<uint8, 6>;
+    reason_code ieee80211.ReasonCode;
+// VendorSpecificInfo
 };
 
 // MLME-DEAUTHENTICATE.confirm (IEEE Std 802.11-2016, 6.3.6.3)
 
-struct DeauthenticateConfirm {
-    array<uint8>:6 peer_sta_address;
+type DeauthenticateConfirm = struct {
+    peer_sta_address array<uint8, 6>;
 };
 
 // MLME-DEAUTHENTICATE.indication (IEEE Std 802.11-2016, 6.3.6.4)
 
-struct DeauthenticateIndication {
-    array<uint8>:6 peer_sta_address;
-    ieee80211.ReasonCode reason_code;
+type DeauthenticateIndication = struct {
+    peer_sta_address array<uint8, 6>;
+    reason_code ieee80211.ReasonCode;
     /// locally_initiated is true if deauth is initiated from the device,
     /// and is false if it's initiated remotely (e.g. due to deauth frame)
-    bool locally_initiated;
-    // VendorSpecificInfo
+    locally_initiated bool;
+// VendorSpecificInfo
 };
 
 // MLME-ASSOCIATE.request (IEEE Std 802.11-2016, 6.3.7.2)
 
-struct AssociateRequest {
-    array<uint8>:6 peer_sta_address;
-    internal.CapabilityInfo cap_info;
-    bytes:internal.RATES_MAX_LEN rates;
-    bool qos_capable;
-    QosInfo qos_info;
-    internal.HtCapabilities? ht_cap;
-    internal.VhtCapabilities? vht_cap;
-    bytes? rsne;
+type AssociateRequest = struct {
+    peer_sta_address array<uint8, 6>;
+    cap_info internal.CapabilityInfo;
+    rates bytes:internal.RATES_MAX_LEN;
+    qos_capable bool;
+    qos_info QosInfo;
+    ht_cap box<internal.HtCapabilities>;
+    vht_cap box<internal.VhtCapabilities>;
+    rsne bytes:optional;
     // Serialized list of vendor IEs to be appended after all other associate request IEs.
-    bytes? vendor_ies;
+    vendor_ies bytes:optional;
 
-    // etc
+// etc
 };
 
 // MLME-ASSOCIATE.confrm (IEEE Std 802.11-2016, 6.3.7.3)
 
-enum AssociateResultCode {
+type AssociateResultCode = strict enum {
     SUCCESS = 0;
     REFUSED_REASON_UNSPECIFIED = 1;
     REFUSED_NOT_AUTHENTICATED = 2;
@@ -228,125 +226,125 @@ enum AssociateResultCode {
     REFUSED_TEMPORARILY = 8;
 };
 
-struct AssociateConfirm {
-    AssociateResultCode result_code;
+type AssociateConfirm = struct {
+    result_code AssociateResultCode;
     // CapabilityInformation
-    uint16 association_id;
+    association_id uint16;
 
     // TODO(fxbug.dev/43063): If we are able to intersect the capabilities with beacon before associating,
     // remove these fields.
-    internal.CapabilityInfo cap_info;
-    bytes:internal.RATES_MAX_LEN rates;
-    WmmParameter? wmm_param;
-    internal.HtCapabilities? ht_cap;
-    internal.VhtCapabilities? vht_cap;
+    cap_info internal.CapabilityInfo;
+    rates bytes:internal.RATES_MAX_LEN;
+    wmm_param box<WmmParameter>;
+    ht_cap box<internal.HtCapabilities>;
+    vht_cap box<internal.VhtCapabilities>;
 
-    // etc
+// etc
 };
 
 // MLME-ASSOCIATE.indication (IEEE Std 802.11-2016, 6.3.7.4)
 
-struct AssociateIndication {
-    array<uint8>:6 peer_sta_address;
-    internal.CapabilityInfo cap;
-    uint16 listen_interval;
-    bytes? ssid;
-    bytes:internal.RATES_MAX_LEN rates;
+type AssociateIndication = struct {
+    peer_sta_address array<uint8, 6>;
+    cap internal.CapabilityInfo;
+    listen_interval uint16;
+    ssid bytes:optional;
+    rates bytes:internal.RATES_MAX_LEN;
     // BSSMembershipSelectorSet
-    bytes? rsne;
+    rsne bytes:optional;
 
-    // etc
+// etc
 };
 
 // MLME-ASSOCIATE.response (IEEE Std 802.11-2016, 6.3.7.5)
 
-struct AssociateResponse {
-    array<uint8>:6 peer_sta_address;
-    AssociateResultCode result_code;
+type AssociateResponse = struct {
+    peer_sta_address array<uint8, 6>;
+    result_code AssociateResultCode;
 
-    uint16 association_id;
+    association_id uint16;
 
     // This is not part of the MLME SAP, but we need this to set the association context state in
     // the MLME.
-    internal.CapabilityInfo cap;
+    cap internal.CapabilityInfo;
 
     // This combines both the BSSBasicRateSet and the OperationalRateSet, as the MLME will split
     // them up.
-    bytes:internal.RATES_MAX_LEN rates;
+    rates bytes:internal.RATES_MAX_LEN;
 
-    // etc
+// etc
 };
 
 // MLME-DISASSOCIATE.request (IEEE Std 802.11-2016, 6.3.9.1)
 
-struct DisassociateRequest {
-    array<uint8>:6 peer_sta_address;
-    ieee80211.ReasonCode reason_code;
-    // VendorSpecificInfo
+type DisassociateRequest = struct {
+    peer_sta_address array<uint8, 6>;
+    reason_code ieee80211.ReasonCode;
+// VendorSpecificInfo
 };
 
 // MLME-DISASSOCIATE.confirm (IEEE Std 802.11-2016, 6.3.9.2)
 
-struct DisassociateConfirm {
-    int32 status;
+type DisassociateConfirm = struct {
+    status int32;
 };
 
 // MLME-DISASSOCIATE.indication (IEEE Std 802.11-2016, 6.3.9.3)
 
-struct DisassociateIndication {
-    array<uint8>:6 peer_sta_address;
-    ieee80211.ReasonCode reason_code;
+type DisassociateIndication = struct {
+    peer_sta_address array<uint8, 6>;
+    reason_code ieee80211.ReasonCode;
     /// locally_initiated is true if diassoc is initiated from the device,
     /// and is false if it's initiated remotely (e.g. due to disassoc frame)
-    bool locally_initiated;
-    // VendorSpecificInfo
+    locally_initiated bool;
+// VendorSpecificInfo
 };
 
 // MLME-RESET.request (IEEE Std 802.11-2016, 6.3.10.2)
 
-struct ResetRequest {
-    array<uint8>:6 sta_address;
-    bool set_default_mib;
+type ResetRequest = struct {
+    sta_address array<uint8, 6>;
+    set_default_mib bool;
 };
 
 // MLME-START.request (IEEE Std 802.11-2016, 6.3.11.2)
 
 // See dot11CountryString of IEEE Std 802.11-2016, Annex C
-const uint8 countryEnvironAll = 32; // an ASCII ' ' character
-const uint8 countryEnvironOutdoor = 79; // an ASCII 'O' character
-const uint8 countryEnvironIndoor = 73; // an ASCII 'I' character
-const uint8 countryEnvironNonCountry = 88; // an ASCII 'X' character
+const countryEnvironAll uint8 = 32; // an ASCII ' ' character
+const countryEnvironOutdoor uint8 = 79; // an ASCII 'O' character
+const countryEnvironIndoor uint8 = 73; // an ASCII 'I' character
+const countryEnvironNonCountry uint8 = 88; // an ASCII 'X' character
 
 // Information derived from Country Element, IEEE Std 802.11-2016, 9.4.2.9.
-struct Country {
-    array<uint8>:2 alpha2; // ISO 3116-1
+type Country = struct {
+    alpha2 array<uint8, 2>; // ISO 3116-1
 
     // countryEnviron constant from above
     // or Operating Class Table number from IEEE Std 802.11-2016 Annex D.
-    uint8 suffix;
+    suffix uint8;
 };
 
-struct StartRequest {
-    bytes:ieee80211.MAX_SSID_BYTE_LEN ssid;
-    internal.BssTypes bss_type;
-    uint16 beacon_period; // in TU
-    uint8 dtim_period;
+type StartRequest = struct {
+    ssid bytes:ieee80211.MAX_SSID_BYTE_LEN;
+    bss_type internal.BssTypes;
+    beacon_period uint16; // in TU
+    dtim_period uint8;
 
     // PHY parameter sets
-    uint8 channel;
+    channel uint8;
 
     // Capability information.
-    internal.CapabilityInfo cap;
+    cap internal.CapabilityInfo;
 
     // This combines both the BSSBasicRateSet and the OperationalRateSet, as the MLME will split
     // them up.
-    bytes:internal.RATES_MAX_LEN rates;
+    rates bytes:internal.RATES_MAX_LEN;
 
     // TODO(porce): Conditionally present. See IEEE Std 802.11-2016, 10.2, 11.8, 11.10.
     // See also dot11MultiDomainCapabilityActivated.
-    Country country;
+    country Country;
 
-    bytes:ieee80211.MAX_MESH_ID_BYTE_LEN mesh_id;
+    mesh_id bytes:ieee80211.MAX_MESH_ID_BYTE_LEN;
 
     // TODO(hahnr): Add additional elements.
 
@@ -354,7 +352,7 @@ struct StartRequest {
     // primitive. However, IEEE doesn't define any other primitive to configure the RSN after its
     // BSS was started. The RSNE must be available when the BSS is started, and thus, this is the
     // right place to transfer the RSNE to the MLME.
-    bytes? rsne;
+    rsne bytes:optional;
 
     // Combined with what MLME knows about the device capabilities,
     // following parameters determine what to be advertised to the peer
@@ -367,13 +365,13 @@ struct StartRequest {
     // - VHT Capabilities
     // - VHT Operation
     // - Extended Capabilities
-    fuchsia.wlan.common.PHY phy;
-    fuchsia.wlan.common.CBW cbw;
+    phy fuchsia.wlan.common.PHY;
+    cbw fuchsia.wlan.common.CBW;
 };
 
 // MLME-START.confirm (IEEE Std 802.11-2016, 6.3.11.3)
 
-enum StartResultCode {
+type StartResultCode = strict enum {
     SUCCESS = 0;
     BSS_ALREADY_STARTED_OR_JOINED = 1;
     RESET_REQUIRED_BEFORE_START = 2;
@@ -381,132 +379,132 @@ enum StartResultCode {
     INTERNAL_ERROR = 4;
 };
 
-struct StartConfirm {
-    StartResultCode result_code;
+type StartConfirm = struct {
+    result_code StartResultCode;
 };
 
 // MLME-STOP.request (IEEE Std 802.11-2016, 6.3.12.2)
 
-struct StopRequest {
-    bytes:ieee80211.MAX_SSID_BYTE_LEN ssid;
+type StopRequest = struct {
+    ssid bytes:ieee80211.MAX_SSID_BYTE_LEN;
 };
 
-enum StopResultCode {
+type StopResultCode = strict enum {
     SUCCESS = 0;
     BSS_ALREADY_STOPPED = 1;
     INTERNAL_ERROR = 2;
 };
 
-struct StopConfirm {
-    StopResultCode result_code;
+type StopConfirm = struct {
+    result_code StopResultCode;
 };
 
 // MLME-SETKEYS.request (IEEE Std 802.11-2016 6.3.19.1)
 
-enum KeyType {
+type KeyType = strict enum {
     GROUP = 1;
     PAIRWISE = 2;
     PEER_KEY = 3;
     IGTK = 4;
 };
 
-struct SetKeyDescriptor {
+type SetKeyDescriptor = struct {
     // Specs specify a bit string, we use byte array.
-    bytes key;
-    uint16 key_id;
-    KeyType key_type;
-    array<uint8>:6 address;
-    uint64 rsc;
-    array<uint8>:3 cipher_suite_oui;
-    uint8 cipher_suite_type;
+    key bytes;
+    key_id uint16;
+    key_type KeyType;
+    address array<uint8, 6>;
+    rsc uint64;
+    cipher_suite_oui array<uint8, 3>;
+    cipher_suite_type uint8;
 };
 
-struct SetKeysRequest {
-    vector<SetKeyDescriptor> keylist;
+type SetKeysRequest = struct {
+    keylist vector<SetKeyDescriptor>;
 };
 
 // MLME-DELETEKEYS.request (IEEE Std 802.11-2016 6.3.20.1)
 
-struct DeleteKeyDescriptor {
-    uint16 key_id;
-    KeyType key_type;
-    array<uint8>:6 address;
+type DeleteKeyDescriptor = struct {
+    key_id uint16;
+    key_type KeyType;
+    address array<uint8, 6>;
 };
 
-struct DeleteKeysRequest {
-    vector<DeleteKeyDescriptor> keylist;
+type DeleteKeysRequest = struct {
+    keylist vector<DeleteKeyDescriptor>;
 };
 
 // MLME-EAPOL.request (IEEE Std 802.11-2016 6.3.22.1)
 
-struct EapolRequest {
-    array<uint8>:6 src_addr;
-    array<uint8>:6 dst_addr;
-    bytes data;
+type EapolRequest = struct {
+    src_addr array<uint8, 6>;
+    dst_addr array<uint8, 6>;
+    data bytes;
 };
 
 // MLME-EAPOL.confirm (IEEE Std 802.11-2016 6.3.22.2)
 
-enum EapolResultCode {
+type EapolResultCode = strict enum {
     SUCCESS = 0;
     TRANSMISSION_FAILURE = 1;
-    //LAST = TRANSMISSION_FAILURE;
+//LAST = TRANSMISSION_FAILURE;
 };
 
-struct EapolConfirm {
-    EapolResultCode result_code;
+type EapolConfirm = struct {
+    result_code EapolResultCode;
     /// This value corresponds to the dst_addr in the EapolRequest we're confirming.
     /// IEEE 802.11-2016 does not include this field, but we need it to disambiguate
     /// if multiple EAPoL handshakes are ongoing.
-    array<uint8>:6 dst_addr;
+    dst_addr array<uint8, 6>;
 };
 
 // IEEE Std 802.11-2016, 9.4.2.98
-struct MeshConfiguration {
-    uint8 active_path_sel_proto_id;
-    uint8 active_path_sel_metric_id;
-    uint8 congest_ctrl_method_id;
-    uint8 sync_method_id;
-    uint8 auth_proto_id;
-    uint8 mesh_formation_info;
-    uint8 mesh_capability;
+type MeshConfiguration = struct {
+    active_path_sel_proto_id uint8;
+    active_path_sel_metric_id uint8;
+    congest_ctrl_method_id uint8;
+    sync_method_id uint8;
+    auth_proto_id uint8;
+    mesh_formation_info uint8;
+    mesh_capability uint8;
 };
 
 // Fields that are common between the MPM Open and Confirm actions
-struct MeshPeeringCommon {
-    array<uint8>:6 peer_sta_address;
-    uint16 protocol_id;
-    uint16 local_link_id;
-    bytes:32 mesh_id;
-    vector<uint8> rates;
-    MeshConfiguration mesh_config;
-    internal.HtCapabilities? ht_cap;
-    internal.HtOperation? ht_op;
-    internal.VhtCapabilities? vht_cap;
-    internal.VhtOperation? vht_op;
+type MeshPeeringCommon = struct {
+    peer_sta_address array<uint8, 6>;
+    protocol_id uint16;
+    local_link_id uint16;
+    mesh_id bytes:32;
+    rates vector<uint8>;
+    mesh_config MeshConfiguration;
+    ht_cap box<internal.HtCapabilities>;
+    ht_op box<internal.HtOperation>;
+    vht_cap box<internal.VhtCapabilities>;
+    vht_op box<internal.VhtOperation>;
 };
 
 // IEEE Std 802.11-2016, 9.6.16.2.2
-struct MeshPeeringOpenAction {
-    MeshPeeringCommon common;
+type MeshPeeringOpenAction = struct {
+    common MeshPeeringCommon;
 };
 
 // IEEE Std 802.11-2016, 9.6.16.3.2
-struct MeshPeeringConfirmAction {
-    MeshPeeringCommon common;
-    uint16 aid;
-    uint16 peer_link_id;
+type MeshPeeringConfirmAction = struct {
+    common MeshPeeringCommon;
+    aid uint16;
+    peer_link_id uint16;
 };
 
-struct MeshPeeringParams {
-    array<uint8>:6 peer_sta_address;
-    uint16 local_aid;
-    vector<uint8> rates;
-    // TODO(gbonik): HT/VHT caps
+type MeshPeeringParams = struct {
+    peer_sta_address array<uint8, 6>;
+    local_aid uint16;
+    rates vector<uint8>;
+// TODO(gbonik): HT/VHT caps
 };
 
-struct GetMeshPathTableRequest {
-    uint8 dummy;
+type GetMeshPathTableRequest = struct {
+    dummy uint8;
 };
 
 // Because these methods rely on an external entity to provide a response, events are used instead
@@ -529,111 +527,222 @@ protocol MLME {
     // in response (unless the channel is closed first).
     //
     // After `OnScanEnd`, no further events with the same `txn_id` shall be sent.
-    StartScan(ScanRequest req);
+    StartScan(struct {
+        req ScanRequest;
+    });
 
     // An incremental scan result containing information about a single BSS.
     // Only one event per unique BSSID per transaction will be sent.
-    -> OnScanResult(ScanResult result);
+    -> OnScanResult(struct {
+        result ScanResult;
+    });
 
     // An event that signals the end of a scan transaction.
-    -> OnScanEnd(ScanEnd end);
+    -> OnScanEnd(struct {
+        end ScanEnd;
+    });
 
     // ====
 
-    JoinReq(JoinRequest req);
-    -> JoinConf(JoinConfirm resp);
+    JoinReq(struct {
+        req JoinRequest;
+    });
+    -> JoinConf(struct {
+        resp JoinConfirm;
+    });
 
-    AuthenticateReq(AuthenticateRequest req);
-    -> AuthenticateConf(AuthenticateConfirm resp);
+    AuthenticateReq(struct {
+        req AuthenticateRequest;
+    });
+    -> AuthenticateConf(struct {
+        resp AuthenticateConfirm;
+    });
 
-    -> AuthenticateInd(AuthenticateIndication ind);
-    AuthenticateResp(AuthenticateResponse resp);
+    -> AuthenticateInd(struct {
+        ind AuthenticateIndication;
+    });
+    AuthenticateResp(struct {
+        resp AuthenticateResponse;
+    });
 
-    DeauthenticateReq(DeauthenticateRequest req);
-    -> DeauthenticateConf(DeauthenticateConfirm resp);
+    DeauthenticateReq(struct {
+        req DeauthenticateRequest;
+    });
+    -> DeauthenticateConf(struct {
+        resp DeauthenticateConfirm;
+    });
 
-    -> DeauthenticateInd(DeauthenticateIndication ind);
+    -> DeauthenticateInd(struct {
+        ind DeauthenticateIndication;
+    });
 
-    AssociateReq(AssociateRequest req);
-    -> AssociateConf(AssociateConfirm resp);
+    AssociateReq(struct {
+        req AssociateRequest;
+    });
+    -> AssociateConf(struct {
+        resp AssociateConfirm;
+    });
 
-    -> AssociateInd(AssociateIndication ind);
-    AssociateResp(AssociateResponse resp);
+    -> AssociateInd(struct {
+        ind AssociateIndication;
+    });
+    AssociateResp(struct {
+        resp AssociateResponse;
+    });
 
-    DisassociateReq(DisassociateRequest req);
-    -> DisassociateConf(DisassociateConfirm resp);
+    DisassociateReq(struct {
+        req DisassociateRequest;
+    });
+    -> DisassociateConf(struct {
+        resp DisassociateConfirm;
+    });
 
-    -> DisassociateInd(DisassociateIndication ind);
+    -> DisassociateInd(struct {
+        ind DisassociateIndication;
+    });
 
-    ResetReq(ResetRequest req);
+    ResetReq(struct {
+        req ResetRequest;
+    });
 
-    StartReq(StartRequest req);
-    -> StartConf(StartConfirm resp);
+    StartReq(struct {
+        req StartRequest;
+    });
+    -> StartConf(struct {
+        resp StartConfirm;
+    });
 
-    StopReq(StopRequest req);
-    -> StopConf(StopConfirm resp);
+    StopReq(struct {
+        req StopRequest;
+    });
+    -> StopConf(struct {
+        resp StopConfirm;
+    });
 
-    SetKeysReq(SetKeysRequest req);
+    SetKeysReq(struct {
+        req SetKeysRequest;
+    });
 
-    DeleteKeysReq(DeleteKeysRequest req);
+    DeleteKeysReq(struct {
+        req DeleteKeysRequest;
+    });
 
-    EapolReq(EapolRequest req);
-    -> EapolConf(EapolConfirm resp);
+    EapolReq(struct {
+        req EapolRequest;
+    });
+    -> EapolConf(struct {
+        resp EapolConfirm;
+    });
 
     // The following are extensions to the 802.11 MLME SAP interface.
 
     // ==== Mesh ===
-    -> IncomingMpOpenAction(MeshPeeringOpenAction action);
-    SendMpOpenAction(MeshPeeringOpenAction action);
-    -> IncomingMpConfirmAction(MeshPeeringConfirmAction action);
-    SendMpConfirmAction(MeshPeeringConfirmAction action);
+    -> IncomingMpOpenAction(struct {
+        action MeshPeeringOpenAction;
+    });
+    SendMpOpenAction(struct {
+        action MeshPeeringOpenAction;
+    });
+    -> IncomingMpConfirmAction(struct {
+        action MeshPeeringConfirmAction;
+    });
+    SendMpConfirmAction(struct {
+        action MeshPeeringConfirmAction;
+    });
 
-    MeshPeeringEstablished(MeshPeeringParams peering);
+    MeshPeeringEstablished(struct {
+        peering MeshPeeringParams;
+    });
 
-    GetMeshPathTableReq(GetMeshPathTableRequest req) -> (fuchsia.wlan.mesh.MeshPathTable table);
+    GetMeshPathTableReq(struct {
+        req GetMeshPathTableRequest;
+    }) -> (struct {
+        table fuchsia.wlan.mesh.MeshPathTable;
+    });
 
-    -> SignalReport(SignalReportIndication ind);
+    -> SignalReport(struct {
+        ind SignalReportIndication;
+    });
 
-    -> EapolInd(EapolIndication ind);
-    SetControlledPort(SetControlledPortRequest req);
+    -> EapolInd(struct {
+        ind EapolIndication;
+    });
+    SetControlledPort(struct {
+        req SetControlledPortRequest;
+    });
 
-    QueryDeviceInfo() -> (DeviceInfo info);
+    QueryDeviceInfo() -> (struct {
+        info DeviceInfo;
+    });
 
     StatsQueryReq();
-    -> StatsQueryResp(StatsQueryResponse resp);
+    -> StatsQueryResp(struct {
+        resp StatsQueryResponse;
+    });
 
-    ListMinstrelPeers() -> (MinstrelListResponse resp);
-    GetMinstrelStats(MinstrelStatsRequest req) -> (MinstrelStatsResponse resp);
+    ListMinstrelPeers() -> (struct {
+        resp MinstrelListResponse;
+    });
+    GetMinstrelStats(struct {
+        req MinstrelStatsRequest;
+    }) -> (struct {
+        resp MinstrelStatsResponse;
+    });
 
-    StartCaptureFrames(StartCaptureFramesRequest req) -> (StartCaptureFramesResponse resp);
+    StartCaptureFrames(struct {
+        req StartCaptureFramesRequest;
+    }) -> (struct {
+        resp StartCaptureFramesResponse;
+    });
     StopCaptureFrames();
-    -> RelayCapturedFrame(CapturedFrameResult result);
+    -> RelayCapturedFrame(struct {
+        result CapturedFrameResult;
+    });
 
-    -> OnChannelSwitched(ChannelSwitchInfo info);
+    -> OnChannelSwitched(struct {
+        info ChannelSwitchInfo;
+    });
 
-    -> OnPmkAvailable(PmkInfo info);
+    -> OnPmkAvailable(struct {
+        info PmkInfo;
+    });
 
     // === Messages for managing SAE authentication inside SME ===
     // MLME notification that SME will handle authentication.
-    -> OnSaeHandshakeInd(SaeHandshakeIndication ind);
+    -> OnSaeHandshakeInd(struct {
+        ind SaeHandshakeIndication;
+    });
     // SME notification that authentication is completed.
-    SaeHandshakeResp(SaeHandshakeResponse resp);
-    SaeFrameTx(SaeFrame frame);
-    -> OnSaeFrameRx(SaeFrame frame);
+    SaeHandshakeResp(struct {
+        resp SaeHandshakeResponse;
+    });
+    SaeFrameTx(struct {
+        frame SaeFrame;
+    });
+    -> OnSaeFrameRx(struct {
+        frame SaeFrame;
+    });
 
     WmmStatusReq();
-    -> OnWmmStatusResp(int32 status, internal.WmmStatusResponse resp);
+    -> OnWmmStatusResp(struct {
+        status int32;
+        resp internal.WmmStatusResponse;
+    });
 
     // For SoftMAC drivers only. Let SME inform MLME about the capability negotiation outcome.
     // TODO(fxbug.dev/43063): If we are able to intersect the capabilities with beacon before associating,
     // remove this function and the capabilities from AssociateConfirm and use AssociateRequest.
-    FinalizeAssociationReq(NegotiatedCapabilities cap);
+    FinalizeAssociationReq(struct {
+        cap NegotiatedCapabilities;
+    });
 };
 
 // Temporary interface for bridging between the devhost-owned channel model and
 // the driver-owned channel model of connection management.
 /// This protocol is used to connect to the interface's underlying MLME.
-[ForDeprecatedCBindings]
+@for_deprecated_c_bindings
 protocol Connector {
-    Connect(request<MLME> request);
+    Connect(resource struct {
+        request server_end:MLME;
+    });
 };

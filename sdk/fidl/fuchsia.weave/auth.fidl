@@ -1,8 +1,6 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.weave;
 
 using fuchsia.mem;
@@ -14,10 +12,10 @@ using fuchsia.mem;
 /// Weave signatures the maximum size of the returned signature is set to
 /// 139 bytes which is the largest amount of space needed to return an
 /// encoded ECDSA P521 signature.
-const uint32 MAX_SIGNATURE_SIZE = 139;
+const MAX_SIGNATURE_SIZE uint32 = 139;
 
 /// The maximum size for a public key produced when generating a key pair.
-const uint32 MAX_PUBLIC_KEY_SIZE = 65;
+const MAX_PUBLIC_KEY_SIZE uint32 = 65;
 
 /// Bytes representing a wrapped private key. Since the size of the wrapping is
 /// implementation-defined, the bytes are only bounded by MAX. The bytes should
@@ -26,7 +24,7 @@ const uint32 MAX_PUBLIC_KEY_SIZE = 65;
 alias PrivateKey = bytes:MAX;
 
 /// This protocol is used for just-in-time provisioning operations.
-[Discoverable]
+@discoverable
 protocol Provisioner {
     /// Generate key for just-in-time provisioning operations, used when
     /// working with Weave operational certificates. On success, a wrapped
@@ -36,35 +34,51 @@ protocol Provisioner {
     ///
     /// Currently, Weave only supports ECDSA signatures. This protocol returns
     /// a key-pair compatible with the Signer protocol (e.g. P256).
-    GenerateKeyPair() -> (PrivateKey wrapped_private_key, bytes:MAX_PUBLIC_KEY_SIZE public_key) error ErrorCode;
+    GenerateKeyPair() -> (struct {
+        wrapped_private_key PrivateKey;
+        public_key bytes:MAX_PUBLIC_KEY_SIZE;
+    }) error ErrorCode;
 };
 
 /// This protocol is used for signing operations with the factory-provisioned
 /// Weave key or generated private keys.
-[Discoverable]
+@discoverable
 protocol Signer {
     /// Sign the provided `hash` with the factory provisioned key. On success
     /// the result is returned in `signature`. The signature must be of a type
     /// that is supported by Weave, and must take the standard form of an ASN.1
     /// DER SEQUENCE. This operation must support SHA1 and SHA256 hash values.
-    SignHash(bytes:32 hash) -> (bytes:MAX_SIGNATURE_SIZE signature) error ErrorCode;
+    SignHash(struct {
+        hash bytes:32;
+    }) -> (struct {
+        signature bytes:MAX_SIGNATURE_SIZE;
+    }) error ErrorCode;
 
     /// Sign the provided `hash` with the provided `wrapped_private_key`. On
     /// success, the result is returned in `signature`. The signature must be
     /// of a type that is supported by Weave, and must take the standard form
     /// of an ASN.1 DER SEQUENCE. This operation must support SHA1 and SHA256
     /// hash values.
-    [Transitional]
-    SignHashWithPrivateKey(bytes:32 hash, PrivateKey wrapped_private_key) -> (bytes:MAX_SIGNATURE_SIZE signature) error ErrorCode;
+    @transitional
+    SignHashWithPrivateKey(struct {
+        hash bytes:32;
+        wrapped_private_key PrivateKey;
+    }) -> (struct {
+        signature bytes:MAX_SIGNATURE_SIZE;
+    }) error ErrorCode;
 };
 
 /// This protocol is used to retrieve factory data that may be encrypted at
 /// rest.
-[Discoverable]
+@discoverable
 protocol FactoryDataManager {
     /// Return the device `pairing_code` on success.
-    GetPairingCode() -> (bytes:16 pairing_code) error ErrorCode;
+    GetPairingCode() -> (struct {
+        pairing_code bytes:16;
+    }) error ErrorCode;
 
     /// Returns the factory provisioned Weave certificate in PEM format.
-    GetWeaveCertificate() -> (fuchsia.mem.Buffer certificate) error ErrorCode;
+    GetWeaveCertificate() -> (resource struct {
+        certificate fuchsia.mem.Buffer;
+    }) error ErrorCode;
 };

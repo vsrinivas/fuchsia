@@ -1,52 +1,50 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.input.report;
 
 using fuchsia.input;
 
 /// Hardcoded max sizes for keyboard vectors. These sizes should be increased
 /// if we ever see keyboards with more objects than can be represented.
-const uint32 KEYBOARD_MAX_NUM_KEYS = 256;
-const uint32 KEYBOARD_MAX_NUM_LEDS = 256;
-const uint32 KEYBOARD_MAX_PRESSED_KEYS = 256;
+const KEYBOARD_MAX_NUM_KEYS uint32 = 256;
+const KEYBOARD_MAX_NUM_LEDS uint32 = 256;
+const KEYBOARD_MAX_PRESSED_KEYS uint32 = 256;
 
 /// Describes the format of the input report that will be sent from the keyboard
 /// to the device.
-table KeyboardInputDescriptor {
+type KeyboardInputDescriptor = table {
     // Was used for input2 keys.
     1: reserved;
 
     /// The list of keys that this keyboard contains.
-    2: vector<fuchsia.input.Key>:KEYBOARD_MAX_NUM_KEYS keys3;
+    2: keys3 vector<fuchsia.input.Key>:KEYBOARD_MAX_NUM_KEYS;
 };
 
 /// Describes the format of the output report that can be sent to the keyboard..
-table KeyboardOutputDescriptor {
+type KeyboardOutputDescriptor = table {
     /// The list of keyboard LEDs that can be toggled.
-    1: vector<LedType>:KEYBOARD_MAX_NUM_LEDS leds;
+    1: leds vector<LedType>:KEYBOARD_MAX_NUM_LEDS;
 };
 
 /// The capabilities of a keyboard device.
-table KeyboardDescriptor {
-    1: KeyboardInputDescriptor input;
-    2: KeyboardOutputDescriptor output;
+type KeyboardDescriptor = table {
+    1: input KeyboardInputDescriptor;
+    2: output KeyboardOutputDescriptor;
 };
 
 /// A single report created by a keyboard device.
-table KeyboardInputReport {
+type KeyboardInputReport = table {
     // Was used for input2 pressed_keys.
     1: reserved;
 
     /// The list of keys that are currently pressed down.
-    2: vector<fuchsia.input.Key>:KEYBOARD_MAX_PRESSED_KEYS pressed_keys3;
+    2: pressed_keys3 vector<fuchsia.input.Key>:KEYBOARD_MAX_PRESSED_KEYS;
 };
 
 /// A single report containing output information for a keyboard.
-table KeyboardOutputReport {
+type KeyboardOutputReport = table {
     /// Each LED in this list will be turned on. Any LED not in this list will be
     /// turned off.
-    1: vector<LedType>:KEYBOARD_MAX_NUM_LEDS enabled_leds;
+    1: enabled_leds vector<LedType>:KEYBOARD_MAX_NUM_LEDS;
 };

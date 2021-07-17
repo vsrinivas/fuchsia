@@ -1,23 +1,21 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.cpu.insntrace;
 
 using zx;
 
-const uint16 API_VERSION = 0;
+const API_VERSION uint16 = 0;
 
 /// The maximum number of traces that can be collected at once.
 /// A "trace" is the instruction stream for one entity, cpu or thread.
-const uint16 MAX_NUM_TRACES = 64;
+const MAX_NUM_TRACES uint16 = 64;
 
 /// The maximum number of supported address ranges.
-const uint16 MAX_NUM_ADDR_RANGES = 2;
+const MAX_NUM_ADDR_RANGES uint16 = 2;
 
 /// Tracing modes
-enum Mode : uint8 {
+type Mode = strict enum : uint8 {
     // Trace each cpu, regardless of what's running on it.
     CPU = 0;
     // Trace specific threads.
@@ -25,8 +23,8 @@ enum Mode : uint8 {
 };
 
 /// The allocation configuration of a trace.
-struct Allocation {
-    Mode mode;
+type Allocation = struct {
+    mode Mode;
 
     // The number of traces to create.
     // In CPU mode this must be zx_system_get_num_cpus().
@@ -34,49 +32,49 @@ struct Allocation {
     // will be collected. Buffer space is allocated on demand, but the
     // underlying data structure has a maximum. This value can be at most
     // MAX_NUM_TRACES.
-    uint16 num_traces;
+    num_traces uint16;
 };
 
 /// An address range, as [start,end].
-struct AddressRange {
-    uint64 start;
-    uint64 end;
+type AddressRange = struct {
+    start uint64;
+    end uint64;
 };
 
 /// A buffer's configuration.
-struct BufferConfig {
+type BufferConfig = struct {
     /// A "buffer" is made up of `num_chunks` chunks with each chunk having
     /// size `1<<chunk_order` pages.
-    uint32 num_chunks;
+    num_chunks uint32;
 
     /// log2 of the number of pages
-    uint32 chunk_order;
+    chunk_order uint32;
 
     /// If true then use circular buffering.
-    bool is_circular;
+    is_circular bool;
 
     /// The value of the control register.
-    uint64 ctl;
+    ctl uint64;
 
     /// If non-zero then the address space of the instruction must match in
     /// order for the instruction to be traced. On x86 architectures the
     /// address space is specified by CR3.
-    uint64 address_space_match;
+    address_space_match uint64;
 
     /// If non-zero, tracing is restricted to these address ranges.
     /// TODO(dje): There's only two, and vectors don't currently work here,
     /// so spell these out individually
-    AddressRange address_range_0;
-    AddressRange address_range_1;
+    address_range_0 AddressRange;
+    address_range_1 AddressRange;
 };
 
 /// A buffer's runtime state.
-struct BufferState {
+type BufferState = struct {
     /// This is the offset in the buffer where tracing stopped (treating all
     /// buffers as one large one). If using a circular buffer then all of the
     /// buffer may contain data, there's no current way to know if tracing
     /// wrapped without scanning records.
-    uint64 capture_end;
+    capture_end uint64;
 };
 
 alias BufferDescriptor = uint32;
@@ -85,7 +83,9 @@ protocol Controller {
     /// Initialize the trace.
     /// This does not include allocating space for the trace buffers, that is
     /// done later by `AllocateBuffer()`.
-    Initialize(Allocation allocation) -> () error zx.status;
+    Initialize(struct {
+        allocation Allocation;
+    }) -> (struct {}) error zx.status;
 
     /// Free all trace buffers and any other resources allocated for the trace.
     /// This is also done when the connection is closed (as well as stopping
@@ -94,33 +94,60 @@ protocol Controller {
     /// This can only fail when tracing in THREAD mode where tracing is
     /// terminated differently, in which case the error is `ZX_ERR_BAD_STATE`.
     // TODO(fxbug.dev/30840): Support terminating the trace in THREAD mode.
-    Terminate() -> () error zx.status;
+    Terminate() -> (struct {}) error zx.status;
 
     /// Return the trace allocation configuration.
-    GetAllocation() -> (Allocation? allocation);
+    GetAllocation() -> (struct {
+        allocation box<Allocation>;
+    });
 
     /// Allocate a trace buffer.
     /// When tracing cpus, buffers are auto-assigned to cpus: the resulting
     /// trace buffer descriptor is the number of the cpu using the buffer.
-    AllocateBuffer(BufferConfig config) -> (BufferDescriptor descriptor) error zx.status;
+    AllocateBuffer(struct {
+        config BufferConfig;
+    }) -> (struct {
+        descriptor BufferDescriptor;
+    }) error zx.status;
 
     /// Assign a buffer to a thread.
-    AssignThreadBuffer(BufferDescriptor descriptor, zx.handle:THREAD thread) -> () error zx.status;
+    AssignThreadBuffer(resource struct {
+        descriptor BufferDescriptor;
+        thread zx.handle:THREAD;
+    }) -> (struct {}) error zx.status;
 
     /// Release a previously assigned buffer from a thread.
-    ReleaseThreadBuffer(BufferDescriptor descriptor, zx.handle:THREAD thread) -> () error zx.status;
+    ReleaseThreadBuffer(resource struct {
+        descriptor BufferDescriptor;
+        thread zx.handle:THREAD;
+    }) -> (struct {}) error zx.status;
 
     /// Fetch a buffer's configuration.
-    GetBufferConfig(BufferDescriptor descriptor) -> (BufferConfig? config);
+    GetBufferConfig(struct {
+        descriptor BufferDescriptor;
+    }) -> (struct {
+        config box<BufferConfig>;
+    });
 
     /// Fetch runtime information about a buffer.
-    GetBufferState(BufferDescriptor descriptor) -> (BufferState? state);
+    GetBufferState(struct {
+        descriptor BufferDescriptor;
+    }) -> (struct {
+        state box<BufferState>;
+    });
 
     /// Fetch the handle of a chunk of a trace buffer.
-    GetChunkHandle(BufferDescriptor descriptor, uint32 chunk_num) -> (zx.handle:VMO? buffer);
+    GetChunkHandle(struct {
+        descriptor BufferDescriptor;
+        chunk_num uint32;
+    }) -> (resource struct {
+        buffer zx.handle:<VMO, optional>;
+    });
 
     /// Free a previously allocated trace buffer.
-    FreeBuffer(BufferDescriptor descriptor) -> ();
+    FreeBuffer(struct {
+        descriptor BufferDescriptor;
+    }) -> ();
 
     /// Start tracing.
     /// Must be called after `Initialize()` + `AllocateBuffer()`,

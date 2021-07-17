@@ -1,31 +1,41 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.amlogiccanvas;
 
 using zx;
 
-enum CanvasFlags : uint32 {
+type CanvasFlags = strict enum : uint32 {
     READ = 0x1;
     WRITE = 0x2;
 };
 
-struct CanvasInfo {
-    uint32 height;
-    uint32 stride_bytes;
-    uint32 wrap;
-    uint32 blkmode;
-    uint32 endianness;
-    uint32 flags;
+type CanvasInfo = struct {
+    height uint32;
+    stride_bytes uint32;
+    wrap uint32;
+    blkmode uint32;
+    endianness uint32;
+    flags uint32;
 };
 
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol AmlogicCanvas {
     /// Configures a canvas.
     /// Adds a framebuffer to the canvas lookup table.
-    Config(zx.handle:VMO vmo, uint64 offset, CanvasInfo info) -> (zx.status s, uint8 canvas_idx);
+    Config(resource struct {
+        vmo zx.handle:VMO;
+        offset uint64;
+        info CanvasInfo;
+    }) -> (struct {
+        s zx.status;
+        canvas_idx uint8;
+    });
     /// Frees up a canvas.
-    Free(uint8 canvas_idx) -> (zx.status s);
+    Free(struct {
+        canvas_idx uint8;
+    }) -> (struct {
+        s zx.status;
+    });
 };

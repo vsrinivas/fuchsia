@@ -1,35 +1,33 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.bluetooth.test;
 
 using fuchsia.bluetooth as bt;
 
 /// The maximum size (in bytes) of a local name assigned using the HCI_Write_Local_Name command
 /// (see Core Specification v5.1, Vol 2, Part E, 7.3.11).
-const uint8 MAX_LOCAL_NAME_LENGTH = 248;
+const MAX_LOCAL_NAME_LENGTH uint8 = 248;
 
 /// Advertising data MTUs for legacy (4.x) and extended (5.x) advertising PDU types
 /// (see Core Specification v5.1, Vol 2, Part E, sections 7.3.11 & 7.8.54).
-const uint8 MAX_LEGACY_ADVERTISING_DATA_LENGTH = 31;
-const uint8 MAX_EXTENDED_ADVERTISING_DATA_LENGTH = 251;
+const MAX_LEGACY_ADVERTISING_DATA_LENGTH uint8 = 31;
+const MAX_EXTENDED_ADVERTISING_DATA_LENGTH uint8 = 251;
 
 /// Contains Bluetooth controller & baseband parameters that are writable by the host but don't
 /// fall under a particular procedural category (as are those defined below).
-table ControllerParameters {
+type ControllerParameters = table {
     /// The local name used for the Link Layer name discovery procedure. This parameter only applies
     /// for the BR/EDR transport. In LE, the local name is provided as an advertising parameter and
     /// via GATT.
-    1: string:MAX_LOCAL_NAME_LENGTH local_name;
+    1: local_name string:MAX_LOCAL_NAME_LENGTH;
 
     /// The local "Class of Device" used during the BR/EDR inquiry procedure.
-    2: bt.DeviceClass device_class;
+    2: device_class bt.DeviceClass;
 };
 
 /// LE legacy advertising types from Bluetooth Core Specification 5.1 Vol 2, Part E, Section 7.8.5.
-enum LegacyAdvertisingType : uint8 {
+type LegacyAdvertisingType = strict enum : uint8 {
     /// Connectable and scannable.
     ADV_IND = 0;
 
@@ -47,46 +45,46 @@ enum LegacyAdvertisingType : uint8 {
 };
 
 /// Controller parameters for legacy advertising.
-table LegacyAdvertisingState {
+type LegacyAdvertisingState = table {
     /// True if advertising has been enabled using the HCI_LE_Set_Advertising_Enable command.
     /// This field is always present.
-    1: bool enabled;
+    1: enabled bool;
 
     /// The most recently configured advertising type. This field is always present. Defaults to
     /// [`fuchsia.bluetooth.test/LegacyAdvertisingType.ADV_IND`].
-    2: LegacyAdvertisingType type;
+    2: type LegacyAdvertisingType;
 
     /// The LE address type being used for advertising. This field is always present. Defaults to
     /// [`fuchsia.bluetooth/AddressType.PUBLIC`].
-    3: bt.AddressType address_type;
+    3: address_type bt.AddressType;
 
     /// The host-specified advertising interval range parameters. Present only if configured.
-    4: uint16 interval_min;
-    5: uint16 interval_max;
+    4: interval_min uint16;
+    5: interval_max uint16;
 
     /// Any configured advertising and scan response data. Present only if either field is non-zero.
-    6: bytes:MAX_LEGACY_ADVERTISING_DATA_LENGTH advertising_data;
-    7: bytes:MAX_LEGACY_ADVERTISING_DATA_LENGTH scan_response;
+    6: advertising_data bytes:MAX_LEGACY_ADVERTISING_DATA_LENGTH;
+    7: scan_response bytes:MAX_LEGACY_ADVERTISING_DATA_LENGTH;
 };
 
 /// Represents the LE scan state. The fields are present if scan parameters have been
 /// configured.
-table LeScanState {
+type LeScanState = table {
     /// True if a scan is enabled.
-    1: bool enabled;
+    1: enabled bool;
 
     /// True if an active scan is enabled. Otherwise the scan is passive.
-    2: bool active;
+    2: active bool;
 
     /// The scan interval and window parameters. These are defined in Bluetooth controller
     /// "timeslices" where 1 slice = 0.625 ms. Valid values range from 0x4 (2.5 ms) to 0x4000 (10.24
     /// ms).
-    3: uint16 interval;
-    4: uint16 window;
+    3: interval uint16;
+    4: window uint16;
 
     /// True if duplicate filtering has been enabled.
-    5: bool filter_duplicates;
+    5: filter_duplicates bool;
 
     /// The type of local device address used.
-    6: bt.AddressType address_type;
+    6: address_type bt.AddressType;
 };

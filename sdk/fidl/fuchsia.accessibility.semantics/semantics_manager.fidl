@@ -1,30 +1,28 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.accessibility.semantics;
 
 using fuchsia.math;
 using fuchsia.ui.views;
 
 /// Maximum depth of the semantic tree.
-const uint64 MAX_TREE_DEPTH = 256;
+const MAX_TREE_DEPTH uint64 = 256;
 
 /// Maximum number of children for a node in the semantic tree.
-const uint64 MAX_FAN_OUT = 20000;
+const MAX_FAN_OUT uint64 = 20000;
 
 /// Maximum number of semantic nodes that may be sent in a single update.
-const uint64 MAX_NODES_PER_UPDATE = 2048;
+const MAX_NODES_PER_UPDATE uint64 = 2048;
 
 /// Maximum size of a label string, in bytes.
-const uint64 MAX_LABEL_SIZE = 16384;
+const MAX_LABEL_SIZE uint64 = 16384;
 
 /// Maximum size of a value string, in bytes.
-const uint64 MAX_VALUE_SIZE = 16384;
+const MAX_VALUE_SIZE uint64 = 16384;
 
 /// Maximum size of a message string, in bytes.
-const uint64 MAX_MESSAGE_SIZE = 16384;
+const MAX_MESSAGE_SIZE uint64 = 16384;
 
 /// An interface to manage connections with views for the purposes of gathering semantic information
 /// about their current UI state.
@@ -33,25 +31,27 @@ const uint64 MAX_MESSAGE_SIZE = 16384;
 /// semantics manager supplies an interface to update, commit and delete information from the
 /// semantic tree for that view. If the semantic manager encounters an error, it will close the
 /// channel, delete any associated data and rely on the client to re-register.
-[Discoverable]
+@discoverable
 protocol SemanticsManager {
-    RegisterViewForSemantics(fuchsia.ui.views.ViewRef view_ref,
-                             SemanticListener listener,
-                             request<SemanticTree> semantic_tree_request);
+    RegisterViewForSemantics(resource struct {
+        view_ref fuchsia.ui.views.ViewRef;
+        listener client_end:SemanticListener;
+        semantic_tree_request server_end:SemanticTree;
+    });
 };
 
 /// Represents a Semantic Event that is fired on a Semantic Tree.
-union SemanticEvent {
-    1: AnnounceEvent announce;
+type SemanticEvent = strict union {
+    1: announce AnnounceEvent;
 };
 
 /// An announce event is one where a message is sent to a Semantic Tree,
 /// informing a change of some global state in the application. Because this
 /// announcement can be disruptive to assistive technology, it should be used
 /// sparingly.
-table AnnounceEvent {
+type AnnounceEvent = table {
     /// A message describing the change in the application. This message is expected to be localized in the language that the application is in.
-    1: string:MAX_MESSAGE_SIZE message;
+    1: message string:MAX_MESSAGE_SIZE;
 };
 
 /// Interface to update the semantic tree for a particular view. Nodes can be added, updated or
@@ -72,10 +72,14 @@ table AnnounceEvent {
 protocol SemanticTree {
 
     /// Sends new/updated nodes to the root to add to the cache on the next commit.
-    UpdateSemanticNodes(vector<Node>:MAX_NODES_PER_UPDATE nodes);
+    UpdateSemanticNodes(struct {
+        nodes vector<Node>:MAX_NODES_PER_UPDATE;
+    });
 
     /// Tells the root to remove nodes with node_ids from the semantic tree on the next commit.
-    DeleteSemanticNodes(vector<uint32>:MAX_NODES_PER_UPDATE node_ids);
+    DeleteSemanticNodes(struct {
+        node_ids vector<uint32>:MAX_NODES_PER_UPDATE;
+    });
 
     /// Commits pending changes to node tree associated with the view using UpdateSemanticNodes and
     /// DeleteSemanticNodes. Updates are processed in the order in which they are received. If the
@@ -87,20 +91,22 @@ protocol SemanticTree {
     /// and does not wait for CommitUpdates(). It is the caller's
     /// responsibility to fire events on nodes that have been already commited.
     /// The return callback is invoked to acknowledge that the event was received.
-    [Transitional]
-    SendSemanticEvent(SemanticEvent semantic_event) -> ();
+    @transitional
+    SendSemanticEvent(struct {
+        semantic_event SemanticEvent;
+    }) -> ();
 };
 
 /// Results of hit testing on a view's semantic tree which is implemented by
 /// Runtimes(like Flutter/Chrome) and sent to Accessibility.
-table Hit {
+type Hit = table {
     /// Unique ID that represents a node in a particular UI.
     /// Zero is assumed to be the root node and the only entry point to the tree.
     /// node_id will not be filled when there is no hit.
-    1: uint32 node_id;
+    1: node_id uint32;
 
     /// The ordered list of node ids which represent path from root node to the hit node.
-    2: vector<uint32>:MAX_TREE_DEPTH path_from_root;
+    2: path_from_root vector<uint32>:MAX_TREE_DEPTH;
 };
 
 /// A semantic provider is the client-side interface that the manager can use to enable or disable
@@ -108,15 +114,26 @@ table Hit {
 protocol SemanticListener {
     /// Asks the semantics provider to perform an accessibility action on the
     /// node with node id in the front-end.
-    OnAccessibilityActionRequested(uint32 node_id, Action action) -> (bool handled);
+    OnAccessibilityActionRequested(struct {
+        node_id uint32;
+        action Action;
+    }) -> (struct {
+        handled bool;
+    });
 
     /// Asks the semantics provider to perform hit testing and return the result.
-    [Transitional]
-    HitTest(fuchsia.math.PointF local_point) -> (Hit result);
+    @transitional
+    HitTest(struct {
+        local_point fuchsia.math.PointF;
+    }) -> (struct {
+        result Hit;
+    });
 
     /// Callback telling the client whether or not to send updates to the semantic tree.
     /// The semantics manager will clear all state when this is called with updates_enabled = false.
     /// When called with updates_enabled = true, the client should sent the full state of the
     /// current semantic tree.
-    OnSemanticsModeChanged(bool updates_enabled) -> ();
+    OnSemanticsModeChanged(struct {
+        updates_enabled bool;
+    }) -> ();
 };

@@ -1,18 +1,22 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.boot;
 
 using zx;
 
 /// Protocol for retrieving factory boot item payloads.
-[Discoverable, ForDeprecatedCBindings]
+@discoverable
+@for_deprecated_c_bindings
 protocol FactoryItems {
     /// Gets a `payload` for a `ZBI_TYPE_STORAGE_BOOTFS_FACTORY` boot item with
     /// extra field set to `extra`.
     ///
     /// NOTE: We return the `length` of the item, as VMOs must be page-aligned.
-    Get(uint32 extra) -> (zx.handle:VMO? payload, uint32 length);
+    Get(struct {
+        extra uint32;
+    }) -> (resource struct {
+        payload zx.handle:<VMO, optional>;
+        length uint32;
+    });
 };

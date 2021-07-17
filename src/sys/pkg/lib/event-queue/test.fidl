@@ -1,11 +1,11 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library test.pkg.eventqueue;
 
 // This is an example event monitor FIDL protocol that can be used with the event queue library.
 protocol ExampleEventMonitor {
-    OnEvent(string:100 event) -> ();
+    OnEvent(struct {
+        event string:100;
+    }) -> ();
 };

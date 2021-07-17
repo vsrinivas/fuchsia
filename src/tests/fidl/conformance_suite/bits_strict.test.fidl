@@ -1,42 +1,40 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library conformance;
 
-strict bits StrictBitsUint8 : uint8 {
+type StrictBitsUint8 = strict bits : uint8 {
     A = 0x1;
     B = 0x2;
 };
 
-strict bits StrictBitsUint16 : uint16 {
+type StrictBitsUint16 = strict bits : uint16 {
     A = 0x1;
     B = 0x2;
 };
 
-strict bits StrictBitsUint32 : uint32 {
+type StrictBitsUint32 = strict bits : uint32 {
     A = 0x1;
     B = 0x2;
 };
 
-strict bits StrictBitsUint64 : uint64 {
+type StrictBitsUint64 = strict bits : uint64 {
     A = 0x1;
     B = 0x2;
 };
 
-struct StrictBitsUint8Struct {
-    StrictBitsUint8 b;
+type StrictBitsUint8Struct = struct {
+    b StrictBitsUint8;
 };
 
-struct StrictBitsUint16Struct {
-    StrictBitsUint16 b;
+type StrictBitsUint16Struct = struct {
+    b StrictBitsUint16;
 };
 
-struct StrictBitsUint32Struct {
-    StrictBitsUint32 b;
+type StrictBitsUint32Struct = struct {
+    b StrictBitsUint32;
 };
 
-struct StrictBitsUint64Struct {
-    StrictBitsUint64 b;
+type StrictBitsUint64Struct = struct {
+    b StrictBitsUint64;
 };

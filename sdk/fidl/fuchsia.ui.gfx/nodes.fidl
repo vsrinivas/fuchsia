@@ -1,8 +1,6 @@
 // Copyright 2017 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.ui.gfx;
 
 // These are the types of nodes that can be created within a Scenic `Session`.
@@ -30,18 +28,18 @@ library fuchsia.ui.gfx;
 /// - has_parent
 /// - has_shape
 /// - has_material
-struct ShapeNodeArgs {
+type ShapeNodeArgs = struct {
     // TODO(fxbug.dev/23916): Clean up dummy args.
-    uint32 unused = 0;
+    unused uint32 = 0;
 };
 
 /// Characteristics:
 /// - has_parent
 /// - is_clip
 /// - has_parts
-struct ClipNodeArgs {
+type ClipNodeArgs = struct {
     // TODO(fxbug.dev/23916): Clean up dummy args.
-    uint32 unused = 0;
+    unused uint32 = 0;
 };
 
 /// Characteristics:
@@ -50,8 +48,8 @@ struct ClipNodeArgs {
 /// - has_children
 /// - has_parts
 /// - has_opacity
-struct OpacityNodeArgsHACK {
-    uint32 unused = 0;
+type OpacityNodeArgsHACK = struct {
+    unused uint32 = 0;
 };
 
 /// Characteristics:
@@ -60,7 +58,7 @@ struct OpacityNodeArgsHACK {
 /// - has_parent
 /// - has_parts
 /// - has_clip
-struct EntityNodeArgs {
+type EntityNodeArgs = struct {
     // TODO(fxbug.dev/23916): Clean up dummy args.
-    uint32 unused = 0;
+    unused uint32 = 0;
 };

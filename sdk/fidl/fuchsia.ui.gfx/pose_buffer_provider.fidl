@@ -1,17 +1,20 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.ui.gfx;
 
 using zx;
 
 /// A minimal fidl interface to allow sourcing the contents of a PoseBuffer from another service.
-[Discoverable]
+@discoverable
 protocol PoseBufferProvider {
     /// Sets the PoseBuffer and the parameters PoseBufferProvider will use to fill that PoseBuffer.
     /// Setting this when it is already set will replace the previously set parameters with the new
     /// parameters, which will release the provider's reference to the buffer.
-    SetPoseBuffer(zx.handle:VMO buffer, uint32 num_entries, int64 base_time, uint64 time_interval);
+    SetPoseBuffer(resource struct {
+        buffer zx.handle:VMO;
+        num_entries uint32;
+        base_time int64;
+        time_interval uint64;
+    });
 };

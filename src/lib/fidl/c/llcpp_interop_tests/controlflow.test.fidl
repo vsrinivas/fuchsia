@@ -1,12 +1,10 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fidl.test.llcpp.controlflow;
 
 /// Interface for testing shutdown/epitaphs etc.
-[ForDeprecatedCBindings]
+@for_deprecated_c_bindings
 protocol ControlFlow {
     /// Shutdown the server without a reply.
     /// The server should unbind the channel from the dispatch loop, closing it.
@@ -21,5 +19,7 @@ protocol ControlFlow {
     /// Calling this method generates no reply and a epitaph with error set to
     /// `ZX_ERR_ACCESS_DENIED`. The channel will then be closed.
     /// This tests sending an epitaph from a normal (two-way) method call handler.
-    MustSendAccessDeniedEpitaph() -> (int32 reply);
+    MustSendAccessDeniedEpitaph() -> (struct {
+        reply int32;
+    });
 };

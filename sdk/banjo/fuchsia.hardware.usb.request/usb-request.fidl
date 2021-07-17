@@ -1,8 +1,6 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.usb.request;
 
 using ddk.hw.physiter;
@@ -10,60 +8,62 @@ using fuchsia.hardware.usb.descriptor;
 using zx;
 
 /// Should be set by the requestor.
-struct UsbHeader {
+type UsbHeader = struct {
     /// Frame number for scheduling isochronous transfers.
-    uint64 frame;
-    uint32 device_id;
+    frame uint64;
+    device_id uint32;
     /// bEndpointAddress from endpoint descriptor.
-    uint8 ep_address;
+    ep_address uint8;
     /// Number of bytes to transfer.
-    zx.off length;
+    length zx.off;
     /// Send zero length packet if length is multiple of max packet size.
-    bool send_zlp;
+    send_zlp bool;
 };
 
 /// Response data.
 /// (Filled in by processor before |UsbRequestComplete()| is called)
-struct UsbResponse {
+type UsbResponse = struct {
     /// Status of transaction.
     /// ZX_ERR_IO_INVALID indicates that the device stalled the transfer.
-    zx.status status;
+    status zx.status;
     /// Number of bytes actually transferred (on success).
-    zx.off actual;
+    actual zx.off;
     /// Number of consecutive requests that were silently completed immediately prior to this
     /// request.
     /// This only needs to be checked if the client has set |cb_on_error_only| on any requests,
     /// otherwise it will always be zero.
-    uint64 silent_completions_count;
+    silent_completions_count uint64;
 };
 
-resource struct UsbRequest {
-    UsbHeader header;
+type UsbRequest = resource struct {
+    header UsbHeader;
 
     /// For control transactions.
-    fuchsia.hardware.usb.descriptor.UsbSetup setup;
+    setup fuchsia.hardware.usb.descriptor.UsbSetup;
 
     /// VMO handle for payload.
-    zx.handle:VMO vmo_handle;
-    uint64 size;
+    vmo_handle zx.handle:VMO;
+    size uint64;
     /// Offset of the start of data from first page address of the vmo.
-    zx.off offset;
+    offset zx.off;
     /// Mapped address of the first page of the vmo.
     /// Add offset to get actual data.
-    uint64 virt;
+    virt uint64;
 
-    zx.handle pmt;
+    pmt zx.handle;
     /// Phys addresses of the payload.
-    [Mutable] vector<zx.paddr>:MAX phys;
+    @mutable
+    phys vector<zx.paddr>:MAX;
 
-    [Mutable] vector<ddk.hw.physiter.SgEntry>:MAX sg;
+    @mutable
+    sg vector<ddk.hw.physiter.SgEntry>:MAX;
 
-    UsbResponse response;
+    response UsbResponse;
 
     /// usb_request_release() frees the request if this is true.
-    bool release_frees;
+    release_frees bool;
 
-    uint64 alloc_size;
+    alloc_size uint64;
 
     /// Set by the requester if the callback should be skipped on successful completion.
     /// This is useful for isochronous requests, where the requester does not care about
@@ -78,19 +78,23 @@ resource struct UsbRequest {
     /// If the requester receives a callback, they should check the response's
     /// |silent_completions_count| to know how many consecutive requests prior to this one
     /// (in relation to queue order for the endpoint) have completed successfully.
-    bool cb_on_error_only;
+    cb_on_error_only bool;
     /// Direct mode -- if set to true, this packet is handled with high priority directly
     /// in interrupt context. It will NOT be safe to block in any callbacks, and all layers
     /// should take the most direct path to route the packet to the requesting driver from
     /// hardware.
-    bool direct;
+    direct bool;
     /// If true, resets an endpoint and does not transfer any data.
-    bool reset;
+    reset bool;
     /// The address of the endpoint to reset.
-    uint8 reset_address;
+    reset_address uint8;
 };
 
-[Transport = "Banjo", BanjoLayout = "ddk-callback"]
+@transport("Banjo")
+@banjo_layout("ddk-callback")
 protocol UsbRequestCompleteCallback {
-    Callback([InOut] UsbRequest req) -> ();
+    Callback(resource struct {
+        @in_out
+        req UsbRequest;
+    }) -> ();
 };

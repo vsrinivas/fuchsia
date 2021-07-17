@@ -1,17 +1,20 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.thermal;
 
 using zx;
 
 /// This is somewhat of a dummy protocol that's only useful for
 /// connecting to the thermal driver's FIDL interface via Banjo.
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol Thermal {
     /// Pass a channel handle to the thermal driver to connect to its
     /// FIDL interface.
-    Connect(zx.handle:CHANNEL chan) -> (zx.status status);
+    Connect(resource struct {
+        chan zx.handle:CHANNEL;
+    }) -> (struct {
+        status zx.status;
+    });
 };

@@ -1,17 +1,15 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.identity.tokens;
 
 /// The maximum number of service providers for which `AuthProvider` components
 /// can be simultaneously installed.
-const uint32 MAX_SERVICE_PROVIDER_COUNT = 128;
+const MAX_SERVICE_PROVIDER_COUNT uint32 = 128;
 
 /// The maximum number of Accounts that can be authorized within a service
 /// provider for a single instance of TokenManager.
-const uint32 MAX_ACCOUNT_COUNT = 128;
+const MAX_ACCOUNT_COUNT uint32 = 128;
 
 /// The primary domain name of the service provider used to authorize accounts.
 /// Only one `AuthProvider` component can be installed for each service provider
@@ -29,17 +27,20 @@ protocol TokenManager {
     /// `TokenManager`.
     ///
     /// - `service_providers` a vector of available service providers.
-    ListServiceProviders() -> (
-        vector<ServiceProvider>:MAX_SERVICE_PROVIDER_COUNT service_providers
-        ) error Error;
+    ListServiceProviders() -> (struct {
+        service_providers vector<ServiceProvider>:MAX_SERVICE_PROVIDER_COUNT;
+    }) error Error;
 
     /// Returns the list of currently authorized accounts for a particular
     /// service provider.
     ///
     /// + `service_provider` the service provider to query.
     /// - `account_ids` a vector of authorized accounts for `service_provider`.
-    ListAccounts(ServiceProvider service_provider)
-        -> (vector<AccountId>:MAX_ACCOUNT_COUNT account_ids) error Error;
+    ListAccounts(struct {
+        service_provider ServiceProvider;
+    }) -> (struct {
+        account_ids vector<AccountId>:MAX_ACCOUNT_COUNT;
+    }) error Error;
 
     /// Acquires credentials for a new account from a service provider.
     ///
@@ -60,9 +61,12 @@ protocol TokenManager {
     /// * error `ABORTED` The user cancelled or failed an interactive flow.
     /// * error `SERVICE_PROVIDER_DENIED` The service provider refused to grant
     ///         the requested token.
-    AddAccount(ServiceProvider service_provider,
-               vector<Scope>:MAX_SCOPE_COUNT scopes)
-        -> (AccountId account_id) error Error;
+    AddAccount(struct {
+        service_provider ServiceProvider;
+        scopes vector<Scope>:MAX_SCOPE_COUNT;
+    }) -> (struct {
+        account_id AccountId;
+    }) error Error;
 
     /// Refreshes credentials or changes credential scopes for an account that
     /// was previously authorized.
@@ -81,9 +85,11 @@ protocol TokenManager {
     /// * error `ABORTED` The user cancelled or failed an interactive flow.
     /// * error `SERVICE_PROVIDER_DENIED` The service provider refused to grant
     ///         the requested token.
-    ReauthorizeAccount(ServiceProvider service_provider,
-                       AccountId account_id,
-                       vector<Scope>:MAX_SCOPE_COUNT scopes) -> () error Error;
+    ReauthorizeAccount(struct {
+        service_provider ServiceProvider;
+        account_id AccountId;
+        scopes vector<Scope>:MAX_SCOPE_COUNT;
+    }) -> (struct {}) error Error;
 
     /// Returns an OAuth 2.0 access token for the specified account.
     ///
@@ -116,11 +122,14 @@ protocol TokenManager {
     ///         that the user reauthenticate before supplying the requested
     ///         token. The client should call the `ReauthorizeAccount` method
     ///         before retrying the request.
-    GetOauthAccessToken(ServiceProvider service_provider,
-                        AccountId account_id,
-                        ClientId? client_id,
-                        vector<Scope>:MAX_SCOPE_COUNT scopes)
-        -> (OauthAccessToken access_token) error Error;
+    GetOauthAccessToken(struct {
+        service_provider ServiceProvider;
+        account_id AccountId;
+        client_id ClientId:optional;
+        scopes vector<Scope>:MAX_SCOPE_COUNT;
+    }) -> (struct {
+        access_token OauthAccessToken;
+    }) error Error;
 
     /// Returns user information for the specified account as defined by
     /// OpenID Connect.
@@ -135,8 +144,12 @@ protocol TokenManager {
     ///         that the user reauthenticate before supplying the user info.
     /// * error `UNSUPPORTED_OPERATION` The auth provider does not support
     ///         OpenID Connect.
-    GetOpenIdUserInfo(ServiceProvider service_provider, AccountId account_id)
-        -> (OpenIdUserInfo user_info) error Error;
+    GetOpenIdUserInfo(struct {
+        service_provider ServiceProvider;
+        account_id AccountId;
+    }) -> (struct {
+        user_info OpenIdUserInfo;
+    }) error Error;
 
     /// Returns an OpenID Connect ID token for the specified account.
     ///
@@ -159,10 +172,13 @@ protocol TokenManager {
     ///         that the user reauthenticate before supplying the user info.
     /// * error `UNSUPPORTED_OPERATION` The auth provider does not support
     ///         OpenID Connect.
-    GetOpenIdToken(ServiceProvider service_provider,
-                   AccountId account_id,
-                   Audience? audience)
-        -> (OpenIdToken id_token) error Error;
+    GetOpenIdToken(struct {
+        service_provider ServiceProvider;
+        account_id AccountId;
+        audience Audience:optional;
+    }) -> (struct {
+        id_token OpenIdToken;
+    }) error Error;
 
     /// Deletes and revokes all long lived and short lived tokens generated for
     /// an account.
@@ -185,8 +201,9 @@ protocol TokenManager {
     ///                this `ServiceProvider`.
     /// + `force` Whether to force local deletion even when the remote
     ///           revocation cannot be completed.
-    DeleteAccount(ServiceProvider service_provider,
-                  AccountId account_id,
-                  bool force)
-        -> () error Error;
+    DeleteAccount(struct {
+        service_provider ServiceProvider;
+        account_id AccountId;
+        force bool;
+    }) -> (struct {}) error Error;
 };

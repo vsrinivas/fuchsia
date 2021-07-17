@@ -1,13 +1,11 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.input.report;
 
 using zx;
 
-const uint32 MAX_DEVICE_REPORT_COUNT = 50;
+const MAX_DEVICE_REPORT_COUNT uint32 = 50;
 
 /// Each `InputReportsReader` has its own FIFO of InputReports that it maintains.
 /// When ReadInputReports is called it drains the InputReports FIFO.
@@ -19,7 +17,9 @@ protocol InputReportsReader {
     /// report available.
     /// If there is already one outstanding Hanging-Get, calling this
     /// again will return ZX_ERR_ALREADY_BOUND.
-    ReadInputReports() -> (vector<InputReport>:MAX_DEVICE_REPORT_COUNT reports) error zx.status;
+    ReadInputReports() -> (struct {
+        reports vector<InputReport>:MAX_DEVICE_REPORT_COUNT;
+    }) error zx.status;
 };
 
 /// An `InputDevice` driver represents a single physical input device.
@@ -30,20 +30,30 @@ protocol InputReportsReader {
 protocol InputDevice {
     /// Open a new InputReportsReader on this device. Each reader receives
     /// their own reports.
-    GetInputReportsReader(request<InputReportsReader> reader);
+    GetInputReportsReader(resource struct {
+        reader server_end:InputReportsReader;
+    });
 
     /// Gets the device descriptor for this device.
-    GetDescriptor() -> (DeviceDescriptor descriptor);
+    GetDescriptor() -> (struct {
+        descriptor DeviceDescriptor;
+    });
 
     /// Send a single output report to the device. This will throw an error
     /// if the output report does not follow the OutputDescriptor.
-    SendOutputReport(OutputReport report) -> () error zx.status;
+    SendOutputReport(struct {
+        report OutputReport;
+    }) -> (struct {}) error zx.status;
 
     /// Get the feature report for a given device. This requests the state of
     /// the device's features.
-    GetFeatureReport() -> (FeatureReport report) error zx.status;
+    GetFeatureReport() -> (struct {
+        report FeatureReport;
+    }) error zx.status;
 
     /// Set the feature report for a given device. This sets the state of
     /// the device's features.
-    SetFeatureReport(FeatureReport report) -> () error zx.status;
+    SetFeatureReport(struct {
+        report FeatureReport;
+    }) -> (struct {}) error zx.status;
 };

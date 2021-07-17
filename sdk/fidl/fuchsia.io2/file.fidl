@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.io2;
 
 using fuchsia.mem;
@@ -12,7 +10,7 @@ using zx;
 // what's the point of diminishing marginal returns.
 /// The maximum I/O size that is allowed for read/write operations using
 /// byte vectors.
-const uint64 MAX_TRANSFER_SIZE = 8192;
+const MAX_TRANSFER_SIZE uint64 = 8192;
 
 /// The byte vector type used for read/write operations.
 alias Transfer = bytes:MAX_TRANSFER_SIZE;
@@ -32,8 +30,12 @@ protocol File {
     ///   of the file.
     ///
     /// This method does not require any rights.
-    Seek(SeekOrigin origin, int64 offset)
-        -> (uint64 offset_from_start) error zx.status;
+    Seek(struct {
+        origin SeekOrigin;
+        offset int64;
+    }) -> (struct {
+        offset_from_start uint64;
+    }) error zx.status;
 
     /// Reads up to 'count' bytes at the seek offset.
     /// The seek offset is moved forward by the number of bytes read.
@@ -51,7 +53,11 @@ protocol File {
     ///   `data` vector.
     ///
     /// This method requires the [`Rights.READ_BYTES`] right.
-    Read(uint64 count) -> (Transfer data) error zx.status;
+    Read(struct {
+        count uint64;
+    }) -> (struct {
+        data Transfer;
+    }) error zx.status;
 
     /// Writes data at the seek offset.
     /// The seek offset is moved forward by the number of bytes written.
@@ -74,7 +80,11 @@ protocol File {
     ///   is still updated if in append mode.
     ///
     /// This method requires the [`Rights.WRITE_BYTES`] right.
-    Write(Transfer data) -> (uint64 actual_count) error zx.status;
+    Write(struct {
+        data Transfer;
+    }) -> (struct {
+        actual_count uint64;
+    }) error zx.status;
 
     /// Reads up to 'count' bytes at the provided offset.
     /// Does not affect the seek offset.
@@ -91,7 +101,12 @@ protocol File {
     ///   `data` vector.
     ///
     /// This method requires the [`Rights.READ_BYTES`] right.
-    ReadAt(uint64 count, uint64 offset) -> (Transfer data) error zx.status;
+    ReadAt(struct {
+        count uint64;
+        offset uint64;
+    }) -> (struct {
+        data Transfer;
+    }) error zx.status;
 
     /// Writes data at the provided offset.
     /// Does not affect the seek offset.
@@ -112,8 +127,12 @@ protocol File {
     ///   ensuring write access without mutating the file.
     ///
     /// This method requires the [`Rights.WRITE_BYTES`] right.
-    WriteAt(Transfer data, uint64 offset)
-        -> (uint64 actual_count) error zx.status;
+    WriteAt(struct {
+        data Transfer;
+        offset uint64;
+    }) -> (struct {
+        actual_count uint64;
+    }) error zx.status;
 
     /// Shrinks or grows the file size to 'length' bytes.
     ///
@@ -123,7 +142,9 @@ protocol File {
     /// as if it was zeroed.
     ///
     /// This method requires the [`Rights.WRITE_BYTES`] right.
-    Resize(uint64 length) -> () error zx.status;
+    Resize(struct {
+        length uint64;
+    }) -> (struct {}) error zx.status;
 
     /// Acquires a [`fuchsia.mem/Range`] representing this file, if
     /// there is one, with the requested access rights.
@@ -137,13 +158,17 @@ protocol File {
     /// * [`Rights.READ_BYTES`] if `flags` includes [`VmoFlags.READ`].
     /// * [`Rights.WRITE_BYTES`] if `flags` includes [`VmoFlags.WRITE`].
     /// * [`Rights.EXECUTE`] if `flags` includes [`VmoFlags.EXECUTE`].
-    GetMemRange(VmoFlags flags) -> (fuchsia.mem.Range buffer) error zx.status;
+    GetMemRange(struct {
+        flags VmoFlags;
+    }) -> (resource struct {
+        buffer fuchsia.mem.Range;
+    }) error zx.status;
 };
 
 /// The reference point for updating the seek offset. See [`File.Seek`].
 ///
 /// This enum matches the `zx_stream_seek_origin_t` enum.
-enum SeekOrigin : uint32 {
+type SeekOrigin = strict enum : uint32 {
     /// Seek from the start of the file.
     /// The seek offset will be set to `offset` bytes.
     /// The seek offset cannot be negative in this case.
@@ -158,7 +183,7 @@ enum SeekOrigin : uint32 {
     END = 2;
 };
 
-bits VmoFlags : uint64 {
+type VmoFlags = strict bits : uint64 {
     /// Requests that the VMO be readable.
     READ = 0x00000001;
 
@@ -183,7 +208,7 @@ bits VmoFlags : uint64 {
 /// Auxiliary data for the file representation of a node.
 /// The selection of this variant in [`Representation`] implies that the
 /// connection speaks the [`fuchsia.io2/File`] protocol.
-resource table FileInfo {
+type FileInfo = resource table {
     /// An optional event which transmits information about an object's
     /// readability or writability. This event relays information about the
     /// underlying object, not the capability granted to client: this event
@@ -196,12 +221,12 @@ resource table FileInfo {
     /// - The filesystem supports signalling readability/writability events.
     ///
     /// The [`FileSignal`] values may be observed on this event.
-    1: zx.handle:EVENT observer;
+    1: observer zx.handle:EVENT;
 
     /// Returns if the file is opened in append mode.
     /// In append mode, the seek offset is moved to the end before every
     /// write, the two steps performed in an atomic manner.
-    2: bool is_append;
+    2: is_append bool;
 
     /// An optional stream object, which can be used to read to and write from
     /// the file.
@@ -209,10 +234,10 @@ resource table FileInfo {
     /// Reading and writing the file using the stream object can be up to 20x
     /// faster than reading and writing the file using the Read and Write
     /// operations in the [`fuchsia.io2/File`] protocol.
-    3: zx.handle:STREAM stream;
+    3: stream zx.handle:STREAM;
 };
 
-bits FileSignal : uint32 {
+type FileSignal = strict bits : uint32 {
     /// Indicates the file is ready for reading.
     READABLE = 0x01000000; // ZX_USER_SIGNAL_0
 

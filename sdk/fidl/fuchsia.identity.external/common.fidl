@@ -1,12 +1,10 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.identity.external;
 
 /// Specifies the reason that a fuchsia.identity.external method failed.
-enum Error {
+type Error = strict enum {
     /// Some other problem occurred that cannot be classified using one of the
     /// more specific statuses.
     UNKNOWN = 1;
@@ -53,4 +51,3 @@ enum Error {
     /// The user cancelled or failed an interactive authentication operation.
     ABORTED = 11;
 };
-

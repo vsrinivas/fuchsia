@@ -1,14 +1,12 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.mailbox;
 
 using zx;
 
 // Mailboxes
-enum MailboxType : uint8 {
+type MailboxType = strict enum : uint8 {
     SCP_SECURE_MAILBOX = 0x0;
     SCP_NS_LOW_PRIORITY_MAILBOX = 0x1;
     SCP_NS_HIGH_PRIORITY_MAILBOX = 0x2;
@@ -18,17 +16,25 @@ enum MailboxType : uint8 {
     INVALID_MAILBOX = 0x6;
 };
 
-struct MailboxDataBuf {
-    uint32 cmd;
-    [Buffer] vector<uint8>:MAX tx;
+type MailboxDataBuf = struct {
+    cmd uint32;
+    @buffer
+    tx vector<uint8>:MAX;
 };
 
-struct MailboxChannel {
-    MailboxType mailbox;
-    [Buffer] vector<uint8>:MAX rx;
+type MailboxChannel = struct {
+    mailbox MailboxType;
+    @buffer
+    rx vector<uint8>:MAX;
 };
 
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol Mailbox {
-    SendCommand(MailboxChannel channel, MailboxDataBuf mdata) -> (zx.status s);
+    SendCommand(struct {
+        channel MailboxChannel;
+        mdata MailboxDataBuf;
+    }) -> (struct {
+        s zx.status;
+    });
 };

@@ -1,48 +1,76 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.clock;
 
 using zx;
 
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol Clock {
 
     /// Enables (ungates) this clock.
     /// Drivers *must* call enable on all clocks they depend upon.
-    Enable() -> (zx.status s);
+    Enable() -> (struct {
+        s zx.status;
+    });
 
     /// Disables (gates) this clock.
     /// Drivers should call this method to indicate to the clock subsystem that
     /// a particular clock signal is no longer necessary.
-    Disable() -> (zx.status s);
+    Disable() -> (struct {
+        s zx.status;
+    });
 
     /// Returns `true` if a given clock is running.
     /// May query the hardware or return a cached value.
-    IsEnabled() -> (zx.status s, bool enabled);
+    IsEnabled() -> (struct {
+        s zx.status;
+        enabled bool;
+    });
 
     /// Attempt to set the rate of the clock provider.
-    SetRate(uint64 hz) -> (zx.status s);
+    SetRate(struct {
+        hz uint64;
+    }) -> (struct {
+        s zx.status;
+    });
 
     /// Query the hardware for the highest supported rate that does not
     /// exceed hz_in.
-    QuerySupportedRate(uint64 hz_in) -> (zx.status s, uint64 hz_out);
+    QuerySupportedRate(struct {
+        hz_in uint64;
+    }) -> (struct {
+        s zx.status;
+        hz_out uint64;
+    });
 
     /// Returns the current rate that a given clock is running at.
-    GetRate() -> (zx.status s, uint64 hz);
+    GetRate() -> (struct {
+        s zx.status;
+        hz uint64;
+    });
 
     /// Sets the input of this clock by index. I.e. by selecting a mux.
     /// This clock has N inputs defined 0 through N-1, which are valid arguemts
     /// as the index to SetInput.
-    SetInput(uint32 idx) -> (zx.status s);
+    SetInput(struct {
+        idx uint32;
+    }) -> (struct {
+        s zx.status;
+    });
 
     /// Returns the number of inputs this clock has.
     /// Any value between 0 and UINT32_MAX is a valid return for this method.
     /// A Root Oscillator may return 0 for instance, if it has no inputs.
-    GetNumInputs() -> (zx.status s, uint32 n);
+    GetNumInputs() -> (struct {
+        s zx.status;
+        n uint32;
+    });
 
     /// Returns the index of the current input of this clock.
-    GetInput() -> (zx.status s, uint32 index);
+    GetInput() -> (struct {
+        s zx.status;
+        index uint32;
+    });
 };

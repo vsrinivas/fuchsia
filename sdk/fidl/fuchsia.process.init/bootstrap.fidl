@@ -1,7 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
 library fuchsia.process.init;
 
 using fuchsia.ldsvc;
@@ -16,25 +15,33 @@ protocol Bootstrap {
     ///
     /// This method must be called at most once, and must come before all other method calls if it
     /// is sent at all.
-    InitializeInterpreter(InterpreterInfo info);
+    InitializeInterpreter(resource struct {
+        info InterpreterInfo;
+    });
 
     /// Provide the program with the capabilities and information it needs for runtime support.
     ///
     /// This method must be called exactly once. It must proceed all other messages except the
     /// optional call to `InitializeInterpreter`.
-    InitializeRuntime(RuntimeInfo info);
+    InitializeRuntime(resource struct {
+        info RuntimeInfo;
+    });
 
     /// Add the given handles to set of startup handles for the process.
     ///
     /// Must be called after `InitializeInterpreter` and `InitializeRuntime`, and before
     /// `Start`. Can be called multiple times.
-    AddHandles(vector<fuchsia.process.HandleInfo>:64 handles);
+    AddHandles(resource struct {
+        handles vector<fuchsia.process.HandleInfo>:64;
+    });
 
     /// Add the given names to the namespace of the new process.
     ///
     /// Must be called after `InitializeInterpreter` and `InitializeRuntime`, and before
     /// `Start`. Can be called multiple times.
-    AddNames(vector<fuchsia.process.NameInfo>:64 names);
+    AddNames(resource struct {
+        names vector<fuchsia.process.NameInfo>:64;
+    });
 
     /// Start the process.
     ///
@@ -50,41 +57,45 @@ protocol Bootstrap {
     /// first `argc` byte sequences in the payload are the command line
     /// arguments. The next `environc` byte sequences are the environment
     /// variables.
-    Start(uint32 argc, uint32 environc, fuchsia.mem.Data data);
+    Start(resource struct {
+        argc uint32;
+        environc uint32;
+        data fuchsia.mem.Data;
+    });
 };
 
-resource struct RuntimeInfo {
+type RuntimeInfo = resource struct {
     /// The process being bootstrapped.
-    zx.handle:PROCESS process;
+    process zx.handle:PROCESS;
 
     /// The initial thread of the process being bootstrapped.
-    zx.handle:THREAD initial_thread;
+    initial_thread zx.handle:THREAD;
 
     /// REVIEW: What VMAR(s) does the program runtime receive?
-    zx.handle:VMAR vmars;
+    vmars zx.handle:VMAR;
 };
 
 /// Flags to modulate the behavior of the interpreter for a process.
-bits InterpreterFlags : uint64 {
+type InterpreterFlags = strict bits : uint64 {
     DEBUG = 0x1;
     TRACE = 0x2;
 };
 
 /// Information need by the interpreter to initialize a process.
-resource struct InterpreterInfo {
+type InterpreterInfo = resource struct {
     /// Flags to modulate the behavior of the interpreter.
     /// REVIEW: Can this be removed?
-    InterpreterFlags flags;
+    flags InterpreterFlags;
 
     /// The VMAR into which the interpreter should load code.
-    zx.handle:VMAR target_vmar;
+    target_vmar zx.handle:VMAR;
 
     /// The VMAR into which the interpreter was loaded.
-    zx.handle:VMAR interpreter_vmar;
+    interpreter_vmar zx.handle:VMAR;
 
     /// The executable to load.
-    zx.handle:VMO executable;
+    executable zx.handle:VMO;
 
     /// The shared library loader to use for the process.
-    fuchsia.ldsvc.Loader loader;
+    loader client_end:fuchsia.ldsvc.Loader;
 };

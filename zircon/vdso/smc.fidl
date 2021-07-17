@@ -1,36 +1,39 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library zx;
 
 // TODO(scottmg): ARM_SMC_xyz.
 
-struct SmcParameters {
-    uint32 func_id;
-    uint64 arg1;
-    uint64 arg2;
-    uint64 arg3;
-    uint64 arg4;
-    uint64 arg5;
-    uint64 arg6;
-    uint16 client_id;
-    uint16 secure_os_id;
+type SmcParameters = struct {
+    func_id uint32;
+    arg1 uint64;
+    arg2 uint64;
+    arg3 uint64;
+    arg4 uint64;
+    arg5 uint64;
+    arg6 uint64;
+    client_id uint16;
+    secure_os_id uint16;
 };
 
-struct SmcResult {
-    uint64 arg0;
-    uint64 arg1;
-    uint64 arg2;
-    uint64 arg3;
-    uint64 arg6; // at least one implementation uses it as a way to return session_id.
+type SmcResult = struct {
+    arg0 uint64;
+    arg1 uint64;
+    arg2 uint64;
+    arg3 uint64;
+    arg6 uint64; // at least one implementation uses it as a way to return session_id.
 };
 
-[Transport = "Syscall"]
+@transport("Syscall")
 protocol smc {
     // TODO(fxbug.dev/32803): handle No rights required?
     /// Make Secure Monitor Call (SMC) from user space.
-    smc_call(handle:RESOURCE handle, SmcParameters parameters)
-        -> (status status, SmcResult out_smc_result);
+    smc_call(resource struct {
+        handle handle:RESOURCE;
+        parameters SmcParameters;
+    }) -> (struct {
+        status status;
+        out_smc_result SmcResult;
+    });
 };

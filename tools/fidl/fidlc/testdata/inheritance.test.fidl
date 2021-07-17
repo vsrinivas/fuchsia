@@ -1,8 +1,11 @@
-deprecated_syntax;
 library fidl.test.inheritance;
 
 protocol super {
-    foo(string s) -> (int64 y);
+    foo(struct {
+        s string;
+    }) -> (struct {
+        y int64;
+    });
 };
 
 protocol sub {

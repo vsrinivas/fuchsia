@@ -1,8 +1,6 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.feedback;
 
 /// Registers data useful to attach in feedback reports (crash, user feedback or bug reports).
@@ -16,7 +14,7 @@ library fuchsia.feedback;
 ///
 /// The epitaph ZX_ERR_NO_RESOURCES indicates that the server can no longer store additional
 /// component data and will not service new connections.
-[Discoverable]
+@discoverable
 protocol ComponentDataRegister {
     /// Upserts, i.e. updates or inserts, extra component data to be included in feedback reports.
     ///
@@ -61,14 +59,16 @@ protocol ComponentDataRegister {
     ///
     /// Note that the server will only hold at most MAX_NUM_ANNOTATIONS_PER_NAMESPACE distinct
     /// annotation keys per namespace, picking up the latest values.
-    Upsert(ComponentData data) -> ();
+    Upsert(struct {
+        data ComponentData;
+    }) -> ();
 };
 
-const uint32 MAX_NAMESPACE_LENGTH = 32;
-const uint32 MAX_NUM_ANNOTATIONS_PER_NAMESPACE = 16;
+const MAX_NAMESPACE_LENGTH uint32 = 32;
+const MAX_NUM_ANNOTATIONS_PER_NAMESPACE uint32 = 16;
 
 /// Data known to a component, but not exposed to the platform, to attach to feedback reports.
-table ComponentData {
+type ComponentData = table {
     /// The top-level namespace associated with the data:
     /// * Is intended to group related data together and reduce data key collisions across
     ///   namespaces.
@@ -83,7 +83,7 @@ table ComponentData {
     /// * Must not match a reserved namespace used internally for platform data, e.g., "build", or
     ///   this will result in a ZX_ERR_INVALID_ARGS epitaph. The list of reserved namespaces is
     ///   internal and subject to change for now.
-    1: string:MAX_NAMESPACE_LENGTH namespace;
+    1: namespace string:MAX_NAMESPACE_LENGTH;
 
     /// A vector of key-value string pairs, e.g., `<"version", "1.2.3.45">`.
     ///
@@ -93,5 +93,5 @@ table ComponentData {
     /// * Must match [a-z\-\.]+, i.e. only lowercase letters, hyphens and periods. Use periods for
     ///   sub-namespacing, e.g., "build.label" and "build.type", so that related annotations are
     ///   grouped together (here related to "build") when sorted lexicographically.
-    2: vector<Annotation>:MAX_NUM_ANNOTATIONS_PER_NAMESPACE annotations;
+    2: annotations vector<Annotation>:MAX_NUM_ANNOTATIONS_PER_NAMESPACE;
 };

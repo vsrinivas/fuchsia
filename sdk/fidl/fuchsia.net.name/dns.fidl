@@ -1,52 +1,49 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.net.name;
 
 using fuchsia.net;
 
 /// Extra information about statically set DNS servers.
-table StaticDnsServerSource {
-};
+type StaticDnsServerSource = table {};
 
 /// Extra information about DNS servers discovered through DHCPv4.
-table DhcpDnsServerSource {
+type DhcpDnsServerSource = table {
     /// The interface index over which this server was discovered.
-    1: uint64 source_interface;
+    1: source_interface uint64;
 };
 
 /// Extra information about DNS servers discovered through NDP.
-table NdpDnsServerSource {
+type NdpDnsServerSource = table {
     /// The interface index over which this server was discovered.
-    1: uint64 source_interface;
+    1: source_interface uint64;
 };
 
 /// Extra information about DNS servers discovered through DHCPv6.
-table Dhcpv6DnsServerSource {
+type Dhcpv6DnsServerSource = table {
     /// The interface index over which this server was discovered.
-    1: uint64 source_interface;
+    1: source_interface uint64;
 };
 
 /// The configuration source for a [`fuchsia.net.name/DnsServer`].
-union DnsServerSource {
+type DnsServerSource = strict union {
     /// The server is statically configured through
     /// [`fuchsia.net.name/LookupAdmin.SetDefaultServers`].
-    1: StaticDnsServerSource static_source;
+    1: static_source StaticDnsServerSource;
     /// The server was discovered through DHCPv4.
-    2: DhcpDnsServerSource dhcp;
+    2: dhcp DhcpDnsServerSource;
     /// The server was discovered through an NDP Router Advertisement.
-    3: NdpDnsServerSource ndp;
+    3: ndp NdpDnsServerSource;
     /// The server was discovered through DHCPv6.
-    4: Dhcpv6DnsServerSource dhcpv6;
+    4: dhcpv6 Dhcpv6DnsServerSource;
 };
 
 /// A DNS server configuration.
-table DnsServer {
+type DnsServer = table {
     /// The server's address, must be provided.
-    1: fuchsia.net.SocketAddress address;
+    1: address fuchsia.net.SocketAddress;
     /// The configuration source for this server. Defaults to
     /// [`fuchsia.net.name/DnsServerSource.static_source`].
-    2: DnsServerSource source;
+    2: source DnsServerSource;
 };

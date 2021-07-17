@@ -1,11 +1,9 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.weave;
 
-enum ErrorCode : uint32 {
+type ErrorCode = strict enum : uint32 {
     /// Key/pairing code not found in storage.
     FILE_NOT_FOUND = 1;
     /// Error occurred during cryptographic operations.

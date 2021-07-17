@@ -1,32 +1,30 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library banjo.examples.attributes;
 
-struct none_struct {
-    int32 foo;
-    int32 bar;
-    int32 baz;
+type none_struct = struct {
+    foo int32;
+    bar int32;
+    baz int32;
 };
 
-[Packed]
-struct packed_struct {
-    int32 foo;
-    int32 bar;
-    int32 baz;
+@packed
+type packed_struct = struct {
+    foo int32;
+    bar int32;
+    baz int32;
 };
 
-union none_union {
-    1: int32 foo;
-    2: int32 bar;
-    3: int32 baz;
+type none_union = strict union {
+    1: foo int32;
+    2: bar int32;
+    3: baz int32;
 };
 
-[packed]
-union packed_union {
-    1: int32 foo;
-    2: int32 bar;
-    3: int32 baz;
+@packed
+type packed_union = strict union {
+    1: foo int32;
+    2: bar int32;
+    3: baz int32;
 };

@@ -1,15 +1,13 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.images;
 
 using zx;
 
-resource struct EncodedImage {
-  /// The vmo.
-  zx.handle:VMO vmo;
-  /// The size of the image in the vmo in bytes.
-  uint64 size;
+type EncodedImage = resource struct {
+    /// The vmo.
+    vmo zx.handle:VMO;
+    /// The size of the image in the vmo in bytes.
+    size uint64;
 };

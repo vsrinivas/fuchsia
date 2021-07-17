@@ -1,8 +1,6 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.tee;
 
 using zx;
@@ -11,28 +9,28 @@ using zx;
 
 /// UUID identifiers are used to identify the TEE Operating System and individual Trusted
 /// Applications. This structure matches the UUID type as defined by RFC4122.
-struct Uuid {
-    uint32 time_low;
-    uint16 time_mid;
-    uint16 time_hi_and_version;
-    array<uint8>:8 clock_seq_and_node;
+type Uuid = struct {
+    time_low uint32;
+    time_mid uint16;
+    time_hi_and_version uint16;
+    clock_seq_and_node array<uint8, 8>;
 };
 
-table OsRevision {
-    1: uint32 major;
-    2: uint32 minor;
+type OsRevision = table {
+    1: major uint32;
+    2: minor uint32;
 };
 
-table OsInfo {
-    1: Uuid uuid;
-    2: OsRevision revision;
-    3: bool is_global_platform_compliant;
+type OsInfo = table {
+    1: uuid Uuid;
+    2: revision OsRevision;
+    3: is_global_platform_compliant bool;
 };
 
 /// Communication with the TEE OS and Trusted Applications is performed using opaque parameters.
 /// These parameters can be a mix of small values (Value type) or a buffer reference (Buffer type).
 /// A parameter will be tagged as either an input, output or both (inout).
-enum Direction : uint32 {
+type Direction = strict enum : uint32 {
     INPUT = 0;
     OUTPUT = 1;
     INOUT = 2;
@@ -41,12 +39,11 @@ enum Direction : uint32 {
 /// An empty parameter type is used as a placeholder for elements in the parameter set that are not
 /// used.
 // TODO(fxbug.dev/8031): Consider making this a table once empty tables do not cause binding issues.
-struct None {
-};
+type None = struct {};
 
 /// Represents a buffer parameter.
-resource table Buffer {
-    1: Direction direction;
+type Buffer = resource table {
+    1: direction Direction;
 
     /// The VMO is allowed to be not present for situations where the TEE allows for buffer size
     /// checks.
@@ -55,41 +52,41 @@ resource table Buffer {
     /// calculate how large that output buffer should be, they can attempt the operation without
     /// a vmo and the Trusted Application will populate the size field so that the operation can
     /// be performed again with an appropriately sized buffer.
-    2: zx.handle:VMO vmo;
-    3: uint64 offset;
-    4: uint64 size;
+    2: vmo zx.handle:VMO;
+    3: offset uint64;
+    4: size uint64;
 };
 
 /// Represents a direct value parameter.
-table Value {
-    1: Direction direction;
+type Value = table {
+    1: direction Direction;
 
     /// This value is optional. If not set, a zero value is sent in its place if it is required by
     /// the calling convention.
-    2: uint64 a;
+    2: a uint64;
 
     /// This value is optional. If not set, a zero value is sent in its place if it is required by
     /// the calling convention.
-    3: uint64 b;
+    3: b uint64;
 
     /// This value is optional. If not set, a zero value is sent in its place if it is required by
     /// the calling convention.
-    4: uint64 c;
+    4: c uint64;
 };
 
-flexible resource union Parameter {
-    1: None none;
-    2: Buffer buffer;
-    3: Value value;
+type Parameter = flexible resource union {
+    1: none None;
+    2: buffer Buffer;
+    3: value Value;
 };
 
-const uint32 MAX_PARAMETERSET_COUNT = 4;
+const MAX_PARAMETERSET_COUNT uint32 = 4;
 alias ParameterSet = vector<Parameter>:MAX_PARAMETERSET_COUNT;
 
 /// Each operation must flow through the device driver and the trusted operating system before
 /// reaching the trusted application (and back). The ReturnOrigin indicates which layer provided the
 /// return code.
-enum ReturnOrigin : uint32 {
+type ReturnOrigin = strict enum : uint32 {
     COMMUNICATION = 0;
     TRUSTED_OS = 1;
     TRUSTED_APPLICATION = 2;
@@ -99,31 +96,44 @@ enum ReturnOrigin : uint32 {
 /// of the parameter set. The returned parameter set will be a copy of the input parameter set, but
 /// with the INOUT and OUTPUT parameters updated. If the parameter is a Buffer, it will update the
 /// Buffer.size to the number of bytes written.
-resource table OpResult {
-    1: uint64 return_code;
-    2: ReturnOrigin return_origin;
-    3: ParameterSet parameter_set;
+type OpResult = resource table {
+    1: return_code uint64;
+    2: return_origin ReturnOrigin;
+    3: parameter_set ParameterSet;
 };
 
 /// Provides information about the TEE device.
-[Discoverable]
+@discoverable
 protocol DeviceInfo {
     /// Obtains information about the TEE OS.
-    GetOsInfo() -> (OsInfo info);
+    GetOsInfo() -> (struct {
+        info OsInfo;
+    });
 };
 
 /// Represents a connection to an application running in the TEE.
-[Discoverable]
+@discoverable
 protocol Application {
     /// Initiates a communication session with the trusted application.
-    OpenSession2(ParameterSet parameter_set)
-        -> (uint32 session_id, OpResult op_result);
+    OpenSession2(resource struct {
+        parameter_set ParameterSet;
+    }) -> (resource struct {
+        session_id uint32;
+        op_result OpResult;
+    });
 
     /// Requests the trusted application perform the provided command. The command is unique to the
     /// trusted application.
-    InvokeCommand(uint32 session_id, uint32 command_id, ParameterSet parameter_set)
-        -> (OpResult op_result);
+    InvokeCommand(resource struct {
+        session_id uint32;
+        command_id uint32;
+        parameter_set ParameterSet;
+    }) -> (resource struct {
+        op_result OpResult;
+    });
 
     /// Closes an established session.
-    CloseSession(uint32 session_id) -> ();
+    CloseSession(struct {
+        session_id uint32;
+    }) -> ();
 };

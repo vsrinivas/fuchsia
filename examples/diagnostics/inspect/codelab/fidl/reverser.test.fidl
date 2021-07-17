@@ -1,14 +1,17 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
 library fuchsia.examples.inspect;
 
 // [START reverser_fidl]
 // Implementation of a string reverser.
-[Discoverable]
+@discoverable
 protocol Reverser {
     // Returns the input string reversed character-by-character.
-    Reverse(string:1024 input) -> (string:1024 response);
+    Reverse(struct {
+        input string:1024;
+    }) -> (struct {
+        response string:1024;
+    });
 };
 // [END reverser_fidl]

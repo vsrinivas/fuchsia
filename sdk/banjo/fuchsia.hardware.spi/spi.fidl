@@ -1,25 +1,40 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.spi;
 
 using zx;
 
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol Spi {
     // TODO(67570): Remove these once all drivers have switched over to the FIDL protocol.
 
     /// Half-duplex transmit data to a SPI device; always transmits the entire buffer on success.
-    Transmit(vector<uint8>:MAX txdata) -> (zx.status status);
+    Transmit(struct {
+        txdata vector<uint8>:MAX;
+    }) -> (struct {
+        status zx.status;
+    });
     /// Half-duplex receive data from a SPI device; always reads the full size requested.
-    Receive(uint32 size) -> (zx.status status, vector<uint8>:MAX rxdata);
+    Receive(struct {
+        size uint32;
+    }) -> (struct {
+        status zx.status;
+        rxdata vector<uint8>:MAX;
+    });
     /// Full-duplex SPI transaction. Received data will exactly equal the length of the transmit
     /// buffer.
-    Exchange(vector<uint8>:MAX txdata) -> (zx.status status, vector<uint8>:MAX rxdata);
+    Exchange(struct {
+        txdata vector<uint8>:MAX;
+    }) -> (struct {
+        status zx.status;
+        rxdata vector<uint8>:MAX;
+    });
 
     /// Tells the SPI driver to start listening for fuchsia.hardware.spi messages on server.
     /// See sdk/fidl/fuchsia.hardware.spi/spi.fidl.
-    ConnectServer(zx.handle:CHANNEL server) -> ();
+    ConnectServer(resource struct {
+        server zx.handle:CHANNEL;
+    }) -> ();
 };

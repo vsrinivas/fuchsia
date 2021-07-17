@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.media.sessions2;
 
 using zx;
@@ -12,40 +10,40 @@ using fuchsia.media;
 alias SessionId = uint64;
 
 /// SessionInfoDelta holds a description of a media session.
-table SessionInfoDelta {
+type SessionInfoDelta = table {
     /// The domain on which the session takes place. A domain identifies a set of
     /// mutually compatible media targets and sessions; sessions on a domain may
     /// be played back on targets of the same domain.
     ///
     /// This field is always present.
-    1: Domain domain;
+    1: domain Domain;
     /// Whether the source of the media playback is on this device.
     ///
     /// This field is present only if known.
-    2: bool is_local;
+    2: is_local bool;
     /// If this is `true`, the playback is taking place local to the device.
     /// Playing on the device speaker is local, playing on a remote speaker
     /// is not. This is only set when the session is playing back; a paused
     /// session is not active.
     ///
     /// This field is always present.
-    3: bool is_locally_active;
+    3: is_locally_active bool;
     /// The status of the player.
     ///
     /// This field is always present.
-    4: PlayerStatus player_status;
+    4: player_status PlayerStatus;
     /// Metadata describing the media session.
     ///
     /// This field is always present.
-    5: fuchsia.media.Metadata metadata;
+    5: metadata fuchsia.media.Metadata;
     /// Images associated with the media or its source.
     ///
     /// This field is always present.
-    6: vector<MediaImage> media_images;
+    6: media_images vector<MediaImage>;
     /// The capabilities the player of the media implements.
     ///
     /// This field is always present.
-    7: PlayerCapabilities player_capabilities;
+    7: player_capabilities PlayerCapabilities;
 };
 
 /// Controls a media session and views its status.
@@ -61,7 +59,9 @@ protocol SessionControl {
     /// Seeks to a specific position in media. Implementations are free to
     /// enter an error state if the position is out of bounds. `position`
     /// is an offset from the beginning of the media.
-    Seek(zx.duration position);
+    Seek(struct {
+        position zx.duration;
+    });
     /// Skips forward in media by the player's default skip amount.
     SkipForward();
     /// Skips in reverse in media by the player's default skip amount.
@@ -72,18 +72,27 @@ protocol SessionControl {
     PrevItem();
     /// Sets the playback rate of the media. This will not change the
     /// playback mode.
-    SetPlaybackRate(float32 playback_rate);
+    SetPlaybackRate(struct {
+        playback_rate float32;
+    });
     /// Sets repeat mode to any of the supported repeat modes.
-    SetRepeatMode(RepeatMode repeat_mode);
+    SetRepeatMode(struct {
+        repeat_mode RepeatMode;
+    });
     /// Sets shuffle mode.
-    SetShuffleMode(bool shuffle_on);
+    SetShuffleMode(struct {
+        shuffle_on bool;
+    });
     /// Binds to the session's volume control for control and notifications.
-    BindVolumeControl(
-        request<fuchsia.media.audio.VolumeControl> volume_control_request);
+    BindVolumeControl(resource struct {
+        volume_control_request server_end:fuchsia.media.audio.VolumeControl;
+    });
     /// Watches the session status. Leave a request hanging to receive a reply when
     /// the session status changes. The first request will be answered immediately with
     /// the current state.
-    WatchStatus() -> (SessionInfoDelta session_info_delta);
+    WatchStatus() -> (struct {
+        session_info_delta SessionInfoDelta;
+    });
 };
 
 /// Views a media session's status.
@@ -93,17 +102,19 @@ protocol SessionObserver {
     /// Watches the session status. Leave a request hanging to receive a reply when
     /// the session status changes. The first request will be answered immediately with
     /// the current state.
-    WatchStatus() -> (SessionInfoDelta session_info_delta);
+    WatchStatus() -> (struct {
+        session_info_delta SessionInfoDelta;
+    });
 };
 
 /// Options that specify which sessions are watched when watching the collection.
 ///
 /// The watched set is the set of sessions which satisfies all options.
-table WatchOptions {
+type WatchOptions = table {
     /// Watch only the active session. Watches all if not set.
-    1: bool only_active;
+    1: only_active bool;
     /// Watch only sessions with these allowlisted ids. Watches all if not set.
-    2: vector<SessionId>:1000 allowed_sessions;
+    2: allowed_sessions vector<SessionId>:1000;
 };
 
 /// `SessionsWatcher` watches the collection of published sessions.
@@ -114,53 +125,67 @@ protocol SessionsWatcher {
     ///
     /// `SessionsWatcher` must reply to acknowledge receipt of the session info delta.
     /// Delinquent watchers who do not reply will eventually be disconnected.
-    SessionUpdated(SessionId session_id, SessionInfoDelta session_info_delta) -> ();
+    SessionUpdated(struct {
+        session_id SessionId;
+        session_info_delta SessionInfoDelta;
+    }) -> ();
 
     /// Called by the registry service when a session is removed from the registered
     /// collection.
     ///
     /// `SessionsWatcher` must reply to acknlowledge receipt of the session removal.
     /// Delinquent watchers who do not reply will eventually be disconnected.
-    SessionRemoved(SessionId session_id) -> ();
+    SessionRemoved(struct {
+        session_id SessionId;
+    }) -> ();
 };
 
 /// `Discovery` observes the collection of published media sessions
 /// and connects clients to them.
-[Discoverable]
+@discoverable
 protocol Discovery {
     /// Connects a session watcher configured with the given options.
-    WatchSessions(
-        WatchOptions watch_options,
-        SessionsWatcher session_watcher);
+    WatchSessions(resource struct {
+        watch_options WatchOptions;
+        session_watcher client_end:SessionsWatcher;
+    });
 
     /// Connects to a `SessionControl` for `session_id` if present. Drops the
     /// given channel otherwise.
-    ConnectToSession(SessionId session_id,
-                     request<SessionControl> session_control_request);
+    ConnectToSession(resource struct {
+        session_id SessionId;
+        session_control_request server_end:SessionControl;
+    });
 };
 
 /// `ObserverDiscovery` observes the collection of published media sessions
 /// and connects clients to them for observation without playback controls.
-[Discoverable]
+@discoverable
 protocol ObserverDiscovery {
     /// Connects a session watcher configured with the given options.
-    WatchSessions(WatchOptions watch_options,
-                  SessionsWatcher sessions_watcher);
+    WatchSessions(resource struct {
+        watch_options WatchOptions;
+        sessions_watcher client_end:SessionsWatcher;
+    });
 
     /// Connects to a `SessionObserver` for `session_id` if present. Drops the
     /// given channel otherwise.
-    ConnectToSession(SessionId session_id,
-                     request<SessionObserver> session_request);
+    ConnectToSession(resource struct {
+        session_id SessionId;
+        session_request server_end:SessionObserver;
+    });
 };
 
 /// A protocol for watching the current active media session on the device.
 ///
 /// The currently active media session is the most recent existing media session
 /// to announce a "Playing" state on the local device, even if it is now paused.
-[Discoverable]
+@discoverable
 protocol ActiveSession {
     /// Watches the active session. The first request will be answered immediately
     /// with the current active session. Always leave a request hanging to receive
     /// a reply when the active session changes.
-    WatchActiveSession() -> (SessionControl? session);
+    WatchActiveSession() -> (resource struct {
+        session client_end:<SessionControl, optional>;
+    });
 };

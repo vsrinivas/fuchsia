@@ -1,6 +1,4 @@
-deprecated_syntax;
 library fidl.test.escaping;
 
 /// "pleaseescapethisdocommentproperly"
-struct DocCommentWithQuotes {
-};
+type DocCommentWithQuotes = struct {};

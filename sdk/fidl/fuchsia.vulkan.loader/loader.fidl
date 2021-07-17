@@ -1,13 +1,11 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.vulkan.loader;
 
 using zx;
 
-flexible bits Features {
+type Features = flexible bits {
     /// Implements Get().
     GET = 1;
     /// Implements ConnectToDeviceFs().
@@ -16,19 +14,24 @@ flexible bits Features {
     CONNECT_TO_MANIFEST_FS = 4;
 };
 
-flexible bits ConnectToManifestOptions {
+type ConnectToManifestOptions = flexible bits {
     /// Wait for the loader to finish processing current ICD loading/unloading
     /// operations before completing the connection.
     WAIT_FOR_IDLE = 1;
 };
 
 /// Service to provide Vulkan libraries to the loader.
-[Discoverable, ForDeprecatedCBindings]
+@discoverable
+@for_deprecated_c_bindings
 protocol Loader {
     /// Requests a client driver library with the given name from the Vulkan loader
     /// service. Returns a VMO suitable for loading as a dynamic library on
     /// success, a null handle on failure.
-    Get(string:64 name) -> (zx.handle:VMO? lib);
+    Get(struct {
+        name string:64;
+    }) -> (resource struct {
+        lib zx.handle:<VMO, optional>;
+    });
 
     /// Connects to a FS serving fuchsia.io containing all Vulkan ICD manifests.
     /// See
@@ -36,13 +39,20 @@ protocol Loader {
     /// for a description of the manifest file format.  Manifests will always
     /// appear in this directory after the relevant device appears in
     /// `ConnectToDeviceFs()`.
-    ConnectToManifestFs(ConnectToManifestOptions options, zx.handle:CHANNEL channel);
+    ConnectToManifestFs(resource struct {
+        options ConnectToManifestOptions;
+        channel zx.handle:CHANNEL;
+    });
 
     /// Connects to a FS serving fuchsia.io containing all device nodes
     /// potentially relevant to ICDs.  /dev/<devname> will be served under
     /// <devname> in this directory.
-    ConnectToDeviceFs(zx.handle:CHANNEL channel);
+    ConnectToDeviceFs(resource struct {
+        channel zx.handle:CHANNEL;
+    });
 
     /// Returns the set of features the loader service supports.
-    GetSupportedFeatures() -> (Features features);
+    GetSupportedFeatures() -> (struct {
+        features Features;
+    });
 };

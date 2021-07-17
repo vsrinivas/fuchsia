@@ -1,13 +1,13 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.audio;
 
 /// For an overview of the DAI protocols see
 /// [Digital Audio Interface](//docs/concepts/drivers/driver_architectures/audio_drivers/audio_dai.md)
 protocol DaiConnect {
     /// This connects to a DAI protocol server.
-    Connect(request<Dai> dai_protocol);
+    Connect(resource struct {
+        dai_protocol server_end:Dai;
+    });
 };

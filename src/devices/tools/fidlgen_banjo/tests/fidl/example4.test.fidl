@@ -1,19 +1,20 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library banjo.examples.example4;
 
-struct Point {
-    uint64 x;
+type Point = struct {
+    x uint64;
 };
 
-enum Enum {
+type Enum = strict enum {
     x = 23;
 };
 
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol Interface {
-    func(bool x) -> ();
+    func(struct {
+        x bool;
+    }) -> ();
 };

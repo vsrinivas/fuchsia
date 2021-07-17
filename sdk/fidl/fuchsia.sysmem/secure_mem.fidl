@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.sysmem;
 
 using zx;
@@ -47,7 +45,9 @@ protocol SecureMem {
     ///    with TEE which doesn't generate zx_status_t errors).
     ///  * other errors are possible, such as from communication failures or
     ///    server propagation of zx_status_t failures
-    GetPhysicalSecureHeaps() -> (PhysicalSecureHeaps heaps) error zx.status;
+    GetPhysicalSecureHeaps() -> (struct {
+        heaps PhysicalSecureHeaps;
+    }) error zx.status;
 
     /// This request from sysmem to the securemem driver lets the TEE know the
     /// physical memory address and length of any secure heap whose location is
@@ -83,28 +83,30 @@ protocol SecureMem {
     ///    with TEE which doesn't generate zx_status_t errors).
     ///  * other errors are possible, such as from communication failures or
     ///    server propagation of zx_status_t failures
-    SetPhysicalSecureHeaps(PhysicalSecureHeaps heaps) -> () error zx.status;
+    SetPhysicalSecureHeaps(struct {
+        heaps PhysicalSecureHeaps;
+    }) -> (struct {}) error zx.status;
 };
 
-struct PhysicalSecureHeap {
+type PhysicalSecureHeap = struct {
     /// This must be a HeapType that is secure/protected.
-    HeapType heap;
+    heap HeapType;
     /// Must be at least PAGE_SIZE aligned.
-    uint64 physical_address;
+    physical_address uint64;
     /// Must be at least PAGE_SIZE aligned.
-    uint64 size_bytes;
+    size_bytes uint64;
 };
 
 // Sysmem uses layout=Simple, which requires picking a specific array size.
 // Each heap consumes ~24 bytes on the stack, so we limit to a number that
 // exceeds the needs of any current use case (1 heap in each direction so far),
 // without over-alias stack space (24 bytes * 32 == 768 bytes).
-const uint32 MAX_HEAPS_COUNT = 32;
+const MAX_HEAPS_COUNT uint32 = 32;
 
 // In this struct we use array instead of vector because layout=Simple.
-struct PhysicalSecureHeaps {
+type PhysicalSecureHeaps = struct {
     /// Must be <= MAX_HEAPS_COUNT.
-    uint32 heaps_count;
+    heaps_count uint32;
     /// Only the first heaps_count are meaningful.  The rest are ignored.
-    array<PhysicalSecureHeap>:MAX_HEAPS_COUNT heaps;
+    heaps array<PhysicalSecureHeap, MAX_HEAPS_COUNT>;
 };

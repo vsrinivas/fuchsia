@@ -1,4 +1,3 @@
-deprecated_syntax;
 library fidl.test.handles;
 
 using zx;
@@ -6,7 +5,7 @@ using zx;
 // This is not a reference to library zx to avoid complexity in the test data.
 // A local handle is defined here that contains subtypes that this test cares
 // about.
-enum obj_type : uint32 {
+type obj_type = strict enum : uint32 {
     NONE = 0;
     PROCESS = 1;
     THREAD = 2;
@@ -41,54 +40,53 @@ enum obj_type : uint32 {
 
 resource_definition handle : uint32 {
     properties {
-        obj_type subtype;
-        zx.rights rights;
+        subtype obj_type;
+        rights zx.rights;
     };
 };
 
-protocol SomeProtocol {
-};
+protocol SomeProtocol {};
 
 alias aliased_plain_handle = handle;
 alias aliased_subtype_handle = handle:VMO;
 alias aliased_rights_handle = handle:<VMO, zx.rights.DUPLICATE>;
 
-resource struct Handles {
-    handle plain_handle;
+type Handles = resource struct {
+    plain_handle handle;
 
-    handle:BTI bti_handle;
-    handle:CHANNEL channel_handle;
-    handle:CLOCK clock_handle;
-    handle:LOG debuglog_handle;
-    handle:EVENT event_handle;
-    handle:EVENTPAIR eventpair_handle;
-    handle:EXCEPTION exception_handle;
-    handle:FIFO fifo_handle;
-    handle:GUEST guest_handle;
-    handle:INTERRUPT interrupt_handle;
-    handle:IOMMU iommu_handle;
-    handle:JOB job_handle;
-    handle:PAGER pager_handle;
-    handle:PCI_DEVICE pcidevice_handle;
-    handle:PMT pmt_handle;
-    handle:PORT port_handle;
-    handle:PROCESS process_handle;
-    handle:PROFILE profile_handle;
-    handle:RESOURCE resource_handle;
-    handle:SOCKET socket_handle;
-    handle:SUSPEND_TOKEN suspendtoken_handle;
-    handle:THREAD thread_handle;
-    handle:TIMER timer_handle;
-    handle:VCPU vcpu_handle;
-    handle:VMAR vmar_handle;
-    handle:VMO vmo_handle;
+    bti_handle handle:BTI;
+    channel_handle handle:CHANNEL;
+    clock_handle handle:CLOCK;
+    debuglog_handle handle:LOG;
+    event_handle handle:EVENT;
+    eventpair_handle handle:EVENTPAIR;
+    exception_handle handle:EXCEPTION;
+    fifo_handle handle:FIFO;
+    guest_handle handle:GUEST;
+    interrupt_handle handle:INTERRUPT;
+    iommu_handle handle:IOMMU;
+    job_handle handle:JOB;
+    pager_handle handle:PAGER;
+    pcidevice_handle handle:PCI_DEVICE;
+    pmt_handle handle:PMT;
+    port_handle handle:PORT;
+    process_handle handle:PROCESS;
+    profile_handle handle:PROFILE;
+    resource_handle handle:RESOURCE;
+    socket_handle handle:SOCKET;
+    suspendtoken_handle handle:SUSPEND_TOKEN;
+    thread_handle handle:THREAD;
+    timer_handle handle:TIMER;
+    vcpu_handle handle:VCPU;
+    vmar_handle handle:VMAR;
+    vmo_handle handle:VMO;
 
-    handle:<VMO, zx.rights.DUPLICATE | zx.rights.READ> rights_handle;
+    rights_handle handle:<VMO, zx.rights.DUPLICATE | zx.rights.READ>;
 
-    aliased_plain_handle aliased_plain_handle_field;
-    aliased_subtype_handle aliased_subtype_handle_field;
-    aliased_rights_handle aliased_rights_handle_field;
+    aliased_plain_handle_field aliased_plain_handle;
+    aliased_subtype_handle_field aliased_subtype_handle;
+    aliased_rights_handle_field aliased_rights_handle;
 
-    SomeProtocol some_protocol;
-    request<SomeProtocol> request_some_protocol;
+    some_protocol client_end:SomeProtocol;
+    request_some_protocol server_end:SomeProtocol;
 };

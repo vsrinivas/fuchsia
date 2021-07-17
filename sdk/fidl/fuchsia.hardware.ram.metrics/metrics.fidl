@@ -1,40 +1,38 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.ram.metrics;
 
 using zx;
 
-const uint32 MAX_COUNT_CHANNELS = 8;
+const MAX_COUNT_CHANNELS uint32 = 8;
 
 /// Configures bus hardware to make one measurement.
-struct BandwidthMeasurementConfig {
+type BandwidthMeasurementConfig = struct {
     /// How many bus cycles to perform the measurement over.
-    uint64 cycles_to_measure;
+    cycles_to_measure uint64;
     /// Contains which ports to aggregate for each channel.
-    array<uint64>:MAX_COUNT_CHANNELS channels;
+    channels array<uint64, MAX_COUNT_CHANNELS>;
 };
 
 /// Contains the actual cycles granted to each channel. Not all hardware
 /// supports all 3 counters. If a counter is not supported the value
 /// returned is zero.
-struct GrantedCyclesResult {
-    uint64 read_cycles;
-    uint64 write_cycles;
-    uint64 readwrite_cycles;
+type GrantedCyclesResult = struct {
+    read_cycles uint64;
+    write_cycles uint64;
+    readwrite_cycles uint64;
 };
 
-struct BandwidthInfo {
+type BandwidthInfo = struct {
     // Time when the measurement started.
-    zx.time timestamp;
+    timestamp zx.time;
     // Bus frequency in hertz (Hz) when the measurement started.
-    uint64 frequency;
+    frequency uint64;
     // Number of bytes per cycle.
-    uint64 bytes_per_cycle;
-    array<GrantedCyclesResult>:MAX_COUNT_CHANNELS channels;
-    GrantedCyclesResult total;
+    bytes_per_cycle uint64;
+    channels array<GrantedCyclesResult, MAX_COUNT_CHANNELS>;
+    total GrantedCyclesResult;
 };
 
 /// Interface to obtain memory bandwidth usage measurements from hardware
@@ -62,7 +60,11 @@ protocol Device {
     /// by the hardware.
     /// ZX_ERR_SHOULD_WAIT : Too many requests pending. A future request might succeed.
     /// Other errors indicate internal failure.
-    MeasureBandwidth(BandwidthMeasurementConfig config) -> (BandwidthInfo info) error zx.status;
+    MeasureBandwidth(struct {
+        config BandwidthMeasurementConfig;
+    }) -> (struct {
+        info BandwidthInfo;
+    }) error zx.status;
 
     /// Retrieve the DDR Windowing tool results
     /// The windowing tool runs in the bootloader and stores results in a sticky register.
@@ -71,5 +73,7 @@ protocol Device {
     ///
     /// The return on failure is ZX_ERR_NOT_SUPPORTED if the hardware does not support
     /// reading the sticky register.
-    GetDdrWindowingResults() -> (uint32 value) error zx.status;
+    GetDdrWindowingResults() -> (struct {
+        value uint32;
+    }) error zx.status;
 };

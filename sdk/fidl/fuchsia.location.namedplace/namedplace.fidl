@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 /// Protocols and types related to named places. Named places include cities,
 /// countries, regions, etc. This specifically excludes protocols and types
 /// related to latitude and longitude.
@@ -17,7 +15,7 @@ alias RegionCode = string:2;
 /// inform Location Services of the inputs that should be used to
 /// determine the regulatory region whose rules should govern the
 /// operation of radios on the system.
-[Discoverable]
+@discoverable
 protocol RegulatoryRegionConfigurator {
     /// Sets the region.
     ///
@@ -47,13 +45,15 @@ protocol RegulatoryRegionConfigurator {
     /// ```
     ///
     /// + request `region` the current regulatory region.
-    SetRegion(RegionCode region);
+    SetRegion(struct {
+        region RegionCode;
+    });
 };
 
 /// The RegulatoryRegionWatcher protocol provides the mechanism for
 /// radio subsystems to learn the currently applicable regulatory
 /// region, and to be notified when that value changes.
-[Discoverable]
+@discoverable
 protocol RegulatoryRegionWatcher {
     /// This call is deprecated. Use GetRegionUpdate instead.
     ///
@@ -73,7 +73,9 @@ protocol RegulatoryRegionWatcher {
     ///     closed with `ZX_ERR_BAD_STATE`.
     ///
     /// - response `new_region` the current regulatory region.
-    GetUpdate() -> (RegionCode new_region);
+    GetUpdate() -> (struct {
+        new_region RegionCode;
+    });
 
     /// Returns the new RegionCode, when it changes.
     ///
@@ -91,5 +93,7 @@ protocol RegulatoryRegionWatcher {
     ///     closed with `ZX_ERR_BAD_STATE`.
     ///
     /// - response `new_region` the current regulatory region.
-    GetRegionUpdate() -> (RegionCode? new_region);
+    GetRegionUpdate() -> (struct {
+        new_region RegionCode:optional;
+    });
 };

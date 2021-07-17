@@ -1,20 +1,26 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.usb.virtual.bus;
 
 using zx;
 
-[ForDeprecatedCBindings]
+@for_deprecated_c_bindings
 protocol Bus {
     /// Enables the virtual bus.
-    Enable() -> (zx.status status);
+    Enable() -> (struct {
+        status zx.status;
+    });
     /// Disables the virtual bus.
-    Disable() -> (zx.status status);
+    Disable() -> (struct {
+        status zx.status;
+    });
     /// Simulates a USB connected event.
-    Connect() -> (zx.status status);
+    Connect() -> (struct {
+        status zx.status;
+    });
     /// Simulates a USB connected event.
-    Disconnect() -> (zx.status status);
+    Disconnect() -> (struct {
+        status zx.status;
+    });
 };

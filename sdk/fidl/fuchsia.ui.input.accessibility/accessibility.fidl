@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.ui.input.accessibility;
 
 using fuchsia.math;
@@ -10,7 +8,7 @@ using fuchsia.ui.input;
 using zx;
 
 /// Possible ways an accessibility listener can process pointer events.
-enum EventHandling {
+type EventHandling = strict enum {
     /// The listener consumes all the pointer events for (device_id, pointer_id)
     /// until the next UP event.
     CONSUMED = 1;
@@ -22,39 +20,41 @@ enum EventHandling {
 
 /// A PointerEvent is a privileged pointer event that has local view and global
 /// screen coordinates as well as some metadata about the event type.
-table PointerEvent {
+type PointerEvent = table {
     /// Time the event was delivered. The time is in nanoseconds and corresponds
     /// to the monotonic time as determined by the zx_clock_get_monotonic syscall.
-    1: uint64 event_time;
+    1: event_time uint64;
     /// ID of the device that captured this event.
-    2: uint32 device_id;
+    2: device_id uint32;
     /// ID of the pointer that identifies this event.
-    3: uint32 pointer_id;
+    3: pointer_id uint32;
     /// Type of this event, e.g. touch, mouse, etc.
-    4: fuchsia.ui.input.PointerEventType type;
+    4: type fuchsia.ui.input.PointerEventType;
     /// Phase of this event, e.g. add, down, etc.
-    5: fuchsia.ui.input.PointerEventPhase phase;
+    5: phase fuchsia.ui.input.PointerEventPhase;
     /// The coordinate of this pointer event in normalized device coordinates.
     /// Normalized device coordinates have dimensions in the range [-1, 1],
     /// with (0, 0) being the center of the device and axes aligned with the
     /// native display.
-    6: fuchsia.math.PointF ndc_point;
+    6: ndc_point fuchsia.math.PointF;
     /// The viewref koid of the top most view hit for this pointer event.
     /// This field is set to `ZX_KOID_INVALID` when there is no view hit and
     /// `local_point` is undefined.
-    7: zx.koid viewref_koid;
+    7: viewref_koid zx.koid;
     /// The point of this pointer event in local view coordinates.
-    8: fuchsia.math.PointF local_point;
+    8: local_point fuchsia.math.PointF;
 };
 
 /// PointerEventRegistration allows an accessibility service to register a
 /// pointer event listener, so that it can intercept pointer events before they
 /// reach clients.
-[Discoverable]
+@discoverable
 protocol PointerEventRegistry {
     /// Registers a listener to start receiving incoming pointer events. For
     /// now, only one listener is allowed and the first to register is honored.
-    Register(PointerEventListener pointer_event_listener);
+    Register(resource struct {
+        pointer_event_listener client_end:PointerEventListener;
+    });
 };
 
 /// A PointerEventListener receives pointer events and decides to consume them
@@ -69,7 +69,13 @@ protocol PointerEventListener {
     /// ending in an UP phase event. The event can arrive while the stream is in
     /// progress or when it has already finished. The resulting
     /// behavior depends on how it was handled, please see EventHandling above.
-    OnEvent(PointerEvent pointer_event);
+    OnEvent(struct {
+        pointer_event PointerEvent;
+    });
 
-    -> OnStreamHandled(uint32 device_id, uint32 pointer_id, EventHandling handled);
+    -> OnStreamHandled(struct {
+        device_id uint32;
+        pointer_id uint32;
+        handled EventHandling;
+    });
 };

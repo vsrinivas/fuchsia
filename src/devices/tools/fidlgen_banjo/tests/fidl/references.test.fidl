@@ -1,29 +1,36 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library banjo.examples.references;
 
-struct SomeType {
-  uint32 value;
+type SomeType = struct {
+    value uint32;
 };
 
-struct VectorFieldInStruct {
-  [OutOfLineContents] vector<SomeType> the_vector;
-  vector<SomeType?> the_other_vector;
-  vector<SomeType> the_default_vector;
+type VectorFieldInStruct = struct {
+    @out_of_line_contents
+    the_vector vector<SomeType>;
+    the_other_vector vector<box<SomeType>>;
+    the_default_vector vector<SomeType>;
 };
 
-struct MutableField {
-  [Mutable] string some_string;
-  string? some_other_string;
-  string some_default_string;
+type MutableField = struct {
+    @mutable
+    some_string string;
+    some_other_string string:optional;
+    some_default_string string;
 };
 
-[Transport = "Banjo"]
+@transport("Banjo")
 protocol InOutProtocol {
-  DoSomething([InOut] SomeType param) -> ();
-  DoSomeOtherThing(SomeType? param) -> ();
-  DoSomeDefaultThing(SomeType param) -> ();
+    DoSomething(struct {
+        @in_out
+        param SomeType;
+    }) -> ();
+    DoSomeOtherThing(struct {
+        param box<SomeType>;
+    }) -> ();
+    DoSomeDefaultThing(struct {
+        param SomeType;
+    }) -> ();
 };

@@ -1,12 +1,10 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.accessibility;
 
 /// Specifies color correction mode.
-enum ColorCorrectionMode {
+type ColorCorrectionMode = strict enum {
     /// No color correction.
     DISABLED = 0;
 
@@ -28,40 +26,44 @@ enum ColorCorrectionMode {
 /// corrected color (r', g', b') is
 ///   (r', g', b') = color_adjustment_post_offset
 ///                + color_adjustment_matrix . ((r, g, b) + color_adjustment_pre_offset).
-table ColorTransformConfiguration {
+type ColorTransformConfiguration = table {
     /// When color_inversion_enabled is true, certain colors are inverted across the entire screen.
     /// If this field is omitted behavior should remain unchanged.
-    1: bool color_inversion_enabled;
+    1: color_inversion_enabled bool;
 
     /// When color_correction is set to DISABLED, colors are displayed normally. When
     /// color_correction has different value, colors are modified to correct for the specified type
     /// of color blindness. If this field is omitted behavior should remain unchanged.
-    2: ColorCorrectionMode color_correction;
+    2: color_correction ColorCorrectionMode;
 
     /// 3x3 Matrix in row-major form which will be used by root presenter to apply color correction
     /// and color inversion, or a combination fo the two. This field should always be set.
-    3: array<float32>:9 color_adjustment_matrix;
+    3: color_adjustment_matrix array<float32, 9>;
 
     /// 3x1 vector which is used by root presenter as an offset added to the original RGB color,
     /// before it multiplies with the |color_adjustment_matrix|. This field should always be set.
-    4: array<float32>:3 color_adjustment_pre_offset;
+    4: color_adjustment_pre_offset array<float32, 3>;
 
     /// 3x1 vector which is used by root presenter as an offset added to the multiplied result
     /// of |color_adjustment_matrix| and original RGB color. This field should always be set.
-    5: array<float32>:3 color_adjustment_post_offset;
+    5: color_adjustment_post_offset array<float32, 3>;
 };
 
 /// Handler implemented by the owner of the presentation. Accessibility manager uses this protocol
 /// to make changes to the screen's color transform.
 protocol ColorTransformHandler {
     /// Called when the color transform configuration has changed.
-    SetColorTransformConfiguration(ColorTransformConfiguration configuration) -> ();
+    SetColorTransformConfiguration(struct {
+        configuration ColorTransformConfiguration;
+    }) -> ();
 };
 
 /// Allows a presentation owner to register a handler for color transforms. This API is implemented
 /// by the Accessibility manager and called by Root Presenter.
-[Discoverable]
+@discoverable
 protocol ColorTransform {
     /// Registers a handler for changes in the color transform configuration.
-    RegisterColorTransformHandler(ColorTransformHandler handler);
+    RegisterColorTransformHandler(resource struct {
+        handler client_end:ColorTransformHandler;
+    });
 };

@@ -1,11 +1,9 @@
 // Copyright 2017 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.bluetooth.le;
 
-enum PeripheralError {
+type PeripheralError = strict enum {
     /// The operation or parameters requested are not supported on the current hardware.
     NOT_SUPPORTED = 1;
 
@@ -33,7 +31,7 @@ enum PeripheralError {
 /// The mode affects how quickly a scanner or central is able to discover the peripheral; however it
 /// can have an adverse effect on power consumption. While the system will try to honor a client's
 /// request, it is not guaranteed to do so.
-enum AdvertisingModeHint : uint8 {
+type AdvertisingModeHint = strict enum : uint8 {
     /// Advertise with a very short interval and window for fast discovery at the cost of higher
     /// power consumption. This corresponds to a 30-60ms interval on the 1M PHYs and 90-180ms on the
     /// coded PHY.
@@ -49,41 +47,40 @@ enum AdvertisingModeHint : uint8 {
 };
 
 /// Represents the parameters for configuring advertisements.
-table AdvertisingParameters {
+type AdvertisingParameters = table {
     /// The fields that will be encoded in the data section of advertising packets.
     ///
     /// This field is required.
-    1: AdvertisingData data;
+    1: data AdvertisingData;
 
     /// The fields that are to be sent in a scan response packet. Clients may use this to send
     /// additional data that does not fit inside an advertising packet on platforms that do not
     /// support the advertising data length extensions.
     ///
     /// If present advertisements will be configured to be scannable.
-    2: AdvertisingData scan_response;
+    2: scan_response AdvertisingData;
 
     /// The desired advertising frequency. See [`fuchsia.bluetooth.le/AdvertisingModeHint`].
     /// Defaults to [`fuchsia.bluetooth.le/AdvertisingModeHint.SLOW`] if not present.
-    3: AdvertisingModeHint mode_hint;
+    3: mode_hint AdvertisingModeHint;
 
     /// If present and true then the controller will broadcast connectable advertisements which
     /// allows remote LE centrals to initiate a connection to the Peripheral. If false or otherwise
     /// not present then the advertisements will be non-connectable.
-    [Deprecated = "Prefer to use the connection_options field for new code."]
-    4: bool connectable;
+    @deprecated("Prefer to use the connection_options field for new code.")
+    4: connectable bool;
 
     /// If present, the controller will broadcast connectable advertisements
     /// which allow peers to initiate connections to the Peripheral. The fields
     /// of `ConnectionOptions` will configure any connections set up from
     /// advertising.
-    5: ConnectionOptions connection_options;
+    5: connection_options ConnectionOptions;
 };
 
 /// Capability that is valid for the duration of advertising. The caller can close the handle to
 /// stop advertising. If the system internally stops advertising for any reason, the handle will be
 /// closed to communicate this to the client.
-protocol AdvertisingHandle {
-};
+protocol AdvertisingHandle {};
 
 /// Protocol that is valid for the duration of advertising. The caller can close
 /// the protocol to stop advertising. If the system internally stops advertising
@@ -107,10 +104,13 @@ protocol AdvertisedPeripheral {
     /// + request `connection` Represents the connection.
     /// - response An empty response should be sent to acknowledge the
     ///   connection and resume advertising (for flow control).
-    OnConnected(Peer peer, Connection connection) -> ();
+    OnConnected(resource struct {
+        peer Peer;
+        connection client_end:Connection;
+    }) -> ();
 };
 
-[Discoverable]
+@discoverable
 protocol Peripheral {
     /// Start advertising continuously as a LE peripheral. If advertising cannot
     /// be initiated then `advertised_peripheral` will be closed and an error
@@ -139,7 +139,10 @@ protocol Peripheral {
     ///   recommended before calling `Advertise` again.
     /// * error If an error occurs, `advertised_peripheral` will be closed and a
     ///   `PeripheralError` will be returned.
-    Advertise(AdvertisingParameters parameters, AdvertisedPeripheral advertised_peripheral) -> () error PeripheralError;
+    Advertise(resource struct {
+        parameters AdvertisingParameters;
+        advertised_peripheral client_end:AdvertisedPeripheral;
+    }) -> (struct {}) error PeripheralError;
 
     /// Start advertising as a LE peripheral. An empty response is sent to indicate when advertising
     /// has successfully initiated. If advertising cannot be initiated, then the response will
@@ -161,8 +164,11 @@ protocol Peripheral {
     /// + request `handle` Handle that remains valid for the duration of this advertising session.
     /// * error Returns a [`fuchsia.bluetooth.le/PeripheralError`] if advertising cannot be
     ///         initiated. In this case the `handle` will be closed.
-    [Deprecated]
-    StartAdvertising(AdvertisingParameters parameters, request<AdvertisingHandle> handle) -> () error PeripheralError;
+    @deprecated
+    StartAdvertising(resource struct {
+        parameters AdvertisingParameters;
+        handle server_end:AdvertisingHandle;
+    }) -> (struct {}) error PeripheralError;
 
     /// Event delivered when a remote LE central initiates a connection to this Peripheral when
     /// connectable advertising is enabled via
@@ -175,6 +181,9 @@ protocol Peripheral {
     ///
     /// + request `peer` Information about the central that initiated the connection.
     /// + request `connection` Represents the connection.
-    [Deprecated]
-    -> OnPeerConnected(Peer peer, Connection connection);
+    @deprecated
+    -> OnPeerConnected(resource struct {
+        peer Peer;
+        connection client_end:Connection;
+    });
 };

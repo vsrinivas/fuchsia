@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 /// The neighbor table helps decide where to send IP packets. It allows for the
 /// translation between IP addresses and MAC addresses.
 ///
@@ -52,7 +50,7 @@ using fuchsia.net;
 using zx;
 
 /// Inspect the neighbor table and related interface configuration.
-[Discoverable]
+@discoverable
 protocol View {
     /// Open a connection to an [`EntryIterator`] for listing existing entries
     /// and optionally watching for state changes.
@@ -60,7 +58,10 @@ protocol View {
     /// + request `it` request the server to bind an implementation of
     ///     `EntryIterator` to this channel.
     /// + request `options` modifies the behavior of the [`EntryIterator`].
-    OpenEntryIterator(request<EntryIterator> it, EntryIteratorOptions options);
+    OpenEntryIterator(resource struct {
+        it server_end:EntryIterator;
+        options EntryIteratorOptions;
+    });
 
     /// View the current configurations of an interface.
     ///
@@ -70,12 +71,16 @@ protocol View {
     /// * error `ZX_ERR_NOT_FOUND` if `interface` does not exist.
     // TODO(fxbug.dev/59058): Reading configuration should be moved to
     // interface-scoped protocols in fuchsia.net.interfaces.
-    GetUnreachabilityConfig(fuchsia.net.interface_id interface, fuchsia.net.IpVersion ip_version)
-        -> (UnreachabilityConfig config) error zx.status;
+    GetUnreachabilityConfig(struct {
+        interface fuchsia.net.interface_id;
+        ip_version fuchsia.net.IpVersion;
+    }) -> (struct {
+        config UnreachabilityConfig;
+    }) error zx.status;
 };
 
 /// Modify the neighbor table and related interface configuration.
-[Discoverable]
+@discoverable
 protocol Controller {
     /// Create a static entry. If a conflict is found, overwrite the existing
     /// entry. Conflicts occur when two entries have the same interface
@@ -88,8 +93,11 @@ protocol Controller {
     /// * error `ZX_ERR_NOT_FOUND` if `interface` does not exist.
     /// * error `ZX_ERR_NOT_SUPPORTED` if `interface` does not keep a neighbor
     ///     table (e.g. point-to-point links).
-    AddEntry(fuchsia.net.interface_id interface, fuchsia.net.IpAddress neighbor, fuchsia.net.MacAddress mac)
-        -> () error zx.status;
+    AddEntry(struct {
+        interface fuchsia.net.interface_id;
+        neighbor fuchsia.net.IpAddress;
+        mac fuchsia.net.MacAddress;
+    }) -> (struct {}) error zx.status;
 
     /// Delete a dynamic or static entry.
     ///
@@ -100,8 +108,10 @@ protocol Controller {
     ///   `neighbor`.
     /// * error `ZX_ERR_NOT_SUPPORTED` if `interface` does not keep a neighbor
     ///     table (e.g. point-to-point links).
-    RemoveEntry(fuchsia.net.interface_id interface, fuchsia.net.IpAddress neighbor)
-        -> () error zx.status;
+    RemoveEntry(struct {
+        interface fuchsia.net.interface_id;
+        neighbor fuchsia.net.IpAddress;
+    }) -> (struct {}) error zx.status;
 
     /// Delete all dynamic and static entries belonging to an interface.
     ///
@@ -111,8 +121,10 @@ protocol Controller {
     /// * error `ZX_ERR_NOT_FOUND` if `interface` does not exist.
     /// * error `ZX_ERR_NOT_SUPPORTED` if `interface` does not keep a neighbor
     ///     table (e.g. point-to-point links).
-    ClearEntries(fuchsia.net.interface_id interface, fuchsia.net.IpVersion ip_version)
-        -> () error zx.status;
+    ClearEntries(struct {
+        interface fuchsia.net.interface_id;
+        ip_version fuchsia.net.IpVersion;
+    }) -> (struct {}) error zx.status;
 
     /// Change the configuration of the neighbor discovery algorithm for an
     /// interface.
@@ -131,6 +143,9 @@ protocol Controller {
     ///     constraints.
     // TODO(fxbug.dev/59058): Updating configuration should be moved to
     // interface-scoped protocols in fuchsia.net.interfaces.
-    UpdateUnreachabilityConfig(fuchsia.net.interface_id interface, fuchsia.net.IpVersion ip_version,
-                               UnreachabilityConfig config) -> () error zx.status;
+    UpdateUnreachabilityConfig(struct {
+        interface fuchsia.net.interface_id;
+        ip_version fuchsia.net.IpVersion;
+        config UnreachabilityConfig;
+    }) -> (struct {}) error zx.status;
 };

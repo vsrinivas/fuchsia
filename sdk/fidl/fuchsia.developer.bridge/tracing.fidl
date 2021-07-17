@@ -5,8 +5,6 @@
 //! Covers the FFX tracing service, which is for running trace readouts
 //! on a Fuchsia target.
 //! For more information/usage examples, see the FFX trace plugin.
-deprecated_syntax;
-
 library fuchsia.developer.bridge;
 
 using fuchsia.device;
@@ -14,7 +12,7 @@ using fuchsia.tracing.controller;
 
 /// This covers erorr from using the `Tracing` protocol below (specifically
 /// trace recording errors).
-enum RecordingError {
+type RecordingError = strict enum {
     /// Error encountered when opening the proxy to the target.
     TARGET_PROXY_OPEN = 0;
 
@@ -31,7 +29,7 @@ enum RecordingError {
 };
 
 /// Covers how a trace will be run when invoking `StartRecording`.
-table TraceOptions {
+type TraceOptions = table {
     /// Determines how long a trace recording will run before terminating in
     /// fractional seconds. This is an "at-least" duration, with the actual
     /// runtime terminating likely a few dozen milliseconds longer.
@@ -39,21 +37,24 @@ table TraceOptions {
     /// If this is not set, a trace will run indefinitely and must be stopped
     /// using `StopRecording`. Or by cleanly shutting down the daemon via
     /// `ffx daemon stop` or by using the Deamon proxy itself.
-    1: float64 duration;
+    1: duration float64;
 };
 
-[Discoverable]
+@discoverable
 protocol Tracing {
     /// Starts a trace recording. If the target behind the query is already
     /// running a trace, or some trace is actively writing to the output file,
     /// this will
-    StartRecording(string:fuchsia.device.DEVICE_NAME_MAX? target_query,
-                   string:255 output_file,
-                   TraceOptions options,
-                   fuchsia.tracing.controller.TraceConfig target_config)
-        -> () error RecordingError;
+    StartRecording(struct {
+        target_query string:<fuchsia.device.DEVICE_NAME_MAX, optional>;
+        output_file string:255;
+        options TraceOptions;
+        target_config fuchsia.tracing.controller.TraceConfig;
+    }) -> (struct {}) error RecordingError;
 
     /// Stops the trace recording, flushing the remaining contents to the output
     /// file.
-    StopRecording(string:255 output_file) -> () error RecordingError;
+    StopRecording(struct {
+        output_file string:255;
+    }) -> (struct {}) error RecordingError;
 };

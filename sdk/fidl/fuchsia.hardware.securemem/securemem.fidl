@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.securemem;
 
 using zx;
@@ -18,5 +16,10 @@ protocol Device {
     ///    entity. The protocol implementation should not be expected to keep the VMO pinned.
     ///  * The server implementation must not use an IOMMU-backed BTI handle, as the physical
     ///    address of the VMO being pinned must be stable.
-    GetSecureMemoryPhysicalAddress(zx.handle:VMO secure_mem) -> (zx.status s, zx.paddr paddr);
+    GetSecureMemoryPhysicalAddress(resource struct {
+        secure_mem zx.handle:VMO;
+    }) -> (struct {
+        s zx.status;
+        paddr zx.paddr;
+    });
 };

@@ -1,16 +1,14 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.ui.views;
 
 /// A ViewRef's state of focus.
-table FocusState {
+type FocusState = table {
     /// Describes if a ViewRef has gained focus (true), or lost focus (false).
     ///
     /// Required field.
-    1: bool focused;
+    1: focused bool;
 };
 
 /// A method of enabling a ViewRef creator to determine if its ViewRef has
@@ -47,5 +45,7 @@ protocol ViewRefFocused {
     /// Flow control: The caller is allowed at most one in-flight |Watch| call
     /// at at time: subsequent |Watch| calls must wait until the acknowledgment
     /// returns. Non-compliance results in channel closure.
-    Watch() -> (FocusState state);
+    Watch() -> (struct {
+        state FocusState;
+    });
 };

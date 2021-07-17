@@ -1,41 +1,82 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.spiimpl;
 
 using zx;
 
 // Must match //sdk/fidl/fuchsia.hardware.sharedmemory/sharedmemory.fidl
-enum SpiVmoRight : uint32 {
+type SpiVmoRight = strict enum : uint32 {
     READ = 0x1; // The protocol implementation can read from this VMO (used for write requests).
     WRITE = 0x2; // The protocol implementation can write to this VMO (used for read requests).
 };
 
 /// Low-level protocol for spi drivers.
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol SpiImpl {
     /// Returns the number of chip select lines available or provided by the driver instance.
     /// To be used as a limit on the acceptable values for the `chip_select' field in the Exchange()
     /// and ExchangeVmo() methods.
-    GetChipSelectCount() -> (uint32 count);
+    GetChipSelectCount() -> (struct {
+        count uint32;
+    });
 
     /// Perform a SPI bus transaction of the specified length. Either txdata or rxdata may be
     /// NULL, in which case the transaction will be half-duplex in the appropriate direction.
     /// Regardless, both vectors must have the same length.
-    Exchange(uint32 chip_select, vector<uint8>:MAX txdata) -> (zx.status status, vector<uint8>:MAX rxdata);
+    Exchange(struct {
+        chip_select uint32;
+        txdata vector<uint8>:MAX;
+    }) -> (struct {
+        status zx.status;
+        rxdata vector<uint8>:MAX;
+    });
 
     /// rights is a bit field containing SpiVmoRight values, and determines the read/write
     /// permissions used by the implementation when pinning or mapping the VMO.
-    RegisterVmo(uint32 chip_select, uint32 vmo_id, zx.handle:VMO vmo, uint64 offset, uint64 size,
-                uint32 rights) -> (zx.status status);
-    UnregisterVmo(uint32 chip_select, uint32 vmo_id) -> (zx.status status, zx.handle:VMO vmo);
+    RegisterVmo(resource struct {
+        chip_select uint32;
+        vmo_id uint32;
+        vmo zx.handle:VMO;
+        offset uint64;
+        size uint64;
+        rights uint32;
+    }) -> (struct {
+        status zx.status;
+    });
+    UnregisterVmo(struct {
+        chip_select uint32;
+        vmo_id uint32;
+    }) -> (resource struct {
+        status zx.status;
+        vmo zx.handle:VMO;
+    });
 
-    TransmitVmo(uint32 chip_select, uint32 vmo_id, uint64 offset, uint64 size)
-        -> (zx.status status);
-    ReceiveVmo(uint32 chip_select, uint32 vmo_id, uint64 offset, uint64 size)
-        -> (zx.status status);
-    ExchangeVmo(uint32 chip_select, uint32 tx_vmo_id, uint64 tx_offset, uint32 rx_vmo_id,
-                uint64 rx_offset, uint64 size) -> (zx.status status);
+    TransmitVmo(struct {
+        chip_select uint32;
+        vmo_id uint32;
+        offset uint64;
+        size uint64;
+    }) -> (struct {
+        status zx.status;
+    });
+    ReceiveVmo(struct {
+        chip_select uint32;
+        vmo_id uint32;
+        offset uint64;
+        size uint64;
+    }) -> (struct {
+        status zx.status;
+    });
+    ExchangeVmo(struct {
+        chip_select uint32;
+        tx_vmo_id uint32;
+        tx_offset uint64;
+        rx_vmo_id uint32;
+        rx_offset uint64;
+        size uint64;
+    }) -> (struct {
+        status zx.status;
+    });
 };

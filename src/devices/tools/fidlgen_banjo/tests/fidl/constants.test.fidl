@@ -1,12 +1,11 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
 library banjo.examples.constants;
 
-const uint32 SOME_VALUE = 12345;
-const int8 ANOTHER_VALUE = 32;
-const bool DO_IT = false;
-const int16 FANCY_PANTS = 0xFF;
-[Namespaced]
-const uint8 NAMESPACED_VALUE = 32;
+const SOME_VALUE uint32 = 12345;
+const ANOTHER_VALUE int8 = 32;
+const DO_IT bool = false;
+const FANCY_PANTS int16 = 0xFF;
+@namespaced
+const NAMESPACED_VALUE uint8 = 32;

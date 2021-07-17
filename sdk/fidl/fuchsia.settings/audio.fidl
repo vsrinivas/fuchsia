@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.settings;
 
 using fuchsia.media;
@@ -11,22 +9,26 @@ using fuchsia.media;
 ///
 /// Supported SettingsEpitaph enums:
 /// REQUEST_NOT_SUPPORTED, INTERNAL_SERVICE_ERROR, PERSISTENT_STORAGE_ERROR
-[Discoverable]
+@discoverable
 protocol Audio {
     /// Gets the current [AudioSettings]. Returns immediately on first call;
     /// subsequent calls return when the value changes.
     ///
     /// If this call fails, it is considered a fatal error and the channel
     /// will be closed.
-    Watch() -> (AudioSettings settings);
+    Watch() -> (struct {
+        settings AudioSettings;
+    });
 
     /// Sets audio settings. Any field not explicitly set in the table performs a
     /// no-op, and will not make any changes.
-    Set(AudioSettings settings) -> () error Error;
+    Set(struct {
+        settings AudioSettings;
+    }) -> (struct {}) error Error;
 };
 
 /// The source of the volume settings. The volume is set according to the source.
-enum AudioStreamSettingSource {
+type AudioStreamSettingSource = strict enum {
 
     /// The volume is set by the user. When the `source` in AudioStreamSettings is
     /// set to this, the audio volume is set to `user_volume`.
@@ -37,39 +39,39 @@ enum AudioStreamSettingSource {
     SYSTEM = 1;
 };
 
-table Volume {
+type Volume = table {
     /// The volume level ranged [0.0, 1.0]. The level maps to a dbfs value from a volume
     /// curve in the setting service. Not a number (NaN), infinity or negative infinity
     /// will cause SetVolume to fail with INVALID_VALUE.
-    1: float32 level;
+    1: level float32;
 
     /// True if the volume should be muted. If this is true, then the volume is silent,
     /// regardless of `level`.
-    2: bool muted;
+    2: muted bool;
 };
 
-table AudioStreamSettings {
+type AudioStreamSettings = table {
     /// The audio stream which the settings are applying to.
-    1: fuchsia.media.AudioRenderUsage stream;
+    1: stream fuchsia.media.AudioRenderUsage;
 
     /// The volume of `stream` is set according to the volume settings from `source`.
-    2: AudioStreamSettingSource source;
+    2: source AudioStreamSettingSource;
 
     /// User level volume setting. If the `source` is USER, then the volume is set to
     /// `user_volume`.
-    3: Volume user_volume;
+    3: user_volume Volume;
 };
 
-table AudioSettings {
+type AudioSettings = table {
     /// Contains the volume setting for all audio stream settings. There should only be
     /// one AudioStreamSettings for each fuchsia.media.AudioRenderUsage.
-    1: vector<AudioStreamSettings>:5 streams;
+    1: streams vector<AudioStreamSettings>:5;
 
     /// To be deprecated in favor of fuchsia.settings.InputDeviceSettings.
-    2: AudioInput input;
+    2: input AudioInput;
 };
 
-table AudioInput {
+type AudioInput = table {
     /// Whether the audio input is muted. Takes into consideration the hardware state.
-    1: bool muted;
+    1: muted bool;
 };

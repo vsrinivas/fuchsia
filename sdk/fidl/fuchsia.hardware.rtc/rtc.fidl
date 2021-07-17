@@ -1,27 +1,31 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.rtc;
 
 using zx;
 
-[ForDeprecatedCBindings]
-struct Time {
-    uint8 seconds;
-    uint8 minutes;
-    uint8 hours;
-    uint8 day;
-    uint8 month;
-    uint16 year;
+@for_deprecated_c_bindings
+type Time = struct {
+    seconds uint8;
+    minutes uint8;
+    hours uint8;
+    day uint8;
+    month uint8;
+    year uint16;
 };
 
-[ForDeprecatedCBindings]
+@for_deprecated_c_bindings
 protocol Device {
     /// Get the current RTC time
-    Get() -> (Time rtc);
+    Get() -> (struct {
+        rtc Time;
+    });
 
     /// Set the RTC time
-    Set(Time rtc) -> (zx.status status);
+    Set(struct {
+        rtc Time;
+    }) -> (struct {
+        status zx.status;
+    });
 };

@@ -1,32 +1,39 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.display.capture;
 
 using zx;
 
 alias ZxUnownedHandle = uint32;
 
-[Transport = "Banjo", BanjoLayout = "ddk-interface"]
+@transport("Banjo")
+@banjo_layout("ddk-interface")
 protocol DisplayCaptureInterface {
     OnCaptureComplete() -> ();
 };
 
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol DisplayCaptureImpl {
     /// The function will only be called once, and it will be called before any other
     /// functions are called.
-    SetDisplayCaptureInterface(DisplayCaptureInterface intf) -> ();
+    SetDisplayCaptureInterface(resource struct {
+        intf client_end:DisplayCaptureInterface;
+    }) -> ();
 
     /// Import BufferCollection backed VMO pointed to by index.
     /// Importing the VMO usually involves pinning the VMO and updating display
     /// controller hardware registers with the physical address of the VMO to be
     /// used for capture. Returns out_capture_handle which maps to the allocated
     /// resource
-    ImportImageForCapture(ZxUnownedHandle collection, uint32 index)
-        -> (zx.status s, uint64 capture_handle);
+    ImportImageForCapture(struct {
+        collection ZxUnownedHandle;
+        index uint32;
+    }) -> (struct {
+        s zx.status;
+        capture_handle uint64;
+    });
 
     /// Starts capture into the resource mapped by capture_handle (non-blocking)
     /// Only one active capture is allowed at a time.
@@ -35,13 +42,23 @@ protocol DisplayCaptureImpl {
     /// Drivers should not leave display hardware in this unexpected state.
     /// Drivers are expected to stop and/or abort capture if no valid
     /// image is being displayed.
-    StartCapture(uint64 capture_handle) -> (zx.status s);
+    StartCapture(struct {
+        capture_handle uint64;
+    }) -> (struct {
+        s zx.status;
+    });
 
     /// Releases resources allocated by capture_handle.
     /// Releasing resources from an active capture is not allowed and will cause
     /// unexpected behavior.
-    ReleaseCapture(uint64 capture_handle) -> (zx.status s);
+    ReleaseCapture(struct {
+        capture_handle uint64;
+    }) -> (struct {
+        s zx.status;
+    });
 
     /// Returns true if capture is completed. False otherwise.
-    IsCaptureCompleted() -> (bool b);
+    IsCaptureCompleted() -> (struct {
+        b bool;
+    });
 };

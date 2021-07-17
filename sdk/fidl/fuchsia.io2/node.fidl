@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.io2;
 
 using zx;
@@ -21,8 +19,10 @@ protocol Node {
     ///
     /// For files, the cloned connection and the original connection have
     /// independent seek offsets.
-    Reopen(ConnectionOptions options,
-           zx.handle:CHANNEL object_request);
+    Reopen(resource struct {
+        options ConnectionOptions;
+        object_request zx.handle:CHANNEL;
+    });
 
     /// Terminates the connection to the node.
     ///
@@ -50,7 +50,11 @@ protocol Node {
     /// associated error.
     ///
     /// This method does not require any rights.
-    Describe(ConnectionInfoQuery query) -> (ConnectionInfo info);
+    Describe(struct {
+        query ConnectionInfoQuery;
+    }) -> (resource struct {
+        info ConnectionInfo;
+    });
 
     /// An event produced eagerly by the server if requested by
     /// [`ConnectionFlags.GET_CONNECTION_INFO`]. This event will be the
@@ -61,14 +65,18 @@ protocol Node {
     ///
     /// Different from [`fuchsia.io/OnOpen`], an error during open/reopen is
     /// always manifested as an epitaph.
-    -> OnConnectionInfo(ConnectionInfo info);
+    -> OnConnectionInfo(resource struct {
+        info ConnectionInfo;
+    });
 
     /// Acquires a token which can be used to identify this connection at
     /// a later point in time.
     ///
     /// This method does not require any rights. Note that the token identifies
     /// the connection, hence carries the rights information on this connection.
-    GetToken() -> (Token token) error zx.status;
+    GetToken() -> (resource struct {
+        token Token;
+    }) error zx.status;
 
     /// Acquires information about the node.
     ///
@@ -80,8 +88,11 @@ protocol Node {
     /// - `attributes` the returned attributes.
     ///
     /// This method requires the [`Rights.GET_ATTRIBUTES`] right.
-    GetAttributes(NodeAttributesQuery query)
-        -> (NodeAttributes attributes) error zx.status;
+    GetAttributes(struct {
+        query NodeAttributesQuery;
+    }) -> (struct {
+        attributes NodeAttributes;
+    }) error zx.status;
 
     /// Updates information about the node.
     ///
@@ -89,7 +100,9 @@ protocol Node {
     /// the intent to update the corresponding attribute.
     ///
     /// This method requires the [`Rights.UPDATE_ATTRIBUTES`] right.
-    UpdateAttributes(NodeAttributes attributes) -> () error zx.status;
+    UpdateAttributes(struct {
+        attributes NodeAttributes;
+    }) -> (struct {}) error zx.status;
 
     /// Synchronizes updates to the node to the underlying media, if it exists.
     ///
@@ -100,5 +113,5 @@ protocol Node {
     /// between operations.
     ///
     /// This method does not require any rights.
-    Sync() -> () error zx.status;
+    Sync() -> (struct {}) error zx.status;
 };

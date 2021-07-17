@@ -1,32 +1,60 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fidl.rust.test.external;
 
 using zx;
 
 protocol SendHandleProtocol {
-    SendHandleReducedRights(zx.handle:<EVENT, zx.rights.TRANSFER> h);
-    SendHandleSameRights(zx.handle:<EVENT> h);
+    SendHandleReducedRights(resource struct {
+        h zx.handle:<EVENT, zx.rights.TRANSFER>;
+    });
+    SendHandleSameRights(resource struct {
+        h zx.handle:EVENT;
+    });
 };
 
 protocol EchoHandleProtocol {
-    EchoHandleRequestResponseReducedRights(zx.handle:<EVENT, zx.rights.TRANSFER | zx.rights.DUPLICATE> h) -> (zx.handle:<EVENT, zx.rights.TRANSFER> h);
+    EchoHandleRequestResponseReducedRights(resource struct {
+        h zx.handle:<EVENT, zx.rights.TRANSFER | zx.rights.DUPLICATE>;
+    }) -> (resource struct {
+        h zx.handle:<EVENT, zx.rights.TRANSFER>;
+    });
 
-    EchoHandleRequestReducedRights(zx.handle:<EVENT, zx.rights.TRANSFER> h) -> (zx.handle:<EVENT> h);
-    EchoHandleRequestSameRights(zx.handle:<EVENT> h) -> (zx.handle:<EVENT> h);
+    EchoHandleRequestReducedRights(resource struct {
+        h zx.handle:<EVENT, zx.rights.TRANSFER>;
+    }) -> (resource struct {
+        h zx.handle:EVENT;
+    });
+    EchoHandleRequestSameRights(resource struct {
+        h zx.handle:EVENT;
+    }) -> (resource struct {
+        h zx.handle:EVENT;
+    });
 
-    EchoHandleResponseReducedRights(zx.handle:<EVENT> h) -> (zx.handle:<EVENT, zx.rights.TRANSFER> h);
-    EchoHandleResponseSameRights(zx.handle:<EVENT> h) -> (zx.handle:<EVENT> h);
+    EchoHandleResponseReducedRights(resource struct {
+        h zx.handle:EVENT;
+    }) -> (resource struct {
+        h zx.handle:<EVENT, zx.rights.TRANSFER>;
+    });
+    EchoHandleResponseSameRights(resource struct {
+        h zx.handle:EVENT;
+    }) -> (resource struct {
+        h zx.handle:EVENT;
+    });
 };
 
 protocol PushEventProtocol {
-    -> PushEventReducedRights(zx.handle:<EVENT, zx.rights.TRANSFER> h);
-    -> PushEventSameRights(zx.handle:<EVENT> h);
+    -> PushEventReducedRights(resource struct {
+        h zx.handle:<EVENT, zx.rights.TRANSFER>;
+    });
+    -> PushEventSameRights(resource struct {
+        h zx.handle:EVENT;
+    });
 };
 
 protocol ErrorSyntaxProtocol {
-    TestErrorSyntax() -> (zx.handle:<EVENT, zx.rights.TRANSFER> h) error uint32;
+    TestErrorSyntax() -> (resource struct {
+        h zx.handle:<EVENT, zx.rights.TRANSFER>;
+    }) error uint32;
 };

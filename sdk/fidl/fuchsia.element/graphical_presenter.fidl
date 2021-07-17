@@ -1,8 +1,6 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.element;
 
 using fuchsia.ui.views;
@@ -14,7 +12,7 @@ using fuchsia.ui.views;
 ///
 /// The presented views can be annotated with `fuchsia.element.Annotations` to communicate
 /// presentation properties to the `GraphicalPresenter`.
-[Discoverable]
+@discoverable
 protocol GraphicalPresenter {
     /// Presents the view described by `view_spec`.
     ///
@@ -42,24 +40,26 @@ protocol GraphicalPresenter {
     /// * error `PresentViewError.INVALID_ARGS` if `spec.view_holder_token` or
     ///   `spec.view_ref` are missing or invalid
     /// * error `PresentViewError` if the view could not be presented
-    PresentView(ViewSpec view_spec, AnnotationController? annotation_controller,
-                request<ViewController>? view_controller_request)
-        -> () error PresentViewError;
+    PresentView(resource struct {
+        view_spec ViewSpec;
+        annotation_controller client_end:<AnnotationController, optional>;
+        view_controller_request server_end:<ViewController, optional>;
+    }) -> (struct {}) error PresentViewError;
 };
 
 /// An error returned when `GraphicalPresenter` fails to present a view.
-enum PresentViewError {
+type PresentViewError = strict enum {
     /// The provided `ViewSpec` is malformed.
     INVALID_ARGS = 1;
 };
 
 /// A description of a view that can be presented by a `GraphicalPresenter`.
-resource table ViewSpec {
+type ViewSpec = resource table {
     /// The view holder token for the presented view. Required.
-    1: fuchsia.ui.views.ViewHolderToken view_holder_token;
+    1: view_holder_token fuchsia.ui.views.ViewHolderToken;
 
     /// The `ViewRef` of the presented view. Required.
-    2: fuchsia.ui.views.ViewRef view_ref;
+    2: view_ref fuchsia.ui.views.ViewRef;
 
     /// The annotations associated with the presented view.
     ///
@@ -73,7 +73,7 @@ resource table ViewSpec {
     /// `ViewSpec.annotations` for the associated view.
     ///
     /// Optional.
-    3: Annotations annotations;
+    3: annotations Annotations;
 };
 
 /// An interface that gives clients of `GraphicalPresenter` control over a view

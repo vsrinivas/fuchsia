@@ -1,17 +1,24 @@
-deprecated_syntax;
 library fidl.test.requestflexibleenvelope;
 
-flexible union FlexibleFoo {
-    1: string s;
-    2: int32 i;
+type FlexibleFoo = flexible union {
+    1: s string;
+    2: i int32;
 };
 
-union StrictFoo {
-    1: string s;
-    2: int32 i;
+type StrictFoo = strict union {
+    1: s string;
+    2: i int32;
 };
 
 protocol Protocol {
-    RequestStrictResponseFlexible(StrictFoo s) -> (FlexibleFoo f);
-    RequestFlexibleResponseStrict(FlexibleFoo s) -> (StrictFoo f);
+    RequestStrictResponseFlexible(struct {
+        s StrictFoo;
+    }) -> (struct {
+        f FlexibleFoo;
+    });
+    RequestFlexibleResponseStrict(struct {
+        s FlexibleFoo;
+    }) -> (struct {
+        f StrictFoo;
+    });
 };

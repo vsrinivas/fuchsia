@@ -1,69 +1,67 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.input.report;
 
 /// A hardcoded number of max mouse buttons. This should be increased in the future
 /// if we ever see mice with more buttons.
-const uint32 MOUSE_MAX_NUM_BUTTONS = 32;
+const MOUSE_MAX_NUM_BUTTONS uint32 = 32;
 
 /// Describes the format of the input report that will be sent from the mouse
 /// to the device.
-table MouseInputDescriptor {
+type MouseInputDescriptor = table {
     /// The range of relative X movement.
-    1: Axis movement_x;
+    1: movement_x Axis;
 
     /// The range of relative Y movement.
-    2: Axis movement_y;
+    2: movement_y Axis;
 
     /// The range of the position of X.
     /// The main use of position is from virtual mice like over VNC.
-    6: Axis position_x;
+    6: position_x Axis;
 
     /// The range of the position of Y.
     /// The main use of position is from virtual mice like over VNC.
-    7: Axis position_y;
+    7: position_y Axis;
 
     /// The range of relative vertical scroll.
-    3: Axis scroll_v;
+    3: scroll_v Axis;
 
     /// The range of relative horizontal scroll.
-    4: Axis scroll_h;
+    4: scroll_h Axis;
 
     /// This is a vector of id's for the mouse buttons.
-    5: vector<uint8>:MOUSE_MAX_NUM_BUTTONS buttons;
+    5: buttons vector<uint8>:MOUSE_MAX_NUM_BUTTONS;
 };
 
 /// The capabilities of a mouse device.
-table MouseDescriptor {
-    1: MouseInputDescriptor input;
+type MouseDescriptor = table {
+    1: input MouseInputDescriptor;
 };
 
 /// `MouseReport` gives the relative movement of the mouse and currently
 /// pressed buttons. Relative means the movement seen between the previous
 /// report and this report. The client is responsible for tracking this and
 /// converting it to absolute movement.
-table MouseInputReport {
+type MouseInputReport = table {
     /// Relative X positional displacement.
-    1: int64 movement_x;
+    1: movement_x int64;
     /// Relative Y positional displacement.
-    2: int64 movement_y;
+    2: movement_y int64;
 
     /// The position of X.
     /// The main use of position is from virtual mice like over VNC.
-    6: int64 position_x;
+    6: position_x int64;
 
     /// The position of Y.
     /// The main use of position is from virtual mice like over VNC.
-    7: int64 position_y;
+    7: position_y int64;
 
     /// Relative vertical scrolling displacement.
-    3: int64 scroll_v;
+    3: scroll_v int64;
     /// Relative horizontal scrolling displacement.
-    4: int64 scroll_h;
+    4: scroll_h int64;
 
     /// A list of currently pressed buttons.
-    5: vector<uint8>:MOUSE_MAX_NUM_BUTTONS pressed_buttons;
+    5: pressed_buttons vector<uint8>:MOUSE_MAX_NUM_BUTTONS;
 };

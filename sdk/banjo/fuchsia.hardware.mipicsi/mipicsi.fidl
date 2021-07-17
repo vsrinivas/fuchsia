@@ -1,25 +1,23 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.mipicsi;
 using fuchsia.hardware.camera;
 using zx;
 
-struct MipiInfo {
+type MipiInfo = struct {
     // Number of channels used.
-    uint32 channel;
+    channel uint32;
     // Number of lanes used.
-    uint32 lanes;
+    lanes uint32;
     // Used to program MIPI_PHY_THS_SETTLE. No documentation.
-    uint32 ui_value;
+    ui_value uint32;
     // MIPI CSI Version.
-    uint32 csi_version;
+    csi_version uint32;
 };
 
 /// Values for Image Formats.
-enum MipiImageFormat : uint32 {
+type MipiImageFormat = strict enum : uint32 {
     AM_RAW6 = 0x1;
     AM_RAW7 = 0x2;
     AM_RAW8 = 0x3;
@@ -29,7 +27,7 @@ enum MipiImageFormat : uint32 {
 };
 
 /// Values for different MIPI modes.
-enum MipiModes : uint32 {
+type MipiModes = strict enum : uint32 {
     DDR_MODE = 0x0;
     // Direct mode.
     DIR_MODE = 0x1;
@@ -38,20 +36,28 @@ enum MipiModes : uint32 {
 };
 
 /// Values for virtual channel.
-enum MipiPath : uint32 {
+type MipiPath = strict enum : uint32 {
     PATH0 = 0x0;
     PATH1 = 0x1;
 };
 
-struct MipiAdapInfo {
-    fuchsia.hardware.camera.Dimensions resolution;
-    MipiImageFormat format;
-    MipiModes mode;
-    MipiPath path;
+type MipiAdapInfo = struct {
+    resolution fuchsia.hardware.camera.Dimensions;
+    format MipiImageFormat;
+    mode MipiModes;
+    path MipiPath;
 };
 
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol MipiCsi {
-    Init(MipiInfo mipi_info, MipiAdapInfo adap_info) -> (zx.status s);
-    DeInit() -> (zx.status s);
+    Init(struct {
+        mipi_info MipiInfo;
+        adap_info MipiAdapInfo;
+    }) -> (struct {
+        s zx.status;
+    });
+    DeInit() -> (struct {
+        s zx.status;
+    });
 };

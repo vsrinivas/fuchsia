@@ -1,20 +1,18 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.mem2;
 
 using zx;
 
 alias BufferId = uint32;
 
-const uint32 MAX_BUFFERS = 64;
-const uint32 MAX_VMO_NAME_LENGTH = 64;
-const uint32 MAX_PARTICIPANT_NAME_LENGTH = 64;
+const MAX_BUFFERS uint32 = 64;
+const MAX_VMO_NAME_LENGTH uint32 = 64;
+const MAX_PARTICIPANT_NAME_LENGTH uint32 = 64;
 
 /// Provides buffers (VMOs) to groups of participants.
-[Discoverable]
+@discoverable
 protocol BufferProvider {
     /// Creates a new logical buffer collection identified by `provider_token`. The reply is sent
     /// when all participant tokens have been submitted or the operation fails for some reason.
@@ -27,10 +25,13 @@ protocol BufferProvider {
     /// - response `collection_info` a description of the resulting buffer collection.
     /// * error reason for failure to create the collection. This method will never return
     ///   `BufferProviderError.TIMED_OUT_WAITING_FOR_CREATION`.
-    CreateBufferCollection(zx.handle:EVENTPAIR provider_token,
-                           string:MAX_VMO_NAME_LENGTH vmo_name,
-                           request<BufferCollection>? buffer_collection_request)
-        -> (CollectionInfo collection_info) error BufferProviderError;
+    CreateBufferCollection(resource struct {
+        provider_token zx.handle:EVENTPAIR;
+        vmo_name string:MAX_VMO_NAME_LENGTH;
+        buffer_collection_request server_end:<BufferCollection, optional>;
+    }) -> (struct {
+        collection_info CollectionInfo;
+    }) error BufferProviderError;
 
     /// Gets buffers for the logical buffer collection identified by |participant_token|, which must
     /// be a peer of the provider token used in a `CreateBufferCollection` call. This operation
@@ -50,12 +51,15 @@ protocol BufferProvider {
     /// - response `buffers `the VMOs that make up the collection, meeting all constraints from all
     ///   participants.
     /// * error reason for failiure to create the collection.
-    GetBuffers(zx.handle:EVENTPAIR participant_token,
-               Constraints constraints,
-               request<BufferCollection>? buffer_collection_request,
-               string:MAX_PARTICIPANT_NAME_LENGTH name,
-               uint64 id)
-        -> (vector<zx.handle:VMO>:MAX_BUFFERS buffers) error BufferProviderError;
+    GetBuffers(resource struct {
+        participant_token zx.handle:EVENTPAIR;
+        constraints Constraints;
+        buffer_collection_request server_end:<BufferCollection, optional>;
+        name string:MAX_PARTICIPANT_NAME_LENGTH;
+        id uint64;
+    }) -> (resource struct {
+        buffers vector<zx.handle:VMO>:MAX_BUFFERS;
+    }) error BufferProviderError;
 };
 
 protocol BufferCollection {
@@ -79,44 +83,46 @@ protocol BufferCollection {
     /// calls `BufferProvider.CreateBufferCollection` passing the provider token, then it calls
     /// this method on the existing collection, passing one of the participant tokens. The other
     /// participant token is passed to the new participant so it may join the collection.
-    ReferNewCollection(zx.handle:EVENTPAIR participant_token) -> () error BufferProviderError;
+    ReferNewCollection(resource struct {
+        participant_token zx.handle:EVENTPAIR;
+    }) -> (struct {}) error BufferProviderError;
 };
 
-table CollectionInfo {
+type CollectionInfo = table {
     /// The size of the buffers in the collection.
-    1: uint32 buffer_size;
+    1: buffer_size uint32;
 
     /// The size of the collection.
-    2: uint32 buffer_count;
+    2: buffer_count uint32;
 };
 
 /// Describes constraints applied to a buffer collection by a participant via
 /// `BufferProvider.GetBuffers`.
 // TODO: Define this for real.
 // TODO: More specific name? BufferConstraints?
-table Constraints {
+type Constraints = table {
     /// Minimum buffer size. The participant requires that each buffer in the collection be at
     /// least this size (in bytes). The size of the buffers in the buffer collection will be at
     /// least the maximum of these values across all participants. If this value is not provided,
     /// a default value of 0 is presumed.
-    1: uint32 min_buffer_size;
+    1: min_buffer_size uint32;
 
     /// Buffer count. The participant may, at any given time, maintain possession of this many
     /// buffers. The number of buffers in the buffer collection will be at least the sum of these
     /// values across all participants. If this value is not provided, a default value of 0 is
     /// presumed.
-    2: uint32 buffer_count;
+    2: buffer_count uint32;
 
     /// Minimum aggregate buffer size. The participant requires that the sum (in bytes) of the sizes
     /// of all the buffers in the collection be at least this large. The sum of the sizes of all the
     /// buffers in the buffer collection will be at least the sum of these values across all
     /// participants. If this value is not provided, a default value of 0 is presumed.
-    3: uint64 min_aggregate_buffer_size;
+    3: min_aggregate_buffer_size uint64;
 };
 
 /// Errors that may be returned by `BufferProvider.CreateBufferCollection` or
 /// `BufferProvider.GetBuffers`.
-enum BufferProviderError {
+type BufferProviderError = strict enum {
     /// Participants have submitted constraints that cannot be collectively satisfied.
     OVERCONSTRAINED = 1;
 

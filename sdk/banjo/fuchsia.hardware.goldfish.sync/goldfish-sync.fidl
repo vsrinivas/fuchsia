@@ -1,13 +1,16 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.goldfish.sync;
 
 using zx;
 
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol GoldfishSync {
-    CreateTimeline(zx.handle:CHANNEL timeline_req) -> (zx.status s);
+    CreateTimeline(resource struct {
+        timeline_req zx.handle:CHANNEL;
+    }) -> (struct {
+        s zx.status;
+    });
 };

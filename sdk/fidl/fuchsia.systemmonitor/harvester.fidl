@@ -1,14 +1,14 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.systemmonitor;
 
 using zx;
 
-[Discoverable]
+@discoverable
 protocol Harvester {
     /// Connect a socket over which the legacy gRPC protocol can be used.
-    ConnectGrpc(zx.handle:SOCKET socket) -> () error zx.status;
+    ConnectGrpc(resource struct {
+        socket zx.handle:SOCKET;
+    }) -> (struct {}) error zx.status;
 };

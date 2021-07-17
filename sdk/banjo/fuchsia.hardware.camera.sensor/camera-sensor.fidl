@@ -1,96 +1,97 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
-
 library fuchsia.hardware.camera.sensor;
 
 using fuchsia.hardware.camera;
 using zx;
 
-const uint32 EXTENSION_VALUE_ARRAY_LEN = 32;
+const EXTENSION_VALUE_ARRAY_LEN uint32 = 32;
 
 /// A type used to distinguish extension parameters.
-union ExtensionValueDataType {
-    1: int32 int_value;
-    2: uint32 uint_value;
-    3: array<uint8>:EXTENSION_VALUE_ARRAY_LEN byte_array_value;
-    4: fuchsia.hardware.camera.Dimensions dimension_value;
-    5: fuchsia.hardware.camera.MinMaxConstraints constraints_value;
-    6: array<FrameRateInfo>:EXTENSION_VALUE_ARRAY_LEN frame_rate_info_value;
+type ExtensionValueDataType = strict union {
+    1: int_value int32;
+    2: uint_value uint32;
+    3: byte_array_value array<uint8, EXTENSION_VALUE_ARRAY_LEN>;
+    4: dimension_value fuchsia.hardware.camera.Dimensions;
+    5: constraints_value fuchsia.hardware.camera.MinMaxConstraints;
+    6: frame_rate_info_value array<FrameRateInfo, EXTENSION_VALUE_ARRAY_LEN>;
 };
 
-enum PixelType : uint8 {
+type PixelType = strict enum : uint8 {
     RAW8 = 1;
     RAW10 = 2;
     RAW12 = 3;
 };
 
-enum DynamicRangeMode : uint8 {
+type DynamicRangeMode = strict enum : uint8 {
     LINEAR = 1;
     WIDE = 2;
 };
 
-enum BinningMode : uint8 {
+type BinningMode = strict enum : uint8 {
     NONE = 1;
     ADDITIVE = 2;
     AVERAGE = 3;
 };
 
-struct SamplingParams {
-    BinningMode mode;
-    uint32 bin_amount;
-    uint32 skip_amount;
+type SamplingParams = struct {
+    mode BinningMode;
+    bin_amount uint32;
+    skip_amount uint32;
 };
 
-struct ReadoutConfig {
+type ReadoutConfig = struct {
     /// Describes sampling parameters for the x plane.
-    SamplingParams sampling_x;
+    sampling_x SamplingParams;
     /// Describes sampling parameters for the y plane.
-    SamplingParams sampling_y;
+    sampling_y SamplingParams;
     /// The x and y offset as well as the width and height for cropping.
-    fuchsia.hardware.camera.Rect scaler_crop;
+    scaler_crop fuchsia.hardware.camera.Rect;
 };
 
 /// A sensor can support several different predefined modes.
 /// This structure keeps all necessary information about a mode.
 // TODO(fxbug.dev/55427): Move non-sensor-specific params out of this struct.
-struct OperatingMode {
+type OperatingMode = struct {
     /// This mode's index.
-    uint8 idx;
+    idx uint8;
     /// This mode's identifying string.
-    string:MAX identifier;
+    identifier string:MAX;
     /// Maximum frames per second.
-    uint32 fps;
+    fps uint32;
     /// Input resolution, where |x| is pixel width and |y| is pixel height.
-    fuchsia.hardware.camera.Dimensions resolution_in;
+    resolution_in fuchsia.hardware.camera.Dimensions;
     /// Output resolution, where |x| is pixel width and |y| is pixel height.
-    fuchsia.hardware.camera.Dimensions resolution_out;
+    resolution_out fuchsia.hardware.camera.Dimensions;
     /// How many exposures this mode supports.
-    uint8 exposures;
+    exposures uint8;
     /// A mode that reflects what dynamic range technique is being used.
-    DynamicRangeMode dr_mode;
+    dr_mode DynamicRangeMode;
     /// The pixel type (e.g. whether the output is in RAW8, RAW10, etc. format).
-    PixelType pixel_type;
+    pixel_type PixelType;
     /// Lane count.
-    uint8 lanes;
+    lanes uint8;
     /// MBps per lane.
-    uint32 mbps;
+    mbps uint32;
     /// Line time.
-    float32 line_time;
+    line_time float32;
     /// Frame time.
-    float32 frame_time;
+    frame_time float32;
     /// A structure containing information on binning, skipping, and scaling
     /// operations carried out on frame data.
-    ReadoutConfig readout;
+    readout ReadoutConfig;
 };
 
 /// This structure maps the sensor's frame rates to coarse max integration time.
-struct FrameRateInfo {
-    fuchsia.hardware.camera.FrameRate frame_rate;
-    uint32 max_coarse_integration_time;
+type FrameRateInfo = struct {
+    frame_rate fuchsia.hardware.camera.FrameRate;
+    max_coarse_integration_time uint32;
 };
 
+// TODO(fxbug.dev/55428): Incorporate muting behavior into documentation. Add arg/return value info.
+// TODO(fxbug.dev/56558): Add a versioning mechanism.
+// TODO(fxbug.dev/55430): Transition methods to use [Async].
 /// Exposes a product-agnostic interface to the camera's sensor.
 /// Allows clients to get and set sensor constraints, sensor mode,
 /// and its dynamic operating state.
@@ -104,27 +105,39 @@ struct FrameRateInfo {
 ///    ZX_ERR_OUT_OF_RANGE        - Args fall outside of min/max constraints.
 ///    ZX_ERR_BUFFER_TOO_SMALL    - Buffer provided cannot hold all required data.
 ///    ZX_ERR_IO_NOT_PRESENT      - There is no sensor device present or bound.
-// TODO(fxbug.dev/55428): Incorporate muting behavior into documentation. Add arg/return value info.
-// TODO(fxbug.dev/56558): Add a versioning mechanism.
-// TODO(fxbug.dev/55430): Transition methods to use [Async].
-[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
+@transport("Banjo")
+@banjo_layout("ddk-protocol")
 protocol CameraSensor2 {
     /// Initializes the sensor.
-    Init() -> (zx.status s);
+    Init() -> (struct {
+        s zx.status;
+    });
     /// De-Initializes the sensor.
     DeInit() -> ();
 
     /// Retrieves the sensor's ID.
-    GetSensorId() -> (zx.status s, uint32 id);
+    GetSensorId() -> (struct {
+        s zx.status;
+        id uint32;
+    });
 
     /// Retrieve a vector of available modes.
-    GetAvailableModes() -> (zx.status s, vector<OperatingMode>:MAX modes);
+    GetAvailableModes() -> (struct {
+        s zx.status;
+        modes vector<OperatingMode>:MAX;
+    });
     /// Use a specific mode for the initialization sequence.
-    SetMode(uint32 mode) -> (zx.status s);
+    SetMode(struct {
+        mode uint32;
+    }) -> (struct {
+        s zx.status;
+    });
 
     /// Start streaming.
     /// Is safe to call this if streaming is already started.
-    StartStreaming() -> (zx.status s);
+    StartStreaming() -> (struct {
+        s zx.status;
+    });
     /// Stop streaming.
     /// It is safe to call this if streaming is already stopped.
     StopStreaming() -> ();
@@ -132,28 +145,63 @@ protocol CameraSensor2 {
     // Exposure Settings
 
     /// Retrieve analog gain value.
-    GetAnalogGain() -> (zx.status s, float32 gain);
+    GetAnalogGain() -> (struct {
+        s zx.status;
+        gain float32;
+    });
     /// Changes analog gain value.
-    SetAnalogGain(float32 gain) -> (zx.status s, float32 gain);
+    SetAnalogGain(struct {
+        gain float32;
+    }) -> (struct {
+        s zx.status;
+        gain float32;
+    });
     /// Retrieve digital gain value.
-    GetDigitalGain() -> (zx.status s, float32 gain);
+    GetDigitalGain() -> (struct {
+        s zx.status;
+        gain float32;
+    });
     /// Changes digital gain value.
-    SetDigitalGain(float32 gain) -> (zx.status s, float32 gain);
+    SetDigitalGain(struct {
+        gain float32;
+    }) -> (struct {
+        s zx.status;
+        gain float32;
+    });
     /// Retrieve integration time value.
-    GetIntegrationTime() -> (zx.status s, float32 int_time);
+    GetIntegrationTime() -> (struct {
+        s zx.status;
+        int_time float32;
+    });
     /// Changes Integration Time.
-    SetIntegrationTime(float32 int_time) -> (zx.status s, float32 int_time);
+    SetIntegrationTime(struct {
+        int_time float32;
+    }) -> (struct {
+        s zx.status;
+        int_time float32;
+    });
 
     /// Update the sensor with new parameters.
-    Update() -> (zx.status s);
+    Update() -> (struct {
+        s zx.status;
+    });
 
     // OTP
 
     /// Retrieve the total size of the data stored in the OTP module.
-    GetOtpSize() -> (zx.status s, uint32 size);
+    GetOtpSize() -> (struct {
+        s zx.status;
+        size uint32;
+    });
     /// Retrieve the specified amount of OTP data at the offset and write them to
     /// the provided vmo.
-    GetOtpData(uint32 byte_count, uint32 offset) -> (zx.status s, zx.handle:VMO otp_data);
+    GetOtpData(struct {
+        byte_count uint32;
+        offset uint32;
+    }) -> (resource struct {
+        s zx.status;
+        otp_data zx.handle:VMO;
+    });
 
     // Test Controls
 
@@ -165,28 +213,59 @@ protocol CameraSensor2 {
     ///    4            - PN9
     ///    5-255        - Reserved
     ///    256-65535    – Manufacturer specific
-    GetTestPatternMode() -> (zx.status s, uint16 value);
+    GetTestPatternMode() -> (struct {
+        s zx.status;
+        value uint16;
+    });
     /// Changes the sensor's test pattern mode.
-    SetTestPatternMode(uint16 mode) -> (zx.status s);
+    SetTestPatternMode(struct {
+        mode uint16;
+    }) -> (struct {
+        s zx.status;
+    });
     /// Retrieves the test pattern data being used.
-    GetTestPatternData() -> (zx.status s, fuchsia.hardware.camera.ColorVal data);
+    GetTestPatternData() -> (struct {
+        s zx.status;
+        data fuchsia.hardware.camera.ColorVal;
+    });
     /// Changes data used by the test pattern. Only used by certain modes.
-    SetTestPatternData(fuchsia.hardware.camera.ColorVal data) -> (zx.status s);
+    SetTestPatternData(struct {
+        data fuchsia.hardware.camera.ColorVal;
+    }) -> (struct {
+        s zx.status;
+    });
 
     /// Retrieves the test cursor data being used.
-    GetTestCursorData() -> (zx.status s, fuchsia.hardware.camera.Rect data);
+    GetTestCursorData() -> (struct {
+        s zx.status;
+        data fuchsia.hardware.camera.Rect;
+    });
     /// Changes the sensor's cursor-related parameters.
-    SetTestCursorData(fuchsia.hardware.camera.Rect data) -> (zx.status s);
+    SetTestCursorData(struct {
+        data fuchsia.hardware.camera.Rect;
+    }) -> (struct {
+        s zx.status;
+    });
 
     // Other Capabilities
 
     /// This subset of the API provides implementers with the flexibility to provide custom
     /// endpoints for elements not otherwise included.
     /// Retrieves the specified element. The caller must reference the implementer's ID list.
-    GetExtensionValue(uint64 id) -> (zx.status s, ExtensionValueDataType value);
+    GetExtensionValue(struct {
+        id uint64;
+    }) -> (struct {
+        s zx.status;
+        value ExtensionValueDataType;
+    });
     /// This subset of the API provides implementers with the flexibility to provide custom
     /// endpoints for elements not otherwise included.
     /// Changes the specified element. The caller must reference the implementer's ID list.
-    SetExtensionValue(uint64 id, ExtensionValueDataType value)
-        -> (zx.status s, ExtensionValueDataType value);
+    SetExtensionValue(struct {
+        id uint64;
+        value ExtensionValueDataType;
+    }) -> (struct {
+        s zx.status;
+        value ExtensionValueDataType;
+    });
 };
