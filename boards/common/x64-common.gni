@@ -74,6 +74,4 @@ board_package_labels = [
   "//src/graphics/lib/goldfish-vulkan/gnbuild:goldfish-vulkan",
 ]
 
-max_fuchsia_zbi_size = 16777216  # 16 MiB
-max_zedboot_zbi_size = 16777216  # 16 MiB
 minfs_enable_dirty_cache = true
