@@ -31,7 +31,6 @@ group("deprecated_flutter_app_allowlist") {
     "//src/ui/tests/integration_flutter_tests/embedder/parent-view:parent-view",
     "//src/ui/tests/integration_input_tests/touch/one-flutter:one-flutter",
     "//src/tests/intl/timestamp-server-dart:timestamp-server-flutter",
-    "//vendor/google/connectivity/management/router_manager_app:router-manager-app",
     "//vendor/google/factory/fctui:fctui",
   ]
 
