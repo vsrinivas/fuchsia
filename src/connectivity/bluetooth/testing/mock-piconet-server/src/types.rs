@@ -4,16 +4,16 @@
 
 use {
     anyhow::{format_err, Error},
+    bt_rfcomm::profile::is_rfcomm_protocol,
     fidl_fuchsia_bluetooth_bredr as bredr,
     fuchsia_bluetooth::{
-        profile::{Attribute, Psm},
+        profile::{psm_from_protocol, Attribute, ProtocolDescriptor, Psm},
         types::{PeerId, Uuid},
     },
     std::{collections::HashSet, convert::TryFrom},
 };
 
 use crate::peer::service::ServiceHandle;
-use crate::profile::build_l2cap_descriptor;
 
 /// Convenience type for storing the fields of a Profile.ServiceFound response.
 pub struct ServiceFoundResponse {
@@ -37,6 +37,31 @@ impl TryFrom<bredr::LaunchInfo> for LaunchInfo {
             url: src.component_url.ok_or(format_err!("Component URL must be provided"))?,
             arguments: src.arguments.unwrap_or(Vec::new()),
         })
+    }
+}
+
+/// Converts a ProtocolDescriptor to a collection of DataElements.
+fn protocol_descriptor_to_data_elements(
+    desc: &bredr::ProtocolDescriptor,
+) -> Vec<Option<Box<bredr::DataElement>>> {
+    let identifier = Some(Box::new(Uuid::new16(desc.protocol as u16).into()));
+    let params: Vec<Option<Box<bredr::DataElement>>> =
+        desc.params.iter().map(|elt| Some(Box::new(elt.clone()))).collect();
+
+    // Build the list of data elements - the protocol identifier with all of the parameters.
+    let mut result = vec![identifier];
+    result.extend(params);
+    result
+}
+
+/// Builds the ProtocolDescriptorList Attribute from the provided `protocol`.
+fn protocol_to_attribute(protocol: &Vec<bredr::ProtocolDescriptor>) -> bredr::Attribute {
+    let elements = protocol.iter().map(protocol_descriptor_to_data_elements).flatten().collect();
+    bredr::Attribute {
+        id: bredr::ATTR_PROTOCOL_DESCRIPTOR_LIST,
+        element: bredr::DataElement::Sequence(vec![Some(Box::new(bredr::DataElement::Sequence(
+            elements,
+        )))]),
     }
 }
 
@@ -81,9 +106,10 @@ pub struct ServiceRecord {
     /// The Service Class IDs specified by this record. There must be at least one.
     svc_ids: HashSet<bredr::ServiceClassProfileIdentifier>,
 
-    /// The PSM of the primary connection specified by this record. It is valid to
-    /// not specify a PSM.
-    primary_connection: Option<Psm>,
+    /// The primary protocol associated with this record. The entire protocol list is stored so that
+    /// when the service is reported to a service search, no information  is lost (e.g the RFCOMM
+    /// channel number).
+    primary_protocol: Vec<ProtocolDescriptor>,
 
     /// Any additional PSMs specified by this record. If none, this will be empty.
     additional_psms: HashSet<Psm>,
@@ -94,23 +120,23 @@ pub struct ServiceRecord {
     /// The additional attributes specified by this record.
     additional_attributes: Vec<Attribute>,
 
-    /// Metadata about this service. This information will be set when the service
-    /// is registered. Use `ServiceRecord::register_service_record()` to mark the
-    /// ServiceRecord as registered by assigning a unique `RegisteredServiceId`.
+    /// Metadata about this service. This information will be set when the service is registered.
+    /// Use `ServiceRecord::register_service_record()` to mark the ServiceRecord as registered by
+    /// assigning a unique `RegisteredServiceId`.
     reg_id: Option<RegisteredServiceId>,
 }
 
 impl ServiceRecord {
     pub fn new(
         svc_ids: HashSet<bredr::ServiceClassProfileIdentifier>,
-        primary_connection: Option<Psm>,
+        primary_protocol: Vec<ProtocolDescriptor>,
         additional_psms: HashSet<Psm>,
         profile_descriptors: Vec<bredr::ProfileDescriptor>,
         additional_attributes: Vec<Attribute>,
     ) -> Self {
         Self {
             svc_ids,
-            primary_connection,
+            primary_protocol,
             additional_psms,
             profile_descriptors,
             additional_attributes,
@@ -124,22 +150,29 @@ impl ServiceRecord {
 
     /// Returns all the PSMs specified by this record.
     pub fn psms(&self) -> HashSet<Psm> {
-        let mut psms = HashSet::new();
-        if let Some(psm) = self.primary_connection {
-            psms.insert(psm);
+        let mut psms = self.additional_psms.clone();
+
+        // For RFCOMM-dependent services, the PSM is typically not supplied in the protocol list
+        // of the service definition.
+        if is_rfcomm_protocol(&self.primary_protocol) {
+            psms.insert(Psm::RFCOMM);
+        } else {
+            if let Some(psm) = psm_from_protocol(&self.primary_protocol) {
+                psms.insert(psm);
+            }
         }
-        psms.union(&self.additional_psms).cloned().collect()
+        psms
     }
 
-    /// Returns true if the Service has been registered. Namely, it must be assigned
-    /// a PeerId and ServiceHandle.
+    /// Returns true if the Service has been registered. Namely, it must be assigned a PeerId and
+    /// ServiceHandle.
     #[cfg(test)]
     fn is_registered(&self) -> bool {
         self.reg_id.is_some()
     }
 
-    /// Every registered ServiceRecord has a unique identifier. This is data associated
-    /// with the piconet member that registered it.
+    /// Every registered ServiceRecord has a unique identifier. This is data associated with the
+    /// piconet member that registered it.
     ///
     /// Returns an error if the service has not been registered.
     pub fn unique_service_id(&self) -> Result<RegisteredServiceId, Error> {
@@ -159,8 +192,8 @@ impl ServiceRecord {
         self.reg_id = Some(reg_id);
     }
 
-    /// Converts the ServiceRecord into a ServiceFoundResponse. Builds the
-    /// ProtocolDescriptorList from the data in the ServiceRecord.
+    /// Converts the ServiceRecord into a ServiceFoundResponse. Builds the ProtocolDescriptorList
+    /// from the data in the ServiceRecord.
     ///
     /// Returns an error if the ServiceRecord has not been registered.
     // TODO(fxbug.dev/51454): Build the full ServiceFoundResponse. Right now, we just
@@ -170,25 +203,12 @@ impl ServiceRecord {
             self.reg_id.ok_or(format_err!("The service has not been registered."))?.peer_id();
         let mut attributes = vec![];
 
-        // 1. Build the (optional) primary Protocol Descriptor List. This is both returned and
-        // included in `attributes`.
-        let (protocol, attribute_list) = self.primary_connection.map_or((None, None), |psm| {
-            let prot_list = vec![
-                Some(Box::new(Uuid::new16(bredr::ProtocolIdentifier::L2Cap as u16).into())),
-                Some(Box::new(bredr::DataElement::Uint16(psm.into()))),
-            ];
-            (Some(build_l2cap_descriptor(psm)), Some(prot_list))
-        });
-        if let Some(attr) = attribute_list {
-            attributes.push(bredr::Attribute {
-                id: bredr::ATTR_PROTOCOL_DESCRIPTOR_LIST,
-                element: bredr::DataElement::Sequence(vec![Some(Box::new(
-                    bredr::DataElement::Sequence(attr),
-                ))]),
-            });
-        }
+        // The primary protocol list. This is both returned and included in `attributes`.
+        let protocol: Vec<bredr::ProtocolDescriptor> =
+            self.primary_protocol.iter().map(Into::into).collect();
+        attributes.push(protocol_to_attribute(&protocol));
 
-        // 2. Add the Service Class ID List Attribute. There should always be at least one.
+        // The service class identifiers.
         let svc_ids_list: Vec<bredr::ServiceClassProfileIdentifier> =
             self.svc_ids.iter().cloned().collect();
         let svc_ids_sequence =
@@ -198,7 +218,7 @@ impl ServiceRecord {
             element: bredr::DataElement::Sequence(svc_ids_sequence),
         });
 
-        // 3. Add the potential Profile Descriptors.
+        // Profile descriptors.
         if !self.profile_descriptors.is_empty() {
             let mut prof_desc_sequence = vec![];
             for descriptor in &self.profile_descriptors {
@@ -217,19 +237,18 @@ impl ServiceRecord {
             });
         }
 
-        // Add the additional attributes to the response.
-        let mut additional_attributes =
-            self.additional_attributes.iter().map(|attr| bredr::Attribute::from(attr)).collect();
+        // Additional attributes.
+        let mut additional_attributes = self.additional_attributes.iter().map(Into::into).collect();
         attributes.append(&mut additional_attributes);
 
-        Ok(ServiceFoundResponse { id: peer_id, protocol, attributes })
+        Ok(ServiceFoundResponse { id: peer_id, protocol: Some(protocol), attributes })
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::profile::tests::rfcomm_service_definition;
+    use crate::profile::{build_l2cap_descriptor, tests::rfcomm_service_definition};
     use {
         bt_rfcomm::ServerChannel, fidl_fuchsia_bluetooth as fidl_bt,
         fuchsia_bluetooth::profile::DataElement,
@@ -287,8 +306,13 @@ mod tests {
             minor_version: 2,
         }];
         let additional_attrs = vec![Attribute { id: 0x2400, element: DataElement::Uint8(10) }];
-        let mut service_record =
-            ServiceRecord::new(ids, Some(primary_psm), additional, descs, additional_attrs);
+        let mut service_record = ServiceRecord::new(
+            ids,
+            build_l2cap_descriptor(primary_psm).iter().map(Into::into).collect(),
+            additional,
+            descs,
+            additional_attrs,
+        );
 
         // Creating the initial ServiceRecord should not be registered.
         assert_eq!(false, service_record.is_registered());
@@ -319,8 +343,8 @@ mod tests {
 
     #[test]
     fn service_record_with_rfcomm() {
-        let (_, mut rfcomm_record) =
-            rfcomm_service_definition(ServerChannel::try_from(4).expect("valid"));
+        let example_channel = ServerChannel::try_from(4).expect("valid");
+        let (_, mut rfcomm_record) = rfcomm_service_definition(example_channel);
         assert!(!rfcomm_record.is_registered());
 
         // RFCOMM should be associated with this record.
@@ -331,6 +355,21 @@ mod tests {
         let handle = RegisteredServiceId::new(PeerId(6313), /* handle= */ 9);
         rfcomm_record.register_service_record(handle);
         assert!(rfcomm_record.is_registered());
+
+        let response = rfcomm_record.to_service_found_response().expect("valid record");
+        assert_eq!(
+            response.protocol,
+            Some(vec![
+                bredr::ProtocolDescriptor {
+                    protocol: bredr::ProtocolIdentifier::L2Cap,
+                    params: vec![],
+                },
+                bredr::ProtocolDescriptor {
+                    protocol: bredr::ProtocolIdentifier::Rfcomm,
+                    params: vec![bredr::DataElement::Uint8(example_channel.into())]
+                }
+            ])
+        );
     }
 
     #[test]

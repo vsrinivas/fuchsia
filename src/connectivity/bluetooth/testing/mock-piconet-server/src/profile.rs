@@ -4,7 +4,7 @@
 
 use {
     anyhow::format_err,
-    bt_rfcomm::profile::is_rfcomm_protocol,
+    bt_rfcomm::profile::{is_rfcomm_protocol, server_channel_from_protocol},
     fidl_fuchsia_bluetooth_bredr as bredr,
     fuchsia_bluetooth::{profile::*, util::CollectExt},
     std::{
@@ -41,20 +41,20 @@ fn parse_service_definition(
         return Err(format_err!("There must be at least one service class UUID"));
     };
 
-    // Parse the primary connection type. RFCOMM protocol descriptors typically leave the L2CAP
-    // PSM empty, therefore we treat it as a special case.
-    let primary_connection = if is_rfcomm_protocol(&definition.protocol_descriptor_list) {
-        Some(Psm::RFCOMM)
-    } else {
-        definition.primary_psm()
-    };
+    // The primary protocol may be empty and not specify a PSM. However, in the case of RFCOMM, it
+    // must be fully populated.
+    let primary_protocol = definition.protocol_descriptor_list.clone();
+    if is_rfcomm_protocol(&primary_protocol) {
+        let _channel_number = server_channel_from_protocol(&primary_protocol)
+            .ok_or(format_err!("Invalid RFCOMM descriptor"))?;
+    }
 
     // Convert (potential) additional PSMs into local Psm type.
     let additional_psms = definition.additional_psms();
 
     Ok(ServiceRecord::new(
         svc_ids,
-        primary_connection,
+        primary_protocol,
         additional_psms,
         definition.profile_descriptors,
         definition.additional_attributes,
@@ -92,10 +92,13 @@ pub(crate) mod tests {
             ..bredr::ServiceDefinition::EMPTY
         };
 
-        let mut ids = HashSet::new();
-        ids.insert(bredr::ServiceClassProfileIdentifier::Headset);
-        ids.insert(bredr::ServiceClassProfileIdentifier::Handsfree);
-        let record = ServiceRecord::new(ids, None, HashSet::new(), vec![], vec![]);
+        let ids = vec![
+            bredr::ServiceClassProfileIdentifier::Headset,
+            bredr::ServiceClassProfileIdentifier::Handsfree,
+        ]
+        .into_iter()
+        .collect();
+        let record = ServiceRecord::new(ids, vec![], HashSet::new(), vec![], vec![]);
 
         (def, record)
     }
@@ -108,27 +111,28 @@ pub(crate) mod tests {
             major_version: 1,
             minor_version: 2,
         }];
+        let protocol_descriptor_list = vec![
+            bredr::ProtocolDescriptor {
+                protocol: bredr::ProtocolIdentifier::L2Cap,
+                params: vec![bredr::DataElement::Uint16(psm.into())],
+            },
+            bredr::ProtocolDescriptor {
+                protocol: bredr::ProtocolIdentifier::Avdtp,
+                params: vec![bredr::DataElement::Uint16(0x0103)], // Indicate v1.3
+            },
+        ];
         let def = bredr::ServiceDefinition {
             service_class_uuids: Some(vec![Uuid::new16(0x110B).into()]), // Audio Sink UUID
-            protocol_descriptor_list: Some(vec![
-                bredr::ProtocolDescriptor {
-                    protocol: bredr::ProtocolIdentifier::L2Cap,
-                    params: vec![bredr::DataElement::Uint16(psm.into())],
-                },
-                bredr::ProtocolDescriptor {
-                    protocol: bredr::ProtocolIdentifier::Avdtp,
-                    params: vec![bredr::DataElement::Uint16(0x0103)], // Indicate v1.3
-                },
-            ]),
+            protocol_descriptor_list: Some(protocol_descriptor_list.clone()),
             profile_descriptors: Some(prof_descs.clone()),
             additional_attributes: Some(vec![]),
             ..bredr::ServiceDefinition::EMPTY
         };
 
-        let mut a2dp_ids = HashSet::new();
-        a2dp_ids.insert(bredr::ServiceClassProfileIdentifier::AudioSink);
-        let connection = Some(psm);
-        let record = ServiceRecord::new(a2dp_ids, connection, HashSet::new(), prof_descs, vec![]);
+        let a2dp_ids = vec![bredr::ServiceClassProfileIdentifier::AudioSink].into_iter().collect();
+        let primary_protocol = protocol_descriptor_list.iter().map(Into::into).collect();
+        let record =
+            ServiceRecord::new(a2dp_ids, primary_protocol, HashSet::new(), prof_descs, vec![]);
 
         (def, record)
     }
@@ -156,22 +160,22 @@ pub(crate) mod tests {
         .into_iter()
         .collect();
         let additional_psms = vec![Psm::AVCTP_BROWSE].into_iter().collect();
-
+        let protocol_descriptor_list = vec![
+            bredr::ProtocolDescriptor {
+                protocol: bredr::ProtocolIdentifier::L2Cap,
+                params: vec![bredr::DataElement::Uint16(bredr::PSM_AVCTP as u16)],
+            },
+            bredr::ProtocolDescriptor {
+                protocol: bredr::ProtocolIdentifier::Avctp,
+                params: vec![bredr::DataElement::Uint16(0x0103)], // Indicate v1.3
+            },
+        ];
         let def = bredr::ServiceDefinition {
             service_class_uuids: Some(vec![
                 Uuid::new16(AvRemoteControl as u16).into(),
                 Uuid::new16(AvRemoteControlController as u16).into(),
             ]),
-            protocol_descriptor_list: Some(vec![
-                bredr::ProtocolDescriptor {
-                    protocol: bredr::ProtocolIdentifier::L2Cap,
-                    params: vec![bredr::DataElement::Uint16(bredr::PSM_AVCTP as u16)],
-                },
-                bredr::ProtocolDescriptor {
-                    protocol: bredr::ProtocolIdentifier::Avctp,
-                    params: vec![bredr::DataElement::Uint16(0x0103)], // Indicate v1.3
-                },
-            ]),
+            protocol_descriptor_list: Some(protocol_descriptor_list.clone()),
             additional_protocol_descriptor_lists: Some(vec![vec![
                 bredr::ProtocolDescriptor {
                     protocol: bredr::ProtocolIdentifier::L2Cap,
@@ -186,10 +190,10 @@ pub(crate) mod tests {
             additional_attributes: Some(vec![(&avrcp_attribute).into()]),
             ..bredr::ServiceDefinition::new_empty()
         };
-        let connection = Some(Psm::AVCTP);
+        let primary_protocol = protocol_descriptor_list.iter().map(Into::into).collect();
         let record = ServiceRecord::new(
             avrcp_ids,
-            connection,
+            primary_protocol,
             additional_psms,
             prof_descs,
             vec![avrcp_attribute],
@@ -231,27 +235,29 @@ pub(crate) mod tests {
             major_version: 1,
             minor_version: 2,
         }];
+        let protocol_descriptor_list = vec![
+            bredr::ProtocolDescriptor {
+                protocol: bredr::ProtocolIdentifier::L2Cap,
+                params: vec![], // For RFCOMM services, the PSM is omitted.
+            },
+            bredr::ProtocolDescriptor {
+                protocol: bredr::ProtocolIdentifier::Rfcomm,
+                params: vec![bredr::DataElement::Uint8(rfcomm_channel.into())],
+            },
+        ];
         let def = bredr::ServiceDefinition {
             service_class_uuids: Some(vec![Uuid::new16(
                 bredr::ServiceClassProfileIdentifier::SerialPort as u16,
             )
             .into()]),
-            protocol_descriptor_list: Some(vec![
-                bredr::ProtocolDescriptor {
-                    protocol: bredr::ProtocolIdentifier::L2Cap,
-                    params: vec![], // For RFCOMM services, the PSM is omitted.
-                },
-                bredr::ProtocolDescriptor {
-                    protocol: bredr::ProtocolIdentifier::Rfcomm,
-                    params: vec![bredr::DataElement::Uint8(rfcomm_channel.into())],
-                },
-            ]),
+            protocol_descriptor_list: Some(protocol_descriptor_list.clone()),
             profile_descriptors: Some(prof_descs.clone()),
             ..bredr::ServiceDefinition::EMPTY
         };
         let spp_ids = vec![bredr::ServiceClassProfileIdentifier::SerialPort].into_iter().collect();
-        let primary_psm = Some(Psm::RFCOMM);
-        let record = ServiceRecord::new(spp_ids, primary_psm, HashSet::new(), prof_descs, vec![]);
+        let primary_protocol = protocol_descriptor_list.iter().map(Into::into).collect();
+        let record =
+            ServiceRecord::new(spp_ids, primary_protocol, HashSet::new(), prof_descs, vec![]);
         (def, record)
     }
 

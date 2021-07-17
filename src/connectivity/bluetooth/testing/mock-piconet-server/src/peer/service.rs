@@ -175,15 +175,16 @@ impl ServiceSet {
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
-
-    use crate::profile::tests::a2dp_service_definition;
+    use crate::profile::{build_l2cap_descriptor, tests::a2dp_service_definition};
 
     fn avrcp_service_record(psm: Psm) -> ServiceRecord {
         let mut service_ids = HashSet::new();
         service_ids.insert(ServiceClassProfileIdentifier::AvRemoteControl);
         service_ids.insert(ServiceClassProfileIdentifier::AvRemoteControlController);
 
-        ServiceRecord::new(service_ids, Some(psm), HashSet::new(), vec![], vec![])
+        let protocol = build_l2cap_descriptor(psm).iter().map(Into::into).collect();
+
+        ServiceRecord::new(service_ids, protocol, HashSet::new(), vec![], vec![])
     }
 
     #[test]

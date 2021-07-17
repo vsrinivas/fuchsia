@@ -361,10 +361,14 @@ impl MockPeer {
 mod tests {
     use super::*;
     use {
-        bt_rfcomm::ServerChannel,
+        bt_rfcomm::{
+            profile::{is_rfcomm_protocol, server_channel_from_protocol},
+            ServerChannel,
+        },
         fidl::endpoints::create_proxy_and_stream,
         fidl_fuchsia_sys::EnvironmentOptions,
         fuchsia_async as fasync,
+        fuchsia_bluetooth::profile::ProtocolDescriptor,
         fuchsia_component::{fuchsia_single_component_package_url, server::ServiceFs},
         futures::{lock::Mutex, pin_mut, task::Poll},
         matches::assert_matches,
@@ -544,35 +548,51 @@ mod tests {
         (handle, component_stream)
     }
 
-    /// Expects a ServiceFound call to the `stream`.
+    /// Expects a ServiceFound call to the `stream` for the `other_peer`. Returns the primary
+    /// protocol associated with the service.
+    ///
     /// Panics if the call doesn't happen.
     fn expect_search_service_found(
         exec: &mut fasync::TestExecutor,
         stream: &mut bredr::SearchResultsRequestStream,
-    ) {
+        other_peer: PeerId,
+    ) -> Option<Vec<ProtocolDescriptor>> {
         let service_found_fut = stream.select_next_some();
         pin_mut!(service_found_fut);
 
         match exec.run_until_stalled(&mut service_found_fut) {
-            Poll::Ready(Ok(bredr::SearchResultsRequest::ServiceFound { responder, .. })) => {
+            Poll::Ready(Ok(bredr::SearchResultsRequest::ServiceFound {
+                peer_id,
+                protocol,
+                responder,
+                ..
+            })) => {
                 let _ = responder.send();
+                assert_eq!(other_peer, peer_id.into());
+                protocol.map(|p| p.iter().map(Into::into).collect())
             }
             x => panic!("Expected ServiceFound request but got: {:?}", x),
         }
     }
 
-    /// Expects a ServiceFound call to the observer `stream`.
+    /// Expects a ServiceFound event on the observer `stream` for the `other_peer`.
     /// Panics if the call doesn't happen.
     fn expect_observer_service_found(
         exec: &mut fasync::TestExecutor,
         stream: &mut bredr::PeerObserverRequestStream,
+        other_peer: PeerId,
     ) {
         let observer_fut = stream.select_next_some();
         pin_mut!(observer_fut);
 
         match exec.run_until_stalled(&mut observer_fut) {
-            Poll::Ready(Ok(bredr::PeerObserverRequest::ServiceFound { responder, .. })) => {
+            Poll::Ready(Ok(bredr::PeerObserverRequest::ServiceFound {
+                peer_id,
+                responder,
+                ..
+            })) => {
                 let _ = responder.send();
+                assert_eq!(other_peer, peer_id.into());
             }
             x => panic!("Expected ServiceFound request but got: {:?}", x),
         }
@@ -786,14 +806,15 @@ mod tests {
         assert!(exec.run_until_stalled(&mut search3).is_pending());
 
         // Build a fake service as a registered record and notify any A2DP Sink searches.
+        let other_peer = PeerId(999);
         let (_, mut record) = a2dp_service_definition(Psm::new(19));
-        record.register_service_record(RegisteredServiceId::new(PeerId(999), 789)); // random
+        record.register_service_record(RegisteredServiceId::new(other_peer, 789)); // random
         let services = vec![record];
         mock_peer.notify_searches(&bredr::ServiceClassProfileIdentifier::AudioSink, services);
 
         // Only `stream1` and `stream2` correspond to searches for AudioSink.
-        expect_search_service_found(&mut exec, &mut stream1);
-        expect_search_service_found(&mut exec, &mut stream2);
+        expect_search_service_found(&mut exec, &mut stream1, other_peer);
+        expect_search_service_found(&mut exec, &mut stream2, other_peer);
         match exec.run_until_stalled(&mut stream3.next()) {
             Poll::Pending => {}
             x => panic!("Expected Pending but got: {:?}", x),
@@ -801,8 +822,8 @@ mod tests {
 
         // Validate that the search results were observed by the PeerObserver for this MockPeer.
         // We expect the observer to be updated twice, since two different searches were notified.
-        expect_observer_service_found(&mut exec, &mut observer_stream);
-        expect_observer_service_found(&mut exec, &mut observer_stream);
+        expect_observer_service_found(&mut exec, &mut observer_stream, other_peer);
+        expect_observer_service_found(&mut exec, &mut observer_stream, other_peer);
 
         Ok(())
     }
@@ -862,7 +883,7 @@ mod tests {
         mock_peer.notify_searches(&bredr::ServiceClassProfileIdentifier::AudioSink, vec![record]);
 
         // Should be notified on the peer's search stream.
-        expect_search_service_found(&mut exec, &mut stream);
+        expect_search_service_found(&mut exec, &mut stream, remote_peer);
 
         // The remote peer associated with the A2DP Sink service reconnects with an identical service.
         record_clone.register_service_record(RegisteredServiceId::new(remote_peer, random_handle));
@@ -871,7 +892,7 @@ mod tests {
 
         // Even though it's an identical service, it should still be relayed to the `mock_peer`
         // because the `remote_peer` re-advertised it (e.g re-registered it).
-        expect_search_service_found(&mut exec, &mut stream);
+        expect_search_service_found(&mut exec, &mut stream, remote_peer);
 
         Ok(())
     }
@@ -935,5 +956,39 @@ mod tests {
             }
             x => panic!("Expected PeerConnected but got: {:?}", x),
         }
+    }
+
+    #[test]
+    fn rfcomm_advertisement_relayed_to_peer_search() {
+        let mut exec = fasync::TestExecutor::new().unwrap();
+
+        let id = PeerId(81);
+        let (mut mock_peer, mut observer_stream, _env_vars) =
+            create_mock_peer(id).expect("valid mock peer");
+
+        // Peer searches for SPP services in the piconet.
+        let (mut search_results, _search_fut) = build_and_register_search(
+            &mut mock_peer,
+            bredr::ServiceClassProfileIdentifier::SerialPort,
+        );
+
+        // Some random SPP service is discovered.
+        let other_peer = PeerId(82);
+        let random_handle = 1234;
+        let random_rfcomm_channel = ServerChannel::try_from(5).expect("valid channel");
+        let (_, mut spp_record) = rfcomm_service_definition(random_rfcomm_channel);
+        spp_record.register_service_record(RegisteredServiceId::new(other_peer, random_handle));
+
+        // Since the `mock_peer` is searching for SPP services, it should be notified of the service.
+        mock_peer
+            .notify_searches(&bredr::ServiceClassProfileIdentifier::SerialPort, vec![spp_record]);
+        let discovered_protocol =
+            expect_search_service_found(&mut exec, &mut search_results, other_peer)
+                .expect("Should have protocol");
+        assert!(is_rfcomm_protocol(&discovered_protocol));
+        assert_eq!(server_channel_from_protocol(&discovered_protocol), Some(random_rfcomm_channel));
+
+        // Should be echoed on the observer.
+        expect_observer_service_found(&mut exec, &mut observer_stream, other_peer);
     }
 }
