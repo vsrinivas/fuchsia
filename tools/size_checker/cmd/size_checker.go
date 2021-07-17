@@ -6,6 +6,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -14,9 +15,11 @@ import (
 	"log"
 	"net/url"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -42,6 +45,10 @@ type SizeLimits struct {
 	DistributedShlibsLimit json.Number `json:"distributed_shlibs_limit"`
 	// Specifies a series of size components/categories with a struct describing each.
 	Components []Component `json:"components"`
+	// Specifies a list of size components for blobs not added to blobfs.
+	// This is useful when we want to check the size of packages that are
+	// not added to BlobFS at assembly-time.
+	NonBlobFSComponents []NonBlobFSComponent `json:"non_blobfs_components"`
 }
 
 // Display prints the contents of node and its children into a string.  All
@@ -65,10 +72,17 @@ type Component struct {
 	Src       []string    `json:"src"`
 }
 
+type NonBlobFSComponent struct {
+	Component     string      `json:"component"`
+	Limit         json.Number `json:"limit"`
+	BlobsJsonPath string      `json:"blobs_json_path"`
+}
+
 type ComponentSize struct {
-	Size   int64 `json:"size"`
-	Budget int64 `json:"budget"`
-	nodes  []*Node
+	Size             int64 `json:"size"`
+	Budget           int64 `json:"budget"`
+	IncludedInBlobFS bool
+	nodes            []*Node
 }
 
 type Blob struct {
@@ -518,6 +532,74 @@ func parseBlobfsBudget(buildDir, fileSystemSizesJSONFilename string) int64 {
 	return 0
 }
 
+// Run an executable at |toolPath| and pass the |args|, then return the stdout.
+func runToolAndCollectOutput(toolPath string, args []string) (bytes.Buffer, error) {
+	cmd := exec.Command(toolPath, args...)
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	err := cmd.Run()
+	return out, err
+}
+
+// Use the blobfs-compression tool at the provided path to calculate the size of
+// the blob at |blobFilePath|.
+func calculateCompressedBlobSize(blobfsCompressionToolPath string, blobFilePath string) (int64, error) {
+	var source_file_arg = fmt.Sprintf("--source_file=%s", blobFilePath)
+	out, err := runToolAndCollectOutput(blobfsCompressionToolPath, []string{source_file_arg})
+	if err != nil {
+		return 0, err
+	}
+	return calculateCompressedBlobSizeFromToolOutput(out)
+}
+
+// From the output of the blobfs-compression tool, |out|, parse the blob size,
+// and return it.
+func calculateCompressedBlobSizeFromToolOutput(out bytes.Buffer) (int64, error) {
+	out_parts := bytes.Split(out.Bytes(), []byte(" "))
+	if len(out_parts) < 2 {
+		return 0, fmt.Errorf("Output of blobfs-compression has an invalid format: %s\n", out.String())
+	}
+	size, err := strconv.Atoi(string(out_parts[1]))
+	if err != nil {
+		return 0, fmt.Errorf("Failed to parse the blob size from blobfs-compression output: %s\n", out.String())
+	}
+
+	return int64(size), nil
+}
+
+// Read the blobs.json file at |blobsJSONFilePath| and construct a BlobFromJSON
+// struct.
+func readBlobsJSONFile(blobsJSONFilePath string) ([]BlobFromJSON, error) {
+	blobs := []BlobFromJSON{}
+	data, err := ioutil.ReadFile(blobsJSONFilePath)
+	if err != nil {
+		return nil, fmt.Errorf(readError(blobsJSONFilePath, err))
+	}
+	if err := json.Unmarshal(data, &blobs); err != nil {
+		return nil, fmt.Errorf(unmarshalError(blobsJSONFilePath, err))
+	}
+	return blobs, nil
+}
+
+// Read the blobs.json file at |blobsJSONFilePath|, and return all the blobs
+// referenced in it.
+func getBlobPathsFromBlobsJSONFile(blobsJSONFilePath string) ([]string, error) {
+	var blobs, err = readBlobsJSONFile(blobsJSONFilePath)
+	if err != nil {
+		return nil, err
+	}
+	return getBlobPathsFromBlobsJSON(blobs), nil
+}
+
+// Iterate over the |blobsJSON| struct, and return all the blobs.
+func getBlobPathsFromBlobsJSON(blobsJSON []BlobFromJSON) []string {
+	var blob_paths = []string{}
+	for _, blob := range blobsJSON {
+		blob_paths = append(blob_paths, blob.SourcePath)
+	}
+	return blob_paths
+}
+
 // Processes the given sizeLimits and throws an error if any component in the sizeLimits is above its
 // allocated space limit.
 func parseSizeLimits(sizeLimits *SizeLimits, buildDir, packageList, blobsJSON string) map[string]*ComponentSize {
@@ -587,14 +669,55 @@ func parseSizeLimits(sizeLimits *SizeLimits, buildDir, packageList, blobsJSON st
 		}
 
 		// There is only ever one copy of Update ZBIs.
+		// TODO(fxbug.dev/58645): Delete once clients have removed the update
+		// from their components list.
 		if component.Component == "Update ZBIs" {
 			budget /= 2
 			size /= 2
 		}
 		outputSizes[component.Component] = &ComponentSize{
-			Size:   size,
-			Budget: budget,
-			nodes:  nodes,
+			Size:             size,
+			Budget:           budget,
+			IncludedInBlobFS: true,
+			nodes:            nodes,
+		}
+	}
+
+	var blobfsCompressionToolPath = filepath.Join(buildDir, "host_x64/blobfs-compression")
+	for _, component := range sizeLimits.NonBlobFSComponents {
+		// Collect the paths to each blob in the component.
+		blobsJSONPath := filepath.Join(buildDir, component.BlobsJsonPath)
+		var blobPaths, err = getBlobPathsFromBlobsJSONFile(blobsJSONPath)
+		if err != nil {
+			log.Fatalf("Failed to read the blob paths from blob.json: %s\n", err)
+		}
+
+		// Sum all the individual blob sizes.
+		var size = int64(0)
+		var nodes []*Node
+		for _, blobPath := range blobPaths {
+			var fullBlobPath = filepath.Join(buildDir, blobPath)
+			var blobSize, err = calculateCompressedBlobSize(blobfsCompressionToolPath, fullBlobPath)
+			if err != nil {
+				log.Fatalf("Failed to calculate the blob size: %s\n", err)
+			}
+			node := newNode(blobPath)
+			node.size = blobSize
+			nodes = append(nodes, node)
+			size += blobSize
+		}
+
+		budget, err := component.Limit.Int64()
+		if err != nil {
+			log.Fatalf("Failed to parse %s as an int64: %s\n", component.Limit, err)
+		}
+
+		// Add the sizes and budgets to the output.
+		outputSizes[component.Component] = &ComponentSize{
+			Size:             size,
+			Budget:           budget,
+			IncludedInBlobFS: false,
+			nodes:            nodes,
 		}
 	}
 
@@ -604,9 +727,10 @@ func parseSizeLimits(sizeLimits *SizeLimits, buildDir, packageList, blobsJSON st
 	}
 	const icuDataName = "ICU Data"
 	outputSizes[icuDataName] = &ComponentSize{
-		Size:   totalIcuDataSize,
-		Budget: ICUDataLimit,
-		nodes:  icuDataNodes,
+		Size:             totalIcuDataSize,
+		Budget:           ICUDataLimit,
+		IncludedInBlobFS: true,
+		nodes:            icuDataNodes,
 	}
 
 	CoreSizeLimit, err := sizeLimits.CoreLimit.Int64()
@@ -619,9 +743,10 @@ func parseSizeLimits(sizeLimits *SizeLimits, buildDir, packageList, blobsJSON st
 	// filters.
 	coreNodes = append(coreNodes, root)
 	outputSizes[coreName] = &ComponentSize{
-		Size:   root.size,
-		Budget: CoreSizeLimit,
-		nodes:  coreNodes,
+		Size:             root.size,
+		Budget:           CoreSizeLimit,
+		IncludedInBlobFS: true,
+		nodes:            coreNodes,
 	}
 
 	if sizeLimits.DistributedShlibsLimit.String() != "" {
@@ -632,9 +757,10 @@ func parseSizeLimits(sizeLimits *SizeLimits, buildDir, packageList, blobsJSON st
 
 		const distributedShlibsName = "Distributed shared libraries"
 		outputSizes[distributedShlibsName] = &ComponentSize{
-			Size:   totalDistributedShlibsSize,
-			Budget: DistributedShlibsSizeLimit,
-			nodes:  distributedShlibsNodes,
+			Size:             totalDistributedShlibsSize,
+			Budget:           DistributedShlibsSizeLimit,
+			IncludedInBlobFS: true,
+			nodes:            distributedShlibsNodes,
 		}
 	}
 
@@ -713,9 +839,11 @@ func generateReport(outputSizes map[string]*ComponentSize, showBudgetOnly bool, 
 			endColorCharacter = "\033[0m"
 		}
 
-		totalSize += componentSize.Size
-		totalBudget += componentSize.Budget
-		totalRemaining += remainingBudget
+		if componentSize.IncludedInBlobFS {
+			totalSize += componentSize.Size
+			totalBudget += componentSize.Budget
+			totalRemaining += remainingBudget
+		}
 		report.WriteString(
 			fmt.Sprintf("%-80s | %10s | %10s | %s%10s%s\n", componentName, formatSize(componentSize.Size), formatSize(componentSize.Budget), startColorCharacter, formatSize(remainingBudget), endColorCharacter))
 		if !showBudgetOnly {
@@ -782,7 +910,7 @@ See //tools/size_checker for more details.`)
 		log.Fatal(unmarshalError(sizeCheckerJSON, err))
 	}
 	// If there are no components, then there are no work to do. We are done.
-	if len(sizeLimits.Components) == 0 {
+	if len(sizeLimits.Components) == 0 && len(sizeLimits.NonBlobFSComponents) == 0 {
 		os.Exit(0)
 	}
 

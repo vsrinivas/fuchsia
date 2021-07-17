@@ -102,6 +102,8 @@ zx_status_t BlobfsCompress(const uint8_t* src, const size_t src_sz, uint8_t* des
   } else {
     saving_ratio = 0;
   }
+
+  // The format of this message is depended on by //tools/size_checker/cmd/size_checker.go.
   printf("Wrote %lu bytes (%.2f%% space saved).\n", aligned_compressed_size, saving_ratio * 100);
 
   // By default, filling 0x00 at the end of compressed buffer to match |aligned_compressed_size|.

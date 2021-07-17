@@ -5,6 +5,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -228,6 +229,76 @@ func Test_processBlobsJSON_blobLookup(t *testing.T) {
 		})
 	}
 }
+
+func Test_calculateCompressedBlobSizeFromToolOutput(t *testing.T) {
+	tests := []struct {
+		name   string
+		output string
+		is_err bool
+		size   int64
+	}{
+		{
+			"Success",
+			"Wrote 5 bytes",
+			false,
+			5,
+		},
+		{
+			"Error",
+			"Wrote bytes",
+			true,
+			0,
+		},
+		{
+			"EmptyOutput",
+			"",
+			true,
+			0,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			var bytes bytes.Buffer
+			bytes.WriteString(test.output)
+			size, err := calculateCompressedBlobSizeFromToolOutput(bytes)
+			if !test.is_err && (err != nil) {
+				t.Fatalf("Calculation returned an error when expected success: %s", err)
+			} else if test.is_err && (err == nil) {
+				t.Fatalf("Calculation returned success when expecting error")
+			}
+			if test.size != size {
+				t.Fatalf("Calculation returns %d; expect %d", size, test.size)
+			}
+		})
+	}
+}
+
+func Test_getBlobsPathFromBlobsJson(t *testing.T) {
+	blobs := []BlobFromJSON{
+		{
+			"11111",
+			"path1",
+			"source_root1",
+		},
+		{
+			"22222",
+			"path2",
+			"source_root2",
+		},
+	}
+	blob_paths := getBlobPathsFromBlobsJSON(blobs)
+	if len(blob_paths) != 2 {
+		t.Fatalf("getBlobPathsFromBlobsJSON returned invalid number of paths; expected 2")
+	}
+	if blob_paths[0] != "source_root1" {
+		t.Fatalf("getBlobPathsFromBlobsJSON found %s in index 0; expected %s", blob_paths[0], "source_root1")
+	}
+	if blob_paths[1] != "source_root2" {
+		t.Fatalf("getBlobPathsFromBlobsJSON found %s in index 1; expected %s", blob_paths[1], "source_root2")
+	}
+}
+
 func Test_nodeAdd(t *testing.T) {
 	root := newDummyNode()
 	if root.size != 0 {
@@ -326,11 +397,22 @@ func Test_processInput(t *testing.T) {
 				Src:       []string{"foo-pkg"},
 			},
 		},
+		NonBlobFSComponents: []NonBlobFSComponent{
+			{
+				Component:     "bar",
+				Limit:         json.Number(strconv.Itoa(singleBlobSize)),
+				BlobsJsonPath: "blobs.json",
+			},
+		},
 	}
 	buildDir := t.TempDir()
 	pkgDir := path.Join("obj", "foo-pkg")
+	hostToolsDir := path.Join(buildDir, "host_x64")
 	if err := os.MkdirAll(path.Join(buildDir, pkgDir), 0o700); err != nil {
 		t.Fatalf("Failed to create package dir: %v", err)
+	}
+	if err := os.MkdirAll(hostToolsDir, 0o700); err != nil {
+		t.Fatalf("Failed to create host tools dir: %v", err)
 	}
 	blobsJSONF, err := os.Create(path.Join(buildDir, pkgDir, BlobsJSON))
 	if err != nil {
@@ -381,10 +463,24 @@ func Test_processInput(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create blob size file: %v", err)
 	}
-	if _, err := blobSizeF.Write([]byte(fmt.Sprintf(`[{"source_path":"","merkle":"deadbeef","bytes":0,"size":%d},{"source_path":"","merkle":"abc123","bytes":0,"size":%d}]\n`, singleBlobSize, singleBlobSize))); err != nil {
+	if _, err := blobSizeF.Write([]byte(fmt.Sprintf(`[{"source_path":"","merkle":"deadbeef","bytes":0,"size":%d},{"source_path":"","merkle":"abc123","bytes":0,"size":%d}]`, singleBlobSize, singleBlobSize))); err != nil {
 		t.Fatalf("Failed to write blob sizes: %v", err)
 	}
 	blobSizeF.Close()
+
+	blobfsCompressionFile := path.Join(buildDir, "host_x64", "blobfs-compression")
+	blobfsCompression, err := os.Create(blobfsCompressionFile)
+	if err != nil {
+		t.Fatalf("Failed to create blobfs-compression script: %v", err)
+	}
+	if _, err := blobfsCompression.Write([]byte(fmt.Sprintf("#!/bin/bash\necho 'Wrote 5 bytes'\n"))); err != nil {
+		t.Fatalf("Failed to write blobfs-compression: %v", err)
+	}
+	if err := os.Chmod(blobfsCompressionFile, 0o700); err != nil {
+		t.Fatalf("Failed to make blobfs-compression executable: %v", err)
+	}
+	blobfsCompression.Close()
+
 	sizes := parseSizeLimits(&input, buildDir, blobListRelPath, blobSizeRelPath)
 	fooSize, ok := sizes["foo"]
 	if !ok {
@@ -392,6 +488,13 @@ func Test_processInput(t *testing.T) {
 	}
 	if fooSize.Size != int64(2*singleBlobSize) {
 		t.Fatalf("Unexpected size for component foo: %v", fooSize)
+	}
+	barSize, ok := sizes["bar"]
+	if !ok {
+		t.Fatalf("Failed to find bar in sizes: %v", sizes)
+	}
+	if barSize.Size != int64(10) {
+		t.Fatalf("Unexpected size for component bar: %v", fooSize)
 	}
 
 	// Both the budget-only and full report should report going over-budget.
