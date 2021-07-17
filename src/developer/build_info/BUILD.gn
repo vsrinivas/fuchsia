@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
-import("//src/sys/core/build/core_shard.gni")
 
 executable("bin") {
   output_name = "build_info"
@@ -24,16 +23,12 @@ executable("bin") {
 }
 
 fuchsia_component("build-info") {
-  manifest = "meta/build_info.cml"
+  manifest = "meta/build_info.cmx"
   deps = [ ":bin" ]
 }
 
 fuchsia_package("build-info-service") {
   deps = [ ":build-info" ]
-}
-
-core_shard("build_info_core_shard") {
-  shard_file = "meta/build_info.core_shard.cml"
 }
 
 executable("test-bin") {
