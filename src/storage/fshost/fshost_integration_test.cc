@@ -67,9 +67,12 @@ void FshostIntegrationTest::ResumeWatcher() const {
 fbl::unique_fd FshostIntegrationTest::WaitForMount(const std::string& name,
                                                    uint64_t expected_fs_type) {
   // The mount point will always exist so we expect open() to work regardless of whether the device
-  // is actually mounted. We retry until the mount point has the expected filesystem type. Retry 20
-  // times and then give up.
-  for (int i = 0; i < 20; i++) {
+  // is actually mounted. We retry until the mount point has the expected filesystem type.
+  //
+  // This can be relatively slow on some bots (especially with asan) because it can involve lots of
+  // complex process launching so use a high retry limit.
+  constexpr int kMaxRetries = 30;
+  for (int i = 0; i < kMaxRetries; i++) {
     fidl::SynchronousInterfacePtr<fuchsia::io::Node> root;
     zx_status_t status =
         exposed_dir()->Open(fuchsia::io::OPEN_RIGHT_READABLE, 0, name, root.NewRequest());
