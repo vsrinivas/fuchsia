@@ -1,11 +1,12 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
 library bazel.examples.localdeps;
 
 using bazel.examples.simple;
 
 protocol Foobar {
-    DoSomething(bazel.examples.simple.Hello world);
+    DoSomething(struct {
+        world bazel.examples.simple.Hello;
+    });
 };

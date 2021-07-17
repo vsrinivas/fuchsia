@@ -123,7 +123,7 @@ mod tests {
 
 library some_lib;
 
-enum MessageIds : uint64 {
+type MessageIds = strict enum : uint64 {
     // 'string'
     STRING_NAME = 7134240810508078445;
 };

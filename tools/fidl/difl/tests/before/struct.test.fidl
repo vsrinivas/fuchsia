@@ -1,7 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-deprecated_syntax;
 library fidl.difl.test;
 
 using zx;
@@ -9,152 +8,152 @@ using zx;
 // Before
 
 //!DeclRemoved
-struct StructRemoved {
-    int32 field;
+type StructRemoved = struct {
+    field int32;
 };
 
 // Attributes
 
-struct StructAttributeAdded {
-    int32 field;
+type StructAttributeAdded = struct {
+    field int32;
 };
 
-[Attribute]
-struct StructAttributeRemoved {
-    int32 field;
+@attribute
+type StructAttributeRemoved = struct {
+    field int32;
 };
 
-[Attribute = "before"]
-struct StructAttributeChanged {
-    int32 field;
+@attribute("before")
+type StructAttributeChanged = struct {
+    field int32;
 };
 
 // Fields
 
-struct StructMemberRenamed {
+type StructMemberRenamed = struct {
     //!StructMemberRenamed
-    int32 field;
+    field int32;
 };
 
 //!StructSizeChanged
 //!StructMemberAdded
-struct StructMemberAdded {
-    int32 field;
+type StructMemberAdded = struct {
+    field int32;
 };
 
 //!StructSizeChanged
-struct StructMemberRemoved {
-    int32 field;
+type StructMemberRemoved = struct {
+    field int32;
     //!StructMemberRemoved
-    int32 old_field;
+    old_field int32;
 };
 
-struct StructMemberReordered {
+type StructMemberReordered = struct {
     //!StructMemberMoved
-    int32 first;
+    first int32;
     //!StructMemberMoved
-    int32 second;
+    second int32;
 };
 
 // Field attributes
 
-struct StructMemberAttributeAdded {
-    int32 field;
+type StructMemberAttributeAdded = struct {
+    field int32;
 };
 
-struct StructMemberAttributeRemoved {
-    [Attribute]
-    int32 field;
+type StructMemberAttributeRemoved = struct {
+    @attribute
+    field int32;
 };
 
-struct StructMemberAttributeChanged {
-    [Attribute = "before"]
-    int32 field;
+type StructMemberAttributeChanged = struct {
+    @attribute("before")
+    field int32;
 };
 
 // Field types
 
-struct StructMemberSignChanged {
+type StructMemberSignChanged = struct {
     //!StructMemberTypeChanged
-    int32 field;
+    field int32;
 };
 
 //!StructSizeChanged
-struct StructMemberSizeChanged {
+type StructMemberSizeChanged = struct {
     //!StructMemberTypeChanged
     //!StructMemberSizeChanged
-    int32 field;
+    field int32;
 };
 
-struct StructMemberSplit {
+type StructMemberSplit = struct {
     //!StructMemberSplit
-    int32 ab;
+    ab int32;
 };
 
 //!StructMemberJoined
-struct StructMemberJoin {
-    int16 a;
-    int16 b;
+type StructMemberJoin = struct {
+    a int16;
+    b int16;
 };
 
 //!StructSizeChanged
 //!StructMemberAdded
-struct StructMemberSplitPadding {
-    uint16 z;
+type StructMemberSplitPadding = struct {
+    z uint16;
     //!StructMemberRemoved
-    int32 ab;
+    ab int32;
 };
 
 //!StructSizeChanged
 //!StructMemberAdded
-struct StructMemberJoinPadding {
-    uint16 z;
+type StructMemberJoinPadding = struct {
+    z uint16;
     //!StructMemberRemoved
-    int16 a;
+    a int16;
     //!StructMemberRemoved
-    int16 b;
+    b int16;
 };
 
-struct StructMemberStringToOptionalString {
+type StructMemberStringToOptionalString = struct {
     //!StructMemberTypeChanged
-    string field;
+    field string;
 };
 
-struct StructMemberStringFromOptionalString {
+type StructMemberStringFromOptionalString = struct {
     //!StructMemberTypeChanged
-    string? field;
+    field string:optional;
 };
 
-resource struct StructMemberHandleToOptionalHandle {
+type StructMemberHandleToOptionalHandle = resource struct {
     //!StructMemberTypeChanged
-    zx.handle field;
+    field zx.handle;
 };
 
-resource struct StructMemberHandleFromOptionalHandle {
+type StructMemberHandleFromOptionalHandle = resource struct {
     //!StructMemberTypeChanged
-    zx.handle? field;
+    field zx.handle:optional;
 };
 
-resource struct StructMemberHandleTypeChanged {
+type StructMemberHandleTypeChanged = resource struct {
     //!StructMemberTypeChanged
-    zx.handle:CHANNEL field;
+    field zx.handle:CHANNEL;
 };
 
-struct StructMemberStringLengthChanged {
+type StructMemberStringLengthChanged = struct {
     //!StructMemberTypeChanged
-    string:5 field;
+    field string:5;
 };
 
-struct StructMemberVectorLengthChanged {
+type StructMemberVectorLengthChanged = struct {
     //!StructMemberTypeChanged
-    vector<int32>:5 field;
+    field vector<int32>:5;
 };
 
 //!StructSizeChanged
-struct StructMemberArrayLengthChanged {
+type StructMemberArrayLengthChanged = struct {
     //!StructMemberSizeChanged
     //!StructMemberTypeChanged
-    array<int32>:5 field;
+    field array<int32, 5>;
 };
 
 // Struct Layout

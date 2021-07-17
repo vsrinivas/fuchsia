@@ -32,7 +32,7 @@ def main():
     # Run 'fidlc' to generate the header.
     subprocess.check_call(
         [
-            args.fidlc, '--experimental', 'old_syntax_only',
+            args.fidlc, '--experimental', 'allow_new_syntax',
             '--deprecated-fuchsia-only-c-header',
             args.deprecated_fuchsia_only_c_header, '--name', args.name,
             '@' + args.rsp_file

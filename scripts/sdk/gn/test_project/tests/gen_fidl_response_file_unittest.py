@@ -28,17 +28,21 @@ OUT_LIBRARIES_FILENAME = 'out_libraries'
 
 FIDL_FILE_CONTENTS = """library fidl.examples.echo;
 // [START protocol]
-[Discoverable]
+@discoverable
 protocol Echo {
-    EchoString(string? value) -> (string? response);
+    EchoString(struct {
+        value string:optional;
+    }) -> (struct {
+        response string:optional;
+    });
 };
 // [END protocol]
 /// A service with multiple Echo protocol implementations.
 service EchoService {
     /// An implementation of `Echo` that prefixes its output with "foo: ".
-    Echo foo;
+    foo client_end:Echo;
     /// An implementation of `Echo` that prefixes its output with "bar: ".
-    Echo bar;
+    bar client_end:Echo;
 };
 """
 

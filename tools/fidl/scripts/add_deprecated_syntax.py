@@ -25,9 +25,9 @@ def main(args):
 
     root_path = Path(args.root)
     for filepath in sys.stdin:
+        path = Path(filepath.strip())
         if not path.is_file():
             continue
-        path = Path(filepath.strip())
         relpath = str(path.relative_to(root_path))
         if relpath.startswith('out/default') or relpath.startswith('prebuilt/'):
             continue

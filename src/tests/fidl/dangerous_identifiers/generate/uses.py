@@ -19,11 +19,12 @@ def use(func):
 # TODO(fxbug.dev/77561): we probably want to add a "constraints" test, for cases
 #  like `vector<Foo>:true` etc.
 
+
 @use
 def constants(f, idents: List[ScopedIdentifier]):
     for ident in idents:
         f.write(ident.decl_attributes)
-        f.write(f"const uint32 {ident} = 1;\n")
+        f.write(f"const {ident} uint32 = 1;\n")
 
 
 @use
@@ -50,10 +51,10 @@ def enums(f, idents: List[ScopedIdentifier]):
     # enums with every dangerous name
     for ident in idents:
         f.write(ident.decl_attributes)
-        f.write(f"enum {ident} {{ MEMBER = 1; }};\n")
+        f.write(f"type {ident} = strict enum {{ MEMBER = 1; }};\n")
 
     # enum with every dangerous field name
-    f.write("enum DangerousMembers {\n")
+    f.write("type DangerousMembers = strict enum {\n")
     for i, ident in enumerate(idents):
         f.write(ident.decl_attributes)
         f.write(f"  {ident} = {i};\n")
@@ -66,48 +67,48 @@ def struct_types(f, idents: List[ScopedIdentifier]):
     f.write("alias membertype = uint32;\n")
     for ident in idents:
         f.write(ident.decl_attributes)
-        f.write(f"struct {ident} {{ membertype member = 1; }};\n")
+        f.write(f"type {ident} = struct {{ member membertype = 1; }};\n")
 
     # a struct with every dangerous name as the field type
-    f.write("struct DangerousMembers {\n")
+    f.write("type DangerousMembers = struct {\n")
     for i, ident in enumerate(idents):
         # dangerous field type
         f.write(ident.decl_attributes)
-        f.write(f"  {ident} f{i};\n")
+        f.write(f"  f{i} {ident};\n")
     f.write("};\n")
 
 
 @use
 def struct_names(f, idents: List[ScopedIdentifier]):
     # a struct with every dangerous name as the field name
-    f.write("struct DangerousMembers {\n")
+    f.write("type DangerousMembers = struct {\n")
     for ident in idents:
         f.write(ident.decl_attributes)
-        f.write(f"  uint32 {ident};\n")
+        f.write(f"  {ident} uint32;\n")
     f.write("};\n")
 
 
 @use
 def union_names(f, idents):
     # unions with every dangerous name
-    f.write("struct membertype {};\n")
+    f.write("type membertype = struct {};\n")
     for ident in idents:
-        f.write(f"union {ident} {{ 1: membertype member; }};\n")
+        f.write(f"type {ident} = strict union {{ 1: member membertype; }};\n")
 
     # a union with every dangerous name as the field type
-    f.write("union DangerousMembers {\n")
+    f.write("type DangerousMembers = strict union {\n")
     for i, ident in enumerate(idents):
         # dangerous field type
-        f.write(f"  {i+1}: {ident} f{i};\n")
+        f.write(f"  {i+1}: f{i} {ident};\n")
     f.write("};\n")
 
 
 @use
 def union_types(f, idents):
     # a union with every dangerous name as the field name
-    f.write("union DangerousMembers {\n")
+    f.write("type DangerousMembers = strict union {\n")
     for i, ident in enumerate(idents):
-        f.write(f"  {i+1}: uint32 f{i};\n")
+        f.write(f"  {i+1}: f{i} uint32;\n")
     f.write("};\n")
 
 
@@ -117,23 +118,23 @@ def table_names(f, idents: List[ScopedIdentifier]):
     f.write("alias membertype = uint32;\n")
     for ident in idents:
         f.write(ident.decl_attributes)
-        f.write(f"table {ident} {{ 1: membertype member; }};\n")
+        f.write(f"type {ident} = table {{ 1: member membertype; }};\n")
     # a table with every dangerous name as the field type
-    f.write("table DangerousMembers {\n")
+    f.write("type DangerousMembers = table {\n")
     for i, ident in enumerate(idents):
         # dangerous field type
         f.write(ident.decl_attributes)
-        f.write(f"  {i+1}: {ident} f{i};\n")
+        f.write(f"  {i+1}: f{i} {ident};\n")
     f.write("};\n")
 
 
 @use
 def table_fields(f, idents: List[ScopedIdentifier]):
     # a table with every dangerous name as the field name
-    f.write("table DangerousMembers {\n")
+    f.write("type DangerousMembers = table {\n")
     for i, ident in enumerate(idents):
         f.write(ident.decl_attributes)
-        f.write(f"  {i+1}: uint32 {ident};\n")
+        f.write(f"  {i+1}: {ident} uint32;\n")
     f.write("};\n")
 
 
@@ -172,7 +173,7 @@ def method_request_arguments(f, idents: List[ScopedIdentifier]):
     f.write("protocol DangerousRequestArguments {\n")
     for i, ident in enumerate(idents):
         f.write(ident.decl_attributes)
-        f.write(f"  Method{i}(argtype {ident});\n")
+        f.write(f"  Method{i}(struct {{ {ident} argtype; }});\n")
     f.write("};\n")
 
 
@@ -183,7 +184,7 @@ def method_response_arguments(f, idents: List[ScopedIdentifier]):
     f.write("protocol DangerousResponseArguments {\n")
     for i, ident in enumerate(idents):
         f.write(ident.decl_attributes)
-        f.write(f"  Method{i}() -> (argtype {ident});\n")
+        f.write(f"  Method{i}() -> (struct {{ {ident} argtype; }});\n")
     f.write("};\n")
 
 
@@ -194,7 +195,7 @@ def method_event_arguments(f, idents: List[ScopedIdentifier]):
     f.write("protocol DangerousResponseArguments {\n")
     for i, ident in enumerate(idents):
         f.write(ident.decl_attributes)
-        f.write(f"  -> Event{i}(argtype {ident});\n")
+        f.write(f"  -> Event{i}(struct {{ {ident} argtype; }});\n")
     f.write("};\n")
 
 
@@ -204,7 +205,7 @@ def service_names(f, idents: List[ScopedIdentifier]):
     f.write("protocol SampleProtocol { Method(); };\n")
     for ident in idents:
         f.write(ident.decl_attributes)
-        f.write(f"service {ident} {{ SampleProtocol member; }};\n")
+        f.write(f"service {ident} {{ member client_end:SampleProtocol; }};\n")
 
 
 @use
@@ -219,7 +220,7 @@ def service_member_types(f, idents: List[ScopedIdentifier]):
     for i, ident in enumerate(idents):
         # dangerous field type
         f.write(ident.decl_attributes)
-        f.write(f"  {ident} f{i};\n")
+        f.write(f"  f{i} client_end:{ident};\n")
     f.write("};\n")
 
 
@@ -230,5 +231,5 @@ def service_member_names(f, idents: List[ScopedIdentifier]):
     f.write("service DangerousServiceMemberNames {\n")
     for ident in idents:
         f.write(ident.decl_attributes)
-        f.write(f"  SampleProtocol {ident};\n")
+        f.write(f"  {ident} client_end:SampleProtocol;\n")
     f.write("};\n")

@@ -14,6 +14,7 @@
 
 #include <fidl/formatter.h>
 #include <fidl/lexer.h>
+#include <fidl/new_formatter.h>
 #include <fidl/parser.h>
 #include <fidl/source_manager.h>
 #include <fidl/utils.h>
@@ -53,15 +54,29 @@ void Usage(const std::string& argv0) {
 bool Format(const fidl::SourceFile& source_file, fidl::Reporter* reporter, std::string& output) {
   fidl::Lexer lexer(source_file, reporter);
   fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kOldSyntaxOnly);
-  fidl::Parser parser(&lexer, reporter, experimental_flags);
-  std::unique_ptr<fidl::raw::File> ast = parser.Parse();
-  if (!parser.Success()) {
-    return false;
+
+  // TODO(fxbug.dev/70247): Delete this conditional
+  // The old and new syntaxes have different formatters, so here we scan the file for the
+  // `deprecated_syntax` token, and choose the right formatter based on whether or not it exists.
+  if (!fidl::utils::HasDeprecatedSyntaxToken(source_file)) {
+    experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
+    auto formatter = fidl::fmt::NewFormatter(100, reporter);
+    auto result = formatter.Format(source_file, experimental_flags);
+    if (!result.has_value()) {
+      return false;
+    }
+    output = result.value();
+  } else {
+    experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kOldSyntaxOnly);
+    fidl::Parser parser(&lexer, reporter, experimental_flags);
+    std::unique_ptr<fidl::raw::File> ast = parser.Parse();
+    if (!parser.Success()) {
+      return false;
+    }
+    fidl::raw::FormattingTreeVisitor visitor;
+    visitor.OnFile(ast);
+    output = *visitor.formatted_output();
   }
-  fidl::raw::FormattingTreeVisitor visitor;
-  visitor.OnFile(ast);
-  output = *visitor.formatted_output();
 
   std::string source_file_str(source_file.data());
   if (!fidl::utils::OnlyWhitespaceChanged(source_file_str, output)) {

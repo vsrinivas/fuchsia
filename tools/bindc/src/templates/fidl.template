@@ -1,4 +1,4 @@
-[NoDoc]
+@no_doc
 library {library_name};
 
 using fuchsia.driver.framework as fdf;

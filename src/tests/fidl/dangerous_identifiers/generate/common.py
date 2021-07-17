@@ -59,7 +59,7 @@ class ScopedIdentifier:
     def decl_attributes(self) -> str:
         '''Attributes to put on a declaration with this name.'''
         if self.bindings_denylist:
-            return f'[BindingsDenylist="{self.bindings_denylist}"]\n'
+            return f'@bindings_denylist("{self.bindings_denylist}")\n'
         else:
             return ''
 

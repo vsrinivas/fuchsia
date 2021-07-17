@@ -16,8 +16,8 @@ from common import Identifier, Deny
 # The deny list members specify a list of styles, uses and bindings to deny.
 # The bindings list is used to decide whether to include certain identifiers
 # in the generated fidl files. If a bindings list is included then a
-# [BindingsDenyList] attribute will be used, if not then the identifier will
-# be entirely ommitted from the affected contexts.
+# @bindings_denylist attribute will be used, if not then the identifier will
+# be entirely omitted from the affected contexts.
 
 # Deny rule to apply to Rust keywords, see fxbug.dev/60219
 RUST_KEYWORD = [

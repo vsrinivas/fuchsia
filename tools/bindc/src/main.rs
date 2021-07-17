@@ -360,7 +360,7 @@ fn convert_to_fidl_constant(
     if !declaration.extends {
         writeln!(
             &mut result,
-            "const fdf.NodePropertyKey {} = \"{}.{}\";",
+            "const {} fdf.NodePropertyKey = \"{}.{}\";",
             &identifier_name, &path, &identifier_name
         )?;
     }
@@ -369,16 +369,16 @@ fn convert_to_fidl_constant(
         let name = generate_declaration_name(&identifier_name, value);
         let property_output = match &value {
             bind_library::Value::Number(_, val) => {
-                format!("const fdf.NodePropertyValueUint {} = {};", name, val)
+                format!("const {} fdf.NodePropertyValueUint = {};", name, val)
             }
             bind_library::Value::Str(_, val) => {
-                format!("const fdf.NodePropertyValueString {} = \"{}\";", name, val)
+                format!("const {} fdf.NodePropertyValueString = \"{}\";", name, val)
             }
             bind_library::Value::Bool(_, val) => {
-                format!("const fdf.NodePropertyValueBool {} = {};", name, val)
+                format!("const {} fdf.NodePropertyValueBool = {};", name, val)
             }
             bind_library::Value::Enum(_) => {
-                format!("const fdf.NodePropertyValueEnum {};", name)
+                format!("const {}; fdf.NodePropertyValueEnum", name)
             }
         };
         writeln!(&mut result, "{}", property_output)?;
@@ -650,7 +650,7 @@ mod tests {
         let template: Vec<String> = get_test_fidl_template(empty_ast);
 
         let expected = vec![
-            "[NoDoc]".to_string(),
+            "@no_doc".to_string(),
             "library bind.fuchsia.platform;".to_string(),
             "using fuchsia.driver.framework as fdf;".to_string(),
         ];
@@ -667,11 +667,11 @@ mod tests {
         let template: Vec<String> = get_test_fidl_template(ast);
 
         let expected = vec![
-            "[NoDoc]".to_string(),
+            "@no_doc".to_string(),
             "library bind.fuchsia.platform;".to_string(),
             "using fuchsia.driver.framework as fdf;".to_string(),
-            "const fdf.NodePropertyKey A_KEY = \"fuchsia.platform.A_KEY\";".to_string(),
-            "const fdf.NodePropertyValueString A_KEY_A_VALUE = \"a string value\";".to_string(),
+            "const A_KEY fdf.NodePropertyKey = \"fuchsia.platform.A_KEY\";".to_string(),
+            "const A_KEY_A_VALUE fdf.NodePropertyValueString = \"a string value\";".to_string(),
         ];
 
         assert!(template.into_iter().zip(expected).all(|(a, b)| (a == b)));
@@ -686,10 +686,10 @@ mod tests {
         let template: Vec<String> = get_test_fidl_template(ast);
 
         let expected = vec![
-            "[NoDoc]".to_string(),
+            "@no_doc".to_string(),
             "library bind.fuchsia.platform;".to_string(),
             "using fuchsia.driver.framework as fdf;".to_string(),
-            "const fdf.NodePropertyValueUint BIND_PROTOCOL_BUS = 84;".to_string(),
+            "const BIND_PROTOCOL_BUS fdf.NodePropertyValueUint = 84;".to_string(),
         ];
 
         assert!(template.into_iter().zip(expected).all(|(a, b)| (a == b)));
@@ -704,11 +704,11 @@ mod tests {
         let template: Vec<String> = get_test_fidl_template(ast);
 
         let expected = vec![
-            "[NoDoc]".to_string(),
+            "@no_doc".to_string(),
             "library bind.fuchsia.platform;".to_string(),
             "using fuchsia.driver.framework as fdf;".to_string(),
-            "const fdf.NodePropertyKey A_KEY = \"fuchsia.platform.A_KEY\";".to_string(),
-            "const fdf.NodePropertyValueString A_KEY_A_VALUE = \"a string value\";".to_string(),
+            "const A_KEY fdf.NodePropertyKey = \"fuchsia.platform.A_KEY\";".to_string(),
+            "const A_KEY_A_VALUE fdf.NodePropertyValueString = \"a string value\";".to_string(),
         ];
 
         assert!(template.into_iter().zip(expected).all(|(a, b)| (a == b)));

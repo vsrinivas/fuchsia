@@ -65,7 +65,7 @@ def generate_fidlc_json(fidlc_binary, syscall_dir, output_fidlc_json_path):
 
     subprocess.check_call(
         [
-            fidlc_binary, '--experimental', 'old_syntax_only', '--json',
+            fidlc_binary, '--experimental', 'allow_new_syntax', '--json',
             output_fidlc_json_path, '--files'
         ] + sorted(fidl_files))
 
