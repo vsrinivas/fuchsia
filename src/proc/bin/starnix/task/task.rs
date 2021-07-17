@@ -304,6 +304,7 @@ impl Task {
                 creds,
                 child_exit_signal,
             )?;
+            *child.task.signal_stack.lock() = *self.signal_stack.lock();
             self.mm.snapshot_to(&child.task.mm)?;
         }
 
@@ -338,6 +339,11 @@ impl Task {
 
         // TODO: All threads other than the calling thread are destroyed.
 
+        // TODO: The dispositions of any signals that are being caught are
+        //       reset to the default.
+
+        *self.signal_stack.lock() = None;
+
         self.mm.exec().map_err(Errno::from_status_like_fdio)?;
 
         // TODO: The file descriptor table is unshared, undoing the effect of
@@ -350,6 +356,8 @@ impl Task {
         //
         // For now, we do not implement that behavior.
         self.files.exec();
+
+        // TODO: POSIX timers are not preserved.
 
         // TODO: The termination signal is reset to SIGCHLD.
 
