@@ -85,6 +85,9 @@ table RepositoryPackage {
     2: string:2048 hash;
     /// Size in bytes of all blobs in this package.
     3: uint64 size;
+    /// Last modification timestamp (seconds since UNIX epoch). May be null depending on repository
+    /// source.
+    4: uint64 modified;
     // TODO: add `components` here.
 };
 

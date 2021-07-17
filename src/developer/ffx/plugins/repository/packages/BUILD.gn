@@ -17,6 +17,7 @@ ffx_plugin("ffx_repository_packages") {
     "//src/lib/fidl/rust/fidl",
     "//src/sys/pkg/lib/tuf",
     "//third_party/rust_crates:async-trait",
+    "//third_party/rust_crates:chrono",
     "//third_party/rust_crates:humansize",
     "//third_party/rust_crates:prettytable-rs",
   ]

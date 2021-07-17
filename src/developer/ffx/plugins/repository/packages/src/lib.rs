@@ -4,6 +4,7 @@
 
 use {
     anyhow::Result,
+    chrono::{offset::Utc, DateTime},
     errors::ffx_bail,
     ffx_core::ffx_plugin,
     ffx_repository_packages_args::PackagesCommand,
@@ -12,7 +13,10 @@ use {
     fidl_fuchsia_developer_bridge_ext::RepositoryError,
     humansize::{file_size_opts, FileSize},
     prettytable::{cell, format::TableFormat, row, Row, Table},
-    std::io::{stdout, Write},
+    std::{
+        io::{stdout, Write},
+        time::{Duration, SystemTime},
+    },
 };
 
 const MAX_HASH: usize = 11;
@@ -43,7 +47,7 @@ async fn packages_impl<W: Write>(
     let client = client.into_proxy()?;
 
     let mut table = Table::new();
-    table.set_titles(row!("NAME", "SIZE", "HASH"));
+    table.set_titles(row!("NAME", "SIZE", "HASH", "MODIFIED"));
     if let Some(fmt) = table_format {
         table.set_format(fmt);
     }
@@ -78,7 +82,11 @@ async fn packages_impl<W: Write>(
                             clone
                         }
                     })
-                    .unwrap_or("<unknown>".to_string())
+                    .unwrap_or("<unknown>".to_string()),
+                repo.modified
+                    .and_then(|m| SystemTime::UNIX_EPOCH.checked_add(Duration::from_secs(m)))
+                    .map(|m| DateTime::<Utc>::from(m).to_rfc2822())
+                    .unwrap_or(String::new())
             ));
         }
     }
@@ -119,6 +127,7 @@ mod test {
                                                         "longhashlonghashlonghashlonghash"
                                                             .to_string(),
                                                     ),
+                                                    modified: Some(60 * 60 * 24),
                                                     ..RepositoryPackage::EMPTY
                                                 },
                                                 RepositoryPackage {
@@ -167,7 +176,7 @@ mod test {
         assert_eq!(run_impl(PackagesCommand {
             name: "devhost".to_string(),
             full_hash: false,
-        }).await.trim(), "NAME      SIZE  HASH \n package1  1 B   longhashlon... \n package2  2 KB  secondhashs...");
+        }).await.trim(), "NAME      SIZE  HASH            MODIFIED \n package1  1 B   longhashlon...  Fri, 02 Jan 1970 00:00:00 +0000 \n package2  2 KB  secondhashs...");
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -175,6 +184,6 @@ mod test {
         assert_eq!(run_impl(PackagesCommand {
             name: "devhost".to_string(),
             full_hash: true,
-        }).await.trim(), "NAME      SIZE  HASH \n package1  1 B   longhashlonghashlonghashlonghash \n package2  2 KB  secondhashsecondhashsecondhash");
+        }).await.trim(), "NAME      SIZE  HASH                              MODIFIED \n package1  1 B   longhashlonghashlonghashlonghash  Fri, 02 Jan 1970 00:00:00 +0000 \n package2  2 KB  secondhashsecondhashsecondhash");
     }
 }

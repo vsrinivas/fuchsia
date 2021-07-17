@@ -9,7 +9,7 @@ use {
     fidl_fuchsia_developer_bridge_ext::{RepositorySpec, RepositoryStorageType},
     fidl_fuchsia_pkg as pkg,
     futures::{
-        future::ready,
+        future::{join_all, ready},
         stream::{once, BoxStream},
         AsyncReadExt, StreamExt as _,
     },
@@ -333,21 +333,32 @@ impl Repository {
     pub async fn list_packages(&self) -> Result<Vec<RepositoryPackage>, Error> {
         let client = self.client.lock();
         let targets = client.trusted_targets().context("missing target information")?;
-        Ok(targets
-            .targets()
-            .into_iter()
-            .filter_map(|(k, v)| {
-                let custom = v.custom()?;
-                let size = custom.get("size")?.as_u64()?;
-                let hash = custom.get("merkle")?.as_str().unwrap_or("").to_string();
-                Some(RepositoryPackage {
+        join_all(targets.targets().into_iter().filter_map(|(k, v)| {
+            let custom = v.custom()?;
+            let size = custom.get("size")?.as_u64()?;
+            let hash = custom.get("merkle")?.as_str().unwrap_or("").to_string();
+            let path = format!("blobs/{}", hash);
+            Some(async move {
+                let modified = self
+                    .backend
+                    .target_modification_time(&path)
+                    .await?
+                    .map(|x| -> anyhow::Result<u64> {
+                        Ok(x.duration_since(SystemTime::UNIX_EPOCH)?.as_secs())
+                    })
+                    .transpose()?;
+                Ok(RepositoryPackage {
                     name: Some(k.to_string()),
                     size: Some(size),
                     hash: Some(hash),
+                    modified,
                     ..RepositoryPackage::EMPTY
                 })
             })
-            .collect())
+        }))
+        .await
+        .into_iter()
+        .collect()
     }
 }
 
