@@ -80,6 +80,7 @@ class FuchsiaWebServices {
       'fuchsia.accessibility.semantics.SemanticsManager',
       'fuchsia.device.NameProvider',
       'fuchsia.fonts.Provider',
+      'fuchsia.input.virtualkeyboard.ControllerCreator',
       'fuchsia.intl.PropertyProvider',
       'fuchsia.logger.LogSink',
       'fuchsia.media.Audio',
@@ -92,8 +93,7 @@ class FuchsiaWebServices {
       'fuchsia.process.Launcher',
       'fuchsia.sysmem.Allocator',
       'fuchsia.tracing.provider.Registry',
-      'fuchsia.ui.input.ImeService',
-      'fuchsia.ui.input.ImeVisibilityService',
+      'fuchsia.ui.input3.Keyboard',
       'fuchsia.ui.scenic.Scenic',
       'fuchsia.vulkan.loader.Loader',
     ]);
