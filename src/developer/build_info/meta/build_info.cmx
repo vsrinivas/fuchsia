@@ -1,0 +1,13 @@
+{
+    "include": [
+        "syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/build_info"
+    },
+    "sandbox": {
+        "features": [
+            "build-info"
+        ]
+    }
+}
