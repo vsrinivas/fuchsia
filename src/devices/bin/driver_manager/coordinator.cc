@@ -258,7 +258,7 @@ Coordinator::Coordinator(CoordinatorConfig config, InspectManager* inspect_manag
   root_device_ =
       fbl::MakeRefCounted<Device>(this, "root", fbl::String(), "root,", nullptr, ZX_PROTOCOL_ROOT,
                                   zx::vmo(), zx::channel(), fidl::ClientEnd<fio::Directory>());
-  root_device_->flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE | DEV_CTX_MULTI_BIND;
+  root_device_->flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE;
 
   bind_driver_manager_ =
       std::make_unique<BindDriverManager>(this, fit::bind_member<&Coordinator::AttemptBind>(this));
@@ -881,10 +881,6 @@ zx_status_t Coordinator::AddDeviceGroup(
 }
 
 zx_status_t Coordinator::BindDriver(Driver* drv) {
-  zx_status_t status = bind_driver_manager_->MatchAndBind(root_device_, drv, true /* autobind */);
-  if (status != ZX_ERR_NEXT) {
-    return status;
-  }
   if (!running_) {
     return ZX_ERR_UNAVAILABLE;
   }

@@ -225,6 +225,9 @@ zx_status_t BindDriverManager::MatchAndBindWithDriverIndex(
 }
 
 void BindDriverManager::BindAllDevicesDriverIndex(const DriverLoader::MatchDeviceConfig& config) {
+  // This call is not strictly necessary -- we do not bind anything to the root device.
+  // However, it guarantees that we connect to the driver index and wait for it to start.
+  // Some tests become flaky if we don't do this here.
   zx_status_t status = MatchAndBindWithDriverIndex(coordinator_->root_device(), config);
   if (status != ZX_OK && status != ZX_ERR_NEXT) {
     LOGF(ERROR, "DriverIndex failed to match root_device: %d", status);
