@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use bitflags::bitflags;
 use fuchsia_zircon::{self as zx, AsHandleRef, HandleBased};
 use lazy_static::lazy_static;
 use parking_lot::{Mutex, RwLock};
@@ -19,6 +20,12 @@ use crate::types::*;
 
 lazy_static! {
     pub static ref PAGE_SIZE: u64 = zx::system_get_page_size() as u64;
+}
+
+bitflags! {
+    pub struct MappingOptions: u32 {
+      const SHARED = 1;
+    }
 }
 
 #[derive(Debug, Eq, PartialEq, Clone)]
@@ -39,12 +46,21 @@ struct Mapping {
     /// The rights used by the mapping.
     permissions: zx::VmarFlags,
 
+    /// The flags for this mapping.
+    options: MappingOptions,
+
     /// A name associated with the mapping. Set by prctl(PR_SET_VMA, PR_SET_VMA_ANON_NAME, ...).
     name: CString,
 }
 
 impl Mapping {
-    fn new(base: UserAddress, vmo: Arc<zx::Vmo>, vmo_offset: u64, flags: zx::VmarFlags) -> Mapping {
+    fn new(
+        base: UserAddress,
+        vmo: Arc<zx::Vmo>,
+        vmo_offset: u64,
+        flags: zx::VmarFlags,
+        options: MappingOptions,
+    ) -> Mapping {
         Mapping {
             base,
             vmo,
@@ -53,6 +69,7 @@ impl Mapping {
                 & (zx::VmarFlags::PERM_READ
                     | zx::VmarFlags::PERM_WRITE
                     | zx::VmarFlags::PERM_EXECUTE),
+            options,
             name: CString::default(),
         }
     }
@@ -66,6 +83,7 @@ impl Mapping {
                 & (zx::VmarFlags::PERM_READ
                     | zx::VmarFlags::PERM_WRITE
                     | zx::VmarFlags::PERM_EXECUTE),
+            options: self.options,
             name: self.name.clone(),
         }
     }
@@ -123,6 +141,7 @@ impl MemoryManagerState {
         vmo_offset: u64,
         length: usize,
         flags: zx::VmarFlags,
+        options: MappingOptions,
     ) -> Result<UserAddress, zx::Status> {
         let addr = UserAddress::from_ptr(self.user_vmar.map(
             vmar_offset,
@@ -131,7 +150,7 @@ impl MemoryManagerState {
             length,
             flags,
         )?);
-        let mapping = Mapping::new(addr, vmo, vmo_offset, flags);
+        let mapping = Mapping::new(addr, vmo, vmo_offset, flags, options);
         let end = (addr + length).round_up(*PAGE_SIZE);
         self.mappings.insert(addr..end, mapping);
         Ok(addr)
@@ -249,6 +268,7 @@ impl MemoryManager {
                         zx::VmarFlags::PERM_READ
                             | zx::VmarFlags::PERM_WRITE
                             | zx::VmarFlags::REQUIRE_NON_RESIZABLE,
+                        MappingOptions::empty(),
                     )
                     .map_err(Self::get_errno_for_map_err)?;
                 let brk = ProgramBreak { base: addr, current: addr };
@@ -322,7 +342,9 @@ impl MemoryManager {
         for (range, mapping) in state.mappings.iter() {
             let vmo_info = mapping.vmo.info().map_err(impossible_error)?;
             let entry = vmos.entry(vmo_info.koid).or_insert_with(|| {
-                if vmo_info.flags.contains(zx::VmoInfoFlags::PAGER_BACKED) {
+                if vmo_info.flags.contains(zx::VmoInfoFlags::PAGER_BACKED)
+                    || mapping.options.contains(MappingOptions::SHARED)
+                {
                     Ok(mapping.vmo.clone())
                 } else {
                     mapping
@@ -342,6 +364,7 @@ impl MemoryManager {
                             vmo_offset,
                             length,
                             mapping.permissions | zx::VmarFlags::SPECIFIC,
+                            mapping.options,
                         )
                         .map_err(Self::get_errno_for_map_err)?;
                 }
@@ -387,11 +410,12 @@ impl MemoryManager {
         vmo_offset: u64,
         length: usize,
         flags: zx::VmarFlags,
+        options: MappingOptions,
     ) -> Result<UserAddress, Errno> {
         let vmar_offset = if addr.is_null() { 0 } else { addr - self.base_addr };
         let mut state = self.state.write();
         state
-            .map(vmar_offset, Arc::new(vmo), vmo_offset, length, flags)
+            .map(vmar_offset, Arc::new(vmo), vmo_offset, length, flags, options)
             .map_err(Self::get_errno_for_map_err)
     }
 
@@ -583,7 +607,9 @@ impl elf_load::Mapper for MemoryManager {
     ) -> Result<usize, zx::Status> {
         let vmo = Arc::new(vmo.duplicate_handle(zx::Rights::SAME_RIGHTS)?);
         let mut state = self.state.write();
-        state.map(vmar_offset, vmo, vmo_offset, length, flags).map(|addr| addr.ptr())
+        state
+            .map(vmar_offset, vmo, vmo_offset, length, flags, MappingOptions::empty())
+            .map(|addr| addr.ptr())
     }
 }
 

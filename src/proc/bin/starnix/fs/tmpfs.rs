@@ -165,6 +165,7 @@ mod test {
     use fuchsia_async as fasync;
     use zerocopy::AsBytes;
 
+    use crate::mm::*;
     use crate::testing::*;
 
     #[test]
@@ -196,7 +197,14 @@ mod test {
         let flags = zx::VmarFlags::PERM_READ | zx::VmarFlags::PERM_WRITE;
         let test_addr = task
             .mm
-            .map(UserAddress::default(), test_vmo, 0, test_mem_size as usize, flags)
+            .map(
+                UserAddress::default(),
+                test_vmo,
+                0,
+                test_mem_size as usize,
+                flags,
+                MappingOptions::empty(),
+            )
             .unwrap();
 
         let seq_addr = UserAddress::from_ptr(test_addr.ptr() + path.len());

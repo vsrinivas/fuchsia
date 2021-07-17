@@ -165,6 +165,7 @@ pub fn load_executable(
         0,
         stack_size,
         zx::VmarFlags::PERM_READ | zx::VmarFlags::PERM_WRITE,
+        MappingOptions::empty(),
     )?;
     let stack = stack_base + (stack_size - 8);
 

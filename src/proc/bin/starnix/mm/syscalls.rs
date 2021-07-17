@@ -8,6 +8,7 @@ use std::ffi::CStr;
 use crate::fs::*;
 use crate::logging::*;
 use crate::mm::*;
+use crate::not_implemented;
 use crate::syscalls::*;
 use crate::types::*;
 
@@ -36,9 +37,11 @@ pub fn sys_mmap(
 ) -> Result<SyscallResult, Errno> {
     // These are the flags that are currently supported.
     if prot & !(PROT_READ | PROT_WRITE | PROT_EXEC) != 0 {
+        not_implemented!("mmap: prot: 0x{:x}", prot);
         return Err(EINVAL);
     }
-    if flags & !(MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED | MAP_NORESERVE) != 0 {
+    if flags & !(MAP_PRIVATE | MAP_SHARED | MAP_ANONYMOUS | MAP_FIXED | MAP_NORESERVE) != 0 {
+        not_implemented!("mmap: flags: 0x{:x}", flags);
         return Err(EINVAL);
     }
 
@@ -99,7 +102,12 @@ pub fn sys_mmap(
     };
     let vmo_offset = if flags & MAP_ANONYMOUS != 0 { 0 } else { offset };
 
-    let addr = ctx.task.mm.map(addr, vmo, vmo_offset as u64, length, zx_flags)?;
+    let mut options = MappingOptions::empty();
+    if flags & MAP_SHARED != 0 {
+        options |= MappingOptions::SHARED;
+    }
+
+    let addr = ctx.task.mm.map(addr, vmo, vmo_offset as u64, length, zx_flags, options)?;
     Ok(addr.into())
 }
 
