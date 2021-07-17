@@ -13,13 +13,5 @@
         "icon": "images/Terminal-icon-2x.png",
         "title": "Terminal",
         "url": "fuchsia-pkg://fuchsia.com/terminal#meta/terminal.cmx"
-    },
-    {
-        "icon": "images/Chromium-icon-2x.png",
-        "title": "Chromium"
-    },
-    {
-        "icon": "images/Settings-icon-2x.png",
-        "title": "Settings"
     }
 ]
