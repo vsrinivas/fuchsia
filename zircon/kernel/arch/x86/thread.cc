@@ -248,10 +248,6 @@ static void x86_debug_restore_state(Thread* thread) {
   }
 }
 
-// The target fsgsbase attribute allows the compiler to make use of fsgsbase instructions.  While
-// this function does not use fsgsbase instructions directly, it calls
-// |x86_segment_selector_context_switch|, which does.  By adding the attribute here, we enable the
-// compiler to inline |x86_segment_selector_context_switch| into this function.
 void arch_context_switch(Thread* oldthread, Thread* newthread) {
   // set the tss SP0 value to point at the top of our stack
   x86_set_tss_sp(newthread->stack().top());
