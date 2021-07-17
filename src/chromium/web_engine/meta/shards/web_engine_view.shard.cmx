@@ -2,8 +2,8 @@
     "sandbox": {
         "services": [
             "fuchsia.accessibility.semantics.SemanticsManager",
-            "fuchsia.ui.input.ImeService",
-            "fuchsia.ui.input.ImeVisibilityService",
+            "fuchsia.input.virtualkeyboard.ControllerCreator",
+            "fuchsia.ui.input3.Keyboard",
             "fuchsia.ui.scenic.Scenic"
         ]
     }
