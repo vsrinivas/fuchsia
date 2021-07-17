@@ -42,7 +42,11 @@ if (is_host) {
       "//third_party/rust_crates:log",
       "//third_party/rust_crates:serde_json",
     ]
-    test_deps = [ ":empty-repo" ]
+    test_deps = [
+      ":empty-repo",
+      "//third_party/rust_crates:matches",
+      "//third_party/rust_crates:serial_test",
+    ]
 
     sources = [ "src/lib.rs" ]
   }
