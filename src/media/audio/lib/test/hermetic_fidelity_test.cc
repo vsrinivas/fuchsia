@@ -229,7 +229,7 @@ void HermeticFidelityTest::DisplaySummaryResults(
     printf("\n\tFull-spectrum Frequency Response - %s - output channel %d",
            test_case.test_name.c_str(), channel_spec.channel);
     for (auto freq_idx = 0u; freq_idx < kNumReferenceFreqs; ++freq_idx) {
-      printf("%s%8.3f,", (freq_idx % 10 == 0 ? "\n" : ""),
+      printf(" %s%8.3f,", (freq_idx % 10 == 0 ? "\n" : ""),
              floor(chan_level_results_db[freq_idx] / kFidelityDbTolerance) * kFidelityDbTolerance);
     }
     printf("\n");
@@ -239,7 +239,7 @@ void HermeticFidelityTest::DisplaySummaryResults(
     printf("\n\tSignal-to-Noise and Distortion -   %s - output channel %d",
            test_case.test_name.c_str(), channel_spec.channel);
     for (auto freq_idx = 0u; freq_idx < kNumReferenceFreqs; ++freq_idx) {
-      printf("%s%8.3f,", (freq_idx % 10 == 0 ? "\n" : ""),
+      printf(" %s%8.3f,", (freq_idx % 10 == 0 ? "\n" : ""),
              floor(chan_sinad_results_db[freq_idx] / kFidelityDbTolerance) * kFidelityDbTolerance);
     }
     printf("\n\n");
@@ -290,17 +290,19 @@ void HermeticFidelityTest::Run(
   // Translate from input frame number to output frame number.
   auto input_frame_to_output_frame = [](int64_t input_frame) { return input_frame; };
 
+  //
   // Compute input signal length: it should first include time to ramp in, then the number of frames
   // that we actually analyze, and then time to ramp out.
   int64_t input_signal_frames_to_measure =
       std::ceil(static_cast<double>(kFreqTestBufSize * tc.input_format.frames_per_second()) /
                 tc.output_format.frames_per_second());
-
-  // Compute the renderer payload buffer size (including pre-signal and post-signal silence).
-  // TODO(mpuryear): revisit, once pipeline automatically handles filter_width by feeding silence.
-  auto input_signal_start = tc.pipeline.pos_filter_width;
   auto input_signal_frames =
       tc.pipeline.neg_filter_width + input_signal_frames_to_measure + tc.pipeline.pos_filter_width;
+
+  //
+  // Compute the renderer payload buffer size (including pre-signal silence).
+  // TODO(mpuryear): revisit, once pipeline automatically handles filter_width by feeding silence.
+  auto input_signal_start = tc.pipeline.pos_filter_width;
   auto total_input_frames = input_signal_start + input_signal_frames;
   if constexpr (kDebugInputBuffer) {
     FX_LOGS(INFO) << "input_signal_start " << input_signal_start
@@ -346,16 +348,18 @@ void HermeticFidelityTest::Run(
     auto freq = translated_ref_freqs_[freq_idx];  // The frequency within our power-of-two buffer
     auto freq_for_display = kReferenceFrequencies[freq_idx];
 
-    // Write input signal to input buffer. Start with silence, for pre-ramping; this aligns the
-    // input and output WAV files (if enabled). Append signal to account for full ramp-in and
-    // ramp-out. We could include trailing silence to flush out any cached values and show decay,
-    // but there is no need to do so for these tests.
+    // Write input signal to input buffer. Start with silence for pre-ramping, which aligns the
+    // input and output WAV files (if enabled). Prepend / append signal to account for ramp-in/out.
+    // We could include trailing silence to flush out any cached values and show decay, but there is
+    // no need to do so for these tests.
     auto signal_section =
         GenerateCosineAudio(input_type_mono, input_signal_frames_to_measure, freq);
     auto input_mono = bookend_silence;
+    input_mono.Append(AudioBufferSlice(
+        &signal_section, input_signal_frames_to_measure - tc.pipeline.neg_filter_width,
+        input_signal_frames_to_measure));
     input_mono.Append(AudioBufferSlice(&signal_section));
-    input_mono.Append(
-        AudioBufferSlice(&signal_section, 0, input_signal_frames - input_signal_frames_to_measure));
+    input_mono.Append(AudioBufferSlice(&signal_section, 0, tc.pipeline.pos_filter_width));
     FX_CHECK(input_mono.NumFrames() == static_cast<int64_t>(total_input_frames))
         << "Miscalculated input_mono length: testcode error";
 
@@ -374,22 +378,24 @@ void HermeticFidelityTest::Run(
         << "Miscalculated input length: testcode error";
 
     if constexpr (kDebugInputBuffer) {
-      // We construct the input buffer in pieces. If signals don't align at these seams, it causes
-      // distortion. For debugging, show these "seam" locations in the input buffer we created.
-      std::string tag = "\nInput buffer for " + std::to_string(freq_for_display) + " Hz [" +
-                        std::to_string(freq_idx) + "]";
-      input.Display(0, 16, tag);
-      input.Display(input_signal_start - 16, input_signal_start + 16, "Start of input signal");
-      input.Display(input_signal_start + tc.pipeline.neg_filter_width - 16,
-                    input_signal_start + tc.pipeline.neg_filter_width + 16,
-                    "End of initial ramp-in of input signal");
-      input.Display(
-          input_signal_start + tc.pipeline.neg_filter_width + input_signal_frames_to_measure - 16,
-          input_signal_start + tc.pipeline.neg_filter_width + input_signal_frames_to_measure + 16,
-          "End of input signal; start of additional ramp-out");
-      input.Display(input_signal_start + input_signal_frames - 16,
-                    input_signal_start + input_signal_frames + 16, "End of additional ramp-out");
-      input.Display(input.NumFrames() - 16, input.NumFrames(), "End of input buffer");
+      if (kDebugBuffersAtAllFrequencies || freq_for_display == kFrequencyForBufferDebugging) {
+        // We construct the input buffer in pieces. If signals don't align at these seams, it causes
+        // distortion. For debugging, show these "seam" locations in the input buffer we created.
+        std::string tag = "\nInput buffer for " + std::to_string(freq_for_display) + " Hz [" +
+                          std::to_string(freq_idx) + "]";
+        input.Display(0, 16, tag);
+        input.Display(input_signal_start - 16, input_signal_start + 16, "Start of input signal");
+        input.Display(input_signal_start + tc.pipeline.neg_filter_width - 16,
+                      input_signal_start + tc.pipeline.neg_filter_width + 16,
+                      "End of initial ramp-in of input signal");
+        input.Display(
+            input_signal_start + tc.pipeline.neg_filter_width + input_signal_frames_to_measure - 16,
+            input_signal_start + tc.pipeline.neg_filter_width + input_signal_frames_to_measure + 16,
+            "End of input signal; start of additional ramp-out");
+        input.Display(input_signal_start + input_signal_frames - 16,
+                      input_signal_start + input_signal_frames + 16, "End of additional ramp-out");
+        input.Display(input.NumFrames() - 16, input.NumFrames(), "End of input buffer");
+      }
     }
 
     // Save off the input file, if requested.
@@ -417,14 +423,20 @@ void HermeticFidelityTest::Run(
                                      output_analysis_start + kFreqTestBufSize);
 
       if constexpr (kDebugOutputBuffer) {
-        std::string tag = "\nOutput buffer for " + std::to_string(freq_for_display) + " Hz [" +
-                          std::to_string(freq_idx) + "], channel " +
-                          std::to_string(channel_spec.channel);
-        // For debugging, show critical locations in the output buffer we retrieved.
-        ring_buffer_chan.Display(output_analysis_start - 16, output_analysis_start + 16, tag);
-        ring_buffer_chan.Display(output_analysis_start + kFreqTestBufSize - 16,
-                                 output_analysis_start + kFreqTestBufSize + 16,
-                                 "End of output analysis section");
+        if (kDebugBuffersAtAllFrequencies || freq_for_display == kFrequencyForBufferDebugging) {
+          std::string tag = "\nOutput buffer for " + std::to_string(freq_for_display) + " Hz [" +
+                            std::to_string(freq_idx) + "], channel " +
+                            std::to_string(channel_spec.channel);
+          // For debugging, show critical locations in the output buffer we retrieved.
+          ring_buffer_chan.Display(0, 16, tag);
+          ring_buffer_chan.Display(output_analysis_start - 16, output_analysis_start + 16,
+                                   "Startof output analysis section");
+          ring_buffer_chan.Display(output_analysis_start + kFreqTestBufSize - 16,
+                                   output_analysis_start + kFreqTestBufSize + 16,
+                                   "End of output analysis section");
+          ring_buffer_chan.Display(ring_buffer_chan.NumFrames() - 16, ring_buffer_chan.NumFrames(),
+                                   "End of output buffer");
+        }
       }
 
       auto channel_is_out_of_band = (channel_spec.freq_resp_lower_limits_db[0] == -INFINITY);
@@ -432,17 +444,7 @@ void HermeticFidelityTest::Run(
                           freq_for_display > tc.low_pass_frequency || channel_is_out_of_band);
 
       double sinad_db, level_db = 0.0;
-      if (!out_of_band) {
-        auto result = MeasureAudioFreqs(output, {static_cast<int32_t>(freq)});
-        level_db = DoubleToDb(result.magnitudes[freq]);
-        sinad_db = DoubleToDb(result.magnitudes[freq] / result.total_magn_other);
-        if constexpr (!kSuppressInProgressResults) {
-          FX_LOGS(INFO) << "Channel " << channel_spec.channel << ": " << std::setw(5)
-                        << freq_for_display << " Hz [" << std::setw(2) << freq_idx << "] --  level "
-                        << std::fixed << std::setprecision(4) << std::setw(9) << level_db
-                        << " db,  sinad " << std::setw(8) << sinad_db << " db";
-        }
-      } else {
+      if (out_of_band) {
         // For out-of-band frequencies, we use the sinad array to store Out-of-Band Rejection,
         // which is measured as the sinad(all frequencies), assuming a full-scale input.
         sinad_db = DoubleToDb(1.0 / MeasureAudioFreqs(output, {}).total_magn_other);
@@ -452,6 +454,23 @@ void HermeticFidelityTest::Run(
                         << freq_for_display << " Hz [" << std::setw(2) << freq_idx
                         << "] --       out-of-band rejection " << std::fixed << std::setprecision(4)
                         << std::setw(8) << sinad_db << " db";
+        }
+      } else {
+        auto result = MeasureAudioFreqs(output, {static_cast<int32_t>(freq)});
+        level_db = DoubleToDb(result.magnitudes[freq]);
+        if (isinf(level_db) && level_db < 0) {
+          // If an expected signal was truly absent (silence), we probably underflowed. This
+          // [level_db, sinad_db] pair is meaningless, so set sinad_db to -INFINITY as well.
+          sinad_db = -INFINITY;
+        } else {
+          sinad_db = DoubleToDb(result.magnitudes[freq] / result.total_magn_other);
+        }
+
+        if constexpr (!kSuppressInProgressResults) {
+          FX_LOGS(INFO) << "Channel " << channel_spec.channel << ": " << std::setw(5)
+                        << freq_for_display << " Hz [" << std::setw(2) << freq_idx << "] --  level "
+                        << std::fixed << std::setprecision(4) << std::setw(9) << level_db
+                        << " db,  sinad " << std::setw(8) << sinad_db << " db";
         }
       }
 

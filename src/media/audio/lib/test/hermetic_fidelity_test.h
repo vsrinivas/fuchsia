@@ -79,7 +79,11 @@ class HermeticFidelityTest : public HermeticPipelineTest {
   // Debug positioning and values of the output ring buffer snapshot, by showing certain locations.
   static constexpr bool kDebugOutputBuffer = false;
 
-  // Show a frequency's result immediately. Helps correlate UNDERFLOW with affected frequency.
+  // If debugging input/output ring buffer contents, display buffer sections for ALL frequencies.
+  static constexpr bool kDebugBuffersAtAllFrequencies = false;
+  static constexpr int32_t kFrequencyForBufferDebugging = 16000;
+
+  // No verbose results (in-progress results help correlate UNDERFLOW with affected frequency).
   static constexpr bool kSuppressInProgressResults = false;
 
   // Retain and display the worst-case results in a multi-repeat run. Helpful for updating limits.
