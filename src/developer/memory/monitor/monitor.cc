@@ -105,7 +105,8 @@ uint64_t TotalReadWriteCycles(const fuchsia::hardware::ram::metrics::BandwidthIn
 }
 
 std::vector<memory::BucketMatch> CreateBucketMatchesFromConfigData() {
-  if (!std::filesystem::exists(kBucketConfigPath)) {
+  std::error_code _ignore;
+  if (!std::filesystem::exists(kBucketConfigPath, _ignore)) {
     FX_LOGS(WARNING) << "Bucket configuration file not found; no buckets will be available.";
     return {};
   }

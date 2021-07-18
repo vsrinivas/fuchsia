@@ -40,7 +40,8 @@ void SetRamDevice(monitor::Monitor* app) {
 }
 const char kNotfiyCrashReporterPath[] = "/config/data/send_critical_pressure_crash_reports";
 bool SendCriticalMemoryPressureCrashReports() {
-  return std::filesystem::exists(kNotfiyCrashReporterPath);
+  std::error_code _ignore;
+  return std::filesystem::exists(kNotfiyCrashReporterPath, _ignore);
 }
 }  // namespace
 
