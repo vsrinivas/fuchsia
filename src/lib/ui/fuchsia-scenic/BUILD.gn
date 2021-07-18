@@ -32,7 +32,9 @@ rustc_library("fuchsia-scenic") {
 
   sources = [
     "src/cmd.rs",
+    "src/flatland.rs",
     "src/lib.rs",
+    "src/sysmem.rs",
     "src/view_ref_pair.rs",
     "src/view_token_pair.rs",
   ]

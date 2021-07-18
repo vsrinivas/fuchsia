@@ -29,5 +29,6 @@ fuchsia_package("flatland-examples") {
   deps = [
     "flatland-display",
     "flatland-display:flatland-display-rust",
+    "flatland-view-provider",
   ]
 }

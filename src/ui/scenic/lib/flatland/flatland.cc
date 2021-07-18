@@ -980,6 +980,8 @@ void Flatland::OnNextFrameBegin(uint32_t additional_present_credits,
 
 void Flatland::OnFramePresented(const std::map<scheduling::PresentId, zx::time>& latched_times,
                                 scheduling::PresentTimestamps present_times) {
+  // TODO(fxbug.dev/63305): remove `num_presents_allowed` from this event.  Clients should obtain
+  // this information from OnPresentProcessedValues().
   present2_helper_.OnPresented(latched_times, present_times, /*num_presents_allowed=*/0);
 }
 

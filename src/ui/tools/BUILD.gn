@@ -38,6 +38,7 @@ group("tests") {
     "present_view:tests",
     "print-input-report:print-input-report-test",
     "tiles:tiles_tests",
+    "tiles/flatland:tiles-flatland-tests",
   ]
 }
 

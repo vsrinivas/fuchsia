@@ -4,6 +4,7 @@
 library fuchsia.ui.app;
 
 using fuchsia.sys;
+using fuchsia.ui.composition;
 using fuchsia.ui.views;
 using zx;
 
@@ -59,6 +60,19 @@ protocol ViewProvider {
     @transitional
     CreateViewWithViewRef(resource struct {
         token zx.handle:EVENTPAIR;
+        view_ref_control fuchsia.ui.views.ViewRefControl;
+        view_ref fuchsia.ui.views.ViewRef;
+    });
+};
+
+// TODO(fxbug.dev/64653) This is a placeholder analogue to ViewProvider in the context of Flatland,
+// which will be replaced once we have agreed what we actually want it to look like.  For example:
+// should CreateView() return a value?  Should one of the args be a table, so that this can be
+// extended?
+@discoverable
+protocol TemporaryFlatlandViewProvider {
+    CreateView(resource struct {
+        graph_link_token fuchsia.ui.composition.GraphLinkToken;
         view_ref_control fuchsia.ui.views.ViewRefControl;
         view_ref fuchsia.ui.views.ViewRef;
     });

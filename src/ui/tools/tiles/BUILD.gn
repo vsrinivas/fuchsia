@@ -44,9 +44,22 @@ executable("bin") {
   ]
 }
 
-fuchsia_package_with_single_component("tiles") {
+fuchsia_component("tiles-gfx") {
+  component_name = "tiles"
   manifest = "meta/tiles.cmx"
   deps = [ ":bin" ]
+}
+
+fuchsia_component("tiles-flatland") {
+  manifest = "flatland/meta/tiles-flatland.cmx"
+  deps = [ "flatland:bin" ]
+}
+
+fuchsia_package("tiles") {
+  deps = [
+    ":tiles-flatland",
+    ":tiles-gfx",
+  ]
 }
 
 executable("tiles_unittests") {

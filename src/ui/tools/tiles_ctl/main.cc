@@ -5,7 +5,6 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <fuchsia/developer/tiles/cpp/fidl.h>
-#include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -35,7 +34,7 @@ using UniqueDIR = fxl::UniqueObject<DIR*, UniqueDIRTraits>;
 
 void Usage() {
   printf(
-      "Usage: tiles_ctl <command>\n"
+      "Usage: tiles_ctl [--flatland] <command>\n"
       "  Supported commands:\n"
       "    start\n"
       "    add [--disable-focus] <url> [<args>...]\n"
@@ -56,7 +55,7 @@ std::string FirstNumericEntryInDir(const UniqueDIR& dir) {
   return "";
 }
 
-ControllerPtr FindTiles() {
+ControllerPtr FindTilesService(bool use_flatland) {
   std::string sys_realm_entry;
   UniqueDIR sys(opendir("/hub/r/sys/"));
   if (sys.is_valid()) {
@@ -69,7 +68,8 @@ ControllerPtr FindTiles() {
     sys.reset(opendir("/"));
     sys_realm_entry = "hub";
   }
-  std::string tiles_name = sys_realm_entry + "/c/tiles.cmx/";
+  std::string tiles_name =
+      sys_realm_entry + (use_flatland ? "/c/tiles-flatland.cmx" : "/c/tiles.cmx/");
   fbl::unique_fd tile_component(
       openat(dirfd(sys.get()), tiles_name.c_str(), O_DIRECTORY | O_RDONLY));
   if (!tile_component.is_valid()) {
@@ -105,11 +105,15 @@ ControllerPtr FindTiles() {
   return tiles;
 }
 
-bool Start() {
+bool Start(bool use_flatland) {
   auto services = sys::ServiceDirectory::CreateFromNamespace();
 
   fuchsia::sys::LaunchInfo launch_info;
-  launch_info.url = "fuchsia-pkg://fuchsia.com/tiles#meta/tiles.cmx";
+  if (use_flatland) {
+    launch_info.url = "fuchsia-pkg://fuchsia.com/tiles#meta/tiles-flatland.cmx";
+  } else {
+    launch_info.url = "fuchsia-pkg://fuchsia.com/tiles#meta/tiles.cmx";
+  }
 
   fuchsia::sys::LauncherSyncPtr launcher;
   services->Connect(launcher.NewRequest());
@@ -117,8 +121,8 @@ bool Start() {
   return launcher->CreateComponent(std::move(launch_info), {}) == ZX_OK;
 }
 
-bool Add(std::string url, bool allow_focus, std::vector<std::string> args) {
-  auto tiles = FindTiles();
+bool Add(bool use_flatland, std::string url, bool allow_focus, std::vector<std::string> args) {
+  auto tiles = FindTilesService(use_flatland);
   if (!tiles)
     return false;
   uint32_t key = 0;
@@ -132,15 +136,15 @@ bool Add(std::string url, bool allow_focus, std::vector<std::string> args) {
   return true;
 }
 
-bool Remove(uint32_t key) {
-  auto tiles = FindTiles();
+bool Remove(bool use_flatland, uint32_t key) {
+  auto tiles = FindTilesService(use_flatland);
   if (!tiles)
     return false;
   return tiles->RemoveTile(key) == ZX_OK;
 }
 
-bool List() {
-  auto tiles = FindTiles();
+bool List(bool use_flatland) {
+  auto tiles = FindTilesService(use_flatland);
   if (!tiles)
     return false;
 
@@ -161,8 +165,8 @@ bool List() {
   return true;
 }
 
-bool Quit() {
-  auto tiles = FindTiles();
+bool Quit(bool use_flatland) {
+  auto tiles = FindTilesService(use_flatland);
   if (!tiles)
     return false;
 
@@ -179,10 +183,19 @@ int main(int argc, const char** argv) {
     return 1;
   }
 
+  const std::string use_flatland_string =
+      command_line.GetOptionValueWithDefault("flatland", "false");
+  if ((use_flatland_string != "") && (use_flatland_string != "true") &&
+      (use_flatland_string != "false")) {
+    Usage();
+    return 1;
+  }
+  const bool use_flatland = (use_flatland_string != "false");
+
   const auto& cmd = positional_args[0];
 
   if (cmd == "start") {
-    if (!Start()) {
+    if (!Start(use_flatland)) {
       return 1;
     }
   } else if (cmd == "add") {
@@ -200,7 +213,7 @@ int main(int argc, const char** argv) {
     auto url = positional_args[1 + adjust];
     std::vector<std::string> component_args{std::next(positional_args.begin(), 2 + adjust),
                                             positional_args.end()};
-    if (!Add(url, allow_focus, component_args)) {
+    if (!Add(use_flatland, url, allow_focus, component_args)) {
       return 1;
     }
   } else if (cmd == "remove") {
@@ -213,14 +226,14 @@ int main(int argc, const char** argv) {
       Usage();
       return 1;
     }
-    if (!Remove(key)) {
+    if (!Remove(use_flatland, key)) {
       return 1;
     }
   } else if (cmd == "list") {
-    if (!List())
+    if (!List(use_flatland))
       return 1;
   } else if (cmd == "quit") {
-    if (!Quit()) {
+    if (!Quit(use_flatland)) {
       return 1;
     }
   } else {

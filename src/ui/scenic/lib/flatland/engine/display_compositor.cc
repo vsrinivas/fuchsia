@@ -480,18 +480,20 @@ void DisplayCompositor::RenderFrame(uint64_t frame_number, zx::time presentation
   // version of ApplyConfig2(), which latter proved to be infeasible for some drivers to implement.
   // For the time being, we fake a vsync event with a hardcoded timer.
   ApplyConfig();
-  async::PostTask(async_get_default_dispatcher(), [weak = weak_factory_.GetWeakPtr(), frame_number,
-                                                   display_ids{std::move(display_ids)}]() {
-    if (auto thiz = weak.get()) {
-      for (auto display_id : display_ids) {
-        thiz->OnVsync(display_id, frame_number, zx::time(zx_clock_get_monotonic()));
-      }
-    }
-  });
+  async::PostDelayedTask(
+      async_get_default_dispatcher(),
+      [weak = weak_factory_.GetWeakPtr(), frame_number, display_ids{std::move(display_ids)}]() {
+        if (auto thiz = weak.get()) {
+          for (auto display_id : display_ids) {
+            thiz->OnVsync(display_id, frame_number, zx::time(zx_clock_get_monotonic()));
+          }
+        }
+      },
+      zx::duration(16'700'000));
 }
 
 void DisplayCompositor::OnVsync(uint64_t display_id, uint64_t frame_number, zx::time timestamp) {
-  FX_DCHECK(display_id == 1) << "current expect hardcoded display_id == 1";
+  FX_DCHECK(display_id == 1) << "currently expect hardcoded display_id == 1, not " << display_id;
   release_fence_manager_.OnVsync(frame_number, timestamp);
 }
 

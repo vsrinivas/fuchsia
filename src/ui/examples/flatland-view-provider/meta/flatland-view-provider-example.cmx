@@ -1,0 +1,15 @@
+{
+    "include": [
+        "syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/flatland_view_provider"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sysmem.Allocator",
+            "fuchsia.ui.composition.Allocator",
+            "fuchsia.ui.composition.Flatland"
+        ]
+    }
+}

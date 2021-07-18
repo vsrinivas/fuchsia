@@ -3,9 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    fidl_fuchsia_math as fmath, fidl_fuchsia_ui_composition as scenic_alloc,
-    fidl_fuchsia_ui_composition as fland, fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_protocol, fuchsia_syslog as syslog, fuchsia_zircon as zx,
+    fidl_fuchsia_math as fmath, fidl_fuchsia_ui_composition as fland, fuchsia_async as fasync,
+    fuchsia_component::client::connect_to_protocol,
+    fuchsia_scenic::{flatland::LinkTokenPair, BufferCollectionTokenPair},
+    fuchsia_syslog as syslog, fuchsia_zircon as zx,
     log::*,
 };
 
@@ -14,40 +15,6 @@ use fuchsia_framebuffer::{
     sysmem::minimum_row_bytes, sysmem::BufferCollectionAllocator, FrameUsage,
 };
 use std::{convert::TryInto, thread, time::Duration};
-
-// TODO(fxbug.dev/76640): move somewhere common, like fuchsia-flatland library.
-struct LinkTokenPair {
-    graph_link_token: fland::GraphLinkToken,
-    content_link_token: fland::ContentLinkToken,
-}
-
-impl LinkTokenPair {
-    fn new() -> LinkTokenPair {
-        let (raw_graph_token, raw_content_token) =
-            zx::Channel::create().expect("failed to create channel");
-        LinkTokenPair {
-            graph_link_token: fland::GraphLinkToken { value: raw_graph_token },
-            content_link_token: fland::ContentLinkToken { value: raw_content_token },
-        }
-    }
-}
-
-// TODO(fxbug.dev/76640): move somewhere common, like fuchsia-flatland library.
-struct BufferCollectionTokenPair {
-    export_token: scenic_alloc::BufferCollectionExportToken,
-    import_token: scenic_alloc::BufferCollectionImportToken,
-}
-
-impl BufferCollectionTokenPair {
-    fn new() -> BufferCollectionTokenPair {
-        let (raw_export_token, raw_import_token) =
-            zx::EventPair::create().expect("failed to create eventpair");
-        BufferCollectionTokenPair {
-            export_token: scenic_alloc::BufferCollectionExportToken { value: raw_export_token },
-            import_token: scenic_alloc::BufferCollectionImportToken { value: raw_import_token },
-        }
-    }
-}
 
 #[fasync::run_singlethreaded]
 async fn main() {
@@ -68,13 +35,13 @@ async fn main() {
         .expect("error connecting to Flatland display");
     let flatland =
         connect_to_protocol::<fland::FlatlandMarker>().expect("error connecting to Flatland");
-    let allocator = connect_to_protocol::<scenic_alloc::AllocatorMarker>()
+    let allocator = connect_to_protocol::<fland::AllocatorMarker>()
         .expect("error connecting to Scenic allocator");
     info!("Established connections to Flatland and Allocator");
 
     // Link the Flatland display to the Flatland session.  This is accomplished by passing each of
     // them one half of the LinkTokenPair.
-    let mut link_tokens = LinkTokenPair::new();
+    let mut link_tokens = LinkTokenPair::new().expect("failed to create LinkTokenPair");
 
     let (_content_link_proxy, content_link_request) =
         create_proxy::<fland::ContentLinkMarker>().expect("failed to create ContentLink endpoints");

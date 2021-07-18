@@ -62,10 +62,7 @@ class GraphLinkImpl : public fuchsia::ui::composition::GraphLink {
       return;
     }
 
-    layout_helper_.SetCallback(
-        [callback = std::move(callback)](fuchsia::ui::composition::LayoutInfo info) {
-          callback(std::move(info));
-        });
+    layout_helper_.SetCallback(std::move(callback));
   }
 
   // |fuchsia::ui::composition::GraphLink|

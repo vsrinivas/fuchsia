@@ -3,8 +3,11 @@
 // found in the LICENSE file.
 
 mod cmd;
+pub mod flatland;
+mod sysmem;
 mod view_ref_pair;
 mod view_token_pair;
+pub use self::sysmem::*;
 pub use self::view_ref_pair::*;
 pub use self::view_token_pair::*;
 
