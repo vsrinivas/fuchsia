@@ -116,7 +116,7 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
 impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver<DS, NI> {
     async fn provision_network(&self, params: ProvisioningParams) -> ZxResult<()> {
         use std::convert::TryInto;
-        fx_log_info!("Got provision command: {:?}", params);
+        fx_log_debug!("Got provision command: {:?}", params);
 
         if params.identity.raw_name.is_none() {
             // We must at least have the network name specified.
@@ -429,7 +429,7 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
         &self,
         params: ProvisioningParams,
     ) -> BoxStream<'_, ZxResult<Result<ProvisioningProgress, ProvisionError>>> {
-        fx_log_info!("Got form command: {:?}", params);
+        fx_log_debug!("Got form command: {:?}", params);
 
         let init_task = async move {
             // Wait for our turn.
@@ -467,7 +467,7 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
         &self,
         params: JoinParams,
     ) -> BoxStream<'_, ZxResult<Result<ProvisioningProgress, ProvisionError>>> {
-        fx_log_info!("Got join command: {:?}", params);
+        fx_log_debug!("Got join command: {:?}", params);
 
         let init_task = async move {
             // Wait for our turn.
@@ -711,7 +711,7 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
         &self,
         params: &NetworkScanParameters,
     ) -> BoxStream<'_, ZxResult<Vec<BeaconInfo>>> {
-        fx_log_info!("Got network scan command: {:?}", params);
+        fx_log_debug!("Got network scan command: {:?}", params);
 
         let channels = params.channels.clone();
         let tx_power = params.tx_power_dbm;
@@ -774,7 +774,7 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
                             }
                         };
 
-                        fx_log_info!("network_scan: got result: {:?}", result);
+                        fx_log_debug!("network_scan: got result: {:?}", result);
 
                         Some(Ok(Some(vec![BeaconInfo {
                             identity: Identity {
