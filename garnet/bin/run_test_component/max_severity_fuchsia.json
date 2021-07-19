@@ -66,10 +66,6 @@
         },
         {
             "max_severity": "ERROR",
-            "url": "fuchsia-pkg://fuchsia.com/intl_services_tests#meta/intl_services_test.cmx"
-        },
-        {
-            "max_severity": "ERROR",
             "url": "fuchsia-pkg://fuchsia.com/input_unittests#meta/input_unittests.cmx"
         },
         {
