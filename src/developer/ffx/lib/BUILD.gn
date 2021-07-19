@@ -9,6 +9,7 @@ if (is_host) {
     "errors",
     "fidl-fuchsia-developer-bridge-ext",
     "fms",
+    "gcs",
     "netext",
     "pkg",
     "services",
