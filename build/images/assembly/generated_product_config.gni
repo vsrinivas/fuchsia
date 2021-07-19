@@ -13,6 +13,8 @@ import("//build/zbi/kernel_cmdline.gni")
 #  base_packages: List of labels or groups of labels for the base packages (required)
 #  cache_packages: List of labels or groups of labels for the cache packages (required)
 #  kernel_image: Label of the kernel image (required)
+#  bootfs_labels: List of labels to the files that must be placed in BootFS. (required)
+#  extra_base_deps: List of labels to the extra dependencies to add to the base packages (optional)
 #  cmdline: List of kernel cmdline argument strings (optional)
 #  cmdline_deps: List of labels to walk to find the kernel cmdline args (optional)
 template("generated_product_config") {
@@ -20,6 +22,7 @@ template("generated_product_config") {
   assert(defined(invoker.base_packages), "Need to define the base packages")
   assert(defined(invoker.cache_packages), "Need to define the cache packages")
   assert(defined(invoker.kernel_image), "Need to define the kernel image")
+  assert(defined(invoker.bootfs_labels), "Need to define the bootfs labels")
 
   if (bootfs_only) {
     assert(defined(invoker.universe_packages),
@@ -65,6 +68,11 @@ template("generated_product_config") {
   #
   uses_base_package = !bootfs_only
 
+  if (defined(invoker.extra_base_deps)) {
+    assert(!bootfs_only,
+           "extra_base_deps can only be declared for non bootfs_only products")
+  }
+
   # BootFS only builds do not need to pass lists of base, meta, cache, universe
   # packages and other files.
   if (!bootfs_only) {
@@ -102,7 +110,10 @@ template("generated_product_config") {
     list_package_manifests(labels.extra_base_list) {
       testonly = true
       filename = files.extra_base_list
-      deps = [ "//build/input:system_image" ]
+      deps = []
+      if (defined(invoker.extra_base_deps)) {
+        deps += invoker.extra_base_deps
+      }
     }
 
     generated_file(labels.extra_base_deps_list) {
@@ -149,7 +160,7 @@ template("generated_product_config") {
   distribution_manifest(labels.bootfs_entries_metadata) {
     testonly = true
     outputs = [ files.bootfs_entries_metadata ]
-    deps = [ "//build/input:bootfs" ]
+    deps = invoker.bootfs_labels
 
     # In a bootfs-only build, all packages need to be included in bootfs, and so
     # must be added here.

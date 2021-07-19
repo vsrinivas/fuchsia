@@ -311,6 +311,10 @@ generated_product_config("product_config") {
   base_packages += meta_package_labels
   cache_packages = [ "//:additional_cache_packages" ]
   kernel_image = "//zircon/kernel"
+  bootfs_labels = [ "//build/input:bootfs" ]
+  if (!bootfs_only) {
+    extra_base_deps = [ "//build/input:system_image" ]
+  }
 
   # Universe packages are only added to the images for bootfs-only builds,
   # because they must be put into BootFS. On all other builds, universe
