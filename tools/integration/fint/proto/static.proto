@@ -135,4 +135,7 @@ message Static {
   // Whether to use rbe for running ninja. Will be ignored (and rbe will not
   // be used) when building with some experimental toolchain versions.
   bool enable_rbe = 31;
+
+  // Whether we're performing an incremental build.
+  bool incremental = 32;
 }
