@@ -115,6 +115,8 @@ fbl::String GetTestFilter() {
     return "*Luis*";
   } else if (!strcmp(board_name, "Eve")) {
     return "*Eve*";
+  } else if (!strcmp(board_name, "NUC7i5DNB")) {
+    return "*Nuc*";
   } else if (!strcmp(board_name, "Standard PC (Q35 + ICH9, 2009)")) {
     // QEMU and AEMU with emulated Q35 boards have this board name.
     return "*QemuX64Q35*";
@@ -540,6 +542,22 @@ TEST_F(DeviceEnumerationTest, EveTest) {
       "sys/platform/pci/00:19.2/i2c-bus-9d64/i2c/i2c-0-58/max98927",  // Codec right speaker.
       "sys/platform/pci/00:19.2/i2c-bus-9d64/i2c/i2c-0-19/alc5663",   // Codec headphones.
       "sys/platform/pci/00:19.2/i2c-bus-9d64/i2c/i2c-0-87/alc5514",   // Codec mics.
+  };
+
+  ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
+}
+
+TEST_F(DeviceEnumerationTest, NucTest) {
+  static const char* kDevicePaths[] = {
+    "pci-00:02.0/intel_i915/intel-gpu-core",
+    "pci-00:02.0/intel_i915/display-controller",
+    "pci-00:14.0/xhci/usb-bus",
+    "pci-00:15.0/i2c-bus-9d60",
+    "pci-00:15.1/i2c-bus-9d61",
+    "pci-00:17.0/ahci",
+    "pci-00:1f.3/intel-hda-000",
+    "pci-00:1f.3/intel-hda-controller",
+    "pci-00:1f.6/e1000",
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));
