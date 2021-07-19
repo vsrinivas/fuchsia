@@ -12,6 +12,7 @@ import("//build/components/fuchsia_system_package.gni")
 import("//build/dist/resource.gni")
 import("//build/images/args.gni")
 import("//build/images/assembly/generated_board_config.gni")
+import("//build/images/assembly/generated_product_config.gni")
 import("//build/images/vboot/vboot.gni")
 import("//build/info/info.gni")
 import("//build/packages/package_metadata.gni")
@@ -64,25 +65,11 @@ group("assembly") {
 #
 # Labels used internally in this file
 labels = {
-  kernel_image_metadata = "kernel_image.gn_meta.json"
-  kernel_cmdline_args_metadata = "kernel_cmdline_args.gn_meta.json"
-  bootfs_entries_metadata = "bootfs_entries.gn_meta.json"
   board_config = "board_config.json"
 }
 
-#####
-#
 # Labels whose outputs are used by Image Assembly, and are deps in this file
 dep_labels = {
-  ####
-  # External labels that are deps.
-  #
-  version_file = "//build/info:latest-commit-date"
-  ota_epoch_file = "//src/sys/pkg/bin/system-updater:epoch.json"
-  kernel_image = "//zircon/kernel"
-  kernel_cmdline_args = "//build/input:bootfs"
-  bootfs_entries = "//build/input:bootfs"
-
   ####
   # External labels whose outputs are compared against for validity (temporary)
   #
@@ -121,9 +108,6 @@ dep_labels = {
   ####
   # Internal labels, in "dep" format:
   #
-  kernel_image_metadata = ":" + labels.kernel_image_metadata
-  kernel_cmdline_args_metadata = ":" + labels.kernel_cmdline_args_metadata
-  bootfs_entries_metadata = ":" + labels.bootfs_entries_metadata
   board_config = ":" + labels.board_config
 }
 
@@ -141,32 +125,6 @@ dep_labels = {
 files = {
   assembly_config = "${target_out_dir}/config.json"
   board_config = "${target_out_dir}/board_config.json"
-
-  # Package lists for the base package
-  base_package_list = "${target_out_dir}/package_lists/base"
-  cache_package_list = "${target_out_dir}/package_lists/cache"
-  extra_base_package_list = "${target_out_dir}/package_lists/extra_base"
-  extra_base_deps_package_list =
-      "${target_out_dir}/package_lists/extra_base_deps"
-
-  # The file that contains the version
-  version_file = build_info_files.version
-
-  # The file that contains the ota backstop
-  ota_epoch_file = get_label_info(dep_labels.ota_epoch_file, "target_out_dir") +
-                   "/epoch.json"
-
-  # The results of a GN metadata walk that contains all the kernel cmd arguments
-  kernel_cmdline_args_metadata =
-      target_out_dir + "/" + labels.kernel_cmdline_args_metadata
-
-  # The results of a GN metadata walk that contains the kernel's `image`
-  # metadata.
-  kernel_image_metadata = target_out_dir + "/" + labels.kernel_image_metadata
-
-  # The results of a GN metadata walk that contains all of the bootfs files
-  bootfs_entries_metadata =
-      target_out_dir + "/" + labels.bootfs_entries_metadata
 
   # The working directories for the ffx assembly image task.
   gendir = "${target_out_dir}/gen"
@@ -304,22 +262,6 @@ file_args = {
   assembly_config = rebase_path(files.assembly_config, root_build_dir)
   board_config = rebase_path(files.board_config, root_build_dir)
 
-  base_package_list = rebase_path(files.base_package_list, root_build_dir)
-  cache_package_list = rebase_path(files.cache_package_list, root_build_dir)
-  extra_base_package_list =
-      rebase_path(files.extra_base_package_list, root_build_dir)
-  extra_base_deps_package_list =
-      rebase_path(files.extra_base_deps_package_list, root_build_dir)
-
-  version_file = rebase_path(files.version_file, root_build_dir)
-  ota_epoch_file = rebase_path(files.ota_epoch_file, root_build_dir)
-  kernel_cmdline_args_metadata =
-      rebase_path(files.kernel_cmdline_args_metadata, root_build_dir)
-  kernel_image_metadata =
-      rebase_path(files.kernel_image_metadata, root_build_dir)
-  bootfs_entries_metadata =
-      rebase_path(files.bootfs_entries_metadata, root_build_dir)
-
   gendir = rebase_path(files.gendir, root_build_dir)
   outdir = rebase_path(files.outdir, root_build_dir)
 
@@ -359,252 +301,23 @@ file_args = {
       rebase_path(files.extracted_prev_update_pkg, root_build_dir)
 }
 
-#####
-# These are the package groups that are used to build the system:
-#
-# - `base_packages` - This is the "base package set", the set of packages that
-#                     are considered for all OTA updates and part of the flash
-#                     files' blobfs.
-#
-# - `cache_packages` - These are the (usually) ephemeral packages which are pre-
-#                      installed on the system, present in flash files, but not
-#                      in the update package (except that they currently are
-#                      placed into the `base package set` for all intents and
-#                      purposes.
-#
-# - `universe_packages` - The "known universe of packages at build time".  These
-#                         are all the packages that are defined in the build as
-#                         potentially placed on the device, and therefore they
-#                         need to have their shell command and config-data
-#                         entries placed in base.
-#
-# - `meta_packages` - These are packages that exist because they are assembly-
-#                     time constructed containers of data about other packages:
-#                       - shell command entries
-#                       - config data
-#                       - indexes
-#
-
-group("base_packages") {
-  testonly = base_cache_packages_testonly
-  visibility = [ ":*" ]
-  public_deps = [
+generated_product_config("product_config") {
+  output_path = files.assembly_config
+  base_packages = [
     "//:additional_base_driver_packages",
     "//:additional_base_packages",
+    "//build/images:driver-manager-base-config",
   ]
-}
+  base_packages += meta_package_labels
+  cache_packages = [ "//:additional_cache_packages" ]
+  kernel_image = "//zircon/kernel"
 
-group("cache_packages") {
-  testonly = base_cache_packages_testonly
-  visibility = [ ":*" ]
-  public_deps = [ "//:additional_cache_packages" ]
-}
-
-group("universe_packages") {
-  testonly = fuchsia_zbi_testonly
-  visibility = [ ":*" ]
-  public_deps = [
-    ":base_packages",
-    ":cache_packages",
-    "//:additional_universe_packages",
-  ]
-}
-
-group("meta_packages") {
-  visibility = [ ":*" ]
-  testonly = fuchsia_zbi_testonly
-  public_deps = [ "//build/images:driver-manager-base-config" ]
-  public_deps += meta_package_labels
-}
-
-if (uses_base_package) {
-  #####
-  #  Set up the Inputs for `base` package creation.
-  #
-  # The above groups of packages need to be walked for metadata to find all of the
-  # package manifests for the targets in those dependency trees.  These groups
-  # don't include the special packages that are synthesized by the build itself
-  # (those are in 'meta_packages')
-  #
-  # These lists of packages manifests then need to be incorporated into the JSON
-  # configuration that is expected by the `ffx assembly` tooling.
-  #
-  #  - `base` package set
-  #  - `cache` package set
-  #  - `meta` package set (packages created by the build)
-  #  - `extra_base_packages` package set (the packages whose contents are
-  #     incorporated into the `base` package contents, not as packages that are
-  #     individually listed in the base package set)
-  #
-  #  The following target names are used:
-  #
-  #  `package_manifest_list.[base, cache, extra_base]` -> These are the raw lists
-  #       of package manifests that are gathered via metadata walks
-  #
-  #  `assembly_config_input.[base, cache, extra_base]` -> These are the converted
-  #       versions of the lists into the format as expected by the tooling.
-  #
-
-  #####
-  # Helper template to create the package list inputs.
-  #
-  template("list_package_manifests") {
-    generated_file(target_name) {
-      data_keys = [ "package_output_manifests" ]
-      walk_keys = [ "package_barrier" ]
-      outputs = [ invoker.filename ]
-      output_conversion = "json"
-      rebase = root_build_dir
-
-      forward_variables_from(invoker,
-                             [
-                               "deps",
-                               "testonly",
-                             ])
-    }
-  }
-
-  list_package_manifests("package_manifest_list.base") {
-    testonly = true
-    filename = files.base_package_list
-    deps = [
-      ":base_packages",
-      ":meta_packages",
-    ]
-  }
-
-  list_package_manifests("package_manifest_list.cache") {
-    testonly = true
-    filename = files.cache_package_list
-    deps = [ ":cache_packages" ]
-  }
-
-  list_package_manifests("package_manifest_list.extra_base") {
-    testonly = true
-    filename = files.extra_base_package_list
-    deps = [ "//build/input:system_image" ]
-  }
-
-  generated_file("package_manifest_list.extra_base_deps") {
-    testonly = true
-    data_keys = [ "system_image_extra_package_manifest" ]
-    walk_keys = [ "system_image_extra_package_manifest_barrier" ]
-    outputs = [ files.extra_base_deps_package_list ]
-    output_conversion = "json"
-    deps = [
-      ":base_packages",
-      ":meta_packages",
-    ]
-  }
-}
-
-#####
-# Setup the inputs for the ZBI creation
-#
-#
-generated_file(labels.kernel_image_metadata) {
-  data_keys = [ "images" ]
-  outputs = [ files.kernel_image_metadata ]
-  output_conversion = "json"
-  deps = [ dep_labels.kernel_image ]
-}
-
-generated_file(labels.kernel_cmdline_args_metadata) {
-  testonly = true
-  data_keys = [ "zbi_config_entry" ]
-  walk_keys = [ "zbi_input_barrier" ]
-  outputs = [ files.kernel_cmdline_args_metadata ]
-  output_conversion = "json"
-  deps = [ dep_labels.kernel_cmdline_args ]
-}
-
-distribution_manifest(labels.bootfs_entries_metadata) {
-  testonly = true
-  outputs = [ files.bootfs_entries_metadata ]
-  deps = [ dep_labels.bootfs_entries ]
+  # Universe packages are only added to the images for bootfs-only builds,
+  # because they must be put into BootFS. On all other builds, universe
+  # packages are only added to a package server.
   if (bootfs_only) {
-    # In a bootfs-only build, all packages need to be included in bootfs, and so
-    # must be added here.
-    deps += [
-      ":meta_packages",
-      ":universe_packages",
-      "//build/input:system_image",
-    ]
+    universe_packages = [ "//:additional_universe_packages" ]
   }
-}
-
-#####
-# Create the configuration file for the assembly tool
-#
-#
-action("create_config") {
-  testonly = true
-  script = "make_assembly_config.py"
-  inputs = []
-  deps = []
-  args = []
-
-  # If we have a base package (the usual case), then add those inputs, deps, and
-  # args to the config creation.
-  if (uses_base_package) {
-    inputs += [
-      files.base_package_list,
-      files.cache_package_list,
-      files.extra_base_package_list,
-      files.extra_base_deps_package_list,
-      files.version_file,
-      files.ota_epoch_file,
-    ]
-
-    deps += [
-      ":package_manifest_list.base",
-      ":package_manifest_list.cache",
-      ":package_manifest_list.extra_base",
-      ":package_manifest_list.extra_base_deps",
-      dep_labels.version_file,
-      dep_labels.ota_epoch_file,
-    ]
-
-    args += [
-      "--base-packages-list",
-      file_args.base_package_list,
-      "--cache-packages-list",
-      file_args.cache_package_list,
-      "--extra-files-packages-list",
-      file_args.extra_base_package_list,
-      "--extra-deps-files-packages-list",
-      file_args.extra_base_deps_package_list,
-      "--version-file",
-      file_args.version_file,
-      "--epoch-file",
-      file_args.ota_epoch_file,
-    ]
-  }
-
-  # All builds must use a ZBI, and those relevant inputs, deps, and args:
-  inputs += [
-    files.kernel_image_metadata,
-    files.kernel_cmdline_args_metadata,
-    files.bootfs_entries_metadata,
-  ]
-  deps += [
-    dep_labels.kernel_image_metadata,
-    dep_labels.kernel_cmdline_args_metadata,
-    dep_labels.bootfs_entries_metadata,
-  ]
-
-  args += [
-    "--kernel-image-metadata",
-    file_args.kernel_image_metadata,
-    "--zbi-config-entries",
-    file_args.kernel_cmdline_args_metadata,
-    "--bootfs-entries",
-    file_args.bootfs_entries_metadata,
-    "--output",
-    file_args.assembly_config,
-  ]
-
-  outputs = [ files.assembly_config ]
 }
 
 # Select the correct vbmeta and salt depending on if it is bootfs_only or not.
@@ -645,7 +358,7 @@ ffx_action("images") {
   testonly = true
   deps = [
     ":board_config",
-    ":create_config",
+    ":product_config",
   ]
 
   args = []
@@ -769,7 +482,6 @@ if (uses_base_package) {
 #
 # Validation checks that the base package contents matches the system-image
 # package contents
-
 group("output_validation_checks") {
   testonly = true
   deps = []

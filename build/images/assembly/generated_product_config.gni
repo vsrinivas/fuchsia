@@ -1,0 +1,222 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/dist/distribution_manifest.gni")
+import("//build/dist/resource.gni")
+import("//build/images/args.gni")
+import("//build/info/info.gni")
+
+# Arguments
+#  output_path: Path to write the product config (required)
+#  base_packages: List of labels or groups of labels for the base packages (required)
+#  cache_packages: List of labels or groups of labels for the cache packages (required)
+#  kernel_image: Label of the kernel image (required)
+template("generated_product_config") {
+  assert(defined(invoker.output_path), "Need to define the output path")
+  assert(defined(invoker.base_packages), "Need to define the base packages")
+  assert(defined(invoker.cache_packages), "Need to define the cache packages")
+  assert(defined(invoker.kernel_image), "Need to define the kernel image")
+
+  if (bootfs_only) {
+    assert(defined(invoker.universe_packages),
+           "Need to define the universe packages")
+  }
+
+  # Labels used in this file.
+  labels = {
+    base_package_list = "${target_name}_package_manifest_list.base"
+    cache_package_list = "${target_name}_package_manifest_list.cache"
+    extra_base_list = "${target_name}_package_manifest_list.extra_base"
+    extra_base_deps_list =
+        "${target_name}_package_manifest_list.extra_base_deps"
+    kernel_image_metadata = "${target_name}_kernel_image_metadata"
+    kernel_cmdline_args_metadata = "${target_name}_kernel_cmdline_args_metadata"
+    bootfs_entries_metadata = "${target_name}_bootfs_entries_metadata"
+  }
+
+  # Files produced by targets in this file.
+  files = {
+    base_package_list = "$target_out_dir/package_lists/${target_name}_base"
+    cache_package_list = "$target_out_dir/package_lists/${target_name}_cache"
+    extra_base_list = "$target_out_dir/package_lists/${target_name}_extra_base"
+    extra_base_deps_list =
+        "$target_out_dir/package_lists/${target_name}_extra_base_deps"
+    kernel_image_metadata =
+        "$target_out_dir/${target_name}_kernel_image.gn_meta.json"
+    kernel_cmdline_args_metadata =
+        "$target_out_dir/${target_name}_kernel_cmdline_args.gn_meta.json"
+    bootfs_entries_metadata =
+        "$target_out_dir/${target_name}_bootfs_entries.gn_meta.json"
+  }
+
+  ####
+  #
+  # Deal with "bringup" and other zbi-only builds.
+  #
+  # These builds set `bootfs_only` to true, and do not include a base/system_image
+  # package, pkgfs, blobfs, fvm, etc.
+  #
+  # This declares an inverted variable that has easier reading and is less likely
+  # to miss the `!` operator:
+  #
+  uses_base_package = !bootfs_only
+
+  # BootFS only builds do not need to pass lists of base, meta, cache, universe
+  # packages and other files.
+  if (!bootfs_only) {
+    #####
+    # Helper template to create the package list inputs.
+    #
+    template("list_package_manifests") {
+      generated_file(target_name) {
+        data_keys = [ "package_output_manifests" ]
+        walk_keys = [ "package_barrier" ]
+        outputs = [ invoker.filename ]
+        output_conversion = "json"
+        rebase = root_build_dir
+
+        forward_variables_from(invoker,
+                               [
+                                 "deps",
+                                 "testonly",
+                               ])
+      }
+    }
+
+    list_package_manifests(labels.base_package_list) {
+      testonly = true
+      filename = files.base_package_list
+      deps = invoker.base_packages
+    }
+
+    list_package_manifests(labels.cache_package_list) {
+      testonly = true
+      filename = files.cache_package_list
+      deps = invoker.cache_packages
+    }
+
+    list_package_manifests(labels.extra_base_list) {
+      testonly = true
+      filename = files.extra_base_list
+      deps = [ "//build/input:system_image" ]
+    }
+
+    generated_file(labels.extra_base_deps_list) {
+      testonly = true
+      data_keys = [ "system_image_extra_package_manifest" ]
+      walk_keys = [ "system_image_extra_package_manifest_barrier" ]
+      outputs = [ files.extra_base_deps_list ]
+      output_conversion = "json"
+      deps = invoker.base_packages
+    }
+  }
+
+  generated_file(labels.kernel_image_metadata) {
+    data_keys = [ "images" ]
+    outputs = [ files.kernel_image_metadata ]
+    output_conversion = "json"
+    deps = [ invoker.kernel_image ]
+  }
+
+  generated_file(labels.kernel_cmdline_args_metadata) {
+    testonly = true
+    data_keys = [ "zbi_config_entry" ]
+    walk_keys = [ "zbi_input_barrier" ]
+    outputs = [ files.kernel_cmdline_args_metadata ]
+    output_conversion = "json"
+    deps = [ "//build/input:bootfs" ]
+  }
+
+  distribution_manifest(labels.bootfs_entries_metadata) {
+    testonly = true
+    outputs = [ files.bootfs_entries_metadata ]
+    deps = [ "//build/input:bootfs" ]
+
+    # In a bootfs-only build, all packages need to be included in bootfs, and so
+    # must be added here.
+    if (bootfs_only) {
+      deps += [ "//build/input:system_image" ]
+      deps += invoker.base_packages + invoker.cache_packages +
+              invoker.universe_packages
+    }
+  }
+
+  if (!bootfs_only) {
+    version_label = "//build/info:latest-commit-date"
+    ota_epoch_label = "//src/sys/pkg/bin/system-updater:epoch.json"
+    version_file = build_info_files.version
+    ota_epoch_file =
+        get_label_info(ota_epoch_label, "target_out_dir") + "/epoch.json"
+  }
+
+  action(target_name) {
+    testonly = true
+    script = "//build/images/assembly/make_assembly_config.py"
+    inputs = []
+    deps = []
+    args = []
+
+    # If we have a base package (the usual case), then add those inputs, deps, and
+    # args to the config creation.
+    if (uses_base_package) {
+      inputs += [
+        files.base_package_list,
+        files.cache_package_list,
+        files.extra_base_list,
+        files.extra_base_deps_list,
+        version_file,
+        ota_epoch_file,
+      ]
+
+      deps += [
+        ":${labels.base_package_list}",
+        ":${labels.cache_package_list}",
+        ":${labels.extra_base_deps_list}",
+        ":${labels.extra_base_list}",
+        ota_epoch_label,
+        version_label,
+      ]
+
+      args += [
+        "--base-packages-list",
+        rebase_path(files.base_package_list, root_build_dir),
+        "--cache-packages-list",
+        rebase_path(files.cache_package_list, root_build_dir),
+        "--extra-files-packages-list",
+        rebase_path(files.extra_base_list, root_build_dir),
+        "--extra-deps-files-packages-list",
+        rebase_path(files.extra_base_deps_list, root_build_dir),
+        "--version-file",
+        rebase_path(version_file, root_build_dir),
+        "--epoch-file",
+        rebase_path(ota_epoch_file, root_build_dir),
+      ]
+    }
+
+    # All builds must use a ZBI, and those relevant inputs, deps, and args:
+    inputs += [
+      files.kernel_image_metadata,
+      files.kernel_cmdline_args_metadata,
+      files.bootfs_entries_metadata,
+    ]
+    deps += [
+      ":${labels.bootfs_entries_metadata}",
+      ":${labels.kernel_cmdline_args_metadata}",
+      ":${labels.kernel_image_metadata}",
+    ]
+
+    args += [
+      "--kernel-image-metadata",
+      rebase_path(files.kernel_image_metadata, root_build_dir),
+      "--zbi-config-entries",
+      rebase_path(files.kernel_cmdline_args_metadata, root_build_dir),
+      "--bootfs-entries",
+      rebase_path(files.bootfs_entries_metadata, root_build_dir),
+      "--output",
+      rebase_path(invoker.output_path, root_build_dir),
+    ]
+
+    outputs = [ invoker.output_path ]
+  }
+}
