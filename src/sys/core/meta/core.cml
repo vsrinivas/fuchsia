@@ -449,7 +449,6 @@
         },
         {
             protocol: [
-                "fuchsia.buildinfo.Provider",
                 "fuchsia.hwinfo.Device",
                 "fuchsia.net.interfaces.State",
                 "fuchsia.overnet.Overnet",
