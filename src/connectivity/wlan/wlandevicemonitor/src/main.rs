@@ -12,13 +12,19 @@ mod watcher_service;
 use {
     anyhow::Error,
     argh::FromArgs,
-    fuchsia_async as fasync,
-    fuchsia_component::server::{ServiceFs, ServiceObjLocal},
+    fidl_fuchsia_wlan_device_service as fidl_svc, fuchsia_async as fasync,
+    fuchsia_component::{
+        client::connect_to_protocol,
+        server::{ServiceFs, ServiceObjLocal},
+    },
     fuchsia_inspect::Inspector,
+    fuchsia_syslog as syslog,
     futures::{future::try_join3, FutureExt, StreamExt, TryFutureExt},
     log::{error, info},
     std::sync::Arc,
 };
+
+const MAX_LOG_LEVEL: log::LevelFilter = log::LevelFilter::Info;
 
 /// Configuration for wlan-monitor service.
 #[derive(FromArgs, Clone, Debug, Default)]
@@ -32,11 +38,19 @@ pub struct ServiceCfg {
 async fn serve_fidl(
     mut fs: ServiceFs<ServiceObjLocal<'_, ()>>,
     phys: Arc<device::PhyMap>,
+    ifaces: Arc<device::IfaceMap>,
     watcher_service: watcher_service::WatcherService<device::PhyDevice, device::IfaceDevice>,
+    dev_svc: fidl_svc::DeviceServiceProxy,
 ) -> Result<(), Error> {
     fs.dir("svc").add_fidl_service(move |reqs| {
-        let fut = service::serve_monitor_requests(reqs, phys.clone(), watcher_service.clone())
-            .unwrap_or_else(|e| error!("error serving device monitor API: {}", e));
+        let fut = service::serve_monitor_requests(
+            reqs,
+            phys.clone(),
+            ifaces.clone(),
+            watcher_service.clone(),
+            dev_svc.clone(),
+        )
+        .unwrap_or_else(|e| error!("error serving device monitor API: {}", e));
         fasync::Task::spawn(fut).detach()
     });
     fs.take_and_serve_directory_handle()?;
@@ -46,6 +60,9 @@ async fn serve_fidl(
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
+    syslog::init().expect("Syslog init should not fail");
+    log::set_max_level(MAX_LOG_LEVEL);
+
     info!("Starting");
     let cfg: ServiceCfg = argh::from_env();
     info!("{:?}", cfg);
@@ -54,6 +71,8 @@ async fn main() -> Result<(), Error> {
     let phys = Arc::new(phys);
     let (ifaces, iface_events) = device::IfaceMap::new();
     let ifaces = Arc::new(ifaces);
+
+    let dev_svc = connect_to_protocol::<fidl_svc::DeviceServiceMarker>()?;
 
     let (watcher_service, watcher_fut) =
         watcher_service::serve_watchers(phys.clone(), ifaces.clone(), phy_events, iface_events);
@@ -74,7 +93,7 @@ async fn main() -> Result<(), Error> {
             .right_future()
     };
 
-    let fidl_fut = serve_fidl(fs, phys, watcher_service);
+    let fidl_fut = serve_fidl(fs, phys, ifaces, watcher_service, dev_svc);
 
     let ((), (), ()) = try_join3(
         fidl_fut,

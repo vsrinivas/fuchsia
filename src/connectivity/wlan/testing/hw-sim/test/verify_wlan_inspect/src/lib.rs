@@ -143,7 +143,7 @@ async fn verify_wlan_inspect() {
             .await;
     }
 
-    let hierarchy = get_inspect_hierarchy().await.expect("expect Inspect data");
+    let hierarchy = get_inspect_hierarchy("wlanstack.cmx").await.expect("expect Inspect data");
     assert_data_tree!(hierarchy, root: contains {
         latest_active_client_iface: 0u64,
         client_stats: contains {
@@ -156,7 +156,6 @@ async fn verify_wlan_inspect() {
         },
         device_events: contains {
             "0": contains {},
-            "1": contains {},
         },
         "iface-0": contains {
             last_pulse: contains {
@@ -182,6 +181,13 @@ async fn verify_wlan_inspect() {
             },
         }
     });
+    let monitor_hierarchy =
+        get_inspect_hierarchy("wlandevicemonitor.cmx").await.expect("expect Inspect data");
+    assert_data_tree!(monitor_hierarchy, root: contains {
+        device_events: contains {
+            "0": contains {},
+        },
+    });
 
     let properties = select_properties(hierarchy, DISCONNECT_CTX_SELECTOR);
     assert!(properties.is_empty(), "there should not be a disconnect_ctx yet");
@@ -192,7 +198,7 @@ async fn verify_wlan_inspect() {
     })
     .await;
 
-    let hierarchy = get_inspect_hierarchy().await.expect("expect Inspect data");
+    let hierarchy = get_inspect_hierarchy("wlanstack.cmx").await.expect("expect Inspect data");
     assert_data_tree!(hierarchy, root: contains {
         latest_active_client_iface: 0u64,
         client_stats: contains {
@@ -231,7 +237,6 @@ async fn verify_wlan_inspect() {
         },
         device_events: contains {
             "0": contains {},
-            "1": contains {},
         },
         "iface-0": contains {
             last_pulse: contains {
@@ -257,6 +262,13 @@ async fn verify_wlan_inspect() {
             },
         }
     });
+    let monitor_hierarchy =
+        get_inspect_hierarchy("wlandevicemonitor.cmx").await.expect("expect Inspect data");
+    assert_data_tree!(monitor_hierarchy, root: contains {
+        device_events: contains {
+            "0": contains {},
+        },
+    });
 
     let properties = select_properties(hierarchy, DISCONNECT_CTX_SELECTOR);
     let node_paths: HashSet<&str> =
@@ -273,9 +285,9 @@ async fn verify_wlan_inspect() {
     helper.stop().await;
 }
 
-async fn get_inspect_hierarchy() -> Result<DiagnosticsHierarchy, Error> {
+async fn get_inspect_hierarchy(component: &str) -> Result<DiagnosticsHierarchy, Error> {
     ArchiveReader::new()
-        .add_selector(ComponentSelector::new(vec!["wlanstack.cmx".to_string()]))
+        .add_selector(ComponentSelector::new(vec![component.to_string()]))
         .snapshot::<Inspect>()
         .await?
         .into_iter()

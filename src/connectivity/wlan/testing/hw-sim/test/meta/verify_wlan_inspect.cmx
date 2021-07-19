@@ -4,9 +4,12 @@
             "injected-services": {
                 "fuchsia.diagnostics.ArchiveAccessor": "fuchsia-pkg://fuchsia.com/archivist-for-embedding#meta/archivist-for-embedding.cmx",
                 "fuchsia.stash.SecureStore": "fuchsia-pkg://fuchsia.com/stash#meta/stash_secure.cmx",
-                "fuchsia.wlan.device.service.DeviceService": [
-                    "fuchsia-pkg://fuchsia.com/wlanstack#meta/wlanstack.cmx",
+                "fuchsia.wlan.device.service.DeviceMonitor": [
+                    "fuchsia-pkg://fuchsia.com/wlandevicemonitor#meta/wlandevicemonitor.cmx",
                     "--isolated-devmgr"
+                ],
+                "fuchsia.wlan.device.service.DeviceService": [
+                    "fuchsia-pkg://fuchsia.com/wlanstack#meta/wlanstack.cmx"
                 ],
                 "fuchsia.wlan.devmgr.IsolatedDevmgr": [
                     "fuchsia-pkg://fuchsia.com/wlan-hw-sim-test#meta/wlan-devmgr.cmx"

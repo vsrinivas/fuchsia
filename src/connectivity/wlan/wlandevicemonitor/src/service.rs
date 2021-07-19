@@ -4,13 +4,14 @@
 
 use {
     crate::{
-        device::{IfaceDevice, PhyDevice, PhyMap},
+        device::{self, IfaceDevice, IfaceMap, NewIface, PhyDevice, PhyMap},
         watcher_service,
     },
     anyhow::{Context, Error},
+    fidl::endpoints::create_endpoints,
     fidl_fuchsia_wlan_device as fidl_dev,
     fidl_fuchsia_wlan_device_service::{self as fidl_svc, DeviceMonitorRequest},
-    fuchsia_zircon as zx,
+    fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
     futures::TryStreamExt,
     log::{error, info},
     std::sync::Arc,
@@ -19,7 +20,9 @@ use {
 pub(crate) async fn serve_monitor_requests(
     mut req_stream: fidl_svc::DeviceMonitorRequestStream,
     phys: Arc<PhyMap>,
+    ifaces: Arc<IfaceMap>,
     watcher_service: watcher_service::WatcherService<PhyDevice, IfaceDevice>,
+    dev_svc: fidl_svc::DeviceServiceProxy,
 ) -> Result<(), Error> {
     while let Some(req) = req_stream.try_next().await.context("error running DeviceService")? {
         match req {
@@ -49,11 +52,25 @@ pub(crate) async fn serve_monitor_requests(
                 let status = clear_country(&phys, req).await;
                 responder.send(status.into_raw())
             }
-            DeviceMonitorRequest::CreateIface { req: _, responder } => {
-                responder.send(zx::Status::NOT_SUPPORTED.into_raw(), None)
+            DeviceMonitorRequest::CreateIface { req, responder } => {
+                match create_iface(&dev_svc, &phys, req).await {
+                    Ok(new_iface) => {
+                        info!("iface #{} started ({:?})", new_iface.id, new_iface.phy_ownership);
+                        ifaces.insert(
+                            new_iface.id,
+                            IfaceDevice { phy_ownership: new_iface.phy_ownership },
+                        );
+
+                        let resp = fidl_svc::CreateIfaceResponse { iface_id: new_iface.id };
+                        responder.send(zx::sys::ZX_OK, Some(resp).as_mut())
+                    }
+                    Err(status) => responder.send(status.into_raw(), None),
+                }
             }
-            DeviceMonitorRequest::DestroyIface { req: _, responder } => {
-                responder.send(zx::Status::NOT_SUPPORTED.into_raw())
+            DeviceMonitorRequest::DestroyIface { req, responder } => {
+                let result = destroy_iface(&phys, &ifaces, req.iface_id).await;
+                let status = into_status_and_opt(result).0;
+                responder.send(status.into_raw())
             }
         }?;
     }
@@ -140,23 +157,96 @@ async fn query_phy(phys: &PhyMap, id: u16) -> Option<fidl_dev::PhyInfo> {
     Some(query_result.info)
 }
 
+async fn create_iface(
+    dev_svc: &fidl_svc::DeviceServiceProxy,
+    phys: &PhyMap,
+    req: fidl_svc::CreateIfaceRequest,
+) -> Result<NewIface, zx::Status> {
+    let phy_id = req.phy_id;
+    let phy = phys.get(&req.phy_id).ok_or(zx::Status::NOT_FOUND)?;
+
+    let (mlme_client, mlme_server) = create_endpoints::<fidl_mlme::MlmeMarker>()
+        .map_err(|e| {
+            error!("failed to create MlmeProxy: {}", e);
+            zx::Status::INTERNAL
+        })
+        .map(|(p, c)| (p, Some(c.into_channel())))?;
+
+    let mut phy_req = fidl_dev::CreateIfaceRequest {
+        role: req.role,
+        mlme_channel: mlme_server,
+        init_mac_addr: req.mac_addr,
+    };
+    let r = phy.proxy.create_iface(&mut phy_req).await.map_err(move |e| {
+        error!("Error sending 'CreateIface' request to phy #{}: {}", phy_id, e);
+        zx::Status::INTERNAL
+    })?;
+    zx::Status::ok(r.status)?;
+
+    let (status, iface_id) = dev_svc
+        .add_iface(&mut fidl_svc::AddIfaceRequest {
+            phy_id,
+            assigned_iface_id: r.iface_id,
+            iface: mlme_client,
+        })
+        .await
+        .map_err(|e| {
+            error!("failed to add interfaces to DeviceService: {:?}", e);
+            zx::Status::INTERNAL
+        })?;
+    zx::Status::ok(status)?;
+    let added_iface = iface_id.ok_or(zx::Status::INTERNAL)?;
+
+    Ok(NewIface {
+        id: added_iface.iface_id,
+        phy_ownership: device::PhyOwnership { phy_id, phy_assigned_id: r.iface_id },
+    })
+}
+
+async fn destroy_iface(phys: &PhyMap, ifaces: &IfaceMap, id: u16) -> Result<(), zx::Status> {
+    info!("destroy_iface(id = {})", id);
+    let iface = ifaces.get(&id).ok_or(zx::Status::NOT_FOUND)?;
+    let phy_ownership = &iface.phy_ownership;
+    let phy = phys.get(&phy_ownership.phy_id).ok_or(zx::Status::NOT_FOUND)?;
+    let mut phy_req = fidl_dev::DestroyIfaceRequest { id: phy_ownership.phy_assigned_id };
+    let r = phy.proxy.destroy_iface(&mut phy_req).await.map_err(move |e| {
+        error!("Error sending 'DestroyIface' request to phy {:?}: {}", phy_ownership, e);
+        zx::Status::INTERNAL
+    })?;
+    let () = zx::Status::ok(r.status)?;
+
+    ifaces.remove(&id);
+    Ok(())
+}
+
+fn into_status_and_opt<T>(r: Result<T, zx::Status>) -> (zx::Status, Option<T>) {
+    match r {
+        Ok(x) => (zx::Status::OK, Some(x)),
+        Err(status) => (status, None),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use {
         super::*,
-        crate::device::{IfaceMap, PhyOwnership},
+        crate::device::PhyOwnership,
         fidl::endpoints::create_proxy,
         fuchsia_async as fasync,
         futures::{future::BoxFuture, task::Poll, StreamExt},
         pin_utils::pin_mut,
+        test_case::test_case,
         void::Void,
         wlan_common::assert_variant,
         wlan_dev::DeviceEnv,
     };
 
     struct TestValues {
-        proxy: fidl_svc::DeviceMonitorProxy,
-        req_stream: fidl_svc::DeviceMonitorRequestStream,
+        monitor_proxy: fidl_svc::DeviceMonitorProxy,
+        monitor_req_stream: fidl_svc::DeviceMonitorRequestStream,
+        dev_proxy: fidl_svc::DeviceServiceProxy,
+        #[allow(unused)]
+        dev_req_stream: fidl_svc::DeviceServiceRequestStream,
         phys: Arc<PhyMap>,
         ifaces: Arc<IfaceMap>,
         watcher_service: watcher_service::WatcherService<PhyDevice, IfaceDevice>,
@@ -164,9 +254,12 @@ mod tests {
     }
 
     fn test_setup() -> TestValues {
-        let (proxy, requests) = create_proxy::<fidl_svc::DeviceMonitorMarker>()
+        let (monitor_proxy, requests) = create_proxy::<fidl_svc::DeviceMonitorMarker>()
             .expect("failed to create DeviceMonitor proxy");
-        let req_stream = requests.into_stream().expect("failed to create request stream");
+        let monitor_req_stream = requests.into_stream().expect("failed to create request stream");
+        let (dev_proxy, requests) = create_proxy::<fidl_svc::DeviceServiceMarker>()
+            .expect("failed to create DeviceMonitor proxy");
+        let dev_req_stream = requests.into_stream().expect("failed to create request stream");
         let (phys, phy_events) = PhyMap::new();
         let phys = Arc::new(phys);
 
@@ -177,8 +270,10 @@ mod tests {
             watcher_service::serve_watchers(phys.clone(), ifaces.clone(), phy_events, iface_events);
 
         TestValues {
-            proxy,
-            req_stream,
+            monitor_proxy,
+            monitor_req_stream,
+            dev_proxy,
+            dev_req_stream,
             phys,
             ifaces,
             watcher_service,
@@ -206,16 +301,18 @@ mod tests {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
         let service_fut = serve_monitor_requests(
-            test_values.req_stream,
+            test_values.monitor_req_stream,
             test_values.phys.clone(),
+            test_values.ifaces.clone(),
             test_values.watcher_service,
+            test_values.dev_proxy,
         );
         pin_mut!(service_fut);
 
         assert_variant!(exec.run_until_stalled(&mut service_fut), Poll::Pending);
 
         // Request the list of available PHYs.
-        let list_fut = test_values.proxy.list_phys();
+        let list_fut = test_values.monitor_proxy.list_phys();
         pin_mut!(list_fut);
         assert_variant!(exec.run_until_stalled(&mut list_fut), Poll::Pending);
 
@@ -232,7 +329,7 @@ mod tests {
         test_values.phys.insert(0, phy);
 
         // Request the list of available PHYs.
-        let list_fut = test_values.proxy.list_phys();
+        let list_fut = test_values.monitor_proxy.list_phys();
         pin_mut!(list_fut);
         assert_variant!(exec.run_until_stalled(&mut list_fut), Poll::Pending);
 
@@ -248,7 +345,7 @@ mod tests {
         test_values.phys.remove(&0);
 
         // Request the list of available PHYs.
-        let list_fut = test_values.proxy.list_phys();
+        let list_fut = test_values.monitor_proxy.list_phys();
         pin_mut!(list_fut);
         assert_variant!(exec.run_until_stalled(&mut list_fut), Poll::Pending);
 
@@ -269,16 +366,18 @@ mod tests {
         test_values.phys.insert(10u16, phy);
 
         let service_fut = serve_monitor_requests(
-            test_values.req_stream,
+            test_values.monitor_req_stream,
             test_values.phys,
+            test_values.ifaces,
             test_values.watcher_service,
+            test_values.dev_proxy,
         );
         pin_mut!(service_fut);
         assert_variant!(exec.run_until_stalled(&mut service_fut), Poll::Pending);
 
         // Initiate a GetDevPath request. The returned future should not be able
         // to produce a result immediately
-        let query_fut = test_values.proxy.get_dev_path(10u16);
+        let query_fut = test_values.monitor_proxy.get_dev_path(10u16);
         pin_mut!(query_fut);
         assert_variant!(exec.run_until_stalled(&mut query_fut), Poll::Pending);
         assert_variant!(exec.run_until_stalled(&mut service_fut), Poll::Pending);
@@ -297,16 +396,18 @@ mod tests {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
         let service_fut = serve_monitor_requests(
-            test_values.req_stream,
+            test_values.monitor_req_stream,
             test_values.phys,
+            test_values.ifaces.clone(),
             test_values.watcher_service,
+            test_values.dev_proxy,
         );
         pin_mut!(service_fut);
 
         assert_variant!(exec.run_until_stalled(&mut service_fut), Poll::Pending);
 
         // Query a PHY's dev path.
-        let query_fut = test_values.proxy.get_dev_path(0);
+        let query_fut = test_values.monitor_proxy.get_dev_path(0);
         pin_mut!(query_fut);
         assert_variant!(exec.run_until_stalled(&mut query_fut), Poll::Pending);
 
@@ -325,16 +426,18 @@ mod tests {
         test_values.phys.insert(10u16, phy);
 
         let service_fut = serve_monitor_requests(
-            test_values.req_stream,
+            test_values.monitor_req_stream,
             test_values.phys,
+            test_values.ifaces,
             test_values.watcher_service,
+            test_values.dev_proxy,
         );
         pin_mut!(service_fut);
         assert_variant!(exec.run_until_stalled(&mut service_fut), Poll::Pending);
 
         // Initiate a GetMacRoles request. The returned future should not be able
         // to produce a result immediately
-        let query_fut = test_values.proxy.get_supported_mac_roles(10u16);
+        let query_fut = test_values.monitor_proxy.get_supported_mac_roles(10u16);
         pin_mut!(query_fut);
         assert_variant!(exec.run_until_stalled(&mut query_fut), Poll::Pending);
 
@@ -368,16 +471,18 @@ mod tests {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
         let service_fut = serve_monitor_requests(
-            test_values.req_stream,
+            test_values.monitor_req_stream,
             test_values.phys,
+            test_values.ifaces.clone(),
             test_values.watcher_service,
+            test_values.dev_proxy,
         );
         pin_mut!(service_fut);
 
         assert_variant!(exec.run_until_stalled(&mut service_fut), Poll::Pending);
 
         // Query a PHY's dev path.
-        let query_fut = test_values.proxy.get_supported_mac_roles(0);
+        let query_fut = test_values.monitor_proxy.get_supported_mac_roles(0);
         pin_mut!(query_fut);
         assert_variant!(exec.run_until_stalled(&mut query_fut), Poll::Pending);
 
@@ -396,9 +501,11 @@ mod tests {
         pin_mut!(watcher_fut);
 
         let service_fut = serve_monitor_requests(
-            test_values.req_stream,
+            test_values.monitor_req_stream,
             test_values.phys.clone(),
+            test_values.ifaces.clone(),
             test_values.watcher_service,
+            test_values.dev_proxy,
         );
         pin_mut!(service_fut);
 
@@ -407,7 +514,10 @@ mod tests {
         // Watch for new devices.
         let (watcher_proxy, watcher_server_end) =
             fidl::endpoints::create_proxy().expect("failed to create watcher proxy");
-        test_values.proxy.watch_devices(watcher_server_end).expect("failed to watch devices");
+        test_values
+            .monitor_proxy
+            .watch_devices(watcher_server_end)
+            .expect("failed to watch devices");
 
         // Progress the service loop.
         assert_variant!(exec.run_until_stalled(&mut service_fut), Poll::Pending);
@@ -444,9 +554,11 @@ mod tests {
         pin_mut!(watcher_fut);
 
         let service_fut = serve_monitor_requests(
-            test_values.req_stream,
+            test_values.monitor_req_stream,
             test_values.phys.clone(),
+            test_values.ifaces.clone(),
             test_values.watcher_service,
+            test_values.dev_proxy,
         );
         pin_mut!(service_fut);
 
@@ -460,7 +572,10 @@ mod tests {
         // Watch for new devices.
         let (watcher_proxy, watcher_server_end) =
             fidl::endpoints::create_proxy().expect("failed to create watcher proxy");
-        test_values.proxy.watch_devices(watcher_server_end).expect("failed to watch devices");
+        test_values
+            .monitor_proxy
+            .watch_devices(watcher_server_end)
+            .expect("failed to watch devices");
 
         // Progress the service loop.
         assert_variant!(exec.run_until_stalled(&mut service_fut), Poll::Pending);
@@ -495,9 +610,11 @@ mod tests {
         pin_mut!(watcher_fut);
 
         let service_fut = serve_monitor_requests(
-            test_values.req_stream,
+            test_values.monitor_req_stream,
             test_values.phys.clone(),
+            test_values.ifaces.clone(),
             test_values.watcher_service,
+            test_values.dev_proxy,
         );
         pin_mut!(service_fut);
 
@@ -506,7 +623,10 @@ mod tests {
         // Watch for new devices.
         let (watcher_proxy, watcher_server_end) =
             fidl::endpoints::create_proxy().expect("failed to create watcher proxy");
-        test_values.proxy.watch_devices(watcher_server_end).expect("failed to watch devices");
+        test_values
+            .monitor_proxy
+            .watch_devices(watcher_server_end)
+            .expect("failed to watch devices");
 
         // Progress the service loop.
         assert_variant!(exec.run_until_stalled(&mut service_fut), Poll::Pending);
@@ -544,9 +664,11 @@ mod tests {
         pin_mut!(watcher_fut);
 
         let service_fut = serve_monitor_requests(
-            test_values.req_stream,
+            test_values.monitor_req_stream,
             test_values.phys.clone(),
+            test_values.ifaces.clone(),
             test_values.watcher_service,
+            test_values.dev_proxy,
         );
         pin_mut!(service_fut);
 
@@ -561,7 +683,10 @@ mod tests {
         // Watch for new devices.
         let (watcher_proxy, watcher_server_end) =
             fidl::endpoints::create_proxy().expect("failed to create watcher proxy");
-        test_values.proxy.watch_devices(watcher_server_end).expect("failed to watch devices");
+        test_values
+            .monitor_proxy
+            .watch_devices(watcher_server_end)
+            .expect("failed to watch devices");
 
         // Progress the service loop.
         assert_variant!(exec.run_until_stalled(&mut service_fut), Poll::Pending);
@@ -773,77 +898,201 @@ mod tests {
         assert_eq!(Poll::Ready(zx::Status::NOT_SUPPORTED), exec.run_until_stalled(&mut req_fut));
     }
 
-    #[test]
-    fn test_create_iface() {
-        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let test_values = test_setup();
-        let service_fut = serve_monitor_requests(
-            test_values.req_stream,
-            test_values.phys,
-            test_values.watcher_service,
-        );
-        pin_mut!(service_fut);
-
-        assert_variant!(exec.run_until_stalled(&mut service_fut), Poll::Pending);
-
-        // Create an interface for a PHY.
-        let mut req = fidl_svc::CreateIfaceRequest {
-            phy_id: 0,
-            role: fidl_dev::MacRole::Client,
-            mac_addr: None,
-        };
-        let create_fut = test_values.proxy.create_iface(&mut req);
-        pin_mut!(create_fut);
-        assert_variant!(exec.run_until_stalled(&mut create_fut), Poll::Pending);
-
-        // Progress the service loop.
-        assert_variant!(exec.run_until_stalled(&mut service_fut), Poll::Pending);
-
-        // The future to create the interface should fail.
-        assert_variant!(
-            exec.run_until_stalled(&mut create_fut),
-            Poll::Ready(Ok((status, None))) => {
-                assert_eq!(status, zx::Status::NOT_SUPPORTED.into_raw());
-            }
-        );
-    }
-
-    #[test]
-    fn test_destroy_iface() {
-        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let test_values = test_setup();
-        let service_fut = serve_monitor_requests(
-            test_values.req_stream,
-            test_values.phys,
-            test_values.watcher_service,
-        );
-        pin_mut!(service_fut);
-
-        assert_variant!(exec.run_until_stalled(&mut service_fut), Poll::Pending);
-
-        // Request the destruction of an interface
-        let mut req = fidl_svc::DestroyIfaceRequest { iface_id: 0 };
-        let destroy_fut = test_values.proxy.destroy_iface(&mut req);
-        pin_mut!(destroy_fut);
-        assert_variant!(exec.run_until_stalled(&mut destroy_fut), Poll::Pending);
-
-        // Progress the service loop.
-        assert_variant!(exec.run_until_stalled(&mut service_fut), Poll::Pending);
-
-        // The future to create the interface should fail.
-        assert_variant!(
-            exec.run_until_stalled(&mut destroy_fut),
-            Poll::Ready(Ok(status)) => {
-                assert_eq!(status, zx::Status::NOT_SUPPORTED.into_raw());
-            }
-        );
-    }
-
     fn fake_phy_info() -> fidl_dev::PhyInfo {
         fidl_dev::PhyInfo {
             id: 10,
             dev_path: Some("/dev/null".to_string()),
             supported_mac_roles: Vec::new(),
         }
+    }
+
+    #[test_case(false, false, false; "CreateIface without MACsucceeds")]
+    #[test_case(true, false, false; "CreateIface with MAC succeeds")]
+    #[test_case(false, true, false; "CreateIface fails on interface creation")]
+    #[test_case(false, false, true; "CreateIface fails on interface addition")]
+    fn test_create_iface(with_mac: bool, create_iface_fails: bool, add_iface_fails: bool) {
+        let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
+        let mut test_values = test_setup();
+
+        let (phy, mut phy_stream) = fake_phy("/dev/null");
+        test_values.phys.insert(10, phy);
+
+        // Initiate a CreateIface request. The returned future should not be able
+        // to produce a result immediately
+        let create_fut = super::create_iface(
+            &test_values.dev_proxy,
+            &test_values.phys,
+            fidl_svc::CreateIfaceRequest {
+                phy_id: 10,
+                role: fidl_dev::MacRole::Client,
+                mac_addr: if with_mac { Some(vec![0, 1, 2, 3, 4, 5]) } else { None },
+            },
+        );
+        pin_mut!(create_fut);
+        assert_variant!(exec.run_until_stalled(&mut create_fut), Poll::Pending);
+
+        // Validate the PHY request
+        assert_variant!(exec.run_until_stalled(&mut phy_stream.next()),
+            Poll::Ready(Some(Ok(fidl_dev::PhyRequest::CreateIface { req, responder }))) => {
+                assert_eq!(fidl_dev::MacRole::Client, req.role);
+
+                if with_mac {
+                    assert_eq!(req.init_mac_addr, Some(vec![0, 1, 2, 3, 4, 5]));
+                }
+
+                let mut response = if create_iface_fails {
+                    fidl_dev::CreateIfaceResponse { status: zx::sys::ZX_ERR_NOT_SUPPORTED, iface_id: 0 }
+                } else {
+                    fidl_dev::CreateIfaceResponse { status: zx::sys::ZX_OK, iface_id: 123 }
+                };
+
+                responder.send(&mut response).expect("failed to send CreateIfaceResponse");
+            }
+        );
+
+        // If this case should fail on interface creation, the future should complete here with an
+        // error.
+        if create_iface_fails {
+            assert_variant!(
+                exec.run_until_stalled(&mut create_fut),
+                Poll::Ready(Err(zx::Status::NOT_SUPPORTED))
+            );
+            return;
+        }
+
+        // Progress the interface creation process so that the new MLME channel is passed to the
+        // device service.
+        assert_variant!(exec.run_until_stalled(&mut create_fut), Poll::Pending);
+        assert_variant!(
+            exec.run_until_stalled(&mut test_values.dev_req_stream.next()),
+            Poll::Ready(Some(Ok(fidl_svc::DeviceServiceRequest::AddIface { req, responder}))) => {
+                assert_eq!(req.phy_id, 10);
+                assert_eq!(req.assigned_iface_id, 123);
+
+                let (status, mut response) = if add_iface_fails {
+                    (zx::Status::NOT_SUPPORTED.into_raw(), None)
+                } else {
+                    (zx::Status::OK.into_raw(), Some(fidl_svc::AddIfaceResponse { iface_id: 5 }))
+                };
+                responder.send(status, response.as_mut()).expect("failed to send AddIface response");
+            }
+        );
+
+        // The original future should resolve into a response.
+        assert_variant!(exec.run_until_stalled(&mut create_fut),
+            Poll::Ready(response) => {
+                if add_iface_fails {
+                    assert_variant!(response, Err(zx::Status::NOT_SUPPORTED));
+                } else {
+                    let response = response.expect("CreateIface failed unexpectedly");
+                    assert_eq!(5, response.id);
+                    assert_eq!(
+                        device::PhyOwnership { phy_id: 10, phy_assigned_id: 123 },
+                        response.phy_ownership
+                    );
+                }
+            }
+        );
+    }
+
+    #[test]
+    fn create_iface_on_invalid_phy_id() {
+        let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
+        let test_values = test_setup();
+
+        let fut = super::create_iface(
+            &test_values.dev_proxy,
+            &test_values.phys,
+            fidl_svc::CreateIfaceRequest {
+                phy_id: 10,
+                role: fidl_dev::MacRole::Client,
+                mac_addr: None,
+            },
+        );
+        pin_mut!(fut);
+        assert_variant!(
+            exec.run_until_stalled(&mut fut),
+            Poll::Ready(Err(zx::Status::NOT_FOUND)),
+            "expected failure on invalid PHY"
+        );
+    }
+
+    fn fake_destroy_iface_env(
+        phy_map: &PhyMap,
+        iface_map: &IfaceMap,
+    ) -> fidl_dev::PhyRequestStream {
+        let (phy, phy_stream) = fake_phy("/dev/null");
+        phy_map.insert(10, phy);
+        iface_map.insert(
+            42,
+            device::IfaceDevice { phy_ownership: PhyOwnership { phy_id: 10, phy_assigned_id: 0 } },
+        );
+        phy_stream
+    }
+
+    #[test]
+    fn destroy_iface_success() {
+        let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
+        let test_values = test_setup();
+        let mut phy_stream = fake_destroy_iface_env(&test_values.phys, &test_values.ifaces);
+
+        let destroy_fut = super::destroy_iface(&test_values.phys, &test_values.ifaces, 42);
+        pin_mut!(destroy_fut);
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut destroy_fut));
+
+        let (req, responder) = assert_variant!(exec.run_until_stalled(&mut phy_stream.next()),
+            Poll::Ready(Some(Ok(fidl_dev::PhyRequest::DestroyIface { req, responder }))) => (req, responder)
+        );
+
+        // Verify the destroy iface request to the corresponding PHY is correct.
+        assert_eq!(0, req.id);
+
+        responder
+            .send(&mut fidl_dev::DestroyIfaceResponse { status: zx::sys::ZX_OK })
+            .expect("failed to send DestroyIfaceResponse");
+        assert_eq!(Poll::Ready(Ok(())), exec.run_until_stalled(&mut destroy_fut));
+
+        // Verify iface was removed from available ifaces.
+        assert!(test_values.ifaces.get(&42u16).is_none(), "iface expected to be deleted");
+    }
+
+    #[test]
+    fn destroy_iface_failure() {
+        let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
+        let test_values = test_setup();
+        let mut phy_stream = fake_destroy_iface_env(&test_values.phys, &test_values.ifaces);
+
+        let destroy_fut = super::destroy_iface(&test_values.phys, &test_values.ifaces, 42);
+        pin_mut!(destroy_fut);
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut destroy_fut));
+
+        let (req, responder) = assert_variant!(exec.run_until_stalled(&mut phy_stream.next()),
+            Poll::Ready(Some(Ok(fidl_dev::PhyRequest::DestroyIface { req, responder }))) => (req, responder)
+        );
+
+        // Verify the destroy iface request to the corresponding PHY is correct.
+        assert_eq!(0, req.id);
+
+        responder
+            .send(&mut fidl_dev::DestroyIfaceResponse { status: zx::sys::ZX_ERR_INTERNAL })
+            .expect("failed to send DestroyIfaceResponse");
+        assert_eq!(
+            Poll::Ready(Err(zx::Status::INTERNAL)),
+            exec.run_until_stalled(&mut destroy_fut)
+        );
+
+        // Verify iface was not removed from available ifaces.
+        assert!(test_values.ifaces.get(&42u16).is_some(), "iface expected to not be deleted");
+    }
+
+    #[test]
+    fn destroy_iface_not_found() {
+        let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
+        let test_values = test_setup();
+        let _phy_stream = fake_destroy_iface_env(&test_values.phys, &test_values.ifaces);
+
+        let fut = super::destroy_iface(&test_values.phys, &test_values.ifaces, 43);
+        pin_mut!(fut);
+        assert_eq!(Poll::Ready(Err(zx::Status::NOT_FOUND)), exec.run_until_stalled(&mut fut));
     }
 }

@@ -4,7 +4,9 @@
 
 use {
     fidl_fuchsia_wlan_device::MacRole::Client,
-    fidl_fuchsia_wlan_device_service::{CreateIfaceRequest, DeviceServiceMarker},
+    fidl_fuchsia_wlan_device_service::{
+        CreateIfaceRequest, DeviceMonitorMarker, DeviceServiceMarker,
+    },
     fuchsia_component::client::connect_to_protocol,
     fuchsia_zircon::DurationNum,
     fuchsia_zircon_sys::ZX_OK,
@@ -23,18 +25,21 @@ async fn multiple_interfaces_per_phy() {
 
     let wlanstack_svc =
         connect_to_protocol::<DeviceServiceMarker>().expect("connecting to wlanstack");
+    let wlan_monitor_svc =
+        connect_to_protocol::<DeviceMonitorMarker>().expect("connecting to wlandevicemonitor");
     let first_iface_id = get_first_matching_iface_id(&wlanstack_svc, |_iface| true)
         .expect_within(5.seconds(), "getting first iface")
         .await;
     let resp = wlanstack_svc.list_ifaces().await.expect("listing ifaces #1");
     assert_eq!(resp.ifaces.len(), 1);
 
-    let resp = wlanstack_svc.list_phys().await.expect("listing phys");
-    assert_eq!(resp.phys.len(), 1);
+    let resp = wlan_monitor_svc.list_phys().await.expect("listing phys");
+    assert_eq!(resp.len(), 1);
 
-    let phy_id = resp.phys[0].phy_id;
+    let phy_id = resp[0];
     let mut req = CreateIfaceRequest { phy_id, role: Client, mac_addr: None };
-    let (status, resp) = wlanstack_svc.create_iface(&mut req).await.expect("creating a new iface");
+    let (status, resp) =
+        wlan_monitor_svc.create_iface(&mut req).await.expect("creating a new iface");
     assert_eq!(status, ZX_OK);
 
     let new_iface_id = resp.unwrap().iface_id;

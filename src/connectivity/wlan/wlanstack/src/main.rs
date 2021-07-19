@@ -8,7 +8,6 @@
 #![recursion_limit = "256"]
 
 mod device;
-mod device_watch;
 mod future_util;
 mod inspect;
 mod mlme_query_proxy;
@@ -18,8 +17,6 @@ mod stats_scheduler;
 mod telemetry;
 #[cfg(test)]
 pub mod test_helper;
-mod watchable_map;
-mod watcher_service;
 
 use anyhow::{Context, Error};
 use argh::FromArgs;
@@ -30,14 +27,13 @@ use fuchsia_component::server::{ServiceFs, ServiceObjLocal};
 use fuchsia_inspect::Inspector;
 use fuchsia_inspect_contrib::auto_persist;
 use fuchsia_syslog as syslog;
+use futures::future::try_join4;
 use futures::prelude::*;
-use futures::try_join;
 use log::{error, info};
 use std::sync::Arc;
 use wlan_sme;
 
-use crate::device::{IfaceDevice, IfaceMap, PhyDevice, PhyMap};
-use crate::watcher_service::WatcherService;
+use crate::device::IfaceMap;
 
 const CONCURRENT_LIMIT: usize = 1000;
 
@@ -54,10 +50,6 @@ pub struct ServiceCfg {
     /// if legacy WPA1 should be supported by the service instance.
     #[argh(switch)]
     pub wpa1_supported: bool,
-    /// if devices are spawned in an isolated devmgr and device_watcher should watch devices
-    /// in the isolated devmgr (for wlan-hw-sim based tests)
-    #[argh(switch)]
-    pub isolated_devmgr: bool,
 }
 
 impl From<ServiceCfg> for wlan_sme::Config {
@@ -89,20 +81,9 @@ async fn main() -> Result<(), Error> {
     let inspect_tree = Arc::new(inspect::WlanstackTree::new(inspector, persistence_req_sender));
     fs.dir("svc").add_fidl_service(IncomingServices::Device);
 
-    let (phys, phy_events) = device::PhyMap::new();
-    let (ifaces, iface_events) = device::IfaceMap::new();
-    let phys = Arc::new(phys);
+    let ifaces = IfaceMap::new();
     let ifaces = Arc::new(ifaces);
 
-    // TODO(fxbug.dev/45790): this should not depend on isolated_devmgr; the two functionalities should
-    // live in separate binaries to avoid leaking test dependencies into production builds.
-    let phy_server = if cfg.isolated_devmgr {
-        device::serve_phys::<isolated_devmgr::IsolatedDeviceEnv>(phys.clone(), inspect_tree.clone())
-            .left_future()
-    } else {
-        device::serve_phys::<wlan_dev::RealDeviceEnv>(phys.clone(), inspect_tree.clone())
-            .right_future()
-    };
     let cobalt_1dot1_svc = fuchsia_component::client::connect_to_protocol::<
         fidl_fuchsia_metrics::MetricEventLoggerFactoryMarker,
     >()
@@ -128,27 +109,21 @@ async fn main() -> Result<(), Error> {
         cobalt_sender.clone(),
         inspect_tree.clone(),
     );
-    let (watcher_service, watcher_fut) =
-        watcher_service::serve_watchers(phys.clone(), ifaces.clone(), phy_events, iface_events);
-    let serve_fidl_fut = serve_fidl(
-        cfg,
-        fs,
-        phys,
-        ifaces,
-        watcher_service,
-        inspect_tree,
-        cobalt_sender,
-        cobalt_1dot1_proxy,
-    );
 
-    let _ = try_join!(
+    let dev_monitor = fuchsia_component::client::connect_to_protocol::<
+        fidl_fuchsia_wlan_device_service::DeviceMonitorMarker,
+    >()
+    .context("Failed to connect to DeviceMonitor.")?;
+    let serve_fidl_fut =
+        serve_fidl(cfg, fs, ifaces, inspect_tree, cobalt_sender, cobalt_1dot1_proxy, dev_monitor);
+
+    let ((), (), (), ()) = try_join4(
         serve_fidl_fut,
-        watcher_fut.map_ok(|_: void::Void| ()),
-        phy_server.map_ok(|_: void::Void| ()),
         cobalt_reporter.map(Ok),
         persistence_req_forwarder_fut.map(Ok),
         telemetry_server.map(Ok),
-    )?;
+    )
+    .await?;
     info!("Exiting");
     Ok(())
 }
@@ -160,38 +135,35 @@ enum IncomingServices {
 async fn serve_fidl(
     cfg: ServiceCfg,
     mut fs: ServiceFs<ServiceObjLocal<'_, IncomingServices>>,
-    phys: Arc<PhyMap>,
     ifaces: Arc<IfaceMap>,
-    watcher_service: WatcherService<PhyDevice, IfaceDevice>,
     inspect_tree: Arc<inspect::WlanstackTree>,
     cobalt_sender: CobaltSender,
     cobalt_1dot1_proxy: fidl_fuchsia_metrics::MetricEventLoggerProxy,
+    dev_monitor_proxy: fidl_fuchsia_wlan_device_service::DeviceMonitorProxy,
 ) -> Result<(), Error> {
     fs.take_and_serve_directory_handle()?;
     let iface_counter = Arc::new(service::IfaceCounter::new());
 
     let fdio_server = fs.for_each_concurrent(CONCURRENT_LIMIT, move |s| {
-        let phys = phys.clone();
         let ifaces = ifaces.clone();
-        let watcher_service = watcher_service.clone();
         let cobalt_sender = cobalt_sender.clone();
         let cobalt_1dot1_proxy = cobalt_1dot1_proxy.clone();
         let cfg = cfg.clone();
         let inspect_tree = inspect_tree.clone();
         let iface_counter = iface_counter.clone();
+        let dev_monitor_proxy = dev_monitor_proxy.clone();
         async move {
             match s {
                 IncomingServices::Device(stream) => {
                     service::serve_device_requests(
                         iface_counter,
                         cfg,
-                        phys,
                         ifaces,
-                        watcher_service,
                         stream,
                         inspect_tree,
                         cobalt_sender,
                         cobalt_1dot1_proxy,
+                        dev_monitor_proxy,
                     )
                     .unwrap_or_else(|e| println!("{:?}", e))
                     .await

@@ -26,7 +26,7 @@ use {
     fidl::{endpoints::RequestStream, handle::AsyncChannel},
     fidl_fuchsia_location_namedplace::RegulatoryRegionWatcherMarker,
     fidl_fuchsia_process_lifecycle::{LifecycleRequest, LifecycleRequestStream},
-    fidl_fuchsia_wlan_device_service::DeviceServiceMarker,
+    fidl_fuchsia_wlan_device_service::{DeviceMonitorMarker, DeviceServiceMarker},
     fidl_fuchsia_wlan_policy as fidl_policy, fuchsia_async as fasync,
     fuchsia_async::DurationExt,
     fuchsia_cobalt::{CobaltConnector, ConnectionType},
@@ -245,6 +245,8 @@ async fn run_lifecycle_handler() -> Result<(), Error> {
 async fn run_all_futures() -> Result<(), Error> {
     let wlan_svc = fuchsia_component::client::connect_to_protocol::<DeviceServiceMarker>()
         .context("failed to connect to device service")?;
+    let monitor_svc = fuchsia_component::client::connect_to_protocol::<DeviceMonitorMarker>()
+        .context("failed to connect to device monitor")?;
     let (cobalt_api, cobalt_fut) =
         CobaltConnector::default().serve(ConnectionType::project_id(metrics::PROJECT_ID));
 
@@ -257,13 +259,14 @@ async fn run_all_futures() -> Result<(), Error> {
 
     let phy_manager = Arc::new(Mutex::new(PhyManager::new(
         wlan_svc.clone(),
+        monitor_svc.clone(),
         component::inspector().root().create_child("phy_manager"),
     )));
     let configurator =
         legacy::deprecated_configuration::DeprecatedConfigurator::new(phy_manager.clone());
 
     let (watcher_proxy, watcher_server_end) = fidl::endpoints::create_proxy()?;
-    wlan_svc.watch_devices(watcher_server_end)?;
+    monitor_svc.watch_devices(watcher_server_end)?;
 
     let (client_sender, client_receiver) = mpsc::unbounded();
     let (ap_sender, ap_receiver) = mpsc::unbounded();

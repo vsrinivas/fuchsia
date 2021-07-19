@@ -1281,6 +1281,8 @@ mod tests {
     pub struct TestValues {
         pub device_service_proxy: fidl_fuchsia_wlan_device_service::DeviceServiceProxy,
         pub device_service_stream: fidl_fuchsia_wlan_device_service::DeviceServiceRequestStream,
+        pub monitor_service_proxy: fidl_fuchsia_wlan_device_service::DeviceMonitorProxy,
+        pub monitor_service_stream: fidl_fuchsia_wlan_device_service::DeviceMonitorRequestStream,
         pub client_update_sender: listener::ClientListenerMessageSender,
         pub client_update_receiver: mpsc::UnboundedReceiver<listener::ClientListenerMessage>,
         pub ap_update_sender: listener::ApListenerMessageSender,
@@ -1298,10 +1300,17 @@ mod tests {
 
     /// Create a TestValues for a unit test.
     pub fn test_setup(exec: &mut TestExecutor) -> TestValues {
-        let (proxy, requests) =
+        let (device_service_proxy, device_service_requests) =
             create_proxy::<fidl_fuchsia_wlan_device_service::DeviceServiceMarker>()
                 .expect("failed to create SeviceService proxy");
-        let stream = requests.into_stream().expect("failed to create stream");
+        let device_service_stream =
+            device_service_requests.into_stream().expect("failed to create stream");
+
+        let (monitor_service_proxy, monitor_service_requests) =
+            create_proxy::<fidl_fuchsia_wlan_device_service::DeviceMonitorMarker>()
+                .expect("failed to create SeviceService proxy");
+        let monitor_service_stream =
+            monitor_service_requests.into_stream().expect("failed to create stream");
 
         let (client_sender, client_receiver) = mpsc::unbounded();
         let (ap_sender, ap_receiver) = mpsc::unbounded();
@@ -1320,8 +1329,10 @@ mod tests {
         ));
 
         TestValues {
-            device_service_proxy: proxy,
-            device_service_stream: stream,
+            device_service_proxy,
+            device_service_stream,
+            monitor_service_proxy,
+            monitor_service_stream,
             client_update_sender: client_sender,
             client_update_receiver: client_receiver,
             ap_update_sender: ap_sender,
@@ -1337,9 +1348,10 @@ mod tests {
     /// Creates a new PhyManagerPtr for tests.
     fn create_empty_phy_manager(
         device_service: fidl_fuchsia_wlan_device_service::DeviceServiceProxy,
+        monitor_service: fidl_fuchsia_wlan_device_service::DeviceMonitorProxy,
         node: inspect::Node,
     ) -> Arc<Mutex<dyn PhyManagerApi + Send>> {
-        Arc::new(Mutex::new(phy_manager::PhyManager::new(device_service, node)))
+        Arc::new(Mutex::new(phy_manager::PhyManager::new(device_service, monitor_service, node)))
     }
 
     #[derive(Debug)]
@@ -1675,8 +1687,11 @@ mod tests {
 
         // Create a PhyManager with no knowledge of any client ifaces.
         let test_values = test_setup(&mut exec);
-        let phy_manager =
-            create_empty_phy_manager(test_values.device_service_proxy.clone(), test_values.node);
+        let phy_manager = create_empty_phy_manager(
+            test_values.device_service_proxy.clone(),
+            test_values.monitor_service_proxy.clone(),
+            test_values.node,
+        );
 
         // Create and IfaceManager and issue a scan request.
         let mut iface_manager = IfaceManagerService::new(
@@ -2163,8 +2178,11 @@ mod tests {
 
         // Create a PhyManager with no knowledge of any client ifaces.
         let test_values = test_setup(&mut exec);
-        let phy_manager =
-            create_empty_phy_manager(test_values.device_service_proxy.clone(), test_values.node);
+        let phy_manager = create_empty_phy_manager(
+            test_values.device_service_proxy.clone(),
+            test_values.monitor_service_proxy.clone(),
+            test_values.node,
+        );
 
         let mut iface_manager = IfaceManagerService::new(
             phy_manager,
@@ -2297,6 +2315,7 @@ mod tests {
         // Create an empty PhyManager and IfaceManager.
         let phy_manager = phy_manager::PhyManager::new(
             test_values.device_service_proxy.clone(),
+            test_values.monitor_service_proxy.clone(),
             test_values.node,
         );
         let mut iface_manager = IfaceManagerService::new(
@@ -2444,6 +2463,7 @@ mod tests {
         // Create and empty PhyManager and IfaceManager.
         let phy_manager = phy_manager::PhyManager::new(
             test_values.device_service_proxy.clone(),
+            test_values.monitor_service_proxy.clone(),
             test_values.node,
         );
         let mut iface_manager = IfaceManagerService::new(
@@ -2575,6 +2595,7 @@ mod tests {
         // Create an empty PhyManager and IfaceManager.
         let phy_manager = phy_manager::PhyManager::new(
             test_values.device_service_proxy.clone(),
+            test_values.monitor_service_proxy.clone(),
             test_values.node,
         );
         let mut iface_manager = IfaceManagerService::new(
@@ -2705,6 +2726,7 @@ mod tests {
         // Create an empty PhyManager and IfaceManager.
         let phy_manager = phy_manager::PhyManager::new(
             test_values.device_service_proxy.clone(),
+            test_values.monitor_service_proxy.clone(),
             test_values.node,
         );
         let mut iface_manager = IfaceManagerService::new(
@@ -2812,6 +2834,7 @@ mod tests {
         // Create an empty PhyManager and IfaceManager.
         let phy_manager = phy_manager::PhyManager::new(
             test_values.device_service_proxy.clone(),
+            test_values.monitor_service_proxy.clone(),
             test_values.node,
         );
         let mut iface_manager = IfaceManagerService::new(
@@ -2939,6 +2962,7 @@ mod tests {
         // Create an empty PhyManager and IfaceManager.
         let phy_manager = phy_manager::PhyManager::new(
             test_values.device_service_proxy.clone(),
+            test_values.monitor_service_proxy.clone(),
             test_values.node,
         );
         let mut iface_manager = IfaceManagerService::new(
@@ -3068,6 +3092,7 @@ mod tests {
         // Create an empty PhyManager and IfaceManager.
         let phy_manager = phy_manager::PhyManager::new(
             test_values.device_service_proxy.clone(),
+            test_values.monitor_service_proxy.clone(),
             test_values.node,
         );
         let mut iface_manager = IfaceManagerService::new(
@@ -3349,6 +3374,7 @@ mod tests {
         // Create an empty PhyManager and IfaceManager.
         let phy_manager = phy_manager::PhyManager::new(
             test_values.device_service_proxy.clone(),
+            test_values.monitor_service_proxy.clone(),
             test_values.node,
         );
         let mut iface_manager = IfaceManagerService::new(
@@ -3451,6 +3477,7 @@ mod tests {
         // Create an empty PhyManager and IfaceManager.
         let phy_manager = phy_manager::PhyManager::new(
             test_values.device_service_proxy.clone(),
+            test_values.monitor_service_proxy.clone(),
             test_values.node,
         );
         let mut iface_manager = IfaceManagerService::new(
@@ -3520,6 +3547,7 @@ mod tests {
         // Create an empty PhyManager and IfaceManager.
         let phy_manager = phy_manager::PhyManager::new(
             test_values.device_service_proxy.clone(),
+            test_values.monitor_service_proxy.clone(),
             test_values.node,
         );
         let mut iface_manager = IfaceManagerService::new(
@@ -4090,6 +4118,7 @@ mod tests {
         // Create an empty PhyManager and IfaceManager.
         let phy_manager = phy_manager::PhyManager::new(
             test_values.device_service_proxy.clone(),
+            test_values.monitor_service_proxy.clone(),
             test_values.node,
         );
         let iface_manager = IfaceManagerService::new(
@@ -4212,6 +4241,7 @@ mod tests {
         // Create an empty PhyManager and IfaceManager.
         let phy_manager = phy_manager::PhyManager::new(
             test_values.device_service_proxy.clone(),
+            test_values.monitor_service_proxy.clone(),
             test_values.node,
         );
         let iface_manager = IfaceManagerService::new(
@@ -4284,6 +4314,7 @@ mod tests {
             TestType::Fail => {
                 let phy_manager = phy_manager::PhyManager::new(
                     test_values.device_service_proxy.clone(),
+                    test_values.monitor_service_proxy.clone(),
                     test_values.node,
                 );
                 let iface_manager = IfaceManagerService::new(
@@ -4651,8 +4682,11 @@ mod tests {
 
         // Create an empty IfaceManager
         let test_values = test_setup(&mut exec);
-        let phy_manager =
-            create_empty_phy_manager(test_values.device_service_proxy.clone(), test_values.node);
+        let phy_manager = create_empty_phy_manager(
+            test_values.device_service_proxy.clone(),
+            test_values.monitor_service_proxy.clone(),
+            test_values.node,
+        );
         let mut iface_manager = IfaceManagerService::new(
             phy_manager,
             test_values.client_update_sender,

@@ -5,7 +5,6 @@
 use {
     anyhow::{format_err, Error},
     fidl_fuchsia_wlan_common::DriverFeature,
-    fidl_fuchsia_wlan_device as fidl_wlan_dev,
     fidl_fuchsia_wlan_mlme::{self as fidl_mlme, DeviceInfo},
     fuchsia_cobalt::CobaltSender,
     fuchsia_inspect_contrib::inspect_log,
@@ -13,23 +12,21 @@ use {
         channel::mpsc,
         future::{Future, FutureExt, FutureObj},
         select,
-        stream::{FuturesUnordered, Stream, StreamExt, TryStreamExt},
+        stream::{Stream, StreamExt},
     },
-    log::{error, info},
-    pin_utils::pin_mut,
-    std::{marker::Unpin, sync::Arc},
-    void::Void,
+    log::info,
+    parking_lot::Mutex,
+    std::{collections::HashMap, marker::Unpin, sync::Arc},
     wlan_common::hasher::WlanHasher,
     wlan_inspect,
     wlan_sme::{self, clone_utils},
 };
 
 use crate::{
-    device_watch, inspect,
+    inspect,
     mlme_query_proxy::MlmeQueryProxy,
     station,
     stats_scheduler::{self, StatsScheduler},
-    watchable_map::WatchableMap,
     ServiceCfg,
 };
 
@@ -52,11 +49,6 @@ pub struct NewIface {
     pub mlme_proxy: fidl_mlme::MlmeProxy,
 }
 
-pub struct PhyDevice {
-    pub proxy: fidl_wlan_dev::PhyProxy,
-    pub device: wlan_dev::Device,
-}
-
 pub type ClientSmeServer = mpsc::UnboundedSender<super::station::client::Endpoint>;
 pub type ApSmeServer = mpsc::UnboundedSender<super::station::ap::Endpoint>;
 pub type MeshSmeServer = mpsc::UnboundedSender<super::station::mesh::Endpoint>;
@@ -77,54 +69,34 @@ pub struct IfaceDevice {
     pub shutdown_sender: ShutdownSender,
 }
 
-pub type PhyMap = WatchableMap<u16, PhyDevice>;
-pub type IfaceMap = WatchableMap<u16, IfaceDevice>;
-
-pub async fn serve_phys<Env: wlan_dev::DeviceEnv>(
-    phys: Arc<PhyMap>,
-    inspect_tree: Arc<inspect::WlanstackTree>,
-) -> Result<Void, Error> {
-    let new_phys = device_watch::watch_phy_devices::<Env>()?;
-    pin_mut!(new_phys);
-    let mut active_phys = FuturesUnordered::new();
-    loop {
-        select! {
-            // OK to fuse directly in the `select!` since we bail immediately
-            // when a `None` is encountered.
-            new_phy = new_phys.next().fuse() => match new_phy {
-                None => return Err(format_err!("new phy stream unexpectedly finished")),
-                Some(Err(e)) => return Err(format_err!("new phy stream returned an error: {}", e)),
-                Some(Ok(new_phy)) => {
-                    let fut = serve_phy(&phys, new_phy, inspect_tree.clone());
-                    active_phys.push(fut);
-                }
-            },
-            () = active_phys.select_next_some() => {},
-        }
-    }
+pub struct IfaceMap {
+    inner: Mutex<Arc<HashMap<u16, Arc<IfaceDevice>>>>,
 }
 
-async fn serve_phy(
-    phys: &PhyMap,
-    new_phy: device_watch::NewPhyDevice,
-    inspect_tree: Arc<inspect::WlanstackTree>,
-) {
-    let msg = format!("new phy #{}: {}", new_phy.id, new_phy.device.path().to_string_lossy());
-    info!("{}", msg);
-    inspect_log!(inspect_tree.device_events.lock().get_mut(), msg: msg);
-
-    let id = new_phy.id;
-    let event_stream = new_phy.proxy.take_event_stream();
-    phys.insert(id, PhyDevice { proxy: new_phy.proxy, device: new_phy.device });
-    let r = event_stream.map_ok(|_| ()).try_collect::<()>().await;
-    phys.remove(&id);
-    if let Err(e) = r {
-        let msg = format!("error reading from FIDL channel of phy #{}: {}", id, e);
-        error!("{}", msg);
-        inspect_log!(inspect_tree.device_events.lock().get_mut(), msg: msg);
+impl IfaceMap {
+    pub fn new() -> Self {
+        IfaceMap { inner: Mutex::new(Arc::new(HashMap::new())) }
     }
-    info!("phy removed: #{}", id);
-    inspect_log!(inspect_tree.device_events.lock().get_mut(), msg: format!("phy removed: #{}", id));
+
+    pub fn insert(&self, iface_id: u16, device: IfaceDevice) {
+        let mut inner = self.inner.lock();
+        let hash_map = Arc::make_mut(&mut inner);
+        hash_map.insert(iface_id, Arc::new(device));
+    }
+
+    pub fn remove(&self, iface_id: &u16) {
+        let mut inner = self.inner.lock();
+        let hash_map = Arc::make_mut(&mut inner);
+        hash_map.remove(iface_id);
+    }
+
+    pub fn get_snapshot(&self) -> Arc<HashMap<u16, Arc<IfaceDevice>>> {
+        self.inner.lock().clone()
+    }
+
+    pub fn get(&self, iface_id: &u16) -> Option<Arc<IfaceDevice>> {
+        self.inner.lock().get(iface_id).map(|v| v.clone())
+    }
 }
 
 pub fn create_and_serve_sme(
@@ -138,6 +110,7 @@ pub fn create_and_serve_sme(
     cobalt_sender: CobaltSender,
     cobalt_1dot1_proxy: fidl_fuchsia_metrics::MetricEventLoggerProxy,
     device_info: DeviceInfo,
+    dev_monitor_proxy: fidl_fuchsia_wlan_device_service::DeviceMonitorProxy,
 ) -> Result<impl Future<Output = Result<(), Error>>, Error> {
     let event_stream = mlme_proxy.take_event_stream();
     let (stats_sched, stats_reqs) = stats_scheduler::create_scheduler();
@@ -183,13 +156,21 @@ pub fn create_and_serve_sme(
 
     Ok(async move {
         let result = sme_fut.await.map_err(|e| format_err!("error while serving SME: {}", e));
-        info!("iface removed: #{}", id);
         inspect_log!(
             inspect_tree.device_events.lock().get_mut(),
             msg: format!("iface removed: #{}", id)
         );
         inspect_tree.unmark_active_client_iface(id);
         ifaces.remove(&id);
+
+        // Upon any error associated with the iface in wlanstack, the iface should be destroyed
+        // since it can no longer being managed by wlanstack. This includes either the associated
+        // MLME or SME FIDL channels being closed.
+        let mut req = fidl_fuchsia_wlan_device_service::DestroyIfaceRequest { iface_id: id };
+        if let Err(e) = dev_monitor_proxy.destroy_iface(&mut req).await {
+            info!("unable to inform DeviceMonitor of interface removal: {:?}", e);
+        }
+
         result
     })
 }
@@ -284,7 +265,7 @@ mod tests {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (mlme_proxy, _mlme_server) =
             create_proxy::<MlmeMarker>().expect("failed to create MlmeProxy");
-        let (iface_map, _iface_map_events) = IfaceMap::new();
+        let iface_map = IfaceMap::new();
         let iface_map = Arc::new(iface_map);
         let (inspect_tree, _persistence_stream) = test_helper::fake_inspect_tree();
         let iface_tree_holder = inspect_tree.create_iface_child(1);
@@ -293,6 +274,9 @@ mod tests {
         let (cobalt_1dot1_proxy, _) =
             create_proxy::<fidl_fuchsia_metrics::MetricEventLoggerMarker>()
                 .expect("failed to create Cobalt 1.1 proxy");
+        let (dev_monitor_proxy, _) =
+            create_proxy::<fidl_fuchsia_wlan_device_service::DeviceMonitorMarker>()
+                .expect("failed to create DeviceMonitor proxy");
 
         // Assert that the IfaceMap is initially empty.
         assert!(iface_map.get(&5).is_none());
@@ -308,6 +292,7 @@ mod tests {
             cobalt_sender,
             cobalt_1dot1_proxy,
             fake_device_info(),
+            dev_monitor_proxy,
         )
         .expect("failed to create SME");
 
@@ -369,7 +354,7 @@ mod tests {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (mlme_proxy, _mlme_server) =
             create_proxy::<MlmeMarker>().expect("failed to create MlmeProxy");
-        let (iface_map, _iface_map_events) = IfaceMap::new();
+        let iface_map = IfaceMap::new();
         let iface_map = Arc::new(iface_map);
         let (inspect_tree, _persistence_stream) = test_helper::fake_inspect_tree();
         let iface_tree_holder = inspect_tree.create_iface_child(1);
@@ -378,6 +363,12 @@ mod tests {
         let (cobalt_1dot1_proxy, _) =
             create_proxy::<fidl_fuchsia_metrics::MetricEventLoggerMarker>()
                 .expect("failed to create Cobalt 1.1 proxy");
+        let (dev_monitor_proxy, dev_monitor_server) =
+            create_proxy::<fidl_fuchsia_wlan_device_service::DeviceMonitorMarker>()
+                .expect("failed to create DeviceMonitor proxy");
+        let mut dev_monitor_stream = dev_monitor_server
+            .into_stream()
+            .expect("failed to create DeviceMonitor request stream");
 
         // Assert that the IfaceMap is initially empty.
         assert!(iface_map.get(&5).is_none());
@@ -393,6 +384,7 @@ mod tests {
             cobalt_sender,
             cobalt_1dot1_proxy,
             fake_device_info(),
+            dev_monitor_proxy,
         )
         .expect("failed to create SME");
 
@@ -408,6 +400,186 @@ mod tests {
         let mut shutdown_sender = iface_map.get(&5).unwrap().shutdown_sender.clone();
         let shutdown_signal = shutdown_sender.send(());
         let mut shutdown_fut = join(serve_fut, shutdown_signal);
+        assert_variant!(exec.run_until_stalled(&mut shutdown_fut), Poll::Pending);
+
+        // Verify that a notification is sent to DeviceMonitor.
+        assert_variant!(
+            exec.run_until_stalled(&mut dev_monitor_stream.next()),
+            Poll::Ready(Some(Ok(fidl_fuchsia_wlan_device_service::DeviceMonitorRequest::DestroyIface {
+                req,
+                responder,
+            }))) => {
+            assert_eq!(req, fidl_fuchsia_wlan_device_service::DestroyIfaceRequest { iface_id: 5 });
+            responder.send(0).expect("failed to send result to SME fut.");
+        });
+
+        // The SME future should complete successfully.
         assert_variant!(exec.run_until_stalled(&mut shutdown_fut), Poll::Ready((Ok(()), Ok(()))));
+    }
+
+    #[test]
+    fn test_new_iface_map() {
+        let _exec = fasync::TestExecutor::new().expect("failed to create an executor");
+
+        let iface_map = IfaceMap::new();
+        let hashmap = iface_map.inner.lock();
+        assert!(hashmap.is_empty());
+    }
+
+    #[test]
+    fn test_iface_map_insert_remove() {
+        let _exec = fasync::TestExecutor::new().expect("failed to create an executor");
+
+        let iface_map = IfaceMap::new();
+        let (mlme_proxy, _) = create_proxy::<MlmeMarker>().expect("failed to create MlmeProxy");
+        let (sender, _) = mpsc::unbounded();
+        let (stats_sched, _) = stats_scheduler::create_scheduler();
+        let (shutdown_sender, _) = mpsc::channel(1);
+        iface_map.insert(
+            5,
+            IfaceDevice {
+                phy_ownership: PhyOwnership { phy_id: 0, phy_assigned_id: 0 },
+                sme_server: SmeServer::Client(sender),
+                stats_sched,
+                mlme_query: MlmeQueryProxy::new(mlme_proxy),
+                device_info: fake_device_info(),
+                shutdown_sender,
+            },
+        );
+
+        {
+            let hashmap = iface_map.inner.lock();
+            assert!(!hashmap.is_empty());
+        }
+
+        iface_map.remove(&5);
+
+        {
+            let hashmap = iface_map.inner.lock();
+            assert!(hashmap.is_empty());
+        }
+    }
+
+    #[test]
+    fn test_iface_map_remove_nonexistent_iface() {
+        let _exec = fasync::TestExecutor::new().expect("failed to create an executor");
+
+        let iface_map = IfaceMap::new();
+        let (mlme_proxy, _) = create_proxy::<MlmeMarker>().expect("failed to create MlmeProxy");
+        let (sender, _) = mpsc::unbounded();
+        let (stats_sched, _) = stats_scheduler::create_scheduler();
+        let (shutdown_sender, _) = mpsc::channel(1);
+        iface_map.insert(
+            5,
+            IfaceDevice {
+                phy_ownership: PhyOwnership { phy_id: 0, phy_assigned_id: 0 },
+                sme_server: SmeServer::Client(sender),
+                stats_sched,
+                mlme_query: MlmeQueryProxy::new(mlme_proxy),
+                device_info: fake_device_info(),
+                shutdown_sender,
+            },
+        );
+
+        {
+            let hashmap = iface_map.inner.lock();
+            assert!(!hashmap.is_empty());
+        }
+
+        iface_map.remove(&0);
+
+        {
+            let hashmap = iface_map.inner.lock();
+            assert!(!hashmap.is_empty());
+        }
+    }
+
+    #[test]
+    fn test_iface_map_insert_get() {
+        let _exec = fasync::TestExecutor::new().expect("failed to create an executor");
+
+        let iface_map = IfaceMap::new();
+        let (mlme_proxy, _) = create_proxy::<MlmeMarker>().expect("failed to create MlmeProxy");
+        let (sender, _) = mpsc::unbounded();
+        let (stats_sched, _) = stats_scheduler::create_scheduler();
+        let (shutdown_sender, _) = mpsc::channel(1);
+        iface_map.insert(
+            5,
+            IfaceDevice {
+                phy_ownership: PhyOwnership { phy_id: 0, phy_assigned_id: 0 },
+                sme_server: SmeServer::Client(sender),
+                stats_sched,
+                mlme_query: MlmeQueryProxy::new(mlme_proxy),
+                device_info: fake_device_info(),
+                shutdown_sender,
+            },
+        );
+
+        let map_entry = iface_map.get(&5).expect("iface is missing from map");
+        assert_eq!(map_entry.phy_ownership, PhyOwnership { phy_id: 0, phy_assigned_id: 0 });
+        assert_eq!(map_entry.device_info, fake_device_info());
+    }
+
+    #[test]
+    fn test_iface_map_insert_get_nonexistent_iface() {
+        let _exec = fasync::TestExecutor::new().expect("failed to create an executor");
+
+        let iface_map = IfaceMap::new();
+        let (mlme_proxy, _) = create_proxy::<MlmeMarker>().expect("failed to create MlmeProxy");
+        let (sender, _) = mpsc::unbounded();
+        let (stats_sched, _) = stats_scheduler::create_scheduler();
+        let (shutdown_sender, _) = mpsc::channel(1);
+        iface_map.insert(
+            5,
+            IfaceDevice {
+                phy_ownership: PhyOwnership { phy_id: 0, phy_assigned_id: 0 },
+                sme_server: SmeServer::Client(sender),
+                stats_sched,
+                mlme_query: MlmeQueryProxy::new(mlme_proxy),
+                device_info: fake_device_info(),
+                shutdown_sender,
+            },
+        );
+
+        assert!(iface_map.get(&0).is_none());
+    }
+
+    #[test]
+    fn test_get_snapshot() {
+        let _exec = fasync::TestExecutor::new().expect("failed to create an executor");
+
+        // The initial snapshot should be empty.
+        let iface_map = IfaceMap::new();
+        let hashmap = iface_map.get_snapshot();
+        assert!(hashmap.is_empty());
+
+        // Add an entry to the map and request another snapshot.  This one should contain a single
+        // interface record.
+        let (mlme_proxy, _) = create_proxy::<MlmeMarker>().expect("failed to create MlmeProxy");
+        let (sender, _) = mpsc::unbounded();
+        let (stats_sched, _) = stats_scheduler::create_scheduler();
+        let (shutdown_sender, _) = mpsc::channel(1);
+        iface_map.insert(
+            5,
+            IfaceDevice {
+                phy_ownership: PhyOwnership { phy_id: 0, phy_assigned_id: 0 },
+                sme_server: SmeServer::Client(sender),
+                stats_sched,
+                mlme_query: MlmeQueryProxy::new(mlme_proxy),
+                device_info: fake_device_info(),
+                shutdown_sender,
+            },
+        );
+
+        let hashmap = iface_map.get_snapshot();
+        assert!(!hashmap.is_empty());
+        let keys: Vec<u16> = hashmap.keys().cloned().collect();
+        assert_eq!(keys.len(), 1);
+        assert_eq!(keys[0], 5);
+
+        // Remove the interface and again expect the snapshot to be empty.
+        iface_map.remove(&5);
+        let hashmap = iface_map.get_snapshot();
+        assert!(hashmap.is_empty());
     }
 }

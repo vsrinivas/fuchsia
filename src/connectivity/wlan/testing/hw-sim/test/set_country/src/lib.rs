@@ -4,7 +4,7 @@
 
 use {
     fidl_fuchsia_wlan_device_service::{
-        DeviceServiceMarker, DeviceServiceProxy, SetCountryRequest,
+        DeviceMonitorMarker, DeviceMonitorProxy, SetCountryRequest,
     },
     fidl_fuchsia_wlan_tap::WlantapPhyEvent,
     fuchsia_component::client::connect_to_protocol,
@@ -17,7 +17,7 @@ use {
 
 async fn set_country_helper<'a>(
     receiver: oneshot::Receiver<()>,
-    svc: &'a DeviceServiceProxy,
+    svc: &'a DeviceMonitorProxy,
     req: &'a mut SetCountryRequest,
 ) {
     let status = svc.set_country(req).await.expect("calling set_country");
@@ -36,13 +36,13 @@ async fn set_country() {
     const ALPHA2: &[u8; 2] = b"RS";
 
     let mut helper = test_utils::TestHelper::begin_test(default_wlantap_config_client()).await;
-    let svc = connect_to_protocol::<DeviceServiceMarker>()
-        .expect("Failed to connect to wlanstack_dev_svc");
+    let svc = connect_to_protocol::<DeviceMonitorMarker>()
+        .expect("Failed to connect to wlandevicemonitor");
 
     let resp = svc.list_phys().await.unwrap();
 
-    assert!(resp.phys.len() > 0, "WLAN PHY device is created but ListPhys returned empty.");
-    let phy_id = resp.phys[0].phy_id;
+    assert!(resp.len() > 0, "WLAN PHY device is created but ListPhys returned empty.");
+    let phy_id = resp[0];
     let mut req = SetCountryRequest { phy_id, alpha2: *ALPHA2 };
 
     let (sender, receiver) = oneshot::channel();

@@ -82,7 +82,6 @@ rustc_binary("bin") {
 
   sources = [
     "src/device.rs",
-    "src/device_watch.rs",
     "src/future_util.rs",
     "src/inspect.rs",
     "src/main.rs",
@@ -98,8 +97,6 @@ rustc_binary("bin") {
     "src/telemetry/mod.rs",
     "src/telemetry/test_helper.rs",
     "src/test_helper.rs",
-    "src/watchable_map.rs",
-    "src/watcher_service.rs",
   ]
 }
 

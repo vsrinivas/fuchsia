@@ -5,7 +5,9 @@
 use crate::wlan::types::{ClientStatusResponse, MacRole, QueryIfaceResponse};
 use anyhow::{Context as _, Error};
 use fidl_fuchsia_wlan_device;
-use fidl_fuchsia_wlan_device_service::{DeviceServiceMarker, DeviceServiceProxy};
+use fidl_fuchsia_wlan_device_service::{
+    DeviceMonitorMarker, DeviceMonitorProxy, DeviceServiceMarker, DeviceServiceProxy,
+};
 use fidl_fuchsia_wlan_internal as fidl_internal;
 use fuchsia_component::client::connect_to_protocol;
 use fuchsia_zircon as zx;
@@ -27,15 +29,20 @@ struct InnerWlanFacade {
 #[derive(Debug)]
 pub struct WlanFacade {
     wlan_svc: DeviceServiceProxy,
-
+    monitor_svc: DeviceMonitorProxy,
     inner: RwLock<InnerWlanFacade>,
 }
 
 impl WlanFacade {
     pub fn new() -> Result<WlanFacade, Error> {
         let wlan_svc = connect_to_protocol::<DeviceServiceMarker>()?;
+        let monitor_svc = connect_to_protocol::<DeviceMonitorMarker>()?;
 
-        Ok(WlanFacade { wlan_svc, inner: RwLock::new(InnerWlanFacade { scan_results: false }) })
+        Ok(WlanFacade {
+            wlan_svc,
+            monitor_svc,
+            inner: RwLock::new(InnerWlanFacade { scan_results: false }),
+        })
     }
 
     /// Gets the list of wlan interface IDs.
@@ -48,7 +55,7 @@ impl WlanFacade {
 
     /// Gets the list of wlan interface IDs.
     pub async fn get_phy_id_list(&self) -> Result<Vec<u16>, Error> {
-        let wlan_phy_ids = wlan_service_util::get_phy_list(&self.wlan_svc)
+        let wlan_phy_ids = wlan_service_util::get_phy_list(&self.monitor_svc)
             .await
             .context("Get Phy Id List: failed to get wlan phy list")?;
         Ok(wlan_phy_ids)
@@ -128,7 +135,7 @@ impl WlanFacade {
     /// # Arguments
     /// * `iface_id` - The u16 interface id.
     pub async fn destroy_iface(&self, iface_id: u16) -> Result<(), Error> {
-        wlan_service_util::destroy_iface(&self.wlan_svc, iface_id)
+        wlan_service_util::destroy_iface(&self.monitor_svc, iface_id)
             .await
             .context("Destroy: Failed to destroy iface")
     }

@@ -30,6 +30,7 @@ group("drivers") {
 # also include an appropriate target under config/.
 common_packages = [
   "wlancfg",
+  "wlandevicemonitor",
   "//src/connectivity/location/regulatory_region",
 ]
 
@@ -87,6 +88,7 @@ group("tests") {
     "wlancfg:wlancfg-tests",
     "wlancfg:wlancfg-v1",
     "wlancfg/tool:donut-tests",
+    "wlandevicemonitor:wlandevicemonitor-tests",
     "wlanstack:wlanstack-tests",
   ]
 }

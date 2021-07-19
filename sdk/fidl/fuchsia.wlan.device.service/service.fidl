@@ -6,6 +6,7 @@ library fuchsia.wlan.device.service;
 using fuchsia.wlan.common;
 using fuchsia.wlan.device;
 using fuchsia.wlan.minstrel;
+using fuchsia.wlan.mlme;
 using fuchsia.wlan.sme;
 using fuchsia.wlan.stats;
 
@@ -76,6 +77,16 @@ type ClearCountryRequest = struct {
     phy_id uint16;
 };
 
+type AddIfaceRequest = resource struct {
+    phy_id uint16;
+    assigned_iface_id uint16;
+    iface client_end:fuchsia.wlan.mlme.MLME;
+};
+
+type AddIfaceResponse = struct {
+    iface_id uint16;
+};
+
 protocol DeviceWatcher {
     -> OnPhyAdded(struct {
         phy_id uint16;
@@ -93,19 +104,13 @@ protocol DeviceWatcher {
 
 @discoverable
 protocol DeviceService {
-    // Phy methods
-    ListPhys() -> (struct {
-        resp ListPhysResponse;
-    });
-    QueryPhy(struct {
-        req QueryPhyRequest;
+    // Iface methods
+    AddIface(resource struct {
+        req AddIfaceRequest;
     }) -> (struct {
         status int32;
-        resp box<QueryPhyResponse>;
+        iface_id box<AddIfaceResponse>;
     });
-    // 3-15: reserved
-
-    // Iface methods
     ListIfaces() -> (struct {
         resp ListIfacesResponse;
     });
@@ -114,19 +119,6 @@ protocol DeviceService {
     }) -> (struct {
         status int32;
         resp box<QueryIfaceResponse>;
-    });
-    CreateIface(struct {
-        req CreateIfaceRequest;
-    }) -> (struct {
-        status int32;
-        resp box<CreateIfaceResponse>;
-    });
-    // 19: reserved for StartIface
-    // 20: reserved for StopIface
-    DestroyIface(struct {
-        req DestroyIfaceRequest;
-    }) -> (struct {
-        status int32;
     });
     GetClientSme(resource struct {
         iface_id uint16;
@@ -164,25 +156,6 @@ protocol DeviceService {
     }) -> (struct {
         status int32;
         peer box<fuchsia.wlan.minstrel.Peer>;
-    });
-
-    WatchDevices(resource struct {
-        watcher server_end:DeviceWatcher;
-    });
-    GetCountry(struct {
-        phy_id uint16;
-    }) -> (struct {
-        resp GetCountryResponse;
-    }) error int32;
-    SetCountry(struct {
-        req SetCountryRequest;
-    }) -> (struct {
-        status int32;
-    });
-    ClearCountry(struct {
-        req ClearCountryRequest;
-    }) -> (struct {
-        status int32;
     });
 };
 

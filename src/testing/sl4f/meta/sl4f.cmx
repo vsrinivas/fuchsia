@@ -99,6 +99,7 @@
             "fuchsia.weave.FactoryDataManager",
             "fuchsia.weave.Stack",
             "fuchsia.wlan.device.Phy",
+            "fuchsia.wlan.device.service.DeviceMonitor",
             "fuchsia.wlan.device.service.DeviceService",
             "fuchsia.wlan.policy.AccessPointListener",
             "fuchsia.wlan.policy.AccessPointProvider",

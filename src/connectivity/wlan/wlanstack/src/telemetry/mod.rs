@@ -1859,7 +1859,7 @@ mod tests {
     }
 
     fn fake_iface_map() -> (IfaceMap, impl Stream<Item = StatsRequest>) {
-        let (ifaces_map, _watcher) = IfaceMap::new();
+        let ifaces_map = IfaceMap::new();
         let (iface_device, stats_requests) = fake_iface_device();
         ifaces_map.insert(IFACE_ID, iface_device);
         (ifaces_map, stats_requests)

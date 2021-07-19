@@ -321,7 +321,7 @@ mod tests {
     #[test]
     fn test_mark_unmark_active_client_iface_simple() {
         let (inspect_tree, _persistence_stream) = test_helper::fake_inspect_tree();
-        let (iface_map, _iface_map_events) = IfaceMap::new();
+        let iface_map = IfaceMap::new();
         let iface_map = Arc::new(iface_map);
 
         inspect_tree.mark_active_client_iface(0, iface_map, inspect_tree.create_iface_child(0));
@@ -333,7 +333,7 @@ mod tests {
     #[test]
     fn test_mark_unmark_active_client_iface_interleave() {
         let (inspect_tree, _persistence_stream) = test_helper::fake_inspect_tree();
-        let (iface_map, _iface_map_events) = IfaceMap::new();
+        let iface_map = IfaceMap::new();
         let iface_map = Arc::new(iface_map);
 
         inspect_tree.mark_active_client_iface(

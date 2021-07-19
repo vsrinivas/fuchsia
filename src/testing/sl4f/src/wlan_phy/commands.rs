@@ -24,6 +24,18 @@ impl Facade for WlanPhyFacade {
                     })?;
                 Ok(to_value(self.get_country(phy_id).await?)?)
             }
+            "get_dev_path" => {
+                let phy_id =
+                    args.get("phy_id").ok_or_else(|| format_err!("Must provide a `phy_id`"))?;
+                let phy_id: u16 = phy_id
+                    .as_u64()
+                    .ok_or_else(|| format_err!("`phy_id` must be a number, but was {:?}", phy_id))?
+                    .try_into()
+                    .or_else(|_err| {
+                        Err(format_err!("`phy_id` must fit u16, but was {:?}", phy_id))
+                    })?;
+                Ok(to_value(self.get_dev_path(phy_id).await?)?)
+            }
             _ => return Err(format_err!("unsupported command {} for wlan-phy-facade!", method)),
         }
     }

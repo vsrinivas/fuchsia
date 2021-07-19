@@ -28,6 +28,14 @@ pub struct PhyOwnership {
     pub phy_assigned_id: u16,
 }
 
+#[derive(Debug)]
+pub struct NewIface {
+    // Global, unique iface ID.
+    pub id: u16,
+    // Information about this iface's PHY.
+    pub phy_ownership: PhyOwnership,
+}
+
 pub struct PhyDevice {
     pub proxy: fidl_wlan_dev::PhyProxy,
     pub device: wlan_dev::Device,

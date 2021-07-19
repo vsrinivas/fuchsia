@@ -5,7 +5,9 @@
 use {
     anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_wlan_device::MacRole,
-    fidl_fuchsia_wlan_device_service::{DestroyIfaceRequest, DeviceServiceProxy},
+    fidl_fuchsia_wlan_device_service::{
+        DestroyIfaceRequest, DeviceMonitorProxy, DeviceServiceProxy,
+    },
     fuchsia_syslog::fx_log_info,
     fuchsia_zircon as zx,
 };
@@ -52,12 +54,12 @@ pub async fn get_first_iface(wlan_svc: &DeviceServiceProxy, role: MacRole) -> Re
 ///
 /// # Arguments
 /// * `wlan_svc`: a DeviceServiceProxy
-pub async fn get_phy_list(wlan_svc: &DeviceServiceProxy) -> Result<Vec<u16>, Error> {
-    let phys = wlan_svc.list_phys().await.context("Error getting phy list")?.phys;
-    Ok(phys.into_iter().map(|p| p.phy_id).collect())
+pub async fn get_phy_list(wlan_svc: &DeviceMonitorProxy) -> Result<Vec<u16>, Error> {
+    let phys = wlan_svc.list_phys().await.context("Error getting phy list")?;
+    Ok(phys)
 }
 
-pub async fn destroy_iface(wlan_svc: &DeviceServiceProxy, iface_id: u16) -> Result<(), Error> {
+pub async fn destroy_iface(wlan_svc: &DeviceMonitorProxy, iface_id: u16) -> Result<(), Error> {
     let mut req = DestroyIfaceRequest { iface_id };
 
     let response = wlan_svc.destroy_iface(&mut req).await.context("Error destroying iface")?;

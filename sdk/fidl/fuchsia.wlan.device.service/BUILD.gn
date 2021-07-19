@@ -19,6 +19,7 @@ fidl("fuchsia.wlan.device.service") {
     "//sdk/fidl/fuchsia.wlan.common",
     "//sdk/fidl/fuchsia.wlan.device",
     "//sdk/fidl/fuchsia.wlan.minstrel",
+    "//sdk/fidl/fuchsia.wlan.mlme",
     "//sdk/fidl/fuchsia.wlan.sme",
     "//sdk/fidl/fuchsia.wlan.stats",
   ]

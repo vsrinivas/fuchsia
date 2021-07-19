@@ -255,9 +255,9 @@ mod tests {
         fidl::endpoints::RequestStream,
         fidl_fuchsia_wlan_common as fidl_common,
         fidl_fuchsia_wlan_device_service::{
-            self as wlan_service, DeviceServiceMarker, DeviceServiceProxy, DeviceServiceRequest,
-            DeviceServiceRequestStream, IfaceListItem, ListIfacesResponse, ListPhysResponse,
-            PhyListItem,
+            self as wlan_service, DeviceMonitorMarker, DeviceMonitorProxy, DeviceMonitorRequest,
+            DeviceMonitorRequestStream, DeviceServiceMarker, DeviceServiceProxy,
+            DeviceServiceRequest, DeviceServiceRequestStream, IfaceListItem, ListIfacesResponse,
         },
         fidl_fuchsia_wlan_sme::{
             BssInfo, ClientSmeMarker, ClientSmeRequest, ClientSmeRequestStream, ConnectResultCode,
@@ -610,17 +610,17 @@ mod tests {
     #[test]
     fn list_phys_returns_iface_id_vector() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
-        let (wlan_service, server) = create_wlan_service_util();
+        let (monitor_service, server) = create_wlan_monitor_util();
         let mut next_device_service_req = server.into_future();
 
         // create the data to use in the response
         let phy_id_list: Vec<u16> = vec![0, 1, 35, 36];
         let mut phy_list_vec = vec![];
         for id in &phy_id_list {
-            phy_list_vec.push(PhyListItem { phy_id: *id, path: format!("/fake/path/{}", *id) });
+            phy_list_vec.push(*id);
         }
 
-        let fut = get_phy_list(&wlan_service);
+        let fut = get_phy_list(&monitor_service);
         pin_mut!(fut);
         assert!(exec.run_until_stalled(&mut fut).is_pending());
 
@@ -645,14 +645,14 @@ mod tests {
     #[test]
     fn list_phys_properly_handles_zero_phys() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
-        let (wlan_service, server) = create_wlan_service_util();
+        let (monitor_service, server) = create_wlan_monitor_util();
         let mut next_device_service_req = server.into_future();
 
         // create the data to use in the response
         let phy_id_list: Vec<u16> = vec![];
         let phy_list_vec = vec![];
 
-        let fut = get_phy_list(&wlan_service);
+        let fut = get_phy_list(&monitor_service);
         pin_mut!(fut);
         assert!(exec.run_until_stalled(&mut fut).is_pending());
 
@@ -685,6 +685,17 @@ mod tests {
         })
     }
 
+    fn poll_device_monitor_req(
+        exec: &mut TestExecutor,
+        next_device_monitor_req: &mut StreamFuture<DeviceMonitorRequestStream>,
+    ) -> Poll<DeviceMonitorRequest> {
+        exec.run_until_stalled(next_device_monitor_req).map(|(req, stream)| {
+            *next_device_monitor_req = stream.into_future();
+            req.expect("did not expect the DeviceServiceRequestStream to end")
+                .expect("error polling device service request stream")
+        })
+    }
+
     fn send_iface_list_response(
         exec: &mut TestExecutor,
         server: &mut StreamFuture<wlan_service::DeviceServiceRequestStream>,
@@ -702,17 +713,17 @@ mod tests {
 
     fn send_phy_list_response(
         exec: &mut TestExecutor,
-        server: &mut StreamFuture<wlan_service::DeviceServiceRequestStream>,
-        phy_list_vec: Vec<PhyListItem>,
+        server: &mut StreamFuture<wlan_service::DeviceMonitorRequestStream>,
+        phy_list_vec: Vec<u16>,
     ) {
-        let responder = match poll_device_service_req(exec, server) {
-            Poll::Ready(DeviceServiceRequest::ListPhys { responder }) => responder,
+        let responder = match poll_device_monitor_req(exec, server) {
+            Poll::Ready(DeviceMonitorRequest::ListPhys { responder }) => responder,
             Poll::Pending => panic!("expected a request to be available"),
             _ => panic!("expected a ListPhys request"),
         };
 
         // now send the response back
-        let _result = responder.send(&mut ListPhysResponse { phys: phy_list_vec });
+        let _result = responder.send(&phy_list_vec);
     }
 
     #[test]
@@ -974,6 +985,13 @@ mod tests {
 
     fn create_wlan_service_util() -> (DeviceServiceProxy, DeviceServiceRequestStream) {
         let (proxy, server) = endpoints::create_proxy::<DeviceServiceMarker>()
+            .expect("failed to create a wlan_service channel for tests");
+        let server = server.into_stream().expect("failed to create a wlan_service response stream");
+        (proxy, server)
+    }
+
+    fn create_wlan_monitor_util() -> (DeviceMonitorProxy, DeviceMonitorRequestStream) {
+        let (proxy, server) = endpoints::create_proxy::<DeviceMonitorMarker>()
             .expect("failed to create a wlan_service channel for tests");
         let server = server.into_stream().expect("failed to create a wlan_service response stream");
         (proxy, server)
@@ -1281,11 +1299,11 @@ mod tests {
 
     fn send_destroy_iface_response(
         exec: &mut TestExecutor,
-        server: &mut StreamFuture<wlan_service::DeviceServiceRequestStream>,
+        server: &mut StreamFuture<wlan_service::DeviceMonitorRequestStream>,
         status: zx::Status,
     ) {
-        let responder = match poll_device_service_req(exec, server) {
-            Poll::Ready(DeviceServiceRequest::DestroyIface { responder, .. }) => responder,
+        let responder = match poll_device_monitor_req(exec, server) {
+            Poll::Ready(DeviceMonitorRequest::DestroyIface { responder, .. }) => responder,
             Poll::Pending => panic!("expected a request to be available"),
             _ => panic!("expected a destroy iface request"),
         };
@@ -1297,10 +1315,10 @@ mod tests {
     #[test]
     fn test_destroy_single_iface_ok() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
-        let (wlan_service, server) = create_wlan_service_util();
+        let (monitor_service, server) = create_wlan_monitor_util();
         let mut next_device_service_req = server.into_future();
 
-        let fut = destroy_iface(&wlan_service, 0);
+        let fut = destroy_iface(&monitor_service, 0);
         pin_mut!(fut);
         assert!(exec.run_until_stalled(&mut fut).is_pending());
 
