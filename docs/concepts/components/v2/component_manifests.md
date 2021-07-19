@@ -82,59 +82,8 @@ See also: [ELF Runner](elf_runner.md), [Component Runners][doc-runners]
 
 Component manifests provide a syntax for routing capabilities between
 components. For a detailed walkthrough about what happens during capability
-routing, see
-[_Life of a protocol open_](capabilities/life_of_a_protocol_open.md)
-
-#### Capability types {#capability-types}
-
-The following capabilities can be routed:
-
--   `protocol`: A filesystem service node that can be used to open a channel to
-    a FIDL protocol.
--   `directory`: A filesystem directory.
--   `storage`: A filesystem directory that is isolated to the component using
-    it.
--   `runner`: A capability that allows a component to use a particular
-    [runner][doc-runners].
--   `resolver`: A capability that, when registered in an
-    [environment](#environments), causes a component with a particular URL
-    scheme to be resolved with that [resolver][doc-resolvers].
-
-`protocol`, `directory` and `storage` capabilities are routed to components that
-`use` them. `runner` capabilities are routed to [environments](#environments)
-that include them.
-
-#### Routing terminology {#routing-terminology}
-
-Component manifests declare how capabilities are routed between components. The
-language of capability routing consists of the following three keywords:
-
--   `use`: When a component `uses` a capability, the capability is installed in
-    the component's namespace. A component may `use` any capability that has
-    been `offered` to it.
--   `offer`: A component may `offer` a capability to a *target*, which is either
-    a [child][doc-children] or [collection][doc-collections]. When a capability
-    is offered to a child, the child instance may `use` the capability or
-    `offer` it to one of its own targets. Likewise, when a capability is offered
-    to a collection, any instance in the collection may `use` the capability or
-    `offer` it.
--   `expose`: When a component `exposes` a capability to its parent, the parent
-    may `offer` the capability to one of its other children. A component may
-    `expose` any capability that it provides, or that one of its children
-    exposes.
-
-When you use these keywords together, they express how a capability is routed
-from a component instance's [outgoing directory][glossary.outgoing-directory] to
-another component instance's [namespace][glossary.namespace]:
-
--   `use` describes the capabilities that populate a component instance's
-    namespace.
--   `expose` and `offer` describe how capabilities are passed between component
-    instances. Aside from their directionality, there is one significant
-    difference between `offer` and `expose`. While a component may `use` a
-    capability that was `offered` to it, a component is not allowed to `use` a
-    capability that was `exposed` to it by its child. This restriction exists to
-    prevent dependency cycles between parent and child.
+routing, see the [Capabilities overview][doc-capabilities]
+and [Life of a protocol open][doc-protocol-open].
 
 #### Framework protocols {#framework-protocols}
 
@@ -727,29 +676,28 @@ expect their facets to adhere to a particular schema.
 
 This section may be omitted.
 
-[glossary.component declaration]: /docs/glossary/README.md#component-declaration
-[glossary.component manifest]: /docs/glossary/README.md#component-manifest
-[glossary.component manifest source]: /docs/glossary/README.md#component-manifest-source
-[glossary.hub]: /docs/glossary/README.md#hub
-[glossary.namespace]: /docs/glossary/README.md#namespace
-[glossary.outgoing-directory]: /docs/glossary/README.md#outgoing-directory
-[glossary.package]: /docs/glossary/README.md#package
 [doc-children]: realms.md#child-component-instances
 [doc-collections]: realms.md#collections
-[doc-environments]: environments.md
-[doc-protocol]: /docs/concepts/components/v2/capabilities/protocol.md
 [doc-directory]: /docs/concepts/components/v2/capabilities/directory.md
 [doc-eager]: lifecycle.md#eager_binding
-[doc-storage]: /docs/concepts/components/v2/capabilities/storage.md
-[doc-runners]: /docs/concepts/components/v2/capabilities/runners.md
-[doc-resolvers]: /docs/concepts/components/v2/capabilities/resolvers.md
+[doc-environments]: environments.md
 [doc-module-facets]: /docs/concepts/modular/module_facet.md
 [doc-package-url]: /docs/concepts/packages/package_url.md
 [doc-packages]: /docs/concepts/packages/package.md
+[doc-protocol]: /docs/concepts/components/v2/capabilities/protocol.md
+[doc-protocol-open]: /docs/concepts/components/v2/capabilities/life_of_a_protocol_open.md
 [doc-realm-definitions]: realms.md#definitions
+[doc-resolvers]: /docs/concepts/components/v2/capabilities/resolvers.md
+[doc-runners]: /docs/concepts/components/v2/capabilities/runners.md
 [doc-static-children]: realms.md#static-children
+[doc-storage]: /docs/concepts/components/v2/capabilities/storage.md
 [examples-routing]: /examples/components/routing
 [fidl-component-decl]: /sdk/fidl/fuchsia.sys2/decls/component_decl.fidl
 [fidl-io2-rights]: /sdk/fidl/fuchsia.io2/rights-abilities.fidl
 [fidl-realm]: /sdk/fidl/fuchsia.sys2/realm.fidl
+[glossary.component declaration]: /docs/glossary/README.md#component-declaration
+[glossary.component manifest]: /docs/glossary/README.md#component-manifest
+[glossary.component manifest source]: /docs/glossary/README.md#component-manifest-source
+[glossary.hub]: /docs/glossary/README.md#hub
+[glossary.package]: /docs/glossary/README.md#package
 [src-cmc]: /tools/cmc
