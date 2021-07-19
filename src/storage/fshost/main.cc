@@ -17,7 +17,6 @@
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/fit/defer.h>
 #include <lib/syslog/cpp/macros.h>
-#include <lib/syslog/global.h>
 #include <lib/zx/channel.h>
 #include <zircon/boot/image.h>
 #include <zircon/device/vfs.h>

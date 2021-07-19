@@ -84,6 +84,9 @@ const char Config::kUseDefaultLoader[] = "use-default-loader";
 // Wait for data before launching pkgfs.
 const char Config::kWaitForData[] = "wait-for-data";
 
+// Use Fxfs instead of Minfs for the data partition.
+const char Config::kUseFxfs[] = "use-fxfs";
+
 Config::Options Config::ReadOptions(std::istream& stream) {
   Options options;
   for (std::string line; std::getline(stream, line);) {

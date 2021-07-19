@@ -8,6 +8,9 @@ import("//build/test.gni")
 import("//src/storage/testing/isolated_devmgr.gni")
 import("//tools/cmc/build/cmc.gni")
 
+# Set to true to enable Fxfs
+use_fxfs = false
+
 declare_args() {
   # blobfs_maximum_runtime_bytes is an upper bound on the partition size on the device. Partitions
   # can grow as needed if there are extra slices available in FVM. This limit prevents the blobfs
@@ -148,6 +151,7 @@ source_set("block-watcher") {
     "block-device.cc",
     "block-watcher.cc",
     "config.cc",
+    "copier.cc",
     "encrypted-volume.cc",
     "filesystem-mounter.cc",
     "fshost-fs-provider.cc",
@@ -179,6 +183,7 @@ source_set("block-watcher") {
     "//sdk/fidl/fuchsia.hardware.block.encrypted:fuchsia.hardware.block.encrypted_c",
     "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_c",
     "//sdk/fidl/fuchsia.hardware.block.verified:fuchsia.hardware.block.verified_llcpp",
+    "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_llcpp",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/fit",
@@ -197,6 +202,7 @@ source_set("block-watcher") {
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/ramdevice-client",
+    "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-engine",
   ]
@@ -206,6 +212,10 @@ source_set("block-watcher") {
     public_deps += [ "//src/storage/extractor/cpp:disk_extractor" ]
   } else {
     sources += [ "extract-metadata-noop.cc" ]
+  }
+
+  if (use_fxfs) {
+    deps += [ "//src/storage/fxfs" ]
   }
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
@@ -411,6 +421,24 @@ fuchsia_component("test-fshost") {
   ]
 }
 
+test("copier_test") {
+  sources = [
+    "copier.cc",
+    "copier_test.cc",
+  ]
+  deps = [
+    "//sdk/lib/syslog/cpp:cpp-macros",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/sys/test_runners:tmp_storage",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zxc",
+  ]
+}
+
+fuchsia_unittest_component("copier-test") {
+  deps = [ ":copier_test" ]
+}
+
 storage_isolated_devmgr_unittest_v2_component("fshost-integration-test") {
   manifest = "meta/fshost_integration_test.cml"
   deps = [
@@ -436,6 +464,7 @@ fuchsia_test_package("fshost-tests") {
     ":fshost-inspect-test",
     ":fshost-metrics-test",
     ":fshost-loader-service-test",
+    ":copier-test",
   ]
   deps = [
     ":test-fshost",
@@ -507,9 +536,6 @@ template("fshost_config") {
     if (!format_minfs_on_corruption) {
       contents += [ "-format-minfs-on-corruption" ]
     }
-    if (defined(invoker.use_syslog) && invoker.use_syslog) {
-      contents += [ "use-syslog" ]
-    }
     if (defined(invoker.use_default_loader) && invoker.use_default_loader) {
       contents += [ "use-default-loader" ]
     }
@@ -521,6 +547,10 @@ template("fshost_config") {
     if (defined(invoker.apply_limits_to_ramdisk) &&
         invoker.apply_limits_to_ramdisk) {
       contents += [ "apply-limits-to-ramdisk" ]
+    }
+
+    if (defined(invoker.use_fxfs) && invoker.use_fxfs) {
+      contents += [ "use-fxfs" ]
     }
 
     output_conversion = "list lines"
@@ -548,22 +578,24 @@ fshost_config("default_config") {
   gpt_all = false
   no_minfs_zxcrypt = false
   sandbox_decompression = false
+  if (use_fxfs) {
+    use_fxfs = true
+  }
 }
 
 fshost_config("integration_test_config") {
   # Some of the tests require us to be able to match against multiple GPT devices.
   gpt_all = true
 
-  use_syslog = true
   use_default_loader = true
 
-  # The test BlockDeviceManagerIntegration.MaxSize verifies that the minfs "max runtime bytes"
-  # gets applied correctly. It checks that the max size in FVM is set to this value. The
+  # The test BlockDeviceManagerIntegration.MaxSize verifies that the minfs "max runtime bytes" gets
+  # applied correctly. It checks that the max size in FVM is set to this value. The
   # "apply_limits_to_ramdisk" flag is required to apply the minfs limit even to a ramdisk which is
-  # used in tests (normally the limits apply only to physical devices).
-  #
-  # This number is chosen to be large because it will apply to all tests in the fshost integration
-  # test. So all minfs partitions created in that test must be smaller than this value.
-  minfs_maximum_runtime_bytes_override = 1073741824
+  # used in tests (normally the limits apply only to physical devices).  This number applies to all
+  # tests in the fshost integration test, so all minfs partitions created must be smaller than this
+  # value, but all disks should be larger than this value.
+  minfs_maximum_runtime_bytes_override = 117440512
+
   apply_limits_to_ramdisk = true
 }

@@ -5,6 +5,7 @@
 #include "src/storage/fshost/fshost_integration_test.h"
 
 #include <sys/statfs.h>
+#include <zircon/device/vfs.h>
 
 namespace fshost {
 
@@ -64,8 +65,7 @@ void FshostIntegrationTest::ResumeWatcher() const {
   ASSERT_EQ(result->status, ZX_OK);
 }
 
-fbl::unique_fd FshostIntegrationTest::WaitForMount(const std::string& name,
-                                                   uint64_t expected_fs_type) {
+std::pair<fbl::unique_fd, uint64_t> FshostIntegrationTest::WaitForMount(const std::string& name) {
   // The mount point will always exist so we expect open() to work regardless of whether the device
   // is actually mounted. We retry until the mount point has the expected filesystem type.
   //
@@ -78,23 +78,23 @@ fbl::unique_fd FshostIntegrationTest::WaitForMount(const std::string& name,
         exposed_dir()->Open(fuchsia::io::OPEN_RIGHT_READABLE, 0, name, root.NewRequest());
     EXPECT_EQ(ZX_OK, status);
     if (status != ZX_OK)
-      return fbl::unique_fd();
+      return std::make_pair(fbl::unique_fd(), 0);
 
     fbl::unique_fd fd;
     status = fdio_fd_create(root.Unbind().TakeChannel().release(), fd.reset_and_get_address());
     EXPECT_EQ(ZX_OK, status);
     if (status != ZX_OK)
-      return fbl::unique_fd();
+      return std::make_pair(fbl::unique_fd(), 0);
 
     struct statfs buf;
-    EXPECT_EQ(fstatfs(fd.get(), &buf), 0);
-    if (buf.f_type == expected_fs_type)
-      return fd;
+    EXPECT_EQ(fstatfs(fd.get(), &buf), 0) << ": " << strerror(errno);
+    if (buf.f_type != VFS_TYPE_MEMFS)
+      return std::make_pair(std::move(fd), buf.f_type);
 
     sleep(1);
   }
 
-  return fbl::unique_fd();
+  return std::make_pair(fbl::unique_fd(), 0);
 }
 
 }  // namespace fshost

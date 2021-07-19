@@ -28,11 +28,11 @@ class FshostIntegrationTest : public testing::Test {
   void PauseWatcher() const;
   void ResumeWatcher() const;
 
-  // Waits for a mount to happen at the given toplevel path. The mounted filesystem is expected to
-  // have the given type (VFS_TYPE_MINFS, etc.).
+  // Waits for a mount to happen at the given toplevel path. If successful returns a file
+  // descriptor opened on the root and the filesystem type (VFS_TYPE_MINFS, etc.).
   //
   // Times out after 10s.
-  fbl::unique_fd WaitForMount(const std::string& name, uint64_t expected_fs_type);
+  std::pair<fbl::unique_fd, uint64_t> WaitForMount(const std::string& name);
 
  private:
   fidl::SynchronousInterfacePtr<fuchsia::io::Directory> exposed_dir_;

@@ -5,6 +5,7 @@
 #ifndef SRC_STORAGE_FSHOST_BLOCK_DEVICE_H_
 #define SRC_STORAGE_FSHOST_BLOCK_DEVICE_H_
 
+#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/zx/status.h>
 #include <zircon/types.h>
 
@@ -51,6 +52,9 @@ class BlockDevice final : public BlockDeviceInterface {
   disk_format_t content_format() const final;
   const std::string& topological_path() const final { return topological_path_; }
   const std::string& partition_name() const final;
+  zx::status<fidl::ClientEnd<fuchsia_io::Node>> GetDeviceEndPoint() const;
+  zx_status_t CheckFxfs() const;
+  zx_status_t FormatFxfs() const;
 
  private:
   FilesystemMounter* mounter_ = nullptr;

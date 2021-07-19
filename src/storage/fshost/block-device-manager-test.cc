@@ -109,7 +109,7 @@ TEST(BlockDeviceManager, ReadOptions) {
 TEST_F(BlockDeviceManagerIntegration, MaxSize) {
   namespace fio = fuchsia_io;
 
-  constexpr uint32_t kBlockCount = 1024 * 256;
+  constexpr uint32_t kBlockCount = 9 * 1024 * 256;
   constexpr uint32_t kBlockSize = 512;
   constexpr uint32_t kSliceSize = 32'768;
   constexpr size_t kDeviceSize = kBlockCount * kBlockSize;
@@ -141,8 +141,9 @@ TEST_F(BlockDeviceManagerIntegration, MaxSize) {
   // Now reattach the ram-disk and fshost should format it.
   auto ramdisk_or = storage::RamDisk::CreateWithVmo(std::move(vmo), kBlockSize);
   ASSERT_EQ(ramdisk_or.status_value(), ZX_OK);
-  fbl::unique_fd fd = WaitForMount("minfs", VFS_TYPE_MINFS);
+  auto [fd, fs_type] = WaitForMount("minfs");
   ASSERT_TRUE(fd);
+  EXPECT_TRUE(fs_type == VFS_TYPE_MINFS || fs_type == VFS_TYPE_FXFS);
 
   // FVM will be at something like "/dev/misc/ramctl/ramdisk-1/block/fvm"
   std::string fvm_path = ramdisk_or.value().path() + "/fvm";
@@ -170,7 +171,7 @@ TEST_F(BlockDeviceManagerIntegration, MaxSize) {
 
   // The partition limit should match the value set in the integration test fshost configuration
   // (see the BUILD.gn file).
-  EXPECT_EQ(1073741824u, limit_result->byte_count);
+  EXPECT_EQ(limit_result->byte_count, 117440512u);
 }
 
 }  // namespace

@@ -51,6 +51,8 @@ async fn main() -> Result<(), Error> {
     #[cfg(feature = "tracing")]
     fuchsia_trace_provider::trace_provider_create_with_fdio();
 
+    log::info!("fxfs started {:?}", std::env::args());
+
     let args: TopLevel = argh::from_env();
 
     let client = RemoteBlockClient::new(zx::Channel::from(

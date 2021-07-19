@@ -42,7 +42,7 @@ zx::status<zx::channel> FilesystemMounter::MountFilesystem(FsManager::MountPoint
   if (create_endpoints.is_error()) {
     return create_endpoints.take_error();
   }
-  auto [client_end, server_end] = std::move(create_endpoints.value());
+  auto [export_root, server_end] = std::move(create_endpoints.value());
 
   constexpr size_t num_handles = 2;
   zx_handle_t handles[num_handles] = {server_end.TakeChannel().release(),
@@ -73,28 +73,34 @@ zx::status<zx::channel> FilesystemMounter::MountFilesystem(FsManager::MountPoint
   }
   argv.push_back("mount");
   argv.push_back(nullptr);
-  zx_status_t status =
-      LaunchFs(static_cast<int>(argv.size() - 1), argv.data(), handles, ids, num_handles, fs_flags);
-  if (status != ZX_OK) {
+  if (zx_status_t status = LaunchFs(static_cast<int>(argv.size() - 1), argv.data(), handles, ids,
+                                    num_handles, fs_flags);
+      status != ZX_OK) {
     return zx::error(status);
   }
 
-  auto result = fidl::WireCall(client_end).Describe();
+  auto result = fidl::WireCall(export_root).Describe();
   if (!result.ok()) {
     return zx::error(result.status());
   }
 
-  zx::channel root;
-  status = fs_root_handle(client_end.channel().get(), root.reset_and_get_address());
-  if (status != ZX_OK) {
-    return zx::error(status);
-  }
-  status = InstallFs(point, std::move(root));
-  if (status != ZX_OK) {
+  zx::channel root_client, root_server;
+  if (zx_status_t status = zx::channel::create(0, &root_client, &root_server); status != ZX_OK) {
     return zx::error(status);
   }
 
-  return zx::ok(client_end.TakeChannel());
+  if (auto resp = fidl::WireCall<fio::Directory>(zx::unowned_channel(export_root.channel()))
+                      .Open(fio::wire::kOpenRightReadable | fio::wire::kOpenFlagPosix, 0,
+                            fidl::StringView("root"), std::move(root_server));
+      !resp.ok()) {
+    return zx::error(resp.status());
+  }
+
+  if (zx_status_t status = InstallFs(point, std::move(root_client)); status != ZX_OK) {
+    return zx::error(status);
+  }
+
+  return zx::ok(export_root.TakeChannel());
 }
 
 zx_status_t FilesystemMounter::MountData(zx::channel block_device, const mount_options_t& options) {
@@ -102,7 +108,8 @@ zx_status_t FilesystemMounter::MountData(zx::channel block_device, const mount_o
     return ZX_ERR_ALREADY_BOUND;
   }
 
-  zx::status ret = MountFilesystem(FsManager::MountPoint::kData, "/pkg/bin/minfs", options,
+  const char* binary_path = config_.is_set(Config::kUseFxfs) ? "/pkg/bin/fxfs" : "/pkg/bin/minfs";
+  zx::status ret = MountFilesystem(FsManager::MountPoint::kData, binary_path, options,
                                    std::move(block_device), FS_SVC);
   if (ret.is_error()) {
     return ret.error_value();

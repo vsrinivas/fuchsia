@@ -4,13 +4,16 @@
 
 #include "block-device.h"
 
+#include <dirent.h>
 #include <fcntl.h>
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/device/llcpp/fidl.h>
+#include <fuchsia/fs/llcpp/fidl.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/block/partition/c/fidl.h>
 #include <fuchsia/hardware/block/partition/llcpp/fidl.h>
 #include <fuchsia/hardware/block/volume/c/fidl.h>
+#include <fuchsia/hardware/block/volume/llcpp/fidl.h>
 #include <inttypes.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
@@ -19,6 +22,7 @@
 #include <lib/fdio/unsafe.h>
 #include <lib/fdio/watcher.h>
 #include <lib/fzl/time.h>
+#include <lib/service/llcpp/service.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/status.h>
@@ -26,6 +30,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <unistd.h>
 #include <zircon/device/block.h>
 #include <zircon/processargs.h>
@@ -46,6 +51,9 @@
 #include "extract-metadata.h"
 #include "pkgfs-launcher.h"
 #include "src/devices/block/drivers/block-verity/verified-volume-client.h"
+#include "src/storage/fshost/copier.h"
+#include "src/storage/fshost/fshost-fs-provider.h"
+#include "src/storage/fvm/format.h"
 #include "src/storage/minfs/fsck.h"
 #include "src/storage/minfs/minfs.h"
 
@@ -62,8 +70,8 @@ const char kAllowAuthoringFactoryConfigFile[] = "/boot/config/allow-authoring-fa
 // GUID of the device does not match a known valid one. Returns
 // ZX_ERR_NOT_SUPPORTED if the GUID is a system GUID. Returns ZX_OK if an
 // attempt to mount is made, without checking mount success.
-zx_status_t MountMinfs(FilesystemMounter* mounter, zx::channel block_device,
-                       mount_options_t* options) {
+zx_status_t MountData(FilesystemMounter* mounter, zx::channel block_device,
+                      mount_options_t* options) {
   fuchsia_hardware_block_partition_GUID type_guid;
   zx_status_t io_status, status;
   io_status = fuchsia_hardware_block_partition_PartitionGetTypeGuid(block_device.get(), &status,
@@ -85,7 +93,7 @@ zx_status_t MountMinfs(FilesystemMounter* mounter, zx::channel block_device,
   } else if (gpt_is_durable_guid(type_guid.value, GPT_GUID_LEN)) {
     return mounter->MountDurable(std::move(block_device), *options);
   }
-  FX_LOGS(ERROR) << "Unrecognized partition GUID for minfs; not mounting";
+  FX_LOGS(ERROR) << "Unrecognized partition GUID for data partition; not mounting";
   return ZX_ERR_WRONG_TYPE;
 }
 
@@ -145,6 +153,108 @@ std::string GetTopologicalPath(int fd) {
   }
   const auto& path = resp->result.response().path;
   return {path.data(), path.size()};
+}
+
+// Runs the binary indicated in `argv`, which must always be terminated with nullptr.
+// `device_channel`, containing a handle to the block device, is passed to the binary.  If
+// `export_root` is specified, the binary is launched asynchronously.  Otherwise, this waits for the
+// binary to terminate and returns the status.
+zx_status_t RunBinary(const fbl::Vector<const char*>& argv,
+                      fidl::ClientEnd<fuchsia_io::Node> device,
+                      fidl::ServerEnd<fuchsia_io::Directory> export_root = {}) {
+  FX_CHECK(argv[argv.size() - 1] == nullptr);
+  FshostFsProvider fs_provider;
+  DevmgrLauncher launcher(&fs_provider);
+  zx::process proc;
+  int handle_count = 1;
+  zx_handle_t handles[2] = {device.TakeChannel().release()};
+  if (export_root) {
+    handles[1] = export_root.TakeChannel().release();
+    ++handle_count;
+  }
+  uint32_t handle_ids[] = {FS_HANDLE_BLOCK_DEVICE_ID, PA_DIRECTORY_REQUEST};
+  if (zx_status_t status = launcher.Launch(
+          *zx::job::default_job(), argv[0], argv.data(), nullptr, -1,
+          /* TODO(fxbug.dev/32044) */ zx::resource(), handles, handle_ids, handle_count, &proc, 0);
+      status != ZX_OK) {
+    FX_LOGS(ERROR) << "Failed to launch binary: " << argv[0];
+    return status;
+  }
+
+  // If `export_root` was supplied, don't wait for process termination.
+  if (handle_count > 1)
+    return ZX_OK;
+
+  if (zx_status_t status = proc.wait_one(ZX_PROCESS_TERMINATED, zx::time::infinite(), nullptr);
+      status != ZX_OK) {
+    FX_LOGS(ERROR) << "Error waiting for process to terminate";
+    return status;
+  }
+
+  zx_info_process_t info;
+  if (zx_status_t status = proc.get_info(ZX_INFO_PROCESS, &info, sizeof(info), nullptr, nullptr);
+      status != ZX_OK) {
+    FX_LOGS(ERROR) << "Failed to get process info";
+    return status;
+  }
+
+  if (!(info.flags & ZX_INFO_PROCESS_FLAG_EXITED) || info.return_code != 0) {
+    FX_LOGS(ERROR) << "flags: " << info.flags << ", return_code: " << info.return_code;
+    return ZX_ERR_BAD_STATE;
+  }
+
+  return ZX_OK;
+}
+
+// Unmounts the filesystem using fuchsia.fs (rather than DirectoryAdmin).
+void Unmount(const fidl::ClientEnd<fuchsia_io::Directory>& export_root) {
+  auto client_end_or = service::ConnectAt<fuchsia_fs::Admin>(export_root);
+  if (client_end_or.is_error()) {
+    FX_LOGS(ERROR) << "Unmount failed";
+    return;
+  }
+
+  // Ignore errors; there's nothing we can do.
+  fidl::WireCall(*client_end_or).Shutdown();
+}
+
+// Tries to mount Minfs and reads all data found on the minfs partition.  Errors are ignored.
+Copier TryReadingMinfs(fidl::ClientEnd<fuchsia_io::Node> device) {
+  fbl::Vector<const char*> argv = {"/pkg/bin/minfs", "mount", nullptr};
+  auto export_root_or = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  if (export_root_or.is_error())
+    return {};
+  if (RunBinary(argv, std::move(device), std::move(export_root_or->server)) != ZX_OK)
+    return {};
+
+  zx_handle_t root_dir_handle;
+  if (zx_status_t status = fs_root_handle(export_root_or->client.channel().get(), &root_dir_handle);
+      status != ZX_OK) {
+    return {};
+  }
+
+  fbl::unique_fd fd;
+  if (zx_status_t status = fdio_fd_create(root_dir_handle, fd.reset_and_get_address());
+      status != ZX_OK) {
+    FX_LOGS(ERROR) << "fdio_fd_create failed";
+    return {};
+  }
+
+  // Clone the handle so that we can unmount.
+  if (zx_status_t status = fdio_fd_clone(fd.get(), &root_dir_handle); status != ZX_OK) {
+    FX_LOGS(ERROR) << "fdio_fd_clone failed";
+    return {};
+  }
+
+  fidl::ClientEnd<fuchsia_io::DirectoryAdmin> root_dir_client((zx::channel(root_dir_handle)));
+  auto unmount = fit::defer([&root_dir_client] { fidl::WireCall(root_dir_client).Unmount(); });
+
+  if (auto copier_or = Copier::Read(std::move(fd)); copier_or.is_error()) {
+    FX_LOGS(ERROR) << "Copier::Read: " << copier_or.status_string();
+    return {};
+  } else {
+    return std::move(copier_or).value();
+  }
 }
 
 }  // namespace
@@ -397,20 +507,26 @@ zx_status_t BlockDevice::CheckFilesystem() {
                       << " seconds";
       });
       FX_LOGS(INFO) << "fsck of " << disk_format_string(format_) << " started";
-      uint64_t device_size = info.block_size * info.block_count / minfs::kMinfsBlockSize;
-      std::unique_ptr<block_client::BlockDevice> device;
-      zx_status_t status = minfs::FdToBlockDevice(fd_, &device);
-      if (status != ZX_OK) {
-        FX_LOGS(ERROR) << "Cannot convert fd to block device: " << status;
-        return status;
+
+      if (device_config_->is_set(Config::kUseFxfs)) {
+        FX_LOGS(INFO) << "Using fxfs";
+        status = CheckFxfs();
+      } else {
+        uint64_t device_size = info.block_size * info.block_count / minfs::kMinfsBlockSize;
+        std::unique_ptr<block_client::BlockDevice> device;
+        status = minfs::FdToBlockDevice(fd_, &device);
+        if (status != ZX_OK) {
+          FX_LOGS(ERROR) << "Cannot convert fd to block device: " << status;
+          return status;
+        }
+        std::unique_ptr<minfs::Bcache> bc;
+        status = minfs::Bcache::Create(std::move(device), static_cast<uint32_t>(device_size), &bc);
+        if (status != ZX_OK) {
+          FX_LOGS(ERROR) << "Could not initialize minfs bcache.";
+          return status;
+        }
+        status = minfs::Fsck(std::move(bc), minfs::FsckOptions{.repair = true});
       }
-      std::unique_ptr<minfs::Bcache> bc;
-      status = minfs::Bcache::Create(std::move(device), static_cast<uint32_t>(device_size), &bc);
-      if (status != ZX_OK) {
-        FX_LOGS(ERROR) << "Could not initialize minfs bcache.";
-        return status;
-      }
-      status = minfs::Fsck(std::move(bc), minfs::FsckOptions{.repair = true});
 
       if (status != ZX_OK) {
         mounter_->mutable_metrics()->LogMinfsCorruption();
@@ -456,26 +572,35 @@ zx_status_t BlockDevice::FormatFilesystem() {
       return ZX_ERR_NOT_SUPPORTED;
     }
     case DISK_FORMAT_MINFS: {
-      FX_LOGS(INFO) << "Formatting minfs.";
-      uint64_t blocks = info.block_size * info.block_count / minfs::kMinfsBlockSize;
-      std::unique_ptr<block_client::BlockDevice> device;
-      zx_status_t status = minfs::FdToBlockDevice(fd_, &device);
-      if (status != ZX_OK) {
-        FX_LOGS(ERROR) << "Cannot convert fd to block device: " << status;
-        return status;
+      if (device_config_->is_set(Config::kUseFxfs)) {
+        FX_LOGS(INFO) << "Formatting fxfs";
+        status = FormatFxfs();
+        if (status != ZX_OK) {
+          FX_LOGS(ERROR) << "Failed to format fxfs: " << zx_status_get_string(status);
+          return status;
+        }
+      } else {
+        FX_LOGS(INFO) << "Formatting minfs.";
+        uint64_t blocks = info.block_size * info.block_count / minfs::kMinfsBlockSize;
+        std::unique_ptr<block_client::BlockDevice> device;
+        zx_status_t status = minfs::FdToBlockDevice(fd_, &device);
+        if (status != ZX_OK) {
+          FX_LOGS(ERROR) << "Cannot convert fd to block device: " << status;
+          return status;
+        }
+        std::unique_ptr<minfs::Bcache> bc;
+        status = minfs::Bcache::Create(std::move(device), static_cast<uint32_t>(blocks), &bc);
+        if (status != ZX_OK) {
+          FX_LOGS(ERROR) << "Could not initialize minfs bcache.";
+          return status;
+        }
+        minfs::MountOptions options = {};
+        if ((status = minfs::Mkfs(options, bc.get())) != ZX_OK) {
+          FX_LOGS(ERROR) << "Could not format minfs filesystem.";
+          return status;
+        }
+        FX_LOGS(INFO) << "Minfs filesystem re-formatted. Expect data loss.";
       }
-      std::unique_ptr<minfs::Bcache> bc;
-      status = minfs::Bcache::Create(std::move(device), static_cast<uint32_t>(blocks), &bc);
-      if (status != ZX_OK) {
-        FX_LOGS(ERROR) << "Could not initialize minfs bcache.";
-        return status;
-      }
-      minfs::MountOptions options = {};
-      if ((status = minfs::Mkfs(options, bc.get())) != ZX_OK) {
-        FX_LOGS(ERROR) << "Could not format minfs filesystem.";
-        return status;
-      }
-      FX_LOGS(INFO) << "Minfs filesystem re-formatted. Expect data loss.";
       return ZX_OK;
     }
     default:
@@ -539,11 +664,10 @@ zx_status_t BlockDevice::MountFilesystem() {
     }
     case DISK_FORMAT_MINFS: {
       mount_options_t options = default_mount_options;
-      FX_LOGS(INFO) << "BlockDevice::MountFilesystem(minfs)";
-      zx_status_t status = MountMinfs(mounter_, std::move(block_device), &options);
+      FX_LOGS(INFO) << "BlockDevice::MountFilesystem(data partition)";
+      zx_status_t status = MountData(mounter_, std::move(block_device), &options);
       if (status != ZX_OK) {
-        FX_LOGS(ERROR) << "Failed to mount minfs partition: " << zx_status_get_string(status)
-                       << ".";
+        FX_LOGS(ERROR) << "Failed to mount data partition: " << zx_status_get_string(status) << ".";
         MaybeDumpMetadata(fd_.duplicate(), {.disk_format = DISK_FORMAT_MINFS});
         return status;
       }
@@ -604,11 +728,11 @@ zx_status_t BlockDeviceInterface::Add(bool format_on_corruption) {
       return MountFilesystem();
     }
     case DISK_FORMAT_MINFS: {
-      FX_LOGS(INFO) << "mounting minfs: format on corruption is "
+      FX_LOGS(INFO) << "mounting data partition: format on corruption is "
                     << (format_on_corruption ? "enabled" : "disabled");
       if (zx_status_t status = CheckFilesystem(); status != ZX_OK) {
         if (!format_on_corruption) {
-          FX_LOGS(INFO) << "formatting minfs on this target is disabled";
+          FX_LOGS(INFO) << "formatting data partition on this target is disabled";
           return status;
         }
         if (zx_status_t status = FormatFilesystem(); status != ZX_OK) {
@@ -636,6 +760,204 @@ zx_status_t BlockDeviceInterface::Add(bool format_on_corruption) {
       return ZX_ERR_NOT_SUPPORTED;
   }
   return ZX_ERR_NOT_SUPPORTED;
+}
+
+// Clones the device handle.
+zx::status<fidl::ClientEnd<fuchsia_io::Node>> BlockDevice::GetDeviceEndPoint() const {
+  auto end_points_or = fidl::CreateEndpoints<fuchsia_io::Node>();
+  if (end_points_or.is_error())
+    return end_points_or.take_error();
+
+  fdio_cpp::UnownedFdioCaller caller(fd_);
+  if (zx_status_t status =
+          fidl::WireCall<fuchsia_io::Node>(zx::unowned_channel(caller.borrow_channel()))
+              .Clone(fuchsia_io::wire::kCloneFlagSameRights, std::move(end_points_or->server))
+              .status();
+      status != ZX_OK) {
+    return zx::error(status);
+  }
+
+  return zx::ok(std::move(end_points_or->client));
+}
+
+zx_status_t BlockDevice::CheckFxfs() const {
+  fbl::Vector<const char*> argv;
+  argv.push_back("/pkg/bin/fxfs");
+  argv.push_back("fsck");
+  argv.push_back(nullptr);
+  auto device_or = GetDeviceEndPoint();
+  if (device_or.is_error()) {
+    return device_or.error_value();
+  }
+  return RunBinary(argv, std::move(device_or).value());
+}
+
+// This is a destructive operation and isn't atomic (i.e. not resilient to power interruption).
+zx_status_t BlockDevice::FormatFxfs() const {
+  // Try mounting minfs and slurp all existing data off.
+  zx_handle_t handle;
+  if (zx_status_t status = fdio_fd_clone(fd_.get(), &handle); status != ZX_OK)
+    return status;
+  fbl::unique_fd fd;
+  if (zx_status_t status = fdio_fd_create(handle, fd.reset_and_get_address()); status != ZX_OK)
+    return status;
+
+  Copier copier;
+  {
+    auto device_or = GetDeviceEndPoint();
+    if (device_or.is_error())
+      return device_or.error_value();
+    copier = TryReadingMinfs(std::move(device_or).value());
+  }
+
+  fidl::ClientEnd<fuchsia_io::Node> device;
+  if (auto device_or = GetDeviceEndPoint(); device_or.is_error()) {
+    return device_or.error_value();
+  } else {
+    device = std::move(device_or).value();
+  }
+
+  fidl::UnownedClientEnd<fuchsia_hardware_block_volume::Volume> volume_client(
+      device.channel().borrow());
+
+  auto query_result = fidl::WireCall(volume_client).Query();
+  if (query_result.status() != ZX_OK) {
+    FX_LOGS(ERROR) << "Unable to query FVM information: "
+                   << zx_status_get_string(query_result.status());
+    return query_result.status();
+  }
+
+  auto query_response = query_result.Unwrap();
+  if (query_response->status != ZX_OK) {
+    FX_LOGS(ERROR) << "Unable to query FVM information: "
+                   << zx_status_get_string(query_response->status);
+    return query_response->status;
+  }
+
+  const uint64_t slice_size = query_response->info->slice_size;
+
+  // Free all the existing slices.
+  uint64_t slice = 1;
+  // The -1 here is because of zxcrypt; zxcrypt will offset all slices by 1 to account for its
+  // header.  zxcrypt isn't present in all cases, but that won't matter since minfs shouldn't be
+  // using a slice so high.
+  while (slice < fvm::kMaxVSlices - 1) {
+    auto query_result = fidl::WireCall(volume_client)
+                            .QuerySlices(fidl::VectorView<uint64_t>::FromExternal(&slice, 1));
+    if (query_result.status() != ZX_OK) {
+      FX_LOGS(ERROR) << "Unable to query slices (slice: " << slice << ", max: " << fvm::kMaxVSlices
+                     << "): " << zx_status_get_string(query_result.status());
+      return query_result.status();
+    }
+
+    auto query_response = query_result.Unwrap();
+    if (query_response->status != ZX_OK) {
+      FX_LOGS(ERROR) << "Unable to query slices (slice: " << slice << ", max: " << fvm::kMaxVSlices
+                     << "): " << zx_status_get_string(query_response->status);
+      return query_response->status;
+    }
+
+    if (query_response->response_count == 0) {
+      break;
+    }
+
+    for (uint64_t i = 0; i < query_response->response_count; ++i) {
+      if (query_response->response[i].allocated) {
+        auto shrink_result =
+            fidl::WireCall(volume_client).Shrink(slice, query_response->response[i].count);
+        if (zx_status_t status = shrink_result.status() == ZX_OK ? shrink_result.Unwrap()->status
+                                                                 : shrink_result.status();
+            status != ZX_OK) {
+          FX_LOGS(ERROR) << "Unable to shrink partition: " << zx_status_get_string(status);
+          return status;
+        }
+      }
+      slice += query_response->response[i].count;
+    }
+  }
+
+  // -1 because zxcrypt steals a slice.
+  int slice_count =
+      device_config_->ReadUint64OptionValue(Config::kMinfsMaxBytes, 0) / slice_size - 1;
+
+  if (slice_count < 0) {
+    auto query_result = fidl::WireCall(volume_client).Query();
+    if (query_result.status() != ZX_OK)
+      return query_result.status();
+    const auto* response = query_result.Unwrap();
+    if (response->status != ZX_OK)
+      return response->status;
+    // If a size is not specified, limit the size of the data partition so as not to use up all
+    // FVM's space (thus limiting blobfs growth).  24 MiB should be enough.
+    slice_count =
+        std::min(24 * 1024 * 1024 / slice_size - 1,
+                 response->info->pslice_total_count - response->info->pslice_allocated_count);
+  }
+
+  auto extend_result =
+      fidl::WireCall(volume_client)
+          .Extend(1, slice_count - 1);  // Another -1 here because we get the first slice for free.
+  if (zx_status_t status =
+          extend_result.status() == ZX_OK ? extend_result.Unwrap()->status : extend_result.status();
+      status != ZX_OK) {
+    FX_LOGS(ERROR) << "Unable to extend partition (slice_count: " << slice_count
+                   << "): " << zx_status_get_string(status);
+    return status;
+  }
+
+  fbl::Vector<const char*> argv = {"/pkg/bin/fxfs", "mkfs", nullptr};
+  if (zx_status_t status = RunBinary(argv, std::move(device)); status != ZX_OK)
+    return status;
+
+  // Now mount and then copy all the data back.
+  if (zx_status_t status = fdio_fd_clone(fd_.get(), &handle); status != ZX_OK) {
+    FX_LOGS(ERROR) << "fdio_fd_clone failed";
+    return status;
+  }
+  if (zx_status_t status = fdio_fd_create(handle, fd.reset_and_get_address()); status != ZX_OK)
+    return status;
+
+  auto export_root_or = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  if (export_root_or.is_error())
+    return export_root_or.error_value();
+
+  argv[1] = "mount";
+  auto device_or = GetDeviceEndPoint();
+  if (device_or.is_error()) {
+    return device_or.error_value();
+  }
+  if (zx_status_t status =
+          RunBinary(argv, std::move(device_or).value(), std::move(export_root_or->server));
+      status != ZX_OK) {
+    FX_LOGS(ERROR) << "Unable to mount fxfs after format";
+    return status;
+  }
+
+  zx::channel root_client, root_server;
+  if (zx_status_t status = zx::channel::create(0, &root_client, &root_server); status != ZX_OK)
+    return status;
+
+  if (auto resp = fidl::WireCall(export_root_or->client)
+                      .Open(fuchsia_io::wire::kOpenRightReadable | fuchsia_io::wire::kOpenFlagPosix,
+                            0, fidl::StringView("root"), std::move(root_server));
+      !resp.ok()) {
+    return resp.status();
+  }
+
+  if (zx_status_t status = fdio_fd_create(root_client.release(), fd.reset_and_get_address());
+      status != ZX_OK) {
+    FX_LOGS(ERROR) << "fdio_fd_create failed";
+    return status;
+  }
+
+  if (zx_status_t status = copier.Write(std::move(fd)); status != ZX_OK) {
+    FX_LOGS(ERROR) << "Failed to copy data";
+    return status;
+  }
+
+  Unmount(export_root_or->client);
+
+  return ZX_OK;
 }
 
 }  // namespace fshost

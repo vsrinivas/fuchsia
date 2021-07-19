@@ -242,6 +242,22 @@ TEST_P(AttrTest, ParentModificationTimeUpdatedCorrectly) {
   ASSERT_EQ(rmdir(parent.c_str()), 0);
 }
 
+TEST_P(AttrTest, ModeReportedCorrectly) {
+  std::string dir = GetPath("dir");
+  ASSERT_EQ(mkdir(dir.c_str(), 0666), 0);
+  struct stat stat_buf;
+  ASSERT_EQ(stat(dir.c_str(), &stat_buf), 0);
+
+  EXPECT_TRUE(S_ISDIR(stat_buf.st_mode));
+
+  std::string file = GetPath("file");
+  fbl::unique_fd fd(open(file.c_str(), O_CREAT | O_RDWR, 0666));
+  ASSERT_TRUE(fd);
+  ASSERT_EQ(stat(file.c_str(), &stat_buf), 0);
+
+  EXPECT_TRUE(S_ISREG(stat_buf.st_mode));
+}
+
 INSTANTIATE_TEST_SUITE_P(/*no prefix*/, AttrTest, testing::ValuesIn(AllTestFilesystems()),
                          testing::PrintToStringParamName());
 

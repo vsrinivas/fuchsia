@@ -12,6 +12,7 @@ use {
     },
     anyhow::Error,
     async_trait::async_trait,
+    fdio::fdio_sys::{V_IRGRP, V_IROTH, V_IRUSR, V_IWUSR, V_TYPE_FILE},
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{self as fio, NodeAttributes, NodeMarker},
     fidl_fuchsia_mem::Buffer,
@@ -188,7 +189,7 @@ impl File for FxFile {
         // TODO(jfsulliv): This assumes that we always get the data attribute at index 0 of
         // |attribute_sizes|.
         Ok(NodeAttributes {
-            mode: 0u32, // TODO(jfsulliv): Mode bits
+            mode: V_TYPE_FILE | V_IRUSR | V_IWUSR | V_IRGRP | V_IROTH,
             id: self.handle.object_id(),
             content_size: props.data_attribute_size,
             storage_size: props.allocated_size,

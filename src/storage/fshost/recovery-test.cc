@@ -53,7 +53,9 @@ TEST_F(FsRecoveryTest, EmptyPartitionRecoveryTest) {
   ASSERT_EQ(ramdisk_or.status_value(), ZX_OK);
 
   // Minfs should be automatically mounted.
-  ASSERT_TRUE(WaitForMount("minfs", VFS_TYPE_MINFS));
+  auto [fd, fs_type] = WaitForMount("minfs");
+  EXPECT_TRUE(fd);
+  EXPECT_TRUE(fs_type == VFS_TYPE_MINFS || fs_type == VFS_TYPE_FXFS);
 }
 
 }  // namespace

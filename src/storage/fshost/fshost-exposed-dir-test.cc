@@ -66,7 +66,9 @@ TEST_F(FshostExposedDirTest, ExposesDiagnosticsAndServicesForBlobfs) {
   auto ramdisk_or = storage::RamDisk::CreateWithVmo(std::move(vmo), kBlockSize);
   ASSERT_EQ(ramdisk_or.status_value(), ZX_OK);
 
-  ASSERT_TRUE(WaitForMount("blob", VFS_TYPE_BLOBFS));
+  auto [fd, fs_type] = WaitForMount("blob");
+  ASSERT_TRUE(fd);
+  EXPECT_EQ(fs_type, VFS_TYPE_BLOBFS);
 
   fidl::SynchronousInterfacePtr<fuchsia::io::Node> exposed_dir_client;
   ASSERT_EQ(

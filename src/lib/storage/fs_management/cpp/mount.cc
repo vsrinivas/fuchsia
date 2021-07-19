@@ -347,6 +347,11 @@ zx_status_t mount(int dev_fd, const char* mount_path, disk_format_t df,
     return status;
   }
 
+  // If no mount point is provided, just return success; the caller can get whatever they want from
+  // the export root.
+  if (mount_path == nullptr)
+    return ZX_OK;
+
   if (options->bind_to_namespace) {
     fdio_ns_t* ns;
     if ((status = fdio_ns_get_installed(&ns)) != ZX_OK) {
@@ -358,7 +363,6 @@ zx_status_t mount(int dev_fd, const char* mount_path, disk_format_t df,
     if (options->create_mountpoint) {
       return fs_management::MakeDirAndRemoteMount(mount_path, std::move(data_root));
     }
-
     return mount_root_handle(data_root.release(), mount_path);
   }
 }
