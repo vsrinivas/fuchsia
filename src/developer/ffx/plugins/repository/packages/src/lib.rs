@@ -67,10 +67,12 @@ async fn packages_impl<W: Write>(
 
         for repo in repos {
             rows.push(row!(
-                repo.name.unwrap_or("<unknown>".to_string()),
+                repo.name.as_deref().unwrap_or("<unknown>"),
                 repo.size
-                    .map(|s| s.file_size(file_size_opts::CONVENTIONAL).unwrap_or(format!("{}b", s)))
-                    .unwrap_or("<unknown>".to_string()),
+                    .map(|s| s
+                        .file_size(file_size_opts::CONVENTIONAL)
+                        .unwrap_or_else(|_| format!("{}b", s)))
+                    .unwrap_or_else(|| "<unknown>".to_string()),
                 repo.hash
                     .map(|s| {
                         if cmd.full_hash {
@@ -82,11 +84,11 @@ async fn packages_impl<W: Write>(
                             clone
                         }
                     })
-                    .unwrap_or("<unknown>".to_string()),
+                    .unwrap_or_else(|| "<unknown>".to_string()),
                 repo.modified
                     .and_then(|m| SystemTime::UNIX_EPOCH.checked_add(Duration::from_secs(m)))
                     .map(|m| DateTime::<Utc>::from(m).to_rfc2822())
-                    .unwrap_or(String::new())
+                    .unwrap_or_else(String::new)
             ));
         }
     }

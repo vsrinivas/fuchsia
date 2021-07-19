@@ -7,33 +7,68 @@ use {
     ffx_core::ffx_plugin,
     ffx_repository_list_args::ListCommand,
     fidl,
-    fidl_fuchsia_developer_bridge::{RepositoryIteratorMarker, RepositoryRegistryProxy},
+    fidl_fuchsia_developer_bridge::{
+        self as bridge, RepositoryIteratorMarker, RepositoryRegistryProxy,
+    },
+    prettytable::{cell, format::TableFormat, row, Row, Table},
     std::io::{stdout, Write},
 };
 
 #[ffx_plugin("ffx_repository", RepositoryRegistryProxy = "daemon::service")]
 pub async fn list(cmd: ListCommand, repos: RepositoryRegistryProxy) -> Result<()> {
-    list_impl(cmd, repos, stdout()).await
+    list_impl(cmd, repos, None, stdout()).await
 }
 
 async fn list_impl<W: Write>(
     _cmd: ListCommand,
     repos_proxy: RepositoryRegistryProxy,
+    table_format: Option<TableFormat>,
     mut writer: W,
 ) -> Result<()> {
     let (client, server) = fidl::endpoints::create_endpoints::<RepositoryIteratorMarker>()?;
     repos_proxy.list_repositories(server)?;
     let client = client.into_proxy()?;
 
+    let mut table = Table::new();
+    table.set_titles(row!("NAME", "TYPE", "EXTRA"));
+    if let Some(fmt) = table_format {
+        table.set_format(fmt);
+    }
+
+    let mut rows = vec![];
     loop {
         let repos = client.next().await?;
 
         if repos.is_empty() {
+            rows.sort_by_key(|r: &Row| r.get_cell(0).unwrap().get_content());
+            for row in rows.into_iter() {
+                table.add_row(row);
+            }
+            table.print(&mut writer)?;
             return Ok(());
         }
 
         for repo in repos {
-            writeln!(writer, "{}", repo.name)?;
+            let mut row = row!();
+
+            row.add_cell(cell!(repo.name));
+
+            match repo.spec {
+                bridge::RepositorySpec::FileSystem(filesystem_spec) => {
+                    row.add_cell(cell!("filesystem"));
+                    row.add_cell(cell!(filesystem_spec.path.as_deref().unwrap_or("unknown")));
+                }
+                bridge::RepositorySpec::Pm(pm_spec) => {
+                    row.add_cell(cell!("pm"));
+                    row.add_cell(cell!(pm_spec.path.as_deref().unwrap_or("unknown")));
+                }
+                bridge::RepositorySpecUnknown!() => {
+                    row.add_cell(cell!("<unknown>"));
+                    row.add_cell(cell!(""));
+                }
+            }
+
+            rows.push(row);
         }
     }
 }
@@ -43,11 +78,12 @@ mod test {
     use super::*;
     use {
         fidl_fuchsia_developer_bridge::{
-            FileSystemRepositorySpec, RepositoryConfig, RepositoryIteratorRequest,
-            RepositoryRegistryRequest, RepositorySpec,
+            FileSystemRepositorySpec, PmRepositorySpec, RepositoryConfig,
+            RepositoryIteratorRequest, RepositoryRegistryRequest, RepositorySpec,
         },
         fuchsia_async as fasync,
         futures::StreamExt,
+        prettytable::format::FormatBuilder,
     };
 
     #[fasync::run_singlethreaded(test)]
@@ -77,10 +113,10 @@ mod test {
                                                     },
                                                     &mut RepositoryConfig {
                                                         name: "Test2".to_owned(),
-                                                        spec: RepositorySpec::FileSystem(
-                                                            FileSystemRepositorySpec {
+                                                        spec: RepositorySpec::Pm(
+                                                            PmRepositorySpec {
                                                                 path: Some("c/d".to_owned()),
-                                                                ..FileSystemRepositorySpec::EMPTY
+                                                                ..PmRepositorySpec::EMPTY
                                                             },
                                                         ),
                                                     },
@@ -101,7 +137,17 @@ mod test {
             .detach();
         });
         let mut out = Vec::<u8>::new();
-        list_impl(ListCommand {}, repos, &mut out).await.unwrap();
-        assert_eq!(&String::from_utf8_lossy(&out), "Test1\nTest2\n");
+        list_impl(
+            ListCommand {},
+            repos,
+            Some(FormatBuilder::new().padding(1, 1).build()),
+            &mut out,
+        )
+        .await
+        .unwrap();
+        assert_eq!(
+            &String::from_utf8_lossy(&out),
+            " NAME   TYPE        EXTRA \n Test1  filesystem  a/b \n Test2  pm          c/d \n"
+        );
     }
 }

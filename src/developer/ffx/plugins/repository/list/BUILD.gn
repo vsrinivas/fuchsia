@@ -15,6 +15,7 @@ ffx_plugin("ffx_repository_list") {
     "//src/lib/fidl/rust/fidl",
     "//src/sys/pkg/lib/tuf",
     "//third_party/rust_crates:async-trait",
+    "//third_party/rust_crates:prettytable-rs",
   ]
 
   sources = [
