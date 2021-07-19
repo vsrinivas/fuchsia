@@ -766,13 +766,6 @@ class MaxOutOfLineVisitor final : public TypeShapeVisitor<DataSize> {
       }
     }
 
-    const DataSize num_bitmasks = DataSize(max_unreserved_index + 64) / 64;
-    constexpr DataSize kBitmaskSize = 8;
-    DataSize all_bitmasks_size = 0;
-    if (wire_format() == WireFormat::kV2 || wire_format() == WireFormat::kV2Header) {
-      all_bitmasks_size = kBitmaskSize * num_bitmasks;
-    }
-
     const size_t envelope_array_size = max_unreserved_index == -1 ? 0 : max_unreserved_index + 1;
 
     DataSize envelope_size = 0;
@@ -786,7 +779,7 @@ class MaxOutOfLineVisitor final : public TypeShapeVisitor<DataSize> {
         envelope_size = 8;
         break;
     }
-    return DataSize(envelope_array_size) * envelope_size + all_bitmasks_size + max_out_of_line;
+    return DataSize(envelope_array_size) * envelope_size + max_out_of_line;
   }
 
   std::any Visit(const flat::Table::Member& object) override {

@@ -168,7 +168,7 @@
         "alignment": 8,
         "depth": 2,
         "max_handles": 0,
-        "max_out_of_line": 24,
+        "max_out_of_line": 16,
         "has_padding": false,
         "has_flexible_envelope": true
       }
@@ -218,7 +218,7 @@
         "alignment": 8,
         "depth": 2,
         "max_handles": 0,
-        "max_out_of_line": 416,
+        "max_out_of_line": 408,
         "has_padding": false,
         "has_flexible_envelope": true
       }

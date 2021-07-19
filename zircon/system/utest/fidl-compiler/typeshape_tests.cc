@@ -413,7 +413,7 @@ table TableWithBoolAndU64 {
                                     Expected{
                                         .inline_size = 16,
                                         .alignment = 8,
-                                        .max_out_of_line = 16,
+                                        .max_out_of_line = 8,
                                         .depth = 2,
                                         .has_padding = true,
                                         .has_flexible_envelope = true,
@@ -433,7 +433,7 @@ table TableWithBoolAndU64 {
                                     Expected{
                                         .inline_size = 16,
                                         .alignment = 8,
-                                        .max_out_of_line = 24,
+                                        .max_out_of_line = 16,
                                         .depth = 2,
                                         .has_padding = true,
                                         .has_flexible_envelope = true,
@@ -453,7 +453,7 @@ table TableWithBoolAndU64 {
                                     Expected{
                                         .inline_size = 16,
                                         .alignment = 8,
-                                        .max_out_of_line = 24,
+                                        .max_out_of_line = 16,
                                         .depth = 2,
                                         .has_padding = true,
                                         .has_flexible_envelope = true,
@@ -473,7 +473,7 @@ table TableWithBoolAndU64 {
                                     Expected{
                                         .inline_size = 16,
                                         .alignment = 8,
-                                        .max_out_of_line = 32,
+                                        .max_out_of_line = 24,
                                         .depth = 2,
                                         .has_padding = true,
                                         .has_flexible_envelope = true,
@@ -530,7 +530,7 @@ table OneReserved {
                                     Expected{
                                         .inline_size = 16,
                                         .alignment = 8,
-                                        .max_out_of_line = 32,
+                                        .max_out_of_line = 24,
                                         .depth = 2,
                                         .has_padding = true,
                                         .has_flexible_envelope = true,
@@ -550,7 +550,7 @@ table OneReserved {
                                     Expected{
                                         .inline_size = 16,
                                         .alignment = 8,
-                                        .max_out_of_line = 32,
+                                        .max_out_of_line = 24,
                                         .depth = 2,
                                         .has_padding = true,
                                         .has_flexible_envelope = true,
@@ -570,7 +570,7 @@ table OneReserved {
                                     Expected{
                                         .inline_size = 16,
                                         .alignment = 8,
-                                        .max_out_of_line = 24,
+                                        .max_out_of_line = 16,
                                         .depth = 2,
                                         .has_padding = true,
                                         .has_flexible_envelope = true,
@@ -626,7 +626,7 @@ resource table TableWithOneHandle {
                                     Expected{
                                         .inline_size = 16,
                                         .alignment = 8,
-                                        .max_out_of_line = 16,
+                                        .max_out_of_line = 8,
                                         .max_handles = 1,
                                         .depth = 2,
                                         .has_padding = true,
@@ -810,7 +810,7 @@ table TableWithOptionalTableWithBoolAndU64 {
                                     Expected{
                                         .inline_size = 16,
                                         .alignment = 8,
-                                        .max_out_of_line = 16,
+                                        .max_out_of_line = 8,
                                         .depth = 2,
                                         .has_padding = true,
                                         .has_flexible_envelope = true,
@@ -830,7 +830,7 @@ table TableWithOptionalTableWithBoolAndU64 {
                                     Expected{
                                         .inline_size = 16,
                                         .alignment = 8,
-                                        .max_out_of_line = 48,
+                                        .max_out_of_line = 32,
                                         .depth = 4,
                                         .has_padding = true,
                                         .has_flexible_envelope = true,
@@ -850,7 +850,7 @@ table TableWithOptionalTableWithBoolAndU64 {
                                     Expected{
                                         .inline_size = 16,
                                         .alignment = 8,
-                                        .max_out_of_line = 16,
+                                        .max_out_of_line = 8,
                                         .depth = 2,
                                         .has_padding = true,
                                         .has_flexible_envelope = true,
@@ -870,7 +870,7 @@ table TableWithOptionalTableWithBoolAndU64 {
                                     Expected{
                                         .inline_size = 16,
                                         .alignment = 8,
-                                        .max_out_of_line = 56,
+                                        .max_out_of_line = 40,
                                         .depth = 4,
                                         .has_padding = true,
                                         .has_flexible_envelope = true,
@@ -878,14 +878,23 @@ table TableWithOptionalTableWithBoolAndU64 {
 
   auto bool_and_u32 = test_library.LookupTable("TableWithOptionalBoolAndU32");
   ASSERT_NOT_NULL(bool_and_u32);
-  ASSERT_NO_FAILURES(CheckTypeShape(bool_and_u32, Expected{
-                                                      .inline_size = 16,
-                                                      .alignment = 8,
-                                                      .max_out_of_line = 24,
-                                                      .depth = 2,
-                                                      .has_padding = true,
-                                                      .has_flexible_envelope = true,
-                                                  }));
+  ASSERT_NO_FAILURES(CheckTypeShape(bool_and_u32,
+                                    Expected{
+                                        .inline_size = 16,
+                                        .alignment = 8,
+                                        .max_out_of_line = 24,
+                                        .depth = 2,
+                                        .has_padding = true,
+                                        .has_flexible_envelope = true,
+                                    },
+                                    Expected{
+                                        .inline_size = 16,
+                                        .alignment = 8,
+                                        .max_out_of_line = 16,
+                                        .depth = 2,
+                                        .has_padding = true,
+                                        .has_flexible_envelope = true,
+                                    }));
 
   auto table_with_bool_and_u32 = test_library.LookupTable("TableWithOptionalTableWithBoolAndU32");
   ASSERT_NOT_NULL(table_with_bool_and_u32);
@@ -901,7 +910,7 @@ table TableWithOptionalTableWithBoolAndU64 {
                                     Expected{
                                         .inline_size = 16,
                                         .alignment = 8,
-                                        .max_out_of_line = 56,
+                                        .max_out_of_line = 40,
                                         .depth = 4,
                                         .has_padding = true,
                                         .has_flexible_envelope = true,
@@ -909,14 +918,23 @@ table TableWithOptionalTableWithBoolAndU64 {
 
   auto bool_and_u64 = test_library.LookupTable("TableWithOptionalBoolAndU64");
   ASSERT_NOT_NULL(bool_and_u64);
-  ASSERT_NO_FAILURES(CheckTypeShape(bool_and_u64, Expected{
-                                                      .inline_size = 16,
-                                                      .alignment = 8,
-                                                      .max_out_of_line = 32,
-                                                      .depth = 2,
-                                                      .has_padding = true,
-                                                      .has_flexible_envelope = true,
-                                                  }));
+  ASSERT_NO_FAILURES(CheckTypeShape(bool_and_u64,
+                                    Expected{
+                                        .inline_size = 16,
+                                        .alignment = 8,
+                                        .max_out_of_line = 32,
+                                        .depth = 2,
+                                        .has_padding = true,
+                                        .has_flexible_envelope = true,
+                                    },
+                                    Expected{
+                                        .inline_size = 16,
+                                        .alignment = 8,
+                                        .max_out_of_line = 24,
+                                        .depth = 2,
+                                        .has_padding = true,
+                                        .has_flexible_envelope = true,
+                                    }));
 
   auto table_with_bool_and_u64 = test_library.LookupTable("TableWithOptionalTableWithBoolAndU64");
   ASSERT_NOT_NULL(table_with_bool_and_u64);
@@ -932,7 +950,7 @@ table TableWithOptionalTableWithBoolAndU64 {
                                     Expected{
                                         .inline_size = 16,
                                         .alignment = 8,
-                                        .max_out_of_line = 64,
+                                        .max_out_of_line = 48,
                                         .depth = 4,
                                         .has_padding = true,
                                         .has_flexible_envelope = true,
@@ -1059,7 +1077,7 @@ table TableWithOptionalUnion {
                                     Expected{
                                         .inline_size = 16,
                                         .alignment = 8,
-                                        .max_out_of_line = 48,
+                                        .max_out_of_line = 40,
                                         .depth = 3,
                                         .has_padding = true,
                                         .has_flexible_envelope = true,
@@ -1256,14 +1274,23 @@ table TableWithUnboundedVectors {
 
   auto table_with_padded_vector = test_library.LookupTable("TableWithPaddedVector");
   ASSERT_NOT_NULL(table_with_padded_vector);
-  ASSERT_NO_FAILURES(CheckTypeShape(table_with_padded_vector, Expected{
-                                                                  .inline_size = 16,
-                                                                  .alignment = 8,
-                                                                  .max_out_of_line = 48,
-                                                                  .depth = 3,
-                                                                  .has_padding = true,
-                                                                  .has_flexible_envelope = true,
-                                                              }));
+  ASSERT_NO_FAILURES(CheckTypeShape(table_with_padded_vector,
+                                    Expected{
+                                        .inline_size = 16,
+                                        .alignment = 8,
+                                        .max_out_of_line = 48,
+                                        .depth = 3,
+                                        .has_padding = true,
+                                        .has_flexible_envelope = true,
+                                    },
+                                    Expected{
+                                        .inline_size = 16,
+                                        .alignment = 8,
+                                        .max_out_of_line = 40,
+                                        .depth = 3,
+                                        .has_padding = true,
+                                        .has_flexible_envelope = true,
+                                    }));
 
   auto table_with_unbounded_vector = test_library.LookupTable("TableWithUnboundedVector");
   ASSERT_NOT_NULL(table_with_unbounded_vector);
@@ -1412,7 +1439,7 @@ resource table TableWithHandleStructVector {
                                     Expected{
                                         .inline_size = 16,
                                         .alignment = 8,
-                                        .max_out_of_line = 256,
+                                        .max_out_of_line = 192,
                                         .max_handles = 8,
                                         .depth = 3,
                                         .has_padding = true,
@@ -1421,16 +1448,25 @@ resource table TableWithHandleStructVector {
 
   auto table_with_handle_struct_vector = test_library.LookupTable("TableWithHandleStructVector");
   ASSERT_NOT_NULL(table_with_handle_struct_vector);
-  ASSERT_NO_FAILURES(
-      CheckTypeShape(table_with_handle_struct_vector, Expected{
-                                                          .inline_size = 16,
-                                                          .alignment = 8,
-                                                          .max_out_of_line = 64,
-                                                          .max_handles = 8,
-                                                          .depth = 3,
-                                                          .has_padding = true,
-                                                          .has_flexible_envelope = true,
-                                                      }));
+  ASSERT_NO_FAILURES(CheckTypeShape(table_with_handle_struct_vector,
+                                    Expected{
+                                        .inline_size = 16,
+                                        .alignment = 8,
+                                        .max_out_of_line = 64,
+                                        .max_handles = 8,
+                                        .depth = 3,
+                                        .has_padding = true,
+                                        .has_flexible_envelope = true,
+                                    },
+                                    Expected{
+                                        .inline_size = 16,
+                                        .alignment = 8,
+                                        .max_out_of_line = 56,
+                                        .max_handles = 8,
+                                        .depth = 3,
+                                        .has_padding = true,
+                                        .has_flexible_envelope = true,
+                                    }));
 }
 
 TEST(TypeshapeTests, GoodStrings) {
@@ -1479,14 +1515,23 @@ table TableWithUnboundedString {
 
   auto table_with_short_string = test_library.LookupTable("TableWithShortString");
   ASSERT_NOT_NULL(table_with_short_string);
-  ASSERT_NO_FAILURES(CheckTypeShape(table_with_short_string, Expected{
-                                                                 .inline_size = 16,
-                                                                 .alignment = 8,
-                                                                 .max_out_of_line = 40,
-                                                                 .depth = 3,
-                                                                 .has_padding = true,
-                                                                 .has_flexible_envelope = true,
-                                                             }));
+  ASSERT_NO_FAILURES(CheckTypeShape(table_with_short_string,
+                                    Expected{
+                                        .inline_size = 16,
+                                        .alignment = 8,
+                                        .max_out_of_line = 40,
+                                        .depth = 3,
+                                        .has_padding = true,
+                                        .has_flexible_envelope = true,
+                                    },
+                                    Expected{
+                                        .inline_size = 16,
+                                        .alignment = 8,
+                                        .max_out_of_line = 32,
+                                        .depth = 3,
+                                        .has_padding = true,
+                                        .has_flexible_envelope = true,
+                                    }));
 
   auto table_with_unbounded_string = test_library.LookupTable("TableWithUnboundedString");
   ASSERT_NOT_NULL(table_with_unbounded_string);
@@ -1533,14 +1578,23 @@ table TableWithAnInt32ArrayNoPadding {
 
   auto table_with_an_array = test_library.LookupTable("TableWithAnArray");
   ASSERT_NOT_NULL(table_with_an_array);
-  ASSERT_NO_FAILURES(CheckTypeShape(table_with_an_array, Expected{
-                                                             .inline_size = 16,
-                                                             .alignment = 8,
-                                                             .max_out_of_line = 56,
-                                                             .depth = 2,
-                                                             .has_padding = false,
-                                                             .has_flexible_envelope = true,
-                                                         }));
+  ASSERT_NO_FAILURES(CheckTypeShape(table_with_an_array,
+                                    Expected{
+                                        .inline_size = 16,
+                                        .alignment = 8,
+                                        .max_out_of_line = 56,
+                                        .depth = 2,
+                                        .has_padding = false,
+                                        .has_flexible_envelope = true,
+                                    },
+                                    Expected{
+                                        .inline_size = 16,
+                                        .alignment = 8,
+                                        .max_out_of_line = 48,
+                                        .depth = 2,
+                                        .has_padding = false,
+                                        .has_flexible_envelope = true,
+                                    }));
 
   auto table_with_an_int32_array_with_padding =
       test_library.LookupTable("TableWithAnInt32ArrayWithPadding");
@@ -1551,6 +1605,14 @@ table TableWithAnInt32ArrayNoPadding {
                          .inline_size = 16,
                          .alignment = 8,
                          .max_out_of_line = 32,  // 16 table header + ALIGN(4 * 3 array) = 32
+                         .depth = 2,
+                         .has_padding = true,
+                         .has_flexible_envelope = true,
+                     },
+                     Expected{
+                         .inline_size = 16,
+                         .alignment = 8,
+                         .max_out_of_line = 24,
                          .depth = 2,
                          .has_padding = true,
                          .has_flexible_envelope = true,
@@ -1565,6 +1627,14 @@ table TableWithAnInt32ArrayNoPadding {
                          .inline_size = 16,
                          .alignment = 8,
                          .max_out_of_line = 32,  // 16 table header + ALIGN(4 * 4 array) = 32
+                         .depth = 2,
+                         .has_padding = false,
+                         .has_flexible_envelope = true,
+                     },
+                     Expected{
+                         .inline_size = 16,
+                         .alignment = 8,
+                         .max_out_of_line = 24,
                          .depth = 2,
                          .has_padding = false,
                          .has_flexible_envelope = true,
@@ -1605,15 +1675,25 @@ resource table TableWithNullableHandleArray {
 
   auto table_with_handle_array = test_library.LookupTable("TableWithHandleArray");
   ASSERT_NOT_NULL(table_with_handle_array);
-  ASSERT_NO_FAILURES(CheckTypeShape(table_with_handle_array, Expected{
-                                                                 .inline_size = 16,
-                                                                 .alignment = 8,
-                                                                 .max_out_of_line = 48,
-                                                                 .max_handles = 8,
-                                                                 .depth = 2,
-                                                                 .has_padding = false,
-                                                                 .has_flexible_envelope = true,
-                                                             }));
+  ASSERT_NO_FAILURES(CheckTypeShape(table_with_handle_array,
+                                    Expected{
+                                        .inline_size = 16,
+                                        .alignment = 8,
+                                        .max_out_of_line = 48,
+                                        .max_handles = 8,
+                                        .depth = 2,
+                                        .has_padding = false,
+                                        .has_flexible_envelope = true,
+                                    },
+                                    Expected{
+                                        .inline_size = 16,
+                                        .alignment = 8,
+                                        .max_out_of_line = 40,
+                                        .max_handles = 8,
+                                        .depth = 2,
+                                        .has_padding = false,
+                                        .has_flexible_envelope = true,
+                                    }));
 
   auto nullable_handle_array = test_library.LookupStruct("NullableHandleArray");
   ASSERT_NOT_NULL(nullable_handle_array);
@@ -1625,16 +1705,25 @@ resource table TableWithNullableHandleArray {
 
   auto table_with_nullable_handle_array = test_library.LookupTable("TableWithNullableHandleArray");
   ASSERT_NOT_NULL(table_with_nullable_handle_array);
-  ASSERT_NO_FAILURES(
-      CheckTypeShape(table_with_nullable_handle_array, Expected{
-                                                           .inline_size = 16,
-                                                           .alignment = 8,
-                                                           .max_out_of_line = 48,
-                                                           .max_handles = 8,
-                                                           .depth = 2,
-                                                           .has_padding = false,
-                                                           .has_flexible_envelope = true,
-                                                       }));
+  ASSERT_NO_FAILURES(CheckTypeShape(table_with_nullable_handle_array,
+                                    Expected{
+                                        .inline_size = 16,
+                                        .alignment = 8,
+                                        .max_out_of_line = 48,
+                                        .max_handles = 8,
+                                        .depth = 2,
+                                        .has_padding = false,
+                                        .has_flexible_envelope = true,
+                                    },
+                                    Expected{
+                                        .inline_size = 16,
+                                        .alignment = 8,
+                                        .max_out_of_line = 40,
+                                        .max_handles = 8,
+                                        .depth = 2,
+                                        .has_padding = false,
+                                        .has_flexible_envelope = true,
+                                    }));
 }
 
 // TODO(pascallouis): write an "xunions_with_handles" test case.

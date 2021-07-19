@@ -126,7 +126,7 @@
         "alignment": 8,
         "depth": 2,
         "max_handles": 0,
-        "max_out_of_line": 64,
+        "max_out_of_line": 56,
         "has_padding": false,
         "has_flexible_envelope": true
       }
@@ -182,7 +182,7 @@
         "alignment": 8,
         "depth": 2,
         "max_handles": 0,
-        "max_out_of_line": 24,
+        "max_out_of_line": 16,
         "has_padding": false,
         "has_flexible_envelope": true
       }
@@ -298,7 +298,7 @@
         "alignment": 8,
         "depth": 2,
         "max_handles": 0,
-        "max_out_of_line": 80,
+        "max_out_of_line": 72,
         "has_padding": false,
         "has_flexible_envelope": true
       }
@@ -374,7 +374,7 @@
         "alignment": 8,
         "depth": 2,
         "max_handles": 0,
-        "max_out_of_line": 56,
+        "max_out_of_line": 48,
         "has_padding": false,
         "has_flexible_envelope": true
       }
@@ -1395,7 +1395,7 @@
         "alignment": 8,
         "depth": 2,
         "max_handles": 0,
-        "max_out_of_line": 1072,
+        "max_out_of_line": 1056,
         "has_padding": false,
         "has_flexible_envelope": true
       }
