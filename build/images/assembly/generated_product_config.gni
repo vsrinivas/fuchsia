@@ -39,6 +39,7 @@ template("generated_product_config") {
     kernel_image_metadata = "${target_name}_kernel_image_metadata"
     kernel_cmdline_args = "${target_name}_kernel_cmdline_args"
     bootfs_entries_metadata = "${target_name}_bootfs_entries_metadata"
+    boot_args = "${target_name}_boot_args"
   }
 
   # Files produced by targets in this file.
@@ -54,6 +55,7 @@ template("generated_product_config") {
         "$target_out_dir/${target_name}_kernel_cmdline_args.json"
     bootfs_entries_metadata =
         "$target_out_dir/${target_name}_bootfs_entries.gn_meta.json"
+    boot_args = "$target_out_dir/${target_name}_boot_args"
   }
 
   ####
@@ -123,6 +125,16 @@ template("generated_product_config") {
       outputs = [ files.extra_base_deps_list ]
       output_conversion = "json"
       deps = invoker.base_packages
+    }
+  }
+
+  generated_file(labels.boot_args) {
+    outputs = [ files.boot_args ]
+    output_conversion = "json"
+    if (defined(invoker.boot_args)) {
+      contents = invoker.boot_args
+    } else {
+      contents = []
     }
   }
 
@@ -227,9 +239,11 @@ template("generated_product_config") {
     inputs += [
       files.kernel_image_metadata,
       files.kernel_cmdline_args,
+      files.boot_args,
       files.bootfs_entries_metadata,
     ]
     deps += [
+      ":${labels.boot_args}",
       ":${labels.bootfs_entries_metadata}",
       ":${labels.kernel_cmdline_args}",
       ":${labels.kernel_image_metadata}",
@@ -240,6 +254,8 @@ template("generated_product_config") {
       rebase_path(files.kernel_image_metadata, root_build_dir),
       "--kernel-cmdline",
       rebase_path(files.kernel_cmdline_args, root_build_dir),
+      "--boot-args",
+      rebase_path(files.boot_args, root_build_dir),
       "--bootfs-entries",
       rebase_path(files.bootfs_entries_metadata, root_build_dir),
       "--output",

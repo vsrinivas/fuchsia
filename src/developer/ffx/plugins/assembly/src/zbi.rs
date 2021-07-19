@@ -37,6 +37,11 @@ pub fn construct_zbi(
         // Instruct devmgr that a /system volume is required.
         zbi_builder.add_boot_arg("devmgr.require-system=true");
 
+        // Add the additional boot args.
+        for boot_arg in &product.boot_args {
+            zbi_builder.add_boot_arg(boot_arg);
+        }
+
         // Specify how to launch pkgfs: bin/pkgsvr <base-merkle>
         zbi_builder
             .add_boot_arg(&format!("zircon.system.pkgfs.cmd=bin/pkgsvr+{}", &base_package.merkle));

@@ -23,6 +23,7 @@ def main():
         '--kernel-cmdline', type=argparse.FileType('r'), required=True)
     parser.add_argument(
         '--kernel-image-metadata', type=argparse.FileType('r'), required=True)
+    parser.add_argument('--boot-args', type=argparse.FileType('r'))
     parser.add_argument(
         '--bootfs-entries', type=argparse.FileType('r'), required=True)
     parser.add_argument('--output', type=argparse.FileType('w'), required=True)
@@ -69,6 +70,10 @@ def main():
     ]
     config["kernel_image"] = kernel_path
     config["kernel_cmdline"] = json.load(args.kernel_cmdline)
+
+    if args.boot_args is not None:
+        config["boot_args"] = json.load(args.boot_args)
+
     config["bootfs_files"] = json.load(args.bootfs_entries)
 
     json.dump(config, args.output, indent=2)

@@ -43,6 +43,10 @@ pub struct ProductConfig {
     #[serde(default)]
     pub kernel_cmdline: Vec<String>,
 
+    /// The list of additional boot args to add.
+    #[serde(default)]
+    pub boot_args: Vec<String>,
+
     /// The set of files to be placed in BOOTFS in the ZBI.
     #[serde(default)]
     pub bootfs_files: Vec<FileEntry>,
@@ -342,6 +346,7 @@ mod tests {
               "cache_packages": ["package3", "package4"],
               "kernel_image": "path/to/kernel",
               "kernel_cmdline": ["arg1", "arg2"],
+              "boot_args": ["arg1", "arg2"],
               "bootfs_files": [
                 {
                     "source": "path/to/source",
