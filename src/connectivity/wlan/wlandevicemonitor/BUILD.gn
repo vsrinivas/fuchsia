@@ -6,6 +6,18 @@ import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
 import("//third_party/cobalt/metrics_registry.gni")
 
+group("components") {
+  deps = [
+    ":isolated_dev_mgr_wlandevicemonitor",
+    ":wlandevicemonitor",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":wlandevicemonitor-tests" ]
+}
+
 metrics_registry("wlan_metrics_registry") {
   # This must match the ID of our Cobalt project as specified in:
   # third_party/cobalt_config/projects.yaml
@@ -17,55 +29,66 @@ metrics_registry("wlan_metrics_registry") {
   generate_binarypb = false
 }
 
+wlandevicemonitor_deps = [
+  "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+  "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common-rustc",
+  "//sdk/fidl/fuchsia.wlan.device:fuchsia.wlan.device-rustc",
+  "//sdk/fidl/fuchsia.wlan.device.service:fuchsia.wlan.device.service-rustc",
+  "//sdk/fidl/fuchsia.wlan.internal:fuchsia.wlan.internal-rustc",
+  "//sdk/fidl/fuchsia.wlan.mlme:fuchsia.wlan.mlme-rustc",
+  "//sdk/fidl/fuchsia.wlan.tap:fuchsia.wlan.tap-rustc",
+  "//src/connectivity/wlan/lib/common/rust/:wlan-common",
+  "//src/connectivity/wlan/lib/isolated-devmgr",
+  "//src/connectivity/wlan/lib/wlan_dev",
+  "//src/lib/diagnostics/inspect/contrib/rust",
+  "//src/lib/diagnostics/inspect/runtime/rust",
+  "//src/lib/diagnostics/inspect/rust",
+  "//src/lib/fdio/rust:fdio",
+  "//src/lib/fidl/rust/fidl",
+  "//src/lib/fuchsia-async",
+  "//src/lib/fuchsia-component",
+  "//src/lib/storage/fuchsia-vfs-watcher",
+  "//src/lib/syslog/rust:syslog",
+  "//src/lib/zerocopy",
+  "//src/lib/zircon/rust:fuchsia-zircon",
+  "//third_party/rust_crates:anyhow",
+  "//third_party/rust_crates:argh",
+  "//third_party/rust_crates:futures",
+  "//third_party/rust_crates:log",
+  "//third_party/rust_crates:parking_lot",
+  "//third_party/rust_crates:pin-utils",
+  "//third_party/rust_crates:tempfile",
+  "//third_party/rust_crates:test-case",
+  "//third_party/rust_crates:void",
+]
+
+wlandevicemonitor_srcs = [
+  "src/device.rs",
+  "src/device_watch.rs",
+  "src/inspect.rs",
+  "src/main.rs",
+  "src/service.rs",
+  "src/watchable_map.rs",
+  "src/watcher_service.rs",
+]
+
 rustc_binary("bin") {
   name = "wlandevicemonitor"
   with_unit_tests = true
   edition = "2018"
 
-  deps = [
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
-    "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common-rustc",
-    "//sdk/fidl/fuchsia.wlan.device:fuchsia.wlan.device-rustc",
-    "//sdk/fidl/fuchsia.wlan.device.service:fuchsia.wlan.device.service-rustc",
-    "//sdk/fidl/fuchsia.wlan.internal:fuchsia.wlan.internal-rustc",
-    "//sdk/fidl/fuchsia.wlan.mlme:fuchsia.wlan.mlme-rustc",
-    "//sdk/fidl/fuchsia.wlan.tap:fuchsia.wlan.tap-rustc",
-    "//src/connectivity/wlan/lib/common/rust/:wlan-common",
-    "//src/connectivity/wlan/lib/isolated-devmgr",
-    "//src/connectivity/wlan/lib/wlan_dev",
-    "//src/lib/diagnostics/inspect/contrib/rust",
-    "//src/lib/diagnostics/inspect/runtime/rust",
-    "//src/lib/diagnostics/inspect/rust",
-    "//src/lib/fdio/rust:fdio",
-    "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia-async",
-    "//src/lib/fuchsia-component",
-    "//src/lib/storage/fuchsia-vfs-watcher",
-    "//src/lib/syslog/rust:syslog",
-    "//src/lib/zerocopy",
-    "//src/lib/zircon/rust:fuchsia-zircon",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:argh",
-    "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:log",
-    "//third_party/rust_crates:parking_lot",
-    "//third_party/rust_crates:pin-utils",
-    "//third_party/rust_crates:tempfile",
-    "//third_party/rust_crates:test-case",
-    "//third_party/rust_crates:void",
-  ]
-
+  sources = wlandevicemonitor_srcs
+  deps = wlandevicemonitor_deps
   test_deps = [ "//src/connectivity/wlan/testing/wlantap-client" ]
+}
 
-  sources = [
-    "src/device.rs",
-    "src/device_watch.rs",
-    "src/inspect.rs",
-    "src/main.rs",
-    "src/service.rs",
-    "src/watchable_map.rs",
-    "src/watcher_service.rs",
-  ]
+rustc_binary("isolated_dev_mgr_bin") {
+  name = "isolated_dev_mgr_wlandevicemonitor"
+  edition = "2018"
+
+  sources = wlandevicemonitor_srcs
+  deps = wlandevicemonitor_deps
+  features = [ "isolated_dev_mgr" ]
 }
 
 fuchsia_package_with_single_component("wlandevicemonitor") {
@@ -74,6 +97,14 @@ fuchsia_package_with_single_component("wlandevicemonitor") {
     ":wlan_metrics_registry",
   ]
   manifest = "meta/wlandevicemonitor.cmx"
+}
+
+fuchsia_package_with_single_component("isolated_dev_mgr_wlandevicemonitor") {
+  deps = [
+    ":isolated_dev_mgr_bin",
+    ":wlan_metrics_registry",
+  ]
+  manifest = "meta/isolated_dev_mgr_wlandevicemonitor.cmx"
 }
 
 fuchsia_unittest_package("wlandevicemonitor-tests") {

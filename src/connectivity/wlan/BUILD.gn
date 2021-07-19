@@ -88,7 +88,8 @@ group("tests") {
     "wlancfg:wlancfg-tests",
     "wlancfg:wlancfg-v1",
     "wlancfg/tool:donut-tests",
-    "wlandevicemonitor:wlandevicemonitor-tests",
+    "wlandevicemonitor:isolated_dev_mgr_wlandevicemonitor",
+    "wlandevicemonitor:tests",
     "wlanstack:wlanstack-tests",
   ]
 }

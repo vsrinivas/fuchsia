@@ -3,7 +3,7 @@
         "syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "bin/wlandevicemonitor"
+        "binary": "bin/isolated_dev_mgr_wlandevicemonitor"
     },
     "sandbox": {
         "dev": [
@@ -12,7 +12,8 @@
         ],
         "services": [
             "fuchsia.cobalt.LoggerFactory",
-            "fuchsia.wlan.device.service.DeviceService"
+            "fuchsia.wlan.device.service.DeviceService",
+            "fuchsia.wlan.devmgr.IsolatedDevmgr"
         ]
     }
 }

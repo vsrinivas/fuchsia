@@ -11,7 +11,6 @@ mod watcher_service;
 
 use {
     anyhow::Error,
-    argh::FromArgs,
     fidl_fuchsia_wlan_device_service as fidl_svc, fuchsia_async as fasync,
     fuchsia_component::{
         client::connect_to_protocol,
@@ -19,21 +18,15 @@ use {
     },
     fuchsia_inspect::Inspector,
     fuchsia_syslog as syslog,
-    futures::{future::try_join3, FutureExt, StreamExt, TryFutureExt},
+    futures::{
+        future::{try_join3, BoxFuture},
+        StreamExt, TryFutureExt,
+    },
     log::{error, info},
     std::sync::Arc,
 };
 
 const MAX_LOG_LEVEL: log::LevelFilter = log::LevelFilter::Info;
-
-/// Configuration for wlan-monitor service.
-#[derive(FromArgs, Clone, Debug, Default)]
-pub struct ServiceCfg {
-    /// if devices are spawned in an isolated devmgr and device_watcher should watch devices
-    /// in the isolated devmgr (for wlan-hw-sim based tests)
-    #[argh(switch)]
-    pub isolated_devmgr: bool,
-}
 
 async fn serve_fidl(
     mut fs: ServiceFs<ServiceObjLocal<'_, ()>>,
@@ -58,14 +51,35 @@ async fn serve_fidl(
     Ok(())
 }
 
+// Depending on the build configuration, compile in support for either the isolated device manager
+// or the real device environment.  This eliminates the need for having test code in the production
+// build of wlandevicemonitor.
+#[cfg(feature = "isolated_dev_mgr")]
+fn serve_phys(
+    phys: Arc<device::PhyMap>,
+    inspect_tree: Arc<inspect::WlanMonitorTree>,
+) -> BoxFuture<'static, Result<void::Void, Error>> {
+    info!("Serving IsolatedDevMgr environment");
+    let fut = device::serve_phys::<isolated_devmgr::IsolatedDeviceEnv>(phys, inspect_tree);
+    Box::pin(fut)
+}
+
+#[cfg(not(feature = "isolated_dev_mgr"))]
+fn serve_phys(
+    phys: Arc<device::PhyMap>,
+    inspect_tree: Arc<inspect::WlanMonitorTree>,
+) -> BoxFuture<'static, Result<void::Void, Error>> {
+    info!("Serving real device environment");
+    let fut = device::serve_phys::<wlan_dev::RealDeviceEnv>(phys, inspect_tree);
+    Box::pin(fut)
+}
+
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     syslog::init().expect("Syslog init should not fail");
     log::set_max_level(MAX_LOG_LEVEL);
 
     info!("Starting");
-    let cfg: ServiceCfg = argh::from_env();
-    info!("{:?}", cfg);
 
     let (phys, phy_events) = device::PhyMap::new();
     let phys = Arc::new(phys);
@@ -83,16 +97,7 @@ async fn main() -> Result<(), Error> {
     inspect_runtime::serve(&inspector, &mut fs)?;
     let inspect_tree = Arc::new(inspect::WlanMonitorTree::new(inspector));
 
-    // TODO(fxbug.dev/45790): this should not depend on isolated_devmgr; the two functionalities should
-    // live in separate binaries to avoid leaking test dependencies into production builds.
-    let phy_server = if cfg.isolated_devmgr {
-        device::serve_phys::<isolated_devmgr::IsolatedDeviceEnv>(phys.clone(), inspect_tree.clone())
-            .left_future()
-    } else {
-        device::serve_phys::<wlan_dev::RealDeviceEnv>(phys.clone(), inspect_tree.clone())
-            .right_future()
-    };
-
+    let phy_server = serve_phys(phys.clone(), inspect_tree.clone());
     let fidl_fut = serve_fidl(fs, phys, ifaces, watcher_service, dev_svc);
 
     let ((), (), ()) = try_join3(

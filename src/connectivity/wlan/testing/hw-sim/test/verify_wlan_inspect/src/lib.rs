@@ -181,8 +181,9 @@ async fn verify_wlan_inspect() {
             },
         }
     });
-    let monitor_hierarchy =
-        get_inspect_hierarchy("wlandevicemonitor.cmx").await.expect("expect Inspect data");
+    let monitor_hierarchy = get_inspect_hierarchy("isolated_dev_mgr_wlandevicemonitor.cmx")
+        .await
+        .expect("expect Inspect data");
     assert_data_tree!(monitor_hierarchy, root: contains {
         device_events: contains {
             "0": contains {},
@@ -262,8 +263,9 @@ async fn verify_wlan_inspect() {
             },
         }
     });
-    let monitor_hierarchy =
-        get_inspect_hierarchy("wlandevicemonitor.cmx").await.expect("expect Inspect data");
+    let monitor_hierarchy = get_inspect_hierarchy("isolated_dev_mgr_wlandevicemonitor.cmx")
+        .await
+        .expect("expect Inspect data");
     assert_data_tree!(monitor_hierarchy, root: contains {
         device_events: contains {
             "0": contains {},
