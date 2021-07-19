@@ -1,8 +1,8 @@
 {
     "include": [
-        "syslog/client.shard.cmx",
         "//src/chromium/web_engine/meta/shards/web_engine_base.shard.cmx",
-        "//src/chromium/web_engine/meta/shards/web_engine_feature_network.shard.cmx"
+        "//src/chromium/web_engine/meta/shards/web_engine_feature_network.shard.cmx",
+        "syslog/client.shard.cmx"
     ],
     "program": {
         "binary": "bin/sl4f"
@@ -25,7 +25,8 @@
         ],
         "features": [
             "build-info",
-            "deprecated-shell"
+            "deprecated-shell",
+            "hub"
         ],
         "services": [
             "fuchsia.bluetooth.a2dp.ComponentLifecycle",
