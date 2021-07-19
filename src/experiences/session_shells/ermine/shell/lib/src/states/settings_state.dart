@@ -30,7 +30,8 @@ enum SettingsPage {
   shortcuts,
   feedback,
   opensource,
-  brightness
+  brightness,
+  about
 }
 
 /// Defines the state of the [QuickSettings] overlay.
@@ -38,6 +39,7 @@ abstract class SettingsState with Store implements TaskService {
   ObservableValue<bool> get allSettingsPageVisible;
   ObservableValue<bool> get shortcutsPageVisible;
   ObservableValue<bool> get timezonesPageVisible;
+  ObservableValue<bool> get aboutPageVisible;
   ObservableValue<WiFiStrength> get wifiStrength;
   ObservableValue<BatteryCharge> get batteryCharge;
   ObservableValue<String> get dateTime;
@@ -72,4 +74,5 @@ abstract class SettingsState with Store implements TaskService {
   Action get showTimezoneSettings;
   Action get setBrightnessLevel;
   Action get setBrightnessAuto;
+  Action get showAboutSettings;
 }

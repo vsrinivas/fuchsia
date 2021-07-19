@@ -93,6 +93,7 @@ dart_library("lib") {
     "src/widgets/oobe/channels.dart",
     "src/widgets/oobe/data_sharing.dart",
     "src/widgets/oobe/ssh_keys.dart",
+    "src/widgets/settings/about_settings.dart",
     "src/widgets/settings/setting_details.dart",
     "src/widgets/settings/shortcut_settings.dart",
     "src/widgets/settings/timezone_settings.dart",

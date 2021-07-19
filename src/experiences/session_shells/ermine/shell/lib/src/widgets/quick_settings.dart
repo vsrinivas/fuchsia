@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 import 'package:ermine/src/states/app_state.dart';
+import 'package:ermine/src/widgets/settings/about_settings.dart';
 import 'package:ermine/src/widgets/settings/shortcut_settings.dart';
 import 'package:ermine/src/widgets/settings/timezone_settings.dart';
 import 'package:flutter/material.dart';
@@ -38,6 +39,7 @@ class QuickSettings extends StatelessWidget {
                   TimezoneSettings(
                       state: state,
                       onChange: (tz) => state.updateTimezone([tz])),
+                if (state.aboutPageVisible.value) AboutSettings(state),
               ],
             ),
           );
@@ -193,6 +195,14 @@ class _ListSettings extends StatelessWidget {
                     child: Text(Strings.open.toUpperCase()),
                   ),
                 ),
+                // About
+                ListTile(
+                  contentPadding: EdgeInsets.symmetric(horizontal: 24),
+                  leading: Icon(Icons.read_more),
+                  title: Text('${Strings.about} ${Strings.fuchsia}'),
+                  onTap: appState.settingsState.showAboutSettings,
+                ),
+
                 // Features not implemented yet.
                 // Volume
                 ListTile(

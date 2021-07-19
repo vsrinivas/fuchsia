@@ -38,6 +38,10 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
       (() => settingsPage.value == SettingsPage.timezone).asComputed();
 
   @override
+  late final aboutPageVisible =
+      (() => settingsPage.value == SettingsPage.about).asComputed();
+
+  @override
   final wifiStrength = Observable<WiFiStrength>(WiFiStrength.good);
 
   @override
@@ -194,6 +198,11 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
   @override
   late final Action showAllSettings = () {
     settingsPage.value = SettingsPage.none;
+  }.asAction();
+
+  @override
+  late final Action showAboutSettings = () {
+    settingsPage.value = SettingsPage.about;
   }.asAction();
 
   @override

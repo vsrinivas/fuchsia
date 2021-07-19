@@ -716,4 +716,19 @@ class Strings {
         name: 'language',
         desc: 'The button label for "Language" text field.',
       );
+  static String get about => Intl.message(
+        'About',
+        name: 'about',
+        desc: 'The label for "About" text field.',
+      );
+  static String get disclaimer => Intl.message(
+        'Disclaimer',
+        name: 'disclaimer',
+        desc: 'The label for "Disclaimer" text field.',
+      );
+  static String get fuchsia => Intl.message(
+        'Fuchsia',
+        name: 'fuchsia',
+        desc: 'The label for "Fuchsia" text field.',
+      );
 }
