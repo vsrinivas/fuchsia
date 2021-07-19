@@ -95,8 +95,14 @@ if (is_host) {
 }
 
 install_host_tools("host") {
-  deps = [ ":size_checker" ]
-  outputs = [ "size_checker" ]
+  deps = [
+    ":size_checker",
+    "//src/storage/tools/blobfs-compression",
+  ]
+  outputs = [
+    "size_checker",
+    "blobfs-compression",
+  ]
 }
 
 group("tests") {
