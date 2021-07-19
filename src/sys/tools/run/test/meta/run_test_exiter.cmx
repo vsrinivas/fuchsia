@@ -4,10 +4,5 @@
     ],
     "program": {
         "binary": "bin/run_test_exiter"
-    },
-    "sandbox": {
-        "services": [
-            "fuchsia.tracing.provider.Registry"
-        ]
     }
 }

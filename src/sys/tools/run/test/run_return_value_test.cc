@@ -12,7 +12,7 @@
 
 #include "src/lib/files/file.h"
 
-static constexpr char kRunPath[] = "/bin/run";
+static constexpr char kRunPath[] = "/pkg/bin/run";
 static constexpr char kExiter[] = "fuchsia-pkg://fuchsia.com/run_tests#meta/run_test_exiter.cmx";
 static constexpr char kExiterV2Ext[] =
     "fuchsia-pkg://fuchsia.com/run_tests#meta/run_test_exiter.cm";

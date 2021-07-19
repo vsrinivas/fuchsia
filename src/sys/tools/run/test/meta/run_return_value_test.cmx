@@ -7,7 +7,7 @@
     },
     "sandbox": {
         "features": [
-            "deprecated-shell"
+            "isolated-temp"
         ],
         "services": [
             "fuchsia.process.Launcher",

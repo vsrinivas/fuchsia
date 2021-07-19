@@ -67,7 +67,10 @@ fuchsia_component("run_test_exiter") {
 fuchsia_component("run_return_value_test") {
   testonly = true
   manifest = "meta/run_return_value_test.cmx"
-  deps = [ ":run_return_value_test_bin" ]
+  deps = [
+    ":run_return_value_test_bin",
+    "//src/sys/tools/run:bin",
+  ]
 }
 
 fuchsia_component("run_tests") {
