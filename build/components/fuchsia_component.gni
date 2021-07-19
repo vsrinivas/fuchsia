@@ -72,6 +72,12 @@ import("//tools/cmc/build/cmx.gni")
 #     Type: string
 #     Default: target_name
 #
+#   check_includes (optional)
+#     Check against expect_includes() in deps.
+#     Warning: Do not disable this unless there is a good, documented reason.
+#     Type: boolean
+#     Default: true
+#
 #   check_references (optional)
 #     Check component manifest references (e.g. "program.binary") against
 #     package manifest.
@@ -136,6 +142,7 @@ template("fuchsia_component") {
                              "deps",
                              "manifest",
                              "restricted_features",
+                             "check_includes",
                              "testonly",
                              "visibility",
                              "experimental_force_runner",

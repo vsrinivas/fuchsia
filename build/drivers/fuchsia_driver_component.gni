@@ -56,30 +56,12 @@ template("fuchsia_driver_component") {
     ]
   }
 
-  # Collect any manifest includes.
-  includes_target = "${target_name}_manifest_includes"
-  generated_file(includes_target) {
-    visibility = [ ":*" ]
-    forward_variables_from(invoker,
-                           [
-                             "testonly",
-                             "deps",
-                           ])
-    data_keys = [ "test_component_manifest_cml" ]
-    outputs = [ "$target_out_dir/${target_name}.json" ]
-    output_conversion = "json"
-  }
-
-  # Merge the manifest includes with the program info.
   full_manifest_target = "${target_name}_full_manifest"
   cmc_merge(full_manifest_target) {
     visibility = [ ":*" ]
     forward_variables_from(invoker, [ "testonly" ])
     output_name = invoker.target_name + ".cml"
-    deps = [
-      ":${includes_target}",
-      ":${manifest_target}",
-    ]
+    deps = [ ":${manifest_target}" ]
     sources = []
     foreach(dep, deps) {
       sources += get_target_outputs(dep)
@@ -87,6 +69,8 @@ template("fuchsia_driver_component") {
   }
 
   fuchsia_component(target_name) {
+    # TODO(fxbug.dev/80980): Remove check_includes = false.
+    check_includes = false
     forward_variables_from(invoker,
                            [
                              "visibility",
