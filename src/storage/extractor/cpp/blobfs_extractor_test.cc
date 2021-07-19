@@ -46,7 +46,12 @@ constexpr uint64_t SuperblockOffset() {
 }
 
 constexpr uint64_t BlockBitmapOffset(const blobfs::Superblock& info) {
-  return SuperblockOffset() + blobfs::kBlobfsSuperblockBlocks * blobfs::kBlobfsBlockSize;
+  uint64_t block_map_offset =
+      SuperblockOffset() + blobfs::kBlobfsSuperblockBlocks * blobfs::kBlobfsBlockSize;
+  if (info.flags & blobfs::kBlobFlagFVM) {
+    block_map_offset += blobfs::kBlobfsSuperblockBlocks;
+  }
+  return block_map_offset;
 }
 
 constexpr uint64_t NodemapOffset(const blobfs::Superblock& info) {
@@ -172,6 +177,7 @@ TEST_P(BlobfsExtractionTest, TestJournal) {
 
   CreateInputAndOutputStream(fs(), input_fd, output_fd);
   Extract(input_fd, output_fd);
+
   blobfs::Superblock info;
 
   VerifyInputSuperblock(&info, input_fd);

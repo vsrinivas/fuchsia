@@ -131,6 +131,14 @@ zx::status<> FsWalker::WalkSegments() const {
     std::cerr << "FAIL: Add superblock" << std::endl;
     return status;
   }
+  if (info_.flags & blobfs::kBlobFlagFVM) {
+    if (auto status = extractor_.AddBlocks(blobfs::kFVMBackupSuperblockOffset,
+                                           blobfs::kBlobfsSuperblockBlocks, properties);
+        status.is_error()) {
+      std::cerr << "FAIL: Add backup superblock" << std::endl;
+      return status;
+    }
+  }
   if (auto status = extractor_.AddBlocks(blobfs::BlockMapStartBlock(info_),
                                          blobfs::BlockMapBlocks(info_), properties);
       status.is_error()) {
