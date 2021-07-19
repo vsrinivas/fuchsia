@@ -132,6 +132,12 @@ comes from Inspect.
 }
 ```
 
+Note: The example hierarchy contains a node and property with the same
+name, `connection_validity`, under the same parent. This situation should
+be avoided in practice so that the hierarchy can be represented in JSON
+(where child keys are unique). We include this example to illustrate
+the difference between node and property selection below.
+
 Given this data hierarchy, consider the following hierarchy path selector:
 
 ```
@@ -154,8 +160,11 @@ following selector:
 root/reverser_service/connection_validity
 ```
 
-This path hierarchy selector describes the path from root to the `connection_validity` node. It is
-completely unrelated to the `connection_validity` property on the `reverser_service` node.
+This path hierarchy selector describes the path from root to the
+`connection_validity` node. It is completely unrelated to the
+`connection_validity` property on the `reverser_service` node, which
+can be selected using a [Property Selector](#property_selector):
+`root/reverser_service:connection_validity`.
 
 ### Wildcarding {#wildcarding}
 
