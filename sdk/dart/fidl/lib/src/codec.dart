@@ -9,6 +9,7 @@ import 'package:zircon/zircon.dart';
 
 import 'error.dart';
 import 'message.dart';
+import 'wire_format.dart';
 
 // ignore_for_file: always_specify_types
 // ignore_for_file: avoid_positional_boolean_parameters
@@ -32,7 +33,7 @@ const int _kInitialBufferSize = 512;
 const int _kMinBufferSizeIncreaseFactor = 2;
 
 class Encoder {
-  Encoder();
+  Encoder(this.wireFormat);
 
   OutgoingMessage get message {
     final ByteData trimmed = ByteData.view(data.buffer, 0, _extent);
@@ -42,6 +43,7 @@ class Encoder {
   ByteData data = ByteData(_kInitialBufferSize);
   final List<HandleDisposition> _handleDispositions = <HandleDisposition>[];
   int _extent = 0;
+  WireFormat wireFormat;
 
   void _grow(int newSize) {
     final Uint8List newList = Uint8List(newSize)
@@ -144,15 +146,18 @@ class Encoder {
 class Decoder {
   Decoder(IncomingMessage message)
       : data = message.data,
-        handleInfos = message.handleInfos;
+        handleInfos = message.handleInfos,
+        wireFormat = message.wireFormat;
 
-  Decoder.fromRawArgs(this.data, this.handleInfos);
+  Decoder.fromRawArgs(this.data, this.handleInfos, this.wireFormat);
 
   ByteData data;
   List<HandleInfo> handleInfos;
 
   int _nextOffset = 0;
   int _nextHandle = 0;
+
+  WireFormat wireFormat;
 
   int nextOffset() {
     return _nextOffset;

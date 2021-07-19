@@ -129,7 +129,7 @@ class SuperProxy extends $fidl.AsyncProxy<Super> implements Super {
           StackTrace.current);
     }
 
-    final $fidl.Encoder $encoder = $fidl.Encoder();
+    final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
     $encoder.encodeMessageHeader(_kSuper_foo_Ordinal, 0);
     final List<$fidl.MemberType> $types = _kSuper_foo_Type.request!;
     $fidl.encodeMessageWithCallback(
@@ -164,7 +164,8 @@ class SuperBinding extends $fidl.AsyncBinding<Super> {
             );
           });
           $future.then(($response) {
-            final $fidl.Encoder $encoder = $fidl.Encoder();
+            final $fidl.Encoder $encoder =
+                $fidl.Encoder($fidl.kWireFormatDefault);
             $encoder.encodeMessageHeader(_kSuper_foo_Ordinal, $message.txid);
             final List<$fidl.MemberType> $types = _kSuper_foo_Type.response!;
             $fidl.encodeMessage(
@@ -273,7 +274,7 @@ class SubProxy extends $fidl.AsyncProxy<Sub> implements Sub {
           StackTrace.current);
     }
 
-    final $fidl.Encoder $encoder = $fidl.Encoder();
+    final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
     $encoder.encodeMessageHeader(_kSub_foo_Ordinal, 0);
     final List<$fidl.MemberType> $types = _kSub_foo_Type.request!;
     $fidl.encodeMessageWithCallback(
@@ -308,7 +309,8 @@ class SubBinding extends $fidl.AsyncBinding<Sub> {
             );
           });
           $future.then(($response) {
-            final $fidl.Encoder $encoder = $fidl.Encoder();
+            final $fidl.Encoder $encoder =
+                $fidl.Encoder($fidl.kWireFormatDefault);
             $encoder.encodeMessageHeader(_kSub_foo_Ordinal, $message.txid);
             final List<$fidl.MemberType> $types = _kSub_foo_Type.response!;
             $fidl.encodeMessage(

@@ -367,7 +367,7 @@ class ProtocolProxy extends $fidl.AsyncProxy<Protocol> implements Protocol {
           StackTrace.current);
     }
 
-    final $fidl.Encoder $encoder = $fidl.Encoder();
+    final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
     $encoder.encodeMessageHeader(
         _kProtocol_RequestStrictResponseFlexible_Ordinal, 0);
     final List<$fidl.MemberType> $types =
@@ -391,7 +391,7 @@ class ProtocolProxy extends $fidl.AsyncProxy<Protocol> implements Protocol {
           StackTrace.current);
     }
 
-    final $fidl.Encoder $encoder = $fidl.Encoder();
+    final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
     $encoder.encodeMessageHeader(
         _kProtocol_RequestFlexibleResponseStrict_Ordinal, 0);
     final List<$fidl.MemberType> $types =
@@ -432,7 +432,8 @@ class ProtocolBinding extends $fidl.AsyncBinding<Protocol> {
             );
           });
           $future.then(($response) {
-            final $fidl.Encoder $encoder = $fidl.Encoder();
+            final $fidl.Encoder $encoder =
+                $fidl.Encoder($fidl.kWireFormatDefault);
             $encoder.encodeMessageHeader(
                 _kProtocol_RequestStrictResponseFlexible_Ordinal,
                 $message.txid);
@@ -467,7 +468,8 @@ class ProtocolBinding extends $fidl.AsyncBinding<Protocol> {
             );
           });
           $future.then(($response) {
-            final $fidl.Encoder $encoder = $fidl.Encoder();
+            final $fidl.Encoder $encoder =
+                $fidl.Encoder($fidl.kWireFormatDefault);
             $encoder.encodeMessageHeader(
                 _kProtocol_RequestFlexibleResponseStrict_Ordinal,
                 $message.txid);

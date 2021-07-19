@@ -721,7 +721,7 @@ class InterfaceProxy extends $fidl.AsyncProxy<Interface> implements Interface {
           StackTrace.current);
     }
 
-    final $fidl.Encoder $encoder = $fidl.Encoder();
+    final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
     $encoder.encodeMessageHeader(_kInterface_Method_Ordinal, 0);
     return $async.Future.sync(() {
       ctrl.sendMessage($encoder.message);
@@ -754,7 +754,8 @@ class InterfaceBinding extends $fidl.AsyncBinding<Interface> {
         final _onEvent_stream = impl.onEvent;
         if (_onEvent_stream != null) {
           $subscriptions.add(_onEvent_stream.listen(($response) {
-            final $fidl.Encoder $encoder = $fidl.Encoder();
+            final $fidl.Encoder $encoder =
+                $fidl.Encoder($fidl.kWireFormatDefault);
             $encoder.encodeMessageHeader(_kInterface_OnEvent_Ordinal, 0);
             final List<$fidl.MemberType> $types =
                 _kInterface_OnEvent_Type.response!;

@@ -127,7 +127,7 @@ class TopProxy extends $fidl.AsyncProxy<Top> implements Top {
           StackTrace.current);
     }
 
-    final $fidl.Encoder $encoder = $fidl.Encoder();
+    final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
     $encoder.encodeMessageHeader(_kTop_GetFoo_Ordinal, 0);
     final $completer = $async.Completer<lib$bottom.Foo>();
     ctrl.sendMessageWithResponse($encoder.message, $completer);
@@ -155,7 +155,8 @@ class TopBinding extends $fidl.AsyncBinding<Top> {
             return _impl.getFoo();
           });
           $future.then(($response) {
-            final $fidl.Encoder $encoder = $fidl.Encoder();
+            final $fidl.Encoder $encoder =
+                $fidl.Encoder($fidl.kWireFormatDefault);
             $encoder.encodeMessageHeader(_kTop_GetFoo_Ordinal, $message.txid);
             final List<$fidl.MemberType> $types = _kTop_GetFoo_Type.response!;
             $fidl.encodeMessage(

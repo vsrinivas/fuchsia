@@ -128,7 +128,7 @@ type encodeSuccessCase struct {
 }
 
 type decodeSuccessCase struct {
-	DecoderName, Name, Value, ValueType, Bytes, HandleDefs, Handles, UnusedHandles string
+	Name, Value, ValueType, Bytes, HandleDefs, Handles, UnusedHandles string
 }
 
 type encodeFailureCase struct {
@@ -136,7 +136,7 @@ type encodeFailureCase struct {
 }
 
 type decodeFailureCase struct {
-	DecoderName, Name, ValueType, Bytes, ErrorCode, HandleDefs, Handles string
+	Name, ValueType, Bytes, ErrorCode, HandleDefs, Handles string
 }
 
 // Generate generates dart tests.
@@ -168,6 +168,51 @@ func GenerateConformanceTests(gidl gidlir.All, fidl fidlgen.Root, config gidlcon
 	return buf.Bytes(), err
 }
 
+func containsUnion(decl gidlmixer.Declaration) bool {
+	return containsUnionInner(decl, 0)
+}
+
+func containsUnionInner(decl gidlmixer.Declaration, depth int) bool {
+	if depth > 64 {
+		return false
+	}
+	depth++
+
+	switch decl := decl.(type) {
+	case gidlmixer.PrimitiveDeclaration:
+		return false
+	case *gidlmixer.EnumDecl:
+		return false
+	case *gidlmixer.BitsDecl:
+		return false
+	case *gidlmixer.HandleDecl:
+		return false
+	case *gidlmixer.StringDecl:
+		return false
+	case gidlmixer.ListDeclaration:
+		return containsUnionInner(decl.Elem(), depth)
+	case *gidlmixer.StructDecl:
+		for _, fieldName := range decl.FieldNames() {
+			field, _ := decl.Field(fieldName)
+			if containsUnionInner(field, depth) {
+				return true
+			}
+		}
+		return false
+	case *gidlmixer.TableDecl:
+		for _, fieldName := range decl.FieldNames() {
+			field, _ := decl.Field(fieldName)
+			if containsUnionInner(field, depth) {
+				return true
+			}
+		}
+		return false
+	case *gidlmixer.UnionDecl:
+		return true
+	}
+	panic(fmt.Sprintf("unhandled case %T", decl))
+}
+
 func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, schema gidlmixer.Schema) ([]encodeSuccessCase, error) {
 	var encodeSuccessCases []encodeSuccessCase
 	for _, encodeSuccess := range gidlEncodeSuccesses {
@@ -178,7 +223,7 @@ func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, schema gidlm
 		valueStr := visit(encodeSuccess.Value, decl)
 		valueType := typeName(decl)
 		for _, encoding := range encodeSuccess.Encodings {
-			if !wireFormatSupported(encoding.WireFormat) {
+			if !wireFormatSupportedForEncode(encoding.WireFormat) {
 				continue
 			}
 			encodeSuccessCases = append(encodeSuccessCases, encodeSuccessCase{
@@ -205,7 +250,13 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, schema gidlm
 		valueStr := visit(decodeSuccess.Value, decl)
 		valueType := typeName(decl)
 		for _, encoding := range decodeSuccess.Encodings {
-			if !wireFormatSupported(encoding.WireFormat) {
+			if !wireFormatSupportedForDecode(encoding.WireFormat) {
+				continue
+			}
+			if containsUnion(decl) {
+				// Unions are not currently implemented for v2 in dart, but many tests are defined.
+				// Disabling here for simplicity (instead of disabling each gidl test).
+				// TODO(fxbug.dev/80880) Re-enable union tests.
 				continue
 			}
 			decodeSuccessCases = append(decodeSuccessCases, decodeSuccessCase{
@@ -236,7 +287,7 @@ func encodeFailureCases(gidlEncodeFailures []gidlir.EncodeFailure, schema gidlmi
 		}
 		valueStr := visit(encodeFailure.Value, decl)
 		valueType := typeName(decl)
-		for _, wireFormat := range supportedWireFormats {
+		for _, wireFormat := range supportedEncodeWireFormats {
 			encodeFailureCases = append(encodeFailureCases, encodeFailureCase{
 				EncoderName: encoderName(wireFormat),
 				Name:        testCaseName(encodeFailure.Name, wireFormat),
@@ -253,7 +304,7 @@ func encodeFailureCases(gidlEncodeFailures []gidlir.EncodeFailure, schema gidlmi
 func decodeFailureCases(gidlDecodeFailures []gidlir.DecodeFailure, schema gidlmixer.Schema) ([]decodeFailureCase, error) {
 	var decodeFailureCases []decodeFailureCase
 	for _, decodeFailure := range gidlDecodeFailures {
-		_, err := schema.ExtractDeclarationByName(decodeFailure.Type)
+		decl, err := schema.ExtractDeclarationByName(decodeFailure.Type)
 		if err != nil {
 			return nil, fmt.Errorf("decode failure %s: %s", decodeFailure.Name, err)
 		}
@@ -263,7 +314,13 @@ func decodeFailureCases(gidlDecodeFailures []gidlir.DecodeFailure, schema gidlmi
 		}
 		valueType := dartTypeName(decodeFailure.Type)
 		for _, encoding := range decodeFailure.Encodings {
-			if !wireFormatSupported(encoding.WireFormat) {
+			if !wireFormatSupportedForDecode(encoding.WireFormat) {
+				continue
+			}
+			if containsUnion(decl) {
+				// Unions are not currently implemented for v2 in dart, but many tests are defined.
+				// Disabling here for simplicity (instead of disabling each gidl test).
+				// TODO(fxbug.dev/80880) Re-enable union tests.
 				continue
 			}
 			decodeFailureCases = append(decodeFailureCases, decodeFailureCase{
@@ -279,12 +336,24 @@ func decodeFailureCases(gidlDecodeFailures []gidlir.DecodeFailure, schema gidlmi
 	return decodeFailureCases, nil
 }
 
-var supportedWireFormats = []gidlir.WireFormat{
+var supportedEncodeWireFormats = []gidlir.WireFormat{
 	gidlir.V1WireFormat,
 }
+var supportedDecodeWireFormats = []gidlir.WireFormat{
+	gidlir.V1WireFormat,
+	gidlir.V2WireFormat,
+}
 
-func wireFormatSupported(wireFormat gidlir.WireFormat) bool {
-	for _, wf := range supportedWireFormats {
+func wireFormatSupportedForEncode(wireFormat gidlir.WireFormat) bool {
+	for _, wf := range supportedEncodeWireFormats {
+		if wireFormat == wf {
+			return true
+		}
+	}
+	return false
+}
+func wireFormatSupportedForDecode(wireFormat gidlir.WireFormat) bool {
+	for _, wf := range supportedDecodeWireFormats {
 		if wireFormat == wf {
 			return true
 		}

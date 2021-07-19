@@ -664,7 +664,7 @@ class SimpleProtocolProxy extends $fidl.AsyncProxy<SimpleProtocol>
           StackTrace.current);
     }
 
-    final $fidl.Encoder $encoder = $fidl.Encoder();
+    final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
     $encoder.encodeMessageHeader(_kSimpleProtocol_Add_Ordinal, 0);
     final List<$fidl.MemberType> $types = _kSimpleProtocol_Add_Type.request!;
     $fidl.encodeMessageWithCallback(
@@ -702,7 +702,8 @@ class SimpleProtocolBinding extends $fidl.AsyncBinding<SimpleProtocol> {
             );
           });
           $future.then(($response) {
-            final $fidl.Encoder $encoder = $fidl.Encoder();
+            final $fidl.Encoder $encoder =
+                $fidl.Encoder($fidl.kWireFormatDefault);
             $encoder.encodeMessageHeader(
                 _kSimpleProtocol_Add_Ordinal, $message.txid);
             final List<$fidl.MemberType> $types =

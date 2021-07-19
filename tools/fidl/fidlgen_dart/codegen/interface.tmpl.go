@@ -298,7 +298,7 @@ class {{ .ProxyName }} extends $fidl.AsyncProxy<{{ .Name }}>
         return $async.Future.error($fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'), StackTrace.current);
       }
 
-      final $fidl.Encoder $encoder = $fidl.Encoder();
+      final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
       $encoder.encodeMessageHeader({{ .OrdinalName }}, 0);
       {{- if .Request }}
         final List<$fidl.MemberType> $types = {{ .TypeSymbol }}.request!;
@@ -352,7 +352,7 @@ class {{ .BindingName }} extends $fidl.AsyncBinding<{{ .Name }}> {
             final _{{ .Name }}_stream = impl.{{ .Name }};
             if (_{{ .Name }}_stream != null) {
               $subscriptions.add(_{{ .Name }}_stream.listen(($response) {
-                final $fidl.Encoder $encoder = $fidl.Encoder();
+                final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
                 $encoder.encodeMessageHeader({{ .OrdinalName }}, 0);
                 final List<$fidl.MemberType> $types = {{ .TypeSymbol }}.response!;
                 {{ template "EncodeResponse" . }}
@@ -420,7 +420,7 @@ class {{ .BindingName }} extends $fidl.AsyncBinding<{{ .Name }}> {
                 })
                 {{ end }}
                 .then(($response) {
-                  final $fidl.Encoder $encoder = $fidl.Encoder();
+                  final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
                   $encoder.encodeMessageHeader({{ .OrdinalName }}, $message.txid);
                   {{- if .Response.WireParameters }}
                     final List<$fidl.MemberType> $types = {{ .TypeSymbol }}.response!;

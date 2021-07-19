@@ -291,7 +291,23 @@ HandleDef(HandleSubtype.event, 2147483648),// #0
 ]));
 			
 			DecodeSuccessCase.run(
+				'GoldenBoolStruct_v2',
+				GoldenBoolStruct(v: true),
+				kGoldenBoolStruct_Type,
+				Uint8List.fromList([
+0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00, //
+]));
+			
+			DecodeSuccessCase.run(
 				'GoldenIntStruct_v1',
+				GoldenIntStruct(v: 0x1),
+				kGoldenIntStruct_Type,
+				Uint8List.fromList([
+0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00, //
+]));
+			
+			DecodeSuccessCase.run(
+				'GoldenIntStruct_v2',
 				GoldenIntStruct(v: 0x1),
 				kGoldenIntStruct_Type,
 				Uint8List.fromList([
@@ -307,7 +323,23 @@ HandleDef(HandleSubtype.event, 2147483648),// #0
 ]));
 			
 			DecodeSuccessCase.run(
+				'GoldenUintStruct_v2',
+				GoldenUintStruct(v: 0x1),
+				kGoldenUintStruct_Type,
+				Uint8List.fromList([
+0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00, //
+]));
+			
+			DecodeSuccessCase.run(
 				'GoldenFloatStruct_v1',
+				GoldenFloatStruct(v: 0),
+				kGoldenFloatStruct_Type,
+				Uint8List.fromList([
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, //
+]));
+			
+			DecodeSuccessCase.run(
+				'GoldenFloatStruct_v2',
 				GoldenFloatStruct(v: 0),
 				kGoldenFloatStruct_Type,
 				Uint8List.fromList([
@@ -323,7 +355,25 @@ HandleDef(HandleSubtype.event, 2147483648),// #0
 ]));
 			
 			DecodeSuccessCase.run(
+				'GoldenDoubleStruct_v2',
+				GoldenDoubleStruct(v: 0),
+				kGoldenDoubleStruct_Type,
+				Uint8List.fromList([
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, //
+]));
+			
+			DecodeSuccessCase.run(
 				'GoldenStringStruct_v1',
+				GoldenStringStruct(v: 'abcd'),
+				kGoldenStringStruct_Type,
+				Uint8List.fromList([
+0x04,0x00,0x00,0x00,0x00,0x00,0x00,0x00, //
+0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff, //
+0x61,0x62,0x63,0x64,0x00,0x00,0x00,0x00, //
+]));
+			
+			DecodeSuccessCase.run(
+				'GoldenStringStruct_v2',
 				GoldenStringStruct(v: 'abcd'),
 				kGoldenStringStruct_Type,
 				Uint8List.fromList([
@@ -343,7 +393,26 @@ HandleDef(HandleSubtype.event, 2147483648),// #0
 ]));
 			
 			DecodeSuccessCase.run(
+				'GoldenNullableStringStructNonNull_v2',
+				GoldenNullableStringStruct(v: 'abcd'),
+				kGoldenNullableStringStruct_Type,
+				Uint8List.fromList([
+0x04,0x00,0x00,0x00,0x00,0x00,0x00,0x00, //
+0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff, //
+0x61,0x62,0x63,0x64,0x00,0x00,0x00,0x00, //
+]));
+			
+			DecodeSuccessCase.run(
 				'GoldenNullableStringStructNull_v1',
+				GoldenNullableStringStruct(v: null),
+				kGoldenNullableStringStruct_Type,
+				Uint8List.fromList([
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, //
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, //
+]));
+			
+			DecodeSuccessCase.run(
+				'GoldenNullableStringStructNull_v2',
 				GoldenNullableStringStruct(v: null),
 				kGoldenNullableStringStruct_Type,
 				Uint8List.fromList([
@@ -360,7 +429,23 @@ HandleDef(HandleSubtype.event, 2147483648),// #0
 ]));
 			
 			DecodeSuccessCase.run(
+				'GoldenEnumStruct_v2',
+				GoldenEnumStruct(v: kGoldenEnum_Type.ctor(0x1)),
+				kGoldenEnumStruct_Type,
+				Uint8List.fromList([
+0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00, //
+]));
+			
+			DecodeSuccessCase.run(
 				'GoldenBitsStruct_v1',
+				GoldenBitsStruct(v: kGoldenBits_Type.ctor(0x1)),
+				kGoldenBitsStruct_Type,
+				Uint8List.fromList([
+0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00, //
+]));
+			
+			DecodeSuccessCase.run(
+				'GoldenBitsStruct_v2',
 				GoldenBitsStruct(v: kGoldenBits_Type.ctor(0x1)),
 				kGoldenBitsStruct_Type,
 				Uint8List.fromList([
@@ -380,39 +465,15 @@ HandleDef(HandleSubtype.event, 2147483648),// #0
 ]));
 			
 			DecodeSuccessCase.run(
-				'GoldenUnionStruct_v1',
-				GoldenUnionStruct(v: GoldenUnion.withV(0x1)),
-				kGoldenUnionStruct_Type,
-				Uint8List.fromList([
-0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00, //
-0x08,0x00,0x00,0x00,0x00,0x00,0x00,0x00, //
-0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff, //
-0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00, //
-]));
-			
-			DecodeSuccessCase.run(
-				'GoldenNullableUnionStructNonNull_v1',
-				GoldenNullableUnionStruct(v: GoldenUnion.withV(0x1)),
-				kGoldenNullableUnionStruct_Type,
-				Uint8List.fromList([
-0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00, //
-0x08,0x00,0x00,0x00,0x00,0x00,0x00,0x00, //
-0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff, //
-0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00, //
-]));
-			
-			DecodeSuccessCase.run(
-				'GoldenNullableUnionStructNull_v1',
-				GoldenNullableUnionStruct(v: null),
-				kGoldenNullableUnionStruct_Type,
-				Uint8List.fromList([
-0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, //
-0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, //
-0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, //
-]));
-			
-			DecodeSuccessCase.run(
 				'GoldenByteArrayStruct_v1',
+				GoldenByteArrayStruct(v: Uint8List.fromList([0x1, 0x2, 0x3, 0x4])),
+				kGoldenByteArrayStruct_Type,
+				Uint8List.fromList([
+0x01,0x02,0x03,0x04,0x00,0x00,0x00,0x00, //
+]));
+			
+			DecodeSuccessCase.run(
+				'GoldenByteArrayStruct_v2',
 				GoldenByteArrayStruct(v: Uint8List.fromList([0x1, 0x2, 0x3, 0x4])),
 				kGoldenByteArrayStruct_Type,
 				Uint8List.fromList([
@@ -428,7 +489,26 @@ HandleDef(HandleSubtype.event, 2147483648),// #0
 ]));
 			
 			DecodeSuccessCase.run(
+				'GoldenStructArrayStruct_v2',
+				GoldenStructArrayStruct(v: [GoldenIntStruct(v: 0x1), GoldenIntStruct(v: 0x2)]),
+				kGoldenStructArrayStruct_Type,
+				Uint8List.fromList([
+0x01,0x00,0x02,0x00,0x00,0x00,0x00,0x00, //
+]));
+			
+			DecodeSuccessCase.run(
 				'GoldenByteVectorStruct_v1',
+				GoldenByteVectorStruct(v: Uint8List.fromList([0x1, 0x2, 0x3, 0x4, 0x1, 0x2, 0x3, 0x4, 0x1, 0x2, 0x3, 0x4])),
+				kGoldenByteVectorStruct_Type,
+				Uint8List.fromList([
+0x0c,0x00,0x00,0x00,0x00,0x00,0x00,0x00, //
+0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff, //
+0x01,0x02,0x03,0x04,0x01,0x02,0x03,0x04, //
+0x01,0x02,0x03,0x04,0x00,0x00,0x00,0x00, //
+]));
+			
+			DecodeSuccessCase.run(
+				'GoldenByteVectorStruct_v2',
 				GoldenByteVectorStruct(v: Uint8List.fromList([0x1, 0x2, 0x3, 0x4, 0x1, 0x2, 0x3, 0x4, 0x1, 0x2, 0x3, 0x4])),
 				kGoldenByteVectorStruct_Type,
 				Uint8List.fromList([
@@ -449,7 +529,26 @@ HandleDef(HandleSubtype.event, 2147483648),// #0
 ]));
 			
 			DecodeSuccessCase.run(
+				'GoldenByteNullableVectorStructNonNull_v2',
+				GoldenNullableByteVectorStruct(v: Uint8List.fromList([0x1, 0x2, 0x3, 0x4])),
+				kGoldenNullableByteVectorStruct_Type,
+				Uint8List.fromList([
+0x04,0x00,0x00,0x00,0x00,0x00,0x00,0x00, //
+0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff, //
+0x01,0x02,0x03,0x04,0x00,0x00,0x00,0x00, //
+]));
+			
+			DecodeSuccessCase.run(
 				'GoldenNullableByteVectorStructNull_v1',
+				GoldenNullableByteVectorStruct(v: null),
+				kGoldenNullableByteVectorStruct_Type,
+				Uint8List.fromList([
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, //
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, //
+]));
+			
+			DecodeSuccessCase.run(
+				'GoldenNullableByteVectorStructNull_v2',
 				GoldenNullableByteVectorStruct(v: null),
 				kGoldenNullableByteVectorStruct_Type,
 				Uint8List.fromList([
@@ -468,6 +567,16 @@ HandleDef(HandleSubtype.event, 2147483648),// #0
 ]));
 			
 			DecodeSuccessCase.run(
+				'GoldenStructVectorStruct_v2',
+				GoldenStructVectorStruct(v: [GoldenIntStruct(v: 0x1), GoldenIntStruct(v: 0x2)]),
+				kGoldenStructVectorStruct_Type,
+				Uint8List.fromList([
+0x02,0x00,0x00,0x00,0x00,0x00,0x00,0x00, //
+0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff, //
+0x01,0x00,0x02,0x00,0x00,0x00,0x00,0x00, //
+]));
+			
+			DecodeSuccessCase.run(
 				'GoldenNullableStructNonNull_v1',
 				GoldenNullableStruct(v: GoldenBoolStruct(v: true)),
 				kGoldenNullableStruct_Type,
@@ -477,7 +586,24 @@ HandleDef(HandleSubtype.event, 2147483648),// #0
 ]));
 			
 			DecodeSuccessCase.run(
+				'GoldenNullableStructNonNull_v2',
+				GoldenNullableStruct(v: GoldenBoolStruct(v: true)),
+				kGoldenNullableStruct_Type,
+				Uint8List.fromList([
+0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff, //
+0x01,0x00,0x00,0x00,0x00,0x00,0x00,0x00, //
+]));
+			
+			DecodeSuccessCase.run(
 				'GoldenNullableStructNull_v1',
+				GoldenNullableStruct(v: null),
+				kGoldenNullableStruct_Type,
+				Uint8List.fromList([
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, //
+]));
+			
+			DecodeSuccessCase.run(
+				'GoldenNullableStructNull_v2',
 				GoldenNullableStruct(v: null),
 				kGoldenNullableStruct_Type,
 				Uint8List.fromList([
@@ -499,8 +625,31 @@ HandleDef(HandleSubtype.event, 2147483648),// #0
 				[
 0,]);
 			
+			DecodeSuccessCase.runWithHandles(
+				'GoldenNullableHandleStructNonNull_v2',
+				(List<Handle> handles) => GoldenNullableHandleStruct(v: handles[0]),
+				kGoldenNullableHandleStruct_Type,
+				Uint8List.fromList([
+0xff,0xff,0xff,0xff,0x00,0x00,0x00,0x00, //
+]),
+				[
+HandleDef(HandleSubtype.event, 2147483648),// #0
+],
+				[
+0,],
+				[
+0,]);
+			
 			DecodeSuccessCase.run(
 				'GoldenNullableHandleStructNull_v1',
+				GoldenNullableHandleStruct(v: null),
+				kGoldenNullableHandleStruct_Type,
+				Uint8List.fromList([
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, //
+]));
+			
+			DecodeSuccessCase.run(
+				'GoldenNullableHandleStructNull_v2',
 				GoldenNullableHandleStruct(v: null),
 				kGoldenNullableHandleStruct_Type,
 				Uint8List.fromList([
@@ -517,6 +666,15 @@ HandleDef(HandleSubtype.event, 2147483648),// #0
 			
 			DecodeFailureCase.run(
 				'GoldenStringStructNullBody_v1',
+				kGoldenStringStruct_Type,
+				Uint8List.fromList([
+0x03,0x00,0x00,0x00,0x00,0x00,0x00,0x00, //
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00, //
+]),
+				fidl.FidlErrorCode.fidlNonEmptyStringWithNullBody);
+			
+			DecodeFailureCase.run(
+				'GoldenStringStructNullBody_v2',
 				kGoldenStringStruct_Type,
 				Uint8List.fromList([
 0x03,0x00,0x00,0x00,0x00,0x00,0x00,0x00, //

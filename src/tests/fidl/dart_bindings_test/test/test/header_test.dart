@@ -70,7 +70,7 @@ void main() {
       final client = pair.first;
       TestAsyncBinding().bind(EmptyImpl(), InterfaceRequest(pair.second));
 
-      final encoder = Encoder()
+      final encoder = Encoder(kWireFormatDefault)
         ..encodeMessageHeader(0, 0)
         ..encodeUint8(0, kMessageMagicOffset);
       client.writeEtc(encoder.message.data, encoder.message.handleDispositions);

@@ -116,7 +116,7 @@ class ParentProxy extends $fidl.AsyncProxy<Parent> implements Parent {
           StackTrace.current);
     }
 
-    final $fidl.Encoder $encoder = $fidl.Encoder();
+    final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
     $encoder.encodeMessageHeader(_kParent_First_Ordinal, 0);
     final List<$fidl.MemberType> $types = _kParent_First_Type.request!;
     $fidl.encodeMessageWithCallback(
@@ -248,7 +248,7 @@ class ChildProxy extends $fidl.AsyncProxy<Child> implements Child {
           StackTrace.current);
     }
 
-    final $fidl.Encoder $encoder = $fidl.Encoder();
+    final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
     $encoder.encodeMessageHeader(_kChild_First_Ordinal, 0);
     final List<$fidl.MemberType> $types = _kChild_First_Type.request!;
     $fidl.encodeMessageWithCallback(
@@ -268,7 +268,7 @@ class ChildProxy extends $fidl.AsyncProxy<Child> implements Child {
           StackTrace.current);
     }
 
-    final $fidl.Encoder $encoder = $fidl.Encoder();
+    final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
     $encoder.encodeMessageHeader(_kChild_Second_Ordinal, 0);
     final List<$fidl.MemberType> $types = _kChild_Second_Type.request!;
     $fidl.encodeMessageWithCallback(

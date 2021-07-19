@@ -281,7 +281,7 @@ class ExampleProxy extends $fidl.AsyncProxy<Example> implements Example {
           StackTrace.current);
     }
 
-    final $fidl.Encoder $encoder = $fidl.Encoder();
+    final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
     $encoder.encodeMessageHeader(_kExample_foo_Ordinal, 0);
     final List<$fidl.MemberType> $types = _kExample_foo_Type.request!;
     $fidl.encodeMessageWithCallback(
@@ -325,7 +325,8 @@ class ExampleBinding extends $fidl.AsyncBinding<Example> {
               return Future.error($error, StackTrace.current);
             }
           }).then(($response) {
-            final $fidl.Encoder $encoder = $fidl.Encoder();
+            final $fidl.Encoder $encoder =
+                $fidl.Encoder($fidl.kWireFormatDefault);
             $encoder.encodeMessageHeader(_kExample_foo_Ordinal, $message.txid);
             final List<$fidl.MemberType> $types = _kExample_foo_Type.response!;
             $fidl.encodeMessage(

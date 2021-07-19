@@ -215,7 +215,7 @@ class EmptyProtocolProxy extends $fidl.AsyncProxy<EmptyProtocol>
           StackTrace.current);
     }
 
-    final $fidl.Encoder $encoder = $fidl.Encoder();
+    final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
     $encoder.encodeMessageHeader(_kEmptyProtocol_Send_Ordinal, 0);
     final List<$fidl.MemberType> $types = _kEmptyProtocol_Send_Type.request!;
     $fidl.encodeMessageWithCallback(
@@ -240,7 +240,7 @@ class EmptyProtocolProxy extends $fidl.AsyncProxy<EmptyProtocol>
           StackTrace.current);
     }
 
-    final $fidl.Encoder $encoder = $fidl.Encoder();
+    final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
     $encoder.encodeMessageHeader(_kEmptyProtocol_SendAndReceive_Ordinal, 0);
     final List<$fidl.MemberType> $types =
         _kEmptyProtocol_SendAndReceive_Type.request!;
@@ -270,7 +270,8 @@ class EmptyProtocolBinding extends $fidl.AsyncBinding<EmptyProtocol> {
         final _receive_stream = impl.receive;
         if (_receive_stream != null) {
           $subscriptions.add(_receive_stream.listen(($response) {
-            final $fidl.Encoder $encoder = $fidl.Encoder();
+            final $fidl.Encoder $encoder =
+                $fidl.Encoder($fidl.kWireFormatDefault);
             $encoder.encodeMessageHeader(_kEmptyProtocol_Receive_Ordinal, 0);
             final List<$fidl.MemberType> $types =
                 _kEmptyProtocol_Receive_Type.response!;
@@ -324,7 +325,8 @@ class EmptyProtocolBinding extends $fidl.AsyncBinding<EmptyProtocol> {
             );
           });
           $future.then(($response) {
-            final $fidl.Encoder $encoder = $fidl.Encoder();
+            final $fidl.Encoder $encoder =
+                $fidl.Encoder($fidl.kWireFormatDefault);
             $encoder.encodeMessageHeader(
                 _kEmptyProtocol_SendAndReceive_Ordinal, $message.txid);
             final List<$fidl.MemberType> $types =

@@ -10,6 +10,7 @@ import 'package:zircon/zircon.dart';
 import 'codec.dart';
 import 'error.dart';
 import 'types.dart';
+import 'wire_format.dart';
 // ignore_for_file: public_member_api_docs
 
 const int kMessageHeaderSize = 16;
@@ -19,6 +20,7 @@ const int kMessageMagicOffset = 7;
 const int kMessageOrdinalOffset = 8;
 
 const int kMagicNumberInitial = 1;
+const int kWireFormatV2FlagMask = 2;
 
 class _BaseMessage {
   _BaseMessage(this.data);
@@ -28,6 +30,12 @@ class _BaseMessage {
   int get txid => data.getUint32(kMessageTxidOffset, Endian.little);
   int get ordinal => data.getUint64(kMessageOrdinalOffset, Endian.little);
   int get magic => data.getUint8(kMessageMagicOffset);
+  WireFormat get wireFormat {
+    if ((data.getUint8(kMessageFlagOffset) & kWireFormatV2FlagMask) != 0) {
+      return WireFormat.v2;
+    }
+    return WireFormat.v1;
+  }
 
   bool isCompatible() => magic == kMagicNumberInitial;
 

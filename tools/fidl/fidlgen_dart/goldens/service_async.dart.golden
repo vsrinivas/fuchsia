@@ -115,7 +115,7 @@ class FirstProtocolProxy extends $fidl.AsyncProxy<FirstProtocol>
           StackTrace.current);
     }
 
-    final $fidl.Encoder $encoder = $fidl.Encoder();
+    final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
     $encoder.encodeMessageHeader(_kFirstProtocol_MethodOnFirst_Ordinal, 0);
     return $async.Future.sync(() {
       ctrl.sendMessage($encoder.message);
@@ -228,7 +228,7 @@ class SecondProtocolProxy extends $fidl.AsyncProxy<SecondProtocol>
           StackTrace.current);
     }
 
-    final $fidl.Encoder $encoder = $fidl.Encoder();
+    final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
     $encoder.encodeMessageHeader(_kSecondProtocol_MethodOnSecond_Ordinal, 0);
     return $async.Future.sync(() {
       ctrl.sendMessage($encoder.message);

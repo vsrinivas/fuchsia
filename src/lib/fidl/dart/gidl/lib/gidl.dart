@@ -14,7 +14,12 @@ import 'handles.dart';
 abstract class Encoders {
   // ignore: prefer_constructors_over_static_methods
   static fidl.Encoder get v1 {
-    return fidl.Encoder();
+    return fidl.Encoder(fidl.WireFormat.v1);
+  }
+
+  // ignore: prefer_constructors_over_static_methods
+  static fidl.Encoder get v2 {
+    return fidl.Encoder(fidl.WireFormat.v2);
   }
 }
 
@@ -22,7 +27,12 @@ abstract class Encoders {
 abstract class Decoders {
   // ignore: prefer_constructors_over_static_methods
   static fidl.Decoder get v1 {
-    return fidl.Decoder.fromRawArgs(null, []);
+    return fidl.Decoder.fromRawArgs(null, [], fidl.WireFormat.v1);
+  }
+
+  // ignore: prefer_constructors_over_static_methods
+  static fidl.Decoder get v2 {
+    return fidl.Decoder.fromRawArgs(null, [], fidl.WireFormat.v2);
   }
 }
 
@@ -32,8 +42,8 @@ List<T> _reorderList<T>(List<T> data, List<int> order) =>
     order.map((index) => data[index]).toList();
 
 fidl.OutgoingMessage _encode<T, I extends Iterable<T>>(
-    fidl.FidlType<T, I> type, T value) {
-  final fidl.Encoder encoder = fidl.Encoder()..encodeMessageHeader(0, 0);
+    fidl.Encoder encoder, fidl.FidlType<T, I> type, T value) {
+  encoder.encodeMessageHeader(0, 0);
   fidl.MemberType member = fidl.MemberType(
     type: type,
     offset: 0,
@@ -80,7 +90,7 @@ class EncodeSuccessCase<T, I extends Iterable<T>> {
   static void run<T, I extends Iterable<T>>(fidl.Encoder encoder, String name,
       T input, fidl.FidlType<T, I> type, Uint8List bytes) {
     group(name, () {
-      EncodeSuccessCase(input, type, bytes)._checkEncode();
+      EncodeSuccessCase(input, type, bytes)._checkEncode(encoder);
     });
   }
 
@@ -97,16 +107,16 @@ class EncodeSuccessCase<T, I extends Iterable<T>> {
     final testCase = EncodeSuccessCase(inputFactory(handles), type, bytes,
         handles: expectedHandles);
     group(name, () {
-      testCase._checkEncode();
+      testCase._checkEncode(encoder);
       tearDown(() {
         closeHandles(testCase.handles);
       });
     });
   }
 
-  void _checkEncode() {
+  void _checkEncode(fidl.Encoder encoder) {
     test('encode', () {
-      final message = _encode(type, input);
+      final message = _encode(encoder, type, input);
       expect(_getMessageBodyBytes(message), equals(bytes));
       expect(message.handleDispositions.map((h) => h.handle).toList(),
           equals(handles));
@@ -183,7 +193,7 @@ class EncodeFailureCase<T, I extends Iterable<T>> {
       fidl.FidlType<T, I> type,
       fidl.FidlErrorCode code) {
     group(name, () {
-      EncodeFailureCase(inputFactory, type, code)._checkEncodeFails();
+      EncodeFailureCase(inputFactory, type, code)._checkEncodeFails(encoder);
     });
   }
 
@@ -197,18 +207,18 @@ class EncodeFailureCase<T, I extends Iterable<T>> {
     final handles = createHandles(handleDefs);
     group(name, () {
       EncodeFailureCase(() => inputFactory(handles), type, code)
-          ._checkEncodeFails();
+          ._checkEncodeFails(encoder);
       test('handles are closed', () {
         expect(handles.map(isHandleClosed), equals(handles.map((_) => true)));
       });
     });
   }
 
-  void _checkEncodeFails() {
+  void _checkEncodeFails(fidl.Encoder encoder) {
     test('encode fails', () {
       expect(() {
         final input = inputFactory();
-        _encode(type, input);
+        _encode(encoder, type, input);
       },
           throwsA(const TypeMatcher<fidl.FidlError>()
               .having((e) => e.code, 'code', equals(code))));

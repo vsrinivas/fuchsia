@@ -2530,7 +2530,7 @@ class TestProtocolProxy extends $fidl.AsyncProxy<TestProtocol>
           StackTrace.current);
     }
 
-    final $fidl.Encoder $encoder = $fidl.Encoder();
+    final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
     $encoder.encodeMessageHeader(
         _kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal, 0);
     final $completer = $async.Completer<StrictBoundedXUnion>();
@@ -2547,7 +2547,7 @@ class TestProtocolProxy extends $fidl.AsyncProxy<TestProtocol>
           StackTrace.current);
     }
 
-    final $fidl.Encoder $encoder = $fidl.Encoder();
+    final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
     $encoder.encodeMessageHeader(
         _kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal,
         0);
@@ -2583,7 +2583,8 @@ class TestProtocolBinding extends $fidl.AsyncBinding<TestProtocol> {
             return _impl.strictXUnionHenceResponseMayBeStackAllocated();
           });
           $future.then(($response) {
-            final $fidl.Encoder $encoder = $fidl.Encoder();
+            final $fidl.Encoder $encoder =
+                $fidl.Encoder($fidl.kWireFormatDefault);
             $encoder.encodeMessageHeader(
                 _kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal,
                 $message.txid);
@@ -2621,7 +2622,8 @@ class TestProtocolBinding extends $fidl.AsyncBinding<TestProtocol> {
             return _impl.flexibleXUnionHenceResponseMustBeHeapAllocated();
           });
           $future.then(($response) {
-            final $fidl.Encoder $encoder = $fidl.Encoder();
+            final $fidl.Encoder $encoder =
+                $fidl.Encoder($fidl.kWireFormatDefault);
             $encoder.encodeMessageHeader(
                 _kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal,
                 $message.txid);

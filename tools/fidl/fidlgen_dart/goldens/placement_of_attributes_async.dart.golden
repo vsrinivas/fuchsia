@@ -489,7 +489,7 @@ class ExampleProtocolProxy extends $fidl.AsyncProxy<ExampleProtocol>
           StackTrace.current);
     }
 
-    final $fidl.Encoder $encoder = $fidl.Encoder();
+    final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
     $encoder.encodeMessageHeader(_kExampleProtocol_Method_Ordinal, 0);
     final List<$fidl.MemberType> $types =
         _kExampleProtocol_Method_Type.request!;

@@ -35,7 +35,7 @@ void main() async {
         ChannelPair channelPair = ChannelPair();
         final defaultRights = ChannelWithDefaultRights(c: channelPair.first);
 
-        var encoder = Encoder()..alloc(8, 0);
+        var encoder = Encoder(kWireFormatDefault)..alloc(8, 0);
         kChannelWithDefaultRights_Type.encode(encoder, defaultRights, 0, 1);
 
         final decoder =
@@ -68,7 +68,7 @@ void main() async {
 
     // TODO(fxbug.dev/56687): test in GIDL
     test('unknown ordinal flexible with handles', () async {
-      var encoder = Encoder()..alloc(24, 0);
+      var encoder = Encoder(kWireFormatDefault)..alloc(24, 0);
       kExampleXunion_Type.encode(encoder, xunion, 0, 1);
 
       // overwrite the ordinal to be unknown
@@ -88,7 +88,7 @@ void main() async {
       expect(actual.data, equals(expectedData));
       expect(actual.handles.length, equals(1));
 
-      encoder = Encoder()..alloc(24, 0);
+      encoder = Encoder(kWireFormatDefault)..alloc(24, 0);
       kExampleXunion_Type.encode(encoder, unknownXunion, 0, 1);
 
       expect(encoder.message.data.lengthInBytes, 40);
@@ -107,7 +107,7 @@ void main() async {
     });
 
     test('encode integer bounds', () {
-      final encoder = Encoder()..alloc(1024, 0);
+      final encoder = Encoder(kWireFormatDefault)..alloc(1024, 0);
 
       encoder.encodeInt8(-128, 0);
       encoder.encodeInt8(127, 0);
