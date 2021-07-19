@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    fdio::fdio_sys::V_IRWXU,
     fidl::endpoints::{create_endpoints, create_proxy, Proxy, ServiceMarker},
     fidl_fuchsia_io as io,
     fidl_fuchsia_io2::{UnlinkFlags, UnlinkOptions},
@@ -49,8 +50,7 @@ fn convert_node_proxy<T: ServiceMarker>(proxy: io::NodeProxy) -> T::Proxy {
     T::Proxy::from_channel(proxy.into_channel().expect("Cannot convert node proxy to channel"))
 }
 
-/// Helper function to open the desired node in the root folder. Only use this
-/// if testing something other than the open call directly.
+/// Helper function to open the desired node in the root folder.
 /// Asserts that open_node_status succeeds.
 async fn open_node<T: ServiceMarker>(
     dir: &io::DirectoryProxy,
@@ -58,11 +58,12 @@ async fn open_node<T: ServiceMarker>(
     mode: u32,
     path: &str,
 ) -> T::Proxy {
-    open_node_status::<T>(dir, flags, mode, path).await.expect("open_node_status failed!")
+    open_node_status::<T>(dir, flags, mode, path)
+        .await
+        .expect(&format!("open_node_status failed for {}", path))
 }
 
-/// Helper function to open the desired node in the root folder. Only use this
-/// if testing something other than the open call directly.
+/// Helper function to open the desired node in the root folder.
 async fn open_node_status<T: ServiceMarker>(
     dir: &io::DirectoryProxy,
     flags: u32,
@@ -466,11 +467,153 @@ async fn open_file_with_extra_rights() {
                 .open(*file_flags | io::OPEN_FLAG_DESCRIBE, io::MODE_TYPE_FILE, TEST_FILE, server)
                 .expect("Cannot open file");
 
-            assert_eq!(get_open_status(&client).await, zx::Status::ACCESS_DENIED,
+            assert_eq!(
+                get_open_status(&client).await,
+                zx::Status::ACCESS_DENIED,
                 "Opened a file with more rights than the directory! (flags: dir = {}, file = {})",
-                *dir_flags, *file_flags);
+                *dir_flags,
+                *file_flags
+            );
         }
     }
+}
+
+/// Checks that open fails with ZX_ERR_BAD_PATH when it should.
+#[fasync::run_singlethreaded(test)]
+async fn open_path() {
+    let harness = TestHarness::new().await;
+    let root = root_directory(vec![directory("dir", vec![])]);
+    let root_dir = harness.get_directory(root, harness.all_rights);
+
+    // Valid paths:
+    for path in [".", "/", "/dir/"] {
+        open_node::<io::NodeMarker>(&root_dir, io::OPEN_RIGHT_READABLE, 0, path).await;
+    }
+
+    // Invalid paths:
+    for path in [
+        "", "//", "///", "////", "./", "/dir//", "//dir//", "/dir//", "/dir/../", "/dir/..",
+        "/dir/./", "/dir/.", "/./", "./dir",
+    ] {
+        assert_eq!(
+            open_node_status::<io::NodeMarker>(&root_dir, io::OPEN_RIGHT_READABLE, 0, path)
+                .await
+                .expect_err("open succeeded"),
+            zx::Status::INVALID_ARGS,
+            "path: {}",
+            path,
+        );
+    }
+}
+
+/// Check that a trailing flash with OPEN_FLAG_NOT_DIRECTORY returns ZX_ERR_INVALID_ARGS.
+#[fasync::run_singlethreaded(test)]
+async fn open_trailing_slash_with_not_directory() {
+    let harness = TestHarness::new().await;
+    let root = root_directory(vec![]);
+    let root_dir = harness.get_directory(root, harness.all_rights);
+    assert_eq!(
+        open_node_status::<io::NodeMarker>(
+            &root_dir,
+            io::OPEN_RIGHT_READABLE | io::OPEN_FLAG_NOT_DIRECTORY,
+            0,
+            "foo/"
+        )
+        .await
+        .expect_err("open succeeded"),
+        zx::Status::INVALID_ARGS
+    );
+}
+
+/// Checks that mode is ignored when opening existing nodes.
+#[fasync::run_singlethreaded(test)]
+async fn open_flags_and_mode() {
+    let harness = TestHarness::new().await;
+    let root = root_directory(vec![file(TEST_FILE, vec![]), directory("dir", vec![])]);
+    let root_dir = harness.get_directory(root, harness.all_rights);
+
+    // mode should be ignored when opening an existing object.
+    open_node::<io::NodeMarker>(
+        &root_dir,
+        io::OPEN_RIGHT_READABLE,
+        io::MODE_TYPE_DIRECTORY,
+        TEST_FILE,
+    )
+    .await;
+    open_node::<io::NodeMarker>(&root_dir, io::OPEN_RIGHT_READABLE, io::MODE_TYPE_FILE, "dir")
+        .await;
+    open_node::<io::NodeMarker>(
+        &root_dir,
+        io::OPEN_RIGHT_READABLE | io::OPEN_FLAG_DIRECTORY,
+        V_IRWXU,
+        "dir",
+    )
+    .await;
+
+    // MODE_TYPE_DIRECTORY is incompatible with OPEN_FLAG_NOT_DIRECTORY
+    assert_eq!(
+        open_node_status::<io::NodeMarker>(
+            &root_dir,
+            io::OPEN_RIGHT_READABLE | io::OPEN_FLAG_NOT_DIRECTORY,
+            io::MODE_TYPE_DIRECTORY,
+            "foo"
+        )
+        .await
+        .expect_err("open succeeded"),
+        zx::Status::INVALID_ARGS
+    );
+
+    // MODE_TYPE_FILE is incompatible with a path that specifies a directory
+    assert_eq!(
+        open_node_status::<io::NodeMarker>(
+            &root_dir,
+            io::OPEN_RIGHT_READABLE,
+            io::MODE_TYPE_FILE,
+            "foo/"
+        )
+        .await
+        .expect_err("open succeeded"),
+        zx::Status::INVALID_ARGS
+    );
+
+    // MODE_TYPE_FILE is incompatible with OPEN_FLAG_DIRECTORY
+    assert_eq!(
+        open_node_status::<io::NodeMarker>(
+            &root_dir,
+            io::OPEN_RIGHT_READABLE | io::OPEN_FLAG_DIRECTORY,
+            io::MODE_TYPE_FILE,
+            "foo"
+        )
+        .await
+        .expect_err("open succeeded"),
+        zx::Status::INVALID_ARGS
+    );
+
+    // Can't open . with OPEN_FLAG_NOT_DIRECTORY
+    assert_eq!(
+        open_node_status::<io::NodeMarker>(
+            &root_dir,
+            io::OPEN_RIGHT_READABLE | io::OPEN_FLAG_NOT_DIRECTORY,
+            0,
+            "."
+        )
+        .await
+        .expect_err("open succeeded"),
+        zx::Status::INVALID_ARGS
+    );
+
+    // Can't have OPEN_FLAG_DIRECTORY and OPEN_FLAG_NOT_DIRECTORY
+    assert_eq!(
+        open_node_status::<io::NodeMarker>(
+            &root_dir,
+            io::OPEN_RIGHT_READABLE | io::OPEN_FLAG_DIRECTORY | io::OPEN_FLAG_NOT_DIRECTORY,
+            0,
+            "."
+        )
+        .await
+        .expect_err("open succeeded"),
+        zx::Status::INVALID_ARGS
+    );
 }
 
 #[fasync::run_singlethreaded(test)]

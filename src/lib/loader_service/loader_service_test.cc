@@ -227,7 +227,7 @@ TEST_F(LoaderServiceTest, InvalidLoadObject) {
   ASSERT_TRUE(status.is_ok());
   fidl::WireSyncClient<fldsvc::Loader> client(std::move(status.value()));
 
-  EXPECT_NO_FATAL_FAILURE(LoadObject(client, "/", zx::error(ZX_ERR_NOT_FILE)));
+  EXPECT_NO_FATAL_FAILURE(LoadObject(client, "/", zx::error(ZX_ERR_INVALID_ARGS)));
   EXPECT_NO_FATAL_FAILURE(LoadObject(client, "..", zx::error(ZX_ERR_INVALID_ARGS)));
   EXPECT_NO_FATAL_FAILURE(LoadObject(client, "asan", zx::error(ZX_ERR_NOT_FILE)));
 }

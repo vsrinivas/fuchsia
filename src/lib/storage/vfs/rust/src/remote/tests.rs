@@ -39,7 +39,7 @@ fn set_up_remote(scope: ExecutionScope) -> DirectoryProxy {
         scope,
         OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
         MODE_TYPE_DIRECTORY,
-        Path::empty(),
+        Path::dot(),
         ServerEnd::new(remote_server_end.into_channel()),
     );
 
@@ -74,7 +74,7 @@ fn remote_dir_construction_open_node_ref() {
     run_client(exec, || async move {
         let (proxy, server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
         let flags = OPEN_FLAG_NODE_REFERENCE;
-        server.open(scope, flags, 0, Path::empty(), server_end.into_channel().into());
+        server.open(scope, flags, 0, Path::dot(), server_end.into_channel().into());
         assert_close!(proxy);
     })
 }
@@ -90,7 +90,7 @@ fn remote_dir_construction_open_no_remote() {
     run_client(exec, || async move {
         let (proxy, server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
         let flags = OPEN_FLAG_NO_REMOTE;
-        server.open(scope, flags, 0, Path::empty(), server_end.into_channel().into());
+        server.open(scope, flags, 0, Path::dot(), server_end.into_channel().into());
         assert_close!(proxy);
     })
 }
@@ -112,7 +112,7 @@ fn remote_dir_direct_connection() {
             scope,
             flags,
             MODE_TYPE_DIRECTORY,
-            Path::empty(),
+            Path::dot(),
             server_end.into_channel().into(),
         );
 

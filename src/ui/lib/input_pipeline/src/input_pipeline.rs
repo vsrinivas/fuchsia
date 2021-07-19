@@ -502,7 +502,7 @@ mod tests {
             scope_for_watcher,
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             0,
-            Path::empty(),
+            Path::dot(),
             server_end_for_watcher,
         );
         let device_watcher = Watcher::new(dir_proxy_for_watcher).await.unwrap();
@@ -517,7 +517,7 @@ mod tests {
             scope_for_pipeline,
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             0,
-            Path::empty(),
+            Path::dot(),
             server_end_for_pipeline,
         );
 
@@ -587,7 +587,7 @@ mod tests {
             scope_for_watcher,
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             0,
-            Path::empty(),
+            Path::dot(),
             server_end_for_watcher,
         );
         let device_watcher = Watcher::new(dir_proxy_for_watcher).await.unwrap();
@@ -602,7 +602,7 @@ mod tests {
             scope_for_pipeline,
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             0,
-            Path::empty(),
+            Path::dot(),
             server_end_for_pipeline,
         );
 

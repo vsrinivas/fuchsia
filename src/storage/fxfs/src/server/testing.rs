@@ -68,7 +68,7 @@ impl TestFixture {
             scope.clone(),
             OPEN_FLAG_DIRECTORY | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             MODE_TYPE_DIRECTORY,
-            Path::empty(),
+            Path::dot(),
             ServerEnd::new(server_end.into_channel()),
         );
         Self { scope, state: Some(State { filesystem, volume, root }) }

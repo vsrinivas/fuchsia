@@ -211,7 +211,7 @@ mod tests {
             scope,
             io_util::OPEN_RIGHT_READABLE,
             0,
-            vfs::path::Path::empty(),
+            vfs::path::Path::dot(),
             fidl::endpoints::ServerEnd::new(proxy_server_end.into_channel()),
         );
         proxy

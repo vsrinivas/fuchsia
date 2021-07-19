@@ -76,6 +76,11 @@ bool PrevalidateFlags(uint32_t flags) {
       return false;
     }
   }
+
+  if ((flags & fio::wire::kOpenFlagNotDirectory) && (flags & fio::wire::kOpenFlagDirectory)) {
+    return false;
+  }
+
   return true;
 }
 

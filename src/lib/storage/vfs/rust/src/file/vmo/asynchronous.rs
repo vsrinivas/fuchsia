@@ -397,7 +397,7 @@ where
         self: Arc<Self>,
         scope: ExecutionScope,
         flags: u32,
-        mode: u32,
+        _mode: u32,
         path: Path,
         server_end: ServerEnd<NodeMarker>,
     ) {
@@ -412,7 +412,6 @@ where
             scope.clone(),
             self,
             flags,
-            mode,
             readable,
             writable,
             server_end,

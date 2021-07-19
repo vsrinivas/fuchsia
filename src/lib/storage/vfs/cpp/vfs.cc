@@ -669,48 +669,61 @@ void Vfs::SetReadonly(bool value) {
 zx_status_t Vfs::Walk(fbl::RefPtr<Vnode> vn, std::string_view path, fbl::RefPtr<Vnode>* out_vn,
                       std::string_view* out_path) {
   zx_status_t r;
-  while (!path.empty() && path[path.length() - 1] == '/') {
-    // Discard extra trailing '/' characters.
-    path = std::string_view(path.data(), path.length() - 1);
+
+  if (path.empty()) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  // Handle "." and "/".
+  if (path == "." || path == "/") {
+    *out_vn = std::move(vn);
+    *out_path = ".";
+    return ZX_OK;
+  }
+
+  // Allow leading '/'.
+  if (path[0] == '/') {
+    path = path.substr(1);
+  }
+
+  // Allow trailing '/', but only if preceded by something.
+  if (path.length() > 1 && path.back() == '/') {
+    path = path.substr(0, path.length() - 1);
   }
 
   for (;;) {
-    while (!path.empty() && path[0] == '/') {
-      // Discard extra leading '/' characters.
-      path = std::string_view(&path[1], path.length() - 1);
-    }
-    if (path.empty()) {
-      // Convert empty initial path of final path segment to ".".
-      path = std::string_view(".", 1);
-    }
 #ifdef __Fuchsia__
     if (vn->IsRemote()) {
       // Remote filesystem mount, caller must resolve.
       *out_vn = std::move(vn);
-      *out_path = std::move(path);
+      *out_path = path;
       return ZX_OK;
     }
 #endif
 
     // Look for the next '/' separated path component.
-    const char* next_path = reinterpret_cast<const char*>(memchr(path.data(), '/', path.length()));
-    if (next_path == nullptr) {
+    size_t slash = path.find('/');
+    std::string_view component = path.substr(0, slash);
+    if (component.length() > NAME_MAX) {
+      return ZX_ERR_BAD_PATH;
+    }
+    if (component.empty() || component == "." || component == "..") {
+      return ZX_ERR_INVALID_ARGS;
+    }
+
+    if (slash == std::string_view::npos) {
       // Final path segment.
       *out_vn = vn;
       *out_path = path;
       return ZX_OK;
     }
 
-    // Path has at least one additional segment.
-    std::string_view component(path.data(), next_path - path.data());
-    if (component.length() > NAME_MAX) {
-      return ZX_ERR_BAD_PATH;
-    }
     if ((r = LookupNode(std::move(vn), component, &vn)) != ZX_OK) {
       return r;
     }
+
     // Traverse to the next segment.
-    path = std::string_view(next_path + 1, path.length() - (component.length() + 1));
+    path = path.substr(slash + 1);
   }
 }
 

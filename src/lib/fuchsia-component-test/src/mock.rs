@@ -228,7 +228,7 @@ mod tests {
             ExecutionScope::new(),
             fio::OPEN_RIGHT_READABLE,
             fio::MODE_TYPE_DIRECTORY,
-            VfsPath::empty(),
+            VfsPath::dot(),
             data_dir_server_end.into_channel().into(),
         );
 

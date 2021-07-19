@@ -21,6 +21,7 @@ impl From<FxfsError> for Status {
             FxfsError::TooBig => Status::FILE_BIG,
             FxfsError::InvalidVersion => Status::NOT_SUPPORTED,
             FxfsError::JournalFlushError => Status::IO,
+            FxfsError::NotSupported => Status::NOT_SUPPORTED,
         }
     }
 }

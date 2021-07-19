@@ -153,7 +153,7 @@ fn spawn_vfs(dir: Arc<dyn DirectoryEntry>) -> DirectoryProxy {
         scope,
         fidl_fuchsia_io::OPEN_RIGHT_READABLE,
         0,
-        vfs::path::Path::empty(),
+        vfs::path::Path::dot(),
         ServerEnd::new(server_end.into_channel()),
     );
     client_end.into_proxy().unwrap()

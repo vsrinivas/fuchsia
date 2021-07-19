@@ -261,7 +261,7 @@ where
             scope_builder.new(),
             self.flags,
             self.mode.unwrap_or(0),
-            Path::empty(),
+            Path::dot(),
             server_end.into_channel().into(),
         );
 

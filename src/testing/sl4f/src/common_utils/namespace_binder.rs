@@ -50,7 +50,7 @@ impl NamespaceBinder {
                     self.scope.clone(),
                     fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
                     fio::MODE_TYPE_DIRECTORY,
-                    vfs::path::Path::empty(),
+                    vfs::path::Path::dot(),
                     ServerEnd::new(server.into_channel()),
                 );
 

@@ -428,7 +428,7 @@ mod tests {
             scope,
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             fidl_fuchsia_io::MODE_TYPE_DIRECTORY,
-            vfs::path::Path::empty(),
+            vfs::path::Path::dot(),
             ServerEnd::new(example_dir_service.into_channel()),
         );
 

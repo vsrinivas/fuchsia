@@ -190,7 +190,7 @@ mod tests {
                         ExecutionScope::new(),
                         fio::OPEN_RIGHT_READABLE,
                         fio::MODE_TYPE_DIRECTORY,
-                        vfs::path::Path::empty(),
+                        vfs::path::Path::dot(),
                         ServerEnd::new(dir_s),
                     );
                     return Some(Package {

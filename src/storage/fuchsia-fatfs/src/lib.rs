@@ -169,7 +169,7 @@ impl FatFs {
                     scope.clone(),
                     OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
                     0,
-                    Path::empty(),
+                    Path::dot(),
                     fidl::endpoints::ServerEnd::new(dir.into_channel()),
                 );
 
@@ -376,7 +376,7 @@ mod tests {
         let scope = ExecutionScope::new();
         let (proxy, remote) = fidl::endpoints::create_proxy::<NodeMarker>().unwrap();
         let root = fatfs.get_root().expect("get_root OK");
-        root.clone().open(scope, OPEN_RIGHT_READABLE, 0, Path::empty(), remote);
+        root.clone().open(scope, OPEN_RIGHT_READABLE, 0, Path::dot(), remote);
         root.close().expect("Close OK");
 
         structure.verify(proxy).await.expect("Verify succeeds");

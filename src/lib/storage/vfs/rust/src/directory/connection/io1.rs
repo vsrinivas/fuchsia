@@ -31,8 +31,8 @@ use {
         DirectoryAdminSyncResponder, DirectoryAdminUnlink2Responder, DirectoryAdminUnlinkResponder,
         DirectoryAdminUnmountNodeResponder, DirectoryAdminUnmountResponder,
         DirectoryAdminWatchResponder, DirectoryObject, NodeAttributes, NodeInfo, NodeMarker,
-        INO_UNKNOWN, MODE_TYPE_DIRECTORY, OPEN_FLAG_CREATE, OPEN_FLAG_NODE_REFERENCE,
-        OPEN_FLAG_POSIX, OPEN_RIGHT_WRITABLE,
+        INO_UNKNOWN, MODE_TYPE_DIRECTORY, OPEN_FLAG_CREATE, OPEN_FLAG_DIRECTORY,
+        OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY, OPEN_FLAG_POSIX, OPEN_RIGHT_WRITABLE,
     },
     fidl_fuchsia_io2::UnlinkOptions,
     fuchsia_async::Channel,
@@ -68,7 +68,6 @@ pub trait DerivedConnection: Send + Sync {
         scope: ExecutionScope,
         directory: OpenDirectory<Self::Directory>,
         flags: u32,
-        mode: u32,
         server_end: ServerEnd<NodeMarker>,
     );
 
@@ -504,13 +503,13 @@ where
             }
         };
 
-        self.directory.clone().open(self.scope.clone(), flags, mode, Path::empty(), server_end);
+        self.directory.clone().open(self.scope.clone(), flags, mode, Path::dot(), server_end);
     }
 
     fn handle_open(
         &self,
-        flags: u32,
-        mut mode: u32,
+        mut flags: u32,
+        mode: u32,
         path: String,
         server_end: ServerEnd<NodeMarker>,
     ) {
@@ -519,12 +518,19 @@ where
             return;
         }
 
-        if path == "/" || path == "" {
-            send_on_open_with_error(flags, server_end, Status::BAD_PATH);
-            return;
+        let path = match Path::validate_and_split(path) {
+            Ok(path) => path,
+            Err(status) => {
+                send_on_open_with_error(flags, server_end, status);
+                return;
+            }
+        };
+
+        if path.is_dir() {
+            flags |= OPEN_FLAG_DIRECTORY;
         }
 
-        let mut flags = match check_child_connection_flags(self.flags, flags) {
+        let (mut flags, mode) = match check_child_connection_flags(self.flags, flags, mode) {
             Ok(updated) => updated,
             Err(status) => {
                 send_on_open_with_error(flags, server_end, status);
@@ -532,11 +538,11 @@ where
             }
         };
 
-        if path == "." || path == "./" {
+        if path.as_ref() == "." {
             // Note that we reject both OPEN_FLAG_CREATE and OPEN_FLAG_CREATE_IF_ABSENT, rather
             // than just OPEN_FLAG_CREATE_IF_ABSENT. This matches the behaviour of the C++
             // filesystems.
-            if flags & OPEN_FLAG_CREATE != 0 {
+            if flags & (OPEN_FLAG_CREATE | OPEN_FLAG_NOT_DIRECTORY) != 0 {
                 send_on_open_with_error(flags, server_end, Status::INVALID_ARGS);
                 return;
             }
@@ -550,18 +556,6 @@ where
 
             self.handle_clone(flags, mode, server_end);
             return;
-        }
-
-        let path = match Path::validate_and_split(path) {
-            Ok(path) => path,
-            Err(status) => {
-                send_on_open_with_error(flags, server_end, status);
-                return;
-            }
-        };
-
-        if path.is_dir() {
-            mode |= MODE_TYPE_DIRECTORY;
         }
 
         // It is up to the open method to handle OPEN_FLAG_DESCRIBE from this point on.
@@ -696,7 +690,7 @@ mod tests {
             ExecutionScope::new(),
             OPEN_FLAG_DIRECTORY | OPEN_RIGHT_READABLE,
             MODE_TYPE_DIRECTORY,
-            Path::empty(),
+            Path::dot(),
             ServerEnd::new(dir_server_end.into_channel()),
         );
 
@@ -729,7 +723,7 @@ mod tests {
             ExecutionScope::new(),
             OPEN_FLAG_DIRECTORY | OPEN_RIGHT_READABLE,
             MODE_TYPE_DIRECTORY,
-            Path::empty(),
+            Path::dot(),
             ServerEnd::new(dir_server_end.into_channel()),
         );
 
@@ -764,7 +758,7 @@ mod tests {
             ExecutionScope::new(),
             OPEN_FLAG_DIRECTORY | OPEN_RIGHT_READABLE,
             MODE_TYPE_DIRECTORY,
-            Path::empty(),
+            Path::dot(),
             ServerEnd::new(dir_server_end.into_channel()),
         );
 
@@ -802,7 +796,7 @@ mod tests {
             ExecutionScope::new(),
             OPEN_FLAG_DIRECTORY | OPEN_RIGHT_READABLE,
             MODE_TYPE_DIRECTORY,
-            Path::empty(),
+            Path::dot(),
             ServerEnd::new(dir_server_end.into_channel()),
         );
 

@@ -118,7 +118,6 @@ impl FileConnection {
         scope: ExecutionScope,
         file: Arc<dyn FileConnectionApi>,
         flags: u32,
-        mode: u32,
         readable: bool,
         writable: bool,
         server_end: ServerEnd<NodeMarker>,
@@ -127,7 +126,6 @@ impl FileConnection {
             scope.clone(),
             file,
             flags,
-            mode,
             readable,
             writable,
             server_end,
@@ -143,13 +141,12 @@ impl FileConnection {
         scope: ExecutionScope,
         file: Arc<dyn FileConnectionApi>,
         flags: u32,
-        mode: u32,
         readable: bool,
         writable: bool,
         server_end: ServerEnd<NodeMarker>,
     ) {
         let flags = match new_connection_validate_flags(
-            flags, mode, readable, writable, /*append_allowed=*/ false,
+            flags, readable, writable, /*append_allowed=*/ false,
         ) {
             Ok(updated) => updated,
             Err(status) => {
@@ -510,7 +507,6 @@ impl FileConnection {
             self.scope.clone(),
             self.file.clone(),
             flags,
-            0,
             self.readable,
             self.writable,
             server_end,

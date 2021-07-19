@@ -579,12 +579,11 @@ impl DirectoryEntry for FatDirectory {
                     scope,
                     OpenDirectory::new(entry),
                     flags,
-                    mode,
                     server_end,
                 );
             }
             Ok(FatNode::File(entry)) => {
-                entry.clone().open(scope, flags, mode, Path::empty(), server_end);
+                entry.clone().open(scope, flags, mode, Path::dot(), server_end);
             }
         };
     }
@@ -950,7 +949,7 @@ mod tests {
         let scope = ExecutionScope::new();
         let (proxy, server_end) =
             fidl::endpoints::create_proxy::<fidl_fuchsia_io::NodeMarker>().unwrap();
-        dir.clone().open(scope.clone(), OPEN_RIGHT_READABLE, 0, Path::empty(), server_end);
+        dir.clone().open(scope.clone(), OPEN_RIGHT_READABLE, 0, Path::dot(), server_end);
         let scope_clone = scope.clone();
 
         Status::ok(proxy.close().await.expect("Send request OK")).expect("First close OK");

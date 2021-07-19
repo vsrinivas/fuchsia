@@ -43,7 +43,7 @@ async fn builtin_time_service_and_clock_routed() {
         scope,
         fio::OPEN_FLAG_DIRECTORY | fio::OPEN_RIGHT_READABLE,
         0,
-        vfs::path::Path::empty(),
+        vfs::path::Path::dot(),
         ServerEnd::new(server),
     );
 

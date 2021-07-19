@@ -598,7 +598,7 @@ fn make_diagnostics_dir<T: ServiceObjTrait>(fs: &mut ServiceFs<T>) -> Arc<Simple
         scope,
         OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
         MODE_TYPE_DIRECTORY,
-        Path::empty(),
+        Path::dot(),
         server_end,
     );
     fs.add_remote("diagnostics", proxy);

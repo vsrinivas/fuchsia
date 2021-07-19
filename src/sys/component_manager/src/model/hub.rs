@@ -142,7 +142,7 @@ impl Hub {
         mut server_end: zx::Channel,
     ) -> Result<(), ModelError> {
         let root_moniker = AbsoluteMoniker::root();
-        self.open(&root_moniker, flags, MODE_TYPE_DIRECTORY, pfsPath::empty(), &mut server_end)
+        self.open(&root_moniker, flags, MODE_TYPE_DIRECTORY, pfsPath::dot(), &mut server_end)
             .await?;
         Ok(())
     }
@@ -723,7 +723,7 @@ mod tests {
                 ExecutionScope::new(),
                 OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
                 MODE_TYPE_DIRECTORY,
-                pfsPath::empty(),
+                pfsPath::dot(),
                 ServerEnd::new(server_end.into_channel()),
             );
         })
@@ -740,7 +740,7 @@ mod tests {
                 ExecutionScope::new(),
                 OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
                 MODE_TYPE_DIRECTORY,
-                pfsPath::empty(),
+                pfsPath::dot(),
                 ServerEnd::new(server_end.into_channel()),
             );
         })

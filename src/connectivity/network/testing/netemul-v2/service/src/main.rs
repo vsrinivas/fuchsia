@@ -373,7 +373,7 @@ impl ManagedRealm {
                         vfs::execution_scope::ExecutionScope::new(),
                         fio::OPEN_RIGHT_READABLE,
                         fio::MODE_TYPE_DIRECTORY,
-                        vfs::path::Path::empty(),
+                        vfs::path::Path::dot(),
                         server_end.into_channel().into(),
                     );
                 }
@@ -527,7 +527,7 @@ fn make_devfs() -> Result<(fio::DirectoryProxy, Arc<SimpleMutableDir>)> {
         vfs::execution_scope::ExecutionScope::new(),
         fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
         fio::MODE_TYPE_DIRECTORY,
-        vfs::path::Path::empty(),
+        vfs::path::Path::dot(),
         server.into_channel().into(),
     );
     Ok((proxy, dir))

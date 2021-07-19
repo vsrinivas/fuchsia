@@ -33,7 +33,7 @@ async fn serve_fake_filesystem(
         vfs::execution_scope::ExecutionScope::new(),
         fidl_fuchsia_io::OPEN_RIGHT_READABLE,
         0,
-        vfs::path::Path::empty(),
+        vfs::path::Path::dot(),
         ServerEnd::new(pkgfs_service.into_channel()),
     );
     let (system_proxy, system_service) =
@@ -42,7 +42,7 @@ async fn serve_fake_filesystem(
         vfs::execution_scope::ExecutionScope::new(),
         fidl_fuchsia_io::OPEN_RIGHT_READABLE,
         0,
-        vfs::path::Path::empty(),
+        vfs::path::Path::dot(),
         ServerEnd::new(system_service.into_channel()),
     );
     let mut fs = ServiceFs::new();

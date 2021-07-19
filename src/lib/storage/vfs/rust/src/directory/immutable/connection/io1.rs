@@ -53,10 +53,9 @@ impl DerivedConnection for ImmutableConnection {
         scope: ExecutionScope,
         directory: OpenDirectory<Self::Directory>,
         flags: u32,
-        mode: u32,
         server_end: ServerEnd<NodeMarker>,
     ) {
-        let flags = match new_connection_validate_flags(flags, mode) {
+        let flags = match new_connection_validate_flags(flags) {
             Ok(updated) => updated,
             Err(status) => {
                 send_on_open_with_error(flags, server_end, status);

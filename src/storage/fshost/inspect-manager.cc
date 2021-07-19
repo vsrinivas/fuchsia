@@ -53,7 +53,7 @@ void InspectManager::ServeStats(const std::string& name, fbl::RefPtr<fs::Vnode> 
       [this, name = std::move(name), root = std::move(root)] {
         inspect::Inspector insp;
         fidl::ClientEnd<fio::Node> root_chan;
-        zx_status_t status = OpenNode(root->GetRemote(), "/", S_IFDIR, &root_chan);
+        zx_status_t status = OpenNode(root->GetRemote(), ".", S_IFDIR, &root_chan);
         if (status != ZX_OK) {
           return fpromise::make_result_promise(fpromise::ok(std::move(insp)));
         }
@@ -193,7 +193,7 @@ std::optional<DirectoryEntry> DirectoryEntriesIterator::MaybeMakeEntry(
     const std::string& entry_name) {
   // Open child of the current node with the given entry name.
   fidl::ClientEnd<fio::Node> child_chan;
-  zx_status_t status = OpenNode(directory_, entry_name, S_IFREG | S_IFDIR, &child_chan);
+  zx_status_t status = OpenNode(directory_, entry_name, 0, &child_chan);
   if (status != ZX_OK) {
     return std::nullopt;
   }

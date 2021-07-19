@@ -316,7 +316,7 @@ pub mod test {
             dev.scope.clone(),
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             0,
-            Path::empty(),
+            Path::dot(),
             fidl::endpoints::ServerEnd::new(channel),
         );
         root.close().unwrap();

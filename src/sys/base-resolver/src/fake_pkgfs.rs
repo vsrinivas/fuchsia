@@ -127,7 +127,7 @@ impl Entry for MockFile {
             vfs::execution_scope::ExecutionScope::new(),
             flags,
             mode,
-            vfs::path::Path::empty(),
+            vfs::path::Path::dot(),
             object.into_channel().into(),
         );
     }

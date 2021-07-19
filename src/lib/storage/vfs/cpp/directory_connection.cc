@@ -175,19 +175,51 @@ void DirectoryConnection::AddInotifyFilter(AddInotifyFilterRequestView request,
 }
 
 void DirectoryConnection::Open(OpenRequestView request, OpenCompleter::Sync& completer) {
-  auto open_options = VnodeConnectionOptions::FromIoV1Flags(request->flags);
-  auto write_error = [describe = open_options.flags.describe](fidl::ServerEnd<fio::Node> channel,
-                                                              zx_status_t error) {
+  bool describe = request->flags & fio::wire::kOpenFlagDescribe;
+  auto write_error = [describe](fidl::ServerEnd<fio::Node> channel, zx_status_t error) {
     if (describe) {
       fidl::WireEventSender<fio::Node>(std::move(channel)).OnOpen(error, fio::wire::NodeInfo());
     }
   };
 
-  if (!PrevalidateFlags(request->flags)) {
+  std::string_view path(request->path.data(), request->path.size());
+  if (path.size() > PATH_MAX) {
+    return write_error(std::move(request->object), ZX_ERR_BAD_PATH);
+  }
+
+  if (path.empty() ||
+      ((path == "." || path == "/") && (request->flags & fio::wire::kOpenFlagNotDirectory))) {
+    return write_error(std::move(request->object), ZX_ERR_INVALID_ARGS);
+  }
+
+  uint32_t flags = request->flags;
+  if (path.back() == '/') {
+    flags |= fio::wire::kOpenFlagDirectory;
+  }
+
+  auto open_options = VnodeConnectionOptions::FromIoV1Flags(flags);
+
+  if (!PrevalidateFlags(flags)) {
     FS_PRETTY_TRACE_DEBUG("[DirectoryOpen] prevalidate failed",
                           ", incoming flags: ", ZxFlags(request->flags),
                           ", path: ", request->path.data());
     return write_error(std::move(request->object), ZX_ERR_INVALID_ARGS);
+  }
+
+  uint32_t mode = request->mode;
+  const uint32_t mode_type = mode & fio::wire::kModeTypeMask;
+  if (mode_type == 0) {
+    if (open_options.flags.directory) {
+      mode |= fio::wire::kModeTypeDirectory;
+    }
+  } else {
+    if (open_options.flags.directory && mode_type != fio::wire::kModeTypeDirectory) {
+      return write_error(std::move(request->object), ZX_ERR_INVALID_ARGS);
+    }
+
+    if (open_options.flags.not_directory && mode_type == fio::wire::kModeTypeDirectory) {
+      return write_error(std::move(request->object), ZX_ERR_INVALID_ARGS);
+    }
   }
 
   FS_PRETTY_TRACE_DEBUG("[DirectoryOpen] our options: ", options(),
@@ -204,9 +236,6 @@ void DirectoryConnection::Open(OpenRequestView request, OpenCompleter::Sync& com
       !open_options.flags.posix) {
     return write_error(std::move(request->object), ZX_ERR_INVALID_ARGS);
   }
-  if (request->path.empty() || (request->path.size() > PATH_MAX)) {
-    return write_error(std::move(request->object), ZX_ERR_BAD_PATH);
-  }
 
   // Check for directory rights inheritance
   zx_status_t status = EnforceHierarchicalRights(options().rights, open_options, &open_options);
@@ -214,9 +243,7 @@ void DirectoryConnection::Open(OpenRequestView request, OpenCompleter::Sync& com
     FS_PRETTY_TRACE_DEBUG("Rights violation during DirectoryOpen");
     return write_error(std::move(request->object), status);
   }
-  OpenAt(vfs(), vnode(), std::move(request->object),
-         std::string_view(request->path.data(), request->path.size()), open_options,
-         options().rights, request->mode);
+  OpenAt(vfs(), vnode(), std::move(request->object), path, open_options, options().rights, mode);
 }
 
 void DirectoryConnection::Unlink(UnlinkRequestView request, UnlinkCompleter::Sync& completer) {

@@ -26,7 +26,8 @@ use {
     fidl_fuchsia_fs::FsType,
     fidl_fuchsia_io::{
         self as fio, FilesystemInfo, NodeAttributes, NodeMarker, DIRENT_TYPE_DIRECTORY,
-        DIRENT_TYPE_FILE, MAX_FILENAME, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, OPEN_FLAG_CREATE,
+        DIRENT_TYPE_FILE, MAX_FILENAME, MODE_TYPE_BLOCK_DEVICE, MODE_TYPE_DIRECTORY,
+        MODE_TYPE_FILE, MODE_TYPE_MASK, MODE_TYPE_SERVICE, MODE_TYPE_SOCKET, OPEN_FLAG_CREATE,
         OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DIRECTORY, OPEN_FLAG_NOT_DIRECTORY,
         WATCH_MASK_EXISTING,
     },
@@ -198,14 +199,12 @@ impl FxDirectory {
                     if last_segment {
                         match object_descriptor {
                             ObjectDescriptor::File => {
-                                if mode & MODE_TYPE_DIRECTORY > 0 || flags & OPEN_FLAG_DIRECTORY > 0
-                                {
+                                if flags & OPEN_FLAG_DIRECTORY > 0 {
                                     bail!(FxfsError::NotDir)
                                 }
                             }
                             ObjectDescriptor::Directory => {
-                                if mode & MODE_TYPE_FILE > 0 || flags & OPEN_FLAG_NOT_DIRECTORY > 0
-                                {
+                                if flags & OPEN_FLAG_NOT_DIRECTORY > 0 {
                                     bail!(FxfsError::NotFile)
                                 }
                             }
@@ -251,14 +250,18 @@ impl FxDirectory {
         mode: u32,
     ) -> Result<Arc<dyn FxNode>, Error> {
         self.ensure_writable()?;
-        if mode & MODE_TYPE_DIRECTORY != 0 {
-            Ok(Arc::new(FxDirectory::new(
+        match mode & MODE_TYPE_MASK {
+            MODE_TYPE_DIRECTORY => Ok(Arc::new(FxDirectory::new(
                 Some(self.clone()),
                 self.directory.create_child_dir(transaction, name).await?,
-            )) as Arc<dyn FxNode>)
-        } else {
-            Ok(Arc::new(FxFile::new(self.directory.create_child_file(transaction, name).await?))
-                as Arc<dyn FxNode>)
+            )) as Arc<dyn FxNode>),
+            0 | MODE_TYPE_FILE => Ok(Arc::new(FxFile::new(
+                self.directory.create_child_file(transaction, name).await?,
+            )) as Arc<dyn FxNode>),
+            MODE_TYPE_BLOCK_DEVICE | MODE_TYPE_SOCKET | MODE_TYPE_SERVICE => {
+                bail!(FxfsError::NotSupported)
+            }
+            _ => bail!(FxfsError::InvalidArgs),
         }
     }
 
@@ -463,11 +466,10 @@ impl DirectoryEntry for FxDirectory {
                             cloned_scope,
                             OpenDirectory::new(dir),
                             flags,
-                            mode,
                             server_end,
                         );
                     } else if let Ok(file) = node.into_any().downcast::<FxFile>() {
-                        file.clone().open(cloned_scope, flags, mode, Path::empty(), server_end);
+                        file.clone().open(cloned_scope, flags, mode, Path::dot(), server_end);
                     } else {
                         unreachable!();
                     }

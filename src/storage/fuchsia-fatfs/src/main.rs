@@ -67,7 +67,7 @@ async fn main() -> Result<(), Error> {
         scope.clone(),
         fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
         0,
-        Path::empty(),
+        Path::dot(),
         server.into_channel().into(),
     );
 

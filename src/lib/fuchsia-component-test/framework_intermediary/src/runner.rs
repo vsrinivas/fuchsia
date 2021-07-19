@@ -182,7 +182,7 @@ impl Runner {
             execution_scope.clone(),
             fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             fio::MODE_TYPE_DIRECTORY,
-            VfsPath::empty(),
+            VfsPath::dot(),
             host_dir_server_end.into_channel().into(),
         );
 
@@ -289,7 +289,7 @@ impl Runner {
             execution_scope.clone(),
             fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             fio::MODE_TYPE_DIRECTORY,
-            VfsPath::empty(),
+            VfsPath::dot(),
             start_info.outgoing_dir.unwrap().into_channel().into(),
         );
 
@@ -367,7 +367,7 @@ async fn run_mock_controller(
         execution_scope.clone(),
         fio::OPEN_RIGHT_READABLE,
         fio::MODE_TYPE_DIRECTORY,
-        VfsPath::empty(),
+        VfsPath::dot(),
         runtime_dir_server_end.into_channel().into(),
     );
 
@@ -410,7 +410,7 @@ async fn run_v1_controller(
         execution_scope.clone(),
         fio::OPEN_RIGHT_READABLE,
         fio::MODE_TYPE_DIRECTORY,
-        VfsPath::empty(),
+        VfsPath::dot(),
         runtime_dir_server_end.into_channel().into(),
     );
 

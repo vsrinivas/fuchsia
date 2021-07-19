@@ -962,7 +962,7 @@ mod tests {
             scope,
             fidl_fuchsia_io::OPEN_RIGHT_READABLE,
             fidl_fuchsia_io::MODE_TYPE_DIRECTORY,
-            vfs::path::Path::empty(),
+            vfs::path::Path::dot(),
             ServerEnd::new(dir_server.into_channel()),
         );
 

@@ -76,7 +76,7 @@ fn describe() {
             create_proxy::<FileMarker>().expect("Failed to create connection endpoints");
 
         let flags = OPEN_FLAG_NODE_REFERENCE | OPEN_FLAG_DESCRIBE;
-        server.open(scope, flags, 0, Path::empty(), server_end.into_channel().into());
+        server.open(scope, flags, 0, Path::dot(), server_end.into_channel().into());
 
         assert_event!(proxy, FileEvent::OnOpen_ { s, info }, {
             assert_eq!(s, ZX_OK);

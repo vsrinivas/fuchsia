@@ -538,7 +538,7 @@ impl IncomingNamespace {
                 ExecutionScope::new(),
                 fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
                 fio::MODE_TYPE_DIRECTORY,
-                Path::empty(),
+                Path::dot(),
                 server_end.into_channel().into(),
             );
 

@@ -54,7 +54,7 @@ async fn start_with_cache_no_space() {
         vfs::execution_scope::ExecutionScope::build().entry_constructor(constructor.clone()).new(),
         fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
         0,
-        vfs::path::Path::empty(),
+        vfs::path::Path::dot(),
         server.into_channel().into(),
     );
 

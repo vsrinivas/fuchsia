@@ -182,7 +182,6 @@ where
                         scope,
                         OpenDirectory::new(self as Arc<dyn MutableConnectionClient>),
                         flags,
-                        mode,
                         server_end,
                     );
                 } else {
@@ -190,7 +189,6 @@ where
                         scope,
                         OpenDirectory::new(self as Arc<dyn ImmutableConnectionClient>),
                         flags,
-                        mode,
                         server_end,
                     );
                 }

@@ -450,7 +450,7 @@ mod tests {
             scope,
             fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             fio::MODE_TYPE_DIRECTORY,
-            vfs::path::Path::empty(),
+            vfs::path::Path::dot(),
             endpoints::ServerEnd::new(dir_server.into_channel()),
         );
 
@@ -480,7 +480,7 @@ mod tests {
             scope,
             fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             fio::MODE_TYPE_DIRECTORY,
-            vfs::path::Path::empty(),
+            vfs::path::Path::dot(),
             endpoints::ServerEnd::new(dir_server.into_channel()),
         );
 

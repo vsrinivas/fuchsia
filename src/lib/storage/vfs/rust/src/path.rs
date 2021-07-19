@@ -20,13 +20,18 @@ pub struct Path {
 }
 
 impl Path {
-    /// Creates an empty path.
+    /// DEPRECATED
     pub fn empty() -> Path {
         Path { is_dir: false, inner: String::new(), next: 0 }
     }
 
+    /// Returns a path for dot, i.e. the current directory.
+    pub fn dot() -> Path {
+        Path { is_dir: false, inner: ".".to_string(), next: 1 }
+    }
+
     /// Splits a `path` string into components, also checking if it is in a canonical form,
-    /// disallowing any "." and ".." components, as well as empty component names.
+    /// disallowing any ".." components, as well as empty component names.
     pub fn validate_and_split<Source>(path: Source) -> Result<Path, Status>
     where
         Source: Into<String>,
@@ -40,14 +45,9 @@ impl Path {
         }
 
         match path.as_str() {
-            "" => {
-                // `path.split('/')` below will split an empty string into one component that is an
-                // empty string.  But we disallow empty components.  Empty path is a special case
-                // anyways.
-                Ok(Path { is_dir: false, inner: path, next: 0 })
-            }
+            "." => Ok(Self::dot()),
             "/" => {
-                // Need to have a special case for this, as well.  Otherwise code below will treat
+                // Need to have a special case for this, as otherwise, the code below will treat
                 // this path as having one empty component - string before the first '/'.  Also,
                 // `into_string` does not return the trailing '/' when the last component has been
                 // reached.  One can argue for a path like this it has already have happened.
@@ -56,23 +56,28 @@ impl Path {
             _ => {
                 let is_dir = path.ends_with('/');
 
+                // Allow a leading slash.
+                let next = if path.len() > 1 && path.starts_with('/') { 1 } else { 0 };
+
+                let mut check = path[next..].split('/');
+
+                // Allow trailing slash to indicate a directory.
+                if is_dir {
+                    let _ = check.next_back();
+                }
+
                 // Disallow empty components, ".", and ".."s.  Path is expected to be
                 // canonicalized.  See fxbug.dev/28436 for discussion of empty components.
-                {
-                    let mut check = path.split('/');
-                    // Allow trailing slash to indicate a directory.
-                    if is_dir {
-                        let _ = check.next_back();
+                for c in check {
+                    if c.is_empty() || c == ".." || c == "." {
+                        return Err(Status::INVALID_ARGS);
                     }
-
-                    if check.any(|c| {
-                        c.is_empty() || c == ".." || c == "." || (c.len() as u64) > MAX_FILENAME
-                    }) {
+                    if c.len() as u64 > MAX_FILENAME {
                         return Err(Status::BAD_PATH);
                     }
                 }
 
-                Ok(Path { is_dir, inner: path, next: 0 })
+                Ok(Path { is_dir, inner: path, next })
             }
         }
     }
@@ -184,28 +189,22 @@ mod tests {
     }
 
     macro_rules! negative_construction_test {
-        (path: $path:expr, $details:expr) => {
+        (path: $path:expr, $details:expr, $status:expr) => {
             match Path::validate_and_split($path) {
                 Ok(path) => {
                     panic!("Constructed '{}' with {}: {:?}", stringify!($path), $details, path)
                 }
-                Err(status) => assert_eq!(status, Status::BAD_PATH),
+                Err(status) => assert_eq!(status, $status),
             }
         };
     }
 
     #[test]
     fn empty() {
-        simple_construction_test! {
+        negative_construction_test! {
             path: "",
-            mut path => {
-                assert!(path.is_empty());
-                assert!(!path.is_dir());
-                assert!(!path.is_single_component());
-                assert_eq!(path.peek(), None);
-                assert_eq!(path.next(), None);
-                assert_eq!(path.into_string(), String::new());
-            }
+            "empty path",
+            Status::INVALID_ARGS
         };
     }
 
@@ -407,23 +406,37 @@ mod tests {
     fn no_empty_components() {
         negative_construction_test! {
             path: "//",
-            "empty components"
+            "empty components",
+            Status::INVALID_ARGS
         };
     }
 
     #[test]
-    fn no_absolute_paths() {
-        negative_construction_test! {
+    fn absolute_paths() {
+        simple_construction_test! {
             path: "/a/b/c",
-            "\"absolute\" path"
-        };
+            mut path => {
+                assert!(!path.is_empty());
+                assert!(!path.is_dir());
+                assert!(!path.is_single_component());
+                assert_eq!(path.peek(), Some("a"));
+                assert_eq!(path.peek(), Some("a"));
+                assert_eq!(path.next(), Some("a"));
+                assert_eq!(path.next(), Some("b"));
+                assert_eq!(path.next(), Some("c"));
+                assert_eq!(path.peek(), None);
+                assert_eq!(path.next(), None);
+                assert_eq!(path.into_string(), "".to_string());
+            }
+        }
     }
 
     #[test]
     fn dot_components() {
         negative_construction_test! {
             path: "a/./b",
-            "'.' components"
+            "'.' components",
+            Status::INVALID_ARGS
         };
     }
 
@@ -431,7 +444,8 @@ mod tests {
     fn dot_dot_components() {
         negative_construction_test! {
             path: "a/../b",
-            "'..' components"
+            "'..' components",
+            Status::INVALID_ARGS
         };
     }
 
@@ -440,7 +454,8 @@ mod tests {
         let string = "a".repeat(MAX_FILENAME as usize + 1);
         negative_construction_test! {
             path: &string,
-            "filename too long"
+            "filename too long",
+            Status::BAD_PATH
         };
     }
 
@@ -455,7 +470,8 @@ mod tests {
         assert_eq!(path.len(), MAX_PATH as usize);
         negative_construction_test! {
             path: &path,
-            "path too long"
+            "path too long",
+            Status::BAD_PATH
         };
     }
 

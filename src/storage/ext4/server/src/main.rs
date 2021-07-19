@@ -146,7 +146,7 @@ fn serve_vmo(
         Err(err) => return construct_fs_error_to_mount_vmo_result(err),
     };
 
-    tree.open(scope, flags, 0, Path::empty(), root.into_channel().into());
+    tree.open(scope, flags, 0, Path::dot(), root.into_channel().into());
 
     MountVmoResult::Success(Success {})
 }

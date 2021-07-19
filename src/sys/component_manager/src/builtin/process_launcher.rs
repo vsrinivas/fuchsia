@@ -601,7 +601,7 @@ mod tests {
             ExecutionScope::new(),
             fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             fio::MODE_TYPE_DIRECTORY,
-            path::Path::empty(),
+            path::Path::dot(),
             ServerEnd::new(dir_server),
         );
 

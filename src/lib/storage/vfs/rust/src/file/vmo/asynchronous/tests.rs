@@ -136,7 +136,7 @@ fn read_only_read_with_describe() {
             create_proxy::<FileMarker>().expect("Failed to create connection endpoints");
 
         let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
-        server.open(scope, flags, 0, Path::empty(), server_end.into_channel().into());
+        server.open(scope, flags, 0, Path::dot(), server_end.into_channel().into());
 
         assert_event!(proxy, FileEvent::OnOpen_ { s, info }, {
             assert_eq!(s, ZX_OK);
@@ -265,7 +265,7 @@ fn read_error() {
                 scope.clone(),
                 flags,
                 0,
-                Path::empty(),
+                Path::dot(),
                 server_end.into_channel().into(),
             );
 
@@ -279,7 +279,7 @@ fn read_error() {
             let (proxy, server_end) =
                 create_proxy::<FileMarker>().expect("Failed to create connection endpoints");
 
-            server.open(scope, flags, 0, Path::empty(), server_end.into_channel().into());
+            server.open(scope, flags, 0, Path::dot(), server_end.into_channel().into());
 
             assert_event!(proxy, FileEvent::OnOpen_ { s, info }, {
                 assert_eq!(s, ZX_OK);
@@ -1003,7 +1003,7 @@ fn mock_directory_with_one_file_and_two_connections() {
                     scope,
                     OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
                     0,
-                    Path::empty(),
+                    Path::dot(),
                     server_end.into_channel().into(),
                 );
 

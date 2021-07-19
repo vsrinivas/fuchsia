@@ -178,5 +178,6 @@ group("tests") {
     ":fxfs-fs-tests",
     ":fxfs-tests",
     ":lib_test($host_toolchain)",
+    "//src/storage/testing:storage-isolated-devmgr",
   ]
 }

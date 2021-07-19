@@ -114,7 +114,6 @@ impl<T: 'static + File> FileConnection<T> {
         scope: ExecutionScope,
         file: OpenFile<T>,
         flags: u32,
-        mode: u32,
         server_end: ServerEnd<NodeMarker>,
         readable: bool,
         writable: bool,
@@ -123,7 +122,6 @@ impl<T: 'static + File> FileConnection<T> {
             scope.clone(),
             file,
             flags,
-            mode,
             server_end,
             readable,
             writable,
@@ -138,13 +136,12 @@ impl<T: 'static + File> FileConnection<T> {
         scope: ExecutionScope,
         file: OpenFile<T>,
         flags: u32,
-        mode: u32,
         server_end: ServerEnd<NodeMarker>,
         readable: bool,
         writable: bool,
     ) {
         let flags = match new_connection_validate_flags(
-            flags, mode, readable, writable, /*append_allowed=*/ true,
+            flags, readable, writable, /*append_allowed=*/ true,
         ) {
             Ok(updated) => updated,
             Err(status) => {
@@ -372,7 +369,7 @@ impl<T: 'static + File> FileConnection<T> {
         };
 
         let file: Arc<dyn DirectoryEntry> = self.file.clone();
-        file.open(self.scope.clone(), flags, 0, Path::empty(), server_end);
+        file.open(self.scope.clone(), flags, 0, Path::dot(), server_end);
     }
 
     async fn handle_get_attr(&mut self) -> (zx::Status, NodeAttributes) {
@@ -803,7 +800,7 @@ mod tests {
             self: Arc<Self>,
             scope: ExecutionScope,
             flags: u32,
-            mode: u32,
+            _mode: u32,
             path: Path,
             server_end: ServerEnd<NodeMarker>,
         ) {
@@ -813,7 +810,6 @@ mod tests {
                 scope.clone(),
                 OpenFile::new(self.clone(), scope),
                 flags,
-                mode,
                 server_end.into_channel().into(),
                 true,
                 true,
@@ -859,7 +855,6 @@ mod tests {
             scope.clone(),
             OpenFile::new(file.clone(), scope.clone()),
             flags,
-            0,
             server_end.into_channel().into(),
             true,
             true,

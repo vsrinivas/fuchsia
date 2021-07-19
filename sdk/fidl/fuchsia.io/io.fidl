@@ -545,16 +545,17 @@ protocol Directory {
 
     /// Opens a new object relative to this directory object.
     ///
-    /// `path` may contain multiple segments, separated by "/" characters,
-    /// and should never be empty; i.e., "" is an invalid path. Paths should not contain
-    /// a leading "/".
+    /// `path` may contain multiple segments, separated by "/" characters, and should never be
+    /// empty; i.e. "" is an invalid path. A trailing slash implies OPEN_FLAG_DIRECTORY. Components
+    /// must not be empty (i.e. "foo//bar" is invalid). ".." is disallowed anywhere in the path. "."
+    /// is only allowed if the path is exactly ".", but not otherwise. A leading '/' is allowed (and
+    /// is treated the same way as if not present, i.e. "/foo/bar' and "foo/bar" are the same).
     ///
     /// `flags` may be any of the `OPEN_FLAG_*` and `OPEN_RIGHT_*` values, bitwise ORed together.
     /// The `OPEN_FLAG_DESCRIBE` flag may cause an `OnOpen` event to be transmitted
     /// on the `object` handle, indicating the type of object opened.
     ///
-    /// If an unknown value is sent for either flags or mode, the connection should
-    /// be closed.
+    /// If an unknown value is sent for flags the connection should be closed.
     ///
     /// `OPEN_RIGHT_*` flags provided in `flags` will restrict access rights on
     /// the `object` channel which will be connected to the opened entity.
@@ -566,7 +567,14 @@ protocol Directory {
     ///
     /// The caller must specify either one or more of the `OPEN_RIGHT_*` flags, or
     /// the `OPEN_FLAG_NODE_REFERENCE` flag.
-    // TODO(smklein): Who uses mode? Can it be removed?
+    ///
+    /// `mode` is only used if an object is created and indicates the type of object to be
+    /// created. An unsupported mode will cause the connection to be closed.
+    /// The mode type, if set, must always be consistent with the OPEN_FLAG_DIRECTORY and
+    /// OPEN_FLAG_NOT_DIRECTORY flags, even if an object is not being created. If an object is not
+    /// being created, `mode` is otherwise ignored. If an object is being created and the mode
+    /// type is not set, a directory will be created if OPEN_FLAG_DIRECTORY is set (explicitly or
+    /// implicitly), or otherwise a server chosen object type.
     Open(resource struct {
         flags uint32;
         mode uint32;

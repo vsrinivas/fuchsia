@@ -34,6 +34,8 @@ pub enum FxfsError {
     InvalidVersion,
     #[error("Journal flush error")]
     JournalFlushError,
+    #[error("Not supported")]
+    NotSupported,
 }
 
 impl FxfsError {

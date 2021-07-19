@@ -163,7 +163,7 @@ async fn main() -> Result<(), Error> {
         ExecutionScope::new(),
         OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
         MODE_TYPE_DIRECTORY,
-        pfsPath::empty(),
+        pfsPath::dot(),
         server_end,
     );
     fs.add_remote("input", DirectoryProxy::from_channel(proxy.into_channel().unwrap()));

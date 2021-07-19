@@ -44,8 +44,12 @@ pub async fn serve_collection<'a>(
     server_chan: &'a mut Channel,
 ) -> Result<(), ModelError> {
     let path_utf8 = path.to_str().ok_or_else(|| ModelError::path_is_not_utf8(path.clone()))?;
-    let path = vfs::path::Path::validate_and_split(path_utf8)
-        .map_err(|_| ModelError::path_invalid(path_utf8))?;
+    let path = if path_utf8.is_empty() {
+        vfs::path::Path::dot()
+    } else {
+        vfs::path::Path::validate_and_split(path_utf8)
+            .map_err(|_| ModelError::path_invalid(path_utf8))?
+    };
     let execution_scope =
         collection_component.lock_resolved_state().await?.execution_scope().clone();
     let dir = lazy::lazy(ServiceCollectionDirectory {

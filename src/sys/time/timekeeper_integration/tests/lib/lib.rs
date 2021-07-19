@@ -267,7 +267,7 @@ impl NestedTimekeeper {
             vfs::execution_scope::ExecutionScope::new(),
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             MODE_TYPE_DIRECTORY,
-            vfs::path::Path::empty(),
+            vfs::path::Path::dot(),
             devmgr_server,
         );
 

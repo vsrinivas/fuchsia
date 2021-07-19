@@ -36,9 +36,10 @@ use {
     fidl_fuchsia_io::{
         DirectoryEvent, DirectoryMarker, DirectoryObject, DirectoryProxy, FileEvent, FileMarker,
         NodeAttributes, NodeInfo, DIRENT_TYPE_DIRECTORY, DIRENT_TYPE_FILE, INO_UNKNOWN,
-        MAX_FILENAME, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, OPEN_FLAG_DESCRIBE,
-        OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_POSIX, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
-        WATCH_MASK_ADDED, WATCH_MASK_EXISTING, WATCH_MASK_IDLE, WATCH_MASK_REMOVED,
+        MAX_FILENAME, MODE_TYPE_DIRECTORY, OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY,
+        OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY, OPEN_FLAG_POSIX, OPEN_RIGHT_READABLE,
+        OPEN_RIGHT_WRITABLE, WATCH_MASK_ADDED, WATCH_MASK_EXISTING, WATCH_MASK_IDLE,
+        WATCH_MASK_REMOVED,
     },
     fuchsia_async::TestExecutor,
     fuchsia_zircon::{
@@ -101,7 +102,7 @@ fn open_empty_directory_with_describe() {
             create_proxy::<DirectoryMarker>().expect("Failed to create connection endpoints");
 
         let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
-        server.open(scope, flags, 0, Path::empty(), server_end.into_channel().into());
+        server.open(scope, flags, 0, Path::dot(), server_end.into_channel().into());
 
         assert_event!(root, DirectoryEvent::OnOpen_ { s, info }, {
             assert_eq!(s, ZX_OK);
@@ -434,7 +435,7 @@ fn open_empty_path() {
 
     run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
         let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
-        open_as_file_assert_err!(&root, flags, "", Status::BAD_PATH);
+        open_as_file_assert_err!(&root, flags, "", Status::INVALID_ARGS);
 
         assert_close!(root);
     });
@@ -468,17 +469,16 @@ fn open_file_as_directory() {
     };
 
     run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
-        let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
-        let mode = MODE_TYPE_DIRECTORY;
+        let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE | OPEN_FLAG_DIRECTORY;
         {
-            let root = open_get_proxy::<FileMarker>(&root, flags, mode, "file2");
+            let root = open_get_proxy::<FileMarker>(&root, flags, 0, "file2");
             assert_event!(root, FileEvent::OnOpen_ { s, info }, {
                 assert_eq!(Status::from_raw(s), Status::NOT_DIR);
                 assert_eq!(info, None);
             });
         }
         {
-            let root = open_get_proxy::<FileMarker>(&root, flags, mode, "dir/file1");
+            let root = open_get_proxy::<FileMarker>(&root, flags, 0, "dir/file1");
             assert_event!(root, FileEvent::OnOpen_ { s, info }, {
                 assert_eq!(Status::from_raw(s), Status::NOT_DIR);
                 assert_eq!(info, None);
@@ -498,17 +498,16 @@ fn open_directory_as_file() {
     };
 
     run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
-        let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
-        let mode = MODE_TYPE_FILE;
+        let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE | OPEN_FLAG_NOT_DIRECTORY;
         {
-            let root = open_get_proxy::<DirectoryMarker>(&root, flags, mode, "dir");
+            let root = open_get_proxy::<DirectoryMarker>(&root, flags, 0, "dir");
             assert_event!(root, DirectoryEvent::OnOpen_ { s, info }, {
                 assert_eq!(Status::from_raw(s), Status::NOT_FILE);
                 assert_eq!(info, None);
             });
         }
         {
-            let root = open_get_proxy::<DirectoryMarker>(&root, flags, mode, "dir/dir2");
+            let root = open_get_proxy::<DirectoryMarker>(&root, flags, 0, "dir/dir2");
             assert_event!(root, DirectoryEvent::OnOpen_ { s, info }, {
                 assert_eq!(Status::from_raw(s), Status::NOT_FILE);
                 assert_eq!(info, None);
@@ -557,9 +556,9 @@ fn no_dots_in_open() {
 
     run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
         let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
-        open_as_directory_assert_err!(&root, flags, "dir/../dir2", Status::BAD_PATH);
-        open_as_directory_assert_err!(&root, flags, "dir/./dir2", Status::BAD_PATH);
-        open_as_directory_assert_err!(&root, flags, "./dir", Status::BAD_PATH);
+        open_as_directory_assert_err!(&root, flags, "dir/../dir2", Status::INVALID_ARGS);
+        open_as_directory_assert_err!(&root, flags, "dir/./dir2", Status::INVALID_ARGS);
+        open_as_directory_assert_err!(&root, flags, "./dir", Status::INVALID_ARGS);
 
         assert_close!(root);
     });
@@ -575,12 +574,12 @@ fn no_consequtive_slashes_in_open() {
 
     run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
         let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
-        open_as_directory_assert_err!(&root, flags, "dir/../dir2", Status::BAD_PATH);
-        open_as_directory_assert_err!(&root, flags, "dir/./dir2", Status::BAD_PATH);
-        open_as_directory_assert_err!(&root, flags, "dir//dir2", Status::BAD_PATH);
-        open_as_directory_assert_err!(&root, flags, "dir/dir2//", Status::BAD_PATH);
-        open_as_directory_assert_err!(&root, flags, "//dir/dir2", Status::BAD_PATH);
-        open_as_directory_assert_err!(&root, flags, "./dir", Status::BAD_PATH);
+        open_as_directory_assert_err!(&root, flags, "dir/../dir2", Status::INVALID_ARGS);
+        open_as_directory_assert_err!(&root, flags, "dir/./dir2", Status::INVALID_ARGS);
+        open_as_directory_assert_err!(&root, flags, "dir//dir2", Status::INVALID_ARGS);
+        open_as_directory_assert_err!(&root, flags, "dir/dir2//", Status::INVALID_ARGS);
+        open_as_directory_assert_err!(&root, flags, "//dir/dir2", Status::INVALID_ARGS);
+        open_as_directory_assert_err!(&root, flags, "./dir", Status::INVALID_ARGS);
 
         assert_close!(root);
     });
@@ -1064,7 +1063,7 @@ fn in_tree_open() {
             create_proxy::<DirectoryMarker>().expect("Failed to create connection endpoints");
 
         let flags = OPEN_RIGHT_READABLE;
-        ssh.open(scope, flags, 0, Path::empty(), server_end.into_channel().into());
+        ssh.open(scope, flags, 0, Path::dot(), server_end.into_channel().into());
 
         let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
         open_as_vmo_file_assert_content!(&proxy, flags, "sshd_config", "# Empty");
@@ -1452,7 +1451,7 @@ fn watch_addition_with_two_scopes() {
                     .expect("Failed to create connection endpoints");
 
                 let flags = OPEN_RIGHT_READABLE;
-                server.open(scope, flags, 0, Path::empty(), server_end.into_channel().into());
+                server.open(scope, flags, 0, Path::dot(), server_end.into_channel().into());
                 proxy
             }
 

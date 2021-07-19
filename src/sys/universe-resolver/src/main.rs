@@ -476,7 +476,7 @@ mod tests {
                             ExecutionScope::new(),
                             fio::OPEN_RIGHT_READABLE,
                             fio::MODE_TYPE_DIRECTORY,
-                            Path::empty(),
+                            Path::dot(),
                             ServerEnd::new(dir.into_channel()),
                         );
                         responder.send(&mut Ok(())).unwrap();
@@ -531,7 +531,7 @@ mod tests {
                             ExecutionScope::new(),
                             fio::OPEN_RIGHT_READABLE,
                             fio::MODE_TYPE_DIRECTORY,
-                            Path::empty(),
+                            Path::dot(),
                             ServerEnd::new(dir.into_channel()),
                         );
                         responder.send(&mut Ok(())).unwrap();
@@ -576,7 +576,7 @@ mod tests {
                             ExecutionScope::new(),
                             fio::OPEN_RIGHT_READABLE,
                             fio::MODE_TYPE_DIRECTORY,
-                            Path::empty(),
+                            Path::dot(),
                             ServerEnd::new(dir.into_channel()),
                         );
                         responder.send(&mut Ok(())).unwrap();
@@ -614,7 +614,7 @@ mod tests {
                             ExecutionScope::new(),
                             fio::OPEN_RIGHT_READABLE,
                             fio::MODE_TYPE_DIRECTORY,
-                            Path::empty(),
+                            Path::dot(),
                             ServerEnd::new(dir.into_channel()),
                         );
                         responder.send(&mut Ok(())).unwrap();
@@ -679,7 +679,7 @@ mod tests {
                             ExecutionScope::new(),
                             fio::OPEN_RIGHT_READABLE,
                             fio::MODE_TYPE_DIRECTORY,
-                            Path::empty(),
+                            Path::dot(),
                             ServerEnd::new(dir.into_channel()),
                         );
                         responder.send(&mut Ok(())).unwrap();

@@ -357,7 +357,7 @@ impl DirectoryEntry for FatFile {
         self: Arc<Self>,
         scope: ExecutionScope,
         flags: u32,
-        mode: u32,
+        _mode: u32,
         path: Path,
         server_end: ServerEnd<NodeMarker>,
     ) {
@@ -381,7 +381,6 @@ impl DirectoryEntry for FatFile {
             scope.clone(),
             connection::util::OpenFile::new(self, scope),
             flags,
-            mode,
             server_end,
             /*readable=*/ true,
             /*writable=*/ true,

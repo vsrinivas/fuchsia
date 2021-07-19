@@ -195,7 +195,6 @@ impl<T: LazyDirectory> DirectoryEntry for Lazy<T> {
                     scope,
                     OpenDirectory::new(self),
                     flags,
-                    mode,
                     server_end,
                 );
                 return;

@@ -311,7 +311,7 @@ impl TestEnvironment {
                     | fidl_fuchsia_io::OPEN_RIGHT_READABLE
                     | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
                 0,
-                vfs::path::Path::empty(),
+                vfs::path::Path::dot(),
                 server_dir,
             );
             app_builder = app_builder.add_handle_to_namespace(

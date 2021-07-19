@@ -111,7 +111,7 @@ async fn main() -> Result<(), Error> {
             ExecutionScope::new(),
             fio::OPEN_RIGHT_READABLE,
             fio::MODE_TYPE_DIRECTORY,
-            pfsPath::empty(),
+            pfsPath::dot(),
             pkgfs_server_end,
         );
     })
@@ -129,7 +129,7 @@ async fn main() -> Result<(), Error> {
             ExecutionScope::new(),
             fio::OPEN_RIGHT_READABLE,
             fio::MODE_TYPE_DIRECTORY,
-            pfsPath::empty(),
+            pfsPath::dot(),
             svc_for_sys_server_end,
         );
     })

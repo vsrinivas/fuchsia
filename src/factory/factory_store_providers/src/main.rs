@@ -434,7 +434,7 @@ mod tests {
             scope,
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             MODE_TYPE_DIRECTORY,
-            vfs::path::Path::empty(),
+            vfs::path::Path::dot(),
             ServerEnd::new(dir_server.into_channel()),
         );
         let ns = fdio::Namespace::installed().unwrap();

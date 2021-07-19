@@ -88,7 +88,7 @@ pub fn spawn_vfs(dir: Arc<dyn DirectoryEntry>) -> DirectoryProxy {
         scope,
         fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
         0,
-        vfs::path::Path::empty(),
+        vfs::path::Path::dot(),
         ServerEnd::new(server_end.into_channel()),
     );
     client_end

@@ -801,7 +801,7 @@ mod tests {
             vfs::execution_scope::ExecutionScope::new(),
             fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             fio::MODE_TYPE_DIRECTORY,
-            vfs::path::Path::empty(),
+            vfs::path::Path::dot(),
             devfs_server,
         );
 

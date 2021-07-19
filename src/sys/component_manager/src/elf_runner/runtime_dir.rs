@@ -124,7 +124,7 @@ impl RuntimeDirBuilder {
             ExecutionScope::new(),
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             0,
-            fvfsPath::empty(),
+            fvfsPath::dot(),
             self.server_end,
         );
 

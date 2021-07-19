@@ -763,7 +763,7 @@ impl ComponentInstance {
                 let flags = fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_POSIX;
                 let server_chan = channel::take_channel(server_chan);
                 let server_end = ServerEnd::new(server_chan);
-                exposed_dir.open(flags, fio::MODE_TYPE_DIRECTORY, Path::empty(), server_end);
+                exposed_dir.open(flags, fio::MODE_TYPE_DIRECTORY, Path::dot(), server_end);
                 Ok(())
             }
             InstanceState::Purged => {

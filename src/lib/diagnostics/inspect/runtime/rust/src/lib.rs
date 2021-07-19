@@ -48,7 +48,7 @@ pub fn serve<'a, ServiceObjTy: ServiceObjTrait>(
 
     let server_end = server.into_channel().into();
     let scope = ExecutionScope::new();
-    dir.open(scope, OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, 0, Path::empty(), server_end);
+    dir.open(scope, OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, 0, Path::dot(), server_end);
     service_fs.add_remote(DIAGNOSTICS_DIR, proxy);
 
     Ok(())

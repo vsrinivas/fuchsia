@@ -233,7 +233,7 @@ mod tests {
             ExecutionScope::new(),
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             MODE_TYPE_DIRECTORY,
-            path::Path::empty(),
+            path::Path::dot(),
             ServerEnd::<NodeMarker>::new(in_dir_server.into()),
         );
         let in_dir_proxy = ClientEnd::<DirectoryMarker>::new(in_dir_client)
@@ -311,7 +311,7 @@ mod tests {
             ExecutionScope::new(),
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             MODE_TYPE_DIRECTORY,
-            path::Path::empty(),
+            path::Path::dot(),
             ServerEnd::<NodeMarker>::new(expose_dir_server.into()),
         );
         let expose_dir_proxy = ClientEnd::<DirectoryMarker>::new(expose_dir_client)
