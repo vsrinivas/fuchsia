@@ -155,29 +155,41 @@ def GetClangCommandFromNinjaForFilename(filename):
   return fuchsia_flags + common_flags
 
 
-def FlagsForFile(filename):
+def Settings(**kwargs):
   """This is the main entry point for YCM. Its interface is fixed.
 
+  https://github.com/ycm-core/YouCompleteMe#option-2-provide-the-flags-manually
+
   Args:
-    filename: (String) Path to source file being edited.
+    **kwargs: (Dictionary) Contains at least 'language' and 'filename'.
 
   Returns:
     (Dictionary)
       'flags': (List of Strings) Command line flags.
       'do_cache': (Boolean) True if the result should be cached.
+      'ls': (Dictionary) Language server configs.
   """
-  if zircon_database and ('zircon/' in filename):
-    zircon_compilation_info = zircon_database.GetCompilationInfoForFile(
-      filename)
-    if zircon_compilation_info.compiler_flags_:
-      return {
-        'flags': zircon_compilation_info.compiler_flags_,
-        'include_paths_relative_to_dir':
-            zircon_compilation_info.compiler_working_dir_,
-        'do_cache': True
-      }
-  file_flags = GetClangCommandFromNinjaForFilename(filename)
-  # We add the arch specific flags
-  final_flags = file_flags + arch_flags
+  if kwargs['language'] == 'rust':
+    return {'ls': {
+      'checkOnSave': {'enable': False},
+      'diagnostics': {'disabled': ['unresolved-proc-macro']},
+    }}
 
-  return {'flags': final_flags, 'do_cache': True}
+  if kwargs['language'] == 'cfamily':
+    filename = kwargs['filename']
+    if zircon_database and ('zircon/' in filename):
+      zircon_compilation_info = zircon_database.GetCompilationInfoForFile(
+        filename)
+      if zircon_compilation_info.compiler_flags_:
+        return {
+          'flags': zircon_compilation_info.compiler_flags_,
+          'include_paths_relative_to_dir':
+              zircon_compilation_info.compiler_working_dir_,
+          'do_cache': True
+        }
+    file_flags = GetClangCommandFromNinjaForFilename(filename)
+    # We add the arch specific flags
+    final_flags = file_flags + arch_flags
+    return {'flags': final_flags, 'do_cache': True}
+
+  return {}
