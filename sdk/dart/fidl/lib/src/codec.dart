@@ -18,7 +18,6 @@ import 'wire_format.dart';
 const int _kAlignment = 8;
 const int _kAlignmentMask = _kAlignment - 1;
 
-const int _kUnionAsXUnionFlag = 1;
 const int _maxOutOfLineDepth = 32;
 
 int _align(int size) => (size + _kAlignmentMask) & ~_kAlignmentMask;
@@ -85,7 +84,7 @@ class Encoder {
   void encodeMessageHeader(int ordinal, int txid) {
     alloc(kMessageHeaderSize, 0);
     encodeUint32(txid, kMessageTxidOffset);
-    encodeUint8(_kUnionAsXUnionFlag, kMessageFlagOffset);
+    encodeUint8(0, kMessageFlagOffset);
     encodeUint8(0, kMessageFlagOffset + 1);
     encodeUint8(0, kMessageFlagOffset + 2);
     encodeUint8(kMagicNumberInitial, kMessageMagicOffset);
