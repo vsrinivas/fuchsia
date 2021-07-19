@@ -798,8 +798,7 @@ zx::status<fidl::ClientEnd<fio::Directory>> DriverRunner::CreateComponent(std::s
                              .collection = fidl::StringView::FromExternal(collection)},
         std::move(server_end), std::move(bind_callback));
     if (!bind.ok()) {
-      // TODO(fxb/80878): Fix flake and change this to an ERROR.
-      LOGF(WARNING, "Failed to bind component '%s': %s", name.data(),
+      LOGF(ERROR, "Failed to bind component '%s': %s", name.data(),
            bind.FormatDescription().c_str());
     }
   };

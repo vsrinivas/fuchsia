@@ -45,6 +45,13 @@ fuchsia_component("driver-manager-component") {
 
 fuchsia_test_package("driver-runner-integration-test") {
   test_components = [ ":driver-runner-integration-test-component" ]
+
+  # TODO(fxdebug.dev/80878): Make ERROR logs fail the test.
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
   deps = [
     ":driver-manager-component",
     ":driver-runner-integration-root",
