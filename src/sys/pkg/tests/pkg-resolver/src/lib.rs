@@ -469,7 +469,7 @@ where
 
             // Make sure pkg_resolver has network access as required by the hyper client shard
             .add_route(CapabilityRoute {
-                capability: Capability::protocol("fuchsia.net.NameLookup"),
+                capability: Capability::protocol("fuchsia.net.name.Lookup"),
                 source: RouteEndpoint::AboveRoot,
                 targets: vec![
                     RouteEndpoint::component("pkg_resolver_wrapper"),

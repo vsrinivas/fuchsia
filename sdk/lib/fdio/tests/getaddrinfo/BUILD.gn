@@ -20,6 +20,7 @@ rustc_test("getaddrinfo_test") {
 
   deps = [
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
+    "//sdk/fidl/fuchsia.net.name:fuchsia.net.name-rustc",
     "//src/connectivity/lib/net-declare",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",

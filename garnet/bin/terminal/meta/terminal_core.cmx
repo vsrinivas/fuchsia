@@ -25,7 +25,7 @@
         "services": [
             "fuchsia.hardware.pty.Device",
             "fuchsia.logger.Log",
-            "fuchsia.net.NameLookup",
+            "fuchsia.net.name.Lookup",
             "fuchsia.pkg.PackageResolverAdmin",
             "fuchsia.pkg.RepositoryManager",
             "fuchsia.pkg.rewrite.Engine",

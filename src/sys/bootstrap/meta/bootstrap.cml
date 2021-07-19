@@ -140,7 +140,7 @@
                 "fuchsia.kernel.RootJobForInspect",
                 "fuchsia.kernel.Stats",
                 "fuchsia.metrics.MetricEventLoggerFactory",
-                "fuchsia.net.NameLookup",
+                "fuchsia.net.name.Lookup",
                 "fuchsia.net.stack.Log",
                 "fuchsia.net.stack.Stack",
                 "fuchsia.netstack.Netstack",

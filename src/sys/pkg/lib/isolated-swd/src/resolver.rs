@@ -94,7 +94,7 @@ impl Resolver {
         let boot_args = Arc::new(IsolatedBootArgs::new(channel));
 
         let mut fs: ServiceFs<ServiceObj<'_, ()>> = ServiceFs::new();
-        fs.add_proxy_service::<fidl_fuchsia_net::NameLookupMarker, _>()
+        fs.add_proxy_service::<fidl_fuchsia_net_name::LookupMarker, _>()
             .add_proxy_service::<fidl_fuchsia_posix_socket::ProviderMarker, _>()
             .add_proxy_service::<fidl_fuchsia_logger::LogSinkMarker, _>()
             .add_proxy_service::<fidl_fuchsia_tracing_provider::RegistryMarker, _>()

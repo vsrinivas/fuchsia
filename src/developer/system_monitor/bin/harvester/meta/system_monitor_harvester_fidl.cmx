@@ -19,7 +19,7 @@
             "fuchsia.kernel.RootJob",
             "fuchsia.kernel.RootJobForInspect",
             "fuchsia.kernel.Stats",
-            "fuchsia.net.NameLookup",
+            "fuchsia.net.name.Lookup",
             "fuchsia.overnet.ServicePublisher",
             "fuchsia.posix.socket.Provider",
             "fuchsia.sysinfo.SysInfo",

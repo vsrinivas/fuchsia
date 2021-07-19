@@ -297,7 +297,7 @@
         {
             protocol: [
                 "fuchsia.cobalt.LoggerFactory",
-                "fuchsia.net.NameLookup",
+                "fuchsia.net.name.Lookup",
                 "fuchsia.posix.socket.Provider",
                 "fuchsia.tracing.provider.Registry",
             ],
@@ -706,7 +706,7 @@
         },
         {
             protocol: [
-                "fuchsia.net.NameLookup",
+                "fuchsia.net.name.Lookup",
                 "fuchsia.posix.socket.Provider",
             ],
             from: "#appmgr",
@@ -715,7 +715,7 @@
         },
         {
             protocol: [
-                "fuchsia.net.NameLookup",
+                "fuchsia.net.name.Lookup",
                 "fuchsia.net.neighbor.Controller",
                 "fuchsia.posix.socket.Provider",
                 "fuchsia.stash.SecureStore",

@@ -11,7 +11,10 @@ use {
     },
     fidl_fuchsia_net::{self as fnet, NameLookupRequest, NameLookupRequestStream},
     fidl_fuchsia_net_ext as net_ext,
-    fidl_fuchsia_net_name::{LookupAdminRequest, LookupAdminRequestStream},
+    fidl_fuchsia_net_name::{
+        self as fname, LookupAdminRequest, LookupAdminRequestStream, LookupRequest,
+        LookupRequestStream,
+    },
     fidl_fuchsia_net_routes as fnet_routes, fuchsia_async as fasync,
     fuchsia_component::server::{ServiceFs, ServiceFsDir},
     fuchsia_inspect, fuchsia_zircon as zx,
@@ -229,9 +232,8 @@ async fn update_resolver<T: ResolverLookup>(resolver: &SharedResolver<T>, server
 }
 
 enum IncomingRequest {
-    // NameLookup service.
     NameLookup(NameLookupRequestStream),
-    // LookupAdmin Service.
+    Lookup(LookupRequestStream),
     LookupAdmin(LookupAdminRequestStream),
 }
 
@@ -289,11 +291,7 @@ impl ResolverLookup for Resolver {
     }
 }
 
-/// Helper function to handle a [`ResolverError`] and convert it into a
-/// [`fnet::LookupError`].
-///
-/// `source` is used for debugging information.
-fn handle_err(source: &'static str, err: ResolveError) -> fnet::LookupError {
+fn handle_err(source: &str, err: ResolveError) -> fname::LookupError {
     use trust_dns_proto::error::ProtoErrorKind;
 
     let (lookup_err, ioerr) = match err.kind() {
@@ -306,16 +304,16 @@ fn handle_err(source: &'static str, err: ResolveError) -> fnet::LookupError {
         // there is no name in the input vector to look up with "can not lookup for no names".
         // This is a best-effort mapping.
         ResolveErrorKind::NoRecordsFound { query: _, valid_until: _ } => {
-            (fnet::LookupError::NotFound, None)
+            (fname::LookupError::NotFound, None)
         }
         ResolveErrorKind::Proto(err) => match err.kind() {
             ProtoErrorKind::DomainNameTooLong(_) | ProtoErrorKind::EdnsNameNotRoot(_) => {
-                (fnet::LookupError::InvalidArgs, None)
+                (fname::LookupError::InvalidArgs, None)
             }
             ProtoErrorKind::Canceled(_) | ProtoErrorKind::Timeout => {
-                (fnet::LookupError::Transient, None)
+                (fname::LookupError::Transient, None)
             }
-            ProtoErrorKind::Io(inner) => (fnet::LookupError::Transient, Some(inner)),
+            ProtoErrorKind::Io(inner) => (fname::LookupError::Transient, Some(inner)),
             ProtoErrorKind::CharacterDataTooLong { max: _, len: _ }
             | ProtoErrorKind::LabelOverlapsWithOther { label: _, other: _ }
             | ProtoErrorKind::DnsKeyProtocolNot3(_)
@@ -340,12 +338,12 @@ fn handle_err(source: &'static str, err: ResolveError) -> fnet::LookupError {
             | ProtoErrorKind::SSL(_)
             | ProtoErrorKind::Timer
             | ProtoErrorKind::UrlParsing(_)
-            | ProtoErrorKind::Utf8(_) => (fnet::LookupError::InternalError, None),
+            | ProtoErrorKind::Utf8(_) => (fname::LookupError::InternalError, None),
         },
-        ResolveErrorKind::Io(inner) => (fnet::LookupError::Transient, Some(inner)),
-        ResolveErrorKind::Timeout => (fnet::LookupError::Transient, None),
+        ResolveErrorKind::Io(inner) => (fname::LookupError::Transient, Some(inner)),
+        ResolveErrorKind::Timeout => (fname::LookupError::Transient, None),
         ResolveErrorKind::Msg(_) | ResolveErrorKind::Message(_) => {
-            (fnet::LookupError::InternalError, None)
+            (fname::LookupError::InternalError, None)
         }
     };
 
@@ -364,18 +362,29 @@ fn handle_err(source: &'static str, err: ResolveError) -> fnet::LookupError {
     lookup_err
 }
 
+fn fname_error_to_fnet_error(err: fname::LookupError) -> fnet::LookupError {
+    match err {
+        fname::LookupError::NotFound => fnet::LookupError::NotFound,
+        fname::LookupError::Transient => fnet::LookupError::Transient,
+        fname::LookupError::InvalidArgs => fnet::LookupError::InvalidArgs,
+        fname::LookupError::InternalError => fnet::LookupError::InternalError,
+    }
+}
+
 struct LookupMode {
     ipv4_lookup: bool,
     ipv6_lookup: bool,
+    sort_addresses: bool,
 }
 
 async fn lookup_ip_inner<T: ResolverLookup>(
-    caller: &'static str,
+    caller: &str,
     resolver: &SharedResolver<T>,
     stats: Arc<QueryStats>,
+    routes: &fnet_routes::StateProxy,
     hostname: String,
-    LookupMode { ipv4_lookup, ipv6_lookup }: LookupMode,
-) -> Result<Vec<fnet::IpAddress>, fnet::LookupError> {
+    LookupMode { ipv4_lookup, ipv6_lookup, sort_addresses }: LookupMode,
+) -> Result<Vec<fnet::IpAddress>, fname::LookupError> {
     let start_time = fasync::Time::now();
     let resolver = resolver.read();
     let result: Result<Vec<_>, _> = match (ipv4_lookup, ipv6_lookup) {
@@ -390,44 +399,28 @@ async fn lookup_ip_inner<T: ResolverLookup>(
             .await
             .map(|addrs| addrs.into_iter().map(|addr| net_ext::IpAddress(addr).into()).collect()),
         (false, false) => {
-            return Err(fnet::LookupError::InvalidArgs);
+            return Err(fname::LookupError::InvalidArgs);
         }
     };
     let () = stats.finish_query(start_time, result.as_ref().err().map(|e| e.kind())).await;
-    result.map_err(|e| handle_err(caller, e)).and_then(|addrs| {
+    let addrs = result.map_err(|e| handle_err(caller, e)).and_then(|addrs| {
         if addrs.is_empty() {
-            Err(fnet::LookupError::NotFound)
+            Err(fname::LookupError::NotFound)
         } else {
             Ok(addrs)
         }
-    })
-}
-
-async fn handle_lookup_ip2<T: ResolverLookup>(
-    resolver: &SharedResolver<T>,
-    stats: Arc<QueryStats>,
-    routes: &fnet_routes::StateProxy,
-    hostname: String,
-    options: fnet::LookupIpOptions2,
-) -> Result<fnet::LookupResult, fnet::LookupError> {
-    let fnet::LookupIpOptions2 { ipv4_lookup, ipv6_lookup, sort_addresses, .. } = options;
-    let mode = LookupMode {
-        ipv4_lookup: ipv4_lookup.unwrap_or(false),
-        ipv6_lookup: ipv6_lookup.unwrap_or(false),
-    };
-    let addrs = lookup_ip_inner("LookupIp2", resolver, stats, hostname, mode).await?;
-    let addrs = if sort_addresses.unwrap_or(false) {
-        sort_preferred_addresses(addrs, routes).await?
+    })?;
+    if sort_addresses {
+        sort_preferred_addresses(addrs, routes).await
     } else {
-        addrs
-    };
-    Ok(fnet::LookupResult { addresses: Some(addrs), ..fnet::LookupResult::EMPTY })
+        Ok(addrs)
+    }
 }
 
 async fn sort_preferred_addresses(
     mut addrs: Vec<fnet::IpAddress>,
     routes: &fnet_routes::StateProxy,
-) -> Result<Vec<fnet::IpAddress>, fnet::LookupError> {
+) -> Result<Vec<fnet::IpAddress>, fname::LookupError> {
     let mut addrs_info = futures::future::try_join_all(
         addrs
             // Drain addresses from addrs, but keep it alive so we don't need to
@@ -460,7 +453,7 @@ async fn sort_preferred_addresses(
     .await
     .map_err(|e: fidl::Error| {
         warn!("fuchsia.net.routes/State.resolve FIDL error {:?}", e);
-        fnet::LookupError::InternalError
+        fname::LookupError::InternalError
     })?;
     let () = addrs_info.sort_by(|(_laddr, left), (_raddr, right)| left.cmp(right));
     // Reinsert the addresses in order from addr_info.
@@ -668,21 +661,24 @@ impl std::cmp::Eq for DasCmpInfo {}
 async fn handle_lookup_hostname<T: ResolverLookup>(
     resolver: &SharedResolver<T>,
     addr: fnet::IpAddress,
-) -> Result<String, fnet::LookupError> {
+) -> Result<String, fname::LookupError> {
     let net_ext::IpAddress(addr) = addr.into();
     let resolver = resolver.read();
 
     match resolver.reverse_lookup(addr).await {
-        // TODO(chuningw): Revisit LookupHostname() method of namelookup.fidl.
         Ok(response) => {
-            response.iter().next().ok_or(fnet::LookupError::NotFound).map(|h| h.to_string())
+            response.iter().next().ok_or(fname::LookupError::NotFound).map(ToString::to_string)
         }
         Err(error) => Err(handle_err("LookupHostname", error)),
     }
 }
 
-/// IP lookup variants from [`fnet::NameLookupRequest`].
 enum IpLookupRequest {
+    LookupIp {
+        hostname: String,
+        options: fname::LookupIpOptions,
+        responder: fname::LookupLookupIpResponder,
+    },
     LookupIp2 {
         hostname: String,
         options: fnet::LookupIpOptions2,
@@ -706,7 +702,40 @@ async fn run_name_lookup<T: ResolverLookup>(
                         .expect("receiver should not be closed");
                     Ok(())
                 }
-                NameLookupRequest::LookupHostname { addr, responder } => {
+                NameLookupRequest::LookupHostname { addr, responder } => responder.send(
+                    &mut handle_lookup_hostname(&resolver, addr)
+                        .await
+                        .map_err(fname_error_to_fnet_error),
+                ),
+            }
+        })
+        .await;
+    // Some clients will drop the channel when timing out
+    // requests. Mute those errors to prevent log spamming.
+    if let Err(fidl::Error::ServerResponseWrite(zx::Status::PEER_CLOSED)) = result {
+        Ok(())
+    } else {
+        result
+    }
+}
+
+async fn run_lookup<T: ResolverLookup>(
+    resolver: &SharedResolver<T>,
+    stream: LookupRequestStream,
+    sender: mpsc::Sender<IpLookupRequest>,
+) -> Result<(), fidl::Error> {
+    let result = stream
+        .try_for_each_concurrent(None, |request| async {
+            match request {
+                LookupRequest::LookupIp { hostname, options, responder } => {
+                    let () = sender
+                        .clone()
+                        .send(IpLookupRequest::LookupIp { hostname, options, responder })
+                        .await
+                        .expect("receiver should not be closed");
+                    Ok(())
+                }
+                LookupRequest::LookupHostname { addr, responder } => {
                     responder.send(&mut handle_lookup_hostname(&resolver, addr).await)
                 }
             }
@@ -735,13 +764,56 @@ fn create_ip_lookup_fut<T: ResolverLookup>(
         async move {
             #[derive(Debug)]
             enum IpLookupResult {
+                LookupIp(Result<fname::LookupResult, fname::LookupError>),
                 LookupIp2(Result<fnet::LookupResult, fnet::LookupError>),
             }
             let (lookup_result, send_result) = match request {
+                IpLookupRequest::LookupIp { hostname, options, responder } => {
+                    let fname::LookupIpOptions { ipv4_lookup, ipv6_lookup, sort_addresses, .. } =
+                        options;
+                    let mode = LookupMode {
+                        ipv4_lookup: ipv4_lookup.unwrap_or(false),
+                        ipv6_lookup: ipv6_lookup.unwrap_or(false),
+                        sort_addresses: sort_addresses.unwrap_or(false),
+                    };
+                    let addrs = lookup_ip_inner(
+                        "LookupIp",
+                        resolver,
+                        stats.clone(),
+                        &routes,
+                        hostname,
+                        mode,
+                    )
+                    .await;
+                    let mut lookup_result = addrs.map(|addrs| fname::LookupResult {
+                        addresses: Some(addrs),
+                        ..fname::LookupResult::EMPTY
+                    });
+                    let send_result = responder.send(&mut lookup_result);
+                    (IpLookupResult::LookupIp(lookup_result), send_result)
+                }
                 IpLookupRequest::LookupIp2 { hostname, options, responder } => {
-                    let mut lookup_result =
-                        handle_lookup_ip2(resolver, stats.clone(), &routes, hostname, options)
-                            .await;
+                    let fnet::LookupIpOptions2 { ipv4_lookup, ipv6_lookup, sort_addresses, .. } =
+                        options;
+                    let mode = LookupMode {
+                        ipv4_lookup: ipv4_lookup.unwrap_or(false),
+                        ipv6_lookup: ipv6_lookup.unwrap_or(false),
+                        sort_addresses: sort_addresses.unwrap_or(false),
+                    };
+                    let addrs = lookup_ip_inner(
+                        "LookupIp2",
+                        resolver,
+                        stats.clone(),
+                        &routes,
+                        hostname,
+                        mode,
+                    )
+                    .await
+                    .map_err(fname_error_to_fnet_error);
+                    let mut lookup_result = addrs.map(|addrs| fnet::LookupResult {
+                        addresses: Some(addrs),
+                        ..fnet::LookupResult::EMPTY
+                    });
                     let send_result = responder.send(&mut lookup_result);
                     (IpLookupResult::LookupIp2(lookup_result), send_result)
                 }
@@ -920,6 +992,7 @@ async fn main() -> Result<(), Error> {
     let _: &mut ServiceFsDir<'_, _> = fs
         .dir("svc")
         .add_fidl_service(IncomingRequest::NameLookup)
+        .add_fidl_service(IncomingRequest::Lookup)
         .add_fidl_service(IncomingRequest::LookupAdmin);
     let _: &mut ServiceFs<_> =
         fs.take_and_serve_directory_handle().context("failed to serve directory")?;
@@ -929,6 +1002,9 @@ async fn main() -> Result<(), Error> {
     let (sender, recv) = mpsc::channel(MAX_PARALLEL_REQUESTS);
     let serve_fut = fs.for_each_concurrent(None, |incoming_service| async {
         match incoming_service {
+            IncomingRequest::Lookup(stream) => run_lookup(&resolver, stream, sender.clone())
+                .await
+                .unwrap_or_else(|e| warn!("run_lookup finished with error: {}", e)),
             IncomingRequest::LookupAdmin(stream) => {
                 run_lookup_admin(&resolver, &config_state, stream).await.unwrap_or_else(|e| {
                     if e.is_closed() {
@@ -958,8 +1034,6 @@ mod tests {
         str::FromStr,
         sync::Arc,
     };
-
-    use fidl_fuchsia_net_name as fname;
 
     use dns::test_util::*;
     use dns::DEFAULT_PORT;

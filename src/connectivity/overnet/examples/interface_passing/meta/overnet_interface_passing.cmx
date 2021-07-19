@@ -7,9 +7,9 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.net.NameLookup",
             "fuchsia.net.mdns.Publisher",
             "fuchsia.net.mdns.Subscriber",
+            "fuchsia.net.name.Lookup",
             "fuchsia.netemul.sync.SyncManager",
             "fuchsia.overnet.ServiceConsumer",
             "fuchsia.overnet.ServicePublisher",

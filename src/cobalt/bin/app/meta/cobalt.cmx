@@ -13,8 +13,8 @@
             "root-ssl-certificates"
         ],
         "services": [
-            "fuchsia.net.NameLookup",
             "fuchsia.net.http.Loader",
+            "fuchsia.net.name.Lookup",
             "fuchsia.posix.socket.Provider",
             "fuchsia.scheduler.ProfileProvider",
             "fuchsia.settings.Privacy",

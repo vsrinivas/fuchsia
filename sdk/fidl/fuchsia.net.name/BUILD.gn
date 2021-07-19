@@ -9,6 +9,7 @@ fidl("fuchsia.net.name") {
   api = "fuchsia.net.name.api"
   sources = [
     "dns.fidl",
+    "lookup.fidl",
     "lookup_admin.fidl",
     "server_watcher.fidl",
   ]

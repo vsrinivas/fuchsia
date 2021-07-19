@@ -162,7 +162,7 @@ is not local and/or requires the network:
 {
     "sandbox": {
         "services": [
-            "fuchsia.net.NameLookup",
+            "fuchsia.net.name.Lookup",
             "fuchsia.net.interfaces.State",
             "fuchsia.netstack.Netstack",
             "fuchsia.posix.socket.Provider"

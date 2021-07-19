@@ -7,8 +7,8 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.net.NameLookup",
             "fuchsia.net.interfaces.State",
+            "fuchsia.net.name.Lookup",
             "fuchsia.net.stack.Stack",
             "fuchsia.netemul.sync.SyncManager",
             "fuchsia.netstack.Netstack",

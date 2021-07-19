@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    fidl_fuchsia_net as fnet, fuchsia_async as fasync,
+    fidl_fuchsia_net_name as fnet_name, fuchsia_async as fasync,
     fuchsia_component::client,
     fuchsia_component::server::ServiceFs,
     futures::{FutureExt as _, StreamExt as _, TryStreamExt as _},
@@ -12,7 +12,7 @@ use {
 #[fasync::run_singlethreaded(test)]
 async fn test_getaddrinfo() {
     let mut fs = ServiceFs::new();
-    let _: &mut ServiceFs<_> = fs.add_fidl_service(|s: fnet::NameLookupRequestStream| s);
+    let _: &mut ServiceFs<_> = fs.add_fidl_service(|s: fnet_name::LookupRequestStream| s);
 
     let env = fs
         .create_salted_nested_environment("test_getaddrinfo")
@@ -25,7 +25,7 @@ async fn test_getaddrinfo() {
 
     let mut fs = fs.map(Ok).try_for_each_concurrent(None, |stream| {
         stream.try_for_each_concurrent(None, |request| match request {
-            fnet::NameLookupRequest::LookupIp2 { hostname, options, responder } => {
+            fnet_name::LookupRequest::LookupIp { hostname, options, responder } => {
                 futures::future::ready(responder.send(&mut if hostname == "example.com" {
                     let addresses = std::iter::empty()
                         .chain(
@@ -44,9 +44,9 @@ async fn test_getaddrinfo() {
                         )
                         .collect();
                     let addresses = Some(addresses);
-                    Ok(fnet::LookupResult { addresses, ..fnet::LookupResult::EMPTY })
+                    Ok(fnet_name::LookupResult { addresses, ..fnet_name::LookupResult::EMPTY })
                 } else {
-                    Err(fnet::LookupError::NotFound)
+                    Err(fnet_name::LookupError::NotFound)
                 }))
             }
             request => panic!("unexpected request: {:?}", request),

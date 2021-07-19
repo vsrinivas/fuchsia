@@ -34,7 +34,7 @@
     // Capabilities used by this component.
     use: [
         // List your component's dependencies here, ex:
-        // { protocol: "fuchsia.net.NameLookup" }
+        // { protocol: "fuchsia.net.name.Lookup" }
     ],
 
     // [END capabilities_block]

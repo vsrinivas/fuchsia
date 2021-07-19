@@ -91,7 +91,7 @@
                 "fuchsia.feedback.CrashReporter",
                 "fuchsia.hwinfo.Device",
                 "fuchsia.metrics.MetricEventLoggerFactory",
-                "fuchsia.net.NameLookup",
+                "fuchsia.net.name.Lookup",
                 "fuchsia.net.stack.Log",
                 "fuchsia.net.stack.Stack",
                 "fuchsia.netstack.Netstack",

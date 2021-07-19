@@ -109,8 +109,7 @@ At present, these are the libraries considered in this document:
    + neither is planned for SDK inclusion
 - `fuchsia.net`
    + included in SDK
-   + should contain only common types, no protocols
-   + protocol `NameLookup` should move to `fuchsia.net.name`
+   + contains only common types, no protocols
 -  fuchsia.net.dhcp
    + included in SDK via dependency in `fuchsia.netstack`
    + planned for removal from SDK
@@ -129,8 +128,7 @@ At present, these are the libraries considered in this document:
    + out of scope of this document. do we need to bring it in scope?
 - `fuchsia.net.name`
    + not included in SDK
-   + protocol `LookupAdmin` is the role-separated pair of
-     `fuchsia.net.NameLookup`. We should pull in `NameLookup` (`Lookup`?)
+   + protocol `LookupAdmin` is the role-separated pair of `Lookup`
 - `fuchsia.net.neighbor`
    + not planned for SDK inclusion
 - `fuchsia.net.oldhttp`

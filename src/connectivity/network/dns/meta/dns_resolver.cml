@@ -13,6 +13,7 @@
     capabilities: [
         {
             protocol: [
+                "fuchsia.net.name.Lookup",
                 "fuchsia.net.name.LookupAdmin",
                 "fuchsia.net.NameLookup",
             ],
@@ -29,6 +30,7 @@
     expose: [
         {
             protocol: [
+                "fuchsia.net.name.Lookup",
                 "fuchsia.net.name.LookupAdmin",
                 "fuchsia.net.NameLookup",
             ],

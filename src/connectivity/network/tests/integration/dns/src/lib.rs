@@ -439,7 +439,7 @@ async fn test_fallback_on_query_refused(
     let env = sandbox
         .create_netstack_environment_with::<Netstack2, _, _>(
             "env",
-            &[KnownServices::LookupAdmin, KnownServices::NameLookup],
+            &[KnownServices::LookupAdmin, KnownServices::Lookup],
         )
         .expect("failed to create environment");
 
@@ -466,28 +466,27 @@ async fn test_fallback_on_query_refused(
         .await
         .expect("failed to create socket");
 
-    let name_lookup = env
-        .connect_to_service::<fnet::NameLookupMarker>()
-        .expect("failed to connect to NameLookup");
+    let name_lookup =
+        env.connect_to_service::<net_name::LookupMarker>().expect("failed to connect to Lookup");
     let lookup_fut = async {
         let ips = name_lookup
-            .lookup_ip2(
+            .lookup_ip(
                 hostname,
-                fnet::LookupIpOptions2 {
+                net_name::LookupIpOptions {
                     ipv4_lookup: Some(ipv4_lookup),
                     ipv6_lookup: Some(ipv6_lookup),
                     sort_addresses: Some(true),
-                    ..fnet::LookupIpOptions2::EMPTY
+                    ..net_name::LookupIpOptions::EMPTY
                 },
             )
             .await
             .expect("FIDL error")
-            .expect("lookup_ip2 error");
+            .expect("lookup_ip error");
         assert_eq!(
             ips,
-            fnet::LookupResult {
+            net_name::LookupResult {
                 addresses: Some(vec![resolved_addr]),
-                ..fnet::LookupResult::EMPTY
+                ..net_name::LookupResult::EMPTY
             }
         );
     }

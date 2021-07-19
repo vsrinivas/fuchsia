@@ -13,7 +13,7 @@
             "build-info"
         ],
         "services": [
-            "fuchsia.net.NameLookup",
+            "fuchsia.net.name.Lookup",
             "fuchsia.posix.socket.Provider"
         ]
     }

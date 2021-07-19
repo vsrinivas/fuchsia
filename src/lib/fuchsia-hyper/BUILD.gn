@@ -40,7 +40,7 @@ rustc_library("fuchsia-hyper") {
   } else {
     deps += [
       "//garnet/lib/rust/webpki-roots-fuchsia",
-      "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
+      "//sdk/fidl/fuchsia.net.name:fuchsia.net.name-rustc",
       "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket-rustc",
       "//src/lib/fuchsia-component",
       "//src/lib/network/fidl_fuchsia_net_ext",

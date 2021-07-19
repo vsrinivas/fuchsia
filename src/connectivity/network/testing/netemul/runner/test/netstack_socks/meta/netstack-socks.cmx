@@ -8,8 +8,8 @@
     "sandbox": {
         "services": [
             "fuchaia.logger.LogSink",
-            "fuchsia.net.NameLookup",
             "fuchsia.net.interfaces.State",
+            "fuchsia.net.name.Lookup",
             "fuchsia.netemul.environment.ManagedEnvironment",
             "fuchsia.netemul.network.NetworkContext",
             "fuchsia.netemul.sync.SyncManager",

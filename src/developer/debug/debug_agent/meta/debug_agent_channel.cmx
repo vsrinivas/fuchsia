@@ -18,7 +18,7 @@
         "services": [
             "fuchsia.exception.ProcessLimbo",
             "fuchsia.kernel.RootJob",
-            "fuchsia.net.NameLookup",
+            "fuchsia.net.name.Lookup",
             "fuchsia.posix.socket.Provider",
             "fuchsia.process.Launcher",
             "fuchsia.process.Resolver",

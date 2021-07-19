@@ -44,7 +44,7 @@ pub struct OmahaConfig {
 /// The following conditions are expected to be met:
 /// * The `isolated-swd` package (//src/sys/pkg/lib/isolated-ota:isolated-swd) must be available
 ///     for use - it contains all of the SWD binaries and their manifests.
-/// * Network services (fuchsia.net.NameLookup and fuchsia.posix.socket.Provider) are available in
+/// * Network services (fuchsia.net.name.Lookup and fuchsia.posix.socket.Provider) are available in
 ///     the /svc/ directory.
 /// * The pkgsvr binary should be in the current namespace at /pkg/bin/pkgsvr.
 ///

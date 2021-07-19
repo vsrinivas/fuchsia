@@ -1,0 +1,89 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.net.name;
+
+using fuchsia.net;
+
+/// The maximum length of a hostname, as per [RFC 1035 section 2.3.4](https://tools.ietf.org/html/rfc1035#section-2.3.4).
+const MAX_HOSTNAME_SIZE uint64 = 255;
+
+/// A hostname.
+///
+/// Although the maximum length of a domain or hostname is 255 characters,
+/// each label within a name must not be longer than 63 characters as per
+/// [RFC 1035 section 2.3.4](https://tools.ietf.org/html/rfc1035#section-2.3.4).
+/// A label in a host name is the alphanumeric characters or hyphens, seperated
+/// by a period (e.g. abc.com has two labels, 'abc' and 'com').
+alias Hostname = string:MAX_HOSTNAME_SIZE;
+
+/// Lookup operation options.
+// TODO(https://fxbug.dev/65978): inline this into LookupIp; currently produces:
+// ../../sdk/fidl/fuchsia.net.name/lookup.fidl:44:17: error: anonymous layouts are not yet fully supported
+//         options table {
+//                 ^~~~~~~~
+//
+// TODO(https://fxbug.dev/21414): add a field here and in `LookupResult` to support returning the
+// canonical name.
+type LookupIpOptions = table {
+    /// Include IPv4 results.
+    ///
+    /// If absent, interpreted as false.
+    1: ipv4_lookup bool;
+    /// Include IPv6 results.
+    ///
+    /// If absent, interpreted as false.
+    2: ipv6_lookup bool;
+    /// Sort addresses in order of preference.
+    ///
+    /// It true, Addresses are sorted according to destination address selection described in [RFC
+    /// 6724 Section 6](https://tools.ietf.org/html/rfc6724#section-6).
+    ///
+    /// If absent, interpreted as false.
+    3: sort_addresses bool;
+};
+
+/// The result of a lookup operation.
+// TODO(https://fxbug.dev/65978): inline this into LookupIp; currently produces:
+// error: 'table' cannot be yet be used as a parameter list (http://fxbug.dev/76349)
+type LookupResult = table {
+    /// The IP addresses resulting from a lookup.
+    ///
+    /// If sorting was requested, `addresses` is sorted in order of preference, most preferred
+    /// destination address first.
+    1: addresses vector<fuchsia.net.IpAddress>:MAX;
+};
+
+/// Lookup operation errors.
+type LookupError = strict enum {
+    /// No result was found for this query.
+    NOT_FOUND = 1;
+    /// The lookup failed, but may succeed at a later time. For instance, the
+    /// network or DNS server may be unreachable.
+    TRANSIENT = 2;
+    /// The lookup failed due to an invalid argument (for instance, the hostname was not encoded
+    /// correctly, or was too long).
+    INVALID_ARGS = 3;
+    /// The lookup failed due to an internal error.
+    INTERNAL_ERROR = 4;
+};
+
+/// Provides name and address resolution.
+@discoverable
+protocol Lookup {
+    /// Lookup a list of IP addresses by hostname.
+    ///
+    /// If `hostname` is an Internationalized Domain Name, it must be encoded as per RFC 3490.
+    LookupIp(struct {
+        hostname Hostname;
+        options LookupIpOptions;
+    }) -> (struct {
+        result LookupResult;
+    }) error LookupError;
+    /// Look up a hostname by IP address.
+    LookupHostname(struct {
+        addr fuchsia.net.IpAddress;
+    }) -> (struct {
+        hostname Hostname;
+    }) error LookupError;
+};

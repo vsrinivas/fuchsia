@@ -4,6 +4,7 @@
 
 #include <fcntl.h>
 #include <fuchsia/net/llcpp/fidl.h>
+#include <fuchsia/net/name/llcpp/fidl.h>
 #include <ifaddrs.h>
 #include <lib/fdio/io.h>
 #include <lib/fit/defer.h>
@@ -26,6 +27,7 @@
 
 namespace fio = fuchsia_io;
 namespace fnet = fuchsia_net;
+namespace fnet_name = fuchsia_net_name;
 namespace fsocket = fuchsia_posix_socket;
 
 zx::status<fidl::WireSyncClient<fsocket::Provider>>& fdio_get_socket_provider() {
@@ -295,15 +297,15 @@ int accept4(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict addr
 __EXPORT
 int _getaddrinfo_from_dns(struct address buf[MAXADDRS], char canon[256], const char* name,
                           int family) {
-  auto& name_lookup = get_client<fnet::NameLookup>();
+  auto& name_lookup = get_client<fnet_name::Lookup>();
   if (name_lookup.is_error()) {
     errno = fdio_status_to_errno(name_lookup.status_value());
     return EAI_SYSTEM;
   }
 
-  fnet::wire::LookupIpOptions2::Frame_ frame;
-  fnet::wire::LookupIpOptions2 options(
-      fidl::ObjectView<fnet::wire::LookupIpOptions2::Frame_>::FromExternal(&frame));
+  fnet_name::wire::LookupIpOptions::Frame_ frame;
+  fnet_name::wire::LookupIpOptions options(
+      fidl::ObjectView<fnet_name::wire::LookupIpOptions::Frame_>::FromExternal(&frame));
   bool trueVal = true;
   fidl::ObjectView trueView = fidl::ObjectView<bool>::FromExternal(&trueVal);
   // TODO(https://fxbug.dev/76522): Use address sorting from the DNS service.
@@ -323,19 +325,19 @@ int _getaddrinfo_from_dns(struct address buf[MAXADDRS], char canon[256], const c
   }
 
   // Explicitly allocating message buffers to avoid heap allocation.
-  fidl::Buffer<fidl::WireRequest<fnet::NameLookup::LookupIp2>> request_buffer;
-  fidl::Buffer<fidl::WireResponse<fnet::NameLookup::LookupIp2>> response_buffer;
-  const fidl::WireUnownedResult fidl_result = name_lookup->LookupIp2(
+  fidl::Buffer<fidl::WireRequest<fnet_name::Lookup::LookupIp>> request_buffer;
+  fidl::Buffer<fidl::WireResponse<fnet_name::Lookup::LookupIp>> response_buffer;
+  const fidl::WireUnownedResult fidl_result = name_lookup->LookupIp(
       request_buffer.view(), fidl::StringView::FromExternal(name), options, response_buffer.view());
   if (!fidl_result.ok()) {
     errno = fdio_status_to_errno(fidl_result.status());
     return EAI_SYSTEM;
   }
-  const fnet::wire::NameLookupLookupIp2Result& wire_result = fidl_result.value().result;
+  const fnet_name::wire::LookupLookupIpResult& wire_result = fidl_result.value().result;
   switch (wire_result.which()) {
-    case fnet::wire::NameLookupLookupIp2Result::Tag::kResponse: {
+    case fnet_name::wire::LookupLookupIpResult::Tag::kResponse: {
       int count = 0;
-      const fnet::wire::LookupResult& result = wire_result.response().result;
+      const fnet_name::wire::LookupResult& result = wire_result.response().result;
       if (result.has_addresses()) {
         for (const fnet::wire::IpAddress& addr : result.addresses()) {
           switch (addr.which()) {
@@ -363,15 +365,15 @@ int _getaddrinfo_from_dns(struct address buf[MAXADDRS], char canon[256], const c
 
       return count;
     }
-    case fnet::wire::NameLookupLookupIp2Result::Tag::kErr:
+    case fnet_name::wire::LookupLookupIpResult::Tag::kErr:
       switch (wire_result.err()) {
-        case fnet::wire::LookupError::kNotFound:
+        case fnet_name::wire::LookupError::kNotFound:
           return EAI_NONAME;
-        case fnet::wire::LookupError::kTransient:
+        case fnet_name::wire::LookupError::kTransient:
           return EAI_AGAIN;
-        case fnet::wire::LookupError::kInvalidArgs:
+        case fnet_name::wire::LookupError::kInvalidArgs:
           return EAI_FAIL;
-        case fnet::wire::LookupError::kInternalError:
+        case fnet_name::wire::LookupError::kInternalError:
           errno = EIO;
           return EAI_SYSTEM;
       }

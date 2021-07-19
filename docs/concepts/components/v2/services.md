@@ -60,7 +60,7 @@ An example of a FIDL service definition (defined in fuchsia.network):
 
 ```fidl
 service Provider {
-    fuchsia.net.NameLookup name_lookup;
+    fuchsia.net.name.Lookup name_lookup;
     fuchsia.posix.socket.Provider socket_provider;
 }
 ```

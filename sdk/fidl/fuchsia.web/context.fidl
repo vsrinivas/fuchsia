@@ -61,7 +61,7 @@ type ContentDirectoryProvider = resource table {
 /// [`CreateContextParams.service_directory`].
 type ContextFeatureFlags = strict bits : uint64 {
     /// Enables network access. Requires the following services:
-    /// - [`fuchsia.net/NameLookup`]
+    /// - [`fuchsia.net.name.Lookup`]
     /// - [`fuchsia.net.interfaces/State`]
     /// - [`fuchsia.posix.socket/Provider`]
     NETWORK = 0x1;

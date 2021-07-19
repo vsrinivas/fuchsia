@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 library fuchsia.net;
 
+// TODO(https://fxbug.dev/49741): Remove this file after soft transition.
+
 type LookupError = strict enum {
     /// No result was found for this query.
     NOT_FOUND = 1;
@@ -52,10 +54,8 @@ const MAX_HOSTNAME_SIZE uint64 = 255;
 /// by a period (e.g. abc.com has two labels, 'abc' and 'com').
 alias Hostname = string:MAX_HOSTNAME_SIZE;
 
-// TODO(https://fxbug.dev/21414): support CNAME.
-// TODO(https://fxbug.dev/21415): Figure out a way to expose scope ID for IPv6 addresses.
-// TODO(https://fxbug.dev/49741): Move to fuchsia.net.name once build unification is done.
 @discoverable
+@deprecated("Use fuchsia.net.name.Lookup")
 protocol NameLookup {
     /// Lookup a list of IP addresses by hostname.
     ///

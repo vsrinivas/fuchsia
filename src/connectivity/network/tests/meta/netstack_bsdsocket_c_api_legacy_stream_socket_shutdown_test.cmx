@@ -2,7 +2,7 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
-                "fuchsia.net.NameLookup": "fuchsia-pkg://fuchsia.com/netstack-c-api-tests#meta/dns-resolver.cmx",
+                "fuchsia.net.name.Lookup": "fuchsia-pkg://fuchsia.com/netstack-c-api-tests#meta/dns-resolver.cmx",
                 "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/netstack-c-api-tests#meta/netstack-debug.cmx"
             }
         }
@@ -18,7 +18,7 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.net.NameLookup",
+            "fuchsia.net.name.Lookup",
             "fuchsia.posix.socket.Provider"
         ]
     }

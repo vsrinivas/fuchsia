@@ -24,8 +24,8 @@
             "fuchsia.feedback.internal.LastRebootDirectoryMigrator",
             "fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister",
             "fuchsia.metrics.MetricEventLoggerFactory",
-            "fuchsia.net.NameLookup",
             "fuchsia.net.http.Loader",
+            "fuchsia.net.name.Lookup",
             "fuchsia.posix.socket.Provider",
             "fuchsia.settings.Privacy",
             "fuchsia.update.channelcontrol.ChannelControl"

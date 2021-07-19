@@ -5,7 +5,7 @@
                 "fuchsia.net.http.Loader": "fuchsia-pkg://fuchsia.com/http-client#meta/http-client.cmx"
             },
             "system-services": [
-                "fuchsia.net.NameLookup",
+                "fuchsia.net.name.Lookup",
                 "fuchsia.posix.socket.Provider"
             ]
         }
@@ -23,7 +23,7 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.net.NameLookup",
+            "fuchsia.net.name.Lookup",
             "fuchsia.posix.socket.Provider",
             "fuchsia.sys.Launcher"
         ]

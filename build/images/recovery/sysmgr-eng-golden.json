@@ -13,6 +13,7 @@
         "fuchsia.net.dhcpv6.ClientProvider": "fuchsia-pkg://fuchsia.com/dhcpv6-client#meta/dhcpv6-client.cmx",
         "fuchsia.net.filter.Filter": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
         "fuchsia.net.interfaces.State": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
+        "fuchsia.net.name.Lookup": "fuchsia-pkg://fuchsia.com/dns-resolver#meta/dns-resolver.cmx",
         "fuchsia.net.name.LookupAdmin": "fuchsia-pkg://fuchsia.com/dns-resolver#meta/dns-resolver.cmx",
         "fuchsia.net.neighbor.Controller": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
         "fuchsia.net.neighbor.View": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
@@ -28,6 +29,7 @@
         "fuchsia.posix.socket.Provider",
         "fuchsia.net.dhcpv6.ClientProvider",
         "fuchsia.net.NameLookup",
+        "fuchsia.net.name.Lookup",
         "fuchsia.net.name.LookupAdmin",
         "fuchsia.bogus.DoesNotExist"
     ]

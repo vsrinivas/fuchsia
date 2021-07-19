@@ -87,7 +87,7 @@ class FuchsiaWebServices {
       'fuchsia.media.SessionAudioConsumerFactory',
       'fuchsia.mediacodec.CodecFactory',
       'fuchsia.memorypressure.Provider',
-      'fuchsia.net.NameLookup',
+      'fuchsia.net.name.Lookup',
       'fuchsia.net.interfaces.State',
       'fuchsia.posix.socket.Provider',
       'fuchsia.process.Launcher',

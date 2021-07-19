@@ -8,7 +8,7 @@ use {
         HyperConnectorFuture, TcpOptions, TcpStream,
     },
     fidl_connector::{Connect, ServiceReconnector},
-    fidl_fuchsia_net::{NameLookupMarker, NameLookupProxy},
+    fidl_fuchsia_net_name::{LookupIpOptions, LookupMarker, LookupProxy, LookupResult},
     fidl_fuchsia_posix_socket::{ProviderMarker, ProviderProxy},
     fuchsia_async::{self, net},
     fuchsia_zircon as zx,
@@ -133,21 +133,21 @@ trait ProviderConnector {
     fn connect(&self) -> Result<ProviderProxy, io::Error>;
 }
 
-trait NameLookupConnector {
-    fn connect(&self) -> Result<NameLookupProxy, io::Error>;
+trait LookupConnector {
+    fn connect(&self) -> Result<LookupProxy, io::Error>;
 }
 
 #[derive(Clone)]
 struct RealServiceConnector {
     socket_provider_connector: ServiceReconnector<ProviderMarker>,
-    name_lookup_connector: ServiceReconnector<NameLookupMarker>,
+    name_lookup_connector: ServiceReconnector<LookupMarker>,
 }
 
 impl RealServiceConnector {
     fn new() -> Self {
         RealServiceConnector {
             socket_provider_connector: ServiceReconnector::<ProviderMarker>::new(),
-            name_lookup_connector: ServiceReconnector::<NameLookupMarker>::new(),
+            name_lookup_connector: ServiceReconnector::<LookupMarker>::new(),
         }
     }
 }
@@ -163,8 +163,8 @@ impl ProviderConnector for RealServiceConnector {
     }
 }
 
-impl NameLookupConnector for RealServiceConnector {
-    fn connect(&self) -> Result<NameLookupProxy, io::Error> {
+impl LookupConnector for RealServiceConnector {
+    fn connect(&self) -> Result<LookupProxy, io::Error> {
         self.name_lookup_connector.connect().map_err(|err| {
             io::Error::new(
                 io::ErrorKind::Other,
@@ -174,7 +174,7 @@ impl NameLookupConnector for RealServiceConnector {
     }
 }
 
-async fn connect_to_addr<T: ProviderConnector + NameLookupConnector>(
+async fn connect_to_addr<T: ProviderConnector + LookupConnector>(
     provider: &T,
     host: &str,
     port: u16,
@@ -193,19 +193,19 @@ async fn connect_to_addr<T: ProviderConnector + NameLookupConnector>(
 }
 
 async fn resolve_ip_addr(
-    name_lookup: &impl NameLookupConnector,
+    name_lookup: &impl LookupConnector,
     host: &str,
     port: u16,
 ) -> Result<impl Iterator<Item = SocketAddr>, io::Error> {
     let proxy = name_lookup.connect()?;
-    let fidl_fuchsia_net::LookupResult { addresses, .. } = proxy
-        .lookup_ip2(
+    let LookupResult { addresses, .. } = proxy
+        .lookup_ip(
             host,
-            fidl_fuchsia_net::LookupIpOptions2 {
+            LookupIpOptions {
                 ipv4_lookup: Some(true),
                 ipv6_lookup: Some(true),
                 sort_addresses: Some(true),
-                ..fidl_fuchsia_net::LookupIpOptions2::EMPTY
+                ..LookupIpOptions::EMPTY
             },
         )
         .await
@@ -341,6 +341,7 @@ mod test {
         super::*,
         crate::*,
         fidl::endpoints::create_proxy_and_stream,
+        fidl_fuchsia_net_name::{LookupError, LookupRequest},
         fidl_fuchsia_posix_socket::ProviderRequest,
         fuchsia_async::{self as fasync, net::TcpListener, LocalExecutor},
         futures::prelude::*,
@@ -527,8 +528,8 @@ mod test {
         proxy: T,
     }
 
-    impl NameLookupConnector for ProxyConnector<NameLookupProxy> {
-        fn connect(&self) -> Result<NameLookupProxy, io::Error> {
+    impl LookupConnector for ProxyConnector<LookupProxy> {
+        fn connect(&self) -> Result<LookupProxy, io::Error> {
             Ok(self.proxy.clone())
         }
     }
@@ -536,19 +537,19 @@ mod test {
     #[fasync::run_singlethreaded(test)]
     async fn test_resolve_ip_addr() {
         let (sender, receiver) = futures::channel::mpsc::unbounded();
-        let (proxy, stream) = create_proxy_and_stream::<NameLookupMarker>()
-            .expect("failed to create NameLookup proxy and stream");
+        let (proxy, stream) = create_proxy_and_stream::<LookupMarker>()
+            .expect("failed to create Lookup proxy and stream");
         const TEST_HOSTNAME: &'static str = "foobar.com";
         let name_lookup_fut = stream.zip(receiver).for_each(|(req, mut rsp)| match req {
-            Ok(fidl_fuchsia_net::NameLookupRequest::LookupIp2 { hostname, options, responder }) => {
+            Ok(LookupRequest::LookupIp { hostname, options, responder }) => {
                 assert_eq!(hostname.as_str(), TEST_HOSTNAME);
                 assert_eq!(
                     options,
-                    fidl_fuchsia_net::LookupIpOptions2 {
+                    LookupIpOptions {
                         ipv4_lookup: Some(true),
                         ipv6_lookup: Some(true),
                         sort_addresses: Some(true),
-                        ..fidl_fuchsia_net::LookupIpOptions2::EMPTY
+                        ..LookupIpOptions::EMPTY
                     }
                 );
                 futures::future::ready(
@@ -568,19 +569,18 @@ mod test {
         let test_fut = async move {
             // Test expectation's error variant is a tuple of the lookup error
             // to inject and the expected io error kind returned.
-            type Expectation =
-                Result<Vec<std::net::IpAddr>, (fidl_fuchsia_net::LookupError, io::ErrorKind)>;
+            type Expectation = Result<Vec<std::net::IpAddr>, (LookupError, io::ErrorKind)>;
             let test_resolve = |port, expect: Expectation| {
                 let fidl_response = expect
                     .clone()
-                    .map(|addrs| fidl_fuchsia_net::LookupResult {
+                    .map(|addrs| LookupResult {
                         addresses: Some(
                             addrs
                                 .into_iter()
                                 .map(|std| fidl_fuchsia_net_ext::IpAddress(std).into())
                                 .collect(),
                         ),
-                        ..fidl_fuchsia_net::LookupResult::EMPTY
+                        ..LookupResult::EMPTY
                     })
                     .map_err(|(fidl_err, _io_err)| fidl_err);
                 let expect = expect
@@ -602,11 +602,7 @@ mod test {
             let () = test_resolve(PORT1, Ok(vec![ip_v4])).await;
             let () = test_resolve(PORT2, Ok(vec![ip_v6])).await;
             let () = test_resolve(PORT1, Ok(vec![ip_v4, ip_v6])).await;
-            let () = test_resolve(
-                PORT1,
-                Err((fidl_fuchsia_net::LookupError::NotFound, io::ErrorKind::Other)),
-            )
-            .await;
+            let () = test_resolve(PORT1, Err((LookupError::NotFound, io::ErrorKind::Other))).await;
         };
 
         let ((), ()) = futures::future::join(name_lookup_fut, test_fut).await;

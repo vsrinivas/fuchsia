@@ -14,7 +14,7 @@
         "services": [
             "fuchsia.boot.Items",
             "fuchsia.hardware.pty.Device",
-            "fuchsia.net.NameLookup",
+            "fuchsia.net.name.Lookup",
             "fuchsia.posix.socket.Provider",
             "fuchsia.process.Launcher"
         ]

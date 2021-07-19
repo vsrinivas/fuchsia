@@ -24,7 +24,7 @@
             to: "#test_driver",
         },
         {
-            protocol: [ "fuchsia.net.NameLookup" ],
+            protocol: [ "fuchsia.net.name.Lookup" ],
             from: "#dns_resolver",
             to: "#test_driver",
         },

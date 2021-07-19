@@ -15,8 +15,9 @@
             "fuchsia.kernel.RootJobForInspect",
             "fuchsia.kernel.Stats",
             "fuchsia.modular.SessionRestartController",
-            "fuchsia.net.NameLookup",
+            "fuchsia.net.name.Lookup",
             "fuchsia.posix.socket.Provider",
+            "fuchsia.recovery.ui.FactoryResetCountdown",
             "fuchsia.scheduler.ProfileProvider",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Loader",
@@ -25,14 +26,13 @@
             "fuchsia.ui.annotation.Registry",
             "fuchsia.ui.focus.FocusChainListenerRegistry",
             "fuchsia.ui.input.PointerCaptureListenerRegistry",
+            "fuchsia.ui.input.accessibility.PointerEventRegistry",
             "fuchsia.ui.pointerinjector.Registry",
-            "fuchsia.ui.scenic.Scenic",
-            "fuchsia.vulkan.loader.Loader",
-            "fuchsia.recovery.ui.FactoryResetCountdown",
-            "fuchsia.ui.views.accessibility.FocuserRegistry",
             "fuchsia.ui.policy.DeviceListenerRegistry",
             "fuchsia.ui.policy.Presenter",
-            "fuchsia.ui.input.accessibility.PointerEventRegistry"
+            "fuchsia.ui.scenic.Scenic",
+            "fuchsia.ui.views.accessibility.FocuserRegistry",
+            "fuchsia.vulkan.loader.Loader"
         ]
     }
 }

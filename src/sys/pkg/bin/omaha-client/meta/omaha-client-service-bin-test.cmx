@@ -2,7 +2,7 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
-                "fuchsia.net.NameLookup": "fuchsia-pkg://fuchsia.com/dns-resolver#meta/dns-resolver.cmx",
+                "fuchsia.net.name.Lookup": "fuchsia-pkg://fuchsia.com/dns-resolver#meta/dns-resolver.cmx",
                 "fuchsia.net.routes.State": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
                 "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
                 "fuchsia.stash.Store2": "fuchsia-pkg://fuchsia.com/stash#meta/stash2.cmx",
@@ -11,8 +11,8 @@
         }
     },
     "include": [
-        "syslog/client.shard.cmx",
-        "//src/lib/fuchsia-hyper/hyper.shard.cmx"
+        "//src/lib/fuchsia-hyper/hyper.shard.cmx",
+        "syslog/client.shard.cmx"
     ],
     "program": {
         "binary": "bin/omaha_client_service_bin_test"

@@ -6,12 +6,11 @@
 
 use {
     anyhow::Context as _, async_trait::async_trait, fidl::endpoints::DiscoverableService as _,
-    fidl_fuchsia_net as fnet, fidl_fuchsia_net_filter as fnet_filter,
-    fidl_fuchsia_net_interfaces as fnet_interfaces, fidl_fuchsia_net_name as fnet_name,
-    fidl_fuchsia_net_neighbor as fnet_neighbor, fidl_fuchsia_net_routes as fnet_routes,
-    fidl_fuchsia_net_stack as fnet_stack, fidl_fuchsia_netemul as fnetemul,
-    fidl_fuchsia_netstack as fnetstack, fidl_fuchsia_posix_socket as fposix_socket,
-    fidl_fuchsia_stash as fstash,
+    fidl_fuchsia_net_filter as fnet_filter, fidl_fuchsia_net_interfaces as fnet_interfaces,
+    fidl_fuchsia_net_name as fnet_name, fidl_fuchsia_net_neighbor as fnet_neighbor,
+    fidl_fuchsia_net_routes as fnet_routes, fidl_fuchsia_net_stack as fnet_stack,
+    fidl_fuchsia_netemul as fnetemul, fidl_fuchsia_netstack as fnetstack,
+    fidl_fuchsia_posix_socket as fposix_socket, fidl_fuchsia_stash as fstash,
 };
 
 use crate::Result;
@@ -140,7 +139,7 @@ impl<'a> From<&'a KnownServiceProvider> for fnetemul::ChildDef {
                 exposes: Some(vec![fidl_fuchsia_net_dhcp::Server_Marker::SERVICE_NAME.to_string()]),
                 uses: Some(fnetemul::ChildUses::Capabilities(vec![
                     fnetemul::Capability::LogSink(fnetemul::Empty {}),
-                    fnetemul::Capability::ChildDep(service_dep::<fnet::NameLookupMarker>(
+                    fnetemul::Capability::ChildDep(service_dep::<fnet_name::LookupMarker>(
                         constants::dns_resolver::COMPONENT_NAME,
                     )),
                     fnetemul::Capability::ChildDep(service_dep::<fnet_neighbor::ControllerMarker>(
@@ -174,7 +173,7 @@ impl<'a> From<&'a KnownServiceProvider> for fnetemul::ChildDef {
                 url: Some(constants::dns_resolver::COMPONENT_URL.to_string()),
                 exposes: Some(vec![
                     fnet_name::LookupAdminMarker::SERVICE_NAME.to_string(),
-                    fnet::NameLookupMarker::SERVICE_NAME.to_string(),
+                    fnet_name::LookupMarker::SERVICE_NAME.to_string(),
                 ]),
                 uses: Some(fnetemul::ChildUses::Capabilities(vec![
                     fnetemul::Capability::LogSink(fnetemul::Empty {}),
