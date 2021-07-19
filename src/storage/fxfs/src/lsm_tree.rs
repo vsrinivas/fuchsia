@@ -22,8 +22,8 @@ use {
         sync::{Arc, RwLock},
     },
     types::{
-        IntoLayerRefs, Item, ItemRef, Key, Layer, LayerIterator, LayerWriter, MutableLayer,
-        NextKey, OrdLowerBound, Value,
+        IntoLayerRefs, Item, ItemRef, Key, Layer, LayerIterator, LayerWriter, MergeableKey,
+        MutableLayer, NextKey, OrdLowerBound, Value,
     },
 };
 
@@ -58,7 +58,7 @@ pub struct LSMTree<K, V> {
     merge_fn: merge::MergeFn<K, V>,
 }
 
-impl<'tree, K: Eq + Key + NextKey + OrdLowerBound, V: Value> LSMTree<K, V> {
+impl<'tree, K: MergeableKey, V: Value> LSMTree<K, V> {
     /// Creates a new empty tree.
     pub fn new(merge_fn: merge::MergeFn<K, V>) -> Self {
         LSMTree {

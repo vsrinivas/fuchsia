@@ -4,14 +4,12 @@
 
 use {
     crate::{
-        lsm_tree::LSMTree,
         object_handle::INVALID_OBJECT_ID,
         object_store::{
             allocator::{Allocator, Reservation},
             filesystem::Mutations,
             graveyard::Graveyard,
             journal::{self, checksum_list::ChecksumList, JournalCheckpoint},
-            merge::{self},
             transaction::{AssocObj, MetadataReservation, Mutation, Transaction, TxnMutation},
             ObjectStore,
         },
@@ -177,13 +175,7 @@ impl ObjectManager {
                 // This assumes that all stores are children of the root store.
                 assert_ne!(store_object_id, root_parent_store_object_id);
                 assert_ne!(store_object_id, root_store.store_object_id());
-                ObjectStore::new(
-                    Some(root_store),
-                    store_object_id,
-                    fs,
-                    None,
-                    LSMTree::new(merge::merge),
-                )
+                ObjectStore::new(Some(root_store), store_object_id, fs, None)
             })
             .clone()
     }

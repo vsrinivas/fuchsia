@@ -11,9 +11,8 @@ use {
     std::{fmt::Debug, sync::Arc},
 };
 
-// Keys and values need to implement the following traits. For merging, they also need to implement
-// OrdLowerBound.
-// TODO: Use trait_alias when available.
+// Keys and values need to implement the following traits.  For merging, they need to implement
+// MergeableKey.  TODO: Use trait_alias when available.
 pub trait Key:
     Clone
     + OrdUpperBound
@@ -27,8 +26,8 @@ pub trait Key:
 {
 }
 impl<K> Key for K where
-    K: OrdUpperBound
-        + Clone
+    K: Clone
+        + OrdUpperBound
         + Send
         + Sync
         + serde::de::DeserializeOwned
@@ -38,6 +37,9 @@ impl<K> Key for K where
         + 'static
 {
 }
+
+pub trait MergeableKey: Key + Eq + NextKey + OrdLowerBound {}
+impl<K> MergeableKey for K where K: Key + Eq + NextKey + OrdLowerBound {}
 
 pub trait Value:
     Clone
@@ -115,6 +117,10 @@ impl<K: PartialEq, V: PartialEq> Eq for Item<K, V> {}
 impl<K, V> Item<K, V> {
     pub fn new(key: K, value: V) -> Item<K, V> {
         Item { key, value, sequence: 0u64 }
+    }
+
+    pub fn new_with_sequence(key: K, value: V, sequence: u64) -> Item<K, V> {
+        Item { key, value, sequence }
     }
 
     pub fn as_item_ref(&self) -> ItemRef<'_, K, V> {

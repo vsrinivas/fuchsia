@@ -16,6 +16,7 @@ pub mod store_object_handle;
 #[cfg(test)]
 mod testing;
 pub mod transaction;
+mod tree;
 pub mod volume;
 
 pub use directory::Directory;
@@ -28,7 +29,7 @@ use {
         errors::FxfsError,
         lsm_tree::{
             layers_from_handles,
-            types::{BoxedLayerIterator, ItemRef, LayerIterator},
+            types::{BoxedLayerIterator, Item, ItemRef, LayerIterator},
             LSMTree,
         },
         object_handle::{ObjectHandle, ObjectHandleExt, Writer, INVALID_OBJECT_ID},
@@ -36,12 +37,12 @@ use {
             filesystem::{Filesystem, Mutations},
             journal::checksum_list::ChecksumList,
             record::{
-                AttributeKey, Checksums, ExtentKey, ExtentValue, ObjectItem, ObjectKey,
-                ObjectKeyData, ObjectKind, ObjectValue, DEFAULT_DATA_ATTRIBUTE_ID,
+                Checksums, ExtentKey, ExtentValue, ObjectItem, ObjectKey, ObjectKeyData,
+                ObjectKind, ObjectValue, DEFAULT_DATA_ATTRIBUTE_ID,
             },
             transaction::{
-                AssocObj, AssociatedObject, LockKey, Mutation, ObjectStoreMutation, Operation,
-                Options, StoreInfoMutation, Transaction,
+                AssocObj, AssociatedObject, ExtentMutation, LockKey, Mutation, ObjectStoreMutation,
+                Operation, Options, StoreInfoMutation, Transaction,
             },
         },
         trace_duration,
@@ -81,7 +82,8 @@ pub struct StoreInfo {
 
     // Object ids for layers.  TODO(csuter): need a layer of indirection here so we can
     // support snapshots.
-    layers: Vec<u64>,
+    object_tree_layers: Vec<u64>,
+    extent_tree_layers: Vec<u64>,
 
     // The object ID for the root directory.
     root_directory_object_id: u64,
@@ -114,6 +116,7 @@ pub struct ObjectStore {
     last_object_id: AtomicU64,
     store_info: Mutex<Option<StoreInfo>>,
     tree: LSMTree<ObjectKey, ObjectValue>,
+    extent_tree: LSMTree<ExtentKey, ExtentValue>,
 
     // When replaying the journal, the store cannot read StoreInfo until the whole journal
     // has been replayed, so during that time, store_info_handle will be None and records
@@ -128,7 +131,6 @@ impl ObjectStore {
         store_object_id: u64,
         filesystem: Arc<dyn Filesystem>,
         store_info: Option<StoreInfo>,
-        tree: LSMTree<ObjectKey, ObjectValue>,
     ) -> Arc<ObjectStore> {
         let device = filesystem.device();
         let block_size = filesystem.block_size();
@@ -140,7 +142,8 @@ impl ObjectStore {
             filesystem: Arc::downgrade(&filesystem),
             last_object_id: AtomicU64::new(0),
             store_info: Mutex::new(store_info),
-            tree,
+            tree: LSMTree::new(merge::merge),
+            extent_tree: LSMTree::new(merge::merge_extents),
             store_info_handle: OnceCell::new(),
         });
         store
@@ -151,13 +154,7 @@ impl ObjectStore {
         store_object_id: u64,
         filesystem: Arc<dyn Filesystem>,
     ) -> Arc<Self> {
-        Self::new(
-            parent_store,
-            store_object_id,
-            filesystem,
-            Some(StoreInfo::default()),
-            LSMTree::new(merge::merge),
-        )
+        Self::new(parent_store, store_object_id, filesystem, Some(StoreInfo::default()))
     }
 
     pub fn device(&self) -> &Arc<dyn Device> {
@@ -178,6 +175,10 @@ impl ObjectStore {
 
     pub fn tree(&self) -> &LSMTree<ObjectKey, ObjectValue> {
         &self.tree
+    }
+
+    pub fn extent_tree(&self) -> &LSMTree<ExtentKey, ExtentValue> {
+        &self.extent_tree
     }
 
     pub fn root_directory_object_id(&self) -> u64 {
@@ -366,11 +367,26 @@ impl ObjectStore {
     // this more than once simultaneously for a given object.
     pub async fn tombstone(&self, object_id: u64, txn_options: Options<'_>) -> Result<(), Error> {
         let fs = self.filesystem();
-        let mut search_key = ObjectKey::attribute(object_id, 0);
+        let mut search_key = ExtentKey::new(object_id, 0, 0..0);
         // TODO(csuter): There should be a test that runs fsck after each transaction.
         loop {
             let mut transaction = fs.clone().new_transaction(&[], txn_options).await?;
-            let next_key = self.delete_some(&mut transaction, &search_key).await?;
+            let next_key = self.delete_extents(&mut transaction, &search_key).await?;
+            if next_key.is_none() {
+                transaction.add(
+                    self.store_object_id,
+                    Mutation::merge_object(
+                        ObjectKey::tombstone(search_key.object_id),
+                        ObjectValue::None,
+                    ),
+                );
+                // Remove the object from the graveyard.
+                self.filesystem().object_manager().graveyard().unwrap().remove(
+                    &mut transaction,
+                    self.store_object_id,
+                    search_key.object_id,
+                );
+            }
             transaction.commit().await?;
             search_key = if let Some(next_key) = next_key {
                 next_key
@@ -382,59 +398,50 @@ impl ObjectStore {
     }
 
     // Makes progress on deleting part of a file but stops before a transaction gets too big.
-    async fn delete_some(
+    async fn delete_extents(
         &self,
         transaction: &mut Transaction<'_>,
-        search_key: &ObjectKey,
-    ) -> Result<Option<ObjectKey>, Error> {
-        let layer_set = self.tree.layer_set();
+        search_key: &ExtentKey,
+    ) -> Result<Option<ExtentKey>, Error> {
+        let layer_set = self.extent_tree.layer_set();
         let mut merger = layer_set.merger();
         let allocator = self.allocator();
         let mut iter = merger.seek(Bound::Included(search_key)).await?;
+        let mut delete_extent_mutation = None;
         // Loop over the extents and deallocate them.
-        while let Some(item) = iter.get() {
-            if item.key.object_id != search_key.object_id {
+        while let Some(ItemRef {
+            key: ExtentKey { object_id, attribute_id, range },
+            value: ExtentValue { device_offset },
+            ..
+        }) = iter.get()
+        {
+            if *object_id != search_key.object_id {
                 break;
             }
-            if let Some((
-                _,
-                attribute_id,
-                ExtentKey { range },
-                ExtentValue { device_offset: Some((device_offset, _)) },
-            )) = item.into()
-            {
+            if let Some((device_offset, _)) = device_offset {
                 let device_range = *device_offset..*device_offset + (range.end - range.start);
                 allocator.deallocate(transaction, device_range).await?;
-                transaction.add(
-                    self.store_object_id,
-                    Mutation::merge_object(
-                        ObjectKey::extent(search_key.object_id, attribute_id, 0..range.end),
-                        ObjectValue::deleted_extent(),
-                    ),
-                );
+                delete_extent_mutation = Some(Mutation::extent(
+                    ExtentKey::new(search_key.object_id, *attribute_id, 0..range.end),
+                    ExtentValue::deleted_extent(),
+                ));
                 // Stop if the transaction is getting too big.  At time of writing, this threshold
                 // limits transactions to about 10,000 bytes.
                 const TRANSACTION_MUTATION_THRESHOLD: usize = 200;
                 if transaction.mutations.len() >= TRANSACTION_MUTATION_THRESHOLD {
-                    return Ok(Some(ObjectKey::with_extent_key(
+                    transaction.add(self.store_object_id, delete_extent_mutation.unwrap());
+                    return Ok(Some(ExtentKey::search_key_from_offset(
                         search_key.object_id,
-                        attribute_id,
-                        ExtentKey::search_key_from_offset(range.end),
+                        *attribute_id,
+                        range.end,
                     )));
                 }
             }
             iter.advance().await?;
         }
-        transaction.add(
-            self.store_object_id,
-            Mutation::merge_object(ObjectKey::tombstone(search_key.object_id), ObjectValue::None),
-        );
-        // Remove the object from the graveyard.
-        self.filesystem().object_manager().graveyard().unwrap().remove(
-            transaction,
-            self.store_object_id,
-            search_key.object_id,
-        );
+        if let Some(m) = delete_extent_mutation {
+            transaction.add(self.store_object_id, m);
+        }
         Ok(None)
     }
 
@@ -444,7 +451,10 @@ impl ObjectStore {
         let mut objects = Vec::new();
         // We should not include the ID of the store itself, since that should be referred to in the
         // volume directory.
-        objects.extend_from_slice(&self.store_info.lock().unwrap().as_ref().unwrap().layers);
+        let guard = self.store_info.lock().unwrap();
+        let store_info = guard.as_ref().unwrap();
+        objects.extend_from_slice(&store_info.object_tree_layers);
+        objects.extend_from_slice(&store_info.extent_tree_layers);
         objects
     }
 
@@ -495,16 +505,22 @@ impl ObjectStore {
                 HandleOptions::default(),
             )
             .await?;
-            let layer_object_ids = loop {
+            let (object_tree_layer_object_ids, extent_tree_layer_object_ids) = loop {
                 if let Some(store_info) = &*self.store_info.lock().unwrap() {
-                    break store_info.layers.clone();
+                    break (
+                        store_info.object_tree_layers.clone(),
+                        store_info.extent_tree_layers.clone(),
+                    );
                 }
 
                 if handle.get_size() > 0 {
                     let serialized_info = handle.contents(MAX_STORE_INFO_SERIALIZED_SIZE).await?;
                     let store_info: StoreInfo = deserialize_from(&serialized_info[..])
                         .context("Failed to deserialize StoreInfo")?;
-                    let layer_object_ids = store_info.layers.clone();
+                    let layer_object_ids = (
+                        store_info.object_tree_layers.clone(),
+                        store_info.extent_tree_layers.clone(),
+                    );
                     self.update_last_object_id(store_info.last_object_id);
                     *self.store_info.lock().unwrap() = Some(store_info);
                     break layer_object_ids;
@@ -512,11 +528,12 @@ impl ObjectStore {
 
                 // The store_info will be absent for a newly created and empty object store, since
                 // there have been no StoreInfoMutations applied to it.
-                break vec![];
+                break (vec![], vec![]);
             };
+
             let mut handles = Vec::new();
             let mut total_size = 0;
-            for object_id in layer_object_ids {
+            for object_id in object_tree_layer_object_ids {
                 let handle =
                     ObjectStore::open_object(&parent_store, object_id, HandleOptions::default())
                         .await?;
@@ -524,6 +541,17 @@ impl ObjectStore {
                 handles.push(handle);
             }
             self.tree.append_layers(handles.into()).await?;
+
+            let mut handles = Vec::new();
+            for object_id in extent_tree_layer_object_ids {
+                let handle =
+                    ObjectStore::open_object(&parent_store, object_id, HandleOptions::default())
+                        .await?;
+                total_size += handle.get_size();
+                handles.push(handle);
+            }
+            self.extent_tree.append_layers(handles.into()).await?;
+
             let _ = self.store_info_handle.set(handle);
             self.filesystem().object_manager().update_reservation(self.store_object_id, total_size);
             Ok(())
@@ -575,36 +603,30 @@ impl ObjectStore {
         mutation: &Mutation,
         checksum_list: &mut ChecksumList,
     ) -> Result<bool, Error> {
-        if let Mutation::ObjectStore(ObjectStoreMutation { item, .. }) = mutation {
-            if let Some((
-                _,
-                _,
-                ExtentKey { range },
-                ExtentValue {
-                    device_offset: Some((device_offset, Checksums::Fletcher(checksums))),
-                },
-            )) = item.as_item_ref().into()
-            {
-                if checksums.len() == 0 {
-                    return Ok(false);
-                }
-                let len = if let Ok(l) = usize::try_from(range.length()) {
-                    l
-                } else {
-                    return Ok(false);
-                };
-                if len % checksums.len() != 0 {
-                    return Ok(false);
-                }
-                if (len / checksums.len()) % 4 != 0 {
-                    return Ok(false);
-                }
-                checksum_list.push(
-                    journal_offset,
-                    *device_offset..*device_offset + range.length(),
-                    checksums,
-                );
+        if let Mutation::Extent(ExtentMutation(
+            ExtentKey { range, .. },
+            ExtentValue { device_offset: Some((device_offset, Checksums::Fletcher(checksums))) },
+        )) = mutation
+        {
+            if checksums.len() == 0 {
+                return Ok(false);
             }
+            let len = if let Ok(l) = usize::try_from(range.length()) {
+                l
+            } else {
+                return Ok(false);
+            };
+            if len % checksums.len() != 0 {
+                return Ok(false);
+            }
+            if (len / checksums.len()) % 4 != 0 {
+                return Ok(false);
+            }
+            checksum_list.push(
+                journal_offset,
+                *device_offset..*device_offset + range.length(),
+                checksums,
+            );
         }
         Ok(true)
     }
@@ -614,45 +636,32 @@ impl ObjectStore {
 // to apply a number of optimizations, such as removing tombstoned objects or deleted extents.
 // These optimizations can only be applied after the compaction completes, thus we have an explicit
 // iterator to apply these optimizations.
-struct MajorCompactionIterator<'a> {
-    iter: BoxedLayerIterator<'a, ObjectKey, ObjectValue>,
+struct MajorCompactionIterator<'a, K, V, F> {
+    iter: BoxedLayerIterator<'a, K, V>,
+    can_discard: F,
 }
 
-impl<'a> MajorCompactionIterator<'a> {
-    pub fn new(
-        iter: BoxedLayerIterator<'a, ObjectKey, ObjectValue>,
-    ) -> MajorCompactionIterator<'a> {
-        Self { iter }
-    }
-
-    fn can_discard_item(item: ItemRef<'_, ObjectKey, ObjectValue>) -> bool {
-        match (item.key, item.value) {
-            (ObjectKey { data: ObjectKeyData::Tombstone, .. }, _) => true,
-            (
-                ObjectKey {
-                    object_id: _,
-                    data: ObjectKeyData::Attribute(_, AttributeKey::Extent(..)),
-                },
-                ObjectValue::Extent(ExtentValue { device_offset: None }),
-            ) => true,
-            _ => false,
-        }
+impl<'a, K, V, F> MajorCompactionIterator<'a, K, V, F> {
+    pub fn new(iter: BoxedLayerIterator<'a, K, V>, can_discard: F) -> Self {
+        Self { iter, can_discard }
     }
 }
 
 #[async_trait]
-impl LayerIterator<ObjectKey, ObjectValue> for MajorCompactionIterator<'_> {
+impl<K: Send + Sync, V: Send + Sync, F: for<'b> Fn(ItemRef<'b, K, V>) -> bool + Send + Sync>
+    LayerIterator<K, V> for MajorCompactionIterator<'_, K, V, F>
+{
     async fn advance(&mut self) -> Result<(), Error> {
         self.iter.advance().await?;
         loop {
             match self.iter.get() {
-                Some(item) if Self::can_discard_item(item) => self.iter.advance().await?,
+                Some(item) if (self.can_discard)(item) => self.iter.advance().await?,
                 _ => return Ok(()),
             }
         }
     }
 
-    fn get(&self) -> Option<ItemRef<'_, ObjectKey, ObjectValue>> {
+    fn get(&self) -> Option<ItemRef<'_, K, V>> {
         self.iter.get()
     }
 }
@@ -693,23 +702,36 @@ impl Mutations for ObjectStore {
             Mutation::ObjectStoreInfo(StoreInfoMutation(store_info)) => {
                 *self.store_info.lock().unwrap() = Some(store_info);
             }
-            Mutation::BeginFlush => self.tree.seal().await,
+            Mutation::BeginFlush => {
+                self.tree.seal().await;
+                self.extent_tree.seal().await;
+            }
             Mutation::EndFlush => {
                 if transaction.is_none() {
                     self.tree.reset_immutable_layers();
+                    self.extent_tree.reset_immutable_layers();
                     // StoreInfo needs to be read from the store-info file.
                     *self.store_info.lock().unwrap() = None;
                 } else {
-                    let layers = self.tree.immutable_layer_set();
+                    let object_tree_layer_set = self.tree.immutable_layer_set();
+                    let object_tree_handles =
+                        object_tree_layer_set.layers.iter().map(|l| l.handle());
+                    let extent_tree_layer_set = self.extent_tree.immutable_layer_set();
+                    let extent_tree_handles =
+                        extent_tree_layer_set.layers.iter().map(|l| l.handle());
                     self.filesystem().object_manager().update_reservation(
                         self.store_object_id,
-                        layers
-                            .layers
-                            .iter()
-                            .map(|l| l.handle().map(|h| h.get_size()).unwrap_or(0))
+                        object_tree_handles
+                            .chain(extent_tree_handles)
+                            .map(|h| h.map(ObjectHandle::get_size).unwrap_or(0))
                             .sum(),
                     );
                 }
+            }
+            Mutation::Extent(ExtentMutation(key, value)) => {
+                let item = Item::new_with_sequence(key, value, log_offset);
+                let lower_bound = item.key.key_for_merge_into();
+                self.extent_tree.merge_into(item, &lower_bound).await;
             }
             _ => panic!("unexpected mutation: {:?}", mutation), // TODO(csuter): can't panic
         }
@@ -746,79 +768,75 @@ impl Mutations for ObjectStore {
             ..Default::default()
         };
         let mut transaction = filesystem.clone().new_transaction(&[], txn_options).await?;
-        let object_handle = ObjectStore::create_object(
+
+        let new_object_tree_layer = ObjectStore::create_object(
             parent_store,
             &mut transaction,
             HandleOptions { skip_journal_checks: true, ..Default::default() },
         )
         .await?;
-        let object_id = object_handle.object_id();
-        graveyard.add(&mut transaction, parent_store.store_object_id(), object_id);
+        let new_object_tree_layer_object_id = new_object_tree_layer.object_id();
+        graveyard.add(
+            &mut transaction,
+            parent_store.store_object_id(),
+            new_object_tree_layer_object_id,
+        );
+
+        let new_extent_tree_layer = ObjectStore::create_object(
+            parent_store,
+            &mut transaction,
+            HandleOptions { skip_journal_checks: true, ..Default::default() },
+        )
+        .await?;
+        let new_extent_tree_layer_object_id = new_extent_tree_layer.object_id();
+        graveyard.add(
+            &mut transaction,
+            parent_store.store_object_id(),
+            new_extent_tree_layer_object_id,
+        );
+
         transaction.add(self.store_object_id(), Mutation::BeginFlush);
         transaction.commit().await?;
 
-        // This size can't be too big because we've been called to flush in-memory data in order to
-        // relieve space in the journal, so if it's too large, we could end up exhausting the
-        // journal before we've finished.  With that said, its current value might be too small;
-        // it's something that will need to be tuned.
-        let mut layer_set = self.tree.immutable_layer_set();
-        let mut total_size = 0;
-        let mut layer_count = 0;
-        let mut split_index = layer_set
-            .layers
-            .iter()
-            .position(|layer| {
-                match layer.handle() {
-                    None => {}
-                    Some(handle) => {
-                        let size = handle.get_size();
-                        // Stop adding more layers when the total size of all the immutable layers
-                        // so far is less than 3/4 of the layer we are looking at.
-                        if total_size > 0 && total_size * 4 < size * 3 {
-                            return true;
-                        }
-                        total_size += size;
-                        layer_count += 1;
+        impl tree::MajorCompactable<ObjectKey, ObjectValue> for LSMTree<ObjectKey, ObjectValue> {
+            fn major_iter(
+                iter: BoxedLayerIterator<'_, ObjectKey, ObjectValue>,
+            ) -> BoxedLayerIterator<'_, ObjectKey, ObjectValue> {
+                Box::new(MajorCompactionIterator::new(iter, |item: ItemRef<'_, _, _>| {
+                    match item.key {
+                        ObjectKey { data: ObjectKeyData::Tombstone, .. } => true,
+                        _ => false,
                     }
-                }
-                false
-            })
-            .unwrap_or(layer_set.layers.len());
-
-        // If there's only one immutable layer to merge with and it's big, don't merge with it.
-        // Instead, we'll create a new layer and eventually that will grow to be big enough to merge
-        // with the existing layers.  The threshold here cannot be so big such that merging with a
-        // layer that big ends up using so much journal space that we have to immediately flush
-        // again as that has the potential to end up in an infinite loop, and so the number chosen
-        // here is related to the journal's RECLAIM_SIZE.
-        if layer_count == 1
-            && total_size > journal::RECLAIM_SIZE
-            && layer_set.layers[split_index - 1].handle().is_some()
-        {
-            split_index -= 1;
+                }))
+            }
         }
 
-        let layers_to_keep = layer_set.layers.split_off(split_index);
-
-        {
-            let mut merger = layer_set.merger();
-            let iter: BoxedLayerIterator<'_, ObjectKey, ObjectValue> = if layers_to_keep.is_empty()
-            {
-                Box::new(MajorCompactionIterator::new(Box::new(
-                    merger.seek(Bound::Unbounded).await?,
-                )))
-            } else {
-                Box::new(merger.seek(Bound::Unbounded).await?)
-            };
-            self.tree
-                .compact_with_iterator(
-                    iter,
-                    Writer::new(&object_handle, txn_options),
-                    object_handle.block_size(),
-                )
-                .await
-                .context("ObjectStore::flush")?;
+        impl tree::MajorCompactable<ExtentKey, ExtentValue> for LSMTree<ExtentKey, ExtentValue> {
+            fn major_iter(
+                iter: BoxedLayerIterator<'_, ExtentKey, ExtentValue>,
+            ) -> BoxedLayerIterator<'_, ExtentKey, ExtentValue> {
+                Box::new(MajorCompactionIterator::new(iter, |item: ItemRef<'_, _, _>| {
+                    match item.value {
+                        ExtentValue { device_offset: None } => true,
+                        _ => false,
+                    }
+                }))
+            }
         }
+
+        let (object_tree_layers_to_keep, old_object_tree_layers) =
+            tree::flush(&self.tree, Writer::new(&new_object_tree_layer, txn_options)).await?;
+        let (extent_tree_layers_to_keep, old_extent_tree_layers) =
+            tree::flush(&self.extent_tree, Writer::new(&new_extent_tree_layer, txn_options))
+                .await?;
+
+        let mut new_object_tree_layers =
+            layers_from_handles(Box::new([new_object_tree_layer])).await?;
+        new_object_tree_layers.extend(object_tree_layers_to_keep.iter().map(|l| (*l).clone()));
+
+        let mut new_extent_tree_layers =
+            layers_from_handles(Box::new([new_extent_tree_layer])).await?;
+        new_extent_tree_layers.extend(extent_tree_layers_to_keep.iter().map(|l| (*l).clone()));
 
         let mut serialized_info = Vec::new();
         let mut new_store_info = self.store_info();
@@ -826,7 +844,12 @@ impl Mutations for ObjectStore {
         let mut transaction = filesystem.clone().new_transaction(&[], txn_options).await?;
 
         // Move the existing layers we're compacting to the graveyard.
-        for layer in &layer_set.layers {
+        for layer in &old_object_tree_layers {
+            if let Some(handle) = layer.handle() {
+                graveyard.add(&mut transaction, parent_store.store_object_id(), handle.object_id());
+            }
+        }
+        for layer in &old_extent_tree_layers {
             if let Some(handle) = layer.handle() {
                 graveyard.add(&mut transaction, parent_store.store_object_id(), handle.object_id());
             }
@@ -834,15 +857,20 @@ impl Mutations for ObjectStore {
 
         new_store_info.last_object_id = self.last_object_id.load(atomic::Ordering::Relaxed);
 
-        let mut layers = layers_from_handles(Box::new([object_handle])).await?;
-        layers.extend(layers_to_keep.iter().map(|l| (*l).clone()));
-
-        new_store_info.layers = Vec::new();
-        for layer in &layers {
+        new_store_info.object_tree_layers = Vec::new();
+        for layer in &new_object_tree_layers {
             if let Some(handle) = layer.handle() {
-                new_store_info.layers.push(handle.object_id());
+                new_store_info.object_tree_layers.push(handle.object_id());
             }
         }
+
+        new_store_info.extent_tree_layers = Vec::new();
+        for layer in &new_extent_tree_layers {
+            if let Some(handle) = layer.handle() {
+                new_store_info.extent_tree_layers.push(handle.object_id());
+            }
+        }
+
         serialize_into(&mut serialized_info, &new_store_info)?;
         let mut buf = self.device.allocate_buffer(serialized_info.len());
         buf.as_mut_slice().copy_from_slice(&serialized_info[..]);
@@ -853,17 +881,35 @@ impl Mutations for ObjectStore {
             .txn_write(&mut transaction, 0u64, buf.as_ref())
             .await?;
         transaction.add(self.store_object_id(), Mutation::EndFlush);
-        graveyard.remove(&mut transaction, parent_store.store_object_id(), object_id);
+        graveyard.remove(
+            &mut transaction,
+            parent_store.store_object_id(),
+            new_object_tree_layer_object_id,
+        );
+        graveyard.remove(
+            &mut transaction,
+            parent_store.store_object_id(),
+            new_extent_tree_layer_object_id,
+        );
 
         transaction
             .commit_with_callback(|_| {
                 *self.store_info.lock().unwrap() = Some(new_store_info);
-                self.tree.set_layers(layers);
+                self.tree.set_layers(new_object_tree_layers);
+                self.extent_tree.set_layers(new_extent_tree_layers);
             })
             .await?;
 
         // Now close the layers and purge them.
-        for layer in layer_set.layers {
+        for layer in old_object_tree_layers {
+            let object_id = layer.handle().map(|h| h.object_id());
+            layer.close_layer().await;
+            if let Some(object_id) = object_id {
+                parent_store.tombstone(object_id, txn_options).await?;
+            }
+        }
+
+        for layer in old_extent_tree_layers {
             let object_id = layer.handle().map(|h| h.object_id());
             layer.close_layer().await;
             if let Some(object_id) = object_id {
@@ -893,7 +939,7 @@ mod tests {
                 directory::Directory,
                 filesystem::{Filesystem, FxFilesystem, Mutations, OpenFxFilesystem, SyncOptions},
                 fsck::fsck,
-                record::{AttributeKey, ExtentValue, ObjectKey, ObjectKeyData, ObjectValue},
+                record::{ExtentKey, ExtentValue, ObjectKey},
                 transaction::{Options, TransactionHandler},
                 HandleOptions, ObjectStore,
             },
@@ -1130,19 +1176,15 @@ mod tests {
 
         root_store.tombstone(child_id, Options::default()).await.expect("tombstone failed");
 
-        let layers = root_store.tree.layer_set();
+        let layers = root_store.extent_tree.layer_set();
         let mut merger = layers.merger();
         let mut iter = merger
-            .seek(Bound::Included(&ObjectKey::extent(child_id, 0, 0..8192).search_key()))
+            .seek(Bound::Included(&ExtentKey::new(child_id, 0, 0..8192).search_key()))
             .await
             .expect("seek failed");
         assert_matches!(
             iter.get(),
-            Some(ItemRef {
-                key: ObjectKey { data: ObjectKeyData::Attribute(_, AttributeKey::Extent(_)), .. },
-                value: ObjectValue::Extent(ExtentValue { device_offset: None }),
-                ..
-            })
+            Some(ItemRef { value: ExtentValue { device_offset: None }, .. })
         );
         iter.advance().await.expect("advance failed");
         assert_matches!(iter.get(), None);
@@ -1173,18 +1215,18 @@ mod tests {
         };
 
         let has_deleted_extent_records = |root_store: Arc<ObjectStore>, child_id| async move {
-            let layers = root_store.tree.layer_set();
+            let layers = root_store.extent_tree.layer_set();
             let mut merger = layers.merger();
             let mut iter = merger
-                .seek(Bound::Included(&ObjectKey::extent(child_id, 0, 0..1).search_key()))
+                .seek(Bound::Included(&ExtentKey::new(child_id, 0, 0..1).search_key()))
                 .await
                 .expect("seek failed");
             loop {
                 match iter.get() {
                     None => return false,
                     Some(ItemRef {
-                        key: ObjectKey { object_id, .. },
-                        value: ObjectValue::Extent(ExtentValue { device_offset: None }),
+                        key: ExtentKey { object_id, .. },
+                        value: ExtentValue { device_offset: None },
                         ..
                     }) if *object_id == child_id => return true,
                     _ => {}

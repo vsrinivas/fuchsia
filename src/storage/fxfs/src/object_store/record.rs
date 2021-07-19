@@ -5,7 +5,7 @@
 // TODO(jfsulliv): need validation after deserialization.
 
 use {
-    crate::lsm_tree::types::{Item, ItemRef, NextKey, OrdLowerBound, OrdUpperBound},
+    crate::lsm_tree::types::{Item, NextKey, OrdLowerBound, OrdUpperBound},
     serde::{Deserialize, Serialize},
     std::cmp::{max, min},
     std::convert::From,
@@ -34,28 +34,24 @@ pub enum ObjectKeyData {
     /// A generic, untyped object.
     Object,
     /// An attribute associated with an object.  It has a 64-bit ID.
-    Attribute(u64, AttributeKey),
+    Attribute(u64),
     /// A child of a directory.
     Child { name: String }, // TODO(jfsulliv): Should this be a string or array of bytes?
     /// A graveyard entry.
     GraveyardEntry { store_object_id: u64, object_id: u64 },
 }
 
-#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
-pub enum AttributeKey {
-    Size,
-    Extent(ExtentKey),
-}
-
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub struct ExtentKey {
+    pub object_id: u64,
+    pub attribute_id: u64,
     pub range: Range<u64>,
 }
 
 impl ExtentKey {
     /// Creates an ExtentKey.
-    pub fn new(range: std::ops::Range<u64>) -> Self {
-        ExtentKey { range }
+    pub fn new(object_id: u64, attribute_id: u64, range: std::ops::Range<u64>) -> Self {
+        ExtentKey { object_id, attribute_id, range }
     }
 
     /// Returns the range of bytes common between this extent and |other|.
@@ -75,13 +71,13 @@ impl ExtentKey {
     /// we'd search for 0..101 which would set the iterator to 50..150.
     pub fn search_key(&self) -> Self {
         assert_ne!(self.range.start, self.range.end);
-        ExtentKey::search_key_from_offset(self.range.start)
+        ExtentKey::search_key_from_offset(self.object_id, self.attribute_id, self.range.start)
     }
 
     /// Similar to previous, but from an offset.  Returns a search key that will find the first
     /// extent that touches offset..
-    pub fn search_key_from_offset(offset: u64) -> Self {
-        ExtentKey { range: 0..offset + 1 }
+    pub fn search_key_from_offset(object_id: u64, attribute_id: u64, offset: u64) -> Self {
+        ExtentKey { object_id, attribute_id, range: 0..offset + 1 }
     }
 
     /// Returns the merge key for this extent; that is, a key which is <= this extent and any other
@@ -91,7 +87,11 @@ impl ExtentKey {
     /// 100..150, we'd use a merge hint of 0..100 which would set the iterator to 50..150 (the first
     /// element > 100..150 under Ord).
     pub fn key_for_merge_into(&self) -> Self {
-        ExtentKey { range: 0..self.range.start }
+        ExtentKey {
+            object_id: self.object_id,
+            attribute_id: self.attribute_id,
+            range: 0..self.range.start,
+        }
     }
 }
 
@@ -107,7 +107,10 @@ impl OrdUpperBound for ExtentKey {
         // keys within the same layer, ties can always be broken using layer index.  Insertions into
         // the mutable layer should always be done using merge_into, which will ensure keys don't
         // end up overlapping.
-        self.range.end.cmp(&other.range.end)
+        self.object_id
+            .cmp(&other.object_id)
+            .then(self.attribute_id.cmp(&other.attribute_id))
+            .then(self.range.end.cmp(&other.range.end))
     }
 }
 
@@ -115,7 +118,11 @@ impl OrdLowerBound for ExtentKey {
     // Orders by the start of the range rather than the end, and doesn't include the end in the
     // comparison. This is used when merging, where we want to merge keys in lower-bound order.
     fn cmp_lower_bound(&self, other: &ExtentKey) -> std::cmp::Ordering {
-        return self.range.start.cmp(&other.range.start);
+        self.object_id.cmp(&other.object_id).then(
+            self.attribute_id
+                .cmp(&other.attribute_id)
+                .then(self.range.start.cmp(&other.range.start)),
+        )
     }
 }
 
@@ -124,7 +131,9 @@ impl Ord for ExtentKey {
         // We expect cmp_upper_bound and cmp_lower_bound to be used mostly, but ObjectKey needs an
         // Ord method in order to compare other enum variants, and Transaction requires an ObjectKey
         // to implement Ord.
-        self.range.start.cmp(&other.range.start).then(self.range.end.cmp(&other.range.end))
+        self.object_id.cmp(&other.object_id).then(self.attribute_id.cmp(&other.attribute_id).then(
+            self.range.start.cmp(&other.range.start).then(self.range.end.cmp(&other.range.end)),
+        ))
     }
 }
 
@@ -151,26 +160,7 @@ impl ObjectKey {
 
     /// Creates an ObjectKey for an attribute.
     pub fn attribute(object_id: u64, attribute_id: u64) -> Self {
-        Self { object_id, data: ObjectKeyData::Attribute(attribute_id, AttributeKey::Size) }
-    }
-
-    /// Creates an ObjectKey for an extent.
-    pub fn extent(object_id: u64, attribute_id: u64, range: std::ops::Range<u64>) -> Self {
-        Self {
-            object_id,
-            data: ObjectKeyData::Attribute(
-                attribute_id,
-                AttributeKey::Extent(ExtentKey::new(range)),
-            ),
-        }
-    }
-
-    /// Creates an ObjectKey from an ExtentKey.
-    pub fn with_extent_key(object_id: u64, attribute_id: u64, extent_key: ExtentKey) -> Self {
-        Self {
-            object_id,
-            data: ObjectKeyData::Attribute(attribute_id, AttributeKey::Extent(extent_key)),
-        }
+        Self { object_id, data: ObjectKeyData::Attribute(attribute_id) }
     }
 
     /// Creates an ObjectKey for a child.
@@ -190,79 +180,32 @@ impl ObjectKey {
         Self { object_id, data: ObjectKeyData::Tombstone }
     }
 
-    /// Returns the search key for this extent; that is, a key which is <= this key under Ord and
-    /// OrdLowerBound.
-    /// This would be used when searching for an extent with |find| (when we want to find any
-    /// overlapping extent, which could include extents that start earlier).
-    pub fn search_key(&self) -> Self {
-        if let Self {
-            object_id,
-            data: ObjectKeyData::Attribute(attribute_id, AttributeKey::Extent(e)),
-        } = self
-        {
-            Self::with_extent_key(*object_id, *attribute_id, e.search_key())
-        } else {
-            self.clone()
-        }
-    }
-
-    /// Returns the merge key for this key; that is, a key which is <= this key and any
-    /// other possibly overlapping key, under Ord. This would be used for the hint in |merge_into|.
+    /// Returns the merge key for this key; that is, a key which is <= this key and any other
+    /// possibly overlapping key, under Ord. This would be used for `lower_bound` to calls to
+    /// `merge_into`.  For now, object keys don't have any range based bits, so this just returns a
+    /// clone.
     pub fn key_for_merge_into(&self) -> Self {
-        if let Self {
-            object_id,
-            data: ObjectKeyData::Attribute(attribute_id, AttributeKey::Extent(e)),
-        } = self
-        {
-            Self::with_extent_key(*object_id, *attribute_id, e.key_for_merge_into())
-        } else {
-            self.clone()
-        }
+        self.clone()
     }
 }
 
 impl OrdUpperBound for ObjectKey {
     fn cmp_upper_bound(&self, other: &ObjectKey) -> std::cmp::Ordering {
-        self.object_id.cmp(&other.object_id).then_with(|| match (&self.data, &other.data) {
-            (
-                ObjectKeyData::Attribute(left_attr_id, AttributeKey::Extent(ref left_extent)),
-                ObjectKeyData::Attribute(right_attr_id, AttributeKey::Extent(ref right_extent)),
-            ) => left_attr_id.cmp(right_attr_id).then(left_extent.cmp_upper_bound(right_extent)),
-            _ => self.data.cmp(&other.data),
-        })
+        self.cmp(other)
     }
 }
 
 impl OrdLowerBound for ObjectKey {
     fn cmp_lower_bound(&self, other: &ObjectKey) -> std::cmp::Ordering {
-        self.object_id.cmp(&other.object_id).then_with(|| match (&self.data, &other.data) {
-            (
-                ObjectKeyData::Attribute(left_attr_id, AttributeKey::Extent(ref left_extent)),
-                ObjectKeyData::Attribute(right_attr_id, AttributeKey::Extent(ref right_extent)),
-            ) => left_attr_id.cmp(right_attr_id).then(left_extent.cmp_lower_bound(right_extent)),
-            _ => self.data.cmp(&other.data),
-        })
+        self.cmp(other)
     }
 }
 
-impl NextKey for ObjectKey {
+impl NextKey for ObjectKey {}
+
+impl NextKey for ExtentKey {
     fn next_key(&self) -> Option<Self> {
-        if let ObjectKey { data: ObjectKeyData::Attribute(_, AttributeKey::Extent(_)), .. } = self {
-            let mut key = self.clone();
-            if let ObjectKey {
-                data: ObjectKeyData::Attribute(_, AttributeKey::Extent(ExtentKey { range })),
-                ..
-            } = &mut key
-            {
-                // We want a key such that cmp_lower_bound returns Greater for any key which starts
-                // after end, and a key such that if you search for it, you'll get an extent whose
-                // end > range.end.
-                *range = range.end..range.end + 1;
-            }
-            Some(key)
-        } else {
-            None
-        }
+        Some(ExtentKey::new(self.object_id, self.attribute_id, self.range.end..self.range.end + 1))
     }
 }
 
@@ -283,6 +226,20 @@ pub struct ExtentValue {
 }
 
 impl ExtentValue {
+    pub fn new(device_offset: u64) -> ExtentValue {
+        ExtentValue { device_offset: Some((device_offset, Checksums::None)) }
+    }
+
+    /// Creates an ExtentValue with a checksum
+    pub fn with_checksum(device_offset: u64, checksum: Checksums) -> ExtentValue {
+        ExtentValue { device_offset: Some((device_offset, checksum)) }
+    }
+
+    /// Creates an ObjectValue for a deletion of an object extent.
+    pub fn deleted_extent() -> ExtentValue {
+        ExtentValue { device_offset: None }
+    }
+
     /// Returns a new ExtentValue offset by `amount`.  Both `amount` and `extent_len` must be
     /// multiples of the underlying block size.
     pub fn offset_by(&self, amount: u64, extent_len: u64) -> Self {
@@ -401,8 +358,6 @@ pub enum ObjectValue {
     Object { kind: ObjectKind, attributes: ObjectAttributes },
     /// An attribute associated with a file object. |size| is the size of the attribute in bytes.
     Attribute { size: u64 },
-    /// An extent associated with an object.
-    Extent(ExtentValue),
     /// A child of an object. |object_id| is the ID of the child, and |object_descriptor| describes
     /// the child.
     Child { object_id: u64, object_descriptor: ObjectDescriptor },
@@ -425,18 +380,6 @@ impl ObjectValue {
     pub fn attribute(size: u64) -> ObjectValue {
         ObjectValue::Attribute { size }
     }
-    /// Creates an ObjectValue for an insertion/replacement of an object extent.
-    pub fn extent(device_offset: u64) -> ObjectValue {
-        ObjectValue::Extent(ExtentValue { device_offset: Some((device_offset, Checksums::None)) })
-    }
-    /// Creates an ObjectValue for an insertion/replacement of an object extent.
-    pub fn extent_with_checksum(device_offset: u64, checksum: Checksums) -> ObjectValue {
-        ObjectValue::Extent(ExtentValue { device_offset: Some((device_offset, checksum)) })
-    }
-    /// Creates an ObjectValue for a deletion of an object extent.
-    pub fn deleted_extent() -> ObjectValue {
-        ObjectValue::Extent(ExtentValue { device_offset: None })
-    }
     /// Creates an ObjectValue for an object child.
     pub fn child(object_id: u64, object_descriptor: ObjectDescriptor) -> ObjectValue {
         ObjectValue::Child { object_id, object_descriptor }
@@ -444,30 +387,6 @@ impl ObjectValue {
 }
 
 pub type ObjectItem = Item<ObjectKey, ObjectValue>;
-
-/// If the given item describes an extent, unwraps it and returns the extent key/value.
-impl<'a> From<ItemRef<'a, ObjectKey, ObjectValue>>
-    for Option<(/*object-id*/ u64, /*attribute-id*/ u64, &'a ExtentKey, &'a ExtentValue)>
-{
-    fn from(item: ItemRef<'a, ObjectKey, ObjectValue>) -> Self {
-        match item {
-            ItemRef {
-                key:
-                    ObjectKey {
-                        object_id,
-                        data:
-                            ObjectKeyData::Attribute(
-                                attribute_id, //
-                                AttributeKey::Extent(ref extent_key),
-                            ),
-                    },
-                value: ObjectValue::Extent(ref extent_value),
-                ..
-            } => Some((*object_id, *attribute_id, extent_key, extent_value)),
-            _ => None,
-        }
-    }
-}
 
 #[cfg(test)]
 mod tests {
@@ -479,129 +398,70 @@ mod tests {
 
     #[test]
     fn test_extent_cmp() {
-        let extent = ObjectKey::with_extent_key(1, 0, ExtentKey::new(100..150));
-        assert_eq!(
-            extent.cmp_upper_bound(&ObjectKey::with_extent_key(1, 0, ExtentKey::new(0..100))),
-            Ordering::Greater
-        );
-        assert_eq!(
-            extent.cmp_upper_bound(&ObjectKey::with_extent_key(1, 0, ExtentKey::new(0..110))),
-            Ordering::Greater
-        );
-        assert_eq!(
-            extent.cmp_upper_bound(&ObjectKey::with_extent_key(1, 0, ExtentKey::new(0..150))),
-            Ordering::Equal
-        );
-        assert_eq!(
-            extent.cmp_upper_bound(&ObjectKey::with_extent_key(1, 0, ExtentKey::new(99..150))),
-            Ordering::Equal
-        );
-        assert_eq!(
-            extent.cmp_upper_bound(&ObjectKey::with_extent_key(1, 0, ExtentKey::new(100..150))),
-            Ordering::Equal
-        );
-        assert_eq!(
-            extent.cmp_upper_bound(&ObjectKey::with_extent_key(1, 0, ExtentKey::new(0..151))),
-            Ordering::Less
-        );
-        assert_eq!(
-            extent.cmp_upper_bound(&ObjectKey::with_extent_key(1, 0, ExtentKey::new(100..151))),
-            Ordering::Less
-        );
-        assert_eq!(
-            extent.cmp_upper_bound(&ObjectKey::with_extent_key(1, 0, ExtentKey::new(150..1000))),
-            Ordering::Less
-        );
+        let extent = ExtentKey::new(1, 0, 100..150);
+        assert_eq!(extent.cmp_upper_bound(&ExtentKey::new(1, 0, 0..100)), Ordering::Greater);
+        assert_eq!(extent.cmp_upper_bound(&ExtentKey::new(1, 0, 0..110)), Ordering::Greater);
+        assert_eq!(extent.cmp_upper_bound(&ExtentKey::new(1, 0, 0..150)), Ordering::Equal);
+        assert_eq!(extent.cmp_upper_bound(&ExtentKey::new(1, 0, 99..150)), Ordering::Equal);
+        assert_eq!(extent.cmp_upper_bound(&ExtentKey::new(1, 0, 100..150)), Ordering::Equal);
+        assert_eq!(extent.cmp_upper_bound(&ExtentKey::new(1, 0, 0..151)), Ordering::Less);
+        assert_eq!(extent.cmp_upper_bound(&ExtentKey::new(1, 0, 100..151)), Ordering::Less);
+        assert_eq!(extent.cmp_upper_bound(&ExtentKey::new(1, 0, 150..1000)), Ordering::Less);
 
         // Attribute ID takes precedence over range
-        assert_eq!(extent.cmp_upper_bound(&ObjectKey::extent(1, 1, 0..100)), Ordering::Less);
+        assert_eq!(extent.cmp_upper_bound(&ExtentKey::new(1, 1, 0..100)), Ordering::Less);
         // Object ID takes precedence over all
         assert_eq!(
-            ObjectKey::extent(1, 1, 0..100).cmp_upper_bound(&ObjectKey::with_extent_key(
-                0,
-                1,
-                ExtentKey::new(150..1000)
-            )),
+            ExtentKey::new(1, 1, 0..100).cmp_upper_bound(&ExtentKey::new(0, 1, 150..1000)),
             Ordering::Greater
         );
     }
 
     #[test]
     fn test_extent_cmp_lower_bound() {
-        let extent = ObjectKey::with_extent_key(1, 0, ExtentKey::new(100..150));
-        assert_eq!(
-            extent.cmp_lower_bound(&ObjectKey::with_extent_key(1, 0, ExtentKey::new(0..100))),
-            Ordering::Greater
-        );
-        assert_eq!(
-            extent.cmp_lower_bound(&ObjectKey::with_extent_key(1, 0, ExtentKey::new(0..110))),
-            Ordering::Greater
-        );
-        assert_eq!(
-            extent.cmp_lower_bound(&ObjectKey::with_extent_key(1, 0, ExtentKey::new(0..150))),
-            Ordering::Greater
-        );
-        assert_eq!(
-            extent.cmp_lower_bound(&ObjectKey::with_extent_key(1, 0, ExtentKey::new(0..1000))),
-            Ordering::Greater
-        );
-        assert_eq!(
-            extent.cmp_lower_bound(&ObjectKey::with_extent_key(1, 0, ExtentKey::new(99..1000))),
-            Ordering::Greater
-        );
-        assert_eq!(
-            extent.cmp_lower_bound(&ObjectKey::with_extent_key(1, 0, ExtentKey::new(100..150))),
-            Ordering::Equal
-        );
+        let extent = ExtentKey::new(1, 0, 100..150);
+        assert_eq!(extent.cmp_lower_bound(&ExtentKey::new(1, 0, 0..100)), Ordering::Greater);
+        assert_eq!(extent.cmp_lower_bound(&ExtentKey::new(1, 0, 0..110)), Ordering::Greater);
+        assert_eq!(extent.cmp_lower_bound(&ExtentKey::new(1, 0, 0..150)), Ordering::Greater);
+        assert_eq!(extent.cmp_lower_bound(&ExtentKey::new(1, 0, 0..1000)), Ordering::Greater);
+        assert_eq!(extent.cmp_lower_bound(&ExtentKey::new(1, 0, 99..1000)), Ordering::Greater);
+        assert_eq!(extent.cmp_lower_bound(&ExtentKey::new(1, 0, 100..150)), Ordering::Equal);
         // cmp_lower_bound does not check the upper bound of the range
-        assert_eq!(
-            extent.cmp_lower_bound(&ObjectKey::with_extent_key(1, 0, ExtentKey::new(100..1000))),
-            Ordering::Equal
-        );
-        assert_eq!(
-            extent.cmp_lower_bound(&ObjectKey::with_extent_key(1, 0, ExtentKey::new(101..102))),
-            Ordering::Less
-        );
+        assert_eq!(extent.cmp_lower_bound(&ExtentKey::new(1, 0, 100..1000)), Ordering::Equal);
+        assert_eq!(extent.cmp_lower_bound(&ExtentKey::new(1, 0, 101..102)), Ordering::Less);
 
         // Attribute ID takes precedence over range
-        assert_eq!(extent.cmp_lower_bound(&ObjectKey::extent(1, 1, 0..100)), Ordering::Less);
+        assert_eq!(extent.cmp_lower_bound(&ExtentKey::new(1, 1, 0..100)), Ordering::Less);
         // Object ID takes precedence over all
         assert_eq!(
-            ObjectKey::extent(1, 1, 0..100).cmp_lower_bound(&ObjectKey::with_extent_key(
-                0,
-                1,
-                ExtentKey::new(150..1000)
-            )),
+            ExtentKey::new(1, 1, 0..100).cmp_lower_bound(&ExtentKey::new(0, 1, 150..1000)),
             Ordering::Greater
         );
     }
 
     #[test]
     fn test_extent_search_and_insertion_key() {
-        let extent = ObjectKey::with_extent_key(1, 0, ExtentKey::new(100..150));
-        assert_eq!(extent.search_key(), ObjectKey::with_extent_key(1, 0, ExtentKey::new(0..101)));
+        let extent = ExtentKey::new(1, 0, 100..150);
+        assert_eq!(extent.search_key(), ExtentKey::new(1, 0, 0..101));
         assert_eq!(extent.cmp_lower_bound(&extent.search_key()), Ordering::Greater);
         assert_eq!(extent.cmp_upper_bound(&extent.search_key()), Ordering::Greater);
-        assert_eq!(
-            extent.key_for_merge_into(),
-            ObjectKey::with_extent_key(1, 0, ExtentKey::new(0..100))
-        );
+        assert_eq!(extent.key_for_merge_into(), ExtentKey::new(1, 0, 0..100));
         assert_eq!(extent.cmp_lower_bound(&extent.key_for_merge_into()), Ordering::Greater);
     }
 
     #[test]
     fn test_next_key() {
-        let next_key = ObjectKey::extent(1, 0, 0..100).next_key().unwrap();
-        assert_eq!(ObjectKey::extent(1, 0, 101..200).cmp_lower_bound(&next_key), Ordering::Greater);
-        assert_eq!(ObjectKey::extent(1, 0, 100..200).cmp_lower_bound(&next_key), Ordering::Equal);
-        assert_eq!(ObjectKey::extent(1, 0, 100..101).cmp_lower_bound(&next_key), Ordering::Equal);
-        assert_eq!(ObjectKey::extent(1, 0, 99..100).cmp_lower_bound(&next_key), Ordering::Less);
-        assert_eq!(ObjectKey::extent(1, 0, 0..100).cmp_upper_bound(&next_key), Ordering::Less);
-        assert_eq!(ObjectKey::extent(1, 0, 99..100).cmp_upper_bound(&next_key), Ordering::Less);
-        assert_eq!(ObjectKey::extent(1, 0, 100..101).cmp_upper_bound(&next_key), Ordering::Equal);
-        assert_eq!(ObjectKey::extent(1, 0, 100..200).cmp_upper_bound(&next_key), Ordering::Greater);
-        assert_eq!(ObjectKey::extent(1, 0, 50..101).cmp_upper_bound(&next_key), Ordering::Equal);
-        assert_eq!(ObjectKey::extent(1, 0, 50..200).cmp_upper_bound(&next_key), Ordering::Greater);
+        let next_key = ExtentKey::new(1, 0, 0..100).next_key().unwrap();
+        assert_eq!(ExtentKey::new(1, 0, 101..200).cmp_lower_bound(&next_key), Ordering::Greater);
+        assert_eq!(ExtentKey::new(1, 0, 100..200).cmp_lower_bound(&next_key), Ordering::Equal);
+        assert_eq!(ExtentKey::new(1, 0, 100..101).cmp_lower_bound(&next_key), Ordering::Equal);
+        assert_eq!(ExtentKey::new(1, 0, 99..100).cmp_lower_bound(&next_key), Ordering::Less);
+        assert_eq!(ExtentKey::new(1, 0, 0..100).cmp_upper_bound(&next_key), Ordering::Less);
+        assert_eq!(ExtentKey::new(1, 0, 99..100).cmp_upper_bound(&next_key), Ordering::Less);
+        assert_eq!(ExtentKey::new(1, 0, 100..101).cmp_upper_bound(&next_key), Ordering::Equal);
+        assert_eq!(ExtentKey::new(1, 0, 100..200).cmp_upper_bound(&next_key), Ordering::Greater);
+        assert_eq!(ExtentKey::new(1, 0, 50..101).cmp_upper_bound(&next_key), Ordering::Equal);
+        assert_eq!(ExtentKey::new(1, 0, 50..200).cmp_upper_bound(&next_key), Ordering::Greater);
 
         assert!(ObjectKey::object(1).next_key().is_none());
     }

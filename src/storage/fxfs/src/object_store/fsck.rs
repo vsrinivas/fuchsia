@@ -16,9 +16,7 @@ use {
             constants::{SUPER_BLOCK_A_OBJECT_ID, SUPER_BLOCK_B_OBJECT_ID},
             filesystem::{Filesystem, FxFilesystem},
             graveyard::Graveyard,
-            record::{
-                AttributeKey, ExtentValue, ObjectKey, ObjectKeyData, ObjectKind, ObjectValue,
-            },
+            record::{ExtentKey, ExtentValue, ObjectKey, ObjectKeyData, ObjectKind, ObjectValue},
             transaction::{LockKey, TransactionHandler},
             volume::root_volume,
             ObjectStore,
@@ -190,23 +188,6 @@ impl Fsck {
                     }
                 }
                 (
-                    ObjectKey {
-                        data: ObjectKeyData::Attribute(_, AttributeKey::Extent(extent_key)),
-                        ..
-                    },
-                    ObjectValue::Extent(ExtentValue { device_offset: Some((device_offset, _)) }),
-                ) => {
-                    let item = Item::new(
-                        AllocatorKey {
-                            device_range: *device_offset
-                                ..*device_offset + extent_key.range.end - extent_key.range.start,
-                        },
-                        AllocatorValue { delta: 1 },
-                    );
-                    let lower_bound = item.key.lower_bound_for_merge_into();
-                    self.allocations.merge_into(item, &lower_bound, allocator::merge::merge).await;
-                }
-                (
                     ObjectKey { data: ObjectKeyData::Child { .. }, .. },
                     ObjectValue::Child { object_id, .. },
                 ) => match object_refs.entry(*object_id) {
@@ -221,6 +202,29 @@ impl Fsck {
             }
             iter.advance().await?;
         }
+
+        let layer_set = store.extent_tree.layer_set();
+        let mut merger = layer_set.merger();
+        let mut iter = merger.seek(Bound::Unbounded).await?;
+        while let Some(ItemRef {
+            key: ExtentKey { range, .. },
+            value: ExtentValue { device_offset },
+            ..
+        }) = iter.get()
+        {
+            if let Some((device_offset, _)) = device_offset {
+                let item = Item::new(
+                    AllocatorKey {
+                        device_range: *device_offset..*device_offset + range.end - range.start,
+                    },
+                    AllocatorValue { delta: 1 },
+                );
+                let lower_bound = item.key.lower_bound_for_merge_into();
+                self.allocations.merge_into(item, &lower_bound, allocator::merge::merge).await;
+            }
+            iter.advance().await?;
+        }
+
         // Check object reference counts.
         for (object_id, (count, references)) in object_refs {
             if count != references {

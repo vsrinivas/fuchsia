@@ -8,10 +8,7 @@ use {
         lsm_tree::types::ItemRef,
         object_handle::{ObjectHandle, ObjectProperties},
         object_store::{
-            record::{
-                ExtentKey, ExtentValue, ObjectKey, ObjectValue, Timestamp,
-                DEFAULT_DATA_ATTRIBUTE_ID,
-            },
+            record::{ExtentKey, ExtentValue, Timestamp, DEFAULT_DATA_ATTRIBUTE_ID},
             transaction::{self, Transaction},
         },
     },
@@ -45,18 +42,17 @@ impl Handle {
         self.extents.push((r, 0));
     }
 
-    pub fn try_push_extent_from_object_item(
+    pub fn try_push_extent(
         &mut self,
-        item: ItemRef<'_, ObjectKey, ObjectValue>,
+        item: ItemRef<'_, ExtentKey, ExtentValue>,
         journal_offset: u64,
     ) -> Result<bool, Error> {
-        match item.into() {
-            Some((
-                object_id,
-                DEFAULT_DATA_ATTRIBUTE_ID,
-                ExtentKey { range },
-                ExtentValue { device_offset: Some((device_offset, _)) },
-            )) if object_id == self.object_id => {
+        match item {
+            ItemRef {
+                key: ExtentKey { object_id, attribute_id: DEFAULT_DATA_ATTRIBUTE_ID, range },
+                value: ExtentValue { device_offset: Some((device_offset, _)) },
+                ..
+            } if *object_id == self.object_id => {
                 if self.extents.is_empty() {
                     self.start_offset = range.start;
                 } else if range.start != self.size {

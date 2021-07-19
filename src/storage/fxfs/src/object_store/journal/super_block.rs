@@ -4,9 +4,10 @@
 
 use {
     crate::{
-        lsm_tree::types::LayerIterator,
+        lsm_tree::types::{Item, LayerIterator},
         object_handle::ObjectHandle,
         object_store::{
+            allocator::Reservation,
             constants::{SUPER_BLOCK_A_OBJECT_ID, SUPER_BLOCK_B_OBJECT_ID},
             journal::{
                 handle::Handle,
@@ -14,7 +15,7 @@ use {
                 writer::JournalWriter,
                 JournalCheckpoint,
             },
-            record::ObjectItem,
+            record::{ExtentKey, ExtentValue, ObjectItem},
             transaction::Options,
             ObjectStore,
         },
@@ -132,7 +133,10 @@ enum SuperBlockRecord {
 
     // Following the super-block header are ObjectItem records that are to be replayed into the root
     // parent object store.
-    Item(ObjectItem),
+    ObjectItem(ObjectItem),
+
+    // After the ObjectItem records, come the extent records.
+    ExtentItem(Item<ExtentKey, ExtentValue>),
 
     // Marks the end of the full super-block.
     End,
@@ -189,58 +193,103 @@ impl SuperBlock {
     ) -> Result<(), Error> {
         assert_eq!(root_parent_store.store_object_id(), self.root_parent_store_object_id);
 
-        let mut writer = JournalWriter::new(SUPER_BLOCK_BLOCK_SIZE, 0);
+        let object_manager = root_parent_store.filesystem().object_manager();
+        let mut writer = SuperBlockWriter::new(handle, object_manager.metadata_reservation());
 
-        serialize_into(&mut writer, self)?;
+        serialize_into(&mut writer.writer, self)?;
 
         let tree = root_parent_store.tree();
         let layer_set = tree.layer_set();
         let mut merger = layer_set.merger();
         let mut iter = merger.seek(Bound::Unbounded).await?;
 
-        let mut next_extent_offset = MIN_SUPER_BLOCK_SIZE;
-        let object_manager = root_parent_store.filesystem().object_manager();
-        let reservation = object_manager.metadata_reservation();
-
         while let Some(item_ref) = iter.get() {
-            if writer.journal_file_checkpoint().file_offset
-                >= next_extent_offset - SUPER_BLOCK_CHUNK_SIZE
-            {
-                let mut transaction = handle
-                    .new_transaction_with_options(Options {
-                        skip_journal_checks: true,
-                        borrow_metadata_space: true,
-                        allocator_reservation: Some(reservation),
-                        ..Default::default()
-                    })
-                    .await?;
-                let allocated = handle
-                    .preallocate_range(
-                        &mut transaction,
-                        next_extent_offset..next_extent_offset + SUPER_BLOCK_CHUNK_SIZE,
-                    )
-                    .await?;
-                transaction.commit().await?;
-                for device_range in allocated {
-                    next_extent_offset += device_range.end - device_range.start;
-                    serialize_into(&mut writer, &SuperBlockRecord::Extent(device_range))?;
-                }
-            }
-            serialize_into(&mut writer, &SuperBlockRecord::Item(item_ref.cloned()))?;
+            writer.maybe_extend().await?;
+            serialize_into(&mut writer.writer, &SuperBlockRecord::ObjectItem(item_ref.cloned()))?;
             iter.advance().await?;
         }
-        serialize_into(&mut writer, &SuperBlockRecord::End)?;
-        writer.pad_to_block()?;
-        let (offset, buf) = writer.take_buffer(&handle).unwrap();
-        handle.overwrite(offset, buf.as_ref()).await?;
+
+        let tree = root_parent_store.extent_tree();
+        let layer_set = tree.layer_set();
+        let mut merger = layer_set.merger();
+        let mut iter = merger.seek(Bound::Unbounded).await?;
+
+        while let Some(item_ref) = iter.get() {
+            writer.maybe_extend().await?;
+            serialize_into(&mut writer.writer, &SuperBlockRecord::ExtentItem(item_ref.cloned()))?;
+            iter.advance().await?;
+        }
+
+        serialize_into(&mut writer.writer, &SuperBlockRecord::End)?;
+        writer.writer.pad_to_block()?;
+        writer.flush_buffer().await
+    }
+}
+
+struct SuperBlockWriter<'a, H> {
+    handle: H,
+    writer: JournalWriter,
+    next_extent_offset: u64,
+    reservation: &'a Reservation,
+}
+
+impl<'a, H: ObjectHandle> SuperBlockWriter<'a, H> {
+    fn new(handle: H, reservation: &'a Reservation) -> Self {
+        Self {
+            handle,
+            writer: JournalWriter::new(SUPER_BLOCK_BLOCK_SIZE, 0),
+            next_extent_offset: MIN_SUPER_BLOCK_SIZE,
+            reservation,
+        }
+    }
+
+    async fn maybe_extend(&mut self) -> Result<(), Error> {
+        if self.writer.journal_file_checkpoint().file_offset
+            < self.next_extent_offset - SUPER_BLOCK_CHUNK_SIZE
+        {
+            return Ok(());
+        }
+        let mut transaction = self
+            .handle
+            .new_transaction_with_options(Options {
+                skip_journal_checks: true,
+                borrow_metadata_space: true,
+                allocator_reservation: Some(self.reservation),
+                ..Default::default()
+            })
+            .await?;
+        let allocated = self
+            .handle
+            .preallocate_range(
+                &mut transaction,
+                self.next_extent_offset..self.next_extent_offset + SUPER_BLOCK_CHUNK_SIZE,
+            )
+            .await?;
+        transaction.commit().await?;
+        for device_range in allocated {
+            self.next_extent_offset += device_range.end - device_range.start;
+            serialize_into(&mut self.writer, &SuperBlockRecord::Extent(device_range))?;
+        }
         Ok(())
     }
+
+    async fn flush_buffer(&mut self) -> Result<(), Error> {
+        let (offset, buf) = self.writer.take_buffer(&self.handle).unwrap();
+        self.handle.overwrite(offset, buf.as_ref()).await
+    }
+}
+
+#[derive(Debug)]
+pub enum SuperBlockItem {
+    End,
+    Object(ObjectItem),
+    Extent(Item<ExtentKey, ExtentValue>),
 }
 
 pub struct ItemReader(JournalReader<Handle>);
 
 impl ItemReader {
-    pub async fn next_item(&mut self) -> Result<Option<ObjectItem>, Error> {
+    pub async fn next_item(&mut self) -> Result<SuperBlockItem, Error> {
         loop {
             match self.0.deserialize().await? {
                 ReadResult::Reset => bail!("Unexpected reset"),
@@ -248,8 +297,13 @@ impl ItemReader {
                 ReadResult::Some(SuperBlockRecord::Extent(extent)) => {
                     self.0.handle().push_extent(extent)
                 }
-                ReadResult::Some(SuperBlockRecord::Item(item)) => return Ok(Some(item)),
-                ReadResult::Some(SuperBlockRecord::End) => return Ok(None),
+                ReadResult::Some(SuperBlockRecord::ObjectItem(item)) => {
+                    return Ok(SuperBlockItem::Object(item))
+                }
+                ReadResult::Some(SuperBlockRecord::ExtentItem(item)) => {
+                    return Ok(SuperBlockItem::Extent(item))
+                }
+                ReadResult::Some(SuperBlockRecord::End) => return Ok(SuperBlockItem::End),
             }
         }
     }
@@ -258,7 +312,7 @@ impl ItemReader {
 #[cfg(test)]
 mod tests {
     use {
-        super::{SuperBlock, SuperBlockCopy, MIN_SUPER_BLOCK_SIZE},
+        super::{SuperBlock, SuperBlockCopy, SuperBlockItem, MIN_SUPER_BLOCK_SIZE},
         crate::{
             lsm_tree::types::LayerIterator,
             object_handle::ObjectHandle,
@@ -401,10 +455,36 @@ mod tests {
 
         // Check that the records match what we expect in the root parent store.
         let mut iter = merger.seek(Bound::Unbounded).await.expect("seek failed");
-        while let Some(item) = written_super_block_a.1.next_item().await.expect("next_item failed")
-        {
-            assert_eq!(item.as_item_ref(), iter.get().expect("missing item"));
+
+        let mut written_item = written_super_block_a.1.next_item().await.expect("next_item failed");
+
+        while let Some(item) = iter.get() {
+            if let SuperBlockItem::Object(i) = written_item {
+                assert_eq!(i.as_item_ref(), item);
+            } else {
+                panic!("missing item: {:?}", item);
+            }
             iter.advance().await.expect("advance failed");
+            written_item = written_super_block_a.1.next_item().await.expect("next_item failed");
+        }
+
+        let layer_set = fs.object_manager().root_parent_store().extent_tree().layer_set();
+        let mut merger = layer_set.merger();
+        let mut iter = merger.seek(Bound::Unbounded).await.expect("seek failed");
+
+        while let Some(item) = iter.get() {
+            if let SuperBlockItem::Extent(i) = written_item {
+                assert_eq!(i.as_item_ref(), item);
+            } else {
+                panic!("missing item: {:?}", item);
+            }
+            iter.advance().await.expect("advance failed");
+            written_item = written_super_block_a.1.next_item().await.expect("next_item failed");
+        }
+
+        if let SuperBlockItem::End = written_item {
+        } else {
+            panic!("unexpected extra item: {:?}", written_item);
         }
     }
 }

@@ -25,7 +25,7 @@ use {
     crate::{
         debug_assert_not_too_long,
         errors::FxfsError,
-        lsm_tree::LSMTree,
+        lsm_tree::types::ItemRef,
         object_handle::ObjectHandle,
         object_store::{
             allocator::{Allocator, SimpleAllocator},
@@ -37,16 +37,13 @@ use {
                 checksum_list::ChecksumList,
                 handle::Handle,
                 reader::{JournalReader, ReadResult},
-                super_block::{SuperBlock, SuperBlockCopy},
+                super_block::{SuperBlock, SuperBlockCopy, SuperBlockItem},
                 writer::JournalWriter,
             },
-            merge::{self},
             object_manager::ObjectManager,
-            record::{ExtentKey, ObjectKey, DEFAULT_DATA_ATTRIBUTE_ID},
+            record::{ExtentKey, DEFAULT_DATA_ATTRIBUTE_ID},
             round_down,
-            transaction::{
-                AssocObj, Mutation, ObjectStoreMutation, Options, Transaction, TxnMutation,
-            },
+            transaction::{AssocObj, ExtentMutation, Mutation, Options, Transaction, TxnMutation},
             HandleOptions, ObjectStore, StoreObjectHandle,
         },
         trace_duration,
@@ -254,9 +251,17 @@ impl Journal {
             filesystem.clone(),
         );
 
-        while let Some(item) = reader.next_item().await? {
-            let mutation = Mutation::insert_object(item.key, item.value);
-            root_parent.apply_mutation(mutation, None, item.sequence, AssocObj::None).await;
+        loop {
+            let (mutation, sequence) = match reader.next_item().await? {
+                SuperBlockItem::End => break,
+                SuperBlockItem::Object(item) => {
+                    (Mutation::insert_object(item.key, item.value), item.sequence)
+                }
+                SuperBlockItem::Extent(item) => {
+                    (Mutation::extent(item.key, item.value), item.sequence)
+                }
+            };
+            root_parent.apply_mutation(mutation, None, sequence, AssocObj::None).await;
         }
 
         // TODO(jfsulliv): Upgrade minor revision as needed.
@@ -311,7 +316,6 @@ impl Journal {
             super_block.root_store_object_id,
             filesystem.clone(),
             None,
-            LSMTree::new(merge::merge),
         );
         self.objects.set_root_store(root_store);
 
@@ -319,20 +323,17 @@ impl Journal {
 
         let mut handle;
         {
-            let root_parent_layer = root_parent.tree().mutable_layer();
+            let root_parent_layer = root_parent.extent_tree().mutable_layer();
             let mut iter = root_parent_layer
-                .seek(Bound::Included(&ObjectKey::with_extent_key(
+                .seek(Bound::Included(&ExtentKey::search_key_from_offset(
                     super_block.journal_object_id,
                     DEFAULT_DATA_ATTRIBUTE_ID,
-                    ExtentKey::search_key_from_offset(round_down(
-                        super_block.journal_checkpoint.file_offset,
-                        BLOCK_SIZE,
-                    )),
+                    round_down(super_block.journal_checkpoint.file_offset, BLOCK_SIZE),
                 )))
                 .await?;
             handle = Handle::new(super_block.journal_object_id, device.clone());
             while let Some(item) = iter.get() {
-                if !handle.try_push_extent_from_object_item(item, 0)? {
+                if !handle.try_push_extent(item, 0)? {
                     break;
                 }
                 iter.advance().await?;
@@ -384,13 +385,11 @@ impl Journal {
                                     // file so that we can pass them to the reader so that it can
                                     // read the journal file.
                                     if *object_id == super_block.root_parent_store_object_id {
-                                        if let Mutation::ObjectStore(ObjectStoreMutation {
-                                            item,
-                                            ..
-                                        }) = mutation
+                                        if let Mutation::Extent(ExtentMutation(key, value)) =
+                                            mutation
                                         {
-                                            reader.handle().try_push_extent_from_object_item(
-                                                item.as_item_ref(),
+                                            reader.handle().try_push_extent(
+                                                ItemRef { key, value, sequence: 0 },
                                                 checkpoint.file_offset,
                                             )?;
                                         }

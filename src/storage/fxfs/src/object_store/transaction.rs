@@ -9,7 +9,7 @@ use {
         object_handle::INVALID_OBJECT_ID,
         object_store::{
             allocator::{AllocatorItem, Reservation},
-            record::{ObjectItem, ObjectKey, ObjectValue},
+            record::{ExtentKey, ExtentValue, ObjectItem, ObjectKey, ObjectValue},
             StoreInfo,
         },
     },
@@ -105,6 +105,7 @@ pub enum Mutation {
     // with compacted ones.
     EndFlush,
     UpdateBorrowed(u64),
+    Extent(ExtentMutation),
 }
 
 impl Mutation {
@@ -139,6 +140,10 @@ impl Mutation {
 
     pub fn allocation_ref(item: AllocatorItem) -> Self {
         Mutation::AllocatorRef(AllocatorMutation(item))
+    }
+
+    pub fn extent(key: ExtentKey, value: ExtentValue) -> Self {
+        Mutation::Extent(ExtentMutation(key, value))
     }
 }
 
@@ -179,6 +184,29 @@ impl PartialEq for ObjectStoreMutation {
 }
 
 impl Eq for ObjectStoreMutation {}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct ExtentMutation(pub ExtentKey, pub ExtentValue);
+
+impl Ord for ExtentMutation {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.0.cmp(&other.0)
+    }
+}
+
+impl PartialOrd for ExtentMutation {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl PartialEq for ExtentMutation {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.eq(&other.0)
+    }
+}
+
+impl Eq for ExtentMutation {}
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct StoreInfoMutation(pub StoreInfo);

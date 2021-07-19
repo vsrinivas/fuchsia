@@ -168,6 +168,10 @@ impl<'a> Writer<'a> {
     pub fn new(handle: &'a dyn ObjectHandle, options: transaction::Options<'a>) -> Self {
         Self { handle, options, buffer: handle.allocate_buffer(BUFFER_SIZE), offset: 0 }
     }
+
+    pub fn handle(&self) -> &dyn ObjectHandle {
+        self.handle
+    }
 }
 
 #[async_trait]
