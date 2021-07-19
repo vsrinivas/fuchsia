@@ -151,15 +151,19 @@ impl Facet for SpinningSquareFacet {
         let mut raster_builder = render_context.raster_builder().expect("raster_builder");
         raster_builder.add(&self.clone_square_path(), Some(&transformation));
         let square_raster = raster_builder.build();
-        layer_group.replace_all(std::iter::once(Layer {
-            raster: square_raster,
-            clip: None,
-            style: Style {
-                fill_rule: FillRule::NonZero,
-                fill: Fill::Solid(self.square_color),
-                blend_mode: BlendMode::Over,
+
+        layer_group.insert(
+            0,
+            Layer {
+                raster: square_raster,
+                clip: None,
+                style: Style {
+                    fill_rule: FillRule::NonZero,
+                    fill: Fill::Solid(self.square_color),
+                    blend_mode: BlendMode::Over,
+                },
             },
-        }));
+        );
         Ok(())
     }
 

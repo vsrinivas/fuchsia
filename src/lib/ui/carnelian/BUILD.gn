@@ -357,6 +357,7 @@ rustc_binary("textgrid") {
     "//third_party/rust_crates:argh",
     "//third_party/rust_crates:chrono",
     "//third_party/rust_crates:euclid",
+    "//third_party/rust_crates:rustc-hash",
   ]
 }
 

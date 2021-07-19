@@ -12,7 +12,7 @@ use {
         Size, ViewAssistantContext,
     },
     euclid::point2,
-    std::{any::Any, cell::RefCell, collections::HashMap, rc::Rc},
+    std::{any::Any, cell::RefCell, collections::HashMap, convert::TryFrom, rc::Rc},
     term_model::{
         ansi::CursorStyle,
         term::{color::Rgb, RenderableCellContent},
@@ -283,37 +283,37 @@ impl<T: 'static> Facet for TextGridFacet<T> {
         // Create an iterator over all layers.
         let layers = cells
             .flat_map(|(column, row, content, fg, bg)| {
-                maybe_raster_for_cell_content(
-                    render_context,
-                    &content,
-                    column,
-                    row,
-                    cell_size,
-                    textgrid,
-                    font,
-                    glyphs,
-                    cursors,
-                )
-                .map(|r| (r, fg))
+                // Yield a background raster if needed.
+                if bg != background {
+                    // Use a block cursor for background.
+                    maybe_raster_for_cursor_style(
+                        render_context,
+                        CursorStyle::Block,
+                        column,
+                        row,
+                        cell_size,
+                        cursors,
+                    )
+                } else {
+                    None
+                }
+                .map(|r| (r, bg))
                 .into_iter()
-                .chain({
-                    // Yield a background raster if needed.
-                    if bg != background {
-                        // Use a block cursor for background.
-                        maybe_raster_for_cursor_style(
-                            render_context,
-                            CursorStyle::Block,
-                            column,
-                            row,
-                            cell_size,
-                            cursors,
-                        )
-                    } else {
-                        None
-                    }
-                    .map(|r| (r, bg))
-                    .into_iter()
-                })
+                .chain(
+                    maybe_raster_for_cell_content(
+                        render_context,
+                        &content,
+                        column,
+                        row,
+                        cell_size,
+                        textgrid,
+                        font,
+                        glyphs,
+                        cursors,
+                    )
+                    .map(|r| (r, fg))
+                    .into_iter(),
+                )
             })
             .map(|(raster, color)| Layer {
                 raster,
@@ -325,7 +325,10 @@ impl<T: 'static> Facet for TextGridFacet<T> {
                 },
             });
 
-        layer_group.replace_all(layers);
+        layer_group.clear();
+        for (i, layer) in layers.enumerate() {
+            layer_group.insert(u16::try_from(i).expect("too many layers"), layer);
+        }
 
         Ok(())
     }

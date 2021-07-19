@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::{cell::RefCell, collections::HashMap, io::Read, mem, ptr, u32};
+use std::{cell::RefCell, collections::HashMap, convert::TryFrom, io::Read, mem, ptr, u32};
 
 use anyhow::Error;
 use euclid::{
@@ -249,7 +249,7 @@ fn render_composition(
     // be clipped by the current clip. When a layer comes up with a different
     // clip, the current layer gets reset and the cycle begins anew.
 
-    let mut order = 0;
+    let mut order_offset = 0;
     let mut current_clip = None;
     let mut layers = composition.layers.iter().rev();
 
@@ -262,7 +262,7 @@ fn render_composition(
     }
 
     duration_begin!("gfx", "render::Context<Mold>::print_layers", "count" => composition.layers.len() as u32);
-    while let Some(layer) = layers.next() {
+    while let Some((order, layer)) = layers.next() {
         if layer.raster.prints.is_empty() {
             continue;
         }
@@ -274,11 +274,12 @@ fn render_composition(
                 let mold_layer = mold_composition.get_mut(layer_details.0).unwrap();
                 let clip_count = 1 + layers
                     .clone()
-                    .filter_map(|layer| layer.clip.as_ref())
+                    .filter_map(|(_, layer)| layer.clip.as_ref())
                     .take_while(|clip| clip.prints == first_clip.prints)
                     .count();
 
-                mold_layer.enable().set_order(order).set_props(mold::Props {
+                let mold_order = u16::try_from(order + order_offset).expect("too many layers");
+                mold_layer.enable().set_order(mold_order).set_props(mold::Props {
                     fill_rule: match layer.style.fill_rule {
                         FillRule::NonZero => mold::FillRule::NonZero,
                         FillRule::EvenOdd => mold::FillRule::EvenOdd,
@@ -299,7 +300,7 @@ fn render_composition(
                     transform.m32,
                 ]);
 
-                order += 1;
+                order_offset += 1;
                 current_clip = layer.clip.clone();
             }
         }
@@ -307,7 +308,8 @@ fn render_composition(
         let layer_details = add_to_composition(mold_composition, &layer.raster);
 
         let mold_layer = mold_composition.get_mut(layer_details.0).unwrap();
-        mold_layer.enable().set_order(order).set_props(mold::Props {
+        let mold_order = u16::try_from(order + order_offset).expect("too many layers");
+        mold_layer.enable().set_order(mold_order).set_props(mold::Props {
             fill_rule: match layer.style.fill_rule {
                 FillRule::NonZero => mold::FillRule::NonZero,
                 FillRule::EvenOdd => mold::FillRule::EvenOdd,
@@ -363,8 +365,6 @@ fn render_composition(
             transform.m31,
             transform.m32,
         ]);
-
-        order += 1;
     }
     duration_end!("gfx", "render::Context<Mold>::print_layers");
 

@@ -232,63 +232,64 @@ impl Facet for ClockFaceFacet {
         let center = vec2(size.width as i32 / 2, size.height as i32 / 2);
         let shadow_offset = center + vec2(elevation, elevation * 2);
 
-        let hands = [&self.hour_hand, &self.minute_hand, &self.second_hand];
+        let hands = [&self.second_hand, &self.minute_hand, &self.hour_hand];
 
-        let layers = hands
-            .iter()
-            .map(|hand| Layer {
-                raster: hand.raster.clone().unwrap().translate(center),
-                clip: None,
-                style: Style {
-                    fill_rule: FillRule::NonZero,
-                    fill: Fill::Solid(hand.color),
-                    blend_mode: BlendMode::Over,
-                },
-            })
-            .chain(std::iter::once(Layer {
-                raster: hands
-                    .iter()
-                    .fold(None, |raster_union: Option<Raster>, hand| {
+        let layers = std::iter::once(Layer {
+            raster: hands
+                .iter()
+                .enumerate()
+                .fold(None, |raster_union: Option<Raster>, (i, hand)| {
+                    if i != 1 {
                         let raster = hand.raster.clone().unwrap().translate(shadow_offset);
                         if let Some(raster_union) = raster_union {
                             Some(raster_union + raster)
                         } else {
                             Some(raster)
                         }
-                    })
-                    .unwrap(),
-                clip: None,
-                style: Style {
-                    fill_rule: FillRule::NonZero,
-                    fill: Fill::Solid(SHADOW_COLOR),
-                    blend_mode: BlendMode::Over,
-                },
-            }))
-            .chain(std::iter::once(Layer {
-                raster: hands
-                    .iter()
-                    .enumerate()
-                    .fold(None, |raster_union: Option<Raster>, (i, hand)| {
-                        if i != 1 {
-                            let raster = hand.raster.clone().unwrap().translate(shadow_offset);
-                            if let Some(raster_union) = raster_union {
-                                Some(raster_union + raster)
-                            } else {
-                                Some(raster)
-                            }
-                        } else {
-                            raster_union
-                        }
-                    })
-                    .unwrap(),
-                clip: None,
-                style: Style {
-                    fill_rule: FillRule::NonZero,
-                    fill: Fill::Solid(SHADOW_COLOR),
-                    blend_mode: BlendMode::Over,
-                },
-            }));
-        layer_group.replace_all(layers);
+                    } else {
+                        raster_union
+                    }
+                })
+                .unwrap(),
+            clip: None,
+            style: Style {
+                fill_rule: FillRule::NonZero,
+                fill: Fill::Solid(SHADOW_COLOR),
+                blend_mode: BlendMode::Over,
+            },
+        })
+        .chain(std::iter::once(Layer {
+            raster: hands
+                .iter()
+                .fold(None, |raster_union: Option<Raster>, hand| {
+                    let raster = hand.raster.clone().unwrap().translate(shadow_offset);
+                    if let Some(raster_union) = raster_union {
+                        Some(raster_union + raster)
+                    } else {
+                        Some(raster)
+                    }
+                })
+                .unwrap(),
+            clip: None,
+            style: Style {
+                fill_rule: FillRule::NonZero,
+                fill: Fill::Solid(SHADOW_COLOR),
+                blend_mode: BlendMode::Over,
+            },
+        }))
+        .chain(hands.iter().map(|hand| Layer {
+            raster: hand.raster.clone().unwrap().translate(center),
+            clip: None,
+            style: Style {
+                fill_rule: FillRule::NonZero,
+                fill: Fill::Solid(hand.color),
+                blend_mode: BlendMode::Over,
+            },
+        }));
+        layer_group.clear();
+        for (i, layer) in layers.enumerate() {
+            layer_group.insert(i as u16, layer);
+        }
         Ok(())
     }
 

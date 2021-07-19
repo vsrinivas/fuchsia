@@ -116,7 +116,10 @@ impl Facet for GammaFacet {
                 blend_mode: BlendMode::Over,
             },
         }));
-        layer_group.replace_all(layers);
+        layer_group.clear();
+        for (i, layer) in layers.enumerate() {
+            layer_group.insert(i as u16, layer);
+        }
         Ok(())
     }
 

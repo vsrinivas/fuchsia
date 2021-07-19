@@ -673,7 +673,17 @@ impl TextGridCell {
                 );
                 let char_position = cell_position + grid.baseline;
 
-                Some(glyph.raster.clone().translate(char_position.to_vector().to_i32()))
+                let raster = glyph.raster.clone().translate(char_position.to_vector().to_i32());
+
+                // Add empty raster to enable caching of the translated glyph.
+                // TODO: add more appropriate API for this.
+                let empty_raster = {
+                    let raster_builder = context.raster_builder().unwrap();
+                    raster_builder.build()
+                };
+                let raster = raster + empty_raster;
+
+                Some(raster)
             }
         } else {
             None

@@ -15,7 +15,7 @@ use crate::{
 use anyhow::Error;
 use euclid::{default::Transform2D, size2, vec2};
 use rive_rs::{self as rive};
-use std::{any::Any, collections::BTreeMap, path::PathBuf};
+use std::{any::Any, collections::BTreeMap, convert::TryFrom, path::PathBuf};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 /// Identifier for a Facet
@@ -122,15 +122,18 @@ impl Facet for RectangleFacet {
         });
         let raster = line_raster.clone();
         self.raster = Some(line_raster);
-        layer_group.replace_all(std::iter::once(Layer {
-            raster: raster,
-            clip: None,
-            style: Style {
-                fill_rule: FillRule::NonZero,
-                fill: Fill::Solid(self.color),
-                blend_mode: BlendMode::Over,
+        layer_group.insert(
+            0,
+            Layer {
+                raster,
+                clip: None,
+                style: Style {
+                    fill_rule: FillRule::NonZero,
+                    fill: Fill::Solid(self.color),
+                    blend_mode: BlendMode::Over,
+                },
             },
-        }));
+        );
         Ok(())
     }
 
@@ -286,15 +289,18 @@ impl Facet for TextFacet {
         let raster = rendered_text.raster.clone().translate(translation.to_i32());
         self.rendered_text = Some(rendered_text);
 
-        layer_group.replace_all(std::iter::once(Layer {
-            raster,
-            clip: None,
-            style: Style {
-                fill_rule: FillRule::NonZero,
-                fill: Fill::Solid(self.options.color),
-                blend_mode: BlendMode::Over,
+        layer_group.insert(
+            0,
+            Layer {
+                raster,
+                clip: None,
+                style: Style {
+                    fill_rule: FillRule::NonZero,
+                    fill: Fill::Solid(self.options.color),
+                    blend_mode: BlendMode::Over,
+                },
             },
-        }));
+        );
         Ok(())
     }
 
@@ -339,11 +345,10 @@ impl Facet for RasterFacet {
         _render_context: &mut RenderContext,
         _view_context: &ViewAssistantContext,
     ) -> Result<(), Error> {
-        layer_group.replace_all(std::iter::once(Layer {
-            raster: self.raster.clone(),
-            clip: None,
-            style: self.style.clone(),
-        }));
+        layer_group.insert(
+            0,
+            Layer { raster: self.raster.clone(), clip: None, style: self.style.clone() },
+        );
         Ok(())
     }
 
@@ -401,11 +406,12 @@ impl Facet for ShedFacet {
                 )]
             }
         });
-        layer_group.replace_all(rasters.iter().map(|(raster, style)| Layer {
-            raster: raster.clone(),
-            clip: None,
-            style: style.clone(),
-        }));
+        for (i, (raster, style)) in rasters.iter().rev().enumerate() {
+            layer_group.insert(
+                u16::try_from(i).expect("too many layers"),
+                Layer { raster: raster.clone(), clip: None, style: style.clone() },
+            );
+        }
         self.rasters = Some(rasters);
         Ok(())
     }
@@ -480,15 +486,18 @@ impl Facet for RiveFacet {
             );
         });
 
-        layer_group.replace_all(self.render_cache.layers.drain(..).rev().filter(
-            |Layer { style, .. }|
+        let layers = self.render_cache.layers.drain(..).filter(|Layer { style, .. }|
                     // Skip transparent fills. This optimization is especially useful for
                     // artboards with transparent backgrounds.
                     match &style.fill {
                         Fill::Solid(color) => color.a != 0 || style.blend_mode != BlendMode::Over,
                         _ => true
-                    },
-        ));
+                    });
+
+        layer_group.clear();
+        for (i, layer) in layers.enumerate() {
+            layer_group.insert(u16::try_from(i).expect("too many layers"), layer);
+        }
 
         Ok(())
     }

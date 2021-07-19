@@ -184,16 +184,22 @@ impl ViewAssistant for PngViewAssistant {
         });
 
         // Clear area where image was previously located.
-        let clear_layer = rendering.clear_raster.iter().map(|raster| Layer {
-            raster: raster.clone(),
-            clip: None,
-            style: Style {
-                fill_rule: FillRule::NonZero,
-                fill: Fill::Solid(background),
-                blend_mode: BlendMode::Over,
+        rendering.composition.insert(
+            0,
+            Layer {
+                raster: rendering
+                    .clear_raster
+                    .as_ref()
+                    .map(|raster| raster.clone())
+                    .expect("clear raster"),
+                clip: None,
+                style: Style {
+                    fill_rule: FillRule::NonZero,
+                    fill: Fill::Solid(background),
+                    blend_mode: BlendMode::Over,
+                },
             },
-        });
-        rendering.composition.replace(.., clear_layer);
+        );
         let image = render_context.get_current_image(context);
         render_context.render(&rendering.composition, None, image, &ext);
 

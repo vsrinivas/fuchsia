@@ -296,15 +296,18 @@ impl Facet for TestFacet {
         });
         let raster = line_raster.clone();
         self.raster = Some(line_raster);
-        layer_group.replace_all(std::iter::once(Layer {
-            raster: raster,
-            clip: None,
-            style: Style {
-                fill_rule: FillRule::NonZero,
-                fill: Fill::Solid(self.color),
-                blend_mode: BlendMode::Over,
+        layer_group.insert(
+            0,
+            Layer {
+                raster: raster,
+                clip: None,
+                style: Style {
+                    fill_rule: FillRule::NonZero,
+                    fill: Fill::Solid(self.color),
+                    blend_mode: BlendMode::Over,
+                },
             },
-        }));
+        );
         Ok(())
     }
 

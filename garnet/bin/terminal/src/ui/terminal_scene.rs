@@ -12,6 +12,7 @@ use {
         Coord, Rect, Size, ViewAssistantContext,
     },
     fuchsia_trace as ftrace,
+    std::convert::TryFrom,
     term_model::term::RenderableCellsIter,
 };
 
@@ -65,7 +66,10 @@ impl TerminalScene {
         let grid_layers = self.grid_view.render(render_context, cells);
         let scroll_bar_layers = self.scroll_bar.render(render_context);
 
-        self.composition.replace(.., grid_layers.into_iter().chain(scroll_bar_layers));
+        self.composition.clear();
+        for (i, layer) in grid_layers.into_iter().chain(scroll_bar_layers).enumerate() {
+            self.composition.insert(u16::try_from(i).expect("too many layers"), layer);
+        }
 
         render_context.render(&self.composition, None, image, &ext);
     }

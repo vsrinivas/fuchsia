@@ -25,6 +25,7 @@ use {
     rand::{thread_rng, Rng},
     std::{
         collections::{BTreeMap, VecDeque},
+        convert::TryFrom,
         f32, fs,
         ops::Range,
     },
@@ -732,7 +733,6 @@ struct Contents {
     image: Image,
     composition: Composition,
     size: Size,
-    tool_count: usize,
     tool_damage: Option<Range<usize>>,
     stroke_count: usize,
     stroke_damage: Option<Range<usize>>,
@@ -746,7 +746,6 @@ impl Contents {
             image,
             composition,
             size: Size::zero(),
-            tool_count: 0,
             tool_damage: None,
             stroke_count: 0,
             stroke_damage: None,
@@ -768,6 +767,46 @@ impl Contents {
         } else {
             RenderExt::default()
         };
+
+        // Update damaged stroke layers.
+        if let Some(damage) = self.stroke_damage.take() {
+            let layers = scene.strokes[damage.start..damage.end].iter().map(|stroke| Layer {
+                raster: stroke
+                    .segments
+                    .iter()
+                    .fold(None, |raster_union: Option<Raster>, segment| {
+                        if let Some(raster) = &segment.1.raster {
+                            if let Some(raster_union) = raster_union {
+                                Some(raster_union + raster.clone())
+                            } else {
+                                Some(raster.clone())
+                            }
+                        } else {
+                            raster_union
+                        }
+                    })
+                    .unwrap(),
+                clip: None,
+                style: Style {
+                    fill_rule: FillRule::NonZero,
+                    fill: Fill::Solid(stroke.color),
+                    blend_mode: BlendMode::Over,
+                },
+            });
+            for (i, layer) in layers.enumerate() {
+                self.composition.insert(u16::try_from(damage.start + i).unwrap(), layer);
+            }
+            // Add more stroke layers if needed.
+            if self.stroke_count < scene.strokes.len() {
+                self.stroke_count = scene.strokes.len();
+            }
+        }
+
+        // Remove strokes that are no longer part of the scene.
+        while self.stroke_count > scene.strokes.len() {
+            self.stroke_count -= 1;
+            self.composition.remove(u16::try_from(self.stroke_count).unwrap());
+        }
 
         // Update damaged tool layers.
         if let Some(damage) = self.tool_damage.take() {
@@ -806,58 +845,11 @@ impl Contents {
                         },
                     }))
                 });
-            let range = (damage.start * 2)..(damage.end * 2);
-            // Add tool layers if needed.
-            if self.tool_count < damage.end {
-                self.composition.replace(range.start.., layers);
-                self.tool_count = damage.end;
-            } else {
-                self.composition.replace(range, layers);
-            }
-        }
 
-        let bottom = self.tool_count * 2 + scene.strokes.len();
-        // Update damaged stroke layers.
-        if let Some(damage) = self.stroke_damage.take() {
-            let layers = scene.strokes[damage.start..damage.end].iter().rev().map(|stroke| Layer {
-                raster: stroke
-                    .segments
-                    .iter()
-                    .fold(None, |raster_union: Option<Raster>, segment| {
-                        if let Some(raster) = &segment.1.raster {
-                            if let Some(raster_union) = raster_union {
-                                Some(raster_union + raster.clone())
-                            } else {
-                                Some(raster.clone())
-                            }
-                        } else {
-                            raster_union
-                        }
-                    })
-                    .unwrap(),
-                clip: None,
-                style: Style {
-                    fill_rule: FillRule::NonZero,
-                    fill: Fill::Solid(stroke.color),
-                    blend_mode: BlendMode::Over,
-                },
-            });
-            // Reverse range.
-            let range = (bottom - damage.end)..(bottom - damage.start);
-            // Add more stroke layers if needed.
-            if self.stroke_count < scene.strokes.len() {
-                let count = scene.strokes.len() - self.stroke_count;
-                self.composition.replace(range.start..(range.end - count), layers);
-                self.stroke_count = scene.strokes.len();
-            } else {
-                self.composition.replace(range, layers);
+            for (i, layer) in layers.enumerate() {
+                self.composition
+                    .insert(u16::try_from(MAX_STROKES + damage.start + i).unwrap(), layer);
             }
-        }
-
-        // Remove strokes that are no longer part of the scene.
-        if self.stroke_count > scene.strokes.len() {
-            self.composition.replace(bottom.., std::iter::empty::<Layer>());
-            self.stroke_count = scene.strokes.len();
         }
 
         context.render(&self.composition, Some(clip), self.image, &ext);

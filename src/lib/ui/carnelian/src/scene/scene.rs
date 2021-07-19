@@ -26,6 +26,7 @@ use fuchsia_zircon::{AsHandleRef, Event, Signals};
 use std::{
     any::Any,
     collections::{BTreeMap, HashMap},
+    convert::TryFrom,
     fmt::{self, Debug},
 };
 
@@ -48,15 +49,15 @@ fn cursor_layer(cursor_raster: &Raster, position: IntPoint, color: &Color) -> La
     }
 }
 
-fn cursor_layer_pair(cursor_raster: &Raster, position: IntPoint) -> Vec<Layer> {
+fn cursor_layer_pair(cursor_raster: &Raster, position: IntPoint) -> (Layer, Layer) {
     let black_pos = position + vec2(-1, -1);
-    vec![
+    (
         cursor_layer(cursor_raster, position, &Color::fuchsia()),
         cursor_layer(cursor_raster, black_pos, &Color::new()),
-    ]
+    )
 }
 
-type LayerMap = BTreeMap<FacetId, Vec<Layer>>;
+type LayerMap = BTreeMap<FacetId, BTreeMap<u16, Layer>>;
 
 /// Options for creating a scene.
 pub struct SceneOptions {
@@ -96,6 +97,7 @@ impl Default for SceneOptions {
 pub struct Scene {
     renderings: HashMap<u64, Rendering>,
     mouse_cursor_raster: Option<Raster>,
+    corner_knockouts_raster: Option<Raster>,
     id_generator: IdGenerator,
     facets: FacetMap,
     facet_order: Vec<FacetId>,
@@ -116,6 +118,7 @@ impl Scene {
         Self {
             renderings: HashMap::new(),
             mouse_cursor_raster: None,
+            corner_knockouts_raster: None,
             id_generator,
             facets,
             facet_order,
@@ -212,18 +215,12 @@ impl Scene {
         duration!("gfx", "Scene::update_scene_layers");
 
         for (facet_id, facet_entry) in &mut self.facets {
-            let facet_layers = self.layers.remove(facet_id).unwrap_or_else(|| Vec::new());
+            let facet_layers = self.layers.remove(facet_id).unwrap_or_else(|| BTreeMap::new());
             let mut layer_group = LayerGroup(facet_layers);
             facet_entry
                 .facet
                 .update_layers(size, &mut layer_group, render_context, view_context)
                 .expect("update_layers");
-            if facet_entry.location != Point::zero() {
-                for layer in &mut layer_group.0 {
-                    layer.raster =
-                        layer.raster.clone().translate(facet_entry.location.to_vector().to_i32());
-                }
-            }
             self.layers.insert(*facet_id, layer_group.0);
         }
     }
@@ -245,42 +242,51 @@ impl Scene {
     }
 
     fn update_composition(
-        layers: impl IntoIterator<Item = Layer>,
+        layers: impl IntoIterator<Item = (u16, Layer)>,
         mouse_position: &Option<IntPoint>,
         mouse_cursor_raster: &Option<Raster>,
         corner_knockouts: &Option<Raster>,
         composition: &mut Composition,
     ) {
-        let corner_knockouts_layer = corner_knockouts.as_ref().and_then(|raster| {
-            Some(Layer {
-                raster: raster.clone(),
-                clip: None,
-                style: Style {
-                    fill_rule: FillRule::NonZero,
-                    fill: Fill::Solid(Color::new()),
-                    blend_mode: BlendMode::Over,
+        duration!("gfx", "Scene::update_composition");
+
+        // TODO: Don't rebuild the composition each frame. This is expensive for
+        // scenes with large set of layers.
+        composition.clear();
+
+        for (order, layer) in layers.into_iter() {
+            composition.insert(order, layer);
+        }
+
+        // Mold backend uses some of the namespace for clips so avoid 5k at the top.
+        const TOP_LEVEL_OFFSET: u16 = 5000;
+
+        const CORNER_KOCKOUTS_ORDER: u16 = u16::max_value() - TOP_LEVEL_OFFSET;
+        const MOUSE_CURSOR_LAYER_0_ORDER: u16 = u16::max_value() - TOP_LEVEL_OFFSET - 1;
+        const MOUSE_CURSOR_LAYER_1_ORDER: u16 = u16::max_value() - TOP_LEVEL_OFFSET - 2;
+
+        if let Some(position) = mouse_position {
+            if let Some(raster) = mouse_cursor_raster {
+                let (layer0, layer1) = cursor_layer_pair(raster, *position);
+                composition.insert(MOUSE_CURSOR_LAYER_0_ORDER, layer0);
+                composition.insert(MOUSE_CURSOR_LAYER_1_ORDER, layer1);
+            }
+        }
+
+        if let Some(raster) = corner_knockouts {
+            composition.insert(
+                CORNER_KOCKOUTS_ORDER,
+                Layer {
+                    raster: raster.clone(),
+                    clip: None,
+                    style: Style {
+                        fill_rule: FillRule::NonZero,
+                        fill: Fill::Solid(Color::new()),
+                        blend_mode: BlendMode::Over,
+                    },
                 },
-            })
-        });
-
-        let cursor_layers: Vec<Layer> = mouse_position
-            .and_then(|position| {
-                let mouse_cursor_raster =
-                    mouse_cursor_raster.as_ref().expect("mouse_cursor_raster");
-                Some(cursor_layer_pair(mouse_cursor_raster, position))
-            })
-            .into_iter()
-            .flatten()
-            .collect();
-
-        composition.replace(
-            ..,
-            cursor_layers
-                .clone()
-                .into_iter()
-                .chain(corner_knockouts_layer.into_iter())
-                .chain(layers.into_iter()),
-        );
+            );
+        }
     }
 
     /// Render the scene. Expected to be called from the view assistant's render method.
@@ -298,11 +304,15 @@ impl Scene {
 
         let ext = RenderExt { pre_clear, ..Default::default() };
 
-        let corner_knockouts = if self.options.round_scene_corners {
-            Some(raster_for_corner_knockouts(&Rect::from_size(size), 10.0, render_context))
-        } else {
-            None
-        };
+        const CORNER_KNOCKOUTS_SIZE: f32 = 10.0;
+
+        if self.options.round_scene_corners && self.corner_knockouts_raster.is_none() {
+            self.corner_knockouts_raster = Some(raster_for_corner_knockouts(
+                &Rect::from_size(size),
+                CORNER_KNOCKOUTS_SIZE,
+                render_context,
+            ));
+        }
 
         let mouse_cursor_position = if self.options.enable_mouse_cursor {
             if context.mouse_cursor_position.is_some() && self.mouse_cursor_raster.is_none() {
@@ -315,19 +325,41 @@ impl Scene {
 
         self.update_scene_layers(size, render_context, context);
 
+        let composition = &mut self.composition;
+        let facet_order = &self.facet_order;
+        let facets = &self.facets;
         let layers = &self.layers;
-        let scene_layers = self.facet_order.iter().flat_map(|id| {
-            let facet_layers = layers.get(id).expect("layers");
-            facet_layers.iter().map(|layer| layer.clone())
+
+        let mut next_origin: u32 = 0;
+        let layers = facet_order.iter().rev().flat_map(|facet_id| {
+            let facet_entry = facets.get(facet_id).expect("facets");
+            let facet_translation = facet_entry.location.to_vector().to_i32();
+            let facet_layers = layers.get(facet_id).expect("layers");
+            let facet_origin = next_origin;
+
+            // Advance origin for next facet.
+            next_origin += facet_layers.keys().next_back().map(|o| *o as u32 + 1).unwrap_or(0);
+
+            facet_layers.iter().map(move |(order, layer)| {
+                (
+                    u16::try_from(facet_origin + *order as u32).expect("too many layers"),
+                    Layer {
+                        raster: layer.raster.clone().translate(facet_translation),
+                        clip: layer.clip.clone().map(|c| c.translate(facet_translation)),
+                        style: layer.style.clone(),
+                    },
+                )
+            })
         });
 
         Self::update_composition(
-            scene_layers,
+            layers,
             mouse_cursor_position,
             &self.mouse_cursor_raster,
-            &corner_knockouts,
-            &mut self.composition,
+            &self.corner_knockouts_raster,
+            composition,
         );
+
         render_context.render(&self.composition, None, image, &ext);
         ready_event.as_handle_ref().signal(Signals::NONE, Signals::EVENT_SIGNALED)?;
 

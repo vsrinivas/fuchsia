@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::{ops::RangeBounds, ptr, slice};
+use std::{collections::BTreeMap, convert::TryFrom, ptr, slice};
 
 use euclid::default::{Rect, Size2D};
 use spinel_rs_sys::*;
@@ -19,8 +19,8 @@ use crate::{
 fn group_layers(
     spn_styling: SpnStyling,
     top_group: SpnGroupId,
-    layers: &[Layer<Spinel>],
-    layer_id_start: u32,
+    layers: &BTreeMap<u16, Layer<Spinel>>,
+    last_layer: u32,
 ) {
     fn cmds_len(style: &Style) -> usize {
         let fill_rule_len = match style.fill_rule {
@@ -41,14 +41,15 @@ fn group_layers(
         1 + fill_rule_len + fill_len + blend_mode_len
     }
 
-    for (i, Layer { style, .. }) in layers.iter().enumerate() {
+    for (order, Layer { style, .. }) in layers.iter() {
+        let i = *order as u32;
         let cmds = unsafe {
             let len = cmds_len(style);
             let data = init(|ptr| {
                 spn!(spn_styling_group_layer(
                     spn_styling,
                     top_group,
-                    layer_id_start + i as u32,
+                    last_layer - i,
                     len as u32,
                     ptr
                 ))
@@ -109,7 +110,7 @@ fn group_layers(
 
 #[derive(Clone, Debug)]
 pub struct SpinelComposition {
-    pub(crate) layers: Vec<Layer<Spinel>>,
+    pub(crate) layers: BTreeMap<u16, Layer<Spinel>>,
     pub(crate) background_color: [f32; 4],
 }
 
@@ -130,18 +131,20 @@ impl SpinelComposition {
             spn!(spn_composition_set_clip(composition, clip.as_ptr(),));
         }
 
+        let last_layer = *self.layers.keys().next_back().unwrap_or(&0) as u32;
+        let clear_layer = last_layer + 1;
+
         // Release existing rasters after placing them in clear layer.
         for raster in previous_rasters.drain(..) {
-            let i = self.layers.len();
             unsafe {
-                spn!(spn_composition_place(composition, &raster, &(i as u32), ptr::null(), 1));
+                spn!(spn_composition_place(composition, &raster, &(clear_layer), ptr::null(), 1));
             }
             context.get_checked().map(|context| unsafe {
                 spn!(spn_raster_release(context, &raster as *const _, 1))
             });
         }
 
-        for (i, Layer { raster, .. }) in self.layers.iter().enumerate() {
+        for (order, Layer { raster, .. }) in self.layers.iter() {
             for (paths, txty) in raster.rasters.iter() {
                 unsafe {
                     spn!(spn_raster_builder_begin(raster_builder));
@@ -186,8 +189,9 @@ impl SpinelComposition {
                 let raster =
                     unsafe { init(|ptr| spn!(spn_raster_builder_end(raster_builder, ptr))) };
 
+                let i = last_layer - *order as u32;
                 unsafe {
-                    spn!(spn_composition_place(composition, &raster, &(i as u32), ptr::null(), 1));
+                    spn!(spn_composition_place(composition, &raster, &(i), ptr::null(), 1));
                 }
 
                 // Save raster for clearing.
@@ -207,8 +211,10 @@ impl SpinelComposition {
         const MAX_LAYER_CMDS: u32 = 6; // spn_styling_group_layer
         let leave_cmds: u32 = if needs_linear_to_srgb_opcode { 5 } else { 4 }; // spn_styling_group_leave
 
+        let last_layer = *self.layers.keys().next_back().unwrap_or(&0) as u32;
         let num_clear_layers = 1;
-        let len = self.layers.len() as u32 + num_clear_layers;
+        let num_layers = last_layer + 1;
+        let len = num_layers + num_clear_layers;
         let styling_len = len * MAX_LAYER_CMDS + PARENTS + ENTER_CMDS + leave_cmds + GROUP_SIZE;
         let spn_styling = context.get_checked().map(|context| unsafe {
             init(|ptr| spn!(spn_styling_create(context, ptr, len, styling_len)))
@@ -246,19 +252,13 @@ impl SpinelComposition {
             cmds_leave[3] = SpnCommand::SpnStylingOpcodeColorAccStoreToSurface;
         }
 
-        group_layers(spn_styling, top_group, &self.layers, 0);
+        group_layers(spn_styling, top_group, &self.layers, last_layer);
 
         // Clear commands for layer with previous rasters.
         let clear_cmds = unsafe {
             let data = init(|ptr| {
                 let len = 5;
-                spn!(spn_styling_group_layer(
-                    spn_styling,
-                    top_group,
-                    self.layers.len() as u32,
-                    len,
-                    ptr
-                ))
+                spn!(spn_styling_group_layer(spn_styling, top_group, num_layers, len, ptr))
             });
             slice::from_raw_parts_mut(data, len as usize)
         };
@@ -278,7 +278,10 @@ impl SpinelComposition {
 
 impl Composition<Spinel> for SpinelComposition {
     fn new(background_color: Color) -> Self {
-        Self { layers: vec![], background_color: background_color.to_linear_premult_rgba() }
+        Self {
+            layers: BTreeMap::new(),
+            background_color: background_color.to_linear_premult_rgba(),
+        }
     }
 
     fn with_layers(
@@ -286,7 +289,11 @@ impl Composition<Spinel> for SpinelComposition {
         background_color: Color,
     ) -> Self {
         Self {
-            layers: layers.into_iter().collect(),
+            layers: layers
+                .into_iter()
+                .enumerate()
+                .map(|(i, layer)| (u16::try_from(i).expect("too many layers"), layer))
+                .collect(),
             background_color: background_color.to_linear_premult_rgba(),
         }
     }
@@ -295,11 +302,11 @@ impl Composition<Spinel> for SpinelComposition {
         self.layers.clear();
     }
 
-    fn replace<R, I>(&mut self, range: R, with: I)
-    where
-        R: RangeBounds<usize>,
-        I: IntoIterator<Item = Layer<Spinel>>,
-    {
-        self.layers.splice(range, with);
+    fn insert(&mut self, order: u16, layer: Layer<Spinel>) -> Option<Layer<Spinel>> {
+        self.layers.insert(order, layer)
+    }
+
+    fn remove(&mut self, order: u16) -> Option<Layer<Spinel>> {
+        self.layers.remove(&order)
     }
 }

@@ -21,8 +21,10 @@ use {
     fuchsia_trace::duration,
     fuchsia_trace_provider,
     fuchsia_zircon::Event,
+    rustc_hash::FxHashMap,
     std::{
         any::Any,
+        collections::hash_map::Entry,
         f32,
         fs::File,
         io::{prelude::*, BufReader},
@@ -144,9 +146,10 @@ struct TextGridFacet {
     font: FontFace,
     glyphs: GlyphMap,
     foreground: Color,
-    pages: Vec<Vec<(usize, usize, char)>>,
+    pages: Vec<Vec<(u16, u16, char)>>,
     size: Size,
     current_page: usize,
+    cells: FxHashMap<(u16, u16), char>,
 }
 
 /// Message used to advance to next page
@@ -158,12 +161,22 @@ impl TextGridFacet {
         cell_size: Size,
         cell_padding: f32,
         foreground: Color,
-        pages: Vec<Vec<(usize, usize, char)>>,
+        pages: Vec<Vec<(u16, u16, char)>>,
     ) -> Self {
         let textgrid = TextGrid::new(cell_size, cell_padding);
         let glyphs = GlyphMap::new();
+        let cells: FxHashMap<(u16, u16), char> = FxHashMap::default();
 
-        Self { textgrid, font, glyphs, foreground, pages, size: Size::zero(), current_page: 0 }
+        Self {
+            textgrid,
+            font,
+            glyphs,
+            foreground,
+            pages,
+            size: Size::zero(),
+            current_page: 0,
+            cells,
+        }
     }
 }
 
@@ -183,24 +196,77 @@ impl Facet for TextGridFacet {
         let font = &self.font;
         let textgrid = &self.textgrid;
         let foreground = &self.foreground;
-        let cells = &self.pages[self.current_page];
-        let layers = cells
-            .iter()
-            .filter_map(|(column, row, c)| {
-                let cell =
-                    TextGridCell::new(render_context, *column, *row, *c, textgrid, font, glyphs);
-                cell.raster
-            })
-            .map(|raster| Layer {
-                raster,
-                clip: None,
-                style: Style {
-                    fill_rule: FillRule::NonZero,
-                    fill: Fill::Solid(*foreground),
-                    blend_mode: BlendMode::Over,
-                },
-            });
-        layer_group.replace_all(layers);
+        let page = &self.pages[self.current_page];
+
+        const MAX_ROWS: u16 = 128;
+        const MAX_COLUMNS_PER_ROW: u16 = 256;
+
+        for (column, row, c) in page {
+            assert_eq!(*row < MAX_ROWS, true);
+            assert_eq!(*column < MAX_COLUMNS_PER_ROW, true);
+            let order = *row * MAX_COLUMNS_PER_ROW + *column;
+            match self.cells.entry((*column, *row)) {
+                Entry::Occupied(entry) => {
+                    if *entry.get() != *c {
+                        let cell = TextGridCell::new(
+                            render_context,
+                            *column as usize,
+                            *row as usize,
+                            *c,
+                            textgrid,
+                            font,
+                            glyphs,
+                        );
+                        if let Some(raster) = cell.raster {
+                            let value = entry.into_mut();
+                            *value = *c;
+
+                            layer_group.insert(
+                                order,
+                                Layer {
+                                    raster,
+                                    clip: None,
+                                    style: Style {
+                                        fill_rule: FillRule::NonZero,
+                                        fill: Fill::Solid(*foreground),
+                                        blend_mode: BlendMode::Over,
+                                    },
+                                },
+                            );
+                        } else {
+                            entry.remove_entry();
+                            layer_group.remove(order);
+                        }
+                    }
+                }
+                Entry::Vacant(entry) => {
+                    let cell = TextGridCell::new(
+                        render_context,
+                        *column as usize,
+                        *row as usize,
+                        *c,
+                        textgrid,
+                        font,
+                        glyphs,
+                    );
+                    if let Some(raster) = cell.raster {
+                        entry.insert(*c);
+                        layer_group.insert(
+                            order,
+                            Layer {
+                                raster,
+                                clip: None,
+                                style: Style {
+                                    fill_rule: FillRule::NonZero,
+                                    fill: Fill::Solid(*foreground),
+                                    blend_mode: BlendMode::Over,
+                                },
+                            },
+                        );
+                    }
+                }
+            }
+        }
 
         Ok(())
     }
@@ -216,7 +282,7 @@ impl Facet for TextGridFacet {
     }
 }
 
-fn load_pages(path: PathBuf) -> Result<Vec<Vec<(usize, usize, char)>>, Error> {
+fn load_pages(path: PathBuf) -> Result<Vec<Vec<(u16, u16, char)>>, Error> {
     let file = File::open(path)?;
     let reader = BufReader::new(file);
     let mut pages = vec![];
@@ -231,7 +297,7 @@ fn load_pages(path: PathBuf) -> Result<Vec<Vec<(usize, usize, char)>>, Error> {
                     row_start = row + 1;
                     break;
                 } else {
-                    cells.push((column, row - row_start, c));
+                    cells.push((column as u16, (row - row_start) as u16, c));
                 }
             }
         }

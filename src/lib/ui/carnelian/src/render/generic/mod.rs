@@ -2,13 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::{
-    fmt::Debug,
-    hash::Hash,
-    io::Read,
-    ops::{Add, RangeBounds},
-    u32,
-};
+use std::{fmt::Debug, hash::Hash, io::Read, ops::Add, u32};
 
 use anyhow::Error;
 use euclid::{
@@ -286,12 +280,10 @@ pub trait Composition<B: Backend> {
     fn with_layers(layers: impl IntoIterator<Item = Layer<B>>, background_color: Color) -> Self;
     /// Resets composition by removing all layers.
     fn clear(&mut self);
-    /// Replaces the specified range in the composition with the given `with` iterator.
-    /// `replace_with` does not need to be the same length as `range`.
-    fn replace<R, I>(&mut self, range: R, with: I)
-    where
-        R: RangeBounds<usize>,
-        I: IntoIterator<Item = Layer<B>>;
+    /// Inserts layer into the composition.
+    fn insert(&mut self, order: u16, layer: Layer<B>) -> Option<Layer<B>>;
+    /// Removes layer from the composition.
+    fn remove(&mut self, order: u16) -> Option<Layer<B>>;
 }
 
 #[cfg(test)]

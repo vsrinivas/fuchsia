@@ -9,7 +9,10 @@ use crate::{
     render::{BlendMode, Context as RenderContext, FillRule, Layer, Raster},
     Coord, Rect, Size,
 };
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::{
+    collections::BTreeMap,
+    sync::atomic::{AtomicUsize, Ordering},
+};
 
 /// Individual bits of UI
 pub mod facets;
@@ -61,13 +64,26 @@ impl Iterator for IdGenerator {
 }
 
 /// Group of layers created and modified by facets.
-pub struct LayerGroup(Vec<Layer>);
+pub struct LayerGroup(BTreeMap<u16, Layer>);
 
 impl LayerGroup {
-    /// Replace all the layers in a layer group with the contents of the iterator.
-    /// Eventually layer group might provide more incremental ways to modify the contents of
-    /// the group.
-    pub fn replace_all(&mut self, new_layers: impl IntoIterator<Item = Layer>) {
-        self.0.splice(.., new_layers.into_iter());
+    /// Clears the group, removing all layers.
+    pub fn clear(&mut self) {
+        self.0.clear();
+    }
+
+    /// Insert a order-layer pair into the group.
+    ///
+    /// If the group did not have a layer at this location present, None is returned.
+    ///
+    /// If the group did have a layer present at this location, the layer is updated,
+    /// and the old layer is returned.
+    pub fn insert(&mut self, order: u16, layer: Layer) -> Option<Layer> {
+        self.0.insert(order, layer)
+    }
+
+    /// Removes a layer from the group, returning the layer if present.
+    pub fn remove(&mut self, order: u16) -> Option<Layer> {
+        self.0.remove(&order)
     }
 }
