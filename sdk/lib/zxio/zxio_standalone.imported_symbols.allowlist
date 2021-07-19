@@ -136,6 +136,9 @@ zx_object_get_info
 zx_object_get_property
 zx_object_wait_one
 zx_socket_read
+zx_socket_set_disposition
+# TODO(https://fxbug.dev/78129): Remove zx_socket_shutdown after zxio stops
+# using it and its dependents are rebuilt.
 zx_socket_shutdown
 zx_socket_write
 zx_status_get_string

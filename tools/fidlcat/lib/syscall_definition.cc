@@ -3844,6 +3844,24 @@ void SyscallDecoderDispatcher::Populate() {
                                         std::make_unique<ArgumentAccess<uint32_t>>(options));
   }
 
+  {
+    Syscall* zx_socket_set_disposition =
+        Add("zx_socket_set_disposition", SyscallReturnType::kStatus);
+    // Arguments
+    auto handle = zx_socket_set_disposition->Argument<zx_handle_t>(SyscallType::kHandle);
+    auto disposition =
+        zx_socket_set_disposition->Argument<uint32_t>(SyscallType::kSocketDisposition);
+    auto disposition_peer =
+        zx_socket_set_disposition->Argument<uint32_t>(SyscallType::kSocketDisposition);
+    // Inputs
+    zx_socket_set_disposition->Input<zx_handle_t>(
+        "handle", std::make_unique<ArgumentAccess<zx_handle_t>>(handle));
+    zx_socket_set_disposition->Input<uint32_t>(
+        "disposition", std::make_unique<ArgumentAccess<uint32_t>>(disposition));
+    zx_socket_set_disposition->Input<uint32_t>(
+        "disposition_peer", std::make_unique<ArgumentAccess<uint32_t>>(disposition_peer));
+  }
+
   { Add("zx_thread_exit", SyscallReturnType::kNoReturn); }
 
   {

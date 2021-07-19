@@ -73,7 +73,7 @@ Add to `protocol socket`:
 library zx;
 
 protocol socket {
-  /// Change disposition of writes.
+  /// Set disposition of writes.
   socket_set_disposition(handle:<SOCKET, rights.MANAGE_SOCKET> handle, uint32 disposition, uint32 disposition_peer) -> (status status);
 }
 ```
@@ -90,11 +90,11 @@ Valid disposition flags that can be used:
 **ZX_SOCKET_DISPOSITION_WRITE_DISABLED** - Disable writes for the specified
 socket endpoint. Once set, writes to the specified socket endpoint will fail
 with **ZX_ERR_BAD_STATE**. Reads from the specified socket endpoint will
-succeed until all data buffered in the socket is consumed, and fail with
-**ZX_ERR_BAD_STATE** thereafter.
+succeed until all data buffered in the specified socket endpoint is consumed,
+and fail with **ZX_ERR_BAD_STATE** thereafter.
 
 **ZX_SOCKET_DISPOSITION_WRITE_ENABLED** - Enable writes for the specified
-socket endpoint.  Once set, writes to and reads from the specified socket
+socket endpoint. Once set, writes to and reads from the specified socket
 endpoint will behave as specified in [`zx_socket_write`][socket_write] and
 [`zx_socket_read`][socket_read], respectively.
 

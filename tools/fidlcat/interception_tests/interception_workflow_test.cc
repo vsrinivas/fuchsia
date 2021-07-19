@@ -632,6 +632,7 @@ TEST_F(InterceptionWorkflowTestX64, SyscallsAutomated) {
       "zx_smc_call not automated\n"
       "zx_socket_create fully automated\n"
       "zx_socket_read partially automated\n"
+      "zx_socket_set_disposition doesn't need automation\n"
       "zx_socket_shutdown doesn't need automation\n"
       "zx_socket_write partially automated\n"
       "zx_system_get_dcache_line_size doesn't need automation\n"
@@ -680,7 +681,7 @@ TEST_F(InterceptionWorkflowTestX64, SyscallsAutomated) {
       "zx_vmo_set_size doesn't need automation\n"
       "zx_vmo_write fully automated\n";
   uint32_t expected_fully_automated = 66;
-  uint32_t expected_cant_be_automated = 58;
+  uint32_t expected_cant_be_automated = 59;
   uint32_t expected_partially_automated = 17;
   uint32_t expected_not_automated = 12;
   EXPECT_EQ(actual_fully_automated, expected_fully_automated);

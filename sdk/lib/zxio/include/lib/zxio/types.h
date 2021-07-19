@@ -291,7 +291,8 @@ typedef struct zxio_dirent {
 typedef uint32_t zxio_shutdown_options_t;
 
 #define ZXIO_SHUTDOWN_OPTIONS_WRITE ((zxio_shutdown_options_t)1ul << 0)
-#define ZXIO_SHUTDOWN_OPTIONS_READ ((zxio_shutdown_options_t)1ul << 1)
+#define ZXIO_SHUTDOWN_OPTIONS_READ  ((zxio_shutdown_options_t)1ul << 1)
+#define ZXIO_SHUTDOWN_OPTIONS_MASK  (ZXIO_SHUTDOWN_OPTIONS_WRITE | ZXIO_SHUTDOWN_OPTIONS_READ)
 
 enum advisory_lock_type {
   ADVISORY_LOCK_SHARED = 0x1,

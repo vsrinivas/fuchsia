@@ -66,7 +66,9 @@ enum class SyscallType {
   kSize,
   kSocketCreateOptions,
   kSocketReadOptions,
+  // TODO(https://fxbug.dev/78128): Remove after ABI transition.
   kSocketShutdownOptions,
+  kSocketDisposition,
   kStatus,
   kStruct,
   kSystemEventType,

@@ -114,8 +114,11 @@ toc:
     path: /docs/reference/syscalls/socket_create.md
   - title: "zx_socket_read"
     path: /docs/reference/syscalls/socket_read.md
+    # TODO(https://fxbug.dev/78128): Remove after ABI transition.
   - title: "zx_socket_shutdown"
     path: /docs/reference/syscalls/socket_shutdown.md
+  - title: "zx_socket_set_disposition"
+    path: /docs/reference/syscalls/socket_set_disposition.md
   - title: "zx_socket_write"
     path: /docs/reference/syscalls/socket_write.md
 - title: "Stream"

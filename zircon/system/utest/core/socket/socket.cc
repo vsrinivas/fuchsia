@@ -240,7 +240,8 @@ TEST(SocketTest, SetThreshholdsAndCheckSignals) {
   memset(&info, 0, sizeof(info));
   ASSERT_OK(remote.get_info(ZX_INFO_SOCKET, &info, sizeof(info), nullptr, nullptr));
   size_t write_threshold = info.tx_buf_max - (SOCKET2_SIGNALTEST_RX_THRESHOLD + 2);
-  ASSERT_OK(remote.set_property(ZX_PROP_SOCKET_TX_THRESHOLD, &write_threshold, sizeof(write_threshold)));
+  ASSERT_OK(
+      remote.set_property(ZX_PROP_SOCKET_TX_THRESHOLD, &write_threshold, sizeof(write_threshold)));
   {
     size_t count;
     ASSERT_OK(remote.get_property(ZX_PROP_SOCKET_TX_THRESHOLD, &count, sizeof(count)));
@@ -654,6 +655,205 @@ TEST(SocketTest, ShutdownReadBytesOutstanding) {
     ASSERT_EQ(count, kMsg2.size());
     EXPECT_BYTES_EQ(rbuf, kMsg2.data(), kMsg2.size());
   }
+}
+
+TEST(SocketTest, SetDispositionHandleWithoutRight) {
+  zx::socket local, remote;
+  ASSERT_OK(zx::socket::create(0, &local, &remote));
+
+  EXPECT_EQ(GetSignals(local), ZX_SOCKET_WRITABLE);
+  EXPECT_EQ(GetSignals(remote), ZX_SOCKET_WRITABLE);
+
+  zx_info_handle_basic_t info;
+  memset(&info, 0, sizeof(info));
+  EXPECT_OK(local.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr));
+  EXPECT_TRUE((info.rights & ZX_RIGHT_MANAGE_SOCKET) != 0);
+
+  zx::socket local_clone;
+  ASSERT_OK(local.duplicate(info.rights ^ ZX_RIGHT_MANAGE_SOCKET, &local_clone));
+
+  EXPECT_STATUS(local_clone.set_disposition(ZX_SOCKET_DISPOSITION_WRITE_DISABLED, 0),
+                ZX_ERR_ACCESS_DENIED);
+  EXPECT_STATUS(local_clone.set_disposition(0, ZX_SOCKET_DISPOSITION_WRITE_DISABLED),
+                ZX_ERR_ACCESS_DENIED);
+}
+
+TEST(SocketTest, SetDispositionInvalidArgs) {
+  zx::socket local, remote;
+  ASSERT_OK(zx::socket::create(0, &local, &remote));
+
+  EXPECT_STATUS(local.set_disposition(
+                    ZX_SOCKET_DISPOSITION_WRITE_DISABLED | ZX_SOCKET_DISPOSITION_WRITE_ENABLED, 0),
+                ZX_ERR_INVALID_ARGS);
+  EXPECT_STATUS(local.set_disposition(
+                    0, ZX_SOCKET_DISPOSITION_WRITE_DISABLED | ZX_SOCKET_DISPOSITION_WRITE_ENABLED),
+                ZX_ERR_INVALID_ARGS);
+  constexpr uint32_t invalid_disposition =
+      1337 & ~(ZX_SOCKET_DISPOSITION_WRITE_DISABLED | ZX_SOCKET_DISPOSITION_WRITE_ENABLED);
+  EXPECT_STATUS(local.set_disposition(invalid_disposition, 0), ZX_ERR_INVALID_ARGS);
+  EXPECT_STATUS(local.set_disposition(0, invalid_disposition), ZX_ERR_INVALID_ARGS);
+}
+
+void disable_write_helper(bool disable_local_write, bool disable_remote_write, bool use_shutdown) {
+  zx::socket local, remote;
+  ASSERT_OK(zx::socket::create(0, &local, &remote));
+
+  zx_signals_t local_state = ZX_SOCKET_WRITABLE;
+  zx_signals_t remote_state = ZX_SOCKET_WRITABLE;
+  EXPECT_EQ(GetSignals(local), local_state);
+  EXPECT_EQ(GetSignals(remote), remote_state);
+
+  auto write_data = [](zx::socket& endpoint, std::string_view msg) {
+    size_t count;
+    ASSERT_OK(endpoint.write(0u, msg.data(), msg.size(), &count));
+    ASSERT_EQ(count, msg.size());
+  };
+
+  // Write some data on endpoints that are about to get their writes disabled. Endpoints that keep
+  // their write privilege will be written on later: it confirms that disabling writes on a peer
+  // does not prevent the other end from writing data.
+  if (disable_local_write) {
+    ASSERT_NO_FAILURES(write_data(local, kMsg1));
+    remote_state |= ZX_SOCKET_READABLE;
+    EXPECT_EQ(GetSignals(remote), remote_state);
+  }
+  if (disable_remote_write) {
+    ASSERT_NO_FAILURES(write_data(remote, kMsg2));
+    local_state |= ZX_SOCKET_READABLE;
+    EXPECT_EQ(GetSignals(local), local_state);
+  }
+
+  // Set the dispositions.
+  {
+    uint32_t shutdown_mode = 0;
+    uint32_t local_disposition = 0;
+    uint32_t remote_disposition = 0;
+    if (disable_local_write) {
+      shutdown_mode |= ZX_SOCKET_SHUTDOWN_WRITE;
+      local_disposition = ZX_SOCKET_DISPOSITION_WRITE_DISABLED;
+      local_state |= ZX_SOCKET_WRITE_DISABLED;
+      local_state ^= ZX_SOCKET_WRITABLE;
+      remote_state |= ZX_SOCKET_PEER_WRITE_DISABLED;
+    }
+    if (disable_remote_write) {
+      shutdown_mode |= ZX_SOCKET_SHUTDOWN_READ;
+      remote_disposition = ZX_SOCKET_DISPOSITION_WRITE_DISABLED;
+      remote_state ^= ZX_SOCKET_WRITABLE;
+      remote_state |= ZX_SOCKET_WRITE_DISABLED;
+      local_state |= ZX_SOCKET_PEER_WRITE_DISABLED;
+    }
+    if (use_shutdown) {
+      ASSERT_OK(local.shutdown(shutdown_mode));
+    } else {
+      ASSERT_OK(local.set_disposition(local_disposition, remote_disposition));
+    }
+    EXPECT_EQ(GetSignals(local), local_state);
+    EXPECT_EQ(GetSignals(remote), remote_state);
+  }
+
+  // Attempt to write data on both endpoints. It should fail if their writes were disabled.
+  {
+    auto try_write_data = [write_data](zx::socket& endpoint, zx_signals_t& peer_state,
+                                       bool write_is_disabled, std::string_view msg) {
+      if (write_is_disabled) {
+        ASSERT_STATUS(endpoint.write(0u, msg.data(), msg.size(), nullptr), ZX_ERR_BAD_STATE);
+        // Furthermore, writes can't be re-enabled when there is buffered data.
+        ASSERT_STATUS(endpoint.set_disposition(ZX_SOCKET_DISPOSITION_WRITE_ENABLED, 0),
+                      ZX_ERR_BAD_STATE);
+      } else {
+        write_data(endpoint, msg);
+        peer_state |= ZX_SOCKET_READABLE;
+      }
+    };
+    ASSERT_NO_FAILURES(try_write_data(local, remote_state, disable_local_write, kMsg1));
+    EXPECT_EQ(GetSignals(remote), remote_state);
+    ASSERT_NO_FAILURES(try_write_data(remote, local_state, disable_remote_write, kMsg2));
+    EXPECT_EQ(GetSignals(local), local_state);
+  }
+
+  auto read_and_verify_data = [](zx::socket& endpoint, std::string_view msg) {
+    char rbuf[kReadBufSize];
+    size_t count;
+    ASSERT_OK(endpoint.read(0u, rbuf, sizeof(rbuf), &count));
+    ASSERT_EQ(count, msg.size());
+    ASSERT_BYTES_EQ(rbuf, msg.data(), msg.size());
+  };
+
+  // Consume the data of both endpoints. Then try to read more: depending on the disposition of the
+  // peer, it should fail one way or another.
+  {
+    auto consume_data = [read_and_verify_data](zx::socket& endpoint, zx_signals_t& state,
+                                               bool peer_write_disabled, std::string_view msg) {
+      read_and_verify_data(endpoint, msg);
+      state ^= ZX_SOCKET_READABLE;
+      zx_status_t expected = peer_write_disabled ? ZX_ERR_BAD_STATE : ZX_ERR_SHOULD_WAIT;
+      char rbuf[kReadBufSize];
+      ASSERT_STATUS(endpoint.read(0u, rbuf, 1u, nullptr), expected);
+    };
+    ASSERT_NO_FAILURES(consume_data(local, local_state, disable_remote_write, kMsg2));
+    EXPECT_EQ(GetSignals(local), local_state);
+    ASSERT_NO_FAILURES(consume_data(remote, remote_state, disable_local_write, kMsg1));
+    EXPECT_EQ(GetSignals(remote), remote_state);
+  }
+
+  // Enable writes on both endpoints, and confirm that reading/writing works from both ends.
+  // Only do this when using set_disposition. Shutdown are non-revertible so this wouldn't
+  // work.
+  if (!use_shutdown) {
+    EXPECT_OK(local.set_disposition(ZX_SOCKET_DISPOSITION_WRITE_ENABLED,
+                                    ZX_SOCKET_DISPOSITION_WRITE_ENABLED));
+    EXPECT_EQ(GetSignals(local), ZX_SOCKET_WRITABLE);
+    EXPECT_EQ(GetSignals(remote), ZX_SOCKET_WRITABLE);
+
+    ASSERT_NO_FAILURES(write_data(local, kMsg2));
+    ASSERT_NO_FAILURES(write_data(remote, kMsg3));
+    EXPECT_EQ(GetSignals(local), ZX_SOCKET_WRITABLE | ZX_SOCKET_READABLE);
+    EXPECT_EQ(GetSignals(remote), ZX_SOCKET_WRITABLE | ZX_SOCKET_READABLE);
+
+    ASSERT_NO_FAILURES(read_and_verify_data(local, kMsg3));
+    ASSERT_NO_FAILURES(read_and_verify_data(remote, kMsg2));
+    EXPECT_EQ(GetSignals(local), ZX_SOCKET_WRITABLE);
+    EXPECT_EQ(GetSignals(remote), ZX_SOCKET_WRITABLE);
+  }
+}
+
+TEST(SocketTest, DisableWriteLocalWithShutdown) { disable_write_helper(true, false, true); }
+
+TEST(SocketTest, DisableWritePeerWithShutdown) { disable_write_helper(false, true, true); }
+
+TEST(SocketTest, DisableWriteBothEndpointWithShutdown) { disable_write_helper(true, true, true); }
+
+TEST(SocketTest, DisableWriteLocalWithSetDisposition) { disable_write_helper(true, false, false); }
+
+TEST(SocketTest, DisableWritePeerWithSetDisposition) { disable_write_helper(false, true, false); }
+
+TEST(SocketTest, DisableWriteBothEndpointsWithSetDisposition) {
+  disable_write_helper(true, true, false);
+}
+
+TEST(SocketTest, SetDispositionOfClosedPeerWithBufferedData) {
+  zx::socket local;
+  {
+    zx::socket remote;
+    ASSERT_OK(zx::socket::create(0, &local, &remote));
+
+    EXPECT_EQ(GetSignals(local), ZX_SOCKET_WRITABLE);
+    EXPECT_EQ(GetSignals(remote), ZX_SOCKET_WRITABLE);
+
+    {
+      size_t count;
+      EXPECT_OK(remote.write(0u, kMsg1.data(), kMsg1.size(), &count));
+      EXPECT_EQ(count, kMsg1.size());
+    }
+
+    EXPECT_OK(local.set_disposition(0, ZX_SOCKET_DISPOSITION_WRITE_DISABLED));
+    // There is buffered data, so we can't re-enable writes.
+    EXPECT_STATUS(local.set_disposition(0, ZX_SOCKET_DISPOSITION_WRITE_ENABLED), ZX_ERR_BAD_STATE);
+  }
+
+  // Even though the peer is now closed, there is still buffered data so the writes can't be
+  // re-enabled.
+  EXPECT_STATUS(local.set_disposition(0, ZX_SOCKET_DISPOSITION_WRITE_ENABLED), ZX_ERR_BAD_STATE);
 }
 
 TEST(SocketTest, ShortWrite) {

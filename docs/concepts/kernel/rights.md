@@ -35,6 +35,7 @@ default rights for each object type, which can be reduced via
 | **ZX_RIGHT_MANAGE_PROCESS** | **NOT YET IMPLEMENTED** Allows creation of threads, etc. |
 | **ZX_RIGHT_MANAGE_THREAD**  | **NOT YET IMPLEMENTED** Allows suspending/resuming threads, etc. |
 | **ZX_RIGHT_APPLY_PROFILE**  | Allows a scheduling profile to be applied to a thread via [`zx_object_set_profile()`] |
+| **ZX_RIGHT_MANAGE_SOCKET**  | Allows changing socket disposition via [`zx_socket_set_disposition()`] |
 
 ## ZX_RIGHTS_BASIC
 
@@ -61,4 +62,5 @@ These four rights are referred to as **ZX_RIGHTS_BASIC** when used together.
 [`zx_object_signal_peer()`]: /docs/reference/syscalls/object_signal_peer.md
 [`zx_object_wait_many()`]: /docs/reference/syscalls/object_wait_many.md
 [`zx_object_wait_one()`]: /docs/reference/syscalls/object_wait_one.md
+[`zx_socket_set_disposition()`]: /docs/reference/syscalls/socket_set_disposition.md
 [`zx_task_kill()`]: /docs/reference/syscalls/task_kill.md

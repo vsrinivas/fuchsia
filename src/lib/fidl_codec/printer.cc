@@ -682,6 +682,7 @@ void PrettyPrinter::DisplayRights(uint32_t rights) {
   RightsCase(ZX_RIGHT_MANAGE_PROCESS);
   RightsCase(ZX_RIGHT_MANAGE_THREAD);
   RightsCase(ZX_RIGHT_APPLY_PROFILE);
+  RightsCase(ZX_RIGHT_MANAGE_SOCKET);
   RightsCase(ZX_RIGHT_SAME_RIGHTS);
   *this << ResetColor;
 }
@@ -805,6 +806,28 @@ void PrettyPrinter::DisplaySocketShutdownOptions(uint32_t options) {
   const char* separator = "";
   SocketShutdownOptionsCase(ZX_SOCKET_SHUTDOWN_WRITE);
   SocketShutdownOptionsCase(ZX_SOCKET_SHUTDOWN_READ);
+  *this << ResetColor;
+}
+
+#define SocketDispositionCase(name)       \
+  if ((disposition & (name)) == (name)) { \
+    disposition ^= name;                  \
+    *this << separator << #name;          \
+    separator = " | ";                    \
+  }
+
+void PrettyPrinter::DisplaySocketDisposition(uint32_t disposition) {
+  *this << Blue;
+  if (disposition == 0) {
+    *this << "0" << ResetColor;
+    return;
+  }
+  const char* separator = "";
+  SocketDispositionCase(ZX_SOCKET_DISPOSITION_WRITE_DISABLED);
+  SocketDispositionCase(ZX_SOCKET_DISPOSITION_WRITE_ENABLED);
+  if (disposition) {
+    *this << separator << disposition;
+  }
   *this << ResetColor;
 }
 

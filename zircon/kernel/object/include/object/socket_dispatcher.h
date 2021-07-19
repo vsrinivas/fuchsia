@@ -8,6 +8,7 @@
 #define ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_SOCKET_DISPATCHER_H_
 
 #include <lib/user_copy/user_ptr.h>
+#include <lib/zx/status.h>
 #include <stdint.h>
 #include <zircon/rights.h>
 #include <zircon/types.h>
@@ -20,6 +21,18 @@
 
 class SocketDispatcher final : public PeeredDispatcher<SocketDispatcher, ZX_DEFAULT_SOCKET_RIGHTS> {
  public:
+  class Disposition {
+   public:
+    enum Value { kNone, kWriteDisabled, kWriteEnabled };
+
+    static zx::status<Disposition> TryFrom(uint32_t disposition);
+    explicit Disposition(Value disposition);
+    operator Value() const;
+
+   private:
+    Value value_;
+  };
+
   enum class ReadType { kConsume, kPeek };
 
   static zx_status_t Create(uint32_t flags, KernelHandle<SocketDispatcher>* handle0,
@@ -35,6 +48,9 @@ class SocketDispatcher final : public PeeredDispatcher<SocketDispatcher, ZX_DEFA
 
   // Shut this endpoint of the socket down for reading, writing, or both.
   zx_status_t Shutdown(uint32_t how);
+
+  // Set the socket endpoints' dispositions.
+  zx_status_t SetDisposition(Disposition disposition, Disposition disposition_peer);
 
   zx_status_t Read(ReadType type, user_out_ptr<char> dst, size_t len, size_t* nread);
 
@@ -58,6 +74,8 @@ class SocketDispatcher final : public PeeredDispatcher<SocketDispatcher, ZX_DEFA
       TA_REQ(get_lock());
   zx_status_t UserSignalSelfLocked(uint32_t clear_mask, uint32_t set_mask) TA_REQ(get_lock());
   zx_status_t ShutdownOtherLocked(uint32_t how) TA_REQ(get_lock());
+  void UpdateReadStatus(Disposition disposition_peer) TA_REQ(get_lock());
+  [[nodiscard]] bool IsDispositionStateValid(Disposition disposition_peer) const TA_REQ(get_lock());
 
   bool is_full() const TA_REQ(get_lock()) { return data_.is_full(); }
   bool is_empty() const TA_REQ(get_lock()) { return data_.is_empty(); }

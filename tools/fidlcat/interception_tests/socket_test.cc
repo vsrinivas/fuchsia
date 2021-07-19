@@ -252,4 +252,86 @@ SOCKET_SHUTDOWN_DISPLAY_TEST(ZxSocketShutdownWrite, ZX_OK, ZX_SOCKET_SHUTDOWN_WR
                              "\x1B[32m0.000000\x1B[0m "
                              "  -> \x1B[32mZX_OK\x1B[0m\n");
 
+std::unique_ptr<SystemCallTest> ZxSocketSetDisposition(int64_t result, std::string_view result_name,
+                                                       zx_handle_t handle, uint32_t disposition,
+                                                       uint32_t disposition_peer) {
+  auto value = std::make_unique<SystemCallTest>("zx_socket_set_disposition", result, result_name);
+  value->AddInput(handle);
+  value->AddInput(disposition);
+  value->AddInput(disposition_peer);
+  return value;
+}
+
+#define SOCKET_SET_DISPOSITION_DISPLAY_TEST_CONTENT(result, disposition, disposition_peer, \
+                                                    expected)                              \
+  PerformDisplayTest(                                                                      \
+      "$plt(zx_socket_set_disposition)",                                                   \
+      ZxSocketSetDisposition(result, #result, kHandle, disposition, disposition_peer), expected);
+
+#define SOCKET_SET_DISPOSITION_DISPLAY_TEST(name, errno, disposition, disposition_peer, expected) \
+  TEST_F(InterceptionWorkflowTestX64, name) {                                                     \
+    SOCKET_SET_DISPOSITION_DISPLAY_TEST_CONTENT(errno, disposition, disposition_peer, expected);  \
+  }                                                                                               \
+  TEST_F(InterceptionWorkflowTestArm, name) {                                                     \
+    SOCKET_SET_DISPOSITION_DISPLAY_TEST_CONTENT(errno, disposition, disposition_peer, expected);  \
+  }
+
+SOCKET_SET_DISPOSITION_DISPLAY_TEST(ZxSocketSetDispositionLocal, ZX_OK,
+                                    ZX_SOCKET_DISPOSITION_WRITE_ENABLED, 0,
+                                    "\n"
+                                    "\x1B[32m0.000000\x1B[0m "
+                                    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
+                                    "zx_socket_set_disposition("
+                                    "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
+                                    "disposition: \x1B[32mzx.socket_disposition\x1B[0m = "
+                                    "\x1B[34mZX_SOCKET_DISPOSITION_WRITE_ENABLED\x1B[0m, "
+                                    "disposition_peer: \x1B[32mzx.socket_disposition\x1B[0m = "
+                                    "\x1B[34m0\x1B[0m)\n"
+                                    "\x1B[32m0.000000\x1B[0m "
+                                    "  -> \x1B[32mZX_OK\x1B[0m\n");
+
+SOCKET_SET_DISPOSITION_DISPLAY_TEST(ZxSocketSetDispositionPeer, ZX_OK, 0,
+                                    ZX_SOCKET_DISPOSITION_WRITE_ENABLED,
+                                    "\n"
+                                    "\x1B[32m0.000000\x1B[0m "
+                                    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
+                                    "zx_socket_set_disposition("
+                                    "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
+                                    "disposition: \x1B[32mzx.socket_disposition\x1B[0m = "
+                                    "\x1B[34m0\x1B[0m, "
+                                    "disposition_peer: \x1B[32mzx.socket_disposition\x1B[0m = "
+                                    "\x1B[34mZX_SOCKET_DISPOSITION_WRITE_ENABLED\x1B[0m)\n"
+                                    "\x1B[32m0.000000\x1B[0m "
+                                    "  -> \x1B[32mZX_OK\x1B[0m\n");
+
+SOCKET_SET_DISPOSITION_DISPLAY_TEST(ZxSocketSetDispositionBoth, ZX_OK,
+                                    ZX_SOCKET_DISPOSITION_WRITE_DISABLED |
+                                        ZX_SOCKET_DISPOSITION_WRITE_ENABLED,
+                                    ZX_SOCKET_DISPOSITION_WRITE_DISABLED,
+                                    "\n"
+                                    "\x1B[32m0.000000\x1B[0m "
+                                    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
+                                    "zx_socket_set_disposition("
+                                    "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
+                                    "disposition: \x1B[32mzx.socket_disposition\x1B[0m = "
+                                    "\x1B[34mZX_SOCKET_DISPOSITION_WRITE_DISABLED | "
+                                    "ZX_SOCKET_DISPOSITION_WRITE_ENABLED\x1B[0m, "
+                                    "disposition_peer: \x1B[32mzx.socket_disposition\x1B[0m = "
+                                    "\x1B[34mZX_SOCKET_DISPOSITION_WRITE_DISABLED\x1B[0m)\n"
+                                    "\x1B[32m0.000000\x1B[0m "
+                                    "  -> \x1B[32mZX_OK\x1B[0m\n");
+
+SOCKET_SET_DISPOSITION_DISPLAY_TEST(ZxSocketSetDispositionInvalid, ZX_OK, 1337, 0,
+                                    "\n"
+                                    "\x1B[32m0.000000\x1B[0m "
+                                    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
+                                    "zx_socket_set_disposition("
+                                    "handle: \x1B[32mhandle\x1B[0m = \x1B[31mcefa1db0\x1B[0m, "
+                                    "disposition: \x1B[32mzx.socket_disposition\x1B[0m = "
+                                    "\x1B[34mZX_SOCKET_DISPOSITION_WRITE_DISABLED | 1336\x1B[0m, "
+                                    "disposition_peer: \x1B[32mzx.socket_disposition\x1B[0m = "
+                                    "\x1B[34m0\x1B[0m)\n"
+                                    "\x1B[32m0.000000\x1B[0m "
+                                    "  -> \x1B[32mZX_OK\x1B[0m\n");
+
 }  // namespace fidlcat

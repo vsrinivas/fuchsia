@@ -38,9 +38,20 @@ protocol socket {
 
     /// Prevent reading or writing.
     /// Rights: handle must be of type ZX_OBJ_TYPE_SOCKET and have ZX_RIGHT_WRITE.
+    // TODO(https://fxbug.dev/78128): Remove after ABI transition.
     socket_shutdown(resource struct {
         handle handle:SOCKET;
         options uint32;
+    }) -> (struct {
+        status status;
+    });
+
+    /// Set disposition of writes.
+    /// Rights: handle must be of type ZX_OBJ_TYPE_SOCKET and have ZX_RIGHT_MANAGE_SOCKET.
+    socket_set_disposition(resource struct {
+        handle handle:<SOCKET, rights.MANAGE_SOCKET>;
+        disposition uint32;
+        disposition_peer uint32;
     }) -> (struct {
         status status;
     });

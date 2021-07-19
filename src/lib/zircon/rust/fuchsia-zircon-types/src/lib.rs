@@ -104,6 +104,7 @@ multiconst!(zx_rights_t, [
     ZX_RIGHT_MANAGE_PROCESS = 1 << 17;
     ZX_RIGHT_MANAGE_THREAD  = 1 << 18;
     ZX_RIGHT_APPLY_PROFILE  = 1 << 19;
+    ZX_RIGHT_MANAGE_SOCKET  = 1 << 20;
     ZX_RIGHT_SAME_RIGHTS    = 1 << 31;
 ]);
 
@@ -515,8 +516,8 @@ pub const ZX_CPRNG_DRAW_MAX_LEN: usize = 256;
 pub const ZX_CPRNG_ADD_ENTROPY_MAX_LEN: usize = 256;
 
 // Socket flags and limits.
-pub const ZX_SOCKET_SHUTDOWN_WRITE: u32 = 1;
-pub const ZX_SOCKET_SHUTDOWN_READ: u32 = 1 << 1;
+pub const ZX_SOCKET_DISPOSITION_WRITE_DISABLED: u32 = 1 << 0;
+pub const ZX_SOCKET_DISPOSITION_WRITE_ENABLED: u32 = 1 << 1;
 
 // VM Object clone flags
 pub const ZX_VMO_CHILD_SNAPSHOT: u32 = 1 << 0;

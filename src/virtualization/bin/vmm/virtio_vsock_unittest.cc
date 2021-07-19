@@ -530,7 +530,7 @@ TEST_F(VirtioVsockTest, ShutdownRead) {
   HostConnectOnPortRequest(kVirtioVsockHostPort, &connection);
   HostConnectOnPortResponse(kVirtioVsockHostPort);
 
-  ASSERT_EQ(connection.socket.shutdown(ZX_SOCKET_SHUTDOWN_WRITE), ZX_OK);
+  ASSERT_EQ(connection.socket.set_disposition(ZX_SOCKET_DISPOSITION_WRITE_DISABLED, 0), ZX_OK);
   HostShutdownOnPort(kVirtioVsockHostPort, VIRTIO_VSOCK_FLAG_SHUTDOWN_RECV);
 }
 
@@ -539,7 +539,7 @@ TEST_F(VirtioVsockTest, ShutdownWrite) {
   HostConnectOnPortRequest(kVirtioVsockHostPort, &connection);
   HostConnectOnPortResponse(kVirtioVsockHostPort);
 
-  ASSERT_EQ(connection.socket.shutdown(ZX_SOCKET_SHUTDOWN_READ), ZX_OK);
+  ASSERT_EQ(connection.socket.set_disposition(0, ZX_SOCKET_DISPOSITION_WRITE_DISABLED), ZX_OK);
   HostShutdownOnPort(kVirtioVsockHostPort, VIRTIO_VSOCK_FLAG_SHUTDOWN_SEND);
 }
 
@@ -548,7 +548,7 @@ TEST_F(VirtioVsockTest, WriteAfterShutdown) {
   HostConnectOnPortRequest(kVirtioVsockHostPort, &connection);
   HostConnectOnPortResponse(kVirtioVsockHostPort);
 
-  ASSERT_EQ(connection.socket.shutdown(ZX_SOCKET_SHUTDOWN_READ), ZX_OK);
+  ASSERT_EQ(connection.socket.set_disposition(0, ZX_SOCKET_DISPOSITION_WRITE_DISABLED), ZX_OK);
   HostShutdownOnPort(kVirtioVsockHostPort, VIRTIO_VSOCK_FLAG_SHUTDOWN_SEND);
 
   // Test write after shutdown.

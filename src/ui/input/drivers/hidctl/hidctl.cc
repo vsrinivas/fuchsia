@@ -107,7 +107,7 @@ void HidDevice::DdkUnbind(ddk::UnbindTxn txn) {
   fbl::AutoLock lock(&lock_);
   if (data_.is_valid()) {
     // Prevent further writes to the socket
-    zx_status_t status = data_.shutdown(ZX_SOCKET_SHUTDOWN_READ);
+    zx_status_t status = data_.set_disposition(0, ZX_SOCKET_DISPOSITION_WRITE_DISABLED);
     ZX_DEBUG_ASSERT(status == ZX_OK);
     // Signal the thread to shutdown
     status = data_.signal(0, HID_SHUTDOWN);

@@ -197,6 +197,7 @@ def match_sentence_form(sentence, arg_names):
         'ZX_RIGHT_MANAGE_PROCESS',
         'ZX_RIGHT_MANAGE_THREAD',
         'ZX_RIGHT_APPLY_PROFILE',
+        'ZX_RIGHT_MANAGE_SOCKET',
     ])
 
     all_types = set([

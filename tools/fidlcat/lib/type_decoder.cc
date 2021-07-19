@@ -123,6 +123,8 @@ std::string_view TypeName(SyscallType type) {
       return "zx_socket_read_options_t";
     case SyscallType::kSocketShutdownOptions:
       return "zx_socket_shutdown_options_t";
+    case SyscallType::kSocketDisposition:
+      return "zx_socket_disposition_t";
     case SyscallType::kStatus:
       return "status_t";
     case SyscallType::kSystemEventType:

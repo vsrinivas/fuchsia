@@ -27,6 +27,7 @@ type rights = strict bits : uint32 {
     MANAGE_PROCESS = 0x00020000;
     MANAGE_THREAD = 0x00040000;
     APPLY_PROFILE = 0x00080000;
+    MANAGE_SOCKET = 0x00100000;
     SAME_RIGHTS = 0x80000000;
 };
 

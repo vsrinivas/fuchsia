@@ -250,7 +250,7 @@ void DumpAllChannels() {
 }
 
 static const char kRightsHeader[] =
-    "dup tr r w x map gpr spr enm des spo gpo sig sigp wt ins mj mp mt ap";
+    "dup tr r w x map gpr spr enm des spo gpo sig sigp wt ins mj mp mt ap ms";
 static void DumpHandleRightsKeyMap() {
   printf("dup : ZX_RIGHT_DUPLICATE\n");
   printf("tr  : ZX_RIGHT_TRANSFER\n");
@@ -272,6 +272,7 @@ static void DumpHandleRightsKeyMap() {
   printf("mp  : ZX_RIGHT_MANAGE_PROCESS\n");
   printf("mt  : ZX_RIGHT_MANAGE_THREAD\n");
   printf("ap  : ZX_RIGHT_APPLY_PROFILE\n");
+  printf("ms  : ZX_RIGHT_MANAGE_SOCKET\n");
 }
 
 static bool HasRights(zx_rights_t rights, zx_rights_t desired) {
@@ -280,7 +281,7 @@ static bool HasRights(zx_rights_t rights, zx_rights_t desired) {
 
 static void FormatHandleRightsMask(zx_rights_t rights, char* buf, size_t buf_len) {
   snprintf(buf, buf_len,
-           "%3d %2d %1d %1d %1d %3d %3d %3d %3d %3d %3d %3d %3d %4d %2d %3d %2d %2d %2d %2d",
+           "%3d %2d %1d %1d %1d %3d %3d %3d %3d %3d %3d %3d %3d %4d %2d %3d %2d %2d %2d %2d %2d",
            HasRights(rights, ZX_RIGHT_DUPLICATE), HasRights(rights, ZX_RIGHT_TRANSFER),
            HasRights(rights, ZX_RIGHT_READ), HasRights(rights, ZX_RIGHT_WRITE),
            HasRights(rights, ZX_RIGHT_EXECUTE), HasRights(rights, ZX_RIGHT_MAP),
@@ -290,7 +291,8 @@ static void FormatHandleRightsMask(zx_rights_t rights, char* buf, size_t buf_len
            HasRights(rights, ZX_RIGHT_SIGNAL), HasRights(rights, ZX_RIGHT_SIGNAL_PEER),
            HasRights(rights, ZX_RIGHT_WAIT), HasRights(rights, ZX_RIGHT_INSPECT),
            HasRights(rights, ZX_RIGHT_MANAGE_JOB), HasRights(rights, ZX_RIGHT_MANAGE_PROCESS),
-           HasRights(rights, ZX_RIGHT_MANAGE_THREAD), HasRights(rights, ZX_RIGHT_APPLY_PROFILE));
+           HasRights(rights, ZX_RIGHT_MANAGE_THREAD), HasRights(rights, ZX_RIGHT_APPLY_PROFILE),
+           HasRights(rights, ZX_RIGHT_MANAGE_SOCKET));
 }
 
 void DumpProcessHandles(zx_koid_t id) {

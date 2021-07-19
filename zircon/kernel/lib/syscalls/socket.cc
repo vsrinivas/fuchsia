@@ -104,6 +104,8 @@ zx_status_t sys_socket_read(zx_handle_t handle, uint32_t options, user_out_ptr<v
 }
 
 // zx_status_t zx_socket_shutdown
+//
+// TODO(https://fxbug.dev/78128): Remove after ABI transition.
 zx_status_t sys_socket_shutdown(zx_handle_t handle, uint32_t options) {
   if (options & ~ZX_SOCKET_SHUTDOWN_MASK)
     return ZX_ERR_INVALID_ARGS;
@@ -115,5 +117,29 @@ zx_status_t sys_socket_shutdown(zx_handle_t handle, uint32_t options) {
   if (status != ZX_OK)
     return status;
 
-  return socket->Shutdown(options & ZX_SOCKET_SHUTDOWN_MASK);
+  return socket->Shutdown(options);
+}
+
+// zx_status_t zx_socket_set_disposition
+zx_status_t sys_socket_set_disposition(zx_handle_t handle, uint32_t disposition,
+                                       uint32_t disposition_peer) {
+  zx::status maybe_disposition = SocketDispatcher::Disposition::TryFrom(disposition);
+  if (maybe_disposition.is_error()) {
+    return maybe_disposition.error_value();
+  }
+  zx::status maybe_disposition_peer = SocketDispatcher::Disposition::TryFrom(disposition_peer);
+  if (maybe_disposition_peer.is_error()) {
+    return maybe_disposition_peer.error_value();
+  }
+
+  auto up = ProcessDispatcher::GetCurrent();
+
+  fbl::RefPtr<SocketDispatcher> socket;
+  zx_status_t status =
+      up->handle_table().GetDispatcherWithRights(handle, ZX_RIGHT_MANAGE_SOCKET, &socket);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  return socket->SetDisposition(maybe_disposition.value(), maybe_disposition_peer.value());
 }

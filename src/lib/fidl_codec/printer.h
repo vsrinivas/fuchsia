@@ -191,7 +191,11 @@ class PrettyPrinter {
   void DisplaySocketReadOptions(uint32_t options);
 
   // Display socket shutdown options.
+  // TODO(https://fxbug.dev/78128): Remove after ABI transition.
   void DisplaySocketShutdownOptions(uint32_t options);
+
+  // Display a socket disposition.
+  void DisplaySocketDisposition(uint32_t disposition);
 
   // Displays status.
   void DisplayStatus(zx_status_t status);

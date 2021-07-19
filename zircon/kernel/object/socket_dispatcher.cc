@@ -29,6 +29,26 @@ KCOUNTER(dispatcher_socket_create_count, "dispatcher.socket.create")
 KCOUNTER(dispatcher_socket_destroy_count, "dispatcher.socket.destroy")
 
 // static
+zx::status<SocketDispatcher::Disposition> SocketDispatcher::Disposition::TryFrom(
+    uint32_t disposition) {
+  switch (disposition) {
+    case 0:
+      return zx::success(Disposition(Disposition::Value::kNone));
+    case ZX_SOCKET_DISPOSITION_WRITE_DISABLED:
+      return zx::success(Disposition(Disposition::Value::kWriteDisabled));
+    case ZX_SOCKET_DISPOSITION_WRITE_ENABLED:
+      return zx::success(Disposition(Disposition::Value::kWriteEnabled));
+    default:
+      return zx::error(ZX_ERR_INVALID_ARGS);
+  }
+}
+
+SocketDispatcher::Disposition::Disposition(SocketDispatcher::Disposition::Value disposition)
+    : value_(disposition) {}
+
+SocketDispatcher::Disposition::operator Value() const { return value_; }
+
+// static
 zx_status_t SocketDispatcher::Create(uint32_t flags, KernelHandle<SocketDispatcher>* handle0,
                                      KernelHandle<SocketDispatcher>* handle1, zx_rights_t* rights) {
   LTRACE_ENTRY;
@@ -97,6 +117,7 @@ zx_status_t SocketDispatcher::UserSignalSelfLocked(uint32_t clear_mask, uint32_t
   return ZX_OK;
 }
 
+// TODO(https://fxbug.dev/78128): Delete Shutdown after ABI transition.
 zx_status_t SocketDispatcher::Shutdown(uint32_t how) {
   canary_.Assert();
 
@@ -128,8 +149,8 @@ zx_status_t SocketDispatcher::Shutdown(uint32_t how) {
   }
   UpdateStateLocked(clear_mask, set_mask);
 
-  // Our peer already be closed - if so, we've already updated our own bits so we are done. If the
-  // peer is done, we need to notify them of the state change.
+  // Our peer may already be closed - if so, we've already updated our own bits so we are done. If
+  // the peer is done, we need to notify them of the state change.
   if (peer_ != nullptr) {
     AssertHeld(*peer_->get_lock());
     return peer_->ShutdownOtherLocked(how);
@@ -159,6 +180,83 @@ zx_status_t SocketDispatcher::ShutdownOtherLocked(uint32_t how) {
   return ZX_OK;
 }
 
+namespace {
+void ExtendMasksFromDisposition(SocketDispatcher::Disposition disposition, zx_signals_t& clear_mask,
+                                zx_signals_t& set_mask, zx_signals_t& clear_mask_peer,
+                                zx_signals_t& set_mask_peer) {
+  switch (disposition) {
+    case SocketDispatcher::Disposition::kWriteDisabled:
+      clear_mask |= ZX_SOCKET_WRITABLE;
+      set_mask |= ZX_SOCKET_WRITE_DISABLED;
+      set_mask_peer |= ZX_SOCKET_PEER_WRITE_DISABLED;
+      break;
+    case SocketDispatcher::Disposition::kWriteEnabled:
+      clear_mask |= ZX_SOCKET_WRITE_DISABLED;
+      set_mask |= ZX_SOCKET_WRITABLE;
+      clear_mask_peer |= ZX_SOCKET_PEER_WRITE_DISABLED;
+      break;
+    case SocketDispatcher::Disposition::kNone:
+      break;
+  }
+}
+}  // namespace
+
+void SocketDispatcher::UpdateReadStatus(Disposition disposition_peer) {
+  switch (disposition_peer) {
+    case Disposition::kWriteDisabled:
+      read_disabled_ = true;
+      break;
+    case Disposition::kWriteEnabled:
+      read_disabled_ = false;
+      break;
+    case Disposition::kNone:
+      break;
+  }
+}
+
+bool SocketDispatcher::IsDispositionStateValid(Disposition disposition_peer) const {
+  // All the data written by an endpoint must be read by the other endpoint before writes can be
+  // re-enabled, as per /docs/reference/syscalls/socket_set_disposition.md.
+  return !(disposition_peer == Disposition::kWriteEnabled && !is_empty() &&
+           GetSignalsStateLocked() & ZX_SOCKET_PEER_WRITE_DISABLED);
+}
+
+zx_status_t SocketDispatcher::SetDisposition(Disposition disposition,
+                                             Disposition disposition_peer) {
+  canary_.Assert();
+
+  LTRACE_ENTRY;
+
+  if (disposition == Disposition::kNone && disposition_peer == Disposition::kNone) {
+    // Nothing to do, return early.
+    return ZX_OK;
+  }
+
+  zx_signals_t clear_mask = 0u, set_mask = 0u, clear_mask_peer = 0u, set_mask_peer = 0u;
+  ExtendMasksFromDisposition(disposition, clear_mask, set_mask, clear_mask_peer, set_mask_peer);
+  Guard<Mutex> guard{get_lock()};
+
+  if (!IsDispositionStateValid(disposition_peer)) {
+    return ZX_ERR_BAD_STATE;
+  }
+
+  if (peer_ != nullptr) {
+    AssertHeld(*peer_->get_lock());
+    if (!peer_->IsDispositionStateValid(disposition)) {
+      return ZX_ERR_BAD_STATE;
+    }
+    ExtendMasksFromDisposition(disposition_peer, clear_mask_peer, set_mask_peer, clear_mask,
+                               set_mask);
+    peer_->UpdateReadStatus(disposition);
+    peer_->UpdateStateLocked(clear_mask_peer, set_mask_peer);
+  }
+
+  UpdateReadStatus(disposition_peer);
+  UpdateStateLocked(clear_mask, set_mask);
+
+  return ZX_OK;
+}
+
 zx_status_t SocketDispatcher::Write(user_in_ptr<const char> src, size_t len, size_t* nwritten) {
   canary_.Assert();
 
@@ -166,7 +264,7 @@ zx_status_t SocketDispatcher::Write(user_in_ptr<const char> src, size_t len, siz
 
   Guard<Mutex> guard{get_lock()};
 
-  if (!peer_)
+  if (peer_ == nullptr)
     return ZX_ERR_PEER_CLOSED;
   zx_signals_t signals = GetSignalsStateLocked();
   if (signals & ZX_SOCKET_WRITE_DISABLED)
@@ -246,7 +344,7 @@ zx_status_t SocketDispatcher::Read(ReadType type, user_out_ptr<char> dst, size_t
     return ZX_ERR_INVALID_ARGS;
 
   if (is_empty()) {
-    if (!peer_)
+    if (peer_ == nullptr)
       return ZX_ERR_PEER_CLOSED;
     // If reading is disabled on our end and we're empty, we'll never become readable again.
     // Return a different error to let the caller know.

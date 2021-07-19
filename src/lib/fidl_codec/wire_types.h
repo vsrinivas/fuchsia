@@ -274,7 +274,9 @@ class Uint32Type : public IntegralType<uint32_t> {
     kSignals,
     kSocketCreateOptions,
     kSocketReadOptions,
+    // TODO(https://fxbug.dev/78128): Remove after ABI transition.
     kSocketShutdownOptions,
+    kSocketDisposition,
     kStatus,
     kSystemEventType,
     kSystemPowerctl,

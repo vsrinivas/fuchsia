@@ -37,7 +37,12 @@ class socket final : public object<socket> {
     return zx_socket_read(get(), options, buffer, len, actual);
   }
 
+  // TODO(https://fxbug.dev/78128): Remove shutdown after ABI transition.
   zx_status_t shutdown(uint32_t options) const { return zx_socket_shutdown(get(), options); }
+
+  zx_status_t set_disposition(uint32_t disposition, uint32_t disposition_peer) const {
+    return zx_socket_set_disposition(get(), disposition, disposition_peer);
+  }
 };
 
 using unowned_socket = unowned<socket>;

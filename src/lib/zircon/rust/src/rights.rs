@@ -34,6 +34,7 @@ bitflags! {
         const MANAGE_PROCESS = sys::ZX_RIGHT_MANAGE_PROCESS;
         const MANAGE_THREAD  = sys::ZX_RIGHT_MANAGE_THREAD;
         const APPLY_PROFILE  = sys::ZX_RIGHT_APPLY_PROFILE;
+        const MANAGE_SOCKET  = sys::ZX_RIGHT_MANAGE_SOCKET;
         const SAME_RIGHTS    = sys::ZX_RIGHT_SAME_RIGHTS;
 
         const BASIC          = sys::ZX_RIGHT_TRANSFER | sys::ZX_RIGHT_DUPLICATE |

@@ -114,6 +114,7 @@ Symbols:
   _zx_smc_call:    { Type: Func }
   _zx_socket_create: { Type: Func }
   _zx_socket_read: { Type: Func }
+  _zx_socket_set_disposition: { Type: Func }
   _zx_socket_shutdown: { Type: Func }
   _zx_socket_write: { Type: Func }
   _zx_status_get_string: { Type: Func }
@@ -297,6 +298,7 @@ Symbols:
   zx_smc_call:     { Type: Func, Weak: true }
   zx_socket_create: { Type: Func, Weak: true }
   zx_socket_read:  { Type: Func, Weak: true }
+  zx_socket_set_disposition: { Type: Func, Weak: true }
   zx_socket_shutdown: { Type: Func, Weak: true }
   zx_socket_write: { Type: Func, Weak: true }
   zx_status_get_string: { Type: Func, Weak: true }

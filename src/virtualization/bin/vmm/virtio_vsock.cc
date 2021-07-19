@@ -273,10 +273,15 @@ zx_status_t VirtioVsock::SocketConnection::WriteCredit(virtio_vsock_hdr_t* heade
 }
 
 zx_status_t VirtioVsock::SocketConnection::Shutdown(uint32_t flags) {
-  uint32_t shutdown_flags =
-      (flags & VIRTIO_VSOCK_FLAG_SHUTDOWN_RECV ? ZX_SOCKET_SHUTDOWN_READ : 0) |
-      (flags & VIRTIO_VSOCK_FLAG_SHUTDOWN_SEND ? ZX_SOCKET_SHUTDOWN_WRITE : 0);
-  return socket_.shutdown(shutdown_flags);
+  uint32_t disposition = 0;
+  if (flags & VIRTIO_VSOCK_FLAG_SHUTDOWN_SEND) {
+    disposition = ZX_SOCKET_DISPOSITION_WRITE_DISABLED;
+  }
+  uint32_t disposition_peer = 0;
+  if (flags & VIRTIO_VSOCK_FLAG_SHUTDOWN_RECV) {
+    disposition_peer = ZX_SOCKET_DISPOSITION_WRITE_DISABLED;
+  }
+  return socket_.set_disposition(disposition, disposition_peer);
 }
 
 static zx_status_t setup_desc_chain(VirtioQueue* queue, virtio_vsock_hdr_t* header,

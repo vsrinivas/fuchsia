@@ -167,11 +167,16 @@ impl Socket {
 
     /// Close half of the socket, so attempts by the other side to write will fail.
     ///
-    /// Implements the `ZX_SOCKET_SHUTDOWN_WRITE` option of
-    /// [zx_socket_shutdown](https://fuchsia.dev/fuchsia-src/reference/syscalls/socket_shutdown.md).
+    /// Implements the `ZX_SOCKET_DISPOSITION_WRITE_DISABLED` option of
+    /// [zx_socket_set_disposition](https://fuchsia.dev/fuchsia-src/reference/syscalls/socket_set_disposition.md).
     pub fn half_close(&self) -> Result<(), Status> {
-        let status =
-            unsafe { sys::zx_socket_shutdown(self.raw_handle(), sys::ZX_SOCKET_SHUTDOWN_WRITE) };
+        let status = unsafe {
+            sys::zx_socket_set_disposition(
+                self.raw_handle(),
+                sys::ZX_SOCKET_DISPOSITION_WRITE_DISABLED,
+                0,
+            )
+        };
         ok(status)
     }
 
@@ -225,7 +230,7 @@ mod tests {
         // Try reading when there is nothing to read.
         assert_eq!(s2.read(&mut read_vec), Err(Status::SHOULD_WAIT));
 
-        // Close the socket from one end.
+        // Disable writes on one end of the socket.
         assert!(s1.half_close().is_ok());
         assert_eq!(s2.read(&mut read_vec), Err(Status::BAD_STATE));
         assert_eq!(s1.write(b"fail"), Err(Status::BAD_STATE));

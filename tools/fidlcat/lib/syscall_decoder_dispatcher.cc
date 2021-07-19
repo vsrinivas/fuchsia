@@ -135,6 +135,9 @@ std::unique_ptr<fidl_codec::Type> SyscallTypeToFidlCodecType(fidlcat::SyscallTyp
     case SyscallType::kSocketShutdownOptions:
       return std::make_unique<fidl_codec::Uint32Type>(
           fidl_codec::Uint32Type::Kind::kSocketShutdownOptions);
+    case SyscallType::kSocketDisposition:
+      return std::make_unique<fidl_codec::Uint32Type>(
+          fidl_codec::Uint32Type::Kind::kSocketDisposition);
     case SyscallType::kStatus:
       return std::make_unique<fidl_codec::Uint32Type>(fidl_codec::Uint32Type::Kind::kStatus);
     case SyscallType::kSystemEventType:

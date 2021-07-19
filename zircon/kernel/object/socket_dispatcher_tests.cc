@@ -52,8 +52,7 @@ bool TestCreateWriteReadClose() {
     write->put<unsigned char>(static_cast<unsigned char>(i), i);
   }
   size_t written = 0;
-  auto write_status =
-      dispatcher0.dispatcher()->Write(write->user_in<char>(), kSize, &written);
+  auto write_status = dispatcher0.dispatcher()->Write(write->user_in<char>(), kSize, &written);
   EXPECT_EQ(write_status, ZX_OK);
   EXPECT_EQ(written, kSize);
   // Expect to not be able to read on the dispatcher side you just wrote to
@@ -69,8 +68,8 @@ bool TestCreateWriteReadClose() {
   ASSERT_TRUE(ac.check());
   for (uint i = 0; i < kSize; i++) {
     size_t bytes_read = 0;
-    auto read_status = dispatcher1.dispatcher()->Read(
-        SocketDispatcher::ReadType::kConsume, read->user_out<char>(), 1, &bytes_read);
+    auto read_status = dispatcher1.dispatcher()->Read(SocketDispatcher::ReadType::kConsume,
+                                                      read->user_out<char>(), 1, &bytes_read);
     EXPECT_EQ(read_status, ZX_OK);
     EXPECT_EQ(bytes_read, 1u);
     // Expect consuming 1-byte reads to reduce rx_buf_available.
@@ -94,9 +93,29 @@ bool TestCreateWriteReadClose() {
   END_TEST;
 }
 
+bool TestDispositionSwitchMustBeExhaustive() {
+  BEGIN_TEST;
+
+  [[maybe_unused]] auto fn = [](SocketDispatcher::Disposition disposition) {
+    switch (disposition) {
+      case SocketDispatcher::Disposition::kNone:
+        return true;
+      case SocketDispatcher::Disposition::kWriteDisabled:
+        return true;
+      case SocketDispatcher::Disposition::kWriteEnabled:
+        return true;
+    };
+    // This proves that exhaustive checkness is done by the switch - otherwise we would get a
+    // compilation error because we would not return a value in all code path.
+  };
+
+  END_TEST;
+}
+
 }  // namespace
 
 UNITTEST_START_TESTCASE(socket_dispatcher_tests)
 UNITTEST("TestCreateDestroyManySockets", TestCreateDestroyManySockets)
 UNITTEST("TestCreateWriteReadClose", TestCreateWriteReadClose)
+UNITTEST("TestDispositionSwitchMustBeExhaustive", TestDispositionSwitchMustBeExhaustive)
 UNITTEST_END_TESTCASE(socket_dispatcher_tests, "socket_dispatcher_tests", "SocketDispatcher tests")
