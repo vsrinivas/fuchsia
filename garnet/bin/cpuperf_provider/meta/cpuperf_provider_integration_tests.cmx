@@ -24,8 +24,8 @@
             "sys/cpu-trace"
         ],
         "features": [
-            "deprecated-shell",
-            "isolated-temp"
+            "isolated-temp",
+            "shell-commands"
         ],
         "services": [
             "fuchsia.process.Launcher",
