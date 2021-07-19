@@ -61,8 +61,9 @@ void init_build_id(uint level) {
   }
 }
 
-// This must happen before print_version, below.
-LK_INIT_HOOK(elf_build_id, &init_build_id, LK_INIT_LEVEL_HEAP - 2)
+// This must happen before print_version below and should happen as early as possible to ensure we
+// get useful backtraces when the kernel panics.
+LK_INIT_HOOK(elf_build_id, &init_build_id, LK_INIT_LEVEL_EARLIEST)
 
 void print_module(FILE* f, const char* build_id) {
   fprintf(f, "{{{module:0:kernel:elf:%s}}}\n", build_id);
