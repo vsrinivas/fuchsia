@@ -7,7 +7,7 @@
     },
     "sandbox": {
         "features": [
-            "deprecated-shell"
+            "hub"
         ],
         "services": [
             "fuchsia.sys.Environment"
