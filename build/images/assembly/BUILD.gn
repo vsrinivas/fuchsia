@@ -318,6 +318,8 @@ generated_product_config("product_config") {
   if (bootfs_only) {
     universe_packages = [ "//:additional_universe_packages" ]
   }
+
+  cmdline_deps = [ "//build/input:bootfs" ]
 }
 
 # Select the correct vbmeta and salt depending on if it is bootfs_only or not.

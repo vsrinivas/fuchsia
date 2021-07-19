@@ -73,7 +73,7 @@ template("zbi_input") {
                              "metadata",
                              "type",
                              "sources",
-                             "kernel_config_args",
+                             "kernel_cmdline_args",
                            ])
 
     metadata = {
@@ -82,16 +82,9 @@ template("zbi_input") {
 
       # This entry is used by assembly, instead of zbi_input_args, as this isn't
       # in the form of arguments to the zbi tool.
-      zbi_config_entry = [
-        {
-          forward_variables_from(invoker,
-                                 [
-                                   "type",
-                                   "sources",
-                                   "kernel_config_args",
-                                 ])
-        },
-      ]
+      if (defined(invoker.kernel_cmdline_args)) {
+        zbi_config_entry = invoker.kernel_cmdline_args
+      }
 
       if (defined(invoker.metadata)) {
         forward_variables_from(invoker.metadata, "*")

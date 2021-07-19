@@ -6,12 +6,15 @@ import("//build/dist/distribution_manifest.gni")
 import("//build/dist/resource.gni")
 import("//build/images/args.gni")
 import("//build/info/info.gni")
+import("//build/zbi/kernel_cmdline.gni")
 
 # Arguments
 #  output_path: Path to write the product config (required)
 #  base_packages: List of labels or groups of labels for the base packages (required)
 #  cache_packages: List of labels or groups of labels for the cache packages (required)
 #  kernel_image: Label of the kernel image (required)
+#  cmdline: List of kernel cmdline argument strings (optional)
+#  cmdline_deps: List of labels to walk to find the kernel cmdline args (optional)
 template("generated_product_config") {
   assert(defined(invoker.output_path), "Need to define the output path")
   assert(defined(invoker.base_packages), "Need to define the base packages")
@@ -31,7 +34,7 @@ template("generated_product_config") {
     extra_base_deps_list =
         "${target_name}_package_manifest_list.extra_base_deps"
     kernel_image_metadata = "${target_name}_kernel_image_metadata"
-    kernel_cmdline_args_metadata = "${target_name}_kernel_cmdline_args_metadata"
+    kernel_cmdline_args = "${target_name}_kernel_cmdline_args"
     bootfs_entries_metadata = "${target_name}_bootfs_entries_metadata"
   }
 
@@ -44,8 +47,8 @@ template("generated_product_config") {
         "$target_out_dir/package_lists/${target_name}_extra_base_deps"
     kernel_image_metadata =
         "$target_out_dir/${target_name}_kernel_image.gn_meta.json"
-    kernel_cmdline_args_metadata =
-        "$target_out_dir/${target_name}_kernel_cmdline_args.gn_meta.json"
+    kernel_cmdline_args =
+        "$target_out_dir/${target_name}_kernel_cmdline_args.json"
     bootfs_entries_metadata =
         "$target_out_dir/${target_name}_bootfs_entries.gn_meta.json"
   }
@@ -119,13 +122,28 @@ template("generated_product_config") {
     deps = [ invoker.kernel_image ]
   }
 
-  generated_file(labels.kernel_cmdline_args_metadata) {
+  # Accumulate the list of cmdline dependencies by first taking the
+  # directly-specified arguments, creating a new metadata target, and adding it
+  # to the list of all metadata targets, then second walking the metadata to
+  # construct the final list.
+  cmdline_deps = []
+  if (defined(invoker.cmdline)) {
+    kernel_cmdline("${target_name}_extra_cmdline") {
+      args = invoker.cmdline
+    }
+    cmdline_deps += [ ":${target_name}_extra_cmdline" ]
+  }
+  if (defined(invoker.cmdline_deps)) {
+    cmdline_deps += invoker.cmdline_deps
+  }
+
+  generated_file(labels.kernel_cmdline_args) {
     testonly = true
     data_keys = [ "zbi_config_entry" ]
     walk_keys = [ "zbi_input_barrier" ]
-    outputs = [ files.kernel_cmdline_args_metadata ]
+    outputs = [ files.kernel_cmdline_args ]
     output_conversion = "json"
-    deps = [ "//build/input:bootfs" ]
+    deps = cmdline_deps
   }
 
   distribution_manifest(labels.bootfs_entries_metadata) {
@@ -197,20 +215,20 @@ template("generated_product_config") {
     # All builds must use a ZBI, and those relevant inputs, deps, and args:
     inputs += [
       files.kernel_image_metadata,
-      files.kernel_cmdline_args_metadata,
+      files.kernel_cmdline_args,
       files.bootfs_entries_metadata,
     ]
     deps += [
       ":${labels.bootfs_entries_metadata}",
-      ":${labels.kernel_cmdline_args_metadata}",
+      ":${labels.kernel_cmdline_args}",
       ":${labels.kernel_image_metadata}",
     ]
 
     args += [
       "--kernel-image-metadata",
       rebase_path(files.kernel_image_metadata, root_build_dir),
-      "--zbi-config-entries",
-      rebase_path(files.kernel_cmdline_args_metadata, root_build_dir),
+      "--kernel-cmdline",
+      rebase_path(files.kernel_cmdline_args, root_build_dir),
       "--bootfs-entries",
       rebase_path(files.bootfs_entries_metadata, root_build_dir),
       "--output",

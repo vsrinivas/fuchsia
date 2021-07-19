@@ -33,6 +33,6 @@ template("kernel_cmdline") {
     }
 
     # Add the raw args for use with assembly.
-    kernel_config_args = invoker.args
+    kernel_cmdline_args = invoker.args
   }
 }

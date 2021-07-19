@@ -20,7 +20,7 @@ def main():
     parser.add_argument('--version-file')
     parser.add_argument('--epoch-file')
     parser.add_argument(
-        '--zbi-config-entries', type=argparse.FileType('r'), required=True)
+        '--kernel-cmdline', type=argparse.FileType('r'), required=True)
     parser.add_argument(
         '--kernel-image-metadata', type=argparse.FileType('r'), required=True)
     parser.add_argument(
@@ -62,17 +62,13 @@ def main():
 
     # The build_api_module("images") entry with name "kernel" and type "zbi"
     # is the kernel ZBI to include in the bootable ZBI.  There can be only one.
-    [kernel_path] = [image["path"] for image in kernel_metadata
-                     if image["name"] == "kernel" and image["type"] == "zbi"]
+    [kernel_path] = [
+        image["path"]
+        for image in kernel_metadata
+        if image["name"] == "kernel" and image["type"] == "zbi"
+    ]
     config["kernel_image"] = kernel_path
-
-    zbi_config_entries = json.load(args.zbi_config_entries)
-    kernel_boot_args = []
-    for entry in zbi_config_entries:
-        if 'kernel_config_args' in entry:
-            kernel_boot_args.extend(entry['kernel_config_args'])
-
-    config["kernel_cmdline"] = kernel_boot_args
+    config["kernel_cmdline"] = json.load(args.kernel_cmdline)
     config["bootfs_files"] = json.load(args.bootfs_entries)
 
     json.dump(config, args.output, indent=2)
