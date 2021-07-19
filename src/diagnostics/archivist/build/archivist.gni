@@ -1,0 +1,41 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config.gni")
+import("//build/images/filesystem_limits.gni")
+import("//build/rust/rustc_binary.gni")
+
+# Define a Rust binary with optimizations used by the Archivist.
+#
+# This template should be used for the Archivist itself as well as any
+# benchmarks building on top of the Archivist library.
+#
+# Has the same properties as rustc_binary.
+template("archivist_optimized_binary") {
+  rustc_binary(target_name) {
+    forward_variables_from(invoker, "*")
+
+    # Optimize for size
+    force_opt = "z"
+
+    # Can't dynamically link libstd and libtest for ZBI binaries
+    configs -= [ "//build/config/fuchsia:dynamic_rust_standard_library" ]
+
+    # If max ZBI size is <=16 MiB
+    if (max_fuchsia_zbi_size > 0 && max_fuchsia_zbi_size <= 16777216) {
+      # Past experience tells us that Archivist binaries are too large to fit into a ZBI
+      # that's capped at 16 MiB unless we enable Thin LTO.
+      # Thin LTO provides a ~65% decrease in binary size, at a cost of a ~5x
+      # increase in compile wall time.
+      # Regular ("fat") LTO provides a ~70% size decrease but is ~6x slower than
+      # Thin LTO.
+      # The team decided that Thin LTO is a reasonable compromise.
+      # It's not entirely clear why Thin LTO produces size improvements.
+      # See: fxbug.dev/80514
+      configs += [ "//build/config/lto:thinlto" ]
+      configs -= [ "//build/config/lto:thinlto" ]
+      configs += [ "//build/config/lto:thinlto" ]
+    }
+  }
+}

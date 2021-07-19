@@ -3,18 +3,11 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
-import("//build/rust/rustc_binary.gni")
+import("//src/diagnostics/archivist/build/archivist.gni")
 
-rustc_binary("bin") {
+archivist_optimized_binary("bin") {
   output_name = "archivist_benchmarks"
   edition = "2018"
-  force_opt = "z"
-
-  # Match configs on archivist
-  configs += [ "//build/config/lto:thinlto" ]
-  configs -= [ "//build/config/lto:thinlto" ]
-  configs += [ "//build/config/lto:thinlto" ]
-  configs -= [ "//build/config/fuchsia:dynamic_rust_standard_library" ]
 
   deps = [
     "//src/developer/fuchsia-criterion",
