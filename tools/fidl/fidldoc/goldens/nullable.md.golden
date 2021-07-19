@@ -12,7 +12,7 @@
 ### Add {#SimpleProtocol.Add}
 
 
-#### Request
+#### Request {#SimpleProtocol.Add_Request}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     <tr>
@@ -28,7 +28,7 @@
         </tr></table>
 
 
-#### Response
+#### Response {#SimpleProtocol.Add_Response}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     <tr>

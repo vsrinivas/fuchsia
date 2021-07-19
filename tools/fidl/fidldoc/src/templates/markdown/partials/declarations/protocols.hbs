@@ -12,7 +12,7 @@
 {{> doc ~}}
 
 {{#if has_request}}
-#### Request
+#### Request {#{{methodId (rpn name) (rpn ../name)}}_Request}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     {{#each maybe_request ~}}
@@ -29,7 +29,7 @@
 {{~ /if}}
 
 {{#if has_response}}
-#### Response
+#### Response {#{{methodId (rpn name) (rpn ../name)}}_Response}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     {{#each maybe_response ~}}

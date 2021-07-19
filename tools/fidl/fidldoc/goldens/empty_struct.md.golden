@@ -14,7 +14,7 @@
 
 
 
-#### Response
+#### Response {#EmptyProtocol.Receive_Response}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     <tr>
@@ -27,7 +27,7 @@
 ### Send {#EmptyProtocol.Send}
 
 
-#### Request
+#### Request {#EmptyProtocol.Send_Request}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     <tr>
@@ -42,7 +42,7 @@
 ### SendAndReceive {#EmptyProtocol.SendAndReceive}
 
 
-#### Request
+#### Request {#EmptyProtocol.SendAndReceive_Request}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     <tr>
@@ -53,7 +53,7 @@
         </tr></table>
 
 
-#### Response
+#### Response {#EmptyProtocol.SendAndReceive_Response}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     <tr>

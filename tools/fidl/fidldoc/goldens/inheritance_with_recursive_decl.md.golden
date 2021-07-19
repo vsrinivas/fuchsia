@@ -12,7 +12,7 @@
 ### First {#Child.First}
 
 
-#### Request
+#### Request {#Child.First_Request}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     <tr>
@@ -27,7 +27,7 @@
 ### Second {#Child.Second}
 
 
-#### Request
+#### Request {#Child.Second_Request}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     <tr>
@@ -46,7 +46,7 @@
 ### First {#Parent.First}
 
 
-#### Request
+#### Request {#Parent.First_Request}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     <tr>

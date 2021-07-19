@@ -12,7 +12,7 @@
 ### MethodOnFirst {#FirstProtocol.MethodOnFirst}
 
 
-#### Request
+#### Request {#FirstProtocol.MethodOnFirst_Request}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     </table>
@@ -26,7 +26,7 @@
 ### MethodOnSecond {#SecondProtocol.MethodOnSecond}
 
 
-#### Request
+#### Request {#SecondProtocol.MethodOnSecond_Request}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     </table>

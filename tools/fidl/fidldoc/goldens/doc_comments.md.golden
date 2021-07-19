@@ -18,7 +18,7 @@
 <p>method comment #1</p>
 <p>method comment #3</p>
 
-#### Request
+#### Request {#Interface.Method_Request}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     </table>
@@ -32,7 +32,7 @@
 
 
 
-#### Response
+#### Response {#Interface.OnEvent_Response}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     </table>

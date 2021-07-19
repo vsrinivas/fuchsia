@@ -12,13 +12,13 @@
 ### FlexibleXUnionHenceResponseMustBeHeapAllocated {#TestProtocol.FlexibleXUnionHenceResponseMustBeHeapAllocated}
 
 
-#### Request
+#### Request {#TestProtocol.FlexibleXUnionHenceResponseMustBeHeapAllocated_Request}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     </table>
 
 
-#### Response
+#### Response {#TestProtocol.FlexibleXUnionHenceResponseMustBeHeapAllocated_Response}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     <tr>
@@ -31,13 +31,13 @@
 ### StrictXUnionHenceResponseMayBeStackAllocated {#TestProtocol.StrictXUnionHenceResponseMayBeStackAllocated}
 
 
-#### Request
+#### Request {#TestProtocol.StrictXUnionHenceResponseMayBeStackAllocated_Request}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     </table>
 
 
-#### Response
+#### Response {#TestProtocol.StrictXUnionHenceResponseMayBeStackAllocated_Response}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     <tr>

@@ -14,7 +14,7 @@
 
 
 
-#### Response
+#### Response {#ChannelProtocol.EventA_Response}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     <tr>
@@ -32,7 +32,7 @@
 ### MethodA {#ChannelProtocol.MethodA}
 
 
-#### Request
+#### Request {#ChannelProtocol.MethodA_Request}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     <tr>
@@ -52,7 +52,7 @@
 ### MethodB {#ChannelProtocol.MethodB}
 
 
-#### Request
+#### Request {#ChannelProtocol.MethodB_Request}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     <tr>
@@ -68,7 +68,7 @@
         </tr></table>
 
 
-#### Response
+#### Response {#ChannelProtocol.MethodB_Response}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     <tr>
@@ -81,7 +81,7 @@
 ### MutateSocket {#ChannelProtocol.MutateSocket}
 
 
-#### Request
+#### Request {#ChannelProtocol.MutateSocket_Request}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     <tr>
@@ -92,7 +92,7 @@
         </tr></table>
 
 
-#### Response
+#### Response {#ChannelProtocol.MutateSocket_Response}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     <tr>
@@ -105,7 +105,7 @@
 ### TakeHandle {#ChannelProtocol.TakeHandle}
 
 
-#### Request
+#### Request {#ChannelProtocol.TakeHandle_Request}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     <tr>
@@ -116,7 +116,7 @@
         </tr></table>
 
 
-#### Response
+#### Response {#ChannelProtocol.TakeHandle_Response}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     </table>
@@ -128,7 +128,7 @@
 ### Method {#DiscoverableProtocol.Method}
 
 
-#### Request
+#### Request {#DiscoverableProtocol.Method_Request}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     </table>
@@ -144,7 +144,7 @@
 
 
 
-#### Response
+#### Response {#HandleRightsProtocol.AnEvent_Response}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     <tr>
@@ -157,7 +157,7 @@
 ### NoResponseMethod {#HandleRightsProtocol.NoResponseMethod}
 
 
-#### Request
+#### Request {#HandleRightsProtocol.NoResponseMethod_Request}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     <tr>
@@ -172,7 +172,7 @@
 ### ResponseMethod {#HandleRightsProtocol.ResponseMethod}
 
 
-#### Request
+#### Request {#HandleRightsProtocol.ResponseMethod_Request}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     <tr>
@@ -183,7 +183,7 @@
         </tr></table>
 
 
-#### Response
+#### Response {#HandleRightsProtocol.ResponseMethod_Response}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     <tr>
@@ -200,7 +200,7 @@
 ### MethodC {#SyscallProtocol.MethodC}
 
 
-#### Request
+#### Request {#SyscallProtocol.MethodC_Request}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     <tr>
@@ -226,7 +226,7 @@
 
 
 
-#### Response
+#### Response {#Transitional.Event_Response}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     <tr>
@@ -239,7 +239,7 @@
 ### OneWay {#Transitional.OneWay}
 
 
-#### Request
+#### Request {#Transitional.OneWay_Request}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     <tr>
@@ -254,7 +254,7 @@
 ### Request {#Transitional.Request}
 
 
-#### Request
+#### Request {#Transitional.Request_Request}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     <tr>
@@ -265,7 +265,7 @@
         </tr></table>
 
 
-#### Response
+#### Response {#Transitional.Request_Response}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     <tr>
@@ -282,13 +282,13 @@
 ### NoRequestEmptyResponse {#WithAndWithoutRequestResponse.NoRequestEmptyResponse}
 
 
-#### Request
+#### Request {#WithAndWithoutRequestResponse.NoRequestEmptyResponse_Request}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     </table>
 
 
-#### Response
+#### Response {#WithAndWithoutRequestResponse.NoRequestEmptyResponse_Response}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     </table>
@@ -296,7 +296,7 @@
 ### NoRequestNoResponse {#WithAndWithoutRequestResponse.NoRequestNoResponse}
 
 
-#### Request
+#### Request {#WithAndWithoutRequestResponse.NoRequestNoResponse_Request}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     </table>
@@ -306,13 +306,13 @@
 ### NoRequestWithResponse {#WithAndWithoutRequestResponse.NoRequestWithResponse}
 
 
-#### Request
+#### Request {#WithAndWithoutRequestResponse.NoRequestWithResponse_Request}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     </table>
 
 
-#### Response
+#### Response {#WithAndWithoutRequestResponse.NoRequestWithResponse_Response}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     <tr>
@@ -327,7 +327,7 @@
 
 
 
-#### Response
+#### Response {#WithAndWithoutRequestResponse.OnEmptyResponse_Response}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     </table>
@@ -337,7 +337,7 @@
 
 
 
-#### Response
+#### Response {#WithAndWithoutRequestResponse.OnWithResponse_Response}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     <tr>
@@ -350,7 +350,7 @@
 ### WithRequestEmptyResponse {#WithAndWithoutRequestResponse.WithRequestEmptyResponse}
 
 
-#### Request
+#### Request {#WithAndWithoutRequestResponse.WithRequestEmptyResponse_Request}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     <tr>
@@ -361,7 +361,7 @@
         </tr></table>
 
 
-#### Response
+#### Response {#WithAndWithoutRequestResponse.WithRequestEmptyResponse_Response}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     </table>
@@ -369,7 +369,7 @@
 ### WithRequestNoResponse {#WithAndWithoutRequestResponse.WithRequestNoResponse}
 
 
-#### Request
+#### Request {#WithAndWithoutRequestResponse.WithRequestNoResponse_Request}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     <tr>
@@ -384,7 +384,7 @@
 ### WithRequestWithResponse {#WithAndWithoutRequestResponse.WithRequestWithResponse}
 
 
-#### Request
+#### Request {#WithAndWithoutRequestResponse.WithRequestWithResponse_Request}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     <tr>
@@ -395,7 +395,7 @@
         </tr></table>
 
 
-#### Response
+#### Response {#WithAndWithoutRequestResponse.WithRequestWithResponse_Response}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     <tr>
@@ -412,13 +412,13 @@
 ### ErrorAsEnum {#WithErrorSyntax.ErrorAsEnum}
 
 
-#### Request
+#### Request {#WithErrorSyntax.ErrorAsEnum_Request}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     </table>
 
 
-#### Response
+#### Response {#WithErrorSyntax.ErrorAsEnum_Response}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     <tr>
@@ -431,13 +431,13 @@
 ### ErrorAsPrimitive {#WithErrorSyntax.ErrorAsPrimitive}
 
 
-#### Request
+#### Request {#WithErrorSyntax.ErrorAsPrimitive_Request}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     </table>
 
 
-#### Response
+#### Response {#WithErrorSyntax.ErrorAsPrimitive_Response}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     <tr>
@@ -450,13 +450,13 @@
 ### HandleInResult {#WithErrorSyntax.HandleInResult}
 
 
-#### Request
+#### Request {#WithErrorSyntax.HandleInResult_Request}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     </table>
 
 
-#### Response
+#### Response {#WithErrorSyntax.HandleInResult_Response}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     <tr>
@@ -469,13 +469,13 @@
 ### ResponseAsStruct {#WithErrorSyntax.ResponseAsStruct}
 
 
-#### Request
+#### Request {#WithErrorSyntax.ResponseAsStruct_Request}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     </table>
 
 
-#### Response
+#### Response {#WithErrorSyntax.ResponseAsStruct_Response}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     <tr>
@@ -492,7 +492,7 @@
 ### ClientEnds {#WithProtocolEnds.ClientEnds}
 
 
-#### Request
+#### Request {#WithProtocolEnds.ClientEnds_Request}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     <tr>
@@ -503,7 +503,7 @@
         </tr></table>
 
 
-#### Response
+#### Response {#WithProtocolEnds.ClientEnds_Response}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     <tr>
@@ -516,7 +516,7 @@
 ### ServerEnds {#WithProtocolEnds.ServerEnds}
 
 
-#### Request
+#### Request {#WithProtocolEnds.ServerEnds_Request}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     <tr>
@@ -527,7 +527,7 @@
         </tr></table>
 
 
-#### Response
+#### Response {#WithProtocolEnds.ServerEnds_Response}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     <tr>
@@ -540,7 +540,7 @@
 ### StructContainingEnds {#WithProtocolEnds.StructContainingEnds}
 
 
-#### Request
+#### Request {#WithProtocolEnds.StructContainingEnds_Request}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     <tr>
@@ -551,7 +551,7 @@
         </tr></table>
 
 
-#### Response
+#### Response {#WithProtocolEnds.StructContainingEnds_Response}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     <tr>

@@ -12,7 +12,7 @@
 ### foo {#Example.foo}
 
 
-#### Request
+#### Request {#Example.foo_Request}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     <tr>
@@ -23,7 +23,7 @@
         </tr></table>
 
 
-#### Response
+#### Response {#Example.foo_Response}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     <tr>

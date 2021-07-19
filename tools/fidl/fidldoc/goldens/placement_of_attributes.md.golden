@@ -12,7 +12,7 @@
 ### Method {#ExampleProtocol.Method}
 
 
-#### Request
+#### Request {#ExampleProtocol.Method_Request}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     <tr>

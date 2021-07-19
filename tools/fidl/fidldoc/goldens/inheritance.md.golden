@@ -12,7 +12,7 @@
 ### foo {#sub.foo}
 
 
-#### Request
+#### Request {#sub.foo_Request}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     <tr>
@@ -23,7 +23,7 @@
         </tr></table>
 
 
-#### Response
+#### Response {#sub.foo_Response}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     <tr>
@@ -40,7 +40,7 @@
 ### foo {#super.foo}
 
 
-#### Request
+#### Request {#super.foo_Request}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     <tr>
@@ -51,7 +51,7 @@
         </tr></table>
 
 
-#### Response
+#### Response {#super.foo_Response}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     <tr>

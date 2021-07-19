@@ -16,13 +16,13 @@
 ### GetChild {#Parent.GetChild}
 
 
-#### Request
+#### Request {#Parent.GetChild_Request}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     </table>
 
 
-#### Response
+#### Response {#Parent.GetChild_Response}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     <tr>
@@ -35,13 +35,13 @@
 ### GetChildRequest {#Parent.GetChildRequest}
 
 
-#### Request
+#### Request {#Parent.GetChildRequest_Request}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     </table>
 
 
-#### Response
+#### Response {#Parent.GetChildRequest_Response}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     <tr>
@@ -54,7 +54,7 @@
 ### TakeChild {#Parent.TakeChild}
 
 
-#### Request
+#### Request {#Parent.TakeChild_Request}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     <tr>
@@ -69,7 +69,7 @@
 ### TakeChildRequest {#Parent.TakeChildRequest}
 
 
-#### Request
+#### Request {#Parent.TakeChildRequest_Request}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     <tr>

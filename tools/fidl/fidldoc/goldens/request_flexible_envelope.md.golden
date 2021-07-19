@@ -12,7 +12,7 @@
 ### RequestFlexibleResponseStrict {#Protocol.RequestFlexibleResponseStrict}
 
 
-#### Request
+#### Request {#Protocol.RequestFlexibleResponseStrict_Request}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     <tr>
@@ -23,7 +23,7 @@
         </tr></table>
 
 
-#### Response
+#### Response {#Protocol.RequestFlexibleResponseStrict_Response}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     <tr>
@@ -36,7 +36,7 @@
 ### RequestStrictResponseFlexible {#Protocol.RequestStrictResponseFlexible}
 
 
-#### Request
+#### Request {#Protocol.RequestStrictResponseFlexible_Request}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     <tr>
@@ -47,7 +47,7 @@
         </tr></table>
 
 
-#### Response
+#### Response {#Protocol.RequestStrictResponseFlexible_Response}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     <tr>

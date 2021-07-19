@@ -12,13 +12,13 @@
 ### GetFoo {#Top.GetFoo}
 
 
-#### Request
+#### Request {#Top.GetFoo_Request}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     </table>
 
 
-#### Response
+#### Response {#Top.GetFoo_Response}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
     <tr>
