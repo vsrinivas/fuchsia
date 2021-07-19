@@ -58,41 +58,20 @@ class ErmineDriver {
   /// This restarts the workstation session and connects to the running instance
   /// of Ermine using FlutterDriver.
   Future<void> setUp() async {
-    await waitFor(() async {
-      // Restart the workstation session.
-      final result = await sl4f.ssh.run('session_control restart');
-      if (result.exitCode != 0) {
-        fail('failed to restart workstation session.');
-      }
+    // Restart the workstation session.
+    final result = await sl4f.ssh.run('session_control restart');
+    if (result.exitCode != 0) {
+      fail('failed to restart workstation session.');
+    }
 
-      // Wait for Ermine to start.
-      if (!await isRunning(ermineUrl).catchError((e) {
-        print('$e: Failed wait for isRunning');
-        return false;
-      })) {
-        return false;
-      }
+    // Initialize Ermine's flutter driver and web driver connectors.
+    await _connector.initialize();
 
-      // Wait for the shell to be visible.
-      if (!await waitForOverlays().catchError((e) {
-        print('$e: Failed to waitForOverlays');
-        return false;
-      })) {
-        return false;
-      }
-
-      // Initialize Ermine's flutter driver and web driver connectors.
-      await _connector.initialize();
-
-      // Now connect to ermine.
-      _driver = await _connector.driverForIsolate('ermine');
-      if (_driver == null) {
-        print('Unable to connect to ermine. Retrying...');
-        return false;
-      }
-
-      return true;
-    }, timeout: Duration(minutes: 2));
+    // Now connect to ermine.
+    _driver = await _connector.driverForIsolate('ermine');
+    if (_driver == null) {
+      fail('Unable to connect to ermine.');
+    }
   }
 
   /// Closes [FlutterDriverConnector] and performs cleanup.

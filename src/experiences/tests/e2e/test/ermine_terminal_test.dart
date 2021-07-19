@@ -23,7 +23,7 @@ void main() {
 
   const componentUrl = 'fuchsia-pkg://fuchsia.com/terminal#meta/terminal.cmx';
 
-  setUp(() async {
+  setUpAll(() async {
     sl4f = Sl4f.fromEnvironment();
     await sl4f.startServer();
 
@@ -33,11 +33,15 @@ void main() {
     input = Input(sl4f);
   });
 
-  tearDown(() async {
+  tearDownAll(() async {
     // Any of these may end up being null if the test fails in setup.
     await ermine.tearDown();
     await sl4f.stopServer();
     sl4f.close();
+  });
+
+  setUp(() async {
+    await ermine.driver.requestData('closeAll');
   });
 
   Future<List<ViewSnapshot>> _waitForViews(String componentUrl, int instances,

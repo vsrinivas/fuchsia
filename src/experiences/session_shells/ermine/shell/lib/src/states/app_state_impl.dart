@@ -281,6 +281,13 @@ class AppStateImpl with Disposable implements AppState {
     topView.value.close();
   }.asAction();
 
+  late final Action closeAll = () {
+    for (final view in views) {
+      view.close();
+    }
+    views.clear();
+  }.asAction();
+
   @override
   late final launch = (String title, String url) async {
     try {
@@ -330,6 +337,7 @@ class AppStateImpl with Disposable implements AppState {
         'switchPrev': switchPrev,
         'cancel': cancel,
         'close': closeView,
+        'closeAll': closeAll,
         'settings': showOverlay,
         'shortcuts': showOverlay,
         'screenSaver': showScreenSaver,
