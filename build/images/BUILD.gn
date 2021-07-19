@@ -2796,12 +2796,18 @@ group("build_args_metadata") {
 # Build the UEFI disk image.
 # GCE, a consumer of this image, requires it to be named disk.raw
 uefi_disk_path = "$target_out_dir/disk.raw"
-compiled_action("uefi-disk") {
-  hermetic_deps = false
+mkfs_label = "//zircon/third_party/uapp/mkfs-msdosfs($host_toolchain)"
+mkfs_out_dir = get_label_info(mkfs_label, "root_out_dir")
+mkfs_bin = "$mkfs_out_dir/mkfs-msdosfs"
 
-  deps = uefi_disk_deps + [ "//src/firmware/gigaboot:bootloader(//src/firmware/gigaboot:efi_$target_cpu)" ]
+compiled_action("uefi-disk") {
+  deps = uefi_disk_deps + [
+           mkfs_label,
+           "//src/firmware/gigaboot:bootloader(//src/firmware/gigaboot:efi_$target_cpu)",
+         ]
   testonly = true
   tool = "//tools/make-fuchsia-vol"
+  inputs = [ mkfs_bin ]
   args = [
     "-fuchsia-build-dir",
     rebase_path("$root_build_dir"),
@@ -2811,6 +2817,17 @@ compiled_action("uefi-disk") {
 
   if (bootfs_only) {
     args += [ "-ramdisk-only" ]
+  } else {
+    inputs += [
+      fvm_tool_path,
+      data_image_path,
+      blob_image_path,
+    ]
+    deps += [
+      "//build/images:blob.blk",
+      "//build/images:data.blk",
+      "//src/storage/bin/fvm:fvm(//build/toolchain:host_x64)",
+    ]
   }
 
   args += [ rebase_path(uefi_disk_path) ]

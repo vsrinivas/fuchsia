@@ -4,6 +4,7 @@
 
 import("//build/compiled_action.gni")
 import("//build/config/clang/clang.gni")
+import("//src/developer/ffx/build/ffx_action.gni")
 
 declare_args() {
   # If true, vboot() image builds print out the exact "futility" command line.
@@ -184,11 +185,7 @@ template("esp") {
   }
   output_file = "$root_out_dir/$output_file"
 
-  mkfs_label = "//zircon/third_party/uapp/mkfs-msdosfs($host_toolchain)"
-  mkfs_out_dir = get_label_info(mkfs_label, "root_out_dir")
-  mkfs_bin = "$mkfs_out_dir/mkfs-msdosfs"
-
-  compiled_action(target_name) {
+  ffx_action(target_name) {
     forward_variables_from(invoker,
                            [
                              "deps",
@@ -197,15 +194,13 @@ template("esp") {
                              "visibility",
                            ])
 
-    tool = "//tools/make-efi"
-
     outputs = [ output_file ]
-    inputs = [ mkfs_bin ]
+    inputs = []
     args = [
+      "efi",
+      "create",
       "--output",
       rebase_path(output_file, root_build_dir),
-      "--mkfs",
-      rebase_path(mkfs_bin, root_build_dir),
     ]
 
     if (defined(invoker.zircon_bin)) {
@@ -255,7 +250,5 @@ template("esp") {
       inputs += [ gigaboot_bin ]
       deps += [ gigaboot_target ]
     }
-
-    deps += [ mkfs_label ]
   }
 }
