@@ -138,9 +138,6 @@ zx_status_t InterruptEventDispatcher::BindVcpu(fbl::RefPtr<VcpuDispatcher> vcpu_
 interrupt_eoi InterruptEventDispatcher::IrqHandler(void* ctx) {
   InterruptEventDispatcher* self = reinterpret_cast<InterruptEventDispatcher*>(ctx);
 
-  if (self->get_flags() & INTERRUPT_MASK_POSTWAIT)
-    mask_interrupt(self->vector_);
-
   self->InterruptHandler();
   return IRQ_EOI_DEACTIVATE;
 }
