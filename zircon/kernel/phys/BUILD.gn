@@ -310,6 +310,12 @@ zbi_executable("physboot") {
     deps += [ "//zircon/kernel/arch/x86/phys/boot-shim:trampoline-boot" ]
     include_dirs = [ "//zircon/kernel/arch/x86/phys/boot-shim" ]
   }
+
+  # TODO(fxbug.dev/79992): Work around LTO compilation bugs.
+  # Remove this when the compiler issues are resolved.
+  if (current_cpu == "arm64") {
+    exclude_toolchain_tags = [ "lto" ]
+  }
 }
 
 source_set("handoff") {
