@@ -30,10 +30,5 @@ toc:
     path: /docs/development/diagnostics/logs/severity.md
   - title: "View"
     path: /docs/development/diagnostics/logs/viewing.md
-
-# TODO(fxbug.dev/60406)
-# - title: "Generate Selectors"
-#   path: /docs/development/diagnostics/selectors.md
-
 - title: "Analyze with Triage"
   path: /docs/development/diagnostics/triage/codelab.md
