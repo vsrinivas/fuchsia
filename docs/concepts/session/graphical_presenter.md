@@ -2,7 +2,7 @@
 
 ## Overview
 
-[Graphical presentet][glossary.GraphicalPresenter] is a component role, within
+[Graphical presenter][glossary.GraphicalPresenter] is a component role, within
 the session, that presents multiple graphical views to the user; most commonly,
 views from the session's [components][glossary.component].
 
