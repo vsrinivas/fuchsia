@@ -24,7 +24,7 @@ TEST(ClientController, BindingTwicePanics) {
   ClientController controller;
 
   controller.Bind(std::make_shared<WireClientImpl<TestProtocol>>(), std::move(h1),
-                  loop.dispatcher(), nullptr, fidl::internal::AnyTeardownObserver::Noop(),
+                  loop.dispatcher(), nullptr, fidl::AnyTeardownObserver::Noop(),
                   fidl::internal::ThreadingPolicy::kCreateAndTeardownFromAnyThread);
 
   ASSERT_DEATH([&] {
@@ -33,7 +33,7 @@ TEST(ClientController, BindingTwicePanics) {
     __lsan::ScopedDisabler _;
 #endif
     controller.Bind(std::make_shared<WireClientImpl<TestProtocol>>(), std::move(h2),
-                    loop.dispatcher(), nullptr, fidl::internal::AnyTeardownObserver::Noop(),
+                    loop.dispatcher(), nullptr, fidl::AnyTeardownObserver::Noop(),
                     fidl::internal::ThreadingPolicy::kCreateAndTeardownFromAnyThread);
   });
 }

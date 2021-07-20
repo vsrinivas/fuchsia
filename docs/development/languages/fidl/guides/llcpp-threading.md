@@ -192,7 +192,7 @@ Here is an example showing this pattern:
 
 #### Custom teardown observer
 
-Provide an instance of `fidl::internal::AnyTeardownObserver` to the bindings.
+Provide an instance of `fidl::AnyTeardownObserver` to the bindings.
 The observer will be notified when teardown is complete. There are several
 ways to create a teardown observer:
 

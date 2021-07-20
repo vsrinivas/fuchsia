@@ -56,6 +56,8 @@ class AsyncEventHandler {
   virtual void on_fidl_error(::fidl::UnbindInfo error) {}
 };
 
+}  // namespace internal
+
 // A type-erasing object to inform the user the completion of bindings teardown.
 //
 // Teardown observers are constructed by public helper functions such as
@@ -106,7 +108,6 @@ class AnyTeardownObserver final {
   Closure callback_;
 };
 
-}  // namespace internal
 }  // namespace fidl
 
 #endif  // LIB_FIDL_LLCPP_INTERNAL_CLIENT_DETAILS_H_

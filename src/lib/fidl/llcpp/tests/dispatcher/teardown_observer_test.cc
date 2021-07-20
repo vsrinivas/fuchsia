@@ -11,7 +11,7 @@ namespace {
 TEST(TeardownObserver, ObserveTeardown) {
   bool called = false;
   {
-    fidl::internal::AnyTeardownObserver observer = fidl::ObserveTeardown([&called]() {
+    fidl::AnyTeardownObserver observer = fidl::ObserveTeardown([&called]() {
       ASSERT_FALSE(called);
       called = true;
     });
@@ -26,7 +26,7 @@ TEST(TeardownObserver, ShareUntilTeardown) {
   std::shared_ptr p = std::make_shared<int>();
   EXPECT_EQ(1, p.use_count());
   {
-    fidl::internal::AnyTeardownObserver observer = fidl::ShareUntilTeardown(p);
+    fidl::AnyTeardownObserver observer = fidl::ShareUntilTeardown(p);
     EXPECT_EQ(2, p.use_count());
     std::move(observer).Notify();
     EXPECT_EQ(1, p.use_count());
@@ -49,7 +49,7 @@ TEST(TeardownObserver, OwnUntilTeardown) {
   std::unique_ptr p = std::make_unique<LifetimeTracker>(&alive);
   ASSERT_TRUE(alive);
   {
-    auto observer = fidl::internal::AnyTeardownObserver::ByOwning(std::move(p));
+    auto observer = fidl::AnyTeardownObserver::ByOwning(std::move(p));
     ASSERT_TRUE(alive);
     std::move(observer).Notify();
     ASSERT_FALSE(alive);
@@ -58,7 +58,7 @@ TEST(TeardownObserver, OwnUntilTeardown) {
 }
 
 TEST(AnyTeardownObserver, CannotNotifyTwice) {
-  auto observer = fidl::internal::AnyTeardownObserver::ByCallback([] {});
+  auto observer = fidl::AnyTeardownObserver::ByCallback([] {});
   std::move(observer).Notify();
   ASSERT_DEATH([&] { std::move(observer).Notify(); });
 }
