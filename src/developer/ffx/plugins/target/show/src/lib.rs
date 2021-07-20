@@ -55,7 +55,7 @@ pub async fn show_cmd(
         remote_proxy,
         daemon_proxy,
         target_show_args,
-        Box::new(stdout()),
+        &mut stdout(),
     )
     .await
 }
@@ -72,10 +72,10 @@ async fn show_cmd_impl<W: Write>(
     remote_proxy: RemoteControlProxy,
     daemon_proxy: DaemonProxy,
     target_show_args: args::TargetShow,
-    mut writer: W,
+    writer: &mut W,
 ) -> Result<()> {
     if target_show_args.version {
-        println!("ffx target show version 0.1");
+        writeln!(writer, "ffx target show version 0.1")?;
         return Ok(());
     }
     // To add more show information, add a `gather_*_show(*) call to this
@@ -96,9 +96,9 @@ async fn show_cmd_impl<W: Write>(
         Err(e) => bail!(e),
     };
     if target_show_args.json {
-        show::output_for_machine(&show, &target_show_args, &mut writer)?;
+        show::output_for_machine(&show, &target_show_args, writer)?;
     } else {
-        show::output_for_human(&show, &target_show_args, &mut writer)?;
+        show::output_for_human(&show, &target_show_args, writer)?;
     }
     Ok(())
 }
