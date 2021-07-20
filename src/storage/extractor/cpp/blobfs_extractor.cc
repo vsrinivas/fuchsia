@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fdio/fd.h>
+#include <lib/zx/channel.h>
 #include <lib/zx/status.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -20,9 +22,12 @@
 #include <fbl/unique_fd.h>
 #include <safemath/checked_math.h>
 
+#include "lib/async/dispatcher.h"
+#include "src/storage/blobfs/blobfs.h"
 #include "src/storage/blobfs/format.h"
 #include "src/storage/extractor/c/extractor.h"
 #include "src/storage/extractor/cpp/extractor.h"
+#include "zircon/system/ulib/block-client/include/block-client/cpp/remote-block-device.h"
 
 namespace extractor {
 namespace {
@@ -32,7 +37,8 @@ class FsWalker {
  public:
   static zx::status<std::unique_ptr<FsWalker>> Create(fbl::unique_fd input_fd,
                                                       Extractor& extractor);
-  zx::status<> Walk() const;
+
+  zx::status<> Walk(async_dispatcher_t* dispatcher);
 
  private:
   // Returns maximum addressable block in the fs.
@@ -49,7 +55,19 @@ class FsWalker {
   // Marks them as data unmodified.
   zx::status<> WalkSegments() const;
 
-  // Returns a reference to loaded superblock.
+  // LoadAndVerify each blob and dump the corrupted files.
+  zx::status<> WalkBlobs(blobfs::Blobfs& blobfs) const;
+
+  // Dumps each block in an extent
+  zx::status<> ExtentBlockHandler(blobfs::Extent extent) const;
+
+  // Iterates through all the extents of an inode, node_num is inode index,
+  // alloc_block is a counter for number of blocks traversed.
+  zx::status<> WalkExtentContainer(blobfs::Blobfs& blobfs, uint32_t node_num, uint32_t alloc_block,
+                                   blobfs::Inode ino) const;
+
+  zx::status<std::unique_ptr<blobfs::Blobfs>> CreateBlobfs(async_dispatcher_t* dispatcher);
+
   const blobfs::Superblock& Info() const { return info_; }
 
   FsWalker(fbl::unique_fd input_fd, Extractor& extractor);
@@ -77,7 +95,44 @@ class FsWalker {
 
   // File from where the filesystem is parsed/loaded.
   fbl::unique_fd input_fd_;
+
+  // Pointer to vfs.
+  std::unique_ptr<blobfs::VfsType> vfs_;
 };
+
+blobfs::MountOptions ReadOnlyOptions() {
+  return blobfs::MountOptions{.writability = blobfs::Writability::ReadOnlyDisk};
+}
+
+zx::status<std::unique_ptr<blobfs::Blobfs>> FsWalker::CreateBlobfs(async_dispatcher_t* dispatcher) {
+  zx::channel root_client;
+  zx_status_t status = fdio_fd_clone(input_fd_.get(), root_client.reset_and_get_address());
+  if (status != ZX_OK) {
+    std::cerr << "Error transferring input fd to channel" << std::endl;
+    std::cerr << "Status: " << status << std::endl;
+    return zx::error(status);
+  }
+  std::unique_ptr<block_client::RemoteBlockDevice> device;
+  if (zx_status_t status =
+          block_client::RemoteBlockDevice::Create(std::move(root_client), &device) != ZX_OK) {
+    std::cerr << "Error creating Remote Block Device";
+  }
+
+  vfs_ = std::make_unique<blobfs::VfsType>(dispatcher);
+
+#if ENABLE_BLOBFS_NEW_PAGER
+  if (auto status = vfs_->Init(); status.is_error())
+    return zx::error(status.error_value());
+#endif
+
+  auto blobfs_or =
+      blobfs::Blobfs::Create(dispatcher, std::move(device), vfs_.get(), ReadOnlyOptions());
+  if (blobfs_or.is_error()) {
+    std::cerr << "Cannot create filesystem for checking: " << blobfs_or.status_string();
+    return zx::error(blobfs_or.status_value());
+  }
+  return zx::ok(std::move(blobfs_or.value()));
+}
 
 FsWalker::FsWalker(fbl::unique_fd input_fd, Extractor& extractor)
     : extractor_(extractor), input_fd_(std::move(input_fd)) {}
@@ -94,7 +149,7 @@ zx::status<std::unique_ptr<FsWalker>> FsWalker::Create(fbl::unique_fd input_fd,
   return zx::ok(std::move(walker));
 }
 
-zx::status<> FsWalker::Walk() const {
+zx::status<> FsWalker::Walk(async_dispatcher_t* dispatcher) {
   if (auto status = WalkPartition(); status.is_error()) {
     std::cerr << "Walking partition failed" << std::endl;
     return status;
@@ -102,6 +157,67 @@ zx::status<> FsWalker::Walk() const {
 
   if (auto status = WalkSegments(); status.is_error()) {
     std::cerr << "Walking segments failed" << std::endl;
+    return status;
+  }
+
+  auto blob_or = CreateBlobfs(dispatcher);
+  if (blob_or.is_error()) {
+    std::cerr << "Creating Blobfs instance failed" << std::endl;
+    return zx::error(blob_or.error_value());
+  }
+  return WalkBlobs(*blob_or.value());
+}
+
+zx::status<> FsWalker::WalkBlobs(blobfs::Blobfs& blobfs) const {
+  for (unsigned n = 0; n < blobfs.Info().inode_count; n++) {
+    auto inode_or = blobfs.GetNode(n);
+    blobfs::Inode ino = *inode_or.value();
+    blobfs::NodePrelude header = ino.header;
+    if (header.IsAllocated() && header.IsInode()) {
+      uint32_t alloc_block = 0;
+      if (auto status = blobfs.LoadAndVerifyBlob(n) != ZX_OK) {
+        if (auto status = ExtentBlockHandler(ino.extents[0]); status.is_error()) {
+          return status;
+        }
+        alloc_block += ino.extents[0].Length();
+        if (alloc_block < ino.block_count && header.next_node != 0) {
+          return WalkExtentContainer(blobfs, header.next_node, alloc_block, ino);
+        }
+      }
+    }
+  }
+  return zx::ok();
+}
+
+zx::status<> FsWalker::WalkExtentContainer(blobfs::Blobfs& blobfs, uint32_t node_num,
+                                           uint32_t alloc_block, blobfs::Inode ino) const {
+  auto inode_or = blobfs.GetNode(node_num);
+  if (inode_or.is_error()) {
+    return zx::error(inode_or.error_value());
+  }
+  blobfs::Inode inode = *inode_or.value();
+  blobfs::ExtentContainer* node = inode.AsExtentContainer();
+  blobfs::NodePrelude header = node->header;
+  for (int i = 0; i < node->extent_count; i++) {
+    if (auto status = ExtentBlockHandler(node->extents[i]); status.is_error()) {
+      return status;
+    }
+    alloc_block += node->extents[i].Length();
+  }
+  if (alloc_block < ino.block_count && header.next_node != 0) {
+    return WalkExtentContainer(blobfs, header.next_node, alloc_block, ino);
+  }
+  return zx::ok();
+}
+
+zx::status<> FsWalker::ExtentBlockHandler(blobfs::Extent extent) const {
+  ExtentProperties properties = {.extent_kind = ExtentKind::Data,
+                                 .data_kind = DataKind::Unmodified};
+
+  if (auto status = extractor_.AddBlocks(extent.Start() + blobfs::DataStartBlock(info_),
+                                         extent.Length(), properties);
+      status.is_error()) {
+    std::cerr << "FAIL: Dump corrupt blob" << std::endl;
     return status;
   }
   return zx::ok();
@@ -179,14 +295,19 @@ zx::status<> FsWalker::LoadSuperblock() {
 }  // namespace
 
 zx::status<> BlobfsExtract(fbl::unique_fd input_fd, Extractor& extractor) {
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  if (zx_status_t status = loop.StartThread(); status != ZX_OK) {
+    std::cerr << "Cannot initialize dispatch loop: " << zx_status_get_string(status);
+    return zx::error(status);
+  }
+
   auto walker_or = FsWalker::Create(std::move(input_fd), extractor);
   if (walker_or.is_error()) {
     std::cerr << "Walker: Init failure: " << walker_or.error_value() << std::endl;
     return zx::error(walker_or.error_value());
   }
   std::unique_ptr<FsWalker> walker = std::move(walker_or.value());
-
-  return walker->Walk();
+  return walker->Walk(loop.dispatcher());
 }
 
 }  // namespace extractor

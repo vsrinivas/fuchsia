@@ -214,6 +214,10 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   // Return true if streaming writes feature is enabled.
   static bool StreamingWritesEnabled();
 
+  // Loads the blob with inode |node_index| and verifies that the contents of the blob are valid.
+  // Discards the blob's data after performing verification.
+  [[nodiscard]] zx_status_t LoadAndVerifyBlob(uint32_t node_index);
+
  protected:
   // Reloads metadata from disk. Useful when metadata on disk
   // may have changed due to journal playback.
@@ -275,10 +279,6 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   // Creates an unique identifier for this instance. This is to be called only during
   // "construction".
   [[nodiscard]] zx_status_t CreateFsId();
-
-  // Loads the blob with inode |node_index| and verifies that the contents of the blob are valid.
-  // Discards the blob's data after performing verification.
-  [[nodiscard]] zx_status_t LoadAndVerifyBlob(uint32_t node_index);
 
   // Runs fsck at the end of a transaction, just after metadata has been written. Used for testing
   // to be sure that all transactions leave the file system in a good state.

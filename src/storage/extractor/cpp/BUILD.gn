@@ -66,7 +66,6 @@ static_library("disk_extractor") {
   ]
 
   sources = [
-    "blobfs_extractor.cc",
     "extractor.cc",
     "hex_dump_generator.cc",
     "minfs_extractor.cc",
@@ -79,15 +78,22 @@ static_library("disk_extractor") {
     "//zircon/public/lib/zxc",
   ]
   if (is_fuchsia) {
+    sources += [ "blobfs_extractor.cc" ]
     public_deps += [
       "//zircon/system/ulib/fzl",
+      "//zircon/system/ulib/id_allocator",
       "//zircon/system/ulib/syslog",
     ]
     deps += [
       "//sdk/lib/fdio",
       "//zircon/public/lib/fbl",
+      "//zircon/public/lib/sync",
       "//zircon/public/lib/zx",
+      "//zircon/system/ulib/async-loop:async-loop-cpp",
+      "//zircon/system/ulib/async-loop:async-loop-default",
     ]
     include_dirs = [ ".." ]
+  } else {
+    sources += [ "blobfs_extractor_host.cc" ]
   }
 }

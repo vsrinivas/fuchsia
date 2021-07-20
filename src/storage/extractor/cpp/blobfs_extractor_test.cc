@@ -62,19 +62,26 @@ constexpr uint64_t JournalOffset(const blobfs::Superblock& info) {
   return NodemapOffset(info) + blobfs::NodeMapBlocks(info) * blobfs::kBlobfsBlockSize;
 }
 
+constexpr uint64_t DatablockOffset(const blobfs::Superblock& info) {
+  return JournalOffset(info) + blobfs::JournalBlocks(info) * blobfs::kBlobfsBlockSize;
+}
+
 void CreateInputAndOutputStream(fs_test::TestFilesystem& fs, fbl::unique_fd& input,
-                                fbl::unique_fd& output) {
+                                fbl::unique_fd& output, std::unique_ptr<blobfs::BlobInfo>* blob) {
   std::unique_ptr<blobfs::BlobInfo> blob_info =
       blobfs::GenerateBlob(blobfs::RandomFill, fs.mount_path(), 1 << 17);
   fbl::unique_fd fd;
   ASSERT_NO_FATAL_FAILURE(MakeBlob(*blob_info, &fd));
   ASSERT_EQ(close(fd.release()), 0);
   ASSERT_EQ(fs.Unmount().status_value(), ZX_OK);
-  input.reset(open(fs.DevicePath().value().c_str(), O_RDONLY));
+  input.reset(open(fs.DevicePath().value().c_str(), O_RDWR));
   ASSERT_TRUE(input);
   char out_path[] = "/tmp/blobfs-extraction.XXXXXX";
   output.reset(mkostemp(out_path, O_RDWR | O_CREAT | O_EXCL));
   ASSERT_TRUE(output);
+  if (blob != nullptr) {
+    *blob = std::move(blob_info);
+  }
 }
 
 void Extract(const fbl::unique_fd& input_fd, const fbl::unique_fd& output_fd) {
@@ -110,7 +117,7 @@ TEST_P(BlobfsExtractionTest, TestSuperblock) {
   fbl::unique_fd input_fd;
   fbl::unique_fd output_fd;
 
-  CreateInputAndOutputStream(fs(), input_fd, output_fd);
+  CreateInputAndOutputStream(fs(), input_fd, output_fd, nullptr);
   Extract(input_fd, output_fd);
 
   blobfs::Superblock info;
@@ -125,7 +132,7 @@ TEST_P(BlobfsExtractionTest, TestNodeMap) {
   fbl::unique_fd input_fd;
   fbl::unique_fd output_fd;
 
-  CreateInputAndOutputStream(fs(), input_fd, output_fd);
+  CreateInputAndOutputStream(fs(), input_fd, output_fd, nullptr);
   Extract(input_fd, output_fd);
 
   blobfs::Superblock info;
@@ -151,7 +158,7 @@ TEST_P(BlobfsExtractionTest, TestBlockMap) {
   fbl::unique_fd input_fd;
   fbl::unique_fd output_fd;
 
-  CreateInputAndOutputStream(fs(), input_fd, output_fd);
+  CreateInputAndOutputStream(fs(), input_fd, output_fd, nullptr);
   Extract(input_fd, output_fd);
 
   blobfs::Superblock info;
@@ -175,7 +182,7 @@ TEST_P(BlobfsExtractionTest, TestJournal) {
   fbl::unique_fd input_fd;
   fbl::unique_fd output_fd;
 
-  CreateInputAndOutputStream(fs(), input_fd, output_fd);
+  CreateInputAndOutputStream(fs(), input_fd, output_fd, nullptr);
   Extract(input_fd, output_fd);
 
   blobfs::Superblock info;
@@ -194,6 +201,70 @@ TEST_P(BlobfsExtractionTest, TestJournal) {
   std::unique_ptr<char[]> read_buffer_blockmap(new char[size]);
   ASSERT_EQ(pread(output_fd.get(), read_buffer_blockmap.get(), size, JournalOffset(info)), size);
   ASSERT_EQ(memcmp(journal.get(), read_buffer_blockmap.get(), size), 0);
+}
+
+TEST_P(BlobfsExtractionTest, TestCorruptBlob) {
+  fbl::unique_fd input_fd;
+  fbl::unique_fd output_fd;
+  std::unique_ptr<blobfs::BlobInfo> blob_info;
+  CreateInputAndOutputStream(fs(), input_fd, output_fd, &blob_info);
+
+  blobfs::Superblock info;
+  VerifyInputSuperblock(&info, input_fd);
+  ASSERT_EQ(int(info.alloc_inode_count), 1);
+
+  std::unique_ptr<blobfs::Inode[]> inode_table;
+  inode_table =
+      std::make_unique<blobfs::Inode[]>(NodeMapBlocks(info) * blobfs::kBlobfsInodesPerBlock);
+  ssize_t nodemap_size = blobfs::NodeMapBlocks(info) * blobfs::kBlobfsBlockSize;
+  ASSERT_EQ(nodemap_size, pread(input_fd.get(), inode_table.get(), nodemap_size,
+                                blobfs::kBlobfsBlockSize * blobfs::NodeMapStartBlock(info)));
+  uint64_t input_datablock_offset = 0;
+  bool found_allocated_inode = false;
+  uint64_t size_of_data;
+  for (unsigned n = 0; n < info.inode_count; n++) {
+    blobfs::Inode ino = inode_table[n];
+    blobfs::NodePrelude header = ino.header;
+    if (header.IsAllocated() && header.IsInode()) {
+      blobfs::Extent extent = ino.extents[0];
+      input_datablock_offset = extent.Start();
+      size_of_data = extent.Length() * blobfs::kBlobfsBlockSize;
+      found_allocated_inode = true;
+      break;
+    }
+  }
+  ASSERT_EQ(found_allocated_inode, true);
+  char corrupt_block[blobfs::kBlobfsBlockSize] = {'C'};
+  // Assuming here that merkle tree is at the beginning and only takes up one block woo
+  ssize_t r = pwrite(
+      input_fd.get(), corrupt_block, sizeof(corrupt_block),
+      (blobfs::DataStartBlock(info) + input_datablock_offset + 1) * blobfs::kBlobfsBlockSize);
+  ASSERT_EQ(r, (ssize_t)sizeof(corrupt_block));
+
+  Extract(input_fd, output_fd);
+  VerifyOutputSuperblock(&info, output_fd);
+
+  struct stat stats;
+  ASSERT_EQ(fstat(output_fd.get(), &stats), 0);
+  char read_buffer_datablocks[size_of_data];
+  ASSERT_EQ(pread(output_fd.get(), read_buffer_datablocks, size_of_data, DatablockOffset(info)),
+            ssize_t(size_of_data));
+
+  // Assuming that the merkle tree takes up the first block of read_buffer_datablocks
+  ASSERT_NE(memcmp(blob_info->data.get(), read_buffer_datablocks + blobfs::kBlobfsBlockSize,
+                   size_of_data - blobfs::kBlobfsBlockSize),
+            0);
+
+  ASSERT_EQ(memcmp(blob_info->data.get() + blobfs::kBlobfsBlockSize,
+                   read_buffer_datablocks + (2 * blobfs::kBlobfsBlockSize),
+                   size_of_data - (2 * blobfs::kBlobfsBlockSize)),
+            0);
+
+  ssize_t r1 = pwrite(
+      input_fd.get(), blob_info->data.get(), sizeof(corrupt_block),
+      (blobfs::DataStartBlock(info) + input_datablock_offset + 1) * blobfs::kBlobfsBlockSize);
+
+  ASSERT_GE(r1, 0) << "errno: " << strerror(errno) << std::endl;
 }
 
 INSTANTIATE_TEST_SUITE_P(/*no prefix*/, BlobfsExtractionTest,
