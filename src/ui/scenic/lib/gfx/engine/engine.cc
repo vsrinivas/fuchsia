@@ -37,6 +37,7 @@ Engine::Engine(escher::EscherWeakPtr weak_escher,
           escher_,
           escher::ESCHER_CHECKED_VK_RESULT(escher_->device()->caps().GetMatchingDepthStencilFormat(
               {vk::Format::eD24UnormS8Uint, vk::Format::eD32SfloatS8Uint})))),
+      view_linker_(ViewLinker::New()),
       image_factory_(std::make_unique<escher::ImageFactoryAdapter>(escher()->gpu_allocator(),
                                                                    escher()->resource_recycler())),
       buffer_collection_importer_(buffer_collection_importer),
@@ -51,6 +52,7 @@ Engine::Engine(escher::EscherWeakPtr weak_escher,
 
 Engine::Engine(escher::EscherWeakPtr weak_escher)
     : escher_(std::move(weak_escher)),
+      view_linker_(ViewLinker::New()),
       image_factory_(escher() ? std::make_unique<escher::ImageFactoryAdapter>(
                                     escher()->gpu_allocator(), escher()->resource_recycler())
                               : nullptr),

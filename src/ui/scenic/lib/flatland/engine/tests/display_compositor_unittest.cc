@@ -27,7 +27,6 @@ using fuchsia::ui::composition::ContentLinkToken;
 using fuchsia::ui::composition::GraphLink;
 using fuchsia::ui::composition::GraphLinkToken;
 using fuchsia::ui::composition::LayoutInfo;
-using fuchsia::ui::composition::LinkProperties;
 
 namespace flatland {
 namespace test {

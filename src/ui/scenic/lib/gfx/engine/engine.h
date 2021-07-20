@@ -112,14 +112,14 @@ class Engine : public scheduling::FrameRenderer {
   // Compositors) would just be able to schedule a frame for themselves.
   SceneGraphWeakPtr scene_graph() { return scene_graph_.GetWeakPtr(); }
 
-  ViewLinker* view_linker() { return &view_linker_; }
+  ViewLinker* view_linker() { return view_linker_.get(); }
 
   AnnotationManager* annotation_manager() { return annotation_manager_.get(); }
 
   SessionContext session_context() {
     return SessionContext{
-        vk_device(),   escher(),      escher_resource_recycler(), escher_image_factory(),
-        scene_graph(), &view_linker_, buffer_collection_importer_};
+        vk_device(),   escher(),           escher_resource_recycler(), escher_image_factory(),
+        scene_graph(), view_linker_.get(), buffer_collection_importer_};
   }
 
   // Invoke Escher::Cleanup().  If more work remains afterward, post a delayed
@@ -172,7 +172,7 @@ class Engine : public scheduling::FrameRenderer {
 
   std::unique_ptr<EngineRenderer> engine_renderer_;
 
-  ViewLinker view_linker_;
+  std::shared_ptr<ViewLinker> view_linker_;
 
   std::unique_ptr<escher::ImageFactoryAdapter> image_factory_;
 

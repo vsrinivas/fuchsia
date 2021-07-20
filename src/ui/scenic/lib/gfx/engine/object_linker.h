@@ -6,6 +6,7 @@
 #define SRC_UI_SCENIC_LIB_GFX_ENGINE_OBJECT_LINKER_H_
 
 #include <lib/async/cpp/wait.h>
+#include <lib/async/default.h>
 #include <lib/fit/function.h>
 #include <lib/zx/handle.h>
 #include <lib/zx/object_traits.h>
@@ -13,12 +14,13 @@
 
 #include <cstdint>
 #include <memory>
+#include <mutex>
 #include <type_traits>
 #include <unordered_map>
 
 #include "src/lib/fxl/macros.h"
-#include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/ui/scenic/lib/scenic/util/error_reporter.h"
+#include "src/ui/scenic/lib/utils/dispatcher_holder.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -29,9 +31,15 @@ class ObjectLinkerBase {
  public:
   virtual ~ObjectLinkerBase() = default;
 
-  size_t ExportCount() { return exports_.size(); }
+  size_t ExportCount() {
+    auto access = GetScopedAccess();
+    return exports_.size();
+  }
   size_t UnresolvedExportCount();
-  size_t ImportCount() { return imports_.size(); }
+  size_t ImportCount() {
+    auto access = GetScopedAccess();
+    return imports_.size();
+  }
   size_t UnresolvedImportCount();
 
  protected:
@@ -54,7 +62,13 @@ class ObjectLinkerBase {
     void LinkInvalidated(bool on_destruction);
     void LinkUnresolved();
 
-    fit::function<void(bool on_destruction)> link_invalidated_;
+    // Helper method used for posting tasks on |dispatcher_holder_|, unless the method is already
+    // called on that dispatcher. Mainly used for multi-threaded ObjectLinker where there is no
+    // guarantee on which thread linking is completed.
+    void ExecuteOrPostTaskOnDispatcher(fit::closure handler);
+
+    std::function<void(bool on_destruction)> link_invalidated_;
+    std::shared_ptr<utils::DispatcherHolder> dispatcher_holder_;
 
     friend class ObjectLinkerBase;
   };
@@ -70,7 +84,7 @@ class ObjectLinkerBase {
   };
 
   // Only concrete ObjectLinker types should instantiate these.
-  ObjectLinkerBase() = default;
+  ObjectLinkerBase() : wait_dispatcher_(async_get_default_dispatcher()) {}
 
   // Creates a new Endpoint for linking and reports any errors in creation
   // using |error_reporter|.
@@ -98,6 +112,7 @@ class ObjectLinkerBase {
 
   // Sets up an async::Wait on |Endpoint| that will fire a callback if the
   // Endpoint peer's token is destroyed before a link has been established.
+  // All wait tasks run on |wait_dispatcher_|.
   std::unique_ptr<async::Wait> WaitForPeerDeath(zx_handle_t endpoint_handle, zx_koid_t endpoint_id,
                                                 bool is_import);
 
@@ -109,8 +124,40 @@ class ObjectLinkerBase {
   // initialized-but-unresolved state.
   zx::handle ReleaseToken(zx_koid_t endpoint_id, bool is_import);
 
+  // Class that encapsulates acquiring |mutex_| to provide serialized access to ObjectLinker and
+  // Links created from it.
+  // This protects internal data structures of ObjectLinker, |exports_| and |imports_|, and Links
+  // that are referenced under these data structures. i.e. one thread may run AttemptLinking()
+  // while the other invalidates the Link endpoint, which would cause unexpected behavior and
+  // dropped link_resolved callback. Therefore, each ObjectLinker method accessing these data
+  // structures and each Link method modifying internals should hold ScopedAccess to make sure calls
+  // are seralized.
+  class ScopedAccess {
+   public:
+    ScopedAccess() = default;
+    explicit ScopedAccess(ObjectLinkerBase* linker) : linker_(linker) { linker_->mutex_.lock(); }
+    ~ScopedAccess() {
+      if (linker_) {
+        linker_->mutex_.unlock();
+      }
+    }
+
+   private:
+    ObjectLinkerBase* linker_ = nullptr;
+  };
+
+  // Each method should acquire this before execution.
+  ScopedAccess GetScopedAccess() { return ScopedAccess(this); }
+
   std::unordered_map<zx_koid_t, Endpoint> exports_;
   std::unordered_map<zx_koid_t, Endpoint> imports_;
+
+  // The default dispatcher on which this class was created. WaitForPeerDeath() tasks run on this
+  // dispatcher.
+  async_dispatcher_t* const wait_dispatcher_;
+
+ private:
+  std::recursive_mutex mutex_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ObjectLinkerBase);
 };
@@ -144,10 +191,10 @@ class ObjectLinkerBase {
 // through cloned handles, will result in an error.
 // TODO(fxbug.dev/23989): Allow multiple Imports.
 //
-// This class is thread-hostile.  It requires the owning thread to have a
-// default async loop.
+// This class is thread-safe. Links may be created and used on multiple threads.
 template <typename Export, typename Import>
-class ObjectLinker : public ObjectLinkerBase {
+class ObjectLinker : public ObjectLinkerBase,
+                     public std::enable_shared_from_this<ObjectLinker<Export, Import>> {
  public:
   // Represents one endpoint of a Link between two objects in different
   // |Session|s.
@@ -161,22 +208,46 @@ class ObjectLinker : public ObjectLinkerBase {
     using PeerObj = typename std::conditional<is_import, Export, Import>::type;
 
     Link() = default;
-    virtual ~Link() { Invalidate(/*on_destruction=*/true, /*invalidate_peer=*/true); }
-    Link(Link&& other) { *this = std::move(other); }
-    Link& operator=(nullptr_t) { Invalidate(/*on_destruction=*/false, /*invalidate_peer=*/true); }
+    virtual ~Link() {
+      auto access = GetLinkerScopedAccess();
+      Invalidate(/*on_destruction=*/true, /*invalidate_peer=*/true);
+    }
+    // TODO(fxbug.dev/80550): Make this immovable type.
+    Link(Link&& other) noexcept {
+      FX_CHECK(!linker_ || !other.linker_ || linker_ == other.linker_);
+      auto access = GetLinkerScopedAccess();
+      auto other_access = other.GetLinkerScopedAccess();
+      *this = std::move(other);
+    }
+    Link& operator=(nullptr_t) {
+      auto access = GetLinkerScopedAccess();
+      Invalidate(/*on_destruction=*/false, /*invalidate_peer=*/true);
+    }
     Link& operator=(Link&& other);
 
-    bool valid() const { return linker_ && endpoint_id_ != ZX_KOID_INVALID; }
-    bool initialized() const { return valid() && link_resolved_; }
-    zx_koid_t endpoint_id() const { return endpoint_id_; }
+    bool valid() {
+      auto access = GetLinkerScopedAccess();
+      return endpoint_id_ != ZX_KOID_INVALID;
+    }
+    bool initialized() {
+      auto access = GetLinkerScopedAccess();
+      return valid() && link_resolved_;
+    }
+    zx_koid_t endpoint_id() {
+      auto access = GetLinkerScopedAccess();
+      return endpoint_id_;
+    }
 
     // Initialize the Link with an |object| and callbacks for |link_resolved|
     // and |link_invalidated| events, making it ready for connection to its peer.
     // The |link_invalidated| event is guaranteed to be called regardless of
     // whether or not the |link_resolved| callback is, including if this Link
     // is destroyed, in which case |on_destruction| will be true.
-    void Initialize(fit::function<void(PeerObj peer_object)> link_resolved = nullptr,
-                    fit::function<void(bool on_destruction)> link_invalidated = nullptr);
+    // If |dispatcher_holder| is given, these callbacks will be guaranteed to run on this
+    // dispatcher. Otherwise, it may be run on any dispatcher where the work is completed.
+    void Initialize(std::function<void(PeerObj peer_object)> link_resolved = nullptr,
+                    std::function<void(bool on_destruction)> link_invalidated = nullptr,
+                    std::shared_ptr<utils::DispatcherHolder> dispatcher_holder = nullptr);
 
     // Releases the zx::handle for this link, allowing the caller to establish a new link with it.
     //
@@ -187,16 +258,23 @@ class ObjectLinker : public ObjectLinkerBase {
 
    private:
     // Kept private so only an ObjectLinker can construct a valid Link.
-    Link(Obj object, zx_koid_t endpoint_id, fxl::WeakPtr<ObjectLinker> linker)
+    Link(Obj object, zx_koid_t endpoint_id, std::shared_ptr<ObjectLinker> linker)
         : object_(std::move(object)), endpoint_id_(endpoint_id), linker_(std::move(linker)) {}
 
     void LinkResolved(ObjectLinkerBase::Link* peer_link) override;
     void Invalidate(bool on_destruction, bool invalidate_peer) override;
 
+    // Enforces serialized access to ObjectLinker and Links created from it. Each method should
+    // acquire this before execution. This is needed because one thread might be modifying internals
+    // of Link while another one accesses the internals.
+    ScopedAccess GetLinkerScopedAccess() {
+      return linker_ ? linker_->GetScopedAccess() : ScopedAccess();
+    }
+
     std::optional<Obj> object_;
     zx_koid_t endpoint_id_ = ZX_KOID_INVALID;
-    fxl::WeakPtr<ObjectLinker> linker_;
-    fit::function<void(PeerObj peer_link)> link_resolved_;
+    std::shared_ptr<ObjectLinker> linker_;
+    std::function<void(PeerObj peer_link)> link_resolved_;
 
     friend class ObjectLinker;
     friend class ObjectLinker::Link<!is_import>;
@@ -204,7 +282,9 @@ class ObjectLinker : public ObjectLinkerBase {
   using ExportLink = Link<false>;
   using ImportLink = Link<true>;
 
-  ObjectLinker() : weak_factory_(this) {}
+  static std::shared_ptr<ObjectLinker> New() {
+    return std::shared_ptr<ObjectLinker>(new ObjectLinker<Export, Import>());
+  }
   ~ObjectLinker() = default;
 
   // Creates an outgoing cross-session ExportLink between two objects, which
@@ -222,8 +302,9 @@ class ObjectLinker : public ObjectLinkerBase {
   // the links for both objects.
   template <typename T, typename = std::enable_if_t<zx::object_traits<T>::has_peer_handle>>
   ExportLink CreateExport(Export export_obj, T token, ErrorReporter* error_reporter) {
+    auto access = GetScopedAccess();
     const zx_koid_t endpoint_id = CreateEndpoint(std::move(token), error_reporter, false);
-    return ExportLink(std::move(export_obj), endpoint_id, weak_factory_.GetWeakPtr());
+    return ExportLink(std::move(export_obj), endpoint_id, this->shared_from_this());
   }
 
   // Creates an incoming cross-session ImportLink between two objects, which
@@ -239,18 +320,21 @@ class ObjectLinker : public ObjectLinkerBase {
   // the links for both objects.
   template <typename T, typename = std::enable_if_t<zx::object_traits<T>::has_peer_handle>>
   ImportLink CreateImport(Import import_obj, T token, ErrorReporter* error_reporter) {
+    auto access = GetScopedAccess();
     const zx_koid_t endpoint_id = CreateEndpoint(std::move(token), error_reporter, true);
-    return ImportLink(std::move(import_obj), endpoint_id, weak_factory_.GetWeakPtr());
+    return ImportLink(std::move(import_obj), endpoint_id, this->shared_from_this());
   }
 
  private:
-  // Should be last.  See weak_ptr.h.
-  fxl::WeakPtrFactory<ObjectLinker> weak_factory_;
+  ObjectLinker() = default;
 };
 
 template <typename Export, typename Import>
 template <bool is_import>
 auto ObjectLinker<Export, Import>::Link<is_import>::operator=(Link&& other) -> Link& {
+  FX_CHECK(!linker_ || !other.linker_ || linker_ == other.linker_);
+  auto access = GetLinkerScopedAccess();
+  auto other_access = other.GetLinkerScopedAccess();
   // Invalidate the existing Link if its still valid.
   Invalidate(/*on_destruction=*/false, /*invalidate_peer=*/true);
 
@@ -258,6 +342,7 @@ auto ObjectLinker<Export, Import>::Link<is_import>::operator=(Link&& other) -> L
   // its endpoint when it dies.
   link_resolved_ = std::move(other.link_resolved_);
   link_invalidated_ = std::move(other.link_invalidated_);
+  dispatcher_holder_ = std::move(other.dispatcher_holder_);
   object_ = std::move(other.object_);
   linker_ = std::move(other.linker_);
   endpoint_id_ = std::move(other.endpoint_id_);
@@ -273,14 +358,17 @@ auto ObjectLinker<Export, Import>::Link<is_import>::operator=(Link&& other) -> L
 template <typename Export, typename Import>
 template <bool is_import>
 void ObjectLinker<Export, Import>::Link<is_import>::Initialize(
-    fit::function<void(PeerObj peer_object)> link_resolved,
-    fit::function<void(bool on_destruction)> link_invalidated) {
+    std::function<void(PeerObj peer_object)> link_resolved,
+    std::function<void(bool on_destruction)> link_invalidated,
+    std::shared_ptr<utils::DispatcherHolder> dispatcher_holder) {
+  auto access = GetLinkerScopedAccess();
   FX_DCHECK(valid());
   FX_DCHECK(!initialized());
   FX_DCHECK(link_resolved);
 
   link_resolved_ = std::move(link_resolved);
   link_invalidated_ = std::move(link_invalidated);
+  dispatcher_holder_ = std::move(dispatcher_holder);
 
   linker_->InitializeEndpoint(this, endpoint_id_, is_import);
 }
@@ -288,6 +376,7 @@ void ObjectLinker<Export, Import>::Link<is_import>::Initialize(
 template <typename Export, typename Import>
 template <bool is_import>
 std::optional<zx::handle> ObjectLinker<Export, Import>::Link<is_import>::ReleaseToken() {
+  auto access = GetLinkerScopedAccess();
   if (!valid()) {
     return std::optional<zx::handle>();
   }
@@ -300,10 +389,10 @@ template <typename Export, typename Import>
 template <bool is_import>
 void ObjectLinker<Export, Import>::Link<is_import>::Invalidate(bool on_destruction,
                                                                bool invalidate_peer) {
+  auto access = GetLinkerScopedAccess();
   if (valid()) {
     linker_->DestroyEndpoint(endpoint_id_, is_import, invalidate_peer);
   }
-  linker_.reset();
   object_.reset();
   link_resolved_ = nullptr;
   endpoint_id_ = ZX_KOID_INVALID;
@@ -314,10 +403,15 @@ template <typename Export, typename Import>
 template <bool is_import>
 void ObjectLinker<Export, Import>::Link<is_import>::LinkResolved(
     ObjectLinkerBase::Link* peer_link) {
+  auto access = GetLinkerScopedAccess();
   if (link_resolved_) {
     auto* typed_peer_link = static_cast<Link<!is_import>*>(peer_link);
     FX_DCHECK(typed_peer_link->object_.has_value());
-    link_resolved_(std::move(typed_peer_link->object_.value()));
+    ExecuteOrPostTaskOnDispatcher([link_resolved = link_resolved_,
+                                   object = std::move(typed_peer_link->object_.value())]() mutable {
+      // Doesn't need to be locked because the closure/argument are no longer owned by the Link.
+      link_resolved(std::move(object));
+    });
   }
 }
 

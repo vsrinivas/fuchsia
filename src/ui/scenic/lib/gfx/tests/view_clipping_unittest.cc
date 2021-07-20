@@ -44,14 +44,14 @@ class ViewClippingTest : public VkSessionTest {
 
     FX_DCHECK(!view_linker_);
 
-    view_linker_ = std::make_unique<ViewLinker>();
+    view_linker_ = ViewLinker::New();
     session_context.view_linker = view_linker_.get();
 
     return session_context;
   }
 
  private:
-  std::unique_ptr<ViewLinker> view_linker_;
+  std::shared_ptr<ViewLinker> view_linker_;
 };
 
 static constexpr float kNear = 1.f;

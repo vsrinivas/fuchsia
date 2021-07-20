@@ -283,6 +283,7 @@ source_set("object_linker") {
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/ui/scenic/lib/scenic/util",
+    "//src/ui/scenic/lib/utils",
   ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings

@@ -5,8 +5,6 @@
 #ifndef SRC_UI_SCENIC_LIB_UTILS_DISPATCHER_HOLDER_H_
 #define SRC_UI_SCENIC_LIB_UTILS_DISPATCHER_HOLDER_H_
 
-#include <fuchsia/sysmem/cpp/fidl.h>
-#include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/dispatcher.h>
 #include <lib/zx/event.h>

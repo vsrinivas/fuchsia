@@ -8,6 +8,7 @@
 #include <fuchsia/sysmem/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 
+#include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/ui/scenic/lib/allocation/buffer_collection_importer.h"
 #include "src/ui/scenic/lib/display/util.h"
 #include "src/ui/scenic/lib/flatland/engine/engine_types.h"

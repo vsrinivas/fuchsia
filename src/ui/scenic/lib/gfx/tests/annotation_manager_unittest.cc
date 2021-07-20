@@ -74,7 +74,7 @@ class AnnotationManagerTest : public ViewTreeSessionTest {
     SessionContext session_context = ViewTreeSessionTest::CreateSessionContext();
     FX_DCHECK(!view_linker_);
     FX_DCHECK(!scene_graph_);
-    view_linker_ = std::make_unique<ViewLinker>();
+    view_linker_ = ViewLinker::New();
     scene_graph_ = std::make_unique<SceneGraph>(/*request_focus*/ [](auto...) { return false; });
     session_context.view_linker = view_linker_.get();
     session_context.scene_graph = scene_graph_->GetWeakPtr();
@@ -113,7 +113,7 @@ class AnnotationManagerTest : public ViewTreeSessionTest {
 
   sys::testing::ComponentContextProvider context_provider_;
   std::unique_ptr<SceneGraph> scene_graph_;
-  std::unique_ptr<ViewLinker> view_linker_;
+  std::shared_ptr<ViewLinker> view_linker_;
   std::unique_ptr<AnnotationManager> annotation_manager_;
 };
 

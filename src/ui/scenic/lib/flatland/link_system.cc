@@ -29,7 +29,7 @@ glm::vec2 ComputeScale(const glm::mat3& matrix) {
 }  // namespace
 
 LinkSystem::LinkSystem(TransformHandle::InstanceId instance_id)
-    : instance_id_(instance_id), link_graph_(instance_id_) {}
+    : instance_id_(instance_id), link_graph_(instance_id_), linker_(ObjectLinker::New()) {}
 
 LinkSystem::ChildLink LinkSystem::CreateChildLink(
     std::shared_ptr<utils::DispatcherHolder> dispatcher_holder, ContentLinkToken token,
@@ -37,6 +37,7 @@ LinkSystem::ChildLink LinkSystem::CreateChildLink(
     fidl::InterfaceRequest<ContentLink> content_link, TransformHandle graph_handle,
     LinkProtocolErrorCallback error_callback) {
   FX_DCHECK(token.value.is_valid());
+  FX_DCHECK(initial_properties.has_logical_size());
 
   auto impl = std::make_shared<GraphLinkImpl>(std::move(dispatcher_holder));
   const TransformHandle link_handle = link_graph_.CreateTransform();
@@ -44,7 +45,7 @@ LinkSystem::ChildLink LinkSystem::CreateChildLink(
   // Pass |error_callback| to the other endpoint of ObjectLinker. |error_callback| handles
   // errors in the caller's Flatland session, which is the parent Flatland in this case. ContentLink
   // errors should be handled by the parent and it will be set in the other endpoint after linking.
-  ObjectLinker::ImportLink importer = linker_.CreateImport(
+  ObjectLinker::ImportLink importer = linker_->CreateImport(
       {.interface = std::move(content_link), .error_callback = std::move(error_callback)},
       std::move(token.value),
       /* error_reporter */ nullptr);
@@ -52,7 +53,7 @@ LinkSystem::ChildLink LinkSystem::CreateChildLink(
   importer.Initialize(
       /* link_resolved = */
       [ref = shared_from_this(), impl, graph_handle, link_handle,
-       initial_properties = std::move(initial_properties)](GraphLinkRequest request) {
+       logical_size = initial_properties.logical_size()](GraphLinkRequest request) {
         // TODO(fxbug.dev/76712): Remove this check after relinking is fixed.
         if (request.error_callback)
           impl->SetErrorCallback(request.error_callback);
@@ -61,11 +62,9 @@ LinkSystem::ChildLink LinkSystem::CreateChildLink(
         // one of the Flatland instance threads, but since we haven't stored the Link impl anywhere
         // yet, we still have exclusive access and can safely call functions without
         // synchronization.
-        if (initial_properties.has_logical_size()) {
-          LayoutInfo info;
-          info.set_logical_size(initial_properties.logical_size());
-          impl->UpdateLayoutInfo(std::move(info));
-        }
+        LayoutInfo info;
+        info.set_logical_size(logical_size);
+        impl->UpdateLayoutInfo(std::move(info));
 
         {
           // Mutate shared state while holding our mutex.
@@ -112,10 +111,10 @@ LinkSystem::ParentLink LinkSystem::CreateParentLink(
   // errors in the caller's Flatland session, which is the child Flatland in this case. GraphLink
   // errors should be handled by the parent and it will be set in the other endpoint after linking.
   ObjectLinker::ExportLink exporter =
-      linker_.CreateExport({.interface = std::move(graph_link),
-                            .child_handle = link_origin,
-                            .error_callback = std::move(error_callback)},
-                           std::move(token.value), /* error_reporter */ nullptr);
+      linker_->CreateExport({.interface = std::move(graph_link),
+                             .child_handle = link_origin,
+                             .error_callback = std::move(error_callback)},
+                            std::move(token.value), /* error_reporter */ nullptr);
 
   exporter.Initialize(
       /* link_resolved = */

@@ -61,13 +61,13 @@ class ProtectedMemoryVisitorTest : public SessionTest {
 
     FX_DCHECK(!view_linker_);
 
-    view_linker_ = std::make_unique<ViewLinker>();
+    view_linker_ = ViewLinker::New();
     session_context.view_linker = view_linker_.get();
 
     return session_context;
   }
 
-  std::unique_ptr<ViewLinker> view_linker_;
+  std::shared_ptr<ViewLinker> view_linker_;
 };
 
 TEST_F(ProtectedMemoryVisitorTest, ReturnsFalseForOpacityNode) {

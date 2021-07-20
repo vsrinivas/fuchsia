@@ -4,6 +4,7 @@
 
 #include "src/ui/scenic/lib/gfx/engine/object_linker.h"
 
+#include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/syslog/cpp/macros.h>
 
@@ -16,25 +17,40 @@ namespace gfx {
 
 void ObjectLinkerBase::Link::LinkInvalidated(bool on_destruction) {
   if (link_invalidated_) {
-    // link_invalidated_ will be reset to nullptr; this way we can avoid
-    // assignment operators to |link_validated_|.
     auto link_invalidated_fn = std::move(link_invalidated_);
-    link_invalidated_fn(on_destruction);
+    link_invalidated_ = [](auto) {};
+    ExecuteOrPostTaskOnDispatcher([link_invalidated = link_invalidated_fn, on_destruction]() {
+      // Doesn't need to be locked because the closure/argument are no longer owned by the Link.
+      link_invalidated(on_destruction);
+    });
   }
 }
 
 void ObjectLinkerBase::Link::LinkUnresolved() {
   if (link_invalidated_) {
-    link_invalidated_(false);
+    ExecuteOrPostTaskOnDispatcher([link_invalidated = link_invalidated_]() {
+      // Doesn't need to be locked because the closure/argument are no longer owned by the Link.
+      link_invalidated(false);
+    });
   }
 }
 
+void ObjectLinkerBase::Link::ExecuteOrPostTaskOnDispatcher(fit::closure handler) {
+  if (dispatcher_holder_ && async_get_default_dispatcher() != dispatcher_holder_->dispatcher()) {
+    async::PostTask(dispatcher_holder_->dispatcher(), std::move(handler));
+    return;
+  }
+  handler();
+}
+
 size_t ObjectLinkerBase::UnresolvedExportCount() {
+  auto access = GetScopedAccess();
   return std::count_if(exports_.begin(), exports_.end(),
                        [](const auto& iter) { return iter.second.IsUnresolved(); });
 }
 
 size_t ObjectLinkerBase::UnresolvedImportCount() {
+  auto access = GetScopedAccess();
   return std::count_if(imports_.begin(), imports_.end(),
                        [](const auto& iter) { return iter.second.IsUnresolved(); });
 }
@@ -43,6 +59,7 @@ zx_koid_t ObjectLinkerBase::CreateEndpoint(zx::handle token, ErrorReporter* erro
                                            bool is_import) {
   // Select imports or exports to operate on based on the flag.
   auto& endpoints = is_import ? imports_ : exports_;
+  auto access = GetScopedAccess();
 
   if (!token) {
     error_reporter->ERROR() << "Token is invalid";
@@ -80,6 +97,7 @@ zx_koid_t ObjectLinkerBase::CreateEndpoint(zx::handle token, ErrorReporter* erro
 void ObjectLinkerBase::DestroyEndpoint(zx_koid_t endpoint_id, bool is_import, bool destroy_peer) {
   auto& endpoints = is_import ? imports_ : exports_;
   auto& peer_endpoints = is_import ? exports_ : imports_;
+  auto access = GetScopedAccess();
 
   auto endpoint_iter = endpoints.find(endpoint_id);
   if (endpoint_iter == endpoints.end()) {
@@ -119,6 +137,7 @@ void ObjectLinkerBase::InitializeEndpoint(ObjectLinkerBase::Link* link, zx_koid_
   FX_DCHECK(link);
 
   auto& endpoints = is_import ? imports_ : exports_;
+  auto access = GetScopedAccess();
 
   // Update the endpoint with the connection information.
   auto endpoint_iter = endpoints.find(endpoint_id);
@@ -151,6 +170,7 @@ void ObjectLinkerBase::AttemptLinking(zx_koid_t endpoint_id, zx_koid_t peer_endp
                                       bool is_import) {
   auto& endpoints = is_import ? imports_ : exports_;
   auto& peer_endpoints = is_import ? exports_ : imports_;
+  auto access = GetScopedAccess();
 
   auto endpoint_iter = endpoints.find(endpoint_id);
   FX_DCHECK(endpoint_iter != endpoints.end());
@@ -185,6 +205,7 @@ void ObjectLinkerBase::AttemptLinking(zx_koid_t endpoint_id, zx_koid_t peer_endp
 std::unique_ptr<async::Wait> ObjectLinkerBase::WaitForPeerDeath(zx_handle_t endpoint_handle,
                                                                 zx_koid_t endpoint_id,
                                                                 bool is_import) {
+  auto access = GetScopedAccess();
   // Each endpoint must be removed from being considered for linking if its
   // peer's handle is closed before the two entries are successfully linked.
   // This communication happens via the link_failed callback.
@@ -199,6 +220,7 @@ std::unique_ptr<async::Wait> ObjectLinkerBase::WaitForPeerDeath(zx_handle_t endp
   auto waiter = std::make_unique<async::Wait>(
       endpoint_handle, __ZX_OBJECT_PEER_CLOSED, 0, std::bind([this, endpoint_id, is_import]() {
         auto& endpoints = is_import ? imports_ : exports_;
+        auto access = GetScopedAccess();
         auto endpoint_iter = endpoints.find(endpoint_id);
         FX_DCHECK(endpoint_iter != endpoints.end());
         Endpoint& endpoint = endpoint_iter->second;
@@ -215,7 +237,7 @@ std::unique_ptr<async::Wait> ObjectLinkerBase::WaitForPeerDeath(zx_handle_t endp
         }
       }));
 
-  zx_status_t status = waiter->Begin(async_get_default_dispatcher());
+  zx_status_t status = waiter->Begin(wait_dispatcher_);
   FX_DCHECK(status == ZX_OK);
 
   return waiter;
@@ -224,6 +246,7 @@ std::unique_ptr<async::Wait> ObjectLinkerBase::WaitForPeerDeath(zx_handle_t endp
 zx::handle ObjectLinkerBase::ReleaseToken(zx_koid_t endpoint_id, bool is_import) {
   auto& endpoints = is_import ? imports_ : exports_;
   auto& peer_endpoints = is_import ? exports_ : imports_;
+  auto access = GetScopedAccess();
 
   // If the endpoint was resolved, it will still be invalidated, but the peer endpoint must be
   // unresolved first if it exists.
@@ -231,7 +254,6 @@ zx::handle ObjectLinkerBase::ReleaseToken(zx_koid_t endpoint_id, bool is_import)
   FX_DCHECK(endpoint_iter != endpoints.end());
 
   zx_koid_t peer_endpoint_id = endpoint_iter->second.peer_endpoint_id;
-
   auto peer_endpoint_iter = peer_endpoints.find(peer_endpoint_id);
   if (peer_endpoint_iter == peer_endpoints.end()) {
     return std::move(endpoint_iter->second.token);

@@ -240,7 +240,7 @@ class LinkSystem : public std::enable_shared_from_this<LinkSystem> {
   TransformHandle::InstanceId instance_id_;
   TransformGraph link_graph_;
 
-  ObjectLinker linker_;
+  std::shared_ptr<ObjectLinker> linker_;
 
   // TODO(fxbug.dev/44335): These maps are modified at Link creation and destruction time (within
   // the ObjectLinker closures) as well as within UpdateLinks, which is called by the core render

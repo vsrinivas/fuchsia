@@ -39,8 +39,10 @@ DisplayCompositorTestBase::FakeFlatlandSession::LinkToParent(FakeFlatlandSession
 
   // Create the child link.
   fidl::InterfacePtr<ContentLink> content_link;
+  LinkProperties properties;
+  properties.set_logical_size(fuchsia::math::SizeU{1, 2});
   LinkSystem::ChildLink child_link = link_system_->CreateChildLink(
-      dispatcher_holder_, std::move(parent_token), LinkProperties(), content_link.NewRequest(),
+      dispatcher_holder_, std::move(parent_token), std::move(properties), content_link.NewRequest(),
       parent_session.graph_.CreateTransform(),
       [](const std::string& error_log) { GTEST_FAIL() << error_log; });
 
