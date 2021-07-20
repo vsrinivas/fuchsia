@@ -58,6 +58,17 @@ def strip_toolchain(target):
     return re.search("[^(]*", target)[0]
 
 
+def extract_toolchain(target):
+    """ Return the toolchain part of the provided label, or None if it doesn't have one."""
+    if "(" not in target:
+        # target has no toolchain specified
+        return None
+    substr = target[target.find("(") + 1:]
+    if not target.endswith(")"):
+        raise ValueError("target %s missing closing `)`")
+    return substr[:-1]  # remove closing `)`
+
+
 def lookup_gn_pkg_name(project, target, *, for_workspace):
     if for_workspace:
         return mangle_label(target)
@@ -366,7 +377,9 @@ def main():
     with open(os.path.join(gn_cargo_dir, "generate_cargo.stamp"), "w") as f:
         f.truncate()
 
-    workspace_dirs = []
+    # a dict of "toolchain label" to list of Cargo.toml files in it
+    # special case: the key None means the default toolchain
+    workspace_dirs_by_toolchain = collections.defaultdict(list)
 
     for target in project.rust_targets:
         cargo_toml_dir = os.path.join(gn_cargo_dir, str(lookup[target]))
@@ -399,13 +412,12 @@ def main():
 
         if (not target.startswith("//third_party/rust_crates:")
            ) and target in project.reachable_targets:
-            if "(" not in target:
-                # for now, only put fuchsia crates in workspace
-                workspace_dirs.append(
-                    (
-                        target,
-                        os.path.relpath(
-                            for_workspace_cargo_toml_dir, root_path)))
+            toolchain = extract_toolchain(target)
+            workspace_dirs_by_toolchain[toolchain].append(
+                (
+                    target,
+                    os.path.relpath(
+                        for_workspace_cargo_toml_dir, root_path)))
             with open(os.path.join(for_workspace_cargo_toml_dir, "Cargo.toml"),
                       "w") as fout:
                 write_toml_file(
@@ -420,23 +432,40 @@ def main():
                     for_workspace=True)
 
     # TODO: refactor into separate function
-    with open(os.path.join(gn_cargo_dir, "for_workspace",
-                           "Cargo_for_fuchsia_dir.toml"), "w") as fout:
-        fout.write("[workspace]\nmembers = [\n")
-        for target, dir in workspace_dirs:
-            fout.write("  # %s\n" % target)
-            fout.write("  %s,\n" % json.dumps(dir))
-        fout.write("]\n")
+    for toolchain, workspace_dirs in workspace_dirs_by_toolchain.items():
+        subdir = os.path.join(gn_cargo_dir, "for_workspace")
+        if toolchain:
+            # Strip off the leading "//" from the toolchain label so we don't
+            # accidentally use it as an absolute path.
+            path_safe_toolchain = toolchain.lstrip("/")
+            subdir = os.path.join(subdir, "toolchain", path_safe_toolchain)
+        else:
+            # the workspace for the default toolchain (None in the dict) just
+            # lives in for_workspace directly.
+            pass
 
-        fout.write('exclude = ["third_party/rust_crates",]\n')
-        fout.write("\n[patch.crates-io]\n")
-        for patch in project.patches:
-            path = project.patches[patch]["path"]
-            fout.write(
-                "%s = { path = %s }\n" % (
-                    patch,
-                    json.dumps(os.path.join("third_party/rust_crates", path))))
-        fout.write("\n")
+        try:
+            os.makedirs(subdir, exist_ok=True)
+        except OSError:
+            print("Failed to create directory for Cargo: %s" % subdir)
+
+        with open(os.path.join(subdir, "Cargo_for_fuchsia_dir.toml"),
+                  "w") as fout:
+            fout.write("[workspace]\nmembers = [\n")
+            for target, dir in workspace_dirs:
+                fout.write("  # %s\n" % target)
+                fout.write("  %s,\n" % json.dumps(dir))
+            fout.write("]\n")
+
+            fout.write('exclude = ["third_party/rust_crates",]\n')
+            fout.write("\n[patch.crates-io]\n")
+            for patch in project.patches:
+                path = project.patches[patch]["path"]
+                fout.write(
+                    "%s = { path = %s }\n" % (
+                        patch,
+                        json.dumps(os.path.join("third_party/rust_crates", path))))
+            fout.write("\n")
     return 0
 
 
