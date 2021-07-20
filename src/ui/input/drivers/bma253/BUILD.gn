@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 
 driver_bind_rules("bma253-bind") {
@@ -17,7 +18,8 @@ driver_bind_rules("bma253-bind") {
   ]
 }
 
-driver_module("bma253") {
+driver_module("bma253-driver") {
+  output_name = "bma253"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -44,6 +46,11 @@ driver_module("bma253") {
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/simplehid",
   ]
+}
+
+fuchsia_driver_component("bma253") {
+  component_name = "bma253"
+  deps = [ ":bma253-driver" ]
 }
 
 test("bma253-test") {

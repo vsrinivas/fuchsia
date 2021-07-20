@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 import("//src/lib/isolated_devmgr/v2_component/isolated_devmgr.gni")
 
@@ -15,7 +16,8 @@ driver_bind_rules("test-bind") {
   deps = [ "//src/devices/bind/fuchsia.test" ]
 }
 
-driver_module("test-driver") {
+driver_module("test-driver-driver") {
+  output_name = "test-driver"
   sources = [ "test-driver.cc" ]
   deps = [
     ":test-bind",
@@ -28,6 +30,11 @@ driver_module("test-driver") {
     "//src/lib/files",
     "//zircon/public/lib/sync",
   ]
+}
+
+fuchsia_driver_component("test-driver") {
+  component_name = "test-driver"
+  deps = [ ":test-driver-driver" ]
 }
 
 test("test") {

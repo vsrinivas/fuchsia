@@ -4,6 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 
 driver_bind_rules("dai-test-bind") {
   rules = "dai_test.bind"
@@ -12,7 +13,8 @@ driver_bind_rules("dai-test-bind") {
   deps = [ "//src/devices/bind/fuchsia.platform" ]
 }
 
-driver_module("dai-test") {
+driver_module("dai-test-driver") {
+  output_name = "dai-test"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -42,6 +44,11 @@ driver_module("dai-test") {
     # TODO(andresoportus): Remove depedency on TLS (maybe done by C++ bindings unification).
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
+}
+
+fuchsia_driver_component("dai-test") {
+  component_name = "dai-test"
+  deps = [ ":dai-test-driver" ]
 }
 
 group("tests") {

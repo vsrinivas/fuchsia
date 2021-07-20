@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 
 driver_bind_rules("cypress_cy8cmbr3108-bind") {
@@ -14,7 +15,8 @@ driver_bind_rules("cypress_cy8cmbr3108-bind") {
   deps = [ "//src/devices/bind/fuchsia.synaptics.platform" ]
 }
 
-driver_module("cypress") {
+driver_module("cypress-driver") {
+  output_name = "cypress"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -35,6 +37,11 @@ driver_module("cypress") {
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/hwreg-i2c",
   ]
+}
+
+fuchsia_driver_component("cypress") {
+  component_name = "cypress"
+  deps = [ ":cypress-driver" ]
 }
 
 test("cypress-touch-test") {

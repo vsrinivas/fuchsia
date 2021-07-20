@@ -4,6 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 
 driver_bind_rules("dw_spi-bind") {
   rules = "dw_spi.bind"
@@ -12,7 +13,8 @@ driver_bind_rules("dw_spi-bind") {
   deps = [ "//src/devices/bind/fuchsia.platform" ]
 }
 
-driver_module("dw-spi") {
+driver_module("dw-spi-driver") {
+  output_name = "dw-spi"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -37,6 +39,11 @@ driver_module("dw-spi") {
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/sync",
   ]
+}
+
+fuchsia_driver_component("dw-spi") {
+  component_name = "dw-spi"
+  deps = [ ":dw-spi-driver" ]
 }
 
 group("tests") {

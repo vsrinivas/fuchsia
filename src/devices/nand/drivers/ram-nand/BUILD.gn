@@ -4,6 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 import("//build/testing/bootfs_test.gni")
 
@@ -17,7 +18,8 @@ driver_bind_rules("ram-nand-bind") {
   ]
 }
 
-driver_module("ram-nand") {
+driver_module("ram-nand-driver") {
+  output_name = "ram-nand"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -43,6 +45,11 @@ driver_module("ram-nand") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
   ]
+}
+
+fuchsia_driver_component("ram-nand") {
+  component_name = "ram-nand"
+  deps = [ ":ram-nand-driver" ]
 }
 
 source_set("common") {

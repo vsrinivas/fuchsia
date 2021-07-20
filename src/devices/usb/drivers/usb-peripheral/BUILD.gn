@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 
 driver_bind_rules("usb_peripheral_bind") {
@@ -15,7 +16,8 @@ driver_bind_rules("usb_peripheral_bind") {
   deps = [ "//src/devices/bind/fuchsia.usb" ]
 }
 
-driver_module("usb-peripheral") {
+driver_module("usb-peripheral-driver") {
+  output_name = "usb-peripheral"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -56,6 +58,11 @@ driver_module("usb-peripheral") {
   # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
   # See linked bug for details.
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
+}
+
+fuchsia_driver_component("usb-peripheral") {
+  component_name = "usb-peripheral"
+  deps = [ ":usb-peripheral-driver" ]
 }
 
 test("usb-peripheral-unittest-bin") {

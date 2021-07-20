@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 
 driver_bind_rules("aml-sdmmc-bind") {
@@ -15,7 +16,8 @@ driver_bind_rules("aml-sdmmc-bind") {
   deps = [ "//src/devices/bind/amlogic.platform" ]
 }
 
-driver_module("aml-sdmmc") {
+driver_module("aml-sdmmc-driver") {
+  output_name = "aml-sdmmc"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -43,6 +45,11 @@ driver_module("aml-sdmmc") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zxc",
   ]
+}
+
+fuchsia_driver_component("aml-sdmmc") {
+  component_name = "aml-sdmmc"
+  deps = [ ":aml-sdmmc-driver" ]
 }
 
 test("aml-sdmmc-test-bin") {

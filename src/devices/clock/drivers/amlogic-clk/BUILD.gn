@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 
 group("tests") {
@@ -24,7 +25,8 @@ driver_bind_rules("aml-clk-bind") {
   ]
 }
 
-driver_module("amlogic-clk") {
+driver_module("amlogic-clk-driver") {
+  output_name = "amlogic-clk"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -54,6 +56,11 @@ driver_module("amlogic-clk") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
   ]
+}
+
+fuchsia_driver_component("amlogic-clk") {
+  component_name = "amlogic-clk"
+  deps = [ ":amlogic-clk-driver" ]
 }
 
 test("amlogic-clk-test-bin") {

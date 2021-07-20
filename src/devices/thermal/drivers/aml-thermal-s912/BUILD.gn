@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 
 driver_bind_rules("aml-thermal-s912-bind") {
@@ -14,7 +15,8 @@ driver_bind_rules("aml-thermal-s912-bind") {
   deps = [ "//src/devices/bind/amlogic.platform" ]
 }
 
-driver_module("aml-thermal-s912") {
+driver_module("aml-thermal-s912-driver") {
+  output_name = "aml-thermal-s912"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -39,6 +41,11 @@ driver_module("aml-thermal-s912") {
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fidl-utils",
   ]
+}
+
+fuchsia_driver_component("aml-thermal-s912") {
+  component_name = "aml-thermal-s912"
+  deps = [ ":aml-thermal-s912-driver" ]
 }
 
 test("aml-thermal-s912-test-bin") {

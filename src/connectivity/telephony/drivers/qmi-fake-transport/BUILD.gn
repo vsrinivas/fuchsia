@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 
 fuchsia_system_package("qmi-fake-transport") {
   testonly = true
@@ -27,7 +28,7 @@ group("tests") {
   deps = [ ":qmi_fake_bind_test" ]
 }
 
-driver_module("fake_qmi_driver") {
+driver_module("fake_qmi_driver-driver") {
   output_name = "qmi-fake-transport"
   testonly = true
 
@@ -57,4 +58,10 @@ driver_module("fake_qmi_driver") {
   # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
   # See linked bug for details.
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
+}
+
+fuchsia_driver_component("fake_qmi_driver") {
+  testonly = true
+  component_name = "qmi-fake-transport"
+  deps = [ ":fake_qmi_driver-driver" ]
 }

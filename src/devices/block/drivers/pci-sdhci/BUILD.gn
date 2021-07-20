@@ -4,6 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 
 driver_bind_rules("pci-sdhci-bind") {
   rules = "pci-sdhci.bind"
@@ -12,7 +13,8 @@ driver_bind_rules("pci-sdhci-bind") {
   deps = [ "//src/devices/bind/fuchsia.pci" ]
 }
 
-driver_module("pci-sdhci") {
+driver_module("pci-sdhci-driver") {
+  output_name = "pci-sdhci"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -29,6 +31,11 @@ driver_module("pci-sdhci") {
     "//src/lib/ddk",
     "//zircon/public/lib/sync",
   ]
+}
+
+fuchsia_driver_component("pci-sdhci") {
+  component_name = "pci-sdhci"
+  deps = [ ":pci-sdhci-driver" ]
 }
 
 group("tests") {

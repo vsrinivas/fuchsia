@@ -4,6 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
@@ -35,7 +36,8 @@ driver_bind_rules("two_endpoint_hid_bind") {
   ]
 }
 
-driver_module("usb-hid") {
+driver_module("usb-hid-driver") {
+  output_name = "usb-hid"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -59,7 +61,13 @@ driver_module("usb-hid") {
   ]
 }
 
-driver_module("usb-one-endpoint-hid-fake-usb") {
+fuchsia_driver_component("usb-hid") {
+  component_name = "usb-hid"
+  deps = [ ":usb-hid-driver" ]
+}
+
+driver_module("usb-one-endpoint-hid-fake-usb-driver") {
+  output_name = "usb-one-endpoint-hid-fake-usb"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -84,7 +92,13 @@ driver_module("usb-one-endpoint-hid-fake-usb") {
   ]
 }
 
-driver_module("usb-two-endpoint-hid-fake-usb") {
+fuchsia_driver_component("usb-one-endpoint-hid-fake-usb") {
+  component_name = "usb-one-endpoint-hid-fake-usb"
+  deps = [ ":usb-one-endpoint-hid-fake-usb-driver" ]
+}
+
+driver_module("usb-two-endpoint-hid-fake-usb-driver") {
+  output_name = "usb-two-endpoint-hid-fake-usb"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -107,6 +121,11 @@ driver_module("usb-two-endpoint-hid-fake-usb") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/hid",
   ]
+}
+
+fuchsia_driver_component("usb-two-endpoint-hid-fake-usb") {
+  component_name = "usb-two-endpoint-hid-fake-usb"
+  deps = [ ":usb-two-endpoint-hid-fake-usb-driver" ]
 }
 
 group("fake") {

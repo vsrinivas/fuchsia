@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 
 driver_bind_rules("rndishost_bind") {
   rules = "rndishost.bind"
@@ -16,7 +17,7 @@ driver_bind_rules("rndishost_bind") {
   ]
 }
 
-driver_module("driver") {
+driver_module("driver_module") {
   visibility = [
     ":*",
     "//src/connectivity/ethernet:drivers",
@@ -45,6 +46,11 @@ driver_module("driver") {
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
   ]
+}
+
+fuchsia_driver_component("driver") {
+  component_name = "rndis-host"
+  deps = [ ":driver_module" ]
 }
 
 fuchsia_system_package("rndis-host") {

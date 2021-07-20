@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 
 group("tests") {
   testonly = true
@@ -65,8 +66,14 @@ source_set("sources") {
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
-driver_module("aml-gpu") {
+driver_module("aml-gpu-driver") {
+  output_name = "aml-gpu"
   deps = [ ":sources" ]
+}
+
+fuchsia_driver_component("aml-gpu") {
+  component_name = "aml-gpu"
+  deps = [ ":aml-gpu-driver" ]
 }
 
 executable("aml-gpu-test-bin") {

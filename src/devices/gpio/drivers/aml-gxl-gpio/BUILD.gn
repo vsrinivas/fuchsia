@@ -4,6 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 
 driver_bind_rules("aml-gxl-gpio-bind") {
   rules = "aml-gxl-gpio.bind"
@@ -15,7 +16,8 @@ driver_bind_rules("aml-gxl-gpio-bind") {
   ]
 }
 
-driver_module("aml-gxl-gpio") {
+driver_module("aml-gxl-gpio-driver") {
+  output_name = "aml-gxl-gpio"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -38,6 +40,11 @@ driver_module("aml-gxl-gpio") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
   ]
+}
+
+fuchsia_driver_component("aml-gxl-gpio") {
+  component_name = "aml-gxl-gpio"
+  deps = [ ":aml-gxl-gpio-driver" ]
 }
 
 group("tests") {

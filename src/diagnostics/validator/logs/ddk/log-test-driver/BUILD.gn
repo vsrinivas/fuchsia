@@ -4,6 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/fidl/fidl.gni")
 import("//build/test.gni")
 import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
@@ -26,9 +27,15 @@ source_set("common") {
   ]
 }
 
-driver_module("log-test-driver") {
+driver_module("log-test-driver-driver") {
+  output_name = "log-test-driver"
   deps = [
     ":common",
     "//src/devices/lib/driver",
   ]
+}
+
+fuchsia_driver_component("log-test-driver") {
+  component_name = "log-test-driver"
+  deps = [ ":log-test-driver-driver" ]
 }

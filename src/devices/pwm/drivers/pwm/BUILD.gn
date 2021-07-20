@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 
 driver_bind_rules("pwm-bind") {
@@ -15,7 +16,8 @@ driver_bind_rules("pwm-bind") {
   deps = [ "//src/devices/bind/fuchsia.pwm" ]
 }
 
-driver_module("pwm") {
+driver_module("pwm-driver") {
+  output_name = "pwm"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -26,6 +28,11 @@ driver_module("pwm") {
     ":common",
     "//src/devices/lib/driver",
   ]
+}
+
+fuchsia_driver_component("pwm") {
+  component_name = "pwm"
+  deps = [ ":pwm-driver" ]
 }
 
 test("pwm-test-bin") {

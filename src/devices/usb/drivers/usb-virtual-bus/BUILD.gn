@@ -4,6 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/fidl/fidl.gni")
 import("//build/test.gni")
 import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
@@ -37,11 +38,17 @@ source_set("common") {
   ]
 }
 
-driver_module("usb-virtual-bus") {
+driver_module("usb-virtual-bus-driver") {
+  output_name = "usb-virtual-bus"
   deps = [
     ":common",
     "//src/devices/lib/driver",
   ]
+}
+
+fuchsia_driver_component("usb-virtual-bus") {
+  component_name = "usb-virtual-bus"
+  deps = [ ":usb-virtual-bus-driver" ]
 }
 
 bind_library("fuchsia.usb.test") {
@@ -61,7 +68,8 @@ fidl("fuchsia.hardware.usb.virtualbustest") {
   sources = [ "usb-virtualbustest.test.fidl" ]
 }
 
-driver_module("virtual-bus-tester") {
+driver_module("virtual-bus-tester-driver") {
+  output_name = "virtual-bus-tester"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -84,6 +92,11 @@ driver_module("virtual-bus-tester") {
   ]
 }
 
+fuchsia_driver_component("virtual-bus-tester") {
+  component_name = "virtual-bus-tester"
+  deps = [ ":virtual-bus-tester-driver" ]
+}
+
 driver_bind_rules("usb-virtual-bus-tester-function-bind") {
   rules = "usb-virtual-bus-tester-function.bind"
   header_output = "usb-virtual-bus-tester-function-bind.h"
@@ -93,7 +106,8 @@ driver_bind_rules("usb-virtual-bus-tester-function-bind") {
   ]
 }
 
-driver_module("virtual-bus-tester-function") {
+driver_module("virtual-bus-tester-function-driver") {
+  output_name = "virtual-bus-tester-function"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -113,6 +127,11 @@ driver_module("virtual-bus-tester-function") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
   ]
+}
+
+fuchsia_driver_component("virtual-bus-tester-function") {
+  component_name = "virtual-bus-tester-function"
+  deps = [ ":virtual-bus-tester-function-driver" ]
 }
 
 test("usb-virtual-bus-test-bin") {

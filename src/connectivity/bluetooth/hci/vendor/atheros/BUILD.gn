@@ -7,6 +7,7 @@ import("//build/cipd.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/dist/resource.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 
 driver_bind_rules("bt_hci_atheros_bind") {
   rules = "bt_hci_atheros.bind"
@@ -18,7 +19,7 @@ driver_bind_rules("bt_hci_atheros_bind") {
   ]
 }
 
-driver_module("driver") {
+driver_module("driver_module") {
   output_name = "bt-hci-atheros"
 
   sources = [
@@ -45,6 +46,11 @@ driver_module("driver") {
   ]
 
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+}
+
+fuchsia_driver_component("driver") {
+  component_name = "bt-hci-atheros"
+  deps = [ ":driver_module" ]
 }
 
 if (internal_access) {

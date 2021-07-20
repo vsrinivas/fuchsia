@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/cipd.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 
 if (internal_access) {
   config_tas2770 = "audio/config/tas2770/tas2770_config.h"
@@ -25,7 +26,8 @@ driver_bind_rules("astro-bind") {
   ]
 }
 
-driver_module("astro") {
+driver_module("astro-driver") {
+  output_name = "astro"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -105,6 +107,11 @@ driver_module("astro") {
     include_dirs = [ "$root_out_dir" ]
     defines = [ "TAS2770_CONFIG_PATH=\"$config_tas2770\"" ]
   }
+}
+
+fuchsia_driver_component("astro") {
+  component_name = "astro"
+  deps = [ ":astro-driver" ]
 }
 
 group("tests") {

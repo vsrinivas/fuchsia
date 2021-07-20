@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 
 driver_bind_rules("bind") {
@@ -14,7 +15,8 @@ driver_bind_rules("bind") {
   deps = [ "//src/devices/bind/fuchsia.usb" ]
 }
 
-driver_module("usb-hub-rewrite") {
+driver_module("usb-hub-rewrite-driver") {
+  output_name = "usb-hub-rewrite"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -42,6 +44,11 @@ driver_module("usb-hub-rewrite") {
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/inspect",
   ]
+}
+
+fuchsia_driver_component("usb-hub-rewrite") {
+  component_name = "usb-hub-rewrite"
+  deps = [ ":usb-hub-rewrite-driver" ]
 }
 
 test("usb-hub-test") {

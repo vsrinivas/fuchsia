@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 
 fuchsia_system_package("usb-qmi-function") {
   testonly = true
@@ -24,7 +25,7 @@ group("tests") {
   deps = [ ":usb_qmi_function_bind_test" ]
 }
 
-driver_module("qmi_function") {
+driver_module("qmi_function-driver") {
   output_name = "qmi-function"
   testonly = true
 
@@ -42,4 +43,10 @@ driver_module("qmi_function") {
     "//zircon/public/lib/zx",
   ]
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+}
+
+fuchsia_driver_component("qmi_function") {
+  testonly = true
+  component_name = "qmi-function"
+  deps = [ ":qmi_function-driver" ]
 }

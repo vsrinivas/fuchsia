@@ -4,6 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 
 group("broker") {
   deps = [ ":nand-broker" ]
@@ -18,7 +19,8 @@ driver_bind_rules("nand-broker-bind") {
   deps = [ "//src/devices/bind/fuchsia.nand" ]
 }
 
-driver_module("nand-broker") {
+driver_module("nand-broker-driver") {
+  output_name = "nand-broker"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -37,6 +39,11 @@ driver_module("nand-broker") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
   ]
+}
+
+fuchsia_driver_component("nand-broker") {
+  component_name = "nand-broker"
+  deps = [ ":nand-broker-driver" ]
 }
 
 group("tests") {

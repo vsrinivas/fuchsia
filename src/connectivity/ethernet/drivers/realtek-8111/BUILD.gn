@@ -4,6 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 
 driver_bind_rules("realtek_rtl8111_bind") {
   rules = "realtek_rtl8111.bind"
@@ -13,7 +14,8 @@ driver_bind_rules("realtek_rtl8111_bind") {
 }
 
 if (current_cpu == "x64") {
-  driver_module("realtek-8111") {
+  driver_module("realtek-8111-driver") {
+    output_name = "realtek-8111"
     configs += [
       "//build/config:all_source",
       "//build/config/fuchsia:enable_zircon_asserts",
@@ -29,6 +31,11 @@ if (current_cpu == "x64") {
       "//src/lib/ddk",
       "//zircon/public/lib/zircon-internal",
     ]
+  }
+
+  fuchsia_driver_component("realtek-8111") {
+    component_name = "realtek-8111"
+    deps = [ ":realtek-8111-driver" ]
   }
 }
 

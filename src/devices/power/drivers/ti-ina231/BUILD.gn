@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 
 source_set("metadata") {
@@ -37,13 +38,19 @@ driver_bind_rules("bind") {
   deps = [ "//src/devices/bind/fuchsia.ti.platform" ]
 }
 
-driver_module("ti-ina231") {
+driver_module("ti-ina231-driver") {
+  output_name = "ti-ina231"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
   sources = [ "ti-ina231.cc" ]
   deps = [ ":common" ]
+}
+
+fuchsia_driver_component("ti-ina231") {
+  component_name = "ti-ina231"
+  deps = [ ":ti-ina231-driver" ]
 }
 
 test("ti-ina231-test-bin") {

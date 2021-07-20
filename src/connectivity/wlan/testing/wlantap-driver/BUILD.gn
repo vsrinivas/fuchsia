@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 
 driver_bind_rules("wlantapctl_bind") {
   rules = "wlantapctl.bind"
@@ -18,7 +19,7 @@ group("tests") {
   deps = [ ":wlantapctl_bind_test" ]
 }
 
-driver_module("wlantap_driver") {
+driver_module("wlantap_driver-driver") {
   output_name = "wlantap"
 
   sources = [
@@ -52,6 +53,11 @@ driver_module("wlantap_driver") {
   # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
   # See linked bug for details.
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
+}
+
+fuchsia_driver_component("wlantap_driver") {
+  component_name = "wlantap"
+  deps = [ ":wlantap_driver-driver" ]
 }
 
 fuchsia_system_package("wlantap") {

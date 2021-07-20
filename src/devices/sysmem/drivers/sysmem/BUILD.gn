@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/fidl/fidl.gni")
 import("//build/test.gni")
 
@@ -82,7 +83,8 @@ source_set("sysmem_common_srcs") {
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
-driver_module("sysmem") {
+driver_module("sysmem-driver") {
+  output_name = "sysmem"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -100,6 +102,11 @@ driver_module("sysmem") {
     "//src/devices/lib/driver",
     "//zircon/system/ulib/sysmem-version",
   ]
+}
+
+fuchsia_driver_component("sysmem") {
+  component_name = "sysmem"
+  deps = [ ":sysmem-driver" ]
 }
 
 test("sysmem-unittest-bin") {

@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 
 driver_bind_rules("aml_light_bind") {
@@ -18,7 +19,8 @@ driver_bind_rules("aml_light_bind") {
   ]
 }
 
-driver_module("aml-light") {
+driver_module("aml-light-driver") {
+  output_name = "aml-light"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -40,6 +42,11 @@ driver_module("aml-light") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
   ]
+}
+
+fuchsia_driver_component("aml-light") {
+  component_name = "aml-light"
+  deps = [ ":aml-light-driver" ]
 }
 
 test("aml-light-test") {

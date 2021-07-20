@@ -4,6 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 
 driver_bind_rules("serial_bind") {
   rules = "serial.bind"
@@ -13,7 +14,8 @@ driver_bind_rules("serial_bind") {
   deps = [ "//src/devices/bind/fuchsia.serial" ]
 }
 
-driver_module("serial") {
+driver_module("serial-driver") {
+  output_name = "serial"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -23,6 +25,11 @@ driver_module("serial") {
     ":common",
     "//src/devices/lib/driver",
   ]
+}
+
+fuchsia_driver_component("serial") {
+  component_name = "serial"
+  deps = [ ":serial-driver" ]
 }
 
 source_set("common") {

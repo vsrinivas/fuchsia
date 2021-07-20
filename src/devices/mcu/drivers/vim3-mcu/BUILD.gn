@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 
 driver_bind_rules("vim3_mcu_bind") {
@@ -17,7 +18,8 @@ driver_bind_rules("vim3_mcu_bind") {
   ]
 }
 
-driver_module("vim3-mcu") {
+driver_module("vim3-mcu-driver") {
+  output_name = "vim3-mcu"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -35,6 +37,12 @@ driver_module("vim3-mcu") {
     "//zircon/public/lib/pretty",
   ]
 }
+
+fuchsia_driver_component("vim3-mcu") {
+  component_name = "vim3-mcu"
+  deps = [ ":vim3-mcu-driver" ]
+}
+
 test("vim3-mcu-test-bin") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   output_name = "vim3-mcu-test"

@@ -6,6 +6,7 @@ import("//build/bind/bind.gni")
 import("//build/cipd.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 
 pramboot_path = "ft8201/FT8006_Pramboot_V1.6_20180426_le.bin"
@@ -71,7 +72,7 @@ source_set("common") {
   ]
 }
 
-driver_module("ft8201-module") {
+driver_module("ft8201-module-driver") {
   output_name = "ft8201"
   sources = [ "ft8201.cc" ]
   configs += [
@@ -86,6 +87,11 @@ driver_module("ft8201-module") {
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
+}
+
+fuchsia_driver_component("ft8201-module") {
+  component_name = "ft8201"
+  deps = [ ":ft8201-module-driver" ]
 }
 
 executable("ft8201-test-bin") {

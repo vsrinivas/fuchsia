@@ -4,6 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 
 driver_bind_rules("max98927_bind") {
   rules = "max98927.bind"
@@ -12,7 +13,8 @@ driver_bind_rules("max98927_bind") {
   deps = [ "//src/devices/bind/fuchsia.acpi" ]
 }
 
-driver_module("max98927") {
+driver_module("max98927-driver") {
+  output_name = "max98927"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -34,6 +36,11 @@ driver_module("max98927") {
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/fidl-utils",
   ]
+}
+
+fuchsia_driver_component("max98927") {
+  component_name = "max98927"
+  deps = [ ":max98927-driver" ]
 }
 
 group("tests") {

@@ -4,6 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 
 assert(current_cpu == "x64")
 
@@ -14,7 +15,8 @@ driver_bind_rules("intel_rtc_bind") {
   deps = [ "//src/devices/bind/fuchsia.acpi" ]
 }
 
-driver_module("intel-rtc") {
+driver_module("intel-rtc-driver") {
+  output_name = "intel-rtc"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -27,6 +29,11 @@ driver_module("intel-rtc") {
     "//src/devices/rtc/lib/rtc",
     "//src/lib/ddk",
   ]
+}
+
+fuchsia_driver_component("intel-rtc") {
+  component_name = "intel-rtc"
+  deps = [ ":intel-rtc-driver" ]
 }
 
 group("tests") {

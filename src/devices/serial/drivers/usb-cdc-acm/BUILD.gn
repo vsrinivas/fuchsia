@@ -4,6 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
@@ -18,7 +19,8 @@ driver_bind_rules("cdc_acm_bind") {
   ]
 }
 
-driver_module("usb-cdc-acm") {
+driver_module("usb-cdc-acm-driver") {
+  output_name = "usb-cdc-acm"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -42,6 +44,11 @@ driver_module("usb-cdc-acm") {
   ]
 }
 
+fuchsia_driver_component("usb-cdc-acm") {
+  component_name = "usb-cdc-acm"
+  deps = [ ":usb-cdc-acm-driver" ]
+}
+
 driver_bind_rules("usb_cdc_acm_function_bind") {
   rules = "usb_cdc_acm_function.bind"
   header_output = "usb_cdc_acm_function_bind.h"
@@ -52,7 +59,8 @@ driver_bind_rules("usb_cdc_acm_function_bind") {
   ]
 }
 
-driver_module("fake-usb-cdc-acm") {
+driver_module("fake-usb-cdc-acm-driver") {
+  output_name = "fake-usb-cdc-acm"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -73,6 +81,11 @@ driver_module("fake-usb-cdc-acm") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
   ]
+}
+
+fuchsia_driver_component("fake-usb-cdc-acm") {
+  component_name = "fake-usb-cdc-acm"
+  deps = [ ":fake-usb-cdc-acm-driver" ]
 }
 
 test("usb-cdc-acm-integration") {

@@ -4,6 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//src/devices/bus/drivers/pci/pci.gni")
 
 driver_bind_rules("qemu_bus_bind") {
@@ -18,7 +19,8 @@ group("tests") {
   deps = [ ":qemu_bus_bind_test" ]
 }
 
-driver_module("qemu-arm64") {
+driver_module("qemu-arm64-driver") {
+  output_name = "qemu-arm64"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -58,4 +60,9 @@ driver_module("qemu-arm64") {
     # TODO(fxbug.dev/47406): restore some form of data dependency on qemu
     # boot shims.
   }
+}
+
+fuchsia_driver_component("qemu-arm64") {
+  component_name = "qemu-arm64"
+  deps = [ ":qemu-arm64-driver" ]
 }

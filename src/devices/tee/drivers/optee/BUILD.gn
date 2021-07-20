@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 
 driver_bind_rules("optee-bind") {
@@ -55,7 +56,8 @@ source_set("optee_lib") {
   ]
 }
 
-driver_module("optee") {
+driver_module("optee-driver") {
+  output_name = "optee"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -64,6 +66,11 @@ driver_module("optee") {
     configs += [ "//build/unification/config:zircon-migrated" ]
   }
   deps = [ ":optee_lib" ]
+}
+
+fuchsia_driver_component("optee") {
+  component_name = "optee"
+  deps = [ ":optee-driver" ]
 }
 
 group("tests") {

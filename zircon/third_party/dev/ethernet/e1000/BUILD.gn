@@ -4,6 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 
 bind_library("fuchsia.intel.e1000") {
   source = "fuchsia.intel.e1000.bind"
@@ -19,7 +20,8 @@ driver_bind_rules("e1000_bind") {
   ]
 }
 
-driver_module("e1000") {
+driver_module("e1000-driver") {
+  output_name = "e1000"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -56,6 +58,11 @@ driver_module("e1000") {
     "//src/lib/listnode",
   ]
   configs += [ "//build/config:Wno-conversion" ]
+}
+
+fuchsia_driver_component("e1000") {
+  component_name = "e1000"
+  deps = [ ":e1000-driver" ]
 }
 
 group("tests") {

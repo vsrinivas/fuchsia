@@ -4,6 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 
 driver_bind_rules("virtio_socket_bind") {
@@ -17,7 +18,8 @@ group("tests") {
   testonly = true
   deps = [ ":virtio_socket_bind_test" ]
 }
-driver_module("virtio_socket") {
+driver_module("virtio_socket-driver") {
+  output_name = "virtio_socket"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -39,4 +41,9 @@ driver_module("virtio_socket") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
+}
+
+fuchsia_driver_component("virtio_socket") {
+  component_name = "virtio_socket"
+  deps = [ ":virtio_socket-driver" ]
 }

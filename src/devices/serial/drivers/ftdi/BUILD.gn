@@ -4,6 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 
 driver_bind_rules("ftdi_bind") {
   rules = "ftdi.bind"
@@ -13,7 +14,8 @@ driver_bind_rules("ftdi_bind") {
   deps = [ "//src/devices/bind/fuchsia.usb" ]
 }
 
-driver_module("ftdi") {
+driver_module("ftdi-driver") {
+  output_name = "ftdi"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -48,6 +50,11 @@ driver_module("ftdi") {
   ]
 }
 
+fuchsia_driver_component("ftdi") {
+  component_name = "ftdi"
+  deps = [ ":ftdi-driver" ]
+}
+
 driver_bind_rules("ftdi_function_bind") {
   rules = "ftdi_function.bind"
   header_output = "ftdi_function_bind.h"
@@ -58,7 +65,8 @@ driver_bind_rules("ftdi_function_bind") {
   ]
 }
 
-driver_module("ftdi-fake-usb") {
+driver_module("ftdi-fake-usb-driver") {
+  output_name = "ftdi-fake-usb"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -79,6 +87,11 @@ driver_module("ftdi-fake-usb") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
   ]
+}
+
+fuchsia_driver_component("ftdi-fake-usb") {
+  component_name = "ftdi-fake-usb"
+  deps = [ ":ftdi-fake-usb-driver" ]
 }
 
 group("tests") {

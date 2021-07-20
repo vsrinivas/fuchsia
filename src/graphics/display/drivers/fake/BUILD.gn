@@ -4,6 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 
 group("tests") {
   testonly = true
@@ -18,7 +19,8 @@ driver_bind_rules("fake-display-bind") {
   deps = [ "//src/devices/bind/fuchsia.platform" ]
 }
 
-driver_module("fake-display") {
+driver_module("fake-display-driver") {
+  output_name = "fake-display"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -30,6 +32,11 @@ driver_module("fake-display") {
     ":fake-lib",
     "//src/devices/lib/driver",
   ]
+}
+
+fuchsia_driver_component("fake-display") {
+  component_name = "fake-display"
+  deps = [ ":fake-display-driver" ]
 }
 
 source_set("fake-lib") {

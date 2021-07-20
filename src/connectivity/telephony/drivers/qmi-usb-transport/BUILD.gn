@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 
 fuchsia_system_package("qmi-usb-transport") {
   deps = [ ":qmi_driver" ]
@@ -28,12 +29,17 @@ group("tests") {
   deps = [ ":qmi_usb_bind_test" ]
 }
 
-driver_module("qmi_driver") {
+driver_module("qmi_driver-driver") {
   output_name = "qmi-transport"
 
   deps = [ ":qmi_driver_src" ]
 
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+}
+
+fuchsia_driver_component("qmi_driver") {
+  component_name = "qmi-transport"
+  deps = [ ":qmi_driver-driver" ]
 }
 
 source_set("qmi_driver_src") {

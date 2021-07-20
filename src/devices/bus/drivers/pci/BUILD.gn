@@ -4,6 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("pci.gni")
 
 group("pci") {
@@ -36,7 +37,7 @@ source_set("user_pci") {
     "upstream_node.cc",
   ]
   public_deps = [
-    ":pci_bind",
+    ":pci_bind_header",
     "//sdk/banjo/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.pciroot:fuchsia.hardware.pciroot_banjo_cpp",
     "//sdk/fidl/fuchsia.hardware.pci:fuchsia.hardware.pci_llcpp",
@@ -71,7 +72,8 @@ driver_bind_rules("pci_bind") {
 }
 
 if (platform_enable_user_pci) {
-  driver_module("bus-pci") {
+  driver_module("bus-pci-driver") {
+    output_name = "bus-pci"
     configs += [
       "//build/config:all_source",
       "//build/config/fuchsia:enable_zircon_asserts",
@@ -90,8 +92,14 @@ if (platform_enable_user_pci) {
       "//src/devices/lib/driver",
     ]
   }
+
+  fuchsia_driver_component("bus-pci") {
+    component_name = "bus-pci"
+    deps = [ ":bus-pci-driver" ]
+  }
 } else {  # Kernel PCI
-  driver_module("bus-pci") {
+  driver_module("bus-pci-driver") {
+    output_name = "bus-pci"
     configs += [
       "//build/config:all_source",
       "//build/config/fuchsia:enable_zircon_asserts",
@@ -116,6 +124,11 @@ if (platform_enable_user_pci) {
       "//zircon/public/lib/fidl",
       "//zircon/public/lib/pretty",
     ]
+  }
+
+  fuchsia_driver_component("bus-pci") {
+    component_name = "bus-pci"
+    deps = [ ":bus-pci-driver" ]
   }
 }
 

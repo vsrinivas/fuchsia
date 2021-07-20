@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 
 driver_bind_rules("aml-meson-power-bind") {
@@ -18,7 +19,8 @@ driver_bind_rules("aml-meson-power-bind") {
   ]
 }
 
-driver_module("aml-meson-power") {
+driver_module("aml-meson-power-driver") {
+  output_name = "aml-meson-power"
   defines = [ "_ALL_SOURCE" ]
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
   configs += [ "//build/unification/config:zircon-migrated" ]
@@ -43,6 +45,11 @@ driver_module("aml-meson-power") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
   ]
+}
+
+fuchsia_driver_component("aml-meson-power") {
+  component_name = "aml-meson-power"
+  deps = [ ":aml-meson-power-driver" ]
 }
 
 test("aml-meson-power-test-bin") {

@@ -4,6 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 
 source_set("shared") {
   visibility = [ ":*" ]
@@ -41,7 +42,8 @@ foreach(driver, simple_drivers) {
 
   tests += [ ":simple-$driver-bind_test" ]
 
-  driver_module("simple.$driver") {
+  driver_module("simple.$driver-driver") {
+    output_name = "simple.$driver"
     configs += [
       "//build/config:all_source",
       "//build/config/fuchsia:enable_zircon_asserts",
@@ -60,6 +62,11 @@ foreach(driver, simple_drivers) {
 
     # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
     configs += [ "//build/config:Wno-conversion" ]
+  }
+
+  fuchsia_driver_component("simple.$driver") {
+    component_name = "simple.$driver"
+    deps = [ ":simple.$driver-driver" ]
   }
 }
 group("tests") {

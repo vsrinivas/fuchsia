@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 
 fuchsia_system_package("at-fake-transport") {
   testonly = true
@@ -24,7 +25,7 @@ group("tests") {
   deps = [ ":at_fake_bind_test" ]
 }
 
-driver_module("fake_at_driver") {
+driver_module("fake_at_driver-driver") {
   output_name = "at-fake-transport"
   testonly = true
 
@@ -54,4 +55,10 @@ driver_module("fake_at_driver") {
   # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
   # See linked bug for details.
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
+}
+
+fuchsia_driver_component("fake_at_driver") {
+  testonly = true
+  component_name = "at-fake-transport"
+  deps = [ ":fake_at_driver-driver" ]
 }

@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 
 driver_bind_rules("goldfish_address_space-bind") {
@@ -34,7 +35,7 @@ common_deps = [
   "//zircon/system/ulib/trace:trace-driver",
 ]
 
-driver_module("address_space_driver") {
+driver_module("address_space_driver-driver") {
   output_name = "goldfish_address_space"
 
   sources = [ "address_space_device.cc" ]
@@ -48,6 +49,11 @@ driver_module("address_space_driver") {
   # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
   # See linked bug for details.
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
+}
+
+fuchsia_driver_component("address_space_driver") {
+  component_name = "goldfish_address_space"
+  deps = [ ":address_space_driver-driver" ]
 }
 
 fuchsia_system_package("goldfish_address_space") {

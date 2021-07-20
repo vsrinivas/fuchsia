@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 
 group("tests") {
   testonly = true
@@ -54,7 +55,7 @@ source_set("lib") {
   ]
 }
 
-driver_module("driver") {
+driver_module("driver_module") {
   output_name = "imx227"
 
   sources = [ "imx227_hardware_test.cc" ]
@@ -64,6 +65,11 @@ driver_module("driver") {
     "//sdk/fidl/fuchsia.driver.test",
     "//sdk/lib/syslog/cpp:backend_legacy",
   ]
+}
+
+fuchsia_driver_component("driver") {
+  component_name = "imx227"
+  deps = [ ":driver_module" ]
 }
 
 fuchsia_system_package("imx227") {

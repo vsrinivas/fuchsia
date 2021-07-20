@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 
 driver_bind_rules("usb_bus_bind") {
@@ -15,7 +16,8 @@ driver_bind_rules("usb_bus_bind") {
   deps = [ "//src/devices/bind/fuchsia.usb" ]
 }
 
-driver_module("usb-bus") {
+driver_module("usb-bus-driver") {
+  output_name = "usb-bus"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -30,6 +32,11 @@ driver_module("usb-bus") {
     "//src/devices/lib/driver",
     "//zircon/system/ulib/fbl",
   ]
+}
+
+fuchsia_driver_component("usb-bus") {
+  component_name = "usb-bus"
+  deps = [ ":usb-bus-driver" ]
 }
 
 source_set("common") {

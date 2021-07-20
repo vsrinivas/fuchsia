@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 
 config("wlan_config") {
@@ -18,7 +19,7 @@ driver_bind_rules("wlan_bind") {
   deps = [ "//src/devices/bind/fuchsia.wlan" ]
 }
 
-driver_module("wlan_driver") {
+driver_module("wlan_driver-driver") {
   output_name = "wlan"
   sources = [
     "device.cc",
@@ -43,6 +44,11 @@ driver_module("wlan_driver") {
     "//zircon/public/lib/zx",
   ]
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+}
+
+fuchsia_driver_component("wlan_driver") {
+  component_name = "wlan"
+  deps = [ ":wlan_driver-driver" ]
 }
 
 test("wlan_minstrel_unittest") {

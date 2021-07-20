@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 
 driver_bind_rules("virtio_gpu_bind") {
@@ -40,7 +41,8 @@ source_set("gpu_lib") {
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
-driver_module("virtio_gpu") {
+driver_module("virtio_gpu-driver") {
+  output_name = "virtio_gpu"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -56,6 +58,11 @@ driver_module("virtio_gpu") {
     "//src/devices/lib/driver",
     "//src/lib/ddktl",
   ]
+}
+
+fuchsia_driver_component("virtio_gpu") {
+  component_name = "virtio_gpu"
+  deps = [ ":virtio_gpu-driver" ]
 }
 
 test("virtio-gpu-test") {

@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 
 driver_bind_rules("i2c_bind") {
@@ -15,7 +16,8 @@ driver_bind_rules("i2c_bind") {
   deps = [ "//src/devices/bind/fuchsia.i2c" ]
 }
 
-driver_module("i2c") {
+driver_module("i2c-driver") {
+  output_name = "i2c"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -42,6 +44,11 @@ driver_module("i2c") {
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/trace:trace-driver",
   ]
+}
+
+fuchsia_driver_component("i2c") {
+  component_name = "i2c"
+  deps = [ ":i2c-driver" ]
 }
 
 test("i2c-test-bin") {

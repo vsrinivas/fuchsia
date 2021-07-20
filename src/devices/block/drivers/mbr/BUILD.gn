@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 
 group("tests") {
@@ -23,7 +24,8 @@ driver_bind_rules("mbr_bind") {
   deps = [ "//src/devices/bind/fuchsia.hardware.block" ]
 }
 
-driver_module("mbr") {
+driver_module("mbr-driver") {
+  output_name = "mbr"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -49,6 +51,11 @@ driver_module("mbr") {
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/mbr",
   ]
+}
+
+fuchsia_driver_component("mbr") {
+  component_name = "mbr"
+  deps = [ ":mbr-driver" ]
 }
 
 test("mbr-test-bin") {

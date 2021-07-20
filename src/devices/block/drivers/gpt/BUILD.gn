@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 
 group("tests") {
@@ -24,7 +25,8 @@ driver_bind_rules("gpt_bind") {
   deps = [ "//src/devices/bind/fuchsia.hardware.block" ]
 }
 
-driver_module("gpt") {
+driver_module("gpt-driver") {
+  output_name = "gpt"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -43,6 +45,11 @@ driver_module("gpt") {
     "//zircon/public/lib/cksum",
     "//zircon/public/lib/sync",
   ]
+}
+
+fuchsia_driver_component("gpt") {
+  component_name = "gpt"
+  deps = [ ":gpt-driver" ]
 }
 
 test("gpt-device-test-bin") {

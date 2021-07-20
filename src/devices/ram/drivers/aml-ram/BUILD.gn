@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 
 driver_bind_rules("aml_ram_bind") {
@@ -18,7 +19,8 @@ driver_bind_rules("aml_ram_bind") {
   ]
 }
 
-driver_module("aml-ram") {
+driver_module("aml-ram-driver") {
+  output_name = "aml-ram"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -33,6 +35,11 @@ driver_module("aml-ram") {
     "//src/devices/lib/driver",
     "//src/devices/lib/mmio",
   ]
+}
+
+fuchsia_driver_component("aml-ram") {
+  component_name = "aml-ram"
+  deps = [ ":aml-ram-driver" ]
 }
 
 test("aml-ram-test-bin") {

@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 
 driver_bind_rules("aml-cpu-legacy-bind") {
@@ -15,7 +16,8 @@ driver_bind_rules("aml-cpu-legacy-bind") {
   deps = [ "//src/devices/bind/fuchsia.google.platform" ]
 }
 
-driver_module("aml-cpu-legacy") {
+driver_module("aml-cpu-legacy-driver") {
+  output_name = "aml-cpu-legacy"
   defines = [ "_ALL_SOURCE" ]
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
   if (is_fuchsia) {
@@ -48,6 +50,11 @@ driver_module("aml-cpu-legacy") {
   # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
   # See linked bug for details.
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
+}
+
+fuchsia_driver_component("aml-cpu-legacy") {
+  component_name = "aml-cpu-legacy"
+  deps = [ ":aml-cpu-legacy-driver" ]
 }
 
 test("aml-cpu-legacy-test-bin") {

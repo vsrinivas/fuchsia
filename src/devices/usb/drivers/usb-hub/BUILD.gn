@@ -4,6 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 
 driver_bind_rules("usb_hub_bind") {
   rules = "usb_hub.bind"
@@ -17,7 +18,8 @@ group("tests") {
   deps = [ ":usb_hub_bind_test" ]
 }
 
-driver_module("usb-hub") {
+driver_module("usb-hub-driver") {
+  output_name = "usb-hub"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -37,4 +39,9 @@ driver_module("usb-hub") {
     "//src/lib/ddk",
     "//zircon/public/lib/sync",
   ]
+}
+
+fuchsia_driver_component("usb-hub") {
+  component_name = "usb-hub"
+  deps = [ ":usb-hub-driver" ]
 }

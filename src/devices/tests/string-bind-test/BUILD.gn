@@ -4,6 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
@@ -51,7 +52,7 @@ driver_bind_rules("parent-driver-bind") {
   deps = [ "//src/devices/bind/fuchsia.test" ]
 }
 
-driver_module("parent-driver") {
+driver_module("parent-driver-driver") {
   output_name = "string-bind-parent"
   test = true
   configs += [
@@ -69,6 +70,11 @@ driver_module("parent-driver") {
   ]
 }
 
+fuchsia_driver_component("parent-driver") {
+  component_name = "string-bind-parent"
+  deps = [ ":parent-driver-driver" ]
+}
+
 driver_bind_rules("child-driver-bind") {
   rules = "child-driver.bind"
   header_output = "child-driver-bind.h"
@@ -78,7 +84,7 @@ driver_bind_rules("child-driver-bind") {
   ]
 }
 
-driver_module("child-driver") {
+driver_module("child-driver-driver") {
   output_name = "string-bind-child"
   test = true
   configs += [
@@ -94,4 +100,9 @@ driver_module("child-driver") {
     "//src/devices/lib/driver",
     "//src/lib/ddk",
   ]
+}
+
+fuchsia_driver_component("child-driver") {
+  component_name = "string-bind-child"
+  deps = [ ":child-driver-driver" ]
 }

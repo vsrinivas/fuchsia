@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 
 driver_bind_rules("ahci_bind") {
@@ -16,7 +17,8 @@ driver_bind_rules("ahci_bind") {
     "//src/devices/bind/fuchsia.pci.massstorage",
   ]
 }
-driver_module("ahci") {
+driver_module("ahci-driver") {
+  output_name = "ahci"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -26,6 +28,11 @@ driver_module("ahci") {
     ":shared",
     "//src/devices/lib/driver",
   ]
+}
+
+fuchsia_driver_component("ahci") {
+  component_name = "ahci"
+  deps = [ ":ahci-driver" ]
 }
 
 group("tests") {

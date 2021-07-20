@@ -4,6 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 
 driver_bind_rules("display_bind") {
   rules = "display.bind"
@@ -13,7 +14,8 @@ driver_bind_rules("display_bind") {
   deps = [ "//src/devices/bind/fuchsia.hardware.display" ]
 }
 
-driver_module("display") {
+driver_module("display-driver") {
+  output_name = "display"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -24,6 +26,11 @@ driver_module("display") {
     "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/devices/lib/driver",
   ]
+}
+
+fuchsia_driver_component("display") {
+  component_name = "display"
+  deps = [ ":display-driver" ]
 }
 
 # Also used by test/.

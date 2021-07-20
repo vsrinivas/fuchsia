@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 
 driver_bind_rules("ti_tas5782-bind") {
@@ -14,7 +15,8 @@ driver_bind_rules("ti_tas5782-bind") {
   deps = [ "//src/devices/bind/fuchsia.ti.platform" ]
 }
 
-driver_module("tas5782") {
+driver_module("tas5782-driver") {
+  output_name = "tas5782"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -35,6 +37,11 @@ driver_module("tas5782") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
   ]
+}
+
+fuchsia_driver_component("tas5782") {
+  component_name = "tas5782"
+  deps = [ ":tas5782-driver" ]
 }
 
 test("tas5782-test") {

@@ -4,6 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 
 driver_bind_rules("machina_board_bind") {
   rules = "machina_board.bind"
@@ -20,7 +21,8 @@ group("tests") {
   deps = [ ":machina_board_bind_test" ]
 }
 
-driver_module("machina") {
+driver_module("machina-driver") {
+  output_name = "machina"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -41,4 +43,9 @@ driver_module("machina") {
     "//src/devices/lib/driver",
     "//src/lib/ddk",
   ]
+}
+
+fuchsia_driver_component("machina") {
+  component_name = "machina"
+  deps = [ ":machina-driver" ]
 }

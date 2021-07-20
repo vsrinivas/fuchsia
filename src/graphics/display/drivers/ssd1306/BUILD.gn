@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 
 driver_bind_rules("ssd1306-bind") {
@@ -14,7 +15,8 @@ driver_bind_rules("ssd1306-bind") {
   deps = [ "//src/devices/bind/fuchsia.platform" ]
 }
 
-driver_module("ssd1306_driver") {
+driver_module("ssd1306_driver-driver") {
+  output_name = "ssd1306_driver"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -35,6 +37,11 @@ driver_module("ssd1306_driver") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
   ]
+}
+
+fuchsia_driver_component("ssd1306_driver") {
+  component_name = "ssd1306_driver"
+  deps = [ ":ssd1306_driver-driver" ]
 }
 
 fuchsia_system_package("ssd1306") {

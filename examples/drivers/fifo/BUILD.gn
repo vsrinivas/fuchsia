@@ -4,6 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 
 driver_bind_rules("demo-fifo-bind") {
   rules = "demo-fifo.bind"
@@ -16,7 +17,8 @@ group("fifo") {
   deps = [ ":demo-fifo" ]
 }
 
-driver_module("demo-fifo") {
+driver_module("demo-fifo-driver") {
+  output_name = "demo-fifo"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -28,6 +30,11 @@ driver_module("demo-fifo") {
     "//src/devices/lib/driver",
     "//src/lib/ddk",
   ]
+}
+
+fuchsia_driver_component("demo-fifo") {
+  component_name = "demo-fifo"
+  deps = [ ":demo-fifo-driver" ]
 }
 
 group("tests") {

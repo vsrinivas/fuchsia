@@ -4,9 +4,10 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//src/graphics/lib/magma/gnbuild/magma.gni")
 
-driver_module("msd_arm") {
+driver_module("msd_arm-driver") {
   output_name = "libmsd_arm"
 
   deps = [
@@ -16,7 +17,12 @@ driver_module("msd_arm") {
   ]
 }
 
-driver_module("msd_arm_test") {
+fuchsia_driver_component("msd_arm") {
+  component_name = "libmsd_arm"
+  deps = [ ":msd_arm-driver" ]
+}
+
+driver_module("msd_arm_test-driver") {
   testonly = true
   output_name = "libmsd_arm_test"
 
@@ -28,6 +34,12 @@ driver_module("msd_arm_test") {
     "//src/graphics/lib/magma/tests/unit_tests:magma_platform_hardware_tests",
     "//src/graphics/lib/magma/tests/unit_tests:msd_abi_conformance_tests",
   ]
+}
+
+fuchsia_driver_component("msd_arm_test") {
+  testonly = true
+  component_name = "libmsd_arm_test"
+  deps = [ ":msd_arm_test-driver" ]
 }
 
 driver_bind_rules("msd_arm_bind") {

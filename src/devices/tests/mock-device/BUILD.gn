@@ -4,6 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/fidl/fidl.gni")
 
 driver_bind_rules("mock-device-bind") {
@@ -13,7 +14,8 @@ driver_bind_rules("mock-device-bind") {
   disable_autobind = true
 }
 
-driver_module("mock-device") {
+driver_module("mock-device-driver") {
+  output_name = "mock-device"
   test = true
   testonly = true
   sources = [
@@ -39,6 +41,12 @@ driver_module("mock-device") {
   # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
   # See linked bug for details.
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
+}
+
+fuchsia_driver_component("mock-device") {
+  testonly = true
+  component_name = "mock-device"
+  deps = [ ":mock-device-driver" ]
 }
 
 fidl("fuchsia.device.mock") {

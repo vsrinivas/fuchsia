@@ -4,6 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 
 driver_bind_rules("virtio_rng_bind") {
@@ -18,7 +19,8 @@ group("tests") {
   deps = [ ":virtio_rng_bind_test" ]
 }
 
-driver_module("virtio_rng") {
+driver_module("virtio_rng-driver") {
+  output_name = "virtio_rng"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -36,4 +38,9 @@ driver_module("virtio_rng") {
     "//src/devices/lib/driver",
     "//src/lib/ddktl",
   ]
+}
+
+fuchsia_driver_component("virtio_rng") {
+  component_name = "virtio_rng"
+  deps = [ ":virtio_rng-driver" ]
 }

@@ -4,6 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 
 driver_bind_rules("bootpart_bind") {
   disable_autobind = true
@@ -18,7 +19,8 @@ group("tests") {
   deps = [ ":bootpart_bind_test" ]
 }
 
-driver_module("bootpart") {
+driver_module("bootpart-driver") {
+  output_name = "bootpart"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -34,4 +36,9 @@ driver_module("bootpart") {
     "//zircon/public/lib/cksum",
     "//zircon/public/lib/sync",
   ]
+}
+
+fuchsia_driver_component("bootpart") {
+  component_name = "bootpart"
+  deps = [ ":bootpart-driver" ]
 }

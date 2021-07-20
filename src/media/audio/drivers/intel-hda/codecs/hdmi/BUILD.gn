@@ -4,6 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 
 driver_bind_rules("ihda_codecs_hdmi_bind") {
   rules = "hdmi_ihda_codec.bind"
@@ -16,7 +17,8 @@ group("hdmi") {
   deps = [ ":hdmi-audio-codec" ]
 }
 
-driver_module("hdmi-audio-codec") {
+driver_module("hdmi-audio-codec-driver") {
+  output_name = "hdmi-audio-codec"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -41,6 +43,11 @@ driver_module("hdmi-audio-codec") {
     "//zircon/system/ulib/edid",
     "//zircon/system/ulib/intel-hda",
   ]
+}
+
+fuchsia_driver_component("hdmi-audio-codec") {
+  component_name = "hdmi-audio-codec"
+  deps = [ ":hdmi-audio-codec-driver" ]
 }
 
 group("tests") {

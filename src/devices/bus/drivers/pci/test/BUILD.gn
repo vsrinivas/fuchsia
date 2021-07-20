@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 import("//src/devices/bus/drivers/pci/pci.gni")
 import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
@@ -58,7 +59,8 @@ test("pci-driver") {
 
 # These drivers are not 'test' drivers because at the moment having other
 # drivers in test/ breaks ddkltl integration tests.
-driver_module("pci_fake") {
+driver_module("pci_fake-driver") {
+  output_name = "pci_fake"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -82,7 +84,14 @@ driver_module("pci_fake") {
   ]
 }
 
-driver_module("pci_protocol_test_driver") {
+fuchsia_driver_component("pci_fake") {
+  testonly = true
+  component_name = "pci_fake"
+  deps = [ ":pci_fake-driver" ]
+}
+
+driver_module("pci_protocol_test_driver-driver") {
+  output_name = "pci_protocol_test_driver"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -105,6 +114,11 @@ driver_module("pci_protocol_test_driver") {
     "//src/lib/ddktl",
     "//zircon/public/lib/zxtest",
   ]
+}
+
+fuchsia_driver_component("pci_protocol_test_driver") {
+  component_name = "pci_protocol_test_driver"
+  deps = [ ":pci_protocol_test_driver-driver" ]
 }
 
 fuchsia_unittest_package("pci-unit-test") {

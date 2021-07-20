@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 
 driver_bind_rules("ethertap_bind") {
@@ -14,7 +15,8 @@ driver_bind_rules("ethertap_bind") {
   deps = [ "//src/devices/bind/fuchsia.test" ]
 }
 
-driver_module("ethertap") {
+driver_module("ethertap-driver") {
+  output_name = "ethertap"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -37,6 +39,11 @@ driver_module("ethertap") {
     "//zircon/public/lib/pretty",
     "//zircon/public/lib/zx",
   ]
+}
+
+fuchsia_driver_component("ethertap") {
+  component_name = "ethertap"
+  deps = [ ":ethertap-driver" ]
 }
 
 test("ethertap-unittest") {

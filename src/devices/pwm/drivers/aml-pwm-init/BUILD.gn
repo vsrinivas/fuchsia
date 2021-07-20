@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 
 driver_bind_rules("aml-pwm-init-bind") {
@@ -15,7 +16,8 @@ driver_bind_rules("aml-pwm-init-bind") {
   deps = [ "//src/devices/bind/amlogic.platform" ]
 }
 
-driver_module("aml-pwm-init") {
+driver_module("aml-pwm-init-driver") {
+  output_name = "aml-pwm-init"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -34,6 +36,11 @@ driver_module("aml-pwm-init") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zircon-internal",
   ]
+}
+
+fuchsia_driver_component("aml-pwm-init") {
+  component_name = "aml-pwm-init"
+  deps = [ ":aml-pwm-init-driver" ]
 }
 
 test("aml-pwm-init-test-bin") {

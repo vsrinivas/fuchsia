@@ -4,6 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 
 driver_bind_rules("nvme_bind") {
   rules = "nvme.bind"
@@ -20,7 +21,8 @@ group("tests") {
   deps = [ ":nvme_bind_test" ]
 }
 
-driver_module("nvme") {
+driver_module("nvme-driver") {
+  output_name = "nvme"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -37,4 +39,9 @@ driver_module("nvme") {
     "//src/lib/ddk",
     "//zircon/public/lib/sync",
   ]
+}
+
+fuchsia_driver_component("nvme") {
+  component_name = "nvme"
+  deps = [ ":nvme-driver" ]
 }

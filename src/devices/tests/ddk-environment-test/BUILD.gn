@@ -4,6 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/fidl/fidl.gni")
 import("//build/test.gni")
 import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
@@ -18,7 +19,8 @@ fidl("fuchsia.device.environment.test") {
   sources = [ "environment.test.fidl" ]
 }
 
-driver_module("ddk-environment-test") {
+driver_module("ddk-environment-test-driver") {
+  output_name = "ddk-environment-test"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -36,6 +38,11 @@ driver_module("ddk-environment-test") {
     "//src/lib/files",
     "//zircon/public/lib/sync",
   ]
+}
+
+fuchsia_driver_component("ddk-environment-test") {
+  component_name = "ddk-environment-test"
+  deps = [ ":ddk-environment-test-driver" ]
 }
 
 test("ddk-environment") {

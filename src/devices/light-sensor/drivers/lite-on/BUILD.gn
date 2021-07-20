@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 
 driver_bind_rules("ltr-578als-bind") {
@@ -17,7 +18,8 @@ driver_bind_rules("ltr-578als-bind") {
   ]
 }
 
-driver_module("lite-on") {
+driver_module("lite-on-driver") {
+  output_name = "lite-on"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -43,6 +45,11 @@ driver_module("lite-on") {
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/simplehid",
   ]
+}
+
+fuchsia_driver_component("lite-on") {
+  component_name = "lite-on"
+  deps = [ ":lite-on-driver" ]
 }
 
 test("ltr-578als-test-bin") {

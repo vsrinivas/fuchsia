@@ -6,6 +6,7 @@ import("//build/bind/bind.gni")
 import("//build/cipd.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 
 declare_args() {
   # Path to the amlogic decoder firmware file. Overrides the default in the build.
@@ -50,7 +51,8 @@ if (target_cpu == "arm64") {
     deps = [ "//src/devices/bind/amlogic.platform" ]
   }
 
-  driver_module("amlogic_video_decoder") {
+  driver_module("amlogic_video_decoder-driver") {
+    output_name = "amlogic_video_decoder"
     deps = [
       ":amlogic_video_bind",
       ":sources",
@@ -61,8 +63,13 @@ if (target_cpu == "arm64") {
     sources = [ "binding.c" ]
   }
 
+  fuchsia_driver_component("amlogic_video_decoder") {
+    component_name = "amlogic_video_decoder"
+    deps = [ ":amlogic_video_decoder-driver" ]
+  }
+
   # This version of the driver runs tests on startup.
-  driver_module("amlogic_decoder_test") {
+  driver_module("amlogic_decoder_test-driver") {
     output_name = "amlogic_video_decoder_test"
 
     testonly = true
@@ -82,13 +89,18 @@ if (target_cpu == "arm64") {
     ]
   }
 
+  fuchsia_driver_component("amlogic_decoder_test") {
+    testonly = true
+    component_name = "amlogic_video_decoder_test"
+    deps = [ ":amlogic_decoder_test-driver" ]
+  }
+
   config("sources_include_config") {
     include_dirs = [ "." ]
   }
 
   source_set("test_support") {
     deps = [
-      ":amlogic_video_test_bind",
       "//src/devices/lib/driver",
       "//src/lib/ddk",
     ]
@@ -159,7 +171,7 @@ if (target_cpu == "arm64") {
       "local_codec_factory.h",
     ]
     public_deps = [
-      ":amlogic_video_test_bind",
+      ":amlogic_video_test_bind_header",
       "h264:h264_parser",
       "//sdk/banjo/fuchsia.hardware.amlogiccanvas:fuchsia.hardware.amlogiccanvas_banjo_cpp",
       "//sdk/banjo/fuchsia.hardware.clock:fuchsia.hardware.clock_banjo_cpp",

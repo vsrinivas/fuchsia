@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 
 # Common configuration for builds on Fuchsia.
 config("fuchsia_config") {
@@ -132,10 +133,15 @@ source_set("pcie") {
   public_configs = [ ":fuchsia_config" ]
 }
 
-driver_module("iwlwifi_driver") {
+driver_module("iwlwifi_driver-driver") {
   output_name = "iwlwifi"
 
   deps = [ ":pcie" ]
+}
+
+fuchsia_driver_component("iwlwifi_driver") {
+  component_name = "iwlwifi"
+  deps = [ ":iwlwifi_driver-driver" ]
 }
 
 all_fw_files = [

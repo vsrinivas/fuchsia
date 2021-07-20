@@ -4,6 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/fidl/fidl.gni")
 import("//build/test.gni")
 import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
@@ -40,7 +41,8 @@ driver_bind_rules("test-board-bind") {
   ]
 }
 
-driver_module("test-board") {
+driver_module("test-board-driver") {
+  output_name = "test-board"
   configs += [ "//build/config:all_source" ]
   sources = [
     "test-board.cc",
@@ -74,6 +76,11 @@ driver_module("test-board") {
   ]
 }
 
+fuchsia_driver_component("test-board") {
+  component_name = "test-board"
+  deps = [ ":test-board-driver" ]
+}
+
 driver_bind_rules("test-gpio-bind") {
   rules = "test/test-gpio.bind"
   header_output = "test-gpio-bind.h"
@@ -83,7 +90,8 @@ driver_bind_rules("test-gpio-bind") {
   ]
 }
 
-driver_module("test-gpio") {
+driver_module("test-gpio-driver") {
+  output_name = "test-gpio"
   configs += [ "//build/config:all_source" ]
   sources = [ "test/gpio.cc" ]
   deps = [
@@ -100,6 +108,11 @@ driver_module("test-gpio") {
   ]
 }
 
+fuchsia_driver_component("test-gpio") {
+  component_name = "test-gpio"
+  deps = [ ":test-gpio-driver" ]
+}
+
 driver_bind_rules("test-power-bind") {
   rules = "test/test-power.bind"
   header_output = "test-power-bind.h"
@@ -109,7 +122,8 @@ driver_bind_rules("test-power-bind") {
   ]
 }
 
-driver_module("test-power") {
+driver_module("test-power-driver") {
+  output_name = "test-power"
   configs += [ "//build/config:all_source" ]
   sources = [ "test/power.cc" ]
   deps = [
@@ -126,6 +140,11 @@ driver_module("test-power") {
   ]
 }
 
+fuchsia_driver_component("test-power") {
+  component_name = "test-power"
+  deps = [ ":test-power-driver" ]
+}
+
 driver_bind_rules("test-goldfish-address-space-bind") {
   rules = "test/test-goldfish-address-space.bind"
   header_output = "test-goldfish-address-space-bind.h"
@@ -135,7 +154,8 @@ driver_bind_rules("test-goldfish-address-space-bind") {
   ]
 }
 
-driver_module("test-goldfish-address-space") {
+driver_module("test-goldfish-address-space-driver") {
+  output_name = "test-goldfish-address-space"
   configs += [ "//build/config:all_source" ]
   sources = [ "test/goldfish_address_space.cc" ]
   deps = [
@@ -151,6 +171,11 @@ driver_module("test-goldfish-address-space") {
   ]
 }
 
+fuchsia_driver_component("test-goldfish-address-space") {
+  component_name = "test-goldfish-address-space"
+  deps = [ ":test-goldfish-address-space-driver" ]
+}
+
 driver_bind_rules("test-goldfish-pipe-bind") {
   rules = "test/test-goldfish-pipe.bind"
   header_output = "test-goldfish-pipe-bind.h"
@@ -160,7 +185,8 @@ driver_bind_rules("test-goldfish-pipe-bind") {
   ]
 }
 
-driver_module("test-goldfish-pipe") {
+driver_module("test-goldfish-pipe-driver") {
+  output_name = "test-goldfish-pipe"
   configs += [ "//build/config:all_source" ]
   sources = [ "test/goldfish_pipe.cc" ]
   deps = [
@@ -176,6 +202,11 @@ driver_module("test-goldfish-pipe") {
   ]
 }
 
+fuchsia_driver_component("test-goldfish-pipe") {
+  component_name = "test-goldfish-pipe"
+  deps = [ ":test-goldfish-pipe-driver" ]
+}
+
 driver_bind_rules("test-goldfish-sync-bind") {
   rules = "test/test-goldfish-sync.bind"
   header_output = "test-goldfish-sync-bind.h"
@@ -185,7 +216,8 @@ driver_bind_rules("test-goldfish-sync-bind") {
   ]
 }
 
-driver_module("test-goldfish-sync") {
+driver_module("test-goldfish-sync-driver") {
+  output_name = "test-goldfish-sync"
   configs += [ "//build/config:all_source" ]
   sources = [ "test/goldfish_sync.cc" ]
   deps = [
@@ -201,6 +233,11 @@ driver_module("test-goldfish-sync") {
   ]
 }
 
+fuchsia_driver_component("test-goldfish-sync") {
+  component_name = "test-goldfish-sync"
+  deps = [ ":test-goldfish-sync-driver" ]
+}
+
 driver_bind_rules("test-clock-bind") {
   rules = "test/test-clock.bind"
   header_output = "test-clock-bind.h"
@@ -210,7 +247,8 @@ driver_bind_rules("test-clock-bind") {
   ]
 }
 
-driver_module("test-clock") {
+driver_module("test-clock-driver") {
+  output_name = "test-clock"
   configs += [ "//build/config:all_source" ]
   sources = [ "test/clock.cc" ]
   deps = [
@@ -227,6 +265,11 @@ driver_module("test-clock") {
   ]
 }
 
+fuchsia_driver_component("test-clock") {
+  component_name = "test-clock"
+  deps = [ ":test-clock-driver" ]
+}
+
 driver_bind_rules("test-i2c-bind") {
   rules = "test/test-i2c.bind"
   header_output = "test-i2c-bind.h"
@@ -236,7 +279,8 @@ driver_bind_rules("test-i2c-bind") {
   ]
 }
 
-driver_module("test-i2c") {
+driver_module("test-i2c-driver") {
+  output_name = "test-i2c"
   configs += [ "//build/config:all_source" ]
   sources = [ "test/i2c.cc" ]
   deps = [
@@ -253,6 +297,11 @@ driver_module("test-i2c") {
   ]
 }
 
+fuchsia_driver_component("test-i2c") {
+  component_name = "test-i2c"
+  deps = [ ":test-i2c-driver" ]
+}
+
 driver_bind_rules("test-spi-bind") {
   rules = "test/test-spi.bind"
   header_output = "test-spi-bind.h"
@@ -262,7 +311,8 @@ driver_bind_rules("test-spi-bind") {
   ]
 }
 
-driver_module("test-spi") {
+driver_module("test-spi-driver") {
+  output_name = "test-spi"
   configs += [ "//build/config:all_source" ]
   sources = [ "test/spi.cc" ]
   deps = [
@@ -279,6 +329,11 @@ driver_module("test-spi") {
   ]
 }
 
+fuchsia_driver_component("test-spi") {
+  component_name = "test-spi"
+  deps = [ ":test-spi-driver" ]
+}
+
 driver_bind_rules("test-pwm-bind") {
   rules = "test/test-pwm.bind"
   header_output = "test-pwm-bind.h"
@@ -288,7 +343,8 @@ driver_bind_rules("test-pwm-bind") {
   ]
 }
 
-driver_module("test-pwm") {
+driver_module("test-pwm-driver") {
+  output_name = "test-pwm"
   configs += [ "//build/config:all_source" ]
   sources = [ "test/pwm.cc" ]
   deps = [
@@ -304,6 +360,11 @@ driver_module("test-pwm") {
   ]
 }
 
+fuchsia_driver_component("test-pwm") {
+  component_name = "test-pwm"
+  deps = [ ":test-pwm-driver" ]
+}
+
 driver_bind_rules("test-rpmb-bind") {
   rules = "test/test-rpmb.bind"
   header_output = "test-rpmb-bind.h"
@@ -313,7 +374,8 @@ driver_bind_rules("test-rpmb-bind") {
   ]
 }
 
-driver_module("test-rpmb") {
+driver_module("test-rpmb-driver") {
+  output_name = "test-rpmb"
   configs += [ "//build/config:all_source" ]
   sources = [ "test/rpmb.cc" ]
   deps = [
@@ -327,6 +389,11 @@ driver_module("test-rpmb") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
   ]
+}
+
+fuchsia_driver_component("test-rpmb") {
+  component_name = "test-rpmb"
+  deps = [ ":test-rpmb-driver" ]
 }
 
 driver_bind_rules("test-vreg-bind") {
@@ -348,7 +415,8 @@ driver_bind_rules("test-pci-bind") {
   ]
 }
 
-driver_module("test-pci") {
+driver_module("test-pci-driver") {
+  output_name = "test-pci"
   testonly = true
   configs += [ "//build/config:all_source" ]
   sources = [ "test/pci.cc" ]
@@ -366,7 +434,14 @@ driver_module("test-pci") {
   ]
 }
 
-driver_module("test-vreg") {
+fuchsia_driver_component("test-pci") {
+  testonly = true
+  component_name = "test-pci"
+  deps = [ ":test-pci-driver" ]
+}
+
+driver_module("test-vreg-driver") {
+  output_name = "test-vreg"
   configs += [ "//build/config:all_source" ]
   sources = [ "test/vreg.cc" ]
   deps = [
@@ -383,13 +458,19 @@ driver_module("test-vreg") {
   ]
 }
 
+fuchsia_driver_component("test-vreg") {
+  component_name = "test-vreg"
+  deps = [ ":test-vreg-driver" ]
+}
+
 driver_bind_rules("test-composite-bind") {
   rules = "test/test-composite.bind"
   header_output = "test-composite-bind.h"
   deps = [ "//src/devices/bind/test.platform" ]
 }
 
-driver_module("test-composite") {
+driver_module("test-composite-driver") {
+  output_name = "test-composite"
   configs += [ "//build/config:all_source" ]
   sources = [ "test/composite.c" ]
   deps = [
@@ -420,12 +501,18 @@ driver_module("test-composite") {
   ]
 }
 
+fuchsia_driver_component("test-composite") {
+  component_name = "test-composite"
+  deps = [ ":test-composite-driver" ]
+}
+
 driver_bind_rules("test-child-2.proxy-bind") {
   header_output = "test-child-2.proxy-bind.h"
   disable_autobind = true
 }
 
-driver_module("test-child-2.proxy") {
+driver_module("test-child-2.proxy-driver") {
+  output_name = "test-child-2.proxy"
   configs += [ "//build/config:all_source" ]
   sources = [ "test/child-2.proxy.c" ]
   deps = [
@@ -433,6 +520,11 @@ driver_module("test-child-2.proxy") {
     "//src/devices/lib/driver",
     "//src/lib/ddk",
   ]
+}
+
+fuchsia_driver_component("test-child-2.proxy") {
+  component_name = "test-child-2.proxy"
+  deps = [ ":test-child-2.proxy-driver" ]
 }
 
 simple_drivers = [
@@ -449,7 +541,8 @@ foreach(driver, simple_drivers) {
     deps = [ "//src/devices/bind/test.platform" ]
   }
 
-  driver_module("test-$driver") {
+  driver_module("test-$driver-driver") {
+    output_name = "test-$driver"
     configs += [ "//build/config:all_source" ]
     sources = [ "test/$driver.c" ]
     deps = [
@@ -461,6 +554,11 @@ foreach(driver, simple_drivers) {
       # TODO(fxb/38132): Migrate to the new bind rules and delete the below
       "//src/lib/ddk:ddk-deprecated-binding-headers",
     ]
+  }
+
+  fuchsia_driver_component("test-$driver") {
+    component_name = "test-$driver"
+    deps = [ ":test-$driver-driver" ]
   }
 }
 
@@ -511,7 +609,8 @@ driver_bind_rules("test-bti-board-bind") {
   ]
 }
 
-driver_module("test-bti-board") {
+driver_module("test-bti-board-driver") {
+  output_name = "test-bti-board"
   configs += [ "//build/config:all_source" ]
   sources = [ "test-bti-board.cc" ]
   deps = [
@@ -527,12 +626,18 @@ driver_module("test-bti-board") {
   ]
 }
 
+fuchsia_driver_component("test-bti-board") {
+  component_name = "test-bti-board"
+  deps = [ ":test-bti-board-driver" ]
+}
+
 driver_bind_rules("test-bti-bind") {
   rules = "test-bti.bind"
   header_output = "test-bti-bind.h"
   deps = [ "//src/devices/bind/test.platform" ]
 }
-driver_module("test-bti") {
+driver_module("test-bti-driver") {
+  output_name = "test-bti"
   configs += [ "//build/config:all_source" ]
   sources = [ "test-bti.cc" ]
   deps = [
@@ -546,6 +651,11 @@ driver_module("test-bti") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
   ]
+}
+
+fuchsia_driver_component("test-bti") {
+  component_name = "test-bti"
+  deps = [ ":test-bti-driver" ]
 }
 
 test("platform-bus-bti") {
@@ -580,7 +690,8 @@ driver_bind_rules("test-power-sensor-bind") {
   ]
 }
 
-driver_module("test-power-sensor") {
+driver_module("test-power-sensor-driver") {
+  output_name = "test-power-sensor"
   configs += [ "//build/config:all_source" ]
   sources = [ "test/power-sensor.cc" ]
   deps = [
@@ -594,6 +705,11 @@ driver_module("test-power-sensor") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
   ]
+}
+
+fuchsia_driver_component("test-power-sensor") {
+  component_name = "test-power-sensor"
+  deps = [ ":test-power-sensor-driver" ]
 }
 
 isolated_devmgr_unittest_package("platform-bus-bti-test") {

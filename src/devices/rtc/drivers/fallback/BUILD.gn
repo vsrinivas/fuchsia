@@ -4,6 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
@@ -18,7 +19,8 @@ driver_bind_rules("fallback_rtc_bind") {
   ]
 }
 
-driver_module("fallback") {
+driver_module("fallback-driver") {
+  output_name = "fallback"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -35,6 +37,11 @@ driver_module("fallback") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
   ]
+}
+
+fuchsia_driver_component("fallback") {
+  component_name = "fallback"
+  deps = [ ":fallback-driver" ]
 }
 
 test("fallback-rtc") {

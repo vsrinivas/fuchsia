@@ -4,6 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 
 group("tests") {
   testonly = true
@@ -21,7 +22,8 @@ driver_bind_rules("ftl_bind") {
   deps = [ "//src/devices/bind/fuchsia.nand" ]
 }
 
-driver_module("ftl") {
+driver_module("ftl-driver") {
+  output_name = "ftl"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -38,6 +40,11 @@ driver_module("ftl") {
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",
   ]
+}
+
+fuchsia_driver_component("ftl") {
+  component_name = "ftl"
+  deps = [ ":ftl-driver" ]
 }
 
 # Also used by ftl-test.

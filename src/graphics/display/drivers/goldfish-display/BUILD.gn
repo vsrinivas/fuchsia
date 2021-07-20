@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 
 driver_bind_rules("goldfish-display-bind") {
@@ -14,7 +15,8 @@ driver_bind_rules("goldfish-display-bind") {
   deps = [ "//src/devices/bind/fuchsia.goldfish" ]
 }
 
-driver_module("goldfish-display") {
+driver_module("goldfish-display-driver") {
+  output_name = "goldfish-display"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -26,6 +28,11 @@ driver_module("goldfish-display") {
     ":goldfish-display-bind",
     "//src/devices/lib/driver",
   ]
+}
+
+fuchsia_driver_component("goldfish-display") {
+  component_name = "goldfish-display"
+  deps = [ ":goldfish-display-driver" ]
 }
 
 source_set("common") {

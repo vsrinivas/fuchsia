@@ -4,6 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/fidl/fidl.gni")
 import("//build/test.gni")
 import("//build/testing/environments.gni")
@@ -93,7 +94,8 @@ driver_bind_rules("test-devhost-parent-bind") {
   deps = [ "//src/devices/bind/test.platform" ]
 }
 
-driver_module("driver-host-test-driver") {
+driver_module("driver-host-test-driver-driver") {
+  output_name = "driver-host-test-driver"
   sources = [ "test-driver.cc" ]
   deps = [
     ":fuchsia.device.restarttest_llcpp",
@@ -106,13 +108,19 @@ driver_module("driver-host-test-driver") {
   ]
 }
 
+fuchsia_driver_component("driver-host-test-driver") {
+  component_name = "driver-host-test-driver"
+  deps = [ ":driver-host-test-driver-driver" ]
+}
+
 driver_bind_rules("test-devhost-child-bind") {
   rules = "test-devhost-child.bind"
   header_output = "test-devhost-child-bind.h"
   deps = [ "//src/devices/bind/fuchsia.test" ]
 }
 
-driver_module("driver-host-test-child-driver") {
+driver_module("driver-host-test-child-driver-driver") {
+  output_name = "driver-host-test-child-driver"
   sources = [ "test-driver-child.cc" ]
   deps = [
     ":test-devhost-child-bind",
@@ -122,6 +130,11 @@ driver_module("driver-host-test-child-driver") {
     "//src/lib/ddktl",
     "//zircon/system/ulib/fbl",
   ]
+}
+
+fuchsia_driver_component("driver-host-test-child-driver") {
+  component_name = "driver-host-test-child-driver"
+  deps = [ ":driver-host-test-child-driver-driver" ]
 }
 
 fidl("fuchsia.device.restarttest") {
@@ -135,7 +148,8 @@ driver_bind_rules("driver-host-restart-bind") {
   deps = [ "//src/devices/bind/test.platform" ]
 }
 
-driver_module("driver-host-restart-driver") {
+driver_module("driver-host-restart-driver-driver") {
+  output_name = "driver-host-restart-driver"
   sources = [ "host-restart-test-driver.cc" ]
   deps = [
     ":driver-host-restart-bind",
@@ -146,6 +160,11 @@ driver_module("driver-host-restart-driver") {
     "//src/lib/ddktl",
     "//zircon/system/ulib/fbl",
   ]
+}
+
+fuchsia_driver_component("driver-host-restart-driver") {
+  component_name = "driver-host-restart-driver"
+  deps = [ ":driver-host-restart-driver-driver" ]
 }
 
 test("driver_host_test") {
@@ -189,7 +208,8 @@ driver_bind_rules("unit-test-fail-bind") {
   disable_autobind = true
 }
 
-driver_module("unit-test-fail") {
+driver_module("unit-test-fail-driver") {
+  output_name = "unit-test-fail"
   test = true
   sources = [ "unit-test-fail.cc" ]
   deps = [
@@ -199,6 +219,11 @@ driver_module("unit-test-fail") {
   ]
 }
 
+fuchsia_driver_component("unit-test-fail") {
+  component_name = "unit-test-fail"
+  deps = [ ":unit-test-fail-driver" ]
+}
+
 driver_bind_rules("unit-test-pass-bind") {
   rules = "unit-test-pass.bind"
   header_output = "unit-test-pass-bind.h"
@@ -206,7 +231,8 @@ driver_bind_rules("unit-test-pass-bind") {
   disable_autobind = true
 }
 
-driver_module("unit-test-pass") {
+driver_module("unit-test-pass-driver") {
+  output_name = "unit-test-pass"
   test = true
   sources = [ "unit-test-pass.cc" ]
   deps = [
@@ -214,6 +240,11 @@ driver_module("unit-test-pass") {
     "//src/devices/lib/driver",
     "//src/lib/ddk",
   ]
+}
+
+fuchsia_driver_component("unit-test-pass") {
+  component_name = "unit-test-pass"
+  deps = [ ":unit-test-pass-driver" ]
 }
 
 isolated_devmgr_unittest_package("driver-host-tests") {

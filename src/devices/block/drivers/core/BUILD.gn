@@ -5,20 +5,26 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 
-driver_module("core") {
+driver_module("core-driver") {
+  output_name = "block.core"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
   configs += [ "//build/unification/config:zircon-migrated" ]
-  output_name = "block.core"
   deps = [
     ":shared",
     "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/devices/lib/driver",
   ]
+}
+
+fuchsia_driver_component("core") {
+  component_name = "block.core"
+  deps = [ ":core-driver" ]
 }
 
 group("tests") {

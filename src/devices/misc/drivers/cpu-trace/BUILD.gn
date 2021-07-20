@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 
 source_set("perf-mon") {
@@ -42,7 +43,8 @@ driver_bind_rules("cpu_trace_bind") {
   deps = [ "//src/devices/bind/fuchsia.platform" ]
 }
 
-driver_module("cpu-trace") {
+driver_module("cpu-trace-driver") {
+  output_name = "cpu-trace"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -67,6 +69,11 @@ driver_module("cpu-trace") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
   ]
+}
+
+fuchsia_driver_component("cpu-trace") {
+  component_name = "cpu-trace"
+  deps = [ ":cpu-trace-driver" ]
 }
 
 group("tests") {

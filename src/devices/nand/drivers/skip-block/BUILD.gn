@@ -5,13 +5,20 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 
-driver_module("skip-block") {
+driver_module("skip-block-driver") {
+  output_name = "skip-block"
   deps = [
     ":common",
     "//src/devices/lib/driver",
   ]
+}
+
+fuchsia_driver_component("skip-block") {
+  component_name = "skip-block"
+  deps = [ ":skip-block-driver" ]
 }
 
 driver_bind_rules("skip-block-bind") {

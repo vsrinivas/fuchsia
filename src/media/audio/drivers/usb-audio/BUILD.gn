@@ -4,6 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 
 driver_bind_rules("usb_audio_bind") {
   rules = "usb_audio.bind"
@@ -76,6 +77,12 @@ source_set("shared") {
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
-driver_module("usb-audio") {
+driver_module("usb-audio-driver") {
+  output_name = "usb-audio"
   deps = [ ":shared" ]
+}
+
+fuchsia_driver_component("usb-audio") {
+  component_name = "usb-audio"
+  deps = [ ":usb-audio-driver" ]
 }

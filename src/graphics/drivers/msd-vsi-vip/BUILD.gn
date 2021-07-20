@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//src/graphics/lib/magma/gnbuild/magma.gni")
 
 fuchsia_system_package("msd-vsi-vip") {
@@ -16,7 +17,7 @@ fuchsia_system_package("msd-vsi-vip-test") {
   deps = [ ":msd_vsi_test" ]
 }
 
-driver_module("msd_vsi") {
+driver_module("msd_vsi-driver") {
   output_name = "libmsd_vsi"
   deps = [
     ":msd_vsi_entry",
@@ -25,7 +26,12 @@ driver_module("msd_vsi") {
   ]
 }
 
-driver_module("msd_vsi_test") {
+fuchsia_driver_component("msd_vsi") {
+  component_name = "libmsd_vsi"
+  deps = [ ":msd_vsi-driver" ]
+}
+
+driver_module("msd_vsi_test-driver") {
   testonly = true
   output_name = "libmsd_vsi_test"
   deps = [
@@ -33,6 +39,12 @@ driver_module("msd_vsi_test") {
     "$magma_build_root/src/magma_util/platform:logger_for_system_drivers",
     "src",
   ]
+}
+
+fuchsia_driver_component("msd_vsi_test") {
+  testonly = true
+  component_name = "libmsd_vsi_test"
+  deps = [ ":msd_vsi_test-driver" ]
 }
 
 driver_bind_rules("msd_vsi_bind") {

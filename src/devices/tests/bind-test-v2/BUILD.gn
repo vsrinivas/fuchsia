@@ -4,6 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
@@ -47,7 +48,7 @@ driver_bind_rules("bind-v2") {
   deps = [ "//src/devices/bind/fuchsia.test" ]
 }
 
-driver_module("bind-test-driver-v2") {
+driver_module("bind-test-driver-v2-driver") {
   output_name = "bind-test-v2"
   test = true
   configs += [
@@ -63,4 +64,9 @@ driver_module("bind-test-driver-v2") {
     "//src/devices/lib/driver",
     "//src/lib/ddk",
   ]
+}
+
+fuchsia_driver_component("bind-test-driver-v2") {
+  component_name = "bind-test-v2"
+  deps = [ ":bind-test-driver-v2-driver" ]
 }

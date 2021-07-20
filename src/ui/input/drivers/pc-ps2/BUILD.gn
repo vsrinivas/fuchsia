@@ -4,6 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 
 driver_bind_rules("i8042_bind") {
   rules = "i8042.bind"
@@ -17,7 +18,8 @@ group("tests") {
   deps = [ ":i8042_bind_test" ]
 }
 
-driver_module("pc-ps2") {
+driver_module("pc-ps2-driver") {
+  output_name = "pc-ps2"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -35,4 +37,9 @@ driver_module("pc-ps2") {
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
+}
+
+fuchsia_driver_component("pc-ps2") {
+  component_name = "pc-ps2"
+  deps = [ ":pc-ps2-driver" ]
 }

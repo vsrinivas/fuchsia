@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 
 driver_bind_rules("tcs3400_light_bind") {
@@ -15,7 +16,8 @@ driver_bind_rules("tcs3400_light_bind") {
   deps = [ "//src/devices/bind/fuchsia.ams.platform" ]
 }
 
-driver_module("ams-light") {
+driver_module("ams-light-driver") {
+  output_name = "ams-light"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -42,6 +44,11 @@ driver_module("ams-light") {
     "//zircon/public/lib/zxc",
     "//zircon/system/ulib/hid",
   ]
+}
+
+fuchsia_driver_component("ams-light") {
+  component_name = "ams-light"
+  deps = [ ":ams-light-driver" ]
 }
 
 test("ams-light-test-bin") {

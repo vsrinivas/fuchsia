@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 
 driver_bind_rules("intel-i915-bind") {
@@ -56,8 +57,14 @@ source_set("common_srcs") {
   ]
 }
 
-driver_module("intel-i915") {
+driver_module("intel-i915-driver") {
+  output_name = "intel-i915"
   deps = [ ":common_srcs" ]
+}
+
+fuchsia_driver_component("intel-i915") {
+  component_name = "intel-i915"
+  deps = [ ":intel-i915-driver" ]
 }
 
 test("intel-i915-test") {

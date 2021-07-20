@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 
 driver_bind_rules("registers_bind") {
@@ -15,7 +16,8 @@ driver_bind_rules("registers_bind") {
   deps = [ "//src/devices/bind/fuchsia.platform" ]
 }
 
-driver_module("registers") {
+driver_module("registers-driver") {
+  output_name = "registers"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -34,6 +36,11 @@ driver_module("registers") {
   # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
   # See linked bug for details.
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
+}
+
+fuchsia_driver_component("registers") {
+  component_name = "registers"
+  deps = [ ":registers-driver" ]
 }
 
 test("registers-test") {

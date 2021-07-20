@@ -4,12 +4,19 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 
-driver_module("aml-rawnand") {
+driver_module("aml-rawnand-driver") {
+  output_name = "aml-rawnand"
   deps = [
     ":common",
     "//src/devices/lib/driver",
   ]
+}
+
+fuchsia_driver_component("aml-rawnand") {
+  component_name = "aml-rawnand"
+  deps = [ ":aml-rawnand-driver" ]
 }
 
 driver_bind_rules("aml-rawnand-bind") {

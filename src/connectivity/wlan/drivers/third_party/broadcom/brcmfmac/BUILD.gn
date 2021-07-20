@@ -14,6 +14,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("config.gni")
 
 # By default, targets are only visible here and to subdirectories.
@@ -259,7 +260,7 @@ driver_bind_rules("brcmfmac_sdio_bind") {
 }
 
 # Driver module for the brcmfmac driver.
-driver_module("driver_module") {
+driver_module("driver_module-driver") {
   output_name = "brcmfmac"
   sources = [ "binding.cc" ]
   deps = [
@@ -269,6 +270,11 @@ driver_module("driver_module") {
     ":driver_sources",
     "//src/connectivity/wlan/lib/common/cpp:common",
   ]
+}
+
+fuchsia_driver_component("driver_module") {
+  component_name = "brcmfmac"
+  deps = [ ":driver_module-driver" ]
   visibility += [
     "//bundles/drivers:pci",
     "//src/connectivity/wlan:drivers",
@@ -277,7 +283,7 @@ driver_module("driver_module") {
 
 # Driver module for the test version of the brcmfmac driver, which includes run_unit_tests() DDK
 # tests.
-driver_module("test_driver_module") {
+driver_module("test_driver_module-driver") {
   output_name = "brcmfmac-test"
   sources = [ "binding.cc" ]
   deps = [
@@ -290,6 +296,11 @@ driver_module("test_driver_module") {
     "pcie:pcie_driver_test",
   ]
   defines = [ "CONFIG_BRCMFMAC_DRIVER_TEST=1" ]
+}
+
+fuchsia_driver_component("test_driver_module") {
+  component_name = "brcmfmac-test"
+  deps = [ ":test_driver_module-driver" ]
   visibility += [ "//src/connectivity/wlan:drivers" ]
 }
 

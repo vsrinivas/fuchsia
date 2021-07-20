@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 import("//build/testing/bootfs_test.gni")
 import("//src/devices/bus/drivers/pci/pci.gni")
@@ -59,7 +60,8 @@ driver_bind_rules("x64-bind") {
   ]
 }
 
-driver_module("platform-bus-x86") {
+driver_module("platform-bus-x86-driver") {
+  output_name = "platform-bus-x86"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -142,6 +144,11 @@ driver_module("platform-bus-x86") {
     "//zircon/system/ulib/region-alloc",
     "//zircon/third_party/ulib/chromiumos-platform-ec",
   ]
+}
+
+fuchsia_driver_component("platform-bus-x86") {
+  component_name = "platform-bus-x86"
+  deps = [ ":platform-bus-x86-driver" ]
 }
 
 test("x86-battery-test") {

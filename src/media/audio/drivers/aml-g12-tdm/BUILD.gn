@@ -4,6 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 
 driver_bind_rules("aml-g12-tdm-bind") {
   rules = "aml_tdm.bind"
@@ -13,7 +14,8 @@ driver_bind_rules("aml-g12-tdm-bind") {
   deps = [ "//src/devices/bind/amlogic.platform" ]
 }
 
-driver_module("aml-g12-tdm") {
+driver_module("aml-g12-tdm-driver") {
+  output_name = "aml-g12-tdm"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -47,6 +49,11 @@ driver_module("aml-g12-tdm") {
   ]
 }
 
+fuchsia_driver_component("aml-g12-tdm") {
+  component_name = "aml-g12-tdm"
+  deps = [ ":aml-g12-tdm-driver" ]
+}
+
 driver_bind_rules("aml-g12-tdm-dai-bind") {
   rules = "aml_tdm_dai.bind"
   header_output = "aml_tdm_dai_bind.h"
@@ -58,7 +65,8 @@ driver_bind_rules("aml-g12-tdm-dai-bind") {
   ]
 }
 
-driver_module("aml-g12-tdm-dai") {
+driver_module("aml-g12-tdm-dai-driver") {
+  output_name = "aml-g12-tdm-dai"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -91,6 +99,11 @@ driver_module("aml-g12-tdm-dai") {
     # TODO(andresoportus): Remove depedency on TLS (maybe done by C++ bindings unification).
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
+}
+
+fuchsia_driver_component("aml-g12-tdm-dai") {
+  component_name = "aml-g12-tdm-dai"
+  deps = [ ":aml-g12-tdm-dai-driver" ]
 }
 
 group("tests") {

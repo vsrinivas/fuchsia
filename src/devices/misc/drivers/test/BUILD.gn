@@ -4,6 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 
 driver_bind_rules("test_bind") {
   rules = "test.bind"
@@ -20,7 +21,8 @@ group("tests") {
   deps = [ ":test_bind_test" ]
 }
 
-driver_module("test") {
+driver_module("test-driver") {
+  output_name = "test"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -37,4 +39,9 @@ driver_module("test") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/fbl",
   ]
+}
+
+fuchsia_driver_component("test") {
+  component_name = "test"
+  deps = [ ":test-driver" ]
 }

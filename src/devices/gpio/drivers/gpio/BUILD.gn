@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 
 driver_bind_rules("gpio_bind") {
@@ -15,7 +16,8 @@ driver_bind_rules("gpio_bind") {
   deps = [ "//src/devices/bind/fuchsia.gpio" ]
 }
 
-driver_module("gpio") {
+driver_module("gpio-driver") {
+  output_name = "gpio"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -35,6 +37,11 @@ driver_module("gpio") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
   ]
+}
+
+fuchsia_driver_component("gpio") {
+  component_name = "gpio"
+  deps = [ ":gpio-driver" ]
 }
 
 test("gpio-test-bin") {

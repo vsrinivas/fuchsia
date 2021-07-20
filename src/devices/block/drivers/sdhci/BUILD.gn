@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 
 driver_bind_rules("sdhci-bind") {
@@ -14,7 +15,8 @@ driver_bind_rules("sdhci-bind") {
   deps = [ "//src/devices/bind/fuchsia.sdmmc" ]
 }
 
-driver_module("sdhci") {
+driver_module("sdhci-driver") {
+  output_name = "sdhci"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -36,6 +38,11 @@ driver_module("sdhci") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
   ]
+}
+
+fuchsia_driver_component("sdhci") {
+  component_name = "sdhci"
+  deps = [ ":sdhci-driver" ]
 }
 
 test("sdhci-test-bin") {

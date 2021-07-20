@@ -4,6 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 
 driver_bind_rules("usb_composite_bind") {
   rules = "usb_composite.bind"
@@ -18,7 +19,8 @@ group("tests") {
   deps = [ ":usb_composite_bind_test" ]
 }
 
-driver_module("usb-composite") {
+driver_module("usb-composite-driver") {
+  output_name = "usb-composite"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -40,4 +42,9 @@ driver_module("usb-composite") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
   ]
+}
+
+fuchsia_driver_component("usb-composite") {
+  component_name = "usb-composite"
+  deps = [ ":usb-composite-driver" ]
 }

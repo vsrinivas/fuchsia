@@ -4,6 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 
 driver_bind_rules("pcf8563_rtc_bind") {
   rules = "pcf8563_rtc.bind"
@@ -12,7 +13,8 @@ driver_bind_rules("pcf8563_rtc_bind") {
   deps = [ "//src/devices/bind/fuchsia.nxp.platform" ]
 }
 
-driver_module("nxp") {
+driver_module("nxp-driver") {
+  output_name = "nxp"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -32,6 +34,11 @@ driver_module("nxp") {
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/hid",
   ]
+}
+
+fuchsia_driver_component("nxp") {
+  component_name = "nxp"
+  deps = [ ":nxp-driver" ]
 }
 
 group("tests") {

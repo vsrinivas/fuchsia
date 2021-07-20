@@ -4,6 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/fidl/fidl.gni")
 import("//build/test.gni")
 import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
@@ -18,7 +19,8 @@ fidl("fuchsia.device.manager.test") {
   sources = [ "metadata.test.fidl" ]
 }
 
-driver_module("isolateddevmgr-test-driver") {
+driver_module("isolateddevmgr-test-driver-driver") {
+  output_name = "isolateddevmgr-test-driver"
   sources = [ "test-driver.cc" ]
   deps = [
     ":fuchsia.device.manager.test_llcpp",
@@ -29,6 +31,11 @@ driver_module("isolateddevmgr-test-driver") {
     "//src/lib/ddktl",
     "//zircon/system/ulib/fbl",
   ]
+}
+
+fuchsia_driver_component("isolateddevmgr-test-driver") {
+  component_name = "isolateddevmgr-test-driver"
+  deps = [ ":isolateddevmgr-test-driver-driver" ]
 }
 
 test("isolateddevmgr") {

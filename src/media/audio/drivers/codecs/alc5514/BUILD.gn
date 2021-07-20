@@ -4,6 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 
 driver_bind_rules("alc5514_bind") {
   rules = "alc5514.bind"
@@ -12,7 +13,8 @@ driver_bind_rules("alc5514_bind") {
   deps = [ "//src/devices/bind/fuchsia.acpi" ]
 }
 
-driver_module("alc5514") {
+driver_module("alc5514-driver") {
+  output_name = "alc5514"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -33,6 +35,11 @@ driver_module("alc5514") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
   ]
+}
+
+fuchsia_driver_component("alc5514") {
+  component_name = "alc5514"
+  deps = [ ":alc5514-driver" ]
 }
 
 group("tests") {

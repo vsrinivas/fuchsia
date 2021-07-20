@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 
 driver_bind_rules("bcm_hci_bind") {
@@ -18,7 +19,8 @@ driver_bind_rules("bcm_hci_bind") {
   ]
 }
 
-driver_module("bt-hci-broadcom") {
+driver_module("bt-hci-broadcom-driver") {
+  output_name = "bt-hci-broadcom"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -36,6 +38,11 @@ driver_module("bt-hci-broadcom") {
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/sync",
   ]
+}
+
+fuchsia_driver_component("bt-hci-broadcom") {
+  component_name = "bt-hci-broadcom"
+  deps = [ ":bt-hci-broadcom-driver" ]
 }
 
 resource("broadcom-firmware") {

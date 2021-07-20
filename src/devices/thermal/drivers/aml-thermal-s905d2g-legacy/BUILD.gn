@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 
 driver_bind_rules("aml-thermal-s905d2g-legacy-bind") {
@@ -15,7 +16,8 @@ driver_bind_rules("aml-thermal-s905d2g-legacy-bind") {
   deps = [ "//src/devices/bind/amlogic.platform" ]
 }
 
-driver_module("aml-thermal-s905d2g-legacy") {
+driver_module("aml-thermal-s905d2g-legacy-driver") {
+  output_name = "aml-thermal-s905d2g-legacy"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -52,6 +54,11 @@ driver_module("aml-thermal-s905d2g-legacy") {
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fidl-utils",
   ]
+}
+
+fuchsia_driver_component("aml-thermal-s905d2g-legacy") {
+  component_name = "aml-thermal-s905d2g-legacy"
+  deps = [ ":aml-thermal-s905d2g-legacy-driver" ]
 }
 
 test("aml-thermal-s905d2g-legacy-test-bin") {

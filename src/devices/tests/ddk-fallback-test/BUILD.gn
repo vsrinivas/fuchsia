@@ -4,6 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/fidl/fidl.gni")
 import("//build/test.gni")
 import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
@@ -15,7 +16,8 @@ driver_bind_rules("ddk-fallback-test-bind") {
   deps = [ "//src/devices/bind/test.platform" ]
 }
 
-driver_module("ddk-fallback-test") {
+driver_module("ddk-fallback-test-driver") {
+  output_name = "ddk-fallback-test"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -33,7 +35,13 @@ driver_module("ddk-fallback-test") {
   ]
 }
 
-driver_module("ddk-not-fallback-test") {
+fuchsia_driver_component("ddk-fallback-test") {
+  component_name = "ddk-fallback-test"
+  deps = [ ":ddk-fallback-test-driver" ]
+}
+
+driver_module("ddk-not-fallback-test-driver") {
+  output_name = "ddk-not-fallback-test"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -49,6 +57,11 @@ driver_module("ddk-not-fallback-test") {
     "//src/lib/files",
     "//zircon/public/lib/sync",
   ]
+}
+
+fuchsia_driver_component("ddk-not-fallback-test") {
+  component_name = "ddk-not-fallback-test"
+  deps = [ ":ddk-not-fallback-test-driver" ]
 }
 
 test("ddk-fallback") {

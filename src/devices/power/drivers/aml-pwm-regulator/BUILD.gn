@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 
 driver_bind_rules("aml-pwm-regulator-bind") {
@@ -27,12 +28,18 @@ group("common") {
   ]
 }
 
-driver_module("aml-pwm-regulator") {
+driver_module("aml-pwm-regulator-driver") {
+  output_name = "aml-pwm-regulator"
   sources = [ "aml-pwm-regulator.cc" ]
   deps = [
     ":common",
     "//src/devices/lib/driver",
   ]
+}
+
+fuchsia_driver_component("aml-pwm-regulator") {
+  component_name = "aml-pwm-regulator"
+  deps = [ ":aml-pwm-regulator-driver" ]
 }
 
 test("aml-pwm-regulator-test-bin") {

@@ -4,6 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 
 driver_bind_rules("rtl8211f_bind") {
   rules = "rtl8211f.bind"
@@ -12,7 +13,8 @@ driver_bind_rules("rtl8211f_bind") {
   deps = [ "//src/devices/bind/fuchsia.realtek.platform" ]
 }
 
-driver_module("realtek-8211f") {
+driver_module("realtek-8211f-driver") {
+  output_name = "realtek-8211f"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -29,6 +31,11 @@ driver_module("realtek-8211f") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
   ]
+}
+
+fuchsia_driver_component("realtek-8211f") {
+  component_name = "realtek-8211f"
+  deps = [ ":realtek-8211f-driver" ]
 }
 
 group("tests") {

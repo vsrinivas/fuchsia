@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 
 driver_bind_rules("usb_hci_test_bind") {
@@ -66,7 +67,7 @@ test("usb-hci-test") {
   ]
 }
 
-driver_module("driver") {
+driver_module("driver_module") {
   output_name = "usb-hci-test-driver"
 
   sources = [ "usb-hci-test-driver.cc" ]
@@ -86,6 +87,11 @@ driver_module("driver") {
     "//zircon/public/lib/zx",
   ]
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+}
+
+fuchsia_driver_component("driver") {
+  component_name = "usb-hci-test-driver"
+  deps = [ ":driver_module" ]
 }
 
 fuchsia_system_package("usb-hci-test-driver") {

@@ -17,6 +17,7 @@ import("//build/bind/bind.gni")
 import("//build/cipd.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 
 driver_bind_rules("ath10k_bind") {
   rules = "ath10k_pci.bind"
@@ -33,7 +34,7 @@ group("tests") {
   ]
 }
 
-driver_module("ath10k_driver") {
+driver_module("ath10k_driver-driver") {
   output_name = "ath10k"
 
   sources = [
@@ -103,6 +104,11 @@ driver_module("ath10k_driver") {
 
   # Suppress warnings the atheros code doesn't comply with.
   configs += [ "//build/config:Wno-unused-but-set-variable" ]
+}
+
+fuchsia_driver_component("ath10k_driver") {
+  component_name = "ath10k"
+  deps = [ ":ath10k_driver-driver" ]
 }
 
 if (internal_access) {

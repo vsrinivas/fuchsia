@@ -4,6 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 
 driver_bind_rules("clock-bind") {
   rules = "clock.bind"
@@ -13,7 +14,8 @@ driver_bind_rules("clock-bind") {
   deps = [ "//src/devices/bind/fuchsia.clockimpl" ]
 }
 
-driver_module("clock") {
+driver_module("clock-driver") {
+  output_name = "clock"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -31,6 +33,11 @@ driver_module("clock") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
   ]
+}
+
+fuchsia_driver_component("clock") {
+  component_name = "clock"
+  deps = [ ":clock-driver" ]
 }
 
 group("tests") {

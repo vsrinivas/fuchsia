@@ -4,6 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 
 driver_bind_rules("usb_dfu_bind") {
   rules = "usb_dfu.bind"
@@ -20,7 +21,8 @@ group("tests") {
   testonly = true
   deps = [ ":usb_dfu_bind_test" ]
 }
-driver_module("usb-dfu") {
+driver_module("usb-dfu-driver") {
+  output_name = "usb-dfu"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -43,4 +45,9 @@ driver_module("usb-dfu") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
   ]
+}
+
+fuchsia_driver_component("usb-dfu") {
+  component_name = "usb-dfu"
+  deps = [ ":usb-dfu-driver" ]
 }

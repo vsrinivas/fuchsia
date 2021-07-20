@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 
 driver_bind_rules("ti_tas5720-bind") {
@@ -15,7 +16,8 @@ driver_bind_rules("ti_tas5720-bind") {
   deps = [ "//src/devices/bind/fuchsia.ti.platform" ]
 }
 
-driver_module("tas5720") {
+driver_module("tas5720-driver") {
+  output_name = "tas5720"
   defines = [ "_ALL_SOURCE" ]
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
   configs += [ "//build/unification/config:zircon-migrated" ]
@@ -34,6 +36,11 @@ driver_module("tas5720") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
   ]
+}
+
+fuchsia_driver_component("tas5720") {
+  component_name = "tas5720"
+  deps = [ ":tas5720-driver" ]
 }
 
 test("tas5720-test-bin") {

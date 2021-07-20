@@ -4,6 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 
 driver_bind_rules("usb_cdc_bind") {
   rules = "usb_cdc.bind"
@@ -16,7 +17,8 @@ driver_bind_rules("usb_cdc_bind") {
   ]
 }
 
-driver_module("usb-cdc-function") {
+driver_module("usb-cdc-function-driver") {
+  output_name = "usb-cdc-function"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -35,6 +37,11 @@ driver_module("usb-cdc-function") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
   ]
+}
+
+fuchsia_driver_component("usb-cdc-function") {
+  component_name = "usb-cdc-function"
+  deps = [ ":usb-cdc-function-driver" ]
 }
 
 group("tests") {

@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 
 driver_bind_rules("aml_uart_bind") {
@@ -15,7 +16,8 @@ driver_bind_rules("aml_uart_bind") {
   deps = [ "//src/devices/bind/amlogic.platform" ]
 }
 
-driver_module("aml-uart") {
+driver_module("aml-uart-driver") {
+  output_name = "aml-uart"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -42,6 +44,11 @@ driver_module("aml-uart") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
   ]
+}
+
+fuchsia_driver_component("aml-uart") {
+  component_name = "aml-uart"
+  deps = [ ":aml-uart-driver" ]
 }
 
 test("aml-uart-test-bin") {

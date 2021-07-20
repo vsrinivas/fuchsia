@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 
 group("platform") {
@@ -20,7 +21,8 @@ driver_bind_rules("platform-bus-bind") {
   disable_autobind = true
 }
 
-driver_module("platform-bus") {
+driver_module("platform-bus-driver") {
+  output_name = "platform-bus"
   sources = [
     "cpu-trace.cc",
     "device-resources.cc",
@@ -58,7 +60,13 @@ driver_module("platform-bus") {
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
-driver_module("platform-bus.proxy") {
+fuchsia_driver_component("platform-bus") {
+  component_name = "platform-bus"
+  deps = [ ":platform-bus-driver" ]
+}
+
+driver_module("platform-bus.proxy-driver") {
+  output_name = "platform-bus.proxy"
   sources = [ "platform-proxy.cc" ]
   deps = [
     ":platform-bus-bind",
@@ -71,6 +79,11 @@ driver_module("platform-bus.proxy") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
   ]
+}
+
+fuchsia_driver_component("platform-bus.proxy") {
+  component_name = "platform-bus.proxy"
+  deps = [ ":platform-bus.proxy-driver" ]
 }
 
 test("platform-bus-unittest") {

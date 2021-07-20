@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 
 driver_bind_rules("bt-hci-emulator-bind") {
   rules = "bt-hci-emulator.bind"
@@ -14,7 +15,7 @@ driver_bind_rules("bt-hci-emulator-bind") {
   deps = [ "//src/devices/bind/fuchsia.test" ]
 }
 
-driver_module("driver") {
+driver_module("driver_module") {
   output_name = "bt-hci-emulator"
   testonly = true
 
@@ -46,6 +47,12 @@ driver_module("driver") {
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-default",
   ]
+}
+
+fuchsia_driver_component("driver") {
+  testonly = true
+  component_name = "bt-hci-emulator"
+  deps = [ ":driver_module" ]
 }
 
 fuchsia_system_package("emulator") {

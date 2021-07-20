@@ -4,6 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 
 driver_bind_rules("dwmac_bind") {
   rules = "dwmac.bind"
@@ -12,7 +13,8 @@ driver_bind_rules("dwmac_bind") {
   deps = [ "//src/devices/bind/fuchsia.designware.platform" ]
 }
 
-driver_module("dwmac") {
+driver_module("dwmac-driver") {
+  output_name = "dwmac"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -45,6 +47,11 @@ driver_module("dwmac") {
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/fzl",
   ]
+}
+
+fuchsia_driver_component("dwmac") {
+  component_name = "dwmac"
+  deps = [ ":dwmac-driver" ]
 }
 
 group("tests") {

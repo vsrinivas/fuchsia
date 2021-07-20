@@ -4,6 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 
 driver_bind_rules("alc5663_bind") {
   rules = "alc5663.bind"
@@ -34,7 +35,8 @@ source_set("shared") {
   ]
 }
 
-driver_module("alc5663") {
+driver_module("alc5663-driver") {
+  output_name = "alc5663"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -45,6 +47,11 @@ driver_module("alc5663") {
     "//src/devices/lib/driver",
     "//src/lib/ddk",
   ]
+}
+
+fuchsia_driver_component("alc5663") {
+  component_name = "alc5663"
+  deps = [ ":alc5663-driver" ]
 }
 
 group("tests") {

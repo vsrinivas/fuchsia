@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 
 driver_bind_rules("hid_bind") {
@@ -15,7 +16,8 @@ driver_bind_rules("hid_bind") {
   deps = [ "//src/devices/bind/fuchsia.hid" ]
 }
 
-driver_module("hid") {
+driver_module("hid-driver") {
+  output_name = "hid"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -48,6 +50,11 @@ driver_module("hid") {
   # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
   # See linked bug for details.
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
+}
+
+fuchsia_driver_component("hid") {
+  component_name = "hid"
+  deps = [ ":hid-driver" ]
 }
 
 test("hid-test") {

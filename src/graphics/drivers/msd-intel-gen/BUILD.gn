@@ -4,10 +4,11 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//src/graphics/lib/magma/gnbuild/magma.gni")
 
 # The gpu device
-driver_module("msd_intel") {
+driver_module("msd_intel-driver") {
   output_name = "libmsd_intel"
 
   deps = [
@@ -17,8 +18,13 @@ driver_module("msd_intel") {
   ]
 }
 
+fuchsia_driver_component("msd_intel") {
+  component_name = "libmsd_intel"
+  deps = [ ":msd_intel-driver" ]
+}
+
 # The gpu device; runs gtests at startup
-driver_module("msd_intel_test") {
+driver_module("msd_intel_test-driver") {
   testonly = true
 
   output_name = "libmsd_intel_test"
@@ -28,6 +34,12 @@ driver_module("msd_intel_test") {
     "$magma_build_root/src/magma_util/platform:logger_for_system_drivers",
     "src",
   ]
+}
+
+fuchsia_driver_component("msd_intel_test") {
+  testonly = true
+  component_name = "libmsd_intel_test"
+  deps = [ ":msd_intel_test-driver" ]
 }
 
 driver_bind_rules("msd_intel_bind") {

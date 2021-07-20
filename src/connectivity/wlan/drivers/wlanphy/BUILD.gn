@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 
 wlanphy_sources = [
@@ -37,7 +38,7 @@ driver_bind_rules("wlanphy_bind") {
   deps = [ "//src/devices/bind/fuchsia.wlan" ]
 }
 
-driver_module("wlanphy_driver") {
+driver_module("wlanphy_driver-driver") {
   output_name = "wlanphy"
   sources = wlanphy_sources
 
@@ -48,6 +49,11 @@ driver_module("wlanphy_driver") {
   # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
   # See linked bug for details.
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
+}
+
+fuchsia_driver_component("wlanphy_driver") {
+  component_name = "wlanphy"
+  deps = [ ":wlanphy_driver-driver" ]
 }
 
 fuchsia_system_package("wlanphy") {

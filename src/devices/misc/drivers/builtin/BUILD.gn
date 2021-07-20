@@ -4,6 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 
 driver_bind_rules("root_drivers_bind") {
   rules = "root_drivers.bind"
@@ -18,7 +19,8 @@ group("tests") {
   deps = [ ":root_drivers_bind_test" ]
 }
 
-driver_module("builtin") {
+driver_module("builtin-driver") {
+  output_name = "builtin"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -34,4 +36,9 @@ driver_module("builtin") {
     "//src/devices/lib/driver",
     "//src/lib/ddk",
   ]
+}
+
+fuchsia_driver_component("builtin") {
+  component_name = "builtin"
+  deps = [ ":builtin-driver" ]
 }

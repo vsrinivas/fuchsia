@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 
 driver_bind_rules("hid_input_report_bind") {
@@ -23,7 +24,8 @@ group("tests") {
   ]
 }
 
-driver_module("hid-input-report") {
+driver_module("hid-input-report-driver") {
+  output_name = "hid-input-report"
   sources = [
     "input-report.cc",
     "input-reports-reader.cc",
@@ -46,6 +48,11 @@ driver_module("hid-input-report") {
     "//zircon/system/ulib/hid-parser",
     "//zircon/system/ulib/trace:trace-driver",
   ]
+}
+
+fuchsia_driver_component("hid-input-report") {
+  component_name = "hid-input-report"
+  deps = [ ":hid-input-report-driver" ]
 }
 
 test("hid-input-report-test-bin") {

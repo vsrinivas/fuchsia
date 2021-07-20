@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 
 driver_bind_rules("aml-cpu-bind") {
@@ -18,7 +19,8 @@ driver_bind_rules("aml-cpu-bind") {
   ]
 }
 
-driver_module("aml-cpu") {
+driver_module("aml-cpu-driver") {
+  output_name = "aml-cpu"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -48,6 +50,11 @@ driver_module("aml-cpu") {
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/inspect",
   ]
+}
+
+fuchsia_driver_component("aml-cpu") {
+  component_name = "aml-cpu"
+  deps = [ ":aml-cpu-driver" ]
 }
 
 test("aml-cpu-test-bin") {

@@ -4,6 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 
 driver_bind_rules("aml-scpi-s912-bind") {
   rules = "aml-scpi-s912.bind"
@@ -29,7 +30,8 @@ group("aml-scpi-s912") {
   ]
 }
 
-driver_module("aml-scpi-s912.mailbox") {
+driver_module("aml-scpi-s912.mailbox-driver") {
+  output_name = "aml-scpi-s912.mailbox"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -58,7 +60,13 @@ driver_module("aml-scpi-s912.mailbox") {
   ]
 }
 
-driver_module("scpi") {
+fuchsia_driver_component("aml-scpi-s912.mailbox") {
+  component_name = "aml-scpi-s912.mailbox"
+  deps = [ ":aml-scpi-s912.mailbox-driver" ]
+}
+
+driver_module("scpi-driver") {
+  output_name = "scpi"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -82,6 +90,11 @@ driver_module("scpi") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/sync",
   ]
+}
+
+fuchsia_driver_component("scpi") {
+  component_name = "scpi"
+  deps = [ ":scpi-driver" ]
 }
 
 group("tests") {

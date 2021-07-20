@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 
 driver_bind_rules("dw_i2c-bind") {
@@ -14,7 +15,8 @@ driver_bind_rules("dw_i2c-bind") {
   deps = [ "//src/devices/bind/fuchsia.platform" ]
 }
 
-driver_module("dw-i2c") {
+driver_module("dw-i2c-driver") {
+  output_name = "dw-i2c"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -37,6 +39,11 @@ driver_module("dw-i2c") {
     "//zircon/public/lib/hwreg",
     "//zircon/public/lib/sync",
   ]
+}
+
+fuchsia_driver_component("dw-i2c") {
+  component_name = "dw-i2c"
+  deps = [ ":dw-i2c-driver" ]
 }
 
 test("dw-i2c-test-bin") {

@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 
 driver_bind_rules("aml-axg-gpio-bind") {
@@ -26,7 +27,8 @@ group("tests") {
   ]
 }
 
-driver_module("aml-axg-gpio") {
+driver_module("aml-axg-gpio-driver") {
+  output_name = "aml-axg-gpio"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -51,6 +53,11 @@ driver_module("aml-axg-gpio") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
   ]
+}
+
+fuchsia_driver_component("aml-axg-gpio") {
+  component_name = "aml-axg-gpio"
+  deps = [ ":aml-axg-gpio-driver" ]
 }
 
 test("aml-axg-gpio-test-bin") {

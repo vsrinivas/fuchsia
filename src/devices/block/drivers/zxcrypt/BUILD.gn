@@ -4,8 +4,10 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 
-driver_module("zxcrypt") {
+driver_module("zxcrypt-driver") {
+  output_name = "zxcrypt"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -62,6 +64,11 @@ driver_module("zxcrypt") {
     #"//sdk/lib/fdio",
     "//src/security/zxcrypt:zxcrypt-fdio",
   ]
+}
+
+fuchsia_driver_component("zxcrypt") {
+  component_name = "zxcrypt"
+  deps = [ ":zxcrypt-driver" ]
 }
 
 driver_bind_rules("bind") {

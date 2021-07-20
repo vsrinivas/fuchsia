@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 
 driver_bind_rules("virtio_block_bind") {
@@ -14,7 +15,8 @@ driver_bind_rules("virtio_block_bind") {
   deps = [ "//src/devices/bind/fuchsia.pci" ]
 }
 
-driver_module("virtio_block") {
+driver_module("virtio_block-driver") {
+  output_name = "virtio_block"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -31,6 +33,11 @@ driver_module("virtio_block") {
     "//src/devices/lib/driver",
     "//src/lib/ddktl",
   ]
+}
+
+fuchsia_driver_component("virtio_block") {
+  component_name = "virtio_block"
+  deps = [ ":virtio_block-driver" ]
 }
 
 source_set("block_lib") {
@@ -62,7 +69,8 @@ driver_bind_rules("virtio_scsi_bind") {
   deps = [ "//src/devices/bind/fuchsia.pci" ]
 }
 
-driver_module("virtio_scsi") {
+driver_module("virtio_scsi-driver") {
+  output_name = "virtio_scsi"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -78,6 +86,11 @@ driver_module("virtio_scsi") {
     "//src/devices/lib/driver",
     "//src/lib/ddktl",
   ]
+}
+
+fuchsia_driver_component("virtio_scsi") {
+  component_name = "virtio_scsi"
+  deps = [ ":virtio_scsi-driver" ]
 }
 
 test("virtio-block-test-bin") {

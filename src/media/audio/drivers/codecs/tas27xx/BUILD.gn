@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 
 driver_bind_rules("ti_tas27xx-bind") {
@@ -15,7 +16,8 @@ driver_bind_rules("ti_tas27xx-bind") {
   deps = [ "//src/devices/bind/fuchsia.ti.platform" ]
 }
 
-driver_module("tas27xx") {
+driver_module("tas27xx-driver") {
+  output_name = "tas27xx"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -37,6 +39,11 @@ driver_module("tas27xx") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
   ]
+}
+
+fuchsia_driver_component("tas27xx") {
+  component_name = "tas27xx"
+  deps = [ ":tas27xx-driver" ]
 }
 
 test("tas27xx-test-bin") {

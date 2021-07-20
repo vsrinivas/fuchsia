@@ -4,6 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 
 driver_bind_rules("ihda_codecs_realtek_bind") {
   rules = "realtek_ihda_codec.bind"
@@ -16,7 +17,8 @@ group("realtek") {
   deps = [ ":realtek-audio-codec" ]
 }
 
-driver_module("realtek-audio-codec") {
+driver_module("realtek-audio-codec-driver") {
+  output_name = "realtek-audio-codec"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -38,6 +40,11 @@ driver_module("realtek-audio-codec") {
     "//zircon/system/ulib/dispatcher-pool",
     "//zircon/system/ulib/intel-hda",
   ]
+}
+
+fuchsia_driver_component("realtek-audio-codec") {
+  component_name = "realtek-audio-codec"
+  deps = [ ":realtek-audio-codec-driver" ]
 }
 
 group("tests") {

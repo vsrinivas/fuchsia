@@ -9,6 +9,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 
 group("my-driver-cpp") {
@@ -45,9 +46,14 @@ driver_module("driver") {
   ]
 }
 
+fuchsia_driver_component("component") {
+  component_name = "my-driver-cpp"
+  deps = [ ":driver" ]
+}
+
 fuchsia_system_package("pkg") {
   package_name = "my-driver-cpp"
-  deps = [ ":driver" ]
+  deps = [ ":component" ]
 
   # Remove the line below when this package is only used by the system image.
   allowed_in_extra_deps = true

@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/dist/renamed_binary.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 
 driver_bind_rules("sysdev-bind") {
   header_output = "sysdev-bind.h"
@@ -26,7 +27,8 @@ renamed_binary("renamed_sys_binary") {
   dest = "driver/platform-bus.so"
 }
 
-driver_module("sysdev") {
+driver_module("sysdev-driver") {
+  output_name = "sysdev"
   test = true
   sources = [ "sysdev.cc" ]
   deps = [
@@ -39,4 +41,9 @@ driver_module("sysdev") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
   ]
+}
+
+fuchsia_driver_component("sysdev") {
+  component_name = "sysdev"
+  deps = [ ":sysdev-driver" ]
 }

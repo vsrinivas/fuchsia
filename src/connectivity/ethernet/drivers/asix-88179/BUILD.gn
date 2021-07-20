@@ -4,6 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/fidl/fidl.gni")
 import("//build/test.gni")
 import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
@@ -26,7 +27,8 @@ driver_bind_rules("fake_usb_ax88179_bind") {
   ]
 }
 
-driver_module("asix-88179") {
+driver_module("asix-88179-driver") {
+  output_name = "asix-88179"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -52,13 +54,19 @@ driver_module("asix-88179") {
   ]
 }
 
+fuchsia_driver_component("asix-88179") {
+  component_name = "asix-88179"
+  deps = [ ":asix-88179-driver" ]
+}
+
 fidl("asix-88179-test-helper") {
   name = "fuchsia.hardware.ax88179"
   sources = [ "hooks.test.fidl" ]
   public_deps = [ "//zircon/vdso/zx" ]
 }
 
-driver_module("fake-asix-88179") {
+driver_module("fake-asix-88179-driver") {
+  output_name = "fake-asix-88179"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -83,6 +91,11 @@ driver_module("fake-asix-88179") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/inet6",
   ]
+}
+
+fuchsia_driver_component("fake-asix-88179") {
+  component_name = "fake-asix-88179"
+  deps = [ ":fake-asix-88179-driver" ]
 }
 
 test("asix-88179-integration") {

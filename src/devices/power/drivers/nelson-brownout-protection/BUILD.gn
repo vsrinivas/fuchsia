@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 
 driver_bind_rules("nelson-brownout-protection-bind") {
@@ -31,10 +32,16 @@ group("common") {
   ]
 }
 
-driver_module("nelson-brownout-protection") {
+driver_module("nelson-brownout-protection-driver") {
+  output_name = "nelson-brownout-protection"
   configs += [ "//build/config:all_source" ]
   sources = [ "nelson-brownout-protection.cc" ]
   deps = [ ":common" ]
+}
+
+fuchsia_driver_component("nelson-brownout-protection") {
+  component_name = "nelson-brownout-protection"
+  deps = [ ":nelson-brownout-protection-driver" ]
 }
 
 test("nelson-brownout-protection-test-bin") {

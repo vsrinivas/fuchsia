@@ -5,6 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 
 driver_bind_rules("tmp112-bind") {
@@ -17,7 +18,8 @@ driver_bind_rules("tmp112-bind") {
   ]
 }
 
-driver_module("tmp112") {
+driver_module("tmp112-driver") {
+  output_name = "tmp112"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -33,6 +35,11 @@ driver_module("tmp112") {
     "//src/lib/ddk",
     "//src/lib/ddktl",
   ]
+}
+
+fuchsia_driver_component("tmp112") {
+  component_name = "tmp112"
+  deps = [ ":tmp112-driver" ]
 }
 
 test("tmp112-test-bin") {

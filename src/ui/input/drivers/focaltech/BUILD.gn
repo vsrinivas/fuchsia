@@ -6,6 +6,7 @@ import("//build/bind/bind.gni")
 import("//build/cipd.gni")
 import("//build/components.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/test.gni")
 
 driver_bind_rules("focaltech_touch_bind") {
@@ -53,7 +54,8 @@ group("common") {
   ]
 }
 
-driver_module("focaltech") {
+driver_module("focaltech-driver") {
+  output_name = "focaltech"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -66,8 +68,14 @@ driver_module("focaltech") {
   deps = [ ":common" ]
 }
 
+fuchsia_driver_component("focaltech") {
+  component_name = "focaltech"
+  deps = [ ":focaltech-driver" ]
+}
+
 # Requires internal access.
-driver_module("focaltech-sherlock") {
+driver_module("focaltech-sherlock-driver") {
+  output_name = "focaltech-sherlock"
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
@@ -78,6 +86,11 @@ driver_module("focaltech-sherlock") {
     ":common",
     ":firmware-sherlock",
   ]
+}
+
+fuchsia_driver_component("focaltech-sherlock") {
+  component_name = "focaltech-sherlock"
+  deps = [ ":focaltech-sherlock-driver" ]
 }
 
 test("focaltech-test-bin") {
