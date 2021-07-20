@@ -22,7 +22,7 @@ TEST(VmoCloneTestCase, SizeAlign) {
   // create clones with different sizes, make sure the created size is a multiple of a page size
   for (uint64_t s = 0; s < zx_system_get_page_size() * 4; s++) {
     zx_handle_t clone_vmo;
-    EXPECT_OK(zx_vmo_create_child(vmo, ZX_VMO_CHILD_COPY_ON_WRITE, 0, s, &clone_vmo), "vm_clone");
+    EXPECT_OK(zx_vmo_create_child(vmo, ZX_VMO_CHILD_SNAPSHOT, 0, s, &clone_vmo), "vm_clone");
 
     // should be the size rounded up to the nearest page boundary
     uint64_t size = 0x99999999;
@@ -51,8 +51,7 @@ TEST(VmoCloneTestCase, NameProperty) {
 
   // clone it
   clone_vmo[0] = ZX_HANDLE_INVALID;
-  EXPECT_OK(zx_vmo_create_child(vmo, ZX_VMO_CHILD_COPY_ON_WRITE, 0, size, &clone_vmo[0]),
-            "vm_clone");
+  EXPECT_OK(zx_vmo_create_child(vmo, ZX_VMO_CHILD_SNAPSHOT, 0, size, &clone_vmo[0]), "vm_clone");
   EXPECT_NE(ZX_HANDLE_INVALID, clone_vmo[0], "vm_clone_handle");
   char name[ZX_MAX_NAME_LEN];
   EXPECT_OK(zx_object_get_property(clone_vmo[0], ZX_PROP_NAME, name, ZX_MAX_NAME_LEN),
@@ -62,8 +61,7 @@ TEST(VmoCloneTestCase, NameProperty) {
   // clone it a second time w/o the rights property
   EXPECT_OK(zx_handle_replace(vmo, ZX_DEFAULT_VMO_RIGHTS & ~ZX_RIGHTS_PROPERTY, &vmo));
   clone_vmo[1] = ZX_HANDLE_INVALID;
-  EXPECT_OK(zx_vmo_create_child(vmo, ZX_VMO_CHILD_COPY_ON_WRITE, 0, size, &clone_vmo[1]),
-            "vm_clone");
+  EXPECT_OK(zx_vmo_create_child(vmo, ZX_VMO_CHILD_SNAPSHOT, 0, size, &clone_vmo[1]), "vm_clone");
   EXPECT_NE(ZX_HANDLE_INVALID, clone_vmo[1], "vm_clone_handle");
   EXPECT_OK(zx_object_get_property(clone_vmo[0], ZX_PROP_NAME, name, ZX_MAX_NAME_LEN),
             "zx_object_get_property");
@@ -88,7 +86,7 @@ TEST(VmoCloneTestCase, Decommit) {
 
   // clone it and map that
   clone_vmo = ZX_HANDLE_INVALID;
-  EXPECT_OK(zx_vmo_create_child(vmo, ZX_VMO_CHILD_COPY_ON_WRITE, 0, size, &clone_vmo), "vm_clone");
+  EXPECT_OK(zx_vmo_create_child(vmo, ZX_VMO_CHILD_SNAPSHOT, 0, size, &clone_vmo), "vm_clone");
   EXPECT_NE(ZX_HANDLE_INVALID, clone_vmo, "vm_clone_handle");
 
   // decommit is not supported on clones or plain vmos which have children
@@ -130,7 +128,7 @@ TEST(VmoCloneTestCase, Commit) {
 
   // clone it and map that
   clone_vmo = ZX_HANDLE_INVALID;
-  EXPECT_OK(zx_vmo_create_child(vmo, ZX_VMO_CHILD_COPY_ON_WRITE, 0, size, &clone_vmo), "vm_clone");
+  EXPECT_OK(zx_vmo_create_child(vmo, ZX_VMO_CHILD_SNAPSHOT, 0, size, &clone_vmo), "vm_clone");
   EXPECT_NE(ZX_HANDLE_INVALID, clone_vmo, "vm_clone_handle");
   EXPECT_EQ(ZX_OK,
             zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, clone_vmo, 0,
@@ -196,7 +194,7 @@ TEST(VmoCloneTestCase, Rights) {
   EXPECT_EQ(GetHandleRights(reduced_rights_vmo), kOldVmoRights);
 
   zx_handle_t clone;
-  ASSERT_EQ(zx_vmo_create_child(reduced_rights_vmo, ZX_VMO_CHILD_COPY_ON_WRITE, 0,
+  ASSERT_EQ(zx_vmo_create_child(reduced_rights_vmo, ZX_VMO_CHILD_SNAPSHOT, 0,
                                 zx_system_get_page_size(), &clone),
             ZX_OK);
 
@@ -224,7 +222,7 @@ TEST(VmoCloneTestCase, NoResize) {
   zx_handle_t vmo = ZX_HANDLE_INVALID;
 
   zx_vmo_create(len, 0, &parent);
-  zx_vmo_create_child(parent, ZX_VMO_CHILD_COPY_ON_WRITE, 0, len, &vmo);
+  zx_vmo_create_child(parent, ZX_VMO_CHILD_SNAPSHOT, 0, len, &vmo);
 
   EXPECT_NE(vmo, ZX_HANDLE_INVALID);
 
