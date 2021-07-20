@@ -618,36 +618,6 @@ TEST_F(RootPresenterTest, InputInjection_FinishStreamOnClientDisconnect) {
   EXPECT_EQ(injector_registry_->num_registered(), 0u);
 }
 
-TEST_F(RootPresenterTest, InputInjection_FinishStreamOnServerAndClientDisconnect) {
-  SetUpInputTest();
-
-  fuchsia::ui::input::InputDevicePtr input_device_ptr;
-  input_device_registry_ptr_->RegisterDevice(TouchscreenDescriptorTemplate(),
-                                             input_device_ptr.NewRequest());
-
-  // Buffer an update.
-  input_device_ptr->DispatchReport(TouchscreenReportTemplate());
-  input_device_ptr->DispatchReport(TouchscreenReportTemplate());
-  RunLoopUntilIdle();
-  EXPECT_EQ(injector_registry_->num_events_received(), 1u);
-  EXPECT_EQ(injector_registry_->num_registered(), 1u);
-
-  // After killing the server-side binding, the client should immediately reconnect and send
-  // any events still pending.
-  injector_registry_->KillAllBindings();
-  // And if the client was disconnected at the same time, it should continue with clean up after
-  // recovery.
-  input_device_ptr.Unbind();
-  EXPECT_EQ(injector_registry_->num_events_received(), 1u);
-  EXPECT_EQ(injector_registry_->num_registered(), 0u);
-
-  // The client should reconnect, send pending events and then clean up and close the channel to
-  // the registry.
-  RunLoopUntilIdle();
-  EXPECT_EQ(injector_registry_->num_events_received(), 2u);
-  EXPECT_EQ(injector_registry_->num_registered(), 0u);
-}
-
 // Tests that Injector correctly buffers events until the scene is ready.
 TEST_F(RootPresenterTest, InjectorStartupTest) {
   SetUpInputTest();

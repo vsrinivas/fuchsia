@@ -121,6 +121,7 @@ class Injector {
     uint32_t device_id = std::numeric_limits<uint32_t>::max();
     fuchsia::ui::pointerinjector::DevicePtr touch_injector;
     std::deque<fuchsia::ui::pointerinjector::Event> pending_events;
+    bool injecting_first_event = true;
     bool injection_in_flight = false;
     bool kill_when_empty = false;
   };

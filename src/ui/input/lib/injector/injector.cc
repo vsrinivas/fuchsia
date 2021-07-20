@@ -12,6 +12,8 @@
 #include <lib/ui/scenic/cpp/view_ref_pair.h>
 #include <zircon/status.h>
 
+#include <stack>
+
 #include "lib/async/cpp/time.h"
 #include "lib/async/default.h"
 
@@ -32,6 +34,8 @@ uint64_t GetCurrentMinute() {
 }
 
 }  // namespace
+
+using fuchsia::ui::pointerinjector::EventPhase;
 
 InjectorInspector::InjectorInspector(inspect::Node node)
     : node_(std::move(node)),
@@ -167,6 +171,26 @@ void Injector::InjectPending(InjectorId injector_id) {
   TRACE_DURATION("input", "inject_pending_events");
   FX_DCHECK(injectors_.count(injector_id));
   auto& injector = injectors_.at(injector_id);
+
+  // For the first event, skip until the first ADD.
+  if (injector.injecting_first_event) {
+    auto& pending_events = injector.pending_events;
+    std::stack<fuchsia::ui::pointerinjector::Event> non_pointer_events;
+    while (!pending_events.empty()) {
+      if (!pending_events.front().data().is_pointer_sample()) {
+        non_pointer_events.emplace(std::move(pending_events.front()));
+      } else if (pending_events.front().data().pointer_sample().phase() == EventPhase::ADD) {
+        break;
+      }
+      pending_events.pop_front();
+    }
+    // Add the non-pointer events back on the queue.
+    while (!non_pointer_events.empty()) {
+      pending_events.emplace_front(std::move(non_pointer_events.top()));
+      non_pointer_events.pop();
+    }
+  }
+
   if (injector.injection_in_flight || injector.pending_events.empty() || !scene_ready_) {
     injector_inspector_.OnInjectPendingCancelled(injector.injection_in_flight,
                                                  injector.pending_events.empty(), !scene_ready_);
@@ -174,14 +198,13 @@ void Injector::InjectPending(InjectorId injector_id) {
   }
 
   injector.injection_in_flight = true;
+  injector.injecting_first_event = false;
 
   std::vector<fuchsia::ui::pointerinjector::Event> events_to_inject;
-  size_t num_events = 0;
   while (!injector.pending_events.empty() &&
-         num_events < fuchsia::ui::pointerinjector::MAX_INJECT) {
+         events_to_inject.size() < fuchsia::ui::pointerinjector::MAX_INJECT) {
     events_to_inject.emplace_back(std::move(injector.pending_events.front()));
     injector.pending_events.pop_front();
-    ++num_events;
   }
 
   for (const auto& event : events_to_inject) {
@@ -233,19 +256,19 @@ void Injector::OnEvent(const fuchsia::ui::input::InputEvent& event) {
   const trace_flow_id_t trace_id = PointerTraceHACK(pointer.radius_major, pointer.radius_minor);
   TRACE_FLOW_END("input", "dispatch_event_to_presentation", trace_id);
 
-  fuchsia::ui::pointerinjector::EventPhase phase;
+  EventPhase phase;
   switch (pointer.phase) {
     case fuchsia::ui::input::PointerEventPhase::ADD:
-      phase = fuchsia::ui::pointerinjector::EventPhase::ADD;
+      phase = EventPhase::ADD;
       break;
     case fuchsia::ui::input::PointerEventPhase::MOVE:
-      phase = fuchsia::ui::pointerinjector::EventPhase::CHANGE;
+      phase = EventPhase::CHANGE;
       break;
     case fuchsia::ui::input::PointerEventPhase::REMOVE:
-      phase = fuchsia::ui::pointerinjector::EventPhase::REMOVE;
+      phase = EventPhase::REMOVE;
       break;
     case fuchsia::ui::input::PointerEventPhase::CANCEL:
-      phase = fuchsia::ui::pointerinjector::EventPhase::CANCEL;
+      phase = EventPhase::CANCEL;
       break;
     default: {
       FX_LOGS(ERROR) << "Received unexpected phase: " << pointer.phase;
@@ -319,6 +342,7 @@ void Injector::SetupInputInjection(InjectorId injector_id, uint32_t device_id) {
   }
 
   injector.injection_in_flight = false;
+  injector.injecting_first_event = true;
   component_context_->svc()->Connect<fuchsia::ui::pointerinjector::Registry>()->Register(
       std::move(config), injectors_.at(injector_id).touch_injector.NewRequest(), [] {});
   injector.touch_injector.set_error_handler([this, injector_id, device_id](zx_status_t error) {
