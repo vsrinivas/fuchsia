@@ -67,8 +67,8 @@ template("fidl_rust_library") {
     }
 
     non_rust_deps = [ ":$generation_target_name($rust_toolchain)" ]
-    source_root = rebase_path("$file_stem.rs")
-    sources = [ rebase_path("$file_stem.rs") ]
+    source_root = "$file_stem.rs"
+    sources = [ "$file_stem.rs" ]
 
     configs -= [ "//build/config/rust:allow_unused_results" ]
   }

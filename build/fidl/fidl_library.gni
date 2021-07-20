@@ -257,9 +257,9 @@ template("fidl_library") {
       tool = fidl_api_summarize_tool
       args = [
         "--fidl-ir-file",
-        rebase_path(json_representation),
+        rebase_path(json_representation, root_build_dir),
         "--output-file",
-        rebase_path(summary_file),
+        rebase_path(summary_file, root_build_dir),
       ]
 
       inputs = [ json_representation ]
@@ -280,9 +280,9 @@ template("fidl_library") {
         "--format",
         "json",
         "--fidl-ir-file",
-        rebase_path(json_representation),
+        rebase_path(json_representation, root_build_dir),
         "--output-file",
-        rebase_path(summary_file_json),
+        rebase_path(summary_file_json, root_build_dir),
       ]
 
       inputs = [ json_representation ]
@@ -385,7 +385,7 @@ template("fidl_library") {
       sdk_sources += [ destination ]
       all_files += [
         {
-          source = rebase_path(source)
+          source = source
           dest = destination
         },
       ]
@@ -400,7 +400,7 @@ template("fidl_library") {
       sdk_deps += [ sdk_dep ]
       gen_dir = get_label_info(sdk_dep, "target_gen_dir")
       name = get_label_info(sdk_dep, "name")
-      sdk_metas += [ rebase_path("$gen_dir/$name.meta.json") ]
+      sdk_metas += [ "$gen_dir/$name.meta.json" ]
     }
 
     # Generate the library metadata.
@@ -415,14 +415,15 @@ template("fidl_library") {
       outputs = [ meta_file ]
 
       args = [
-               "--out",
-               rebase_path(meta_file),
-               "--name",
-               library_name,
-               "--root",
-               file_base,
-               "--specs",
-             ] + sdk_metas + [ "--sources" ] + sdk_sources
+        "--out",
+        rebase_path(meta_file, root_build_dir),
+        "--name",
+        library_name,
+        "--root",
+        file_base,
+      ]
+      args += [ "--specs" ] + rebase_path(sdk_metas, root_build_dir)
+      args += [ "--sources" ] + sdk_sources
 
       deps = sdk_deps
     }
@@ -440,9 +441,9 @@ template("fidl_library") {
 
       args = [
                "--out",
-               rebase_path(normalized_file),
+               rebase_path(normalized_file, root_build_dir),
                "--files",
-             ] + to_normalize
+             ] + rebase_path(to_normalize, root_build_dir)
     }
 
     sdk_atom("${target_name}_sdk") {
