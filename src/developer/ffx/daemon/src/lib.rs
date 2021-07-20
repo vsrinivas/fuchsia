@@ -126,15 +126,9 @@ pub async fn spawn_daemon() -> Result<()> {
     let mut stdout = Stdio::null();
     let mut stderr = Stdio::null();
 
-    if ffx.verbose {
-        stdout = Stdio::inherit();
-        stderr = Stdio::inherit();
-    } else {
-        if ffx_config::logging::is_enabled().await {
-            // TODO(raggi): maybe dup instead.
-            stdout = Stdio::from(ffx_config::logging::log_file(LOG_FILE_PREFIX).await?);
-            stderr = Stdio::from(ffx_config::logging::log_file(LOG_FILE_PREFIX).await?);
-        }
+    if ffx_config::logging::is_enabled().await {
+        stdout = Stdio::from(ffx_config::logging::log_file(LOG_FILE_PREFIX).await?);
+        stderr = Stdio::from(ffx_config::logging::log_file(LOG_FILE_PREFIX).await?);
     }
 
     let mut cmd = Command::new(ffx_path);

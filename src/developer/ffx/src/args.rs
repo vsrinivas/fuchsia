@@ -31,10 +31,6 @@ pub struct Ffx {
     /// override default proxy timeout
     pub timeout: Option<f64>,
 
-    #[argh(switch, short = 'v')]
-    /// use verbose output
-    pub verbose: bool,
-
     #[argh(subcommand)]
     pub subcommand: Option<Subcommand>,
 }
