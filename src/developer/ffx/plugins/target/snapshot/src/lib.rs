@@ -96,7 +96,7 @@ fn format_annotations(mut annotations: Vec<Annotation>) -> String {
 }
 
 pub async fn dump_annotations<W: Write>(
-    mut write: W,
+    writer: &mut W,
     data_provider_proxy: DataProviderProxy,
 ) -> Result<()> {
     // Build parameters
@@ -115,7 +115,6 @@ pub async fn dump_annotations<W: Write>(
         .annotations
         .ok_or(anyhow!("Received empty annotations."))?;
 
-    let writer = &mut write;
     writeln!(writer, "{}", format_annotations(annotations))?;
 
     Ok(())
@@ -123,6 +122,14 @@ pub async fn dump_annotations<W: Write>(
 
 #[ffx_plugin(DataProviderProxy = "core/appmgr:out:fuchsia.feedback.DataProvider")]
 pub async fn snapshot(data_provider_proxy: DataProviderProxy, cmd: SnapshotCommand) -> Result<()> {
+    snapshot_impl(data_provider_proxy, cmd, &mut std::io::stdout()).await
+}
+
+pub async fn snapshot_impl<W: Write>(
+    data_provider_proxy: DataProviderProxy,
+    cmd: SnapshotCommand,
+    writer: &mut W,
+) -> Result<()> {
     // Parse CLI args.
     let output_dir = match cmd.output_file {
         None => {
@@ -140,8 +147,7 @@ pub async fn snapshot(data_provider_proxy: DataProviderProxy, cmd: SnapshotComma
     };
 
     if cmd.dump_annotations {
-        let writer = Box::new(std::io::stdout());
-        dump_annotations(writer.as_ref(), data_provider_proxy).await?;
+        dump_annotations(writer, data_provider_proxy).await?;
     } else {
         // Make file proxy and channel for snapshot
         let (file_proxy, file_server_end) = fidl::endpoints::create_proxy::<FileMarker>()?;
@@ -169,7 +175,7 @@ pub async fn snapshot(data_provider_proxy: DataProviderProxy, cmd: SnapshotComma
         let mut file = fs::File::create(&file_path)?;
         file.write_all(&data)?;
 
-        println!("Exported {}", file_path.to_string_lossy());
+        writeln!(writer, "Exported {}", file_path.to_string_lossy())?;
     }
 
     Ok(())
@@ -200,7 +206,6 @@ mod test {
         fidl_fuchsia_feedback::{Annotations, DataProviderRequest, Snapshot},
         fidl_fuchsia_io::{FileRequest, NodeAttributes},
         futures::TryStreamExt,
-        std::io::BufWriter,
     };
 
     fn serve_fake_file(server: ServerEnd<FileMarker>) {
@@ -270,8 +275,13 @@ mod test {
         let annotations = Annotations { ..Annotations::EMPTY };
         let data_provider_proxy = setup_fake_data_provider_server(annotations);
 
-        let result = snapshot(data_provider_proxy, cmd).await.unwrap();
+        let mut writer = Vec::new();
+        let result = snapshot_impl(data_provider_proxy, cmd, &mut writer).await.unwrap();
         assert_eq!(result, ());
+
+        let output = String::from_utf8(writer).unwrap();
+        assert!(output.starts_with("Exported"));
+        assert!(output.ends_with("snapshot.zip\n"));
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -290,10 +300,10 @@ mod test {
         let annotations = Annotations { annotations: Some(annotation_vec), ..Annotations::EMPTY };
         let data_provider_proxy = setup_fake_data_provider_server(annotations);
 
-        let mut output = String::new();
-        let writer = unsafe { BufWriter::new(output.as_mut_vec()) };
-        dump_annotations(writer, data_provider_proxy).await?;
+        let mut writer = Vec::new();
+        dump_annotations(&mut writer, data_provider_proxy).await?;
 
+        let output = String::from_utf8(writer).unwrap();
         assert_eq!(
             output,
             "build\n\
