@@ -81,7 +81,7 @@ where
 }
 
 /// Spawns a VFS handler for the provided `dir`.
-pub fn spawn_vfs(dir: Arc<dyn DirectoryEntry>) -> DirectoryProxy {
+fn spawn_vfs(dir: Arc<dyn DirectoryEntry>) -> DirectoryProxy {
     let (client_end, server_end) = create_proxy::<DirectoryMarker>().unwrap();
     let scope = ExecutionScope::new();
     dir.open(
@@ -92,4 +92,16 @@ pub fn spawn_vfs(dir: Arc<dyn DirectoryEntry>) -> DirectoryProxy {
         ServerEnd::new(server_end.into_channel()),
     );
     client_end
+}
+
+/// Sets up a mock dev/ directory with the provided `dev_directory` topology.
+pub async fn mock_dev(
+    handles: MockHandles,
+    dev_directory: Arc<dyn DirectoryEntry>,
+) -> Result<(), Error> {
+    let mut fs = ServiceFs::new();
+    fs.add_remote("dev", spawn_vfs(dev_directory));
+    fs.serve_connection(handles.outgoing_dir.into_channel())?;
+    fs.collect::<()>().await;
+    Ok(())
 }

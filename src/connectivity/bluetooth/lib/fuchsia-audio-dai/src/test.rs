@@ -6,8 +6,9 @@ use anyhow::format_err;
 use derivative::Derivative;
 use fidl_fuchsia_hardware_audio::*;
 use fuchsia_async as fasync;
-use futures::StreamExt;
+use futures::{Future, StreamExt};
 use std::sync::{Arc, Mutex};
+use vfs::{directory::entry::DirectoryEntry, mut_pseudo_directory, service};
 
 use crate::driver::{ensure_dai_format_is_supported, ensure_pcm_format_is_supported};
 use crate::DigitalAudioInterface;
@@ -157,15 +158,22 @@ async fn test_handle_dai_requests(
                     continue;
                 }
                 handle.set_configured(dai_format, pcm_format);
-                let requests = ring_buffer.into_stream().expect("stream from serverend");
+                let requests = ring_buffer.into_stream().expect("stream from server end");
                 _rb_task = Some(fasync::Task::spawn(handle_ring_buffer(requests, handle.clone())));
             }
-            x => panic!("Got a reqest we haven't implemented: {:?}", x),
+            x => panic!("Got a request we haven't implemented: {:?}", x),
         };
     }
 }
 
-pub fn test_digital_audio_interface(as_input: bool) -> (DigitalAudioInterface, TestHandle) {
+/// Represents a mock DAI device that processes `Dai` requests from the provided `requests`
+/// stream.
+/// Returns a Future representing the processing task and a `TestHandle` which can be used
+/// to validate behavior.
+fn mock_dai_device(
+    as_input: bool,
+    requests: DaiRequestStream,
+) -> (impl Future<Output = ()>, TestHandle) {
     let supported_dai_formats = DaiSupportedFormats {
         number_of_channels: vec![1],
         sample_formats: vec![DaiSampleFormat::PcmSigned],
@@ -186,19 +194,52 @@ pub fn test_digital_audio_interface(as_input: bool) -> (DigitalAudioInterface, T
         ..SupportedFormats::EMPTY
     };
 
-    let (proxy, requests) =
-        fidl::endpoints::create_proxy_and_stream::<DaiMarker>().expect("proxy creation");
-
     let handle = TestHandle::new();
 
-    fasync::Task::spawn(test_handle_dai_requests(
+    let handler_fut = test_handle_dai_requests(
         supported_dai_formats,
         supported_pcm_formats,
         as_input,
         requests,
         handle.clone(),
-    ))
-    .detach();
+    );
+    (handler_fut, handle)
+}
+
+/// Builds and returns a DigitalAudioInterface for testing scenarios. Returns the
+/// `TestHandle` associated with this device which can be used to validate behavior.
+pub fn test_digital_audio_interface(as_input: bool) -> (DigitalAudioInterface, TestHandle) {
+    let (proxy, requests) =
+        fidl::endpoints::create_proxy_and_stream::<DaiMarker>().expect("proxy creation");
+
+    let (handler, handle) = mock_dai_device(as_input, requests);
+    fasync::Task::spawn(handler).detach();
 
     (DigitalAudioInterface::from_proxy(proxy), handle)
+}
+
+async fn handle_dai_connect_requests(as_input: bool, mut stream: DaiConnectRequestStream) {
+    while let Some(request) = stream.next().await {
+        if let Ok(DaiConnectRequest::Connect { dai_protocol, .. }) = request {
+            let (handler, _test_handle) =
+                mock_dai_device(as_input, dai_protocol.into_stream().unwrap());
+            fasync::Task::spawn(handler).detach();
+        }
+    }
+}
+
+/// Builds and returns a VFS with a mock input and output DAI device.
+pub fn mock_dai_dev_with_io_devices(input: String, output: String) -> Arc<dyn DirectoryEntry> {
+    mut_pseudo_directory! {
+        "class" => mut_pseudo_directory! {
+            "dai" => mut_pseudo_directory! {
+                &input => service::host(
+                    move |stream: DaiConnectRequestStream| handle_dai_connect_requests(true, stream)
+                ),
+                &output => service::host(
+                    move |stream: DaiConnectRequestStream| handle_dai_connect_requests(false, stream)
+                ),
+            }
+        }
+    }
 }

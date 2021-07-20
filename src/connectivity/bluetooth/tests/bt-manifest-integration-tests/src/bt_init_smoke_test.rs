@@ -4,7 +4,7 @@
 
 use {
     anyhow::Error,
-    bt_manifest_integration_lib::{add_fidl_service_handler, spawn_vfs},
+    bt_manifest_integration_lib::{add_fidl_service_handler, mock_dev},
     fdio,
     fidl::endpoints::{DiscoverableService, Proxy},
     fidl_fuchsia_bluetooth_bredr::{ProfileMarker, ProfileProxy},
@@ -23,7 +23,8 @@ use {
     },
     futures::{channel::mpsc, SinkExt, StreamExt},
     log::{error, info},
-    vfs::pseudo_directory,
+    std::sync::Arc,
+    vfs::{directory::entry::DirectoryEntry, pseudo_directory},
 };
 
 const BT_INIT_URL: &str = "fuchsia-pkg://fuchsia.com/bt-init-smoke-test#meta/test-bt-init.cm";
@@ -64,6 +65,14 @@ impl From<SnoopRequestStream> for Event {
 impl From<NameProviderRequestStream> for Event {
     fn from(src: NameProviderRequestStream) -> Self {
         Self::NameProvider(Some(src))
+    }
+}
+
+fn dev_bt_host() -> Arc<dyn DirectoryEntry> {
+    pseudo_directory! {
+        "class" => pseudo_directory! {
+            "bt-host" => pseudo_directory! {}
+        }
     }
 }
 
@@ -138,20 +147,6 @@ async fn mock_provider(sender: mpsc::Sender<Event>, handles: MockHandles) -> Res
     Ok(())
 }
 
-/// The component mock that provides the device directory for bt-gap.
-async fn mock_dev(handles: MockHandles) -> Result<(), Error> {
-    let mut fs = ServiceFs::new();
-    let dev_bt_host = pseudo_directory! {
-        "class" => pseudo_directory! {
-            "bt-host" => pseudo_directory! {}
-        }
-    };
-    fs.add_remote("dev", spawn_vfs(dev_bt_host));
-    fs.serve_connection(handles.outgoing_dir.into_channel())?;
-    fs.collect::<()>().await;
-    Ok(())
-}
-
 // Helper for the common case of routing between bt-init and its mock client.
 fn route_from_bt_init_to_mock_client<S: DiscoverableService>(builder: &mut RealmBuilder) {
     builder
@@ -199,7 +194,7 @@ async fn bt_init_component_topology() {
         .add_component(
             MOCK_DEV_MONIKER,
             ComponentSource::Mock(Mock::new({
-                move |mock_handles: MockHandles| Box::pin(mock_dev(mock_handles))
+                move |mock_handles: MockHandles| Box::pin(mock_dev(mock_handles, dev_bt_host()))
             })),
         )
         .await

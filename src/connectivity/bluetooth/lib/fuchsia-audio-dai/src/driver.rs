@@ -10,10 +10,7 @@ use futures::{
     future::{self, Either},
     Future, FutureExt, TryFutureExt,
 };
-use std::{
-    fs::OpenOptions,
-    path::{Path, PathBuf},
-};
+use std::path::{Path, PathBuf};
 
 #[derive(Debug)]
 pub struct DigitalAudioInterface {
@@ -42,21 +39,20 @@ impl DigitalAudioInterface {
                 return Ok(());
             }
         }
-        let dai_dev = OpenOptions::new().read(true).write(true).open(self.path.as_path())?;
-        let device_topo = fdio::device_get_topo_path(&dai_dev)?;
-        log::info!("Connecting to DAI: {:?} @ {:?}", self.path, device_topo);
+        let (dai_connect_proxy, dai_connect_server) =
+            fidl::endpoints::create_proxy::<DaiConnectMarker>()?;
+        let path = self.path.to_str().ok_or(format_err!("invalid DAI path"))?;
+        fdio::service_connect(path, dai_connect_server.into_channel())?;
 
-        let dev_channel = fdio::clone_channel(&dai_dev)?;
-        let connect = DaiConnectSynchronousProxy::new(dev_channel);
-        let (ours, theirs) = fidl::endpoints::create_proxy()?;
-        connect.connect(theirs)?;
+        let (ours, theirs) = fidl::endpoints::create_proxy::<DaiMarker>()?;
+        dai_connect_proxy.connect(theirs)?;
 
         self.proxy = Some(ours);
         Ok(())
     }
 
     fn get_proxy(&self) -> Result<&DaiProxy, Error> {
-        self.proxy.as_ref().ok_or(format_err!("Proxy not conntect"))
+        self.proxy.as_ref().ok_or(format_err!("Proxy not connected"))
     }
 
     /// Get the properties of the DAI.

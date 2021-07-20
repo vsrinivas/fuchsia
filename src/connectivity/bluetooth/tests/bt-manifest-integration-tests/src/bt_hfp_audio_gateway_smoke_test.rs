@@ -4,12 +4,13 @@
 
 use {
     anyhow::Error,
-    bt_manifest_integration_lib::{add_fidl_service_handler, mock_component, spawn_vfs},
+    bt_manifest_integration_lib::{add_fidl_service_handler, mock_component, mock_dev},
     fidl_fuchsia_bluetooth_bredr::{ProfileMarker, ProfileRequest},
     fidl_fuchsia_bluetooth_hfp::{HfpMarker, HfpProxy},
     fidl_fuchsia_bluetooth_hfp_test::{HfpTestMarker, HfpTestProxy},
     fidl_fuchsia_io2 as fio2,
     fidl_fuchsia_media::{AudioDeviceEnumeratorMarker, AudioDeviceEnumeratorRequestStream},
+    fuchsia_audio_dai::test::mock_dai_dev_with_io_devices,
     fuchsia_component::server::ServiceFs,
     fuchsia_component_test::{
         builder::{Capability, CapabilityRoute, ComponentSource, RealmBuilder, RouteEndpoint},
@@ -17,7 +18,6 @@ use {
     },
     futures::{channel::mpsc, SinkExt, StreamExt},
     log::info,
-    vfs::pseudo_directory,
 };
 
 /// HFP Audio Gateway component URL.
@@ -58,27 +58,6 @@ impl From<AudioDeviceEnumeratorRequestStream> for Event {
     fn from(src: AudioDeviceEnumeratorRequestStream) -> Self {
         Self::AudioDevice(Some(src))
     }
-}
-
-/// The component mock that provides the dev/ directory for DAI.
-// TODO(fxbug.dev/79954): This mock dev/ directory publishes an empty "test-device".
-// Because there is no such DAI device, the HFP component will exit early. This is good enough for
-// scope of this smoke test as HFP is able to access this directory capability.
-// Eventually, we'd like to publish an actual DAI Test Device to this directory so that the HFP
-// component doesn't terminate.
-async fn mock_dev(handles: MockHandles) -> Result<(), Error> {
-    let mut fs = ServiceFs::new();
-    let dev_dai = pseudo_directory! {
-        "class" => pseudo_directory! {
-            "dai" => pseudo_directory! {
-                "test-device" => pseudo_directory! {}
-            }
-        }
-    };
-    fs.add_remote("dev", spawn_vfs(dev_dai));
-    fs.serve_connection(handles.outgoing_dir.into_channel())?;
-    fs.collect::<()>().await;
-    Ok(())
 }
 
 async fn mock_audio_device_provider(
@@ -150,7 +129,12 @@ async fn hfp_audio_gateway_v2_capability_routing() {
         .add_eager_component(
             MOCK_DEV_MONIKER,
             ComponentSource::Mock(Mock::new({
-                move |mock_handles: MockHandles| Box::pin(mock_dev(mock_handles))
+                move |mock_handles: MockHandles| {
+                    Box::pin(mock_dev(
+                        mock_handles,
+                        mock_dai_dev_with_io_devices("input1".to_string(), "output1".to_string()),
+                    ))
+                }
             })),
         )
         .await

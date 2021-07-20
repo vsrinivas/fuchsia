@@ -12,10 +12,12 @@ rustc_library("fuchsia-audio-dai") {
     "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio-rustc",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
+    "//src/lib/storage/vfs/rust:vfs",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:derivative",
@@ -33,8 +35,11 @@ rustc_library("fuchsia-audio-dai") {
   ]
 
   test_deps = [
+    "//sdk/fidl/fuchsia.io2:fuchsia.io2-rustc",
+    "//src/connectivity/bluetooth/tests/bt-manifest-integration-tests:lib",
     "//src/lib/async-utils",
     "//src/lib/fuchsia",
+    "//src/lib/fuchsia-component-test",
     "//src/lib/testing/fixture",
     "//third_party/rust_crates:futures-test",
   ]
