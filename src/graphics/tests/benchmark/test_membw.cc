@@ -40,7 +40,6 @@ int main(int argc, char** argv) {
   }
 
   buffer_size = 6000000;
-  iterations = 10000;
 
   if (argc > 2) {
     buffer_size = strtoul(argv[2], nullptr, 0);
@@ -49,12 +48,25 @@ int main(int argc, char** argv) {
     iterations = strtoul(argv[3], nullptr, 0);
   }
 
+  printf("Allocating buffers\n");fflush(stdout);
   a = malloc(buffer_size);
   b = malloc(buffer_size);
 
+  printf("Initializing buffers\n");fflush(stdout);
   // Don't fill with zero, could be zero-page optimized
   memset(a, 1, buffer_size);
   memset(b, 1, buffer_size);
+
+  iterations = 1;
+  printf("Running 1 iteration\n");fflush(stdout);
+  if (do_copy) {
+    copy_loop();
+  } else {
+    set_loop();
+  }
+
+  iterations = 10000;
+  printf("Running %lu iterations\n", iterations);fflush(stdout);
 
   auto start = std::chrono::high_resolution_clock::now();
 
