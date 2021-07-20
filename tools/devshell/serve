@@ -5,7 +5,7 @@
 
 #### CATEGORY=Software delivery
 ### start `pave` and `serve-updates` in a single command
-## usage: fx serve [-v] [-l host[:port]] [-c version] [-a target]
+## usage: fx serve [-v] [-l host[:port]] [-c version] [-a target] [--name NAME]
 ##   -l host:port for "pm serve" to listen on
 ##   -c version configuration format version for the served config.json
 ##              that "pm" will serve. Valid choices: 1 or 2.
@@ -14,6 +14,7 @@
 ##              Choosing `2` will serve a file which cannot be processed by
 ##              `amberctl` but by `pkgctl repo ...` without the `-f 1` switch.
 ##   --no-auto-config do not configure this host as a package server on the device
+##   --name NAME Name the generated update source config NAME.
 ##   --[no-]persist enable or disable persistent repo metadata. Disabled by default.
 ##   -v enable more verbose output (must be first argument)
 ##   -a target ipv6 address for "fx pave --no-bind"
@@ -65,6 +66,10 @@ while (($#)); do
       ;;
     --persist)
       serve_args+=("--persist")
+      ;;
+    --name)
+      serve_args+=("--name" "$2")
+      shift
       ;;
     -l)
       serve_args+=("$1" "$2")

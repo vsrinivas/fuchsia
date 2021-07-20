@@ -5,7 +5,8 @@
 
 #### CATEGORY=Software delivery
 ### start the update server and attach to a running fuchsia device
-## usage: fx serve-updates [-v] [-l host[:port]] [-c version] [--no-auto-config]
+## usage: fx serve-updates [-v] [-l host[:port]] [-c version] [--no-auto-config] [--name NAME]
+##
 ##   -l host:port       host and port that "pm serve" will listen on
 ##   -c version         configuration format version for the served config.json
 ##                      that "pm" will serve. Valid choices: 1 or 2.
@@ -14,6 +15,7 @@
 ##                      Choosing `2` will serve a file which cannot be processed by
 ##                      `amberctl` but by `pkgctl repo ...` without the `-f 1` switch.
 ##   --no-auto-config   do not configure this host as a package server on the device
+##   --name NAME        Name the generated update source config NAME.
 ##   --[no-]persist     enable or disable persistence of repository metadata. Disabled
 ##                      by default.
 ##   -v                 verbose mode, shows info and debug messages from "pm"
@@ -42,6 +44,7 @@ verbose=false
 auto_config=true
 clean_first=false
 config_format="2"
+source_name=""
 persist="--no-persist"
 while (($#)); do
   case "$1" in
@@ -52,6 +55,10 @@ while (($#)); do
       ;;
     -c)
       config_format=("$2")
+      shift
+      ;;
+    --name)
+      source_name="$2"
       shift
       ;;
     --no-persist)
@@ -276,7 +283,13 @@ while true; do
 
   if [[ "$state" == "config" ]]; then
     log "Registering devhost as update source"
-    if with-pinned-target fx-command-run add-update-source ${persist} --port "${port}"; then
+
+    add_update_source_args=( "${persist}" --port "${port}" )
+    if [[ ! -z "${source_name}" ]]; then
+      add_update_source_args+=( --name "${source_name}" )
+    fi
+
+    if with-pinned-target fx-command-run add-update-source "${add_update_source_args[@]}"; then
       log "Ready to push packages!"
       # Log the uptime so that it is clear(er) from fx serve if the device rebooted.
       # The tr is present as the output sometimes contains spurious control characters.
