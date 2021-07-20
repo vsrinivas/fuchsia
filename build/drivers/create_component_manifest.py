@@ -50,7 +50,7 @@ def main():
     manifest = {
         'program': {
             'runner': 'driver',
-            'program': program,
+            'binary': program,
             'bind': bind
         }
     }

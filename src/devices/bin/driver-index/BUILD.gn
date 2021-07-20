@@ -4,6 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/components.gni")
+import("//build/config/fuchsia/rules.gni")
 import("//build/drivers/driver_manifest.gni")
 import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/drivers/fuchsia_driver_package.gni")
@@ -77,22 +78,32 @@ fuchsia_package("package") {
   deps = [ ":component" ]
 }
 
+driver_module("fake-driver") {
+}
+
 driver_bind_rules("test-bind") {
   rules = "test.bind"
 }
 
-fuchsia_component("test-bind-component") {
-  manifest = "meta/test-driver-one.cml"
-  deps = [ ":test-bind" ]
+fuchsia_driver_component("test-bind-component") {
+  deps = [
+    ":fake-driver",
+    ":test-bind",
+  ]
+}
+
+driver_module("fake-driver2") {
 }
 
 driver_bind_rules("test-bind2") {
   rules = "test2.bind"
 }
 
-fuchsia_component("test-bind2-component") {
-  manifest = "meta/test-driver-two.cml"
-  deps = [ ":test-bind2" ]
+fuchsia_driver_component("test-bind2-component") {
+  deps = [
+    ":fake-driver2",
+    ":test-bind2",
+  ]
 }
 
 driver_manifest("driver-manifest") {

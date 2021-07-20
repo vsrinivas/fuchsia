@@ -115,9 +115,8 @@ impl ResolvedDriver {
         let bind = io_util::read_file_bytes(&bind).await.context("Failed to read bind")?;
         let bind = DecodedBindRules::new(bind)?;
 
-        // TODO(fxb/78950): Replace "program" with "rules".
-        let driver_path = get_rules_string_value(&component, "program")
-            .ok_or(anyhow::anyhow!("Missing bind path"))?;
+        let driver_path = get_rules_string_value(&component, "binary")
+            .ok_or(anyhow::anyhow!("Missing driver path"))?;
 
         Ok(ResolvedDriver {
             component_url: component_url,
