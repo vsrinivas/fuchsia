@@ -181,8 +181,7 @@ TEST(Bti, Clone) {
 
   zx::vmo vmo, clone;
   ASSERT_EQ(zx::vmo::create(zx_system_get_page_size(), ZX_VMO_RESIZABLE, &vmo), ZX_OK);
-  ASSERT_EQ(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, zx_system_get_page_size(), &clone),
-            ZX_OK);
+  ASSERT_EQ(vmo.create_child(ZX_VMO_CHILD_SNAPSHOT, 0, zx_system_get_page_size(), &clone), ZX_OK);
 
   zx_paddr_t paddrs;
   ASSERT_EQ(bti.pin(ZX_BTI_PERM_READ, clone, 0, zx_system_get_page_size(), &paddrs, 1, &pmt),
@@ -277,9 +276,9 @@ TEST(Bti, NoDelayedUnpin) {
     // actually be useful.
     static constexpr int kClones = 16;
     zx::vmo clones[kClones];
-    vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, kVmoSize, &clones[0]);
+    vmo.create_child(ZX_VMO_CHILD_SNAPSHOT, 0, kVmoSize, &clones[0]);
     for (int i = 1; i < kClones; i++) {
-      clones[rand() % i].create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, kVmoSize, &clones[i]);
+      clones[rand() % i].create_child(ZX_VMO_CHILD_SNAPSHOT, 0, kVmoSize, &clones[i]);
     }
     // To ensure our info querying is slow, spin up another thread to do long running operations on
     // our vmo chain. When tested this made the get_info call take around 500ms.
@@ -315,7 +314,7 @@ TEST(Bti, NoDelayedUnpin) {
 
     // After unpinning we should be able to make a clone.
     zx::vmo clone;
-    ASSERT_EQ(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, kVmoSize, &clone), ZX_OK);
+    ASSERT_EQ(vmo.create_child(ZX_VMO_CHILD_SNAPSHOT, 0, kVmoSize, &clone), ZX_OK);
   }
 
   running = false;

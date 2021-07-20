@@ -720,14 +720,13 @@ void ChildPermsTestHelper(const zx_handle_t vmo) {
 
   // Make different kinds of children and ensure we get the correct rights.
   zx_handle_t child;
-  EXPECT_OK(
-      zx_vmo_create_child(vmo, ZX_VMO_CHILD_COPY_ON_WRITE, 0, zx_system_get_page_size(), &child));
+  EXPECT_OK(zx_vmo_create_child(vmo, ZX_VMO_CHILD_SNAPSHOT, 0, zx_system_get_page_size(), &child));
   EXPECT_EQ(GetHandleRights(child),
             (parent_rights | ZX_RIGHT_GET_PROPERTY | ZX_RIGHT_SET_PROPERTY | ZX_RIGHT_WRITE) &
                 ~ZX_RIGHT_EXECUTE);
   EXPECT_OK(zx_handle_close(child));
 
-  EXPECT_OK(zx_vmo_create_child(vmo, ZX_VMO_CHILD_COPY_ON_WRITE | ZX_VMO_CHILD_NO_WRITE, 0,
+  EXPECT_OK(zx_vmo_create_child(vmo, ZX_VMO_CHILD_SNAPSHOT | ZX_VMO_CHILD_NO_WRITE, 0,
                                 zx_system_get_page_size(), &child));
   EXPECT_EQ(GetHandleRights(child),
             (parent_rights | ZX_RIGHT_GET_PROPERTY | ZX_RIGHT_SET_PROPERTY) & ~ZX_RIGHT_WRITE);
@@ -1124,21 +1123,21 @@ TEST(VmoTestCase, Cache) {
 
   // clone the vmo, make sure policy doesn't set
   zx::vmo clone;
-  EXPECT_OK(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, size, &clone));
+  EXPECT_OK(vmo.create_child(ZX_VMO_CHILD_SNAPSHOT, 0, size, &clone));
   EXPECT_EQ(ZX_ERR_BAD_STATE, vmo.set_cache_policy(ZX_CACHE_POLICY_CACHED));
   clone.reset();
   EXPECT_OK(vmo.set_cache_policy(ZX_CACHE_POLICY_CACHED));
 
   // clone the vmo, try to set policy on the clone
-  EXPECT_OK(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, size, &clone));
+  EXPECT_OK(vmo.create_child(ZX_VMO_CHILD_SNAPSHOT, 0, size, &clone));
   EXPECT_EQ(ZX_ERR_BAD_STATE, clone.set_cache_policy(ZX_CACHE_POLICY_CACHED));
   clone.reset();
 
   // set the policy, make sure future clones do not go through
   EXPECT_OK(vmo.set_cache_policy(ZX_CACHE_POLICY_UNCACHED));
-  EXPECT_EQ(ZX_ERR_BAD_STATE, vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, size, &clone));
+  EXPECT_EQ(ZX_ERR_BAD_STATE, vmo.create_child(ZX_VMO_CHILD_SNAPSHOT, 0, size, &clone));
   EXPECT_OK(vmo.set_cache_policy(ZX_CACHE_POLICY_CACHED));
-  EXPECT_OK(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, size, &clone));
+  EXPECT_OK(vmo.create_child(ZX_VMO_CHILD_SNAPSHOT, 0, size, &clone));
   clone.reset();
 
   // set the policy, make sure vmo read/write do not work

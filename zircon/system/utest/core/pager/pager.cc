@@ -1727,9 +1727,8 @@ TEST(Pager, InvalidPagerSupplyPages) {
 
     if (i == kIsClone) {
       ASSERT_EQ(zx::vmo::create(zx_system_get_page_size(), 0, &alt_vmo), ZX_OK);
-      ASSERT_EQ(
-          alt_vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, zx_system_get_page_size(), &aux_vmo),
-          ZX_OK);
+      ASSERT_EQ(alt_vmo.create_child(ZX_VMO_CHILD_SNAPSHOT, 0, zx_system_get_page_size(), &aux_vmo),
+                ZX_OK);
     } else if (i == kFromPager) {
       ASSERT_EQ(zx_pager_create_vmo(pager.get(), 0, port.get(), 0, zx_system_get_page_size(),
                                     aux_vmo.reset_and_get_address()),
@@ -1744,9 +1743,8 @@ TEST(Pager, InvalidPagerSupplyPages) {
     }
 
     if (i == kHasClone) {
-      ASSERT_EQ(
-          aux_vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, zx_system_get_page_size(), &alt_vmo),
-          ZX_OK);
+      ASSERT_EQ(aux_vmo.create_child(ZX_VMO_CHILD_SNAPSHOT, 0, zx_system_get_page_size(), &alt_vmo),
+                ZX_OK);
     }
 
     if (i == kFromPager) {

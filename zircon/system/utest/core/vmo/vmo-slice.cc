@@ -329,7 +329,7 @@ TEST(VmoSliceTestCase, CowPageSourceThroughSlices) {
 
   // Create a COW child so that we have a hidden parent as the root page source.
   zx::vmo cow_child;
-  ASSERT_OK(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, zx_system_get_page_size(), &cow_child));
+  ASSERT_OK(vmo.create_child(ZX_VMO_CHILD_SNAPSHOT, 0, zx_system_get_page_size(), &cow_child));
 
   // Now create a slice of the cow_child
   zx::vmo slice;
@@ -341,7 +341,7 @@ TEST(VmoSliceTestCase, CowPageSourceThroughSlices) {
   // branch can be removed.
   zx::vmo cow_child2;
   zx_status_t result =
-      slice.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, zx_system_get_page_size(), &cow_child2);
+      slice.create_child(ZX_VMO_CHILD_SNAPSHOT, 0, zx_system_get_page_size(), &cow_child2);
   if (result == ZX_OK) {
     // Attempt to write to this child. This will require propagating page through both hidden and
     // non hidden VMOs.

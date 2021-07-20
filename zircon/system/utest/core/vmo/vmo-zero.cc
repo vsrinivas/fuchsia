@@ -157,8 +157,7 @@ TEST(VmoZeroTestCase, ContentInParentAndChild) {
 
   zx::vmo child;
   // Create a child of both pages, and then just fork the first 1
-  EXPECT_OK(
-      parent.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, zx_system_get_page_size() * 2, &child));
+  EXPECT_OK(parent.create_child(ZX_VMO_CHILD_SNAPSHOT, 0, zx_system_get_page_size() * 2, &child));
   VmoWrite(child, 2, 0);
 
   // As page 2 is still CoW with the parent page 1 cannot be decommitted as it would then see old
@@ -175,8 +174,7 @@ TEST(VmoZeroTestCase, EmptyCowChildren) {
   VmoWrite(parent, 1, 0);
 
   zx::vmo child;
-  EXPECT_OK(
-      parent.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, zx_system_get_page_size() * 2, &child));
+  EXPECT_OK(parent.create_child(ZX_VMO_CHILD_SNAPSHOT, 0, zx_system_get_page_size() * 2, &child));
 
   // Parent should have the page currently attributed to it.
   EXPECT_EQ(zx_system_get_page_size(), VmoCommittedBytes(parent));
@@ -204,7 +202,7 @@ TEST(VmoZeroTestCase, MergeZeroChildren) {
   VmoWrite(parent, 1, 0);
 
   zx::vmo child;
-  EXPECT_OK(parent.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, zx_system_get_page_size(), &child));
+  EXPECT_OK(parent.create_child(ZX_VMO_CHILD_SNAPSHOT, 0, zx_system_get_page_size(), &child));
 
   // Parent should have the page currently attributed to it.
   EXPECT_EQ(zx_system_get_page_size(), VmoCommittedBytes(parent));
@@ -227,8 +225,7 @@ TEST(VmoZeroTestCase, AllocateAfterMerge) {
   InitPageTaggedVmo(2, &parent);
 
   zx::vmo child;
-  EXPECT_OK(
-      parent.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, zx_system_get_page_size() * 2, &child));
+  EXPECT_OK(parent.create_child(ZX_VMO_CHILD_SNAPSHOT, 0, zx_system_get_page_size() * 2, &child));
 
   // Validate initial state.
   VmoCheck(child, 1, 0);
@@ -257,8 +254,7 @@ TEST(VmoZeroTestCase, AllocateAfterMergeHiddenChild) {
   InitPageTaggedVmo(3, &parent);
 
   zx::vmo child1, child2;
-  EXPECT_OK(
-      parent.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, zx_system_get_page_size() * 3, &child1));
+  EXPECT_OK(parent.create_child(ZX_VMO_CHILD_SNAPSHOT, 0, zx_system_get_page_size() * 3, &child1));
   EXPECT_EQ(zx_system_get_page_size() * 3, VmoCommittedBytes(parent) + VmoCommittedBytes(child1));
 
   // Zero a page in the parent before creating the next child. This places a zero page in the
@@ -266,8 +262,7 @@ TEST(VmoZeroTestCase, AllocateAfterMergeHiddenChild) {
   EXPECT_OK(parent.op_range(ZX_VMO_OP_ZERO, 0, zx_system_get_page_size(), NULL, 0));
   EXPECT_EQ(zx_system_get_page_size() * 3, VmoCommittedBytes(parent) + VmoCommittedBytes(child1));
 
-  EXPECT_OK(
-      parent.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, zx_system_get_page_size() * 3, &child2));
+  EXPECT_OK(parent.create_child(ZX_VMO_CHILD_SNAPSHOT, 0, zx_system_get_page_size() * 3, &child2));
 
   // Zero the middle page of child1. This leaves the number of comitted pages the same.
   EXPECT_OK(child1.op_range(ZX_VMO_OP_ZERO, zx_system_get_page_size(), zx_system_get_page_size(),
@@ -317,8 +312,7 @@ TEST(VmoZeroTestCase, WriteCowParent) {
   VmoWrite(parent, 1, 0);
 
   zx::vmo child;
-  EXPECT_OK(
-      parent.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, zx_system_get_page_size() * 2, &child));
+  EXPECT_OK(parent.create_child(ZX_VMO_CHILD_SNAPSHOT, 0, zx_system_get_page_size() * 2, &child));
 
   // Parent should have the page currently attributed to it.
   EXPECT_EQ(zx_system_get_page_size(), VmoCommittedBytes(parent));
@@ -351,8 +345,7 @@ TEST(VmoZeroTestCase, ChildZeroThenWrite) {
   VmoWrite(parent, 1, 0);
 
   zx::vmo child;
-  EXPECT_OK(
-      parent.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, zx_system_get_page_size() * 2, &child));
+  EXPECT_OK(parent.create_child(ZX_VMO_CHILD_SNAPSHOT, 0, zx_system_get_page_size() * 2, &child));
 
   // Parent should have the page currently attributed to it.
   EXPECT_EQ(zx_system_get_page_size(), VmoCommittedBytes(parent));
@@ -383,8 +376,8 @@ TEST(VmoZeroTestCase, Nested) {
 
   // Create two children.
   zx::vmo child1, child2;
-  EXPECT_OK(parent.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, zx_system_get_page_size(), &child1));
-  EXPECT_OK(parent.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, zx_system_get_page_size(), &child2));
+  EXPECT_OK(parent.create_child(ZX_VMO_CHILD_SNAPSHOT, 0, zx_system_get_page_size(), &child1));
+  EXPECT_OK(parent.create_child(ZX_VMO_CHILD_SNAPSHOT, 0, zx_system_get_page_size(), &child2));
 
   // Should have 1 page total attributed to the parent.
   EXPECT_EQ(zx_system_get_page_size(), VmoCommittedBytes(parent));
@@ -420,11 +413,11 @@ TEST(VmoZeroTestcase, ZeroFreesAndAllocates) {
 
   // Create two levels of children so we are forced to fork a page when inserting a marker later.
   zx::vmo intermediate;
-  EXPECT_OK(parent.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, zx_system_get_page_size() * 3,
-                                &intermediate));
+  EXPECT_OK(
+      parent.create_child(ZX_VMO_CHILD_SNAPSHOT, 0, zx_system_get_page_size() * 3, &intermediate));
   zx::vmo child;
-  EXPECT_OK(intermediate.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, zx_system_get_page_size() * 3,
-                                      &child));
+  EXPECT_OK(
+      intermediate.create_child(ZX_VMO_CHILD_SNAPSHOT, 0, zx_system_get_page_size() * 3, &child));
 
   // Commit the first page in the child so we have something to decommit later.
   VmoWrite(child, 1, 0);
@@ -448,8 +441,8 @@ TEST(VmoZeroTestCase, ResizeOverHiddenMarkers) {
   // Create an intermediate hidden parent, this ensures that when the child is resized the pages in
   // the range cannot simply be freed, as there is still a child of the root that needs them.
   zx::vmo intermediate;
-  ASSERT_OK(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, zx_system_get_page_size() * 4,
-                             &intermediate));
+  ASSERT_OK(
+      vmo.create_child(ZX_VMO_CHILD_SNAPSHOT, 0, zx_system_get_page_size() * 4, &intermediate));
 
   // Now zero that second last page slot. As our parent has a page here a marker has to get inserted
   // to prevent seeing back to the parent. We explicitly do not zero the first or last page as in
@@ -459,7 +452,7 @@ TEST(VmoZeroTestCase, ResizeOverHiddenMarkers) {
 
   // Create a sibling over this zero page.
   zx::vmo sibling;
-  ASSERT_OK(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, zx_system_get_page_size() * 2,
+  ASSERT_OK(vmo.create_child(ZX_VMO_CHILD_SNAPSHOT, zx_system_get_page_size() * 2,
                              zx_system_get_page_size(), &sibling));
 
   // The sibling should see the zeros.

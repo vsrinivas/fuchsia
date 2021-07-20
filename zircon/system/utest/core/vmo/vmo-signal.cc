@@ -57,12 +57,12 @@ TEST(VmoSignalTestCase, ChildSignalClone) {
   for (int ix = 0; ix != 10; ++ix) {
     ASSERT_OK(VmoHasNoChildren(vmo), "");
 
-    ASSERT_OK(zx_vmo_create_child(vmo, ZX_VMO_CHILD_COPY_ON_WRITE, 0u, 4096u, &clone), "");
+    ASSERT_OK(zx_vmo_create_child(vmo, ZX_VMO_CHILD_SNAPSHOT, 0u, 4096u, &clone), "");
 
     ASSERT_OK(VmoHasNoChildren(clone), "");
     ASSERT_OK(VmoHasChildren(vmo), "");
 
-    ASSERT_OK(zx_vmo_create_child(clone, ZX_VMO_CHILD_COPY_ON_WRITE, 0u, 4096u, &clone2), "");
+    ASSERT_OK(zx_vmo_create_child(clone, ZX_VMO_CHILD_SNAPSHOT, 0u, 4096u, &clone2), "");
 
     ASSERT_OK(VmoHasNoChildren(clone2), "");
     ASSERT_OK(VmoHasChildren(clone), "");
@@ -90,7 +90,7 @@ TEST(VmoSignalTestCase, ChildSignalMap) {
   for (int ix = 0; ix != 10; ++ix) {
     ASSERT_OK(VmoHasNoChildren(vmo), "");
 
-    ASSERT_OK(zx_vmo_create_child(vmo, ZX_VMO_CHILD_COPY_ON_WRITE, 0u, 4096u, &clone), "");
+    ASSERT_OK(zx_vmo_create_child(vmo, ZX_VMO_CHILD_SNAPSHOT, 0u, 4096u, &clone), "");
 
     uintptr_t addr = 0;
     ASSERT_OK(zx_vmar_map(zx_vmar_root_self(), options, 0u, clone, 0, 4096u, &addr), "");
