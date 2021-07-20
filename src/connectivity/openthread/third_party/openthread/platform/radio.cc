@@ -250,3 +250,15 @@ extern "C" void otPlatDiagRadioReceived(otInstance *a_instance, otRadioFrame *a_
 extern "C" void otPlatDiagAlarmCallback(otInstance *a_instance) { OT_UNUSED_VARIABLE(a_instance); }
 
 #endif  // OPENTHREAD_CONFIG_DIAG_ENABLE
+
+otError otPlatRadioSetRegion(otInstance *a_instance, uint16_t a_region_code)
+{
+    OT_UNUSED_VARIABLE(a_instance);
+    return sRadioSpinel.SetRadioRegion(a_region_code);
+}
+
+otError otPlatRadioGetRegion(otInstance *a_instance, uint16_t *a_region_code)
+{
+    OT_UNUSED_VARIABLE(a_instance);
+    return sRadioSpinel.GetRadioRegion(a_region_code);
+}
