@@ -1,2 +1,5 @@
-# Turn off LF normalization for vendored crates
+# Turn off LF normalization for vendored crates.
 vendor/** text=false
+
+# Don't treat test data as text.
+vendor/**/third_party/NIST/SHAVS/*.rsp -diff
