@@ -498,28 +498,13 @@ async fn test_persisted_values_applied_at_start() {
     // service.
     for stream in test_audio_info.streams.iter() {
         verify_audio_stream(&settings, AudioStreamSettings::from(*stream));
-        let new_stream = if stream.stream_type == AudioStreamType::Interruption
-            || stream.stream_type == AudioStreamType::Background
-        {
-            // AudioStreamType::Interruption updates AudioRenderUsage::Background, therefore, the
-            // values from audio_core will equal to last Interruption/Background stream updates.
-            AudioStream {
-                stream_type: AudioStreamType::Background,
-                source: stream.source,
-                user_volume_level: 0.3,
-                user_volume_muted: false,
-            }
-        } else {
-            *stream
-        };
-        let new_stream = &new_stream;
         assert_eq!(
-            (new_stream.user_volume_level, new_stream.user_volume_muted),
+            (stream.user_volume_level, stream.user_volume_muted),
             fake_services
                 .audio_core
                 .lock()
                 .await
-                .get_level_and_mute(AudioRenderUsage::from(new_stream.stream_type))
+                .get_level_and_mute(AudioRenderUsage::from(stream.stream_type))
                 .unwrap()
         );
     }
