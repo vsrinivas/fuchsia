@@ -26,6 +26,8 @@ def main():
     parser.add_argument(
         '--cxx', help='The C++ compiler to use', required=False, default='c++')
     parser.add_argument(
+        '--ar', help='The archive linker to use', required=False, default='ar')
+    parser.add_argument(
         '--dump-syms', help='The dump_syms tool to use', required=False)
     parser.add_argument(
         '--objcopy',
@@ -279,6 +281,7 @@ def main():
         # GOCACHE, CC and CXX below may be used in different working directories
         # so they have to be absolute.
         'GOCACHE': os.path.abspath(args.go_cache),
+        'AR': os.path.abspath(args.ar),
         'CC': os.path.abspath(args.cc),
         'CXX': os.path.abspath(args.cxx),
         'CGO_CFLAGS': cflags_joined,
@@ -319,6 +322,10 @@ def main():
         cmd += ['-tags', ' '.join(args.tag)]
     if args.buildmode:
         cmd += ['-buildmode', args.buildmode]
+        if args.buildmode == 'c-archive':
+            if not args.ar:
+                parser.error('--ar=AR is required with --buildmode=c-archive')
+            args.ldflag.extend(['-extar', os.path.relpath(args.ar, gopath_src)])
     if args.gcflag:
         cmd += ['-gcflags', ' '.join(args.gcflag)]
     if args.ldflag:

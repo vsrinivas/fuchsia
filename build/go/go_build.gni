@@ -196,6 +196,8 @@ template("go_build") {
       "$rebased_clang_prefix/clang++",
       "--objcopy",
       "$rebased_clang_prefix/llvm-objcopy",
+      "--ar",
+      "$rebased_clang_prefix/llvm-ar",
       "--sysroot",
       rebase_path(sysroot, root_build_dir),
       "--target",
