@@ -1,9 +1,10 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 #include "iface-device.h"
 
+#include <fuchsia/wlan/internal/c/banjo.h>
 #include <lib/ddk/debug.h>
 #include <stdio.h>
 
@@ -32,8 +33,9 @@ static wlanmac_protocol_ops_t wlanmac_test_protocol_ops = {
     .set_channel = [](void* ctx, uint32_t options, const wlan_channel_t* chan) -> zx_status_t {
       return DEV(ctx)->SetChannel(options, chan);
     },
-    .configure_bss = [](void* ctx, uint32_t options,
-                        const wlan_bss_config_t* config) -> zx_status_t { return ZX_OK; },
+    .configure_bss = [](void* ctx, uint32_t options, const bss_config_t* config) -> zx_status_t {
+      return ZX_OK;
+    },
     .enable_beaconing = [](void* ctx, uint32_t options,
                            const wlan_bcn_config_t* bcn_cfg) -> zx_status_t { return ZX_OK; },
     .configure_beacon = [](void* ctx, uint32_t options,

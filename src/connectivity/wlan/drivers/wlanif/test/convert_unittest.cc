@@ -1,4 +1,4 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -6,6 +6,7 @@
 #include <fuchsia/hardware/wlanif/c/banjo.h>
 #include <fuchsia/wlan/common/cpp/fidl.h>
 #include <fuchsia/wlan/ieee80211/cpp/fidl.h>
+#include <fuchsia/wlan/internal/c/banjo.h>
 #include <fuchsia/wlan/internal/cpp/fidl.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <fuchsia/wlan/stats/cpp/fidl.h>
@@ -45,7 +46,7 @@ zx_status_t ValidateMessage(T* msg) {
 TEST(ConvertTest, ToFidlBssDescription) {
   uint8_t ies[] = {0, 4, 0x73, 0x73, 0x69, 0x64};
   wlanif_bss_description_t wlanif_desc{.bssid = {1, 2, 3, 4, 5, 6},
-                                       .bss_type = WLAN_BSS_TYPE_INFRASTRUCTURE,
+                                       .bss_type = BSS_TYPE_INFRASTRUCTURE,
                                        .beacon_period = 2,
                                        .timestamp = 54321,
                                        .local_time = 777,
@@ -68,7 +69,7 @@ TEST(ConvertTest, ToFidlBssDescription) {
   EXPECT_EQ(status, ZX_OK);
   auto expected_bssid = std::array<uint8_t, 6>{1, 2, 3, 4, 5, 6};
   EXPECT_EQ(fidl_desc.bssid, expected_bssid);
-  EXPECT_EQ(fidl_desc.bss_type, fuchsia::wlan::internal::BssTypes::INFRASTRUCTURE);
+  EXPECT_EQ(fidl_desc.bss_type, fuchsia::wlan::internal::BssType::INFRASTRUCTURE);
   EXPECT_EQ(fidl_desc.beacon_period, 2u);
   EXPECT_EQ(fidl_desc.timestamp, 54321u);
   EXPECT_EQ(fidl_desc.local_time, 777u);
@@ -488,7 +489,7 @@ TEST(ConvertTest, ToWlanifBssDescription) {
   uint8_t ies[] = {0, 4, 0x73, 0x73, 0x69, 0x64};
   wlan_internal::BssDescription fidl_desc{
       .bssid = std::array<uint8_t, 6>{1, 2, 3, 4, 5, 6},
-      .bss_type = fuchsia::wlan::internal::BssTypes::INFRASTRUCTURE,
+      .bss_type = fuchsia::wlan::internal::BssType::INFRASTRUCTURE,
       .beacon_period = 2,
       .timestamp = 54321,
       .local_time = 777,
@@ -504,7 +505,7 @@ TEST(ConvertTest, ToWlanifBssDescription) {
 
   uint8_t expected_bssid[] = {1, 2, 3, 4, 5, 6};
   EXPECT_EQ(memcmp(wlanif_desc.bssid, expected_bssid, sizeof(wlanif_desc.bssid)), 0);
-  EXPECT_EQ(wlanif_desc.bss_type, WLAN_BSS_TYPE_INFRASTRUCTURE);
+  EXPECT_EQ(wlanif_desc.bss_type, BSS_TYPE_INFRASTRUCTURE);
   EXPECT_EQ(wlanif_desc.beacon_period, 2u);
   EXPECT_EQ(wlanif_desc.timestamp, 54321u);
   EXPECT_EQ(wlanif_desc.local_time, 777u);

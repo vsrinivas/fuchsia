@@ -1,4 +1,4 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 library fuchsia.hardware.wlanif;
@@ -8,6 +8,7 @@ using ddk.hw.wlan.wlaninfo;
 using fuchsia.hardware.ethernet;
 using fuchsia.hardware.ethernet.mac;
 using fuchsia.hardware.wlan.info;
+using fuchsia.wlan.internal;
 using zx;
 
 type WlanScanType = strict enum : uint8 {
@@ -31,7 +32,7 @@ type WlanifSsid = struct {
 
 type WlanifScanReq = struct {
     txn_id uint64;
-    bss_type fuchsia.hardware.wlan.info.WlanBssType;
+    bss_type fuchsia.wlan.internal.BssType;
     bssid array<uint8, fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH>;
     ssid WlanifSsid;
     scan_type WlanScanType;
@@ -55,7 +56,7 @@ const WLAN_IE_BODY_MAX_LEN uint32 = 255;
 const WLAN_VIE_MAX_LEN uint32 = 510; // max length for two elements (WPA and WSC)
 type WlanifBssDescription = struct {
     bssid array<uint8, fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH>;
-    bss_type fuchsia.hardware.wlan.info.WlanBssType;
+    bss_type fuchsia.wlan.internal.BssType;
     beacon_period uint32;
     timestamp uint64;
     local_time uint64;
@@ -135,7 +136,7 @@ type WlanifResetReq = struct {
 
 type WlanifStartReq = struct {
     ssid WlanifSsid;
-    bss_type fuchsia.hardware.wlan.info.WlanBssType;
+    bss_type fuchsia.wlan.internal.BssType;
     beacon_period uint32;
     dtim_period uint32;
     channel uint8;

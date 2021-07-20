@@ -1,7 +1,8 @@
-// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 #include <fuchsia/hardware/wlanif/c/banjo.h>
+#include <fuchsia/wlan/internal/c/banjo.h>
 #include <zircon/errors.h>
 
 #include <ddk/hw/wlan/wlaninfo/c/banjo.h>
@@ -19,7 +20,7 @@ constexpr zx::duration kSimulatedClockDuration = zx::sec(10);
 constexpr uint64_t kScanTxnId = 0x4a65616e6e65;
 const wlanif_scan_req kDefaultScanReq = {
     .txn_id = kScanTxnId,
-    .bss_type = WLAN_BSS_TYPE_INFRASTRUCTURE,
+    .bss_type = BSS_TYPE_INFRASTRUCTURE,
     .scan_type = WLAN_SCAN_TYPE_ACTIVE,
     .num_channels = WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS,
     .min_channel_time = SimInterface::kDefaultActiveScanDwellTimeMs,

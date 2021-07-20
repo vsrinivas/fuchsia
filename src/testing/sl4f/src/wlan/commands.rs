@@ -1,4 +1,4 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -43,8 +43,8 @@ pub struct WlanChanDef {
 }
 
 #[derive(Serialize, Deserialize)]
-#[serde(remote = "fidl_internal::BssTypes")]
-pub enum BssTypesDef {
+#[serde(remote = "fidl_internal::BssType")]
+pub enum BssTypeDef {
     Infrastructure = 1,
     Personal = 2,
     Independent = 3,
@@ -56,8 +56,8 @@ pub enum BssTypesDef {
 #[serde(remote = "fidl_internal::BssDescription")]
 struct BssDescriptionDef {
     pub bssid: [u8; 6],
-    #[serde(with = "BssTypesDef")]
-    pub bss_type: fidl_internal::BssTypes,
+    #[serde(with = "BssTypeDef")]
+    pub bss_type: fidl_internal::BssType,
     pub beacon_period: u16,
     pub timestamp: u64,
     pub local_time: u64,

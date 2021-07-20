@@ -1,10 +1,11 @@
-// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_DEVICE_INTERFACE_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_DEVICE_INTERFACE_H_
 
+#include <fuchsia/wlan/internal/c/banjo.h>
 #include <fuchsia/wlan/minstrel/cpp/fidl.h>
 #include <zircon/types.h>
 
@@ -59,7 +60,7 @@ class DeviceInterface {
 
   virtual zx_status_t SetChannel(wlan_channel_t chan) = 0;
   virtual zx_status_t SetStatus(uint32_t status) = 0;
-  virtual zx_status_t ConfigureBss(wlan_bss_config_t* cfg) = 0;
+  virtual zx_status_t ConfigureBss(bss_config_t* cfg) = 0;
   virtual zx_status_t EnableBeaconing(wlan_bcn_config_t* bcn_cfg) = 0;
   virtual zx_status_t ConfigureBeacon(std::unique_ptr<Packet> packet) = 0;
   virtual zx_status_t SetKey(wlan_key_config_t* key_config) = 0;

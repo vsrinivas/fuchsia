@@ -1,4 +1,4 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -7,6 +7,7 @@ use {
     anyhow::format_err,
     banjo_fuchsia_hardware_wlan_info::*,
     banjo_fuchsia_hardware_wlan_mac::{WlanHwScanConfig, WlanmacInfo},
+    banjo_fuchsia_wlan_internal::BssConfig,
     fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
     std::ffi::c_void,
     wlan_common::{mac::MacAddr, TimeUnit},
@@ -65,8 +66,8 @@ pub struct Device {
     /// Get information and capabilities of this WLAN interface
     get_wlanmac_info: extern "C" fn(device: *mut c_void) -> WlanmacInfo,
     /// Configure the device's BSS.
-    /// |cfg| is mutable because the underlying API does not take a const wlan_bss_config_t.
-    configure_bss: extern "C" fn(device: *mut c_void, cfg: *mut WlanBssConfig) -> i32,
+    /// |cfg| is mutable because the underlying API does not take a const bss_config_t.
+    configure_bss: extern "C" fn(device: *mut c_void, cfg: *mut BssConfig) -> i32,
     /// Enable hardware offload of beaconing on the device.
     enable_beaconing: extern "C" fn(
         device: *mut c_void,
@@ -143,8 +144,8 @@ impl Device {
         (self.get_wlanmac_info)(self.device)
     }
 
-    pub fn configure_bss(&self, mut cfg: WlanBssConfig) -> Result<(), zx::Status> {
-        let status = (self.configure_bss)(self.device, &mut cfg as *mut WlanBssConfig);
+    pub fn configure_bss(&self, mut cfg: BssConfig) -> Result<(), zx::Status> {
+        let status = (self.configure_bss)(self.device, &mut cfg as *mut BssConfig);
         zx::ok(status)
     }
 
@@ -222,7 +223,7 @@ mod test_utils {
         pub keys: Vec<key::KeyConfig>,
         pub hw_scan_req: Option<WlanHwScanConfig>,
         pub info: WlanmacInfo,
-        pub bss_cfg: Option<WlanBssConfig>,
+        pub bss_cfg: Option<BssConfig>,
         pub bcn_cfg: Option<(Vec<u8>, usize, TimeUnit)>,
         pub link_status: LinkStatus,
         pub assocs: std::collections::HashMap<MacAddr, WlanAssocCtx>,
@@ -338,7 +339,7 @@ mod test_utils {
             unsafe { (*(device as *const Self)).info }
         }
 
-        pub extern "C" fn configure_bss(device: *mut c_void, cfg: *mut WlanBssConfig) -> i32 {
+        pub extern "C" fn configure_bss(device: *mut c_void, cfg: *mut BssConfig) -> i32 {
             unsafe {
                 (*(device as *mut Self)).bss_cfg.replace((*cfg).clone());
             }
@@ -548,6 +549,7 @@ mod tests {
     use {
         super::*, crate::ddk_converter, banjo_ddk_hw_wlan_ieee80211::*,
         banjo_ddk_hw_wlan_wlaninfo::*, banjo_fuchsia_hardware_wlan_mac::WlanHwScanType,
+        banjo_fuchsia_wlan_internal as banjo_internal,
         fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, wlan_common::assert_variant,
     };
 
@@ -696,9 +698,9 @@ mod tests {
     fn configure_bss() {
         let mut fake_device = FakeDevice::new();
         let dev = fake_device.as_device();
-        dev.configure_bss(WlanBssConfig {
+        dev.configure_bss(BssConfig {
             bssid: [1, 2, 3, 4, 5, 6],
-            bss_type: WlanBssType::PERSONAL,
+            bss_type: banjo_internal::BssType::PERSONAL,
             remote: true,
         })
         .expect("error configuring bss");

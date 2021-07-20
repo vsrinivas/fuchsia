@@ -1,4 +1,4 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -770,7 +770,7 @@ fn create_start_request(
 
     fidl_mlme::StartRequest {
         ssid: ssid.clone(),
-        bss_type: fidl_internal::BssTypes::Infrastructure,
+        bss_type: fidl_internal::BssType::Infrastructure,
         beacon_period: DEFAULT_BEACON_PERIOD,
         dtim_period: DEFAULT_DTIM_PERIOD,
         channel: op.chan.primary,
@@ -888,7 +888,7 @@ mod tests {
                 start_req.cap,
                 mac::CapabilityInfo(0).with_short_preamble(true).with_ess(true).raw(),
             );
-            assert_eq!(start_req.bss_type, fidl_internal::BssTypes::Infrastructure);
+            assert_eq!(start_req.bss_type, fidl_internal::BssType::Infrastructure);
             assert_ne!(start_req.beacon_period, 0);
             assert_eq!(start_req.dtim_period, DEFAULT_DTIM_PERIOD);
             assert_eq!(

@@ -1,7 +1,8 @@
-// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/wlan/internal/c/banjo.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <lib/zx/time.h>
 #include <zircon/assert.h>
@@ -91,7 +92,7 @@ zx_status_t ClientMlme::Init() {
       .get_wlanmac_info = [](void* device) -> wlanmac_info_t {
         return DEVICE(device)->GetWlanMacInfo();
       },
-      .configure_bss = [](void* device, wlan_bss_config_t* cfg) -> zx_status_t {
+      .configure_bss = [](void* device, bss_config_t* cfg) -> zx_status_t {
         return DEVICE(device)->ConfigureBss(cfg);
       },
       .enable_beaconing = [](void* device, mlme_out_buf_t buf, size_t tim_ele_offset,

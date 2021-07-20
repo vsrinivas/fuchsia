@@ -1,10 +1,11 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/test/sim_test.h"
 
 #include <fuchsia/wlan/ieee80211/cpp/fidl.h>
+#include <fuchsia/wlan/internal/c/banjo.h>
 
 namespace wlan_ieee80211 = ::fuchsia::wlan::ieee80211;
 
@@ -269,7 +270,7 @@ void SimInterface::StartAssoc(const common::MacAddr& bssid, const wlan_ssid_t& s
   join_req.selected_bss.ies_bytes_list = assoc_ctx_.ies.data();
   join_req.selected_bss.ies_bytes_count = assoc_ctx_.ies.size();
   join_req.selected_bss.chan = channel;
-  join_req.selected_bss.bss_type = WLAN_BSS_TYPE_ANY_BSS;
+  join_req.selected_bss.bss_type = BSS_TYPE_ANY_BSS;
   if_impl_ops_->join_req(if_impl_ctx_, &join_req);
 }
 
@@ -307,7 +308,7 @@ void SimInterface::StartScan(uint64_t txn_id, bool active) {
   size_t num_channels = kDefaultScanChannels.size();
   wlanif_scan_req_t req = {
       .txn_id = txn_id,
-      .bss_type = WLAN_BSS_TYPE_INFRASTRUCTURE,
+      .bss_type = BSS_TYPE_INFRASTRUCTURE,
       .scan_type = scan_type,
       .num_channels = num_channels,
       .min_channel_time = dwell_time,
@@ -353,7 +354,7 @@ void SimInterface::StartSoftAp(const wlan_ssid_t& ssid, const wlan_channel_t& ch
   ZX_ASSERT(role_ == WLAN_INFO_MAC_ROLE_AP);
 
   wlanif_start_req_t start_req = {
-      .bss_type = WLAN_BSS_TYPE_INFRASTRUCTURE,
+      .bss_type = BSS_TYPE_INFRASTRUCTURE,
       .beacon_period = beacon_period,
       .dtim_period = dtim_period,
       .channel = channel.primary,

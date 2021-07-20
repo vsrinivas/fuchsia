@@ -1,9 +1,10 @@
-// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mac-device.h"
 
+#include <fuchsia/wlan/internal/c/banjo.h>
 #include <zircon/status.h>
 
 #include <memory>
@@ -33,7 +34,7 @@ zx_status_t MacDevice::WlanmacSetChannel(uint32_t options, const wlan_channel_t*
   return mac_set_channel(mvmvif_, options, chan);
 }
 
-zx_status_t MacDevice::WlanmacConfigureBss(uint32_t options, const wlan_bss_config_t* config) {
+zx_status_t MacDevice::WlanmacConfigureBss(uint32_t options, const bss_config_t* config) {
   return mac_configure_bss(mvmvif_, options, config);
 }
 

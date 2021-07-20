@@ -1,11 +1,11 @@
-// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 library fuchsia.wlan.internal;
 
 using fuchsia.wlan.common;
 
-type BssTypes = strict enum {
+type BssType = strict enum {
     INFRASTRUCTURE = 1;
     PERSONAL = 2;
     INDEPENDENT = 3;
@@ -14,23 +14,38 @@ type BssTypes = strict enum {
 //LAST = ANY_BSS;
 };
 
+type BssConfig = struct {
+    bssid array<uint8, 6>;
+    bss_type BssType;
+    remote bool;
+};
+
 // IEEE Std 802.11-2016, 9.4.1.4
 alias CapabilityInfo = uint16;
 
 // IEEE Std 802.11-2016 9.4.2.56
+@namespaced
 const HT_CAP_LEN uint8 = 26;
+
 // IEEE Std 802.11-2016 9.4.2.57
+@namespaced
 const HT_OP_LEN uint8 = 22;
+
 // IEEE Std 802.11-2016 9.5.2.158
+@namespaced
 const VHT_CAP_LEN uint8 = 12;
+
 // IEEE Std 802.11-2016 9.5.2.159
+@namespaced
 const VHT_OP_LEN uint8 = 5;
+
 // IEEE Std 802.11-2016 defines 12 values in dot11SupportedDataRatesRxTable and
 // 2 values for BSS Membership Selector in Table 9-78. Only these 14 values are valid.
 // But in fxbug.dev/41022, some of these values may be duplicated in both SupportedRates(SR) and
 // ExtendedSupportedRates(ESR). Since the SR element allows 8 bytes, and assuming the ESR element
 // duplicates all the values in the SR element plus contains all the remaining valid values, the
 // maximum is set to 8 + 14 = 22.
+@namespaced
 const RATES_MAX_LEN uint8 = 22;
 
 // IEEE Std 802.11-2016 9.4.2.56
@@ -57,7 +72,7 @@ type VhtOperation = struct {
 type BssDescription = struct {
     bssid array<uint8, 6>;
 
-    bss_type BssTypes;
+    bss_type BssType;
     beacon_period uint16; // in TU
     timestamp uint64;
     local_time uint64;

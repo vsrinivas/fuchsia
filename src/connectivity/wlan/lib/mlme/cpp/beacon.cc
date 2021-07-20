@@ -1,4 +1,4 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -112,18 +112,18 @@ static void WriteElements(BufferWriter* w, const BeaconConfig& config, size_t* r
 }
 
 template <typename T>
-static void SetBssType(T* bcn, BssType bss_type) {
+static void SetBeaconBssType(T* bcn, BeaconBssType bss_type) {
   // IEEE Std 802.11-2016, 9.4.1.4
   switch (bss_type) {
-    case BssType::kInfrastructure:
+    case BeaconBssType::kInfrastructure:
       bcn->cap.set_ess(1);
       bcn->cap.set_ibss(0);
       break;
-    case BssType::kIndependent:
+    case BeaconBssType::kIndependent:
       bcn->cap.set_ess(0);
       bcn->cap.set_ibss(1);
       break;
-    case BssType::kMesh:
+    case BeaconBssType::kMesh:
       bcn->cap.set_ess(0);
       bcn->cap.set_ibss(0);
       break;
@@ -155,7 +155,7 @@ static zx_status_t BuildBeaconOrProbeResponse(const BeaconConfig& config,
   bcn->timestamp = config.timestamp;
   bcn->cap.set_privacy(config.rsne != nullptr);
 
-  SetBssType(bcn, config.bss_type);
+  SetBeaconBssType(bcn, config.bss_type);
   bcn->cap.set_short_preamble(1);
 
   // Write elements.

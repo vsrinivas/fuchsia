@@ -1,4 +1,4 @@
-# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -19,6 +19,12 @@ test("convert_unittest") {
   sources = [ "convert_unittest.cc" ]
 
   deps = [
+    "//sdk/fidl/fuchsia.wlan.common",
+    "//sdk/fidl/fuchsia.wlan.ieee80211",
+    "//sdk/fidl/fuchsia.wlan.internal",
+    "//sdk/fidl/fuchsia.wlan.internal:fuchsia.wlan.internal_banjo_c",
+    "//sdk/fidl/fuchsia.wlan.mlme",
+    "//sdk/fidl/fuchsia.wlan.stats",
     "//src/connectivity/wlan/drivers/wlanif:lib_source",
     "//src/connectivity/wlan/lib/mlme/cpp:mlme",
     "//src/lib/fxl/test:gtest_main",
@@ -34,6 +40,9 @@ test("device_unittest") {
 
   deps = [
     "//sdk/banjo/ddk.hw.wlan.ieee80211:ddk.hw.wlan.ieee80211_banjo_cpp",
+    "//sdk/fidl/fuchsia.wlan.internal",
+    "//sdk/fidl/fuchsia.wlan.internal:fuchsia.wlan.internal_banjo_c",
+    "//sdk/fidl/fuchsia.wlan.mlme",
     "//src/connectivity/wlan/drivers/wlanif:lib_source",
     "//src/connectivity/wlan/lib/mlme/cpp:mlme",
     "//src/devices/lib/driver",

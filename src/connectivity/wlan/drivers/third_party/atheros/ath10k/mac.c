@@ -17,6 +17,7 @@
 
 #include "mac.h"
 
+#include <fuchsia/wlan/internal/c/banjo.h>
 #include <stdlib.h>
 #include <zircon/status.h>
 
@@ -2916,7 +2917,7 @@ static zx_status_t ath10k_mac_bss_disassoc(struct ath10k* ar) {
 }
 
 // As a client role, prepare to connect to a BSS.
-zx_status_t ath10k_mac_set_bss(struct ath10k* ar, const wlan_bss_config_t* config) {
+zx_status_t ath10k_mac_set_bss(struct ath10k* ar, const bss_config_t* config) {
   struct ath10k_vif* arvif = &ar->arvif;
 
   mtx_lock(&ar->conf_mutex);

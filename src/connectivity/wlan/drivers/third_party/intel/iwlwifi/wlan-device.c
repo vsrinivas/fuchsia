@@ -1,4 +1,4 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -48,6 +48,7 @@
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/wlan-device.h"
 
+#include <fuchsia/wlan/internal/c/banjo.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
 #include <stdio.h>
@@ -320,7 +321,7 @@ zx_status_t mac_set_channel(void* ctx, uint32_t options, const wlan_channel_t* c
   return ret;
 }
 
-zx_status_t mac_configure_bss(void* ctx, uint32_t options, const wlan_bss_config_t* config) {
+zx_status_t mac_configure_bss(void* ctx, uint32_t options, const bss_config_t* config) {
   struct iwl_mvm_vif* mvmvif = ctx;
   zx_status_t ret = ZX_OK;
 
@@ -328,7 +329,7 @@ zx_status_t mac_configure_bss(void* ctx, uint32_t options, const wlan_bss_config
            config->bssid[0], config->bssid[1], config->bssid[2], config->bssid[3], config->bssid[4],
            config->bssid[5], config->bss_type, config->remote);
 
-  if (config->bss_type != WLAN_BSS_TYPE_INFRASTRUCTURE) {
+  if (config->bss_type != BSS_TYPE_INFRASTRUCTURE) {
     IWL_ERR(mvmvif, "invalid bss_type requested: %d\n", config->bss_type);
     return ZX_ERR_INVALID_ARGS;
   }

@@ -1,9 +1,10 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/wlan/info/c/banjo.h>
 #include <fuchsia/hardware/wlanif/c/banjo.h>
+#include <fuchsia/wlan/internal/c/banjo.h>
 #include <zircon/errors.h>
 
 #include <functional>
@@ -118,7 +119,7 @@ void ActiveScanTest::Init() {
   client_ifc_.GetMacAddr(&sim_fw_mac_);
 
   default_scan_req_ = {
-      .bss_type = WLAN_BSS_TYPE_INFRASTRUCTURE,
+      .bss_type = BSS_TYPE_INFRASTRUCTURE,
       .scan_type = WLAN_SCAN_TYPE_ACTIVE,
       .num_channels = 5,
       .channel_list = {1, 2, 3, 4, 5},
@@ -337,7 +338,7 @@ TEST_F(ActiveScanTest, OverSizeSsid) {
   // Case contains over-size ssid in ssid field of request.
   wlanif_scan_req_t req_break_ssid = {
       .txn_id = ++client_ifc_.scan_txn_id_,
-      .bss_type = WLAN_BSS_TYPE_INFRASTRUCTURE,
+      .bss_type = BSS_TYPE_INFRASTRUCTURE,
       .ssid = invalid_scan_ssid,
       .scan_type = WLAN_SCAN_TYPE_ACTIVE,
       .num_channels = 5,
@@ -349,7 +350,7 @@ TEST_F(ActiveScanTest, OverSizeSsid) {
 
   // Case contains over-size ssid in ssid_list in request.
   wlanif_scan_req_t req_break_ssid_list = {.txn_id = ++client_ifc_.scan_txn_id_,
-                                           .bss_type = WLAN_BSS_TYPE_INFRASTRUCTURE,
+                                           .bss_type = BSS_TYPE_INFRASTRUCTURE,
                                            .scan_type = WLAN_SCAN_TYPE_ACTIVE,
                                            .num_channels = 5,
                                            .channel_list = {1, 2, 3, 4, 5},

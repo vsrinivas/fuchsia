@@ -1,4 +1,4 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -418,7 +418,7 @@ mod tests {
     fn scan_req() -> fidl_mlme::ScanRequest {
         fidl_mlme::ScanRequest {
             txn_id: 1337,
-            bss_type: fidl_internal::BssTypes::Infrastructure,
+            bss_type: fidl_internal::BssType::Infrastructure,
             bssid: BSSID.0,
             ssid: b"ssid".to_vec(),
             scan_type: fidl_mlme::ScanTypes::Passive,
@@ -806,7 +806,7 @@ mod tests {
                 txn_id: 1337,
                 bss: fidl_internal::BssDescription {
                     bssid: BSSID.0,
-                    bss_type: fidl_internal::BssTypes::Infrastructure,
+                    bss_type: fidl_internal::BssType::Infrastructure,
                     beacon_period: BEACON_INTERVAL,
                     timestamp: TIMESTAMP,
                     local_time: 0,

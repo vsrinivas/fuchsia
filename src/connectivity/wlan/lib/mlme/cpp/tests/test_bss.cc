@@ -1,4 +1,4 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -72,7 +72,7 @@ wlan_internal::BssDescription CreateBssDescription(bool rsne, wlan_channel_t cha
   wlan_internal::BssDescription bss_desc;
   std::memcpy(bss_desc.bssid.data(), bssid.byte, common::kMacAddrLen);
   std::vector<uint8_t> ssid(kSsid, kSsid + sizeof(kSsid));
-  bss_desc.bss_type = wlan_internal::BssTypes::INFRASTRUCTURE;
+  bss_desc.bss_type = wlan_internal::BssType::INFRASTRUCTURE;
   bss_desc.beacon_period = kBeaconPeriodTu;
   bss_desc.timestamp = 0;
   bss_desc.local_time = 0;
@@ -99,7 +99,7 @@ wlan_internal::BssDescription CreateBssDescription(bool rsne, wlan_channel_t cha
 MlmeMsg<wlan_mlme::ScanRequest> CreateScanRequest(uint32_t max_channel_time) {
   auto req = wlan_mlme::ScanRequest::New();
   req->txn_id = 0;
-  req->bss_type = wlan_internal::BssTypes::ANY_BSS;
+  req->bss_type = wlan_internal::BssType::ANY_BSS;
   std::memcpy(req->bssid.data(), kBroadcastBssid, sizeof(kBroadcastBssid));
   req->ssid = {0};
   req->scan_type = wlan_mlme::ScanTypes::PASSIVE;
@@ -113,7 +113,7 @@ MlmeMsg<wlan_mlme::StartRequest> CreateStartRequest(bool protected_ap) {
   auto req = wlan_mlme::StartRequest::New();
   std::vector<uint8_t> ssid(kSsid, kSsid + sizeof(kSsid));
   req->ssid = std::move(ssid);
-  req->bss_type = wlan_internal::BssTypes::INFRASTRUCTURE;
+  req->bss_type = wlan_internal::BssType::INFRASTRUCTURE;
   req->beacon_period = kBeaconPeriodTu;
   req->dtim_period = kDtimPeriodTu;
   req->channel = kBssChannel.primary;

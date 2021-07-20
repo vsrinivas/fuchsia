@@ -1,4 +1,4 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 library fuchsia.hardware.wlan.info;
@@ -122,22 +122,12 @@ type WlanGi = strict enum : uint8 {
     G_1600NS = 0x20;
 };
 
-
 // Temporarily redeclare above with old names to transition.
 const WLAN_GI__800NS uint8 = 0x1;
 const WLAN_GI__400NS uint8 = 0x2;
 const WLAN_GI__200NS uint8 = 0x4;
 const WLAN_GI__3200NS uint8 = 0x10;
 const WLAN_GI__1600NS uint8 = 0x20;
-
-type WlanBssType = strict enum : uint8 {
-    INFRASTRUCTURE = 1;
-    /// Independent BSS
-    IBSS = 2;
-    PERSONAL = 3;
-    MESH = 4;
-    ANY_BSS = 5;
-};
 
 type WlanPhyType = strict enum : uint8 {
     /// IEEE 802.11 for 1, 2 Mbps.
@@ -164,14 +154,6 @@ type WlanPhyType = strict enum : uint8 {
 };
 
 const WLAN_PHY_TYPE_OFDM uint8 = 0x4;
-
-type WlanBssConfig = struct {
-    bssid array<uint8, 6>;
-    /// Whether this BSS is an infrastructure or independent BSS.
-    bss_type WlanBssType;
-    /// If 'remote' is 'true', the BSS is *not* managed by this device.
-    remote bool;
-};
 
 /// Access category
 /// WFA WMM v1.2, 2.2.2 Table 6

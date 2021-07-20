@@ -18,6 +18,7 @@
 #include "pci.h"
 
 #include <fuchsia/hardware/pci/c/banjo.h>
+#include <fuchsia/wlan/internal/c/banjo.h>
 #include <inttypes.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
@@ -3221,7 +3222,7 @@ static zx_status_t ath10k_pci_set_channel(void* ctx, uint32_t options, const wla
 }
 
 static zx_status_t ath10k_pci_configure_bss(void* ctx, uint32_t options,
-                                            const wlan_bss_config_t* config) {
+                                            const bss_config_t* config) {
   struct ath10k* ar = ctx;
   if (!verify_started(ar)) {
     return ZX_ERR_BAD_STATE;

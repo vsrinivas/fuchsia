@@ -1,9 +1,10 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/wlanif/c/banjo.h>
 #include <fuchsia/wlan/ieee80211/cpp/fidl.h>
+#include <fuchsia/wlan/internal/c/banjo.h>
 #include <fuchsia/wlan/stats/cpp/fidl.h>
 #include <zircon/errors.h>
 
@@ -1002,7 +1003,7 @@ TEST_F(AssocTest, AssocWhileScanning) {
 
   wlanif_scan_req_t scan_req = {
       .txn_id = 42,
-      .bss_type = WLAN_BSS_TYPE_INFRASTRUCTURE,
+      .bss_type = BSS_TYPE_INFRASTRUCTURE,
       .scan_type = WLAN_SCAN_TYPE_PASSIVE,
       .num_channels = 11,
       .channel_list = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11},

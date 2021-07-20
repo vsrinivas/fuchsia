@@ -1,4 +1,4 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -69,12 +69,12 @@ pub fn construct_bss_description(
 
 /// Note: This is in Beacon / Probe Response frames context.
 /// IEEE Std 802.11-2016, 9.4.1.4
-fn get_bss_type(capability_info: CapabilityInfo) -> fidl_internal::BssTypes {
+fn get_bss_type(capability_info: CapabilityInfo) -> fidl_internal::BssType {
     match (capability_info.ess(), capability_info.ibss()) {
-        (true, false) => fidl_internal::BssTypes::Infrastructure,
-        (false, true) => fidl_internal::BssTypes::Independent,
-        (false, false) => fidl_internal::BssTypes::Mesh,
-        _ => fidl_internal::BssTypes::AnyBss,
+        (true, false) => fidl_internal::BssType::Infrastructure,
+        (false, true) => fidl_internal::BssType::Independent,
+        (false, false) => fidl_internal::BssType::Mesh,
+        _ => fidl_internal::BssType::AnyBss,
     }
 }
 
@@ -191,7 +191,7 @@ mod tests {
             bss_desc,
             fidl_internal::BssDescription {
                 bssid: BSSID.0,
-                bss_type: fidl_internal::BssTypes::Infrastructure,
+                bss_type: fidl_internal::BssType::Infrastructure,
                 beacon_period: BEACON_INTERVAL,
                 timestamp: TIMESTAMP,
                 local_time: 0,

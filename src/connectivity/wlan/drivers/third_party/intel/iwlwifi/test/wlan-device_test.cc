@@ -1,9 +1,10 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 // To test PHY and MAC device callback functions.
 
+#include <fuchsia/wlan/internal/c/banjo.h>
 #include <lib/mock-function/mock-function.h>
 #include <stdio.h>
 #include <zircon/syscalls.h>
@@ -482,7 +483,7 @@ class MacInterfaceTest : public WlanDeviceTest, public MockTrans {
     return wlanmac_ops.set_channel(&mvmvif_sta_, option, chan);
   }
 
-  zx_status_t ConfigureBss(const wlan_bss_config_t* config) {
+  zx_status_t ConfigureBss(const bss_config_t* config) {
     uint32_t option = 0;
     return wlanmac_ops.configure_bss(&mvmvif_sta_, option, config);
   }
@@ -578,9 +579,9 @@ class MacInterfaceTest : public WlanDeviceTest, public MockTrans {
 
   wlanmac_ifc_protocol_t ifc_;
   wlanmac_ifc_protocol_ops_t proto_ops_;
-  static constexpr wlan_bss_config_t kBssConfig = {
+  static constexpr bss_config_t kBssConfig = {
       .bssid = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06},
-      .bss_type = WLAN_BSS_TYPE_INFRASTRUCTURE,
+      .bss_type = BSS_TYPE_INFRASTRUCTURE,
       .remote = true,
   };
   static constexpr wlan_assoc_ctx_t kAssocCtx = {
@@ -643,9 +644,9 @@ TEST_F(MacInterfaceTest, DuplicateConfigureBss) {
 // Test unsupported bss_type.
 //
 TEST_F(MacInterfaceTest, UnsupportedBssType) {
-  static constexpr wlan_bss_config_t kUnsupportedBssConfig = {
+  static constexpr bss_config_t kUnsupportedBssConfig = {
       .bssid = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06},
-      .bss_type = WLAN_BSS_TYPE_IBSS,
+      .bss_type = BSS_TYPE_INDEPENDENT,
       .remote = true,
   };
   ASSERT_EQ(ZX_ERR_INVALID_ARGS, ConfigureBss(&kUnsupportedBssConfig));

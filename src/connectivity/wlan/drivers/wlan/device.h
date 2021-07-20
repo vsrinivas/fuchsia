@@ -1,4 +1,4 @@
-// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -7,6 +7,7 @@
 
 #include <fuchsia/hardware/ethernet/cpp/banjo.h>
 #include <fuchsia/hardware/wlan/mac/cpp/banjo.h>
+#include <fuchsia/wlan/internal/c/banjo.h>
 #include <fuchsia/wlan/minstrel/cpp/fidl.h>
 #include <lib/ddk/driver.h>
 #include <lib/zx/channel.h>
@@ -71,7 +72,7 @@ class Device : public DeviceInterface {
   zx_status_t SendService(fbl::Span<const uint8_t> span) final;
   zx_status_t SetChannel(wlan_channel_t chan) final;
   zx_status_t SetStatus(uint32_t status) final;
-  zx_status_t ConfigureBss(wlan_bss_config_t* cfg) final;
+  zx_status_t ConfigureBss(bss_config_t* cfg) final;
   zx_status_t EnableBeaconing(wlan_bcn_config_t* bcn_cfg) final;
   zx_status_t ConfigureBeacon(std::unique_ptr<Packet> beacon) final;
   zx_status_t SetKey(wlan_key_config_t* key_config) final;

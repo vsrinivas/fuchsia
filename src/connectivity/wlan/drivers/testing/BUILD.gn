@@ -1,4 +1,4 @@
-# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -46,6 +46,7 @@ driver_module("wlanphy-testdev-driver") {
     "//sdk/banjo/fuchsia.hardware.wlanphy:fuchsia.hardware.wlanphy_banjo_cpp",
     "//sdk/fidl/fuchsia.wlan.device",
     "//sdk/fidl/fuchsia.wlan.device:fuchsia.wlan.device_llcpp",
+    "//sdk/fidl/fuchsia.wlan.internal:fuchsia.wlan.internal_banjo_c",
     "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/devices/lib/driver",
     "//src/lib/ddk",

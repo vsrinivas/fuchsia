@@ -1,4 +1,4 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -71,7 +71,7 @@ const DEFAULT_MOCK_IES: &'static [u8] = &[
 pub struct BssCreator {
     // *** Fields already in fidl_internal::BssDescription
     pub bssid: [u8; 6],
-    pub bss_type: fidl_internal::BssTypes,
+    pub bss_type: fidl_internal::BssType,
     pub beacon_period: u16,
     pub timestamp: u64,
     pub local_time: u64,
@@ -209,7 +209,7 @@ impl From<fidl_sme::Protection> for FakeProtectionCfg {
 pub fn build_fake_bss_creator__(protection_cfg: FakeProtectionCfg) -> BssCreator {
     BssCreator {
         bssid: [7, 1, 2, 77, 53, 8],
-        bss_type: fidl_internal::BssTypes::Infrastructure,
+        bss_type: fidl_internal::BssType::Infrastructure,
         beacon_period: 100,
         timestamp: 0,
         local_time: 0,

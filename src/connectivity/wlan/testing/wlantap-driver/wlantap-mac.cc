@@ -1,4 +1,4 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -6,6 +6,7 @@
 
 #include <fuchsia/hardware/wlan/mac/cpp/banjo.h>
 #include <fuchsia/wlan/device/cpp/fidl.h>
+#include <fuchsia/wlan/internal/cpp/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/driver.h>
 
@@ -92,8 +93,7 @@ struct WlantapMacImpl : WlantapMac {
     return ZX_OK;
   }
 
-  static zx_status_t WlanmacConfigureBss(void* ctx, uint32_t options,
-                                         const wlan_bss_config_t* config) {
+  static zx_status_t WlanmacConfigureBss(void* ctx, uint32_t options, const bss_config_t* config) {
     auto& self = *static_cast<WlantapMacImpl*>(ctx);
     if (options != 0) {
       return ZX_ERR_INVALID_ARGS;

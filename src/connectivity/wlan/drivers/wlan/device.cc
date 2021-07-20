@@ -1,9 +1,10 @@
-// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 #include "device.h"
 
+#include <fuchsia/wlan/internal/c/banjo.h>
 #include <lib/ddk/device.h>
 #include <lib/zx/thread.h>
 #include <lib/zx/time.h>
@@ -606,9 +607,7 @@ void Device::SetStatusLocked(uint32_t status) {
   }
 }
 
-zx_status_t Device::ConfigureBss(wlan_bss_config_t* cfg) {
-  return wlanmac_proxy_.ConfigureBss(0u, cfg);
-}
+zx_status_t Device::ConfigureBss(bss_config_t* cfg) { return wlanmac_proxy_.ConfigureBss(0u, cfg); }
 
 zx_status_t Device::EnableBeaconing(wlan_bcn_config_t* bcn_cfg) {
   if (bcn_cfg != nullptr) {

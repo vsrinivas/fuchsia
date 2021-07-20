@@ -1,4 +1,4 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -48,7 +48,7 @@ pub fn fake_bss_info() -> BssInfo {
 pub fn fake_scan_request() -> fidl_mlme::ScanRequest {
     fidl_mlme::ScanRequest {
         txn_id: 1,
-        bss_type: fidl_internal::BssTypes::Infrastructure,
+        bss_type: fidl_internal::BssType::Infrastructure,
         bssid: [8, 2, 6, 2, 1, 11],
         ssid: vec![],
         scan_type: fidl_mlme::ScanTypes::Active,

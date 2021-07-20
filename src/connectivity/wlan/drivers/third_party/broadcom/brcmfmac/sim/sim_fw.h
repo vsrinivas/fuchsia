@@ -18,6 +18,7 @@
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_SIM_SIM_FW_H_
 
 #include <fuchsia/wlan/ieee80211/cpp/fidl.h>
+#include <fuchsia/wlan/internal/c/banjo.h>
 #include <stdint.h>
 #include <sys/types.h>
 #include <zircon/types.h>
@@ -129,7 +130,7 @@ class SimFirmware {
   struct AssocOpts {
     common::MacAddr bssid;
     wlan_ssid_t ssid;
-    wlan_bss_type_t bss_type;
+    bss_type_t bss_type;
   };
 
  public:

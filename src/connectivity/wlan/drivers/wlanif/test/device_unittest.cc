@@ -1,9 +1,10 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 #include "src/connectivity/wlan/drivers/wlanif/device.h"
 
+#include <fuchsia/wlan/internal/c/banjo.h>
 #include <fuchsia/wlan/internal/cpp/fidl.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <lib/fidl/cpp/decoder.h>
@@ -165,7 +166,7 @@ TEST(SmeChannel, Bound) {
   // Send scan request to device.
   auto mlme_proxy = wlan_mlme::MLME_SyncProxy(std::move(ctx.mlme));
   mlme_proxy.StartScan(wlan_mlme::ScanRequest{
-      .bss_type = wlan_internal::BssTypes::INFRASTRUCTURE,
+      .bss_type = wlan_internal::BssType::INFRASTRUCTURE,
       .scan_type = wlan_mlme::ScanTypes::PASSIVE,
   });
 
@@ -174,7 +175,7 @@ TEST(SmeChannel, Bound) {
 
   // Verify scan request.
   ASSERT_TRUE(ctx.scan_req.has_value());
-  ASSERT_EQ(ctx.scan_req->bss_type, WLAN_BSS_TYPE_INFRASTRUCTURE);
+  ASSERT_EQ(ctx.scan_req->bss_type, BSS_TYPE_INFRASTRUCTURE);
   ASSERT_EQ(ctx.scan_req->scan_type, WLAN_SCAN_TYPE_PASSIVE);
 
   device->EthUnbind();

@@ -20,6 +20,7 @@
 #include <fuchsia/hardware/wlan/info/c/banjo.h>
 #include <fuchsia/hardware/wlanif/c/banjo.h>
 #include <fuchsia/wlan/ieee80211/cpp/fidl.h>
+#include <fuchsia/wlan/internal/c/banjo.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
 
@@ -571,8 +572,9 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
 
           if (scan_state_.state == ScanState::SCANNING) {
             BRCMF_DBG(SIM, "Scan in progress, aborting scan.");
-            hw_.RequestCallback(std::bind(&SimFirmware::ScanComplete, this, BRCMF_E_STATUS_NEWASSOC),
-                                kAbortScanDelay);
+            hw_.RequestCallback(
+                std::bind(&SimFirmware::ScanComplete, this, BRCMF_E_STATUS_NEWASSOC),
+                kAbortScanDelay);
           }
 
           auto assoc_opts = std::make_unique<AssocOpts>();
@@ -653,8 +655,8 @@ zx_status_t SimFirmware::BusTxData(struct brcmf_netbuf* netbuf) {
 
   // IEEE Std 802.11-2016, 9.4.1.4
   switch (assoc_state_.opts->bss_type) {
-    case WLAN_BSS_TYPE_IBSS:
-      // We don't support IBSS
+    case BSS_TYPE_INDEPENDENT:
+      // We don't support INDEPENDENT
       ZX_ASSERT_MSG(false, "Non-infrastructure types not currently supported by sim-fw\n");
       dataFrame.toDS_ = 0;
       dataFrame.fromDS_ = 0;
@@ -662,10 +664,10 @@ zx_status_t SimFirmware::BusTxData(struct brcmf_netbuf* netbuf) {
       dataFrame.addr2_ = common::MacAddr(ethFrame->h_source);
       dataFrame.addr3_ = assoc_state_.opts->bssid;
       break;
-    case WLAN_BSS_TYPE_ANY_BSS:
+    case BSS_TYPE_ANY_BSS:
       // It seems that our driver typically uses this with the intention the the firmware will treat
       // it as an infrastructure bss, so we'll do the same
-    case WLAN_BSS_TYPE_INFRASTRUCTURE:
+    case BSS_TYPE_INFRASTRUCTURE:
       dataFrame.toDS_ = 1;
       dataFrame.fromDS_ = 0;
       dataFrame.addr1_ = assoc_state_.opts->bssid;
@@ -1547,12 +1549,12 @@ void SimFirmware::RxAssocResp(std::shared_ptr<const simulation::SimAssocRespFram
 
     if (capIbss && !capEss) {
       ZX_ASSERT_MSG(false, "Non-infrastructure types not currently supported by sim-fw\n");
-      assoc_state_.opts->bss_type = WLAN_BSS_TYPE_IBSS;
+      assoc_state_.opts->bss_type = BSS_TYPE_INDEPENDENT;
     } else if (!capIbss && capEss) {
-      assoc_state_.opts->bss_type = WLAN_BSS_TYPE_INFRASTRUCTURE;
+      assoc_state_.opts->bss_type = BSS_TYPE_INFRASTRUCTURE;
     } else if (capIbss && capEss) {
       ZX_ASSERT_MSG(false, "Non-infrastructure types not currently supported by sim-fw\n");
-      assoc_state_.opts->bss_type = WLAN_BSS_TYPE_MESH;
+      assoc_state_.opts->bss_type = BSS_TYPE_MESH;
     } else {
       BRCMF_WARN("Station with impossible capability not being an ess or ibss found\n");
     }

@@ -1,4 +1,4 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -24,6 +24,7 @@ use {
     anyhow::{self, format_err},
     banjo_fuchsia_hardware_wlan_info as banjo_wlan_info,
     banjo_fuchsia_hardware_wlan_mac as banjo_wlan_mac,
+    banjo_fuchsia_wlan_internal as banjo_internal,
     channel_listener::{ChannelListenerSource, ChannelListenerState},
     channel_scheduler::ChannelScheduler,
     fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_internal as fidl_internal,
@@ -262,9 +263,9 @@ impl ClientMlme {
         self.set_main_channel(channel)
             .map_err(|status| Error::Status(format!("Error setting device channel"), status))?;
 
-        let bss_config = banjo_wlan_info::WlanBssConfig {
+        let bss_config = banjo_internal::BssConfig {
             bssid: bss.bssid.clone(),
-            bss_type: banjo_wlan_info::WlanBssType::INFRASTRUCTURE,
+            bss_type: banjo_internal::BssType::INFRASTRUCTURE,
             remote: true,
         };
 
@@ -1183,7 +1184,7 @@ mod tests {
     fn scan_req() -> fidl_mlme::ScanRequest {
         fidl_mlme::ScanRequest {
             txn_id: 1337,
-            bss_type: fidl_internal::BssTypes::Infrastructure,
+            bss_type: fidl_internal::BssType::Infrastructure,
             bssid: BSSID.0,
             ssid: b"ssid".to_vec(),
             scan_type: fidl_mlme::ScanTypes::Passive,

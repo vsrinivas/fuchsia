@@ -1,7 +1,8 @@
-// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/wlan/internal/c/banjo.h>
 #include <zircon/status.h>
 
 #include <memory>
@@ -41,7 +42,7 @@ ApMlme::ApMlme(DeviceInterface* device) : device_(device), rust_ap_(nullptr, ap_
       .get_wlanmac_info = [](void* mlme) -> wlanmac_info_t {
         return MLME(mlme)->device_->GetWlanMacInfo();
       },
-      .configure_bss = [](void* mlme, wlan_bss_config_t* cfg) -> zx_status_t {
+      .configure_bss = [](void* mlme, bss_config_t* cfg) -> zx_status_t {
         return MLME(mlme)->device_->ConfigureBss(cfg);
       },
       .enable_beaconing = [](void* mlme, mlme_out_buf_t buf, size_t tim_ele_offset,

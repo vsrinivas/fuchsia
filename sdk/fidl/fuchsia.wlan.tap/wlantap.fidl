@@ -1,10 +1,11 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 library fuchsia.wlan.tap;
 
-using fuchsia.wlan.device;
 using fuchsia.wlan.common;
+using fuchsia.wlan.device;
+using fuchsia.wlan.internal;
 using zx;
 
 /// Describes the capabilities of the fake wlantap-phy device to be created.
@@ -63,15 +64,6 @@ type WlanTxInfo = struct {
 type WlanTxPacket = struct {
     data vector<uint8>;
     info WlanTxInfo;
-};
-
-/// BSS that is to be configured, or "remembered", by the wlantap device.
-/// These values are populated by the wlantap driver and should not be specified manually.
-/// See wlan_bss_config_t for details about each field.
-type WlanBssConfig = struct {
-    bssid array<uint8, 6>;
-    bss_type uint8;
-    remote bool;
 };
 
 /// Configuration pertaining to security keys, often used by RSN and other secure authentication.
@@ -197,7 +189,7 @@ type SetChannelArgs = struct {
 
 type ConfigureBssArgs = struct {
     wlanmac_id uint16;
-    config WlanBssConfig;
+    config fuchsia.wlan.internal.BssConfig;
 };
 
 type SetKeyArgs = struct {

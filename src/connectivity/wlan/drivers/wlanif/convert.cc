@@ -1,10 +1,12 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 #include "convert.h"
 
 #include <fuchsia/wlan/ieee80211/cpp/fidl.h>
+#include <fuchsia/wlan/internal/c/banjo.h>
+#include <fuchsia/wlan/internal/cpp/fidl.h>
 #include <fuchsia/wlan/stats/cpp/fidl.h>
 
 #include <algorithm>
@@ -23,23 +25,6 @@ namespace wlan_ieee80211 = ::fuchsia::wlan::ieee80211;
 namespace wlan_internal = ::fuchsia::wlan::internal;
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
 namespace wlan_stats = ::fuchsia::wlan::stats;
-
-uint8_t ConvertBssType(wlan_internal::BssTypes bss_type) {
-  switch (bss_type) {
-    case wlan_internal::BssTypes::INFRASTRUCTURE:
-      return WLAN_BSS_TYPE_INFRASTRUCTURE;
-    case wlan_internal::BssTypes::PERSONAL:
-      return WLAN_BSS_TYPE_PERSONAL;
-    case wlan_internal::BssTypes::INDEPENDENT:
-      return WLAN_BSS_TYPE_IBSS;
-    case wlan_internal::BssTypes::MESH:
-      return WLAN_BSS_TYPE_MESH;
-    case wlan_internal::BssTypes::ANY_BSS:
-      return WLAN_BSS_TYPE_ANY_BSS;
-    default:
-      ZX_ASSERT(0);
-  }
-}
 
 uint8_t ConvertScanType(wlan_mlme::ScanTypes scan_type) {
   switch (scan_type) {
@@ -131,7 +116,7 @@ void ConvertBssDescription(wlanif_bss_description_t* wlanif_desc,
   std::memcpy(wlanif_desc->bssid, fidl_desc.bssid.data(), ETH_ALEN);
 
   // bss_type
-  wlanif_desc->bss_type = ConvertBssType(fidl_desc.bss_type);
+  wlanif_desc->bss_type = static_cast<bss_type_t>(fidl_desc.bss_type);
 
   // beacon_period
   wlanif_desc->beacon_period = fidl_desc.beacon_period;
@@ -159,18 +144,18 @@ void ConvertBssDescription(wlanif_bss_description_t* wlanif_desc,
   wlanif_desc->snr_db = fidl_desc.snr_db;
 }
 
-wlan_internal::BssTypes ConvertBssType(uint8_t bss_type) {
+wlan_internal::BssType ConvertBssType(uint8_t bss_type) {
   switch (bss_type) {
-    case WLAN_BSS_TYPE_INFRASTRUCTURE:
-      return wlan_internal::BssTypes::INFRASTRUCTURE;
-    case WLAN_BSS_TYPE_PERSONAL:
-      return wlan_internal::BssTypes::PERSONAL;
-    case WLAN_BSS_TYPE_IBSS:
-      return wlan_internal::BssTypes::INDEPENDENT;
-    case WLAN_BSS_TYPE_MESH:
-      return wlan_internal::BssTypes::MESH;
-    case WLAN_BSS_TYPE_ANY_BSS:
-      return wlan_internal::BssTypes::ANY_BSS;
+    case BSS_TYPE_INFRASTRUCTURE:
+      return wlan_internal::BssType::INFRASTRUCTURE;
+    case BSS_TYPE_PERSONAL:
+      return wlan_internal::BssType::PERSONAL;
+    case BSS_TYPE_INDEPENDENT:
+      return wlan_internal::BssType::INDEPENDENT;
+    case BSS_TYPE_MESH:
+      return wlan_internal::BssType::MESH;
+    case BSS_TYPE_ANY_BSS:
+      return wlan_internal::BssType::ANY_BSS;
     default:
       ZX_ASSERT(0);
   }

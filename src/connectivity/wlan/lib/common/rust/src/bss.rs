@@ -1,4 +1,4 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -94,7 +94,7 @@ pub enum Standard {
 pub struct BssDescription {
     // *** Fields originally in fidl_internal::BssDescription
     pub bssid: [u8; 6],
-    pub bss_type: fidl_internal::BssTypes,
+    pub bss_type: fidl_internal::BssType,
     pub beacon_period: u16,
     pub timestamp: u64,
     pub local_time: u64,

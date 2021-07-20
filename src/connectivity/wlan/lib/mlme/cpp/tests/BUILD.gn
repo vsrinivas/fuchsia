@@ -1,4 +1,4 @@
-# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -31,7 +31,11 @@ source_set("test_main") {
     "//src/lib/timekeeper:testing",
   ]
 
-  deps = [ "//third_party/googletest:gtest" ]
+  deps = [
+    "//sdk/fidl/fuchsia.wlan.internal",
+    "//sdk/fidl/fuchsia.wlan.internal:fuchsia.wlan.internal_banjo_c",
+    "//third_party/googletest:gtest",
+  ]
 
   configs += [ "//src/connectivity/wlan/lib/mlme/cpp:wlan_mlme_config" ]
 }

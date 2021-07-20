@@ -1,4 +1,4 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -6,6 +6,8 @@
 
 #include <fuchsia/hardware/wlanif/c/banjo.h>
 #include <fuchsia/wlan/ieee80211/cpp/fidl.h>
+#include <fuchsia/wlan/internal/c/banjo.h>
+#include <fuchsia/wlan/internal/cpp/fidl.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/ddk/device.h>
@@ -258,7 +260,7 @@ void Device::StartScan(wlan_mlme::ScanRequest req) {
   impl_req.txn_id = req.txn_id;
 
   // bss_type
-  impl_req.bss_type = ConvertBssType(req.bss_type);
+  impl_req.bss_type = static_cast<bss_type_t>(req.bss_type);
 
   // bssid
   std::memcpy(impl_req.bssid, req.bssid.data(), ETH_ALEN);
@@ -465,7 +467,7 @@ void Device::StartReq(wlan_mlme::StartRequest req) {
   CopySSID(req.ssid, &impl_req.ssid);
 
   // bss_type
-  impl_req.bss_type = ConvertBssType(req.bss_type);
+  impl_req.bss_type = static_cast<bss_type_t>(req.bss_type);
 
   // beacon_period
   impl_req.beacon_period = req.beacon_period;

@@ -1,4 +1,4 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -164,7 +164,7 @@ impl Ap {
             return Ok(());
         }
 
-        if req.bss_type != fidl_internal::BssTypes::Infrastructure {
+        if req.bss_type != fidl_internal::BssType::Infrastructure {
             info!("MLME-START.request: BSS type {:?} not supported", req.bss_type);
             self.ctx.send_mlme_start_conf(fidl_mlme::StartResultCode::NotSupported)?;
             return Ok(());
@@ -816,7 +816,7 @@ mod tests {
         );
         ap.handle_mlme_start_req(fidl_mlme::StartRequest {
             ssid: b"coolnet".to_vec(),
-            bss_type: fidl_internal::BssTypes::Infrastructure,
+            bss_type: fidl_internal::BssType::Infrastructure,
             beacon_period: 5,
             dtim_period: 1,
             channel: 2,
@@ -875,7 +875,7 @@ mod tests {
 
         ap.handle_mlme_start_req(fidl_mlme::StartRequest {
             ssid: b"coolnet".to_vec(),
-            bss_type: fidl_internal::BssTypes::Infrastructure,
+            bss_type: fidl_internal::BssType::Infrastructure,
             beacon_period: 5,
             dtim_period: 1,
             channel: 2,

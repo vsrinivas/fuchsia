@@ -1,4 +1,4 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -554,7 +554,7 @@ mod tests {
         }
         let bss_desc = fidl_fuchsia_wlan_internal::BssDescription {
             bssid: (0..6).map(|_| rng.gen::<u8>()).collect::<Vec<u8>>().try_into().unwrap(),
-            bss_type: fidl_fuchsia_wlan_internal::BssTypes::Infrastructure,
+            bss_type: fidl_fuchsia_wlan_internal::BssType::Infrastructure,
             beacon_period: rng.gen::<u16>(),
             timestamp: rng.gen::<u64>(),
             local_time: rng.gen::<u64>(),

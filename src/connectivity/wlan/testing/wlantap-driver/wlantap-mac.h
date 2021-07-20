@@ -1,10 +1,11 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 #ifndef SRC_CONNECTIVITY_WLAN_TESTING_WLANTAP_DRIVER_WLANTAP_MAC_H_
 #define SRC_CONNECTIVITY_WLAN_TESTING_WLANTAP_DRIVER_WLANTAP_MAC_H_
 
+#include <fuchsia/wlan/internal/cpp/banjo.h>
 #include <fuchsia/wlan/tap/cpp/fidl.h>
 #include <lib/ddk/device.h>
 
@@ -20,7 +21,7 @@ class WlantapMac {
     virtual void WlantapMacStop(uint16_t id) = 0;
     virtual void WlantapMacQueueTx(uint16_t id, wlan_tx_packet_t* pkt) = 0;
     virtual void WlantapMacSetChannel(uint16_t id, const wlan_channel_t* channel) = 0;
-    virtual void WlantapMacConfigureBss(uint16_t id, const wlan_bss_config_t* config) = 0;
+    virtual void WlantapMacConfigureBss(uint16_t id, const bss_config_t* config) = 0;
     virtual void WlantapMacSetKey(uint16_t id, const wlan_key_config_t* key_config) = 0;
   };
 

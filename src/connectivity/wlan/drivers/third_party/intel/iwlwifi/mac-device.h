@@ -1,8 +1,9 @@
-// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/wlan/mac/cpp/banjo.h>
+#include <fuchsia/wlan/internal/cpp/banjo.h>
 #include <lib/ddk/device.h>
 
 #include <ddktl/device.h>
@@ -36,7 +37,7 @@ class MacDevice : public MacDeviceType,
   void WlanmacStop();
   zx_status_t WlanmacQueueTx(uint32_t options, wlan_tx_packet_t* pkt);
   zx_status_t WlanmacSetChannel(uint32_t options, const wlan_channel_t* chan);
-  zx_status_t WlanmacConfigureBss(uint32_t options, const wlan_bss_config_t* config);
+  zx_status_t WlanmacConfigureBss(uint32_t options, const bss_config_t* config);
   zx_status_t WlanmacEnableBeaconing(uint32_t options, const wlan_bcn_config_t* bcn_cfg);
   zx_status_t WlanmacConfigureBeacon(uint32_t options, const wlan_tx_packet_t* pkt);
   zx_status_t WlanmacSetKey(uint32_t options, const wlan_key_config_t* key_config);

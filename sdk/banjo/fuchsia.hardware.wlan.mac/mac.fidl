@@ -1,4 +1,4 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 library fuchsia.hardware.wlan.mac;
@@ -6,6 +6,7 @@ library fuchsia.hardware.wlan.mac;
 using ddk.hw.wlan.wlaninfo;
 using fuchsia.hardware.ethernet;
 using fuchsia.hardware.wlan.info;
+using fuchsia.wlan.internal;
 using zx;
 
 type WlanmacInfo = struct {
@@ -328,7 +329,7 @@ protocol Wlanmac {
     // Configures a BSS which the STA is either joining or managing.
     ConfigureBss(struct {
         options uint32;
-        config fuchsia.hardware.wlan.info.WlanBssConfig;
+        config fuchsia.wlan.internal.BssConfig;
     }) -> (struct {
         st zx.status;
     });

@@ -1,4 +1,4 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -6,6 +6,7 @@
 
 #include <fuchsia/hardware/wlanphyimpl/c/banjo.h>
 #include <fuchsia/wlan/device/cpp/fidl.h>
+#include <fuchsia/wlan/internal/cpp/banjo.h>
 #include <lib/ddk/debug.h>
 #include <zircon/status.h>
 
@@ -381,20 +382,20 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
     }
   }
 
-  virtual void WlantapMacConfigureBss(uint16_t wlanmac_id,
-                                      const wlan_bss_config_t* config) override {
+  virtual void WlantapMacConfigureBss(uint16_t wlanmac_id, const bss_config_t* config) override {
     zxlogf(INFO, "%s: WlantapMacConfigureBss id=%u", name_.c_str(), wlanmac_id);
     std::lock_guard<std::mutex> guard(lock_);
     if (stopped_ || !user_binding_.is_bound()) {
       zxlogf(INFO, "%s: WlantapMacConfigureBss ignored, shutting down", name_.c_str());
       return;
     }
-    user_binding_.events().ConfigureBss({.wlanmac_id = wlanmac_id,
-                                         .config = {
-                                             .bssid = ToFidlArray(config->bssid),
-                                             .bss_type = config->bss_type,
-                                             .remote = config->remote,
-                                         }});
+    user_binding_.events().ConfigureBss(
+        {.wlanmac_id = wlanmac_id,
+         .config = {
+             .bssid = ToFidlArray(config->bssid),
+             .bss_type = static_cast<fuchsia::wlan::internal::BssType>(config->bss_type),
+             .remote = config->remote,
+         }});
     zxlogf(INFO, "%s: WlantapMacConfigureBss done", name_.c_str());
   }
 

@@ -1,5 +1,5 @@
 header = """
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 """
@@ -16,6 +16,7 @@ sys_includes = [
     # Banjo types.
     "fuchsia/hardware/wlan/info/c/banjo.h",  # wlan_channel_t
     "fuchsia/hardware/wlan/mac/c/banjo.h",   # wlanmac_info_t, wlan_hw_scan_config_t, wlan_rx_info_t
+    "fuchsia/wlan/internal/c/banjo.h",   # bss_config_t
 
     # Other existing types.
     "garnet/lib/wlan/protocol/include/wlan/protocol/mac.h",  # wlan_key_config_t
@@ -46,9 +47,9 @@ include = [
 
 exclude = [
     # Banjo types.
+    "BssConfig",
     "WlanAssocCtx",
     "WlanChannel",
-    "WlanBssConfig",
     "WlanHwScanConfig",
     "WlanIndication",
     "WlanmacInfo",
@@ -78,8 +79,8 @@ exclude = [
 "SequenceManager" = "mlme_sequence_manager_t"
 
 # Banjo types.
+"BssConfig" = "bss_config_t"
 "WlanAssocCtx" = "wlan_assoc_ctx_t"
-"WlanBssConfig" = "wlan_bss_config_t"
 "WlanChannel" = "wlan_channel_t"
 "WlanHwScanConfig" = "wlan_hw_scan_config_t"
 "WlanmacInfo" = "wlanmac_info_t"

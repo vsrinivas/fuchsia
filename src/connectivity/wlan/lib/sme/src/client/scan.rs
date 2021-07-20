@@ -1,4 +1,4 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -232,7 +232,7 @@ fn new_scan_request(
 ) -> ScanRequest {
     let scan_req = ScanRequest {
         txn_id: mlme_txn_id,
-        bss_type: fidl_internal::BssTypes::Infrastructure,
+        bss_type: fidl_internal::BssType::Infrastructure,
         bssid: WILDCARD_BSS_ID.clone(),
         ssid,
         scan_type: fidl_mlme::ScanTypes::Passive,

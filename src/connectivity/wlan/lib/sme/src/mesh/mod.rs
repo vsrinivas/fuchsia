@@ -1,4 +1,4 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -172,7 +172,7 @@ fn validate_config(config: &Config) -> Result<(), JoinMeshResult> {
 fn create_start_request(config: &Config) -> fidl_mlme::StartRequest {
     fidl_mlme::StartRequest {
         ssid: vec![],
-        bss_type: fidl_internal::BssTypes::Mesh,
+        bss_type: fidl_internal::BssType::Mesh,
         beacon_period: DEFAULT_BEACON_PERIOD,
         dtim_period: DEFAULT_DTIM_PERIOD,
         channel: config.channel,

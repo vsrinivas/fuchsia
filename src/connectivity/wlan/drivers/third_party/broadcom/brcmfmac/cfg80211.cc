@@ -21,6 +21,7 @@
 #include <fuchsia/hardware/wlanif/c/banjo.h>
 #include <fuchsia/hardware/wlanphyimpl/c/banjo.h>
 #include <fuchsia/wlan/ieee80211/cpp/fidl.h>
+#include <fuchsia/wlan/internal/c/banjo.h>
 #include <lib/ddk/metadata.h>
 #include <stdlib.h>
 #include <threads.h>
@@ -2523,7 +2524,7 @@ static void brcmf_return_scan_result(struct net_device* ndev, uint16_t channel,
 
   result.txn_id = ndev->scan_txn_id;
   memcpy(result.bss.bssid, bssid, ETH_ALEN);
-  result.bss.bss_type = WLAN_BSS_TYPE_ANY_BSS;
+  result.bss.bss_type = BSS_TYPE_ANY_BSS;
   result.bss.beacon_period = 0;
   result.bss.timestamp = 0;
   result.bss.local_time = 0;
@@ -3077,7 +3078,7 @@ static uint8_t brcmf_cfg80211_start_ap(struct net_device* ndev, const wlanif_sta
     return WLAN_START_RESULT_BSS_ALREADY_STARTED_OR_JOINED;
   }
 
-  if (req->bss_type != WLAN_BSS_TYPE_INFRASTRUCTURE) {
+  if (req->bss_type != BSS_TYPE_INFRASTRUCTURE) {
     BRCMF_ERR("Attempt to start AP in unsupported mode (%d)", req->bss_type);
     return WLAN_START_RESULT_NOT_SUPPORTED;
   }

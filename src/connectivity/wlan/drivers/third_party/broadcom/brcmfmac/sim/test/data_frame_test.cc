@@ -1,9 +1,10 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/wlan/info/c/banjo.h>
 #include <fuchsia/hardware/wlanif/c/banjo.h>
+#include <fuchsia/wlan/internal/c/banjo.h>
 #include <zircon/errors.h>
 
 #include <ddk/hw/wlan/wlaninfo/c/banjo.h>
@@ -383,7 +384,7 @@ void DataFrameTest::StartAssoc() {
   join_req.selected_bss.ies_bytes_list = assoc_context_.ies.data();
   join_req.selected_bss.ies_bytes_count = assoc_context_.ies.size();
   join_req.selected_bss.chan = assoc_context_.channel;
-  join_req.selected_bss.bss_type = WLAN_BSS_TYPE_ANY_BSS;
+  join_req.selected_bss.bss_type = BSS_TYPE_ANY_BSS;
   client_ifc_.if_impl_ops_->join_req(client_ifc_.if_impl_ctx_, &join_req);
 }
 

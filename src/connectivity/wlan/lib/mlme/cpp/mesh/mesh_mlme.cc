@@ -1,4 +1,4 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -53,7 +53,7 @@ static zx_status_t BuildMeshBeacon(wlan_channel_t channel, DeviceInterface* devi
 
   BeaconConfig c = {
       .bssid = device->GetState()->address(),
-      .bss_type = BssType::kMesh,
+      .bss_type = BeaconBssType::kMesh,
       .ssid = &dummy,
       .ssid_len = 0,
       .rsne = nullptr,

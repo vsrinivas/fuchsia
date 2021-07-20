@@ -1,4 +1,4 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -11,6 +11,7 @@
 
 #include <fuchsia/hardware/wlan/info/c/banjo.h>
 #include <fuchsia/hardware/wlan/mac/c/banjo.h>
+#include <fuchsia/wlan/internal/c/banjo.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -92,9 +93,9 @@ typedef struct {
   wlanmac_info_t (*get_wlanmac_info)(void *device);
   /**
    * Configure the device's BSS.
-   * |cfg| is mutable because the underlying API does not take a const wlan_bss_config_t.
+   * |cfg| is mutable because the underlying API does not take a const bss_config_t.
    */
-  int32_t (*configure_bss)(void *device, wlan_bss_config_t *cfg);
+  int32_t (*configure_bss)(void *device, bss_config_t *cfg);
   /**
    * Enable hardware offload of beaconing on the device.
    */

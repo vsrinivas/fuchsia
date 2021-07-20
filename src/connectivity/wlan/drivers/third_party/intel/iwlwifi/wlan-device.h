@@ -1,4 +1,4 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -8,6 +8,7 @@
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_WLAN_DEVICE_H_
 
 #include <fuchsia/hardware/wlanphyimpl/c/banjo.h>
+#include <fuchsia/wlan/internal/c/banjo.h>
 #include <lib/ddk/device.h>
 
 #include "garnet/lib/wlan/protocol/include/wlan/protocol/mac.h"
@@ -43,7 +44,7 @@ zx_status_t mac_start(void* ctx, const wlanmac_ifc_protocol_t* ifc, zx_handle_t*
 void mac_stop(void* ctx);
 zx_status_t mac_queue_tx(void* ctx, uint32_t options, wlan_tx_packet_t* pkt);
 zx_status_t mac_set_channel(void* ctx, uint32_t options, const wlan_channel_t* chan);
-zx_status_t mac_configure_bss(void* ctx, uint32_t options, const wlan_bss_config_t* config);
+zx_status_t mac_configure_bss(void* ctx, uint32_t options, const bss_config_t* config);
 zx_status_t mac_enable_beaconing(void* ctx, uint32_t options, const wlan_bcn_config_t* bcn_cfg);
 zx_status_t mac_configure_beacon(void* ctx, uint32_t options, const wlan_tx_packet_t* pkt);
 zx_status_t mac_set_key(void* ctx, uint32_t options, const wlan_key_config_t* key_config);

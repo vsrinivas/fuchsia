@@ -1,10 +1,11 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_TESTS_MOCK_DEVICE_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_TESTS_MOCK_DEVICE_H_
 
+#include <fuchsia/wlan/internal/c/banjo.h>
 #include <fuchsia/wlan/minstrel/cpp/fidl.h>
 #include <lib/timekeeper/test_clock.h>
 
@@ -142,14 +143,14 @@ struct MockDevice : public DeviceInterface {
     return ZX_OK;
   }
 
-  zx_status_t ConfigureBss(wlan_bss_config_t* cfg) final {
+  zx_status_t ConfigureBss(bss_config_t* cfg) final {
     if (!cfg) {
       bss_cfg.reset();
     } else {
       // Copy config which might get freed by the MLME before the result was
       // verified.
-      bss_cfg.reset(new wlan_bss_config_t);
-      memcpy(bss_cfg.get(), cfg, sizeof(wlan_bss_config_t));
+      bss_cfg.reset(new bss_config_t);
+      memcpy(bss_cfg.get(), cfg, sizeof(bss_config_t));
     }
     return ZX_OK;
   }
@@ -281,7 +282,7 @@ struct MockDevice : public DeviceInterface {
   PacketList wlan_queue;
   std::vector<std::vector<uint8_t>> svc_queue;
   std::vector<std::vector<uint8_t>> eth_queue;
-  std::unique_ptr<wlan_bss_config_t> bss_cfg;
+  std::unique_ptr<bss_config_t> bss_cfg;
   KeyList keys;
   std::unique_ptr<Packet> beacon;
   bool beaconing_enabled;
