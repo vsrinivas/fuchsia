@@ -41,17 +41,12 @@ function main {
 
   addr=""
   port=""
-  source_name="devhost"
+  source_name=""
   persist=""
   while [[ $# -ne 0 ]]; do
     case "$1" in
       --addr)
         addr="$2"
-        # FIXME(http://fxbug.dev/80430): Rather than always assuming devhost,
-        # we should instead use a build-specific name.
-        if [[ "${source_name}" == "devhost" ]]; then
-          source_name="${addr}"
-        fi
         shift
         ;;
       --port)
@@ -78,6 +73,14 @@ function main {
   if is_feature_enabled "legacy_serve"; then
     if [[ -z "${port}" ]]; then
       port="8083"
+    fi
+
+    if [[ -z "${source_name}" ]]; then
+      if [[ -z "${addr}" ]]; then
+        source_name="devhost"
+      else
+        source_name="${addr}"
+      fi
     fi
 
     if [[ -z "${addr}" ]]; then
@@ -152,6 +155,12 @@ function main {
       fx-error "Flag '--port' is currently required to be 8085 by ffx repository serving"
       fx-error "See http://fxbug.dev/77146 for more details."
       return 1
+    fi
+
+    # Use the build directory's name by default. Note that package URLs are not
+    # allowed to have underscores, so replace them with hyphens.
+    if [[ -z "${source_name}" ]]; then
+      source_name="`basename ${FUCHSIA_BUILD_DIR} | tr '_' '-'`"
     fi
 
     register_args=( --alias fuchsia.com )
