@@ -9,9 +9,7 @@ ffx_plugin("ffx_component_run") {
   edition = "2018"
   args_with_unit_tests = true
   deps = [
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
-    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-url",
     "//third_party/rust_crates:async-trait",

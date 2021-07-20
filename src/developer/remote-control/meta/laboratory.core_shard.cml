@@ -6,9 +6,7 @@
             // TODO(78792): This collection needs a formal name.
             name: "ffx-laboratory",
             environment: "#universe-resolver-env",
-
-            // TODO(78795): Switch to "single-run" durability when it is ready.
-            durability: "transient",
+            durability: "single_run",
         },
     ],
     capabilities: [

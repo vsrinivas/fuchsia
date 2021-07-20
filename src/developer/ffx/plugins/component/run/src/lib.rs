@@ -6,11 +6,8 @@ use {
     anyhow::{anyhow, Result},
     ffx_component_run_args::RunComponentCommand,
     ffx_core::ffx_plugin,
-    fidl::endpoints::create_endpoints,
-    fidl_fuchsia_developer_remotecontrol as rc, fidl_fuchsia_io as fio,
-    fidl_fuchsia_sys2::{
-        ChildDecl, ChildRef, CollectionRef, CreateChildArgs, RealmProxy, StartupMode,
-    },
+    fidl_fuchsia_developer_remotecontrol as rc,
+    fidl_fuchsia_sys2::{ChildDecl, CollectionRef, CreateChildArgs, RealmProxy, StartupMode},
     fuchsia_url::pkg_url::PkgUrl,
 };
 
@@ -78,18 +75,11 @@ async fn run_component_cmd(realm_proxy: RealmProxy, run: RunComponentCommand) ->
         ..ChildDecl::EMPTY
     };
 
-    let mut child_ref = ChildRef { name, collection: Some(COLLECTION_NAME.to_string()) };
-
+    // The collection this child is being created under is single-run.
+    // Creating the component will automatically cause it to start.
     let child_args = CreateChildArgs { numbered_handles: None, ..CreateChildArgs::EMPTY };
     realm_proxy
         .create_child(&mut collection, decl, child_args)
         .await?
-        .map_err(|e| anyhow!("Error creating child: {:?}", e))?;
-
-    let (_, server_end) = create_endpoints::<fio::DirectoryMarker>()?;
-    realm_proxy
-        .bind_child(&mut child_ref, server_end)
-        .await?
-        .map_err(|e| anyhow!("Error binding to child: {:?}", e))?;
-    return Ok(());
+        .map_err(|e| anyhow!("Error creating child: {:?}", e))
 }
