@@ -1,11 +1,32 @@
 {
     "$defs": {
-        "artifacts": {
-            "description": "List of relative paths to artifacts scoped to a suite run or test case",
-            "items": {
-                "type": "string"
+        "artifact_metadata": {
+            "description": "Metadata about an artifact",
+            "properties": {
+                "artifact_type": {
+                    "description": "Semantic type of an artifact",
+                    "enum": [
+                        "SYSLOG",
+                        "STDOUT",
+                        "STDERR"
+                    ]
+                },
+                "component_moniker": {
+                    "description": "The moniker of the component in the test realm that produced the artifact",
+                    "type": "string"
+                }
             },
-            "type": "array"
+            "required": [
+                "artifact_type"
+            ]
+        },
+        "artifacts": {
+            "description": "A mapping of known artifacts to metadata associated with each artifact.",
+            "patternProperties": {
+                "": {
+                    "$ref": "#/$defs/artifact_metadata"
+                }
+            }
         },
         "caseEntry": {
             "additionalProperties": false,

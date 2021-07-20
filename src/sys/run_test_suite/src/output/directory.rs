@@ -35,7 +35,7 @@ struct EntityEntry {
     /// Name of the artifact directory containing artifacts scoped to this entity.
     artifact_dir: PathBuf,
     /// A list of artifacts by filename.
-    artifacts: Vec<String>,
+    artifacts: Vec<(String, directory::ArtifactMetadataV0)>,
     /// Most recently known outcome for the entity.
     outcome: ReportedOutcome,
     /// The approximate UTC start time as measured by the host.
@@ -128,7 +128,13 @@ impl ArtifactReporter for DirectoryReporter {
 
         let artifact = File::create(artifact_dir.join(name))?;
 
-        entry.artifacts.push(name.to_string());
+        entry.artifacts.push((
+            name.to_string(),
+            directory::ArtifactMetadataV0 {
+                artifact_type: (*artifact_type).into(),
+                component_moniker: None,
+            },
+        ));
         Ok(artifact)
     }
 }
@@ -262,8 +268,11 @@ fn filename_for_type(artifact_type: &ArtifactType) -> &'static str {
 
 /// Construct a serializable version of a test run.
 fn construct_serializable_run(run_entry: EntityEntry) -> directory::TestRunResult {
-    let suites = run_entry
-        .children
+    let duration_milliseconds = run_entry.run_time_millis();
+    let start_time = run_entry.start_time_millis();
+    let EntityEntry { children, artifacts, artifact_dir, outcome, .. } = run_entry;
+
+    let suites = children
         .iter()
         .map(|suite_id| {
             let raw_id = match suite_id {
@@ -274,15 +283,14 @@ fn construct_serializable_run(run_entry: EntityEntry) -> directory::TestRunResul
         })
         .collect();
     directory::TestRunResult::V0 {
-        artifacts: run_entry
-            .artifacts
-            .iter()
-            .map(|name| run_entry.artifact_dir.join(name))
+        artifacts: artifacts
+            .into_iter()
+            .map(|(name, metadata)| (artifact_dir.join(name), metadata))
             .collect(),
-        outcome: into_serializable_outcome(run_entry.outcome),
+        outcome: into_serializable_outcome(outcome),
         suites,
-        duration_milliseconds: run_entry.run_time_millis(),
-        start_time: run_entry.start_time_millis(),
+        duration_milliseconds,
+        start_time,
     }
 }
 
@@ -293,29 +301,35 @@ fn construct_serializable_suite(
 ) -> directory::SuiteResult {
     let cases = case_entries
         .into_iter()
-        .map(|case_entry| directory::TestCaseResultV0 {
-            artifacts: case_entry
-                .artifacts
-                .iter()
-                .map(|name| case_entry.artifact_dir.join(name))
-                .collect(),
-            outcome: into_serializable_outcome(case_entry.outcome),
-            duration_milliseconds: case_entry.run_time_millis(),
-            start_time: case_entry.start_time_millis(),
-            name: case_entry.name,
+        .map(|case_entry| {
+            let duration_milliseconds = case_entry.run_time_millis();
+            let start_time = case_entry.start_time_millis();
+            let EntityEntry { artifact_dir, artifacts, outcome, name, .. } = case_entry;
+            directory::TestCaseResultV0 {
+                artifacts: artifacts
+                    .into_iter()
+                    .map(|(name, metadata)| (artifact_dir.join(name), metadata))
+                    .collect(),
+                outcome: into_serializable_outcome(outcome),
+                duration_milliseconds,
+                start_time,
+                name,
+            }
         })
         .collect::<Vec<_>>();
+    let duration_milliseconds = suite_entry.run_time_millis();
+    let start_time = suite_entry.start_time_millis();
+    let EntityEntry { artifact_dir, artifacts, outcome, name, .. } = suite_entry;
     directory::SuiteResult::V0 {
-        artifacts: suite_entry
-            .artifacts
-            .iter()
-            .map(|name| suite_entry.artifact_dir.join(name))
+        artifacts: artifacts
+            .into_iter()
+            .map(|(name, metadata)| (artifact_dir.join(name), metadata))
             .collect(),
-        outcome: into_serializable_outcome(suite_entry.outcome),
+        outcome: into_serializable_outcome(outcome),
         cases,
-        duration_milliseconds: suite_entry.run_time_millis(),
-        start_time: suite_entry.start_time_millis(),
-        name: suite_entry.name,
+        duration_milliseconds,
+        start_time,
+        name,
     }
 }
 
@@ -448,26 +462,42 @@ mod test {
         assert_run_result(
             dir.path(),
             &run_result,
-            &ExpectedTestRun::new(directory::Outcome::Passed)
-                .with_artifact(STDOUT_FILE, "stdout from run\n"),
+            &ExpectedTestRun::new(directory::Outcome::Passed).with_artifact(
+                STDOUT_FILE,
+                directory::ArtifactType::Stdout,
+                "stdout from run\n",
+            ),
         );
         assert_suite_results(
             dir.path(),
             &suite_results,
             &vec![ExpectedSuite::new("suite-1", directory::Outcome::Passed)
                 .with_case(
-                    ExpectedTestCase::new("case-1-0", directory::Outcome::Passed)
-                        .with_artifact(STDOUT_FILE, "stdout from case 0\n"),
+                    ExpectedTestCase::new("case-1-0", directory::Outcome::Passed).with_artifact(
+                        STDOUT_FILE,
+                        directory::ArtifactType::Stdout,
+                        "stdout from case 0\n",
+                    ),
                 )
                 .with_case(
-                    ExpectedTestCase::new("case-1-1", directory::Outcome::Passed)
-                        .with_artifact(STDOUT_FILE, "stdout from case 1\n"),
+                    ExpectedTestCase::new("case-1-1", directory::Outcome::Passed).with_artifact(
+                        STDOUT_FILE,
+                        directory::ArtifactType::Stdout,
+                        "stdout from case 1\n",
+                    ),
                 )
                 .with_case(
-                    ExpectedTestCase::new("case-1-2", directory::Outcome::Passed)
-                        .with_artifact(STDOUT_FILE, "stdout from case 2\n"),
+                    ExpectedTestCase::new("case-1-2", directory::Outcome::Passed).with_artifact(
+                        STDOUT_FILE,
+                        directory::ArtifactType::Stdout,
+                        "stdout from case 2\n",
+                    ),
                 )
-                .with_artifact(STDOUT_FILE, "stdout from suite\n")],
+                .with_artifact(
+                    STDOUT_FILE,
+                    directory::ArtifactType::Stdout,
+                    "stdout from suite\n",
+                )],
         );
     }
 
@@ -510,7 +540,11 @@ mod test {
         assert_eq!(suite_results.len(), 2);
         // names of the suites are identical, so we rely on the outcome to differentiate them.
         let expected_success_suite = ExpectedSuite::new("suite", directory::Outcome::Passed)
-            .with_artifact(STDOUT_FILE, "stdout from passed suite\n");
+            .with_artifact(
+                STDOUT_FILE,
+                directory::ArtifactType::Stdout,
+                "stdout from passed suite\n",
+            );
         let expected_failed_suite = ExpectedSuite::new("suite", directory::Outcome::Failed);
 
         if let directory::SuiteResult::V0 { outcome: directory::Outcome::Passed, .. } =

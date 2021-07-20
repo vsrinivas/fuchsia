@@ -258,7 +258,7 @@ fn display_output_directory<W: Write>(path: PathBuf, mut writer: W) -> Result<()
         writeln!(
             writer,
             "Run artifacts: {}",
-            run_artifacts.iter().map(|path| path.to_string_lossy()).collect::<Vec<_>>().join(", ")
+            run_artifacts.keys().map(|path| path.to_string_lossy()).collect::<Vec<_>>().join(", ")
         )?;
     }
 
@@ -272,7 +272,7 @@ fn display_output_directory<W: Write>(path: PathBuf, mut writer: W) -> Result<()
             writeln!(
                 writer,
                 "\tArtifacts: {}",
-                artifacts.iter().map(|path| path.to_string_lossy()).collect::<Vec<_>>().join(", ")
+                artifacts.keys().map(|path| path.to_string_lossy()).collect::<Vec<_>>().join(", ")
             )?;
         }
         for case in cases.iter() {
@@ -283,7 +283,7 @@ fn display_output_directory<W: Write>(path: PathBuf, mut writer: W) -> Result<()
                     "\tCase {} Artifacts: {}",
                     case.name,
                     case.artifacts
-                        .iter()
+                        .keys()
                         .map(|path| path.to_string_lossy())
                         .collect::<Vec<_>>()
                         .join(", ")

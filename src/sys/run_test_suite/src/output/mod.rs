@@ -173,6 +173,7 @@ impl<'a> CaseReporter<'a> {
 }
 
 /// An enumeration of different known artifact types.
+#[derive(Clone, Copy)]
 pub enum ArtifactType {
     Stdout,
     Stderr,
@@ -213,6 +214,16 @@ impl From<crate::Outcome> for ReportedOutcome {
             crate::Outcome::Inconclusive => Self::Inconclusive,
             crate::Outcome::Timedout => Self::Timedout,
             crate::Outcome::Error => Self::Error,
+        }
+    }
+}
+
+impl Into<test_output_directory::ArtifactType> for ArtifactType {
+    fn into(self) -> test_output_directory::ArtifactType {
+        match self {
+            Self::Stdout => test_output_directory::ArtifactType::Stdout,
+            Self::Stderr => test_output_directory::ArtifactType::Stderr,
+            Self::Syslog => test_output_directory::ArtifactType::Syslog,
         }
     }
 }

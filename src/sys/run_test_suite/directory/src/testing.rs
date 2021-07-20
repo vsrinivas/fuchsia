@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 use crate::{
-    Outcome, SuiteEntryV0, SuiteResult, TestCaseResultV0, TestRunResult, RUN_SUMMARY_NAME,
+    ArtifactMetadataV0, Outcome, SuiteEntryV0, SuiteResult, TestCaseResultV0, TestRunResult,
+    RUN_SUMMARY_NAME,
 };
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
@@ -145,31 +146,43 @@ fn assert_case_result(
 
 fn assert_artifacts(
     root: &Path,
-    actual_artifact_list: &Vec<PathBuf>,
-    expected_artifact_contents: &HashMap<String, Box<dyn Fn(&str)>>,
+    actual_artifacts: &HashMap<PathBuf, ArtifactMetadataV0>,
+    expected_artifacts: &HashMap<String, (ArtifactMetadataV0, Box<dyn Fn(&str)>)>,
 ) {
     let actual_artifact_names: HashSet<String> = HashSet::from_iter(
-        actual_artifact_list.iter().map(|p| p.file_name().unwrap().to_str().unwrap().to_string()),
+        actual_artifacts.keys().map(|p| p.file_name().unwrap().to_str().unwrap().to_string()),
     );
     let expected_artifact_names: HashSet<String> =
-        HashSet::from_iter(expected_artifact_contents.keys().map(|s| s.to_string()));
+        HashSet::from_iter(expected_artifacts.keys().map(|s| s.to_string()));
     assert_eq!(expected_artifact_names, actual_artifact_names);
 
-    for artifact_path in actual_artifact_list.iter() {
+    //for (artifact_path, (expected_metadata, assertion_fn)) in expected_artifacts.iter() {
+    for (artifact_path, actual_metadata) in actual_artifacts.iter() {
         let absolute_artifact_path = root.join(artifact_path);
-        let artifact_name = absolute_artifact_path.file_name().unwrap().to_str().unwrap();
-        let artifact_contents =
-            std::fs::read_to_string(&absolute_artifact_path).expect("read artifact file");
-        let assertion_fn = expected_artifact_contents.get(artifact_name).unwrap();
+        let actual_contents = std::fs::read_to_string(&absolute_artifact_path);
+        assert!(
+            actual_contents.is_ok(),
+            "Error reading artifact {:?}: {:?}",
+            absolute_artifact_path,
+            actual_contents.unwrap_err(),
+        );
 
-        (assertion_fn)(&artifact_contents);
+        let artifact_name = absolute_artifact_path.file_name().unwrap().to_str().unwrap();
+        let (expected_metadata, assertion_fn) = expected_artifacts.get(artifact_name).unwrap();
+
+        assert_eq!(
+            expected_metadata, actual_metadata,
+            "Metadata for {:?} does not match expected",
+            absolute_artifact_path
+        );
+        (assertion_fn)(&actual_contents.unwrap());
     }
 }
 
 /// A version of a test run result that contains all output in memory. This should only be used
 /// for making assertions in a test.
 pub struct ExpectedTestRun {
-    artifacts: HashMap<String, Box<dyn Fn(&str)>>,
+    artifacts: HashMap<String, (ArtifactMetadataV0, Box<dyn Fn(&str)>)>,
     outcome: Outcome,
     start_time: MatchOption<u64>,
     duration_milliseconds: MatchOption<u64>,
@@ -178,7 +191,7 @@ pub struct ExpectedTestRun {
 /// A version of a suite run result that contains all output in memory. This should only be used
 /// for making assertions in a test.
 pub struct ExpectedSuite {
-    artifacts: HashMap<String, Box<dyn Fn(&str)>>,
+    artifacts: HashMap<String, (ArtifactMetadataV0, Box<dyn Fn(&str)>)>,
     name: String,
     outcome: Outcome,
     cases: HashMap<String, ExpectedTestCase>,
@@ -189,7 +202,7 @@ pub struct ExpectedSuite {
 /// A version of a test case result that contains all output in memory. This should only be used
 /// for making assertions in a test.
 pub struct ExpectedTestCase {
-    artifacts: HashMap<String, Box<dyn Fn(&str)>>,
+    artifacts: HashMap<String, (ArtifactMetadataV0, Box<dyn Fn(&str)>)>,
     name: String,
     outcome: Outcome,
     start_time: MatchOption<u64>,
@@ -199,10 +212,12 @@ pub struct ExpectedTestCase {
 macro_rules! common_impl {
     {} => {
         /// Add an artifact matching the exact contents.
-        pub fn with_artifact<S: AsRef<str>, T: AsRef<str>>(self, name: S, contents: T) -> Self {
+        pub fn with_artifact<S: AsRef<str>, T: AsRef<str>, U: Into<ArtifactMetadataV0>>(
+            self, name: S, metadata: U, contents: T
+        ) -> Self {
             let owned_expected = contents.as_ref().to_string();
             let owned_name = name.as_ref().to_string();
-            self.with_matching_artifact(name, move |actual| {
+            self.with_matching_artifact(name, metadata, move |actual| {
                 assert_eq!(
                     &owned_expected, actual,
                     "Mismatch in artifact '{}'. Expected: '{}', actual:'{}'",
@@ -213,12 +228,13 @@ macro_rules! common_impl {
 
         /// Add an artifact. `matcher` will be run against the contents of
         /// the actual artifact and may contain assertions.
-        pub fn with_matching_artifact<S: AsRef<str>, F: 'static + Fn(&str)>(
+        pub fn with_matching_artifact<S: AsRef<str>, F: 'static + Fn(&str), U: Into<ArtifactMetadataV0>>(
             mut self,
             name: S,
+            metadata: U,
             matcher: F,
         ) -> Self {
-            self.artifacts.insert(name.as_ref().to_string(), Box::new(matcher));
+            self.artifacts.insert(name.as_ref().to_string(), (metadata.into(), Box::new(matcher)));
             self
         }
 

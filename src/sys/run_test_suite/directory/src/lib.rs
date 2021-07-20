@@ -5,7 +5,7 @@
 pub mod testing;
 
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+use std::{collections::HashMap, path::PathBuf};
 
 /// Filename of the top level summary json.
 pub const RUN_SUMMARY_NAME: &str = "run_summary.json";
@@ -30,9 +30,9 @@ pub enum Outcome {
 pub enum TestRunResult {
     #[serde(rename = "0")]
     V0 {
-        /// Paths to artifacts scoped at the run level. The paths are relative to the root of
-        /// the output directory.
-        artifacts: Vec<PathBuf>,
+        /// A mapping from paths to artifacts to metadata associated with the artifact.
+        /// The paths are relative to the root of the output directory.
+        artifacts: HashMap<PathBuf, ArtifactMetadataV0>,
         outcome: Outcome,
         suites: Vec<SuiteEntryV0>,
         /// Approximate start time, as milliseconds since the epoch.
@@ -58,9 +58,9 @@ pub struct SuiteEntryV0 {
 pub enum SuiteResult {
     #[serde(rename = "0")]
     V0 {
-        /// Paths to artifacts scoped at the run level. The paths are relative to the root of
-        /// the output directory.
-        artifacts: Vec<PathBuf>,
+        /// A mapping from paths to artifacts to metadata associated with the artifact.
+        /// The paths are relative to the root of the output directory.
+        artifacts: HashMap<PathBuf, ArtifactMetadataV0>,
         outcome: Outcome,
         name: String,
         cases: Vec<TestCaseResultV0>,
@@ -75,9 +75,9 @@ pub enum SuiteResult {
 /// A serializable test case result.
 #[derive(Deserialize, Serialize, PartialEq, Eq, Debug)]
 pub struct TestCaseResultV0 {
-    /// Paths to artifacts scoped at the run level. The paths are relative to the root of
-    /// the output directory.
-    pub artifacts: Vec<PathBuf>,
+    /// A mapping from paths to artifacts to metadata associated with the artifact.
+    /// The paths are relative to the root of the output directory.
+    pub artifacts: HashMap<PathBuf, ArtifactMetadataV0>,
     pub outcome: Outcome,
     pub name: String,
     /// Approximate start time, as milliseconds since the epoch.
@@ -87,9 +87,35 @@ pub struct TestCaseResultV0 {
     pub duration_milliseconds: Option<u64>,
 }
 
+/// Metadata associated with an artifact.
+#[derive(Deserialize, Serialize, PartialEq, Eq, Debug)]
+pub struct ArtifactMetadataV0 {
+    /// The type of the artifact.
+    pub artifact_type: ArtifactType,
+    /// Moniker of the component which produced the artifact, if applicable.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub component_moniker: Option<String>,
+}
+
+/// Types of artifacts known to the test framework.
+#[derive(Deserialize, Serialize, PartialEq, Eq, Debug)]
+#[serde(rename_all = "UPPERCASE")]
+pub enum ArtifactType {
+    Syslog,
+    Stdout,
+    Stderr,
+}
+
+impl From<ArtifactType> for ArtifactMetadataV0 {
+    fn from(other: ArtifactType) -> Self {
+        Self { artifact_type: other, component_moniker: None }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
+    use maplit::hashmap;
     use serde_json::{from_str, json, to_string, Value};
     use std::path::Path;
     use valico::json_schema;
@@ -98,7 +124,7 @@ mod test {
     fn run_version_serialized() {
         // This is a sanity check that verifies version is serialized.
         let run_result = TestRunResult::V0 {
-            artifacts: vec![],
+            artifacts: HashMap::new(),
             outcome: Outcome::Inconclusive,
             suites: vec![],
             duration_milliseconds: None,
@@ -110,7 +136,7 @@ mod test {
 
         let expected = json!({
             "version": "0",
-            "artifacts": [],
+            "artifacts": {},
             "outcome": "INCONCLUSIVE",
             "suites": [],
         });
@@ -122,7 +148,7 @@ mod test {
     fn run_version_mismatch() {
         let wrong_version_json = json!({
             "version": "10",
-            "artifacts": [],
+            "artifacts": {},
             "outcome": "INCONCLUSIVE",
             "suites": [],
         });
@@ -135,7 +161,7 @@ mod test {
     #[test]
     fn suite_version_serialized() {
         let suite_result = SuiteResult::V0 {
-            artifacts: vec![],
+            artifacts: HashMap::new(),
             outcome: Outcome::Inconclusive,
             cases: vec![],
             name: "suite".to_string(),
@@ -148,7 +174,7 @@ mod test {
 
         let expected = json!({
             "version": "0",
-            "artifacts": [],
+            "artifacts": {},
             "outcome": "INCONCLUSIVE",
             "cases": [],
             "name": "suite",
@@ -161,7 +187,7 @@ mod test {
     fn suite_version_mismatch() {
         let wrong_version_json = json!({
             "version": "10",
-            "artifacts": [],
+            "artifacts": {},
             "outcome": "INCONCLUSIVE",
             "cases": [],
             "name": "suite",
@@ -182,24 +208,29 @@ mod test {
 
         let cases = vec![
             TestRunResult::V0 {
-                artifacts: vec![],
+                artifacts: hashmap! {},
                 outcome: Outcome::Skipped,
                 suites: vec![],
                 duration_milliseconds: None,
                 start_time: None,
             },
             TestRunResult::V0 {
-                artifacts: vec![Path::new("a/b.txt").to_path_buf()],
+                artifacts: hashmap! {
+                    Path::new("a/b.txt").to_path_buf() => ArtifactType::Syslog.into(),
+                },
                 outcome: Outcome::Skipped,
                 suites: vec![SuiteEntryV0 { summary: "suite-summary.json".to_string() }],
                 duration_milliseconds: None,
                 start_time: None,
             },
             TestRunResult::V0 {
-                artifacts: vec![
-                    Path::new("a/b.txt").to_path_buf(),
-                    Path::new("c/d.txt").to_path_buf(),
-                ],
+                artifacts: hashmap! {
+                    Path::new("a/b.txt").to_path_buf() => ArtifactType::Stderr.into(),
+                    Path::new("c/d.txt").to_path_buf() => ArtifactMetadataV0 {
+                        artifact_type: ArtifactType::Syslog,
+                        component_moniker: Some("component".to_string())
+                    },
+                },
                 outcome: Outcome::Skipped,
                 suites: vec![
                     SuiteEntryV0 { summary: "suite-summary-1.json".to_string() },
@@ -232,7 +263,7 @@ mod test {
 
         let cases = vec![
             SuiteResult::V0 {
-                artifacts: vec![],
+                artifacts: hashmap! {},
                 outcome: Outcome::Passed,
                 name: "my test suite".to_string(),
                 cases: vec![],
@@ -240,11 +271,11 @@ mod test {
                 start_time: None,
             },
             SuiteResult::V0 {
-                artifacts: vec![],
+                artifacts: hashmap! {},
                 outcome: Outcome::Failed,
                 name: "another suite".to_string(),
                 cases: vec![TestCaseResultV0 {
-                    artifacts: vec![],
+                    artifacts: hashmap! {},
                     outcome: Outcome::Inconclusive,
                     name: "test case".to_string(),
                     duration_milliseconds: Some(12),
@@ -254,24 +285,29 @@ mod test {
                 start_time: Some(200),
             },
             SuiteResult::V0 {
-                artifacts: vec![Path::new("suite/a.txt").to_path_buf()],
+                artifacts: hashmap! {
+                    Path::new("suite/a.txt").to_path_buf() => ArtifactType::Stderr.into(),
+                },
                 outcome: Outcome::Failed,
                 name: "another suite".to_string(),
                 cases: vec![
                     TestCaseResultV0 {
-                        artifacts: vec![
-                            Path::new("case-0/b.txt").to_path_buf(),
-                            Path::new("case-0/c.txt").to_path_buf(),
-                        ],
+                        artifacts: hashmap! {
+                            Path::new("case-0/b.txt").to_path_buf() => ArtifactType::Stdout.into(),
+                            Path::new("case-0/c.txt").to_path_buf() => ArtifactMetadataV0 {
+                                artifact_type: ArtifactType::Syslog,
+                                component_moniker: Some("component".to_string())
+                            },
+                        },
                         outcome: Outcome::Timedout,
                         name: "test case".to_string(),
                         duration_milliseconds: None,
                         start_time: Some(37),
                     },
                     TestCaseResultV0 {
-                        artifacts: vec![
-                            Path::new("case-1/d.txt").to_path_buf(),
-                            Path::new("case-1/e.txt").to_path_buf(),
+                        artifacts: hashmap![
+                            Path::new("case-1/d.txt").to_path_buf() => ArtifactType::Stdout.into(),
+                            Path::new("case-1/e.txt").to_path_buf() => ArtifactType::Stdout.into(),
                         ],
                         outcome: Outcome::Error,
                         name: "test case 2".to_string(),

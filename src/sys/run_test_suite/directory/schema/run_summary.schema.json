@@ -1,5 +1,33 @@
 {
     "$defs": {
+        "artifact_metadata": {
+            "description": "Metadata about an artifact",
+            "properties": {
+                "artifact_type": {
+                    "description": "Semantic type of an artifact",
+                    "enum": [
+                        "SYSLOG",
+                        "STDOUT",
+                        "STDERR"
+                    ]
+                },
+                "component_moniker": {
+                    "description": "The moniker of the component in the test realm that produced the artifact",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "artifact_type"
+            ]
+        },
+        "artifacts": {
+            "description": "A mapping of known artifacts to metadata associated with each artifact.",
+            "patternProperties": {
+                "": {
+                    "$ref": "#/$defs/artifact_metadata"
+                }
+            }
+        },
         "suiteEntry": {
             "additionalProperties": false,
             "properties": {
@@ -19,11 +47,7 @@
     "description": "Format for the top level run summary of a fuchsia test output directory.",
     "properties": {
         "artifacts": {
-            "description": "List of relative paths to artifacts scoped to the test run",
-            "items": {
-                "type": "string"
-            },
-            "type": "array"
+            "$ref": "#/$defs/artifacts"
         },
         "duration_milliseconds": {
             "description": "Run duration in milliseconds",
