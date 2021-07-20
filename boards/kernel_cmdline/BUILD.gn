@@ -106,8 +106,6 @@ kernel_cmdline("vim3") {
 
 kernel_cmdline("chromebook-x64") {
   args = [
-    "kernel.serial=acpi",
-
     # Depthcharge will fill this in.
     "zvb.boot-partition-uuid=%U",
   ]

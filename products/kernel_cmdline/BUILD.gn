@@ -56,11 +56,6 @@ kernel_cmdline("kernel.oom.behavior--reboot") {
   args = [ "kernel.oom.behavior=reboot" ]
 }
 
-kernel_cmdline("kernel.serial--acpi") {
-  args = [ "kernel.serial=acpi" ]
-  deps = [ "//build/validate:non_production_tag" ]
-}
-
 kernel_cmdline("kernel.serial--none") {
   args = [ "kernel.serial=none" ]
 }
