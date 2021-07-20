@@ -48,11 +48,6 @@ node_config("sherlock") {
   source = "sherlock_node_config.json"
 }
 
-# This is a temporary target to assist with thermd removal.
-node_config("sherlock_2") {
-  source = "sherlock_node_config_2.json"
-}
-
 # Make the node config files available for the power-manager-tests test package
 # to allow for some more advanced validation beyond what we can accomplish with
 # JSON schema validation alone.
@@ -66,6 +61,5 @@ config_data("test_config_data") {
     "luis_node_config.json",
     "nelson_node_config.json",
     "sherlock_node_config.json",
-    "sherlock_node_config_2.json",
   ]
 }

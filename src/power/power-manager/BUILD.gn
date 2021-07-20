@@ -180,8 +180,3 @@ group("nelson_config") {
 group("sherlock_config") {
   deps = [ "node_config:sherlock" ]
 }
-
-# This is a temporary target to assist with thermd removal.
-group("sherlock_config_2") {
-  deps = [ "node_config:sherlock_2" ]
-}

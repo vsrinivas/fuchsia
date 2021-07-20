@@ -33,17 +33,17 @@
   },
   {
     "type": "DeviceControlHandler",
-    "name": "cpu_dev_000",
+    "name": "big_cluster_dev",
     "config": {
       "driver_path": "/dev/class/cpu-ctrl/000"
     }
   },
   {
     "type": "CpuControlHandler",
-    "name": "cpu_control_000",
+    "name": "big_cluster_control",
     "config": {
       "driver_path": "/dev/class/cpu-ctrl/000",
-      "capacitance": 1.2E-10,
+      "capacitance": 4.6E-10,
       "logical_cpu_numbers": [
         2,
         3,
@@ -54,19 +54,19 @@
     },
     "dependencies": {
       "cpu_stats_handler_node": "cpu_stats",
-      "cpu_dev_handler_node": "cpu_dev_000"
+      "cpu_dev_handler_node": "big_cluster_dev"
     }
   },
   {
     "type": "DeviceControlHandler",
-    "name": "cpu_dev_001",
+    "name": "little_cluster_dev",
     "config": {
       "driver_path": "/dev/class/cpu-ctrl/001"
     }
   },
   {
     "type": "CpuControlHandler",
-    "name": "cpu_control_001",
+    "name": "little_cluster_control",
     "config": {
       "driver_path": "/dev/class/cpu-ctrl/001",
       "capacitance": 1.2E-10,
@@ -78,7 +78,7 @@
     },
     "dependencies": {
       "cpu_stats_handler_node": "cpu_stats",
-      "cpu_dev_handler_node": "cpu_dev_001"
+      "cpu_dev_handler_node": "little_cluster_dev"
     }
   },
   {
@@ -100,8 +100,8 @@
       "crash_report_handler_node": "crash_handler",
       "temperature_handler_node": "temperature_soc_pll",
       "cpu_control_nodes": [
-        "cpu_control_000",
-        "cpu_control_001"
+        "little_cluster_control",
+        "big_cluster_control"
       ],
       "system_power_handler_node": "sys_shutdown",
       "thermal_limiter_node": "thermal_limiter"
@@ -110,28 +110,15 @@
       "controller_params": {
         "sample_interval": 1.0,
         "filter_time_constant": 5.0,
-        "target_temperature": 80.0,
-        "e_integral_min": 0.0,
+        "target_temperature": 90.0,
+        "e_integral_min": -25.0,
         "e_integral_max": 0.0,
-        "sustainable_power": 1.0,
+        "sustainable_power": 2.96,
         "proportional_gain": 0.0,
-        "integral_gain": 0.0
+        "integral_gain": 0.12
       },
-      "thermal_shutdown_temperature": 0.0,
+      "thermal_shutdown_temperature": 100.0,
       "throttle_end_delay": 60.0
-    }
-  },
-  {
-    "type": "ThermalShutdown",
-    "name": "thermal_shutdown_soc_pll",
-    "dependencies": {
-      "system_shutdown_node": "sys_shutdown",
-      "temperature_handler_node": "temperature_soc_pll"
-    },
-    "config": {
-      "thermal_shutdown_temperature_c": 100.0,
-      "poll_interval_s": 1,
-      "filter_time_constant_s": 1
     }
   }
 ]
