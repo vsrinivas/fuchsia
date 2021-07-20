@@ -113,11 +113,18 @@ async fn create_realm_instance(
             )),
         )
         .await?;
-    for ChildDef { url, name, exposes, uses, program_args, .. } in children.unwrap_or_default() {
+    for ChildDef { url, name, exposes, uses, program_args, eager, .. } in
+        children.unwrap_or_default()
+    {
         let url = url.ok_or(CreateRealmError::UrlNotProvided)?;
         let name = name.ok_or(CreateRealmError::NameNotProvided)?;
-        let _: &mut RealmBuilder =
-            builder.add_component(name.as_ref(), ComponentSource::url(&url)).await?;
+        if eager.unwrap_or(false) {
+            let _: &mut RealmBuilder =
+                builder.add_eager_component(name.as_ref(), ComponentSource::url(&url)).await?;
+        } else {
+            let _: &mut RealmBuilder =
+                builder.add_component(name.as_ref(), ComponentSource::url(&url)).await?;
+        }
         if let Some(program_args) = program_args {
             // This assertion should always pass because `RealmBuilder::add_component` will have
             // failed already if a component with the same moniker already exists in the realm.
@@ -1001,6 +1008,38 @@ mod tests {
         }
     }
 
+    async fn expect_single_inspect_node(
+        realm: &TestRealm,
+        component_moniker: &str,
+        f: impl Fn(&diagnostics_hierarchy::DiagnosticsHierarchy),
+    ) {
+        let TestRealm { realm } = realm;
+        let realm_moniker = realm.get_moniker().await.expect("failed to get moniker");
+        let data = diagnostics_reader::ArchiveReader::new()
+            .add_selector(diagnostics_reader::ComponentSelector::new(vec![
+                selectors::sanitize_string_for_selectors(&realm_moniker),
+                component_moniker.into(),
+            ]))
+            .snapshot::<diagnostics_reader::Inspect>()
+            .await
+            .expect("failed to get inspect data")
+            .into_iter()
+            .map(
+                |diagnostics_data::InspectData {
+                     data_source: _,
+                     metadata: _,
+                     moniker: _,
+                     payload,
+                     version: _,
+                 }| payload,
+            )
+            .collect::<Vec<_>>();
+        match &data[..] {
+            [Some(datum)] => f(datum),
+            data => panic!("there should be exactly one matching inspect node; found {:?}", data),
+        }
+    }
+
     #[fixture(with_sandbox)]
     #[fuchsia::test]
     async fn inspect(sandbox: fnetemul::SandboxProxy) {
@@ -1034,46 +1073,41 @@ mod tests {
                     j,
                 );
             }
-            let TestRealm { realm } = realm;
-            let selector = vec![
-                selectors::sanitize_string_for_selectors(&realm.get_moniker().await.expect(
-                    &format!("fuchsia.netemul/ManagedRealm.get_moniker call failed on realm {}", i),
-                )),
-                COUNTER_COMPONENT_NAME.into(),
-            ];
-            let data = diagnostics_reader::ArchiveReader::new()
-                .add_selector(diagnostics_reader::ComponentSelector::new(selector))
-                .snapshot::<diagnostics_reader::Inspect>()
-                .await
-                .expect(&format!("failed to get inspect data in realm {}", i))
-                .into_iter()
-                .map(
-                    |diagnostics_data::InspectData {
-                         data_source: _,
-                         metadata: _,
-                         moniker: _,
-                         payload,
-                         version: _,
-                     }| payload,
-                )
-                .collect::<Vec<_>>();
-            match &data[..] {
-                [datum] => match datum {
-                    None => panic!("empty inspect payload in realm {}", i),
-                    Some(data) => {
-                        diagnostics_reader::assert_data_tree!(data, root: {
-                            counter: {
-                                count: u64::from(i),
-                            }
-                        });
+            let () = expect_single_inspect_node(&realm, COUNTER_COMPONENT_NAME, |data| {
+                diagnostics_reader::assert_data_tree!(data, root: {
+                    counter: {
+                        count: u64::from(i),
                     }
-                },
-                data => panic!(
-                    "there should be exactly one matching inspect node in realm {}; got {:?}",
-                    i, data
-                ),
-            }
+                });
+            })
+            .await;
         }
+    }
+
+    #[fixture(with_sandbox)]
+    #[fuchsia::test]
+    async fn eager_component(sandbox: fnetemul::SandboxProxy) {
+        let realm = TestRealm::new(
+            &sandbox,
+            fnetemul::RealmOptions {
+                children: Some(vec![fnetemul::ChildDef {
+                    eager: Some(true),
+                    ..counter_component()
+                }]),
+                ..fnetemul::RealmOptions::EMPTY
+            },
+        );
+
+        // Without binding to the child by connecting to its exposed service, we should be able to
+        // see its inspect data since it has been started eagerly.
+        let () = expect_single_inspect_node(&realm, COUNTER_COMPONENT_NAME, |data| {
+            diagnostics_reader::assert_data_tree!(data, root: {
+                counter: {
+                    count: 0u64,
+                }
+            });
+        })
+        .await;
     }
 
     #[fixture(with_sandbox)]

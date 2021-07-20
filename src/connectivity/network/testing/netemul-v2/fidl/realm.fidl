@@ -74,6 +74,9 @@ type ChildDef = table {
     /// any arguments specified in the manifest. If left unspecified, the
     /// original arguments from the manifest are used.
     5: program_args vector<string:MAX>:MAX;
+    /// Whether the component should be started eagerly once the realm is
+    /// created. If not set, interpreted as false.
+    6: eager bool;
 };
 
 /// Options used to create a [`ManagedRealm`].
