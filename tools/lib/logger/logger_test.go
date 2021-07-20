@@ -25,7 +25,6 @@ func TestWithContext(t *testing.T) {
 	if v, ok := ctx.Value(globalLoggerKeyType{}).(*Logger); !ok || v == nil {
 		t.Fatalf("Updated context should have globalLoggerKeyType, but got nil")
 	}
-
 }
 
 func TestNewLogger(t *testing.T) {

@@ -757,30 +757,33 @@ func TestWithTargetDuration(t *testing.T) {
 	})
 
 	t.Run("evenly distributes shards based on run algorithm", func(t *testing.T) {
-		input := []*Shard{{
-			Name: "env1",
-			Env:  env1,
-			Tests: []Test{
-				{
-					Test:         makeTest(1, "fuchsia").Test,
-					Runs:         5,
-					RunAlgorithm: StopOnSuccess,
+		input := []*Shard{
+			{
+				Name: "env1",
+				Env:  env1,
+				Tests: []Test{
+					{
+						Test:         makeTest(1, "fuchsia").Test,
+						Runs:         5,
+						RunAlgorithm: StopOnSuccess,
+					},
+					{
+						Test:         makeTest(2, "fuchsia").Test,
+						Runs:         5,
+						RunAlgorithm: StopOnSuccess,
+					},
 				},
-				{
-					Test:         makeTest(2, "fuchsia").Test,
-					Runs:         5,
-					RunAlgorithm: StopOnSuccess,
+			}, {
+				Name: "mult",
+				Env:  env1,
+				Tests: []Test{
+					{
+						Test:         makeTest(1, "fuchsia").Test,
+						Runs:         5,
+						RunAlgorithm: KeepGoing,
+					},
 				},
-			}}, {
-			Name: "mult",
-			Env:  env1,
-			Tests: []Test{
-				{
-					Test:         makeTest(1, "fuchsia").Test,
-					Runs:         5,
-					RunAlgorithm: KeepGoing,
-				},
-			}},
+			},
 		}
 		actual := WithTargetDuration(input, 2, 0, 0, defaultDurations)
 		expectedTests := [][]string{
@@ -793,7 +796,8 @@ func TestWithTargetDuration(t *testing.T) {
 			{{5, StopOnSuccess}, {5, StopOnSuccess}},
 			{{2, KeepGoing}},
 			{{2, KeepGoing}},
-			{{1, KeepGoing}}}
+			{{1, KeepGoing}},
+		}
 		assertShardsContainRunConfigs(t, actual, expectedRuns)
 		assertShardsContainTests(t, actual, expectedTests)
 	})
@@ -855,15 +859,18 @@ func TestExtractDeps(t *testing.T) {
 	})
 
 	t.Run("some deps", func(t *testing.T) {
-		tests := []Test{{
-			Test: build.Test{
-				Name:            "A",
-				RuntimeDepsFile: depsFile(t, buildDir, "1", "2"),
-			}}, {
-			Test: build.Test{
-				Name:            "B",
-				RuntimeDepsFile: depsFile(t, buildDir, "3"),
-			}},
+		tests := []Test{
+			{
+				Test: build.Test{
+					Name:            "A",
+					RuntimeDepsFile: depsFile(t, buildDir, "1", "2"),
+				},
+			}, {
+				Test: build.Test{
+					Name:            "B",
+					RuntimeDepsFile: depsFile(t, buildDir, "3"),
+				},
+			},
 		}
 		expected := []string{"1", "2", "3"}
 		shardHasExpectedDeps(t, buildDir, tests, expected)
@@ -877,15 +884,18 @@ func TestExtractDeps(t *testing.T) {
 	})
 
 	t.Run("deps are deduped", func(t *testing.T) {
-		tests := []Test{{
-			Test: build.Test{
-				Name:            "A",
-				RuntimeDepsFile: depsFile(t, buildDir, "1", "2", "2"),
-			}}, {
-			Test: build.Test{
-				Name:            "B",
-				RuntimeDepsFile: depsFile(t, buildDir, "2", "3"),
-			}},
+		tests := []Test{
+			{
+				Test: build.Test{
+					Name:            "A",
+					RuntimeDepsFile: depsFile(t, buildDir, "1", "2", "2"),
+				},
+			}, {
+				Test: build.Test{
+					Name:            "B",
+					RuntimeDepsFile: depsFile(t, buildDir, "2", "3"),
+				},
+			},
 		}
 		expected := []string{"1", "2", "3"}
 		shardHasExpectedDeps(t, buildDir, tests, expected)

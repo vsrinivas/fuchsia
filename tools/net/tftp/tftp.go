@@ -63,10 +63,8 @@ const (
 	dataOffset        = 4 // data start in packet
 )
 
-var (
-	// ErrShouldWait indicates that the target is busy.
-	ErrShouldWait = fmt.Errorf("target is busy")
-)
+// ErrShouldWait indicates that the target is busy.
+var ErrShouldWait = fmt.Errorf("target is busy")
 
 type options struct {
 	blockSize    uint16

@@ -22,7 +22,8 @@ func TestParse(t *testing.T) {
 			expected: &Document{
 				Version: 13,
 			},
-		}, {
+		},
+		{
 			name: "should parse a document containing only the version and plan",
 			input: strings.TrimSpace(`
 TAP version 13
@@ -32,7 +33,8 @@ TAP version 13
 				Version: 13,
 				Plan:    Plan{Start: 1, End: 2},
 			},
-		}, {
+		},
+		{
 			name: "should parse a basic TAP document",
 			input: strings.TrimSpace(`
 TAP version 13

@@ -165,7 +165,7 @@ func (t *subprocessTester) Test(ctx context.Context, test testsharder.Test, stdo
 		return sinkRef, fmt.Errorf("test %q has no `path` set", test.Name)
 	}
 	// Some tests read testOutDirEnvKey so ensure they get their own output dir.
-	if err := os.MkdirAll(outDir, 0770); err != nil {
+	if err := os.MkdirAll(outDir, 0o770); err != nil {
 		return sinkRef, err
 	}
 

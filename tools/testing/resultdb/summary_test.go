@@ -11,6 +11,7 @@ import (
 	"time"
 
 	resultpb "go.chromium.org/luci/resultdb/proto/v1"
+
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 	"go.fuchsia.dev/fuchsia/tools/testing/testparser"
 )
@@ -157,6 +158,7 @@ func TestInvocationLevelArtifacts(t *testing.T) {
 		t.Errorf("Did not find serial_log.txt in output")
 	}
 }
+
 func TestDetermineExpected(t *testing.T) {
 	testCases := []struct {
 		testStatus     resultpb.TestStatus

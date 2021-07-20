@@ -13,10 +13,9 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"google.golang.org/protobuf/testing/protocmp"
-
 	resultpb "go.chromium.org/luci/resultdb/proto/v1"
 	sinkpb "go.chromium.org/luci/resultdb/sink/proto/v1"
+	"google.golang.org/protobuf/testing/protocmp"
 )
 
 var testDataDir = flag.String("test_data_dir", "testdata", "Path to testdata/; only used in GN build")
@@ -79,7 +78,6 @@ func TestStringPairConvert(t *testing.T) {
 		got, err := stringPairFromString(tc.tag)
 		if err != nil {
 			t.Errorf("stringPairFromString(%s) errored %v", tc.tag, err)
-
 		}
 		if diff := cmp.Diff(tc.want, got, protocmp.Transform()); diff != "" {
 			t.Errorf("stringPairFromString diff (-want +got):\n%s", diff)

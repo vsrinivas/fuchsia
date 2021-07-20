@@ -90,7 +90,6 @@ func TestDirIsEmpty(t *testing.T) {
 	} else if !empty {
 		t.Fatalf("non-existent directory should be empty")
 	}
-
 }
 
 func TestCopyDir(t *testing.T) {

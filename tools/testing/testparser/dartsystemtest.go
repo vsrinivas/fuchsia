@@ -11,9 +11,7 @@ import (
 	"time"
 )
 
-var (
-	dartSystemTestPreamblePattern = regexp.MustCompile(`^\[----------\] Test results JSON:$`)
-)
+var dartSystemTestPreamblePattern = regexp.MustCompile(`^\[----------\] Test results JSON:$`)
 
 type dartSystemTestResults struct {
 	TestGroups []TestGroup
@@ -31,7 +29,7 @@ type TestCase struct {
 }
 
 func parseDartSystemTest(lines [][]byte) []TestCaseResult {
-	var jsonBytes = []byte{}
+	var jsonBytes []byte
 	for _, line := range lines[1:] {
 		jsonBytes = append(jsonBytes, line...)
 	}

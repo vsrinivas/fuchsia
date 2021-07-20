@@ -41,7 +41,8 @@ func TestRecordingOfOutputs(t *testing.T) {
 							Name: "SINK_A2",
 							File: "sink_a2.txt",
 						},
-					}},
+					},
+				},
 			},
 			Stdio: []byte("STDOUT_A"),
 		},
@@ -151,7 +152,8 @@ func TestRecordingOfOutputs(t *testing.T) {
 						Name: "SINK_B",
 						File: "sink_b.txt",
 					},
-				}},
+				},
+			},
 		},
 	}, "other_dir")
 	o.Close()

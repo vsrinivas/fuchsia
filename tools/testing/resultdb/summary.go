@@ -143,7 +143,8 @@ func testDetailsToResultSink(tags []*resultpb.StringPair, testDetail *runtests.T
 				filepath.Base(outputFile): {
 					Body:        &sinkpb.Artifact_FilePath{FilePath: outputFile},
 					ContentType: "text/plain",
-				}}
+				},
+			}
 		} else {
 			log.Printf("[Warn] outputFile: %s is not readable, skip.", outputFile)
 		}

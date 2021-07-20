@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/google/shlex"
+
 	"go.fuchsia.dev/fuchsia/tools/build/ninjago/compdb"
 )
 
@@ -375,7 +376,7 @@ func MurmurHash64A(data []byte) uint64 {
 	const seed = uint64(0xDECAFBADDECAFBAD)
 	const m = uint64(0xc6a4a7935bd1e995)
 	const r = 47
-	var h = seed ^ (uint64(len(data)) * m)
+	h := seed ^ (uint64(len(data)) * m)
 	for len(data) >= 8 {
 		k := binary.LittleEndian.Uint64(data[0:])
 		k *= m

@@ -12,7 +12,6 @@ func TestNewAEMUTarget(t *testing.T) {
 	a, err := NewAEMUTarget(QEMUConfig{
 		Target: "x64",
 	}, Options{})
-
 	if err != nil {
 		t.Fatalf("Unable to create NewAEMUTarget: %s", err)
 	}

@@ -10,7 +10,6 @@ import (
 )
 
 func TestArgs(t *testing.T) {
-
 	argsJSON := []byte(`
 	{
 		"bool_var": true

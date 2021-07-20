@@ -57,30 +57,35 @@ func TestStringInLogCheck(t *testing.T) {
 				SwarmingOutput: []byte(fmt.Sprintf("PREFIX %s SUFFIX", killerString)),
 			},
 			swarmingResultState: "COMPLETED",
-		}, {
+		},
+		{
 			name: "should not match if string in other log",
 			testingOutputs: TestingOutputs{
 				SerialLog:      []byte(killerString),
 				SwarmingOutput: []byte("gentle string"),
 			},
-		}, {
+		},
+		{
 			name: "should not match if except_string in log",
 			testingOutputs: TestingOutputs{
 				SwarmingOutput: []byte(killerString + exceptString),
 			},
-		}, {
+		},
+		{
 			name: "should match if string before except_block",
 			testingOutputs: TestingOutputs{
 				SwarmingOutput: []byte(fmt.Sprintf("PREFIX %s ... %s output %s SUFFIX", killerString, exceptBlock.startString, exceptBlock.endString)),
 			},
 			shouldMatch: true,
-		}, {
+		},
+		{
 			name: "should match if string after except_block",
 			testingOutputs: TestingOutputs{
 				SwarmingOutput: []byte(fmt.Sprintf("PREFIX %s output %s ... %s SUFFIX", exceptBlock.startString, exceptBlock.endString, killerString)),
 			},
 			shouldMatch: true,
-		}, {
+		},
+		{
 			name: "should not match if string in except_block",
 			testingOutputs: TestingOutputs{
 				SwarmingOutput: []byte(
@@ -89,7 +94,8 @@ func TestStringInLogCheck(t *testing.T) {
 						exceptBlock.startString, killerString, exceptBlock.endString,
 						exceptBlock2.startString, killerString, exceptBlock2.endString)),
 			},
-		}, {
+		},
+		{
 			name: "should match if string in both except_block and outside except_block",
 			testingOutputs: TestingOutputs{
 				SwarmingOutput: []byte(fmt.Sprintf(
@@ -99,7 +105,8 @@ func TestStringInLogCheck(t *testing.T) {
 				)),
 			},
 			shouldMatch: true,
-		}, {
+		},
+		{
 			name: "should match if swarming task state is in expected states",
 			testingOutputs: TestingOutputs{
 				SwarmingOutput: []byte(killerString),
@@ -107,7 +114,8 @@ func TestStringInLogCheck(t *testing.T) {
 			states:              []string{"STATE_1", "STATE_2"},
 			swarmingResultState: "STATE_1",
 			shouldMatch:         true,
-		}, {
+		},
+		{
 			name: "should not match if swarming task state is not in expected states",
 			testingOutputs: TestingOutputs{
 				SwarmingOutput: []byte(killerString),

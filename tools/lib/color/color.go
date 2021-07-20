@@ -69,9 +69,11 @@ func (color) White(format string, a ...interface{}) string { return colorString(
 func (color) DefaultColor(format string, a ...interface{}) string {
 	return colorString(DefaultFg, format, a...)
 }
+
 func (color) WithColor(code ColorCode, format string, a ...interface{}) string {
 	return colorString(code, format, a...)
 }
+
 func (color) Enabled() bool {
 	return true
 }
@@ -96,9 +98,11 @@ func (monochrome) White(format string, a ...interface{}) string   { return fmt.S
 func (monochrome) DefaultColor(format string, a ...interface{}) string {
 	return fmt.Sprintf(format, a...)
 }
+
 func (monochrome) WithColor(_ ColorCode, format string, a ...interface{}) string {
 	return fmt.Sprintf(format, a...)
 }
+
 func (monochrome) Enabled() bool {
 	return false
 }

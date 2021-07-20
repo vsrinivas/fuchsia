@@ -134,7 +134,6 @@ func TestReadUntilMatch(t *testing.T) {
 		}()
 
 		match, err := ReadUntilMatch(context.Background(), m)
-
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}

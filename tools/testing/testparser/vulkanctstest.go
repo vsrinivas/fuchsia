@@ -17,7 +17,7 @@ var (
 
 func parseVulkanCtsTest(lines [][]byte) []TestCaseResult {
 	var res []TestCaseResult
-	var displayName = ""
+	var displayName string
 	var suiteName string
 	var caseName string
 	for _, line := range lines {
@@ -67,7 +67,6 @@ func parseVulkanCtsTest(lines [][]byte) []TestCaseResult {
 			Status:      Fail,
 			Format:      "VulkanCtsTest",
 		})
-
 	}
 	return res
 }

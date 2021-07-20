@@ -8,7 +8,5 @@ import (
 	"errors"
 )
 
-var (
-	// ErrUnimplemented is an error for unimplemented methods.
-	ErrUnimplemented error = errors.New("method unimplemented")
-)
+// ErrUnimplemented is an error for unimplemented methods.
+var ErrUnimplemented error = errors.New("method unimplemented")

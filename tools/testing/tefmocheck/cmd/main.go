@@ -59,16 +59,16 @@ func loadTestSummary(path string) (*runtests.TestSummary, error) {
 }
 
 func main() {
-	var help = flag.Bool("help", false, "Whether to show Usage and exit.")
+	help := flag.Bool("help", false, "Whether to show Usage and exit.")
 	flag.Usage = usage
-	var swarmingSummaryPath = flag.String("swarming-summary-json", "", "Path to the Swarming task summary file. Required.")
-	var swarmingHost = flag.String("swarming-host", "", "Swarming server host. Optional.")
-	var inputSummaryPath = flag.String("test-summary-json", "", "Path to test summary file. Optional.")
-	var swarmingOutputPath = flag.String("swarming-output", "", "Path to a file containing the stdout and stderr of the Swarming task. Optional.")
-	var syslogPath = flag.String("syslog", "", "Path to a file containing the syslog. Optional.")
-	var serialLogPath = flag.String("serial-log", "", "Path to a file containing the serial log. Optional.")
-	var outputsDir = flag.String("outputs-dir", "", "If set, will produce text output files for the produced tests in this dir. Optional.")
-	var jsonOutput = flag.String("json-output", "", "Output summary.json to this path.")
+	swarmingSummaryPath := flag.String("swarming-summary-json", "", "Path to the Swarming task summary file. Required.")
+	swarmingHost := flag.String("swarming-host", "", "Swarming server host. Optional.")
+	inputSummaryPath := flag.String("test-summary-json", "", "Path to test summary file. Optional.")
+	swarmingOutputPath := flag.String("swarming-output", "", "Path to a file containing the stdout and stderr of the Swarming task. Optional.")
+	syslogPath := flag.String("syslog", "", "Path to a file containing the syslog. Optional.")
+	serialLogPath := flag.String("serial-log", "", "Path to a file containing the serial log. Optional.")
+	outputsDir := flag.String("outputs-dir", "", "If set, will produce text output files for the produced tests in this dir. Optional.")
+	jsonOutput := flag.String("json-output", "", "Output summary.json to this path.")
 	flag.Parse()
 
 	if *help || flag.NArg() > 0 || *swarmingSummaryPath == "" {

@@ -16,10 +16,10 @@ import (
 	"syscall"
 	"unicode/utf8"
 
-	"go.fuchsia.dev/fuchsia/tools/lib/logger"
-
 	"golang.org/x/net/ipv4"
 	"golang.org/x/net/ipv6"
+
+	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 )
 
 // DefaultPort is the mDNS port required of the spec, though this library is port-agnostic.
@@ -660,7 +660,8 @@ func newMDNSConn4() *mDNSConn4 {
 			},
 			netFactory: &defaultConnectionFactoryV4{},
 			ttl:        -1,
-		}}
+		},
+	}
 }
 
 type mDNSConn6 struct {
@@ -677,7 +678,8 @@ func newMDNSConn6() *mDNSConn6 {
 			},
 			netFactory: &defaultConnectionFactoryV6{},
 			ttl:        -1,
-		}}
+		},
+	}
 }
 
 type mDNS struct {

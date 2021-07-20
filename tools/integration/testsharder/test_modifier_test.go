@@ -103,12 +103,18 @@ func TestAffectedModifiers(t *testing.T) {
 			{Test: build.Test{Name: "affected-arm64", OS: linux, CPU: "arm64"}},
 			{Test: build.Test{Name: "affected-linux", OS: linux, CPU: x64}},
 			{Test: build.Test{Name: "affected-mac", OS: "mac", CPU: x64}},
-			{Test: build.Test{Name: "affected-host+target", OS: linux, CPU: x64},
-				Envs: []build.Environment{{Dimensions: build.DimensionSet{DeviceType: "AEMU"}}}},
-			{Test: build.Test{Name: "affected-AEMU", OS: fuchsia, CPU: x64},
-				Envs: []build.Environment{{Dimensions: build.DimensionSet{DeviceType: "AEMU"}}}},
-			{Test: build.Test{Name: "affected-other-device", OS: fuchsia, CPU: x64},
-				Envs: []build.Environment{{Dimensions: build.DimensionSet{DeviceType: "other-device"}}}},
+			{
+				Test: build.Test{Name: "affected-host+target", OS: linux, CPU: x64},
+				Envs: []build.Environment{{Dimensions: build.DimensionSet{DeviceType: "AEMU"}}},
+			},
+			{
+				Test: build.Test{Name: "affected-AEMU", OS: fuchsia, CPU: x64},
+				Envs: []build.Environment{{Dimensions: build.DimensionSet{DeviceType: "AEMU"}}},
+			},
+			{
+				Test: build.Test{Name: "affected-other-device", OS: fuchsia, CPU: x64},
+				Envs: []build.Environment{{Dimensions: build.DimensionSet{DeviceType: "other-device"}}},
+			},
 			{Test: build.Test{Name: "not-affected"}},
 		}
 		nameToShouldBeMultiplied := map[string]bool{

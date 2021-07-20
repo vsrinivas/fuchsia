@@ -130,7 +130,7 @@ func lastLine(input []byte) string {
 
 func TestSplitTestLogs(t *testing.T) {
 	logDir := t.TempDir()
-	if err := os.MkdirAll(logDir, 0700); err != nil {
+	if err := os.MkdirAll(logDir, 0o700); err != nil {
 		t.Fatal("failed to create unifiedLogDir:", err)
 	}
 

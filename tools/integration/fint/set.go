@@ -22,11 +22,9 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/lib/subprocess"
 )
 
-var (
-	// Path to a file within the checkout which, if its timestamp is updated,
-	// will cause the build system to rebuild all nonhermetic build actions.
-	rebuildNonHermeticActionsPath = []string{"build", "tracer", "force_nonhermetic_rebuild"}
-)
+// Path to a file within the checkout which, if its timestamp is updated,
+// will cause the build system to rebuild all nonhermetic build actions.
+var rebuildNonHermeticActionsPath = []string{"build", "tracer", "force_nonhermetic_rebuild"}
 
 // Set runs `gn gen` given a static and context spec. It's intended to be
 // consumed as a library function.

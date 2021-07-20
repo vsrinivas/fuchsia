@@ -12,9 +12,9 @@ import (
 	"path"
 	"path/filepath"
 
-	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
-
 	"github.com/pkg/sftp"
+
+	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
 )
 
 // DataSinkCopier copies data sinks from a remote host after a runtests invocation.
@@ -116,7 +116,7 @@ func (v sftpViewer) copyFile(remote, local string) error {
 	}
 	defer remoteFile.Close()
 
-	if err = os.MkdirAll(filepath.Dir(local), 0777); err != nil {
+	if err = os.MkdirAll(filepath.Dir(local), 0o777); err != nil {
 		return err
 	}
 	localFile, err := os.Create(local)

@@ -51,13 +51,13 @@ func RunChecks(checks []FailureModeCheck, to *TestingOutputs, outputsDir string)
 			outputFile := debugPathForCheck(check)
 			testDetails.OutputFiles = []string{outputFile}
 			outputFileAbsPath := filepath.Join(outputsDir, outputFile)
-			if err := os.MkdirAll(filepath.Dir(outputFileAbsPath), 0777); err != nil {
+			if err := os.MkdirAll(filepath.Dir(outputFileAbsPath), 0o777); err != nil {
 				return nil, err
 			}
 			debugText := fmt.Sprintf(
 				"This is a synthetic test that was produced by the tefmocheck tool during post-processing of test results. See https://fuchsia.googlesource.com/fuchsia/+/HEAD/tools/testing/tefmocheck/README.md\n%s",
 				check.DebugText())
-			if err := ioutil.WriteFile(outputFileAbsPath, []byte(debugText), 0666); err != nil {
+			if err := ioutil.WriteFile(outputFileAbsPath, []byte(debugText), 0o666); err != nil {
 				return nil, err
 			}
 		}

@@ -13,10 +13,8 @@ import (
 	"strings"
 )
 
-var (
-	// ErrBuildIDNotFound is a sometimes expected error that a build ID was not found.
-	ErrBuildIDNotFound = errors.New("build ID not found")
-)
+// ErrBuildIDNotFound is a sometimes expected error that a build ID was not found.
+var ErrBuildIDNotFound = errors.New("build ID not found")
 
 // Binary represents a binary produced by the build.
 type Binary struct {

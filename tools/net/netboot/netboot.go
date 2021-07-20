@@ -17,8 +17,9 @@ import (
 	"strings"
 	"time"
 
-	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"golang.org/x/net/ipv6"
+
+	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 )
 
 // NodenameWildcard is the wildcard for discovering all nodes.
@@ -162,7 +163,8 @@ func newNetbootQuery(nodename string, cookie uint32, port int) (*netbootQuery, e
 		conn:    conn,
 		conn6:   conn6,
 		port:    port,
-		isOpen:  true}, nil
+		isOpen:  true,
+	}, nil
 }
 
 func (n *netbootQuery) write(ctx context.Context) error {

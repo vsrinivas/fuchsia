@@ -30,7 +30,7 @@ func indentJSON(jsonBytes []byte) ([]byte, error) {
 }
 
 func main() {
-	var inputPath = flag.String("file", "", "Path to a file to be parsed. Optional; defaults to stdin.")
+	inputPath := flag.String("file", "", "Path to a file to be parsed. Optional; defaults to stdin.")
 	flag.Usage = usage
 
 	// Parse any global flags (e.g. those for glog)

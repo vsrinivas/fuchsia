@@ -9,10 +9,8 @@ import (
 	"errors"
 )
 
-var (
-	// ErrArgNotSet represents an arg not having been set in the build.
-	ErrArgNotSet = errors.New("arg not set")
-)
+// ErrArgNotSet represents an arg not having been set in the build.
+var ErrArgNotSet = errors.New("arg not set")
 
 // Args represents the GN arguments set in the build.
 type Args map[string]json.RawMessage

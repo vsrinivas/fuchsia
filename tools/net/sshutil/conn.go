@@ -14,12 +14,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pkg/sftp"
+	"golang.org/x/crypto/ssh"
+
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/lib/retry"
 	"go.fuchsia.dev/fuchsia/tools/net/sshutil/constants"
-
-	"github.com/pkg/sftp"
-	"golang.org/x/crypto/ssh"
 )
 
 const (
@@ -443,7 +443,6 @@ func (s *Session) Wait(ctx context.Context) error {
 	case <-ctx.Done():
 		return ctx.Err()
 	}
-
 }
 
 func (s *Session) Run(ctx context.Context, command []string) error {

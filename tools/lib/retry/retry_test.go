@@ -22,7 +22,6 @@ func TestRetry(t *testing.T) {
 			}
 			return fmt.Errorf("try %d", i)
 		}, nil)
-
 		if err != nil {
 			t.Errorf("unexpected error: %v", err)
 		}

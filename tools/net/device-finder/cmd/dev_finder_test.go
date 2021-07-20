@@ -25,17 +25,23 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/net/netboot"
 )
 
-const defaultIPResponseNAT = "192.168.0.42"
-const defaultIPTarget = "192.168.1.92"
-const defaultIPv6ResponseNAT = "fe80::ae68:3cff:3e9f:7317"
-const defaultIPv6Target = "fe80::ae68:3cff:3e9f:beef"
-const defaultIPv6MDNSZone = "mdnsIface0"
+const (
+	defaultIPResponseNAT   = "192.168.0.42"
+	defaultIPTarget        = "192.168.1.92"
+	defaultIPv6ResponseNAT = "fe80::ae68:3cff:3e9f:7317"
+	defaultIPv6Target      = "fe80::ae68:3cff:3e9f:beef"
+	defaultIPv6MDNSZone    = "mdnsIface0"
+)
 
-const fuchsiaMDNSNodename1 = "fuchsia-domain-name-1"
-const fuchsiaMDNSNodename2 = "fuchsia-domain-name-2"
+const (
+	fuchsiaMDNSNodename1 = "fuchsia-domain-name-1"
+	fuchsiaMDNSNodename2 = "fuchsia-domain-name-2"
+)
 
-const defaultIPv6NetbootAddr = "fe80::ae68:3cff:3e9f:7319"
-const defaultIPv6NetbootZone = "netbootIface0"
+const (
+	defaultIPv6NetbootAddr = "fe80::ae68:3cff:3e9f:7319"
+	defaultIPv6NetbootZone = "netbootIface0"
+)
 
 const defaultNetbootNodename = "this-is-a-netboot-device-1"
 
