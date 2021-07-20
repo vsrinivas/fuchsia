@@ -58,7 +58,4 @@ message Context {
   // after an incremental builds with the same static spec but a different
   // version of the code, which perfcompare builders do.
   bool skip_ninja_noop_check = 13;
-
-  // Whether we're performing an incremental build.
-  bool incremental = 14;
 }
