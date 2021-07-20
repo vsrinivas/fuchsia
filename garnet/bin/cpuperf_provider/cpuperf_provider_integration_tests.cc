@@ -14,7 +14,7 @@
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/test/test_settings.h"
 
-const char kTracePath[] = "/bin/trace";
+const char kTracePath[] = "/pkg/bin/trace";
 
 const char kDurationArg[] = "--duration=1";
 

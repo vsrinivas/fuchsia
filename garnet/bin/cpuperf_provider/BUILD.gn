@@ -103,6 +103,7 @@ if (current_cpu == "x64") {
     sources = [ "cpuperf_provider_integration_tests.cc" ]
 
     deps = [
+      "//garnet/bin/trace:bin",
       "//garnet/lib/perfmon",
       "//src/developer/tracing/lib/test_utils",
       "//src/lib/fxl",
