@@ -39,6 +39,7 @@ async fn test_stop_timeouts() {
         .await
         .unwrap()
         .child_name()
+        .to_string()
     };
 
     // Why do we have three duplicate events sets here? We expect three things

@@ -587,8 +587,8 @@ impl ScopedInstance {
         )
     }
     /// Return the name of this instance.
-    pub fn child_name(&self) -> String {
-        return self.child_name.clone();
+    pub fn child_name(&self) -> &str {
+        self.child_name.as_str()
     }
 }
 

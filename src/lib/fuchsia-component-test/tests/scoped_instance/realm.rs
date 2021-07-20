@@ -108,7 +108,7 @@ async fn create_instances() -> Result<Vec<ScopedInstance>, Error> {
         }
         {
             let echo_proxy = connect_to_childs_protocol::<fecho::EchoMarker>(
-                scoped_instance.child_name(),
+                scoped_instance.child_name().to_string(),
                 Some("coll".to_string()),
             )
             .await

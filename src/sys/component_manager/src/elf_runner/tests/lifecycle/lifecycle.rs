@@ -32,7 +32,7 @@ async fn test_normal_behavior() {
         .await
         .unwrap();
 
-        (instance.child_name(), instance.take_destroy_waiter())
+        (instance.child_name().to_string(), instance.take_destroy_waiter())
     };
     let () = destroy_waiter.await.expect("failed to destroy child");
 

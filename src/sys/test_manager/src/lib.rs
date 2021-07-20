@@ -810,7 +810,7 @@ impl Suite {
         let (suite, suite_request) = fidl::endpoints::create_proxy().expect("cannot create suite");
         let test = self.launch_test(sender.clone(), suite_request, test_map.clone()).await;
         let test_name = match &test {
-            Some(t) => Some(t.instance.root.child_name()),
+            Some(t) => Some(t.instance.root.child_name().to_string()),
             None => None,
         };
 
@@ -959,7 +959,7 @@ pub async fn run_test_manager_query_server(
                 {
                     Ok(test) => {
                         let enumeration_result = enumerate_tests(&suite, None).await;
-                        let test_name = test.instance.root.child_name();
+                        let test_name = test.instance.root.child_name().to_string();
                         let t = fasync::Task::spawn(test.destroy());
                         match enumeration_result {
                             Ok(invocations) => {
@@ -1103,7 +1103,7 @@ async fn launch_test(
     .map_err(LaunchTestError::InitializeTestRealm)?;
     realm.set_collection_name(TESTS_COLLECTION);
     let instance = realm.create().await.map_err(LaunchTestError::CreateTestRealm)?;
-    let test_name = instance.root.child_name();
+    let test_name = instance.root.child_name().to_string();
     test_map.insert(test_name.clone(), test_url.to_string());
     let archive_accessor_arc_clone = archive_accessor_arc.clone();
     let connect_to_instance_services = async move {
