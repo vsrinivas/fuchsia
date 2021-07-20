@@ -559,7 +559,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_sys_lseek() -> Result<(), Errno> {
-        let (_kernel, task_owner) = create_kernel_and_task();
+        let (_kernel, task_owner) = create_kernel_and_task_with_pkgfs();
         let ctx = SyscallContext::new(&task_owner.task);
         let fd = FdNumber::from_raw(10);
         let file_handle = task_owner.task.open_file(b"data/testfile.txt", OpenFlags::RDONLY)?;
@@ -593,7 +593,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_sys_dup() -> Result<(), Errno> {
-        let (_kernel, task_owner) = create_kernel_and_task();
+        let (_kernel, task_owner) = create_kernel_and_task_with_pkgfs();
         let ctx = SyscallContext::new(&task_owner.task);
         let file_handle = task_owner.task.open_file(b"data/testfile.txt", OpenFlags::RDONLY)?;
         let files = &task_owner.task.files;
@@ -616,7 +616,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_sys_dup3() -> Result<(), Errno> {
-        let (_kernel, task_owner) = create_kernel_and_task();
+        let (_kernel, task_owner) = create_kernel_and_task_with_pkgfs();
         let ctx = SyscallContext::new(&task_owner.task);
         let file_handle = task_owner.task.open_file(b"data/testfile.txt", OpenFlags::RDONLY)?;
         let files = &task_owner.task.files;

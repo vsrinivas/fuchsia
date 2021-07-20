@@ -264,7 +264,7 @@ async fn start_component(
     let remotefs =
         Remotefs::new(root.into_channel(), fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE);
 
-    let fs = FsContext::new(Namespace::new(remotefs));
+    let fs = FsContext::new(remotefs);
     for mnt in mount {
         let mut field_iter = mnt.as_bytes().splitn(2, |c| *c == b':');
         let mut mount_point =

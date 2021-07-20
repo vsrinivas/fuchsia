@@ -10,6 +10,7 @@ use std::sync::Arc;
 
 use crate::auth::Credentials;
 use crate::fs::fuchsia::Remotefs;
+use crate::fs::tmpfs::Tmpfs;
 use crate::fs::*;
 use crate::mm::syscalls::sys_mmap;
 use crate::syscalls::SyscallContext;
@@ -20,23 +21,26 @@ use crate::types::*;
 /// Create an FsContext for use in testing.
 ///
 /// Open "/pkg" and returns an FsContext rooted in that directory.
-pub fn create_test_file_system() -> Arc<FsContext> {
+fn create_pkgfs() -> Arc<FsContext> {
     let root =
         directory::open_in_namespace("/pkg", fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE)
             .expect("failed to open /pkg");
-    return FsContext::new(Namespace::new(Remotefs::new(
+    return FsContext::new(Remotefs::new(
         root.into_channel().unwrap().into_zx_channel(),
         fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
-    )));
+    ));
 }
 
 /// Creates a `Kernel` and `Task` with the package file system for testing purposes.
 ///
 /// The `Task` is backed by a real process, and can be used to test syscalls.
-pub fn create_kernel_and_task() -> (Arc<Kernel>, TaskOwner) {
-    create_kernel_and_task_with_fs(create_test_file_system())
+pub fn create_kernel_and_task_with_pkgfs() -> (Arc<Kernel>, TaskOwner) {
+    create_kernel_and_task_with_fs(create_pkgfs())
 }
 
+pub fn create_kernel_and_task() -> (Arc<Kernel>, TaskOwner) {
+    create_kernel_and_task_with_fs(FsContext::new(Tmpfs::new()))
+}
 /// Creates a `Kernel` and `Task` for testing purposes.
 ///
 /// The `Task` is backed by a real process, and can be used to test syscalls.
@@ -67,7 +71,7 @@ pub fn create_task(kernel: &Arc<Kernel>, task_name: &str) -> TaskOwner {
         &CString::new(task_name).unwrap(),
         0,
         FdTable::new(),
-        create_test_file_system(),
+        create_pkgfs(),
         Credentials::default(),
         None,
     )

@@ -182,8 +182,7 @@ mod test {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_write_read() {
-        let fs = FsContext::new(Namespace::new(Tmpfs::new()));
-        let (_kernel, task_owner) = create_kernel_and_task_with_fs(fs);
+        let (_kernel, task_owner) = create_kernel_and_task();
         let task = &task_owner.task;
 
         let test_mem_size = 0x10000;
@@ -225,8 +224,7 @@ mod test {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_permissions() {
-        let fs = FsContext::new(Namespace::new(Tmpfs::new()));
-        let (_kernel, task_owner) = create_kernel_and_task_with_fs(fs);
+        let (_kernel, task_owner) = create_kernel_and_task();
         let task = &task_owner.task;
 
         let path = b"test.bin";
@@ -266,8 +264,7 @@ mod test {
 
         // At this point, all the nodes are dropped.
 
-        let (_kernel, task_owner) =
-            create_kernel_and_task_with_fs(FsContext::new(Namespace::new(fs)));
+        let (_kernel, task_owner) = create_kernel_and_task_with_fs(FsContext::new(fs));
         let task = &task_owner.task;
 
         task.open_file(b"/usr/bin", OpenFlags::RDONLY | OpenFlags::DIRECTORY)

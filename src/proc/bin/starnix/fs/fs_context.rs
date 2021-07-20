@@ -45,7 +45,8 @@ impl FsContext {
     ///
     /// The root and cwd of the FsContext are initialized to the root of the
     /// namespace.
-    pub fn new(namespace: Arc<Namespace>) -> Arc<FsContext> {
+    pub fn new(root: FileSystemHandle) -> Arc<FsContext> {
+        let namespace = Namespace::new(root);
         let root = namespace.root();
         Arc::new(FsContext {
             namespace,
@@ -143,12 +144,13 @@ impl FsContext {
 mod test {
     use fuchsia_async as fasync;
 
+    use super::*;
+    use crate::fs::tmpfs::Tmpfs;
     use crate::testing::*;
-    use crate::types::*;
 
     #[fasync::run_singlethreaded(test)]
     async fn test_umask() {
-        let fs = create_test_file_system();
+        let fs = FsContext::new(Tmpfs::new());
 
         assert_eq!(FileMode::from_bits(0o22), fs.set_umask(FileMode::from_bits(0o3020)));
         assert_eq!(FileMode::from_bits(0o646), fs.apply_umask(FileMode::from_bits(0o666)));
@@ -158,7 +160,7 @@ mod test {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_chdir() {
-        let (_kernel, task_owner) = create_kernel_and_task();
+        let (_kernel, task_owner) = create_kernel_and_task_with_pkgfs();
 
         let task = &task_owner.task;
         assert_eq!(b"/".to_vec(), task.fs.cwd().path());

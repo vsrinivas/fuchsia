@@ -238,7 +238,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_load_hello_starnix() {
-        let (_kernel, task_owner) = create_kernel_and_task();
+        let (_kernel, task_owner) = create_kernel_and_task_with_pkgfs();
         let task = &task_owner.task;
         exec_hello_starnix(task).expect("failed to load executable");
         assert!(task.mm.get_mapping_count() > 0);
@@ -246,7 +246,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_snapshot_hello_starnix() {
-        let (kernel, task_owner) = create_kernel_and_task();
+        let (kernel, task_owner) = create_kernel_and_task_with_pkgfs();
         let task = &task_owner.task;
         exec_hello_starnix(task).expect("failed to load executable");
 
