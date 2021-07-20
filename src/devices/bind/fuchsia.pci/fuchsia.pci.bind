@@ -38,6 +38,7 @@ extend uint fuchsia.BIND_PCI_DID {
   VIRTIO_DEV_TYPE_T_ENTROPY = 0x1005,
   VIRTIO_DEV_TYPE_T_9P = 0x1009,
   RTL8111 = 0x8168,
+  INTEL_SPT_SPI0 = 0x9d29,
 };
 
 extend uint fuchsia.BIND_PCI_CLASS {

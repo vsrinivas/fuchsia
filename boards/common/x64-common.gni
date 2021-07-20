@@ -23,6 +23,7 @@ _bootfs_deps =
       "//src/devices/i2c/drivers/intel-i2c",
       "//src/devices/rtc/drivers/intel-rtc",
       "//src/devices/serial/drivers/uart16550",
+      "//src/devices/spi/drivers/intel-gspi",
       "//src/devices/usb/drivers/xhci-rewrite:xhci",
       "//src/graphics/display/drivers/intel-i915",
       "//src/graphics/display/drivers/simple:simple.amd-kaveri",

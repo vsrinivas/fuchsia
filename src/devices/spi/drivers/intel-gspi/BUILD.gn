@@ -1,0 +1,79 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/bind/bind.gni")
+import("//build/components.gni")
+import("//build/config/fuchsia/rules.gni")
+import("//build/test.gni")
+
+driver_bind_rules("intel_gspi_bind") {
+  rules = "intel-gspi.bind"
+  header_output = "intel_gspi_bind.h"
+  tests = "bind_tests.json"
+  deps = [ "//src/devices/bind/fuchsia.pci" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":intel-gspi-test",
+    ":intel_gspi_bind_test",
+  ]
+}
+
+common_deps = [
+  ":intel_gspi_bind",
+  "//sdk/banjo/fuchsia.hardware.acpi:fuchsia.hardware.acpi_banjo_cpp",
+  "//sdk/banjo/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp",
+  "//sdk/banjo/fuchsia.hardware.spiimpl:fuchsia.hardware.spiimpl_banjo_cpp",
+  "//sdk/fidl/fuchsia.hardware.spi:fuchsia.hardware.spi_llcpp",
+  "//src/devices/lib/acpi",
+  "//src/devices/lib/driver",
+  "//src/devices/lib/mmio",
+  "//src/devices/pci/lib/device-protocol-pci",
+  "//src/devices/pci/lib/pci",
+  "//src/lib/ddktl",
+  "//zircon/public/lib/hwreg",
+  "//zircon/system/ulib/inspect",
+]
+
+driver_module("driver") {
+  output_name = "intel-gspi"
+  configs += [
+    "//build/config:all_source",
+    "//build/config/fuchsia:enable_zircon_asserts",
+  ]
+  deps = common_deps
+  sources = [ "intel-gspi.cc" ]
+}
+
+fuchsia_system_package("intel-gspi") {
+  package_name = "intel-gspi"
+  deps = [ ":driver" ]
+
+  allowed_in_extra_deps = true
+}
+
+test("intel-gspi-test-bin") {
+  output_name = "intel-gspi-test"
+  sources = [
+    "intel-gspi-test.cc",
+    "intel-gspi.cc",
+  ]
+
+  deps =
+      common_deps + [
+        "//sdk/banjo/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp_mock",
+        "//src/devices/testing/mock-ddk",
+        "//src/devices/testing/fake-mmio-reg",
+        "//zircon/system/ulib/async-loop:async-loop-cpp",
+        "//zircon/system/ulib/mock-function",
+        "//zircon/system/ulib/zxtest",
+        "//src/devices/lib/acpi/mock:mock-acpi",
+      ]
+}
+
+fuchsia_unittest_package("intel-gspi-test") {
+  deps = [ ":intel-gspi-test-bin" ]
+}
