@@ -40,10 +40,10 @@ class DevfsExporter {
   }
 
  private:
-  DevfsExporter(fidl::Client<fuchsia_device_fs::Exporter> exporter,
+  DevfsExporter(fidl::WireSharedClient<fuchsia_device_fs::Exporter> exporter,
                 const fbl::RefPtr<fs::PseudoDir>& svc_dir);
 
-  fidl::Client<fuchsia_device_fs::Exporter> exporter_;
+  fidl::WireSharedClient<fuchsia_device_fs::Exporter> exporter_;
   fbl::RefPtr<fs::PseudoDir> svc_dir_;
 };
 

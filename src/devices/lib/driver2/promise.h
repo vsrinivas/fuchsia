@@ -17,16 +17,15 @@ class ContinueWith;
 namespace internal {
 
 // Connects to the given |path| in |ns|, and returns a fpromise::result containing a
-// fidl::Client on success.
+// fidl::WireSharedClient on success.
 template <typename T>
-fpromise::result<fidl::Client<T>, zx_status_t> ConnectWithResult(const driver::Namespace& ns,
-                                                                 async_dispatcher_t* dispatcher,
-                                                                 std::string_view path) {
+fpromise::result<fidl::WireSharedClient<T>, zx_status_t> ConnectWithResult(
+    const driver::Namespace& ns, async_dispatcher_t* dispatcher, std::string_view path) {
   auto result = ns.Connect<T>(path);
   if (result.is_error()) {
     return fpromise::error(result.status_value());
   }
-  fidl::Client<T> client(std::move(*result), dispatcher);
+  fidl::WireSharedClient<T> client(std::move(*result), dispatcher);
   return fpromise::ok(std::move(client));
 }
 
@@ -71,9 +70,9 @@ struct ContinueCall<Func, 1> {
 }  // namespace internal
 
 // Connects to the given |path| in |ns|, and returns a fpromise::promise containing a
-// fidl::Client on success.
+// fidl::WireSharedClient on success.
 template <typename T>
-fpromise::promise<fidl::Client<T>, zx_status_t> Connect(
+fpromise::promise<fidl::WireSharedClient<T>, zx_status_t> Connect(
     const driver::Namespace& ns, async_dispatcher_t* dispatcher,
     std::string_view path = fidl::DiscoverableProtocolDefaultPath<T>) {
   return fpromise::make_result_promise(internal::ConnectWithResult<T>(ns, dispatcher, path));

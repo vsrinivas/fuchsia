@@ -51,7 +51,7 @@ class PackagedDriver {
  private:
   async_dispatcher_t* dispatcher_;
   svc::Outgoing outgoing_;
-  fidl::Client<fdf::Node> node_;
+  fidl::WireSharedClient<fdf::Node> node_;
   driver::Namespace ns_;
   driver::Logger logger_;
   inspect::Inspector inspector_;

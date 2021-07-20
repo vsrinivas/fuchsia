@@ -16,11 +16,11 @@ zx::status<DevfsExporter> DevfsExporter::Create(const Namespace& ns, async_dispa
   if (result.is_error()) {
     return result.take_error();
   }
-  fidl::Client<fdfs::Exporter> client(std::move(*result), dispatcher);
+  fidl::WireSharedClient<fdfs::Exporter> client(std::move(*result), dispatcher);
   return zx::ok(DevfsExporter(std::move(client), svc_dir));
 }
 
-DevfsExporter::DevfsExporter(fidl::Client<fdfs::Exporter> exporter,
+DevfsExporter::DevfsExporter(fidl::WireSharedClient<fdfs::Exporter> exporter,
                              const fbl::RefPtr<fs::PseudoDir>& svc_dir)
     : exporter_(std::move(exporter)), svc_dir_(svc_dir) {}
 

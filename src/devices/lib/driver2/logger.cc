@@ -21,7 +21,7 @@ zx::status<Logger> Logger::Create(const Namespace& ns, async_dispatcher_t* dispa
     return ns_result.take_error();
   }
 
-  fidl::Client<fuchsia_logger::LogSink> log_sink(std::move(*ns_result), dispatcher);
+  fidl::WireSharedClient<fuchsia_logger::LogSink> log_sink(std::move(*ns_result), dispatcher);
   auto sink_result = log_sink->Connect(std::move(server_end));
   if (!sink_result.ok()) {
     return zx::error(sink_result.status());
