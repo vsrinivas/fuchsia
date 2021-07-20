@@ -17,7 +17,7 @@ function check-for-package-server {
       fx-warn "WARNING: You probably need to stop that one and start a new one here with \"fx serve\""
     fi
   else
-    if is_macos; then
+    if [[ "$(uname -s)" == "Darwin" ]]; then
       if ! netstat -anp tcp | awk '{print $4}' | grep "\.8085$" > /dev/null; then
         fx-error "It looks like the ffx package server is not running."
         fx-error "You probably need to run \"fx add-update-source\""
