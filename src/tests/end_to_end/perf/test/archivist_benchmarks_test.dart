@@ -9,9 +9,9 @@ import 'helpers.dart';
 void main() {
   enableLoggingOutput();
 
-  test('archivist_benchmarks', () async {
+  test('archivist_redaction_benchmarks', () async {
     final helper = await PerfTestHelper.make();
     await helper.runTestCommand(
-        (resultsFile) => '/bin/archivist_benchmarks $resultsFile');
+        (resultsFile) => '/bin/archivist_redaction_benchmarks $resultsFile');
   }, timeout: Timeout.none);
 }

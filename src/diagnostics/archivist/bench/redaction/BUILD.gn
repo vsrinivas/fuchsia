@@ -5,11 +5,14 @@
 import("//build/components.gni")
 import("//src/diagnostics/archivist/build/archivist.gni")
 
-fuchsia_shell_package("archivist-benchmarks") {
-  deps = [ "redaction:bin" ]
-}
+archivist_optimized_binary("bin") {
+  output_name = "archivist_redaction_benchmarks"
+  edition = "2018"
 
-group("bench") {
-  testonly = true
-  deps = [ ":archivist-benchmarks" ]
+  deps = [
+    "//src/developer/fuchsia-criterion",
+    "//src/diagnostics/archivist:lib",
+  ]
+
+  sources = [ "src/main.rs" ]
 }
