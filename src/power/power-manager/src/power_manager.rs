@@ -237,30 +237,18 @@ mod tests {
         })
     }
 
-    /// Tests for correct ordering of nodes within each available node config file. The test
-    /// verifies that if the DriverManagerHandler node is present in the config file, then it is
-    /// listed before any other nodes that require a driver connection (identified as a node that
-    /// contains a string config key called "driver_path").
     #[test]
-    fn test_config_files_driver_manager_handler_ordering() {
+    fn test_config_files() -> Result<(), Error> {
         let config_files = get_node_config_files().collect::<Vec<_>>();
         assert!(config_files.len() > 0, "No config files found");
 
         for (file_path, config_file) in config_files {
-            let driver_manager_handler_index =
-                config_file.iter().position(|config| config["type"] == "DriverManagerHandler");
-            let first_node_using_drivers_index =
-                config_file.iter().position(|config| config["config"].get("driver_path").is_some());
-
-            if driver_manager_handler_index.is_some() && first_node_using_drivers_index.is_some() {
-                assert!(
-                    driver_manager_handler_index.unwrap()
-                        <= first_node_using_drivers_index.unwrap(),
-                    "Error in {}: Must list DriverManagerHandler node before {}",
-                    file_path,
-                    config_file[first_node_using_drivers_index.unwrap()]["name"]
-                );
-            }
+            cpu_control_handler::tests::test_config_file(&config_file)
+                .context(format!("cpu_control_handler check failed for {}", file_path))?;
+            driver_manager_handler::tests::test_config_file(&config_file)
+                .context(format!("driver_manager_handler check failed for {}", file_path))?;
         }
+
+        Ok(())
     }
 }

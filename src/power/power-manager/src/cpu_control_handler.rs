@@ -54,8 +54,8 @@ pub struct CpuControlParams {
     pub p_states: Vec<PState>,
     /// Model capacitance of each CPU core. Required to estimate power usage.
     pub capacitance: Farads,
-    /// Number of cores contained within this CPU domain.
-    pub num_cores: u32,
+    /// Logical CPU numbers contained within this CPU domain.
+    pub logical_cpu_numbers: Vec<u32>,
 }
 
 impl CpuControlParams {
@@ -63,8 +63,11 @@ impl CpuControlParams {
     ///  - Contains at least one element;
     ///  - Is in order of decreasing nominal power consumption.
     fn validate(&self) -> Result<(), Error> {
-        if self.num_cores == 0 {
-            return Err(format_err!("Must have > 0 cores"));
+        if self.logical_cpu_numbers.len() == 0 {
+            return Err(format_err!("Must have > 0 CPUs"));
+        }
+        if !self.logical_cpu_numbers.windows(2).all(|w| w[0] < w[1]) {
+            return Err(format_err!("CPUs must be sorted and non-repeating"));
         }
         if self.p_states.len() == 0 {
             return Err(format_err!("Must have at least one P-state"));
@@ -108,6 +111,7 @@ pub struct CpuControlHandlerBuilder<'a> {
     cpu_dev_handler_node: Rc<dyn Node>,
     cpu_ctrl_proxy: Option<fcpuctrl::DeviceProxy>,
     inspect_root: Option<&'a inspect::Node>,
+    logical_cpu_numbers: Vec<u32>,
 }
 
 impl<'a> CpuControlHandlerBuilder<'a> {
@@ -115,6 +119,7 @@ impl<'a> CpuControlHandlerBuilder<'a> {
         cpu_driver_path: String,
         // TODO(fxbug.dev/45507): Determine a proper owner for this value.
         capacitance: Farads,
+        logical_cpu_numbers: Vec<u32>,
         cpu_stats_handler: Rc<dyn Node>,
         cpu_dev_handler_node: Rc<dyn Node>,
     ) -> Self {
@@ -122,6 +127,7 @@ impl<'a> CpuControlHandlerBuilder<'a> {
             cpu_driver_path,
             capacitance,
             min_cpu_clock_speed: Hertz(0.0),
+            logical_cpu_numbers,
             cpu_stats_handler,
             cpu_dev_handler_node,
             cpu_ctrl_proxy: None,
@@ -134,6 +140,7 @@ impl<'a> CpuControlHandlerBuilder<'a> {
         cpu_driver_path: String,
         proxy: fcpuctrl::DeviceProxy,
         capacitance: Farads,
+        logical_cpu_numbers: Vec<u32>,
         cpu_stats_handler: Rc<dyn Node>,
         cpu_dev_handler_node: Rc<dyn Node>,
     ) -> Self {
@@ -142,6 +149,7 @@ impl<'a> CpuControlHandlerBuilder<'a> {
             cpu_ctrl_proxy: Some(proxy),
             min_cpu_clock_speed: Hertz(0.0),
             capacitance,
+            logical_cpu_numbers,
             cpu_stats_handler,
             cpu_dev_handler_node,
             inspect_root: None,
@@ -154,6 +162,7 @@ impl<'a> CpuControlHandlerBuilder<'a> {
             driver_path: String,
             capacitance: f64,
             min_cpu_clock_speed: f64,
+            logical_cpu_numbers: Vec<u32>,
         }
 
         #[derive(Deserialize)]
@@ -172,6 +181,7 @@ impl<'a> CpuControlHandlerBuilder<'a> {
         Self::new_with_driver_path(
             data.config.driver_path,
             Farads(data.config.capacitance),
+            data.config.logical_cpu_numbers,
             nodes[&data.dependencies.cpu_stats_handler_node].clone(),
             nodes[&data.dependencies.cpu_dev_handler_node].clone(),
         )
@@ -208,6 +218,7 @@ impl<'a> CpuControlHandlerBuilder<'a> {
             &self.cpu_driver_path,
             &proxy,
             self.capacitance,
+            self.logical_cpu_numbers,
             self.min_cpu_clock_speed,
         )
         .await
@@ -240,6 +251,7 @@ impl<'a> CpuControlHandlerBuilder<'a> {
         cpu_driver_path: &String,
         cpu_ctrl_proxy: &fcpuctrl::DeviceProxy,
         capacitance: Farads,
+        logical_cpu_numbers: Vec<u32>,
         min_cpu_clock_speed: Hertz,
     ) -> Result<CpuControlParams, Error> {
         fuchsia_trace::duration!(
@@ -269,11 +281,7 @@ impl<'a> CpuControlHandlerBuilder<'a> {
             }
         }
 
-        let params = CpuControlParams {
-            p_states,
-            num_cores: cpu_ctrl_proxy.get_num_logical_cores().await? as u32,
-            capacitance,
-        };
+        let params = CpuControlParams { p_states, logical_cpu_numbers, capacitance };
         params.validate()?;
 
         fuchsia_trace::instant!(
@@ -284,7 +292,7 @@ impl<'a> CpuControlHandlerBuilder<'a> {
             "valid" => 1,
             "p_states" => format!("{:?}", params.p_states).as_str(),
             "capacitance" => params.capacitance.0,
-            "num_cores" => params.num_cores,
+            "logical_cpu_numbers" => format!("{:?}", params.logical_cpu_numbers).as_str(),
             "skipped_p_states" => format!("{:?}", skipped_p_states).as_str()
         );
 
@@ -328,11 +336,17 @@ impl CpuControlHandler {
             "CpuControlHandler::get_load",
             "driver" => self.cpu_driver_path.as_str()
         );
-        match self.send_message(&self.cpu_stats_handler, &Message::GetCpuLoads).await {
-            Ok(MessageReturn::GetCpuLoads(loads)) => Ok(loads.iter().sum()),
-            Ok(r) => Err(format_err!("GetCpuLoads had unexpected return value: {:?}", r)),
-            Err(e) => Err(format_err!("GetCpuLoads failed: {:?}", e)),
-        }
+
+        // Get load for all CPUs in the system
+        let cpu_loads =
+            match self.send_message(&self.cpu_stats_handler, &Message::GetCpuLoads).await {
+                Ok(MessageReturn::GetCpuLoads(loads)) => Ok(loads),
+                Ok(r) => Err(format_err!("GetCpuLoads had unexpected return value: {:?}", r)),
+                Err(e) => Err(format_err!("GetCpuLoads failed: {:?}", e)),
+            }?;
+
+        // Filter down to only the ones we're concerned with
+        Ok(self.cpu_control_params.logical_cpu_numbers.iter().map(|i| cpu_loads[*i as usize]).sum())
     }
 
     /// Returns the current CPU P-state index
@@ -369,7 +383,7 @@ impl CpuControlHandler {
         let current_p_state_index = self.current_p_state_index.get();
 
         // This is reused several times.
-        let num_cores = self.cpu_control_params.num_cores as f64;
+        let num_cores = self.cpu_control_params.logical_cpu_numbers.len() as f64;
 
         // The operation completion rate over the last sample interval is
         //     num_operations / sample_interval,
@@ -387,9 +401,6 @@ impl CpuControlHandler {
                 self.cpu_driver_path.as_str() => last_load
             );
 
-            // TODO(pshickel): Eventually we'll need a way to query the load only from the cores we
-            // care about. As far as I can tell, there isn't currently a way to correlate the CPU
-            // info coming from CpuStats with that from CpuCtrl.
             let last_frequency = self.cpu_control_params.p_states[current_p_state_index].frequency;
             (last_frequency.mul_scalar(last_load), last_frequency.mul_scalar(num_cores))
         };
@@ -521,7 +532,10 @@ impl InspectData {
         }
 
         cpu_params_node.record_double("capacitance (F)", params.capacitance.0);
-        cpu_params_node.record_uint("num_cores", params.num_cores.into());
+        cpu_params_node.record_string(
+            "logical_cpu_numbers",
+            format!("{:?}", params.logical_cpu_numbers).as_str(),
+        );
 
         // Pass ownership of the new `cpu_params_node` to the root node
         self.root_node.record(cpu_params_node);
@@ -538,6 +552,7 @@ pub mod tests {
     use futures::TryStreamExt;
     use inspect::assert_data_tree;
     use matches::assert_matches;
+    use std::collections::HashSet;
 
     fn setup_fake_service(params: CpuControlParams) -> fcpuctrl::DeviceProxy {
         let (proxy, mut stream) =
@@ -547,7 +562,7 @@ pub mod tests {
             while let Ok(req) = stream.try_next().await {
                 match req {
                     Some(fcpuctrl::DeviceRequest::GetNumLogicalCores { responder }) => {
-                        let _ = responder.send(params.num_cores as u64);
+                        let _ = responder.send(params.logical_cpu_numbers.len() as u64);
                     }
                     Some(fcpuctrl::DeviceRequest::GetPerformanceStateInfo { state, responder }) => {
                         let index = state as usize;
@@ -580,6 +595,7 @@ pub mod tests {
             "Fake".to_string(),
             setup_fake_service(params),
             capacitance,
+            vec![0, 1, 2, 3],
             cpu_stats_handler,
             cpu_dev_handler_node,
         )
@@ -599,7 +615,7 @@ pub mod tests {
         let mut mock_maker = MockNodeMaker::new();
         let cpu_ctrl_node = setup_test_node(
             CpuControlParams {
-                num_cores: 1,
+                logical_cpu_numbers: vec![0],
                 p_states: vec![PState { frequency: Hertz(0.0), voltage: Volts(0.0) }],
                 capacitance: Farads(0.0),
             },
@@ -624,9 +640,27 @@ pub mod tests {
     /// Tests that CpuControlParams' `validate` correctly returns an error under invalid inputs.
     #[test]
     fn test_invalid_cpu_params() {
-        // Num_cores == 0
+        // Empty CPUs
         assert!(CpuControlParams {
-            num_cores: 0,
+            logical_cpu_numbers: vec![],
+            p_states: vec![PState { frequency: Hertz(0.0), voltage: Volts(0.0) }],
+            capacitance: Farads(100e-12)
+        }
+        .validate()
+        .is_err());
+
+        // Repeating CPUs
+        assert!(CpuControlParams {
+            logical_cpu_numbers: vec![0, 0],
+            p_states: vec![PState { frequency: Hertz(0.0), voltage: Volts(0.0) }],
+            capacitance: Farads(100e-12)
+        }
+        .validate()
+        .is_err());
+
+        // Non-ascending CPUs
+        assert!(CpuControlParams {
+            logical_cpu_numbers: vec![1, 0],
             p_states: vec![PState { frequency: Hertz(0.0), voltage: Volts(0.0) }],
             capacitance: Farads(100e-12)
         }
@@ -634,13 +668,17 @@ pub mod tests {
         .is_err());
 
         // Empty p_states
-        assert!(CpuControlParams { num_cores: 1, p_states: vec![], capacitance: Farads(100e-12) }
-            .validate()
-            .is_err());
+        assert!(CpuControlParams {
+            logical_cpu_numbers: vec![0],
+            p_states: vec![],
+            capacitance: Farads(100e-12)
+        }
+        .validate()
+        .is_err());
 
         // p_states in order of increasing power usage
         assert!(CpuControlParams {
-            num_cores: 1,
+            logical_cpu_numbers: vec![0],
             p_states: vec![
                 PState { frequency: Hertz(1.0), voltage: Volts(1.0) },
                 PState { frequency: Hertz(2.0), voltage: Volts(1.0) }
@@ -652,7 +690,7 @@ pub mod tests {
 
         // p_states with identical power usage
         assert!(CpuControlParams {
-            num_cores: 1,
+            logical_cpu_numbers: vec![0],
             p_states: vec![
                 PState { frequency: Hertz(1.0), voltage: Volts(1.0) },
                 PState { frequency: Hertz(1.0), voltage: Volts(1.0) }
@@ -678,7 +716,7 @@ pub mod tests {
 
         // Arbitrary CpuControlParams chosen to allow the node to demonstrate P-state selection
         let cpu_params = CpuControlParams {
-            num_cores: 4,
+            logical_cpu_numbers: vec![0, 1, 2, 3],
             p_states: vec![
                 PState { frequency: Hertz(2.0e9), voltage: Volts(5.0) },
                 PState { frequency: Hertz(2.0e9), voltage: Volts(4.0) },
@@ -695,7 +733,7 @@ pub mod tests {
                 get_cpu_power(
                     cpu_params.capacitance,
                     p_state.voltage,
-                    p_state.frequency.mul_scalar(cpu_params.num_cores as f64),
+                    p_state.frequency.mul_scalar(cpu_params.logical_cpu_numbers.len() as f64),
                 )
             })
             .collect();
@@ -705,9 +743,11 @@ pub mod tests {
             // The CpuControlHandler node queries the current CPU load each time it receives a
             // SetMaxPowerConsumption message
             vec![
-                (msg_eq!(GetCpuLoads), msg_ok_return!(GetCpuLoads(vec![1.0; 4]))),
-                (msg_eq!(GetCpuLoads), msg_ok_return!(GetCpuLoads(vec![1.0; 4]))),
-                (msg_eq!(GetCpuLoads), msg_ok_return!(GetCpuLoads(vec![1.0; 4]))),
+                // Make StatsNode give load for more CPUs than we care about to test the filtering
+                // logic
+                (msg_eq!(GetCpuLoads), msg_ok_return!(GetCpuLoads(vec![1.0; 8]))),
+                (msg_eq!(GetCpuLoads), msg_ok_return!(GetCpuLoads(vec![1.0; 8]))),
+                (msg_eq!(GetCpuLoads), msg_ok_return!(GetCpuLoads(vec![1.0; 8]))),
             ],
         );
         let devhost_node = mock_maker.make(
@@ -767,7 +807,7 @@ pub mod tests {
         // Arbitrary CpuControlParams chosen to allow the node to demonstrate P-state selection
         let capacitance = Farads(100.0e-12);
         let cpu_params = CpuControlParams {
-            num_cores: 4,
+            logical_cpu_numbers: vec![0, 1, 2, 3],
             p_states: vec![
                 PState { frequency: Hertz(2.0e9), voltage: Volts(3.0) },
                 PState { frequency: Hertz(1.0e9), voltage: Volts(3.0) },
@@ -784,7 +824,7 @@ pub mod tests {
                 get_cpu_power(
                     capacitance,
                     p_state.voltage,
-                    Hertz(p_state.frequency.0 * cpu_params.num_cores as f64),
+                    Hertz(p_state.frequency.0 * cpu_params.logical_cpu_numbers.len() as f64),
                 )
             })
             .collect();
@@ -815,6 +855,7 @@ pub mod tests {
             "Fake".to_string(),
             setup_fake_service(cpu_params),
             capacitance,
+            vec![0, 1, 2, 3],
             stats_node,
             devhost_node.clone(),
         )
@@ -849,16 +890,20 @@ pub mod tests {
         let mut mock_maker = MockNodeMaker::new();
 
         // Some dummy CpuControlParams to verify the params get published in Inspect
-        let num_cores = 4;
         let p_state = PState { frequency: Hertz(2.0e9), voltage: Volts(4.5) };
         let capacitance = Farads(100.0e-12);
-        let params = CpuControlParams { num_cores, p_states: vec![p_state], capacitance };
+        let params = CpuControlParams {
+            logical_cpu_numbers: vec![0, 1, 2, 3],
+            p_states: vec![p_state],
+            capacitance,
+        };
 
         let inspector = inspect::Inspector::new();
         let _node = CpuControlHandlerBuilder::new_with_proxy(
             "Fake".to_string(),
             setup_fake_service(params),
             capacitance,
+            vec![0, 1, 2, 3],
             mock_maker.make("StatsNode", vec![]),
             mock_maker.make(
                 "DevHostNode",
@@ -880,7 +925,7 @@ pub mod tests {
                 "CpuControlHandler (Fake)": contains {
                     cpu_control_params: {
                         "capacitance (F)": capacitance.0,
-                        num_cores: num_cores as u64,
+                        logical_cpu_numbers: "[0, 1, 2, 3]",
                         p_state_0: {
                             "voltage (V)": p_state.voltage.0,
                             "frequency (Hz)": p_state.frequency.0
@@ -900,7 +945,8 @@ pub mod tests {
             "config": {
                 "driver_path": "/dev/class/cpu-ctrl/000",
                 "capacitance": 1.2E-10,
-                "min_cpu_clock_speed": 1.0e9
+                "min_cpu_clock_speed": 1.0e9,
+                "logical_cpu_numbers": [0, 1]
             },
             "dependencies": {
                 "cpu_stats_handler_node": "cpu_stats",
@@ -913,5 +959,28 @@ pub mod tests {
         nodes.insert("cpu_stats".to_string(), mock_maker.make("MockNode", vec![]));
         nodes.insert("cpu_dev".to_string(), mock_maker.make("MockNode", vec![]));
         let _ = CpuControlHandlerBuilder::new_from_json(json_data, &nodes);
+    }
+
+    /// Called by power_manager::tests::test_config_files for each node config file under
+    /// node_config/.
+    ///
+    /// Tests that node config files do not contain instances of CpuControlHandler nodes with
+    /// overlapping CPU numbers.
+    pub fn test_config_file(config_file: &Vec<json::Value>) -> Result<(), Error> {
+        let cpu_control_handlers = config_file.iter().filter(|n| n["type"] == "CpuControlHandler");
+
+        let mut set = HashSet::new();
+        for node in cpu_control_handlers {
+            for cpu in node["config"]["logical_cpu_numbers"].as_array().unwrap() {
+                let cpu_idx = cpu.as_i64().unwrap();
+                if set.contains(&cpu_idx) {
+                    return Err(format_err!("CPU {} already specified", cpu_idx));
+                }
+
+                set.insert(cpu_idx);
+            }
+        }
+
+        Ok(())
     }
 }

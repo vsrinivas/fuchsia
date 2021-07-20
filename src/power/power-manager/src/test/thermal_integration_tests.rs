@@ -23,7 +23,7 @@ use test_util::assert_near;
 
 #[derive(Clone, Debug)]
 struct SimulatedCpuParams {
-    num_cpus: u32,
+    logical_cpu_numbers: Vec<u32>,
     p_states: Vec<PState>,
     capacitance: Farads,
 }
@@ -137,7 +137,7 @@ impl Simulator {
             environment_temperature: p.environment_temperature,
             time: Seconds(0.0),
             op_scheduler: p.op_scheduler,
-            idle_times: vec![Nanoseconds(0); p.cpu_params.num_cpus as usize],
+            idle_times: vec![Nanoseconds(0); p.cpu_params.logical_cpu_numbers.len() as usize],
             p_state_index: 0,
             thermal_model_params: p.thermal_model_params,
             cpu_params: p.cpu_params,
@@ -259,11 +259,14 @@ impl Simulator {
     /// number of operations completed.
     fn step_cpu(&mut self, dt: Seconds, num_operations_requested: f64) -> f64 {
         let frequency = self.get_p_state().frequency;
-        let num_operations_completed =
-            f64::min(num_operations_requested, frequency * dt * self.cpu_params.num_cpus as f64);
+        let num_operations_completed = f64::min(
+            num_operations_requested,
+            frequency * dt * self.cpu_params.logical_cpu_numbers.len() as f64,
+        );
 
         let total_cpu_time = num_operations_completed / frequency;
-        let active_time_per_core = total_cpu_time.div_scalar(self.cpu_params.num_cpus as f64);
+        let active_time_per_core =
+            total_cpu_time.div_scalar(self.cpu_params.logical_cpu_numbers.len() as f64);
 
         // Calculation of `num_operations_completed` should guarantee this condition.
         assert!(active_time_per_core <= dt);
@@ -295,7 +298,8 @@ impl<'a> ThermalPolicyTest<'a> {
     fn new(sim_params: SimulatorParams, policy_params: ThermalPolicyParams) -> Self {
         {
             let p = &sim_params.cpu_params;
-            let max_op_rate = p.p_states[0].frequency.mul_scalar(p.num_cpus as f64);
+            let max_op_rate =
+                p.p_states[0].frequency.mul_scalar(p.logical_cpu_numbers.len() as f64);
             let max_power = cpu_control_handler::get_cpu_power(
                 p.capacitance,
                 p.p_states[0].voltage,
@@ -353,7 +357,7 @@ impl<'a> ThermalPolicyTest<'a> {
         let cpu_control_params = cpu_control_handler::CpuControlParams {
             p_states: cpu_params.p_states.clone(),
             capacitance: cpu_params.capacitance,
-            num_cores: cpu_params.num_cpus,
+            logical_cpu_numbers: cpu_params.logical_cpu_numbers.clone(),
         };
         let cpu_control_node = cpu_control_handler::tests::setup_test_node(
             cpu_control_params,
@@ -396,7 +400,7 @@ impl<'a> ThermalPolicyTest<'a> {
 
 fn default_cpu_params() -> SimulatedCpuParams {
     SimulatedCpuParams {
-        num_cpus: 4,
+        logical_cpu_numbers: vec![0, 1, 2, 3],
         p_states: vec![
             PState { frequency: Hertz(2.0e9), voltage: Volts(1.0) },
             PState { frequency: Hertz(1.5e9), voltage: Volts(0.8) },
@@ -614,7 +618,8 @@ fn test_average_temperature() {
 fn test_no_jitter_at_max_load() {
     // Choose an operation rate that induces max load at highest frequency.
     let cpu_params = default_cpu_params();
-    let operation_rate = cpu_params.p_states[0].frequency.mul_scalar(cpu_params.num_cpus as f64);
+    let operation_rate =
+        cpu_params.p_states[0].frequency.mul_scalar(cpu_params.logical_cpu_numbers.len() as f64);
 
     // Use a very large filter time constant: 1 deg raw --> 0.001 deg filtered in the first
     // cycle after a change.

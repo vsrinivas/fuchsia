@@ -41,6 +41,12 @@
     "config": {
       "driver_path": "/dev/class/cpu-ctrl/000",
       "capacitance": 1.2E-10,
+      "logical_cpu_numbers": [
+        0,
+        1,
+        2,
+        3
+      ],
       "min_cpu_clock_speed": 1000000000.0
     },
     "dependencies": {

@@ -70,12 +70,21 @@
                 "type": "number",
                 "minimum": 0,
                 "exclusiveMinimum": true
+              },
+              "logical_cpu_numbers": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "number",
+                  "minimum": 0
+                }
               }
             },
             "additionalProperties": false,
             "required": [
               "driver_path",
-              "capacitance"
+              "capacitance",
+              "logical_cpu_numbers"
             ]
           },
           "dependencies": {
