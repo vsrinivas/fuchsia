@@ -1,0 +1,50 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/compiled_action.gni")
+import("//build/dev.gni")
+
+# Validates that all use statements for protocols & directories has a valid
+# expose-offer-use chain and in the case of directories that the correct
+# rights are provided.
+#
+# Parameters
+#   deps, public_deps, data_deps (optional)
+#       Usual GN meaning.
+#
+template("verify_routes") {
+  compiled_action("${target_name}") {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "deps",
+                             "public_deps",
+                             "data_deps",
+                             "visibility",
+                           ])
+
+    depfile = "$target_out_dir/$target_name.d"
+    tool = "//src/security/scrutiny/bin/verify_routes:bin"
+    tool_output_name = "scrutiny_verify_routes"
+    stamp_file = "$target_gen_dir/$target_name.verified"
+    published_packages = "//build/images:publish"
+
+    inputs = [ invoker.allowlist ]
+    outputs = [ stamp_file ]
+
+    args = [
+      "--stamp",
+      rebase_path(stamp_file, root_build_dir),
+      "--depfile",
+      rebase_path(depfile, root_build_dir),
+      "--allowlist",
+      rebase_path(invoker.allowlist, root_build_dir),
+    ]
+    if (!defined(invoker.deps)) {
+      deps = []
+    }
+
+    deps += [ published_packages ]
+  }
+}

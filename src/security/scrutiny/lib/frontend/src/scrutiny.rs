@@ -83,7 +83,11 @@ impl Scrutiny {
             Arc::clone(&scheduler),
             Arc::clone(&dispatcher),
         )));
-        let shell = Shell::new(Arc::clone(&manager), Arc::clone(&dispatcher));
+        let shell = Shell::new(
+            Arc::clone(&manager),
+            Arc::clone(&dispatcher),
+            config.runtime.logging.silent_mode,
+        );
         Ok(Self { manager, dispatcher, scheduler, visualizer, shell, config })
     }
 

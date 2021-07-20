@@ -1,0 +1,82 @@
+[
+    // List of all directory capabilities that are exempt from the verify
+    // routes checker. Only add to this list if you cannot remove the
+    // unused route.
+    {
+        capability_type: "directory",
+        results: {
+            errors: [],
+        },
+    },
+
+    // List of all protocol capabilities that are exempt from the verify
+    // routes checker. Only add to this list if you cannot remove the
+    // unused route.
+    {
+        capability_type: "protocol",
+        results: {
+            errors: [
+                {
+                    capability: "fuchsia.power.BatteryManager",
+                    using_node: "/core/appmgr",
+                },
+                {
+                    capability: "fuchsia.power.test.BatterySimulator",
+                    using_node: "/core/appmgr",
+                },
+                {
+                    capability: "fuchsia.net.interfaces.State",
+                    using_node: "/core/last_reboot",
+                },
+                {
+                    capability: "fuchsia.pkg.LocalMirror",
+                    using_node: "/core/pkg-resolver",
+                },
+                {
+                    capability: "fuchsia.bluetooth.a2dp.AudioMode",
+                    using_node: "/core/appmgr",
+                },
+                {
+                    capability: "fuchsia.bluetooth.internal.a2dp.Controller",
+                    using_node: "/core/appmgr",
+                },
+                {
+                    capability: "fuchsia.device.Controller",
+                    using_node: "/core/temperature-logger",
+                },
+                {
+                    capability: "fuchsia.hardware.temperature.Device",
+                    using_node: "/core/temperature-logger",
+                },
+                {
+                    capability: "fuchsia.device.Controller",
+                    using_node: "/core/system-metrics-logger",
+                },
+                {
+                    capability: "fuchsia.hardware.power.Source",
+                    using_node: "/core/battery_manager",
+                },
+                {
+                    capability: "fuchsia.component.runner.ComponentRunner",
+                    using_node: "/core/starnix_manager/starnix_runner",
+                },
+                {
+                    capability: "fuchsia.component.runner.ComponentRunner",
+                    using_node: "/core/test_manager/starnix_test_runner/starnix_runner",
+                },
+                {
+                    capability: "fuchsia.sys2.Realm",
+                    using_node: "/core/test_manager/starnix_test_runner/starnix_runner",
+                },
+                {
+                    capability: "fuchsia.logger.LogSink",
+                    using_node: "/core/build-info",
+                },
+                {
+                    capability: "fuchsia.memorypressure.Provider",
+                    using_node: "/core/vulkan_loader",
+                },
+            ],
+        },
+    },
+]

@@ -80,6 +80,14 @@ declare_args() {
   # 5. delete 'product.txt.orig' and remove it from this list.
   fuchsia_static_pkgs_goldens = []
 
+  # An optional list of (capability, moniker) pairs that determine exceptions
+  # to the verify_route.gni build rule that prevents v2 components from
+  # attempting to use capabilities they were not offered. Generally new entries
+  # should not be added to this allowlist and acts as a marker for future
+  # technical debt to clean up.
+  fuchsia_verify_routes_exceptions_allowlist =
+      "//src/security/policy/build/verify_routes_exceptions_allowlist.json5"
+
   # An optional list of golden files for recovery.zbi static pkgs list. If
   # specified, they would be compared against recovery.zbi static pkgs list
   # during build time.  At least one of the golden files must match.

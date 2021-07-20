@@ -125,12 +125,14 @@ pub struct Shell {
     manager: Arc<Mutex<PluginManager>>,
     dispatcher: Arc<RwLock<ControllerDispatcher>>,
     readline: Editor<ScrutinyHelper>,
+    silent_mode: bool,
 }
 
 impl Shell {
     pub fn new(
         manager: Arc<Mutex<PluginManager>>,
         dispatcher: Arc<RwLock<ControllerDispatcher>>,
+        silent_mode: bool,
     ) -> Self {
         let config = Config::builder()
             .history_ignore_space(true)
@@ -142,7 +144,7 @@ impl Shell {
         if let Err(_) = readline.load_history("/tmp/scrutiny_history") {
             warn!("No shell history available");
         }
-        Self { manager, dispatcher, readline }
+        Self { manager, dispatcher, readline, silent_mode }
     }
 
     fn prompt(&mut self) -> Option<String> {
@@ -382,7 +384,9 @@ impl Shell {
         } else {
             writeln!(output, "scrutiny: command not found: {}", command)?;
         }
-        print!("{}", output);
+        if !self.silent_mode {
+            print!("{}", output);
+        }
         Ok(output)
     }
 

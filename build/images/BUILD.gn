@@ -25,6 +25,7 @@ import("//build/packages/package_metadata.gni")
 import("//build/product.gni")
 import("//build/security.gni")
 import("//build/security/verify_build.gni")
+import("//build/security/verify_routes.gni")
 import("//build/unification/future/images/devmgr_config.gni")
 import("//build/unification/zx_host_tool.gni")
 import("//build/zbi/zbi.gni")
@@ -654,6 +655,14 @@ if (fuchsia_static_pkgs_goldens != []) {
     blobfs_manifest_target = ":blob.manifest"
     goldens = fuchsia_static_pkgs_goldens
   }
+}
+
+# Verifies that capabilities used by components are correctly routed to
+# those components. Statically validating the expose-offer-use chain and
+# the rights chain.
+verify_routes("verify_capability_routes") {
+  testonly = true
+  allowlist = fuchsia_verify_routes_exceptions_allowlist
 }
 
 # The main bootable image, which requires `blob.blk` to appear on some
@@ -2720,6 +2729,9 @@ group("updates") {
     ":root_component_index_metadata",
     ":system_snapshot",
   ]
+  if (!is_coverage) {
+    deps += [ ":verify_capability_routes" ]
+  }
 }
 
 group("bootserver") {

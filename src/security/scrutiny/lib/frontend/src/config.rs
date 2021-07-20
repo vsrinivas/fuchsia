@@ -121,11 +121,19 @@ impl RuntimeConfig {
 pub struct LoggingConfig {
     pub path: String,
     pub verbosity: LoggingVerbosity,
+    /// Set to true if you don't want stdio output from running commands. This
+    /// is useful if you want to interact with the API inside Rust and just
+    /// receive the output of the command.
+    pub silent_mode: bool,
 }
 
 impl LoggingConfig {
     pub fn default() -> LoggingConfig {
-        LoggingConfig { path: "/tmp/scrutiny.log".to_string(), verbosity: LoggingVerbosity::Info }
+        LoggingConfig {
+            path: "/tmp/scrutiny.log".to_string(),
+            verbosity: LoggingVerbosity::Info,
+            silent_mode: false,
+        }
     }
     pub fn minimal() -> LoggingConfig {
         LoggingConfig::default()
