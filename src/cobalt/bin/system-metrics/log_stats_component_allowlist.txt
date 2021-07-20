@@ -1,5 +1,5 @@
 0 fuchsia-pkg://fuchsia.com/root_presenter#meta/root_presenter.cmx
-1 fuchsia-pkg://fuchsia.com/pkg-resolver#meta/pkg-resolver.cmx
+1 fuchsia-pkg://fuchsia.com/pkg-resolver#meta/pkg-resolver.cm
 2 fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm
 3 fuchsia-pkg://fuchsia.com/sysmgr#meta/sysmgr.cmx
 4 fuchsia-pkg://fuchsia.com/cast_agent#meta/cast_agent.cmx
