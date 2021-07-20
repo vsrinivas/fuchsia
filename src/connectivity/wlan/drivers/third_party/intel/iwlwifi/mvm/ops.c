@@ -1116,9 +1116,7 @@ void iwl_mvm_async_handlers_purge(struct iwl_mvm* mvm) {
   mtx_lock(&mvm->async_handlers_lock);
   list_for_every_entry_safe (&mvm->async_handlers_list, entry, tmp, struct iwl_async_handler_entry,
                              list) {
-#if 0   // NEEDS_PORTING
-        iwl_free_rxb(&entry->rxb);
-#endif  // NEEDS_PORTING
+    iwl_free_rxb(&entry->rxb);
     list_delete(&entry->list);
     kfree(entry);
   }

@@ -219,9 +219,10 @@ enum iwl_hcmd_dataflag {
  * struct iwl_host_cmd - Host command to the uCode
  *
  * @data: array of chunks that composes the data of the host command
- * @resp_pkt: response packet, if %CMD_WANT_SKB was set
- * @_rx_page_order: (internally used to free response packet)
- * @_rx_page_addr: (internally used to free response packet)
+ * @resp_pkt: response packet, if %CMD_WANT_SKB was set.
+ *            This variable is used by a Tx command (if the CMD_WANT_SKB bit is requested) and
+ *            is assigned (to meta->source->resp_pkt) when the response is received from the
+ *            firmware. See pcie/tx.c:iwl_pcie_hcmd_complete() for more details.
  * @flags: can be CMD_*
  * @len: array of the lengths of the chunks in data
  * @dataflags: IWL_HCMD_DFL_*
@@ -231,8 +232,6 @@ enum iwl_hcmd_dataflag {
 struct iwl_host_cmd {
   const void* data[IWL_MAX_CMD_TBS_PER_TFD];
   struct iwl_rx_packet* resp_pkt;
-  unsigned long _rx_page_addr;
-  uint32_t _rx_page_order;
 
   uint32_t flags;
   uint32_t id;
@@ -240,12 +239,13 @@ struct iwl_host_cmd {
   uint8_t dataflags[IWL_MAX_CMD_TBS_PER_TFD];
 };
 
-static inline void iwl_free_resp(struct iwl_host_cmd* cmd) {
-  IWL_ERR(trans, "%s needs porting\n", __FUNCTION__);
-#if 0   // NEEDS_PORTING
-    free_pages(cmd->_rx_page_addr, cmd->_rx_page_order);
-#endif  // NEEDS_PORTING
-}
+// Originally used by Linux to release the page mapping (says _rx_page_addr). But we don't need this
+// in Fuchsia because the mapping info is maintained in io_buf.
+//
+// However, we keep the function (even it is empty) because calling function has semantic meaning in
+// the code, which means the code will no longer accesses the resources after calling this function.
+//
+static inline void iwl_free_resp(struct iwl_host_cmd* cmd) {}
 
 struct iwl_rx_cmd_buffer {
   struct iwl_iobuf* _iobuf;
@@ -266,11 +266,13 @@ static inline struct iwl_iobuf* rxb_steal_iobuf(struct iwl_rx_cmd_buffer* r) {
   return r->_iobuf;
 }
 
-#if 0   // NEEDS_PORTING
-static inline void iwl_free_rxb(struct iwl_rx_cmd_buffer* r) {
-    __free_pages(r->_page, r->_rx_page_order);
-}
-#endif  // NEEDS_PORTING
+// Originally used by Linux to release the page mapping (says _rx_page_addr). But we don't need this
+// in Fuchsia because the mapping info is maintained in io_buf.
+//
+// However, we keep the function (even it is empty) because calling function has semantic meaning in
+// the code, which means the code will no longer accesses the resources after calling this function.
+//
+static inline void iwl_free_rxb(struct iwl_rx_cmd_buffer* r) {}
 
 #define MAX_NO_RECLAIM_CMDS 6
 

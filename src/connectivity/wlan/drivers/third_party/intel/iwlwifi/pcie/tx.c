@@ -1828,10 +1828,6 @@ void iwl_pcie_hcmd_complete(struct iwl_trans* trans, struct iwl_rx_cmd_buffer* r
 #endif  // NEEDS_PORTING
 
     meta->source->resp_pkt = pkt;
-#if 0   // NEEDS_PORTING
-        meta->source->_rx_page_addr = (unsigned long)page_address(p);
-        meta->source->_rx_page_order = trans_pcie->rx_page_order;
-#endif  // NEEDS_PORTING
   }
 
   if (meta->flags & CMD_WANT_ASYNC_CALLBACK) {
