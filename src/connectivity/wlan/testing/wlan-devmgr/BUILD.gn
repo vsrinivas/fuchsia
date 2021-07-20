@@ -2,7 +2,20 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/dist/renamed_binary.gni")
 import("//src/lib/isolated_devmgr/isolated_devmgr.gni")
+import("//src/lib/isolated_devmgr/v2_component/isolated_devmgr.gni")
+
+group("wlan_devmgr_deps") {
+  deps = [
+    "//sdk/fidl/fuchsia.io2:fuchsia.io2-rustc",
+    "//src/connectivity/ethernet/drivers/ethernet",
+    "//src/connectivity/wlan/drivers/wlan:wlan_driver",
+    "//src/connectivity/wlan/drivers/wlanphy:wlanphy_driver",
+    "//src/connectivity/wlan/testing/wlantap-driver:wlantap_driver",
+    "//src/devices/tests/sysdev",
+  ]
+}
 
 isolated_devmgr_component("wlan-devmgr") {
   args = [
@@ -13,12 +26,24 @@ isolated_devmgr_component("wlan-devmgr") {
     "--load_driver=/boot/driver/ethernet.so",
     "--wait_for=test/wlantapctl",
   ]
+  deps = [ ":wlan_devmgr_deps" ]
+}
+
+# TODO(https://fxbug.dev/77388): Remove this
+renamed_binary("renamed_sys_binary") {
+  source = "$root_out_dir/sysdev.so"
+  source_deps = [ "//src/devices/tests/sysdev" ]
+  dest = "driver/platform-bus.so"
+}
+
+isolated_devmgr_v2_component("wlan-devmgr-v2-component") {
+  deps = [ ":wlan_devmgr_deps" ]
+}
+
+fuchsia_package("wlan-devmgr-v2") {
+  testonly = true
   deps = [
-    "//sdk/fidl/fuchsia.io2:fuchsia.io2-rustc",
-    "//src/connectivity/ethernet/drivers/ethernet",
-    "//src/connectivity/wlan/drivers/wlan:wlan_driver",
-    "//src/connectivity/wlan/drivers/wlanphy:wlanphy_driver",
-    "//src/connectivity/wlan/testing/wlantap-driver:wlantap_driver",
-    "//src/devices/tests/sysdev",
+    ":renamed_sys_binary",
+    ":wlan-devmgr-v2-component",
   ]
 }
