@@ -25,5 +25,5 @@ declare_args() {
   # Determines whether the fuchsia_async library used by many Rust targets will be compiled
   # with TRACE level log statements that increase binary size a measurable amount.
   # TODO(fxbug.dev/80742) move this to a toolchain to allow multiple products to build together
-  fuchsia_async_trace_level_logging = false
+  fuchsia_async_trace_level_logging = true
 }
