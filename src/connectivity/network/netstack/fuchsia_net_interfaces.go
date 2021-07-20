@@ -33,6 +33,8 @@ import (
 	tcpipstack "gvisor.dev/gvisor/pkg/tcpip/stack"
 )
 
+const watcherProtocolName = "fuchsia.net.interfaces/Watcher"
+
 // addressPatch is a patch to the address data exposed by upstream interface
 // data. This type provides a mechanism by which clients of onPropertiesChange
 // can extend the data exposed by fuchsia.net.interfaces beyond what is
@@ -104,11 +106,12 @@ type interfaceWatcherImpl struct {
 	}
 }
 
-const maxInterfaceWatcherQueueLen = 512
+const maxInterfaceWatcherQueueLen = 128
 
 func (wi *interfaceWatcherImpl) onEvent(e interfaces.Event) {
 	wi.mu.Lock()
 	if len(wi.mu.queue) >= maxInterfaceWatcherQueueLen {
+		_ = syslog.WarnTf(watcherProtocolName, "too many unconsumed events (client may not be calling Watch as frequently as possible): %d, max: %d", len(wi.mu.queue), maxInterfaceWatcherQueueLen)
 		wi.cancelServe()
 	} else {
 		wi.mu.queue = append(wi.mu.queue, e)
@@ -239,7 +242,7 @@ func (ns *Netstack) onPropertiesChange(nicid tcpip.NICID, addressPatches []addre
 
 	nicInfo, ok := ns.stack.NICInfo()[nicid]
 	if !ok {
-		_ = syslog.WarnTf("fuchsia.net.interfaces/Watcher", "onPropertiesChange interface %d cannot be found", nicid)
+		_ = syslog.WarnTf(watcherProtocolName, "onPropertiesChange interface %d cannot be found", nicid)
 		return
 	}
 
@@ -252,7 +255,7 @@ func (ns *Netstack) onPropertiesChange(nicid tcpip.NICID, addressPatches []addre
 			}
 		}
 	} else {
-		_ = syslog.WarnTf("fuchsia.net.interfaces/Watcher", "onPropertiesChange called regarding unknown interface %d", nicid)
+		_ = syslog.WarnTf(watcherProtocolName, "onPropertiesChange called regarding unknown interface %d", nicid)
 	}
 }
 
@@ -297,13 +300,13 @@ func (ns *Netstack) onInterfaceAdd(nicid tcpip.NICID) {
 	defer ns.interfaceWatchers.mu.Unlock()
 
 	if properties, ok := ns.interfaceWatchers.mu.lastObserved[nicid]; ok {
-		_ = syslog.WarnTf("fuchsia.net.interfaces/Watcher", "interface added but already known: %+v", properties)
+		_ = syslog.WarnTf(watcherProtocolName, "interface added but already known: %+v", properties)
 		return
 	}
 
 	nicInfo, ok := ns.stack.NICInfo()[nicid]
 	if !ok {
-		_ = syslog.WarnTf("fuchsia.net.interfaces/Watcher", "interface %d added but not in NICInfo map", nicid)
+		_ = syslog.WarnTf(watcherProtocolName, "interface %d added but not in NICInfo map", nicid)
 		return
 	}
 
@@ -327,7 +330,7 @@ func (c *interfaceWatcherCollection) onInterfaceRemove(nicid tcpip.NICID) {
 	defer c.mu.Unlock()
 
 	if _, ok := c.mu.lastObserved[nicid]; !ok {
-		_ = syslog.WarnTf("fuchsia.net.interfaces/Watcher", "unknown interface removed")
+		_ = syslog.WarnTf(watcherProtocolName, "unknown interface removed")
 		return
 	}
 	delete(c.mu.lastObserved, nicid)
@@ -362,7 +365,7 @@ func (si *interfaceStateImpl) GetWatcher(_ fidl.Context, _ interfaces.WatcherOpt
 
 	go func() {
 		component.ServeExclusiveConcurrent(ctx, &interfaces.WatcherWithCtxStub{Impl: &impl}, watcher.Channel, func(err error) {
-			_ = syslog.WarnTf("fuchsia.net.interfaces/Watcher", "%s", err)
+			_ = syslog.WarnTf(watcherProtocolName, "%s", err)
 		})
 
 		si.ns.interfaceWatchers.mu.Lock()
