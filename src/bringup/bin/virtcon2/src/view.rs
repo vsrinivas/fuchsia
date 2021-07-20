@@ -9,7 +9,6 @@ use {
     crate::text_grid::{font_to_cell_size, TextGridFacet, TextGridMessages},
     anyhow::{anyhow, Error},
     carnelian::{
-        color::Color,
         drawing::{load_font, FontFace},
         input, make_message,
         render::{rive::load_rive, Context as RenderContext},
@@ -34,9 +33,10 @@ use {
         path::PathBuf,
     },
     term_model::{
+        ansi::TermInfo,
         event::{Event, EventListener},
         grid::Scroll,
-        term::SizeInfo,
+        term::{color::Rgb, SizeInfo},
     },
 };
 
@@ -109,10 +109,9 @@ const MIN_TAB_WIDTH: usize = 16;
 const MAX_TAB_WIDTH: usize = 32;
 
 // Status bar colors.
-const STATUS_COLOR_BACKGROUND: Color = Color { r: 0, g: 0, b: 0, a: 255 };
-const STATUS_COLOR_DEFAULT: Color = Color { r: 170, g: 170, b: 170, a: 255 };
-const STATUS_COLOR_ACTIVE: Color = Color { r: 255, g: 255, b: 85, a: 255 };
-const STATUS_COLOR_UPDATED: Color = Color { r: 85, g: 255, b: 85, a: 255 };
+const STATUS_COLOR_DEFAULT: Rgb = Rgb { r: 170, g: 170, b: 170 };
+const STATUS_COLOR_ACTIVE: Rgb = Rgb { r: 255, g: 255, b: 85 };
+const STATUS_COLOR_UPDATED: Rgb = Rgb { r: 85, g: 255, b: 85 };
 
 // Padding between text and cell size.
 const CELL_PADDING_FACTOR: f32 = 2.0 / 15.0;
@@ -280,11 +279,11 @@ impl VirtualConsoleViewAssistant {
 
     // This returns a vector with the status for each terminal. The return value
     // is suitable for passing to the TextGridFacet.
-    fn get_status(&self) -> Vec<(String, Color)> {
+    fn get_status(&self) -> Vec<(String, Rgb)> {
         self.terminals
             .iter()
             .map(|(id, (t, status))| {
-                let color = if *id == self.active_terminal_id {
+                let fg = if *id == self.active_terminal_id {
                     STATUS_COLOR_ACTIVE
                 } else if status.has_output {
                     STATUS_COLOR_UPDATED
@@ -295,7 +294,7 @@ impl VirtualConsoleViewAssistant {
                 let left = if status.at_top { '[' } else { '<' };
                 let right = if status.at_bottom { ']' } else { '>' };
 
-                (format!("{}{}{} {}", left, *id, right, t.title()), color)
+                (format!("{}{}{} {}", left, *id, right, t.title()), fg)
             })
             .collect()
     }
@@ -569,18 +568,18 @@ impl ViewAssistant for VirtualConsoleViewAssistant {
                 };
                 let font_size = self.font_size * scale_factor;
                 let cell_size = font_to_cell_size(font_size, font_size * CELL_PADDING_FACTOR);
-                let status_size = Size::new(context.size.width, cell_size.height);
 
                 self.resize_terminals(&context.size, font_size);
 
                 let active_term =
                     self.terminals.get(&self.active_terminal_id).map(|(t, _)| t.clone_term());
                 let status = self.get_status();
+                let columns = active_term.as_ref().map(|t| t.borrow().cols().0).unwrap_or(1);
 
                 // Determine the status bar tab width based on the current number
                 // of terminals.
-                let tab_width = (status_size.width as usize / (status.len() + 1))
-                    .clamp(MIN_TAB_WIDTH, MAX_TAB_WIDTH);
+                let tab_width =
+                    (columns as usize / (status.len() + 1)).clamp(MIN_TAB_WIDTH, MAX_TAB_WIDTH);
 
                 // Add the text grid to the scene.
                 let textgrid = builder.facet(Box::new(TextGridFacet::new(
@@ -592,11 +591,6 @@ impl ViewAssistant for VirtualConsoleViewAssistant {
                     tab_width,
                     font_size * CELL_PADDING_FACTOR,
                 )));
-
-                // Add status bar background to the scene if needed.
-                if self.color_scheme.back != STATUS_COLOR_BACKGROUND {
-                    builder.rectangle(status_size, STATUS_COLOR_BACKGROUND);
-                }
 
                 self.cell_size = cell_size;
                 self.tab_width = tab_width;

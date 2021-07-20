@@ -54,6 +54,7 @@ rustc_library("lib") {
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-runtime",
     "//src/lib/pty",
+    "//src/lib/trace/rust:trace",
     "//src/lib/trace/rust:trace-provider",
     "//src/lib/ui/carnelian",
     "//src/lib/zircon/rust:fuchsia-zircon",
@@ -62,6 +63,7 @@ rustc_library("lib") {
     "//third_party/rust_crates:euclid",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:libc",
+    "//third_party/rust_crates:rustc-hash",
   ]
 }
 
