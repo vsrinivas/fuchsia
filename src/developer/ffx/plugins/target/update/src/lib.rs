@@ -25,12 +25,27 @@ pub async fn update_cmd(
     channel_control_proxy: ChannelControlProxy,
     update_args: args::Update,
 ) -> Result<(), Error> {
+    update_cmd_impl(
+        update_manager_proxy,
+        channel_control_proxy,
+        update_args,
+        &mut std::io::stdout(),
+    )
+    .await
+}
+
+pub async fn update_cmd_impl<W: std::io::Write>(
+    update_manager_proxy: ManagerProxy,
+    channel_control_proxy: ChannelControlProxy,
+    update_args: args::Update,
+    writer: &mut W,
+) -> Result<(), Error> {
     match update_args.cmd {
         args::Command::Channel(args::Channel { cmd }) => {
-            handle_channel_control_cmd(cmd, channel_control_proxy).await?;
+            handle_channel_control_cmd(cmd, channel_control_proxy, writer).await?;
         }
         args::Command::CheckNow(check_now) => {
-            handle_check_now_cmd(check_now, update_manager_proxy).await?;
+            handle_check_now_cmd(check_now, update_manager_proxy, writer).await?;
         }
         args::Command::ForceInstall(args) => {
             force_install(args.update_pkg_url, args.reboot).await?;
@@ -40,7 +55,10 @@ pub async fn update_cmd(
 }
 
 /// Wait for and print state changes. For informational / DX purposes.
-async fn monitor_state(mut stream: MonitorRequestStream) -> Result<(), Error> {
+async fn monitor_state<W: std::io::Write>(
+    mut stream: MonitorRequestStream,
+    writer: &mut W,
+) -> Result<(), Error> {
     while let Some(event) = stream.try_next().await? {
         match event {
             MonitorRequest::OnState { state, responder } => {
@@ -52,7 +70,7 @@ async fn monitor_state(mut stream: MonitorRequestStream) -> Result<(), Error> {
                 if state.is_error() {
                     anyhow::bail!("Update failed: {:?}", state)
                 } else {
-                    println!("State: {:?}", state);
+                    writeln!(writer, "State: {:?}", state)?;
                 }
             }
         }
@@ -61,18 +79,19 @@ async fn monitor_state(mut stream: MonitorRequestStream) -> Result<(), Error> {
 }
 
 /// Handle subcommands for `update channel`.
-async fn handle_channel_control_cmd(
+async fn handle_channel_control_cmd<W: std::io::Write>(
     cmd: args::channel::Command,
     channel_control: fidl_fuchsia_update_channelcontrol::ChannelControlProxy,
+    writer: &mut W,
 ) -> Result<(), Error> {
     match cmd {
         args::channel::Command::Get(_) => {
             let channel = channel_control.get_current().await?;
-            println!("current channel: {}", channel);
+            writeln!(writer, "current channel: {}", channel)?;
         }
         args::channel::Command::Target(_) => {
             let channel = channel_control.get_target().await?;
-            println!("target channel: {}", channel);
+            writeln!(writer, "target channel: {}", channel)?;
         }
         args::channel::Command::Set(args::channel::Set { channel }) => {
             channel_control.set_target(&channel).await?;
@@ -80,11 +99,11 @@ async fn handle_channel_control_cmd(
         args::channel::Command::List(_) => {
             let channels = channel_control.get_target_list().await?;
             if channels.is_empty() {
-                println!("known channels list is empty.");
+                writeln!(writer, "known channels list is empty.")?;
             } else {
-                println!("known channels:");
+                writeln!(writer, "known channels:")?;
                 for channel in channels {
-                    println!("{}", channel);
+                    writeln!(writer, "{}", channel)?;
                 }
             }
         }
@@ -94,9 +113,10 @@ async fn handle_channel_control_cmd(
 
 /// If there's a new version available, update to it, printing progress to the
 /// console during the process.
-async fn handle_check_now_cmd(
+async fn handle_check_now_cmd<W: std::io::Write>(
     cmd: args::CheckNow,
     update_manager: fidl_fuchsia_update::ManagerProxy,
+    writer: &mut W,
 ) -> Result<(), Error> {
     let args::CheckNow { service_initiated, monitor } = cmd;
     let options = CheckOptions {
@@ -114,9 +134,9 @@ async fn handle_check_now_cmd(
     if let Err(e) = update_manager.check_now(options, monitor_client).await? {
         anyhow::bail!("Update check failed to start: {:?}", e);
     }
-    println!("Checking for an update.");
+    writeln!(writer, "Checking for an update.")?;
     if let Some(monitor_server) = monitor_server {
-        monitor_state(monitor_server).await?;
+        monitor_state(monitor_server, writer).await?;
     }
     Ok(())
 }
@@ -125,8 +145,8 @@ async fn handle_check_now_cmd(
 /// the current system software.
 // TODO(fxbug.dev/60019): implement force install.
 async fn force_install(_update_pkg_url: String, _reboot: bool) -> Result<(), Error> {
-    println!("The force install is not yet implemented in this tool.");
-    println!("In the meantime, please use preexisting tools for a force install.");
+    eprintln!("The force install is not yet implemented in this tool.");
+    eprintln!("In the meantime, please use preexisting tools for a force install.");
     Ok(())
 }
 
@@ -137,15 +157,20 @@ mod tests {
     use fidl_fuchsia_update_channelcontrol::ChannelControlRequest;
     use matches::assert_matches;
 
-    async fn perform_channel_control_test<V>(argument: args::channel::Command, verifier: V)
-    where
+    async fn perform_channel_control_test<V, O>(
+        argument: args::channel::Command,
+        verifier: V,
+        output: O,
+    ) where
         V: Fn(ChannelControlRequest),
+        O: Fn(String),
     {
         let (proxy, mut stream) =
             create_proxy_and_stream::<fidl_fuchsia_update_channelcontrol::ChannelControlMarker>()
                 .unwrap();
-        let fut = async move {
-            assert_matches!(handle_channel_control_cmd(argument, proxy).await, Ok(()));
+        let mut buf = Vec::new();
+        let fut = async {
+            assert_matches!(handle_channel_control_cmd(argument, proxy, &mut buf).await, Ok(()));
         };
         let stream_fut = async move {
             let result = stream.next().await.unwrap();
@@ -155,18 +180,22 @@ mod tests {
             }
         };
         future::join(fut, stream_fut).await;
+        let out = String::from_utf8(buf).unwrap();
+        output(out);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_channel_get() {
-        perform_channel_control_test(args::channel::Command::Get(args::channel::Get {}), |cmd| {
-            match cmd {
+        perform_channel_control_test(
+            args::channel::Command::Get(args::channel::Get {}),
+            |cmd| match cmd {
                 ChannelControlRequest::GetCurrent { responder } => {
                     responder.send("channel").unwrap();
                 }
                 request => panic!("Unexpected request: {:?}", request),
-            }
-        })
+            },
+            |output| assert_eq!(output, "current channel: channel\n"),
+        )
         .await;
     }
 
@@ -180,6 +209,7 @@ mod tests {
                 }
                 request => panic!("Unexpected request: {:?}", request),
             },
+            |output| assert_eq!(output, "target channel: target-channel\n"),
         )
         .await;
     }
@@ -195,20 +225,38 @@ mod tests {
                 }
                 request => panic!("Unexpected request: {:?}", request),
             },
+            |output| assert!(output.is_empty()),
         )
         .await;
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_channel_list() {
-        perform_channel_control_test(args::channel::Command::List(args::channel::List {}), |cmd| {
-            match cmd {
+    async fn test_channel_list_no_channels() {
+        perform_channel_control_test(
+            args::channel::Command::List(args::channel::List {}),
+            |cmd| match cmd {
+                ChannelControlRequest::GetTargetList { responder } => {
+                    responder.send(&mut vec![].into_iter()).unwrap();
+                }
+                request => panic!("Unexpected request: {:?}", request),
+            },
+            |output| assert_eq!(output, "known channels list is empty.\n"),
+        )
+        .await;
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_channel_list_with_channels() {
+        perform_channel_control_test(
+            args::channel::Command::List(args::channel::List {}),
+            |cmd| match cmd {
                 ChannelControlRequest::GetTargetList { responder } => {
                     responder.send(&mut vec!["some-channel", "other-channel"].into_iter()).unwrap();
                 }
                 request => panic!("Unexpected request: {:?}", request),
-            }
-        })
+            },
+            |output| assert_eq!(output, "known channels:\nsome-channel\nother-channel\n"),
+        )
         .await;
     }
 }
