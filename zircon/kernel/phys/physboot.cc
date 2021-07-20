@@ -240,9 +240,11 @@ void ZbiMain(void* zbi_ptr, arch::EarlyTicks ticks) {
 
   InitMemory(zbi_ptr);
 
+  gBootTimes.Set(PhysBootTimes::kZbiEntry, ticks);
+
   // This marks the interval between handoff from the boot loader (kZbiEntry)
   // and phys environment setup with identity-mapped memory management et al.
-  gBootTimes.Set(PhysBootTimes::kPhysSetup, ticks);
+  gBootTimes.SampleNow(PhysBootTimes::kPhysSetup);
 
   auto zbi_header = static_cast<const zbi_header_t*>(zbi_ptr);
   BootZbi::InputZbi zbi(zbitl::StorageFromRawHeader(zbi_header));
