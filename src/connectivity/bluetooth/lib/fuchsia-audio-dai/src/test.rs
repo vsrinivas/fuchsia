@@ -80,19 +80,32 @@ impl TestHandle {
     }
 }
 
+/// Logs and breaks out of the loop if the result is an Error.
+macro_rules! log_error {
+    ($result:expr, $tag:expr) => {
+        if let Err(e) = $result {
+            log::warn!("Error sending {}: {:?}", $tag, e);
+            break;
+        }
+    };
+}
+
 async fn handle_ring_buffer(mut requests: RingBufferRequestStream, handle: TestHandle) {
     while let Some(req) = requests.next().await {
-        let req = req.expect("no error on ring buffer");
-        match req {
+        if let Err(e) = req {
+            log::warn!("Error processing RingBuffer request stream: {:?}", e);
+            break;
+        }
+        match req.unwrap() {
             RingBufferRequest::Start { responder } => match handle.start() {
-                Ok(()) => responder.send(0).expect("fidl response send ok"),
+                Ok(()) => log_error!(responder.send(0), "ring buffer start response"),
                 Err(()) => {
                     log::warn!("Started when we couldn't expect it, shutting down");
                 }
             },
             RingBufferRequest::Stop { responder } => {
                 handle.stop();
-                responder.send().expect("fidl response ok");
+                log_error!(responder.send(), "ring buffer stop response");
             }
             x => unimplemented!("RingBuffer Request not implemented: {:?}", x),
         };
@@ -116,17 +129,18 @@ async fn test_handle_dai_requests(
     let mut _rb_task = None;
     while let Some(req) = requests.next().await {
         if let Err(e) = req {
-            panic!("Had an error on the request stream for the DAI: {:?}", e);
+            log::warn!("Error processing DAI request stream: {:?}", e);
+            break;
         }
         match req.unwrap() {
             DaiRequest::GetProperties { responder } => {
-                responder.send(properties.clone()).expect("properties response")
+                log_error!(responder.send(properties.clone()), "properties response");
             }
             DaiRequest::GetDaiFormats { responder } => {
-                responder.send(&mut Ok(vec![dai_formats.clone()])).expect("formats response")
+                log_error!(responder.send(&mut Ok(vec![dai_formats.clone()])), "formats response");
             }
             DaiRequest::GetRingBufferFormats { responder } => {
-                responder.send(&mut Ok(vec![pcm_formats.clone()])).expect("pcm response")
+                log_error!(responder.send(&mut Ok(vec![pcm_formats.clone()])), "pcm response");
             }
             DaiRequest::CreateRingBuffer {
                 dai_format, ring_buffer_format, ring_buffer, ..
@@ -161,7 +175,7 @@ async fn test_handle_dai_requests(
                 let requests = ring_buffer.into_stream().expect("stream from server end");
                 _rb_task = Some(fasync::Task::spawn(handle_ring_buffer(requests, handle.clone())));
             }
-            x => panic!("Got a request we haven't implemented: {:?}", x),
+            x => unimplemented!("DAI request not implemented: {:?}", x),
         };
     }
 }
