@@ -29,7 +29,7 @@ Status ZxStatus(zx_status_t s, std::string msg);
 
 #else
 
-// As with the ZxStatus version above, this will automatically use the strerror() strinf if no
+// As with the ZxStatus version above, this will automatically use the strerror() string if no
 // message is given.
 Status ErrnoStatus(int en);
 Status ErrnoStatus(int en, std::string msg);

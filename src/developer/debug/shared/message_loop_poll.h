@@ -27,14 +27,17 @@ class MessageLoopPoll : public MessageLoop {
   void Cleanup() override;
   WatchHandle WatchFD(WatchMode mode, int fd, FDWatcher watcher) override;
 
- private:
-  struct WatchInfo;
+ protected:
+  int GetNextWatchId();
 
   // MessageLoop protected implementation.
   uint64_t GetMonotonicNowNS() const override;
   void RunImpl() override;
   void StopWatching(int id) override;
   void SetHasTasks() override;
+
+ private:
+  struct WatchInfo;
 
   // Prepares the pollfd vector with all the handles we will be watching for poll(). The map_indices
   // vector will be of the same length and will contain the key into watches_ of each item in the

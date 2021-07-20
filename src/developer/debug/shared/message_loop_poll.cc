@@ -77,9 +77,9 @@ bool CreateLocalNonBlockingPipe(fbl::unique_fd* out_end, fbl::unique_fd* in_end)
 }  // namespace
 
 struct MessageLoopPoll::WatchInfo {
-  int fd = 0;
+  int fd = -1;
   WatchMode mode = WatchMode::kReadWrite;
-  FDWatcher watcher = nullptr;
+  FDWatcher watcher;
 };
 
 MessageLoopPoll::MessageLoopPoll() {
@@ -114,7 +114,7 @@ bool MessageLoopPoll::Init(std::string* error_message) {
 }
 
 void MessageLoopPoll::Cleanup() {
-  // Force unregister out watch before cleaning up current MessageLoop.
+  // Force unregister our watch before cleaning up current MessageLoop.
   wakeup_pipe_watch_ = WatchHandle();
   watches_.clear();
   MessageLoop::Cleanup();
@@ -138,6 +138,12 @@ MessageLoop::WatchHandle MessageLoopPoll::WatchFD(WatchMode mode, int fd, FDWatc
   watches_[watch_id] = std::move(info);
 
   return WatchHandle(this, watch_id);
+}
+
+int MessageLoopPoll::GetNextWatchId() {
+  int watch_id = next_watch_id_;
+  next_watch_id_++;
+  return watch_id;
 }
 
 uint64_t MessageLoopPoll::GetMonotonicNowNS() const {

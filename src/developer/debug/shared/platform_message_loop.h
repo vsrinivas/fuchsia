@@ -7,6 +7,8 @@
 
 #if defined(__Fuchsia__)
 #include "src/developer/debug/shared/message_loop_target.h"
+#elif defined(__linux__)
+#include "src/developer/debug/shared/message_loop_linux.h"
 #else
 #include "src/developer/debug/shared/message_loop_poll.h"
 #endif
@@ -15,6 +17,8 @@ namespace debug_ipc {
 
 #if defined(__Fuchsia__)
 using PlatformMessageLoop = MessageLoopTarget;
+#elif defined(__linux__)
+using PlatformMessageLoop = MessageLoopLinux;
 #else
 using PlatformMessageLoop = MessageLoopPoll;
 #endif
