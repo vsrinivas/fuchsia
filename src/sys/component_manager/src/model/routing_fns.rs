@@ -14,19 +14,22 @@ use {
         },
     },
     cm_rust::{ExposeDecl, UseDecl},
-    directory_broker::RoutingFn,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::NodeMarker,
-    fuchsia_async as fasync,
     log::*,
+    vfs::{execution_scope::ExecutionScope, path::Path, remote::RoutingFn},
 };
 
 pub fn route_use_fn(component: WeakComponentInstance, use_: UseDecl) -> RoutingFn {
     Box::new(
-        move |flags: u32, mode: u32, relative_path: String, server_end: ServerEnd<NodeMarker>| {
+        move |scope: ExecutionScope,
+              flags: u32,
+              mode: u32,
+              path: Path,
+              server_end: ServerEnd<NodeMarker>| {
             let component = component.clone();
             let use_ = use_.clone();
-            fasync::Task::spawn(async move {
+            scope.spawn(async move {
                 let component = match component.upgrade() {
                     Ok(component) => component,
                     Err(e) => {
@@ -44,7 +47,7 @@ pub fn route_use_fn(component: WeakComponentInstance, use_: UseDecl) -> RoutingF
                 let res = route_and_open_namespace_capability(
                     flags,
                     mode,
-                    relative_path,
+                    path.into_string(),
                     use_.clone(),
                     &component,
                     &mut server_end,
@@ -59,18 +62,21 @@ pub fn route_use_fn(component: WeakComponentInstance, use_: UseDecl) -> RoutingF
                     )
                     .await;
                 }
-            })
-            .detach();
+            });
         },
     )
 }
 
 pub fn route_expose_fn(component: WeakComponentInstance, expose: ExposeDecl) -> RoutingFn {
     Box::new(
-        move |flags: u32, mode: u32, relative_path: String, server_end: ServerEnd<NodeMarker>| {
+        move |scope: ExecutionScope,
+              flags: u32,
+              mode: u32,
+              path: Path,
+              server_end: ServerEnd<NodeMarker>| {
             let component = component.clone();
             let expose = expose.clone();
-            fasync::Task::spawn(async move {
+            scope.spawn(async move {
                 let component = match component.upgrade() {
                     Ok(component) => component,
                     Err(e) => {
@@ -88,7 +94,7 @@ pub fn route_expose_fn(component: WeakComponentInstance, expose: ExposeDecl) -> 
                 let res = route_and_open_namespace_capability_from_expose(
                     flags,
                     mode,
-                    relative_path,
+                    path.into_string(),
                     expose.clone(),
                     &component,
                     &mut server_end,
@@ -103,8 +109,7 @@ pub fn route_expose_fn(component: WeakComponentInstance, expose: ExposeDecl) -> 
                     )
                     .await;
                 }
-            })
-            .detach();
+            });
         },
     )
 }

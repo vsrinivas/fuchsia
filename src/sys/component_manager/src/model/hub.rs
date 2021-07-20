@@ -19,11 +19,10 @@ use {
     },
     async_trait::async_trait,
     cm_rust::{CapabilityPath, ComponentDecl},
-    directory_broker,
     fidl::endpoints::{ServerEnd, ServiceMarker},
     fidl_fuchsia_io::{DirectoryProxy, NodeMarker, CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_DIRECTORY},
     fidl_fuchsia_sys2::LifecycleControllerMarker,
-    fuchsia_async as fasync, fuchsia_trace as trace, fuchsia_zircon as zx,
+    fuchsia_trace as trace, fuchsia_zircon as zx,
     futures::lock::Mutex,
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMonikerBase},
     std::{
@@ -35,7 +34,7 @@ use {
     vfs::{
         directory::entry::DirectoryEntry, directory::immutable::simple as pfs,
         execution_scope::ExecutionScope, file::vmo::asynchronous::read_only_static,
-        path::Path as pfsPath,
+        path::Path as pfsPath, remote::remote_dir,
     },
 };
 
@@ -313,11 +312,7 @@ impl Hub {
         let mut in_dir = pfs::simple();
         tree.install(target_moniker, &mut in_dir)?;
         if let Some(pkg_dir) = package_dir {
-            in_dir.add_node(
-                "pkg",
-                directory_broker::DirectoryBroker::from_directory_proxy(pkg_dir),
-                target_moniker,
-            )?;
+            in_dir.add_node("pkg", remote_dir(pkg_dir), target_moniker)?;
         }
         execution_directory.add_node("in", in_dir, target_moniker)?;
         Ok(())
@@ -338,18 +333,18 @@ impl Hub {
         let capabilities = vec![DirTreeCapability::new(
             lifecycle_controller_path,
             Box::new(
-                move |_flags: u32,
+                move |scope: ExecutionScope,
+                      _flags: u32,
                       _mode: u32,
-                      _relative_path: String,
+                      _relative_path: pfsPath,
                       server_end: ServerEnd<NodeMarker>| {
                     let lifecycle_controller = lifecycle_controller.clone();
                     let server_end =
                         ServerEnd::<LifecycleControllerMarker>::new(server_end.into_channel());
                     let lifecycle_controller_stream = server_end.into_stream().unwrap();
-                    fasync::Task::spawn(async move {
+                    scope.spawn(async move {
                         lifecycle_controller.serve(lifecycle_controller_stream).await;
-                    })
-                    .detach();
+                    });
                 },
             ),
         )];
@@ -381,11 +376,7 @@ impl Hub {
     ) -> Result<(), ModelError> {
         trace::duration!("component_manager", "hub:add_out_directory");
         if let Some(out_dir) = outgoing_dir {
-            execution_directory.add_node(
-                "out",
-                directory_broker::DirectoryBroker::from_directory_proxy(out_dir),
-                target_moniker,
-            )?;
+            execution_directory.add_node("out", remote_dir(out_dir), target_moniker)?;
         }
         Ok(())
     }
@@ -397,11 +388,7 @@ impl Hub {
     ) -> Result<(), ModelError> {
         trace::duration!("component_manager", "hub:add_runtime_directory");
         if let Some(runtime_dir) = runtime_dir {
-            execution_directory.add_node(
-                "runtime",
-                directory_broker::DirectoryBroker::from_directory_proxy(runtime_dir),
-                abs_moniker,
-            )?;
+            execution_directory.add_node("runtime", remote_dir(runtime_dir), abs_moniker)?;
         }
         Ok(())
     }

@@ -47,8 +47,8 @@ live in `tests/`.
 #### Problem
 
 Many parts of the code need access to a `Realm`. Some of those are long-running asynchronous
-operations, such as hosting a pseudo-fs directory with a closure (see `//src/sys/lib/directory_broker`).
-These operations are executed on the global executor through `fasync::spawn`.
+operations, such as hosting a vfs directory with a closure. These operations are executed on the
+global executor through `fasync::spawn`.
 
 These closures should never capture an `Arc<Realm>`, as the closures lifetime is not bound to the `Realm`,
 even though it is conceptually tied to the life of `Realm`. This can lead to memory leaks / reference cycles.

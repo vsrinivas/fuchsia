@@ -6,7 +6,7 @@
 
 use {
     anyhow::{format_err, Error},
-    directory_broker, fdio,
+    fdio,
     fidl::endpoints::{create_endpoints, create_proxy, Proxy},
     fidl_fidl_examples_echo as fidl_echo, fidl_fuchsia_io as fio,
     fidl_fuchsia_sys_internal as fsys_internal, fuchsia_async as fasync,
@@ -19,6 +19,7 @@ use {
     vfs::{
         directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
         file::vmo::asynchronous::read_only_static, path::Path as pfsPath, pseudo_directory,
+        remote::remote_dir,
     },
 };
 
@@ -82,10 +83,10 @@ async fn main() -> Result<(), Error> {
         let fake_pkgfs = pseudo_directory! {
             "packages" => pseudo_directory! {
                 "sysmgr" => pseudo_directory! {
-                    "0" => directory_broker::DirectoryBroker::from_directory_proxy(pkg_dir),
+                    "0" => remote_dir(pkg_dir),
                 },
                 "echo_server" => pseudo_directory! {
-                    "0" => directory_broker::DirectoryBroker::from_directory_proxy(pkg_dir_2),
+                    "0" => remote_dir(pkg_dir_2),
                 },
                 "config-data" => pseudo_directory! {
                     "0" => pseudo_directory! {

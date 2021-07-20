@@ -198,15 +198,18 @@ async fn load_package_firmware_test() -> Result<(), Error> {
             },
         },
     };
-    let driver_dir = directory_broker::DirectoryBroker::from_directory_proxy(
-        io_util::open_directory_in_namespace("/pkg/driver/test", io_util::OPEN_RIGHT_READABLE)?,
-    );
-    let meta_dir = directory_broker::DirectoryBroker::from_directory_proxy(
-        io_util::open_directory_in_namespace("/pkg/meta", io_util::OPEN_RIGHT_READABLE)?,
-    );
-    let bind_dir = directory_broker::DirectoryBroker::from_directory_proxy(
-        io_util::open_directory_in_namespace("/pkg/bind", io_util::OPEN_RIGHT_READABLE)?,
-    );
+    let driver_dir = vfs::remote::remote_dir(io_util::open_directory_in_namespace(
+        "/pkg/driver/test",
+        io_util::OPEN_RIGHT_READABLE,
+    )?);
+    let meta_dir = vfs::remote::remote_dir(io_util::open_directory_in_namespace(
+        "/pkg/meta",
+        io_util::OPEN_RIGHT_READABLE,
+    )?);
+    let bind_dir = vfs::remote::remote_dir(io_util::open_directory_in_namespace(
+        "/pkg/bind",
+        io_util::OPEN_RIGHT_READABLE,
+    )?);
     let base_manifest = vfs::file::vmo::asynchronous::read_only_static(
         r#"[{"driver_url": "fuchsia-pkg://fuchsia.com/my-package#meta/ddk-firmware-test-driver.cm"}]"#,
     );
@@ -281,9 +284,10 @@ async fn load_package_firmware_test() -> Result<(), Error> {
 #[fuchsia::test]
 async fn load_system_firmware_test() -> Result<(), Error> {
     let firmware_file = vfs::file::vmo::asynchronous::read_only_static(b"this is some firmware\n");
-    let driver_dir = directory_broker::DirectoryBroker::from_directory_proxy(
-        io_util::open_directory_in_namespace("/pkg/driver/test", io_util::OPEN_RIGHT_READABLE)?,
-    );
+    let driver_dir = vfs::remote::remote_dir(io_util::open_directory_in_namespace(
+        "/pkg/driver/test",
+        io_util::OPEN_RIGHT_READABLE,
+    )?);
     let system: Directory = vfs::pseudo_directory! {
         "driver" => driver_dir,
         "lib" => vfs::pseudo_directory! {

@@ -60,7 +60,6 @@ template("component_manager") {
     "//src/sys/lib/cm_rust",
     "//src/sys/lib/cm_types",
     "//src/sys/lib/component_id_index",
-    "//src/sys/lib/directory_broker",
     "//src/sys/lib/moniker",
     "//src/sys/lib/routing",
     "//src/sys/lib/runner",
@@ -232,7 +231,6 @@ template("component_manager") {
       deps += [
         "//src/lib/diagnostics/hierarchy/rust",
         "//src/lib/process_builder:test-util-fidl-rustc",
-        "//src/sys/lib/directory_broker",
         "//src/sys/lib/library_loader",
         "//src/sys/lib/routing/testing:routing_test_helpers",
         "//third_party/rust_crates:matches",

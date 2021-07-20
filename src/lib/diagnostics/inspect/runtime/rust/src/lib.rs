@@ -61,7 +61,6 @@ mod tests {
     use fuchsia_component::server::ServiceObj;
     use fuchsia_component_test::ScopedInstance;
     use fuchsia_inspect::{assert_inspect_tree, reader, Inspector};
-    use glob::glob;
 
     const TEST_COMPONENT_URL: &str =
         "fuchsia-pkg://fuchsia.com/inspect-runtime-tests#meta/inspect_test_component.cm";
@@ -83,15 +82,14 @@ mod tests {
             .await
             .expect("failed to create test component");
 
-        let pattern = format!(
+        let path = format!(
             "/hub/children/coll:{}/exec/out/diagnostics/{}",
             app.child_name(),
             TreeMarker::SERVICE_NAME
         );
-        let path = glob(&pattern)?.next().unwrap().expect("failed to parse glob");
         let (tree, server_end) =
             fidl::endpoints::create_proxy::<TreeMarker>().expect("failed to create proxy");
-        fdio::service_connect(&path.to_string_lossy().to_string(), server_end.into_channel())
+        fdio::service_connect(&path, server_end.into_channel())
             .expect("failed to connect to service");
 
         let hierarchy = reader::read(&tree).await?;

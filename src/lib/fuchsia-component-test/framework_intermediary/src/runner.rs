@@ -4,7 +4,6 @@
 
 use {
     anyhow::{format_err, Error},
-    directory_broker,
     fidl::endpoints::{create_endpoints, create_proxy, ClientEnd, Proxy, ServerEnd, ServiceMarker},
     fidl_fuchsia_component_runner as fcrunner, fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio,
     fidl_fuchsia_realm_builder as ftrb, fidl_fuchsia_sys as fsysv1, files_async,
@@ -159,10 +158,11 @@ impl Runner {
         let host_pseudo_dir = pfs::simple();
         host_pseudo_dir.clone().add_entry(
             fsysv1::LoaderMarker::NAME,
-            directory_broker::DirectoryBroker::new(Box::new(
-                move |flags: u32,
+            vfs::remote::remote_boxed(Box::new(
+                move |_scope: ExecutionScope,
+                      flags: u32,
                       mode: u32,
-                      _relative_path: String,
+                      _relative_path: VfsPath,
                       server_end: ServerEnd<fio::NodeMarker>| {
                     if let Err(e) = runner_svc_dir_proxy.open(
                         flags,
@@ -274,16 +274,7 @@ impl Runner {
         let (outgoing_svc_dir_proxy, outgoing_svc_dir_server_end) =
             create_proxy::<fio::DirectoryMarker>()?;
         let out_pseudo_dir = pseudo_directory!(
-            "svc" => directory_broker::DirectoryBroker::new(Box::new(
-                move |flags: u32,
-                      mode: u32,
-                      relative_path: String,
-                      server_end: ServerEnd<fio::NodeMarker>| {
-                    if let Err(e) = outgoing_svc_dir_proxy.open(flags, mode, &relative_path, server_end) {
-                        error!("failed to forward service open to v1 outdir: {:?}", e);
-                    }
-                },
-            )),
+            "svc" => vfs::remote::remote_dir(outgoing_svc_dir_proxy),
         );
         out_pseudo_dir.open(
             execution_scope.clone(),

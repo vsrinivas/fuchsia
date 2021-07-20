@@ -13,7 +13,6 @@ use {
         },
     },
     async_trait::async_trait,
-    directory_broker,
     fidl::endpoints::{ClientEnd, ServerEnd},
     fidl_fuchsia_io::DirectoryMarker,
     fuchsia_zircon as zx,
@@ -30,7 +29,7 @@ use {
     },
     vfs::{
         directory::entry::DirectoryEntry, directory::immutable::simple as pfs,
-        execution_scope::ExecutionScope, path::Path as pfsPath,
+        execution_scope::ExecutionScope, path::Path as pfsPath, remote::remote_dir,
     },
 };
 
@@ -376,11 +375,7 @@ impl CapabilityProvider for HubInjectionCapabilityProvider {
             .expect("failed to create directory proxy");
 
         let dir = pfs::simple();
-        dir.add_node(
-            "old_hub",
-            directory_broker::DirectoryBroker::from_directory_proxy(hub_proxy),
-            &self.abs_moniker,
-        )?;
+        dir.add_node("old_hub", remote_dir(hub_proxy), &self.abs_moniker)?;
         let mut relative_path = relative_path.to_str().expect("path is not utf8").to_string();
         relative_path.push('/');
         let path =

@@ -453,7 +453,7 @@ mod tests {
         fidl_fuchsia_io::MODE_TYPE_SERVICE,
         fuchsia_async as fasync,
         futures::{lock::Mutex, poll, task::Poll},
-        io_util::OPEN_RIGHT_READABLE,
+        io_util::{OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
         matches::assert_matches,
         moniker::AbsoluteMoniker,
         std::collections::HashSet,
@@ -982,7 +982,7 @@ mod tests {
         let node_proxy = io_util::open_node(
             &dir_proxy,
             &PathBuf::from("hippo"),
-            OPEN_RIGHT_READABLE,
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             MODE_TYPE_SERVICE,
         )
         .expect("failed to open echo service");
@@ -1041,7 +1041,7 @@ mod tests {
         let node_proxy = io_util::open_node(
             &dir_proxy,
             &PathBuf::from("hippo"),
-            OPEN_RIGHT_READABLE,
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             MODE_TYPE_SERVICE,
         )
         .expect("failed to open echo service");
@@ -1376,7 +1376,7 @@ mod tests {
         let node_proxy = io_util::open_node(
             &dir_proxy,
             &PathBuf::from("hippo"),
-            OPEN_RIGHT_READABLE,
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             MODE_TYPE_SERVICE,
         )
         .expect("failed to open hippo service");
@@ -1448,7 +1448,7 @@ mod tests {
             let node_proxy = io_util::open_node(
                 &dir_proxy,
                 &PathBuf::from("hippo"),
-                OPEN_RIGHT_READABLE,
+                OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
                 MODE_TYPE_SERVICE,
             )
             .expect("failed to open hippo service");

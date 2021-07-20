@@ -21,7 +21,7 @@ use {
     },
     cm_rust_testing::*,
     fidl::endpoints::Proxy,
-    fidl_fuchsia_io::{MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE},
+    fidl_fuchsia_io::{MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
     fidl_fuchsia_sys2 as fsys,
     moniker::AbsoluteMoniker,
     std::{convert::TryFrom, ops::Deref, path::Path, sync::Arc},
@@ -64,7 +64,7 @@ async fn call_work_scheduler_svc_from_namespace(
     let node_proxy = io_util::open_node(
         &dir_proxy,
         &Path::new(&path.basename),
-        OPEN_RIGHT_READABLE,
+        OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
         MODE_TYPE_SERVICE,
     )
     .expect("failed to open WorkScheduler service");

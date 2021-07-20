@@ -5,20 +5,18 @@
 use {
     super::mocks::HostFn,
     cm_rust::CapabilityPath,
-    directory_broker::DirectoryBroker,
     fidl::endpoints::ServerEnd,
-    fidl_fidl_examples_echo::{EchoMarker, EchoRequest, EchoRequestStream},
+    fidl_fidl_examples_echo::{EchoRequest, EchoRequestStream},
     fidl_fuchsia_io::{
-        DirectoryMarker, DirectoryProxy, NodeMarker, CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_DIRECTORY,
+        DirectoryMarker, DirectoryProxy, CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_DIRECTORY,
         OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
-    fuchsia_async as fasync,
     futures::TryStreamExt,
     std::{collections::HashMap, convert::TryFrom, sync::Arc},
     vfs::{
         self, directory::entry::DirectoryEntry, directory::immutable::simple as pfs,
         execution_scope::ExecutionScope, file::vmo::asynchronous::read_only_const,
-        tree_builder::TreeBuilder,
+        remote::remote_dir, service::host, tree_builder::TreeBuilder,
     },
 };
 
@@ -40,7 +38,7 @@ impl OutDir {
 
     /// Adds a file providing the echo service at the given path.
     pub fn add_echo_service(&mut self, path: CapabilityPath) {
-        self.add_entry(path, DirectoryBroker::new(Box::new(Self::echo_server_fn)));
+        self.add_entry(path, host(Self::echo_server_fn));
     }
 
     /// Adds a static file at the given path.
@@ -52,7 +50,7 @@ impl OutDir {
     pub fn add_directory_proxy(&mut self, test_dir_proxy: &DirectoryProxy) {
         self.add_entry(
             CapabilityPath::try_from("/data").unwrap(),
-            DirectoryBroker::from_directory_proxy(
+            remote_dir(
                 io_util::clone_directory(&test_dir_proxy, CLONE_FLAG_SAME_RIGHTS)
                     .expect("could not clone directory"),
             ),
@@ -91,21 +89,11 @@ impl OutDir {
     }
 
     /// Hosts a new service on `server_end` that implements `fidl.examples.echo.Echo`.
-    fn echo_server_fn(
-        _flags: u32,
-        _mode: u32,
-        _relative_path: String,
-        server_end: ServerEnd<NodeMarker>,
-    ) {
-        fasync::Task::spawn(async move {
-            let server_end: ServerEnd<EchoMarker> = ServerEnd::new(server_end.into_channel());
-            let mut stream: EchoRequestStream = server_end.into_stream().unwrap();
-            while let Some(EchoRequest::EchoString { value, responder }) =
-                stream.try_next().await.unwrap()
-            {
-                responder.send(value.as_ref().map(|s| &**s)).unwrap();
-            }
-        })
-        .detach();
+    async fn echo_server_fn(mut stream: EchoRequestStream) {
+        while let Some(EchoRequest::EchoString { value, responder }) =
+            stream.try_next().await.unwrap()
+        {
+            responder.send(value.as_ref().map(|s| &**s)).unwrap();
+        }
     }
 }

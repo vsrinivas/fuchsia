@@ -20,7 +20,6 @@ use {
     ::routing::{route_to_storage_decl, verify_instance_in_component_id_index, RouteRequest},
     anyhow::{Context, Error},
     cm_rust::{self, CapabilityPath, ComponentDecl, UseDecl, UseProtocolDecl},
-    directory_broker,
     fidl::endpoints::{create_endpoints, ClientEnd, Proxy, ServerEnd, ServiceMarker},
     fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_io::{self as fio, DirectoryMarker, DirectoryProxy, NodeMarker},
@@ -35,6 +34,7 @@ use {
     vfs::{
         directory::entry::DirectoryEntry, directory::helper::DirectlyMutable,
         directory::immutable::simple as pfs, execution_scope::ExecutionScope, path::Path,
+        remote::remote,
     },
 };
 
@@ -443,14 +443,14 @@ impl IncomingNamespace {
         component: WeakComponentInstance,
     ) -> Result<(), ModelError> {
         let not_found_component_copy = component.clone();
-        let route_open_fn = Box::new(
-            move |flags: u32,
-                  mode: u32,
-                  relative_path: String,
-                  server_end: ServerEnd<NodeMarker>| {
-                let use_ = use_.clone();
-                let component = component.clone();
-                fasync::Task::spawn(async move {
+        let route_open_fn = move |scope: ExecutionScope,
+                                  flags: u32,
+                                  mode: u32,
+                                  relative_path: Path,
+                                  server_end: ServerEnd<NodeMarker>| {
+            let use_ = use_.clone();
+            let component = component.clone();
+            scope.spawn(async move {
                     let target = match component.upgrade() {
                         Ok(component) => component,
                         Err(e) => {
@@ -471,7 +471,7 @@ impl IncomingNamespace {
                                      OpenServiceOptions{
                                          flags,
                                          open_mode: mode,
-                                         relative_path,
+                                         relative_path: relative_path.into_string(),
                                          server_chan: &mut server_end
                                      }
                                  ))
@@ -481,8 +481,8 @@ impl IncomingNamespace {
                                  OpenOptions::Protocol(
                                      OpenProtocolOptions{
                                          flags,
-                                         open_mode:mode,
-                                         relative_path,
+                                         open_mode: mode,
+                                         relative_path: relative_path.into_string(),
                                          server_chan: &mut server_end
                                      }
                                  ))
@@ -501,10 +501,8 @@ impl IncomingNamespace {
                         )
                         .await;
                     }
-                })
-                .detach();
-            },
-        );
+                });
+        };
 
         let service_dir = svc_dirs.entry(capability_path.dirname.clone()).or_insert_with(|| {
             make_dir_with_not_found_logging(
@@ -514,10 +512,7 @@ impl IncomingNamespace {
         });
         service_dir
             .clone()
-            .add_entry(
-                &capability_path.basename,
-                directory_broker::DirectoryBroker::new(route_open_fn),
-            )
+            .add_entry(&capability_path.basename, remote(route_open_fn))
             .expect("could not add service to directory");
         Ok(())
     }

@@ -7,10 +7,10 @@ use {
         addable_directory::AddableDirectory, component::WeakComponentInstance, error::ModelError,
     },
     cm_rust::{CapabilityPath, ComponentDecl, ExposeDecl, UseDecl},
-    directory_broker::{DirectoryBroker, RoutingFn},
     moniker::AbsoluteMoniker,
     std::collections::HashMap,
     vfs::directory::immutable::simple as pfs,
+    vfs::remote::{remote_boxed, RoutingFn},
 };
 
 /// Indicates a capability to add to a constructed DirTree. This struct
@@ -88,7 +88,7 @@ impl DirTree {
             root_dir.add_node(&name, subdir, abs_moniker)?;
         }
         for (name, route_fn) in self.broker_nodes {
-            let node = DirectoryBroker::new(route_fn);
+            let node = remote_boxed(route_fn);
             root_dir.add_node(&name, node, abs_moniker)?;
         }
         Ok(())

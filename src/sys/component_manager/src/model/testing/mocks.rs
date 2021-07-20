@@ -20,7 +20,6 @@ use {
     anyhow::format_err,
     async_trait::async_trait,
     cm_rust::{ComponentDecl, ExposeDecl, UseDecl},
-    directory_broker::RoutingFn,
     fidl::endpoints::RequestStream,
     fidl::{endpoints::ServerEnd, epitaph::ChannelEpitaphExt},
     fidl_fidl_examples_echo::{EchoMarker, EchoRequest, EchoRequestStream},
@@ -48,7 +47,7 @@ use {
     },
     vfs::{
         directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
-        file::vmo::asynchronous::read_only_static, path::Path, pseudo_directory,
+        file::vmo::asynchronous::read_only_static, path::Path, pseudo_directory, remote::RoutingFn,
     },
 };
 
@@ -108,10 +107,14 @@ impl From<ExposeDecl> for CapabilityType {
 
 fn new_proxy_routing_fn(ty: CapabilityType) -> RoutingFn {
     Box::new(
-        move |flags: u32, mode: u32, relative_path: String, server_end: ServerEnd<NodeMarker>| {
+        move |scope: ExecutionScope,
+              flags: u32,
+              mode: u32,
+              path: Path,
+              server_end: ServerEnd<NodeMarker>| {
             match ty {
                 CapabilityType::Protocol => {
-                    fasync::Task::spawn(async move {
+                    scope.spawn(async move {
                         let server_end: ServerEnd<EchoMarker> =
                             ServerEnd::new(server_end.into_channel());
                         let mut stream: EchoRequestStream = server_end.into_stream().unwrap();
@@ -120,15 +123,12 @@ fn new_proxy_routing_fn(ty: CapabilityType) -> RoutingFn {
                         {
                             responder.send(value.as_ref().map(|s| &**s)).unwrap();
                         }
-                    })
-                    .detach();
+                    });
                 }
                 CapabilityType::Directory | CapabilityType::Storage => {
                     let sub_dir = pseudo_directory!(
                         "hello" => read_only_static(b"friend"),
                     );
-                    let path =
-                        Path::validate_and_split(relative_path).expect("Failed to split path");
                     sub_dir.open(ExecutionScope::new(), flags, mode, path, server_end);
                 }
                 CapabilityType::Service => panic!("service capability unsupported"),

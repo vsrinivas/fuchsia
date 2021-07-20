@@ -23,7 +23,7 @@ use {
     },
     cm_rust::{ChildDecl, ComponentDecl, NativeIntoFidl},
     cm_types::Url,
-    fidl::endpoints::{self, Proxy, ServerEnd, ServiceMarker},
+    fidl::endpoints::{self, Proxy, ServiceMarker},
     fidl_fidl_examples_echo as echo, fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_io::{
         DirectoryMarker, DirectoryProxy, CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_SERVICE,
@@ -39,7 +39,7 @@ use {
     std::default::Default,
     std::path::Path,
     std::sync::Arc,
-    vfs::directory::entry::DirectoryEntry,
+    vfs::{directory::entry::DirectoryEntry, service},
 };
 
 pub const TEST_RUNNER_NAME: &str = cm_rust_testing::TEST_RUNNER_NAME;
@@ -245,9 +245,13 @@ pub async fn write_file<'a>(root_proxy: &'a DirectoryProxy, path: &'a str, conte
 }
 
 pub async fn call_echo<'a>(root_proxy: &'a DirectoryProxy, path: &'a str) -> String {
-    let node_proxy =
-        io_util::open_node(&root_proxy, &Path::new(path), OPEN_RIGHT_READABLE, MODE_TYPE_SERVICE)
-            .expect("failed to open echo service");
+    let node_proxy = io_util::open_node(
+        &root_proxy,
+        &Path::new(path),
+        OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+        MODE_TYPE_SERVICE,
+    )
+    .expect("failed to open echo service");
     let echo_proxy = echo::EchoProxy::new(node_proxy.into_channel().unwrap());
     let res = echo_proxy.echo_string(Some("hippos")).await;
     res.expect("failed to use echo service").expect("no result from echo")
@@ -263,25 +267,14 @@ where
 {
     use futures::sink::SinkExt;
     let (sender, receiver) = futures::channel::mpsc::channel(0);
-    let entry = directory_broker::DirectoryBroker::new(Box::new(
-        move |_flags: u32,
-              _mode: u32,
-              _relative_path: String,
-              server_end: ServerEnd<fidl_fuchsia_io::NodeMarker>| {
-            let mut sender = sender.clone();
-            fasync::Task::spawn(async move {
-                // Convert the stream into a channel of the correct service.
-                let server_end: ServerEnd<S> = ServerEnd::new(server_end.into_channel());
-                let mut stream: S::RequestStream = server_end.into_stream().unwrap();
-
-                // Keep handling requests until the stream closes or the handler returns an error.
-                while let Ok(Some(request)) = stream.try_next().await {
-                    sender.send(request).await.unwrap();
-                }
-            })
-            .detach();
-        },
-    ));
+    let entry = service::host(move |mut stream: S::RequestStream| {
+        let mut sender = sender.clone();
+        async move {
+            while let Ok(Some(request)) = stream.try_next().await {
+                sender.send(request).await.unwrap();
+            }
+        }
+    });
     (entry, receiver)
 }
 

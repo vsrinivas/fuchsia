@@ -9,7 +9,7 @@ use {
     },
     cm_rust::CapabilityPath,
     fidl_fuchsia_component as fcomponent,
-    fidl_fuchsia_io::{MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE},
+    fidl_fuchsia_io::{MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
     fidl_fuchsia_sys2 as fsys,
     fuchsia_async::Channel,
     fuchsia_zircon as zx,
@@ -110,7 +110,7 @@ async fn dispatch(
         .await
         .map_err(|err| Error::Model(err))?
         .open_outgoing(
-            OPEN_RIGHT_READABLE,
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             MODE_TYPE_SERVICE,
             svc_path.to_path_buf(),
             &mut server_end,

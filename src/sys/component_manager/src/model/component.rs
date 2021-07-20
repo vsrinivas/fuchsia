@@ -46,7 +46,9 @@ use {
     },
     fidl::endpoints::{create_endpoints, Proxy, ServerEnd},
     fidl_fuchsia_component_runner as fcrunner,
-    fidl_fuchsia_io::{self as fio, DirectoryProxy, MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE},
+    fidl_fuchsia_io::{
+        self as fio, DirectoryProxy, MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+    },
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::{
         future::{
@@ -391,7 +393,7 @@ impl ComponentInstance {
                         .map_err(|_| ModelError::InsufficientResources)?;
                 let mut server_channel = server_channel.into_channel();
                 let options = OpenRunnerOptions {
-                    flags: OPEN_RIGHT_READABLE,
+                    flags: OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
                     open_mode: MODE_TYPE_SERVICE,
                     server_chan: &mut server_channel,
                 };

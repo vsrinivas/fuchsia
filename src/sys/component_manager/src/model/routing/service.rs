@@ -239,7 +239,7 @@ impl lazy::LazyDirectory for ServiceCollectionDirectory {
                 let (proxy, server) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
                     .map_err(|_| Status::INTERNAL)?;
                 if let Ok(()) = open_capability_at_source(OpenRequest {
-                    flags: fio::OPEN_RIGHT_READABLE,
+                    flags: fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
                     open_mode: fio::MODE_TYPE_DIRECTORY,
                     relative_path: PathBuf::new(),
                     source,

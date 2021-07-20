@@ -1304,7 +1304,7 @@ pub mod capability_util {
         let node_proxy = io_util::open_node(
             &dir_proxy,
             &Path::new(&path.basename),
-            OPEN_RIGHT_READABLE,
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             MODE_TYPE_SERVICE,
         )
         .expect("failed to open realm service");
@@ -1332,7 +1332,7 @@ pub mod capability_util {
         let node_proxy = io_util::open_node(
             &dir_proxy,
             &Path::new(&path.basename),
-            OPEN_RIGHT_READABLE,
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             MODE_TYPE_SERVICE,
         )
         .expect("failed to open realm service");
@@ -1358,7 +1358,7 @@ pub mod capability_util {
         let node_proxy = io_util::open_node(
             &dir_proxy,
             &Path::new(&path.basename),
-            OPEN_RIGHT_READABLE,
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             MODE_TYPE_SERVICE,
         )
         .expect("failed to open realm service");
@@ -1418,7 +1418,7 @@ pub mod capability_util {
         let state = component.lock_state().await;
         match &*state {
             InstanceState::Resolved(resolved_instance_state) => {
-                let flags = OPEN_RIGHT_READABLE;
+                let flags = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE;
                 let vns_path = to_fvfs_path(path);
                 resolved_instance_state
                     .get_exposed_dir()
