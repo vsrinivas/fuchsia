@@ -434,6 +434,7 @@ pub fn sys_fchownat(
     _group: u32,
     _flags: u32,
 ) -> Result<SyscallResult, Errno> {
+    not_implemented!("Stubbed fchownat has no effect.");
     Ok(SUCCESS)
 }
 
