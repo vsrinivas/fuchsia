@@ -130,7 +130,7 @@ func TestRunSteps(t *testing.T) {
 	t.Run("touches nonhermetic rebuild file before running GN in incremental mode", func(t *testing.T) {
 		runner := &fakeSubprocessRunner{}
 		contextSpec := proto.Clone(contextSpec).(*fintpb.Context)
-		contextSpec.Incremental = true
+		staticSpec.Incremental = true
 
 		_, err := runSteps(ctx, runner, staticSpec, contextSpec, "linux-x64")
 		if err != nil {

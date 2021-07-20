@@ -91,7 +91,7 @@ func Build(ctx context.Context, staticSpec *fintpb.Static, contextSpec *fintpb.C
 		jobCount:  int(contextSpec.GomaJobCount),
 	}
 
-	if contextSpec.Incremental {
+	if staticSpec.Incremental {
 		// If we're building incrementally, we need to clean out any stale files
 		// in the build directory.
 		if err := ninjaCleanDead(ctx, runner); err != nil {
@@ -110,7 +110,7 @@ func Build(ctx context.Context, staticSpec *fintpb.Static, contextSpec *fintpb.C
 		ninjaErr = runner.run(ctx, targets, os.Stdout, os.Stderr)
 	} else {
 		var explainSink io.Writer
-		if contextSpec.Incremental {
+		if staticSpec.Incremental {
 			f, err := ioutil.TempFile(contextSpec.ArtifactDir, "")
 			if err != nil {
 				return nil, err
@@ -124,7 +124,7 @@ func Build(ctx context.Context, staticSpec *fintpb.Static, contextSpec *fintpb.C
 			runner,
 			targets,
 			// Add -d explain to incremental builds.
-			contextSpec.Incremental,
+			staticSpec.Incremental,
 			explainSink,
 		)
 	}

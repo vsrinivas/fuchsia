@@ -55,7 +55,7 @@ func runSteps(
 		return nil, fmt.Errorf("build_dir must be set")
 	}
 
-	if contextSpec.Incremental {
+	if staticSpec.Incremental {
 		// If we're building incrementally, we need to rebuild all nonhermetic
 		// actions. This is done by touching a particular source file in the
 		// tree.
