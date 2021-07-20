@@ -26,18 +26,21 @@ impl Waiter {
     /// If the wait is interrupted (see interrupt), this function returns
     /// EINTR.
     pub fn wait(&self) -> Result<(), Errno> {
-        self.wait_util(zx::Time::INFINITE)
+        self.wait_until(zx::Time::INFINITE)
     }
 
     /// Wait until the given deadline has passed or the waiter is woken up.
     ///
     /// If the wait is interrupted (seee interrupt), this function returns
     /// EINTR.
-    pub fn wait_util(&self, deadline: zx::Time) -> Result<(), Errno> {
-        let packet = self.port.wait(deadline).map_err(impossible_error)?;
-        match packet.status() {
-            zx::sys::ZX_OK => Ok(()),
-            _ => Err(EINTR),
+    pub fn wait_until(&self, deadline: zx::Time) -> Result<(), Errno> {
+        match self.port.wait(deadline) {
+            Ok(packet) => match packet.status() {
+                zx::sys::ZX_OK => Ok(()),
+                _ => Err(EINTR),
+            },
+            Err(zx::Status::TIMED_OUT) => Ok(()),
+            Err(errno) => Err(impossible_error(errno)),
         }
     }
 

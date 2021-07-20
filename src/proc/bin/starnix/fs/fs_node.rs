@@ -11,7 +11,6 @@ use fuchsia_zircon::Time;
 use super::{FileOps, ObserverList};
 use crate::devices::DeviceHandle;
 use crate::fs::*;
-use crate::syscalls::system::time_to_timespec;
 use crate::types::*;
 
 pub struct FsNode {
@@ -355,9 +354,9 @@ impl FsNode {
             st_nlink: info.link_count,
             st_uid: info.uid,
             st_gid: info.gid,
-            st_ctim: time_to_timespec(&info.time_create),
-            st_mtim: time_to_timespec(&info.time_modify),
-            st_atim: time_to_timespec(&info.time_access),
+            st_ctim: timespec_from_time(info.time_create),
+            st_mtim: timespec_from_time(info.time_modify),
+            st_atim: timespec_from_time(info.time_access),
             st_dev: info.dev,
             st_rdev: info.rdev,
             st_blksize: BYTES_PER_BLOCK,

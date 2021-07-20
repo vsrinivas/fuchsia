@@ -116,6 +116,7 @@ if (target_cpu == "x64") {
       "types/file_mode.rs",
       "types/mod.rs",
       "types/open_flags.rs",
+      "types/time.rs",
       "types/uapi.rs",
       "types/user_address.rs",
       "types/user_buffer.rs",

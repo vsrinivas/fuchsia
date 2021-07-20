@@ -5,13 +5,16 @@
 mod errno;
 mod file_mode;
 mod open_flags;
-pub mod uapi;
+mod time;
 mod user_address;
 mod user_buffer;
+
+pub mod uapi;
 
 pub use errno::*;
 pub use file_mode::*;
 pub use open_flags::*;
+pub use time::*;
 pub use uapi::*;
 pub use user_address::*;
 pub use user_buffer::*;

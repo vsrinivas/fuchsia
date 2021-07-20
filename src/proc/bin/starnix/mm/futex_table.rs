@@ -101,7 +101,7 @@ impl FutexTable {
             }
             entries.push(FutexEntry { waiter: Arc::clone(&task.waiter), mask });
         }
-        task.waiter.wait_util(deadline)
+        task.waiter.wait_until(deadline)
     }
 
     /// Wake the given number of waiters on futex at the given address.

@@ -50,13 +50,6 @@ pub fn sys_getrandom(
     Ok(size.into())
 }
 
-const NANOS_PER_SECOND: i64 = 1000 * 1000 * 1000;
-
-pub fn time_to_timespec(time: &zx::Time) -> timespec {
-    let nanos = time.into_nanos();
-    timespec { tv_sec: nanos / NANOS_PER_SECOND, tv_nsec: nanos % NANOS_PER_SECOND }
-}
-
 pub fn sys_clock_getres(
     ctx: &SyscallContext<'_>,
     which_clock: i32,
@@ -111,9 +104,7 @@ pub fn sys_gettimeofday(
     user_tz: UserRef<timezone>,
 ) -> Result<SyscallResult, Errno> {
     if !user_tv.is_null() {
-        let now = utc_time().into_nanos();
-        let tv =
-            timeval { tv_sec: now / NANOS_PER_SECOND, tv_usec: (now % NANOS_PER_SECOND) / 1000 };
+        let tv = timeval_from_time(utc_time());
         ctx.task.mm.write_object(user_tv, &tv)?;
     }
     if !user_tz.is_null() {
@@ -122,23 +113,25 @@ pub fn sys_gettimeofday(
     return Ok(SUCCESS);
 }
 
-fn get_duration_from_timespec(ts: timespec) -> Result<zx::Duration, Errno> {
-    if ts.tv_nsec >= NANOS_PER_SECOND {
-        return Err(EINVAL);
-    }
-    return Ok(zx::Duration::from_seconds(ts.tv_sec) + zx::Duration::from_nanos(ts.tv_nsec));
-}
-
 pub fn sys_nanosleep(
     ctx: &SyscallContext<'_>,
     user_request: UserRef<timespec>,
-    _user_remaining: UserRef<timespec>,
+    user_remaining: UserRef<timespec>,
 ) -> Result<SyscallResult, Errno> {
     let mut request = timespec::default();
     ctx.task.mm.read_object(user_request, &mut request)?;
-    let time = get_duration_from_timespec(request)?;
-    // TODO: We should be waiting on an object that can wake us up if we get a signal.
-    time.sleep();
+    let deadline = zx::Time::after(duration_from_timespec(request)?);
+    ctx.task.waiter.wait_until(deadline).map_err(|e| {
+        if e == EINTR {
+            let now = zx::Time::get_monotonic();
+            let remaining =
+                timespec_from_duration(std::cmp::max(zx::Duration::from_nanos(0), deadline - now));
+            if let Err(e) = ctx.task.mm.write_object(user_remaining, &remaining) {
+                return e;
+            }
+        }
+        e
+    })?;
     Ok(SUCCESS)
 }
 
