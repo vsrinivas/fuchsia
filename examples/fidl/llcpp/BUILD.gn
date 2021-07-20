@@ -8,6 +8,7 @@ group("all") {
     "async_completer/client",
     "async_completer/server",
     "client",
+    "client_shared",
     "client_sync",
     "request_pipelining/client",
     "request_pipelining/server",

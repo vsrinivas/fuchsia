@@ -44,9 +44,10 @@ int main(int argc, const char** argv) {
    private:
     async::Loop& loop_;
   };
+  EventHandler handler(loop);
 
   // Create a client to the Echo protocol.
-  fidl::Client client(std::move(*client_end), dispatcher, std::make_shared<EventHandler>(loop));
+  fidl::WireClient client(std::move(*client_end), dispatcher, &handler);
 
   // Make an EchoString call, passing it a lambda to handle the response asynchronously.
   auto result_async = client->EchoString(

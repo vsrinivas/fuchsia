@@ -188,7 +188,7 @@ This complete process is described in further detail in the
 ### Initialize the event loop
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/server/main.cc" region_tag="main" highlight="2,3,4,5,30" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/server/main.cc" region_tag="main" highlight="2,3,4,5,32" %}
 ```
 
 The event loop is used to asynchronously listen for incoming connections and
@@ -216,18 +216,19 @@ serve capabilities (e.g. FIDL protocols) to other components.
 The server then registers the Echo protocol using `ougoing.svc_dir()->AddEntry()`.
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/server/main.cc" region_tag="main" highlight="19,20,21,22,23,24,25,26,27,28,29,30,31" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/server/main.cc" region_tag="main" highlight="17,18,19,20,21,22,23,24,25,26,27,28,29,30,31" %}
 ```
 
 The call to `AddEntry` installs a handler for the name of the FIDL protocol
-(`fuchsia_examples::Echo::Name`, which is the string
-`"fuchsia.examples.Echo"`). The handler will call the lambda function that we
-created, and this lambda function will call `server.Bind()` with the `fidl::ServerEnd<fuchsia_examples::Echo>`, which internally wraps a
+(`fuchsia_examples::Echo::Name`, which is the string `"fuchsia.examples.Echo"`).
+The handler will call the lambda function that we created, and this lambda
+function will call `EchoImpl::Bind` with the
+`fidl::ServerEnd<fuchsia_examples::Echo>`, which internally wraps a
 `zx::channel`, that represents a request from a client.
 
 When a client requests access to `/svc/fuchsia.examples.Echo`, this function
 will be called with a channel that represents the request. This channel is bound
-to our server via the `Bind()` function, and future requests from this client
+to our server via the `Bind` function, and future requests from this client
 will call.
 
 When the handler is called (i.e. when a client has requested to connect to the

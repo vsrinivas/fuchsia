@@ -10,7 +10,7 @@ In the `Echo` implementation from the [server tutorial][server-tut], the server 
 to `EchoString` requests using the completer.
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/server/main.cc" region_tag="impl" highlight="12,13,14,15,16,17,18,19,20" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/server/main.cc" region_tag="impl" highlight="34,35,36,37,38" %}
 ```
 
 Notice that the type for the completer has `::Sync`. This indicates the default mode of operation:

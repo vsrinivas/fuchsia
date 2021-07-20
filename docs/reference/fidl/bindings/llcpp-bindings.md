@@ -370,9 +370,10 @@ API exposes three templated endpoint classes:
 
 * `fidl::ClientEnd<TicTacToe>`: the client endpoint of the `TicTacToe` protocol;
   it owns a `zx::channel`. Client bindings that require exclusive ownership of
-  the channel would consume this type. For example, a `fidl::Client<TicTacToe>`
-  may be constructed from a `fidl::ClientEnd<TicTacToe>`, also known as "binding
-  the channel to the message dispatcher".
+  the channel would consume this type. For example, a
+  `fidl::WireClient<TicTacToe>` may be constructed from a
+  `fidl::ClientEnd<TicTacToe>`, also known as "binding the channel to the
+  message dispatcher".
 * `fidl::UnownedClientEnd<TicTacToe>`: an unowned value borrowing some client
   endpoint of the `TicTacToe` protocol. Client APIs that do not require
   exclusive ownership of the channel would take this type. An `UnownedClientEnd`
@@ -432,35 +433,43 @@ generated.
 The LLCPP bindings provides multiple ways to interact with a FIDL protocol as a
 client:
 
-* `fidl::Client<TicTacToe>`: This class exposes thread-safe APIs for outgoing
-  asynchronous and synchronous calls as well as asynchronous event handling. It
-  owns the client end of the channel. An `async_dispatcher_t*` is required to
-  support the asynchronous APIs as well as event and error handling. This is the
-  recommended variant for most use-cases, except for those where an
-  `async_dispatcher_t` cannot be used.
-* `TicTacToe::SyncClient`: This class exposes purely synchronous APIs for
-  outgoing calls as well as for event handling. It owns the client end of the
-  channel.
-* `TicTacToe::Call`: This class is identical to `SyncClient` except that it does
-  not have ownership of the client end of the channel. `Call` may be preferable
-  to `SyncClient` when migrating code from the C bindings to the LLCPP bindings,
-  or when implementing C APIs that take raw `zx_handle_t`s.
+* `fidl::WireClient<TicTacToe>`: This class exposes thread-safe APIs for
+  outgoing asynchronous and synchronous calls as well as asynchronous event
+  handling. It owns the client end of the channel. An `async_dispatcher_t*` is
+  required to support the asynchronous APIs as well as event and error handling.
+  It must be used with a single-threaded dispatcher. Objects of this class must
+  be bound to the client endpoint and destroyed on the same thread that is
+  running the dispatcher. This is the recommended variant for most use cases,
+  except for those where an `async_dispatcher_t` cannot be used or when the
+  client needs to be moved between threads.
+* `fidl::WireSharedClient<TicTacToe>`: This class has less opinions on threading
+  models compared to `WireClient`, but requires a two-phase shutdown pattern to
+  prevent use-after-frees. Objects of this class may be destroyed on an
+  arbitrary thread. It also supports use with a multi-threaded dispatcher. For
+  more details, see [LLCPP threading guide][llcpp-threading-guide].
+* `fidl::WireSyncClient<TicTacToe>`: This class exposes purely synchronous APIs
+  for outgoing calls as well as for event handling. It owns the client end of
+  the channel.
+* `fidl::WireCall<TicTacToe>`: This class is identical to `WireSyncClient`
+  except that it does not have ownership of the client end of the channel.
+  `WireCall` may be preferable to `WireSyncClient` when migrating code from the
+  C bindings to the LLCPP bindings, or when implementing C APIs that take raw
+  `zx_handle_t`s.
 
-#### fidl::Client {#async-client}
+#### WireClient {#async-client}
 
-<!-- TODO(fxbug.dev/58672) fidl::Client should be covered by generated docs -->
+<!-- TODO(fxbug.dev/58672) fidl::WireClient should be covered by generated docs -->
 
-`fidl::Client` is thread-safe and supports both synchronous and asynchronous
-calls as well as asynchronous event handling. It also supports use with a
-multi-threaded dispatcher.
+`fidl::WireClient` is thread-safe and supports both synchronous and asynchronous
+calls as well as asynchronous event handling.
 
 ##### Creation
 
 A client is created with a client-end `fidl::ClientEnd<P>` to the protocol `P`,
-an `async_dispatcher_t*`, and an optional shared pointer on an
+an `async_dispatcher_t*`, and an optional pointer to an
 [`AsyncEventHandler`](#async-event-handlers) that defines the methods to be
 called when a FIDL event is received or when the client is unbound. If the
-virtual for a particular event is not overridden, the event is ignored.
+virtual method for a particular event is not overridden, the event is ignored.
 
 ```cpp
 class EventHandler : public fidl::WireAsyncEventHandler<TicTacToe> {
@@ -469,48 +478,24 @@ class EventHandler : public fidl::WireAsyncEventHandler<TicTacToe> {
 
   void OnOpponentMove(OnOpponentMoveResponse* event) override { /* ... */ }
 
-  void Unbound(fidl::UnbindInfo unbind_info) override { /* ... */ }
+  void on_fidl_error(fidl::UnbindInfo unbind_info) override { /* ... */ }
 };
 
 fidl::ClientEnd<TicTacToe> client_end = /* logic to connect to the protocol */;
-Client<TicTacToe> client;
+EventHandler event_handler;
+WireClient<TicTacToe> client;
 zx_status_t status = client.Bind(
-    std::move(client_end), dispatcher, std::make_shared<EventHandler>());
+    std::move(client_end), dispatcher, &event_handler);
 ```
-The channel may be unbound automatically in case of the server-end being closed
-or due to an invalid message being received from the server. You may also
-actively unbind the channel through `client.Unbind()`.
 
-#### Unbinding
-
-Unbinding is thread-safe. In any of these cases, ongoing and future operations
-will not cause a fatal failure, only returning `ZX_ERR_CANCELED` where
-appropriate.
-
-If you provided an unbound hook, it is executed as task on the dispatcher,
-providing a reason and error status for the unbinding. You may also recover
-ownership of the client end of the channel through the hook. The unbound hook is
-guaranteed to be run.
-
-##### Interaction with dispatcher
-
-All asynchronous responses, event handling, and error handling are done through
-the `async_dispatcher_t*` provided on creation of a client. With the exception
-of the dispatcher being shutdown, you can expect that all hooks provided to the
-client APIs will be executed on a dispatcher thread (and not nested within other
-user code).
-
-Note: If you shutdown the dispatcher while there are any active bindings, the
-unbound hook may be executed on the thread executing shutdown. As such, you must
-not take any locks that could be taken by hooks provided to `fidl::Client` APIs
-while executing `async::Loop::Shutdown()/async_loop_shutdown()`. (You should
-probably ensure that no locks are held around shutdown anyway since it joins all
-dispatcher threads, which may take locks in user code).
+The binding may be torn down automatically in case of the server-end being
+closed or due to an invalid message being received from the server. You may also
+actively tear down the bindings by destroying the client object.
 
 ##### Outgoing FIDL methods
 
-You can invoke outgoing FIDL APIs through the `fidl::Client` instance.
-Dereferencing a `fidl::Client` provides access to the following methods:
+You can invoke outgoing FIDL APIs through the `fidl::WireClient` instance.
+Dereferencing a `fidl::WireClient` provides access to the following methods:
 
 * `fidl::Result StartGame(bool start_first)`: Managed variant of a fire
   and forget method.
@@ -522,18 +507,20 @@ Dereferencing a `fidl::Client` provides access to the following methods:
   callback to handle responses as the last argument. The callback is executed
   on response in a dispatcher thread. The returned `fidl::Result` refers
   just to the status of the outgoing call.
-* `fidl::Result MakeMove(fidl::BufferSpan _request_buffer, uint8_t row,
-  uint8_t col, MakeMoveResponseContext* _context)`: Asynchronous,
-  caller-allocated variant of a two way method. The final argument is a response
-  context, which is explained below.
+* `fidl::Result MakeMove(fidl::BufferSpan _request_buffer, uint8_t row, uint8_t
+  col, MakeMoveResponseContext* _context)`: Asynchronous, caller-allocated
+  variant of a two way method. The final argument is a response context, which
+  is explained below.
 * `ResultOf::MakeMove MakeMove_Sync(uint8_t row, uint8_t col)`: Synchronous,
-  managed variant of a two way method. The same method exists on `SyncClient`.
-* `UnownedResultOf::MakeMove_sync(fidl::BufferSpan _request_buffer, uint8_t row,
-  uint8_t col, fidl::BufferSpan _response_buffer)`: Synchronous, caller-allocated
-  variant of a two way method. The same method exists on `SyncClient`.
+  managed variant of a two way method. The same method exists on
+  `WireSyncClient`.
+* `UnownedResultOf::MakeMove_Sync(fidl::BufferSpan _request_buffer, uint8_t row,
+  uint8_t col, fidl::BufferSpan _response_buffer)`: Synchronous,
+  caller-allocated variant of a two way method. The same method exists on
+  `WireSyncClient`.
 
 Note: One-way and synchronous two-way FIDL methods have a similar API to the
-[`SyncClient`](#sync-client) versions. Aside from one-way methods directly
+[`WireSyncClient`](#sync-client) versions. Aside from one-way methods directly
 returning `fidl::StatusAndError` and the added `_Sync` on the synchronous
 methods, the behavior is identical.
 
@@ -543,29 +530,36 @@ asynchronous case. `TicTacToe` has only one response context,
 should be overridden to handle responses:
 
 ```c++
-virtual void OnReply(MakeMoveResponse* msg) = 0;
-virtual void OnError() = 0;
+virtual void OnResult(fidl::WireUnownedResult<MakeMove>&& result) = 0;
+virtual void OnCanceled() = 0;
 ```
 
-Only one of the two methods is called for a single response: `OnReply()` is
-called with a successfully decoded response, whereas `OnError()` is called on
-any error that would cause the response context to be discarded without
-`OnReply()` being called. You are responsible for ensuring that the response
-context object outlives the duration of the entire async call, since the
-`fidl::Client` borrows the context object by address to avoid implicit
-allocation.
+Exactly one of the two methods is called for a single response: `OnResult` is
+called with a result object either representing a successfully decoded response
+or an error that is specific to this call. `OnCanceled` is called when the
+two-way call is canceled due to unrelated errors or when the user destroys the
+client object. You are responsible for ensuring that the response context object
+outlives the duration of the entire async call, since the `fidl::WireClient`
+borrows the context object by address to avoid implicit allocation.
 
-Note: If the client is destroyed with outstanding asynchronous transactions,
-`OnError()` will be invoked for all of the associated `ResponseContext`s
+##### Centralized error handler
 
-#### SyncClient {#sync-client}
+When the binding is torn down due to an error,
+`fidl::AsyncEventHandler<TicTacToe>::on_fidl_error` will be invoked from the
+dispatcher thread with the detailed reason. When the error is dispatcher
+shutdown, `on_fidl_error` will be invoked from the thread that is calling
+dispatcher shutdown. It is recommended to put any central logic for logging or
+releasing resources in that handler.
 
-`TicTacToe::SyncClient` provides the following methods:
+#### WireSyncClient {#sync-client}
 
-* `explicit SyncClient(fidl::ClientEnd<TicTacToe>)`: Constructor.
-* `~SyncClient()`: Default destructor.
-* `SyncClient(&&)`: Default move constructor.
-* `SyncClient& operator=(SyncClient&&)`: Default move assignment.
+`fidl::WireSyncClient<TicTacToe>` is a synchronous client which provides the
+following methods:
+
+* `explicit WireSyncClient(fidl::ClientEnd<TicTacToe>)`: Constructor.
+* `~WireSyncClient()`: Default destructor.
+* `WireSyncClient(&&)`: Default move constructor.
+* `WireSyncClient& operator=(WireSyncClient&&)`: Default move assignment.
 * `fidl::ClientEnd<TicTacToe>& client_end()`: Returns a mutable reference to
   the underlying [client endpoint](#typed-channels).
 * `const fidl::ClientEnd<TicTacToe>& client_end() const`: Returns the underlying
@@ -604,33 +598,28 @@ responses, whereas the caller-allocated variant allows the user to pass in the
 buffers themselves. The owned variant is easier to use, but may result in extra
 allocation.
 
-#### Call {#client-call}
+#### WireCall {#client-call}
 
-`TicTacToe::Call` provides similar methods to those found in `SyncClient`, with
-the only difference being that they are all `static` and take a
-`fidl::UnownedClientEnd<TicTacToe>` as the first parameter:
+`fidl::WireCall<TicTacToe>` provides similar methods to those found in
+`WireSyncClient`, with the only difference being that `WireCall` can be
+constructed with a `fidl::UnownedClientEnd<TicTacToe>` i.e. it borrows the
+client endpoint:
 
-* `static ResultOf::StartGame StartGame(
-      fidl::UnownedClientEnd<TicTacToe> _client_end, bool start_first)`:
-  Owned variant of `StartGame`.
-* `static UnownedResultOf::StartGame StartGame(
-      fidl::UnownedClientEnd<TicTacToe> _client_end,
-      fidl::BufferSpan _request_buffer, bool start_first)`:
-  Caller-allocated variant of `StartGame`.
-* `static ResultOf::MakeMove MakeMove(
-      fidl::UnownedClientEnd<TicTacToe> _client_end, uint8_t row, uint8_t col)`:
-  Owned variant of `MakeMove`.
-* `static UnownedResultOf::MakeMove MakeMove(
-      fidl::UnownedClientEnd<TicTacToe> _client_end,
-      fidl::BufferSpan _request_buffer, uint8_t row, uint8_t col,
-      fidl::BufferSpan _response_buffer);`:
-  Caller-allocated variant of `MakeMove`.
+* `ResultOf::StartGame StartGame(bool start_first)`: Owned variant of
+  `StartGame`.
+* `UnownedResultOf::StartGame StartGame(fidl::BufferSpan _request_buffer, bool
+  start_first)`: Caller-allocated variant of `StartGame`.
+* `ResultOf::MakeMove MakeMove(uint8_t row, uint8_t col)`: Owned variant of
+  `MakeMove`.
+* `UnownedResultOf::MakeMove MakeMove(fidl::BufferSpan _request_buffer, uint8_t
+  row, uint8_t col, fidl::BufferSpan _response_buffer);`: Caller-allocated
+  variant of `MakeMove`.
 
 #### Result, ResultOf and UnownedResultOf {#resultof}
 
-The managed variants of each method of `SyncClient` and `Call` all return a
-`ResultOf::` type, whereas the caller-allocating variants all return an
-`UnownedResultOf::`. Fire and forget methods on `fidl::Client` return a
+The managed variants of each method of `WireSyncClient` and `WireCall` all
+return a `ResultOf::` type, whereas the caller-allocating variants all return an
+`UnownedResultOf::`. Fire and forget methods on `fidl::WireClient` return a
 `Result`. These types define the same set of methods:
 
 *   `zx_status status() const` returns the transport status. it returns the
@@ -870,31 +859,33 @@ on the type of [client](#client) being used.
 
 #### Async client {#async-event-handlers}
 
-When using a `fidl::Client`, events can be handled asynchronously by passing the
-class a `std::shared_ptr<TicTacToe::AsyncEventHandler>`. The `AsyncEventHandler` class has the
-following members:
+When using a `fidl::WireClient`, events can be handled asynchronously by passing
+the class a `TicTacToe::AsyncEventHandler*`. The `AsyncEventHandler` class has
+the following members:
 
-* `virtual void OnOpponentMove(OnOpponentMoveResponse* message) {}`: handler for the
-  OnOpponentMove event (one method per event).
+* `virtual void OnOpponentMove(OnOpponentMoveResponse* message) {}`: handler for
+  the OnOpponentMove event (one method per event).
 
-* `virtual Unbound(::fidl::UnbindInfo info) {}`: method called when the client has been unbound.
+* `virtual on_fidl_error(::fidl::UnbindInfo info) {}`: method called when the
+  client encounters a terminal error.
 
-To be able to handle events and unbound, a class that inherits from `AsyncEventHandler` must be
-defined.
+To be able to handle events and errors, a class that inherits from
+`AsyncEventHandler` must be defined.
 
 #### Sync client {#sync-event-handlers}
 
 For `SyncClient` and `Call` clients, events are handled synchronously by calling
-a `HandleOneEvent` function and passing it a `TicTacToe::SyncEventHandler`.
+a `HandleOneEvent` function and passing it a
+`fidl::WireSyncEventHandler<TicTacToe>`.
 
-`SyncEventHandler` is a class that contains a pure virtual method for each event. In
-this example, it consists of the following member:
+`WireSyncEventHandler` is a class that contains a pure virtual method for each
+event. In this example, it consists of the following member:
 
 * `virtual void OnOpponentMove(TicTacToe::OnOpponentMoveResponse* event) = 0`:
   The handle for the OnOpponentMove event.
 * `virtual zx_status_t Unknown() { return ZX_ERR_NOT_SUPPORTED; }`:
   The status to be returned by `HandleOneEvent` if an unknown event is found.
-  This method should be overriden only if a specific status is needed.
+  This method should be overridden only if a specific status is needed.
 
 To be able to handle events, a class that inherits from `SyncEventHandler` must
 be defined. This class must define the virtual methods for the events it wants
@@ -1185,8 +1176,8 @@ completer)`, respectively.
 <!-- xrefs -->
 [cpp-style]: https://google.github.io/styleguide/cppguide.html#Naming
 [llcpp-allocation]: /docs/development/languages/fidl/guides/llcpp-memory-ownership.md
-[llcpp-async-example]:
-/docs/development/languages/fidl/tutorials/llcpp/topics/async-completer.md
+[llcpp-async-example]: /docs/development/languages/fidl/tutorials/llcpp/topics/async-completer.md
+[llcpp-threading-guide]: /docs/development/languages/fidl/guides/llcpp-threading.md
 [llcpp-tutorial]: /docs/development/languages/fidl/tutorials/llcpp
 [llcpp-server-example]: /examples/fidl/llcpp/server
 [lang-constants]: /docs/reference/fidl/language/language.md#constants

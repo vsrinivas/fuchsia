@@ -23,7 +23,7 @@ int main(int argc, const char** argv) {
 
   auto client_end = service::Connect<fuchsia_examples::Echo>();
   ZX_ASSERT(client_end.is_ok());
-  fidl::Client client(std::move(*client_end), dispatcher);
+  fidl::WireClient client(std::move(*client_end), dispatcher);
 
   auto start = time(nullptr);
 

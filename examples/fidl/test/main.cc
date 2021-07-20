@@ -79,6 +79,14 @@ TEST(IntegrationTest, LlcppAsync) {
             0);
 }
 
+TEST(IntegrationTest, LlcppAsyncMultiThreaded) {
+  ASSERT_EQ(
+      LaunchComponents("fuchsia-pkg://fuchsia.com/echo-llcpp-client-shared#meta/echo-client.cmx",
+                       "fuchsia-pkg://fuchsia.com/echo-llcpp-server#meta/echo-server.cmx",
+                       {"fuchsia.examples.Echo"}),
+      0);
+}
+
 TEST(IntegrationTest, LlcppSync) {
   ASSERT_EQ(
       LaunchComponents("fuchsia-pkg://fuchsia.com/echo-llcpp-client-sync#meta/echo-client.cmx",

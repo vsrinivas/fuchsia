@@ -120,6 +120,8 @@ After connecting to the `EchoLauncher` server, the client
 code connects to one instance of `Echo` using `GetEcho` and another using
 `GetEchoPipelined` and then makes an `EchoString` request on each instance.
 
+### Non-pipelined client
+
 This is the non-pipelined code:
 
 ```cpp
@@ -128,16 +130,17 @@ This is the non-pipelined code:
 
 This code has two layers of callbacks:
 
-* The outer layer handles the launcher request.
-* The inner layer handles the `EchoString` request.
+* The outer layer handles the launcher `GetEcho` response.
+* The inner layer handles the `EchoString` response.
 
-Also, the code instantiates the `fidl::Client<Echo>` in the outer scope then
-`Bind`s it inside of the callback, so that the client's lifetime matches the
-lifetime of the component. This client needs to be in scope when the echo
-response is received, which will most likely be after the top level callback
-returns.
+Inside the `GetEcho` response callback, the code binds the returned client end
+to a `fidl::WireSharedClient<Echo>`, and places a clone into the `EchoString`
+callback, so that the client's lifetime is extended until when the echo response
+is received, which will most likely be after the top level callback returns.
 
-Despite having to initialize the channel first, the pipelined code is much
+### Pipelined client
+
+Despite having to create a pair of endpoints first, the pipelined code is much
 simpler:
 
 ```cpp

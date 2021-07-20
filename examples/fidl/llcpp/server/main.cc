@@ -22,11 +22,14 @@
 // creating a subclass of the ::Interface class for the protocol.
 class EchoImpl final : public fidl::WireServer<fuchsia_examples::Echo> {
  public:
+  // [START bind_server]
   // Bind this implementation to a channel.
-  void Bind(async_dispatcher_t* dispatcher, fidl::ServerEnd<fuchsia_examples::Echo> request) {
+  void Bind(std::unique_ptr<EchoImpl> self, async_dispatcher_t* dispatcher,
+            fidl::ServerEnd<fuchsia_examples::Echo> request) {
+    // Destroy |self| when the unbound handler completes.
     fidl::OnUnboundFn<EchoImpl> unbound_handler =
-        [](EchoImpl* self, fidl::UnbindInfo info,
-           fidl::ServerEnd<fuchsia_examples::Echo> server_end) {
+        [self = std::move(self)](EchoImpl* impl, fidl::UnbindInfo info,
+                                 fidl::ServerEnd<fuchsia_examples::Echo> server_end) {
           switch (info.reason()) {
             case fidl::Reason::kClose:
             case fidl::Reason::kUnbind:
@@ -38,6 +41,7 @@ class EchoImpl final : public fidl::WireServer<fuchsia_examples::Echo> {
         };
     binding_ = fidl::BindServer(dispatcher, std::move(request), this, std::move(unbound_handler));
   }
+  // [END bind_server]
 
   // Handle a SendString request by sending on OnString event with the request value. For
   // fire and forget methods, the completer can be used to close the channel with an epitaph.
@@ -46,12 +50,14 @@ class EchoImpl final : public fidl::WireServer<fuchsia_examples::Echo> {
       binding_.value()->OnString(request->value);
     }
   }
+
   // Handle an EchoString request by responding with the request value. For two-way
   // methods, the completer is also used to send a response.
   void EchoString(EchoStringRequestView request, EchoStringCompleter::Sync& completer) override {
     completer.Reply(request->value);
   }
 
+ private:
   // A reference back to the Binding that this class is bound to, which is used
   // to send events to the client.
   cpp17::optional<fidl::ServerBindingRef<fuchsia_examples::Echo>> binding_;
@@ -64,9 +70,6 @@ int main(int argc, char** argv) {
   // loop to listen for incoming requests.
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   async_dispatcher_t* dispatcher = loop.dispatcher();
-
-  // Create an instance of our EchoImpl.
-  EchoImpl server;
 
   // Create an Outgoing class which will serve requests from the /svc/ directory.
   svc::Outgoing outgoing(loop.dispatcher());
@@ -81,10 +84,14 @@ int main(int argc, char** argv) {
   status = outgoing.svc_dir()->AddEntry(
       fidl::DiscoverableProtocolName<fuchsia_examples::Echo>,
       fbl::MakeRefCounted<fs::Service>(
-          [&server, dispatcher](fidl::ServerEnd<fuchsia_examples::Echo> request) mutable {
+          [dispatcher](fidl::ServerEnd<fuchsia_examples::Echo> request) mutable {
             std::cout << "Incoming connection for "
                       << fidl::DiscoverableProtocolName<fuchsia_examples::Echo> << std::endl;
-            server.Bind(dispatcher, std::move(request));
+            // [START create_server]
+            // Create an instance of our EchoImpl.
+            std::unique_ptr server = std::make_unique<EchoImpl>();
+            server->Bind(std::move(server), dispatcher, std::move(request));
+            // [END create_server]
             return ZX_OK;
           }));
 

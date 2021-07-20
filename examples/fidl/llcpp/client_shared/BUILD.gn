@@ -1,0 +1,29 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+executable("bin") {
+  output_name = "fidl_echo_llcpp_client_shared"
+  sources = [ "main.cc" ]
+
+  deps = [
+    "//examples/fidl/fuchsia.examples:fuchsia.examples_llcpp",
+    "//sdk/lib/fdio",
+    "//zircon/public/lib/fidl",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/service:service-llcpp",
+  ]
+}
+
+fuchsia_component("echo-client") {
+  manifest = "client.cmx"
+  deps = [ ":bin" ]
+}
+
+fuchsia_package("client_shared") {
+  package_name = "echo-llcpp-client-shared"
+  deps = [ ":echo-client" ]
+}

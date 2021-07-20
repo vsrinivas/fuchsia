@@ -23,7 +23,7 @@ int main(int argc, const char** argv) {
   // Connect to the EchoLauncher protocol
   auto launcher_client_end = service::Connect<fuchsia_examples::EchoLauncher>();
   ZX_ASSERT(launcher_client_end.status_value() == ZX_OK);
-  fidl::Client launcher(std::move(*launcher_client_end), dispatcher);
+  fidl::WireClient launcher(std::move(*launcher_client_end), dispatcher);
 
   // Make a non-pipelined request to get an instance of Echo
   auto result = launcher->GetEcho(
@@ -31,7 +31,7 @@ int main(int argc, const char** argv) {
       [&](fidl::WireResponse<fuchsia_examples::EchoLauncher::GetEcho>* response) {
         // Take the channel to Echo in the response, bind it to the dispatcher, and
         // make an EchoString request on it.
-        fidl::Client echo(std::move(response->response), dispatcher);
+        fidl::WireSharedClient echo(std::move(response->response), dispatcher);
         echo->EchoString("hello!",
                          // Clone |echo| into the callback so that the client
                          // is only destroyed after we receive the response.
@@ -52,7 +52,7 @@ int main(int argc, const char** argv) {
   // Make a pipelined request to get an instance of Echo
   ZX_ASSERT(launcher->GetEchoPipelined("pipelined: ", std::move(server_end)).ok());
   // A client can be initialized using the client end without waiting for a response
-  fidl::Client echo_pipelined(std::move(client_end), dispatcher);
+  fidl::WireClient echo_pipelined(std::move(client_end), dispatcher);
   echo_pipelined->EchoString(
       "hello!", [&](fidl::WireResponse<fuchsia_examples::Echo::EchoString>* response) {
         std::string reply(response->response.data(), response->response.size());

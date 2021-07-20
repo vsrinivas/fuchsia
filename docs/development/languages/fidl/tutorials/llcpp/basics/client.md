@@ -87,7 +87,7 @@ As in the server, the code first sets up an async loop so that the client can
 listen for incoming responses from the server without blocking.
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/client/main.cc" region_tag="main" highlight="2,3,20,25,29,40,43,44,58" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/client/main.cc" region_tag="main" highlight="2,3,20,25,29,41,44,45,59" %}
 ```
 
 The dispatcher is used to run two pieces of async code. It is first used to run
@@ -160,7 +160,7 @@ The code makes three requests to the server:
   is a fire and forget method).
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/client/main.cc" region_tag="main" highlight="34,35,36,37,38,39,40,41,46,47,48,49,50,51,53,54,55,56,57,58" %}
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/client/main.cc" region_tag="main" highlight="35,36,37,38,39,40,41,42,47,48,49,50,51,52,54,55,56,57,58" %}
 ```
 
 The client object works by overriding the dereference operator to return a
