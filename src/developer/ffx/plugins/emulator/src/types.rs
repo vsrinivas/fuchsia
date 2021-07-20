@@ -69,7 +69,9 @@ impl FuchsiaPaths for InTreePaths {
         self.root_dir
             .as_ref()
             .map(|c| c.clone())
-            .ok_or(anyhow!("Cannot read path info from root_dir {:?}", self.root_dir))
+            .ok_or(anyhow!("Cannot locate Fuchsia binaries.\n\
+            SDK users, make sure you include the --sdk flag and run the program from inside the Fuchsia SDK directory.\n\
+            Non-SDK users, make sure you're running the program from inside the Fuchsia source directory tree."))
     }
 
     fn find_fuchsia_build_dir(&mut self) -> Result<PathBuf> {
