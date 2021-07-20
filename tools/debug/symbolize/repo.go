@@ -12,6 +12,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -20,6 +21,11 @@ import (
 
 	"go.fuchsia.dev/fuchsia/tools/debug/elflib"
 	"go.fuchsia.dev/fuchsia/tools/lib/cache"
+)
+
+const (
+	// Metadata key for the modified time of an object in a CloudRepo.
+	googleReservedFileMtime = "goog-reserved-file-mtime"
 )
 
 // FileCloser holds a reference to a file and prevents it from being deleted
@@ -102,12 +108,29 @@ func (c *CloudRepo) GetBuildObject(buildID string) (FileCloser, error) {
 		ctx, cancel = context.WithTimeout(ctx, *c.timeout)
 		defer cancel()
 	}
+	attrs, err := obj.Attrs(ctx)
+	if err != nil {
+		return nil, err
+	}
+	var mtime time.Time
+	if mtimeString, ok := attrs.Metadata[googleReservedFileMtime]; ok {
+		mtimeInt, err := strconv.ParseInt(mtimeString, 10, 64)
+		if err != nil {
+			return nil, err
+		}
+		mtime = time.Unix(mtimeInt, 0)
+	} else {
+		mtime = attrs.Created
+	}
 	r, err := obj.NewReader(ctx)
 	if err != nil {
 		return nil, err
 	}
 	out, err = c.cache.Add(buildIDKey(buildID), r)
 	if err != nil {
+		return nil, err
+	}
+	if err := os.Chtimes(out.String(), mtime, mtime); err != nil {
 		return nil, err
 	}
 	if ctx.Err() == context.DeadlineExceeded {
