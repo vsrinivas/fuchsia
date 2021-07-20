@@ -7,11 +7,12 @@
 #include <fuchsia/hardware/gpio/cpp/banjo-mock.h>
 #include <lib/ddk/metadata.h>
 #include <lib/device-protocol/i2c-channel.h>
-#include <lib/fake_ddk/fake_ddk.h>
 #include <lib/mock-i2c/mock-i2c.h>
 
 #include <ddktl/metadata/light-sensor.h>
 #include <zxtest/zxtest.h>
+
+#include "src/devices/testing/mock-ddk/mock-device.h"
 
 namespace tcs {
 
@@ -26,8 +27,6 @@ struct Tcs3400Test : public zxtest::Test {
   }
   void SetGainAndIntegrationTest(uint8_t gain, uint32_t integration_time_ms, uint8_t again_register,
                                  uint8_t atime_register) {
-    fake_ddk::Bind tester;
-
     mock_i2c::MockI2c mock_i2c;
     mock_i2c
         .ExpectWriteStop({0x81, atime_register}, ZX_ERR_INTERNAL)  // error, will retry.
@@ -35,16 +34,18 @@ struct Tcs3400Test : public zxtest::Test {
         .ExpectWriteStop({0x81, atime_register}, ZX_OK)            // integration time (ATIME).
         .ExpectWriteStop({0x8f, again_register});                  // control (for AGAIN).
 
+    std::shared_ptr<MockDevice> fake_parent = MockDevice::FakeRootParent();
     ddk::I2cChannel i2c(mock_i2c.GetProto());
     ddk::GpioProtocolClient gpio;
     zx::port port;
     ASSERT_OK(zx::port::create(0, &port));
-    Tcs3400Device device(fake_ddk::kFakeParent, std::move(i2c), gpio, std::move(port));
+    Tcs3400Device device(fake_parent.get(), std::move(i2c), gpio, std::move(port));
 
     metadata::LightSensorParams parameters = {};
     parameters.integration_time_ms = integration_time_ms;
     parameters.gain = gain;
-    tester.SetMetadata(DEVICE_METADATA_PRIVATE, &parameters, sizeof(metadata::LightSensorParams));
+    fake_parent->SetMetadata(DEVICE_METADATA_PRIVATE, &parameters,
+                             sizeof(metadata::LightSensorParams));
     EXPECT_OK(device.InitMetadata());
     mock_i2c.VerifyAndClear();
   }
@@ -67,7 +68,7 @@ TEST_F(Tcs3400Test, IntegrationTime) {
 }
 
 TEST(Tcs3400Test, TooManyI2cErrors) {
-  fake_ddk::Bind tester;
+  auto fake_parent = MockDevice::FakeRootParent();
   metadata::LightSensorParams parameters = {};
   parameters.gain = 64;
   parameters.integration_time_ms = 612;  // For atime = 0x01.
@@ -82,19 +83,21 @@ TEST(Tcs3400Test, TooManyI2cErrors) {
   ddk::GpioProtocolClient gpio;
   zx::port port;
   ASSERT_OK(zx::port::create(0, &port));
-  Tcs3400Device device(fake_ddk::kFakeParent, std::move(i2c), gpio, std::move(port));
+  Tcs3400Device device(fake_parent.get(), std::move(i2c), gpio, std::move(port));
 
-  tester.SetMetadata(DEVICE_METADATA_PRIVATE, &parameters, sizeof(metadata::LightSensorParams));
+  fake_parent->SetMetadata(DEVICE_METADATA_PRIVATE, &parameters,
+                           sizeof(metadata::LightSensorParams));
   EXPECT_NOT_OK(device.InitMetadata());
 }
 
 TEST(Tcs3400Test, InputReport) {
-  fake_ddk::Bind tester;
+  auto fake_parent = MockDevice::FakeRootParent();
   metadata::LightSensorParams parameters = {};
   parameters.gain = 64;
   parameters.integration_time_ms = 612;  // For atime = 0x01.
 
-  tester.SetMetadata(DEVICE_METADATA_PRIVATE, &parameters, sizeof(metadata::LightSensorParams));
+  fake_parent->SetMetadata(DEVICE_METADATA_PRIVATE, &parameters,
+                           sizeof(metadata::LightSensorParams));
 
   ddk::MockGpio mock_gpio;
   mock_gpio.ExpectConfigIn(ZX_OK, GPIO_NO_PULL);
@@ -130,7 +133,7 @@ TEST(Tcs3400Test, InputReport) {
         : Tcs3400Device(device, std::move(i2c), gpio, std::move(port)) {}
     void ShutDown() override { Tcs3400Device::ShutDown(); }
   };
-  Tcs3400DeviceTest device(fake_ddk::kFakeParent, std::move(i2c),
+  Tcs3400DeviceTest device(fake_parent.get(), std::move(i2c),
                            ddk::GpioProtocolClient(mock_gpio.GetProto()), std::move(port));
   EXPECT_OK(device.InitMetadata());
 
@@ -161,12 +164,13 @@ TEST(Tcs3400Test, InputReport) {
 }
 
 TEST(Tcs3400Test, InputReportSaturated) {
-  fake_ddk::Bind tester;
+  auto fake_parent = MockDevice::FakeRootParent();
   metadata::LightSensorParams parameters = {};
   parameters.gain = 64;
   parameters.integration_time_ms = 612;  // For atime = 0x01.
 
-  tester.SetMetadata(DEVICE_METADATA_PRIVATE, &parameters, sizeof(metadata::LightSensorParams));
+  fake_parent->SetMetadata(DEVICE_METADATA_PRIVATE, &parameters,
+                           sizeof(metadata::LightSensorParams));
 
   ddk::MockGpio mock_gpio;
   mock_gpio.ExpectConfigIn(ZX_OK, GPIO_NO_PULL);
@@ -202,7 +206,7 @@ TEST(Tcs3400Test, InputReportSaturated) {
         : Tcs3400Device(device, std::move(i2c), gpio, std::move(port)) {}
     void ShutDown() override { Tcs3400Device::ShutDown(); }
   };
-  Tcs3400DeviceTest device(fake_ddk::kFakeParent, std::move(i2c),
+  Tcs3400DeviceTest device(fake_parent.get(), std::move(i2c),
                            ddk::GpioProtocolClient(mock_gpio.GetProto()), std::move(port));
   EXPECT_OK(device.InitMetadata());
 
