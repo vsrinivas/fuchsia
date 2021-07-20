@@ -1537,8 +1537,8 @@ TEST_F(VmoClone2TestCase, NoSnapshotPager) {
   ASSERT_OK(pager.create_vmo(0, port, 0, zx_system_get_page_size(), &vmo));
 
   zx::vmo uni_clone;
-  ASSERT_OK(
-      vmo.create_child(ZX_VMO_CHILD_PRIVATE_PAGER_COPY, 0, zx_system_get_page_size(), &uni_clone));
+  ASSERT_OK(vmo.create_child(ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE, 0, zx_system_get_page_size(),
+                             &uni_clone));
 
   zx::vmo clone;
   ASSERT_EQ(vmo.create_child(ZX_VMO_CHILD_SNAPSHOT, 0, zx_system_get_page_size(), &clone),

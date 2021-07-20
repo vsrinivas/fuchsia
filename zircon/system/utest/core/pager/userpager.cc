@@ -95,8 +95,8 @@ std::unique_ptr<Vmo> Vmo::Clone() { return Clone(0, size_); }
 std::unique_ptr<Vmo> Vmo::Clone(uint64_t offset, uint64_t size) {
   zx::vmo clone;
   zx_status_t status;
-  if ((status = vmo_.create_child(ZX_VMO_CHILD_PRIVATE_PAGER_COPY | ZX_VMO_CHILD_RESIZABLE, offset,
-                                  size, &clone)) != ZX_OK) {
+  if ((status = vmo_.create_child(ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE | ZX_VMO_CHILD_RESIZABLE,
+                                  offset, size, &clone)) != ZX_OK) {
     fprintf(stderr, "vmo create_child failed with %s\n", zx_status_get_string(status));
     return nullptr;
   }

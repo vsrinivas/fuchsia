@@ -1182,8 +1182,9 @@ TEST(Pager, CloneResizeCloneHazard) {
   ASSERT_TRUE(pager.SupplyPages(vmo, 0, 2));
 
   zx::vmo clone_vmo;
-  EXPECT_EQ(ZX_OK, vmo->vmo().create_child(ZX_VMO_CHILD_PRIVATE_PAGER_COPY | ZX_VMO_CHILD_RESIZABLE,
-                                           0, kSize, &clone_vmo));
+  EXPECT_EQ(ZX_OK, vmo->vmo().create_child(
+                       ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE | ZX_VMO_CHILD_RESIZABLE, 0, kSize,
+                       &clone_vmo));
 
   uintptr_t ptr_rw;
   EXPECT_EQ(ZX_OK, zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, clone_vmo, 0,
@@ -1212,7 +1213,8 @@ TEST(Pager, CloneResizeParentOK) {
   ASSERT_TRUE(pager.SupplyPages(vmo, 0, 2));
 
   zx::vmo clone_vmo;
-  ASSERT_EQ(ZX_OK, vmo->vmo().create_child(ZX_VMO_CHILD_PRIVATE_PAGER_COPY, 0, kSize, &clone_vmo));
+  ASSERT_EQ(ZX_OK,
+            vmo->vmo().create_child(ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE, 0, kSize, &clone_vmo));
 
   uintptr_t ptr_rw;
   EXPECT_EQ(ZX_OK, zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, clone_vmo, 0,
@@ -1262,8 +1264,8 @@ TEST(Pager, CloneShrinkGrowParent) {
         pager.SupplyPages(vmo, 0, config.vmo_size / zx_system_get_page_size(), std::move(aux)));
 
     zx::vmo clone_vmo;
-    ASSERT_EQ(ZX_OK, vmo->vmo().create_child(ZX_VMO_CHILD_PRIVATE_PAGER_COPY, config.clone_offset,
-                                             config.vmo_size, &clone_vmo));
+    ASSERT_EQ(ZX_OK, vmo->vmo().create_child(ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE,
+                                             config.clone_offset, config.vmo_size, &clone_vmo));
 
     uintptr_t ptr_ro;
     EXPECT_EQ(ZX_OK, zx::vmar::root_self()->map(ZX_VM_PERM_READ, 0, clone_vmo, 0, config.clone_size,
@@ -1830,7 +1832,8 @@ TEST(Pager, DecommitTest) {
             ZX_ERR_NOT_SUPPORTED);
 
   zx::vmo child;
-  ASSERT_EQ(vmo.create_child(ZX_VMO_CHILD_PRIVATE_PAGER_COPY, 0, zx_system_get_page_size(), &child),
+  ASSERT_EQ(vmo.create_child(ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE, 0, zx_system_get_page_size(),
+                             &child),
             ZX_OK);
 
   ASSERT_EQ(child.op_range(ZX_VMO_OP_DECOMMIT, 0, zx_system_get_page_size(), nullptr, 0),
