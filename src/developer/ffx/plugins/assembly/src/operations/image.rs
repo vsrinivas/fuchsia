@@ -56,7 +56,7 @@ pub fn assemble(args: ImageArgs) -> Result<()> {
     };
 
     info!("Creating the update package");
-    let update_package: UpdatePackage = construct_update(
+    let _update_package: UpdatePackage = construct_update(
         &outdir,
         &gendir,
         &product,
@@ -68,17 +68,7 @@ pub fn assemble(args: ImageArgs) -> Result<()> {
 
     let blobfs_path: Option<PathBuf> = if let Some(base_package) = &base_package {
         info!("Creating the blobfs");
-        // Include the update package in blobfs if necessary.
-        let update_package =
-            if board.blobfs.include_update_package { Some(&update_package) } else { None };
-        Some(construct_blobfs(
-            &outdir,
-            &gendir,
-            &product,
-            &board.blobfs,
-            &base_package,
-            update_package,
-        )?)
+        Some(construct_blobfs(&outdir, &gendir, &product, &board.blobfs, &base_package)?)
     } else {
         info!("Skipping blobfs creation");
         None

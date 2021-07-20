@@ -4,7 +4,6 @@
 
 use crate::base_package::BasePackage;
 use crate::config::{BlobFSConfig, ProductConfig};
-use crate::update_package::UpdatePackage;
 
 use anyhow::{Context, Result};
 use assembly_blobfs::BlobFSBuilder;
@@ -16,7 +15,6 @@ pub fn construct_blobfs(
     product: &ProductConfig,
     blobfs_config: &BlobFSConfig,
     base_package: &BasePackage,
-    update_package: Option<&UpdatePackage>,
 ) -> Result<PathBuf> {
     let mut blobfs_builder = BlobFSBuilder::new(&blobfs_config.layout);
     blobfs_builder.set_compressed(blobfs_config.compress);
@@ -33,14 +31,6 @@ pub fn construct_blobfs(
     blobfs_builder.add_file(&base_package.path)?;
     for (_, source) in &base_package.contents {
         blobfs_builder.add_file(source)?;
-    }
-
-    // Add the update package and its contents.
-    if let Some(update_package) = update_package {
-        blobfs_builder.add_file(&update_package.path)?;
-        for (_, source) in &update_package.contents {
-            blobfs_builder.add_file(source)?;
-        }
     }
 
     // Build the blobfs and return its path.
@@ -63,11 +53,7 @@ mod tests {
     fn construct() {
         let dir = tempdir().unwrap();
         let product_config = ProductConfig::default();
-        let blobfs_config = BlobFSConfig {
-            layout: "padded".to_string(),
-            include_update_package: true,
-            compress: true,
-        };
+        let blobfs_config = BlobFSConfig { layout: "padded".to_string(), compress: true };
 
         // Create a fake base package.
         let base_path = dir.path().join("base.far");
@@ -81,7 +67,7 @@ mod tests {
             path: base_path,
         };
         let blobfs_path =
-            construct_blobfs(dir.path(), dir.path(), &product_config, &blobfs_config, &base, None)
+            construct_blobfs(dir.path(), dir.path(), &product_config, &blobfs_config, &base)
                 .unwrap();
         assert_eq!(blobfs_path, dir.path().join("blob.blk"));
     }

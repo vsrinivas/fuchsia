@@ -204,11 +204,6 @@ pub struct BlobFSConfig {
     #[serde(default = "default_blob_layout")]
     pub layout: String,
 
-    /// Whether to include the update package in blobfs in order to reserve
-    /// space. This is usually to ensure that OTAs are possible.
-    #[serde(default = "default_true")]
-    pub include_update_package: bool,
-
     #[serde(default = "default_true")]
     pub compress: bool,
 }

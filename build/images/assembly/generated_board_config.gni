@@ -113,7 +113,6 @@ template("generated_board_config") {
 
       blobfs = {
         layout = blob_layout_format
-        include_update_package = product_include_updates_in_blobfs
       }
 
       if (uses_base_package) {
