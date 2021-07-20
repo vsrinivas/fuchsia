@@ -23,8 +23,8 @@
 
 static inline bool is_fpu_enabled(uint64_t cpacr) { return !!(BITS(cpacr, 21, 20) != 0); }
 
-static void arm64_fpu_load_regs(Thread* t) {
-  struct fpstate* fpstate = &t->arch().fpstate;
+static void arm64_fpu_load_regs(const Thread* t) {
+  const struct fpstate* fpstate = &t->arch().fpstate;
 
   LTRACEF("cpu %u, thread %s, load fpstate %p\n", arch_curr_cpu_num(), t->name(), fpstate);
 
@@ -85,7 +85,7 @@ static void arm64_fpu_save_regs(Thread* t) {
   LTRACEF("thread %s, fpcr %x, fpsr %x\n", t->name(), fpstate->fpcr, fpstate->fpsr);
 }
 
-static bool use_lazy_fpu_restore(Thread* t) {
+static bool use_lazy_fpu_restore(const Thread* t) {
   // The number 8 here was selected by measuring |fp_restore_count| running
   // a particular workload.
   return (t->arch().fp_restore_count < 8u);

@@ -55,9 +55,9 @@
 #define XSAVE_XCOMP_BV_COMPACT (1ULL << 63)
 
 static void fxsave(void* register_state);
-static void fxrstor(void* register_state);
-static void xrstor(void* register_state, uint64_t feature_mask);
-static void xrstors(void* register_state, uint64_t feature_mask);
+static void fxrstor(const void* register_state);
+static void xrstor(const void* register_state, uint64_t feature_mask);
+static void xrstors(const void* register_state, uint64_t feature_mask);
 static void xsave(void* register_state, uint64_t feature_mask);
 static void xsaveopt(void* register_state, uint64_t feature_mask);
 static void xsaves(void* register_state, uint64_t feature_mask);
@@ -364,7 +364,7 @@ void x86_extended_register_save_state(void* register_state) {
   }
 }
 
-void x86_extended_register_restore_state(void* register_state) {
+void x86_extended_register_restore_state(const void* register_state) {
   /* The idle threads have no extended register state */
   if (unlikely(!register_state)) {
     return;
@@ -379,7 +379,7 @@ void x86_extended_register_restore_state(void* register_state) {
   }
 }
 
-void x86_extended_register_context_switch(Thread* old_thread, Thread* new_thread) {
+void x86_extended_register_context_switch(Thread* old_thread, const Thread* new_thread) {
   if (likely(old_thread)) {
     x86_extended_register_save_state(old_thread->arch().extended_register_buffer);
   }
@@ -497,11 +497,11 @@ static void fxsave(void* register_state) {
   __asm__ __volatile__("fxsave %0" : "=m"(*(uint8_t*)register_state) : : "memory");
 }
 
-static void fxrstor(void* register_state) {
+static void fxrstor(const void* register_state) {
   __asm__ __volatile__("fxrstor %0" : : "m"(*(uint8_t*)register_state) : "memory");
 }
 
-static void xrstor(void* register_state, uint64_t feature_mask) {
+static void xrstor(const void* register_state, uint64_t feature_mask) {
   __asm__ volatile("xrstor %0"
                    :
                    : "m"(*(uint8_t*)register_state), "d"((uint32_t)(feature_mask >> 32)),
@@ -509,7 +509,7 @@ static void xrstor(void* register_state, uint64_t feature_mask) {
                    : "memory");
 }
 
-static void xrstors(void* register_state, uint64_t feature_mask) {
+static void xrstors(const void* register_state, uint64_t feature_mask) {
   __asm__ volatile("xrstors %0"
                    :
                    : "m"(*(uint8_t*)register_state), "d"((uint32_t)(feature_mask >> 32)),

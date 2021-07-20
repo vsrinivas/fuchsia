@@ -13,8 +13,6 @@
 #include <zircon/syscalls/debug.h>
 #include <zircon/types.h>
 
-__BEGIN_CDECLS
-
 struct Thread;
 
 // The caller is responsible for making sure the thread is in an exception
@@ -33,7 +31,5 @@ zx_status_t arch_set_debug_regs(Thread* thread, const zx_thread_state_debug_regs
 
 zx_status_t arch_get_single_step(Thread* thread, zx_thread_state_single_step_t* out);
 zx_status_t arch_set_single_step(Thread* thread, const zx_thread_state_single_step_t* in);
-
-__END_CDECLS
 
 #endif  // ZIRCON_KERNEL_INCLUDE_ARCH_DEBUGGER_H_

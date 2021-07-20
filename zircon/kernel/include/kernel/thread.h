@@ -959,6 +959,7 @@ struct Thread {
 #endif
 
   arch_thread& arch() { return arch_; }
+  const arch_thread& arch() const { return arch_; }
 
   KernelStack& stack() { return stack_; }
   const KernelStack& stack() const { return stack_; }

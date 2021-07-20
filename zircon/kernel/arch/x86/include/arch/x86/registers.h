@@ -291,12 +291,10 @@ void x86_extended_register_save_state(void* register_state);
 
 /* Restore a state created by x86_extended_register_init_state or
  * x86_extended_register_save_state */
-void x86_extended_register_restore_state(void* register_state);
+void x86_extended_register_restore_state(const void* register_state);
 
-#ifdef __cplusplus
 struct Thread;
-void x86_extended_register_context_switch(Thread* old_thread, Thread* new_thread);
-#endif
+void x86_extended_register_context_switch(Thread* old_thread, const Thread* new_thread);
 
 void x86_set_extended_register_pt_state(bool threads);
 

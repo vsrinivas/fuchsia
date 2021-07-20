@@ -316,9 +316,10 @@ zx_status_t arch_get_fp_regs(Thread* thread, zx_thread_state_fp_regs* out) {
   DEBUG_ASSERT(thread->IsUserStateSavedLocked());
 
   uint32_t comp_size = 0;
-  x86_xsave_legacy_area* save =
-      static_cast<x86_xsave_legacy_area*>(x86_get_extended_register_state_component(
-          thread->arch().extended_register_buffer, X86_XSAVE_STATE_INDEX_X87, false, &comp_size));
+  const x86_xsave_legacy_area* save =
+      static_cast<const x86_xsave_legacy_area*>(x86_get_extended_register_state_component(
+          thread->arch().extended_register_buffer, X86_XSAVE_STATE_INDEX_X87,
+          false, &comp_size));
   DEBUG_ASSERT(save);  // Legacy getter should always succeed.
 
   out->fcw = save->fcw;
@@ -355,6 +356,7 @@ zx_status_t arch_set_fp_regs(Thread* thread, const zx_thread_state_fp_regs* in) 
 }
 
 zx_status_t arch_get_vector_regs(Thread* thread, zx_thread_state_vector_regs* out) {
+  // The get_set function promises to not modify the thread state in get mode.
   return x86_get_set_vector_regs(thread, out, RegAccess::kGet);
 }
 

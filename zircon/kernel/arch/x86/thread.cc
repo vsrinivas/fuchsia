@@ -70,8 +70,8 @@ void arch_thread_initialize(Thread* t, vaddr_t entry_point) {
 
   // Initialize the debug registers to a valid initial state.
   arch.track_debug_state = false;
-  for (auto& dr: arch.debug_state.dr) {
-    dr = 0; // set dr0-dr3
+  for (auto& dr : arch.debug_state.dr) {
+    dr = 0;  // set dr0-dr3
   }
   arch.debug_state.dr6 = X86_DR6_MASK;
   arch.debug_state.dr7 = X86_DR7_MASK;
@@ -141,7 +141,7 @@ static void x86_segment_selector_save_state(Thread* thread) {
   }
 }
 
-static void x86_segment_selector_restore_state(Thread* thread) {
+static void x86_segment_selector_restore_state(const Thread* thread) {
   set_ds(0);
   set_es(0);
   set_fs(0);
@@ -237,7 +237,7 @@ static void x86_debug_context_switch(Thread* old_thread, Thread* new_thread) {
   }
 }
 
-static void x86_debug_restore_state(Thread* thread) {
+static void x86_debug_restore_state(const Thread* thread) {
   // If |thread| has debug state, restore it, which enables it.
   if (unlikely(thread->arch().track_debug_state)) {
     x86_write_hw_debug_regs(&thread->arch().debug_state);
