@@ -9,6 +9,7 @@ use {
         model::{
             binding::Binder,
             component::{BindReason, ComponentInstance, InstanceState, WeakComponentInstance},
+            events::{registry::EventSubscription, source::EventSource, stream::EventStream},
             hooks::HooksRegistration,
             model::Model,
             testing::{
@@ -21,7 +22,7 @@ use {
     archivist_lib::{
         container::ComponentIdentity, events::types::ComponentIdentifier, logs::Message,
     },
-    cm_rust::{ChildDecl, ComponentDecl, NativeIntoFidl},
+    cm_rust::{CapabilityName, ChildDecl, ComponentDecl, EventMode, NativeIntoFidl},
     cm_types::Url,
     fidl::endpoints::{self, Proxy, ServiceMarker},
     fidl_fidl_examples_echo as echo, fidl_fuchsia_component_runner as fcrunner,
@@ -501,4 +502,28 @@ pub fn get_message_logged_to_socket(socket: zx::Socket) -> Option<String> {
         }
         Err(_) => None,
     }
+}
+
+/// Create a new event stream for the provided environment.
+pub async fn new_event_stream(
+    builtin_environment: Arc<Mutex<BuiltinEnvironment>>,
+    events: Vec<CapabilityName>,
+    mode: EventMode,
+) -> (EventSource, EventStream) {
+    let mut event_source = builtin_environment
+        .as_ref()
+        .lock()
+        .await
+        .event_source_factory
+        .create_for_debug()
+        .await
+        .expect("created event source");
+    let event_stream = event_source
+        .subscribe(
+            events.into_iter().map(|event| EventSubscription::new(event, mode.clone())).collect(),
+        )
+        .await
+        .expect("subscribe to event stream");
+    event_source.start_component_tree().await;
+    (event_source, event_stream)
 }

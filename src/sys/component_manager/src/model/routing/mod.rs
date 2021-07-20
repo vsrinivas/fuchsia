@@ -383,7 +383,7 @@ pub(super) async fn route_and_delete_storage(
 /// Sets an epitaph on `server_end` for a capability routing failure, and logs the error. Logs a
 /// failure to route a capability. Formats `err` as a `String`, but elides the type if the error is
 /// a `RoutingError`, the common case.
-pub(super) async fn report_routing_failure(
+pub async fn report_routing_failure(
     target: &Arc<ComponentInstance>,
     cap: &ComponentCapability,
     err: &ModelError,

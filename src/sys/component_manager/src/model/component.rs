@@ -102,6 +102,9 @@ pub enum BindReason {
     Root,
     /// Indicates that this component is starting because it was scheduled by WorkScheduler.
     Scheduled,
+    /// Indicates that this component is starting because it was bound to through
+    /// the fuchsia.component.Binder protocol.
+    Binder,
     /// This is an unsupported BindReason. If you are seeing this then this is a bug.
     Unsupported,
 }
@@ -125,6 +128,8 @@ impl fmt::Display for BindReason {
                 BindReason::Eager => "it's eager".to_string(),
                 BindReason::Root => "it's the root".to_string(),
                 BindReason::Scheduled => "it was scheduled to run".to_string(),
+                BindReason::Binder =>
+                    "it was bound to via fuchsia.component.Binder protocol".to_string(),
                 BindReason::Unsupported => "this is a bug".to_string(),
             }
         )

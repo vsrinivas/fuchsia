@@ -15,6 +15,7 @@ pub mod klog;
 pub mod model;
 pub mod startup;
 
+pub(crate) mod binder;
 pub(crate) mod channel;
 pub(crate) mod directory_ready_notifier;
 pub(crate) mod framework;

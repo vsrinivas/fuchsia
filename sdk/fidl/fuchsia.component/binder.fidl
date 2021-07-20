@@ -1,0 +1,22 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+deprecated_syntax;
+library fuchsia.component;
+
+/// A framework-provided protocol that allows components that use it to bind to
+/// the component that exposes it. The act of connecting to this protocol will
+/// trigger the bind. Thus, this protocol contains no methods. For more details
+/// on binding, see
+/// https://fuchsia.dev/fuchsia-src/concepts/components/v2/lifecycle?hl=en#binding.
+///
+/// When a component connects to protocol, the component exposing this capability
+/// will be started if it's not already running. Upon a failure to start, the
+/// component framework will close the server end of the channel with a
+/// zx.status epitaph.
+///
+/// Note: The component doesn't need to serve this protocol, it is implemented
+/// by the framework.
+[Discoverable]
+protocol Binder {
+};

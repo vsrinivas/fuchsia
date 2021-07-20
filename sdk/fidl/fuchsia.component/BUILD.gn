@@ -8,6 +8,7 @@ fidl("fuchsia.component") {
   sdk_category = "partner"
 
   sources = [
+    "binder.fidl",
     "constants.fidl",
     "error.fidl",
     "types.fidl",

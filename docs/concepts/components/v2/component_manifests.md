@@ -94,7 +94,8 @@ protocols:
 
 -   [`fuchsia.sys2.Realm`][fidl-realm]: Allows a component to manage and bind to
     its children. Scoped to the component's realm.
-
+-   [`fuchsia.component.Binder`][fidl-binder]: Allows a component to start
+    another component.
 #### Framework directories {#framework-directories}
 
 A *framework directory* is a directory provided by the component framework.
@@ -694,6 +695,7 @@ This section may be omitted.
 [examples-routing]: /examples/components/routing
 [fidl-component-decl]: /sdk/fidl/fuchsia.sys2/decls/component_decl.fidl
 [fidl-io2-rights]: /sdk/fidl/fuchsia.io2/rights-abilities.fidl
+[fidl-binder]: /sdk/fidl/fuchsia.component/binder.fidl
 [fidl-realm]: /sdk/fidl/fuchsia.sys2/realm.fidl
 [glossary.component declaration]: /docs/glossary/README.md#component-declaration
 [glossary.component manifest]: /docs/glossary/README.md#component-manifest

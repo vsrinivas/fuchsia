@@ -1,0 +1,37 @@
+{
+    include: [
+        "//src/sys/test_runners/rust/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/binder_integration_test",
+    },
+    children: [
+        {
+            name: "hello_world",
+            url: "fuchsia-pkg://fuchsia.com/binder_integration_test#meta/hello_world.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: "fuchsia.component.Binder",
+            from: "#hello_world",
+        },
+        { protocol: "fuchsia.sys2.EventSource" },
+        {
+            event: "stopped",
+            from: "framework",
+        },
+        {
+            event: "started",
+            from: "framework",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: "#hello_world",
+        },
+    ],
+}

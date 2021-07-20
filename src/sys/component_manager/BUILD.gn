@@ -93,6 +93,7 @@ template("component_manager") {
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
   ]
   _sources = [
+    "src/binder.rs",
     "src/builtin/arguments.rs",
     "src/builtin/capability.rs",
     "src/builtin/debug_resource.rs",

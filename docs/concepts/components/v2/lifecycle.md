@@ -31,13 +31,17 @@ connects to some capability that is provided by `B`. When this happens,
 component instance `B` is started, unless it was already started. In most cases,
 this is the most common reason for a component instance to [start](#starting).
 
-Concretely, there are two ways that `A` can bind to `B`:
+Concretely, there are three ways that `A` can bind to `B`:
 
 -   `A` connects to a capability in its namespace which is
     [exposed][doc-manifests-expose] or [offered][doc-manifests-offer] by `B`.
     This is the most common way.
 -   `A` binds to one of its children using the [`Realm.BindChild`][realm.fidl]
     protocol.
+-   `A` binds to the [`fuchsia.component.Binder`][binder.fidl]
+    [framework protocol][doc-framework-protocol] which is exposed or offered
+    by `B`. Unlike a traditional capability, this protocol
+    is implemented by the component framework.
 
 The word "bind" is meant to imply that a component is run on account of being
 "bound" by its clients. In theory, when no more clients are bound to a
@@ -135,6 +139,7 @@ fx list-packages --base
 ```
 
 [core-shard]: /src/sys/core/README.md
+[doc-framework-protocol]: component_manifests.md#framework-protocols
 [doc-collections]: realms.md#collections
 [doc-lifecycle]: lifecycle.md
 [doc-manifests-children]: component_manifests.md#children
@@ -149,3 +154,4 @@ fx list-packages --base
 [principle-accountability]: design_principles.md#accountability
 [principle-continuity]: design_principles.md#illusion-of-continuity
 [realm.fidl]: https://fuchsia.dev/reference/fidl/fuchsia.sys2#Realm
+[binder.fidl]: https://fuchsia.dev/reference/fidl/fuchsia.component#Binder

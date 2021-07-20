@@ -439,7 +439,7 @@ mod tests {
             model::{
                 binding::Binder,
                 component::{BindReason, ComponentInstance},
-                events::{registry::EventSubscription, source::EventSource, stream::EventStream},
+                events::{source::EventSource, stream::EventStream},
                 testing::{mocks::*, out_dir::OutDir, test_helpers::*, test_hook::*},
             },
         },
@@ -531,27 +531,12 @@ mod tests {
             events: Vec<CapabilityName>,
             mode: EventMode,
         ) -> (EventSource, EventStream) {
-            let mut event_source = self
-                .builtin_environment
-                .as_ref()
-                .unwrap()
-                .lock()
-                .await
-                .event_source_factory
-                .create_for_debug()
-                .await
-                .expect("created event source");
-            let event_stream = event_source
-                .subscribe(
-                    events
-                        .into_iter()
-                        .map(|event| EventSubscription::new(event, mode.clone()))
-                        .collect(),
-                )
-                .await
-                .expect("subscribe to event stream");
-            event_source.start_component_tree().await;
-            (event_source, event_stream)
+            new_event_stream(
+                self.builtin_environment.as_ref().expect("builtin_environment is none").clone(),
+                events,
+                mode,
+            )
+            .await
         }
     }
 

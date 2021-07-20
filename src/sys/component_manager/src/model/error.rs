@@ -230,7 +230,7 @@ impl ModelError {
             ModelError::PolicyError { err } => err.as_zx_status(),
             ModelError::ComponentInstanceError {
                 err: ComponentInstanceError::InstanceNotFound { .. },
-            } => zx::Status::UNAVAILABLE,
+            } => zx::Status::NOT_FOUND,
             ModelError::Unsupported { .. } => zx::Status::NOT_SUPPORTED,
             // Any other type of error is not expected.
             _ => zx::Status::INTERNAL,

@@ -4,6 +4,7 @@
 
 use {
     crate::{
+        binder::BinderCapabilityHost,
         builtin::{
             arguments::Arguments as BootArguments,
             capability::BuiltinCapability,
@@ -306,6 +307,7 @@ pub struct BuiltinEnvironment {
     pub vmex_resource: Option<Arc<VmexResource>>,
 
     pub work_scheduler: Arc<WorkScheduler>,
+    pub binder_capability_host: Arc<BinderCapabilityHost>,
     pub realm_capability_host: Arc<RealmCapabilityHost>,
     pub storage_admin_capability_host: Arc<StorageAdmin>,
     pub hub: Option<Arc<Hub>>,
@@ -585,6 +587,10 @@ impl BuiltinEnvironment {
             Arc::new(RealmCapabilityHost::new(Arc::downgrade(&model), runtime_config.clone()));
         model.root.hooks.install(realm_capability_host.hooks()).await;
 
+        // Set up the binder service.
+        let binder_capability_host = Arc::new(BinderCapabilityHost::new(Arc::downgrade(&model)));
+        model.root.hooks.install(binder_capability_host.hooks()).await;
+
         // Set up the storage admin protocol
         let storage_admin_capability_host = Arc::new(StorageAdmin::new());
         model.root.hooks.install(storage_admin_capability_host.hooks()).await;
@@ -681,6 +687,7 @@ impl BuiltinEnvironment {
             system_controller,
             utc_time_maintainer,
             work_scheduler,
+            binder_capability_host,
             realm_capability_host,
             storage_admin_capability_host,
             hub,

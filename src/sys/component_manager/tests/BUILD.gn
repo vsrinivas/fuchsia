@@ -11,6 +11,7 @@ group("tests") {
   deps = [
     "attributed_logging:attributed-logging-test",
     "base_resolver_test",
+    "binder:tests",
     "collections:collections_integration_test",
     "component-time:tests",
     "destruction:destruction_integration_test",
