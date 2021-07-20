@@ -14,10 +14,28 @@ pub struct Credentials {
     pub saved_gid: gid_t,
 }
 
+fn parse_id_number(id: Option<&str>) -> Result<u32, Errno> {
+    let id_str = id.ok_or(EINVAL)?;
+    let id_no: u32 = id_str.parse().map_err(|_| return EINVAL)?;
+    if id_str != id_no.to_string() {
+        return Err(EINVAL);
+    }
+    Ok(id_no)
+}
+
 impl Credentials {
-    /// Creates a new set of credentials with all ids set to `id`.
-    pub fn new(id: uid_t) -> Credentials {
-        Credentials { uid: id, gid: id, euid: id, egid: id, saved_uid: id, saved_gid: id }
+    // Creates a new set of credentials from the start of an
+    // /etc/passwd line.
+    pub fn from_passwd(passwd_line: &str) -> Result<Credentials, Errno> {
+        let mut fields = passwd_line.split(':');
+        let name = fields.next().ok_or_else(|| return EINVAL)?;
+        let passwd = fields.next().ok_or_else(|| return EINVAL)?;
+        if name.len() == 0 || passwd.len() == 0 {
+            return Err(EINVAL);
+        }
+        let uid: uid_t = parse_id_number(fields.next())?;
+        let gid: gid_t = parse_id_number(fields.next())?;
+        Ok(Credentials { uid: uid, gid: gid, euid: uid, egid: gid, saved_uid: uid, saved_gid: gid })
     }
 
     /// Compares the user ID of `self` to that of `other`.

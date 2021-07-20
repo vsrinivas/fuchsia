@@ -7,5 +7,6 @@
             "/data:tmpfs",
             "/tmp:tmpfs",
         ],
+        user: "root:x:0:0",
     },
 }

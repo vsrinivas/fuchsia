@@ -235,6 +235,9 @@ async fn start_component(
         })
         .unwrap_or(Ok(vec![]))?;
 
+    let user_passwd = runner::get_program_string(&start_info, "user").unwrap_or("fuchsia:x:42:42");
+    let credentials = Credentials::from_passwd(user_passwd)?;
+
     let environ = runner::get_program_strvec(&start_info, "environ")
         .map(|args| {
             args.iter().map(|arg| CString::new(arg.clone())).collect::<Result<Vec<CString>, _>>()
@@ -283,8 +286,7 @@ async fn start_component(
         fs.lookup_node(fs.root.clone(), mount_point)?.mount(child_fs)?;
     }
 
-    let task_owner =
-        Task::create_process(&kernel, &binary_path, 0, files, fs, Credentials::new(3), None)?;
+    let task_owner = Task::create_process(&kernel, &binary_path, 0, files, fs, credentials, None)?;
 
     let mut argv = vec![binary_path];
     argv.extend(args.into_iter());
