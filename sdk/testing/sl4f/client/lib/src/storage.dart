@@ -90,4 +90,13 @@ class Storage {
         .request('file_facade.MakeDir', {'path': path, 'recurse': recurse});
     return result;
   }
+
+  Future<Map<String, dynamic>> stat(String path) async {
+    _log.fine('Stat\'ing $path.');
+    final result = await _sl4f.request('file_facade.Stat', {'path': path});
+    if (result == 'NotFound') {
+      return null;
+    }
+    return result;
+  }
 }

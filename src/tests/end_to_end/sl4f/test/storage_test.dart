@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:convert';
-
 import 'package:logging/logging.dart';
 import 'package:sl4f/sl4f.dart' as sl4f;
 import 'package:test/test.dart';
@@ -33,42 +31,32 @@ void main() {
     Logger.root.clearListeners();
   });
 
+  Future<bool> exists(String path) async {
+    final result = await storage.stat(path);
+    return result != null;
+  }
+
   group('file facade', () {
-    test('writes to path', () async {
+    test('writes to path then reads from it', () async {
       String timestampName =
           'write-test-${DateTime.now().millisecondsSinceEpoch}';
-      await storage.putBytes('/tmp/$timestampName', 'h3ll0 w3r1d!'.codeUnits);
-
-      expect(await listDir(sl4fDriver, '/tmp'), contains(timestampName));
-    });
-
-    test('reads from path', () async {
-      String timestampName =
-          'read-test-${DateTime.now().millisecondsSinceEpoch}';
-      if ((await sl4fDriver.ssh
-                  .run('echo -n "!d1r3w 0ll3h" > /tmp/$timestampName'))
-              .exitCode !=
-          0) {
-        fail('failed to create file to test read.');
-      }
+      await storage.putBytes('/tmp/$timestampName', 'h3ll0 w0r1d!'.codeUnits);
+      expect(await exists('/tmp/$timestampName'), true);
 
       final result = await storage.readFile('/tmp/$timestampName');
-      expect(String.fromCharCodes(result), '!d1r3w 0ll3h');
+      expect(String.fromCharCodes(result), 'h3ll0 w0r1d!');
     });
 
     test('deletes file in path', () async {
       String timestampName =
           'delete-test-${DateTime.now().millisecondsSinceEpoch}';
-      if ((await sl4fDriver.ssh.run('echo "exists" > /tmp/$timestampName'))
-              .exitCode !=
-          0) {
-        fail('failed to create file to test delete.');
-      }
+      await storage.putBytes('/tmp/$timestampName', 'h3ll0 w3r1d!'.codeUnits);
+      expect(await exists('/tmp/$timestampName'), true);
 
       String result = await storage.deleteFile('/tmp/$timestampName');
       expect(result, 'Success');
 
-      expect(await listDir(sl4fDriver, '/tmp'), isNot(contains(timestampName)));
+      expect(await exists('/tmp/$timestampName'), false);
     });
 
     test('returns notfound when deleting unexisting code', () async {
@@ -84,7 +72,7 @@ void main() {
       String result = await storage.makeDirectory('/tmp/$timestampName');
 
       expect(result, 'Success');
-      expect(await listDir(sl4fDriver, '/tmp'), contains(timestampName));
+      expect(await exists('/tmp/$timestampName'), true);
     });
 
     test('creates new dir recursively', () async {
@@ -95,9 +83,8 @@ void main() {
           recurse: true);
       expect(result, 'Success');
 
-      expect(await listDir(sl4fDriver, '/tmp'), contains(timestampName));
-      expect(
-          await listDir(sl4fDriver, '/tmp/$timestampName'), contains(subdir));
+      expect(await exists('/tmp/$timestampName'), true);
+      expect(await exists('/tmp/$timestampName/$subdir'), true);
     });
 
     test('returns alreadyexists when creating existing directory', () async {
@@ -115,13 +102,4 @@ void main() {
       expect(result, 'AlreadyExists');
     });
   }, timeout: _timeout);
-}
-
-Future<List<String>> listDir(sl4f.Sl4f sl4f, String dir) async {
-  final process = await sl4f.ssh.start('ls $dir');
-  if (await process.exitCode != 0) {
-    fail('unable to run ls under $dir');
-  }
-  final findResult = await process.stdout.transform(utf8.decoder).join();
-  return findResult.split('\n');
 }
