@@ -5,7 +5,9 @@
     "program": {
         "args": [
             "--url",
-            "fuchsia-pkg://fuchsia.com/log-sink-validator-rust#meta/sink-validator-rust-puppet.cmx"
+            "fuchsia-pkg://fuchsia.com/log-sink-validator-rust#meta/sink-validator-rust-puppet.cmx",
+            "--ignore-tag",
+            "fuchsia_async"
         ],
         "binary": "bin/sink_validator"
     },

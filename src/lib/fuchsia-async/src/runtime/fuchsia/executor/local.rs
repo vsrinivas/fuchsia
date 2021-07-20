@@ -72,6 +72,7 @@ impl LocalExecutor {
         let mut res = self.main_task.poll(&mut main_future, &self.main_waker);
         local_collector.task_polled(
             MAIN_TASK_ID,
+            self.inner.source,
             /* complete */ false,
             /* pending_tasks */ self.inner.ready_tasks.len(),
         );
@@ -106,6 +107,7 @@ impl LocalExecutor {
                         res = self.main_task.poll(&mut main_future, &self.main_waker);
                         local_collector.task_polled(
                             MAIN_TASK_ID,
+                            self.inner.source,
                             /* complete */ false,
                             /* pending_tasks */ self.inner.ready_tasks.len(),
                         );
@@ -279,6 +281,7 @@ impl TestExecutor {
                 let res = self.local.main_task.poll(main_future, &self.local.main_waker);
                 local_collector.task_polled(
                     MAIN_TASK_ID,
+                    self.local.inner.source,
                     /* complete */ false,
                     /* pending_tasks */ self.local.inner.ready_tasks.len(),
                 );

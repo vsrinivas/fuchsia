@@ -19,6 +19,7 @@ use std::{
     cell::RefCell,
     collections::{BinaryHeap, HashMap},
     fmt,
+    panic::Location,
     sync::atomic::{AtomicBool, AtomicI64, AtomicUsize, Ordering},
     sync::{Arc, Weak},
     task::Context,
@@ -74,12 +75,19 @@ pub(super) struct Inner {
     pub(super) ready_tasks: SegQueue<Arc<Task>>,
     time: ExecutorTime,
     pub(super) collector: Collector,
+    pub(super) source: Option<&'static Location<'static>>,
 }
 
 impl Inner {
+    #[cfg_attr(trace_level_logging, track_caller)]
     pub fn new(time: ExecutorTime, is_local: bool) -> Result<Self, zx::Status> {
+        #[cfg(trace_level_logging)]
+        let source = Some(Location::caller());
+        #[cfg(not(trace_level_logging))]
+        let source = None;
+
         let collector = Collector::new();
-        collector.task_created(MAIN_TASK_ID);
+        collector.task_created(MAIN_TASK_ID, source);
         Ok(Inner {
             port: zx::Port::create()?,
             done: AtomicBool::new(false),
@@ -90,6 +98,7 @@ impl Inner {
             ready_tasks: SegQueue::new(),
             time,
             collector,
+            source,
         })
     }
 
@@ -105,7 +114,7 @@ impl Inner {
         // TODO: loop but don't starve
         if let Some(task) = self.ready_tasks.pop() {
             let complete = task.try_poll();
-            local_collector.task_polled(task.id, complete, self.ready_tasks.len());
+            local_collector.task_polled(task.id, task.source, complete, self.ready_tasks.len());
             if complete {
                 // Completed
                 self.active_tasks.lock().remove(&task.id);
@@ -113,6 +122,7 @@ impl Inner {
         }
     }
 
+    #[cfg_attr(trace_level_logging, track_caller)]
     pub fn spawn(self: &Arc<Self>, future: FutureObj<'static, ()>) {
         // Prevent a deadlock in `.active_tasks` when a task is spawned from a custom
         // Drop impl while the executor is being torn down.
@@ -121,7 +131,7 @@ impl Inner {
         }
         let next_id = self.task_count.fetch_add(1, Ordering::Relaxed);
         let task = Task::new(next_id, future, self.clone());
-        self.collector.task_created(next_id);
+        self.collector.task_created(next_id, task.source);
         let waker = task.waker();
         self.active_tasks.lock().insert(next_id, task);
         ArcWake::wake_by_ref(&waker);
@@ -254,7 +264,7 @@ impl Inner {
         while let Some(_) = self.ready_tasks.pop() {}
 
         // Synthetic main task marked completed
-        self.collector.task_completed(MAIN_TASK_ID);
+        self.collector.task_completed(MAIN_TASK_ID, self.source);
 
         // Do not allow any receivers to outlive the executor. That's very likely a bug waiting to
         // happen. See discussion above.
@@ -356,15 +366,23 @@ pub(super) struct Task {
     future: AtomicFuture,
     executor: Arc<Inner>,
     notifier: Notifier,
+    source: Option<&'static Location<'static>>,
 }
 
 impl Task {
+    #[cfg_attr(trace_level_logging, track_caller)]
     fn new(id: usize, future: FutureObj<'static, ()>, executor: Arc<Inner>) -> Arc<Self> {
+        #[cfg(trace_level_logging)]
+        let source = Some(Location::caller());
+        #[cfg(not(trace_level_logging))]
+        let source = None;
+
         Arc::new(Self {
             id,
             future: AtomicFuture::new(future),
             executor,
             notifier: Notifier::default(),
+            source,
         })
     }
 

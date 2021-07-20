@@ -60,6 +60,7 @@ impl<T: Send> Task<T> {
     /// The passed future will live until either (a) the future completes,
     /// (b) the returned [`Task`] is dropped while the executor is running, or
     /// (c) the executor is destroyed; whichever comes first.
+    #[cfg_attr(trace_level_logging, track_caller)]
     pub fn spawn(future: impl Future<Output = T> + Send + 'static) -> Task<T> {
         // Fuse is a combinator that will drop the underlying future as soon as it has been
         // completed to ensure resources are reclaimed as soon as possible. That gives callers that

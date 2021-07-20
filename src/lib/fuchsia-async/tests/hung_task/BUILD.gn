@@ -1,0 +1,47 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_binary.gni")
+
+group("hung_task") {
+  testonly = true
+  deps = [ ":tests" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":hung_task_tests" ]
+}
+
+fuchsia_component("test_driver") {
+  testonly = true
+  component_name = "hung_task_tests"
+  manifest = "meta/hung_task_tests.cml"
+  deps = [ ":test_bin" ]
+}
+
+# Run with `fx test hung_task_tests`.
+fuchsia_test_package("hung_task_tests") {
+  test_components = [ ":test_driver" ]
+}
+
+rustc_test("test_bin") {
+  name = "hung_task_tests"
+  source_root = "src/test.rs"
+
+  deps = [
+    "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
+    "//src/lib/diagnostics/data",
+    "//src/lib/diagnostics/hierarchy",
+    "//src/lib/diagnostics/log/rust",
+    "//src/lib/diagnostics/reader",
+    "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:pin-utils",
+    "//third_party/rust_crates:tracing",
+  ]
+
+  sources = [ "src/test.rs" ]
+}

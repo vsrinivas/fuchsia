@@ -24,6 +24,7 @@ use common::Inner;
 ///
 /// Tasks spawned using this method must be threadsafe (implement the `Send` trait),
 /// as they may be run on either a singlethreaded or multithreaded executor.
+#[cfg_attr(trace_level_logging, track_caller)]
 pub(crate) fn spawn<F>(future: F)
 where
     F: Future<Output = ()> + Send + 'static,
@@ -37,6 +38,7 @@ where
 /// do not have to be threadsafe (implement the `Send` trait). In return, this method
 /// requires that the current executor never be run in a multithreaded mode-- only
 /// `run_singlethreaded` can be used.
+#[cfg_attr(trace_level_logging, track_caller)]
 pub(crate) fn spawn_local<F>(future: F)
 where
     F: Future<Output = ()> + 'static,

@@ -25,8 +25,7 @@ use proptest::{
     test_runner::{Reason, RngAlgorithm, TestRng, TestRunner},
 };
 use proptest_derive::Arbitrary;
-use std::io::Cursor;
-use std::{collections::BTreeMap, ops::Range};
+use std::{collections::BTreeMap, io::Cursor, ops::Range};
 use tracing::*;
 
 /// Validate Log VMO formats written by 'puppet' programs controlled by
@@ -45,13 +44,17 @@ struct Opt {
     /// true if the runtime supports stopping the interest listener
     #[argh(switch)]
     test_stop_listener: bool,
+    /// messages with this tag will be ignored. can be repeated.
+    #[argh(option, long = "ignore-tag")]
+    ignored_tags: Vec<String>,
 }
 
 #[fuchsia_async::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&[]).unwrap();
-    let Opt { puppet_url, new_file_line_rules, test_printf, test_stop_listener } = argh::from_env();
-    Puppet::launch(&puppet_url, new_file_line_rules, test_printf, test_stop_listener)
+    let Opt { puppet_url, new_file_line_rules, test_printf, test_stop_listener, ignored_tags } =
+        argh::from_env();
+    Puppet::launch(&puppet_url, new_file_line_rules, test_printf, test_stop_listener, ignored_tags)
         .await?
         .test()
         .await
@@ -65,6 +68,7 @@ struct Puppet {
     _app_watchdog: Task<()>,
     _env: EnvironmentControllerProxy,
     new_file_line_rules: bool,
+    ignored_tags: Vec<Value>,
 }
 
 impl Puppet {
@@ -73,12 +77,13 @@ impl Puppet {
         new_file_line_rules: bool,
         has_structured_printf: bool,
         supports_stopping_listener: bool,
+        ignored_tags: Vec<String>,
     ) -> Result<Self, Error> {
         let mut fs = ServiceFs::new();
         fs.add_fidl_service(|s: LogSinkRequestStream| s);
 
         let start_time = zx::Time::get_monotonic();
-        info!(%puppet_url, "launching");
+        info!(%puppet_url, ?ignored_tags, "launching");
         let (_env, mut app) = fs
             .launch_component_in_nested_environment(
                 puppet_url.to_owned(),
@@ -119,10 +124,11 @@ impl Puppet {
                 _app_watchdog,
                 _env,
                 new_file_line_rules,
+                ignored_tags: ignored_tags.into_iter().map(Value::Text).collect(),
             };
 
             assert_eq!(
-                puppet.read_record(new_file_line_rules).await?,
+                puppet.read_record(new_file_line_rules).await?.unwrap(),
                 RecordAssertion::new(&puppet.info, Severity::Info, new_file_line_rules)
                     .add_string("message", "Puppet started.")
                     .build(puppet.start_time..zx::Time::get_monotonic())
@@ -144,29 +150,35 @@ impl Puppet {
         }
     }
 
-    async fn read_record(&self, new_file_line_rules: bool) -> Result<TestRecord, Error> {
+    async fn read_record(&self, new_file_line_rules: bool) -> Result<Option<TestRecord>, Error> {
         loop {
             let mut buf: Vec<u8> = vec![];
             let bytes_read = self.socket.read_datagram(&mut buf).await.unwrap();
             if bytes_read == 0 {
                 continue;
             }
-            return TestRecord::parse(&buf[0..bytes_read], new_file_line_rules);
+            return TestRecord::parse(&buf[0..bytes_read], new_file_line_rules, &self.ignored_tags);
         }
     }
 
     // For the CPP puppet it's necessary to strip out the TID from the comparison
     // as interest events happen outside the main thread due to HLCPP.
-    async fn read_record_no_tid(&self, expected_tid: u64) -> Result<TestRecord, Error> {
+    async fn read_record_no_tid(&self, expected_tid: u64) -> Result<Option<TestRecord>, Error> {
         loop {
             let mut buf: Vec<u8> = vec![];
             let bytes_read = self.socket.read_datagram(&mut buf).await.unwrap();
             if bytes_read == 0 {
                 continue;
             }
-            let mut record = TestRecord::parse(&buf[0..bytes_read], self.new_file_line_rules)?;
-            record.arguments.remove("tid");
-            record.arguments.insert("tid".to_string(), Value::UnsignedInt(expected_tid));
+            let mut record = TestRecord::parse(
+                &buf[0..bytes_read],
+                self.new_file_line_rules,
+                &self.ignored_tags,
+            )?;
+            if let Some(record) = record.as_mut() {
+                record.arguments.remove("tid");
+                record.arguments.insert("tid".to_string(), Value::UnsignedInt(expected_tid));
+            }
             return Ok(record);
         }
     }
@@ -231,7 +243,14 @@ impl Puppet {
         let before = zx::Time::get_monotonic();
         self.proxy.emit_log(&mut spec).await?;
         let after = zx::Time::get_monotonic();
-        let record = self.read_record(new_file_line_rules).await?;
+
+        // read until we get to a non-ignored record
+        let record = loop {
+            if let Some(r) = self.read_record(new_file_line_rules).await? {
+                break r;
+            };
+        };
+
         Ok((record, before..after))
     }
 }
@@ -267,7 +286,7 @@ async fn assert_interest_listener(
     handle.send_on_register_interest(interest)?;
     info!("Waiting for interest....");
     assert_eq!(
-        puppet.read_record_no_tid(puppet.info.tid).await?,
+        puppet.read_record_no_tid(puppet.info.tid).await?.unwrap(),
         RecordAssertion::new(&puppet.info, Severity::Warn, new_file_line_rules)
             .add_string("message", "Changed severity")
             .build(puppet.start_time..zx::Time::get_monotonic())
@@ -278,13 +297,13 @@ async fn assert_interest_listener(
     send_log_with_severity!(Warn);
     send_log_with_severity!(Error);
     assert_eq!(
-        puppet.read_record_no_tid(puppet.info.tid).await?,
+        puppet.read_record_no_tid(puppet.info.tid).await?.unwrap(),
         RecordAssertion::new(&puppet.info, Severity::Warn, new_file_line_rules)
             .add_string("message", "Warn")
             .build(puppet.start_time..zx::Time::get_monotonic())
     );
     assert_eq!(
-        puppet.read_record_no_tid(puppet.info.tid).await?,
+        puppet.read_record_no_tid(puppet.info.tid).await?.unwrap(),
         RecordAssertion::new(&puppet.info, Severity::Error, new_file_line_rules)
             .add_string("message", "Error")
             .build(puppet.start_time..zx::Time::get_monotonic())
@@ -306,7 +325,7 @@ async fn assert_interest_listener(
         handle.send_on_register_interest(interest)?;
         info!("Waiting for interest to change back....");
         assert_eq!(
-            puppet.read_record_no_tid(puppet.info.tid).await?,
+            puppet.read_record_no_tid(puppet.info.tid).await?.unwrap(),
             RecordAssertion::new(&puppet.info, Severity::Trace, new_file_line_rules)
                 .add_string("message", "Changed severity")
                 .build(puppet.start_time..zx::Time::get_monotonic())
@@ -342,7 +361,7 @@ async fn assert_printf_record(puppet: &mut Puppet, new_file_line_rules: bool) ->
     puppet.proxy.emit_printf_log(&mut spec).await?;
     info!("Waiting for printf");
     assert_eq!(
-        puppet.read_record(new_file_line_rules).await?,
+        puppet.read_record(new_file_line_rules).await?.unwrap(),
         RecordAssertion::new(&puppet.info, Severity::Info, new_file_line_rules)
             .add_string("message", "Test printf int %i string %s double %f")
             .add_printf(Value::SignedInt(5))
@@ -458,14 +477,23 @@ enum StateMachine {
 }
 
 impl TestRecord {
-    fn parse(buf: &[u8], new_file_line_rules: bool) -> Result<Self, Error> {
+    fn parse(
+        buf: &[u8],
+        new_file_line_rules: bool,
+        ignored_tags: &[Value],
+    ) -> Result<Option<Self>, Error> {
         let Record { timestamp, severity, arguments } = parse_record(buf)?.0;
 
         let mut sorted_args = BTreeMap::new();
         let mut printf_arguments = vec![];
 
         let mut state = StateMachine::Init;
-        for Argument { name, value } in arguments.into_iter() {
+        for Argument { name, value } in arguments {
+            // check for ignored tags
+            if name == "tag" && ignored_tags.iter().any(|t| t == &value) {
+                return Ok(None);
+            }
+
             macro_rules! insert_normal {
                 () => {
                     if severity >= Severity::Error || new_file_line_rules {
@@ -507,7 +535,8 @@ impl TestRecord {
                 }
             }
         }
-        Ok(Self { timestamp, severity, arguments: sorted_args, printf_arguments })
+
+        Ok(Some(Self { timestamp, severity, arguments: sorted_args, printf_arguments }))
     }
 }
 impl PartialEq<RecordAssertion> for TestRecord {

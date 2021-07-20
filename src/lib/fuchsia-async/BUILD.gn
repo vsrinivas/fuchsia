@@ -3,9 +3,15 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//build/product.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_staticlib.gni")
 import("//build/testing/environments.gni")
+
+config("trace_level_logging") {
+  rustflags = [ "--cfg=trace_level_logging" ]
+  visibility = [ ":*" ]
+}
 
 rustc_library("fuchsia-async") {
   name = "fuchsia_async"
@@ -22,6 +28,7 @@ rustc_library("fuchsia-async") {
     "//third_party/rust_crates:libc",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:pin-utils",
+    "//third_party/rust_crates:tracing",
   ]
   sources = [
     "src/atomic_future.rs",
@@ -85,6 +92,10 @@ rustc_library("fuchsia-async") {
     ]
   }
   test_deps = [ "//third_party/rust_crates:futures-test" ]
+
+  if (fuchsia_async_trace_level_logging) {
+    configs += [ ":trace_level_logging" ]
+  }
 }
 
 rustc_staticlib("fuchsia-async-staticlib") {
@@ -118,5 +129,6 @@ group("tests") {
     ":fuchsia-async-tests",
     ":fuchsia-async_test($host_toolchain)",
     "cpp:tests",
+    "tests",
   ]
 }

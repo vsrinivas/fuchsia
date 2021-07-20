@@ -11,8 +11,11 @@
 //! on minimal overhead.
 
 use fuchsia_zircon as zx;
-use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
-use std::{cmp, mem};
+use std::{
+    cmp, mem,
+    panic::Location,
+    sync::atomic::{AtomicU64, AtomicUsize, Ordering},
+};
 
 /// A low-overhead metrics collection type intended for use by an async executor.
 #[derive(Default)]
@@ -35,12 +38,26 @@ impl Collector {
     }
 
     /// Called when a task is created (usually, this means spawned).
-    pub fn task_created(&self, _id: usize) {
+    pub fn task_created(&self, _id: usize, _source: Option<&Location<'_>>) {
+        #[cfg(trace_level_logging)]
+        tracing::trace!(
+            tag = "fuchsia_async",
+            id = _id,
+            source = %_source.unwrap(),
+            "Task spawned"
+        );
         self.tasks_created.fetch_add(1, Ordering::Relaxed);
     }
 
     /// Called when a task is complete.
-    pub fn task_completed(&self, _id: usize) {
+    pub fn task_completed(&self, _id: usize, _source: Option<&Location<'_>>) {
+        #[cfg(trace_level_logging)]
+        tracing::trace!(
+            tag = "fuchsia_async",
+            id = _id,
+            source = %_source.unwrap(),
+            "Task completed"
+        );
         self.tasks_completed.fetch_add(1, Ordering::Relaxed);
     }
 
@@ -93,7 +110,13 @@ impl<'a> LocalCollector<'a> {
     /// Called after a task was polled. If the task completed, `complete`
     /// should be true. `pending_tasks` is the observed size of the pending task
     /// queue (excluding the currently polled task).
-    pub fn task_polled(&mut self, id: usize, complete: bool, tasks_pending: usize) {
+    pub fn task_polled(
+        &mut self,
+        id: usize,
+        source: Option<&Location<'_>>,
+        complete: bool,
+        tasks_pending: usize,
+    ) {
         self.polls += 1;
         let new_local_max = cmp::max(self.tasks_pending_max, tasks_pending);
         if new_local_max > self.tasks_pending_max {
@@ -102,7 +125,7 @@ impl<'a> LocalCollector<'a> {
             self.tasks_pending_max = cmp::max(new_local_max, prev_upstream_max);
         }
         if complete {
-            self.collector.task_completed(id);
+            self.collector.task_completed(id, source);
         }
     }
 
@@ -232,9 +255,9 @@ mod tests {
     #[test]
     fn collector() {
         let collector = Collector::new();
-        collector.task_created(0);
-        collector.task_created(1);
-        collector.task_completed(0);
+        collector.task_created(0, Some(Location::caller()));
+        collector.task_created(1, Some(Location::caller()));
+        collector.task_completed(0, Some(Location::caller()));
         assert_eq!(collector.tasks_created.load(Ordering::Relaxed), 2);
         assert_eq!(collector.tasks_completed.load(Ordering::Relaxed), 1);
     }
@@ -245,9 +268,9 @@ mod tests {
         collector.tasks_pending_max.store(6, Ordering::Relaxed);
         collector.polls.store(1, Ordering::Relaxed);
         let mut local_collector = collector.create_local_collector();
-        local_collector.task_polled(0, false, /* pending_tasks */ 5);
+        local_collector.task_polled(0, Some(Location::caller()), false, /* pending_tasks */ 5);
         assert_eq!(collector.tasks_pending_max.load(Ordering::Relaxed), 6);
-        local_collector.task_polled(0, false, /* pending_tasks */ 7);
+        local_collector.task_polled(0, Some(Location::caller()), false, /* pending_tasks */ 7);
         assert_eq!(collector.tasks_pending_max.load(Ordering::Relaxed), 7);
         assert_eq!(local_collector.polls, 2);
 
@@ -265,7 +288,7 @@ mod tests {
         // One more cycle to check that max is idempotent when main collector is greater
         collector.tasks_pending_max.store(10, Ordering::Relaxed);
         local_collector.woke_up(WakeupReason::Io);
-        local_collector.task_polled(0, false, /* pending_tasks */ 8);
+        local_collector.task_polled(0, Some(Location::caller()), false, /* pending_tasks */ 8);
         assert_eq!(local_collector.tasks_pending_max, 10);
 
         // Flush with drop this time. Polls 3 -> 4
@@ -291,7 +314,7 @@ mod tests {
         assert_eq!(ticker.update(), (false, true));
 
         // Poll should NOT move awake time forward
-        local_collector.task_polled(0, true, 1);
+        local_collector.task_polled(0, Some(Location::caller()), true, 1);
         assert_eq!(ticker.update(), (false, false));
 
         // Drop should move awake time forward
@@ -330,11 +353,11 @@ mod tests {
         let mut ticker = Ticker::new(&collector);
 
         // tasks_created += 1
-        collector.task_created(0);
+        collector.task_created(0, Some(Location::caller()));
         let mut local_1 = collector.create_local_collector();
 
         // tasks_polled += 1, tasks_pending_max = 5
-        local_1.task_polled(0, false, 5);
+        local_1.task_polled(0, Some(Location::caller()), false, 5);
 
         // ticks_awake += T
         local_1.will_wait();
@@ -343,9 +366,9 @@ mod tests {
         let mut local_2 = collector.create_local_collector();
 
         // tasks_created += 1, tasks_polled += 2, tasks_complete += 1, tasks_pending_max = 7
-        collector.task_created(1);
-        local_2.task_polled(0, false, 7);
-        local_2.task_polled(0, true, 3);
+        collector.task_created(1, Some(Location::caller()));
+        local_2.task_polled(0, Some(Location::caller()), false, 7);
+        local_2.task_polled(0, Some(Location::caller()), true, 3);
 
         // ticks_awake += T
         local_2.will_wait();
