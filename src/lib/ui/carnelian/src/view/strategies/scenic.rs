@@ -5,7 +5,7 @@ use crate::{
     app::{MessageInternal, RenderOptions},
     drawing::DisplayRotation,
     geometry::UintSize,
-    input::ScenicInputHandler,
+    input::scenic::ScenicInputHandler,
     message::Message,
     render::{
         self,

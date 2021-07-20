@@ -9,7 +9,7 @@ use crate::{
     },
     drawing::DisplayRotation,
     geometry::IntSize,
-    input::{self, listen_for_user_input, DeviceId, InputReportHandler},
+    input::{self, listen_for_user_input, report::InputReportHandler, DeviceId},
     view::{
         strategies::{
             base::{ViewStrategyParams, ViewStrategyPtr},
