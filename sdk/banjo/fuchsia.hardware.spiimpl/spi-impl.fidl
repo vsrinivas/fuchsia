@@ -33,6 +33,19 @@ protocol SpiImpl {
         rxdata vector<uint8>:MAX;
     });
 
+    /// Lock the bus.
+    LockBus(struct {
+        chip_select uint32;
+    }) -> (struct {
+        status zx.status;
+    });
+    /// Unlock the bus.
+    UnlockBus(struct {
+        chip_select uint32;
+    }) -> (struct {
+        status zx.status;
+    });
+
     /// rights is a bit field containing SpiVmoRight values, and determines the read/write
     /// permissions used by the implementation when pinning or mapping the VMO.
     RegisterVmo(resource struct {

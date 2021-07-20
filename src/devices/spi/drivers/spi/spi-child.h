@@ -25,8 +25,12 @@ class SpiChild : public SpiChildType,
                  public ddk::SpiProtocol<SpiChild, ddk::base_protocol> {
  public:
   SpiChild(zx_device_t* parent, ddk::SpiImplProtocolClient spi, uint32_t chip_select,
-           SpiDevice* spi_parent)
-      : SpiChildType(parent), spi_(spi), cs_(chip_select), spi_parent_(*spi_parent) {}
+           SpiDevice* spi_parent, bool has_siblings)
+      : SpiChildType(parent),
+        spi_(spi),
+        cs_(chip_select),
+        spi_parent_(*spi_parent),
+        has_siblings_(has_siblings) {}
 
   void DdkRelease();
 
@@ -45,6 +49,10 @@ class SpiChild : public SpiChildType,
   void Receive(ReceiveRequestView request, ReceiveCompleter::Sync& completer) override;
   void Exchange(ExchangeRequestView request, ExchangeCompleter::Sync& completer) override;
 
+  void CanAssertCs(CanAssertCsRequestView request, CanAssertCsCompleter::Sync& completer) override;
+  void AssertCs(AssertCsRequestView request, AssertCsCompleter::Sync& completer) override;
+  void DeassertCs(DeassertCsRequestView request, DeassertCsCompleter::Sync& completer) override;
+
   zx_status_t SpiTransmit(const uint8_t* txdata_list, size_t txdata_count);
   zx_status_t SpiReceive(uint32_t size, uint8_t* out_rxdata_list, size_t rxdata_count,
                          size_t* out_rxdata_actual);
@@ -56,6 +64,8 @@ class SpiChild : public SpiChildType,
   const ddk::SpiImplProtocolClient spi_;
   const uint32_t cs_;
   SpiDevice& spi_parent_;
+  // False if this child is the only device on the bus.
+  bool has_siblings_;
 };
 
 }  // namespace spi

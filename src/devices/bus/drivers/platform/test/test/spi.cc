@@ -6,10 +6,10 @@
 #include <fuchsia/hardware/spiimpl/cpp/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/driver.h>
+#include <lib/ddk/metadata.h>
 
 #include <memory>
 
-#include <lib/ddk/metadata.h>
 #include <ddktl/device.h>
 
 #include "src/devices/bus/drivers/platform/test/test-spi-bind.h"
@@ -112,6 +112,8 @@ class TestSpiDevice : public DeviceType,
     return ZX_ERR_NOT_SUPPORTED;
   }
 
+  zx_status_t SpiImplLockBus(uint32_t chip_select) { return ZX_ERR_NOT_SUPPORTED; }
+  zx_status_t SpiImplUnlockBus(uint32_t chip_select) { return ZX_ERR_NOT_SUPPORTED; }
   // Methods required by the ddk mixins
   void DdkRelease() { delete this; }
 

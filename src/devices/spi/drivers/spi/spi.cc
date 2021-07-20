@@ -83,6 +83,7 @@ void SpiDevice::AddChildren() {
   }
   zxlogf(INFO, "%s: %zu channels supplied.", __func__, metadata->channels().count());
 
+  bool has_siblings = metadata->channels().count() > 1;
   for (auto& channel : metadata->channels()) {
     const auto bus_id = channel.has_bus_id() ? channel.bus_id() : 0;
 
@@ -96,7 +97,7 @@ void SpiDevice::AddChildren() {
     const auto did = channel.has_did() ? channel.did() : 0;
 
     fbl::AllocChecker ac;
-    auto dev = fbl::MakeRefCountedChecked<SpiChild>(&ac, zxdev(), spi_, cs, this);
+    auto dev = fbl::MakeRefCountedChecked<SpiChild>(&ac, zxdev(), spi_, cs, this, has_siblings);
     if (!ac.check()) {
       zxlogf(ERROR, "%s: out of memory", __func__);
       return;

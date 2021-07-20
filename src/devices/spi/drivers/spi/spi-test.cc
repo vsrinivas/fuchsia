@@ -27,11 +27,13 @@ class FakeDdkSpiImpl;
 class FakeDdkSpiImpl : public fake_ddk::Bind,
                        public ddk::SpiImplProtocol<FakeDdkSpiImpl, ddk::base_protocol> {
  public:
-  explicit FakeDdkSpiImpl() {
+  explicit FakeDdkSpiImpl(const spi_channel_t* channels = kSpiChannels,
+                          size_t count = countof(kSpiChannels)) {
     fake_ddk::Protocol proto = {&spi_impl_protocol_ops_, this};
     SetProtocol(ZX_PROTOCOL_SPI_IMPL, &proto);
 
-    auto result = fidl_metadata::spi::SpiChannelsToFidl(kSpiChannels);
+    auto result =
+        fidl_metadata::spi::SpiChannelsToFidl(cpp20::span<const spi_channel_t>(channels, count));
     ASSERT_OK(result.status_value());
     data_ = std::move(result.value());
     SetMetadata(DEVICE_METADATA_SPI_CHANNELS, data_.data(), data_.size());
@@ -217,6 +219,8 @@ class FakeDdkSpiImpl : public fake_ddk::Bind,
     return std::get<1>(*rx_it).write(buf, rx_offset, std::max(size, sizeof(buf)));
   }
 
+  zx_status_t SpiImplLockBus(uint32_t chip_select) { return ZX_OK; }
+  zx_status_t SpiImplUnlockBus(uint32_t chip_select) { return ZX_OK; }
   SpiDevice* bus_device_;
   fbl::Vector<SpiChild*> children_;
   fbl::Vector<fake_ddk::FidlMessenger*> fidl_clients_;
@@ -517,4 +521,100 @@ TEST(SpiDevice, SpiFidlVectorErrorTest) {
   EXPECT_EQ(ddk.bus_device_, nullptr);
 }
 
+TEST(SpiDevice, AssertCsWithSiblingTest) {
+  FakeDdkSpiImpl ddk;
+
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+  ASSERT_OK(loop.StartThread("spi-test-thread"));
+
+  fidl::Client<fuchsia_hardware_spi::Device> cs0_client, cs1_client;
+  SpiDevice::Create(nullptr, fake_ddk::kFakeParent);
+  EXPECT_EQ(ddk.children_.size(), std::size(ddk.kSpiChannels));
+
+  {
+    zx::channel client, server;
+    ASSERT_OK(zx::channel::create(0, &client, &server));
+    ddk.children_[0]->SpiConnectServer(std::move(server));
+    cs0_client.Bind(std::move(client), loop.dispatcher());
+  }
+
+  {
+    zx::channel client, server;
+    ASSERT_OK(zx::channel::create(0, &client, &server));
+    ddk.children_[1]->SpiConnectServer(std::move(server));
+    cs1_client.Bind(std::move(client), loop.dispatcher());
+  }
+
+  {
+    auto result = cs0_client->CanAssertCs_Sync();
+    ASSERT_TRUE(result.ok());
+    ASSERT_FALSE(result->can);
+  }
+
+  {
+    auto result = cs1_client->CanAssertCs_Sync();
+    ASSERT_TRUE(result.ok());
+    ASSERT_FALSE(result->can);
+  }
+
+  {
+    auto result = cs0_client->AssertCs_Sync();
+    ASSERT_TRUE(result.ok());
+    ASSERT_STATUS(result->status, ZX_ERR_NOT_SUPPORTED);
+  }
+
+  {
+    auto result = cs1_client->AssertCs_Sync();
+    ASSERT_TRUE(result.ok());
+    ASSERT_STATUS(result->status, ZX_ERR_NOT_SUPPORTED);
+  }
+
+  {
+    auto result = cs0_client->DeassertCs_Sync();
+    ASSERT_TRUE(result.ok());
+    ASSERT_STATUS(result->status, ZX_ERR_NOT_SUPPORTED);
+  }
+
+  {
+    auto result = cs1_client->DeassertCs_Sync();
+    ASSERT_TRUE(result.ok());
+    ASSERT_STATUS(result->status, ZX_ERR_NOT_SUPPORTED);
+  }
+}
+
+TEST(SpiDevice, AssertCsNoSiblingTest) {
+  FakeDdkSpiImpl ddk(FakeDdkSpiImpl::kSpiChannels, 1);
+
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+  ASSERT_OK(loop.StartThread("spi-test-thread"));
+
+  fidl::Client<fuchsia_hardware_spi::Device> cs0_client;
+  SpiDevice::Create(nullptr, fake_ddk::kFakeParent);
+  EXPECT_EQ(ddk.children_.size(), 1);
+
+  {
+    zx::channel client, server;
+    ASSERT_OK(zx::channel::create(0, &client, &server));
+    ddk.children_[0]->SpiConnectServer(std::move(server));
+    cs0_client.Bind(std::move(client), loop.dispatcher());
+  }
+
+  {
+    auto result = cs0_client->CanAssertCs_Sync();
+    ASSERT_TRUE(result.ok());
+    ASSERT_TRUE(result->can);
+  }
+
+  {
+    auto result = cs0_client->AssertCs_Sync();
+    ASSERT_TRUE(result.ok());
+    ASSERT_OK(result->status);
+  }
+
+  {
+    auto result = cs0_client->DeassertCs_Sync();
+    ASSERT_TRUE(result.ok());
+    ASSERT_OK(result->status);
+  }
+}
 }  // namespace spi

@@ -35,6 +35,9 @@ class DwSpi : public DeviceType, public ddk::SpiImplProtocol<DwSpi, ddk::base_pr
   zx_status_t SpiImplExchangeVmo(uint32_t cs, uint32_t tx_vmo_id, uint64_t tx_offset,
                                  uint32_t rx_vmo_id, uint64_t rx_offset, uint64_t size);
 
+  zx_status_t SpiImplLockBus(uint32_t chip_select) { return ZX_ERR_NOT_SUPPORTED; }
+  zx_status_t SpiImplUnlockBus(uint32_t chip_select) { return ZX_ERR_NOT_SUPPORTED; }
+
  private:
   explicit DwSpi(zx_device_t* device, ddk::MmioBuffer mmio)
       : DeviceType(device), mmio_(std::move(mmio)) {}

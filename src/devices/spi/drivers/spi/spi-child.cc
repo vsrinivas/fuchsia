@@ -166,6 +166,26 @@ zx_status_t SpiChild::SpiExchange(const uint8_t* txdata_list, size_t txdata_coun
   return ZX_OK;
 }
 
+void SpiChild::CanAssertCs(CanAssertCsRequestView request, CanAssertCsCompleter::Sync& completer) {
+  completer.Reply(!has_siblings_);
+}
+
+void SpiChild::AssertCs(AssertCsRequestView request, AssertCsCompleter::Sync& completer) {
+  if (has_siblings_) {
+    completer.Reply(ZX_ERR_NOT_SUPPORTED);
+  } else {
+    completer.Reply(spi_.LockBus(cs_));
+  }
+}
+
+void SpiChild::DeassertCs(DeassertCsRequestView request, DeassertCsCompleter::Sync& completer) {
+  if (has_siblings_) {
+    completer.Reply(ZX_ERR_NOT_SUPPORTED);
+  } else {
+    completer.Reply(spi_.UnlockBus(cs_));
+  }
+}
+
 void SpiChild::SpiConnectServer(zx::channel server) {
   spi_parent_.ConnectServer(std::move(server), this);
 }

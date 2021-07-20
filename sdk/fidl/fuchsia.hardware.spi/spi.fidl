@@ -69,6 +69,23 @@ protocol Device {
         rxdata vector<uint8>:MAX_TRANSFER_SIZE;
     });
 
+    /// Returns true if the device can call |AssertCs()| and |DeassertCs()|.
+    CanAssertCs() -> (struct {
+        can bool;
+    });
+
+    /// Assert CS for this device.
+    /// Returns ZX_ERR_NOT_SUPPORTED if there is more than one device on the bus.
+    AssertCs() -> (struct {
+        status zx.status;
+    });
+    /// Deassert CS for this device.
+    /// Returns ZX_ERR_BAD_STATE if CS is already deasserted.
+    /// Returns ZX_ERR_NOT_SUPPORTED if there is more than one device on the bus.
+    DeassertCs() -> (struct {
+        status zx.status;
+    });
+
     compose fuchsia.hardware.sharedmemory.SharedVmoIo;
     compose fuchsia.hardware.sharedmemory.SharedVmoRegister;
 };
