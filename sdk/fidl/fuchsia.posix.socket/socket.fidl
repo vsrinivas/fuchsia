@@ -5,15 +5,9 @@ library fuchsia.posix.socket;
 
 using fuchsia.io;
 using fuchsia.net;
+using fuchsia.net.interfaces;
 using fuchsia.posix;
 using zx;
-
-/// The maximum length of an interface name.
-// `sizeof((struct ifreq).ifr_name) == 16`; the last byte is reserved for the null terminator.
-const INTERFACE_NAME_LENGTH uint8 = 15;
-
-/// An interface name as a sequence of bytes.
-alias interface_name = string:INTERFACE_NAME_LENGTH;
 
 /// Socket shutdown mode.
 type ShutdownMode = strict bits : uint16 {
@@ -163,11 +157,11 @@ protocol BaseSocket {
 
     /// Set `SOL_SOCKET` -> `SO_BINDTODEVICE`.
     SetBindToDevice(struct {
-        value interface_name;
+        value fuchsia.net.interfaces.name;
     }) -> (struct {}) error fuchsia.posix.Errno;
     /// Get `SOL_SOCKET` -> `SO_BINDTODEVICE`.
     GetBindToDevice() -> (struct {
-        value interface_name;
+        value fuchsia.net.interfaces.name;
     }) error fuchsia.posix.Errno;
 
     /// Set `SOL_SOCKET` -> `SO_TIMESTAMP`.
@@ -679,7 +673,7 @@ type InterfaceAddresses = table {
     /// ID of the interface.
     1: id uint64;
     /// Name of the interface.
-    2: name interface_name;
+    2: name fuchsia.net.interfaces.name;
     /// Contains the interface flags, as returned by the SIOCGIFFLAGS ioctl
     /// operation.
     ///
@@ -782,19 +776,19 @@ protocol Provider {
     InterfaceIndexToName(struct {
         index uint64;
     }) -> (struct {
-        name interface_name;
+        name fuchsia.net.interfaces.name;
     }) error zx.status;
     /// Looks up an interface by its name and returns its index. Returns `ZX_ERR_NOT_FOUND` if the
     /// specified name doesn't exist.
     InterfaceNameToIndex(struct {
-        name interface_name;
+        name fuchsia.net.interfaces.name;
     }) -> (struct {
         index uint64;
     }) error zx.status;
     /// Looks up an interface by its name and returns its flags. Returns `ZX_ERR_NOT_FOUND` if the
     /// specified name doesn't exist.
     InterfaceNameToFlags(struct {
-        name interface_name;
+        name fuchsia.net.interfaces.name;
     }) -> (struct {
         flags InterfaceFlags;
     }) error zx.status;

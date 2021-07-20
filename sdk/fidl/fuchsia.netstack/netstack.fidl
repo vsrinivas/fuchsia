@@ -5,8 +5,8 @@ library fuchsia.netstack;
 
 using fuchsia.hardware.ethernet;
 using fuchsia.net.dhcp;
+using fuchsia.net.interfaces;
 using fuchsia.net;
-using fuchsia.posix.socket;
 using zx;
 
 type Status = strict enum {
@@ -24,7 +24,7 @@ type NetErr = struct {
 };
 
 type InterfaceConfig = struct {
-    name fuchsia.posix.socket.interface_name;
+    name fuchsia.net.interfaces.name;
 
     /// An unstable file path corresponding to the interface. Used in watching the creation
     /// and destruction of the interface, or in accessing the interface using netdump.

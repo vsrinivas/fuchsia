@@ -5,15 +5,14 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.posix.socket") {
-  sdk_category = "partner"
-
-  api = "fuchsia.posix.socket.api"
+  sdk_category = "internal"
 
   sources = [ "socket.fidl" ]
 
   public_deps = [
     "//sdk/fidl/fuchsia.io",
     "//sdk/fidl/fuchsia.net",
+    "//sdk/fidl/fuchsia.net.interfaces",
     "//sdk/fidl/fuchsia.posix",
     "//zircon/vdso/zx",
   ]

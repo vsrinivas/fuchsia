@@ -97,7 +97,7 @@ async fn run_netstack_and_get_ipv6_addrs_for_endpoint<N: Netstack>(
         .add_ethernet_device(
             &name,
             &mut netstack::InterfaceConfig {
-                name: name[..fidl_fuchsia_posix_socket::INTERFACE_NAME_LENGTH.into()].to_string(),
+                name: name[..fidl_fuchsia_net_interfaces::INTERFACE_NAME_LENGTH.into()].to_string(),
                 filepath: "/fake/filepath/for_test".to_string(),
                 metric: 0,
             },

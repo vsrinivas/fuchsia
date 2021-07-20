@@ -5,9 +5,9 @@ library fuchsia.net.stack;
 
 using fuchsia.hardware.ethernet;
 using fuchsia.hardware.network;
-using fuchsia.net;
+using fuchsia.net.interfaces;
 using fuchsia.net.name;
-using fuchsia.posix.socket;
+using fuchsia.net;
 
 /// A path to a device node.
 alias device_path = string:255;
@@ -46,7 +46,7 @@ type InterfaceInfo = struct {
 @deprecated("Use fuchsia.net.interfaces/Watcher")
 type InterfaceProperties = struct {
     /// Human-readable name of the interface. eg. eth001, wlanx35.
-    name fuchsia.posix.socket.interface_name;
+    name fuchsia.net.interfaces.name;
 
     /// The topological path to the device, representing a stable identifier for the interface
     /// hardware.
@@ -128,7 +128,7 @@ type DeviceDefinition = strict resource union {
 type InterfaceConfig = table {
     /// Human-readable name of the interface. eg. eth001, wlanx35.
     /// Will be set to a default generic name if not provided.
-    1: name fuchsia.posix.socket.interface_name;
+    1: name fuchsia.net.interfaces.name;
 
     /// The topological path to the device, representing a stable identifier for the interface
     /// hardware.

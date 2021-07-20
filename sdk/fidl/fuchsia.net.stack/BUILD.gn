@@ -11,7 +11,7 @@ fidl("fuchsia.net.stack") {
     "//sdk/fidl/fuchsia.hardware.ethernet",
     "//sdk/fidl/fuchsia.hardware.network",
     "//sdk/fidl/fuchsia.net",
+    "//sdk/fidl/fuchsia.net.interfaces",
     "//sdk/fidl/fuchsia.net.name",
-    "//sdk/fidl/fuchsia.posix.socket",
   ]
 }

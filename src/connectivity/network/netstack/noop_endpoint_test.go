@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//go:build !build_with_native_toolchain
 // +build !build_with_native_toolchain
 
 package netstack
@@ -10,7 +11,7 @@ import (
 	"testing"
 
 	"fidl/fuchsia/hardware/network"
-	"fidl/fuchsia/posix/socket"
+	"fidl/fuchsia/net/interfaces"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link"
 
@@ -126,7 +127,7 @@ func addNoopEndpoint(t *testing.T, ns *Netstack, name string) *ifState {
 			prefix := t.Name()
 			for {
 				candidate := makeEndpointName(prefix, name)(nicid)
-				if overflow := len(candidate) - int(socket.InterfaceNameLength); overflow > 0 {
+				if overflow := len(candidate) - int(interfaces.InterfaceNameLength); overflow > 0 {
 					prefix = prefix[:len(prefix)-overflow]
 					continue
 				}

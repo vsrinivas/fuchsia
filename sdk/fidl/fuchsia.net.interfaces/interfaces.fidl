@@ -5,8 +5,14 @@ library fuchsia.net.interfaces;
 
 using fuchsia.hardware.network;
 using fuchsia.net;
-using fuchsia.posix.socket;
 using zx;
+
+/// The maximum length of an interface name.
+// `sizeof((struct ifreq).ifr_name) == 16`; the last byte is reserved for the null terminator.
+const INTERFACE_NAME_LENGTH uint8 = 15;
+
+/// An interface name as a sequence of bytes.
+alias name = string:INTERFACE_NAME_LENGTH;
 
 type Empty = struct {};
 
@@ -73,7 +79,7 @@ type Properties = table {
     /// Whether there is a default IPv6 route through this interface.
     6: has_default_ipv6_route bool;
     /// The name of the interface. Immutable.
-    7: name fuchsia.posix.socket.interface_name;
+    7: name name;
 };
 
 /// Options for configuring the interface state watcher.
