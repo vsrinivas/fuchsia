@@ -25,6 +25,7 @@ struct TestType {
   TestType& operator=(const TestType&) = delete;
 
   void Method() {}
+  void ConstMethod() const {}
 
   static size_t constructions() { return constructions_.load(); }
   static size_t destructions() { return destructions_.load(); }
@@ -92,6 +93,13 @@ void lazy_init_test() {
 
   EXPECT_EQ(expected_constructions, Type::constructions());
   EXPECT_EQ(expected_destructions, Type::destructions());
+
+  // Make sure that the const accessors (Get and the -> operator) are defined
+  // for each specialization of LazyInit.
+  const LazyInitType& const_test_value = test_value_storage.value;
+  const_test_value.Get().ConstMethod();   // Get()
+  const_test_value->ConstMethod();        // -> operator
+  (&const_test_value)->ConstMethod();     // address of operator
 
   if (Check == CheckType::None) {
     ASSERT_NO_DEATH(initialization_test, "Testing re-intialization.\n");

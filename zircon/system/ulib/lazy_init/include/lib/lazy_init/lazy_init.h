@@ -70,6 +70,10 @@ union LazyInitStorage {
   constexpr T* operator->() { return &value; }
   constexpr T* operator&() { return &value; }
 
+  constexpr const T& operator*() const { return value; }
+  constexpr const T* operator->() const { return &value; }
+  constexpr const T* operator&() const { return &value; }
+
   Empty empty;
   T value;
 };
@@ -87,6 +91,10 @@ union LazyInitStorage<T, false> {
   constexpr T& operator*() { return value; }
   constexpr T* operator->() { return &value; }
   constexpr T* operator&() { return &value; }
+
+  constexpr const T& operator*() const { return value; }
+  constexpr const T* operator->() const { return &value; }
+  constexpr const T* operator&() const { return &value; }
 
   Empty empty;
   T value;
@@ -131,17 +139,20 @@ class LazyInit<T, CheckType::None, Destructor::Disabled> {
   // ensure that initialization is already performed and that the effects of
   // initialization are visible.
   T& Get() { return *storage_; }
+  const T& Get() const { return *storage_; }
 
   // Accesses the wrapped global by pointer. It is up to the caller to ensure
   // that initialization is already performed and that the effects of
   // initialization are visible.
   T* operator->() { return &Get(); }
+  const T* operator->() const { return &Get(); }
 
   // Returns a pointer to the wrapped global. All specializations return a
   // pointer without performing consistency checks. This should be used
   // cautiously, preferably only in constant expressions that take the address
   // of the wrapped global.
   constexpr T* operator&() { return &storage_; }
+  constexpr const T* operator&() const { return &storage_; }
 
  private:
   template <typename, CheckType, Destructor>
@@ -190,16 +201,23 @@ class LazyInit<T, CheckType::Basic, Destructor::Disabled> {
     return *storage_;
   }
 
+  const T& Get() const {
+    ZX_ASSERT(*initialized_);
+    return *storage_;
+  }
+
   // Accesses the wrapped global by pointer. Asserts that initialization is
   // already perfromed, however, it is up the caller to ensure that the
   // effects of initialization are visible.
   T* operator->() { return &Get(); }
+  const T* operator->() const { return &Get(); }
 
   // Returns a pointer to the wrapped global. All specializations return a
   // pointer without performing consistency checks. This should be used
   // cautiously, preferably only in constant expressions that take the address
   // of the wrapped global.
   constexpr T* operator&() { return &storage_; }
+  constexpr const T* operator&() const { return &storage_; }
 
  private:
   template <typename, CheckType, Destructor>
@@ -258,16 +276,23 @@ class LazyInit<T, CheckType::Atomic, Destructor::Disabled> {
     return *storage_;
   }
 
+  const T& Get() const {
+    AssertState(State::Initialized, state_->load(std::memory_order_relaxed));
+    return *storage_;
+  }
+
   // Accesses the wrapped global by pointer. Asserts that initialization is
   // already perfromed. The effects of initialization are guaranteed to be
   // visible if the assertion passes.
   T* operator->() { return &Get(); }
+  const T* operator->() const { return &Get(); }
 
   // Returns a pointer to the wrapped global. All specializations return a
   // pointer without performing consistency checks. This should be used
   // cautiously, preferably only in constant expressions that take the address
   // of the wrapped global.
   constexpr T* operator&() { return &storage_; }
+  constexpr const T* operator&() const { return &storage_; }
 
  private:
   template <typename, CheckType, Destructor>
@@ -283,7 +308,7 @@ class LazyInit<T, CheckType::Atomic, Destructor::Disabled> {
   };
 
   // Asserts that the expected state matches the actual state.
-  void AssertState(State expected, State actual) {
+  void AssertState(State expected, State actual) const {
     ZX_ASSERT_MSG(expected == actual, "expected=%d actual=%d", static_cast<int>(expected),
                   static_cast<int>(actual));
   }
