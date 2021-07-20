@@ -110,6 +110,16 @@
           },
           "name": {
             "type": "string"
+          },
+          "config": {
+            "type": "object",
+            "properties": {
+              "cpu_load_cache_duration_ms": {
+                "type": "number",
+                "minimum": 0,
+                "exclusiveMinimum": true
+              }
+            }
           }
         },
         "additionalProperties": false,

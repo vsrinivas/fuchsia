@@ -6,14 +6,14 @@ use crate::error::PowerManagerError;
 use crate::log_if_err;
 use crate::message::{Message, MessageReturn};
 use crate::node::Node;
-use crate::types::Nanoseconds;
-use crate::utils::connect_proxy;
+use crate::types::{Milliseconds, Nanoseconds};
+use crate::utils::{connect_proxy, get_current_timestamp};
 use anyhow::{format_err, Error};
 use async_trait::async_trait;
 use fidl_fuchsia_kernel as fstats;
 use fuchsia_inspect::{self as inspect};
 use fuchsia_inspect_contrib::{inspect_log, nodes::BoundedListNode};
-use log::*;
+use serde_derive::Deserialize;
 use serde_json as json;
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -37,18 +37,40 @@ use std::rc::Rc;
 const CPU_STATS_SVC: &'static str = "/svc/fuchsia.kernel.Stats";
 
 /// A builder for constructing the CpuStatsHandler node
+#[derive(Default)]
 pub struct CpuStatsHandlerBuilder<'a> {
     stats_svc_proxy: Option<fstats::StatsProxy>,
     inspect_root: Option<&'a inspect::Node>,
+    cpu_load_cache_duration: Option<Milliseconds>,
 }
 
 impl<'a> CpuStatsHandlerBuilder<'a> {
-    pub fn new() -> Self {
-        Self { stats_svc_proxy: None, inspect_root: None }
+    #[cfg(test)]
+    fn new() -> Self {
+        Self::default()
     }
 
-    pub fn new_from_json(_json_data: json::Value, _nodes: &HashMap<String, Rc<dyn Node>>) -> Self {
-        Self::new()
+    pub fn new_from_json(json_data: json::Value, _nodes: &HashMap<String, Rc<dyn Node>>) -> Self {
+        #[derive(Deserialize)]
+        struct Config {
+            cpu_load_cache_duration_ms: Option<u32>,
+        }
+
+        #[derive(Deserialize)]
+        struct JsonData {
+            config: Option<Config>,
+        }
+
+        let data: JsonData = json::from_value(json_data).unwrap();
+        Self {
+            stats_svc_proxy: None,
+            inspect_root: None,
+            cpu_load_cache_duration: data
+                .config
+                .map(|config| config.cpu_load_cache_duration_ms)
+                .flatten()
+                .map(|limit| Milliseconds(limit.into())),
+        }
     }
 
     #[cfg(test)]
@@ -60,6 +82,12 @@ impl<'a> CpuStatsHandlerBuilder<'a> {
     #[cfg(test)]
     pub fn with_inspect_root(mut self, root: &'a inspect::Node) -> Self {
         self.inspect_root = Some(root);
+        self
+    }
+
+    #[cfg(test)]
+    pub fn with_cpu_load_cache_duration(mut self, cpu_load_cache_duration: Milliseconds) -> Self {
+        self.cpu_load_cache_duration = Some(cpu_load_cache_duration);
         self
     }
 
@@ -76,12 +104,13 @@ impl<'a> CpuStatsHandlerBuilder<'a> {
 
         let node = Rc::new(CpuStatsHandler {
             stats_svc_proxy: proxy,
-            cpu_idle_stats: RefCell::new(Default::default()),
+            cpu_stats: RefCell::new(Default::default()),
             inspect: InspectData::new(inspect_root, "CpuStatsHandler".to_string()),
+            cpu_load_cache_duration: self.cpu_load_cache_duration.unwrap_or(Milliseconds(0)),
         });
 
         // Seed the idle stats
-        node.cpu_idle_stats.replace(node.get_idle_stats().await?);
+        node.cpu_stats.replace(node.get_idle_stats().await?);
 
         Ok(node)
     }
@@ -89,25 +118,34 @@ impl<'a> CpuStatsHandlerBuilder<'a> {
 
 /// The CpuStatsHandler node
 pub struct CpuStatsHandler {
-    /// A proxy handle to communicate with the Kernel Stats service
+    /// A proxy handle to communicate with the Kernel Stats service.
     stats_svc_proxy: fstats::StatsProxy,
 
-    /// Cached CPU idle states from the most recent call
-    cpu_idle_stats: RefCell<CpuIdleStats>,
+    /// Cached CPU stats from the most recent GetCpuLoads request.
+    cpu_stats: RefCell<CpuStats>,
 
-    /// A struct for managing Component Inspection data
+    /// Cache duration for updating CPU load. If a GetCpuLoads request is received within this
+    /// period of time from the previous request, the previous CPU load values are returned instead
+    /// of refreshing the data.
+    cpu_load_cache_duration: Milliseconds,
+
+    /// A struct for managing Component Inspection data.
     inspect: InspectData,
 }
 
-/// A record to store the total time spent idle for each CPU in the system at a moment in time
+/// A record to store the total time spent idle for each CPU in the system at a moment in time and
+/// the calculated CPU load derived from those idle stats.
 #[derive(Default, Debug)]
-struct CpuIdleStats {
+struct CpuStats {
     /// Time the record was taken
     timestamp: Nanoseconds,
 
     /// Vector containing the total time since boot that each CPU has spent has spent idle. The
     /// length of the vector is equal to the number of CPUs in the system at the time of the record.
     idle_times: Vec<Nanoseconds>,
+
+    /// CPU load calculated using deltas from this and the previous `CpuStats` record.
+    calculated_cpu_loads: Vec<f32>,
 }
 
 impl CpuStatsHandler {
@@ -139,12 +177,58 @@ impl CpuStatsHandler {
 
     async fn handle_get_cpu_loads(&self) -> Result<MessageReturn, PowerManagerError> {
         fuchsia_trace::duration!("power_manager", "CpuStatsHandler::handle_get_cpu_loads");
-        let new_stats = self.get_idle_stats().await?;
-        let loads = Self::calculate_cpu_loads(&self.cpu_idle_stats.borrow(), &new_stats);
-        self.cpu_idle_stats.replace(new_stats);
+
+        if self.is_cpu_load_stale() {
+            self.update_cpu_stats().await?;
+        }
+
+        Ok(MessageReturn::GetCpuLoads(self.cpu_stats.borrow().calculated_cpu_loads.clone()))
+    }
+
+    /// Determines if the cached CPU load stats are stale. The data is considered to be "stale" if:
+    ///     - The CPU loads have not yet been calculated
+    ///     - The time since the previous CPU load calculation exceeds
+    ///       `self.cpu_load_cache_duration`
+    fn is_cpu_load_stale(&self) -> bool {
+        let cpu_stats = self.cpu_stats.borrow();
+
+        cpu_stats.calculated_cpu_loads.len() == 0
+            || Milliseconds::from(get_current_timestamp() - cpu_stats.timestamp)
+                > self.cpu_load_cache_duration
+    }
+
+    /// Gets the idle CPU stats from the server and returns a new CpuStats instance without
+    /// populating the `calculated_cpu_loads` field.
+    async fn get_idle_stats(&self) -> Result<CpuStats, Error> {
+        Ok(CpuStats {
+            timestamp: get_current_timestamp(),
+            idle_times: self
+                .get_cpu_stats()
+                .await?
+                .per_cpu_stats
+                .ok_or(format_err!("Received null per_cpu_stats"))?
+                .iter()
+                .enumerate()
+                .map(|(i, per_cpu_stats)| match per_cpu_stats.idle_time {
+                    Some(idle_time) => Ok(Nanoseconds(idle_time)),
+                    None => Err(format_err!("Received null idle_time for CPU {}", i)),
+                })
+                .collect::<Result<Vec<Nanoseconds>, Error>>()?,
+            calculated_cpu_loads: vec![],
+        })
+    }
+
+    /// Updates the `cpu_stats` state by first requesting updated CPU stats from the server, then
+    /// calculating refreshed CPU load values based on the new stats.
+    async fn update_cpu_stats(&self) -> Result<(), Error> {
+        fuchsia_trace::duration!("power_manager", "CpuStatsHandler::update_cpu_stats");
+
+        let mut new_stats = self.get_idle_stats().await?;
+        let cpu_loads = Self::calculate_cpu_loads(&self.cpu_stats.borrow(), &new_stats)?;
+        new_stats.calculated_cpu_loads = cpu_loads.clone();
 
         // Log the total load to Inspect / tracing
-        let total_load: f32 = loads.iter().sum();
+        let total_load: f32 = cpu_loads.iter().sum();
         self.inspect.log_total_cpu_load(total_load as f64);
         fuchsia_trace::instant!(
             "power_manager",
@@ -153,70 +237,42 @@ impl CpuStatsHandler {
             "load" => total_load as f64
         );
 
-        Ok(MessageReturn::GetCpuLoads(loads))
-    }
-
-    /// Gets the CPU idle stats, then populates them into the CpuIdleStats struct format that we
-    /// can more easily use for calculations.
-    async fn get_idle_stats(&self) -> Result<CpuIdleStats, Error> {
-        fuchsia_trace::duration!("power_manager", "CpuStatsHandler::get_idle_stats");
-        let mut idle_stats: CpuIdleStats = Default::default();
-        let cpu_stats = self.get_cpu_stats().await?;
-        let per_cpu_stats =
-            cpu_stats.per_cpu_stats.ok_or(format_err!("Received null per_cpu_stats"))?;
-
-        idle_stats.timestamp = crate::utils::get_current_timestamp();
-        for i in 0..cpu_stats.actual_num_cpus as usize {
-            idle_stats.idle_times.push(Nanoseconds(
-                per_cpu_stats[i]
-                    .idle_time
-                    .ok_or(format_err!("Received null idle_time for CPU {}", i))?,
-            ));
-        }
-
-        fuchsia_trace::instant!(
-            "power_manager",
-            "CpuStatsHandler::idle_stats_result",
-            fuchsia_trace::Scope::Thread,
-            "idle_stats" => format!("{:?}", idle_stats).as_str()
-        );
-
-        Ok(idle_stats)
+        self.cpu_stats.replace(new_stats);
+        Ok(())
     }
 
     /// Calculates the load of all CPUs in the system. Per-CPU load is measured as a value from 0.0
     /// to 1.0.
     ///     old_idle: the starting idle stats
     ///     new_idle: the ending idle stats
-    fn calculate_cpu_loads(old_idle: &CpuIdleStats, new_idle: &CpuIdleStats) -> Vec<f32> {
-        fuchsia_trace::duration!("power_manager", "CpuStatsHandler::calculate_cpu_loads");
-        if old_idle.idle_times.len() != new_idle.idle_times.len() {
-            error!(
+    fn calculate_cpu_loads(old_stats: &CpuStats, new_stats: &CpuStats) -> Result<Vec<f32>, Error> {
+        if old_stats.idle_times.len() != new_stats.idle_times.len() {
+            return Err(format_err!(
                 "Number of CPUs changed (old={}; new={})",
-                old_idle.idle_times.len(),
-                new_idle.idle_times.len()
-            );
-            return vec![0.0];
+                old_stats.idle_times.len(),
+                new_stats.idle_times.len()
+            ));
         }
 
-        let total_time_delta = new_idle.timestamp - old_idle.timestamp;
+        let total_time_delta = new_stats.timestamp - old_stats.timestamp;
         if total_time_delta.0 <= 0 {
-            error!(
+            return Err(format_err!(
                 "Expected positive total_time_delta, got: {:?} (start={:?}; end={:?})",
-                total_time_delta, old_idle.timestamp, new_idle.timestamp
-            );
-            return vec![0.0];
+                total_time_delta,
+                old_stats.timestamp,
+                new_stats.timestamp
+            ));
         }
 
-        old_idle
+        Ok(old_stats
             .idle_times
             .iter()
-            .zip(new_idle.idle_times.iter())
+            .zip(new_stats.idle_times.iter())
             .map(|(old_idle_time, new_idle_time)| {
                 let busy_time = total_time_delta.0 - (new_idle_time.0 - old_idle_time.0);
                 busy_time as f32 / total_time_delta.0 as f32
             })
-            .collect()
+            .collect())
     }
 }
 
@@ -396,27 +452,74 @@ pub mod tests {
             .unwrap();
     }
 
-    /// Tests the calculate_cpu_loads function. Test values are used as input (representing
-    /// the total time delta and idle times of four total CPUs), and the result is compared
-    /// against expected output for these test values:
-    ///     CPU 0: 20ns idle / 100ns total = 0.8 load
-    ///     CPU 1: 40ns idle / 100ns total = 0.6 load
-    ///     CPU 2: 60ns idle / 100ns total = 0.4 load
-    ///     CPU 3: 80ns idle / 100ns total = 0.2 load
     #[test]
-    fn test_calculate_cpu_loads() {
-        let idle_sample_1 = CpuIdleStats {
-            timestamp: Nanoseconds(0),
-            idle_times: vec![Nanoseconds(0), Nanoseconds(0), Nanoseconds(0), Nanoseconds(0)],
-        };
+    fn test_handle_get_cpu_loads_with_staleness() {
+        // Use executor so we can advance the fake time
+        let mut executor = fasync::TestExecutor::new_with_fake_time().unwrap();
 
-        let idle_sample_2 = CpuIdleStats {
-            timestamp: Nanoseconds(100),
-            idle_times: vec![Nanoseconds(20), Nanoseconds(40), Nanoseconds(60), Nanoseconds(80)],
-        };
+        // Fake idle times that will be fed into the node. These idle times mean the node will first
+        // see idle times of 0 for both CPUs, then idle times of 1s and 2s on the next poll.
+        let mut fake_idle_times: VecDeque<Vec<Nanoseconds>> = vec![
+            vec![Seconds(0.0).into(), Seconds(0.0).into()],
+            vec![Seconds(1.0).into(), Seconds(2.0).into()],
+            vec![Seconds(7.0).into(), Seconds(2.0).into()],
+        ]
+        .into();
 
-        let calculated_loads = CpuStatsHandler::calculate_cpu_loads(&idle_sample_1, &idle_sample_2);
-        assert_eq!(calculated_loads, vec![0.8, 0.6, 0.4, 0.2])
+        // Create a node with a 10s cache duration
+        let node = executor
+            .run_until_stalled(&mut Box::pin(
+                CpuStatsHandlerBuilder::new()
+                    .with_proxy(setup_fake_service(move || fake_idle_times.pop_front().unwrap()))
+                    .with_cpu_load_cache_duration(Seconds(10.0).into())
+                    .build(),
+            ))
+            .unwrap()
+            .unwrap();
+
+        // Move fake time forward by 4s. This total time delta combined with the `fake_idle_times`
+        // data mean the CPU loads should be reported as 0.75 and 0.25. CPU load will be considered
+        // stale because it has never been calculated before.
+        executor.set_fake_time(executor.now().add(4.seconds()));
+        executor
+            .run_until_stalled(&mut Box::pin(async {
+                match node.handle_message(&Message::GetCpuLoads).await {
+                    Ok(MessageReturn::GetCpuLoads(loads)) => {
+                        assert_eq!(loads, vec![0.75, 0.5]);
+                    }
+                    e => panic!("Unexpected message response: {:?}", e),
+                }
+            }))
+            .unwrap();
+
+        // Move time forward another 4s. Since this is within the 10s cache duration,
+        // `fake_idle_times` should remain unpolled and the node should report identical CPU loads
+        // as before.
+        executor.set_fake_time(executor.now().add(4.seconds()));
+        executor
+            .run_until_stalled(&mut Box::pin(async {
+                match node.handle_message(&Message::GetCpuLoads).await {
+                    Ok(MessageReturn::GetCpuLoads(loads)) => {
+                        assert_eq!(loads, vec![0.75, 0.5]);
+                    }
+                    e => panic!("Unexpected message response: {:?}", e),
+                }
+            }))
+            .unwrap();
+
+        // Move time forward another 8s. We should now see the node poll `fake_idle_times` again and
+        // report load from the last 12 seconds (since we've crossed the 10s cache duration).
+        executor.set_fake_time(executor.now().add(8.seconds()));
+        executor
+            .run_until_stalled(&mut Box::pin(async {
+                match node.handle_message(&Message::GetCpuLoads).await {
+                    Ok(MessageReturn::GetCpuLoads(loads)) => {
+                        assert_eq!(loads, vec![0.5, 1.0]);
+                    }
+                    e => panic!("Unexpected message response: {:?}", e),
+                }
+            }))
+            .unwrap();
     }
 
     /// Tests that an unsupported message is handled gracefully and an Unsupported error is returned
@@ -463,7 +566,16 @@ pub mod tests {
     async fn test_new_from_json() {
         let json_data = json::json!({
             "type": "CpuStatsHandler",
-            "name": "cpu_stats"
+            "name": "cpu_stats",
+        });
+        let _ = CpuStatsHandlerBuilder::new_from_json(json_data, &HashMap::new());
+
+        let json_data = json::json!({
+            "type": "CpuStatsHandler",
+            "name": "cpu_stats",
+            "config": {
+                "cpu_load_cache_duration_ms": 10
+            }
         });
         let _ = CpuStatsHandlerBuilder::new_from_json(json_data, &HashMap::new());
     }

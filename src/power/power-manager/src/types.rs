@@ -38,6 +38,7 @@ define_unit!(Volts, f64);
 define_unit!(Watts, f64);
 define_unit!(Nanoseconds, i64);
 define_unit!(Microseconds, i64);
+define_unit!(Milliseconds, i64);
 
 // An unsigned integer in the range [0 - x], where x is an upper bound defined by the
 // thermal_limiter crate.
@@ -96,6 +97,18 @@ impl From<Seconds> for Microseconds {
 impl From<Nanoseconds> for Microseconds {
     fn from(nanos: Nanoseconds) -> Self {
         Microseconds(nanos.0 / 1000)
+    }
+}
+
+impl From<Seconds> for Milliseconds {
+    fn from(seconds: Seconds) -> Self {
+        Milliseconds((seconds.0 * 1e3) as i64)
+    }
+}
+
+impl From<Nanoseconds> for Milliseconds {
+    fn from(nanos: Nanoseconds) -> Self {
+        Milliseconds(nanos.0 / 1_000_000)
     }
 }
 
