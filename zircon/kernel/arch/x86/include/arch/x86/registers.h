@@ -214,8 +214,6 @@
 #include <sys/types.h>
 #include <zircon/compiler.h>
 
-__BEGIN_CDECLS
-
 /* Indices of xsave feature states; state components are
  * enumerated in Intel Vol 1 section 13.1 */
 #define X86_XSAVE_STATE_INDEX_X87 0
@@ -390,10 +388,8 @@ void x86_write_hw_debug_regs(const x86_debug_state_t* debug_state);
 void x86_print_dr6(uint64_t dr6);
 void x86_print_dr7(uint64_t dr7);
 
-#endif
+#endif  // !NDEBUG
 
-__END_CDECLS
-
-#endif
+#endif  // !__ASSEMBLER__
 
 #endif  // ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_REGISTERS_H_

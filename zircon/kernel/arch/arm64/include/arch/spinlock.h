@@ -17,8 +17,6 @@
 #include <arch/arm64/mp.h>
 #include <kernel/cpu.h>
 
-__BEGIN_CDECLS
-
 #define ARCH_SPIN_LOCK_INITIAL_VALUE \
   (arch_spin_lock_t) { 0 }
 
@@ -37,7 +35,5 @@ static inline cpu_num_t arch_spin_lock_holder_cpu(const arch_spin_lock_t* lock) 
 static inline bool arch_spin_lock_held(const arch_spin_lock_t* lock) {
   return arch_spin_lock_holder_cpu(lock) == arch_curr_cpu_num();
 }
-
-__END_CDECLS
 
 #endif  // ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_SPINLOCK_H_

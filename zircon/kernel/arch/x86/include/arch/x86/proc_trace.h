@@ -12,11 +12,7 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
-__BEGIN_CDECLS
-
 void x86_processor_trace_init(void);
-
-__END_CDECLS
 
 zx_status_t x86_ipt_alloc_trace(zx_insntrace_trace_mode_t mode, uint32_t num_traces);
 

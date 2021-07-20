@@ -20,8 +20,6 @@ class CpuId;
 
 class MsrAccess;
 
-__BEGIN_CDECLS
-
 #define MAX_SUPPORTED_CPUID (0x17)
 #define MAX_SUPPORTED_CPUID_HYP (0x40000001)
 #define MAX_SUPPORTED_CPUID_EXT (0x8000001e)
@@ -341,8 +339,6 @@ void x86_intel_init_percpu(void);
 bool x86_intel_cpu_has_rsb_fallback(const cpu_id::CpuId* cpuid, MsrAccess* msr);
 uint32_t x86_amd_get_patch_level(void);
 uint32_t x86_intel_get_patch_level(void);
-
-__END_CDECLS
 
 const x86_microarch_config_t* get_microarch_config(const cpu_id::CpuId* cpuid);
 bool x86_intel_idle_state_may_empty_rsb(X86IdleState*);

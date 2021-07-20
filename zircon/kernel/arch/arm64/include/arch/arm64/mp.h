@@ -14,8 +14,6 @@
 #include <kernel/align.h>
 #include <kernel/cpu.h>
 
-__BEGIN_CDECLS
-
 // bits for mpidr register
 #define MPIDR_AFF0_MASK 0xFFULL
 #define MPIDR_AFF0_SHIFT 0
@@ -143,7 +141,5 @@ cpu_num_t arm64_mpidr_to_cpu_num(uint64_t mpidr);
 
 // Setup the high-level percpu struct pointer for |cpu_num|.
 void arch_setup_percpu(cpu_num_t cpu_num, struct percpu* percpu);
-
-__END_CDECLS
 
 #endif  // ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_ARM64_MP_H_

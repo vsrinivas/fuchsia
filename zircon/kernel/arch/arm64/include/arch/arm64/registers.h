@@ -82,8 +82,6 @@
 #include <sys/types.h>
 #include <zircon/compiler.h>
 
-__BEGIN_CDECLS
-
 /* Kernel tracking of the current state of the debug registers for a particular thread.
  * ARMv8 can have from 2 to 16 HW breakpoints and 2 to 16 HW watchpoints.
  *
@@ -148,7 +146,5 @@ void arm64_clear_hw_debug_regs();
 void arm64_print_debug_registers(const arm64_debug_state_t*);
 void arm64_print_mdscr();
 #endif
-
-__END_CDECLS
 
 #endif  // ZIRCON_KERNEL_ARCH_ARM64_INCLUDE_ARCH_ARM64_REGISTERS_H_

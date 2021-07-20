@@ -19,52 +19,50 @@
 #include <arch/defines.h>
 #include <kernel/cpu.h>
 
-__BEGIN_CDECLS
+// Fast routines that most arches will implement inline.
+static void arch_enable_ints();
+static void arch_disable_ints();
+static bool arch_ints_disabled();
 
-/* fast routines that most arches will implement inline */
-static void arch_enable_ints(void);
-static void arch_disable_ints(void);
-static bool arch_ints_disabled(void);
-
-static cpu_num_t arch_curr_cpu_num(void);
-static uint arch_max_num_cpus(void);
-static uint arch_cpu_features(void);
+static cpu_num_t arch_curr_cpu_num();
+static uint arch_max_num_cpus();
+static uint arch_cpu_features();
 
 uint8_t arch_get_hw_breakpoint_count();
 uint8_t arch_get_hw_watchpoint_count();
 
+// Usually implemented in or called from assembly.
+extern "C" {
 void arch_clean_cache_range(vaddr_t start, size_t len);
 void arch_clean_invalidate_cache_range(vaddr_t start, size_t len);
 void arch_invalidate_cache_range(vaddr_t start, size_t len);
 void arch_sync_cache_range(vaddr_t start, size_t len);
+} // extern C
 
-/* Used to suspend work on a CPU until it is further shutdown.
- * This will only be invoked with interrupts disabled.  This function
- * must not re-enter the scheduler.
- * flush_done should be signaled after state is flushed. */
+// Used to suspend work on a CPU until it is further shutdown.
+// This will only be invoked with interrupts disabled.  This function
+// must not re-enter the scheduler.
+// flush_done should be signaled after state is flushed.
 class Event;
 void arch_flush_state_and_halt(Event *flush_done) __NO_RETURN;
 
 int arch_idle_thread_routine(void *) __NO_RETURN;
 
-/* arch optimized version of a page zero routine against a page aligned buffer */
-void arch_zero_page(void *);
+// Arch optimized version of a page zero routine against a page aligned buffer.
+// Usually implemented in or called from assembly.
+extern "C" void arch_zero_page(void *);
 
-__END_CDECLS
-
-/* give the specific arch a chance to override some routines */
+// Give the specific arch a chance to override some routines.
 #include <arch/arch_ops.h>
 
-__BEGIN_CDECLS
-
-/* The arch_blocking_disallowed() flag is used to check that in-kernel interrupt
- * handlers do not do any blocking operations.  This is a per-CPU flag.
- * Various blocking operations, such as mutex.Acquire(), contain assertions
- * that arch_blocking_disallowed() is false.
- *
- * arch_blocking_disallowed() should only be true when interrupts are
- * disabled. */
-static inline bool arch_blocking_disallowed(void) {
+// The arch_blocking_disallowed() flag is used to check that in-kernel interrupt
+// handlers do not do any blocking operations.  This is a per-CPU flag.
+// Various blocking operations, such as mutex.Acquire(), contain assertions
+// that arch_blocking_disallowed() is false.
+//
+// arch_blocking_disallowed() should only be true when interrupts are
+// disabled.
+static inline bool arch_blocking_disallowed() {
   return READ_PERCPU_FIELD32(blocking_disallowed);
 }
 
@@ -73,8 +71,6 @@ static inline void arch_set_blocking_disallowed(bool value) {
 }
 
 static inline uint32_t arch_num_spinlocks_held(void) { return READ_PERCPU_FIELD32(num_spinlocks); }
-
-__END_CDECLS
 
 #endif  // !__ASSEMBLER__
 

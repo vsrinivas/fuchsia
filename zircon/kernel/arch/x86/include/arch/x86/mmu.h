@@ -109,8 +109,6 @@
 
 #include <arch/x86/page_tables/page_tables.h>
 
-__BEGIN_CDECLS
-
 static inline bool x86_kpti_is_enabled() {
   extern int g_enable_isolation;
   return g_enable_isolation == 1;
@@ -132,8 +130,6 @@ void x86_mmu_early_init(void);
 void x86_mmu_init(void);
 
 paddr_t x86_kernel_cr3(void);
-
-__END_CDECLS
 
 #endif  // !__ASSEMBLER__
 

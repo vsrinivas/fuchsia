@@ -18,8 +18,6 @@
 
 #include <kernel/cpu.h>
 
-__BEGIN_CDECLS
-
 struct iframe_t;
 
 typedef struct {
@@ -77,6 +75,8 @@ struct arm64_context_switch_frame {
 
 struct Thread;
 
+// Implemented in or called from assembly.
+extern "C" {
 #if __has_feature(shadow_call_stack)
 void arm64_context_switch(vaddr_t* old_sp, vaddr_t new_sp, vaddr_t new_tpidr,
                           uintptr_t** old_scsp, uintptr_t* new_scsp);
@@ -85,14 +85,15 @@ void arm64_uspace_entry(iframe_t* iframe, vaddr_t kstack, vaddr_t scsp) __NO_RET
 void arm64_context_switch(vaddr_t* old_sp, vaddr_t new_sp, vaddr_t new_tpidr);
 void arm64_uspace_entry(iframe_t* iframe, vaddr_t kstack) __NO_RETURN;
 #endif
-arm64_context_switch_frame* arm64_get_context_switch_frame(Thread* thread);
 
-extern void arm64_el1_exception_base(void);
-void arm64_el3_to_el1(void);
+void arm64_el1_exception_base(void);
 void arm64_sync_exception(iframe_t* iframe, uint exception_flags, uint32_t esr);
 
 void platform_irq(iframe_t* frame);
 void platform_fiq(iframe_t* frame);
+} // extern C
+
+arm64_context_switch_frame* arm64_get_context_switch_frame(Thread* thread);
 
 /* fpu routines */
 void arm64_fpu_exception(iframe_t* iframe, uint exception_flags);
@@ -101,8 +102,6 @@ void arm64_fpu_save_state(Thread* t);
 void arm64_fpu_restore_state(Thread* t);
 
 uint64_t arm64_get_boot_el(void);
-
-void arm_reset(void);
 
 /*
  * Creates a stack and sets the stack pointer for the specified secondary CPU.
@@ -113,8 +112,6 @@ zx_status_t arm64_create_secondary_stack(cpu_num_t cpu_num, uint64_t mpid);
  * Frees a stack created by |arm64_create_secondary_stack|.
  */
 zx_status_t arm64_free_secondary_stack(cpu_num_t cpu_num);
-
-__END_CDECLS
 
 #endif  // __ASSEMBLER__
 

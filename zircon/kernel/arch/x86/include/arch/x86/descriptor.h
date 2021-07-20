@@ -52,8 +52,6 @@ void x86_set_tss_io_bitmap(IoBitmap& bitmap);
 void x86_clear_tss_io_bitmap(IoBitmap& bitmap);
 void x86_reset_tss_io_bitmap(void);
 
-__BEGIN_CDECLS
-
 typedef uint16_t seg_sel_t;
 
 /* fill in a descriptor in the GDT */
@@ -82,8 +80,6 @@ static inline void gdt_load(uintptr_t base) {
 
 void gdt_setup(void);
 uintptr_t gdt_get(void);
-
-__END_CDECLS
 
 #endif
 

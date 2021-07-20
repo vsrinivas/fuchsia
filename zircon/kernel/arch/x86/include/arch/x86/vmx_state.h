@@ -123,7 +123,8 @@ static_assert(__offsetof(VmxState, guest_state.cr2) == GS_CR2);
 // exited again. Otherwise, we failed to launch the guest.
 zx_status_t vmx_enter(VmxState* vmx_state);
 
-__BEGIN_CDECLS
+// Implemented in assembly.
+extern "C" {
 
 // Low-level functionality to save register and restore register state
 // before/after entering a guest. Should only be called by vmx_enter.
@@ -133,7 +134,7 @@ zx_status_t vmx_enter_asm(VmxState* vmx_state);
 // detail of vmx_enter_asm().
 void vmx_guest_exit();
 
-__END_CDECLS
+} // extern C
 
 #endif  // __ASSEMBLER__
 

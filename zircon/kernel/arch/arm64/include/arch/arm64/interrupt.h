@@ -11,8 +11,6 @@
 
 #include <ktl/atomic.h>
 
-__BEGIN_CDECLS
-
 // override of some routines
 static inline void arch_enable_ints(void) {
   ktl::atomic_signal_fence(ktl::memory_order_seq_cst);
@@ -52,8 +50,6 @@ static inline bool arch_fiqs_disabled(void) {
 
   return !!state;
 }
-
-__END_CDECLS
 
 #endif  // __ASSEMBLER__
 

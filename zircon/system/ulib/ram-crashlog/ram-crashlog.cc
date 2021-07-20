@@ -10,13 +10,17 @@
 
 #include <ram-crashlog/ram-crashlog.h>
 
+#if _KERNEL
+// to get arch_clean_cache_range()
+#include <arch/ops.h>
+#endif
+
 namespace {
 // When this module is used in the actual kernel, we need to make certain
 // to actually clean the cache at very specific points in a crashlog update
 // sequence.  If this is being built for user-mode, then the module is only
 // being built for testing, and cache scrubbing is not needed.
 #if _KERNEL
-extern "C" void arch_clean_cache_range(uintptr_t start, size_t len);
 void clean_cache_range(void* ptr, size_t len) {
   arch_clean_cache_range(reinterpret_cast<uintptr_t>(ptr), len);
 }

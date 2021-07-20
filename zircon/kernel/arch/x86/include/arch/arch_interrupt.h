@@ -12,9 +12,6 @@
 #include <arch/x86.h>
 #include <ktl/atomic.h>
 
-// Note: still pulled in from some C code, remove when the last C code is gone.
-__BEGIN_CDECLS
-
 // Implementation of x86 specific routines to disable and reenable
 // local interrupts on the current cpu.
 
@@ -43,7 +40,5 @@ static inline void arch_interrupt_restore(interrupt_saved_state_t old_state) {
     x86_restore_flags(old_state);
   }
 }
-
-__END_CDECLS
 
 #endif  // ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_ARCH_INTERRUPT_H_

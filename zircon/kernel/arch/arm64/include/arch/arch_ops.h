@@ -18,8 +18,6 @@
 #include <arch/arm64/interrupt.h>
 #include <arch/arm64/mp.h>
 
-__BEGIN_CDECLS
-
 #define ENABLE_CYCLE_COUNTER 1
 
 static inline uint32_t arch_cpu_features(void) { return arm64_isa_features; }
@@ -28,7 +26,8 @@ static inline uint32_t arch_dcache_line_size(void) { return arm64_dcache_size; }
 
 static inline uint32_t arch_icache_line_size(void) { return arm64_icache_size; }
 
-void arm64_clean_cache_range_pou(vaddr_t start, size_t len);
+// Implemented in assembly.
+extern "C" void arm64_clean_cache_range_pou(vaddr_t start, size_t len);
 
 // Log architecture-specific data for process creation.
 // This can only be called after the process has been created and before
@@ -37,8 +36,6 @@ void arm64_clean_cache_range_pou(vaddr_t start, size_t len);
 static inline void arch_trace_process_create(uint64_t pid, paddr_t tt_phys) {
   // nothing to do
 }
-
-__END_CDECLS
 
 #endif  // __ASSEMBLER__
 

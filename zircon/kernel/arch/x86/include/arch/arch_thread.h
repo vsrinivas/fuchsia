@@ -26,8 +26,6 @@ static_assert(((KERNEL_ASPACE_BASE >> X86_PFR_RUN_FAULT_HANDLER_BIT) & 1) == 1 &
                   ((KERNEL_ASPACE_SIZE - 1) & KERNEL_ASPACE_BASE) == 0,
               "PFR fault handler bit not invariant over kernel addresses");
 
-__BEGIN_CDECLS
-
 struct arch_thread {
   vaddr_t sp;
 #if __has_feature(safe_stack)
@@ -71,7 +69,5 @@ struct arch_thread {
   bool track_debug_state;
   x86_debug_state_t debug_state;
 };
-
-__END_CDECLS
 
 #endif  // ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_ARCH_THREAD_H_

@@ -31,8 +31,6 @@ static_assert(((KERNEL_ASPACE_BASE >> ARM64_DFR_RUN_FAULT_HANDLER_BIT) & 1) == 1
                   ((KERNEL_ASPACE_SIZE - 1) & KERNEL_ASPACE_BASE) == 0,
               "DFR fault handler bit not invariant over kernel addresses");
 
-__BEGIN_CDECLS
-
 struct fpstate {
   // align the save state on a 16 byte offset to optimally handle vector load/stores
   alignas(16) uint64_t regs[64];
@@ -119,8 +117,6 @@ static_assert(thread_pointer_offsetof(shadow_call_sp) == CURRENT_SCSP_OFFSET,
 static_assert(CURRENT_SCSP_OFFSET == CURRENT_PERCPU_PTR_OFFSET + 8,
               "shadow call stack pointer not immediately after percpu");
 #endif
-
-__END_CDECLS
 
 #endif  // __ASSEMBLER__
 

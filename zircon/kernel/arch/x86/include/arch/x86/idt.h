@@ -10,8 +10,6 @@
 #include <assert.h>
 #include <zircon/compiler.h>
 
-__BEGIN_CDECLS
-
 struct idt_entry {
   uint32_t w0, w1;
   uint32_t w2, w3;
@@ -73,7 +71,8 @@ void idt_set_ist_index(struct idt *idt, uint8_t vec, uint8_t ist_idx);
  *
  * @param idt Pointer to the IDT to initialize
  */
-void idt_setup(struct idt *idt);
+// Implemented in or assembly.
+extern "C" void idt_setup(struct idt *idt);
 
 /*
  * @brief Setup the read-only remapping of the IDT.
@@ -99,7 +98,5 @@ static inline void idt_load(struct idt *idt) {
  * @brief Get the read-only IDT.
  */
 struct idt *idt_get_readonly(void);
-
-__END_CDECLS
 
 #endif  // ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_IDT_H_

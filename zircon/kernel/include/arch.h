@@ -11,8 +11,6 @@
 #include <sys/types.h>
 #include <zircon/compiler.h>
 
-__BEGIN_CDECLS
-
 struct iframe_t;
 
 // Early platform initialization, before UART, MMU, kernel command line args, etc.
@@ -45,8 +43,6 @@ void arch_setup_uspace_iframe(iframe_t* iframe, uintptr_t entry_point, uintptr_t
 // Enter userspace.
 // |iframe| is generally initialized with |arch_setup_uspace_iframe()|.
 void arch_enter_uspace(iframe_t* iframe) __NO_RETURN;
-
-__END_CDECLS
 
 // On x86, user mode general registers are stored in one of two structures depending on how the
 // thread entered the kernel.  If via interrupt/exception, they are stored in an iframe_t.  If via

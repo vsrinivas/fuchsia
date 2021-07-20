@@ -39,8 +39,6 @@
 #include <kernel/cpu.h>
 #include <ktl/atomic.h>
 
-__BEGIN_CDECLS
-
 struct Thread;
 struct percpu;
 
@@ -113,7 +111,8 @@ extern struct x86_percpu *ap_percpus;
 
 // This needs to be run very early in the boot process from start.S and as
 // each CPU is brought up.
-void x86_init_percpu(cpu_num_t cpu_num);
+// Called from assembly.
+extern "C" void x86_init_percpu(cpu_num_t cpu_num);
 
 /* used to set the bootstrap processor's apic_id once the APIC is initialized */
 void x86_set_local_apic_id(uint32_t apic_id);
@@ -146,14 +145,13 @@ static inline uint arch_max_num_cpus(void) { return x86_num_cpus; }
 
 void x86_ipi_halt_handler(void *) __NO_RETURN;
 
-void x86_secondary_entry(ktl::atomic<unsigned int>* aps_still_booting, Thread *thread);
+// Called from assembly.
+extern "C" void x86_secondary_entry(ktl::atomic<unsigned int> *aps_still_booting, Thread *thread);
 
 void x86_force_halt_all_but_local_and_bsp(void);
 
 // Setup the high-level percpu struct pointer for |cpu_num|.
 void arch_setup_percpu(cpu_num_t cpu_num, struct percpu *percpu);
-
-__END_CDECLS
 
 #endif  // !__ASSEMBLER__
 

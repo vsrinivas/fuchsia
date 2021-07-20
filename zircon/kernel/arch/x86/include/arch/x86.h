@@ -21,14 +21,13 @@
 #include <arch/x86/registers.h>
 #include <kernel/cpu.h>
 
-__BEGIN_CDECLS
-
 struct iframe_t;
 struct syscall_regs_t;
 
 #define X86_8BYTE_MASK 0xFFFFFFFF
 
-void x86_exception_handler(struct iframe_t* frame);
+// Implemented in assembly.
+extern "C" void x86_exception_handler(struct iframe_t* frame);
 void platform_irq(struct iframe_t* frame);
 
 struct arch_exception_context {
@@ -47,6 +46,9 @@ struct x86_64_context_switch_frame {
   uint64_t rip;
 };
 
+// Implemented in or called from assembly.
+extern "C" {
+
 #if __has_feature(safe_stack)
 void x86_64_context_switch(vaddr_t* oldsp, vaddr_t newsp, vaddr_t* old_unsafe_sp,
                            vaddr_t new_unsafe_sp);
@@ -59,6 +61,8 @@ void x86_uspace_entry(const struct iframe_t* iframe) __NO_RETURN;
 void x86_syscall(void);
 
 void x86_syscall_process_pending_signals(struct syscall_regs_t* gregs);
+
+} // extern C
 
 /* @brief Register all of the CPUs in the system
  *
@@ -273,7 +277,8 @@ static inline uint32_t read_msr32(uint32_t msr_id) {
   return msr_read_val;
 }
 
-zx_status_t read_msr_safe(uint32_t msr_id, uint64_t* val);
+// Implemented in assembly.
+extern "C" zx_status_t read_msr_safe(uint32_t msr_id, uint64_t* val);
 
 // Read msr |msr_id| on CPU |cpu| and return the 64-bit value.
 uint64_t read_msr_on_cpu(cpu_num_t cpu, uint32_t msr_id);
@@ -414,6 +419,9 @@ static inline void outpdrep(uint16_t _port, uint32_t* _buffer, uint32_t _writes)
       : "d"(_port), "S"(_buffer), "c"(_writes));
 }
 
+// Implemented in assembly.
+extern "C" {
+
 void x86_monitor(volatile void* addr);
 // |hints| is used to specify which C-state the processor should enter when
 // MWAIT is called.
@@ -427,6 +435,6 @@ void x86_enable_ints_and_hlt(void);
 void mds_buff_overwrite(void);
 void x86_ras_fill(void);
 
-__END_CDECLS
+} // extern C
 
 #endif  // ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_H_

@@ -11,8 +11,6 @@
 #include <zircon/time.h>
 #include <zircon/types.h>
 
-__BEGIN_CDECLS
-
 #define X86_MAX_CSTATES 12
 
 typedef struct {
@@ -68,8 +66,6 @@ const x86_idle_states_t* x86_get_idle_states(void);
 // Returns the number of states in |states|.
 // If |states| is invalid (i.e. does not contain X86_CSTATE_C1), returns -1.
 int x86_num_idle_states(const x86_idle_states_t* states);
-
-__END_CDECLS
 
 #include <ktl/atomic.h>
 

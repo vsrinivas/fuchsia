@@ -27,7 +27,8 @@
 
 #include <vm/vm_aspace.h>
 
-__BEGIN_CDECLS
+// Implemented in assembly.
+extern "C" {
 
 // Markers for the application processor bootstrap code region
 extern void x86_bootstrap16_start(void);
@@ -42,7 +43,7 @@ extern void _x86_secondary_cpu_long_mode_entry(void);
 // Note that this does not restore %rdi, and it touches below the saved %rsp.
 extern void _x86_suspend_wakeup(void);
 
-__END_CDECLS
+} // extern "C"
 
 struct __PACKED x86_bootstrap16_data {
   // Physical address of identity PML4

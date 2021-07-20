@@ -13,8 +13,6 @@
 #include <kernel/cpu.h>
 #include <kernel/mp.h>
 
-__BEGIN_CDECLS
-
 /* send inter processor interrupt, if supported */
 void arch_mp_send_ipi(mp_ipi_target_t target, cpu_mask_t mask, mp_ipi_t ipi);
 
@@ -49,8 +47,6 @@ zx_status_t arch_mp_prep_cpu_unplug(cpu_num_t cpu_id);
  * arch to do whatever it needs to do to stop the CPU */
 zx_status_t arch_mp_cpu_unplug(cpu_num_t cpu_id);
 
-void arch_mp_init_percpu(void);
-
-__END_CDECLS
+void arch_mp_init_percpu();
 
 #endif  // ZIRCON_KERNEL_INCLUDE_ARCH_MP_H_

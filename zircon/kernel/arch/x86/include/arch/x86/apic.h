@@ -12,8 +12,6 @@
 
 #include <dev/interrupt.h>
 
-__BEGIN_CDECLS
-
 // clang-format off
 #define INVALID_APIC_ID              0xffffffff
 #define APIC_PHYS_BASE               0xfee00000
@@ -140,7 +138,5 @@ void apic_io_restore(void);
 
 void apic_local_debug(void);
 void apic_io_debug(void);
-
-__END_CDECLS
 
 #endif  // ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_APIC_H_

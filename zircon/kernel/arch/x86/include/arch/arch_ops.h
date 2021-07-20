@@ -17,8 +17,6 @@
 #include <arch/x86/mp.h>
 #include <ktl/atomic.h>
 
-__BEGIN_CDECLS
-
 /* override of some routines */
 static inline void arch_enable_ints(void) {
   ktl::atomic_signal_fence(ktl::memory_order_seq_cst);
@@ -53,8 +51,6 @@ uint32_t arch_icache_line_size(void);
 // it is running. Alas we can't use zx_koid_t here as the arch layer is at a
 // lower level than zircon.
 void arch_trace_process_create(uint64_t pid, paddr_t pt_phys);
-
-__END_CDECLS
 
 #endif  // !__ASSEMBLER__
 
