@@ -83,7 +83,6 @@
             "fuchsia.sysinfo.SysInfo",
             "fuchsia.sysmem.Allocator",
             "fuchsia.systemmetrics.test.SystemMetricsLogger",
-            "fuchsia.testing.sl4f.FacadeProvider",
             "fuchsia.thermal.test.TemperatureLogger",
             "fuchsia.tracing.controller.Controller",
             "fuchsia.tracing.provider.Registry",
