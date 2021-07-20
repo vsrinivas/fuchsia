@@ -32,6 +32,7 @@ pub async fn test_lowpanctl() {
     test_lowpanctl_replace_mac_filter_settings().await;
     test_lowpanctl_get_neighbor_table().await;
     test_lowpanctl_get_counters().await;
+    test_lowpanctl_reset_counters().await;
 }
 
 pub async fn test_lowpanctl_status() {
@@ -195,6 +196,12 @@ pub async fn test_lowpanctl_get_counters() {
     test_lowpanctl_command(vec!["get-counters".to_string()])
         .await
         .expect("Call to `lowpanctl get-counters` failed.");
+}
+
+pub async fn test_lowpanctl_reset_counters() {
+    test_lowpanctl_command(vec!["get-counters".to_string(), "--reset".to_string()])
+        .await
+        .expect("Call to `lowpanctl get-counters --reset` failed.");
 }
 
 pub async fn test_lowpanctl_command(args: Vec<String>) -> Result<(), Error> {

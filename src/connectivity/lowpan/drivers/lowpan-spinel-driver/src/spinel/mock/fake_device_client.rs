@@ -577,6 +577,18 @@ impl FakeSpinelDevice {
                     }
                 }
             }
+            Prop::Cntr(PropCntr::AllMacCounters) => {
+                spinel_write!(
+                    &mut response,
+                    "Ciidd",
+                    frame.header,
+                    Cmd::PropValueIs,
+                    prop,
+                    vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                )
+                .unwrap();
+            }
             prop => {
                 let mut properties = self.properties.lock();
                 if prop == Prop::Net(PropNet::NetworkName) && new_value.last() != Some(&0) {

@@ -194,6 +194,55 @@ async fn test_spinel_lowpan_driver() {
                 })
             );
 
+            let mac_counters = driver.reset_counters().await;
+            traceln!("app_task: reset_counters: {:?}", mac_counters);
+            assert_eq!(
+                mac_counters,
+                Ok(AllCounters {
+                    mac_tx: Some(MacCounters {
+                        total: Some(0),
+                        unicast: Some(1),
+                        broadcast: Some(2),
+                        ack_requested: Some(3),
+                        acked: Some(4),
+                        no_ack_requested: Some(5),
+                        data: Some(6),
+                        data_poll: Some(7),
+                        beacon: Some(8),
+                        beacon_request: Some(9),
+                        other: Some(10),
+                        retries: Some(11),
+                        direct_max_retry_expiry: Some(15),
+                        indirect_max_retry_expiry: Some(16),
+                        err_cca: Some(12),
+                        err_abort: Some(13),
+                        err_busy_channel: Some(14),
+                        ..MacCounters::EMPTY
+                    }),
+                    mac_rx: Some(MacCounters {
+                        total: Some(100),
+                        unicast: Some(101),
+                        broadcast: Some(102),
+                        data: Some(103),
+                        data_poll: Some(104),
+                        beacon: Some(105),
+                        beacon_request: Some(106),
+                        other: Some(107),
+                        address_filtered: Some(108),
+                        dest_addr_filtered: Some(109),
+                        duplicated: Some(110),
+                        err_no_frame: Some(111),
+                        err_unknown_neighbor: Some(112),
+                        err_invalid_src_addr: Some(113),
+                        err_sec: Some(114),
+                        err_fcs: Some(115),
+                        err_other: Some(116),
+                        ..MacCounters::EMPTY
+                    }),
+                    ..AllCounters::EMPTY
+                })
+            );
+
             traceln!("app_task: Attempting a reset...");
             assert_eq!(driver.reset().await, Ok(()));
             traceln!("app_task: Did reset!");

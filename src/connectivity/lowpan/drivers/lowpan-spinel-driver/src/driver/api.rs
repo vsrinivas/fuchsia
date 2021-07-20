@@ -1495,8 +1495,12 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
     }
 
     async fn reset_counters(&self) -> ZxResult<AllCounters> {
-        // TODO: Implement.
-        return Ok(AllCounters::EMPTY);
+        self.frame_handler
+            .send_request(CmdPropValueSet(PropCntr::AllMacCounters.into(), 0u8))
+            .await
+            .map_err(|e| ZxStatus::from(ErrorAdapter(e)))?;
+
+        self.get_counters().await
     }
 }
 

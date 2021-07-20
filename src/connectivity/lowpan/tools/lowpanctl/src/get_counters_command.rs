@@ -10,7 +10,11 @@ use fidl_fuchsia_lowpan_device::MacCounters;
 /// Contains the arguments decoded for the `get-counters` command.
 #[derive(FromArgs, PartialEq, Debug)]
 #[argh(subcommand, name = "get-counters")]
-pub struct GetCountersCommand {}
+pub struct GetCountersCommand {
+    /// reset counters
+    #[argh(switch)]
+    pub reset: bool,
+}
 
 macro_rules! get_fmt_u32_str {
     ($c:ident, $i:ident) => {
@@ -37,7 +41,8 @@ impl GetCountersCommand {
         let counters_proxy =
             context.get_default_device_counters().await.context("Unable to get device instance")?;
 
-        let result = counters_proxy.get().await?;
+        let result =
+            if self.reset { counters_proxy.reset().await? } else { counters_proxy.get().await? };
 
         println!("+---------------------------+------------------+------------------+");
         println!("|        Counter Name       |        Tx        |        Rx        |");
