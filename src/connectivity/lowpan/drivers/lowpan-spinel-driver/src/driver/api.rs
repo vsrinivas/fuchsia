@@ -332,52 +332,54 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
     fn watch_device_state(&self) -> BoxStream<'_, ZxResult<DeviceState>> {
         futures::stream::unfold(
             None,
-            move |last_state: Option<(DeviceState, AsyncConditionWait<'_>)>| async move {
-                let mut snapshot;
-                if let Some((last_state, mut condition)) = last_state {
-                    // The first item has already been emitted by the stream, so
-                    // we need to wait for changes before we emit more.
-                    loop {
-                        // This loop is where our stream waits for
-                        // the next change to the device state.
+            move |last_state: Option<(DeviceState, AsyncConditionWait<'_>)>| {
+                async move {
+                    let mut snapshot;
+                    if let Some((last_state, mut condition)) = last_state {
+                        // The first item has already been emitted by the stream, so
+                        // we need to wait for changes before we emit more.
+                        loop {
+                            // This loop is where our stream waits for
+                            // the next change to the device state.
 
-                        // Wait for the driver state change condition to unblock.
-                        condition.await;
+                            // Wait for the driver state change condition to unblock.
+                            condition.await;
 
-                        // Set up the condition for the next iteration.
-                        condition = self.driver_state_change.wait();
+                            // Set up the condition for the next iteration.
+                            condition = self.driver_state_change.wait();
 
-                        // Wait until we are ready.
-                        self.wait_for_state(DriverState::is_initialized).await;
+                            // Wait until we are ready.
+                            self.wait_for_state(DriverState::is_initialized).await;
 
-                        snapshot = self.device_state_snapshot();
-                        if snapshot != last_state {
-                            break;
+                            snapshot = self.device_state_snapshot();
+                            if snapshot != last_state {
+                                break;
+                            }
                         }
+
+                        // We start out with our "delta" being a clone of the
+                        // current device state. We will then selectively clear
+                        // the fields it contains so that only fields that have
+                        // changed are represented.
+                        let mut delta = snapshot.clone();
+
+                        if last_state.connectivity_state == snapshot.connectivity_state {
+                            delta.connectivity_state = None;
+                        }
+
+                        if last_state.role == snapshot.role {
+                            delta.role = None;
+                        }
+
+                        Some((Ok(delta), Some((snapshot, condition))))
+                    } else {
+                        // This is the first item being emitted from the stream,
+                        // so we end up emitting the current device state and
+                        // setting ourselves up for the next iteration.
+                        let condition = self.driver_state_change.wait();
+                        snapshot = self.device_state_snapshot();
+                        Some((Ok(snapshot.clone()), Some((snapshot, condition))))
                     }
-
-                    // We start out with our "delta" being a clone of the
-                    // current device state. We will then selectively clear
-                    // the fields it contains so that only fields that have
-                    // changed are represented.
-                    let mut delta = snapshot.clone();
-
-                    if last_state.connectivity_state == snapshot.connectivity_state {
-                        delta.connectivity_state = None;
-                    }
-
-                    if last_state.role == snapshot.role {
-                        delta.role = None;
-                    }
-
-                    Some((Ok(delta), Some((snapshot, condition))))
-                } else {
-                    // This is the first item being emitted from the stream,
-                    // so we end up emitting the current device state and
-                    // setting ourselves up for the next iteration.
-                    let condition = self.driver_state_change.wait();
-                    snapshot = self.device_state_snapshot();
-                    Some((Ok(snapshot.clone()), Some((snapshot, condition))))
                 }
             },
         )
@@ -387,38 +389,40 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
     fn watch_identity(&self) -> BoxStream<'_, ZxResult<Identity>> {
         futures::stream::unfold(
             None,
-            move |last_state: Option<(Identity, AsyncConditionWait<'_>)>| async move {
-                let mut snapshot;
-                if let Some((last_state, mut condition)) = last_state {
-                    // The first copy of the identity has already been emitted
-                    // by the stream, so we need to wait for changes before we emit more.
-                    loop {
-                        // This loop is where our stream waits for
-                        // the next change to the identity.
+            move |last_state: Option<(Identity, AsyncConditionWait<'_>)>| {
+                async move {
+                    let mut snapshot;
+                    if let Some((last_state, mut condition)) = last_state {
+                        // The first copy of the identity has already been emitted
+                        // by the stream, so we need to wait for changes before we emit more.
+                        loop {
+                            // This loop is where our stream waits for
+                            // the next change to the identity.
 
-                        // Wait for the driver state change condition to unblock.
-                        condition.await;
+                            // Wait for the driver state change condition to unblock.
+                            condition.await;
 
-                        // Set up the condition for the next iteration.
-                        condition = self.driver_state_change.wait();
+                            // Set up the condition for the next iteration.
+                            condition = self.driver_state_change.wait();
 
-                        // Wait until we are ready.
-                        self.wait_for_state(DriverState::is_initialized).await;
+                            // Wait until we are ready.
+                            self.wait_for_state(DriverState::is_initialized).await;
 
-                        // Grab our identity snapshot and make sure it is actually different.
-                        snapshot = self.identity_snapshot();
-                        if snapshot != last_state {
-                            break;
+                            // Grab our identity snapshot and make sure it is actually different.
+                            snapshot = self.identity_snapshot();
+                            if snapshot != last_state {
+                                break;
+                            }
                         }
+                        Some((Ok(snapshot.clone()), Some((snapshot, condition))))
+                    } else {
+                        // This is the first item being emitted from the stream,
+                        // so we end up emitting the current identity and
+                        // setting ourselves up for the next iteration.
+                        let condition = self.driver_state_change.wait();
+                        snapshot = self.identity_snapshot();
+                        Some((Ok(snapshot.clone()), Some((snapshot, condition))))
                     }
-                    Some((Ok(snapshot.clone()), Some((snapshot, condition))))
-                } else {
-                    // This is the first item being emitted from the stream,
-                    // so we end up emitting the current identity and
-                    // setting ourselves up for the next iteration.
-                    let condition = self.driver_state_change.wait();
-                    snapshot = self.identity_snapshot();
-                    Some((Ok(snapshot.clone()), Some((snapshot, condition))))
                 }
             },
         )
@@ -924,6 +928,8 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
             return Err(ZxStatus::INVALID_ARGS);
         }
 
+        let on_mesh_net = OnMeshNet::from(net);
+
         let lock_future = self
             .frame_handler
             .send_request(CmdPropValueSet(PropThread::AllowLocalNetDataChange.into(), true))
@@ -941,7 +947,7 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
 
         let future = self
             .frame_handler
-            .send_request(CmdPropValueInsert(PropThread::OnMeshNets.into(), OnMeshNet::from(net)))
+            .send_request(CmdPropValueInsert(PropThread::OnMeshNets.into(), on_mesh_net.clone()))
             .inspect_err(|e| fx_log_err!("register_on_mesh_prefix: Failed insert: {:?}", e));
 
         // Wait for our turn.
@@ -959,7 +965,11 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
                 let ret = future.await;
                 // This next line makes sure that we always run the cleanup
                 // future, even if our primary future fails.
-                ret.and(cleanup_future.await)
+                ret.and(cleanup_future.await).and_then(move |ret| {
+                    let mut driver_state = self.driver_state.lock();
+                    driver_state.local_on_mesh_nets.insert(CorrelatedBox(on_mesh_net));
+                    Ok(ret)
+                })
             }
             .boxed(),
         )
@@ -974,6 +984,11 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
 
         // Wait until we are ready.
         self.wait_for_state(DriverState::is_initialized).await;
+
+        {
+            let mut driver_state = self.driver_state.lock();
+            driver_state.local_on_mesh_nets.remove(&CorrelatedBox(OnMeshNet::from(subnet.clone())));
+        }
 
         let lock_future = self
             .frame_handler
@@ -1030,6 +1045,8 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
             return Err(ZxStatus::INVALID_ARGS);
         }
 
+        let external_route = crate::spinel::ExternalRoute::from(net);
+
         let lock_future = self
             .frame_handler
             .send_request(CmdPropValueSet(PropThread::AllowLocalNetDataChange.into(), true))
@@ -1049,12 +1066,12 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
             .frame_handler
             .send_request(CmdPropValueInsert(
                 PropThread::OffMeshRoutes.into(),
-                crate::spinel::ExternalRoute::from(net),
+                external_route.clone(),
             ))
             .inspect_err(|e| fx_log_err!("register_external_route: Failed insert: {:?}", e));
 
         // Wait for our turn.
-        let _lock = match self.wait_for_api_task_lock("register_external_router").await {
+        let _lock = match self.wait_for_api_task_lock("register_external_route").await {
             Ok(x) => x,
             Err(x) => {
                 fx_log_warn!("Failed waiting for API task lock: {:?}", x);
@@ -1068,7 +1085,11 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
                 let ret = future.await;
                 // This next line makes sure that we always run the cleanup
                 // future, even if our primary future fails.
-                ret.and(cleanup_future.await)
+                ret.and(cleanup_future.await).and_then(move |ret| {
+                    let mut driver_state = self.driver_state.lock();
+                    driver_state.local_external_routes.insert(CorrelatedBox(external_route));
+                    Ok(ret)
+                })
             }
             .boxed(),
         )
@@ -1083,6 +1104,13 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
 
         // Wait until we are ready.
         self.wait_for_state(DriverState::is_initialized).await;
+
+        {
+            let mut driver_state = self.driver_state.lock();
+            driver_state
+                .local_external_routes
+                .remove(&CorrelatedBox(crate::spinel::ExternalRoute::from(subnet.clone())));
+        }
 
         let lock_future = self
             .frame_handler

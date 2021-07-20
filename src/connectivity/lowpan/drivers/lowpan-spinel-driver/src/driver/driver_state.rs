@@ -51,8 +51,14 @@ pub(super) struct DriverState {
     /// On-Mesh Networks.
     pub(super) on_mesh_nets: OnMeshNets,
 
+    /// Local On-Mesh Networks.
+    pub(super) local_on_mesh_nets: OnMeshNets,
+
     /// External Routes.
     pub(super) external_routes: ExternalRoutes,
+
+    /// Local external Routes.
+    pub(super) local_external_routes: ExternalRoutes,
 
     /// The current link-local address
     pub(super) link_local_addr: std::net::Ipv6Addr,
@@ -84,7 +90,9 @@ impl Clone for DriverState {
             address_table: self.address_table.clone(),
             mcast_table: self.mcast_table.clone(),
             on_mesh_nets: self.on_mesh_nets.clone(),
+            local_on_mesh_nets: self.local_on_mesh_nets.clone(),
             external_routes: self.external_routes.clone(),
+            local_external_routes: self.local_external_routes.clone(),
             link_local_addr: self.link_local_addr.clone(),
             mesh_local_addr: self.mesh_local_addr.clone(),
             mac_addr: self.mac_addr.clone(),
@@ -109,7 +117,9 @@ impl PartialEq for DriverState {
             && self.address_table.eq(&other.address_table)
             && self.mcast_table.eq(&other.mcast_table)
             && self.on_mesh_nets.eq(&other.on_mesh_nets)
+            && self.local_on_mesh_nets.eq(&other.local_on_mesh_nets)
             && self.external_routes.eq(&other.external_routes)
+            && self.local_external_routes.eq(&other.local_external_routes)
             && self.link_local_addr.eq(&other.link_local_addr)
             && self.mesh_local_addr.eq(&other.mesh_local_addr)
             && self.mac_addr.eq(&self.mac_addr)
@@ -132,7 +142,9 @@ impl Default for DriverState {
             address_table: Default::default(),
             mcast_table: Default::default(),
             on_mesh_nets: Default::default(),
+            local_on_mesh_nets: Default::default(),
             external_routes: Default::default(),
+            local_external_routes: Default::default(),
             link_local_addr: std::net::Ipv6Addr::UNSPECIFIED,
             mesh_local_addr: std::net::Ipv6Addr::UNSPECIFIED,
             mac_addr: Default::default(),

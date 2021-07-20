@@ -427,6 +427,18 @@ impl From<fidl_fuchsia_lowpan_device::OnMeshPrefix> for OnMeshNet {
     }
 }
 
+impl From<fidl_fuchsia_lowpan::Ipv6Subnet> for OnMeshNet {
+    fn from(subnet: fidl_fuchsia_lowpan::Ipv6Subnet) -> Self {
+        Self {
+            subnet: subnet.into(),
+            stable: false,
+            flags: NetFlags::default(),
+            local: true,
+            rloc16: Default::default(),
+        }
+    }
+}
+
 pub type OnMeshNets = HashSet<CorrelatedBox<OnMeshNet>>;
 
 impl Correlated for OnMeshNet {
@@ -498,6 +510,19 @@ impl From<fidl_fuchsia_lowpan_device::ExternalRoute> for ExternalRoute {
             },
             local: true,
             next_hop: true,
+            rloc16: Default::default(),
+        }
+    }
+}
+
+impl From<fidl_fuchsia_lowpan::Ipv6Subnet> for ExternalRoute {
+    fn from(subnet: fidl_fuchsia_lowpan::Ipv6Subnet) -> Self {
+        Self {
+            subnet: subnet.into(),
+            stable: false,
+            flags: RouteFlags::default(),
+            local: true,
+            next_hop: false,
             rloc16: Default::default(),
         }
     }

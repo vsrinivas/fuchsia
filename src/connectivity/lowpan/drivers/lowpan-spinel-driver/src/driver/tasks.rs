@@ -10,7 +10,7 @@ use anyhow::{Context as _, Error};
 use fidl_fuchsia_location_namedplace::RegulatoryRegionWatcherMarker;
 use fuchsia_component::client::connect_to_protocol;
 use futures::prelude::*;
-use lowpan_driver_common::FutureExt;
+use lowpan_driver_common::{Driver, FutureExt};
 use packet::ParsablePacket;
 use packet_formats::icmp::mld::MldPacket;
 use packet_formats::icmp::{IcmpParseArgs, Icmpv6Packet};
@@ -403,52 +403,97 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
     }
 
     async fn sync_addresses(&self) -> Result<(), Error> {
-        let driver_state = self.driver_state.lock();
+        let local_on_mesh_nets;
+        let local_external_routes;
+        {
+            let driver_state = self.driver_state.lock();
+            local_on_mesh_nets = driver_state.local_on_mesh_nets.clone();
+            local_external_routes = driver_state.local_external_routes.clone();
 
-        // Add the link-local address first, so that it is at the top of the list.
-        if let Err(err) = self.net_if.add_address(&Subnet {
-            addr: driver_state.link_local_addr.clone(),
-            prefix_len: STD_IPV6_NET_PREFIX_LEN,
-        }) {
-            fx_log_err!("Unable to add address `{}`: {:?}", driver_state.link_local_addr, err);
-        }
-
-        // Add the mesh-local address second, so that it is the next address in the list.
-        if let Err(err) = self.net_if.add_address(&Subnet {
-            addr: driver_state.mesh_local_addr.clone(),
-            prefix_len: STD_IPV6_NET_PREFIX_LEN,
-        }) {
-            fx_log_err!("Unable to add address `{}`: {:?}", driver_state.mesh_local_addr, err);
-        }
-
-        // Add the rest of the addresses
-        for entry in driver_state.address_table.iter() {
-            // Skip re-adding the link local address.
-            if entry.subnet.addr == driver_state.link_local_addr {
-                continue;
+            // Add the link-local address first, so that it is at the top of the list.
+            if let Err(err) = self.net_if.add_address(&Subnet {
+                addr: driver_state.link_local_addr.clone(),
+                prefix_len: STD_IPV6_NET_PREFIX_LEN,
+            }) {
+                fx_log_err!(
+                    "Unable to add link-local address `{}` to netstack: {:?}",
+                    driver_state.link_local_addr,
+                    err
+                );
             }
 
-            // Skip any addresses that have a mesh-local prefix.
-            if driver_state.addr_is_mesh_local(&entry.subnet.addr) {
-                continue;
+            // Add the mesh-local address second, so that it is the next address in the list.
+            if let Err(err) = self.net_if.add_address(&Subnet {
+                addr: driver_state.mesh_local_addr.clone(),
+                prefix_len: STD_IPV6_NET_PREFIX_LEN,
+            }) {
+                fx_log_err!(
+                    "Unable to add mesh-local address `{}` to netstack: {:?}",
+                    driver_state.mesh_local_addr,
+                    err
+                );
             }
 
-            if let Err(err) = self.net_if.add_address(&entry.subnet) {
-                fx_log_err!("Unable to add address `{}`: {:?}", entry.subnet.addr, err);
+            // Add the rest of the addresses
+            for entry in driver_state
+                .address_table
+                .iter()
+                // Skip re-adding the link local address.
+                .filter(|entry| entry.subnet.addr != driver_state.link_local_addr)
+                // Skip any addresses that have a mesh-local prefix.
+                .filter(|entry| !driver_state.addr_is_mesh_local(&entry.subnet.addr))
+            {
+                if let Err(err) = self.net_if.add_address(&entry.subnet) {
+                    fx_log_warn!(
+                        "Unable to add address `{}` to netstack: {:?}",
+                        entry.subnet.addr,
+                        err
+                    );
+                }
+            }
+
+            // Also handle on-mesh networks
+            for entry in driver_state.on_mesh_nets.iter() {
+                if let Err(err) = self.on_mesh_net_added(&driver_state, &entry.0) {
+                    fx_log_warn!(
+                        "Adding on-mesh net `{:?}` to netstack failed: `{:?}`",
+                        &entry.0,
+                        err
+                    );
+                }
+            }
+
+            // Also handle external routes
+            for entry in driver_state.external_routes.iter() {
+                if let Err(err) = self.external_route_added(&driver_state, &entry.0) {
+                    fx_log_warn!(
+                        "Adding external_route `{:?}` to netstack failed: `{:?}`",
+                        &entry.0,
+                        err
+                    );
+                }
             }
         }
 
-        // Also handle on-mesh networks
-        for entry in driver_state.on_mesh_nets.iter() {
-            if let Err(err) = self.on_mesh_net_added(&driver_state, &entry.0) {
-                fx_log_err!("Adding on-mesh net `{:?}` failed: `{:?}`", &entry.0, err);
+        // re-add local on-mesh networks
+        for entry in local_on_mesh_nets.iter() {
+            if let Err(err) = self.register_on_mesh_prefix(entry.0.clone().into()).await {
+                fx_log_warn!(
+                    "Adding local on-mesh net `{:?}` to netstack failed: `{:?}`",
+                    &entry.0,
+                    err
+                );
             }
         }
 
-        // Also handle external routes
-        for entry in driver_state.external_routes.iter() {
-            if let Err(err) = self.external_route_added(&driver_state, &entry.0) {
-                fx_log_err!("Adding external_route `{:?}` failed: `{:?}`", &entry.0, err);
+        // re-add local external routes
+        for entry in local_external_routes.iter() {
+            if let Err(err) = self.register_external_route(entry.0.clone().into()).await {
+                fx_log_err!(
+                    "Adding local external route `{:?}` to netstack failed: `{:?}`",
+                    &entry.0,
+                    err
+                );
             }
         }
 
@@ -514,27 +559,42 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
             .await
             .context("Unable to mark network interface as offline")?;
 
-        let driver_state = self.driver_state.lock();
+        let mut driver_state = self.driver_state.lock();
 
         for entry in driver_state.address_table.iter() {
             if let Err(err) = self.net_if.remove_address(&entry.subnet) {
-                fx_log_err!("Unable to remove address: {:?}", err);
+                fx_log_warn!(
+                    "Unable to remove address {:?} from netstack: {:?}",
+                    entry.subnet,
+                    err
+                );
             }
         }
 
         // Also clean-up on-mesh networks
         for entry in driver_state.on_mesh_nets.iter() {
             if let Err(err) = self.on_mesh_net_removed(&driver_state, &entry.0) {
-                fx_log_err!("Removing on-mesh net `{:?}` failed: `{:?}`", &entry.0, err);
+                fx_log_warn!(
+                    "Removing on-mesh net `{:?}` from netstack failed: `{:?}`",
+                    &entry.0,
+                    err
+                );
             }
         }
 
         // Also clean-up external routes
         for entry in driver_state.external_routes.iter() {
             if let Err(err) = self.external_route_removed(&driver_state, &entry.0) {
-                fx_log_err!("Removing external_route `{:?}` failed: `{:?}`", &entry.0, err);
+                fx_log_warn!(
+                    "Removing external_route `{:?}` from netstack failed: `{:?}`",
+                    &entry.0,
+                    err
+                );
             }
         }
+
+        // Wipe the multicast addresses
+        driver_state.mcast_table.clear();
 
         Ok(())
     }
@@ -578,6 +638,13 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
             {
                 fx_log_warn!("Unable to set `PropNet::InterfaceUp`: {:?}", err);
             }
+
+            // Clean up any transient state that is only kept while we are online
+            let mut driver_state = self.driver_state.lock();
+            driver_state.mcast_table.clear();
+            driver_state.address_table.clear();
+            driver_state.on_mesh_nets.clear();
+            driver_state.external_routes.clear();
         } // API task lock goes out of scope here
 
         fx_log_info!("offline_loop: Waiting");

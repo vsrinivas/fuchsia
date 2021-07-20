@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use crate::spinel::Status;
+use fidl_fuchsia_net_stack_ext::NetstackError;
 use fuchsia_syslog::macros::*;
 use fuchsia_zircon_status::Status as ZxStatus;
 use std::fmt::Debug;
@@ -36,5 +37,64 @@ impl From<ErrorAdapter<anyhow::Error>> for ZxStatus {
             fx_log_err!("Unhandled error when casting to ZxStatus: {:?}", err);
             ZxStatus::INTERNAL
         }
+    }
+}
+
+pub trait ErrorExt {
+    fn get_zx_status(&self) -> Option<ZxStatus>;
+    fn get_netstack_error(&self) -> Option<fidl_fuchsia_net_stack::Error>;
+}
+
+impl ErrorExt for anyhow::Error {
+    /// If this error is based on a `ZxStatus`, then return it.
+    fn get_zx_status(&self) -> Option<ZxStatus> {
+        if let Some(status) = self.downcast_ref::<ZxStatus>() {
+            Some(*status)
+        } else {
+            None
+        }
+    }
+
+    /// If this error is based on a Netstack `Error`, then return it.
+    fn get_netstack_error(&self) -> Option<fidl_fuchsia_net_stack::Error> {
+        if let Some(err) = self.downcast_ref::<NetstackError>() {
+            Some(err.0)
+        } else {
+            None
+        }
+    }
+}
+
+pub trait ErrorResultExt {
+    type Error;
+    fn ignore_already_exists(self) -> Result<(), Self::Error>;
+    fn ignore_not_found(self) -> Result<(), Self::Error>;
+}
+
+impl ErrorResultExt for Result<(), anyhow::Error> {
+    type Error = anyhow::Error;
+    fn ignore_already_exists(self) -> Result<(), Self::Error> {
+        self.or_else(|err| {
+            if err.get_zx_status() == Some(ZxStatus::ALREADY_EXISTS) {
+                Ok(())
+            } else if err.get_netstack_error() == Some(fidl_fuchsia_net_stack::Error::AlreadyExists)
+            {
+                Ok(())
+            } else {
+                Err(err)
+            }
+        })
+    }
+
+    fn ignore_not_found(self) -> Result<(), Self::Error> {
+        self.or_else(|err| {
+            if err.get_zx_status() == Some(ZxStatus::NOT_FOUND) {
+                Ok(())
+            } else if err.get_netstack_error() == Some(fidl_fuchsia_net_stack::Error::NotFound) {
+                Ok(())
+            } else {
+                Err(err)
+            }
+        })
     }
 }

@@ -362,7 +362,7 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
                             addr: driver_state.link_local_addr,
                             prefix_len: STD_IPV6_NET_PREFIX_LEN,
                         };
-                        if let Err(err) = self.net_if.remove_address(&subnet) {
+                        if let Err(err) = self.net_if.remove_address(&subnet).ignore_not_found() {
                             fx_log_err!(
                                 "Unable to remove address `{}` from interface: {:?}",
                                 subnet.addr,
@@ -373,7 +373,7 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
 
                     if !value.is_unspecified() {
                         let subnet = Subnet { addr: value, prefix_len: STD_IPV6_NET_PREFIX_LEN };
-                        if let Err(err) = self.net_if.add_address(&subnet) {
+                        if let Err(err) = self.net_if.add_address(&subnet).ignore_already_exists() {
                             fx_log_err!(
                                 "Unable to add address `{}` to interface: {:?}",
                                 subnet.addr,
@@ -407,7 +407,7 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
                             addr: driver_state.mesh_local_addr,
                             prefix_len: STD_IPV6_NET_PREFIX_LEN,
                         };
-                        if let Err(err) = self.net_if.remove_address(&subnet) {
+                        if let Err(err) = self.net_if.remove_address(&subnet).ignore_not_found() {
                             fx_log_err!(
                                 "Unable to remove address `{}` from interface: {:?}",
                                 subnet.addr,
@@ -418,7 +418,7 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
 
                     if !value.is_unspecified() {
                         let subnet = Subnet { addr: value, prefix_len: STD_IPV6_NET_PREFIX_LEN };
-                        if let Err(err) = self.net_if.add_address(&subnet) {
+                        if let Err(err) = self.net_if.add_address(&subnet).ignore_already_exists() {
                             fx_log_err!(
                                 "Unable to add address `{}` to interface: {:?}",
                                 subnet.addr,
@@ -445,12 +445,14 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
 
                 let mut driver_state = self.driver_state.lock();
 
-                fx_log_info!("Multicast table update: {:#?}", value);
+                fx_log_debug!("Multicast table update: {:#?}", value);
 
                 if value != driver_state.mcast_table {
                     for changed_group in driver_state.mcast_table.symmetric_difference(&value) {
                         if value.contains(changed_group) {
-                            if let Err(err) = self.net_if.join_mcast_group(&changed_group) {
+                            if let Err(err) =
+                                self.net_if.join_mcast_group(&changed_group).ignore_already_exists()
+                            {
                                 fx_log_err!(
                                     "Unable to join multicast group `{:?}`: {:?}",
                                     changed_group,
@@ -458,7 +460,9 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
                                 );
                             }
                         } else {
-                            if let Err(err) = self.net_if.leave_mcast_group(&changed_group) {
+                            if let Err(err) =
+                                self.net_if.leave_mcast_group(&changed_group).ignore_not_found()
+                            {
                                 fx_log_err!(
                                     "Unable to leave multicast group `{:?}`: {:?}",
                                     changed_group,
@@ -479,7 +483,7 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
 
                 let mut driver_state = self.driver_state.lock();
 
-                fx_log_info!("New address table: {:#?}", value);
+                fx_log_debug!("New address table: {:#?}", value);
 
                 if value != driver_state.address_table {
                     if driver_state.connectivity_state.is_online() {
@@ -489,7 +493,11 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
                             if value.contains(changed_address)
                                 && !driver_state.addr_is_mesh_local(&changed_address.subnet.addr)
                             {
-                                if let Err(err) = self.net_if.add_address(&changed_address.subnet) {
+                                if let Err(err) = self
+                                    .net_if
+                                    .add_address(&changed_address.subnet)
+                                    .ignore_already_exists()
+                                {
                                     fx_log_err!(
                                         "Unable to add address `{:?}` to interface: {:?}",
                                         changed_address.subnet,
@@ -497,8 +505,10 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
                                     );
                                 }
                             } else {
-                                if let Err(err) =
-                                    self.net_if.remove_address(&changed_address.subnet)
+                                if let Err(err) = self
+                                    .net_if
+                                    .remove_address(&changed_address.subnet)
+                                    .ignore_not_found()
                                 {
                                     fx_log_err!(
                                         "Unable to remove address `{:?}` from interface: {:?}",
@@ -520,7 +530,7 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
 
                 let mut driver_state = self.driver_state.lock();
 
-                fx_log_info!("OnMeshNets: {:#?}", value);
+                fx_log_debug!("OnMeshNets: {:#?}", value);
 
                 if driver_state.connectivity_state.is_online() {
                     for change in CorrelatedDiff::diff(&driver_state.on_mesh_nets, &value) {
@@ -625,7 +635,7 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
         {
             let new_addr = driver_state.slaac_address_for_prefix(on_mesh_net.subnet.clone())?;
             fx_log_info!("Adding new SLAAC address: {:?}", new_addr);
-            self.net_if.add_address(&new_addr)?;
+            self.net_if.add_address(&new_addr).ignore_already_exists()?;
         }
         Ok(())
     }
@@ -643,7 +653,7 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
 
         if on_mesh_net.flags.is_slaac_valid() {
             let slaac_addr = driver_state.slaac_address_for_prefix(on_mesh_net.subnet.clone())?;
-            self.net_if.remove_address(&slaac_addr)?;
+            self.net_if.remove_address(&slaac_addr).ignore_not_found()?;
         }
 
         Ok(())
@@ -668,12 +678,12 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
             {
                 let new_addr = driver_state.slaac_address_for_prefix(new.subnet.clone())?;
                 fx_log_info!("Adding new SLAAC address: {:?}", new_addr);
-                self.net_if.add_address(&new_addr)?;
+                self.net_if.add_address(&new_addr).ignore_already_exists()?;
             }
         } else if old.flags.is_slaac_valid() && !new.flags.is_slaac_valid() {
             let slaac_addr = driver_state.slaac_address_for_prefix(new.subnet.clone())?;
             fx_log_info!("Removing SLAAC address: {:?}", slaac_addr);
-            self.net_if.remove_address(&slaac_addr)?;
+            self.net_if.remove_address(&slaac_addr).ignore_not_found()?;
         }
 
         Ok(())
@@ -687,7 +697,7 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
         fx_log_info!("ExternalRoute Added: {:?}", external_route);
 
         if !external_route.local {
-            self.net_if.add_external_route(&external_route.subnet)?;
+            self.net_if.add_external_route(&external_route.subnet).ignore_already_exists()?;
         }
 
         Ok(())
@@ -701,7 +711,7 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
         fx_log_info!("ExternalRoute Removed: {:?}", external_route);
 
         if !external_route.local {
-            self.net_if.remove_external_route(&external_route.subnet)?;
+            self.net_if.remove_external_route(&external_route.subnet).ignore_not_found()?;
         }
 
         Ok(())
