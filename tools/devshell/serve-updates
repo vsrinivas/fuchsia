@@ -255,14 +255,12 @@ log "Discovery..."
 # State is used to prevent too much output
 state="discover"
 while true; do
-  if ! kill -0 "${background_pid}" 2> /dev/null; then
-    if is_feature_enabled "legacy_serve"; then
+  if [[ -n "${background_pid}" ]]; then
+    if ! kill -0 "${background_pid}" 2> /dev/null; then
       log "Server died, exiting"
-    else
-      log "Repository Server Logger died, exiting"
+      background_pid=
+      exit 1
     fi
-    background_pid=
-    exit 1
   fi
 
   if [[ "$state" == "discover" ]]; then
