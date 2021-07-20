@@ -24,7 +24,7 @@ class FileEventHandler : public fidl::WireAsyncEventHandler<fio::File> {
  public:
   explicit FileEventHandler(const std::string& binary_value) : binary_value_(binary_value) {}
 
-  void Unbound(fidl::UnbindInfo info) override {
+  void on_fidl_error(fidl::UnbindInfo info) override {
     if (!info.ok()) {
       LOGF(ERROR, "Failed to start driver '/pkg/%s', could not open library: %s",
            binary_value_.c_str(), info.FormatDescription().c_str());
@@ -181,8 +181,8 @@ void DriverHost::Start(StartRequestView request, StartCompleter::Sync& completer
   // Once we receive the VMO from the call to GetBuffer, we can load the driver
   // into this driver host. We move the storage and encoded for start_args into
   // this callback to extend its lifetime.
-  fidl::Client<fio::File> file(std::move(endpoints->client), loop_.dispatcher(),
-                               std::make_shared<FileEventHandler>(binary.value()));
+  fidl::WireSharedClient file(std::move(endpoints->client), loop_.dispatcher(),
+                              std::make_unique<FileEventHandler>(binary.value()));
   auto callback = [this, request = std::move(request->driver), completer = completer.ToAsync(),
                    url = std::move(url), binary = std::move(*binary), message = std::move(message),
                    _ = file.Clone()](fidl::WireResponse<fio::File::GetBuffer>* response) mutable {

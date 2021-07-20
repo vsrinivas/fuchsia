@@ -256,17 +256,17 @@ TEST_F(DriverHostTest, Start_OutgoingServices) {
 
     zx_status_t status() const { return status_; }
 
-    void Unbound(fidl::UnbindInfo info) override { status_ = info.status(); }
+    void on_fidl_error(fidl::UnbindInfo info) override { status_ = info.status(); }
 
    private:
     zx_status_t status_ = ZX_ERR_INVALID_ARGS;
   };
 
-  auto event_handler = std::make_shared<EventHandler>();
-  fidl::Client<ftest::Outgoing> outgoing(std::move(*client_end), loop().dispatcher(),
-                                         event_handler);
+  EventHandler event_handler;
+  fidl::WireClient<ftest::Outgoing> outgoing(std::move(*client_end), loop().dispatcher(),
+                                             &event_handler);
   loop().RunUntilIdle();
-  EXPECT_EQ(ZX_ERR_STOP, event_handler->status());
+  EXPECT_EQ(ZX_ERR_STOP, event_handler.status());
 
   driver.reset();
   loop().RunUntilIdle();
