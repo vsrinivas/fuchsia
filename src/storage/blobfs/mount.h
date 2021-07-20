@@ -61,6 +61,8 @@ struct MountOptions {
 
   CompressionSettings compression_settings{};
   bool sandbox_decompression = false;
+
+  int32_t paging_threads = 1;
 #ifndef NDEBUG
   bool fsck_at_end_of_every_transaction = false;
 #endif

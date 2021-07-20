@@ -76,7 +76,10 @@ test("blobfs_integration") {
   # We need some extra system flags that the _ALL_SOURCE define exposes.
   configs += [ "//build/config:all_source" ]
 
-  sources = [ "blobfs_integration_test.cc" ]
+  sources = [
+    "blobfs_integration_test.cc",
+    "multithreaded_smoke_test.cc",
+  ]
   deps = [
     ":blobfs_integration_fixtures",
     "//sdk/fidl/fuchsia.blobfs:fuchsia.blobfs_c",

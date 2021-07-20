@@ -144,19 +144,19 @@ UserPager::Worker::Worker(size_t decompression_buffer_size, BlobfsMetrics* metri
     : decompression_buffer_size_(decompression_buffer_size), metrics_(metrics) {}
 
 zx::status<std::unique_ptr<UserPager::Worker>> UserPager::Worker::Create(
-    std::unique_ptr<TransferBuffer> uncompressed_buffer,
-    std::unique_ptr<TransferBuffer> compressed_buffer, size_t decompression_buffer_size,
+    std::unique_ptr<WorkerResources> resources, size_t decompression_buffer_size,
     BlobfsMetrics* metrics, bool sandbox_decompression) {
-  ZX_DEBUG_ASSERT(metrics != nullptr && uncompressed_buffer != nullptr &&
-                  uncompressed_buffer->vmo().is_valid() && compressed_buffer != nullptr &&
-                  compressed_buffer->vmo().is_valid());
+  ZX_DEBUG_ASSERT(metrics != nullptr && resources->uncompressed_buffer != nullptr &&
+                  resources->uncompressed_buffer->vmo().is_valid() &&
+                  resources->compressed_buffer != nullptr &&
+                  resources->compressed_buffer->vmo().is_valid());
 
-  if (uncompressed_buffer->size() % kBlobfsBlockSize ||
-      compressed_buffer->size() % kBlobfsBlockSize ||
+  if (resources->uncompressed_buffer->size() % kBlobfsBlockSize ||
+      resources->compressed_buffer->size() % kBlobfsBlockSize ||
       decompression_buffer_size % kBlobfsBlockSize) {
     return zx::error(ZX_ERR_INVALID_ARGS);
   }
-  if (compressed_buffer->size() < decompression_buffer_size) {
+  if (resources->compressed_buffer->size() < decompression_buffer_size) {
     return zx::error(ZX_ERR_INVALID_ARGS);
   }
 
@@ -164,8 +164,8 @@ zx::status<std::unique_ptr<UserPager::Worker>> UserPager::Worker::Create(
 
   auto worker =
       std::unique_ptr<UserPager::Worker>(new UserPager::Worker(decompression_buffer_size, metrics));
-  worker->uncompressed_transfer_buffer_ = std::move(uncompressed_buffer);
-  worker->compressed_transfer_buffer_ = std::move(compressed_buffer);
+  worker->uncompressed_transfer_buffer_ = std::move(resources->uncompressed_buffer);
+  worker->compressed_transfer_buffer_ = std::move(resources->compressed_buffer);
 
   zx_status_t status =
       worker->compressed_mapper_.Map(worker->compressed_transfer_buffer_->vmo(), 0,
@@ -482,19 +482,23 @@ PagerErrorStatus UserPager::Worker::TransferChunkedPages(UserPager::PageSupplier
   return PagerErrorStatus::kOK;
 }
 
-UserPager::UserPager(std::unique_ptr<Worker> worker) : worker_(std::move(worker)) {}
+UserPager::UserPager(std::vector<std::unique_ptr<Worker>> workers) : workers_(std::move(workers)) {}
 
 zx::status<std::unique_ptr<UserPager>> UserPager::Create(
-    std::unique_ptr<TransferBuffer> uncompressed_buffer,
-    std::unique_ptr<TransferBuffer> compressed_buffer, size_t decompression_buffer_size,
+    std::vector<std::unique_ptr<WorkerResources>> resources, size_t decompression_buffer_size,
     BlobfsMetrics* metrics, bool sandbox_decompression) {
-  auto worker_or =
-      UserPager::Worker::Create(std::move(uncompressed_buffer), std::move(compressed_buffer),
-                                decompression_buffer_size, metrics, sandbox_decompression);
-  if (worker_or.is_error()) {
-    return worker_or.take_error();
+  std::vector<std::unique_ptr<UserPager::Worker>> workers;
+  ZX_ASSERT(!resources.empty());
+  for (auto& res : resources) {
+    auto worker_or = UserPager::Worker::Create(std::move(res), decompression_buffer_size, metrics,
+                                               sandbox_decompression);
+    if (worker_or.is_error()) {
+      return worker_or.take_error();
+    }
+    workers.push_back(std::move(worker_or.value()));
   }
-  auto pager = std::unique_ptr<UserPager>(new UserPager(std::move(worker_or.value())));
+
+  auto pager = std::unique_ptr<UserPager>(new UserPager(std::move(workers)));
 
   // Create the pager object.
   zx_status_t status = zx::pager::create(0, &pager->pager_);
@@ -528,13 +532,21 @@ zx::status<std::unique_ptr<UserPager>> UserPager::Create(
   return zx::ok(std::move(pager));
 }
 
+uint32_t UserPager::AllocateWorker() {
+  std::lock_guard l(worker_allocation_lock_);
+  ZX_DEBUG_ASSERT(worker_id_allocator_ < workers_.size());
+  return worker_id_allocator_++;
+}
+
 PagerErrorStatus UserPager::TransferPages(PageSupplier page_supplier, uint64_t offset,
                                           uint64_t length, const UserPagerInfo& info) {
   static const fs_watchdog::FsOperationType kOperation(
       fs_watchdog::FsOperationType::CommonFsOperation::PageFault, std::chrono::seconds(60));
   [[maybe_unused]] fs_watchdog::FsOperationTracker tracker(&kOperation, watchdog_.get());
 
-  return worker_->TransferPages(std::move(page_supplier), offset, length, info);
+  // Assigns a worker to each pager thread statically.
+  thread_local uint32_t worker_id = AllocateWorker();
+  return workers_[worker_id]->TransferPages(std::move(page_supplier), offset, length, info);
 }
 
 }  // namespace pager

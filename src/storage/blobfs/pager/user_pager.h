@@ -104,6 +104,16 @@ class UserPager {
  public:
   DISALLOW_COPY_ASSIGN_AND_MOVE(UserPager);
 
+  // Resources needed for each worker thread.
+  struct WorkerResources {
+    WorkerResources(std::unique_ptr<TransferBuffer> uncompressed,
+                    std::unique_ptr<TransferBuffer> compressed)
+        : uncompressed_buffer(std::move(uncompressed)), compressed_buffer(std::move(compressed)) {}
+
+    std::unique_ptr<TransferBuffer> uncompressed_buffer;
+    std::unique_ptr<TransferBuffer> compressed_buffer;
+  };
+
   // Abstracts out how pages are supplied to the system.
   using PageSupplier = std::function<zx::status<>(uint64_t offset, uint64_t length,
                                                   const zx::vmo& aux_vmo, uint64_t aux_offset)>;
@@ -111,14 +121,14 @@ class UserPager {
   // Creates an instance of UserPager.
   // A new thread is created and started to process page fault requests.
   // |uncompressed_buffer| is used to retrieve and buffer uncompressed data from the underlying
-  // storage. |compressed_buffer| is used to retrieve and buffer compressed data from the underlying
-  // storage. |decompression_buffer_size| is the size of the scratch buffer to use for
-  // decompression.
+  // storage. |resources| is a set of resources needed for each individual |Worker| so only as many
+  // pager threads are supported as there are sets of resources. |decompression_buffer_size| is the
+  // size of the scratch buffer to use for decompression.
   // TODO(fxbug.dev/67659): Update this to take a vector of |Worker| when actually prepared to
   // handle multiple threads.
   [[nodiscard]] static zx::status<std::unique_ptr<UserPager>> Create(
-      std::unique_ptr<TransferBuffer> compressed_buffer, std::unique_ptr<TransferBuffer> buffer,
-      size_t decompression_buffer_size, BlobfsMetrics* metrics, bool sandbox_decompression);
+      std::vector<std::unique_ptr<WorkerResources>> resources, size_t decompression_buffer_size,
+      BlobfsMetrics* metrics, bool sandbox_decompression);
 
   // Returns the pager handle.
   const zx::pager& Pager() const { return pager_; }
@@ -159,8 +169,7 @@ class UserPager {
     // underlying storage. |decompression_buffer_size| is the size of the scratch buffer to use for
     // decompression.
     [[nodiscard]] static zx::status<std::unique_ptr<Worker>> Create(
-        std::unique_ptr<TransferBuffer> uncompressed_buffer,
-        std::unique_ptr<TransferBuffer> compressed_buffer, size_t decompression_buffer_size,
+        std::unique_ptr<WorkerResources> resources, size_t decompression_buffer_size,
         BlobfsMetrics* metrics, bool sandbox_decompression);
 
     // See |UserPager::TransferPages()| which simply selects which Worker to delegate the
@@ -215,17 +224,25 @@ class UserPager {
     BlobfsMetrics* metrics_ = nullptr;
   };
 
-  explicit UserPager(std::unique_ptr<Worker> worker);
+  explicit UserPager(std::vector<std::unique_ptr<Worker>> workers);
 
   // Watchdog which triggers if any page faults exceed a threshold deadline.  This *must* come
   // before the loop below so that the loop, whose threads might have references to the watchdog, is
   // destroyed first.
   std::unique_ptr<fs_watchdog::WatchdogInterface> watchdog_;
 
+  // Called for instantiating a thread local which statically assigns a worker to each thread.
+  uint32_t AllocateWorker();
+
   // Set of resources required by a thread to serve the page. This *must* come before the loop below
   // since the threads for that loop may have references to the worker. Destruction of that loop
   // will ensure that all of the threads have stopped.
-  std::unique_ptr<Worker> worker_;
+  std::vector<std::unique_ptr<Worker>> workers_;
+
+  // Protects the worker_id_allocator_ from multiple pager thread races.
+  std::mutex worker_allocation_lock_;
+  // Incremented on the first call within each pager thread to allocate a worker.
+  uint32_t worker_id_allocator_ __TA_GUARDED(worker_allocation_lock_) = 0;
 
   // Async loop for pager requests.
   async::Loop pager_loop_ = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);

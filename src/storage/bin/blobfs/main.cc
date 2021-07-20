@@ -192,6 +192,7 @@ int usage() {
       "         -i|--num_inodes n          The initial number of inodes to allocate space for.\n"
       "                                    Only valid for mkfs.\n"
       "         -s|--sandbox_decompression Run blob decompression in a sandboxed component.\n"
+      "         -t|--paging_threads n      The number of threads to use in the pager\n"
       "         -h|--help                  Display this message\n"
       "\n"
       "On Fuchsia, blobfs takes the block device argument by handle.\n"
@@ -221,11 +222,12 @@ zx::status<Options> ProcessArgs(int argc, char** argv, CommandFunction* func) {
         {"blob_layout_format", required_argument, nullptr, 'b'},
         {"num_inodes", required_argument, nullptr, 'i'},
         {"sandbox_decompression", no_argument, nullptr, 's'},
+        {"paging_threads", no_argument, nullptr, 't'},
         {"help", no_argument, nullptr, 'h'},
         {nullptr, 0, nullptr, 0},
     };
     int opt_index;
-    int c = getopt_long(argc, argv, "vrmc:l:i:e:h", opts, &opt_index);
+    int c = getopt_long(argc, argv, "vrmst:c:l:i:e:h", opts, &opt_index);
 
     if (c < 0) {
       break;
@@ -287,6 +289,15 @@ zx::status<Options> ProcessArgs(int argc, char** argv, CommandFunction* func) {
       }
       case 's': {
         options.mount_options.sandbox_decompression = true;
+        break;
+      }
+      case 't': {
+        std::optional<int> num_threads = ParseInt(optarg);
+        if (!num_threads || *num_threads <= 0) {
+          fprintf(stderr, "Invalid argument for --paging_threads: %s\n", optarg);
+          return zx::error(usage());
+        }
+        options.mount_options.paging_threads = *num_threads;
         break;
       }
       case 'h':
