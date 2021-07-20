@@ -247,8 +247,8 @@ termios = "0.3.2"
 waker-fn = "1.1"
 zip = { version = "0.5.5", default-features = false, features = ["deflate"] }
 
-# For crates that we don't want to vendor, create a dummy package in tiny_mirrors/ (see existing
-# examples).
+# For crates we don't want to vendor, follow instructions at
+# //docs/development/languages/rust/external_crates.md.
 [patch.crates-io]
 # Keep this sorted alphabetically, please.
 backtrace-sys = { path = "empty/backtrace-sys" }
