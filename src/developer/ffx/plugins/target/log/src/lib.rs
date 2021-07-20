@@ -341,19 +341,19 @@ fn calculate_monotonic_time(
 }
 
 async fn print_symbolizer_warning(err: Error, should_sleep: bool) {
-    println!(
+    eprintln!(
         "Warning: attempting to get the symbolizer binary failed.
 This likely means that your logs will not be symbolized."
     );
-    println!("\nThe failure was: {}", err);
+    eprintln!("\nThe failure was: {}", err);
 
     let sdk_type: Result<String, _> = get("sdk.type").await;
     if sdk_type.is_err() || sdk_type.unwrap() == "" {
-        println!("If you are working in-tree, ensure that the sdk.type config setting is set accordingly:");
-        println!("  ffx config set sdk.type in-tree");
+        eprintln!("If you are working in-tree, ensure that the sdk.type config setting is set accordingly:");
+        eprintln!("  ffx config set sdk.type in-tree");
     }
 
-    println!(
+    eprintln!(
         "\nYou can silence this warning by passing `--ignore-symbolizer-failure`: \
                             \n  `ffx target log --ignore-symbolizer-failure <subcommand>`",
     );
@@ -368,6 +368,15 @@ pub async fn log(
     daemon_proxy: DaemonProxy,
     rcs_proxy: RemoteControlProxy,
     cmd: LogCommand,
+) -> Result<()> {
+    log_impl(daemon_proxy, rcs_proxy, cmd, &mut std::io::stdout()).await
+}
+
+pub async fn log_impl<W: std::io::Write>(
+    daemon_proxy: DaemonProxy,
+    rcs_proxy: RemoteControlProxy,
+    cmd: LogCommand,
+    writer: &mut W,
 ) -> Result<()> {
     let config_color: bool = get(COLOR_CONFIG_NAME).await?;
 
@@ -389,26 +398,26 @@ pub async fn log(
                     let registered_result = is_current_sdk_root_registered().await;
                     if let Ok(false) = registered_result {
                         let sdk_type: Result<String, _> = get("sdk.type").await;
-                        println!(
+                        eprintln!(
                             "It looks like there is no symbol index for your sdk root registered."
                         );
-                        println!("If you want symbolization to work correctly, run the following from your checkout:");
+                        eprintln!("If you want symbolization to work correctly, run the following from your checkout:");
 
                         if sdk_type.is_ok() && sdk_type.unwrap() == "in-tree".to_string() {
-                            println!("  fx symbol-index register");
+                            eprintln!("  fx symbol-index register");
                         } else {
                             let symbol_index = s.get_host_tool("symbol-index");
                             match symbol_index {
                                 Ok(path) => {
-                                    println!("  {} register", path.to_string_lossy().to_string());
+                                    eprintln!("  {} register", path.to_string_lossy().to_string());
                                 }
                                 Err(e) => {
-                                    println!("We could not find the path to the symbol-index host-tool: {}", e);
+                                    eprintln!("We could not find the path to the symbol-index host-tool: {}", e);
                                 }
                             }
                         }
 
-                        println!("\nSilence this message in the future by disabling the `proactive_log.symbolize.enabled` config setting, \
+                        eprintln!("\nSilence this message in the future by disabling the `proactive_log.symbolize.enabled` config setting, \
                                     or passing the '--ignore-symbolizer-failure' flag to this command.");
                     } else if registered_result.is_err() {
                         log::warn!(
@@ -425,18 +434,21 @@ pub async fn log(
                     print_symbolizer_warning(e, !cmd.ignore_symbolizer_failure).await;
                 }
             },
-            Err(e) => print_symbolizer_warning(e, !cmd.ignore_symbolizer_failure).await,
+            Err(e) => {
+                print_symbolizer_warning(e, !cmd.ignore_symbolizer_failure).await;
+            }
         };
     }
 
-    log_cmd(daemon_proxy, rcs_proxy, &mut formatter, cmd).await
+    log_cmd(daemon_proxy, rcs_proxy, &mut formatter, cmd, writer).await
 }
 
-pub async fn log_cmd(
+pub async fn log_cmd<W: std::io::Write>(
     daemon_proxy: DaemonProxy,
     rcs: RemoteControlProxy,
     log_formatter: &mut impl LogFormatter,
     cmd: LogCommand,
+    writer: &mut W,
 ) -> Result<()> {
     let stream_mode = match cmd.cmd {
         LogSubCommand::Watch(WatchCommand { dump }) => {
@@ -470,11 +482,12 @@ pub async fn log_cmd(
             }
 
             if target_info.boot_timestamp_nanos.is_none() && (from.is_some() || to.is_some()) {
-                println!(
+                writeln!(
+                    writer,
                     "{}target timestamp not available - from/to filters will not be applied.{}",
                     color::Fg(color::Red),
                     style::Reset
-                );
+                )?;
                 (None, None)
             } else {
                 (
@@ -495,6 +508,7 @@ pub async fn log_cmd(
         },
         daemon_proxy,
         log_formatter,
+        writer,
     )
     .await
 }
@@ -656,15 +670,19 @@ mod test {
         };
         let expected_responses = vec![];
 
+        let mut writer = Vec::new();
         log_cmd(
             setup_fake_daemon_server(params, Arc::new(expected_responses)),
             setup_fake_rcs(),
             &mut formatter,
             cmd,
+            &mut writer,
         )
         .await
         .unwrap();
 
+        let output = String::from_utf8(writer).unwrap();
+        assert!(output.is_empty());
         formatter.assert_same_logs(vec![])
     }
 
@@ -690,15 +708,19 @@ mod test {
             ]),
         ];
 
+        let mut writer = Vec::new();
         log_cmd(
             setup_fake_daemon_server(params, Arc::new(expected_responses)),
             setup_fake_rcs(),
             &mut formatter,
             cmd,
+            &mut writer,
         )
         .await
         .unwrap();
 
+        let output = String::from_utf8(writer).unwrap();
+        assert!(output.is_empty());
         formatter.assert_same_logs(vec![Ok(log1), Ok(log2), Ok(log3)])
     }
 
@@ -725,15 +747,19 @@ mod test {
             ]),
         ];
 
+        let mut writer = Vec::new();
         log_cmd(
             setup_fake_daemon_server(params, Arc::new(expected_responses)),
             setup_fake_rcs(),
             &mut formatter,
             cmd,
+            &mut writer,
         )
         .await
         .unwrap();
 
+        let output = String::from_utf8(writer).unwrap();
+        assert!(output.is_empty());
         formatter.assert_same_logs(vec![
             Ok(log1),
             Ok(log2),
@@ -802,15 +828,19 @@ mod test {
             serde_json::to_string(&log3).unwrap(),
         ])];
 
+        let mut writer = Vec::new();
         assert!(log_cmd(
             setup_fake_daemon_server(params, Arc::new(expected_responses)),
             setup_fake_rcs(),
             &mut formatter,
             cmd,
+            &mut writer,
         )
         .await
         .is_ok());
 
+        let output = String::from_utf8(writer).unwrap();
+        assert!(output.is_empty());
         formatter.assert_same_logs(vec![Ok(log1), Ok(log2)])
     }
 
@@ -1258,14 +1288,19 @@ mod test {
             ..DaemonDiagnosticsStreamParameters::EMPTY
         };
 
+        let mut writer = Vec::new();
         log_cmd(
             setup_fake_daemon_server(params, Arc::new(vec![])),
             setup_fake_rcs(),
             &mut formatter,
             cmd,
+            &mut writer,
         )
         .await
         .unwrap();
+
+        let output = String::from_utf8(writer).unwrap();
+        assert!(output.is_empty());
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -1286,14 +1321,19 @@ mod test {
             ..DaemonDiagnosticsStreamParameters::EMPTY
         };
 
+        let mut writer = Vec::new();
         log_cmd(
             setup_fake_daemon_server(params, Arc::new(vec![])),
             setup_fake_rcs(),
             &mut formatter,
             cmd,
+            &mut writer,
         )
         .await
         .unwrap();
+
+        let output = String::from_utf8(writer).unwrap();
+        assert!(output.is_empty());
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -1309,16 +1349,21 @@ mod test {
             ..empty_dump_command()
         };
 
+        let mut writer = Vec::new();
         assert!(log_cmd(
             setup_fake_daemon_server(DaemonDiagnosticsStreamParameters::EMPTY, Arc::new(vec![])),
             setup_fake_rcs(),
             &mut formatter,
             cmd,
+            &mut writer,
         )
         .await
         .unwrap_err()
         .ffx_error()
         .is_some());
+
+        let output = String::from_utf8(writer).unwrap();
+        assert!(output.is_empty());
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -1334,16 +1379,21 @@ mod test {
             ..empty_dump_command()
         };
 
+        let mut writer = Vec::new();
         assert!(log_cmd(
             setup_fake_daemon_server(DaemonDiagnosticsStreamParameters::EMPTY, Arc::new(vec![])),
             setup_fake_rcs(),
             &mut formatter,
             cmd,
+            &mut writer,
         )
         .await
         .unwrap_err()
         .ffx_error()
         .is_some());
+
+        let output = String::from_utf8(writer).unwrap();
+        assert!(output.is_empty());
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

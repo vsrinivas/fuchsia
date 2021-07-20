@@ -96,10 +96,11 @@ async fn setup_daemon_stream(
         .context("connecting to daemon")
 }
 
-pub async fn exec_log_cmd(
+pub async fn exec_log_cmd<W: std::io::Write>(
     params: LogCommandParameters,
     daemon_proxy: DaemonProxy,
     log_formatter: &mut impl LogFormatter,
+    writer: &mut W,
 ) -> Result<()> {
     let (mut proxy, server) =
         create_proxy::<ArchiveIteratorMarker>().context("failed to create endpoints")?;
@@ -166,7 +167,8 @@ pub async fn exec_log_cmd(
                                 Err(e) => {
                                     match e {
                                         DiagnosticsStreamError::NoMatchingTargets => {
-                                            println!(
+                                            writeln!(
+                                                writer,
                                                 "{}",
                                                 format_ffx_event(
                                                     &format!(
@@ -175,13 +177,14 @@ pub async fn exec_log_cmd(
                                                     ),
                                                     None
                                                 )
-                                            );
+                                            )?;
                                         }
                                         DiagnosticsStreamError::NoStreamForTarget => {
-                                            println!("{}" , format_ffx_event(&format!("{} is up, but the logger hasn't started yet. Retrying...", &params.target_identifier), None));
+                                            writeln!(writer, "{}" , format_ffx_event(&format!("{} is up, but the logger hasn't started yet. Retrying...", &params.target_identifier), None))?;
                                         }
                                         _ => {
-                                            println!(
+                                            writeln!(
+                                                writer,
                                                 "{}",
                                                 format_ffx_event(
                                                     &format!(
@@ -190,7 +193,7 @@ pub async fn exec_log_cmd(
                                                     ),
                                                     None
                                                 )
-                                            );
+                                            )?;
                                         }
                                     }
                                     Timer::new(Duration::from_millis(RETRY_TIMEOUT_MILLIS)).await;
@@ -335,13 +338,18 @@ mod test {
         };
         let expected_responses = vec![];
 
+        let mut writer = Vec::new();
         exec_log_cmd(
             LogCommandParameters::from(params.clone()),
             setup_fake_daemon_server(params, Arc::new(expected_responses)),
             &mut formatter,
+            &mut writer,
         )
         .await
         .unwrap();
+
+        let output = String::from_utf8(writer).unwrap();
+        assert!(output.is_empty());
 
         formatter.assert_same_logs(vec![])
     }
@@ -367,14 +375,18 @@ mod test {
             ]),
         ];
 
+        let mut writer = Vec::new();
         exec_log_cmd(
             LogCommandParameters::from(params.clone()),
             setup_fake_daemon_server(params, Arc::new(expected_responses)),
             &mut formatter,
+            &mut writer,
         )
         .await
         .unwrap();
 
+        let output = String::from_utf8(writer).unwrap();
+        assert!(output.is_empty());
         formatter.assert_same_logs(vec![Ok(log1), Ok(log2), Ok(log3)])
     }
 
@@ -400,14 +412,18 @@ mod test {
             ]),
         ];
 
+        let mut writer = Vec::new();
         exec_log_cmd(
             LogCommandParameters::from(params.clone()),
             setup_fake_daemon_server(params, Arc::new(expected_responses)),
             &mut formatter,
+            &mut writer,
         )
         .await
         .unwrap();
 
+        let output = String::from_utf8(writer).unwrap();
+        assert!(output.is_empty());
         formatter.assert_same_logs(vec![
             Ok(log1),
             Ok(log2),
@@ -424,13 +440,18 @@ mod test {
             ..DaemonDiagnosticsStreamParameters::EMPTY
         };
 
+        let mut writer = Vec::new();
         exec_log_cmd(
             LogCommandParameters::from(params.clone()),
             setup_fake_daemon_server(params, Arc::new(vec![])),
             &mut formatter,
+            &mut writer,
         )
         .await
         .unwrap();
+
+        let output = String::from_utf8(writer).unwrap();
+        assert!(output.is_empty());
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -442,12 +463,17 @@ mod test {
             ..DaemonDiagnosticsStreamParameters::EMPTY
         };
 
+        let mut writer = Vec::new();
         exec_log_cmd(
             LogCommandParameters::from(params.clone()),
             setup_fake_daemon_server(params, Arc::new(vec![])),
             &mut formatter,
+            &mut writer,
         )
         .await
         .unwrap();
+
+        let output = String::from_utf8(writer).unwrap();
+        assert!(output.is_empty());
     }
 }
