@@ -10,6 +10,8 @@ import("//sdk/cts/build/write_cts_file.gni")
 #
 # An equivalent to fuchsia_package, but ensures dependencies are allowed in CTS.
 template("cts_fuchsia_package") {
+  assert(defined(invoker.package_name), "package_name must be defined.")
+
   if (!defined(invoker.deps)) {
     invoker.deps = []
   }

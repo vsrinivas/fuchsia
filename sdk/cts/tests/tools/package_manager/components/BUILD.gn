@@ -34,6 +34,7 @@ cts_fuchsia_component("cts-package-manager-sample2") {
 }
 
 cts_fuchsia_package("cts-package-manager-sample-component") {
+  package_name = "cts-package-manager-sample-component"
   testonly = true
   deps = [
     ":cts-package-manager-sample",

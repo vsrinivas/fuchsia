@@ -147,6 +147,7 @@ cts_fuchsia_component("fidl_hlcpp_unit_tests") {
 }
 
 cts_fuchsia_test_package("fidl_hlcpp_tests") {
+  package_name = "fidl_hlcpp_tests"
   test_components = [
     ":fidl_hlcpp_conformance_tests",
     ":fidl_hlcpp_unit_tests",

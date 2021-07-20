@@ -2,19 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 import("//build/sdk/sdk_atom.gni")
-
-declare_args() {
-  # Name of the CTS version.
-  #
-  # Used to change the dependency paths of CTS deps.
-  #
-  # Example of path change:
-  #   //zircon/system/ulib/zxtest -> //prebuilt/cts/${cts_version}/pkg/zxtest
-  #
-  # Usage:
-  #   `fx set PRODUCT.BOARD --args cts_version='"version_name"'`
-  cts_version = ""
-}
+import("//sdk/cts/build/cts_version.gni")
 
 # Copies specific sources to an SDK.
 #

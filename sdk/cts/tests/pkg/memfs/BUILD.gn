@@ -28,6 +28,7 @@ cts_fuchsia_component("memfs-component") {
 }
 
 cts_fuchsia_test_package("memfs-test-package") {
+  package_name = "memfs-test-package"
   test_components = [ ":memfs-component" ]
 }
 

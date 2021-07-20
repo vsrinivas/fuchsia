@@ -35,6 +35,9 @@ template("cts_artifacts") {
     _cts_artifacts_dir = "$root_out_dir/cts"
 
     deps = []
+    if (defined(invoker.deps)) {
+      deps = invoker.deps
+    }
 
     # Copies all package archives into _cts_artifacts_dir.
     if (defined(invoker.package_archives)) {

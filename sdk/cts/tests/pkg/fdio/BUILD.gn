@@ -215,6 +215,7 @@ cts_fuchsia_component("use-shebang-from-resolve-component") {
 }
 
 cts_fuchsia_test_package("fdio-spawn-tests") {
+  package_name = "fdio-spawn-tests"
   test_components = [ ":fdio-spawn-tests-component" ]
 
   deps = [

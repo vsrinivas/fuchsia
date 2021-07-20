@@ -55,6 +55,7 @@ cts_fuchsia_component("inspect-publisher") {
 }
 
 cts_fuchsia_test_package("fuchsia-diagnostics-tests") {
+  package_name = "fuchsia-diagnostics-tests"
   test_components = [ ":diagnostics-test" ]
   deps = [ ":inspect-publisher" ]
 }

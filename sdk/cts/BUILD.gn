@@ -5,12 +5,12 @@
 import("//build/config/build_api_module.gni")
 import("//sdk/cts/build/cts.gni")
 
-# The list of filepaths to include in the CTS archive.
-#
-# Paths should be given without a '//' prefix.
-#
-# Type: list(string)
 build_api_module("cts_artifacts") {
+  # The list of filepaths to include in the CTS archive.
+  #
+  # Paths should be given without a '//' prefix.
+  #
+  # Type: list(string)
   testonly = true
   data_keys = [ "cts_artifacts" ]
   deps = [
@@ -19,15 +19,39 @@ build_api_module("cts_artifacts") {
   ]
 }
 
+action("update_test_manifest") {
+  # When trying to build CTS at ToT and a previous version of CTS, the build fails because both CTS
+  # versions generate packages with identical names. This target appends the CTS version to the
+  # previous CTS version's package names in the test manifest. The previous version's package names
+  # are updated in the in the build via //sdk/cts/build/script/transform_build_gn.py.
+  script = "//sdk/cts/build/scripts/update_test_manifest.py"
+  inputs = [ "data/test_manifest.json" ]
+  outputs = [ "$target_gen_dir/test_manifest.json" ]
+
+  args = [
+    "--manifest",
+    rebase_path("data/test_manifest.json"),
+    "--out",
+    rebase_path(outputs[0]),
+  ]
+
+  if (cts_version != "") {
+    args += [
+      "--cts_version",
+      cts_version,
+    ]
+  }
+}
+
 cts_artifacts("cts_data_files") {
   data = [
-    "data/test_manifest.json",
+           # TODO(fxb/80700): Combine the ABI and API targets, and add these LICENSE files in //sdk:cts.
+           "../../LICENSE",
+           "../../AUTHORS",
+           "../../PATENTS",
+         ] + get_target_outputs(":update_test_manifest")
 
-    # TODO(fxb/80700): Combine the ABI and API targets, and add these LICENSE files in //sdk:cts.
-    "../../LICENSE",
-    "../../AUTHORS",
-    "../../PATENTS",
-  ]
+  deps = [ ":update_test_manifest" ]
 }
 
 group("cts_no_e2e") {

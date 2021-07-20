@@ -4,6 +4,7 @@
 
 import("//build/components.gni")
 import("//sdk/cts/build/cts_element.gni")
+import("//sdk/cts/build/cts_version.gni")
 import("//sdk/cts/build/write_cts_file.gni")
 
 # Defines a Compatibility Test Suite package.
@@ -14,10 +15,16 @@ import("//sdk/cts/build/write_cts_file.gni")
 # Example:
 # ```
 # cts_fuchsia_test_package("my-test-package") {
+#   package_name = "my-test-package"
 #   test_components = [ ":my-test-component" ]
 # }
 # ```
 template("cts_fuchsia_test_package") {
+  assert(defined(invoker.package_name), "package_name must be defined.")
+  if (cts_version != "") {
+    invoker.package_name += "_$cts_version"
+  }
+
   # Ensure that deps and test_components are CTS targets.
   invoker_deps = []
   if (defined(invoker.deps)) {

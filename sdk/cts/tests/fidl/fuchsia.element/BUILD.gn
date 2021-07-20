@@ -29,6 +29,8 @@ cts_fuchsia_component("element-manager-test") {
 }
 
 cts_fuchsia_test_package("fuchsia-element-tests") {
+  package_name = "fuchsia-element-tests"
+
   # TODO(fxbug.dev/70941): Remove workaround for teardown race causing unrelated ERROR
   test_specs = {
     log_settings = {
@@ -85,6 +87,7 @@ cts_fuchsia_component("reference-session") {
 }
 
 cts_fuchsia_package("fuchsia-element-reference") {
+  package_name = "fuchsia-element-reference"
   testonly = true
   deps = [
     ":reference-element",

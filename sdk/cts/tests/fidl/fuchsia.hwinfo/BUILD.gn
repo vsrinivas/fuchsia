@@ -30,6 +30,7 @@ cts_fuchsia_component("hwinfo-test") {
 }
 
 cts_fuchsia_test_package("fuchsia-hwinfo-tests") {
+  package_name = "fuchsia-hwinfo-tests"
   test_specs = {
     log_settings = {
       max_severity = "ERROR"

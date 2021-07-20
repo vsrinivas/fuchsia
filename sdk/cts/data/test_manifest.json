@@ -1,17 +1,21 @@
 [
     {
+        "archive_name": "my-cts-test-package",
         "component_name": "my-cts-component",
         "package": "my-cts-test-package"
     },
     {
+        "archive_name": "fuchsia-element-tests",
         "component_name": "element-manager-test",
         "package": "fuchsia-element-tests"
     },
     {
+        "archive_name": "fuchsia-hwinfo-tests",
         "component_name": "hwinfo-test",
         "package": "fuchsia-hwinfo-tests"
     },
     {
+        "archive_name": "fuchsia-diagnostics-tests",
         "component_name": "inspect-publisher",
         "package": "fuchsia-diagnostics-tests"
     }

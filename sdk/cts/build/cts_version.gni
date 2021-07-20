@@ -1,0 +1,15 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+declare_args() {
+  # Name of the CTS version.
+  #
+  # Used to change the dependency paths of CTS deps.
+  #
+  # Example of path change:
+  #   //zircon/system/ulib/zxtest -> //prebuilt/cts/${cts_version}/pkg/zxtest
+  #
+  # Usage:
+  #   `fx set PRODUCT.BOARD --args cts_version='"version_name"'`
+  cts_version = ""
+}

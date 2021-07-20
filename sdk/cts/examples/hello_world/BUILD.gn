@@ -31,6 +31,7 @@ cts_fuchsia_component("my-cts-component") {
 }
 
 cts_fuchsia_test_package("my-cts-test-package") {
+  package_name = "my-cts-test-package"
   test_components = [ ":my-cts-component" ]
 }
 

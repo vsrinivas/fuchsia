@@ -5,6 +5,7 @@
 
 import argparse
 import os
+import re
 import shutil
 import sys
 
@@ -12,10 +13,13 @@ _targets_to_remove = [
     "cts_copy_to_sdk",
     "cts_source_library",
     "sdk_molecule",
+    "cts_artifacts",
+    "group(\"prebuilts\")",
+    "action(\"update_test_manifest\")",
 ]
 
 
-def transform_build_gn(src, dest, in_tree_mappings):
+def transform_build_gn(src, dest, in_tree_mappings, version):
     """
     Naively transforms a BUILD.gn file to work in the CTS archive.
     """
@@ -33,6 +37,9 @@ def transform_build_gn(src, dest, in_tree_mappings):
             for key in in_tree_mappings.keys():
                 if key in line:
                     output.append(line.replace(key, in_tree_mappings[key]))
+        elif version != "" and "package_name" in line:
+            # Append between the quotes of `package_name = "name"`
+            output.append(re.sub(r'\"(.+)\"', r'"\1_%s"' % version, line))
         else:
             output.append(line)
 
@@ -79,7 +86,7 @@ def main():
 
     ext = os.path.splitext(args.source)[1]
     if ext == ".gn":
-        transform_build_gn(args.source, args.dest, in_tree_mappings)
+        transform_build_gn(args.source, args.dest, in_tree_mappings, version)
     else:
         shutil.copy(args.source, args.dest)
 
