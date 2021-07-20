@@ -331,8 +331,8 @@ int main(int argc, char** argv) {
   CoordinatorConfig config;
   SystemInstance system_instance;
   config.boot_args = &boot_args;
-  config.driver_index =
-      fidl::Client<fdf::DriverIndex>(std::move(driver_index_client.value()), loop.dispatcher());
+  config.driver_index = fidl::WireSharedClient<fdf::DriverIndex>(
+      std::move(driver_index_client.value()), loop.dispatcher());
   config.require_system = driver_manager_params.require_system;
   config.asan_drivers = driver_manager_params.driver_host_asan;
   config.suspend_fallback = driver_manager_params.suspend_timeout_fallback;

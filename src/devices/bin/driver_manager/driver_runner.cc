@@ -151,19 +151,6 @@ class AsyncRemove {
   std::vector<Node*> nodes_;
 };
 
-class EventHandler : public fidl::WireAsyncEventHandler<fdf::DriverHost> {
- public:
-  EventHandler(DriverHostComponent* component,
-               fbl::DoublyLinkedList<std::unique_ptr<DriverHostComponent>>* driver_hosts)
-      : component_(component), driver_hosts_(driver_hosts) {}
-
-  void Unbound(fidl::UnbindInfo info) override { driver_hosts_->erase(*component_); }
-
- private:
-  DriverHostComponent* const component_;
-  fbl::DoublyLinkedList<std::unique_ptr<DriverHostComponent>>* driver_hosts_;
-};
-
 DriverComponent::DriverComponent(fidl::ClientEnd<fdf::Driver> driver)
     : driver_(std::move(driver)), wait_(this, driver_.channel().get(), ZX_CHANNEL_PEER_CLOSED) {}
 
@@ -202,7 +189,7 @@ DriverHostComponent::DriverHostComponent(
     fidl::ClientEnd<fdf::DriverHost> driver_host, async_dispatcher_t* dispatcher,
     fbl::DoublyLinkedList<std::unique_ptr<DriverHostComponent>>* driver_hosts)
     : driver_host_(std::move(driver_host), dispatcher,
-                   std::make_shared<EventHandler>(this, driver_hosts)) {}
+                   fidl::ObserveTeardown([this, driver_hosts] { driver_hosts->erase(*this); })) {}
 
 zx::status<fidl::ClientEnd<fdf::Driver>> DriverHostComponent::Start(
     fidl::ClientEnd<fdf::Node> client_end, const Node& node,
@@ -220,13 +207,13 @@ zx::status<fidl::ClientEnd<fdf::Driver>> DriverHostComponent::Start(
   fdf::wire::DriverStartArgs args(allocator);
   args.set_node(allocator, std::move(client_end))
       .set_symbols(allocator, node.symbols())
-      .set_url(allocator, std::move(start_info.resolved_url()))
-      .set_program(allocator, std::move(start_info.program()))
-      .set_ns(allocator, std::move(start_info.ns()))
+      .set_url(allocator, start_info.resolved_url())
+      .set_program(allocator, start_info.program())
+      .set_ns(allocator, start_info.ns())
       .set_outgoing_dir(allocator, std::move(start_info.outgoing_dir()))
       .set_capabilities(
           allocator, fidl::VectorView<fdf::wire::DriverCapabilities>::FromExternal(*capabilities));
-  auto start = driver_host_->Start(std::move(args), std::move(endpoints->server));
+  auto start = driver_host_->Start(args, std::move(endpoints->server));
   if (!start.ok()) {
     LOGF(ERROR, "Failed to start driver '%s' in driver host: %s", binary.data(),
          start.FormatDescription().c_str());

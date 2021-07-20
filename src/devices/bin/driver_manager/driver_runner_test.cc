@@ -44,15 +44,8 @@ class FakeContext : public fpromise::context {
   }
 };
 
-class UnbindWatcher : public fidl::WireAsyncEventHandler<frunner::ComponentController> {
- public:
-  UnbindWatcher(size_t index, std::vector<size_t>& indices) : index_(index), indices_(indices) {}
-
-  void Unbound(fidl::UnbindInfo) override { indices_.emplace_back(index_); }
-
- private:
-  const size_t index_;
-  std::vector<size_t>& indices_;
+fidl::AnyTeardownObserver TeardownWatcher(size_t index, std::vector<size_t>& indices) {
+  return fidl::ObserveTeardown([&indices = indices, index] { indices.emplace_back(index); });
 };
 
 class TestRealm : public fsys::testing::Realm_TestBase {
@@ -1027,10 +1020,10 @@ TEST_F(DriverRunnerTest, StartDriverChain_UnbindSecondNode) {
   // Unbinding the second node stops all drivers bound in the sub-tree, in a
   // depth-first order.
   std::vector<size_t> indices;
-  std::vector<fidl::Client<frunner::ComponentController>> clients;
+  std::vector<fidl::WireSharedClient<frunner::ComponentController>> clients;
   for (auto& driver : drivers) {
     clients.emplace_back(std::move(driver), loop().dispatcher(),
-                         std::make_shared<UnbindWatcher>(clients.size() + 1, indices));
+                         TeardownWatcher(clients.size() + 1, indices));
   }
   second_node.Unbind();
   loop().RunUntilIdle();
@@ -1082,10 +1075,10 @@ TEST_F(DriverRunnerTest, StartSecondDriver_UnbindRootNode) {
 
   // Unbinding the root node stops all drivers.
   std::vector<size_t> indices;
-  fidl::Client<frunner::ComponentController> root_client(
-      std::move(*root_driver), loop().dispatcher(), std::make_shared<UnbindWatcher>(0, indices));
-  fidl::Client<frunner::ComponentController> second_client(
-      std::move(second_driver), loop().dispatcher(), std::make_shared<UnbindWatcher>(1, indices));
+  fidl::WireSharedClient<frunner::ComponentController> root_client(
+      std::move(*root_driver), loop().dispatcher(), TeardownWatcher(0, indices));
+  fidl::WireSharedClient<frunner::ComponentController> second_client(
+      std::move(second_driver), loop().dispatcher(), TeardownWatcher(1, indices));
   root_node.Unbind();
   loop().RunUntilIdle();
   EXPECT_THAT(indices, ElementsAre(1, 0));
@@ -1134,10 +1127,10 @@ TEST_F(DriverRunnerTest, StartSecondDriver_StopRootDriver) {
 
   // Stopping the root driver stops all drivers.
   std::vector<size_t> indices;
-  fidl::Client<frunner::ComponentController> root_client(
-      std::move(*root_driver), loop().dispatcher(), std::make_shared<UnbindWatcher>(0, indices));
-  fidl::Client<frunner::ComponentController> second_client(
-      std::move(second_driver), loop().dispatcher(), std::make_shared<UnbindWatcher>(1, indices));
+  fidl::WireSharedClient<frunner::ComponentController> root_client(
+      std::move(*root_driver), loop().dispatcher(), TeardownWatcher(0, indices));
+  fidl::WireSharedClient<frunner::ComponentController> second_client(
+      std::move(second_driver), loop().dispatcher(), TeardownWatcher(1, indices));
   root_client->Stop();
   loop().RunUntilIdle();
   EXPECT_THAT(indices, ElementsAre(1, 0));
@@ -1194,10 +1187,10 @@ TEST_F(DriverRunnerTest, StartSecondDriver_BlockOnSecondDriver) {
   // Stopping the root driver stops all drivers, but is blocked waiting on the
   // second driver to stop.
   std::vector<size_t> indices;
-  fidl::Client<frunner::ComponentController> root_client(
-      std::move(*root_driver), loop().dispatcher(), std::make_shared<UnbindWatcher>(0, indices));
-  fidl::Client<frunner::ComponentController> second_client(
-      std::move(second_driver), loop().dispatcher(), std::make_shared<UnbindWatcher>(1, indices));
+  fidl::WireSharedClient<frunner::ComponentController> root_client(
+      std::move(*root_driver), loop().dispatcher(), TeardownWatcher(0, indices));
+  fidl::WireSharedClient<frunner::ComponentController> second_client(
+      std::move(second_driver), loop().dispatcher(), TeardownWatcher(1, indices));
   root_client->Stop();
   loop().RunUntilIdle();
   EXPECT_THAT(indices, ElementsAre(1));

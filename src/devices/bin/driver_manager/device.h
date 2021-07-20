@@ -277,8 +277,8 @@ class Device
       fbl::Array<zx_device_prop_t> props, fbl::Array<StrProperty> str_props,
       fidl::ServerEnd<fuchsia_device_manager::Coordinator> coordinator_request,
       fidl::ClientEnd<fuchsia_device_manager::DeviceController> device_controller,
-      bool want_init_task, bool skip_autobind, zx::vmo inspect,
-      zx::channel client_remote, fbl::RefPtr<Device>* device);
+      bool want_init_task, bool skip_autobind, zx::vmo inspect, zx::channel client_remote,
+      fbl::RefPtr<Device>* device);
   static zx_status_t CreateComposite(
       Coordinator* coordinator, fbl::RefPtr<DriverHost> driver_host,
       const CompositeDevice& composite,
@@ -561,7 +561,8 @@ class Device
     return test_wait_.Begin(dispatcher);
   }
 
-  const fidl::Client<fuchsia_device_manager::DeviceController>& device_controller() const {
+  const fidl::WireSharedClient<fuchsia_device_manager::DeviceController>& device_controller()
+      const {
     return device_controller_;
   }
 
@@ -594,7 +595,7 @@ class Device
   // reading.
   async::WaitMethod<Device, &Device::HandleTestOutput> test_wait_{this};
 
-  fidl::Client<fuchsia_device_manager::DeviceController> device_controller_;
+  fidl::WireSharedClient<fuchsia_device_manager::DeviceController> device_controller_;
   std::optional<fidl::ServerBindingRef<fuchsia_device_manager::Coordinator>> coordinator_binding_;
 
   int RunCompatibilityTests();

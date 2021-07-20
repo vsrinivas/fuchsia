@@ -61,7 +61,7 @@ class DriverHostComponent : public fbl::DoublyLinkedListable<std::unique_ptr<Dri
       fuchsia_component_runner::wire::ComponentStartInfo start_info);
 
  private:
-  fidl::Client<fuchsia_driver_framework::DriverHost> driver_host_;
+  fidl::WireSharedClient<fuchsia_driver_framework::DriverHost> driver_host_;
 };
 
 class DriverBinder {
@@ -164,8 +164,8 @@ class DriverRunner : public fidl::WireServer<fuchsia_component_runner::Component
                                                                      std::string collection);
 
   uint64_t next_driver_host_id_ = 0;
-  fidl::Client<fuchsia_sys2::Realm> realm_;
-  fidl::Client<fuchsia_driver_framework::DriverIndex> driver_index_;
+  fidl::WireSharedClient<fuchsia_sys2::Realm> realm_;
+  fidl::WireSharedClient<fuchsia_driver_framework::DriverIndex> driver_index_;
   async_dispatcher_t* const dispatcher_;
   std::shared_ptr<Node> root_node_;
 

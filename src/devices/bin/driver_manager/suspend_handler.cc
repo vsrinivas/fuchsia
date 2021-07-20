@@ -15,13 +15,14 @@
 
 namespace {
 
-fidl::Client<fuchsia_fshost::Admin> ConnectToFshostAdminServer(async_dispatcher_t* dispatcher) {
+fidl::WireSharedClient<fuchsia_fshost::Admin> ConnectToFshostAdminServer(
+    async_dispatcher_t* dispatcher) {
   auto result = service::Connect<fuchsia_fshost::Admin>();
   if (result.is_error()) {
     LOGF(ERROR, "Failed to connect to fuchsia.fshost.Admin: %s", result.status_string());
-    return fidl::Client<fuchsia_fshost::Admin>();
+    return fidl::WireSharedClient<fuchsia_fshost::Admin>();
   }
-  return fidl::Client(std::move(*result), dispatcher);
+  return fidl::WireSharedClient(std::move(*result), dispatcher);
 }
 
 void SuspendFallback(const zx::resource& root_resource, uint32_t flags) {

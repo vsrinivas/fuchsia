@@ -503,9 +503,8 @@ TEST_F(MultipleDeviceTestCase, DevfsWatcherCleanup) {
 
 TEST_F(MultipleDeviceTestCase, DevfsUnsupportedAPICheck) {
   zx::channel chan = devfs_root_clone();
-  fidl::Client<fuchsia_io::DirectoryAdmin> client(
-      fidl::ClientEnd<fuchsia_io::DirectoryAdmin>(std::move(chan)),
-      coordinator_loop()->dispatcher());
+  fidl::WireClient client(fidl::ClientEnd<fuchsia_io::DirectoryAdmin>(std::move(chan)),
+                          coordinator_loop()->dispatcher());
 
   {
     auto result = client->GetDevicePath([](auto* ret) { ASSERT_EQ(ret->s, ZX_ERR_NOT_SUPPORTED); });

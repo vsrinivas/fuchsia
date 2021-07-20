@@ -20,22 +20,22 @@ namespace fdm = fuchsia_device_manager;
 
 class MockFshostAdminServer final : public fidl::WireServer<fuchsia_fshost::Admin> {
  public:
-  MockFshostAdminServer() : has_been_shutdown_(false) {}
+  MockFshostAdminServer() = default;
 
-  fidl::Client<fuchsia_fshost::Admin> CreateClient(async_dispatcher* dispatcher) {
+  fidl::WireSharedClient<fuchsia_fshost::Admin> CreateClient(async_dispatcher* dispatcher) {
     auto endpoints = fidl::CreateEndpoints<fuchsia_fshost::Admin>();
     if (endpoints.is_error()) {
-      return fidl::Client<fuchsia_fshost::Admin>();
+      return fidl::WireSharedClient<fuchsia_fshost::Admin>();
     }
 
     auto status = fidl::BindSingleInFlightOnly(dispatcher, std::move(endpoints->server), this);
     if (status != ZX_OK) {
       LOGF(ERROR, "Failed to create client for mock fshost admin, failed to bind: %s",
            zx_status_get_string(status));
-      return fidl::Client<fuchsia_fshost::Admin>();
+      return fidl::WireSharedClient<fuchsia_fshost::Admin>();
     }
 
-    return fidl::Client(std::move(endpoints->client), dispatcher);
+    return fidl::WireSharedClient(std::move(endpoints->client), dispatcher);
   }
 
   void Shutdown(ShutdownRequestView request, ShutdownCompleter::Sync& completer) override {
@@ -43,7 +43,7 @@ class MockFshostAdminServer final : public fidl::WireServer<fuchsia_fshost::Admi
     completer.Reply();
   }
 
-  bool has_been_shutdown_;
+  bool has_been_shutdown_ = false;
 };
 
 class CoordinatorForTest {

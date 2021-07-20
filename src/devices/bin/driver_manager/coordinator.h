@@ -141,7 +141,7 @@ struct CoordinatorConfig {
   // Client for the Arguments service.
   fidl::WireSyncClient<fuchsia_boot::Arguments>* boot_args;
   // Client for the DriverIndex.
-  fidl::Client<fdf::DriverIndex> driver_index;
+  fidl::WireSharedClient<fdf::DriverIndex> driver_index;
   // Whether we require /system.
   bool require_system = false;
   // Whether we require ASan drivers.
@@ -359,7 +359,7 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
   bool launched_first_driver_host_ = false;
   bool power_manager_registered_ = false;
   LoaderServiceConnector loader_service_connector_;
-  fidl::Client<fuchsia_power_manager::DriverManagerRegistration> power_manager_client_;
+  fidl::WireSharedClient<fuchsia_power_manager::DriverManagerRegistration> power_manager_client_;
   DriverLoader driver_loader_;
 
   // All Drivers
