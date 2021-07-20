@@ -6,6 +6,7 @@
 #define SRC_DEVICES_BLOCK_DRIVERS_SDMMC_SDIO_CONTROLLER_DEVICE_H_
 
 #include <fuchsia/hardware/sdio/c/banjo.h>
+#include <lib/inspect/cpp/inspect.h>
 #include <lib/sync/completion.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/status.h>
@@ -150,6 +151,11 @@ class SdioControllerDevice : public SdioControllerDeviceType,
   std::array<SdioFunction, SDIO_MAX_FUNCS> funcs_ TA_GUARDED(lock_);
   sdio_device_hw_info_t hw_info_ TA_GUARDED(lock_);
   bool tuned_ = false;
+
+  inspect::Inspector inspector_;
+  inspect::Node root_;
+  inspect::UintProperty tx_errors_;
+  inspect::UintProperty rx_errors_;
 };
 
 }  // namespace sdmmc

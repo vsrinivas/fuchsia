@@ -183,7 +183,9 @@ zx_status_t SdioControllerDevice::AddDevice() {
     return st;
   }
 
-  st = DdkAdd("sdmmc-sdio", DEVICE_ADD_NON_BINDABLE);
+  st = DdkAdd(ddk::DeviceAddArgs("sdmmc-sdio")
+                  .set_inspect_vmo(inspector_.DuplicateVmo())
+                  .set_flags(DEVICE_ADD_NON_BINDABLE));
   if (st != ZX_OK) {
     zxlogf(ERROR, "sdmmc: Failed to add sdio device, retcode = %d", st);
     return st;
@@ -204,6 +206,10 @@ zx_status_t SdioControllerDevice::AddDevice() {
     }
     devices[i].release();
   }
+
+  root_ = inspector_.GetRoot().CreateChild("sdio_core");
+  tx_errors_ = root_.CreateUint("tx_errors", 0);
+  rx_errors_ = root_.CreateUint("rx_errors", 0);
 
   remove_device_on_error.cancel();
   return ZX_OK;
@@ -511,7 +517,7 @@ zx_status_t SdioControllerDevice::SdioDoRwTxn(uint8_t fn_idx, sdio_rw_txn_t* txn
     st = sdmmc_.SdioIoRwExtended(hw_info_.caps, txn->write, fn_idx, addr, txn->incr, num_blocks,
                                  func_blk_size, use_dma, buf, dma_vmo, buf_offset + data_processed);
     if (st != ZX_OK) {
-      return st;
+      break;
     }
     rem_blocks -= num_blocks;
     data_processed += num_blocks * func_blk_size;
@@ -520,11 +526,19 @@ zx_status_t SdioControllerDevice::SdioDoRwTxn(uint8_t fn_idx, sdio_rw_txn_t* txn
     }
   }
 
-  if (data_processed < data_size) {
+  if (st == ZX_OK && data_processed < data_size) {
     // process remaining data.
     st = sdmmc_.SdioIoRwExtended(hw_info_.caps, txn->write, fn_idx, addr, txn->incr, 1,
                                  data_size - data_processed, use_dma, buf, dma_vmo,
                                  buf_offset + data_processed);
+  }
+
+  if (st != ZX_OK) {
+    if (txn->write) {
+      tx_errors_.Add(1);
+    } else {
+      rx_errors_.Add(1);
+    }
   }
 
   return st;
