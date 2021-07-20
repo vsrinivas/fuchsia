@@ -193,12 +193,12 @@ if (current_toolchain == dart_toolchain) {
 
     rebased_sources = []
     foreach(source, invoker.sources) {
-      rebased_source_dir = rebase_path(source_dir)
+      rebased_source_dir = rebase_path(source_dir, root_build_dir)
       rebased_sources += [ "$rebased_source_dir/$source" ]
     }
     if (defined(invoker.extra_sources)) {
       foreach(source, invoker.extra_sources) {
-        rebased_sources += [ rebase_path(source) ]
+        rebased_sources += [ rebase_path(source, root_build_dir) ]
       }
     }
     source_file = "$target_gen_dir/$target_name.sources"
@@ -286,7 +286,7 @@ if (current_toolchain == dart_toolchain) {
         script = "//build/dart/verify_sources.py"
         output_file = "$target_gen_dir/$target_name.missing"
 
-        sources = rebased_sources
+        sources = rebase_path(rebased_sources, ".", root_build_dir)
         outputs = [ output_file ]
 
         args = [
@@ -342,7 +342,7 @@ if (current_toolchain == dart_toolchain) {
                "--source_lists",
                "@" + rebase_path(_all_deps_sources_list_file, root_build_dir),
                "--sources",
-             ] + rebase_path(rebased_sources, root_build_dir)
+             ] + rebased_sources
 
       inputs = [ _all_deps_sources_list_file ]
       deps = [ ":${_all_deps_sources_list_target}" ]
@@ -391,17 +391,17 @@ if (current_toolchain == dart_toolchain) {
 
         args = [
           "--out",
-          rebase_path(invocation_file),
+          rebase_path(invocation_file, root_build_dir),
           "--source-file",
-          rebase_path(source_file),
+          rebase_path(source_file, root_build_dir),
           "--dot-packages",
           rebase_path(_packages_path, root_build_dir),
           "--dartanalyzer",
-          rebase_path(dart_analyzer_binary),
+          rebase_path(dart_analyzer_binary, root_build_dir),
           "--dart-sdk",
-          rebase_path(dart_sdk),
+          rebase_path(dart_sdk, root_build_dir),
           "--options",
-          rebase_path(options_file),
+          rebase_path(options_file, root_build_dir),
           "--package-name",
           package_name,
         ]
@@ -436,7 +436,7 @@ if (current_toolchain == dart_toolchain) {
                    dart_analyzer_binary,
                    options_file,
                    source_file,
-                 ] + rebased_sources
+                 ] + rebase_path(rebased_sources, ".", root_build_dir)
 
         output_file = "$target_gen_dir/$target_name.analyzed"
         outputs = [ output_file ]
@@ -528,7 +528,7 @@ if (current_toolchain == dart_toolchain) {
       sources = []
       if (defined(invoker.sources)) {
         foreach(src, invoker.sources) {
-          sources += [ rebase_path("$source_dir/$src") ]
+          sources += [ "$source_dir/$src" ]
         }
       }
       inputs = [
@@ -600,7 +600,6 @@ if (current_toolchain == dart_toolchain) {
       detect_target_name = "${target_name}_detect_action"
       verify_target_name = "${target_name}_verify"
       detect_target_file = "$target_gen_dir/$package_name.api"
-      api_file = rebase_path(".") + "/$package_name.api"
 
       action(detect_target_name) {
         runner_label = "//build/dart/sdk/detect_api_changes($dart_toolchain)"
@@ -619,13 +618,13 @@ if (current_toolchain == dart_toolchain) {
           "--api-name",
           get_label_info(":$target_name", "label_no_toolchain"),
           "--source-file",
-          rebase_path(source_file),
+          rebase_path(source_file, root_build_dir),
           "--dot-packages",
-          rebase_path(_packages_path),
+          rebase_path(_packages_path, root_build_dir),
           "--output-file",
-          rebase_path("$detect_target_file"),
+          rebase_path("$detect_target_file", root_build_dir),
           "--golden-api",
-          api_file,
+          rebase_path("$package_name.api", root_build_dir),
 
           # Uncomment to force updating the .api files
           #"--overwrite",
@@ -638,8 +637,8 @@ if (current_toolchain == dart_toolchain) {
       # Verify that the library API file complies with the specified schema.
       validate_json(verify_target_name) {
         forward_variables_from(invoker, [ "testonly" ])
-        data = rebase_path("$detect_target_file")
-        schema = rebase_path("//build/dart/sdk/detect_api_changes/schema.json")
+        data = detect_target_file
+        schema = "//build/dart/sdk/detect_api_changes/schema.json"
         deps = dart_sdk_deps + [ ":$detect_target_name" ]
         public_deps = [ ":$detect_target_name" ]
       }
@@ -672,11 +671,11 @@ if (current_toolchain == dart_toolchain) {
 
         gen_dir = get_label_info(sdk_dep, "target_gen_dir")
         name = get_label_info(sdk_dep, "name")
-        sdk_metas += [ rebase_path("$gen_dir/$name.meta.json") ]
+        sdk_metas += [ "$gen_dir/$name.meta.json" ]
       }
       foreach(dep, third_party_deps) {
         path = get_label_info(dep, "dir")
-        third_party_pubspecs += [ rebase_path("$path/pubspec.yaml") ]
+        third_party_pubspecs += [ "$path/pubspec.yaml" ]
       }
 
       file_base = "dart/${invoker.package_name}"
@@ -684,12 +683,12 @@ if (current_toolchain == dart_toolchain) {
       sdk_sources = []
       sdk_source_mappings = []
       foreach(source, rebased_sources) {
-        relative_source = rebase_path(source, source_dir)
+        relative_source = rebase_path(source, source_dir, root_build_dir)
         dest = "$file_base/lib/$relative_source"
         sdk_sources += [ dest ]
         sdk_source_mappings += [
           {
-            source = source
+            source = "${source_dir}/${relative_source}"
             dest = dest
           },
         ]
@@ -711,15 +710,16 @@ if (current_toolchain == dart_toolchain) {
 
         args = [
           "--out",
-          rebase_path(metadata_file),
+          rebase_path(metadata_file, root_build_dir),
           "--name",
           package_name,
           "--root",
           file_base,
         ]
-        args += [ "--specs" ] + sdk_metas
+        args += [ "--specs" ] + rebase_path(sdk_metas, root_build_dir)
         args += [ "--sources" ] + sdk_sources
-        args += [ "--third-party-specs" ] + third_party_pubspecs
+        args += [ "--third-party-specs" ] +
+                rebase_path(third_party_pubspecs, root_build_dir)
 
         if (defined(invoker.null_safe) && invoker.null_safe) {
           args += [ "--dart-library-null-safe" ]
