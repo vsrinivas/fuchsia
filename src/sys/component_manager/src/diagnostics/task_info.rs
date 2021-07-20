@@ -10,8 +10,15 @@ use {
     },
     fuchsia_inspect as inspect, fuchsia_zircon as zx, fuchsia_zircon_sys as zx_sys,
     futures::{future::BoxFuture, lock::Mutex, FutureExt},
+    lazy_static::lazy_static,
     std::sync::Weak,
 };
+
+lazy_static! {
+    static ref SAMPLES: inspect::StringReference<'static> = "@samples".into();
+    static ref SAMPLE_INDEXES: Vec<inspect::StringReference<'static>> =
+        (0..COMPONENT_CPU_MAX_SAMPLES).map(|x| x.to_string().into()).collect();
+}
 
 #[derive(Debug)]
 pub struct TaskInfo<T: RuntimeStatsSource> {
@@ -106,9 +113,9 @@ impl<T: RuntimeStatsSource + Send + Sync> TaskInfo<T> {
     /// Writes the task measurements under the given inspect node `parent`.
     pub fn record_to_node(&self, parent: &inspect::Node) {
         let node = parent.create_child(self.koid.to_string());
-        let samples = node.create_child("@samples");
+        let samples = node.create_child(&*SAMPLES);
         for (i, measurement) in self.measurements.iter().enumerate() {
-            let child = samples.create_child(i.to_string());
+            let child = samples.create_child(&SAMPLE_INDEXES[i]);
             measurement.record_to_node(&child);
             samples.record(child);
         }
@@ -133,6 +140,8 @@ impl<T: RuntimeStatsSource + Send + Sync> TaskInfo<T> {
 
 #[cfg(test)]
 mod tests {
+    use inspect::testing::DiagnosticsHierarchyGetter;
+
     use {
         super::*,
         crate::diagnostics::testing::FakeTask,
@@ -218,6 +227,44 @@ mod tests {
                 }
             }
         });
+    }
+
+    #[fuchsia::test]
+    async fn write_more_than_max_samples() {
+        let inspector = inspect::Inspector::new();
+        let mut task = TaskInfo::try_from(FakeTask::new(
+            1,
+            vec![
+                zx::TaskRuntimeInfo {
+                    cpu_time: 2,
+                    queue_time: 4,
+                    ..zx::TaskRuntimeInfo::default()
+                },
+                zx::TaskRuntimeInfo {
+                    cpu_time: 6,
+                    queue_time: 8,
+                    ..zx::TaskRuntimeInfo::default()
+                },
+            ],
+        ))
+        .unwrap();
+
+        for _ in 0..(COMPONENT_CPU_MAX_SAMPLES + 10) {
+            assert!(task.measure_if_no_parent().await.is_some());
+        }
+
+        assert_eq!(task.measurements.len(), COMPONENT_CPU_MAX_SAMPLES);
+        task.record_to_node(inspector.root());
+
+        let hierarchy = inspector.get_diagnostics_hierarchy();
+        for top_level in &hierarchy.children {
+            for i in 0..COMPONENT_CPU_MAX_SAMPLES {
+                let index = i.to_string();
+                let child =
+                    hierarchy.get_child_by_path(&[&top_level.name, "@samples", &index]).unwrap();
+                assert_eq!(child.name, index);
+            }
+        }
     }
 
     #[fuchsia::test]

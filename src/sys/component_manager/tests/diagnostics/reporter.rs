@@ -50,7 +50,7 @@ async fn main() {
                     current_size: 4096u64,
                     maximum_size: 2097152u64,
                     total_dynamic_children: 0u64,
-                    allocated_blocks: 49u64,
+                    allocated_blocks: 39u64,
                     deallocated_blocks: 0u64,
                 },
                 components: {

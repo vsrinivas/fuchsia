@@ -5,11 +5,18 @@
 use {
     crate::diagnostics::constants::COMPONENT_CPU_MAX_SAMPLES,
     fuchsia_inspect as inspect, fuchsia_zircon as zx,
+    lazy_static::lazy_static,
     std::{
         collections::VecDeque,
         ops::{AddAssign, Deref, DerefMut, SubAssign},
     },
 };
+
+lazy_static! {
+    static ref TIMESTAMP: inspect::StringReference<'static> = "timestamp".into();
+    static ref CPU_TIME: inspect::StringReference<'static> = "cpu_time".into();
+    static ref QUEUE_TIME: inspect::StringReference<'static> = "queue_time".into();
+}
 
 #[derive(Debug, Default)]
 pub struct Measurement {
@@ -30,9 +37,9 @@ impl Measurement {
 
     /// Records the measurement data to the given inspect `node`.
     pub fn record_to_node(&self, node: &inspect::Node) {
-        node.record_int("timestamp", self.timestamp.into_nanos());
-        node.record_int("cpu_time", self.cpu_time.into_nanos());
-        node.record_int("queue_time", self.queue_time.into_nanos());
+        node.record_int(&*TIMESTAMP, self.timestamp.into_nanos());
+        node.record_int(&*CPU_TIME, self.cpu_time.into_nanos());
+        node.record_int(&*QUEUE_TIME, self.queue_time.into_nanos());
     }
 
     /// The measured cpu time.
