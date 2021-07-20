@@ -10,6 +10,7 @@ group("testing") {
     "fuchsia-hyper-test-support",
     "loop_fixture",
     "predicates",
+    "temp_test_env",
   ]
 }
 
@@ -21,5 +22,6 @@ group("tests") {
     "fuchsia-hyper-test-support:tests",
     "loop_fixture:tests",
     "predicates:tests",
+    "temp_test_env:tests",
   ]
 }
