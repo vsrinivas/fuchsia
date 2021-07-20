@@ -207,13 +207,11 @@ class X86PageTableBase::ConsistencyManager {
   PendingTlbInvalidation tlb_;
 
   // vm_page_t's to relese to the PMM after the TLB invalidation occurs
-  list_node to_free_;
+  list_node to_free_ = LIST_INITIAL_VALUE(to_free_);
 };
 
 X86PageTableBase::ConsistencyManager::ConsistencyManager(X86PageTableBase* pt)
-    : pt_(pt), clf_(pt->needs_cache_flushes()) {
-  to_free_ = LIST_INITIAL_VALUE(to_free_);
-}
+    : pt_(pt), clf_(pt->needs_cache_flushes()) {}
 
 X86PageTableBase::ConsistencyManager::~ConsistencyManager() {
   DEBUG_ASSERT(pt_ == nullptr);
@@ -1081,7 +1079,7 @@ zx_status_t X86PageTableBase::UnmapPages(vaddr_t vaddr, const size_t count, size
   MappingCursor start(/*vaddr=*/vaddr, /*size=*/count * PAGE_SIZE);
   MappingCursor result;
 
-  ConsistencyManager cm(this);
+  __UNINITIALIZED ConsistencyManager cm(this);
   {
     Guard<Mutex> a{&lock_};
     DEBUG_ASSERT(virt_);
@@ -1116,7 +1114,7 @@ zx_status_t X86PageTableBase::MapPages(vaddr_t vaddr, paddr_t* phys, size_t coun
     return ZX_ERR_INVALID_ARGS;
 
   PageTableLevel top = top_level();
-  ConsistencyManager cm(this);
+  __UNINITIALIZED ConsistencyManager cm(this);
   {
     Guard<Mutex> a{&lock_};
     DEBUG_ASSERT(virt_);
@@ -1159,7 +1157,7 @@ zx_status_t X86PageTableBase::MapPagesContiguous(vaddr_t vaddr, paddr_t paddr, c
   MappingCursor start(/*paddrs=*/&paddr, /*paddr_count=*/1, /*page_size=*/count * PAGE_SIZE,
                       /*vaddr=*/vaddr, /*size=*/count * PAGE_SIZE);
   MappingCursor result;
-  ConsistencyManager cm(this);
+  __UNINITIALIZED ConsistencyManager cm(this);
   {
     Guard<Mutex> a{&lock_};
     DEBUG_ASSERT(virt_);
@@ -1195,7 +1193,7 @@ zx_status_t X86PageTableBase::ProtectPages(vaddr_t vaddr, size_t count, uint mmu
 
   MappingCursor start(/*vaddr=*/vaddr, /*size=*/count * PAGE_SIZE);
   MappingCursor result;
-  ConsistencyManager cm(this);
+  __UNINITIALIZED ConsistencyManager cm(this);
   {
     Guard<Mutex> a{&lock_};
     zx_status_t status = UpdateMapping(virt_, mmu_flags, top_level(), start, &result, &cm);
@@ -1272,7 +1270,7 @@ zx_status_t X86PageTableBase::HarvestAccessed(vaddr_t vaddr, size_t count,
 
   MappingCursor start(/*vaddr=*/vaddr, /*size=*/count * PAGE_SIZE);
   MappingCursor result;
-  ConsistencyManager cm(this);
+  __UNINITIALIZED ConsistencyManager cm(this);
   {
     Guard<Mutex> a{&lock_};
     HarvestMapping(virt_, action, top_level(), start, &result, &cm);

@@ -44,7 +44,8 @@ struct PendingTlbInvalidation {
   bool contains_global = false;
   // Number of valid elements in |item|
   uint count = 0;
-  // List of addresses queued for invalidation
+  // List of addresses queued for invalidation.
+  // Explicitly uninitialized since the size is fairly large.
   Item item[32];
 
   // Add address |v|, translated at depth |level|, to the set of addresses to be invalidated.
