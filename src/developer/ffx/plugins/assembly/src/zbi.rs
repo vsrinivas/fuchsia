@@ -19,6 +19,7 @@ pub fn construct_zbi(
     product: &ProductConfig,
     board: &BoardConfig,
     base_package: Option<&BasePackage>,
+    fvm: Option<impl AsRef<Path>>,
 ) -> Result<PathBuf> {
     let mut zbi_builder = ZbiBuilder::default();
 
@@ -74,6 +75,11 @@ pub fn construct_zbi(
     // Add the BootFS files.
     for bootfs_entry in &product.bootfs_files {
         zbi_builder.add_bootfs_file(&bootfs_entry.source, &bootfs_entry.destination);
+    }
+
+    // Add the FVM as a ramdisk in the ZBI if necessary.
+    if let Some(fvm) = &fvm {
+        zbi_builder.add_ramdisk(&fvm);
     }
 
     // Set the zbi compression to use.
@@ -199,9 +205,15 @@ mod tests {
             path: base_path,
         };
 
-        let zbi_path =
-            construct_zbi(dir.path(), dir.path(), &product_config, &board_config, Some(&base))
-                .unwrap();
+        let zbi_path = construct_zbi(
+            dir.path(),
+            dir.path(),
+            &product_config,
+            &board_config,
+            Some(&base),
+            None::<PathBuf>,
+        )
+        .unwrap();
         assert_eq!(zbi_path, dir.path().join("fuchsia.zbi"));
     }
 

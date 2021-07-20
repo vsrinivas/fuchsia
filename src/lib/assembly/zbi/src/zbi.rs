@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use anyhow::{anyhow, Context, Error, Result};
+use assembly_util::PathToStringExt;
 use log::debug;
 use std::collections::BTreeMap;
 use std::fs::File;
@@ -19,6 +20,9 @@ pub struct ZbiBuilder {
     bootfs_files: BTreeMap<String, PathBuf>,
     bootargs: Vec<String>,
     cmdline: Vec<String>,
+
+    // A ramdisk to add to the ZBI.
+    ramdisk: Option<PathBuf>,
 
     /// optional compression to use.
     compression: Option<String>,
@@ -50,6 +54,11 @@ impl ZbiBuilder {
     /// Add a kernel command line argument.
     pub fn add_cmdline_arg(&mut self, arg: &str) {
         self.cmdline.push(arg.to_string());
+    }
+
+    /// Add a ramdisk to the ZBI.
+    pub fn add_ramdisk(&mut self, source: impl AsRef<Path>) {
+        self.ramdisk = Some(source.as_ref().to_path_buf());
     }
 
     /// Set the compression to use with the ZBI.
@@ -169,6 +178,15 @@ impl ZbiBuilder {
                 .ok_or(anyhow!("Boot args path is not valid UTF-8"))?;
             args.push("--type=image_args".to_string());
             args.push(format!("--entry={}", boot_args_path));
+        }
+
+        // Add the ramdisk if needed.
+        if let Some(ramdisk) = &self.ramdisk {
+            args.push("--type=ramdisk".to_string());
+            if let Some(compression) = &self.compression {
+                args.push(format!("--compress={}", compression));
+            }
+            args.push(ramdisk.path_to_string()?);
         }
 
         // Set the compression level for bootfs files.

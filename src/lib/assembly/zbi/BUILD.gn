@@ -2,20 +2,24 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/host.gni")
 import("//build/rust/rustc_library.gni")
 
-rustc_library("zbi") {
-  version = "0.1.0"
-  with_unit_tests = true
-  deps = [
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:log",
-    "//third_party/rust_crates:tempfile",
-  ]
-  sources = [
-    "src/lib.rs",
-    "src/zbi.rs",
-  ]
+if (is_host) {
+  rustc_library("zbi") {
+    version = "0.1.0"
+    with_unit_tests = true
+    deps = [
+      "//src/lib/assembly/util",
+      "//third_party/rust_crates:anyhow",
+      "//third_party/rust_crates:log",
+      "//third_party/rust_crates:tempfile",
+    ]
+    sources = [
+      "src/lib.rs",
+      "src/zbi.rs",
+    ]
+  }
 }
 
 group("tests") {

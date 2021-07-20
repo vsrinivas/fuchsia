@@ -34,8 +34,34 @@ pub fn assemble(args: ImageArgs) -> Result<()> {
         None
     };
 
+    let blobfs_path: Option<PathBuf> = if let Some(base_package) = &base_package {
+        info!("Creating the blobfs");
+        Some(construct_blobfs(&outdir, &gendir, &product, &board.blobfs, &base_package)?)
+    } else {
+        info!("Skipping blobfs creation");
+        None
+    };
+
+    let fvms: Option<Fvms> = if let Some(fvm_config) = &board.fvm {
+        info!("Creating the fvm");
+        Some(construct_fvm(&outdir, &fvm_config, blobfs_path.as_ref())?)
+    } else {
+        info!("Skipping fvm creation");
+        None
+    };
+
+    // If the FVM should be embedded in the ZBI, select the default one.
+    let fvm_for_zbi: Option<&PathBuf> = match (&board.zbi.embed_fvm_in_zbi, &fvms) {
+        (true, None) => {
+            anyhow::bail!("Config indicates FVM should embed in ZBI, but no FVM was generated");
+        }
+        (true, Some(fvms)) => Some(&fvms.default),
+        (false, _) => None,
+    };
+
     info!("Creating the ZBI");
-    let zbi_path = construct_zbi(&outdir, &gendir, &product, &board, base_package.as_ref())?;
+    let zbi_path =
+        construct_zbi(&outdir, &gendir, &product, &board, base_package.as_ref(), fvm_for_zbi)?;
 
     let vbmeta_path: Option<PathBuf> = if let Some(vbmeta_config) = &board.vbmeta {
         info!("Creating the VBMeta image");
@@ -65,22 +91,6 @@ pub fn assemble(args: ImageArgs) -> Result<()> {
         vbmeta_path,
         base_package.as_ref(),
     )?;
-
-    let blobfs_path: Option<PathBuf> = if let Some(base_package) = &base_package {
-        info!("Creating the blobfs");
-        Some(construct_blobfs(&outdir, &gendir, &product, &board.blobfs, &base_package)?)
-    } else {
-        info!("Skipping blobfs creation");
-        None
-    };
-
-    let _fvms: Option<Fvms> = if let Some(fvm_config) = &board.fvm {
-        info!("Creating the fvm");
-        Some(construct_fvm(&outdir, &fvm_config, blobfs_path.as_ref())?)
-    } else {
-        info!("Skipping fvm creation");
-        None
-    };
 
     Ok(())
 }
