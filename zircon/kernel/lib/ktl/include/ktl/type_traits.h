@@ -45,6 +45,9 @@ using std::is_copy_constructible_v;
 using std::is_copy_assignable;
 using std::is_copy_assignable_v;
 
+using std::is_floating_point;
+using std::is_floating_point_v;
+
 using std::is_integral;
 using std::is_integral_v;
 
