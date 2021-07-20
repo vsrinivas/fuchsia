@@ -17,6 +17,11 @@
             to: "#build-info",
         },
         {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: "#build-info",
+        },
+        {
             protocol: "fuchsia.buildinfo.Provider",
             from: "#build-info",
             to: [
