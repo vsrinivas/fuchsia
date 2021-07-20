@@ -20,7 +20,9 @@
 #include <fbl/hard_int.h>
 #include <usb/usb.h>
 
-#include "lib/fit/result.h"
+#include <lib/fit/result.h>
+#include <lib/fit/single_threaded_executor.h>
+#include <lib/zx/time.h>
 #include "src/devices/usb/drivers/usb-hub-rewrite/usb_hub_rewrite_bind.h"
 
 namespace {
@@ -95,7 +97,7 @@ zx_status_t UsbHubDevice::Init() {
 
 zx_status_t UsbHubDevice::UsbHubInterfaceResetPort(uint32_t port) {
   return RunSynchronously(
-      SetFeature(USB_RECIP_PORT, USB_FEATURE_PORT_RESET, static_cast<uint8_t>(port)));
+      SetFeatureAsync(USB_RECIP_PORT, USB_FEATURE_PORT_RESET, static_cast<uint8_t>(port)));
 }
 
 zx_status_t UsbHubDevice::RunSynchronously(fpromise::promise<void, zx_status_t> promise) {
@@ -152,9 +154,9 @@ void UsbHubDevice::DdkInit(ddk::InitTxn txn) {
 
   std::optional<usb::InterfaceList> interfaces;
   status = usb::InterfaceList::Create(usb_, false, &interfaces);
-  if(status != ZX_OK){
+  if (status != ZX_OK) {
     txn_->Reply(status);
-    return; 
+    return;
   }
   status = ZX_ERR_IO;
   // According to USB 2.0 Specification section 11.12.1 a hub should have exactly one
@@ -165,7 +167,8 @@ void UsbHubDevice::DdkInit(ddk::InitTxn txn) {
       auto ep_iter = eplist.begin();
       auto ep = ep_iter.endpoint();
       interrupt_endpoint_ = ep->descriptor;
-       status = usb_.EnableEndpoint(&interrupt_endpoint_, (ep->has_companion) ? &ep->ss_companion : nullptr, true);
+      status = usb_.EnableEndpoint(&interrupt_endpoint_,
+                                   (ep->has_companion) ? &ep->ss_companion : nullptr, true);
       break;
     }
   }
@@ -217,10 +220,20 @@ void UsbHubDevice::DdkInit(ddk::InitTxn txn) {
   }
 
   // Once the hub is initialized, power on the ports and wait as per spec
-  executor_->schedule_task(PowerOnPorts().and_then([this]() {
-    // then wait for bPwrOn2PwrGood (2 millisecond intervals)
-    return Sleep(zx::deadline_after(zx::msec(2 * hub_descriptor_.b_power_on2_pwr_good)));
-  }));
+
+  status = PowerOnPorts();
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Could not power on all ports");
+    txn_->Reply(status);
+    return;
+  }
+
+  status = zx::nanosleep(zx::deadline_after(zx::msec(2 * hub_descriptor_.b_power_on2_pwr_good)));
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to sleep");
+    txn_->Reply(status);
+    return;
+  }
 
   // Next -- we retrieve the port status
   auto port_status_result = GetPortStatus();
@@ -302,10 +315,11 @@ void UsbHubDevice::StartInterruptLoop() {
 }
 
 fpromise::promise<void, zx_status_t> UsbHubDevice::ResetPort(PortNumber port) {
-  return SetFeature(USB_RECIP_PORT, USB_FEATURE_PORT_RESET, port.value()).and_then([this, port]() {
-    fbl::AutoLock l(&async_execution_context_);
-    port_status_[PortNumberToIndex(port).value()].reset_pending = true;
-  });
+  return SetFeatureAsync(USB_RECIP_PORT, USB_FEATURE_PORT_RESET, port.value())
+      .and_then([this, port]() {
+        fbl::AutoLock l(&async_execution_context_);
+        port_status_[PortNumberToIndex(port).value()].reset_pending = true;
+      });
 }
 
 PortNumber UsbHubDevice::GetPortNumber(const PortStatus& status) {
@@ -369,16 +383,23 @@ void UsbHubDevice::HandleResetComplete(PortNumber port) {
   });
 }
 
-fpromise::promise<void, zx_status_t> UsbHubDevice::PowerOnPorts() {
-  std::vector<fpromise::promise<void, zx_status_t>> promises;
-  promises.reserve(hub_descriptor_.b_nbr_ports);
+zx_status_t UsbHubDevice::PowerOnPorts() {
+  std::vector<zx_status_t> port_statuses;
+  port_statuses.reserve(hub_descriptor_.b_nbr_ports);
   for (uint8_t i = 0; i < hub_descriptor_.b_nbr_ports; i++) {
-    promises.push_back(SetFeature(USB_RECIP_PORT, USB_FEATURE_PORT_POWER, i + 1));
+    port_statuses.push_back(SetFeature(USB_RECIP_PORT, USB_FEATURE_PORT_POWER, i + 1));
   }
-  return Fold(fpromise::join_promise_vector(std::move(promises)).box());
+
+  for (auto& status : port_statuses) {
+    if (status != ZX_OK) {
+      return status;
+    }
+  }
+  return ZX_OK;
 }
 
-fpromise::promise<usb_port_status_t, zx_status_t> UsbHubDevice::GetPortStatusAsync(PortNumber port) {
+fpromise::promise<usb_port_status_t, zx_status_t> UsbHubDevice::GetPortStatusAsync(
+    PortNumber port) {
   return ControlInAsync(USB_RECIP_PORT | USB_DIR_IN, USB_REQ_GET_STATUS, 0, port.value(),
                         sizeof(usb_port_status_t))
       .and_then([](std::vector<uint8_t>& data) -> fpromise::result<usb_port_status_t, zx_status_t> {
@@ -437,9 +458,9 @@ fpromise::promise<usb_port_status_t, zx_status_t> UsbHubDevice::GetPortStatusAsy
 }
 
 zx::status<usb_port_status_t> UsbHubDevice::GetPortStatus(PortNumber port) {
-  zx::status<std::vector<uint8_t>> result = ControlIn(USB_RECIP_PORT | USB_DIR_IN, USB_REQ_GET_STATUS, 0, port.value(),
-                          sizeof(usb_port_status_t));
-  if(result.is_error()){
+  zx::status<std::vector<uint8_t>> result = ControlIn(
+      USB_RECIP_PORT | USB_DIR_IN, USB_REQ_GET_STATUS, 0, port.value(), sizeof(usb_port_status_t));
+  if (result.is_error()) {
     return zx::error(result.error_value());
   }
   auto data = result.value();
@@ -492,33 +513,21 @@ zx::status<usb_port_status_t> UsbHubDevice::GetPortStatus(PortNumber port) {
         ClearFeature(USB_RECIP_PORT, USB_FEATURE_C_PORT_CONFIG_ERROR, port.value()));
   }
   zx_status_t operations_status = ZX_OK;
-  executor_->schedule_task(
-      fpromise::join_promise_vector(std::move(pending_operations))
-          .then([&](clear_feature_result& result) {
-            if (result.is_error()) {
-              operations_status = ZX_ERR_BAD_STATE;
-            }
-            for (auto& result : result.value()) {
-              if (result.is_error()) {
-                operations_status = ZX_ERR_BAD_STATE;
-              }
-            }
-          }));
+  executor_->schedule_task(fpromise::join_promise_vector(std::move(pending_operations))
+                               .then([&](clear_feature_result& result) {
+                                 if (result.is_error()) {
+                                   operations_status = ZX_ERR_BAD_STATE;
+                                 }
+                                 for (auto& result : result.value()) {
+                                   if (result.is_error()) {
+                                     operations_status = ZX_ERR_BAD_STATE;
+                                   }
+                                 }
+                               }));
   if (operations_status != ZX_OK) {
     return zx::error(operations_status);
   }
   return zx::ok(status);
-}
-
-fpromise::promise<void, zx_status_t> UsbHubDevice::Sleep(zx::time deadline) {
-  fpromise::bridge<void, zx_status_t> bridge;
-  zx_status_t status = async::PostTaskForTime(
-      loop_.dispatcher(),
-      [completer = std::move(bridge.completer)]() mutable { completer.complete_ok(); }, deadline);
-  if (status != ZX_OK) {
-    return fpromise::make_error_promise(status);
-  }
-  return bridge.consumer.promise().box();
 }
 
 void UsbHubDevice::DdkUnbind(ddk::UnbindTxn txn) {
@@ -543,18 +552,24 @@ zx_status_t UsbHubDevice::Bind(std::unique_ptr<fpromise::executor> executor, zx_
   return status;
 }
 
-fpromise::promise<void, zx_status_t> UsbHubDevice::SetFeature(uint8_t request_type,
-                                                              uint16_t feature, uint16_t index) {
+zx_status_t UsbHubDevice::SetFeature(uint8_t request_type, uint16_t feature, uint16_t index) {
   return ControlOut(request_type, USB_REQ_SET_FEATURE, feature, index, nullptr, 0);
+}
+
+fpromise::promise<void, zx_status_t> UsbHubDevice::SetFeatureAsync(uint8_t request_type,
+                                                                   uint16_t feature,
+                                                                   uint16_t index) {
+  return ControlOutAsync(request_type, USB_REQ_SET_FEATURE, feature, index, nullptr, 0);
 }
 
 fpromise::promise<void, zx_status_t> UsbHubDevice::ClearFeature(uint8_t request_type,
                                                                 uint16_t feature, uint16_t index) {
-  return ControlOut(request_type, USB_REQ_CLEAR_FEATURE, feature, index, nullptr, 0);
+  return ControlOutAsync(request_type, USB_REQ_CLEAR_FEATURE, feature, index, nullptr, 0);
 }
 
-zx::status<std::vector<uint8_t>> UsbHubDevice::ControlIn(
-    uint8_t request_type, uint8_t request, uint16_t value, uint16_t index, size_t read_size) {
+zx::status<std::vector<uint8_t>> UsbHubDevice::ControlIn(uint8_t request_type, uint8_t request,
+                                                         uint16_t value, uint16_t index,
+                                                         size_t read_size) {
   if ((request_type & USB_DIR_MASK) != USB_DIR_IN) {
     return zx::error(ZX_ERR_INVALID_ARGS);
   }
@@ -627,10 +642,44 @@ fpromise::promise<std::vector<uint8_t>, zx_status_t> UsbHubDevice::ControlInAsyn
       .box();
 }
 
-fpromise::promise<void, zx_status_t> UsbHubDevice::ControlOut(uint8_t request_type, uint8_t request,
-                                                              uint16_t value, uint16_t index,
-                                                              const void* write_buffer,
-                                                              size_t write_size) {
+zx_status_t UsbHubDevice::ControlOut(uint8_t request_type, uint8_t request, uint16_t value,
+                                     uint16_t index, const void* write_buffer, size_t write_size) {
+  if ((request_type & USB_DIR_MASK) != USB_DIR_OUT) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  ZX_ASSERT(write_size <= kMaxRequestLength);
+  std::optional<Request> usb_request = AllocRequest();
+  usb_request->request()->header.length = write_size;
+  usb_request->request()->setup.bm_request_type = request_type;
+  usb_request->request()->setup.b_request = request;
+  usb_request->request()->setup.w_index = index;
+  usb_request->request()->setup.w_value = value;
+  usb_request->request()->setup.w_length = static_cast<uint16_t>(write_size);
+  size_t result = usb_request->CopyTo(write_buffer, write_size, 0);
+  ZX_ASSERT(result == write_size);
+  std::atomic<zx_status_t> status = ZX_OK;
+  sync_completion_t completion;
+  executor_->schedule_task(
+      RequestQueue(*std::move(usb_request)).then([&](fpromise::result<Request, void>& value) {
+        auto request = std::move(value.take_ok_result().value);
+        auto request_status = request.request()->response.status;
+        if (request_status != ZX_OK) {
+          request_pool_.Add(std::move(request));
+          status = request_status;
+          return;
+        }
+        request_pool_.Add(std::move(request));
+        sync_completion_signal(&completion);
+      }));
+  sync_completion_wait(&completion, ZX_TIME_INFINITE);
+  return ZX_OK;
+}
+
+fpromise::promise<void, zx_status_t> UsbHubDevice::ControlOutAsync(uint8_t request_type,
+                                                                   uint8_t request, uint16_t value,
+                                                                   uint16_t index,
+                                                                   const void* write_buffer,
+                                                                   size_t write_size) {
   if ((request_type & USB_DIR_MASK) != USB_DIR_OUT) {
     return fpromise::make_result_promise<void, zx_status_t>(fpromise::error(ZX_ERR_INVALID_ARGS));
   }

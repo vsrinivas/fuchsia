@@ -67,7 +67,8 @@ class UsbHubDevice;
 using UsbHub = ddk::Device<UsbHubDevice, ddk::Unbindable, ddk::Initializable, ddk::GetProtocolable>;
 using Request = usb::Request<void>;
 using CallbackRequest = usb::CallbackRequest<sizeof(std::max_align_t) * 4>;
-using clear_feature_result = fpromise::result<std::vector<fpromise::result<void, zx_status_t>>, void>;
+using clear_feature_result =
+    fpromise::result<std::vector<fpromise::result<void, zx_status_t>>, void>;
 class UsbHubDevice : public UsbHub, public ddk::UsbHubInterfaceProtocol<UsbHubDevice> {
  public:
   explicit UsbHubDevice(zx_device_t* parent)
@@ -99,7 +100,7 @@ class UsbHubDevice : public UsbHub, public ddk::UsbHubInterfaceProtocol<UsbHubDe
   zx_status_t UsbHubInterfaceResetPort(uint32_t port);
 
   // Powers on all ports on the hub
-  fpromise::promise<void, zx_status_t> PowerOnPorts();
+  zx_status_t PowerOnPorts();
 
   // Retrieves the status of a port.
   zx::status<usb_port_status_t> GetPortStatus(PortNumber port);
@@ -154,26 +155,26 @@ class UsbHubDevice : public UsbHub, public ddk::UsbHubInterfaceProtocol<UsbHubDe
     return PortNumber(index.value() + 1);
   }
 
-  // Invokes a promise at the specified deadline
-  fpromise::promise<void, zx_status_t> Sleep(zx::time deadline);
+  zx_status_t SetFeature(uint8_t request_type, uint16_t feature, uint16_t index);
 
-  fpromise::promise<void, zx_status_t> SetFeature(uint8_t request_type, uint16_t feature,
-                                                  uint16_t index);
+  fpromise::promise<void, zx_status_t> SetFeatureAsync(uint8_t request_type, uint16_t feature,
+                                                       uint16_t index);
 
   fpromise::promise<void, zx_status_t> ClearFeature(uint8_t request_type, uint16_t feature,
                                                     uint16_t index);
 
-  zx::status<std::vector<uint8_t>> ControlIn(uint8_t request_type, uint8_t request,
-                                                            uint16_t value, uint16_t index,
-                                                            size_t read_size);
+  zx::status<std::vector<uint8_t>> ControlIn(uint8_t request_type, uint8_t request, uint16_t value,
+                                             uint16_t index, size_t read_size);
 
-  fpromise::promise<std::vector<uint8_t>, zx_status_t> ControlInAsync(uint8_t request_type,
-                                                                 uint8_t request, uint16_t value,
-                                                                 uint16_t index, size_t read_size);
+  fpromise::promise<std::vector<uint8_t>, zx_status_t> ControlInAsync(
+      uint8_t request_type, uint8_t request, uint16_t value, uint16_t index, size_t read_size);
 
-  fpromise::promise<void, zx_status_t> ControlOut(uint8_t request_type, uint8_t request, uint16_t value,
-                                             uint16_t index, const void* write_buffer,
-                                             size_t write_size);
+  zx_status_t ControlOut(uint8_t request_type, uint8_t request, uint16_t value, uint16_t index,
+                         const void* write_buffer, size_t write_size);
+
+  fpromise::promise<void, zx_status_t> ControlOutAsync(uint8_t request_type, uint8_t request,
+                                                       uint16_t value, uint16_t index,
+                                                       const void* write_buffer, size_t write_size);
 
   std::optional<Request> AllocRequest();
 
@@ -197,17 +198,18 @@ class UsbHubDevice : public UsbHub, public ddk::UsbHubInterfaceProtocol<UsbHubDe
       uint8_t request_type, uint16_t type, uint16_t index, size_t length = sizeof(T)) {
     static_assert(sizeof(T) >= sizeof(usb_descriptor_header_t));
     auto result = ControlIn(request_type | USB_DIR_IN, USB_REQ_GET_DESCRIPTOR,
-                             static_cast<uint16_t>(type << 8 | index), 0, length);
-    if(result.is_error()){
+                            static_cast<uint16_t>(type << 8 | index), 0, length);
+    if (result.is_error()) {
       return fpromise::error(result.error_value());
     }
     size_t request_size = result.value().size();
     VariableLengthDescriptor<T> variable_descriptor;
-    if(sizeof(variable_descriptor.descriptor) < request_size){
+    if (sizeof(variable_descriptor.descriptor) < request_size) {
       return fpromise::error(ZX_ERR_NO_MEMORY);
     }
     memcpy(&variable_descriptor.descriptor, result.value().data(), request_size);
-    auto* usb_descriptor = reinterpret_cast<usb_descriptor_header_t*>(&variable_descriptor.descriptor);
+    auto* usb_descriptor =
+        reinterpret_cast<usb_descriptor_header_t*>(&variable_descriptor.descriptor);
     if (usb_descriptor->bLength != request_size) {
       zxlogf(ERROR, "Mismatched descriptor length\n");
       return fpromise::error(ZX_ERR_BAD_STATE);

@@ -169,13 +169,14 @@ class SyntheticHarness : public zxtest::Test {
     bool ran = false;
     zx_status_t status = ZX_OK;
     sync_completion_t completion;
-    executor_->schedule_task(std::move(promise).then([&](fpromise::result<void, zx_status_t>& result) {
-      ran = true;
-      if (result.is_error()) {
-        status = result.error();
-      }
-      sync_completion_signal(&completion);
-    }));
+    executor_->schedule_task(
+        std::move(promise).then([&](fpromise::result<void, zx_status_t>& result) {
+          ran = true;
+          if (result.is_error()) {
+            status = result.error();
+          }
+          sync_completion_signal(&completion);
+        }));
     sync_completion_wait(&completion, ZX_TIME_INFINITE);
     if (!ran) {
       status = ZX_ERR_INTERNAL;
@@ -184,6 +185,7 @@ class SyntheticHarness : public zxtest::Test {
   }
 
   void TearDown() override {
+    loop_.Shutdown();
     device_->Release();
     ASSERT_FALSE(device_->HasOps());
   }
@@ -342,18 +344,6 @@ TEST_F(UnbrandedHarness, Usb3Hub) {
   ASSERT_TRUE(ResetPending(1));
 }
 
-TEST_F(SmaysHarness, Timeout) {
-  auto dev = device();
-  zx::time start = zx::clock::get_monotonic();
-  zx::time timeout = zx::deadline_after(zx::msec(30));
-  bool ran = false;
-  ASSERT_OK(dev->RunSynchronously(dev->Sleep(timeout).and_then([&]() {
-    ASSERT_GT((zx::clock::get_monotonic() - start).to_msecs(), 29);
-    ran = true;
-  })));
-  ASSERT_TRUE(ran);
-}
-
 TEST_F(SyntheticHarness, SetFeature) {
   auto dev = device();
   bool ran = false;
@@ -364,7 +354,7 @@ TEST_F(SyntheticHarness, SetFeature) {
     ran = true;
     usb_request_complete(request, ZX_OK, 0, &completion);
   });
-  ASSERT_OK(RunSynchronously(dev->SetFeature(3, 7, 2)));
+  ASSERT_OK(dev->SetFeature(3, 7, 2));
   ASSERT_TRUE(ran);
 }
 
