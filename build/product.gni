@@ -12,7 +12,7 @@ declare_args() {
   # Include update package in blob.blk. Some products may not need the update
   # package included as part of the blobfs.
   # TODO(fxbug.dev/58645) Remove when no longer needed.
-  product_include_updates_in_blobfs = true
+  product_include_updates_in_blobfs = false
 
   # The following arguments are all used to configure the contents of the core
   # component realm. See //src/sys/core/build/core.gni for documentation on what
