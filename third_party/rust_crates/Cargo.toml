@@ -267,7 +267,7 @@ nom_locate = { path = "forks/nom_locate" }
 ntapi = { path = "empty/ntapi" }
 pkg-config = { path = "empty/pkg-config" }
 regex-automata = { path = "forks/regex-automata" }
-rust-crypto = { path = "../rust-mirrors/rust-crypto" }
+rust-crypto = { path = "mirrors/rust-crypto" }
 rustls = { path = "forks/rustls" }
 security-framework = { path = "forks/security-framework" }
 serde_json5 = { path = "mirrors/serde_json5" } # TODO(fxbug.dev/75491) remove
