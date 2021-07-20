@@ -16,8 +16,8 @@ class LaunchButton extends StatelessWidget {
     return Material(
       type: MaterialType.transparency,
       child: Ink(
-        width: 56,
-        height: 56,
+        width: 64,
+        height: 64,
         decoration: ShapeDecoration(
           color: Colors.transparent,
           shape: CircleBorder(),
