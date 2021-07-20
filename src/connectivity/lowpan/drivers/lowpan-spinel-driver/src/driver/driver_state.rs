@@ -67,6 +67,9 @@ pub(super) struct DriverState {
     /// Contains the state associated with assisting/commissioning
     /// new devices onto the network.
     pub(super) assisting_state: AssistingState,
+
+    /// Current regulatory domain, if known.
+    pub(super) regulatory_domain: Option<RegionCode>,
 }
 
 impl Clone for DriverState {
@@ -86,6 +89,7 @@ impl Clone for DriverState {
             mesh_local_addr: self.mesh_local_addr.clone(),
             mac_addr: self.mac_addr.clone(),
             assisting_state: self.assisting_state.clone(),
+            regulatory_domain: self.regulatory_domain.clone(),
         }
     }
 }
@@ -110,6 +114,7 @@ impl PartialEq for DriverState {
             && self.mesh_local_addr.eq(&other.mesh_local_addr)
             && self.mac_addr.eq(&self.mac_addr)
             && self.assisting_state.eq(&self.assisting_state)
+            && self.regulatory_domain.eq(&self.regulatory_domain)
     }
 }
 
@@ -132,6 +137,7 @@ impl Default for DriverState {
             mesh_local_addr: std::net::Ipv6Addr::UNSPECIFIED,
             mac_addr: Default::default(),
             assisting_state: Default::default(),
+            regulatory_domain: Default::default(),
         }
     }
 }

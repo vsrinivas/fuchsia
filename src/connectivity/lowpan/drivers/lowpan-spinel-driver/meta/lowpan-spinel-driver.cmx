@@ -17,6 +17,7 @@
         ],
         "services": [
             "fuchsia.factory.lowpan.FactoryRegister",
+            "fuchsia.location.namedplace.RegulatoryRegionWatcher",
             "fuchsia.lowpan.device.Register",
             "fuchsia.lowpan.spinel.Device",
             "fuchsia.net.interfaces.State",

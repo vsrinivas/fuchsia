@@ -12,6 +12,7 @@ rustc_test("lowpan-driver-provision-mock-bin") {
   source_root = "mock-device/lowpan_driver_provision_mock.rs"
   edition = "2018"
   deps = [
+    "//sdk/fidl/fuchsia.location.namedplace:fuchsia.location.namedplace-rustc",
     "//src/connectivity/lowpan/drivers/lowpan-spinel-driver/tests/lib",
     "//src/connectivity/lowpan/drivers/lowpan-spinel-driver/tests/test-code",
     "//src/connectivity/lowpan/tools/lowpanctl",

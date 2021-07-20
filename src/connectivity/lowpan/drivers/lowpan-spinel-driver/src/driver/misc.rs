@@ -172,6 +172,10 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
     /// so that local state stays in sync with the device.
     pub(super) fn on_prop_value_is(&self, prop: Prop, mut value: &[u8]) -> Result<(), Error> {
         match prop {
+            Prop::Phy(PropPhy::RegionCode) => {
+                fx_log_info!("Region code set to {:?}", RegionCode::try_unpack_from_slice(value)?);
+            }
+
             Prop::Mac(PropMac::LongAddr) => {
                 let mac_addr = EUI64::try_unpack_from_slice(value)?;
                 let mut driver_state = self.driver_state.lock();

@@ -404,6 +404,9 @@ async fn main() -> Result<(), Error> {
         .context("initialize logging")?;
     fuchsia_syslog::set_severity(fuchsia_syslog::levels::TRACE);
 
+    #[cfg(test)]
+    fuchsia_syslog::LOGGER.set_severity(fuchsia_syslog::levels::TRACE);
+
     if Path::new("/config/data/bootstrap_config.json").exists() {
         fx_log_err!("Bootstrapping ot-stack. Skipping lowpan-spinel-driver launch");
         return Ok(());

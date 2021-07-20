@@ -117,7 +117,7 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
             }
         };
 
-        traceln!("init_task: Sending get NCP version request...");
+        fx_log_debug!("init_task: Sending get NCP version request...");
 
         let ncp_version = self.get_property_simple::<String, _>(Prop::NcpVersion).await?;
 
@@ -180,14 +180,32 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
             .send_request(CmdPropValueSet(PropPhy::Enabled.into(), true).verify())
             .await
         {
-            fx_log_info!("init_task: Unable enable phy: {:?}", err);
+            fx_log_info!("init_task: Unable to explicitly enable PHY: {:?}", err);
         }
 
-        fx_log_info!("init_task: Finally updating driver state to initialized");
+        // Set the region code if we have one.
+        let code = self.driver_state.lock().regulatory_domain;
+        if let Some(code) = code {
+            if let Err(err) = self
+                .frame_handler
+                .send_request(CmdPropValueSet(PropPhy::RegionCode.into(), code).verify())
+                .await
+                .context("Setting PropPhy::RegionCode Failed")
+            {
+                // Sadly, there is no capability for us to check if this
+                // feature isn't enabled/implemented on the NCP. We just
+                // have to try to set it and see what happens. We log a
+                // warning if it fails.
+                fx_log_warn!("init_task: Error: {:?}", err);
+            }
+        }
 
         // Update the driver state.
         {
             let mut driver_state = self.driver_state.lock();
+
+            fx_log_debug!("init_task: Finally updating driver state to initialized");
+
             driver_state.init_state = InitState::Initialized;
             driver_state.caps = caps;
         }

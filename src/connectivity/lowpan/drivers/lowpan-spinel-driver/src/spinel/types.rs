@@ -12,6 +12,7 @@ use fidl_fuchsia_lowpan_device::{AllCounters, MacCounters};
 use hex;
 use net_types::ip::IpAddress;
 use spinel_pack::*;
+use static_assertions::_core::str::from_utf8;
 use std::collections::HashSet;
 use std::hash::Hash;
 use std::io;
@@ -674,11 +675,66 @@ impl std::convert::TryInto<JoinerCommissioning> for JoinerCommissioningParams {
     }
 }
 
+/// A regulatory region code
+#[spinel_packed("CC")]
+#[derive(Debug, Hash, Clone, Eq, Default, PartialEq, Copy)]
+pub struct RegionCode(u8, u8);
+
+impl RegionCode {
+    fn is_valid(&self) -> bool {
+        self.0 > 16 && self.0 < 128 && self.1 > 16 && self.1 < 128
+    }
+}
+
+impl TryFrom<&str> for RegionCode {
+    type Error = anyhow::Error;
+    fn try_from(region: &str) -> Result<Self, Self::Error> {
+        if region.is_empty() {
+            return Ok(RegionCode(0, 0));
+        }
+        if region.len() == 2 {
+            let ret = RegionCode(region.bytes().nth(0).unwrap(), region.bytes().nth(1).unwrap());
+            if ret.is_valid() {
+                return Ok(ret);
+            }
+        }
+        Err(format_err!("Bad region string {:?}", region))
+    }
+}
+
+impl TryFrom<String> for RegionCode {
+    type Error = anyhow::Error;
+    fn try_from(region: String) -> Result<Self, Self::Error> {
+        RegionCode::try_from(region.as_str())
+    }
+}
+
+impl ToString for RegionCode {
+    fn to_string(&self) -> String {
+        if self.is_valid() {
+            return from_utf8(&[self.0, self.1]).unwrap().to_string();
+        }
+        "".to_string()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     use matches::assert_matches;
+
+    #[test]
+    fn test_region_code() {
+        assert_eq!(RegionCode(0, 0), RegionCode::default());
+        assert_eq!(RegionCode(0, 0).to_string(), "".to_string());
+        assert_eq!(RegionCode(0x34, 0x32).to_string(), "42".to_string());
+        assert_eq!(RegionCode::try_from("US").unwrap().to_string(), "US".to_string());
+        assert_eq!(RegionCode::try_from("").unwrap(), RegionCode::default());
+        assert_matches!(RegionCode::try_from("1"), Err(_));
+        assert_matches!(RegionCode::try_from("111"), Err(_));
+        assert_matches!(RegionCode::try_from("\n5"), Err(_));
+    }
 
     #[test]
     fn test_header() {

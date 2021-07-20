@@ -4,6 +4,12 @@
             "injected-services": {
                 "fuchsia.factory.lowpan.FactoryLookup": "fuchsia-pkg://fuchsia.com/lowpanservice#meta/lowpanservice.cmx",
                 "fuchsia.factory.lowpan.FactoryRegister": "fuchsia-pkg://fuchsia.com/lowpanservice#meta/lowpanservice.cmx",
+                "fuchsia.location.namedplace.RegulatoryRegionConfigurator": [
+                    "fuchsia-pkg://fuchsia.com/regulatory_region#meta/regulatory_region.cmx"
+                ],
+                "fuchsia.location.namedplace.RegulatoryRegionWatcher": [
+                    "fuchsia-pkg://fuchsia.com/regulatory_region#meta/regulatory_region.cmx"
+                ],
                 "fuchsia.lowpan.device.Lookup": "fuchsia-pkg://fuchsia.com/lowpanservice#meta/lowpanservice.cmx",
                 "fuchsia.lowpan.device.Register": "fuchsia-pkg://fuchsia.com/lowpanservice#meta/lowpanservice.cmx",
                 "fuchsia.lowpan.spinel.Device": [
@@ -30,6 +36,8 @@
         "services": [
             "fuchsia.factory.lowpan.FactoryLookup",
             "fuchsia.factory.lowpan.FactoryRegister",
+            "fuchsia.location.namedplace.RegulatoryRegionConfigurator",
+            "fuchsia.location.namedplace.RegulatoryRegionWatcher",
             "fuchsia.lowpan.device.Lookup",
             "fuchsia.lowpan.device.Register",
             "fuchsia.lowpan.spinel.Device",

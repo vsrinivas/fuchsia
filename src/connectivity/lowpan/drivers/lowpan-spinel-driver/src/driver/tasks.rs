@@ -7,6 +7,8 @@ use crate::spinel::*;
 
 use crate::spinel::Subnet;
 use anyhow::{Context as _, Error};
+use fidl_fuchsia_location_namedplace::RegulatoryRegionWatcherMarker;
+use fuchsia_component::client::connect_to_protocol;
 use futures::prelude::*;
 use lowpan_driver_common::FutureExt;
 use packet::ParsablePacket;
@@ -14,6 +16,7 @@ use packet_formats::icmp::mld::MldPacket;
 use packet_formats::icmp::{IcmpParseArgs, Icmpv6Packet};
 use packet_formats::ip::{IpPacket, Ipv6Proto};
 use packet_formats::ipv6::Ipv6Packet;
+use std::convert::TryInto;
 
 impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
     async fn intercept_from_host(&self, mut packet_bytes: &[u8]) -> bool {
@@ -334,8 +337,48 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
                         .await
                         .context("pending_outbound_frame_handler")
                 } else {
-                    Ok(())
+                    Result::<_, Error>::Ok(())
                 }
+            });
+
+        let regulatory_region_watcher = connect_to_protocol::<RegulatoryRegionWatcherMarker>()
+            .context("RegulatoryRegionWatcherMarker")?;
+
+        let regulatory_region_stream =
+            futures::stream::unfold(regulatory_region_watcher, move |watcher| {
+                watcher.get_update().map(|x| match x {
+                    Ok(region) => Some((Result::<_, Error>::Ok(region), watcher)),
+                    Err(err) => {
+                        fx_log_warn!("Unable to get RegulatoryRegionWatcher instance: {:?}", err);
+                        None
+                    }
+                })
+            })
+            .and_then(move |region: String| async move {
+                fx_log_info!("Got region code {:?}", region);
+                let code = region.try_into()?;
+                self.wait_for_state(DriverState::is_initialized).await;
+
+                {
+                    let mut driver_state = self.driver_state.lock();
+                    driver_state.regulatory_domain = Some(code);
+                    std::mem::drop(driver_state);
+                    self.driver_state_change.trigger();
+                }
+
+                self.frame_handler
+                    .send_request(CmdPropValueSet(PropPhy::RegionCode.into(), code).verify())
+                    .await
+                    .context("Setting PropPhy::RegionCode Failed")?;
+
+                Result::<_, Error>::Ok(())
+            })
+            .map(|x| {
+                // We just log errors and continue for now.
+                if let Err(e) = x {
+                    fx_log_warn!("regulatory_region_stream: Error: {:?}", e);
+                }
+                Result::<_, Error>::Ok(())
             });
 
         let net_if_event_stream = self
@@ -349,10 +392,12 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
                 .map_err(|x| x.context("single_main_loop"))
         });
 
-        futures::stream::select(
-            futures::stream::select(main_loop_stream.into_stream(), net_if_event_stream),
-            pending_outbound_frame_handler,
-        )
+        futures::stream::select_all([
+            main_loop_stream.into_stream().boxed(),
+            net_if_event_stream.boxed(),
+            pending_outbound_frame_handler.boxed(),
+            regulatory_region_stream.boxed(),
+        ])
         .try_collect::<()>()
         .await
     }

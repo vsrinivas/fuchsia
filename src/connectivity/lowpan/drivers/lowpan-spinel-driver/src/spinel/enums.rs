@@ -201,6 +201,9 @@ pub enum PropPhy {
     RxSensitivity,
     PcapEnabled,
     ChanPreferred,
+    FemLnaGain,
+    ChanMaxPower,
+    RegionCode,
     Unknown(u32),
 }
 impl_sub_enum!(Prop::Phy, PropPhy);
@@ -446,6 +449,9 @@ impl From<Prop> for u32 {
             Phy(PropPhy::RxSensitivity) => 0x27,
             Phy(PropPhy::PcapEnabled) => 0x28,
             Phy(PropPhy::ChanPreferred) => 0x29,
+            Phy(PropPhy::FemLnaGain) => 0x2a,
+            Phy(PropPhy::ChanMaxPower) => 0x2b,
+            Phy(PropPhy::RegionCode) => 0x2c,
             Phy(PropPhy::Unknown(x)) => x,
 
             Mac(PropMac::ScanState) => 0x30,
@@ -582,6 +588,9 @@ impl From<u32> for Prop {
             0x27 => Phy(PropPhy::RxSensitivity),
             0x28 => Phy(PropPhy::PcapEnabled),
             0x29 => Phy(PropPhy::ChanPreferred),
+            0x2a => Phy(PropPhy::FemLnaGain),
+            0x2b => Phy(PropPhy::ChanMaxPower),
+            0x2c => Phy(PropPhy::RegionCode),
             x if (x >= 0x20 && x < 0x30) || (x >= 0x1200 && x < 0x1300) => Phy(PropPhy::Unknown(x)),
 
             0x30 => Mac(PropMac::ScanState),
