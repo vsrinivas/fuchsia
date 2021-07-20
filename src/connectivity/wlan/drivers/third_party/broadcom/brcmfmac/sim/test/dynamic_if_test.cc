@@ -207,7 +207,7 @@ static zx_status_t modified_get_metadata(brcmf_bus* bus, void* data, size_t exp_
 }
 
 static zx_status_t validate_not_invoked_on_del(struct brcmf_if* ifp,
-                                                   const struct brcmf_event_msg* e, void* data) {
+                                               const struct brcmf_event_msg* e, void* data) {
   struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
   struct brcmf_if_event* ifevent = (struct brcmf_if_event*)data;
 
@@ -274,7 +274,6 @@ TEST_F(DynamicIfTest, EventHandlingOnSoftAPDel) {
   EXPECT_EQ(wdev->iftype, WLAN_INFO_MAC_ROLE_AP);
   EXPECT_EQ(ZX_OK, brcmf_fil_bsscfg_data_set(ifp, "interface_remove", nullptr, 0));
 }
-
 
 // Verify if all iovars in metadata were set.
 static void verify_metadata_iovars(brcmf_simdev* sim, brcmf_if* ifp) {

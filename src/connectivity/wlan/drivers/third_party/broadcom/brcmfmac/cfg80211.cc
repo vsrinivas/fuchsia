@@ -1070,8 +1070,7 @@ static zx_status_t brcmf_run_escan(struct brcmf_cfg80211_info* cfg, struct brcmf
     *sync_id_out = params->sync_id;
   } else {
     if (err == ZX_ERR_UNAVAILABLE) {
-      BRCMF_ERR("system busy : escan canceled sme state: 0x%lx",
-                atomic_load(&ifp->vif->sme_state));
+      BRCMF_ERR("system busy : escan canceled sme state: 0x%lx", atomic_load(&ifp->vif->sme_state));
     } else if (err == ZX_ERR_SHOULD_WAIT) {
       BRCMF_INFO("firmware is busy, failing the scan, please retry later. %s, fw err %s",
                  zx_status_get_string(err), brcmf_fil_get_errstr(fw_err));
@@ -1131,8 +1130,7 @@ zx_status_t brcmf_cfg80211_scan(struct net_device* ndev, const wlanif_scan_req_t
     return ZX_ERR_UNAVAILABLE;
   }
   if (brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &vif->sme_state)) {
-    BRCMF_INFO("Scan request suppressed: connect in progress (status: %lu)",
-               vif->sme_state.load());
+    BRCMF_INFO("Scan request suppressed: connect in progress (status: %lu)", vif->sme_state.load());
     return ZX_ERR_SHOULD_WAIT;
   }
   if (brcmf_is_ap_start_pending(cfg)) {
