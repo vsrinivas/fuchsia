@@ -11,7 +11,6 @@
 #include <vector>
 
 #include "device_request.h"
-#include "engine_command_streamer.h"
 #include "global_context.h"
 #include "gpu_progress.h"
 #include "gtt.h"
@@ -24,6 +23,7 @@
 #include "msd_intel_pci_device.h"
 #include "platform_semaphore.h"
 #include "platform_trace.h"
+#include "render_command_streamer.h"
 #include "sequencer.h"
 
 class MsdIntelDevice : public msd_device_t,

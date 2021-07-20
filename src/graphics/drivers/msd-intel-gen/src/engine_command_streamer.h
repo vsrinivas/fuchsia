@@ -53,13 +53,15 @@ class EngineCommandStreamer {
 
   virtual bool Reset();
 
+  bool StartBatchBuffer(MsdIntelContext* context, uint64_t gpu_addr,
+                        AddressSpaceType address_space_type);
+
  protected:
   virtual bool ExecBatch(std::unique_ptr<MappedBatch> mapped_batch) = 0;
 
   bool SubmitContext(MsdIntelContext* context, uint32_t tail);
   bool UpdateContext(MsdIntelContext* context, uint32_t tail);
   void SubmitExeclists(MsdIntelContext* context);
-  bool PipeControl(MsdIntelContext* context, uint32_t flags, uint32_t* sequence_number);
   void InvalidateTlbs();
 
   // from intel-gfx-prm-osrc-bdw-vol03-gpu_overview_3.pdf p.7
@@ -90,75 +92,32 @@ class EngineCommandStreamer {
   friend class TestEngineCommandStreamer;
 };
 
-class RenderEngineCommandStreamer : public EngineCommandStreamer {
+class InflightCommandSequence {
  public:
-  static std::unique_ptr<RenderEngineCommandStreamer> Create(EngineCommandStreamer::Owner* owner);
+  InflightCommandSequence(uint32_t sequence_number, uint32_t ringbuffer_offset,
+                          std::unique_ptr<MappedBatch> mapped_batch)
+      : sequence_number_(sequence_number),
+        ringbuffer_offset_(ringbuffer_offset),
+        mapped_batch_(std::move(mapped_batch)) {}
 
-  static std::unique_ptr<RenderInitBatch> CreateRenderInitBatch(uint32_t device_id);
+  uint32_t sequence_number() { return sequence_number_; }
 
-  // |address_space| used to map the render init batch.
-  bool RenderInit(std::shared_ptr<MsdIntelContext> context,
-                  std::unique_ptr<RenderInitBatch> init_batch,
-                  std::shared_ptr<AddressSpace> address_space);
+  uint32_t ringbuffer_offset() { return ringbuffer_offset_; }
 
-  void SubmitBatch(std::unique_ptr<MappedBatch> batch) override;
+  std::weak_ptr<MsdIntelContext> GetContext() { return mapped_batch_->GetContext(); }
 
-  void ProcessCompletedCommandBuffers(uint32_t last_completed_sequence);
-  void ResetCurrentContext();
-  void ContextSwitched();
+  MappedBatch* mapped_batch() { return mapped_batch_.get(); }
 
-  bool IsIdle() override { return inflight_command_sequences_.empty(); }
-
-  // This does not return ownership of the mapped batches so it is not safe
-  // to safe the result and this method must be called from the device thread
-  std::vector<MappedBatch*> GetInflightBatches();
+  InflightCommandSequence(InflightCommandSequence&& seq) {
+    sequence_number_ = seq.sequence_number_;
+    ringbuffer_offset_ = seq.ringbuffer_offset_;
+    mapped_batch_ = std::move(seq.mapped_batch_);
+  }
 
  private:
-  RenderEngineCommandStreamer(EngineCommandStreamer::Owner* owner);
-
-  uint32_t GetContextSize() const override { return PAGE_SIZE * 20; }
-
-  bool ExecBatch(std::unique_ptr<MappedBatch> mapped_batch) override;
-
-  bool MoveBatchToInflight(std::unique_ptr<MappedBatch> mapped_batch);
-  bool StartBatchBuffer(MsdIntelContext* context, uint64_t gpu_addr,
-                        AddressSpaceType address_space_type);
-  bool WriteSequenceNumber(MsdIntelContext* context, uint32_t* sequence_number_out);
-  void ScheduleContext();
-
-  class InflightCommandSequence {
-   public:
-    InflightCommandSequence(uint32_t sequence_number, uint32_t ringbuffer_offset,
-                            std::unique_ptr<MappedBatch> mapped_batch)
-        : sequence_number_(sequence_number),
-          ringbuffer_offset_(ringbuffer_offset),
-          mapped_batch_(std::move(mapped_batch)) {}
-
-    uint32_t sequence_number() { return sequence_number_; }
-
-    uint32_t ringbuffer_offset() { return ringbuffer_offset_; }
-
-    std::weak_ptr<MsdIntelContext> GetContext() { return mapped_batch_->GetContext(); }
-
-    MappedBatch* mapped_batch() { return mapped_batch_.get(); }
-
-    InflightCommandSequence(InflightCommandSequence&& seq) {
-      sequence_number_ = seq.sequence_number_;
-      ringbuffer_offset_ = seq.ringbuffer_offset_;
-      mapped_batch_ = std::move(seq.mapped_batch_);
-    }
-
-   private:
-    uint32_t sequence_number_;
-    uint32_t ringbuffer_offset_;
-    std::unique_ptr<MappedBatch> mapped_batch_;
-  };
-
-  std::unique_ptr<Scheduler> scheduler_;
-  std::queue<InflightCommandSequence> inflight_command_sequences_;
-  bool context_switch_pending_{};
-
-  friend class TestEngineCommandStreamer;
+  uint32_t sequence_number_;
+  uint32_t ringbuffer_offset_;
+  std::unique_ptr<MappedBatch> mapped_batch_;
 };
 
 #endif  // ENGINE_COMMAND_STREAMER_H

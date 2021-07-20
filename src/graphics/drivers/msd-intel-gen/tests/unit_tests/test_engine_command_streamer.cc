@@ -10,11 +10,11 @@
 
 #include "address_space.h"
 #include "device_id.h"
-#include "engine_command_streamer.h"
 #include "gtt.h"
 #include "instructions.h"
 #include "register_tracer.h"
 #include "registers.h"
+#include "render_command_streamer.h"
 #include "render_init_batch.h"
 #include "sequencer.h"
 

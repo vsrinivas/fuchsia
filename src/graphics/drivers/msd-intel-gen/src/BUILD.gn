@@ -51,6 +51,8 @@ source_set("src") {
     "ppgtt.cc",
     "ppgtt.h",
     "registers.h",
+    "render_command_streamer.cc",
+    "render_command_streamer.h",
     "render_init_batch.cc",
     "render_init_batch.h",
     "render_init_batch_gen9.cc",
