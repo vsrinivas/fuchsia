@@ -128,6 +128,9 @@ class Realm {
     return root_.ConnectAtExposedDir<Interface>(std::move(request));
   }
 
+  // Get the child name of the root component.
+  std::string GetChildName() const;
+
   class Builder;
 
  private:
@@ -165,13 +168,15 @@ class Realm::Builder {
   // Realm object.
   // This function can only be called once per RealmBuilder instance.
   // Multiple invocations will result in a panic.
-  Realm Build(const sys::ComponentContext* context);
+  Realm Build();
 
  private:
-  Builder(fuchsia::realm::builder::FrameworkIntermediarySyncPtr framework_intermediary_proxy,
+  Builder(const sys::ComponentContext* context,
+          fuchsia::realm::builder::FrameworkIntermediarySyncPtr framework_intermediary_proxy,
           ServiceDirectory framework_intermediary_exposed_dir);
 
   bool realm_commited_;
+  const sys::ComponentContext* context_;
   fuchsia::realm::builder::FrameworkIntermediarySyncPtr framework_intermediary_proxy_;
   ServiceDirectory framework_intermediary_exposed_dir_;
 };

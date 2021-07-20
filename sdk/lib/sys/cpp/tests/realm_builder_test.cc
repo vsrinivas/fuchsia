@@ -27,7 +27,7 @@ TEST(RealmBuilderTest, RoutesProtocolFromChild) {
   realm_builder.AddRoute(CapabilityRoute{.capability = Protocol{"test.placeholders.Echo"},
                                          .source = Moniker{"echo_server"},
                                          .targets = {AboveRoot()}});
-  auto realm = realm_builder.Build(context.get());
+  auto realm = realm_builder.Build();
   test::placeholders::EchoSyncPtr echo_proxy;
   ASSERT_EQ(realm.Connect(echo_proxy.NewRequest()), ZX_OK);
   fidl::StringPtr response;
@@ -43,7 +43,7 @@ TEST(RealmBuilderTest, RoutesProtocolFromGrandchild) {
   realm_builder.AddRoute(CapabilityRoute{.capability = Protocol{"test.placeholders.Echo"},
                                          .source = Moniker{"parent/echo_server"},
                                          .targets = {AboveRoot()}});
-  auto realm = realm_builder.Build(context.get());
+  auto realm = realm_builder.Build();
   test::placeholders::EchoSyncPtr echo_proxy;
   ASSERT_EQ(realm.Connect(echo_proxy.NewRequest()), ZX_OK);
   fidl::StringPtr response;
@@ -59,10 +59,32 @@ TEST(RealmBuilderTest, RoutesProtocolFromLegacyChild) {
   realm_builder.AddRoute(CapabilityRoute{.capability = Protocol{"test.placeholders.Echo"},
                                          .source = Moniker{"echo_server"},
                                          .targets = {AboveRoot()}});
-  auto realm = realm_builder.Build(context.get());
+  auto realm = realm_builder.Build();
   test::placeholders::EchoSyncPtr echo_proxy;
   ASSERT_EQ(realm.Connect(echo_proxy.NewRequest()), ZX_OK);
   fidl::StringPtr response;
   ASSERT_EQ(echo_proxy->EchoString("hello", &response), ZX_OK);
   EXPECT_EQ(response, fidl::StringPtr("hello"));
+}
+
+TEST(RealmBuilderUnittest, PanicsWhenArgsAreNullptr) {
+  ASSERT_DEATH({ Realm::Builder::New(nullptr); }, "");
+}
+
+TEST(RealmBuilderUnittest, UsesRandomChildName) {
+  auto context = sys::ComponentContext::Create();
+  std::string child_name_1 = "";
+  {
+    auto realm_builder = Realm::Builder::New(context.get());
+    auto realm = realm_builder.Build();
+    child_name_1 = realm.GetChildName();
+  }
+  std::string child_name_2 = "";
+  {
+    auto realm_builder = Realm::Builder::New(context.get());
+    auto realm = realm_builder.Build();
+    child_name_2 = realm.GetChildName();
+  }
+
+  EXPECT_NE(child_name_1, child_name_2);
 }

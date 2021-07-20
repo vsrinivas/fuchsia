@@ -29,7 +29,6 @@ namespace {
 
 constexpr char kCollectionName[] = "fuchsia_component_test_collection";
 constexpr char kFrameworkIntermediaryChildName[] = "fuchsia_component_test_framework_intermediary";
-constexpr char kRootName[] = "sys_cpp_realm_builder_root";
 
 void PanicIfMonikerBad(Moniker& moniker) {
   if (!moniker.path.empty()) {
@@ -103,10 +102,14 @@ fuchsia::realm::builder::CapabilityRoute ConvertToFidl(CapabilityRoute route) {
 
 Realm::Realm(internal::ScopedInstance root) : root_(std::move(root)) {}
 
+std::string Realm::GetChildName() const { return root_.GetChildName(); }
+
 Realm::Builder::Builder(
+    const sys::ComponentContext* context,
     fuchsia::realm::builder::FrameworkIntermediarySyncPtr framework_intermediary_proxy,
     sys::ServiceDirectory framework_intermediary_exposed_dir)
     : realm_commited_(false),
+      context_(context),
       framework_intermediary_proxy_(std::move(framework_intermediary_proxy)),
       framework_intermediary_exposed_dir_(std::move(framework_intermediary_exposed_dir)) {}
 
@@ -146,26 +149,24 @@ Realm::Builder& Realm::Builder::AddRoute(CapabilityRoute route) {
   return *this;
 }
 
-Realm Realm::Builder::Build(const sys::ComponentContext* context) {
+Realm Realm::Builder::Build() {
   ZX_ASSERT_MSG(!realm_commited_, "RealmBuilder::Build() called after Realm already created");
-  ZX_ASSERT_MSG(context != nullptr, "context passed to RealmBuilder::Build() must not be nullptr");
   fuchsia::realm::builder::FrameworkIntermediary_Commit_Result result;
   ASSERT_STATUS_AND_RESULT_OK("FrameworkIntemediary/Commit",
                               framework_intermediary_proxy_->Commit(&result), result);
   realm_commited_ = true;
   std::string root_component_url = result.response().root_component_url;
-  return Realm(
-      internal::ScopedInstance::New(context, kCollectionName, kRootName, root_component_url));
+  return Realm(internal::ScopedInstance::New(context_, kCollectionName, root_component_url));
 }
 
 Realm::Builder Realm::Builder::New(const sys::ComponentContext* context) {
-  ZX_ASSERT_MSG(context != nullptr, "context passed to RealmBuilder::New() must not be nullptr");
+  ASSERT_NOT_NULL(context);
   fuchsia::realm::builder::FrameworkIntermediarySyncPtr proxy;
   auto realm = internal::CreateRealmPtr(context);
   auto child_ref = fuchsia::sys2::ChildRef{.name = kFrameworkIntermediaryChildName};
   auto exposed_dir = internal::BindChild(realm.get(), child_ref);
   exposed_dir.Connect(proxy.NewRequest());
-  return Builder(std::move(proxy), std::move(exposed_dir));
+  return Builder(context, std::move(proxy), std::move(exposed_dir));
 }
 
 }  // namespace sys::testing

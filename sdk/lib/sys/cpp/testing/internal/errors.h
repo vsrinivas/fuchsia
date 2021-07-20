@@ -42,4 +42,9 @@ void PanicWithMessage(const char* stacktrace, const char* context,
     ASSERT_RESULT_OK((method), (result));                   \
   } while (0)
 
+#define ASSERT_NOT_NULL(value)                                                                  \
+  do {                                                                                          \
+    ZX_ASSERT_MSG((value) != nullptr, "[%s] %s must not be null", __PRETTY_FUNCTION__, #value); \
+  } while (0)
+
 #endif  // LIB_SYS_CPP_TESTING_INTERNAL_ERRORS_H_

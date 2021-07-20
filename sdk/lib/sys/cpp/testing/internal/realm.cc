@@ -11,6 +11,7 @@
 namespace sys::testing::internal {
 
 fuchsia::sys2::RealmSyncPtr CreateRealmPtr(const sys::ComponentContext* context) {
+  ASSERT_NOT_NULL(context);
   fuchsia::sys2::RealmSyncPtr realm;
   context->svc()->Connect(realm.NewRequest());
   return realm;
@@ -18,6 +19,7 @@ fuchsia::sys2::RealmSyncPtr CreateRealmPtr(const sys::ComponentContext* context)
 
 ServiceDirectory BindChild(fuchsia::sys2::Realm_Sync* realm,
                            const fuchsia::sys2::ChildRef& child_ref) {
+  ASSERT_NOT_NULL(realm);
   fuchsia::io::DirectorySyncPtr exposed_dir;
   fuchsia::sys2::Realm_BindChild_Result result;
   ASSERT_STATUS_AND_RESULT_OK(
@@ -27,6 +29,7 @@ ServiceDirectory BindChild(fuchsia::sys2::Realm_Sync* realm,
 
 void CreateChild(fuchsia::sys2::Realm_Sync* realm, std::string collection, std::string name,
                  std::string url) {
+  ASSERT_NOT_NULL(realm);
   fuchsia::sys2::CollectionRef collection_ref = {
       .name = collection,
   };
@@ -42,6 +45,7 @@ void CreateChild(fuchsia::sys2::Realm_Sync* realm, std::string collection, std::
 }
 
 void DestroyChild(fuchsia::sys2::Realm_Sync* realm, fuchsia::sys2::ChildRef child_ref) {
+  ASSERT_NOT_NULL(realm);
   fuchsia::sys2::Realm_DestroyChild_Result result;
   ASSERT_STATUS_AND_RESULT_OK("Realm/DestroyChild",
                               realm->DestroyChild(std::move(child_ref), &result), result);

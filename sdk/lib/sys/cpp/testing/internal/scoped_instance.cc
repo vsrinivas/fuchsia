@@ -19,16 +19,26 @@
 #include <zircon/assert.h>
 #include <zircon/status.h>
 
-#include <algorithm>
-#include <utility>
-#include <variant>
+#include <random>
+
+#include "lib/sys/cpp/testing/realm_builder.h"
 
 namespace sys::testing::internal {
 
-ScopedInstance::ScopedInstance(const sys::ComponentContext* context,
+namespace {
+
+std::size_t random_unsigned() {
+  std::random_device random_device;
+  std::mt19937 generator(random_device());
+  std::uniform_int_distribution<std::size_t> distribution;
+  return distribution(generator);
+}
+}  // namespace
+
+ScopedInstance::ScopedInstance(fuchsia::sys2::RealmSyncPtr realm_proxy,
                                fuchsia::sys2::ChildRef child_ref, ServiceDirectory exposed_dir)
-    : context_(context),
-      child_ref_(child_ref),
+    : realm_proxy_(std::move(realm_proxy)),
+      child_ref_(std::move(child_ref)),
       exposed_dir_(std::move(exposed_dir)),
       has_moved_(false) {}
 
@@ -36,20 +46,19 @@ ScopedInstance::~ScopedInstance() {
   if (has_moved_) {
     return;
   }
-  auto realm = CreateRealmPtr(context_);
-  DestroyChild(realm.get(), child_ref_);
+  DestroyChild(realm_proxy_.get(), child_ref_);
 }
 
 ScopedInstance::ScopedInstance(ScopedInstance&& other) noexcept
-    : context_(other.context_),
-      child_ref_(other.child_ref_),
+    : child_ref_(std::move(other.child_ref_)),
       exposed_dir_(std::move(other.exposed_dir_)),
       has_moved_(false) {
+  realm_proxy_.Bind(other.realm_proxy_.Unbind());
   other.has_moved_ = true;
 }
 
 ScopedInstance& ScopedInstance::operator=(ScopedInstance&& other) noexcept {
-  this->context_ = std::move(other.context_);
+  this->realm_proxy_ = std::move(other.realm_proxy_);
   this->child_ref_ = std::move(other.child_ref_);
   this->exposed_dir_ = std::move(other.exposed_dir_);
   this->has_moved_ = false;
@@ -58,13 +67,24 @@ ScopedInstance& ScopedInstance::operator=(ScopedInstance&& other) noexcept {
 }
 
 ScopedInstance ScopedInstance::New(const sys::ComponentContext* context, std::string collection,
+                                   std::string url) {
+  ASSERT_NOT_NULL(context);
+  std::string name = "auto-" + std::to_string(random_unsigned());
+  return New(context, std::move(collection), std::move(name), std::move(url));
+}
+
+ScopedInstance ScopedInstance::New(const sys::ComponentContext* context, std::string collection,
                                    std::string name, std::string url) {
+  ASSERT_NOT_NULL(context);
   auto realm = CreateRealmPtr(context);
-  CreateChild(realm.get(), collection, name, url);
+  CreateChild(realm.get(), collection, name, std::move(url));
   auto exposed_dir =
       BindChild(realm.get(), fuchsia::sys2::ChildRef{.name = name, .collection = collection});
-  return ScopedInstance(context, fuchsia::sys2::ChildRef{.name = name, .collection = collection},
+  return ScopedInstance(std::move(realm),
+                        fuchsia::sys2::ChildRef{.name = name, .collection = collection},
                         std::move(exposed_dir));
 }
+
+std::string ScopedInstance::GetChildName() const { return child_ref_.name; }
 
 }  // namespace sys::testing::internal

@@ -6,4 +6,8 @@
     program: {
         binary: "bin/realm_builder_test_bin",
     },
+    use: [
+        // Needed for gTest Death Tests.
+        { protocol: "fuchsia.process.Launcher" },
+    ],
 }
