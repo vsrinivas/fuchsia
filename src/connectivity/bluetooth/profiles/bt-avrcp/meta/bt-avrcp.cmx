@@ -1,0 +1,13 @@
+{
+    "include": [
+        "syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/bt_avrcp"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.bluetooth.bredr.Profile"
+        ]
+    }
+}

@@ -88,8 +88,17 @@ fuchsia_component("component") {
   deps = [ ":bin" ]
 }
 
+fuchsia_component("component-legacy") {
+  component_name = "bt-avrcp"
+  manifest = "meta/bt-avrcp.cmx"
+  deps = [ ":bin" ]
+}
+
 fuchsia_package("bt-avrcp") {
-  deps = [ ":component" ]
+  deps = [
+    ":component",
+    ":component-legacy",
+  ]
 }
 
 fuchsia_unittest_package("bt-avrcp-tests") {
