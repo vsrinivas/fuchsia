@@ -5,6 +5,7 @@
 #define SRC_DEVICES_BUS_DRIVERS_PCI_BUS_H_
 
 #include <fuchsia/hardware/pci/llcpp/fidl.h>
+#include <fuchsia/hardware/pciroot/c/banjo.h>
 #include <fuchsia/hardware/pciroot/cpp/banjo.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/mmio-buffer.h>
@@ -26,6 +27,7 @@
 #include <ddktl/protocol/empty-protocol.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_wavl_tree.h>
+#include <fbl/span.h>
 #include <fbl/vector.h>
 
 #include "src/devices/bus/drivers/pci/bridge.h"
@@ -134,6 +136,10 @@ class Bus : public PciBusType,
   ddk::PcirootProtocolClient pciroot_;
   const pci_platform_info_t info_;
   std::optional<ddk::MmioBuffer> ecam_;
+  fbl::Span<const pci_legacy_irq> irqs_{};
+  fbl::Span<const pci_bdf_t> acpi_devices_{};
+  fbl::Span<const pci_irq_routing_entry_t> irq_routing_entries_{};
+
   // All devices hang off of this Bus's root port.
   std::unique_ptr<PciRoot> root_;
   fbl::Mutex devices_lock_;

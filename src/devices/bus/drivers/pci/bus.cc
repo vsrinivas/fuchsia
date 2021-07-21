@@ -86,6 +86,11 @@ zx_status_t Bus::Initialize() {
   // pciroot protocol.
   root_ = std::unique_ptr<PciRoot>(new PciRoot(info_.start_bus_num, pciroot_));
 
+  acpi_devices_ = fbl::Span<const pci_bdf_t>(info_.acpi_bdfs_list, info_.acpi_bdfs_count);
+  irqs_ = fbl::Span<const pci_legacy_irq>(info_.legacy_irqs_list, info_.legacy_irqs_count);
+  irq_routing_entries_ =
+      fbl::Span<const pci_irq_routing_entry_t>(info_.irq_routing_list, info_.irq_routing_count);
+
   // Begin our bus scan starting at our root
   ScanDownstream();
   zx_status_t status = ConfigureLegacyIrqs();
@@ -252,8 +257,7 @@ zx_status_t Bus::SetUpLegacyIrqHandlers() {
   }
 
   // most cases they'll be using MSI / MSI-X anyway so a warning is sufficient.
-  fbl::Span<const pci_legacy_irq> irqs(info_.legacy_irqs_list, info_.legacy_irqs_count);
-  for (auto& irq : irqs) {
+  for (auto& irq : irqs_) {
     zx::interrupt interrupt(irq.interrupt);
     status = interrupt.bind(legacy_irq_port_, irq.vector, ZX_INTERRUPT_BIND);
     if (status != ZX_OK) {
@@ -284,8 +288,6 @@ zx_status_t Bus::ConfigureLegacyIrqs() {
   // routing table provided by the platform. While we hold the devices_lock no
   // changes can be made to the Bus topology, ensuring the lifetimes of the
   // upstream paths and config accesses.
-  fbl::Span<const pci_irq_routing_entry_t> routing_entries(info_.irq_routing_list,
-                                                           info_.irq_routing_count);
   for (auto& device : devices_) {
     uint8_t pin = device.config()->Read(Config::kInterruptPin);
     // If a device has no pin configured in the InterruptPin register then it
@@ -329,8 +331,8 @@ zx_status_t Bus::ConfigureLegacyIrqs() {
              entry.port_function_id == port->function_id && entry.device_id == device.dev_id();
     };
 
-    auto found = std::find_if(routing_entries.begin(), routing_entries.end(), find_fn);
-    if (found != std::end(routing_entries)) {
+    auto found = std::find_if(irq_routing_entries_.begin(), irq_routing_entries_.end(), find_fn);
+    if (found != std::end(irq_routing_entries_)) {
       uint8_t vector = found->pins[pin - 1];
       device.config()->Write(Config::kInterruptLine, vector);
       zxlogf(DEBUG, "[%s] pin %u mapped to %#x", device.config()->addr(), pin, vector);
