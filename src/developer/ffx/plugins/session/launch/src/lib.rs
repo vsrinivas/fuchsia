@@ -11,7 +11,15 @@ use {
 
 #[ffx_plugin(LauncherProxy = "core/session-manager:expose:fuchsia.session.Launcher")]
 pub async fn launch(launcher_proxy: LauncherProxy, cmd: SessionLaunchCommand) -> Result<()> {
-    println!("Launching session: {}", cmd.url);
+    launch_impl(launcher_proxy, cmd, &mut std::io::stdout()).await
+}
+
+pub async fn launch_impl<W: std::io::Write>(
+    launcher_proxy: LauncherProxy,
+    cmd: SessionLaunchCommand,
+    writer: &mut W,
+) -> Result<()> {
+    writeln!(writer, "Launching session: {}", cmd.url)?;
     let config = LaunchConfiguration { session_url: Some(cmd.url), ..LaunchConfiguration::EMPTY };
     launcher_proxy.launch(config).await?.map_err(|err| format_err!("{:?}", err))
 }

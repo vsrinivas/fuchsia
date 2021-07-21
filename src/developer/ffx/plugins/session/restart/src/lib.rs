@@ -10,8 +10,16 @@ use {
 };
 
 #[ffx_plugin(RestarterProxy = "core/session-manager:expose:fuchsia.session.Restarter")]
-pub async fn restart(restarter_proxy: RestarterProxy, _cmd: SessionRestartCommand) -> Result<()> {
-    println!("Restart the current session");
+pub async fn restart(restarter_proxy: RestarterProxy, cmd: SessionRestartCommand) -> Result<()> {
+    restart_impl(restarter_proxy, cmd, &mut std::io::stdout()).await
+}
+
+pub async fn restart_impl<W: std::io::Write>(
+    restarter_proxy: RestarterProxy,
+    _cmd: SessionRestartCommand,
+    writer: &mut W,
+) -> Result<()> {
+    writeln!(writer, "Restart the current session")?;
     restarter_proxy.restart().await?.map_err(|err| format_err!("{:?}", err))
 }
 
@@ -28,7 +36,10 @@ mod test {
         });
 
         let restart_cmd = SessionRestartCommand {};
-        let result = restart(proxy, restart_cmd).await;
+        let mut writer = Vec::new();
+        let result = restart_impl(proxy, restart_cmd, &mut writer).await;
         assert!(result.is_ok());
+        let output = String::from_utf8(writer).unwrap();
+        assert_eq!(output, "Restart the current session\n");
     }
 }

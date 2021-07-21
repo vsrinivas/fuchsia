@@ -20,7 +20,16 @@ pub async fn add(
     manager_proxy: Option<ManagerProxy>,
     cmd: SessionAddCommand,
 ) -> Result<()> {
-    println!("Add {} to the current session", &cmd.url);
+    add_impl(element_manager_proxy, manager_proxy, cmd, &mut std::io::stdout()).await
+}
+
+pub async fn add_impl<W: std::io::Write>(
+    element_manager_proxy: Option<ElementManagerProxy>,
+    manager_proxy: Option<ManagerProxy>,
+    cmd: SessionAddCommand,
+    writer: &mut W,
+) -> Result<()> {
+    writeln!(writer, "Add {} to the current session", &cmd.url)?;
     if let Some(manager_proxy) = manager_proxy {
         manager_proxy
             .propose_element(Spec { component_url: Some(cmd.url.to_string()), ..Spec::EMPTY }, None)
