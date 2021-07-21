@@ -132,6 +132,16 @@ void TestPoolAllocation(Pool& pool, Type type, uint64_t size, uint64_t alignment
   }
 }
 
+void TestPoolFreeRamSubrangeUpdating(Pool& pool, Type type, uint64_t addr, uint64_t size,
+                                     bool alloc_error = false) {
+  auto status = pool.UpdateFreeRamSubranges(type, addr, size);
+  if (alloc_error) {
+    EXPECT_TRUE(status.is_error());
+    return;
+  }
+  EXPECT_FALSE(status.is_error());
+}
+
 // Fills up a pool with two-byte allocations of varying types until its
 // bookkeeping space is used up.
 [[maybe_unused]] void Oom(Pool& pool) {
@@ -897,6 +907,233 @@ TEST(MemallocPoolTests, FreedAllocations) {
   ASSERT_NO_FATAL_FAILURE(TestPoolContents(ctx.pool, {expected}));
 }
 
+TEST(MemallocPoolTests, FreeRamSubrangeUpdates) {
+  PoolContext ctx;
+  MemRange ranges[] = {
+      // RAM: [0, 3*kChunkSize) relative to kUsableMemoryStart
+      {
+          .addr = kUsableMemoryStart,
+          .size = 3 * kChunkSize,
+          .type = Type::kFreeRam,
+      },
+      // data ZBI: [3*kChunkSize, 4*kChunkSize) relative to kUsableMemoryStart
+      {
+          .addr = kUsableMemoryStart + 3 * kChunkSize,
+          .size = kChunkSize,
+          .type = Type::kDataZbi,
+      },
+      // RAM: [4*kChunkSize, 5*kChunkSize) relative to kUsableMemoryStart
+      {
+          .addr = kUsableMemoryStart + 4 * kChunkSize,
+          .size = kChunkSize,
+          .type = Type::kFreeRam,
+      },
+      // RAM: [5*kChunkSize, 6*kChunkSize) relative to kUsableMemoryStart
+      {
+          .addr = kUsableMemoryStart + 5 * kChunkSize,
+          .size = kChunkSize,
+          .type = Type::kPhysKernel,
+      },
+      // RAM: [6*kChunkSize, 7*kChunkSize) relative to kUsableMemoryStart
+      {
+          .addr = kUsableMemoryStart + 6 * kChunkSize,
+          .size = kChunkSize,
+          .type = Type::kFreeRam,
+      },
+  };
+
+  ASSERT_NO_FATAL_FAILURE(TestPoolInit(ctx.pool, {ranges}));
+
+  {
+    const MemRange expected[] = {
+        // bookkeeping: [0, kChunkSize)
+        {
+            .addr = kUsableMemoryStart,
+            .size = kChunkSize,
+            .type = Type::kPoolBookkeeping,
+        },
+        // RAM: [kChunkSize, 3*kChunkSize) relative to kUsableMemoryStart
+        {
+            .addr = kUsableMemoryStart + kChunkSize,
+            .size = 2 * kChunkSize,
+            .type = Type::kFreeRam,
+        },
+        // data ZBI: [3*kChunkSize, 4*kChunkSize) relative to kUsableMemoryStart
+        {
+            .addr = kUsableMemoryStart + 3 * kChunkSize,
+            .size = kChunkSize,
+            .type = Type::kDataZbi,
+        },
+        // RAM: [4*kChunkSize, 5*kChunkSize) relative to kUsableMemoryStart
+        {
+            .addr = kUsableMemoryStart + 4 * kChunkSize,
+            .size = kChunkSize,
+            .type = Type::kFreeRam,
+        },
+        // RAM: [5*kChunkSize, 6*kChunkSize) relative to kUsableMemoryStart
+        {
+            .addr = kUsableMemoryStart + 5 * kChunkSize,
+            .size = kChunkSize,
+            .type = Type::kPhysKernel,
+        },
+        // RAM: [6*kChunkSize, 7*kChunkSize) relative to kUsableMemoryStart
+        {
+            .addr = kUsableMemoryStart + 6 * kChunkSize,
+            .size = kChunkSize,
+            .type = Type::kFreeRam,
+        },
+    };
+    ASSERT_NO_FATAL_FAILURE(TestPoolContents(ctx.pool, {expected}));
+  }
+
+  // Updating can happen across an extended type.
+  {
+    ASSERT_NO_FATAL_FAILURE(TestPoolFreeRamSubrangeUpdating(ctx.pool, Type::kPoolTestPayload,
+                                                            kUsableMemoryStart, 3 * kChunkSize));
+
+    const MemRange expected[] = {
+        // bookkeeping: [0, kChunkSize)
+        {
+            .addr = kUsableMemoryStart,
+            .size = kChunkSize,
+            .type = Type::kPoolBookkeeping,
+        },
+        // test payload: [kChunkSize, 3*kChunkSize) relative to kUsableMemoryStart
+        // Updated.
+        {
+            .addr = kUsableMemoryStart + kChunkSize,
+            .size = 2 * kChunkSize,
+            .type = Type::kPoolTestPayload,
+        },
+        // data ZBI: [3*kChunkSize, 4*kChunkSize) relative to kUsableMemoryStart
+        {
+            .addr = kUsableMemoryStart + 3 * kChunkSize,
+            .size = kChunkSize,
+            .type = Type::kDataZbi,
+        },
+        // RAM: [4*kChunkSize, 5*kChunkSize) relative to kUsableMemoryStart
+        {
+            .addr = kUsableMemoryStart + 4 * kChunkSize,
+            .size = kChunkSize,
+            .type = Type::kFreeRam,
+        },
+        // RAM: [5*kChunkSize, 6*kChunkSize) relative to kUsableMemoryStart
+        {
+            .addr = kUsableMemoryStart + 5 * kChunkSize,
+            .size = kChunkSize,
+            .type = Type::kPhysKernel,
+        },
+        // RAM: [6*kChunkSize, 7*kChunkSize) relative to kUsableMemoryStart
+        {
+            .addr = kUsableMemoryStart + 6 * kChunkSize,
+            .size = kChunkSize,
+            .type = Type::kFreeRam,
+        },
+    };
+    ASSERT_NO_FATAL_FAILURE(TestPoolContents(ctx.pool, {expected}));
+
+    // Weak allocation does not affect extended type ranges, even when there
+    // is no free RAM in the provided range.
+    ASSERT_NO_FATAL_FAILURE(TestPoolFreeRamSubrangeUpdating(
+        ctx.pool, Type::kPoolTestPayload, kUsableMemoryStart + 3 * kChunkSize, kChunkSize));
+    ASSERT_NO_FATAL_FAILURE(TestPoolContents(ctx.pool, {expected}));
+  }
+
+  {
+    ASSERT_NO_FATAL_FAILURE(TestPoolFreeRamSubrangeUpdating(
+        ctx.pool, Type::kPoolTestPayload, kUsableMemoryStart + 3 * kChunkSize, 3 * kChunkSize));
+
+    const MemRange expected[] = {
+        // bookkeeping: [0, kChunkSize)
+        {
+            .addr = kUsableMemoryStart,
+            .size = kChunkSize,
+            .type = Type::kPoolBookkeeping,
+        },
+        // test payload: [kChunkSize, 3*kChunkSize) relative to kUsableMemoryStart
+        // Updated.
+        {
+            .addr = kUsableMemoryStart + kChunkSize,
+            .size = 2 * kChunkSize,
+            .type = Type::kPoolTestPayload,
+        },
+        // data ZBI: [3*kChunkSize, 4*kChunkSize) relative to kUsableMemoryStart
+        {
+            .addr = kUsableMemoryStart + 3 * kChunkSize,
+            .size = kChunkSize,
+            .type = Type::kDataZbi,
+        },
+        // test payload: [4*kChunkSize, 5*kChunkSize) relative to kUsableMemoryStart
+        {
+            // Updated.
+            .addr = kUsableMemoryStart + 4 * kChunkSize,
+            .size = kChunkSize,
+            .type = Type::kPoolTestPayload,
+        },
+        // RAM: [5*kChunkSize, 6*kChunkSize) relative to kUsableMemoryStart
+        {
+            .addr = kUsableMemoryStart + 5 * kChunkSize,
+            .size = kChunkSize,
+            .type = Type::kPhysKernel,
+        },
+        // RAM: [6*kChunkSize, 7*kChunkSize) relative to kUsableMemoryStart
+        {
+            .addr = kUsableMemoryStart + 6 * kChunkSize,
+            .size = kChunkSize,
+            .type = Type::kFreeRam,
+        },
+    };
+    ASSERT_NO_FATAL_FAILURE(TestPoolContents(ctx.pool, {expected}));
+  }
+
+  {
+    ASSERT_NO_FATAL_FAILURE(TestPoolFreeRamSubrangeUpdating(ctx.pool, Type::kPoolTestPayload,
+                                                            kUsableMemoryStart, 7 * kChunkSize));
+
+    const MemRange expected[] = {
+        // bookkeeping: [0, kChunkSize)
+        {
+            .addr = kUsableMemoryStart,
+            .size = kChunkSize,
+            .type = Type::kPoolBookkeeping,
+        },
+        // test payload: [kChunkSize, 3*kChunkSize) relative to kUsableMemoryStart
+        // Updated.
+        {
+            .addr = kUsableMemoryStart + kChunkSize,
+            .size = 2 * kChunkSize,
+            .type = Type::kPoolTestPayload,
+        },
+        // data ZBI: [3*kChunkSize, 4*kChunkSize) relative to kUsableMemoryStart
+        {
+            .addr = kUsableMemoryStart + 3 * kChunkSize,
+            .size = kChunkSize,
+            .type = Type::kDataZbi,
+        },
+        // test payload: [4*kChunkSize, 5*kChunkSize) relative to kUsableMemoryStart
+        {
+            .addr = kUsableMemoryStart + 4 * kChunkSize,
+            .size = kChunkSize,
+            .type = Type::kPoolTestPayload,
+        },
+        // RAM: [5*kChunkSize, 6*kChunkSize) relative to kUsableMemoryStart
+        {
+            .addr = kUsableMemoryStart + 5 * kChunkSize,
+            .size = kChunkSize,
+            .type = Type::kPhysKernel,
+        },
+        // test payload: [6*kChunkSize, 7*kChunkSize) relative to kUsableMemoryStart
+        {
+            // Updated.
+            .addr = kUsableMemoryStart + 6 * kChunkSize,
+            .size = kChunkSize,
+            .type = Type::kPoolTestPayload,
+        },
+    };
+    ASSERT_NO_FATAL_FAILURE(TestPoolContents(ctx.pool, {expected}));
+  }
+}
+
 TEST(MemallocPoolTests, OutOfMemory) {
   PoolContext ctx;
   MemRange ranges[] = {
@@ -925,6 +1162,17 @@ TEST(MemallocPoolTests, OutOfMemory) {
     });
     ASSERT_NE(ctx.pool.end(), it);
     ASSERT_NO_FATAL_FAILURE(TestPoolFreeing(ctx.pool, it->addr, 1, /*free_error=*/true));
+  }
+
+  // Ditto for any weak allocations that result in subdivision.
+  {
+    auto it = std::find_if(ctx.pool.begin(), ctx.pool.end(), [](const MemRange& range) {
+      return range.type == Type::kFreeRam && range.size > 1;
+    });
+    ASSERT_NE(ctx.pool.end(), it);
+    ASSERT_NO_FATAL_FAILURE(TestPoolFreeRamSubrangeUpdating(ctx.pool, Type::kPoolTestPayload,
+                                                            it->addr, 1,
+                                                            /*alloc_error=*/true));
   }
 }
 

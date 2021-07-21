@@ -160,6 +160,23 @@ class Pool {
       Type type, uint64_t size, uint64_t alignment = __STDCPP_DEFAULT_NEW_ALIGNMENT__,
       uint64_t max_addr = std::numeric_limits<uintptr_t>::max());
 
+  // Attempts to perform a "weak allocation" of the given range, wherein all
+  // kFreeRam subranges are updated to `type`. The given range must be
+  // comprised of tracked subranges of extended type, kFreeRam, or
+  // kBookkeeping. `addr + size` cannot exceed UINT64_MAX.
+  //
+  // The utility of weak allocation lies in situations where there is a special
+  // range that we ultimately want reserved for "something" later on, but it is
+  // immaterial what occupies it in the meantime, so long as nothing is further
+  // allocated from there. For example, when loading a fixed-address kernel
+  // image, we would want to prevent page tables - which must persist
+  // across the boot -from being allocated out of that load range.
+  //
+  // fitx::failed is returned if there is insufficient bookkeeping to track any
+  // new ranges of memory.
+  //
+  fitx::result<fitx::failed> UpdateFreeRamSubranges(Type type, uint64_t addr, uint64_t size);
+
   // Attempts to free a subrange of a previously allocated range or one of
   // extended type that had previously been passed to Init(). This subrange is
   // updated to have type kFreeRam.
@@ -176,6 +193,7 @@ class Pool {
 
  private:
   using mutable_iterator = typename List::iterator;
+  using TypeUpdateFunc = fit::inline_function<void(Type&)>;
 
   // Custom node struct defined so that List's iterators dereference instead as
   // const MemRange&.
@@ -223,15 +241,11 @@ class Pool {
 
   // Merges into `it` any neighboring nodes with directly adjacent ranges of
   // the same type.
-  void Coalesce(mutable_iterator it);
+  mutable_iterator Coalesce(mutable_iterator it);
 
   // Returns an iterator pointing to the node whose range contains
   // [addr, addr + size), returning ranges_.end() if no such node exists.
   mutable_iterator GetContainingNode(uint64_t addr, uint64_t size);
-
-  // Converts any kFreeRam subranges of [0, kNullPointerRegion) to have type
-  // kNullPointerRegion.
-  fitx::result<fitx::failed> PopulateNullPointerRegion();
 
   // Converts as much of [addr, addr + size) as bookkeeping memory as possible,
   // returning the address just after what it was able to convert.

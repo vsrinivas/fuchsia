@@ -11,7 +11,6 @@
 #include <lib/stdcompat/span.h>
 #include <stdarg.h>
 #include <stdio.h>
-#include <zircon/limits.h>
 
 #include <algorithm>
 #include <cstddef>
@@ -116,7 +115,7 @@ fitx::result<fitx::failed> Pool::Init(cpp20::span<internal::MemRangeIterationCon
   }
 
   // Per the documentation.
-  return PopulateNullPointerRegion();
+  return UpdateFreeRamSubranges(Type::kNullPointerRegion, 0, kNullPointerRegionEnd);
 }
 
 fitx::result<fitx::failed, Pool::Node*> Pool::NewNode(const MemRange& range) {
@@ -196,7 +195,6 @@ fitx::result<fitx::failed> Pool::Free(uint64_t addr, uint64_t size) {
     return fitx::ok();
   }
 
-  // Find the first node containing the address `addr`.
   auto it = GetContainingNode(addr, size);
   ZX_ASSERT_MSG(it != ranges_.end(), "Pool::Free(): provided address range is untracked");
 
@@ -222,16 +220,31 @@ fitx::result<fitx::failed> Pool::Free(uint64_t addr, uint64_t size) {
   return fitx::ok();
 }
 
-fitx::result<fitx::failed> Pool::PopulateNullPointerRegion() {
+fitx::result<fitx::failed> Pool::UpdateFreeRamSubranges(Type type, uint64_t addr, uint64_t size) {
+  ZX_ASSERT(IsExtendedType(type));
+  ZX_ASSERT(kMax - addr >= size);
+
+  if (size == 0) {
+    // Nothing to do.
+    return fitx::ok();
+  }
+
+  // Try to proactively ensure two bookkeeping nodes, which might be required
+  // by InsertSubrange() below.
+  TryToEnsureTwoBookkeepingNodes();
+
   mutable_iterator it = ranges_.begin();
-  while (it != ranges_.end() && it->addr < kNullPointerRegionEnd) {
-    if (it->type == Type::kFreeRam) {
-      uint64_t first = it->addr;
-      uint64_t last = std::min(it->end(), kNullPointerRegionEnd);
-      const MemRange range{.addr = first, .size = last - first, .type = Type::kNullPointerRegion};
-      if (auto result = InsertSubrange(range, it); result.is_error()) {
-        return result.take_error();
+  while (it != ranges_.end() && addr + size > it->addr) {
+    if (addr < it->end() && it->type == Type::kFreeRam) {
+      uint64_t first = std::max(it->addr, addr);
+      uint64_t last = std::min(it->end(), addr + size);
+      const MemRange range{.addr = first, .size = last - first, .type = type};
+      if (auto status = InsertSubrange(range, it); status.is_error()) {
+        return status.take_error();
+      } else {
+        it = std::move(status).value();
       }
+      it = Coalesce(it);
     }
     ++it;
   }
@@ -335,7 +348,7 @@ Pool::mutable_iterator Pool::GetContainingNode(uint64_t addr, uint64_t size) {
   return (prev->addr <= addr && range_end <= prev->end()) ? prev : ranges_.end();
 }
 
-void Pool::Coalesce(mutable_iterator it) {
+Pool::mutable_iterator Pool::Coalesce(mutable_iterator it) {
   if (it != ranges_.begin()) {
     auto prev = std::prev(it);
     if (prev->type == it->type && prev->end() == it->addr) {
@@ -351,6 +364,7 @@ void Pool::Coalesce(mutable_iterator it) {
       unused_.push_back(ranges_.erase(next));
     }
   }
+  return it;
 }
 
 void Pool::TryToEnsureTwoBookkeepingNodes() {
