@@ -67,6 +67,12 @@ assert(_debuginfo_valid + [ debuginfo ] - [ debuginfo ] != _debuginfo_valid,
 declare_args() {
   # Explicitly specify DWARF version used.
   dwarf_version = 5
+
+  # TODO(fxbug.dev/26814): Use DWARF 4 for the kernel proper and physboot
+  # until the GDB used by kernel developers fully supports DWARF 5.
+  if (is_kernel) {
+    dwarf_version = 4
+  }
 }
 
 assert(dwarf_version >= 2 && dwarf_version <= 5,

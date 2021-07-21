@@ -46,12 +46,6 @@ if (current_toolchain == default_toolchain) {
       os = "fuchsia"
       environment = "kernel"
 
-      toolchain_args = {
-        # TODO(fxbug.dev/26814): Use DWARF 4 for kernel until GDB used by kernel
-        # developers fully supports DWARF 5.
-        dwarf_version = 4
-      }
-
       toolchain_tags = [
         "kernel",
         "standalone",
