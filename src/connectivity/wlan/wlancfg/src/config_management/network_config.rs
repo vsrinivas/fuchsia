@@ -402,8 +402,10 @@ fn check_config_errors(
     credential: &Credential,
 ) -> Result<(), NetworkConfigError> {
     // Verify SSID has at most fidl_ieee80211::MAX_SSID_BYTE_LEN bytes
-    if ssid.as_ref().len() > (fidl_ieee80211::MAX_SSID_BYTE_LEN as usize) {
-        return Err(NetworkConfigError::SsidLen);
+    if ssid.as_ref().len() < 1 as usize {
+        return Err(NetworkConfigError::SsidEmpty);
+    } else if ssid.as_ref().len() > (fidl_ieee80211::MAX_SSID_BYTE_LEN as usize) {
+        return Err(NetworkConfigError::SsidExceedsMaxLen);
     }
     // Verify that credentials match the security type. This code only inspects the lengths of
     // passphrases and PSKs; the underlying data is considered opaque here.
@@ -454,7 +456,8 @@ pub enum NetworkConfigError {
     OpenNetworkPassword,
     PasswordLen,
     PskLen,
-    SsidLen,
+    SsidEmpty,
+    SsidExceedsMaxLen,
     MissingPasswordPsk,
     ConfigMissingId,
     ConfigMissingCredential,
@@ -471,7 +474,10 @@ impl Debug for NetworkConfigError {
             }
             NetworkConfigError::PasswordLen => write!(f, "invalid password length"),
             NetworkConfigError::PskLen => write!(f, "invalid PSK length"),
-            NetworkConfigError::SsidLen => {
+            NetworkConfigError::SsidEmpty => {
+                write!(f, "SSID must have a non-zero length")
+            }
+            NetworkConfigError::SsidExceedsMaxLen => {
                 write!(f, "SSID has max allowed length of {}", fidl_ieee80211::MAX_SSID_BYTE_LEN)
             }
             NetworkConfigError::MissingPasswordPsk => {
@@ -497,8 +503,28 @@ impl Debug for NetworkConfigError {
 }
 
 impl From<NetworkConfigError> for fidl_policy::NetworkConfigChangeError {
-    fn from(_err: NetworkConfigError) -> Self {
-        fidl_policy::NetworkConfigChangeError::GeneralError
+    fn from(err: NetworkConfigError) -> Self {
+        match err {
+            NetworkConfigError::OpenNetworkPassword | NetworkConfigError::MissingPasswordPsk => {
+                fidl_policy::NetworkConfigChangeError::InvalidSecurityCredentialError
+            }
+            NetworkConfigError::PasswordLen | NetworkConfigError::PskLen => {
+                fidl_policy::NetworkConfigChangeError::CredentialLenError
+            }
+            NetworkConfigError::SsidEmpty => fidl_policy::NetworkConfigChangeError::SsidEmptyError,
+            NetworkConfigError::SsidExceedsMaxLen => {
+                fidl_policy::NetworkConfigChangeError::SsidExceedsMaxLenError
+            }
+            NetworkConfigError::ConfigMissingId | NetworkConfigError::ConfigMissingCredential => {
+                fidl_policy::NetworkConfigChangeError::NetworkConfigMissingFieldError
+            }
+            NetworkConfigError::CredentialTypeInvalid => {
+                fidl_policy::NetworkConfigChangeError::UnsupportedCredentialError
+            }
+            NetworkConfigError::StashWriteError | NetworkConfigError::LegacyWriteError => {
+                fidl_policy::NetworkConfigChangeError::NetworkConfigWriteError
+            }
+        }
     }
 }
 
@@ -582,7 +608,7 @@ mod tests {
     }
 
     #[fuchsia::test]
-    fn new_network_config_invalid_ssid() {
+    fn new_network_config_ssid_exceeds_max_length() {
         let credential = Credential::None;
 
         let config_result = NetworkConfig::new(
@@ -591,7 +617,7 @@ mod tests {
             false,
         );
 
-        assert_variant!(config_result, Err(NetworkConfigError::SsidLen));
+        assert_variant!(config_result, Err(NetworkConfigError::SsidExceedsMaxLen));
     }
 
     #[fuchsia::test]
@@ -704,12 +730,21 @@ mod tests {
     }
 
     #[fuchsia::test]
-    fn check_config_errors_invalid_ssid() {
+    fn check_config_errors_ssid_empty() {
+        let empty_ssid: Vec<u8> = vec![];
+        assert_variant!(
+            check_config_errors(&empty_ssid, &SecurityType::None, &Credential::None),
+            Err(NetworkConfigError::SsidEmpty)
+        );
+    }
+
+    #[fuchsia::test]
+    fn check_config_errors_ssid_exceeds_max_length() {
         // The longest valid SSID length is 32, so 33 characters is too long.
         let long_ssid = [6; 33].to_vec();
         assert_variant!(
             check_config_errors(&long_ssid, &SecurityType::None, &Credential::None),
-            Err(NetworkConfigError::SsidLen)
+            Err(NetworkConfigError::SsidExceedsMaxLen)
         );
     }
 

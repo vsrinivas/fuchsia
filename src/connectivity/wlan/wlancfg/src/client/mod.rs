@@ -1659,7 +1659,7 @@ mod tests {
         // Check that the the response says we failed to save the network.
         assert_variant!(exec.run_until_stalled(&mut save_fut), Poll::Ready(result) => {
             let error = result.expect("Failed to get save network response");
-            assert_eq!(error, Err(SaveError::GeneralError));
+            assert_eq!(error, Err(fidl_policy::NetworkConfigChangeError::NetworkConfigWriteError));
         });
 
         // Check that the value was was not saved in saved networks manager.
