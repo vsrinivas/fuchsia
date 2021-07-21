@@ -26,7 +26,7 @@ use net_types::ip::{Ip, IpVersion, Ipv4, Ipv6};
 use netstack3_core::{
     connect_udp, get_udp_conn_info, get_udp_listener_info, listen_udp, remove_udp_conn,
     remove_udp_listener, send_udp, send_udp_conn, send_udp_listener, IdMap, IdMapCollection, IpExt,
-    UdpConnId, UdpEventDispatcher, UdpListenerId,
+    UdpConnId, UdpConnInfo, UdpEventDispatcher, UdpListenerId, UdpListenerInfo,
 };
 use packet::serialize::Buf;
 use std::collections::VecDeque;
@@ -753,10 +753,10 @@ where
                 // listener, and retrieve the bound local addr and port.
                 let list_info = remove_udp_listener(self.ctx.deref_mut(), listener_id);
                 // also remove from the EventLoop context:
-                I::get_collection_mut(self.ctx.dispatcher_mut())
-                    .listeners
-                    .remove(&listener_id)
-                    .unwrap();
+                assert_ne!(
+                    I::get_collection_mut(self.ctx.dispatcher_mut()).listeners.remove(&listener_id),
+                    None
+                );
 
                 (list_info.local_ip, Some(list_info.local_port))
             }
@@ -765,7 +765,10 @@ where
                 // connection, and retrieve the bound local addr and port.
                 let conn_info = remove_udp_conn(self.ctx.deref_mut(), conn_id);
                 // also remove from the EventLoop context:
-                I::get_collection_mut(self.ctx.dispatcher_mut()).conns.remove(&conn_id).unwrap();
+                assert_ne!(
+                    I::get_collection_mut(self.ctx.dispatcher_mut()).conns.remove(&conn_id),
+                    None
+                );
                 (Some(conn_info.local_ip), Some(conn_info.local_port))
             }
         };
@@ -776,7 +779,12 @@ where
 
         self.get_state_mut().info.state =
             SocketState::BoundConnect { conn_id, shutdown_read: false, shutdown_write: false };
-        I::get_collection_mut(self.ctx.dispatcher_mut()).conns.insert(&conn_id, self.binding_id);
+        assert_eq!(
+            I::get_collection_mut(self.ctx.dispatcher_mut())
+                .conns
+                .insert(&conn_id, self.binding_id),
+            None
+        );
         Ok(())
     }
 
@@ -795,9 +803,12 @@ where
         let listener_id = listen_udp(self.ctx.deref_mut(), local_addr, local_port)
             .map_err(IntoErrno::into_errno)?;
         self.get_state_mut().info.state = SocketState::BoundListen { listener_id };
-        I::get_collection_mut(self.ctx.dispatcher_mut())
-            .listeners
-            .insert(&listener_id, self.binding_id);
+        assert_eq!(
+            I::get_collection_mut(self.ctx.dispatcher_mut())
+                .listeners
+                .insert(&listener_id, self.binding_id),
+            None
+        );
         Ok(())
     }
 
@@ -847,15 +858,21 @@ where
             SocketState::Unbound => {} // nothing to do
             SocketState::BoundListen { listener_id } => {
                 // remove from bindings:
-                I::get_collection_mut(self.ctx.dispatcher_mut()).listeners.remove(&listener_id);
+                assert_ne!(
+                    I::get_collection_mut(self.ctx.dispatcher_mut()).listeners.remove(&listener_id),
+                    None
+                );
                 // remove from core:
-                remove_udp_listener(self.ctx.deref_mut(), listener_id);
+                let _: UdpListenerInfo<_> = remove_udp_listener(self.ctx.deref_mut(), listener_id);
             }
             SocketState::BoundConnect { conn_id, .. } => {
                 // remove from bindings:
-                I::get_collection_mut(self.ctx.dispatcher_mut()).conns.remove(&conn_id);
+                assert_ne!(
+                    I::get_collection_mut(self.ctx.dispatcher_mut()).conns.remove(&conn_id),
+                    None
+                );
                 // remove from core:
-                remove_udp_conn(self.ctx.deref_mut(), conn_id);
+                let _: UdpConnInfo<_> = remove_udp_conn(self.ctx.deref_mut(), conn_id);
             }
         }
         self.get_state_mut().info.state = SocketState::Unbound;
@@ -866,10 +883,18 @@ where
         if inner.ref_count == 1 {
             // always make sure the socket is closed with core.
             self.close_core();
-            I::get_collection_mut(self.ctx.dispatcher_mut())
-                .binding_data
-                .remove(self.binding_id)
-                .unwrap();
+            matches::assert_matches!(
+                I::get_collection_mut(self.ctx.dispatcher_mut())
+                    .binding_data
+                    .remove(self.binding_id),
+                Some(BindingData {
+                    local_event: _,
+                    peer_event: _,
+                    info: _,
+                    available_data: _,
+                    ref_count: 1,
+                })
+            );
         } else {
             inner.ref_count -= 1;
         }
@@ -914,12 +939,7 @@ where
                 error!("UDP socket failed to signal peer: {:?}", e);
             }
         }
-        Ok((
-            addr,
-            data,
-            psocket::RecvControlData::EMPTY,
-            truncated.try_into().unwrap_or(std::u32::MAX),
-        ))
+        Ok((addr, data, psocket::RecvControlData::EMPTY, truncated.try_into().unwrap_or(u32::MAX)))
     }
 
     fn send_msg(&mut self, addr: Option<fnet::SocketAddress>, data: Vec<u8>) -> Result<i64, Errno> {
@@ -1351,9 +1371,10 @@ mod tests {
         // Wait for datagram to arrive on Alice's socket:
 
         println!("Waiting for signals");
-        fasync::OnSignals::new(&alice_events, ZXSIO_SIGNAL_INCOMING)
-            .await
-            .expect("waiting for readable succeeds");
+        assert_eq!(
+            fasync::OnSignals::new(&alice_events, ZXSIO_SIGNAL_INCOMING).await,
+            Ok(ZXSIO_SIGNAL_INCOMING | ZXSIO_SIGNAL_OUTGOING)
+        );
 
         let (from, data, _, truncated) = alice_socket
             .recv_msg(true, 2048, false, psocket::RecvMsgFlags::empty())
@@ -1497,9 +1518,10 @@ mod tests {
             body.len() as i64
         );
 
-        fasync::OnSignals::new(&bob_events, ZXSIO_SIGNAL_INCOMING)
-            .await
-            .expect("failed to wait for readable event on bob");
+        assert_eq!(
+            fasync::OnSignals::new(&bob_events, ZXSIO_SIGNAL_INCOMING).await,
+            Ok(ZXSIO_SIGNAL_INCOMING | ZXSIO_SIGNAL_OUTGOING)
+        );
 
         // Receive from the cloned socket.
         let (from, data, _, truncated) = bob_cloned
@@ -1570,9 +1592,10 @@ mod tests {
                 fidl_fuchsia_io::NodeInfo::DatagramSocket(e) => e.event,
                 _ => panic!("Got wrong describe response for UDP socket"),
             };
-            fasync::OnSignals::new(&alice_readonly_event, ZXSIO_SIGNAL_INCOMING)
-                .await
-                .expect("failed to wait for readable event on alice readonly");
+            assert_eq!(
+                fasync::OnSignals::new(&alice_readonly_event, ZXSIO_SIGNAL_INCOMING).await,
+                Ok(ZXSIO_SIGNAL_INCOMING | ZXSIO_SIGNAL_OUTGOING)
+            );
 
             let (from, data, _, truncated) = alice_readonly
                 .recv_msg(true, 2048, false, psocket::RecvMsgFlags::empty())
@@ -1612,9 +1635,10 @@ mod tests {
             .context("FIDL error")
             .and_then(|s| zx::Status::ok(s).context("close failed"))
             .expect("failed to close");
-        fasync::OnSignals::new(&alice_events, ZXSIO_SIGNAL_INCOMING)
-            .await
-            .expect("failed to wait for readable event on alice");
+        assert_eq!(
+            fasync::OnSignals::new(&alice_events, ZXSIO_SIGNAL_INCOMING).await,
+            Ok(ZXSIO_SIGNAL_INCOMING | ZXSIO_SIGNAL_OUTGOING)
+        );
 
         let (from, data, _, truncated) = alice_socket
             .recv_msg(true, 2048, false, psocket::RecvMsgFlags::empty())
@@ -1889,11 +1913,12 @@ mod tests {
 
         let (e1, e2) = zx::EventPair::create().unwrap();
         fasync::Task::spawn(async move {
-            fasync::OnSignals::new(&events, ZXSIO_SIGNAL_INCOMING)
-                .await
-                .expect("should become unblocked because of the shutdown");
+            assert_eq!(
+                fasync::OnSignals::new(&events, ZXSIO_SIGNAL_INCOMING).await,
+                Ok(ZXSIO_SIGNAL_INCOMING | ZXSIO_SIGNAL_OUTGOING)
+            );
 
-            e1.signal_peer(zx::Signals::NONE, zx::Signals::USER_0).unwrap();
+            assert_eq!(e1.signal_peer(zx::Signals::NONE, ZXSIO_SIGNAL_INCOMING), Ok(()));
         })
         .detach();
 
@@ -1909,7 +1934,10 @@ mod tests {
             .expect("recvmsg should return empty data");
         assert!(data.is_empty());
 
-        fasync::OnSignals::new(&e2, zx::Signals::USER_0).await.expect("must be signaled");
+        assert_eq!(
+            fasync::OnSignals::new(&e2, ZXSIO_SIGNAL_INCOMING).await,
+            Ok(ZXSIO_SIGNAL_INCOMING | zx::Signals::EVENTPAIR_CLOSED)
+        );
 
         let () = socket
             .shutdown(psocket::ShutdownMode::Read)

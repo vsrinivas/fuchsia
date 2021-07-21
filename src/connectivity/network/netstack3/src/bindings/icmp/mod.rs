@@ -29,6 +29,7 @@ use std::collections::HashMap;
 // the ability to throttle consumption.
 const RX_BUFFER_SIZE: usize = 256;
 
+#[derive(Debug)]
 pub(crate) struct EchoSocket {
     reply_tx: futures::channel::mpsc::Sender<fidl_icmp::EchoPacket>,
 }

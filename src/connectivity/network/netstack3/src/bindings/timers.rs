@@ -216,7 +216,8 @@ where
                 // If we don't have any currently scheduled timers with this
                 // timer_id, we're just going to insert a new value into the
                 // vacant entry, marking it with next_id.
-                e.insert(TimerInfo { id: next_id, instant: time, abort_handle });
+                let _: &mut TimerInfo =
+                    e.insert(TimerInfo { id: next_id, instant: time, abort_handle });
                 None
             }
             Entry::Occupied(mut e) => {
@@ -294,7 +295,7 @@ where
                 // The event is only valid if its id matches the one in the
                 // HashMap:
                 if e.get().id == event.id {
-                    e.remove();
+                    let _: TimerInfo = e.remove();
                     Ok(event.inner)
                 } else {
                     Err(event)
@@ -314,6 +315,7 @@ mod tests {
     };
     use fuchsia_zircon::{self as zx, DurationNum};
     use futures::{channel::mpsc, lock::Mutex, task::Poll, Future, StreamExt};
+    use matches::assert_matches;
     use std::sync::Arc;
 
     struct TimerData {
@@ -417,10 +419,10 @@ mod tests {
             assert!(d.dispatcher.schedule_timer(1, nanos_from_now(1)).is_none());
             assert!(d.dispatcher.schedule_timer(2, nanos_from_now(2)).is_none());
         });
-        fired.try_next().expect_err("timer 1 hasn't fired yet");
+        assert_matches!(fired.try_next(), Err(mpsc::TryRecvError { .. }));
         executor.set_fake_time(fasync::Time::after(1.nanos()));
         assert_eq!(run_in_executor(&mut executor, fired.next()).unwrap(), 1);
-        fired.try_next().expect_err("timer 2 hasn't fired yet");
+        assert_matches!(fired.try_next(), Err(mpsc::TryRecvError { .. }));
         executor.set_fake_time(fasync::Time::after(1.nanos()));
         assert_eq!(run_in_executor(&mut executor, fired.next()).unwrap(), 2);
     }
@@ -520,7 +522,7 @@ mod tests {
             assert_eq!(d.cancel_timer(&1).unwrap(), time1);
         }
         run_until_stalled(&mut executor);
-        rcv.try_next().expect_err("no timers should've fired yet");
+        assert_matches!(rcv.try_next(), Err(mpsc::TryRecvError { .. }));
         {
             let d = &mut t.0.try_lock().unwrap().dispatcher;
             // do the same thing again, we'll let the timer expire, but we're
@@ -532,7 +534,7 @@ mod tests {
             assert_eq!(d.schedule_timer(2, time3).unwrap(), time2);
         }
         run_until_stalled(&mut executor);
-        rcv.try_next().expect_err("no timers should've fired yet");
+        assert_matches!(rcv.try_next(), Err(mpsc::TryRecvError { .. }));
 
         // finally after setting the time to the rescheduled time, we should get
         // the rescheduled timer 2.

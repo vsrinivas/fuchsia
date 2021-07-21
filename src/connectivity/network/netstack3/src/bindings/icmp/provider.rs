@@ -142,7 +142,10 @@ where
                 trace!("Spawned ICMP Echo socket worker");
 
                 let socket = EchoSocket { reply_tx };
-                I::get_icmp_echo_sockets(ctx.dispatcher_mut()).insert(conn, socket);
+                matches::assert_matches!(
+                    I::get_icmp_echo_sockets(ctx.dispatcher_mut()).insert(conn, socket),
+                    None
+                );
                 Ok(())
             }
             Err(e) => {
@@ -162,6 +165,7 @@ mod test {
     use fidl_fuchsia_net as fidl_net;
     use fidl_fuchsia_net_icmp::{
         EchoPacket, EchoSocketConfig, EchoSocketEvent, EchoSocketMarker, EchoSocketProxy,
+        ProviderProxy,
     };
 
     use net_types::ip::{AddrSubnetEither, Ipv4, Ipv4Addr};
@@ -346,32 +350,38 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_icmp_echo_socket_ipv4_no_remote_ip() {
-        open_icmp_echo_socket::<TestIpv4Addr, TestNoIpv4Addr>(zx::Status::INVALID_ARGS).await;
+        let _: (TestSetup, EchoSocketProxy) =
+            open_icmp_echo_socket::<TestIpv4Addr, TestNoIpv4Addr>(zx::Status::INVALID_ARGS).await;
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_icmp_echo_socket_ipv6_no_remote_ip() {
-        open_icmp_echo_socket::<TestIpv6Addr, TestNoIpv6Addr>(zx::Status::INVALID_ARGS).await;
+        let _: (TestSetup, EchoSocketProxy) =
+            open_icmp_echo_socket::<TestIpv6Addr, TestNoIpv6Addr>(zx::Status::INVALID_ARGS).await;
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_icmp_echo_socket_ipv4_ipv6_mismatch() {
-        open_icmp_echo_socket::<TestIpv4Addr, TestIpv6Addr>(zx::Status::INVALID_ARGS).await;
+        let _: (TestSetup, EchoSocketProxy) =
+            open_icmp_echo_socket::<TestIpv4Addr, TestIpv6Addr>(zx::Status::INVALID_ARGS).await;
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_icmp_echo_socket_ipv6_ipv4_mismatch() {
-        open_icmp_echo_socket::<TestIpv6Addr, TestIpv4Addr>(zx::Status::INVALID_ARGS).await;
+        let _: (TestSetup, EchoSocketProxy) =
+            open_icmp_echo_socket::<TestIpv6Addr, TestIpv4Addr>(zx::Status::INVALID_ARGS).await;
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_icmp_echo_socket_no_local_or_remote_ipv4() {
-        open_icmp_echo_socket::<TestNoIpv4Addr, TestNoIpv4Addr>(zx::Status::INVALID_ARGS).await;
+        let _: (TestSetup, EchoSocketProxy) =
+            open_icmp_echo_socket::<TestNoIpv4Addr, TestNoIpv4Addr>(zx::Status::INVALID_ARGS).await;
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_icmp_echo_socket_no_local_or_remote_ipv6() {
-        open_icmp_echo_socket::<TestNoIpv6Addr, TestNoIpv6Addr>(zx::Status::INVALID_ARGS).await;
+        let _: (TestSetup, EchoSocketProxy) =
+            open_icmp_echo_socket::<TestNoIpv6Addr, TestNoIpv6Addr>(zx::Status::INVALID_ARGS).await;
     }
 
     // Relies on connect_echo_socket_inner, thus cannot use the
@@ -403,7 +413,7 @@ mod test {
         t.get(BOB).wait_for_interface_online(1).await;
 
         // Open an ICMP echo socket from Alice to Bob
-        t.get(ALICE).connect_icmp_provider().unwrap();
+        let _: ProviderProxy = t.get(ALICE).connect_icmp_provider().unwrap();
 
         let local = Some(SpecifiedAddr::new(Ipv4Addr::new(ALICE_IP)).unwrap());
         let remote = SpecifiedAddr::new(Ipv4Addr::new(BOB_IP)).unwrap();

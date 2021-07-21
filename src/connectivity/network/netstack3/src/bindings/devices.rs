@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::collections::HashMap;
+use std::collections::hash_map::{self, HashMap};
 
 use ethernet as eth;
 use fidl_fuchsia_hardware_ethernet::Features;
 use fidl_fuchsia_hardware_ethernet::MacAddress;
-use netstack3_core::{DeviceId, IdMapCollection, IdMapCollectionKey};
+use netstack3_core::{DeviceId, Entry, IdMapCollection, IdMapCollectionKey};
 
 pub type BindingId = u64;
 
@@ -81,12 +81,12 @@ pub enum ToggleError {
 
 impl<C, I> Devices<C, I>
 where
-    C: IdMapCollectionKey + Clone,
+    C: IdMapCollectionKey + Clone + std::fmt::Debug,
 {
     /// Allocates a new [`BindingId`].
-    fn alloc_id(&mut self) -> BindingId {
-        self.last_id = self.last_id + 1;
-        self.last_id
+    fn alloc_id(last_id: &mut BindingId) -> BindingId {
+        *last_id += 1;
+        *last_id
     }
 
     /// Adds a new active device.
@@ -96,16 +96,18 @@ where
     /// and a [`DeviceInfo`] struct will be created with the provided `info` and
     /// IDs.
     pub fn add_active_device(&mut self, core_id: C, info: I) -> Option<BindingId> {
-        if self.active_devices.get(&core_id).is_some() {
-            return None;
+        let Self { active_devices, id_map, inactive_devices: _, last_id } = self;
+        match active_devices.entry(core_id) {
+            Entry::Occupied(_) => None,
+            Entry::Vacant(entry) => {
+                let id = Self::alloc_id(last_id);
+                let core_id = entry.key().clone();
+                matches::assert_matches!(id_map.insert(id, core_id.clone()), None);
+                let _: &mut DeviceInfo<_, _> =
+                    entry.insert(DeviceInfo { id, core_id: Some(core_id.clone()), info });
+                Some(id)
+            }
         }
-        let id = self.alloc_id();
-
-        self.active_devices
-            .insert(&core_id, DeviceInfo { id, core_id: Some(core_id.clone()), info });
-        self.id_map.insert(id, core_id);
-
-        Some(id)
     }
 
     /// Adds a new device in the inactive state.
@@ -118,8 +120,10 @@ where
     /// by calling [`Devices::activate_device`] with the newly created
     /// [`BindingId`].
     pub fn add_device(&mut self, info: I) -> BindingId {
-        let id = self.alloc_id();
-        self.inactive_devices.insert(id, DeviceInfo { id, core_id: None, info });
+        let Self { active_devices: _, id_map: _, inactive_devices, last_id } = self;
+        let id = Self::alloc_id(last_id);
+        // NB: Can't `assert_eq!(_, None)` because of missing I: Debug bound.
+        assert!(inactive_devices.insert(id, DeviceInfo { id, core_id: None, info }).is_none());
         id
     }
 
@@ -142,25 +146,55 @@ where
         id: BindingId,
         generate_core_id: F,
     ) -> Result<&DeviceInfo<C, I>, ToggleError> {
-        if self.id_map.contains_key(&id) {
-            return Err(ToggleError::NoChange);
-        }
+        let Self { active_devices, id_map, inactive_devices, last_id: _ } = self;
 
-        match self.inactive_devices.remove(&id) {
-            None => Err(ToggleError::NotFound),
-            Some(mut info) => {
-                let core_id = generate_core_id(&info);
-                assert!(self.active_devices.get(&core_id).is_none());
+        let inactive_entry = inactive_devices.entry(id);
 
-                assert!(info.core_id.is_none());
-                info.core_id = Some(core_id.clone());
-
-                self.id_map.insert(id, core_id.clone());
-                self.active_devices.insert(&core_id, info);
-                // we can unwrap here because we just inserted the device
-                // above.
-                Ok(self.active_devices.get(&core_id).unwrap())
+        match id_map.entry(id) {
+            hash_map::Entry::Occupied(core_id) => {
+                match inactive_entry {
+                    hash_map::Entry::Occupied(inactive) => {
+                        panic!(
+                            "inactive device {:?} is associated with core as {:?}",
+                            inactive.key(),
+                            core_id.get()
+                        )
+                    }
+                    hash_map::Entry::Vacant(vacant) => {
+                        let _: hash_map::VacantEntry<'_, _, _> = vacant;
+                    }
+                };
+                Err(ToggleError::NoChange)
             }
+            hash_map::Entry::Vacant(entry) => match inactive_entry {
+                hash_map::Entry::Occupied(inactive) => {
+                    let core_id = generate_core_id(&inactive.get());
+
+                    match active_devices.entry(core_id.clone()) {
+                        Entry::Occupied(active) => {
+                            panic!(
+                                "inactive device {:?} is also active as {:?}",
+                                inactive.key(),
+                                active.key(),
+                            );
+                        }
+                        Entry::Vacant(vacant) => {
+                            let mut info = inactive.remove();
+                            matches::assert_matches!(
+                                std::mem::replace(&mut info.core_id, Some(core_id.clone())),
+                                None
+                            );
+                            let info = vacant.insert(info);
+                            let _: &mut C = entry.insert(core_id);
+                            Ok(info)
+                        }
+                    }
+                }
+                hash_map::Entry::Vacant(vacant) => {
+                    let _: hash_map::VacantEntry<'_, _, _> = vacant;
+                    Err(ToggleError::NotFound)
+                }
+            },
         }
     }
 
@@ -170,7 +204,7 @@ where
     /// - `id` exists.
     /// - `id` has an associated `core_id`.
     ///
-    /// On success, returnes a ref to the updated [`DeviceInfo`] and the
+    /// On success, returns a ref to the updated [`DeviceInfo`] and the
     /// previously associated `core_id`.
     pub fn deactivate_device(
         &mut self,
@@ -461,7 +495,7 @@ mod tests {
         let mut devices = TestDevices::default();
         let core_id = MockDeviceId(1);
         // Add an active device with core_id
-        devices.add_active_device(core_id, 20).unwrap();
+        assert_eq!(devices.add_active_device(core_id, 20), Some(1));
 
         // Trying to activate another device with the same core_id should panic
         let second_device = devices.add_device(10);

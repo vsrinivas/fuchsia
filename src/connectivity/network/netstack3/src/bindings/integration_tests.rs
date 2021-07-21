@@ -579,7 +579,7 @@ impl TestSetupBuilder {
                     configure_endpoint_address(&cli, if_id, addr).await?;
                 }
 
-                stack.endpoint_ids.insert(ep_name, if_id);
+                assert_eq!(stack.endpoint_ids.insert(ep_name, if_id), None);
             }
 
             setup.add_stack(stack)
@@ -909,7 +909,7 @@ async fn test_list_interfaces() {
             .await
             .squash_result()
             .expect("Add interface address succeeds");
-        if_props.insert(if_id, (ep_info, vec![if_ip, if_ipv6_ll]));
+        assert_eq!(if_props.insert(if_id, (ep_info, vec![if_ip, if_ipv6_ll])), None);
     }
 
     let ifs = stack.list_interfaces().await.expect("List interfaces");

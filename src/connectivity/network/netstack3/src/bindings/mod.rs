@@ -29,7 +29,7 @@ use std::time::Duration;
 use fidl_fuchsia_net_icmp as fidl_icmp;
 use fidl_fuchsia_net_stack as fidl_net_stack;
 use fuchsia_async as fasync;
-use fuchsia_component::server::ServiceFs;
+use fuchsia_component::server::{ServiceFs, ServiceFsDir};
 use futures::{lock::Mutex, StreamExt};
 use log::{debug, error, trace, warn};
 use net_types::ethernet::Mac;
@@ -479,10 +479,13 @@ impl Netstack {
     /// Consumes the netstack and starts serving all the FIDL services it
     /// implements to the outgoing service directory.
     pub async fn serve(self) -> Result<(), anyhow::Error> {
+        use anyhow::Context as _;
+
         debug!("Serving netstack");
         self.spawn_timers().await;
         let mut fs = ServiceFs::new_local();
-        fs.dir("svc")
+        let _: &mut ServiceFsDir<'_, _> = fs
+            .dir("svc")
             .add_fidl_service(|rs: fidl_fuchsia_net_icmp::ProviderRequestStream| {
                 icmp::IcmpProviderWorker::spawn(self.clone(), rs)
             })
@@ -492,8 +495,8 @@ impl Netstack {
             .add_fidl_service(|rs: fidl_fuchsia_posix_socket::ProviderRequestStream| {
                 socket::SocketProviderWorker::spawn(self.clone(), rs)
             });
-        fs.take_and_serve_directory_handle()?;
-        fs.collect::<()>().await;
+        let fs = fs.take_and_serve_directory_handle().context("directory handle")?;
+        let () = fs.collect::<()>().await;
         debug!("Services stream finished");
         Ok(())
     }

@@ -216,6 +216,7 @@ impl EchoSocketWorkerInner<EchoSocketWatchResponder, IcmpConnId<Ipv4>, IcmpConnI
 mod test {
     use fidl_fuchsia_net_icmp::{EchoPacket, EchoSocketWatchResult};
     use fuchsia_zircon as zx;
+    use matches::assert_matches;
 
     use super::*;
 
@@ -263,8 +264,8 @@ mod test {
         let payload = vec![1, 2, 3, 4, 5];
         let packet = EchoPacket { sequence_num: 1, payload };
 
-        worker.handle_reply(packet.clone()).unwrap();
-        worker.watch(TestResponder { expected: Ok(packet) }).unwrap();
+        assert_matches!(worker.handle_reply(packet.clone()), Ok(()));
+        assert_matches!(worker.watch(TestResponder { expected: Ok(packet) }), Ok(()));
     }
 
     #[test]
@@ -274,8 +275,8 @@ mod test {
         let payload = vec![1, 2, 3, 4, 5];
         let packet = EchoPacket { sequence_num: 1, payload };
 
-        worker.watch(TestResponder { expected: Ok(packet.clone()) }).unwrap();
-        worker.handle_reply(packet).unwrap();
+        assert_matches!(worker.watch(TestResponder { expected: Ok(packet.clone()) }), Ok(()));
+        assert_matches!(worker.handle_reply(packet), Ok(()));
     }
 
     #[test]
@@ -285,10 +286,10 @@ mod test {
         let first_packet = EchoPacket { sequence_num: 1, payload: vec![0, 1, 2, 3, 4] };
         let second_packet = EchoPacket { sequence_num: 2, payload: vec![5, 6, 7, 8, 9] };
 
-        worker.handle_reply(first_packet.clone()).unwrap();
-        worker.handle_reply(second_packet.clone()).unwrap();
-        worker.watch(TestResponder { expected: Ok(first_packet) }).unwrap();
-        worker.watch(TestResponder { expected: Ok(second_packet) }).unwrap();
+        assert_matches!(worker.handle_reply(first_packet.clone()), Ok(()));
+        assert_matches!(worker.handle_reply(second_packet.clone()), Ok(()));
+        assert_matches!(worker.watch(TestResponder { expected: Ok(first_packet) }), Ok(()));
+        assert_matches!(worker.watch(TestResponder { expected: Ok(second_packet) }), Ok(()));
     }
 
     #[test]
@@ -298,10 +299,13 @@ mod test {
         let first_packet = EchoPacket { sequence_num: 1, payload: vec![0, 1, 2, 3, 4] };
         let second_packet = EchoPacket { sequence_num: 2, payload: vec![5, 6, 7, 8, 9] };
 
-        worker.watch(TestResponder { expected: Ok(first_packet.clone()) }).unwrap();
-        worker.watch(TestResponder { expected: Ok(second_packet.clone()) }).unwrap();
-        worker.handle_reply(first_packet).unwrap();
-        worker.handle_reply(second_packet).unwrap();
+        assert_matches!(worker.watch(TestResponder { expected: Ok(first_packet.clone()) }), Ok(()));
+        assert_matches!(
+            worker.watch(TestResponder { expected: Ok(second_packet.clone()) }),
+            Ok(())
+        );
+        assert_matches!(worker.handle_reply(first_packet), Ok(()));
+        assert_matches!(worker.handle_reply(second_packet), Ok(()));
     }
 
     #[test]
@@ -311,10 +315,16 @@ mod test {
         let first_packet = EchoPacket { sequence_num: 1, payload: vec![0, 1, 2, 3, 4] };
         let second_packet = EchoPacket { sequence_num: 2, payload: vec![5, 6, 7, 8, 9] };
 
-        worker.handle_reply(first_packet.clone()).unwrap();
-        worker.handle_reply(second_packet.clone()).unwrap_err();
-        worker.watch(TestResponder { expected: Ok(first_packet) }).unwrap();
-        worker.watch(TestResponder { expected: Err(zx::Status::IO_OVERRUN) }).unwrap();
+        assert_matches!(worker.handle_reply(first_packet.clone()), Ok(()));
+        assert_matches!(
+            worker.handle_reply(second_packet.clone()),
+            Err(ResponderError::ReachedCapacity)
+        );
+        assert_matches!(worker.watch(TestResponder { expected: Ok(first_packet) }), Ok(()));
+        assert_matches!(
+            worker.watch(TestResponder { expected: Err(zx::Status::IO_OVERRUN) }),
+            Ok(())
+        );
     }
 
     #[test]
@@ -325,13 +335,16 @@ mod test {
         let second_packet = EchoPacket { sequence_num: 2, payload: vec![5, 6, 7, 8, 9] };
         let third_packet = EchoPacket { sequence_num: 3, payload: vec![2, 4, 6, 8, 0] };
 
-        worker.handle_reply(first_packet.clone()).unwrap();
-        worker.handle_reply(second_packet).unwrap_err(); // second_packet should be dropped
-        worker.watch(TestResponder { expected: Ok(first_packet) }).unwrap();
-        worker.watch(TestResponder { expected: Err(zx::Status::IO_OVERRUN) }).unwrap();
+        assert_matches!(worker.handle_reply(first_packet.clone()), Ok(()));
+        assert_matches!(worker.handle_reply(second_packet), Err(ResponderError::ReachedCapacity)); // second_packet should be dropped
+        assert_matches!(worker.watch(TestResponder { expected: Ok(first_packet) }), Ok(()));
+        assert_matches!(
+            worker.watch(TestResponder { expected: Err(zx::Status::IO_OVERRUN) }),
+            Ok(())
+        );
 
-        worker.handle_reply(third_packet.clone()).unwrap();
-        worker.watch(TestResponder { expected: Ok(third_packet) }).unwrap();
+        assert_matches!(worker.handle_reply(third_packet.clone()), Ok(()));
+        assert_matches!(worker.watch(TestResponder { expected: Ok(third_packet) }), Ok(()));
     }
 
     #[test]
@@ -343,14 +356,17 @@ mod test {
         let third_packet = EchoPacket { sequence_num: 3, payload: vec![2, 4, 6, 8, 0] };
         let fourth_packet = EchoPacket { sequence_num: 4, payload: vec![1, 3, 5, 7, 9] };
 
-        worker.handle_reply(first_packet.clone()).unwrap();
-        worker.handle_reply(second_packet).unwrap_err(); // second_packet should be dropped
-        worker.handle_reply(third_packet).unwrap_err(); // third_packet should be dropped
-        worker.watch(TestResponder { expected: Ok(first_packet) }).unwrap();
-        worker.watch(TestResponder { expected: Err(zx::Status::IO_OVERRUN) }).unwrap();
+        assert_matches!(worker.handle_reply(first_packet.clone()), Ok(()));
+        assert_matches!(worker.handle_reply(second_packet), Err(ResponderError::ReachedCapacity)); // second_packet should be dropped
+        assert_matches!(worker.handle_reply(third_packet), Err(ResponderError::ReachedCapacity)); // third_packet should be dropped
+        assert_matches!(worker.watch(TestResponder { expected: Ok(first_packet) }), Ok(()));
+        assert_matches!(
+            worker.watch(TestResponder { expected: Err(zx::Status::IO_OVERRUN) }),
+            Ok(())
+        );
 
-        worker.handle_reply(fourth_packet.clone()).unwrap();
-        worker.watch(TestResponder { expected: Ok(fourth_packet) }).unwrap();
+        assert_matches!(worker.handle_reply(fourth_packet.clone()), Ok(()));
+        assert_matches!(worker.watch(TestResponder { expected: Ok(fourth_packet) }), Ok(()));
     }
 
     #[test]
@@ -362,14 +378,20 @@ mod test {
         let third_packet = EchoPacket { sequence_num: 3, payload: vec![2, 4, 6, 8, 0] };
         let fourth_packet = EchoPacket { sequence_num: 4, payload: vec![1, 3, 5, 7, 9] };
 
-        worker.watch(TestResponder { expected: Ok(first_packet.clone()) }).unwrap();
-        worker.watch(TestResponder { expected: Ok(second_packet.clone()) }).unwrap();
-        worker.handle_reply(first_packet).unwrap();
-        worker.handle_reply(second_packet).unwrap();
-        worker.handle_reply(third_packet.clone()).unwrap();
-        worker.handle_reply(fourth_packet).unwrap_err(); // fourth_packet should be dropped
-        worker.watch(TestResponder { expected: Ok(third_packet) }).unwrap();
-        worker.watch(TestResponder { expected: Err(zx::Status::IO_OVERRUN) }).unwrap();
+        assert_matches!(worker.watch(TestResponder { expected: Ok(first_packet.clone()) }), Ok(()));
+        assert_matches!(
+            worker.watch(TestResponder { expected: Ok(second_packet.clone()) }),
+            Ok(())
+        );
+        assert_matches!(worker.handle_reply(first_packet), Ok(()));
+        assert_matches!(worker.handle_reply(second_packet), Ok(()));
+        assert_matches!(worker.handle_reply(third_packet.clone()), Ok(()));
+        assert_matches!(worker.handle_reply(fourth_packet), Err(ResponderError::ReachedCapacity)); // fourth_packet should be dropped
+        assert_matches!(worker.watch(TestResponder { expected: Ok(third_packet) }), Ok(()));
+        assert_matches!(
+            worker.watch(TestResponder { expected: Err(zx::Status::IO_OVERRUN) }),
+            Ok(())
+        );
     }
 
     #[test]
@@ -381,13 +403,22 @@ mod test {
         let third_packet = EchoPacket { sequence_num: 3, payload: vec![2, 4, 6, 8, 0] };
         let fourth_packet = EchoPacket { sequence_num: 4, payload: vec![1, 3, 5, 7, 9] };
 
-        worker.watch(TestResponder { expected: Ok(first_packet.clone()) }).unwrap();
-        worker.handle_reply(first_packet).unwrap();
-        worker.handle_reply(second_packet.clone()).unwrap();
-        worker.handle_reply(third_packet.clone()).unwrap_err(); // third_packet should be dropped
-        worker.watch(TestResponder { expected: Ok(second_packet) }).unwrap();
-        worker.watch(TestResponder { expected: Err(zx::Status::IO_OVERRUN) }).unwrap();
-        worker.watch(TestResponder { expected: Ok(fourth_packet.clone()) }).unwrap();
-        worker.handle_reply(fourth_packet.clone()).unwrap();
+        assert_matches!(worker.watch(TestResponder { expected: Ok(first_packet.clone()) }), Ok(()));
+        assert_matches!(worker.handle_reply(first_packet), Ok(()));
+        assert_matches!(worker.handle_reply(second_packet.clone()), Ok(()));
+        assert_matches!(
+            worker.handle_reply(third_packet.clone()),
+            Err(ResponderError::ReachedCapacity)
+        ); // third_packet should be dropped
+        assert_matches!(worker.watch(TestResponder { expected: Ok(second_packet) }), Ok(()));
+        assert_matches!(
+            worker.watch(TestResponder { expected: Err(zx::Status::IO_OVERRUN) }),
+            Ok(())
+        );
+        assert_matches!(
+            worker.watch(TestResponder { expected: Ok(fourth_packet.clone()) }),
+            Ok(())
+        );
+        assert_matches!(worker.handle_reply(fourth_packet.clone()), Ok(()));
     }
 }
