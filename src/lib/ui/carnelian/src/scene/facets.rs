@@ -65,7 +65,7 @@ pub trait Facet {
     fn update_layers(
         &mut self,
         size: Size,
-        layer_group: &mut LayerGroup,
+        layer_group: &mut dyn LayerGroup,
         render_context: &mut RenderContext,
         view_context: &ViewAssistantContext,
     ) -> Result<(), Error>;
@@ -110,7 +110,7 @@ impl Facet for RectangleFacet {
     fn update_layers(
         &mut self,
         _size: Size,
-        layer_group: &mut LayerGroup,
+        layer_group: &mut dyn LayerGroup,
         render_context: &mut RenderContext,
         _view_context: &ViewAssistantContext,
     ) -> Result<(), Error> {
@@ -255,7 +255,7 @@ impl Facet for TextFacet {
     fn update_layers(
         &mut self,
         _size: Size,
-        layer_group: &mut LayerGroup,
+        layer_group: &mut dyn LayerGroup,
         render_context: &mut RenderContext,
         _view_context: &ViewAssistantContext,
     ) -> Result<(), Error> {
@@ -341,7 +341,7 @@ impl Facet for RasterFacet {
     fn update_layers(
         &mut self,
         _size: Size,
-        layer_group: &mut LayerGroup,
+        layer_group: &mut dyn LayerGroup,
         _render_context: &mut RenderContext,
         _view_context: &ViewAssistantContext,
     ) -> Result<(), Error> {
@@ -375,7 +375,7 @@ impl Facet for ShedFacet {
     fn update_layers(
         &mut self,
         _size: Size,
-        layer_group: &mut LayerGroup,
+        layer_group: &mut dyn LayerGroup,
         render_context: &mut RenderContext,
         _view_context: &ViewAssistantContext,
     ) -> Result<(), Error> {
@@ -437,7 +437,7 @@ impl Facet for SpacingFacet {
     fn update_layers(
         &mut self,
         _size: Size,
-        _layer_group: &mut LayerGroup,
+        _layer_group: &mut dyn LayerGroup,
         _render_context: &mut RenderContext,
         _view_context: &ViewAssistantContext,
     ) -> Result<(), Error> {
@@ -467,7 +467,7 @@ impl Facet for RiveFacet {
     fn update_layers(
         &mut self,
         _size: Size,
-        layer_group: &mut LayerGroup,
+        layer_group: &mut dyn LayerGroup,
         render_context: &mut RenderContext,
         _view_context: &ViewAssistantContext,
     ) -> Result<(), Error> {

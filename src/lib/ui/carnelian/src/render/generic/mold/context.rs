@@ -261,6 +261,11 @@ fn render_composition(
         };
     }
 
+    // Enable this to debug partial updates:
+    //
+    //   buffer.buffer.fill([0, 0, 255, 255]);
+    //
+
     duration_begin!("gfx", "render::Context<Mold>::print_layers", "count" => composition.layers.len() as u32);
     while let Some((order, layer)) = layers.next() {
         if layer.raster.prints.is_empty() {

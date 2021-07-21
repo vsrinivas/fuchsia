@@ -30,6 +30,34 @@ use std::{
     fmt::{self, Debug},
 };
 
+struct DirectLayerGroup<'a>(&'a mut Composition);
+
+impl LayerGroup for DirectLayerGroup<'_> {
+    fn clear(&mut self) {
+        self.0.clear();
+    }
+    fn insert(&mut self, order: u16, layer: Layer) -> Option<Layer> {
+        self.0.insert(order, layer)
+    }
+    fn remove(&mut self, order: u16) -> Option<Layer> {
+        self.0.remove(order)
+    }
+}
+
+struct SimpleLayerGroup<'a>(&'a mut BTreeMap<u16, Layer>);
+
+impl LayerGroup for SimpleLayerGroup<'_> {
+    fn clear(&mut self) {
+        self.0.clear();
+    }
+    fn insert(&mut self, order: u16, layer: Layer) -> Option<Layer> {
+        self.0.insert(order, layer)
+    }
+    fn remove(&mut self, order: u16) -> Option<Layer> {
+        self.0.remove(&order)
+    }
+}
+
 fn create_mouse_cursor_raster(render_context: &mut RenderContext) -> Raster {
     let path = path_for_cursor(Point::zero(), 20.0, render_context);
     let mut raster_builder = render_context.raster_builder().expect("raster_builder");
@@ -215,13 +243,12 @@ impl Scene {
         duration!("gfx", "Scene::update_scene_layers");
 
         for (facet_id, facet_entry) in &mut self.facets {
-            let facet_layers = self.layers.remove(facet_id).unwrap_or_else(|| BTreeMap::new());
-            let mut layer_group = LayerGroup(facet_layers);
+            let facet_layers = self.layers.entry(*facet_id).or_insert_with(|| BTreeMap::new());
+            let mut layer_group = SimpleLayerGroup(facet_layers);
             facet_entry
                 .facet
                 .update_layers(size, &mut layer_group, render_context, view_context)
                 .expect("update_layers");
-            self.layers.insert(*facet_id, layer_group.0);
         }
     }
 
@@ -249,10 +276,6 @@ impl Scene {
         composition: &mut Composition,
     ) {
         duration!("gfx", "Scene::update_composition");
-
-        // TODO: Don't rebuild the composition each frame. This is expensive for
-        // scenes with large set of layers.
-        composition.clear();
 
         for (order, layer) in layers.into_iter() {
             composition.insert(order, layer);
@@ -323,42 +346,68 @@ impl Scene {
             &None
         };
 
-        self.update_scene_layers(size, render_context, context);
+        // Allow single scene facets to mutate the composition directly for optimal
+        // performance.
+        if self.facets.len() == 1 {
+            let (_, facet_entry) = self.facets.iter_mut().next().expect("first facet");
+            if facet_entry.location != Point::zero() {
+                panic!("single facet scene with non-zero ({:?}) location", facet_entry.location);
+            }
+            let composition = &mut self.composition;
+            let mut layer_group = DirectLayerGroup(composition);
+            facet_entry
+                .facet
+                .update_layers(size, &mut layer_group, render_context, context)
+                .expect("update_layers");
 
-        let composition = &mut self.composition;
-        let facet_order = &self.facet_order;
-        let facets = &self.facets;
-        let layers = &self.layers;
+            Self::update_composition(
+                std::iter::empty(),
+                mouse_cursor_position,
+                &self.mouse_cursor_raster,
+                &self.corner_knockouts_raster,
+                composition,
+            );
+        } else {
+            self.update_scene_layers(size, render_context, context);
 
-        let mut next_origin: u32 = 0;
-        let layers = facet_order.iter().rev().flat_map(|facet_id| {
-            let facet_entry = facets.get(facet_id).expect("facets");
-            let facet_translation = facet_entry.location.to_vector().to_i32();
-            let facet_layers = layers.get(facet_id).expect("layers");
-            let facet_origin = next_origin;
+            let composition = &mut self.composition;
+            let facet_order = &self.facet_order;
+            let facets = &self.facets;
+            let layers = &self.layers;
 
-            // Advance origin for next facet.
-            next_origin += facet_layers.keys().next_back().map(|o| *o as u32 + 1).unwrap_or(0);
+            // Clear composition and generate a completely new set of layers.
+            composition.clear();
 
-            facet_layers.iter().map(move |(order, layer)| {
-                (
-                    u16::try_from(facet_origin + *order as u32).expect("too many layers"),
-                    Layer {
-                        raster: layer.raster.clone().translate(facet_translation),
-                        clip: layer.clip.clone().map(|c| c.translate(facet_translation)),
-                        style: layer.style.clone(),
-                    },
-                )
-            })
-        });
+            let mut next_origin: u32 = 0;
+            let layers = facet_order.iter().rev().flat_map(|facet_id| {
+                let facet_entry = facets.get(facet_id).expect("facets");
+                let facet_translation = facet_entry.location.to_vector().to_i32();
+                let facet_layers = layers.get(facet_id).expect("layers");
+                let facet_origin = next_origin;
 
-        Self::update_composition(
-            layers,
-            mouse_cursor_position,
-            &self.mouse_cursor_raster,
-            &self.corner_knockouts_raster,
-            composition,
-        );
+                // Advance origin for next facet.
+                next_origin += facet_layers.keys().next_back().map(|o| *o as u32 + 1).unwrap_or(0);
+
+                facet_layers.iter().map(move |(order, layer)| {
+                    (
+                        u16::try_from(facet_origin + *order as u32).expect("too many layers"),
+                        Layer {
+                            raster: layer.raster.clone().translate(facet_translation),
+                            clip: layer.clip.clone().map(|c| c.translate(facet_translation)),
+                            style: layer.style.clone(),
+                        },
+                    )
+                })
+            });
+
+            Self::update_composition(
+                layers,
+                mouse_cursor_position,
+                &self.mouse_cursor_raster,
+                &self.corner_knockouts_raster,
+                composition,
+            );
+        }
 
         render_context.render(&self.composition, None, image, &ext);
         ready_event.as_handle_ref().signal(Signals::NONE, Signals::EVENT_SIGNALED)?;

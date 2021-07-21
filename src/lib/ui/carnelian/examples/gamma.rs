@@ -75,7 +75,7 @@ impl Facet for GammaFacet {
     fn update_layers(
         &mut self,
         size: Size,
-        layer_group: &mut LayerGroup,
+        layer_group: &mut dyn LayerGroup,
         render_context: &mut RenderContext,
         _view_context: &ViewAssistantContext,
     ) -> std::result::Result<(), anyhow::Error> {
