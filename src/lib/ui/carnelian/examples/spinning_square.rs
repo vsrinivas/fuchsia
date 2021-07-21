@@ -188,8 +188,8 @@ struct SpinningSquareViewAssistant {
 
 impl SpinningSquareViewAssistant {
     fn new() -> Result<ViewAssistantPtr, Error> {
-        let square_color = Color { r: 0xff, g: 0x00, b: 0xff, a: 0xff };
-        let background_color = Color { r: 0xb7, g: 0x41, b: 0x0e, a: 0xff };
+        let square_color = Color { r: 0xbb, g: 0x00, b: 0xff, a: 0xbb };
+        let background_color = Color { r: 0x3f, g: 0x8a, b: 0x99, a: 0xff };
         let start = Time::get_monotonic();
         Ok(Box::new(SpinningSquareViewAssistant {
             background_color,
