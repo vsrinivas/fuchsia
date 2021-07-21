@@ -326,7 +326,7 @@ zx_status_t GicDistributor::BindVcpus(uint32_t vector, uint8_t cpu_mask) {
   return ZX_OK;
 }
 
-zx_status_t GicDistributor::Read(uint64_t addr, IoValue* value) const {
+zx_status_t GicDistributor::Read(uint64_t addr, IoValue* value) {
   if (!gicd_access_valid(addr, value->access_size)) {
     return ZX_ERR_IO;
   }
@@ -650,7 +650,7 @@ zx_status_t GicDistributor::ConfigureDtb(void* dtb) const {
   return ZX_OK;
 }
 
-zx_status_t GicRedistributor::Read(uint64_t addr, IoValue* value) const {
+zx_status_t GicRedistributor::Read(uint64_t addr, IoValue* value) {
   if (!gicr_access_valid(addr, value->access_size)) {
     return ZX_ERR_IO;
   }

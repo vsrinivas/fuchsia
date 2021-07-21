@@ -37,7 +37,7 @@ zx_status_t Pl031::Init(Guest* guest) {
   return guest->CreateMapping(TrapType::MMIO_SYNC, kPl031PhysBase, kPl031Size, 0, this);
 }
 
-zx_status_t Pl031::Read(uint64_t addr, IoValue* value) const {
+zx_status_t Pl031::Read(uint64_t addr, IoValue* value) {
   // We only support 32-bit reads/writes.
   if (value->access_size != 4) {
     return ZX_ERR_IO;

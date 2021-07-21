@@ -152,7 +152,7 @@ void PciBar::set_pci_config_reg(size_t slot, uint32_t value) {
   }
 }
 
-zx_status_t PciBar::Read(uint64_t addr, IoValue* value) const {
+zx_status_t PciBar::Read(uint64_t addr, IoValue* value) {
   TRACE_DURATION("machina", "pci_readbar", "vendor_id", TA_UINT32(device_->attrs().vendor_id),
                  "device_id", TA_UINT32(device_->attrs().device_id), "offset", TA_UINT64(addr),
                  "access_size", TA_UINT32(value->access_size));
@@ -170,7 +170,7 @@ std::string_view PciBar::Name() const { return device_->name(); }
 
 PciPortHandler::PciPortHandler(PciBus* bus) : bus_(bus) {}
 
-zx_status_t PciPortHandler::Read(uint64_t addr, IoValue* value) const {
+zx_status_t PciPortHandler::Read(uint64_t addr, IoValue* value) {
   return bus_->ReadIoPort(addr, value);
 }
 
@@ -180,7 +180,7 @@ zx_status_t PciPortHandler::Write(uint64_t addr, const IoValue& value) {
 
 PciEcamHandler::PciEcamHandler(PciBus* bus) : bus_(bus) {}
 
-zx_status_t PciEcamHandler::Read(uint64_t addr, IoValue* value) const {
+zx_status_t PciEcamHandler::Read(uint64_t addr, IoValue* value) {
   return bus_->ReadEcam(addr, value);
 }
 

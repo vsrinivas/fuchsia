@@ -47,7 +47,7 @@ zx_status_t Pl011::Init(Guest* guest) {
   return guest->CreateMapping(TrapType::MMIO_SYNC, kPl011PhysBase, kPl011Size, 0, this);
 }
 
-zx_status_t Pl011::Read(uint64_t addr, IoValue* value) const {
+zx_status_t Pl011::Read(uint64_t addr, IoValue* value) {
   switch (static_cast<Pl011Register>(addr)) {
     case Pl011Register::CR: {
       std::lock_guard<std::mutex> lock(mutex_);

@@ -98,7 +98,7 @@ zx_status_t PicHandler::Init(Guest* guest, uint16_t base) {
   return guest->CreateMapping(TrapType::PIO_SYNC, base, kPicSize, 0, this);
 }
 
-zx_status_t PicHandler::Read(uint64_t addr, IoValue* value) const {
+zx_status_t PicHandler::Read(uint64_t addr, IoValue* value) {
   if (addr == kPicDataPort) {
     value->access_size = 1;
     value->u8 = kPicInvalid;
@@ -113,7 +113,7 @@ zx_status_t PitHandler::Init(Guest* guest) {
   return guest->CreateMapping(TrapType::PIO_SYNC, kPitBase, kPitSize, 0, this);
 }
 
-zx_status_t PitHandler::Read(uint64_t addr, IoValue* value) const { return ZX_ERR_NOT_SUPPORTED; }
+zx_status_t PitHandler::Read(uint64_t addr, IoValue* value) { return ZX_ERR_NOT_SUPPORTED; }
 
 zx_status_t PitHandler::Write(uint64_t addr, const IoValue& value) { return ZX_OK; }
 
@@ -127,7 +127,7 @@ zx_status_t Pm1Handler::Init(Guest* guest) {
                               this);
 }
 
-zx_status_t Pm1Handler::Read(uint64_t addr, IoValue* value) const {
+zx_status_t Pm1Handler::Read(uint64_t addr, IoValue* value) {
   switch (addr) {
     case kPm1StatusPortOffset:
       value->access_size = 2;
@@ -192,7 +192,7 @@ zx_status_t CmosHandler::Init(Guest* guest) {
   return guest->CreateMapping(TrapType::PIO_SYNC, kCmosBase, kCmosSize, 0, this);
 }
 
-zx_status_t CmosHandler::Read(uint64_t addr, IoValue* value) const {
+zx_status_t CmosHandler::Read(uint64_t addr, IoValue* value) {
   switch (addr) {
     case kCmosDataPort: {
       value->access_size = 1;
@@ -231,7 +231,7 @@ zx_status_t CmosHandler::Write(uint64_t addr, const IoValue& value) {
   }
 }
 
-zx_status_t CmosHandler::ReadCmosRegister(uint8_t cmos_index, uint8_t* value) const {
+zx_status_t CmosHandler::ReadCmosRegister(uint8_t cmos_index, uint8_t* value) {
   time_t now = rtc_time();
   struct tm tm;
   if (localtime_r(&now, &tm) == nullptr) {
@@ -325,7 +325,7 @@ zx_status_t I8042Handler::Init(Guest* guest) {
                               kI8042CommandPort, this);
 }
 
-zx_status_t I8042Handler::Read(uint64_t port, IoValue* value) const {
+zx_status_t I8042Handler::Read(uint64_t port, IoValue* value) {
   switch (port) {
     case kI8042DataPort: {
       value->access_size = 1;
@@ -365,7 +365,7 @@ zx_status_t I8237Handler::Init(Guest* guest) {
                               this);
 }
 
-zx_status_t I8237Handler::Read(uint64_t port, IoValue* value) const {
+zx_status_t I8237Handler::Read(uint64_t port, IoValue* value) {
   if (port != kI8237DmaPage0) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -390,7 +390,7 @@ zx_status_t ProcessorInterfaceHandler::Init(Guest* guest) {
                               this);
 }
 
-zx_status_t ProcessorInterfaceHandler::Read(uint64_t addr, IoValue* value) const {
+zx_status_t ProcessorInterfaceHandler::Read(uint64_t addr, IoValue* value) {
   switch (addr) {
     case kNmiStatusControlOffset:
       value->u8 = nmi_sc_;

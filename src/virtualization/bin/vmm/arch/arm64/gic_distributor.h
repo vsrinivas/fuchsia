@@ -23,7 +23,7 @@ class GicRedistributor : public IoHandler {
  public:
   GicRedistributor(uint16_t id, bool last) : id_(id), last_(last) {}
 
-  zx_status_t Read(uint64_t addr, IoValue* value) const override;
+  zx_status_t Read(uint64_t addr, IoValue* value) override;
   zx_status_t Write(uint64_t addr, const IoValue& value) override;
   std::string_view Name() const override { return "GIC Redistributor"; }
 
@@ -51,7 +51,7 @@ class GicDistributor : public IoHandler, public PlatformDevice {
   zx_status_t Interrupt(uint32_t vector);
 
   // |IoHandler|
-  zx_status_t Read(uint64_t addr, IoValue* value) const override;
+  zx_status_t Read(uint64_t addr, IoValue* value) override;
   zx_status_t Write(uint64_t addr, const IoValue& value) override;
   std::string_view Name() const override { return "GIC Distributor"; }
 

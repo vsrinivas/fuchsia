@@ -34,7 +34,7 @@ class IoApic : public IoHandler, public PlatformDevice {
   zx_status_t Init();
 
   // IoHandler interface.
-  zx_status_t Read(uint64_t addr, IoValue* value) const override;
+  zx_status_t Read(uint64_t addr, IoValue* value) override;
   zx_status_t Write(uint64_t addr, const IoValue& value) override;
   std::string_view Name() const override { return "IO APIC"; }
 

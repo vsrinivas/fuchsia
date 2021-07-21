@@ -26,7 +26,7 @@ class PicHandler : public IoHandler {
  public:
   zx_status_t Init(Guest* guest, uint16_t base);
 
-  zx_status_t Read(uint64_t addr, IoValue* value) const override;
+  zx_status_t Read(uint64_t addr, IoValue* value) override;
   zx_status_t Write(uint64_t addr, const IoValue& value) override;
   std::string_view Name() const override { return "PIC"; }
 };
@@ -35,7 +35,7 @@ class PitHandler : public IoHandler {
  public:
   zx_status_t Init(Guest* guest);
 
-  zx_status_t Read(uint64_t addr, IoValue* value) const override;
+  zx_status_t Read(uint64_t addr, IoValue* value) override;
   zx_status_t Write(uint64_t addr, const IoValue& value) override;
   std::string_view Name() const override { return "PIT"; }
 };
@@ -44,7 +44,7 @@ class Pm1Handler : public IoHandler {
  public:
   zx_status_t Init(Guest* guest);
 
-  zx_status_t Read(uint64_t addr, IoValue* value) const override;
+  zx_status_t Read(uint64_t addr, IoValue* value) override;
   zx_status_t Write(uint64_t addr, const IoValue& value) override;
   std::string_view Name() const override { return "PM1"; }
 
@@ -57,12 +57,12 @@ class CmosHandler : public IoHandler {
  public:
   zx_status_t Init(Guest* guest);
 
-  zx_status_t Read(uint64_t addr, IoValue* value) const override;
+  zx_status_t Read(uint64_t addr, IoValue* value) override;
   zx_status_t Write(uint64_t addr, const IoValue& value) override;
   std::string_view Name() const override { return "CMOS"; }
 
  private:
-  zx_status_t ReadCmosRegister(uint8_t cmos_index, uint8_t* value) const;
+  zx_status_t ReadCmosRegister(uint8_t cmos_index, uint8_t* value);
   zx_status_t WriteCmosRegister(uint8_t cmos_index, uint8_t value);
   mutable std::mutex mutex_;
   uint8_t index_ __TA_GUARDED(mutex_) = 0;
@@ -72,7 +72,7 @@ class I8042Handler : public IoHandler {
  public:
   zx_status_t Init(Guest* guest);
 
-  zx_status_t Read(uint64_t addr, IoValue* value) const override;
+  zx_status_t Read(uint64_t addr, IoValue* value) override;
   zx_status_t Write(uint64_t addr, const IoValue& value) override;
   std::string_view Name() const override { return "I8042"; }
 
@@ -85,7 +85,7 @@ class I8237Handler : public IoHandler {
  public:
   zx_status_t Init(Guest* guest);
 
-  zx_status_t Read(uint64_t addr, IoValue* value) const override;
+  zx_status_t Read(uint64_t addr, IoValue* value) override;
   zx_status_t Write(uint64_t addr, const IoValue& value) override;
   std::string_view Name() const override { return "I8237"; }
 };
@@ -94,7 +94,7 @@ class ProcessorInterfaceHandler : public IoHandler {
  public:
   zx_status_t Init(Guest* guest);
 
-  zx_status_t Read(uint64_t addr, IoValue* value) const override;
+  zx_status_t Read(uint64_t addr, IoValue* value) override;
   zx_status_t Write(uint64_t addr, const IoValue& value) override;
   std::string_view Name() const override { return "Processor Interface"; }
 

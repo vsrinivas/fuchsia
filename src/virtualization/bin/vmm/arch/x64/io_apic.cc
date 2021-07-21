@@ -72,7 +72,7 @@ zx_status_t IoApic::Interrupt(uint32_t global_irq) {
   return guest_->Interrupt(dest, vector);
 }
 
-zx_status_t IoApic::Read(uint64_t addr, IoValue* value) const {
+zx_status_t IoApic::Read(uint64_t addr, IoValue* value) {
   switch (addr) {
     case kIoApicIoRegSel: {
       std::lock_guard<std::mutex> lock(mutex_);

@@ -41,7 +41,8 @@ class IoHandler {
   virtual std::string_view Name() const = 0;
 
   // Read |value.access_size| bytes from |addr| into |value|.
-  virtual zx_status_t Read(zx_gpaddr_t addr, IoValue* value) const = 0;
+  // Not const since there may be side effects.
+  virtual zx_status_t Read(zx_gpaddr_t addr, IoValue* value) = 0;
 
   // Write |value.access_size| bytes to |addr| from |value|.
   virtual zx_status_t Write(zx_gpaddr_t addr, const IoValue& value) = 0;

@@ -46,7 +46,7 @@ zx_status_t I8250::Init(Guest* guest, zx::socket* socket, uint64_t addr) {
   return guest->CreateMapping(TrapType::PIO_SYNC, addr, kI8250Size, 0, this);
 }
 
-zx_status_t I8250::Read(uint64_t addr, IoValue* io) const {
+zx_status_t I8250::Read(uint64_t addr, IoValue* io) {
   switch (static_cast<I8250Register>(addr)) {
     case I8250Register::INTERRUPT_ENABLE:
       io->access_size = 1;

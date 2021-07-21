@@ -102,7 +102,7 @@ class PciBar : public IoHandler {
   void set_pci_config_reg(size_t slot, uint32_t value);
 
   // IoHandler interface.
-  zx_status_t Read(uint64_t addr, IoValue* value) const override;
+  zx_status_t Read(uint64_t addr, IoValue* value) override;
   zx_status_t Write(uint64_t addr, const IoValue& value) override;
   std::string_view Name() const override;
 
@@ -248,7 +248,7 @@ class PciDevice {
 class PciPortHandler : public IoHandler {
  public:
   explicit PciPortHandler(PciBus* bus);
-  zx_status_t Read(uint64_t addr, IoValue* value) const override;
+  zx_status_t Read(uint64_t addr, IoValue* value) override;
   zx_status_t Write(uint64_t addr, const IoValue& value) override;
   std::string_view Name() const override { return "PCI Bus"; }
 
@@ -259,7 +259,7 @@ class PciPortHandler : public IoHandler {
 class PciEcamHandler : public IoHandler {
  public:
   explicit PciEcamHandler(PciBus* bus);
-  zx_status_t Read(uint64_t addr, IoValue* value) const override;
+  zx_status_t Read(uint64_t addr, IoValue* value) override;
   zx_status_t Write(uint64_t addr, const IoValue& value) override;
   std::string_view Name() const override { return "PCI Bus"; }
 
