@@ -421,7 +421,7 @@ Example: changing a union declaration from [`strict` to
 `flexible`][example-union-strict-flexible], or [`flexible` to
 `strict`][example-union-flexible-strict].
 
-### Value vs resource
+### Value vs resource {#value-vs-resource}
 
 Adding or removing the `resource` modifier on a struct, table, or union is
 binary-compatible. Removing the `resource` modifier may cause runtime validation
