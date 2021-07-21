@@ -1236,7 +1236,7 @@ template <typename F>
 Errno zxsio_posix_ioctl(int req, va_list va, F fallback) {
   switch (req) {
     case SIOCGIFNAME: {
-      auto& provider = fdio_get_socket_provider();
+      auto& provider = get_client<fsocket::Provider>();
       if (provider.is_error()) {
         return Errno(fdio_status_to_errno(provider.error_value()));
       }
@@ -1260,7 +1260,7 @@ Errno zxsio_posix_ioctl(int req, va_list va, F fallback) {
       return Errno(Errno::Ok);
     }
     case SIOCGIFINDEX: {
-      auto& provider = fdio_get_socket_provider();
+      auto& provider = get_client<fsocket::Provider>();
       if (provider.is_error()) {
         return Errno(fdio_status_to_errno(provider.error_value()));
       }
@@ -1287,7 +1287,7 @@ Errno zxsio_posix_ioctl(int req, va_list va, F fallback) {
       return Errno(Errno::Ok);
     }
     case SIOCGIFFLAGS: {
-      auto& provider = fdio_get_socket_provider();
+      auto& provider = get_client<fsocket::Provider>();
       if (provider.is_error()) {
         return Errno(fdio_status_to_errno(provider.error_value()));
       }
@@ -1321,7 +1321,7 @@ Errno zxsio_posix_ioctl(int req, va_list va, F fallback) {
       }
       struct ifconf& ifc = *ifc_ptr;
 
-      auto& provider = fdio_get_socket_provider();
+      auto& provider = get_client<fsocket::Provider>();
       if (provider.is_error()) {
         return Errno(fdio_status_to_errno(provider.error_value()));
       }

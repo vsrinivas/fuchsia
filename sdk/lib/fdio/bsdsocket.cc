@@ -30,13 +30,9 @@ namespace fnet = fuchsia_net;
 namespace fnet_name = fuchsia_net_name;
 namespace fsocket = fuchsia_posix_socket;
 
-zx::status<fidl::WireSyncClient<fsocket::Provider>>& fdio_get_socket_provider() {
-  return get_client<fsocket::Provider>();
-}
-
 __EXPORT
 int socket(int domain, int type, int protocol) {
-  auto& provider = fdio_get_socket_provider();
+  auto& provider = get_client<fsocket::Provider>();
   if (provider.is_error()) {
     return ERRNO(EIO);
   }
@@ -529,7 +525,7 @@ int setsockopt(int fd, int level, int optname, const void* optval, socklen_t opt
 // result list because raw sockets are not supported on Fuchsia.
 __EXPORT
 int getifaddrs(struct ifaddrs** ifap) {
-  auto& provider = fdio_get_socket_provider();
+  auto& provider = get_client<fsocket::Provider>();
   if (provider.is_error()) {
     return ERRNO(provider.error_value());
   }

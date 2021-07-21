@@ -388,6 +388,4 @@ zx::status<typename fidl::WireSyncClient<T>>& get_client() {
   return client;
 }
 
-zx::status<fidl::WireSyncClient<fuchsia_posix_socket::Provider>>& fdio_get_socket_provider();
-
 #endif  // LIB_FDIO_INTERNAL_H_
