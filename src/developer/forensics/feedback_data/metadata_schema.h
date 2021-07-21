@@ -16,6 +16,9 @@ constexpr const char* kMetadataSchema = R"({
    "metadata_version": {
        "type": "string"
    },
+   "snapshot_uuid": {
+      "type": "string"
+   },
    "files": {
        "type": "object",
        "patternProperties":{
@@ -95,6 +98,7 @@ constexpr const char* kMetadataSchema = R"({
     "required": [
       "snapshot_version",
       "metadata_version",
+      "snapshot_uuid",
       "files"
     ]
 })";

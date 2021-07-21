@@ -111,6 +111,7 @@ namespace feedback_data {
 namespace {
 
 constexpr zx::duration kPreviousBootUtcMonotonicDifference = zx::sec(100);
+constexpr const char* kSnapshotUuid = "snapshot_uuid";
 
 class MetadataTest : public UnitTestFixture {
  protected:
@@ -136,8 +137,8 @@ class MetadataTest : public UnitTestFixture {
                                      const ::fpromise::result<Attachments>& attachments,
                                      const bool missing_non_platform_annotations = false) {
     FX_CHECK(metadata_);
-    const auto metadata_str =
-        metadata_->MakeMetadata(annotations, attachments, missing_non_platform_annotations);
+    const auto metadata_str = metadata_->MakeMetadata(annotations, attachments, kSnapshotUuid,
+                                                      missing_non_platform_annotations);
 
     rapidjson::Document json;
     FX_CHECK(!json.Parse(metadata_str.c_str()).HasParseError());
@@ -151,6 +152,7 @@ class MetadataTest : public UnitTestFixture {
     // Convert to std::string to use its '==' operator.
     FX_CHECK(json["snapshot_version"].GetString() == std::string(SnapshotVersion::kString));
     FX_CHECK(json["metadata_version"].GetString() == std::string(Metadata::kVersion));
+    FX_CHECK(json["snapshot_uuid"].GetString() == std::string(kSnapshotUuid));
 
     return json;
   }
@@ -360,8 +362,9 @@ TEST_F(MetadataTest, Check_SmokeTest) {
 TEST_F(MetadataTest, Check_EmptySnapshot) {
   SetUpMetadata(/*annotation_allowlist=*/{}, /*attachment_allowlist=*/{});
 
-  auto metadata_str = metadata_->MakeMetadata(::fpromise::error(), ::fpromise::error(),
-                                              /*missing_non_platform_annotations=*/false);
+  auto metadata_str =
+      metadata_->MakeMetadata(::fpromise::error(), ::fpromise::error(), kSnapshotUuid,
+                              /*missing_non_platform_annotations=*/false);
 
   rapidjson::Document json;
   ASSERT_TRUE(!json.Parse(metadata_str.c_str()).HasParseError());
@@ -375,6 +378,7 @@ TEST_F(MetadataTest, Check_EmptySnapshot) {
   // Convert to std::string to use its '==' operator.
   EXPECT_STREQ(json["snapshot_version"].GetString(), SnapshotVersion::kString);
   EXPECT_STREQ(json["metadata_version"].GetString(), Metadata::kVersion);
+  EXPECT_STREQ(json["snapshot_uuid"].GetString(), kSnapshotUuid);
 
   EXPECT_TRUE(json.HasMember("files"));
   EXPECT_TRUE(json["files"].IsObject());

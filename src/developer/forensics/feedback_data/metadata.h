@@ -32,7 +32,7 @@ class Metadata {
   // number of non-platform annotations the Datastore can hold.
   std::string MakeMetadata(const ::fpromise::result<Annotations>& annotations,
                            const ::fpromise::result<Attachments>& attachments,
-                           bool missing_non_platform_annotations);
+                           const std::string& snapshot_uuid, bool missing_non_platform_annotations);
 
   static constexpr const char* kVersion = "1";
 

@@ -100,6 +100,7 @@ source_set("data_provider") {
     "//src/developer/forensics/utils/fit",
     "//src/lib/fsl",
     "//src/lib/fxl",
+    "//src/lib/uuid",
     "//third_party/libpng",
   ]
 }

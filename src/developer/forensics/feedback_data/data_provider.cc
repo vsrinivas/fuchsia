@@ -26,6 +26,7 @@
 #include "src/developer/forensics/utils/archive.h"
 #include "src/lib/fsl/vmo/sized_vmo.h"
 #include "src/lib/fxl/strings/string_printf.h"
+#include "src/lib/uuid/uuid.h"
 
 namespace forensics {
 namespace feedback_data {
@@ -130,7 +131,7 @@ void DataProvider::GetSnapshot(fuchsia::feedback::GetSnapshotParameters params,
                 }
 
                 attachments[kAttachmentMetadata] =
-                    metadata_.MakeMetadata(annotations_result, attachments_result,
+                    metadata_.MakeMetadata(annotations_result, attachments_result, uuid::Generate(),
                                            datastore_->IsMissingNonPlatformAnnotations());
 
                 // We bundle the attachments into a single archive.

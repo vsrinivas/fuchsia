@@ -227,6 +227,7 @@ Metadata::Metadata(async_dispatcher_t* dispatcher, timekeeper::Clock* clock,
 
 std::string Metadata::MakeMetadata(const ::fpromise::result<Annotations>& annotations_result,
                                    const ::fpromise::result<Attachments>& attachments_result,
+                                   const std::string& snapshot_uuid,
                                    bool missing_non_platform_annotations) {
   Document metadata_json(kObjectType);
   auto& allocator = metadata_json.GetAllocator();
@@ -244,6 +245,7 @@ std::string Metadata::MakeMetadata(const ::fpromise::result<Annotations>& annota
   metadata_json.AddMember("snapshot_version", Value(SnapshotVersion::kString, allocator),
                           allocator);
   metadata_json.AddMember("metadata_version", Value(Metadata::kVersion, allocator), allocator);
+  metadata_json.AddMember("snapshot_uuid", Value(snapshot_uuid, allocator), allocator);
   metadata_json.AddMember("files", Value(kObjectType), allocator);
 
   const bool has_non_platform_annotations =
