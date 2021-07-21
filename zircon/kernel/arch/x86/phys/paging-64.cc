@@ -4,7 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <lib/memalloc/allocator.h>
+#include <lib/memalloc/pool.h>
 #include <lib/page-table/types.h>
 #include <stdio.h>
 
@@ -71,10 +71,11 @@ class BootstrapMemoryManager final : public page_table::MemoryManager {
   }
 
   // Release all remaining memory into the allocator.
-  void Release(memalloc::Allocator& allocator) {
+  void Release(memalloc::Pool& allocator) {
     if (!memory_.empty()) {
-      printf("Releasing %zu bytes of early memory.\n", memory_.size());
-      (void)allocator.AddRange(reinterpret_cast<uint64_t>(memory_.data()), memory_.size());
+      if (allocator.Free(reinterpret_cast<uint64_t>(memory_.data()), memory_.size()).is_error()) {
+        printf("Failed to release .bss bootstrap memory\n");
+      }
     }
     memory_ = {};
   }
@@ -90,10 +91,10 @@ class BootstrapMemoryManager final : public page_table::MemoryManager {
 void ArchSetUpAddressSpaceEarly(const zbitl::MemRangeTable& table) {
   BootstrapMemoryManager manager(gBootstrapMemory);
   InstallIdentityMapPageTables(manager, table);
-  manager.Release(Allocation::GetAllocator());
+  manager.Release(Allocation::GetPool());
 }
 
 void ArchSetUpAddressSpaceLate(const zbitl::MemRangeTable& table) {
-  AllocationMemoryManager manager(Allocation::GetAllocator());
+  AllocationMemoryManager manager(Allocation::GetPool());
   InstallIdentityMapPageTables(manager, table);
 }

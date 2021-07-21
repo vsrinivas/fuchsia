@@ -13,7 +13,7 @@
 
 // Forward-declared; fully declared in <lib/memalloc/allocator.h>.
 namespace memalloc {
-class Allocator;
+class Pool;
 }  // namespace memalloc
 
 // Forward-declared; fully declared in <lib/zbitl/items/mem_config.h>.
@@ -40,7 +40,7 @@ void ArchSetUpAddressSpaceLate(const zbitl::MemRangeTable& table);
 // A page_table::MemoryManager that allocates by way of Allocator.
 class AllocationMemoryManager final : public page_table::MemoryManager {
  public:
-  explicit AllocationMemoryManager(memalloc::Allocator& allocator) : allocator_(allocator) {}
+  explicit AllocationMemoryManager(memalloc::Pool& pool) : pool_(pool) {}
 
   ktl::byte* Allocate(size_t size, size_t alignment) final;
 
@@ -55,7 +55,7 @@ class AllocationMemoryManager final : public page_table::MemoryManager {
   }
 
  private:
-  memalloc::Allocator& allocator_;
+  memalloc::Pool& pool_;
 };
 
 #endif  // ZIRCON_KERNEL_PHYS_INCLUDE_PHYS_PAGE_TABLE_H_

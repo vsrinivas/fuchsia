@@ -6,6 +6,7 @@
 
 #include <inttypes.h>
 #include <lib/fitx/result.h>
+#include <lib/memalloc/range.h>
 #include <lib/zbitl/error_stdio.h>
 #include <lib/zbitl/view.h>
 #include <stdio.h>
@@ -61,7 +62,7 @@ int TestMain(void* zbi_ptr, arch::EarlyTicks) {
 
   const auto length = zbitl::UncompressedLength(*it->header);
   fbl::AllocChecker ac;
-  auto payload = Allocation::New(ac, length);
+  auto payload = Allocation::New(ac, memalloc::Type::kZbiTestPayload, length);
   if (!ac.check()) {
     printf("FAILED: Could not allocate %u bytes for payload.\n", length);
     return 1;

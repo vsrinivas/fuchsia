@@ -5,7 +5,8 @@
 // https://opensource.org/licenses/MIT
 
 #include <inttypes.h>
-#include <lib/memalloc/allocator.h>
+#include <lib/memalloc/pool.h>
+#include <lib/zbitl/error_stdio.h>
 #include <lib/zbitl/items/mem_config.h>
 #include <lib/zbitl/view.h>
 #include <stdio.h>
@@ -16,31 +17,50 @@
 #include <phys/allocation.h>
 #include <phys/main.h>
 #include <phys/page-table.h>
-
-namespace {
+#include <phys/symbolize.h>
 
 using ZbiView = zbitl::View<zbitl::ByteView>;
-
-// Print all memory ranges in the given ZbiView.
-void PrintMemoryRanges(const zbitl::MemRangeTable& table) {
-  printf("Memory ranges present in ZBI:\n");
-  for (const auto& range : table) {
-    ktl::string_view name = zbitl::MemRangeTypeName(range.type);
-    if (name.empty()) {
-      name = "unknown";
-    }
-    printf("  paddr: [0x%16" PRIx64 " -- 0x%16" PRIx64 ") : size %10" PRIu64 " kiB : %.*s (%#x)\n",
-           range.paddr, range.paddr + range.length, range.length / 1024,
-           static_cast<int>(name.size()), name.data(), range.type);
-  }
-  printf("\n");
-}
-
-}  // namespace
 
 void InitMemory(void* zbi) {
   zbitl::View<zbitl::ByteView> view{
       zbitl::StorageFromRawHeader(static_cast<const zbi_header_t*>(zbi))};
+
+  auto it = view.begin();
+  while (it != view.end() && it->header->type != ZBI_TYPE_MEM_CONFIG) {
+    ++it;
+  }
+  if (auto result = view.take_error(); result.is_error()) {
+    zbitl::PrintViewError(std::move(result).error_value());
+    ZX_PANIC("error occured while parsing the data ZBI");
+  }
+  ZX_ASSERT_MSG(it != view.end(), "no MEM_CONFIG item found in the data ZBI");
+  ktl::span<zbi_mem_range_t> zbi_ranges = {
+      const_cast<zbi_mem_range_t*>(reinterpret_cast<const zbi_mem_range_t*>(it->payload.data())),
+      it->payload.size() / sizeof(zbi_mem_range_t),
+  };
+
+  uint64_t phys_start = reinterpret_cast<uint64_t>(PHYS_LOAD_ADDRESS);
+  uint64_t phys_end = reinterpret_cast<uint64_t>(_end);
+  memalloc::MemRange ranges[] = {
+      {
+          .addr = phys_start,
+          .size = phys_end - phys_start,
+          .type = memalloc::Type::kPhysKernel,
+      },
+      {
+          .addr = reinterpret_cast<uint64_t>(zbi),
+          .size = static_cast<uint64_t>(view.size_bytes()),
+          .type = memalloc::Type::kDataZbi,
+      },
+  };
+
+  std::array all_ranges = {
+      memalloc::AsMemRanges(zbi_ranges),
+      ktl::span<memalloc::MemRange>{ranges},
+  };
+
+  auto& pool = Allocation::GetPool();
+  ZX_ASSERT(pool.Init(all_ranges).is_ok());
 
   // Find memory information.
   fitx::result<std::string_view, zbitl::MemRangeTable> memory =
@@ -50,37 +70,8 @@ void InitMemory(void* zbi) {
              static_cast<int>(memory.error_value().size()), memory.error_value().data());
   }
 
-  // Print memory information.
-  PrintMemoryRanges(*memory);
-
-  // Add all memory claimed to be free to the allocator.
-  memalloc::Allocator& allocator = Allocation::GetAllocator();
-  for (const auto& range : *memory) {
-    // Ignore reserved memory on our first pass.
-    if (range.type != ZBI_MEM_RANGE_RAM) {
-      continue;
-    }
-    zx::status<> result = allocator.AddRange(range.paddr, range.length);
-    ZX_ASSERT(result.is_ok());
-  }
-
-  // Remove any memory region marked as reserved.
-  for (const auto& range : *memory) {
-    if (range.type != ZBI_MEM_RANGE_RESERVED) {
-      continue;
-    }
-    zx::status<> result = allocator.RemoveRange(range.paddr, range.length);
-    ZX_ASSERT(result.is_ok());
-  }
-
-  // Remove space occupied by the ZBI.
-  zx::status<> result =
-      allocator.RemoveRange(reinterpret_cast<uint64_t>(view.storage().data()), view.size_bytes());
-  ZX_ASSERT(result.is_ok());
-
-  // Remove space occupied by the program itself.
-  Allocation::InitReservedRanges();
-
   // Set up our own address space.
   ArchSetUpAddressSpaceEarly(*memory);
+
+  pool.PrintMemoryRanges(Symbolize::kProgramName_);
 }

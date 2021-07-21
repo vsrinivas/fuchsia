@@ -10,6 +10,7 @@
 #include <lib/acpi_lite.h>
 #include <lib/boot-shim/boot-shim.h>
 #include <lib/boot-shim/test-serial-number.h>
+#include <lib/memalloc/pool.h>
 #include <stdlib.h>
 
 #include <phys/main.h>
@@ -40,6 +41,7 @@ void PhysMain(void* ptr, arch::EarlyTicks boot_ticks) {
       shim.Check("Failed to append boot loader items to data ZBI",
                  shim.AppendItems(boot.DataZbi()))) {
     EnablePaging();
+    Allocation::GetPool().PrintMemoryRanges(Symbolize::kProgramName_);
     boot.Boot();
   }
 

@@ -6,13 +6,15 @@
 
 #include "phys/zbitl-allocation.h"
 
+#include <lib/memalloc/range.h>
+
 #include <fbl/alloc_checker.h>
 #include <ktl/move.h>
 
 // Yet another allocation interface.
 fitx::result<ktl::string_view, Allocation> ZbitlScratchAllocator(size_t size) {
   fbl::AllocChecker ac;
-  auto result = Allocation::New(ac, size);
+  auto result = Allocation::New(ac, memalloc::Type::kPhysScratch, size);
   if (ac.check()) {
     return fitx::ok(ktl::move(result));
   }

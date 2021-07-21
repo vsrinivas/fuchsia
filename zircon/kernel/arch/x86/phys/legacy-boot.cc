@@ -7,92 +7,96 @@
 #include "legacy-boot.h"
 
 #include <inttypes.h>
-#include <lib/memalloc/allocator.h>
+#include <lib/memalloc/pool.h>
+#include <lib/memalloc/range.h>
 #include <lib/zbitl/items/mem_config.h>
 #include <zircon/assert.h>
 
+#include <array>
+
+#include <ktl/array.h>
+#include <ktl/iterator.h>
 #include <ktl/limits.h>
+#include <ktl/span.h>
 #include <phys/allocation.h>
+#include <phys/main.h>
 #include <phys/page-table.h>
 #include <phys/symbolize.h>
 #include <pretty/sizes.h>
 
-void InitMemoryFromRanges() {
-  char pretty_buffer[MAX_FORMAT_SIZE_LEN];
-  auto pretty = [&pretty_buffer](uint64_t size) -> const char* {
-    if (size < ktl::numeric_limits<size_t>::max()) {
-      return format_size(pretty_buffer, sizeof(pretty_buffer), size);
-    }
-    if (size % (uint64_t{1} << 30) == 0) {
-      snprintf(pretty_buffer, sizeof(pretty_buffer), "%" PRIu64 "G", size >> 30);
-    } else {
-      snprintf(pretty_buffer, sizeof(pretty_buffer), "%" PRIu64 "B", size);
-    }
-    return pretty_buffer;
+extern "C" {
+
+// TODO(fxbug.dev/79166): In the linuxboot case, the linking logic gives the
+// wrong value for PHYS_LOAD_ADDRESS in the linuxboot case; work around that
+// for now.
+[[gnu::weak]] extern ktl::byte LINUXBOOT_LOAD_ADDRESS[];
+
+}  // extern "C"
+
+namespace {
+
+template <typename T>
+ktl::span<const ktl::byte> AsBytes(const T& obj) {
+  ktl::span span{ktl::data(obj), ktl::size(obj)};
+  return ktl::as_bytes(span);
+}
+
+}  // namespace
+
+void LegacyBootInitMemory() {
+  constexpr auto as_memrange =
+      [](auto obj, memalloc::Type type = memalloc::Type::kLegacyBootData) -> memalloc::MemRange {
+    auto bytes = AsBytes(obj);
+    return {
+        .addr = reinterpret_cast<uint64_t>(bytes.data()),
+        .size = static_cast<uint64_t>(bytes.size()),
+        .type = type,
+    };
   };
 
-  auto& allocator = Allocation::GetAllocator();
-  auto add_range = [&](uint64_t base, uint64_t size, auto what) {
-    ZX_ASSERT_MSG(allocator.AddRange(base, size).is_ok(),
-                  "Cannot add %s range [%#" PRIx64 ", %#" PRIx64 ")\n", what, base, size);
-    printf("%s: [0x%016" PRIx64 ", 0x%016" PRIx64 ")  %12s %s added\n", Symbolize::kProgramName_,
-           base, base + size, pretty(size), what);
-  };
-  auto remove_range = [&](uint64_t base, uint64_t size, auto what) {
-    ZX_ASSERT_MSG(allocator.RemoveRange(base, size).is_ok(),
-                  "Cannot remove %s range [%#" PRIx64 ", %#" PRIx64 ")\n", what, base, size);
-    printf("%s: [0x%016" PRIx64 ", 0x%016" PRIx64 "): %12s %s removed\n", Symbolize::kProgramName_,
-           base, base + size, pretty(size), what);
+  // TODO(fxbug.dev/79166): See LINUXBOOT_LOAD_ADDRESS comment above.
+  uint64_t phys_start = &LINUXBOOT_LOAD_ADDRESS ? reinterpret_cast<uint64_t>(LINUXBOOT_LOAD_ADDRESS)
+                                                : reinterpret_cast<uint64_t>(PHYS_LOAD_ADDRESS);
+  uint64_t phys_end = reinterpret_cast<uint64_t>(_end);
+
+  auto in_load_image = [phys_start, phys_end](auto obj) -> bool {
+    auto bytes = AsBytes(obj);
+    uint64_t start = reinterpret_cast<uint64_t>(bytes.data());
+    uint64_t end = start + bytes.size();
+    return phys_start <= start && end <= phys_end;
   };
 
-  // Add normal memory first.
-  for (const zbi_mem_range_t& range : gLegacyBoot.mem_config) {
-    if (range.type == ZBI_MEM_RANGE_RAM) {
-      add_range(range.paddr, range.length, "RAM");
-    }
+  // Do not fill in the last three ranges in the array yet; we only need to
+  // account for them if they do not lie within the shim's load image.
+  memalloc::MemRange ranges[] = {
+      {
+          .addr = phys_start,
+          .size = phys_end - phys_start,
+          .type = memalloc::Type::kPhysKernel,
+      },
+      as_memrange(gLegacyBoot.ramdisk, memalloc::Type::kDataZbi),
+      {},
+      {},
+      {},
+  };
+  size_t num_ranges = 2;
+  if (!in_load_image(gLegacyBoot.cmdline)) {
+    ranges[num_ranges++] = as_memrange(gLegacyBoot.cmdline);
+  }
+  if (!in_load_image(gLegacyBoot.bootloader)) {
+    ranges[num_ranges++] = as_memrange(gLegacyBoot.bootloader);
+  }
+  if (!in_load_image(gLegacyBoot.mem_config)) {
+    ranges[num_ranges++] = as_memrange(gLegacyBoot.mem_config);
   }
 
-  // Now remove everything else, in case it overlapped.
-  for (const zbi_mem_range_t& range : gLegacyBoot.mem_config) {
-    if (range.type != ZBI_MEM_RANGE_RAM) {
-      remove_range(range.paddr, range.length, "reserved");
-    }
-  }
-
-  auto reserve_string = [&](ktl::string_view s, const char* what) {
-    if (!s.empty()) {
-      remove_range(reinterpret_cast<uintptr_t>(s.data()), s.size() + 1, what);
-    }
+  ktl::array all_ranges = {
+      memalloc::AsMemRanges(gLegacyBoot.mem_config),
+      ktl::span<memalloc::MemRange>({ranges}).subspan(0, num_ranges),
   };
 
-  auto reserve_blob = [&](auto blob, const char* what) {
-    if (!blob.empty()) {
-      remove_range(reinterpret_cast<uintptr_t>(blob.data()), blob.size_bytes(), what);
-    }
-  };
-
-  // Remove the memory occupied by the boot loader name and command line
-  // strings present.  They will be copied into the data ZBI later, but that
-  // requires allocation first.
-  reserve_string(gLegacyBoot.bootloader, "boot loader name");
-  reserve_string(gLegacyBoot.cmdline, "kernel command line");
-
-  // Reserve the memory occupied by the RAMDISK (ZBI) image.
-  reserve_blob(gLegacyBoot.ramdisk, "ZBI");
-
-  // Reserve the memory occupied by the mem_config table itself.
-  reserve_blob(gLegacyBoot.mem_config, "ZBI_TYPE_MEM_CONFIG table");
-
-  // Remove space occupied by the program itself.
-  Allocation::InitReservedRanges();
-
-  if constexpr (sizeof(uintptr_t) < sizeof(uint64_t)) {
-    // Remove everything above the part of the address space we can use.
-    constexpr uint64_t ptr_max = ktl::numeric_limits<uintptr_t>::max();
-    constexpr uint64_t start = ptr_max + 1;
-    constexpr uint64_t size = ktl::numeric_limits<uint64_t>::max() - start + 1;
-    remove_range(start, size, "unreachable address space");
-  }
+  auto& pool = Allocation::GetPool();
+  ZX_ASSERT(pool.Init(all_ranges).is_ok());
 }
 
 void EnablePaging() {

@@ -13,6 +13,7 @@
 #include <zircon/boot/multiboot.h>
 
 #include <ktl/atomic.h>
+#include <ktl/span.h>
 #include <phys/allocation.h>
 #include <phys/main.h>
 #include <phys/symbolize.h>
@@ -117,7 +118,7 @@ void InitMemory(void* bootloader_data) {
     LegacyBootQuirks();
   }
 
-  InitMemoryFromRanges();
+  LegacyBootInitMemory();
 
   // Note this doesn't remove the memory covering the Multiboot info itself or
   // the memory map or module list data just examined.  We assume those have

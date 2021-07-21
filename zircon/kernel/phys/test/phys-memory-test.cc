@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <inttypes.h>
+#include <lib/memalloc/range.h>
 #include <stdio.h>
 #include <string.h>
 #include <zircon/assert.h>
@@ -23,7 +24,7 @@ namespace {
 
 constexpr uint64_t kMiB = 1024 * 1024;
 
-// Allocate and overwrite all RAM from the given memalloc::Allocator.
+// Allocate and overwrite all RAM from the given memalloc::Pool.
 //
 // Return the number of bytes that were in the allocator.
 size_t AllocateAndOverwriteFreeMemory() {
@@ -36,7 +37,7 @@ size_t AllocateAndOverwriteFreeMemory() {
   while (allocation_size > 0) {
     // Allocate some memory.
     fbl::AllocChecker ac;
-    auto result = Allocation::New(ac, allocation_size);
+    auto result = Allocation::New(ac, memalloc::Type::kZbiTestPayload, allocation_size);
     if (!ac.check()) {
       allocation_size /= 2;
       continue;

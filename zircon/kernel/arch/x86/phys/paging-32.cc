@@ -52,7 +52,7 @@ void ArchSetUpAddressSpaceLate(const zbitl::MemRangeTable& table) {
   // fixed .bss location based on the fixed 1 MiB load address may overlap with
   // areas that should be reserved.  So it's preferable to go directly to the
   // physical page allocator that respects explicitly reserved ranges.
-  AllocationMemoryManager manager(Allocation::GetAllocator());
+  AllocationMemoryManager manager(Allocation::GetPool());
   InstallIdentityMapPageTables(manager, table);
 
   // Now actually turn on paging.  This affects us immediately in 32-bit mode,

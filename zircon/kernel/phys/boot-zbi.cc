@@ -8,6 +8,7 @@
 
 #include <inttypes.h>
 #include <lib/arch/zbi-boot.h>
+#include <lib/memalloc/range.h>
 #include <stdio.h>
 
 #include <phys/symbolize.h>
@@ -321,7 +322,8 @@ fitx::result<BootZbi::Error> BootZbi::Load(uint32_t extra_data_capacity,
   if (!KernelCanLoadInPlace() || !data_.storage().empty()) {
     // Allocate space for the kernel image and copy it in.
     fbl::AllocChecker ac;
-    kernel_buffer_ = Allocation::New(ac, KernelMemorySize(), arch::kZbiBootKernelAlignment);
+    kernel_buffer_ = Allocation::New(ac, memalloc::Type::kKernel, KernelMemorySize(),
+                                     arch::kZbiBootKernelAlignment);
     if (!ac.check()) {
       return fitx::error{Error{
           .zbi_error = "cannot allocate memory for kernel image",
@@ -335,7 +337,8 @@ fitx::result<BootZbi::Error> BootZbi::Load(uint32_t extra_data_capacity,
   if (data_.storage().empty()) {
     // Allocate new space for the data ZBI and copy it over.
     fbl::AllocChecker ac;
-    data_buffer_ = Allocation::New(ac, data_required_size, arch::kZbiBootDataAlignment);
+    data_buffer_ = Allocation::New(ac, memalloc::Type::kDataZbi, data_required_size,
+                                   arch::kZbiBootDataAlignment);
     if (!ac.check()) {
       return fitx::error{Error{
           .zbi_error = "cannot allocate memory for data ZBI",

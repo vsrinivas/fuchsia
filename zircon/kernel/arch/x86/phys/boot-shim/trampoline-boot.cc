@@ -8,7 +8,7 @@
 
 #include <lib/arch/x86/standard-segments.h>
 #include <lib/arch/zbi-boot.h>
-#include <lib/memalloc/allocator.h>
+#include <lib/memalloc/pool.h>
 #include <lib/zbitl/items/mem_config.h>
 
 #include <cstddef>
@@ -147,8 +147,12 @@ fitx::result<BootZbi::Error> TrampolineBoot::Load(uint32_t extra_data_capacity) 
 
   // Now we know how much space the kernel image needs.
   // Reserve it at the fixed load address.
-  auto& alloc = Allocation::GetAllocator();
-  ZX_ASSERT(alloc.RemoveRange(kFixedLoadAddress, KernelMemorySize()).is_ok());
+  auto& pool = Allocation::GetPool();
+  if (auto result = pool.UpdateFreeRamSubranges(memalloc::Type::kFixedAddressKernel,
+                                                kFixedLoadAddress, KernelMemorySize());
+      result.is_error()) {
+    return fitx::error{BootZbi::Error{.zbi_error = "unable to reserve kernel's load image"sv}};
+  }
 
   // The trampoline needs someplace safely neither in the kernel image, nor in
   // the data ZBI image, nor in this shim's own image since that might overlap

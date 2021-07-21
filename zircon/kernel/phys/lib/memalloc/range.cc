@@ -31,10 +31,22 @@ std::string_view ToString(Type type) {
       return "null pointer region"sv;
     case Type::kPhysKernel:
       return "phys kernel image"sv;
+    case Type::kKernel:
+      return "kernel image"sv;
+    case Type::kFixedAddressKernel:
+      return "fixed-address kernel image"sv;
     case Type::kDataZbi:
       return "data ZBI"sv;
+    case Type::kLegacyBootData:
+      return "legacy boot data";
+    case Type::kIdentityPageTables:
+      return "identity page tables"sv;
+    case Type::kPhysScratch:
+      return "phys scratch"sv;
     case Type::kPoolTestPayload:
       return "memalloc::Pool test payload"sv;
+    case Type::kZbiTestPayload:
+      return "ZBI test payload"sv;
     case Type::kMaxExtended:
       return "kMaxExtended"sv;
   }

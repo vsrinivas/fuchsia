@@ -8,6 +8,7 @@
 #include <lib/arch/zbi-boot.h>
 #include <lib/boot-options/boot-options.h>
 #include <lib/boot-options/word-view.h>
+#include <lib/memalloc/range.h>
 #include <lib/zbitl/error_stdio.h>
 #include <lib/zbitl/view.h>
 #include <stdio.h>
@@ -59,7 +60,8 @@ LoadedZircon LoadZircon(BootZbi::InputZbi& zbi, BootZbi::InputZbi::iterator kern
   // space after it that the bss and boot_alloc reserve are likely to fit.
   buffer_sizes.size += reserve_memory_estimate + BootZbi::kKernelBootAllocReserve;
 
-  auto buffer = Allocation::New(ac, buffer_sizes.size, buffer_sizes.alignment);
+  auto buffer =
+      Allocation::New(ac, memalloc::Type::kKernel, buffer_sizes.size, buffer_sizes.alignment);
   if (!ac.check()) {
     printf(
         "physboot: Cannot allocate %#zx bytes aligned to %#zx for decompressed kernel payload!\n",
@@ -141,7 +143,8 @@ LoadedZircon LoadZircon(BootZbi::InputZbi& zbi, BootZbi::InputZbi::iterator kern
     // Actually, the original data ZBI must be moved elsewhere since it
     // overlaps the space where the fixed-address kernel will be loaded.
     fbl::AllocChecker ac;
-    relocated_zbi = Allocation::New(ac, zbi.storage().size(), arch::kZbiBootDataAlignment);
+    relocated_zbi = Allocation::New(ac, memalloc::Type::kDataZbi, zbi.storage().size(),
+                                    arch::kZbiBootDataAlignment);
     if (!ac.check()) {
       printf("physboot: Cannot allocate %#zx bytes aligned to %#zx for relocated data ZBI!\n",
              zbi.storage().size(), arch::kZbiBootDataAlignment);

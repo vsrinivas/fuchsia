@@ -7,6 +7,7 @@
 #include <lib/arch/zbi-boot.h>
 #include <lib/boot-shim/boot-shim.h>
 #include <lib/boot-shim/test-serial-number.h>
+#include <lib/memalloc/pool.h>
 #include <lib/zbitl/image.h>
 #include <stdlib.h>
 #include <zircon/boot/driver-config.h>
@@ -173,6 +174,7 @@ void PhysMain(void* ptr, arch::EarlyTicks boot_ticks) {
   TrampolineBoot boot;
   if ((IsProperZbi(shim.input_zbi()) ? LoadProperZbi : LoadDepthchargeZbi)(shim, boot)) {
     EnablePaging();
+    Allocation::GetPool().PrintMemoryRanges(Symbolize::kProgramName_);
     boot.Boot();
   }
 

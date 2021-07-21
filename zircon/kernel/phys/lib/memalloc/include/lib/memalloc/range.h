@@ -51,13 +51,30 @@ enum class Type : uint64_t {
   // The phys kernel memory image.
   kPhysKernel,
 
+  // The kernel memory image.
+  kKernel,
+
+  // The kernel memory image at a fixed address of 1MiB.
+  kFixedAddressKernel,
+
   // The data ZBI, as placed by the bootloader.
   kDataZbi,
 
-  // TODO(fxbug.dev/77359): define more...
+  // Data structures related to legacy boot protocols.
+  kLegacyBootData,
+
+  // Identity-mapping page tables.
+  kIdentityPageTables,
+
+  // General scratch space used by the phys kernel, but that which is free for
+  // the next kernel as of hand-off.
+  kPhysScratch,
 
   // A generic allocated type for Pool tests.
   kPoolTestPayload,
+
+  // A generic allocated type for ZBI tests.
+  kZbiTestPayload,
 
   // A placeholder value signifying the last extended type. It must not be used
   // as an actual type value.

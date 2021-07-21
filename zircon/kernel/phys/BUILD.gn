@@ -204,6 +204,10 @@ if (toolchain_environment == "kernel.phys" ||
 
       # allocation.h has #include <lib/fitx/result.h>.
       "//zircon/system/ulib/zxc",
+
+      # allocation.h has #include <lib/memalloc/range.h>
+      # allocation.h has #include <lib/memalloc/pool.h>
+      "//zircon/kernel/phys/lib/memalloc",
     ]
     public_configs = [ ":includes" ]
   }
@@ -234,6 +238,7 @@ if (toolchain_environment == "kernel.phys" ||
       ":allocation",
       ":main",
       ":page-table",
+      ":symbolize",
       "//zircon/kernel/arch/$zircon_cpu/phys:address-space",
       "//zircon/kernel/lib/arch",
       "//zircon/kernel/phys/lib/memalloc",

@@ -16,9 +16,14 @@
 #include <ktl/span.h>
 #include <ktl/string_view.h>
 
-// This is just forward-declared; <lib/memalloc/allocator.h> declares it fully.
 namespace memalloc {
-class Allocator;
+
+// Forward-declared; declared in <lib/memalloc/range.h>.
+enum class Type : uint64_t;
+
+// Forward-declared; declared in <lib/memalloc/pool.h>.
+class Pool;
+
 }  // namespace memalloc
 
 // This object represents one memory allocation, and owns that allocation so
@@ -62,18 +67,13 @@ class Allocation {
 
   // If allocation fails, operator bool will return false later.
   // The AllocChecker must be checked after construction, too.
-  static Allocation New(fbl::AllocChecker& ac, size_t size,
+  static Allocation New(fbl::AllocChecker& ac, memalloc::Type type, size_t size,
                         size_t alignment = __STDCPP_DEFAULT_NEW_ALIGNMENT__);
 
-  // Get the allocator instance used to construct Allocation objects.  Every
-  // call returns the same object, but the first may initialize it.  Note
-  // separate #include <lib/memalloc/allocator.h> is necessary to use the instance.
-  [[gnu::const]] static memalloc::Allocator& GetAllocator();
-
-  // This makes GetAllocator().RemoveRange() calls for standard ranges.
-  // InitMemory() (main.h) calls this after populating the allocator with
-  // hardware/firmware ranges and exclusions.
-  static void InitReservedRanges();
+  // Get the memalloc::Pool instance used to construct Allocation objects.
+  // Every call returns the same object, but the first may initialize it.  Note
+  // separate #include <lib/memalloc/pool.h> is necessary to use the instance.
+  [[gnu::const]] static memalloc::Pool& GetPool();
 
  private:
   ktl::span<ktl::byte> data_;

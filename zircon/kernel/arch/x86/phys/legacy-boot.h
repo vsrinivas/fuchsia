@@ -34,7 +34,7 @@ extern LegacyBoot gLegacyBoot;
 
 // This is a subroutine of InitMemory().  It primes the allocator and reserves
 // ranges based on the data in gLegacyBoot.
-void InitMemoryFromRanges();
+void LegacyBootInitMemory();
 
 // Set up 64-bit identity-mapping page tables and enable them in the CPU.
 // This uses the allocator and so must be done only after all necessary

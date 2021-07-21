@@ -5,12 +5,14 @@
 // https://opensource.org/licenses/MIT
 
 #include <lib/memalloc/allocator.h>
+#include <lib/memalloc/pool.h>
+#include <lib/memalloc/range.h>
 
 #include <ktl/byte.h>
 #include <phys/page-table.h>
 
 ktl::byte* AllocationMemoryManager::Allocate(size_t size, size_t alignment) {
-  auto result = allocator_.Allocate(size, alignment);
+  auto result = pool_.Allocate(memalloc::Type::kIdentityPageTables, size, alignment);
   if (result.is_error()) {
     return nullptr;
   }

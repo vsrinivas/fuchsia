@@ -113,7 +113,7 @@ void InitMemory(void* bootloader_data) {
   PopulateMemRages(bp);
 
   // Now prime the allocator from that information.
-  InitMemoryFromRanges();
+  LegacyBootInitMemory();
 
   // Note this doesn't remove the memory covering the boot_params (zero page)
   // just examined.  We assume those have already been consumed as needed

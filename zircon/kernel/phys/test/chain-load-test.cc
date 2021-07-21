@@ -6,6 +6,7 @@
 
 #include <inttypes.h>
 #include <lib/fitx/result.h>
+#include <lib/memalloc/range.h>
 #include <lib/zbitl/error_stdio.h>
 #include <lib/zbitl/view.h>
 #include <stdio.h>
@@ -28,7 +29,7 @@ namespace {
 
 Allocation Allocate(BootZbi::Size need, const char* for_what) {
   fbl::AllocChecker ac;
-  auto result = Allocation::New(ac, need.size, need.alignment);
+  auto result = Allocation::New(ac, memalloc::Type::kZbiTestPayload, need.size, need.alignment);
   if (!ac.check()) {
     printf("Cannot allocate %s size=%#zx alignment=%#zx\n", for_what, need.size, need.alignment);
   }

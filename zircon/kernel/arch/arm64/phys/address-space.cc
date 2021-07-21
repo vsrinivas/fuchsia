@@ -6,7 +6,8 @@
 
 #include <lib/arch/arm64/system.h>
 #include <lib/arch/cache.h>
-#include <lib/memalloc/allocator.h>
+#include <lib/memalloc/pool.h>
+#include <lib/memalloc/range.h>
 #include <lib/page-table/arch/arm64/builder.h>
 #include <lib/page-table/builder.h>
 #include <lib/page-table/types.h>
@@ -148,7 +149,7 @@ void CreateBootstapPageTable(page_table::MemoryManager& allocator,
 }  // namespace
 
 void ArchSetUpAddressSpaceEarly(const zbitl::MemRangeTable& table) {
-  AllocationMemoryManager manager(Allocation::GetAllocator());
+  AllocationMemoryManager manager(Allocation::GetPool());
   CreateBootstapPageTable(manager, table);
 }
 
