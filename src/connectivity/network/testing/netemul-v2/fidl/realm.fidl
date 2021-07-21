@@ -20,9 +20,13 @@ type ExposedCapability = strict union {
 /// A dependency of one child component on a capability exposed by another in
 /// the same realm.
 type ChildDep = table {
-    /// The name of the child exposing the needed capability. Required.
+    /// The name of the child exposing the needed capability.
+    ///
+    /// Required.
     1: name fuchsia.component.name;
-    /// The exposed capability. Required.
+    /// The exposed capability.
+    ///
+    /// Required.
     2: capability ExposedCapability;
 };
 
@@ -61,34 +65,47 @@ type ChildUses = strict union {
 
 /// The definition of a child component to be added to a [`ManagedRealm`].
 type ChildDef = table {
-    /// The component URL of this child. Required.
+    /// The component URL of this child.
+    ///
+    /// Required.
     1: url fuchsia.url.Url;
-    /// The name of this child local to its containing realm. Required.
+    /// The name of this child local to its containing realm.
+    ///
+    /// Required.
     2: name fuchsia.component.name;
-    /// Services that this child exposes to the realm. Defaults to empty.
+    /// Services that this child exposes to the realm.
+    ///
+    /// If not set, interpreted as an empty vector.
     3: exposes vector<string:fuchsia.component.MAX_PATH_LENGTH>:MAX;
-    /// Services that this child uses. Defaults to
-    /// [`fuchsia.netemul/ChildUses.all`].
+    /// Services that this child uses.
+    ///
+    /// If not set, interpreted as [`ChildUses.all`].
     4: uses ChildUses;
     /// Arguments to be passed to the child at runtime. If specified, overrides
-    /// any arguments specified in the manifest. If left unspecified, the
-    /// original arguments from the manifest are used.
+    /// any arguments specified in the manifest.
+    ///
+    /// If not set, the original arguments from the manifest are used.
     5: program_args vector<string:MAX>:MAX;
     /// Whether the component should be started eagerly once the realm is
-    /// created. If not set, interpreted as false.
+    /// created.
+    ///
+    /// If not set, interpreted as false.
     6: eager bool;
 };
 
 /// Options used to create a [`ManagedRealm`].
 type RealmOptions = resource table {
-    /// Realm name. Defaults to an automatically-generated name.
+    /// Realm name.
     ///
     /// The realm name is used for attribution and debugging purposes. It is
     /// used to decorate logs that come from its constituent child components.
-    1: name string:MAX;
-    /// Child components to dynamically create in this realm. Defaults to empty.
     ///
-    /// If empty, no additional services will be registered.
+    /// If not set, an automatically-generated name will be used.
+    1: name string:MAX;
+    /// Child components to dynamically create in this realm.
+    ///
+    /// If not set, interpreted as an empty vector (no additional services will
+    /// be registered).
     2: children vector<ChildDef>:MAX;
 };
 
@@ -132,7 +149,7 @@ protocol ManagedRealm {
     /// this realm.
     ///
     /// This `devfs` instance is available to components that have the
-    /// [`fuchsia.netemul/Capability.netemul_devfs`] capability.
+    /// [`Capability.netemul_devfs`] capability.
     ///
     /// + request `path` relative path from `devfs` root to the virtual device
     ///     to be added to the realm.
