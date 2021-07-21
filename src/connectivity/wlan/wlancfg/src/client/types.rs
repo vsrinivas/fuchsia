@@ -1,4 +1,4 @@
-// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -20,7 +20,7 @@ pub type SecurityType = fidl_policy::SecurityType;
 pub type ConnectionState = fidl_policy::ConnectionState;
 pub type DisconnectStatus = fidl_policy::DisconnectStatus;
 pub type Compatibility = fidl_policy::Compatibility;
-pub type WlanChan = fidl_common::WlanChan;
+pub type WlanChan = fidl_common::WlanChannel;
 pub type Bssid = [u8; 6];
 pub type Ssid = Vec<u8>;
 pub type DisconnectReason = PolicyDisconnectionMetricDimensionReason;

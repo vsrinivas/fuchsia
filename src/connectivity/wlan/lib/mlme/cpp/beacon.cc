@@ -116,16 +116,16 @@ static void SetBeaconBssType(T* bcn, BeaconBssType bss_type) {
   // IEEE Std 802.11-2016, 9.4.1.4
   switch (bss_type) {
     case BeaconBssType::kInfrastructure:
-      bcn->cap.set_ess(1);
-      bcn->cap.set_ibss(0);
+      bcn->capability_info.set_ess(1);
+      bcn->capability_info.set_ibss(0);
       break;
     case BeaconBssType::kIndependent:
-      bcn->cap.set_ess(0);
-      bcn->cap.set_ibss(1);
+      bcn->capability_info.set_ess(0);
+      bcn->capability_info.set_ibss(1);
       break;
     case BeaconBssType::kMesh:
-      bcn->cap.set_ess(0);
-      bcn->cap.set_ibss(0);
+      bcn->capability_info.set_ess(0);
+      bcn->capability_info.set_ibss(0);
       break;
   }
 }
@@ -153,10 +153,10 @@ static zx_status_t BuildBeaconOrProbeResponse(const BeaconConfig& config,
   auto bcn = w.Write<Beacon>();
   bcn->beacon_interval = config.beacon_period;
   bcn->timestamp = config.timestamp;
-  bcn->cap.set_privacy(config.rsne != nullptr);
+  bcn->capability_info.set_privacy(config.rsne != nullptr);
 
   SetBeaconBssType(bcn, config.bss_type);
-  bcn->cap.set_short_preamble(1);
+  bcn->capability_info.set_short_preamble(1);
 
   // Write elements.
   BufferWriter elem_w(w.RemainingBuffer());

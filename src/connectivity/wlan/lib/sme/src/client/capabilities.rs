@@ -1,4 +1,4 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -56,8 +56,8 @@ const OVERRIDE_VHT_CAP_INFO_SUPPORTED_CBW_SET: u32 = 0;
 
 /// A driver may not properly populate an interface's Capabilities to reflect the selected role.
 /// Override the reported capabilities to ensure compatibility with Client role.
-fn override_capability_info(cap_info: CapabilityInfo) -> CapabilityInfo {
-    cap_info
+fn override_capability_info(capability_info: CapabilityInfo) -> CapabilityInfo {
+    capability_info
         .with_ess(OVERRIDE_CAP_INFO_ESS)
         .with_ibss(OVERRIDE_CAP_INFO_IBSS)
         .with_cf_pollable(OVERRIDE_CAP_INFO_CF_POLLABLE)
@@ -81,7 +81,7 @@ pub(crate) fn derive_join_channel_and_capabilities(
         .ok_or_else(|| format_err!("iface does not support BSS channel {}", bss_channel.primary))?;
 
     // Step 2.1 - Override CapabilityInfo
-    let cap_info = override_capability_info(CapabilityInfo(band_info.cap));
+    let capability_info = override_capability_info(CapabilityInfo(band_info.capability_info));
 
     // Step 2.2 - Derive data rates
     // Both are safe to unwrap because SupportedRate is one byte and will not cause alignment issue.
@@ -97,7 +97,7 @@ pub(crate) fn derive_join_channel_and_capabilities(
     let (ht_cap, vht_cap) =
         override_ht_vht(band_info.ht_cap.as_ref(), band_info.vht_cap.as_ref(), channel.cbw)?;
 
-    Ok((channel, ClientCapabilities(StaCapabilities { cap_info, rates, ht_cap, vht_cap })))
+    Ok((channel, ClientCapabilities(StaCapabilities { capability_info, rates, ht_cap, vht_cap })))
 }
 
 /// Follow the Channel as announced by the AP, unless user has manually specified CBW with
@@ -309,20 +309,20 @@ mod tests {
 
     #[test]
     fn test_build_cap_info() {
-        let cap_info = CapabilityInfo(0)
+        let capability_info = CapabilityInfo(0)
             .with_ess(!OVERRIDE_CAP_INFO_ESS)
             .with_ibss(!OVERRIDE_CAP_INFO_IBSS)
             .with_cf_pollable(!OVERRIDE_CAP_INFO_CF_POLLABLE)
             .with_cf_poll_req(!OVERRIDE_CAP_INFO_CF_POLL_REQUEST)
             .with_privacy(!OVERRIDE_CAP_INFO_PRIVACY)
             .with_spectrum_mgmt(!OVERRIDE_CAP_INFO_SPECTRUM_MGMT);
-        let cap_info = override_capability_info(cap_info);
-        assert_eq!(cap_info.ess(), OVERRIDE_CAP_INFO_ESS);
-        assert_eq!(cap_info.ibss(), OVERRIDE_CAP_INFO_IBSS);
-        assert_eq!(cap_info.cf_pollable(), OVERRIDE_CAP_INFO_CF_POLLABLE);
-        assert_eq!(cap_info.cf_poll_req(), OVERRIDE_CAP_INFO_CF_POLL_REQUEST);
-        assert_eq!(cap_info.privacy(), OVERRIDE_CAP_INFO_PRIVACY);
-        assert_eq!(cap_info.spectrum_mgmt(), OVERRIDE_CAP_INFO_SPECTRUM_MGMT);
+        let capability_info = override_capability_info(capability_info);
+        assert_eq!(capability_info.ess(), OVERRIDE_CAP_INFO_ESS);
+        assert_eq!(capability_info.ibss(), OVERRIDE_CAP_INFO_IBSS);
+        assert_eq!(capability_info.cf_pollable(), OVERRIDE_CAP_INFO_CF_POLLABLE);
+        assert_eq!(capability_info.cf_poll_req(), OVERRIDE_CAP_INFO_CF_POLL_REQUEST);
+        assert_eq!(capability_info.privacy(), OVERRIDE_CAP_INFO_PRIVACY);
+        assert_eq!(capability_info.spectrum_mgmt(), OVERRIDE_CAP_INFO_SPECTRUM_MGMT);
     }
 
     #[test]

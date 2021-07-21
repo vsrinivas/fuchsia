@@ -1,4 +1,4 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -22,12 +22,12 @@ constexpr zx::duration kSimulatedClockDuration = zx::sec(10);
 using ::testing::NotNull;
 
 constexpr simulation::WlanTxInfo kAp1TxInfo = {
-    .channel = {.primary = 9, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0}};
+    .channel = {.primary = 9, .cbw = CHANNEL_BANDWIDTH_CBW20, .secondary80 = 0}};
 constexpr wlan_ssid_t kAp1Ssid = {.len = 16, .ssid = "Fuchsia Fake AP1"};
 const common::MacAddr kAp1Bssid({0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc});
 
 constexpr simulation::WlanTxInfo kAp2TxInfo = {
-    .channel = {.primary = 10, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0}};
+    .channel = {.primary = 10, .cbw = CHANNEL_BANDWIDTH_CBW20, .secondary80 = 0}};
 constexpr wlan_ssid_t kAp2Ssid = {.len = 16, .ssid = "Fuchsia Fake AP2"};
 const common::MacAddr kAp2Bssid({0x12, 0x34, 0x56, 0x78, 0x9a, 0xcc});
 
@@ -95,7 +95,7 @@ void compareSsid(const wlan_ssid_t& ssid1, const wlan_ssid_t& ssid2) {
  */
 TEST_F(ProbeTest, DifferentChannel) {
   constexpr simulation::WlanTxInfo kWrongChannelTxInfo = {
-      .channel = {.primary = 11, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0}};
+      .channel = {.primary = 11, .cbw = CHANNEL_BANDWIDTH_CBW20, .secondary80 = 0}};
 
   simulation::SimProbeReqFrame probe_req_frame(kClientMacAddr);
   env_.ScheduleNotification(

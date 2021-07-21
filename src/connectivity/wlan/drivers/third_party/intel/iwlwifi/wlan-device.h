@@ -43,7 +43,7 @@ zx_status_t mac_query(void* ctx, uint32_t options, wlanmac_info_t* info);
 zx_status_t mac_start(void* ctx, const wlanmac_ifc_protocol_t* ifc, zx_handle_t* out_mlme_channel);
 void mac_stop(void* ctx);
 zx_status_t mac_queue_tx(void* ctx, uint32_t options, wlan_tx_packet_t* pkt);
-zx_status_t mac_set_channel(void* ctx, uint32_t options, const wlan_channel_t* chan);
+zx_status_t mac_set_channel(void* ctx, uint32_t options, const wlan_channel_t* channel);
 zx_status_t mac_configure_bss(void* ctx, uint32_t options, const bss_config_t* config);
 zx_status_t mac_enable_beaconing(void* ctx, uint32_t options, const wlan_bcn_config_t* bcn_cfg);
 zx_status_t mac_configure_beacon(void* ctx, uint32_t options, const wlan_tx_packet_t* pkt);

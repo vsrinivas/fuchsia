@@ -22,9 +22,9 @@ use crate::common_utils::common::parse_u64_identifier;
 // https://serde.rs/remote-derive.html
 
 #[derive(Serialize, Deserialize)]
-#[serde(remote = "fidl_common::Cbw")]
+#[serde(remote = "fidl_common::ChannelBandwidth")]
 #[repr(u32)]
-pub enum CbwDef {
+pub enum ChannelBandwidthDef {
     Cbw20 = 0,
     Cbw40 = 1,
     Cbw40Below = 2,
@@ -34,11 +34,11 @@ pub enum CbwDef {
 }
 
 #[derive(Serialize, Deserialize)]
-#[serde(remote = "fidl_common::WlanChan")]
-pub struct WlanChanDef {
+#[serde(remote = "fidl_common::WlanChannel")]
+pub struct ChannelDef {
     pub primary: u8,
-    #[serde(with = "CbwDef")]
-    pub cbw: fidl_common::Cbw,
+    #[serde(with = "ChannelBandwidthDef")]
+    pub cbw: fidl_common::ChannelBandwidth,
     pub secondary80: u8,
 }
 
@@ -61,10 +61,10 @@ struct BssDescriptionDef {
     pub beacon_period: u16,
     pub timestamp: u64,
     pub local_time: u64,
-    pub cap: u16,
+    pub capability_info: u16,
     pub ies: Vec<u8>,
-    #[serde(with = "WlanChanDef")]
-    pub chan: fidl_common::WlanChan,
+    #[serde(with = "ChannelDef")]
+    pub channel: fidl_common::WlanChannel,
     pub rssi_dbm: i8,
     pub snr_db: i8,
 }

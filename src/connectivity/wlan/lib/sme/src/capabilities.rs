@@ -1,4 +1,4 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -25,7 +25,7 @@ use {
 /// (Re)Association Request and (Re)Association Response frames.
 #[derive(Debug, PartialEq)]
 pub struct StaCapabilities {
-    pub cap_info: CapabilityInfo,
+    pub capability_info: CapabilityInfo,
     pub rates: Vec<SupportedRate>,
     pub ht_cap: Option<HtCapabilities>,
     pub vht_cap: Option<VhtCapabilities>,
@@ -48,8 +48,8 @@ pub fn intersect_with_ap_as_client(
             vec![]
         }
     };
-    let (cap_info, ht_cap, vht_cap) = intersect(&client.0, &ap.0);
-    StaCapabilities { rates, cap_info, ht_cap, vht_cap }
+    let (capability_info, ht_cap, vht_cap) = intersect(&client.0, &ap.0);
+    StaCapabilities { rates, capability_info, ht_cap, vht_cap }
 }
 
 /// Performs capability negotiation with a remote client assuming the Fuchsia device is an AP.
@@ -61,8 +61,8 @@ pub fn intersect_with_remote_client_as_ap(
     // Safe to unwrap. Otherwise we would have rejected the association from this remote client.
     let rates = intersect_rates(ApRates(&ap.0.rates[..]), ClientRates(&remote_client.0.rates[..]))
         .unwrap_or(vec![]);
-    let (cap_info, ht_cap, vht_cap) = intersect(&ap.0, &remote_client.0);
-    StaCapabilities { rates, cap_info, ht_cap, vht_cap }
+    let (capability_info, ht_cap, vht_cap) = intersect(&ap.0, &remote_client.0);
+    StaCapabilities { rates, capability_info, ht_cap, vht_cap }
 }
 
 fn intersect(
@@ -70,7 +70,7 @@ fn intersect(
     theirs: &StaCapabilities,
 ) -> (CapabilityInfo, Option<HtCapabilities>, Option<VhtCapabilities>) {
     // Every bit is a boolean so bit-wise and is sufficient
-    let cap_info = CapabilityInfo(ours.cap_info.raw() & theirs.cap_info.raw());
+    let capability_info = CapabilityInfo(ours.capability_info.raw() & theirs.capability_info.raw());
     let ht_cap = match (ours.ht_cap, theirs.ht_cap) {
         // Intersect is NOT necessarily symmetrical. Our own capabilities prevails.
         (Some(ours), Some(theirs)) => Some(ours.intersect(&theirs)),
@@ -81,7 +81,7 @@ fn intersect(
         (Some(ours), Some(theirs)) => Some(ours.intersect(&theirs)),
         _ => None,
     };
-    (cap_info, ht_cap, vht_cap)
+    (capability_info, ht_cap, vht_cap)
 }
 
 impl From<fidl_mlme::AssociateConfirm> for ApCapabilities {
@@ -89,7 +89,7 @@ impl From<fidl_mlme::AssociateConfirm> for ApCapabilities {
         type HtCapArray = [u8; fidl_internal::HT_CAP_LEN as usize];
         type VhtCapArray = [u8; fidl_internal::VHT_CAP_LEN as usize];
 
-        let cap_info = CapabilityInfo(ac.cap_info);
+        let capability_info = CapabilityInfo(ac.capability_info);
         let rates = ac.rates.iter().map(|&r| SupportedRate(r)).collect();
 
         let ht_cap = ac.ht_cap.map(|ht_cap| {
@@ -104,7 +104,7 @@ impl From<fidl_mlme::AssociateConfirm> for ApCapabilities {
             let vht_caps: VhtCapabilities = *parse_vht_capabilities(&bytes[..]).unwrap();
             vht_caps
         });
-        Self(StaCapabilities { cap_info, rates, ht_cap, vht_cap })
+        Self(StaCapabilities { capability_info, rates, ht_cap, vht_cap })
     }
 }
 
@@ -128,7 +128,7 @@ impl StaCapabilities {
         });
         fidl_mlme::NegotiatedCapabilities {
             channel: channel.to_fidl(),
-            cap_info: self.cap_info.raw(),
+            capability_info: self.capability_info.raw(),
             rates: self.rates.as_bytes().to_vec(),
             // TODO(fxbug.dev/43938): populate WMM param with actual value
             wmm_param: None,
@@ -148,7 +148,7 @@ mod tests {
 
     fn fake_client_join_cap() -> ClientCapabilities {
         ClientCapabilities(StaCapabilities {
-            cap_info: mac::CapabilityInfo(0x1234),
+            capability_info: mac::CapabilityInfo(0x1234),
             rates: [101, 102, 103, 104].iter().cloned().map(SupportedRate).collect(),
             ht_cap: Some(HtCapabilities {
                 ht_cap_info: ie::HtCapabilityInfo(0).with_rx_stbc(2).with_tx_stbc(false),
@@ -160,7 +160,7 @@ mod tests {
 
     fn fake_ap_join_cap() -> ApCapabilities {
         ApCapabilities(StaCapabilities {
-            cap_info: mac::CapabilityInfo(0x4321),
+            capability_info: mac::CapabilityInfo(0x4321),
             // 101 + 128 turns it into a basic rate
             rates: [101 + 128, 102, 9].iter().cloned().map(SupportedRate).collect(),
             ht_cap: Some(HtCapabilities {
@@ -176,7 +176,7 @@ mod tests {
         assert_eq!(
             intersect_with_ap_as_client(&fake_client_join_cap(), &fake_ap_join_cap()),
             StaCapabilities {
-                cap_info: mac::CapabilityInfo(0x0220),
+                capability_info: mac::CapabilityInfo(0x0220),
                 rates: [229, 102].iter().cloned().map(SupportedRate).collect(),
                 ht_cap: Some(HtCapabilities {
                     ht_cap_info: ie::HtCapabilityInfo(0).with_rx_stbc(2).with_tx_stbc(false),
@@ -192,7 +192,7 @@ mod tests {
         assert_eq!(
             intersect_with_remote_client_as_ap(&fake_ap_join_cap(), &fake_client_join_cap()),
             StaCapabilities {
-                cap_info: mac::CapabilityInfo(0x0220),
+                capability_info: mac::CapabilityInfo(0x0220),
                 rates: [229, 102].iter().cloned().map(SupportedRate).collect(),
                 ht_cap: Some(HtCapabilities {
                     ht_cap_info: ie::HtCapabilityInfo(0).with_rx_stbc(0).with_tx_stbc(true),
@@ -208,7 +208,7 @@ mod tests {
         let ac = fidl_mlme::AssociateConfirm {
             result_code: fidl_mlme::AssociateResultCode::Success,
             association_id: 123,
-            cap_info: 0x1234,
+            capability_info: 0x1234,
             rates: vec![125, 126, 127, 128, 129],
             wmm_param: None,
             ht_cap: Some(Box::new(fidl_internal::HtCapabilities {
@@ -218,11 +218,11 @@ mod tests {
                 bytes: ie::fake_vht_capabilities().as_bytes().try_into().unwrap(),
             })),
         };
-        let cap: ApCapabilities = ac.into();
+        let capability_info: ApCapabilities = ac.into();
         assert_eq!(
-            cap.0,
+            capability_info.0,
             StaCapabilities {
-                cap_info: mac::CapabilityInfo(0x1234),
+                capability_info: mac::CapabilityInfo(0x1234),
                 rates: [125u8, 126, 127, 128, 129].iter().cloned().map(ie::SupportedRate).collect(),
                 ht_cap: Some(ie::fake_ht_capabilities()),
                 vht_cap: Some(ie::fake_vht_capabilities()),
@@ -232,25 +232,25 @@ mod tests {
 
     #[test]
     fn cap_to_fidl_negotiated_cap() {
-        let cap = StaCapabilities {
-            cap_info: mac::CapabilityInfo(0x1234),
+        let capability_info = StaCapabilities {
+            capability_info: mac::CapabilityInfo(0x1234),
             rates: [125u8, 126, 127, 128, 129].iter().cloned().map(ie::SupportedRate).collect(),
             ht_cap: Some(ie::fake_ht_capabilities()),
             vht_cap: Some(ie::fake_vht_capabilities()),
         };
-        let fidl_cap = cap.to_fidl_negotiated_capabilities(&Channel {
+        let fidl_cap = capability_info.to_fidl_negotiated_capabilities(&Channel {
             primary: 123,
             cbw: wlan_common::channel::Cbw::Cbw80P80 { secondary80: 42 },
         });
         assert_eq!(
             fidl_cap,
             fidl_mlme::NegotiatedCapabilities {
-                channel: fidl_fuchsia_wlan_common::WlanChan {
+                channel: fidl_fuchsia_wlan_common::WlanChannel {
                     primary: 123,
-                    cbw: fidl_common::Cbw::Cbw80P80,
+                    cbw: fidl_common::ChannelBandwidth::Cbw80P80,
                     secondary80: 42,
                 },
-                cap_info: 0x1234,
+                capability_info: 0x1234,
                 rates: vec![125, 126, 127, 128, 129],
                 wmm_param: None,
                 ht_cap: Some(Box::new(fidl_internal::HtCapabilities {

@@ -1,7 +1,8 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/wlan/common/c/banjo.h>
 #include <fuchsia/wlan/ieee80211/cpp/fidl.h>
 
 #include <cstring>
@@ -116,7 +117,7 @@ constexpr zx::duration kStartTime = zx::msec(50);
 constexpr zx::duration kEndTime = zx::sec(3);
 constexpr zx::duration kBeaconPeriod = zx::msec(100);
 constexpr simulation::WlanTxInfo kDefaultTxInfo = {
-    .channel = {.primary = 9, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0}};
+    .channel = {.primary = 9, .cbw = CHANNEL_BANDWIDTH_CBW20, .secondary80 = 0}};
 
 constexpr wlan_ssid_t kDefaultSsid = {
     .len = 15,
@@ -196,7 +197,7 @@ TEST_F(BeaconTest, StartStop) {
 constexpr zx::duration kUpdateTime = zx::sec(1);
 constexpr zx::duration kNewBeaconPeriod = zx::msec(42);
 constexpr wlan_channel_t kNewChannel = {
-    .primary = 136, .cbw = WLAN_CHANNEL_BANDWIDTH__80, .secondary80 = 0};
+    .primary = 136, .cbw = CHANNEL_BANDWIDTH_CBW80, .secondary80 = 0};
 constexpr wlan_ssid_t kNewSsid = {
     .len = 5,
     .ssid = "Dumbo",
@@ -264,14 +265,14 @@ constexpr zx::duration kSwitchTime = zx::sec(1);
 constexpr zx::duration kCsaBeaconInterval = zx::msec(120);
 constexpr zx::duration kLongCsaBeaconInterval = zx::msec(350);
 constexpr wlan_channel_t kFirstChannelSwitched = {
-    .primary = 10, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0};
+    .primary = 10, .cbw = CHANNEL_BANDWIDTH_CBW20, .secondary80 = 0};
 const common::MacAddr kClientMacAddr({0x11, 0x22, 0x33, 0x44, 0x55, 0x66});
 
 // Used in OverlapTest
 constexpr wlan_channel_t kSecondChannelSwitched = {
-    .primary = 11, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0};
+    .primary = 11, .cbw = CHANNEL_BANDWIDTH_CBW20, .secondary80 = 0};
 constexpr wlan_channel_t kThirdChannelSwitched = {
-    .primary = 12, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0};
+    .primary = 12, .cbw = CHANNEL_BANDWIDTH_CBW20, .secondary80 = 0};
 constexpr zx::duration kShortEndTime = zx::msec(500);
 constexpr zx::duration kFirstSetChannel = zx::msec(80);
 constexpr zx::duration kSecondSetChannel = zx::msec(180);

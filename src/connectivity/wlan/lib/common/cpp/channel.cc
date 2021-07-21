@@ -1,7 +1,8 @@
-// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/wlan/common/c/banjo.h>
 #include <zircon/assert.h>
 
 #include <wlan/common/channel.h>
@@ -28,32 +29,32 @@ bool Is5Ghz(uint8_t channel_number) {
 
 bool Is2Ghz(uint8_t channel_number) { return !Is5Ghz(channel_number); }
 
-bool Is5Ghz(const wlan_channel_t& chan) { return Is5Ghz(chan.primary); }
+bool Is5Ghz(const wlan_channel_t& channel) { return Is5Ghz(channel.primary); }
 
-bool Is2Ghz(const wlan_channel_t& chan) { return !Is5Ghz(chan.primary); }
+bool Is2Ghz(const wlan_channel_t& channel) { return !Is5Ghz(channel.primary); }
 
-bool IsValidChan2Ghz(const wlan_channel_t& chan) {
-  uint8_t p = chan.primary;
+bool IsValidChan2Ghz(const wlan_channel_t& channel) {
+  uint8_t p = channel.primary;
 
   if (p < 1 || p > 14) {
     return false;
   }
 
-  switch (chan.cbw) {
-    case WLAN_CHANNEL_BANDWIDTH__20:
+  switch (channel.cbw) {
+    case CHANNEL_BANDWIDTH_CBW20:
       return true;
-    case WLAN_CHANNEL_BANDWIDTH__40ABOVE:
+    case CHANNEL_BANDWIDTH_CBW40:
       return (p <= 7);
-    case WLAN_CHANNEL_BANDWIDTH__40BELOW:
+    case CHANNEL_BANDWIDTH_CBW40BELOW:
       return (p >= 5);
     default:
       return false;
   }
 }
 
-bool IsValidChan5Ghz(const wlan_channel_t& chan) {
-  uint8_t p = chan.primary;
-  uint8_t s = chan.secondary80;
+bool IsValidChan5Ghz(const wlan_channel_t& channel) {
+  uint8_t p = channel.primary;
+  uint8_t s = channel.secondary80;
 
   // See IEEE Std 802.11-2016, Table 9-252, 9-253
   // TODO(porce): Augment wlan_channel_t to carry
@@ -76,10 +77,10 @@ bool IsValidChan5Ghz(const wlan_channel_t& chan) {
     return false;
   }
 
-  switch (chan.cbw) {
-    case WLAN_CHANNEL_BANDWIDTH__20:
+  switch (channel.cbw) {
+    case CHANNEL_BANDWIDTH_CBW20:
       break;
-    case WLAN_CHANNEL_BANDWIDTH__40ABOVE:
+    case CHANNEL_BANDWIDTH_CBW40:
       if (p <= 144 && (p % 8 != 4)) {
         return false;
       }
@@ -87,7 +88,7 @@ bool IsValidChan5Ghz(const wlan_channel_t& chan) {
         return false;
       }
       break;
-    case WLAN_CHANNEL_BANDWIDTH__40BELOW:
+    case CHANNEL_BANDWIDTH_CBW40BELOW:
       if (p <= 144 && (p % 8 != 0)) {
         return false;
       }
@@ -95,17 +96,17 @@ bool IsValidChan5Ghz(const wlan_channel_t& chan) {
         return false;
       }
       break;
-    case WLAN_CHANNEL_BANDWIDTH__80:
+    case CHANNEL_BANDWIDTH_CBW80:
       if (p == 165) {
         return false;
       }
       break;
-    case WLAN_CHANNEL_BANDWIDTH__80P80: {
+    case CHANNEL_BANDWIDTH_CBW80P80: {
       if (!(s == 42 || s == 58 || s == 106 || s == 122 || s == 138 || s == 155)) {
         return false;
       }
 
-      uint8_t ccfs0 = GetCenterChanIdx(chan);
+      uint8_t ccfs0 = GetCenterChanIdx(channel);
       uint8_t ccfs1 = s;
       uint8_t gap = (ccfs0 >= ccfs1) ? (ccfs0 - ccfs1) : (ccfs1 - ccfs0);
       if (gap <= 16) {
@@ -113,7 +114,7 @@ bool IsValidChan5Ghz(const wlan_channel_t& chan) {
       }
       break;
     }
-    case WLAN_CHANNEL_BANDWIDTH__160: {
+    case CHANNEL_BANDWIDTH_CBW160: {
       if (p >= 132) {
         return false;
       }
@@ -126,23 +127,23 @@ bool IsValidChan5Ghz(const wlan_channel_t& chan) {
   return true;
 }
 
-bool IsValidChan(const wlan_channel_t& chan) {
-  auto result = Is2Ghz(chan) ? IsValidChan2Ghz(chan) : IsValidChan5Ghz(chan);
+bool IsValidChan(const wlan_channel_t& channel) {
+  auto result = Is2Ghz(channel) ? IsValidChan2Ghz(channel) : IsValidChan5Ghz(channel);
 
   // TODO(porce): Revisit if wlan library may have active logging
   // Prefer logging in the caller only
   if (!result) {
-    errorf("invalid channel value: %s\n", ChanStr(chan).c_str());
+    errorf("invalid channel value: %s\n", ChanStr(channel).c_str());
   }
   return result;
 }
 
-Mhz GetCenterFreq(const wlan_channel_t& chan) {
-  ZX_DEBUG_ASSERT(IsValidChan(chan));
+Mhz GetCenterFreq(const wlan_channel_t& channel) {
+  ZX_DEBUG_ASSERT(IsValidChan(channel));
 
   Mhz spacing = 5;
   Mhz channel_starting_frequency;
-  if (Is2Ghz(chan)) {
+  if (Is2Ghz(channel)) {
     channel_starting_frequency = kBaseFreq2Ghz;
   } else {
     // 5 GHz
@@ -150,22 +151,22 @@ Mhz GetCenterFreq(const wlan_channel_t& chan) {
   }
 
   // IEEE Std 802.11-2016, 21.3.14
-  return channel_starting_frequency + spacing * GetCenterChanIdx(chan);
+  return channel_starting_frequency + spacing * GetCenterChanIdx(channel);
 }
 
 // Returns the channel index corresponding to the first frequency segment's
 // center frequency
-uint8_t GetCenterChanIdx(const wlan_channel_t& chan) {
-  uint8_t p = chan.primary;
-  switch (chan.cbw) {
-    case WLAN_CHANNEL_BANDWIDTH__20:
+uint8_t GetCenterChanIdx(const wlan_channel_t& channel) {
+  uint8_t p = channel.primary;
+  switch (channel.cbw) {
+    case CHANNEL_BANDWIDTH_CBW20:
       return p;
-    case WLAN_CHANNEL_BANDWIDTH__40ABOVE:
+    case CHANNEL_BANDWIDTH_CBW40:
       return p + 2;
-    case WLAN_CHANNEL_BANDWIDTH__40BELOW:
+    case CHANNEL_BANDWIDTH_CBW40BELOW:
       return p - 2;
-    case WLAN_CHANNEL_BANDWIDTH__80:
-    case WLAN_CHANNEL_BANDWIDTH__80P80:
+    case CHANNEL_BANDWIDTH_CBW80:
+    case CHANNEL_BANDWIDTH_CBW80P80:
       if (p <= 48) {
         return 42;
       } else if (p <= 64) {
@@ -182,7 +183,7 @@ uint8_t GetCenterChanIdx(const wlan_channel_t& chan) {
         // Not reachable
         return p;
       }
-    case WLAN_CHANNEL_BANDWIDTH__160:
+    case CHANNEL_BANDWIDTH_CBW160:
       // See IEEE Std 802.11-2016 Table 9-252 and 9-253.
       // Note CBW160 has only one frequency segment, regardless of
       // encodings on CCFS0 and CCFS1 in VHT Operation Information IE.
@@ -195,23 +196,23 @@ uint8_t GetCenterChanIdx(const wlan_channel_t& chan) {
         return p;
       }
     default:
-      return chan.primary;
+      return channel.primary;
   }
 }
 
-const char* CbwSuffix(wlan_channel_bandwidth_t cbw) {
+const char* CbwSuffix(channel_bandwidth_t cbw) {
   switch (cbw) {
-    case WLAN_CHANNEL_BANDWIDTH__20:
+    case CHANNEL_BANDWIDTH_CBW20:
       return "";  // Vanilla plain 20 MHz bandwidth
-    case WLAN_CHANNEL_BANDWIDTH__40ABOVE:
+    case CHANNEL_BANDWIDTH_CBW40:
       return "+";  // SCA, often denoted by "+1"
-    case WLAN_CHANNEL_BANDWIDTH__40BELOW:
+    case CHANNEL_BANDWIDTH_CBW40BELOW:
       return "-";  // SCB, often denoted by "-1"
-    case WLAN_CHANNEL_BANDWIDTH__80:
+    case CHANNEL_BANDWIDTH_CBW80:
       return "V";  // VHT 80 MHz
-    case WLAN_CHANNEL_BANDWIDTH__160:
+    case CHANNEL_BANDWIDTH_CBW160:
       return "W";  // VHT Wave2 160 MHz
-    case WLAN_CHANNEL_BANDWIDTH__80P80:
+    case CHANNEL_BANDWIDTH_CBW80P80:
       return "P";  // VHT Wave2 80Plus80 (not often obvious, but P is the first
                    // alphabet)
     default:
@@ -219,60 +220,62 @@ const char* CbwSuffix(wlan_channel_bandwidth_t cbw) {
   }
 }
 
-const char* CbwStr(wlan_channel_bandwidth_t cbw) {
+const char* CbwStr(channel_bandwidth_t cbw) {
   switch (cbw) {
-    case WLAN_CHANNEL_BANDWIDTH__20:
+    case CHANNEL_BANDWIDTH_CBW20:
       return "CBW20";
-    case WLAN_CHANNEL_BANDWIDTH__40ABOVE:
+    case CHANNEL_BANDWIDTH_CBW40:
       return "CBW40";
-    case WLAN_CHANNEL_BANDWIDTH__40BELOW:
+    case CHANNEL_BANDWIDTH_CBW40BELOW:
       return "CBW40B";
-    case WLAN_CHANNEL_BANDWIDTH__80:
+    case CHANNEL_BANDWIDTH_CBW80:
       return "CBW80";
-    case WLAN_CHANNEL_BANDWIDTH__160:
+    case CHANNEL_BANDWIDTH_CBW160:
       return "CBW160";
-    case WLAN_CHANNEL_BANDWIDTH__80P80:
+    case CHANNEL_BANDWIDTH_CBW80P80:
       return "CBW80P80";
     default:
       return "Invalid";
   }
 }
 
-std::string ChanStr(const wlan_channel_t& chan) {
+std::string ChanStr(const wlan_channel_t& channel) {
   char buf[8 + 1];
-  if (chan.cbw != WLAN_CHANNEL_BANDWIDTH__80P80) {
-    std::snprintf(buf, sizeof(buf), "%u%s", chan.primary, CbwSuffix(chan.cbw));
+  if (channel.cbw != CHANNEL_BANDWIDTH_CBW80P80) {
+    std::snprintf(buf, sizeof(buf), "%u%s", channel.primary, CbwSuffix(channel.cbw));
   } else {
-    std::snprintf(buf, sizeof(buf), "%u+%u%s", chan.primary, chan.secondary80, CbwSuffix(chan.cbw));
+    std::snprintf(buf, sizeof(buf), "%u+%u%s", channel.primary, channel.secondary80,
+                  CbwSuffix(channel.cbw));
   }
   return std::string(buf);
 }
 
-std::string ChanStrLong(const wlan_channel_t& chan) {
+std::string ChanStrLong(const wlan_channel_t& channel) {
   char buf[16 + 1];
-  if (chan.cbw != WLAN_CHANNEL_BANDWIDTH__80P80) {
-    std::snprintf(buf, sizeof(buf), "%u %s", chan.primary, CbwStr(chan.cbw));
+  if (channel.cbw != CHANNEL_BANDWIDTH_CBW80P80) {
+    std::snprintf(buf, sizeof(buf), "%u %s", channel.primary, CbwStr(channel.cbw));
   } else {
-    std::snprintf(buf, sizeof(buf), "%u+%u %s", chan.primary, chan.secondary80, CbwStr(chan.cbw));
+    std::snprintf(buf, sizeof(buf), "%u+%u %s", channel.primary, channel.secondary80,
+                  CbwStr(channel.cbw));
   }
   return std::string(buf);
 }
 
-wlan_channel_t FromFidl(const wlan_common::WlanChan& fidl_chan) {
+wlan_channel_t FromFidl(const wlan_common::WlanChannel& fidl_channel) {
   // Translate wlan::WlanChan class defined in wlan-mlme.fidl
   // to wlan_channel_t struct defined in wlan.h
   return wlan_channel_t{
-      .primary = fidl_chan.primary,
-      .cbw = static_cast<uint8_t>(fidl_chan.cbw),
-      .secondary80 = fidl_chan.secondary80,
+      .primary = fidl_channel.primary,
+      .cbw = static_cast<uint8_t>(fidl_channel.cbw),
+      .secondary80 = fidl_channel.secondary80,
   };
 }
 
-wlan_common::WlanChan ToFidl(const wlan_channel_t& chan) {
-  return wlan_common::WlanChan{
-      .primary = chan.primary,
-      .cbw = static_cast<wlan_common::CBW>(chan.cbw),
-      .secondary80 = chan.secondary80,
+wlan_common::WlanChannel ToFidl(const wlan_channel_t& channel) {
+  return wlan_common::WlanChannel{
+      .primary = channel.primary,
+      .cbw = static_cast<wlan_common::ChannelBandwidth>(channel.cbw),
+      .secondary80 = channel.secondary80,
   };
 }
 

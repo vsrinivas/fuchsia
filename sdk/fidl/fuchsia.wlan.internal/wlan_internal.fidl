@@ -5,6 +5,9 @@ library fuchsia.wlan.internal;
 
 using fuchsia.wlan.common;
 
+@namespaced
+const MAC_ADDR_BYTE_LEN uint8 = 6;
+
 type BssType = strict enum {
     INFRASTRUCTURE = 1;
     PERSONAL = 2;
@@ -15,7 +18,7 @@ type BssType = strict enum {
 };
 
 type BssConfig = struct {
-    bssid array<uint8, 6>;
+    bssid array<uint8, MAC_ADDR_BYTE_LEN>;
     bss_type BssType;
     remote bool;
 };
@@ -70,20 +73,20 @@ type VhtOperation = struct {
 
 // IEEE Std 802.11-2016 6.3.3.3.2
 type BssDescription = struct {
-    bssid array<uint8, 6>;
+    bssid array<uint8, MAC_ADDR_BYTE_LEN>;
 
     bss_type BssType;
     beacon_period uint16; // in TU
     timestamp uint64;
     local_time uint64;
 
-    cap CapabilityInfo;
+    capability_info CapabilityInfo;
 
     /// All info elements present in the beacon or probe response frame.
     ies bytes;
 
     // List up non-standard, Fuchsia only parameters
-    chan fuchsia.wlan.common.WlanChan;
+    channel fuchsia.wlan.common.WlanChannel;
     // The running average of received signal strength indicator in units of dBm. This value is
     // updated periodically when the client is associated to an AP.
     rssi_dbm int8; // dBm

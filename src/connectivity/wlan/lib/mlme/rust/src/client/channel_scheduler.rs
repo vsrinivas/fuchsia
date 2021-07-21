@@ -1,4 +1,4 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -10,8 +10,7 @@ use {
         },
         timer::EventId,
     },
-    banjo_fuchsia_hardware_wlan_info::*,
-    fuchsia_zircon as zx,
+    banjo_fuchsia_wlan_common as banjo_common, fuchsia_zircon as zx,
     log::{debug, error},
     std::collections::VecDeque,
 };
@@ -65,7 +64,7 @@ impl<'a, CL: ChannelListener> BoundChannelScheduler<'a, CL> {
     /// desired time to switch channel.
     pub fn schedule_immediate(
         &mut self,
-        channel: WlanChannel,
+        channel: banjo_common::WlanChannel,
         duration: zx::Duration,
     ) -> RequestId {
         self.chan_sched.request_id += 1;
@@ -84,7 +83,7 @@ impl<'a, CL: ChannelListener> BoundChannelScheduler<'a, CL> {
     /// scheduled request, in which case it will be retried at a later time.
     pub fn queue_channels(
         &mut self,
-        channels: Vec<WlanChannel>,
+        channels: Vec<banjo_common::WlanChannel>,
         duration: zx::Duration,
     ) -> RequestId {
         self.chan_sched.request_id += 1;
@@ -204,7 +203,7 @@ impl ChannelQueue {
         self.queue.push_back(req)
     }
 
-    fn front(&self) -> Option<(WlanChannel, ChannelRequestMeta)> {
+    fn front(&self) -> Option<(banjo_common::WlanChannel, ChannelRequestMeta)> {
         self.queue.front().map(|req| match req {
             ChannelRequest::Single { channel, meta } => (*channel, *meta),
             ChannelRequest::List { channels, current_idx, meta } => (channels[*current_idx], *meta),
@@ -246,8 +245,8 @@ struct ChannelRequestMeta {
 
 #[derive(Debug, Clone)]
 enum ChannelRequest {
-    Single { channel: WlanChannel, meta: ChannelRequestMeta },
-    List { channels: Vec<WlanChannel>, current_idx: usize, meta: ChannelRequestMeta },
+    Single { channel: banjo_common::WlanChannel, meta: ChannelRequestMeta },
+    List { channels: Vec<banjo_common::WlanChannel>, current_idx: usize, meta: ChannelRequestMeta },
 }
 
 impl ChannelRequest {
@@ -267,18 +266,28 @@ mod tests {
             device::{Device, FakeDevice},
             timer::{FakeScheduler, Timer},
         },
+        banjo_fuchsia_wlan_common as banjo_common,
         fuchsia_zircon::prelude::DurationNum,
         std::{cell::RefCell, rc::Rc},
     };
 
-    const IMMEDIATE_CHANNEL: WlanChannel =
-        WlanChannel { primary: 11, cbw: WlanChannelBandwidth::B_40, secondary80: 0 };
+    const IMMEDIATE_CHANNEL: banjo_common::WlanChannel = banjo_common::WlanChannel {
+        primary: 11,
+        cbw: banjo_common::ChannelBandwidth::CBW40,
+        secondary80: 0,
+    };
 
-    const QUEUE_CHANNEL_1: WlanChannel =
-        WlanChannel { primary: 5, cbw: WlanChannelBandwidth::B_20, secondary80: 0 };
+    const QUEUE_CHANNEL_1: banjo_common::WlanChannel = banjo_common::WlanChannel {
+        primary: 5,
+        cbw: banjo_common::ChannelBandwidth::CBW20,
+        secondary80: 0,
+    };
 
-    const QUEUE_CHANNEL_2: WlanChannel =
-        WlanChannel { primary: 6, cbw: WlanChannelBandwidth::B_20, secondary80: 0 };
+    const QUEUE_CHANNEL_2: banjo_common::WlanChannel = banjo_common::WlanChannel {
+        primary: 6,
+        cbw: banjo_common::ChannelBandwidth::CBW20,
+        secondary80: 0,
+    };
 
     #[test]
     fn test_schedule_immediate_on_empty_queue() {

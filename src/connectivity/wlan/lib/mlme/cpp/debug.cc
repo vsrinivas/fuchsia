@@ -1,6 +1,8 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
+#include <fuchsia/wlan/common/c/banjo.h>
 
 #include <cstring>
 #include <iomanip>
@@ -330,7 +332,7 @@ std::string Describe(const wlan_rx_info_t& rxinfo) {
   BUFFER("valid_fields:0x%0x8", rxinfo.valid_fields);
   BUFFER("phy:%u", rxinfo.phy);
   BUFFER("data_rate:%u", rxinfo.data_rate);
-  BUFFER("chan:%s", common::ChanStr(rxinfo.chan).c_str());
+  BUFFER("channel:%s", common::ChanStr(rxinfo.channel).c_str());
   BUFFER("mcs:%u", rxinfo.mcs);
   BUFFER("rssi_dbm:%d", rxinfo.rssi_dbm);
   BUFFER("snr_dbh:%d", rxinfo.snr_dbh);
@@ -656,7 +658,7 @@ std::string Describe(const wlanmac_info& wi) {
   BUFFER("role:%u", wi.mac_role);
   BUFFER("phys:0x%04x", wi.supported_phys);
   BUFFER("feat:0x%08x", wi.driver_features);
-  BUFFER("cap:0x%08x", wi.caps);
+  BUFFER("capability_info:0x%08x", wi.caps);
   BUFFER("#bands:%du", wi.bands_count);
   for (uint8_t i = 0; i < wi.bands_count; i++) {
     BUFFER("[band %u]%s", i, Describe(wi.bands[i]).c_str());
@@ -664,22 +666,22 @@ std::string Describe(const wlanmac_info& wi) {
   return std::string(buf);
 }
 
-std::string Describe(const CapabilityInfo& cap) {
+std::string Describe(const CapabilityInfo& capability_info) {
   char buf[512];
   size_t offset = 0;
-  BUFFER("ess:%u", cap.ess());
-  BUFFER("ibss:%u", cap.ibss());
-  BUFFER("cf_pollable:%u", cap.cf_pollable());
-  BUFFER("cf_poll_req:%u", cap.cf_poll_req());
-  BUFFER("privacy:%u", cap.privacy());
-  BUFFER("short_preamble:%u", cap.short_preamble());
-  BUFFER("spectrum_mgmt:%u", cap.spectrum_mgmt());
-  BUFFER("qos:%u", cap.qos());
-  BUFFER("short_slot_time:%u", cap.short_slot_time());
-  BUFFER("apsd:%u", cap.apsd());
-  BUFFER("radio_msmt:%u", cap.radio_msmt());
-  BUFFER("delayed_block_ack:%u", cap.delayed_block_ack());
-  BUFFER("immediate_block_ack:%u", cap.immediate_block_ack());
+  BUFFER("ess:%u", capability_info.ess());
+  BUFFER("ibss:%u", capability_info.ibss());
+  BUFFER("cf_pollable:%u", capability_info.cf_pollable());
+  BUFFER("cf_poll_req:%u", capability_info.cf_poll_req());
+  BUFFER("privacy:%u", capability_info.privacy());
+  BUFFER("short_preamble:%u", capability_info.short_preamble());
+  BUFFER("spectrum_mgmt:%u", capability_info.spectrum_mgmt());
+  BUFFER("qos:%u", capability_info.qos());
+  BUFFER("short_slot_time:%u", capability_info.short_slot_time());
+  BUFFER("apsd:%u", capability_info.apsd());
+  BUFFER("radio_msmt:%u", capability_info.radio_msmt());
+  BUFFER("delayed_block_ack:%u", capability_info.delayed_block_ack());
+  BUFFER("immediate_block_ack:%u", capability_info.immediate_block_ack());
   return std::string(buf);
 }
 

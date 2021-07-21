@@ -60,10 +60,10 @@ pub async fn connect(
         radio_cfg: fidl_sme::RadioConfig {
             override_phy: false,
             phy: fidl_common::Phy::Ht,
-            override_cbw: false,
-            cbw: fidl_common::Cbw::Cbw20,
-            override_primary_chan: false,
-            primary_chan: 0,
+            override_channel_bandwidth: false,
+            channel_bandwidth: fidl_common::ChannelBandwidth::Cbw20,
+            override_primary_channel: false,
+            primary_channel: 0,
         },
         deprecated_scan_type: fidl_common::ScanType::Passive,
         multiple_bss_candidates: false, // only used for metrics, select an arbitrary value
@@ -280,18 +280,18 @@ mod tests {
             beacon_period: rng.gen::<u16>(),
             timestamp: rng.gen::<u64>(),
             local_time: rng.gen::<u64>(),
-            cap: rng.gen::<u16>(),
+            capability_info: rng.gen::<u16>(),
             ies: (0..1024).map(|_| rng.gen::<u8>()).collect(),
             rssi_dbm: rng.gen::<i8>(),
-            chan: fidl_common::WlanChan {
+            channel: fidl_common::WlanChannel {
                 primary: rng.gen::<u8>(),
                 cbw: match rng.gen_range(0, 5) {
-                    0 => fidl_common::Cbw::Cbw20,
-                    1 => fidl_common::Cbw::Cbw40,
-                    2 => fidl_common::Cbw::Cbw40Below,
-                    3 => fidl_common::Cbw::Cbw80,
-                    4 => fidl_common::Cbw::Cbw160,
-                    5 => fidl_common::Cbw::Cbw80P80,
+                    0 => fidl_common::ChannelBandwidth::Cbw20,
+                    1 => fidl_common::ChannelBandwidth::Cbw40,
+                    2 => fidl_common::ChannelBandwidth::Cbw40Below,
+                    3 => fidl_common::ChannelBandwidth::Cbw80,
+                    4 => fidl_common::ChannelBandwidth::Cbw160,
+                    5 => fidl_common::ChannelBandwidth::Cbw80P80,
                     _ => panic!(),
                 },
                 secondary80: rng.gen::<u8>(),
@@ -1074,9 +1074,9 @@ mod tests {
                 ssid: ssid.clone(),
                 rssi_dbm: -30,
                 snr_db: 10,
-                channel: fidl_common::WlanChan {
+                channel: fidl_common::WlanChannel {
                     primary: 1,
-                    cbw: fidl_common::Cbw::Cbw20,
+                    cbw: fidl_common::ChannelBandwidth::Cbw20,
                     secondary80: 0,
                 },
                 protection: Protection::Wpa2Personal,
@@ -1129,7 +1129,11 @@ mod tests {
             b"foo".to_vec(),
             -30,
             20,
-            fidl_common::WlanChan { primary: 1, cbw: fidl_common::Cbw::Cbw20, secondary80: 0 },
+            fidl_common::WlanChannel {
+                primary: 1,
+                cbw: fidl_common::ChannelBandwidth::Cbw20,
+                secondary80: 0,
+            },
             Protection::Wpa2Personal,
             true,
         );
@@ -1139,7 +1143,11 @@ mod tests {
             b"hello".to_vec(),
             -60,
             10,
-            fidl_common::WlanChan { primary: 2, cbw: fidl_common::Cbw::Cbw20, secondary80: 0 },
+            fidl_common::WlanChannel {
+                primary: 2,
+                cbw: fidl_common::ChannelBandwidth::Cbw20,
+                secondary80: 0,
+            },
             Protection::Wpa2Personal,
             false,
         );
@@ -1255,7 +1263,7 @@ mod tests {
         ssid: Vec<u8>,
         rssi_dbm: i8,
         snr_db: i8,
-        channel: fidl_common::WlanChan,
+        channel: fidl_common::WlanChannel,
         protection: Protection,
         compatible: bool,
     ) -> fidl_sme::BssInfo {
@@ -1273,7 +1281,7 @@ mod tests {
                 ssid: ssid,
                 rssi_dbm: rssi_dbm,
                 snr_db: snr_db,
-                chan: channel,
+                channel: channel,
             ),
         }
     }

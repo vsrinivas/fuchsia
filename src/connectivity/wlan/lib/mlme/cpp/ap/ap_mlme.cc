@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/wlan/common/c/banjo.h>
 #include <fuchsia/wlan/internal/c/banjo.h>
 #include <zircon/status.h>
 
@@ -33,8 +34,8 @@ ApMlme::ApMlme(DeviceInterface* device) : device_(device), rust_ap_(nullptr, ap_
       .get_wlan_channel = [](void* mlme) -> wlan_channel_t {
         return MLME(mlme)->device_->GetState()->channel();
       },
-      .set_wlan_channel = [](void* mlme, wlan_channel_t chan) -> zx_status_t {
-        return MLME(mlme)->device_->SetChannel(chan);
+      .set_wlan_channel = [](void* mlme, wlan_channel_t channel) -> zx_status_t {
+        return MLME(mlme)->device_->SetChannel(channel);
       },
       .set_key = [](void* mlme, wlan_key_config_t* key) -> zx_status_t {
         return MLME(mlme)->device_->SetKey(key);

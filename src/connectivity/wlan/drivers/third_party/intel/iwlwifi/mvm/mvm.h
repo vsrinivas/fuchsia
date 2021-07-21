@@ -1702,16 +1702,16 @@ void iwl_mvm_rx_shared_mem_cfg_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_buff
 
 /* MVM PHY */
 zx_status_t iwl_mvm_phy_ctxt_add(struct iwl_mvm* mvm, struct iwl_mvm_phy_ctxt* ctxt,
-                                 wlan_channel_t* chandef, uint8_t chains_static,
+                                 wlan_channel_t* channeldef, uint8_t chains_static,
                                  uint8_t chains_dynamic);
 zx_status_t iwl_mvm_phy_ctxt_changed(struct iwl_mvm* mvm, struct iwl_mvm_phy_ctxt* ctxt,
-                                     const wlan_channel_t* chandef, uint8_t chains_static,
+                                     const wlan_channel_t* channeldef, uint8_t chains_static,
                                      uint8_t chains_dynamic);
 void iwl_mvm_phy_ctxt_ref(struct iwl_mvm* mvm, struct iwl_mvm_phy_ctxt* ctxt);
 zx_status_t iwl_mvm_phy_ctxt_unref(struct iwl_mvm* mvm, struct iwl_mvm_phy_ctxt* ctxt);
 int iwl_mvm_phy_ctx_count(struct iwl_mvm* mvm);
-uint8_t iwl_mvm_get_channel_width(const wlan_channel_t* chandef);
-uint8_t iwl_mvm_get_ctrl_pos(const wlan_channel_t* chandef);
+uint8_t iwl_mvm_get_channel_width(const wlan_channel_t* channeldef);
+uint8_t iwl_mvm_get_ctrl_pos(const wlan_channel_t* channeldef);
 
 /* MAC (virtual interface) programming */
 zx_status_t iwl_mvm_mac_ctxt_init(struct iwl_mvm_vif* mvmvif);
@@ -2167,12 +2167,13 @@ zx_status_t iwl_mvm_mac_sta_state(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_sta
 void iwl_mvm_mac_mgd_prepare_tx(struct iwl_mvm* mvm, struct iwl_mvm_vif* mvmvif,
                                 uint16_t req_duration);
 
-zx_status_t iwl_mvm_add_chanctx(struct iwl_mvm* mvm, const wlan_channel_t* chandef,
+zx_status_t iwl_mvm_add_chanctx(struct iwl_mvm* mvm, const wlan_channel_t* channeldef,
                                 uint16_t* phy_ctxt_id);
 zx_status_t iwl_mvm_remove_chanctx(struct iwl_mvm* mvm, uint16_t phy_ctxt_id);
 zx_status_t iwl_mvm_change_chanctx(struct iwl_mvm* mvm, uint16_t phy_ctxt_id,
-                                   const wlan_channel_t* chandef);
-zx_status_t iwl_mvm_assign_vif_chanctx(struct iwl_mvm_vif* mvmvif, const wlan_channel_t* chandef);
+                                   const wlan_channel_t* channeldef);
+zx_status_t iwl_mvm_assign_vif_chanctx(struct iwl_mvm_vif* mvmvif,
+                                       const wlan_channel_t* channeldef);
 zx_status_t iwl_mvm_unassign_vif_chanctx(struct iwl_mvm_vif* mvmvif);
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////

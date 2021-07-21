@@ -4,6 +4,7 @@
 
 #include <fuchsia/hardware/wlan/info/c/banjo.h>
 #include <fuchsia/hardware/wlanif/c/banjo.h>
+#include <fuchsia/wlan/common/c/banjo.h>
 #include <fuchsia/wlan/common/cpp/fidl.h>
 #include <fuchsia/wlan/ieee80211/cpp/fidl.h>
 #include <fuchsia/wlan/internal/c/banjo.h>
@@ -45,25 +46,25 @@ zx_status_t ValidateMessage(T* msg) {
 
 TEST(ConvertTest, ToFidlBssDescription) {
   uint8_t ies[] = {0, 4, 0x73, 0x73, 0x69, 0x64};
-  wlanif_bss_description_t wlanif_desc{.bssid = {1, 2, 3, 4, 5, 6},
-                                       .bss_type = BSS_TYPE_INFRASTRUCTURE,
-                                       .beacon_period = 2,
-                                       .timestamp = 54321,
-                                       .local_time = 777,
-                                       .cap = 1337,
-                                       .ies_bytes_list = ies,
-                                       .ies_bytes_count = sizeof(ies),
+  bss_description_t banjo_desc{.bssid = {1, 2, 3, 4, 5, 6},
+                               .bss_type = BSS_TYPE_INFRASTRUCTURE,
+                               .beacon_period = 2,
+                               .timestamp = 54321,
+                               .local_time = 777,
+                               .capability_info = 1337,
+                               .ies_list = ies,
+                               .ies_count = sizeof(ies),
 
-                                       .chan{
-                                           .primary = 32,
-                                           .cbw = WLAN_CHANNEL_BANDWIDTH__40,
-                                           .secondary80 = 0,
-                                       },
-                                       .rssi_dbm = -40,
-                                       .snr_db = 20};
+                               .channel{
+                                   .primary = 32,
+                                   .cbw = CHANNEL_BANDWIDTH_CBW40,
+                                   .secondary80 = 0,
+                               },
+                               .rssi_dbm = -40,
+                               .snr_db = 20};
 
   wlan_internal::BssDescription fidl_desc = {};
-  ConvertBssDescription(&fidl_desc, wlanif_desc);
+  ConvertBssDescription(&fidl_desc, banjo_desc);
 
   auto status = ValidateMessage(&fidl_desc);
   EXPECT_EQ(status, ZX_OK);
@@ -73,12 +74,12 @@ TEST(ConvertTest, ToFidlBssDescription) {
   EXPECT_EQ(fidl_desc.beacon_period, 2u);
   EXPECT_EQ(fidl_desc.timestamp, 54321u);
   EXPECT_EQ(fidl_desc.local_time, 777u);
-  EXPECT_EQ(fidl_desc.cap, 1337);
+  EXPECT_EQ(fidl_desc.capability_info, 1337);
   auto expected_ies = std::vector<uint8_t>(ies, ies + sizeof(ies));
   EXPECT_EQ(fidl_desc.ies, expected_ies);
-  EXPECT_EQ(fidl_desc.chan.primary, 32);
-  EXPECT_EQ(fidl_desc.chan.cbw, fuchsia::wlan::common::CBW::CBW40);
-  EXPECT_EQ(fidl_desc.chan.secondary80, 0);
+  EXPECT_EQ(fidl_desc.channel.primary, 32);
+  EXPECT_EQ(fidl_desc.channel.cbw, fuchsia::wlan::common::ChannelBandwidth::CBW40);
+  EXPECT_EQ(fidl_desc.channel.secondary80, 0);
   EXPECT_EQ(fidl_desc.rssi_dbm, -40);
   EXPECT_EQ(fidl_desc.snr_db, 20);
 }
@@ -493,30 +494,31 @@ TEST(ConvertTest, ToWlanifBssDescription) {
       .beacon_period = 2,
       .timestamp = 54321,
       .local_time = 777,
-      .cap = 1337,
+      .capability_info = 1337,
       .ies = std::vector<uint8_t>(ies, ies + sizeof(ies)),
 
-      .chan{.primary = 32, .cbw = fuchsia::wlan::common::CBW::CBW40, .secondary80 = 0},
+      .channel{
+          .primary = 32, .cbw = fuchsia::wlan::common::ChannelBandwidth::CBW40, .secondary80 = 0},
       .rssi_dbm = -40,
       .snr_db = 20};
 
-  wlanif_bss_description_t wlanif_desc = {};
-  ConvertBssDescription(&wlanif_desc, fidl_desc);
+  bss_description_t banjo_desc = {};
+  ConvertBssDescription(&banjo_desc, fidl_desc);
 
   uint8_t expected_bssid[] = {1, 2, 3, 4, 5, 6};
-  EXPECT_EQ(memcmp(wlanif_desc.bssid, expected_bssid, sizeof(wlanif_desc.bssid)), 0);
-  EXPECT_EQ(wlanif_desc.bss_type, BSS_TYPE_INFRASTRUCTURE);
-  EXPECT_EQ(wlanif_desc.beacon_period, 2u);
-  EXPECT_EQ(wlanif_desc.timestamp, 54321u);
-  EXPECT_EQ(wlanif_desc.local_time, 777u);
-  EXPECT_EQ(wlanif_desc.cap, 1337);
-  ASSERT_EQ(wlanif_desc.ies_bytes_count, sizeof(ies));
-  EXPECT_EQ(memcmp(wlanif_desc.ies_bytes_list, ies, sizeof(ies)), 0);
-  EXPECT_EQ(wlanif_desc.chan.primary, 32);
-  EXPECT_EQ(wlanif_desc.chan.cbw, WLAN_CHANNEL_BANDWIDTH__40);
-  EXPECT_EQ(wlanif_desc.chan.secondary80, 0);
-  EXPECT_EQ(wlanif_desc.rssi_dbm, -40);
-  EXPECT_EQ(wlanif_desc.snr_db, 20);
+  EXPECT_EQ(memcmp(banjo_desc.bssid, expected_bssid, sizeof(banjo_desc.bssid)), 0);
+  EXPECT_EQ(banjo_desc.bss_type, BSS_TYPE_INFRASTRUCTURE);
+  EXPECT_EQ(banjo_desc.beacon_period, 2u);
+  EXPECT_EQ(banjo_desc.timestamp, 54321u);
+  EXPECT_EQ(banjo_desc.local_time, 777u);
+  EXPECT_EQ(banjo_desc.capability_info, 1337);
+  ASSERT_EQ(banjo_desc.ies_count, sizeof(ies));
+  EXPECT_EQ(memcmp(banjo_desc.ies_list, ies, sizeof(ies)), 0);
+  EXPECT_EQ(banjo_desc.channel.primary, 32);
+  EXPECT_EQ(banjo_desc.channel.cbw, CHANNEL_BANDWIDTH_CBW40);
+  EXPECT_EQ(banjo_desc.channel.secondary80, 0);
+  EXPECT_EQ(banjo_desc.rssi_dbm, -40);
+  EXPECT_EQ(banjo_desc.snr_db, 20);
 }
 
 TEST(ConvertTest, ToWlanifOrFidlSaeAuthFrame) {

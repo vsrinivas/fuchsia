@@ -1,4 +1,4 @@
-// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -151,7 +151,7 @@ TEST(HtCapabilities, DdkConversion) {
 
 TEST(HtOperation, DdkConversion) {
   wlan_ht_op ddk{
-      .primary_chan = 123,
+      .primary_channel = 123,
       .head = 0x01020304,
       .tail = 0x05,
       .rx_mcs_head = 0x00000001000000ff,
@@ -160,7 +160,7 @@ TEST(HtOperation, DdkConversion) {
   };
 
   auto ieee = HtOperation::FromDdk(ddk);
-  EXPECT_EQ(123U, ieee.primary_chan);
+  EXPECT_EQ(123U, ieee.primary_channel);
   EXPECT_EQ(0x01020304U, ieee.head.val());
   EXPECT_EQ(0x05U, ieee.tail.val());
   EXPECT_EQ(0x00000001000000ffU, ieee.basic_mcs_set.rx_mcs_head.val());
@@ -168,7 +168,7 @@ TEST(HtOperation, DdkConversion) {
   EXPECT_EQ(0x00000000U, ieee.basic_mcs_set.tx_mcs.val());
 
   auto ddk2 = ieee.ToDdk();
-  EXPECT_EQ(ddk.primary_chan, ddk2.primary_chan);
+  EXPECT_EQ(ddk.primary_channel, ddk2.primary_channel);
   EXPECT_EQ(ddk.head, ddk2.head);
   EXPECT_EQ(ddk.tail, ddk2.tail);
   EXPECT_EQ(ddk.rx_mcs_head, ddk2.rx_mcs_head);

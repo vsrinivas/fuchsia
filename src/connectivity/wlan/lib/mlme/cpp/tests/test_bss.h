@@ -1,10 +1,11 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_TESTS_TEST_BSS_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_TESTS_TEST_BSS_H_
 
+#include <fuchsia/wlan/common/c/banjo.h>
 #include <fuchsia/wlan/ieee80211/cpp/fidl.h>
 #include <fuchsia/wlan/internal/cpp/fidl.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
@@ -38,7 +39,7 @@ static constexpr uint16_t kDtimPeriodTu = 2;
 static constexpr uint8_t kListenInterval = 10;  // Beacon Periods
 static constexpr wlan_channel_t kBssChannel = {
     .primary = 36,
-    .cbw = WLAN_CHANNEL_BANDWIDTH__40,
+    .cbw = CHANNEL_BANDWIDTH_CBW40,
 };
 static constexpr wlan_info_phy_type_t kBssPhy = WLAN_INFO_PHY_TYPE_HT;
 static constexpr uint8_t kSsid[] = {'F', 'u', 'c', 'h', 's', 'i', 'a', '-', 'A', 'P'};
@@ -150,8 +151,8 @@ FV TypeCheckWlanFrame(Packet* pkt) {
   return frame;
 }
 
-::fuchsia::wlan::internal::BssDescription CreateBssDescription(bool rsn,
-                                                               wlan_channel_t chan = kBssChannel);
+::fuchsia::wlan::internal::BssDescription CreateBssDescription(
+    bool rsn, wlan_channel_t channel = kBssChannel);
 MlmeMsg<::fuchsia::wlan::mlme::ScanRequest> CreateScanRequest(uint32_t max_channel_time);
 MlmeMsg<::fuchsia::wlan::mlme::StartRequest> CreateStartRequest(bool protected_ap);
 MlmeMsg<::fuchsia::wlan::mlme::StopRequest> CreateStopRequest();
@@ -166,7 +167,7 @@ MlmeMsg<::fuchsia::wlan::mlme::AssociateResponse> CreateAssocResponse(
     common::MacAddr client_addr, ::fuchsia::wlan::mlme::AssociateResultCode result_code,
     uint16_t aid);
 MlmeMsg<::fuchsia::wlan::mlme::NegotiatedCapabilities> CreateFinalizeAssociationRequest(
-    const wlan_assoc_ctx& ac, wlan_channel_t chan);
+    const wlan_assoc_ctx& ac, wlan_channel_t channel);
 MlmeMsg<::fuchsia::wlan::mlme::EapolRequest> CreateEapolRequest(common::MacAddr src_addr,
                                                                 common::MacAddr dst_addr);
 MlmeMsg<::fuchsia::wlan::mlme::SetKeysRequest> CreateSetKeysRequest(common::MacAddr addr,

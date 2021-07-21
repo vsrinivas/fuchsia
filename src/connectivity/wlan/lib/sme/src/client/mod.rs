@@ -1,4 +1,4 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -1015,7 +1015,7 @@ mod tests {
         let bss_desc = fake_fidl_bss!(
             Wpa2,
             ssid: b"foo".to_vec(),
-            cap: wlan_common::mac::CapabilityInfo(0).with_privacy(false).0,
+            capability_info: wlan_common::mac::CapabilityInfo(0).with_privacy(false).0,
         );
         let mut connect_fut =
             sme.on_connect_command(connect_req(b"foo".to_vec(), bss_desc, credential));

@@ -18,7 +18,7 @@ use {
     anyhow::format_err,
     banjo_ddk_hw_wlan_wlaninfo as banjo_hw_wlaninfo,
     banjo_fuchsia_hardware_wlan_info as banjo_wlan_info,
-    banjo_fuchsia_hardware_wlan_mac as banjo_wlan_mac,
+    banjo_fuchsia_hardware_wlan_mac as banjo_wlan_mac, banjo_fuchsia_wlan_common as banjo_common,
     fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_internal as fidl_internal,
     fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
     log::{error, warn},
@@ -190,9 +190,9 @@ impl<'a> BoundScanner<'a> {
         } else {
             let channels = channel_list
                 .iter()
-                .map(|c| banjo_wlan_info::WlanChannel {
+                .map(|c| banjo_common::WlanChannel {
                     primary: *c,
-                    cbw: banjo_wlan_info::WlanChannelBandwidth::B_20,
+                    cbw: banjo_common::ChannelBandwidth::CBW20,
                     secondary80: 0,
                 })
                 .collect();
@@ -245,7 +245,7 @@ impl<'a> BoundScanner<'a> {
     }
 
     /// Notify scanner about end of probe-delay timeout so that it sends out probe request.
-    pub fn handle_probe_delay_timeout(&mut self, channel: banjo_wlan_info::WlanChannel) {
+    pub fn handle_probe_delay_timeout(&mut self, channel: banjo_common::WlanChannel) {
         let ssid = match &self.scanner.ongoing_scan {
             Some(OngoingScan { req, .. }) => req.ssid.clone(),
             None => return,
@@ -273,7 +273,7 @@ impl<'a> BoundScanner<'a> {
 
     /// Called after switching to a requested channel from a scan request. It's primarily to
     /// send out, or schedule to send out, a probe request in an active scan.
-    pub fn begin_requested_channel_time(&mut self, channel: banjo_wlan_info::WlanChannel) {
+    pub fn begin_requested_channel_time(&mut self, channel: banjo_common::WlanChannel) {
         let (req, probe_delay_timeout_id) = match &mut self.scanner.ongoing_scan {
             Some(req) => (&req.req, &mut req.probe_delay_timeout_id),
             None => return,
@@ -298,11 +298,11 @@ impl<'a> BoundScanner<'a> {
     fn send_probe_req(
         &mut self,
         ssid: &[u8],
-        channel: banjo_wlan_info::WlanChannel,
+        channel: banjo_common::WlanChannel,
     ) -> Result<(), Error> {
         let iface_info = self.ctx.device.wlanmac_info();
         let band_info = get_band_info(&iface_info, channel)
-            .ok_or(format_err!("no band found for chan {:?}", channel.primary))?;
+            .ok_or(format_err!("no band found for channel {:?}", channel.primary))?;
         let rates: Vec<u8> = band_info.rates.iter().cloned().filter(|r| *r > 0).collect();
 
         let (buf, bytes_written) = write_frame!(&mut self.ctx.buf_provider, {
@@ -340,7 +340,7 @@ impl<'a> BoundScanner<'a> {
 
 fn get_band_info(
     iface_info: &banjo_wlan_mac::WlanmacInfo,
-    channel: banjo_wlan_info::WlanChannel,
+    channel: banjo_common::WlanChannel,
 ) -> Option<&banjo_hw_wlaninfo::WlanInfoBandInfo> {
     const _2GHZ_BAND_HIGHEST_CHANNEL: u8 = 14;
     iface_info.bands[..iface_info.bands_count as usize]
@@ -392,16 +392,16 @@ mod tests {
     const BSSID: Bssid = Bssid([6u8; 6]);
     const IFACE_MAC: MacAddr = [7u8; 6];
     // Original channel set by FakeDevice
-    const ORIGINAL_CHAN: banjo_wlan_info::WlanChannel = chan(0);
+    const ORIGINAL_CHAN: banjo_common::WlanChannel = channel(0);
 
     const TIMESTAMP: u64 = 364983910445;
     // Capability information: ESS
     const CAPABILITY_INFO: CapabilityInfo = CapabilityInfo(1);
     const BEACON_INTERVAL: u16 = 100;
     const RX_INFO: banjo_wlan_mac::WlanRxInfo = banjo_wlan_mac::WlanRxInfo {
-        chan: banjo_wlan_info::WlanChannel {
+        channel: banjo_common::WlanChannel {
             primary: 11,
-            cbw: banjo_wlan_info::WlanChannelBandwidth::B_20,
+            cbw: banjo_common::ChannelBandwidth::CBW20,
             secondary80: 0,
         },
         rssi_dbm: -40,
@@ -448,8 +448,8 @@ mod tests {
         assert_eq!(
             m.listener_state.drain_events(),
             vec![
-                LEvent::PreSwitch { from: ORIGINAL_CHAN, to: chan(6), req_id },
-                LEvent::PostSwitch { from: ORIGINAL_CHAN, to: chan(6), req_id },
+                LEvent::PreSwitch { from: ORIGINAL_CHAN, to: channel(6), req_id },
+                LEvent::PostSwitch { from: ORIGINAL_CHAN, to: channel(6), req_id },
             ]
         );
     }
@@ -473,13 +473,13 @@ mod tests {
         assert_eq!(
             m.listener_state.drain_events(),
             vec![
-                LEvent::PreSwitch { from: ORIGINAL_CHAN, to: chan(6), req_id },
-                LEvent::PostSwitch { from: ORIGINAL_CHAN, to: chan(6), req_id },
+                LEvent::PreSwitch { from: ORIGINAL_CHAN, to: channel(6), req_id },
+                LEvent::PostSwitch { from: ORIGINAL_CHAN, to: channel(6), req_id },
             ]
         );
 
         // On post-switch announcement, the listener would call `begin_requested_channel_time`
-        scanner.bind(&mut ctx).begin_requested_channel_time(chan(6));
+        scanner.bind(&mut ctx).begin_requested_channel_time(channel(6));
         assert_eq!(m.fake_device.wlan_queue.len(), 1);
         #[rustfmt::skip]
         assert_eq!(&m.fake_device.wlan_queue[0].0[..], &[
@@ -513,18 +513,18 @@ mod tests {
             .bind(&mut ctx)
             .on_sme_scan(scan_req, m.listener_state.create_channel_listener_fn(), &mut m.chan_sched)
             .expect("expect scan req accepted");
-        scanner.bind(&mut ctx).begin_requested_channel_time(chan(6));
+        scanner.bind(&mut ctx).begin_requested_channel_time(channel(6));
 
         // Verify nothing is sent yet, but timeout is scheduled
         assert!(m.fake_device.wlan_queue.is_empty());
         assert!(scanner.probe_delay_timeout_id().is_some());
         let timeout_id = scanner.probe_delay_timeout_id().unwrap();
         assert_variant!(ctx.timer.triggered(&timeout_id), Some(event) => {
-            assert_eq!(event, TimedEvent::ScannerProbeDelay(chan(6)));
+            assert_eq!(event, TimedEvent::ScannerProbeDelay(channel(6)));
         });
 
         // Check that telling scanner to handle timeout would send probe request frame
-        scanner.bind(&mut ctx).handle_probe_delay_timeout(chan(6));
+        scanner.bind(&mut ctx).handle_probe_delay_timeout(channel(6));
         assert_eq!(m.fake_device.wlan_queue.len(), 1);
         #[rustfmt::skip]
         assert_eq!(&m.fake_device.wlan_queue[0].0[..], &[
@@ -810,12 +810,12 @@ mod tests {
                     beacon_period: BEACON_INTERVAL,
                     timestamp: TIMESTAMP,
                     local_time: 0,
-                    cap: CAPABILITY_INFO.0,
+                    capability_info: CAPABILITY_INFO.0,
                     ies: beacon_ies(),
                     rssi_dbm: RX_INFO.rssi_dbm,
-                    chan: fidl_common::WlanChan {
-                        primary: RX_INFO.chan.primary,
-                        cbw: fidl_common::Cbw::Cbw20,
+                    channel: fidl_common::WlanChannel {
+                        primary: RX_INFO.channel.primary,
+                        cbw: fidl_common::ChannelBandwidth::Cbw20,
                         secondary80: 0,
                     },
                     snr_db: 0,
@@ -904,10 +904,10 @@ mod tests {
         );
     }
 
-    const fn chan(primary: u8) -> banjo_wlan_info::WlanChannel {
-        banjo_wlan_info::WlanChannel {
+    const fn channel(primary: u8) -> banjo_common::WlanChannel {
+        banjo_common::WlanChannel {
             primary,
-            cbw: banjo_wlan_info::WlanChannelBandwidth::B_20,
+            cbw: banjo_common::ChannelBandwidth::CBW20,
             secondary80: 0,
         }
     }

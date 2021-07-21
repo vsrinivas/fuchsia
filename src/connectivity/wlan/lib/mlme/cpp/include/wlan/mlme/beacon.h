@@ -5,6 +5,8 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_BEACON_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_BEACON_H_
 
+#include <fuchsia/wlan/common/c/banjo.h>
+
 #include <wlan/mlme/ht.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/ps_cfg.h>

@@ -88,7 +88,7 @@ async fn verify_client_connects_to_ap(
         "connecting to AP",
         |event| match event {
             WlantapPhyEvent::SetChannel { args } => {
-                if args.chan.primary == WLANCFG_DEFAULT_AP_CHANNEL.primary {
+                if args.channel.primary == WLANCFG_DEFAULT_AP_CHANNEL.primary {
                     // TODO(fxbug.dev/35337): use beacon frame from configure_beacon
                     send_beacon(
                         &WLANCFG_DEFAULT_AP_CHANNEL,

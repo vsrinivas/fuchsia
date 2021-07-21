@@ -1,4 +1,4 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -146,7 +146,7 @@ TEST_F(MvmTest, rxMpdu) {
 
   EXPECT_EQ(WLAN_RX_INFO_VALID_DATA_RATE, rx_info.valid_fields & WLAN_RX_INFO_VALID_DATA_RATE);
   EXPECT_EQ(TO_HALF_MBPS(18), rx_info.data_rate);
-  EXPECT_EQ(kExpChan, rx_info.chan.primary);
+  EXPECT_EQ(kExpChan, rx_info.channel.primary);
   EXPECT_EQ(WLAN_RX_INFO_VALID_RSSI, rx_info.valid_fields & WLAN_RX_INFO_VALID_RSSI);
   EXPECT_EQ(static_cast<int8_t>(-10), rx_info.rssi_dbm);
 }

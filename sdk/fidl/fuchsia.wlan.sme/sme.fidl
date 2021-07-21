@@ -1,4 +1,4 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 library fuchsia.wlan.sme;
@@ -48,7 +48,7 @@ type BssInfo = struct {
     ssid vector<uint8>:ieee80211.MAX_SSID_BYTE_LEN;
     rssi_dbm int8;
     snr_db int8;
-    channel fuchsia.wlan.common.WlanChan;
+    channel fuchsia.wlan.common.WlanChannel;
     protection Protection;
     compatible bool;
     bss_desc fuchsia.wlan.internal.BssDescription;
@@ -112,10 +112,10 @@ protocol ConnectTransaction {
 type RadioConfig = struct {
     override_phy bool;
     phy fuchsia.wlan.common.PHY;
-    override_cbw bool;
-    cbw fuchsia.wlan.common.CBW;
-    override_primary_chan bool;
-    primary_chan uint8;
+    override_channel_bandwidth bool;
+    channel_bandwidth fuchsia.wlan.common.ChannelBandwidth;
+    override_primary_channel bool;
+    primary_channel uint8;
 };
 
 /// Empty struct used as credential value for open networks.

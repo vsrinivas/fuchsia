@@ -1,4 +1,4 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -12,39 +12,42 @@ use wlan_common::{
     RadioConfig,
 };
 
-fn convert_chanwidth_to_cbw(chan_width_set: ChanWidthSet) -> fidl_common::Cbw {
+fn convert_chanwidth_to_cbw(chan_width_set: ChanWidthSet) -> fidl_common::ChannelBandwidth {
     if chan_width_set == ChanWidthSet::TWENTY_ONLY {
-        fidl_common::Cbw::Cbw20
+        fidl_common::ChannelBandwidth::Cbw20
     } else {
-        fidl_common::Cbw::Cbw40Below
+        fidl_common::ChannelBandwidth::Cbw40Below
     }
 }
 
-fn convert_secchan_offset_to_cbw(secchan_offset: SecChanOffset) -> fidl_common::Cbw {
+fn convert_secchan_offset_to_cbw(secchan_offset: SecChanOffset) -> fidl_common::ChannelBandwidth {
     if secchan_offset == SecChanOffset::SECONDARY_ABOVE {
-        fidl_common::Cbw::Cbw40
+        fidl_common::ChannelBandwidth::Cbw40
     } else if secchan_offset == SecChanOffset::SECONDARY_BELOW {
-        fidl_common::Cbw::Cbw40Below
+        fidl_common::ChannelBandwidth::Cbw40Below
     } else {
-        fidl_common::Cbw::Cbw20
+        fidl_common::ChannelBandwidth::Cbw20
     }
 }
 
-fn convert_vht_segments_to_cbw(seg0: u8, seg1: u8) -> fidl_common::Cbw {
+fn convert_vht_segments_to_cbw(seg0: u8, seg1: u8) -> fidl_common::ChannelBandwidth {
     // See IEEE Std 802.11-2016, Table 9-253
     let gap = if seg0 >= seg1 { seg0 - seg1 } else { seg1 - seg0 };
     if seg1 == 0 {
-        fidl_common::Cbw::Cbw80
+        fidl_common::ChannelBandwidth::Cbw80
     } else if gap == 8 {
-        fidl_common::Cbw::Cbw160
+        fidl_common::ChannelBandwidth::Cbw160
     } else if gap > 16 {
-        fidl_common::Cbw::Cbw80P80
+        fidl_common::ChannelBandwidth::Cbw80P80
     } else {
-        fidl_common::Cbw::Cbw80
+        fidl_common::ChannelBandwidth::Cbw80
     }
 }
 
-fn derive_cbw_ht(client_ht_cap: &HtCapabilities, bss_ht_op: &HtOperation) -> fidl_common::Cbw {
+fn derive_cbw_ht(
+    client_ht_cap: &HtCapabilities,
+    bss_ht_op: &HtOperation,
+) -> fidl_common::ChannelBandwidth {
     let client_ht_cap_info = client_ht_cap.ht_cap_info;
     let client_cbw = convert_chanwidth_to_cbw(client_ht_cap_info.chan_width_set());
     let ap_cbw =
@@ -57,7 +60,7 @@ fn derive_cbw_vht(
     _client_vht_cap: &VhtCapabilities,
     bss_ht_op: &HtOperation,
     bss_vht_op: &VhtOperation,
-) -> fidl_common::Cbw {
+) -> fidl_common::ChannelBandwidth {
     // Derive CBW from AP's VHT IEs
     let ap_cbw = if bss_vht_op.vht_cbw == VhtChannelBandwidth::CBW_80_160_80P80 {
         convert_vht_segments_to_cbw(bss_vht_op.center_freq_seg0, bss_vht_op.center_freq_seg1)
@@ -67,13 +70,13 @@ fn derive_cbw_vht(
 
     // TODO(fxbug.dev/29000): Support CBW160 and CBW80P80
     // See IEEE Std 802.11-2016 table 9-250 for full decoding
-    let client_cbw = fidl_common::Cbw::Cbw80;
+    let client_cbw = fidl_common::ChannelBandwidth::Cbw80;
 
     std::cmp::min(client_cbw, ap_cbw)
 }
 
-fn get_band_id(primary_chan: u8) -> fidl_common::Band {
-    if primary_chan <= 14 {
+fn get_band_id(primary_channel: u8) -> fidl_common::Band {
+    if primary_channel <= 14 {
         fidl_common::Band::WlanBand2Ghz
     } else {
         fidl_common::Band::WlanBand5Ghz
@@ -93,8 +96,8 @@ pub fn derive_phy_cbw(
     bss: &BssDescription,
     device_info: &fidl_mlme::DeviceInfo,
     radio_cfg: &RadioConfig,
-) -> (fidl_common::Phy, fidl_common::Cbw) {
-    let band_cap = match get_device_band_info(device_info, bss.chan.primary) {
+) -> (fidl_common::Phy, fidl_common::ChannelBandwidth) {
+    let band_cap = match get_device_band_info(device_info, bss.channel.primary) {
         None => {
             error!(
                 "Could not find the device capability corresponding to the \
@@ -102,7 +105,7 @@ pub fn derive_phy_cbw(
                  Falling back to ERP with 20 MHz bandwidth",
             );
             // Fallback to a common ground of Fuchsia
-            return (fidl_common::Phy::Erp, fidl_common::Cbw::Cbw20);
+            return (fidl_common::Phy::Erp, fidl_common::ChannelBandwidth::Cbw20);
         }
         Some(bc) => bc,
     };
@@ -124,8 +127,8 @@ pub fn derive_phy_cbw(
     // Safe to unwrap below because phy_to_use guarantees that IEs exist.
     // TODO(fxbug.dev/38205): Clean up this part to remove all the expect(...).
     let best_cbw = match phy_to_use {
-        fidl_common::Phy::Hr => fidl_common::Cbw::Cbw20,
-        fidl_common::Phy::Erp => fidl_common::Cbw::Cbw20,
+        fidl_common::Phy::Hr => fidl_common::ChannelBandwidth::Cbw20,
+        fidl_common::Phy::Erp => fidl_common::ChannelBandwidth::Cbw20,
         fidl_common::Phy::Ht => derive_cbw_ht(
             &parse_ht_capabilities(&band_cap.ht_cap.as_ref().unwrap().bytes[..])
                 .expect("band capability needs ht_cap"),
@@ -143,21 +146,21 @@ pub fn derive_phy_cbw(
 
     let cbw_to_use = match radio_cfg.cbw {
         None => best_cbw,
-        Some(override_cbw) => {
-            let (cbw, _) = override_cbw.to_fidl();
+        Some(override_channel_bandwidth) => {
+            let (cbw, _) = override_channel_bandwidth.to_fidl();
             std::cmp::min(best_cbw, cbw)
         }
     };
     (phy_to_use, cbw_to_use)
 }
 
-/// Derive PHY to use for AP or Mesh role. Input config_phy and chan are required to be valid.
+/// Derive PHY to use for AP or Mesh role. Input config_phy and channel are required to be valid.
 pub fn derive_phy_cbw_for_ap(
     device_info: &fidl_mlme::DeviceInfo,
     config_phy: &Phy,
-    chan: &Channel,
+    channel: &Channel,
 ) -> (Phy, Cbw) {
-    let band_cap = match get_device_band_info(device_info, chan.primary) {
+    let band_cap = match get_device_band_info(device_info, channel.primary) {
         None => {
             error!(
                 "Could not find the device capability corresponding to the \
@@ -181,7 +184,7 @@ pub fn derive_phy_cbw_for_ap(
     let best_cbw = match phy_to_use {
         Phy::Hr | Phy::Erp => Cbw::Cbw20,
         Phy::Ht => {
-            // Consider the input chan of this function can be Channel
+            // Consider the input channel of this function can be Channel
             // { primary: 48, cbw: Cbw80 }, which is valid. If phy_to_use is HT, however,
             // Cbw80 becomes infeasible, and a next feasible CBW needs to be found.
             let ht_cap = parse_ht_capabilities(&band_cap.ht_cap.as_ref().unwrap().bytes[..])
@@ -191,7 +194,7 @@ pub fn derive_phy_cbw_for_ap(
                 Cbw::Cbw20
             } else {
                 // Only one is feasible.
-                let c = Channel::new(chan.primary, Cbw::Cbw40);
+                let c = Channel::new(channel.primary, Cbw::Cbw40);
                 if c.is_valid_in_us() {
                     Cbw::Cbw40
                 } else {
@@ -202,7 +205,7 @@ pub fn derive_phy_cbw_for_ap(
         // TODO(porce): CBW160, CBW80P80, HEW support
         Phy::Vht | Phy::Hew => Cbw::Cbw80,
     };
-    let cbw_to_use = std::cmp::min(chan.cbw, best_cbw);
+    let cbw_to_use = std::cmp::min(channel.cbw, best_cbw);
 
     (phy_to_use, cbw_to_use)
 }
@@ -231,9 +234,12 @@ mod tests {
 
     #[test]
     fn test_convert_chanwidth_to_cbw() {
-        assert_eq!(fidl_common::Cbw::Cbw20, convert_chanwidth_to_cbw(ChanWidthSet::TWENTY_ONLY));
         assert_eq!(
-            fidl_common::Cbw::Cbw40Below,
+            fidl_common::ChannelBandwidth::Cbw20,
+            convert_chanwidth_to_cbw(ChanWidthSet::TWENTY_ONLY)
+        );
+        assert_eq!(
+            fidl_common::ChannelBandwidth::Cbw40Below,
             convert_chanwidth_to_cbw(ChanWidthSet::TWENTY_FORTY)
         );
     }
@@ -241,31 +247,31 @@ mod tests {
     #[test]
     fn test_convert_secchan_offset_to_cbw() {
         assert_eq!(
-            fidl_common::Cbw::Cbw20,
+            fidl_common::ChannelBandwidth::Cbw20,
             convert_secchan_offset_to_cbw(SecChanOffset::SECONDARY_NONE)
         );
         assert_eq!(
-            fidl_common::Cbw::Cbw40,
+            fidl_common::ChannelBandwidth::Cbw40,
             convert_secchan_offset_to_cbw(SecChanOffset::SECONDARY_ABOVE)
         );
         assert_eq!(
-            fidl_common::Cbw::Cbw40Below,
+            fidl_common::ChannelBandwidth::Cbw40Below,
             convert_secchan_offset_to_cbw(SecChanOffset::SECONDARY_BELOW)
         );
     }
 
     #[test]
     fn test_convert_vht_segments_to_cbw() {
-        assert_eq!(fidl_common::Cbw::Cbw80, convert_vht_segments_to_cbw(255, 0));
-        assert_eq!(fidl_common::Cbw::Cbw160, convert_vht_segments_to_cbw(255, 247));
-        assert_eq!(fidl_common::Cbw::Cbw80P80, convert_vht_segments_to_cbw(255, 200));
-        assert_eq!(fidl_common::Cbw::Cbw80, convert_vht_segments_to_cbw(255, 250));
+        assert_eq!(fidl_common::ChannelBandwidth::Cbw80, convert_vht_segments_to_cbw(255, 0));
+        assert_eq!(fidl_common::ChannelBandwidth::Cbw160, convert_vht_segments_to_cbw(255, 247));
+        assert_eq!(fidl_common::ChannelBandwidth::Cbw80P80, convert_vht_segments_to_cbw(255, 200));
+        assert_eq!(fidl_common::ChannelBandwidth::Cbw80, convert_vht_segments_to_cbw(255, 250));
     }
 
     #[test]
     fn test_derive_cbw_ht() {
         {
-            let want = fidl_common::Cbw::Cbw20;
+            let want = fidl_common::ChannelBandwidth::Cbw20;
             let got = derive_cbw_ht(
                 &fake_ht_cap_chanwidth(ChanWidthSet::TWENTY_FORTY),
                 &fake_ht_op_sec_offset(SecChanOffset::SECONDARY_NONE),
@@ -273,7 +279,7 @@ mod tests {
             assert_eq!(want, got);
         }
         {
-            let want = fidl_common::Cbw::Cbw20;
+            let want = fidl_common::ChannelBandwidth::Cbw20;
             let got = derive_cbw_ht(
                 &fake_ht_cap_chanwidth(ChanWidthSet::TWENTY_ONLY),
                 &fake_ht_op_sec_offset(SecChanOffset::SECONDARY_ABOVE),
@@ -281,7 +287,7 @@ mod tests {
             assert_eq!(want, got);
         }
         {
-            let want = fidl_common::Cbw::Cbw40;
+            let want = fidl_common::ChannelBandwidth::Cbw40;
             let got = derive_cbw_ht(
                 &fake_ht_cap_chanwidth(ChanWidthSet::TWENTY_FORTY),
                 &fake_ht_op_sec_offset(SecChanOffset::SECONDARY_ABOVE),
@@ -289,7 +295,7 @@ mod tests {
             assert_eq!(want, got);
         }
         {
-            let want = fidl_common::Cbw::Cbw40Below;
+            let want = fidl_common::ChannelBandwidth::Cbw40Below;
             let got = derive_cbw_ht(
                 &fake_ht_cap_chanwidth(ChanWidthSet::TWENTY_FORTY),
                 &fake_ht_op_sec_offset(SecChanOffset::SECONDARY_BELOW),
@@ -301,7 +307,7 @@ mod tests {
     #[test]
     fn test_derive_cbw_vht() {
         {
-            let want = fidl_common::Cbw::Cbw80;
+            let want = fidl_common::ChannelBandwidth::Cbw80;
             let got = derive_cbw_vht(
                 &fake_ht_cap_chanwidth(ChanWidthSet::TWENTY_FORTY),
                 &fake_vht_capabilities(),
@@ -311,7 +317,7 @@ mod tests {
             assert_eq!(want, got);
         }
         {
-            let want = fidl_common::Cbw::Cbw40;
+            let want = fidl_common::ChannelBandwidth::Cbw40;
             let got = derive_cbw_vht(
                 &fake_ht_cap_chanwidth(ChanWidthSet::TWENTY_FORTY),
                 &fake_vht_capabilities(),
@@ -341,12 +347,12 @@ mod tests {
     #[test]
     fn test_derive_phy_cbw() {
         {
-            let want = (fidl_common::Phy::Vht, fidl_common::Cbw::Cbw80);
+            let want = (fidl_common::Phy::Vht, fidl_common::ChannelBandwidth::Cbw80);
             let got = derive_phy_cbw(
                 &fake_bss!(Open,
-                    chan: fidl_common::WlanChan {
+                    channel: fidl_common::WlanChannel {
                         primary: 123,
-                        cbw: fidl_common::Cbw::Cbw80P80,
+                        cbw: fidl_common::ChannelBandwidth::Cbw80P80,
                         secondary80: 42,
                     },
                     ies_overrides: IesOverrides::new()
@@ -358,36 +364,36 @@ mod tests {
             assert_eq!(want, got);
         }
         {
-            let want = (fidl_common::Phy::Ht, fidl_common::Cbw::Cbw40);
+            let want = (fidl_common::Phy::Ht, fidl_common::ChannelBandwidth::Cbw40);
             let got = derive_phy_cbw(
                 &fake_bss!(Open,
-                    chan: fidl_common::WlanChan {
+                    channel: fidl_common::WlanChannel {
                         primary: 123,
-                        cbw: fidl_common::Cbw::Cbw80P80,
+                        cbw: fidl_common::ChannelBandwidth::Cbw80P80,
                         secondary80: 42,
                     },
                     ies_overrides: IesOverrides::new()
                         .set(IeType::VHT_OPERATION, fake_vht_op_bytes().to_vec()),
                 ),
                 &fake_device_info_vht(ChanWidthSet::TWENTY_FORTY),
-                &fake_overrider(fidl_common::Phy::Ht, fidl_common::Cbw::Cbw80),
+                &fake_overrider(fidl_common::Phy::Ht, fidl_common::ChannelBandwidth::Cbw80),
             );
             assert_eq!(want, got);
         }
         {
-            let want = (fidl_common::Phy::Ht, fidl_common::Cbw::Cbw20);
+            let want = (fidl_common::Phy::Ht, fidl_common::ChannelBandwidth::Cbw20);
             let got = derive_phy_cbw(
                 &fake_bss!(Open,
-                    chan: fidl_common::WlanChan {
+                    channel: fidl_common::WlanChannel {
                         primary: 123,
-                        cbw: fidl_common::Cbw::Cbw80P80,
+                        cbw: fidl_common::ChannelBandwidth::Cbw80P80,
                         secondary80: 42,
                     },
                     ies_overrides: IesOverrides::new()
                         .set(IeType::VHT_OPERATION, fake_vht_op_bytes().to_vec()),
                 ),
                 &fake_device_info_ht(ChanWidthSet::TWENTY_ONLY),
-                &fake_overrider(fidl_common::Phy::Vht, fidl_common::Cbw::Cbw80),
+                &fake_overrider(fidl_common::Phy::Vht, fidl_common::ChannelBandwidth::Cbw80),
             );
             assert_eq!(want, got);
         }
@@ -395,12 +401,12 @@ mod tests {
 
     struct UserCfg {
         phy: Phy,
-        chan: Channel,
+        channel: Channel,
     }
 
     impl UserCfg {
-        fn new(phy: Phy, primary_chan: u8, cbw: Cbw) -> Self {
-            UserCfg { phy, chan: Channel::new(primary_chan, cbw) }
+        fn new(phy: Phy, primary_channel: u8, cbw: Cbw) -> Self {
+            UserCfg { phy, channel: Channel::new(primary_channel, cbw) }
         }
     }
 
@@ -413,7 +419,7 @@ mod tests {
             let got = derive_phy_cbw_for_ap(
                 &fake_device_info_vht(ChanWidthSet::TWENTY_FORTY),
                 &usr_cfg.phy,
-                &usr_cfg.chan,
+                &usr_cfg.channel,
             );
             assert_eq!(want, got);
         }
@@ -423,7 +429,7 @@ mod tests {
             let got = derive_phy_cbw_for_ap(
                 &fake_device_info_vht(ChanWidthSet::TWENTY_FORTY),
                 &usr_cfg.phy,
-                &usr_cfg.chan,
+                &usr_cfg.channel,
             );
             assert_eq!(want, got);
         }
@@ -433,7 +439,7 @@ mod tests {
             let got = derive_phy_cbw_for_ap(
                 &fake_device_info_vht(ChanWidthSet::TWENTY_FORTY),
                 &usr_cfg.phy,
-                &usr_cfg.chan,
+                &usr_cfg.channel,
             );
             assert_eq!(want, got);
         }
@@ -443,7 +449,7 @@ mod tests {
             let got = derive_phy_cbw_for_ap(
                 &fake_device_info_vht(ChanWidthSet::TWENTY_FORTY),
                 &usr_cfg.phy,
-                &usr_cfg.chan,
+                &usr_cfg.channel,
             );
             assert_eq!(want, got);
         }
@@ -455,7 +461,7 @@ mod tests {
             let got = derive_phy_cbw_for_ap(
                 &fake_device_info_vht(ChanWidthSet::TWENTY_FORTY),
                 &usr_cfg.phy,
-                &usr_cfg.chan,
+                &usr_cfg.channel,
             );
             assert_eq!(want, got);
         }
@@ -465,7 +471,7 @@ mod tests {
             let got = derive_phy_cbw_for_ap(
                 &fake_device_info_vht(ChanWidthSet::TWENTY_FORTY),
                 &usr_cfg.phy,
-                &usr_cfg.chan,
+                &usr_cfg.channel,
             );
             assert_eq!(want, got);
         }
@@ -475,7 +481,7 @@ mod tests {
             let got = derive_phy_cbw_for_ap(
                 &fake_device_info_ht(ChanWidthSet::TWENTY_FORTY),
                 &usr_cfg.phy,
-                &usr_cfg.chan,
+                &usr_cfg.channel,
             );
             assert_eq!(want, got);
         }
@@ -485,7 +491,7 @@ mod tests {
             let got = derive_phy_cbw_for_ap(
                 &fake_device_info_ht(ChanWidthSet::TWENTY_FORTY),
                 &usr_cfg.phy,
-                &usr_cfg.chan,
+                &usr_cfg.channel,
             );
             assert_eq!(want, got);
         }
@@ -497,7 +503,7 @@ mod tests {
             let got = derive_phy_cbw_for_ap(
                 &fake_device_info_ht(ChanWidthSet::TWENTY_FORTY),
                 &usr_cfg.phy,
-                &usr_cfg.chan,
+                &usr_cfg.channel,
             );
             assert_eq!(want, got);
         }
@@ -507,7 +513,7 @@ mod tests {
             let got = derive_phy_cbw_for_ap(
                 &fake_device_info_ht(ChanWidthSet::TWENTY_FORTY),
                 &usr_cfg.phy,
-                &usr_cfg.chan,
+                &usr_cfg.channel,
             );
             assert_eq!(want, got);
         }
@@ -517,7 +523,7 @@ mod tests {
             let got = derive_phy_cbw_for_ap(
                 &fake_device_info_ht(ChanWidthSet::TWENTY_ONLY),
                 &usr_cfg.phy,
-                &usr_cfg.chan,
+                &usr_cfg.channel,
             );
             assert_eq!(want, got);
         }

@@ -1,4 +1,4 @@
-// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -187,15 +187,18 @@ class CapabilityInfo : public common::BitField<uint16_t> {
   WLAN_BIT_FIELD(immediate_block_ack, 15, 1)
 
   static CapabilityInfo FromDdk(uint32_t ddk_caps) {
-    CapabilityInfo cap{};
+    CapabilityInfo capability_info{};
 #define BITFLAG_TO_BIT(x, y) ((x & y) > 0 ? 1 : 0)
-    cap.set_short_preamble(BITFLAG_TO_BIT(ddk_caps, WLAN_INFO_HARDWARE_CAPABILITY_SHORT_PREAMBLE));
-    cap.set_spectrum_mgmt(BITFLAG_TO_BIT(ddk_caps, WLAN_INFO_HARDWARE_CAPABILITY_SPECTRUM_MGMT));
-    cap.set_short_slot_time(
+    capability_info.set_short_preamble(
+        BITFLAG_TO_BIT(ddk_caps, WLAN_INFO_HARDWARE_CAPABILITY_SHORT_PREAMBLE));
+    capability_info.set_spectrum_mgmt(
+        BITFLAG_TO_BIT(ddk_caps, WLAN_INFO_HARDWARE_CAPABILITY_SPECTRUM_MGMT));
+    capability_info.set_short_slot_time(
         BITFLAG_TO_BIT(ddk_caps, WLAN_INFO_HARDWARE_CAPABILITY_SHORT_SLOT_TIME));
-    cap.set_radio_msmt(BITFLAG_TO_BIT(ddk_caps, WLAN_INFO_HARDWARE_CAPABILITY_RADIO_MSMT));
+    capability_info.set_radio_msmt(
+        BITFLAG_TO_BIT(ddk_caps, WLAN_INFO_HARDWARE_CAPABILITY_RADIO_MSMT));
 #undef BITFLAG_TO_BIT
-    return cap;
+    return capability_info;
   }
 };
 
@@ -287,7 +290,7 @@ struct Beacon {
   // 9.4.1.3
   uint16_t beacon_interval;
   // 9.4.1.4
-  CapabilityInfo cap;
+  CapabilityInfo capability_info;
 
   constexpr size_t len() const { return sizeof(*this); }
 } __PACKED;
@@ -307,7 +310,7 @@ struct ProbeResponse {
   // 9.4.1.3
   uint16_t beacon_interval;
   // 9.4.1.4
-  CapabilityInfo cap;
+  CapabilityInfo capability_info;
 
   constexpr size_t len() const { return sizeof(*this); }
 } __PACKED;
@@ -354,7 +357,7 @@ struct AssociationRequest {
   static constexpr size_t max_len() { return sizeof(AssociationRequest); }
 
   // 9.4.1.4
-  CapabilityInfo cap;
+  CapabilityInfo capability_info;
   // 9.4.1.6
   uint16_t listen_interval;
 
@@ -369,7 +372,7 @@ struct AssociationResponse {
   static constexpr size_t max_len() { return sizeof(AssociationResponse); }
 
   // 9.4.1.4
-  CapabilityInfo cap;
+  CapabilityInfo capability_info;
   // 9.4.1.9
   uint16_t status_code;
   // 9.4.1.8
@@ -380,14 +383,14 @@ struct AssociationResponse {
 
 // IEEE Std 802.11-2016, 9.3.3.8
 struct ReassociationRequest {
-  CapabilityInfo cap;
+  CapabilityInfo capability_info;
   uint16_t listen_interval;
   common::MacAddr current_ap_addr;
 } __PACKED;
 
 // IEEE Std 802.11-2016, 9.3.3.9
 struct ReassociationResponse {
-  CapabilityInfo cap;
+  CapabilityInfo capability_info;
   uint16_t status_code;
   uint16_t aid;
 } __PACKED;
@@ -395,7 +398,7 @@ struct ReassociationResponse {
 // IEEE Std 802.11-2016, 9.3.3.16
 struct TimingAdvertisement {
   uint64_t timestamp;
-  CapabilityInfo cap;
+  CapabilityInfo capability_info;
 } __PACKED;
 
 // IEEE Std 802.11-2016, 9.3.3.5

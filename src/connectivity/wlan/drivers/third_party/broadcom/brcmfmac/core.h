@@ -36,6 +36,7 @@
 #include <shared_mutex>
 
 #include "bus.h"
+#include "fuchsia/wlan/internal/c/banjo.h"
 #include "fweh.h"
 #include "fwil_types.h"
 #include "linuxisms.h"
@@ -230,7 +231,7 @@ struct brcmf_if {
   int32_t bsscfgidx;
   uint8_t mac_addr[ETH_ALEN];
   uint8_t netif_stop;
-  struct wlanif_bss_description bss;
+  bss_description_t bss;
   uint8_t ies[WLAN_MSDU_MAX_LEN];
   // spinlock_t netif_stop_lock;
   std::atomic<int> pend_8021x_cnt;

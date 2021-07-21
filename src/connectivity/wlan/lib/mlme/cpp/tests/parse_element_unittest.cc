@@ -1,4 +1,4 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -45,7 +45,7 @@ TEST(ParseElement, DsssParamSet) {
   const uint8_t raw_body[] = {11};
   const DsssParamSet* dsss = ParseDsssParamSet(raw_body);
   ASSERT_NE(nullptr, dsss);
-  ASSERT_EQ(11u, dsss->current_chan);
+  ASSERT_EQ(11u, dsss->current_channel);
 }
 
 TEST(ParseElement, DsssParamSetToShort) {
@@ -278,7 +278,7 @@ TEST(ParseElement, HtOperation) {
                                 0x5, 0x6,  0x7,  0x8,  0x9,  0xa,  0xb, 0xc, 0xd, 0xe, 0xf};
   const HtOperation* h = ParseHtOperation(raw_body);
   ASSERT_NE(nullptr, h);
-  EXPECT_EQ(36, h->primary_chan);
+  EXPECT_EQ(36, h->primary_channel);
   EXPECT_EQ(0x44332211u, h->head.val());
   EXPECT_EQ(0x55u, h->tail.val());
   EXPECT_EQ(0x0706050403020100ul, h->basic_mcs_set.rx_mcs_head.val());

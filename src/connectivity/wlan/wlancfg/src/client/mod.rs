@@ -1,4 +1,4 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -589,10 +589,10 @@ mod tests {
                 radio_cfg: fidl_sme::RadioConfig {
                     override_phy: false,
                     phy: fidl_common::Phy::Ht,
-                    override_cbw: false,
-                    cbw: fidl_common::Cbw::Cbw20,
-                    override_primary_chan: false,
-                    primary_chan: 0,
+                    override_channel_bandwidth: false,
+                    channel_bandwidth: fidl_common::ChannelBandwidth::Cbw20,
+                    override_primary_channel: false,
+                    primary_channel: 0,
                 },
                 deprecated_scan_type: fidl_common::ScanType::Passive,
                 multiple_bss_candidates: false,
@@ -2036,9 +2036,9 @@ mod tests {
         let (controller2, _) = request_controller(&test_values.provider);
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
 
-        let chan = controller2.into_channel().expect("error turning proxy into channel");
+        let channel = controller2.into_channel().expect("error turning proxy into channel");
         let mut buffer = zx::MessageBuf::new();
-        let epitaph_fut = chan.recv_msg(&mut buffer);
+        let epitaph_fut = channel.recv_msg(&mut buffer);
         pin_mut!(epitaph_fut);
         assert_variant!(exec.run_until_stalled(&mut epitaph_fut), Poll::Ready(Ok(_)));
 
@@ -2050,7 +2050,7 @@ mod tests {
         Decoder::decode_into::<EpitaphBody>(&header, tail, &mut [], &mut msg)
             .expect("failed decoding body");
         assert_eq!(msg.error, zx::Status::ALREADY_BOUND);
-        assert!(chan.is_closed());
+        assert!(channel.is_closed());
     }
 
     struct FakeIfaceManagerNoIfaces {}
@@ -2283,9 +2283,9 @@ mod tests {
         let (controller2, _) = request_controller(&provider);
         assert_variant!(exec.run_until_stalled(&mut second_serve_fut), Poll::Pending);
 
-        let chan = controller2.into_channel().expect("error turning proxy into channel");
+        let channel = controller2.into_channel().expect("error turning proxy into channel");
         let mut buffer = zx::MessageBuf::new();
-        let epitaph_fut = chan.recv_msg(&mut buffer);
+        let epitaph_fut = channel.recv_msg(&mut buffer);
         pin_mut!(epitaph_fut);
         assert_variant!(exec.run_until_stalled(&mut epitaph_fut), Poll::Ready(Ok(_)));
 
@@ -2297,7 +2297,7 @@ mod tests {
         Decoder::decode_into::<EpitaphBody>(&header, tail, &mut [], &mut msg)
             .expect("failed decoding body");
         assert_eq!(msg.error, zx::Status::ALREADY_BOUND);
-        assert!(chan.is_closed());
+        assert!(channel.is_closed());
 
         // Drop the first controller and verify that the second provider client can get a
         // functional client controller.

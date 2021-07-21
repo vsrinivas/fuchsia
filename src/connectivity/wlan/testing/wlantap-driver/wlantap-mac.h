@@ -5,6 +5,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_TESTING_WLANTAP_DRIVER_WLANTAP_MAC_H_
 #define SRC_CONNECTIVITY_WLAN_TESTING_WLANTAP_DRIVER_WLANTAP_MAC_H_
 
+#include <fuchsia/wlan/common/c/banjo.h>
 #include <fuchsia/wlan/internal/cpp/banjo.h>
 #include <fuchsia/wlan/tap/cpp/fidl.h>
 #include <lib/ddk/device.h>

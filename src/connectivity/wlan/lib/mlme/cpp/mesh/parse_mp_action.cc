@@ -1,4 +1,4 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -91,8 +91,8 @@ static void ConvertMpmHeader(const MpmHeader& header, wlan_mlme::MeshPeeringComm
 
 // IEEE Std 802.11-2016, 9.6.16.2.2
 bool ParseMpOpenAction(BufferReader* r, wlan_mlme::MeshPeeringOpenAction* out) {
-  auto cap_info = r->Read<CapabilityInfo>();
-  if (cap_info == nullptr) {
+  auto capability_info = r->Read<CapabilityInfo>();
+  if (capability_info == nullptr) {
     return false;
   }
 
@@ -114,8 +114,8 @@ bool ParseMpOpenAction(BufferReader* r, wlan_mlme::MeshPeeringOpenAction* out) {
 
 // IEEE Std 802.11-2016, 9.6.16.3.2
 bool ParseMpConfirmAction(BufferReader* r, wlan_mlme::MeshPeeringConfirmAction* out) {
-  auto cap_info = r->Read<CapabilityInfo>();
-  if (cap_info == nullptr) {
+  auto capability_info = r->Read<CapabilityInfo>();
+  if (capability_info == nullptr) {
     return false;
   }
 

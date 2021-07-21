@@ -1,4 +1,4 @@
-// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
@@ -239,9 +239,9 @@ mod tests {
                         ssid: ssid.as_bytes().to_vec(),
                         rssi_dbm,
                         snr_db: 0,
-                        channel: fidl_common::WlanChan {
+                        channel: fidl_common::WlanChannel {
                             primary: 1,
-                            cbw: fidl_common::Cbw::Cbw20,
+                            cbw: fidl_common::ChannelBandwidth::Cbw20,
                             secondary80: 0,
                         },
                         protection: fidl_sme::Protection::Unknown,

@@ -1,4 +1,4 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -424,7 +424,7 @@ mod tests {
     #[test]
     fn dsss_param_set() {
         let mut buf = vec![];
-        write_dsss_param_set(&mut buf, &DsssParamSet { current_chan: 6 }).expect("expected Ok");
+        write_dsss_param_set(&mut buf, &DsssParamSet { current_channel: 6 }).expect("expected Ok");
         assert_eq!(&[3, 1, 6], &buf[..]);
     }
 

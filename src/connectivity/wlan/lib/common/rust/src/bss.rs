@@ -98,8 +98,8 @@ pub struct BssDescription {
     pub beacon_period: u16,
     pub timestamp: u64,
     pub local_time: u64,
-    pub cap: u16,
-    pub chan: fidl_fuchsia_wlan_common::WlanChan,
+    pub capability_info: u16,
+    pub channel: fidl_fuchsia_wlan_common::WlanChannel,
     pub rssi_dbm: i8,
     pub snr_db: i8,
     pub ies: Vec<u8>,
@@ -225,7 +225,7 @@ impl BssDescription {
 
     /// Categorize BSS on what protection it supports.
     pub fn protection(&self) -> Protection {
-        if !CapabilityInfo(self.cap).privacy() {
+        if !CapabilityInfo(self.capability_info).privacy() {
             return Protection::Open;
         }
 
@@ -306,7 +306,7 @@ impl BssDescription {
             Standard::Dot11Ac
         } else if self.ht_cap().is_some() && self.ht_op().is_some() {
             Standard::Dot11N
-        } else if self.chan.primary <= 14 {
+        } else if self.channel.primary <= 14 {
             if self.rates.iter().any(|r| match ie::SupportedRate(*r).rate() {
                 12 | 18 | 24 | 36 | 48 | 72 | 96 | 108 => true,
                 _ => false,
@@ -388,7 +388,7 @@ impl BssDescription {
             hasher.hash_ssid(self.ssid()),
             hasher.hash_mac_addr(&self.bssid),
             self.protection(),
-            self.chan.primary,
+            self.channel.primary,
             self.rssi_dbm,
         )
     }
@@ -401,7 +401,7 @@ impl BssDescription {
             self.ssid().to_ssid_string(),
             self.bssid.to_mac_string(),
             self.protection(),
-            self.chan.primary,
+            self.channel.primary,
             self.rssi_dbm,
         )
     }
@@ -463,8 +463,8 @@ impl BssDescription {
             beacon_period: bss.beacon_period,
             timestamp: bss.timestamp,
             local_time: bss.local_time,
-            cap: bss.cap,
-            chan: bss.chan,
+            capability_info: bss.capability_info,
+            channel: bss.channel,
             rssi_dbm: bss.rssi_dbm,
             snr_db: bss.snr_db,
             ies: bss.ies,
@@ -488,8 +488,8 @@ impl BssDescription {
             beacon_period: self.beacon_period,
             timestamp: self.timestamp,
             local_time: self.local_time,
-            cap: self.cap,
-            chan: self.chan,
+            capability_info: self.capability_info,
+            channel: self.channel,
             rssi_dbm: self.rssi_dbm,
             snr_db: self.snr_db,
             ies: self.ies,
@@ -526,7 +526,7 @@ pub fn phy_standard_map(bss_list: &Vec<BssDescription>) -> HashMap<Standard, usi
 /// Given a list of BssDescription, return a mapping from channel to the number of BSS using
 /// that channel.
 pub fn channel_map(bss_list: &Vec<BssDescription>) -> HashMap<u8, usize> {
-    info_map(bss_list, |bss| bss.chan.primary)
+    info_map(bss_list, |bss| bss.channel.primary)
 }
 
 fn info_map<F, T>(bss_list: &Vec<BssDescription>, f: F) -> HashMap<T, usize>
@@ -682,10 +682,10 @@ mod tests {
     #[test]
     fn test_latest_standard_g() {
         let bss = fake_bss!(Open,
-            chan: fidl_common::WlanChan {
+            channel: fidl_common::WlanChannel {
                 primary: 1,
                 secondary80: 0,
-                cbw: fidl_common::Cbw::Cbw20,
+                cbw: fidl_common::ChannelBandwidth::Cbw20,
             },
             rates: vec![12],
             ies_overrides: IesOverrides::new()
@@ -700,10 +700,10 @@ mod tests {
     #[test]
     fn test_latest_standard_b() {
         let bss = fake_bss!(Open,
-            chan: fidl_common::WlanChan {
+            channel: fidl_common::WlanChannel {
                 primary: 1,
                 secondary80: 0,
-                cbw: fidl_common::Cbw::Cbw20,
+                cbw: fidl_common::ChannelBandwidth::Cbw20,
             },
             rates: vec![2],
             ies_overrides: IesOverrides::new()
@@ -718,10 +718,10 @@ mod tests {
     #[test]
     fn test_latest_standard_b_with_basic() {
         let bss = fake_bss!(Open,
-            chan: fidl_common::WlanChan {
+            channel: fidl_common::WlanChannel {
                 primary: 1,
                 secondary80: 0,
-                cbw: fidl_common::Cbw::Cbw20,
+                cbw: fidl_common::ChannelBandwidth::Cbw20,
             },
             rates: vec![ie::SupportedRate(2).with_basic(true).0],
             ies_overrides: IesOverrides::new()
@@ -736,10 +736,10 @@ mod tests {
     #[test]
     fn test_latest_standard_a() {
         let bss = fake_bss!(Open,
-            chan: fidl_common::WlanChan {
+            channel: fidl_common::WlanChannel {
                 primary: 36,
                 secondary80: 0,
-                cbw: fidl_common::Cbw::Cbw20,
+                cbw: fidl_common::ChannelBandwidth::Cbw20,
             },
             rates: vec![48],
             ies_overrides: IesOverrides::new()
@@ -839,18 +839,24 @@ mod tests {
         assert_eq!(bss.rates(), &[0x81, 0x82, 0x83, 4, 5, 6]);
         assert_eq!(bss.country(), Some(&[1, 2, 3][..]));
         assert_eq!(bss.rsne(), Some(&fake_wpa2_rsne()[..]));
-        assert_variant!(bss.ht_cap(), Some(cap) => {
-            assert_eq!(cap.bytes(), &ht_cap[..]);
+        assert_variant!(bss.ht_cap(), Some(capability_info) => {
+            assert_eq!(capability_info.bytes(), &ht_cap[..]);
         });
-        assert_eq!(bss.raw_ht_cap().map(|cap| cap.bytes.to_vec()), Some(ht_cap));
+        assert_eq!(
+            bss.raw_ht_cap().map(|capability_info| capability_info.bytes.to_vec()),
+            Some(ht_cap)
+        );
         assert_variant!(bss.ht_op(), Some(op) => {
             assert_eq!(op.bytes(), &ht_op[..]);
         });
         assert_eq!(bss.raw_ht_op().map(|op| op.bytes.to_vec()), Some(ht_op));
-        assert_variant!(bss.vht_cap(), Some(cap) => {
-            assert_eq!(cap.bytes(), &vht_cap[..]);
+        assert_variant!(bss.vht_cap(), Some(capability_info) => {
+            assert_eq!(capability_info.bytes(), &vht_cap[..]);
         });
-        assert_eq!(bss.raw_vht_cap().map(|cap| cap.bytes.to_vec()), Some(vht_cap));
+        assert_eq!(
+            bss.raw_vht_cap().map(|capability_info| capability_info.bytes.to_vec()),
+            Some(vht_cap)
+        );
         assert_variant!(bss.vht_op(), Some(op) => {
             assert_eq!(op.bytes(), &vht_op[..]);
         });

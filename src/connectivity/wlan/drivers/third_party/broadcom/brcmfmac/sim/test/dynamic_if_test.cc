@@ -1,9 +1,10 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/wlan/info/c/banjo.h>
 #include <fuchsia/hardware/wlanphyimpl/c/banjo.h>
+#include <fuchsia/wlan/common/c/banjo.h>
 #include <fuchsia/wlan/ieee80211/cpp/fidl.h>
 #include <zircon/errors.h>
 
@@ -21,7 +22,7 @@ namespace wlan::brcmfmac {
 // Some default AP and association request values
 constexpr uint16_t kDefaultCh = 149;
 constexpr wlan_channel_t kDefaultChannel = {
-    .primary = kDefaultCh, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0};
+    .primary = kDefaultCh, .cbw = CHANNEL_BANDWIDTH_CBW20, .secondary80 = 0};
 // Chanspec value corresponding to kDefaultChannel with current d11 encoder.
 constexpr uint16_t kDefaultChanspec = 53397;
 constexpr uint16_t kTestChanspec = 0xd0a5;
@@ -124,10 +125,10 @@ void DynamicIfTest::ChannelCheck() {
   uint16_t client_chanspec = GetChanspec(false, ZX_OK);
   EXPECT_EQ(softap_chanspec, client_chanspec);
   brcmf_simdev* sim = device_->GetSim();
-  wlan_channel_t chan;
-  sim->sim_fw->convert_chanspec_to_channel(softap_chanspec, &chan);
+  wlan_channel_t channel;
+  sim->sim_fw->convert_chanspec_to_channel(softap_chanspec, &channel);
   EXPECT_GE(softap_ifc_.stats_.csa_indications.size(), 1U);
-  EXPECT_EQ(chan.primary, softap_ifc_.stats_.csa_indications.front().new_channel);
+  EXPECT_EQ(channel.primary, softap_ifc_.stats_.csa_indications.front().new_channel);
 }
 
 void DynamicIfTest::TxAuthAndAssocReq() {

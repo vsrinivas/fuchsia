@@ -1,4 +1,4 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -298,7 +298,7 @@ mod tests {
     #[test]
     pub fn dsss_param_set_ok() {
         let r = parse_dsss_param_set(&[6u8][..]).expect("expected Ok");
-        assert_eq!(6, r.current_chan);
+        assert_eq!(6, r.current_channel);
     }
 
     #[test]
@@ -454,7 +454,7 @@ mod tests {
         // HtOperation element without Element Id and length
         #[rustfmt::skip]
         let raw_body = [
-            99, // primary_chan(u8)
+            99, // primary_channel(u8)
             0xff, // ht_op_info_head(HtOpInfoHead(u8))
             0xfe, 0xff, 0xff, 0xff, // ht_op_info_tail(HtOpInfoTail(u8),
             0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -463,7 +463,7 @@ mod tests {
         ];
         let ht_op = parse_ht_operation(&raw_body[..]).expect("valid frame should result in OK");
 
-        assert_eq!(ht_op.primary_chan, 99);
+        assert_eq!(ht_op.primary_channel, 99);
 
         let ht_op_info_head = ht_op.ht_op_info_head;
         assert_eq!(ht_op_info_head.secondary_chan_offset(), SecChanOffset::SECONDARY_BELOW);

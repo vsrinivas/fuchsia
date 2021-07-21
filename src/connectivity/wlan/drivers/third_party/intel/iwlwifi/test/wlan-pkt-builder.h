@@ -1,4 +1,4 @@
-// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -7,11 +7,13 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_TEST_WLAN_PKT_BUILDER_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_TEST_WLAN_PKT_BUILDER_H_
 
+#include <fuchsia/wlan/common/c/banjo.h>
 #include <stdint.h>
 #include <string.h>
-#include <zxtest/zxtest.h>
 
 #include <memory>
+
+#include <zxtest/zxtest.h>
 
 namespace wlan::testing {
 
@@ -42,7 +44,7 @@ class WlanPktBuilder {
       pkt_->packet_head.data_size = len;
 
       pkt_->info.tx_flags = 0;
-      pkt_->info.cbw = WLAN_CHANNEL_BANDWIDTH__20;
+      pkt_->info.channel_bandwidth = CHANNEL_BANDWIDTH_CBW20;
     }
     ~WlanPkt() {}
 

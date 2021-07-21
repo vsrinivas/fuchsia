@@ -18,7 +18,7 @@ struct ieee80211_hw* ieee80211_alloc_hw(size_t priv_data_len, const struct ieee8
 bool ieee80211_is_valid_chan(uint8_t primary) {
   wlan_channel_t chan = {
       .primary = primary,
-      .cbw = WLAN_CHANNEL_BANDWIDTH__20,
+      .cbw = CHANNEL_BANDWIDTH_CBW20,
       .secondary80 = 0,
   };
 
@@ -28,7 +28,7 @@ bool ieee80211_is_valid_chan(uint8_t primary) {
 uint16_t ieee80211_get_center_freq(uint8_t ch_num) {
   wlan_channel_t chan = {
       .primary = ch_num,
-      .cbw = WLAN_CHANNEL_BANDWIDTH__20,
+      .cbw = CHANNEL_BANDWIDTH_CBW20,
       .secondary80 = 0,
   };
 

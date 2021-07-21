@@ -117,10 +117,14 @@ executable("mvm_test") {
   output_name = "mvm_test"
   testonly = true
 
-  sources = [ "mvm_test.cc" ]
+  sources = [
+    "mvm_test.cc",
+    "wlan-pkt-builder.h",
+  ]
 
   defines = testing_defines
   deps = [
+           "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_banjo_c",
            "//zircon/system/ulib/async-loop:async-loop-cpp",
            "//zircon/system/ulib/async-loop:async-loop-default",
          ] + testing_deps
@@ -150,12 +154,16 @@ executable("pcie_test") {
   output_name = "pcie_test"
   testonly = true
 
-  sources = [ "pcie_test.cc" ]
+  sources = [
+    "pcie_test.cc",
+    "wlan-pkt-builder.h",
+  ]
 
   defines = testing_defines
   deps = testing_deps
   deps += [
     "//garnet/lib/wlan/protocol:protocol",
+    "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_banjo_c",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:core",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:pcie",
     "//src/devices/pci/testing:pci-protocol-fake",
@@ -209,11 +217,15 @@ executable("wlan-device_test") {
   output_name = "wlan-device_test"
   testonly = true
 
-  sources = [ "wlan-device_test.cc" ]
+  sources = [
+    "wlan-device_test.cc",
+    "wlan-pkt-builder.h",
+  ]
 
   defines = testing_defines
   deps = testing_deps
   deps += [
+    "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_banjo_c",
     "//sdk/fidl/fuchsia.wlan.internal:fuchsia.wlan.internal_banjo_c",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:core",
   ]

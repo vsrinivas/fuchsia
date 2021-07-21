@@ -1,4 +1,4 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -6,8 +6,9 @@ use {
     anyhow::{bail, Error},
     banjo_ddk_hw_wlan_wlaninfo as banjo_ddk_wlaninfo,
     banjo_fuchsia_hardware_wlan_info as banjo_wlan_info,
-    banjo_fuchsia_hardware_wlan_mac as banjo_wlan_mac, fidl_fuchsia_wlan_common as fidl_common,
-    fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_mlme as fidl_mlme,
+    banjo_fuchsia_hardware_wlan_mac as banjo_wlan_mac, banjo_fuchsia_wlan_common as banjo_common,
+    fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_internal as fidl_internal,
+    fidl_fuchsia_wlan_mlme as fidl_mlme,
     log::warn,
     wlan_common::{
         ie::{
@@ -18,29 +19,29 @@ use {
     zerocopy::AsBytes,
 };
 
-pub fn ddk_channel_from_fidl(fc: fidl_common::WlanChan) -> banjo_wlan_info::WlanChannel {
+pub fn ddk_channel_from_fidl(fc: fidl_common::WlanChannel) -> banjo_common::WlanChannel {
     let cbw = match fc.cbw {
-        fidl_common::Cbw::Cbw20 => banjo_wlan_info::WlanChannelBandwidth::B_20,
-        fidl_common::Cbw::Cbw40 => banjo_wlan_info::WlanChannelBandwidth::B_40,
-        fidl_common::Cbw::Cbw40Below => banjo_wlan_info::WlanChannelBandwidth::B_40BELOW,
-        fidl_common::Cbw::Cbw80 => banjo_wlan_info::WlanChannelBandwidth::B_80,
-        fidl_common::Cbw::Cbw160 => banjo_wlan_info::WlanChannelBandwidth::B_160,
-        fidl_common::Cbw::Cbw80P80 => banjo_wlan_info::WlanChannelBandwidth::B_80P80,
+        fidl_common::ChannelBandwidth::Cbw20 => banjo_common::ChannelBandwidth::CBW20,
+        fidl_common::ChannelBandwidth::Cbw40 => banjo_common::ChannelBandwidth::CBW40,
+        fidl_common::ChannelBandwidth::Cbw40Below => banjo_common::ChannelBandwidth::CBW40BELOW,
+        fidl_common::ChannelBandwidth::Cbw80 => banjo_common::ChannelBandwidth::CBW80,
+        fidl_common::ChannelBandwidth::Cbw160 => banjo_common::ChannelBandwidth::CBW160,
+        fidl_common::ChannelBandwidth::Cbw80P80 => banjo_common::ChannelBandwidth::CBW80P80,
     };
-    banjo_wlan_info::WlanChannel { primary: fc.primary, cbw, secondary80: fc.secondary80 }
+    banjo_common::WlanChannel { primary: fc.primary, cbw, secondary80: fc.secondary80 }
 }
 
 pub fn build_ddk_assoc_ctx(
     bssid: Bssid,
     aid: Aid,
-    cap: fidl_mlme::NegotiatedCapabilities,
+    negotiated_capabilities: fidl_mlme::NegotiatedCapabilities,
     ht_op: Option<[u8; fidl_internal::HT_OP_LEN as usize]>,
     vht_op: Option<[u8; fidl_internal::VHT_OP_LEN as usize]>,
 ) -> banjo_wlan_info::WlanAssocCtx {
     let mut rates = [0; banjo_wlan_info::WLAN_MAC_MAX_RATES as usize];
-    rates[..cap.rates.len()].clone_from_slice(&cap.rates);
-    let has_ht_cap = cap.ht_cap.is_some();
-    let has_vht_cap = cap.vht_cap.is_some();
+    rates[..negotiated_capabilities.rates.len()].clone_from_slice(&negotiated_capabilities.rates);
+    let has_ht_cap = negotiated_capabilities.ht_cap.is_some();
+    let has_vht_cap = negotiated_capabilities.vht_cap.is_some();
     let phy = match (has_ht_cap, has_vht_cap) {
         (true, true) => banjo_wlan_info::WlanPhyType::VHT,
         (true, false) => banjo_wlan_info::WlanPhyType::HT,
@@ -48,8 +49,11 @@ pub fn build_ddk_assoc_ctx(
         // But default to ERP nonetheless just to be safe.
         _ => banjo_wlan_info::WlanPhyType::ERP,
     };
-    let ht_cap_bytes = cap.ht_cap.map_or([0; fidl_internal::HT_CAP_LEN as usize], |h| h.bytes);
-    let vht_cap_bytes = cap.vht_cap.map_or([0; fidl_internal::VHT_CAP_LEN as usize], |v| v.bytes);
+    let ht_cap_bytes =
+        negotiated_capabilities.ht_cap.map_or([0; fidl_internal::HT_CAP_LEN as usize], |h| h.bytes);
+    let vht_cap_bytes = negotiated_capabilities
+        .vht_cap
+        .map_or([0; fidl_internal::VHT_CAP_LEN as usize], |v| v.bytes);
     let ht_op_bytes = ht_op.unwrap_or([0; fidl_internal::HT_OP_LEN as usize]);
     let vht_op_bytes = vht_op.unwrap_or([0; fidl_internal::VHT_OP_LEN as usize]);
     banjo_wlan_info::WlanAssocCtx {
@@ -61,16 +65,16 @@ pub fn build_ddk_assoc_ctx(
         // It is working now but we may need to revisit.
         listen_interval: 0,
         phy,
-        chan: ddk_channel_from_fidl(cap.channel),
+        channel: ddk_channel_from_fidl(negotiated_capabilities.channel),
         // TODO(fxbug.dev/29325): QoS works with Aruba/Ubiquiti for BlockAck session but it may need to be
         // dynamically determined for each outgoing data frame.
         // TODO(fxbug.dev/43938): Derive QoS flag and WMM parameters from device info
         qos: has_ht_cap,
         wmm_params: blank_wmm_params(),
 
-        rates_cnt: cap.rates.len() as u16, // will not overflow as MAX_RATES_LEN is u8
+        rates_cnt: negotiated_capabilities.rates.len() as u16, // will not overflow as MAX_RATES_LEN is u8
         rates,
-        cap_info: cap.cap_info,
+        capability_info: negotiated_capabilities.capability_info,
         // All the unwrap are safe because the size of the byte array follow wire format.
         has_ht_cap,
         ht_cap: { *parse_ht_capabilities(&ht_cap_bytes[..]).unwrap() }.into(),
@@ -128,7 +132,7 @@ pub fn device_info_from_wlanmac_info(
 
 fn convert_ddk_band_info(
     band_info: banjo_ddk_wlaninfo::WlanInfoBandInfo,
-    cap: u16,
+    capability_info: u16,
 ) -> fidl_mlme::BandCapabilities {
     let band_id = match band_info.band {
         banjo_ddk_wlaninfo::WlanInfoBand::TWO_GHZ => fidl_common::Band::WlanBand2Ghz,
@@ -165,7 +169,15 @@ fn convert_ddk_band_info(
     } else {
         None
     };
-    fidl_mlme::BandCapabilities { band_id, rates, base_frequency, channels, cap, ht_cap, vht_cap }
+    fidl_mlme::BandCapabilities {
+        band_id,
+        rates,
+        base_frequency,
+        channels,
+        capability_info,
+        ht_cap,
+        vht_cap,
+    }
 }
 
 fn convert_driver_features(
@@ -212,12 +224,12 @@ mod tests {
             Bssid([1, 2, 3, 4, 5, 6]),
             42,
             fidl_mlme::NegotiatedCapabilities {
-                channel: fidl_common::WlanChan {
+                channel: fidl_common::WlanChannel {
                     primary: 149,
-                    cbw: fidl_common::Cbw::Cbw40,
+                    cbw: fidl_common::ChannelBandwidth::Cbw40,
                     secondary80: 42,
                 },
-                cap_info: 0x1234,
+                capability_info: 0x1234,
                 rates: vec![111, 112, 113, 114, 115, 116, 117, 118, 119, 120],
                 wmm_param: None,
                 ht_cap: Some(Box::new(fidl_internal::HtCapabilities {
@@ -235,12 +247,12 @@ mod tests {
         assert_eq!(0, ddk.listen_interval);
         assert_eq!(banjo_wlan_info::WlanPhyType::VHT, ddk.phy);
         assert_eq!(
-            banjo_wlan_info::WlanChannel {
+            banjo_common::WlanChannel {
                 primary: 149,
-                cbw: banjo_wlan_info::WlanChannelBandwidth::B_40,
+                cbw: banjo_common::ChannelBandwidth::CBW40,
                 secondary80: 42
             },
-            ddk.chan
+            ddk.channel
         );
         assert_eq!(true, ddk.qos);
 
@@ -248,7 +260,7 @@ mod tests {
         assert_eq!([111, 112, 113, 114, 115, 116, 117, 118, 119, 120], ddk.rates[0..10]);
         assert_eq!(&[0; 253][..], &ddk.rates[10..]);
 
-        assert_eq!(0x1234, ddk.cap_info);
+        assert_eq!(0x1234, ddk.capability_info);
 
         assert_eq!(true, ddk.has_ht_cap);
         let expected_ht_cap: banjo_80211::Ieee80211HtCapabilities =
@@ -292,9 +304,9 @@ mod tests {
             valid_fields: 0,
             phy: 0,
             data_rate: 0,
-            chan: banjo_wlan_info::WlanChannel {
+            channel: banjo_common::WlanChannel {
                 primary: 0,
-                cbw: banjo_wlan_info::WlanChannelBandwidth::B_20,
+                cbw: banjo_common::ChannelBandwidth::CBW20,
                 secondary80: 0,
             },
             mcs: 0,
@@ -338,7 +350,7 @@ mod tests {
         assert_eq!(band0.rates, vec![12, 24, 48, 54, 96, 108]);
         assert_eq!(band0.base_frequency, 2407);
         assert_eq!(band0.channels, vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]);
-        assert_eq!(band0.cap, 10);
+        assert_eq!(band0.capability_info, 10);
         assert!(band0.ht_cap.is_some());
         assert!(band0.vht_cap.is_none());
     }

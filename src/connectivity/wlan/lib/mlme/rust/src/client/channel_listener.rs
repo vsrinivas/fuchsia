@@ -1,4 +1,4 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -8,7 +8,7 @@ use {
         device::Device,
         timer::Timer,
     },
-    banjo_fuchsia_hardware_wlan_info as banjo_wlan_info,
+    banjo_fuchsia_wlan_common as banjo_common,
     log::{debug, error, warn},
 };
 
@@ -25,8 +25,8 @@ pub trait ChannelListener {
     /// primarily so client can be notified that request is about to be served.
     fn on_pre_switch_channel(
         &mut self,
-        from: banjo_wlan_info::WlanChannel,
-        to: banjo_wlan_info::WlanChannel,
+        from: banjo_common::WlanChannel,
+        to: banjo_common::WlanChannel,
         request_id: channel_scheduler::RequestId,
     );
     /// Triggered by ChannelScheduler after switching to a requested channel.
@@ -34,8 +34,8 @@ pub trait ChannelListener {
     /// primarily so client can be notified that request has started.
     fn on_post_switch_channel(
         &mut self,
-        from: banjo_wlan_info::WlanChannel,
-        to: banjo_wlan_info::WlanChannel,
+        from: banjo_common::WlanChannel,
+        to: banjo_common::WlanChannel,
         request_id: channel_scheduler::RequestId,
     );
     /// Triggered when request is fully serviced, or the request is interrupted but will not
@@ -57,7 +57,7 @@ pub enum ChannelListenerSource {
 
 #[derive(Default)]
 pub struct ChannelListenerState {
-    pub(crate) main_channel: Option<banjo_wlan_info::WlanChannel>,
+    pub(crate) main_channel: Option<banjo_common::WlanChannel>,
     pub(crate) off_channel_req_id: Option<channel_scheduler::RequestId>,
 }
 
@@ -90,12 +90,12 @@ impl<'a> ChannelListener for MlmeChannelListener<'a> {
 
     fn on_pre_switch_channel(
         &mut self,
-        from: banjo_wlan_info::WlanChannel,
-        to: banjo_wlan_info::WlanChannel,
+        from: banjo_common::WlanChannel,
+        to: banjo_common::WlanChannel,
         _request_id: channel_scheduler::RequestId,
     ) {
         let main_channel = match self.state.main_channel {
-            Some(chan) => chan,
+            Some(channel) => channel,
             None => return,
         };
         let station = match &mut self.station {
@@ -110,8 +110,8 @@ impl<'a> ChannelListener for MlmeChannelListener<'a> {
 
     fn on_post_switch_channel(
         &mut self,
-        from: banjo_wlan_info::WlanChannel,
-        to: banjo_wlan_info::WlanChannel,
+        from: banjo_common::WlanChannel,
+        to: banjo_common::WlanChannel,
         request_id: channel_scheduler::RequestId,
     ) {
         if let ChannelListenerSource::Scanner = request_id.1 {
@@ -124,7 +124,7 @@ impl<'a> ChannelListener for MlmeChannelListener<'a> {
 
         // off -> on channel
         let main_channel = match self.state.main_channel {
-            Some(chan) => chan,
+            Some(channel) => channel,
             None => return,
         };
         let station = match &mut self.station {
@@ -204,13 +204,13 @@ mod test_utils {
     #[derive(Debug, PartialEq)]
     pub enum LEvent {
         PreSwitch {
-            from: banjo_wlan_info::WlanChannel,
-            to: banjo_wlan_info::WlanChannel,
+            from: banjo_common::WlanChannel,
+            to: banjo_common::WlanChannel,
             req_id: channel_scheduler::RequestId,
         },
         PostSwitch {
-            from: banjo_wlan_info::WlanChannel,
-            to: banjo_wlan_info::WlanChannel,
+            from: banjo_common::WlanChannel,
+            to: banjo_common::WlanChannel,
             req_id: channel_scheduler::RequestId,
         },
         ReqComplete(channel_scheduler::RequestId, channel_scheduler::QueueState),
@@ -227,8 +227,8 @@ mod test_utils {
 
         fn on_pre_switch_channel(
             &mut self,
-            from: banjo_wlan_info::WlanChannel,
-            to: banjo_wlan_info::WlanChannel,
+            from: banjo_common::WlanChannel,
+            to: banjo_common::WlanChannel,
             request_id: channel_scheduler::RequestId,
         ) {
             self.events.borrow_mut().push(LEvent::PreSwitch { from, to, req_id: request_id });
@@ -236,8 +236,8 @@ mod test_utils {
 
         fn on_post_switch_channel(
             &mut self,
-            from: banjo_wlan_info::WlanChannel,
-            to: banjo_wlan_info::WlanChannel,
+            from: banjo_common::WlanChannel,
+            to: banjo_common::WlanChannel,
             request_id: channel_scheduler::RequestId,
         ) {
             self.events.borrow_mut().push(LEvent::PostSwitch { from, to, req_id: request_id });

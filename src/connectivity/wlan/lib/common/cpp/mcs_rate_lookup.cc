@@ -11,6 +11,7 @@
 // NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE
 // OF THIS SOFTWARE.
 
+#include <fuchsia/wlan/common/c/banjo.h>
 #include <fuchsia/wlan/common/cpp/fidl.h>
 #include <zircon/compiler.h>
 #include <zircon/errors.h>
@@ -618,7 +619,8 @@ const vht_per_bandwidth_table_t kVht160mhzRateLookup = {
      {5616000, 6240000},
      {6240000, 6933300}}};
 
-zx_status_t ValidateHtLookupRequestBounds(const ::fuchsia::wlan::common::CBW& cbw, uint8_t mcs,
+zx_status_t ValidateHtLookupRequestBounds(const ::fuchsia::wlan::common::ChannelBandwidth& cbw,
+                                          uint8_t mcs,
                                           const ::fuchsia::wlan::common::GuardInterval& gi) {
   auto status = ZX_OK;
   if (mcs >= kHtMaxMcsCount) {
@@ -628,7 +630,8 @@ zx_status_t ValidateHtLookupRequestBounds(const ::fuchsia::wlan::common::CBW& cb
   }
 
   // HT PHY channel bandwidth must be either 20 MHz or 40 MHz, see IEEE 802.11 19.1.1.
-  if (cbw != ::fuchsia::wlan::common::CBW::CBW20 && cbw != ::fuchsia::wlan::common::CBW::CBW40) {
+  if (cbw != ::fuchsia::wlan::common::ChannelBandwidth::CBW20 &&
+      cbw != ::fuchsia::wlan::common::ChannelBandwidth::CBW40) {
     status = ZX_ERR_OUT_OF_RANGE;
     errorf("Invalid HT channel bandwidth (%s)\n", zx_status_get_string(status));
     return status;
@@ -652,7 +655,8 @@ zx_status_t ValidateHtLookupRequestBounds(const ::fuchsia::wlan::common::CBW& cb
   return ZX_OK;
 }
 
-zx_status_t ValidateVhtLookupRequestBounds(const ::fuchsia::wlan::common::CBW& cbw, uint8_t mcs,
+zx_status_t ValidateVhtLookupRequestBounds(const ::fuchsia::wlan::common::ChannelBandwidth& cbw,
+                                           uint8_t mcs,
                                            const ::fuchsia::wlan::common::GuardInterval& gi,
                                            uint8_t nss) {
   auto status = ZX_OK;
@@ -695,7 +699,7 @@ zx_status_t GiEnumToIndex(::fuchsia::wlan::common::GuardInterval gi, uint8_t* gi
 
 }  // namespace
 
-zx_status_t HtDataRateLookup(const ::fuchsia::wlan::common::CBW& cbw, uint8_t mcs,
+zx_status_t HtDataRateLookup(const ::fuchsia::wlan::common::ChannelBandwidth& cbw, uint8_t mcs,
                              const ::fuchsia::wlan::common::GuardInterval& gi, uint32_t* out_kbps) {
   auto status = ValidateHtLookupRequestBounds(cbw, mcs, gi);
   if (status != ZX_OK) {
@@ -708,10 +712,10 @@ zx_status_t HtDataRateLookup(const ::fuchsia::wlan::common::CBW& cbw, uint8_t mc
   }
   uint32_t rate_kbps = HT_INVALID_RATE;
   switch (cbw) {
-    case ::fuchsia::wlan::common::CBW::CBW20:
+    case ::fuchsia::wlan::common::ChannelBandwidth::CBW20:
       rate_kbps = kHt20mhzRateLookup[mcs][gi_index];
       break;
-    case ::fuchsia::wlan::common::CBW::CBW40:
+    case ::fuchsia::wlan::common::ChannelBandwidth::CBW40:
       rate_kbps = kHt40mhzRateLookup[mcs][gi_index];
       break;
     default:
@@ -729,7 +733,7 @@ zx_status_t HtDataRateLookup(const ::fuchsia::wlan::common::CBW& cbw, uint8_t mc
   return status;
 }
 
-zx_status_t VhtDataRateLookup(const ::fuchsia::wlan::common::CBW& cbw, uint8_t mcs,
+zx_status_t VhtDataRateLookup(const ::fuchsia::wlan::common::ChannelBandwidth& cbw, uint8_t mcs,
                               const ::fuchsia::wlan::common::GuardInterval& gi, uint8_t num_sts,
                               uint8_t stbc, uint32_t* out_kbps) {
   // IEEE 802.11-2016 8.3.4.4 defines this formula for finding the VHT NSS.
@@ -737,7 +741,7 @@ zx_status_t VhtDataRateLookup(const ::fuchsia::wlan::common::CBW& cbw, uint8_t m
   return VhtDataRateLookup(cbw, mcs, gi, nss, out_kbps);
 }
 
-zx_status_t VhtDataRateLookup(const ::fuchsia::wlan::common::CBW& cbw, uint8_t mcs,
+zx_status_t VhtDataRateLookup(const ::fuchsia::wlan::common::ChannelBandwidth& cbw, uint8_t mcs,
                               const ::fuchsia::wlan::common::GuardInterval& gi, uint8_t nss,
                               uint32_t* out_kbps) {
   auto status = ValidateVhtLookupRequestBounds(cbw, mcs, gi, nss);
@@ -751,18 +755,18 @@ zx_status_t VhtDataRateLookup(const ::fuchsia::wlan::common::CBW& cbw, uint8_t m
   }
   uint32_t rate_kbps = VHT_INVALID_RATE;
   switch (cbw) {
-    case ::fuchsia::wlan::common::CBW::CBW20:
+    case ::fuchsia::wlan::common::ChannelBandwidth::CBW20:
       rate_kbps = kVht20mhzRateLookup[nss][mcs][gi_index];
       break;
-    case ::fuchsia::wlan::common::CBW::CBW40:
+    case ::fuchsia::wlan::common::ChannelBandwidth::CBW40:
       rate_kbps = kVht40mhzRateLookup[nss][mcs][gi_index];
       break;
-    case ::fuchsia::wlan::common::CBW::CBW80:
+    case ::fuchsia::wlan::common::ChannelBandwidth::CBW80:
       rate_kbps = kVht80mhzRateLookup[nss][mcs][gi_index];
       break;
-    case ::fuchsia::wlan::common::CBW::CBW80P80:
+    case ::fuchsia::wlan::common::ChannelBandwidth::CBW80P80:
       __FALLTHROUGH;  // 80+80 uses the same lookup table as 160 MHz.
-    case ::fuchsia::wlan::common::CBW::CBW160:
+    case ::fuchsia::wlan::common::ChannelBandwidth::CBW160:
       rate_kbps = kVht160mhzRateLookup[nss][mcs][gi_index];
       break;
     default:

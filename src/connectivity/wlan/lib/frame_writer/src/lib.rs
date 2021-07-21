@@ -1,4 +1,4 @@
-// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -554,7 +554,7 @@ mod tests {
         let (buf, bytes_written) = write_frame!(buffer_provider, {
             ies: {
                 dsss_param_set: &ie::DsssParamSet {
-                    current_chan: 42
+                    current_channel: 42
                 },
             }
         })

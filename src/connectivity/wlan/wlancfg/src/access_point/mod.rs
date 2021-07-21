@@ -1,4 +1,4 @@
-// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -824,9 +824,9 @@ mod tests {
         let (controller2, _) = request_controller(&test_values.provider);
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
 
-        let chan = controller2.into_channel().expect("error turning proxy into channel");
+        let channel = controller2.into_channel().expect("error turning proxy into channel");
         let mut buffer = zx::MessageBuf::new();
-        let epitaph_fut = chan.recv_msg(&mut buffer);
+        let epitaph_fut = channel.recv_msg(&mut buffer);
         pin_mut!(epitaph_fut);
         assert_variant!(exec.run_until_stalled(&mut epitaph_fut), Poll::Ready(Ok(_)));
 
@@ -838,7 +838,7 @@ mod tests {
         Decoder::decode_into::<EpitaphBody>(&header, tail, &mut [], &mut msg)
             .expect("failed decoding body");
         assert_eq!(msg.error, zx::Status::ALREADY_BOUND);
-        assert!(chan.is_closed());
+        assert!(channel.is_closed());
     }
 
     #[fuchsia::test]
@@ -866,9 +866,9 @@ mod tests {
         let (controller2, _) = request_controller(&provider);
         assert_variant!(exec.run_until_stalled(&mut second_serve_fut), Poll::Pending);
 
-        let chan = controller2.into_channel().expect("error turning proxy into channel");
+        let channel = controller2.into_channel().expect("error turning proxy into channel");
         let mut buffer = zx::MessageBuf::new();
-        let epitaph_fut = chan.recv_msg(&mut buffer);
+        let epitaph_fut = channel.recv_msg(&mut buffer);
         pin_mut!(epitaph_fut);
         assert_variant!(exec.run_until_stalled(&mut epitaph_fut), Poll::Ready(Ok(_)));
 
@@ -880,7 +880,7 @@ mod tests {
         Decoder::decode_into::<EpitaphBody>(&header, tail, &mut [], &mut msg)
             .expect("failed decoding body");
         assert_eq!(msg.error, zx::Status::ALREADY_BOUND);
-        assert!(chan.is_closed());
+        assert!(channel.is_closed());
 
         // Drop the initial client controller and make sure the second service instance can get a
         // client controller and make a request.

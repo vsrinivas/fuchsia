@@ -22,8 +22,7 @@ use {
         timer::*,
     },
     anyhow::{self, format_err},
-    banjo_fuchsia_hardware_wlan_info as banjo_wlan_info,
-    banjo_fuchsia_hardware_wlan_mac as banjo_wlan_mac,
+    banjo_fuchsia_hardware_wlan_mac as banjo_wlan_mac, banjo_fuchsia_wlan_common as banjo_common,
     banjo_fuchsia_wlan_internal as banjo_internal,
     channel_listener::{ChannelListenerSource, ChannelListenerState},
     channel_scheduler::ChannelScheduler,
@@ -64,7 +63,7 @@ pub enum TimedEvent {
     /// Association timed out. AP did not complete association in time.
     Associating,
     ChannelScheduler,
-    ScannerProbeDelay(banjo_wlan_info::WlanChannel),
+    ScannerProbeDelay(banjo_common::WlanChannel),
     /// Association status update includes checking for auto deauthentication due to beacon loss
     /// and report signal strength
     AssociationStatusCheck,
@@ -121,7 +120,7 @@ impl ClientMlme {
 
     pub fn set_main_channel(
         &mut self,
-        channel: banjo_wlan_info::WlanChannel,
+        channel: banjo_common::WlanChannel,
     ) -> Result<(), zx::Status> {
         self.ctx.device.set_channel(channel)?;
         self.channel_state.main_channel = Some(channel);
@@ -259,7 +258,7 @@ impl ClientMlme {
     }
 
     fn join_device(&mut self, bss: &BssDescription) -> Result<(), Error> {
-        let channel = crate::ddk_converter::ddk_channel_from_fidl(bss.chan);
+        let channel = crate::ddk_converter::ddk_channel_from_fidl(bss.channel);
         self.set_main_channel(channel)
             .map_err(|status| Error::Status(format!("Error setting device channel"), status))?;
 
@@ -596,7 +595,7 @@ impl<'a> BoundClient<'a> {
     // TODO(fxbug.dev/39148): Use an IE set instead of individual IEs.
     pub fn send_assoc_req_frame(
         &mut self,
-        cap_info: u16,
+        capability_info: u16,
         rates: &[u8],
         rsne: &[u8],
         ht_cap: &[u8],
@@ -615,7 +614,7 @@ impl<'a> BoundClient<'a> {
                         .with_seq_num(self.ctx.seq_mgr.next_sns1(&self.sta.bssid.0) as u16)
                 ),
                 mac::AssocReqHdr: &mac::AssocReqHdr {
-                    capabilities: mac::CapabilityInfo(cap_info),
+                    capabilities: mac::CapabilityInfo(capability_info),
                     listen_interval: 0,
                 },
             },
@@ -882,7 +881,7 @@ impl<'a> BoundClient<'a> {
 
         let mut assoc_conf = fidl_mlme::AssociateConfirm {
             association_id: FAILED_ASSOCIATION_AID,
-            cap_info: 0,
+            capability_info: 0,
             result_code,
             rates: vec![],
             wmm_param: None,
@@ -900,7 +899,7 @@ impl<'a> BoundClient<'a> {
     fn send_associate_conf_success<B: ByteSlice>(
         &mut self,
         association_id: mac::Aid,
-        cap_info: mac::CapabilityInfo,
+        capability_info: mac::CapabilityInfo,
         elements: B,
     ) {
         type HtCapArray = [u8; fidl_internal::HT_CAP_LEN as usize];
@@ -908,7 +907,7 @@ impl<'a> BoundClient<'a> {
 
         let mut assoc_conf = fidl_mlme::AssociateConfirm {
             association_id,
-            cap_info: cap_info.raw(),
+            capability_info: capability_info.raw(),
             result_code: fidl_mlme::AssociateResultCode::Success,
             rates: vec![],
             wmm_param: None,
@@ -1126,9 +1125,9 @@ mod tests {
         0x00, 0x0f, 0xac, 0x02, //  akm suite list
         0xa8, 0x04, //  rsn capabilities
     ];
-    const MAIN_CHANNEL: banjo_wlan_info::WlanChannel = banjo_wlan_info::WlanChannel {
+    const MAIN_CHANNEL: banjo_common::WlanChannel = banjo_common::WlanChannel {
         primary: 11,
-        cbw: banjo_wlan_info::WlanChannelBandwidth::B_20,
+        cbw: banjo_common::ChannelBandwidth::CBW20,
         secondary80: 0,
     };
     const SCAN_CHANNEL_PRIMARY: u8 = 6;
@@ -1264,7 +1263,7 @@ mod tests {
             nav_sync_delay: 42,
             op_rates: vec![1, 2, 3],
             phy: fidl_common::Phy::Erp,
-            cbw: fidl_common::Cbw::Cbw20,
+            channel_bandwidth: fidl_common::ChannelBandwidth::Cbw20,
         })
         .expect("valid JoinRequest should be handled successfully");
         me.get_bound_client().expect("client sta should have been created by now.");
@@ -1281,7 +1280,7 @@ mod tests {
             nav_sync_delay: 42,
             op_rates: vec![1, 2, 3],
             phy: fidl_common::Phy::Erp,
-            cbw: fidl_common::Cbw::Cbw20,
+            channel_bandwidth: fidl_common::ChannelBandwidth::Cbw20,
         })
         .expect("valid JoinRequest should be handled successfully");
         let client = me.get_bound_client().expect("client sta should have been created by now.");
@@ -1299,7 +1298,7 @@ mod tests {
             nav_sync_delay: 42,
             op_rates: vec![1, 2, 3],
             phy: fidl_common::Phy::Erp,
-            cbw: fidl_common::Cbw::Cbw20,
+            channel_bandwidth: fidl_common::ChannelBandwidth::Cbw20,
         })
         .expect("valid JoinRequest should be handled successfully");
         let client = me.get_bound_client().expect("client sta should have been created by now.");
@@ -1317,7 +1316,7 @@ mod tests {
             nav_sync_delay: 42,
             op_rates: vec![1, 2, 3],
             phy: fidl_common::Phy::Erp,
-            cbw: fidl_common::Cbw::Cbw20,
+            channel_bandwidth: fidl_common::ChannelBandwidth::Cbw20,
         })
         .expect("valid JoinRequest should be handled successfully");
         let client = me.get_bound_client().expect("client sta should have been created by now.");
@@ -2267,7 +2266,7 @@ mod tests {
             associate_conf,
             fidl_mlme::AssociateConfirm {
                 association_id: 42,
-                cap_info: 0x1234,
+                capability_info: 0x1234,
                 result_code: fidl_mlme::AssociateResultCode::Success,
                 rates: vec![9, 10, 1, 2, 3, 4, 5, 6, 7, 8],
                 wmm_param: None,
@@ -2296,7 +2295,7 @@ mod tests {
             associate_conf,
             fidl_mlme::AssociateConfirm {
                 association_id: 0,
-                cap_info: 0,
+                capability_info: 0,
                 result_code: fidl_mlme::AssociateResultCode::RefusedExternalReason,
                 rates: vec![],
                 wmm_param: None,

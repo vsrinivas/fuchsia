@@ -1,4 +1,4 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -6,6 +6,7 @@
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_SIM_TEST_SIM_TEST_H_
 
 #include <fuchsia/hardware/wlanif/c/banjo.h>
+#include <fuchsia/wlan/common/c/banjo.h>
 #include <zircon/types.h>
 
 #include <set>
@@ -68,7 +69,7 @@ class SimInterface {
   // SoftAP defaults
   static constexpr wlan_ssid_t kDefaultSoftApSsid = {.len = 10, .ssid = "Sim_SoftAP"};
   static constexpr wlan_channel_t kDefaultSoftApChannel = {
-      .primary = 11, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0};
+      .primary = 11, .cbw = CHANNEL_BANDWIDTH_CBW20, .secondary80 = 0};
   static constexpr uint32_t kDefaultSoftApBeaconPeriod = 100;
   static constexpr uint32_t kDefaultSoftApDtimPeriod = 100;
 
@@ -133,7 +134,7 @@ class SimInterface {
   // Scan operations
   void StartScan(uint64_t txn_id = 0, bool active = false);
   std::optional<wlan_scan_result_t> ScanResultCode(uint64_t txn_id);
-  const std::list<wlanif_bss_description_t>* ScanResultBssList(uint64_t txn_id);
+  const std::list<bss_description_t>* ScanResultBssList(uint64_t txn_id);
 
   // SoftAP operation
   void StartSoftAp(const wlan_ssid_t& ssid = kDefaultSoftApSsid,
@@ -177,7 +178,7 @@ class SimInterface {
   struct ScanStatus {
     // If not present, indicates that the scan has not completed yet
     std::optional<wlan_scan_result_t> result_code = std::nullopt;
-    std::list<wlanif_bss_description_t> result_list;
+    std::list<bss_description_t> result_list;
   };
   // One entry per scan started
   std::map<uint64_t, ScanStatus> scan_results_;

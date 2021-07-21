@@ -1,4 +1,4 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -14,8 +14,8 @@ use {
     },
     banjo_ddk_hw_wlan_ieee80211::*,
     banjo_fuchsia_hardware_wlan_info::*,
-    fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_mlme as fidl_mlme,
-    fuchsia_zircon as zx,
+    banjo_fuchsia_wlan_common as banjo_common, fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
+    fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
     std::collections::VecDeque,
     wlan_common::{
         appendable::Appendable,
@@ -431,10 +431,10 @@ impl RemoteClient {
                     aid: aid,
                     listen_interval: 0, // This field is not used for AP.
                     phy: WlanPhyType::ERP,
-                    chan: WlanChannel {
+                    channel: banjo_common::WlanChannel {
                         primary: channel,
                         // TODO(fxbug.dev/40917): Correctly support this.
-                        cbw: WlanChannelBandwidth::B_20,
+                        cbw: banjo_common::ChannelBandwidth::CBW20,
                         secondary80: 0,
                     },
 
@@ -443,7 +443,7 @@ impl RemoteClient {
 
                     rates_cnt: rates.len() as u16,
                     rates: rates_arr,
-                    cap_info: capabilities.raw(),
+                    capability_info: capabilities.raw(),
 
                     // TODO(fxbug.dev/40917): Correctly support all of this.
                     has_ht_cap: false,
@@ -1594,7 +1594,7 @@ mod tests {
                 peer_sta_address: CLIENT_ADDR,
                 listen_interval: 1,
                 ssid: Some(b"coolnet".to_vec()),
-                cap: CapabilityInfo(0).with_short_preamble(true).raw(),
+                capability_info: CapabilityInfo(0).with_short_preamble(true).raw(),
                 rates: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
                 rsne: None,
             },
@@ -2274,7 +2274,7 @@ mod tests {
                 peer_sta_address: CLIENT_ADDR,
                 listen_interval: 10,
                 ssid: Some(b"coolnet".to_vec()),
-                cap: CapabilityInfo(0).raw(),
+                capability_info: CapabilityInfo(0).raw(),
                 rates: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
                 rsne: Some(vec![48, 2, 77, 88]),
             },

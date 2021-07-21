@@ -1,10 +1,11 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_TESTING_LIB_SIM_FAKE_AP_SIM_FAKE_AP_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_TESTING_LIB_SIM_FAKE_AP_SIM_FAKE_AP_H_
 
+#include <fuchsia/wlan/common/c/banjo.h>
 #include <fuchsia/wlan/ieee80211/cpp/fidl.h>
 #include <lib/zx/time.h>
 #include <netinet/if_ether.h>
@@ -61,10 +62,10 @@ class FakeAp final : public StationIfc {
   explicit FakeAp(Environment* environ) : environment_(environ) { environ->AddStation(this); }
 
   FakeAp(Environment* environ, const common::MacAddr& bssid, const wlan_ssid_t& ssid,
-         const wlan_channel_t chan)
+         const wlan_channel_t channel)
       : environment_(environ), bssid_(bssid), ssid_(ssid) {
     environ->AddStation(this);
-    tx_info_.channel = chan;
+    tx_info_.channel = channel;
     beacon_state_.beacon_frame_.bssid_ = bssid;
     beacon_state_.beacon_frame_.AddSsidIe(ssid);
     // By default, assume AP is part of an infrastructure network

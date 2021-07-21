@@ -1,4 +1,4 @@
-// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -674,9 +674,9 @@ mod tests {
                 ssid: "duplicated ssid".as_bytes().to_vec(),
                 rssi_dbm: 0,
                 snr_db: 1,
-                channel: fidl_common::WlanChan {
+                channel: fidl_common::WlanChannel {
                     primary: 1,
-                    cbw: fidl_common::Cbw::Cbw20,
+                    cbw: fidl_common::ChannelBandwidth::Cbw20,
                     secondary80: 0,
                 },
                 protection: fidl_sme::Protection::Wpa3Enterprise,
@@ -688,9 +688,9 @@ mod tests {
                 ssid: "unique ssid".as_bytes().to_vec(),
                 rssi_dbm: 7,
                 snr_db: 2,
-                channel: fidl_common::WlanChan {
+                channel: fidl_common::WlanChannel {
                     primary: 8,
-                    cbw: fidl_common::Cbw::Cbw20,
+                    cbw: fidl_common::ChannelBandwidth::Cbw20,
                     secondary80: 0,
                 },
                 protection: fidl_sme::Protection::Wpa2Personal,
@@ -702,9 +702,9 @@ mod tests {
                 ssid: "duplicated ssid".as_bytes().to_vec(),
                 rssi_dbm: 13,
                 snr_db: 3,
-                channel: fidl_common::WlanChan {
+                channel: fidl_common::WlanChannel {
                     primary: 11,
-                    cbw: fidl_common::Cbw::Cbw20,
+                    cbw: fidl_common::ChannelBandwidth::Cbw20,
                     secondary80: 0,
                 },
                 protection: fidl_sme::Protection::Wpa3Enterprise,
@@ -724,9 +724,9 @@ mod tests {
                         rssi: 0,
                         timestamp_nanos: 0,
                         snr_db: 1,
-                        channel: fidl_common::WlanChan {
+                        channel: fidl_common::WlanChannel {
                             primary: 1,
-                            cbw: fidl_common::Cbw::Cbw20,
+                            cbw: fidl_common::ChannelBandwidth::Cbw20,
                             secondary80: 0,
                         },
                         observed_in_passive_scan: true,
@@ -738,9 +738,9 @@ mod tests {
                         rssi: 13,
                         timestamp_nanos: 0,
                         snr_db: 3,
-                        channel: fidl_common::WlanChan {
+                        channel: fidl_common::WlanChannel {
                             primary: 11,
-                            cbw: fidl_common::Cbw::Cbw20,
+                            cbw: fidl_common::ChannelBandwidth::Cbw20,
                             secondary80: 0,
                         },
                         observed_in_passive_scan: true,
@@ -758,9 +758,9 @@ mod tests {
                     rssi: 7,
                     timestamp_nanos: 0,
                     snr_db: 2,
-                    channel: fidl_common::WlanChan {
+                    channel: fidl_common::WlanChannel {
                         primary: 8,
-                        cbw: fidl_common::Cbw::Cbw20,
+                        cbw: fidl_common::ChannelBandwidth::Cbw20,
                         secondary80: 0,
                     },
                     observed_in_passive_scan: true,
@@ -820,9 +820,9 @@ mod tests {
                 ssid: "foo active ssid".as_bytes().to_vec(),
                 rssi_dbm: 0,
                 snr_db: 8,
-                channel: fidl_common::WlanChan {
+                channel: fidl_common::WlanChannel {
                     primary: 1,
-                    cbw: fidl_common::Cbw::Cbw20,
+                    cbw: fidl_common::ChannelBandwidth::Cbw20,
                     secondary80: 0,
                 },
                 protection: fidl_sme::Protection::Wpa3Enterprise,
@@ -834,9 +834,9 @@ mod tests {
                 ssid: "misc ssid".as_bytes().to_vec(),
                 rssi_dbm: 7,
                 snr_db: 9,
-                channel: fidl_common::WlanChan {
+                channel: fidl_common::WlanChannel {
                     primary: 8,
-                    cbw: fidl_common::Cbw::Cbw20,
+                    cbw: fidl_common::ChannelBandwidth::Cbw20,
                     secondary80: 0,
                 },
                 protection: fidl_sme::Protection::Wpa2Personal,
@@ -854,9 +854,9 @@ mod tests {
                         rssi: 0,
                         timestamp_nanos: 0,
                         snr_db: 1,
-                        channel: fidl_common::WlanChan {
+                        channel: fidl_common::WlanChannel {
                             primary: 1,
-                            cbw: fidl_common::Cbw::Cbw20,
+                            cbw: fidl_common::ChannelBandwidth::Cbw20,
                             secondary80: 0,
                         },
                         observed_in_passive_scan: true,
@@ -868,9 +868,9 @@ mod tests {
                         rssi: 13,
                         timestamp_nanos: 0,
                         snr_db: 3,
-                        channel: fidl_common::WlanChan {
+                        channel: fidl_common::WlanChannel {
                             primary: 11,
-                            cbw: fidl_common::Cbw::Cbw20,
+                            cbw: fidl_common::ChannelBandwidth::Cbw20,
                             secondary80: 0,
                         },
                         observed_in_passive_scan: true,
@@ -888,9 +888,9 @@ mod tests {
                     rssi: 0,
                     timestamp_nanos: 0,
                     snr_db: 8,
-                    channel: fidl_common::WlanChan {
+                    channel: fidl_common::WlanChannel {
                         primary: 1,
-                        cbw: fidl_common::Cbw::Cbw20,
+                        cbw: fidl_common::ChannelBandwidth::Cbw20,
                         secondary80: 0,
                     },
                     observed_in_passive_scan: false,
@@ -907,9 +907,9 @@ mod tests {
                     rssi: 7,
                     timestamp_nanos: 0,
                     snr_db: 9,
-                    channel: fidl_common::WlanChan {
+                    channel: fidl_common::WlanChannel {
                         primary: 8,
-                        cbw: fidl_common::Cbw::Cbw20,
+                        cbw: fidl_common::ChannelBandwidth::Cbw20,
                         secondary80: 0,
                     },
                     observed_in_passive_scan: false,
@@ -926,9 +926,9 @@ mod tests {
                     rssi: 7,
                     timestamp_nanos: 0,
                     snr_db: 2,
-                    channel: fidl_common::WlanChan {
+                    channel: fidl_common::WlanChannel {
                         primary: 8,
-                        cbw: fidl_common::Cbw::Cbw20,
+                        cbw: fidl_common::ChannelBandwidth::Cbw20,
                         secondary80: 0,
                     },
                     observed_in_passive_scan: true,
@@ -1493,9 +1493,9 @@ mod tests {
                 ssid: "duplicated ssid".as_bytes().to_vec(),
                 rssi_dbm: 0,
                 snr_db: 1,
-                channel: fidl_common::WlanChan {
+                channel: fidl_common::WlanChannel {
                     primary: 1,
-                    cbw: fidl_common::Cbw::Cbw20,
+                    cbw: fidl_common::ChannelBandwidth::Cbw20,
                     secondary80: 0,
                 },
                 protection: fidl_sme::Protection::Wpa3Enterprise,
@@ -1507,9 +1507,9 @@ mod tests {
                 ssid: "duplicated ssid".as_bytes().to_vec(),
                 rssi_dbm: 13,
                 snr_db: 3,
-                channel: fidl_common::WlanChan {
+                channel: fidl_common::WlanChannel {
                     primary: 14,
-                    cbw: fidl_common::Cbw::Cbw20,
+                    cbw: fidl_common::ChannelBandwidth::Cbw20,
                     secondary80: 0,
                 },
                 protection: fidl_sme::Protection::Wpa3Enterprise,
@@ -1529,9 +1529,9 @@ mod tests {
             rssi: 0,
             timestamp_nanos: 0,
             snr_db: 1,
-            channel: fidl_common::WlanChan {
+            channel: fidl_common::WlanChannel {
                 primary: 1,
-                cbw: fidl_common::Cbw::Cbw20,
+                cbw: fidl_common::ChannelBandwidth::Cbw20,
                 secondary80: 0,
             },
             observed_in_passive_scan: true,
@@ -1551,9 +1551,9 @@ mod tests {
                 ssid: "duplicated ssid".as_bytes().to_vec(),
                 rssi_dbm: 100,
                 snr_db: 100,
-                channel: fidl_common::WlanChan {
+                channel: fidl_common::WlanChannel {
                     primary: 100,
-                    cbw: fidl_common::Cbw::Cbw40,
+                    cbw: fidl_common::ChannelBandwidth::Cbw40,
                     secondary80: 0,
                 },
                 protection: fidl_sme::Protection::Wpa3Enterprise,
@@ -1565,9 +1565,9 @@ mod tests {
                 ssid: "duplicated ssid".as_bytes().to_vec(),
                 rssi_dbm: 101,
                 snr_db: 101,
-                channel: fidl_common::WlanChan {
+                channel: fidl_common::WlanChannel {
                     primary: 101,
-                    cbw: fidl_common::Cbw::Cbw40,
+                    cbw: fidl_common::ChannelBandwidth::Cbw40,
                     secondary80: 0,
                 },
                 protection: fidl_sme::Protection::Wpa3Enterprise,
@@ -1583,9 +1583,9 @@ mod tests {
                 rssi: 0,
                 timestamp_nanos: 0,
                 snr_db: 1,
-                channel: fidl_common::WlanChan {
+                channel: fidl_common::WlanChannel {
                     primary: 1,
-                    cbw: fidl_common::Cbw::Cbw20,
+                    cbw: fidl_common::ChannelBandwidth::Cbw20,
                     secondary80: 0,
                 },
                 observed_in_passive_scan: true,
@@ -1597,9 +1597,9 @@ mod tests {
                 rssi: 101,
                 timestamp_nanos: 0,
                 snr_db: 101,
-                channel: fidl_common::WlanChan {
+                channel: fidl_common::WlanChannel {
                     primary: 101,
-                    cbw: fidl_common::Cbw::Cbw40,
+                    cbw: fidl_common::ChannelBandwidth::Cbw40,
                     secondary80: 0,
                 },
                 observed_in_passive_scan: false,
@@ -2123,9 +2123,9 @@ mod tests {
             ssid: ssid.clone(),
             protection: fidl_sme::Protection::Wpa2Wpa3Personal,
             compatible: true,
-            channel: fidl_common::WlanChan {
+            channel: fidl_common::WlanChannel {
                 primary: 8,
-                cbw: fidl_common::Cbw::Cbw20,
+                cbw: fidl_common::ChannelBandwidth::Cbw20,
                 secondary80: 0,
             },
             ..generate_random_bss_info()

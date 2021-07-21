@@ -18,6 +18,7 @@
 #include "pci.h"
 
 #include <fuchsia/hardware/pci/c/banjo.h>
+#include <fuchsia/wlan/common/c/banjo.h>
 #include <fuchsia/wlan/internal/c/banjo.h>
 #include <inttypes.h>
 #include <lib/ddk/device.h>
@@ -3190,35 +3191,36 @@ static zx_status_t ath10k_pci_queue_tx(void* ctx, uint32_t options, wlan_tx_pack
   return ath10k_mac_op_tx(ar, pkt);
 }
 
-static const char* cbw_as_str(wlan_channel_bandwidth_t cbw) {
+static const char* cbw_as_str(channel_bandwidth_t cbw) {
   switch (cbw) {
-    case WLAN_CHANNEL_BANDWIDTH__20:
+    case CHANNEL_BANDWIDTH_CBW20:
       return "CBW20";
-    case WLAN_CHANNEL_BANDWIDTH__40:
-      return "CBW40ABOVE";
-    case WLAN_CHANNEL_BANDWIDTH__40BELOW:
+    case CHANNEL_BANDWIDTH_CBW40:
+      return "CBW40";
+    case CHANNEL_BANDWIDTH_CBW40BELOW:
       return "CBW40BELOW";
-    case WLAN_CHANNEL_BANDWIDTH__80:
+    case CHANNEL_BANDWIDTH_CBW80:
       return "CBW80";
-    case WLAN_CHANNEL_BANDWIDTH__160:
+    case CHANNEL_BANDWIDTH_CBW160:
       return "CBW160";
-    case WLAN_CHANNEL_BANDWIDTH__80P80:
+    case CHANNEL_BANDWIDTH_CBW80P80:
       return "CBW80P80";
     default:
       return "Invalid";
   }
 }
 
-static zx_status_t ath10k_pci_set_channel(void* ctx, uint32_t options, const wlan_channel_t* chan) {
+static zx_status_t ath10k_pci_set_channel(void* ctx, uint32_t options,
+                                          const wlan_channel_t* channel) {
   struct ath10k* ar = ctx;
   if (!verify_started(ar)) {
     return ZX_ERR_BAD_STATE;
   }
 
-  ath10k_info("setting channel (pri: %d, sec: %d, bw: %s)\n", chan->primary, chan->secondary80,
-              cbw_as_str(chan->cbw));
-  memcpy(&ar->rx_channel, chan, sizeof(wlan_channel_t));
-  return ath10k_mac_assign_vif_chanctx(ar, chan);
+  ath10k_info("setting channel (pri: %d, sec: %d, bw: %s)\n", channel->primary,
+              channel->secondary80, cbw_as_str(channel->cbw));
+  memcpy(&ar->rx_channel, channel, sizeof(wlan_channel_t));
+  return ath10k_mac_assign_vif_chanctx(ar, channel);
 }
 
 static zx_status_t ath10k_pci_configure_bss(void* ctx, uint32_t options,

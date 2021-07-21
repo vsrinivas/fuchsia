@@ -22,14 +22,14 @@ pub fn construct_bss_description(
     ies: &[u8],
     rx_info: Option<banjo_wlan_mac::WlanRxInfo>,
 ) -> Result<fidl_internal::BssDescription, Error> {
-    let mut dsss_chan = None;
+    let mut dsss_channel = None;
     let mut parsed_ht_op = None;
     let mut parsed_vht_op = None;
 
     for (id, body) in ie::Reader::new(ies) {
         match id {
             ie::Id::DSSS_PARAM_SET => {
-                dsss_chan = Some(ie::parse_dsss_param_set(body)?.current_chan)
+                dsss_channel = Some(ie::parse_dsss_param_set(body)?.current_channel)
             }
             ie::Id::HT_OPERATION => {
                 let ht_op = ie::parse_ht_operation(body)?;
@@ -44,9 +44,9 @@ pub fn construct_bss_description(
     }
 
     let bss_type = get_bss_type(capability_info);
-    let chan = derive_channel(
-        rx_info.map(|info| info.chan.primary),
-        dsss_chan,
+    let channel = derive_channel(
+        rx_info.map(|info| info.channel.primary),
+        dsss_channel,
         parsed_ht_op,
         parsed_vht_op,
     )
@@ -58,10 +58,9 @@ pub fn construct_bss_description(
         beacon_period: beacon_interval.into(),
         timestamp,
         local_time: 0,
-        cap: capability_info.raw(),
+        capability_info: capability_info.raw(),
         ies: ies.to_vec(),
-
-        chan,
+        channel,
         rssi_dbm: rx_info.as_ref().map(|info| info.rssi_dbm).unwrap_or(0),
         snr_db: 0,
     })
@@ -81,7 +80,7 @@ fn get_bss_type(capability_info: CapabilityInfo) -> fidl_internal::BssType {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, banjo_fuchsia_hardware_wlan_info as banjo_wlan_info,
+        super::*, banjo_fuchsia_wlan_common as banjo_common,
         fidl_fuchsia_wlan_common as fidl_common,
     };
 
@@ -91,9 +90,9 @@ mod tests {
     // Capability information: ESS, privacy, spectrum mgmt, radio msmt
     const CAPABILITY_INFO: CapabilityInfo = CapabilityInfo(0x1111);
     const RX_INFO: banjo_wlan_mac::WlanRxInfo = banjo_wlan_mac::WlanRxInfo {
-        chan: banjo_wlan_info::WlanChannel {
+        channel: banjo_common::WlanChannel {
             primary: 11,
-            cbw: banjo_wlan_info::WlanChannelBandwidth::B_20,
+            cbw: banjo_common::ChannelBandwidth::CBW20,
             secondary80: 0,
         },
         rssi_dbm: -40,
@@ -195,12 +194,12 @@ mod tests {
                 beacon_period: BEACON_INTERVAL,
                 timestamp: TIMESTAMP,
                 local_time: 0,
-                cap: CAPABILITY_INFO.0,
+                capability_info: CAPABILITY_INFO.0,
                 ies,
                 rssi_dbm: RX_INFO.rssi_dbm,
-                chan: fidl_common::WlanChan {
+                channel: fidl_common::WlanChannel {
                     primary: 140,
-                    cbw: fidl_common::Cbw::Cbw40,
+                    cbw: fidl_common::ChannelBandwidth::Cbw40,
                     secondary80: 0,
                 },
                 snr_db: 0,

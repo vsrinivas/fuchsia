@@ -15,6 +15,7 @@
  */
 /*********************channel spec common functions*********************/
 
+#include <fuchsia/wlan/common/c/banjo.h>
 #include <zircon/assert.h>
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/brcmu_d11.h"
@@ -209,21 +210,21 @@ uint16_t channel_to_chanspec(const brcmu_d11inf* d11inf, const wlan_channel_t* c
   ch_inf.chnum = ch->primary;
 
   switch (ch->cbw) {
-    case WLAN_CHANNEL_BANDWIDTH__20:
+    case CHANNEL_BANDWIDTH_CBW20:
       ch_inf.bw = BRCMU_CHAN_BW_20;
       ch_inf.sb = BRCMU_CHAN_SB_NONE;
       break;
-    case WLAN_CHANNEL_BANDWIDTH__40:
+    case CHANNEL_BANDWIDTH_CBW40:
       ch_inf.bw = BRCMU_CHAN_BW_40;
       ch_inf.sb = BRCMU_CHAN_SB_U;
       break;
-    case WLAN_CHANNEL_BANDWIDTH__40BELOW:
+    case CHANNEL_BANDWIDTH_CBW40BELOW:
       ch_inf.bw = BRCMU_CHAN_BW_40;
       ch_inf.sb = BRCMU_CHAN_SB_L;
       break;
-    case WLAN_CHANNEL_BANDWIDTH__80:
-    case WLAN_CHANNEL_BANDWIDTH__160:
-    case WLAN_CHANNEL_BANDWIDTH__80P80:
+    case CHANNEL_BANDWIDTH_CBW80:
+    case CHANNEL_BANDWIDTH_CBW160:
+    case CHANNEL_BANDWIDTH_CBW80P80:
     default:
       BRCMF_ERR("unsupported channel width");
       break;
@@ -245,15 +246,15 @@ void chanspec_to_channel(const brcmu_d11inf* d11_inf, uint16_t chanspec, wlan_ch
 
   switch (ch_inf.bw) {
     case BRCMU_CHAN_BW_20:
-      ch->cbw = WLAN_CHANNEL_BANDWIDTH__20;
+      ch->cbw = CHANNEL_BANDWIDTH_CBW20;
       break;
     case BRCMU_CHAN_BW_40:
       switch (ch_inf.sb) {
         case BRCMU_CHAN_SB_U:
-          ch->cbw = WLAN_CHANNEL_BANDWIDTH__40;
+          ch->cbw = CHANNEL_BANDWIDTH_CBW40;
           break;
         case BRCMU_CHAN_SB_L:
-          ch->cbw = WLAN_CHANNEL_BANDWIDTH__40BELOW;
+          ch->cbw = CHANNEL_BANDWIDTH_CBW40BELOW;
           break;
         default:
           ZX_DEBUG_ASSERT(0);

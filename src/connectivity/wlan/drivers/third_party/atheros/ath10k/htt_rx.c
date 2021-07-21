@@ -16,6 +16,7 @@
  */
 
 #include <assert.h>
+#include <fuchsia/wlan/common/c/banjo.h>
 #include <lib/ddk/driver.h>
 #include <lib/ddk/hw/arch_ops.h>
 #include <lib/zircon-internal/fnv1hash.h>
@@ -1339,7 +1340,7 @@ static void ath10k_htt_rx_h_deliver(struct ath10k* ar, list_node_t* amsdu) {
   while ((msdu = list_remove_head_type(amsdu, struct ath10k_msg_buf, listnode)) != NULL) {
     wlan_rx_info_t rx_info = {};
     // TODO(gbonik): fill in channel correctly
-    memcpy(&rx_info.chan, &ar->rx_channel, sizeof(wlan_channel_t));
+    memcpy(&rx_info.channel, &ar->rx_channel, sizeof(wlan_channel_t));
     // TODO(gbonik): fill in rx_info from rx_desc
 
     wlanmac_ifc_recv(&ar->wlanmac, 0, msdu->vaddr + msdu->rx.frame_offset, msdu->rx.frame_size,
@@ -1754,7 +1755,7 @@ static zx_status_t ath10k_htt_rx_in_ord_ind(struct ath10k* ar, struct ath10k_msg
 
     struct htt_rx_desc* rx_desc = ath10k_msg_buf_get_header(msdu, ATH10K_MSG_TYPE_HTT_RX);
     wlan_rx_info_t rx_info = {};
-    memcpy(&rx_info.chan, &ar->rx_channel, sizeof(wlan_channel_t));
+    memcpy(&rx_info.channel, &ar->rx_channel, sizeof(wlan_channel_t));
     // TODO: fill in rx_info from rx_desc
     wlanmac_ifc_recv(&ar->wlanmac, 0, rx_desc->msdu_payload, msdu_len, &rx_info);
     ath10k_msg_buf_free(msdu);

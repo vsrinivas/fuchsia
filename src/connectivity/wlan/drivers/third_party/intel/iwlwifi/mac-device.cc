@@ -4,6 +4,7 @@
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mac-device.h"
 
+#include <fuchsia/wlan/common/c/banjo.h>
 #include <fuchsia/wlan/internal/c/banjo.h>
 #include <zircon/status.h>
 
@@ -30,8 +31,8 @@ zx_status_t MacDevice::WlanmacQueueTx(uint32_t options, wlan_tx_packet_t* pkt) {
   return mac_queue_tx(mvmvif_, options, pkt);
 }
 
-zx_status_t MacDevice::WlanmacSetChannel(uint32_t options, const wlan_channel_t* chan) {
-  return mac_set_channel(mvmvif_, options, chan);
+zx_status_t MacDevice::WlanmacSetChannel(uint32_t options, const wlan_channel_t* channel) {
+  return mac_set_channel(mvmvif_, options, channel);
 }
 
 zx_status_t MacDevice::WlanmacConfigureBss(uint32_t options, const bss_config_t* config) {

@@ -4,6 +4,7 @@
 library fuchsia.hardware.wlan.info;
 
 using ddk.hw.wlan.ieee80211;
+using fuchsia.wlan.common;
 
 // LINT.IfChange
 type WlanKeyType = strict enum : uint8 {
@@ -22,7 +23,7 @@ type WlanSsid = struct {
 // IEEE Std 802.11-2016, 9.4.2.57
 @packed
 type WlanHtOp = struct {
-    primary_chan uint8;
+    primary_channel uint8;
 
     /// First 8 bits of HT Operation:
     /// - Secondary Channel Offset: 2 bits
@@ -59,43 +60,6 @@ type WlanVhtOp = struct {
     center_freq_seg0 uint8;
     center_freq_seg1 uint8;
     basic_mcs uint16;
-};
-
-/// Channel Bandwidth. See IEEE 802.11-2016 21.2.4 Table 21-2
-/// VHT notation
-type WlanChannelBandwidth = strict enum : uint8 {
-    /// Default. Corresponds to SecondaryChannelOffset-None
-    B_20 = 0;
-    B_40 = 1;
-    // Corresponds to SecondaryChannelOffset-Above
-    // TODO(http://fxbug.dev/74579): Clean this up.
-    //B_40ABOVE = 1;
-    /// Corresponds to SecondaryChannelOffset-Below
-    B_40BELOW = 2;
-    B_80 = 3;
-    B_160 = 4;
-    /// Non-contiguous frequency segments
-    B_80P80 = 5;
-};
-
-// Temporarily redeclare above with old names to transition.
-// TODO(http://fxbug.dev/74579): Clean this up.
-const WLAN_CHANNEL_BANDWIDTH__20 uint8 = 0;
-const WLAN_CHANNEL_BANDWIDTH__40 uint8 = 1;
-const WLAN_CHANNEL_BANDWIDTH__40ABOVE uint8 = 1;
-const WLAN_CHANNEL_BANDWIDTH__40BELOW uint8 = 2;
-const WLAN_CHANNEL_BANDWIDTH__80 uint8 = 3;
-const WLAN_CHANNEL_BANDWIDTH__160 uint8 = 4;
-const WLAN_CHANNEL_BANDWIDTH__80P80 uint8 = 5;
-
-type WlanChannel = struct {
-    /// Channel index used for the primary channel
-    primary uint8;
-    /// Channel Bandwidth
-    cbw WlanChannelBandwidth;
-    // Channel index corresponding to the center frequency
-    // of the secondary frequency segment
-    secondary80 uint8;
 };
 
 type WlanRxInfoValid = strict enum : uint32 {
@@ -204,7 +168,7 @@ type WlanAssocCtx = struct {
     aid uint16;
     listen_interval uint16;
     phy WlanPhyType;
-    chan WlanChannel;
+    channel fuchsia.wlan.common.WlanChannel;
 
     /// QoS capable and parameters
     qos bool;
@@ -217,7 +181,7 @@ type WlanAssocCtx = struct {
     rates array<uint8, WLAN_MAC_MAX_RATES>;
 
     /// IEEE Std 802.11-2016, 9.4.1.4
-    cap_info uint16;
+    capability_info uint16;
 
     /// IEEE Std 802.11-2016, 9.4.2.56, 57
     /// Rx MCS Bitmask in Supported MCS Set field represents the set of MCS

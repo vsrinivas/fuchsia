@@ -293,7 +293,7 @@ static zx_status_t mac_ensure_phyctxt_valid(struct iwl_mvm_vif* mvmvif) {
   return ZX_OK;
 }
 
-zx_status_t mac_set_channel(void* ctx, uint32_t options, const wlan_channel_t* chan) {
+zx_status_t mac_set_channel(void* ctx, uint32_t options, const wlan_channel_t* channel) {
   struct iwl_mvm_vif* mvmvif = ctx;
   zx_status_t ret;
 
@@ -304,15 +304,15 @@ zx_status_t mac_set_channel(void* ctx, uint32_t options, const wlan_channel_t* c
     return ret;
   }
 
-  mvmvif->phy_ctxt->chandef = *chan;
+  mvmvif->phy_ctxt->chandef = *channel;
 
-  ret = iwl_mvm_change_chanctx(mvmvif->mvm, mvmvif->phy_ctxt->id, chan);
+  ret = iwl_mvm_change_chanctx(mvmvif->mvm, mvmvif->phy_ctxt->id, channel);
   if (ret != ZX_OK) {
     IWL_ERR(mvmvif, "Cannot change chanctx: %s\n", zx_status_get_string(ret));
     return ret;
   }
 
-  ret = iwl_mvm_assign_vif_chanctx(mvmvif, chan);
+  ret = iwl_mvm_assign_vif_chanctx(mvmvif, channel);
   if (ret != ZX_OK) {
     IWL_ERR(mvmvif, "Cannot assign VIF chanctx: %s\n", zx_status_get_string(ret));
     return ret;

@@ -14,6 +14,8 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include <fuchsia/wlan/common/c/banjo.h>
+
 #include <gtest/gtest.h>
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/brcmu_d11.h"
@@ -39,18 +41,18 @@ TEST(ChannelConversion, ChannelToChanspec) {
   brcmu_chan out_ch;
 
   // Try a simple 20 MHz channel in the 2.4 GHz band
-  in_ch = {.primary = 11, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0};
+  in_ch = {.primary = 11, .cbw = CHANNEL_BANDWIDTH_CBW20, .secondary80 = 0};
   out_ch = {
       .chnum = 11, .band = BRCMU_CHAN_BAND_2G, .bw = BRCMU_CHAN_BW_20, .sb = BRCMU_CHAN_SB_NONE};
   verify_channel_to_chanspec(in_ch, out_ch);
 
   // Try a 40+ MHz channel in the 5 GHz band
-  in_ch = {.primary = 44, .cbw = WLAN_CHANNEL_BANDWIDTH__40, .secondary80 = 0};
+  in_ch = {.primary = 44, .cbw = CHANNEL_BANDWIDTH_CBW40, .secondary80 = 0};
   out_ch = {.chnum = 44, .band = BRCMU_CHAN_BAND_5G, .bw = BRCMU_CHAN_BW_40, .sb = BRCMU_CHAN_SB_U};
   verify_channel_to_chanspec(in_ch, out_ch);
 
   // Try a 40- MHz channel in the 5 GHz band with invalid secondary80 (which should be ignored)
-  in_ch = {.primary = 112, .cbw = WLAN_CHANNEL_BANDWIDTH__40BELOW, .secondary80 = 44};
+  in_ch = {.primary = 112, .cbw = CHANNEL_BANDWIDTH_CBW40BELOW, .secondary80 = 44};
   out_ch = {
       .chnum = 112, .band = BRCMU_CHAN_BAND_5G, .bw = BRCMU_CHAN_BW_40, .sb = BRCMU_CHAN_SB_L};
   verify_channel_to_chanspec(in_ch, out_ch);
@@ -77,17 +79,17 @@ TEST(ChannelConversion, ChanspecToChannel) {
   // Try a simple 20 MHz channel in the 2.4 GHz band
   in_ch = {
       .chnum = 11, .band = BRCMU_CHAN_BAND_2G, .bw = BRCMU_CHAN_BW_20, .sb = BRCMU_CHAN_SB_NONE};
-  out_ch = {.primary = 11, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0};
+  out_ch = {.primary = 11, .cbw = CHANNEL_BANDWIDTH_CBW20, .secondary80 = 0};
   verify_chanspec_to_channel(in_ch, out_ch);
 
   // Try a 40+ MHz channel in the 5 GHz band
   in_ch = {.chnum = 44, .band = BRCMU_CHAN_BAND_5G, .bw = BRCMU_CHAN_BW_40, .sb = BRCMU_CHAN_SB_U};
-  out_ch = {.primary = 44, .cbw = WLAN_CHANNEL_BANDWIDTH__40, .secondary80 = 0};
+  out_ch = {.primary = 44, .cbw = CHANNEL_BANDWIDTH_CBW40, .secondary80 = 0};
   verify_chanspec_to_channel(in_ch, out_ch);
 
   // Try a 40- MHz channel in the 5 GHz band
   in_ch = {.chnum = 112, .band = BRCMU_CHAN_BAND_5G, .bw = BRCMU_CHAN_BW_40, .sb = BRCMU_CHAN_SB_L};
-  out_ch = {.primary = 112, .cbw = WLAN_CHANNEL_BANDWIDTH__40BELOW, .secondary80 = 0};
+  out_ch = {.primary = 112, .cbw = CHANNEL_BANDWIDTH_CBW40BELOW, .secondary80 = 0};
   verify_chanspec_to_channel(in_ch, out_ch);
 };
 

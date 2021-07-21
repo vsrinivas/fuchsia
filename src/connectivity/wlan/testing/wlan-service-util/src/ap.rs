@@ -1,4 +1,4 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -58,10 +58,10 @@ pub async fn start(
         radio_cfg: fidl_sme::RadioConfig {
             override_phy: false,
             phy: fidl_common::Phy::Ht,
-            override_cbw: false,
-            cbw: fidl_common::Cbw::Cbw20,
-            override_primary_chan: true,
-            primary_chan: channel,
+            override_channel_bandwidth: false,
+            channel_bandwidth: fidl_common::ChannelBandwidth::Cbw20,
+            override_primary_channel: true,
+            primary_channel: channel,
         },
     };
     let start_ap_result_code = iface_sme_proxy.start(&mut config).await;
@@ -142,10 +142,10 @@ mod tests {
             radio_cfg: fidl_sme::RadioConfig {
                 override_phy: false,
                 phy: fidl_common::Phy::Ht,
-                override_cbw: false,
-                cbw: fidl_common::Cbw::Cbw20,
-                override_primary_chan: true,
-                primary_chan: channel,
+                override_channel_bandwidth: false,
+                channel_bandwidth: fidl_common::ChannelBandwidth::Cbw20,
+                override_primary_channel: true,
+                primary_channel: channel,
             },
         };
 

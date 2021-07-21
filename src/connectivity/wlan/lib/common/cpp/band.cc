@@ -1,18 +1,20 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/wlan/common/c/banjo.h>
+#include <zircon/assert.h>
+
 #include <wlan/common/band.h>
 #include <wlan/common/channel.h>
-#include <zircon/assert.h>
 
 namespace wlan {
 namespace common {
 
 namespace wlan_common = ::fuchsia::wlan::common;
 
-wlan_info_band_t GetBand(const wlan_channel_t& chan) {
-  return Is2Ghz(chan) ? WLAN_INFO_BAND_2GHZ : WLAN_INFO_BAND_5GHZ;
+wlan_info_band_t GetBand(const wlan_channel_t& channel) {
+  return Is2Ghz(channel) ? WLAN_INFO_BAND_2GHZ : WLAN_INFO_BAND_5GHZ;
 }
 
 std::string BandStr(uint8_t band) {
@@ -31,7 +33,7 @@ std::string BandStr(uint8_t band) {
 
 std::string BandStr(wlan_info_band_t band) { return BandStr(static_cast<uint8_t>(band)); }
 
-std::string BandStr(const wlan_channel_t& chan) { return BandStr(GetBand(chan)); }
+std::string BandStr(const wlan_channel_t& channel) { return BandStr(GetBand(channel)); }
 
 wlan_common::Band BandToFidl(uint8_t band) {
   return BandToFidl(static_cast<wlan_info_band_t>(band));

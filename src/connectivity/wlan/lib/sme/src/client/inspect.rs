@@ -1,4 +1,4 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -264,8 +264,12 @@ impl BssInfoNode {
             .wmm_param
             .as_ref()
             .map(|p| BssWmmParamNode::new(node.create_child("wmm_param"), &p));
-        let ht_cap = bss_info.ht_cap.map(|cap| node.create_bytes("ht_cap", cap.bytes));
-        let vht_cap = bss_info.vht_cap.map(|cap| node.create_bytes("vht_cap", cap.bytes));
+        let ht_cap = bss_info
+            .ht_cap
+            .map(|capability_info| node.create_bytes("ht_cap", capability_info.bytes));
+        let vht_cap = bss_info
+            .vht_cap
+            .map(|capability_info| node.create_bytes("vht_cap", capability_info.bytes));
 
         let mut this = Self {
             node,
@@ -362,14 +366,14 @@ pub struct ChannelNode {
 }
 
 impl ChannelNode {
-    pub fn new(node: Node, channel: fidl_common::WlanChan) -> Self {
+    pub fn new(node: Node, channel: fidl_common::WlanChannel) -> Self {
         let primary = node.create_uint("primary", channel.primary as u64);
         let cbw = node.create_string("cbw", format!("{:?}", channel.cbw));
         let secondary80 = node.create_uint("secondary80", channel.secondary80 as u64);
         Self { _node: node, primary, cbw, secondary80 }
     }
 
-    pub fn update(&mut self, channel: fidl_common::WlanChan) {
+    pub fn update(&mut self, channel: fidl_common::WlanChannel) {
         self.primary.set(channel.primary as u64);
         self.cbw.set(&format!("{:?}", channel.cbw));
         self.secondary80.set(channel.secondary80 as u64);

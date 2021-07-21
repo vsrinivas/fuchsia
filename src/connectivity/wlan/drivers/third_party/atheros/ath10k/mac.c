@@ -17,6 +17,7 @@
 
 #include "mac.h"
 
+#include <fuchsia/wlan/common/c/banjo.h>
 #include <fuchsia/wlan/internal/c/banjo.h>
 #include <stdlib.h>
 #include <zircon/status.h>
@@ -1420,22 +1421,22 @@ static inline zx_status_t set_center_freq_and_phymode(const wlan_channel_t* chan
                                                       enum wmi_phy_mode* ptr_phymode) {
   uint8_t primary_chan = chandef->primary;
   wlan_info_band_t band = chan_to_band(primary_chan);
-  wlan_channel_bandwidth_t cbw = chandef->cbw;
+  channel_bandwidth_t cbw = chandef->cbw;
   uint16_t new_center_freq = 0;
   enum wmi_phy_mode phymode = MODE_UNKNOWN;
 
   switch (band) {
     case WLAN_INFO_BAND_2GHZ:
       switch (cbw) {
-        case WLAN_CHANNEL_BANDWIDTH__20:
+        case CHANNEL_BANDWIDTH_CBW20:
           new_center_freq = center_freq->cbw20;
           phymode = MODE_11NG_HT20;
           break;
-        case WLAN_CHANNEL_BANDWIDTH__40ABOVE:
+        case CHANNEL_BANDWIDTH_CBW40:
           new_center_freq = center_freq->cbw40_above;
           phymode = MODE_11NG_HT40;
           break;
-        case WLAN_CHANNEL_BANDWIDTH__40BELOW:
+        case CHANNEL_BANDWIDTH_CBW40BELOW:
           new_center_freq = center_freq->cbw40_below;
           phymode = MODE_11NG_HT40;
           break;
@@ -1447,27 +1448,27 @@ static inline zx_status_t set_center_freq_and_phymode(const wlan_channel_t* chan
 
     case WLAN_INFO_BAND_5GHZ:
       switch (cbw) {
-        case WLAN_CHANNEL_BANDWIDTH__20:
+        case CHANNEL_BANDWIDTH_CBW20:
           new_center_freq = center_freq->cbw20;
           phymode = MODE_11NA_HT20;
           break;
-        case WLAN_CHANNEL_BANDWIDTH__40ABOVE:
+        case CHANNEL_BANDWIDTH_CBW40:
           new_center_freq = center_freq->cbw40_above;
           phymode = MODE_11NA_HT40;
           break;
-        case WLAN_CHANNEL_BANDWIDTH__40BELOW:
+        case CHANNEL_BANDWIDTH_CBW40BELOW:
           new_center_freq = center_freq->cbw40_below;
           phymode = MODE_11NA_HT40;
           break;
-        case WLAN_CHANNEL_BANDWIDTH__80:
+        case CHANNEL_BANDWIDTH_CBW80:
           new_center_freq = center_freq->cbw80;
           phymode = MODE_11AC_VHT80;
           break;
-        case WLAN_CHANNEL_BANDWIDTH__160:
+        case CHANNEL_BANDWIDTH_CBW160:
           new_center_freq = center_freq->cbw160;
           phymode = MODE_11AC_VHT160;
           break;
-        case WLAN_CHANNEL_BANDWIDTH__80P80:
+        case CHANNEL_BANDWIDTH_CBW80P80:
           // TODO(fxbug.dev/29457): Returns 2 center freqs.
           return ZX_ERR_NOT_SUPPORTED;
         default:
@@ -1484,13 +1485,13 @@ static inline zx_status_t set_center_freq_and_phymode(const wlan_channel_t* chan
   // Check for unsupported channel + CBW combinations
   if (new_center_freq == 0) {
     ath10k_err("unsupported channel/CBW combination (%d @ %s MHz)\n", primary_chan,
-               cbw == WLAN_CHANNEL_BANDWIDTH__20        ? "20"
-               : cbw == WLAN_CHANNEL_BANDWIDTH__40ABOVE ? "40+"
-               : cbw == WLAN_CHANNEL_BANDWIDTH__40BELOW ? "40-"
-               : cbw == WLAN_CHANNEL_BANDWIDTH__80      ? "80"
-               : cbw == WLAN_CHANNEL_BANDWIDTH__160     ? "160"
-               : cbw == WLAN_CHANNEL_BANDWIDTH__80P80   ? "80 + 80"
-                                                        : "unrecognized");
+               cbw == CHANNEL_BANDWIDTH_CBW20        ? "20"
+               : cbw == CHANNEL_BANDWIDTH_CBW40      ? "40+"
+               : cbw == CHANNEL_BANDWIDTH_CBW40BELOW ? "40-"
+               : cbw == CHANNEL_BANDWIDTH_CBW80      ? "80"
+               : cbw == CHANNEL_BANDWIDTH_CBW160     ? "160"
+               : cbw == CHANNEL_BANDWIDTH_CBW80P80   ? "80 + 80"
+                                                     : "unrecognized");
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -1517,7 +1518,7 @@ static zx_status_t ath10k_vdev_start_restart(struct ath10k_vif* arvif,
   }
 
   const struct ath10k_channel* secondary_chan;
-  if (chandef->cbw == WLAN_CHANNEL_BANDWIDTH__80P80) {
+  if (chandef->cbw == CHANNEL_BANDWIDTH_CBW80P80) {
     status = ath10k_lookup_chan(chandef->secondary80, &secondary_chan);
 
     if (status != ZX_OK) {
@@ -2298,7 +2299,7 @@ static void ath10k_peer_assoc_h_basic(struct ath10k* ar, const wlan_assoc_ctx_t*
   arg->peer_flags |= arvif->ar->wmi.peer_flags->auth;
   arg->peer_listen_intval = ath10k_peer_assoc_h_listen_intval(ar, assoc);
   arg->peer_num_spatial_streams = 1;
-  arg->peer_caps = assoc->cap_info;
+  arg->peer_caps = assoc->capability_info;
 }
 
 static void ath10k_peer_assoc_h_crypto(struct ath10k* ar, const wlan_assoc_ctx_t* assoc,
@@ -2585,7 +2586,7 @@ static void ath10k_peer_assoc_h_vht(struct ath10k* ar, const wlan_assoc_ctx_t* a
 
   arg->peer_flags |= ar->wmi.peer_flags->vht;
 
-  wlan_info_band_t band = chan_to_band(assoc->chan.primary);
+  wlan_info_band_t band = chan_to_band(assoc->channel.primary);
   if (band == WLAN_INFO_BAND_2GHZ) {
     arg->peer_flags |= ar->wmi.peer_flags->vht_2g;
   }
@@ -2603,15 +2604,15 @@ static void ath10k_peer_assoc_h_vht(struct ath10k* ar, const wlan_assoc_ctx_t* a
   arg->peer_max_mpdu =
       MAX(arg->peer_max_mpdu, (1U << (IEEE80211_HT_MAX_AMPDU_FACTOR + ampdu_factor)) - 1);
 
-  if (assoc->chan.cbw == WLAN_CHANNEL_BANDWIDTH__80) {
+  if (assoc->channel.cbw == CHANNEL_BANDWIDTH_CBW80) {
     arg->peer_flags |= ar->wmi.peer_flags->bw80;
   }
 
-  if (assoc->chan.cbw == WLAN_CHANNEL_BANDWIDTH__160) {
+  if (assoc->channel.cbw == CHANNEL_BANDWIDTH_CBW160) {
     arg->peer_flags |= ar->wmi.peer_flags->bw160;
   }
 
-  ZX_ASSERT(assoc->chan.cbw != WLAN_CHANNEL_BANDWIDTH__80P80);
+  ZX_ASSERT(assoc->channel.cbw != CHANNEL_BANDWIDTH_CBW80P80);
 
   /* Calculate peer NSS capability from VHT capabilities if STA
    * supports VHT.
@@ -2676,16 +2677,16 @@ static void ath10k_peer_assoc_h_qos(struct ath10k* ar, const wlan_assoc_ctx_t* a
              !!(arg->peer_flags & arvif->ar->wmi.peer_flags->qos));
 }
 
-static enum wmi_phy_mode ath10k_mac_get_phymode_vht(wlan_channel_bandwidth_t cbw) {
-  if (cbw == WLAN_CHANNEL_BANDWIDTH__160) {
+static enum wmi_phy_mode ath10k_mac_get_phymode_vht(channel_bandwidth_t cbw) {
+  if (cbw == CHANNEL_BANDWIDTH_CBW160) {
     return MODE_11AC_VHT160;
-  } else if (cbw == WLAN_CHANNEL_BANDWIDTH__80P80) {
+  } else if (cbw == CHANNEL_BANDWIDTH_CBW80P80) {
     return MODE_11AC_VHT80_80;
-  } else if (cbw == WLAN_CHANNEL_BANDWIDTH__80) {
+  } else if (cbw == CHANNEL_BANDWIDTH_CBW80) {
     return MODE_11AC_VHT80;
-  } else if (cbw == WLAN_CHANNEL_BANDWIDTH__40ABOVE || cbw == WLAN_CHANNEL_BANDWIDTH__40BELOW) {
+  } else if (cbw == CHANNEL_BANDWIDTH_CBW40 || cbw == CHANNEL_BANDWIDTH_CBW40BELOW) {
     return MODE_11AC_VHT40;
-  } else if (cbw == WLAN_CHANNEL_BANDWIDTH__20) {
+  } else if (cbw == CHANNEL_BANDWIDTH_CBW20) {
     return MODE_11AC_VHT20;
   }
   return MODE_UNKNOWN;
@@ -2693,21 +2694,21 @@ static enum wmi_phy_mode ath10k_mac_get_phymode_vht(wlan_channel_bandwidth_t cbw
 
 static enum wmi_phy_mode ath10k_peer_assoc_h_phymode(const wlan_assoc_ctx_t* assoc) {
   enum wmi_phy_mode phymode = MODE_UNKNOWN;
-  wlan_info_band_t band = chan_to_band(assoc->chan.primary);
-  wlan_channel_bandwidth_t cbw = assoc->chan.cbw;
+  wlan_info_band_t band = chan_to_band(assoc->channel.primary);
+  channel_bandwidth_t cbw = assoc->channel.cbw;
 
   COND_WARN(__builtin_popcount(assoc->phy) != 1);  // Assume only one bit asserted.
 
   switch (band) {
     case WLAN_INFO_BAND_2GHZ:
       if ((assoc->phy == WLAN_INFO_PHY_TYPE_VHT) && assoc->has_vht_cap) {
-        if (cbw == WLAN_CHANNEL_BANDWIDTH__40ABOVE || cbw == WLAN_CHANNEL_BANDWIDTH__40BELOW) {
+        if (cbw == CHANNEL_BANDWIDTH_CBW40 || cbw == CHANNEL_BANDWIDTH_CBW40BELOW) {
           phymode = MODE_11AC_VHT40;
         } else {
           phymode = MODE_11AC_VHT20;
         }
       } else if ((assoc->phy == WLAN_INFO_PHY_TYPE_HT) && assoc->has_ht_cap) {
-        if (cbw == WLAN_CHANNEL_BANDWIDTH__40ABOVE || cbw == WLAN_CHANNEL_BANDWIDTH__40BELOW) {
+        if (cbw == CHANNEL_BANDWIDTH_CBW40 || cbw == CHANNEL_BANDWIDTH_CBW40BELOW) {
           phymode = MODE_11NG_HT40;
         } else {
           phymode = MODE_11NG_HT20;
@@ -2724,9 +2725,9 @@ static enum wmi_phy_mode ath10k_peer_assoc_h_phymode(const wlan_assoc_ctx_t* ass
        * Check VHT first.
        */
       if ((assoc->phy == WLAN_INFO_PHY_TYPE_VHT) && assoc->has_vht_cap) {
-        phymode = ath10k_mac_get_phymode_vht(assoc->chan.cbw);
+        phymode = ath10k_mac_get_phymode_vht(assoc->channel.cbw);
       } else if ((assoc->phy == WLAN_INFO_PHY_TYPE_HT) && assoc->has_ht_cap) {
-        if (cbw == WLAN_CHANNEL_BANDWIDTH__40ABOVE || cbw == WLAN_CHANNEL_BANDWIDTH__40BELOW) {
+        if (cbw == CHANNEL_BANDWIDTH_CBW40 || cbw == CHANNEL_BANDWIDTH_CBW40BELOW) {
           phymode = MODE_11NA_HT40;
         } else {
           phymode = MODE_11NA_HT20;
@@ -7400,13 +7401,14 @@ unlock:
 // want to support continued association transferring to a new channel (likely
 // ath10k_mac_update_vif_channel). Upon successful completion, we will be in a started,
 // but not up, state.
-zx_status_t ath10k_mac_assign_vif_chanctx(struct ath10k* ar, const wlan_channel_t* chan) {
+zx_status_t ath10k_mac_assign_vif_chanctx(struct ath10k* ar, const wlan_channel_t* channel) {
   struct ath10k_vif* arvif = &ar->arvif;
   zx_status_t ret;
 
   mtx_lock(&ar->conf_mutex);
 
-  ath10k_dbg(ar, ATH10K_DBG_MAC, "mac chanctx assign ptr %pK vdev_id %i\n", chan, arvif->vdev_id);
+  ath10k_dbg(ar, ATH10K_DBG_MAC, "mac chanctx assign ptr %pK vdev_id %i\n", channel,
+             arvif->vdev_id);
 
   if (arvif->is_started) {
     if (arvif->is_up) {
@@ -7416,17 +7418,17 @@ zx_status_t ath10k_mac_assign_vif_chanctx(struct ath10k* ar, const wlan_channel_
                     zx_status_get_string(ret));
       }
     }
-    ret = ath10k_vdev_restart(arvif, chan);
+    ret = ath10k_vdev_restart(arvif, channel);
   } else {
-    ret = ath10k_vdev_start(arvif, chan);
+    ret = ath10k_vdev_start(arvif, channel);
   }
 
   if (ret != ZX_OK) {
-    if (chan->cbw == WLAN_CHANNEL_BANDWIDTH__80P80) {
+    if (channel->cbw == CHANNEL_BANDWIDTH_CBW80P80) {
       ath10k_warn("failed to start vdev %i on channels %d + %d: %s\n", arvif->vdev_id,
-                  chan->primary, chan->secondary80, zx_status_get_string(ret));
+                  channel->primary, channel->secondary80, zx_status_get_string(ret));
     } else {
-      ath10k_warn("failed to start vdev %i on channel %d: %s\n", arvif->vdev_id, chan->primary,
+      ath10k_warn("failed to start vdev %i on channel %d: %s\n", arvif->vdev_id, channel->primary,
                   zx_status_get_string(ret));
     }
     goto err;

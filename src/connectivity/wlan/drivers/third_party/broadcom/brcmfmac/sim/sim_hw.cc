@@ -16,6 +16,8 @@
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/sim_hw.h"
 
+#include <fuchsia/wlan/common/c/banjo.h>
+
 #include <cstring>
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/brcm_hw_ids.h"

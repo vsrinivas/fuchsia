@@ -1,8 +1,9 @@
-// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/wlanif/c/banjo.h>
+#include <fuchsia/wlan/common/c/banjo.h>
 #include <lib/inspect/cpp/hierarchy.h>
 #include <lib/inspect/cpp/inspect.h>
 
@@ -20,7 +21,7 @@ namespace wlan::brcmfmac {
 using ::testing::NotNull;
 
 constexpr wlan_channel_t kDefaultChannel = {
-    .primary = 9, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0};
+    .primary = 9, .cbw = CHANNEL_BANDWIDTH_CBW20, .secondary80 = 0};
 const common::MacAddr kDefaultBssid({0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc});
 constexpr wlan_ssid_t kDefaultSsid = {.len = 15, .ssid = "Fuchsia Fake AP"};
 
@@ -79,8 +80,8 @@ void CrashRecoveryTest::VerifyScanResult(const uint64_t scan_id, size_t min_resu
                                          wlan_scan_result_t expect_code) {
   EXPECT_GE(client_ifc_.ScanResultBssList(scan_id)->size(), min_result_num);
 
-  wlanif_bss_description_t result_bss_des = client_ifc_.ScanResultBssList(scan_id)->back();
-  auto ssid = brcmf_find_ssid_in_ies(result_bss_des.ies_bytes_list, result_bss_des.ies_bytes_count);
+  bss_description_t result_bss_des = client_ifc_.ScanResultBssList(scan_id)->back();
+  auto ssid = brcmf_find_ssid_in_ies(result_bss_des.ies_list, result_bss_des.ies_count);
   common::MacAddr res_bssid(result_bss_des.bssid);
 
   EXPECT_EQ(res_bssid, kDefaultBssid);

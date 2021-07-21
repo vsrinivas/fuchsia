@@ -1,11 +1,10 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 use {
     crate::{create_rx_info, send_beacon},
-    fidl_fuchsia_wlan_common::{Cbw, WlanChan},
-    fidl_fuchsia_wlan_tap as wlantap,
+    fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_tap as wlantap,
     std::collections::hash_map::HashMap,
     wlan_common::{
         bss::Protection,
@@ -59,9 +58,9 @@ impl<'a, T> Action<T> for Sequence<'a, T> {
 }
 
 /// MatchChannel provides functions to register dispatches to different actions based on the
-/// WlanChan found in SetChannelArgs, as well as a fallthrough case.
+/// WlanChannel found in SetChannelArgs, as well as a fallthrough case.
 pub struct MatchChannel<'a> {
-    actions: HashMap<WlanChan, Box<dyn Action<wlantap::SetChannelArgs> + 'a>>,
+    actions: HashMap<fidl_common::WlanChannel, Box<dyn Action<wlantap::SetChannelArgs> + 'a>>,
     fallthrough_action: Box<dyn Action<wlantap::SetChannelArgs> + 'a>,
 }
 
@@ -73,7 +72,7 @@ impl<'a> MatchChannel<'a> {
     /// Registers an action for a channel.
     pub fn on_channel(
         mut self,
-        channel: WlanChan,
+        channel: fidl_common::WlanChannel,
         action: impl Action<wlantap::SetChannelArgs> + 'a,
     ) -> Self {
         self.actions.insert(channel, Box::new(action));
@@ -86,7 +85,14 @@ impl<'a> MatchChannel<'a> {
         primary: u8,
         action: impl Action<wlantap::SetChannelArgs> + 'a,
     ) -> Self {
-        self.on_channel(WlanChan { primary: primary, cbw: Cbw::Cbw20, secondary80: 0 }, action)
+        self.on_channel(
+            fidl_common::WlanChannel {
+                primary: primary,
+                cbw: fidl_common::ChannelBandwidth::Cbw20,
+                secondary80: 0,
+            },
+            action,
+        )
     }
 
     /// Registers a fallthrough action if none of the registered channels match.
@@ -98,7 +104,7 @@ impl<'a> MatchChannel<'a> {
 
 impl<'a> Action<wlantap::SetChannelArgs> for MatchChannel<'a> {
     fn run(&mut self, args: &wlantap::SetChannelArgs) {
-        if let Some(action) = self.actions.get_mut(&args.chan) {
+        if let Some(action) = self.actions.get_mut(&args.channel) {
             action.run(&args)
         } else {
             self.fallthrough_action.run(&args)
@@ -148,9 +154,9 @@ impl<'a> Beacon<'a> {
 
 impl<'a> Action<wlantap::SetChannelArgs> for Beacon<'a> {
     fn run(&mut self, args: &wlantap::SetChannelArgs) {
-        if args.chan.primary == self.primary_channel {
+        if args.channel.primary == self.primary_channel {
             send_beacon(
-                &args.chan,
+                &args.channel,
                 &self.bssid,
                 &self.ssid,
                 &self.protection,
@@ -224,11 +230,11 @@ impl<'a> Action<wlantap::TxArgs> for MatchTx<'a> {
 /// Rx forwards packets to the Rx queue of a device.
 pub struct Rx<'a> {
     proxy: &'a wlantap::WlantapPhyProxy,
-    channel: WlanChan,
+    channel: fidl_common::WlanChannel,
 }
 
 impl<'a> Rx<'a> {
-    pub fn send(proxy: &'a wlantap::WlantapPhyProxy, channel: WlanChan) -> Self {
+    pub fn send(proxy: &'a wlantap::WlantapPhyProxy, channel: fidl_common::WlanChannel) -> Self {
         Self { proxy, channel }
     }
 }

@@ -1,4 +1,4 @@
-// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -6,6 +6,7 @@
 #define SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_CHANNEL_H_
 
 #include <fuchsia/hardware/wlan/info/c/banjo.h>
+#include <fuchsia/wlan/common/c/banjo.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 
 #include <cstdint>
@@ -33,23 +34,23 @@ constexpr Mhz kBaseFreq5Ghz = 5000;
 // TODO(porce): Replace all channel > 14 test throughout the codes
 bool Is5Ghz(uint8_t channel_number);
 bool Is2Ghz(uint8_t channel_number);
-bool Is5Ghz(const wlan_channel_t& chan);
-bool Is2Ghz(const wlan_channel_t& chan);
+bool Is5Ghz(const wlan_channel_t& channel);
+bool Is2Ghz(const wlan_channel_t& channel);
 
-bool IsValidChan2Ghz(const wlan_channel_t& chan);
-bool IsValidChan5Ghz(const wlan_channel_t& chan);
-bool IsValidChan(const wlan_channel_t& chan);
+bool IsValidChan2Ghz(const wlan_channel_t& channel);
+bool IsValidChan5Ghz(const wlan_channel_t& channel);
+bool IsValidChan(const wlan_channel_t& channel);
 
-Mhz GetCenterFreq(const wlan_channel_t& chan);
-uint8_t GetCenterChanIdx(const wlan_channel_t& chan);
+Mhz GetCenterFreq(const wlan_channel_t& channel);
+uint8_t GetCenterChanIdx(const wlan_channel_t& channel);
 
-std::string ChanStr(const wlan_channel_t& chan);
-std::string ChanStrLong(const wlan_channel_t& chan);
+std::string ChanStr(const wlan_channel_t& channel);
+std::string ChanStrLong(const wlan_channel_t& channel);
 
 std::string GetPhyStr(wlan_info_phy_type_t phy);
 
 struct Channel {
-  wlan_channel_t chan;
+  wlan_channel_t channel;
   // TODO(porce): Validation
   // TODO(porce): Notation string.
   // TODO(porce): Center frequencies.
@@ -57,14 +58,14 @@ struct Channel {
   // See IEEE Std 802.11-2016 19.3.15
 };
 
-wlan_channel_t FromFidl(const ::fuchsia::wlan::common::WlanChan& fidl_chan);
-::fuchsia::wlan::common::WlanChan ToFidl(const wlan_channel_t& chan);
+wlan_channel_t FromFidl(const ::fuchsia::wlan::common::WlanChannel& fidl_channel);
+::fuchsia::wlan::common::WlanChannel ToFidl(const wlan_channel_t& channel);
 
 wlan_info_phy_type_t FromFidl(::fuchsia::wlan::common::PHY phy);
 ::fuchsia::wlan::common::PHY ToFidl(wlan_info_phy_type_t phy);
 
-const char* CbwSuffix(wlan_channel_bandwidth_t cbw);
-const char* CbwStr(wlan_channel_bandwidth_t cbw);
+const char* CbwSuffix(channel_bandwidth_t cbw);
+const char* CbwStr(channel_bandwidth_t cbw);
 
 }  // namespace common
 }  // namespace wlan

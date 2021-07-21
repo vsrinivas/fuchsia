@@ -75,8 +75,8 @@ pub struct BssCreator {
     pub beacon_period: u16,
     pub timestamp: u64,
     pub local_time: u64,
-    pub cap: u16,
-    pub chan: fidl_fuchsia_wlan_common::WlanChan,
+    pub capability_info: u16,
+    pub channel: fidl_fuchsia_wlan_common::WlanChannel,
     pub rssi_dbm: i8,
     pub snr_db: i8,
 
@@ -128,8 +128,8 @@ impl BssCreator {
             beacon_period: self.beacon_period,
             timestamp: self.timestamp,
             local_time: self.local_time,
-            cap: self.cap,
-            chan: self.chan,
+            capability_info: self.capability_info,
+            channel: self.channel,
             rssi_dbm: self.rssi_dbm,
             snr_db: self.snr_db,
             ies: ies_updater.finalize(),
@@ -213,11 +213,15 @@ pub fn build_fake_bss_creator__(protection_cfg: FakeProtectionCfg) -> BssCreator
         beacon_period: 100,
         timestamp: 0,
         local_time: 0,
-        chan: fidl_common::WlanChan { primary: 3, secondary80: 0, cbw: fidl_common::Cbw::Cbw40 },
+        channel: fidl_common::WlanChannel {
+            primary: 3,
+            secondary80: 0,
+            cbw: fidl_common::ChannelBandwidth::Cbw40,
+        },
         rssi_dbm: 0,
         snr_db: 0,
 
-        cap: mac::CapabilityInfo(0)
+        capability_info: mac::CapabilityInfo(0)
             .with_privacy(match protection_cfg {
                 FakeProtectionCfg::Open => false,
                 _ => true,

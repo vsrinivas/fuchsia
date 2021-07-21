@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/wlanif/c/banjo.h>
+#include <fuchsia/wlan/common/c/banjo.h>
 #include <fuchsia/wlan/ieee80211/cpp/fidl.h>
 #include <fuchsia/wlan/internal/c/banjo.h>
 #include <fuchsia/wlan/stats/cpp/fidl.h>
@@ -31,7 +32,7 @@ using ::testing::SizeIs;
 
 // Some default AP and association request values
 constexpr wlan_channel_t kDefaultChannel = {
-    .primary = 9, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0};
+    .primary = 9, .cbw = CHANNEL_BANDWIDTH_CBW20, .secondary80 = 0};
 constexpr wlan_ssid_t kDefaultSsid = {.len = 15, .ssid = "Fuchsia Fake AP"};
 const uint8_t kIes[] = {
     // SSID
@@ -426,9 +427,9 @@ void AssocTest::StartAssoc() {
   // Send join request
   wlanif_join_req join_req = {};
   std::memcpy(join_req.selected_bss.bssid, context_.bssid.byte, ETH_ALEN);
-  join_req.selected_bss.ies_bytes_list = context_.ies.data();
-  join_req.selected_bss.ies_bytes_count = context_.ies.size();
-  join_req.selected_bss.chan = context_.tx_info.channel;
+  join_req.selected_bss.ies_list = context_.ies.data();
+  join_req.selected_bss.ies_count = context_.ies.size();
+  join_req.selected_bss.channel = context_.tx_info.channel;
   client_ifc_.if_impl_ops_->join_req(client_ifc_.if_impl_ctx_, &join_req);
 }
 
@@ -662,7 +663,7 @@ TEST_F(AssocTest, NoAps) {
   context_.bssid = kBssid;
   context_.expected_results.push_front(WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
   context_.ssid = {.len = 6, .ssid = "TestAP"};
-  context_.tx_info.channel = {.primary = 9, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0};
+  context_.tx_info.channel = {.primary = 9, .cbw = CHANNEL_BANDWIDTH_CBW20, .secondary80 = 0};
 
   env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
 
@@ -717,7 +718,7 @@ TEST_F(AssocTest, WrongIds) {
   Init();
 
   constexpr wlan_channel_t kWrongChannel = {
-      .primary = 8, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0};
+      .primary = 8, .cbw = CHANNEL_BANDWIDTH_CBW20, .secondary80 = 0};
   ASSERT_NE(kDefaultChannel.primary, kWrongChannel.primary);
   constexpr wlan_ssid_t kWrongSsid = {.len = 14, .ssid = "Fuchsia Fake AP"};
   ASSERT_NE(kDefaultSsid.len, kWrongSsid.len);

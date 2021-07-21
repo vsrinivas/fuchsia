@@ -1,4 +1,4 @@
-// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -4970,9 +4970,9 @@ mod tests {
                     compatible: true,
                     observed_in_passive_scan: false,
                     snr_db: 20,
-                    channel: fidl_fuchsia_wlan_common::WlanChan {
+                    channel: fidl_fuchsia_wlan_common::WlanChannel {
                         primary: 8,
-                        cbw: fidl_fuchsia_wlan_common::Cbw::Cbw20,
+                        cbw: fidl_fuchsia_wlan_common::ChannelBandwidth::Cbw20,
                         secondary80: 0,
                     },
                     bss_desc: fake_fidl_bss!(Open, bssid: [20, 30, 40, 50, 60, 70]),
@@ -5089,9 +5089,9 @@ mod tests {
                     compatible: true,
                     observed_in_passive_scan: false,
                     snr_db: 20,
-                    channel: fidl_fuchsia_wlan_common::WlanChan {
+                    channel: fidl_fuchsia_wlan_common::WlanChannel {
                         primary: 8,
-                        cbw: fidl_fuchsia_wlan_common::Cbw::Cbw20,
+                        cbw: fidl_fuchsia_wlan_common::ChannelBandwidth::Cbw20,
                         secondary80: 0,
                     },
                     bss_desc: fake_fidl_bss!(Open, bssid: [20, 30, 40, 50, 60, 70]),

@@ -294,15 +294,15 @@ fn get_channels_to_scan(device_info: &DeviceInfo, scan_request: &fidl_sme::ScanR
 
     SUPPORTED_CHANNELS
         .iter()
-        .filter(|chan| device_supported_channels.contains(chan))
-        .filter(|chan| {
+        .filter(|channel| device_supported_channels.contains(channel))
+        .filter(|channel| {
             if let &fidl_sme::ScanRequest::Passive(_) = scan_request {
                 return true;
             };
             if supports_dfs {
                 return true;
             };
-            !Channel::new(**chan, Cbw::Cbw20).is_dfs()
+            !Channel::new(**channel, Cbw::Cbw20).is_dfs()
         })
         .filter(|chan| {
             // If this is an active scan and there are any channels specified by the caller,
@@ -506,7 +506,7 @@ mod tests {
 
     #[test]
     fn test_active_discovery_scan_args_empty() {
-        let device_info = device_info_with_chan(vec![1, 36, 165]);
+        let device_info = device_info_with_channel(vec![1, 36, 165]);
         let mut sched: ScanScheduler<i32> = ScanScheduler::new(Arc::new(device_info));
         let scan_cmd = DiscoveryScan::new(
             10,
@@ -525,7 +525,7 @@ mod tests {
 
     #[test]
     fn test_active_discovery_scan_args_filled() {
-        let device_info = device_info_with_chan(vec![1, 36, 165]);
+        let device_info = device_info_with_channel(vec![1, 36, 165]);
         let mut sched: ScanScheduler<i32> = ScanScheduler::new(Arc::new(device_info));
         let ssid1 = "ssid1".as_bytes().to_vec();
         let ssid2 = "ssid2".as_bytes().to_vec();
@@ -701,7 +701,7 @@ mod tests {
         ScanScheduler::new(Arc::new(test_utils::fake_device_info(CLIENT_ADDR)))
     }
 
-    fn device_info_with_chan(channels: Vec<u8>) -> DeviceInfo {
+    fn device_info_with_channel(channels: Vec<u8>) -> DeviceInfo {
         DeviceInfo {
             bands: vec![fidl_mlme::BandCapabilities {
                 channels,

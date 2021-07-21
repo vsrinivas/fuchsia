@@ -1,4 +1,4 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -13,7 +13,7 @@ namespace common {
 
 void WriteSsid(BufferWriter* w, fbl::Span<const uint8_t> ssid);
 void WriteSupportedRates(BufferWriter* w, fbl::Span<const SupportedRate> supported_rates);
-void WriteDsssParamSet(BufferWriter* w, uint8_t current_chan);
+void WriteDsssParamSet(BufferWriter* w, uint8_t current_channel);
 void WriteCfParamSet(BufferWriter* w, CfParamSet param_set);
 void WriteTim(BufferWriter* w, TimHeader header, fbl::Span<const uint8_t> bitmap);
 void WriteCountry(BufferWriter* w, Country country, fbl::Span<SubbandTriplet> triplets);

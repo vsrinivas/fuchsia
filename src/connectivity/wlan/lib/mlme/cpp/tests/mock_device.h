@@ -5,6 +5,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_TESTS_MOCK_DEVICE_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_TESTS_MOCK_DEVICE_H_
 
+#include <fuchsia/wlan/common/c/banjo.h>
 #include <fuchsia/wlan/internal/c/banjo.h>
 #include <fuchsia/wlan/minstrel/cpp/fidl.h>
 #include <lib/timekeeper/test_clock.h>
@@ -32,7 +33,7 @@ namespace {
 
 struct WlanPacket {
   std::unique_ptr<Packet> pkt;
-  wlan_channel_bandwidth_t cbw;
+  channel_bandwidth_t cbw;
   wlan_info_phy_type_t phy;
   uint32_t flags;
 };
@@ -97,7 +98,7 @@ struct MockDevice : public DeviceInterface {
     wlanmac_info.caps = 0;
     state->set_channel({
         .primary = 1,
-        .cbw = WLAN_CHANNEL_BANDWIDTH__20,
+        .cbw = CHANNEL_BANDWIDTH_CBW20,
     });
   }
 
@@ -133,8 +134,8 @@ struct MockDevice : public DeviceInterface {
     return ZX_OK;
   }
 
-  zx_status_t SetChannel(wlan_channel_t chan) final {
-    state->set_channel(chan);
+  zx_status_t SetChannel(wlan_channel_t channel) final {
+    state->set_channel(channel);
     return ZX_OK;
   }
 

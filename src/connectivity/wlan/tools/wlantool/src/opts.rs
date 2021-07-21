@@ -1,4 +1,4 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -62,12 +62,12 @@ impl ::std::convert::From<PhyArg> for wlan_common::Phy {
     }
 }
 
-impl ::std::convert::From<CbwArg> for wlan_common::Cbw {
+impl ::std::convert::From<CbwArg> for wlan_common::ChannelBandwidth {
     fn from(arg: CbwArg) -> Self {
         match arg {
-            CbwArg::Cbw20 => wlan_common::Cbw::Cbw20,
-            CbwArg::Cbw40 => wlan_common::Cbw::Cbw40,
-            CbwArg::Cbw80 => wlan_common::Cbw::Cbw80,
+            CbwArg::Cbw20 => wlan_common::ChannelBandwidth::Cbw20,
+            CbwArg::Cbw40 => wlan_common::ChannelBandwidth::Cbw40,
+            CbwArg::Cbw80 => wlan_common::ChannelBandwidth::Cbw80,
         }
     }
 }

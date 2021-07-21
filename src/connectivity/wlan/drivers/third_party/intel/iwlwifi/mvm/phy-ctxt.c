@@ -45,7 +45,7 @@
 // an entry in firmware. This value usually will be changed later.
 const wlan_channel_t default_channel = {
     .primary = 1,
-    .cbw = WLAN_CHANNEL_BANDWIDTH__20,
+    .cbw = CHANNEL_BANDWIDTH_CBW20,
 };
 
 // Converts channel number to band type.
@@ -62,14 +62,14 @@ wlan_info_band_t iwl_mvm_get_channel_band(uint8_t chan_num) {
 /* Maps the driver specific channel width definition to the fw values */
 uint8_t iwl_mvm_get_channel_width(const wlan_channel_t* chandef) {
   switch (chandef->cbw) {
-    case WLAN_CHANNEL_BANDWIDTH__20:
+    case CHANNEL_BANDWIDTH_CBW20:
       return PHY_VHT_CHANNEL_MODE20;
-    case WLAN_CHANNEL_BANDWIDTH__40ABOVE:
-    case WLAN_CHANNEL_BANDWIDTH__40BELOW:  // fall-thru
+    case CHANNEL_BANDWIDTH_CBW40:
+    case CHANNEL_BANDWIDTH_CBW40BELOW:  // fall-thru
       return PHY_VHT_CHANNEL_MODE40;
-    case WLAN_CHANNEL_BANDWIDTH__80:
+    case CHANNEL_BANDWIDTH_CBW80:
       return PHY_VHT_CHANNEL_MODE80;
-    case WLAN_CHANNEL_BANDWIDTH__160:
+    case CHANNEL_BANDWIDTH_CBW160:
       return PHY_VHT_CHANNEL_MODE160;
     default:
       WARN(1, "Invalid channel width=%u", chandef->width);
@@ -85,10 +85,10 @@ uint8_t iwl_mvm_get_channel_width(const wlan_channel_t* chandef) {
  */
 uint8_t iwl_mvm_get_ctrl_pos(const wlan_channel_t* chandef) {
   uint8_t primary = chandef->primary;
-  wlan_channel_bandwidth_t cbw = chandef->cbw;
+  channel_bandwidth_t cbw = chandef->cbw;
   uint8_t base;
 
-  if (chandef->cbw == WLAN_CHANNEL_BANDWIDTH__20) {
+  if (chandef->cbw == CHANNEL_BANDWIDTH_CBW20) {
     // 20Mhz always uses the default value.
     return PHY_VHT_CTRL_POS_1_BELOW;
   }
@@ -100,14 +100,14 @@ uint8_t iwl_mvm_get_ctrl_pos(const wlan_channel_t* chandef) {
   } else if (100 <= primary && primary <= 128) {
     base = 100;
   } else if (132 <= primary && primary <= 144) {
-    if (cbw == WLAN_CHANNEL_BANDWIDTH__160) {  // This group doesn't support 160MHz primary
-                                               // channels. Use default value.
+    if (cbw == CHANNEL_BANDWIDTH_CBW160) {  // This group doesn't support 160MHz primary
+                                            // channels. Use default value.
       return PHY_VHT_CTRL_POS_1_BELOW;
     }
     base = 132;
   } else if (149 <= primary && primary <= 161) {
-    if (cbw == WLAN_CHANNEL_BANDWIDTH__160) {  // This group doesn't support 160MHz primary
-                                               // channels. Use default value.
+    if (cbw == CHANNEL_BANDWIDTH_CBW160) {  // This group doesn't support 160MHz primary
+                                            // channels. Use default value.
       return PHY_VHT_CTRL_POS_1_BELOW;
     }
     base = 149;
@@ -121,22 +121,22 @@ uint8_t iwl_mvm_get_ctrl_pos(const wlan_channel_t* chandef) {
                                          // # of 1's means the bandwidth.
   bool has_bit2 = offset_to_base & 0x4;  // for HT40+/- checking
   switch (chandef->cbw) {
-    case WLAN_CHANNEL_BANDWIDTH__40ABOVE:  // The secondary channel is above the primary.
-      mask = 0x7;                          // Keep 3 bits.
-      if (has_bit2) {                      // Channel 40, 48, 56 ... doesn't allow HT40+.
+    case CHANNEL_BANDWIDTH_CBW40:  // The secondary channel is above the primary.
+      mask = 0x7;                  // Keep 3 bits.
+      if (has_bit2) {              // Channel 40, 48, 56 ... doesn't allow HT40+.
         return PHY_VHT_CTRL_POS_1_BELOW;
       }
       break;
-    case WLAN_CHANNEL_BANDWIDTH__40BELOW:  // The secondary channel is below the primary.
-      mask = 0x7;                          // Keep 3 bits.
-      if (!has_bit2) {                     // Channel 36, 44, 52 ... doesn't allow HT40-.
+    case CHANNEL_BANDWIDTH_CBW40BELOW:  // The secondary channel is below the primary.
+      mask = 0x7;                       // Keep 3 bits.
+      if (!has_bit2) {                  // Channel 36, 44, 52 ... doesn't allow HT40-.
         return PHY_VHT_CTRL_POS_1_BELOW;
       }
       break;
-    case WLAN_CHANNEL_BANDWIDTH__80:
+    case CHANNEL_BANDWIDTH_CBW80:
       mask = 0xf;  // Keep 4 bits.
       break;
-    case WLAN_CHANNEL_BANDWIDTH__160:
+    case CHANNEL_BANDWIDTH_CBW160:
       mask = 0x1f;  // Keep 5 bits.
       break;
     /*

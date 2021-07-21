@@ -19,6 +19,7 @@
 // ath10k_msg_type and how ATH10K_MSG_TYPE_WMI is *referred* in wmi.h) is that the .c code must
 // include the msg_buf.h. Then the msg_buf.h will include wmi.h and wmi-tlv.h to expand the macros
 // properly. TODO(fxbug.dev/29228): Cleanup ath10k msg_buf
+#include <fuchsia/wlan/common/c/banjo.h>
 #include <lib/ddk/driver.h>
 #include <lib/zircon-internal/align.h>
 
@@ -2184,9 +2185,9 @@ zx_status_t ath10k_wmi_event_mgmt_rx(struct ath10k* ar, struct ath10k_msg_buf* b
   rx_info.valid_fields |= WLAN_RX_INFO_VALID_RSSI;
   rx_info.rssi_dbm = ATH10K_DEFAULT_NOISE_FLOOR + arg.snr;
 
-  rx_info.chan.primary = arg.channel;
-  rx_info.chan.cbw = WLAN_CHANNEL_BANDWIDTH__20;
-  rx_info.chan.secondary80 = 0;
+  rx_info.channel.primary = arg.channel;
+  rx_info.channel.cbw = CHANNEL_BANDWIDTH_CBW20;
+  rx_info.channel.secondary80 = 0;
 
   rx_status = arg.status;
 

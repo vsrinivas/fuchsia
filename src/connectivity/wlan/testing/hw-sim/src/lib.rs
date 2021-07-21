@@ -5,7 +5,7 @@
 use {
     anyhow::Error,
     fidl::endpoints::{create_endpoints, create_proxy},
-    fidl_fuchsia_wlan_common::{Cbw, WlanChan},
+    fidl_fuchsia_wlan_common as fidl_common,
     fidl_fuchsia_wlan_device::MacRole,
     fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_mlme as fidl_mlme,
     fidl_fuchsia_wlan_policy::{
@@ -54,9 +54,16 @@ pub const CLIENT_MAC_ADDR: [u8; 6] = [0x67, 0x62, 0x6f, 0x6e, 0x69, 0x6b];
 pub const AP_MAC_ADDR: mac::Bssid = mac::Bssid([0x70, 0xf1, 0x1c, 0x05, 0x2d, 0x7f]);
 pub const AP_SSID: &[u8] = b"ap_ssid";
 pub const ETH_DST_MAC: [u8; 6] = [0x65, 0x74, 0x68, 0x64, 0x73, 0x74];
-pub const CHANNEL: WlanChan = WlanChan { primary: 1, secondary80: 0, cbw: Cbw::Cbw20 };
-pub const WLANCFG_DEFAULT_AP_CHANNEL: WlanChan =
-    WlanChan { primary: 11, secondary80: 0, cbw: Cbw::Cbw20 };
+pub const CHANNEL: fidl_common::WlanChannel = fidl_common::WlanChannel {
+    primary: 1,
+    secondary80: 0,
+    cbw: fidl_common::ChannelBandwidth::Cbw20,
+};
+pub const WLANCFG_DEFAULT_AP_CHANNEL: fidl_common::WlanChannel = fidl_common::WlanChannel {
+    primary: 11,
+    secondary80: 0,
+    cbw: fidl_common::ChannelBandwidth::Cbw20,
+};
 
 pub fn default_wlantap_config_client() -> WlantapPhyConfig {
     wlantap_config_client(format!("wlantap-client"), CLIENT_MAC_ADDR)
@@ -74,7 +81,7 @@ pub fn wlantap_config_ap(name: String, mac_addr: [u8; 6]) -> WlantapPhyConfig {
     config::create_wlantap_config(name, mac_addr, MacRole::Ap)
 }
 
-pub fn create_rx_info(channel: &WlanChan, rssi_dbm: i8) -> WlanRxInfo {
+pub fn create_rx_info(channel: &fidl_common::WlanChannel, rssi_dbm: i8) -> WlanRxInfo {
     // should match enum WlanRxInfoValid::RSSI in zircon/system/banjo/fuchsia.hardware.wlan.info/info.banjo
     const WLAN_RX_INFO_VALID_RSSI: u32 = 0x10;
     WlanRxInfo {
@@ -82,7 +89,7 @@ pub fn create_rx_info(channel: &WlanChan, rssi_dbm: i8) -> WlanRxInfo {
         valid_fields: if rssi_dbm == 0 { 0 } else { WLAN_RX_INFO_VALID_RSSI },
         phy: 0,
         data_rate: 0,
-        chan: WlanChan {
+        channel: fidl_common::WlanChannel {
             // TODO(fxbug.dev/7391): use clone()
             primary: channel.primary,
             cbw: channel.cbw,
@@ -95,7 +102,7 @@ pub fn create_rx_info(channel: &WlanChan, rssi_dbm: i8) -> WlanRxInfo {
 }
 
 pub fn send_beacon(
-    channel: &WlanChan,
+    channel: &fidl_common::WlanChannel,
     bssid: &mac::Bssid,
     ssid: &[u8],
     protection: &Protection,
@@ -125,7 +132,7 @@ pub fn send_beacon(
             ssid: ssid,
             supported_rates: &[0x82, 0x84, 0x8b, 0x0c, 0x12, 0x96, 0x18, 0x24, 0x30, 0x48, 0xe0, 0x6c],
             extended_supported_rates: { /* continues from supported_rates */ },
-            dsss_param_set: &ie::DsssParamSet { current_chan: channel.primary },
+            dsss_param_set: &ie::DsssParamSet { current_channel: channel.primary },
             rsne?: match protection {
                 Protection::Unknown => panic!("Cannot send beacon with unknown protection"),
                 Protection::Open | Protection::Wep | Protection::Wpa1 => None,
@@ -148,7 +155,7 @@ pub fn send_beacon(
 }
 
 pub fn send_probe_resp(
-    channel: &WlanChan,
+    channel: &fidl_common::WlanChannel,
     bssid: &mac::Bssid,
     ssid: &[u8],
     protection: &Protection,
@@ -178,7 +185,7 @@ pub fn send_probe_resp(
             ssid: ssid,
             supported_rates: &[0x82, 0x84, 0x8b, 0x0c, 0x12, 0x96, 0x18, 0x24, 0x30, 0x48, 0xe0, 0x6c],
             extended_supported_rates: { /* continues from supported_rates */ },
-            dsss_param_set: &ie::DsssParamSet { current_chan: channel.primary },
+            dsss_param_set: &ie::DsssParamSet { current_channel: channel.primary },
             rsne?: match protection {
                 Protection::Unknown => panic!("Cannot send beacon with unknown protection"),
                 Protection::Open | Protection::Wep | Protection::Wpa1 => None,
@@ -202,7 +209,7 @@ pub fn send_probe_resp(
 
 pub fn send_sae_authentication_frame(
     sae_frame: &fidl_mlme::SaeFrame,
-    channel: &WlanChan,
+    channel: &fidl_common::WlanChannel,
     bssid: &mac::Bssid,
     proxy: &WlantapPhyProxy,
 ) -> Result<(), anyhow::Error> {
@@ -265,7 +272,7 @@ fn convert_to_ieee80211_status_code(
 }
 
 pub fn send_open_authentication_success(
-    channel: &WlanChan,
+    channel: &fidl_common::WlanChannel,
     bssid: &mac::Bssid,
     proxy: &WlantapPhyProxy,
 ) -> Result<(), anyhow::Error> {
@@ -291,7 +298,7 @@ pub fn send_open_authentication_success(
 }
 
 pub fn send_association_response(
-    channel: &WlanChan,
+    channel: &fidl_common::WlanChannel,
     bssid: &mac::Bssid,
     status_code: mac::StatusCode,
     proxy: &WlantapPhyProxy,
@@ -326,7 +333,7 @@ pub fn send_association_response(
 }
 
 pub fn send_disassociate(
-    channel: &WlanChan,
+    channel: &fidl_common::WlanChannel,
     bssid: &mac::Bssid,
     reason_code: mac::ReasonCode,
     proxy: &WlantapPhyProxy,
@@ -452,7 +459,7 @@ pub fn create_wpa2_psk_authenticator(
 pub fn process_tx_auth_updates(
     authenticator: &mut wlan_rsn::Authenticator,
     update_sink: &mut wlan_rsn::rsna::UpdateSink,
-    channel: &WlanChan,
+    channel: &fidl_common::WlanChannel,
     bssid: &mac::Bssid,
     phy: &WlantapPhyProxy,
     ready_for_sae_frames: bool,
@@ -500,9 +507,9 @@ pub fn handle_set_channel_event(
     bssid: &mac::Bssid,
     protection: &Protection,
 ) {
-    debug!("Handling set channel event on channel {:?}", args.chan);
-    if args.chan.primary == CHANNEL.primary {
-        send_beacon(&args.chan, bssid, ssid, protection, &phy, 0).unwrap();
+    debug!("Handling set channel event on channel {:?}", args.channel);
+    if args.channel.primary == CHANNEL.primary {
+        send_beacon(&args.channel, bssid, ssid, protection, &phy, 0).unwrap();
     }
 }
 
@@ -517,7 +524,7 @@ pub fn handle_tx_event<F>(
     F: FnMut(
         &mut wlan_rsn::Authenticator,
         &mut wlan_rsn::rsna::UpdateSink,
-        &WlanChan,
+        &fidl_common::WlanChannel,
         &mac::Bssid,
         &WlantapPhyProxy,
         bool, // ready_for_sae_frames
@@ -844,7 +851,7 @@ pub async fn connect_open(helper: &mut test_utils::TestHelper, ssid: &[u8], bssi
 }
 
 pub fn rx_wlan_data_frame(
-    channel: &WlanChan,
+    channel: &fidl_common::WlanChannel,
     addr1: &[u8; 6],
     addr2: &[u8; 6],
     addr3: &[u8; 6],

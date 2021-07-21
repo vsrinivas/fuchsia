@@ -1,4 +1,4 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -167,11 +167,11 @@ pub fn fake_band_capabilities_5ghz_vht(chanwidth: ChanWidthSet) -> fidl_mlme::Ba
     }
 }
 
-pub fn fake_overrider(phy: fidl_common::Phy, cbw: fidl_common::Cbw) -> RadioConfig {
+pub fn fake_overrider(phy: fidl_common::Phy, cbw: fidl_common::ChannelBandwidth) -> RadioConfig {
     RadioConfig {
         phy: Some(Phy::from_fidl(phy)),
         cbw: Some(Cbw::from_fidl(cbw, 0)),
-        primary_chan: None,
+        primary_channel: None,
     }
 }
 
@@ -204,7 +204,7 @@ pub fn fake_5ghz_band_capabilities() -> fidl_mlme::BandCapabilities {
         rates: vec![0x0c, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6c],
         base_frequency: 5000,
         channels: vec![],
-        cap: fake_capability_info().0,
+        capability_info: fake_capability_info().0,
         ht_cap: None,
         vht_cap: None,
     }
@@ -231,7 +231,7 @@ pub fn fake_2ghz_band_capabilities() -> fidl_mlme::BandCapabilities {
         rates: vec![0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6c],
         base_frequency: 2407,
         channels: vec![],
-        cap: fake_capability_info().0,
+        capability_info: fake_capability_info().0,
         ht_cap: None,
         vht_cap: None,
     }

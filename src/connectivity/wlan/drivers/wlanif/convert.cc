@@ -4,6 +4,7 @@
 
 #include "convert.h"
 
+#include <fuchsia/wlan/common/c/banjo.h>
 #include <fuchsia/wlan/ieee80211/cpp/fidl.h>
 #include <fuchsia/wlan/internal/c/banjo.h>
 #include <fuchsia/wlan/internal/cpp/fidl.h>
@@ -37,33 +38,33 @@ uint8_t ConvertScanType(wlan_mlme::ScanTypes scan_type) {
   }
 }
 
-uint8_t ConvertCBW(wlan_common::CBW cbw) {
+uint8_t ConvertCBW(wlan_common::ChannelBandwidth cbw) {
   switch (cbw) {
-    case wlan_common::CBW::CBW20:
-      return WLAN_CHANNEL_BANDWIDTH__20;
-    case wlan_common::CBW::CBW40:
-      return WLAN_CHANNEL_BANDWIDTH__40;
-    case wlan_common::CBW::CBW40BELOW:
-      return WLAN_CHANNEL_BANDWIDTH__40BELOW;
-    case wlan_common::CBW::CBW80:
-      return WLAN_CHANNEL_BANDWIDTH__80;
-    case wlan_common::CBW::CBW160:
-      return WLAN_CHANNEL_BANDWIDTH__160;
-    case wlan_common::CBW::CBW80P80:
-      return WLAN_CHANNEL_BANDWIDTH__80P80;
+    case wlan_common::ChannelBandwidth::CBW20:
+      return CHANNEL_BANDWIDTH_CBW20;
+    case wlan_common::ChannelBandwidth::CBW40:
+      return CHANNEL_BANDWIDTH_CBW40;
+    case wlan_common::ChannelBandwidth::CBW40BELOW:
+      return CHANNEL_BANDWIDTH_CBW40BELOW;
+    case wlan_common::ChannelBandwidth::CBW80:
+      return CHANNEL_BANDWIDTH_CBW80;
+    case wlan_common::ChannelBandwidth::CBW160:
+      return CHANNEL_BANDWIDTH_CBW160;
+    case wlan_common::ChannelBandwidth::CBW80P80:
+      return CHANNEL_BANDWIDTH_CBW80P80;
   }
   ZX_ASSERT(0);
 }
 
-void ConvertWlanChan(wlan_channel_t* wlanif_chan, const wlan_common::WlanChan& fidl_chan) {
+void ConvertWlanChan(wlan_channel_t* wlanif_channel, const wlan_common::WlanChannel& fidl_channel) {
   // primary
-  wlanif_chan->primary = fidl_chan.primary;
+  wlanif_channel->primary = fidl_channel.primary;
 
   // CBW
-  wlanif_chan->cbw = ConvertCBW(fidl_chan.cbw);
+  wlanif_channel->cbw = ConvertCBW(fidl_channel.cbw);
 
   // secondary80
-  wlanif_chan->secondary80 = fidl_chan.secondary80;
+  wlanif_channel->secondary80 = fidl_channel.secondary80;
 }
 
 void CopySSID(const ::std::vector<uint8_t>& in_ssid, wlanif_ssid_t* out_ssid) {
@@ -110,38 +111,38 @@ void CopyVendorSpecificIE(const ::std::vector<uint8_t>& in_vendor_specific,
   std::memcpy(out_vendor_specific, in_vendor_specific.data(), *vendor_specific_len);
 }
 
-void ConvertBssDescription(wlanif_bss_description_t* wlanif_desc,
+void ConvertBssDescription(bss_description_t* banjo_desc,
                            const wlan_internal::BssDescription& fidl_desc) {
   // bssid
-  std::memcpy(wlanif_desc->bssid, fidl_desc.bssid.data(), ETH_ALEN);
+  std::memcpy(banjo_desc->bssid, fidl_desc.bssid.data(), ETH_ALEN);
 
   // bss_type
-  wlanif_desc->bss_type = static_cast<bss_type_t>(fidl_desc.bss_type);
+  banjo_desc->bss_type = static_cast<bss_type_t>(fidl_desc.bss_type);
 
   // beacon_period
-  wlanif_desc->beacon_period = fidl_desc.beacon_period;
+  banjo_desc->beacon_period = fidl_desc.beacon_period;
 
   // timestamp
-  wlanif_desc->timestamp = fidl_desc.timestamp;
+  banjo_desc->timestamp = fidl_desc.timestamp;
 
   // local_time
-  wlanif_desc->local_time = fidl_desc.local_time;
+  banjo_desc->local_time = fidl_desc.local_time;
 
   // capability
-  wlanif_desc->cap = fidl_desc.cap;
+  banjo_desc->capability_info = fidl_desc.capability_info;
 
   // ies
-  wlanif_desc->ies_bytes_list = fidl_desc.ies.data();
-  wlanif_desc->ies_bytes_count = fidl_desc.ies.size();
+  banjo_desc->ies_list = fidl_desc.ies.data();
+  banjo_desc->ies_count = fidl_desc.ies.size();
 
-  // chan
-  ConvertWlanChan(&wlanif_desc->chan, fidl_desc.chan);
+  // channel
+  ConvertWlanChan(&banjo_desc->channel, fidl_desc.channel);
 
   // rssi_dbm
-  wlanif_desc->rssi_dbm = fidl_desc.rssi_dbm;
+  banjo_desc->rssi_dbm = fidl_desc.rssi_dbm;
 
   // snr_db
-  wlanif_desc->snr_db = fidl_desc.snr_db;
+  banjo_desc->snr_db = fidl_desc.snr_db;
 }
 
 wlan_internal::BssType ConvertBssType(uint8_t bss_type) {
@@ -161,70 +162,70 @@ wlan_internal::BssType ConvertBssType(uint8_t bss_type) {
   }
 }
 
-wlan_common::CBW ConvertCBW(wlan_channel_bandwidth_t cbw) {
+wlan_common::ChannelBandwidth ConvertCBW(channel_bandwidth_t cbw) {
   switch (cbw) {
-    case WLAN_CHANNEL_BANDWIDTH__20:
-      return wlan_common::CBW::CBW20;
-    case WLAN_CHANNEL_BANDWIDTH__40:
-      return wlan_common::CBW::CBW40;
-    case WLAN_CHANNEL_BANDWIDTH__40BELOW:
-      return wlan_common::CBW::CBW40BELOW;
-    case WLAN_CHANNEL_BANDWIDTH__80:
-      return wlan_common::CBW::CBW80;
-    case WLAN_CHANNEL_BANDWIDTH__160:
-      return wlan_common::CBW::CBW160;
-    case WLAN_CHANNEL_BANDWIDTH__80P80:
-      return wlan_common::CBW::CBW80P80;
+    case CHANNEL_BANDWIDTH_CBW20:
+      return wlan_common::ChannelBandwidth::CBW20;
+    case CHANNEL_BANDWIDTH_CBW40:
+      return wlan_common::ChannelBandwidth::CBW40;
+    case CHANNEL_BANDWIDTH_CBW40BELOW:
+      return wlan_common::ChannelBandwidth::CBW40BELOW;
+    case CHANNEL_BANDWIDTH_CBW80:
+      return wlan_common::ChannelBandwidth::CBW80;
+    case CHANNEL_BANDWIDTH_CBW160:
+      return wlan_common::ChannelBandwidth::CBW160;
+    case CHANNEL_BANDWIDTH_CBW80P80:
+      return wlan_common::ChannelBandwidth::CBW80P80;
     default:
       ZX_ASSERT(0);
   }
 }
 
-void ConvertWlanChan(wlan_common::WlanChan* fidl_chan, const wlan_channel_t& wlanif_chan) {
+void ConvertWlanChan(wlan_common::WlanChannel* fidl_channel, const wlan_channel_t& wlanif_channel) {
   // primary
-  fidl_chan->primary = wlanif_chan.primary;
+  fidl_channel->primary = wlanif_channel.primary;
 
   // CBW
-  fidl_chan->cbw = ConvertCBW(wlanif_chan.cbw);
+  fidl_channel->cbw = ConvertCBW(wlanif_channel.cbw);
 
   // secondary80
-  fidl_chan->secondary80 = wlanif_chan.secondary80;
+  fidl_channel->secondary80 = wlanif_channel.secondary80;
 }
 
 void ConvertBssDescription(wlan_internal::BssDescription* fidl_desc,
-                           const wlanif_bss_description_t& wlanif_desc) {
+                           const bss_description_t& banjo_desc) {
   // bssid
-  std::memcpy(fidl_desc->bssid.data(), wlanif_desc.bssid, ETH_ALEN);
+  std::memcpy(fidl_desc->bssid.data(), banjo_desc.bssid, ETH_ALEN);
 
   // bss_type
-  fidl_desc->bss_type = ConvertBssType(wlanif_desc.bss_type);
+  fidl_desc->bss_type = ConvertBssType(banjo_desc.bss_type);
 
   // beacon_period
-  fidl_desc->beacon_period = wlanif_desc.beacon_period;
+  fidl_desc->beacon_period = banjo_desc.beacon_period;
 
   // timestamp
-  fidl_desc->timestamp = wlanif_desc.timestamp;
+  fidl_desc->timestamp = banjo_desc.timestamp;
 
   // local_time
-  fidl_desc->local_time = wlanif_desc.local_time;
+  fidl_desc->local_time = banjo_desc.local_time;
 
   // capability
-  fidl_desc->cap = wlanif_desc.cap;
+  fidl_desc->capability_info = banjo_desc.capability_info;
 
   // ies
-  if (wlanif_desc.ies_bytes_count > 0) {
-    fidl_desc->ies = std::vector<uint8_t>(wlanif_desc.ies_bytes_list,
-                                          wlanif_desc.ies_bytes_list + wlanif_desc.ies_bytes_count);
+  if (banjo_desc.ies_count > 0) {
+    fidl_desc->ies =
+        std::vector<uint8_t>(banjo_desc.ies_list, banjo_desc.ies_list + banjo_desc.ies_count);
   }
 
-  // chan
-  ConvertWlanChan(&fidl_desc->chan, wlanif_desc.chan);
+  // channel
+  ConvertWlanChan(&fidl_desc->channel, banjo_desc.channel);
 
   // rssi_dbm
-  fidl_desc->rssi_dbm = wlanif_desc.rssi_dbm;
+  fidl_desc->rssi_dbm = banjo_desc.rssi_dbm;
 
   // snr_db
-  fidl_desc->snr_db = wlanif_desc.snr_db;
+  fidl_desc->snr_db = banjo_desc.snr_db;
 }
 
 void ConvertAssocInd(wlan_mlme::AssociateIndication* fidl_ind,

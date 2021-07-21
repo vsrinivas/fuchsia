@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/wlan/common/c/banjo.h>
 #include <zircon/status.h>
 
 #include <memory>
@@ -26,7 +27,7 @@ namespace wlan_mesh = ::fuchsia::wlan::mesh;
 static wlan_channel_t GetChannel(uint8_t requested_channel) {
   return wlan_channel_t{
       .primary = requested_channel,
-      .cbw = WLAN_CHANNEL_BANDWIDTH__20,
+      .cbw = CHANNEL_BANDWIDTH_CBW20,
   };
 }
 
@@ -219,7 +220,7 @@ void MeshMlme::ConfigurePeering(const MlmeMsg<wlan_mlme::MeshPeeringParams>& req
       .aid = req.body()->local_aid,
       .phy = WLAN_INFO_PHY_TYPE_OFDM,  // TODO(gbonik): get PHY from
                                        // MeshPeeringParams
-      .chan = device_->GetState()->channel(),
+      .channel = device_->GetState()->channel(),
       .qos = true,  // all mesh nodes are expected to support QoS frames
       .rates_cnt = static_cast<uint16_t>(std::min(req.body()->rates.size(), sizeof(ctx.rates))),
   };

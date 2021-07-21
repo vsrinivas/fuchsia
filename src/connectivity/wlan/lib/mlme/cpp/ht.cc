@@ -1,6 +1,8 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
+#include <fuchsia/wlan/common/c/banjo.h>
 
 #include <wlan/mlme/ht.h>
 
@@ -86,23 +88,23 @@ HtCapabilities BuildHtCapabilities(const HtConfig& config) {
   return htc;  // 28 bytes.
 }
 
-HtOperation BuildHtOperation(const wlan_channel_t& chan) {
+HtOperation BuildHtOperation(const wlan_channel_t& channel) {
   // TODO(porce): Query the BSS internal data to fill up the parameters.
   HtOperation hto;
 
-  hto.primary_chan = chan.primary;
+  hto.primary_channel = channel.primary;
   HtOpInfoHead& head = hto.head;
 
-  switch (chan.cbw) {
-    case WLAN_CHANNEL_BANDWIDTH__40ABOVE:
+  switch (channel.cbw) {
+    case CHANNEL_BANDWIDTH_CBW40:
       head.set_secondary_chan_offset(HtOpInfoHead::SECONDARY_ABOVE);
       head.set_sta_chan_width(HtOpInfoHead::ANY);
       break;
-    case WLAN_CHANNEL_BANDWIDTH__40BELOW:
+    case CHANNEL_BANDWIDTH_CBW40BELOW:
       head.set_secondary_chan_offset(HtOpInfoHead::SECONDARY_BELOW);
       head.set_sta_chan_width(HtOpInfoHead::ANY);
       break;
-    case WLAN_CHANNEL_BANDWIDTH__20:
+    case CHANNEL_BANDWIDTH_CBW20:
     default:
       head.set_secondary_chan_offset(HtOpInfoHead::SECONDARY_NONE);
       head.set_sta_chan_width(HtOpInfoHead::TWENTY);

@@ -1,4 +1,4 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -57,8 +57,8 @@ void WriteSupportedRates(BufferWriter* w, fbl::Span<const SupportedRate> support
   Write(w, element_id::kSuppRates, supported_rates);
 }
 
-void WriteDsssParamSet(BufferWriter* w, uint8_t current_chan) {
-  Write(w, element_id::kDsssParamSet, current_chan);
+void WriteDsssParamSet(BufferWriter* w, uint8_t current_channel) {
+  Write(w, element_id::kDsssParamSet, current_channel);
 }
 
 void WriteCfParamSet(BufferWriter* w, CfParamSet param_set) {

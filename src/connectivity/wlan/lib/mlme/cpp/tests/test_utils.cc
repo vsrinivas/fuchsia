@@ -1,4 +1,4 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -35,7 +35,7 @@ wlan_assoc_ctx_t FakeDdkAssocCtx() {
       .has_ht_op = true,
       .ht_op =
           wlan_ht_op_t{
-              .primary_chan = 123,
+              .primary_channel = 123,
               .head = 0x01020304,
               .tail = 0x05,
               .rx_mcs_head = 0x00000001000000ff,

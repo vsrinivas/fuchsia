@@ -80,6 +80,7 @@ source_set("core") {
   deps = [
     "//garnet/lib/wlan/protocol:protocol",
     "//sdk/banjo/ddk.hw.wlan.wlaninfo:ddk.hw.wlan.wlaninfo_banjo_cpp",
+    "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_banjo_c",
     "//sdk/fidl/fuchsia.wlan.internal:fuchsia.wlan.internal_banjo_cpp",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform",
     "//src/connectivity/wlan/lib/common/cpp:common",

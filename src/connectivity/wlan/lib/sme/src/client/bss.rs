@@ -1,4 +1,4 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -51,7 +51,7 @@ impl ClientConfig {
             rssi_dbm: bss.rssi_dbm,
             snr_db: bss.snr_db,
             signal_report_time: zx::Time::ZERO,
-            channel: Channel::from_fidl(bss.chan),
+            channel: Channel::from_fidl(bss.channel),
             protection: bss.protection(),
             ht_cap: bss.raw_ht_cap(),
             vht_cap: bss.raw_vht_cap(),
@@ -74,7 +74,7 @@ impl ClientConfig {
     }
 
     fn is_bss_protection_compatible(&self, bss: &BssDescription) -> bool {
-        let privacy = wlan_common::mac::CapabilityInfo(bss.cap).privacy();
+        let privacy = wlan_common::mac::CapabilityInfo(bss.capability_info).privacy();
         let protection = bss.protection();
         match &protection {
             Protection::Open => true,
@@ -110,7 +110,7 @@ impl ClientConfig {
         device_info: &fidl_mlme::DeviceInfo,
     ) -> bool {
         derive_join_channel_and_capabilities(
-            Channel::from_fidl(bss.chan),
+            Channel::from_fidl(bss.channel),
             None,
             bss.rates(),
             device_info,
@@ -205,10 +205,10 @@ mod tests {
             bssid: [0u8; 6],
             rssi_dbm: -30,
             snr_db: 0,
-            chan: fidl_common::WlanChan {
+            channel: fidl_common::WlanChannel {
                 primary: 1,
                 secondary80: 0,
-                cbw: fidl_common::Cbw::Cbw20,
+                cbw: fidl_common::ChannelBandwidth::Cbw20,
             },
             ies_overrides: IesOverrides::new()
                 .set(IeType::HT_CAPABILITIES, fake_ht_cap_bytes().to_vec())
@@ -243,10 +243,10 @@ mod tests {
             bssid: [0u8; 6],
             rssi_dbm: -30,
             snr_db: 0,
-            chan: fidl_common::WlanChan {
+            channel: fidl_common::WlanChannel {
                 primary: 1,
                 secondary80: 0,
-                cbw: fidl_common::Cbw::Cbw20,
+                cbw: fidl_common::ChannelBandwidth::Cbw20,
             },
             ies_overrides: IesOverrides::new()
                 .set(IeType::HT_CAPABILITIES, fake_ht_cap_bytes().to_vec())
@@ -278,10 +278,10 @@ mod tests {
             bssid: [0u8; 6],
             rssi_dbm: -30,
             snr_db: 0,
-            chan: fidl_common::WlanChan {
+            channel: fidl_common::WlanChannel {
                 primary: 1,
                 secondary80: 0,
-                cbw: fidl_common::Cbw::Cbw20,
+                cbw: fidl_common::ChannelBandwidth::Cbw20,
             },
             ies_overrides: IesOverrides::new()
                 .set(IeType::HT_CAPABILITIES, fake_ht_cap_bytes().to_vec())
@@ -313,10 +313,10 @@ mod tests {
             bssid: [0u8; 6],
             rssi_dbm: -30,
             snr_db: 0,
-            chan: fidl_common::WlanChan {
+            channel: fidl_common::WlanChannel {
                 primary: 1,
                 secondary80: 0,
-                cbw: fidl_common::Cbw::Cbw20,
+                cbw: fidl_common::ChannelBandwidth::Cbw20,
             },
             ies_overrides: IesOverrides::new()
                 .set(IeType::HT_CAPABILITIES, fake_ht_cap_bytes().to_vec())

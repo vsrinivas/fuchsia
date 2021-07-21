@@ -1,4 +1,4 @@
-// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -57,7 +57,7 @@ static constexpr size_t kMaxSupportedRatesLen = 8;
 
 // IEEE Std 802.11-2016, 9.4.2.4
 struct DsssParamSet {
-  uint8_t current_chan;
+  uint8_t current_channel;
 };
 
 // IEEE Std 802.11-2016, 9.4.2.5
@@ -837,7 +837,7 @@ class HtOpInfoTail : public common::BitField<uint8_t> {
 
 // IEEE Std 802.11-2016, 9.4.2.57
 struct HtOperation {
-  uint8_t primary_chan;  // Primary 20 MHz channel.
+  uint8_t primary_channel;  // Primary 20 MHz channel.
 
   // Implementation hack to support 40bits bitmap.
   HtOpInfoHead head;
@@ -846,7 +846,7 @@ struct HtOperation {
 
   static HtOperation FromDdk(const wlan_ht_op_t& ddk) {
     HtOperation dst{};
-    dst.primary_chan = ddk.primary_chan;
+    dst.primary_channel = ddk.primary_channel;
     dst.head.set_val(ddk.head);
     dst.tail.set_val(ddk.tail);
     dst.basic_mcs_set.rx_mcs_head.set_val(ddk.rx_mcs_head);
@@ -857,7 +857,7 @@ struct HtOperation {
 
   wlan_ht_op_t ToDdk() const {
     wlan_ht_op_t ddk{};
-    ddk.primary_chan = primary_chan;
+    ddk.primary_channel = primary_channel;
     ddk.head = head.val();
     ddk.tail = tail.val();
     ddk.rx_mcs_head = basic_mcs_set.rx_mcs_head.val();

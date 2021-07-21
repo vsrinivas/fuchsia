@@ -1,4 +1,4 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -223,12 +223,12 @@ impl Authenticated {
         req: fidl_mlme::AssociateRequest,
     ) -> Result<EventId, ()> {
         // clone ssid here because we will mutably borrow sta.
-        let cap_info = req.cap_info;
+        let capability_info = req.capability_info;
         let rsne = req.rsne.as_ref().map(|rsne| &rsne[..]).unwrap_or(&[]);
         let ht_cap = req.ht_cap.as_ref().map(|h| &h.bytes[..]).unwrap_or(&[]);
         let vht_cap = req.vht_cap.as_ref().map(|v| &v.bytes[..]).unwrap_or(&[]);
 
-        match sta.send_assoc_req_frame(cap_info, &req.rates[..], rsne, ht_cap, vht_cap) {
+        match sta.send_assoc_req_frame(capability_info, &req.rates[..], rsne, ht_cap, vht_cap) {
             Ok(()) => {
                 let duration_tus = TimeUnit(sta.sta.beacon_period) * ASSOC_TIMEOUT_BCN_PERIODS;
                 let deadline = sta.ctx.timer.now() + duration_tus.into();
@@ -654,11 +654,17 @@ impl Associated {
     fn on_sme_finalize_association(
         &mut self,
         sta: &mut BoundClient<'_>,
-        cap: fidl_mlme::NegotiatedCapabilities,
+        negotiated_capabilities: fidl_mlme::NegotiatedCapabilities,
     ) {
         let Association { aid, ap_ht_op, ap_vht_op, .. } = self.0;
 
-        let assoc_ctx = ddk::build_ddk_assoc_ctx(sta.sta.bssid, aid, cap, ap_ht_op, ap_vht_op);
+        let assoc_ctx = ddk::build_ddk_assoc_ctx(
+            sta.sta.bssid,
+            aid,
+            negotiated_capabilities,
+            ap_ht_op,
+            ap_vht_op,
+        );
         // TODO(fxbug.dev/29325): Determine for each outbound data frame,
         // given the result of the dynamic capability negotiation, data frame
         // classification, and QoS policy.
@@ -1125,8 +1131,8 @@ impl States {
                 _ => state.into(),
             },
             States::Associated(mut state) => match msg {
-                MlmeMsg::FinalizeAssociationReq { cap } => {
-                    state.on_sme_finalize_association(sta, cap);
+                MlmeMsg::FinalizeAssociationReq { negotiated_capabilities } => {
+                    state.on_sme_finalize_association(sta, negotiated_capabilities);
                     state.into()
                 }
                 MlmeMsg::EapolReq { req } => {
@@ -1233,7 +1239,7 @@ mod tests {
         },
         akm::AkmAlgorithm,
         banjo_fuchsia_hardware_wlan_info as banjo_wlan_info,
-        fidl_fuchsia_wlan_common as fidl_common,
+        banjo_fuchsia_wlan_common as banjo_common, fidl_fuchsia_wlan_common as fidl_common,
         fuchsia_zircon::{self as zx, DurationNum},
         wlan_common::{
             assert_variant,
@@ -1288,10 +1294,10 @@ mod tests {
         }
     }
 
-    fn fake_wlan_channel() -> banjo_wlan_info::WlanChannel {
-        banjo_wlan_info::WlanChannel {
+    fn fake_wlan_channel() -> banjo_common::WlanChannel {
+        banjo_common::WlanChannel {
             primary: 0,
-            cbw: banjo_wlan_info::WlanChannelBandwidth(0),
+            cbw: banjo_common::ChannelBandwidth(0),
             secondary80: 0,
         }
     }
@@ -1308,7 +1314,7 @@ mod tests {
         fidl_mlme::AssociateConfirm {
             association_id: 0,
             result_code: fidl_mlme::AssociateResultCode::RefusedReasonUnspecified,
-            cap_info: 0,
+            capability_info: 0,
             rates: vec![],
             wmm_param: None,
             ht_cap: None,
@@ -1340,12 +1346,12 @@ mod tests {
             BSSID,
             42,
             fidl_mlme::NegotiatedCapabilities {
-                channel: fidl_common::WlanChan {
+                channel: fidl_common::WlanChannel {
                     primary: 149,
-                    cbw: fidl_common::Cbw::Cbw40,
+                    cbw: fidl_common::ChannelBandwidth::Cbw40,
                     secondary80: 42,
                 },
-                cap_info: 0,
+                capability_info: 0,
                 rates: vec![],
                 wmm_param: None,
                 ht_cap: None,
@@ -1378,7 +1384,7 @@ mod tests {
     fn empty_associate_request() -> fidl_mlme::AssociateRequest {
         fidl_mlme::AssociateRequest {
             peer_sta_address: [1, 2, 3, 4, 5, 6],
-            cap_info: 0,
+            capability_info: 0,
             rates: vec![1, 2, 3],
             qos_capable: false,
             qos_info: 0,
@@ -1662,7 +1668,7 @@ mod tests {
             fidl_mlme::AssociateConfirm {
                 association_id: 42,
                 result_code: fidl_mlme::AssociateResultCode::Success,
-                cap_info: 52,
+                capability_info: 52,
                 ..empty_associate_conf()
             }
         );
@@ -1702,7 +1708,7 @@ mod tests {
             fidl_mlme::AssociateConfirm {
                 association_id: 42,
                 result_code: fidl_mlme::AssociateResultCode::Success,
-                cap_info: 52,
+                capability_info: 52,
                 ..empty_associate_conf()
             }
         );
@@ -2669,7 +2675,7 @@ mod tests {
 
         sta.ctx
             .device
-            .set_channel(banjo_wlan_info::WlanChannel { primary: 42, ..fake_wlan_channel() })
+            .set_channel(banjo_common::WlanChannel { primary: 42, ..fake_wlan_channel() })
             .expect("fake device is obedient");
         let eth_frame = &[100; 14]; // An ethernet frame must be at least 14 bytes long.
 
@@ -2753,13 +2759,13 @@ mod tests {
             ..empty_association(&mut sta)
         })));
 
-        let cap = fidl_mlme::NegotiatedCapabilities {
-            channel: fidl_common::WlanChan {
+        let negotiated_capabilities = fidl_mlme::NegotiatedCapabilities {
+            channel: fidl_common::WlanChannel {
                 primary: 32,
-                cbw: fidl_common::Cbw::Cbw40,
+                cbw: fidl_common::ChannelBandwidth::Cbw40,
                 secondary80: 88,
             },
-            cap_info: 0x1234,
+            capability_info: 0x1234,
             rates: vec![125, 126, 127, 128, 129, 130],
             wmm_param: None,
             ht_cap: Some(Box::new(fidl_internal::HtCapabilities {
@@ -2771,7 +2777,7 @@ mod tests {
         };
         let state = state.handle_mlme_msg(
             &mut sta,
-            fidl_mlme::MlmeRequestMessage::FinalizeAssociationReq { cap },
+            fidl_mlme::MlmeRequestMessage::FinalizeAssociationReq { negotiated_capabilities },
         );
         assert_variant!(state, States::Associated(_), "should stay in associated");
 
@@ -2785,7 +2791,7 @@ mod tests {
         assert_eq!(assoc_ctx.qos, true);
         assert_eq!(assoc_ctx.rates_cnt, 6);
         assert_eq!(assoc_ctx.rates[..6], [125, 126, 127, 128, 129, 130]);
-        assert_eq!(assoc_ctx.cap_info, 0x1234);
+        assert_eq!(assoc_ctx.capability_info, 0x1234);
         assert!(assoc_ctx.has_ht_cap);
         assert!(assoc_ctx.has_vht_cap);
         assert!(assoc_ctx.has_ht_op);
@@ -3233,9 +3239,9 @@ mod tests {
             valid_fields: banjo_wlan_info::WlanRxInfoValid::RSSI.0,
             phy: 0,
             data_rate: 0,
-            chan: banjo_wlan_info::WlanChannel {
+            channel: banjo_common::WlanChannel {
                 primary: 0,
-                cbw: banjo_wlan_info::WlanChannelBandwidth::B_20,
+                cbw: banjo_common::ChannelBandwidth::CBW20,
                 secondary80: 0,
             },
             mcs: 0,

@@ -5,6 +5,7 @@
 #include "wlantap-phy.h"
 
 #include <fuchsia/hardware/wlanphyimpl/c/banjo.h>
+#include <fuchsia/wlan/common/c/banjo.h>
 #include <fuchsia/wlan/device/cpp/fidl.h>
 #include <fuchsia/wlan/internal/cpp/banjo.h>
 #include <lib/ddk/debug.h>
@@ -101,15 +102,16 @@ wlantap::SetKeyArgs ToSetKeyArgs(uint16_t wlanmac_id, const wlan_key_config_t* c
 wlantap::TxArgs ToTxArgs(uint16_t wlanmac_id, const wlan_tx_packet_t* pkt) {
   auto tx_args = wlantap::TxArgs{
       .wlanmac_id = wlanmac_id,
-      .packet = wlantap::WlanTxPacket{.info =
-                                          wlantap::WlanTxInfo{
-                                              .tx_flags = pkt->info.tx_flags,
-                                              .valid_fields = pkt->info.valid_fields,
-                                              .tx_vector_idx = pkt->info.tx_vector_idx,
-                                              .phy = pkt->info.phy,
-                                              .cbw = pkt->info.cbw,
-                                              .mcs = pkt->info.mcs,
-                                          }},
+      .packet =
+          wlantap::WlanTxPacket{.info =
+                                    wlantap::WlanTxInfo{
+                                        .tx_flags = pkt->info.tx_flags,
+                                        .valid_fields = pkt->info.valid_fields,
+                                        .tx_vector_idx = pkt->info.tx_vector_idx,
+                                        .phy = pkt->info.phy,
+                                        .cbw = static_cast<uint8_t>(pkt->info.channel_bandwidth),
+                                        .mcs = pkt->info.mcs,
+                                    }},
   };
   auto& data = tx_args.packet.data;
   data.clear();
@@ -373,10 +375,11 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
       zxlogf(INFO, "%s: WlantapMacSetChannel ignored, shutting down", name_.c_str());
       return;
     }
-    user_binding_.events().SetChannel({.wlanmac_id = wlanmac_id,
-                                       .chan = {.primary = channel->primary,
-                                                .cbw = static_cast<wlan_common::CBW>(channel->cbw),
-                                                .secondary80 = channel->secondary80}});
+    user_binding_.events().SetChannel(
+        {.wlanmac_id = wlanmac_id,
+         .channel = {.primary = channel->primary,
+                     .cbw = static_cast<wlan_common::ChannelBandwidth>(channel->cbw),
+                     .secondary80 = channel->secondary80}});
     if (!phy_config_->quiet) {
       zxlogf(INFO, "%s: WlantapMacSetChannel done", name_.c_str());
     }

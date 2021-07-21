@@ -25,6 +25,7 @@ source_set("test_main") {
   ]
 
   public_deps = [
+    "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_banjo_c",
     "//sdk/fidl/fuchsia.wlan.ieee80211",
     "//sdk/fidl/fuchsia.wlan.mlme",
     "//src/connectivity/wlan/lib/mlme/cpp:mlme",
@@ -67,6 +68,7 @@ test("client_mlme_tests") {
 
   deps = [
     ":test_main",
+    "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_banjo_c",
     "//sdk/fidl/fuchsia.wlan.ieee80211",
     "//sdk/fidl/fuchsia.wlan.mlme",
     "//src/connectivity/wlan/lib/common/cpp:common",
@@ -105,6 +107,7 @@ test("mac_tests") {
 
   deps = [
     ":test_main",
+    "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_banjo_c",
     "//src/connectivity/wlan/lib/mlme/cpp:mlme",
     "//third_party/googletest:gtest",
   ]

@@ -4,6 +4,7 @@
 
 #include "device.h"
 
+#include <fuchsia/wlan/common/c/banjo.h>
 #include <fuchsia/wlan/internal/c/banjo.h>
 #include <lib/ddk/device.h>
 #include <lib/zx/thread.h>
@@ -503,7 +504,7 @@ TxVector GetTxVector(const std::unique_ptr<MinstrelRateSelector>& minstrel,
     return {
         .phy = WLAN_INFO_PHY_TYPE_ERP,
         .gi = WLAN_GI__800NS,
-        .cbw = WLAN_CHANNEL_BANDWIDTH__20,
+        .cbw = CHANNEL_BANDWIDTH_CBW20,
         .nss = 1,
         .mcs_idx = mcs,
     };
@@ -532,7 +533,7 @@ wlan_tx_info_t MakeTxInfo(const std::unique_ptr<Packet>& packet, const TxVector&
       .valid_fields = valid_fields,
       .tx_vector_idx = idx,
       .phy = static_cast<uint16_t>(tv.phy),
-      .cbw = static_cast<uint8_t>(tv.cbw),
+      .channel_bandwidth = static_cast<uint8_t>(tv.cbw),
       .mcs = tv.mcs_idx,
   };
 }
@@ -573,21 +574,21 @@ zx_status_t Device::SendService(fbl::Span<const uint8_t> span) __TA_NO_THREAD_SA
 
 // TODO(tkilbourn): figure out how to make sure we have the lock for accessing
 // dispatcher_.
-zx_status_t Device::SetChannel(wlan_channel_t chan) __TA_NO_THREAD_SAFETY_ANALYSIS {
+zx_status_t Device::SetChannel(wlan_channel_t channel) __TA_NO_THREAD_SAFETY_ANALYSIS {
   // TODO(porce): Implement == operator for wlan_channel_t, or an equality test
   // function.
 
   char buf[80];
   snprintf(buf, sizeof(buf), "channel set: from %s to %s",
-           common::ChanStr(state_->channel()).c_str(), common::ChanStr(chan).c_str());
+           common::ChanStr(state_->channel()).c_str(), common::ChanStr(channel).c_str());
 
-  zx_status_t status = wlanmac_proxy_.SetChannel(0u, &chan);
+  zx_status_t status = wlanmac_proxy_.SetChannel(0u, &channel);
   if (status != ZX_OK) {
     errorf("%s change failed (status %d)\n", buf, status);
     return status;
   }
 
-  state_->set_channel(chan);
+  state_->set_channel(channel);
 
   verbosef("%s succeeded\n", buf);
   return ZX_OK;
@@ -846,8 +847,8 @@ zx_status_t ValidateWlanMacInfo(const wlanmac_info& wlanmac_info) {
           if (c == 0) {  // End of the valid channel
             break;
           }
-          auto chan = wlan_channel_t{.primary = c, .cbw = WLAN_CHANNEL_BANDWIDTH__20};
-          if (!common::IsValidChan5Ghz(chan)) {
+          auto channel = wlan_channel_t{.primary = c, .cbw = CHANNEL_BANDWIDTH_CBW20};
+          if (!common::IsValidChan5Ghz(channel)) {
             errorf("wlanmac band info for %u MHz has invalid channel %u\n",
                    supported_channels.base_freq, c);
             return ZX_ERR_NOT_SUPPORTED;
@@ -859,8 +860,8 @@ zx_status_t ValidateWlanMacInfo(const wlanmac_info& wlanmac_info) {
           if (c == 0) {  // End of the valid channel
             break;
           }
-          auto chan = wlan_channel_t{.primary = c, .cbw = WLAN_CHANNEL_BANDWIDTH__20};
-          if (!common::IsValidChan2Ghz(chan)) {
+          auto channel = wlan_channel_t{.primary = c, .cbw = CHANNEL_BANDWIDTH_CBW20};
+          if (!common::IsValidChan2Ghz(channel)) {
             errorf("wlanmac band info for %u MHz has invalid cahnnel %u\n",
                    supported_channels.base_freq, c);
             return ZX_ERR_NOT_SUPPORTED;

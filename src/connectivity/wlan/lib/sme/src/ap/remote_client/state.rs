@@ -942,13 +942,13 @@ mod tests {
             peer_sta_address,
             association_id,
             result_code,
-            cap,
+            capability_info,
             rates,
         }) => {
             assert_eq!(peer_sta_address, CLIENT_ADDR);
             assert_eq!(association_id, 0);
             assert_eq!(result_code, fidl_mlme::AssociateResultCode::RefusedReasonUnspecified);
-            assert_eq!(cap, 0);
+            assert_eq!(capability_info, 0);
             assert_eq!(rates, Vec::<u8>::new());
         });
     }
@@ -1052,13 +1052,13 @@ mod tests {
         assert_variant!(mlme_event, MlmeRequest::AssocResponse(fidl_mlme::AssociateResponse {
             peer_sta_address,
             result_code,
-            cap,
+            capability_info,
             rates,
             ..
         }) => {
             assert_eq!(peer_sta_address, CLIENT_ADDR);
             assert_eq!(result_code, fidl_mlme::AssociateResultCode::Success);
-            assert_eq!(cap, CapabilityInfo(0).with_short_preamble(true).raw());
+            assert_eq!(capability_info, CapabilityInfo(0).with_short_preamble(true).raw());
             assert_eq!(rates, vec![0b11111000]);
         });
     }
@@ -1100,14 +1100,14 @@ mod tests {
         assert_variant!(mlme_event, MlmeRequest::AssocResponse(fidl_mlme::AssociateResponse {
             peer_sta_address,
             result_code,
-            cap,
+            capability_info,
             rates,
             ..
         }) => {
             assert_eq!(peer_sta_address, CLIENT_ADDR);
             assert_eq!(result_code, fidl_mlme::AssociateResultCode::Success);
             assert_eq!(
-                cap,
+                capability_info,
                 CapabilityInfo(0).with_short_preamble(true).with_spectrum_mgmt(true).raw(),
             );
             assert_eq!(rates, vec![0b11111000]);
@@ -1137,11 +1137,11 @@ mod tests {
 
         let mlme_event = mlme_stream.try_next().unwrap().expect("expected mlme event");
         assert_variant!(mlme_event, MlmeRequest::AssocResponse(fidl_mlme::AssociateResponse {
-            cap,
+            capability_info,
             rates,
             ..
         }) => {
-            assert_eq!(cap, CapabilityInfo(0).with_short_preamble(true).raw());
+            assert_eq!(capability_info, CapabilityInfo(0).with_short_preamble(true).raw());
             assert_eq!(rates, vec![0b11111000]);
         });
     }
@@ -1171,11 +1171,11 @@ mod tests {
 
         let mlme_event = mlme_stream.try_next().unwrap().expect("expected mlme event");
         assert_variant!(mlme_event, MlmeRequest::AssocResponse(fidl_mlme::AssociateResponse {
-            cap,
+            capability_info,
             rates,
             ..
         }) => {
-            assert_eq!(cap, CapabilityInfo(0).with_short_preamble(true).raw());
+            assert_eq!(capability_info, CapabilityInfo(0).with_short_preamble(true).raw());
             assert_eq!(rates, vec![0b11111000, 0b01111010]);
         });
     }
@@ -1468,13 +1468,13 @@ mod tests {
         assert_variant!(mlme_event, MlmeRequest::AssocResponse(fidl_mlme::AssociateResponse {
             peer_sta_address,
             result_code,
-            cap,
+            capability_info,
             rates,
             ..
         }) => {
             assert_eq!(peer_sta_address, CLIENT_ADDR);
             assert_eq!(result_code, fidl_mlme::AssociateResultCode::Success);
-            assert_eq!(cap, CapabilityInfo(0).with_short_preamble(true).with_privacy(true).raw());
+            assert_eq!(capability_info, CapabilityInfo(0).with_short_preamble(true).with_privacy(true).raw());
             assert_eq!(rates, vec![0b11111000]);
         });
 
@@ -1523,14 +1523,14 @@ mod tests {
         assert_variant!(mlme_event, MlmeRequest::AssocResponse(fidl_mlme::AssociateResponse {
             peer_sta_address,
             result_code,
-            cap,
+            capability_info,
             rates,
             ..
         }) => {
             assert_eq!(peer_sta_address, CLIENT_ADDR);
             assert_eq!(result_code, fidl_mlme::AssociateResultCode::Success);
             assert_eq!(
-                cap,
+                capability_info,
                 CapabilityInfo(0)
                     .with_short_preamble(true)
                     .with_spectrum_mgmt(true)

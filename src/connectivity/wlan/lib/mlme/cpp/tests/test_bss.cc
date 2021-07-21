@@ -4,6 +4,8 @@
 
 #include "src/connectivity/wlan/lib/mlme/cpp/tests/test_bss.h"
 
+#include <fuchsia/wlan/common/c/banjo.h>
+#include <fuchsia/wlan/common/cpp/fidl.h>
 #include <fuchsia/wlan/ieee80211/cpp/fidl.h>
 #include <fuchsia/wlan/internal/cpp/fidl.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
@@ -48,13 +50,13 @@ void WriteTim(BufferWriter* w, const PsCfg& ps_cfg) {
   common::WriteTim(w, hdr, {ps_cfg.GetTim()->BitmapData(), bitmap_len});
 }
 
-void WriteCountry(BufferWriter* w, const wlan_channel_t chan) {
+void WriteCountry(BufferWriter* w, const wlan_channel_t channel) {
   const Country kCountry = {{'U', 'S', ' '}};
 
   std::vector<SubbandTriplet> subbands;
 
   // TODO(porce): Read from the AP's regulatory domain
-  if (wlan::common::Is2Ghz(chan)) {
+  if (wlan::common::Is2Ghz(channel)) {
     subbands.push_back({1, 11, 36});
   } else {
     subbands.push_back({36, 4, 36});
@@ -66,7 +68,7 @@ void WriteCountry(BufferWriter* w, const wlan_channel_t chan) {
   common::WriteCountry(w, kCountry, subbands);
 }
 
-wlan_internal::BssDescription CreateBssDescription(bool rsne, wlan_channel_t chan) {
+wlan_internal::BssDescription CreateBssDescription(bool rsne, wlan_channel_t channel) {
   common::MacAddr bssid(kBssid1);
 
   wlan_internal::BssDescription bss_desc;
@@ -77,10 +79,10 @@ wlan_internal::BssDescription CreateBssDescription(bool rsne, wlan_channel_t cha
   bss_desc.timestamp = 0;
   bss_desc.local_time = 0;
 
-  CapabilityInfo cap{};
-  cap.set_ess(true);
-  cap.set_short_preamble(true);
-  bss_desc.cap = cap.val();
+  CapabilityInfo capability_info{};
+  capability_info.set_ess(true);
+  capability_info.set_short_preamble(true);
+  bss_desc.capability_info = capability_info.val();
 
   if (rsne) {
     bss_desc.ies = std::vector<uint8_t>(kIes, kIes + sizeof(kIes));
@@ -88,8 +90,8 @@ wlan_internal::BssDescription CreateBssDescription(bool rsne, wlan_channel_t cha
     bss_desc.ies = std::vector<uint8_t>(kIes_NoRsne, kIes_NoRsne + sizeof(kIes_NoRsne));
   }
 
-  bss_desc.chan.cbw = static_cast<wlan_common::CBW>(chan.cbw);
-  bss_desc.chan.primary = chan.primary;
+  bss_desc.channel.cbw = static_cast<wlan_common::ChannelBandwidth>(channel.cbw);
+  bss_desc.channel.primary = channel.primary;
 
   bss_desc.rssi_dbm = -35;
 
@@ -139,7 +141,7 @@ MlmeMsg<wlan_mlme::JoinRequest> CreateJoinRequest(bool rsn) {
   req->nav_sync_delay = 20;
   req->op_rates = {12, 24, 48};
   req->phy = wlan::common::ToFidl(kBssPhy);
-  req->cbw = wlan::common::ToFidl(kBssChannel).cbw;
+  req->channel_bandwidth = wlan::common::ToFidl(kBssChannel).cbw;
   req->selected_bss = CreateBssDescription(rsn);
 
   return {std::move(*req), fuchsia::wlan::mlme::internal::kMLME_JoinReq_Ordinal};
@@ -200,27 +202,28 @@ MlmeMsg<wlan_mlme::AssociateResponse> CreateAssocResponse(
 }
 
 MlmeMsg<wlan_mlme::NegotiatedCapabilities> CreateFinalizeAssociationRequest(
-    const wlan_assoc_ctx& ac, wlan_channel_t chan) {
-  auto cap = wlan_mlme::NegotiatedCapabilities::New();
-  cap->channel.primary = chan.primary;
-  cap->channel.cbw = static_cast<wlan_common::CBW>(chan.cbw);
-  cap->channel.secondary80 = chan.secondary80;
+    const wlan_assoc_ctx& ac, wlan_channel_t channel) {
+  auto negotiated_capabilities = wlan_mlme::NegotiatedCapabilities::New();
+  negotiated_capabilities->channel.primary = channel.primary;
+  negotiated_capabilities->channel.cbw = static_cast<wlan_common::ChannelBandwidth>(channel.cbw);
+  negotiated_capabilities->channel.secondary80 = channel.secondary80;
 
-  cap->cap_info = ac.cap_info;
-  cap->rates.assign(ac.rates, ac.rates + ac.rates_cnt);
+  negotiated_capabilities->capability_info = ac.capability_info;
+  negotiated_capabilities->rates.assign(ac.rates, ac.rates + ac.rates_cnt);
   if (ac.has_ht_cap) {
-    cap->ht_cap = wlan_internal::HtCapabilities::New();
-    static_assert(sizeof(cap->ht_cap->bytes) == sizeof(ac.ht_cap));
-    memcpy(cap->ht_cap->bytes.data(), &ac.ht_cap, sizeof(ac.ht_cap));
+    negotiated_capabilities->ht_cap = wlan_internal::HtCapabilities::New();
+    static_assert(sizeof(negotiated_capabilities->ht_cap->bytes) == sizeof(ac.ht_cap));
+    memcpy(negotiated_capabilities->ht_cap->bytes.data(), &ac.ht_cap, sizeof(ac.ht_cap));
   }
 
   if (ac.has_vht_cap) {
-    cap->vht_cap = wlan_internal::VhtCapabilities::New();
-    static_assert(sizeof(cap->vht_cap->bytes) == sizeof(ac.vht_cap));
-    memcpy(cap->vht_cap->bytes.data(), &ac.vht_cap, sizeof(ac.vht_cap));
+    negotiated_capabilities->vht_cap = wlan_internal::VhtCapabilities::New();
+    static_assert(sizeof(negotiated_capabilities->vht_cap->bytes) == sizeof(ac.vht_cap));
+    memcpy(negotiated_capabilities->vht_cap->bytes.data(), &ac.vht_cap, sizeof(ac.vht_cap));
   }
 
-  return {std::move(*cap), fuchsia::wlan::mlme::internal::kMLME_FinalizeAssociationReq_Ordinal};
+  return {std::move(*negotiated_capabilities),
+          fuchsia::wlan::mlme::internal::kMLME_FinalizeAssociationReq_Ordinal};
 }
 
 MlmeMsg<wlan_mlme::EapolRequest> CreateEapolRequest(common::MacAddr src_addr,
@@ -279,8 +282,8 @@ std::unique_ptr<Packet> CreateBeaconFrame(common::MacAddr bssid) {
   auto bcn = w.Write<Beacon>();
   bcn->beacon_interval = kBeaconPeriodTu;
   bcn->timestamp = 0;
-  bcn->cap.set_ess(1);
-  bcn->cap.set_short_preamble(1);
+  bcn->capability_info.set_ess(1);
+  bcn->capability_info.set_short_preamble(1);
 
   BufferWriter elem_w(w.RemainingBuffer());
   common::WriteSsid(&elem_w, kSsid);
@@ -292,7 +295,7 @@ std::unique_ptr<Packet> CreateBeaconFrame(common::MacAddr bssid) {
 
   packet->set_len(w.WrittenBytes() + elem_w.WrittenBytes());
 
-  wlan_rx_info_t rx_info{.rx_flags = 0, .chan = kBssChannel};
+  wlan_rx_info_t rx_info{.rx_flags = 0, .channel = kBssChannel};
   packet->CopyCtrlFrom(rx_info);
 
   return packet;
@@ -326,7 +329,7 @@ std::unique_ptr<Packet> CreateProbeRequest() {
 
   packet->set_len(w.WrittenBytes() + elem_w.WrittenBytes());
 
-  wlan_rx_info_t rx_info{.rx_flags = 0, .chan = kBssChannel};
+  wlan_rx_info_t rx_info{.rx_flags = 0, .channel = kBssChannel};
   packet->CopyCtrlFrom(rx_info);
 
   return packet;
@@ -353,7 +356,7 @@ std::unique_ptr<Packet> CreateAuthReqFrame(common::MacAddr client_addr) {
 
   packet->set_len(w.WrittenBytes());
 
-  wlan_rx_info_t rx_info{.rx_flags = 0, .chan = kBssChannel};
+  wlan_rx_info_t rx_info{.rx_flags = 0, .channel = kBssChannel};
   packet->CopyCtrlFrom(rx_info);
 
   return packet;
@@ -382,7 +385,7 @@ std::unique_ptr<Packet> CreateAuthRespFrame(AuthAlgorithm auth_algo) {
 
   packet->set_len(w.WrittenBytes());
 
-  wlan_rx_info_t rx_info{.rx_flags = 0, .chan = kBssChannel};
+  wlan_rx_info_t rx_info{.rx_flags = 0, .channel = kBssChannel};
   packet->CopyCtrlFrom(rx_info);
 
   return packet;
@@ -408,7 +411,7 @@ std::unique_ptr<Packet> CreateDeauthFrame(common::MacAddr client_addr) {
 
   packet->set_len(w.WrittenBytes());
 
-  wlan_rx_info_t rx_info{.rx_flags = 0, .chan = kBssChannel};
+  wlan_rx_info_t rx_info{.rx_flags = 0, .channel = kBssChannel};
   packet->CopyCtrlFrom(rx_info);
 
   return packet;
@@ -434,10 +437,10 @@ std::unique_ptr<Packet> CreateAssocReqFrame(common::MacAddr client_addr,
   mgmt_hdr->addr3 = bssid;
 
   auto assoc = w.Write<AssociationRequest>();
-  CapabilityInfo cap = {};
-  cap.set_short_preamble(1);
-  cap.set_ess(1);
-  assoc->cap = cap;
+  CapabilityInfo capability_info = {};
+  capability_info.set_short_preamble(1);
+  capability_info.set_ess(1);
+  assoc->capability_info = capability_info;
   assoc->listen_interval = kListenInterval;
 
   BufferWriter elem_w(w.RemainingBuffer());
@@ -450,7 +453,7 @@ std::unique_ptr<Packet> CreateAssocReqFrame(common::MacAddr client_addr,
 
   packet->set_len(w.WrittenBytes() + elem_w.WrittenBytes());
 
-  wlan_rx_info_t rx_info{.rx_flags = 0, .chan = kBssChannel};
+  wlan_rx_info_t rx_info{.rx_flags = 0, .channel = kBssChannel};
   packet->CopyCtrlFrom(rx_info);
 
   return packet;
@@ -477,10 +480,10 @@ std::unique_ptr<Packet> CreateAssocRespFrame(const wlan_assoc_ctx_t& ap_assoc_ct
 
   auto assoc = w.Write<AssociationResponse>();
   assoc->aid = kAid;
-  CapabilityInfo cap = {};
-  cap.set_short_preamble(1);
-  cap.set_ess(1);
-  assoc->cap = cap;
+  CapabilityInfo capability_info = {};
+  capability_info.set_short_preamble(1);
+  capability_info.set_ess(1);
+  assoc->capability_info = capability_info;
   assoc->status_code = static_cast<uint16_t>(wlan_ieee80211::StatusCode::SUCCESS);
 
   BufferWriter elem_w(w.RemainingBuffer());
@@ -499,7 +502,7 @@ std::unique_ptr<Packet> CreateAssocRespFrame(const wlan_assoc_ctx_t& ap_assoc_ct
 
   packet->set_len(w.WrittenBytes() + elem_w.WrittenBytes());
 
-  wlan_rx_info_t rx_info{.rx_flags = 0, .chan = kBssChannel};
+  wlan_rx_info_t rx_info{.rx_flags = 0, .channel = kBssChannel};
   packet->CopyCtrlFrom(rx_info);
 
   return packet;
@@ -525,7 +528,7 @@ std::unique_ptr<Packet> CreateDisassocFrame(common::MacAddr client_addr) {
 
   packet->set_len(w.WrittenBytes());
 
-  wlan_rx_info_t rx_info{.rx_flags = 0, .chan = kBssChannel};
+  wlan_rx_info_t rx_info{.rx_flags = 0, .channel = kBssChannel};
   packet->CopyCtrlFrom(rx_info);
 
   return packet;
@@ -560,7 +563,7 @@ std::unique_ptr<Packet> CreateDataFrame(fbl::Span<const uint8_t> payload) {
 
   packet->set_len(w.WrittenBytes());
 
-  wlan_rx_info_t rx_info{.rx_flags = 0, .chan = kBssChannel};
+  wlan_rx_info_t rx_info{.rx_flags = 0, .channel = kBssChannel};
   packet->CopyCtrlFrom(rx_info);
 
   return packet;
@@ -613,7 +616,7 @@ std::unique_ptr<Packet> CreateAmsduDataFramePacket(
 
   packet->set_len(w.WrittenBytes());
 
-  wlan_rx_info_t rx_info{.rx_flags = 0, .chan = kBssChannel};
+  wlan_rx_info_t rx_info{.rx_flags = 0, .channel = kBssChannel};
   packet->CopyCtrlFrom(rx_info);
 
   return packet;
@@ -638,7 +641,7 @@ DataFrame<> CreateNullDataFrame() {
 
   packet->set_len(w.WrittenBytes());
 
-  wlan_rx_info_t rx_info{.rx_flags = 0, .chan = kBssChannel};
+  wlan_rx_info_t rx_info{.rx_flags = 0, .channel = kBssChannel};
   packet->CopyCtrlFrom(rx_info);
 
   return DataFrame<>(std::move(packet));

@@ -306,7 +306,7 @@ void iwl_mvm_rx_rx_mpdu(struct iwl_mvm* mvm, struct napi_struct* napi,
 
   wlan_info_band_t band =
       phy_flags & RX_RES_PHY_FLAGS_BAND_24 ? WLAN_INFO_BAND_2GHZ : WLAN_INFO_BAND_5GHZ;
-  rx_info.chan.primary = le16_to_cpu(phy_info->channel);
+  rx_info.channel.primary = le16_to_cpu(phy_info->channel);
 
 #if 0   // NEEDS_PORTING
   /* TSF as indicated by the firmware  is at INA time */
@@ -413,16 +413,16 @@ void iwl_mvm_rx_rx_mpdu(struct iwl_mvm* mvm, struct napi_struct* napi,
 
   switch (rate_n_flags & RATE_MCS_CHAN_WIDTH_MSK) {
     case RATE_MCS_CHAN_WIDTH_20:
-      rx_info.chan.cbw = WLAN_CHANNEL_BANDWIDTH__20;
+      rx_info.channel.cbw = CHANNEL_BANDWIDTH_CBW20;
       break;
     case RATE_MCS_CHAN_WIDTH_40:
-      rx_info.chan.cbw = WLAN_CHANNEL_BANDWIDTH__40;
+      rx_info.channel.cbw = CHANNEL_BANDWIDTH_CBW40;
       break;
     case RATE_MCS_CHAN_WIDTH_80:
-      rx_info.chan.cbw = WLAN_CHANNEL_BANDWIDTH__80;
+      rx_info.channel.cbw = CHANNEL_BANDWIDTH_CBW80;
       break;
     case RATE_MCS_CHAN_WIDTH_160:
-      rx_info.chan.cbw = WLAN_CHANNEL_BANDWIDTH__160;
+      rx_info.channel.cbw = CHANNEL_BANDWIDTH_CBW160;
       break;
   }
 

@@ -1,10 +1,11 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_TX_VECTOR_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_TX_VECTOR_H_
 
+#include <fuchsia/wlan/common/c/banjo.h>
 #include <lib/zx/time.h>
 #include <zircon/assert.h>
 #include <zircon/types.h>
@@ -56,7 +57,7 @@ static constexpr tx_vec_idx_t kMaxValidIdx = kDsssCckStartIdx + kDsssCckNumTxVec
 struct TxVector {
   wlan_info_phy_type_t phy;
   wlan_gi_t gi;
-  wlan_channel_bandwidth_t cbw;
+  channel_bandwidth_t cbw;
   // number of spatial streams, for VHT and beyond
   uint8_t nss;
   // For HT,  see IEEE 802.11-2016 Table 19-27

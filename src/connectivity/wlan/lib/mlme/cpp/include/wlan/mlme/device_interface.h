@@ -5,6 +5,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_DEVICE_INTERFACE_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_DEVICE_INTERFACE_H_
 
+#include <fuchsia/wlan/common/c/banjo.h>
 #include <fuchsia/wlan/internal/c/banjo.h>
 #include <fuchsia/wlan/minstrel/cpp/fidl.h>
 #include <zircon/types.h>
@@ -32,7 +33,7 @@ class DeviceState : public fbl::RefCounted<DeviceState> {
   void set_address(const common::MacAddr& addr) { addr_ = addr; }
 
   wlan_channel_t channel() const { return chan_; }
-  void set_channel(const wlan_channel_t& chan) { chan_ = chan; }
+  void set_channel(const wlan_channel_t& channel) { chan_ = channel; }
 
   bool online() { return online_; }
   void set_online(bool online) { online_ = online; }
@@ -58,7 +59,7 @@ class DeviceInterface {
   virtual zx_status_t SendWlan(std::unique_ptr<Packet> packet, uint32_t flags = 0) = 0;
   virtual zx_status_t SendService(fbl::Span<const uint8_t> span) = 0;
 
-  virtual zx_status_t SetChannel(wlan_channel_t chan) = 0;
+  virtual zx_status_t SetChannel(wlan_channel_t channel) = 0;
   virtual zx_status_t SetStatus(uint32_t status) = 0;
   virtual zx_status_t ConfigureBss(bss_config_t* cfg) = 0;
   virtual zx_status_t EnableBeaconing(wlan_bcn_config_t* bcn_cfg) = 0;

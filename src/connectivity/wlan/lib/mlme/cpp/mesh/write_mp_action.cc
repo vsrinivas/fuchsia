@@ -1,4 +1,4 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -22,8 +22,8 @@ static void WriteFixed(BufferWriter* w, const MacHeaderWriter& mac_header_writer
 
   // Capability info: leave ESS and IBSS set to zero to indicate 'mesh'.
   // Hardcode short preamble because the rest of our code does so...
-  auto cap_info = w->Write<CapabilityInfo>();
-  cap_info->set_short_preamble(1);
+  auto capability_info = w->Write<CapabilityInfo>();
+  capability_info->set_short_preamble(1);
 }
 
 static void WriteCommonElementsHead(BufferWriter* w, const wlan_mlme::MeshPeeringCommon& c) {

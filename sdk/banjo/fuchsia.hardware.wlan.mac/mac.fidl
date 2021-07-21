@@ -6,6 +6,7 @@ library fuchsia.hardware.wlan.mac;
 using ddk.hw.wlan.wlaninfo;
 using fuchsia.hardware.ethernet;
 using fuchsia.hardware.wlan.info;
+using fuchsia.wlan.common;
 using fuchsia.wlan.internal;
 using zx;
 
@@ -59,7 +60,7 @@ type WlanRxInfo = struct {
     /// The data rate of the device, measured in units of 0.5 Mb/s.
     data_rate uint32;
     /// The channel of the device at the time of the operation. This field must be included.
-    chan fuchsia.hardware.wlan.info.WlanChannel;
+    channel fuchsia.wlan.common.WlanChannel;
     /// The modulation and coding scheme index of the device at the time of the operation. Depends
     /// on the PHY format and channel width.
     mcs uint8;
@@ -106,7 +107,7 @@ type WlanTxInfo = struct {
     // The PHY format to be used to transmit this packet.
     phy uint16;
     // The channel width to be used to transmit this packet.
-    cbw fuchsia.hardware.wlan.info.WlanChannelBandwidth;
+    channel_bandwidth fuchsia.wlan.common.ChannelBandwidth;
     /// The modulation and coding scheme index for this packet. Depends on the PHY format and
     /// channel width.
     mcs uint8;
@@ -321,7 +322,7 @@ protocol Wlanmac {
     // Set the radio channel
     SetChannel(struct {
         options uint32;
-        chan fuchsia.hardware.wlan.info.WlanChannel;
+        chan fuchsia.wlan.common.WlanChannel;
     }) -> (struct {
         status zx.status;
     });

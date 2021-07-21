@@ -4,6 +4,7 @@
 
 #include <fuchsia/hardware/wlan/info/c/banjo.h>
 #include <fuchsia/hardware/wlanif/c/banjo.h>
+#include <fuchsia/wlan/common/c/banjo.h>
 #include <fuchsia/wlan/internal/c/banjo.h>
 #include <zircon/errors.h>
 
@@ -32,8 +33,8 @@ constexpr zx::duration kSimulatedClockDuration = zx::sec(10);
 
 struct ApInfo {
   explicit ApInfo(simulation::Environment* env, const common::MacAddr& bssid,
-                  const wlan_ssid_t& ssid, const wlan_channel_t& chan)
-      : ap_(env, bssid, ssid, chan) {}
+                  const wlan_ssid_t& ssid, const wlan_channel_t& channel)
+      : ap_(env, bssid, ssid, channel) {}
 
   simulation::FakeAp ap_;
   bool probe_resp_seen_ = false;
@@ -62,7 +63,7 @@ class ActiveScanTest : public SimTest {
   ActiveScanTest() = default;
   void Init();
   void StartFakeAp(const common::MacAddr& bssid, const wlan_ssid_t& ssid,
-                   const wlan_channel_t& chan, zx::duration beacon_interval = kBeaconInterval);
+                   const wlan_channel_t& channel, zx::duration beacon_interval = kBeaconInterval);
 
   void StartScan(const wlanif_scan_req_t* req);
   void VerifyScanResults();
@@ -102,10 +103,9 @@ void ClientIfc::OnScanResult(const wlanif_scan_result_t* result) {
 
   wlanif_scan_result_t copy = *result;
   // Copy the IES data over since the original location may change data by the time we verify.
-  std::vector<uint8_t> ies(copy.bss.ies_bytes_list,
-                           copy.bss.ies_bytes_list + copy.bss.ies_bytes_count);
+  std::vector<uint8_t> ies(copy.bss.ies_list, copy.bss.ies_list + copy.bss.ies_count);
   seen_ies_.push_back(ies);
-  copy.bss.ies_bytes_list = seen_ies_.at(seen_ies_.size() - 1).data();
+  copy.bss.ies_list = seen_ies_.at(seen_ies_.size() - 1).data();
   scan_results_.emplace_back(copy);
 }
 
@@ -130,8 +130,8 @@ void ActiveScanTest::Init() {
 }
 
 void ActiveScanTest::StartFakeAp(const common::MacAddr& bssid, const wlan_ssid_t& ssid,
-                                 const wlan_channel_t& chan, zx::duration beacon_interval) {
-  auto ap_info = std::make_unique<ApInfo>(env_.get(), bssid, ssid, chan);
+                                 const wlan_channel_t& channel, zx::duration beacon_interval) {
+  auto ap_info = std::make_unique<ApInfo>(env_.get(), bssid, ssid, channel);
   // Beacon is also enabled here to make sure this is not disturbing the correct result.
   ap_info->ap_.EnableBeacon(beacon_interval);
   aps_.push_back(std::move(ap_info));
@@ -172,16 +172,16 @@ void ActiveScanTest::VerifyScanResults() {
 
         // Verify SSID
         wlan_ssid_t ssid_info = ap_info->ap_.GetSsid();
-        auto ssid = brcmf_find_ssid_in_ies(result.bss.ies_bytes_list, result.bss.ies_bytes_count);
+        auto ssid = brcmf_find_ssid_in_ies(result.bss.ies_list, result.bss.ies_count);
         EXPECT_EQ(ssid.size(), ssid_info.len);
         ASSERT_LE(ssid_info.len, sizeof(ssid_info.ssid));
         EXPECT_EQ(memcmp(ssid.data(), ssid_info.ssid, ssid_info.len), 0);
 
         // Verify channel
         wlan_channel_t channel = ap_info->ap_.GetChannel();
-        EXPECT_EQ(result.bss.chan.primary, channel.primary);
-        EXPECT_EQ(result.bss.chan.cbw, channel.cbw);
-        EXPECT_EQ(result.bss.chan.secondary80, channel.secondary80);
+        EXPECT_EQ(result.bss.channel.primary, channel.primary);
+        EXPECT_EQ(result.bss.channel.cbw, channel.cbw);
+        EXPECT_EQ(result.bss.channel.secondary80, channel.secondary80);
 
         // Verify has RSSI value
         ASSERT_LT(result.bss.rssi_dbm, 0);
@@ -238,7 +238,7 @@ void ActiveScanTest::Rx(std::shared_ptr<const simulation::SimFrame> frame,
 
 // AP 1&2 on channel 2.
 constexpr wlan_channel_t kDefaultChannel1 = {
-    .primary = 2, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0};
+    .primary = 2, .cbw = CHANNEL_BANDWIDTH_CBW20, .secondary80 = 0};
 constexpr wlan_ssid_t kAp1Ssid = {.len = 16, .ssid = "Fuchsia Fake AP1"};
 const common::MacAddr kAp1Bssid({0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc});
 constexpr wlan_ssid_t kAp2Ssid = {.len = 16, .ssid = "Fuchsia Fake AP2"};
@@ -246,7 +246,7 @@ const common::MacAddr kAp2Bssid({0x12, 0x34, 0x56, 0x78, 0x9a, 0xbd});
 
 // AP 3 on channel 4.
 constexpr wlan_channel_t kDefaultChannel2 = {
-    .primary = 4, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0};
+    .primary = 4, .cbw = CHANNEL_BANDWIDTH_CBW20, .secondary80 = 0};
 constexpr wlan_ssid_t kAp3Ssid = {.len = 16, .ssid = "Fuchsia Fake AP3"};
 const common::MacAddr kAp3Bssid({0x12, 0x34, 0x56, 0x78, 0x9a, 0xbe});
 

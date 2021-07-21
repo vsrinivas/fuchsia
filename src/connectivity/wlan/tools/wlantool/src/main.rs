@@ -1,4 +1,4 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -312,10 +312,10 @@ async fn do_client_connect(
         radio_cfg: fidl_sme::RadioConfig {
             override_phy: phy.is_some(),
             phy: phy.unwrap_or(PhyArg::Vht).into(),
-            override_cbw: cbw.is_some(),
-            cbw: cbw.unwrap_or(CbwArg::Cbw80).into(),
-            override_primary_chan: false,
-            primary_chan: 0,
+            override_channel_bandwidth: cbw.is_some(),
+            channel_bandwidth: cbw.unwrap_or(CbwArg::Cbw80).into(),
+            override_primary_channel: false,
+            primary_channel: 0,
         },
         deprecated_scan_type: scan_type.into(),
         multiple_bss_candidates: false, // only used for metrics, select arbitrary value
@@ -478,7 +478,7 @@ async fn do_ap(cmd: opts::ApCmd, dev_svc_proxy: DeviceService) -> Result<(), Err
                 fidl_sme::StartApResultCode::DfsUnsupported => {
                     println!(
                         "{:?}: The specified role does not support DFS channel {:?}",
-                        r, config.radio_cfg.primary_chan
+                        r, config.radio_cfg.primary_channel
                     );
                 }
                 _ => {
@@ -631,12 +631,12 @@ async fn handle_scan_transaction(scan_txn: fidl_sme::ScanTransactionProxy) -> Re
 fn print_scan_line(
     bssid: impl fmt::Display,
     dbm: impl fmt::Display,
-    chan: impl fmt::Display,
+    channel: impl fmt::Display,
     protection: impl fmt::Display,
     compat: impl fmt::Display,
     ssid: impl fmt::Display,
 ) {
-    println!("{:17} {:>4} {:>6} {:12} {:10} {}", bssid, dbm, chan, protection, compat, ssid)
+    println!("{:17} {:>4} {:>6} {:12} {:10} {}", bssid, dbm, channel, protection, compat, ssid)
 }
 
 fn print_scan_header() {

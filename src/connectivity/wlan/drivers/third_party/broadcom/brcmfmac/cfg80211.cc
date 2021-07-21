@@ -20,6 +20,7 @@
 
 #include <fuchsia/hardware/wlanif/c/banjo.h>
 #include <fuchsia/hardware/wlanphyimpl/c/banjo.h>
+#include <fuchsia/wlan/common/c/banjo.h>
 #include <fuchsia/wlan/ieee80211/cpp/fidl.h>
 #include <fuchsia/wlan/internal/c/banjo.h>
 #include <lib/ddk/metadata.h>
@@ -935,7 +936,7 @@ static zx_status_t brcmf_escan_prep(struct brcmf_cfg80211_info* cfg,
     for (i = 0; i < (int32_t)n_channels; i++) {
       wlan_channel_t wlan_chan;
       wlan_chan.primary = request->channel_list[i];
-      wlan_chan.cbw = WLAN_CHANNEL_BANDWIDTH__20;
+      wlan_chan.cbw = CHANNEL_BANDWIDTH_CBW20;
       wlan_chan.secondary80 = 0;
       chanspec = channel_to_chanspec(&cfg->d11inf, &wlan_chan);
       BRCMF_DBG(SCAN, "Chan : %d, Channel spec: %x", request->channel_list[i], chanspec);
@@ -1866,13 +1867,13 @@ zx_status_t brcmf_cfg80211_connect(struct net_device* ndev, const wlanif_assoc_r
   // encoding 80Mhz and the upper layer had always passed 20Mhz historically so also need to
   // test whether the 40Mhz encoding works properly.
   // TODO(fxbug.dev/65770) - Remove this override.
-  chan_override = ifp->bss.chan;
-  chan_override.cbw = WLAN_CHANNEL_BANDWIDTH__20;
+  chan_override = ifp->bss.channel;
+  chan_override.cbw = CHANNEL_BANDWIDTH_CBW20;
 
   chanspec = channel_to_chanspec(&cfg->d11inf, &chan_override);
   cfg->channel = chanspec;
 
-  ssid = brcmf_find_ssid_in_ies(ifp->bss.ies_bytes_list, ifp->bss.ies_bytes_count);
+  ssid = brcmf_find_ssid_in_ies(ifp->bss.ies_list, ifp->bss.ies_count);
 
   join_params_size = sizeof(join_params);
   memset(&join_params, 0, join_params_size);
@@ -2528,14 +2529,14 @@ static void brcmf_return_scan_result(struct net_device* ndev, uint16_t channel,
   result.bss.beacon_period = 0;
   result.bss.timestamp = 0;
   result.bss.local_time = 0;
-  result.bss.cap = capability;
-  result.bss.chan.primary = (uint8_t)channel;
-  result.bss.chan.cbw = WLAN_CHANNEL_BANDWIDTH__20;  // TODO(cphoenix): Don't hard-code this.
+  result.bss.capability_info = capability;
+  result.bss.channel.primary = (uint8_t)channel;
+  result.bss.channel.cbw = CHANNEL_BANDWIDTH_CBW20;  // TODO(cphoenix): Don't hard-code this.
   result.bss.rssi_dbm = std::min<int16_t>(0, std::max<int16_t>(-255, rssi_dbm));
-  result.bss.ies_bytes_list = ie;
-  result.bss.ies_bytes_count = ie_len;
+  result.bss.ies_list = ie;
+  result.bss.ies_count = ie_len;
 
-  auto ssid = brcmf_find_ssid_in_ies(result.bss.ies_bytes_list, result.bss.ies_bytes_count);
+  auto ssid = brcmf_find_ssid_in_ies(result.bss.ies_list, result.bss.ies_count);
 
   BRCMF_DBG(SCAN, "Returning scan result id: %lu, channel: %d, dbm: %d", result.txn_id, channel,
             result.bss.rssi_dbm);
@@ -3190,7 +3191,7 @@ static uint8_t brcmf_cfg80211_start_ap(struct net_device* ndev, const wlanif_sta
     goto fail;
   }
 
-  channel = {.primary = req->channel, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0};
+  channel = {.primary = req->channel, .cbw = CHANNEL_BANDWIDTH_CBW20, .secondary80 = 0};
   chanspec = channel_to_chanspec(&cfg->d11inf, &channel);
   status = brcmf_fil_iovar_int_set(ifp, "chanspec", chanspec, &fw_err);
   if (status != ZX_OK) {
@@ -3356,25 +3357,25 @@ void brcmf_if_join_req(net_device* ndev, const wlanif_join_req_t* req) {
 
   struct brcmf_if* ifp = ndev_to_if(ndev);
   struct brcmf_cfg80211_profile* profile = &ifp->vif->profile;
-  const wlanif_bss_description_t& sme_bss = req->selected_bss;
+  const bss_description_t& sme_bss = req->selected_bss;
 
-  auto ssid = brcmf_find_ssid_in_ies(sme_bss.ies_bytes_list, sme_bss.ies_bytes_count);
+  auto ssid = brcmf_find_ssid_in_ies(sme_bss.ies_list, sme_bss.ies_count);
 
   wlanif_join_confirm_t result;
   if (!ssid.empty()) {
     BRCMF_IFDBG(WLANIF, ndev, "Join request from SME.");
 #if !defined(NDEBUG)
     BRCMF_IFDBG(WLANIF, ndev, "  ssid: " SSID_FMT_STR ", bssid: " MAC_FMT_STR ", channel: %u",
-                SSID_FMT_VECTOR(ssid), MAC_FMT_ARGS(sme_bss.bssid), sme_bss.chan.primary);
+                SSID_FMT_VECTOR(ssid), MAC_FMT_ARGS(sme_bss.bssid), sme_bss.channel.primary);
 #endif /* !defined(NDEBUG) */
 
     memcpy(&ifp->bss, &sme_bss, sizeof(ifp->bss));
-    if (ifp->bss.ies_bytes_count > WLAN_MSDU_MAX_LEN) {
-      ifp->bss.ies_bytes_count = WLAN_MSDU_MAX_LEN;
+    if (ifp->bss.ies_count > WLAN_MSDU_MAX_LEN) {
+      ifp->bss.ies_count = WLAN_MSDU_MAX_LEN;
     }
     // BSS IES pointer points to data we don't own, so we have to copy the IES over.
-    memcpy(&ifp->ies, ifp->bss.ies_bytes_list, ifp->bss.ies_bytes_count);
-    ifp->bss.ies_bytes_list = ifp->ies;
+    memcpy(&ifp->ies, ifp->bss.ies_list, ifp->bss.ies_count);
+    ifp->bss.ies_list = ifp->ies;
     memcpy(profile->bssid, sme_bss.bssid, ETH_ALEN);
     result.result_code = WLAN_JOIN_RESULT_SUCCESS;
 
@@ -4590,7 +4591,7 @@ zx_status_t brcmf_if_sae_handshake_resp(net_device* ndev, const wlanif_sae_hands
     BRCMF_ERR("Ignoring mismatch and using join MAC address");
   }
 
-  auto ssid = brcmf_find_ssid_in_ies(ifp->bss.ies_bytes_list, ifp->bss.ies_bytes_count);
+  auto ssid = brcmf_find_ssid_in_ies(ifp->bss.ies_list, ifp->bss.ies_count);
   if (ssid.empty()) {
     BRCMF_ERR("No SSID IE in BSS");
     brcmf_return_assoc_result(ndev, WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);

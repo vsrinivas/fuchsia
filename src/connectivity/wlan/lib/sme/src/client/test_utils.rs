@@ -100,7 +100,7 @@ pub fn fake_negotiated_channel_and_capabilities() -> (channel::Channel, ClientCa
     (
         channel::Channel { primary: 3, cbw: channel::Cbw::Cbw40 },
         ClientCapabilities(StaCapabilities {
-            cap_info: crate::test_utils::fake_capability_info(),
+            capability_info: crate::test_utils::fake_capability_info(),
             rates: [0x0c, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6c]
                 .iter()
                 .cloned()
@@ -117,7 +117,7 @@ pub fn create_assoc_conf(result_code: fidl_mlme::AssociateResultCode) -> fidl_ml
         resp: fidl_mlme::AssociateConfirm {
             result_code,
             association_id: 55,
-            cap_info: crate::test_utils::fake_capability_info().raw(),
+            capability_info: crate::test_utils::fake_capability_info().raw(),
             rates: vec![0x0c, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6c],
             // TODO(fxbug.dev/43938): mock with fake WMM param
             wmm_param: None,

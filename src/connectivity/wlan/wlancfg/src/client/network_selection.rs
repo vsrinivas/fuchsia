@@ -1,4 +1,4 @@
-// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -173,7 +173,7 @@ impl InternalBss<'_> {
         let recent_failure_count = self.recent_failure_count();
         let recent_short_connection_count = self.recent_short_connections();
         format!(
-            "{}({:4}), {}, {:>4}dBm, chan {:8}, score {:4}{}{}{}{}",
+            "{}({:4}), {}, {:>4}dBm, channel {:8}, score {:4}{}{}{}{}",
             self.hasher.hash_ssid(&self.saved_network_info.network_id.ssid),
             self.saved_security_type_to_string(),
             self.hasher.hash_mac_addr(&self.scanned_bss_info.bssid),
@@ -1936,9 +1936,9 @@ mod tests {
                 ssid: test_id_1.ssid.clone(),
                 rssi_dbm: 10,
                 snr_db: 10,
-                channel: fidl_common::WlanChan {
+                channel: fidl_common::WlanChannel {
                     primary: 1,
-                    cbw: fidl_common::Cbw::Cbw20,
+                    cbw: fidl_common::ChannelBandwidth::Cbw20,
                     secondary80: 0,
                 },
                 protection: fidl_sme::Protection::Wpa3Enterprise,
@@ -1950,9 +1950,9 @@ mod tests {
                 ssid: test_id_1.ssid.clone(),
                 rssi_dbm: 0,
                 snr_db: 0,
-                channel: fidl_common::WlanChan {
+                channel: fidl_common::WlanChannel {
                     primary: 1,
-                    cbw: fidl_common::Cbw::Cbw20,
+                    cbw: fidl_common::ChannelBandwidth::Cbw20,
                     secondary80: 0,
                 },
                 protection: fidl_sme::Protection::Wpa3Enterprise,
@@ -2054,9 +2054,9 @@ mod tests {
                 ssid: test_id_1.ssid.clone(),
                 rssi_dbm: 10,
                 snr_db: 10,
-                channel: fidl_common::WlanChan {
+                channel: fidl_common::WlanChannel {
                     primary: 1,
-                    cbw: fidl_common::Cbw::Cbw20,
+                    cbw: fidl_common::ChannelBandwidth::Cbw20,
                     secondary80: 0,
                 },
                 protection: fidl_sme::Protection::Wpa3Enterprise,
@@ -2068,9 +2068,9 @@ mod tests {
                 ssid: test_id_2.ssid.clone(),
                 rssi_dbm: 0,
                 snr_db: 0,
-                channel: fidl_common::WlanChan {
+                channel: fidl_common::WlanChannel {
                     primary: 1,
-                    cbw: fidl_common::Cbw::Cbw20,
+                    cbw: fidl_common::ChannelBandwidth::Cbw20,
                     secondary80: 0,
                 },
                 protection: fidl_sme::Protection::Wpa1,
@@ -2098,9 +2098,9 @@ mod tests {
             ssid: test_id_1.ssid.clone(),
             rssi_dbm: 10,
             snr_db: 10,
-            channel: fidl_common::WlanChan {
+            channel: fidl_common::WlanChannel {
                 primary: 1,
-                cbw: fidl_common::Cbw::Cbw20,
+                cbw: fidl_common::ChannelBandwidth::Cbw20,
                 secondary80: 0,
             },
             protection: fidl_sme::Protection::Wpa3Enterprise,
@@ -2166,9 +2166,9 @@ mod tests {
             ssid: test_id_2.ssid.clone(),
             rssi_dbm: 10,
             snr_db: 10,
-            channel: fidl_common::WlanChan {
+            channel: fidl_common::WlanChannel {
                 primary: 1,
-                cbw: fidl_common::Cbw::Cbw20,
+                cbw: fidl_common::ChannelBandwidth::Cbw20,
                 secondary80: 0,
             },
             protection: fidl_sme::Protection::Wpa1,
@@ -2384,9 +2384,9 @@ mod tests {
                 ssid: test_id_1.ssid.clone(),
                 rssi_dbm: 10,
                 snr_db: 10,
-                channel: fidl_common::WlanChan {
+                channel: fidl_common::WlanChannel {
                     primary: 1,
-                    cbw: fidl_common::Cbw::Cbw20,
+                    cbw: fidl_common::ChannelBandwidth::Cbw20,
                     secondary80: 0,
                 },
                 // This network is WPA3, but should still match against the desired WPA2 network
@@ -2399,9 +2399,9 @@ mod tests {
                 ssid: "other ssid".as_bytes().to_vec(),
                 rssi_dbm: 0,
                 snr_db: 0,
-                channel: fidl_common::WlanChan {
+                channel: fidl_common::WlanChannel {
                     primary: 1,
-                    cbw: fidl_common::Cbw::Cbw20,
+                    cbw: fidl_common::ChannelBandwidth::Cbw20,
                     secondary80: 0,
                 },
                 protection: fidl_sme::Protection::Wpa1,

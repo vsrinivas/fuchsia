@@ -4,6 +4,7 @@
 
 // To test PHY and MAC device callback functions.
 
+#include <fuchsia/wlan/common/c/banjo.h>
 #include <fuchsia/wlan/internal/c/banjo.h>
 #include <lib/mock-function/mock-function.h>
 #include <stdio.h>
@@ -478,9 +479,9 @@ class MacInterfaceTest : public WlanDeviceTest, public MockTrans {
   fp_send_cmd original_send_cmd;
 
  protected:
-  zx_status_t SetChannel(const wlan_channel_t* chan) {
+  zx_status_t SetChannel(const wlan_channel_t* channel) {
     uint32_t option = 0;
-    return wlanmac_ops.set_channel(&mvmvif_sta_, option, chan);
+    return wlanmac_ops.set_channel(&mvmvif_sta_, option, channel);
   }
 
   zx_status_t ConfigureBss(const bss_config_t* config) {

@@ -177,7 +177,7 @@ fn create_start_request(config: &Config) -> fidl_mlme::StartRequest {
         dtim_period: DEFAULT_DTIM_PERIOD,
         channel: config.channel,
         // TODO(fxbug.dev/29468): Use actual caps from device here.
-        cap: 0,
+        capability_info: 0,
         // TODO(fxbug.dev/29468): Use actual rates from device here.
         rates: vec![],
         country: fidl_mlme::Country {
@@ -188,7 +188,7 @@ fn create_start_request(config: &Config) -> fidl_mlme::StartRequest {
         rsne: None,
         mesh_id: config.mesh_id.clone(),
         phy: fidl_common::Phy::Ht, // TODO(fxbug.dev/29528, fxbug.dev/29529): Use dynamic value
-        cbw: fidl_common::Cbw::Cbw20,
+        channel_bandwidth: fidl_common::ChannelBandwidth::Cbw20,
     }
 }
 

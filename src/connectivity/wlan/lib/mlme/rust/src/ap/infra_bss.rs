@@ -1,4 +1,4 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -17,9 +17,8 @@ use {
     },
     anyhow::format_err,
     banjo_ddk_hw_wlan_wlaninfo::WlanInfoDriverFeature,
-    banjo_fuchsia_hardware_wlan_info::{WlanChannel, WlanChannelBandwidth},
-    banjo_fuchsia_hardware_wlan_mac as banjo_wlan_mac, fidl_fuchsia_wlan_mlme as fidl_mlme,
-    fuchsia_zircon as zx,
+    banjo_fuchsia_hardware_wlan_mac as banjo_wlan_mac, banjo_fuchsia_wlan_common as banjo_common,
+    fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
     log::error,
     std::collections::{HashMap, VecDeque},
     wlan_common::{
@@ -87,11 +86,11 @@ impl InfraBss {
         };
 
         ctx.device
-            .set_channel(WlanChannel {
+            .set_channel(banjo_common::WlanChannel {
                 primary: channel,
 
                 // TODO(fxbug.dev/40917): Correctly support this.
-                cbw: WlanChannelBandwidth::B_20,
+                cbw: banjo_common::ChannelBandwidth::CBW20,
                 secondary80: 0,
             })
             .map_err(|s| Error::Status(format!("failed to set channel"), s))?;
@@ -188,7 +187,7 @@ impl InfraBss {
                 ctx,
                 self.rsne.is_some(),
                 self.channel,
-                CapabilityInfo(resp.cap),
+                CapabilityInfo(resp.capability_info),
                 resp.result_code,
                 resp.association_id,
                 &resp.rates,
@@ -655,7 +654,11 @@ mod tests {
 
         assert_eq!(
             fake_device.wlan_channel,
-            WlanChannel { primary: 1, cbw: WlanChannelBandwidth::B_20, secondary80: 0 }
+            banjo_common::WlanChannel {
+                primary: 1,
+                cbw: banjo_common::ChannelBandwidth::CBW20,
+                secondary80: 0
+            }
         );
 
         let beacon_tmpl = vec![
@@ -852,7 +855,7 @@ mod tests {
                 peer_sta_address: CLIENT_ADDR,
                 result_code: fidl_mlme::AssociateResultCode::Success,
                 association_id: 1,
-                cap: 0,
+                capability_info: 0,
                 rates: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
             },
         )
@@ -906,7 +909,7 @@ mod tests {
                 peer_sta_address: CLIENT_ADDR,
                 result_code: fidl_mlme::AssociateResultCode::Success,
                 association_id: 1,
-                cap: CapabilityInfo(0).with_short_preamble(true).raw(),
+                capability_info: CapabilityInfo(0).with_short_preamble(true).raw(),
                 rates: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
             },
         )
@@ -1004,7 +1007,7 @@ mod tests {
                 peer_sta_address: CLIENT_ADDR,
                 result_code: fidl_mlme::AssociateResultCode::Success,
                 association_id: 1,
-                cap: 0,
+                capability_info: 0,
                 rates: vec![1, 2, 3],
             },
         )
@@ -1181,7 +1184,7 @@ mod tests {
                 peer_sta_address: CLIENT_ADDR,
                 listen_interval: 10,
                 ssid: Some(b"coolnet".to_vec()),
-                cap: 0,
+                capability_info: 0,
                 rates: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
                 rsne: Some(vec![48, 2, 77, 88]),
             },

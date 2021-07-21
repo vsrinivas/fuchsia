@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/wlan/common/c/banjo.h>
 #include <fuchsia/wlan/internal/c/banjo.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <lib/zx/time.h>
@@ -80,8 +81,8 @@ zx_status_t ClientMlme::Init() {
       .get_wlan_channel = [](void* device) -> wlan_channel_t {
         return DEVICE(device)->GetState()->channel();
       },
-      .set_wlan_channel = [](void* device, wlan_channel_t chan) -> zx_status_t {
-        return DEVICE(device)->SetChannel(chan);
+      .set_wlan_channel = [](void* device, wlan_channel_t channel) -> zx_status_t {
+        return DEVICE(device)->SetChannel(channel);
       },
       .set_key = [](void* device, wlan_key_config_t* key) -> zx_status_t {
         return DEVICE(device)->SetKey(key);

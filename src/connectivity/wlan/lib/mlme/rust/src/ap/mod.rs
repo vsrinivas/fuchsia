@@ -175,7 +175,7 @@ impl Ap {
             req.ssid.clone(),
             TimeUnit(req.beacon_period),
             req.dtim_period,
-            CapabilityInfo(req.cap),
+            CapabilityInfo(req.capability_info),
             req.rates,
             req.channel,
             req.rsne,
@@ -327,7 +327,7 @@ impl Ap {
 
         // Rogue frames received from the wrong channel
         if let Some(rx_info) = rx_info {
-            if rx_info.chan.primary != bss.channel {
+            if rx_info.channel.primary != bss.channel {
                 return;
             }
         }
@@ -393,8 +393,8 @@ mod tests {
             key::{KeyConfig, KeyType, Protection},
             timer::FakeScheduler,
         },
-        banjo_fuchsia_hardware_wlan_info::{WlanChannel, WlanChannelBandwidth},
-        fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
+        banjo_fuchsia_wlan_common as banjo_common, fidl_fuchsia_wlan_common as fidl_common,
+        fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
         wlan_common::{
             assert_variant, big_endian::BigEndianU16, test_utils::fake_frames::fake_wpa2_rsne,
         },
@@ -780,7 +780,11 @@ mod tests {
             valid_fields: 0,
             phy: 0,
             data_rate: 0,
-            chan: WlanChannel { primary: 0, cbw: WlanChannelBandwidth::B_20, secondary80: 0 },
+            channel: banjo_common::WlanChannel {
+                primary: 0,
+                cbw: banjo_common::ChannelBandwidth::CBW20,
+                secondary80: 0,
+            },
             mcs: 0,
             rssi_dbm: 0,
             snr_dbh: 0,
@@ -796,7 +800,11 @@ mod tests {
 
         // Frame from the same channel must be processed and a probe response sent.
         let rx_info_same_channel = banjo_wlan_mac::WlanRxInfo {
-            chan: WlanChannel { primary: 1, cbw: WlanChannelBandwidth::B_20, secondary80: 0 },
+            channel: banjo_common::WlanChannel {
+                primary: 1,
+                cbw: banjo_common::ChannelBandwidth::CBW20,
+                secondary80: 0,
+            },
             ..rx_info_wrong_channel
         };
         fake_device.wlan_queue.clear();
@@ -820,23 +828,23 @@ mod tests {
             beacon_period: 5,
             dtim_period: 1,
             channel: 2,
-            cap: CapabilityInfo(0).raw(),
+            capability_info: CapabilityInfo(0).raw(),
             rates: vec![0b11111000],
             country: fidl_mlme::Country { alpha2: *b"xx", suffix: fidl_mlme::COUNTRY_ENVIRON_ALL },
             mesh_id: vec![],
             rsne: None,
             phy: fidl_common::Phy::Erp,
-            cbw: fidl_common::Cbw::Cbw20,
+            channel_bandwidth: fidl_common::ChannelBandwidth::Cbw20,
         })
         .expect("expected Ap::handle_mlme_start_request OK");
 
         assert!(ap.bss.is_some());
         assert_eq!(
             fake_device.wlan_channel,
-            WlanChannel {
+            banjo_common::WlanChannel {
                 primary: 2,
                 // TODO(fxbug.dev/40917): Correctly support this.
-                cbw: WlanChannelBandwidth::B_20,
+                cbw: banjo_common::ChannelBandwidth::CBW20,
                 secondary80: 0,
             }
         );
@@ -879,13 +887,13 @@ mod tests {
             beacon_period: 5,
             dtim_period: 1,
             channel: 2,
-            cap: CapabilityInfo(0).raw(),
+            capability_info: CapabilityInfo(0).raw(),
             rates: vec![],
             country: fidl_mlme::Country { alpha2: *b"xx", suffix: fidl_mlme::COUNTRY_ENVIRON_ALL },
             mesh_id: vec![],
             rsne: None,
             phy: fidl_common::Phy::Erp,
-            cbw: fidl_common::Cbw::Cbw20,
+            channel_bandwidth: fidl_common::ChannelBandwidth::Cbw20,
         })
         .expect("expected Ap::handle_mlme_start_request OK");
 
@@ -1280,7 +1288,7 @@ mod tests {
                 peer_sta_address: CLIENT_ADDR,
                 result_code: fidl_mlme::AssociateResultCode::Success,
                 association_id: 1,
-                cap: CapabilityInfo(0).raw(),
+                capability_info: CapabilityInfo(0).raw(),
                 rates: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
             },
         })
@@ -1389,7 +1397,7 @@ mod tests {
                 peer_sta_address: CLIENT_ADDR,
                 result_code: fidl_mlme::AssociateResultCode::Success,
                 association_id: 1,
-                cap: CapabilityInfo(0).raw(),
+                capability_info: CapabilityInfo(0).raw(),
                 rates: vec![1, 2, 3],
             },
         })

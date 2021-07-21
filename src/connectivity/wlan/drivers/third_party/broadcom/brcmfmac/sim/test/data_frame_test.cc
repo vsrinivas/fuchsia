@@ -4,6 +4,7 @@
 
 #include <fuchsia/hardware/wlan/info/c/banjo.h>
 #include <fuchsia/hardware/wlanif/c/banjo.h>
+#include <fuchsia/wlan/common/c/banjo.h>
 #include <fuchsia/wlan/internal/c/banjo.h>
 #include <zircon/errors.h>
 
@@ -32,7 +33,7 @@ constexpr zx::duration kSimulatedClockDuration = zx::sec(10);
 
 // Some default AP and association request values
 constexpr wlan_channel_t kDefaultChannel = {
-    .primary = 9, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0};
+    .primary = 9, .cbw = CHANNEL_BANDWIDTH_CBW20, .secondary80 = 0};
 constexpr simulation::WlanTxInfo kDefaultTxInfo = {.channel = kDefaultChannel};
 constexpr wlan_ssid_t kApSsid = {.len = 15, .ssid = "Fuchsia Fake AP"};
 const common::MacAddr kApBssid({0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc});
@@ -381,9 +382,9 @@ void DataFrameTest::StartAssoc() {
   // Send join request
   wlanif_join_req join_req = {};
   std::memcpy(join_req.selected_bss.bssid, assoc_context_.bssid.byte, ETH_ALEN);
-  join_req.selected_bss.ies_bytes_list = assoc_context_.ies.data();
-  join_req.selected_bss.ies_bytes_count = assoc_context_.ies.size();
-  join_req.selected_bss.chan = assoc_context_.channel;
+  join_req.selected_bss.ies_list = assoc_context_.ies.data();
+  join_req.selected_bss.ies_count = assoc_context_.ies.size();
+  join_req.selected_bss.channel = assoc_context_.channel;
   join_req.selected_bss.bss_type = BSS_TYPE_ANY_BSS;
   client_ifc_.if_impl_ops_->join_req(client_ifc_.if_impl_ctx_, &join_req);
 }

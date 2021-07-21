@@ -1,10 +1,11 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_TESTING_IFACE_DEVICE_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_TESTING_IFACE_DEVICE_H_
 
+#include <fuchsia/wlan/common/c/banjo.h>
 #include <lib/ddk/device.h>
 #include <zircon/types.h>
 
@@ -29,7 +30,7 @@ class IfaceDevice {
   zx_status_t Query(uint32_t options, wlanmac_info_t* info);
   void Stop();
   zx_status_t Start(const wlanmac_ifc_protocol_t* ifc, zx_handle_t* out_mlme_channel);
-  zx_status_t SetChannel(uint32_t options, const wlan_channel_t* chan);
+  zx_status_t SetChannel(uint32_t options, const wlan_channel_t* channel);
 
  private:
   zx_device_t* zxdev_;

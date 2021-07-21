@@ -1,6 +1,8 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
+#include <fuchsia/wlan/common/c/banjo.h>
 
 #include <functional>
 
@@ -16,7 +18,7 @@ namespace wlan::brcmfmac {
 
 // Fake AP configuration
 constexpr wlan_channel_t kDefaultChannel = {
-    .primary = 9, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0};
+    .primary = 9, .cbw = CHANNEL_BANDWIDTH_CBW20, .secondary80 = 0};
 constexpr wlan_ssid_t kDefaultSsid = {.len = 15, .ssid = "Fuchsia Fake AP"};
 const common::MacAddr kDefaultBssid({0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc});
 constexpr zx::duration kBeaconInterval = zx::msec(SimInterface::kDefaultPassiveScanDwellTimeMs - 1);
@@ -67,13 +69,13 @@ TEST_F(ScanTest, PassiveDwellTime) {
     EXPECT_EQ(*scan_result_code, WLAN_SCAN_RESULT_SUCCESS);
     auto bss_list = client_ifc_.ScanResultBssList(scan_attempt);
     EXPECT_GT(bss_list->size(), 0U);
-    for (const wlanif_bss_description_t& bss : *bss_list) {
+    for (const bss_description_t& bss : *bss_list) {
       EXPECT_EQ(kDefaultBssid, common::MacAddr(bss.bssid));
-      auto ssid = brcmf_find_ssid_in_ies(bss.ies_bytes_list, bss.ies_bytes_count);
+      auto ssid = brcmf_find_ssid_in_ies(bss.ies_list, bss.ies_count);
       EXPECT_EQ(kDefaultSsid.len, ssid.size());
       EXPECT_EQ(memcmp(kDefaultSsid.ssid, ssid.data(), ssid.size()), 0);
-      EXPECT_EQ(kDefaultChannel.primary, bss.chan.primary);
-      EXPECT_EQ(kDefaultChannel.cbw, bss.chan.cbw);
+      EXPECT_EQ(kDefaultChannel.primary, bss.channel.primary);
+      EXPECT_EQ(kDefaultChannel.cbw, bss.channel.cbw);
     }
   }
 }

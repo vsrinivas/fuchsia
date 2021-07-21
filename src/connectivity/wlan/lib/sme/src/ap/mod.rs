@@ -49,7 +49,7 @@ pub struct Config {
 #[derive(Clone, Debug, PartialEq)]
 pub struct OpRadioConfig {
     phy: Phy,
-    chan: Channel,
+    channel: Channel,
 }
 
 pub type TimeStream = timer::TimeStream<Event>;
@@ -158,18 +158,18 @@ impl ApSme {
                     Ok(rsn_cfg) => rsn_cfg,
                 };
 
-                let band_cap = match get_device_band_info(&ctx.device_info, op.chan.primary) {
+                let band_cap = match get_device_band_info(&ctx.device_info, op.channel.primary) {
                     None => {
                         responder.respond(StartResult::InvalidArguments(format!(
                             "band info for channel {} not found",
-                            op.chan
+                            op.channel
                         )));
                         return State::Idle { ctx };
                     }
                     Some(band_cap) => band_cap,
                 };
 
-                let capabilities = mac::CapabilityInfo(band_cap.cap)
+                let capabilities = mac::CapabilityInfo(band_cap.capability_info)
                     // IEEE Std 802.11-2016, 9.4.1.4: An AP sets the ESS subfield to 1 and the IBSS
                     // subfield to 0 within transmitted Beacon or Probe Response frames.
                     .with_ess(true)
@@ -285,7 +285,7 @@ impl ApSme {
             Some(State::Started { bss: InfraBss { ssid, op_radio_cfg, clients, .. }, .. }) => {
                 Some(fidl_sme::Ap {
                     ssid: ssid.to_vec(),
-                    channel: op_radio_cfg.chan.primary,
+                    channel: op_radio_cfg.channel.primary,
                     num_clients: clients.len() as u16,
                 })
             }
@@ -308,7 +308,7 @@ fn adapt_operation(
 ) -> Result<OpRadioConfig, StartResult> {
     // TODO(porce): .expect() may go way, if wlantool absorbs the default value,
     // eg. CBW20 in HT. But doing so would hinder later control from WLANCFG.
-    if usr_cfg.phy.is_none() || usr_cfg.cbw.is_none() || usr_cfg.primary_chan.is_none() {
+    if usr_cfg.phy.is_none() || usr_cfg.cbw.is_none() || usr_cfg.primary_channel.is_none() {
         return Err(StartResult::InvalidArguments(format!(
             "Incomplete user config: {:?}",
             usr_cfg
@@ -316,13 +316,13 @@ fn adapt_operation(
     }
 
     let phy = usr_cfg.phy.unwrap();
-    let chan = Channel::new(usr_cfg.primary_chan.unwrap(), usr_cfg.cbw.unwrap());
-    if !chan.is_valid_in_us() {
-        return Err(StartResult::InvalidArguments(format!("Invalid channel: {}", chan)));
+    let channel = Channel::new(usr_cfg.primary_channel.unwrap(), usr_cfg.cbw.unwrap());
+    if !channel.is_valid_in_us() {
+        return Err(StartResult::InvalidArguments(format!("Invalid channel: {}", channel)));
     }
 
-    let (phy_adapted, cbw_adapted) = derive_phy_cbw_for_ap(device_info, &phy, &chan);
-    Ok(OpRadioConfig { phy: phy_adapted, chan: Channel::new(chan.primary, cbw_adapted) })
+    let (phy_adapted, cbw_adapted) = derive_phy_cbw_for_ap(device_info, &phy, &channel);
+    Ok(OpRadioConfig { phy: phy_adapted, channel: Channel::new(channel.primary, cbw_adapted) })
 }
 
 impl super::Station for ApSme {
@@ -509,10 +509,10 @@ impl super::Station for ApSme {
 
 fn validate_config(config: &Config) -> Result<(), StartResult> {
     let rc = &config.radio_cfg;
-    if rc.phy.is_none() || rc.cbw.is_none() || rc.primary_chan.is_none() {
+    if rc.phy.is_none() || rc.cbw.is_none() || rc.primary_channel.is_none() {
         return Err(StartResult::InvalidArguments("Invalid radio config".to_string()));
     }
-    let c = Channel::new(rc.primary_chan.unwrap(), config.radio_cfg.cbw.unwrap());
+    let c = Channel::new(rc.primary_channel.unwrap(), config.radio_cfg.cbw.unwrap());
     if !c.is_valid_in_us() {
         Err(StartResult::InvalidArguments("Invalid channel".to_string()))
     } else if c.is_dfs() {
@@ -591,7 +591,7 @@ impl InfraBss {
 
     fn handle_channel_switch(&mut self, info: fidl_mlme::ChannelSwitchInfo) {
         info!("Channel switch for AP {:?}", info);
-        self.op_radio_cfg.chan.primary = info.new_channel;
+        self.op_radio_cfg.channel.primary = info.new_channel;
     }
 
     fn handle_auth_ind(&mut self, ind: fidl_mlme::AuthenticateIndication) {
@@ -649,7 +649,7 @@ impl InfraBss {
             &mut self.ctx,
             &mut self.aid_map,
             self.capabilities,
-            ind.cap,
+            ind.capability_info,
             &self.rates,
             &ind.rates,
             &self.rsn_cfg,
@@ -766,15 +766,15 @@ fn create_start_request(
         buf
     });
 
-    let (cbw, _secondary80) = op.chan.cbw.to_fidl();
+    let (channel_bandwidth, _secondary80) = op.channel.cbw.to_fidl();
 
     fidl_mlme::StartRequest {
         ssid: ssid.clone(),
         bss_type: fidl_internal::BssType::Infrastructure,
         beacon_period: DEFAULT_BEACON_PERIOD,
         dtim_period: DEFAULT_DTIM_PERIOD,
-        channel: op.chan.primary,
-        cap: capabilities.raw(),
+        channel: op.channel.primary,
+        capability_info: capabilities.raw(),
         rates: rates.to_vec(),
         country: fidl_mlme::Country {
             // TODO(fxbug.dev/29490): Get config from wlancfg
@@ -784,7 +784,7 @@ fn create_start_request(
         rsne: rsne_bytes,
         mesh_id: vec![],
         phy: op.phy.to_fidl(),
-        cbw: cbw,
+        channel_bandwidth,
     }
 }
 
@@ -823,8 +823,8 @@ mod tests {
         0x11, 0x00, 0x0f, 0xac, 0x04, // group management cipher suite -- CCMP-128
     ];
 
-    fn radio_cfg(pri_chan: u8) -> RadioConfig {
-        RadioConfig::new(Phy::Ht, Cbw::Cbw20, pri_chan)
+    fn radio_cfg(primary_channel: u8) -> RadioConfig {
+        RadioConfig::new(Phy::Ht, Cbw::Cbw20, primary_channel)
     }
 
     fn unprotected_config() -> Config {
@@ -885,7 +885,7 @@ mod tests {
         assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::Start(start_req))) => {
             assert_eq!(start_req.ssid, SSID.to_vec());
             assert_eq!(
-                start_req.cap,
+                start_req.capability_info,
                 mac::CapabilityInfo(0).with_short_preamble(true).with_ess(true).raw(),
             );
             assert_eq!(start_req.bss_type, fidl_internal::BssType::Infrastructure);
@@ -893,7 +893,7 @@ mod tests {
             assert_eq!(start_req.dtim_period, DEFAULT_DTIM_PERIOD);
             assert_eq!(
                 start_req.channel,
-                unprotected_config().radio_cfg.primary_chan.expect("invalid config")
+                unprotected_config().radio_cfg.primary_channel.expect("invalid config")
             );
             assert!(start_req.rsne.is_none());
         });
@@ -917,7 +917,7 @@ mod tests {
         assert_eq!(
             Some(fidl_sme::Ap {
                 ssid: SSID.to_vec(),
-                channel: unprotected_config().radio_cfg.primary_chan.unwrap(),
+                channel: unprotected_config().radio_cfg.primary_channel.unwrap(),
                 num_clients: 0,
             }),
             sme.get_running_ap()
@@ -932,7 +932,7 @@ mod tests {
         assert_eq!(
             Some(fidl_sme::Ap {
                 ssid: SSID.to_vec(),
-                channel: unprotected_config().radio_cfg.primary_chan.unwrap(),
+                channel: unprotected_config().radio_cfg.primary_channel.unwrap(),
                 num_clients: 0,
             }),
             sme.get_running_ap()
@@ -1084,7 +1084,7 @@ mod tests {
         assert_eq!(
             Some(fidl_sme::Ap {
                 ssid: SSID.to_vec(),
-                channel: unprotected_config().radio_cfg.primary_chan.unwrap(),
+                channel: unprotected_config().radio_cfg.primary_channel.unwrap(),
                 num_clients: 1,
             }),
             sme.get_running_ap()
@@ -1311,7 +1311,7 @@ mod tests {
         // Invalid input
         {
             let dinf = fake_device_info_vht(ChanWidthSet::TWENTY_FORTY);
-            let ucfg = RadioConfig { phy: None, cbw: Some(Cbw::Cbw20), primary_chan: Some(1) };
+            let ucfg = RadioConfig { phy: None, cbw: Some(Cbw::Cbw20), primary_channel: Some(1) };
             let got = adapt_operation(&dinf, &ucfg);
             assert!(got.is_err());
         }
@@ -1326,21 +1326,21 @@ mod tests {
         {
             let dinf = fake_device_info_vht(ChanWidthSet::TWENTY_FORTY);
             let ucfg = RadioConfig::new(Phy::Vht, Cbw::Cbw80, 48);
-            let want = OpRadioConfig { phy: Phy::Vht, chan: Channel::new(48, Cbw::Cbw80) };
+            let want = OpRadioConfig { phy: Phy::Vht, channel: Channel::new(48, Cbw::Cbw80) };
             let got = adapt_operation(&dinf, &ucfg).unwrap();
             assert_eq!(want, got);
         }
         {
             let dinf = fake_device_info_vht(ChanWidthSet::TWENTY_FORTY);
             let ucfg = RadioConfig::new(Phy::Vht, Cbw::Cbw40Below, 48);
-            let want = OpRadioConfig { phy: Phy::Vht, chan: Channel::new(48, Cbw::Cbw40Below) };
+            let want = OpRadioConfig { phy: Phy::Vht, channel: Channel::new(48, Cbw::Cbw40Below) };
             let got = adapt_operation(&dinf, &ucfg).unwrap();
             assert_eq!(want, got);
         }
         {
             let dinf = fake_device_info_vht(ChanWidthSet::TWENTY_FORTY);
             let ucfg = RadioConfig::new(Phy::Vht, Cbw::Cbw20, 48);
-            let want = OpRadioConfig { phy: Phy::Vht, chan: Channel::new(48, Cbw::Cbw20) };
+            let want = OpRadioConfig { phy: Phy::Vht, channel: Channel::new(48, Cbw::Cbw20) };
             let got = adapt_operation(&dinf, &ucfg).unwrap();
             assert_eq!(want, got);
         }
@@ -1349,21 +1349,21 @@ mod tests {
         {
             let dinf = fake_device_info_vht(ChanWidthSet::TWENTY_FORTY);
             let ucfg = RadioConfig::new(Phy::Ht, Cbw::Cbw40Below, 48);
-            let want = OpRadioConfig { phy: Phy::Ht, chan: Channel::new(48, Cbw::Cbw40Below) };
+            let want = OpRadioConfig { phy: Phy::Ht, channel: Channel::new(48, Cbw::Cbw40Below) };
             let got = adapt_operation(&dinf, &ucfg).unwrap();
             assert_eq!(want, got);
         }
         {
             let dinf = fake_device_info_vht(ChanWidthSet::TWENTY_FORTY);
             let ucfg = RadioConfig::new(Phy::Ht, Cbw::Cbw20, 48);
-            let want = OpRadioConfig { phy: Phy::Ht, chan: Channel::new(48, Cbw::Cbw20) };
+            let want = OpRadioConfig { phy: Phy::Ht, channel: Channel::new(48, Cbw::Cbw20) };
             let got = adapt_operation(&dinf, &ucfg).unwrap();
             assert_eq!(want, got);
         }
         {
             let dinf = fake_device_info_vht(ChanWidthSet::TWENTY_ONLY);
             let ucfg = RadioConfig::new(Phy::Ht, Cbw::Cbw40Below, 48);
-            let want = OpRadioConfig { phy: Phy::Ht, chan: Channel::new(48, Cbw::Cbw20) };
+            let want = OpRadioConfig { phy: Phy::Ht, channel: Channel::new(48, Cbw::Cbw20) };
             let got = adapt_operation(&dinf, &ucfg).unwrap();
             assert_eq!(want, got);
         }
@@ -1372,21 +1372,21 @@ mod tests {
         {
             let dinf = fake_device_info_ht(ChanWidthSet::TWENTY_FORTY);
             let ucfg = RadioConfig::new(Phy::Vht, Cbw::Cbw80, 48);
-            let want = OpRadioConfig { phy: Phy::Ht, chan: Channel::new(48, Cbw::Cbw40Below) };
+            let want = OpRadioConfig { phy: Phy::Ht, channel: Channel::new(48, Cbw::Cbw40Below) };
             let got = adapt_operation(&dinf, &ucfg).unwrap();
             assert_eq!(want, got);
         }
         {
             let dinf = fake_device_info_ht(ChanWidthSet::TWENTY_FORTY);
             let ucfg = RadioConfig::new(Phy::Vht, Cbw::Cbw40Below, 48);
-            let want = OpRadioConfig { phy: Phy::Ht, chan: Channel::new(48, Cbw::Cbw40Below) };
+            let want = OpRadioConfig { phy: Phy::Ht, channel: Channel::new(48, Cbw::Cbw40Below) };
             let got = adapt_operation(&dinf, &ucfg).unwrap();
             assert_eq!(want, got);
         }
         {
             let dinf = fake_device_info_ht(ChanWidthSet::TWENTY_FORTY);
             let ucfg = RadioConfig::new(Phy::Vht, Cbw::Cbw20, 48);
-            let want = OpRadioConfig { phy: Phy::Ht, chan: Channel::new(48, Cbw::Cbw20) };
+            let want = OpRadioConfig { phy: Phy::Ht, channel: Channel::new(48, Cbw::Cbw20) };
             let got = adapt_operation(&dinf, &ucfg).unwrap();
             assert_eq!(want, got);
         }
@@ -1395,21 +1395,21 @@ mod tests {
         {
             let dinf = fake_device_info_ht(ChanWidthSet::TWENTY_FORTY);
             let ucfg = RadioConfig::new(Phy::Ht, Cbw::Cbw40Below, 48);
-            let want = OpRadioConfig { phy: Phy::Ht, chan: Channel::new(48, Cbw::Cbw40Below) };
+            let want = OpRadioConfig { phy: Phy::Ht, channel: Channel::new(48, Cbw::Cbw40Below) };
             let got = adapt_operation(&dinf, &ucfg).unwrap();
             assert_eq!(want, got);
         }
         {
             let dinf = fake_device_info_ht(ChanWidthSet::TWENTY_FORTY);
             let ucfg = RadioConfig::new(Phy::Ht, Cbw::Cbw20, 48);
-            let want = OpRadioConfig { phy: Phy::Ht, chan: Channel::new(48, Cbw::Cbw20) };
+            let want = OpRadioConfig { phy: Phy::Ht, channel: Channel::new(48, Cbw::Cbw20) };
             let got = adapt_operation(&dinf, &ucfg).unwrap();
             assert_eq!(want, got);
         }
         {
             let dinf = fake_device_info_ht(ChanWidthSet::TWENTY_ONLY);
             let ucfg = RadioConfig::new(Phy::Ht, Cbw::Cbw40Below, 48);
-            let want = OpRadioConfig { phy: Phy::Ht, chan: Channel::new(48, Cbw::Cbw20) };
+            let want = OpRadioConfig { phy: Phy::Ht, channel: Channel::new(48, Cbw::Cbw20) };
             let got = adapt_operation(&dinf, &ucfg).unwrap();
             assert_eq!(want, got);
         }
@@ -1464,7 +1464,7 @@ mod tests {
                     listen_interval: 100,
                     ssid: Some(SSID.to_vec()),
                     rsne,
-                    cap: mac::CapabilityInfo(0).with_short_preamble(true).raw(),
+                    capability_info: mac::CapabilityInfo(0).with_short_preamble(true).raw(),
                     rates: vec![
                         0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6c,
                     ],
@@ -1497,7 +1497,7 @@ mod tests {
                 assert_eq!(assoc_resp.association_id, aid);
                 assert_eq!(assoc_resp.result_code, result_code);
                 assert_eq!(
-                    assoc_resp.cap,
+                    assoc_resp.capability_info,
                     mac::CapabilityInfo(0).with_short_preamble(true).with_privacy(privacy).raw(),
                 );
             });
@@ -1513,7 +1513,7 @@ mod tests {
                 assert_eq!(assoc_resp.peer_sta_address, self.addr);
                 assert_eq!(assoc_resp.association_id, 0);
                 assert_eq!(assoc_resp.result_code, result_code);
-                assert_eq!(assoc_resp.cap, 0);
+                assert_eq!(assoc_resp.capability_info, 0);
             });
         }
 

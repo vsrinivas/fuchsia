@@ -54,25 +54,10 @@ const WLAN_MSDU_MAX_LEN uint32 = 2304;
 const WLAN_IE_BODY_MAX_LEN uint32 = 255;
 
 const WLAN_VIE_MAX_LEN uint32 = 510; // max length for two elements (WPA and WSC)
-type WlanifBssDescription = struct {
-    bssid array<uint8, fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH>;
-    bss_type fuchsia.wlan.internal.BssType;
-    beacon_period uint32;
-    timestamp uint64;
-    local_time uint64;
-    cap uint16;
-
-    ies_bytes vector<uint8>:MAX;
-
-    chan fuchsia.hardware.wlan.info.WlanChannel;
-    rssi_dbm int8;
-    snr_db int8;
-};
-
 const WLAN_MAX_OP_RATES uint32 = 12;
 
 type WlanifJoinReq = struct {
-    selected_bss WlanifBssDescription;
+    selected_bss fuchsia.wlan.internal.BssDescription;
     join_failure_timeout uint32;
     nav_sync_delay uint32;
     num_op_rates uint64;
@@ -233,7 +218,7 @@ type WlanifStartCaptureFramesResp = struct {
 
 type WlanifScanResult = struct {
     txn_id uint64;
-    bss WlanifBssDescription;
+    bss fuchsia.wlan.internal.BssDescription;
 };
 
 type WlanScanResult = strict enum : uint8 {

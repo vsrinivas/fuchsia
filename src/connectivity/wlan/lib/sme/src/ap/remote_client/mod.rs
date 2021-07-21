@@ -1,4 +1,4 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -140,7 +140,7 @@ impl RemoteClient {
             peer_sta_address: self.addr.clone(),
             result_code,
             association_id: aid,
-            cap: capabilities.0,
+            capability_info: capabilities.0,
             rates,
         }))
     }
@@ -364,13 +364,13 @@ mod tests {
             peer_sta_address,
             result_code,
             association_id,
-            cap,
+            capability_info,
             rates,
         }) => {
             assert_eq!(peer_sta_address, CLIENT_ADDR);
             assert_eq!(result_code, fidl_mlme::AssociateResultCode::RefusedApOutOfMemory);
             assert_eq!(association_id, 1);
-            assert_eq!(cap, CapabilityInfo(0).with_short_preamble(true).raw());
+            assert_eq!(capability_info, CapabilityInfo(0).with_short_preamble(true).raw());
             assert_eq!(rates, vec![1, 2, 3]);
         });
     }

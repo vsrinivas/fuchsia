@@ -1,4 +1,4 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -36,7 +36,7 @@ TEST_F(PhyContextTest, GetControlPosition) {
   wlan_channel_t chandef{};
 
   // Invalid channels. Expect the default value.
-  chandef.cbw = WLAN_CHANNEL_BANDWIDTH__20;
+  chandef.cbw = CHANNEL_BANDWIDTH_CBW20;
   chandef.primary = 0;
   EXPECT_EQ(iwl_mvm_get_ctrl_pos(&chandef), PHY_VHT_CTRL_POS_1_BELOW);
   chandef.primary = 34;
@@ -51,7 +51,7 @@ TEST_F(PhyContextTest, GetControlPosition) {
   EXPECT_EQ(iwl_mvm_get_ctrl_pos(&chandef), PHY_VHT_CTRL_POS_1_BELOW);
 
   // 2.4GHz channels. Expect the default value.
-  chandef.cbw = WLAN_CHANNEL_BANDWIDTH__20;
+  chandef.cbw = CHANNEL_BANDWIDTH_CBW20;
   chandef.primary = 1;
   EXPECT_EQ(iwl_mvm_get_ctrl_pos(&chandef), PHY_VHT_CTRL_POS_1_BELOW);
   chandef.primary = 14;
@@ -60,7 +60,7 @@ TEST_F(PhyContextTest, GetControlPosition) {
   // 5GHz channels. But different bandwitdh.
 
   // 20Mhz primary channels. Expect the default value.
-  chandef.cbw = WLAN_CHANNEL_BANDWIDTH__20;
+  chandef.cbw = CHANNEL_BANDWIDTH_CBW20;
   chandef.primary = 36;
   EXPECT_EQ(iwl_mvm_get_ctrl_pos(&chandef), PHY_VHT_CTRL_POS_1_BELOW);
   chandef.primary = 64;
@@ -79,7 +79,7 @@ TEST_F(PhyContextTest, GetControlPosition) {
   EXPECT_EQ(iwl_mvm_get_ctrl_pos(&chandef), PHY_VHT_CTRL_POS_1_BELOW);
 
   // HT40+ primary channels.
-  chandef.cbw = WLAN_CHANNEL_BANDWIDTH__40ABOVE;
+  chandef.cbw = CHANNEL_BANDWIDTH_CBW40;
   chandef.primary = 36;
   EXPECT_EQ(iwl_mvm_get_ctrl_pos(&chandef), PHY_VHT_CTRL_POS_1_BELOW);
   chandef.primary = 40;  // not allowed
@@ -95,7 +95,7 @@ TEST_F(PhyContextTest, GetControlPosition) {
   EXPECT_EQ(iwl_mvm_get_ctrl_pos(&chandef), PHY_VHT_CTRL_POS_1_BELOW);
 
   // HT40- primary channels.
-  chandef.cbw = WLAN_CHANNEL_BANDWIDTH__40BELOW;
+  chandef.cbw = CHANNEL_BANDWIDTH_CBW40BELOW;
   chandef.primary = 36;  // invalid case since secondary cannot be below 36.
   EXPECT_EQ(iwl_mvm_get_ctrl_pos(&chandef), PHY_VHT_CTRL_POS_1_BELOW);
   chandef.primary = 40;
@@ -113,7 +113,7 @@ TEST_F(PhyContextTest, GetControlPosition) {
   EXPECT_EQ(iwl_mvm_get_ctrl_pos(&chandef), PHY_VHT_CTRL_POS_1_ABOVE);
 
   // 80Mhz primary channels.
-  chandef.cbw = WLAN_CHANNEL_BANDWIDTH__80;
+  chandef.cbw = CHANNEL_BANDWIDTH_CBW80;
   chandef.primary = 36;
   EXPECT_EQ(iwl_mvm_get_ctrl_pos(&chandef), PHY_VHT_CTRL_POS_2_BELOW);
   chandef.primary = 40;
@@ -124,7 +124,7 @@ TEST_F(PhyContextTest, GetControlPosition) {
   EXPECT_EQ(iwl_mvm_get_ctrl_pos(&chandef), PHY_VHT_CTRL_POS_2_ABOVE);
 
   // 160Mhz primary channels.
-  chandef.cbw = WLAN_CHANNEL_BANDWIDTH__160;
+  chandef.cbw = CHANNEL_BANDWIDTH_CBW160;
   chandef.primary = 36;
   EXPECT_EQ(iwl_mvm_get_ctrl_pos(&chandef), PHY_VHT_CTRL_POS_4_BELOW);
   chandef.primary = 40;
@@ -154,7 +154,7 @@ TEST_F(PhyContextTest, Ref) {
           {
               // whatever arbitrary values
               .primary = 5,
-              .cbw = WLAN_CHANNEL_BANDWIDTH__40,
+              .cbw = CHANNEL_BANDWIDTH_CBW40,
           },
   };
 
@@ -172,7 +172,7 @@ TEST_F(PhyContextTest, Ref) {
   ASSERT_EQ(ZX_OK, iwl_mvm_phy_ctxt_unref(mvm_, &ctxt));
   ASSERT_EQ(0, ctxt.ref);
   ASSERT_EQ(1, ctxt.chandef.primary);
-  ASSERT_EQ(WLAN_CHANNEL_BANDWIDTH__20, ctxt.chandef.cbw);
+  ASSERT_EQ(CHANNEL_BANDWIDTH_CBW20, ctxt.chandef.cbw);
 }
 
 TEST_F(PhyContextTest, Changed) {
@@ -180,18 +180,18 @@ TEST_F(PhyContextTest, Changed) {
       .chandef =
           {
               .primary = 5,
-              .cbw = WLAN_CHANNEL_BANDWIDTH__40,
+              .cbw = CHANNEL_BANDWIDTH_CBW40,
           },
   };
 
   wlan_channel_t new_def = {
       .primary = 14,
-      .cbw = WLAN_CHANNEL_BANDWIDTH__80,
+      .cbw = CHANNEL_BANDWIDTH_CBW80,
   };
 
   ASSERT_EQ(ZX_OK, iwl_mvm_phy_ctxt_changed(mvm_, &old_ctxt, &new_def, 1, 1));
   EXPECT_EQ(14, old_ctxt.chandef.primary);
-  EXPECT_EQ(WLAN_CHANNEL_BANDWIDTH__80, old_ctxt.chandef.cbw);
+  EXPECT_EQ(CHANNEL_BANDWIDTH_CBW80, old_ctxt.chandef.cbw);
 }
 
 }  // namespace

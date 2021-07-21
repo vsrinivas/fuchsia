@@ -1,4 +1,4 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -41,14 +41,14 @@ pub fn clone_bss_desc(d: &fidl_internal::BssDescription) -> fidl_internal::BssDe
         beacon_period: d.beacon_period,
         timestamp: d.timestamp,
         local_time: d.local_time,
-        cap: d.cap,
+        capability_info: d.capability_info,
 
         ies: d.ies.clone(),
 
-        chan: fidl_common::WlanChan {
-            primary: d.chan.primary,
-            cbw: d.chan.cbw,
-            secondary80: d.chan.secondary80,
+        channel: fidl_common::WlanChannel {
+            primary: d.channel.primary,
+            cbw: d.channel.cbw,
+            secondary80: d.channel.secondary80,
         },
         rssi_dbm: d.rssi_dbm,
         snr_db: d.snr_db,
@@ -63,7 +63,7 @@ pub fn clone_band_cap(b: &BandCapabilities) -> BandCapabilities {
         channels: b.channels.clone(),
         ht_cap: b.ht_cap.as_ref().map(|v| Box::new(clone_ht_capabilities(v))),
         vht_cap: b.vht_cap.as_ref().map(|v| Box::new(clone_vht_capabilities(v))),
-        cap: b.cap,
+        capability_info: b.capability_info,
     }
 }
 

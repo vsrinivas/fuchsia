@@ -1,4 +1,4 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -357,7 +357,7 @@ fn log_connect_attempts_stats(sender: &mut CobaltSender, connect_stats: &Connect
     };
     let is_multi_bss_dim = convert_bool_dim(is_multi_bss);
     let protection_dim = convert_protection(&bss.protection());
-    let channel_band_dim = convert_channel_band(bss.chan.primary);
+    let channel_band_dim = convert_channel_band(bss.channel.primary);
 
     sender.log_event_count(
         metrics::CONNECTION_ATTEMPTS_METRIC_ID,
@@ -436,7 +436,7 @@ async fn log_connect_result_stats(
 
     let is_multi_bss_dim = convert_bool_dim(is_multi_bss);
     let protection_dim = convert_protection(&bss.protection());
-    let channel_band_dim = convert_channel_band(bss.chan.primary);
+    let channel_band_dim = convert_channel_band(bss.channel.primary);
     let rssi_dim = convert_rssi(bss.rssi_dbm);
     let snr_dim = convert_snr(bss.snr_db);
     sender.with_component().log_event_count(

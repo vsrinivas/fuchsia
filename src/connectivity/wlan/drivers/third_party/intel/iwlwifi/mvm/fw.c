@@ -1180,7 +1180,7 @@ zx_status_t iwl_mvm_up(struct iwl_mvm* mvm) {
   /* Add all the PHY contexts with a default value */
   wlan_channel_t chandef = {
       .primary = 1,
-      .cbw = WLAN_CHANNEL_BANDWIDTH__20,
+      .cbw = CHANNEL_BANDWIDTH_CBW20,
   };
   for (size_t i = 0; i < NUM_PHY_CTX; i++) {
     /*

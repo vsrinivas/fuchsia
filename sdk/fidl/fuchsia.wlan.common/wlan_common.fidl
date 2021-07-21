@@ -1,4 +1,4 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 library fuchsia.wlan.common;
@@ -27,19 +27,18 @@ type PHY = strict enum {
     HEW = 5;
 };
 
-type CBW = strict enum { // Channel Bandwidth
+type ChannelBandwidth = strict enum { // Channel Bandwidth
     CBW20 = 0;
     CBW40 = 1;
-    //CBW40ABOVE = CBW40;
     CBW40BELOW = 2;
     CBW80 = 3;
     CBW160 = 4;
     CBW80P80 = 5;
 };
 
-type WlanChan = struct {
+type WlanChannel = struct {
     primary uint8;
-    cbw CBW;
+    cbw ChannelBandwidth;
     secondary80 uint8;
 };
 

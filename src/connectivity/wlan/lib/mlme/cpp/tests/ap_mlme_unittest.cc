@@ -1,4 +1,4 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -248,7 +248,7 @@ TEST_F(ApInfraBssTest, ProbeRequest_Success) {
   EXPECT_EQ(std::memcmp(frame.hdr()->addr2.byte, kBssid1, 6), 0);
   EXPECT_EQ(std::memcmp(frame.hdr()->addr3.byte, kBssid1, 6), 0);
   EXPECT_EQ(frame.body()->timestamp, 0u);
-  EXPECT_EQ(frame.body()->cap.val(), CapabilityInfo().val());
+  EXPECT_EQ(frame.body()->capability_info.val(), CapabilityInfo().val());
   EXPECT_EQ(frame.body()->beacon_interval, 100);
 }
 

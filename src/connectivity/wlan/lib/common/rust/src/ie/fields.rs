@@ -1,4 +1,4 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -33,7 +33,7 @@ pub struct SupportedRate(pub u8);
 #[derive(FromBytes, AsBytes, Unaligned)]
 #[repr(C)]
 pub struct DsssParamSet {
-    pub current_chan: u8,
+    pub current_channel: u8,
 }
 
 // IEEE Std 802.11-2016, 9.2.4.6
@@ -503,7 +503,7 @@ pub struct AselCapability(pub u8);
 #[repr(C, packed)]
 #[derive(PartialEq, Eq, Hash, AsBytes, FromBytes, Unaligned, Clone, Copy, Debug)]
 pub struct HtOperation {
-    pub primary_chan: u8, // Primary 20 MHz channel.
+    pub primary_channel: u8, // Primary 20 MHz channel.
     // HT Operation Information is 40-bit field so it has to be split
     pub ht_op_info_head: HtOpInfoHead,     // u32
     pub ht_op_info_tail: HtOpInfoTail,     // u8
@@ -514,7 +514,7 @@ impl From<HtOperation> for banjo_wlan_info::WlanHtOp {
     fn from(op: HtOperation) -> Self {
         let mcs = banjo_80211::Ieee80211HtCapabilitiesSupportedMcsSet::from(op.basic_ht_mcs_set);
         Self {
-            primary_chan: op.primary_chan,
+            primary_channel: op.primary_channel,
             head: *&{ op.ht_op_info_head }.raw(),
             tail: *&{ op.ht_op_info_tail }.raw(),
             rx_mcs_head: unsafe { mcs.fields.rx_mcs_head },

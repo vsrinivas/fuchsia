@@ -1,4 +1,4 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -133,7 +133,7 @@ impl Context {
                 peer_sta_address,
                 listen_interval,
                 ssid,
-                cap: capabilities.raw(),
+                capability_info: capabilities.raw(),
                 rates,
                 rsne,
                 // TODO(fxbug.dev/37891): Send everything else (e.g. HT capabilities).
@@ -345,7 +345,7 @@ impl Context {
                 // 5. Supported Rates and BSS Membership Selectors
                 supported_rates: rates,
                 // 6. DSSS Parameter Set
-                dsss_param_set: &ie::DsssParamSet { current_chan: channel },
+                dsss_param_set: &ie::DsssParamSet { current_channel: channel },
                 // 16. Extended Supported Rates and BSS Membership Selectors
                 extended_supported_rates: {/* continue rates */},
                 // 17. RSN
@@ -393,7 +393,7 @@ impl Context {
                 // 5. Supported Rates and BSS Membership Selectors
                 supported_rates: rates,
                 // 6. DSSS Parameter Set
-                dsss_param_set: &ie::DsssParamSet { current_chan: channel },
+                dsss_param_set: &ie::DsssParamSet { current_channel: channel },
                 // 9. Traffic indication map (TIM)
                 // Write a placeholder TIM element, which the firmware will fill in.
                 // We only support hardware with hardware offload beaconing for now (e.g. ath10k).
@@ -591,7 +591,7 @@ mod test {
                 peer_sta_address: CLIENT_ADDR,
                 listen_interval: 1,
                 ssid: Some(b"coolnet".to_vec()),
-                cap: mac::CapabilityInfo(0).raw(),
+                capability_info: mac::CapabilityInfo(0).raw(),
                 rates: vec![1, 2, 3],
                 rsne: None,
             },

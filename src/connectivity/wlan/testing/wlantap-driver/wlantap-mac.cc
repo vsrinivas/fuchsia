@@ -5,6 +5,7 @@
 #include "wlantap-mac.h"
 
 #include <fuchsia/hardware/wlan/mac/cpp/banjo.h>
+#include <fuchsia/wlan/common/c/banjo.h>
 #include <fuchsia/wlan/device/cpp/fidl.h>
 #include <fuchsia/wlan/internal/cpp/banjo.h>
 #include <lib/ddk/debug.h>
@@ -81,15 +82,15 @@ struct WlantapMacImpl : WlantapMac {
     return ZX_OK;
   }
 
-  static zx_status_t WlanmacSetChannel(void* ctx, uint32_t options, const wlan_channel_t* chan) {
+  static zx_status_t WlanmacSetChannel(void* ctx, uint32_t options, const wlan_channel_t* channel) {
     auto& self = *static_cast<WlantapMacImpl*>(ctx);
     if (options != 0) {
       return ZX_ERR_INVALID_ARGS;
     }
-    if (!wlan::common::IsValidChan(*chan)) {
+    if (!wlan::common::IsValidChan(*channel)) {
       return ZX_ERR_INVALID_ARGS;
     }
-    self.listener_->WlantapMacSetChannel(self.id_, chan);
+    self.listener_->WlantapMacSetChannel(self.id_, channel);
     return ZX_OK;
   }
 
@@ -168,9 +169,9 @@ struct WlantapMacImpl : WlantapMac {
                                        .valid_fields = rx_info.valid_fields,
                                        .phy = rx_info.phy,
                                        .data_rate = rx_info.data_rate,
-                                       .chan = {.primary = rx_info.chan.primary,
-                                                .cbw = static_cast<uint8_t>(rx_info.chan.cbw),
-                                                .secondary80 = rx_info.chan.secondary80},
+                                       .channel = {.primary = rx_info.channel.primary,
+                                                   .cbw = static_cast<uint8_t>(rx_info.channel.cbw),
+                                                   .secondary80 = rx_info.channel.secondary80},
                                        .mcs = rx_info.mcs,
                                        .rssi_dbm = rx_info.rssi_dbm,
                                        .snr_dbh = rx_info.snr_dbh};

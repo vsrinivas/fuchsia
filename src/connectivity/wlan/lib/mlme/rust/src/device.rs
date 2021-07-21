@@ -7,6 +7,7 @@ use {
     anyhow::format_err,
     banjo_fuchsia_hardware_wlan_info::*,
     banjo_fuchsia_hardware_wlan_mac::{WlanHwScanConfig, WlanmacInfo},
+    banjo_fuchsia_wlan_common as banjo_common,
     banjo_fuchsia_wlan_internal::BssConfig,
     fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
     std::ffi::c_void,
@@ -54,10 +55,10 @@ pub struct Device {
     /// if no SME channel is available.
     get_sme_channel: unsafe extern "C" fn(device: *mut c_void) -> u32,
     /// Returns the currently set WLAN channel.
-    get_wlan_channel: extern "C" fn(device: *mut c_void) -> WlanChannel,
+    get_wlan_channel: extern "C" fn(device: *mut c_void) -> banjo_common::WlanChannel,
     /// Request the PHY to change its channel. If successful, get_wlan_channel will return the
     /// chosen channel.
-    set_wlan_channel: extern "C" fn(device: *mut c_void, channel: WlanChannel) -> i32,
+    set_wlan_channel: extern "C" fn(device: *mut c_void, channel: banjo_common::WlanChannel) -> i32,
     /// Set a key on the device.
     /// |key| is mutable because the underlying API does not take a const wlan_key_config_t.
     set_key: extern "C" fn(device: *mut c_void, key: *mut key::KeyConfig) -> i32,
@@ -121,8 +122,8 @@ impl Device {
         }
     }
 
-    pub fn set_channel(&self, chan: WlanChannel) -> Result<(), zx::Status> {
-        let status = (self.set_wlan_channel)(self.device, chan);
+    pub fn set_channel(&self, channel: banjo_common::WlanChannel) -> Result<(), zx::Status> {
+        let status = (self.set_wlan_channel)(self.device, channel);
         zx::ok(status)
     }
 
@@ -136,7 +137,7 @@ impl Device {
         zx::ok(status)
     }
 
-    pub fn channel(&self) -> WlanChannel {
+    pub fn channel(&self) -> banjo_common::WlanChannel {
         (self.get_wlan_channel)(self.device)
     }
 
@@ -219,7 +220,7 @@ mod test_utils {
         pub eth_queue: Vec<Vec<u8>>,
         pub wlan_queue: Vec<(Vec<u8>, u32)>,
         pub sme_sap: (zx::Channel, zx::Channel),
-        pub wlan_channel: WlanChannel,
+        pub wlan_channel: banjo_common::WlanChannel,
         pub keys: Vec<key::KeyConfig>,
         pub hw_scan_req: Option<WlanHwScanConfig>,
         pub info: WlanmacInfo,
@@ -237,9 +238,9 @@ mod test_utils {
                 eth_queue: vec![],
                 wlan_queue: vec![],
                 sme_sap,
-                wlan_channel: WlanChannel {
+                wlan_channel: banjo_common::WlanChannel {
                     primary: 0,
-                    cbw: WlanChannelBandwidth::B_20,
+                    cbw: banjo_common::ChannelBandwidth::CBW20,
                     secondary80: 0,
                 },
                 hw_scan_req: None,
@@ -300,11 +301,14 @@ mod test_utils {
             unsafe { (*(device as *mut Self)).sme_sap.0.as_handle_ref().raw_handle() }
         }
 
-        pub extern "C" fn get_wlan_channel(device: *mut c_void) -> WlanChannel {
+        pub extern "C" fn get_wlan_channel(device: *mut c_void) -> banjo_common::WlanChannel {
             unsafe { (*(device as *const Self)).wlan_channel }
         }
 
-        pub extern "C" fn set_wlan_channel(device: *mut c_void, wlan_channel: WlanChannel) -> i32 {
+        pub extern "C" fn set_wlan_channel(
+            device: *mut c_void,
+            wlan_channel: banjo_common::WlanChannel,
+        ) -> i32 {
             unsafe {
                 (*(device as *mut Self)).wlan_channel = wlan_channel;
             }
@@ -621,21 +625,29 @@ mod tests {
     fn get_set_channel() {
         let mut fake_device = FakeDevice::new();
         let dev = fake_device.as_device();
-        dev.set_channel(WlanChannel {
+        dev.set_channel(banjo_common::WlanChannel {
             primary: 2,
-            cbw: WlanChannelBandwidth::B_80P80,
+            cbw: banjo_common::ChannelBandwidth::CBW80P80,
             secondary80: 4,
         })
         .expect("set_channel failed?");
         // Check the internal state.
         assert_eq!(
             fake_device.wlan_channel,
-            WlanChannel { primary: 2, cbw: WlanChannelBandwidth::B_80P80, secondary80: 4 }
+            banjo_common::WlanChannel {
+                primary: 2,
+                cbw: banjo_common::ChannelBandwidth::CBW80P80,
+                secondary80: 4
+            }
         );
         // Check the external view of the internal state.
         assert_eq!(
             dev.channel(),
-            WlanChannel { primary: 2, cbw: WlanChannelBandwidth::B_80P80, secondary80: 4 }
+            banjo_common::WlanChannel {
+                primary: 2,
+                cbw: banjo_common::ChannelBandwidth::CBW80P80,
+                secondary80: 4
+            }
         );
     }
 
@@ -776,13 +788,17 @@ mod tests {
             aid: 1,
             listen_interval: 2,
             phy: WlanPhyType::ERP,
-            chan: WlanChannel { primary: 3, cbw: WlanChannelBandwidth::B_20, secondary80: 0 },
+            channel: banjo_common::WlanChannel {
+                primary: 3,
+                cbw: banjo_common::ChannelBandwidth::CBW20,
+                secondary80: 0,
+            },
             qos: false,
             wmm_params: ddk_converter::blank_wmm_params(),
 
             rates_cnt: 4,
             rates: [0; WLAN_MAC_MAX_RATES as usize],
-            cap_info: 0x0102,
+            capability_info: 0x0102,
 
             has_ht_cap: false,
             // Safe: This is not read by the driver.

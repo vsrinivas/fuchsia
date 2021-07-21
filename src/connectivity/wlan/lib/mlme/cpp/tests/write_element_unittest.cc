@@ -1,4 +1,4 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -162,7 +162,7 @@ TEST(WriteElement, HtOperation) {
   // clang-format on
   Buf buf;
   HtOperation ht_op = {
-      .primary_chan = 36,
+      .primary_channel = 36,
       .head = HtOpInfoHead{0x44332211u},
       .tail = HtOpInfoTail{0x55},
       .basic_mcs_set =

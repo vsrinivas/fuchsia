@@ -575,7 +575,7 @@ static void iwl_mvm_mac_ctxt_cmd_common(struct iwl_mvm_vif* mvmvif, wlan_info_ba
 
   IWL_DEBUG_RATE(mvm, "use_cts_prot %d, ht_operation_mode %d\n", mvmvif->bss_conf.use_cts_prot,
                  mvmvif->bss_conf.ht_operation_mode);
-  if (mvmvif->bss_conf.chandef.cbw != WLAN_CHANNEL_BANDWIDTH__20) {
+  if (mvmvif->bss_conf.chandef.cbw != CHANNEL_BANDWIDTH_CBW20) {
     cmd->qos_flags |= cpu_to_le32(MAC_QOS_FLG_TGN);
   }
   if (ht_enabled) {

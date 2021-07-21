@@ -4,6 +4,7 @@
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/test/sim_test.h"
 
+#include <fuchsia/wlan/common/c/banjo.h>
 #include <fuchsia/wlan/ieee80211/cpp/fidl.h>
 #include <fuchsia/wlan/internal/c/banjo.h>
 
@@ -218,10 +219,9 @@ void SimInterface::OnScanResult(const wlanif_scan_result_t* result) {
   ZX_ASSERT(!results->second.result_code);
 
   // Copy the IES data over since the original location may change data by the time we verify.
-  std::vector<uint8_t> ies(copy.bss.ies_bytes_list,
-                           copy.bss.ies_bytes_list + copy.bss.ies_bytes_count);
+  std::vector<uint8_t> ies(copy.bss.ies_list, copy.bss.ies_list + copy.bss.ies_count);
   scan_results_ies_.push_back(ies);
-  copy.bss.ies_bytes_list = scan_results_ies_.at(scan_results_ies_.size() - 1).data();
+  copy.bss.ies_list = scan_results_ies_.at(scan_results_ies_.size() - 1).data();
   results->second.result_list.push_back(copy.bss);
 }
 
@@ -267,9 +267,9 @@ void SimInterface::StartAssoc(const common::MacAddr& bssid, const wlan_ssid_t& s
   // Send join request
   wlanif_join_req join_req = {};
   std::memcpy(join_req.selected_bss.bssid, bssid.byte, ETH_ALEN);
-  join_req.selected_bss.ies_bytes_list = assoc_ctx_.ies.data();
-  join_req.selected_bss.ies_bytes_count = assoc_ctx_.ies.size();
-  join_req.selected_bss.chan = channel;
+  join_req.selected_bss.ies_list = assoc_ctx_.ies.data();
+  join_req.selected_bss.ies_count = assoc_ctx_.ies.size();
+  join_req.selected_bss.channel = channel;
   join_req.selected_bss.bss_type = BSS_TYPE_ANY_BSS;
   if_impl_ops_->join_req(if_impl_ctx_, &join_req);
 }
@@ -338,7 +338,7 @@ std::optional<wlan_scan_result_t> SimInterface::ScanResultCode(uint64_t txn_id) 
   return results->second.result_code;
 }
 
-const std::list<wlanif_bss_description_t>* SimInterface::ScanResultBssList(uint64_t txn_id) {
+const std::list<bss_description_t>* SimInterface::ScanResultBssList(uint64_t txn_id) {
   auto results = scan_results_.find(txn_id);
 
   // Verify that we started a scan on this interface

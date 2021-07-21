@@ -1,6 +1,8 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
+#include <fuchsia/wlan/common/c/banjo.h>
 
 #include <wlan/common/tx_vector.h>
 
@@ -32,7 +34,7 @@ zx_status_t TxVector::FromSupportedRate(const SupportedRate& erp_rate, TxVector*
   }
   *tx_vec = TxVector{
       .gi = WLAN_GI__800NS,
-      .cbw = WLAN_CHANNEL_BANDWIDTH__20,
+      .cbw = CHANNEL_BANDWIDTH_CBW20,
       .nss = 1,
   };
 
@@ -139,8 +141,8 @@ zx_status_t TxVector::FromIdx(tx_vec_idx_t idx, TxVector* tx_vec) {
     case WLAN_INFO_PHY_TYPE_HT: {
       uint8_t group_idx = (idx - kHtStartIdx) / kHtNumMcs;
       wlan_gi_t gi = ((group_idx / kHtNumCbw) % kHtNumGi == 1 ? WLAN_GI__400NS : WLAN_GI__800NS);
-      wlan_channel_bandwidth_t cbw =
-          (group_idx % kHtNumCbw == 0 ? WLAN_CHANNEL_BANDWIDTH__20 : WLAN_CHANNEL_BANDWIDTH__40);
+      channel_bandwidth_t cbw =
+          (group_idx % kHtNumCbw == 0 ? CHANNEL_BANDWIDTH_CBW20 : CHANNEL_BANDWIDTH_CBW40);
       uint8_t mcs_idx = (idx - kHtStartIdx) % kHtNumMcs;
 
       *tx_vec = TxVector{
@@ -156,7 +158,7 @@ zx_status_t TxVector::FromIdx(tx_vec_idx_t idx, TxVector* tx_vec) {
       *tx_vec = TxVector{
           .phy = phy,
           .gi = WLAN_GI__800NS,
-          .cbw = WLAN_CHANNEL_BANDWIDTH__20,
+          .cbw = CHANNEL_BANDWIDTH_CBW20,
           .nss = 1,
           .mcs_idx = static_cast<uint8_t>(idx - kErpStartIdx),
       };
@@ -166,7 +168,7 @@ zx_status_t TxVector::FromIdx(tx_vec_idx_t idx, TxVector* tx_vec) {
       *tx_vec = TxVector{
           .phy = phy,
           .gi = WLAN_GI__800NS,
-          .cbw = WLAN_CHANNEL_BANDWIDTH__20,
+          .cbw = CHANNEL_BANDWIDTH_CBW20,
           .nss = 1,
           .mcs_idx = static_cast<uint8_t>(idx - kDsssCckStartIdx),
       };
@@ -193,8 +195,8 @@ bool TxVector::IsValid() const {
       if (!(gi == WLAN_GI__800NS || gi == WLAN_GI__400NS)) {
         return false;
       }
-      if (!(cbw == WLAN_CHANNEL_BANDWIDTH__20 || cbw == WLAN_CHANNEL_BANDWIDTH__40 ||
-            cbw == WLAN_CHANNEL_BANDWIDTH__40ABOVE || cbw == WLAN_CHANNEL_BANDWIDTH__40BELOW)) {
+      if (!(cbw == CHANNEL_BANDWIDTH_CBW20 || cbw == CHANNEL_BANDWIDTH_CBW40 ||
+            cbw == CHANNEL_BANDWIDTH_CBW40 || cbw == CHANNEL_BANDWIDTH_CBW40BELOW)) {
         return false;
       }
       return 0 <= mcs_idx && mcs_idx < kHtNumMcs;
@@ -218,8 +220,8 @@ zx_status_t TxVector::ToIdx(tx_vec_idx_t* idx) const {
       if (gi == WLAN_GI__400NS) {
         group_idx = kHtNumCbw;
       }
-      if (cbw == WLAN_CHANNEL_BANDWIDTH__40 || cbw == WLAN_CHANNEL_BANDWIDTH__40ABOVE ||
-          cbw == WLAN_CHANNEL_BANDWIDTH__40BELOW) {
+      if (cbw == CHANNEL_BANDWIDTH_CBW40 || cbw == CHANNEL_BANDWIDTH_CBW40 ||
+          cbw == CHANNEL_BANDWIDTH_CBW40BELOW) {
         group_idx++;
       }
 

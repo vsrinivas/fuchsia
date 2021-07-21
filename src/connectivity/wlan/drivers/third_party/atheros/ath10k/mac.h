@@ -18,6 +18,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_ATHEROS_ATH10K_MAC_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_ATHEROS_ATH10K_MAC_H_
 
+#include <fuchsia/wlan/common/c/banjo.h>
 #include <fuchsia/wlan/internal/c/banjo.h>
 
 #include <ddk/hw/wlan/ieee80211/c/banjo.h>
@@ -110,7 +111,7 @@ void ath10k_halt(struct ath10k* ar);
 void ath10k_mac_vif_beacon_free(struct ath10k_vif* arvif);
 #endif  // NEEDS PORTING
 void ath10k_drain_tx(struct ath10k* ar);
-zx_status_t ath10k_mac_assign_vif_chanctx(struct ath10k* ar, const wlan_channel_t* chan);
+zx_status_t ath10k_mac_assign_vif_chanctx(struct ath10k* ar, const wlan_channel_t* channel);
 #if 0   // NEEDS PORTING
 bool ath10k_mac_is_peer_wep_key_set(struct ath10k* ar, const uint8_t* addr,
                                     uint8_t keyidx);

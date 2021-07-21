@@ -112,7 +112,7 @@ async fn multiple_clients_ap() {
             Open,
             ssid: SSID.to_vec(),
             bssid: AP_MAC_ADDR.0,
-            chan: WLANCFG_DEFAULT_AP_CHANNEL,
+            channel: WLANCFG_DEFAULT_AP_CHANNEL,
         ),
         credential: Credential::None(fidl_sme::Empty {}),
         radio_cfg: RadioConfig::new(Phy::Ht, Cbw::Cbw20, WLANCFG_DEFAULT_AP_CHANNEL.primary)
@@ -153,7 +153,7 @@ async fn multiple_clients_ap() {
             Open,
             ssid: SSID.to_vec(),
             bssid: AP_MAC_ADDR.0,
-            chan: WLANCFG_DEFAULT_AP_CHANNEL,
+            channel: WLANCFG_DEFAULT_AP_CHANNEL,
         ),
         credential: Credential::None(fidl_sme::Empty {}),
         radio_cfg: RadioConfig::new(Phy::Ht, Cbw::Cbw20, WLANCFG_DEFAULT_AP_CHANNEL.primary)

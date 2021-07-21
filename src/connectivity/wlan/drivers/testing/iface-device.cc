@@ -4,6 +4,7 @@
 
 #include "iface-device.h"
 
+#include <fuchsia/wlan/common/c/banjo.h>
 #include <fuchsia/wlan/internal/c/banjo.h>
 #include <lib/ddk/debug.h>
 #include <stdio.h>
@@ -30,8 +31,8 @@ static wlanmac_protocol_ops_t wlanmac_test_protocol_ops = {
     .queue_tx = [](void* ctx, uint32_t options, wlan_tx_packet_t* pkt) -> zx_status_t {
       return ZX_OK;
     },
-    .set_channel = [](void* ctx, uint32_t options, const wlan_channel_t* chan) -> zx_status_t {
-      return DEV(ctx)->SetChannel(options, chan);
+    .set_channel = [](void* ctx, uint32_t options, const wlan_channel_t* channel) -> zx_status_t {
+      return DEV(ctx)->SetChannel(options, channel);
     },
     .configure_bss = [](void* ctx, uint32_t options, const bss_config_t* config) -> zx_status_t {
       return ZX_OK;
@@ -147,8 +148,8 @@ zx_status_t IfaceDevice::Start(const wlanmac_ifc_protocol_t* ifc, zx_handle_t* o
   return ZX_OK;
 }
 
-zx_status_t IfaceDevice::SetChannel(uint32_t options, const wlan_channel_t* chan) {
-  zxlogf(INFO, "wlan::testing::IfaceDevice::SetChannel()  chan=%u", chan->primary);
+zx_status_t IfaceDevice::SetChannel(uint32_t options, const wlan_channel_t* channel) {
+  zxlogf(INFO, "wlan::testing::IfaceDevice::SetChannel()  channel=%u", channel->primary);
   return ZX_OK;
 }
 

@@ -7,6 +7,7 @@
 
 #include <fuchsia/hardware/ethernet/cpp/banjo.h>
 #include <fuchsia/hardware/wlan/mac/cpp/banjo.h>
+#include <fuchsia/wlan/common/c/banjo.h>
 #include <fuchsia/wlan/internal/c/banjo.h>
 #include <fuchsia/wlan/minstrel/cpp/fidl.h>
 #include <lib/ddk/driver.h>
@@ -70,7 +71,7 @@ class Device : public DeviceInterface {
   zx_status_t DeliverEthernet(fbl::Span<const uint8_t> eth_frame) final;
   zx_status_t SendWlan(std::unique_ptr<Packet> packet, uint32_t flags) final;
   zx_status_t SendService(fbl::Span<const uint8_t> span) final;
-  zx_status_t SetChannel(wlan_channel_t chan) final;
+  zx_status_t SetChannel(wlan_channel_t channel) final;
   zx_status_t SetStatus(uint32_t status) final;
   zx_status_t ConfigureBss(bss_config_t* cfg) final;
   zx_status_t EnableBeaconing(wlan_bcn_config_t* bcn_cfg) final;

@@ -1,4 +1,4 @@
-// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 library fuchsia.wlan.mlme;
@@ -42,7 +42,7 @@ type BandCapabilities = struct {
     base_frequency uint16;
     channels bytes;
 
-    cap internal.CapabilityInfo;
+    capability_info internal.CapabilityInfo;
     ht_cap box<internal.HtCapabilities>;
     vht_cap box<internal.VhtCapabilities>;
 };
@@ -134,8 +134,8 @@ type ChannelSwitchInfo = struct {
 /// Non-IEEE custom structure to inform a SoftMAC device about the association negotiation outcome.
 // TODO(fxbug.dev/43063): Remove if we are able to intersect the capabilities with beacon before associating
 type NegotiatedCapabilities = struct {
-    channel fuchsia.wlan.common.WlanChan;
-    cap_info internal.CapabilityInfo;
+    channel fuchsia.wlan.common.WlanChannel;
+    capability_info internal.CapabilityInfo;
     rates bytes:internal.RATES_MAX_LEN;
     wmm_param box<WmmParameter>;
     ht_cap box<internal.HtCapabilities>;

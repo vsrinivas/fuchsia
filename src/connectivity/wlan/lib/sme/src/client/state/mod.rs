@@ -77,8 +77,8 @@ pub struct Idle {
 pub struct Joining {
     cfg: ClientConfig,
     cmd: ConnectCommand,
-    chan: Channel,
-    cap: Option<ClientCapabilities>,
+    channel: Channel,
+    capability_info: Option<ClientCapabilities>,
     protection_ie: Option<ProtectionIe>,
 }
 
@@ -86,8 +86,8 @@ pub struct Joining {
 pub struct Authenticating {
     cfg: ClientConfig,
     cmd: ConnectCommand,
-    chan: Channel,
-    cap: Option<ClientCapabilities>,
+    channel: Channel,
+    capability_info: Option<ClientCapabilities>,
     protection_ie: Option<ProtectionIe>,
 }
 
@@ -95,8 +95,8 @@ pub struct Authenticating {
 pub struct Associating {
     cfg: ClientConfig,
     cmd: ConnectCommand,
-    chan: Channel,
-    cap: Option<ClientCapabilities>,
+    channel: Channel,
+    capability_info: Option<ClientCapabilities>,
     protection_ie: Option<ProtectionIe>,
 }
 
@@ -111,8 +111,8 @@ pub struct Associated {
     last_signal_report_time: zx::Time,
     link_state: LinkState,
     radio_cfg: RadioConfig,
-    chan: Channel,
-    cap: Option<ClientCapabilities>,
+    channel: Channel,
+    capability_info: Option<ClientCapabilities>,
     protection_ie: Option<ProtectionIe>,
     wmm_param: Option<ie::WmmParam>,
     last_channel_switch_time: Option<zx::Time>,
@@ -192,8 +192,8 @@ impl Joining {
                 Ok(Authenticating {
                     cfg: self.cfg,
                     cmd: self.cmd,
-                    chan: self.chan,
-                    cap: self.cap,
+                    channel: self.channel,
+                    capability_info: self.capability_info,
                     protection_ie: self.protection_ie,
                 })
             }
@@ -224,7 +224,7 @@ impl Authenticating {
                 context.info.report_assoc_started();
                 send_mlme_assoc_req(
                     Bssid(self.cmd.bss.bssid.clone()),
-                    self.cap.as_ref(),
+                    self.capability_info.as_ref(),
                     &self.protection_ie,
                     &context.mlme_sink,
                 );
@@ -232,8 +232,8 @@ impl Authenticating {
                 Ok(Associating {
                     cfg: self.cfg,
                     cmd: self.cmd,
-                    chan: self.chan,
-                    cap: self.cap,
+                    channel: self.channel,
+                    capability_info: self.capability_info,
 
                     protection_ie: self.protection_ie,
                 })
@@ -356,8 +356,9 @@ impl Associating {
             match conf.result_code {
                 fidl_mlme::AssociateResultCode::Success => {
                     context.info.report_assoc_success(context.att_id);
-                    if let Some(cap) = self.cap.as_ref() {
-                        let negotiated_cap = intersect_with_ap_as_client(cap, &conf.into());
+                    if let Some(capability_info) = self.capability_info.as_ref() {
+                        let negotiated_cap =
+                            intersect_with_ap_as_client(capability_info, &conf.into());
                         // TODO(eyw): Enable this check once we switch to Rust MLME which populates
                         // associate confirm with IEs.
                         if negotiated_cap.rates.is_empty() {
@@ -381,7 +382,7 @@ impl Associating {
                             return Err(Idle { cfg: self.cfg });
                         }
                         context.mlme_sink.send(MlmeRequest::FinalizeAssociation(
-                            negotiated_cap.to_fidl_negotiated_capabilities(&self.chan),
+                            negotiated_cap.to_fidl_negotiated_capabilities(&self.channel),
                         ))
                     }
 
@@ -437,8 +438,8 @@ impl Associating {
             bss: self.cmd.bss,
             link_state,
             radio_cfg: self.cmd.radio_cfg,
-            chan: self.chan,
-            cap: self.cap,
+            channel: self.channel,
+            capability_info: self.capability_info,
             protection_ie: self.protection_ie,
             wmm_param,
             last_channel_switch_time: None,
@@ -560,7 +561,7 @@ impl Associated {
                 ssid: self.bss.ssid().to_vec(),
                 protection: self.bss.protection(),
                 wsc: self.bss.probe_resp_wsc(),
-                channel: Channel::from_fidl(self.bss.chan),
+                channel: Channel::from_fidl(self.bss.channel),
                 disconnect_source,
                 time_since_channel_switch: self.last_channel_switch_time.map(|t| now() - t),
             };
@@ -590,15 +591,15 @@ impl Associated {
         };
         send_mlme_assoc_req(
             Bssid(cmd.bss.bssid.clone()),
-            self.cap.as_ref(),
+            self.capability_info.as_ref(),
             &self.protection_ie,
             &context.mlme_sink,
         );
         Associating {
             cfg: self.cfg,
             cmd,
-            chan: self.chan,
-            cap: self.cap,
+            channel: self.channel,
+            capability_info: self.capability_info,
             protection_ie: self.protection_ie,
         }
     }
@@ -631,7 +632,7 @@ impl Associated {
                     ssid: self.bss.ssid().to_vec(),
                     protection: self.bss.protection(),
                     wsc: self.bss.probe_resp_wsc(),
-                    channel: Channel::from_fidl(self.bss.chan),
+                    channel: Channel::from_fidl(self.bss.channel),
                     disconnect_source,
                     time_since_channel_switch: self.last_channel_switch_time.map(|t| now() - t),
                 };
@@ -738,7 +739,7 @@ impl Associated {
     }
 
     fn on_channel_switched(&mut self, info: fidl_mlme::ChannelSwitchInfo) {
-        self.bss.chan.primary = info.new_channel;
+        self.bss.channel.primary = info.new_channel;
         self.last_channel_switch_time.replace(now());
     }
 
@@ -980,8 +981,8 @@ impl ClientState {
     }
 
     pub fn connect(self, cmd: ConnectCommand, context: &mut Context) -> Self {
-        let (chan, cap) = match derive_join_channel_and_capabilities(
-            Channel::from_fidl(cmd.bss.chan),
+        let (channel, capability_info) = match derive_join_channel_and_capabilities(
+            Channel::from_fidl(cmd.bss.channel),
             cmd.radio_cfg.cbw,
             cmd.bss.rates(),
             &context.device_info,
@@ -993,7 +994,7 @@ impl ClientState {
             }
         };
 
-        let cap = if context.is_softmac { Some(cap) } else { None };
+        let capability_info = if context.is_softmac { Some(capability_info) } else { None };
 
         // Derive RSN (for WPA2) or Vendor IEs (for WPA1) or neither(WEP/non-protected).
         let protection_ie = match build_protection_ie(&cmd.protection) {
@@ -1010,7 +1011,7 @@ impl ClientState {
         let mut selected_bss = cmd.bss.clone();
         let (phy_to_use, cbw_to_use) =
             derive_phy_cbw(&selected_bss, &context.device_info, &cmd.radio_cfg);
-        selected_bss.chan.cbw = cbw_to_use;
+        selected_bss.channel.cbw = cbw_to_use;
 
         context.mlme_sink.send(MlmeRequest::Join(fidl_mlme::JoinRequest {
             selected_bss: selected_bss.to_fidl(),
@@ -1018,7 +1019,7 @@ impl ClientState {
             nav_sync_delay: 0,
             op_rates: vec![],
             phy: phy_to_use,
-            cbw: cbw_to_use,
+            channel_bandwidth: cbw_to_use,
         }));
         context.att_id += 1;
 
@@ -1034,9 +1035,9 @@ impl ClientState {
         });
         let state = Self::new(cfg.clone());
         match state {
-            Self::Idle(state) => {
-                state.transition_to(Joining { cfg, cmd, chan, cap, protection_ie }).into()
-            }
+            Self::Idle(state) => state
+                .transition_to(Joining { cfg, cmd, channel, capability_info, protection_ie })
+                .into(),
             _ => unreachable!(),
         }
     }
@@ -1059,7 +1060,7 @@ impl ClientState {
                     ssid: state.bss.ssid().to_vec(),
                     protection: state.bss.protection(),
                     wsc: state.bss.probe_resp_wsc(),
-                    channel: Channel::from_fidl(state.bss.chan),
+                    channel: Channel::from_fidl(state.bss.channel),
                     disconnect_source,
                     time_since_channel_switch: state.last_channel_switch_time.map(|t| now() - t),
                 };
@@ -1341,14 +1342,14 @@ fn connect_cmd_inspect_summary(cmd: &ConnectCommand) -> String {
     let bss = &cmd.bss;
     format!(
         "ConnectCmd {{ \
-         cap: {cap:?}, rates: {rates:?}, \
-         protected: {protected:?}, chan: {chan:?}, \
+         capability_info: {capability_info:?}, rates: {rates:?}, \
+         protected: {protected:?}, channel: {channel:?}, \
          rssi: {rssi:?}, ht_cap: {ht_cap:?}, ht_op: {ht_op:?}, \
          vht_cap: {vht_cap:?}, vht_op: {vht_op:?} }}",
-        cap = bss.cap,
+        capability_info = bss.capability_info,
         rates = bss.rates(),
         protected = bss.rsne().is_some(),
-        chan = bss.chan,
+        channel = bss.channel,
         rssi = bss.rssi_dbm,
         ht_cap = bss.ht_cap().is_some(),
         ht_op = bss.ht_op().is_some(),
@@ -1388,7 +1389,7 @@ fn send_mlme_assoc_req(
     };
     let req = fidl_mlme::AssociateRequest {
         peer_sta_address: bssid.0,
-        cap_info: capabilities.map_or(0, |c| c.0.cap_info.raw()),
+        capability_info: capabilities.map_or(0, |c| c.0.capability_info.raw()),
         rates: capabilities.map_or_else(|| vec![], |c| c.0.rates.as_bytes().to_vec()),
         // TODO(fxbug.dev/43938): populate `qos_capable` field from device info
         qos_capable: ht_cap.is_some(),
@@ -1656,8 +1657,8 @@ mod tests {
         let state = ClientState::from(testing::new_state(Joining {
             cfg: ClientConfig::default(),
             cmd,
-            chan: fake_channel(),
-            cap: None,
+            channel: fake_channel(),
+            capability_info: None,
             protection_ie: None,
         }));
 
@@ -1687,8 +1688,8 @@ mod tests {
         let state = ClientState::from(testing::new_state(Authenticating {
             cfg: ClientConfig::default(),
             cmd,
-            chan: fake_channel(),
-            cap: None,
+            channel: fake_channel(),
+            capability_info: None,
             protection_ie: None,
         }));
 
@@ -1721,8 +1722,8 @@ mod tests {
         let state = ClientState::from(testing::new_state(Associating {
             cfg: ClientConfig::default(),
             cmd,
-            chan: fake_channel(),
-            cap: None,
+            channel: fake_channel(),
+            capability_info: None,
             protection_ie: None,
         }));
 
@@ -1979,8 +1980,8 @@ mod tests {
         let state = ClientState::from(testing::new_state(Associating {
             cfg: ClientConfig::default(),
             cmd: command,
-            chan: fake_channel(),
-            cap: None,
+            channel: fake_channel(),
+            capability_info: None,
             protection_ie: None,
         }));
         let assoc_conf = create_assoc_conf(fidl_mlme::AssociateResultCode::Success);
@@ -2271,8 +2272,8 @@ mod tests {
         let state = ClientState::from(testing::new_state(Associating {
             cfg: ClientConfig::default(),
             cmd,
-            chan: fake_channel(),
-            cap: None,
+            channel: fake_channel(),
+            capability_info: None,
             protection_ie: None,
         }));
         let assoc_conf = create_assoc_conf(fidl_mlme::AssociateResultCode::Success);
@@ -2408,10 +2409,10 @@ mod tests {
         let state = link_up_state(Box::new(fake_bss!(Open,
                                                      ssid: b"bar".to_vec(),
                                                      bssid: [8; 6],
-                                                     chan: fidl_common::WlanChan {
+                                                     channel: fidl_common::WlanChannel {
                                                          primary: 1,
                                                          secondary80: 0,
-                                                         cbw: fidl_common::Cbw::Cbw20
+                                                         cbw: fidl_common::ChannelBandwidth::Cbw20
                                                      }
         )));
 
@@ -2419,11 +2420,11 @@ mod tests {
             MlmeEvent::OnChannelSwitched { info: fidl_mlme::ChannelSwitchInfo { new_channel: 36 } };
 
         assert_variant!(&state, ClientState::Associated(state) => {
-            assert_eq!(state.bss.chan.primary, 1);
+            assert_eq!(state.bss.channel.primary, 1);
         });
         let state = state.on_mlme_event(switch_ind, &mut h.context);
         assert_variant!(state, ClientState::Associated(state) => {
-            assert_eq!(state.bss.chan.primary, 36);
+            assert_eq!(state.bss.channel.primary, 36);
         });
     }
 
@@ -2475,8 +2476,9 @@ mod tests {
         let state = idle_state().connect(command, &mut h.context);
 
         // State changed to Joining, capabilities preserved.
-        let cap = assert_variant!(&state, ClientState::Joining(state) => &state.cap);
-        assert!(cap.is_some());
+        let capability_info =
+            assert_variant!(&state, ClientState::Joining(state) => &state.capability_info);
+        assert!(capability_info.is_some());
     }
 
     #[test]
@@ -2488,8 +2490,9 @@ mod tests {
         let state = idle_state().connect(command, &mut h.context);
 
         // State changed to Joining, capabilities discarded as FullMAC ignore them anyway.
-        let cap = assert_variant!(&state, ClientState::Joining(state) => &state.cap);
-        assert!(cap.is_none());
+        let capability_info =
+            assert_variant!(&state, ClientState::Joining(state) => &state.capability_info);
+        assert!(capability_info.is_none());
     }
 
     #[test]
@@ -2538,7 +2541,7 @@ mod tests {
         let resp = fidl_mlme::AssociateConfirm {
             result_code: fidl_mlme::AssociateResultCode::Success,
             association_id: 1,
-            cap_info: 0,
+            capability_info: 0,
             rates: vec![0x0c, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6c],
             ht_cap: cmd.bss.raw_ht_cap().map(Box::new),
             vht_cap: cmd.bss.raw_vht_cap().map(Box::new),
@@ -2920,8 +2923,8 @@ mod tests {
         chan_and_cap: (Channel, ClientCapabilities),
     ) {
         let (chan, client_cap) = chan_and_cap;
-        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::FinalizeAssociation(cap))) => {
-            assert_eq!(cap, client_cap.0.to_fidl_negotiated_capabilities(&chan));
+        assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::FinalizeAssociation(capability_info))) => {
+            assert_eq!(capability_info, client_cap.0.to_fidl_negotiated_capabilities(&chan));
         });
     }
 
@@ -3111,8 +3114,8 @@ mod tests {
         testing::new_state(Joining {
             cfg: ClientConfig::default(),
             cmd,
-            chan: fake_channel(),
-            cap: None,
+            channel: fake_channel(),
+            capability_info: None,
             protection_ie: None,
         })
         .into()
@@ -3128,8 +3131,8 @@ mod tests {
         testing::new_state(Authenticating {
             cfg: ClientConfig::default(),
             cmd,
-            chan: fake_channel(),
-            cap: None,
+            channel: fake_channel(),
+            capability_info: None,
             protection_ie: None,
         })
         .into()
@@ -3139,8 +3142,8 @@ mod tests {
         testing::new_state(Associating {
             cfg: ClientConfig::default(),
             cmd,
-            chan: fake_channel(),
-            cap: None,
+            channel: fake_channel(),
+            capability_info: None,
             protection_ie: None,
         })
         .into()
@@ -3168,8 +3171,8 @@ mod tests {
             last_signal_report_time: zx::Time::ZERO,
             link_state,
             radio_cfg: RadioConfig::default(),
-            chan: fake_channel(),
-            cap: None,
+            channel: fake_channel(),
+            capability_info: None,
             protection_ie: None,
             wmm_param: None,
             last_channel_switch_time: None,
@@ -3201,8 +3204,8 @@ mod tests {
             last_signal_report_time: zx::Time::ZERO,
             link_state,
             radio_cfg: RadioConfig::default(),
-            chan: fake_channel(),
-            cap: None,
+            channel: fake_channel(),
+            capability_info: None,
             protection_ie: None,
             wmm_param,
             last_channel_switch_time: None,
@@ -3232,8 +3235,8 @@ mod tests {
             last_signal_report_time: zx::Time::ZERO,
             link_state,
             radio_cfg: RadioConfig::default(),
-            chan: fake_channel(),
-            cap: None,
+            channel: fake_channel(),
+            capability_info: None,
             protection_ie: None,
             wmm_param: None,
             last_channel_switch_time: None,

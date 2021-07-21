@@ -1,8 +1,9 @@
-// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/wlanif/c/banjo.h>
+#include <fuchsia/wlan/common/c/banjo.h>
 #include <fuchsia/wlan/ieee80211/cpp/fidl.h>
 #include <zircon/errors.h>
 
@@ -19,7 +20,7 @@ namespace wlan::brcmfmac {
 namespace wlan_ieee80211 = ::fuchsia::wlan::ieee80211;
 
 constexpr wlan_channel_t kDefaultChannel = {
-    .primary = 9, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0};
+    .primary = 9, .cbw = CHANNEL_BANDWIDTH_CBW20, .secondary80 = 0};
 const common::MacAddr kDefaultBssid({0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc});
 const common::MacAddr kWrongBssid({0x11, 0x22, 0x33, 0x44, 0x55, 0x66});
 constexpr wlan_ssid_t kDefaultSsid = {.len = 15, .ssid = "Fuchsia Fake AP"};
@@ -247,14 +248,14 @@ wlanif_set_keys_req AuthTest::CreateKeyReq(const uint8_t key[WLAN_MAX_KEY_LEN],
 void AuthTest::StartAuth() {
   wlanif_join_req join_req = {};
   memcpy(join_req.selected_bss.bssid, kDefaultBssid.byte, ETH_ALEN);
-  join_req.selected_bss.ies_bytes_list = kIes;
-  join_req.selected_bss.ies_bytes_count = sizeof(kIes);
-  join_req.selected_bss.chan = kDefaultChannel;
+  join_req.selected_bss.ies_list = kIes;
+  join_req.selected_bss.ies_count = sizeof(kIes);
+  join_req.selected_bss.channel = kDefaultChannel;
   client_ifc_.if_impl_ops_->join_req(client_ifc_.if_impl_ctx_, &join_req);
 }
 
 void AuthTest::OnScanResult(const wlanif_scan_result_t* result) {
-  EXPECT_EQ(result->bss.cap, (uint16_t)32);
+  EXPECT_EQ(result->bss.capability_info, (uint16_t)32);
 }
 
 void AuthTest::OnJoinConf(const wlanif_join_confirm_t* resp) {

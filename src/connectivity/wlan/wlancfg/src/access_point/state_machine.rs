@@ -1,4 +1,4 @@
-// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -323,7 +323,7 @@ async fn starting_state(
     // Apply default PHY, CBW, and channel settings.
     let _ = req.radio_config.phy.get_or_insert(DEFAULT_PHY);
     let _ = req.radio_config.cbw.get_or_insert(DEFAULT_CBW);
-    let _ = req.radio_config.primary_chan.get_or_insert(DEFAULT_CHANNEL);
+    let _ = req.radio_config.primary_channel.get_or_insert(DEFAULT_CHANNEL);
 
     // Send a stop request to ensure that the AP begins in an unstarting state.
     let stop_result = match proxy.stop().await {
