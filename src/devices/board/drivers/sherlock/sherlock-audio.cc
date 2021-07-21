@@ -427,11 +427,10 @@ zx_status_t Sherlock::AudioInit() {
     metadata.lanes_enable_mask[0] = 3;
     metadata.lanes_enable_mask[1] = 3;
 #ifndef FACTORY_BUILD
-    // Boost the woofer above tweeters by 7.1db analog and 5.5db digital needed for this product.
-    // Only applicable in non-factory environments.
+    // Delta between woofers and tweeters of 6.4dB.
     metadata.codecs.delta_gains[0] = 0.f;
-    metadata.codecs.delta_gains[1] = -12.6f;
-    metadata.codecs.delta_gains[2] = -12.6f;
+    metadata.codecs.delta_gains[1] = -6.4f;
+    metadata.codecs.delta_gains[2] = -6.4f;
 #endif                                                 // FACTORY_BUILD
     metadata.codecs.channels_to_use_bitmask[0] = 0x1;  // Woofer uses DAI right I2S channel.
     metadata.codecs.channels_to_use_bitmask[1] = 0x2;  // L tweeter uses DAI left I2S channel.
