@@ -9,6 +9,7 @@ fidl("fuchsia.hardware.usb.bus") {
   public_deps = [
     "//sdk/banjo/fuchsia.hardware.usb.hub",
     "//sdk/banjo/fuchsia.hardware.usb.hubdescriptor",
+    "//sdk/banjo/fuchsia.hardware.usb.request",
     "//zircon/vdso/zx",
   ]
 }

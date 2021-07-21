@@ -11,6 +11,8 @@
 #include <ddktl/device.h>
 #include <fbl/array.h>
 #include <fbl/ref_ptr.h>
+#include <usb/usb-request.h>
+#include <usb/usb.h>
 
 namespace usb_bus {
 
@@ -38,6 +40,10 @@ class UsbBus : public UsbBusType,
   zx_status_t UsbBusDeviceRemoved(/* zx_device_t* */ uint64_t hub_device, uint32_t port);
   zx_status_t UsbBusSetHubInterface(/* zx_device_t* */ uint64_t usb_device,
                                     const usb_hub_interface_protocol_t* hub);
+  void UsbBusRequestQueue(usb_request_t* usb_request,
+                          const usb_request_complete_callback_t* complete_cb) {
+    usb_request_complete(usb_request, ZX_ERR_NOT_SUPPORTED, 0, complete_cb);
+  }
 
   // USB Bus interface implementation.
   zx_status_t UsbBusInterfaceAddDevice(uint32_t device_id, uint32_t hub_id, usb_speed_t speed);

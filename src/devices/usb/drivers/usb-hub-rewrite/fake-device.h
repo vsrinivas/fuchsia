@@ -435,6 +435,10 @@ class FakeDevice : public ddk::UsbBusProtocol<FakeDevice>, public ddk::UsbProtoc
     return SendMessageSync(std::move(entry))->status;
   }
 
+  void UsbBusRequestQueue(usb_request_t* req, const usb_request_complete_callback_t* complete_cb) {
+    usb_request_complete(req, ZX_ERR_NOT_SUPPORTED, 0, complete_cb);
+  }
+
   // USB protocol implementation
   zx_status_t UsbControlIn(uint8_t request_type, uint8_t request, uint16_t value, uint16_t index,
                            int64_t timeout, uint8_t* out_read_buffer, size_t read_size,

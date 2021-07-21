@@ -6,6 +6,7 @@ library fuchsia.hardware.usb.bus;
 using zx;
 using fuchsia.hardware.usb.hub;
 using fuchsia.hardware.usb.hubdescriptor;
+using fuchsia.hardware.usb.request;
 
 alias UsbSpeed = uint32;
 
@@ -49,6 +50,13 @@ protocol UsbBus {
     }) -> (struct {
         s zx.status;
     });
+    /// Queues a USB request with the host stack.
+    RequestQueue(resource struct {
+        @in_out
+        usb_request fuchsia.hardware.usb.request.UsbRequest;
+        @in_out
+        complete_cb client_end:fuchsia.hardware.usb.request.UsbRequestCompleteCallback;
+    }) -> ();
 };
 
 /// Interface for use by the HCI controller to use to notify when devices are added and removed.
