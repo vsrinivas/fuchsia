@@ -5,6 +5,7 @@
 #include <fuchsia/hardware/pci/c/banjo.h>
 #include <fuchsia/hardware/sdhci/c/banjo.h>
 #include <inttypes.h>
+#include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
 #include <lib/device-protocol/pci.h>
@@ -14,6 +15,7 @@
 #include <sys/param.h>
 #include <threads.h>
 #include <unistd.h>
+#include <zircon/status.h>
 
 #include "src/devices/block/drivers/pci-sdhci/pci-sdhci-bind.h"
 
@@ -35,18 +37,16 @@ static zx_status_t pci_sdhci_get_interrupt(void* ctx, zx_handle_t* handle_out) {
   pci_irq_mode_t mode = PCI_IRQ_MODE_DISABLED;
   zx_status_t status = pci_configure_irq_mode(&dev->pci, 1, &mode);
   if (status != ZX_OK) {
-    printf("pci-sdhci: error %d setting irq mode\n", status);
+    zxlogf(ERROR, "error setting irq mode: %s", zx_status_get_string(status));
     return status;
   }
 
   // get irq handle
   status = pci_map_interrupt(&dev->pci, 0, handle_out);
   if (status != ZX_OK) {
-    printf("pci-sdhci: error %d getting irq handle\n", status);
-    return status;
-  } else {
-    return ZX_OK;
+    zxlogf(ERROR, "error getting irq handle: %s", zx_status_get_string(status));
   }
+  return status;
 }
 
 static zx_status_t pci_sdhci_get_mmio(void* ctx, zx_handle_t* out, zx_off_t* out_offset) {
@@ -55,7 +55,7 @@ static zx_status_t pci_sdhci_get_mmio(void* ctx, zx_handle_t* out, zx_off_t* out
     zx_status_t status =
         pci_map_bar_buffer(&dev->pci, 0u, ZX_CACHE_POLICY_UNCACHED_DEVICE, &dev->mmio);
     if (status != ZX_OK) {
-      printf("pci-sdhci: error %d mapping register window\n", status);
+      zxlogf(ERROR, "error mapping register window: %s", zx_status_get_string(status));
       return status;
     }
     dev->regs = dev->mmio.vaddr;
@@ -128,10 +128,10 @@ static zx_protocol_device_t pci_sdhci_device_proto = {
 };
 
 static zx_status_t pci_sdhci_bind(void* ctx, zx_device_t* parent) {
-  printf("pci-sdhci: bind\n");
+  zxlogf(DEBUG, "bind");
   pci_sdhci_device_t* dev = calloc(1, sizeof(pci_sdhci_device_t));
   if (!dev) {
-    printf("pci-sdhci: out of memory\n");
+    zxlogf(ERROR, "out of memory");
     return ZX_ERR_NO_MEMORY;
   }
 
@@ -142,7 +142,7 @@ static zx_status_t pci_sdhci_bind(void* ctx, zx_device_t* parent) {
 
   status = dev->pci.ops->enable_bus_master(dev->pci.ctx, true);
   if (status < 0) {
-    printf("pci-sdhci: error %d in enable bus master\n", status);
+    zxlogf(ERROR, "error in enable bus master: %s", zx_status_get_string(status));
     goto fail;
   }
 
