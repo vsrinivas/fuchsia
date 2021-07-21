@@ -14,7 +14,7 @@
 
 #include "buffer.h"
 #include "config.h"
-#include "mac_adapter.h"
+#include "port_adapter.h"
 #include "src/connectivity/network/drivers/network-device/device/public/network_device.h"
 
 namespace network {
@@ -26,12 +26,12 @@ class DeviceAdapter;
 //
 // This abstract class allows the owner of a `DeviceAdapter` to change its behavior and be notified
 // of important events.
-class DeviceAdapterParent : public MacAdapterParent {
+class DeviceAdapterParent {
  public:
+  virtual ~DeviceAdapterParent() = default;
+
   // Gets the DeviceAdapter's configuration.
-  virtual const BaseConfig& config() const = 0;
-  // Called when the device's `has_session` state changes.
-  virtual void OnHasSessionsChanged(DeviceAdapter* device) = 0;
+  virtual const BaseDeviceConfig& config() const = 0;
   // Called when transmit buffers become available.
   virtual void OnTxAvail(DeviceAdapter* device) = 0;
   // Called when receive buffers become available.
@@ -48,18 +48,12 @@ class DeviceAdapterParent : public MacAdapterParent {
 // buffer is a buffer that contains data that is expected to be sent over a link, and an "Rx" buffer
 // is free space that can be used to write data received over a link and push it back to
 // applications.
-class DeviceAdapter : public ddk::NetworkDeviceImplProtocol<DeviceAdapter>,
-                      public ddk::NetworkPortProtocol<DeviceAdapter> {
+class DeviceAdapter : public ddk::NetworkDeviceImplProtocol<DeviceAdapter> {
  public:
-  // TODO(http://fxbug.dev/64310): Do not automatically install ports once tun FIDL supports it.
-  static constexpr uint8_t kPort0 = 0;
   // Creates a new `DeviceAdapter` with  `parent`, that will serve its requests through
   // `dispatcher`.
-  // If `online` is true, the device starts with its virtual link in the online status.
-  // If `mac` is provided, the device will provide a MAC adderessing layer.
-  static zx::status<std::unique_ptr<DeviceAdapter>> Create(
-      async_dispatcher_t* dispatcher, DeviceAdapterParent* parent, bool online,
-      std::optional<fuchsia_net::wire::MacAddress> mac);
+  static zx::status<std::unique_ptr<DeviceAdapter>> Create(async_dispatcher_t* dispatcher,
+                                                           DeviceAdapterParent* parent);
 
   // Binds `req` to this adapter's `NetworkDeviceInterface`.
   zx_status_t Bind(fidl::ServerEnd<netdev::Device> req);
@@ -85,17 +79,6 @@ class DeviceAdapter : public ddk::NetworkDeviceImplProtocol<DeviceAdapter>,
   void NetworkDeviceImplSetSnoop(bool snoop) { /* do nothing , only auto-snooping is allowed */
   }
 
-  // NetworkPort protocol:
-  void NetworkPortGetInfo(port_info_t* out_info);
-  void NetworkPortGetStatus(port_status_t* out_status);
-  void NetworkPortSetActive(bool active);
-  void NetworkPortGetMac(mac_addr_protocol_t* out_mac_ifc);
-  void NetworkPortRemoved();
-
-  // Sets this device's emulated `online` status.
-  void SetOnline(bool online);
-  // Returns `true` if the device has at least one active session.
-  bool HasSession();
   // Attempts to get a pending transmit buffer containing data expected to reach the network from
   // the pool of pending buffers.
   // The second argument given to `callback` is the number of remaining pending buffers (not
@@ -103,18 +86,25 @@ class DeviceAdapter : public ddk::NetworkDeviceImplProtocol<DeviceAdapter>,
   // Returns `true` if a buffer was successfully allocated. The buffer given to `callback` is
   // discarded from the list of pending buffers and marked as pending for return.
   bool TryGetTxBuffer(fit::callback<zx_status_t(TxBuffer&, size_t)> callback);
+  // Calls `func` with all currently enqueued tx buffers.
+  // If `func` returns a value different than `ZX_OK`, the buffer is returned to the device
+  // implementation with that error.
+  void RetainTxBuffers(fit::function<zx_status_t(TxBuffer&)> func);
   // Attempts to write `data` and `meta` into an available rx buffer and return it to the
   // `NetworkDeviceInterface`.
   // Returns the number of remaining available buffers.
   // Returns `ZX_ERR_BAD_STATE` if the device is offline, or `ZX_ERR_SHOULD_WAIT` if there are no
   // buffers available to write `data` into
-  zx::status<size_t> WriteRxFrame(fuchsia_hardware_network::wire::FrameType frame_type,
+  zx::status<size_t> WriteRxFrame(PortAdapter& port,
+                                  fuchsia_hardware_network::wire::FrameType frame_type,
                                   const uint8_t* data, size_t count,
                                   const std::optional<fuchsia_net_tun::wire::FrameMetadata>& meta);
-  zx::status<size_t> WriteRxFrame(fuchsia_hardware_network::wire::FrameType frame_type,
+  zx::status<size_t> WriteRxFrame(PortAdapter& port,
+                                  fuchsia_hardware_network::wire::FrameType frame_type,
                                   const fidl::VectorView<uint8_t>& data,
                                   const std::optional<fuchsia_net_tun::wire::FrameMetadata>& meta);
-  zx::status<size_t> WriteRxFrame(fuchsia_hardware_network::wire::FrameType frame_type,
+  zx::status<size_t> WriteRxFrame(PortAdapter& port,
+                                  fuchsia_hardware_network::wire::FrameType frame_type,
                                   const std::vector<uint8_t>& data,
                                   const std::optional<fuchsia_net_tun::wire::FrameMetadata>& meta);
   // Copies all pending tx buffers from `this` consuming any available rx buffers from `other`.
@@ -123,18 +113,21 @@ class DeviceAdapter : public ddk::NetworkDeviceImplProtocol<DeviceAdapter>,
   // otherwise buffers from `this` will remain in the available buffer pool.
   void CopyTo(DeviceAdapter* other, bool return_failed_buffers);
 
-  // Gets the MAC adapter associated with the device.
-  //
-  // May be null if the device was created without a MAC layer.
-  const std::unique_ptr<MacAdapter>& mac() const { return mac_; }
+  // Handles status change notifications from port with `port_id`.
+  void OnPortStatusChanged(uint8_t port_id, const port_status_t& new_status);
+  // Adds |port| to the device.
+  void AddPort(PortAdapter& port);
+  // Removes port with |port_id|.
+  void RemovePort(uint8_t port_id);
 
  private:
   static constexpr uint16_t kFifoDepth = 128;
-  DeviceAdapter(DeviceAdapterParent* parent, bool online);
+  explicit DeviceAdapter(DeviceAdapterParent* parent);
 
   // Enqueues a single fulfilled rx frame.
-  void EnqueueRx(fuchsia_hardware_network::wire::FrameType frame_type, RxBuffer buffer,
-                 size_t length, const std::optional<fuchsia_net_tun::wire::FrameMetadata>& meta)
+  void EnqueueRx(uint8_t port_id, fuchsia_hardware_network::wire::FrameType frame_type,
+                 RxBuffer buffer, size_t length,
+                 const std::optional<fuchsia_net_tun::wire::FrameMetadata>& meta)
       __TA_REQUIRES(rx_lock_);
   // Commits all pending rx buffers, returning them to the `NetworkDeviceInterface`.
   void CommitRx() __TA_REQUIRES(rx_lock_);
@@ -150,9 +143,6 @@ class DeviceAdapter : public ddk::NetworkDeviceImplProtocol<DeviceAdapter>,
 
   std::unique_ptr<NetworkDeviceInterface> device_;
   DeviceAdapterParent* const parent_;  // pointer to parent, not owned.
-  fbl::Mutex state_lock_;
-  bool has_sessions_ __TA_GUARDED(state_lock_) = false;
-  bool online_ __TA_GUARDED(state_lock_) = false;
 
   fbl::Mutex rx_lock_;
   fbl::Mutex tx_lock_;
@@ -162,8 +152,6 @@ class DeviceAdapter : public ddk::NetworkDeviceImplProtocol<DeviceAdapter>,
   // complexity and also we lose the benefit of being able to operate on rx and tx frames without
   // shared locks between them.
   VmoStore vmos_;
-  std::array<uint8_t, fuchsia_hardware_network::wire::kMaxFrameTypes> rx_types_{};
-  std::array<tx_support_t, fuchsia_hardware_network::wire::kMaxFrameTypes> tx_types_{};
   std::queue<TxBuffer> tx_buffers_ __TA_GUARDED(tx_lock_);
   bool tx_available_ __TA_GUARDED(tx_lock_) = false;
   std::queue<rx_space_buffer_t> rx_buffers_ __TA_GUARDED(rx_lock_);
@@ -174,9 +162,7 @@ class DeviceAdapter : public ddk::NetworkDeviceImplProtocol<DeviceAdapter>,
   std::vector<tx_result_t> return_tx_list_ __TA_GUARDED(tx_lock_);
   ddk::NetworkDeviceIfcProtocolClient device_iface_;
   const device_info_t device_info_;
-  // TODO(https://fxbug.dev/64310): Remove this field once network-tun supports dynamic ports.
-  const port_info_t port_info_;
-  std::unique_ptr<MacAdapter> mac_;
+  std::array<std::atomic_bool, MAX_PORTS> port_online_status_;
 };
 }  // namespace tun
 }  // namespace network

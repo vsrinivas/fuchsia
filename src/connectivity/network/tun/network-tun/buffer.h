@@ -151,6 +151,7 @@ class TxBuffer : public Buffer {
  public:
   inline fuchsia_hardware_network::wire::FrameType frame_type() const { return frame_type_; }
   uint32_t id() const { return parts().begin()->buffer_id; }
+  uint8_t port_id() const { return port_id_; }
 
   inline std::optional<fuchsia_net_tun::wire::FrameMetadata> TakeMetadata() {
     return std::exchange(meta_, std::nullopt);
@@ -161,7 +162,8 @@ class TxBuffer : public Buffer {
   TxBuffer(const tx_buffer_t& tx, bool get_meta, VmoStore* vmo_store);
 
  private:
-  fuchsia_hardware_network::wire::FrameType frame_type_;
+  const uint8_t port_id_;
+  const fuchsia_hardware_network::wire::FrameType frame_type_;
   std::optional<fuchsia_net_tun::wire::FrameMetadata> meta_;
 };
 

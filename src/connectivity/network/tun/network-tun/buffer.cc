@@ -152,6 +152,7 @@ zx::status<size_t> Buffer::CopyFrom(Buffer& other) {
 
 TxBuffer::TxBuffer(const tx_buffer_t& tx, bool get_meta, VmoStore* vmo_store)
     : Buffer(vmo_store),
+      port_id_(tx.meta.port),
       frame_type_(static_cast<fuchsia_hardware_network::wire::FrameType>(tx.meta.frame_type)) {
   // Enforce the banjo contract.
   ZX_ASSERT(tx.data_count <= MAX_BUFFER_PARTS);

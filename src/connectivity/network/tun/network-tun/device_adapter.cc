@@ -13,11 +13,10 @@
 namespace network {
 namespace tun {
 
-zx::status<std::unique_ptr<DeviceAdapter>> DeviceAdapter::Create(
-    async_dispatcher_t* dispatcher, DeviceAdapterParent* parent, bool online,
-    std::optional<fuchsia_net::wire::MacAddress> mac) {
+zx::status<std::unique_ptr<DeviceAdapter>> DeviceAdapter::Create(async_dispatcher_t* dispatcher,
+                                                                 DeviceAdapterParent* parent) {
   fbl::AllocChecker ac;
-  std::unique_ptr<DeviceAdapter> adapter(new (&ac) DeviceAdapter(parent, online));
+  std::unique_ptr<DeviceAdapter> adapter(new (&ac) DeviceAdapter(parent));
   if (!ac.check()) {
     return zx::error(ZX_ERR_NO_MEMORY);
   }
@@ -25,15 +24,6 @@ zx::status<std::unique_ptr<DeviceAdapter>> DeviceAdapter::Create(
       .ops = &adapter->network_device_impl_protocol_ops_,
       .ctx = adapter.get(),
   };
-
-  // NB: Mac must be created first so it is set when kPort0 is created.
-  if (mac.has_value()) {
-    zx::status mac_adapter = MacAdapter::Create(parent, mac.value(), false);
-    if (mac_adapter.is_error()) {
-      return mac_adapter.take_error();
-    }
-    adapter->mac_ = std::move(mac_adapter.value());
-  }
 
   zx::status device = NetworkDeviceInterface::Create(
       dispatcher, ddk::NetworkDeviceImplProtocolClient(&proto), "network-tun");
@@ -51,36 +41,24 @@ zx_status_t DeviceAdapter::Bind(fidl::ServerEnd<netdev::Device> req) {
 
 zx_status_t DeviceAdapter::NetworkDeviceImplInit(const network_device_ifc_protocol_t* iface) {
   device_iface_ = ddk::NetworkDeviceIfcProtocolClient(iface);
-  device_iface_.AddPort(kPort0, this, &network_port_protocol_ops_);
   return ZX_OK;
 }
 
 void DeviceAdapter::NetworkDeviceImplStart(network_device_impl_start_callback callback,
                                            void* cookie) {
-  bool tx_valid;
-  {
-    fbl::AutoLock lock(&state_lock_);
-    has_sessions_ = true;
-    tx_valid = online_;
-  }
   {
     fbl::AutoLock lock(&rx_lock_);
     rx_available_ = true;
   }
   {
     fbl::AutoLock lock(&tx_lock_);
-    tx_available_ = tx_valid;
+    tx_available_ = true;
   }
-  parent_->OnHasSessionsChanged(this);
   callback(cookie);
 }
 
 void DeviceAdapter::NetworkDeviceImplStop(network_device_impl_stop_callback callback,
                                           void* cookie) {
-  {
-    fbl::AutoLock lock(&state_lock_);
-    has_sessions_ = false;
-  }
   {
     // Return all rx buffers.
     fbl::AutoLock lock(&rx_lock_);
@@ -113,7 +91,6 @@ void DeviceAdapter::NetworkDeviceImplStop(network_device_impl_stop_callback call
       tx_buffers_.pop();
     }
   }
-  parent_->OnHasSessionsChanged(this);
   callback(cookie);
 }
 
@@ -132,9 +109,13 @@ void DeviceAdapter::NetworkDeviceImplQueueTx(const tx_buffer_t* buf_list, size_t
       return;
     }
     for (const tx_buffer_t& b : buffers) {
+      if (b.meta.port >= port_online_status_.size() || !port_online_status_[b.meta.port]) {
+        EnqueueTx(b.id, ZX_ERR_UNAVAILABLE);
+        continue;
+      }
       tx_buffers_.emplace(vmos_.MakeTxBuffer(b, parent_->config().report_metadata));
-      buf_list++;
     }
+    CommitTx();
   }
   parent_->OnTxAvail(this);
 }
@@ -184,60 +165,6 @@ void DeviceAdapter::NetworkDeviceImplReleaseVmo(uint8_t vmo_id) {
   }
 }
 
-void DeviceAdapter::NetworkPortGetInfo(port_info_t* out_info) { *out_info = port_info_; }
-void DeviceAdapter::NetworkPortGetStatus(port_status_t* out_status) {
-  fbl::AutoLock lock(&state_lock_);
-  *out_status = {
-      .mtu = parent_->config().mtu,
-      .flags =
-          online_ ? static_cast<uint32_t>(fuchsia_hardware_network::wire::StatusFlags::kOnline) : 0,
-  };
-}
-void DeviceAdapter::NetworkPortSetActive(bool active) {}
-void DeviceAdapter::NetworkPortGetMac(mac_addr_protocol_t* out_mac_ifc) {
-  if (mac_) {
-    *out_mac_ifc = mac_->proto();
-  } else {
-    *out_mac_ifc = {};
-  }
-}
-void DeviceAdapter::NetworkPortRemoved() {}
-
-void DeviceAdapter::SetOnline(bool online) {
-  port_status_t new_status;
-  {
-    fbl::AutoLock lock(&state_lock_);
-    if (online == online_) {
-      return;
-    }
-    FX_VLOGF(1, "tun", "DeviceAdapter: SetOnline: %d", online);
-    online_ = online;
-    new_status.mtu = parent_->config().mtu;
-    new_status.flags =
-        online_ ? static_cast<uint32_t>(fuchsia_hardware_network::wire::StatusFlags::kOnline) : 0;
-
-    {
-      fbl::AutoLock tx_lock(&tx_lock_);
-      tx_available_ = online_ && has_sessions_;
-      // If going offline, discard all pending tx buffers.
-      if (!tx_available_) {
-        while (!tx_buffers_.empty()) {
-          EnqueueTx(tx_buffers_.front().id(), ZX_ERR_UNAVAILABLE);
-          tx_buffers_.pop();
-        }
-        CommitTx();
-      }
-    }
-  }
-  // TODO(https://fxbug.dev/64310): Don't hard-coded port 0 once tun can have more ports.
-  device_iface_.PortStatusChanged(kPort0, &new_status);
-}
-
-bool DeviceAdapter::HasSession() {
-  fbl::AutoLock lock(&state_lock_);
-  return has_sessions_;
-}
-
 bool DeviceAdapter::TryGetTxBuffer(fit::callback<zx_status_t(TxBuffer&, size_t)> callback) {
   uint32_t id;
 
@@ -256,18 +183,28 @@ bool DeviceAdapter::TryGetTxBuffer(fit::callback<zx_status_t(TxBuffer&, size_t)>
   return true;
 }
 
-zx::status<size_t> DeviceAdapter::WriteRxFrame(
-    fuchsia_hardware_network::wire::FrameType frame_type, const uint8_t* data, size_t count,
-    const std::optional<fuchsia_net_tun::wire::FrameMetadata>& meta) {
-  {
-    // can't write if device is offline
-    fbl::AutoLock lock(&state_lock_);
-    if (!online_) {
-      return zx::error(ZX_ERR_BAD_STATE);
+void DeviceAdapter::RetainTxBuffers(fit::function<zx_status_t(TxBuffer&)> func) {
+  fbl::AutoLock lock(&tx_lock_);
+  for (size_t size = tx_buffers_.size(); size > 0; size--) {
+    TxBuffer& buffer = tx_buffers_.front();
+    zx_status_t status = func(buffer);
+    if (status == ZX_OK) {
+      tx_buffers_.push(std::move(buffer));
+    } else {
+      EnqueueTx(buffer.id(), status);
     }
+    tx_buffers_.pop();
   }
+  CommitTx();
+}
 
-  if (count > parent_->config().mtu) {
+zx::status<size_t> DeviceAdapter::WriteRxFrame(
+    PortAdapter& port, fuchsia_hardware_network::wire::FrameType frame_type, const uint8_t* data,
+    size_t count, const std::optional<fuchsia_net_tun::wire::FrameMetadata>& meta) {
+  if (!port.online()) {
+    return zx::error(ZX_ERR_BAD_STATE);
+  }
+  if (count > port.mtu()) {
     return zx::error(ZX_ERR_INVALID_ARGS);
   }
 
@@ -284,22 +221,24 @@ zx::status<size_t> DeviceAdapter::WriteRxFrame(
     ReclaimRxSpace(std::move(buffer));
     return zx::error(status);
   }
-  EnqueueRx(frame_type, std::move(buffer), count, meta);
+  EnqueueRx(port.id(), frame_type, std::move(buffer), count, meta);
   CommitRx();
 
   return zx::ok(rx_buffers_.size());
 }
 
 zx::status<size_t> DeviceAdapter::WriteRxFrame(
-    fuchsia_hardware_network::wire::FrameType frame_type, const fidl::VectorView<uint8_t>& data,
+    PortAdapter& port, fuchsia_hardware_network::wire::FrameType frame_type,
+    const fidl::VectorView<uint8_t>& data,
     const std::optional<fuchsia_net_tun::wire::FrameMetadata>& meta) {
-  return WriteRxFrame(frame_type, data.data(), data.count(), meta);
+  return WriteRxFrame(port, frame_type, data.data(), data.count(), meta);
 }
 
 zx::status<size_t> DeviceAdapter::WriteRxFrame(
-    fuchsia_hardware_network::wire::FrameType frame_type, const std::vector<uint8_t>& data,
+    PortAdapter& port, fuchsia_hardware_network::wire::FrameType frame_type,
+    const std::vector<uint8_t>& data,
     const std::optional<fuchsia_net_tun::wire::FrameMetadata>& meta) {
-  return WriteRxFrame(frame_type, data.data(), data.size(), meta);
+  return WriteRxFrame(port, frame_type, data.data(), data.size(), meta);
 }
 
 void DeviceAdapter::CopyTo(DeviceAdapter* other, bool return_failed_buffers) {
@@ -333,7 +272,7 @@ void DeviceAdapter::CopyTo(DeviceAdapter* other, bool return_failed_buffers) {
       if (meta.has_value()) {
         meta->flags = 0;
       }
-      other->EnqueueRx(tx_buff.frame_type(), std::move(rx_buff), length, meta);
+      other->EnqueueRx(tx_buff.port_id(), tx_buff.frame_type(), std::move(rx_buff), length, meta);
       EnqueueTx(tx_buff.id(), ZX_OK);
     }
     tx_buffers_.pop();
@@ -343,13 +282,7 @@ void DeviceAdapter::CopyTo(DeviceAdapter* other, bool return_failed_buffers) {
 }
 
 void DeviceAdapter::Teardown(fit::function<void()> callback) {
-  device_->Teardown([this, cb = std::move(callback)]() mutable {
-    if (mac_) {
-      mac_->Teardown(std::move(cb));
-    } else {
-      cb();
-    }
-  });
+  device_->Teardown([cb = std::move(callback)]() mutable { cb(); });
 }
 
 void DeviceAdapter::TeardownSync() {
@@ -358,8 +291,8 @@ void DeviceAdapter::TeardownSync() {
   sync_completion_wait_deadline(&completion, ZX_TIME_INFINITE);
 }
 
-void DeviceAdapter::EnqueueRx(fuchsia_hardware_network::wire::FrameType frame_type, RxBuffer buffer,
-                              size_t length,
+void DeviceAdapter::EnqueueRx(uint8_t port_id, fuchsia_hardware_network::wire::FrameType frame_type,
+                              RxBuffer buffer, size_t length,
                               const std::optional<fuchsia_net_tun::wire::FrameMetadata>& meta)
     __TA_REQUIRES(rx_lock_) {
   // Written length must always fit the buffer.
@@ -378,7 +311,7 @@ void DeviceAdapter::EnqueueRx(fuchsia_hardware_network::wire::FrameType frame_ty
   rx_buffer_t& ret = return_rx_list_.emplace_back(rx_buffer_t{
       .meta =
           {
-              .port = kPort0,
+              .port = port_id,
               .info_type = static_cast<uint32_t>(fuchsia_hardware_network::wire::InfoType::kNoInfo),
               .frame_type = static_cast<uint8_t>(frame_type),
           },
@@ -415,37 +348,20 @@ void DeviceAdapter::CommitTx() {
   }
 }
 
-DeviceAdapter::DeviceAdapter(DeviceAdapterParent* parent, bool online)
+DeviceAdapter::DeviceAdapter(DeviceAdapterParent* parent)
     : ddk::NetworkDeviceImplProtocol<DeviceAdapter>(),
       parent_(parent),
-      online_(online),
       device_info_(device_info_t{
           .tx_depth = kFifoDepth,
           .rx_depth = kFifoDepth,
           .rx_threshold = kFifoDepth / 2,
           .max_buffer_length = fuchsia_net_tun::wire::kMaxMtu,
           .buffer_alignment = 1,
-          // TODO(https://fxbug.dev/75933): Lift restriction on minimum rx buffer length being the
-          // MTU. That will allow us to observe rx buffer chaining on tun.
-          .min_rx_buffer_length = parent->config().mtu,
+          .min_rx_buffer_length = parent->config().min_rx_buffer_length,
           .min_tx_buffer_length = parent->config().min_tx_buffer_length,
-      }),
-      port_info_(port_info_t{
-          .port_class = static_cast<uint8_t>(fuchsia_hardware_network::wire::DeviceClass::kUnknown),
-          .rx_types_list = rx_types_.data(),
-          .rx_types_count = parent->config().rx_types.size(),
-          .tx_types_list = tx_types_.data(),
-          .tx_types_count = parent->config().tx_types.size(),
       }) {
-  // Initialize rx_types_ and tx_types_ lists from parent config.
-  for (size_t i = 0; i < parent_->config().rx_types.size(); i++) {
-    rx_types_[i] = static_cast<uint8_t>(parent_->config().rx_types[i]);
-  }
-  for (size_t i = 0; i < parent_->config().tx_types.size(); i++) {
-    tx_types_[i].features = parent_->config().tx_types[i].features;
-    tx_types_[i].type = static_cast<uint8_t>(parent_->config().tx_types[i].type);
-    tx_types_[i].supported_flags =
-        static_cast<uint32_t>(parent_->config().tx_types[i].supported_flags);
+  for (std::atomic_bool& p : port_online_status_) {
+    p = false;
   }
 }
 
@@ -474,6 +390,20 @@ void DeviceAdapter::ReclaimRxSpace(RxBuffer buffer) __TA_REQUIRES(rx_lock_) {
     rx_buffers_.push(space);
   });
 }
+
+void DeviceAdapter::OnPortStatusChanged(uint8_t port_id, const port_status_t& new_status) {
+  port_online_status_[port_id] =
+      static_cast<bool>(static_cast<netdev::wire::StatusFlags>(new_status.flags) &
+                        netdev::wire::StatusFlags::kOnline);
+  device_iface_.PortStatusChanged(port_id, &new_status);
+}
+
+void DeviceAdapter::AddPort(PortAdapter& port) {
+  network_port_protocol_t proto = port.proto();
+  device_iface_.AddPort(port.id(), proto.ctx, proto.ops);
+}
+
+void DeviceAdapter::RemovePort(uint8_t port_id) { device_iface_.RemovePort(port_id); }
 
 }  // namespace tun
 }  // namespace network

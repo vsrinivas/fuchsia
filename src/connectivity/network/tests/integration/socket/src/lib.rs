@@ -223,9 +223,12 @@ async fn install_ip_device(
     id
 }
 
+const TUN_DEFAULT_PORT_ID: u8 = 0;
+
 /// Creates default base config for an IP tun device.
-fn base_ip_device_config() -> fidl_fuchsia_net_tun::BaseConfig {
-    fidl_fuchsia_net_tun::BaseConfig {
+fn base_ip_device_port_config() -> fidl_fuchsia_net_tun::BasePortConfig {
+    fidl_fuchsia_net_tun::BasePortConfig {
+        id: Some(TUN_DEFAULT_PORT_ID),
         mtu: Some(1500),
         rx_types: Some(vec![
             fidl_fuchsia_hardware_network::FrameType::Ipv4,
@@ -243,9 +246,7 @@ fn base_ip_device_config() -> fidl_fuchsia_net_tun::BaseConfig {
                 supported_flags: fidl_fuchsia_hardware_network::TxFlags::empty(),
             },
         ]),
-        report_metadata: None,
-        min_tx_buffer_length: None,
-        ..fidl_fuchsia_net_tun::BaseConfig::EMPTY
+        ..fidl_fuchsia_net_tun::BasePortConfig::EMPTY
     }
 }
 
@@ -266,18 +267,21 @@ async fn test_ip_endpoints_socket() {
     let (tun_pair, req) = fidl::endpoints::create_proxy::<fidl_fuchsia_net_tun::DevicePairMarker>()
         .expect("failed to create endpoints");
     let () = tun
-        .create_pair(
-            fidl_fuchsia_net_tun::DevicePairConfig {
-                base: Some(base_ip_device_config()),
-                fallible_transmit_left: None,
-                fallible_transmit_right: None,
-                mac_left: None,
-                mac_right: None,
-                ..fidl_fuchsia_net_tun::DevicePairConfig::EMPTY
-            },
-            req,
-        )
+        .create_pair(fidl_fuchsia_net_tun::DevicePairConfig::EMPTY, req)
         .expect("failed to create tun pair");
+
+    let () = tun_pair
+        .add_port(fidl_fuchsia_net_tun::DevicePairPortConfig {
+            base: Some(base_ip_device_port_config()),
+            // No MAC, this is a pure IP device.
+            mac_left: None,
+            mac_right: None,
+            ..fidl_fuchsia_net_tun::DevicePairPortConfig::EMPTY
+        })
+        .await
+        .expect("add_port failed")
+        .map_err(fuchsia_zircon::Status::from_raw)
+        .expect("add_port returned error");
 
     let (client_device, client_req) =
         fidl::endpoints::create_endpoints::<fidl_fuchsia_hardware_network::DeviceMarker>()
@@ -285,21 +289,8 @@ async fn test_ip_endpoints_socket() {
     let (server_device, server_req) =
         fidl::endpoints::create_endpoints::<fidl_fuchsia_hardware_network::DeviceMarker>()
             .expect("failed to create endpoints");
-    let () = tun_pair
-        .connect_protocols(fidl_fuchsia_net_tun::DevicePairEnds {
-            left: Some(fidl_fuchsia_net_tun::Protocols {
-                network_device: Some(client_req),
-                mac_addressing: None,
-                ..fidl_fuchsia_net_tun::Protocols::EMPTY
-            }),
-            right: Some(fidl_fuchsia_net_tun::Protocols {
-                network_device: Some(server_req),
-                mac_addressing: None,
-                ..fidl_fuchsia_net_tun::Protocols::EMPTY
-            }),
-            ..fidl_fuchsia_net_tun::DevicePairEnds::EMPTY
-        })
-        .expect("connect protocols failed");
+    let () = tun_pair.get_left(client_req).expect("get_left failed");
+    let () = tun_pair.get_right(server_req).expect("get_right failed");
 
     // Addresses must be in the same subnet.
     const SERVER_ADDR_V4: fidl_fuchsia_net::Subnet = fidl_subnet!("192.168.0.1/24");
@@ -333,31 +324,39 @@ async fn test_ip_endpoint_packets() {
         fuchsia_component::client::connect_to_protocol::<fidl_fuchsia_net_tun::ControlMarker>()
             .expect("failed to connect to tun service");
 
-    let (tun_dev, req) = fidl::endpoints::create_proxy::<fidl_fuchsia_net_tun::DeviceMarker>()
+    let (tun_dev, req) = fidl::endpoints::create_proxy::<fidl_fuchsia_net_tun::Device2Marker>()
         .expect("failed to create endpoints");
     let () = tun
-        .create_device(
-            fidl_fuchsia_net_tun::DeviceConfig {
-                base: Some(base_ip_device_config()),
-                online: Some(true),
+        .create_device2(
+            fidl_fuchsia_net_tun::DeviceConfig2 {
+                base: None,
                 blocking: Some(true),
-                mac: None,
-                ..fidl_fuchsia_net_tun::DeviceConfig::EMPTY
+                ..fidl_fuchsia_net_tun::DeviceConfig2::EMPTY
             },
             req,
         )
         .expect("failed to create tun pair");
 
+    let (_tun_port, port_req) =
+        fidl::endpoints::create_endpoints::<fidl_fuchsia_net_tun::PortMarker>()
+            .expect("failed to create endpoints");
+    let () = tun_dev
+        .add_port(
+            fidl_fuchsia_net_tun::DevicePortConfig {
+                base: Some(base_ip_device_port_config()),
+                online: Some(true),
+                // No MAC, this is a pure IP device.
+                mac: None,
+                ..fidl_fuchsia_net_tun::DevicePortConfig::EMPTY
+            },
+            port_req,
+        )
+        .expect("add_port failed");
+
     let (device, device_req) =
         fidl::endpoints::create_endpoints::<fidl_fuchsia_hardware_network::DeviceMarker>()
             .expect("failed to create endpoints");
-    let () = tun_dev
-        .connect_protocols(fidl_fuchsia_net_tun::Protocols {
-            network_device: Some(device_req),
-            mac_addressing: None,
-            ..fidl_fuchsia_net_tun::Protocols::EMPTY
-        })
-        .expect("connect protocols failed");
+    let () = tun_dev.get_device(device_req).expect("get_device failed");
 
     // Declare addresses in the same subnet. Alice is Netstack, and Bob is our
     // end of the tun device that we'll use to inject frames.
@@ -456,7 +455,7 @@ async fn test_ip_endpoint_packets() {
     pin_utils::pin_mut!(read_frame);
 
     async fn write_frame_and_read_with_timeout<S>(
-        tun_dev: &fidl_fuchsia_net_tun::DeviceProxy,
+        tun_dev: &fidl_fuchsia_net_tun::Device2Proxy,
         frame: fidl_fuchsia_net_tun::Frame,
         read_frame: &mut S,
     ) -> Result<Option<S::Ok>>
@@ -505,6 +504,7 @@ async fn test_ip_endpoint_packets() {
     // Send v4 ping request.
     let () = tun_dev
         .write_frame(fidl_fuchsia_net_tun::Frame {
+            port: Some(TUN_DEFAULT_PORT_ID),
             frame_type: Some(fidl_fuchsia_hardware_network::FrameType::Ipv4),
             data: Some(packet.clone()),
             meta: None,
@@ -545,6 +545,7 @@ async fn test_ip_endpoint_packets() {
         write_frame_and_read_with_timeout(
             &tun_dev,
             fidl_fuchsia_net_tun::Frame {
+                port: Some(TUN_DEFAULT_PORT_ID),
                 frame_type: Some(fidl_fuchsia_hardware_network::FrameType::Ipv6),
                 data: Some(packet),
                 meta: None,
@@ -580,6 +581,7 @@ async fn test_ip_endpoint_packets() {
     // Send v6 ping request.
     let () = tun_dev
         .write_frame(fidl_fuchsia_net_tun::Frame {
+            port: Some(TUN_DEFAULT_PORT_ID),
             frame_type: Some(fidl_fuchsia_hardware_network::FrameType::Ipv6),
             data: Some(packet.clone()),
             meta: None,
@@ -620,6 +622,7 @@ async fn test_ip_endpoint_packets() {
         write_frame_and_read_with_timeout(
             &tun_dev,
             fidl_fuchsia_net_tun::Frame {
+                port: Some(TUN_DEFAULT_PORT_ID),
                 frame_type: Some(fidl_fuchsia_hardware_network::FrameType::Ipv4),
                 data: Some(packet),
                 meta: None,

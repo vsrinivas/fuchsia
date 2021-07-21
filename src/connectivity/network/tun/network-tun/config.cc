@@ -7,17 +7,21 @@
 namespace network {
 namespace tun {
 
-std::optional<BaseConfig> BaseConfig::Create(const fuchsia_net_tun::wire::BaseConfig& config) {
-  BaseConfig out{
+std::optional<BasePortConfig> BasePortConfig::Create(
+    const fuchsia_net_tun::wire::BasePortConfig& config) {
+  BasePortConfig out{
       .mtu = config.has_mtu() ? config.mtu() : fuchsia_net_tun::wire::kMaxMtu,
-      .report_metadata = config.has_report_metadata() && config.report_metadata(),
-      .min_tx_buffer_length = config.has_min_tx_buffer_length() ? config.min_tx_buffer_length() : 0,
   };
   // Check validity.
   if (out.mtu == 0 || out.mtu > fuchsia_net_tun::wire::kMaxMtu) {
     return std::nullopt;
   }
   // Check required fields.
+  if (!config.has_id() || config.id() >= fuchsia_hardware_network::wire::kMaxPorts) {
+    return std::nullopt;
+  }
+  out.port_id = config.id();
+
   if (!config.has_rx_types()) {
     return std::nullopt;
   }
@@ -37,40 +41,35 @@ std::optional<BaseConfig> BaseConfig::Create(const fuchsia_net_tun::wire::BaseCo
   return out;
 }
 
-std::optional<DeviceConfig> DeviceConfig::Create(
-    const fuchsia_net_tun::wire::DeviceConfig& config) {
-  // Check validity.
+std::optional<DevicePortConfig> DevicePortConfig::Create(
+    const fuchsia_net_tun::wire::DevicePortConfig& config) {
   if (!config.has_base()) {
     return std::nullopt;
   }
-  std::optional base = BaseConfig::Create(config.base());
+  std::optional base = BasePortConfig::Create(config.base());
   if (!base.has_value()) {
     return std::nullopt;
   }
-  DeviceConfig out(std::move(base.value()));
+
+  DevicePortConfig out(std::move(base.value()));
   out.online = config.has_online() && config.online();
-  out.blocking = config.has_blocking() && config.blocking();
   if (config.has_mac()) {
     out.mac = config.mac();
   }
   return out;
 }
 
-std::optional<DevicePairConfig> DevicePairConfig::Create(
-    const fuchsia_net_tun::wire::DevicePairConfig& config) {
-  // Check validity.
+std::optional<DevicePairPortConfig> DevicePairPortConfig::Create(
+    const fuchsia_net_tun::wire::DevicePairPortConfig& config) {
   if (!config.has_base()) {
     return std::nullopt;
   }
-  std::optional base = BaseConfig::Create(config.base());
+  std::optional base = BasePortConfig::Create(config.base());
   if (!base.has_value()) {
     return std::nullopt;
   }
-  DevicePairConfig out(std::move(base.value()));
-  out.fallible_transmit_left =
-      config.has_fallible_transmit_left() && config.fallible_transmit_left();
-  out.fallible_transmit_right =
-      config.has_fallible_transmit_right() && config.fallible_transmit_right();
+
+  DevicePairPortConfig out(std::move(base.value()));
   if (config.has_mac_left()) {
     out.mac_left = config.mac_left();
   }
@@ -78,6 +77,47 @@ std::optional<DevicePairConfig> DevicePairConfig::Create(
     out.mac_right = config.mac_right();
   }
   return out;
+}
+
+BaseDeviceConfig::BaseDeviceConfig(const fuchsia_net_tun::wire::BaseDeviceConfig& config) {
+  if (config.has_report_metadata()) {
+    report_metadata = config.report_metadata();
+  }
+  if (config.has_min_tx_buffer_length()) {
+    min_tx_buffer_length = config.min_tx_buffer_length();
+  }
+  if (config.has_min_rx_buffer_length()) {
+    min_rx_buffer_length = config.min_rx_buffer_length();
+  }
+}
+
+DeviceConfig::DeviceConfig(const fuchsia_net_tun::wire::DeviceConfig2& config)
+    : BaseDeviceConfig([&config]() {
+        if (config.has_base()) {
+          return BaseDeviceConfig(config.base());
+        } else {
+          return BaseDeviceConfig(fuchsia_net_tun::wire::BaseDeviceConfig());
+        }
+      }()) {
+  if (config.has_blocking()) {
+    blocking = config.blocking();
+  }
+}
+
+DevicePairConfig::DevicePairConfig(const fuchsia_net_tun::wire::DevicePairConfig& config)
+    : BaseDeviceConfig([&config]() {
+        if (config.has_base()) {
+          return BaseDeviceConfig(config.base());
+        } else {
+          return BaseDeviceConfig(fuchsia_net_tun::wire::BaseDeviceConfig());
+        }
+      }()) {
+  if (config.has_fallible_transmit_left()) {
+    fallible_transmit_left = config.fallible_transmit_left();
+  }
+  if (config.has_fallible_transmit_right()) {
+    fallible_transmit_right = config.fallible_transmit_right();
+  }
 }
 
 }  // namespace tun

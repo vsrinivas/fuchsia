@@ -11,50 +11,74 @@
 namespace network {
 namespace tun {
 
-class BaseConfig {
+class BasePortConfig {
  public:
-  BaseConfig() = delete;
-  BaseConfig(BaseConfig&&) = default;
+  BasePortConfig() = delete;
+  BasePortConfig(BasePortConfig&&) = default;
 
-  static std::optional<BaseConfig> Create(const fuchsia_net_tun::wire::BaseConfig& config);
+  static std::optional<BasePortConfig> Create(const fuchsia_net_tun::wire::BasePortConfig& config);
 
+  uint8_t port_id;
   uint32_t mtu;
   std::vector<fuchsia_hardware_network::wire::FrameType> rx_types;
   std::vector<fuchsia_hardware_network::wire::FrameTypeSupport> tx_types;
-  bool report_metadata;
-  uint32_t min_tx_buffer_length;
 };
 
-class DeviceConfig : public BaseConfig {
+class DevicePortConfig : public BasePortConfig {
  public:
-  DeviceConfig() = delete;
-  DeviceConfig(DeviceConfig&&) = default;
+  DevicePortConfig() = delete;
+  DevicePortConfig(DevicePortConfig&&) = default;
 
-  static std::optional<DeviceConfig> Create(const fuchsia_net_tun::wire::DeviceConfig& config);
+  static std::optional<DevicePortConfig> Create(
+      const fuchsia_net_tun::wire::DevicePortConfig& config);
 
   bool online;
-  bool blocking;
   std::optional<fuchsia_net::wire::MacAddress> mac;
 
  private:
-  explicit DeviceConfig(BaseConfig&& base) : BaseConfig(std::move(base)) {}
+  explicit DevicePortConfig(BasePortConfig&& base) : BasePortConfig(std::move(base)) {}
 };
 
-class DevicePairConfig : public BaseConfig {
+class DevicePairPortConfig : public BasePortConfig {
  public:
-  DevicePairConfig() = delete;
-  DevicePairConfig(DevicePairConfig&&) = default;
+  DevicePairPortConfig() = delete;
+  DevicePairPortConfig(DevicePairPortConfig&&) = default;
 
-  static std::optional<DevicePairConfig> Create(
-      const fuchsia_net_tun::wire::DevicePairConfig& config);
+  static std::optional<DevicePairPortConfig> Create(
+      const fuchsia_net_tun::wire::DevicePairPortConfig& config);
 
-  bool fallible_transmit_left;
-  bool fallible_transmit_right;
   std::optional<fuchsia_net::wire::MacAddress> mac_left;
   std::optional<fuchsia_net::wire::MacAddress> mac_right;
 
  private:
-  explicit DevicePairConfig(BaseConfig&& base) : BaseConfig(std::move(base)) {}
+  explicit DevicePairPortConfig(BasePortConfig&& base) : BasePortConfig(std::move(base)) {}
+};
+
+class BaseDeviceConfig {
+ public:
+  explicit BaseDeviceConfig(const fuchsia_net_tun::wire::BaseDeviceConfig& config);
+
+  BaseDeviceConfig(BaseDeviceConfig&&) = default;
+
+  bool report_metadata = false;
+  uint32_t min_tx_buffer_length = 0;
+  uint32_t min_rx_buffer_length = 0;
+};
+
+class DeviceConfig : public BaseDeviceConfig {
+ public:
+  explicit DeviceConfig(const fuchsia_net_tun::wire::DeviceConfig2& config);
+  DeviceConfig(DeviceConfig&&) = default;
+
+  bool blocking = false;
+};
+
+class DevicePairConfig : public BaseDeviceConfig {
+ public:
+  explicit DevicePairConfig(const fuchsia_net_tun::wire::DevicePairConfig& config);
+
+  bool fallible_transmit_left = false;
+  bool fallible_transmit_right = false;
 };
 
 }  // namespace tun

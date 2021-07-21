@@ -25,10 +25,12 @@ use std::convert::TryInto;
 use std::net::{Ipv6Addr, UdpSocket};
 
 const IPV6_MIN_MTU: u32 = 1280;
+const TUN_PORT_ID: u8 = 0;
 
 #[derive(Debug)]
 pub struct TunNetworkInterface {
-    tun_dev: ftun::DeviceProxy,
+    tun_dev: ftun::Device2Proxy,
+    tun_port: ftun::PortProxy,
     stack: fnetstack::StackProxy,
     stack_sync: Mutex<fnetstack::StackSynchronousProxy>,
     mcast_socket: UdpSocket,
@@ -39,12 +41,21 @@ impl TunNetworkInterface {
     pub async fn try_new(name: Option<String>) -> Result<TunNetworkInterface, Error> {
         let tun_control = connect_to_protocol::<ftun::ControlMarker>()?;
 
-        let (tun_dev, req) = create_proxy::<ftun::DeviceMarker>()?;
+        let (tun_dev, req) = create_proxy::<ftun::Device2Marker>()?;
 
         tun_control
-            .create_device(
-                ftun::DeviceConfig {
-                    base: Some(ftun::BaseConfig {
+            .create_device2(
+                ftun::DeviceConfig2 { blocking: Some(true), ..ftun::DeviceConfig2::EMPTY },
+                req,
+            )
+            .context("failed to create tun pair")?;
+
+        let (tun_port, port_req) = create_proxy::<ftun::PortMarker>()?;
+        tun_dev
+            .add_port(
+                ftun::DevicePortConfig {
+                    base: Some(ftun::BasePortConfig {
+                        id: Some(TUN_PORT_ID),
                         mtu: Some(IPV6_MIN_MTU),
                         rx_types: Some(vec![
                             fhwnet::FrameType::Ipv6,
@@ -64,23 +75,17 @@ impl TunNetworkInterface {
                                 supported_flags: fhwnet::TxFlags::empty(),
                             },
                         ]),
-                        ..ftun::BaseConfig::EMPTY
+                        ..ftun::BasePortConfig::EMPTY
                     }),
-                    blocking: Some(true),
-                    ..ftun::DeviceConfig::EMPTY
+                    ..ftun::DevicePortConfig::EMPTY
                 },
-                req,
+                port_req,
             )
-            .context("failed to create tun pair")?;
+            .context("failed to add device port")?;
 
         let (device, device_req) = create_endpoints::<fhwnet::DeviceMarker>()?;
 
-        tun_dev
-            .connect_protocols(ftun::Protocols {
-                network_device: Some(device_req),
-                ..ftun::Protocols::EMPTY
-            })
-            .context("connect protocols failed")?;
+        tun_dev.get_device(device_req).context("get device failed")?;
 
         let stack = connect_to_protocol::<fnetstack::StackMarker>()?;
 
@@ -104,7 +109,7 @@ impl TunNetworkInterface {
         let stack_sync = Mutex::new(fnetstack::StackSynchronousProxy::new(client));
         let mcast_socket = UdpSocket::bind((Ipv6Addr::LOCALHOST, 0)).context("UdpSocket::bind")?;
 
-        Ok(TunNetworkInterface { tun_dev, stack, stack_sync, mcast_socket, id })
+        Ok(TunNetworkInterface { tun_dev, tun_port, stack, stack_sync, mcast_socket, id })
     }
 }
 
@@ -135,6 +140,7 @@ impl NetworkInterface for TunNetworkInterface {
         Ok(self
             .tun_dev
             .write_frame(ftun::Frame {
+                port: Some(TUN_PORT_ID),
                 frame_type: Some(fhwnet::FrameType::Ipv6),
                 data: Some(packet.to_vec()),
                 meta: None,
@@ -148,10 +154,10 @@ impl NetworkInterface for TunNetworkInterface {
         fx_log_info!("TunNetworkInterface: Interface online: {:?}", online);
 
         if online {
-            self.tun_dev.set_online(true).await?;
+            self.tun_port.set_online(true).await?;
             self.stack.enable_interface(self.id).await.squash_result()?;
         } else {
-            self.tun_dev.set_online(false).await?;
+            self.tun_port.set_online(false).await?;
         }
 
         Ok(())
@@ -229,7 +235,7 @@ impl NetworkInterface for TunNetworkInterface {
         let enabled_stream = futures::stream::try_unfold((), move |()| async move {
             loop {
                 if let ftun::InternalState { has_session: Some(has_session), .. } =
-                    self.tun_dev.watch_state().await?
+                    self.tun_port.watch_state().await?
                 {
                     break Ok(Some((
                         NetworkInterfaceEvent::InterfaceEnabledChanged(has_session),

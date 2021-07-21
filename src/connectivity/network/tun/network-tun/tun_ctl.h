@@ -32,6 +32,8 @@ class TunCtl : public fidl::WireServer<fuchsia_net_tun::Control> {
 
   void CreateDevice(CreateDeviceRequestView request,
                     CreateDeviceCompleter::Sync& completer) override;
+  void CreateDevice2(CreateDevice2RequestView request,
+                     CreateDevice2Completer::Sync& completer) override;
   void CreatePair(CreatePairRequestView request, CreatePairCompleter::Sync& completer) override;
 
   // Schedules `shutdown_callback` to be called once all devices and device pairs are torn down and

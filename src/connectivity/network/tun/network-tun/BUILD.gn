@@ -17,6 +17,8 @@ source_set("src") {
     "device_adapter.h",
     "mac_adapter.cc",
     "mac_adapter.h",
+    "port_adapter.cc",
+    "port_adapter.h",
     "state.cc",
     "state.h",
     "tun_ctl.cc",

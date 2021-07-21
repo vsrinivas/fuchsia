@@ -25,63 +25,135 @@ namespace testing {
 class TunTest;
 }
 
+// TODO(https://fxbug.dev/75528): Remove after soft transition. Aliases are here to allow for easy
+// disambiguation.
+using LegacyDevice = fidl::WireServer<fuchsia_net_tun::Device>;
+using NewDevice = fidl::WireServer<fuchsia_net_tun::Device2>;
+
 // Implements `fuchsia.net.tun.Device`.
 //
 // `TunDevice` uses `DeviceAdapter` to fulfill the `fuchsia.net.tun.Device` protocol. All FIDL
 // requests are served over its own internally held async dispatcher.
 class TunDevice : public fbl::DoublyLinkedListable<std::unique_ptr<TunDevice>>,
-                  public fidl::WireServer<fuchsia_net_tun::Device>,
+                  public LegacyDevice,
+                  public NewDevice,
                   public DeviceAdapterParent {
  public:
   static constexpr size_t kMaxPendingOps = fuchsia_net_tun::wire::kMaxPendingOperations;
+  // TODO(https://fxbug.dev/75528): Remove port fallback after soft transition.
+  static constexpr uint8_t kLegacyDefaultPort = 0;
 
   // Creates a new `TunDevice` with `config`.
   // `teardown` is called when all the bound client channels are closed.
-  static zx::status<std::unique_ptr<TunDevice>> Create(fit::callback<void(TunDevice*)> teardown,
-                                                       fuchsia_net_tun::wire::DeviceConfig config);
+  static zx::status<std::unique_ptr<TunDevice>> Create(
+      fit::callback<void(TunDevice*)> teardown, const fuchsia_net_tun::wire::DeviceConfig2& config);
   ~TunDevice() override;
 
+  // TODO(https://fxbug.dev/75528): Remove protocol agnostic forms after soft transition.
+  using WriteFrameCallback = fit::callback<void(zx_status_t)>;
+  void WriteFrame(fuchsia_net_tun::wire::Frame frame, WriteFrameCallback callback);
+  using ReadFrameCallback = fit::callback<void(zx::status<fuchsia_net_tun::wire::Frame>)>;
+  void ReadFrame(ReadFrameCallback callback);
+  zx_status_t AddPort(const fuchsia_net_tun::wire::DevicePortConfig& config,
+                      fidl::ServerEnd<fuchsia_net_tun::Port>& request);
+  template <typename F>
+  void WriteFrameGeneric(typename F::WriteFrameRequestView& request,
+                         typename F::WriteFrameCompleter::Sync& completer);
+  template <typename F>
+  void ReadFrameGeneric(typename F::ReadFrameRequestView& request,
+                        typename F::ReadFrameCompleter::Sync& completer);
+  template <typename F>
+  void GetSignalsGeneric(typename F::GetSignalsRequestView& request,
+                         typename F::GetSignalsCompleter::Sync& completer);
+
   // fuchsia.net.tun.Device implementation:
-  void WriteFrame(WriteFrameRequestView request, WriteFrameCompleter::Sync& completer) override;
-  void ReadFrame(ReadFrameRequestView request, ReadFrameCompleter::Sync& completer) override;
+  void WriteFrame(LegacyDevice::WriteFrameRequestView request,
+                  LegacyDevice::WriteFrameCompleter::Sync& completer) override;
+  void ReadFrame(LegacyDevice::ReadFrameRequestView request,
+                 LegacyDevice::ReadFrameCompleter::Sync& completer) override;
   void GetState(GetStateRequestView request, GetStateCompleter::Sync& completer) override;
   void WatchState(WatchStateRequestView request, WatchStateCompleter::Sync& completer) override;
   void SetOnline(SetOnlineRequestView request, SetOnlineCompleter::Sync& completer) override;
   void ConnectProtocols(ConnectProtocolsRequestView request,
                         ConnectProtocolsCompleter::Sync& completer) override;
-  void GetSignals(GetSignalsRequestView request, GetSignalsCompleter::Sync& completer) override;
+  void GetSignals(LegacyDevice::GetSignalsRequestView request,
+                  LegacyDevice::GetSignalsCompleter::Sync& completer) override;
 
-  InternalState State() const;
+  // fuchsia.net.tun.Device2 implementation:
+  void WriteFrame(NewDevice::WriteFrameRequestView request,
+                  NewDevice::WriteFrameCompleter::Sync& completer) override;
+  void ReadFrame(NewDevice::ReadFrameRequestView request,
+                 NewDevice::ReadFrameCompleter::Sync& completer) override;
+  void GetSignals(NewDevice::GetSignalsRequestView request,
+                  NewDevice::GetSignalsCompleter::Sync& completer) override;
+  void AddPort(AddPortRequestView request, AddPortCompleter::Sync& _completer) override;
+  void GetDevice(GetDeviceRequestView request, GetDeviceCompleter::Sync& _completer) override;
 
   // DeviceAdapterParent implementation:
-  const BaseConfig& config() const override { return config_; };
-  void OnHasSessionsChanged(DeviceAdapter* device) override;
+  const BaseDeviceConfig& config() const override { return config_; };
   void OnTxAvail(DeviceAdapter* device) override;
   void OnRxAvail(DeviceAdapter* device) override;
-  // MacAdapterParent implementation:
-  void OnMacStateChanged(MacAdapter* adapter) override;
 
   // Binds `req` to this device.
   // Requests are served over this device's owned loop.
   // NOTE: at this moment only one binding is supported, if the device is already bound the previous
   // channel is closed.
-  void Bind(fidl::ServerEnd<fuchsia_net_tun::Device> req);
+  void Bind(fidl::ServerEnd<fuchsia_net_tun::Device2> req);
+  void BindLegacy(fidl::ServerEnd<fuchsia_net_tun::Device> req);
 
  protected:
   friend testing::TunTest;
   const std::unique_ptr<DeviceAdapter>& adapter() const { return device_; }
 
  private:
+  class Port : public PortAdapterParent, public fidl::WireServer<fuchsia_net_tun::Port> {
+   public:
+    Port(Port&&) = delete;
+
+    static zx::status<std::unique_ptr<Port>> Create(TunDevice* parent,
+                                                    const DevicePortConfig& config);
+    // MacAdapterParent implementation:
+    void OnMacStateChanged(MacAdapter* adapter) override;
+
+    // PortAdapterParent implementation:
+    void OnHasSessionsChanged(PortAdapter& port) override;
+    void OnPortStatusChanged(PortAdapter& port, const port_status_t& new_status) override;
+    void OnPortDestroyed(PortAdapter& port) override;
+
+    // FIDL port implementation:
+    void GetState(GetStateRequestView request, GetStateCompleter::Sync& completer) override;
+    void WatchState(WatchStateRequestView request, WatchStateCompleter::Sync& completer) override;
+    void SetOnline(SetOnlineRequestView request, SetOnlineCompleter::Sync& completer) override;
+
+    void SetOnline(bool online);
+    PortAdapter& adapter() { return *adapter_; }
+
+    void Bind(fidl::ServerEnd<fuchsia_net_tun::Port> req);
+
+   private:
+    explicit Port(TunDevice* parent) : parent_(parent) {}
+    // Fulfills pending WatchState requests.
+    void RunStateChange();
+    // Posts |RunStateChange| to run later on parent dispatcher.
+    void PostRunStateChange();
+    InternalState State() const;
+
+    TunDevice* const parent_;
+    std::unique_ptr<PortAdapter> adapter_;
+    std::optional<WatchStateCompleter::Async> pending_watch_state_;
+    std::optional<InternalState> last_state_;
+    std::optional<fidl::ServerBindingRef<fuchsia_net_tun::Port>> binding_;
+  };
+
   TunDevice(fit::callback<void(TunDevice*)> teardown, DeviceConfig config);
-  // Completes a single WriteFrame request. Returns true iff a reply was sent on the completer.
+  // Completes a single WriteFrame request. Returns true iff a reply was sent on the callback.
   template <typename F, typename C>
-  bool WriteWith(F fn, C& completer);
+  bool WriteWith(F fn, C& callback);
   // Fulfills pending WriteFrame requests. Returns true iff all pending requests were processed.
   bool RunWriteFrame();
   // Fulfills pending ReadFrame requests.
   void RunReadFrame();
-  // Fulfills pending WatchState requests.
-  void RunStateChange();
+
   // Calls the teardown callback.
   void Teardown();
   bool IsBlocking() const { return config_.blocking; }
@@ -91,24 +163,28 @@ class TunDevice : public fbl::DoublyLinkedListable<std::unique_ptr<TunDevice>>,
 
   async::Loop loop_;
   std::optional<thrd_t> loop_thread_;
-  std::optional<fidl::ServerBindingRef<fuchsia_net_tun::Device>> binding_;
+  std::optional<fidl::ServerBindingRef<fuchsia_net_tun::Device2>> binding_;
+  std::optional<fidl::ServerBindingRef<fuchsia_net_tun::Device>> legacy_binding_;
   std::unique_ptr<DeviceAdapter> device_;
+
+  std::array<std::unique_ptr<Port>, MAX_PORTS> ports_;
 
   // Helper struct to store pending write requests.
   struct PendingWriteRequest {
     // Owned fields of fuchsia_net_tun::wire::Frame.
+    uint8_t port_id;
     fuchsia_hardware_network::wire::FrameType frame_type;
     std::vector<uint8_t> data;
     // FrameMetadata::info is a fidl::VectorView, so we should really be copying it. At the time of
     // writing, it isn't used.
     std::optional<fuchsia_net_tun::wire::FrameMetadata> meta;
 
-    // The FIDL transaction completer.
-    WriteFrameCompleter::Async completer;
+    // The FIDL transaction callback.
+    WriteFrameCallback callback;
 
-    PendingWriteRequest(const fuchsia_net_tun::wire::Frame& frame,
-                        WriteFrameCompleter::Async completer)
-        : completer(std::move(completer)) {
+    PendingWriteRequest(const fuchsia_net_tun::wire::Frame& frame, WriteFrameCallback callback)
+        : callback(std::move(callback)) {
+      port_id = frame.has_port() ? frame.port() : kLegacyDefaultPort;
       frame_type = frame.frame_type();
       std::copy(std::begin(frame.data()), std::end(frame.data()), std::back_inserter(data));
       if (frame.has_meta()) {
@@ -117,11 +193,8 @@ class TunDevice : public fbl::DoublyLinkedListable<std::unique_ptr<TunDevice>>,
     }
   };
 
-  std::queue<ReadFrameCompleter::Async> pending_read_frame_;
+  std::queue<ReadFrameCallback> pending_read_frame_;
   std::queue<PendingWriteRequest> pending_write_frame_;
-  std::optional<WatchStateCompleter::Async> pending_watch_state_;
-
-  std::optional<InternalState> last_state_;
 
   zx::eventpair signals_self_;
   zx::eventpair signals_peer_;

@@ -29,18 +29,10 @@ class TunPair : public fbl::DoublyLinkedListable<std::unique_ptr<TunPair>>,
       fit::callback<void(TunPair*)> teardown, fuchsia_net_tun::wire::DevicePairConfig config);
   ~TunPair() override;
 
-  // fuchsia.net.tun.DevicePair implementation:
-  void ConnectProtocols(ConnectProtocolsRequestView request,
-                        ConnectProtocolsCompleter::Sync& completer) override;
-
   // DeviceAdapterParent implementation:
-  const BaseConfig& config() const override { return config_; };
-  void OnHasSessionsChanged(DeviceAdapter* device) override;
+  const BaseDeviceConfig& config() const override { return config_; };
   void OnTxAvail(DeviceAdapter* device) override;
   void OnRxAvail(DeviceAdapter* device) override;
-
-  // MacAdapterParent implementation:
-  void OnMacStateChanged(MacAdapter* adapter) override;
 
   // Binds `req` to this device.
   // Requests are served over this device's owned loop.
@@ -48,15 +40,48 @@ class TunPair : public fbl::DoublyLinkedListable<std::unique_ptr<TunPair>>,
   // channel is closed.
   void Bind(fidl::ServerEnd<fuchsia_net_tun::DevicePair> req);
 
+  void AddPort(AddPortRequestView request, AddPortCompleter::Sync& completer) override;
+  void RemovePort(RemovePortRequestView request, RemovePortCompleter::Sync& completer) override;
+  void GetLeft(GetLeftRequestView request, GetLeftCompleter::Sync& _completer) override;
+  void GetRight(GetRightRequestView request, GetRightCompleter::Sync& _completer) override;
+
  private:
+  class Port : public PortAdapterParent {
+   public:
+    Port(Port&&) = delete;
+    static zx::status<std::unique_ptr<Port>> Create(
+        TunPair* parent, bool left, const BasePortConfig& config,
+        std::optional<fuchsia_net::wire::MacAddress> mac);
+    // MacAdapterParent implementation:
+    void OnMacStateChanged(MacAdapter* adapter) override;
+
+    // PortAdapterParent implementation:
+    void OnHasSessionsChanged(PortAdapter& port) override;
+    void OnPortStatusChanged(PortAdapter& port, const port_status_t& new_status) override;
+    void OnPortDestroyed(PortAdapter& port) override;
+
+    PortAdapter& adapter() { return *adapter_; }
+
+   private:
+    Port(TunPair* parent, bool left) : parent_(parent), left_(left) {}
+    TunPair* const parent_;
+    const bool left_;
+    std::unique_ptr<PortAdapter> adapter_;
+  };
+  struct Ports {
+    std::unique_ptr<Port> left;
+    std::unique_ptr<Port> right;
+  };
+
   TunPair(fit::callback<void(TunPair*)> teardown, DevicePairConfig config);
-  void ConnectProtocols(DeviceAdapter& device, fuchsia_net_tun::wire::Protocols protos);
   void Teardown();
 
   fit::callback<void(TunPair*)> teardown_callback_;
   const DevicePairConfig config_;
 
   fbl::Mutex power_lock_;
+  std::array<Ports, MAX_PORTS> ports_ __TA_GUARDED(power_lock_);
+
   async::Loop loop_;
   std::optional<thrd_t> loop_thread_;
   std::optional<fidl::ServerBindingRef<fuchsia_net_tun::DevicePair>> binding_;

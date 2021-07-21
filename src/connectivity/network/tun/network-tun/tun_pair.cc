@@ -20,28 +20,20 @@ TunPair::TunPair(fit::callback<void(TunPair*)> teardown, DevicePairConfig config
 
 zx::status<std::unique_ptr<TunPair>> TunPair::Create(
     fit::callback<void(TunPair*)> teardown, fuchsia_net_tun::wire::DevicePairConfig config) {
-  std::optional validated_config = DevicePairConfig::Create(config);
-  if (!validated_config.has_value()) {
-    return zx::error(ZX_ERR_INVALID_ARGS);
-  }
-
   fbl::AllocChecker ac;
-  std::unique_ptr<TunPair> tun(
-      new (&ac) TunPair(std::move(teardown), std::move(validated_config.value())));
+  std::unique_ptr<TunPair> tun(new (&ac) TunPair(std::move(teardown), DevicePairConfig(config)));
   if (!ac.check()) {
     return zx::error(ZX_ERR_NO_MEMORY);
   }
 
-  zx::status left =
-      DeviceAdapter::Create(tun->loop_.dispatcher(), tun.get(), false, tun->config_.mac_left);
+  zx::status left = DeviceAdapter::Create(tun->loop_.dispatcher(), tun.get());
   if (left.is_error()) {
     FX_LOGF(ERROR, "tun", "TunDevice::Init device init left failed with %s", left.status_string());
     return left.take_error();
   }
   tun->left_ = std::move(left.value());
 
-  zx::status right =
-      DeviceAdapter::Create(tun->loop_.dispatcher(), tun.get(), false, tun->config_.mac_right);
+  zx::status right = DeviceAdapter::Create(tun->loop_.dispatcher(), tun.get());
   if (right.is_error()) {
     FX_LOGF(ERROR, "tun", "TunDevice::Init device init right failed with %s",
             right.status_string());
@@ -99,30 +91,66 @@ void TunPair::Bind(fidl::ServerEnd<fuchsia_net_tun::DevicePair> req) {
                           fidl::ServerEnd<fuchsia_net_tun::DevicePair>) { impl->Teardown(); });
 }
 
-void TunPair::ConnectProtocols(ConnectProtocolsRequestView request,
-                               ConnectProtocolsCompleter::Sync& completer) {
-  if (request->requests.has_left()) {
-    ConnectProtocols(*left_, std::move(request->requests.left()));
-  }
-  if (request->requests.has_right()) {
-    ConnectProtocols(*right_, std::move(request->requests.right()));
+void TunPair::AddPort(AddPortRequestView request, AddPortCompleter::Sync& completer) {
+  zx_status_t status = [&request, this]() {
+    std::optional maybe_config = DevicePairPortConfig::Create(request->config);
+    if (!maybe_config.has_value()) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+    DevicePairPortConfig& config = *maybe_config;
+    fbl::AutoLock lock(&power_lock_);
+    Ports& ports = ports_[config.port_id];
+    if (ports.left || ports.right) {
+      return ZX_ERR_ALREADY_EXISTS;
+    }
+
+    zx::status left = Port::Create(this, true, config, std::move(config.mac_left));
+    if (left.is_error()) {
+      return left.status_value();
+    }
+    zx::status right = Port::Create(this, false, config, std::move(config.mac_right));
+    if (right.is_error()) {
+      return right.status_value();
+    }
+
+    ports.left = std::move(*left);
+    ports.right = std::move(*right);
+
+    left_->AddPort(ports.left->adapter());
+    right_->AddPort(ports.right->adapter());
+    return ZX_OK;
+  }();
+
+  if (status == ZX_OK) {
+    completer.ReplySuccess();
+  } else {
+    completer.ReplyError(status);
   }
 }
 
-void TunPair::ConnectProtocols(DeviceAdapter& device, fuchsia_net_tun::wire::Protocols protos) {
-  if (protos.has_network_device()) {
-    device.Bind(std::move(protos.network_device()));
-  }
-  if (device.mac() && protos.has_mac_addressing()) {
-    device.mac()->Bind(loop_.dispatcher(), std::move(protos.mac_addressing()));
+void TunPair::RemovePort(RemovePortRequestView request, RemovePortCompleter::Sync& completer) {
+  zx_status_t status = [port_id = request->id, this]() {
+    fbl::AutoLock lock(&power_lock_);
+    if (port_id >= ports_.size() || !ports_[port_id].left || !ports_[port_id].right) {
+      return ZX_ERR_NOT_FOUND;
+    }
+    left_->RemovePort(port_id);
+    right_->RemovePort(port_id);
+    return ZX_OK;
+  }();
+  if (status == ZX_OK) {
+    completer.ReplySuccess();
+  } else {
+    completer.ReplyError(status);
   }
 }
 
-void TunPair::OnHasSessionsChanged(DeviceAdapter* device) {
-  fbl::AutoLock lock(&power_lock_);
-  bool online = left_->HasSession() && right_->HasSession();
-  left_->SetOnline(online);
-  right_->SetOnline(online);
+void TunPair::GetLeft(GetLeftRequestView request, GetLeftCompleter::Sync& _completer) {
+  left_->Bind(std::move(request->device));
+}
+
+void TunPair::GetRight(GetRightRequestView request, GetRightCompleter::Sync& _completer) {
+  right_->Bind(std::move(request->device));
 }
 
 void TunPair::OnTxAvail(DeviceAdapter* device) {
@@ -153,8 +181,64 @@ void TunPair::OnRxAvail(DeviceAdapter* device) {
   source->CopyTo(device, fallible);
 }
 
-void TunPair::OnMacStateChanged(MacAdapter* adapter) {
+zx::status<std::unique_ptr<TunPair::Port>> TunPair::Port::Create(
+    TunPair* parent, bool left, const BasePortConfig& config,
+    std::optional<fuchsia_net::wire::MacAddress> mac) {
+  std::unique_ptr<Port> port(new Port(parent, left));
+  std::unique_ptr<MacAdapter> mac_adapter;
+  if (mac.has_value()) {
+    zx::status status = MacAdapter::Create(port.get(), std::move(*mac), true);
+    if (status.is_error()) {
+      return status.take_error();
+    }
+    mac_adapter = std::move(*status);
+  }
+  port->adapter_ = std::make_unique<PortAdapter>(port.get(), config, std::move(mac_adapter));
+  return zx::ok(std::move(port));
+}
+
+void TunPair::Port::OnHasSessionsChanged(PortAdapter& port) {
+  TunPair& parent = *parent_;
+  fbl::AutoLock lock(&parent.power_lock_);
+  uint8_t port_id = port.id();
+  Ports& ports = parent.ports_[port_id];
+  // Race between teardown of left or right ports might be observed. If any of the ends is not set
+  // assume port teardown is in process and skip this update.
+  if (!ports.left || !ports.right) {
+    return;
+  }
+  PortAdapter& left_adapter = ports.left->adapter();
+  PortAdapter& right_adapter = ports.right->adapter();
+  bool online = left_adapter.has_sessions() && right_adapter.has_sessions();
+  left_adapter.SetOnline(online);
+  right_adapter.SetOnline(online);
+}
+
+void TunPair::Port::OnMacStateChanged(MacAdapter* adapter) {
   // Do nothing, TunPair doesn't care about mac state.
+}
+
+void TunPair::Port::OnPortStatusChanged(PortAdapter& port, const port_status_t& new_status) {
+  TunPair& parent = *parent_;
+  DeviceAdapter& device = [l = left_, &parent]() -> DeviceAdapter& {
+    if (l) {
+      return *parent.left_;
+    } else {
+      return *parent.right_;
+    }
+  }();
+  device.OnPortStatusChanged(port.id(), new_status);
+}
+
+void TunPair::Port::OnPortDestroyed(PortAdapter& port) {
+  TunPair& parent = *parent_;
+  fbl::AutoLock lock(&parent.power_lock_);
+  Ports& ports = parent.ports_[port.id()];
+  if (left_) {
+    ports.left = nullptr;
+  } else {
+    ports.right = nullptr;
+  }
 }
 
 }  // namespace tun

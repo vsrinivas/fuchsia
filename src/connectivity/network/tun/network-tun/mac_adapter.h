@@ -23,6 +23,8 @@ class MacAdapter;
 // This abstract class allows the owner of a `MacAdapter` to be notified of important events.
 class MacAdapterParent {
  public:
+  virtual ~MacAdapterParent() = default;
+
   // Called when there are changes to the internal state of the `adapter`.
   virtual void OnMacStateChanged(MacAdapter* adapter) = 0;
 };

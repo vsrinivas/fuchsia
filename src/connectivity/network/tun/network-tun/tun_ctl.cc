@@ -14,6 +14,54 @@ namespace network {
 namespace tun {
 
 void TunCtl::CreateDevice(CreateDeviceRequestView request, CreateDeviceCompleter::Sync& completer) {
+  // Create a DeviceConfig and DevicePortConfig from legacy configuration.
+  fidl::FidlAllocator alloc;
+  fuchsia_net_tun::wire::DeviceConfig2 fidl_device_config(alloc);
+  fidl_device_config.set_base(alloc, fuchsia_net_tun::wire::BaseDeviceConfig(alloc));
+  fuchsia_net_tun::wire::DevicePortConfig fidl_port_config(alloc);
+  fidl_port_config.set_base(alloc, fuchsia_net_tun::wire::BasePortConfig(alloc));
+
+  fuchsia_net_tun::wire::DeviceConfig& request_config = request->config;
+  if (!request_config.has_base()) {
+    request->device.Close(ZX_ERR_INVALID_ARGS);
+    return;
+  }
+  fuchsia_net_tun::wire::BaseConfig& base = request_config.base();
+  if (base.has_mtu()) {
+    fidl_port_config.base().set_mtu(fidl::ObjectView<uint32_t>::FromExternal(&base.mtu()));
+  }
+  if (base.has_rx_types()) {
+    fidl_port_config.base().set_rx_types(
+        fidl::ObjectView<fidl::VectorView<fuchsia_hardware_network::wire::FrameType>>::FromExternal(
+            &base.rx_types()));
+  }
+  if (base.has_tx_types()) {
+    fidl_port_config.base().set_tx_types(
+        fidl::ObjectView<fidl::VectorView<fuchsia_hardware_network::wire::FrameTypeSupport>>::
+            FromExternal(&base.tx_types()));
+  }
+  if (base.has_report_metadata()) {
+    fidl_device_config.base().set_report_metadata(
+        fidl::ObjectView<bool>::FromExternal(&base.report_metadata()));
+  }
+  if (base.has_min_tx_buffer_length()) {
+    fidl_device_config.base().set_min_tx_buffer_length(
+        fidl::ObjectView<uint32_t>::FromExternal(&base.min_tx_buffer_length()));
+  }
+  if (request_config.has_online()) {
+    fidl_port_config.set_online(fidl::ObjectView<bool>::FromExternal(&request_config.online()));
+  }
+  if (request_config.has_blocking()) {
+    fidl_device_config.set_blocking(
+        fidl::ObjectView<bool>::FromExternal(&request_config.blocking()));
+  }
+  if (request_config.has_mac()) {
+    fidl_port_config.set_mac(
+        fidl::ObjectView<fuchsia_net::wire::MacAddress>::FromExternal(&request_config.mac()));
+  }
+
+  fidl_port_config.base().set_id(alloc, TunDevice::kLegacyDefaultPort);
+
   zx::status tun_device = TunDevice::Create(
       [this](TunDevice* dev) {
         async::PostTask(dispatcher_, [this, dev]() {
@@ -21,7 +69,37 @@ void TunCtl::CreateDevice(CreateDeviceRequestView request, CreateDeviceCompleter
           TryFireShutdownCallback();
         });
       },
-      std::move(request->config));
+      fidl_device_config);
+
+  if (tun_device.is_error()) {
+    FX_LOGF(ERROR, "tun", "TunCtl: legacy TunDevice creation failed: %s",
+            tun_device.status_string());
+    request->device.Close(tun_device.error_value());
+    return;
+  }
+
+  fidl::ServerEnd<fuchsia_net_tun::Port> empty_request;
+  if (zx_status_t status = tun_device->AddPort(fidl_port_config, empty_request); status != ZX_OK) {
+    FX_LOGF(ERROR, "tun", "TunCtl: legacy TunDevice add port failed: %s",
+            zx_status_get_string(status));
+  }
+
+  auto& value = tun_device.value();
+  value->BindLegacy(std::move(request->device));
+  devices_.push_back(std::move(value));
+  FX_LOG(INFO, "tun", "TunCtl: Created TunDevice");
+}
+
+void TunCtl::CreateDevice2(CreateDevice2RequestView request,
+                           CreateDevice2Completer::Sync& completer) {
+  zx::status tun_device = TunDevice::Create(
+      [this](TunDevice* dev) {
+        async::PostTask(dispatcher_, [this, dev]() {
+          devices_.erase(*dev);
+          TryFireShutdownCallback();
+        });
+      },
+      request->config);
 
   if (tun_device.is_error()) {
     FX_LOGF(ERROR, "tun", "TunCtl: TunDevice creation failed: %s", tun_device.status_string());

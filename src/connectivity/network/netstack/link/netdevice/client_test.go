@@ -78,6 +78,7 @@ func (c *MockSessionConfigFactory) MakeSessionConfig(deviceInfo network.DeviceIn
 
 const TunMtu uint32 = 2048
 const TunMinTxLength int = 60
+const TunPortId uint8 = 0
 
 func getTunMac() net.MacAddress {
 	return net.MacAddress{Octets: [6]uint8{0x02, 0x03, 0x04, 0x05, 0x06, 0x07}}
@@ -111,9 +112,9 @@ func tunCtl(t *testing.T) *tun.ControlWithCtxInterface {
 	return tunCtl
 }
 
-func newTunDeviceRequest(t *testing.T) (tun.DeviceWithCtxInterfaceRequest, *tun.DeviceWithCtxInterface) {
+func newTunDeviceRequest(t *testing.T) (tun.Device2WithCtxInterfaceRequest, *tun.Device2WithCtxInterface) {
 	t.Helper()
-	deviceRequest, device, err := tun.NewDeviceWithCtxInterfaceRequest()
+	deviceRequest, device, err := tun.NewDevice2WithCtxInterfaceRequest()
 	if err != nil {
 		t.Fatalf("failed to create tun device request: %s", err)
 	}
@@ -123,6 +124,20 @@ func newTunDeviceRequest(t *testing.T) (tun.DeviceWithCtxInterfaceRequest, *tun.
 		}
 	})
 	return deviceRequest, device
+}
+
+func newTunPortRequest(t *testing.T) (tun.PortWithCtxInterfaceRequest, *tun.PortWithCtxInterface) {
+	t.Helper()
+	portRequest, port, err := tun.NewPortWithCtxInterfaceRequest()
+	if err != nil {
+		t.Fatalf("failed to create tun port request: %s", err)
+	}
+	t.Cleanup(func() {
+		if err := port.Close(); err != nil {
+			t.Errorf("tun port close failed: %s", err)
+		}
+	})
+	return portRequest, port
 }
 
 func newNetworkDeviceRequest(t *testing.T) (network.DeviceWithCtxInterfaceRequest, *network.DeviceWithCtxInterface) {
@@ -137,6 +152,20 @@ func newNetworkDeviceRequest(t *testing.T) (network.DeviceWithCtxInterfaceReques
 		}
 	})
 	return deviceRequest, device
+}
+
+func newNetworkPortRequest(t *testing.T) (network.PortWithCtxInterfaceRequest, *network.PortWithCtxInterface) {
+	t.Helper()
+	portRequest, port, err := network.NewPortWithCtxInterfaceRequest()
+	if err != nil {
+		t.Fatalf("failed to create network port request: %s", err)
+	}
+	t.Cleanup(func() {
+		if err := port.Close(); err != nil {
+			t.Errorf("network port close failed: %s", err)
+		}
+	})
+	return portRequest, port
 }
 
 func newMacAddressingRequest(t *testing.T) (network.MacAddressingWithCtxInterfaceRequest, *network.MacAddressingWithCtxInterface) {
@@ -167,34 +196,53 @@ func newTunDevicePairRequest(t *testing.T) (tun.DevicePairWithCtxInterfaceReques
 	return deviceRequest, device
 }
 
-func createTunWithConfig(t *testing.T, ctx context.Context, config tun.DeviceConfig) *tun.DeviceWithCtxInterface {
+func createTunWithConfig(t *testing.T, ctx context.Context, config tun.DeviceConfig2) *tun.Device2WithCtxInterface {
 	t.Helper()
 	deviceRequest, device := newTunDeviceRequest(t)
-	if err := tunCtl(t).CreateDevice(ctx, config, deviceRequest); err != nil {
+	if err := tunCtl(t).CreateDevice2(ctx, config, deviceRequest); err != nil {
 		t.Fatalf("tunCtl.CreateDevice failed: %s", err)
 	}
 	return device
 }
 
-func createTunWithOnline(t *testing.T, ctx context.Context, online bool) *tun.DeviceWithCtxInterface {
+func addPortWithConfig(t *testing.T, ctx context.Context, tunDev *tun.Device2WithCtxInterface, config tun.DevicePortConfig) *tun.PortWithCtxInterface {
 	t.Helper()
-	var config tun.DeviceConfig
-	config.SetOnline(online)
-	config.SetBlocking(true)
-	config.SetMac(getTunMac())
+	portRequest, port := newTunPortRequest(t)
+	if err := tunDev.AddPort(ctx, config, portRequest); err != nil {
+		t.Fatalf("tundev.AddPort(_, _, _): %s", err)
+	}
+	return port
+}
 
-	var base tun.BaseConfig
-	base.SetMtu(TunMtu)
-	base.SetRxTypes([]network.FrameType{network.FrameTypeEthernet})
-	base.SetTxTypes([]network.FrameTypeSupport{{
+func createTunWithOnline(t *testing.T, ctx context.Context, online bool) (*tun.Device2WithCtxInterface, *tun.PortWithCtxInterface) {
+	t.Helper()
+
+	var baseDeviceConfig tun.BaseDeviceConfig
+	baseDeviceConfig.SetMinTxBufferLength(uint32(TunMinTxLength))
+
+	var deviceConfig tun.DeviceConfig2
+	deviceConfig.SetBlocking(true)
+	deviceConfig.SetBase(baseDeviceConfig)
+
+	var portConfig tun.DevicePortConfig
+	portConfig.SetOnline(online)
+	portConfig.SetMac(getTunMac())
+
+	var basePortConfig tun.BasePortConfig
+	basePortConfig.SetId(TunPortId)
+	basePortConfig.SetMtu(TunMtu)
+	basePortConfig.SetRxTypes([]network.FrameType{network.FrameTypeEthernet})
+	basePortConfig.SetTxTypes([]network.FrameTypeSupport{{
 		Type:           network.FrameTypeEthernet,
 		Features:       network.FrameFeaturesRaw,
 		SupportedFlags: 0,
 	}})
-	base.SetMinTxBufferLength(uint32(TunMinTxLength))
 
-	config.SetBase(base)
-	return createTunWithConfig(t, ctx, config)
+	portConfig.SetBase(basePortConfig)
+
+	tunDevice := createTunWithConfig(t, ctx, deviceConfig)
+	tunPort := addPortWithConfig(t, ctx, tunDevice, portConfig)
+	return tunDevice, tunPort
 }
 
 func createTunPair(t *testing.T, ctx context.Context, frameTypes []network.FrameType) *tun.DevicePairWithCtxInterface {
@@ -207,31 +255,44 @@ func createTunPair(t *testing.T, ctx context.Context, frameTypes []network.Frame
 			SupportedFlags: 0,
 		})
 	}
-	var config tun.DevicePairConfig
-	config.SetMacLeft(getTunMac())
-	config.SetMacRight(getOtherMac())
-
-	var base tun.BaseConfig
-	base.SetMtu(TunMtu)
-	base.SetRxTypes(frameTypes)
-	base.SetTxTypes(txTypes)
-	config.SetBase(base)
 
 	deviceRequest, device := newTunDevicePairRequest(t)
-	if err := tunCtl(t).CreatePair(ctx, config, deviceRequest); err != nil {
+	if err := tunCtl(t).CreatePair(ctx, tun.DevicePairConfig{}, deviceRequest); err != nil {
 		t.Fatalf("tunCtl.CreatePair failed: %s", err)
+	}
+
+	var basePortConfig tun.BasePortConfig
+	basePortConfig.SetId(TunPortId)
+	basePortConfig.SetMtu(TunMtu)
+	basePortConfig.SetRxTypes(frameTypes)
+	basePortConfig.SetTxTypes(txTypes)
+	var portConfig tun.DevicePairPortConfig
+	portConfig.SetBase(basePortConfig)
+	portConfig.SetMacLeft(getTunMac())
+	portConfig.SetMacRight(getOtherMac())
+
+	result, err := device.AddPort(ctx, portConfig)
+	if err != nil {
+		t.Fatalf("device.AddPort(_, _): _, %s", err)
+	}
+	switch w := result.Which(); w {
+	case tun.DevicePairAddPortResultResponse:
+	case tun.DevicePairAddPortResultErr:
+		t.Fatalf("device.AddPort(_, _): %s, nil", zx.Status(result.Err))
+	default:
+		t.Fatalf("device.AddPort(_, _) unrecognized result variant: %d", w)
 	}
 	return device
 }
 
-func createTunClientPair(t *testing.T, ctx context.Context) (*tun.DeviceWithCtxInterface, *MacAddressingClient) {
+func createTunClientPair(t *testing.T, ctx context.Context) (*tun.Device2WithCtxInterface, *tun.PortWithCtxInterface, *MacAddressingClient) {
 	return createTunClientPairWithOnline(t, ctx, true)
 }
 
-func createTunClientPairWithOnline(t *testing.T, ctx context.Context, online bool) (*tun.DeviceWithCtxInterface, *MacAddressingClient) {
+func createTunClientPairWithOnline(t *testing.T, ctx context.Context, online bool) (*tun.Device2WithCtxInterface, *tun.PortWithCtxInterface, *MacAddressingClient) {
 	t.Helper()
-	tundev := createTunWithOnline(t, ctx, online)
-	netdev, mac := connectProtos(t, ctx, tundev)
+	tundev, tunport := createTunWithOnline(t, ctx, online)
+	netdev, mac := connectProtos(t, ctx, tundev, TunPortId)
 
 	client, err := NewMacAddressingClient(ctx, netdev, mac, &SimpleSessionConfigFactory{})
 	if err != nil {
@@ -243,28 +304,23 @@ func createTunClientPairWithOnline(t *testing.T, ctx context.Context, online boo
 			t.Errorf("client close failed: %s", err)
 		}
 	})
-	return tundev, client
+	return tundev, tunport, client
 }
 
-func createDeviceProtocolsRequest(t *testing.T) (*network.DeviceWithCtxInterface, tun.Protocols) {
-	t.Helper()
-	var protocols tun.Protocols
-	devReq, dev := newNetworkDeviceRequest(t)
-	protocols.SetNetworkDevice(devReq)
-	return dev, protocols
-}
-
-func connectProtos(t *testing.T, ctx context.Context, tunDevice *tun.DeviceWithCtxInterface) (*network.DeviceWithCtxInterface, *network.MacAddressingWithCtxInterface) {
+func connectProtos(t *testing.T, ctx context.Context, tunDevice *tun.Device2WithCtxInterface, portId uint8) (*network.DeviceWithCtxInterface, *network.MacAddressingWithCtxInterface) {
 	t.Helper()
 	devReq, dev := newNetworkDeviceRequest(t)
 	macReq, mac := newMacAddressingRequest(t)
+	portReq, port := newNetworkPortRequest(t)
 
-	var protocols tun.Protocols
-	protocols.SetNetworkDevice(devReq)
-	protocols.SetMacAddressing(macReq)
-
-	if err := tunDevice.ConnectProtocols(ctx, protocols); err != nil {
-		t.Fatalf("tunDevice.ConnectProtocols failed: %s", err)
+	if err := tunDevice.GetDevice(ctx, devReq); err != nil {
+		t.Fatalf("tunDevice.GetDevice(_, _): %s", err)
+	}
+	if err := dev.GetPort(ctx, portId, portReq); err != nil {
+		t.Fatalf("dev.GetPort(_, %d, _): %s", portId, err)
+	}
+	if err := port.GetMac(ctx, macReq); err != nil {
+		t.Fatalf("port.GetMac(_, _): %s", err)
 	}
 	return dev, mac
 }
@@ -277,7 +333,7 @@ func TestMain(m *testing.M) {
 func TestClient_WritePacket(t *testing.T) {
 	ctx := context.Background()
 
-	tunDev, client := createTunClientPairWithOnline(t, ctx, false)
+	tunDev, _, client := createTunClientPairWithOnline(t, ctx, false)
 	defer func() {
 		if err := tunDev.Close(); err != nil {
 			t.Fatalf("tunDev.Close() failed: %s", err)
@@ -338,8 +394,8 @@ func TestWritePacket(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			tunDev := createTunWithOnline(t, ctx, true)
-			netdev, mac := connectProtos(t, ctx, tunDev)
+			tunDev, _ := createTunWithOnline(t, ctx, true)
+			netdev, mac := connectProtos(t, ctx, tunDev, TunPortId)
 			client, err := NewMacAddressingClient(
 				ctx,
 				netdev,
@@ -440,7 +496,7 @@ func TestWritePacket(t *testing.T) {
 func TestReceivePacket(t *testing.T) {
 	ctx := context.Background()
 
-	tunDev, client := createTunClientPair(t, ctx)
+	tunDev, _, client := createTunClientPair(t, ctx)
 
 	client.SetOnLinkClosed(func() {})
 	client.SetOnLinkOnlineChanged(func(bool) {})
@@ -536,9 +592,9 @@ func TestReceivePacket(t *testing.T) {
 func TestUpDown(t *testing.T) {
 	ctx := context.Background()
 
-	tunDev, client := createTunClientPair(t, ctx)
+	_, tunPort, client := createTunClientPair(t, ctx)
 
-	state, err := tunDev.WatchState(ctx)
+	state, err := tunPort.WatchState(ctx)
 	if err != nil {
 		t.Fatalf("failed to get tun device state: %s", err)
 	}
@@ -553,7 +609,7 @@ func TestUpDown(t *testing.T) {
 	if err := client.Up(); err != nil {
 		t.Fatalf("client.Up failed: %s", err)
 	}
-	state, err = tunDev.WatchState(ctx)
+	state, err = tunPort.WatchState(ctx)
 	if err != nil {
 		t.Fatalf("failed to get tun device state: %s", err)
 	}
@@ -566,7 +622,7 @@ func TestUpDown(t *testing.T) {
 	if err := client.Down(); err != nil {
 		t.Fatalf("client.Down failed: %s", err)
 	}
-	state, err = tunDev.WatchState(ctx)
+	state, err = tunPort.WatchState(ctx)
 	if err != nil {
 		t.Fatalf("failed to get tun device state: %s", err)
 	}
@@ -578,9 +634,9 @@ func TestUpDown(t *testing.T) {
 func TestSetPromiscuousMode(t *testing.T) {
 	ctx := context.Background()
 
-	tunDev, client := createTunClientPair(t, ctx)
+	_, tunPort, client := createTunClientPair(t, ctx)
 
-	state, err := tunDev.WatchState(ctx)
+	state, err := tunPort.WatchState(ctx)
 	if err != nil {
 		t.Fatalf("failed to get tun device state: %s", err)
 	}
@@ -596,7 +652,7 @@ func TestSetPromiscuousMode(t *testing.T) {
 	if err := client.SetPromiscuousMode(true); err != nil {
 		t.Fatalf("failed to enable promiscuous mode: %s", err)
 	}
-	state, err = tunDev.WatchState(ctx)
+	state, err = tunPort.WatchState(ctx)
 	if err != nil {
 		t.Fatalf("failed to get tun device state: %s", err)
 	}
@@ -609,7 +665,7 @@ func TestSetPromiscuousMode(t *testing.T) {
 	if err := client.SetPromiscuousMode(false); err != nil {
 		t.Fatalf("failed to disable promiscuous mode: %s", err)
 	}
-	state, err = tunDev.WatchState(ctx)
+	state, err = tunPort.WatchState(ctx)
 	if err != nil {
 		t.Fatalf("failed to get tun device state: %s", err)
 	}
@@ -621,7 +677,7 @@ func TestSetPromiscuousMode(t *testing.T) {
 func TestStateChange(t *testing.T) {
 	ctx := context.Background()
 
-	tunDev, client := createTunClientPair(t, ctx)
+	_, tunPort, client := createTunClientPair(t, ctx)
 
 	closed := make(chan struct{})
 	client.SetOnLinkClosed(func() { close(closed) })
@@ -649,7 +705,7 @@ func TestStateChange(t *testing.T) {
 	}
 
 	// Set offline and expect link state Down.
-	if err := tunDev.SetOnline(ctx, false); err != nil {
+	if err := tunPort.SetOnline(ctx, false); err != nil {
 		t.Fatalf("failed to set device online: %s", err)
 	}
 	if <-ch {
@@ -657,7 +713,7 @@ func TestStateChange(t *testing.T) {
 	}
 
 	// Set online and expect link state Started again.
-	if err := tunDev.SetOnline(ctx, true); err != nil {
+	if err := tunPort.SetOnline(ctx, true); err != nil {
 		t.Fatalf("failed to set device offline: %s", err)
 	}
 	if !<-ch {
@@ -668,7 +724,7 @@ func TestStateChange(t *testing.T) {
 func TestDestroyDeviceCausesClose(t *testing.T) {
 	ctx := context.Background()
 
-	tunDev, client := createTunClientPair(t, ctx)
+	tunDev, _, client := createTunClientPair(t, ctx)
 
 	closed := make(chan struct{})
 	client.SetOnLinkClosed(func() { close(closed) })
@@ -687,9 +743,9 @@ func TestDestroyDeviceCausesClose(t *testing.T) {
 func TestCreationFailsIBadFrameType(t *testing.T) {
 	ctx := context.Background()
 
-	tunDev := createTunWithOnline(t, ctx, true)
+	tunDev, _ := createTunWithOnline(t, ctx, true)
 
-	dev, mac := connectProtos(t, ctx, tunDev)
+	dev, mac := connectProtos(t, ctx, tunDev, TunPortId)
 
 	// Try to use IPv4 frames, but tun device is created only with Ethernet
 	// frame support.
@@ -704,15 +760,14 @@ func TestPairExchangePackets(t *testing.T) {
 	ctx := context.Background()
 	pair := createTunPair(t, ctx, []network.FrameType{network.FrameTypeIpv4})
 
-	left, leftProtos := createDeviceProtocolsRequest(t)
-	right, rightProtos := createDeviceProtocolsRequest(t)
+	leftRequest, left := newNetworkDeviceRequest(t)
+	rightRequest, right := newNetworkDeviceRequest(t)
 
-	var pairEnds tun.DevicePairEnds
-	pairEnds.SetLeft(leftProtos)
-	pairEnds.SetRight(rightProtos)
-
-	if err := pair.ConnectProtocols(ctx, pairEnds); err != nil {
-		t.Fatalf("failed to connect to protocols: %s", err)
+	if err := pair.GetLeft(ctx, leftRequest); err != nil {
+		t.Fatalf("pair.GetLeft(_, _): %s", err)
+	}
+	if err := pair.GetRight(ctx, rightRequest); err != nil {
+		t.Fatalf("pair.GetRight(_, _): %s", err)
 	}
 
 	sessionConfig := SimpleSessionConfigFactory{FrameTypes: []network.FrameType{network.FrameTypeIpv4}}
