@@ -300,7 +300,7 @@ macro_rules! instantiate_common_routing_tests {
         // falls back on fuchsia_async and manual logging initialization for now.
         #[fuchsia_async::run_singlethreaded(test)]
         async fn $test() {
-            fuchsia::init_logging_for_component_with_executor(|| {})();
+            fuchsia::init_logging_for_component_with_executor(|| {}, &[])();
 
             $crate::CommonRoutingTest::<$builder_impl>::new().$test().await
         }

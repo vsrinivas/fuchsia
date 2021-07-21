@@ -27,6 +27,15 @@ mod test {
     #[fuchsia::test(logging = true)]
     fn empty_test_with_logging() {}
 
+    #[fuchsia::test(logging_tags = ["foo", "bar"])]
+    async fn empty_test_with_logging_tags() {}
+
+    #[fuchsia::test(logging_tags = ["foo"])]
+    async fn empty_test_with_single_logging_tag() {}
+
+    #[fuchsia::test(logging_tags = [])]
+    async fn empty_test_with_empty_logging_tags() {}
+
     #[allow(dead_code)]
     #[fuchsia::test(add_test_attr = false)]
     fn empty_test_without_add_test_attr() {
@@ -134,8 +143,8 @@ mod test {
         assert!(false)
     }
 
-    // We combine #[fuchsia::component] and #[test] here as a kludge to enable testing of the
-    // fuchsia::component code in a unit test.
+    // TODO(fxbug.dev/81029): We combine #[fuchsia::component] and #[test] here as a kludge to
+    // enable testing of the fuchsia::component code in a unit test.
     // Real users of the fuchsia library should not do this, and the ability to do so is not
     // guaranteed to be present in the future.
     #[fuchsia::component]
@@ -144,8 +153,8 @@ mod test {
         Ok(())
     }
 
-    // We combine #[fuchsia::component] and #[test] here as a kludge to enable testing of the
-    // fuchsia::component code in a unit test.
+    // TODO(fxbug.dev/81029): We combine #[fuchsia::component] and #[test] here as a kludge to
+    // enable testing of the fuchsia::component code in a unit test.
     // Real users of the fuchsia library should not do this, and the ability to do so is not
     // guaranteed to be present in the future.
     #[fuchsia::component]
@@ -154,8 +163,8 @@ mod test {
         Ok(())
     }
 
-    // We combine #[fuchsia::component] and #[test] here as a kludge to enable testing of the
-    // fuchsia::component code in a unit test.
+    // TODO(fxbug.dev/81029): We combine #[fuchsia::component] and #[test] here as a kludge to
+    // enable testing of the fuchsia::component code in a unit test.
     // Real users of the fuchsia library should not do this, and the ability to do so is not
     // guaranteed to be present in the future.
     #[fuchsia::component(threads = 1)]
@@ -164,13 +173,43 @@ mod test {
         Ok(())
     }
 
-    // We combine #[fuchsia::component] and #[test] here as a kludge to enable testing of the
-    // fuchsia::component code in a unit test.
+    // TODO(fxbug.dev/81029): We combine #[fuchsia::component] and #[test] here as a kludge to
+    // enable testing of the fuchsia::component code in a unit test.
     // Real users of the fuchsia library should not do this, and the ability to do so is not
     // guaranteed to be present in the future.
     #[fuchsia::component(threads = 2)]
     #[test]
     async fn empty_async_multithreaded_component_test_with_result() -> Result<(), Error> {
+        Ok(())
+    }
+
+    // TODO(fxbug.dev/81029): We combine #[fuchsia::component] and #[test] here as a kludge to
+    // enable testing of the fuchsia::component code in a unit test.
+    // Real users of the fuchsia library should not do this, and the ability to do so is not
+    // guaranteed to be present in the future.
+    #[fuchsia::component(logging_tags = [])]
+    #[test]
+    async fn component_with_empty_logging_tags() -> Result<(), Error> {
+        Ok(())
+    }
+
+    // TODO(fxbug.dev/81029): We combine #[fuchsia::component] and #[test] here as a kludge to
+    // enable testing of the fuchsia::component code in a unit test.
+    // Real users of the fuchsia library should not do this, and the ability to do so is not
+    // guaranteed to be present in the future.
+    #[fuchsia::component(logging_tags = ["foo"])]
+    #[test]
+    async fn component_with_single_logging_tag() -> Result<(), Error> {
+        Ok(())
+    }
+
+    // TODO(fxbug.dev/81029): We combine #[fuchsia::component] and #[test] here as a kludge to
+    // enable testing of the fuchsia::component code in a unit test.
+    // Real users of the fuchsia library should not do this, and the ability to do so is not
+    // guaranteed to be present in the future.
+    #[fuchsia::component(logging_tags = ["foo", "bar"])]
+    #[test]
+    async fn component_with_logging_tags() -> Result<(), Error> {
         Ok(())
     }
 

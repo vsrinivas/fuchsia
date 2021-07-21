@@ -41,7 +41,7 @@ where
     pub fn write_event(
         &mut self,
         event: &Event<'_>,
-        tag: Option<&str>,
+        tags: Option<&[String]>,
         pid: zx::Koid,
         tid: zx::Koid,
         dropped: u32,
@@ -52,8 +52,10 @@ where
             tid.raw_koid() as u64,
             dropped,
         );
-        if let Some(tag) = tag {
-            builder.add_tag(tag);
+        if let Some(tags) = tags {
+            for tag in tags {
+                builder.add_tag(tag.as_ref());
+            }
         }
         self.write_record(&builder.inner)
     }
@@ -63,7 +65,7 @@ where
     pub fn write_record_for_test(
         &mut self,
         record: &Record,
-        tag: Option<&str>,
+        tags: Option<&[String]>,
         pid: zx::Koid,
         tid: zx::Koid,
         file: &str,
@@ -78,8 +80,10 @@ where
             Some(line),
             dropped,
         );
-        if let Some(tag) = tag {
-            builder.add_tag(tag);
+        if let Some(tags) = tags {
+            for tag in tags {
+                builder.add_tag(tag.as_ref());
+            }
         }
         builder.inner.arguments.extend(record.arguments.iter().cloned());
         self.write_record(&builder.inner)

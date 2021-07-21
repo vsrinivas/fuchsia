@@ -39,10 +39,10 @@ macro_rules! init {
     () => {
         fuchsia_async::Task::spawn($crate::init_publishing(Default::default()).unwrap()).detach()
     };
-    ($tag:expr) => {
+    ($tags:expr) => {
         fuchsia_async::Task::spawn(
             $crate::init_publishing($crate::PublishOptions {
-                tag: Some($tag),
+                tags: Some($tags),
                 ..Default::default()
             })
             .unwrap(),
@@ -64,12 +64,12 @@ pub struct PublishOptions<'a> {
     pub interest: Interest,
 
     /// The tag to use on all messages published. Defaults to `None` which implies component name.
-    pub tag: Option<&'a str>,
+    pub tags: Option<&'a [&'a str]>,
 }
 
 impl<'a> Default for PublishOptions<'a> {
     fn default() -> Self {
-        Self { interest: Interest::EMPTY, tag: None }
+        Self { interest: Interest::EMPTY, tags: None }
     }
 }
 
@@ -114,8 +114,8 @@ impl Publisher {
         let (filter, on_change) = InterestFilter::new(events, options.interest);
 
         let mut sink = Sink::new(log_sink)?;
-        if let Some(tag) = options.tag {
-            sink.set_tag(tag);
+        if let Some(tags) = options.tags {
+            sink.set_tags(&tags);
         }
 
         Ok((Self { inner: Registry::default().with(sink).with(filter) }, on_change))

@@ -6,7 +6,7 @@ extern crate proc_macro;
 
 use {
     proc_macro::TokenStream,
-    quote::{quote, quote_spanned},
+    quote::{quote, quote_spanned, TokenStreamExt},
     syn::{
         parse,
         parse::{Parse, ParseStream},
@@ -82,6 +82,7 @@ struct Transformer {
     sig: Signature,
     block: Box<Block>,
     logging: bool,
+    logging_tags: LoggingTags,
     add_test_attr: bool,
 }
 
@@ -89,7 +90,36 @@ struct Args {
     threads: usize,
     allow_stalls: bool,
     logging: bool,
+    logging_tags: LoggingTags,
     add_test_attr: bool,
+}
+
+#[derive(Default)]
+struct LoggingTags {
+    tags: Vec<String>,
+}
+
+impl quote::ToTokens for LoggingTags {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        for tag in &self.tags {
+            tag.as_str().to_tokens(tokens);
+            tokens.append(proc_macro2::Punct::new(',', proc_macro2::Spacing::Alone));
+        }
+    }
+}
+
+impl Parse for LoggingTags {
+    fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
+        let mut tags = vec![];
+        while !input.is_empty() {
+            tags.push(input.parse::<LitStr>()?.value());
+            if input.is_empty() {
+                break;
+            }
+            input.parse::<Token![,]>()?;
+        }
+        Ok(Self { tags })
+    }
 }
 
 fn get_arg<T: Parse>(p: &ParseStream<'_>) -> syn::Result<T> {
@@ -113,9 +143,23 @@ fn get_bool_arg(p: &ParseStream<'_>, if_present: bool) -> syn::Result<bool> {
     }
 }
 
+fn get_logging_tags(p: &ParseStream<'_>) -> syn::Result<LoggingTags> {
+    p.parse::<Token![=]>()?;
+    let content;
+    syn::bracketed!(content in p);
+    let logging_tags = content.parse::<LoggingTags>()?;
+    Ok(logging_tags)
+}
+
 impl Parse for Args {
     fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
-        let mut args = Self { threads: 1, allow_stalls: true, logging: true, add_test_attr: true };
+        let mut args = Self {
+            threads: 1,
+            allow_stalls: true,
+            logging: true,
+            logging_tags: LoggingTags::default(),
+            add_test_attr: true,
+        };
 
         loop {
             if input.is_empty() {
@@ -127,6 +171,7 @@ impl Parse for Args {
                 "threads" => args.threads = get_base10_arg(&input)?,
                 "allow_stalls" => args.allow_stalls = get_bool_arg(&input, true)?,
                 "logging" => args.logging = get_bool_arg(&input, true)?,
+                "logging_tags" => args.logging_tags = get_logging_tags(&input)?,
                 "add_test_attr" => args.add_test_attr = get_bool_arg(&input, true)?,
                 x => return err(format!("unknown argument: {}", x)),
             }
@@ -177,6 +222,7 @@ impl Transformer {
             sig,
             block,
             logging: args.logging,
+            logging_tags: args.logging_tags,
             add_test_attr: args.add_test_attr,
         })
     }
@@ -192,6 +238,7 @@ impl Finish for Transformer {
         let asyncness = self.sig.asyncness;
         let block = self.block;
         let inputs = self.sig.inputs;
+        let logging_tags = self.logging_tags;
 
         let mut func_attrs = Vec::new();
 
@@ -201,15 +248,23 @@ impl Finish for Transformer {
         } else if self.executor.is_test() {
             let test_name = LitStr::new(&format!("{}", ident), ident.span());
             if self.executor.is_some() {
-                quote! { ::fuchsia::init_logging_for_test_with_executor(func, #test_name) }
+                quote! {
+                    ::fuchsia::init_logging_for_test_with_executor(func, #test_name, &[#logging_tags])
+                }
             } else {
-                quote! { ::fuchsia::init_logging_for_test_with_threads(func, #test_name) }
+                quote! {
+                    ::fuchsia::init_logging_for_test_with_threads(func, #test_name, &[#logging_tags])
+                }
             }
         } else {
             if self.executor.is_some() {
-                quote! { ::fuchsia::init_logging_for_component_with_executor(func) }
+                quote! {
+                    ::fuchsia::init_logging_for_component_with_executor(func, &[#logging_tags])
+                }
             } else {
-                quote! { ::fuchsia::init_logging_for_component_with_threads(func) }
+                quote! {
+                    ::fuchsia::init_logging_for_component_with_threads(func, &[#logging_tags])
+                }
             }
         };
 
@@ -286,6 +341,7 @@ impl<R: Finish, E: Finish> Finish for Result<R, E> {
 ///  - `threads` - integer worker thread count for the component. Must be >0. Default 1.
 ///  - `logging` - boolean toggle for whether to initialize logging (or not). Default true.
 ///                This currently does nothing on host. On Fuchsia fuchsia-syslog is used.
+///  - `logging_tags` - optional list of string to be used as tags for logs. Default: None.
 ///
 /// The main function can return either () or a Result<(), E> where E is an error type.
 /// If the main function takes an argument, it's expected that argument implement
@@ -306,6 +362,7 @@ pub fn component(args: TokenStream, input: TokenStream) -> TokenStream {
 ///  - `threads`       - integer worker thread count for the test. Must be >0. Default 1.
 ///  - `logging`       - boolean toggle for whether to initialize logging (or not). Default true.
 ///                      This currently does nothing on host. On Fuchsia fuchsia-syslog is used.
+///  - `logging_tags` - optional list of string to be used as tags for logs. Default: None.
 ///  - `allow_stalls`  - boolean toggle for whether the async test is allowed to stall during
 ///                      execution (if true), or whether the function must complete without pausing
 ///                      (if false).
