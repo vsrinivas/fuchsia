@@ -180,6 +180,27 @@ static const struct FidlStructElement Fields64fidl_test_protocols_WithProtocolEn
 };
 const struct FidlCodedStruct fidl_test_protocols_WithProtocolEndsStructContainingEndsResponseTable = {.tag=kFidlTypeStruct, .elements=Fields64fidl_test_protocols_WithProtocolEndsStructContainingEndsResponse, .element_count=4u, .size=32u, .name="fidl.test.protocols/WithProtocolEndsStructContainingEndsResponse"};
 
+__LOCAL extern const struct FidlCodedStruct fidl_test_protocols_ManyParametersFifteenRequestTable;
+static const struct FidlStructElement Fields48fidl_test_protocols_ManyParametersFifteenRequest[] = {
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset=16u, .field_type=(fidl_type_t*)(&fidl_internal_kBoolTable)}},
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset=17u, .field_type=(fidl_type_t*)(&fidl_internal_kBoolTable)}},
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset=18u, .field_type=(fidl_type_t*)(&fidl_internal_kBoolTable)}},
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset=19u, .field_type=(fidl_type_t*)(&fidl_internal_kBoolTable)}},
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset=20u, .field_type=(fidl_type_t*)(&fidl_internal_kBoolTable)}},
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset=21u, .field_type=(fidl_type_t*)(&fidl_internal_kBoolTable)}},
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset=22u, .field_type=(fidl_type_t*)(&fidl_internal_kBoolTable)}},
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset=23u, .field_type=(fidl_type_t*)(&fidl_internal_kBoolTable)}},
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset=24u, .field_type=(fidl_type_t*)(&fidl_internal_kBoolTable)}},
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset=25u, .field_type=(fidl_type_t*)(&fidl_internal_kBoolTable)}},
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset=26u, .field_type=(fidl_type_t*)(&fidl_internal_kBoolTable)}},
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset=27u, .field_type=(fidl_type_t*)(&fidl_internal_kBoolTable)}},
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset=28u, .field_type=(fidl_type_t*)(&fidl_internal_kBoolTable)}},
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset=29u, .field_type=(fidl_type_t*)(&fidl_internal_kBoolTable)}},
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset=30u, .field_type=(fidl_type_t*)(&fidl_internal_kBoolTable)}},
+    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=30u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding16,.is_resource=kFidlIsResource_NotResource},.mask_16=65280u}}
+};
+const struct FidlCodedStruct fidl_test_protocols_ManyParametersFifteenRequestTable = {.tag=kFidlTypeStruct, .elements=Fields48fidl_test_protocols_ManyParametersFifteenRequest, .element_count=16u, .size=32u, .name="fidl.test.protocols/ManyParametersFifteenRequest"};
+
 __LOCAL extern const struct FidlCodedStruct fidl_test_protocols_WithErrorSyntaxResponseAsStructRequestTable;
 const struct FidlCodedStruct fidl_test_protocols_WithErrorSyntaxResponseAsStructRequestTable = {.tag=kFidlTypeStruct, .elements=NULL, .element_count=0u, .size=16u, .name="fidl.test.protocols/WithErrorSyntaxResponseAsStructRequest"};
 

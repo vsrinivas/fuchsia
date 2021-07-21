@@ -6564,3 +6564,287 @@ impl WithProtocolEndsStructContainingEndsResponder {
         })
     }
 }
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct ManyParametersMarker;
+
+impl fidl::endpoints::ServiceMarker for ManyParametersMarker {
+    type Proxy = ManyParametersProxy;
+    type RequestStream = ManyParametersRequestStream;
+    const DEBUG_NAME: &'static str = "(anonymous) ManyParameters";
+}
+
+pub trait ManyParametersProxyInterface: Send + Sync {}
+
+#[derive(Debug)]
+#[cfg(target_os = "fuchsia")]
+pub struct ManyParametersSynchronousProxy {
+    client: fidl::client::sync::Client,
+}
+
+#[cfg(target_os = "fuchsia")]
+impl ManyParametersSynchronousProxy {
+    pub fn new(channel: fidl::Channel) -> Self {
+        let service_name = <ManyParametersMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME;
+        Self { client: fidl::client::sync::Client::new(channel, service_name) }
+    }
+
+    pub fn into_channel(self) -> fidl::Channel {
+        self.client.into_channel()
+    }
+
+    /// Waits until an event arrives and returns it. It is safe for other
+    /// threads to make concurrent requests while waiting for an event.
+    pub fn wait_for_event(&self, deadline: zx::Time) -> Result<ManyParametersEvent, fidl::Error> {
+        ManyParametersEvent::decode(self.client.wait_for_event(deadline)?)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ManyParametersProxy {
+    client: fidl::client::Client,
+}
+
+impl fidl::endpoints::Proxy for ManyParametersProxy {
+    type Service = ManyParametersMarker;
+
+    fn from_channel(inner: fidl::AsyncChannel) -> Self {
+        Self::new(inner)
+    }
+
+    fn into_channel(self) -> Result<::fidl::AsyncChannel, Self> {
+        self.client.into_channel().map_err(|client| Self { client })
+    }
+
+    fn as_channel(&self) -> &::fidl::AsyncChannel {
+        self.client.as_channel()
+    }
+}
+
+impl ManyParametersProxy {
+    /// Create a new Proxy for ManyParameters
+    pub fn new(channel: fidl::AsyncChannel) -> Self {
+        let service_name = <ManyParametersMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME;
+        Self { client: fidl::client::Client::new(channel, service_name) }
+    }
+
+    /// Get a Stream of events from the remote end of the ManyParameters protocol
+    ///
+    /// # Panics
+    ///
+    /// Panics if the event stream was already taken.
+    pub fn take_event_stream(&self) -> ManyParametersEventStream {
+        ManyParametersEventStream { event_receiver: self.client.take_event_receiver() }
+    }
+}
+
+impl ManyParametersProxyInterface for ManyParametersProxy {}
+
+pub struct ManyParametersEventStream {
+    event_receiver: fidl::client::EventReceiver,
+}
+
+impl std::marker::Unpin for ManyParametersEventStream {}
+
+impl futures::stream::FusedStream for ManyParametersEventStream {
+    fn is_terminated(&self) -> bool {
+        self.event_receiver.is_terminated()
+    }
+}
+
+impl futures::Stream for ManyParametersEventStream {
+    type Item = Result<ManyParametersEvent, fidl::Error>;
+
+    fn poll_next(
+        mut self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Option<Self::Item>> {
+        let buf = match futures::ready!(futures::stream::StreamExt::poll_next_unpin(
+            &mut self.event_receiver,
+            cx
+        )?) {
+            Some(buf) => buf,
+            None => return std::task::Poll::Ready(None),
+        };
+
+        std::task::Poll::Ready(Some(ManyParametersEvent::decode(buf)))
+    }
+}
+
+#[derive(Debug)]
+pub enum ManyParametersEvent {}
+
+impl ManyParametersEvent {
+    fn decode(mut buf: fidl::MessageBufEtc) -> Result<ManyParametersEvent, fidl::Error> {
+        let (bytes, _handles) = buf.split_mut();
+        let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+
+        match tx_header.ordinal() {
+            _ => Err(fidl::Error::UnknownOrdinal {
+                ordinal: tx_header.ordinal(),
+                service_name: <ManyParametersMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
+            }),
+        }
+    }
+}
+
+/// A type which can be used to send responses and events into a borrowed channel.
+///
+/// Note: this should only be used when the channel must be temporarily
+/// borrowed. For a typical sending of events, use the send_ methods
+/// on the ControlHandle types, which can be acquired through a
+/// RequestStream or Responder type.
+#[deprecated(note = "Use ManyParametersRequestStream / Responder instead")]
+pub struct ManyParametersServerSender<'a> {
+    // Some protocols don't define events which would render this channel unused.
+    #[allow(dead_code)]
+    channel: &'a fidl::Channel,
+}
+
+#[allow(deprecated)]
+impl<'a> ManyParametersServerSender<'a> {
+    pub fn new(channel: &'a fidl::Channel) -> Self {
+        Self { channel }
+    }
+}
+
+/// A Stream of incoming requests for ManyParameters
+pub struct ManyParametersRequestStream {
+    inner: std::sync::Arc<fidl::ServeInner>,
+    is_terminated: bool,
+}
+
+impl std::marker::Unpin for ManyParametersRequestStream {}
+
+impl futures::stream::FusedStream for ManyParametersRequestStream {
+    fn is_terminated(&self) -> bool {
+        self.is_terminated
+    }
+}
+
+impl fidl::endpoints::RequestStream for ManyParametersRequestStream {
+    type Service = ManyParametersMarker;
+
+    /// Consume a channel to make a ManyParametersRequestStream
+    fn from_channel(channel: fidl::AsyncChannel) -> Self {
+        Self { inner: std::sync::Arc::new(fidl::ServeInner::new(channel)), is_terminated: false }
+    }
+
+    /// ControlHandle for the remote connection
+    type ControlHandle = ManyParametersControlHandle;
+
+    /// ControlHandle for the remote connection
+    fn control_handle(&self) -> Self::ControlHandle {
+        ManyParametersControlHandle { inner: self.inner.clone() }
+    }
+
+    fn into_inner(self) -> (::std::sync::Arc<fidl::ServeInner>, bool) {
+        (self.inner, self.is_terminated)
+    }
+
+    fn from_inner(inner: std::sync::Arc<fidl::ServeInner>, is_terminated: bool) -> Self {
+        Self { inner, is_terminated }
+    }
+}
+
+impl futures::Stream for ManyParametersRequestStream {
+    type Item = Result<ManyParametersRequest, fidl::Error>;
+
+    fn poll_next(
+        mut self: std::pin::Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Option<Self::Item>> {
+        let this = &mut *self;
+        if this.inner.poll_shutdown(cx) {
+            this.is_terminated = true;
+            return std::task::Poll::Ready(None);
+        }
+        if this.is_terminated {
+            panic!("polled ManyParametersRequestStream after completion");
+        }
+        fidl::encoding::with_tls_decode_buf(|bytes, handles| {
+            match this.inner.channel().read_etc(cx, bytes, handles) {
+                std::task::Poll::Ready(Ok(())) => {}
+                std::task::Poll::Pending => return std::task::Poll::Pending,
+                std::task::Poll::Ready(Err(zx_status::Status::PEER_CLOSED)) => {
+                    this.is_terminated = true;
+                    return std::task::Poll::Ready(None);
+                }
+                std::task::Poll::Ready(Err(e)) => {
+                    return std::task::Poll::Ready(Some(Err(fidl::Error::ServerRequestRead(e))))
+                }
+            }
+
+            // A message has been received from the channel
+            let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+            if !header.is_compatible() {
+                return std::task::Poll::Ready(Some(Err(fidl::Error::IncompatibleMagicNumber(
+                    header.magic_number(),
+                ))));
+            }
+
+            std::task::Poll::Ready(Some(match header.ordinal() {
+                _ => Err(fidl::Error::UnknownOrdinal {
+                    ordinal: header.ordinal(),
+                    service_name:
+                        <ManyParametersMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
+                }),
+            }))
+        })
+    }
+}
+
+/// Represents a single request.
+/// RequestMessages should only be used for manual deserialization when higher level
+/// structs such as RequestStream cannot be used. One usually would only encounter
+/// such scenarios when working with legacy FIDL code (prior to FIDL generated client/server bindings).
+#[derive(Debug)]
+#[deprecated(note = "Use ManyParametersRequest instead")]
+pub enum ManyParametersRequestMessage {}
+
+#[allow(deprecated)]
+impl ManyParametersRequestMessage {
+    pub fn decode(
+        bytes: &[u8],
+        _handles: &mut [fidl::HandleInfo],
+    ) -> Result<ManyParametersRequestMessage, fidl::Error> {
+        let (header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
+
+        match header.ordinal() {
+            _ => Err(fidl::Error::UnknownOrdinal {
+                ordinal: header.ordinal(),
+                service_name: <ManyParametersMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
+            }),
+        }
+    }
+}
+#[derive(Debug)]
+pub enum ManyParametersRequest {}
+
+impl ManyParametersRequest {
+    /// Name of the method defined in FIDL
+    pub fn method_name(&self) -> &'static str {
+        match *self {}
+    }
+}
+
+pub struct ManyParametersEncoder;
+
+impl ManyParametersEncoder {}
+
+#[derive(Debug, Clone)]
+pub struct ManyParametersControlHandle {
+    inner: std::sync::Arc<fidl::ServeInner>,
+}
+
+impl ManyParametersControlHandle {
+    /// Set the server to shutdown. The underlying channel is only closed the
+    /// next time the stream is polled.
+    pub fn shutdown(&self) {
+        self.inner.shutdown()
+    }
+
+    pub fn shutdown_with_epitaph(&self, status: zx_status::Status) {
+        self.inner.shutdown_with_epitaph(status)
+    }
+}

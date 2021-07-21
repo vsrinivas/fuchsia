@@ -553,6 +553,31 @@ func (msg *withProtocolEndsWithCtxStructContainingEndsResponse) Marshaler() _bin
 	return _mwithProtocolEndsWithCtxStructContainingEndsResponse
 }
 
+type manyParametersWithCtxFifteenRequest struct {
+	_   struct{} `fidl:"s" fidl_size_v1:"16" fidl_alignment_v1:"8" fidl_size_v2:"16" fidl_alignment_v2:"8"`
+	P1  bool     `fidl_offset_v1:"0" fidl_offset_v2:"0"`
+	P2  bool     `fidl_offset_v1:"1" fidl_offset_v2:"1"`
+	P3  bool     `fidl_offset_v1:"2" fidl_offset_v2:"2"`
+	P4  bool     `fidl_offset_v1:"3" fidl_offset_v2:"3"`
+	P5  bool     `fidl_offset_v1:"4" fidl_offset_v2:"4"`
+	P6  bool     `fidl_offset_v1:"5" fidl_offset_v2:"5"`
+	P7  bool     `fidl_offset_v1:"6" fidl_offset_v2:"6"`
+	P8  bool     `fidl_offset_v1:"7" fidl_offset_v2:"7"`
+	P9  bool     `fidl_offset_v1:"8" fidl_offset_v2:"8"`
+	P10 bool     `fidl_offset_v1:"9" fidl_offset_v2:"9"`
+	P11 bool     `fidl_offset_v1:"10" fidl_offset_v2:"10"`
+	P12 bool     `fidl_offset_v1:"11" fidl_offset_v2:"11"`
+	P13 bool     `fidl_offset_v1:"12" fidl_offset_v2:"12"`
+	P14 bool     `fidl_offset_v1:"13" fidl_offset_v2:"13"`
+	P15 bool     `fidl_offset_v1:"14" fidl_offset_v2:"14"`
+}
+
+var _mmanyParametersWithCtxFifteenRequest = _bindings.CreateLazyMarshaler(manyParametersWithCtxFifteenRequest{})
+
+func (msg *manyParametersWithCtxFifteenRequest) Marshaler() _bindings.Marshaler {
+	return _mmanyParametersWithCtxFifteenRequest
+}
+
 type I_withErrorSyntaxResponseAsStructResultTag uint64
 
 const (
@@ -1490,3 +1515,67 @@ func (s_ *WithProtocolEndsWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_
 }
 
 type WithProtocolEndsEventProxy _bindings.ChannelProxy
+
+const (
+	ManyParametersFifteenOrdinal uint64 = 0x295ae26a080f53e3
+)
+
+type ManyParametersWithCtxInterface _bindings.ChannelProxy
+
+func (p *ManyParametersWithCtxInterface) Fifteen(ctx_ _bindings.Context, p1 bool, p2 bool, p3 bool, p4 bool, p5 bool, p6 bool, p7 bool, p8 bool, p9 bool, p10 bool, p11 bool, p12 bool, p13 bool, p14 bool, p15 bool) error {
+	req_ := &manyParametersWithCtxFifteenRequest{
+		P1:  p1,
+		P2:  p2,
+		P3:  p3,
+		P4:  p4,
+		P5:  p5,
+		P6:  p6,
+		P7:  p7,
+		P8:  p8,
+		P9:  p9,
+		P10: p10,
+		P11: p11,
+		P12: p12,
+		P13: p13,
+		P14: p14,
+		P15: p15,
+	}
+	err_ := ((*_bindings.ChannelProxy)(p)).Send(ManyParametersFifteenOrdinal, req_)
+	return err_
+}
+
+type ManyParametersWithCtx interface {
+	Fifteen(ctx_ _bindings.Context, p1 bool, p2 bool, p3 bool, p4 bool, p5 bool, p6 bool, p7 bool, p8 bool, p9 bool, p10 bool, p11 bool, p12 bool, p13 bool, p14 bool, p15 bool) error
+}
+
+type ManyParametersWithCtxTransitionalBase struct{}
+
+type ManyParametersWithCtxInterfaceRequest _bindings.InterfaceRequest
+
+func NewManyParametersWithCtxInterfaceRequest() (ManyParametersWithCtxInterfaceRequest, *ManyParametersWithCtxInterface, error) {
+	req, cli, err := _bindings.NewInterfaceRequest()
+	return ManyParametersWithCtxInterfaceRequest(req), (*ManyParametersWithCtxInterface)(cli), err
+}
+
+type ManyParametersWithCtxStub struct {
+	Impl ManyParametersWithCtx
+}
+
+func (s_ *ManyParametersWithCtxStub) Dispatch(args_ _bindings.DispatchArgs) (_bindings.Message, bool, error) {
+	switch args_.Ordinal {
+	case ManyParametersFifteenOrdinal:
+		in_ := manyParametersWithCtxFifteenRequest{}
+		marshalerCtx, ok := _bindings.GetMarshalerContext(args_.Ctx)
+		if !ok {
+			return nil, false, _bindings.ErrMissingMarshalerContext
+		}
+		if _, _, err_ := _bindings.UnmarshalWithContext2(marshalerCtx, args_.Bytes, args_.HandleInfos, &in_); err_ != nil {
+			return nil, false, err_
+		}
+		err_ := s_.Impl.Fifteen(args_.Ctx, in_.P1, in_.P2, in_.P3, in_.P4, in_.P5, in_.P6, in_.P7, in_.P8, in_.P9, in_.P10, in_.P11, in_.P12, in_.P13, in_.P14, in_.P15)
+		return nil, false, err_
+	}
+	return nil, false, _bindings.ErrUnknownOrdinal
+}
+
+type ManyParametersEventProxy _bindings.ChannelProxy

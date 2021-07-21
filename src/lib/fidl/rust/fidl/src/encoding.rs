@@ -4013,6 +4013,7 @@ macro_rules! tuple_impls {
 }
 
 tuple_impls!(
+    (11 => L),
     (10 => K),
     (9 => J),
     (8 => I),

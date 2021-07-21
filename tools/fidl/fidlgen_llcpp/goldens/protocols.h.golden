@@ -166,6 +166,8 @@ namespace wire {
 struct ProtocolEnds;
 }  // namespace wire
 class WithProtocolEnds;
+
+class ManyParameters;
 namespace wire {
 
 enum class ErrorEnum : uint32_t {
@@ -9783,6 +9785,475 @@ class ::fidl::WireServer<::fidl_test_protocols::WithProtocolEnds>
 
 namespace fidl_test_protocols {
 __LOCAL extern "C" const fidl_type_t
+    fidl_test_protocols_ManyParametersFifteenRequestTable;
+
+__LOCAL extern "C" const fidl_type_t
+    fidl_test_protocols_ManyParametersFifteenResponseTable;
+
+class ManyParameters final {
+  ManyParameters() = delete;
+
+ public:
+  class Fifteen final {
+    Fifteen() = delete;
+  };
+};
+}  // namespace fidl_test_protocols
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::ProtocolDetails<
+    ::fidl_test_protocols::ManyParameters> {};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+struct ::fidl::internal::WireServerDispatcher<
+    ::fidl_test_protocols::ManyParameters>
+    final {
+  WireServerDispatcher() = delete;
+  static ::fidl::DispatchResult TryDispatch(
+      ::fidl::WireServer<::fidl_test_protocols::ManyParameters>* impl,
+      ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn);
+  static ::fidl::DispatchResult Dispatch(
+      ::fidl::WireServer<::fidl_test_protocols::ManyParameters>* impl,
+      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
+};
+#endif  // __Fuchsia__
+
+template <>
+struct ::fidl::WireRequest<::fidl_test_protocols::ManyParameters::Fifteen>
+    final {
+  FIDL_ALIGNDECL
+  fidl_message_header_t _hdr;
+  bool p1;
+  bool p2;
+  bool p3;
+  bool p4;
+  bool p5;
+  bool p6;
+  bool p7;
+  bool p8;
+  bool p9;
+  bool p10;
+  bool p11;
+  bool p12;
+  bool p13;
+  bool p14;
+  bool p15;
+  explicit WireRequest(zx_txid_t _txid, bool p1, bool p2, bool p3, bool p4,
+                       bool p5, bool p6, bool p7, bool p8, bool p9, bool p10,
+                       bool p11, bool p12, bool p13, bool p14, bool p15)
+      : p1(p1),
+        p2(p2),
+        p3(p3),
+        p4(p4),
+        p5(p5),
+        p6(p6),
+        p7(p7),
+        p8(p8),
+        p9(p9),
+        p10(p10),
+        p11(p11),
+        p12(p12),
+        p13(p13),
+        p14(p14),
+        p15(p15) {
+    _InitHeader(_txid);
+  }
+  explicit WireRequest(zx_txid_t _txid) { _InitHeader(_txid); }
+
+  static constexpr const fidl_type_t* Type =
+      &::fidl_test_protocols::
+          fidl_test_protocols_ManyParametersFifteenRequestTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 32;
+  static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 32;
+  static constexpr uint32_t AltMaxOutOfLine = 0;
+  static constexpr bool HasFlexibleEnvelope = false;
+  static constexpr bool HasPointer = false;
+  static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+      ::fidl::internal::TransactionalMessageKind::kRequest;
+
+  class UnownedEncodedMessage final {
+   public:
+    UnownedEncodedMessage(uint8_t* _backing_buffer,
+                          uint32_t _backing_buffer_size, zx_txid_t _txid,
+                          bool p1, bool p2, bool p3, bool p4, bool p5, bool p6,
+                          bool p7, bool p8, bool p9, bool p10, bool p11,
+                          bool p12, bool p13, bool p14, bool p15)
+        : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
+                                _backing_buffer, _backing_buffer_size, _txid,
+                                p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11,
+                                p12, p13, p14, p15) {}
+    UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
+                          uint32_t _backing_buffer_size, zx_txid_t _txid,
+                          bool p1, bool p2, bool p3, bool p4, bool p5, bool p6,
+                          bool p7, bool p8, bool p9, bool p10, bool p11,
+                          bool p12, bool p13, bool p14, bool p15)
+        : message_(::fidl::OutgoingMessage::ConstructorArgs{
+              .iovecs = iovecs_,
+              .iovec_capacity = _iovec_capacity,
+              .backing_buffer = _backing_buffer,
+              .backing_buffer_capacity = _backing_buffer_size,
+          }) {
+      ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
+      FIDL_ALIGNDECL WireRequest _request(_txid, p1, p2, p3, p4, p5, p6, p7, p8,
+                                          p9, p10, p11, p12, p13, p14, p15);
+      message_.Encode<WireRequest>(&_request);
+    }
+    UnownedEncodedMessage(uint8_t* _backing_buffer,
+                          uint32_t _backing_buffer_size, WireRequest* request)
+        : UnownedEncodedMessage(::fidl::internal::IovecBufferSize,
+                                _backing_buffer, _backing_buffer_size,
+                                request) {}
+    UnownedEncodedMessage(uint32_t _iovec_capacity, uint8_t* _backing_buffer,
+                          uint32_t _backing_buffer_size, WireRequest* request)
+        : message_(::fidl::OutgoingMessage::ConstructorArgs{
+              .iovecs = iovecs_,
+              .iovec_capacity = _iovec_capacity,
+              .backing_buffer = _backing_buffer,
+              .backing_buffer_capacity = _backing_buffer_size,
+          }) {
+      ZX_ASSERT(_iovec_capacity <= std::size(iovecs_));
+      message_.Encode<WireRequest>(request);
+    }
+    UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+    UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+    const char* status_string() const { return message_.status_string(); }
+#endif  // __Fuchsia__
+    bool ok() const { return message_.status() == ZX_OK; }
+    std::string FormatDescription() const {
+      return message_.FormatDescription();
+    }
+    const char* lossy_description() const {
+      return message_.lossy_description();
+    }
+    const ::fidl::Result& error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+#ifdef __Fuchsia__
+    template <typename ChannelLike>
+    void Write(ChannelLike&& client) {
+      message_.Write(std::forward<ChannelLike>(client));
+    }
+#endif  // __Fuchsia__
+   private:
+    ::fidl::internal::IovecBuffer iovecs_;
+    ::fidl::OutgoingMessage message_;
+  };
+
+  class OwnedEncodedMessage final {
+   public:
+    explicit OwnedEncodedMessage(zx_txid_t _txid, bool p1, bool p2, bool p3,
+                                 bool p4, bool p5, bool p6, bool p7, bool p8,
+                                 bool p9, bool p10, bool p11, bool p12,
+                                 bool p13, bool p14, bool p15)
+        : message_(1u, backing_buffer_.data(), backing_buffer_.size(), _txid,
+                   p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14,
+                   p15) {}
+    // Internal constructor.
+    explicit OwnedEncodedMessage(
+        ::fidl::internal::AllowUnownedInputRef allow_unowned, zx_txid_t _txid,
+        bool p1, bool p2, bool p3, bool p4, bool p5, bool p6, bool p7, bool p8,
+        bool p9, bool p10, bool p11, bool p12, bool p13, bool p14, bool p15)
+        : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
+                   backing_buffer_.size(), _txid, p1, p2, p3, p4, p5, p6, p7,
+                   p8, p9, p10, p11, p12, p13, p14, p15) {}
+    explicit OwnedEncodedMessage(WireRequest* request)
+        : message_(1u, backing_buffer_.data(), backing_buffer_.size(),
+                   request) {}
+    // Internal constructor.
+    explicit OwnedEncodedMessage(
+        ::fidl::internal::AllowUnownedInputRef allow_unowned,
+        WireRequest* request)
+        : message_(::fidl::internal::IovecBufferSize, backing_buffer_.data(),
+                   backing_buffer_.size(), request) {}
+    OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+    OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
+
+    zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+    const char* status_string() const { return message_.status_string(); }
+#endif  // __Fuchsia__
+    bool ok() const { return message_.ok(); }
+    std::string FormatDescription() const {
+      return message_.FormatDescription();
+    }
+    const char* lossy_description() const {
+      return message_.lossy_description();
+    }
+    const ::fidl::Result& error() const { return message_.error(); }
+
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
+      return message_.GetOutgoingMessage();
+    }
+#ifdef __Fuchsia__
+    template <typename ChannelLike>
+    void Write(ChannelLike&& client) {
+      message_.Write(std::forward<ChannelLike>(client));
+    }
+#endif  // __Fuchsia__
+   private:
+    ::fidl::internal::InlineMessageBuffer<32> backing_buffer_;
+    UnownedEncodedMessage message_;
+  };
+
+ public:
+  class DecodedMessage final
+      : public ::fidl::internal::DecodedMessageBase<::fidl::WireRequest<
+            ::fidl_test_protocols::ManyParameters::Fifteen>> {
+   public:
+    using DecodedMessageBase<::fidl::WireRequest<
+        ::fidl_test_protocols::ManyParameters::Fifteen>>::DecodedMessageBase;
+
+    DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                   zx_handle_info_t* handles = nullptr,
+                   uint32_t handle_actual = 0)
+        : DecodedMessageBase(::fidl::IncomingMessage(bytes, byte_actual,
+                                                     handles, handle_actual)) {}
+
+    ::fidl::WireRequest<::fidl_test_protocols::ManyParameters::Fifteen>*
+    PrimaryObject() {
+      ZX_DEBUG_ASSERT(ok());
+      return reinterpret_cast<
+          ::fidl::WireRequest<::fidl_test_protocols::ManyParameters::Fifteen>*>(
+          bytes());
+    }
+
+    // Release the ownership of the decoded message. That means that the handles
+    // won't be closed When the object is destroyed. After calling this method,
+    // the |DecodedMessage| object should not be used anymore.
+    void ReleasePrimaryObject() { ResetBytes(); }
+  };
+
+ private:
+  void _InitHeader(zx_txid_t _txid);
+};
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::WireResult<::fidl_test_protocols::ManyParameters::Fifteen> final
+    : public ::fidl::Result {
+ public:
+  explicit WireResult(
+      ::fidl::UnownedClientEnd<::fidl_test_protocols::ManyParameters> _client,
+      bool p1, bool p2, bool p3, bool p4, bool p5, bool p6, bool p7, bool p8,
+      bool p9, bool p10, bool p11, bool p12, bool p13, bool p14, bool p15);
+  explicit WireResult(const ::fidl::Result& result) : ::fidl::Result(result) {}
+  WireResult(WireResult&&) = delete;
+  WireResult(const WireResult&) = delete;
+  WireResult* operator=(WireResult&&) = delete;
+  WireResult* operator=(const WireResult&) = delete;
+  ~WireResult() = default;
+
+ private:
+};
+template <>
+class ::fidl::WireUnownedResult<::fidl_test_protocols::ManyParameters::Fifteen>
+    final : public ::fidl::Result {
+ public:
+  explicit WireUnownedResult(
+      ::fidl::UnownedClientEnd<::fidl_test_protocols::ManyParameters> _client,
+      uint8_t* _request_bytes, uint32_t _request_byte_capacity, bool p1,
+      bool p2, bool p3, bool p4, bool p5, bool p6, bool p7, bool p8, bool p9,
+      bool p10, bool p11, bool p12, bool p13, bool p14, bool p15);
+  explicit WireUnownedResult(const ::fidl::Result& result)
+      : ::fidl::Result(result) {}
+  WireUnownedResult(WireUnownedResult&&) = delete;
+  WireUnownedResult(const WireUnownedResult&) = delete;
+  WireUnownedResult* operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult* operator=(const WireUnownedResult&) = delete;
+  ~WireUnownedResult() = default;
+};
+
+// Methods to make a sync FIDL call directly on an unowned channel or a
+// const reference to a
+// |fidl::ClientEnd<::fidl_test_protocols::ManyParameters>|, avoiding setting up
+// a client.
+template <>
+class ::fidl::internal::WireCaller<::fidl_test_protocols::ManyParameters>
+    final {
+ public:
+  explicit WireCaller(
+      ::fidl::UnownedClientEnd<::fidl_test_protocols::ManyParameters>
+          client_end)
+      : client_end_(client_end) {}
+
+  // Allocates 32 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  static ::fidl::WireResult<::fidl_test_protocols::ManyParameters::Fifteen>
+  Fifteen(::fidl::UnownedClientEnd<::fidl_test_protocols::ManyParameters>
+              _client_end,
+          bool p1, bool p2, bool p3, bool p4, bool p5, bool p6, bool p7,
+          bool p8, bool p9, bool p10, bool p11, bool p12, bool p13, bool p14,
+          bool p15) {
+    return ::fidl::WireResult<::fidl_test_protocols::ManyParameters::Fifteen>(
+        _client_end, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13,
+        p14, p15);
+  }
+  // Allocates 32 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::WireResult<::fidl_test_protocols::ManyParameters::Fifteen> Fifteen(
+      bool p1, bool p2, bool p3, bool p4, bool p5, bool p6, bool p7, bool p8,
+      bool p9, bool p10, bool p11, bool p12, bool p13, bool p14, bool p15) && {
+    return ::fidl::WireResult<::fidl_test_protocols::ManyParameters::Fifteen>(
+        client_end_, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13,
+        p14, p15);
+  }
+
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
+  static ::fidl::WireUnownedResult<
+      ::fidl_test_protocols::ManyParameters::Fifteen>
+  Fifteen(::fidl::UnownedClientEnd<::fidl_test_protocols::ManyParameters>
+              _client_end,
+          ::fidl::BufferSpan _request_buffer, bool p1, bool p2, bool p3,
+          bool p4, bool p5, bool p6, bool p7, bool p8, bool p9, bool p10,
+          bool p11, bool p12, bool p13, bool p14, bool p15) {
+    return ::fidl::WireUnownedResult<
+        ::fidl_test_protocols::ManyParameters::Fifteen>(
+        _client_end, _request_buffer.data, _request_buffer.capacity, p1, p2, p3,
+        p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15);
+  }
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
+  ::fidl::WireUnownedResult<::fidl_test_protocols::ManyParameters::Fifteen>
+  Fifteen(::fidl::BufferSpan _request_buffer, bool p1, bool p2, bool p3,
+          bool p4, bool p5, bool p6, bool p7, bool p8, bool p9, bool p10,
+          bool p11, bool p12, bool p13, bool p14, bool p15) && {
+    return ::fidl::WireUnownedResult<
+        ::fidl_test_protocols::ManyParameters::Fifteen>(
+        client_end_, _request_buffer.data, _request_buffer.capacity, p1, p2, p3,
+        p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15);
+  }
+
+ private:
+  ::fidl::UnownedClientEnd<::fidl_test_protocols::ManyParameters> client_end_;
+};
+template <>
+class ::fidl::internal::WireEventHandlerInterface<
+    ::fidl_test_protocols::ManyParameters> {
+ public:
+  WireEventHandlerInterface() = default;
+  virtual ~WireEventHandlerInterface() = default;
+};
+
+template <>
+class ::fidl::WireAsyncEventHandler<::fidl_test_protocols::ManyParameters>
+    : public ::fidl::internal::WireEventHandlerInterface<
+          ::fidl_test_protocols::ManyParameters>,
+      public ::fidl::internal::AsyncEventHandler {
+ public:
+  WireAsyncEventHandler() = default;
+};
+
+template <>
+class ::fidl::WireSyncEventHandler<::fidl_test_protocols::ManyParameters>
+    : public ::fidl::internal::WireEventHandlerInterface<
+          ::fidl_test_protocols::ManyParameters> {
+ public:
+  WireSyncEventHandler() = default;
+
+  // Method called when an unknown event is found. This methods gives the status
+  // which, in this case, is returned by HandleOneEvent.
+  virtual zx_status_t Unknown() = 0;
+
+  // Handle all possible events defined in this protocol.
+  // Blocks to consume exactly one message from the channel, then call the
+  // corresponding virtual method.
+  ::fidl::Result HandleOneEvent(
+      ::fidl::UnownedClientEnd<::fidl_test_protocols::ManyParameters>
+          client_end);
+};
+template <>
+class ::fidl::WireSyncClient<::fidl_test_protocols::ManyParameters> final {
+ public:
+  WireSyncClient() = default;
+
+  explicit WireSyncClient(
+      ::fidl::ClientEnd<::fidl_test_protocols::ManyParameters> client_end)
+      : client_end_(std::move(client_end)) {}
+
+  ~WireSyncClient() = default;
+  WireSyncClient(WireSyncClient&&) = default;
+  WireSyncClient& operator=(WireSyncClient&&) = default;
+
+  const ::fidl::ClientEnd<::fidl_test_protocols::ManyParameters>& client_end()
+      const {
+    return client_end_;
+  }
+  ::fidl::ClientEnd<::fidl_test_protocols::ManyParameters>& client_end() {
+    return client_end_;
+  }
+
+  const ::zx::channel& channel() const { return client_end_.channel(); }
+  ::zx::channel* mutable_channel() { return &client_end_.channel(); }
+
+  // Allocates 32 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::WireResult<::fidl_test_protocols::ManyParameters::Fifteen> Fifteen(
+      bool p1, bool p2, bool p3, bool p4, bool p5, bool p6, bool p7, bool p8,
+      bool p9, bool p10, bool p11, bool p12, bool p13, bool p14, bool p15) {
+    return ::fidl::WireResult<::fidl_test_protocols::ManyParameters::Fifteen>(
+        this->client_end(), p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12,
+        p13, p14, p15);
+  }
+
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
+  ::fidl::WireUnownedResult<::fidl_test_protocols::ManyParameters::Fifteen>
+  Fifteen(::fidl::BufferSpan _request_buffer, bool p1, bool p2, bool p3,
+          bool p4, bool p5, bool p6, bool p7, bool p8, bool p9, bool p10,
+          bool p11, bool p12, bool p13, bool p14, bool p15) {
+    return ::fidl::WireUnownedResult<
+        ::fidl_test_protocols::ManyParameters::Fifteen>(
+        this->client_end(), _request_buffer.data, _request_buffer.capacity, p1,
+        p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15);
+  }
+
+ private:
+  ::fidl::ClientEnd<::fidl_test_protocols::ManyParameters> client_end_;
+};
+
+// Pure-virtual interface to be implemented by a server.
+// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
+// and |fidl::ServerEnd<SomeProtocol>|).
+template <>
+class ::fidl::WireServer<::fidl_test_protocols::ManyParameters>
+    : public ::fidl::internal::IncomingMessageDispatcher {
+ public:
+  WireServer() = default;
+  virtual ~WireServer() = default;
+
+  // The FIDL protocol type that is implemented by this server.
+  using _EnclosingProtocol = ::fidl_test_protocols::ManyParameters;
+
+  using FifteenCompleter = ::fidl::internal::WireCompleter<
+      ::fidl_test_protocols::ManyParameters::Fifteen>;
+  using FifteenRequestView = ::fidl::internal::WireRequestView<
+      ::fidl_test_protocols::ManyParameters::Fifteen>;
+
+  virtual void Fifteen(FifteenRequestView request,
+                       FifteenCompleter::Sync& _completer) = 0;
+
+ private:
+  ::fidl::DispatchResult dispatch_message(::fidl::IncomingMessage&& msg,
+                                          ::fidl::Transaction* txn) final;
+};
+#endif  // __Fuchsia__
+
+namespace fidl_test_protocols {
+__LOCAL extern "C" const fidl_type_t
     fidl_test_protocols_WithErrorSyntaxResponseAsStructRequestTable;
 
 __LOCAL extern "C" const fidl_type_t
@@ -15809,6 +16280,80 @@ static_assert(
 #endif  // __Fuchsia__
 
 template <>
+struct IsFidlType<
+    ::fidl::WireRequest<::fidl_test_protocols::ManyParameters::Fifteen>>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<
+    ::fidl::WireRequest<::fidl_test_protocols::ManyParameters::Fifteen>>
+    : public std::true_type {};
+static_assert(
+    sizeof(
+        ::fidl::WireRequest<::fidl_test_protocols::ManyParameters::Fifteen>) ==
+    ::fidl::WireRequest<
+        ::fidl_test_protocols::ManyParameters::Fifteen>::PrimarySize);
+static_assert(
+    offsetof(
+        ::fidl::WireRequest<::fidl_test_protocols::ManyParameters::Fifteen>,
+        p1) == 16);
+static_assert(
+    offsetof(
+        ::fidl::WireRequest<::fidl_test_protocols::ManyParameters::Fifteen>,
+        p2) == 17);
+static_assert(
+    offsetof(
+        ::fidl::WireRequest<::fidl_test_protocols::ManyParameters::Fifteen>,
+        p3) == 18);
+static_assert(
+    offsetof(
+        ::fidl::WireRequest<::fidl_test_protocols::ManyParameters::Fifteen>,
+        p4) == 19);
+static_assert(
+    offsetof(
+        ::fidl::WireRequest<::fidl_test_protocols::ManyParameters::Fifteen>,
+        p5) == 20);
+static_assert(
+    offsetof(
+        ::fidl::WireRequest<::fidl_test_protocols::ManyParameters::Fifteen>,
+        p6) == 21);
+static_assert(
+    offsetof(
+        ::fidl::WireRequest<::fidl_test_protocols::ManyParameters::Fifteen>,
+        p7) == 22);
+static_assert(
+    offsetof(
+        ::fidl::WireRequest<::fidl_test_protocols::ManyParameters::Fifteen>,
+        p8) == 23);
+static_assert(
+    offsetof(
+        ::fidl::WireRequest<::fidl_test_protocols::ManyParameters::Fifteen>,
+        p9) == 24);
+static_assert(
+    offsetof(
+        ::fidl::WireRequest<::fidl_test_protocols::ManyParameters::Fifteen>,
+        p10) == 25);
+static_assert(
+    offsetof(
+        ::fidl::WireRequest<::fidl_test_protocols::ManyParameters::Fifteen>,
+        p11) == 26);
+static_assert(
+    offsetof(
+        ::fidl::WireRequest<::fidl_test_protocols::ManyParameters::Fifteen>,
+        p12) == 27);
+static_assert(
+    offsetof(
+        ::fidl::WireRequest<::fidl_test_protocols::ManyParameters::Fifteen>,
+        p13) == 28);
+static_assert(
+    offsetof(
+        ::fidl::WireRequest<::fidl_test_protocols::ManyParameters::Fifteen>,
+        p14) == 29);
+static_assert(
+    offsetof(
+        ::fidl::WireRequest<::fidl_test_protocols::ManyParameters::Fifteen>,
+        p15) == 30);
+
+template <>
 struct IsFidlType<::fidl_test_protocols::wire::ErrorEnum>
     : public std::true_type {};
 
@@ -16982,6 +17527,84 @@ class ::fidl::internal::WireWeakEventSender<
 
   std::weak_ptr<::fidl::internal::AsyncServerBinding<
       ::fidl_test_protocols::WithProtocolEnds>>
+      binding_;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+class ::fidl::internal::WireClientImpl<::fidl_test_protocols::ManyParameters>
+    final : public ::fidl::internal::ClientBase {
+ public:
+  // Allocates 32 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl::Result Fifteen(bool p1, bool p2, bool p3, bool p4, bool p5, bool p6,
+                         bool p7, bool p8, bool p9, bool p10, bool p11,
+                         bool p12, bool p13, bool p14, bool p15);
+
+  // Caller provides the backing storage for FIDL message via request buffer.
+  ::fidl::Result Fifteen(::fidl::BufferSpan _request_buffer, bool p1, bool p2,
+                         bool p3, bool p4, bool p5, bool p6, bool p7, bool p8,
+                         bool p9, bool p10, bool p11, bool p12, bool p13,
+                         bool p14, bool p15);
+
+  WireClientImpl() = default;
+
+ private:
+  std::optional<::fidl::UnbindInfo> DispatchEvent(
+      ::fidl::IncomingMessage& msg,
+      ::fidl::internal::AsyncEventHandler* maybe_event_handler) override;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+// |EventSender| owns a server endpoint of a channel speaking
+// the ManyParameters protocol, and can send events in that protocol.
+template <>
+class ::fidl::WireEventSender<::fidl_test_protocols::ManyParameters> {
+ public:
+  // Constructs an event sender with an invalid channel.
+  WireEventSender() = default;
+
+  explicit WireEventSender(
+      ::fidl::ServerEnd<::fidl_test_protocols::ManyParameters> server_end)
+      : server_end_(std::move(server_end)) {}
+
+  // The underlying server channel endpoint, which may be replaced at run-time.
+  const ::fidl::ServerEnd<::fidl_test_protocols::ManyParameters>& server_end()
+      const {
+    return server_end_;
+  }
+  ::fidl::ServerEnd<::fidl_test_protocols::ManyParameters>& server_end() {
+    return server_end_;
+  }
+
+  const ::zx::channel& channel() const { return server_end_.channel(); }
+  ::zx::channel& channel() { return server_end_.channel(); }
+
+  // Whether the underlying channel is valid.
+  bool is_valid() const { return server_end_.is_valid(); }
+
+ private:
+  ::fidl::ServerEnd<::fidl_test_protocols::ManyParameters> server_end_;
+};
+
+template <>
+class ::fidl::internal::WireWeakEventSender<
+    ::fidl_test_protocols::ManyParameters> {
+ public:
+ private:
+  friend class ::fidl::ServerBindingRef<::fidl_test_protocols::ManyParameters>;
+
+  explicit WireWeakEventSender(
+      std::weak_ptr<::fidl::internal::AsyncServerBinding<
+          ::fidl_test_protocols::ManyParameters>>
+          binding)
+      : binding_(std::move(binding)) {}
+
+  std::weak_ptr<::fidl::internal::AsyncServerBinding<
+      ::fidl_test_protocols::ManyParameters>>
       binding_;
 };
 #endif  // __Fuchsia__

@@ -855,6 +855,9 @@ func (c *compiler) compileParameterArray(payload fidlgen.EncodedCompoundIdentifi
 	return parameters
 }
 
+// TODO(fxbug.dev/76655): Remove this.
+const maximumAllowedParameters = 12
+
 func (c *compiler) compileProtocol(val fidlgen.Protocol) Protocol {
 	r := Protocol{
 		Protocol:    val,
@@ -865,6 +868,13 @@ func (c *compiler) compileProtocol(val fidlgen.Protocol) Protocol {
 	}
 
 	for _, v := range val.Methods {
+		if len(v.Request) > maximumAllowedParameters {
+			panic(fmt.Sprintf(
+				`Method %s.%s has %d parameters, but the FIDL Rust bindings `+
+					`only support up to %d. See https://fxbug.dev/76655 for details.`,
+				val.Name, v.Name, len(v.Request), maximumAllowedParameters))
+		}
+
 		name := compileSnakeIdentifier(v.Name)
 		camelName := compileCamelIdentifier(v.Name)
 		var foundResult *Result

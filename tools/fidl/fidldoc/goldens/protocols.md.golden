@@ -193,6 +193,95 @@
             </td>
         </tr></table>
 
+## ManyParameters {#ManyParameters}
+*Defined in [fidl.test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=161)*
+
+
+### Fifteen {#ManyParameters.Fifteen}
+
+
+#### Request {#ManyParameters.Fifteen_Request}
+<table>
+    <tr><th>Name</th><th>Type</th></tr>
+    <tr>
+            <td><code>p1</code></td>
+            <td>
+                <code>bool</code>
+            </td>
+        </tr><tr>
+            <td><code>p2</code></td>
+            <td>
+                <code>bool</code>
+            </td>
+        </tr><tr>
+            <td><code>p3</code></td>
+            <td>
+                <code>bool</code>
+            </td>
+        </tr><tr>
+            <td><code>p4</code></td>
+            <td>
+                <code>bool</code>
+            </td>
+        </tr><tr>
+            <td><code>p5</code></td>
+            <td>
+                <code>bool</code>
+            </td>
+        </tr><tr>
+            <td><code>p6</code></td>
+            <td>
+                <code>bool</code>
+            </td>
+        </tr><tr>
+            <td><code>p7</code></td>
+            <td>
+                <code>bool</code>
+            </td>
+        </tr><tr>
+            <td><code>p8</code></td>
+            <td>
+                <code>bool</code>
+            </td>
+        </tr><tr>
+            <td><code>p9</code></td>
+            <td>
+                <code>bool</code>
+            </td>
+        </tr><tr>
+            <td><code>p10</code></td>
+            <td>
+                <code>bool</code>
+            </td>
+        </tr><tr>
+            <td><code>p11</code></td>
+            <td>
+                <code>bool</code>
+            </td>
+        </tr><tr>
+            <td><code>p12</code></td>
+            <td>
+                <code>bool</code>
+            </td>
+        </tr><tr>
+            <td><code>p13</code></td>
+            <td>
+                <code>bool</code>
+            </td>
+        </tr><tr>
+            <td><code>p14</code></td>
+            <td>
+                <code>bool</code>
+            </td>
+        </tr><tr>
+            <td><code>p15</code></td>
+            <td>
+                <code>bool</code>
+            </td>
+        </tr></table>
+
+
+
 ## SyscallProtocol {#SyscallProtocol}
 *Defined in [fidl.test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=91)*
 

@@ -3437,6 +3437,161 @@ void ::fidl::WireResponse<::fidl_test_protocols::WithProtocolEnds::
 
 #endif  // __Fuchsia__
 
+namespace fidl_test_protocols {
+[[maybe_unused]] constexpr uint64_t kManyParameters_Fifteen_Ordinal =
+    2979943048488637411lu;
+
+extern "C" const fidl_type_t
+    fidl_test_protocols_ManyParametersFifteenRequestTable;
+
+extern "C" const fidl_type_t
+    fidl_test_protocols_ManyParametersFifteenResponseTable;
+#ifdef __Fuchsia__
+}  // namespace fidl_test_protocols
+::fidl::WireResult<::fidl_test_protocols::ManyParameters::Fifteen>::WireResult(
+    ::fidl::UnownedClientEnd<::fidl_test_protocols::ManyParameters> _client,
+    bool p1, bool p2, bool p3, bool p4, bool p5, bool p6, bool p7, bool p8,
+    bool p9, bool p10, bool p11, bool p12, bool p13, bool p14, bool p15) {
+  ::fidl::OwnedEncodedMessage<
+      ::fidl::WireRequest<::fidl_test_protocols::ManyParameters::Fifteen>>
+      _request(::fidl::internal::AllowUnownedInputRef{}, zx_txid_t(0), p1, p2,
+               p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15);
+  auto& _outgoing = _request.GetOutgoingMessage();
+  _outgoing.Write(_client);
+  SetResult(_outgoing);
+}
+namespace fidl_test_protocols {
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+}  // namespace fidl_test_protocols
+::fidl::WireUnownedResult<::fidl_test_protocols::ManyParameters::Fifteen>::
+    WireUnownedResult(
+        ::fidl::UnownedClientEnd<::fidl_test_protocols::ManyParameters> _client,
+        uint8_t* _request_bytes, uint32_t _request_byte_capacity, bool p1,
+        bool p2, bool p3, bool p4, bool p5, bool p6, bool p7, bool p8, bool p9,
+        bool p10, bool p11, bool p12, bool p13, bool p14, bool p15) {
+  ::fidl::UnownedEncodedMessage<
+      ::fidl::WireRequest<::fidl_test_protocols::ManyParameters::Fifteen>>
+      _request(_request_bytes, _request_byte_capacity, zx_txid_t(0), p1, p2, p3,
+               p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15);
+  auto& _outgoing = _request.GetOutgoingMessage();
+  _outgoing.Write(_client);
+  ::fidl::Result::operator=(_outgoing);
+}
+namespace fidl_test_protocols {
+#endif  // __Fuchsia__
+
+}  // namespace fidl_test_protocols
+#ifdef __Fuchsia__
+::fidl::Result
+fidl::internal::WireClientImpl<::fidl_test_protocols::ManyParameters>::Fifteen(
+    bool p1, bool p2, bool p3, bool p4, bool p5, bool p6, bool p7, bool p8,
+    bool p9, bool p10, bool p11, bool p12, bool p13, bool p14, bool p15) {
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
+    auto _res =
+        ::fidl::WireResult<::fidl_test_protocols::ManyParameters::Fifteen>(
+            ::fidl::UnownedClientEnd<::fidl_test_protocols::ManyParameters>(
+                _channel->handle()),
+            p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14, p15);
+    return _res;
+  }
+  return ::fidl::Result::Unbound();
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+::fidl::Result
+fidl::internal::WireClientImpl<::fidl_test_protocols::ManyParameters>::Fifteen(
+    ::fidl::BufferSpan _request_buffer, bool p1, bool p2, bool p3, bool p4,
+    bool p5, bool p6, bool p7, bool p8, bool p9, bool p10, bool p11, bool p12,
+    bool p13, bool p14, bool p15) {
+  if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
+    auto _res = ::fidl::WireUnownedResult<
+        ::fidl_test_protocols::ManyParameters::Fifteen>(
+        ::fidl::UnownedClientEnd<::fidl_test_protocols::ManyParameters>(
+            _channel->handle()),
+        _request_buffer.data, _request_buffer.capacity, p1, p2, p3, p4, p5, p6,
+        p7, p8, p9, p10, p11, p12, p13, p14, p15);
+    return _res;
+  }
+  return ::fidl::Result::Unbound();
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+std::optional<::fidl::UnbindInfo> fidl::internal::
+    WireClientImpl<::fidl_test_protocols::ManyParameters>::DispatchEvent(
+        fidl::IncomingMessage& msg,
+        ::fidl::internal::AsyncEventHandler* maybe_event_handler) {
+  return ::fidl::UnbindInfo::UnknownOrdinal();
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+::fidl::DispatchResult fidl::internal::
+    WireServerDispatcher<::fidl_test_protocols::ManyParameters>::TryDispatch(
+        ::fidl::WireServer<::fidl_test_protocols::ManyParameters>* impl,
+        ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn) {
+  static const ::fidl::internal::MethodEntry entries[] = {
+      {
+          ::fidl_test_protocols::kManyParameters_Fifteen_Ordinal,
+          [](void* interface, ::fidl::IncomingMessage&& msg,
+             ::fidl::Transaction* txn) {
+            ::fidl::DecodedMessage<::fidl::WireRequest<
+                ::fidl_test_protocols::ManyParameters::Fifteen>>
+                decoded{std::move(msg)};
+            if (unlikely(!decoded.ok())) {
+              return decoded.status();
+            }
+            auto* primary = decoded.PrimaryObject();
+            ::fidl::internal::WireCompleter<
+                ::fidl_test_protocols::ManyParameters::Fifteen>::Sync
+                completer(txn);
+            reinterpret_cast<
+                ::fidl::WireServer<::fidl_test_protocols::ManyParameters>*>(
+                interface)
+                ->Fifteen(primary, completer);
+            return ZX_OK;
+          },
+      },
+  };
+  return ::fidl::internal::TryDispatch(
+      impl, msg, txn, entries,
+      entries + sizeof(entries) / sizeof(::fidl::internal::MethodEntry));
+}
+
+::fidl::DispatchResult fidl::internal::
+    WireServerDispatcher<::fidl_test_protocols::ManyParameters>::Dispatch(
+        ::fidl::WireServer<::fidl_test_protocols::ManyParameters>* impl,
+        ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
+  ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
+  if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
+    std::move(msg).CloseHandles();
+    txn->InternalError(::fidl::UnbindInfo::UnknownOrdinal());
+  }
+  return dispatch_result;
+}
+::fidl::DispatchResult
+fidl::WireServer<::fidl_test_protocols::ManyParameters>::dispatch_message(
+    fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
+  return ::fidl::internal::WireServerDispatcher<
+      ::fidl_test_protocols::ManyParameters>::Dispatch(this, std::move(msg),
+                                                       txn);
+}
+#endif  // __Fuchsia__
+
+void ::fidl::WireRequest<::fidl_test_protocols::ManyParameters::Fifteen>::
+    _InitHeader(zx_txid_t _txid) {
+  fidl_init_txn_header(&_hdr, _txid,
+                       ::fidl_test_protocols::kManyParameters_Fifteen_Ordinal);
+}
+
+#ifdef __Fuchsia__
+
+#endif  // __Fuchsia__
+
 void ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResult::
     SizeAndOffsetAssertionHelper() {
   static_assert(sizeof(WithErrorSyntaxErrorAsEnumResult) ==

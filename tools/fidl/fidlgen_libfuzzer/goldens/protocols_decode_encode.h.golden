@@ -9,7 +9,7 @@
 
 namespace fuzzing {
 
-inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 49>
+inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 50>
     fidl_test_protocols_decoder_encoders = {
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::fidl_test_protocols::wire::"
@@ -283,6 +283,15 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 49>
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
                 ::fidl::WireResponse<::fidl_test_protocols::WithProtocolEnds::
                                          StructContainingEnds>>,
+        },
+
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "::fidl::WireRequest<::fidl_test_protocols::"
+                              "ManyParameters::Fifteen>",
+            .has_flexible_envelope = false,
+            .decoder_encoder =
+                ::fidl::fuzzing::DecoderEncoderImpl<::fidl::WireRequest<
+                    ::fidl_test_protocols::ManyParameters::Fifteen>>,
         },
 
         ::fidl::fuzzing::DecoderEncoderForType{

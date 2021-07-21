@@ -100,6 +100,18 @@ class WithProtocolEnds_TestBase
   }
 };
 
+class ManyParameters_TestBase
+    : public ::fidl::WireServer<::fidl_test_protocols::ManyParameters> {
+ public:
+  virtual ~ManyParameters_TestBase() {}
+  virtual void NotImplemented_(const std::string& name,
+                               ::fidl::CompleterBase& completer) = 0;
+  virtual void Fifteen(FifteenRequestView request,
+                       FifteenCompleter::Sync& _completer) override {
+    NotImplemented_("Fifteen", _completer);
+  }
+};
+
 class WithErrorSyntax_TestBase
     : public ::fidl::WireServer<::fidl_test_protocols::WithErrorSyntax> {
  public:

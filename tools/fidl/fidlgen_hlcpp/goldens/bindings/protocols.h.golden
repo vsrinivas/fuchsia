@@ -129,6 +129,12 @@ class WithProtocolEnds;
 using WithProtocolEndsHandle = ::fidl::InterfaceHandle<WithProtocolEnds>;
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
+
+class ManyParameters;
+using ManyParametersHandle = ::fidl::InterfaceHandle<ManyParameters>;
+#endif  // __Fuchsia__
+
 enum class ErrorEnum : uint32_t {
 
   ERR_FOO = 1u,
@@ -1312,6 +1318,68 @@ class WithProtocolEnds_ResponseEncoder {
         _encoder->CurrentHandleCount());
     return _encoder->GetMessage();
   }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+namespace _internal {
+__LOCAL extern "C" const fidl_type_t
+    fidl_test_protocols_ManyParametersFifteenRequestTable;
+
+}  // namespace _internal
+class ManyParameters_RequestEncoder {
+ public:
+  static ::fidl::HLCPPOutgoingMessage Fifteen(::fidl::Encoder* _encoder,
+                                              bool* p1, bool* p2, bool* p3,
+                                              bool* p4, bool* p5, bool* p6,
+                                              bool* p7, bool* p8, bool* p9,
+                                              bool* p10, bool* p11, bool* p12,
+                                              bool* p13, bool* p14, bool* p15) {
+    fidl_trace(WillHLCPPEncode);
+    _encoder->Alloc(32 - sizeof(fidl_message_header_t));
+    ::fidl::Encode(_encoder, p1, 16);
+
+    ::fidl::Encode(_encoder, p2, 17);
+
+    ::fidl::Encode(_encoder, p3, 18);
+
+    ::fidl::Encode(_encoder, p4, 19);
+
+    ::fidl::Encode(_encoder, p5, 20);
+
+    ::fidl::Encode(_encoder, p6, 21);
+
+    ::fidl::Encode(_encoder, p7, 22);
+
+    ::fidl::Encode(_encoder, p8, 23);
+
+    ::fidl::Encode(_encoder, p9, 24);
+
+    ::fidl::Encode(_encoder, p10, 25);
+
+    ::fidl::Encode(_encoder, p11, 26);
+
+    ::fidl::Encode(_encoder, p12, 27);
+
+    ::fidl::Encode(_encoder, p13, 28);
+
+    ::fidl::Encode(_encoder, p14, 29);
+
+    ::fidl::Encode(_encoder, p15, 30);
+
+    fidl_trace(DidHLCPPEncode,
+               &::fidl::test::protocols::_internal::
+                   fidl_test_protocols_ManyParametersFifteenRequestTable,
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
+
+    return _encoder->GetMessage();
+  }
+};
+
+class ManyParameters_ResponseEncoder {
+ public:
 };
 #endif  // __Fuchsia__
 
@@ -2530,6 +2598,21 @@ constexpr uint64_t kWithProtocolEnds_StructContainingEnds_Ordinal =
 
 #ifdef __Fuchsia__
 
+using ManyParametersPtr = ::fidl::InterfacePtr<ManyParameters>;
+class ManyParameters_Proxy;
+class ManyParameters_Stub;
+class ManyParameters_EventSender;
+class ManyParameters_Sync;
+using ManyParametersSyncPtr = ::fidl::SynchronousInterfacePtr<ManyParameters>;
+class ManyParameters_SyncProxy;
+
+namespace internal {
+constexpr uint64_t kManyParameters_Fifteen_Ordinal = 0x295ae26a080f53e3lu;
+}  // namespace internal
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 using WithErrorSyntaxPtr = ::fidl::InterfacePtr<WithErrorSyntax>;
 class WithErrorSyntax_Proxy;
 class WithErrorSyntax_Stub;
@@ -3091,6 +3174,104 @@ class WithProtocolEnds_SyncProxy
  private:
   ::fidl::internal::SynchronousProxy proxy_;
   friend class ::fidl::SynchronousInterfacePtr<WithProtocolEnds>;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+class ManyParameters {
+ public:
+  using Proxy_ = ::fidl::test::protocols::ManyParameters_Proxy;
+  using Stub_ = ::fidl::test::protocols::ManyParameters_Stub;
+  using EventSender_ = ::fidl::test::protocols::ManyParameters_EventSender;
+  using Sync_ = ::fidl::test::protocols::ManyParameters_Sync;
+  virtual ~ManyParameters();
+
+  virtual void Fifteen(bool p1, bool p2, bool p3, bool p4, bool p5, bool p6,
+                       bool p7, bool p8, bool p9, bool p10, bool p11, bool p12,
+                       bool p13, bool p14, bool p15) = 0;
+};
+
+class ManyParameters_RequestDecoder {
+ public:
+  ManyParameters_RequestDecoder() = default;
+  virtual ~ManyParameters_RequestDecoder() = default;
+  static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
+  virtual void Fifteen(bool p1, bool p2, bool p3, bool p4, bool p5, bool p6,
+                       bool p7, bool p8, bool p9, bool p10, bool p11, bool p12,
+                       bool p13, bool p14, bool p15) = 0;
+};
+
+class ManyParameters_ResponseDecoder {
+ public:
+  ManyParameters_ResponseDecoder() = default;
+  virtual ~ManyParameters_ResponseDecoder() = default;
+  static const fidl_type_t* GetType(uint64_t ordinal);
+};
+
+class ManyParameters_EventSender {
+ public:
+  virtual ~ManyParameters_EventSender();
+};
+
+class ManyParameters_Sync {
+ public:
+  using Proxy_ = ::fidl::test::protocols::ManyParameters_SyncProxy;
+  virtual ~ManyParameters_Sync();
+  virtual zx_status_t Fifteen(bool p1, bool p2, bool p3, bool p4, bool p5,
+                              bool p6, bool p7, bool p8, bool p9, bool p10,
+                              bool p11, bool p12, bool p13, bool p14,
+                              bool p15) = 0;
+};
+
+class ManyParameters_Proxy final : public ::fidl::internal::Proxy,
+                                   public ManyParameters {
+ public:
+  explicit ManyParameters_Proxy(::fidl::internal::ProxyController* controller);
+  ~ManyParameters_Proxy() override;
+
+  zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
+  void Fifteen(bool p1, bool p2, bool p3, bool p4, bool p5, bool p6, bool p7,
+               bool p8, bool p9, bool p10, bool p11, bool p12, bool p13,
+               bool p14, bool p15) override;
+
+ private:
+  ManyParameters_Proxy(const ::fidl::test::protocols::ManyParameters_Proxy&) =
+      delete;
+  ManyParameters_Proxy& operator=(
+      const ::fidl::test::protocols::ManyParameters_Proxy&) = delete;
+
+  ::fidl::internal::ProxyController* controller_;
+};
+
+class ManyParameters_Stub final
+    : public ::fidl::internal::Stub,
+      public ::fidl::test::protocols::ManyParameters_EventSender {
+ public:
+  typedef class ::fidl::test::protocols::ManyParameters ManyParameters_clazz;
+  explicit ManyParameters_Stub(
+      ::fidl::test::protocols::ManyParameters_Stub::ManyParameters_clazz* impl);
+  ~ManyParameters_Stub() override;
+
+  zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message,
+                        ::fidl::internal::PendingResponse response) override;
+
+ private:
+  ::fidl::test::protocols::ManyParameters_Stub::ManyParameters_clazz* impl_;
+};
+
+class ManyParameters_SyncProxy
+    : public ::fidl::test::protocols::ManyParameters_Sync {
+ public:
+  explicit ManyParameters_SyncProxy(::zx::channel channel);
+  ~ManyParameters_SyncProxy() override;
+  zx_status_t Fifteen(bool p1, bool p2, bool p3, bool p4, bool p5, bool p6,
+                      bool p7, bool p8, bool p9, bool p10, bool p11, bool p12,
+                      bool p13, bool p14, bool p15) override;
+
+ private:
+  ::fidl::internal::SynchronousProxy proxy_;
+  friend class ::fidl::SynchronousInterfacePtr<ManyParameters>;
 };
 #endif  // __Fuchsia__
 
