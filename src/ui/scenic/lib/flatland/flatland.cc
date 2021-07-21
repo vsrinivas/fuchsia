@@ -27,7 +27,7 @@ using fuchsia::math::Vec;
 using fuchsia::ui::composition::ContentLink;
 using fuchsia::ui::composition::ContentLinkStatus;
 using fuchsia::ui::composition::ContentLinkToken;
-using fuchsia::ui::composition::Error;
+using fuchsia::ui::composition::FlatlandError;
 using fuchsia::ui::composition::GraphLink;
 using fuchsia::ui::composition::GraphLinkToken;
 using fuchsia::ui::composition::ImageProperties;
@@ -94,13 +94,13 @@ void Flatland::Present(fuchsia::ui::composition::PresentArgs args) {
   ++present_count_;
   // Close any clients that had invalid operations on link protocols.
   if (link_protocol_error_) {
-    CloseConnection(Error::BAD_HANGING_GET);
+    CloseConnection(FlatlandError::BAD_HANGING_GET);
     return;
   }
 
   // Close any clients that call Present() without any present tokens.
   if (present_credits_ == 0) {
-    CloseConnection(Error::NO_PRESENTS_REMAINING);
+    CloseConnection(FlatlandError::NO_PRESENTS_REMAINING);
     return;
   }
   present_credits_--;
@@ -130,7 +130,7 @@ void Flatland::Present(fuchsia::ui::composition::PresentArgs args) {
   failure_since_previous_present_ |= !data.cyclical_edges.empty();
 
   if (failure_since_previous_present_) {
-    CloseConnection(Error::BAD_OPERATION);
+    CloseConnection(FlatlandError::BAD_OPERATION);
     return;
   }
 
@@ -1016,7 +1016,7 @@ void Flatland::ReportLinkProtocolError(const std::string& error_log) {
   link_protocol_error_ = true;
 }
 
-void Flatland::CloseConnection(Error error) {
+void Flatland::CloseConnection(FlatlandError error) {
   // Send the error to the client before closing the connection.
   binding_.events().OnError(error);
 

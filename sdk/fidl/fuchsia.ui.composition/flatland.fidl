@@ -9,7 +9,7 @@ using zx;
 
 /// The set of error codes returned in [`OnNextFrameBegin`]. Everything except NO_ERROR, causes
 /// Flatland channel to be closed.
-type Error = strict enum {
+type FlatlandError = strict enum {
     /// Indicates that the parameters used the function calls are invalid.
     BAD_OPERATION = 1;
     /// Indicates that `additional_present_credits` field was not properly processed and the client
@@ -297,12 +297,12 @@ protocol Flatland {
     /// If an error occurrs after a [`Present`], an `OnError` event will fire
     /// with associated information.
     ///
-    /// Errors will close the connection with the client.
+    /// FlatlandErrors will close the connection with the client.
     ///
     /// - response `error` the error a client may receive after performing some
     /// invalid operations.
     -> OnError(struct {
-        error Error;
+        error FlatlandError;
     });
 
     // ***** Graph management *****

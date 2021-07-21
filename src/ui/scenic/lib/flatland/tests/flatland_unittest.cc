@@ -58,7 +58,7 @@ using fuchsia::ui::composition::ContentId;
 using fuchsia::ui::composition::ContentLink;
 using fuchsia::ui::composition::ContentLinkStatus;
 using fuchsia::ui::composition::ContentLinkToken;
-using fuchsia::ui::composition::Error;
+using fuchsia::ui::composition::FlatlandError;
 using fuchsia::ui::composition::GraphLink;
 using fuchsia::ui::composition::GraphLinkStatus;
 using fuchsia::ui::composition::GraphLinkToken;
@@ -95,7 +95,7 @@ struct PresentArgs {
 
   // If PRESENT_WITH_ARGS is called with |expect_success| = false, the error that should be
   // expected as the return value from Present().
-  Error expected_error = Error::BAD_OPERATION;
+  FlatlandError expected_error = FlatlandError::BAD_OPERATION;
 };
 
 struct GlobalIdPair {
@@ -498,12 +498,14 @@ class FlatlandTest : public gtest::TestLoopFixture {
     return {.collection_id = koid, .image_id = global_image_id};
   }
 
-  // Returns Error code passed returned to OnNextFrameBegin() for |flatland|.
-  Error GetPresentError(scheduling::SessionId session_id) { return flatland_errors_[session_id]; }
+  // Returns FlatlandError code passed returned to OnNextFrameBegin() for |flatland|.
+  FlatlandError GetPresentError(scheduling::SessionId session_id) {
+    return flatland_errors_[session_id];
+  }
 
   void RegisterPresentError(fuchsia::ui::composition::FlatlandPtr& flatland_channel,
                             scheduling::SessionId session_id) {
-    flatland_channel.events().OnError = [this, session_id](Error error) {
+    flatland_channel.events().OnError = [this, session_id](FlatlandError error) {
       flatland_errors_[session_id] = error;
     };
   }
@@ -520,7 +522,7 @@ class FlatlandTest : public gtest::TestLoopFixture {
  private:
   std::vector<fuchsia::ui::composition::FlatlandPtr> flatlands_;
   std::vector<fuchsia::ui::composition::FlatlandDisplayPtr> flatland_displays_;
-  std::unordered_map<scheduling::SessionId, Error> flatland_errors_;
+  std::unordered_map<scheduling::SessionId, FlatlandError> flatland_errors_;
   glm::vec2 display_pixel_scale_ = kDefaultPixelScale;
 
   // Storage for |mock_flatland_presenter_|.
@@ -553,7 +555,7 @@ TEST_F(FlatlandTest, PresentErrorNoTokens) {
   // Present again, which should fail because the client has no tokens.
   {
     PresentArgs args;
-    args.expected_error = Error::NO_PRESENTS_REMAINING;
+    args.expected_error = FlatlandError::NO_PRESENTS_REMAINING;
     PRESENT_WITH_ARGS(flatland, std::move(args), false);
   }
 }
@@ -582,7 +584,7 @@ TEST_F(FlatlandTest, MultiplePresentTokensAvailable) {
   // A third Present() will fail since the previous two calls consumed the two tokens.
   {
     PresentArgs args;
-    args.expected_error = Error::NO_PRESENTS_REMAINING;
+    args.expected_error = FlatlandError::NO_PRESENTS_REMAINING;
     PRESENT_WITH_ARGS(flatland, std::move(args), false);
   }
 }
@@ -1806,7 +1808,7 @@ TEST_F(FlatlandTest, OverwrittenHangingGetsReturnError) {
 
   // Present should fail on child because the client has broken flow control.
   PresentArgs args;
-  args.expected_error = Error::BAD_HANGING_GET;
+  args.expected_error = FlatlandError::BAD_HANGING_GET;
   PRESENT_WITH_ARGS(child, std::move(args), false);
 }
 
@@ -1879,7 +1881,7 @@ TEST_F(FlatlandTest, HangingGetsReturnOnCorrectDispatcher) {
   fuchsia::ui::composition::PresentArgs present_args;
   child->Present(std::move(present_args));
   EXPECT_TRUE(child_loop.RunUntilIdle());
-  EXPECT_EQ(GetPresentError(child->GetSessionId()), Error::BAD_HANGING_GET);
+  EXPECT_EQ(GetPresentError(child->GetSessionId()), FlatlandError::BAD_HANGING_GET);
 
   // Cleanup. We need to run link_invalidated tasks on these loopers to clear the topology.
   parent.reset();

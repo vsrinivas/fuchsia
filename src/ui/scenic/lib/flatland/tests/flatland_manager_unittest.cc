@@ -23,8 +23,8 @@ using flatland::FlatlandPresenter;
 using flatland::LinkSystem;
 using flatland::MockFlatlandPresenter;
 using flatland::UberStructSystem;
-using fuchsia::ui::composition::Error;
 using fuchsia::ui::composition::Flatland;
+using fuchsia::ui::composition::FlatlandError;
 using fuchsia::ui::composition::OnNextFrameBeginValues;
 
 // These macros works like functions that check a variety of conditions, but if those conditions
@@ -461,9 +461,9 @@ TEST_F(FlatlandManagerTest, PresentWithoutTokensClosesSession) {
   fidl::InterfacePtr<fuchsia::ui::composition::Flatland> flatland = CreateFlatland();
   const scheduling::SessionId id = uber_struct_system_->GetLatestInstanceId();
 
-  Error error_returned;
+  FlatlandError error_returned;
   uint32_t tokens_remaining = 1;
-  flatland.events().OnError = [&error_returned](Error error) { error_returned = error; };
+  flatland.events().OnError = [&error_returned](FlatlandError error) { error_returned = error; };
 
   flatland.events().OnNextFrameBegin = [&tokens_remaining](OnNextFrameBeginValues values) {
     tokens_remaining += values.additional_present_credits();
@@ -489,7 +489,7 @@ TEST_F(FlatlandManagerTest, PresentWithoutTokensClosesSession) {
   // the destroy_instance_function() posts a task from the worker to the main and that task
   // ultimately posts the destruction back onto the worker.
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&flatland]() { return !flatland.is_bound(); }));
-  EXPECT_EQ(error_returned, Error::NO_PRESENTS_REMAINING);
+  EXPECT_EQ(error_returned, FlatlandError::NO_PRESENTS_REMAINING);
 }
 
 TEST_F(FlatlandManagerTest, ErrorClosesSession) {
@@ -497,9 +497,9 @@ TEST_F(FlatlandManagerTest, ErrorClosesSession) {
   fidl::InterfacePtr<fuchsia::ui::composition::Flatland> flatland = CreateFlatland();
   const scheduling::SessionId id = uber_struct_system_->GetLatestInstanceId();
 
-  Error error_returned;
+  FlatlandError error_returned;
   uint32_t tokens_remaining = 1;
-  flatland.events().OnError = [&error_returned](Error error) { error_returned = error; };
+  flatland.events().OnError = [&error_returned](FlatlandError error) { error_returned = error; };
 
   flatland.events().OnNextFrameBegin = [&tokens_remaining](OnNextFrameBeginValues values) {
     tokens_remaining += values.additional_present_credits();
@@ -519,7 +519,7 @@ TEST_F(FlatlandManagerTest, ErrorClosesSession) {
   // the destroy_instance_function() posts a task from the worker to the main and that task
   // ultimately posts the destruction back onto the worker.
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&flatland]() { return !flatland.is_bound(); }));
-  EXPECT_EQ(error_returned, Error::BAD_OPERATION);
+  EXPECT_EQ(error_returned, FlatlandError::BAD_OPERATION);
 }
 
 TEST_F(FlatlandManagerTest, TokensAreReplenishedAfterRunningOut) {

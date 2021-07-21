@@ -171,7 +171,7 @@ class Flatland : public fuchsia::ui::composition::Flatland,
 
   void ReportBadOperationError();
   void ReportLinkProtocolError(const std::string& error_log);
-  void CloseConnection(fuchsia::ui::composition::Error error);
+  void CloseConnection(fuchsia::ui::composition::FlatlandError error);
 
   // The dispatcher this Flatland instance is running on.
   async_dispatcher_t* dispatcher() const { return dispatcher_holder_->dispatcher(); }

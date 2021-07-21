@@ -64,7 +64,7 @@ fn hsv_to_rgba(h: f32, s: f32, v: f32) -> [u8; 4] {
 enum MessageInternal {
     CreateView(fland::GraphLinkToken, fviews::ViewRefControl, fviews::ViewRef),
     OnPresentError {
-        error: fland::Error,
+        error: fland::FlatlandError,
     },
     OnNextFrameBegin {
         additional_present_credits: u32,

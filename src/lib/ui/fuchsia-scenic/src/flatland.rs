@@ -7,10 +7,10 @@ use {anyhow::Error, fuchsia_zircon as zx};
 pub use {
     fidl_fuchsia_scenic_scheduling::PresentationInfo,
     fidl_fuchsia_ui_composition::{
-        ContentId, ContentLinkMarker, ContentLinkToken, Error as FlatlandError,
-        FlatlandDisplayMarker, FlatlandDisplayProxy, FlatlandEvent, FlatlandEventStream,
-        FlatlandMarker, FlatlandProxy, GraphLinkMarker, GraphLinkProxy, GraphLinkToken, LayoutInfo,
-        LinkProperties, PresentArgs, TransformId,
+        ContentId, ContentLinkMarker, ContentLinkToken, FlatlandDisplayMarker,
+        FlatlandDisplayProxy, FlatlandError, FlatlandEvent, FlatlandEventStream, FlatlandMarker,
+        FlatlandProxy, GraphLinkMarker, GraphLinkProxy, GraphLinkToken, LayoutInfo, LinkProperties,
+        PresentArgs, TransformId,
     },
 };
 
