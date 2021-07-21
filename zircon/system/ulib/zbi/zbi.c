@@ -8,38 +8,11 @@
 
 struct check_state {
   zbi_header_t** err;
-  bool seen_bootfs;
 };
 
 static bool is_zbi_container(const zbi_header_t* hdr) {
   return (hdr->type == ZBI_TYPE_CONTAINER) && (hdr->magic == ZBI_ITEM_MAGIC) &&
          (hdr->extra == ZBI_CONTAINER_MAGIC);
-}
-
-zbi_result_t zbi_init(void* buffer, const size_t length) {
-  if (!buffer) {
-    return ZBI_RESULT_ERROR;
-  }
-
-  if (length < sizeof(zbi_header_t)) {
-    return ZBI_RESULT_TOO_BIG;
-  }
-
-  if ((uintptr_t)buffer % ZBI_ALIGNMENT != 0) {
-    return ZBI_RESULT_BAD_ALIGNMENT;
-  }
-
-  zbi_header_t* hdr = (zbi_header_t*)buffer;
-  hdr->type = ZBI_TYPE_CONTAINER;
-  hdr->length = 0;
-  hdr->extra = ZBI_CONTAINER_MAGIC;
-  hdr->flags = ZBI_FLAG_VERSION;
-  hdr->reserved0 = 0;
-  hdr->reserved1 = 0;
-  hdr->magic = ZBI_ITEM_MAGIC;
-  hdr->crc32 = ZBI_ITEM_NO_CRC32;
-
-  return ZBI_RESULT_OK;
 }
 
 static zbi_result_t for_each_check_entry(zbi_header_t* hdr, void* payload, void* cookie) {
@@ -60,15 +33,10 @@ static zbi_result_t for_each_check_entry(zbi_header_t* hdr, void* payload, void*
     *state->err = hdr;
   }
 
-  if (hdr->type == ZBI_TYPE_STORAGE_BOOTFS) {
-    state->seen_bootfs = true;
-  }
-
   return result;
 }
 
-static zbi_result_t zbi_check_internal(const void* base, uint32_t check_complete,
-                                       zbi_header_t** err) {
+zbi_result_t zbi_check(const void* base, zbi_header_t** err) {
   if (!base) {
     return ZBI_RESULT_ERROR;
   }
@@ -99,44 +67,12 @@ static zbi_result_t zbi_check_internal(const void* base, uint32_t check_complete
   struct check_state state = {.err = err};
   res = zbi_for_each(base, for_each_check_entry, &state);
 
-  if (res == ZBI_RESULT_OK && check_complete != 0) {
-    if (header->length == 0) {
-      res = ZBI_RESULT_ERR_TRUNCATED;
-    } else if (header[1].type != check_complete) {
-      res = ZBI_RESULT_INCOMPLETE_KERNEL;
-      if (err) {
-        *err = (zbi_header_t*)(header + 1);
-      }
-    } else if (!state.seen_bootfs) {
-      res = ZBI_RESULT_INCOMPLETE_BOOTFS;
-      if (err) {
-        *err = (zbi_header_t*)header;
-      }
-    }
-  }
-
   if (err && res == ZBI_RESULT_ERR_TRUNCATED) {
     // A truncated image perhaps indicates a problem with the container?
     *err = (zbi_header_t*)header;
   }
 
   return res;
-}
-
-zbi_result_t zbi_check(const void* base, zbi_header_t** err) {
-  return zbi_check_internal(base, 0, err);
-}
-
-zbi_result_t zbi_check_complete(const void* base, zbi_header_t** err) {
-  return zbi_check_internal(base,
-#ifdef __aarch64__
-                            ZBI_TYPE_KERNEL_ARM64,
-#elif defined(__x86_64__) || defined(__i386__)
-                            ZBI_TYPE_KERNEL_X64,
-#else
-#error "what architecture?"
-#endif
-                            err);
 }
 
 zbi_result_t zbi_for_each(const void* base, const zbi_foreach_cb_t callback, void* cookie) {
@@ -237,45 +173,6 @@ zbi_result_t zbi_create_entry(void* base, size_t capacity, uint32_t type, uint32
     memset((uint8_t*)(hdr + 1) + hdr->length, 0, aligned_length - hdr->length);
     hdr->length = aligned_length;
   }
-
-  return ZBI_RESULT_OK;
-}
-
-zbi_result_t zbi_extend(void* dst_buffer, size_t capacity, const void* src_buffer) {
-  if (!dst_buffer || !src_buffer) {
-    return ZBI_RESULT_ERROR;
-  }
-
-  zbi_header_t* dst = (zbi_header_t*)dst_buffer;
-  zbi_header_t* src = (zbi_header_t*)src_buffer;
-
-  // Extend only works against two zbi containers, if you want to append a zbi
-  // section to the end of a container, use zbi_append_section instead.
-  if (!is_zbi_container(dst) || !is_zbi_container(src)) {
-    return ZBI_RESULT_BAD_TYPE;
-  }
-
-  // Make sure there's enough space in the destination buffer to contain the
-  // source.
-  const uint32_t dst_size = ZBI_ALIGN(dst->length + sizeof(*dst));
-
-  // This captures the situation where there's not even enough space to have
-  // padding between this section and the next.
-  if (dst_size > capacity) {
-    return ZBI_RESULT_TOO_BIG;
-  }
-
-  // This makes sure that there's enough space to perform the copy after
-  const uint32_t remaining_buffer = (uint32_t)capacity - dst_size;
-  if (remaining_buffer < src->length) {
-    return ZBI_RESULT_TOO_BIG;
-  }
-
-  // Okay everything looks good, let's do the copy.
-  memcpy(dst_buffer + dst_size, src_buffer + sizeof(*src), src->length);
-
-  // And patch up the length on the destination buffer's header.
-  dst->length += src->length;
 
   return ZBI_RESULT_OK;
 }

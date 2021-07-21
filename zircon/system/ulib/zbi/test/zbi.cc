@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 #include <assert.h>
-#include <lib/fit/defer.h>
 #include <lib/zbi/zbi.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -11,9 +10,7 @@
 #include <zircon/compiler.h>
 
 #include <cstring>
-#include <memory>
 
-#include <pretty/hexdump.h>
 #include <zxtest/zxtest.h>
 
 const char kTestKernel[] = "4567";
@@ -120,64 +117,6 @@ static uint8_t* get_test_zbi_extra(const size_t extra_bytes) {
 }
 
 static uint8_t* get_test_zbi() { return get_test_zbi_extra(0); }
-
-static zbi_result_t check_contents(zbi_header_t* hdr, void* payload, void* cookie) {
-  const char* expected = nullptr;
-  const char* actual = reinterpret_cast<const char*>(payload);
-
-  switch (hdr->type) {
-    case ZBI_TYPE_KERNEL_X64:
-    case ZBI_TYPE_KERNEL_ARM64:
-      expected = kTestKernel;
-      break;
-    case ZBI_TYPE_CMDLINE:
-      expected = kTestCmdline;
-      break;
-    case ZBI_TYPE_STORAGE_RAMDISK:
-      expected = kTestRD;
-      break;
-    case ZBI_TYPE_STORAGE_BOOTFS:
-      expected = kTestBootfs;
-      break;
-    default:
-      return ZBI_RESULT_ERROR;
-  }
-
-  int* itemsProcessed = reinterpret_cast<int*>(cookie);
-  (*itemsProcessed)++;
-
-  if (!strcmp(expected, actual)) {
-    return ZBI_RESULT_OK;
-  } else {
-    return ZBI_RESULT_ERROR;
-  }
-}
-
-TEST(ZbiTests, ZbiTestInit) {
-  alignas(ZBI_ALIGNMENT) uint8_t buffer[sizeof(zbi_header_t)];
-
-  ASSERT_EQ(zbi_init(buffer, sizeof(buffer)), ZBI_RESULT_OK);
-
-  auto* zbi = reinterpret_cast<zbi_header_t*>(buffer);
-  ASSERT_EQ(zbi->type, ZBI_TYPE_CONTAINER);
-}
-
-TEST(ZbiTests, ZbiTestInitTooSmall) {
-  alignas(ZBI_ALIGNMENT) uint8_t buffer[sizeof(zbi_header_t) - 1];
-
-  ASSERT_EQ(zbi_init(buffer, sizeof(buffer)), ZBI_RESULT_TOO_BIG);
-}
-
-TEST(ZbiTests, ZbiTestInitNotAligned) {
-  alignas(ZBI_ALIGNMENT) uint8_t buffer[sizeof(zbi_header_t) + 1];
-  void* misaligned_buffer = &buffer[1];
-
-  ASSERT_EQ(zbi_init(misaligned_buffer, sizeof(zbi_header_t)), ZBI_RESULT_BAD_ALIGNMENT);
-}
-
-TEST(ZbiTests, ZbiTestInitNullBuffer) {
-  ASSERT_EQ(zbi_init(nullptr, sizeof(zbi_header_t)), ZBI_RESULT_ERROR);
-}
 
 // TODO(fxbug.dev/52665): Consider pulling out the check logic into a common helper.
 TEST(ZbiTests, ZbiTestCheckEmptyContainer) {
@@ -320,66 +259,6 @@ TEST(ZbiTests, ZbiTestCheckTestZbiTruncated) {
   zbi->header.length = 1;
 
   ASSERT_EQ(zbi_check(zbi, nullptr), ZBI_RESULT_ERR_TRUNCATED);
-
-  free(zbi);
-}
-
-TEST(ZbiTests, ZbiTestCheckCompleteTestZbi) {
-  test_zbi_t* zbi = reinterpret_cast<test_zbi_t*>(get_test_zbi());
-
-  ASSERT_EQ(zbi_check_complete(zbi, nullptr), ZBI_RESULT_OK);
-
-  free(zbi);
-}
-
-TEST(ZbiTests, ZbiTestCheckCompleteTestZbiWithErr) {
-  test_zbi_t* zbi = reinterpret_cast<test_zbi_t*>(get_test_zbi());
-  zbi_header_t* err = nullptr;
-
-  EXPECT_EQ(zbi_check_complete(zbi, &err), ZBI_RESULT_OK);
-
-  ASSERT_EQ(err, nullptr);
-
-  free(zbi);
-}
-
-TEST(ZbiTests, ZbiTestCheckCompleteTestZbiNull) {
-  ASSERT_EQ(zbi_check_complete(nullptr, nullptr), ZBI_RESULT_ERROR);
-}
-
-TEST(ZbiTests, ZbiTestCheckCompleteTestZbiTruncated) {
-  zbi_header_t container = ZBI_CONTAINER_HEADER(0);
-  container.length = 0;
-
-  ASSERT_EQ(zbi_check_complete(&container, nullptr), ZBI_RESULT_ERR_TRUNCATED);
-}
-
-TEST(ZbiTests, ZbiTestCheckCompleteTestZbiWrongArch) {
-  test_zbi_t* zbi = reinterpret_cast<test_zbi_t*>(get_test_zbi());
-  zbi->kernel_hdr.type = 0;
-
-  ASSERT_EQ(zbi_check_complete(zbi, nullptr), ZBI_RESULT_INCOMPLETE_KERNEL);
-
-  free(zbi);
-}
-
-TEST(ZbiTests, ZbiTestCheckCompleteTestZbiWrongArchWithErr) {
-  test_zbi_t* zbi = reinterpret_cast<test_zbi_t*>(get_test_zbi());
-  zbi->kernel_hdr.type = 0;
-  zbi_header_t* err = nullptr;
-
-  EXPECT_EQ(zbi_check_complete(zbi, &err), ZBI_RESULT_INCOMPLETE_KERNEL);
-
-  ASSERT_EQ(err, &zbi->kernel_hdr);
-
-  free(zbi);
-}
-
-TEST(ZbiTests, ZbiTestCheckCompleteTestZbiMissingBootfs) {
-  test_zbi_t* zbi = reinterpret_cast<test_zbi_t*>(get_test_zbi());
-  zbi->bootfs_hdr.type = ZBI_TYPE_CMDLINE;
-
-  ASSERT_EQ(zbi_check_complete(zbi, nullptr), ZBI_RESULT_INCOMPLETE_BOOTFS);
 
   free(zbi);
 }
@@ -622,158 +501,4 @@ TEST(ZbiTests, ZbiTestCreateEntryWithPayloadTestZbiSectionTooLarge) {
   ASSERT_EQ(zbi_create_entry_with_payload(&container, /*capacity=*/1, 0, 0, 0, &payload,
                                           /*payload_length=*/2),
             ZBI_RESULT_TOO_BIG);
-}
-
-TEST(ZbiTests, ZbiTestExtendTestZbi) {
-  single_entry_test_zbi_t dst_zbi;
-  single_entry_test_zbi_t src_zbi;
-
-  uint32_t payload = 0xABCDABCD;
-  ASSERT_EQ(zbi_create_entry_with_payload(&src_zbi, sizeof(src_zbi), ZBI_TYPE_CONTAINER, 0, 0,
-                                          &payload, sizeof(payload)),
-            ZBI_RESULT_OK);
-
-  // Extend dst to include src's entry.
-  ASSERT_EQ(zbi_extend(&dst_zbi, sizeof(dst_zbi), &src_zbi), ZBI_RESULT_OK);
-  ASSERT_BYTES_EQ(reinterpret_cast<uint8_t*>(dst_zbi.entry_payload),
-                  reinterpret_cast<uint8_t*>(&payload), sizeof(payload), "Mismatched payload.");
-}
-
-TEST(ZbiTests, ZbiTestExtendTestZbiDstNull) {
-  zbi_header_t zbi = ZBI_CONTAINER_HEADER(0);
-
-  ASSERT_EQ(zbi_extend(nullptr, 0, &zbi), ZBI_RESULT_ERROR);
-}
-
-TEST(ZbiTests, ZbiTestExtendTestZbiSrcNull) {
-  zbi_header_t zbi = ZBI_CONTAINER_HEADER(0);
-
-  ASSERT_EQ(zbi_extend(&zbi, 0, nullptr), ZBI_RESULT_ERROR);
-}
-
-TEST(ZbiTests, ZbiTestExtendTestZbiDstNotContainer) {
-  zbi_header_t src = ZBI_CONTAINER_HEADER(0);
-  zbi_header_t dst = ZBI_CONTAINER_HEADER(0);
-  dst.type = 0;
-
-  ASSERT_EQ(zbi_extend(&dst, 0, &src), ZBI_RESULT_BAD_TYPE);
-}
-
-TEST(ZbiTests, ZbiTestExtendTestZbiSrcNotContainer) {
-  zbi_header_t src = ZBI_CONTAINER_HEADER(0);
-  src.type = 0;
-  zbi_header_t dst = ZBI_CONTAINER_HEADER(0);
-
-  ASSERT_EQ(zbi_extend(&dst, 0, &src), ZBI_RESULT_BAD_TYPE);
-}
-
-TEST(ZbiTests, ZbiTestExtendTestZbiCapacitySmallerThanDstLength) {
-  zbi_header_t src = ZBI_CONTAINER_HEADER(0);
-  zbi_header_t dst = ZBI_CONTAINER_HEADER(1);
-
-  ASSERT_EQ(zbi_extend(&dst, 0, &src), ZBI_RESULT_TOO_BIG);
-}
-
-TEST(ZbiTests, ZbiTestExtendTestZbiCapacitySmallerThanDstAlignedLength) {
-  zbi_header_t src = ZBI_CONTAINER_HEADER(0);
-  zbi_header_t dst = ZBI_CONTAINER_HEADER(6);
-
-  ASSERT_EQ(zbi_extend(&dst, /*capacity=*/7, &src), ZBI_RESULT_TOO_BIG);
-}
-
-TEST(ZbiTests, ZbiTestExtendTestZbiSrcTooLarge) {
-  zbi_header_t src = ZBI_CONTAINER_HEADER(ZBI_ALIGNMENT + 1);
-  zbi_header_t dst = ZBI_CONTAINER_HEADER(ZBI_ALIGNMENT);
-
-  ASSERT_EQ(zbi_extend(&dst, /*capacity=*/ZBI_ALIGNMENT, &src), ZBI_RESULT_TOO_BIG);
-}
-
-// Test the happy case.
-// Make two zbi containers, extend the first by tacking the second to the back
-// of it. Observe that everything went okay.
-TEST(ZbiTests, ZbiTestExtendOkay) {
-  // Create a dst zbi that has enough space to contain the src zbi.
-  uint8_t* src_buf = get_test_zbi();
-
-  const size_t kExtraBytes = (reinterpret_cast<zbi_header_t*>(src_buf))->length;
-  const size_t kDstCapacity = kExtraBytes + sizeof(test_zbi);
-  uint8_t* dst_buf = get_test_zbi_extra(kExtraBytes);
-
-  auto cleanup = fit::defer([src_buf, dst_buf] {
-    free(src_buf);
-    free(dst_buf);
-  });
-
-  // Count the number of sections in the source buffer and the destination
-  // buffer.
-  uint32_t src_sections = 0;
-  uint32_t dst_sections = 0;
-  uint32_t combined_sections = 0;
-
-  ASSERT_EQ(zbi_for_each(src_buf, check_contents, &src_sections), ZBI_RESULT_OK);
-  ASSERT_EQ(zbi_for_each(dst_buf, check_contents, &dst_sections), ZBI_RESULT_OK);
-
-  EXPECT_EQ(zbi_extend(dst_buf, kDstCapacity, src_buf), ZBI_RESULT_OK);
-
-  ASSERT_EQ(zbi_for_each(dst_buf, check_contents, &combined_sections), ZBI_RESULT_OK);
-  ASSERT_EQ(src_sections + dst_sections, combined_sections);
-}
-
-TEST(ZbiTests, ZbiTestNoOverflow) {
-  constexpr size_t kBufferSize = 1024;
-  constexpr size_t kUsableBufferSize = kBufferSize / 2;
-  constexpr uint8_t kSentinel = 0xab;
-
-  static_assert(kBufferSize % ZBI_ALIGNMENT == 0);
-  static_assert(kUsableBufferSize % ZBI_ALIGNMENT == 0);
-
-  uint8_t* dst_buffer = new uint8_t[kBufferSize];
-  std::unique_ptr<uint8_t[]> dst_deleter;
-  dst_deleter.reset(dst_buffer);
-  memset(dst_buffer, kSentinel, kBufferSize);
-
-  uint8_t* src_buffer = new uint8_t[kBufferSize];
-  std::unique_ptr<uint8_t[]> src_deleter;
-  src_deleter.reset(src_buffer);
-  memset(src_buffer, kSentinel, kBufferSize);
-
-  uint8_t* test_data = new uint8_t[kUsableBufferSize];
-  std::unique_ptr<uint8_t[]> test_data_deleter;
-  test_data_deleter.reset(test_data);
-  memset(test_data, 0x12, kUsableBufferSize);
-
-  ASSERT_EQ(zbi_init(dst_buffer, kUsableBufferSize), ZBI_RESULT_OK);
-  ASSERT_EQ(zbi_init(src_buffer, kUsableBufferSize), ZBI_RESULT_OK);
-
-  ASSERT_EQ(zbi_create_entry_with_payload(
-                src_buffer, kUsableBufferSize, ZBI_TYPE_CMDLINE,
-                0,  // Extra
-                0,  // Flags
-                test_data,
-                kUsableBufferSize -
-                    (sizeof(zbi_header_t) * 2)  // Leave room for ZBI header _and_ section header
-                ),
-            ZBI_RESULT_OK);
-
-  ASSERT_EQ(zbi_extend(dst_buffer, kUsableBufferSize, src_buffer), ZBI_RESULT_OK);
-
-  // Make sure we haven't trampled any bytes that we shouldn't have.
-  for (size_t i = kUsableBufferSize; i < kUsableBufferSize; i++) {
-    ASSERT_EQ(dst_buffer[i], kSentinel);
-  }
-
-  ASSERT_EQ(zbi_init(dst_buffer, kUsableBufferSize), ZBI_RESULT_OK);
-
-  ASSERT_EQ(zbi_init(src_buffer, kUsableBufferSize + 1), ZBI_RESULT_OK);
-
-  ASSERT_EQ(zbi_create_entry_with_payload(
-                src_buffer, ZBI_ALIGN(kUsableBufferSize + 1), ZBI_TYPE_CMDLINE,
-                0,  // Extra
-                0,  // Flags
-                test_data,
-                (kUsableBufferSize + 1) - (sizeof(zbi_header_t) * 2)  // This payload is too big.
-                ),
-            ZBI_RESULT_OK);
-
-  ASSERT_NE(zbi_extend(dst_buffer, kUsableBufferSize, src_buffer), ZBI_RESULT_OK);
 }

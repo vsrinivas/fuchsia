@@ -48,22 +48,6 @@ typedef enum zbi_result {
 
 typedef zbi_result_t (*zbi_foreach_cb_t)(zbi_header_t* hdr, void* payload, void* cookie);
 
-// Creates an empty ZBI container in the buffer.
-//
-// The buffer must be aligned to ZBI_ALIGNMENT and large enough to store the
-// empty container.
-//
-// Parameters:
-//     buffer - The buffer the container will be created in.
-//     length - The size of the buffer.
-//
-// Returns:
-//     ZBI_RESULT_OK - On success.
-//     ZBI_RESULT_ERROR - If buffer is NULL.
-//     ZBI_RESULT_TOO_BIG - If the container cannot fit in the buffer.
-//     ZBI_RESULT_BAD_ALIGNMENT - If the buffer is not aligned.
-zbi_result_t zbi_init(void* buffer, size_t length);
-
 // Validates the ZBI.
 //
 // Checks the container and all of its entries.
@@ -80,21 +64,6 @@ zbi_result_t zbi_init(void* buffer, size_t length);
 //     ZBI_RESULT_ERROR - If base is NULL.
 //     Not ZBI_RESULT_OK - Indicating the error.
 zbi_result_t zbi_check(const void* base, zbi_header_t** err);
-
-// Validates the ZBI for the host platform.
-//
-// Same as zbi_check but also diagnoses ZBI_RESULT_INCOMPLETE_* result codes
-// if the ZBI is not a valid complete ZBI for the host platform.
-//
-// Parameters:
-//     base - The ZBI to check.
-//     err - Optional, set to the problem entry if one is found.
-//
-// Returns:
-//     ZBI_RESULT_OK - On success.
-//     ZBI_RESULT_ERROR - If base is NULL.
-//     Not ZBI_RESULT_OK - Indicating the error.
-zbi_result_t zbi_check_complete(const void* base, zbi_header_t** err);
 
 // Calls the callback with a pointer to the header and payload of each ZBI
 // entry (excluding the container).
@@ -168,22 +137,6 @@ zbi_result_t zbi_create_entry(void* base, size_t capacity, uint32_t type, uint32
 zbi_result_t zbi_create_entry_with_payload(void* base, size_t capacity, uint32_t type,
                                            uint32_t extra, uint32_t flags, const void* payload,
                                            uint32_t payload_length);
-
-// Extends a ZBI container with another container's payload.
-//
-// Both dst and src must be ZBI containers.
-//
-// Parameters:
-//     dst - The destination container.
-//     capacity - The max potential size of the base ZBI.
-//     src - The container to copy the payload from.
-//
-// Returns:
-//     ZBI_RESULT_OK - On success.
-//     ZBI_RESULT_ERROR - If dst or src is NULL.
-//     ZBI_RESULT_BAD_TYPE - If dst or src is not a container.
-//     ZBI_RESULT_TOO_BIG - If dst is too small.
-zbi_result_t zbi_extend(void* dst, size_t capacity, const void* src);
 
 __END_CDECLS
 
