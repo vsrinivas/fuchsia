@@ -175,7 +175,7 @@ impl Indexer {
         }
     }
 
-    async fn match_driver(&self, args: fdf::NodeAddArgs) -> fdf::DriverIndexMatchDriverResult {
+    fn match_driver(&self, args: fdf::NodeAddArgs) -> fdf::DriverIndexMatchDriverResult {
         if args.properties.is_none() {
             return Err(Status::INVALID_ARGS.into_raw());
         }
@@ -201,6 +201,35 @@ impl Indexer {
         }
         Err(Status::NOT_FOUND.into_raw())
     }
+
+    fn match_drivers_v1(&self, args: fdf::NodeAddArgs) -> fdf::DriverIndexMatchDriversV1Result {
+        let mut matched_drivers = std::vec::Vec::new();
+
+        if args.properties.is_none() {
+            return Err(Status::INVALID_ARGS.into_raw());
+        }
+        if self.base_repo.is_none() {
+            return Err(Status::NOT_FOUND.into_raw());
+        }
+        let base_drivers = self.base_repo.as_ref().unwrap();
+        let properties = args.properties.unwrap();
+        let properties = node_to_device_property(&properties)?;
+        for driver in &base_drivers.resolved_drivers {
+            match driver.matches(&properties) {
+                Ok(true) => {
+                    matched_drivers.push(driver.create_matched_driver());
+                }
+                Ok(false) => {
+                    continue;
+                }
+                Err(e) => {
+                    log::error!("Driver {}: bind error: {}", driver, e);
+                    continue;
+                }
+            }
+        }
+        Ok(matched_drivers)
+    }
 }
 
 async fn run_index_server(
@@ -213,17 +242,10 @@ async fn run_index_server(
             let indexer = indexer.clone();
             match request {
                 DriverIndexRequest::MatchDriver { args, responder } => {
-                    if indexer.borrow().base_repo.is_none() {
-                        responder
-                            .send(&mut Err(Status::NOT_FOUND.into_raw()))
-                            .or_else(ignore_peer_closed)
-                            .context("error responding to MatchDriver with no base_repo")?;
-                    } else {
-                        responder
-                            .send(&mut indexer.borrow().match_driver(args).await)
-                            .or_else(ignore_peer_closed)
-                            .context("error responding to MatchDriver")?;
-                    }
+                    responder
+                        .send(&mut indexer.borrow().match_driver(args))
+                        .or_else(ignore_peer_closed)
+                        .context("error responding to MatchDriver")?;
                 }
                 DriverIndexRequest::WaitForBaseDrivers { responder } => {
                     if indexer.borrow().base_repo.is_some() {
@@ -234,6 +256,12 @@ async fn run_index_server(
                     } else {
                         indexer.borrow_mut().base_waiters.push(responder);
                     }
+                }
+                DriverIndexRequest::MatchDriversV1 { args, responder } => {
+                    responder
+                        .send(&mut indexer.borrow().match_drivers_v1(args))
+                        .or_else(ignore_peer_closed)
+                        .context("error responding to MatchDriversV1")?;
                 }
             }
             Ok(())
@@ -440,6 +468,78 @@ mod tests {
                 fdf::NodeAddArgs { properties: Some(vec![property]), ..fdf::NodeAddArgs::EMPTY };
             let result = proxy.match_driver(args).await.unwrap();
             assert_eq!(result, Err(Status::NOT_FOUND.into_raw()));
+        }
+        .fuse();
+
+        futures::pin_mut!(index_task, test_task);
+        futures::select! {
+            result = index_task => {
+                panic!("Index task finished: {:?}", result);
+            },
+            () = test_task => {},
+        }
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_match_drivers_v1() {
+        // Make the bind instructions.
+        let always_match = bind::compiler::BindRules {
+            instructions: vec![],
+            symbol_table: std::collections::HashMap::new(),
+            use_new_bytecode: true,
+        };
+        let always_match = DecodedBindRules::new(
+            bind::bytecode_encoder::encode_v2::encode_to_bytecode_v2(always_match).unwrap(),
+        )
+        .unwrap();
+
+        // Make two drivers that will bind to anything.
+        let base_repo = BaseRepo {
+            resolved_drivers: std::vec![
+                ResolvedDriver {
+                    component_url: url::Url::parse(
+                        "fuchsia-pkg://fuchsia.com/package#driver/my-driver.cm"
+                    )
+                    .unwrap(),
+                    driver_path: "meta/my-driver.so".to_string(),
+                    bind_rules: always_match.clone(),
+                },
+                ResolvedDriver {
+                    component_url: url::Url::parse(
+                        "fuchsia-pkg://fuchsia.com/package#driver/my-driver2.cm"
+                    )
+                    .unwrap(),
+                    driver_path: "meta/my-driver2.so".to_string(),
+                    bind_rules: always_match.clone(),
+                }
+            ],
+        };
+
+        let (proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<fdf::DriverIndexMarker>().unwrap();
+
+        let index = Rc::new(RefCell::new(Indexer::new(Some(base_repo))));
+
+        let index_task = run_index_server(index.clone(), stream).fuse();
+        let test_task = async move {
+            let property = fdf::NodeProperty {
+                key: Some(bind::ddk_bind_constants::BIND_PROTOCOL),
+                value: Some(2),
+                ..fdf::NodeProperty::EMPTY
+            };
+            let args =
+                fdf::NodeAddArgs { properties: Some(vec![property]), ..fdf::NodeAddArgs::EMPTY };
+
+            let result = proxy.match_drivers_v1(args).await.unwrap().unwrap();
+            assert_eq!(2, result.len());
+            assert_eq!(
+                "fuchsia-pkg://fuchsia.com/package#driver/my-driver.cm",
+                result[0].url.as_ref().unwrap().as_str(),
+            );
+            assert_eq!(
+                "fuchsia-pkg://fuchsia.com/package#driver/my-driver2.cm",
+                result[1].url.as_ref().unwrap().as_str(),
+            );
         }
         .fuse();
 

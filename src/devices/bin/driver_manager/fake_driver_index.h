@@ -8,6 +8,7 @@
 #include <fuchsia/driver/framework/llcpp/fidl.h>
 #include <lib/fit/function.h>
 #include <lib/zx/status.h>
+#include <zircon/errors.h>
 
 class FakeDriverIndex final : public fidl::WireServer<fuchsia_driver_framework::DriverIndex> {
  public:
@@ -53,6 +54,13 @@ class FakeDriverIndex final : public fidl::WireServer<fuchsia_driver_framework::
   void WaitForBaseDrivers(WaitForBaseDriversRequestView request,
                           WaitForBaseDriversCompleter::Sync& completer) override {
     completer.Reply();
+  }
+
+  // The fake driver index is used only for drivers-as-components and so it
+  // doesn't need any V1 APIs.
+  void MatchDriversV1(MatchDriversV1RequestView request,
+                      MatchDriversV1Completer::Sync& completer) override {
+    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
 
  private:

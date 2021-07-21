@@ -35,4 +35,14 @@ protocol DriverIndex {
 
     /// This function will block until base drivers are loaded.
     WaitForBaseDrivers() -> ();
+
+    // TODO(fxbug.dev/81175): Remove V1 APIs
+    /// This function returns a vector of drivers that match a device.
+    /// This should only be used by DFv1 and should be removed.
+    /// If more than MAX drivers match, only MAX drivers will be returned.
+    MatchDriversV1(struct {
+        args NodeAddArgs;
+    }) -> (struct {
+        driver vector<MatchedDriver>:MAX;
+    }) error zx.status;
 };

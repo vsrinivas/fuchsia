@@ -171,6 +171,10 @@ class FakeDriverIndex final : public fidl::WireServer<fuchsia_driver_framework::
                           WaitForBaseDriversCompleter::Sync& completer) override {
     completer.Reply();
   }
+  void MatchDriversV1(MatchDriversV1RequestView request,
+                      MatchDriversV1Completer::Sync& completer) override {
+    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+  }
 };
 
 }  // namespace
