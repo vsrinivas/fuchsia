@@ -5,7 +5,6 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.posix") {
-  sdk_category = "partner"
-  api = "fuchsia.posix.api"
+  sdk_category = "internal"
   sources = [ "error.fidl" ]
 }
