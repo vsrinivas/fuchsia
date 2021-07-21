@@ -12,6 +12,7 @@
 #include <zircon/errors.h>
 #include <zircon/limits.h>
 
+#include <limits>
 #include <type_traits>
 #include <vector>
 
@@ -29,6 +30,9 @@ using memalloc::Type;
 
 constexpr uint64_t kChunkSize = Pool::kBookkeepingChunkSize;
 constexpr uint64_t kUsableMemoryStart = Pool::kNullPointerRegionEnd;
+constexpr uint64_t kDefaultAlignment = __STDCPP_DEFAULT_NEW_ALIGNMENT__;
+constexpr uint64_t kDefaultMaxAddr = std::numeric_limits<uintptr_t>::max();
+constexpr uint64_t kUint64Max = std::numeric_limits<uint64_t>::max();
 
 constexpr const char* kPrintOutPrefix = "PREFIX";
 
@@ -65,6 +69,81 @@ void TestPoolPrintOut(Pool& pool, const char* prefix, std::string_view expected)
 
   std::string_view actual{buff, n};
   EXPECT_EQ(expected, actual);
+}
+
+void TestPoolAllocation(Pool& pool, Type type, uint64_t size, uint64_t alignment, uint64_t max_addr,
+                        bool alloc_error = false) {
+  auto result = pool.Allocate(type, size, alignment, max_addr);
+  if (alloc_error) {
+    ASSERT_TRUE(result.is_error());
+    return;
+  }
+  ASSERT_FALSE(result.is_error());
+
+  // The resulting range should now be contained in one of the tracked ranges.
+  const MemRange contained = {
+      .addr = std::move(result).value(),
+      .size = size,
+      .type = type,
+  };
+  auto is_contained = [&pool](const MemRange& subrange) -> bool {
+    for (const MemRange& range : pool) {
+      if (range.addr <= subrange.addr && subrange.end() <= range.end()) {
+        return range.type == subrange.type;
+      }
+    }
+    return false;
+  };
+  EXPECT_TRUE(is_contained(contained));
+}
+
+[[maybe_unused]] void TestPoolFreeing(Pool& pool, uint64_t addr, uint64_t size,
+                                      bool free_error = false) {
+  // Returns the tracked type of a single address, if any.
+  //
+  // Asserting that a range is contained within the union of a connected set
+  // of subranges is a bit complicated; accordingly, so assert below on the
+  // weaker proposition that inclusive endpoints are tracked (and with expected
+  // types).
+  auto tracked_type = [&pool](uint64_t addr) -> std::optional<Type> {
+    for (const MemRange& range : pool) {
+      if (range.addr <= addr && addr < range.end()) {
+        return range.type;
+      }
+    }
+    return std::nullopt;
+  };
+
+  EXPECT_TRUE(tracked_type(addr));
+  if (size) {
+    EXPECT_TRUE(tracked_type(addr + size - 1));
+  }
+
+  auto result = pool.Free(addr, size);
+  if (free_error) {
+    ASSERT_TRUE(result.is_error());
+    return;
+  }
+  ASSERT_FALSE(result.is_error());
+
+  EXPECT_EQ(Type::kFreeRam, tracked_type(addr));
+  if (size) {
+    EXPECT_EQ(Type::kFreeRam, tracked_type(addr + size - 1));
+  }
+}
+
+// Fills up a pool with two-byte allocations of varying types until its
+// bookkeeping space is used up.
+[[maybe_unused]] void Oom(Pool& pool) {
+  // Start just after kPoolBookkeeping, to ensure we don't try to allocate a bad
+  // type.
+  uint64_t type_val = static_cast<uint64_t>(Type::kPoolBookkeeping) + 1;
+  bool failure = false;
+  while (!failure && type_val < kUint64Max) {
+    Type type = static_cast<Type>(type_val++);
+    failure = pool.Allocate(type, 2, 1).is_error();
+  }
+  ASSERT_NE(type_val, kUint64Max);  // This should never happen.
 }
 
 TEST(MemallocPoolTests, NoInputMemory) {
@@ -536,6 +615,316 @@ PREFIX: | [0x0000000000010000, 0x0000000000011000) |      4k | bookkeeping
     ASSERT_NO_FATAL_FAILURE(TestPoolInit(ctx.pool, {ranges}));
     ASSERT_NO_FATAL_FAILURE(TestPoolContents(ctx.pool, {expected}));
     ASSERT_NO_FATAL_FAILURE(TestPoolPrintOut(ctx.pool, kPrintOutPrefix, kExpectedPrintOut));
+  }
+}
+
+TEST(MemallocPoolTests, NoResourcesAllocation) {
+  PoolContext ctx;
+  MemRange ranges[] = {
+      // free RAM: [kChunkSize, 3*kChunkSize) relative to kUsableMemoryStart
+      {
+          .addr = kUsableMemoryStart + kChunkSize,
+          .size = 2 * kChunkSize,
+          .type = Type::kFreeRam,
+      },
+  };
+  const MemRange expected[] = {
+      // bookkeeping: [0, kChunkSize) relative to kUsableMemoryStart
+      {
+          .addr = kUsableMemoryStart + kChunkSize,
+          .size = kChunkSize,
+          .type = Type::kPoolBookkeeping,
+      },
+      // free RAM: [2*kChunkSize, 3*kChunkSize) relative to kUsableMemoryStart
+      {
+          .addr = kUsableMemoryStart + 2 * kChunkSize,
+          .size = kChunkSize,
+          .type = Type::kFreeRam,
+      },
+  };
+
+  ASSERT_NO_FATAL_FAILURE(TestPoolInit(ctx.pool, {ranges}));
+  ASSERT_NO_FATAL_FAILURE(TestPoolContents(ctx.pool, {expected}));
+
+  // Requested size is too big:
+  ASSERT_NO_FATAL_FAILURE(TestPoolAllocation(ctx.pool, Type::kPoolTestPayload, 2 * kChunkSize,
+                                             kDefaultAlignment, kDefaultMaxAddr,
+                                             /*alloc_error=*/true));
+  // Requested alignment is too big:
+  ASSERT_NO_FATAL_FAILURE(TestPoolAllocation(ctx.pool, Type::kPoolTestPayload, kChunkSize,
+                                             kChunkSize << 2, kDefaultMaxAddr,
+                                             /*alloc_error=*/true));
+
+  // Requested max address is too small:
+  ASSERT_NO_FATAL_FAILURE(TestPoolAllocation(ctx.pool, Type::kPoolTestPayload, kChunkSize,
+                                             kDefaultAlignment, 3 * kChunkSize - 2,
+                                             /*alloc_error=*/true));
+  ASSERT_NO_FATAL_FAILURE(TestPoolAllocation(ctx.pool, Type::kPoolTestPayload, kChunkSize,
+                                             kDefaultAlignment, 2 * kChunkSize,
+                                             /*alloc_error=*/true));
+
+  // Nothing should have changed.
+  ASSERT_NO_FATAL_FAILURE(TestPoolContents(ctx.pool, {expected}));
+}
+
+TEST(MemallocPoolTests, ExhaustiveAllocation) {
+  MemRange ranges[] = {
+      // free RAM: [kChunkSize, 3*kChunkSize) relative to kUsableMemoryStart
+      {
+          .addr = kUsableMemoryStart + kChunkSize,
+          .size = 2 * kChunkSize,
+          .type = Type::kFreeRam,
+      },
+  };
+  const MemRange expected_before[] = {
+      // bookkeeping: [0, kChunkSize) relative to kUsableMemoryStart
+      {
+          .addr = kUsableMemoryStart + kChunkSize,
+          .size = kChunkSize,
+          .type = Type::kPoolBookkeeping,
+      },
+      // free RAM: [2*kChunkSize, 3*kChunkSize) relative to kUsableMemoryStart
+      {
+          .addr = kUsableMemoryStart + 2 * kChunkSize,
+          .size = kChunkSize,
+          .type = Type::kFreeRam,
+      },
+  };
+  const MemRange expected_after[] = {
+      // bookkeeping: [0, kChunkSize) relative to kUsableMemoryStart
+      {
+          .addr = kUsableMemoryStart + kChunkSize,
+          .size = kChunkSize,
+          .type = Type::kPoolBookkeeping,
+      },
+      // free RAM: [2*kChunkSize, 3*kChunkSize) relative to kUsableMemoryStart
+      {
+          .addr = kUsableMemoryStart + 2 * kChunkSize,
+          .size = kChunkSize,
+          .type = Type::kPoolTestPayload,
+      },
+  };
+
+  {
+    PoolContext ctx;
+
+    ASSERT_NO_FATAL_FAILURE(TestPoolInit(ctx.pool, {ranges}));
+    ASSERT_NO_FATAL_FAILURE(TestPoolContents(ctx.pool, {expected_before}));
+
+    ASSERT_NO_FATAL_FAILURE(TestPoolAllocation(ctx.pool, Type::kPoolTestPayload, kChunkSize,
+                                               kDefaultAlignment, kDefaultMaxAddr));
+
+    ASSERT_NO_FATAL_FAILURE(TestPoolContents(ctx.pool, {expected_after}));
+  }
+
+  {
+    PoolContext ctx;
+
+    ASSERT_NO_FATAL_FAILURE(TestPoolInit(ctx.pool, {ranges}));
+    ASSERT_NO_FATAL_FAILURE(TestPoolContents(ctx.pool, {expected_before}));
+
+    for (size_t i = 0; i < 2; ++i) {
+      ASSERT_NO_FATAL_FAILURE(TestPoolAllocation(ctx.pool, Type::kPoolTestPayload, kChunkSize / 2,
+                                                 kDefaultAlignment, kDefaultMaxAddr));
+    }
+
+    ASSERT_NO_FATAL_FAILURE(TestPoolContents(ctx.pool, {expected_after}));
+  }
+
+  {
+    PoolContext ctx;
+
+    ASSERT_NO_FATAL_FAILURE(TestPoolInit(ctx.pool, {ranges}));
+    ASSERT_NO_FATAL_FAILURE(TestPoolContents(ctx.pool, {expected_before}));
+
+    for (size_t i = 0; i < 4; ++i) {
+      ASSERT_NO_FATAL_FAILURE(TestPoolAllocation(ctx.pool, Type::kPoolTestPayload, kChunkSize / 4,
+                                                 kDefaultAlignment, kDefaultMaxAddr));
+    }
+
+    ASSERT_NO_FATAL_FAILURE(TestPoolContents(ctx.pool, {expected_after}));
+  }
+
+  {
+    PoolContext ctx;
+
+    ASSERT_NO_FATAL_FAILURE(TestPoolInit(ctx.pool, {ranges}));
+    ASSERT_NO_FATAL_FAILURE(TestPoolContents(ctx.pool, {expected_before}));
+
+    for (size_t i = 0; i < kChunkSize; ++i) {
+      ASSERT_NO_FATAL_FAILURE(
+          TestPoolAllocation(ctx.pool, Type::kPoolTestPayload, 1, 1, kDefaultMaxAddr));
+    }
+
+    ASSERT_NO_FATAL_FAILURE(TestPoolContents(ctx.pool, {expected_after}));
+  }
+}
+
+TEST(MemallocPoolTests, Freeing) {
+  PoolContext ctx;
+  MemRange ranges[] = {
+      // RAM: [0, 2*kChunkSize) relative to kUsableMemoryStart
+      {
+          .addr = kUsableMemoryStart,
+          .size = 2 * kChunkSize,
+          .type = Type::kFreeRam,
+      },
+      // data ZBI: [2*kChunkSize, 3*kChunkSize) relative to kUsableMemoryStart
+      {
+          .addr = kUsableMemoryStart + 2 * kChunkSize,
+          .size = kChunkSize,
+          .type = Type::kDataZbi,
+      },
+  };
+
+  const MemRange expected[] = {
+      // bookkeeping: [0, kChunkSize) relative to kUsableMemoryStart
+      {
+          .addr = kUsableMemoryStart,
+          .size = kChunkSize,
+          .type = Type::kPoolBookkeeping,
+      },
+      // free RAM: [kChunkSize, 2*kChunkSize) relative to kUsableMemoryStart
+      {
+          .addr = kUsableMemoryStart + kChunkSize,
+          .size = kChunkSize,
+          .type = Type::kFreeRam,
+      },
+      // data ZBI: [2*kChunkSize, 3*kChunkSize) relative to kUsableMemoryStart
+      {
+          .addr = kUsableMemoryStart + 2 * kChunkSize,
+          .size = kChunkSize,
+          .type = Type::kDataZbi,
+      },
+  };
+
+  const MemRange expected_after[] = {
+      // bookkeeping: [0, kChunkSize) relative to kUsableMemoryStart
+      {
+          .addr = kUsableMemoryStart,
+          .size = kChunkSize,
+          .type = Type::kPoolBookkeeping,
+      },
+      // free RAM: [kChunkSize, 3*kChunkSize) relative to kUsableMemoryStart
+      {
+          .addr = kUsableMemoryStart + kChunkSize,
+          .size = 2 * kChunkSize,
+          .type = Type::kFreeRam,
+      },
+  };
+
+  ASSERT_NO_FATAL_FAILURE(TestPoolInit(ctx.pool, {ranges}));
+  ASSERT_NO_FATAL_FAILURE(TestPoolContents(ctx.pool, {expected}));
+
+  // A subrange of extended type passed to Init() can be freed.
+  ASSERT_NO_FATAL_FAILURE(
+      TestPoolFreeing(ctx.pool, kUsableMemoryStart + 2 * kChunkSize, kChunkSize / 2));
+  ASSERT_NO_FATAL_FAILURE(
+      TestPoolFreeing(ctx.pool, kUsableMemoryStart + 5 * kChunkSize / 2, kChunkSize / 2));
+  ASSERT_NO_FATAL_FAILURE(TestPoolContents(ctx.pool, {expected_after}));
+
+  // Double-frees should be no-ops.
+  ASSERT_NO_FATAL_FAILURE(TestPoolFreeing(ctx.pool, kUsableMemoryStart + kChunkSize, kChunkSize));
+  ASSERT_NO_FATAL_FAILURE(TestPoolContents(ctx.pool, {expected_after}));
+
+  ASSERT_NO_FATAL_FAILURE(
+      TestPoolFreeing(ctx.pool, kUsableMemoryStart + kChunkSize, kChunkSize / 2));
+  ASSERT_NO_FATAL_FAILURE(TestPoolContents(ctx.pool, {expected_after}));
+
+  ASSERT_NO_FATAL_FAILURE(
+      TestPoolFreeing(ctx.pool, kUsableMemoryStart + 3 * kChunkSize / 2, kChunkSize / 2));
+  ASSERT_NO_FATAL_FAILURE(TestPoolContents(ctx.pool, {expected_after}));
+
+  ASSERT_NO_FATAL_FAILURE(
+      TestPoolFreeing(ctx.pool, kUsableMemoryStart + 2 * kChunkSize, kChunkSize));
+  ASSERT_NO_FATAL_FAILURE(TestPoolContents(ctx.pool, {expected_after}));
+}
+
+TEST(MemallocPoolTests, FreedAllocations) {
+  PoolContext ctx;
+  MemRange ranges[] = {
+      // free RAM: [0, 2*kChunkSize) relative to kUsableMemoryStart
+      {
+          .addr = kUsableMemoryStart,
+          .size = 2 * kChunkSize,
+          .type = Type::kFreeRam,
+      },
+  };
+  const MemRange expected[] = {
+      // bookkeeping: [0, kChunkSize) relative to kUsableMemoryStart
+      {
+          .addr = kUsableMemoryStart,
+          .size = kChunkSize,
+          .type = Type::kPoolBookkeeping,
+      },
+      // free RAM: [kChunkSize, 2*kChunkSize) relative to kUsableMemoryStart
+      {
+          .addr = kUsableMemoryStart + kChunkSize,
+          .size = kChunkSize,
+          .type = Type::kFreeRam,
+      },
+  };
+
+  constexpr auto allocate_then_free = [](Pool& pool, uint64_t size) {
+    auto result = pool.Allocate(Type::kPoolTestPayload, size, 1);
+    ASSERT_FALSE(result.is_error());
+    uint64_t addr = std::move(result).value();
+    EXPECT_FALSE(pool.Free(addr, size).is_error());
+  };
+
+  ASSERT_NO_FATAL_FAILURE(TestPoolInit(ctx.pool, {ranges}));
+  ASSERT_NO_FATAL_FAILURE(TestPoolContents(ctx.pool, {expected}));
+
+  ASSERT_NO_FATAL_FAILURE(allocate_then_free(ctx.pool, 1));
+  ASSERT_NO_FATAL_FAILURE(TestPoolContents(ctx.pool, {expected}));
+
+  ASSERT_NO_FATAL_FAILURE(allocate_then_free(ctx.pool, 2));
+  ASSERT_NO_FATAL_FAILURE(TestPoolContents(ctx.pool, {expected}));
+
+  ASSERT_NO_FATAL_FAILURE(allocate_then_free(ctx.pool, 4));
+  ASSERT_NO_FATAL_FAILURE(TestPoolContents(ctx.pool, {expected}));
+
+  ASSERT_NO_FATAL_FAILURE(allocate_then_free(ctx.pool, 8));
+  ASSERT_NO_FATAL_FAILURE(TestPoolContents(ctx.pool, {expected}));
+
+  ASSERT_NO_FATAL_FAILURE(allocate_then_free(ctx.pool, 16));
+  ASSERT_NO_FATAL_FAILURE(TestPoolContents(ctx.pool, {expected}));
+
+  ASSERT_NO_FATAL_FAILURE(allocate_then_free(ctx.pool, kChunkSize / 2));
+  ASSERT_NO_FATAL_FAILURE(TestPoolContents(ctx.pool, {expected}));
+
+  ASSERT_NO_FATAL_FAILURE(allocate_then_free(ctx.pool, kChunkSize));
+  ASSERT_NO_FATAL_FAILURE(TestPoolContents(ctx.pool, {expected}));
+}
+
+TEST(MemallocPoolTests, OutOfMemory) {
+  PoolContext ctx;
+  MemRange ranges[] = {
+      // free RAM: [0, 2*kChunkSize) relative to kUsableMemoryStart
+      {
+          .addr = kUsableMemoryStart,
+          .size = 2 * kChunkSize,
+          .type = Type::kFreeRam,
+      },
+  };
+
+  ASSERT_NO_FATAL_FAILURE(TestPoolInit(ctx.pool, {ranges}));
+  ASSERT_NO_FATAL_FAILURE(Oom(ctx.pool));
+
+  // Allocations should now fail.
+  {
+    auto result = ctx.pool.Allocate(Type::kPoolTestPayload, 1, 1);
+    ASSERT_TRUE(result.is_error());
+  }
+
+  // Same for frees that subdivide ranges. In this case, we can free one byte
+  // from any of the allocated ranges (which were two bytes each).
+  {
+    auto it = std::find_if(ctx.pool.begin(), ctx.pool.end(), [](const MemRange& range) {
+      return range.type != Type::kPoolBookkeeping && range.type != Type::kFreeRam && range.size > 1;
+    });
+    ASSERT_NE(ctx.pool.end(), it);
+    ASSERT_NO_FATAL_FAILURE(TestPoolFreeing(ctx.pool, it->addr, 1, /*free_error=*/true));
   }
 }
 

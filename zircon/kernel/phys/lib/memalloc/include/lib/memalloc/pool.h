@@ -147,7 +147,29 @@ class Pool {
     return *std::prev(end());
   }
 
-  // TODO(fxbug.dev/77359): Add Allocate() method.
+  // Attempts to allocate memory out of free RAM of the prescribed type, size,
+  // and alignment, and with the given largest possible address. The provided
+  // type must be an extended type.
+  //
+  // Any returned address is guaranteed to be nonzero.
+  //
+  // fitx::failed is returned if there is insufficient free RAM to track any
+  // new ranges or if there is no free RAM that meets the given constraints.
+  //
+  fitx::result<fitx::failed, uint64_t> Allocate(
+      Type type, uint64_t size, uint64_t alignment = __STDCPP_DEFAULT_NEW_ALIGNMENT__,
+      uint64_t max_addr = std::numeric_limits<uintptr_t>::max());
+
+  // Attempts to free a subrange of a previously allocated range or one of
+  // extended type that had previously been passed to Init(). This subrange is
+  // updated to have type kFreeRam.
+  //
+  // Freeing a range already tracked as kFreeRam is a no-op.
+  //
+  // fitx::failed is returned if there is insufficient memory to track the new
+  // (subdivided) ranges of memory that would result from freeing.
+  //
+  fitx::result<fitx::failed> Free(uint64_t addr, uint64_t size);
 
   // Pretty-prints the memory ranges contained in the pool.
   void PrintMemoryRanges(const char* prefix, FILE* f = stdout) const;
@@ -179,6 +201,13 @@ class Pool {
     return Init({state});
   }
 
+  // Similar semantics to Allocate(), FindAllocatable() is its main allocation
+  // subroutine: it only finds a suitable address to allocate (not actually
+  // performing the allocation).
+  fitx::result<fitx::failed, uint64_t> FindAllocatable(
+      Type type, uint64_t size, uint64_t alignment,
+      uint64_t max_addr = std::numeric_limits<uintptr_t>::max());
+
   // On success, returns disconnected node with the given range information;
   // fails if there is insufficient bookkeeping space for the new node.
   fitx::result<fitx::failed, Node*> NewNode(const MemRange& range);
@@ -189,8 +218,12 @@ class Pool {
   // fails if there is insufficient bookkeeping space for the new node. As an
   // optimization if known, the iterator pointing to the parent node may be
   // provided.
-  fitx::result<fitx::failed> InsertSubrange(
+  fitx::result<fitx::failed, mutable_iterator> InsertSubrange(
       const MemRange& range, std::optional<mutable_iterator> parent_it = std::nullopt);
+
+  // Merges into `it` any neighboring nodes with directly adjacent ranges of
+  // the same type.
+  void Coalesce(mutable_iterator it);
 
   // Returns an iterator pointing to the node whose range contains
   // [addr, addr + size), returning ranges_.end() if no such node exists.
@@ -203,6 +236,14 @@ class Pool {
   // Converts as much of [addr, addr + size) as bookkeeping memory as possible,
   // returning the address just after what it was able to convert.
   std::byte* PopulateAsBookkeeping(std::byte* addr, uint64_t size);
+
+  // Attempts to ensure - through dynamic allocation of more space if need be -
+  // that at least two unused bookkeeping nodes are available. N = 2 here is
+  // the maximum number of new nodes other Pool methods might need in order to
+  // successfully complete. This method is used in a best-effort context: if
+  // there is insufficient space, the following operation will be permitted to
+  // complete and report exactly that.
+  void TryToEnsureTwoBookkeepingNodes();
 
   BookkeepingAddressToPointer bookkeeping_pointer_ = [](uint64_t addr, uint64_t size) {
     return reinterpret_cast<std::byte*>(addr);

@@ -33,6 +33,8 @@ std::string_view ToString(Type type) {
       return "phys kernel image"sv;
     case Type::kDataZbi:
       return "data ZBI"sv;
+    case Type::kPoolTestPayload:
+      return "memalloc::Pool test payload"sv;
     case Type::kMaxExtended:
       return "kMaxExtended"sv;
   }

@@ -56,6 +56,9 @@ enum class Type : uint64_t {
 
   // TODO(fxbug.dev/77359): define more...
 
+  // A generic allocated type for Pool tests.
+  kPoolTestPayload,
+
   // A placeholder value signifying the last extended type. It must not be used
   // as an actual type value.
   kMaxExtended,
@@ -70,6 +73,10 @@ constexpr size_t kNumExtendedTypes = kMaxExtendedTypeValue - kMinExtendedTypeVal
 constexpr size_t kNumBaseTypes = 3;
 
 std::string_view ToString(Type type);
+
+constexpr bool IsExtendedType(Type type) {
+  return static_cast<uint64_t>(type) >= kMinExtendedTypeValue;
+}
 
 // A memory range type that is layout-compatible to zbi_mem_range_t, but with
 // the benefit of being able to use extended types.
