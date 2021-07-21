@@ -140,15 +140,3 @@ set_defaults("driver_module") {
   # symbols to resolve.
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 }
-
-# TODO(64400): Temporary to allow out of tree users to soft migrate.
-template("driver_module_new") {
-  driver_module(target_name) {
-    forward_variables_from(invoker, "*")
-  }
-}
-
-set_defaults("driver_module_new") {
-  configs = default_shared_library_configs
-  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
-}
