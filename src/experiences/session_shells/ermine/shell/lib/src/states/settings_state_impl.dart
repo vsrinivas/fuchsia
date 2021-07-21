@@ -6,6 +6,7 @@ import 'dart:io';
 
 import 'package:ermine/src/services/settings/battery_watcher_service.dart';
 import 'package:ermine/src/services/settings/brightness_service.dart';
+import 'package:ermine/src/services/settings/channel_service.dart';
 import 'package:ermine/src/services/settings/datetime_service.dart';
 import 'package:ermine/src/services/settings/memory_watcher_service.dart';
 import 'package:ermine/src/services/settings/network_address_service.dart';
@@ -81,6 +82,9 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
   final Observable<IconData> brightnessIcon =
       Icons.brightness_auto.asObservable();
 
+  @override
+  final Observable<bool?> optedIntoUpdates = Observable<bool?>(null);
+
   final List<String> _timezones;
 
   @override
@@ -101,6 +105,7 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
   final MemoryWatcherService memoryWatcherService;
   final BatteryWatcherService batteryWatcherService;
   final BrightnessService brightnessService;
+  final ChannelService channelService;
 
   SettingsStateImpl({
     required ShortcutsService shortcutsService,
@@ -110,6 +115,7 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
     required this.memoryWatcherService,
     required this.batteryWatcherService,
     required this.brightnessService,
+    required this.channelService,
   })  : shortcutBindings = shortcutsService.keyboardBindings,
         _timezones = _loadTimezones(),
         selectedTimezone = timezoneService.timezone.asObservable() {
@@ -152,6 +158,11 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
         brightnessIcon.value = brightnessService.icon;
       });
     };
+    channelService.onChanged = () {
+      runInAction(() {
+        optedIntoUpdates.value = channelService.optedIntoUpdates;
+      });
+    };
   }
 
   @override
@@ -163,6 +174,7 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
       memoryWatcherService.start(),
       batteryWatcherService.start(),
       brightnessService.start(),
+      channelService.start(),
     ]);
   }
 
@@ -175,6 +187,7 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
     await memoryWatcherService.stop();
     await batteryWatcherService.stop();
     await brightnessService.stop();
+    await channelService.stop();
     _dateTimeNow = null;
   }
 
@@ -186,6 +199,7 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
     networkService.dispose();
     memoryWatcherService.dispose();
     batteryWatcherService.dispose();
+    channelService.dispose();
   }
 
   @override

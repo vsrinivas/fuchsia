@@ -4,6 +4,7 @@
 
 import 'package:ermine/src/services/settings/battery_watcher_service.dart';
 import 'package:ermine/src/services/settings/brightness_service.dart';
+import 'package:ermine/src/services/settings/channel_service.dart';
 import 'package:ermine/src/services/settings/datetime_service.dart';
 import 'package:ermine/src/services/settings/memory_watcher_service.dart';
 import 'package:ermine/src/services/settings/network_address_service.dart';
@@ -55,6 +56,7 @@ abstract class SettingsState with Store implements TaskService {
   ObservableValue<double?> get brightnessLevel;
   ObservableValue<bool?> get brightnessAuto;
   ObservableValue<IconData> get brightnessIcon;
+  ObservableValue<bool?> get optedIntoUpdates;
 
   factory SettingsState.from({required ShortcutsService shortcutsService}) {
     return SettingsStateImpl(
@@ -65,6 +67,7 @@ abstract class SettingsState with Store implements TaskService {
       memoryWatcherService: MemoryWatcherService(),
       batteryWatcherService: BatteryWatcherService(),
       brightnessService: BrightnessService(),
+      channelService: ChannelService(),
     );
   }
 

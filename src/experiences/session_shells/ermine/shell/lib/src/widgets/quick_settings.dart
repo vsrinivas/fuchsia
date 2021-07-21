@@ -195,11 +195,11 @@ class _ListSettings extends StatelessWidget {
                     child: Text(Strings.open.toUpperCase()),
                   ),
                 ),
-                // About
+                // About Fuchsia
                 ListTile(
                   contentPadding: EdgeInsets.symmetric(horizontal: 24),
-                  leading: Icon(Icons.read_more),
-                  title: Text('${Strings.about} ${Strings.fuchsia}'),
+                  leading: Icon(Icons.privacy_tip_outlined),
+                  title: Text(Strings.aboutFuchsia),
                   onTap: appState.settingsState.showAboutSettings,
                 ),
 

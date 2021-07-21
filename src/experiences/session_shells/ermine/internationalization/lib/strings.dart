@@ -716,19 +716,29 @@ class Strings {
         name: 'language',
         desc: 'The button label for "Language" text field.',
       );
-  static String get about => Intl.message(
-        'About',
-        name: 'about',
-        desc: 'The label for "About" text field.',
-      );
   static String get disclaimer => Intl.message(
         'Disclaimer',
         name: 'disclaimer',
         desc: 'The label for "Disclaimer" text field.',
       );
-  static String get fuchsia => Intl.message(
-        'Fuchsia',
-        name: 'fuchsia',
-        desc: 'The label for "Fuchsia" text field.',
+  static String get aboutFuchsia => Intl.message(
+        'About Fuchsia',
+        name: 'about fuchsia',
+        desc: 'The label for "About Fuchsia" text field.',
+      );
+  static String get updatesAndPrivacy => Intl.message(
+        'Updates & Privacy',
+        name: 'updates & privacy',
+        desc: 'The label for "Updates & Privacy" text field.',
+      );
+  static String get disclaimerText => Intl.message(
+        'Workstation is an open source reference design for Fuchsia. It’s intended as a developer tool to explore Fuchsia, a brand new operating system built from scratch.\n\nThis is a developer tool - not a consumer oriented product. This preview is intended for developers and enthusiasts to explore and experiment with, but does not come with strong security, privacy, or robustness guarantees.\n\nExpect bugs and rapid changes!\n\nPlease file bugs and send feedback to help improve Fuchsia!',
+        name: 'disclaimer text',
+        desc: 'The disclaimer text for workstation.',
+      );
+  static String get updatesAndPrivacyText => Intl.message(
+        'This system is set to automatically update to improve over time. Use of the update servers are governed by Google APIs Terms of Service and data collected by Google will be handled in accordance with the Google Privacy Policy. To use a Fuchsia system that doesn’t automatically update, visit fuchsia.dev/fuchsia-src/get-started.',
+        name: 'updates and privacy text',
+        desc: 'The updates and privacy text for workstation.',
       );
 }
