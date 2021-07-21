@@ -150,3 +150,33 @@ async fn get_attr_per_package_source(root_dir: DirectoryProxy) {
     )
     .await;
 }
+
+#[fuchsia::test]
+async fn close() {
+    for dir in dirs_to_test().await {
+        close_per_package_source(dir).await
+    }
+}
+
+async fn close_per_package_source(root_dir: DirectoryProxy) {
+    async fn verify_close(root_dir: &DirectoryProxy, path: &str, mode: u32) {
+        let node =
+            io_util::directory::open_node(root_dir, path, OPEN_RIGHT_READABLE, mode).await.unwrap();
+
+        let _ = node.close().await.unwrap();
+
+        matches::assert_matches!(
+            node.close().await,
+            Err(fidl::Error::ClientChannelClosed { status: zx::Status::PEER_CLOSED, .. })
+        );
+    }
+
+    verify_close(&root_dir, ".", MODE_TYPE_DIRECTORY).await;
+    verify_close(&root_dir, "dir", MODE_TYPE_DIRECTORY).await;
+    verify_close(&root_dir, "meta", MODE_TYPE_DIRECTORY).await;
+    verify_close(&root_dir, "meta/dir", MODE_TYPE_DIRECTORY).await;
+
+    verify_close(&root_dir, "file", MODE_TYPE_FILE).await;
+    verify_close(&root_dir, "meta/file", MODE_TYPE_FILE).await;
+    verify_close(&root_dir, "meta", MODE_TYPE_FILE).await;
+}
