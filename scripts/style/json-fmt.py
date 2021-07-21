@@ -12,7 +12,6 @@ on the first error.
 import argparse
 import json
 import os
-import sys
 
 
 def sort(data):
@@ -52,9 +51,8 @@ def main():
                     json_file.seek(0)
                     json_file.truncate()
                     json_file.write(formatted + '\n')
-        except:
-            print(
-                "Exception encountered while processing file " + json_file.name)
+        except json.JSONDecodeError:
+            print(f'Exception encountered while processing {json_file.name}')
             raise
 
 
