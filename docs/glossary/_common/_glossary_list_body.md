@@ -1,5 +1,5 @@
 <li>
-  {{ pencil_edit }}
+  {{ pencil_edit(item.term) }}
   <h3 class="add-link">{{ item.term }}</h3>
     {% if item.short_description != '' %}
     <p>{{ item.short_description }}</p>
@@ -50,4 +50,3 @@
   {% endif %}
 <hr>
 </li>
-

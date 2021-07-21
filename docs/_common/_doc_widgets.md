@@ -9,7 +9,7 @@
 
 {% setvar pencil_edit %}
 <div class="pencil-edit">
-  <a href="{{ fuchsia_editor }}{{ glossary_file }}" title="Edit the glossary"><span class="material-icons" style="font-size: 18px">edit</span></a>
+  <a href="{{ fuchsia_editor }}{{ glossary_file }}&searchAndJump=- term: &quot;{{item.term}}&quot;" title="Edit the glossary"><span class="material-icons" style="font-size: 18px">edit</span></a>
 </div>
 {% endsetvar %}
 
@@ -49,7 +49,7 @@ Help text glossary macros
     {% endif %}
   {% endfor %}
   {% if not match %}
-    <a href="{{ fuchsia_editor }}{{ glossary_file }}"><abbr data-title="This term does not exist in the glossary.
+    <a href="{{ fuchsia_editor }}{{ glossary_file }}&searchAndJump=- term: &quot;{{input}}&quot;"><abbr data-title="This term does not exist in the glossary.
     Check the widget call for typos. Or, click this term to add it to the glossary.">{{ input }}</abbr><span class="material-icons" style="font-size: 18px">edit</span></a>
   {% endif %}
 {%- endmacro %}
@@ -93,7 +93,7 @@ Simple definition callout. Use between pargraphs.
            float: right;
          }
        </style>
-       <aside class="key-term"><b><a href="{{ fuchsia_editor }}{{ glossary_file }}"><abbr data-title="This term does not exist in the glossary.
+       <aside class="key-term"><b><a href="{{ fuchsia_editor }}{{ glossary_file }}&searchAndJump=- term: &quot;{{term}}&quot;"><abbr data-title="This term does not exist in the glossary.
          Check the widget call for typos. Or, click this term to add it to the glossary.">{{ term }}</abbr><span class="material-icons" style="font-size: 18px">edit</span></a></b>
        </aside>
     </div>

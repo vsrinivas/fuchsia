@@ -92,7 +92,7 @@
     <p><a href="{{ fuchsia_editor }}{{ rfcs_dir }}{{ rfc.file }}"><span class="material-icons">edit</span>Edit this RFC</a></p>
   </div>
   <div class="edit-buttons-right">
-    <p><a href="{{ fuchsia_editor }}{{ rfcs_dir }}{{ rfcs_metadata_file }}"><span class="material-icons">edit</span>Edit RFC metadata</a></p>
+    <p><a href="{{ fuchsia_editor }}{{ rfcs_dir }}{{ rfcs_metadata_file }}&searchAndJump=- name: '{{rfc.name}}'"><span class="material-icons">edit</span>Edit RFC metadata</a></p>
   </div>
 </div>
 
