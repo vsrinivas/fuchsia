@@ -544,11 +544,13 @@ TEST(StreamTestCase, Append) {
   };
 
   ASSERT_OK(zx::stream::create(ZX_STREAM_MODE_WRITE, vmo, 0, &stream));
-  zx_info_stream_t info = {};
-  ASSERT_OK(stream.get_info(ZX_INFO_STREAM, &info, sizeof(info), nullptr, nullptr));
-  EXPECT_EQ(ZX_STREAM_MODE_WRITE, info.options);
-  EXPECT_EQ(0u, info.seek);
-  EXPECT_EQ(26u, info.content_size);
+  {
+    zx_info_stream_t info{};
+    ASSERT_OK(stream.get_info(ZX_INFO_STREAM, &info, sizeof(info), nullptr, nullptr));
+    EXPECT_EQ(ZX_STREAM_MODE_WRITE, info.options);
+    EXPECT_EQ(0u, info.seek);
+    EXPECT_EQ(26u, info.content_size);
+  }
 
   vec.capacity = 7u;
   size_t actual = 42u;
@@ -556,24 +558,29 @@ TEST(StreamTestCase, Append) {
   EXPECT_EQ(7u, actual);
   EXPECT_STR_EQ("abcdefghijklmnopqrstuvwxyz0123456", GetData(vmo).c_str());
 
-  memset(&info, 0, sizeof(info));
-  ASSERT_OK(stream.get_info(ZX_INFO_STREAM, &info, sizeof(info), nullptr, nullptr));
-  EXPECT_EQ(ZX_STREAM_MODE_WRITE, info.options);
-  EXPECT_EQ(33u, info.seek);
-  EXPECT_EQ(33u, info.content_size);
+  {
+    zx_info_stream_t info{};
+    ASSERT_OK(stream.get_info(ZX_INFO_STREAM, &info, sizeof(info), nullptr, nullptr));
+    EXPECT_EQ(ZX_STREAM_MODE_WRITE, info.options);
+    EXPECT_EQ(33u, info.seek);
+    EXPECT_EQ(33u, info.content_size);
 
-  vec.capacity = 26u;
-  for (size_t size = info.content_size; size + vec.capacity < zx_system_get_page_size();
-       size += vec.capacity) {
-    ASSERT_OK(stream.writev(ZX_STREAM_APPEND, &vec, 1, &actual));
-    EXPECT_EQ(vec.capacity, actual);
+    vec.capacity = 26u;
+    for (size_t size = info.content_size; size + vec.capacity < zx_system_get_page_size();
+         size += vec.capacity) {
+      ASSERT_OK(stream.writev(ZX_STREAM_APPEND, &vec, 1, &actual));
+      EXPECT_EQ(vec.capacity, actual);
+    }
   }
 
-  ASSERT_OK(stream.get_info(ZX_INFO_STREAM, &info, sizeof(info), nullptr, nullptr));
-  EXPECT_GT(zx_system_get_page_size(), info.content_size);
+  {
+    zx_info_stream_t info{};
+    ASSERT_OK(stream.get_info(ZX_INFO_STREAM, &info, sizeof(info), nullptr, nullptr));
+    EXPECT_GT(zx_system_get_page_size(), info.content_size);
 
-  ASSERT_OK(stream.writev(ZX_STREAM_APPEND, &vec, 1, &actual));
-  EXPECT_EQ(zx_system_get_page_size() - info.content_size, actual);
+    ASSERT_OK(stream.writev(ZX_STREAM_APPEND, &vec, 1, &actual));
+    EXPECT_EQ(zx_system_get_page_size() - info.content_size, actual);
+  }
 
   ASSERT_EQ(ZX_ERR_NO_SPACE, stream.writev(ZX_STREAM_APPEND, &vec, 1, &actual));
 

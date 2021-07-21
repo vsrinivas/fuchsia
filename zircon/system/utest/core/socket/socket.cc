@@ -163,7 +163,7 @@ TEST(SocketTest, Signals) {
     const size_t kChunk = kAllSize / 16;
     fbl::Array<char> big_buf(new char[kAllSize], kAllSize);
     ASSERT_NOT_NULL(big_buf.data());
-    memset(big_buf.data(), 0x66, kAllSize);
+    memset(big_buf.data(), 0x66, big_buf.size());
 
     {
       size_t count;
@@ -176,7 +176,7 @@ TEST(SocketTest, Signals) {
 
     {
       size_t count;
-      ASSERT_OK(remote.read(0u, big_buf.data(), kAllSize, &count));
+      ASSERT_OK(remote.read(0u, big_buf.data(), big_buf.size(), &count));
       ASSERT_EQ(count, kChunk);
     }
 
@@ -236,8 +236,7 @@ TEST(SocketTest, SetThreshholdsAndCheckSignals) {
     ASSERT_EQ(count, (size_t)SOCKET2_SIGNALTEST_RX_THRESHOLD);
   }
 
-  zx_info_socket_t info;
-  memset(&info, 0, sizeof(info));
+  zx_info_socket_t info{};
   ASSERT_OK(remote.get_info(ZX_INFO_SOCKET, &info, sizeof(info), nullptr, nullptr));
   size_t write_threshold = info.tx_buf_max - (SOCKET2_SIGNALTEST_RX_THRESHOLD + 2);
   ASSERT_OK(
@@ -528,8 +527,7 @@ TEST(SocketTest, BytesOutstanding) {
     }
 
     // Check the number of bytes outstanding.
-    zx_info_socket_t info;
-    memset(&info, 0, sizeof(info));
+    zx_info_socket_t info{};
     ASSERT_OK(remote.get_info(ZX_INFO_SOCKET, &info, sizeof(info), nullptr, nullptr));
     EXPECT_EQ(info.rx_buf_available, sizeof(write_data));
 
@@ -578,8 +576,7 @@ TEST(SocketTest, ShutdownWriteBytesOutstanding) {
 
   char rbuf[kReadBufSize];
 
-  zx_info_socket_t info;
-  memset(&info, 0, sizeof(info));
+  zx_info_socket_t info{};
   ASSERT_OK(local.get_info(ZX_INFO_SOCKET, &info, sizeof(info), nullptr, nullptr));
   EXPECT_EQ(info.rx_buf_available, kMsg1.size());
 
@@ -633,8 +630,7 @@ TEST(SocketTest, ShutdownReadBytesOutstanding) {
 
   char rbuf[kReadBufSize];
 
-  zx_info_socket_t info;
-  memset(&info, 0, sizeof(info));
+  zx_info_socket_t info{};
   ASSERT_OK(local.get_info(ZX_INFO_SOCKET, &info, sizeof(info), nullptr, nullptr));
   EXPECT_EQ(info.rx_buf_available, kMsg1.size());
 
@@ -664,8 +660,7 @@ TEST(SocketTest, SetDispositionHandleWithoutRight) {
   EXPECT_EQ(GetSignals(local), ZX_SOCKET_WRITABLE);
   EXPECT_EQ(GetSignals(remote), ZX_SOCKET_WRITABLE);
 
-  zx_info_handle_basic_t info;
-  memset(&info, 0, sizeof(info));
+  zx_info_handle_basic_t info{};
   EXPECT_OK(local.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr));
   EXPECT_TRUE((info.rights & ZX_RIGHT_MANAGE_SOCKET) != 0);
 
@@ -860,8 +855,7 @@ TEST(SocketTest, ShortWrite) {
   zx::socket local, remote;
   ASSERT_OK(zx::socket::create(0, &local, &remote));
 
-  zx_info_socket_t info;
-  memset(&info, 0, sizeof(info));
+  zx_info_socket_t info{};
   ASSERT_OK(local.get_info(ZX_INFO_SOCKET, &info, sizeof(info), nullptr, nullptr));
   const size_t buffer_size = info.rx_buf_max + 1;
   fbl::Array<char> buffer(new char[buffer_size], buffer_size);
@@ -900,10 +894,11 @@ TEST(SocketTest, Datagram) {
     ASSERT_EQ(count, sizeof(write_data));
   }
 
-  zx_info_socket_t info;
-  memset(&info, 0, sizeof(info));
-  ASSERT_OK(remote.get_info(ZX_INFO_SOCKET, &info, sizeof(info), nullptr, nullptr));
-  EXPECT_EQ(info.rx_buf_available, kMsg1.size());
+  {
+    zx_info_socket_t info{};
+    ASSERT_OK(remote.get_info(ZX_INFO_SOCKET, &info, sizeof(info), nullptr, nullptr));
+    EXPECT_EQ(info.rx_buf_available, kMsg1.size());
+  }
   // Read less bytes than in the first datagram, the remaining bytes of the first datagram should
   // be truncated.
   {
@@ -914,9 +909,11 @@ TEST(SocketTest, Datagram) {
     EXPECT_BYTES_EQ(read_data, kMsg1.substr(0, kMsg1.size() - 1).data(), kMsg1.size() - 1);
   }
 
-  memset(&info, 0, sizeof(info));
-  ASSERT_OK(remote.get_info(ZX_INFO_SOCKET, &info, sizeof(info), nullptr, nullptr));
-  EXPECT_EQ(info.rx_buf_available, kMsg2.size());
+  {
+    zx_info_socket_t info{};
+    ASSERT_OK(remote.get_info(ZX_INFO_SOCKET, &info, sizeof(info), nullptr, nullptr));
+    EXPECT_EQ(info.rx_buf_available, kMsg2.size());
+  }
   {
     size_t count;
     uint8_t read_data[kMsg2.size()];
@@ -925,9 +922,11 @@ TEST(SocketTest, Datagram) {
     EXPECT_BYTES_EQ(read_data, kMsg2.data(), kMsg2.size());
   }
 
-  memset(&info, 0, sizeof(info));
-  ASSERT_OK(remote.get_info(ZX_INFO_SOCKET, &info, sizeof(info), nullptr, nullptr));
-  EXPECT_EQ(info.rx_buf_available, sizeof(write_data));
+  {
+    zx_info_socket_t info{};
+    ASSERT_OK(remote.get_info(ZX_INFO_SOCKET, &info, sizeof(info), nullptr, nullptr));
+    EXPECT_EQ(info.rx_buf_available, sizeof(write_data));
+  }
   {
     size_t count;
     uint8_t read_data[kLargerThanMBufPayloadSize];
@@ -936,9 +935,11 @@ TEST(SocketTest, Datagram) {
     EXPECT_BYTES_EQ(read_data, write_data, sizeof(write_data));
   }
 
-  memset(&info, 0, sizeof(info));
-  ASSERT_OK(remote.get_info(ZX_INFO_SOCKET, &info, sizeof(info), nullptr, nullptr));
-  EXPECT_EQ(info.rx_buf_available, 0);
+  {
+    zx_info_socket_t info{};
+    ASSERT_OK(remote.get_info(ZX_INFO_SOCKET, &info, sizeof(info), nullptr, nullptr));
+    EXPECT_EQ(info.rx_buf_available, 0);
+  }
 }
 
 TEST(SocketTest, DatagramPeek) {
@@ -1005,8 +1006,7 @@ TEST(SocketTest, DatagramNoShortWrite) {
   zx::socket local, remote;
   ASSERT_OK(zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote));
 
-  zx_info_socket_t info;
-  memset(&info, 0, sizeof(info));
+  zx_info_socket_t info{};
   ASSERT_OK(remote.get_info(ZX_INFO_SOCKET, &info, sizeof(info), nullptr, nullptr));
   EXPECT_GT(info.tx_buf_max, 0);
 

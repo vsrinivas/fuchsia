@@ -1723,6 +1723,7 @@ TEST(VmoTestCase, Discardable) {
 
   // Make sure we read zeros.
   uint8_t buf[kSize];
+  memset(buf, 0xff, sizeof(buf));
   EXPECT_OK(vmo.read(buf, 0, sizeof(buf)));
   uint8_t comp[kSize];
   memset(comp, 0, sizeof(comp));

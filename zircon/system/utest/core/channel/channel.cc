@@ -1375,7 +1375,7 @@ TEST(ChannelTest, ReadAndWriteWithMultipleSizes) {
 
     uint8_t data[num_bytes + 1];
     zx_handle_t handles[num_handles + 1];
-    memset(data, 0, num_bytes + 1);
+    memset(data, 0, sizeof(data));
 
     std::vector<zx::event> safe_handles(num_handles + 1);
 
