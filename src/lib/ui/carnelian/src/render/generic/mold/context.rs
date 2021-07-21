@@ -199,7 +199,7 @@ fn add_to_composition(
         .unwrap_or_else(|| {
             let layer_id = mold_composition
                 .create_layer()
-                .expect(&format!("Layer limit reached. ({})", u16::max_value()));
+                .unwrap_or_else(|| panic!("Layer limit reached. ({})", u16::max_value()));
 
             for print in &raster.prints {
                 let transform: [f32; 9] = [
