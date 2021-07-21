@@ -6,22 +6,24 @@
 #include <fuchsia/io/cpp/fidl.h>
 #include <fuchsia/realm/builder/cpp/fidl.h>
 #include <fuchsia/sys2/cpp/fidl.h>
+#include <lib/async/dispatcher.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/io.h>
+#include <lib/fidl/cpp/interface_handle.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/sys/cpp/testing/internal/errors.h>
+#include <lib/sys/cpp/testing/internal/mock_runner.h>
 #include <lib/sys/cpp/testing/internal/realm.h>
 #include <lib/sys/cpp/testing/internal/scoped_instance.h>
 #include <lib/sys/cpp/testing/realm_builder.h>
-#include <lib/syslog/cpp/log_level.h>
-#include <lib/syslog/cpp/macros.h>
+#include <lib/sys/cpp/testing/realm_builder_types.h>
 #include <zircon/assert.h>
-#include <zircon/status.h>
 
-#include <algorithm>
-#include <utility>
+#include <memory>
 #include <variant>
+
+#include "lib/async/default.h"
 
 namespace sys::testing {
 
@@ -29,6 +31,8 @@ namespace {
 
 constexpr char kCollectionName[] = "fuchsia_component_test_collection";
 constexpr char kFrameworkIntermediaryChildName[] = "fuchsia_component_test_framework_intermediary";
+constexpr char kMockRunnerName[] = "realm_builder";
+constexpr char kMockIdKey[] = "mock_id";
 
 void PanicIfMonikerBad(Moniker& moniker) {
   if (!moniker.path.empty()) {
@@ -86,6 +90,22 @@ fuchsia::realm::builder::Component ConvertToFidl(Source source) {
   ZX_PANIC("ConvertToFidl(Source) reached unreachable block!");
 }
 
+fuchsia::realm::builder::Component CreateMockComponentFidl(std::string mock_id) {
+  fuchsia::sys2::ComponentDecl component_decl;
+  fuchsia::sys2::ProgramDecl program_decl;
+  program_decl.set_runner(kMockRunnerName);
+  fuchsia::data::Dictionary dictionary;
+  fuchsia::data::DictionaryEntry entry;
+  entry.key = kMockIdKey;
+  auto value = fuchsia::data::DictionaryValue::New();
+  value->set_str(std::move(mock_id));
+  entry.value = std::move(value);
+  dictionary.mutable_entries()->push_back(std::move(entry));
+  program_decl.set_info(std::move(dictionary));
+  component_decl.set_program(std::move(program_decl));
+  return fuchsia::realm::builder::Component::WithDecl(std::move(component_decl));
+}
+
 fuchsia::realm::builder::CapabilityRoute ConvertToFidl(CapabilityRoute route) {
   fuchsia::realm::builder::CapabilityRoute result;
   result.set_capability(ConvertToFidl(route.capability));
@@ -98,20 +118,35 @@ fuchsia::realm::builder::CapabilityRoute ConvertToFidl(CapabilityRoute route) {
   return result;
 }
 
+fidl::InterfaceHandle<fuchsia::io::Directory> CreatePkgDirHandle() {
+  int fd;
+  ASSERT_STATUS_OK(
+      "fdio_open_fd",
+      fdio_open_fd("/pkg", fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
+                   &fd));
+  zx_handle_t handle;
+  ASSERT_STATUS_OK("fdio_fd_transfer", fdio_fd_transfer(fd, &handle));
+  auto channel = zx::channel(handle);
+  return fidl::InterfaceHandle<fuchsia::io::Directory>(std::move(channel));
+}
+
 }  // namespace
 
-Realm::Realm(internal::ScopedInstance root) : root_(std::move(root)) {}
+Realm::Realm(internal::ScopedInstance root, std::unique_ptr<internal::MockRunner> mock_runner)
+    : root_(std::move(root)), mock_runner_(std::move(mock_runner)) {}
 
 std::string Realm::GetChildName() const { return root_.GetChildName(); }
 
 Realm::Builder::Builder(
-    const sys::ComponentContext* context,
+    fuchsia::sys2::RealmSyncPtr realm_proxy,
     fuchsia::realm::builder::FrameworkIntermediarySyncPtr framework_intermediary_proxy,
-    sys::ServiceDirectory framework_intermediary_exposed_dir)
+    sys::ServiceDirectory framework_intermediary_exposed_dir,
+    std::unique_ptr<internal::MockRunner> mock_runner_server)
     : realm_commited_(false),
-      context_(context),
+      realm_proxy_(std::move(realm_proxy)),
       framework_intermediary_proxy_(std::move(framework_intermediary_proxy)),
-      framework_intermediary_exposed_dir_(std::move(framework_intermediary_exposed_dir)) {}
+      framework_intermediary_exposed_dir_(std::move(framework_intermediary_exposed_dir)),
+      mock_runner_(std::move(mock_runner_server)) {}
 
 Realm::Builder& Realm::Builder::AddComponent(Moniker moniker, Component component) {
   PanicIfMonikerBad(moniker);
@@ -124,7 +159,17 @@ Realm::Builder& Realm::Builder::AddComponent(Moniker moniker, Component componen
                moniker.path.c_str());
     }
   }
-  {
+  if (auto mock = std::get_if<Mock>(&component.source)) {
+    std::string mock_id;
+    ASSERT_STATUS_OK("FrameworkIntermediary/NewMockId",
+                     framework_intermediary_proxy_->NewMockId(&mock_id));
+    fuchsia::realm::builder::FrameworkIntermediary_SetComponent_Result result;
+    ASSERT_STATUS_AND_RESULT_OK("FrameworkIntemediary/SetComponent",
+                                framework_intermediary_proxy_->SetComponent(
+                                    moniker.path, CreateMockComponentFidl(mock_id), &result),
+                                result);
+    mock_runner_->Register(mock_id, mock->impl);
+  } else {
     fuchsia::realm::builder::FrameworkIntermediary_SetComponent_Result result;
     ASSERT_STATUS_AND_RESULT_OK("FrameworkIntemediary/SetComponent",
                                 framework_intermediary_proxy_->SetComponent(
@@ -142,31 +187,43 @@ Realm::Builder& Realm::Builder::AddComponent(Moniker moniker, Component componen
 
 Realm::Builder& Realm::Builder::AddRoute(CapabilityRoute route) {
   fuchsia::realm::builder::FrameworkIntermediary_RouteCapability_Result result;
-  auto fidl_route = ConvertToFidl(std::move(route));
+  auto fidl_route = ConvertToFidl(route);
   ASSERT_STATUS_AND_RESULT_OK(
       "FrameworkIntermediary/RouteCapability",
       framework_intermediary_proxy_->RouteCapability(std::move(fidl_route), &result), result);
   return *this;
 }
 
-Realm Realm::Builder::Build() {
+Realm Realm::Builder::Build(async_dispatcher_t* dispatcher) {
+  if (dispatcher == nullptr) {
+    dispatcher = async_get_default_dispatcher();
+  }
+  ASSERT_NOT_NULL(dispatcher);
   ZX_ASSERT_MSG(!realm_commited_, "RealmBuilder::Build() called after Realm already created");
   fuchsia::realm::builder::FrameworkIntermediary_Commit_Result result;
   ASSERT_STATUS_AND_RESULT_OK("FrameworkIntemediary/Commit",
                               framework_intermediary_proxy_->Commit(&result), result);
   realm_commited_ = true;
-  std::string root_component_url = result.response().root_component_url;
-  return Realm(internal::ScopedInstance::New(context_, kCollectionName, root_component_url));
+  // Hand channel to async client so that MockRunner can listen to events.
+  mock_runner_->Bind(framework_intermediary_proxy_.Unbind(), dispatcher);
+  return Realm(internal::ScopedInstance::New(std::move(realm_proxy_), kCollectionName,
+                                             result.response().root_component_url),
+               std::move(mock_runner_));
 }
 
 Realm::Builder Realm::Builder::New(const sys::ComponentContext* context) {
-  ASSERT_NOT_NULL(context);
-  fuchsia::realm::builder::FrameworkIntermediarySyncPtr proxy;
-  auto realm = internal::CreateRealmPtr(context);
+  ZX_ASSERT_MSG(context != nullptr, "context passed to RealmBuilder::New() must not be nullptr");
+  fuchsia::realm::builder::FrameworkIntermediarySyncPtr framework_intermediary_proxy;
+  auto realm_proxy = internal::CreateRealmPtr(context);
   auto child_ref = fuchsia::sys2::ChildRef{.name = kFrameworkIntermediaryChildName};
-  auto exposed_dir = internal::BindChild(realm.get(), child_ref);
-  exposed_dir.Connect(proxy.NewRequest());
-  return Builder(context, std::move(proxy), std::move(exposed_dir));
+  auto exposed_dir = internal::BindChild(realm_proxy.get(), child_ref);
+  exposed_dir.Connect(framework_intermediary_proxy.NewRequest());
+  fuchsia::realm::builder::FrameworkIntermediary_Init_Result result;
+  ASSERT_STATUS_AND_RESULT_OK("FrameworkIntermediary/Init",
+                              framework_intermediary_proxy->Init(CreatePkgDirHandle(), &result),
+                              result);
+  return Builder(std::move(realm_proxy), std::move(framework_intermediary_proxy),
+                 std::move(exposed_dir), std::make_unique<internal::MockRunner>());
 }
 
 }  // namespace sys::testing

@@ -74,7 +74,7 @@ const char* ConvertToString(fuchsia::component::Error& error) {
 }
 
 void PanicWithMessage(const char* stacktrace, const char* context, zx_status_t status) {
-  ZX_PANIC("[%s] FIDL method %s failed with status: %s\n", stacktrace, context,
+  ZX_PANIC("[%s] FIDL method %s failed with status: %s", stacktrace, context,
            zx_status_get_string(status));
 }
 

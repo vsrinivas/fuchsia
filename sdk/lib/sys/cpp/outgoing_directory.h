@@ -54,6 +54,9 @@ class OutgoingDirectory final {
   OutgoingDirectory();
   ~OutgoingDirectory();
 
+  OutgoingDirectory(OutgoingDirectory&&) noexcept;
+  OutgoingDirectory& operator=(OutgoingDirectory&&) noexcept;
+
   // Outgoing objects cannot be copied.
   OutgoingDirectory(const OutgoingDirectory&) = delete;
   OutgoingDirectory& operator=(const OutgoingDirectory&) = delete;

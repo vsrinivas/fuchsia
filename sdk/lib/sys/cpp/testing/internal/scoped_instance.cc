@@ -21,8 +21,6 @@
 
 #include <random>
 
-#include "lib/sys/cpp/testing/realm_builder.h"
-
 namespace sys::testing::internal {
 
 namespace {
@@ -66,21 +64,18 @@ ScopedInstance& ScopedInstance::operator=(ScopedInstance&& other) noexcept {
   return *this;
 }
 
-ScopedInstance ScopedInstance::New(const sys::ComponentContext* context, std::string collection,
+ScopedInstance ScopedInstance::New(fuchsia::sys2::RealmSyncPtr realm_proxy, std::string collection,
                                    std::string url) {
-  ASSERT_NOT_NULL(context);
   std::string name = "auto-" + std::to_string(random_unsigned());
-  return New(context, std::move(collection), std::move(name), std::move(url));
+  return New(std::move(realm_proxy), std::move(collection), std::move(name), std::move(url));
 }
 
-ScopedInstance ScopedInstance::New(const sys::ComponentContext* context, std::string collection,
+ScopedInstance ScopedInstance::New(fuchsia::sys2::RealmSyncPtr realm_proxy, std::string collection,
                                    std::string name, std::string url) {
-  ASSERT_NOT_NULL(context);
-  auto realm = CreateRealmPtr(context);
-  CreateChild(realm.get(), collection, name, std::move(url));
+  CreateChild(realm_proxy.get(), collection, name, std::move(url));
   auto exposed_dir =
-      BindChild(realm.get(), fuchsia::sys2::ChildRef{.name = name, .collection = collection});
-  return ScopedInstance(std::move(realm),
+      BindChild(realm_proxy.get(), fuchsia::sys2::ChildRef{.name = name, .collection = collection});
+  return ScopedInstance(std::move(realm_proxy),
                         fuchsia::sys2::ChildRef{.name = name, .collection = collection},
                         std::move(exposed_dir));
 }

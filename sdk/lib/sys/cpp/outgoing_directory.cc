@@ -39,6 +39,22 @@ OutgoingDirectory::OutgoingDirectory()
 
 OutgoingDirectory::~OutgoingDirectory() = default;
 
+OutgoingDirectory::OutgoingDirectory(OutgoingDirectory&& other) noexcept
+    : root_(std::move(other.root_)), svc_(other.svc_), debug_(other.debug_) {
+  other.svc_ = nullptr;
+  other.debug_ = nullptr;
+}
+
+OutgoingDirectory& OutgoingDirectory::operator=(OutgoingDirectory&& other) noexcept {
+  root_ = std::move(other.root_);
+  svc_ = other.svc_;
+  debug_ = other.debug_;
+
+  other.svc_ = nullptr;
+  other.debug_ = nullptr;
+  return *this;
+}
+
 zx_status_t OutgoingDirectory::Serve(zx::channel directory_request,
                                      async_dispatcher_t* dispatcher) {
   return root_->Serve(fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,

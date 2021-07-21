@@ -24,18 +24,18 @@ namespace sys::testing::internal {
 // will automatically destroy the child component once it goes out of scope.
 class ScopedInstance {
  public:
-  // Same as below with a randomly generated `name`.
-  static ScopedInstance New(const sys::ComponentContext* context, std::string collection,
-                            std::string url);
-
   // Create a dynamic child component using the fuchsia.sys2.Realm API.
-  // |context| must not be NULL.
+  // |realm_proxy| must be bound to a connection to the fuchsia.sys2.Realm protocol.
   // |collection| is the name of the collection to create the child under. This
   // field must refer to a name in the current component's manifest file.
   // |name| is the name to assign to the child.
   // |url| is the component component URL of the child component.
-  static ScopedInstance New(const sys::ComponentContext* context, std::string collection,
+  static ScopedInstance New(fuchsia::sys2::RealmSyncPtr realm_proxy, std::string collection,
                             std::string name, std::string url);
+
+  // Same as above with a randomly generated `name`.
+  static ScopedInstance New(fuchsia::sys2::RealmSyncPtr realm_proxy, std::string collection,
+                            std::string url);
 
   ~ScopedInstance();
 

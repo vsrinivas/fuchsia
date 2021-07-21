@@ -93,12 +93,16 @@ source_set("realm_builder") {
   sources = [
     "internal/errors.cc",
     "internal/errors.h",
+    "internal/mock_runner.cc",
+    "internal/mock_runner.h",
     "internal/realm.cc",
     "internal/realm.h",
     "internal/scoped_instance.cc",
     "internal/scoped_instance.h",
     "realm_builder.cc",
     "realm_builder.h",
+    "realm_builder_types.cc",
+    "realm_builder_types.h",
   ]
 
   public_deps = [
@@ -111,5 +115,6 @@ source_set("realm_builder") {
     "//src/lib/fuchsia-component-test/fidl:fuchsia.realm.builder",
     "//src/lib/fxl",
     "//zircon/system/public:public",
+    "//zircon/system/ulib/async-loop",
   ]
 }
