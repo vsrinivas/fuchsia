@@ -1117,67 +1117,6 @@ struct BaseSocket {
     }
   }
 
-  void getsockopt_inner(const fidl::VectorView<uint8_t>& fidl_optval, int level, int optname,
-                        void* optval, socklen_t* optlen, int16_t* out_code) {
-    size_t copy_len = std::min(static_cast<size_t>(*optlen), fidl_optval.count());
-    bool do_optlen_check = true;
-    // The following code block is to just keep up with Linux parity.
-    switch (level) {
-      case SOL_IP:
-        switch (optname) {
-          case IP_TOS:
-          case IP_RECVTOS:
-          case IP_MULTICAST_TTL:
-          case IP_MULTICAST_LOOP:
-            // On Linux, when the optlen is < sizeof(int), only a single byte is
-            // copied. As these options' value is just a single byte, we are not losing
-            // any information here.
-            //
-            // Note that this probably won't work right on big-endian systems.
-            if (*optlen > 0 && *optlen < sizeof(int)) {
-              copy_len = 1;
-            }
-            do_optlen_check = false;
-            break;
-          default:
-            break;
-        }
-        break;
-      case SOL_IPV6:
-        switch (optname) {
-          case IPV6_MULTICAST_HOPS:
-          case IPV6_MULTICAST_LOOP:
-          case IPV6_RECVTCLASS:
-          case IPV6_TCLASS:
-            do_optlen_check = false;
-            break;
-          default:
-            break;
-        }
-        break;
-      case SOL_TCP:
-        switch (optname) {
-          case TCP_CONGESTION:
-          case TCP_INFO:
-            do_optlen_check = false;
-            break;
-          default:
-            break;
-        }
-        break;
-      default:
-        break;
-    }
-    if (do_optlen_check) {
-      if (fidl_optval.count() > *optlen) {
-        *out_code = EINVAL;
-        return;
-      }
-    }
-    memcpy(optval, fidl_optval.data(), copy_len);
-    *optlen = static_cast<socklen_t>(copy_len);
-  }
-
   zx_status_t shutdown(int how, int16_t* out_code) {
     using fsocket::wire::ShutdownMode;
     ShutdownMode mode;
