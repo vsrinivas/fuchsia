@@ -56,6 +56,8 @@ class FieldCollision;
 
 class ExplicitXUnion;
 
+class UnionSandwich;
+
 class ExplicitUnion;
 
 class ExplicitStrictFoo;
@@ -1915,6 +1917,35 @@ inline zx_status_t Clone(const ::fidl::test::union_::ExplicitXUnion& value,
 
 using ExplicitXUnionPtr = ::std::unique_ptr<ExplicitXUnion>;
 
+class UnionSandwich final {
+ public:
+  static const fidl_type_t* FidlType;
+
+  uint32_t a{};
+
+  ::fidl::test::union_::ExplicitXUnion u{};
+
+  uint32_t b{};
+
+  static inline ::std::unique_ptr<UnionSandwich> New() {
+    return ::std::make_unique<UnionSandwich>();
+  }
+
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, UnionSandwich* value,
+                     size_t _offset);
+  zx_status_t Clone(UnionSandwich* result) const;
+};
+
+inline zx_status_t Clone(const ::fidl::test::union_::UnionSandwich& _value,
+                         ::fidl::test::union_::UnionSandwich* _result) {
+  return _value.Clone(_result);
+}
+
+using UnionSandwichPtr = ::std::unique_ptr<UnionSandwich>;
+
 class ExplicitUnion final {
  public:
   static const fidl_type_t* FidlType;
@@ -3531,6 +3562,42 @@ struct Equality<::fidl::test::union_::ExplicitXUnion> {
       default:
         return ::fidl::Equals(_lhs.unknown_data_, _rhs.unknown_data_);
     }
+  }
+};
+template <>
+struct CodingTraits<::fidl::test::union_::UnionSandwich>
+    : public EncodableCodingTraits<::fidl::test::union_::UnionSandwich, 40> {};
+
+template <>
+struct HasPadding<::fidl::test::union_::UnionSandwich> : public std::true_type {
+};
+
+template <>
+struct IsMemcpyCompatible<::fidl::test::union_::UnionSandwich>
+    : public internal::BoolConstant<
+          !HasPadding<::fidl::test::union_::UnionSandwich>::value &&
+          IsMemcpyCompatible<::fidl::test::union_::ExplicitXUnion>::value &&
+          IsMemcpyCompatible<uint32_t>::value> {};
+
+inline zx_status_t Clone(const ::fidl::test::union_::UnionSandwich& value,
+                         ::fidl::test::union_::UnionSandwich* result) {
+  return ::fidl::test::union_::Clone(value, result);
+}
+
+template <>
+struct Equality<::fidl::test::union_::UnionSandwich> {
+  bool operator()(const ::fidl::test::union_::UnionSandwich& _lhs,
+                  const ::fidl::test::union_::UnionSandwich& _rhs) const {
+    if (!::fidl::Equals(_lhs.a, _rhs.a)) {
+      return false;
+    }
+    if (!::fidl::Equals(_lhs.u, _rhs.u)) {
+      return false;
+    }
+    if (!::fidl::Equals(_lhs.b, _rhs.b)) {
+      return false;
+    }
+    return true;
   }
 };
 template <>

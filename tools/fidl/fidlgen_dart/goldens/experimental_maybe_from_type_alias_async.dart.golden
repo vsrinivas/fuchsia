@@ -320,34 +320,70 @@ class Testing extends $fidl.Struct {
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    $fieldType0.encode($encoder, u1, $offset + 0, $depth);
-    $fieldType1.encode($encoder, u2, $offset + 8, $depth);
-    $fieldType2.encode($encoder, u3, $offset + 24, $depth);
-    $fieldType3.encode($encoder, u4, $offset + 32, $depth);
-    $fieldType4.encode($encoder, u5, $offset + 48, $depth);
-    $fieldType5.encode($encoder, u6, $offset + 64, $depth);
-    $fieldType6.encode($encoder, u7, $offset + 128, $depth);
-    $fieldType7.encode($encoder, v1, $offset + 160, $depth);
-    $fieldType8.encode($encoder, v2, $offset + 176, $depth);
-    $fieldType9.encode($encoder, v3, $offset + 192, $depth);
-    $fieldType10.encode($encoder, a1, $offset + 256, $depth);
-    $fieldType11.encode($encoder, a2, $offset + 264, $depth);
-    $fieldType12.encode($encoder, a3, $offset + 280, $depth);
-    $fieldType13.encode($encoder, r1, $offset + 312, $depth);
-    $fieldType14.encode($encoder, r2, $offset + 320, $depth);
-    $fieldType15.encode($encoder, r3, $offset + 336, $depth);
-    $fieldType16.encode($encoder, b1, $offset + 352, $depth);
-    $fieldType17.encode($encoder, b2, $offset + 368, $depth);
-    $fieldType18.encode($encoder, b3, $offset + 384, $depth);
-    $fieldType19.encode($encoder, s1, $offset + 448, $depth);
-    $fieldType20.encode($encoder, s2, $offset + 464, $depth);
-    $fieldType21.encode($encoder, s3, $offset + 480, $depth);
-    $fieldType22.encode($encoder, vv1, $offset + 544, $depth);
-    $fieldType23.encode($encoder, vv2, $offset + 560, $depth);
-    $fieldType24.encode($encoder, vv3, $offset + 576, $depth);
-    $fieldType25.encode($encoder, aa1, $offset + 624, $depth);
-    $fieldType26.encode($encoder, aa2, $offset + 640, $depth);
-    $fieldType27.encode($encoder, aa3, $offset + 656, $depth);
+    switch ($encoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $fieldType0.encode($encoder, u1, $offset + 0, $depth);
+        $fieldType1.encode($encoder, u2, $offset + 8, $depth);
+        $fieldType2.encode($encoder, u3, $offset + 24, $depth);
+        $fieldType3.encode($encoder, u4, $offset + 32, $depth);
+        $fieldType4.encode($encoder, u5, $offset + 48, $depth);
+        $fieldType5.encode($encoder, u6, $offset + 64, $depth);
+        $fieldType6.encode($encoder, u7, $offset + 128, $depth);
+        $fieldType7.encode($encoder, v1, $offset + 160, $depth);
+        $fieldType8.encode($encoder, v2, $offset + 176, $depth);
+        $fieldType9.encode($encoder, v3, $offset + 192, $depth);
+        $fieldType10.encode($encoder, a1, $offset + 256, $depth);
+        $fieldType11.encode($encoder, a2, $offset + 264, $depth);
+        $fieldType12.encode($encoder, a3, $offset + 280, $depth);
+        $fieldType13.encode($encoder, r1, $offset + 312, $depth);
+        $fieldType14.encode($encoder, r2, $offset + 320, $depth);
+        $fieldType15.encode($encoder, r3, $offset + 336, $depth);
+        $fieldType16.encode($encoder, b1, $offset + 352, $depth);
+        $fieldType17.encode($encoder, b2, $offset + 368, $depth);
+        $fieldType18.encode($encoder, b3, $offset + 384, $depth);
+        $fieldType19.encode($encoder, s1, $offset + 448, $depth);
+        $fieldType20.encode($encoder, s2, $offset + 464, $depth);
+        $fieldType21.encode($encoder, s3, $offset + 480, $depth);
+        $fieldType22.encode($encoder, vv1, $offset + 544, $depth);
+        $fieldType23.encode($encoder, vv2, $offset + 560, $depth);
+        $fieldType24.encode($encoder, vv3, $offset + 576, $depth);
+        $fieldType25.encode($encoder, aa1, $offset + 624, $depth);
+        $fieldType26.encode($encoder, aa2, $offset + 640, $depth);
+        $fieldType27.encode($encoder, aa3, $offset + 656, $depth);
+        break;
+      case $fidl.WireFormat.v2:
+        $fieldType0.encode($encoder, u1, $offset + 0, $depth);
+        $fieldType1.encode($encoder, u2, $offset + 8, $depth);
+        $fieldType2.encode($encoder, u3, $offset + 24, $depth);
+        $fieldType3.encode($encoder, u4, $offset + 32, $depth);
+        $fieldType4.encode($encoder, u5, $offset + 48, $depth);
+        $fieldType5.encode($encoder, u6, $offset + 64, $depth);
+        $fieldType6.encode($encoder, u7, $offset + 128, $depth);
+        $fieldType7.encode($encoder, v1, $offset + 160, $depth);
+        $fieldType8.encode($encoder, v2, $offset + 176, $depth);
+        $fieldType9.encode($encoder, v3, $offset + 192, $depth);
+        $fieldType10.encode($encoder, a1, $offset + 256, $depth);
+        $fieldType11.encode($encoder, a2, $offset + 264, $depth);
+        $fieldType12.encode($encoder, a3, $offset + 280, $depth);
+        $fieldType13.encode($encoder, r1, $offset + 312, $depth);
+        $fieldType14.encode($encoder, r2, $offset + 320, $depth);
+        $fieldType15.encode($encoder, r3, $offset + 336, $depth);
+        $fieldType16.encode($encoder, b1, $offset + 352, $depth);
+        $fieldType17.encode($encoder, b2, $offset + 368, $depth);
+        $fieldType18.encode($encoder, b3, $offset + 384, $depth);
+        $fieldType19.encode($encoder, s1, $offset + 448, $depth);
+        $fieldType20.encode($encoder, s2, $offset + 464, $depth);
+        $fieldType21.encode($encoder, s3, $offset + 480, $depth);
+        $fieldType22.encode($encoder, vv1, $offset + 544, $depth);
+        $fieldType23.encode($encoder, vv2, $offset + 560, $depth);
+        $fieldType24.encode($encoder, vv3, $offset + 576, $depth);
+        $fieldType25.encode($encoder, aa1, $offset + 624, $depth);
+        $fieldType26.encode($encoder, aa2, $offset + 640, $depth);
+        $fieldType27.encode($encoder, aa3, $offset + 656, $depth);
+        break;
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
   }
 
   @override
@@ -413,42 +449,78 @@ class Testing extends $fidl.Struct {
 
   static Testing _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
-    return Testing(
-        u1: $fieldType0.decode($decoder, $offset + 0, $depth),
-        u2: $fieldType1.decode($decoder, $offset + 8, $depth),
-        u3: $fieldType2.decode($decoder, $offset + 24, $depth),
-        u4: $fieldType3.decode($decoder, $offset + 32, $depth),
-        u5: $fieldType4.decode($decoder, $offset + 48, $depth),
-        u6: $fieldType5.decode($decoder, $offset + 64, $depth),
-        u7: $fieldType6.decode($decoder, $offset + 128, $depth),
-        v1: $fieldType7.decode($decoder, $offset + 160, $depth),
-        v2: $fieldType8.decode($decoder, $offset + 176, $depth),
-        v3: $fieldType9.decode($decoder, $offset + 192, $depth),
-        a1: $fieldType10.decode($decoder, $offset + 256, $depth),
-        a2: $fieldType11.decode($decoder, $offset + 264, $depth),
-        a3: $fieldType12.decode($decoder, $offset + 280, $depth),
-        r1: $fieldType13.decode($decoder, $offset + 312, $depth),
-        r2: $fieldType14.decode($decoder, $offset + 320, $depth),
-        r3: $fieldType15.decode($decoder, $offset + 336, $depth),
-        b1: $fieldType16.decode($decoder, $offset + 352, $depth),
-        b2: $fieldType17.decode($decoder, $offset + 368, $depth),
-        b3: $fieldType18.decode($decoder, $offset + 384, $depth),
-        s1: $fieldType19.decode($decoder, $offset + 448, $depth),
-        s2: $fieldType20.decode($decoder, $offset + 464, $depth),
-        s3: $fieldType21.decode($decoder, $offset + 480, $depth),
-        vv1: $fieldType22.decode($decoder, $offset + 544, $depth),
-        vv2: $fieldType23.decode($decoder, $offset + 560, $depth),
-        vv3: $fieldType24.decode($decoder, $offset + 576, $depth),
-        aa1: $fieldType25.decode($decoder, $offset + 624, $depth),
-        aa2: $fieldType26.decode($decoder, $offset + 640, $depth),
-        aa3: $fieldType27.decode($decoder, $offset + 656, $depth));
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        return Testing(
+            u1: $fieldType0.decode($decoder, $offset + 0, $depth),
+            u2: $fieldType1.decode($decoder, $offset + 8, $depth),
+            u3: $fieldType2.decode($decoder, $offset + 24, $depth),
+            u4: $fieldType3.decode($decoder, $offset + 32, $depth),
+            u5: $fieldType4.decode($decoder, $offset + 48, $depth),
+            u6: $fieldType5.decode($decoder, $offset + 64, $depth),
+            u7: $fieldType6.decode($decoder, $offset + 128, $depth),
+            v1: $fieldType7.decode($decoder, $offset + 160, $depth),
+            v2: $fieldType8.decode($decoder, $offset + 176, $depth),
+            v3: $fieldType9.decode($decoder, $offset + 192, $depth),
+            a1: $fieldType10.decode($decoder, $offset + 256, $depth),
+            a2: $fieldType11.decode($decoder, $offset + 264, $depth),
+            a3: $fieldType12.decode($decoder, $offset + 280, $depth),
+            r1: $fieldType13.decode($decoder, $offset + 312, $depth),
+            r2: $fieldType14.decode($decoder, $offset + 320, $depth),
+            r3: $fieldType15.decode($decoder, $offset + 336, $depth),
+            b1: $fieldType16.decode($decoder, $offset + 352, $depth),
+            b2: $fieldType17.decode($decoder, $offset + 368, $depth),
+            b3: $fieldType18.decode($decoder, $offset + 384, $depth),
+            s1: $fieldType19.decode($decoder, $offset + 448, $depth),
+            s2: $fieldType20.decode($decoder, $offset + 464, $depth),
+            s3: $fieldType21.decode($decoder, $offset + 480, $depth),
+            vv1: $fieldType22.decode($decoder, $offset + 544, $depth),
+            vv2: $fieldType23.decode($decoder, $offset + 560, $depth),
+            vv3: $fieldType24.decode($decoder, $offset + 576, $depth),
+            aa1: $fieldType25.decode($decoder, $offset + 624, $depth),
+            aa2: $fieldType26.decode($decoder, $offset + 640, $depth),
+            aa3: $fieldType27.decode($decoder, $offset + 656, $depth));
+      case $fidl.WireFormat.v2:
+        return Testing(
+            u1: $fieldType0.decode($decoder, $offset + 0, $depth),
+            u2: $fieldType1.decode($decoder, $offset + 8, $depth),
+            u3: $fieldType2.decode($decoder, $offset + 24, $depth),
+            u4: $fieldType3.decode($decoder, $offset + 32, $depth),
+            u5: $fieldType4.decode($decoder, $offset + 48, $depth),
+            u6: $fieldType5.decode($decoder, $offset + 64, $depth),
+            u7: $fieldType6.decode($decoder, $offset + 128, $depth),
+            v1: $fieldType7.decode($decoder, $offset + 160, $depth),
+            v2: $fieldType8.decode($decoder, $offset + 176, $depth),
+            v3: $fieldType9.decode($decoder, $offset + 192, $depth),
+            a1: $fieldType10.decode($decoder, $offset + 256, $depth),
+            a2: $fieldType11.decode($decoder, $offset + 264, $depth),
+            a3: $fieldType12.decode($decoder, $offset + 280, $depth),
+            r1: $fieldType13.decode($decoder, $offset + 312, $depth),
+            r2: $fieldType14.decode($decoder, $offset + 320, $depth),
+            r3: $fieldType15.decode($decoder, $offset + 336, $depth),
+            b1: $fieldType16.decode($decoder, $offset + 352, $depth),
+            b2: $fieldType17.decode($decoder, $offset + 368, $depth),
+            b3: $fieldType18.decode($decoder, $offset + 384, $depth),
+            s1: $fieldType19.decode($decoder, $offset + 448, $depth),
+            s2: $fieldType20.decode($decoder, $offset + 464, $depth),
+            s3: $fieldType21.decode($decoder, $offset + 480, $depth),
+            vv1: $fieldType22.decode($decoder, $offset + 544, $depth),
+            vv2: $fieldType23.decode($decoder, $offset + 560, $depth),
+            vv3: $fieldType24.decode($decoder, $offset + 576, $depth),
+            aa1: $fieldType25.decode($decoder, $offset + 624, $depth),
+            aa2: $fieldType26.decode($decoder, $offset + 640, $depth),
+            aa3: $fieldType27.decode($decoder, $offset + 656, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
   }
 }
 
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<Testing> kTesting_Type = $fidl.StructType<Testing>(
-  inlineSize: 704,
+  inlineSizeV1: 704,
+  inlineSizeV2: 704,
   structDecode: Testing._structDecode,
 );
 

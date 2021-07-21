@@ -74,8 +74,20 @@ class ExampleUseOfVectors extends $fidl.Struct {
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    $fieldType0.encode($encoder, vectorOfUint8, $offset + 0, $depth);
-    $fieldType1.encode($encoder, vectorOfVectorOfBool, $offset + 16, $depth);
+    switch ($encoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $fieldType0.encode($encoder, vectorOfUint8, $offset + 0, $depth);
+        $fieldType1.encode(
+            $encoder, vectorOfVectorOfBool, $offset + 16, $depth);
+        break;
+      case $fidl.WireFormat.v2:
+        $fieldType0.encode($encoder, vectorOfUint8, $offset + 0, $depth);
+        $fieldType1.encode(
+            $encoder, vectorOfVectorOfBool, $offset + 16, $depth);
+        break;
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
   }
 
   @override
@@ -89,10 +101,20 @@ class ExampleUseOfVectors extends $fidl.Struct {
 
   static ExampleUseOfVectors _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
-    return ExampleUseOfVectors(
-        vectorOfUint8: $fieldType0.decode($decoder, $offset + 0, $depth),
-        vectorOfVectorOfBool:
-            $fieldType1.decode($decoder, $offset + 16, $depth));
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        return ExampleUseOfVectors(
+            vectorOfUint8: $fieldType0.decode($decoder, $offset + 0, $depth),
+            vectorOfVectorOfBool:
+                $fieldType1.decode($decoder, $offset + 16, $depth));
+      case $fidl.WireFormat.v2:
+        return ExampleUseOfVectors(
+            vectorOfUint8: $fieldType0.decode($decoder, $offset + 0, $depth),
+            vectorOfVectorOfBool:
+                $fieldType1.decode($decoder, $offset + 16, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
   }
 }
 
@@ -100,6 +122,7 @@ class ExampleUseOfVectors extends $fidl.Struct {
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<ExampleUseOfVectors> kExampleUseOfVectors_Type =
     $fidl.StructType<ExampleUseOfVectors>(
-  inlineSize: 32,
+  inlineSizeV1: 32,
+  inlineSizeV2: 32,
   structDecode: ExampleUseOfVectors._structDecode,
 );

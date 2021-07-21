@@ -94,10 +94,22 @@ class ByteAndBytes extends $fidl.Struct {
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    $fieldType0.encode($encoder, singleByte, $offset + 0, $depth);
-    $fieldType1.encode($encoder, manyBytes, $offset + 8, $depth);
-    $fieldType2.encode($encoder, onlyOneKBytes, $offset + 24, $depth);
-    $fieldType3.encode($encoder, optOnlyOneKBytes, $offset + 40, $depth);
+    switch ($encoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $fieldType0.encode($encoder, singleByte, $offset + 0, $depth);
+        $fieldType1.encode($encoder, manyBytes, $offset + 8, $depth);
+        $fieldType2.encode($encoder, onlyOneKBytes, $offset + 24, $depth);
+        $fieldType3.encode($encoder, optOnlyOneKBytes, $offset + 40, $depth);
+        break;
+      case $fidl.WireFormat.v2:
+        $fieldType0.encode($encoder, singleByte, $offset + 0, $depth);
+        $fieldType1.encode($encoder, manyBytes, $offset + 8, $depth);
+        $fieldType2.encode($encoder, onlyOneKBytes, $offset + 24, $depth);
+        $fieldType3.encode($encoder, optOnlyOneKBytes, $offset + 40, $depth);
+        break;
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
   }
 
   @override
@@ -115,11 +127,24 @@ class ByteAndBytes extends $fidl.Struct {
 
   static ByteAndBytes _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
-    return ByteAndBytes(
-        singleByte: $fieldType0.decode($decoder, $offset + 0, $depth),
-        manyBytes: $fieldType1.decode($decoder, $offset + 8, $depth),
-        onlyOneKBytes: $fieldType2.decode($decoder, $offset + 24, $depth),
-        optOnlyOneKBytes: $fieldType3.decode($decoder, $offset + 40, $depth));
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        return ByteAndBytes(
+            singleByte: $fieldType0.decode($decoder, $offset + 0, $depth),
+            manyBytes: $fieldType1.decode($decoder, $offset + 8, $depth),
+            onlyOneKBytes: $fieldType2.decode($decoder, $offset + 24, $depth),
+            optOnlyOneKBytes:
+                $fieldType3.decode($decoder, $offset + 40, $depth));
+      case $fidl.WireFormat.v2:
+        return ByteAndBytes(
+            singleByte: $fieldType0.decode($decoder, $offset + 0, $depth),
+            manyBytes: $fieldType1.decode($decoder, $offset + 8, $depth),
+            onlyOneKBytes: $fieldType2.decode($decoder, $offset + 24, $depth),
+            optOnlyOneKBytes:
+                $fieldType3.decode($decoder, $offset + 40, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
   }
 }
 
@@ -127,6 +152,7 @@ class ByteAndBytes extends $fidl.Struct {
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<ByteAndBytes> kByteAndBytes_Type =
     $fidl.StructType<ByteAndBytes>(
-  inlineSize: 56,
+  inlineSizeV1: 56,
+  inlineSizeV2: 56,
   structDecode: ByteAndBytes._structDecode,
 );

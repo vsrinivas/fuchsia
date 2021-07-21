@@ -33,6 +33,7 @@ using FlexibleUnion = ::fidl::test::union_::FlexibleUnion;
 using FlexibleFoo = ::fidl::test::union_::FlexibleFoo;
 using FieldCollision = ::fidl::test::union_::FieldCollision;
 using ExplicitXUnion = ::fidl::test::union_::ExplicitXUnion;
+using UnionSandwich = ::fidl::test::union_::UnionSandwich;
 using ExplicitUnion = ::fidl::test::union_::ExplicitUnion;
 using ExplicitStrictFoo = ::fidl::test::union_::ExplicitStrictFoo;
 using ExplicitFoo = ::fidl::test::union_::ExplicitFoo;
@@ -665,6 +666,31 @@ struct Allocate<ExplicitXUnion> {
       }
     }
 
+    return out;
+  }
+};
+template <>
+struct MinSize<UnionSandwich> {
+  operator size_t() {
+    return MinSize<uint32_t>() +
+           MinSize<::fidl::test::union_::ExplicitXUnion>() +
+           MinSize<uint32_t>();
+  }
+};
+template <>
+struct Allocate<UnionSandwich> {
+  UnionSandwich operator()(FuzzInput* src, size_t* size) {
+    ZX_ASSERT(*size >= MinSize<UnionSandwich>());
+    UnionSandwich out;
+    const size_t slack_per_member = (*size - MinSize<UnionSandwich>()) / 3;
+    size_t out_size;
+    out_size = MinSize<uint32_t>() + slack_per_member;
+    out.a = Allocate<uint32_t>{}(src, &out_size);
+    out_size =
+        MinSize<::fidl::test::union_::ExplicitXUnion>() + slack_per_member;
+    out.u = Allocate<::fidl::test::union_::ExplicitXUnion>{}(src, &out_size);
+    out_size = MinSize<uint32_t>() + slack_per_member;
+    out.b = Allocate<uint32_t>{}(src, &out_size);
     return out;
   }
 };

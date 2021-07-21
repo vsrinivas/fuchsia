@@ -60,6 +60,7 @@ void main() {
 			{{- if .HandleDefs }}
 			DecodeSuccessCase.runWithHandles(
 				{{ .Name }},
+				{{ .WireFormat }},
 				(List<Handle> handles) => {{ .Value }},
 				{{ .ValueType }},
 				{{ .Bytes }},
@@ -69,6 +70,7 @@ void main() {
 			{{- else }}
 			DecodeSuccessCase.run(
 				{{ .Name }},
+				{{ .WireFormat }},
 				{{ .Value }},
 				{{ .ValueType }},
 				{{ .Bytes }});
@@ -101,6 +103,7 @@ void main() {
 			{{ range .DecodeFailureCases }}
 			DecodeFailureCase.run(
 				{{ .Name }},
+				{{ .WireFormat }},
 				{{ .ValueType }},
 				{{ .Bytes }},
 			{{- if .HandleDefs }}
@@ -128,7 +131,7 @@ type encodeSuccessCase struct {
 }
 
 type decodeSuccessCase struct {
-	Name, Value, ValueType, Bytes, HandleDefs, Handles, UnusedHandles string
+	Name, WireFormat, Value, ValueType, Bytes, HandleDefs, Handles, UnusedHandles string
 }
 
 type encodeFailureCase struct {
@@ -136,7 +139,7 @@ type encodeFailureCase struct {
 }
 
 type decodeFailureCase struct {
-	Name, ValueType, Bytes, ErrorCode, HandleDefs, Handles string
+	Name, WireFormat, ValueType, Bytes, ErrorCode, HandleDefs, Handles string
 }
 
 // Generate generates dart tests.
@@ -261,6 +264,7 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, schema gidlm
 			}
 			decodeSuccessCases = append(decodeSuccessCases, decodeSuccessCase{
 				Name:       testCaseName(decodeSuccess.Name, encoding.WireFormat),
+				WireFormat: wireFormatName(encoding.WireFormat),
 				Value:      valueStr,
 				ValueType:  valueType,
 				Bytes:      buildBytes(encoding.Bytes),
@@ -325,6 +329,7 @@ func decodeFailureCases(gidlDecodeFailures []gidlir.DecodeFailure, schema gidlmi
 			}
 			decodeFailureCases = append(decodeFailureCases, decodeFailureCase{
 				Name:       testCaseName(decodeFailure.Name, encoding.WireFormat),
+				WireFormat: wireFormatName(encoding.WireFormat),
 				ValueType:  valueType,
 				Bytes:      buildBytes(encoding.Bytes),
 				ErrorCode:  errorCode,
@@ -367,6 +372,10 @@ func testCaseName(baseName string, wireFormat gidlir.WireFormat) string {
 
 func encoderName(wireFormat gidlir.WireFormat) string {
 	return fmt.Sprintf("Encoders.%s", wireFormat)
+}
+
+func wireFormatName(wireFormat gidlir.WireFormat) string {
+	return fmt.Sprintf("fidl.WireFormat.%s", wireFormat)
 }
 
 func dartTypeName(inputType string) string {

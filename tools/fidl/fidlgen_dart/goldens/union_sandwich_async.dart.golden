@@ -411,9 +411,20 @@ class SandwichUnionSize8Alignment4 extends $fidl.Struct {
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    $fieldType0.encode($encoder, before, $offset + 0, $depth);
-    $fieldType1.encode($encoder, union, $offset + 8, $depth);
-    $fieldType2.encode($encoder, after, $offset + 32, $depth);
+    switch ($encoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $fieldType0.encode($encoder, before, $offset + 0, $depth);
+        $fieldType1.encode($encoder, union, $offset + 8, $depth);
+        $fieldType2.encode($encoder, after, $offset + 32, $depth);
+        break;
+      case $fidl.WireFormat.v2:
+        $fieldType0.encode($encoder, before, $offset + 0, $depth);
+        $fieldType1.encode($encoder, union, $offset + 8, $depth);
+        $fieldType2.encode($encoder, after, $offset + 24, $depth);
+        break;
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
   }
 
   @override
@@ -429,10 +440,20 @@ class SandwichUnionSize8Alignment4 extends $fidl.Struct {
 
   static SandwichUnionSize8Alignment4 _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
-    return SandwichUnionSize8Alignment4(
-        before: $fieldType0.decode($decoder, $offset + 0, $depth),
-        union: $fieldType1.decode($decoder, $offset + 8, $depth),
-        after: $fieldType2.decode($decoder, $offset + 32, $depth));
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        return SandwichUnionSize8Alignment4(
+            before: $fieldType0.decode($decoder, $offset + 0, $depth),
+            union: $fieldType1.decode($decoder, $offset + 8, $depth),
+            after: $fieldType2.decode($decoder, $offset + 32, $depth));
+      case $fidl.WireFormat.v2:
+        return SandwichUnionSize8Alignment4(
+            before: $fieldType0.decode($decoder, $offset + 0, $depth),
+            union: $fieldType1.decode($decoder, $offset + 8, $depth),
+            after: $fieldType2.decode($decoder, $offset + 24, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
   }
 }
 
@@ -441,7 +462,8 @@ class SandwichUnionSize8Alignment4 extends $fidl.Struct {
 const $fidl.StructType<SandwichUnionSize8Alignment4>
     kSandwichUnionSize8Alignment4_Type =
     $fidl.StructType<SandwichUnionSize8Alignment4>(
-  inlineSize: 40,
+  inlineSizeV1: 40,
+  inlineSizeV2: 32,
   structDecode: SandwichUnionSize8Alignment4._structDecode,
 );
 
@@ -481,9 +503,20 @@ class SandwichUnionSize12Alignment4 extends $fidl.Struct {
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    $fieldType0.encode($encoder, before, $offset + 0, $depth);
-    $fieldType1.encode($encoder, union, $offset + 8, $depth);
-    $fieldType2.encode($encoder, after, $offset + 32, $depth);
+    switch ($encoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $fieldType0.encode($encoder, before, $offset + 0, $depth);
+        $fieldType1.encode($encoder, union, $offset + 8, $depth);
+        $fieldType2.encode($encoder, after, $offset + 32, $depth);
+        break;
+      case $fidl.WireFormat.v2:
+        $fieldType0.encode($encoder, before, $offset + 0, $depth);
+        $fieldType1.encode($encoder, union, $offset + 8, $depth);
+        $fieldType2.encode($encoder, after, $offset + 24, $depth);
+        break;
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
   }
 
   @override
@@ -499,10 +532,20 @@ class SandwichUnionSize12Alignment4 extends $fidl.Struct {
 
   static SandwichUnionSize12Alignment4 _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
-    return SandwichUnionSize12Alignment4(
-        before: $fieldType0.decode($decoder, $offset + 0, $depth),
-        union: $fieldType1.decode($decoder, $offset + 8, $depth),
-        after: $fieldType2.decode($decoder, $offset + 32, $depth));
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        return SandwichUnionSize12Alignment4(
+            before: $fieldType0.decode($decoder, $offset + 0, $depth),
+            union: $fieldType1.decode($decoder, $offset + 8, $depth),
+            after: $fieldType2.decode($decoder, $offset + 32, $depth));
+      case $fidl.WireFormat.v2:
+        return SandwichUnionSize12Alignment4(
+            before: $fieldType0.decode($decoder, $offset + 0, $depth),
+            union: $fieldType1.decode($decoder, $offset + 8, $depth),
+            after: $fieldType2.decode($decoder, $offset + 24, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
   }
 }
 
@@ -511,7 +554,8 @@ class SandwichUnionSize12Alignment4 extends $fidl.Struct {
 const $fidl.StructType<SandwichUnionSize12Alignment4>
     kSandwichUnionSize12Alignment4_Type =
     $fidl.StructType<SandwichUnionSize12Alignment4>(
-  inlineSize: 40,
+  inlineSizeV1: 40,
+  inlineSizeV2: 32,
   structDecode: SandwichUnionSize12Alignment4._structDecode,
 );
 
@@ -545,8 +589,18 @@ class StructSize16Alignment8 extends $fidl.Struct {
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    $fieldType0.encode($encoder, f1, $offset + 0, $depth);
-    $fieldType1.encode($encoder, f2, $offset + 8, $depth);
+    switch ($encoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $fieldType0.encode($encoder, f1, $offset + 0, $depth);
+        $fieldType1.encode($encoder, f2, $offset + 8, $depth);
+        break;
+      case $fidl.WireFormat.v2:
+        $fieldType0.encode($encoder, f1, $offset + 0, $depth);
+        $fieldType1.encode($encoder, f2, $offset + 8, $depth);
+        break;
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
   }
 
   @override
@@ -560,9 +614,18 @@ class StructSize16Alignment8 extends $fidl.Struct {
 
   static StructSize16Alignment8 _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
-    return StructSize16Alignment8(
-        f1: $fieldType0.decode($decoder, $offset + 0, $depth),
-        f2: $fieldType1.decode($decoder, $offset + 8, $depth));
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        return StructSize16Alignment8(
+            f1: $fieldType0.decode($decoder, $offset + 0, $depth),
+            f2: $fieldType1.decode($decoder, $offset + 8, $depth));
+      case $fidl.WireFormat.v2:
+        return StructSize16Alignment8(
+            f1: $fieldType0.decode($decoder, $offset + 0, $depth),
+            f2: $fieldType1.decode($decoder, $offset + 8, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
   }
 }
 
@@ -570,7 +633,8 @@ class StructSize16Alignment8 extends $fidl.Struct {
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<StructSize16Alignment8> kStructSize16Alignment8_Type =
     $fidl.StructType<StructSize16Alignment8>(
-  inlineSize: 16,
+  inlineSizeV1: 16,
+  inlineSizeV2: 16,
   structDecode: StructSize16Alignment8._structDecode,
 );
 
@@ -610,9 +674,20 @@ class SandwichUnionSize24Alignment8 extends $fidl.Struct {
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    $fieldType0.encode($encoder, before, $offset + 0, $depth);
-    $fieldType1.encode($encoder, union, $offset + 8, $depth);
-    $fieldType2.encode($encoder, after, $offset + 32, $depth);
+    switch ($encoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $fieldType0.encode($encoder, before, $offset + 0, $depth);
+        $fieldType1.encode($encoder, union, $offset + 8, $depth);
+        $fieldType2.encode($encoder, after, $offset + 32, $depth);
+        break;
+      case $fidl.WireFormat.v2:
+        $fieldType0.encode($encoder, before, $offset + 0, $depth);
+        $fieldType1.encode($encoder, union, $offset + 8, $depth);
+        $fieldType2.encode($encoder, after, $offset + 24, $depth);
+        break;
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
   }
 
   @override
@@ -628,10 +703,20 @@ class SandwichUnionSize24Alignment8 extends $fidl.Struct {
 
   static SandwichUnionSize24Alignment8 _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
-    return SandwichUnionSize24Alignment8(
-        before: $fieldType0.decode($decoder, $offset + 0, $depth),
-        union: $fieldType1.decode($decoder, $offset + 8, $depth),
-        after: $fieldType2.decode($decoder, $offset + 32, $depth));
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        return SandwichUnionSize24Alignment8(
+            before: $fieldType0.decode($decoder, $offset + 0, $depth),
+            union: $fieldType1.decode($decoder, $offset + 8, $depth),
+            after: $fieldType2.decode($decoder, $offset + 32, $depth));
+      case $fidl.WireFormat.v2:
+        return SandwichUnionSize24Alignment8(
+            before: $fieldType0.decode($decoder, $offset + 0, $depth),
+            union: $fieldType1.decode($decoder, $offset + 8, $depth),
+            after: $fieldType2.decode($decoder, $offset + 24, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
   }
 }
 
@@ -640,7 +725,8 @@ class SandwichUnionSize24Alignment8 extends $fidl.Struct {
 const $fidl.StructType<SandwichUnionSize24Alignment8>
     kSandwichUnionSize24Alignment8_Type =
     $fidl.StructType<SandwichUnionSize24Alignment8>(
-  inlineSize: 40,
+  inlineSizeV1: 40,
+  inlineSizeV2: 32,
   structDecode: SandwichUnionSize24Alignment8._structDecode,
 );
 
@@ -680,9 +766,20 @@ class SandwichUnionSize36Alignment4 extends $fidl.Struct {
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    $fieldType0.encode($encoder, before, $offset + 0, $depth);
-    $fieldType1.encode($encoder, union, $offset + 8, $depth);
-    $fieldType2.encode($encoder, after, $offset + 32, $depth);
+    switch ($encoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $fieldType0.encode($encoder, before, $offset + 0, $depth);
+        $fieldType1.encode($encoder, union, $offset + 8, $depth);
+        $fieldType2.encode($encoder, after, $offset + 32, $depth);
+        break;
+      case $fidl.WireFormat.v2:
+        $fieldType0.encode($encoder, before, $offset + 0, $depth);
+        $fieldType1.encode($encoder, union, $offset + 8, $depth);
+        $fieldType2.encode($encoder, after, $offset + 24, $depth);
+        break;
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
   }
 
   @override
@@ -698,10 +795,20 @@ class SandwichUnionSize36Alignment4 extends $fidl.Struct {
 
   static SandwichUnionSize36Alignment4 _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
-    return SandwichUnionSize36Alignment4(
-        before: $fieldType0.decode($decoder, $offset + 0, $depth),
-        union: $fieldType1.decode($decoder, $offset + 8, $depth),
-        after: $fieldType2.decode($decoder, $offset + 32, $depth));
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        return SandwichUnionSize36Alignment4(
+            before: $fieldType0.decode($decoder, $offset + 0, $depth),
+            union: $fieldType1.decode($decoder, $offset + 8, $depth),
+            after: $fieldType2.decode($decoder, $offset + 32, $depth));
+      case $fidl.WireFormat.v2:
+        return SandwichUnionSize36Alignment4(
+            before: $fieldType0.decode($decoder, $offset + 0, $depth),
+            union: $fieldType1.decode($decoder, $offset + 8, $depth),
+            after: $fieldType2.decode($decoder, $offset + 24, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
   }
 }
 
@@ -710,6 +817,7 @@ class SandwichUnionSize36Alignment4 extends $fidl.Struct {
 const $fidl.StructType<SandwichUnionSize36Alignment4>
     kSandwichUnionSize36Alignment4_Type =
     $fidl.StructType<SandwichUnionSize36Alignment4>(
-  inlineSize: 40,
+  inlineSizeV1: 40,
+  inlineSizeV2: 32,
   structDecode: SandwichUnionSize36Alignment4._structDecode,
 );

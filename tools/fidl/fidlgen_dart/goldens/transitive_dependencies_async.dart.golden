@@ -64,7 +64,16 @@ class Baz extends $fidl.Struct {
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    $fieldType0.encode($encoder, g, $offset + 0, $depth);
+    switch ($encoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $fieldType0.encode($encoder, g, $offset + 0, $depth);
+        break;
+      case $fidl.WireFormat.v2:
+        $fieldType0.encode($encoder, g, $offset + 0, $depth);
+        break;
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
   }
 
   @override
@@ -73,13 +82,21 @@ class Baz extends $fidl.Struct {
   }
 
   static Baz _structDecode($fidl.Decoder $decoder, int $offset, int $depth) {
-    return Baz(g: $fieldType0.decode($decoder, $offset + 0, $depth));
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        return Baz(g: $fieldType0.decode($decoder, $offset + 0, $depth));
+      case $fidl.WireFormat.v2:
+        return Baz(g: $fieldType0.decode($decoder, $offset + 0, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
   }
 }
 
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<Baz> kBaz_Type = $fidl.StructType<Baz>(
-  inlineSize: 4,
+  inlineSizeV1: 4,
+  inlineSizeV2: 4,
   structDecode: Baz._structDecode,
 );

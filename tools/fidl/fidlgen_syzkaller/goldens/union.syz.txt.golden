@@ -49,6 +49,17 @@ fidl_test_union_StructWithNullableXUnionOutOfLine {
 fidl_test_union_StructWithNullableXUnionHandles {
        void void
 } [packed]
+fidl_test_union_UnionSandwichInLine {
+       a int32
+       uInLine fidl_test_union_ExplicitXUnionInLine
+       b int32
+} [packed]
+fidl_test_union_UnionSandwichOutOfLine {
+       void void
+} [packed]
+fidl_test_union_UnionSandwichHandles {
+       void void
+} [packed]
 fidl_test_union_PizzaOrPastaInLine [
        pizzaInLine fidl_union_member[1, fidl_test_union_PizzaInLine]
        pastaInLine fidl_union_member[2, fidl_test_union_PastaInLine]

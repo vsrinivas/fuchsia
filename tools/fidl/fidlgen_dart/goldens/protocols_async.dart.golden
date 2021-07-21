@@ -685,9 +685,20 @@ class WithErrorSyntaxResponseAsStructResponse extends $fidl.Struct {
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    $fieldType0.encode($encoder, a, $offset + 0, $depth);
-    $fieldType1.encode($encoder, b, $offset + 8, $depth);
-    $fieldType2.encode($encoder, c, $offset + 16, $depth);
+    switch ($encoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $fieldType0.encode($encoder, a, $offset + 0, $depth);
+        $fieldType1.encode($encoder, b, $offset + 8, $depth);
+        $fieldType2.encode($encoder, c, $offset + 16, $depth);
+        break;
+      case $fidl.WireFormat.v2:
+        $fieldType0.encode($encoder, a, $offset + 0, $depth);
+        $fieldType1.encode($encoder, b, $offset + 8, $depth);
+        $fieldType2.encode($encoder, c, $offset + 16, $depth);
+        break;
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
   }
 
   @override
@@ -703,10 +714,20 @@ class WithErrorSyntaxResponseAsStructResponse extends $fidl.Struct {
 
   static WithErrorSyntaxResponseAsStructResponse _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
-    return WithErrorSyntaxResponseAsStructResponse(
-        a: $fieldType0.decode($decoder, $offset + 0, $depth),
-        b: $fieldType1.decode($decoder, $offset + 8, $depth),
-        c: $fieldType2.decode($decoder, $offset + 16, $depth));
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        return WithErrorSyntaxResponseAsStructResponse(
+            a: $fieldType0.decode($decoder, $offset + 0, $depth),
+            b: $fieldType1.decode($decoder, $offset + 8, $depth),
+            c: $fieldType2.decode($decoder, $offset + 16, $depth));
+      case $fidl.WireFormat.v2:
+        return WithErrorSyntaxResponseAsStructResponse(
+            a: $fieldType0.decode($decoder, $offset + 0, $depth),
+            b: $fieldType1.decode($decoder, $offset + 8, $depth),
+            c: $fieldType2.decode($decoder, $offset + 16, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
   }
 }
 
@@ -715,7 +736,8 @@ class WithErrorSyntaxResponseAsStructResponse extends $fidl.Struct {
 const $fidl.StructType<WithErrorSyntaxResponseAsStructResponse>
     kWithErrorSyntax_ResponseAsStruct_Response_Type =
     $fidl.StructType<WithErrorSyntaxResponseAsStructResponse>(
-  inlineSize: 24,
+  inlineSizeV1: 24,
+  inlineSizeV2: 24,
   structDecode: WithErrorSyntaxResponseAsStructResponse._structDecode,
 );
 
@@ -743,7 +765,16 @@ class WithErrorSyntaxErrorAsPrimitiveResponse extends $fidl.Struct {
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    $fieldType0.encode($encoder, reserved, $offset + 0, $depth);
+    switch ($encoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $fieldType0.encode($encoder, reserved, $offset + 0, $depth);
+        break;
+      case $fidl.WireFormat.v2:
+        $fieldType0.encode($encoder, reserved, $offset + 0, $depth);
+        break;
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
   }
 
   @override
@@ -755,8 +786,16 @@ class WithErrorSyntaxErrorAsPrimitiveResponse extends $fidl.Struct {
 
   static WithErrorSyntaxErrorAsPrimitiveResponse _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
-    return WithErrorSyntaxErrorAsPrimitiveResponse(
-        reserved: $fieldType0.decode($decoder, $offset + 0, $depth));
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        return WithErrorSyntaxErrorAsPrimitiveResponse(
+            reserved: $fieldType0.decode($decoder, $offset + 0, $depth));
+      case $fidl.WireFormat.v2:
+        return WithErrorSyntaxErrorAsPrimitiveResponse(
+            reserved: $fieldType0.decode($decoder, $offset + 0, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
   }
 }
 
@@ -765,7 +804,8 @@ class WithErrorSyntaxErrorAsPrimitiveResponse extends $fidl.Struct {
 const $fidl.StructType<WithErrorSyntaxErrorAsPrimitiveResponse>
     kWithErrorSyntax_ErrorAsPrimitive_Response_Type =
     $fidl.StructType<WithErrorSyntaxErrorAsPrimitiveResponse>(
-  inlineSize: 1,
+  inlineSizeV1: 1,
+  inlineSizeV2: 1,
   structDecode: WithErrorSyntaxErrorAsPrimitiveResponse._structDecode,
 );
 
@@ -793,7 +833,16 @@ class WithErrorSyntaxErrorAsEnumResponse extends $fidl.Struct {
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    $fieldType0.encode($encoder, reserved, $offset + 0, $depth);
+    switch ($encoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $fieldType0.encode($encoder, reserved, $offset + 0, $depth);
+        break;
+      case $fidl.WireFormat.v2:
+        $fieldType0.encode($encoder, reserved, $offset + 0, $depth);
+        break;
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
   }
 
   @override
@@ -805,8 +854,16 @@ class WithErrorSyntaxErrorAsEnumResponse extends $fidl.Struct {
 
   static WithErrorSyntaxErrorAsEnumResponse _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
-    return WithErrorSyntaxErrorAsEnumResponse(
-        reserved: $fieldType0.decode($decoder, $offset + 0, $depth));
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        return WithErrorSyntaxErrorAsEnumResponse(
+            reserved: $fieldType0.decode($decoder, $offset + 0, $depth));
+      case $fidl.WireFormat.v2:
+        return WithErrorSyntaxErrorAsEnumResponse(
+            reserved: $fieldType0.decode($decoder, $offset + 0, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
   }
 }
 
@@ -815,7 +872,8 @@ class WithErrorSyntaxErrorAsEnumResponse extends $fidl.Struct {
 const $fidl.StructType<WithErrorSyntaxErrorAsEnumResponse>
     kWithErrorSyntax_ErrorAsEnum_Response_Type =
     $fidl.StructType<WithErrorSyntaxErrorAsEnumResponse>(
-  inlineSize: 1,
+  inlineSizeV1: 1,
+  inlineSizeV2: 1,
   structDecode: WithErrorSyntaxErrorAsEnumResponse._structDecode,
 );
 
@@ -844,7 +902,16 @@ class WithErrorSyntaxHandleInResultResponse extends $fidl.Struct {
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    $fieldType0.encode($encoder, h, $offset + 0, $depth);
+    switch ($encoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $fieldType0.encode($encoder, h, $offset + 0, $depth);
+        break;
+      case $fidl.WireFormat.v2:
+        $fieldType0.encode($encoder, h, $offset + 0, $depth);
+        break;
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
   }
 
   @override
@@ -856,8 +923,16 @@ class WithErrorSyntaxHandleInResultResponse extends $fidl.Struct {
 
   static WithErrorSyntaxHandleInResultResponse _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
-    return WithErrorSyntaxHandleInResultResponse(
-        h: $fieldType0.decode($decoder, $offset + 0, $depth));
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        return WithErrorSyntaxHandleInResultResponse(
+            h: $fieldType0.decode($decoder, $offset + 0, $depth));
+      case $fidl.WireFormat.v2:
+        return WithErrorSyntaxHandleInResultResponse(
+            h: $fieldType0.decode($decoder, $offset + 0, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
   }
 }
 
@@ -866,7 +941,8 @@ class WithErrorSyntaxHandleInResultResponse extends $fidl.Struct {
 const $fidl.StructType<WithErrorSyntaxHandleInResultResponse>
     kWithErrorSyntax_HandleInResult_Response_Type =
     $fidl.StructType<WithErrorSyntaxHandleInResultResponse>(
-  inlineSize: 4,
+  inlineSizeV1: 4,
+  inlineSizeV2: 4,
   structDecode: WithErrorSyntaxHandleInResultResponse._structDecode,
 );
 
@@ -925,10 +1001,22 @@ class ProtocolEnds extends $fidl.Struct {
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    $fieldType0.encode($encoder, client, $offset + 0, $depth);
-    $fieldType1.encode($encoder, server, $offset + 4, $depth);
-    $fieldType2.encode($encoder, clientOpt, $offset + 8, $depth);
-    $fieldType3.encode($encoder, serverOpt, $offset + 12, $depth);
+    switch ($encoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $fieldType0.encode($encoder, client, $offset + 0, $depth);
+        $fieldType1.encode($encoder, server, $offset + 4, $depth);
+        $fieldType2.encode($encoder, clientOpt, $offset + 8, $depth);
+        $fieldType3.encode($encoder, serverOpt, $offset + 12, $depth);
+        break;
+      case $fidl.WireFormat.v2:
+        $fieldType0.encode($encoder, client, $offset + 0, $depth);
+        $fieldType1.encode($encoder, server, $offset + 4, $depth);
+        $fieldType2.encode($encoder, clientOpt, $offset + 8, $depth);
+        $fieldType3.encode($encoder, serverOpt, $offset + 12, $depth);
+        break;
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
   }
 
   @override
@@ -946,11 +1034,22 @@ class ProtocolEnds extends $fidl.Struct {
 
   static ProtocolEnds _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
-    return ProtocolEnds(
-        client: $fieldType0.decode($decoder, $offset + 0, $depth),
-        server: $fieldType1.decode($decoder, $offset + 4, $depth),
-        clientOpt: $fieldType2.decode($decoder, $offset + 8, $depth),
-        serverOpt: $fieldType3.decode($decoder, $offset + 12, $depth));
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        return ProtocolEnds(
+            client: $fieldType0.decode($decoder, $offset + 0, $depth),
+            server: $fieldType1.decode($decoder, $offset + 4, $depth),
+            clientOpt: $fieldType2.decode($decoder, $offset + 8, $depth),
+            serverOpt: $fieldType3.decode($decoder, $offset + 12, $depth));
+      case $fidl.WireFormat.v2:
+        return ProtocolEnds(
+            client: $fieldType0.decode($decoder, $offset + 0, $depth),
+            server: $fieldType1.decode($decoder, $offset + 4, $depth),
+            clientOpt: $fieldType2.decode($decoder, $offset + 8, $depth),
+            serverOpt: $fieldType3.decode($decoder, $offset + 12, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
   }
 }
 
@@ -958,7 +1057,8 @@ class ProtocolEnds extends $fidl.Struct {
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<ProtocolEnds> kProtocolEnds_Type =
     $fidl.StructType<ProtocolEnds>(
-  inlineSize: 16,
+  inlineSizeV1: 16,
+  inlineSizeV2: 16,
   structDecode: ProtocolEnds._structDecode,
 );
 

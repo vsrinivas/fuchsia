@@ -64,7 +64,16 @@ class DocCommentWithQuotes extends $fidl.Struct {
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    $fieldType0.encode($encoder, reserved, $offset + 0, $depth);
+    switch ($encoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $fieldType0.encode($encoder, reserved, $offset + 0, $depth);
+        break;
+      case $fidl.WireFormat.v2:
+        $fieldType0.encode($encoder, reserved, $offset + 0, $depth);
+        break;
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
   }
 
   @override
@@ -74,8 +83,16 @@ class DocCommentWithQuotes extends $fidl.Struct {
 
   static DocCommentWithQuotes _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
-    return DocCommentWithQuotes(
-        reserved: $fieldType0.decode($decoder, $offset + 0, $depth));
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        return DocCommentWithQuotes(
+            reserved: $fieldType0.decode($decoder, $offset + 0, $depth));
+      case $fidl.WireFormat.v2:
+        return DocCommentWithQuotes(
+            reserved: $fieldType0.decode($decoder, $offset + 0, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
   }
 }
 
@@ -83,6 +100,7 @@ class DocCommentWithQuotes extends $fidl.Struct {
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<DocCommentWithQuotes> kDocCommentWithQuotes_Type =
     $fidl.StructType<DocCommentWithQuotes>(
-  inlineSize: 1,
+  inlineSizeV1: 1,
+  inlineSizeV2: 1,
   structDecode: DocCommentWithQuotes._structDecode,
 );

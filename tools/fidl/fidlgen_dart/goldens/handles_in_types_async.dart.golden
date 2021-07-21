@@ -247,12 +247,28 @@ class HandlesInTypes extends $fidl.Struct {
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    $fieldType0.encode($encoder, normalHandle, $offset + 0, $depth);
-    $fieldType1.encode($encoder, handleInVec, $offset + 8, $depth);
-    $fieldType2.encode($encoder, handleInArray, $offset + 24, $depth);
-    $fieldType3.encode($encoder, handleInMixedVecArray, $offset + 48, $depth);
-    $fieldType4.encode($encoder, tableWithHandle, $offset + 64, $depth);
-    $fieldType5.encode($encoder, unionWithHandle, $offset + 80, $depth);
+    switch ($encoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $fieldType0.encode($encoder, normalHandle, $offset + 0, $depth);
+        $fieldType1.encode($encoder, handleInVec, $offset + 8, $depth);
+        $fieldType2.encode($encoder, handleInArray, $offset + 24, $depth);
+        $fieldType3.encode(
+            $encoder, handleInMixedVecArray, $offset + 48, $depth);
+        $fieldType4.encode($encoder, tableWithHandle, $offset + 64, $depth);
+        $fieldType5.encode($encoder, unionWithHandle, $offset + 80, $depth);
+        break;
+      case $fidl.WireFormat.v2:
+        $fieldType0.encode($encoder, normalHandle, $offset + 0, $depth);
+        $fieldType1.encode($encoder, handleInVec, $offset + 8, $depth);
+        $fieldType2.encode($encoder, handleInArray, $offset + 24, $depth);
+        $fieldType3.encode(
+            $encoder, handleInMixedVecArray, $offset + 48, $depth);
+        $fieldType4.encode($encoder, tableWithHandle, $offset + 64, $depth);
+        $fieldType5.encode($encoder, unionWithHandle, $offset + 80, $depth);
+        break;
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
   }
 
   @override
@@ -274,14 +290,30 @@ class HandlesInTypes extends $fidl.Struct {
 
   static HandlesInTypes _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
-    return HandlesInTypes(
-        normalHandle: $fieldType0.decode($decoder, $offset + 0, $depth),
-        handleInVec: $fieldType1.decode($decoder, $offset + 8, $depth),
-        handleInArray: $fieldType2.decode($decoder, $offset + 24, $depth),
-        handleInMixedVecArray:
-            $fieldType3.decode($decoder, $offset + 48, $depth),
-        tableWithHandle: $fieldType4.decode($decoder, $offset + 64, $depth),
-        unionWithHandle: $fieldType5.decode($decoder, $offset + 80, $depth));
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        return HandlesInTypes(
+            normalHandle: $fieldType0.decode($decoder, $offset + 0, $depth),
+            handleInVec: $fieldType1.decode($decoder, $offset + 8, $depth),
+            handleInArray: $fieldType2.decode($decoder, $offset + 24, $depth),
+            handleInMixedVecArray:
+                $fieldType3.decode($decoder, $offset + 48, $depth),
+            tableWithHandle: $fieldType4.decode($decoder, $offset + 64, $depth),
+            unionWithHandle:
+                $fieldType5.decode($decoder, $offset + 80, $depth));
+      case $fidl.WireFormat.v2:
+        return HandlesInTypes(
+            normalHandle: $fieldType0.decode($decoder, $offset + 0, $depth),
+            handleInVec: $fieldType1.decode($decoder, $offset + 8, $depth),
+            handleInArray: $fieldType2.decode($decoder, $offset + 24, $depth),
+            handleInMixedVecArray:
+                $fieldType3.decode($decoder, $offset + 48, $depth),
+            tableWithHandle: $fieldType4.decode($decoder, $offset + 64, $depth),
+            unionWithHandle:
+                $fieldType5.decode($decoder, $offset + 80, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
   }
 }
 
@@ -289,7 +321,8 @@ class HandlesInTypes extends $fidl.Struct {
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<HandlesInTypes> kHandlesInTypes_Type =
     $fidl.StructType<HandlesInTypes>(
-  inlineSize: 104,
+  inlineSizeV1: 104,
+  inlineSizeV2: 96,
   structDecode: HandlesInTypes._structDecode,
 );
 

@@ -65,9 +65,22 @@ class {{ .Name }} extends $fidl.Struct {
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    {{- range $index, $member := .Members }}
-    $fieldType{{ $index }}.encode($encoder, {{ $member.Name }}, $offset + {{ $member.OffsetV1 }}, $depth);
-    {{- end }}
+    switch ($encoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        {{- range $index, $member := .Members }}
+        $fieldType{{ $index }}.encode(
+          $encoder, {{ $member.Name }}, $offset + {{ $member.OffsetV1 }}, $depth);
+        {{- end }}
+        break;
+      case $fidl.WireFormat.v2:
+        {{- range $index, $member := .Members }}
+        $fieldType{{ $index }}.encode(
+          $encoder, {{ $member.Name }}, $offset + {{ $member.OffsetV2 }}, $depth);
+        {{- end }}
+        break;
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
   }
 
   @override
@@ -80,12 +93,26 @@ class {{ .Name }} extends $fidl.Struct {
   }
 
   static {{ .Name }} _structDecode($fidl.Decoder $decoder, int $offset, int $depth) {
-    return {{ .Name }}(
-    {{ range $index, $member := .Members }}
-    {{- if ne $index 0 }},{{ end }}
-    {{ $member.Name }}: $fieldType{{ $index }}.decode($decoder, $offset + {{ $member.OffsetV1 }}, $depth)
-    {{- end -}}
-    );
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        return {{ .Name }}(
+        {{ range $index, $member := .Members }}
+        {{- if ne $index 0 }},{{ end }}
+        {{ $member.Name }}: $fieldType{{ $index }}.decode(
+          $decoder, $offset + {{ $member.OffsetV1 }}, $depth)
+        {{- end -}}
+        );
+      case $fidl.WireFormat.v2:
+        return {{ .Name }}(
+        {{ range $index, $member := .Members }}
+        {{- if ne $index 0 }},{{ end }}
+        {{ $member.Name }}: $fieldType{{ $index }}.decode(
+          $decoder, $offset + {{ $member.OffsetV2 }}, $depth)
+        {{- end -}}
+        );
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
   }
 }
 

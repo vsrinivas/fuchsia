@@ -570,42 +570,88 @@ class Handles extends $fidl.Struct {
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    $fieldType0.encode($encoder, plainHandle, $offset + 0, $depth);
-    $fieldType1.encode($encoder, btiHandle, $offset + 4, $depth);
-    $fieldType2.encode($encoder, channelHandle, $offset + 8, $depth);
-    $fieldType3.encode($encoder, clockHandle, $offset + 12, $depth);
-    $fieldType4.encode($encoder, debuglogHandle, $offset + 16, $depth);
-    $fieldType5.encode($encoder, eventHandle, $offset + 20, $depth);
-    $fieldType6.encode($encoder, eventpairHandle, $offset + 24, $depth);
-    $fieldType7.encode($encoder, exceptionHandle, $offset + 28, $depth);
-    $fieldType8.encode($encoder, fifoHandle, $offset + 32, $depth);
-    $fieldType9.encode($encoder, guestHandle, $offset + 36, $depth);
-    $fieldType10.encode($encoder, interruptHandle, $offset + 40, $depth);
-    $fieldType11.encode($encoder, iommuHandle, $offset + 44, $depth);
-    $fieldType12.encode($encoder, jobHandle, $offset + 48, $depth);
-    $fieldType13.encode($encoder, pagerHandle, $offset + 52, $depth);
-    $fieldType14.encode($encoder, pcideviceHandle, $offset + 56, $depth);
-    $fieldType15.encode($encoder, pmtHandle, $offset + 60, $depth);
-    $fieldType16.encode($encoder, portHandle, $offset + 64, $depth);
-    $fieldType17.encode($encoder, processHandle, $offset + 68, $depth);
-    $fieldType18.encode($encoder, profileHandle, $offset + 72, $depth);
-    $fieldType19.encode($encoder, resourceHandle, $offset + 76, $depth);
-    $fieldType20.encode($encoder, socketHandle, $offset + 80, $depth);
-    $fieldType21.encode($encoder, suspendtokenHandle, $offset + 84, $depth);
-    $fieldType22.encode($encoder, threadHandle, $offset + 88, $depth);
-    $fieldType23.encode($encoder, timerHandle, $offset + 92, $depth);
-    $fieldType24.encode($encoder, vcpuHandle, $offset + 96, $depth);
-    $fieldType25.encode($encoder, vmarHandle, $offset + 100, $depth);
-    $fieldType26.encode($encoder, vmoHandle, $offset + 104, $depth);
-    $fieldType27.encode($encoder, rightsHandle, $offset + 108, $depth);
-    $fieldType28.encode(
-        $encoder, aliasedPlainHandleField, $offset + 112, $depth);
-    $fieldType29.encode(
-        $encoder, aliasedSubtypeHandleField, $offset + 116, $depth);
-    $fieldType30.encode(
-        $encoder, aliasedRightsHandleField, $offset + 120, $depth);
-    $fieldType31.encode($encoder, someProtocol, $offset + 124, $depth);
-    $fieldType32.encode($encoder, requestSomeProtocol, $offset + 128, $depth);
+    switch ($encoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $fieldType0.encode($encoder, plainHandle, $offset + 0, $depth);
+        $fieldType1.encode($encoder, btiHandle, $offset + 4, $depth);
+        $fieldType2.encode($encoder, channelHandle, $offset + 8, $depth);
+        $fieldType3.encode($encoder, clockHandle, $offset + 12, $depth);
+        $fieldType4.encode($encoder, debuglogHandle, $offset + 16, $depth);
+        $fieldType5.encode($encoder, eventHandle, $offset + 20, $depth);
+        $fieldType6.encode($encoder, eventpairHandle, $offset + 24, $depth);
+        $fieldType7.encode($encoder, exceptionHandle, $offset + 28, $depth);
+        $fieldType8.encode($encoder, fifoHandle, $offset + 32, $depth);
+        $fieldType9.encode($encoder, guestHandle, $offset + 36, $depth);
+        $fieldType10.encode($encoder, interruptHandle, $offset + 40, $depth);
+        $fieldType11.encode($encoder, iommuHandle, $offset + 44, $depth);
+        $fieldType12.encode($encoder, jobHandle, $offset + 48, $depth);
+        $fieldType13.encode($encoder, pagerHandle, $offset + 52, $depth);
+        $fieldType14.encode($encoder, pcideviceHandle, $offset + 56, $depth);
+        $fieldType15.encode($encoder, pmtHandle, $offset + 60, $depth);
+        $fieldType16.encode($encoder, portHandle, $offset + 64, $depth);
+        $fieldType17.encode($encoder, processHandle, $offset + 68, $depth);
+        $fieldType18.encode($encoder, profileHandle, $offset + 72, $depth);
+        $fieldType19.encode($encoder, resourceHandle, $offset + 76, $depth);
+        $fieldType20.encode($encoder, socketHandle, $offset + 80, $depth);
+        $fieldType21.encode($encoder, suspendtokenHandle, $offset + 84, $depth);
+        $fieldType22.encode($encoder, threadHandle, $offset + 88, $depth);
+        $fieldType23.encode($encoder, timerHandle, $offset + 92, $depth);
+        $fieldType24.encode($encoder, vcpuHandle, $offset + 96, $depth);
+        $fieldType25.encode($encoder, vmarHandle, $offset + 100, $depth);
+        $fieldType26.encode($encoder, vmoHandle, $offset + 104, $depth);
+        $fieldType27.encode($encoder, rightsHandle, $offset + 108, $depth);
+        $fieldType28.encode(
+            $encoder, aliasedPlainHandleField, $offset + 112, $depth);
+        $fieldType29.encode(
+            $encoder, aliasedSubtypeHandleField, $offset + 116, $depth);
+        $fieldType30.encode(
+            $encoder, aliasedRightsHandleField, $offset + 120, $depth);
+        $fieldType31.encode($encoder, someProtocol, $offset + 124, $depth);
+        $fieldType32.encode(
+            $encoder, requestSomeProtocol, $offset + 128, $depth);
+        break;
+      case $fidl.WireFormat.v2:
+        $fieldType0.encode($encoder, plainHandle, $offset + 0, $depth);
+        $fieldType1.encode($encoder, btiHandle, $offset + 4, $depth);
+        $fieldType2.encode($encoder, channelHandle, $offset + 8, $depth);
+        $fieldType3.encode($encoder, clockHandle, $offset + 12, $depth);
+        $fieldType4.encode($encoder, debuglogHandle, $offset + 16, $depth);
+        $fieldType5.encode($encoder, eventHandle, $offset + 20, $depth);
+        $fieldType6.encode($encoder, eventpairHandle, $offset + 24, $depth);
+        $fieldType7.encode($encoder, exceptionHandle, $offset + 28, $depth);
+        $fieldType8.encode($encoder, fifoHandle, $offset + 32, $depth);
+        $fieldType9.encode($encoder, guestHandle, $offset + 36, $depth);
+        $fieldType10.encode($encoder, interruptHandle, $offset + 40, $depth);
+        $fieldType11.encode($encoder, iommuHandle, $offset + 44, $depth);
+        $fieldType12.encode($encoder, jobHandle, $offset + 48, $depth);
+        $fieldType13.encode($encoder, pagerHandle, $offset + 52, $depth);
+        $fieldType14.encode($encoder, pcideviceHandle, $offset + 56, $depth);
+        $fieldType15.encode($encoder, pmtHandle, $offset + 60, $depth);
+        $fieldType16.encode($encoder, portHandle, $offset + 64, $depth);
+        $fieldType17.encode($encoder, processHandle, $offset + 68, $depth);
+        $fieldType18.encode($encoder, profileHandle, $offset + 72, $depth);
+        $fieldType19.encode($encoder, resourceHandle, $offset + 76, $depth);
+        $fieldType20.encode($encoder, socketHandle, $offset + 80, $depth);
+        $fieldType21.encode($encoder, suspendtokenHandle, $offset + 84, $depth);
+        $fieldType22.encode($encoder, threadHandle, $offset + 88, $depth);
+        $fieldType23.encode($encoder, timerHandle, $offset + 92, $depth);
+        $fieldType24.encode($encoder, vcpuHandle, $offset + 96, $depth);
+        $fieldType25.encode($encoder, vmarHandle, $offset + 100, $depth);
+        $fieldType26.encode($encoder, vmoHandle, $offset + 104, $depth);
+        $fieldType27.encode($encoder, rightsHandle, $offset + 108, $depth);
+        $fieldType28.encode(
+            $encoder, aliasedPlainHandleField, $offset + 112, $depth);
+        $fieldType29.encode(
+            $encoder, aliasedSubtypeHandleField, $offset + 116, $depth);
+        $fieldType30.encode(
+            $encoder, aliasedRightsHandleField, $offset + 120, $depth);
+        $fieldType31.encode($encoder, someProtocol, $offset + 124, $depth);
+        $fieldType32.encode(
+            $encoder, requestSomeProtocol, $offset + 128, $depth);
+        break;
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
   }
 
   @override
@@ -681,51 +727,102 @@ class Handles extends $fidl.Struct {
 
   static Handles _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
-    return Handles(
-        plainHandle: $fieldType0.decode($decoder, $offset + 0, $depth),
-        btiHandle: $fieldType1.decode($decoder, $offset + 4, $depth),
-        channelHandle: $fieldType2.decode($decoder, $offset + 8, $depth),
-        clockHandle: $fieldType3.decode($decoder, $offset + 12, $depth),
-        debuglogHandle: $fieldType4.decode($decoder, $offset + 16, $depth),
-        eventHandle: $fieldType5.decode($decoder, $offset + 20, $depth),
-        eventpairHandle: $fieldType6.decode($decoder, $offset + 24, $depth),
-        exceptionHandle: $fieldType7.decode($decoder, $offset + 28, $depth),
-        fifoHandle: $fieldType8.decode($decoder, $offset + 32, $depth),
-        guestHandle: $fieldType9.decode($decoder, $offset + 36, $depth),
-        interruptHandle: $fieldType10.decode($decoder, $offset + 40, $depth),
-        iommuHandle: $fieldType11.decode($decoder, $offset + 44, $depth),
-        jobHandle: $fieldType12.decode($decoder, $offset + 48, $depth),
-        pagerHandle: $fieldType13.decode($decoder, $offset + 52, $depth),
-        pcideviceHandle: $fieldType14.decode($decoder, $offset + 56, $depth),
-        pmtHandle: $fieldType15.decode($decoder, $offset + 60, $depth),
-        portHandle: $fieldType16.decode($decoder, $offset + 64, $depth),
-        processHandle: $fieldType17.decode($decoder, $offset + 68, $depth),
-        profileHandle: $fieldType18.decode($decoder, $offset + 72, $depth),
-        resourceHandle: $fieldType19.decode($decoder, $offset + 76, $depth),
-        socketHandle: $fieldType20.decode($decoder, $offset + 80, $depth),
-        suspendtokenHandle: $fieldType21.decode($decoder, $offset + 84, $depth),
-        threadHandle: $fieldType22.decode($decoder, $offset + 88, $depth),
-        timerHandle: $fieldType23.decode($decoder, $offset + 92, $depth),
-        vcpuHandle: $fieldType24.decode($decoder, $offset + 96, $depth),
-        vmarHandle: $fieldType25.decode($decoder, $offset + 100, $depth),
-        vmoHandle: $fieldType26.decode($decoder, $offset + 104, $depth),
-        rightsHandle: $fieldType27.decode($decoder, $offset + 108, $depth),
-        aliasedPlainHandleField:
-            $fieldType28.decode($decoder, $offset + 112, $depth),
-        aliasedSubtypeHandleField:
-            $fieldType29.decode($decoder, $offset + 116, $depth),
-        aliasedRightsHandleField:
-            $fieldType30.decode($decoder, $offset + 120, $depth),
-        someProtocol: $fieldType31.decode($decoder, $offset + 124, $depth),
-        requestSomeProtocol:
-            $fieldType32.decode($decoder, $offset + 128, $depth));
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        return Handles(
+            plainHandle: $fieldType0.decode($decoder, $offset + 0, $depth),
+            btiHandle: $fieldType1.decode($decoder, $offset + 4, $depth),
+            channelHandle: $fieldType2.decode($decoder, $offset + 8, $depth),
+            clockHandle: $fieldType3.decode($decoder, $offset + 12, $depth),
+            debuglogHandle: $fieldType4.decode($decoder, $offset + 16, $depth),
+            eventHandle: $fieldType5.decode($decoder, $offset + 20, $depth),
+            eventpairHandle: $fieldType6.decode($decoder, $offset + 24, $depth),
+            exceptionHandle: $fieldType7.decode($decoder, $offset + 28, $depth),
+            fifoHandle: $fieldType8.decode($decoder, $offset + 32, $depth),
+            guestHandle: $fieldType9.decode($decoder, $offset + 36, $depth),
+            interruptHandle:
+                $fieldType10.decode($decoder, $offset + 40, $depth),
+            iommuHandle: $fieldType11.decode($decoder, $offset + 44, $depth),
+            jobHandle: $fieldType12.decode($decoder, $offset + 48, $depth),
+            pagerHandle: $fieldType13.decode($decoder, $offset + 52, $depth),
+            pcideviceHandle:
+                $fieldType14.decode($decoder, $offset + 56, $depth),
+            pmtHandle: $fieldType15.decode($decoder, $offset + 60, $depth),
+            portHandle: $fieldType16.decode($decoder, $offset + 64, $depth),
+            processHandle: $fieldType17.decode($decoder, $offset + 68, $depth),
+            profileHandle: $fieldType18.decode($decoder, $offset + 72, $depth),
+            resourceHandle: $fieldType19.decode($decoder, $offset + 76, $depth),
+            socketHandle: $fieldType20.decode($decoder, $offset + 80, $depth),
+            suspendtokenHandle:
+                $fieldType21.decode($decoder, $offset + 84, $depth),
+            threadHandle: $fieldType22.decode($decoder, $offset + 88, $depth),
+            timerHandle: $fieldType23.decode($decoder, $offset + 92, $depth),
+            vcpuHandle: $fieldType24.decode($decoder, $offset + 96, $depth),
+            vmarHandle: $fieldType25.decode($decoder, $offset + 100, $depth),
+            vmoHandle: $fieldType26.decode($decoder, $offset + 104, $depth),
+            rightsHandle: $fieldType27.decode($decoder, $offset + 108, $depth),
+            aliasedPlainHandleField:
+                $fieldType28.decode($decoder, $offset + 112, $depth),
+            aliasedSubtypeHandleField:
+                $fieldType29.decode($decoder, $offset + 116, $depth),
+            aliasedRightsHandleField:
+                $fieldType30.decode($decoder, $offset + 120, $depth),
+            someProtocol: $fieldType31.decode($decoder, $offset + 124, $depth),
+            requestSomeProtocol:
+                $fieldType32.decode($decoder, $offset + 128, $depth));
+      case $fidl.WireFormat.v2:
+        return Handles(
+            plainHandle: $fieldType0.decode($decoder, $offset + 0, $depth),
+            btiHandle: $fieldType1.decode($decoder, $offset + 4, $depth),
+            channelHandle: $fieldType2.decode($decoder, $offset + 8, $depth),
+            clockHandle: $fieldType3.decode($decoder, $offset + 12, $depth),
+            debuglogHandle: $fieldType4.decode($decoder, $offset + 16, $depth),
+            eventHandle: $fieldType5.decode($decoder, $offset + 20, $depth),
+            eventpairHandle: $fieldType6.decode($decoder, $offset + 24, $depth),
+            exceptionHandle: $fieldType7.decode($decoder, $offset + 28, $depth),
+            fifoHandle: $fieldType8.decode($decoder, $offset + 32, $depth),
+            guestHandle: $fieldType9.decode($decoder, $offset + 36, $depth),
+            interruptHandle:
+                $fieldType10.decode($decoder, $offset + 40, $depth),
+            iommuHandle: $fieldType11.decode($decoder, $offset + 44, $depth),
+            jobHandle: $fieldType12.decode($decoder, $offset + 48, $depth),
+            pagerHandle: $fieldType13.decode($decoder, $offset + 52, $depth),
+            pcideviceHandle:
+                $fieldType14.decode($decoder, $offset + 56, $depth),
+            pmtHandle: $fieldType15.decode($decoder, $offset + 60, $depth),
+            portHandle: $fieldType16.decode($decoder, $offset + 64, $depth),
+            processHandle: $fieldType17.decode($decoder, $offset + 68, $depth),
+            profileHandle: $fieldType18.decode($decoder, $offset + 72, $depth),
+            resourceHandle: $fieldType19.decode($decoder, $offset + 76, $depth),
+            socketHandle: $fieldType20.decode($decoder, $offset + 80, $depth),
+            suspendtokenHandle:
+                $fieldType21.decode($decoder, $offset + 84, $depth),
+            threadHandle: $fieldType22.decode($decoder, $offset + 88, $depth),
+            timerHandle: $fieldType23.decode($decoder, $offset + 92, $depth),
+            vcpuHandle: $fieldType24.decode($decoder, $offset + 96, $depth),
+            vmarHandle: $fieldType25.decode($decoder, $offset + 100, $depth),
+            vmoHandle: $fieldType26.decode($decoder, $offset + 104, $depth),
+            rightsHandle: $fieldType27.decode($decoder, $offset + 108, $depth),
+            aliasedPlainHandleField:
+                $fieldType28.decode($decoder, $offset + 112, $depth),
+            aliasedSubtypeHandleField:
+                $fieldType29.decode($decoder, $offset + 116, $depth),
+            aliasedRightsHandleField:
+                $fieldType30.decode($decoder, $offset + 120, $depth),
+            someProtocol: $fieldType31.decode($decoder, $offset + 124, $depth),
+            requestSomeProtocol:
+                $fieldType32.decode($decoder, $offset + 128, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
   }
 }
 
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<Handles> kHandles_Type = $fidl.StructType<Handles>(
-  inlineSize: 132,
+  inlineSizeV1: 132,
+  inlineSizeV2: 132,
   structDecode: Handles._structDecode,
 );
 

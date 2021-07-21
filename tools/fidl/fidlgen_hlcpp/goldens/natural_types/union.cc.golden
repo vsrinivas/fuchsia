@@ -3436,6 +3436,45 @@ void ExplicitXUnion::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
   }
 }
 
+extern "C" const fidl_type_t fidl_test_union_UnionSandwichTable;
+const fidl_type_t* UnionSandwich::FidlType =
+    &fidl_test_union_UnionSandwichTable;
+
+void UnionSandwich::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<UnionSandwich>::value) {
+    memcpy(_encoder->template GetPtr<UnionSandwich>(_offset), this,
+           sizeof(UnionSandwich));
+  } else {
+    ::fidl::Encode(_encoder, &a, _offset + 0);
+    ::fidl::Encode(_encoder, &u, _offset + 8);
+    ::fidl::Encode(_encoder, &b, _offset + 32);
+  }
+}
+
+void UnionSandwich::Decode(::fidl::Decoder* _decoder, UnionSandwich* _value,
+                           size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<UnionSandwich>::value) {
+    memcpy(_value, _decoder->template GetPtr<UnionSandwich>(_offset),
+           sizeof(UnionSandwich));
+  } else {
+    ::fidl::Decode(_decoder, &_value->a, _offset + 0);
+    ::fidl::Decode(_decoder, &_value->u, _offset + 8);
+    ::fidl::Decode(_decoder, &_value->b, _offset + 32);
+  }
+}
+
+zx_status_t UnionSandwich::Clone(UnionSandwich* _result) const {
+  zx_status_t _status = ::fidl::Clone(a, &_result->a);
+  if (_status != ZX_OK) return _status;
+  _status = ::fidl::Clone(u, &_result->u);
+  if (_status != ZX_OK) return _status;
+  _status = ::fidl::Clone(b, &_result->b);
+  if (_status != ZX_OK) return _status;
+  return ZX_OK;
+}
+
 extern "C" const fidl_type_t fidl_test_union_ExplicitUnionTable;
 const fidl_type_t* ExplicitUnion::FidlType =
     &fidl_test_union_ExplicitUnionTable;

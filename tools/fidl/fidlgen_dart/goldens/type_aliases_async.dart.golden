@@ -191,18 +191,38 @@ class ExampleOfUseOfAliases extends $fidl.Struct {
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    $fieldType0.encode($encoder, fieldOfU32, $offset + 0, $depth);
-    $fieldType1.encode($encoder, fieldOfVecOfStrings, $offset + 8, $depth);
-    $fieldType2.encode(
-        $encoder, fieldOfVecOfStringsAtMostNine, $offset + 24, $depth);
-    $fieldType3.encode(
-        $encoder, fieldOfVecOfStringsAtMost5, $offset + 40, $depth);
-    $fieldType4.encode(
-        $encoder, fieldOfVecOfRefMeAtMost5, $offset + 56, $depth);
-    $fieldType5.encode($encoder, fieldOfChannel, $offset + 72, $depth);
-    $fieldType6.encode($encoder, fieldOfClientEnd, $offset + 76, $depth);
-    $fieldType7.encode(
-        $encoder, fieldOfNullableClientEnd, $offset + 80, $depth);
+    switch ($encoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $fieldType0.encode($encoder, fieldOfU32, $offset + 0, $depth);
+        $fieldType1.encode($encoder, fieldOfVecOfStrings, $offset + 8, $depth);
+        $fieldType2.encode(
+            $encoder, fieldOfVecOfStringsAtMostNine, $offset + 24, $depth);
+        $fieldType3.encode(
+            $encoder, fieldOfVecOfStringsAtMost5, $offset + 40, $depth);
+        $fieldType4.encode(
+            $encoder, fieldOfVecOfRefMeAtMost5, $offset + 56, $depth);
+        $fieldType5.encode($encoder, fieldOfChannel, $offset + 72, $depth);
+        $fieldType6.encode($encoder, fieldOfClientEnd, $offset + 76, $depth);
+        $fieldType7.encode(
+            $encoder, fieldOfNullableClientEnd, $offset + 80, $depth);
+        break;
+      case $fidl.WireFormat.v2:
+        $fieldType0.encode($encoder, fieldOfU32, $offset + 0, $depth);
+        $fieldType1.encode($encoder, fieldOfVecOfStrings, $offset + 8, $depth);
+        $fieldType2.encode(
+            $encoder, fieldOfVecOfStringsAtMostNine, $offset + 24, $depth);
+        $fieldType3.encode(
+            $encoder, fieldOfVecOfStringsAtMost5, $offset + 40, $depth);
+        $fieldType4.encode(
+            $encoder, fieldOfVecOfRefMeAtMost5, $offset + 56, $depth);
+        $fieldType5.encode($encoder, fieldOfChannel, $offset + 72, $depth);
+        $fieldType6.encode($encoder, fieldOfClientEnd, $offset + 76, $depth);
+        $fieldType7.encode(
+            $encoder, fieldOfNullableClientEnd, $offset + 80, $depth);
+        break;
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
   }
 
   @override
@@ -228,19 +248,42 @@ class ExampleOfUseOfAliases extends $fidl.Struct {
 
   static ExampleOfUseOfAliases _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
-    return ExampleOfUseOfAliases(
-        fieldOfU32: $fieldType0.decode($decoder, $offset + 0, $depth),
-        fieldOfVecOfStrings: $fieldType1.decode($decoder, $offset + 8, $depth),
-        fieldOfVecOfStringsAtMostNine:
-            $fieldType2.decode($decoder, $offset + 24, $depth),
-        fieldOfVecOfStringsAtMost5:
-            $fieldType3.decode($decoder, $offset + 40, $depth),
-        fieldOfVecOfRefMeAtMost5:
-            $fieldType4.decode($decoder, $offset + 56, $depth),
-        fieldOfChannel: $fieldType5.decode($decoder, $offset + 72, $depth),
-        fieldOfClientEnd: $fieldType6.decode($decoder, $offset + 76, $depth),
-        fieldOfNullableClientEnd:
-            $fieldType7.decode($decoder, $offset + 80, $depth));
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        return ExampleOfUseOfAliases(
+            fieldOfU32: $fieldType0.decode($decoder, $offset + 0, $depth),
+            fieldOfVecOfStrings:
+                $fieldType1.decode($decoder, $offset + 8, $depth),
+            fieldOfVecOfStringsAtMostNine:
+                $fieldType2.decode($decoder, $offset + 24, $depth),
+            fieldOfVecOfStringsAtMost5:
+                $fieldType3.decode($decoder, $offset + 40, $depth),
+            fieldOfVecOfRefMeAtMost5:
+                $fieldType4.decode($decoder, $offset + 56, $depth),
+            fieldOfChannel: $fieldType5.decode($decoder, $offset + 72, $depth),
+            fieldOfClientEnd:
+                $fieldType6.decode($decoder, $offset + 76, $depth),
+            fieldOfNullableClientEnd:
+                $fieldType7.decode($decoder, $offset + 80, $depth));
+      case $fidl.WireFormat.v2:
+        return ExampleOfUseOfAliases(
+            fieldOfU32: $fieldType0.decode($decoder, $offset + 0, $depth),
+            fieldOfVecOfStrings:
+                $fieldType1.decode($decoder, $offset + 8, $depth),
+            fieldOfVecOfStringsAtMostNine:
+                $fieldType2.decode($decoder, $offset + 24, $depth),
+            fieldOfVecOfStringsAtMost5:
+                $fieldType3.decode($decoder, $offset + 40, $depth),
+            fieldOfVecOfRefMeAtMost5:
+                $fieldType4.decode($decoder, $offset + 56, $depth),
+            fieldOfChannel: $fieldType5.decode($decoder, $offset + 72, $depth),
+            fieldOfClientEnd:
+                $fieldType6.decode($decoder, $offset + 76, $depth),
+            fieldOfNullableClientEnd:
+                $fieldType7.decode($decoder, $offset + 80, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
   }
 }
 
@@ -248,6 +291,7 @@ class ExampleOfUseOfAliases extends $fidl.Struct {
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<ExampleOfUseOfAliases> kExampleOfUseOfAliases_Type =
     $fidl.StructType<ExampleOfUseOfAliases>(
-  inlineSize: 88,
+  inlineSizeV1: 88,
+  inlineSizeV2: 88,
   structDecode: ExampleOfUseOfAliases._structDecode,
 );

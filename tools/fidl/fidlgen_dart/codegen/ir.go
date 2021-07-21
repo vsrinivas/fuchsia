@@ -118,6 +118,7 @@ type StructMember struct {
 	Name         string
 	DefaultValue string
 	OffsetV1     int
+	OffsetV2     int
 	typeExpr     string
 	Documented
 }
@@ -962,6 +963,7 @@ func (c *compiler) compileStructMember(val fidlgen.StructMember) StructMember {
 		Name:         c.compileLowerCamelIdentifier(val.Name, structMemberContext),
 		DefaultValue: defaultValue,
 		OffsetV1:     val.FieldShapeV1.Offset,
+		OffsetV2:     val.FieldShapeV2.Offset,
 		typeExpr:     fmt.Sprintf("$fidl.MemberType<%s>(%s, %s)", t.Decl, typeStr, offsetStr),
 		Documented:   docString(val),
 	}
@@ -997,9 +999,10 @@ func (c *compiler) compileStruct(val fidlgen.Struct) Struct {
 	r.HasNullableField = hasNullableField
 
 	r.TypeExpr = fmt.Sprintf(`$fidl.StructType<%s>(
-  inlineSize: %v,
+  inlineSizeV1: %v,
+  inlineSizeV2: %v,
   structDecode: %s._structDecode,
-)`, r.Name, val.TypeShapeV1.InlineSize, r.Name)
+)`, r.Name, val.TypeShapeV1.InlineSize, val.TypeShapeV2.InlineSize, r.Name)
 	return r
 }
 

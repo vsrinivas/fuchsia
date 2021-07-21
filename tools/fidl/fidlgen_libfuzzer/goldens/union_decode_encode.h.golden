@@ -9,7 +9,7 @@
 
 namespace fuzzing {
 
-inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 9>
+inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 10>
     fidl_test_union__decoder_encoders = {
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name =
@@ -76,6 +76,12 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 9>
             .has_flexible_envelope = false,
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
                 ::fidl_test_union::wire::NullableUnionStruct>,
+        },
+        ::fidl::fuzzing::DecoderEncoderForType{
+            .fidl_type_name = "::fidl_test_union::wire::UnionSandwich",
+            .has_flexible_envelope = true,
+            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<
+                ::fidl_test_union::wire::UnionSandwich>,
         },
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::fidl_test_union::wire::Empty",

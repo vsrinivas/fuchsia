@@ -284,6 +284,7 @@ HandleDef(HandleSubtype.event, 2147483648),// #0
 			
 			DecodeSuccessCase.run(
 				'GoldenBoolStruct_v1',
+				fidl.WireFormat.v1,
 				GoldenBoolStruct(v: true),
 				kGoldenBoolStruct_Type,
 				Uint8List.fromList([
@@ -292,6 +293,7 @@ HandleDef(HandleSubtype.event, 2147483648),// #0
 			
 			DecodeSuccessCase.run(
 				'GoldenBoolStruct_v2',
+				fidl.WireFormat.v2,
 				GoldenBoolStruct(v: true),
 				kGoldenBoolStruct_Type,
 				Uint8List.fromList([
@@ -300,6 +302,7 @@ HandleDef(HandleSubtype.event, 2147483648),// #0
 			
 			DecodeSuccessCase.run(
 				'GoldenIntStruct_v1',
+				fidl.WireFormat.v1,
 				GoldenIntStruct(v: 0x1),
 				kGoldenIntStruct_Type,
 				Uint8List.fromList([
@@ -308,6 +311,7 @@ HandleDef(HandleSubtype.event, 2147483648),// #0
 			
 			DecodeSuccessCase.run(
 				'GoldenIntStruct_v2',
+				fidl.WireFormat.v2,
 				GoldenIntStruct(v: 0x1),
 				kGoldenIntStruct_Type,
 				Uint8List.fromList([
@@ -316,6 +320,7 @@ HandleDef(HandleSubtype.event, 2147483648),// #0
 			
 			DecodeSuccessCase.run(
 				'GoldenUintStruct_v1',
+				fidl.WireFormat.v1,
 				GoldenUintStruct(v: 0x1),
 				kGoldenUintStruct_Type,
 				Uint8List.fromList([
@@ -324,6 +329,7 @@ HandleDef(HandleSubtype.event, 2147483648),// #0
 			
 			DecodeSuccessCase.run(
 				'GoldenUintStruct_v2',
+				fidl.WireFormat.v2,
 				GoldenUintStruct(v: 0x1),
 				kGoldenUintStruct_Type,
 				Uint8List.fromList([
@@ -332,6 +338,7 @@ HandleDef(HandleSubtype.event, 2147483648),// #0
 			
 			DecodeSuccessCase.run(
 				'GoldenFloatStruct_v1',
+				fidl.WireFormat.v1,
 				GoldenFloatStruct(v: 0),
 				kGoldenFloatStruct_Type,
 				Uint8List.fromList([
@@ -340,6 +347,7 @@ HandleDef(HandleSubtype.event, 2147483648),// #0
 			
 			DecodeSuccessCase.run(
 				'GoldenFloatStruct_v2',
+				fidl.WireFormat.v2,
 				GoldenFloatStruct(v: 0),
 				kGoldenFloatStruct_Type,
 				Uint8List.fromList([
@@ -348,6 +356,7 @@ HandleDef(HandleSubtype.event, 2147483648),// #0
 			
 			DecodeSuccessCase.run(
 				'GoldenDoubleStruct_v1',
+				fidl.WireFormat.v1,
 				GoldenDoubleStruct(v: 0),
 				kGoldenDoubleStruct_Type,
 				Uint8List.fromList([
@@ -356,6 +365,7 @@ HandleDef(HandleSubtype.event, 2147483648),// #0
 			
 			DecodeSuccessCase.run(
 				'GoldenDoubleStruct_v2',
+				fidl.WireFormat.v2,
 				GoldenDoubleStruct(v: 0),
 				kGoldenDoubleStruct_Type,
 				Uint8List.fromList([
@@ -364,6 +374,7 @@ HandleDef(HandleSubtype.event, 2147483648),// #0
 			
 			DecodeSuccessCase.run(
 				'GoldenStringStruct_v1',
+				fidl.WireFormat.v1,
 				GoldenStringStruct(v: 'abcd'),
 				kGoldenStringStruct_Type,
 				Uint8List.fromList([
@@ -374,6 +385,7 @@ HandleDef(HandleSubtype.event, 2147483648),// #0
 			
 			DecodeSuccessCase.run(
 				'GoldenStringStruct_v2',
+				fidl.WireFormat.v2,
 				GoldenStringStruct(v: 'abcd'),
 				kGoldenStringStruct_Type,
 				Uint8List.fromList([
@@ -384,6 +396,7 @@ HandleDef(HandleSubtype.event, 2147483648),// #0
 			
 			DecodeSuccessCase.run(
 				'GoldenNullableStringStructNonNull_v1',
+				fidl.WireFormat.v1,
 				GoldenNullableStringStruct(v: 'abcd'),
 				kGoldenNullableStringStruct_Type,
 				Uint8List.fromList([
@@ -394,6 +407,7 @@ HandleDef(HandleSubtype.event, 2147483648),// #0
 			
 			DecodeSuccessCase.run(
 				'GoldenNullableStringStructNonNull_v2',
+				fidl.WireFormat.v2,
 				GoldenNullableStringStruct(v: 'abcd'),
 				kGoldenNullableStringStruct_Type,
 				Uint8List.fromList([
@@ -404,6 +418,7 @@ HandleDef(HandleSubtype.event, 2147483648),// #0
 			
 			DecodeSuccessCase.run(
 				'GoldenNullableStringStructNull_v1',
+				fidl.WireFormat.v1,
 				GoldenNullableStringStruct(v: null),
 				kGoldenNullableStringStruct_Type,
 				Uint8List.fromList([
@@ -413,6 +428,7 @@ HandleDef(HandleSubtype.event, 2147483648),// #0
 			
 			DecodeSuccessCase.run(
 				'GoldenNullableStringStructNull_v2',
+				fidl.WireFormat.v2,
 				GoldenNullableStringStruct(v: null),
 				kGoldenNullableStringStruct_Type,
 				Uint8List.fromList([
@@ -422,6 +438,7 @@ HandleDef(HandleSubtype.event, 2147483648),// #0
 			
 			DecodeSuccessCase.run(
 				'GoldenEnumStruct_v1',
+				fidl.WireFormat.v1,
 				GoldenEnumStruct(v: kGoldenEnum_Type.ctor(0x1)),
 				kGoldenEnumStruct_Type,
 				Uint8List.fromList([
@@ -430,6 +447,7 @@ HandleDef(HandleSubtype.event, 2147483648),// #0
 			
 			DecodeSuccessCase.run(
 				'GoldenEnumStruct_v2',
+				fidl.WireFormat.v2,
 				GoldenEnumStruct(v: kGoldenEnum_Type.ctor(0x1)),
 				kGoldenEnumStruct_Type,
 				Uint8List.fromList([
@@ -438,6 +456,7 @@ HandleDef(HandleSubtype.event, 2147483648),// #0
 			
 			DecodeSuccessCase.run(
 				'GoldenBitsStruct_v1',
+				fidl.WireFormat.v1,
 				GoldenBitsStruct(v: kGoldenBits_Type.ctor(0x1)),
 				kGoldenBitsStruct_Type,
 				Uint8List.fromList([
@@ -446,6 +465,7 @@ HandleDef(HandleSubtype.event, 2147483648),// #0
 			
 			DecodeSuccessCase.run(
 				'GoldenBitsStruct_v2',
+				fidl.WireFormat.v2,
 				GoldenBitsStruct(v: kGoldenBits_Type.ctor(0x1)),
 				kGoldenBitsStruct_Type,
 				Uint8List.fromList([
@@ -454,6 +474,7 @@ HandleDef(HandleSubtype.event, 2147483648),// #0
 			
 			DecodeSuccessCase.run(
 				'GoldenTableStruct_v1',
+				fidl.WireFormat.v1,
 				GoldenTableStruct(v: GoldenTable(v: 0x1)),
 				kGoldenTableStruct_Type,
 				Uint8List.fromList([
@@ -466,6 +487,7 @@ HandleDef(HandleSubtype.event, 2147483648),// #0
 			
 			DecodeSuccessCase.run(
 				'GoldenByteArrayStruct_v1',
+				fidl.WireFormat.v1,
 				GoldenByteArrayStruct(v: Uint8List.fromList([0x1, 0x2, 0x3, 0x4])),
 				kGoldenByteArrayStruct_Type,
 				Uint8List.fromList([
@@ -474,6 +496,7 @@ HandleDef(HandleSubtype.event, 2147483648),// #0
 			
 			DecodeSuccessCase.run(
 				'GoldenByteArrayStruct_v2',
+				fidl.WireFormat.v2,
 				GoldenByteArrayStruct(v: Uint8List.fromList([0x1, 0x2, 0x3, 0x4])),
 				kGoldenByteArrayStruct_Type,
 				Uint8List.fromList([
@@ -482,6 +505,7 @@ HandleDef(HandleSubtype.event, 2147483648),// #0
 			
 			DecodeSuccessCase.run(
 				'GoldenStructArrayStruct_v1',
+				fidl.WireFormat.v1,
 				GoldenStructArrayStruct(v: [GoldenIntStruct(v: 0x1), GoldenIntStruct(v: 0x2)]),
 				kGoldenStructArrayStruct_Type,
 				Uint8List.fromList([
@@ -490,6 +514,7 @@ HandleDef(HandleSubtype.event, 2147483648),// #0
 			
 			DecodeSuccessCase.run(
 				'GoldenStructArrayStruct_v2',
+				fidl.WireFormat.v2,
 				GoldenStructArrayStruct(v: [GoldenIntStruct(v: 0x1), GoldenIntStruct(v: 0x2)]),
 				kGoldenStructArrayStruct_Type,
 				Uint8List.fromList([
@@ -498,6 +523,7 @@ HandleDef(HandleSubtype.event, 2147483648),// #0
 			
 			DecodeSuccessCase.run(
 				'GoldenByteVectorStruct_v1',
+				fidl.WireFormat.v1,
 				GoldenByteVectorStruct(v: Uint8List.fromList([0x1, 0x2, 0x3, 0x4, 0x1, 0x2, 0x3, 0x4, 0x1, 0x2, 0x3, 0x4])),
 				kGoldenByteVectorStruct_Type,
 				Uint8List.fromList([
@@ -509,6 +535,7 @@ HandleDef(HandleSubtype.event, 2147483648),// #0
 			
 			DecodeSuccessCase.run(
 				'GoldenByteVectorStruct_v2',
+				fidl.WireFormat.v2,
 				GoldenByteVectorStruct(v: Uint8List.fromList([0x1, 0x2, 0x3, 0x4, 0x1, 0x2, 0x3, 0x4, 0x1, 0x2, 0x3, 0x4])),
 				kGoldenByteVectorStruct_Type,
 				Uint8List.fromList([
@@ -520,6 +547,7 @@ HandleDef(HandleSubtype.event, 2147483648),// #0
 			
 			DecodeSuccessCase.run(
 				'GoldenByteNullableVectorStructNonNull_v1',
+				fidl.WireFormat.v1,
 				GoldenNullableByteVectorStruct(v: Uint8List.fromList([0x1, 0x2, 0x3, 0x4])),
 				kGoldenNullableByteVectorStruct_Type,
 				Uint8List.fromList([
@@ -530,6 +558,7 @@ HandleDef(HandleSubtype.event, 2147483648),// #0
 			
 			DecodeSuccessCase.run(
 				'GoldenByteNullableVectorStructNonNull_v2',
+				fidl.WireFormat.v2,
 				GoldenNullableByteVectorStruct(v: Uint8List.fromList([0x1, 0x2, 0x3, 0x4])),
 				kGoldenNullableByteVectorStruct_Type,
 				Uint8List.fromList([
@@ -540,6 +569,7 @@ HandleDef(HandleSubtype.event, 2147483648),// #0
 			
 			DecodeSuccessCase.run(
 				'GoldenNullableByteVectorStructNull_v1',
+				fidl.WireFormat.v1,
 				GoldenNullableByteVectorStruct(v: null),
 				kGoldenNullableByteVectorStruct_Type,
 				Uint8List.fromList([
@@ -549,6 +579,7 @@ HandleDef(HandleSubtype.event, 2147483648),// #0
 			
 			DecodeSuccessCase.run(
 				'GoldenNullableByteVectorStructNull_v2',
+				fidl.WireFormat.v2,
 				GoldenNullableByteVectorStruct(v: null),
 				kGoldenNullableByteVectorStruct_Type,
 				Uint8List.fromList([
@@ -558,6 +589,7 @@ HandleDef(HandleSubtype.event, 2147483648),// #0
 			
 			DecodeSuccessCase.run(
 				'GoldenStructVectorStruct_v1',
+				fidl.WireFormat.v1,
 				GoldenStructVectorStruct(v: [GoldenIntStruct(v: 0x1), GoldenIntStruct(v: 0x2)]),
 				kGoldenStructVectorStruct_Type,
 				Uint8List.fromList([
@@ -568,6 +600,7 @@ HandleDef(HandleSubtype.event, 2147483648),// #0
 			
 			DecodeSuccessCase.run(
 				'GoldenStructVectorStruct_v2',
+				fidl.WireFormat.v2,
 				GoldenStructVectorStruct(v: [GoldenIntStruct(v: 0x1), GoldenIntStruct(v: 0x2)]),
 				kGoldenStructVectorStruct_Type,
 				Uint8List.fromList([
@@ -578,6 +611,7 @@ HandleDef(HandleSubtype.event, 2147483648),// #0
 			
 			DecodeSuccessCase.run(
 				'GoldenNullableStructNonNull_v1',
+				fidl.WireFormat.v1,
 				GoldenNullableStruct(v: GoldenBoolStruct(v: true)),
 				kGoldenNullableStruct_Type,
 				Uint8List.fromList([
@@ -587,6 +621,7 @@ HandleDef(HandleSubtype.event, 2147483648),// #0
 			
 			DecodeSuccessCase.run(
 				'GoldenNullableStructNonNull_v2',
+				fidl.WireFormat.v2,
 				GoldenNullableStruct(v: GoldenBoolStruct(v: true)),
 				kGoldenNullableStruct_Type,
 				Uint8List.fromList([
@@ -596,6 +631,7 @@ HandleDef(HandleSubtype.event, 2147483648),// #0
 			
 			DecodeSuccessCase.run(
 				'GoldenNullableStructNull_v1',
+				fidl.WireFormat.v1,
 				GoldenNullableStruct(v: null),
 				kGoldenNullableStruct_Type,
 				Uint8List.fromList([
@@ -604,6 +640,7 @@ HandleDef(HandleSubtype.event, 2147483648),// #0
 			
 			DecodeSuccessCase.run(
 				'GoldenNullableStructNull_v2',
+				fidl.WireFormat.v2,
 				GoldenNullableStruct(v: null),
 				kGoldenNullableStruct_Type,
 				Uint8List.fromList([
@@ -612,6 +649,7 @@ HandleDef(HandleSubtype.event, 2147483648),// #0
 			
 			DecodeSuccessCase.runWithHandles(
 				'GoldenNullableHandleStructNonNull_v1',
+				fidl.WireFormat.v1,
 				(List<Handle> handles) => GoldenNullableHandleStruct(v: handles[0]),
 				kGoldenNullableHandleStruct_Type,
 				Uint8List.fromList([
@@ -627,6 +665,7 @@ HandleDef(HandleSubtype.event, 2147483648),// #0
 			
 			DecodeSuccessCase.runWithHandles(
 				'GoldenNullableHandleStructNonNull_v2',
+				fidl.WireFormat.v2,
 				(List<Handle> handles) => GoldenNullableHandleStruct(v: handles[0]),
 				kGoldenNullableHandleStruct_Type,
 				Uint8List.fromList([
@@ -642,6 +681,7 @@ HandleDef(HandleSubtype.event, 2147483648),// #0
 			
 			DecodeSuccessCase.run(
 				'GoldenNullableHandleStructNull_v1',
+				fidl.WireFormat.v1,
 				GoldenNullableHandleStruct(v: null),
 				kGoldenNullableHandleStruct_Type,
 				Uint8List.fromList([
@@ -650,6 +690,7 @@ HandleDef(HandleSubtype.event, 2147483648),// #0
 			
 			DecodeSuccessCase.run(
 				'GoldenNullableHandleStructNull_v2',
+				fidl.WireFormat.v2,
 				GoldenNullableHandleStruct(v: null),
 				kGoldenNullableHandleStruct_Type,
 				Uint8List.fromList([
@@ -666,6 +707,7 @@ HandleDef(HandleSubtype.event, 2147483648),// #0
 			
 			DecodeFailureCase.run(
 				'GoldenStringStructNullBody_v1',
+				fidl.WireFormat.v1,
 				kGoldenStringStruct_Type,
 				Uint8List.fromList([
 0x03,0x00,0x00,0x00,0x00,0x00,0x00,0x00, //
@@ -675,6 +717,7 @@ HandleDef(HandleSubtype.event, 2147483648),// #0
 			
 			DecodeFailureCase.run(
 				'GoldenStringStructNullBody_v2',
+				fidl.WireFormat.v2,
 				kGoldenStringStruct_Type,
 				Uint8List.fromList([
 0x03,0x00,0x00,0x00,0x00,0x00,0x00,0x00, //

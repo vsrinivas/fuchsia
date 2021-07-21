@@ -171,7 +171,16 @@ class StructWithNullableString extends $fidl.Struct {
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    $fieldType0.encode($encoder, val, $offset + 0, $depth);
+    switch ($encoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $fieldType0.encode($encoder, val, $offset + 0, $depth);
+        break;
+      case $fidl.WireFormat.v2:
+        $fieldType0.encode($encoder, val, $offset + 0, $depth);
+        break;
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
   }
 
   @override
@@ -181,8 +190,16 @@ class StructWithNullableString extends $fidl.Struct {
 
   static StructWithNullableString _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
-    return StructWithNullableString(
-        val: $fieldType0.decode($decoder, $offset + 0, $depth));
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        return StructWithNullableString(
+            val: $fieldType0.decode($decoder, $offset + 0, $depth));
+      case $fidl.WireFormat.v2:
+        return StructWithNullableString(
+            val: $fieldType0.decode($decoder, $offset + 0, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
   }
 }
 
@@ -190,7 +207,8 @@ class StructWithNullableString extends $fidl.Struct {
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<StructWithNullableString>
     kStructWithNullableString_Type = $fidl.StructType<StructWithNullableString>(
-  inlineSize: 16,
+  inlineSizeV1: 16,
+  inlineSizeV2: 16,
   structDecode: StructWithNullableString._structDecode,
 );
 
@@ -226,7 +244,16 @@ class StructWithNullableVector extends $fidl.Struct {
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    $fieldType0.encode($encoder, val, $offset + 0, $depth);
+    switch ($encoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $fieldType0.encode($encoder, val, $offset + 0, $depth);
+        break;
+      case $fidl.WireFormat.v2:
+        $fieldType0.encode($encoder, val, $offset + 0, $depth);
+        break;
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
   }
 
   @override
@@ -236,8 +263,16 @@ class StructWithNullableVector extends $fidl.Struct {
 
   static StructWithNullableVector _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
-    return StructWithNullableVector(
-        val: $fieldType0.decode($decoder, $offset + 0, $depth));
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        return StructWithNullableVector(
+            val: $fieldType0.decode($decoder, $offset + 0, $depth));
+      case $fidl.WireFormat.v2:
+        return StructWithNullableVector(
+            val: $fieldType0.decode($decoder, $offset + 0, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
   }
 }
 
@@ -245,7 +280,8 @@ class StructWithNullableVector extends $fidl.Struct {
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<StructWithNullableVector>
     kStructWithNullableVector_Type = $fidl.StructType<StructWithNullableVector>(
-  inlineSize: 16,
+  inlineSizeV1: 16,
+  inlineSizeV2: 16,
   structDecode: StructWithNullableVector._structDecode,
 );
 
@@ -281,7 +317,16 @@ class StructWithNullableHandle extends $fidl.Struct {
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    $fieldType0.encode($encoder, val, $offset + 0, $depth);
+    switch ($encoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $fieldType0.encode($encoder, val, $offset + 0, $depth);
+        break;
+      case $fidl.WireFormat.v2:
+        $fieldType0.encode($encoder, val, $offset + 0, $depth);
+        break;
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
   }
 
   @override
@@ -291,8 +336,16 @@ class StructWithNullableHandle extends $fidl.Struct {
 
   static StructWithNullableHandle _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
-    return StructWithNullableHandle(
-        val: $fieldType0.decode($decoder, $offset + 0, $depth));
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        return StructWithNullableHandle(
+            val: $fieldType0.decode($decoder, $offset + 0, $depth));
+      case $fidl.WireFormat.v2:
+        return StructWithNullableHandle(
+            val: $fieldType0.decode($decoder, $offset + 0, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
   }
 }
 
@@ -300,7 +353,8 @@ class StructWithNullableHandle extends $fidl.Struct {
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<StructWithNullableHandle>
     kStructWithNullableHandle_Type = $fidl.StructType<StructWithNullableHandle>(
-  inlineSize: 4,
+  inlineSizeV1: 4,
+  inlineSizeV2: 4,
   structDecode: StructWithNullableHandle._structDecode,
 );
 
@@ -336,7 +390,16 @@ class StructWithNullableProtocol extends $fidl.Struct {
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    $fieldType0.encode($encoder, val, $offset + 0, $depth);
+    switch ($encoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $fieldType0.encode($encoder, val, $offset + 0, $depth);
+        break;
+      case $fidl.WireFormat.v2:
+        $fieldType0.encode($encoder, val, $offset + 0, $depth);
+        break;
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
   }
 
   @override
@@ -346,8 +409,16 @@ class StructWithNullableProtocol extends $fidl.Struct {
 
   static StructWithNullableProtocol _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
-    return StructWithNullableProtocol(
-        val: $fieldType0.decode($decoder, $offset + 0, $depth));
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        return StructWithNullableProtocol(
+            val: $fieldType0.decode($decoder, $offset + 0, $depth));
+      case $fidl.WireFormat.v2:
+        return StructWithNullableProtocol(
+            val: $fieldType0.decode($decoder, $offset + 0, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
   }
 }
 
@@ -356,7 +427,8 @@ class StructWithNullableProtocol extends $fidl.Struct {
 const $fidl.StructType<StructWithNullableProtocol>
     kStructWithNullableProtocol_Type =
     $fidl.StructType<StructWithNullableProtocol>(
-  inlineSize: 4,
+  inlineSizeV1: 4,
+  inlineSizeV2: 4,
   structDecode: StructWithNullableProtocol._structDecode,
 );
 
@@ -392,7 +464,16 @@ class StructWithNullableRequest extends $fidl.Struct {
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    $fieldType0.encode($encoder, val, $offset + 0, $depth);
+    switch ($encoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $fieldType0.encode($encoder, val, $offset + 0, $depth);
+        break;
+      case $fidl.WireFormat.v2:
+        $fieldType0.encode($encoder, val, $offset + 0, $depth);
+        break;
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
   }
 
   @override
@@ -402,8 +483,16 @@ class StructWithNullableRequest extends $fidl.Struct {
 
   static StructWithNullableRequest _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
-    return StructWithNullableRequest(
-        val: $fieldType0.decode($decoder, $offset + 0, $depth));
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        return StructWithNullableRequest(
+            val: $fieldType0.decode($decoder, $offset + 0, $depth));
+      case $fidl.WireFormat.v2:
+        return StructWithNullableRequest(
+            val: $fieldType0.decode($decoder, $offset + 0, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
   }
 }
 
@@ -412,7 +501,8 @@ class StructWithNullableRequest extends $fidl.Struct {
 const $fidl.StructType<StructWithNullableRequest>
     kStructWithNullableRequest_Type =
     $fidl.StructType<StructWithNullableRequest>(
-  inlineSize: 4,
+  inlineSizeV1: 4,
+  inlineSizeV2: 4,
   structDecode: StructWithNullableRequest._structDecode,
 );
 
@@ -440,7 +530,16 @@ class Int32Wrapper extends $fidl.Struct {
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    $fieldType0.encode($encoder, val, $offset + 0, $depth);
+    switch ($encoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $fieldType0.encode($encoder, val, $offset + 0, $depth);
+        break;
+      case $fidl.WireFormat.v2:
+        $fieldType0.encode($encoder, val, $offset + 0, $depth);
+        break;
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
   }
 
   @override
@@ -450,7 +549,16 @@ class Int32Wrapper extends $fidl.Struct {
 
   static Int32Wrapper _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
-    return Int32Wrapper(val: $fieldType0.decode($decoder, $offset + 0, $depth));
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        return Int32Wrapper(
+            val: $fieldType0.decode($decoder, $offset + 0, $depth));
+      case $fidl.WireFormat.v2:
+        return Int32Wrapper(
+            val: $fieldType0.decode($decoder, $offset + 0, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
   }
 }
 
@@ -458,7 +566,8 @@ class Int32Wrapper extends $fidl.Struct {
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<Int32Wrapper> kInt32Wrapper_Type =
     $fidl.StructType<Int32Wrapper>(
-  inlineSize: 4,
+  inlineSizeV1: 4,
+  inlineSizeV2: 4,
   structDecode: Int32Wrapper._structDecode,
 );
 
@@ -494,7 +603,16 @@ class StructWithNullableStruct extends $fidl.Struct {
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    $fieldType0.encode($encoder, val, $offset + 0, $depth);
+    switch ($encoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $fieldType0.encode($encoder, val, $offset + 0, $depth);
+        break;
+      case $fidl.WireFormat.v2:
+        $fieldType0.encode($encoder, val, $offset + 0, $depth);
+        break;
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
   }
 
   @override
@@ -504,8 +622,16 @@ class StructWithNullableStruct extends $fidl.Struct {
 
   static StructWithNullableStruct _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
-    return StructWithNullableStruct(
-        val: $fieldType0.decode($decoder, $offset + 0, $depth));
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        return StructWithNullableStruct(
+            val: $fieldType0.decode($decoder, $offset + 0, $depth));
+      case $fidl.WireFormat.v2:
+        return StructWithNullableStruct(
+            val: $fieldType0.decode($decoder, $offset + 0, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
   }
 }
 
@@ -513,7 +639,8 @@ class StructWithNullableStruct extends $fidl.Struct {
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<StructWithNullableStruct>
     kStructWithNullableStruct_Type = $fidl.StructType<StructWithNullableStruct>(
-  inlineSize: 8,
+  inlineSizeV1: 8,
+  inlineSizeV2: 8,
   structDecode: StructWithNullableStruct._structDecode,
 );
 
@@ -548,7 +675,16 @@ class StructWithNullableUnion extends $fidl.Struct {
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    $fieldType0.encode($encoder, val, $offset + 0, $depth);
+    switch ($encoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $fieldType0.encode($encoder, val, $offset + 0, $depth);
+        break;
+      case $fidl.WireFormat.v2:
+        $fieldType0.encode($encoder, val, $offset + 0, $depth);
+        break;
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
   }
 
   @override
@@ -558,8 +694,16 @@ class StructWithNullableUnion extends $fidl.Struct {
 
   static StructWithNullableUnion _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
-    return StructWithNullableUnion(
-        val: $fieldType0.decode($decoder, $offset + 0, $depth));
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        return StructWithNullableUnion(
+            val: $fieldType0.decode($decoder, $offset + 0, $depth));
+      case $fidl.WireFormat.v2:
+        return StructWithNullableUnion(
+            val: $fieldType0.decode($decoder, $offset + 0, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
   }
 }
 
@@ -567,7 +711,8 @@ class StructWithNullableUnion extends $fidl.Struct {
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<StructWithNullableUnion> kStructWithNullableUnion_Type =
     $fidl.StructType<StructWithNullableUnion>(
-  inlineSize: 24,
+  inlineSizeV1: 24,
+  inlineSizeV2: 16,
   structDecode: StructWithNullableUnion._structDecode,
 );
 

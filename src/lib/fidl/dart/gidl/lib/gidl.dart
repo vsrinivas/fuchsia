@@ -23,19 +23,6 @@ abstract class Encoders {
   }
 }
 
-// ignore: avoid_classes_with_only_static_members
-abstract class Decoders {
-  // ignore: prefer_constructors_over_static_methods
-  static fidl.Decoder get v1 {
-    return fidl.Decoder.fromRawArgs(null, [], fidl.WireFormat.v1);
-  }
-
-  // ignore: prefer_constructors_over_static_methods
-  static fidl.Decoder get v2 {
-    return fidl.Decoder.fromRawArgs(null, [], fidl.WireFormat.v2);
-  }
-}
-
 /// Returns list `result` where `result[i] == data[order[i]]`. Assumes all
 /// indices are valid.
 List<T> _reorderList<T>(List<T> data, List<int> order) =>
@@ -48,7 +35,8 @@ fidl.OutgoingMessage _encode<T, I extends Iterable<T>>(
     type: type,
     offset: 0,
   );
-  fidl.encodeMessage(encoder, type.encodingInlineSize(), member, value);
+  fidl.encodeMessage(
+      encoder, type.inlineSize(encoder.wireFormat), member, value);
   return encoder.message;
 }
 
@@ -58,22 +46,28 @@ Uint8List _getMessageBodyBytes(fidl.OutgoingMessage message) {
       message.data.lengthInBytes - fidl.kMessageHeaderSize);
 }
 
-T _decode<T, I extends Iterable<T>>(
+T _decode<T, I extends Iterable<T>>(fidl.WireFormat wireFormat,
     fidl.FidlType<T, I> type, Uint8List bytes, List<HandleInfo> handleInfos) {
   // The fidl.decodeMessage function assumes that the passed in FIDL message has
   // a header, while the passed in byte array does not.  This builder prepends
   // an empty placeholder "header" to the byte array, allowing it be properly
   // decoded by the function during tests.
-  BytesBuilder input = BytesBuilder(copy: false)
+  BytesBuilder messageBytesBuilder = BytesBuilder(copy: false)
     ..add(Uint8List(fidl.kMessageHeaderSize))
     ..add(bytes);
-  fidl.IncomingMessage message = fidl.IncomingMessage(
-      ByteData.view(input.toBytes().buffer, 0, input.length), handleInfos);
+  ByteData messageBytes = ByteData.view(
+      messageBytesBuilder.toBytes().buffer, 0, messageBytesBuilder.length);
+  if (wireFormat == fidl.WireFormat.v2) {
+    // Mark that the message contains wire format v2 bytes.
+    messageBytes.setUint8(4, 2);
+  }
+  fidl.IncomingMessage message =
+      fidl.IncomingMessage(messageBytes, handleInfos);
   fidl.MemberType member = fidl.MemberType(
     type: type,
     offset: 0,
   );
-  return fidl.decodeMessage(message, type.decodingInlineSize(), member);
+  return fidl.decodeMessage(message, type.inlineSize(wireFormat), member);
 }
 
 typedef FactoryFromHandles<T> = T Function(List<Handle> handles);
@@ -125,23 +119,29 @@ class EncodeSuccessCase<T, I extends Iterable<T>> {
 }
 
 class DecodeSuccessCase<T, I extends Iterable<T>> {
-  DecodeSuccessCase(this.input, this.type, this.bytes,
+  DecodeSuccessCase(this.wireFormat, this.input, this.type, this.bytes,
       {this.handleInfos = const []});
 
+  final fidl.WireFormat wireFormat;
   final T input;
   final fidl.FidlType<T, I> type;
   final Uint8List bytes;
   final List<HandleInfo> handleInfos;
 
   static void run<T, I extends Iterable<T>>(
-      String name, T input, fidl.FidlType<T, I> type, Uint8List bytes) {
+      String name,
+      fidl.WireFormat wireFormat,
+      T input,
+      fidl.FidlType<T, I> type,
+      Uint8List bytes) {
     group(name, () {
-      DecodeSuccessCase(input, type, bytes)._checkDecode();
+      DecodeSuccessCase(wireFormat, input, type, bytes)._checkDecode();
     });
   }
 
   static void runWithHandles<T, I extends Iterable<T>>(
       String name,
+      fidl.WireFormat wireFormat,
       FactoryFromHandles<T> inputFactory,
       fidl.FidlType<T, I> type,
       Uint8List bytes,
@@ -152,7 +152,8 @@ class DecodeSuccessCase<T, I extends Iterable<T>> {
     final handleInfos = createHandleInfos(handleDefs);
     final handles = handleInfos.map((handleInfo) => handleInfo.handle).toList();
     final inputHandles = _reorderList(handleInfos, handleOrder);
-    final testCase = DecodeSuccessCase(inputFactory(handles), type, bytes,
+    final testCase = DecodeSuccessCase(
+        wireFormat, inputFactory(handles), type, bytes,
         handleInfos: inputHandles);
     group(name, () {
       testCase._checkDecode();
@@ -172,7 +173,7 @@ class DecodeSuccessCase<T, I extends Iterable<T>> {
 
   void _checkDecode() {
     test('decode', () {
-      expect(_decode(type, bytes, handleInfos), equals(input));
+      expect(_decode(wireFormat, type, bytes, handleInfos), equals(input));
     });
   }
 }
@@ -227,8 +228,10 @@ class EncodeFailureCase<T, I extends Iterable<T>> {
 }
 
 class DecodeFailureCase<T, I extends Iterable<T>> {
-  DecodeFailureCase(this.type, this.bytes, this.code, this.handleInfos);
+  DecodeFailureCase(
+      this.wireFormat, this.type, this.bytes, this.code, this.handleInfos);
 
+  final fidl.WireFormat wireFormat;
   final fidl.FidlType<T, I> type;
   final Uint8List bytes;
   final fidl.FidlErrorCode code;
@@ -239,15 +242,20 @@ class DecodeFailureCase<T, I extends Iterable<T>> {
   // The two optional parameters can be merged into a single List<HandleSubtype> in the
   // desired order, but it is simpler to reorder here than having special handling
   // for decode failures in the GIDL backend.
-  static void run<T, I extends Iterable<T>>(String name,
-      fidl.FidlType<T, I> type, Uint8List bytes, fidl.FidlErrorCode code,
+  static void run<T, I extends Iterable<T>>(
+      String name,
+      fidl.WireFormat wireFormat,
+      fidl.FidlType<T, I> type,
+      Uint8List bytes,
+      fidl.FidlErrorCode code,
       [List<HandleDef> handleDefs = const [],
       List<int> handleOrder = const []]) {
     final handleInfos =
         _reorderList(createHandleInfos(handleDefs), handleOrder);
     final handles = handleInfos.map((handleInfo) => handleInfo.handle).toList();
     group(name, () {
-      DecodeFailureCase(type, bytes, code, handleInfos)._checkDecodeFails();
+      DecodeFailureCase(wireFormat, type, bytes, code, handleInfos)
+          ._checkDecodeFails();
       test('handles are closed', () {
         expect(handles.map(isHandleClosed), equals(handles.map((_) => true)));
       });
@@ -257,7 +265,7 @@ class DecodeFailureCase<T, I extends Iterable<T>> {
   void _checkDecodeFails() {
     test('decode fails', () {
       expect(
-          () => _decode(type, bytes, handleInfos),
+          () => _decode(wireFormat, type, bytes, handleInfos),
           throwsA(const TypeMatcher<fidl.FidlError>()
               .having((e) => e.code, 'code', equals(code))));
     });

@@ -124,6 +124,36 @@
         </tr>
 </table>
 
+### UnionSandwich {#UnionSandwich}
+*Defined in [fidl.test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=145)*
+
+
+
+<table>
+    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="UnionSandwich.a">
+            <td><code>a</code></td>
+            <td>
+                <code>uint32</code>
+            </td>
+            <td></td>
+            <td>No default</td>
+        </tr><tr id="UnionSandwich.u">
+            <td><code>u</code></td>
+            <td>
+                <code><a class='link' href='#ExplicitXUnion'>ExplicitXUnion</a></code>
+            </td>
+            <td></td>
+            <td>No default</td>
+        </tr><tr id="UnionSandwich.b">
+            <td><code>b</code></td>
+            <td>
+                <code>uint32</code>
+            </td>
+            <td></td>
+            <td>No default</td>
+        </tr>
+</table>
+
 
 
 

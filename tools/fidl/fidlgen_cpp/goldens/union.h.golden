@@ -46,6 +46,8 @@ using FieldCollision = ::fidl::test::union_::FieldCollision;
 
 using ExplicitXUnion = ::fidl::test::union_::ExplicitXUnion;
 
+using UnionSandwich = ::fidl::test::union_::UnionSandwich;
+
 using ExplicitUnion = ::fidl::test::union_::ExplicitUnion;
 
 using ExplicitStrictFoo = ::fidl::test::union_::ExplicitStrictFoo;

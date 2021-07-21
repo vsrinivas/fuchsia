@@ -39,6 +39,7 @@ __LOCAL extern const struct FidlCodedXUnion fidl_test_union_FieldCollisionTable;
 __LOCAL extern const struct FidlCodedXUnion fidl_test_union_FieldCollisionNullableRefTable;
 __LOCAL extern const struct FidlCodedXUnion fidl_test_union_ExplicitXUnionTable;
 __LOCAL extern const struct FidlCodedXUnion fidl_test_union_ExplicitXUnionNullableRefTable;
+__LOCAL extern const struct FidlCodedStruct fidl_test_union_UnionSandwichTable;
 __LOCAL extern const struct FidlCodedXUnion fidl_test_union_ExplicitUnionTable;
 __LOCAL extern const struct FidlCodedXUnion fidl_test_union_ExplicitUnionNullableRefTable;
 __LOCAL extern const struct FidlCodedXUnion fidl_test_union_ExplicitStrictFooTable;
@@ -273,6 +274,13 @@ static const struct FidlXUnionField Fields41fidl_test_union_ExplicitXUnionNullab
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kFloat32Table)}
 };
 const struct FidlCodedXUnion fidl_test_union_ExplicitXUnionNullableRefTable = {.tag=kFidlTypeXUnion, .field_count=4u, .fields=Fields41fidl_test_union_ExplicitXUnionNullableRef, .nullable=kFidlNullability_Nullable, .name="fidl.test.union/ExplicitXUnion", .strictness=kFidlStrictness_Flexible, .is_resource=kFidlIsResource_NotResource};
+static const struct FidlStructElement Fields29fidl_test_union_UnionSandwich[] = {
+    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=4u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding32,.is_resource=kFidlIsResource_NotResource},.mask_32=4294967295u}},
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset=8u, .field_type=(fidl_type_t*)(&fidl_test_union_ExplicitXUnionTable)}},
+    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=36u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding32,.is_resource=kFidlIsResource_NotResource},.mask_32=4294967295u}}
+};
+const struct FidlCodedStruct fidl_test_union_UnionSandwichTable = {.tag=kFidlTypeStruct, .elements=Fields29fidl_test_union_UnionSandwich, .element_count=3u, .size=40u, .name="fidl.test.union/UnionSandwich"};
+
 static const struct FidlXUnionField Fields29fidl_test_union_ExplicitUnion[] = {
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kInt32Table)},
     /*FidlXUnionField*/{.type=NULL},

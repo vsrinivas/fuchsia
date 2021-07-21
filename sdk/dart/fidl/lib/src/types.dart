@@ -16,6 +16,7 @@ import 'interface.dart';
 import 'struct.dart';
 import 'table.dart';
 import 'unknown_data.dart';
+import 'wire_format.dart';
 import 'xunion.dart';
 
 // ignore_for_file: public_member_api_docs
@@ -179,18 +180,27 @@ const int kHandleAbsent = 0;
 const int kHandlePresent = 0xFFFFFFFF;
 
 abstract class FidlType<T, I extends Iterable<T>> {
-  const FidlType({required this.inlineSize});
+  const FidlType({required this.inlineSizeV1, required this.inlineSizeV2});
 
-  final int inlineSize;
+  final int inlineSizeV1;
+  final int inlineSizeV2;
 
-  int encodingInlineSize() => inlineSize;
-  int decodingInlineSize() => inlineSize;
+  int inlineSize(WireFormat wireFormat) {
+    switch (wireFormat) {
+      case WireFormat.v1:
+        return inlineSizeV1;
+      case WireFormat.v2:
+        return inlineSizeV2;
+      default:
+        throw FidlError('unknown wire format');
+    }
+  }
 
   void encode(Encoder encoder, T value, int offset, int depth);
 
   void encodeArray(Encoder encoder, Iterable<T> value, int offset, int depth) {
     int off = offset;
-    final int stride = encodingInlineSize();
+    final int stride = inlineSize(encoder.wireFormat);
     for (final element in value) {
       encode(encoder, element, off, depth);
       off += stride;
@@ -203,20 +213,22 @@ abstract class FidlType<T, I extends Iterable<T>> {
 }
 
 abstract class SimpleFidlType<T> extends FidlType<T, List<T>> {
-  const SimpleFidlType({required int inlineSize})
-      : super(inlineSize: inlineSize);
+  const SimpleFidlType({required int inlineSizeV1, required int inlineSizeV2})
+      : super(inlineSizeV1: inlineSizeV1, inlineSizeV2: inlineSizeV2);
 
   @override
   List<T> decodeArray(Decoder decoder, int count, int offset, int depth) =>
-      List<T>.generate(count,
-          (int i) => decode(decoder, offset + i * decodingInlineSize(), depth));
+      List<T>.generate(
+          count,
+          (int i) => decode(
+              decoder, offset + i * inlineSize(decoder.wireFormat), depth));
 }
 
 /// This encodes/decodes the UnknowRawData assuming it is in an envelope, i.e.
 /// payload bytes followed directly by handles.
 class UnknownRawDataType extends SimpleFidlType<UnknownRawData> {
   const UnknownRawDataType({required this.numBytes, required this.numHandles})
-      : super(inlineSize: numBytes);
+      : super(inlineSizeV1: numBytes, inlineSizeV2: numBytes);
 
   final int numBytes;
   final int numHandles;
@@ -244,7 +256,7 @@ class UnknownRawDataType extends SimpleFidlType<UnknownRawData> {
 }
 
 class BoolType extends SimpleFidlType<bool> {
-  const BoolType() : super(inlineSize: 1);
+  const BoolType() : super(inlineSizeV1: 1, inlineSizeV2: 1);
 
   @override
   void encode(Encoder encoder, bool value, int offset, int depth) {
@@ -261,7 +273,7 @@ class StatusType extends Int32Type {
 }
 
 class Int8Type extends FidlType<int, Int8List> {
-  const Int8Type() : super(inlineSize: 1);
+  const Int8Type() : super(inlineSizeV1: 1, inlineSizeV2: 1);
 
   @override
   void encode(Encoder encoder, int value, int offset, int depth) {
@@ -285,7 +297,7 @@ class Int8Type extends FidlType<int, Int8List> {
 }
 
 class Int16Type extends FidlType<int, Int16List> {
-  const Int16Type() : super(inlineSize: 2);
+  const Int16Type() : super(inlineSizeV1: 2, inlineSizeV2: 2);
 
   @override
   void encode(Encoder encoder, int value, int offset, int depth) {
@@ -309,7 +321,7 @@ class Int16Type extends FidlType<int, Int16List> {
 }
 
 class Int32Type extends FidlType<int, Int32List> {
-  const Int32Type() : super(inlineSize: 4);
+  const Int32Type() : super(inlineSizeV1: 4, inlineSizeV2: 4);
 
   @override
   void encode(Encoder encoder, int value, int offset, int depth) {
@@ -333,7 +345,7 @@ class Int32Type extends FidlType<int, Int32List> {
 }
 
 class Int64Type extends FidlType<int, Int64List> {
-  const Int64Type() : super(inlineSize: 8);
+  const Int64Type() : super(inlineSizeV1: 8, inlineSizeV2: 8);
 
   @override
   void encode(Encoder encoder, int value, int offset, int depth) {
@@ -357,7 +369,7 @@ class Int64Type extends FidlType<int, Int64List> {
 }
 
 class Uint8Type extends FidlType<int, Uint8List> {
-  const Uint8Type() : super(inlineSize: 1);
+  const Uint8Type() : super(inlineSizeV1: 1, inlineSizeV2: 1);
 
   @override
   void encode(Encoder encoder, int value, int offset, int depth) {
@@ -381,7 +393,7 @@ class Uint8Type extends FidlType<int, Uint8List> {
 }
 
 class Uint16Type extends FidlType<int, Uint16List> {
-  const Uint16Type() : super(inlineSize: 2);
+  const Uint16Type() : super(inlineSizeV1: 2, inlineSizeV2: 2);
 
   @override
   void encode(Encoder encoder, int value, int offset, int depth) {
@@ -405,7 +417,7 @@ class Uint16Type extends FidlType<int, Uint16List> {
 }
 
 class Uint32Type extends FidlType<int, Uint32List> {
-  const Uint32Type() : super(inlineSize: 4);
+  const Uint32Type() : super(inlineSizeV1: 4, inlineSizeV2: 4);
 
   @override
   void encode(Encoder encoder, int value, int offset, int depth) {
@@ -429,7 +441,7 @@ class Uint32Type extends FidlType<int, Uint32List> {
 }
 
 class Uint64Type extends FidlType<int, Uint64List> {
-  const Uint64Type() : super(inlineSize: 8);
+  const Uint64Type() : super(inlineSizeV1: 8, inlineSizeV2: 8);
 
   @override
   void encode(Encoder encoder, int value, int offset, int depth) {
@@ -453,7 +465,7 @@ class Uint64Type extends FidlType<int, Uint64List> {
 }
 
 class Float32Type extends FidlType<double, Float32List> {
-  const Float32Type() : super(inlineSize: 4);
+  const Float32Type() : super(inlineSizeV1: 4, inlineSizeV2: 4);
 
   @override
   void encode(Encoder encoder, double value, int offset, int depth) {
@@ -477,7 +489,7 @@ class Float32Type extends FidlType<double, Float32List> {
 }
 
 class Float64Type extends FidlType<double, Float64List> {
-  const Float64Type() : super(inlineSize: 8);
+  const Float64Type() : super(inlineSizeV1: 8, inlineSizeV2: 8);
 
   @override
   void encode(Encoder encoder, double value, int offset, int depth) {
@@ -568,7 +580,7 @@ Handle _decodeHandle(Decoder decoder, int offset, int objectType, int rights) {
 
 abstract class _BaseHandleType<W> extends SimpleFidlType<W> {
   const _BaseHandleType({required this.objectType, required this.rights})
-      : super(inlineSize: 4);
+      : super(inlineSizeV1: 4, inlineSizeV2: 4);
 
   final int objectType;
   final int rights;
@@ -595,7 +607,8 @@ abstract class _BaseHandleType<W> extends SimpleFidlType<W> {
 
 class NullableHandleType<W> extends SimpleFidlType<W?> {
   final _BaseHandleType<W> _base;
-  const NullableHandleType(this._base) : super(inlineSize: 4);
+  const NullableHandleType(this._base)
+      : super(inlineSizeV1: 4, inlineSizeV2: 4);
 
   @override
   void encode(Encoder encoder, W? value, int offset, int depth) =>
@@ -665,7 +678,7 @@ class VmoType extends _BaseHandleType<Vmo> {
 }
 
 class InterfaceHandleType<T> extends SimpleFidlType<InterfaceHandle<T>> {
-  const InterfaceHandleType() : super(inlineSize: 4);
+  const InterfaceHandleType() : super(inlineSizeV1: 4, inlineSizeV2: 4);
 
   @override
   void encode(
@@ -689,7 +702,7 @@ class InterfaceHandleType<T> extends SimpleFidlType<InterfaceHandle<T>> {
 
 class NullableInterfaceHandleType<T>
     extends SimpleFidlType<InterfaceHandle<T>?> {
-  const NullableInterfaceHandleType() : super(inlineSize: 4);
+  const NullableInterfaceHandleType() : super(inlineSizeV1: 4, inlineSizeV2: 4);
 
   @override
   void encode(
@@ -714,7 +727,7 @@ class NullableInterfaceHandleType<T>
 }
 
 class InterfaceRequestType<T> extends SimpleFidlType<InterfaceRequest<T>> {
-  const InterfaceRequestType() : super(inlineSize: 4);
+  const InterfaceRequestType() : super(inlineSizeV1: 4, inlineSizeV2: 4);
 
   @override
   void encode(
@@ -738,7 +751,8 @@ class InterfaceRequestType<T> extends SimpleFidlType<InterfaceRequest<T>> {
 
 class NullableInterfaceRequestType<T>
     extends SimpleFidlType<InterfaceRequest<T>?> {
-  const NullableInterfaceRequestType() : super(inlineSize: 4);
+  const NullableInterfaceRequestType()
+      : super(inlineSizeV1: 4, inlineSizeV2: 4);
 
   @override
   void encode(
@@ -802,7 +816,7 @@ void _encodeNullVector(Encoder encoder, int offset) {
 class StringType extends SimpleFidlType<String> {
   const StringType({
     this.maybeElementCount,
-  }) : super(inlineSize: 16);
+  }) : super(inlineSizeV1: 16, inlineSizeV2: 16);
 
   final int? maybeElementCount;
 
@@ -827,7 +841,7 @@ class StringType extends SimpleFidlType<String> {
 class NullableStringType extends SimpleFidlType<String?> {
   const NullableStringType({
     this.maybeElementCount,
-  }) : super(inlineSize: 16);
+  }) : super(inlineSizeV1: 16, inlineSizeV2: 16);
 
   final int? maybeElementCount;
   @override
@@ -850,7 +864,8 @@ class NullableStringType extends SimpleFidlType<String?> {
 }
 
 class PointerType<T> extends SimpleFidlType<T?> {
-  const PointerType({required this.element}) : super(inlineSize: 8);
+  const PointerType({required this.element})
+      : super(inlineSizeV1: 8, inlineSizeV2: 8);
 
   final FidlType element;
 
@@ -860,7 +875,8 @@ class PointerType<T> extends SimpleFidlType<T?> {
       encoder.encodeUint64(kAllocAbsent, offset);
     } else {
       encoder.encodeUint64(kAllocPresent, offset);
-      int childOffset = encoder.alloc(element.encodingInlineSize(), depth);
+      int childOffset =
+          encoder.alloc(element.inlineSize(encoder.wireFormat), depth);
       element.encode(encoder, value, childOffset, depth + 1);
     }
   }
@@ -872,8 +888,10 @@ class PointerType<T> extends SimpleFidlType<T?> {
     if (data == kAllocAbsent) {
       return null;
     }
-    T? decoded = element.decode(decoder,
-        decoder.claimMemory(element.decodingInlineSize(), depth), depth + 1);
+    T? decoded = element.decode(
+        decoder,
+        decoder.claimMemory(element.inlineSize(decoder.wireFormat), depth),
+        depth + 1);
     return decoded;
   }
 
@@ -904,9 +922,10 @@ class MemberType<T> {
 
 class StructType<T extends Struct> extends SimpleFidlType<T> {
   const StructType({
-    required int inlineSize,
+    required int inlineSizeV1,
+    required int inlineSizeV2,
     required this.structDecode,
-  }) : super(inlineSize: inlineSize);
+  }) : super(inlineSizeV1: inlineSizeV1, inlineSizeV2: inlineSizeV2);
 
   final StructDecode<T> structDecode;
 
@@ -926,7 +945,8 @@ const int _kEnvelopeSize = 16;
 void _encodeEnvelopePresent<T, I extends Iterable<T>>(
     Encoder encoder, int offset, int depth, T field, FidlType<T, I> fieldType) {
   int numHandles = encoder.countHandles();
-  final fieldOffset = encoder.alloc(fieldType.encodingInlineSize(), depth);
+  final fieldOffset =
+      encoder.alloc(fieldType.inlineSize(encoder.wireFormat), depth);
   fieldType.encode(encoder, field, fieldOffset, depth + 1);
   numHandles = encoder.countHandles() - numHandles;
   final numBytes = encoder.nextOffset() - fieldOffset;
@@ -969,8 +989,8 @@ T? _decodeEnvelopeContent<T, I extends Iterable<T>>(Decoder decoder,
     case kAllocPresent:
       if (isEmpty) throw FidlError('expected empty envelope');
       if (fieldType != null) {
-        final fieldOffset =
-            decoder.claimMemory(fieldType.decodingInlineSize(), depth);
+        final fieldOffset = decoder.claimMemory(
+            fieldType.inlineSize(decoder.wireFormat), depth);
         final claimedHandles = decoder.countClaimedHandles();
         final field = fieldType.decode(decoder, fieldOffset, depth + 1);
         final numBytesConsumed = decoder.nextOffset() - fieldOffset;
@@ -1027,7 +1047,7 @@ class TableType<T extends Table> extends SimpleFidlType<T> {
     required this.members,
     required this.ctor,
     required this.resource,
-  }) : super(inlineSize: inlineSize);
+  }) : super(inlineSizeV1: inlineSize, inlineSizeV2: inlineSize);
 
   final List<FidlType?> members;
   final TableFactory<T> ctor;
@@ -1217,7 +1237,7 @@ class UnionType<T extends XUnion> extends SimpleFidlType<T> {
       required this.ctor,
       required this.flexible,
       required this.resource})
-      : super(inlineSize: 24);
+      : super(inlineSizeV1: 24, inlineSizeV2: 16);
 
   final Map<int, FidlType> members;
   final XUnionFactory<T> ctor;
@@ -1245,7 +1265,7 @@ class NullableUnionType<T extends XUnion> extends SimpleFidlType<T?> {
       required this.ctor,
       required this.flexible,
       required this.resource})
-      : super(inlineSize: 24);
+      : super(inlineSizeV1: 24, inlineSizeV2: 16);
 
   final Map<int, FidlType> members;
   final XUnionFactory<T> ctor;
@@ -1272,7 +1292,9 @@ class EnumType<T extends Enum> extends SimpleFidlType<T> {
     required this.type,
     required this.values,
     required this.ctor,
-  }) : super(inlineSize: 0); // Note: inlineSize is calculated below
+  }) : super(
+            inlineSizeV1: 0,
+            inlineSizeV2: 0); // Note: inlineSize is calculated below
 
   final FidlType<int, Iterable<int>> type;
   // TODO(fxb/7644): Currently, types are generated as consts. This means that
@@ -1285,7 +1307,9 @@ class EnumType<T extends Enum> extends SimpleFidlType<T> {
   final EnumFactory<T> ctor;
 
   @override
-  int get inlineSize => type.inlineSize;
+  int get inlineSizeV1 => type.inlineSizeV1;
+  @override
+  int get inlineSizeV2 => type.inlineSizeV2;
 
   @override
   void encode(Encoder encoder, T value, int offset, int depth) {
@@ -1302,13 +1326,17 @@ class BitsType<T extends Bits> extends SimpleFidlType<T> {
   const BitsType({
     required this.type,
     required this.ctor,
-  }) : super(inlineSize: 0); // Note: inlineSize is calculated below
+  }) : super(
+            inlineSizeV1: 0,
+            inlineSizeV2: 0); // Note: inlineSize is calculated below
 
   final FidlType<int, dynamic> type;
   final BitsFactory<T> ctor;
 
   @override
-  int get inlineSize => type.inlineSize;
+  int get inlineSizeV1 => type.inlineSizeV1;
+  @override
+  int get inlineSizeV2 => type.inlineSizeV2;
 
   @override
   void encode(Encoder encoder, T value, int offset, int depth) {
@@ -1365,7 +1393,8 @@ void _encodeVector<T, I extends Iterable<T>>(
   encoder
     ..encodeUint64(count, offset) // count
     ..encodeUint64(kAllocPresent, offset + 8); // data
-  int childOffset = encoder.alloc(count * element.encodingInlineSize(), depth);
+  int childOffset =
+      encoder.alloc(count * element.inlineSize(encoder.wireFormat), depth);
   element.encodeArray(encoder, value, childOffset, depth + 1);
 }
 
@@ -1377,8 +1406,8 @@ I? _decodeVector<T, I extends Iterable<T>>(Decoder decoder,
   if (data == kAllocAbsent) {
     return null;
   }
-  final int base =
-      decoder.claimMemory(count * element.decodingInlineSize(), depth);
+  final int base = decoder.claimMemory(
+      count * element.inlineSize(decoder.wireFormat), depth);
   I? out = element.decodeArray(decoder, count, base, depth + 1);
   return out;
 }
@@ -1387,7 +1416,7 @@ class VectorType<T, I extends Iterable<T>> extends SimpleFidlType<I> {
   const VectorType({
     required this.element,
     required this.maybeElementCount,
-  }) : super(inlineSize: 16);
+  }) : super(inlineSizeV1: 16, inlineSizeV2: 16);
 
   final FidlType<T, I> element;
   final int? maybeElementCount;
@@ -1411,7 +1440,7 @@ class NullableVectorType<T, I extends Iterable<T>> extends SimpleFidlType<I?> {
   const NullableVectorType({
     required this.element,
     required this.maybeElementCount,
-  }) : super(inlineSize: 16);
+  }) : super(inlineSizeV1: 16, inlineSizeV2: 16);
 
   final FidlType<T, I> element;
   final int? maybeElementCount;
@@ -1434,13 +1463,17 @@ class ArrayType<T, I extends Iterable<T>> extends SimpleFidlType<I> {
   const ArrayType({
     required this.element,
     required this.elementCount,
-  }) : super(inlineSize: 0); // Note: inlineSize is calculated below
+  }) : super(
+            inlineSizeV1: 0,
+            inlineSizeV2: 0); // Note: inlineSize is calculated below
 
   final FidlType<T, I> element;
   final int elementCount;
 
   @override
-  int get inlineSize => elementCount * element.inlineSize;
+  int get inlineSizeV1 => elementCount * element.inlineSizeV1;
+  @override
+  int get inlineSizeV2 => elementCount * element.inlineSizeV2;
 
   @override
   void encode(Encoder encoder, Iterable<T> value, int offset, int depth) {

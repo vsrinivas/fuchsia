@@ -232,7 +232,16 @@ class StructSmallArray extends $fidl.Struct {
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    $fieldType0.encode($encoder, a, $offset + 0, $depth);
+    switch ($encoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $fieldType0.encode($encoder, a, $offset + 0, $depth);
+        break;
+      case $fidl.WireFormat.v2:
+        $fieldType0.encode($encoder, a, $offset + 0, $depth);
+        break;
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
   }
 
   @override
@@ -242,8 +251,16 @@ class StructSmallArray extends $fidl.Struct {
 
   static StructSmallArray _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
-    return StructSmallArray(
-        a: $fieldType0.decode($decoder, $offset + 0, $depth));
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        return StructSmallArray(
+            a: $fieldType0.decode($decoder, $offset + 0, $depth));
+      case $fidl.WireFormat.v2:
+        return StructSmallArray(
+            a: $fieldType0.decode($decoder, $offset + 0, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
   }
 }
 
@@ -251,7 +268,8 @@ class StructSmallArray extends $fidl.Struct {
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<StructSmallArray> kStructSmallArray_Type =
     $fidl.StructType<StructSmallArray>(
-  inlineSize: 8,
+  inlineSizeV1: 8,
+  inlineSizeV2: 8,
   structDecode: StructSmallArray._structDecode,
 );
 
@@ -280,7 +298,16 @@ class StructLargeArray extends $fidl.Struct {
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
-    $fieldType0.encode($encoder, a, $offset + 0, $depth);
+    switch ($encoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $fieldType0.encode($encoder, a, $offset + 0, $depth);
+        break;
+      case $fidl.WireFormat.v2:
+        $fieldType0.encode($encoder, a, $offset + 0, $depth);
+        break;
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
   }
 
   @override
@@ -290,8 +317,16 @@ class StructLargeArray extends $fidl.Struct {
 
   static StructLargeArray _structDecode(
       $fidl.Decoder $decoder, int $offset, int $depth) {
-    return StructLargeArray(
-        a: $fieldType0.decode($decoder, $offset + 0, $depth));
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        return StructLargeArray(
+            a: $fieldType0.decode($decoder, $offset + 0, $depth));
+      case $fidl.WireFormat.v2:
+        return StructLargeArray(
+            a: $fieldType0.decode($decoder, $offset + 0, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
   }
 }
 
@@ -299,7 +334,8 @@ class StructLargeArray extends $fidl.Struct {
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<StructLargeArray> kStructLargeArray_Type =
     $fidl.StructType<StructLargeArray>(
-  inlineSize: 400,
+  inlineSizeV1: 400,
+  inlineSizeV2: 400,
   structDecode: StructLargeArray._structDecode,
 );
 

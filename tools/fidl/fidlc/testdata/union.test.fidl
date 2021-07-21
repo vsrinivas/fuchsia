@@ -141,3 +141,9 @@ type ExplicitXUnion = flexible union {
     1: i int64;
     4: f float32;
 };
+
+type UnionSandwich = struct {
+    a uint32;
+    u ExplicitXUnion;
+    b uint32;
+};
