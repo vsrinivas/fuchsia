@@ -297,15 +297,6 @@ jitterentropy, producing output data that looks closer to uniformly random. Note
 that even when set to false, the CPRNG will re-process the samples, so the
 processing inside of jitterentropy is somewhat redundant.
 
-## kernel.serial=\<string>
-
-This controls what serial port is used.  If provided, it overrides the serial
-port described by the system's bootdata.  The kernel debug serial port is
-a reserved resource and may not be used outside of the kernel.
-
-If set to "none", the kernel debug serial port will be disabled and will not
-be reserved, allowing the default serial port to be used outside the kernel.
-
 ### x64 specific values
 
 On x64, some additional values are supported for configuring 8250-like UARTs:

@@ -336,6 +336,7 @@ void BootOptions::PrintValue(const RedactedHex& value, FILE* out) {
 }
 
 bool BootOptions::Parse(std::string_view value, uart::all::Driver BootOptions::*member) {
+  serial_source = OptionSource::kCmdLine;
   if (!uart::all::WithAllDrivers<UartParser>{this->*member}.Parse(value)) {
     // Probably has nowhere to go, but anyway.
     printf("WARN: Unrecognized serial console setting '%.*s' ignored\n",
