@@ -10,4 +10,6 @@ rustc_library("fakestd") {
   edition = "2018"
 
   sources = [ "src/lib.rs" ]
+
+  configs -= [ "//build/config/rust:allow_unused_results" ]
 }

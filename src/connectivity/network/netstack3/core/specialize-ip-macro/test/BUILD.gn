@@ -18,6 +18,8 @@ rustc_test("specialize-ip-macro-test-lib-test") {
   ]
 
   sources = [ "src/lib.rs" ]
+
+  configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
 fuchsia_unittest_package("unittest_package") {
