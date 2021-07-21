@@ -525,12 +525,12 @@ int main(int argc, const char** argv) {
 
 usage:
   printf("Usage:\n");
-  printf("%s [-c <configuration>] [-d <device ID>] [-t] [-v] [-debug]", argv[0]);
+  printf("%s [-c <configuration>] [-d <device ID>] [-t] [-v] [-debug]\n", argv[0]);
   printf(
       "  -c   Prints configuration descriptor for specified configuration (rather than current "
       "configuration)\n");
   printf("  -d   Prints only specified device\n");
   printf("  -t   Prints USB device tree\n");
-  printf("  -v   Verbose output (prints descriptors\n");
+  printf("  -v   Verbose output (prints descriptors)\n");
   return result;
 }
