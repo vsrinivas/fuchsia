@@ -26,9 +26,12 @@
             url: "fuchsia-pkg://fuchsia.com/forensics#meta/last_reboot.cm",
         },
 
-        // Children below this line may be present on some but not all product configurations (whereas
-        // children above it are expected to be present on all configs that include core.cml)
-        // TODO(fxbug.dev/48215): Decide how to make it easier to understand which children aren't present.
+        // Children below this line may be present on some but not all product configurations.
+        // Children above this line are expected to be present on all configs that include
+        // core.cml.
+        //
+        // TODO(fxbug.dev/81003): If any of the components below are product-specific, move them
+        // to core realm shards.
         {
             name: "activity",
             url: "fuchsia-pkg://fuchsia.com/activity#meta/activity.cm",
