@@ -5,7 +5,6 @@
 use {
     anyhow::Error,
     fidl_fuchsia_examples_inspect::ReverserMarker,
-    fuchsia_async as fasync,
     fuchsia_component::client,
     fuchsia_zircon::DurationNum,
     tracing::{error, info},
@@ -35,9 +34,8 @@ fn usage() -> String {
     )
 }
 
-#[fasync::run_singlethreaded]
+#[fuchsia::component(logging_tags = ["inspect_rust_codelab", "client"])]
 async fn main() -> Result<(), Error> {
-    fuchsia_syslog::init_with_tags(&["inspect_rust_codelab"])?;
     let args = Args::load().unwrap_or_else(|| {
         error!("Invalid args. {}", usage());
         std::process::exit(0);

@@ -90,9 +90,8 @@ fn fizzbuzz(n: u32) -> String {
         .join(" ")
 }
 
-#[fasync::run_singlethreaded]
+#[fuchsia::component(logging_tags = ["inspect_rust_codelab", "fizzbuzz"])]
 async fn main() -> Result<(), Error> {
-    fuchsia_syslog::init_with_tags(&["inspect_rust_codelab"])?;
     let mut fs = ServiceFs::new();
 
     info!("starting up...");

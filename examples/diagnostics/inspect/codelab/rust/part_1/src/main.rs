@@ -6,9 +6,7 @@ use {
     crate::reverser::ReverserServerFactory,
     anyhow::{Context, Error},
     fidl_fuchsia_examples_inspect::FizzBuzzMarker,
-    fuchsia_async as fasync,
     fuchsia_component::{client, server::ServiceFs},
-    fuchsia_syslog,
     futures::{future::try_join, FutureExt, StreamExt},
     tracing::info,
     // CODELAB: Use inspect.
@@ -16,12 +14,10 @@ use {
 
 mod reverser;
 
-#[fasync::run_singlethreaded]
+// [START init_logger]
+#[fuchsia::component(logging_tags = ["inspect_rust_codelab", "part1"])]
+// [END init_logger]
 async fn main() -> Result<(), Error> {
-    // [START init_logger]
-    fuchsia_syslog::init_with_tags(&["inspect_rust_codelab"])?;
-    // [END init_logger]
-
     // [START servicefs_init]
     let mut fs = ServiceFs::new();
     // [END servicefs_init]

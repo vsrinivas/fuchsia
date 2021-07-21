@@ -102,7 +102,7 @@ mod tests {
         futures::channel::oneshot,
     };
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_reverser() -> Result<(), Error> {
         let inspector = inspect::Inspector::new();
 

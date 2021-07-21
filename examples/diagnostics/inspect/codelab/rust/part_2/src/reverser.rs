@@ -112,7 +112,7 @@ mod tests {
         fidl_fuchsia_examples_inspect::{ReverserMarker, ReverserProxy},
     };
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_reverser() -> Result<(), Error> {
         let reverser = open_reverser()?;
         let result = reverser.reverse("hello").await?;

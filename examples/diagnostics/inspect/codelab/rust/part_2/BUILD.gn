@@ -20,7 +20,7 @@ rustc_binary("bin") {
     # [START part_1_solution_build_dep]
     "//src/lib/diagnostics/inspect/runtime/rust",
     "//src/lib/diagnostics/inspect/rust",
-    "//src/lib/syslog/rust:syslog",
+    "//src/lib/fuchsia",
     "//src/lib/zircon/rust:fuchsia-zircon",
 
     # [END part_1_solution_build_dep]
