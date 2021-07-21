@@ -84,11 +84,11 @@ exclusion between the destruction of user objects and **to-user** calls:
         is never scheduled in parallel with any to-user calls.
     </li>
     <li id="solution_2_ref_counting">
-        <b>Reference-counting</b>: Reference-count the user objects such that
+        <b>Reference-counting</b>: reference-count the user objects such that
         they are not destroyed until the binding teardown is complete.
     </li>
     <li id="solution_3_two_phase_shutdown">
-        <b>Two-phase shutdown</b>: Provide a notification when binding teardown
+        <b>Two-phase shutdown</b>: provide a notification when binding teardown
         is complete, such that the user could arrange the business objects to
         destruct after that.
     </li>
@@ -255,8 +255,8 @@ with it.
 
 As applications grow more complex however, there are scenarios for proactively
 shutting down server implementation objects, which involves tearing down the
-server bindings. Drivers for example need to stop relevant servers the device is
-removed.
+server bindings. Drivers for example need to stop relevant servers when the
+device is removed.
 
 There are two ways a server could voluntarily teardown the binding on their end:
 
