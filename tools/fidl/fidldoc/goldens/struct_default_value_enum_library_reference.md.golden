@@ -1,3 +1,5 @@
+<link rel="stylesheet" href="../style.css" />
+
 [TOC]
 
 # fidl.test.structdefaultvalueenumlibraryreference
@@ -7,7 +9,7 @@
 
 ## **STRUCTS**
 
-### Foo {#Foo}
+### Foo  {#Foo data-text="Foo"}
 *Defined in [fidl.test.structdefaultvalueenumlibraryreference/example.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/struct_default_value_enum_library_reference/example.test.fidl;l=5)*
 
 

@@ -1,3 +1,5 @@
+<link rel="stylesheet" href="../style.css" />
+
 [TOC]
 
 # fidl.test.typealiases
@@ -7,7 +9,7 @@
 
 ## **STRUCTS**
 
-### ExampleOfUseOfAliases {#ExampleOfUseOfAliases}
+### ExampleOfUseOfAliases [resource](/fuchsia-src/reference/fidl/language/language.md#value-vs-resource){:.fidl-attribute} {#ExampleOfUseOfAliases data-text="ExampleOfUseOfAliases"}
 *Defined in [fidl.test.typealiases/example.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/type_aliases/example.test.fidl;l=25)*
 
 
@@ -76,7 +78,7 @@
 
 ## **ENUMS**
 
-### obj_type {#obj_type}
+### obj_type [strict](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute} {#obj_type}
 Type: <code>uint32</code>
 
 *Defined in [fidl.test.typealiases/example.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/type_aliases/example.test.fidl;l=8)*

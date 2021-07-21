@@ -39,6 +39,7 @@ if (is_host) {
     "src/templates/markdown/toc.hbs",
     "src/templates/markdown/partials/types/type.hbs",
     "src/templates/markdown/partials/declarations/structs.hbs",
+    "src/templates/markdown/style.css",
   ]
 
   rustc_binary("fidldoc_bin") {
@@ -115,6 +116,7 @@ if (is_host) {
     outputs = [
       "$target_gen_dir/goldens/_toc.yaml",
       "$target_gen_dir/goldens/README.md",
+      "$target_gen_dir/goldens/style.css",
     ]
     foreach(info, fidl_testdata_info_filtered) {
       deps += [ "${info.target}($fidl_toolchain)" ]
@@ -136,6 +138,10 @@ if (is_host) {
       {
         golden = "README.md.golden"
         generated = "$target_gen_dir/goldens/README.md"
+      },
+      {
+        golden = "style.css.golden"
+        generated = "$target_gen_dir/goldens/style.css"
       },
     ]
     foreach(info, fidl_testdata_info_filtered) {

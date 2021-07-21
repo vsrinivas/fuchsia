@@ -1,3 +1,5 @@
+<link rel="stylesheet" href="../style.css" />
+
 [TOC]
 
 # fidl.test.requestflexibleenvelope
@@ -69,7 +71,7 @@
 
 ## **UNIONS**
 
-### FlexibleFoo {#FlexibleFoo}
+### FlexibleFoo [flexible](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute}  {#FlexibleFoo data-text="FlexibleFoo"}
 *Defined in [fidl.test.requestflexibleenvelope/request_flexible_envelope.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/request_flexible_envelope.test.fidl;l=3)*
 
 
@@ -88,7 +90,7 @@
             <td></td>
         </tr></table>
 
-### StrictFoo {#StrictFoo}
+### StrictFoo [strict](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute}  {#StrictFoo data-text="StrictFoo"}
 *Defined in [fidl.test.requestflexibleenvelope/request_flexible_envelope.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/request_flexible_envelope.test.fidl;l=8)*
 
 

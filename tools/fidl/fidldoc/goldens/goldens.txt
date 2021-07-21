@@ -28,6 +28,7 @@ request_flexible_envelope.md.golden
 service.md.golden
 struct.md.golden
 struct_default_value_enum_library_reference.md.golden
+style.css.golden
 table.md.golden
 transitive_dependencies.md.golden
 transitive_dependencies_compose.md.golden

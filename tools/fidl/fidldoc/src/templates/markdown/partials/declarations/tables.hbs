@@ -1,7 +1,7 @@
 {{#if table_declarations}}
 ## **TABLES**
 {{#each table_declarations}}
-### {{rpn name}} {#{{rpn name}}}
+### {{rpn name}} {{#if resource}}[resource](/fuchsia-src/reference/fidl/language/language.md#value-vs-resource){:.fidl-attribute}{{/if}} {#{{rpn name}} data-text="{{rpn name}}"}
 {{#if type}}Type: <code>{{type}}</code>{{/if}}
 
 {{> filename }}

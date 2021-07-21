@@ -1,3 +1,5 @@
+<link rel="stylesheet" href="../style.css" />
+
 [TOC]
 
 # fidl.test.struct
@@ -7,7 +9,7 @@
 
 ## **STRUCTS**
 
-### BasicStruct {#BasicStruct}
+### BasicStruct  {#BasicStruct data-text="BasicStruct"}
 *Defined in [fidl.test.struct/struct.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/struct.test.fidl;l=8)*
 
 
@@ -30,7 +32,7 @@
         </tr>
 </table>
 
-### Simple {#Simple}
+### Simple  {#Simple data-text="Simple"}
 *Defined in [fidl.test.struct/struct.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/struct.test.fidl;l=3)*
 
 

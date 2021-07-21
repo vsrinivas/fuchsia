@@ -1,3 +1,5 @@
+<link rel="stylesheet" href="../style.css" />
+
 [TOC]
 
 # fidl.test.placementofattributes
@@ -28,7 +30,7 @@
 
 ## **STRUCTS**
 
-### ExampleStruct {#ExampleStruct}
+### ExampleStruct  {#ExampleStruct data-text="ExampleStruct"}
 *Defined in [fidl.test.placementofattributes/example.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl;l=30)*
 
 
@@ -48,7 +50,7 @@
 
 ## **ENUMS**
 
-### ExampleEnum {#ExampleEnum}
+### ExampleEnum [strict](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute} {#ExampleEnum}
 Type: <code>uint32</code>
 
 *Defined in [fidl.test.placementofattributes/example.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl;l=16)*
@@ -66,7 +68,7 @@ Type: <code>uint32</code>
 
 ## **TABLES**
 
-### ExampleTable {#ExampleTable}
+### ExampleTable  {#ExampleTable data-text="ExampleTable"}
 
 
 *Defined in [fidl.test.placementofattributes/example.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl;l=36)*
@@ -88,7 +90,7 @@ Type: <code>uint32</code>
 
 ## **UNIONS**
 
-### ExampleUnion {#ExampleUnion}
+### ExampleUnion [strict](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute}  {#ExampleUnion data-text="ExampleUnion"}
 *Defined in [fidl.test.placementofattributes/example.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl;l=45)*
 
 
@@ -101,7 +103,7 @@ Type: <code>uint32</code>
             <td></td>
         </tr></table>
 
-### ExampleXUnion {#ExampleXUnion}
+### ExampleXUnion [flexible](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute}  {#ExampleXUnion data-text="ExampleXUnion"}
 *Defined in [fidl.test.placementofattributes/example.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl;l=51)*
 
 
@@ -118,7 +120,7 @@ Type: <code>uint32</code>
 
 ## **BITS**
 
-### ExampleBits {#ExampleBits}
+### ExampleBits [strict](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute} {#ExampleBits}
 Type: <code>uint32</code>
 
 *Defined in [fidl.test.placementofattributes/example.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl;l=7)*

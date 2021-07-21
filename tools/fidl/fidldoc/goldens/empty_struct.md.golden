@@ -1,3 +1,5 @@
+<link rel="stylesheet" href="../style.css" />
+
 [TOC]
 
 # fidl.test.emptystruct
@@ -67,7 +69,7 @@
 
 ## **STRUCTS**
 
-### Empty {#Empty}
+### Empty  {#Empty data-text="Empty"}
 *Defined in [fidl.test.emptystruct/empty_struct.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/empty_struct.test.fidl;l=3)*
 
 

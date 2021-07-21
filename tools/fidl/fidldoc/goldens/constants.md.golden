@@ -1,3 +1,5 @@
+<link rel="stylesheet" href="../style.css" />
+
 [TOC]
 
 # fidl.test.constants
@@ -7,7 +9,7 @@
 
 ## **STRUCTS**
 
-### Struct {#Struct}
+### Struct  {#Struct data-text="Struct"}
 *Defined in [fidl.test.constants/constants.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/constants.test.fidl;l=41)*
 
 
@@ -55,7 +57,7 @@
 
 ## **ENUMS**
 
-### Enum {#Enum}
+### Enum [strict](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute} {#Enum}
 Type: <code>uint32</code>
 
 *Defined in [fidl.test.constants/constants.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/constants.test.fidl;l=33)*
@@ -69,7 +71,7 @@ Type: <code>uint32</code>
             <td></td>
         </tr></table>
 
-### EnumType {#EnumType}
+### EnumType [strict](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute} {#EnumType}
 Type: <code>int32</code>
 
 *Defined in [fidl.test.constants/constants.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/constants.test.fidl;l=16)*
@@ -91,7 +93,7 @@ Type: <code>int32</code>
 
 ## **BITS**
 
-### Bits {#Bits}
+### Bits [strict](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute} {#Bits}
 Type: <code>uint32</code>
 
 *Defined in [fidl.test.constants/constants.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/constants.test.fidl;l=37)*
@@ -105,7 +107,7 @@ Type: <code>uint32</code>
             <td></td>
         </tr></table>
 
-### BitsType {#BitsType}
+### BitsType [strict](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute} {#BitsType}
 Type: <code>uint32</code>
 
 *Defined in [fidl.test.constants/constants.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/constants.test.fidl;l=22)*

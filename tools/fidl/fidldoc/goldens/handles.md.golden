@@ -1,3 +1,5 @@
+<link rel="stylesheet" href="../style.css" />
+
 [TOC]
 
 # fidl.test.handles
@@ -13,7 +15,7 @@
 
 ## **STRUCTS**
 
-### Handles {#Handles}
+### Handles [resource](/fuchsia-src/reference/fidl/language/language.md#value-vs-resource){:.fidl-attribute} {#Handles data-text="Handles"}
 *Defined in [fidl.test.handles/handles.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/handles.test.fidl;l=54)*
 
 
@@ -257,7 +259,7 @@
 
 ## **ENUMS**
 
-### obj_type {#obj_type}
+### obj_type [strict](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute} {#obj_type}
 Type: <code>uint32</code>
 
 *Defined in [fidl.test.handles/handles.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/handles.test.fidl;l=8)*

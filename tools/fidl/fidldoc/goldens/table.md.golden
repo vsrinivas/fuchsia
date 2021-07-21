@@ -1,3 +1,5 @@
+<link rel="stylesheet" href="../style.css" />
+
 [TOC]
 
 # fidl.test.table
@@ -11,7 +13,7 @@
 
 ## **TABLES**
 
-### EmptyTable {#EmptyTable}
+### EmptyTable  {#EmptyTable data-text="EmptyTable"}
 
 
 *Defined in [fidl.test.table/table.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/table.test.fidl;l=3)*
@@ -22,7 +24,7 @@
     <tr><th>Ordinal</th><th>Name</th><th>Type</th><th>Description</th></tr>
     </table>
 
-### GreaterThan64OrdinalTable {#GreaterThan64OrdinalTable}
+### GreaterThan64OrdinalTable  {#GreaterThan64OrdinalTable data-text="GreaterThan64OrdinalTable"}
 
 
 *Defined in [fidl.test.table/table.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/table.test.fidl;l=36)*
@@ -495,7 +497,7 @@
             <td></td>
         </tr></table>
 
-### NewerSimpleTable {#NewerSimpleTable}
+### NewerSimpleTable  {#NewerSimpleTable data-text="NewerSimpleTable"}
 
 
 *Defined in [fidl.test.table/table.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/table.test.fidl;l=18)*
@@ -555,7 +557,7 @@
             <td></td>
         </tr></table>
 
-### OlderSimpleTable {#OlderSimpleTable}
+### OlderSimpleTable  {#OlderSimpleTable data-text="OlderSimpleTable"}
 
 
 *Defined in [fidl.test.table/table.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/table.test.fidl;l=13)*
@@ -580,7 +582,7 @@
             <td></td>
         </tr></table>
 
-### ReverseOrdinalTable {#ReverseOrdinalTable}
+### ReverseOrdinalTable  {#ReverseOrdinalTable data-text="ReverseOrdinalTable"}
 
 
 *Defined in [fidl.test.table/table.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/table.test.fidl;l=28)*
@@ -612,7 +614,7 @@
             <td></td>
         </tr></table>
 
-### SimpleTable {#SimpleTable}
+### SimpleTable  {#SimpleTable data-text="SimpleTable"}
 
 
 *Defined in [fidl.test.table/table.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/table.test.fidl;l=5)*

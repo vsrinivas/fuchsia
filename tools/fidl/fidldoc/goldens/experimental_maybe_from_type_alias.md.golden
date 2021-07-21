@@ -1,3 +1,5 @@
+<link rel="stylesheet" href="../style.css" />
+
 [TOC]
 
 # fidl.test.experimentalmaybefromtypealias
@@ -13,7 +15,7 @@
 
 ## **STRUCTS**
 
-### Testing {#Testing}
+### Testing [resource](/fuchsia-src/reference/fidl/language/language.md#value-vs-resource){:.fidl-attribute} {#Testing data-text="Testing"}
 *Defined in [fidl.test.experimentalmaybefromtypealias/experimental_maybe_from_type_alias.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/experimental_maybe_from_type_alias.test.fidl;l=14)*
 
 

@@ -1,3 +1,5 @@
+<link rel="stylesheet" href="../style.css" />
+
 [TOC]
 
 # fidl.test.consts
@@ -9,7 +11,7 @@
 
 ## **ENUMS**
 
-### EnumType {#EnumType}
+### EnumType [strict](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute} {#EnumType}
 Type: <code>int32</code>
 
 *Defined in [fidl.test.consts/consts.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/consts.test.fidl;l=14)*
@@ -35,7 +37,7 @@ Type: <code>int32</code>
 
 ## **BITS**
 
-### BitsType {#BitsType}
+### BitsType [strict](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute} {#BitsType}
 Type: <code>uint32</code>
 
 *Defined in [fidl.test.consts/consts.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/consts.test.fidl;l=23)*

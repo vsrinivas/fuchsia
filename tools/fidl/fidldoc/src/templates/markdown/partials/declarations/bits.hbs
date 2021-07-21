@@ -1,7 +1,7 @@
 {{#if bits_declarations}}
 ## **BITS**
 {{#each bits_declarations}}
-### {{rpn name}} {#{{rpn name}}}
+### {{rpn name}} {{#if strict}}[strict]{{else}}[flexible]{{/if}}(/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute} {#{{rpn name}}}
 Type: <code>{{type.subtype}}</code>
 
 {{> filename }}

@@ -1,3 +1,5 @@
+<link rel="stylesheet" href="../style.css" />
+
 [TOC]
 
 # fidl.test.enum
@@ -9,7 +11,7 @@
 
 ## **ENUMS**
 
-### MyFlexibleEnum {#MyFlexibleEnum}
+### MyFlexibleEnum [flexible](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute} {#MyFlexibleEnum}
 Type: <code>uint32</code>
 
 *Defined in [fidl.test.enum/enum.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/enum.test.fidl;l=8)*
@@ -27,7 +29,7 @@ Type: <code>uint32</code>
             <td></td>
         </tr></table>
 
-### MyFlexibleEnumWithCustomUnknown {#MyFlexibleEnumWithCustomUnknown}
+### MyFlexibleEnumWithCustomUnknown [flexible](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute} {#MyFlexibleEnumWithCustomUnknown}
 Type: <code>uint32</code>
 
 *Defined in [fidl.test.enum/enum.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/enum.test.fidl;l=13)*
@@ -49,7 +51,7 @@ Type: <code>uint32</code>
             <td></td>
         </tr></table>
 
-### MyStrictEnum {#MyStrictEnum}
+### MyStrictEnum [strict](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute} {#MyStrictEnum}
 Type: <code>uint32</code>
 
 *Defined in [fidl.test.enum/enum.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/enum.test.fidl;l=3)*

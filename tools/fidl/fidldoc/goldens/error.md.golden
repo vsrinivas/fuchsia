@@ -1,3 +1,5 @@
+<link rel="stylesheet" href="../style.css" />
+
 [TOC]
 
 # fidl.test.error
@@ -37,7 +39,7 @@
 
 ## **STRUCTS**
 
-### Example_foo_Response {#Example_foo_Response}
+### Example_foo_Response  {#Example_foo_Response data-text="Example_foo_Response"}
 *Defined in [fidl.test.error/error.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/error.test.fidl;l=6)*
 
 
@@ -61,7 +63,7 @@
 
 ## **UNIONS**
 
-### Example_foo_Result {#Example_foo_Result}
+### Example_foo_Result [strict](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute}  {#Example_foo_Result data-text="Example_foo_Result"}
 *Defined in [fidl.test.error/error.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/error.test.fidl;l=6)*
 
 

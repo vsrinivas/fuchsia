@@ -155,6 +155,9 @@ fn run(opt: Opt) -> Result<(), Error> {
             "url_path": url_path,
         });
 
+        // Copy static files
+        template.include_static_files().expect("Unable to copy static files");
+
         // Create main page
         template.render_main_page(&main_fidl_doc).expect("Unable to render main page");
 

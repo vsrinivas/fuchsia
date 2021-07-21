@@ -1,7 +1,7 @@
 {{#if union_declarations}}
 ## **UNIONS**
 {{#each union_declarations}}
-### {{rpn name}} {#{{rpn name}}}
+### {{rpn name}} {{#if strict}}[strict]{{else}}[flexible]{{/if}}(/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute} {{#if resource}}[resource](/fuchsia-src/reference/fidl/language/language.md#value-vs-resource){:.fidl-attribute}{{/if}} {#{{rpn name}} data-text="{{rpn name}}"}
 {{> filename }}
 
 {{> doc ~}}

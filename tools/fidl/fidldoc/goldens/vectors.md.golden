@@ -1,3 +1,5 @@
+<link rel="stylesheet" href="../style.css" />
+
 [TOC]
 
 # fidl.test.vectors
@@ -7,7 +9,7 @@
 
 ## **STRUCTS**
 
-### ExampleUseOfVectors {#ExampleUseOfVectors}
+### ExampleUseOfVectors  {#ExampleUseOfVectors data-text="ExampleUseOfVectors"}
 *Defined in [fidl.test.vectors/vectors.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/vectors.test.fidl;l=6)*
 
 

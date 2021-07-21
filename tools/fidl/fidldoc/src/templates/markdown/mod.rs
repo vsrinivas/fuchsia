@@ -163,6 +163,18 @@ impl FidldocTemplate for MarkdownTemplate<'_> {
     fn name(&self) -> String {
         return "Markdown".to_string();
     }
+
+    fn include_static_files(&self) -> Result<(), Error> {
+        let style_css_path = self.output_path.join("style.css");
+        info!("Copying style.css to {}", style_css_path.display());
+
+        let mut style_css_file = File::create(&style_css_path)
+            .with_context(|| format!("Can't create {}", style_css_path.display()))?;
+
+        style_css_file.write_all(include_str!("style.css").as_bytes())?;
+
+        Ok(())
+    }
 }
 
 fn render_template(

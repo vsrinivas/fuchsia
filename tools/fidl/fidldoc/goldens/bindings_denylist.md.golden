@@ -1,3 +1,5 @@
+<link rel="stylesheet" href="../style.css" />
+
 [TOC]
 
 # fidl.test.bindingsdenylist
@@ -31,7 +33,7 @@
 
 ## **STRUCTS**
 
-### OnlyGo {#OnlyGo}
+### OnlyGo  {#OnlyGo data-text="OnlyGo"}
 *Defined in [fidl.test.bindingsdenylist/bindings_denylist.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/bindings_denylist.test.fidl;l=22)*
 
 
@@ -44,7 +46,7 @@
 
 ## **ENUMS**
 
-### OnlyDart {#OnlyDart}
+### OnlyDart [strict](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute} {#OnlyDart}
 Type: <code>uint32</code>
 
 *Defined in [fidl.test.bindingsdenylist/bindings_denylist.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/bindings_denylist.test.fidl;l=17)*
@@ -62,7 +64,7 @@ Type: <code>uint32</code>
 
 ## **TABLES**
 
-### OnlyRust {#OnlyRust}
+### OnlyRust  {#OnlyRust data-text="OnlyRust"}
 
 
 *Defined in [fidl.test.bindingsdenylist/bindings_denylist.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/bindings_denylist.test.fidl;l=25)*
@@ -77,7 +79,7 @@ Type: <code>uint32</code>
 
 ## **UNIONS**
 
-### OnlyLlcpp {#OnlyLlcpp}
+### OnlyLlcpp [strict](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute}  {#OnlyLlcpp data-text="OnlyLlcpp"}
 *Defined in [fidl.test.bindingsdenylist/bindings_denylist.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/bindings_denylist.test.fidl;l=28)*
 
 
@@ -94,7 +96,7 @@ Type: <code>uint32</code>
 
 ## **BITS**
 
-### OnlySyzkaller {#OnlySyzkaller}
+### OnlySyzkaller [strict](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute} {#OnlySyzkaller}
 Type: <code>uint32</code>
 
 *Defined in [fidl.test.bindingsdenylist/bindings_denylist.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/bindings_denylist.test.fidl;l=12)*

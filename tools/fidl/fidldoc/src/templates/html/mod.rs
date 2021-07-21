@@ -90,6 +90,10 @@ impl FidldocTemplate for HtmlTemplate<'_> {
     fn name(&self) -> String {
         return "HTML".to_string();
     }
+
+    fn include_static_files(&self) -> Result<(), Error> {
+        Ok(())
+    }
 }
 
 fn package_hash(
