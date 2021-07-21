@@ -13,10 +13,10 @@
 #define PERSISTENT_RAM_ALLOCATION_GRANULARITY 128
 #endif
 
-static constexpr size_t kPersistentRamAllocaitonGranularity = PERSISTENT_RAM_ALLOCATION_GRANULARITY;
+static constexpr size_t kPersistentRamAllocationGranularity = PERSISTENT_RAM_ALLOCATION_GRANULARITY;
 
-static_assert(ispow2(kPersistentRamAllocaitonGranularity) &&
-                  (kPersistentRamAllocaitonGranularity > 0),
+static_assert(ispow2(kPersistentRamAllocationGranularity) &&
+                  (kPersistentRamAllocationGranularity > 0),
               "The allocation granularity of persistent RAM must be a power of two greater than 0");
 
 #endif  // ZIRCON_KERNEL_INCLUDE_KERNEL_PERSISTENT_RAM_H_

@@ -28,7 +28,7 @@
 #endif
 
 static constexpr size_t kMinCrashlogSize = MIN_CRASHLOG_SIZE;
-static_assert((kMinCrashlogSize % kPersistentRamAllocaitonGranularity) == 0,
+static_assert((kMinCrashlogSize % kPersistentRamAllocationGranularity) == 0,
               "Minimum reserved crashlog size must be a multiple of the persistent RAM allocation "
               "granularity");
 

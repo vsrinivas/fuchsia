@@ -18,7 +18,7 @@
 #endif
 
 static constexpr size_t kTargetPersistentDebugLogSize = TARGET_PERSISTENT_DEBUGLOG_SIZE;
-static_assert((kTargetPersistentDebugLogSize % kPersistentRamAllocaitonGranularity) == 0,
+static_assert((kTargetPersistentDebugLogSize % kPersistentRamAllocationGranularity) == 0,
               "Minimum reserved crashlog size must be a multiple of the persistent RAM allocation "
               "granularity");
 static_assert(kTargetPersistentDebugLogSize <= ktl::numeric_limits<uint32_t>::max());

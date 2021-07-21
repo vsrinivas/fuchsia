@@ -322,26 +322,26 @@ static void allocate_persistent_ram(paddr_t pa, size_t length) {
   {
     // start by figuring out how many chunks of RAM we have available to
     // us total.
-    size_t persistent_chunks_available = length / kPersistentRamAllocaitonGranularity;
+    size_t persistent_chunks_available = length / kPersistentRamAllocationGranularity;
 
     // Make sure that crashlog gets its minimum allocation, or all of the
     // RAM if it cannot meet even its minimum allocation.
     size_t crashlog_chunks = ktl::min(persistent_chunks_available,
-                                      kMinCrashlogSize / kPersistentRamAllocaitonGranularity);
+                                      kMinCrashlogSize / kPersistentRamAllocationGranularity);
     persistent_chunks_available -= crashlog_chunks;
 
     // Give what remains over to the persistent debug logging, up to the
     // desired target amount.
     size_t dlog_chunks =
         ktl::min(persistent_chunks_available,
-                 kTargetPersistentDebugLogSize / kPersistentRamAllocaitonGranularity);
+                 kTargetPersistentDebugLogSize / kPersistentRamAllocationGranularity);
     persistent_chunks_available -= dlog_chunks;
 
     // Finally, anything left over can go to the crashlog.
     crashlog_chunks += persistent_chunks_available;
 
-    crashlog_size = crashlog_chunks * kPersistentRamAllocaitonGranularity;
-    dlog_size = dlog_chunks * kPersistentRamAllocaitonGranularity;
+    crashlog_size = crashlog_chunks * kPersistentRamAllocationGranularity;
+    dlog_size = dlog_chunks * kPersistentRamAllocationGranularity;
   }
 
   // Configure up the crashlog RAM
