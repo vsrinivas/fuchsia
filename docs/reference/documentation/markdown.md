@@ -582,13 +582,13 @@ There are three ways to specify a region of the file to include: region tags, re
     Use the `indented_block` parameter:
 
     ```none {:.devsite-disable-click-to-copy}
-    {% verbatim %}{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" indented_block="table User" %}{% endverbatim %}
+    {% verbatim %}{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" indented_block="type User" %}{% endverbatim %}
     ```
 
     Rendered:
 
     <pre class="lang-cpp prettyprint">
-    {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" indented_block="table User" %}
+    {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" indented_block="type User" %}
     </pre>
 
     The pattern uses the Python regular expression syntax. For more information, see the official [Python documentation][python-regex-doc]{: .external}.
