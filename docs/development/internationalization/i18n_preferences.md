@@ -85,7 +85,7 @@ To send i18n preferences between Fuchsia
 FIDL table:
 
 ```fidl {:.devsite-disable-click-to-copy}
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="sdk/fidl/fuchsia.intl/intl.fidl" indented_block="table Profile" exclude_regexp="(//.*)|(^$)" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="sdk/fidl/fuchsia.intl/intl.fidl" indented_block="type Profile" exclude_regexp="(//.*)|(^$)" %}
 ```
 
 The locale ID is only a building block in the `Profile`. A profile contains a
@@ -196,7 +196,7 @@ is used to write and monitor internationalization-related settings.
 ```
 
 ```fidl {:.devsite-disable-click-to-copy}
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="sdk/fidl/fuchsia.settings/intl.fidl" indented_block="table IntlSettings" exclude_regexp="(//.*)|(^$)" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="sdk/fidl/fuchsia.settings/intl.fidl" indented_block="type IntlSettings" exclude_regexp="(//.*)|(^$)" %}
 ```
 
 This protocol is intended specifically for components that require direct access
