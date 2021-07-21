@@ -36,6 +36,12 @@ source_set("user_pci") {
     "service.cc",
     "upstream_node.cc",
   ]
+
+  deps = [
+    "//src/devices/bind/fuchsia.acpi:bind.fuchsia.acpi",
+    "//src/devices/bind/fuchsia.pci:bind.fuchsia.pci",
+  ]
+
   public_deps = [
     ":pci_bind_header",
     "//sdk/banjo/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp",

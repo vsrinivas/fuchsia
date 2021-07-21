@@ -121,6 +121,9 @@ class Bus : public PciBusType,
   ddk::PcirootProtocolClient& pciroot() { return pciroot_; }
   // Scan a specific bus
   void ScanBus(BusScanEntry entry, std::list<BusScanEntry>* scan_list);
+  // Returns true if a given BDF is present in the list of devices provided by
+  // the platform to us that use the ACPI fragment.
+  bool DeviceHasAcpi(pci_bdf_t bdf);
 
   // Creates interrupts corresponding to legacy IRQ vectors and configures devices accordingly.
   zx_status_t ConfigureLegacyIrqs() __TA_EXCLUDES(devices_lock_);

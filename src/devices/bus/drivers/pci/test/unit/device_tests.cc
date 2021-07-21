@@ -43,7 +43,7 @@ class PciDeviceTests : protected inspect::InspectTestHelper, public zxtest::Test
     EXPECT_OK(MmioConfig::Create(default_bdf(), &pciroot_proto().ecam().mmio(), 0, 1, &cfg));
     // Create and initialize the fake device.
     EXPECT_OK(Device::Create(fake_ddk::kFakeParent, std::move(cfg), &upstream(), &bus(),
-                             GetInspectNode()));
+                             GetInspectNode(), /*has_acpi=*/false));
     return bus().get_device(default_bdf());
   }
 
@@ -83,8 +83,8 @@ TEST_F(PciDeviceTests, CreationTest) {
   // asserts happen following the test it means the fakes are built properly
   // enough and the basic interface is fulfilled.
   ASSERT_OK(MmioConfig::Create(default_bdf(), &pciroot_proto().ecam().mmio(), 0, 1, &cfg));
-  ASSERT_OK(
-      Device::Create(fake_ddk::kFakeParent, std::move(cfg), &upstream(), &bus(), GetInspectNode()));
+  ASSERT_OK(Device::Create(fake_ddk::kFakeParent, std::move(cfg), &upstream(), &bus(),
+                           GetInspectNode(), /*has_acpi=*/false));
 
   // Verify the created device's BDF.
   auto& dev = bus().get_device(default_bdf());
@@ -101,8 +101,8 @@ TEST_F(PciDeviceTests, StdCapabilityTest) {
   memcpy(pciroot_proto().ecam().get(default_bdf()).config, kFakeVirtioInputDeviceConfig.data(),
          kFakeVirtioInputDeviceConfig.max_size());
   ASSERT_OK(MmioConfig::Create(default_bdf(), &pciroot_proto().ecam().mmio(), 0, 1, &cfg));
-  ASSERT_OK(
-      Device::Create(fake_ddk::kFakeParent, std::move(cfg), &upstream(), &bus(), GetInspectNode()));
+  ASSERT_OK(Device::Create(fake_ddk::kFakeParent, std::move(cfg), &upstream(), &bus(),
+                           GetInspectNode(), /*has_acpi=*/false));
   auto& dev = bus().get_device(default_bdf());
 
   // Ensure our faked Keyboard exists.
@@ -178,7 +178,7 @@ TEST_F(PciDeviceTests, InvalidPtrCapabilityTest) {
   std::unique_ptr<Config> cfg;
   ASSERT_OK(MmioConfig::Create(default_bdf(), &pciroot_proto().ecam().mmio(), 0, 1, &cfg));
   EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, Device::Create(fake_ddk::kFakeParent, std::move(cfg), &upstream(),
-                                                &bus(), GetInspectNode()));
+                                                &bus(), GetInspectNode(), /*has_acpi=*/false));
 
   // Ensure no device was added.
   EXPECT_TRUE(bus().devices().is_empty());
@@ -212,7 +212,7 @@ TEST_F(PciDeviceTests, PtrCycleCapabilityTest) {
 
   ASSERT_OK(MmioConfig::Create(default_bdf(), &pciroot_proto().ecam().mmio(), 0, 1, &cfg));
   EXPECT_EQ(ZX_ERR_BAD_STATE, Device::Create(fake_ddk::kFakeParent, std::move(cfg), &upstream(),
-                                             &bus(), GetInspectNode()));
+                                             &bus(), GetInspectNode(), /*has_acpi=*/false));
 
   // Ensure no device was added.
   EXPECT_TRUE(bus().devices().is_empty());
@@ -247,7 +247,7 @@ TEST_F(PciDeviceTests, DuplicateFixedCapabilityTest) {
 
   ASSERT_OK(MmioConfig::Create(default_bdf(), &pciroot_proto().ecam().mmio(), 0, 1, &cfg));
   EXPECT_EQ(ZX_ERR_BAD_STATE, Device::Create(fake_ddk::kFakeParent, std::move(cfg), &upstream(),
-                                             &bus(), GetInspectNode()));
+                                             &bus(), GetInspectNode(), /*has_acpi=*/false));
 
   // Ensure no device was added.
   EXPECT_TRUE(bus().devices().is_empty());

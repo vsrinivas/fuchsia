@@ -19,6 +19,8 @@
 #include <array>
 #include <optional>
 
+#include <bind/fuchsia/acpi/cpp/fidl.h>
+#include <bind/fuchsia/pci/cpp/fidl.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
@@ -49,7 +51,8 @@ namespace {  // anon namespace.  Externals do not need to know about DeviceImpl
 class DeviceImpl : public Device {
  public:
   static zx_status_t Create(zx_device_t* parent, std::unique_ptr<Config>&& cfg,
-                            UpstreamNode* upstream, BusDeviceInterface* bdi, inspect::Node node);
+                            UpstreamNode* upstream, BusDeviceInterface* bdi, inspect::Node node,
+                            bool has_acpi);
 
   // Implement ref counting, do not let derived classes override.
   PCI_IMPLEMENT_REFCOUNTED;
@@ -59,24 +62,27 @@ class DeviceImpl : public Device {
 
  protected:
   DeviceImpl(zx_device_t* parent, std::unique_ptr<Config>&& cfg, UpstreamNode* upstream,
-             BusDeviceInterface* bdi, inspect::Node node)
-      : Device(parent, std::move(cfg), upstream, bdi, std::move(node), false) {}
+             BusDeviceInterface* bdi, inspect::Node node, bool has_acpi)
+      : Device(parent, std::move(cfg), upstream, bdi, std::move(node), /*is_bridge=*/false,
+               has_acpi) {}
 };
 
 zx_status_t DeviceImpl::Create(zx_device_t* parent, std::unique_ptr<Config>&& cfg,
-                               UpstreamNode* upstream, BusDeviceInterface* bdi,
-                               inspect::Node node) {
+                               UpstreamNode* upstream, BusDeviceInterface* bdi, inspect::Node node,
+                               bool has_acpi) {
   fbl::AllocChecker ac;
-  auto raw_dev = new (&ac) DeviceImpl(parent, std::move(cfg), upstream, bdi, std::move(node));
+  auto raw_dev =
+      new (&ac) DeviceImpl(parent, std::move(cfg), upstream, bdi, std::move(node), has_acpi);
   if (!ac.check()) {
-    zxlogf(ERROR, "Out of memory attemping to create PCIe device %s.", cfg->addr());
+    zxlogf(ERROR, "[%s] Out of memory attemping to create PCIe device.", cfg->addr());
     return ZX_ERR_NO_MEMORY;
   }
 
   auto dev = fbl::AdoptRef(static_cast<Device*>(raw_dev));
   zx_status_t status = raw_dev->Init();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Failed to initialize PCIe device (res %d)", status);
+    zxlogf(ERROR, "[%s] Failed to initialize PCIe device: %s", dev->config()->addr(),
+           zx_status_get_string(status));
     return status;
   }
 
@@ -87,13 +93,14 @@ zx_status_t DeviceImpl::Create(zx_device_t* parent, std::unique_ptr<Config>&& cf
 }  // namespace
 
 Device::Device(zx_device_t* parent, std::unique_ptr<Config>&& config, UpstreamNode* upstream,
-               BusDeviceInterface* bdi, inspect::Node node, bool is_bridge)
+               BusDeviceInterface* bdi, inspect::Node node, bool is_bridge, bool has_acpi)
     : PciDeviceType(parent),
       cfg_(std::move(config)),
       upstream_(upstream),
       bdi_(bdi),
       bar_count_(is_bridge ? PCI_BAR_REGS_PER_BRIDGE : PCI_BAR_REGS_PER_DEVICE),
-      is_bridge_(is_bridge) {
+      is_bridge_(is_bridge),
+      has_acpi_(has_acpi) {
   metrics_.node = std::move(node);
   metrics_.legacy.node = metrics_.node.CreateChild(kInspectLegacyInterrupt);
   metrics_.msi.node = metrics_.node.CreateChild(kInspectMsi);
@@ -138,7 +145,7 @@ Device::~Device() {
   zxlogf(TRACE, "%s [%s] dtor finished", is_bridge() ? "bridge" : "device", cfg_->addr());
 }
 
-zx_status_t Device::CreateProxy() {
+zx_status_t Device::CreateCompositeDevice() {
   auto pci_bind_topo = static_cast<uint32_t>(BIND_PCI_TOPO_PACK(bus_id(), dev_id(), func_id()));
   // clang-format off
   zx_device_prop_t pci_device_props[] = {
@@ -179,16 +186,29 @@ zx_status_t Device::CreateProxy() {
       {countof(pci_fragment_match), pci_fragment_match},
   };
 
+  const zx_bind_inst_t acpi_fragment_match[] = {
+      BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_ACPI),
+      BI_ABORT_IF(NE, BIND_ACPI_BUS_TYPE, bind::fuchsia::acpi::BIND_ACPI_BUS_TYPE_PCI),
+      BI_MATCH_IF(EQ, BIND_PCI_TOPO, pci_bind_topo),
+  };
+
+  const device_fragment_part_t acpi_fragment[] = {
+      {countof(acpi_fragment_match), acpi_fragment_match},
+  };
+
+  // These are laid out so that ACPI can be optionally included via the number
+  // of fragments specified.
   const device_fragment_t fragments[] = {
-      {"sysmem", countof(sysmem_fragment), sysmem_fragment},
       {"pci", countof(pci_fragment), pci_fragment},
+      {"sysmem", countof(sysmem_fragment), sysmem_fragment},
+      {"acpi", countof(acpi_fragment), acpi_fragment},
   };
 
   composite_device_desc_t composite_desc = {
       .props = pci_device_props,
       .props_count = countof(pci_device_props),
       .fragments = fragments,
-      .fragments_count = countof(fragments),
+      .fragments_count = (has_acpi_) ? countof(fragments) : countof(fragments) - 1,
       .primary_fragment = "pci",
       .spawn_colocated = false,
   };
@@ -199,8 +219,9 @@ zx_status_t Device::CreateProxy() {
 }
 
 zx_status_t Device::Create(zx_device_t* parent, std::unique_ptr<Config>&& config,
-                           UpstreamNode* upstream, BusDeviceInterface* bdi, inspect::Node node) {
-  return DeviceImpl::Create(parent, std::move(config), upstream, bdi, std::move(node));
+                           UpstreamNode* upstream, BusDeviceInterface* bdi, inspect::Node node,
+                           bool has_acpi) {
+  return DeviceImpl::Create(parent, std::move(config), upstream, bdi, std::move(node), has_acpi);
 }
 
 zx_status_t Device::Init() {
@@ -279,7 +300,7 @@ zx_status_t Device::InitLocked() {
     return st;
   }
 
-  st = CreateProxy();
+  st = CreateCompositeDevice();
   if (st != ZX_OK) {
     zxlogf(ERROR, "device %s couldn't spawn its proxy driver_host: %d", cfg_->addr(), st);
     return st;

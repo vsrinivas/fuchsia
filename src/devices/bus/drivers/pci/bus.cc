@@ -235,8 +235,9 @@ void Bus::ScanBus(BusScanEntry entry, std::list<BusScanEntry>* scan_list) {
         return;
       }
 
-      // We're at a leaf node in the topology so create a normal device
-      status = pci::Device::Create(zxdev(), std::move(config), upstream, this, std::move(node));
+      // We're at a leaf node in the topology so create a normal device.
+      status = pci::Device::Create(zxdev(), std::move(config), upstream, this, std::move(node),
+                                   /*has_acpi=*/DeviceHasAcpi(config->bdf()));
       if (status != ZX_OK) {
         zxlogf(ERROR, "failed to create device at %s: %s", config->addr(),
                zx_status_get_string(status));
@@ -247,6 +248,15 @@ void Bus::ScanBus(BusScanEntry entry, std::list<BusScanEntry>* scan_list) {
     // scan we'll be able to scan the full 8 functions of a given device.
     _func_id = 0;
   }
+}
+
+bool Bus::DeviceHasAcpi(pci_bdf_t bdf) {
+  auto find_fn = [&bdf](const pci_bdf_t& entry) -> bool {
+    return bdf.bus_id == entry.bus_id && bdf.device_id == entry.device_id &&
+           bdf.function_id == entry.function_id;
+  };
+  return std::find_if(acpi_devices_.begin(), acpi_devices_.end(), find_fn) !=
+         std::end(acpi_devices_);
 }
 
 zx_status_t Bus::SetUpLegacyIrqHandlers() {

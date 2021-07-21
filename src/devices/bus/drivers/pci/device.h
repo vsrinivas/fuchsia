@@ -174,8 +174,11 @@ class Device : public PciDeviceType,
 
   // Create, but do not initialize, a device.
   static zx_status_t Create(zx_device_t* parent, std::unique_ptr<Config>&& config,
-                            UpstreamNode* upstream, BusDeviceInterface* bdi, inspect::Node node);
-  zx_status_t CreateProxy();
+                            UpstreamNode* upstream, BusDeviceInterface* bdi, inspect::Node node,
+                            bool has_acpi);
+  // Does the work necessary to create a ddk Composite device representing the
+  // pci::Device.
+  zx_status_t CreateCompositeDevice();
   virtual ~Device();
 
   // Bridge or DeviceImpl will need to implement refcounting
@@ -231,6 +234,7 @@ class Device : public PciDeviceType,
   bool plugged_in() const __TA_REQUIRES(dev_lock_) { return plugged_in_; }
   bool disabled() const __TA_REQUIRES(dev_lock_) { return disabled_; }
   bool quirks_done() const __TA_REQUIRES(dev_lock_) { return quirks_done_; }
+  bool has_acpi() const { return has_acpi_; }
   bool is_bridge() const { return is_bridge_; }
   bool is_pcie() const { return is_pcie_; }
   uint16_t vendor_id() const { return vendor_id_; }
@@ -299,7 +303,7 @@ class Device : public PciDeviceType,
   // traits facilitate that for us.
  protected:
   Device(zx_device_t* parent, std::unique_ptr<Config>&& config, UpstreamNode* upstream,
-         BusDeviceInterface* bdi, inspect::Node node, bool is_bridge);
+         BusDeviceInterface* bdi, inspect::Node node, bool is_bridge, bool has_acpi);
   zx_status_t Init() __TA_EXCLUDES(dev_lock_);
   zx_status_t InitLocked() __TA_REQUIRES(dev_lock_);
   zx_status_t InitInterrupts() __TA_REQUIRES(dev_lock_);
@@ -370,6 +374,7 @@ class Device : public PciDeviceType,
   const uint32_t bar_count_;
 
   const bool is_bridge_;  // True if this device is also a bridge
+  const bool has_acpi_;   // True if this device has an acpi fragment for its composite.
   uint16_t vendor_id_;    // The device's vendor ID, as read from config
   uint16_t device_id_;    // The device's device ID, as read from config
   uint8_t class_id_;      // The device's class ID, as read from config.
