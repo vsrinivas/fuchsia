@@ -31,6 +31,8 @@ class CrashReportBuilder {
   CrashReportBuilder& SetExceptionExpired();
   CrashReportBuilder& SetProcessTerminated();
 
+  const std::optional<std::string>& ProcessName() const;
+
   fuchsia::feedback::CrashReport Consume();
 
  private:

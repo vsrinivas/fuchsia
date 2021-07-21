@@ -100,7 +100,7 @@ void CrashReporter::Send(zx::exception exception, zx::process crashed_process,
       GetComponentSourceIdentity(dispatcher_, services_, fit::Timeout(component_lookup_timeout_),
                                  fsl::GetKoid(crashed_thread.get()))
           .then(
-              [services = services_, builder = std::move(builder),
+              [dispatcher = dispatcher_, services = services_, builder = std::move(builder),
                callback = std::move(callback)](::fpromise::result<SourceIdentity>& result) mutable {
                 SourceIdentity component_lookup;
                 if (result.is_ok()) {
@@ -109,8 +109,29 @@ void CrashReporter::Send(zx::exception exception, zx::process crashed_process,
 
                 builder.SetComponentInfo(component_lookup);
 
-                // We make a fire-and-forget request as we won't do anything with the result.
-                auto crash_reporter = services->Connect<fuchsia::feedback::CrashReporter>();
+                fuchsia::feedback::CrashReporterPtr crash_reporter;
+
+                // TODO(fxbug.deb/79523): rename to feedback.cm
+                if (builder.ProcessName() == "feedback.cmx") {
+                  // Delay connecting to the crash reporter by 5 seconds if the crashed process is
+                  // the crash reporter. This gives the system time to route the request to a new
+                  // instance of the crash reporter instead of sending it into oblivion.
+                  if (const zx_status_t status = async::PostDelayedTask(
+                          dispatcher,
+                          [services,
+                           connection_request = crash_reporter.NewRequest(dispatcher)]() mutable {
+                            services->Connect(std::move(connection_request));
+                          },
+                          zx::sec(5));
+                      status != ZX_OK) {
+                    FX_PLOGS(ERROR, status)
+                        << "Failed to delay connecting to the crash reporter, connecting now";
+                    services->Connect(crash_reporter.NewRequest(dispatcher));
+                  }
+                } else {
+                  services->Connect(crash_reporter.NewRequest(dispatcher));
+                }
+
                 crash_reporter->File(builder.Consume(),
                                      [](fuchsia::feedback::CrashReporter_File_Result result) {});
 

@@ -107,6 +107,8 @@ CrashReportBuilder& CrashReportBuilder::SetProcessTerminated() {
   return *this;
 }
 
+const std::optional<std::string>& CrashReportBuilder::ProcessName() const { return process_name_; }
+
 fuchsia::feedback::CrashReport CrashReportBuilder::Consume() {
   FX_CHECK(process_name_.has_value()) << "Need a process name";
   FX_CHECK(thread_name_.has_value()) << "Need a thread name";
