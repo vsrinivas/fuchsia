@@ -4,7 +4,10 @@
 
 #include "src/developer/forensics/feedback/main_service.h"
 
+#include <fuchsia/feedback/cpp/fidl.h>
 #include <lib/syslog/cpp/macros.h>
+
+#include <vector>
 
 namespace forensics::feedback {
 
@@ -26,6 +29,24 @@ MainService::MainService(async_dispatcher_t* dispatcher,
       crash_reporter_stats_(&inspect_node_manager_, "/fidl/fuchsia.feedback.CrashReporter"),
       crash_reporting_product_register_stats_(
           &inspect_node_manager_, "/fidl/fuchsia.feedback.CrashReportingProductRegister") {}
+
+void MainService::ReportMigrationError(const std::map<std::string, std::string>& annotations) {
+  fuchsia::feedback::CrashReport crash_report;
+  crash_report.set_program_name("feedback")
+      .set_crash_signature("fuchsia-feedback-component-merge-failure");
+
+  std::vector<fuchsia::feedback::Annotation> report_annotations;
+  for (const auto& [k, v] : annotations) {
+    report_annotations.push_back(fuchsia::feedback::Annotation{
+        .key = k,
+        .value = v,
+    });
+  }
+  crash_report.set_annotations(std::move(report_annotations));
+
+  crash_reports_.CrashReporter()->File(std::move(crash_report),
+                                       [](fuchsia::feedback::CrashReporter_File_Result) {});
+}
 
 void MainService::ShutdownImminent() { crash_reports_.ShutdownImminent(); }
 

@@ -40,6 +40,10 @@ class MainService {
 
   void ShutdownImminent();
 
+  // Files a crash report indicating the Feedback migration experienced an error with the specified
+  // annotations.
+  void ReportMigrationError(const std::map<std::string, std::string>& annotations);
+
  private:
   async_dispatcher_t* dispatcher_;
   std::shared_ptr<sys::ServiceDirectory> services_;

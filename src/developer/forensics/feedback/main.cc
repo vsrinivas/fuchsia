@@ -55,16 +55,20 @@ int main() {
                   kDirectoryMigratorResponeTimeout)
           .and_then([&](const std::tuple<::fpromise::result<void, Error>,
                                          ::fpromise::result<void, Error>>& results) {
+            std::map<std::string, std::string> migration_failures;
             if (const auto result = std::get<0>(results); !result.is_ok()) {
               FX_LOGS(ERROR)
                   << "Experienced errors while migrating last reboot, continuing as normal: "
                   << ToString(result.error());
+              migration_failures["debug.last_reboot.migration-failure"] = ToString(result.error());
             }
 
             if (const auto result = std::get<1>(results); !result.is_ok()) {
               FX_LOGS(ERROR)
-                  << "Experienced errors while migrating crash reports , continuing as normal: "
+                  << "Experienced errors while migrating crash reports, continuing as normal: "
                   << ToString(result.error());
+              migration_failures["debug.crash_reports.migration-failure"] =
+                  ToString(result.error());
             }
 
             if (migration_log) {
@@ -102,6 +106,10 @@ int main() {
                     .build_version = crash_reports::GetBuildVersion(),
                     .default_annotations = crash_reports::GetDefaultAnnotations(),
                 });
+
+            if (!migration_failures.empty()) {
+              main_service->ReportMigrationError(migration_failures);
+            }
 
             // The component is now ready to serve its outgoing directory and serve requests.
             component.AddPublicService(
