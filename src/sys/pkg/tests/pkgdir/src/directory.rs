@@ -749,6 +749,26 @@ async fn assert_rewind_no_overflow(dir: &DirectoryProxy) {
 }
 
 #[fuchsia::test]
+async fn get_token() {
+    for dir in dirs_to_test().await {
+        get_token_per_package_source(dir).await
+    }
+}
+
+async fn get_token_per_package_source(root_dir: DirectoryProxy) {
+    for path in [".", "dir", "meta", "meta/dir"] {
+        let dir = io_util::directory::open_directory(&root_dir, path, 0).await.unwrap();
+
+        let (status, token) = dir.get_token().await.unwrap();
+
+        zx::Status::ok(status).expect("status ok");
+        // We can't do anything meaningful with this token beyond checking it's Some because
+        // all the IO APIs that consume tokens are unsupported.
+        let _token = token.expect("token present");
+    }
+}
+
+#[fuchsia::test]
 async fn unsupported() {
     for dir in dirs_to_test().await {
         unsupported_per_package_source(dir).await
