@@ -111,24 +111,6 @@ func setUp(t *testing.T, intree bool) {
 	})
 }
 
-func launchEmuWithRetry(attempts int, cmd *exec.Cmd) error {
-	if err := cmd.Run(); err != nil {
-		var e *exec.ExitError
-		if errors.As(err, &e) {
-			// ExitCode == 1 means something went wrong with the launcher. Don't retry.
-			if e.ExitCode() == 1 {
-				return err
-			}
-		}
-		if attempts--; attempts > 0 {
-			log.Printf("Retry launching emulator... got err %s", err)
-			return launchEmuWithRetry(attempts, cmd)
-		}
-		return err
-	}
-	return nil
-}
-
 // runVDLWithArgs runs fvdl, if intree, use environment variables to set tools and image path.
 // if not intree, images will be downloaded from GCS.
 func runVDLWithArgs(ctx context.Context, t *testing.T, args []string, intree bool) string {
@@ -142,42 +124,58 @@ func runVDLWithArgs(ctx context.Context, t *testing.T, args []string, intree boo
 	vdlOut := filepath.Join(testOut, t.Name(), "vdl_out")
 	t.Logf("[test info] writing vdl output to %s", vdlOut)
 	td := t.TempDir()
-	cmd := exec.CommandContext(
-		ctx,
-		fvdl,
-		append(
-			args,
-			"--vdl-output", vdlOut,
-			"--emulator-log", filepath.Join(testOut, t.Name(), "emu_log"),
-			"--amber-unpack-root", filepath.Join(td, "packages"),
-		)...,
-	)
-	if intree {
-		cmd.Env = append(
-			os.Environ(),
-			"FUCHSIA_BUILD_DIR="+fuchsiaBuildDir,
-			"FUCHSIA_ZBI_COMPRESSION=zstd",
-			"HOST_OUT_DIR="+hostToolsDir,
-			"PREBUILT_AEMU_DIR="+mustAbs(t, emulatorPath),
-			"PREBUILT_GRPCWEBPROXY_DIR="+mustAbs(t, grpcwebproxyPath),
-			"PREBUILT_VDL_DIR="+mustAbs(t, deviceLauncher),
-		)
-	} else {
-		t.Logf("[test info] setting HOME to: %s", runtimeDir)
-		// Set $HOME to runtimeDir so that fvdl can find the ssh key files, which are
-		// expected in $HOME/.ssh/...
-		cmd.Env = append(os.Environ(), "HOME="+runtimeDir)
-	}
-	cmd.Dir = td
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
 
 	t.Cleanup(func() {
 		killEmu(ctx, t, intree, vdlOut)
 	})
 
-	if err := launchEmuWithRetry(2, cmd); err != nil {
-		t.Fatal(err)
+	maxTries := 2
+
+	for tries := 0; tries < maxTries; tries++ {
+		cmd := exec.CommandContext(
+			ctx,
+			fvdl,
+			append(
+				args,
+				"--vdl-output", vdlOut,
+				"--emulator-log", filepath.Join(testOut, t.Name(), "emu_log"),
+				"--amber-unpack-root", filepath.Join(td, "packages"),
+			)...,
+		)
+		if intree {
+			cmd.Env = append(
+				os.Environ(),
+				"FUCHSIA_BUILD_DIR="+fuchsiaBuildDir,
+				"FUCHSIA_ZBI_COMPRESSION=zstd",
+				"HOST_OUT_DIR="+hostToolsDir,
+				"PREBUILT_AEMU_DIR="+mustAbs(t, emulatorPath),
+				"PREBUILT_GRPCWEBPROXY_DIR="+mustAbs(t, grpcwebproxyPath),
+				"PREBUILT_VDL_DIR="+mustAbs(t, deviceLauncher),
+			)
+		} else {
+			t.Logf("[test info] setting HOME to: %s", runtimeDir)
+			// Set $HOME to runtimeDir so that fvdl can find the ssh key files, which are
+			// expected in $HOME/.ssh/...
+			cmd.Env = append(os.Environ(), "HOME="+runtimeDir)
+		}
+		cmd.Dir = td
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err != nil {
+			var e *exec.ExitError
+			if errors.As(err, &e) {
+				// ExitCode == 1 means something went wrong with the launcher. Don't retry.
+				if e.ExitCode() == 1 {
+					t.Fatal(err)
+				}
+			}
+			if tries == maxTries-1 {
+				t.Fatal(err)
+			}
+			log.Printf("Retry launching emulator... got err %s", err)
+		} else {
+			break
+		}
 	}
 	return vdlOut
 }

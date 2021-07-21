@@ -25,21 +25,11 @@ go_library("sdk_lib") {
   ]
 }
 
-go_library("common_lib") {
-  sources = [
-    "common.go",
-    "common_test.go",
-  ]
-  deps = [ "//tools/fvdl/e2e/e2etest" ]
-}
-
 group("tests") {
   testonly = true
   deps = [
-    ":fvdl_common_test($host_toolchain)",
-
-    # TODO(fxbug.dev/81092): Re-enable when not flaky.
-    # ":fvdl_intree_test($host_toolchain)",
+    ":fvdl_intree_test_slirp($host_toolchain)",
+    ":fvdl_intree_test_tuntap($host_toolchain)",
     ":fvdl_sdk_test($host_toolchain)",
   ]
 }
@@ -104,8 +94,8 @@ if (is_linux) {
     }
   }
 
-  go_test("fvdl_intree_test") {
-    output_name = "fvdl_intree_test"
+  go_test("fvdl_intree_test_slirp") {
+    output_name = "fvdl_intree_test_slirp"
     gopackages = [ "go.fuchsia.dev/fuchsia/tools/fvdl/e2e" ]
     deps = [ ":intree_lib" ]
     non_go_deps = [
@@ -116,6 +106,33 @@ if (is_linux) {
       ":prebuilt_grpcwebproxy",
     ]
     args = [
+      "-test.run",
+      "TestStartFVDLInTree_GrpcWebProxy",
+      "--target_cpu",
+      "$target_cpu",
+      "--aemu_dir",
+      rebase_path(_aemu_dir, root_build_dir),
+      "--grpcwebproxy_dir",
+      rebase_path(_grpcwebproxy_dir, root_build_dir),
+      "--device_launcher_dir",
+      rebase_path(_device_launcher_dir, root_build_dir),
+    ]
+  }
+
+  go_test("fvdl_intree_test_tuntap") {
+    output_name = "fvdl_intree_test_tuntap"
+    gopackages = [ "go.fuchsia.dev/fuchsia/tools/fvdl/e2e" ]
+    deps = [ ":intree_lib" ]
+    non_go_deps = [
+      ":copy_host_tools",
+      ":copy_images",
+      ":prebuilt_aemu",
+      ":prebuilt_device_launcher",
+      ":prebuilt_grpcwebproxy",
+    ]
+    args = [
+      "-test.run",
+      "TestStartFVDLInTree_Headless_ServePackages_Tuntap",
       "--target_cpu",
       "$target_cpu",
       "--aemu_dir",
@@ -148,11 +165,5 @@ if (is_linux) {
       "--device_launcher_dir",
       rebase_path(_device_launcher_dir, root_build_dir),
     ]
-  }
-
-  go_test("fvdl_common_test") {
-    output_name = "fvdl_common_test"
-    gopackages = [ "go.fuchsia.dev/fuchsia/tools/fvdl/e2e" ]
-    deps = [ ":common_lib" ]
   }
 }
