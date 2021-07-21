@@ -18,6 +18,7 @@
 #include <ktl/iterator.h>
 #include <ktl/move.h>
 #include <vm/fault.h>
+#include <vm/physmap.h>
 #include <vm/vm.h>
 #include <vm/vm_aspace.h>
 #include <vm/vm_object.h>
@@ -802,6 +803,25 @@ zx_status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags, LazyPageReques
   if (!(pf_flags & VMM_PF_FLAG_WRITE) && !lookup_info.writable) {
     // we read faulted, so only map with read permissions
     mmu_flags &= ~ARCH_MMU_FLAG_PERM_WRITE;
+  }
+
+  // If we are faulting a page into a guest, clean the caches.
+  //
+  // Cleaning pages is required to ensure that guests --- who can disable
+  // their own caches at will --- don't get access to stale (potentially
+  // sensitive) data in memory that hasn't been written back yet.
+  if ((pf_flags & VMM_PF_FLAG_GUEST) != 0) {
+    ArchVmICacheConsistencyManager sync_cm;
+    for (size_t i = 0; i < lookup_info.num_pages; i++) {
+      // Ignore non-physmap pages, such as passed through device ranges.
+      if (unlikely(!is_physmap_phys_addr(lookup_info.paddrs[i]))) {
+        continue;
+      }
+
+      vaddr_t vaddr = reinterpret_cast<vaddr_t>(paddr_to_physmap(lookup_info.paddrs[i]));
+      arch_clean_cache_range(vaddr, PAGE_SIZE);  // Clean d-cache
+      sync_cm.SyncAddr(vaddr, PAGE_SIZE);        // Sync i-cache with d-cache.
+    }
   }
 
   // see if something is mapped here now
