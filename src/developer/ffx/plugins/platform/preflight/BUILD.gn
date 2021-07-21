@@ -29,6 +29,7 @@ ffx_plugin("ffx_preflight") {
     "src/check/emu_acceleration.rs",
     "src/check/emu_networking.rs",
     "src/check/femu_graphics.rs",
+    "src/check/ssh_checks.rs",
     "src/command_runner.rs",
     "src/config.rs",
     "src/json.rs",

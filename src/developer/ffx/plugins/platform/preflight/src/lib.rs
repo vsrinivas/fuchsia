@@ -74,7 +74,10 @@ pub async fn preflight_cmd_impl<W: Write>(cmd: PreflightCommand, writer: &mut W)
         Box::new(check::build_prereqs::BuildPrereqs::new(&command_runner::SYSTEM_COMMAND_RUNNER)),
         Box::new(check::femu_graphics::FemuGraphics::new(&command_runner::SYSTEM_COMMAND_RUNNER)),
         Box::new(check::emu_networking::EmuNetworking::new(&command_runner::SYSTEM_COMMAND_RUNNER)),
-        Box::new(check::emu_acceleration::EmuAcceleration::new(&command_runner::SYSTEM_COMMAND_RUNNER)),
+        Box::new(check::emu_acceleration::EmuAcceleration::new(
+            &command_runner::SYSTEM_COMMAND_RUNNER,
+        )),
+        Box::new(check::ssh_checks::SshChecks::new(&command_runner::SYSTEM_COMMAND_RUNNER)),
     ];
 
     let results = run_preflight_checks(&checks, &config).await?;

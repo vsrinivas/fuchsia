@@ -11,6 +11,7 @@ pub mod build_prereqs;
 pub mod emu_acceleration;
 pub mod emu_networking;
 pub mod femu_graphics;
+pub mod ssh_checks;
 
 /// The result of execution of a `PreflightCheck`. In all cases, the first `String` parameter
 /// contains a message for the end user explaining the result.
