@@ -211,7 +211,7 @@ void Keyboard::InputCallback(
 
   reader_client_->ReadInputReports(
       [this](fidl::WireResponse<fuchsia_input_report::InputReportsReader::ReadInputReports>*
-                 response) { InputCallback(std::move(response->result)); });
+                 response) { InputCallback(response->result); });
 }
 
 zx_status_t Keyboard::StartReading() {
@@ -225,30 +225,18 @@ zx_status_t Keyboard::StartReading() {
     return result.status();
   }
 
-  class EventHandler
-      : public fidl::WireAsyncEventHandler<fuchsia_input_report::InputReportsReader> {
-   public:
-    explicit EventHandler(Keyboard* keyboard) : keyboard_(keyboard) {}
-
-    void Unbound(::fidl::UnbindInfo info) override {
-      printf("vc: Keyboard Reader unbound.\n");
-      keyboard_->InputReaderUnbound(info);
-    }
-
-   private:
-    Keyboard* const keyboard_;
-  };
-
-  reader_client_.Bind(std::move(client), dispatcher_, std::make_shared<EventHandler>(this));
+  reader_client_ = {};
+  reader_client_.Bind(std::move(client), dispatcher_, this);
 
   // Queue up the first read.
   reader_client_->ReadInputReports(
       [this](fidl::WireResponse<fuchsia_input_report::InputReportsReader::ReadInputReports>*
-                 response) { InputCallback(std::move(response->result)); });
+                 response) { InputCallback(response->result); });
   return ZX_OK;
 };
 
-void Keyboard::InputReaderUnbound(fidl::UnbindInfo info) {
+void Keyboard::on_fidl_error(fidl::UnbindInfo info) {
+  printf("vc: Keyboard Reader FIDL error: %s.\n", info.FormatDescription().c_str());
   zx_status_t status = StartReading();
   if (status != ZX_OK) {
     delete this;

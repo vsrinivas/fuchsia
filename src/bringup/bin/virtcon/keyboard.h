@@ -39,7 +39,12 @@ zx_status_t setup_keyboard_watcher(async_dispatcher_t* dispatcher, keypress_hand
 // The Keyboard is responsible for watching the keyboard device, parsing
 // events, handling key-repeats/modifiers, and sending keypresses to
 // the |keypress_handler_t|.
-class Keyboard {
+//
+// If |Setup| is to be used, |Keyboard| must be allocated with `new`, and will
+// own itself. When errors occur during watching, it will attempt to reconnect
+// using the provider server `fuchsia.input.report/InputDevice`. |Keyboard|
+// deletes itself if reconnection fails.
+class Keyboard : public fidl::WireAsyncEventHandler<fuchsia_input_report::InputReportsReader> {
  public:
   Keyboard(async_dispatcher_t* dispatcher, keypress_handler_t handler, bool repeat_keys)
       : dispatcher_(dispatcher), handler_(handler), repeat_enabled_(repeat_keys) {}
@@ -56,9 +61,8 @@ class Keyboard {
   void TimerCallback(async_dispatcher_t* dispatcher, async::TaskBase* task, zx_status_t status);
   void InputCallback(fuchsia_input_report::wire::InputReportsReaderReadInputReportsResult result);
 
-  // This is the callback if reader_client_ is unbound. This tries to reconnect and
-  // will delete Keyboard if reconnecting fails.
-  void InputReaderUnbound(fidl::UnbindInfo info);
+  // Handle error in |reader_client_|.
+  void on_fidl_error(::fidl::UnbindInfo info) override;
 
   // Attempt to connect to an InputReportsReader and start a ReadInputReports call.
   zx_status_t StartReading();
@@ -73,7 +77,7 @@ class Keyboard {
 
   zx::duration repeat_interval_ = zx::duration::infinite();
   std::optional<fidl::WireSyncClient<fuchsia_input_report::InputDevice>> keyboard_client_;
-  fidl::Client<fuchsia_input_report::InputReportsReader> reader_client_;
+  fidl::WireSharedClient<fuchsia_input_report::InputReportsReader> reader_client_;
 
   int modifiers_ = 0;
   bool repeat_enabled_ = true;

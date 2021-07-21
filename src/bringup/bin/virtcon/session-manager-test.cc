@@ -49,7 +49,7 @@ TEST(VirtconSessionManager, TestWriting) {
     session = std::move(response.value());
   }
 
-  auto pty = fidl::Client(std::move(local), loop.dispatcher());
+  auto pty = fidl::WireClient(std::move(local), loop.dispatcher());
 
   char output[] = "Testing!";
   auto result = pty->Write_Sync(
@@ -80,7 +80,7 @@ TEST(VirtconSessionManager, TestWritingMultipleClients) {
     ASSERT_EQ(ZX_OK, response.status_value());
     session_one = std::move(response.value());
   }
-  auto pty_one = fidl::Client(std::move(local1), loop.dispatcher());
+  auto pty_one = fidl::WireClient(std::move(local1), loop.dispatcher());
 
   auto endpoints2 = fidl::CreateEndpoints<fuchsia_hardware_pty::Device>();
   ASSERT_EQ(ZX_OK, endpoints2.status_value());
@@ -91,7 +91,7 @@ TEST(VirtconSessionManager, TestWritingMultipleClients) {
     ASSERT_EQ(ZX_OK, response.status_value());
     session_two = std::move(response.value());
   }
-  auto pty_two = fidl::Client(std::move(local2), loop.dispatcher());
+  auto pty_two = fidl::WireClient(std::move(local2), loop.dispatcher());
 
   // Write pty_one.
   char output_one[] = "Testing One!";
