@@ -278,21 +278,19 @@ void DlogReader::Initialize(NotifyCallback* notify, void* cookie) {
   // A DlogReader can only be initialized once.
   DEBUG_ASSERT(log_ == nullptr);
 
-  DLog* log = &DLOG;
-
-  log_ = log;
+  log_ = &DLOG.Get();
   notify_ = notify;
   cookie_ = cookie;
 
-  Guard<Mutex> readers_guard(&log->readers_lock);
-  log->readers.push_back(this);
+  Guard<Mutex> readers_guard(&log_->readers_lock);
+  log_->readers.push_back(this);
 
   bool do_notify = false;
 
   {
-    Guard<SpinLock, IrqSave> guard{&log->lock};
-    tail_ = log->tail;
-    do_notify = (log->tail != log->head);
+    Guard<SpinLock, IrqSave> guard{&log_->lock};
+    tail_ = log_->tail;
+    do_notify = (log_->tail != log_->head);
   }
 
   // simulate notify callback for events that arrived
@@ -334,18 +332,16 @@ void DlogReader::Notify() {
 // written and calls the notify callback on any readers that
 // have one so they can process new log messages.
 static int debuglog_notifier(void* arg) {
-  DLog* log = &DLOG;
-
   for (;;) {
     if (notifier_shutdown_requested.load()) {
       break;
     }
-    log->event.Wait();
+    DLOG->event.Wait();
 
-    // notify readers that new log items were posted
+    // notify readers that new DLOG items were posted
     {
-      Guard<Mutex> guard(&log->readers_lock);
-      for (DlogReader& reader : log->readers) {
+      Guard<Mutex> guard(&DLOG->readers_lock);
+      for (DlogReader& reader : DLOG->readers) {
         reader.Notify();
       }
     }

@@ -68,11 +68,11 @@ union LazyInitStorage {
 
   constexpr T& operator*() { return value; }
   constexpr T* operator->() { return &value; }
-  constexpr T* operator&() { return &value; }
+  constexpr T* GetStorageAddress() { return &value; }
 
   constexpr const T& operator*() const { return value; }
   constexpr const T* operator->() const { return &value; }
-  constexpr const T* operator&() const { return &value; }
+  constexpr const T* GetStorageAddress() const { return &value; }
 
   Empty empty;
   T value;
@@ -90,11 +90,11 @@ union LazyInitStorage<T, false> {
 
   constexpr T& operator*() { return value; }
   constexpr T* operator->() { return &value; }
-  constexpr T* operator&() { return &value; }
+  constexpr T* GetStorageAddress() { return &value; }
 
   constexpr const T& operator*() const { return value; }
   constexpr const T* operator->() const { return &value; }
-  constexpr const T* operator&() const { return &value; }
+  constexpr const T* GetStorageAddress() const { return &value; }
 
   Empty empty;
   T value;
@@ -151,8 +151,8 @@ class LazyInit<T, CheckType::None, Destructor::Disabled> {
   // pointer without performing consistency checks. This should be used
   // cautiously, preferably only in constant expressions that take the address
   // of the wrapped global.
-  constexpr T* operator&() { return &storage_; }
-  constexpr const T* operator&() const { return &storage_; }
+  constexpr T* GetAddressUnchecked() { return storage_.GetStorageAddress(); }
+  constexpr const T* GetAddressUnchecked() const { return storage_.GetStorageAddress(); }
 
  private:
   template <typename, CheckType, Destructor>
@@ -216,8 +216,8 @@ class LazyInit<T, CheckType::Basic, Destructor::Disabled> {
   // pointer without performing consistency checks. This should be used
   // cautiously, preferably only in constant expressions that take the address
   // of the wrapped global.
-  constexpr T* operator&() { return &storage_; }
-  constexpr const T* operator&() const { return &storage_; }
+  constexpr T* GetAddressUnchecked() { return storage_.GetStorageAddress(); }
+  constexpr const T* GetAddressUnchecked() const { return storage_.GetStorageAddress(); }
 
  private:
   template <typename, CheckType, Destructor>
@@ -291,8 +291,8 @@ class LazyInit<T, CheckType::Atomic, Destructor::Disabled> {
   // pointer without performing consistency checks. This should be used
   // cautiously, preferably only in constant expressions that take the address
   // of the wrapped global.
-  constexpr T* operator&() { return &storage_; }
-  constexpr const T* operator&() const { return &storage_; }
+  constexpr T* GetAddressUnchecked() { return storage_.GetStorageAddress(); }
+  constexpr const T* GetAddressUnchecked() const { return storage_.GetStorageAddress(); }
 
  private:
   template <typename, CheckType, Destructor>

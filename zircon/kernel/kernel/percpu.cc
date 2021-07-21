@@ -24,7 +24,7 @@
 decltype(percpu::boot_processor_) percpu::boot_processor_{};
 percpu* percpu::secondary_processors_{nullptr};
 
-percpu* percpu::boot_index_[1]{&percpu::boot_processor_};
+percpu* percpu::boot_index_[1]{percpu::boot_processor_.GetAddressUnchecked()};
 percpu** percpu::processor_index_{percpu::boot_index_};
 
 size_t percpu::processor_count_{1};
@@ -44,7 +44,7 @@ percpu::percpu(cpu_num_t cpu_num) {
 void percpu::InitializeBoot() {
   boot_processor_.Initialize(0);
   // Install a pointer to the boot CPU's high-level percpu struct in its low-level percpu struct.
-  arch_setup_percpu(0, &boot_processor_);
+  arch_setup_percpu(0, &boot_processor_.Get());
 }
 
 void percpu::InitializeSecondariesBegin(uint32_t /*init_level*/) {
@@ -53,7 +53,7 @@ void percpu::InitializeSecondariesBegin(uint32_t /*init_level*/) {
 
   const size_t index_size = sizeof(percpu*) * processor_count_;
   processor_index_ = static_cast<percpu**>(memalign(MAX_CACHE_LINE, index_size));
-  processor_index_[0] = &boot_processor_;
+  processor_index_[0] = &boot_processor_.Get();
 
   static_assert((MAX_CACHE_LINE % alignof(struct percpu)) == 0);
 

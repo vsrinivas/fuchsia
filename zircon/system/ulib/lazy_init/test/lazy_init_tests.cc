@@ -99,7 +99,7 @@ void lazy_init_test() {
   const LazyInitType& const_test_value = test_value_storage.value;
   const_test_value.Get().ConstMethod();   // Get()
   const_test_value->ConstMethod();        // -> operator
-  (&const_test_value)->ConstMethod();     // address of operator
+  const_test_value.GetAddressUnchecked()->ConstMethod();
 
   if (Check == CheckType::None) {
     ASSERT_NO_DEATH(initialization_test, "Testing re-intialization.\n");
