@@ -363,7 +363,7 @@ impl NetworkSelector {
             scan::perform_directed_active_scan(&sme_proxy, &network.ssid, None).await;
 
         match scan_results {
-            Err(()) => None,
+            Err(_) => None,
             Ok(scan_results) => {
                 let networks = merge_saved_networks_and_scan_data(
                     &self.saved_network_manager,
@@ -548,7 +548,7 @@ async fn augment_bss_with_active_scan(
             Some(vec![channel.primary]),
         )
         .await
-        .map_err(|()| {
+        .map_err(|_| {
             info!("Failed to perform active scan to augment BSS info.");
         })?;
 

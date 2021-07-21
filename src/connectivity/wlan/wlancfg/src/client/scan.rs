@@ -44,12 +44,11 @@ pub trait ScanResultUpdate: Sync + Send {
 async fn sme_scan(
     sme_proxy: &fidl_sme::ClientSmeProxy,
     scan_request: fidl_sme::ScanRequest,
-) -> Result<Vec<fidl_sme::BssInfo>, ()> {
+) -> Result<Vec<fidl_sme::BssInfo>, types::ScanError> {
     enum SmeScanError {
         ShouldRetryLater,
         Other,
     }
-
     async fn sme_scan_internal(
         sme_proxy: &fidl_sme::ClientSmeProxy,
         mut scan_request: fidl_sme::ScanRequest,
@@ -106,9 +105,13 @@ async fn sme_scan(
         Err(SmeScanError::ShouldRetryLater) => {
             info!("Driver requested a delay before retrying scan");
             fasync::Timer::new(zx::Duration::from_millis(SCAN_RETRY_DELAY_MS).after_now()).await;
-            sme_scan_internal(sme_proxy, scan_request.clone()).await.map_err(|_| ())
+            match sme_scan_internal(sme_proxy, scan_request.clone()).await {
+                Ok(result) => Ok(result),
+                Err(SmeScanError::ShouldRetryLater) => Err(types::ScanError::Cancelled),
+                Err(_) => Err(types::ScanError::GeneralError),
+            }
         }
-        Err(_) => Err(()),
+        Err(_) => Err(types::ScanError::GeneralError),
     }
 }
 
@@ -153,15 +156,12 @@ pub(crate) async fn perform_scan<F>(
         Ok(results) => {
             insert_bss_to_network_bss_map(&mut bss_by_network, results, true);
         }
-        Err(()) => {
+        Err(scan_err) => {
             // The passive scan failed. Send an error to the requester and return early.
             if let Some(output_iterator) = output_iterator {
-                send_scan_error_over_fidl(
-                    output_iterator,
-                    fidl_policy::ScanErrorCode::GeneralError,
-                )
-                .await
-                .unwrap_or_else(|e| error!("Failed to send scan error: {}", e));
+                send_scan_error_over_fidl(output_iterator, scan_err)
+                    .await
+                    .unwrap_or_else(|e| error!("Failed to send scan error: {}", e));
             }
             return;
         }
@@ -187,16 +187,13 @@ pub(crate) async fn perform_scan<F>(
                 .await;
                 insert_bss_to_network_bss_map(&mut bss_by_network, results, false);
             }
-            Err(()) => {
+            Err(scan_err) => {
                 // There was an error in the active scan. For the FIDL interface, send an error. We
                 // `.take()` the output_iterator here, so it won't be used for sending results below.
                 if let Some(output_iterator) = output_iterator.take() {
-                    send_scan_error_over_fidl(
-                        output_iterator,
-                        fidl_policy::ScanErrorCode::GeneralError,
-                    )
-                    .await
-                    .unwrap_or_else(|e| error!("Failed to send scan error: {}", e));
+                    send_scan_error_over_fidl(output_iterator, scan_err)
+                        .await
+                        .unwrap_or_else(|e| error!("Failed to send scan error: {}", e));
                 };
                 info!("Proceeding with passive scan results for non-FIDL scan consumers");
             }
@@ -229,7 +226,7 @@ pub(crate) async fn perform_directed_active_scan(
     sme_proxy: &fidl_sme::ClientSmeProxy,
     ssid: &Vec<u8>,
     channels: Option<Vec<u8>>,
-) -> Result<Vec<types::ScanResult>, ()> {
+) -> Result<Vec<types::ScanResult>, types::ScanError> {
     let scan_request = fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
         ssids: vec![ssid.clone()],
         channels: channels.unwrap_or(vec![]),
@@ -1055,7 +1052,8 @@ mod tests {
 
         // Check for results
         assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Ready(result) => {
-            assert_eq!(result, Ok(input_aps));
+            let results = result.expect("failed to get scan results");
+            assert_eq!(results, input_aps);
         });
 
         // No further requests to the sme
@@ -1097,7 +1095,8 @@ mod tests {
 
         // Check for results
         assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Ready(result) => {
-            assert_eq!(result, Ok(input_aps));
+            let results = result.expect("failed to get scan results");
+            assert_eq!(results, input_aps);
         });
 
         // No further requests to the sme
@@ -1138,7 +1137,8 @@ mod tests {
 
         // No retry expected, check for results on the scan request
         assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Ready(result) => {
-            assert_eq!(result, Err(()));
+            let error = result.expect_err("did not expect to recieve scan results");
+            assert_eq!(error, types::ScanError::GeneralError);
         });
 
         // No further requests to the sme
@@ -1224,7 +1224,8 @@ mod tests {
 
             // Check for results
             assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Ready(result) => {
-                assert_eq!(result, Err(()));
+                let error = result.expect_err("did not expect scan results");
+                assert_eq!(error, types::ScanError::Cancelled);
             });
         }
 
@@ -1258,7 +1259,8 @@ mod tests {
 
         // Check for results
         assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Ready(result) => {
-            assert_eq!(result, Err(()));
+            let error = result.expect_err("did not expect scan results");
+            assert_eq!(error, types::ScanError::GeneralError);
         });
 
         // No further requests to the sme

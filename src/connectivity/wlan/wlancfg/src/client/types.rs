@@ -25,6 +25,7 @@ pub type Bssid = [u8; 6];
 pub type Ssid = Vec<u8>;
 pub type DisconnectReason = PolicyDisconnectionMetricDimensionReason;
 pub type ConnectReason = PolicyConnectionAttemptMetricDimensionReason;
+pub type ScanError = fidl_policy::ScanErrorCode;
 
 pub fn convert_to_sme_disconnect_reason(
     disconnect_reason: PolicyDisconnectionMetricDimensionReason,
