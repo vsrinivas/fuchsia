@@ -84,6 +84,9 @@ class ViewManager : public fuchsia::accessibility::semantics::SemanticsManager,
   // |SemanticsSource|
   bool ViewHasVisibleVirtualkeyboard(zx_koid_t view_ref_koid) override;
 
+  // |SemanticsSource|
+  std::optional<zx_koid_t> GetViewWithVisibleVirtualkeyboard() override;
+
   // |FocusHighlightManager|
   void ClearAllHighlights() override;
   void ClearFocusHighlights() override;

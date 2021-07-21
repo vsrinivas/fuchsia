@@ -88,6 +88,12 @@ fpromise::promise<> ExploreAction::SetA11yFocusOrStopPromise(
 }
 
 void ExploreAction::Run(GestureContext gesture_context) {
+  // TODO(fxbug.dev/81122): Remove workaround to hit virtual keyboard.
+  auto virtualkeyboard_view =
+      action_context_->semantics_source->GetViewWithVisibleVirtualkeyboard();
+  if (virtualkeyboard_view) {
+    gesture_context.view_ref_koid = *virtualkeyboard_view;
+  }
   auto promise =
       ExecuteHitTestingPromise(gesture_context)
           .and_then([this, view_koid = gesture_context.view_ref_koid](

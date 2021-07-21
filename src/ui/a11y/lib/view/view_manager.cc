@@ -226,6 +226,13 @@ bool ViewManager::ViewHasVisibleVirtualkeyboard(zx_koid_t view_ref_koid) {
   return view_ref_koid == virtualkeyboard_visibility_.first && virtualkeyboard_visibility_.second;
 }
 
+std::optional<zx_koid_t> ViewManager::GetViewWithVisibleVirtualkeyboard() {
+  if (virtualkeyboard_visibility_.second) {
+    return virtualkeyboard_visibility_.first;
+  }
+  return std::nullopt;
+}
+
 void ViewManager::ClearAllHighlights() {
   ClearFocusHighlights();
   ClearMagnificationHighlights();
