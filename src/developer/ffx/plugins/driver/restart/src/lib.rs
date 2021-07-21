@@ -17,7 +17,15 @@ pub async fn register(
     driver_dev_proxy: DriverDevelopmentProxy,
     cmd: DriverRestartCommand,
 ) -> Result<()> {
-    println!("Restarting driver hosts containing {}", cmd.driver_path);
+    register_impl(driver_dev_proxy, cmd, &mut std::io::stdout()).await
+}
+
+pub async fn register_impl<W: std::io::Write>(
+    driver_dev_proxy: DriverDevelopmentProxy,
+    cmd: DriverRestartCommand,
+    writer: &mut W,
+) -> Result<()> {
+    writeln!(writer, "Restarting driver hosts containing {}", cmd.driver_path)?;
     driver_dev_proxy
         .restart_driver_hosts(&mut cmd.driver_path.to_string())
         .await?

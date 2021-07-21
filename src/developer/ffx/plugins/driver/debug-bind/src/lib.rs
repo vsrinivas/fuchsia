@@ -21,6 +21,14 @@ pub async fn debug_bind(
     service: DriverDevelopmentProxy,
     cmd: DriverDebugBindCommand,
 ) -> Result<()> {
+    debug_bind_impl(service, cmd, &mut std::io::stdout()).await
+}
+
+pub async fn debug_bind_impl<W: std::io::Write>(
+    service: DriverDevelopmentProxy,
+    cmd: DriverDebugBindCommand,
+    writer: &mut W,
+) -> Result<()> {
     let driver_info = service
         .get_driver_info(&mut [cmd.driver_path].iter().map(String::as_str))
         .await
@@ -80,19 +88,19 @@ pub async fn debug_bind(
         .collect::<Vec<DeviceProperty>>();
 
     if cmd.print_instructions {
-        println!("Bind program:");
+        writeln!(writer, "Bind program:")?;
         for instruction in &raw_instructions {
-            println!("{}", instruction);
+            writeln!(writer, "{}", instruction)?;
         }
-        println!();
+        writeln!(writer)?;
     }
 
     if cmd.print_properties {
-        println!("Device properties:");
+        writeln!(writer, "Device properties:")?;
         for property in &device_properties {
-            println!("{}", property);
+            writeln!(writer, "{}", property)?;
         }
-        println!();
+        writeln!(writer)?;
     }
 
     let binds = debugger::debug(&raw_instructions, &device_properties)
@@ -100,9 +108,9 @@ pub async fn debug_bind(
         .is_some();
 
     if binds {
-        println!("Driver binds to the device.");
+        writeln!(writer, "Driver binds to the device.")?;
     } else {
-        println!("Driver doesn't bind to the device.");
+        writeln!(writer, "Driver doesn't bind to the device.")?;
     }
     Ok(())
 }

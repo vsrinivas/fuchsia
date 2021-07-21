@@ -18,7 +18,19 @@ pub async fn register(
     driver_registrar_proxy: DriverRegistrarProxy,
     cmd: DriverRegisterCommand,
 ) -> Result<()> {
-    println!("Notifying the driver manager that there might be a new version of {}", cmd.url);
+    register_impl(driver_registrar_proxy, cmd, &mut std::io::stdout()).await
+}
+
+pub async fn register_impl<W: std::io::Write>(
+    driver_registrar_proxy: DriverRegistrarProxy,
+    cmd: DriverRegisterCommand,
+    writer: &mut W,
+) -> Result<()> {
+    writeln!(
+        writer,
+        "Notifying the driver manager that there might be a new version of {}",
+        cmd.url
+    )?;
     driver_registrar_proxy
         .register(&mut PackageUrl { url: cmd.url.to_string() })
         .await?
