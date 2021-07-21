@@ -9,8 +9,8 @@ use std::ffi::CString;
 use std::sync::Arc;
 
 use crate::auth::Credentials;
-use crate::fs::fuchsia::Remotefs;
-use crate::fs::tmpfs::Tmpfs;
+use crate::fs::fuchsia::RemoteFs;
+use crate::fs::tmpfs::TmpFs;
 use crate::fs::*;
 use crate::mm::syscalls::sys_mmap;
 use crate::syscalls::SyscallContext;
@@ -25,7 +25,7 @@ fn create_pkgfs() -> Arc<FsContext> {
     let root =
         directory::open_in_namespace("/pkg", fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE)
             .expect("failed to open /pkg");
-    return FsContext::new(Remotefs::new(
+    return FsContext::new(RemoteFs::new(
         root.into_channel().unwrap().into_zx_channel(),
         fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
     ));
@@ -39,7 +39,7 @@ pub fn create_kernel_and_task_with_pkgfs() -> (Arc<Kernel>, TaskOwner) {
 }
 
 pub fn create_kernel_and_task() -> (Arc<Kernel>, TaskOwner) {
-    create_kernel_and_task_with_fs(FsContext::new(Tmpfs::new()))
+    create_kernel_and_task_with_fs(FsContext::new(TmpFs::new()))
 }
 /// Creates a `Kernel` and `Task` for testing purposes.
 ///

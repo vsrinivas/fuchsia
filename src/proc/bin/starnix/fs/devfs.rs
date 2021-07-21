@@ -11,18 +11,18 @@ use crate::fs::NullFile;
 use crate::task::*;
 use crate::types::*;
 
-pub struct Devfs {
+pub struct DevFs {
     root: FsNodeHandle,
 }
 
-impl Devfs {
+impl DevFs {
     pub fn new() -> FileSystemHandle {
         let devfs_dev = AnonNodeDevice::new(0);
-        Arc::new(Devfs { root: FsNode::new_root(DevfsDirectory, devfs_dev) })
+        Arc::new(DevFs { root: FsNode::new_root(DevfsDirectory, devfs_dev) })
     }
 }
 
-impl FileSystem for Devfs {
+impl FileSystem for DevFs {
     fn root(&self) -> &FsNodeHandle {
         &self.root
     }

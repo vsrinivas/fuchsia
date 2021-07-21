@@ -146,12 +146,12 @@ mod test {
     use fuchsia_async as fasync;
 
     use super::*;
-    use crate::fs::tmpfs::Tmpfs;
+    use crate::fs::tmpfs::TmpFs;
     use crate::testing::*;
 
     #[fasync::run_singlethreaded(test)]
     async fn test_umask() {
-        let fs = FsContext::new(Tmpfs::new());
+        let fs = FsContext::new(TmpFs::new());
 
         assert_eq!(FileMode::from_bits(0o22), fs.set_umask(FileMode::from_bits(0o3020)));
         assert_eq!(FileMode::from_bits(0o646), fs.apply_umask(FileMode::from_bits(0o666)));

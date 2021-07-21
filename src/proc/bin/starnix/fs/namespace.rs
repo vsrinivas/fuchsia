@@ -287,14 +287,14 @@ impl Hash for NamespaceNode {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::fs::tmpfs::Tmpfs;
+    use crate::fs::tmpfs::TmpFs;
 
     #[test]
     fn test_namespace() -> anyhow::Result<()> {
-        let root_fs = Tmpfs::new();
+        let root_fs = TmpFs::new();
         let root_node = Arc::clone(root_fs.root());
         let _dev_node = root_node.mkdir(b"dev").expect("failed to mkdir dev");
-        let dev_fs = Tmpfs::new();
+        let dev_fs = TmpFs::new();
         let dev_root_node = Arc::clone(dev_fs.root());
         let _dev_pts_node = dev_root_node.mkdir(b"pts").expect("failed to mkdir pts");
 
@@ -322,10 +322,10 @@ mod test {
 
     #[test]
     fn test_mount_does_not_upgrade() -> anyhow::Result<()> {
-        let root_fs = Tmpfs::new();
+        let root_fs = TmpFs::new();
         let root_node = Arc::clone(root_fs.root());
         let _dev_node = root_node.mkdir(b"dev").expect("failed to mkdir dev");
-        let dev_fs = Tmpfs::new();
+        let dev_fs = TmpFs::new();
         let dev_root_node = Arc::clone(dev_fs.root());
         let _dev_pts_node = dev_root_node.mkdir(b"pts").expect("failed to mkdir pts");
 
@@ -353,10 +353,10 @@ mod test {
 
     #[test]
     fn test_path() -> anyhow::Result<()> {
-        let root_fs = Tmpfs::new();
+        let root_fs = TmpFs::new();
         let root_node = Arc::clone(root_fs.root());
         let _dev_node = root_node.mkdir(b"dev").expect("failed to mkdir dev");
-        let dev_fs = Tmpfs::new();
+        let dev_fs = TmpFs::new();
         let dev_root_node = Arc::clone(dev_fs.root());
         let _dev_pts_node = dev_root_node.mkdir(b"pts").expect("failed to mkdir pts");
 

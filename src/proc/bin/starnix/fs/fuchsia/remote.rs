@@ -15,19 +15,19 @@ use crate::task::*;
 use crate::types::*;
 use crate::vmex_resource::VMEX_RESOURCE;
 
-pub struct Remotefs {
+pub struct RemoteFs {
     root: FsNodeHandle,
 }
 
-impl Remotefs {
+impl RemoteFs {
     pub fn new(root: zx::Channel, rights: u32) -> FileSystemHandle {
         let remotefs = AnonNodeDevice::new(0); // TODO: Get from device registry.
         let zxio = Arc::new(Zxio::create(root.into_handle()).unwrap());
-        Arc::new(Remotefs { root: FsNode::new_root(RemoteNode { zxio, rights }, remotefs) })
+        Arc::new(RemoteFs { root: FsNode::new_root(RemoteNode { zxio, rights }, remotefs) })
     }
 }
 
-impl FileSystem for Remotefs {
+impl FileSystem for RemoteFs {
     fn root(&self) -> &FsNodeHandle {
         &self.root
     }
@@ -160,7 +160,7 @@ mod test {
     async fn test_tree() -> Result<(), anyhow::Error> {
         let rights = fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE;
         let root = io_util::directory::open_in_namespace("/pkg", rights)?;
-        let fs = Remotefs::new(root.into_channel().unwrap().into_zx_channel(), rights);
+        let fs = RemoteFs::new(root.into_channel().unwrap().into_zx_channel(), rights);
         let ns = Namespace::new(fs.clone());
         let context = FsContext::new(fs);
         let root = ns.root();

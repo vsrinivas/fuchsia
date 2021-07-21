@@ -28,16 +28,16 @@ impl TmpfsState {
     }
 }
 
-pub struct Tmpfs {
+pub struct TmpFs {
     root: FsNodeHandle,
     _state: Arc<Mutex<TmpfsState>>,
 }
 
-impl Tmpfs {
+impl TmpFs {
     pub fn new() -> FileSystemHandle {
         let tmpfs_dev = AnonNodeDevice::new(0);
         let state = Arc::new(Mutex::new(TmpfsState::default()));
-        let fs = Tmpfs {
+        let fs = TmpFs {
             root: FsNode::new_root(TmpfsDirectory { fs: Arc::downgrade(&state) }, tmpfs_dev),
             _state: state,
         };
@@ -45,7 +45,7 @@ impl Tmpfs {
     }
 }
 
-impl FileSystem for Tmpfs {
+impl FileSystem for TmpFs {
     fn root(&self) -> &FsNodeHandle {
         &self.root
     }
@@ -165,7 +165,7 @@ mod test {
 
     #[test]
     fn test_tmpfs() {
-        let fs = Tmpfs::new();
+        let fs = TmpFs::new();
         let root = fs.root();
         let usr = root.mkdir(b"usr").unwrap();
         let _etc = root.mkdir(b"etc").unwrap();
@@ -249,7 +249,7 @@ mod test {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_persistence() {
-        let fs = Tmpfs::new();
+        let fs = TmpFs::new();
         {
             let root = fs.root();
             let usr = root.mkdir(b"usr").expect("failed to create usr");

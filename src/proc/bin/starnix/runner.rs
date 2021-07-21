@@ -31,9 +31,9 @@ use std::mem;
 use std::sync::Arc;
 
 use crate::auth::Credentials;
-use crate::fs::devfs::Devfs;
-use crate::fs::fuchsia::{create_file_from_handle, Remotefs};
-use crate::fs::tmpfs::Tmpfs;
+use crate::fs::devfs::DevFs;
+use crate::fs::fuchsia::{create_file_from_handle, RemoteFs};
+use crate::fs::tmpfs::TmpFs;
 use crate::fs::*;
 use crate::signals::signal_handling::*;
 use crate::strace;
@@ -265,7 +265,7 @@ async fn start_component(
     let files = files_from_numbered_handles(start_info.numbered_handles, &kernel)?;
 
     let remotefs =
-        Remotefs::new(root.into_channel(), fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE);
+        RemoteFs::new(root.into_channel(), fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE);
 
     let fs = FsContext::new(remotefs);
     for mnt in mount {
@@ -278,8 +278,8 @@ async fn start_component(
         let fs_type =
             field_iter.next().ok_or_else(|| anyhow!("fs type is missing from {:?}", mnt))?;
         let child_fs = match fs_type {
-            b"tmpfs" => Ok(Tmpfs::new()),
-            b"devfs" => Ok(Devfs::new()),
+            b"tmpfs" => Ok(TmpFs::new()),
+            b"devfs" => Ok(DevFs::new()),
             _ => Err(EINVAL),
         }?;
 
