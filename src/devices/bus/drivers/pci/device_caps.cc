@@ -162,6 +162,7 @@ zx_status_t Device::ParseCapabilities() {
                  caps_.pcie);
           return st;
         }
+        is_pcie_ = true;
         break;
       case Capability::Id::kMsi:
         st = AllocateCapability<MsiCapability>(cap_offset, *cfg_, &caps_.msi, &caps_.list);
@@ -293,18 +294,19 @@ zx_status_t Device::ParseExtendedCapabilities() {
 }
 
 // Parse PCI Standard Capabilities starting with the pointer in the PCI
-// config structure.
+// config header.
 zx_status_t Device::ProbeCapabilities() {
   zx_status_t st = ParseCapabilities();
   if (st != ZX_OK) {
     return st;
   }
 
-  st = ParseExtendedCapabilities();
-  if (st != ZX_OK) {
-    return st;
+  // Only attempt to parse extended capabilities if a device is identified as a
+  // PCIe device.
+  if (is_pcie()) {
+    st = ParseExtendedCapabilities();
   }
-  return ZX_OK;
+  return st;
 }
 
 }  // namespace pci

@@ -232,6 +232,7 @@ class Device : public PciDeviceType,
   bool disabled() const __TA_REQUIRES(dev_lock_) { return disabled_; }
   bool quirks_done() const __TA_REQUIRES(dev_lock_) { return quirks_done_; }
   bool is_bridge() const { return is_bridge_; }
+  bool is_pcie() const { return is_pcie_; }
   uint16_t vendor_id() const { return vendor_id_; }
   uint16_t device_id() const { return device_id_; }
   uint8_t class_id() const { return class_id_; }
@@ -380,6 +381,7 @@ class Device : public PciDeviceType,
   bool plugged_in_ __TA_GUARDED(dev_lock_) = false;
   bool disabled_ __TA_GUARDED(dev_lock_) = false;
   bool quirks_done_ __TA_GUARDED(dev_lock_) = false;
+  bool is_pcie_ = false;
 
   Capabilities caps_ __TA_GUARDED(dev_lock_){};
   Irqs irqs_ __TA_GUARDED(dev_lock_){.mode = PCI_IRQ_MODE_DISABLED};
