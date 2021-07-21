@@ -264,5 +264,36 @@ TEST_F(ExploreActionTest, ReadsKeyboardKey) {
   EXPECT_EQ(mock_speaker()->node_ids()[0], 0u);
 }
 
+TEST_F(ExploreActionTest, HitTestsAreSentToKeyboardViewWhenKeyboardIsVisible) {
+  const auto second_view_koid =
+      mock_semantic_provider()->koid() + 1;  // to be different from first view koid.
+  // Simulate a view having a visible keyboard.
+  mock_semantics_source()->set_view_with_visible_keyboard(second_view_koid);
+
+  Node node = accessibility_test::CreateTestNode(0, "Keyboard view root node", {});
+  mock_semantics_source()->CreateSemanticNode(second_view_koid, std::move(node));
+
+  a11y::ExploreAction explore_action(action_context(), mock_screen_reader_context());
+  a11y::GestureContext gesture_context;
+  gesture_context.view_ref_koid = mock_semantic_provider()->koid();
+
+  // Note that the hit test result returns the keyboard view. If, for some reason, the code ever
+  // tries to hit test the other view the return of this hit test for the other view would be empty
+  // and this test would fail.
+  fuchsia::accessibility::semantics::Hit hit;
+  hit.set_node_id(0u);
+  mock_semantics_source()->SetHitTestResult(second_view_koid, std::move(hit));
+
+  explore_action.Run(gesture_context);
+  RunLoopUntilIdle();
+
+  // Checks that a new a11y focus was set, focusing the view with the keyboard.
+  EXPECT_TRUE(mock_a11y_focus_manager()->IsSetA11yFocusCalled());
+  auto focus = mock_a11y_focus_manager()->GetA11yFocus();
+  ASSERT_TRUE(focus);
+  EXPECT_EQ(focus->node_id, 0u);
+  EXPECT_EQ(focus->view_ref_koid, second_view_koid);
+}
+
 }  // namespace
 }  // namespace accessibility_test

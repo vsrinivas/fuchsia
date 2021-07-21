@@ -465,11 +465,14 @@ TEST_F(ViewManagerTest, FocusHighlightManagerDrawHighlightWithAnnotationsDisable
 TEST_F(ViewManagerTest, VirtualkeyboardListenerUpdates) {
   EXPECT_TRUE(semantic_provider_->IsVirtualkeyboardListenerConnected());
   EXPECT_FALSE(view_manager_->ViewHasVisibleVirtualkeyboard(semantic_provider_->koid()));
+  EXPECT_FALSE(view_manager_->GetViewWithVisibleVirtualkeyboard());
   semantic_provider_->UpdateVirtualkeyboardVisibility(true);
   RunLoopUntilIdle();
   EXPECT_TRUE(view_manager_->ViewHasVisibleVirtualkeyboard(semantic_provider_->koid()));
   auto invalid_koid = semantic_provider_->koid() + 1;
   EXPECT_FALSE(view_manager_->ViewHasVisibleVirtualkeyboard(invalid_koid));
+  EXPECT_TRUE(view_manager_->GetViewWithVisibleVirtualkeyboard());
+  EXPECT_EQ(*view_manager_->GetViewWithVisibleVirtualkeyboard(), semantic_provider_->koid());
 
   // Connects a second semantic provider which tries to add a new virtual keyboard listener. This
   // one should fail, as only one registered is supported.

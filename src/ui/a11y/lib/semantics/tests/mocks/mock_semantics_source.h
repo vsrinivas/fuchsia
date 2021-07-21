@@ -35,6 +35,16 @@ class MockSemanticsSource : public a11y::SemanticsSource {
     return has_visible_keyboard_;
   }
 
+  // Sets the return value for |GetViewWithVisibleVirtualkeyboard()|.
+  void set_view_with_visible_keyboard(std::optional<zx_koid_t> view) {
+    view_with_visible_keyboard_ = view;
+  }
+
+  // |SemanticsSource|
+  std::optional<zx_koid_t> GetViewWithVisibleVirtualkeyboard() override {
+    return view_with_visible_keyboard_;
+  }
+
   // Sets if this provider has a visible virtual keyboard.
   void set_has_visible_keyboard(bool visible) { has_visible_keyboard_ = visible; }
 
@@ -149,6 +159,8 @@ class MockSemanticsSource : public a11y::SemanticsSource {
   // Return value for ViewHasSemantics.
   // Default to true since it's the more common testing use case.
   bool view_has_semantics_ = true;
+
+  std::optional<zx_koid_t> view_with_visible_keyboard_;
 };
 
 }  // namespace accessibility_test
