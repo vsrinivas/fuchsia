@@ -10,13 +10,13 @@ use {
 
 #[ffx_plugin("cts.experimental")]
 pub async fn cts(cmd: CtsCommand) -> Result<()> {
-    process_command(cmd.command)
+    process_command(cmd.command, &mut std::io::stdout())
 }
 
-fn process_command(cmd: Args) -> Result<()> {
+fn process_command<W: std::io::Write>(cmd: Args, writer: &mut W) -> Result<()> {
     match cmd {
         Args::Run(_run_cmd) => {
-            println!("Run: WIP");
+            writeln!(writer, "Run: WIP")?;
         }
     }
     Ok(())

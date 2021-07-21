@@ -65,6 +65,10 @@ fn get_operating_system_macos(
 
 #[ffx_plugin()]
 pub async fn preflight_cmd(cmd: PreflightCommand) -> Result<()> {
+    preflight_cmd_impl(cmd, &mut stdout()).await
+}
+
+pub async fn preflight_cmd_impl<W: Write>(cmd: PreflightCommand, writer: &mut W) -> Result<()> {
     let config = PreflightConfig { system: get_operating_system()? };
     let checks: Vec<Box<dyn PreflightCheck>> = vec![
         Box::new(check::build_prereqs::BuildPrereqs::new(&command_runner::SYSTEM_COMMAND_RUNNER)),
@@ -75,10 +79,10 @@ pub async fn preflight_cmd(cmd: PreflightCommand) -> Result<()> {
 
     let results = run_preflight_checks(&checks, &config).await?;
     if cmd.json {
-        println!("{}", serde_json::to_string(&json::results_to_json(&results)?)?);
+        writeln!(writer, "{}", serde_json::to_string(&json::results_to_json(&results)?)?)?;
     } else {
         report_result_analytics(&results).await?;
-        write_preflight_results(&mut stdout(), &results)?;
+        write_preflight_results(writer, &results)?;
     }
 
     Ok(())
