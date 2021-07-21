@@ -202,7 +202,7 @@ async fn use_framework_service() {
     // MockRealmCapabilityHost here overrides the previously installed one.
     let realm_service_host = Arc::new(MockRealmCapabilityHost::new());
     test.model
-        .root
+        .root()
         .hooks
         .install(vec![HooksRegistration::new(
             "MockRealmCapabilityHost",
@@ -1036,7 +1036,7 @@ async fn use_runner_from_environment_failed() {
     let test = RoutingTestBuilder::new("a", components).build().await;
     let runner_host = Arc::new(RunnerHost {});
     test.model
-        .root
+        .root()
         .hooks
         .install(vec![HooksRegistration::new(
             "RunnerHost",

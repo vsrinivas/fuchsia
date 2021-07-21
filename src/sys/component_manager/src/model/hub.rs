@@ -775,7 +775,7 @@ mod tests {
             .await
             .expect("unable to bind service_fs");
 
-        model.root.hooks.install(additional_hooks).await;
+        model.root().hooks.install(additional_hooks).await;
 
         let root_moniker = AbsoluteMoniker::root();
         let res = model.bind(&root_moniker, &BindReason::Root).await;

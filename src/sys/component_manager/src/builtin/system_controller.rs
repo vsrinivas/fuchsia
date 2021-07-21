@@ -120,7 +120,7 @@ impl SystemControllerCapabilityProvider {
                     })
                     .detach();
                     let root =
-                        self.model.upgrade().ok_or(format_err!("model is dropped"))?.root.clone();
+                        self.model.upgrade().ok_or(format_err!("model is dropped"))?.root().clone();
                     ActionSet::register(root, ShutdownAction::new())
                         .await
                         .context("got error waiting for shutdown action to complete")?;
@@ -229,7 +229,7 @@ mod tests {
         let controller_proxy =
             client_channel.into_proxy().expect("failed converting endpoint into proxy");
 
-        let root_component_info = ComponentInfo::new(test.model.root.clone()).await;
+        let root_component_info = ComponentInfo::new(test.model.root().clone()).await;
         let component_a_info = ComponentInfo::new(component_a.clone()).await;
         let component_b_info = ComponentInfo::new(component_b.clone()).await;
         let component_c_info = ComponentInfo::new(component_c.clone()).await;
@@ -318,7 +318,7 @@ mod tests {
             let controller_proxy =
                 client_channel.into_proxy().expect("failed converting endpoint into proxy");
 
-            let root_component_info = ComponentInfo::new(test.model.root.clone()).await;
+            let root_component_info = ComponentInfo::new(test.model.root().clone()).await;
             let component_a_info = ComponentInfo::new(component_a.clone()).await;
 
             // Check that the root component is still here

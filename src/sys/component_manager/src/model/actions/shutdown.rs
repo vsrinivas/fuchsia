@@ -1744,7 +1744,7 @@ mod tests {
     #[fuchsia::test]
     async fn action_shutdown_blocks_stop() {
         let test = ActionsTest::new("root", vec![], None).await;
-        let component = test.model.root.clone();
+        let component = test.model.root().clone();
         let mut action_set = component.lock_actions().await;
 
         // Register some actions, and get notifications. Use `register_inner` so we can register
@@ -1769,7 +1769,7 @@ mod tests {
     #[fuchsia::test]
     async fn action_shutdown_stop_stop() {
         let test = ActionsTest::new("root", vec![], None).await;
-        let component = test.model.root.clone();
+        let component = test.model.root().clone();
         let mut action_set = component.lock_actions().await;
 
         // Register some actions, and get notifications. Use `register_inner` so we can register

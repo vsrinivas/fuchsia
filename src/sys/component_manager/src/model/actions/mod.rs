@@ -370,7 +370,7 @@ pub mod tests {
     #[fuchsia::test]
     async fn action_set() {
         let test = ActionsTest::new("root", vec![], None).await;
-        let component = test.model.root.clone();
+        let component = test.model.root().clone();
 
         let (tx1, rx1) = oneshot::channel();
         register_action_in_new_task(PurgeAction::new(), component.clone(), tx1, Ok(())).await;

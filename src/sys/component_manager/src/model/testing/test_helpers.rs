@@ -335,6 +335,11 @@ impl TestEnvironmentBuilder {
         self
     }
 
+    pub fn enable_reboot_on_terminate(mut self, val: bool) -> Self {
+        self.runtime_config.reboot_on_terminate_enabled = val;
+        self
+    }
+
     /// Returns a `Model` and `BuiltinEnvironment` suitable for most tests.
     pub async fn build(mut self) -> TestModelResult {
         let mock_runner = Arc::new(MockRunner::new());
@@ -398,8 +403,8 @@ impl ActionsTest {
                 .await;
 
         let test_hook = Arc::new(TestHook::new());
-        model.root.hooks.install(test_hook.hooks()).await;
-        model.root.hooks.install(extra_hooks).await;
+        model.root().hooks.install(test_hook.hooks()).await;
+        model.root().hooks.install(extra_hooks).await;
 
         // Host framework service for root, if requested.
         let builtin_environment_inner = builtin_environment.clone();

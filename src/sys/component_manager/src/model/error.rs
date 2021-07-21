@@ -59,6 +59,11 @@ pub enum ModelError {
         #[source]
         err: ClonableError,
     },
+    #[error("calling Admin/Reboot failed: {}", err)]
+    RebootFailed {
+        #[source]
+        err: ClonableError,
+    },
     #[error("failed to resolve \"{}\": {}", url, err)]
     ResolverError {
         url: String,
@@ -188,6 +193,10 @@ impl ModelError {
 
     pub fn namespace_creation_failed(err: impl Into<Error>) -> ModelError {
         ModelError::NamespaceCreationFailed { err: err.into().into() }
+    }
+
+    pub fn reboot_failed(err: impl Into<Error>) -> ModelError {
+        ModelError::RebootFailed { err: err.into().into() }
     }
 
     pub fn manifest_invalid(url: impl Into<String>, err: impl Into<Error>) -> ModelError {

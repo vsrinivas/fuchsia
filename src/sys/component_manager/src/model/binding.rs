@@ -69,7 +69,7 @@ pub async fn bind_at_moniker<'a>(
     reason: &BindReason,
 ) -> Result<Arc<ComponentInstance>, ModelError> {
     let mut cur_moniker = AbsoluteMoniker::root();
-    let mut component = model.root.clone();
+    let mut component = model.root().clone();
     bind_at(component.clone(), reason).await?;
     for m in abs_moniker.path().iter() {
         cur_moniker = cur_moniker.child(m.clone());
@@ -175,7 +175,7 @@ mod tests {
     ) -> (Arc<Model>, Arc<Mutex<BuiltinEnvironment>>, Arc<MockRunner>) {
         let TestModelResult { model, builtin_environment, mock_runner, .. } =
             TestEnvironmentBuilder::new().set_components(components).build().await;
-        model.root.hooks.install(additional_hooks).await;
+        model.root().hooks.install(additional_hooks).await;
         (model, builtin_environment, mock_runner)
     }
 
@@ -187,7 +187,7 @@ mod tests {
         let res = model.bind(&m, &BindReason::Root).await;
         assert!(res.is_ok());
         mock_runner.wait_for_url("test:///root_resolved").await;
-        let actual_children = get_live_children(&model.root).await;
+        let actual_children = get_live_children(&model.root()).await;
         assert!(actual_children.is_empty());
     }
 
@@ -285,14 +285,14 @@ mod tests {
         mock_runner.wait_for_urls(&["test:///root_resolved", "test:///system_resolved"]).await;
 
         // Validate children. system is resolved, but not echo.
-        let actual_children = get_live_children(&*model.root).await;
+        let actual_children = get_live_children(&*model.root()).await;
         let mut expected_children: HashSet<PartialChildMoniker> = HashSet::new();
         expected_children.insert("system".into());
         expected_children.insert("echo".into());
         assert_eq!(actual_children, expected_children);
 
-        let system_component = get_live_child(&*model.root, "system").await;
-        let echo_component = get_live_child(&*model.root, "echo").await;
+        let system_component = get_live_child(&*model.root(), "system").await;
+        let echo_component = get_live_child(&*model.root(), "echo").await;
         let actual_children = get_live_children(&*system_component).await;
         assert!(actual_children.is_empty());
         assert_matches!(
@@ -311,7 +311,7 @@ mod tests {
             .await;
 
         // Validate children. Now echo is resolved.
-        let echo_component = get_live_child(&*model.root, "echo").await;
+        let echo_component = get_live_child(&*model.root(), "echo").await;
         let actual_children = get_live_children(&*echo_component).await;
         assert!(actual_children.is_empty());
 
@@ -575,7 +575,7 @@ mod tests {
         let check_events = async {
             let event = event_stream.wait_until(EventType::Discovered, m.clone()).await.unwrap();
             {
-                let root_state = model.root.lock_state().await;
+                let root_state = model.root().lock_state().await;
                 let root_state = match *root_state {
                     InstanceState::Resolved(ref s) => s,
                     _ => panic!("not resolved"),

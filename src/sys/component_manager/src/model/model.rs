@@ -35,9 +35,13 @@ pub struct ModelParams {
 /// provides operations for instantiating, destroying, querying, and controlling component
 /// instances at runtime.
 pub struct Model {
-    pub root: Arc<ComponentInstance>,
+    /// The instance at the top of the tree, i.e. the instance representing component manager
+    /// itself.
+    top_instance: Arc<ComponentManagerInstance>,
+    /// The instance representing the root component. Owned by `top_instance`, but cached here for
+    /// efficiency.
+    root: Arc<ComponentInstance>,
     _context: Arc<ModelContext>,
-    _top_instance: Arc<ComponentManagerInstance>,
 }
 
 impl Model {
@@ -50,7 +54,24 @@ impl Model {
             Arc::downgrade(&params.top_instance),
             params.root_component_url,
         );
-        Ok(Arc::new(Model { root, _context: context, _top_instance: params.top_instance }))
+        let model = Arc::new(Model {
+            root: root.clone(),
+            _context: context,
+            top_instance: params.top_instance,
+        });
+        model.top_instance.init(root).await;
+        Ok(model)
+    }
+
+    /// Returns a reference to the instance at the top of the tree (component manager's own
+    /// instance).
+    pub fn top_instance(&self) -> &Arc<ComponentManagerInstance> {
+        &self.top_instance
+    }
+
+    /// Returns a reference to the root component instance.
+    pub fn root(&self) -> &Arc<ComponentInstance> {
+        &self.root
     }
 
     /// Looks up a component by absolute moniker. The component instance in the component will be
@@ -123,7 +144,8 @@ pub mod tests {
         let TestModelResult { model, .. } =
             TestEnvironmentBuilder::new().set_components(components).build().await;
 
-        let _ = model.root.lock_actions().await.register_inner(&model.root, ShutdownAction::new());
+        let _ =
+            model.root().lock_actions().await.register_inner(&model.root, ShutdownAction::new());
 
         model.start().await;
     }

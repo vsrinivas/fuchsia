@@ -485,7 +485,7 @@ mod tests {
 
             let hook = Arc::new(TestHook::new());
             let hooks = hook.hooks();
-            model.root.hooks.install(hooks).await;
+            model.root().hooks.install(hooks).await;
 
             // Look up and bind to component.
             let component = model

@@ -599,7 +599,7 @@ mod tests {
         let relative_moniker = RelativeMoniker::new(vec![], vec!["c:0".into(), "coll:d:1".into()]);
         let res = open_isolated_storage(
             StorageCapabilitySource {
-                storage_provider: Some(Arc::clone(&test.model.root)),
+                storage_provider: Some(Arc::clone(&test.model.root())),
                 backing_directory_path: CapabilityPath::try_from("/data").unwrap().clone(),
                 backing_directory_subdir: None,
                 storage_subdir: None,

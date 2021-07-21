@@ -7,7 +7,6 @@ use {
         actions::{Action, ActionKey},
         component::{
             BindReason, ComponentInstance, ExecutionState, InstanceState, Package, Runtime,
-            WeakComponentInstance,
         },
         error::ModelError,
         hooks::{Event, EventError, EventErrorPayload, EventPayload, RuntimeInfo},
@@ -19,7 +18,7 @@ use {
     fidl::endpoints::{self, Proxy, ServerEnd},
     fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_io::DirectoryProxy,
-    fuchsia_async as fasync, fuchsia_zircon as zx,
+    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
     log::*,
     moniker::AbsoluteMoniker,
     std::sync::Arc,
@@ -83,7 +82,7 @@ async fn do_start(
 
         // Generate the Runtime which will be set in the Execution.
         let (pending_runtime, start_info, controller_server_end) = make_execution_runtime(
-            component.as_weak(),
+            &component,
             component_info.resolved_url.clone(),
             component_info.package,
             &component_info.decl,
@@ -174,7 +173,7 @@ pub fn should_return_early(
 /// Returns a configured Runtime for a component and the start info (without actually starting
 /// the component).
 async fn make_execution_runtime(
-    component: WeakComponentInstance,
+    component: &Arc<ComponentInstance>,
     url: String,
     package: Option<Package>,
     decl: &cm_rust::ComponentDecl,
@@ -182,13 +181,23 @@ async fn make_execution_runtime(
     (Runtime, fcrunner::ComponentStartInfo, ServerEnd<fcrunner::ComponentControllerMarker>),
     ModelError,
 > {
+    match component.on_terminate {
+        fsys::OnTerminate::Reboot => {
+            let context = component.try_get_context()?;
+            if !context.runtime_config().reboot_on_terminate_enabled {
+                return Err(ModelError::unsupported("on_terminate=REBOOT"));
+            }
+        }
+        fsys::OnTerminate::None => {}
+    }
+
     // Create incoming/outgoing directories, and populate them.
     let (outgoing_dir_client, outgoing_dir_server) =
         zx::Channel::create().map_err(|e| ModelError::namespace_creation_failed(e))?;
     let (runtime_dir_client, runtime_dir_server) =
         zx::Channel::create().map_err(|e| ModelError::namespace_creation_failed(e))?;
     let mut namespace = IncomingNamespace::new(package)?;
-    let ns = namespace.populate(component.clone(), decl).await?;
+    let ns = namespace.populate(component.as_weak(), decl).await?;
 
     let (controller_client, controller_server) =
         endpoints::create_endpoints::<fcrunner::ComponentControllerMarker>()
@@ -210,7 +219,7 @@ async fn make_execution_runtime(
         Some(controller),
     )?;
     let numbered_handles =
-        component.upgrade()?.args.lock().await.take().and_then(|args| args.numbered_handles);
+        component.args.lock().await.take().and_then(|args| args.numbered_handles);
     let start_info = fcrunner::ComponentStartInfo {
         resolved_url: Some(url),
         program: decl.program.as_ref().map(|p| p.info.clone()),

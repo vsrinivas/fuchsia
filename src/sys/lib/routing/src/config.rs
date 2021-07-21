@@ -88,6 +88,12 @@ pub struct RuntimeConfig {
     /// Which builtin resolver to use for the fuchsia-boot scheme. If not supplied this defaults to
     /// the NONE option.
     pub builtin_boot_resolver: BuiltinBootResolver,
+
+    /// If true, allow components to set the `OnTerminate=REBOOT` option.
+    ///
+    /// This lets a parent component designate that the system should reboot if a child terminates
+    /// (except when it's shut down).
+    pub reboot_on_terminate_enabled: bool,
 }
 
 /// A single security policy allowlist entry.
@@ -186,6 +192,7 @@ impl Default for RuntimeConfig {
             out_dir_contents: OutDirContents::None,
             root_component_url: Default::default(),
             component_id_index_path: None,
+            reboot_on_terminate_enabled: false,
             log_all_events: false,
             builtin_boot_resolver: BuiltinBootResolver::None,
         }
@@ -340,6 +347,7 @@ impl TryFrom<component_internal::Config> for RuntimeConfig {
             out_dir_contents: config.out_dir_contents.unwrap_or(default.out_dir_contents),
             root_component_url,
             component_id_index_path: config.component_id_index_path,
+            reboot_on_terminate_enabled: config.reboot_on_terminate_enabled.unwrap_or(false),
             log_all_events,
             builtin_boot_resolver: config
                 .builtin_boot_resolver
@@ -563,6 +571,7 @@ mod tests {
             out_dir_contents: None,
             root_component_url: None,
             component_id_index_path: None,
+            reboot_on_terminate_enabled: None,
             ..component_internal::Config::EMPTY
         }, RuntimeConfig::default()),
         all_leaf_nodes_none => (component_internal::Config {
@@ -586,6 +595,7 @@ mod tests {
             out_dir_contents: None,
             root_component_url: None,
             component_id_index_path: None,
+            reboot_on_terminate_enabled: None,
             log_all_events: None,
             ..component_internal::Config::EMPTY
         }, RuntimeConfig {
@@ -688,6 +698,7 @@ mod tests {
                 out_dir_contents: Some(component_internal::OutDirContents::Svc),
                 root_component_url: Some(FOO_PKG_URL.to_string()),
                 component_id_index_path: Some("/boot/config/component_id_index".to_string()),
+                reboot_on_terminate_enabled: Some(true),
                 log_all_events: Some(true),
                 builtin_boot_resolver: Some(component_internal::BuiltinBootResolver::None),
                 ..component_internal::Config::EMPTY
@@ -776,6 +787,7 @@ mod tests {
                 out_dir_contents: OutDirContents::Svc,
                 root_component_url: Some(Url::new(FOO_PKG_URL.to_string()).unwrap()),
                 component_id_index_path: Some("/boot/config/component_id_index".to_string()),
+                reboot_on_terminate_enabled: true,
                 log_all_events: true,
                 builtin_boot_resolver: BuiltinBootResolver::None,
             }
@@ -804,6 +816,7 @@ mod tests {
             out_dir_contents: None,
             root_component_url: None,
             component_id_index_path: None,
+            reboot_on_terminate_enabled: None,
             ..component_internal::Config::EMPTY
         }, AllowlistEntryError, AllowlistEntryError::OtherInvalidMoniker(
             "bad".into(),
@@ -835,6 +848,7 @@ mod tests {
             out_dir_contents: None,
             root_component_url: None,
             component_id_index_path: None,
+            reboot_on_terminate_enabled: None,
         ..component_internal::Config::EMPTY
     }, PolicyConfigError, PolicyConfigError::EmptyAllowlistedCapability),
     invalid_capability_policy_empty_source_moniker => (component_internal::Config {
@@ -863,6 +877,7 @@ mod tests {
         out_dir_contents: None,
         root_component_url: None,
         component_id_index_path: None,
+        reboot_on_terminate_enabled: None,
         ..component_internal::Config::EMPTY
     }, PolicyConfigError, PolicyConfigError::EmptySourceMoniker),
     invalid_root_component_url => (component_internal::Config {
@@ -877,6 +892,7 @@ mod tests {
         out_dir_contents: None,
         root_component_url: Some("invalid url".to_string()),
         component_id_index_path: None,
+        reboot_on_terminate_enabled: None,
         ..component_internal::Config::EMPTY
     }, ParseError, ParseError::InvalidValue),
     }

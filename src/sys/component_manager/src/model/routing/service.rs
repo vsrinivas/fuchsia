@@ -451,8 +451,8 @@ mod tests {
             fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
         let mut server_end = server_end.into_channel();
         serve_collection(
-            test.model.root.as_weak(),
-            &test.model.root,
+            test.model.root().as_weak(),
+            &test.model.root(),
             Box::new(provider),
             fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             fio::MODE_TYPE_DIRECTORY,
@@ -549,8 +549,8 @@ mod tests {
             fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
         let mut server_end = server_end.into_channel();
         serve_collection(
-            test.model.root.as_weak(),
-            &test.model.root,
+            test.model.root().as_weak(),
+            test.model.root(),
             Box::new(provider),
             fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             fio::MODE_TYPE_DIRECTORY,

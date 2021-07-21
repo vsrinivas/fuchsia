@@ -38,18 +38,22 @@ use {
         environment::EnvironmentInterface,
         error::ComponentInstanceError,
     },
+    anyhow::format_err,
     async_trait::async_trait,
     clonable_error::ClonableError,
     cm_rust::{
         self, CapabilityPath, ChildDecl, CollectionDecl, ComponentDecl, CreateChildArgs,
         FidlIntoNative, UseDecl,
     },
-    fidl::endpoints::{create_endpoints, Proxy, ServerEnd},
+    fidl::endpoints::{self, Proxy, ServerEnd},
     fidl_fuchsia_component_runner as fcrunner,
+    fidl_fuchsia_hardware_power_statecontrol as fstatecontrol,
     fidl_fuchsia_io::{
         self as fio, DirectoryProxy, MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
-    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
+    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+    fuchsia_component::client,
+    fuchsia_zircon as zx,
     futures::{
         future::{
             join_all, AbortHandle, Abortable, BoxFuture, Either, Future, FutureExt, TryFutureExt,
@@ -192,18 +196,109 @@ pub struct ComponentManagerInstance {
     /// The list of capabilities offered from component manager's namespace.
     pub namespace_capabilities: NamespaceCapabilities,
 
+    /// Mutable state for component manager's instance.
+    state: Mutex<ComponentManagerInstanceState>,
+}
+
+/// Mutable state for component manager's instance.
+pub struct ComponentManagerInstanceState {
+    /// The root component instance, this instance's only child.
+    root: Option<Arc<ComponentInstance>>,
+
     /// Tasks owned by component manager's instance.
-    tasks: Mutex<Vec<fasync::Task<()>>>,
+    tasks: Vec<fasync::Task<()>>,
+
+    /// Task that is rebooting the system, if any.
+    reboot_task: Option<fasync::Task<()>>,
 }
 
 impl ComponentManagerInstance {
     pub fn new(namespace_capabilities: NamespaceCapabilities) -> Self {
-        Self { namespace_capabilities, tasks: Mutex::new(vec![]) }
+        Self { namespace_capabilities, state: Mutex::new(ComponentManagerInstanceState::new()) }
     }
 
-    // Adds a task to the list of tasks owned by component manager.
+    /// Adds a task to the list of tasks owned by component manager.
     pub async fn add_task(&self, task: fasync::Task<()>) {
-        self.tasks.lock().await.push(task);
+        self.state.lock().await.tasks.push(task);
+    }
+
+    #[cfg(test)]
+    pub async fn has_reboot_task(&self) -> bool {
+        self.state.lock().await.reboot_task.is_some()
+    }
+
+    /// Returns the root component instance.
+    ///
+    /// REQUIRES: The root has already been set. Otherwise panics.
+    pub async fn root(&self) -> Arc<ComponentInstance> {
+        self.state.lock().await.root.as_ref().expect("root not set").clone()
+    }
+
+    /// Initializes the state of the instance. Panics if already initialized.
+    pub(super) async fn init(&self, root: Arc<ComponentInstance>) {
+        let mut state = self.state.lock().await;
+        assert!(state.root.is_none(), "child of top instance already set");
+        state.root = Some(root);
+    }
+
+    /// Triggers a graceful system reboot. Panics if the reboot call fails (which will trigger a
+    /// forceful reboot if this is the root component manager instance).
+    ///
+    /// Returns as soon as the call has been made. In the background, component_manager will wait
+    /// on the `Reboot` call.
+    pub(super) async fn trigger_reboot(self: &Arc<Self>) {
+        let mut state = self.state.lock().await;
+        if state.reboot_task.is_some() {
+            // Reboot task was already scheduled, nothing to do.
+            return;
+        }
+        let this = self.clone();
+        state.reboot_task = Some(fasync::Task::spawn(async move {
+            let res = async move {
+                let statecontrol_proxy = this.connect_to_statecontrol_admin().await?;
+                statecontrol_proxy
+                    .reboot(fstatecontrol::RebootReason::CriticalComponentFailure)
+                    .await
+                    .map_err(|e| ModelError::reboot_failed(e))
+                    .and_then(|res| {
+                        res.map_err(|s| {
+                            ModelError::reboot_failed(format_err!(
+                                "Admin/Reboot failed with status: {}",
+                                zx::Status::from_raw(s)
+                            ))
+                        })
+                    })
+            }
+            .await;
+            if let Err(e) = res {
+                // TODO(fxbug.dev/81115): Instead of panicking, we could fall back more gently by
+                // triggering component_manager's shutdown.
+                panic!(
+                    "Component with on_terminate=REBOOT terminated, but triggering \
+                    reboot failed. Crashing component_manager instead: {}",
+                    e
+                );
+            }
+        }));
+    }
+
+    /// Obtains a connection to power_manager's `statecontrol` protocol.
+    async fn connect_to_statecontrol_admin(&self) -> Result<fstatecontrol::AdminProxy, ModelError> {
+        let (exposed_dir, server) =
+            endpoints::create_proxy::<fio::DirectoryMarker>().expect("failed to create proxy");
+        let mut server = server.into_channel();
+        let root = self.root().await;
+        root.open_exposed(&mut server).await?;
+        let statecontrol_proxy =
+            client::connect_to_protocol_at_dir_root::<fstatecontrol::AdminMarker>(&exposed_dir)
+                .map_err(|e| ModelError::reboot_failed(e))?;
+        Ok(statecontrol_proxy)
+    }
+}
+
+impl ComponentManagerInstanceState {
+    pub fn new() -> Self {
+        Self { tasks: vec![], reboot_task: None, root: None }
     }
 }
 
@@ -221,6 +316,8 @@ pub struct ComponentInstance {
     pub component_url: String,
     /// The mode of startup (lazy or eager).
     pub startup: fsys::StartupMode,
+    /// The policy to apply if the component terminates.
+    pub on_terminate: fsys::OnTerminate,
     /// The parent instance. Either a component instance or component manager's instance.
     pub parent: WeakExtendedInstance,
     /// The absolute moniker of this instance.
@@ -258,6 +355,7 @@ impl ComponentInstance {
             AbsoluteMoniker::root(),
             component_url,
             fsys::StartupMode::Lazy,
+            fsys::OnTerminate::None,
             WeakModelContext::new(context),
             WeakExtendedInstance::AboveRoot(component_manager_instance),
             Arc::new(Hooks::new(None)),
@@ -271,6 +369,7 @@ impl ComponentInstance {
         abs_moniker: AbsoluteMoniker,
         component_url: String,
         startup: fsys::StartupMode,
+        on_terminate: fsys::OnTerminate,
         context: WeakModelContext,
         parent: WeakExtendedInstance,
         hooks: Arc<Hooks>,
@@ -281,6 +380,7 @@ impl ComponentInstance {
             abs_moniker,
             component_url,
             startup,
+            on_terminate,
             context,
             parent,
             state: Mutex::new(InstanceState::New),
@@ -394,7 +494,7 @@ impl ComponentInstance {
             if let Some(runner) = decl.get_runner() {
                 // Open up a channel to the runner.
                 let (client_channel, server_channel) =
-                    create_endpoints::<fcrunner::ComponentRunnerMarker>()
+                    endpoints::create_endpoints::<fcrunner::ComponentRunnerMarker>()
                         .map_err(|_| ModelError::InsufficientResources)?;
                 let mut server_channel = server_channel.into_channel();
                 let options = OpenRunnerOptions {
@@ -514,9 +614,8 @@ impl ComponentInstance {
         }
     }
 
-    /// Performs the stop protocol for this component instance.
-    ///
-    /// Returns whether the instance was already running.
+    /// Performs the stop protocol for this component instance. `shut_down` determines whether
+    /// the instance is to be put in the shutdown state; see documentation on [ExecutionState].
     ///
     /// REQUIRES: All dependents have already been stopped.
     pub async fn stop_instance(
@@ -527,6 +626,7 @@ impl ComponentInstance {
         let (was_running, stop_result) = {
             let mut execution = self.lock_execution().await;
             let was_running = execution.runtime.is_some();
+            let shut_down = execution.shut_down | shut_down;
 
             let component_stop_result = {
                 if let Some(runtime) = &mut execution.runtime {
@@ -559,14 +659,22 @@ impl ComponentInstance {
                             self.environment.stop_timeout()
                         );
                     }
+                    if !shut_down && self.on_terminate == fsys::OnTerminate::Reboot {
+                        warn!(
+                            "Component with on_terminate=REBOOT terminated. Rebooting the system"
+                        );
+                        let top_instance = self.top_instance().await?;
+                        top_instance.trigger_reboot().await;
+                    }
                     ret.component_exit_status
                 } else {
                     zx::Status::PEER_CLOSED
                 }
             };
 
+            execution.shut_down = shut_down;
             execution.runtime = None;
-            execution.shut_down |= shut_down;
+
             (was_running, component_stop_result)
         };
 
@@ -817,6 +925,21 @@ impl ComponentInstance {
             _ => &MODEL_LOGGER,
         };
         logger.log(level, format_args!("{}", &message))
+    }
+
+    /// Returns the top instance (component manager's instance) by traversing parent links.
+    async fn top_instance(self: &Arc<Self>) -> Result<Arc<ComponentManagerInstance>, ModelError> {
+        let mut current = self.clone();
+        loop {
+            match current.try_get_parent()? {
+                ExtendedInstance::Component(parent) => {
+                    current = parent.clone();
+                }
+                ExtendedInstance::AboveRoot(parent) => {
+                    return Ok(parent);
+                }
+            }
+        }
     }
 }
 
@@ -1207,6 +1330,7 @@ impl ResolvedInstanceState {
                 component.abs_moniker.child(child_moniker.clone()),
                 child.url.clone(),
                 child.startup,
+                child.on_terminate.unwrap_or(fsys::OnTerminate::None),
                 component.context.clone(),
                 WeakExtendedInstance::Component(WeakComponentInstance::from(component)),
                 Arc::new(Hooks::new(Some(component.hooks.clone()))),

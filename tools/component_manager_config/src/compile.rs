@@ -35,6 +35,7 @@ struct Config {
     component_id_index_path: Option<String>,
     log_all_events: Option<bool>,
     builtin_boot_resolver: Option<BuiltinBootResolver>,
+    reboot_on_terminate_enabled: Option<bool>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -235,6 +236,7 @@ impl TryFrom<Config> for component_internal::Config {
                 Some(builtin_boot_resolver) => Some(builtin_boot_resolver.into()),
                 None => None,
             },
+            reboot_on_terminate_enabled: config.reboot_on_terminate_enabled,
             ..Self::EMPTY
         })
     }
@@ -350,6 +352,7 @@ impl Config {
         extend_if_unset!(self, another, component_id_index_path);
         extend_if_unset!(self, another, log_all_events);
         extend_if_unset!(self, another, builtin_boot_resolver);
+        extend_if_unset!(self, another, reboot_on_terminate_enabled);
         Ok(self)
     }
 
@@ -478,7 +481,7 @@ mod tests {
                         target_moniker: "/foo",
                         environment_name: "my_env",
                     },
-                ]
+                ],
             },
             namespace_capabilities: [
                 {
@@ -496,6 +499,7 @@ mod tests {
             component_id_index_path: "/this/is/an/absolute/path",
             log_all_events: true,
             builtin_boot_resolver: "boot",
+            reboot_on_terminate_enabled: true,
         }"#;
         let config = compile_str(input).expect("failed to compile");
         assert_eq!(
@@ -587,6 +591,7 @@ mod tests {
                 component_id_index_path: Some("/this/is/an/absolute/path".to_string()),
                 log_all_events: Some(true),
                 builtin_boot_resolver: Some(component_internal::BuiltinBootResolver::Boot),
+                reboot_on_terminate_enabled: Some(true),
                 ..component_internal::Config::EMPTY
             }
         );
@@ -673,7 +678,7 @@ mod tests {
         File::create(&input_path).unwrap().write_all(input.as_bytes()).unwrap();
 
         let another_input_path = tmp_dir.path().join("bar.json");
-        let another_input = "{\"list_children_batch_size\": 42,}";
+        let another_input = "{\"list_children_batch_size\": 42, \"reboot_on_terminate_enabled\": true}";
         File::create(&another_input_path).unwrap().write_all(another_input.as_bytes()).unwrap();
 
         let args =
@@ -685,6 +690,7 @@ mod tests {
         let config: component_internal::Config = decode_persistent(&bytes)?;
         assert_eq!(config.debug, Some(true));
         assert_eq!(config.list_children_batch_size, Some(42));
+        assert_eq!(config.reboot_on_terminate_enabled, Some(true));
         Ok(())
     }
 

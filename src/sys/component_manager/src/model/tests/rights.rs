@@ -153,7 +153,7 @@ async fn framework_directory_rights() {
             .expect("failed to clone test dir");
     let directory_host = Arc::new(MockFrameworkDirectoryHost { test_dir_proxy });
     test.model
-        .root
+        .root()
         .hooks
         .install(vec![HooksRegistration::new(
             "MockFrameworkDirectoryHost",
@@ -202,7 +202,7 @@ async fn framework_directory_incompatible_rights() {
             .expect("failed to clone test dir");
     let directory_host = Arc::new(MockFrameworkDirectoryHost { test_dir_proxy });
     test.model
-        .root
+        .root()
         .hooks
         .install(vec![HooksRegistration::new(
             "MockFrameworkDirectoryHost",

@@ -82,6 +82,7 @@ pub struct RoutingTestBuilder {
     custom_outgoing_host_fns: HashMap<String, HostFn>,
     capability_policy: HashMap<CapabilityAllowlistKey, HashSet<AllowlistEntry>>,
     debug_capability_policy: HashMap<CapabilityAllowlistKey, HashSet<(AbsoluteMoniker, String)>>,
+    reboot_on_terminate_enabled: bool,
 }
 
 impl RoutingTestBuilder {
@@ -133,6 +134,11 @@ impl RoutingTestBuilder {
 
     pub fn set_component_id_index_path(mut self, index_path: String) -> Self {
         self.component_id_index_path = Some(index_path);
+        self
+    }
+
+    pub fn set_reboot_on_terminate_enabled(mut self, val: bool) -> Self {
+        self.reboot_on_terminate_enabled = val;
         self
     }
 
@@ -267,6 +273,7 @@ impl RoutingTest {
                 ..Default::default()
             },
             component_id_index_path: builder.component_id_index_path.clone(),
+            reboot_on_terminate_enabled: builder.reboot_on_terminate_enabled,
             ..Default::default()
         };
         let inspector = inspect::Inspector::new();
@@ -282,8 +289,8 @@ impl RoutingTest {
             env_builder.build().await.expect("builtin environment setup failed");
 
         let model = builtin_environment.model.clone();
-        model.root.hooks.install(builder.additional_hooks.clone()).await;
-        model.root.hooks.install(echo_service.hooks()).await;
+        model.root().hooks.install(builder.additional_hooks.clone()).await;
+        model.root().hooks.install(echo_service.hooks()).await;
 
         Self {
             components: builder.components.clone(),
@@ -472,6 +479,20 @@ impl RoutingTest {
         // if this decl is offering/exposing something from `Self`, let's host it
         let mut out_dir = OutDir::new();
         for capability in decl.capabilities.iter() {
+            let path = match capability {
+                CapabilityDecl::Protocol(ProtocolDecl { source_path, .. }) => Some(source_path),
+                CapabilityDecl::Directory(DirectoryDecl { source_path, .. }) => Some(source_path),
+                _ => None,
+            };
+            if let Some(path) = path {
+                if outgoing_paths
+                    .contains_key(&CapabilityPath::try_from(&format!("{}", path) as &str).unwrap())
+                {
+                    // Client installed a custom DirectoryEntry at this path, don't serve the
+                    // default.
+                    continue;
+                }
+            }
             match capability {
                 CapabilityDecl::Protocol(_) => {
                     Self::install_default_out_files(&mut out_dir);
@@ -636,7 +657,7 @@ impl RoutingTestModel for RoutingTest {
 
                 let instance_id = self
                     .model
-                    .root
+                    .root()
                     .try_get_component_id_index()
                     .unwrap()
                     .look_up_moniker(&moniker)
@@ -694,7 +715,7 @@ impl RoutingTestModel for RoutingTest {
                     AbsoluteMoniker::from_relative(&moniker, &storage_relation).unwrap();
                 let component_instance_id = self
                     .model
-                    .root
+                    .root()
                     .try_get_component_id_index()
                     .unwrap()
                     .look_up_moniker(&component_abs_moniker)

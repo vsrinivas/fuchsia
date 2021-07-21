@@ -46,6 +46,7 @@ mod tests {
                 abs_moniker,
                 "test:///bar".into(),
                 fsys::StartupMode::Lazy,
+                fsys::OnTerminate::None,
                 WeakModelContext::default(),
                 WeakExtendedInstance::Component(WeakComponentInstance::default()),
                 Arc::new(Hooks::new(None)),

@@ -23,7 +23,7 @@ type RebootReason = strict enum {
     /// sysmgr crashed.
     SYSMGR_FAILURE = 5;
 
-    /// A critical component managed by sysmgr has failed.
+    /// A critical system component has failed.
     CRITICAL_COMPONENT_FAILURE = 7;
 
     /// A boot partition change was effected.

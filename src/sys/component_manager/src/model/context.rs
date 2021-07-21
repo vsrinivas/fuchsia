@@ -17,6 +17,7 @@ use {
 pub struct ModelContext {
     policy_checker: GlobalPolicyChecker,
     component_id_index: Arc<ComponentIdIndex>,
+    runtime_config: Arc<RuntimeConfig>,
 }
 
 impl ModelContext {
@@ -27,6 +28,7 @@ impl ModelContext {
                 Some(path) => Arc::new(ComponentIdIndex::new(&path).await?),
                 None => Arc::new(ComponentIdIndex::default()),
             },
+            runtime_config: runtime_config.clone(),
             policy_checker: GlobalPolicyChecker::new(runtime_config),
         })
     }
@@ -34,6 +36,10 @@ impl ModelContext {
     /// Returns the runtime policy checker for the model.
     pub fn policy(&self) -> &GlobalPolicyChecker {
         &self.policy_checker
+    }
+
+    pub fn runtime_config(&self) -> &Arc<RuntimeConfig> {
+        &self.runtime_config
     }
 
     pub fn component_id_index(&self) -> Arc<ComponentIdIndex> {
@@ -61,7 +67,7 @@ impl WeakModelContext {
         Self { inner }
     }
 
-    /// Attempts to upgrade this `WeakModelContext` into an `Arc<ModelContext`, if the
+    /// Attempts to upgrade this `WeakModelContext` into an `Arc<ModelContext>`, if the
     /// context has not been destroyed.
     pub fn upgrade(&self) -> Result<Arc<ModelContext>, ModelError> {
         self.inner.upgrade().ok_or_else(|| ModelError::context_not_found())

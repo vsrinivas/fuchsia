@@ -24,6 +24,7 @@ template("component_manager") {
     "//sdk/fidl/fuchsia.component.runner:fuchsia.component.runner-rustc",
     "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
     "//sdk/fidl/fuchsia.diagnostics.types:fuchsia.diagnostics.types-rustc",
+    "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.io2:fuchsia.io2-rustc",
     "//sdk/fidl/fuchsia.kernel:fuchsia.kernel-rustc",
@@ -218,6 +219,7 @@ template("component_manager") {
       non_rust_deps = _non_rust_deps
 
       sources += [
+        "src/model/tests/lifecycle.rs",
         "src/model/tests/mod.rs",
         "src/model/tests/rights.rs",
         "src/model/tests/routing.rs",
