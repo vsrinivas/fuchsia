@@ -2,9 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/scenic/lib/input/injector.h"
-
 #include <lib/fpromise/single_threaded_executor.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -15,6 +14,7 @@
 #include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
+#include "src/ui/scenic/lib/input/touch_injector.h"
 #include "src/ui/scenic/lib/utils/math.h"
 
 using Phase = fuchsia::ui::pointerinjector::EventPhase;
@@ -80,7 +80,7 @@ TEST(InjectorTest, InjectedEvents_ShouldTriggerTheInjectLambda) {
 
   bool connectivity_is_good = true;
   uint32_t num_injections = 0;
-  scenic_impl::input::Injector injector_impl(
+  scenic_impl::input::TouchInjector injector_impl(
       inspect::Node(), InjectorSettingsTemplate(), ViewportTemplate(), injector.NewRequest(),
       /*is_descendant_and_connected=*/
       [&connectivity_is_good](zx_koid_t, zx_koid_t) { return connectivity_is_good; },
@@ -146,7 +146,7 @@ TEST(InjectorTest, InjectionWithNoEvent_ShouldCloseChannel) {
   bool error_callback_fired = false;
   injector.set_error_handler([&error_callback_fired](zx_status_t) { error_callback_fired = true; });
 
-  scenic_impl::input::Injector injector_impl(
+  scenic_impl::input::TouchInjector injector_impl(
       inspect::Node(), InjectorSettingsTemplate(), ViewportTemplate(), injector.NewRequest(),
       /*is_descendant_and_connected=*/
       [](auto...) { return true; },
@@ -175,7 +175,7 @@ TEST(InjectorTest, ClientClosingChannel_ShouldTriggerCancelEvents_ForEachOngoing
   injector.set_error_handler([&error_callback_fired](zx_status_t) { error_callback_fired = true; });
 
   std::vector<uint32_t> cancelled_streams;
-  scenic_impl::input::Injector injector_impl(
+  scenic_impl::input::TouchInjector injector_impl(
       inspect::Node(), InjectorSettingsTemplate(), ViewportTemplate(), injector.NewRequest(),
       /*is_descendant_and_connected=*/
       [](auto...) { return true; },
@@ -241,7 +241,7 @@ TEST(InjectorTest, ServerClosingChannel_ShouldTriggerCancelEvents_ForEachOngoing
   injector.set_error_handler([&error_callback_fired](zx_status_t) { error_callback_fired = true; });
 
   std::vector<uint32_t> cancelled_streams;
-  scenic_impl::input::Injector injector_impl(
+  scenic_impl::input::TouchInjector injector_impl(
       inspect::Node(), InjectorSettingsTemplate(), ViewportTemplate(), injector.NewRequest(),
       /*is_descendant_and_connected=*/
       [](auto...) { return true; },
@@ -307,7 +307,7 @@ TEST(InjectorTest, InjectionOfEmptyEvent_ShouldCloseChannel) {
   injector.set_error_handler([&error_callback_fired](auto) { error_callback_fired = true; });
 
   bool injection_lambda_fired = false;
-  scenic_impl::input::Injector injector_impl(
+  scenic_impl::input::TouchInjector injector_impl(
       inspect::Node(), InjectorSettingsTemplate(), ViewportTemplate(), injector.NewRequest(),
       /*is_descendant_and_connected=*/
       [](zx_koid_t, zx_koid_t) { return true; },
@@ -341,7 +341,7 @@ TEST(InjectorTest, ClientClosingChannel_ShouldTriggerOnChannelClosedLambda) {
       [&client_error_callback_fired](zx_status_t) { client_error_callback_fired = true; });
 
   bool on_channel_closed_callback_fired = false;
-  scenic_impl::input::Injector injector_impl(
+  scenic_impl::input::TouchInjector injector_impl(
       inspect::Node(), InjectorSettingsTemplate(), ViewportTemplate(), injector.NewRequest(),
       /*is_descendant_and_connected=*/[](auto...) { return true; },
       /*inject=*/[](auto...) {},
@@ -369,7 +369,7 @@ TEST(InjectorTest, ServerClosingChannel_ShouldTriggerOnChannelClosedLambda) {
       [&client_error_callback_fired](zx_status_t) { client_error_callback_fired = true; });
 
   bool on_channel_closed_callback_fired = false;
-  scenic_impl::input::Injector injector_impl(
+  scenic_impl::input::TouchInjector injector_impl(
       inspect::Node(), InjectorSettingsTemplate(), ViewportTemplate(), injector.NewRequest(),
       /*is_descendant_and_connected=*/[](auto...) { return true; },
       /*inject=*/[](auto...) {},
@@ -389,7 +389,6 @@ TEST(InjectorTest, ServerClosingChannel_ShouldTriggerOnChannelClosedLambda) {
 }
 
 // Test for lazy connectivity detection.
-// TODO(fxbug.dev/50348): Remove when instant connectivity breakage detection is added.
 TEST(InjectorTest, InjectionWithBadConnectivity_ShouldCloseChannel) {
   // Test loop to be able to control dispatch without having to create an entire test class
   // subclassing TestLoopFixture.
@@ -407,7 +406,7 @@ TEST(InjectorTest, InjectionWithBadConnectivity_ShouldCloseChannel) {
 
   bool connectivity_is_good = true;
   uint32_t num_cancel_events = 0;
-  scenic_impl::input::Injector injector_impl(
+  scenic_impl::input::TouchInjector injector_impl(
       inspect::Node(), InjectorSettingsTemplate(), ViewportTemplate(), injector.NewRequest(),
       /*is_descendant_and_connected=*/
       [&connectivity_is_good](zx_koid_t, zx_koid_t) { return connectivity_is_good; },
@@ -485,7 +484,7 @@ TEST_P(InjectorInvalidEventsTest, InjectEventWithMissingField_ShouldCloseChannel
     error = status;
   });
 
-  scenic_impl::input::Injector injector_impl(
+  scenic_impl::input::TouchInjector injector_impl(
       inspect::Node(), InjectorSettingsTemplate(), ViewportTemplate(), injector.NewRequest(),
       /*is_descendant_and_connected=*/
       [](auto...) { return true; },
@@ -541,7 +540,7 @@ TEST_P(InjectorGoodEventStreamTest,
   bool error_callback_fired = false;
   injector.set_error_handler([&error_callback_fired](zx_status_t) { error_callback_fired = true; });
 
-  scenic_impl::input::Injector injector_impl(
+  scenic_impl::input::TouchInjector injector_impl(
       inspect::Node(), InjectorSettingsTemplate(), ViewportTemplate(), injector.NewRequest(),
       /*is_descendant_and_connected=*/
       [](auto...) { return true; },  // Always true.
@@ -575,7 +574,7 @@ TEST_P(InjectorGoodEventStreamTest,
   bool error_callback_fired = false;
   injector.set_error_handler([&error_callback_fired](zx_status_t) { error_callback_fired = true; });
 
-  scenic_impl::input::Injector injector_impl(
+  scenic_impl::input::TouchInjector injector_impl(
       inspect::Node(), InjectorSettingsTemplate(), ViewportTemplate(), injector.NewRequest(),
       /*is_descendant_and_connected=*/
       [](auto...) { return true; },  // Always true.
@@ -640,7 +639,7 @@ TEST_P(InjectorBadEventStreamTest, InjectionWithBadEventStream_ShouldCloseChanne
     error = status;
   });
 
-  scenic_impl::input::Injector injector_impl(
+  scenic_impl::input::TouchInjector injector_impl(
       inspect::Node(), InjectorSettingsTemplate(), ViewportTemplate(), injector.NewRequest(),
       /*is_descendant_and_connected=*/[](auto...) { return true; },
       /*inject=*/[](auto...) {},
@@ -675,7 +674,7 @@ TEST_P(InjectorBadEventStreamTest, InjectionWithBadEventStream_ShouldCloseChanne
     error = status;
   });
 
-  scenic_impl::input::Injector injector_impl(
+  scenic_impl::input::TouchInjector injector_impl(
       inspect::Node(), InjectorSettingsTemplate(), ViewportTemplate(), injector.NewRequest(),
       /*is_descendant_and_connected=*/[](auto...) { return true; },
       /*inject=*/[](auto...) {},
@@ -706,7 +705,7 @@ TEST(InjectorTest, InjectedViewport_ShouldNotTriggerInjectLambda) {
   injector.set_error_handler([&error_callback_fired](zx_status_t) { error_callback_fired = true; });
 
   bool inject_lambda_fired = false;
-  scenic_impl::input::Injector injector_impl(
+  scenic_impl::input::TouchInjector injector_impl(
       inspect::Node(), InjectorSettingsTemplate(), ViewportTemplate(), injector.NewRequest(),
       /*is_descendant_and_connected=*/[](zx_koid_t, zx_koid_t) { return true; },
       /*inject=*/[&inject_lambda_fired](auto...) { inject_lambda_fired = true; },
@@ -841,7 +840,7 @@ TEST_P(InjectorBadViewportTest, InjectBadViewport_ShouldCloseChannel) {
   injector.set_error_handler([&error_callback_fired](zx_status_t) { error_callback_fired = true; });
 
   bool inject_lambda_fired = false;
-  scenic_impl::input::Injector injector_impl(
+  scenic_impl::input::TouchInjector injector_impl(
       inspect::Node(), InjectorSettingsTemplate(), ViewportTemplate(), injector.NewRequest(),
       /*is_descendant_and_connected=*/[](zx_koid_t, zx_koid_t) { return true; },
       /*inject=*/[&inject_lambda_fired](auto...) { inject_lambda_fired = true; },
@@ -938,7 +937,7 @@ class InjectorInspectionTest : public gtest::TestLoopFixture {
   inspect::Inspector inspector_;
   DevicePtr injector_;
   uint64_t num_injections_ = 0;
-  std::optional<scenic_impl::input::Injector> injector_impl_;
+  std::optional<scenic_impl::input::TouchInjector> injector_impl_;
 };
 
 TEST_F(InjectorInspectionTest, HistogramsTrackInjections) {

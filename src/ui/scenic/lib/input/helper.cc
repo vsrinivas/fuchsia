@@ -4,26 +4,14 @@
 
 #include "src/ui/scenic/lib/input/helper.h"
 
-#include "src/ui/lib/escher/util/type_utils.h"
-#include "src/ui/scenic/lib/gfx/resources/compositor/layer.h"
-#include "src/ui/scenic/lib/gfx/resources/compositor/layer_stack.h"
+#include <lib/syslog/cpp/macros.h>
+
 #include "src/ui/scenic/lib/utils/math.h"
 
 namespace scenic_impl::input {
 
 using PointerEventPhase = fuchsia::ui::input::PointerEventPhase;
 using GfxPointerEvent = fuchsia::ui::input::PointerEvent;
-using InjectorEventPhase = fuchsia::ui::pointerinjector::EventPhase;
-
-GfxPointerEvent ClonePointerWithCoords(const GfxPointerEvent& event, const glm::vec2& coords) {
-  GfxPointerEvent clone;
-  fidl::Clone(event, &clone);
-  clone.x = coords.x;
-  clone.y = coords.y;
-  return clone;
-}
-
-glm::vec2 PointerCoords(const GfxPointerEvent& event) { return {event.x, event.y}; }
 
 trace_flow_id_t PointerTraceHACK(float fa, float fb) {
   uint32_t ia, ib;
@@ -79,60 +67,6 @@ PointerEventPhase InternalPhaseToGfxPhase(Phase phase) {
       FX_CHECK(false) << "Should never be reached.";
       return static_cast<PointerEventPhase>(0);
   };
-}
-
-std::vector<InternalPointerEvent> PointerInjectorEventToInternalPointerEvent(
-    const fuchsia::ui::pointerinjector::Event& event, uint32_t device_id, const Viewport& viewport,
-    zx_koid_t context, zx_koid_t target) {
-  InternalPointerEvent internal_event;
-  internal_event.timestamp = event.timestamp();
-  internal_event.device_id = device_id;
-
-  const fuchsia::ui::pointerinjector::PointerSample& pointer_sample = event.data().pointer_sample();
-  internal_event.pointer_id = pointer_sample.pointer_id();
-  internal_event.viewport = viewport;
-  internal_event.position_in_viewport = {pointer_sample.position_in_viewport()[0],
-                                         pointer_sample.position_in_viewport()[1]};
-  internal_event.context = context;
-  internal_event.target = target;
-
-  std::vector<InternalPointerEvent> events;
-  switch (pointer_sample.phase()) {
-    case InjectorEventPhase::ADD: {
-      // Insert extra event.
-      InternalPointerEvent add_clone = internal_event;
-      add_clone.phase = Phase::kAdd;
-      events.emplace_back(std::move(add_clone));
-      internal_event.phase = Phase::kDown;
-      events.emplace_back(std::move(internal_event));
-      break;
-    }
-    case InjectorEventPhase::CHANGE: {
-      internal_event.phase = Phase::kChange;
-      events.emplace_back(std::move(internal_event));
-      break;
-    }
-    case InjectorEventPhase::REMOVE: {
-      // Insert extra event.
-      InternalPointerEvent up_clone = internal_event;
-      up_clone.phase = Phase::kUp;
-      events.emplace_back(std::move(up_clone));
-      internal_event.phase = Phase::kRemove;
-      events.emplace_back(std::move(internal_event));
-      break;
-    }
-    case InjectorEventPhase::CANCEL: {
-      internal_event.phase = Phase::kCancel;
-      events.emplace_back(std::move(internal_event));
-      break;
-    }
-    default: {
-      FX_CHECK(false) << "unsupported phase: " << static_cast<uint32_t>(pointer_sample.phase());
-      break;
-    }
-  }
-
-  return events;
 }
 
 InternalPointerEvent GfxPointerEventToInternalEvent(

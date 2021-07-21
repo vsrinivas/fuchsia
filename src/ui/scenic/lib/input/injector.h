@@ -8,10 +8,12 @@
 #include <fuchsia/ui/pointerinjector/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fidl/cpp/binding.h>
+#include <lib/inspect/cpp/inspect.h>
 
+#include <deque>
 #include <unordered_map>
 
-#include "src/ui/scenic/lib/input/helper.h"
+#include "src/lib/fxl/macros.h"
 #include "src/ui/scenic/lib/input/internal_pointer_event.h"
 #include "src/ui/scenic/lib/input/stream_id.h"
 
@@ -26,6 +28,10 @@ struct InjectorSettings {
       fuchsia::ui::pointerinjector::DeviceType(0u);
   zx_koid_t context_koid = ZX_KOID_INVALID;
   zx_koid_t target_koid = ZX_KOID_INVALID;
+
+  std::optional<fuchsia::input::report::Axis> scroll_v_range;
+  std::optional<fuchsia::input::report::Axis> scroll_h_range;
+  std::vector<uint8_t> button_identifiers;
 };
 
 // Utility that Injectors use to send diagnostics to Inspect.
@@ -67,7 +73,6 @@ class Injector : public fuchsia::ui::pointerinjector::Device {
            fidl::InterfaceRequest<fuchsia::ui::pointerinjector::Device> device,
            fit::function<bool(/*descendant*/ zx_koid_t, /*ancestor*/ zx_koid_t)>
                is_descendant_and_connected,
-           fit::function<void(const InternalPointerEvent&, StreamId stream_id)> inject,
            fit::function<void()> on_channel_closed);
 
   // Check the validity of a Viewport.
@@ -77,6 +82,17 @@ class Injector : public fuchsia::ui::pointerinjector::Device {
   // |fuchsia::ui::pointerinjector::Device|
   void Inject(std::vector<fuchsia::ui::pointerinjector::Event> events,
               InjectCallback callback) override;
+
+ protected:
+  // Forwards the event to device-specific handler in InputSystem (and eventually the client).
+  virtual void ForwardEvent(const fuchsia::ui::pointerinjector::Event& event,
+                            StreamId stream_id) = 0;
+
+  // Sends an appropriate Cancel event.
+  virtual void CancelStream(uint32_t pointer_id, StreamId stream_id) = 0;
+
+  const InjectorSettings& settings() const { return settings_; }
+  const Viewport& viewport() const { return viewport_; }
 
  private:
   // Return value is either both valid, {ZX_OK, valid stream id} or both
@@ -99,13 +115,11 @@ class Injector : public fuchsia::ui::pointerinjector::Device {
   // they might be made on a destroyed object.
   void CloseChannel(zx_status_t epitaph);
 
-  InjectorInspector inspector_;
-
-  fidl::Binding<fuchsia::ui::pointerinjector::Device> binding_;
-
-  // Client defined data.
+  // Client-defined data.
   const InjectorSettings settings_;
   Viewport viewport_;
+
+  fidl::Binding<fuchsia::ui::pointerinjector::Device> binding_;
 
   // Tracks stream's status (per stream id) as it moves through its state machine. Used to
   // validate each event's phase.
@@ -118,12 +132,11 @@ class Injector : public fuchsia::ui::pointerinjector::Device {
   fit::function<bool(/*descendant*/ zx_koid_t, /*ancestor*/ zx_koid_t)>
       is_descendant_and_connected_;
 
-  // Used to inject the event into InputSystem for dispatch to clients.
-  const fit::function<void(const InternalPointerEvent&, StreamId)> inject_;
-
   // Called both when an error is triggered by either the remote or the local side of the channel.
   // Triggers destruction of this object.
   const fit::function<void()> on_channel_closed_;
+
+  InjectorInspector inspector_;
 };
 
 }  // namespace scenic_impl::input

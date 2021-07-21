@@ -25,7 +25,6 @@ executable("unittests") {
     "mouse_delivery_test.cc",
     "mouse_source_test.cc",
     "pointer_capture_test.cc",
-    "pointer_event_conversion_test.cc",
     "pointerinjector_registry_unittest.cc",
     "touch_source_test.cc",
     "view_tree_input_integration_test.cc",

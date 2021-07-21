@@ -30,6 +30,8 @@ source_set("input") {
     "pointerinjector_registry.h",
     "stream_id.cc",
     "stream_id.h",
+    "touch_injector.cc",
+    "touch_injector.h",
     "touch_source.cc",
     "touch_source.h",
   ]

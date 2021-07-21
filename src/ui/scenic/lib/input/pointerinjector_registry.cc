@@ -6,6 +6,7 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include "src/ui/scenic/lib/input/touch_injector.h"
 #include "src/ui/scenic/lib/utils/helpers.h"
 #include "src/ui/scenic/lib/utils/math.h"
 
@@ -65,23 +66,16 @@ bool IsValidConfig(const fuchsia::ui::pointerinjector::Config& config) {
 }  // namespace
 
 PointerinjectorRegistry::PointerinjectorRegistry(sys::ComponentContext* context,
-                                                 InjectFunc inject_touch_exclusive,
-                                                 InjectFunc inject_touch_hit_tested,
-                                                 InjectFunc inject_mouse_exclusive,
-                                                 InjectFunc inject_mouse_hit_tested,
+                                                 TouchInjectFunc inject_touch_exclusive,
+                                                 TouchInjectFunc inject_touch_hit_tested,
+                                                 MouseInjectFunc inject_mouse_exclusive,
+                                                 MouseInjectFunc inject_mouse_hit_tested,
                                                  inspect::Node inspect_node)
-    : inspect_node_(std::move(inspect_node)) {
-  // Can't use an initializer list for this, since InjectFunc is move-only. Otherwise
-  // |inject_funcs_| could be made const.
-  inject_funcs_.try_emplace({DeviceType::TOUCH, DispatchPolicy::EXCLUSIVE_TARGET},
-                            std::move(inject_touch_exclusive));
-  inject_funcs_.try_emplace({DeviceType::TOUCH, DispatchPolicy::TOP_HIT_AND_ANCESTORS_IN_TARGET},
-                            std::move(inject_touch_hit_tested));
-  inject_funcs_.try_emplace({DeviceType::MOUSE, DispatchPolicy::EXCLUSIVE_TARGET},
-                            std::move(inject_mouse_exclusive));
-  inject_funcs_.try_emplace({DeviceType::MOUSE, DispatchPolicy::MOUSE_HOVER_AND_LATCH_IN_TARGET},
-                            std::move(inject_mouse_hit_tested));
-
+    : inject_touch_exclusive_(std::move(inject_touch_exclusive)),
+      inject_touch_hit_tested_(std::move(inject_touch_hit_tested)),
+      inject_mouse_exclusive_(std::move(inject_mouse_exclusive)),
+      inject_mouse_hit_tested_(std::move(inject_mouse_hit_tested)),
+      inspect_node_(std::move(inspect_node)) {
   if (context) {
     // Adding the service here is safe since the PointerinjectorRegistry instance in InputSystem is
     // created at construction time..
@@ -112,8 +106,6 @@ void PointerinjectorRegistry::Register(
     return;
   }
 
-  // TODO(fxbug.dev/50348): Add a callback to kill the channel immediately if connectivity breaks.
-
   const InjectorId id = ++last_injector_id_;
   InjectorSettings settings{.dispatch_policy = config.dispatch_policy(),
                             .device_id = config.device_id(),
@@ -126,19 +118,34 @@ void PointerinjectorRegistry::Register(
           utils::ColumnMajorMat3VectorToMat4(config.viewport().viewport_to_context_transform()),
   };
 
-  const auto [it, success] = injectors_.try_emplace(
-      id, inspect_node_.CreateChild(inspect_node_.UniqueName("injector-")), std::move(settings),
-      std::move(viewport), std::move(injector),
-      /*is_descendant_and_connected*/
-      [this](zx_koid_t descendant, zx_koid_t ancestor) {
+  fit::function<bool(/*descendant*/ zx_koid_t, /*ancestor*/ zx_koid_t)>
+      is_descendant_and_connected = [this](zx_koid_t descendant, zx_koid_t ancestor) {
         return view_tree_snapshot_->IsDescendant(descendant, ancestor);
-      },
-      /*inject*/
-      [&inject_func = inject_funcs_.at({settings.device_type, settings.dispatch_policy})](
-          const InternalPointerEvent& event, StreamId stream_id) { inject_func(event, stream_id); },
-      /*on_channel_closed*/
-      [this, id] { injectors_.erase(id); });
-  FX_CHECK(success) << "Injector already exists.";
+      };
+  fit::function<void()> on_channel_closed = [this, id] { injectors_.erase(id); };
+
+  if (settings.device_type == fuchsia::ui::pointerinjector::DeviceType::TOUCH) {
+    const auto [_, success] = injectors_.emplace(
+        id,
+        std::make_unique<TouchInjector>(
+            inspect_node_.CreateChild(inspect_node_.UniqueName("touch-injector-")),
+            std::move(settings), std::move(viewport), std::move(injector),
+            std::move(is_descendant_and_connected),
+            /*inject*/
+            [&inject_func = settings.dispatch_policy ==
+                                    fuchsia::ui::pointerinjector::DispatchPolicy::EXCLUSIVE_TARGET
+                                ? inject_touch_exclusive_
+                                : inject_touch_hit_tested_](const InternalPointerEvent& event,
+                                                            StreamId stream_id) {
+              inject_func(event, stream_id);
+            },
+            std::move(on_channel_closed)));
+    FX_CHECK(success) << "Injector already exists.";
+  } else if (settings.device_type == fuchsia::ui::pointerinjector::DeviceType::MOUSE) {
+    // TODO(fxbug.dev/76639): Implement MouseInjector.
+  } else {
+    FX_NOTREACHED();
+  }
 
   callback();
 }

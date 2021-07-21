@@ -6,6 +6,7 @@
 #define SRC_UI_SCENIC_LIB_INPUT_POINTERINJECTOR_REGISTRY_H_
 
 #include <fuchsia/ui/pointerinjector/cpp/fidl.h>
+#include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/function.h>
 #include <lib/sys/cpp/component_context.h>
 
@@ -17,14 +18,16 @@
 
 namespace scenic_impl::input {
 
-using InjectFunc = fit::function<void(const InternalPointerEvent& event, StreamId stream_id)>;
+using TouchInjectFunc = fit::function<void(const InternalPointerEvent& event, StreamId stream_id)>;
+using MouseInjectFunc = fit::function<void(const InternalMouseEvent& event, StreamId stream_id)>;
 
 // Handles the registration and config validation of fuchsia::ui::pointerinjector clients.
 class PointerinjectorRegistry : public fuchsia::ui::pointerinjector::Registry {
  public:
-  PointerinjectorRegistry(sys::ComponentContext* context, InjectFunc inject_touch_exclusive,
-                          InjectFunc inject_touch_hit_tested, InjectFunc inject_mouse_exclusive,
-                          InjectFunc inject_mouse_hit_tested,
+  PointerinjectorRegistry(sys::ComponentContext* context, TouchInjectFunc inject_touch_exclusive,
+                          TouchInjectFunc inject_touch_hit_tested,
+                          MouseInjectFunc inject_mouse_exclusive,
+                          MouseInjectFunc inject_mouse_hit_tested,
                           inspect::Node inspect_node = inspect::Node());
 
   // |fuchsia.ui.pointerinjector.Registry|
@@ -37,21 +40,16 @@ class PointerinjectorRegistry : public fuchsia::ui::pointerinjector::Registry {
   }
 
  private:
-  using InjectorType = std::pair<fuchsia::ui::pointerinjector::DeviceType,
-                                 fuchsia::ui::pointerinjector::DispatchPolicy>;
-  struct InjectorTypeHash {
-    std::size_t operator()(const InjectorType& pair) const {
-      return (static_cast<uint64_t>(pair.first) << 32) | static_cast<uint64_t>(pair.second);
-    }
-  };
-
   using InjectorId = uint64_t;
   InjectorId last_injector_id_ = 0;
-  std::unordered_map<InjectorId, Injector> injectors_;
+  std::unordered_map<InjectorId, std::unique_ptr<Injector>> injectors_;
 
   fidl::BindingSet<fuchsia::ui::pointerinjector::Registry> injector_registry_;
 
-  std::unordered_map<InjectorType, InjectFunc, InjectorTypeHash> inject_funcs_;
+  const TouchInjectFunc inject_touch_exclusive_;
+  const TouchInjectFunc inject_touch_hit_tested_;
+  const MouseInjectFunc inject_mouse_exclusive_;
+  const MouseInjectFunc inject_mouse_hit_tested_;
 
   std::shared_ptr<const view_tree::Snapshot> view_tree_snapshot_ =
       std::make_shared<const view_tree::Snapshot>();

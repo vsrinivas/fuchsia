@@ -12,6 +12,7 @@
 #include <map>
 #include <optional>
 
+#include "src/ui/scenic/lib/gfx/engine/scene_graph.h"
 #include "src/ui/scenic/lib/input/a11y_legacy_contender.h"
 #include "src/ui/scenic/lib/input/a11y_registry.h"
 #include "src/ui/scenic/lib/input/gesture_arena.h"

@@ -6,6 +6,7 @@
 
 #include <lib/fostr/fidl/fuchsia/ui/pointerinjector/formatting.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/trace/event.h>
 
 #include "lib/async/cpp/time.h"
 #include "lib/async/default.h"
@@ -103,17 +104,6 @@ void InjectorInspector::ReportStats(inspect::Inspector& inspector) const {
 
 namespace {
 
-InternalPointerEvent CreateCancelEvent(uint32_t device_id, uint32_t pointer_id, zx_koid_t context,
-                                       zx_koid_t target) {
-  InternalPointerEvent cancel_event;
-  cancel_event.phase = Phase::kCancel;
-  cancel_event.device_id = device_id;
-  cancel_event.pointer_id = pointer_id;
-  cancel_event.context = context;
-  cancel_event.target = target;
-  return cancel_event;
-}
-
 bool HasRequiredFields(const fuchsia::ui::pointerinjector::PointerSample& pointer) {
   return pointer.has_pointer_id() && pointer.has_phase() && pointer.has_position_in_viewport();
 }
@@ -147,17 +137,14 @@ Injector::Injector(inspect::Node inspect_node, InjectorSettings settings, Viewpo
                    fidl::InterfaceRequest<fuchsia::ui::pointerinjector::Device> device,
                    fit::function<bool(/*descendant*/ zx_koid_t, /*ancestor*/ zx_koid_t)>
                        is_descendant_and_connected,
-                   fit::function<void(const InternalPointerEvent&, StreamId)> inject,
                    fit::function<void()> on_channel_closed)
-    : inspector_(std::move(inspect_node)),
-      binding_(this, std::move(device)),
-      settings_(std::move(settings)),
+    : settings_(std::move(settings)),
       viewport_(std::move(viewport)),
+      binding_(this, std::move(device)),
       is_descendant_and_connected_(std::move(is_descendant_and_connected)),
-      inject_(std::move(inject)),
-      on_channel_closed_(std::move(on_channel_closed)) {
+      on_channel_closed_(std::move(on_channel_closed)),
+      inspector_(std::move(inspect_node)) {
   FX_DCHECK(is_descendant_and_connected_);
-  FX_DCHECK(inject_);
   FX_LOGS(INFO) << "Injector : Registered new injector with "
                 << " Device Id: " << settings_.device_id
                 << " Device Type: " << static_cast<uint32_t>(settings_.device_type)
@@ -176,8 +163,6 @@ Injector::Injector(inspect::Node inspect_node, InjectorSettings settings, Viewpo
 void Injector::Inject(std::vector<fuchsia::ui::pointerinjector::Event> events,
                       InjectCallback callback) {
   TRACE_DURATION("input", "Injector::Inject");
-  // TODO(fxbug.dev/50348): Find a way to make to listen for scene graph events instead of checking
-  // connectivity per injected event.
   if (!is_descendant_and_connected_(settings_.target_koid, settings_.context_koid)) {
     FX_LOGS(ERROR) << "Inject() called with Context (koid: " << settings_.context_koid
                    << ") and Target (koid: " << settings_.target_koid
@@ -228,19 +213,8 @@ void Injector::Inject(std::vector<fuchsia::ui::pointerinjector::Event> events,
       if (event.has_trace_flow_id()) {
         TRACE_FLOW_END("input", "dispatch_event_to_scenic", event.trace_flow_id());
       }
-
       ChattyLog(event);  // Scenic accepts the event, put it on chatty log.
-
-      // Translate events to internal representation and inject.
-      std::vector<InternalPointerEvent> internal_events =
-          PointerInjectorEventToInternalPointerEvent(event, settings_.device_id, viewport_,
-                                                     settings_.context_koid, settings_.target_koid);
-
-      FX_DCHECK(stream_id != kInvalidStreamId);
-      for (auto& internal_event : internal_events) {
-        inject_(internal_event, stream_id);
-      }
-
+      ForwardEvent(event, stream_id);
       continue;
     } else {
       // Should be unreachable.
@@ -310,9 +284,7 @@ StreamId Injector::ValidateEventStream(uint32_t pointer_id, EventPhase phase) {
 void Injector::CancelOngoingStreams() {
   // Inject CANCEL event for each ongoing stream.
   for (const auto [pointer_id, stream_id] : ongoing_streams_) {
-    inject_(CreateCancelEvent(settings_.device_id, pointer_id, settings_.context_koid,
-                              settings_.target_koid),
-            stream_id);
+    CancelStream(pointer_id, stream_id);
   }
   ongoing_streams_.clear();
 }
