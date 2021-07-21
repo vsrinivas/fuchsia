@@ -98,10 +98,3 @@ void LegacyBootInitMemory() {
   auto& pool = Allocation::GetPool();
   ZX_ASSERT(pool.Init(all_ranges).is_ok());
 }
-
-void EnablePaging() {
-  auto mem_config = cpp20::as_bytes(gLegacyBoot.mem_config);
-  auto table = zbitl::MemRangeTable::FromSpan(ZBI_TYPE_MEM_CONFIG, mem_config);
-  ZX_ASSERT(table.is_ok());
-  ArchSetUpAddressSpaceLate(table.value());
-}

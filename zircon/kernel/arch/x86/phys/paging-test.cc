@@ -19,7 +19,7 @@ const char Symbolize::kProgramName_[] = "paging-test";
 int TestMain(void* ptr, arch::EarlyTicks) {
   InitMemory(ptr);
 
-  EnablePaging();
+  ArchSetUpAddressSpaceLate();
 
   static volatile int datum = 17;
   ZX_ASSERT(datum == 17);

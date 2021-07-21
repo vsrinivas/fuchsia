@@ -17,9 +17,9 @@
 
 #include "address-space.h"
 
-void ArchSetUpAddressSpaceEarly(const zbitl::MemRangeTable& table) {}
+void ArchSetUpAddressSpaceEarly() {}
 
-void ArchSetUpAddressSpaceLate(const zbitl::MemRangeTable& table) {
+void ArchSetUpAddressSpaceLate() {
   ZX_ASSERT_MSG(arch::BootCpuid<arch::CpuidAmdFeatureFlagsD>().lm(),
                 "CPU does not support 64-bit mode!");
   ZX_ASSERT_MSG(arch::BootCpuid<arch::CpuidFeatureFlagsD>().pse(), "x86-64 requires PSE support!");
@@ -53,7 +53,7 @@ void ArchSetUpAddressSpaceLate(const zbitl::MemRangeTable& table) {
   // areas that should be reserved.  So it's preferable to go directly to the
   // physical page allocator that respects explicitly reserved ranges.
   AllocationMemoryManager manager(Allocation::GetPool());
-  InstallIdentityMapPageTables(manager, table);
+  InstallIdentityMapPageTables(manager);
 
   // Now actually turn on paging.  This affects us immediately in 32-bit mode,
   // as well as being mandatory for 64-bit mode.

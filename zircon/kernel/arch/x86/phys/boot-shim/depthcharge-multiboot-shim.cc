@@ -14,6 +14,7 @@
 #include <zircon/boot/image.h>
 
 #include <phys/main.h>
+#include <phys/page-table.h>
 #include <phys/symbolize.h>
 
 #include "acpi.h"
@@ -173,7 +174,7 @@ void PhysMain(void* ptr, arch::EarlyTicks boot_ticks) {
 
   TrampolineBoot boot;
   if ((IsProperZbi(shim.input_zbi()) ? LoadProperZbi : LoadDepthchargeZbi)(shim, boot)) {
-    EnablePaging();
+    ArchSetUpAddressSpaceLate();
     Allocation::GetPool().PrintMemoryRanges(Symbolize::kProgramName_);
     boot.Boot();
   }

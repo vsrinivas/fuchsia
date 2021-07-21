@@ -16,11 +16,6 @@ namespace memalloc {
 class Pool;
 }  // namespace memalloc
 
-// Forward-declared; fully declared in <lib/zbitl/items/mem_config.h>.
-namespace zbitl {
-class MemRangeTable;
-}  // namespace zbitl
-
 // Perform architecture-specific address space set-up. The "Early" variant
 // assumes that only the boot conditions hold and is expected to be called
 // before "normal work" can proceed; otherwise, the "Late" variant assumes that
@@ -30,12 +25,8 @@ class MemRangeTable;
 //
 // In certain architectural contexts, early or late set-up will not make
 // practical sense, and the associated functions may be no-ops.
-//
-// TODO(fxbug.dev/77359): Remove the MemRangeTable argument once memalloc::Pool
-// is the new allocator: the information encoded in the former is encoded in
-// the latter.
-void ArchSetUpAddressSpaceEarly(const zbitl::MemRangeTable& table);
-void ArchSetUpAddressSpaceLate(const zbitl::MemRangeTable& table);
+void ArchSetUpAddressSpaceEarly();
+void ArchSetUpAddressSpaceLate();
 
 // A page_table::MemoryManager that allocates by way of Allocator.
 class AllocationMemoryManager final : public page_table::MemoryManager {

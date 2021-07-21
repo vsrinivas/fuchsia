@@ -6,13 +6,15 @@
 
 #include <lib/arch/x86/boot-cpuid.h>
 #include <lib/arch/x86/system.h>
+#include <lib/memalloc/pool.h>
+#include <lib/memalloc/range.h>
 #include <lib/page-table/builder.h>
 #include <lib/page-table/types.h>
-#include <lib/zbitl/items/mem_config.h>
 
 #include <fbl/algorithm.h>
 #include <ktl/algorithm.h>
 #include <ktl/optional.h>
+#include <phys/allocation.h>
 
 namespace {
 
@@ -30,41 +32,18 @@ void SwitchToPageTable(Paddr root) {
 
 }  // namespace
 
-void InstallIdentityMapPageTables(page_table::MemoryManager& allocator,
-                                  const zbitl::MemRangeTable& memory_map) {
-  // Get the range of addresses in the memory map.
-  //
-  // It is okay if we over-approximate the required ranges, but we want to
-  // ensure that all physical memory is in the range.
-  uint64_t min_addr = UINT64_MAX;
-  uint64_t max_addr = 0;
-  size_t ranges = 0;
-  for (const auto& range : memory_map) {
-    min_addr = ktl::min(range.paddr, min_addr);
-    max_addr = ktl::max(range.paddr + range.length, max_addr);
-    ranges++;
-  }
-
-  // Ensure we encountered at least one range (and hence our memory
-  // range is non-empty).
-  if (ranges == 0) {
-    ZX_PANIC("No memory ranges found.");
-  }
-  ZX_DEBUG_ASSERT(min_addr < max_addr);
-
-  printf("Physical memory range 0x%" PRIx64 " -- 0x%" PRIx64 " (~%" PRIu64 " MiB)\n", min_addr,
-         max_addr, (max_addr - min_addr) / 1024 / 1024);
-
+void InstallIdentityMapPageTables(page_table::MemoryManager& manager) {
   // Create a page table data structure.
-  ktl::optional builder = page_table::AddressSpaceBuilder::Create(allocator, arch::BootCpuidIo{});
+  ktl::optional builder = page_table::AddressSpaceBuilder::Create(manager, arch::BootCpuidIo{});
   if (!builder.has_value()) {
     ZX_PANIC("Failed to create an AddressSpaceBuilder.");
   }
 
-  // Map in the physical range.
-  uint64_t start = fbl::round_down(min_addr, ZX_MAX_PAGE_SIZE);
-  uint64_t end = fbl::round_up(max_addr, ZX_MAX_PAGE_SIZE);
-  zx_status_t result = builder->MapRegion(Vaddr(start), Paddr(start), end - start,
+  const auto& pool = Allocation::GetPool();
+  uint64_t first = fbl::round_up(pool.front().addr, ZX_MAX_PAGE_SIZE);
+  uint64_t last = fbl::round_down(pool.back().end(), ZX_MAX_PAGE_SIZE);
+  ZX_DEBUG_ASSERT(first < last);
+  zx_status_t result = builder->MapRegion(Vaddr(first), Paddr(first), last - first,
                                           page_table::CacheAttributes::kNormal);
   if (result != ZX_OK) {
     ZX_PANIC("Failed to map in range.");

@@ -177,17 +177,7 @@ fitx::result<BootZbi::Error> TrampolineBoot::Load(uint32_t extra_data_capacity) 
   // up the address space out of the allocator, which will avoid allocating
   // from out of the load image's range that we just reserved.
 #ifdef __x86_64__
-  // TODO(fxbug.dev/77359): Reaching into the ZBI here is a layering violation.
-  // This will be removed once ArchSetUpAddressSpaceLate() no longer needs a
-  // zbitl::MemRangeTable as input.
-  zbitl::View<zbitl::ByteView> view(DataZbi().storage());
-  zbitl::MemRangeTable table;
-  if (auto result = zbitl::MemRangeTable::FromView(view); result.is_error()) {
-    return fitx::error{BootZbi::Error{.zbi_error = std::move(result).error_value()}};
-  } else {
-    table = std::move(result).value();
-  }
-  ArchSetUpAddressSpaceLate(table);
+  ArchSetUpAddressSpaceLate();
 #endif
 
   return fitx::ok();

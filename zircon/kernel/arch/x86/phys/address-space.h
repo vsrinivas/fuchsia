@@ -8,11 +8,9 @@
 #define ZIRCON_KERNEL_ARCH_X86_PHYS_ADDRESS_SPACE_H_
 
 #include <lib/page-table/types.h>
-#include <lib/zbitl/items/mem_config.h>
 
 // Build page tables for identity-mapping all of physical memory and install
 // them in the CPU (%cr3 register).
-void InstallIdentityMapPageTables(page_table::MemoryManager& allocator,
-                                  const zbitl::MemRangeTable& memory_map);
+void InstallIdentityMapPageTables(page_table::MemoryManager& allocator);
 
 #endif  // ZIRCON_KERNEL_ARCH_X86_PHYS_ADDRESS_SPACE_H_

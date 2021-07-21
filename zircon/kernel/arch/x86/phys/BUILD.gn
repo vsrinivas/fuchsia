@@ -286,7 +286,6 @@ if (current_toolchain == default_toolchain) {
       "//zircon/kernel/phys:symbolize",
       "//zircon/kernel/phys/lib/memalloc",
       "//zircon/kernel/phys/lib/page-table",
-      "//zircon/system/ulib/zbitl",
     ]
     include_dirs = [ "//." ]
   }

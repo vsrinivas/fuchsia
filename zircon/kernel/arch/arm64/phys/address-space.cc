@@ -11,7 +11,6 @@
 #include <lib/page-table/arch/arm64/builder.h>
 #include <lib/page-table/builder.h>
 #include <lib/page-table/types.h>
-#include <lib/zbitl/items/mem_config.h>
 #include <zircon/boot/image.h>
 
 #include <ktl/byte.h>
@@ -111,36 +110,57 @@ void EnablePaging(Paddr root) {
   }
 }
 
-void CreateBootstapPageTable(page_table::MemoryManager& allocator,
-                             const zbitl::MemRangeTable& memory_map) {
+void CreateBootstapPageTable() {
+  auto& pool = Allocation::GetPool();
+  AllocationMemoryManager manager(pool);
   // Create a page table data structure.
   ktl::optional builder =
-      page_table::arm64::AddressSpaceBuilder::Create(allocator, kDefaultPageTableLayout);
+      page_table::arm64::AddressSpaceBuilder::Create(manager, kDefaultPageTableLayout);
   if (!builder.has_value()) {
     ZX_PANIC("Failed to create an AddressSpaceBuilder.");
   }
 
-  // Map in all memory regions.
-  for (const auto& range : memory_map) {
-    // Skip over ZBI_MEM_RANGE_RESERVED regions.
-    //
-    // ZBI_MEM_RANGE_RESERVED regions are allowed to overlap ranges seen in
-    // previous or future memory map entries. We don't attempt to unmap such
-    // overlapping regions.
-    //
-    // TODO(fxbug.dev/77789): Avoid mapping in reserved ranges that overlap
-    // other types of RAM.
-    if (range.type == ZBI_MEM_RANGE_RESERVED) {
-      continue;
+  // Maps in the given range, doing nothing if it is reserved.
+  auto map = [&builder](const memalloc::MemRange& range) {
+    if (range.type == memalloc::Type::kReserved) {
+      return;
     }
-    zx_status_t result =
-        builder->MapRegion(Vaddr(range.paddr), Paddr(range.paddr), range.length,
-                           range.type == ZBI_MEM_RANGE_RAM ? page_table::CacheAttributes::kNormal
-                                                           : page_table::CacheAttributes::kDevice);
+    auto result = builder->MapRegion(Vaddr(range.addr), Paddr(range.addr), range.size,
+                                     range.type == memalloc::Type::kPeripheral
+                                         ? page_table::CacheAttributes::kDevice
+                                         : page_table::CacheAttributes::kNormal);
     if (result != ZX_OK) {
       ZX_PANIC("Failed to map in range.");
     }
+  };
+
+  // Map in all memory regions.
+  //
+  // We merge ranges of kFreeRam or extended type on the fly, mapping the
+  // previously constructed range when we have hit a hole or the end.
+  constexpr auto normalize_range = [](const memalloc::MemRange& range) -> memalloc::MemRange {
+    if (memalloc::IsExtendedType(range.type)) {
+      auto normalized = range;
+      normalized.type = memalloc::Type::kFreeRam;
+      return normalized;
+    }
+    return range;
+  };
+
+  std::optional<memalloc::MemRange> prev;
+  for (const memalloc::MemRange& raw_range : pool) {
+    auto range = normalize_range(raw_range);
+    if (!prev) {
+      prev = range;
+    } else if (prev->end() == range.addr && prev->type == range.type) {
+      prev->size += range.size;
+    } else {
+      map(*prev);
+      prev = range;
+    }
   }
+  ZX_DEBUG_ASSERT(prev);
+  map(*prev);
 
   // Enable the MMU and switch to the new page table.
   EnablePaging(builder->root_paddr());
@@ -148,9 +168,6 @@ void CreateBootstapPageTable(page_table::MemoryManager& allocator,
 
 }  // namespace
 
-void ArchSetUpAddressSpaceEarly(const zbitl::MemRangeTable& table) {
-  AllocationMemoryManager manager(Allocation::GetPool());
-  CreateBootstapPageTable(manager, table);
-}
+void ArchSetUpAddressSpaceEarly() { CreateBootstapPageTable(); }
 
-void ArchSetUpAddressSpaceLate(const zbitl::MemRangeTable& table) {}
+void ArchSetUpAddressSpaceLate() {}

@@ -88,13 +88,13 @@ class BootstrapMemoryManager final : public page_table::MemoryManager {
 
 }  // namespace
 
-void ArchSetUpAddressSpaceEarly(const zbitl::MemRangeTable& table) {
+void ArchSetUpAddressSpaceEarly() {
   BootstrapMemoryManager manager(gBootstrapMemory);
-  InstallIdentityMapPageTables(manager, table);
+  InstallIdentityMapPageTables(manager);
   manager.Release(Allocation::GetPool());
 }
 
-void ArchSetUpAddressSpaceLate(const zbitl::MemRangeTable& table) {
+void ArchSetUpAddressSpaceLate() {
   AllocationMemoryManager manager(Allocation::GetPool());
-  InstallIdentityMapPageTables(manager, table);
+  InstallIdentityMapPageTables(manager);
 }

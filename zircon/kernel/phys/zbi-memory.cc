@@ -7,7 +7,6 @@
 #include <inttypes.h>
 #include <lib/memalloc/pool.h>
 #include <lib/zbitl/error_stdio.h>
-#include <lib/zbitl/items/mem_config.h>
 #include <lib/zbitl/view.h>
 #include <stdio.h>
 #include <zircon/assert.h>
@@ -62,16 +61,8 @@ void InitMemory(void* zbi) {
   auto& pool = Allocation::GetPool();
   ZX_ASSERT(pool.Init(all_ranges).is_ok());
 
-  // Find memory information.
-  fitx::result<std::string_view, zbitl::MemRangeTable> memory =
-      zbitl::MemRangeTable::FromView(view);
-  if (memory.is_error()) {
-    ZX_PANIC("Could not read system memory layout: %*s.\n",
-             static_cast<int>(memory.error_value().size()), memory.error_value().data());
-  }
-
   // Set up our own address space.
-  ArchSetUpAddressSpaceEarly(*memory);
+  ArchSetUpAddressSpaceEarly();
 
   pool.PrintMemoryRanges(Symbolize::kProgramName_);
 }
