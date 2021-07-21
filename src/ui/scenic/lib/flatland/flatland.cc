@@ -7,6 +7,7 @@
 #include <lib/async/default.h>
 #include <lib/async/time.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/trace/event.h>
 #include <lib/zx/eventpair.h>
 
 #include <functional>
@@ -88,6 +89,9 @@ Flatland::~Flatland() {
 }
 
 void Flatland::Present(fuchsia::ui::composition::PresentArgs args) {
+  TRACE_DURATION("gfx", "Flatland::Present");
+  TRACE_FLOW_END("gfx", "Flatland::Present", present_count_);
+  ++present_count_;
   // Close any clients that had invalid operations on link protocols.
   if (link_protocol_error_) {
     CloseConnection(Error::BAD_HANGING_GET);
@@ -208,6 +212,8 @@ void Flatland::Present(fuchsia::ui::composition::PresentArgs args) {
       flatland_presenter_->RegisterPresent(session_id_, std::move(*args.mutable_release_fences()));
   present2_helper_.RegisterPresent(present_id,
                                    /*present_received_time=*/zx::time(async_now(dispatcher())));
+
+  TRACE_FLOW_BEGIN("gfx", "ScheduleUpdate", present_id);
 
   // Safe to capture |this| because the Flatland is guaranteed to outlive |fence_queue_|,
   // Flatland is non-movable and FenceQueue does not fire closures after destruction.

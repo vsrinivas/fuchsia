@@ -12,7 +12,7 @@ use {
         sysmem::minimum_row_bytes, sysmem::BufferCollectionAllocator, FrameUsage,
     },
     fuchsia_scenic::{flatland, BufferCollectionTokenPair},
-    fuchsia_zircon as zx,
+    fuchsia_trace as trace, fuchsia_zircon as zx,
     futures::{
         channel::mpsc::{unbounded, UnboundedSender},
         future,
@@ -83,6 +83,7 @@ struct AppModel {
     allocation: Option<fsysmem::BufferCollectionInfo2>,
     num_presents_allowed: u32,
     pending_present: bool,
+    present_count: u64,
     hue: f32,
     page_size: usize,
 }
@@ -100,6 +101,7 @@ impl AppModel {
             allocation: None,
             num_presents_allowed: 1,
             pending_present: false,
+            present_count: 0,
             hue: 0.0,
             page_size: zx::system_get_page_size().try_into().unwrap(),
         }
@@ -225,6 +227,7 @@ impl AppModel {
         additional_present_credits: u32,
         _future_presentation_infos: Vec<flatland::PresentationInfo>,
     ) {
+        trace::duration!("gfx", "FlatlandViewProvider::on_present_processed");
         self.num_presents_allowed += additional_present_credits;
 
         self.hue = (self.hue + 0.5) % 360.0;
@@ -244,6 +247,9 @@ impl AppModel {
 
     fn maybe_present(&mut self) {
         if self.num_presents_allowed > 0 && self.pending_present {
+            trace::duration!("gfx", "FlatlandViewProvider::Present()");
+            trace::flow_begin!("gfx", "Flatland::Present", self.present_count);
+            self.present_count += 1;
             self.pending_present = false;
             self.num_presents_allowed -= 1;
             self.flatland
@@ -376,6 +382,7 @@ fn setup_handle_flatland_events(
                         }
                     }
                     fland::FlatlandEvent::OnFramePresented { frame_presented_info: _ } => {
+                        trace::duration!("gfx", "FlatlandViewProvider::OnFramePresented");
                         // For simplicity, we are ignoring this event and driving our endless
                         // animation via OnNextFrameBegin.  A more advanced app might make use of
                         // the info here to compute the animation values, based on the predicted
@@ -399,6 +406,7 @@ fn setup_handle_flatland_events(
 
 #[fasync::run_singlethreaded]
 async fn main() {
+    fuchsia_trace_provider::trace_provider_create_with_fdio();
     fuchsia_syslog::init_with_tags(&["flatland-display"]).expect("failed to initialize logger");
 
     let (internal_sender, mut internal_receiver) = unbounded::<MessageInternal>();

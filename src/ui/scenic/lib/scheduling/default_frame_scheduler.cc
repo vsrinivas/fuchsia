@@ -255,6 +255,8 @@ void DefaultFrameScheduler::ScheduleUpdateForSession(zx::time requested_presenta
   TRACE_DURATION("gfx", "DefaultFrameScheduler::ScheduleUpdateForSession",
                  "requested_presentation_time", requested_presentation_time.get() / 1'000'000);
 
+  TRACE_FLOW_END("gfx", "ScheduleUpdate", id_pair.present_id);
+
   // Logging the first few frames to find common startup bugs.
   if (frame_number_ < kNumDebugFrames) {
     FX_VLOGS(1) << "ScheduleUpdateForSession session_id: " << id_pair.session_id

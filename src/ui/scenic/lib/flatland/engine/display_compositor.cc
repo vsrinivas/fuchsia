@@ -344,6 +344,7 @@ void DisplayCompositor::RenderFrame(uint64_t frame_number, zx::time presentation
                                     std::vector<zx::event> release_fences,
                                     scheduling::FrameRenderer::FramePresentedCallback callback) {
   TRACE_DURATION("gfx", "flatland::DisplayCompositor::RenderFrame");
+  TRACE_FLOW_STEP("gfx", "scenic_frame", frame_number);
 
   // Config should be reset before doing anything new.
   DiscardConfig();

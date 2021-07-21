@@ -226,6 +226,9 @@ class Flatland : public fuchsia::ui::composition::Flatland,
   // incremented when OnNextFrameBegin() is called, and decremented by 1 for each Present() call.
   uint32_t present_credits_ = 1;
 
+  // Used for client->Flatland present flow IDs.
+  uint64_t present_count_ = 0;
+
   // Must be managed by a shared_ptr because the implementation uses weak_from_this().
   std::shared_ptr<escher::FenceQueue> fence_queue_ = std::make_shared<escher::FenceQueue>();
 
