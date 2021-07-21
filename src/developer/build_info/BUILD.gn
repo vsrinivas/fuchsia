@@ -30,6 +30,7 @@ fuchsia_component("build-info") {
 
 # TODO(fxbug.dev/81009): delete the below
 fuchsia_component("build-info-legacy") {
+  component_name = "build-info"
   manifest = "meta/build_info.cmx"
   deps = [ ":bin" ]
 }
