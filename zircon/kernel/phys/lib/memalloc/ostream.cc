@@ -25,8 +25,8 @@ std::ostream& operator<<(std::ostream& stream, MemRange range) {
   if (range.size == 0) {
     stream << "Ø";
   } else {
-    stream << "[" << range.addr << ", " << (range.addr + std::min(kMax - range.addr, range.size))
-           << ")";
+    stream << "[" << std::hex << range.addr << ", " << std::hex
+           << (range.addr + std::min(kMax - range.addr, range.size)) << ")";
   }
   return stream;
 }

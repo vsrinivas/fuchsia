@@ -13,6 +13,7 @@ zx_library("memalloc") {
   sdk = "source"
   sdk_headers = [
     "lib/memalloc/allocator.h",
+    "lib/memalloc/pool.h",
     "lib/memalloc/range.h",
   ]
 
@@ -23,6 +24,7 @@ zx_library("memalloc") {
   sources = [
     "algorithm.cc",
     "allocator.cc",
+    "pool.cc",
     "range.cc",
   ]
 
@@ -31,6 +33,7 @@ zx_library("memalloc") {
     "//sdk/lib/stdcompat",
     "//src/zircon/lib/zircon",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/pretty",
     "//zircon/system/ulib/zxc",
   ]
   if (is_kernel) {
@@ -42,16 +45,19 @@ zx_library("memalloc") {
   public_deps = [
     "//sdk/lib/stdcompat:headers",
 
+    # <lib/memalloc/pool.h> has #include <lib/fit/function.h>.
     # <lib/memalloc/range.h> has #include <lib/fit/function.h>.
     "//sdk/lib/fit:headers",
 
     # <lib/memalloc/allocator.h> has #include <fbl/intrusive_double_list.h>.
+    # <lib/memalloc/pool.h> has #include <fbl/intrusive_double_list.h>.
     "//zircon/system/ulib/fbl:headers",
 
     # <lib/memalloc/allocator.h> has #include <zx/status.h>.
     "//src/zircon/lib/zircon:headers",
 
     # <lib/memalloc/allocator.h> has #include <lib/zx/status.h>.
+    # <lib/memalloc/pool.h> has #include <lib/zx/status.h>.
     "//zircon/system/ulib/zxc:headers",
   ]
 }
@@ -70,10 +76,12 @@ test("memalloc-test") {
   sources = [
     "algorithm-test.cc",
     "allocator-test.cc",
+    "pool-test.cc",
   ]
   deps = [
     ":memalloc",
     ":testing",
+    "//sdk/lib/fit",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
@@ -82,16 +90,28 @@ test("memalloc-test") {
 
 fuchsia_unittest_package("memalloc-test-package") {
   package_name = "memalloc-tests"
+  manifest = "meta/memalloc-test.cmx"
   deps = [ ":memalloc-test" ]
 }
 
 fuzzer_package("memalloc-fuzzers") {
   fuzz_host = true
-  cpp_fuzzers = [ ":find-fuzzer" ]
+  cpp_fuzzers = [
+    ":find-fuzzer",
+    ":pool-fuzzer",
+  ]
 }
 
 cpp_fuzzer("find-fuzzer") {
   sources = [ "find-fuzzer.cc" ]
+  deps = [
+    ":memalloc",
+    ":testing",
+  ]
+}
+
+cpp_fuzzer("pool-fuzzer") {
+  sources = [ "pool-fuzzer.cc" ]
   deps = [
     ":memalloc",
     ":testing",

@@ -7,6 +7,7 @@
 #ifndef ZIRCON_KERNEL_PHYS_LIB_MEMALLOC_TEST_H_
 #define ZIRCON_KERNEL_PHYS_LIB_MEMALLOC_TEST_H_
 
+#include <lib/memalloc/pool.h>
 #include <lib/memalloc/range.h>
 #include <lib/stdcompat/span.h>
 #include <stdio.h>
@@ -20,11 +21,24 @@
 
 #include <gtest/gtest.h>
 
+#include "algorithm.h"
 #include "ostream.h"  // Enables MemRange auto-stringification in gtest error messages
 
 //
 // Shared test utilities.
 //
+
+// PoolContext holds both a Pool and the memory that backs its bookkeeping.
+// To decouple memory ranges that are tracked from memory ranges that are
+// actually used, we translate any nominal bookkeeping space to the heap.
+struct PoolContext {
+  std::vector<std::unique_ptr<std::byte[]>> bookkeeping;
+
+  memalloc::Pool pool = memalloc::Pool([this](uint64_t addr, uint64_t size) {
+    bookkeeping.push_back(std::make_unique<std::byte[]>(size));
+    return bookkeeping.back().get();
+  });
+};
 
 inline std::string ToString(const memalloc::MemRange& range) {
   std::stringstream ss;

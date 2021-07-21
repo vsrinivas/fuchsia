@@ -44,6 +44,10 @@ enum class Type : uint64_t {
   // Reserved for internal bookkeeping.
   kPoolBookkeeping = kMinExtendedTypeValue,
 
+  // A region of memory conventionally discarded as unsafe (e.g., would result
+  // in an undereferenceable pointer).
+  kNullPointerRegion,
+
   // The phys kernel memory image.
   kPhysKernel,
 
@@ -74,6 +78,10 @@ struct MemRange {
   uint64_t size;
   Type type;
 
+  // The end of the memory range. This method may only be called if addr + size
+  // has been normalized to not overflow.
+  constexpr uint64_t end() const { return addr + size; }
+
   constexpr bool operator==(const MemRange& other) const {
     return addr == other.addr && size == other.size && type == other.type;
   }
@@ -85,7 +93,13 @@ struct MemRange {
   }
 };
 
-// TODO(joshuaseaton): static_assert(cpp20::is_layout_compatible_v<MemRange, zbi_mem_range_t>);
+// We have constrained Type so that the ZBI memory type's value space
+// identically embeds into the lower 2^32 values of Type; the upper 2^32 values
+// is reserved for Type's extensions. Accordingly, in order to coherently
+// recast a zbi_mem_range_t as a MemRange, the former's `reserved` field -
+// which, layout-wise, corresponds to the upper half of Type - must be zeroed
+// out.
+cpp20::span<MemRange> AsMemRanges(cpp20::span<zbi_mem_range_t> ranges);
 
 namespace internal {
 
