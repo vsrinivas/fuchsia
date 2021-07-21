@@ -71,7 +71,7 @@ constexpr uint32_t TypeSize(const fidl_type_t* type) {
     case kFidlTypeHandle:
       return sizeof(zx_handle_t);
     case kFidlTypeStruct:
-      return type->coded_struct().size;
+      return type->coded_struct().size_v1;
     case kFidlTypeTable:
       return sizeof(fidl_vector_t);
     case kFidlTypeXUnion:
@@ -79,7 +79,7 @@ constexpr uint32_t TypeSize(const fidl_type_t* type) {
     case kFidlTypeString:
       return sizeof(fidl_string_t);
     case kFidlTypeArray:
-      return type->coded_array().array_size;
+      return type->coded_array().array_size_v1;
     case kFidlTypeVector:
       return sizeof(fidl_vector_t);
   }
@@ -375,26 +375,26 @@ Result Walker<VisitorImpl>::WalkStruct(const FidlCodedStruct* coded_struct,
     switch (element.header.element_type) {
       case kFidlStructElementType_Field: {
         const FidlStructField& field = element.field;
-        Position field_position = position + field.offset;
+        Position field_position = position + field.offset_v1;
         Result result = WalkInternal(field.field_type, field_position, depth);
         FIDL_RESULT_GUARD(result);
         break;
       }
       case kFidlStructElementType_Padding64: {
         const FidlStructPadding& padding = element.padding;
-        auto status = visitor_->VisitInternalPadding(position + padding.offset, padding.mask_64);
+        auto status = visitor_->VisitInternalPadding(position + padding.offset_v1, padding.mask_64);
         FIDL_STATUS_GUARD(status);
         break;
       }
       case kFidlStructElementType_Padding32: {
         const FidlStructPadding& padding = element.padding;
-        auto status = visitor_->VisitInternalPadding(position + padding.offset, padding.mask_32);
+        auto status = visitor_->VisitInternalPadding(position + padding.offset_v1, padding.mask_32);
         FIDL_STATUS_GUARD(status);
         break;
       }
       case kFidlStructElementType_Padding16: {
         const FidlStructPadding& padding = element.padding;
-        auto status = visitor_->VisitInternalPadding(position + padding.offset, padding.mask_16);
+        auto status = visitor_->VisitInternalPadding(position + padding.offset_v1, padding.mask_16);
         FIDL_STATUS_GUARD(status);
         break;
       }
@@ -416,7 +416,7 @@ Result Walker<VisitorImpl>::WalkStructPointer(const FidlCodedStructPointer* code
   Position obj_position;
   auto status =
       visitor_->VisitPointer(position, VisitorImpl::PointeeType::kOther, PtrTo<Ptr<void>>(position),
-                             coded_struct_pointer->struct_type->size,
+                             coded_struct_pointer->struct_type->size_v1,
                              kFidlMemcpyCompatibility_CannotMemcpy, &obj_position);
   FIDL_STATUS_GUARD(status);
   return WalkStruct(coded_struct_pointer->struct_type, obj_position, inner_depth);
@@ -547,8 +547,8 @@ template <typename VisitorImpl>
 Result Walker<VisitorImpl>::WalkArray(const FidlCodedArray* coded_array,
                                       Walker<VisitorImpl>::Position position,
                                       OutOfLineDepth depth) {
-  return WalkIterableInternal(coded_array->element, position, coded_array->element_size,
-                              coded_array->array_size, depth);
+  return WalkIterableInternal(coded_array->element, position, coded_array->element_size_v1,
+                              coded_array->array_size_v1, depth);
 }
 
 template <typename VisitorImpl>
@@ -639,7 +639,7 @@ Result Walker<VisitorImpl>::WalkVector(const FidlCodedVector* coded_vector,
     FIDL_STATUS_GUARD(Status::kConstraintViolationError);
   }
   uint32_t size;
-  if (unlikely(mul_overflow(count, coded_vector->element_size, &size))) {
+  if (unlikely(mul_overflow(count, coded_vector->element_size_v1, &size))) {
     visitor_->OnError("integer overflow calculating vector size");
     FIDL_STATUS_GUARD(Status::kConstraintViolationError);
   }
@@ -651,7 +651,7 @@ Result Walker<VisitorImpl>::WalkVector(const FidlCodedVector* coded_vector,
                              coded_vector->element_memcpy_compatibility, &array_position);
   FIDL_STATUS_GUARD(status);
 
-  uint32_t stride = coded_vector->element_size;
+  uint32_t stride = coded_vector->element_size_v1;
   ZX_ASSERT(count <= std::numeric_limits<uint32_t>::max());
   uint32_t end_offset = uint32_t(count) * stride;
   return WalkIterableInternal(coded_vector->element, array_position, stride, end_offset,

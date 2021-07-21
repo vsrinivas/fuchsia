@@ -23,7 +23,7 @@ zx_status_t PrimaryObjectSize(const fidl_type_t* type, uint32_t buffer_size,
   // The struct case is "likely" because overhead for tables is less of a relative cost.
   uint32_t primary_size;
   if (likely(type->type_tag() == kFidlTypeStruct)) {
-    primary_size = type->coded_struct().size;
+    primary_size = type->coded_struct().size_v1;
   } else if (likely(type->type_tag() == kFidlTypeTable)) {
     primary_size = sizeof(fidl_table_t);
   } else {

@@ -232,7 +232,8 @@ TEST(BufferTooSmall, decode_overflow_buffer_on_FidlAlign) {
                       .element_type = kFidlStructElementType_Field,
                       .is_resource = kFidlIsResource_NotResource,
                   },
-              .offset = 0,
+              .offset_v1 = 0,
+              .offset_v2 = 0,
               .field_type = &element_field_type,
           },
   };
@@ -240,7 +241,8 @@ TEST(BufferTooSmall, decode_overflow_buffer_on_FidlAlign) {
   const FidlCodedStruct type = {
       .tag = kFidlTypeStruct,
       .element_count = 1,
-      .size = 1,
+      .size_v1 = 1,
+      .size_v2 = 1,
       .elements = &element,
       .name = nullptr,
   };

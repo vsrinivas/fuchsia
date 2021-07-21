@@ -133,7 +133,7 @@ void FormatTypeName(StringBuilder* str, const fidl_type_t* type) {
       FormatElementName(str, type->coded_array().element);
       str->Append(">");
       str->AppendPrintf(":%" PRIu32,
-                        type->coded_array().array_size / type->coded_array().element_size);
+                        type->coded_array().array_size_v1 / type->coded_array().element_size_v1);
       break;
     case kFidlTypeString:
       str->Append("string");

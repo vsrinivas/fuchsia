@@ -129,14 +129,18 @@ struct FidlStructElementHeader {
 struct FidlStructField {
   struct FidlStructElementHeader header;
 
-  uint32_t offset;
+  uint32_t offset_v1;
+  uint32_t offset_v2;
+
   const fidl_type_t* field_type;
 };
 
 struct FidlStructPadding {
   struct FidlStructElementHeader header;
 
-  uint32_t offset;
+  uint32_t offset_v1;
+  uint32_t offset_v2;
+
   // Masks with 0xff on bytes with padding and 0x00 otherwise.
   // They are used by VisitInternalPadding to zero (encoding) and validate (decoding)
   // padding bytes.
@@ -156,8 +160,8 @@ struct FidlStructElement {
   };
 
 #ifdef __cplusplus
-  static constexpr FidlStructElement Field(const fidl_type* type, uint32_t offset,
-                                           FidlIsResource is_resource) {
+  static constexpr FidlStructElement Field(const fidl_type* type, uint32_t offset_v1,
+                                           uint32_t offset_v2, FidlIsResource is_resource) {
     return FidlStructElement{
         .field =
             FidlStructField{
@@ -166,12 +170,14 @@ struct FidlStructElement {
                         .element_type = kFidlStructElementType_Field,
                         .is_resource = is_resource,
                     },
-                .offset = offset,
+                .offset_v1 = offset_v1,
+                .offset_v2 = offset_v2,
                 .field_type = type,
             },
     };
   }
-  static constexpr FidlStructElement Padding64(uint32_t offset, uint64_t mask) {
+  static constexpr FidlStructElement Padding64(uint32_t offset_v1, uint32_t offset_v2,
+                                               uint64_t mask) {
     return FidlStructElement{
         .padding =
             FidlStructPadding{
@@ -180,12 +186,14 @@ struct FidlStructElement {
                         .element_type = kFidlStructElementType_Padding64,
                         .is_resource = kFidlIsResource_NotResource,
                     },
-                .offset = offset,
+                .offset_v1 = offset_v1,
+                .offset_v2 = offset_v2,
                 .mask_64 = mask,
             },
     };
   }
-  static constexpr FidlStructElement Padding32(uint32_t offset, uint32_t mask) {
+  static constexpr FidlStructElement Padding32(uint32_t offset_v1, uint32_t offset_v2,
+                                               uint32_t mask) {
     return FidlStructElement{
         .padding =
             FidlStructPadding{
@@ -194,12 +202,14 @@ struct FidlStructElement {
                         .element_type = kFidlStructElementType_Padding32,
                         .is_resource = kFidlIsResource_NotResource,
                     },
-                .offset = offset,
+                .offset_v1 = offset_v1,
+                .offset_v2 = offset_v2,
                 .mask_32 = mask,
             },
     };
   }
-  static constexpr FidlStructElement Padding16(uint32_t offset, uint16_t mask) {
+  static constexpr FidlStructElement Padding16(uint32_t offset_v1, uint32_t offset_v2,
+                                               uint16_t mask) {
     return FidlStructElement{
         .padding =
             FidlStructPadding{
@@ -208,7 +218,8 @@ struct FidlStructElement {
                         .element_type = kFidlStructElementType_Padding16,
                         .is_resource = kFidlIsResource_NotResource,
                     },
-                .offset = offset,
+                .offset_v1 = offset_v1,
+                .offset_v2 = offset_v2,
                 .mask_16 = mask,
             },
     };
@@ -363,7 +374,8 @@ struct FidlCodedStruct FIDL_INTERNAL_INHERIT_TYPE_T {
   // If a larger size is needed, replace FidlCodedStruct or add a second
   // variant that supports the larger size.
   const uint16_t element_count;
-  const uint32_t size;
+  const uint32_t size_v1;
+  const uint32_t size_v2;
   const struct FidlStructElement* const elements;
   const char* name;  // may be nullptr if omitted at compile time
 
@@ -408,8 +420,10 @@ struct FidlCodedArray FIDL_INTERNAL_INHERIT_TYPE_T {
   // a uint16_t is used (all existing values fit within this size).
   // If a larger size is needed, replace FidlCodedArray or add a second
   // variant that supports the larger size.
-  const uint16_t element_size;
-  const uint32_t array_size;
+  const uint16_t element_size_v1;
+  const uint16_t element_size_v2;
+  const uint32_t array_size_v1;
+  const uint32_t array_size_v2;
   const fidl_type_t* const element;
 
   FIDL_INTERNAL_DELETE_DEFAULT_CONSTRUCTOR(FidlCodedArray)
@@ -442,7 +456,8 @@ struct FidlCodedVector FIDL_INTERNAL_INHERIT_TYPE_T {
   const FidlNullability nullable;
   const FidlMemcpyCompatibility element_memcpy_compatibility;
   const uint32_t max_count;
-  const uint32_t element_size;
+  const uint32_t element_size_v1;
+  const uint32_t element_size_v2;
   const fidl_type_t* const element;
 
   FIDL_INTERNAL_DELETE_DEFAULT_CONSTRUCTOR(FidlCodedVector)
@@ -550,18 +565,18 @@ static_assert(offsetof(struct FidlCodedHandle, tag) == 0, "");
 static_assert(sizeof(struct FidlCodedPrimitive) == 2, "");
 static_assert(sizeof(struct FidlCodedEnum) == 24, "");
 static_assert(sizeof(struct FidlCodedBits) == 24, "");
-static_assert(sizeof(struct FidlCodedStruct) == 24, "");
+static_assert(sizeof(struct FidlCodedStruct) == 32, "");
 static_assert(sizeof(struct FidlCodedStructPointer) == 16, "");
 static_assert(sizeof(struct FidlCodedXUnion) == 24, "");
-static_assert(sizeof(struct FidlCodedArray) == 16, "");
+static_assert(sizeof(struct FidlCodedArray) == 24, "");
 static_assert(sizeof(struct FidlCodedVector) == 24, "");
 static_assert(sizeof(struct FidlCodedString) == 8, "");
 static_assert(sizeof(struct FidlCodedHandle) == 12, "");
 
-static_assert(sizeof(struct FidlStructField) == 16, "");
+static_assert(sizeof(struct FidlStructField) == 24, "");
 static_assert(sizeof(struct FidlTableField) == 16, "");
 static_assert(sizeof(struct FidlXUnionField) == 8, "");
 
-static_assert(sizeof(struct FidlStructElement) == 16, "");
+static_assert(sizeof(struct FidlStructElement) == 24, "");
 
 #endif  // LIB_FIDL_INTERNAL_H_

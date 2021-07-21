@@ -205,7 +205,8 @@ TEST(BufferTooSmall, validate_overflow_buffer_on_FidlAlign) {
                       .element_type = kFidlStructElementType_Field,
                       .is_resource = kFidlIsResource_NotResource,
                   },
-              .offset = 0,
+              .offset_v1 = 0,
+              .offset_v2 = 0,
               .field_type = &element_field_type,
           },
   };
@@ -213,7 +214,8 @@ TEST(BufferTooSmall, validate_overflow_buffer_on_FidlAlign) {
   const FidlCodedStruct type = {
       .tag = kFidlTypeStruct,
       .element_count = 1,
-      .size = 1,
+      .size_v1 = 1,
+      .size_v2 = 1,
       .elements = &element,
       .name = nullptr,
   };
@@ -1543,29 +1545,30 @@ TEST(Primitives, validate_primitives_struct) {
   static const FidlCodedPrimitive kFloat64Type = {.tag = kFidlTypePrimitive,
                                                   .type = kFidlCodedPrimitiveSubtype_Float64};
   static const struct FidlStructElement kFields[] = {
-      FidlStructElement::Field(&kBoolType, 0u, kFidlIsResource_NotResource),
-      FidlStructElement::Field(&kInt8Type, 1u, kFidlIsResource_NotResource),
-      FidlStructElement::Field(&kInt16Type, 2u, kFidlIsResource_NotResource),
-      FidlStructElement::Field(&kInt32Type, 4u, kFidlIsResource_NotResource),
-      FidlStructElement::Field(&kInt64Type, 8u, kFidlIsResource_NotResource),
-      FidlStructElement::Field(&kUint8Type, 16u, kFidlIsResource_NotResource),
-      FidlStructElement::Padding16(16u, 0x00ff),
-      FidlStructElement::Field(&kUint16Type, 18u, kFidlIsResource_NotResource),
-      FidlStructElement::Field(&kUint32Type, 20u, kFidlIsResource_NotResource),
-      FidlStructElement::Field(&kUint64Type, 24u, kFidlIsResource_NotResource),
-      FidlStructElement::Field(&kFloat32Type, 32u, kFidlIsResource_NotResource),
-      FidlStructElement::Padding32(36u, 0xffffffff),
-      FidlStructElement::Field(&kFloat64Type, 40u, kFidlIsResource_NotResource),
+      FidlStructElement::Field(&kBoolType, 0u, 0u, kFidlIsResource_NotResource),
+      FidlStructElement::Field(&kInt8Type, 1u, 1u, kFidlIsResource_NotResource),
+      FidlStructElement::Field(&kInt16Type, 2u, 2u, kFidlIsResource_NotResource),
+      FidlStructElement::Field(&kInt32Type, 4u, 4u, kFidlIsResource_NotResource),
+      FidlStructElement::Field(&kInt64Type, 8u, 8u, kFidlIsResource_NotResource),
+      FidlStructElement::Field(&kUint8Type, 16u, 16u, kFidlIsResource_NotResource),
+      FidlStructElement::Padding16(16u, 16u, 0x00ff),
+      FidlStructElement::Field(&kUint16Type, 18u, 18u, kFidlIsResource_NotResource),
+      FidlStructElement::Field(&kUint32Type, 20u, 20u, kFidlIsResource_NotResource),
+      FidlStructElement::Field(&kUint64Type, 24u, 24u, kFidlIsResource_NotResource),
+      FidlStructElement::Field(&kFloat32Type, 32u, 32u, kFidlIsResource_NotResource),
+      FidlStructElement::Padding32(36u, 36u, 0xffffffff),
+      FidlStructElement::Field(&kFloat64Type, 40u, 40u, kFidlIsResource_NotResource),
   };
   static const FidlCodedStruct kPrimitiveStructCodingTable = {
       .tag = kFidlTypeStruct,
       .element_count = ArrayCount(kFields),
-      .size = 48u,
+      .size_v1 = 48u,
+      .size_v2 = 48u,
       .elements = kFields,
       .name = "fidl.test.coding/PrimitiveStruct",
   };
 
-  uint8_t data[kPrimitiveStructCodingTable.coded_struct().size];
+  uint8_t data[kPrimitiveStructCodingTable.coded_struct().size_v1];
   memset(data, 0, sizeof(data));
 
   const char* error = nullptr;

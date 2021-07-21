@@ -217,11 +217,14 @@ const FidlCodedVector unbounded_too_large_nullable_vector_of_handles = {
     .tag = kFidlTypeVector,
     .nullable = kFidlNullability_Nullable,
     .max_count = FIDL_MAX_SIZE,
-    .element_size = sizeof(zx_handle_t),
+    .element_size_v1 = sizeof(zx_handle_t),
+    .element_size_v2 = sizeof(zx_handle_t),
     .element = &nullable_handle,
 };
 static const FidlStructElement unbounded_too_large_nullable_vector_of_handles_fields[] = {
     FidlStructElement::Field(&unbounded_too_large_nullable_vector_of_handles,
+                             offsetof(unbounded_too_large_nullable_vector_of_handles_message_layout,
+                                      inline_struct.vector),
                              offsetof(unbounded_too_large_nullable_vector_of_handles_message_layout,
                                       inline_struct.vector),
                              true),
@@ -229,7 +232,8 @@ static const FidlStructElement unbounded_too_large_nullable_vector_of_handles_fi
 const FidlCodedStruct unbounded_too_large_nullable_vector_of_handles_message_type = {
     .tag = kFidlTypeStruct,
     .element_count = 1,
-    .size = sizeof(unbounded_too_large_nullable_vector_of_handles_inline_data),
+    .size_v1 = sizeof(unbounded_too_large_nullable_vector_of_handles_inline_data),
+    .size_v2 = sizeof(unbounded_too_large_nullable_vector_of_handles_inline_data),
     .elements = unbounded_too_large_nullable_vector_of_handles_fields,
     .name = "unbounded_too_large_nullable_vector_of_handles_message",
 };

@@ -6,18 +6,18 @@
 __LOCAL extern const struct FidlCodedStruct fidl_test_byteandbytes_ByteAndBytesTable;
 
 
-static const struct FidlCodedVector Vector4294967295nonnullable5uint8Table = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&fidl_internal_kUint8Table), .max_count=4294967295u, .element_size=1u, .nullable=kFidlNullability_Nonnullable, .element_memcpy_compatibility=kFidlMemcpyCompatibility_CanMemcpy};
+static const struct FidlCodedVector Vector4294967295nonnullable5uint8Table = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&fidl_internal_kUint8Table), .max_count=4294967295u, .element_size_v1=1u, .element_size_v2=1u, .nullable=kFidlNullability_Nonnullable, .element_memcpy_compatibility=kFidlMemcpyCompatibility_CanMemcpy};
 
-static const struct FidlCodedVector Vector1024nonnullable5uint8Table = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&fidl_internal_kUint8Table), .max_count=1024u, .element_size=1u, .nullable=kFidlNullability_Nonnullable, .element_memcpy_compatibility=kFidlMemcpyCompatibility_CanMemcpy};
+static const struct FidlCodedVector Vector1024nonnullable5uint8Table = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&fidl_internal_kUint8Table), .max_count=1024u, .element_size_v1=1u, .element_size_v2=1u, .nullable=kFidlNullability_Nonnullable, .element_memcpy_compatibility=kFidlMemcpyCompatibility_CanMemcpy};
 
-static const struct FidlCodedVector Vector1024nullable5uint8Table = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&fidl_internal_kUint8Table), .max_count=1024u, .element_size=1u, .nullable=kFidlNullability_Nullable, .element_memcpy_compatibility=kFidlMemcpyCompatibility_CanMemcpy};
+static const struct FidlCodedVector Vector1024nullable5uint8Table = {.tag=kFidlTypeVector, .element=(fidl_type_t*)(&fidl_internal_kUint8Table), .max_count=1024u, .element_size_v1=1u, .element_size_v2=1u, .nullable=kFidlNullability_Nullable, .element_memcpy_compatibility=kFidlMemcpyCompatibility_CanMemcpy};
 
 
 static const struct FidlStructElement Fields35fidl_test_byteandbytes_ByteAndBytes[] = {
-    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset=0u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding64,.is_resource=kFidlIsResource_NotResource},.mask_64=18446744073709551360ul}},
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset=8u, .field_type=(fidl_type_t*)(&Vector4294967295nonnullable5uint8Table)}},
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset=24u, .field_type=(fidl_type_t*)(&Vector1024nonnullable5uint8Table)}},
-    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset=40u, .field_type=(fidl_type_t*)(&Vector1024nullable5uint8Table)}}
+    /*FidlStructPadding*/{.padding=/*FidlStructPadding*/{.offset_v1=0u, .offset_v2=0u, .header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Padding64,.is_resource=kFidlIsResource_NotResource},.mask_64=18446744073709551360ul}},
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v1=8u, .offset_v2=8u, .field_type=(fidl_type_t*)(&Vector4294967295nonnullable5uint8Table)}},
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v1=24u, .offset_v2=24u, .field_type=(fidl_type_t*)(&Vector1024nonnullable5uint8Table)}},
+    /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v1=40u, .offset_v2=40u, .field_type=(fidl_type_t*)(&Vector1024nullable5uint8Table)}}
 };
-const struct FidlCodedStruct fidl_test_byteandbytes_ByteAndBytesTable = {.tag=kFidlTypeStruct, .elements=Fields35fidl_test_byteandbytes_ByteAndBytes, .element_count=4u, .size=56u, .name="fidl.test.byteandbytes/ByteAndBytes"};
+const struct FidlCodedStruct fidl_test_byteandbytes_ByteAndBytesTable = {.tag=kFidlTypeStruct, .elements=Fields35fidl_test_byteandbytes_ByteAndBytes, .element_count=4u, .size_v1=56u, .size_v2=56u, .name="fidl.test.byteandbytes/ByteAndBytes"};
 
