@@ -1343,7 +1343,7 @@ main(int argc, char const * argv[])
             .internal     = &dbis.internal
           };
 
-          radix_sort_vk_sort(device, cb, rs, &info, &dbi_keyvals_sorted);
+          radix_sort_vk_sort(rs, &info, device, cb, &dbi_keyvals_sorted);
         }
       else
         {
@@ -1364,7 +1364,7 @@ main(int argc, char const * argv[])
             .indirect     = &dbis.indirect
           };
 
-          radix_sort_vk_sort_indirect(device, cb, rs, &info, &dbi_keyvals_sorted);
+          radix_sort_vk_sort_indirect(rs, &info, device, cb, &dbi_keyvals_sorted);
         }
 
         //

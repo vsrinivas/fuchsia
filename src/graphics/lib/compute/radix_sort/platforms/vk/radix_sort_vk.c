@@ -626,10 +626,10 @@ struct radix_sort_vk_ext_base
 //
 //
 void
-radix_sort_vk_sort(VkDevice                               device,
-                   VkCommandBuffer                        cb,
-                   struct radix_sort_vk const *           rs,
+radix_sort_vk_sort(struct radix_sort_vk const *           rs,
                    struct radix_sort_vk_sort_info const * info,
+                   VkDevice                               device,
+                   VkCommandBuffer                        cb,
                    VkDescriptorBufferInfo const **        keyvals_sorted)
 {
   //
@@ -954,10 +954,10 @@ radix_sort_vk_sort(VkDevice                               device,
 //
 //
 void
-radix_sort_vk_sort_indirect(VkDevice                                        device,
-                            VkCommandBuffer                                 cb,
-                            struct radix_sort_vk const *                    rs,
+radix_sort_vk_sort_indirect(struct radix_sort_vk const *                    rs,
                             struct radix_sort_vk_sort_indirect_info const * info,
+                            VkDevice                                        device,
+                            VkCommandBuffer                                 cb,
                             VkDescriptorBufferInfo const **                 keyvals_sorted)
 {
   //
