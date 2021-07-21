@@ -1,4 +1,4 @@
-# Copyright 2019 The Fuchsia Authors
+# Copyright 2021 The Fuchsia Authors
 #
 # Use of this source code is governed by a MIT-style
 # license that can be found in the LICENSE file or at
@@ -7,28 +7,23 @@
 import("//build/zircon/migrated_targets.gni")
 import("params.gni")
 
-zx_library("crashlog") {
+zx_library("persistent-debuglog") {
   kernel = true
-  sources = [
-    "crashlog.cc",
-    "panic_buffer.cc",
-  ]
+  sources = [ "persistent-debuglog.cc" ]
   deps = [
     "//zircon/kernel/lib/console",
-    "//zircon/kernel/lib/counters",
-    "//zircon/kernel/lib/version",
-    "//zircon/kernel/object:headers",
+    "//zircon/kernel/lib/ktl",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/lazy_init",
   ]
   public_configs = [
     ":config",
     "//zircon/kernel:persistent_ram_config",
   ]
-
-  # TODO: testonly
-  deps += [ "test" ]
 }
 
 config("config") {
   visibility = [ ":*" ]
-  defines = [ "MIN_CRASHLOG_SIZE=$min_crashlog_size" ]
+  defines =
+      [ "TARGET_PERSISTENT_DEBUGLOG_SIZE=$target_persistent_debuglog_size" ]
 }

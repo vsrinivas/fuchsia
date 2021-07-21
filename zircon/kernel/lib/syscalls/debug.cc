@@ -9,6 +9,7 @@
 #include <lib/io.h>
 #include <lib/ktrace.h>
 #include <lib/mtrace.h>
+#include <lib/persistent-debuglog.h>
 #include <lib/user_copy/user_ptr.h>
 #include <platform.h>
 #include <stdint.h>
@@ -91,6 +92,9 @@ zx_status_t sys_debug_write(user_in_ptr<const char> ptr, size_t len) {
   char buf[kMaxDebugWriteSize];
   if (ptr.copy_array_from_user(buf, len) != ZX_OK)
     return ZX_ERR_INVALID_ARGS;
+
+  // Dump what we can into the persistent dlog, if we have one.
+  persistent_dlog_write({buf, len});
 
   // This path to serial out arbitrates with the debug log
   // drainer and/or kernel ll debug path to minimize interleaving

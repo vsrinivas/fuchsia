@@ -12,9 +12,11 @@
 #include <lib/boot-options/types.h>
 #include <lib/cmdline.h>
 #include <lib/console.h>
+#include <lib/crashlog.h>
 #include <lib/debuglog.h>
 #include <lib/instrumentation/asan.h>
 #include <lib/memory_limit.h>
+#include <lib/persistent-debuglog.h>
 #include <lib/system-topology.h>
 #include <mexec.h>
 #include <platform.h>
@@ -40,6 +42,7 @@
 #include <kernel/cpu.h>
 #include <kernel/cpu_distance_map.h>
 #include <kernel/dpc.h>
+#include <kernel/persistent_ram.h>
 #include <kernel/spinlock.h>
 #include <kernel/topology.h>
 #include <ktl/algorithm.h>
@@ -307,6 +310,52 @@ static void init_topology(const zbi_topology_node_t* nodes, size_t node_count) {
   }
 }
 
+static void allocate_persistent_ram(paddr_t pa, size_t length) {
+  // Figure out how to divide up our persistent RAM.  Right now there are
+  // two potential users, the crashlog, and persistent debug logging.
+  // Persistent debug logging has a target amount of RAM it would _like_
+  // to have, and crash-logging has a minimum amount it is guaranteed to
+  // get.  Additionally, all allocated are made in a chunks of the minimum
+  // persistent RAM allocation granularity.
+  size_t crashlog_size = 0;
+  size_t dlog_size = 0;
+  {
+    // start by figuring out how many chunks of RAM we have available to
+    // us total.
+    size_t persistent_chunks_available = length / kPersistentRamAllocaitonGranularity;
+
+    // Make sure that crashlog gets its minimum allocation, or all of the
+    // RAM if it cannot meet even its minimum allocation.
+    size_t crashlog_chunks = ktl::min(persistent_chunks_available,
+                                      kMinCrashlogSize / kPersistentRamAllocaitonGranularity);
+    persistent_chunks_available -= crashlog_chunks;
+
+    // Give what remains over to the persistent debug logging, up to the
+    // desired target amount.
+    size_t dlog_chunks =
+        ktl::min(persistent_chunks_available,
+                 kTargetPersistentDebugLogSize / kPersistentRamAllocaitonGranularity);
+    persistent_chunks_available -= dlog_chunks;
+
+    // Finally, anything left over can go to the crashlog.
+    crashlog_chunks += persistent_chunks_available;
+
+    crashlog_size = crashlog_chunks * kPersistentRamAllocaitonGranularity;
+    dlog_size = dlog_chunks * kPersistentRamAllocaitonGranularity;
+  }
+
+  // Configure up the crashlog RAM
+  dprintf(INFO, "Crashlog configured with %" PRIu64 " bytes\n", crashlog_size);
+  platform_set_ram_crashlog_location(pa, crashlog_size);
+
+  // Configure the persistent debuglog RAM (if we have any)
+  if (dlog_size > 0) {
+    dprintf(INFO, "Persistent debug logging enabled and configured with %" PRIu64 " bytes\n",
+            dlog_size);
+    persistent_dlog_set_location(paddr_to_physmap(pa + crashlog_size), dlog_size);
+  }
+}
+
 // Called during platform_init_early, the heap is not yet present.
 void ProcessZbiEarly(zbi_header_t* zbi) {
   DEBUG_ASSERT(zbi);
@@ -363,7 +412,7 @@ void ProcessZbiEarly(zbi_header_t* zbi) {
         dprintf(INFO, "boot reserve NVRAM range: phys base %#" PRIx64 " length %#" PRIx64 "\n",
                 info.base, info.length);
 
-        platform_set_ram_crashlog_location(info.base, info.length);
+        allocate_persistent_ram(info.base, info.length);
         boot_reserve_add_range(info.base, info.length);
         is_mexec_data = true;
         break;

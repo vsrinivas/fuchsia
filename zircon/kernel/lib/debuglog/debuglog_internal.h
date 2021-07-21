@@ -7,6 +7,7 @@
 #ifndef ZIRCON_KERNEL_LIB_DEBUGLOG_DEBUGLOG_INTERNAL_H_
 #define ZIRCON_KERNEL_LIB_DEBUGLOG_DEBUGLOG_INTERNAL_H_
 
+#include <lib/debuglog.h>
 #include <lib/zircon-internal/thread_annotations.h>
 
 #include <kernel/event.h>

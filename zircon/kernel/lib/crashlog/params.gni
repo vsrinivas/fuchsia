@@ -1,0 +1,15 @@
+# Copyright 2021 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+declare_args() {
+  # Controls minimum amount of space of persistent RAM to reserve for the
+  # crashlog.  When other features (such as persistent debug logging) are
+  # enabled, this value controls the minimum number of bytes which will
+  # _always_ be reserved for the crashlog (subject to the total amount of
+  # available persistent RAM), regardless of how much ram is requested by other
+  # users of persistent RAM.  Must be a multiple of 128 bytes.
+  min_crashlog_size = 2048
+}

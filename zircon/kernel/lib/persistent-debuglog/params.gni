@@ -1,0 +1,14 @@
+# Copyright 2021 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+declare_args() {
+  # Controls (in bytes) the target size of the persistent debug log, in bytes.
+  # Setting this to zero disables all persistent debug log functionality.  Note
+  # that while the system will make an attempt to secure this many bytes for the
+  # persistent debug log, it may not be able to due to limited persistent RAM
+  # resources.  Must be a multiple of 128 bytes.
+  target_persistent_debuglog_size = 0
+}

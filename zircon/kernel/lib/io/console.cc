@@ -10,6 +10,7 @@
 #include <debug.h>
 #include <lib/debuglog.h>
 #include <lib/io.h>
+#include <lib/persistent-debuglog.h>
 #include <lib/zircon-internal/macros.h>
 #include <platform.h>
 #include <string.h>
@@ -46,7 +47,11 @@ void console_write(ktl::string_view str) {
   }
 }
 
-static void stdout_write(ktl::string_view str) {
+static void stdout_write(ktl::string_view str, SkipPersistedDebuglog skip_pdlog) {
+  if (skip_pdlog == SkipPersistedDebuglog::No) {
+    persistent_dlog_write(str);
+  }
+
   if (dlog_bypass() == false) {
     if (dlog_write(DEBUGLOG_INFO, 0, str) == ZX_OK)
       return;
@@ -55,21 +60,21 @@ static void stdout_write(ktl::string_view str) {
   serial_write(str);
 }
 
-static void stdout_write_buffered(ktl::string_view str) {
+static void stdout_write_buffered(ktl::string_view str, SkipPersistedDebuglog skip_pdlog) {
   Thread* t = Thread::Current::Get();
 
   if (unlikely(t == nullptr)) {
-    stdout_write(str);
+    stdout_write(str, skip_pdlog);
     return;
   }
 
-  t->linebuffer().Write(str);
+  t->linebuffer().Write(str, skip_pdlog);
 }
 
-void Linebuffer::Write(ktl::string_view str) {
+void Linebuffer::Write(ktl::string_view str, SkipPersistedDebuglog skip_pdlog) {
   // Look for corruption and don't continue.
   if (unlikely(!is_kernel_address((uintptr_t)buffer_.data()) || pos_ >= buffer_.size())) {
-    stdout_write("<linebuffer corruption>\n"sv);
+    stdout_write("<linebuffer corruption>\n"sv, skip_pdlog);
     return;
   }
 
@@ -107,7 +112,7 @@ void Linebuffer::Write(ktl::string_view str) {
       pos_ += 1;
     }
     if (flush) {
-      stdout_write({buffer_.data(), pos_});
+      stdout_write({buffer_.data(), pos_}, skip_pdlog);
       pos_ = 0;
     }
   }
@@ -128,7 +133,7 @@ void unregister_print_callback(PrintCallback* cb) {
 // This is what printf calls.  Really this could and should be const.
 // But all the stdio function signatures require non-const `FILE*`.
 FILE FILE::stdout_{[](void*, ktl::string_view str) {
-                     stdout_write_buffered(str);
+                     stdout_write_buffered(str, SkipPersistedDebuglog::No);
                      return static_cast<int>(str.size());
                    },
                    nullptr};
@@ -144,3 +149,9 @@ FILE gSerialFile{[](void*, ktl::string_view str) {
                    return static_cast<int>(str.size());
                  },
                  nullptr};
+
+FILE gStdoutNoPersist{[](void*, ktl::string_view str) {
+                        stdout_write_buffered(str, SkipPersistedDebuglog::Yes);
+                        return static_cast<int>(str.size());
+                      },
+                      nullptr};

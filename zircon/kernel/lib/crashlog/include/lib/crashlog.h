@@ -10,6 +10,7 @@
 #include <lib/crashlog/panic_buffer.h>
 #include <zircon/boot/crash-reason.h>
 
+#include <kernel/persistent_ram.h>
 #include <vm/vm_object.h>
 
 #if defined(__aarch64__)
@@ -21,6 +22,15 @@
 #include <arch/x86.h>
 
 #endif
+
+#ifndef MIN_CRASHLOG_SIZE
+#define MIN_CRASHLOG_SIZE 2048
+#endif
+
+static constexpr size_t kMinCrashlogSize = MIN_CRASHLOG_SIZE;
+static_assert((kMinCrashlogSize % kPersistentRamAllocaitonGranularity) == 0,
+              "Minimum reserved crashlog size must be a multiple of the persistent RAM allocation "
+              "granularity");
 
 typedef struct {
   uintptr_t base_address;

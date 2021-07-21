@@ -6,6 +6,8 @@
 
 #include <assert.h>
 #include <debug.h>
+#include <lib/debuglog.h>
+#include <lib/persistent-debuglog.h>
 #include <platform.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -195,6 +197,29 @@ size_t default_platform_recover_crashlog(FILE* tgt) {
 
   if (rlog.payload && rlog.payload_len) {
     tgt->Write(ktl::string_view{static_cast<const char*>(rlog.payload), rlog.payload_len});
+    written += rlog.payload_len;
+  }
+
+  // Render any persistent dlog we happened to recover
+  ktl::string_view dlog = persistent_dlog_get_recovered_log();
+  if (dlog.size() > 0) {
+    int print_res =
+        fprintf(tgt, "Recovered %zu bytes from the persistent debug log\n", dlog.size());
+    if (print_res > 0) {
+      written += print_res;
+    }
+
+    print_res = fprintf(tgt, "=================== BEGIN ===================\n");
+    if (print_res > 0) {
+      written += print_res;
+    }
+
+    written += tgt->Write(dlog);
+
+    print_res = fprintf(tgt, "=================== END ===================\n");
+    if (print_res > 0) {
+      written += print_res;
+    }
   }
 
   // Report the total length.

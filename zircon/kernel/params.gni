@@ -84,6 +84,13 @@ declare_args() {
   #   1 - INFO
   #   2 - SPEW
   kernel_debug_print_level = 2
+
+  # Controls the granularity of allocation of the global pool of persistent RAM.
+  # All features which wish to use persistent RAM to preserve data across reboot
+  # must operate in allocations which are a multiple of this value.  The value
+  # should be a power of two, and typically should be a multiple of the
+  # cacheline size of the target architecture.
+  persistent_ram_allocation_granularity = 128
 }
 
 declare_args() {

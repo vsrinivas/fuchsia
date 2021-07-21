@@ -76,6 +76,7 @@ if (is_kernel) {
       "//zircon/kernel/lib/ktl",
       "//zircon/kernel/lib/ktrace",
       "//zircon/kernel/lib/mtrace",
+      "//zircon/kernel/lib/persistent-debuglog",
       "//zircon/kernel/lib/user_copy",
       "//zircon/kernel/lib/userabi:headers",
       "//zircon/kernel/object",

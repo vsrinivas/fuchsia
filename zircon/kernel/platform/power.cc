@@ -10,6 +10,7 @@
 #include <lib/console.h>
 #include <lib/crashlog.h>
 #include <lib/debuglog.h>
+#include <lib/persistent-debuglog.h>
 #include <platform.h>
 #include <stdio.h>
 #include <zircon/compiler.h>
@@ -55,6 +56,12 @@ void platform_halt(platform_halt_action suggested_action, zircon_crash_reason_t 
         crashlog_to_string(crashlog_render_buffer, sizeof(crashlog_render_buffer), reason);
   }
   platform_stow_crashlog(reason, crashlog_render_buffer, rendered_crashlog_len);
+
+  // This is a graceful reboot, invalidate the persistent dlog (if we
+  // have one) so that we don't attempt to recover it during a reboot.
+  if (reason == ZirconCrashReason::NoCrash) {
+    persistent_dlog_invalidate();
+  }
 
   // Finally, fall into the platform specific halt handler.
   platform_specific_halt(suggested_action, reason, halt_on_panic);

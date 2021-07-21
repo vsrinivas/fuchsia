@@ -10,6 +10,7 @@
 #include <lib/fit/defer.h>
 #include <lib/io.h>
 #include <lib/lazy_init/lazy_init.h>
+#include <lib/persistent-debuglog.h>
 #include <lib/version.h>
 #include <platform.h>
 #include <stdint.h>
@@ -70,6 +71,7 @@ void dlog_init_early() {
   // Construct the debuglog. Done here so we can construct it manually before
   // the global constructors are run.
   DLOG.Initialize();
+  persistent_dlog_init_early();
 }
 
 // Called after kernel cmdline options are parsed (in platform_early_init()).

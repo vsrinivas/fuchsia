@@ -16,6 +16,8 @@
 #include <ktl/array.h>
 #include <ktl/string_view.h>
 
+enum class SkipPersistedDebuglog { No = 0, Yes };
+
 class Linebuffer {
  public:
   // Buffer the contents of |str|, sending lines at a time to be
@@ -23,7 +25,7 @@ class Linebuffer {
   //
   // Lines break either at '\n' characters in |str|, or when the
   // internal buffer gets full.
-  void Write(ktl::string_view str);
+  void Write(ktl::string_view str, SkipPersistedDebuglog skip_pdlog);
 
  private:
   size_t pos_ = 0;
@@ -60,5 +62,6 @@ void console_write(ktl::string_view str);
 
 extern FILE gSerialFile;
 extern FILE gConsoleFile;
+extern FILE gStdoutNoPersist;
 
 #endif  // ZIRCON_KERNEL_LIB_IO_INCLUDE_LIB_IO_H_
