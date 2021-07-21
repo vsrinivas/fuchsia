@@ -46,11 +46,11 @@ struct ConfigInspectInfo {
     /// Nanoseconds since boot that this config was loaded.
     timestamp: inspect::StringProperty,
 
-    /// Debug string representation of the value of this config load info.
-    value: inspect::StringProperty,
-
     /// Number of times the config was loaded.
     count: inspect::IntProperty,
+
+    /// Debug string representation of the value of this config load info.
+    value: inspect::StringProperty,
 }
 
 impl DeviceStorageAccess for InspectConfigAgent {
@@ -136,15 +136,17 @@ impl InspectConfigAgent {
         if let event::Event::ConfigLoad(config::base::Event::Load(config::base::ConfigLoadInfo {
             path,
             status,
+            contents,
         })) = payload
         {
             let timestamp = clock::inspect_format_now();
             match self.config_load_values.get_mut(&path) {
                 Some(config_inspect_info) => {
                     config_inspect_info.timestamp.set(&timestamp);
-                    config_inspect_info
-                        .value
-                        .set(&format!("{:#?}", config::base::ConfigLoadInfo { path, status }));
+                    config_inspect_info.value.set(&format!(
+                        "{:#?}",
+                        config::base::ConfigLoadInfo { path, status, contents }
+                    ));
                     config_inspect_info.count.set(config_inspect_info.count.get().unwrap_or(0) + 1);
                 }
                 None => {
@@ -154,7 +156,7 @@ impl InspectConfigAgent {
                         "value",
                         format!(
                             "{:#?}",
-                            config::base::ConfigLoadInfo { path: path.clone(), status }
+                            config::base::ConfigLoadInfo { path: path.clone(), status, contents }
                         ),
                     );
                     let timestamp_prop = node.create_string("timestamp", timestamp.clone());
@@ -229,6 +231,7 @@ mod tests {
         let expected_inspect_info = config::base::ConfigLoadInfo {
             path: "/config/data/input_device_config.json".to_string(),
             status: config::base::ConfigLoadStatus::UsingDefaults(message),
+            contents: Some("{}".to_string()),
         };
 
         // Send the config load message.

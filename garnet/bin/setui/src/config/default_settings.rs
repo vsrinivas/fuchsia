@@ -4,7 +4,7 @@
 
 use anyhow::{format_err, Error};
 use serde::de::DeserializeOwned;
-use std::fmt::Display;
+use std::fmt::{Debug, Display};
 use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
@@ -16,7 +16,7 @@ use crate::service::{message::Messenger, Role};
 
 pub struct DefaultSetting<T, P>
 where
-    T: DeserializeOwned + Clone,
+    T: DeserializeOwned + Clone + Debug,
     P: AsRef<Path> + Display,
 {
     default_value: Option<T>,
@@ -29,7 +29,7 @@ where
 
 impl<T, P> DefaultSetting<T, P>
 where
-    T: DeserializeOwned + Clone,
+    T: DeserializeOwned + Clone + std::fmt::Debug,
     P: AsRef<Path> + Display,
 {
     pub fn new(
@@ -68,6 +68,11 @@ where
                         config::base::ConfigLoadInfo {
                             path: self.config_file_path.to_string(),
                             status: config::base::ConfigLoadStatus::Success,
+                            contents: if let Some(ref payload) = config {
+                                Some(format!("{:?}", payload))
+                            } else {
+                                None
+                            },
                         },
                     ));
                     Ok(config)
@@ -79,6 +84,7 @@ where
                         config::base::ConfigLoadInfo {
                             path: self.config_file_path.to_string(),
                             status: config::base::ConfigLoadStatus::ParseFailure(err_msg.clone()),
+                            contents: None,
                         },
                     ));
                     Err(format_err!("{:?}", err_msg))
@@ -91,6 +97,7 @@ where
                 status: config::base::ConfigLoadStatus::UsingDefaults(
                     "File not found, using defaults".to_string(),
                 ),
+                contents: None,
             }));
             Ok(self.default_value.clone())
         }
@@ -229,6 +236,7 @@ pub(crate) mod testing {
                     status: config::base::ConfigLoadStatus::UsingDefaults(
                         "File not found, using defaults".to_string(),
                     ),
+                    contents: None,
                 }),
             ))),
             &mut receptor,
