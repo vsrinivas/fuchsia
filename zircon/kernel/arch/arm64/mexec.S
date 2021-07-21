@@ -4,10 +4,11 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <lib/arch/cache.h>
+#include <arch/arm64/hypervisor/el2_state.h>
 #include <arch/asm_macros.h>
 #include <arch/defines.h>
 #include <asm.h>
+#include <lib/arch/cache.h>
 #include <mexec.h>
 
 /* Arguments Passed via x0 through x8 inclusive */
@@ -37,6 +38,7 @@ FUNCTION(mexec_asm)
     bic     tmp, tmp, #(1<<2)   // Disable dcache/ucache
     bic     tmp, tmp, #(1<<0)   // Disable the MMU
     msr     sctlr_el1, tmp      // Write the temp back to the control register
+    isb
 
 // Stash the boot arguments to pass to the next kernel since we expect to trash
 // x0 - x5
@@ -53,14 +55,22 @@ FUNCTION(mexec_asm)
 // This is the address of the kernel that we eventueally want to jump to.
     mov     new_kernel_addr, x5
 
-    // If we were originally booted in EL2, transition back into EL2
-    cmp  boot_el, #2
-    b.lt cplt_transition_to_boot_el  // We booted in EL1, no need to transition up
-    adr  x0, cplt_transition_to_boot_el
-    hvc  #1     // Branch into an EL2 trampoline that bounces to cplt_transition_to_boot_el
+// If we were originally booted in EL2, transition back into EL2
+    cmp     boot_el, #2
+    b.lt    .Lcplt_transition_to_boot_el  // We booted in EL1, no need to transition
 
- cplt_transition_to_boot_el:
+// Transition to EL2. We call the hypervisor, which will branch to the address
+// in x0.
+    adr     x0, 1f
+    hvc     #1
 
+1:
+// Reset SCTLR_EL2 to default state, turning off caches and MMU.
+    movlit  tmp, SCTLR_EL2_RES1
+    msr     sctlr_el2, tmp
+    isb
+
+.Lcplt_transition_to_boot_el:
     // Clean/Invalidate the cache early on.
     // We want to make sure that there are no dirty cache entries hanging around
     // in the cache before we start the memcpy.
