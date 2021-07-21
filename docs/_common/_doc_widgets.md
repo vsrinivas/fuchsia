@@ -9,8 +9,11 @@
 
 {% setvar pencil_edit %}
 <div class="pencil-edit">
-  <a href="{{ fuchsia_editor }}{{ glossary_file }}&searchAndJump=- term: &quot;{{item.term}}&quot;" title="Edit the glossary"><span class="material-icons" style="font-size: 18px">edit</span></a>
-</div>
+  {% if item is defined %}
+    <a href="{{ fuchsia_editor }}{{ glossary_file }}&searchAndJump=- term: &quot;{{item.term}}&quot;" title="Edit the glossary"><span class="material-icons" style="font-size: 18px">edit</span></a>
+  {% else %}
+    <a href="{{ fuchsia_editor }}{{ glossary_file }}" title="Edit the glossary"><span class="material-icons" style="font-size: 18px">edit</span></a>
+  {% endif %}
 {% endsetvar %}
 
 {% setvar glossary_edit %}
