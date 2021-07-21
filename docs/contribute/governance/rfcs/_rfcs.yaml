@@ -1444,3 +1444,16 @@
   reviewers: ['pascallouis@google.com', 'mkember@google.com', 'yifeit@google.com']
   submitted: '2021-06-24'
   reviewed: '2021-07-21'
+
+- name: 'RFC-0116'
+  title: 'Wire format support for sparser FIDL tables'
+  short_description: 'This RFC introduces changes to the FIDL wire format that optimize tables for a sparser distribution of present ordinals.'
+  authors: ['bprosnitz@google.com']
+  file: '0116_fidl_sparser_tables.md'
+  area: ['FIDL']
+  issue: ['79093']
+  gerrit_change_id: ['538805']
+  status: 'Rejected'
+  reviewers: []
+  submitted: '2021-06-16'
+  reviewed: '2021-07-21'
