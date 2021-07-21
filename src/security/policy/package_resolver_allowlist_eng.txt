@@ -13,7 +13,6 @@ fuchsia-pkg://fuchsia.com/dash_test#meta/dash_test.cmx
 fuchsia-pkg://fuchsia.com/amberctl-tests#meta/amberctl.cmx
 fuchsia-pkg://fuchsia.com/system-update-checker-integration-tests#meta/system-update-checker-integration-test.cmx
 fuchsia-pkg://fuchsia.com/pkgctl-integration-tests#meta/pkgctl-integration-test.cmx
-fuchsia-pkg://fuchsia.com/system-updater#meta/system-updater.cmx
 fuchsia-pkg://fuchsia.com/system-updater-integration-tests#meta/system-updater-isolated.cmx
 fuchsia-pkg://fuchsia.com/omaha-client-integration-tests#meta/system-updater-isolated.cmx
 fuchsia-pkg://fuchsia.com/pkgctl-integration-tests#meta/pkgctl.cmx

@@ -1,4 +1,2 @@
-fuchsia-pkg://fuchsia.com/amber#meta/system_updater.cmx
 fuchsia-pkg://fuchsia.com/has-misc-storage#meta/has-misc-storage.cmx
-fuchsia-pkg://fuchsia.com/system-updater#meta/system-updater.cmx
 fuchsia-pkg://fuchsia.com/system-update-checker#meta/system-update-checker.cmx

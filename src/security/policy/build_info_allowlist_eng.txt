@@ -17,6 +17,5 @@ fuchsia-pkg://fuchsia.com/sshd-host#meta/sshd-host.cmx
 fuchsia-pkg://fuchsia.com/system_monitor_harvester#meta/system_monitor_harvester.cmx
 fuchsia-pkg://fuchsia.com/system_monitor_harvester#meta/system_monitor_harvester_fidl.cmx
 fuchsia-pkg://fuchsia.com/system_monitor_harvester_tests#meta/system_monitor_harvester_test.cmx
-fuchsia-pkg://fuchsia.com/system-updater#meta/system-updater.cmx
 fuchsia-pkg://fuchsia.com/timekeeper#meta/timekeeper.cmx
 fuchsia-pkg://fuchsia.com/timekeeper_bin_test#meta/timekeeper_bin_test.cmx
