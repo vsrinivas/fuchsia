@@ -46,14 +46,14 @@ fn format_version_info<O: Offset + Display>(
 
 #[ffx_plugin()]
 pub async fn version(daemon_proxy: bridge::DaemonProxy, cmd: VersionCommand) -> Result<()> {
-    version_cmd(&build_info(), cmd, daemon_proxy, std::io::stdout(), Local).await
+    version_cmd(&build_info(), cmd, daemon_proxy, &mut std::io::stdout(), Local).await
 }
 
 pub async fn version_cmd<W: Write, O: Offset + Display>(
     version_info: &VersionInfo,
     cmd: VersionCommand,
     proxy: bridge::DaemonProxy,
-    mut w: W,
+    w: &mut W,
     tz: impl TimeZone<Offset = O>,
 ) -> Result<()> {
     writeln!(w, "{}", format_version_info("ffx", version_info, cmd.verbose, &tz))?;
@@ -93,7 +93,6 @@ mod test {
             future::Shared,
             FutureExt,
         },
-        std::io::BufWriter,
     };
 
     const FAKE_DAEMON_HASH: &str = "fake daemon fake";
@@ -172,18 +171,19 @@ mod test {
         daemon_proxy: bridge::DaemonProxy,
         cmd: VersionCommand,
     ) -> String {
-        let mut output = String::new();
-        let writer = unsafe { BufWriter::new(output.as_mut_vec()) };
-        let result = version_cmd(&version_info, cmd, daemon_proxy, writer, Utc).await.unwrap();
+        let mut writer = Vec::new();
+        let result = version_cmd(&version_info, cmd, daemon_proxy, &mut writer, Utc).await.unwrap();
         assert_eq!(result, ());
-        output
+        String::from_utf8(writer).unwrap()
     }
 
     fn assert_lines(output: String, expected_lines: Vec<String>) {
         let output_lines: Vec<&str> = output.lines().collect();
 
         if output_lines.len() != expected_lines.len() {
-            println!("FULL OUTPUT: \n{}\n", output);
+            let mut writer = std::io::stdout();
+            writeln!(&mut writer, "FULL OUTPUT: \n{}\n", output).unwrap();
+            writer.flush().unwrap();
             assert!(false, "{} lines =/= {} lines", output_lines.len(), expected_lines.len());
         }
 

@@ -8,9 +8,17 @@ use {
 };
 
 #[ffx_plugin()]
-async fn stop(daemon_proxy: bridge::DaemonProxy, _cmd: StopCommand) -> Result<()> {
+async fn stop(daemon_proxy: bridge::DaemonProxy, cmd: StopCommand) -> Result<()> {
+    stop_impl(daemon_proxy, cmd, &mut std::io::stdout()).await
+}
+
+async fn stop_impl<W: std::io::Write>(
+    daemon_proxy: bridge::DaemonProxy,
+    _cmd: StopCommand,
+    writer: &mut W,
+) -> Result<()> {
     daemon_proxy.quit().await?;
-    println!("Stopped daemon.");
+    writeln!(writer, "Stopped daemon.")?;
     Ok(())
 }
 
@@ -33,7 +41,10 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn run_stop_test() {
         let proxy = setup_fake_daemon_server();
-        let result = stop(proxy, StopCommand {}).await.unwrap();
+        let mut writer = Vec::new();
+        let result = stop_impl(proxy, StopCommand {}, &mut writer).await.unwrap();
         assert_eq!(result, ());
+        let output = String::from_utf8(writer).unwrap();
+        assert_eq!(output, "Stopped daemon.\n");
     }
 }

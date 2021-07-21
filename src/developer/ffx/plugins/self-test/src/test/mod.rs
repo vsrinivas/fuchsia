@@ -9,7 +9,7 @@ use {
     serde_json::Value,
     std::process::Stdio,
     std::time::Instant,
-    std::{env, path::PathBuf, process::Command, time::Duration},
+    std::{env, io::Write, path::PathBuf, process::Command, time::Duration},
     std::{future::Future, pin::Pin},
     tempfile::TempDir,
     termion::is_tty,
@@ -150,12 +150,7 @@ impl Isolate {
             ),
         )?;
 
-        Ok(Isolate {
-            _tmpdir: tmpdir,
-            home_dir: home_dir,
-            xdg_config_home: xdg_config_home,
-            ascendd_path: ascendd_path,
-        })
+        Ok(Isolate { _tmpdir: tmpdir, home_dir, xdg_config_home, ascendd_path })
     }
 
     /// ffx constructs a std::process::Command with the given arguments set to be passed to the ffx binary.
@@ -201,12 +196,13 @@ impl Drop for Isolate {
 /// run runs the given set of tests printing results to stdout and exiting
 /// with 0 or 1 if the tests passed or failed, respectively.
 pub async fn run(tests: Vec<TestCase>, timeout: Duration, case_timeout: Duration) -> Result<()> {
-    let color = is_tty(&std::io::stdout());
+    let mut writer = std::io::stdout();
+    let color = is_tty(&writer);
 
     async {
         let num_tests = tests.len();
 
-        println!("1..{}", num_tests);
+        writeln!(&mut writer, "1..{}", num_tests)?;
 
         let mut num_errs: usize = 0;
         for (i, tc) in tests.iter().enumerate().map(|(i, tc)| (i + 1, tc)) {
@@ -215,10 +211,25 @@ pub async fn run(tests: Vec<TestCase>, timeout: Duration, case_timeout: Duration
                 .await
             {
                 Ok(()) => {
-                    println!("{}ok {}{} - {}", green(color), i, nocol(color), tc.name);
+                    writeln!(
+                        &mut writer,
+                        "{}ok {}{} - {}",
+                        green(color),
+                        i,
+                        nocol(color),
+                        tc.name
+                    )?;
                 }
                 Err(err) => {
-                    println!("{}not ok {}{} - {} {:?}", red(color), i, nocol(color), tc.name, err);
+                    writeln!(
+                        &mut writer,
+                        "{}not ok {}{} - {} {:?}",
+                        red(color),
+                        i,
+                        nocol(color),
+                        tc.name,
+                        err
+                    )?;
                     num_errs = num_errs + 1;
                 }
             }
@@ -227,7 +238,14 @@ pub async fn run(tests: Vec<TestCase>, timeout: Duration, case_timeout: Duration
         if num_errs != 0 {
             ffx_bail!("{}{}/{} failed{}", red(color), num_errs, num_tests, nocol(color));
         } else {
-            println!("{}{}/{} passed{}", green(color), num_tests, num_tests, nocol(color));
+            writeln!(
+                &mut writer,
+                "{}{}/{} passed{}",
+                green(color),
+                num_tests,
+                num_tests,
+                nocol(color)
+            )?;
         }
 
         Ok(())
@@ -280,6 +298,6 @@ pub struct TestCase {
 
 impl TestCase {
     pub fn new(name: &'static str, f: TestFn) -> Self {
-        Self { name: name, f: f }
+        Self { name, f }
     }
 }

@@ -30,7 +30,7 @@ use {
     lazy_static::lazy_static,
     regex::Regex,
     serde::Serialize,
-    std::{collections::BTreeSet, path::PathBuf},
+    std::{collections::BTreeSet, io::Write, path::PathBuf},
 };
 
 lazy_static! {
@@ -67,7 +67,8 @@ impl Output for StandardOutput {
                 .map_err(|e| Error::InvalidCommandResponse(e))?,
             Format::Text => result.to_text(),
         };
-        println!("{}", result);
+        let mut writer = std::io::stdout();
+        writeln!(&mut writer, "{}", result)?;
         Ok(())
     }
 }
