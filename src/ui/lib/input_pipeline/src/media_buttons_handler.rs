@@ -45,10 +45,8 @@ impl InputHandler for MediaButtonsHandler {
                 let media_buttons_event = Self::create_media_buttons_event(media_buttons_event);
 
                 // Send the event if the media buttons are supported.
-                if !is_empty_media_buttons_event(&media_buttons_event) {
-                    self.send_event_to_listeners(&media_buttons_event).await;
-                    *self.last_event.lock().await = Some(media_buttons_event);
-                }
+                self.send_event_to_listeners(&media_buttons_event).await;
+                *self.last_event.lock().await = Some(media_buttons_event);
 
                 vec![]
             }
@@ -96,9 +94,10 @@ impl MediaButtonsHandler {
 
                         // Send the listener the last media button event.
                         if let Some(event) = self.last_event.lock().await.clone() {
-                            if !is_empty_media_buttons_event(&event) {
-                                let _ = proxy.on_event(event).await;
-                            }
+                            proxy
+                                .on_event(event)
+                                .await
+                                .context("Failed to send media buttons event to listener")?;
                         }
                     }
                     let _ = responder.send();
@@ -118,28 +117,28 @@ impl MediaButtonsHandler {
         event: consumer_controls::ConsumerControlsEvent,
     ) -> fidl_ui_input::MediaButtonsEvent {
         let mut new_event = fidl_ui_input::MediaButtonsEvent {
-            volume: None,
-            mic_mute: None,
-            pause: None,
-            camera_disable: None,
+            volume: Some(0),
+            mic_mute: Some(false),
+            pause: Some(false),
+            camera_disable: Some(false),
             ..fidl_ui_input::MediaButtonsEvent::EMPTY
         };
         for button in event.pressed_buttons {
             match button {
                 fidl_input_report::ConsumerControlButton::VolumeUp => {
-                    new_event.volume = Some(new_event.volume.unwrap_or_default() + 1);
+                    new_event.volume = Some(new_event.volume.unwrap().saturating_add(1));
                 }
                 fidl_input_report::ConsumerControlButton::VolumeDown => {
-                    new_event.volume = Some(new_event.volume.unwrap_or_default() - 1);
+                    new_event.volume = Some(new_event.volume.unwrap().saturating_sub(1));
                 }
                 fidl_input_report::ConsumerControlButton::MicMute => {
-                    new_event.mic_mute = Some(!new_event.mic_mute.unwrap_or_default());
+                    new_event.mic_mute = Some(true);
                 }
                 fidl_input_report::ConsumerControlButton::Pause => {
-                    new_event.pause = Some(!new_event.pause.unwrap_or_default());
+                    new_event.pause = Some(true);
                 }
                 fidl_input_report::ConsumerControlButton::CameraDisable => {
-                    new_event.camera_disable = Some(!new_event.camera_disable.unwrap_or_default());
+                    new_event.camera_disable = Some(true);
                 }
                 _ => {}
             }
@@ -160,22 +159,6 @@ impl MediaButtonsHandler {
             }
         }
     }
-}
-
-/// Checks if the event contains any media button changes.
-///
-/// # Parameters
-/// `event`: The media button event to check.
-fn is_empty_media_buttons_event(event: &fidl_ui_input::MediaButtonsEvent) -> bool {
-    let empty_event = fidl_ui_input::MediaButtonsEvent {
-        volume: None,
-        mic_mute: None,
-        pause: None,
-        camera_disable: None,
-        ..fidl_ui_input::MediaButtonsEvent::EMPTY
-    };
-
-    empty_event == *event
 }
 
 #[cfg(test)]
@@ -322,7 +305,12 @@ mod tests {
             event_time,
             &descriptor,
         )];
-        let expected_events = vec![create_ui_input_media_buttons_event(Some(1), None, None, None)];
+        let expected_events = vec![create_ui_input_media_buttons_event(
+            Some(1),
+            Some(false),
+            Some(false),
+            Some(false),
+        )];
 
         // Assert registered listeners receives event.
         assert_input_event_sequence_generates_media_buttons_events!(

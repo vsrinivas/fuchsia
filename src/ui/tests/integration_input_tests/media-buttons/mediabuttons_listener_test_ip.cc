@@ -55,7 +55,7 @@ const std::map<std::string, std::string> LocalServices() {
 // Allow these global services from outside the test environment.
 const std::vector<std::string> GlobalServices() {
   return {"fuchsia.vulkan.loader.Loader", "fuchsia.sysmem.Allocator",
-          "fuchsia.scheduler.ProfileProvider"};
+          "fuchsia.tracing.provider.Registry", "fuchsia.scheduler.ProfileProvider"};
 }
 
 // This implements the MediaButtonsListener class. Its purpose is to test that MediaButton Events
@@ -145,30 +145,12 @@ class MediaButtonsListenerTest : public sys::testing::TestWithEnvironment {
   }
 
   // Inject directly into Input Pipeline, using fuchsia.input.injection FIDLs.
-  void InjectInput() {
-    // Set InputReports to inject: one report with buttons pressed, followed by a report with no
-    // buttons pressed.
-    fuchsia::input::report::ConsumerControlInputReport cc_input_report;
-    cc_input_report.set_pressed_buttons({
-        fuchsia::input::report::ConsumerControlButton::CAMERA_DISABLE,
-        fuchsia::input::report::ConsumerControlButton::MIC_MUTE,
-        fuchsia::input::report::ConsumerControlButton::PAUSE,
-        fuchsia::input::report::ConsumerControlButton::VOLUME_UP,
-    });
+  void InjectInput(fuchsia::input::report::ConsumerControlInputReport cc_input_report) {
     fuchsia::input::report::InputReport input_report;
     input_report.set_consumer_control(std::move(cc_input_report));
 
     std::vector<fuchsia::input::report::InputReport> input_reports;
     input_reports.push_back(std::move(input_report));
-
-    fuchsia::input::report::ConsumerControlInputReport remove_cc_input_report;
-    remove_cc_input_report.set_pressed_buttons({});
-
-    fuchsia::input::report::InputReport remove_input_report;
-    remove_input_report.set_consumer_control(std::move(remove_cc_input_report));
-    input_reports.push_back(std::move(remove_input_report));
-
-    // Inject the reports.
     fake_input_device_->SetReports(std::move(input_reports));
 
     ++injection_count_;
@@ -192,7 +174,8 @@ TEST_F(MediaButtonsListenerTest, MediaButtonsWithCallback) {
         observed_event = fidl::Clone(observed);
       };
 
-  // Register the MediaButtons listener against Input Pipeline.
+  // Register the MediaButtons listener against Input Pipeline and inject an event with pressed
+  // buttons.
   fidl::InterfaceHandle<fuchsia::ui::policy::MediaButtonsListener> listener_handle;
   auto button_listener_impl =
       std::make_unique<ButtonsListenerImpl>(listener_handle.NewRequest(), std::move(on_event));
@@ -201,21 +184,42 @@ TEST_F(MediaButtonsListenerTest, MediaButtonsWithCallback) {
   input_pipeline.set_error_handler([](zx_status_t status) {
     FX_LOGS(FATAL) << "Lost connection to Input Pipeline: " << zx_status_get_string(status);
   });
-  input_pipeline->RegisterListener(std::move(listener_handle), [this] { InjectInput(); });
+  fuchsia::input::report::ConsumerControlInputReport first_report;
+  first_report.set_pressed_buttons({
+      fuchsia::input::report::ConsumerControlButton::CAMERA_DISABLE,
+      fuchsia::input::report::ConsumerControlButton::MIC_MUTE,
+      fuchsia::input::report::ConsumerControlButton::PAUSE,
+      fuchsia::input::report::ConsumerControlButton::VOLUME_UP,
+  });
+  input_pipeline->RegisterListener(std::move(listener_handle),
+                                   [this, &first_report] { InjectInput(std::move(first_report)); });
 
   RunLoopUntil([&observed_event] { return observed_event.has_value(); });
 
   ASSERT_TRUE(observed_event->has_volume());
   EXPECT_EQ(observed_event->volume(), 1);
-
   ASSERT_TRUE(observed_event->has_mic_mute());
   EXPECT_TRUE(observed_event->mic_mute());
-
   ASSERT_TRUE(observed_event->has_pause());
   EXPECT_TRUE(observed_event->pause());
-
   ASSERT_TRUE(observed_event->has_camera_disable());
   EXPECT_TRUE(observed_event->camera_disable());
+
+  // Inject a second event that represents releasing the pressed buttons.
+  observed_event.reset();
+  fuchsia::input::report::ConsumerControlInputReport second_report;
+  second_report.set_pressed_buttons({});
+  InjectInput(std::move(second_report));
+  RunLoopUntil([&observed_event] { return observed_event.has_value(); });
+
+  ASSERT_TRUE(observed_event->has_volume());
+  EXPECT_EQ(observed_event->volume(), 0);
+  ASSERT_TRUE(observed_event->has_mic_mute());
+  EXPECT_FALSE(observed_event->mic_mute());
+  ASSERT_TRUE(observed_event->has_pause());
+  EXPECT_FALSE(observed_event->pause());
+  ASSERT_TRUE(observed_event->has_camera_disable());
+  EXPECT_FALSE(observed_event->camera_disable());
 }
 
 }  // namespace

@@ -175,18 +175,6 @@ impl ConsumerControlsBinding {
 
         Some(report)
     }
-
-    /// Returns the [`fidl_input_report::ConsumerControlButton`]s that this binding supports.
-    pub fn supported_buttons() -> Vec<fidl_input_report::ConsumerControlButton> {
-        vec![
-            fidl_input_report::ConsumerControlButton::CameraDisable,
-            fidl_input_report::ConsumerControlButton::FactoryReset,
-            fidl_input_report::ConsumerControlButton::MicMute,
-            fidl_input_report::ConsumerControlButton::Pause,
-            fidl_input_report::ConsumerControlButton::VolumeDown,
-            fidl_input_report::ConsumerControlButton::VolumeUp,
-        ]
-    }
 }
 
 /// Sends an InputEvent over `sender`.

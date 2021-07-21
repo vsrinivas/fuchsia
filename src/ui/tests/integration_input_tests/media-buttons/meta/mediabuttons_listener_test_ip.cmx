@@ -1,15 +1,17 @@
 {
     "include": [
-        "syslog/client.shard.cmx",
-        "//src/lib/vulkan/test-application.shard.cmx"
+        "//src/lib/vulkan/test-application.shard.cmx",
+        "syslog/client.shard.cmx"
     ],
     "program": {
         "binary": "bin/mediabuttons_listener_test_ip"
     },
     "sandbox": {
         "services": [
+            "fuchsia.scheduler.ProfileProvider",
             "fuchsia.sys.Environment",
-            "fuchsia.sys.Loader"
+            "fuchsia.sys.Loader",
+            "fuchsia.tracing.provider.Registry"
         ]
     }
 }

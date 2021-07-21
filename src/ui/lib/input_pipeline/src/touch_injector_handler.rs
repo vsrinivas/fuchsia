@@ -320,7 +320,7 @@ impl TouchInjectorHandler {
                         let events = &mut vec![pointerinjector::Event {
                             timestamp: Some(fuchsia_async::Time::now().into_nanos()),
                             data: Some(pointerinjector::Data::Viewport(new_viewport.clone())),
-                            trace_flow_id: None,
+                            trace_flow_id: Some(fuchsia_trace::generate_nonce()),
                             ..pointerinjector::Event::EMPTY
                         }]
                         .into_iter();
@@ -426,7 +426,8 @@ mod tests {
             Some(request) => match request {
                 Ok(pointerinjector::DeviceRequest::Inject { events, .. }) => {
                     assert_eq!(events.len(), 1);
-                    assert_eq!(events[0], expected_event);
+                    assert_eq!(events[0].timestamp, expected_event.timestamp);
+                    assert_eq!(events[0].data, expected_event.data);
                 }
                 _ => {
                     assert!(false, "Unexpected DeviceRequest.");

@@ -271,6 +271,11 @@ impl TouchBinding {
         let current_contacts: HashMap<u32, TouchContact> =
             touch_contacts_from_touch_report(touch_report);
 
+        // Don't send an event if there are no new contacts.
+        if previous_contacts.is_empty() && current_contacts.is_empty() {
+            return Some(report);
+        }
+
         // Contacts which exist only in current.
         let added_contacts: Vec<TouchContact> = Vec::from_iter(
             current_contacts
@@ -405,6 +410,32 @@ mod tests {
         fuchsia_async as fasync,
         futures::StreamExt,
     };
+
+    #[fasync::run_singlethreaded(test)]
+    async fn process_empty_reports() {
+        let previous_report_time = fuchsia_zircon::Time::get_monotonic().into_nanos();
+        let previous_report = create_touch_input_report(vec![], previous_report_time);
+        let report_time = fuchsia_zircon::Time::get_monotonic().into_nanos();
+        let report = create_touch_input_report(vec![], report_time);
+
+        let descriptor = input_device::InputDeviceDescriptor::Touch(TouchDeviceDescriptor {
+            device_id: 1,
+            contacts: vec![],
+        });
+        let (mut event_sender, mut event_receiver) = futures::channel::mpsc::channel(1);
+        let returned_report = TouchBinding::process_reports(
+            report,
+            Some(previous_report),
+            &descriptor,
+            &mut event_sender,
+        );
+        assert!(returned_report.is_some());
+        assert_eq!(returned_report.unwrap().event_time, Some(report_time));
+
+        // Assert there are no pending events on the receiver.
+        let event = event_receiver.try_next();
+        assert!(event.is_err());
+    }
 
     // Tests that a input report with a new contact generates an event with an add and a down.
     #[fasync::run_singlethreaded(test)]

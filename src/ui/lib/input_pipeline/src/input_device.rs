@@ -176,20 +176,7 @@ pub async fn is_device_type(
 
     // Return if the device type matches the desired `device_type`.
     match device_type {
-        InputDeviceType::ConsumerControls => {
-            let supported_buttons = consumer_controls::ConsumerControlsBinding::supported_buttons();
-            if let Some(fidl_input_report::ConsumerControlDescriptor {
-                input: Some(input), ..
-            }) = device_descriptor.consumer_control
-            {
-                input
-                    .buttons
-                    .map(|buttons| buttons.iter().any(|button| supported_buttons.contains(button)))
-                    .unwrap_or(false)
-            } else {
-                false
-            }
-        }
+        InputDeviceType::ConsumerControls => device_descriptor.consumer_control.is_some(),
         InputDeviceType::Mouse => device_descriptor.mouse.is_some(),
         InputDeviceType::Touch => device_descriptor.touch.is_some(),
         InputDeviceType::Keyboard => device_descriptor.keyboard.is_some(),
@@ -312,39 +299,6 @@ mod tests {
         .unwrap();
 
         assert!(is_device_type(&input_device_proxy, InputDeviceType::ConsumerControls).await);
-    }
-
-    // Tests that is_device_type() returns true for InputDeviceType::ConsumerControls when a
-    // consumer controls device doesn't exist.
-    #[fasync::run_singlethreaded(test)]
-    async fn consumer_controls_input_device_doesnt_exists() {
-        let input_device_proxy = spawn_stream_handler(move |input_device_request| async move {
-            match input_device_request {
-                fidl_input_report::InputDeviceRequest::GetDescriptor { responder } => {
-                    let _ = responder.send(fidl_input_report::DeviceDescriptor {
-                        device_info: None,
-                        mouse: None,
-                        sensor: None,
-                        touch: None,
-                        keyboard: None,
-                        consumer_control: Some(fidl_input_report::ConsumerControlDescriptor {
-                            input: Some(fidl_input_report::ConsumerControlInputDescriptor {
-                                buttons: Some(vec![
-                                    fidl_input_report::ConsumerControlButton::Reboot,
-                                ]),
-                                ..fidl_input_report::ConsumerControlInputDescriptor::EMPTY
-                            }),
-                            ..fidl_input_report::ConsumerControlDescriptor::EMPTY
-                        }),
-                        ..fidl_input_report::DeviceDescriptor::EMPTY
-                    });
-                }
-                _ => panic!("InputDevice handler received an unexpected request"),
-            }
-        })
-        .unwrap();
-
-        assert!(!is_device_type(&input_device_proxy, InputDeviceType::ConsumerControls).await);
     }
 
     // Tests that is_device_type() returns true for InputDeviceType::Mouse when a mouse exists.
