@@ -1,5 +1,8 @@
+
+{% import "fuchsia-src/glossary/_common/_glossary_macros.md" as macro %}
+<!-- The header above is automatically added to this file. Do not modify anything above this line. -->
 <li>
-  {{ pencil_edit(item.term) }}
+  {{ macro.pencil_edit_macro(item.term) }}
   <h3 class="add-link">{{ item.term }}</h3>
     {% if item.short_description != '' %}
     <p>{{ item.short_description }}</p>
