@@ -233,3 +233,5 @@ toc:
   path: /docs/contribute/governance/rfcs/0109_socket_datagram_socket.md
 - title: "RFC-0113: Efficient envelopes"
   path: /docs/contribute/governance/rfcs/0113_efficient_envelopes.md
+- title: "RFC-0114: Inlining small values in FIDL envelopes"
+  path: /docs/contribute/governance/rfcs/0114_fidl_envelope_inlining.md

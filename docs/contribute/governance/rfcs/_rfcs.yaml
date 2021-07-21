@@ -1428,6 +1428,19 @@
   issue: []
   gerrit_change_id: ['545861']
   status: 'Accepted'
-  reviewers: ['']
+  reviewers: ['pascallouis@google.com', 'mkember@google.com', 'yifeit@google.com', 'ianloic@google.com']
   submitted: '2021-06-21'
+  reviewed: '2021-07-21'
+
+- name: 'RFC-0114'
+  title: 'Inlining small values in FIDL envelopes'
+  short_description: 'This RFC proposes a FIDL wire format change that inlines values <= 4-bytes in size into the body of envelopes.'
+  authors: ['bprosnitz@google.com']
+  file: '0114_fidl_envelope_inlining.md'
+  area: ['FIDL']
+  issue: []
+  gerrit_change_id: [545282]
+  status: ''
+  reviewers: ['pascallouis@google.com', 'mkember@google.com', 'yifeit@google.com']
+  submitted: '2021-06-24'
   reviewed: '2021-07-21'
