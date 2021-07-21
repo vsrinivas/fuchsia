@@ -62,7 +62,6 @@ pub async fn add(daemon_proxy: bridge::DaemonProxy, cmd: AddCommand) -> Result<(
     };
 
     if let Err(e) = daemon_proxy.add_target(&mut addr).await? {
-        eprintln!("ERROR: {:?}", e);
         Err(anyhow!("Error adding target: {:?}", e))
     } else {
         Ok(())

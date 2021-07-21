@@ -29,6 +29,14 @@ pub async fn flash(
     // TODO(fxb/74841): remove allow attribute
     #[allow(unused_mut)] mut cmd: FlashCommand,
 ) -> Result<()> {
+    flash_plugin_impl(fastboot_proxy, cmd, &mut stdout()).await
+}
+
+pub async fn flash_plugin_impl<W: Write + Send>(
+    fastboot_proxy: FastbootProxy,
+    mut cmd: FlashCommand,
+    writer: &mut W,
+) -> Result<()> {
     let mut path = PathBuf::new();
     path.push(&cmd.manifest);
     if !path.is_file() {
@@ -50,7 +58,7 @@ pub async fn flash(
                 let key: Option<String> = file("ssh.pub").await?;
                 match key {
                     Some(k) => {
-                        println!("No `--ssh-key` flag, using {}", k);
+                        eprintln!("No `--ssh-key` flag, using {}", k);
                         cmd.oem_stage.push(OemFile::new(SSH_OEM_COMMAND.to_string(), k));
                     }
                     None => ffx_bail!(
@@ -61,25 +69,24 @@ pub async fn flash(
             }
         }
     }
-    let mut writer = Box::new(stdout());
     match path.extension() {
         Some(ext) => {
             if ext == "zip" {
-                let r = ArchiveResolver::new(&mut writer, path)?;
-                flash_impl(&mut writer, r, fastboot_proxy, cmd).await
+                let r = ArchiveResolver::new(writer, path)?;
+                flash_impl(writer, r, fastboot_proxy, cmd).await
             } else if ext == "tgz" || ext == "tar.gz" || ext == "tar" {
-                let r = TarResolver::new(&mut writer, path)?;
-                flash_impl(&mut writer, r, fastboot_proxy, cmd).await
+                let r = TarResolver::new(writer, path)?;
+                flash_impl(writer, r, fastboot_proxy, cmd).await
             } else {
-                flash_impl(&mut writer, Resolver::new(path)?, fastboot_proxy, cmd).await
+                flash_impl(writer, Resolver::new(path)?, fastboot_proxy, cmd).await
             }
         }
-        _ => flash_impl(&mut writer, Resolver::new(path)?, fastboot_proxy, cmd).await,
+        _ => flash_impl(writer, Resolver::new(path)?, fastboot_proxy, cmd).await,
     }
 }
 
 async fn flash_impl<W: Write + Send, F: FileResolver + Send + Sync>(
-    mut writer: W,
+    writer: &mut W,
     mut file_resolver: F,
     fastboot_proxy: FastbootProxy,
     cmd: FlashCommand,
@@ -87,7 +94,7 @@ async fn flash_impl<W: Write + Send, F: FileResolver + Send + Sync>(
     let reader = File::open(file_resolver.manifest())
         .context("opening file for read")
         .map(BufReader::new)?;
-    FlashManifest::load(reader)?.flash(&mut writer, &mut file_resolver, fastboot_proxy, cmd).await
+    FlashManifest::load(reader)?.flash(writer, &mut file_resolver, fastboot_proxy, cmd).await
 }
 
 ////////////////////////////////////////////////////////////////////////////////

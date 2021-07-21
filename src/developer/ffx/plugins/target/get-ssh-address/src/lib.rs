@@ -21,13 +21,13 @@ const DEFAULT_SSH_PORT: u16 = 22;
 
 #[ffx_plugin()]
 pub async fn get_ssh_address(daemon_proxy: DaemonProxy, cmd: GetSshAddressCommand) -> Result<()> {
-    get_ssh_address_impl(daemon_proxy, cmd, Box::new(stdout())).await
+    get_ssh_address_impl(daemon_proxy, cmd, &mut stdout()).await
 }
 
 async fn get_ssh_address_impl<W: Write>(
     daemon_proxy: DaemonProxy,
     cmd: GetSshAddressCommand,
-    mut writer: W,
+    writer: &mut W,
 ) -> Result<()> {
     let timeout = Duration::from_nanos((cmd.timeout().await? * 1000000000.0) as u64);
     let ffx: ffx_lib_args::Ffx = argh::from_env();
@@ -36,7 +36,7 @@ async fn get_ssh_address_impl<W: Write>(
     let res = daemon_proxy
         .get_ssh_address(target.as_deref(), timeout.as_nanos() as i64)
         .await?
-        .map_err(|e| FfxError::DaemonError { err: e, target: target, is_default_target })?;
+        .map_err(|e| FfxError::DaemonError { err: e, target, is_default_target })?;
 
     let (ip, scope, port) = match res {
         TargetAddrInfo::Ip(info) => {

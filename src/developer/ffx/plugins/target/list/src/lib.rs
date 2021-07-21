@@ -17,13 +17,13 @@ mod target_formatter;
 
 #[ffx_plugin()]
 pub async fn list_targets(daemon_proxy: bridge::DaemonProxy, cmd: ListCommand) -> Result<()> {
-    list_impl(daemon_proxy, cmd, Box::new(stdout())).await
+    list_impl(daemon_proxy, cmd, &mut stdout()).await
 }
 
 async fn list_impl<W: Write>(
     daemon_proxy: bridge::DaemonProxy,
     cmd: ListCommand,
-    mut writer: W,
+    writer: &mut W,
 ) -> Result<()> {
     match daemon_proxy
         .list_targets(match cmd.nodename {
@@ -53,10 +53,7 @@ async fn list_impl<W: Write>(
             };
             Ok(())
         }
-        Err(e) => {
-            eprintln!("ERROR: {:?}", e);
-            Err(anyhow!("Error listing targets: {:?}", e))
-        }
+        Err(e) => Err(anyhow!("Error listing targets: {:?}", e)),
     }
 }
 
@@ -73,7 +70,6 @@ mod test {
             DaemonRequest, RemoteControlState, Target as FidlTarget, TargetState, TargetType,
         },
         regex::Regex,
-        std::io::BufWriter,
         std::net::IpAddr,
     };
 
@@ -117,10 +113,9 @@ mod test {
     }
 
     async fn try_run_list_test(num_tests: usize, cmd: ListCommand) -> Result<String> {
-        let mut output = String::new();
-        let writer = unsafe { BufWriter::new(output.as_mut_vec()) };
+        let mut writer = Vec::new();
         let proxy = setup_fake_daemon_server(num_tests);
-        list_impl(proxy, cmd, writer).await.map(|_| output)
+        list_impl(proxy, cmd, &mut writer).await.map(|_| String::from_utf8(writer).unwrap())
     }
 
     async fn run_list_test(num_tests: usize, cmd: ListCommand) -> String {

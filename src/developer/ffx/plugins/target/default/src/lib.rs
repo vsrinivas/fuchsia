@@ -12,10 +12,17 @@ pub(crate) const TARGET_DEFAULT_KEY: &str = "target.default";
 
 #[ffx_plugin()]
 pub async fn exec_target_default(cmd: TargetDefaultCommand) -> Result<()> {
+    exec_target_default_impl(cmd, &mut std::io::stdout()).await
+}
+
+pub async fn exec_target_default_impl<W: std::io::Write>(
+    cmd: TargetDefaultCommand,
+    writer: &mut W,
+) -> Result<()> {
     match &cmd.subcommand {
         SubCommand::Get(_) => {
             let res: String = ffx_config::get(TARGET_DEFAULT_KEY).await.unwrap_or("".to_owned());
-            println!("{}", res);
+            writeln!(writer, "{}", res)?;
         }
         SubCommand::Set(set) => {
             ffx_config::set(
