@@ -1489,7 +1489,7 @@ func (eps *endpointWithSocket) loopWrite(ch chan<- struct{}) {
 			// and shutting it down here would cause signals to be asserted twice,
 			// which can produce races in the client.
 			if eps.ep.Readiness(waiter.EventErr)&waiter.EventErr == 0 {
-				if err := eps.local.Shutdown(zx.SocketShutdownRead); err != nil {
+				if err := eps.local.SetDisposition(0, zx.SocketDispositionWriteDisabled); err != nil {
 					panic(err)
 				}
 				_ = syslog.DebugTf("zx_socket_shutdown", "%p: ZX_SOCKET_SHUTDOWN_READ", eps)
@@ -1559,7 +1559,7 @@ func (eps *endpointWithSocket) loopRead(ch chan<- struct{}) {
 			// and shutting it down here would cause signals to be asserted twice,
 			// which can produce races in the client.
 			if eps.ep.Readiness(waiter.EventErr)&waiter.EventErr == 0 {
-				if err := eps.local.Shutdown(zx.SocketShutdownWrite); err != nil {
+				if err := eps.local.SetDisposition(zx.SocketDispositionWriteDisabled, 0); err != nil {
 					panic(err)
 				}
 				_ = syslog.DebugTf("zx_socket_shutdown", "%p: ZX_SOCKET_SHUTDOWN_WRITE", eps)
@@ -1627,52 +1627,42 @@ func (eps *endpointWithSocket) loopRead(ch chan<- struct{}) {
 // TODO(https://fxbug.dev/78129): After ABI transition, create a copy of this
 // Shutdown2 method but name it Shutdown.
 func (eps *endpointWithSocket) Shutdown2(_ fidl.Context, how socket.ShutdownMode) (socket.BaseSocketShutdown2Result, error) {
-	{
-		how, err := func() (uint32, posix.Errno) {
-			var shutdownFlags uint32
+	var disposition, dispositionPeer uint32
 
-			if how&socket.ShutdownModeRead != 0 {
-				shutdownFlags |= zx.SocketShutdownRead
-				how ^= socket.ShutdownModeRead
-			}
-			if how&socket.ShutdownModeWrite != 0 {
-				shutdownFlags |= zx.SocketShutdownWrite
-				how ^= socket.ShutdownModeWrite
-			}
-			if shutdownFlags == 0 || how != 0 {
-				return 0, posix.ErrnoEinval
-			}
-
-			return shutdownFlags, 0
-		}()
-
-		if err != 0 {
-			return socket.BaseSocketShutdown2ResultWithErr(err), nil
-		}
-
-		if h := eps.local.Handle(); !h.IsValid() {
-			return socket.BaseSocketShutdown2ResultWithErr(tcpipErrorToCode(&tcpip.ErrNotConnected{})), nil
-		}
-
-		if err := eps.peer.Shutdown(how); err != nil {
-			return socket.BaseSocketShutdown2Result{}, err
-		}
-
-		// Only handle a shutdown read on the endpoint here. Shutdown write is
-		// performed by the loopWrite goroutine: it ensures that it happens *after*
-		// all the buffered data in the zircon socket was read.
-		if how&zx.SocketShutdownRead != 0 {
-			switch err := eps.ep.Shutdown(tcpip.ShutdownRead); err.(type) {
-			case nil, *tcpip.ErrNotConnected:
-				// Shutdown can return ErrNotConnected if the endpoint was connected
-				// but no longer is.
-			default:
-				panic(err)
-			}
-		}
-
-		return socket.BaseSocketShutdown2ResultWithResponse(socket.BaseSocketShutdown2Response{}), nil
+	if how&socket.ShutdownModeWrite != 0 {
+		disposition = zx.SocketDispositionWriteDisabled
+		how ^= socket.ShutdownModeWrite
 	}
+	if how&socket.ShutdownModeRead != 0 {
+		dispositionPeer = zx.SocketDispositionWriteDisabled
+		how ^= socket.ShutdownModeRead
+	}
+	if how != 0 || (disposition == 0 && dispositionPeer == 0) {
+		return socket.BaseSocketShutdown2ResultWithErr(posix.ErrnoEinval), nil
+	}
+
+	if h := eps.local.Handle(); !h.IsValid() {
+		return socket.BaseSocketShutdown2ResultWithErr(tcpipErrorToCode(&tcpip.ErrNotConnected{})), nil
+	}
+
+	if err := eps.peer.SetDisposition(disposition, dispositionPeer); err != nil {
+		return socket.BaseSocketShutdown2Result{}, err
+	}
+
+	// Only handle a shutdown read on the endpoint here. Shutdown write is
+	// performed by the loopWrite goroutine: it ensures that it happens *after*
+	// all the buffered data in the zircon socket was read.
+	if how&socket.ShutdownModeRead != 0 {
+		switch err := eps.ep.Shutdown(tcpip.ShutdownRead); err.(type) {
+		case nil, *tcpip.ErrNotConnected:
+			// Shutdown can return ErrNotConnected if the endpoint was connected
+			// but no longer is.
+		default:
+			panic(err)
+		}
+	}
+
+	return socket.BaseSocketShutdown2ResultWithResponse(socket.BaseSocketShutdown2Response{}), nil
 }
 
 type datagramSocketImpl struct {
