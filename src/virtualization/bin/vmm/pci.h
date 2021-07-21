@@ -222,12 +222,21 @@ class PciDevice {
 
   // Static attributes for this device.
   const Attributes attrs_;
-  // Command register.
-  uint16_t command_ __TA_GUARDED(mutex_) = 0;
+
   // PCI bus this device is connected to.
   PciBus* bus_ = nullptr;
+
   // IRQ vector assigned by the bus.
   uint32_t global_irq_ = 0;
+
+  // PCI config register "command".
+  uint16_t command_ __TA_GUARDED(mutex_) = 0;
+
+  // PCI config register "interrupt line".
+  //
+  // The value written here is not used by us for anything, but
+  // software relies on storing arbitrary values here.
+  uint8_t reg_interrupt_line_ __TA_GUARDED(mutex_) = 0;
 
   // Capability section of the config space.
   std::vector<uint8_t> capabilities_ __TA_GUARDED(mutex_);

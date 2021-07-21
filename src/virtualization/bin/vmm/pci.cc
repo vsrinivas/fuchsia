@@ -545,8 +545,9 @@ zx_status_t PciDevice::ReadConfigWord(uint8_t reg, uint32_t* value) const {
     // | max_latency |  min_grant  | interrupt_pin  | interrupt_line |
     //  -------------------------------------------------------------
     case PCI_CONFIG_INTERRUPT_LINE: {
+      std::lock_guard<std::mutex> lock(mutex_);
       const uint8_t interrupt_pin = 1;
-      *value = interrupt_pin << 8;
+      *value = (interrupt_pin << 8) | reg_interrupt_line_;
       return ZX_OK;
     }
     //  -------------------------------------------
@@ -628,6 +629,13 @@ zx_status_t PciDevice::WriteConfig(uint64_t reg, const IoValue& value) {
       // If this write enables interrupts, send any pending interrupts to the
       // bus.
       return Interrupt();
+    }
+    case PCI_CONFIG_INTERRUPT_LINE: {
+      // The 8-byte `interrupt_line` register is R/W, while the other registers
+      // are read-only. (PCI 3.0, Section 6.2.4)
+      std::lock_guard<std::mutex> lock(mutex_);
+      reg_interrupt_line_ = value.u8;
+      return ZX_OK;
     }
     case kPciRegisterBar0:
     case kPciRegisterBar1:

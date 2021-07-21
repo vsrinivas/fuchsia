@@ -154,6 +154,35 @@ TEST(PciDeviceTest, ReadBarSize) {
   EXPECT_EQ(~(reg & kPciBarMmioAddrMask) + 1, bar->size());
 }
 
+// The 8-bit interrupt line register should be read/write.
+TEST(PciDeviceTest, ReadWriteInterruptLine) {
+  Guest guest;
+  PciBus bus(&guest, nullptr);
+  bus.Init(async_get_default_dispatcher());
+  PciDevice* device = bus.root_complex();
+
+  // Write/read the 8-bit value directly.
+  {
+    EXPECT_EQ(device->WriteConfig(PCI_CONFIG_INTERRUPT_LINE, IoValue::FromU8(0xaa)), ZX_OK);
+    IoValue value = IoValue::FromU8(0);
+    EXPECT_EQ(device->ReadConfig(PCI_CONFIG_INTERRUPT_LINE, &value), ZX_OK);
+    EXPECT_EQ(value.u8, 0xaa);
+  }
+
+  // Write/read 32-bits. The interrupt line register should be updated, but not
+  // the neighbouring registers.
+  {
+    IoValue original_value = IoValue::FromU32(0);
+    EXPECT_EQ(device->ReadConfig(PCI_CONFIG_INTERRUPT_LINE, &original_value), ZX_OK);
+
+    EXPECT_EQ(device->WriteConfig(PCI_CONFIG_INTERRUPT_LINE, IoValue::FromU32(0x55555555)), ZX_OK);
+
+    IoValue value = IoValue::FromU32(0);
+    EXPECT_EQ(device->ReadConfig(PCI_CONFIG_INTERRUPT_LINE, &value), ZX_OK);
+    EXPECT_EQ(value.u32, clear_bits(original_value.u32, 8, 0) | 0x55);
+  }
+}
+
 // Verify stats & cap registers correctly show present capabilities and that
 // capability data is readable.
 TEST(PciDeviceTest, ReadCapability) {
