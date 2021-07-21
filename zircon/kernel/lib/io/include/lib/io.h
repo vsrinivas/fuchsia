@@ -16,22 +16,6 @@
 #include <ktl/array.h>
 #include <ktl/string_view.h>
 
-enum class SkipPersistedDebuglog { No = 0, Yes };
-
-class Linebuffer {
- public:
-  // Buffer the contents of |str|, sending lines at a time to be
-  // output via kStdout.
-  //
-  // Lines break either at '\n' characters in |str|, or when the
-  // internal buffer gets full.
-  void Write(ktl::string_view str, SkipPersistedDebuglog skip_pdlog);
-
- private:
-  size_t pos_ = 0;
-  ktl::array<char, 128> buffer_;
-};
-
 class PrintCallback : public fbl::DoublyLinkedListable<PrintCallback*> {
  public:
   PrintCallback(const PrintCallback&) = delete;

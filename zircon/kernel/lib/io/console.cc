@@ -25,6 +25,8 @@
 
 namespace {
 
+enum class SkipPersistedDebuglog { No = 0, Yes };
+
 DECLARE_SINGLETON_SPINLOCK_WITH_TYPE(dputc_spin_lock, MonitoredSpinLock);
 DECLARE_SINGLETON_SPINLOCK_WITH_TYPE(print_spin_lock, MonitoredSpinLock);
 static fbl::DoublyLinkedList<PrintCallback*> print_callbacks TA_GUARDED(print_spin_lock::Get());
@@ -68,18 +70,15 @@ static void stdout_write_buffered(ktl::string_view str, SkipPersistedDebuglog sk
     return;
   }
 
-  t->linebuffer().Write(str, skip_pdlog);
-}
-
-void Linebuffer::Write(ktl::string_view str, SkipPersistedDebuglog skip_pdlog) {
   // Look for corruption and don't continue.
-  if (unlikely(!is_kernel_address((uintptr_t)buffer_.data()) || pos_ >= buffer_.size())) {
+  Thread::Linebuffer& lb = t->linebuffer();
+  if (unlikely(!is_kernel_address((uintptr_t)lb.buffer.data()) || lb.pos >= lb.buffer.size())) {
     stdout_write("<linebuffer corruption>\n"sv, skip_pdlog);
     return;
   }
 
   while (!str.empty()) {
-    size_t remaining = buffer_.size() - pos_;
+    size_t remaining = lb.buffer.size() - lb.pos;
     auto substring = str.substr(0, remaining);
     size_t newline_pos = substring.find_first_of('\n');
 
@@ -103,17 +102,17 @@ void Linebuffer::Write(ktl::string_view str, SkipPersistedDebuglog skip_pdlog) {
       flush = false;
     }
 
-    memcpy(&buffer_[pos_], substring.data(), size);
+    memcpy(&lb.buffer[lb.pos], substring.data(), size);
     str.remove_prefix(size);
-    pos_ += size;
+    lb.pos += size;
 
     if (inject) {
-      buffer_[pos_] = '\n';
-      pos_ += 1;
+      lb.buffer[lb.pos] = '\n';
+      lb.pos += 1;
     }
     if (flush) {
-      stdout_write({buffer_.data(), pos_}, skip_pdlog);
-      pos_ = 0;
+      stdout_write({lb.buffer.data(), lb.pos}, skip_pdlog);
+      lb.pos = 0;
     }
   }
 }

@@ -9,6 +9,7 @@
 #include <ctype.h>
 #include <inttypes.h>
 #include <lib/console.h>
+#include <lib/io.h>
 #include <lib/lockup_detector.h>
 #include <lib/version.h>
 #include <platform.h>

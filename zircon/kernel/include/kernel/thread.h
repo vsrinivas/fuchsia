@@ -9,7 +9,6 @@
 #define ZIRCON_KERNEL_INCLUDE_KERNEL_THREAD_H_
 
 #include <debug.h>
-#include <lib/io.h>
 #include <lib/relaxed_atomic.h>
 #include <platform.h>
 #include <sys/types.h>
@@ -35,6 +34,7 @@
 #include <kernel/task_runtime_stats.h>
 #include <kernel/thread_lock.h>
 #include <kernel/timer.h>
+#include <ktl/array.h>
 #include <ktl/atomic.h>
 #include <ktl/string_view.h>
 #include <lockdep/thread_lock_state.h>
@@ -872,6 +872,11 @@ struct Thread {
     SchedulerStats sched_;
     RelaxedAtomic<zx_ticks_t> page_fault_ticks_{0};
     RelaxedAtomic<zx_ticks_t> lock_contention_ticks_{0};
+  };
+
+  struct Linebuffer {
+    size_t pos = 0;
+    ktl::array<char, 128> buffer;
   };
 
   void UpdateSchedulerStats(const RuntimeStats::SchedulerStats& stats) TA_REQ(thread_lock);
