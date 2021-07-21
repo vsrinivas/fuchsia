@@ -12,6 +12,9 @@
 #include <lib/fpromise/result.h>
 #include <lib/stdcompat/optional.h>
 
+// TODO(78633): Temporarily include legacy header.
+#include <lib/fit/result.h>
+
 #include <array>
 #include <functional>
 #include <map>
