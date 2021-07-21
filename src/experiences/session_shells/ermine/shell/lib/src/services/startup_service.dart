@@ -7,6 +7,7 @@ import 'dart:convert' show json;
 import 'dart:io';
 import 'dart:ui';
 
+import 'package:ermine/src/utils/fuchsia_keyboard.dart';
 import 'package:ermine/src/utils/view_handle.dart';
 import 'package:fidl_fuchsia_buildinfo/fidl_async.dart' as buildinfo;
 import 'package:fidl_fuchsia_device_manager/fidl_async.dart';
@@ -64,6 +65,9 @@ class StartupService extends activity.Listener {
   /// Callback when the system is idle according to activity service.
   late final void Function({required bool idle}) onIdle;
 
+  /// Callback when the Alt key was released. Used to dismiss app switching ui.
+  late final VoidCallback onAltReleased;
+
   final _inspect = Inspect();
   final _intl = PropertyProviderProxy();
   final _deviceManager = AdministratorProxy();
@@ -90,7 +94,19 @@ class StartupService extends activity.Listener {
     // TODO(http://fxb/80131): Remove once activity is reported in the input
     // pipeline.
     WidgetsFlutterBinding.ensureInitialized().addPostFrameCallback((_) {
-      RawKeyboard.instance.addListener((_) => onActivity('keyboard'));
+      RawKeyboard.instance.addListener((event) {
+        // We use Alt key release event to dismiss app switching UI.
+        final data = event.data as RawKeyEventDataFuchsia;
+        final fuchsiaKey = FuchsiaKeyboard.kHidUsagePageMask | data.hidUsage;
+        if (fuchsiaKey == PhysicalKeyboardKey.altLeft.usbHidUsage ||
+            fuchsiaKey == PhysicalKeyboardKey.altRight.usbHidUsage) {
+          if (!event.isAltPressed) {
+            onAltReleased();
+          }
+        }
+        // Notify activity service to user input.
+        onActivity('keyboard');
+      });
     });
 
     // We cannot load MaterialIcons font file from pubspec.yaml. So load it

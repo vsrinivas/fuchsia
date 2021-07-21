@@ -4,6 +4,7 @@
 
 import 'package:ermine/src/states/app_state.dart';
 import 'package:ermine/src/widgets/app_bar.dart';
+import 'package:ermine/src/widgets/app_switcher.dart';
 import 'package:ermine/src/widgets/scrim.dart';
 import 'package:ermine/src/widgets/side_bar.dart';
 import 'package:flutter/widgets.dart';
@@ -41,6 +42,9 @@ class Overlays extends StatelessWidget {
                 right: 0,
                 child: SideBar(state),
               ),
+
+            // App Switcher.
+            if (state.switcherVisible.value) AppSwitcher(state),
           ],
         ),
       );

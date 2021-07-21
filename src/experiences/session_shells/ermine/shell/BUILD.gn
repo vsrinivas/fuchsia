@@ -84,6 +84,7 @@ dart_library("lib") {
     "src/widgets/app_bar.dart",
     "src/widgets/app_chips.dart",
     "src/widgets/app_launcher.dart",
+    "src/widgets/app_switcher.dart",
     "src/widgets/app_view.dart",
     "src/widgets/launch_button.dart",
     "src/widgets/oobe.dart",

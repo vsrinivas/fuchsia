@@ -74,6 +74,7 @@ class AppStateImpl with Disposable implements AppState {
     startupService
       ..onInspect = _onInspect
       ..onIdle = _onIdle
+      ..onAltReleased = _triggerSwitch
       ..serve();
 
     // Add reactions to state changes.
@@ -160,7 +161,7 @@ class AppStateImpl with Disposable implements AppState {
     return !oobeVisible.value &&
         !isIdle.value &&
         shellHasFocus.value &&
-        (appBarVisible.value || sideBarVisible.value);
+        (appBarVisible.value || sideBarVisible.value || switcherVisible.value);
   }).asComputed();
 
   @override
@@ -189,6 +190,9 @@ class AppStateImpl with Disposable implements AppState {
   final views = <ViewState>[].asObservable();
 
   @override
+  final Observable<bool> switcherVisible = false.asObservable();
+
+  @override
   late final viewsVisible = () {
     return views.isNotEmpty && !isIdle.value;
   }.asComputed();
@@ -202,6 +206,9 @@ class AppStateImpl with Disposable implements AppState {
 
   @override
   late final Observable<ViewState> topView = Observable<ViewState>(views.first);
+
+  @override
+  final Observable<ViewState?> switchTarget = Observable<ViewState?>(null);
 
   @override
   String get buildVersion => startupService.buildVersion;
@@ -242,33 +249,66 @@ class AppStateImpl with Disposable implements AppState {
   }.asAction();
 
   @override
+  late final switchView = (ViewState view) {
+    topView.value = view;
+    (view as ViewStateImpl).ready.value = false;
+  }.asAction();
+
+  @override
   late final switchNext = () {
     if (views.length > 1) {
+      // Set focus to shell view so that we can receive the final Alt key press.
+      setFocusToShellView();
+
+      // Start with the top view.
+      switchTarget.value ??= topView.value;
+
       // Get next view from top view. Wrap to first view in list, if it is last.
-      final nextView = topView.value == views.last
+      switchTarget.value = switchTarget.value == views.last
           ? views.first
-          : views[views.indexOf(topView.value) + 1];
-      topView.value = nextView;
-      (nextView as ViewStateImpl).ready.value = false;
+          : views[views.indexOf(switchTarget.value) + 1];
+
+      // Display the app switcher.
+      switcherVisible.value = true;
     }
   }.asAction();
 
   @override
   late final switchPrev = () {
     if (views.length > 1) {
-      final prevView = topView.value == views.first
+      // Set focus to shell view so that we can receive the final Alt key press.
+      setFocusToShellView();
+
+      // Start with the top view.
+      switchTarget.value ??= topView.value;
+
+      switchTarget.value = switchTarget.value == views.first
           ? views.last
-          : views[views.indexOf(topView.value) - 1];
-      topView.value = prevView;
-      (prevView as ViewStateImpl).ready.value = false;
+          : views[views.indexOf(switchTarget.value) - 1];
+
+      // Display the app switcher.
+      switcherVisible.value = true;
     }
   }.asAction();
 
-  @override
-  late final switchView = (ViewState view) {
-    topView.value = view;
-    (view as ViewStateImpl).ready.value = false;
-  }.asAction();
+  void _triggerSwitch() {
+    if (switchTarget.value != null) {
+      runInAction(() {
+        if (switchTarget.value != topView.value) {
+          topView.value = switchTarget.value!;
+          (switchTarget.value as ViewStateImpl).ready.value = false;
+        } else {
+          // Set focus to the child view since we did not switch to another view.
+          setFocusToChildView();
+        }
+
+        // Dismiss the app switcher
+        switcherVisible.value = false;
+
+        switchTarget.value = null;
+      });
+    }
+  }
 
   @override
   late final cancel = hideOverlay;
@@ -366,7 +406,6 @@ class AppStateImpl with Disposable implements AppState {
         }
       }
     });
-    //}
   }
 
   void setFocus(ViewHandle view) {
@@ -413,9 +452,14 @@ class AppStateImpl with Disposable implements AppState {
   void _onViewDismissed(ViewState viewState) {
     runInAction(() {
       final view = viewState as ViewStateImpl;
-      // Switch to next view before closing the view if it was the top view.
-      if (view == topView.value) {
-        switchNext();
+      // Switch to next view before closing this view if it was the top view
+      // and there are other views.
+      if (view == topView.value && views.length > 1) {
+        final nextView = topView.value == views.last
+            ? views.first
+            : views[views.indexOf(topView.value) + 1];
+        topView.value = nextView;
+        (nextView as ViewStateImpl).ready.value = false;
       }
 
       views.remove(view);

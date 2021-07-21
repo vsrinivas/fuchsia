@@ -36,8 +36,10 @@ abstract class AppState with Store {
   ObservableValue<bool> get overlaysVisible;
   ObservableValue<bool> get oobeVisible;
   ObservableValue<bool> get isIdle;
+  ObservableValue<bool> get switcherVisible;
   ObservableValue<bool> get viewsVisible;
   ObservableValue<ViewState> get topView;
+  ObservableValue<ViewState?> get switchTarget;
   ObservableList<ViewState> get views;
   ObservableMap<String, List<String>> get errors;
   ObservableStream<Locale> get localeStream;
