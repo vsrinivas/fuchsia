@@ -28,7 +28,9 @@ impl FsNodeOps for SymlinkNode {
         Ok(Box::new(NullFile))
     }
 
-    fn readlink<'a>(&'a self) -> Result<FsString, Errno> {
+    fn readlink<'a>(&'a self, node: &FsNode) -> Result<FsString, Errno> {
+        let now = fuchsia_runtime::utc_time();
+        node.info_write().time_access = now;
         Ok(self.target.clone())
     }
 

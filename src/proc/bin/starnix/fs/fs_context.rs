@@ -99,14 +99,15 @@ impl FsContext {
         dir: NamespaceNode,
         path: &'a FsStr,
     ) -> Result<(NamespaceNode, &'a FsStr), Errno> {
-        let mut node = dir;
+        let mut current_node = dir;
         let mut it = path.split(|c| *c == b'/');
-        let mut current = it.next().unwrap_or(b"");
-        while let Some(next) = it.next() {
-            node = node.lookup(current)?;
-            current = next;
+        let mut current_path_component = it.next().unwrap_or(b"");
+        while let Some(next_path_component) = it.next() {
+            current_node =
+                current_node.lookup(self, current_path_component, SymlinkFollowing::Enabled)?;
+            current_path_component = next_path_component;
         }
-        Ok((node, current))
+        Ok((current_node, current_path_component))
     }
 
     /// Lookup a namespace node.
@@ -117,7 +118,7 @@ impl FsContext {
     /// This function resolves the component of the given path.
     pub fn lookup_node(&self, dir: NamespaceNode, path: &FsStr) -> Result<NamespaceNode, Errno> {
         let (parent, basename) = self.lookup_parent(dir, path)?;
-        parent.lookup(basename)
+        parent.lookup(self, basename, SymlinkFollowing::Enabled)
     }
 
     pub fn apply_umask(&self, mode: FileMode) -> FileMode {

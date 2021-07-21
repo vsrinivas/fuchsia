@@ -10,7 +10,7 @@ use std::sync::{Arc, Weak};
 
 use parking_lot::RwLock;
 
-use super::{FileHandle, FileObject, FsNodeHandle, FsStr, FsString, UnlinkKind};
+use super::{FileHandle, FileObject, FsContext, FsNodeHandle, FsStr, FsString, UnlinkKind};
 use crate::types::*;
 
 /// A file system that can be mounted in a namespace.
@@ -66,6 +66,16 @@ impl Mount {
         let (ref mount, ref node) = &self.mountpoint.as_ref()?;
         Some(NamespaceNode { mount: Some(mount.upgrade()?), node: node.clone() })
     }
+}
+
+/// The `SymlinkFollowing` enum encodes how symlinks are followed during path traversal.
+#[derive(PartialEq, Eq, Copy, Clone)]
+pub enum SymlinkFollowing {
+    /// Symlinks will be followed.
+    Enabled,
+
+    /// Symlinks will not be followed.
+    Disabled,
 }
 
 /// A node in a mount namespace.
@@ -124,11 +134,11 @@ impl NamespaceNode {
         self.create_node(name, || self.node.mksymlink(name, target))
     }
 
-    pub fn unlink(&self, name: &FsStr, kind: UnlinkKind) -> Result<(), Errno> {
+    pub fn unlink(&self, context: &FsContext, name: &FsStr, kind: UnlinkKind) -> Result<(), Errno> {
         if name.is_empty() || name == b"." || name == b".." {
             return Err(EINVAL);
         }
-        let child = self.lookup(name)?;
+        let child = self.lookup(context, name, SymlinkFollowing::Disabled)?;
 
         let unlink = || {
             if child.mountpoint().is_some() {
@@ -150,18 +160,25 @@ impl NamespaceNode {
     }
 
     /// Traverse down a parent-to-child link in the namespace.
-    ///
-    /// This traversal matches the parent-to-child link in the underlying
-    /// FsNode except at mountpoints, where the link switches from one
-    /// filesystem to another.
-    pub fn lookup(&self, name: &FsStr) -> Result<NamespaceNode, Errno> {
+    pub fn lookup(
+        &self,
+        context: &FsContext,
+        name: &FsStr,
+        symlink_mode: SymlinkFollowing,
+    ) -> Result<NamespaceNode, Errno> {
         if name == b"." || name == b"" {
             Ok(self.clone())
         } else if name == b".." {
             // TODO: make sure this can't escape a chroot
             Ok(self.parent().unwrap_or_else(|| self.clone()))
         } else {
-            let child = self.with_new_node(self.node.component_lookup(name)?);
+            let mut child = self.with_new_node(self.node.component_lookup(name)?);
+            // TODO: this should be a loop resovling chained symlinks.
+            if child.node.info().mode.is_lnk() && symlink_mode == SymlinkFollowing::Enabled {
+                let path = child.node.readlink()?;
+                child = context.lookup_node(context.root.clone(), &path)?;
+            }
+
             if let Some(namespace) = self.namespace() {
                 if let Some(mount) = namespace.mount_points.read().get(&child) {
                     return Ok(mount.root());
@@ -281,12 +298,20 @@ mod test {
         let dev_root_node = Arc::clone(dev_fs.root());
         let _dev_pts_node = dev_root_node.mkdir(b"pts").expect("failed to mkdir pts");
 
-        let ns = Namespace::new(root_fs);
-        let dev = ns.root().lookup(b"dev").expect("failed to lookup dev");
+        let ns = Namespace::new(root_fs.clone());
+        let context = FsContext::new(root_fs);
+        let dev = ns
+            .root()
+            .lookup(&context, b"dev", SymlinkFollowing::Enabled)
+            .expect("failed to lookup dev");
         dev.mount(dev_fs).expect("failed to mount dev root node");
 
-        let dev = ns.root().lookup(b"dev").expect("failed to lookup dev");
-        let pts = dev.lookup(b"pts").expect("failed to lookup pts");
+        let dev = ns
+            .root()
+            .lookup(&context, b"dev", SymlinkFollowing::Enabled)
+            .expect("failed to lookup dev");
+        let pts =
+            dev.lookup(&context, b"pts", SymlinkFollowing::Enabled).expect("failed to lookup pts");
         let pts_parent = pts.parent().ok_or(ENOENT).expect("failed to get parent of pts");
         assert!(Arc::ptr_eq(&pts_parent.node, &dev.node));
 
@@ -304,15 +329,24 @@ mod test {
         let dev_root_node = Arc::clone(dev_fs.root());
         let _dev_pts_node = dev_root_node.mkdir(b"pts").expect("failed to mkdir pts");
 
-        let ns = Namespace::new(root_fs);
-        let dev = ns.root().lookup(b"dev").expect("failed to lookup dev");
+        let ns = Namespace::new(root_fs.clone());
+        let context = FsContext::new(root_fs);
+        let dev = ns
+            .root()
+            .lookup(&context, b"dev", SymlinkFollowing::Enabled)
+            .expect("failed to lookup dev");
         dev.mount(dev_fs).expect("failed to mount dev root node");
-        let new_dev = ns.root().lookup(b"dev").expect("failed to lookup dev again");
+        let new_dev = ns
+            .root()
+            .lookup(&context, b"dev", SymlinkFollowing::Enabled)
+            .expect("failed to lookup dev again");
         assert!(!Arc::ptr_eq(&dev.node, &new_dev.node));
         assert_ne!(&dev, &new_dev);
 
-        let _new_pts = new_dev.lookup(b"pts").expect("failed to lookup pts");
-        assert!(dev.lookup(b"pts").is_err());
+        let _new_pts = new_dev
+            .lookup(&context, b"pts", SymlinkFollowing::Enabled)
+            .expect("failed to lookup pts");
+        assert!(dev.lookup(&context, b"pts", SymlinkFollowing::Enabled).is_err());
 
         Ok(())
     }
@@ -326,12 +360,20 @@ mod test {
         let dev_root_node = Arc::clone(dev_fs.root());
         let _dev_pts_node = dev_root_node.mkdir(b"pts").expect("failed to mkdir pts");
 
-        let ns = Namespace::new(root_fs);
-        let dev = ns.root().lookup(b"dev").expect("failed to lookup dev");
+        let ns = Namespace::new(root_fs.clone());
+        let context = FsContext::new(root_fs);
+        let dev = ns
+            .root()
+            .lookup(&context, b"dev", SymlinkFollowing::Enabled)
+            .expect("failed to lookup dev");
         dev.mount(dev_fs).expect("failed to mount dev root node");
 
-        let dev = ns.root().lookup(b"dev").expect("failed to lookup dev");
-        let pts = dev.lookup(b"pts").expect("failed to lookup pts");
+        let dev = ns
+            .root()
+            .lookup(&context, b"dev", SymlinkFollowing::Enabled)
+            .expect("failed to lookup dev");
+        let pts =
+            dev.lookup(&context, b"pts", SymlinkFollowing::Enabled).expect("failed to lookup pts");
 
         assert_eq!(b"/".to_vec(), ns.root().path());
         assert_eq!(b"/dev".to_vec(), dev.path());

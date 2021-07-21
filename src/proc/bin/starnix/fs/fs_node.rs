@@ -123,17 +123,12 @@ pub trait FsNodeOps: Send + Sync {
     }
 
     /// Creates a symlink with the given `target` path.
-    fn mksymlink(
-        &self,
-        _node: &FsNode,
-        _child: FsNode,
-        _target: &FsStr,
-    ) -> Result<FsNodeHandle, Errno> {
+    fn mksymlink(&self, _child: FsNode, _target: &FsStr) -> Result<FsNodeHandle, Errno> {
         Err(ENOTDIR)
     }
 
     /// Reads the symlink from this node.
-    fn readlink<'a>(&'a self) -> Result<FsString, Errno> {
+    fn readlink<'a>(&'a self, _node: &FsNode) -> Result<FsString, Errno> {
         Err(EINVAL)
     }
 
@@ -312,12 +307,12 @@ impl FsNode {
         target: &FsStr,
     ) -> Result<FsNodeHandle, Errno> {
         self.create_node(name, FileMode::IFLNK | FileMode::ALLOW_ALL, 0, |node| {
-            self.ops().mksymlink(&self, node, target)
+            self.ops().mksymlink(node, target)
         })
     }
 
     pub fn readlink(&self) -> Result<FsString, Errno> {
-        self.ops().readlink()
+        self.ops().readlink(self)
     }
 
     pub fn unlink(self: &FsNodeHandle, name: &FsStr, kind: UnlinkKind) -> Result<(), Errno> {

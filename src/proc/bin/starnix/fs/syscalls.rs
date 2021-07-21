@@ -189,8 +189,11 @@ fn lookup_node_at(
     task: &Task,
     dir_fd: FdNumber,
     user_path: UserCString,
+    symlink_follow_mode: SymlinkFollowing,
 ) -> Result<FsNodeHandle, Errno> {
-    lookup_parent_at(task, dir_fd, user_path, |parent, basename| Ok(parent.lookup(basename)?.node))
+    lookup_parent_at(task, dir_fd, user_path, |parent, basename| {
+        Ok(parent.lookup(&task.fs, basename, symlink_follow_mode)?.node)
+    })
 }
 
 pub fn sys_openat(
@@ -220,7 +223,7 @@ pub fn sys_faccessat(
         return Err(EINVAL);
     }
 
-    let node = lookup_node_at(&ctx.task, dir_fd, user_path)?;
+    let node = lookup_node_at(&ctx.task, dir_fd, user_path, SymlinkFollowing::Disabled)?;
 
     if mode == F_OK {
         return Ok(SUCCESS);
@@ -294,14 +297,11 @@ pub fn sys_newfstatat(
         not_implemented!("newfstatat: flags 0x{:x}", flags);
         return Err(ENOSYS);
     }
-    if flags & AT_SYMLINK_NOFOLLOW != 0 {
-        // TODO: Implement AT_SYMLINK_NOFOLLOW.
-        not_implemented!("newfstatat: flag: AT_SYMLINK_NOFOLLOW");
-        // We pretend to implement AT_SYMLINK_NOFOLLOW in order to run
-        // gVisor tests that involve temp files. Given that we do not yet
-        // implement symlinks, continuing here is harmless.
-    }
-    let node = lookup_node_at(&ctx.task, dir_fd, user_path)?;
+    let node = if flags & AT_SYMLINK_NOFOLLOW != 0 {
+        lookup_node_at(ctx.task, dir_fd, user_path, SymlinkFollowing::Disabled)?
+    } else {
+        lookup_node_at(ctx.task, dir_fd, user_path, SymlinkFollowing::Enabled)?
+    };
     let result = node.stat()?;
     ctx.task.mm.write_object(buffer, &result)?;
     Ok(SUCCESS)
@@ -314,8 +314,7 @@ pub fn sys_readlinkat(
     buffer: UserAddress,
     buffer_size: usize,
 ) -> Result<SyscallResult, Errno> {
-    // TODO: This will likely have to change once symlinks are followed.
-    let node = lookup_node_at(&ctx.task, dir_fd, user_path)?;
+    let node = lookup_node_at(ctx.task, dir_fd, user_path, SymlinkFollowing::Disabled)?;
     let link = node.readlink()?;
 
     // Cap the returned length at buffer_size.
@@ -340,7 +339,7 @@ pub fn sys_truncate(
     length: off_t,
 ) -> Result<SyscallResult, Errno> {
     let length = length.try_into().map_err(|_| EINVAL)?;
-    let node = lookup_node_at(&ctx.task, FdNumber::AT_FDCWD, user_path)?;
+    let node = lookup_node_at(&ctx.task, FdNumber::AT_FDCWD, user_path, SymlinkFollowing::Enabled)?;
     // TODO: Check for writability.
     node.truncate(length)?;
     Ok(SUCCESS)
@@ -407,7 +406,7 @@ pub fn sys_unlinkat(
     let kind =
         if flags & AT_REMOVEDIR != 0 { UnlinkKind::Directory } else { UnlinkKind::NonDirectory };
     lookup_parent_at(&ctx.task, dir_fd, user_path, |parent, basename| {
-        parent.unlink(basename, kind)
+        parent.unlink(&ctx.task.fs, basename, kind)
     })?;
     Ok(SUCCESS)
 }
@@ -421,7 +420,7 @@ pub fn sys_fchmodat(
     if mode & FileMode::IFMT != FileMode::EMPTY {
         return Err(EINVAL);
     }
-    let node = lookup_node_at(&ctx.task, dir_fd, user_path)?;
+    let node = lookup_node_at(&ctx.task, dir_fd, user_path, SymlinkFollowing::Enabled)?;
     node.info_write().mode = mode;
     Ok(SUCCESS)
 }
@@ -515,6 +514,7 @@ pub fn sys_symlinkat(
 
     let mut buf = [0u8; PATH_MAX as usize];
     let path = ctx.task.mm.read_c_string(user_path, &mut buf)?;
+    // TODO: This check could probably be moved into parent.symlink(..).
     if path.len() == 0 {
         return Err(ENOENT);
     }

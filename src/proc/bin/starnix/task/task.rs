@@ -442,7 +442,7 @@ impl Task {
     ) -> Result<FileHandle, Errno> {
         let (dir, path) = self.resolve_dir_fd(dir_fd, path)?;
         let (parent, basename) = self.fs.lookup_parent(dir, path)?;
-        let node = match parent.lookup(basename) {
+        let node = match parent.lookup(&self.fs, basename, SymlinkFollowing::Enabled) {
             Ok(node) => node,
             Err(errno) => {
                 if !flags.contains(OpenFlags::CREAT) {

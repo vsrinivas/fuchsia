@@ -160,13 +160,16 @@ mod test {
     async fn test_tree() -> Result<(), anyhow::Error> {
         let rights = fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE;
         let root = io_util::directory::open_in_namespace("/pkg", rights)?;
-        let ns =
-            Namespace::new(Remotefs::new(root.into_channel().unwrap().into_zx_channel(), rights));
+        let fs = Remotefs::new(root.into_channel().unwrap().into_zx_channel(), rights);
+        let ns = Namespace::new(fs.clone());
+        let context = FsContext::new(fs);
         let root = ns.root();
-        assert_eq!(root.lookup(b"nib").err(), Some(ENOENT));
-        root.lookup(b"lib").unwrap();
+        assert_eq!(root.lookup(&context, b"nib", SymlinkFollowing::Enabled).err(), Some(ENOENT));
+        root.lookup(&context, b"lib", SymlinkFollowing::Enabled).unwrap();
 
-        let _test_file = root.lookup(b"bin/hello_starnix")?.open(OpenFlags::RDONLY)?;
+        let _test_file = root
+            .lookup(&context, b"bin/hello_starnix", SymlinkFollowing::Enabled)?
+            .open(OpenFlags::RDONLY)?;
         Ok(())
     }
 }
