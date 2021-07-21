@@ -7,17 +7,17 @@ use futures::prelude::*;
 // we use parking_lot here instead of futures::lock because Cursor::get_next is recursive
 use parking_lot::Mutex;
 use std::{
+    collections::VecDeque,
     default::Default,
     pin::Pin,
-    sync::{Arc, Weak},
+    sync::Arc,
     task::{Context, Poll, Waker},
 };
 use tracing::trace;
 
-/// A singly-linked-list which allows for concurrent lazy iteration and mutation of its
-/// contents.
+/// A list that can be iterated despite concurrent insertions and deletions.
 pub struct ArcList<T> {
-    inner: Arc<Mutex<Root<T>>>,
+    inner: Arc<Mutex<InnerArcList<T>>>,
 }
 
 impl<T> Default for ArcList<T> {
@@ -28,19 +28,19 @@ impl<T> Default for ArcList<T> {
 
 impl<T> ArcList<T> {
     pub fn is_empty(&self) -> bool {
-        self.inner.lock().head.is_none()
+        self.inner.lock().items.is_empty()
     }
 
     pub fn push_back(&self, item: T) {
         self.inner.lock().push_back(item);
     }
 
-    pub fn peek_front(&self) -> Option<Arc<T>> {
-        self.inner.lock().head.as_ref().map(|h| h.inner.clone())
-    }
-
     pub fn pop_front(&self) -> Option<Arc<T>> {
         self.inner.lock().pop_front()
+    }
+
+    pub fn peek_front(&self) -> Option<Arc<T>> {
+        self.inner.lock().peek_front().map(|item| item.value)
     }
 
     pub fn cursor(&self, mode: StreamMode) -> Cursor<T> {
@@ -65,18 +65,21 @@ impl<T> Clone for ArcList<T> {
     }
 }
 
-struct Node<T> {
-    /// The value of `ArcList::entries_seen` when this node was added to the list. IDs start at 1.
+struct ArcListItem<T> {
     id: u64,
-    /// The value stored.
-    inner: Arc<T>,
-    /// The next node in the list.
-    next: Mutex<Option<Arc<Node<T>>>>,
+    value: Arc<T>,
 }
 
-struct Root<T> {
-    head: Option<Arc<Node<T>>>,
-    tail: Weak<Node<T>>,
+impl<T> Clone for ArcListItem<T> {
+    fn clone(&self) -> Self {
+        Self { id: self.id, value: self.value.clone() }
+    }
+}
+
+struct InnerArcList<T> {
+    /// Map from entries_seen at the point that the entry is added to the list, to the value with
+    /// that id.
+    items: VecDeque<ArcListItem<T>>,
     /// The number of entries ever inserted into the list.
     entries_seen: u64,
     /// The number of entries ever removed from the list.
@@ -89,11 +92,10 @@ struct Root<T> {
     pending_cursors: Vec<(CursorId, Waker)>,
 }
 
-impl<T> Default for Root<T> {
+impl<T> Default for InnerArcList<T> {
     fn default() -> Self {
         Self {
-            head: None,
-            tail: Weak::new(),
+            items: VecDeque::new(),
             entries_seen: 0,
             entries_popped: 0,
             final_entry: std::u64::MAX,
@@ -103,7 +105,7 @@ impl<T> Default for Root<T> {
     }
 }
 
-impl<T> Root<T> {
+impl<T> InnerArcList<T> {
     fn push_back(&mut self, item: T) {
         self.entries_seen += 1;
         assert!(
@@ -111,28 +113,32 @@ impl<T> Root<T> {
             "push_back() must not be called after terminate()"
         );
 
-        let new_node =
-            Arc::new(Node { id: self.entries_seen, inner: Arc::new(item), next: Mutex::new(None) });
-        let new_tail = Arc::downgrade(&new_node);
+        let id = self.entries_seen;
+        self.items.push_back(ArcListItem { id, value: Arc::new(item) });
 
-        if let Some(prev_tail) = self.tail.upgrade() {
-            *prev_tail.next.lock() = Some(new_node);
-        } else {
-            assert!(self.head.is_none(), "if tail is empty then head must be too");
-            self.head = Some(new_node);
-        }
-
-        self.tail = new_tail;
         self.wake_pending();
     }
 
     fn pop_front(&mut self) -> Option<Arc<T>> {
-        let prev_front = self.head.take();
-        if let Some(prev) = prev_front.as_ref() {
+        self.items.pop_front().and_then(|item| {
             self.entries_popped += 1;
-            self.head = prev.next.lock().clone();
-        }
-        prev_front.map(|f| f.inner.clone())
+            Some(item.value)
+        })
+    }
+
+    fn peek_front(&self) -> Option<ArcListItem<T>> {
+        self.items.front().map(|item| item.clone())
+    }
+
+    fn first_starting_at(&self, id: u64) -> Option<ArcListItem<T>> {
+        self.items.front().and_then(|front_item| {
+            if front_item.id < id {
+                let index = id - front_item.id;
+                self.items.get(index as usize).map(|item| item.clone())
+            } else {
+                Some(front_item.clone())
+            }
+        })
     }
 
     fn new_cursor_id(&mut self) -> CursorId {
@@ -160,9 +166,9 @@ struct CursorId(u64);
 
 /// A weak pointer into the buffer which is being concurrently iterated and modified.
 ///
-/// A cursor iterates over nodes in the linked list, holding a weak pointer to the next node. If
-/// that pointer turns out to be stale the cursor starts again at the beginning of the list and
-/// first returns a count of items dropped.
+/// A cursor iterates over nodes in the list, holding the id of the last node seen.
+/// If that id is less than the first id found in the deque, the cursor starts at the beginning of
+/// the list and first returns a count of items dropped.
 ///
 /// The count is maintained by giving each successive item in a list a monotonically increasing ID
 /// and tracking the "high-water mark" of the largest/last ID seen.
@@ -180,8 +186,7 @@ struct CursorId(u64);
 /// congratulations.
 pub struct Cursor<T> {
     id: CursorId,
-    last_visited: Weak<Node<T>>,
-    last_id_seen: u64,
+    last_id_seen: Option<u64>,
     until_id: u64,
     list: ArcList<T>,
     mode: StreamMode,
@@ -197,11 +202,11 @@ impl<T> Cursor<T> {
     /// | subscribe | max at time of snapshot | max ID possible         |
     /// | both      | 0                       | max ID possible         |
     fn new(id: CursorId, list: ArcList<T>, mode: StreamMode) -> Self {
-        let (from, last_visited) = match mode {
-            StreamMode::Snapshot | StreamMode::SnapshotThenSubscribe => (0, Default::default()),
+        let from = match mode {
+            StreamMode::Snapshot | StreamMode::SnapshotThenSubscribe => None,
             StreamMode::Subscribe => {
                 let inner = list.inner.lock();
-                (inner.entries_seen, inner.tail.clone())
+                Some(inner.entries_seen)
             }
         };
 
@@ -210,21 +215,21 @@ impl<T> Cursor<T> {
             StreamMode::SnapshotThenSubscribe | StreamMode::Subscribe => std::u64::MAX,
         };
 
-        Self { id, list, last_id_seen: from, until_id: to, last_visited, mode }
+        Self { id, list, last_id_seen: from, until_id: to, mode }
     }
 
     fn maybe_register_for_wakeup(&mut self, cx: &mut Context<'_>) -> Poll<Option<LazyItem<T>>> {
         let mut root = self.list.inner.lock();
-        let cursor_at_end = self.last_id_seen == root.final_entry;
+        let cursor_at_end = self.last_id_seen.unwrap_or(0) == root.final_entry;
         let list_fully_drained = root.final_entry == root.entries_popped;
 
-        if root.entries_popped > self.last_id_seen {
+        if root.entries_popped > self.last_id_seen.unwrap_or(0) {
             // This happens when entries were popped before they could be returned,
             // but there is not currently anything left to return.  We need
             // to update our position and return the number of entries that
             // were popped.
-            let entries_missing = root.entries_popped - self.last_id_seen;
-            self.last_id_seen = root.entries_popped;
+            let entries_missing = root.entries_popped - self.last_id_seen.unwrap_or(0);
+            self.last_id_seen = Some(root.entries_popped);
             Poll::Ready(Some(LazyItem::ItemsDropped(entries_missing)))
         } else if cursor_at_end || list_fully_drained {
             trace!("{:?} has reached the end of the terminated stream.", self.id);
@@ -245,24 +250,25 @@ impl<T> Cursor<T> {
 
 impl<T> Stream for Cursor<T> {
     type Item = LazyItem<T>;
+
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         trace!("{:?} polled.", self.id);
-        if self.last_id_seen >= self.until_id {
+        if self.last_id_seen.unwrap_or(0) >= self.until_id {
             return Poll::Ready(None);
         }
 
-        let next = if let Some(last) = self.last_visited.upgrade() {
-            // get the next node from our last visited one
-            last.next.lock().clone()
-        } else {
-            // otherwise start again at the head
-            trace!("{:?} starting from the head of the list.", self.id);
-            self.list.inner.lock().head.clone()
+        let next = match self.last_id_seen {
+            Some(id) => self.list.inner.lock().first_starting_at(id + 1),
+            None => {
+                // otherwise start again at the head
+                trace!("{:?} starting from the head of the list.", self.id);
+                self.list.inner.lock().peek_front()
+            }
         };
 
         if let Some(to_return) = next {
             if to_return.id > self.until_id {
-                self.last_id_seen = to_return.id;
+                self.last_id_seen = Some(to_return.id);
                 // we're past the end of this cursor's valid range
                 trace!("{:?} is done.", self.id);
                 return Poll::Ready(None);
@@ -270,19 +276,18 @@ impl<T> Stream for Cursor<T> {
 
             // the number we missed is equal to the difference between
             // the last ID we saw and the ID *just before* the current value
-            let num_missed = (to_return.id - 1) - self.last_id_seen;
+            let num_missed = (to_return.id - 1) - self.last_id_seen.unwrap_or(0);
             let item = if num_missed > 0 {
                 // advance the cursor's high-water mark by the number we missed
                 // so we only report each dropped item once
                 trace!("{:?} reporting {} missed items.", self.id, num_missed);
-                self.last_id_seen += num_missed;
+                self.last_id_seen = Some(self.last_id_seen.unwrap_or(0) + num_missed);
                 LazyItem::ItemsDropped(num_missed)
             } else {
                 // we haven't missed anything, proceed normally
                 trace!("{:?} yielding item {}.", self.id, to_return.id);
-                self.last_id_seen = to_return.id;
-                self.last_visited = Arc::downgrade(&to_return);
-                LazyItem::Next(to_return.inner.clone())
+                self.last_id_seen = Some(to_return.id);
+                LazyItem::Next(to_return.value.clone())
             };
 
             Poll::Ready(Some(item))
