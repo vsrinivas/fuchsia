@@ -65,7 +65,7 @@ type CodecFormatInfo = table {
 };
 
 /// For an overview see
-/// [Audio Codec Interface](//docs/concepts/drivers/driver_interfaces/audio_codec.md)
+/// [[Audio Codec Interface]](https://fuchsia.dev/fuchsia-src/concepts/drivers/driver_architectures/audio_drivers/audio_codec).
 protocol Codec {
     /// Resets the codec.
     /// `Reset` returns when the reset is completed. If the driver can't successfully reset the

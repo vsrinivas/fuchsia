@@ -8,7 +8,7 @@ using fuchsia.ui.policy;
 using fuchsia.sys;
 
 /// Descriptions and defaults for these configurations are echoed in
-/// peridot/docs/modular/guide/config.md.
+/// [modular config guide](https://fuchsia.dev/fuchsia-src/concepts/modular/guide/config).
 type BasemgrConfig = table {
     /// When set to false, Cobalt statistics are disabled.
     /// Default: true

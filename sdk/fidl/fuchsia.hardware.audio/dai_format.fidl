@@ -70,7 +70,7 @@ type DaiFrameFormatCustom = struct {
 
 /// DAI format. Frames are made up of `number_of_channels` samples which have `bits_per_sample` bits
 /// of data within `bits_per_slot` arranged in `frame_format`. For more detailed information see
-/// [Digital Audio Interface](//docs/concepts/drivers/driver_interfaces/audio_dai.md).
+/// [Digital Audio Interface](https://fuchsia.dev/fuchsia-src/concepts/drivers/driver_architectures/audio_drivers/audio_dai).
 type DaiFormat = struct {
     /// Number of channels.
     number_of_channels uint32;
@@ -95,7 +95,7 @@ type DaiFormat = struct {
 /// can be described with one `DaiSupportedFormats`, `GetDaiSupportedFormats` returns more than one
 /// `DaiSupportedFormats` in the returned vector.
 /// For more detailed information see
-/// [Digital Audio Interface](//docs/concepts/drivers/driver_interfaces/audio_dai.md).
+/// [Digital Audio Interface](https://fuchsia.dev/fuchsia-src/concepts/drivers/driver_architectures/audio_drivers/audio_dai).
 type DaiSupportedFormats = struct {
     /// Possible number of channels supported.
     number_of_channels vector<uint32>:MAX_COUNT_DAI_SUPPORTED_NUMBER_OF_CHANNELS;

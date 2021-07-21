@@ -20,7 +20,7 @@ type DaiProperties = table {
 };
 
 /// For an overview see
-/// [Digital Audio Interface](//docs/concepts/drivers/driver_interfaces/audio_dai.md)
+/// [Digital Audio Interface](https://fuchsia.dev/fuchsia-src/concepts/drivers/driver_architectures/audio_drivers/audio_dai).
 protocol Dai {
 
     /// Resets the DAI HW. The `ring_buffer` channel obtained via `CreateRingBuffer` may be closed

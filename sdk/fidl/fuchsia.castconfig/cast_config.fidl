@@ -18,7 +18,7 @@ type ErrorCode = strict enum {
 protocol Provider {
     /// Requests a buffer containing cast config data.
     /// This call implements the Hanging Get protocol as detailed in
-    /// https://fuchsia.dev/fuchsia-src/development/api/fidl.md#delay-responses-using-hanging-gets
+    /// https://fuchsia.dev/fuchsia-src/concepts/api/fidl#hanging-get
     ///
     /// All error cases are terminal, clients should not retry on error.
     Watch() -> (resource struct {

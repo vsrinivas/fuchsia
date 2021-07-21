@@ -130,7 +130,7 @@ protocol Peer {
     EmulateDisconnectionComplete();
 
     /// Watch connection state changes using the
-    /// [hanging get pattern](/docs/development/api/fidl.md#delay-responses-using-hanging-gets).
+    /// [hanging get pattern](https://fuchsia.dev/fuchsia-src/concepts/api/fidl#delay-responses-using-hanging-gets).
     /// Notifies the most recent controller connection state if there has been a change since the
     /// last time this method was called.
     ///
@@ -188,7 +188,7 @@ protocol HciEmulator {
     /// Returns the current controller parameter state. If the parameters have not changed since the
     /// last time this message was received, then this method does not return until there is a
     /// change.
-    /// (see [hanging get pattern](//docs/development/api/fidl.md#delay-responses-using-hanging-gets))
+    /// (see [hanging get pattern](https://fuchsia.dev/fuchsia-src/concepts/api/fidl#delay-responses-using-hanging-gets))
     WatchControllerParameters() -> (struct {
         parameters ControllerParameters;
     });
@@ -199,7 +199,7 @@ protocol HciEmulator {
     ///
     /// Multiple calls to this method can be outstanding at a given time. All calls will resolve in
     /// a response as soon as there is a change to the scan state.
-    /// (see [hanging get pattern](//docs/development/api/fidl.md#delay-responses-using-hanging-gets))
+    /// (see [hanging get pattern](https://fuchsia.dev/fuchsia-src/concepts/api/fidl#delay-responses-using-hanging-gets))
     WatchLeScanStates() -> (struct {
         states vector<LeScanState>:MAX;
     });
@@ -211,7 +211,7 @@ protocol HciEmulator {
     /// Only one call to this method can be outstanding at a given time. The
     /// [`fuchsia.bluetooth.test/HciEmulator`] channel will be closed if a call received when one is
     /// already pending.
-    /// (see [hanging get pattern](//docs/development/api/fidl.md#delay-responses-using-hanging-gets))
+    /// (see [hanging get pattern](https://fuchsia.dev/fuchsia-src/concepts/api/fidl#delay-responses-using-hanging-gets))
     WatchLegacyAdvertisingStates() -> (struct {
         states vector<LegacyAdvertisingState>:MAX;
     });

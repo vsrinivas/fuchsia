@@ -40,7 +40,7 @@ type SupportedFormats = table {
 /// bytes. All values listed in each vector are supported. When not all combinations supported by
 /// the driver can be described with one `SupportedFormats` (and hence one `PcmSupportedFormats`),
 /// `GetSupportedFormats` returns more than one `SupportedFormats` in the returned vector.
-/// For more detailed information see //docs/concepts/drivers/driver_interfaces/audio_streaming.md.
+/// For more detailed information see [Audio Driver Streaming Interface](https://fuchsia.dev/fuchsia-src/concepts/drivers/driver_architectures/audio_drivers/audio_streaming).
 type PcmSupportedFormats = struct {
     /// Vector of possible number of channels supported in ascending order.
     number_of_channels vector<uint8>:MAX_COUNT_SUPPORTED_NUMBER_OF_CHANNELS;
@@ -69,7 +69,7 @@ type Format = table {
 /// Format supporting non-compressed PCM audio. Frames are made up of `number_of_channels` samples
 /// which have `valid_bits_per_sample` bits of left-justified data within `bytes_per_channel`.
 /// bytes. For more detailed information see
-/// //docs/concepts/drivers/driver_interfaces/audio_streaming.md.
+/// [Audio Driver Streaming Interface](https://fuchsia.dev/fuchsia-src/concepts/drivers/driver_architectures/audio_drivers/audio_streaming).
 type PcmFormat = struct {
     /// Number of channels.
     number_of_channels uint8;
@@ -173,7 +173,7 @@ type StreamProperties = table {
 };
 
 /// For an overview see
-/// [Audio Driver Streaming Interface](//docs/concepts/drivers/driver_interfaces/audio_streaming.md)
+/// [Audio Driver Streaming Interface](https://fuchsia.dev/fuchsia-src/concepts/drivers/driver_architectures/audio_drivers/audio_streaming)
 protocol StreamConfig {
     /// Retrieves top level static properties.
     GetProperties() -> (struct {
