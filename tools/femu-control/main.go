@@ -8,7 +8,9 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"net"
 	"os"
+	"strconv"
 	"time"
 
 	subcommands "github.com/google/subcommands"
@@ -23,7 +25,7 @@ var (
 
 func newClient() (fg.FemuGrpcClientInterface, error) {
 	config := fg.FemuGrpcClientConfig{
-		ServerAddr: fmt.Sprintf("%s:%d", *server_addr, *server_port),
+		ServerAddr: net.JoinHostPort(*server_addr, strconv.Itoa(*server_port)),
 		Timeout:    *timeout,
 	}
 
