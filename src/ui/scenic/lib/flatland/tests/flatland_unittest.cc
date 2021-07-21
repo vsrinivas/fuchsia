@@ -1847,9 +1847,11 @@ TEST_F(FlatlandTest, HangingGetsReturnOnCorrectDispatcher) {
       uber_struct_system_->AllocateQueueForSession(session_id), importers);
   RegisterPresentError(child_ptr, session_id);
 
-  // Create child link.
+  // Create child link. Use another loop for GraphLink channel.
+  async::TestLoop graph_link_loop;
   fidl::InterfacePtr<GraphLink> graph_link;
-  child_ptr->LinkToParent(std::move(child_token), graph_link.NewRequest());
+  child_ptr->LinkToParent(std::move(child_token),
+                          graph_link.NewRequest(graph_link_loop.dispatcher()));
   EXPECT_TRUE(child_loop.RunUntilIdle());
 
   // Complete linking sessions.
@@ -1859,29 +1861,31 @@ TEST_F(FlatlandTest, HangingGetsReturnOnCorrectDispatcher) {
   bool layout_updated = false;
   graph_link->GetLayout([&](auto) { layout_updated = true; });
 
-  // Process the request on child's loop.
+  // Process the callback on child's loop.
   EXPECT_TRUE(child_loop.RunUntilIdle());
-
-  // Process the response on parent's loop. Response should not run yet because it is posted on
-  // child's loop.
-  EXPECT_TRUE(parent_loop.RunUntilIdle());
   EXPECT_FALSE(layout_updated);
 
-  // Run the response on child's loop.
-  EXPECT_TRUE(child_loop.RunUntilIdle());
+  // Read the response on graph link's loop.
+  EXPECT_TRUE(graph_link_loop.RunUntilIdle());
   EXPECT_TRUE(layout_updated);
 
-  // Send overwriting hanging gets that will cause an error.
+  // Send overwriting hanging gets that will cause an error on child's loop as we process the
+  // request.
   layout_updated = false;
   graph_link->GetLayout([&](auto) { layout_updated = true; });
   graph_link->GetLayout([&](auto) { layout_updated = true; });
+  EXPECT_TRUE(parent_loop.RunUntilIdle());
   EXPECT_TRUE(child_loop.RunUntilIdle());
-
-  // Overwriting hanging gets should cause an error on child's loop as we process the request.
   fuchsia::ui::composition::PresentArgs present_args;
   child->Present(std::move(present_args));
   EXPECT_TRUE(child_loop.RunUntilIdle());
   EXPECT_EQ(GetPresentError(child->GetSessionId()), Error::BAD_HANGING_GET);
+
+  // Cleanup. We need to run link_invalidated tasks on these loopers to clear the topology.
+  parent.reset();
+  child.reset();
+  EXPECT_TRUE(parent_loop.RunUntilIdle());
+  EXPECT_TRUE(child_loop.RunUntilIdle());
 }
 
 // This test doesn't use the helper function to create a link, because it tests intermediate steps
@@ -2846,8 +2850,8 @@ TEST_F(FlatlandTest, RelinkUnlinkedParentSameToken) {
   std::shared_ptr<Flatland> parent = CreateFlatland();
   std::shared_ptr<Flatland> child = CreateFlatland();
 
+  // Create link and Present.
   const ContentId kLinkId1 = {1};
-
   fidl::InterfacePtr<ContentLink> content_link;
   fidl::InterfacePtr<GraphLink> graph_link;
   CreateLink(parent.get(), child.get(), kLinkId1, &content_link, &graph_link);
@@ -2857,36 +2861,57 @@ TEST_F(FlatlandTest, RelinkUnlinkedParentSameToken) {
   parent->CreateTransform(kId1);
   parent->SetRootTransform(kId1);
   parent->SetContent(kId1, kLinkId1);
-
   PRESENT(parent, true);
-
   EXPECT_TRUE(IsDescendantOf(parent->GetRoot(), child->GetRoot()));
 
+  // Both protocols should be bound at this point.
+  EXPECT_TRUE(content_link.is_bound());
+
+  EXPECT_TRUE(graph_link.is_bound());
+  bool graph_link_updated = false;
+  graph_link->GetLayout([&graph_link_updated](auto) { graph_link_updated = true; });
+  EXPECT_FALSE(graph_link_updated);
+  RunLoopUntilIdle();
+  EXPECT_TRUE(graph_link_updated);
+
+  // Unlink the parent on child.
   GraphLinkToken graph_token;
   child->UnlinkFromParent([&graph_token](GraphLinkToken token) { graph_token = std::move(token); });
-
   PRESENT(child, true);
-
   EXPECT_FALSE(IsDescendantOf(parent->GetRoot(), child->GetRoot()));
 
   // The same token can be used to link a different instance.
   std::shared_ptr<Flatland> child2 = CreateFlatland();
   child2->LinkToParent(std::move(graph_token), graph_link.NewRequest());
-
   PRESENT(child2, true);
-
   EXPECT_TRUE(IsDescendantOf(parent->GetRoot(), child2->GetRoot()));
 
   // The old instance is not re-linked.
   EXPECT_FALSE(IsDescendantOf(parent->GetRoot(), child->GetRoot()));
+
+  // Both protocols should still be bound.
+  EXPECT_TRUE(content_link.is_bound());
+  bool content_link_updated = false;
+  content_link->GetStatus([&content_link_updated](auto) { content_link_updated = true; });
+  EXPECT_FALSE(content_link_updated);
+  UpdateLinks(parent->GetRoot());
+  RunLoopUntilIdle();
+  EXPECT_TRUE(content_link_updated);
+
+  EXPECT_TRUE(graph_link.is_bound());
+  graph_link_updated = false;
+  graph_link->GetLayout([&graph_link_updated](auto) { graph_link_updated = true; });
+  EXPECT_FALSE(graph_link_updated);
+  RunLoopUntilIdle();
+  EXPECT_TRUE(graph_link_updated);
 }
 
 TEST_F(FlatlandTest, RecreateReleasedLinkSameToken) {
   std::shared_ptr<Flatland> parent = CreateFlatland();
   std::shared_ptr<Flatland> child = CreateFlatland();
 
+  // Create link and Present.
   const ContentId kLinkId1 = {1};
-
   fidl::InterfacePtr<ContentLink> content_link;
   fidl::InterfacePtr<GraphLink> graph_link;
   CreateLink(parent.get(), child.get(), kLinkId1, &content_link, &graph_link);
@@ -2896,40 +2921,60 @@ TEST_F(FlatlandTest, RecreateReleasedLinkSameToken) {
   parent->CreateTransform(kId1);
   parent->SetRootTransform(kId1);
   parent->SetContent(kId1, kLinkId1);
-
   PRESENT(parent, true);
-
   EXPECT_TRUE(IsDescendantOf(parent->GetRoot(), child->GetRoot()));
 
+  // Both protocols should be bound at this point.
+  EXPECT_TRUE(content_link.is_bound());
+  bool content_link_updated = false;
+  content_link->GetStatus([&content_link_updated](auto) { content_link_updated = true; });
+  EXPECT_FALSE(content_link_updated);
+  UpdateLinks(parent->GetRoot());
+  RunLoopUntilIdle();
+  EXPECT_TRUE(content_link_updated);
+
+  EXPECT_TRUE(graph_link.is_bound());
+
+  // Release the link on parent.
   ContentLinkToken content_token;
   parent->ReleaseLink(
       kLinkId1, [&content_token](ContentLinkToken token) { content_token = std::move(token); });
-
   PRESENT(parent, true);
-
   EXPECT_FALSE(IsDescendantOf(parent->GetRoot(), child->GetRoot()));
 
   // The same token can be used to create a different link to the same child with a different
-  // parent->
+  // parent.
   std::shared_ptr<Flatland> parent2 = CreateFlatland();
-
   const TransformId kId2 = {2};
   parent2->CreateTransform(kId2);
   parent2->SetRootTransform(kId2);
-
   const ContentId kLinkId2 = {2};
   LinkProperties properties;
   properties.set_logical_size({kDefaultSize, kDefaultSize});
   parent2->CreateLink(kLinkId2, std::move(content_token), std::move(properties),
                       content_link.NewRequest());
   parent2->SetContent(kId2, kLinkId2);
-
   PRESENT(parent2, true);
-
   EXPECT_TRUE(IsDescendantOf(parent2->GetRoot(), child->GetRoot()));
 
   // The old instance is not re-linked.
   EXPECT_FALSE(IsDescendantOf(parent->GetRoot(), child->GetRoot()));
+
+  // Both protocols should still be bound.
+  EXPECT_TRUE(content_link.is_bound());
+  content_link_updated = false;
+  content_link->GetStatus([&content_link_updated](auto) { content_link_updated = true; });
+  EXPECT_FALSE(content_link_updated);
+  UpdateLinks(parent->GetRoot());
+  RunLoopUntilIdle();
+  EXPECT_TRUE(content_link_updated);
+
+  EXPECT_TRUE(graph_link.is_bound());
+  bool graph_link_updated = false;
+  graph_link->GetLayout([&graph_link_updated](auto) { graph_link_updated = true; });
+  EXPECT_FALSE(graph_link_updated);
+  RunLoopUntilIdle();
+  EXPECT_TRUE(graph_link_updated);
 }
 
 TEST_F(FlatlandTest, CreateImageValidCase) {

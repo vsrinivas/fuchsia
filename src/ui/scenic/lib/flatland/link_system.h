@@ -6,7 +6,7 @@
 #define SRC_UI_SCENIC_LIB_FLATLAND_LINK_SYSTEM_H_
 
 #include <fuchsia/ui/composition/cpp/fidl.h>
-#include <lib/fidl/cpp/binding_set.h>
+#include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_request.h>
 
 // clang-format off
@@ -36,13 +36,13 @@ using LinkProtocolErrorCallback = std::function<void(const std::string&)>;
 // pieces of information.
 class GraphLinkImpl : public fuchsia::ui::composition::GraphLink {
  public:
-  explicit GraphLinkImpl(std::shared_ptr<utils::DispatcherHolder> dispatcher_holder)
-      : layout_helper_(dispatcher_holder), status_helper_(std::move(dispatcher_holder)) {}
-
-  void SetErrorCallback(LinkProtocolErrorCallback error_callback) {
-    FX_DCHECK(error_callback);
-    error_callback_ = std::move(error_callback);
-  }
+  explicit GraphLinkImpl(std::shared_ptr<utils::DispatcherHolder> dispatcher_holder,
+                         fidl::InterfaceRequest<GraphLink> request,
+                         LinkProtocolErrorCallback error_callback)
+      : binding_(this, std::move(request), dispatcher_holder->dispatcher()),
+        error_callback_(std::move(error_callback)),
+        layout_helper_(dispatcher_holder),
+        status_helper_(std::move(dispatcher_holder)) {}
 
   void UpdateLayoutInfo(fuchsia::ui::composition::LayoutInfo info) {
     layout_helper_.Update(std::move(info));
@@ -79,8 +79,8 @@ class GraphLinkImpl : public fuchsia::ui::composition::GraphLink {
   }
 
  private:
+  fidl::Binding<fuchsia::ui::composition::GraphLink> binding_;
   LinkProtocolErrorCallback error_callback_;
-
   HangingGetHelper<fuchsia::ui::composition::LayoutInfo> layout_helper_;
   HangingGetHelper<fuchsia::ui::composition::GraphLinkStatus> status_helper_;
 };
@@ -89,13 +89,12 @@ class GraphLinkImpl : public fuchsia::ui::composition::GraphLink {
 // pieces of information.
 class ContentLinkImpl : public fuchsia::ui::composition::ContentLink {
  public:
-  explicit ContentLinkImpl(std::shared_ptr<utils::DispatcherHolder> dispatcher_holder)
-      : status_helper_(std::move(dispatcher_holder)) {}
-
-  void SetErrorCallback(LinkProtocolErrorCallback error_callback) {
-    FX_DCHECK(error_callback);
-    error_callback_ = std::move(error_callback);
-  }
+  explicit ContentLinkImpl(std::shared_ptr<utils::DispatcherHolder> dispatcher_holder,
+                           fidl::InterfaceRequest<ContentLink> request,
+                           LinkProtocolErrorCallback error_callback)
+      : binding_(this, std::move(request), dispatcher_holder->dispatcher()),
+        error_callback_(std::move(error_callback)),
+        status_helper_(std::move(dispatcher_holder)) {}
 
   void UpdateLinkStatus(fuchsia::ui::composition::ContentLinkStatus status) {
     status_helper_.Update(std::move(status));
@@ -115,8 +114,8 @@ class ContentLinkImpl : public fuchsia::ui::composition::ContentLink {
   }
 
  private:
+  fidl::Binding<fuchsia::ui::composition::ContentLink> binding_;
   LinkProtocolErrorCallback error_callback_;
-
   HangingGetHelper<fuchsia::ui::composition::ContentLinkStatus> status_helper_;
 };
 
@@ -145,21 +144,20 @@ class LinkSystem : public std::enable_shared_from_this<LinkSystem> {
   // also supplies its attachment point so that the LinkSystem can create an edge between the two
   // when the link resolves. This allows creation and destruction logic to be paired within a single
   // ObjectLinker endpoint, instead of being spread out between the two endpoints.
-  struct GraphLinkRequest {
-    fidl::InterfaceRequest<fuchsia::ui::composition::GraphLink> interface;
-    TransformHandle child_handle;
-    LinkProtocolErrorCallback error_callback;
+  struct GraphLinkInfo {
+    TransformHandle link_handle;
+    TransformHandle graph_handle;
+    fuchsia::math::SizeU initial_logical_size;
   };
 
-  struct ContentLinkRequest {
-    fidl::InterfaceRequest<fuchsia::ui::composition::ContentLink> interface;
-    LinkProtocolErrorCallback error_callback;
+  struct ContentLinkInfo {
+    TransformHandle child_handle;
   };
 
   // Linked Flatland instances only implement a small piece of link functionality. For now, directly
   // sharing link requests is a clean way to implement that functionality. This will become more
   // complicated as the Flatland API evolves.
-  using ObjectLinker = scenic_impl::gfx::ObjectLinker<GraphLinkRequest, ContentLinkRequest>;
+  using ObjectLinker = scenic_impl::gfx::ObjectLinker<ContentLinkInfo, GraphLinkInfo>;
 
   // Destruction of a ChildLink object will trigger deregistration with the LinkSystem.
   // Deregistration is thread safe, but the user of the Link object should be confident (e.g., by
@@ -257,15 +255,6 @@ class LinkSystem : public std::enable_shared_from_this<LinkSystem> {
   std::unordered_map<TransformHandle, std::shared_ptr<ContentLinkImpl>> content_link_map_;
   // The set of current link topologies. Access is managed by |map_mutex_|.
   GlobalTopologyData::LinkTopologyMap link_topologies_;
-
-  // Any FIDL requests that have to be bound, are bound in these BindingSets. All impl classes are
-  // referenced by both these sets and the Flatland instance that created them via creation of a
-  // link. Entries in these sets are controlled entirely by the link resolution and failure
-  // callbacks that exist in the ObjectLinker links.
-  fidl::BindingSet<fuchsia::ui::composition::GraphLink, std::shared_ptr<GraphLinkImpl>>
-      graph_link_bindings_;
-  fidl::BindingSet<fuchsia::ui::composition::ContentLink, std::shared_ptr<ContentLinkImpl>>
-      content_link_bindings_;
 };
 
 }  // namespace flatland

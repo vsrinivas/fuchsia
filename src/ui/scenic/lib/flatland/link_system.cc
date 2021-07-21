@@ -39,58 +39,35 @@ LinkSystem::ChildLink LinkSystem::CreateChildLink(
   FX_DCHECK(token.value.is_valid());
   FX_DCHECK(initial_properties.has_logical_size());
 
-  auto impl = std::make_shared<GraphLinkImpl>(std::move(dispatcher_holder));
+  auto impl =
+      std::make_shared<ContentLinkImpl>(dispatcher_holder, std::move(content_link), error_callback);
   const TransformHandle link_handle = link_graph_.CreateTransform();
 
-  // Pass |error_callback| to the other endpoint of ObjectLinker. |error_callback| handles
-  // errors in the caller's Flatland session, which is the parent Flatland in this case. ContentLink
-  // errors should be handled by the parent and it will be set in the other endpoint after linking.
-  ObjectLinker::ImportLink importer = linker_->CreateImport(
-      {.interface = std::move(content_link), .error_callback = std::move(error_callback)},
-      std::move(token.value),
-      /* error_reporter */ nullptr);
+  ObjectLinker::ImportLink importer =
+      linker_->CreateImport({.link_handle = link_handle,
+                             .graph_handle = graph_handle,
+                             .initial_logical_size = initial_properties.logical_size()},
+                            std::move(token.value),
+                            /* error_reporter */ nullptr);
 
+  auto content_link_map_key = std::make_shared<TransformHandle>();
   importer.Initialize(
       /* link_resolved = */
-      [ref = shared_from_this(), impl, graph_handle, link_handle,
-       logical_size = initial_properties.logical_size()](GraphLinkRequest request) {
-        // TODO(fxbug.dev/76712): Remove this check after relinking is fixed.
-        if (request.error_callback)
-          impl->SetErrorCallback(request.error_callback);
+      [ref = shared_from_this(), impl, content_link_map_key](ContentLinkInfo info) mutable {
+        *content_link_map_key = info.child_handle;
 
-        // Immediately send out the initial properties over the channel. This callback is fired from
-        // one of the Flatland instance threads, but since we haven't stored the Link impl anywhere
-        // yet, we still have exclusive access and can safely call functions without
-        // synchronization.
-        LayoutInfo info;
-        info.set_logical_size(logical_size);
-        impl->UpdateLayoutInfo(std::move(info));
-
-        {
-          // Mutate shared state while holding our mutex.
-          std::scoped_lock lock(ref->map_mutex_);
-          ref->graph_link_bindings_.AddBinding(impl, std::move(request.interface));
-          ref->graph_link_map_[graph_handle] =
-              GraphLinkData({.impl = impl, .child_link_origin = request.child_handle});
-
-          // The topology is constructed here, instead of in the link_resolved closure of the
-          // ParentLink object, so that its destruction (which depends on the link_handle) can occur
-          // on the same endpoint.
-          ref->link_topologies_[link_handle] = request.child_handle;
-        }
+        std::scoped_lock lock(ref->map_mutex_);
+        ref->content_link_map_[*content_link_map_key] = impl;
       },
       /* link_invalidated = */
-      [ref = shared_from_this(), impl = impl, graph_handle = graph_handle,
-       link_handle = link_handle](bool on_link_destruction) {
-        {
-          std::scoped_lock lock(ref->map_mutex_);
-          ref->graph_link_map_.erase(graph_handle);
-          ref->graph_link_bindings_.RemoveBinding(impl);
-
-          ref->link_topologies_.erase(link_handle);
-          ref->link_graph_.ReleaseTransform(link_handle);
-        }
-      });
+      [ref = shared_from_this(), impl, content_link_map_key](bool on_link_destruction) {
+        // We expect |content_link_map_key| to be assigned by the "link_resolved" closure, but this
+        // might not happen if the link is being destroyed before it was resolved.
+        FX_DCHECK(content_link_map_key || on_link_destruction);
+        std::scoped_lock lock(ref->map_mutex_);
+        ref->content_link_map_.erase(*content_link_map_key);
+      },
+      dispatcher_holder);
 
   return ChildLink({
       .graph_handle = graph_handle,
@@ -105,34 +82,50 @@ LinkSystem::ParentLink LinkSystem::CreateParentLink(
     LinkProtocolErrorCallback error_callback) {
   FX_DCHECK(token.value.is_valid());
 
-  auto impl = std::make_shared<ContentLinkImpl>(std::move(dispatcher_holder));
+  auto impl =
+      std::make_shared<GraphLinkImpl>(dispatcher_holder, std::move(graph_link), error_callback);
 
-  // Pass |error_callback| to the other endpoint of ObjectLinker. |error_callback| handles
-  // errors in the caller's Flatland session, which is the child Flatland in this case. GraphLink
-  // errors should be handled by the parent and it will be set in the other endpoint after linking.
-  ObjectLinker::ExportLink exporter =
-      linker_->CreateExport({.interface = std::move(graph_link),
-                             .child_handle = link_origin,
-                             .error_callback = std::move(error_callback)},
-                            std::move(token.value), /* error_reporter */ nullptr);
+  ObjectLinker::ExportLink exporter = linker_->CreateExport(
+      {.child_handle = link_origin}, std::move(token.value), /* error_reporter */ nullptr);
 
+  auto graph_link_map_key = std::make_shared<TransformHandle>();
+  auto topology_map_key = std::make_shared<TransformHandle>();
   exporter.Initialize(
       /* link_resolved = */
-      [ref = shared_from_this(), impl, link_origin](ContentLinkRequest request) {
-        // TODO(fxbug.dev/76712): Remove this check after relinking is fixed.
-        if (request.error_callback)
-          impl->SetErrorCallback(request.error_callback);
+      [ref = shared_from_this(), impl, graph_link_map_key, topology_map_key,
+       link_origin](GraphLinkInfo info) {
+        *graph_link_map_key = info.graph_handle;
+        *topology_map_key = info.link_handle;
 
         std::scoped_lock lock(ref->map_mutex_);
-        ref->content_link_bindings_.AddBinding(impl, std::move(request.interface));
-        ref->content_link_map_[link_origin] = impl;
+        // TODO(fxbug.dev/80603): When the same parent relinks to different children, we might be
+        // using an outdated logical_size here. It will be corrected in UpdateLinks(), but we should
+        // figure out a way to set the previous GraphLinkImpl's size here.
+        LayoutInfo layout_info;
+        layout_info.set_logical_size(info.initial_logical_size);
+        impl->UpdateLayoutInfo(std::move(layout_info));
+
+        ref->graph_link_map_[*graph_link_map_key] =
+            GraphLinkData({.impl = impl, .child_link_origin = link_origin});
+        // The topology is constructed here, instead of in the link_resolved closure of the
+        // ParentLink object, so that its destruction (which depends on the link_handle) can occur
+        // on the same endpoint.
+        ref->link_topologies_[*topology_map_key] = link_origin;
       },
       /* link_invalidated = */
-      [ref = shared_from_this(), impl = impl, link_origin = link_origin](bool on_link_destruction) {
+      [ref = shared_from_this(), impl, graph_link_map_key,
+       topology_map_key](bool on_link_destruction) {
+        // We expect |graph_link_map_key| and |topology_map_key| to be assigned by the
+        // "link_resolved" closure, but this might not happen if the link is being destroyed before
+        // it was resolved.
+        FX_DCHECK((graph_link_map_key && topology_map_key) || on_link_destruction);
         std::scoped_lock lock(ref->map_mutex_);
-        ref->content_link_map_.erase(link_origin);
-        ref->content_link_bindings_.RemoveBinding(impl);
-      });
+        ref->graph_link_map_.erase(*graph_link_map_key);
+
+        ref->link_topologies_.erase(*topology_map_key);
+        ref->link_graph_.ReleaseTransform(*topology_map_key);
+      },
+      dispatcher_holder);
 
   return ParentLink({
       .link_origin = link_origin,

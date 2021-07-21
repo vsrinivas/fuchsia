@@ -174,7 +174,8 @@ class ObjectLinkerBase {
 // (zx::object_traits:supports_duplication is true) to the |CreateExport| or
 // |CreateImport| methods.  It can be connected with its peer by providing a
 // concrete object to link along with callbacks for both successful and
-// unsuccessful resolution.
+// unsuccessful resolution. Import and Export should be copy constructable as
+// they might be relinked.
 //
 // When the other half of the kernel object is registered with the
 // ObjectLinker, and Initialize() is called on the corresponding Link, the
@@ -302,6 +303,7 @@ class ObjectLinker : public ObjectLinkerBase,
   // the links for both objects.
   template <typename T, typename = std::enable_if_t<zx::object_traits<T>::has_peer_handle>>
   ExportLink CreateExport(Export export_obj, T token, ErrorReporter* error_reporter) {
+    static_assert(std::is_copy_constructible<Export>::value);
     auto access = GetScopedAccess();
     const zx_koid_t endpoint_id = CreateEndpoint(std::move(token), error_reporter, false);
     return ExportLink(std::move(export_obj), endpoint_id, this->shared_from_this());
@@ -320,6 +322,7 @@ class ObjectLinker : public ObjectLinkerBase,
   // the links for both objects.
   template <typename T, typename = std::enable_if_t<zx::object_traits<T>::has_peer_handle>>
   ImportLink CreateImport(Import import_obj, T token, ErrorReporter* error_reporter) {
+    static_assert(std::is_copy_constructible<Import>::value);
     auto access = GetScopedAccess();
     const zx_koid_t endpoint_id = CreateEndpoint(std::move(token), error_reporter, true);
     return ImportLink(std::move(import_obj), endpoint_id, this->shared_from_this());
@@ -407,11 +410,11 @@ void ObjectLinker<Export, Import>::Link<is_import>::LinkResolved(
   if (link_resolved_) {
     auto* typed_peer_link = static_cast<Link<!is_import>*>(peer_link);
     FX_DCHECK(typed_peer_link->object_.has_value());
-    ExecuteOrPostTaskOnDispatcher([link_resolved = link_resolved_,
-                                   object = std::move(typed_peer_link->object_.value())]() mutable {
-      // Doesn't need to be locked because the closure/argument are no longer owned by the Link.
-      link_resolved(std::move(object));
-    });
+    ExecuteOrPostTaskOnDispatcher(
+        [link_resolved = link_resolved_, object = typed_peer_link->object_.value()]() mutable {
+          // Doesn't need to be locked because the closure/argument are no longer owned by the Link.
+          link_resolved(std::move(object));
+        });
   }
 }
 
