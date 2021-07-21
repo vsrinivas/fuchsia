@@ -478,7 +478,7 @@ type endpoint struct {
 	// shutdownFlags represent the current shutdown state of the endpoint.
 	shutdownFlags tcpip.ShutdownFlags
 
-	// tcpRecovery is the loss deteoction algorithm used by TCP.
+	// tcpRecovery is the loss recovery algorithm used by TCP.
 	tcpRecovery tcpip.TCPRecovery
 
 	// sack holds TCP SACK related information for this endpoint.
@@ -754,7 +754,7 @@ func (e *endpoint) ResumeWork() {
 //
 // Precondition: e.mu must be held to call this method.
 func (e *endpoint) setEndpointState(state EndpointState) {
-	oldstate := EndpointState(atomic.LoadUint32(&e.state))
+	oldstate := EndpointState(atomic.SwapUint32(&e.state, uint32(state)))
 	switch state {
 	case StateEstablished:
 		e.stack.Stats().TCP.CurrentEstablished.Increment()
@@ -771,7 +771,6 @@ func (e *endpoint) setEndpointState(state EndpointState) {
 			e.stack.Stats().TCP.CurrentEstablished.Decrement()
 		}
 	}
-	atomic.StoreUint32(&e.state, uint32(state))
 }
 
 // EndpointState returns the current state of the endpoint.
@@ -869,8 +868,6 @@ func newEndpoint(s *stack.Stack, netProto tcpip.NetworkProtocolNumber, waiterQue
 	if err := s.TransportProtocolOption(ProtocolNumber, &synRetries); err == nil {
 		e.maxSynRetries = uint8(synRetries)
 	}
-
-	s.TransportProtocolOption(ProtocolNumber, &e.tcpRecovery)
 
 	if p := s.GetTCPProbe(); p != nil {
 		e.probe = p
@@ -2923,6 +2920,7 @@ func (e *endpoint) maybeEnableSACKPermitted(synOpts *header.TCPSynOptions) {
 	}
 	if bool(v) && synOpts.SACKPermitted {
 		e.SACKPermitted = true
+		e.stack.TransportProtocolOption(ProtocolNumber, &e.tcpRecovery)
 	}
 }
 
