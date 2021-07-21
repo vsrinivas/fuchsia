@@ -28,18 +28,18 @@ alias Hostname = string:MAX_HOSTNAME_SIZE;
 type LookupIpOptions = table {
     /// Include IPv4 results.
     ///
-    /// If absent, interpreted as false.
+    /// If not set, interpreted as false.
     1: ipv4_lookup bool;
     /// Include IPv6 results.
     ///
-    /// If absent, interpreted as false.
+    /// If not set, interpreted as false.
     2: ipv6_lookup bool;
     /// Sort addresses in order of preference.
     ///
     /// It true, Addresses are sorted according to destination address selection described in [RFC
     /// 6724 Section 6](https://tools.ietf.org/html/rfc6724#section-6).
     ///
-    /// If absent, interpreted as false.
+    /// If not set, interpreted as false.
     3: sort_addresses bool;
 };
 
