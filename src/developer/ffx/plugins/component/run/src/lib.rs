@@ -19,10 +19,14 @@ pub async fn run_component(
     realm_proxy: RealmProxy,
     run: RunComponentCommand,
 ) -> Result<()> {
-    run_component_cmd(realm_proxy, run).await
+    run_component_cmd(realm_proxy, run, &mut std::io::stdout()).await
 }
 
-async fn run_component_cmd(realm_proxy: RealmProxy, run: RunComponentCommand) -> Result<()> {
+async fn run_component_cmd<W: std::io::Write>(
+    realm_proxy: RealmProxy,
+    run: RunComponentCommand,
+    writer: &mut W,
+) -> Result<()> {
     let url = match PkgUrl::parse(run.url.as_str()) {
         Ok(url) => url,
         Err(e) => {
@@ -64,7 +68,7 @@ async fn run_component_cmd(realm_proxy: RealmProxy, run: RunComponentCommand) ->
         manifest_name.to_string()
     };
 
-    println!("Creating component instance: {}", name);
+    writeln!(writer, "Creating component instance: {}", name)?;
 
     let mut collection = CollectionRef { name: COLLECTION_NAME.to_string() };
     let decl = ChildDecl {

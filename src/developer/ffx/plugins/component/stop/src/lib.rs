@@ -15,13 +15,14 @@ use {
 
 #[ffx_plugin()]
 pub async fn stop(rcs_proxy: rc::RemoteControlProxy, cmd: ComponentStopCommand) -> Result<()> {
-    stop_impl(rcs_proxy, &cmd.moniker, cmd.recursive).await
+    stop_impl(rcs_proxy, &cmd.moniker, cmd.recursive, &mut std::io::stdout()).await
 }
 
-async fn stop_impl(
+async fn stop_impl<W: std::io::Write>(
     rcs_proxy: rc::RemoteControlProxy,
     moniker: &str,
     recursive: bool,
+    writer: &mut W,
 ) -> Result<()> {
     let (root, dir_server) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
         .context("creating hub root proxy")?;
@@ -46,15 +47,15 @@ async fn stop_impl(
     }
 
     if recursive {
-        println!("Stopping the component with moniker '{}' recursively", moniker);
+        writeln!(writer, "Stopping the component with moniker '{}' recursively", moniker)?;
     } else {
-        println!("Stopping the component with moniker '{}'", moniker);
+        writeln!(writer, "Stopping the component with moniker '{}'", moniker)?;
     }
 
     match get_lifecycle_controller_proxy(hub_dir.proxy).await {
         Ok(proxy) => match proxy.stop(&formatted_moniker.to_string(), recursive).await {
             Ok(Ok(())) => {
-                println!("Successfully stopped the component with moniker '{}'", moniker);
+                writeln!(writer, "Successfully stopped the component with moniker '{}'", moniker)?;
             }
             Ok(Err(e)) => {
                 ffx_bail!(

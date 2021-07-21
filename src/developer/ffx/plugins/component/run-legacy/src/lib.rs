@@ -49,13 +49,14 @@ pub async fn run_component(
         ));
     }
     let process_ids = get_process_id(&run.url, rcs_proxy).await.expect("failed to get process_ids");
-    run_component_cmd(launcher_proxy, process_ids, run).await
+    run_component_cmd(launcher_proxy, process_ids, run, &mut std::io::stdout()).await
 }
 
-async fn run_component_cmd(
+async fn run_component_cmd<W: std::io::Write>(
     launcher_proxy: LauncherProxy,
     process_ids: Vec<u32>,
     run: RunComponentCommand,
+    writer: &mut W,
 ) -> Result<()> {
     let (control_proxy, control_server_end) = create_proxy::<ComponentControllerMarker>()?;
     let (sout, cout) =
@@ -147,19 +148,19 @@ async fn run_component_cmd(
 
     if run.background {
         if process_ids.len() > 0 {
-            println!("Started component: {}\nProcess IDs: {:?}", run.url, process_ids);
+            writeln!(writer, "Started component: {}\nProcess IDs: {:?}", run.url, process_ids)?;
         } else {
-            println!("Started component: {}", run.url);
+            writeln!(writer, "Started component: {}", run.url)?;
         }
         std::process::exit(0);
     } else {
         if process_ids.len() > 0 {
-            println!(
+            writeln!(writer,
                 "Started component: {}\nProcess IDs: {:?}\nComponent stdout and stderr will be shown below. Press Ctrl+C to exit and kill the component.",
                 run.url, process_ids
-            );
+            )?;
         } else {
-            println!("Started component: {}\nComponent stdout and stderr will be shown below. Press Ctrl+C to exit and kill the component.", run.url);
+            writeln!(writer, "Started component: {}\nComponent stdout and stderr will be shown below. Press Ctrl+C to exit and kill the component.", run.url)?;
         }
     }
 
@@ -231,9 +232,12 @@ mod test {
         let run_cmd = RunComponentCommand { url, args, background };
         let launcher_proxy = setup_fake_launcher_service();
         let process_ids = vec![12345];
-        let _response = run_component_cmd(launcher_proxy, process_ids, run_cmd)
+        let mut writer = Vec::new();
+        let _response = run_component_cmd(launcher_proxy, process_ids, run_cmd, &mut writer)
             .await
             .expect("getting tests should not fail");
+        let output = String::from_utf8(writer).unwrap();
+        assert!(output.is_empty());
         Ok(())
     }
 }

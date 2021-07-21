@@ -15,10 +15,14 @@ use {
 
 #[ffx_plugin()]
 pub async fn bind(rcs_proxy: rc::RemoteControlProxy, cmd: ComponentBindCommand) -> Result<()> {
-    bind_impl(rcs_proxy, &cmd.moniker).await
+    bind_impl(rcs_proxy, &cmd.moniker, &mut std::io::stdout()).await
 }
 
-async fn bind_impl(rcs_proxy: rc::RemoteControlProxy, moniker: &str) -> Result<()> {
+async fn bind_impl<W: std::io::Write>(
+    rcs_proxy: rc::RemoteControlProxy,
+    moniker: &str,
+    writer: &mut W,
+) -> Result<()> {
     let (root, dir_server) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
         .context("creating hub root proxy")?;
     rcs_proxy
@@ -44,7 +48,7 @@ async fn bind_impl(rcs_proxy: rc::RemoteControlProxy, moniker: &str) -> Result<(
     match get_lifecycle_controller_proxy(hub_dir.proxy).await {
         Ok(proxy) => match proxy.bind(&formatted_moniker.to_string()).await {
             Ok(Ok(())) => {
-                println!("Successfully bound to the component with moniker '{}'", moniker);
+                writeln!(writer, "Successfully bound to the component with moniker '{}'", moniker)?;
             }
             Ok(Err(e)) => {
                 ffx_bail!(
