@@ -490,11 +490,14 @@ void DisplayCompositor::RenderFrame(uint64_t frame_number, zx::time presentation
           }
         }
       },
-      zx::duration(16'700'000));
+      // Since Scenic's wakeup time is hardcoded to be 14ms from vsync, it is safe to assume that
+      // waking up 14ms in the future will be after vsync has occurred.
+      zx::duration(14'000'000));
 }
 
 void DisplayCompositor::OnVsync(uint64_t display_id, uint64_t frame_number, zx::time timestamp) {
   FX_DCHECK(display_id == 1) << "currently expect hardcoded display_id == 1, not " << display_id;
+  TRACE_DURATION("gfx", "Flatland::DisplayCompositor::OnVsync");
   release_fence_manager_.OnVsync(frame_number, timestamp);
 }
 

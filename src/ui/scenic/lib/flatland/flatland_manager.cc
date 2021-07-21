@@ -7,6 +7,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/fit/function.h>
+#include <lib/trace/event.h>
 
 #include <utility>
 
@@ -205,6 +206,8 @@ void FlatlandManager::OnFramePresented(
                              std::map<scheduling::PresentId, /*latched_time*/ zx::time>>&
         latched_times,
     scheduling::PresentTimestamps present_times) {
+  TRACE_DURATION("gfx", "FlatlandManager::OnFramePresented");
+
   CheckIsOnMainThread();
 
   for (const auto& [session_id, latch_times] : latched_times) {
