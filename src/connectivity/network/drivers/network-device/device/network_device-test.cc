@@ -186,8 +186,7 @@ class NetworkDeviceTest : public ::testing::Test {
     if (zx_status_t status = CreateDevice(); status != ZX_OK) {
       return status;
     }
-    port0_.SetStatus(
-        {.mtu = 2048, .flags = static_cast<uint32_t>(netdev::wire::StatusFlags::kOnline)});
+    port0_.SetStatus({.mtu = 2048});
     port0_.AddPort(kPort0, impl_.client());
     return ZX_OK;
   }
@@ -1057,22 +1056,22 @@ TEST_F(NetworkDeviceTest, ObserveStatus) {
     fidl::WireResult result = watcher.WatchStatus();
     ASSERT_OK(result.status());
     ASSERT_EQ(result.value().port_status.mtu(), port0_.status().mtu);
-    ASSERT_TRUE(result.value().port_status.flags() & StatusFlags::kOnline);
+    ASSERT_EQ(result.value().port_status.flags(), StatusFlags());
   }
-  // Set offline, then set online (watcher is buffered, we should be able to observe both).
-  port0_.SetOnline(false);
+  // Set online, then set offline (watcher is buffered, we should be able to observe both).
   port0_.SetOnline(true);
+  port0_.SetOnline(false);
   {
     fidl::WireResult result = watcher.WatchStatus();
     ASSERT_OK(result.status());
     ASSERT_EQ(result.value().port_status.mtu(), port0_.status().mtu);
-    ASSERT_FALSE(result.value().port_status.flags() & StatusFlags::kOnline);
+    ASSERT_EQ(result.value().port_status.flags(), StatusFlags::kOnline);
   }
   {
     fidl::WireResult result = watcher.WatchStatus();
     ASSERT_OK(result.status());
     ASSERT_EQ(result.value().port_status.mtu(), port0_.status().mtu);
-    ASSERT_TRUE(result.value().port_status.flags() & StatusFlags::kOnline);
+    ASSERT_EQ(result.value().port_status.flags(), StatusFlags());
   }
 
   DiscardDeviceSync();
@@ -2415,6 +2414,55 @@ TEST_F(NetworkDeviceTest, BufferChainingOnListenTx) {
 
 INSTANTIATE_TEST_SUITE_P(NetworkDeviceTest, RxTxParamTest,
                          ::testing::Values(RxTxSwitch::Rx, RxTxSwitch::Tx), rxTxParamTestToString);
+
+TEST_F(NetworkDeviceTest, CanUpdatePortStatusWithinSetActive) {
+  // Tests that notifying status changes inline in a port SetActive call doesn't cause a deadlock.
+  ASSERT_OK(CreateDeviceWithPort0());
+  uint32_t set_active_call_counter = 0;
+  port0_.SetOnSetActiveCallback([this, &set_active_call_counter](bool active) {
+    port0_.SetOnline(active);
+    set_active_call_counter++;
+  });
+
+  fidl::ClientEnd<netdev::StatusWatcher> client_end;
+  {
+    zx::status server_end = fidl::CreateEndpoints(&client_end);
+    ASSERT_OK(server_end.status_value());
+    zx::status port = OpenPort(kPort0);
+    ASSERT_OK(port.status_value());
+    constexpr uint32_t kWatcherBuffer = 3;
+    ASSERT_OK(port->GetStatusWatcher(std::move(server_end.value()), kWatcherBuffer).status());
+  }
+  fidl::WireSyncClient watcher = fidl::BindSyncClient(std::move(client_end));
+
+  {
+    fidl::WireResult result = watcher.WatchStatus();
+    ASSERT_OK(result.status());
+    ASSERT_EQ(result.value().port_status.flags(), netdev::wire::StatusFlags());
+  }
+
+  TestSession session;
+  ASSERT_OK(OpenSession(&session, netdev::wire::SessionFlags::kPrimary, kDefaultDescriptorCount,
+                        kDefaultBufferLength, "primary"));
+
+  // Port goes online on SetActive callback when session attaches.
+  {
+    ASSERT_OK(session.AttachPort(port0_));
+    fidl::WireResult result = watcher.WatchStatus();
+    ASSERT_OK(result.status());
+    ASSERT_EQ(result.value().port_status.flags(), netdev::wire::StatusFlags::kOnline);
+    ASSERT_EQ(set_active_call_counter, 1u);
+  }
+
+  // Port goes offline on SetActive callback when session detaches.
+  {
+    ASSERT_OK(session.DetachPort(port0_.id()));
+    fidl::WireResult result = watcher.WatchStatus();
+    ASSERT_OK(result.status());
+    ASSERT_EQ(result.value().port_status.flags(), netdev::wire::StatusFlags());
+    ASSERT_EQ(set_active_call_counter, 2u);
+  }
+}
 
 }  // namespace testing
 }  // namespace network

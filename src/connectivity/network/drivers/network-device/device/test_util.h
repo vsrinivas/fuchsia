@@ -130,6 +130,7 @@ class FakeNetworkDeviceImpl;
 
 class FakeNetworkPortImpl : public ddk::NetworkPortProtocol<FakeNetworkPortImpl> {
  public:
+  using OnSetActiveCallback = fit::function<void(bool)>;
   FakeNetworkPortImpl();
   ~FakeNetworkPortImpl();
 
@@ -144,6 +145,7 @@ class FakeNetworkPortImpl : public ddk::NetworkPortProtocol<FakeNetworkPortImpl>
   void AddPort(uint8_t port_id, ddk::NetworkDeviceIfcProtocolClient ifc_client);
   void RemoveSync();
   void SetMac(mac_addr_protocol_t proto) { mac_proto_ = proto; }
+  void SetOnSetActiveCallback(OnSetActiveCallback cb) { on_set_active_ = std::move(cb); }
 
   network_port_protocol_t protocol() {
     return {
@@ -162,17 +164,20 @@ class FakeNetworkPortImpl : public ddk::NetworkPortProtocol<FakeNetworkPortImpl>
   void SetStatus(const port_status_t& status);
 
  private:
+  using OnRemovedCallback = fit::callback<void()>;
+
   DISALLOW_COPY_ASSIGN_AND_MOVE(FakeNetworkPortImpl);
 
   std::array<uint8_t, netdev::wire::kMaxFrameTypes> rx_types_;
   std::array<tx_support_t, netdev::wire::kMaxFrameTypes> tx_types_;
   ddk::NetworkDeviceIfcProtocolClient device_client_;
-  fit::callback<void()> on_removed_;
+  OnRemovedCallback on_removed_;
+  OnSetActiveCallback on_set_active_;
   uint8_t id_;
   mac_addr_protocol_t mac_proto_{};
   port_info_t port_info_{};
   std::atomic_bool port_active_ = false;
-  port_status_t status_{};
+  port_status_t status_;
   zx::event event_;
   bool port_removed_ = false;
   bool port_added_ = false;

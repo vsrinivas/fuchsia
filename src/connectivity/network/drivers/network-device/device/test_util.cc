@@ -76,6 +76,9 @@ void FakeNetworkPortImpl::NetworkPortGetStatus(port_status_t* out_status) { *out
 
 void FakeNetworkPortImpl::NetworkPortSetActive(bool active) {
   port_active_ = active;
+  if (on_set_active_) {
+    on_set_active_(active);
+  }
   ASSERT_OK(event_.signal(0, kEventPortActiveChanged));
 }
 

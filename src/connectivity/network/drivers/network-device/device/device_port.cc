@@ -140,29 +140,27 @@ void DevicePort::GetMac(GetMacRequestView request, GetMacCompleter::Sync& _compl
 }
 
 void DevicePort::SessionAttached() {
-  size_t session_count;
-  {
-    fbl::AutoLock lock(&lock_);
-    session_count = ++attached_sessions_count_;
-  }
-  NotifySessionCount(session_count);
+  fbl::AutoLock lock(&lock_);
+  NotifySessionCount(++attached_sessions_count_);
 }
 
 void DevicePort::SessionDetached() {
-  size_t session_count;
-  {
-    fbl::AutoLock lock(&lock_);
-    ZX_ASSERT_MSG(attached_sessions_count_ > 0, "detached the same port twice");
-    session_count = --attached_sessions_count_;
-  }
-  NotifySessionCount(session_count);
+  fbl::AutoLock lock(&lock_);
+  ZX_ASSERT_MSG(attached_sessions_count_ > 0, "detached the same port twice");
+  NotifySessionCount(--attached_sessions_count_);
 }
 
 void DevicePort::NotifySessionCount(size_t new_count) {
+  if (teardown_started_) {
+    // Skip all notifications if tearing down.
+    return;
+  }
   // Port active changes whenever the new count on session attaching or detaching edges away from
   // zero.
   if (new_count <= 1) {
-    port_.SetActive(new_count != 0);
+    // Always post notifications for later on dispatcher so the port implementation can safely call
+    // back into the core device with no risk of deadlocks.
+    async::PostTask(dispatcher_, [this, active = new_count != 0]() { port_.SetActive(active); });
   }
 }
 

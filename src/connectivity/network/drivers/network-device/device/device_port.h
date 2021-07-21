@@ -90,7 +90,7 @@ class DevicePort : public fidl::WireServer<netdev::Port> {
   // Notifies network port implementation that the port is active when `new_count` is 1.
   // Notifies network port implementation that the port is inactive when `new_count` is 0.
   // No-op otherwise.
-  void NotifySessionCount(size_t new_count) __TA_EXCLUDES(lock_);
+  void NotifySessionCount(size_t new_count) __TA_REQUIRES(lock_);
 
   async_dispatcher_t* const dispatcher_;
   const uint8_t port_id_;
