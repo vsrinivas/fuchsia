@@ -7,8 +7,11 @@ import("//build/fidl/fidl.gni")
 fidl("fuchsia.media2") {
   sources = [
     "connection_error.fidl",
+    "consumer.fidl",
+    "producer.fidl",
     "stream_sink.fidl",
     "timelines.fidl",
+    "transport_control.fidl",
   ]
 
   public_deps = [

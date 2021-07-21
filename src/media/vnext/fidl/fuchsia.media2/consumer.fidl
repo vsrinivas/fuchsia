@@ -1,0 +1,256 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.media2;
+
+using zx;
+
+/// Describes any active consumer, including single-stream and multi-stream consumers.
+/// All active consumers should compose this protocol. Single-stream active consumers
+/// and streams exposed by multi-stream active consumers should also compose
+/// `ActiveConsumerStream`.
+protocol ActiveConsumer {
+    /// Starts the presentation timeline.
+    ///
+    /// + request `when` time when the presentation timeline should
+    ///   start as a system time or reference time. If this parameter
+    ///   is not supplied, the presentation timeline starts as soon as
+    ///   possible.
+    /// + request `presentation_time` the presentation time at which
+    ///   the presentation timeline should start.
+    /// - response `reference_time` the reference time when the
+    ///   presentation timeline was actually started.
+    /// - response `presentation_time` the presentation time at which
+    ///   the presentation timeline started.
+    /// * error reason the operation failed.
+    ///
+    /// When a call to this method succeeds, the response is sent when
+    /// the operation actually occurs (that is, when it was scheduled
+    /// to occur), indicating that the service is ready for a `Stop`
+    /// or `SlipPresentation` command. When a call to this method
+    /// fails, the response is sent when the failure is detected.
+    ///
+    /// If this method is called when presentation is already
+    /// underway, the call fails immediately with an `ALREADY_STARTED`
+    /// error.
+    ///
+    /// Otherwise, if this method is called, and `when` specifies a
+    /// time in the past, the call fails immediately with a
+    /// `SCHEDULED_IN_PAST` error.
+    ///
+    /// Otherwise, if this method is called when a `Start` operation
+    /// is already pending (requested but not completed), the pending
+    /// operation fails with a `CANCELLED` error.
+    Start(struct {
+        when WhenStopped:optional;
+        presentation_time zx.duration;
+    }) -> (struct {
+        reference_time zx.time;
+        presentation_time zx.duration;
+    }) error StartError;
+
+    /// Stops the presentation timeline.
+    ///
+    /// + request `when` time when the presentation timeline should
+    ///   stop as a system time, reference time or presentation time.
+    ///   If this parameter is not supplied, the presentation timeline
+    ///   stops as soon as possible.
+    /// - response `reference_time` the reference time when the
+    ///   presentation timeline was actually stopped.
+    /// - response `presentation_time` the presentation time at which
+    ///   the presentation timeline stopped.
+    /// * error reason the operation failed.
+    ///
+    /// When a call to this method succeeds, the response is sent when
+    /// the operation actually occurs (that is, when it was scheduled
+    /// to occur), indicating that the service is ready for a `Start`
+    /// command. When a call to this method fails, the response is
+    /// sent when the failure is detected.
+    ///
+    /// If this method is called when presentation is stopped, the
+    /// call fails immediately with an `ALREADY_STOPPED` error.
+    ///
+    /// Otherwise, if this method is called, and `when` specifies a
+    /// time in the past, the call fails immediately with a
+    /// `SCHEDULED_IN_PAST` error.
+    ///
+    /// Otherwise, if this method is called when a `Stop` operation
+    /// is already pending (requested but not completed), the pending
+    /// operation fails with a `CANCELLED` error.
+    Stop(struct {
+        when WhenPresenting:optional;
+    }) -> (struct {
+        reference_time zx.time;
+        presentation_time zx.duration;
+    }) error StopError;
+
+    /// Sets the presentation rate.
+    ///
+    /// + request `when` time when the presentation rate should be
+    ///   changed as a system time, reference time or presentation
+    ///   time. If this parameter is not supplied, the presentation
+    ///   rate is changed as soon as possible.
+    /// + request `desired_rate` the desired presentation rate. Must
+    ///   be greater than zero, otherwise the service closes the
+    ///   channel.
+    /// - response `presentation_time` the presentation time at which
+    ///   the rate changed.
+    /// - response `actual_rate` the actual presentation rate. This
+    ///   can be different than `desired_rate` depending on the rate
+    ///   capabilities of the object.
+    /// * error reason the operation failed.
+    ///
+    /// Rate changes can be requested at any time. Rate changes
+    /// requested when presentation is stopped remain pending until
+    /// presentation is started and the specified `when` value is
+    /// reached. If `when` is not supplied, the operation pends until
+    /// presentation starts, at which time, the new rate is used and
+    /// the operation completes.
+    ///
+    /// When a call to this method succeeds, the response is sent when
+    /// the operation actually occurs (that is, when it was scheduled
+    /// to occur), indicating that the service is ready for a new
+    /// rate change command. When a call to this method fails,
+    /// the response is sent when the failure is detected.
+    ///
+    /// If this method is called on an object that doesn’t support
+    /// rate changes at all, the call fails immediately with a
+    /// `NOT_SUPPORTED` error.
+    ///
+    /// Otherwise, if this method is called, and `when` specifies a
+    /// time in the past, the call fails immediately with a
+    /// `SCHEDULED_IN_PAST` error.
+    ///
+    /// Otherwise, if this method is called when a `SetRate` operation
+    /// is already pending (requested but not completed), the pending
+    /// operation fails with a `CANCELLED` error.
+    SetRate(struct {
+        when WhenPresenting:optional;
+        desired_rate float32;
+    }) -> (struct {
+        presentation_time zx.duration;
+        actual_rate float32;
+    }) error SetRateError;
+
+    /// Amend the presentation timeline forward or backward.
+    ///
+    /// + request `when` time when the presentation timeline should
+    ///   amended as a system time, reference time or presentation
+    ///   time. If this parameter is not supplied, the presentation
+    ///   timeline is amended as soon as possible.
+    /// + request `delta` the duration the presentation timeline
+    ///   should be amended. This value is added to the presentation
+    ///   time at the specified time. If this value is positive, the
+    ///   timeline slips forward, possibly skipping some of the
+    ///   presentation. If this value is negative, the timeline slips
+    ///   backward, possibly stalling the presentation.
+    /// - response `reference_time` the reference time at which the
+    ///   amendment occurred.
+    /// - response `presentation_time` the presentation time that
+    ///   correlates to `reference_time` as a consequence of this
+    ///   method.
+    /// * error reason the operation failed.
+    ///
+    /// When a call to this method succeeds, the response is sent when
+    /// the operation actually occurs (that is, when it was scheduled
+    /// to occur), indicating that the service is ready for a new
+    /// amend command. When a call to this method fails, the response
+    /// is sent when the failure is detected.
+    ///
+    /// If an amend operation is pending when presentation is stopped,
+    /// the pending operation fails with a `CANCELLED` error.
+    ///
+    /// If this method is called when presentation is stopped, the
+    /// call fails immediately with an `NOT_STARTED` error.
+    ///
+    /// Otherwise, if this method is called, and `when` specifies a
+    /// time in the past, the call fails immediately with a
+    /// `SCHEDULED_IN_PAST` error.
+    ///
+    /// Otherwise, if this method is called when a `AmendPresentation`
+    /// operation is already pending (requested but not completed),
+    /// the pending operation fails with a `CANCELLED` error.
+    AmendPresentation(struct {
+        when WhenStarted:optional;
+        delta zx.duration;
+    }) -> (struct {
+        reference_time zx.time;
+        presentation_time zx.duration;
+    }) error AmendPresentationError;
+};
+
+/// Describes any passive consumer, including single-stream and multi-stream consumers.
+/// All passive consumers should compose this protocol. Single-stream passive consumers
+/// and streams exposed by multi-stream passive consumers should also compose
+/// `ActiveConsumerStream`.
+protocol PassiveConsumer {
+    /// Indicates that writing to the files and consumption of packets
+    /// should start, configuration of the consumer having been
+    /// completed.
+    Start();
+
+    /// Indicates that the file should be completed and closed, all
+    /// expected packets having been consumed.
+    ///
+    /// - response duration the duration of the completed file.
+    Stop() -> (struct {
+        duration zx.duration;
+    });
+};
+
+/// Describes any active consumer stream, including single-stream consumers and streams exposed by
+/// multi-stream consumers. All single-stream active consumers and all streams exposed by
+/// multi-stream active consumers should compose this protocol.
+protocol ActiveConsumerStream {
+    /// Notifies the client that an end-of-stream signal has been
+    /// encountered in the consumed stream and that all prior packets
+    /// have been rendered or otherwise processed.
+    -> OnEndOfStream();
+
+    /// Notifies the client that the minimum lead time constraint has
+    /// been met.
+    -> OnPrimed();
+
+    /// Returns when packet arrival lead time falls outside the
+    /// specified limits.
+    ///
+    /// + request `min` the margin below which packet arrival lead
+    ///   time must fall in order for the reply to be sent. A `min`
+    ///   value of M indicates that the reply should be sent if the
+    ///   packet arrival lead time falls below the minimum lead time
+    ///   plus M. For example, passing zero indicates that the reply
+    ///   should be sent when packet arrival lead time falls below
+    ///   the minimum lead time (when the connection has underflowed).
+    /// + request `max` the margin above which packet arrival lead
+    ///   time must rise in order for the reply to be sent. A `max`
+    ///   value of M indicates that the reply should be sent if the
+    ///   packet arrival lead time rises above the minimum lead time
+    ///   plus M.
+    /// - response `packet_lead_time` the actual packet lead time
+    ///   in excess of the minimum packet lead time measured when the
+    ///   response was generated. This value will only be within
+    ///   the specified limits if the response is generated due to
+    ///   the arrival of a new `WatchPacketLeadTime` request.
+    ///
+    /// Only one `WatchPacketLeadTime` operation may be pending at any
+    /// given time. If a `WatchPacketLeadTime` request is received
+    /// when another such request is pending, the consumer responds
+    /// to the older request with the current packet lead time value.
+    WatchPacketLeadTime(struct {
+        min zx.duration;
+        max zx.duration;
+    }) -> (struct {
+        packet_lead_time zx.duration;
+    });
+};
+
+/// Describes any passive consumer stream, including single-stream consumers and streams exposed by
+/// multi-stream consumers. All single-stream passive consumers and all streams exposed by
+/// multi-stream passive consumers should compose this protocol.
+protocol PassiveConsumerStream {
+    /// Notifies the client that an end-of-stream signal has been
+    /// encountered in the consumed stream and that all prior packets
+    /// have been rendered or otherwise processed.
+    -> OnEndOfStream();
+};

@@ -65,7 +65,7 @@ type StreamTimeline = struct {
 type TimestampUnits = struct {
     /// Duration in the stream timeline corresponding to
     /// `presentation_interval`.
-    timestamp_interval uint64 = 1000000000;
+    timestamp_interval int64 = 1000000000;
 
     /// Duration in the presentation timeline corresponding to
     /// `timestamp_interval`.

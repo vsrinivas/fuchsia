@@ -28,7 +28,8 @@ type AudioSampleFormat = strict enum {
     UNSIGNED_8 = 1;
     SIGNED_16 = 2;
     SIGNED_24_IN_32 = 3;
-    FLOAT = 4;
+    SIGNED_32 = 4;
+    FLOAT = 5;
 };
 
 type AudioChannelLayout = strict union {

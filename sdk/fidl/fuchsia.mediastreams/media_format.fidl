@@ -1,0 +1,14 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.mediastreams;
+
+/// Describes a format used for elementary streams
+type MediaFormat = flexible union {
+    /// Format for audio streams.
+    1: audio AudioFormat;
+
+    /// Format for video streams.
+    2: video VideoFormat;
+};

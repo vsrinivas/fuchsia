@@ -1,6 +1,7 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
 library fuchsia.audio;
 
 using fuchsia.media2;
@@ -8,7 +9,11 @@ using fuchsia.mediastreams;
 using zx;
 
 /// Represents an audio renderer.
+@discoverable
 protocol Renderer {
+    compose fuchsia.media2.ActiveConsumer;
+    compose fuchsia.media2.ActiveConsumerStream;
+
     /// Connects a stream sink for the renderer with the indicated properties.
     ///
     /// + request `buffer_collection_token` a participant token for the buffer collection to be
@@ -42,67 +47,10 @@ protocol Renderer {
     /// Indicates that the current input stream has been disconnected unexpectedly.
     -> OnInputStreamDisconnected();
 
-    /// Indicates that the last packet prior to the end of the stream
-    /// has been rendered.
-    -> OnEndOfStream();
-
     /// Indicates that the stream sink previously created is invalid,
     /// and the client should create another one if it wishes to
     /// continue sending packets.
     -> OnInputStreamSinkInvalid();
-
-    /// Starts the renderer's presentation timeline.
-    ///
-    /// + request `reference_time` the reference time at which the presentation timeline should
-    ///   start. A value less than the current reference time (such as 0) indicates presentation
-    ///   should start as soon as possible.
-    /// + request `presentation_time` the value of the renderer's presentation clock when
-    ///   presentation timeline starts. To resume after stop, pass the presentation time
-    ///   returned by the previous `Stop` call.
-    /// - response `reference_time` the reference time at which the presentation timeline actually
-    ///   started.
-    ///
-    /// If the renderer is currently started, this method does nothing except return the same values
-    /// returned by the previous `Start` call. If a start or stop transition is currently scheduled
-    /// when this method is called, that scheduled transition is first cancelled.
-    Start(struct {
-        reference_time zx.time;
-        presentation_time zx.duration;
-    }) -> (struct {
-        reference_time zx.time;
-    });
-
-    /// Stops the renderer's presentation timeline.
-    ///
-    /// + request `stop_time` the time when the presentation timeline should stop as a reference
-    ///   or presentation time.
-    /// - response `reference_time` the reference time at which the presentation timeline actually
-    ///   stopped.
-    /// - response `presentation_time` the value of the renderer's presentation clock when the
-    ///   presentation timeline actually stopped. This is the current presentation time until
-    ///   a subsequent call to `Start`.
-    ///
-    /// If the renderer is currently stopped, this method does nothing except return the same values
-    /// returned by the previous `Stop` call or 0,0 if this renderer has never started. If a start
-    /// or stop transition is currently scheduled when this method is called, that scheduled
-    /// transition is first cancelled.
-    Stop(struct {
-        stop_time ConsumerStopTime;
-    }) -> (struct {
-        reference_time zx.time;
-        presentation_time zx.duration;
-    });
-
-    /// Requests to change the playback rate of the renderer. 1.0 means normal playback.
-    ///
-    /// + request `rate` the requested rate. Negative rates are not supported.
-    ///
-    /// The new rate will be reflected in the updated status. The `rate_supported` field of
-    /// `RendererStatus` indicates whether this method is supported. If not, calls to this method
-    /// are ignored.
-    SetRate(struct {
-        rate float32;
-    });
 
     /// Gets the current status of the renderer using the long get pattern.
     ///
@@ -113,23 +61,6 @@ protocol Renderer {
     WatchStatus() -> (struct {
         status RendererStatus;
     });
-
-    /// Sets the reference clock to use for this renderer.
-    ///
-    /// All ‘reference time’ values for this renderer are interpreted with respect to this clock.
-    /// If this method is never called, the reference clock is the system’s monotonic clock.
-    // TODO: Does this belong in the factory method?
-    SetReferenceClock(resource struct {
-        reference_clock zx.handle:CLOCK;
-    });
-
-// Binds the volume control for the renderer.
-// TODO: Does this belong in the factory method?
-//BindVolumeControl(request<VolumeControl> request);
-
-// Binds the gain control for the renderer.
-// TODO: Does this belong in the factory method?
-//BindGainControl(request<GainControl> request);
 };
 
 const MAX_COMPRESSION_TYPES uint32 = 16;
@@ -169,15 +100,4 @@ type RendererStatus = table {
 // TODO: Define
 type RendererError = strict enum {
     INTERNAL = 1;
-};
-
-/// Time at which a consumer should stop given as a reference time or a presentation time.
-type ConsumerStopTime = strict union {
-    /// The reference time at which a consumer should stop. Values less than the current reference
-    /// time (such as 0) indicate the consumer should stop as soon as possible.
-    1: reference_time zx.time;
-
-    /// The presenation time at which a consumer should stop. Values less that the current
-    /// presentation time indicate the consumer should stop as soon as possible
-    2: presentation_time zx.duration;
 };

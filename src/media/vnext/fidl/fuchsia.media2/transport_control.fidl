@@ -1,0 +1,59 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.media2;
+
+using zx;
+
+/// Describes when a transport control operation is to occur using
+/// a time value that is comprehensible when the transport is
+/// stopped.
+type WhenStopped = flexible union {
+    1: system_time zx.time;
+    2: reference_time zx.time;
+};
+
+/// Describes when a transport control operation is to occur using
+/// a time value that is comprehensible when the transport is
+/// progressing. This is intended for capturers and producers,
+/// which don’t recognize presentation time.
+type WhenStarted = flexible union {
+    1: system_time zx.time;
+    2: reference_time zx.time;
+    3: stream_time zx.duration;
+};
+
+/// Describes when a transport control operation is to occur using
+/// a time value that is comprehensible when the transport is
+/// progressing. This is intended for renderers and consumers,
+/// which recognize presentation time.
+type WhenPresenting = flexible union {
+    1: system_time zx.time;
+    2: reference_time zx.time;
+    3: presentation_time zx.duration;
+};
+
+type StartError = flexible enum {
+    CANCELLED = 1;
+    SCHEDULED_IN_PAST = 2;
+    ALREADY_STARTED = 3;
+};
+
+type StopError = flexible enum {
+    CANCELLED = 1;
+    SCHEDULED_IN_PAST = 2;
+    ALREADY_STOPPED = 3;
+};
+
+type SetRateError = flexible enum {
+    NOT_SUPPORTED = 1;
+    CANCELLED = 2;
+    SCHEDULED_IN_PAST = 3;
+};
+
+type AmendPresentationError = flexible enum {
+    CANCELLED = 1;
+    SCHEDULED_IN_PAST = 2;
+    NOT_STARTED = 3;
+};

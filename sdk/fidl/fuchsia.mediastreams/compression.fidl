@@ -29,6 +29,7 @@ const AUDIO_COMPRESSION_PCMALAW string = "fuchsia.streams.pcmalaw";
 const AUDIO_COMPRESSION_PCMMULAW string = "fuchsia.streams.pcmmulaw";
 const AUDIO_COMPRESSION_SBC string = "fuchsia.streams.sbc";
 const AUDIO_COMPRESSION_VORBIS string = "fuchsia.streams.vorbis";
+const AUDIO_COMPRESSION_OPUS string = "fuchsia.streams.opus";
 
 const VIDEO_COMPRESSION_H263 string = "fuchsia.streams.h263";
 const VIDEO_COMPRESSION_H264 string = "fuchsia.streams.h264";

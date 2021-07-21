@@ -1,0 +1,189 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.media2;
+
+using zx;
+
+/// Describes any active producer, including single-stream and multi-stream producers.
+/// All active producers should compose this protocol. Single-stream active producers
+/// and streams exposed by multi-stream active producers should also compose
+/// `ActiveProducerStream`.
+protocol ActiveProducer {
+    /// Starts the production of packets.
+    ///
+    /// + request `when` time when the production of packets should
+    ///   start as a system time or reference time. If this parameter
+    ///   is not supplied, packet production starts as soon as
+    ///   possible.
+    /// - response `reference_time` the reference time at which packet
+    ///   production was actually started.
+    ///
+    /// When a call to this method succeeds, the response is sent when
+    /// the operation actually occurs (that is, when it was scheduled
+    /// to occur), indicating that the service is ready for a `Stop`
+    /// command. When a call to this method fails, the response is
+    /// sent when the failure is detected.
+    ///
+    /// If this method is called when packet production is already
+    /// underway, the call fails immediately with an `ALREADY_STARTED`
+    /// error.
+    ///
+    /// Otherwise, if this method is called, and `when` specifies a
+    /// time in the past, the call fails immediately with a
+    /// `SCHEDULED_IN_PAST` error.
+    ///
+    /// Otherwise, if this method is called when a `Start` operation
+    /// is already pending (requested but not completed), the pending
+    /// operation fails with a `CANCELLED` error.
+    Start(struct {
+        when WhenStopped:optional;
+    }) -> (struct {
+        reference_time zx.time;
+    }) error StartError;
+
+    /// Stops packet production.
+    ///
+    /// + request `when` time when the production of packets should
+    ///   stop as a system time, reference time or stream time. If
+    ///   this parameter is not supplied or specifies a time in the
+    ///   past, packet production stops as soon as possible.
+    /// - response `reference_time` the reference time at which packet
+    ///   production was actually stopped.
+    ///
+    /// When a call to this method succeeds, the response is sent when
+    /// the operation actually occurs (that is, when it was scheduled
+    /// to occur), indicating that the service is ready for a `Start`
+    /// command. When a call to this method fails, the response is
+    /// sent when the failure is detected.
+    ///
+    /// If this method is called when packet production is stopped,
+    /// the call fails immediately with an `ALREADY_STOPPED` error.
+    ///
+    /// Otherwise, if this method is called, and `when` specifies a
+    /// time in the past, the call fails immediately with a
+    /// `SCHEDULED_IN_PAST` error.
+    ///
+    /// Otherwise, if this method is called when a `Stop` operation
+    /// is already pending (requested but not completed), the pending
+    /// operation fails with a `CANCELLED` error.
+    Stop(struct {
+        when WhenStarted:optional;
+    }) -> (struct {
+        reference_time zx.time;
+    }) error StopError;
+};
+
+/// Describes any passive producer, including single-stream and multi-stream producers.
+/// All passive producers should compose this protocol. Single-stream passive producers
+/// and streams exposed by multi-stream passive producers should also compose
+/// `PassiveProducerStream`.
+protocol PassiveProducer {
+    /// Starts packet production at the specified presentation time in
+    /// the file.
+    ///
+    /// + request presentation_time the presentation time at which
+    ///   the producer should start reading and producing packets.
+    ///   Compressed packets prior to `presentation_time` may be
+    ///   produced if they are required to decode packets that have
+    ///   been requested.
+    /// TODO: edge cases
+    StartAt(struct {
+        presentation_time zx.duration;
+    });
+
+    /// Stops packet production at the specified presentation time in
+    /// the file.
+    ///
+    /// + request presentation_time the presentation time at which
+    ///   the producer should stop reading and producing packets.
+    /// - response presentation_time the actual presentation time at
+    ///   which reading actually stopped.
+    /// TODO: edge cases
+    StopAt(struct {
+        presentation_time zx.duration;
+    }) -> (struct {
+        presentation_time zx.duration;
+    });
+
+    /// Stops packet production as soon as possible.
+    ///
+    /// - response presentation_time the actual presentation time at
+    ///   which reading actually stopped.
+    /// TODO: edge cases
+    Stop() -> (struct {
+        presentation_time zx.duration;
+    });
+};
+
+/// Describes any active producer stream, including single-stream producers and streams exposed by
+/// multi-stream producers. All single-stream active producers and all streams exposed by
+/// multi-stream active producers should compose this protocol.
+protocol ActiveProducerStream {
+    /// Causes the producer to send a clear signal via its produced
+    /// stream(s) with the specified parameters.
+    ///
+    /// + request `hold_last_frame` whether a video renderer receiving
+    ///   the clear signal should hold the last frame (true) or show
+    ///   black (false).
+    /// + request `completion_fence` an eventpair to be passed along with
+    ///   the clear signal and closed when the signal reaches the end of
+    ///   the pipeline. See `fuchsia.media2.StreamSink/Clear`.
+    Clear(resource struct {
+        hold_last_frame bool;
+        completion_fence zx.handle:EVENTPAIR;
+    });
+
+    /// Returns buffer availability lead time when it falls outside
+    /// the specified limits.
+    ///
+    /// + request `min` the margin below which buffer availability
+    ///   lead time must fall in order for the reply to be sent. A
+    ///   ‘min’ value of M indicates that the reply should be sent if
+    ///   the buffer availability lead time falls below the minimum
+    ///   lead time plus M. For example, passing zero indicates that
+    ///   the reply should be sent when buffer availability lead time
+    ///   falls below the minimum lead time (when the connection has
+    ///   overflowed).
+    /// + request `max` the margin above which buffer availability
+    ///   lead time must rise in order for the reply to be sent. A
+    ///   `max` value of M indicates that the reply should be sent if
+    ///   the buffer availability lead time rises above the minimum
+    ///   lead time plus M.
+    /// - response `buffer_lead_time` the actual buffer availability
+    ///   lead time in excess of the minimum lead time measured when
+    ///   the response was generated. This value will only be within
+    ///   the specified limits if the response is generated due to
+    ///   the arrival of a new `WatchBufferLeadTime` request.
+    ///
+    /// Only one `WatchBufferLeadTime` operation may be pending at any
+    /// given time. If a `WatchBufferLeadTime` request is received
+    /// when another such request is pending, the producer responds
+    /// to the older request with the current buffer lead time value.
+    WatchBufferLeadTime(struct {
+        min zx.duration;
+        max zx.duration;
+    }) -> (struct {
+        buffer_lead_time zx.duration;
+    });
+};
+
+/// Describes any passive producer stream, including single-stream producers and streams exposed by
+/// multi-stream producers. All single-stream passive producers and all streams exposed by
+/// multi-stream passive producers should compose this protocol.
+protocol PassiveProducerStream {
+    /// Causes the producer to send a clear signal via its produced
+    /// stream(s) with the specified parameters.
+    ///
+    /// + request `hold_last_frame` whether a video renderer receiving
+    ///   the clear signal should hold the last frame (true) or show
+    ///   black (false).
+    /// + request `completion_fence` an eventpair to be passed along with
+    ///   the clear signal and closed when the signal reaches the end of
+    ///   the pipeline. See `fuchsia.media2.StreamSink/Clear`.
+    Clear(resource struct {
+        hold_last_frame bool;
+        completion_fence zx.handle:EVENTPAIR;
+    });
+};

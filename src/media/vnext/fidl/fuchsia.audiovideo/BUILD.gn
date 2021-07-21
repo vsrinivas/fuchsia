@@ -4,16 +4,15 @@
 
 import("//build/fidl/fidl.gni")
 
-fidl("fuchsia.mediastreams") {
+fidl("fuchsia.audiovideo") {
   sources = [
-    "audio_format.fidl",
-    "compression.fidl",
-    "encryption.fidl",
-    "video_format.fidl",
+    "metadata.fidl",
+    "producer.fidl",
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.math",
+    "//src/media/vnext/fidl/fuchsia.media2",
+    "//src/media/vnext/fidl/fuchsia.mediastreams",
     "//zircon/vdso/zx",
   ]
 }

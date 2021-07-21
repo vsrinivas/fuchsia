@@ -16,10 +16,15 @@ type Void = struct {};
 
 /// A packet consumer for cross-process elementary stream transport.
 protocol StreamSink {
-    /// Puts a packet to the sink. Closure of the release fence
-    /// by the consumer indicates that the consumer is done with
-    /// the packet and that the buffer regions associated with the
-    /// packet may be reused by the producer.
+    /// Puts a packet to the sink.
+    ///
+    /// + request `packet` structure describing the packet to put.
+    /// + request `release_fence` eventpair closed when the consumer
+    ///   is done with the packet and the buffer regions associated with
+    ///   the packet may be reused. Packets may be released in any order.
+    ///   The release fence may be duplicated as needed. When the last
+    ///   copy of the eventpair has been destroyed, the client receives
+    ///   `ZX_EVENTPAIR_PEER_CLOSED` on the peer of `release_fence`.
     PutPacket(resource struct {
         packet Packet;
         release_fence zx.handle:EVENTPAIR;
@@ -39,11 +44,23 @@ protocol StreamSink {
     /// well as any pending `End` indications, and that this process
     /// should continue downstream. For example, a decoder that
     /// receives a call to this method on the `StreamSink` it
-    /// implements (the decoder’s input), the decoder should release
+    /// implements (the docoder’s input), the decoder should release
     /// all unreleased packets and `End` indications previously
     /// received on the input and call `Clear` on its output
     /// `StreamSink`.
-    Clear();
+    ///
+    /// + request `hold_last_frame` whether a video renderer receiving
+    ///   the clear signal should hold the last frame (true) or show
+    ///   black (false).
+    /// + request `completion_fence` an eventpair to be passed along with
+    ///   the clear signal and closed when the signal reaches the end of
+    ///   end of the pipeline. When a clear operation is forwarded
+    ///   downstream in a pipeline, the `completion_fence` or a duplicate
+    ///   thereof should be used in the downstream `Clear` calls.
+    Clear(resource struct {
+        hold_last_frame bool;
+        completion_fence zx.handle:EVENTPAIR;
+    });
 };
 
 /// Describes a packet delivered via `StreamSink`.
