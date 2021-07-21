@@ -238,13 +238,14 @@ impl std::fmt::Display for StepType {
 
 #[async_trait]
 trait DoctorStepHandler {
-    async fn step(&self, step: StepType) -> Result<()>;
-    async fn output_step(&self, step: StepType) -> Result<()>;
-    async fn result(&self, result: StepResult) -> Result<()>;
+    async fn step(&mut self, step: StepType) -> Result<()>;
+    async fn output_step(&mut self, step: StepType) -> Result<()>;
+    async fn result(&mut self, result: StepResult) -> Result<()>;
 }
 
 struct DefaultDoctorStepHandler {
     recorder: Arc<Mutex<dyn Recorder + Send>>,
+    writer: Box<dyn Write + Send + Sync>,
 }
 
 #[async_trait]
@@ -254,9 +255,9 @@ struct DefaultDoctorStepHandler {
 impl DoctorStepHandler for DefaultDoctorStepHandler {
     // This is a logical step which will have a result. Right now the only difference
     // between it and an output_step is the addition of a newline after the step content.
-    async fn step(&self, step: StepType) -> Result<()> {
-        print!("{}", step);
-        stdout().flush()?;
+    async fn step(&mut self, step: StepType) -> Result<()> {
+        write!(&mut self.writer, "{}", step)?;
+        self.writer.flush()?;
         let mut r = self.recorder.lock().await;
         r.add_content(DOCTOR_OUTPUT_FILENAME, format!("{}", step));
         Ok(())
@@ -264,16 +265,16 @@ impl DoctorStepHandler for DefaultDoctorStepHandler {
 
     // This is step which exists merely to provide output (such as an introduction or
     // result summary).
-    async fn output_step(&self, step: StepType) -> Result<()> {
-        println!("{}", step);
+    async fn output_step(&mut self, step: StepType) -> Result<()> {
+        writeln!(&mut self.writer, "{}", step)?;
         let mut r = self.recorder.lock().await;
         r.add_content(DOCTOR_OUTPUT_FILENAME, format!("{}\n", step));
         Ok(())
     }
 
     // This represents the result of a `step`.
-    async fn result(&self, result: StepResult) -> Result<()> {
-        println!("{}", result);
+    async fn result(&mut self, result: StepResult) -> Result<()> {
+        writeln!(&mut self.writer, "{}", result)?;
         let mut r = self.recorder.lock().await;
         r.add_content(DOCTOR_OUTPUT_FILENAME, format!("{}\n", result));
         Ok(())
@@ -281,8 +282,11 @@ impl DoctorStepHandler for DefaultDoctorStepHandler {
 }
 
 impl DefaultDoctorStepHandler {
-    fn new(recorder: Arc<Mutex<dyn Recorder + Send>>) -> Self {
-        Self { recorder }
+    fn new(
+        recorder: Arc<Mutex<dyn Recorder + Send>>,
+        writer: Box<dyn Write + Send + Sync>,
+    ) -> Self {
+        Self { recorder, writer }
     }
 }
 
@@ -307,6 +311,13 @@ enum TargetCheckResult {
 
 #[ffx_plugin()]
 pub async fn doctor_cmd(cmd: DoctorCommand) -> Result<()> {
+    doctor_cmd_impl(cmd, stdout()).await
+}
+
+pub async fn doctor_cmd_impl<W: Write + Send + Sync + 'static>(
+    cmd: DoctorCommand,
+    mut writer: W,
+) -> Result<()> {
     let daemon_manager = DefaultDaemonManager {};
     let delay = Duration::from_millis(cmd.retry_delay);
 
@@ -320,16 +331,16 @@ pub async fn doctor_cmd(cmd: DoctorCommand) -> Result<()> {
         Ok(enabled) => {
             let enabled: bool = enabled;
             if !enabled && cmd.record {
-                println!(
+                writeln!(&mut writer,
                     "{}WARNING:{} --record was provided but ffx logs are not enabled. This means your record will only include doctor output.",
                     color::Fg(color::Red), style::Reset
-                );
-                println!(
+                )?;
+                writeln!(&mut writer,
                     "ffx doctor will proceed, but if you want to enable logs, you can do so by running:"
-                );
-                println!("  ffx config set log.enabled true");
-                println!("You will then need to restart the ffx daemon:");
-                println!("  ffx doctor --force-restart\n\n");
+                )?;
+                writeln!(&mut writer, "  ffx config set log.enabled true")?;
+                writeln!(&mut writer, "You will then need to restart the ffx daemon:")?;
+                writeln!(&mut writer, "  ffx doctor --force-restart\n\n")?;
                 fuchsia_async::Timer::new(Duration::from_millis(10000)).await;
             }
 
@@ -347,16 +358,20 @@ pub async fn doctor_cmd(cmd: DoctorCommand) -> Result<()> {
             output_dir = Some(final_output_dir);
         }
         Err(e) => {
-            println!(
+            writeln!(
+                &mut writer,
                 "{}WARNING:{} getting log status from ffx config failed. The error was: {:?}",
                 color::Fg(color::Red),
                 style::Reset,
                 e
-            );
+            )?;
             if cmd.record {
-                println!("Record mode requires configuration and will be turned off for this run.");
+                writeln!(
+                    &mut writer,
+                    "Record mode requires configuration and will be turned off for this run."
+                )?;
             }
-            println!("If this issue persists, please file a bug here: {}", BUG_URL);
+            writeln!(&mut writer, "If this issue persists, please file a bug here: {}", BUG_URL)?;
             fuchsia_async::Timer::new(Duration::from_millis(10000)).await;
 
             record = false;
@@ -364,7 +379,7 @@ pub async fn doctor_cmd(cmd: DoctorCommand) -> Result<()> {
     };
 
     let recorder = Arc::new(Mutex::new(DoctorRecorder::new()));
-    let mut handler = DefaultDoctorStepHandler::new(recorder.clone());
+    let mut handler = DefaultDoctorStepHandler::new(recorder.clone(), Box::new(writer));
     let default_target = get(DEFAULT_TARGET_CONFIG)
         .await
         .map_err(|e: ffx_config::api::ConfigError| format!("{:?}", e).replace("\n", ""));
@@ -378,12 +393,7 @@ pub async fn doctor_cmd(cmd: DoctorCommand) -> Result<()> {
         cmd.restart_daemon,
         build_info().build_version,
         default_target,
-        DoctorRecorderParameters {
-            record: record,
-            log_root,
-            output_dir,
-            recorder: recorder.clone(),
-        },
+        DoctorRecorderParameters { record, log_root, output_dir, recorder: recorder.clone() },
     )
     .await?;
 
@@ -761,19 +771,19 @@ mod test {
 
     #[async_trait]
     impl DoctorStepHandler for FakeStepHandler {
-        async fn step(&self, step: StepType) -> Result<()> {
+        async fn step(&mut self, step: StepType) -> Result<()> {
             let mut v = self.steps.lock().await;
             v.push(TestStepEntry::step(step));
             Ok(())
         }
 
-        async fn output_step(&self, step: StepType) -> Result<()> {
+        async fn output_step(&mut self, step: StepType) -> Result<()> {
             let mut v = self.steps.lock().await;
             v.push(TestStepEntry::output_step(step));
             Ok(())
         }
 
-        async fn result(&self, result: StepResult) -> Result<()> {
+        async fn result(&mut self, result: StepResult) -> Result<()> {
             let mut v = self.steps.lock().await;
             v.push(TestStepEntry::result(result));
             Ok(())
