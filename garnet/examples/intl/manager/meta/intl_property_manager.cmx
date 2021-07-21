@@ -9,11 +9,5 @@
             "--timezone_ids=und-u-tz-uslax"
         ],
         "binary": "bin/intl_property_manager"
-    },
-    "sandbox": {
-        "services": [
-            "fuchsia.sys.Environment",
-            "fuchsia.sys.Launcher"
-        ]
     }
 }

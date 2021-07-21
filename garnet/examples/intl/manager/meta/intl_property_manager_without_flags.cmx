@@ -4,11 +4,5 @@
     ],
     "program": {
         "binary": "bin/intl_property_manager"
-    },
-    "sandbox": {
-        "services": [
-            "fuchsia.sys.Environment",
-            "fuchsia.sys.Launcher"
-        ]
     }
 }

@@ -41,16 +41,30 @@ fuchsia_component("intl_property_manager_component") {
   deps = [ ":intl_property_manager_bin" ]
 }
 
+fuchsia_component("intl_property_manager_component_v2") {
+  component_name = "intl_property_manager"
+  manifest = "meta/intl_property_manager.cml"
+  deps = [ ":intl_property_manager_bin" ]
+}
+
 fuchsia_component("intl_property_manager_without_flags_component") {
   component_name = "intl_property_manager_without_flags"
   manifest = "meta/intl_property_manager_without_flags.cmx"
   deps = [ ":intl_property_manager_bin" ]
 }
 
+fuchsia_component("intl_property_manager_without_flags_component_v2") {
+  component_name = "intl_property_manager_without_flags"
+  manifest = "meta/intl_property_manager_without_flags.cml"
+  deps = [ ":intl_property_manager_bin" ]
+}
+
 fuchsia_package("intl_property_manager") {
   deps = [
     ":intl_property_manager_component",
+    ":intl_property_manager_component_v2",
     ":intl_property_manager_without_flags_component",
+    ":intl_property_manager_without_flags_component_v2",
   ]
 }
 
