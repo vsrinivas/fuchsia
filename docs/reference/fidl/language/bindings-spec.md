@@ -399,7 +399,7 @@ be present and large enough to hold the FIDL
 
 Bindings MUST support the following [attributes][attributes]:
 
-* `[Transitional]`
+* `@transitional`
 
 ## Best practices
 

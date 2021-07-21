@@ -56,25 +56,25 @@ The FIDL types are converted to Dart types based on the following table:
 |`bool`|`bool`|
 |`int8`, `int16`, `int32`, `int64`, `uint8`, `uint16`, `uint32`, `uint64`|`int`|
 |`float32`, `float64`|`double`|
-|`array<int8>:N`, `vector<int8>:N`|`Int8List`|
-|`array<int16>:N`, `vector<int16>:N`|`Int16List`|
-|`array<int32>:N`, `vector<int32>:N`|`Int32List`|
-|`array<int64>:N`, `vector<int64>:N`|`Int64List`|
-|`array<uint8>:N`, `vector<uint8>:N`|`Uint8List`|
-|`array<uint16>:N`, `vector<uint16>:N`|`Uint16List`|
-|`array<uint32>:N`, `vector<uint32>:N`|`Uint32List`|
-|`array<uint64>:N`, `vector<uint64>:N`|`Uint64List`|
-|`array<float32>:N`, `vector<float32>:N`|`Float32List`|
-|`array<float64>:N`, `vector<float64>:N`|`Float64List`|
-|`array<T>:N`, `vector<T>:N`|`List<T>`|
+|`array<int8, N>`, `vector<int8>:N`|`Int8List`|
+|`array<int16, N>`, `vector<int16>:N`|`Int16List`|
+|`array<int32, N>`, `vector<int32>:N`|`Int32List`|
+|`array<int64, N>`, `vector<int64>:N`|`Int64List`|
+|`array<uint8, N>`, `vector<uint8>:N`|`Uint8List`|
+|`array<uint16, N>`, `vector<uint16>:N`|`Uint16List`|
+|`array<uint32, N>`, `vector<uint32>:N`|`Uint32List`|
+|`array<uint64, N>`, `vector<uint64>:N`|`Uint64List`|
+|`array<float32, N>`, `vector<float32>:N`|`Float32List`|
+|`array<float64, N>`, `vector<float64>:N`|`Float64List`|
+|`array<T, N>`, `vector<T>:N`|`List<T>`|
 |`string`|`String`|
-|`request<P>`|`fidl.InterfaceRequest<P>`|
-|`P`|`fidl.InterfaceHandle<P>`|
-|`handle:CHANNEL`|`zircon.Channel`|
-|`handle:EVENTPAIR`|`zircon.EventPair`|
-|`handle:SOCKET`|`zircon.Socket`|
-|`handle:VMO`|`zircon.Vmo`|
-|`handle:S`, `handle`|`zircon.Handle`|
+|`server_end:P`|`fidl.InterfaceRequest<P>`|
+|`client_end:P`|`fidl.InterfaceHandle<P>`|
+|`zx.handle:CHANNEL`|`zircon.Channel`|
+|`zx.handle:EVENTPAIR`|`zircon.EventPair`|
+|`zx.handle:SOCKET`|`zircon.Socket`|
+|`zx.handle:VMO`|`zircon.Vmo`|
+|`zx.handle:S`, `zx.handle`|`zircon.Handle`|
 
 ### Response and event parameters {#response-event-parameters}
 
@@ -320,11 +320,7 @@ Example usage:
 Given the [protocol][lang-protocols]:
 
 ```fidl
-protocol TicTacToe {
-    StartGame(bool start_first);
-    MakeMove(uint8 row, uint8 col) -> (bool success, GameState? new_state);
-    -> OnOpponentMove(GameState new_state);
-};
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="protocols" %}
 ```
 
 Note: The `MakeMove` method above returns a bool representing success, and a
@@ -336,7 +332,7 @@ service used by clients to proxy calls to the server, and for the server for
 implementing the protocol.
 
 `TicTacToe` contains a `static const String $serviceName`, which is defined
-depending on the presence of the [[Transitional] attribute](#transitional).
+depending on the presence of the [@transitional attribute](#transitional).
 
 `TicTacToe` has the following abstract methods, representing the protocol
 methods:
@@ -407,7 +403,12 @@ Given the method with an error type:
 
 ```fidl
 protocol TicTacToe {
-    MakeMove(uint8 row, uint8 col) -> (GameState new_state) error MoveError;
+    MakeMove(struct {
+      row uint8;
+      col uint8;
+    }) -> (struct {
+      new_state GameState;
+    }) error MoveError;
 };
 ```
 
@@ -489,7 +490,7 @@ The generated code is identical except for the method ordinals.
 #### Transitional {#transitional}
 
 For protocol methods annotated with the
-[`[Transitional]`](/docs/reference/fidl/language/attributes.md#transitional)
+[`@transitional`](/docs/reference/fidl/language/attributes.md#transitional)
 attribute, the FIDL toolchain generates a default implementation on the abstract
 class so that server implementations will continue to compile without having to
 override the new method.
@@ -497,7 +498,7 @@ override the new method.
 #### Discoverable {#discoverable}
 
 The generated class for a protocol annotated with the
-[`[Discoverable]`](/docs/reference/fidl/language/attributes.md#discoverable)
+[`@discoverable`](/docs/reference/fidl/language/attributes.md#discoverable)
 attribute has a non-null `$serviceName` field.
 
 ### Test scaffolding {#test-scaffolding}

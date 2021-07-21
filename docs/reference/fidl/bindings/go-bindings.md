@@ -61,15 +61,15 @@ The FIDL types are converted to Go types based on the following table.
 |`uint64`|`uint64`|
 |`float32`|`float32`|
 |`float64`|`float64`|
-|`array<T>:N`|`[N]T`|
+|`array<T, N>`|`[N]T`|
 |`vector<T>:N`|`[]T`|
 |`vector<T>:N?`|`*[]T`|
 |`string`|`string`|
-|`string?`|`*string`|
-|`request<P>`|The generated server end type `PInterfaceRequest`, see [Protocols](#protocols)|
-|`P`|The generated client end type `PInterface`, see [Protocols](#protocols)|
-|`handle:S`,`handle:S?`|The equivalent handle type is used if it is supported by the Go runtime (e.g. `zx.VMO`, `zx.Channel`, and `zx.Event`). Otherwise, `zx.Handle` is used|
-|`handle`,`handle?`|`zx.Handle`|
+|`string:optional`|`*string`|
+|`server_end:P`|The generated server end type `PInterfaceRequest`, see [Protocols](#protocols)|
+|`client_end:P`|The generated client end type `PInterface`, see [Protocols](#protocols)|
+|`zx.handle:S`,`zx.handle:<S, optional>`|The equivalent handle type is used if it is supported by the Go runtime (e.g. `zx.VMO`, `zx.Channel`, and `zx.Event`). Otherwise, `zx.Handle` is used|
+|`zx.handle`,`zx.handle:optional`|`zx.Handle`|
 
 ### User defined types {#user-defined-types}
 
@@ -427,7 +427,12 @@ Given the method with an error type:
 
 ```fidl
 protocol TicTacToe {
-    MakeMove(uint8 row, uint8 col) -> (GameState new_state) error MoveError;
+    MakeMove(struct {
+      row uint8;
+      col uint8;
+    }) -> (struct {
+      new_state GameState;
+    }) error MoveError;
 };
 ```
 
@@ -482,15 +487,15 @@ The generated code is identical except for the method ordinals.
 
 #### Transitional {#transitional}
 
-In order to support the `[Transitional]` attribute in Go, FIDL generates a
+In order to support the `@transitional` attribute in Go, FIDL generates a
 `TicTacToeWithCtxTransitionalBase` type, which provides default implementations
-for every method marked as `[Transitional]`. Server implementations that embed
+for every method marked as `@transitional`. Server implementations that embed
 `TicTacToeWithCtxTransitionalBase` will continue to build a new transitional
 method is added.
 
 #### Discoverable
 
-When marked as `[Discoverable]`, the generated `InterfaceRequest` type (in this
+When marked as `@discoverable`, the generated `InterfaceRequest` type (in this
 example `TicTacToeWithCtxInterfaceRequest`) implements `fidl.ServiceRequest`,
 which allows the server end to be used in service discovery.
 

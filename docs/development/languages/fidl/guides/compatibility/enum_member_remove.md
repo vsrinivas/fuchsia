@@ -21,7 +21,7 @@ rust|[link](#rust-init)|[link](#rust-1)||[link](#rust-3)
 ### FIDL {#fidl-init}
 
 ```fidl
-flexible enum Color {
+type Color = flexible enum {
     RED = 1;
     BLUE = 2;
     YELLOW = 3;
@@ -331,7 +331,7 @@ fn reader(color: fidl_lib::Color) -> &'static str {
 - Remove the enum member
 
 ```diff
-  flexible enum Color {
+  type Color = flexible enum {
       RED = 1;
       BLUE = 2;
 -     YELLOW = 3;

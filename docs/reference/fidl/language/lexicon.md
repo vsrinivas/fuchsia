@@ -149,7 +149,7 @@ returning it directly or via an error callback.
 For methods with error types specified:
 
 ```fidl
-DoWork() -> (Data result) error uint32
+DoWork() -> (struct { result Data; }) error uint32
 ```
 
 The **result type** refers to the entire message that would be received by a

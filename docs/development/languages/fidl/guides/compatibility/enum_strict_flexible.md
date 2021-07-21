@@ -21,7 +21,7 @@ rust|[link](#rust-init)|[link](#rust-1)||[link](#rust-3)|
 ### FIDL {#fidl-init}
 
 ```fidl
-strict enum Color : int32 {
+type Color = strict enum : int32 {
     RED = 1;
     BLUE = 2;
     UNKNOWN_COLOR = 3;
@@ -243,11 +243,11 @@ fn reader(color: fidl_lib::Color) -> &'static str {
 - If the enum had a member representing an unknown enum, add the `[Unknown]` attribute to it
 
 ```diff
-- strict enum Color : int32 {
-+ flexible enum Color : int32 {
+- type Color = strict enum : int32 {
++ type Color = flexible enum : int32 {
       RED = 1;
       BLUE = 2;
-+     [Unknown]
++     @unknown
       UNKNOWN_COLOR = 3;
   };
 
@@ -428,10 +428,10 @@ fn reader(color: fidl_lib::Color) -> &'static str {
 - If transitioning away from a custom unknown member, you can now remove the placeholder member at this point.
 
 ```diff
-  flexible enum Color : int32 {
+  type Color = flexible enum : int32 {
       RED = 1;
       BLUE = 2;
--     [Unknown]
+-     @unknown
 -     UNKNOWN_COLOR = 3;
   };
 

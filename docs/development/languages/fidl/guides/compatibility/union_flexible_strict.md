@@ -21,9 +21,9 @@ rust|[link](#rust-init)|[link](#rust-1)||[link](#rust-3)
 ### FIDL {#fidl-init}
 
 ```fidl
-flexible union JsonValue {
-    1: int32 int_value;
-    2: string:MAX string_value;
+type JsonValue = flexible union {
+    1: int_value int32;
+    2: string_value string:MAX;
 };
 ```
 
@@ -237,10 +237,10 @@ fn use_union(value: &fidl_lib::JsonValue) {
 - Change the union from `flexible` to `strict`
 
 ```diff
-- flexible union JsonValue {
-+ strict union JsonValue {
-      1: int32 int_value;
-      2: string:MAX string_value;
+- type JsonValue = flexible union {
++ type JsonValue = strict union {
+      1: int_value int32;
+      2: string_value string:MAX;
   };
 
 ```

@@ -21,10 +21,10 @@ rust|[link](#rust-init)|[link](#rust-1)||[link](#rust-3)
 ### FIDL {#fidl-init}
 
 ```fidl
-flexible union JsonValue {
-    1: int32 int_value;
-    2: string:MAX string_value;
-    3: float32 float_value;
+type JsonValue = flexible union {
+    1: int_value int32;
+    2: string_value string:MAX;
+    3: float_value float32;
 };
 ```
 
@@ -365,10 +365,10 @@ fn reader(value: fidl_lib::JsonValue) -> String {
 - Remove the union variant
 
 ```diff
-  flexible union JsonValue {
-      1: int32 int_value;
-      2: string:MAX string_value;
--     3: float32 float_value;
+  type JsonValue = flexible union {
+      1: int_value int32;
+      2: string_value string:MAX;
+-     3: float_value float32;
   };
 
 ```

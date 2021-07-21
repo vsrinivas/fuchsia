@@ -460,33 +460,33 @@ from the old member to the new member, then deleting the old member. This
 approach can be quite direct with table fields for instance.
 
 Renames are binary-compatible, except in the case of libraries, protocols,
-methods and events. See the `[Selector]` attribute for binary-compatible renames
+methods and events. See the `@selector` attribute for binary-compatible renames
 of these.
 
 ### Attributes {#attributes}
 
-Removing `[Discoverable]` is a source-incompatible change. You first need to
+Removing `@discoverable` is a source-incompatible change. You first need to
 ensure that there are no references to the generated protocol name before
 removing this attribute.
 
-Adding or changing `[Selector]` is a binary-incompatible change on its own, but
+Adding or changing `@selector` is a binary-incompatible change on its own, but
 can be used in the same change as method renames to preserve
 binary-compatibility.
 
-Removing [`[Transitional]`][transitional] is a source-incompatible change. You
+Removing [`@transitional`][transitional] is a source-incompatible change. You
 first need to ensure that all implementations of the method are in place.
 
-Adding or changing `[Transport]` is a source-incompatible and
+Adding or changing `@transport` is a source-incompatible and
 binary-incompatible change.
 
 Changes to the following attributes have no effect on compatibility, although
 they often accompany other incompatible changes:
 
-* `[Deprecated]` (although it may in the future if/when implemented)
-* `[Doc]`
-* `[MaxBytes]`
-* `[MaxHandles]`
-* `[Unknown]`
+* `@deprecated` (although it may in the future if/when implemented)
+* `@doc`
+* `@max_bytes`
+* `@max_handles`
+* `@unknown`
 
 ### Constraints {#constraints}
 

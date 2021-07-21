@@ -55,15 +55,15 @@ The FIDL types are converted to C++ types based on the following table:
 |`uint64`|`uint64_t`|
 |`float32`|`float`|
 |`float64`|`double`|
-|`array:N`|`std::array`|
-|`vector:N`|`std::vector`|
-|`vector:N?`|`fidl::VectorPtr`|
+|`array<T, N>`|`std::array`|
+|`vector<T>:N`|`std::vector`|
+|`vector<T>:<N, optional>`|`fidl::VectorPtr`|
 |`string`|`std::string`|
-|`string?`|`fidl::StringPtr`|
-|`request<P>`, `request<P>?`|`fidl::InterfaceRequest`|
-|`P`,`P?`|`fidl::InterfaceHandle`|
-|`handle`, `handle?`|`zx::handle`|
-|`handle:S`, `handle:S?`|The corresponding zx type is used. For example, `zx::vmo` or `zx::channel`.|
+|`string:optional`|`fidl::StringPtr`|
+|`server_end:P`, `server_end:<P, optional>`|`fidl::InterfaceRequest`|
+|`client_end:P`, `client_end:<P, optional>`|`fidl::InterfaceHandle`|
+|`zx.handle`, `zx.handle:optional`|`zx::handle`|
+|`zx.handle:S`, `zx.handle:<S, optional>`|The corresponding zx type is used. For example, `zx::vmo` or `zx::channel`.|
 
 ### User defined types {#user-defined-types}
 
@@ -540,7 +540,12 @@ Given the method with an error type:
 
 ```fidl
 protocol TicTacToe {
-    MakeMove(uint8 row, uint8 col) -> (GameState new_state) error MoveError;
+    MakeMove(struct {
+      row uint8;
+      col uint8;
+    }) -> (struct {
+      new_state GameState;
+    }) error MoveError;
 };
 ```
 
@@ -634,7 +639,7 @@ The generated code is identical except for the method ordinals.
 #### Transitional
 
 For protocol methods annotated with the
-[`[Transitional]`](/docs/reference/fidl/language/attributes.md#transitional)
+[`@transitional`](/docs/reference/fidl/language/attributes.md#transitional)
 attribute, the `virtual` methods on the protocol class are not pure. This allows
 implementations of the protocol class with missing method overrides to compile
 successfully.
@@ -642,7 +647,7 @@ successfully.
 #### Discoverable {#discoverable}
 
 A protocol annotated with the
-[`[Discoverable]`](/docs/reference/fidl/language/attributes.md#discoverable)
+[`@discoverable`](/docs/reference/fidl/language/attributes.md#discoverable)
 attribute causes the FIDL toolchain to generate an additional `static const char
 Name_[]` field on the protocol class, containing the full protocol name. For a
 protocol `Baz` in the library `foo.bar`, the generated name is `"foo.bar.Baz"`.

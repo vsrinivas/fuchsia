@@ -59,13 +59,13 @@ The FIDL types are converted to C++ types based on the following table:
 |`uint64`|`uint64_t`|
 |`float32`|`float`|
 |`float64`|`double`|
-|`array<T>:N`|`fidl::Array<T, N>`|
+|`array<T, N>`|`fidl::Array<T, N>`|
 |`vector<T>:N`|`fidl::VectorView<T>`|
 |`string`|`fidl::StringView`|
-|`P`, where `P` is a protocol |`fidl::ClientEnd<P>`|
-|`request<P>` |`fidl::ServerEnd<P>`|
-|`handle`|`zx::handle`|
-|`handle:S`|The corresponding zx type is used whenever possible. For example, `zx::vmo` or `zx::channel`.|
+|`client_end:P` |`fidl::ClientEnd<P>`|
+|`server_end:P` |`fidl::ServerEnd<P>`|
+|`zx.handle`|`zx::handle`|
+|`zx.handle:S`|The corresponding zx type is used whenever possible. For example, `zx::vmo` or `zx::channel`.|
 
 Nullable built-in types do not have different generated types than their
 non-nullable counterparts in LLCPP, and are omitted from the table above.
@@ -983,7 +983,12 @@ Given a method:
 
 ```fidl
 protocol TicTacToe {
-    MakeMove(uint8 row, uint8 col) -> (GameState new_state) error MoveError;
+    MakeMove(struct {
+      row uint8;
+      col uint8;
+    }) -> (struct {
+      new_state GameState;
+    }) error MoveError;
 };
 ```
 
@@ -1055,7 +1060,7 @@ The generated code is identical except for the method ordinals.
 #### Transitional
 
 For protocol methods annotated with the
-[`[Transitional]`](/docs/reference/fidl/language/attributes.md#transitional)
+[`@transitional`](/docs/reference/fidl/language/attributes.md#transitional)
 attribute, the `virtual` methods on the protocol class come with a default
 `Close(ZX_NOT_SUPPORTED)` implementation. This allows implementations of the
 protocol class with missing method overrides to compile successfully.
@@ -1063,7 +1068,7 @@ protocol class with missing method overrides to compile successfully.
 #### Discoverable
 
 A protocol annotated with the
-[`[Discoverable]`](/docs/reference/fidl/language/attributes.md#discoverable)
+[`@discoverable`](/docs/reference/fidl/language/attributes.md#discoverable)
 attribute causes the FIDL toolchain to generate an additional `static const char
 Name[]` field on the protocol class, containing the full protocol name.
 

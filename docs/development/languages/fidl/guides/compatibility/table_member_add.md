@@ -21,9 +21,9 @@ rust|[link](#rust-init)||[link](#rust-2)
 ### FIDL {#fidl-init}
 
 ```fidl
-table Profile {
-    1: Timezone timezone;
-    2: TemperatureUnit temperature_unit;
+type Profile = table {
+    1: timezone Timezone;
+    2: temperature_unit TemperatureUnit;
 };
 ```
 
@@ -112,10 +112,10 @@ fn use_table(profile: &fidl_lib::Profile) {
 - Add the new member
 
 ```diff
-  table Profile {
-      1: Timezone timezone;
-      2: TemperatureUnit temperature_unit;
-+     3: bool dark_mode;
+  type Profile = table {
+      1: timezone Timezone;
+      2: temperature_unit TemperatureUnit;
++     3: dark_mode bool;
   };
 
 ```

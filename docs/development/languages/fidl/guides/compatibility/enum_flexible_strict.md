@@ -21,7 +21,7 @@ rust|[link](#rust-init)|[link](#rust-1)||[link](#rust-3)
 ### FIDL {#fidl-init}
 
 ```fidl
-flexible enum Color : int32 {
+type Color = flexible enum : int32 {
     RED = 1;
     BLUE = 2;
 };
@@ -228,8 +228,8 @@ fn complement(color: &fidl_lib::Color) -> Option<fidl_lib::Color> {
 - Change from `flexible` to `strict`
 
 ```diff
-- flexible enum Color : int32 {
-+ strict enum Color : int32 {
+- type Color = flexible enum : int32 {
++ type Color = strict enum : int32 {
       RED = 1;
       BLUE = 2;
   };

@@ -170,7 +170,7 @@ async fn example_service(chan: fasync::Channel) -> Result<(), fidl::Error> {
 ```diff
   protocol Example {
       ExistingMethod();
-+     [Transitional]
++     @transitional
 +     NewMethod();
   };
 
@@ -314,7 +314,7 @@ async fn example_service(chan: fasync::Channel) -> Result<(), fidl::Error> {
 ```diff
   protocol Example {
       ExistingMethod();
--     [Transitional]
+-     @transitional
       NewMethod();
   };
 

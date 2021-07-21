@@ -124,7 +124,7 @@ async fn receive_events(client: fidl_lib::ExampleProxy) -> Result<(), fidl::Erro
 ```diff
   protocol Example {
       -> OnExistingEvent();
-+     [Transitional]
++     @transitional
       -> OnOldEvent();
   };
 
@@ -250,7 +250,7 @@ async fn receive_events(client: fidl_lib::ExampleProxy) -> Result<(), fidl::Erro
 ```diff
   protocol Example {
       -> OnExistingEvent();
--     [Transitional]
+-     @transitional
 -     -> OnOldEvent();
   };
 

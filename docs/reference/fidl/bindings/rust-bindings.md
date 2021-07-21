@@ -52,8 +52,9 @@ parameters to a protocol method.
 
 ### Built-in types {#builtins}
 
-Note: In Rust, the equivalent type for a nullable FIDL type `T?` is an `Option`
-of the Rust type for `T`. These are not explicitly listed in the table below.
+Note: In Rust, the equivalent type for a optional FIDL type `T:optional` is an
+`Option` of the Rust type for `T`. These are not explicitly listed in the table
+below.
 
 In following table, when both an "owned" and "borrowed" variant are specified,
 the "owned" type refers to the type that would appear in an aggregate type (e.g.
@@ -82,26 +83,26 @@ reuse the input value if it does not contain handles.
 |`uint64`|`u64`|
 |`float32`|`f32`|
 |`float64`|`f64`|
-|`array:N`|`&mut [T; N]` *(borrowed)*<br> `[T, N]` *(owned)*|
-|`vector:N`|`&[T]` *(borrowed, when T is a numeric primitive)*<br> `&mut dyn ExactSizeIterator` *(borrowed)*<br>`Vec` *(owned)*|
+|`array<T, N>`|`&mut [T; N]` *(borrowed)*<br> `[T, N]` *(owned)*|
+|`vector<T>:N`|`&[T]` *(borrowed, when T is a numeric primitive)*<br> `&mut dyn ExactSizeIterator` *(borrowed)*<br>`Vec` *(owned)*|
 |`string`|`&str` *(borrowed)*<br>`String` *(owned)*|
-|`request`|`fidl::endpoints::ServerEnd<PMarker>`, *where `PMarker` is the [marker type](#protocols) for this protocol.*|
-|`P`|`fidl::endpoints::ClientEnd<PMarker>` *where `PMarker` is the [marker type](#protocols) for this protocol.*|
-|`handle`|`fidl::Handle`|
-|`handle`|The corresponding handle type is used. For example,`fidl::Channel` or `fidl::Vmo`|
+|`server_end:P`|`fidl::endpoints::ServerEnd<PMarker>`, *where `PMarker` is the [marker type](#protocols) for this protocol.*|
+|`client_end:P`|`fidl::endpoints::ClientEnd<PMarker>` *where `PMarker` is the [marker type](#protocols) for this protocol.*|
+|`zx.handle`|`fidl::Handle`|
+|`zx.handle:S`|The corresponding handle type is used. For example,`fidl::Channel` or `fidl::Vmo`|
 
 
 #### User defined types {#user-defined-types}
 
 Bits, enums, and tables are always referred to using their generated type `T`.
-structs and unions  can be either non-nullable or nullable, and used in an owned
+structs and unions  can be either required or optional, and used in an owned
 context or borrowed context, which means that there are four possible equivalent
 Rust types. For a given `struct T` or `union T`, the types are as follows:
 
 ||owned|borrowed|
 |--- |--- |--- |
-|non-nullable|`T`|`&mut T`|
-|nullable|`Option<T>`|`Option<&mut T>`|
+|required|`T`|`&mut T`|
+|optional|`Option<T>`|`Option<&mut T>`|
 
 ### Request, response, and event parameters {#request-response-event-parameters}
 
@@ -388,7 +389,7 @@ Given a [protocol][lang-protocols]:
 ```
 
 Note: The `MakeMove` method above returns a bool representing success, and a
-nullable response value. This is considered un-idiomatic, you should use an [error type](#protocols-results)
+optional response value. This is considered un-idiomatic, you should use an [error type](#protocols-results)
 instead.
 
 The main entrypoint for interacting with `TicTacToe` is the `TicTacToeMarker`
@@ -595,7 +596,12 @@ For a method with an error type:
 
 ```fidl
 protocol TicTacToe {
-    MakeMove(uint8 row, uint8 col) -> (GameState new_state) error MoveError;
+    MakeMove(struct {
+      row uint8;
+      col uint8;
+    }) -> (struct {
+      new_state GameState;
+    }) error MoveError;
 };
 ```
 
@@ -639,13 +645,13 @@ protocol B {
 
 #### Transitional
 
-The `[Transitional]` attribute only affects the `ProxyInterface` trait, which is
+The `@transitional` attribute only affects the `ProxyInterface` trait, which is
 sometimes used in test code. For non-test code, protocols can be transitioned on
 the server side by having request handlers temporarily use a catch-all match arm
 in the `Request` handler. Client code does not need to be soft transitioned
 since the generated proxy will always implement all methods.
 
-For methods annotated with the `[Transitional]` attribute,  the `ProxyInterface`
+For methods annotated with the `@transitional` attribute,  the `ProxyInterface`
 trait for [asynchronous clients](#protocols-client-asynchronous}) provides
 default implementations that call `unimplemented!()`. As noted earlier, this has
 no effect on the `Proxy` type, which always implements all the trait's methods.
@@ -654,7 +660,7 @@ used for fake proxies in client-side unit tests.
 
 #### Discoverable
 
-For protocols annotated with the `[Discoverable]` attribute, the Marker type
+For protocols annotated with the `@discoverable` attribute, the Marker type
 additionally implements the `fidl::endpoints::DiscoverableService` trait.
 
 ## Explicit encoding and decoding {#encoding-decoding}

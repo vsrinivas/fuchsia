@@ -21,7 +21,7 @@ rust|[link](#rust-init)|[link](#rust-1)||
 ### FIDL {#fidl-init}
 
 ```fidl
-flexible bits Flags {
+type Flags = flexible bits {
     OPTION_A = 1;
     OPTION_B = 2;
 };
@@ -158,8 +158,8 @@ fn use_bits(bits: &fidl_lib::Flags) -> fidl_lib::Flags {
 - Switch from `flexible` to `strict`
 
 ```diff
-- flexible bits Flags {
-+ strict bits Flags {
+- type Flags = flexible bits {
++ type Flags = strict bits {
       OPTION_A = 1;
       OPTION_B = 2;
   };

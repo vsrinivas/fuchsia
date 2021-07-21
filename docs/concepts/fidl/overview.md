@@ -75,10 +75,14 @@ the client.
 ```fidl
 1   library fidl.examples.echo;
 2
-3   [Discoverable]
+3   @discoverable
 4   protocol Echo {
-5       EchoString(string? value) -> (string? response);
-6   };
+5       EchoString(struct {
+6           value string:optional;
+7       }) -> (struct {
+8           response string:optional;
+9       });
+10  };
 ```
 
 Let's go through it line by line.
@@ -87,19 +91,21 @@ Let's go through it line by line.
 protocol. FIDL protocols in different libraries might have the same name, so the
 namespace is used to distinguish amongst them.
 
-**Line 3:** The `[Discoverable]` [**attribute**][attributes] indicates that the
+**Line 3:** The `@discoverable` [**attribute**][attributes] indicates that the
 protocol that follows should be made available for clients to connect to.
 
 **Line 4:** The `protocol` keyword introduces the name of the protocol, here
 it's called `Echo`.
 
-**Line 5:** The method, its parameters, and return values. There are two unusual
+**Lines 5-9:** The method, its parameters, and return values. There are two unusual
 aspects of this line:
 
-*   Note the declaration `string?` (for both `value` and `response`). The
+*   Note the declaration `string:optional` (for both `value` and `response`). The
     `string` part indicates that the parameters are strings (sequences of
-    characters), while the question mark indicates that the parameter is
+    characters), while the `optional` constraint indicates that the parameter is
     optional.
+*   The parameters are wrapped in a `struct`, which is the top level type
+    containing the method parameters.
 *   The `->` part indicates the return, which appears after the method
     declaration, not before. Unlike C++ or Java, a method can return multiple
     values.
@@ -344,20 +350,26 @@ definition file:
 ```fidl
 1   library fidl.examples.echo;
 2
-3   [Discoverable]
+3   @discoverable
 4   protocol Echo {
-5       EchoString(string? value) -> (string? response);
-6       SendString(string? value);
-7       -> ReceiveString (string? response);
-8   };
+5       EchoString(struct {
+6           value string:optional;
+7       }) -> (struct {
+8           response string:optional;
+9       });
+10
+11      SendString(struct { value string:optional; });
+12
+13      ->ReceiveString(struct { response string:optional; });
+14  };
 ```
 
-**Line 5** is the `EchoString` method that we discussed above &mdash; it's a
+**Lines 5-9** are the `EchoString` method that we discussed above &mdash; it's a
 traditional function call message, where the client calls `EchoString` with an
 optional string, and then blocks, waiting for the server to reply with another
 optional string.
 
-**Line 6** is the `SendString` method. It does not have the `->` return
+**Line 11** is the `SendString` method. It does not have the `->` return
 declaration &mdash; that makes it into a "fire and forget" model (send only),
 because we've told the FIDL compiler that this particular method does not have a
 return associated with it.
@@ -368,7 +380,7 @@ return associated with it.
 > method to declaring a function call style method that doesn't have any return
 > arguments.
 
-**Line 7** is the `ReceiveString` method. It's a little different &mdash; it
+**Line 13** is the `ReceiveString` method. It's a little different &mdash; it
 doesn't have the method name in the first part, but rather it's given after the
 `->` operator. This tells the FIDL compiler that this is an "async call" or
 "event" model declaration.

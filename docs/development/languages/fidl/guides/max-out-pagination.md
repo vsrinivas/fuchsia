@@ -97,29 +97,29 @@ The simplified definition of `SendPointerInputCmd` and all transitively
 reachable types through this struct is provided below:
 
 ```fidl
-struct SendPointerInputCmd {
-    uint32 compositor_id;
-    PointerEvent pointer_event;
+type SendPointerInputCmd = struct {
+    compositor_id uint32;
+    pointer_event PointerEvent;
 };
 
-struct PointerEvent {
-    uint64 event_time;
-    uint32 device_id;
-    uint32 pointer_id;
-    PointerEventType type;
-    PointerEventPhase phase;
-    float32 x;
-    float32 y;
-    float32 radius_major;
-    float32 radius_minor;
-    uint32 buttons;
+type PointerEvent = struct {
+    event_time uint64;
+    device_id uint32;
+    pointer_id uint32;
+    type PointerEventType;
+    phase PointerEventPhase;
+    x float32;
+    y float32;
+    radius_major float32;
+    radius_minor float32;
+    buttons uint32;
 };
 
-enum PointerEventType {
+type PointerEventType = flexible enum {
     // members elided
 };
 
-enum PointerEventPhase {
+type PointerEventPhase = flexible enum {
     // members elided
 };
 ```

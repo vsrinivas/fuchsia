@@ -34,7 +34,7 @@ for the target language).
 ```
 
 Note that documentation comments can also be provided via the
-[`[Doc]` attribute][doc-attribute].
+[`@doc]` attribute][doc-attribute].
 
 ### Keywords
 
@@ -54,10 +54,10 @@ cannot end with an underscore.
 
 ```fidl
 // a struct named "Foo"
-struct Foo { };
+type Foo = struct {};
 
 // an enum named "enum", containing a single member
-enum enum { WITH_A_MEMBER = 1; };
+type enum = enum { WITH_A_MEMBER = 1; };
 ```
 
 Note: While using keywords as identifiers is supported, it can lead to
@@ -93,11 +93,11 @@ using textures as tex;
 protocol Frob {
     // "Thing" refers to "Thing" in the "objects" library
     // "tex.Color" refers to "Color" in the "textures" library
-    Paint(Thing thing, tex.Color color);
+    Paint(struct { thing Thing; color tex.Color; });
 };
 
-struct Thing {
-    string name;
+type Thing = struct {
+    name string;
 };
 ```
 
@@ -106,8 +106,8 @@ struct Thing {
 ```fidl
 library textures;
 
-struct Color {
-    uint32 rgba;
+type Color = struct {
+    rgba uint32;
 };
 ```
 
@@ -216,7 +216,7 @@ FIDL supports a number of builtin types as well as declarations of new types
 ### Primitives
 
 *   Simple value types.
-*   Not nullable.
+*   Never optional.
 
 The following primitive types are supported:
 
@@ -241,11 +241,10 @@ We also alias **`byte`** to mean **`uint8`** as a [built-in alias](#built-in-ali
 * Named bit types.
 * Discrete subset of bit values chosen from an underlying integer primitive
   type.
-* Not nullable.
+* Never optional.
 * Bits must have at least one member.
 * Bits can either be [`strict` or `flexible`](#strict-vs-flexible).
-  <!-- TODO(fxbug.dev/64463): update default -->
-  * Bits default to `strict`.
+* Bits default to `flexible`.
 
 #### Operators
 
@@ -262,11 +261,10 @@ We also alias **`byte`** to mean **`uint8`** as a [built-in alias](#built-in-ali
 * Proper enumerated types.
 * Discrete subset of named values chosen from an underlying integer primitive
   type.
-* Not nullable.
+* Never optional.
 * Enums must have at least one member.
 * Enums can be [`strict` or `flexible`](#strict-vs-flexible).
-  <!-- TODO(fxbug.dev/64463): update default -->
-  * Enums default to `strict`.
+* Enums default to `flexible`.
 
 #### Declaration
 
@@ -291,12 +289,12 @@ Enum types are denoted by their identifier, which may be qualified if needed.
 *   Fixed-length sequences of homogeneous elements.
 *   Elements can be of any type including: primitives, enums, arrays, strings,
     vectors, handles, structs, tables, unions.
-*   Not nullable themselves; may contain nullable types.
+*   Never optional themselves; may contain optional types.
 
 #### Use
 
-Arrays are denoted **`array<T>:n`** where _T_ can
-be any FIDL type (including an array) and _n_ is a positive
+Arrays are denoted **`array<T, N>`** where _T_ can
+be any FIDL type (including an array) and _N_ is a positive
 integer constant expression that specifies the number of elements in
 the array.
 
@@ -304,10 +302,14 @@ the array.
 {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="arrays" %}
 ```
 
+Note that _N_ appears as a layout parameter, which means that it affects the ABI
+of the type. In other words, changing the parameter `_N_` is an
+[ABI-breaking][compat] change.
+
 ### Strings
 
 *   Variable-length sequence of UTF-8 encoded characters representing text.
-*   Nullable; null strings and empty strings are distinct.
+*   Can be optional; absent strings and empty strings are distinct.
 *   Can specify a maximum size, eg. **`string:40`** for a
     maximum 40 byte string.
 *   May contain embedded `NUL` bytes, unlike traditional C strings.
@@ -316,15 +318,19 @@ the array.
 
 Strings are denoted as follows:
 
-*   **`string`** : non-nullable string ([validation error][lexicon-validate]
-    occurs if null is encountered)
-*   **`string?`** : nullable string
-*   **`string:N, string:N?`** : string, and nullable string, respectively,
+*   **`string`** : required string ([validation error][lexicon-validate]
+    occurs if absent)
+*   **`string:optional`** : optional string
+*   **`string:N, string:<N, optional>`** : string, and optional string, respectively,
     with maximum length of _N_ bytes
 
 ```fidl
 {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="strings" %}
 ```
+
+Note that _N_ appears as a constraint (it appears after the `:`), which means
+that it does not affect the ABI of the type. In other words, changing the
+parameter `_N_` is not an [ABI-breaking][compat] change.
 
 > Strings should not be used to pass arbitrary binary data since bindings enforce
 > valid UTF-8. Instead, consider `bytes` for small data or
@@ -336,7 +342,7 @@ Strings are denoted as follows:
 ### Vectors
 
 *   Variable-length sequence of homogeneous elements.
-*   Nullable; null vectors and empty vectors are distinct.
+*   Can be optional; absent vectors and empty vectors are distinct.
 *   Can specify a maximum size, eg. **`vector<T>:40`** for a
     maximum 40 element vector.
 *   There is no special case for vectors of bools. Each bool element takes one
@@ -349,12 +355,12 @@ Strings are denoted as follows:
 
 Vectors are denoted as follows:
 
-*   **`vector<T>`** : non-nullable vector of element type
-    _T_ ([validation error][lexicon-validate] occurs if null is encountered)
-*   **`vector<T>?`** : nullable vector of element type
+*   **`vector<T>`** : required vector of element type
+    _T_ ([validation error][lexicon-validate] occurs if absent)
+*   **`vector<T>:optional`** : optional vector of element type
     _T_
-*   **`vector<T>:N, vector<T>:N?`** : vector, and nullable vector, respectively,
-    with maximum length of _N_ elements
+*   **`vector<T>:N, vector<T>:<N, optional>?`** : vector, and optional vector,
+    respectively, with maximum length of _N_ elements
 
 _T_ can be any FIDL type.
 
@@ -366,21 +372,21 @@ _T_ can be any FIDL type.
 
 *   Transfers a Zircon capability by handle value.
 *   Stored as a 32-bit unsigned integer.
-*   Nullable by encoding as a zero-valued handle.
+*   Can be optional; absent handles are encoded as a zero-valued handle.
 *   Handles may optionally be associated with a type and set of required zircon rights
 
 #### Use
 
 Handles are denoted:
 
-*   **`zx.handle`** : non-nullable Zircon handle of unspecified type
-*   **`zx.handle?`** : nullable Zircon handle of unspecified type
-*   **`zx.handle:H`** : non-nullable Zircon handle of type _H_
-*   **`zx.handle:H?`** : nullable Zircon handle of type _H_
-*   **`zx.handle:<H, R>`** : non-nullable Zircon handle of type _H_ with rights
+*   **`zx.handle`** : required Zircon handle of unspecified type
+*   **`zx.handle?`** : optional Zircon handle of unspecified type
+*   **`zx.handle:H`** : required Zircon handle of type _H_
+*   **`zx.handle:<H, optional>`** : optional Zircon handle of type _H_
+*   **`zx.handle:<H, R>`** : required Zircon handle of type _H_ with rights
     _R_
-*   **`zx.handle:<H, R>?`** : nullable Zircon handle of type _H_ with rights
-    _R_
+*   **`zx.handle:<H, R, optional>`** : optional Zircon handle of type _H_ with
+    rights _R_
 
 _H_ can be any [object](/docs/reference/kernel_objects/objects.md) supported by
 Zircon, e.g. `channel`, `thread`, `vmo`. Please refer to the
@@ -408,7 +414,7 @@ Structs, tables, and unions containing handles must be marked with the
 *   Declaration is not intended to be modified once deployed; use protocol
     extension instead.
 *   Declaration can have the [`resource` modifier](#value-vs-resource).
-*   Reference may be nullable.
+*   References may be `box`ed.
 *   Structs contain zero or more members.
 
 #### Declaration
@@ -419,10 +425,10 @@ Structs, tables, and unions containing handles must be marked with the
 
 #### Use
 
-Structs are denoted by their declared name (eg. **Circle**) and nullability:
+Structs are denoted by their declared name (eg. **Circle**):
 
-*   **`Circle`** : non-nullable Circle
-*   **`Circle?`** : nullable Circle
+*   **`Circle`** : required Circle
+*   **`box<Circle>`** : optional Circle, stored [out-of-line][wire-format].
 
 ```fidl
 {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="structs-use" %}
@@ -433,17 +439,17 @@ Structs are denoted by their declared name (eg. **Circle**) and nullability:
 *   Record type consisting of a sequence of typed fields with ordinals.
 *   Declaration is intended for forward and backward compatibility in the face of schema changes.
 *   Declaration can have the [`resource` modifier](#value-vs-resource).
-*   Tables cannot be nullable. The semantics of "missing value" is expressed by an empty table
-    i.e. where all members are absent, to avoid dealing with double nullability.
+*   Tables cannot be optional. The semantics of "missing value" is expressed by an empty table
+    i.e. where all members are absent, to avoid dealing with double optionality.
 *   Tables contain zero or more members.
 
 #### Declaration
 
 ```fidl
-table Profile {
-    1: vector<string> locales;
-    2: vector<string> calendars;
-    3: vector<string> time_zones;
+type Profile = table {
+    1: locales vector<string>;
+    2: calendars vector<string>;
+    3: time_zones vector<string>;
 };
 ```
 
@@ -451,7 +457,7 @@ table Profile {
 
 Tables are denoted by their declared name (eg. **Profile**):
 
-*   **`Profile`** : non-nullable Profile
+*   **`Profile`** : required Profile
 
 Here, we show how `Profile` evolves to also carry temperature units.
 A client aware of the previous definition of `Profile` (without temperature units)
@@ -459,16 +465,16 @@ can still send its profile to a server that has been updated to handle the large
 set of fields.
 
 ```fidl
-enum TemperatureUnit {
+type TemperatureUnit = enum {
     CELSIUS = 1;
     FAHRENHEIT = 2;
 };
 
-table Profile {
-    1: vector<string> locales;
-    2: vector<string> calendars;
-    3: vector<string> time_zones;
-    4: TemperatureUnit temperature_unit;
+type Profile = table {
+    1: locales vector<string>;
+    2: calendars vector<string>;
+    3: time_zones vector<string>;
+    4: temperature_unit TemperatureUnit;
 };
 ```
 
@@ -480,12 +486,11 @@ table Profile {
   compatibility. See the [Compatibility Guide][union-compat] for
   source-compatibility considerations.
 * Declaration can have the [`resource` modifier](#value-vs-resource).
-* Reference may be nullable.
+* Reference may be optional.
 * Unions contain one or more members. A union with no members would have no
   inhabitants and thus would make little sense in a wire format.
 * Unions can either be [`strict` or `flexible`](#strict-vs-flexible).
-  <!-- TODO(fxbug.dev/64463): update default -->
-  * Unions default to `strict`.
+* Unions default to `flexible`.
 
 #### Declaration
 
@@ -495,10 +500,10 @@ table Profile {
 
 #### Use {#unions-use}
 
-Unions are denoted by their declared name (e.g. **Result**) and nullability:
+Unions are denoted by their declared name (e.g. **Result**) and optionality:
 
-*   **`Either`** : non-nullable Result
-*   **`Either?`** : nullable Result
+*   **`Result`** : required Result
+*   **`Result:optional`** : optional Result
 
 ```fidl
 {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="unions-use" %}
@@ -508,8 +513,7 @@ Unions are denoted by their declared name (e.g. **Result**) and nullability:
 
 FIDL declarations can either have **strict** or **flexible** behavior:
 
-<!-- TODO(fxbug.dev/64463): Update this when defaults change. -->
-*   Bits, enums, and unions are strict unless declared with the `flexible`
+*   Bits, enums, and unions are flexible unless declared with the `strict`
     modifier.
 *   Structs always have strict behavior.
 *   Tables always have flexible behavior.
@@ -549,7 +553,7 @@ types include:
 *   [aliases](#aliasing) of resource types
 *   arrays and vectors of resource types
 *   structs, tables, and unions marked with the `resource` modifier
-*   nullable references to any of the above types
+*   optional (or boxed) references to any of the above types
 
 All other types are value types.
 
@@ -568,13 +572,13 @@ future, since adding or removing the `resource` modifier requires
 
 ```fidl
 // No handles now, but we will add some in the future.
-resource table Record {
-    1: string str;
+type Record = resource table {
+    1: str string;
 };
 
 // "Foo" must be a resource because it contains "Record", which is a resource.
-resource struct Foo {
-    Record record;
+type Foo = resource struct {
+    record Record;
 };
 ```
 
@@ -593,7 +597,7 @@ More details are discussed in [RFC-0057: Default No Handles][rfc-0057].
     * Extracting the upper 32 bits of the hash value, and
     * Setting the upper bit of that value to 0.
     * To coerce the compiler into generating a different value, methods can have
-      a `Selector` attribute.  The value of the `Selector` attribute will be
+      a `@selector` attribute.  The value of the `@selector` attribute will be
       used in the place of the method name above.
 *   Each method declaration states its arguments and results.
     *   If no results are declared, then the method is one-way: no response will
@@ -628,12 +632,10 @@ More details are discussed in [RFC-0057: Default No Handles][rfc-0057].
 Protocols are denoted by their name, directionality of the channel, and
 optionality:
 
-*   **`Protocol`** : non-nullable FIDL protocol (client endpoint of channel)
-*   **`Protocol?`** : nullable FIDL protocol (client endpoint of channel)
-*   **`request<Protocol>`** : non-nullable FIDL protocol
-    request (server endpoint of channel)
-*   **`request<Protocol>?`** : nullable FIDL protocol request
-    (server endpoint of channel)
+*   **`client_end:Protocol`** : client endpoint of channel communicating over the FIDL protocol
+*   **`client_end:<Protocol, optional>`** : optional version of the above
+*   **`server_end:Protocol`** : server endpoint of a channel communicating over the FIDL protocol
+*   **`server_end:<Protocol, optional>`** : optional version of the above
 
 ```fidl
 {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="endpoints" %}
@@ -695,9 +697,9 @@ By extending the `SceneryController` protocol to deal with it, perhaps like so:
 
 ```fidl
 protocol SceneryController {
-    SetBackground(Color color);
-    SetForeground(Color color);
-    SetAlphaChannel(int a);
+    SetBackground(struct { color Color; });
+    SetForeground(struct { color Color; });
+    SetAlphaChannel(struct { a int; });
 };
 ```
 
@@ -725,7 +727,7 @@ and then invite `Writer` to include it, by using the `compose` keyword:
 protocol Writer {
     compose SceneryController;
     compose FontController;
-    Text(int x, int y, string message);
+    Text(struct { x int; y int; message string; });
 };
 ```
 
@@ -828,7 +830,9 @@ for you that contains commonly used Zircon definitions.
 [fidl-grammar]: /docs/reference/fidl/language/grammar.md
 [doc-attribute]: /docs/reference/fidl/language/attributes.md#Doc
 [naming-style]: /docs/development/languages/fidl/guides/style.md#Names
+[compat]: /docs/development/languages/fidl/guides/compatibility/README.md
 [union-compat]: /docs/development/languages/fidl/guides/compatibility/README.md#union
 [resource-compat]: /docs/development/languages/fidl/guides/compatibility/README.md#modifiers
 [bindings-reference]: /docs/reference/fidl/bindings/overview.md
 [lexicon-validate]: /docs/reference/fidl/language/lexicon.md#validate
+[wire-format]: /docs/reference/fidl/language/wire-format/README.md

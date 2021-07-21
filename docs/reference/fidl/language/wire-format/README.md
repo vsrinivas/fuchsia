@@ -173,7 +173,7 @@ The reason is the same; there is a fixed number of the member types.
 
 We use **in-line** storage when the size of the subordinate
 object is fixed, and **out-of-line** when it's variable (including
-optional).
+boxed structs).
 
 # Type Details
 
@@ -184,7 +184,7 @@ In this section, we illustrate the encodings for all FIDL objects.
 *   Value stored in [little-endian format][RFC-0030].
 *   Packed with natural alignment.
     *   Each _m_-byte primitive is stored on an _m_-byte boundary.
-*   Not nullable.
+*   Not optional.
 
 The following primitive types are supported:
 
@@ -229,7 +229,7 @@ Handles are moved from one application's context to the other's.
 
 ![drawing](images/handlexlate.png)
 
-The value zero can be used to indicate a nullable handle is null[[1]](#Footnote-1).
+The value zero can be used to indicate a optional handle is absent[[1]](#Footnote-1).
 
 ## Aggregate objects
 
@@ -244,13 +244,13 @@ They may store that data in-line or out-of-line, depending on their type.
     *   Each subsequent element is aligned on element's alignment boundary.
 *   The stride of the array is exactly equal to the size of the element (which
     includes the padding required to satisfy element alignment constraints).
-*   Not nullable.
+*   Never optional.
 *   There is no special case for arrays of bools. Each bool element takes one
     byte as usual.
 
 Arrays are denoted:
 
-*   `array<T>:N`: where **T** can be any FIDL type
+*   `array<T, N>`: where **T** can be any FIDL type
     (including an array) and **N** is the number of elements in the array.
     Note: An array's size MUST be no more than 2<sup>32</sup>-1.
     For additional details, see [FTP-059].
@@ -260,7 +260,7 @@ Arrays are denoted:
 ### Vectors {#vectors}
 
 *   Variable-length sequence of homogeneous elements.
-*   Nullable; null vectors and empty vectors are distinct.
+*   Can be optional; absent vectors and empty vectors are distinct.
 *   Can specify a maximum size, e.g. `vector<T>:40`
     for a maximum 40 element vector.
 *   Stored as a 16 byte record consisting of:
@@ -270,21 +270,21 @@ Arrays are denoted:
     *   `data`: 64-bit presence indication or pointer to out-of-line element data
 *   When encoded for transfer, `data` indicates
     presence of content:
-    *   `0`: vector is null
-    *   `UINTPTR_MAX`: vector is non-null, data is the next out-of-line object
+    *   `0`: vector is absent
+    *   `UINTPTR_MAX`: vector is present, data is the next out-of-line object
 *   When decoded for consumption, `data` is a
     pointer to content:
-    *   `0`: vector is null
-    *   `<valid pointer>`: vector is non-null, data is at indicated memory address
+    *   `0`: vector is absent
+    *   `<valid pointer>`: vector is present, data is at indicated memory address
 *   There is no special case for vectors of bools. Each bool element takes one
     byte as usual.
 
 Vectors are denoted as follows:
 
-*   `vector<T>`: non-nullable vector of element type **T** (validation error
-    occurs if null `data` is encountered)
-*   `vector<T>?`: nullable vector of element type **T**
-*   `vector<T>:N`, `vector<T>:N?`: vector with maximum length of **N** elements
+*   `vector<T>`: required vector of element type **T** (validation error
+    occurs if `data` is absent)
+*   `vector<T>:optional`: optional vector of element type **T**
+*   `vector<T>:N`, `vector<T>:<N, optional>`: vector with maximum length of **N** elements
 
 **T** can be any FIDL type.
 
@@ -330,40 +330,40 @@ A structure can be:
 * empty &mdash; it has no fields. Such a structure is 1 byte in size, with an
   alignment of 1 byte, and is exactly equivalent to a structure containing a
   `uint8` with the value zero.
-* non-nullable &mdash; the structure's contents are stored in-line.
-* nullable &mdash; the structure's contents are stored out-of-line and
+* required &mdash; the structure's contents are stored in-line.
+* optional &mdash; the structure's contents are stored out-of-line and
   accessed through an indirect reference.
 
-Storage of a structure depends on whether it is nullable at point of reference.
+Storage of a structure depends on whether it is boxed at the point of reference.
 
-* Non-nullable structures:
+* Non-boxed structures:
   * Contents are stored in-line within their containing type, enabling very
     efficient aggregate structures to be constructed.
   * The structure layout does not change when inlined; its fields are not
     repacked to fill gaps in its container.
-* Nullable structures:
+* Boxed structures:
   * Contents are stored out-of-line and accessed through an indirect
     reference.
   * When encoded for transfer, stored reference indicates presence of
     structure:
-    * `0`: reference is null
-    * `UINTPTR_MAX`: reference is non-null, structure content
+    * `0`: reference is absent
+    * `UINTPTR_MAX`: reference is present, structure content
       is the next out-of-line object
   * When decoded for consumption, stored reference is a pointer:
-    * `0`: reference is null
-    * `<valid pointer>`: reference is non-null, structure content is at
+    * `0`: reference is absent
+    * `<valid pointer>`: reference is present, structure content is at
       indicated memory address
 
-Structs are denoted by their declared name (e.g. `Circle`) and nullability:
+Structs are denoted by their declared name (e.g. `Circle`) and can be boxed:
 
-*   `Point`: non-nullable `Point`
-*   `Color?`: nullable `Color`
+*   `Point`: required `Point`
+*   `box<Color>`: boxed, always optional `Color`
 
 The following example illustrates:
 
   * Structure layout (order, packing, and alignment)
-  * A non-nullable structure (`Point`)
-  * A nullable structure (`Color`)
+  * A required structure (`Point`)
+  * A boxed (`Color`)
 
 ```fidl
 {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="structs-use" %}
@@ -376,16 +376,16 @@ Going through the layout in detail:
 
 ![drawing](images/structs.png)
 
-1. The first member, `bool filled`, occupies one byte, but requires three bytes
+1. The first member, `filled bool`, occupies one byte, but requires three bytes
    of padding because of the next member, which has a 4-byte alignment
    requirement.
-2. The `CirclePoint center` member is an example of a non-nullable struct. As such,
+2. The `center CirclePoint` member is an example of a required struct. As such,
    its content (the `x` and `y` 32-bit floats) are inlined, and the entire thing
    consumes 8 bytes.
 3. `radius` is a 32-bit item, requiring 4 byte alignment. Since the next
    available location is already on a 4 byte alignment boundary, no padding
    is required.
-4. The `Color? color` member is an example of a nullable structure. Since the
+4. The `color box<Color>` member is an example of a boxed structure. Since the
    `color` data may or may not be present, the most efficient way of handling
    this is to keep a pointer to the structure as the in-line data. That way,
    if the `color` member is indeed present, the pointer points to its data
@@ -393,7 +393,7 @@ Going through the layout in detail:
    data itself is stored out-of-line (after the data for the `Circle`
    structure). If the `color` member is not present, the pointer is `NULL`
    (or, in the encoded format, indicates "is not present" by storing a zero).
-5. The `bool dashed` doesn't require any special alignment, so it goes next.
+5. The `dashed bool` doesn't require any special alignment, so it goes next.
    Now, however, we've reached the end of the object, and all objects must be
    8-byte aligned. That means we need an additional 7 bytes of padding.
 6. The out-of-line data for `color` follows the `Circle` data structure, and
@@ -404,7 +404,7 @@ Going through the layout in detail:
 
 Overall, this structure takes 48 bytes.
 
-By moving the `bool dashed` to be immediately after the `bool filled`, though,
+By moving the `dashed bool` to be immediately after the `filled bool`, though,
 you can realize significant space savings [[2]](#Footnote-2):
 
 ![drawing](images/struct-reorg.png)
@@ -413,7 +413,7 @@ you can realize significant space savings [[2]](#Footnote-2):
    wasted space.
 2. The padding is reduced to two bytes &mdash; this would be a good place to
    add a 16-bit value, or some more `bool`s or 8-bit integers.
-3. Notice how there's no padding required after the `color` pointer; everything
+3. Notice how there's no padding required after the `Color` box; everything
    is perfectly aligned on an 8 byte boundary.
 
 The structure now takes 40 bytes.
@@ -426,7 +426,7 @@ to do that in order to simplify [ABI compatibility changes][abi-api-compat].
 An envelope is a container for out-of-line data, used internally by tables
 and extensible unions. It is not exposed to the FIDL language.
 
-It has a fixed, 16 byte format, and is not nullable:
+It has a fixed, 16 byte format, and is never optional:
 
 ![drawing](images/envelope.png)
 
@@ -445,9 +445,9 @@ Having `num_bytes` and `num_handles` allows us to skip unknown envelope content.
 *   Each element is associated with an ordinal.
 *   Ordinals are sequential, gaps incur an empty envelope cost and hence are discouraged.
 
-Tables are denoted by their declared name (e.g., **Value**), and are not nullable:
+Tables are denoted by their declared name (e.g., **Value**), and are never optional:
 
-*   `Value`: non-nullable `Value`
+*   `Value`: required `Value`
 
 The following example shows how tables are laid out according to their fields.
 
@@ -464,13 +464,13 @@ The following example shows how tables are laid out according to their fields.
 *   Each element is associated with a user specified ordinal.
 *   Ordinals are sequential. Unlike tables, gaps in ordinals do not incur a wire
     format space cost.
-*   Nullable unions are represented with a `0` ordinal, and an empty envelope.
+*   Absent optional unions are represented with a `0` ordinal, and an empty envelope.
 *   Empty unions are not allowed.
 
-unions are denoted by their declared name (e.g. `Value`) and nullability:
+unions are denoted by their declared name (e.g. `Value`) and optionality:
 
-*   `Value`: non-nullable `Value`
-*   `Value?`: nullable `Value`
+*   `Value`: required `Value`
+*   `Value:optional`: optional `Value`
 
 The following example shows how unions are laid out according to their fields.
 
@@ -650,7 +650,7 @@ alignment.
 Notes:
 
 * **N** indicates the number of elements, whether stated explicitly (as in
-  `array<T>:N`, an array with **N** elements of type **T**) or implicitly
+  `array<T, N>`, an array with **N** elements of type **T**) or implicitly
   (a `table` consisting of 7 elements would have `N=7`).
 * The out-of-line size is always padded to 8 bytes. We indicate the content
   size below, excluding the padding.
@@ -671,21 +671,23 @@ Type(s)                      | Size (in-line)                    | Size (out-of-
 `int64`, `uint64`, `float64` | 8                                 | 0                                                               | 8
 `enum`, `bits`               | (underlying type)                 | 0                                                               | (underlying type)
 `handle`, et al.             | 4                                 | 0                                                               | 4
-`array<T>:N`                 | sizeof(T) * N                     | 0                                                               | alignof(T)
+`array<T, N>`                 | sizeof(T) * N                     | 0                                                               | alignof(T)
 `vector`, et al.             | 16                                | N * sizeof(T)                                                   | 8
 `struct`                     | sum(sizeof(fields)) + padding     | 0                                                               | 8
-`struct?`                    | 8                                 | sum(sizeof(fields)) + padding                                   | 8
+`box<struct>`                | 8                                 | sum(sizeof(fields)) + padding                                   | 8
 `envelope`                   | 16                                | sizeof(field)                                                   | 8
 `table`                      | 16                                | M * sizeof(envelope) + sum(aligned_to_8(sizeof(present fields)) | 8
-`union`, `union?`            | 24                                | sizeof(selected variant)                                        | 8
+`union`, `union:optional`    | 24                                | sizeof(selected variant)                                        | 8
 
 The `handle` entry above refers to all flavors of handles, specifically
-`handle`, `handle?`, `handle:H`, `handle:H?`, `Protocol`, `Protocol?`,
-`request<Protocol>`, and `request<Protocol>?`.
+`handle`, `handle:optional`, `handle:H`, `handle:<H, optional>`,
+`client_end:Protocol`, `client_end:<Protocol, optional>`,
+`server_end:Protocol`, and `server_end:<Protocol, optional>`.
 
 Similarly, the `vector` entry above refers to all flavors of vectors,
-specifically `vector<T>`, `vector<T>?`, `vector<T>:N`, `vector<T>:N?`,
-`string`, `string?`, `string:N`, and `string:N?`.
+specifically `vector<T>`, `vector<T>:optional`, `vector<T>:N`,
+`vector<T>:<N, optional>`, `string`, `string:optional`, `string:N`, and
+`string:<N, optional>`.
 
 #### Padding
 
@@ -696,7 +698,7 @@ an error if not).
 
 #### Maximum Recursion Depth
 
-FIDL vectors, nullable structures, tables, and unions enable the construction of
+FIDL vectors, optional structures, tables, and unions enable the construction of
 recursive messages. Left unchecked, processing excessively deep messages could
 lead to resource exhaustion, or undetected infinite looping.
 
