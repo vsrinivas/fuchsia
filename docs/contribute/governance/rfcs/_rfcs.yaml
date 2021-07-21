@@ -1418,3 +1418,16 @@
   reviewers: ['maniscalco@google.com', 'brunodalbo@google.com', 'abarth@google.com', 'iyerm@google.com']
   submitted: '2021-06-17'
   reviewed: '2021-06-25'
+
+- name: 'RFC-0113'
+  title: 'Efficient envelopes'
+  short_description: 'This FTP proposes a more compact encoding for envelopes.'
+  authors: ['apang@google.com', 'ianloic@google.com', 'pascallouis@google.com', 'bprosnitz@google.com']
+  file: '0032_efficient_envelopes.md'
+  area: ['FIDL']
+  issue: []
+  gerrit_change_id: ['545861']
+  status: 'Accepted'
+  reviewers: ['']
+  submitted: '2021-06-21'
+  reviewed: '2021-07-21'

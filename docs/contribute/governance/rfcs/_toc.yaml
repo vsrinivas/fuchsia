@@ -231,3 +231,5 @@ toc:
   path: /docs/contribute/governance/rfcs/0108_component_binder_protocol.md
 - title: "RFC-0109: Fast UDP sockets"
   path: /docs/contribute/governance/rfcs/0109_socket_datagram_socket.md
+- title: "RFC-0113: Efficient envelopes"
+  path: /docs/contribute/governance/rfcs/0113_efficient_envelopes.md
