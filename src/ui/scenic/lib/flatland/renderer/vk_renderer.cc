@@ -10,6 +10,7 @@
 #include "src/ui/lib/escher/renderer/render_funcs.h"
 #include "src/ui/lib/escher/renderer/sampler_cache.h"
 #include "src/ui/lib/escher/resources/resource_recycler.h"
+#include "src/ui/lib/escher/util/fuchsia_utils.h"
 #include "src/ui/lib/escher/util/image_utils.h"
 #include "src/ui/lib/escher/util/trace_macros.h"
 
@@ -491,6 +492,13 @@ void VkRenderer::Render(const ImageMetadata& render_target,
     auto result = escher_->vk_device().importSemaphoreZirconHandleFUCHSIA(
         info, escher_->device()->dispatch_loader());
     FX_DCHECK(result == vk::Result::eSuccess);
+
+    // Create a flow event that ends in the magma system driver.
+    zx::event semaphore_event = GetEventForSemaphore(escher_->device(), sema);
+    zx_info_handle_basic_t koid_info;
+    status = semaphore_event.get_info(ZX_INFO_HANDLE_BASIC, &koid_info, sizeof(koid_info), nullptr,
+                                      nullptr);
+    TRACE_FLOW_BEGIN("gfx", "semaphore", koid_info.koid);
 
     semaphores.emplace_back(sema);
   }
