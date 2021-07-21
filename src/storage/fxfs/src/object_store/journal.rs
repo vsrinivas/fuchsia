@@ -889,17 +889,22 @@ impl Journal {
     }
 
     /// Waits for there to be sufficient space in the journal.
-    pub async fn check_journal_space(&self) {
+    pub async fn check_journal_space(&self) -> Result<(), Error> {
         loop {
-            debug_assert_not_too_long!({
+            let _ = debug_assert_not_too_long!({
                 let mut inner = self.inner.lock().unwrap();
+                if inner.flush_error.is_some() {
+                    // If the flush error is set, this will never make progress, since we can't
+                    // extent the journal any more.
+                    break Err(anyhow!(FxfsError::JournalFlushError).context("Journal closed"));
+                }
                 if self.objects.last_end_offset() - inner.super_block.journal_checkpoint.file_offset
                     < RECLAIM_SIZE
                 {
-                    break;
+                    break Ok(());
                 }
                 let event = inner.reclaim_event.get_or_insert_with(|| Event::new());
-                event.wait()
+                event.wait_or_dropped()
             });
         }
     }
@@ -978,6 +983,9 @@ impl Journal {
                     waker.wake();
                 }
                 if inner.flush_error.is_some() {
+                    // Also wake up anyone waiting for a journal reclaim, since otherwise they will
+                    // hang indefinitely.
+                    inner.reclaim_event = None;
                     return;
                 }
                 inner.flushed_offset = offset + buf.len() as u64;

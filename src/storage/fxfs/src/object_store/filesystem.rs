@@ -328,7 +328,7 @@ impl TransactionHandler for FxFilesystem {
             // TODO(csuter): for now, we don't allow for transactions that might be inflight but
             // not committed.  In theory, if there are a large number of them, it would be possible
             // to run out of journal space.  We should probably have an in-flight limit.
-            self.journal.check_journal_space().await;
+            self.journal.check_journal_space().await?;
         }
 
         // This is the amount of space that we reserve for metadata.  A transaction should not take
