@@ -7,6 +7,7 @@
 import("//build/zircon/migrated_targets.gni")
 
 import("//build/compiled_action.gni")
+import("//build/toolchain/toolchain_environment.gni")
 
 if (current_toolchain == default_toolchain) {
   compiled_action("json") {
@@ -53,11 +54,6 @@ zx_library("boot-options") {
       "//zircon/kernel/lib/libc",
     ]
     public_deps += [ "//zircon/kernel/lib/ktl:headers" ]
-
-    if (toolchain_environment == "kernel") {
-      sources += [ "console.cc" ]
-      deps += [ "$zx/kernel/lib/console" ]
-    }
   }
 
   # TODO: revisit the following three specifications after the zircon-to-fuchsia
@@ -66,6 +62,17 @@ zx_library("boot-options") {
   static = true
   sdk = "source"
   sdk_headers = []
+}
+
+if (toolchain_environment == "kernel") {
+  source_set("boot-options-cli") {
+    sources = [ "console.cc" ]
+    deps = [
+      ":boot-options",
+      "//zircon/kernel/lib/console",
+      "//zircon/kernel/lib/ktl",
+    ]
+  }
 }
 
 if (is_host) {

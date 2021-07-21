@@ -8,7 +8,7 @@
 #include <assert.h>
 #include <ctype.h>
 #include <debug.h>
-#include <lib/cmdline.h>
+#include <lib/boot-options/boot-options.h>
 #include <lib/console.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -821,7 +821,7 @@ static int cmd_test(int argc, const cmd_args* argv, uint32_t flags) {
 }
 
 static void kernel_shell_init(uint level) {
-  if (gCmdline.GetBool(kernel_option::kShell, false)) {
+  if (gBootOptions->shell) {
     console_start();
   }
 }

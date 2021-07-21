@@ -591,6 +591,11 @@ When `shutdown`, will shutdown the system.
 The option allows a notice to be printed when the root job is either terminated, or has no jobs
  and no processes.
 
+### kernel.shell=\<bool>
+**Default:** `false`
+
+Tells the kernel to start its own shell on the kernel console instead of a userspace sh.
+
 
 ## Options available only on arm64 machines
 

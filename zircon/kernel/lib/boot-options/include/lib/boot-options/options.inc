@@ -570,6 +570,10 @@ The option allows a notice to be printed when the root job is either terminated,
  and no processes.
 )""")
 
+DEFINE_OPTION("kernel.shell", bool, shell, {false}, R"""(
+Tells the kernel to start its own shell on the kernel console instead of a userspace sh.
+)""")
+
 // Machine-specific options are included here for all the kernel places.
 // In the generator program, they're included separately.
 

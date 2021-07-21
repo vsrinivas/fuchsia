@@ -10,7 +10,7 @@ zx_library("console") {
   kernel = true
   sources = [ "console.cc" ]
   deps = [
-    "//zircon/kernel/lib/cmdline",
+    "//zircon/kernel/lib/boot-options:headers",
     "//zircon/kernel/lib/init",
   ]
   public_deps = [

@@ -313,11 +313,6 @@ All numbers may be in any base accepted by *strtoul*().
 
 All other values are currently undefined.
 
-## kernel.shell=\<bool>
-
-This option tells the kernel to start its own shell on the kernel console
-instead of a userspace sh.
-
 ## kernel.smp.maxcpus=\<num>
 
 This option caps the number of CPUs to initialize.  It cannot be greater than
