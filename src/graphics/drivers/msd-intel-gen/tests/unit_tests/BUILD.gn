@@ -76,9 +76,10 @@ group("test_deps") {
     "$magma_build_root/tests/mock:address_space",
     "$magma_build_root/tests/mock:bus_mapper",
     "$magma_build_root/tests/mock:mmio",
-    "$msd_intel_gen_build_root/src",
-    "$msd_intel_gen_build_root/tests/mock",
     "//sdk/lib/fit",
+    "//src/graphics/drivers/msd-intel-gen/include",
+    "//src/graphics/drivers/msd-intel-gen/src",
+    "//src/graphics/drivers/msd-intel-gen/tests/mock",
     "//third_party/googletest:gtest",
   ]
 }

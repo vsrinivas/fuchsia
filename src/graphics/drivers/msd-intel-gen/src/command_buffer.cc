@@ -6,6 +6,7 @@
 
 #include "address_space.h"
 #include "instructions.h"
+#include "magma_intel_gen_defs.h"
 #include "msd_intel_connection.h"
 #include "msd_intel_context.h"
 #include "msd_intel_semaphore.h"
@@ -19,6 +20,17 @@ std::unique_ptr<CommandBuffer> CommandBuffer::Create(std::weak_ptr<ClientContext
                                                      msd_semaphore_t** msd_signal_semaphores) {
   if (cmd_buf->resource_count == 0)
     return DRETP(nullptr, "Command buffer requires at least 1 resource");
+
+  switch (cmd_buf->flags) {
+    case 0:
+      cmd_buf->flags = kMagmaIntelGenCommandBufferForRender;
+      break;
+    case kMagmaIntelGenCommandBufferForRender:
+    case kMagmaIntelGenCommandBufferForVideo:
+      break;
+    default:
+      return DRETP(nullptr, "Invalid flags: 0x%lx", cmd_buf->flags);
+  }
 
   std::vector<ExecResource> resources;
   resources.reserve(cmd_buf->resource_count);

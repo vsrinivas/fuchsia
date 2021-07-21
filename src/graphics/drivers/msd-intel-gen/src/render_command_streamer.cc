@@ -87,7 +87,8 @@ bool RenderEngineCommandStreamer::MoveBatchToInflight(std::unique_ptr<MappedBatc
 
   uint32_t ringbuffer_offset = context->get_ringbuffer(id())->tail();
   inflight_command_sequences_.emplace(sequence_number, ringbuffer_offset, std::move(mapped_batch));
-  batch_submitted(sequence_number);
+
+  progress()->Submitted(sequence_number, std::chrono::steady_clock::now());
 
   return true;
 }
@@ -167,6 +168,8 @@ void RenderEngineCommandStreamer::ProcessCompletedCommandBuffers(uint32_t last_c
       scheduler_->CommandBufferCompleted(context);
     }
   }
+
+  progress()->Completed(last_completed_sequence, std::chrono::steady_clock::now());
 }
 
 bool RenderEngineCommandStreamer::PipeControl(MsdIntelContext* context, uint32_t flags,

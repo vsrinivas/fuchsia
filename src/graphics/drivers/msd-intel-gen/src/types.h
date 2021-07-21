@@ -30,6 +30,7 @@ enum AddressSpaceType {
 
 enum EngineCommandStreamerId {
   RENDER_COMMAND_STREAMER,
+  VIDEO_COMMAND_STREAMER,
 };
 
 #endif  // TYPES_H

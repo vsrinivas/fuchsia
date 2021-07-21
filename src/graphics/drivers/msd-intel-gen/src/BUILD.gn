@@ -60,6 +60,8 @@ source_set("src") {
     "scheduler.cc",
     "scheduler.h",
     "types.h",
+    "video_command_streamer.cc",
+    "video_command_streamer.h",
     "workarounds.cc",
     "workarounds.h",
   ]

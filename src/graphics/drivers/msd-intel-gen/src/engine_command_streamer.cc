@@ -82,6 +82,7 @@ void EngineCommandStreamer::InitHardware() {
   uint32_t gtt_addr = magma::to_uint32(status_page->gpu_addr());
   registers::HardwareStatusPageAddress::write(register_io(), mmio_base_, gtt_addr);
 
+  // TODO(fxbug.dev/80908) - switch to engine specific sequence numbers?
   uint32_t initial_sequence_number = sequencer()->next_sequence_number();
   status_page->write_sequence_number(initial_sequence_number);
 
@@ -116,20 +117,28 @@ void EngineCommandStreamer::InvalidateTlbs() {
 }
 
 // Register definitions from BSpec BXML Reference.
-// Register State Context definition from public BSpec,
-// intel-gfx-prm-osrc-bdw-vol07-3d_media_gpgpu_3.pdf pp. 27-28
+// Register State Context definition from public BSpec.
+// Render command streamer:
+// https://01.org/sites/default/files/documentation/intel-gfx-prm-osrc-kbl-vol07-3d_media_gpgpu.pdf
+// pp.25 Video command streamer:
+// https://01.org/sites/default/files/documentation/intel-gfx-prm-osrc-kbl-vol03-gpu_overview.pdf
+// pp.15
 class RegisterStateHelper {
  public:
   RegisterStateHelper(EngineCommandStreamerId id, uint32_t mmio_base, uint32_t* state)
       : id_(id), mmio_base_(mmio_base), state_(state) {}
 
   void write_load_register_immediate_headers() {
+    state_[0x1] = 0x1100101B;
+    state_[0x21] = 0x11001011;
     switch (id_) {
       case RENDER_COMMAND_STREAMER:
-        state_[1] = 0x1100101B;
-        state_[0x21] = 0x11001011;
         state_[0x41] = 0x11000001;
         break;
+      case VIDEO_COMMAND_STREAMER:
+        break;
+      default:
+        DASSERT(false);
     }
   }
 
@@ -138,30 +147,32 @@ class RegisterStateHelper {
     constexpr uint32_t kInhibitSyncContextSwitchBit = 1 << 3;
     constexpr uint32_t kRenderContextRestoreInhibitBit = 1;
 
-    state_[2] = mmio_base_ + 0x244;
+    state_[0x2] = mmio_base_ + 0x244;
+
+    uint32_t bits = kInhibitSyncContextSwitchBit;
     if (id_ == RENDER_COMMAND_STREAMER) {
-      uint32_t bits = kInhibitSyncContextSwitchBit | kRenderContextRestoreInhibitBit;
-      state_[3] = (bits << 16) | bits;
+      bits |= kRenderContextRestoreInhibitBit;
     }
+    state_[0x3] = (bits << 16) | bits;
   }
 
   // RING_BUFFER_HEAD - Ring Buffer Head
   void write_ring_head_pointer(uint32_t head) {
-    state_[4] = mmio_base_ + 0x34;
-    state_[5] = head;
+    state_[0x4] = mmio_base_ + 0x34;
+    state_[0x5] = head;
   }
 
   // RING_BUFFER_TAIL - Ring Buffer Tail
   void write_ring_tail_pointer(uint32_t tail) {
-    state_[6] = mmio_base_ + 0x30;
-    state_[7] = tail;
+    state_[0x6] = mmio_base_ + 0x30;
+    state_[0x7] = tail;
   }
 
   // RING_BUFFER_START - Ring Buffer Start
   void write_ring_buffer_start(uint32_t gtt_ring_buffer_start) {
     DASSERT(magma::is_page_aligned(gtt_ring_buffer_start));
-    state_[8] = mmio_base_ + 0x38;
-    state_[9] = gtt_ring_buffer_start;
+    state_[0x8] = mmio_base_ + 0x38;
+    state_[0x9] = gtt_ring_buffer_start;
   }
 
   // RING_BUFFER_CTL - Ring Buffer Control
@@ -278,6 +289,7 @@ class RegisterStateHelper {
 
   // R_PWR_CLK_STATE - Render Power Clock State Register
   void write_render_power_clock_state() {
+    DASSERT(id_ == RENDER_COMMAND_STREAMER);
     state_[0x42] = mmio_base_ + 0x0C8;
     state_[0x43] = 0;
   }
@@ -421,6 +433,7 @@ bool EngineCommandStreamer::Reset() {
       engine = registers::GraphicsDeviceResetControl::RENDER_ENGINE;
       break;
     default:
+      // TODO:(fxbug.dev/80909) - reset for video CS
       return DRETF(false, "Reset for engine id %d not implemented", id());
   }
 

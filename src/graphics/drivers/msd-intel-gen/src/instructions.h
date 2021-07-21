@@ -74,6 +74,27 @@ class MiLoadDataImmediate {
   }
 };
 
+class MiStoreDataImmediate {
+ public:
+  static constexpr uint32_t kCommandType = 0x20 << 23;
+  static constexpr uint32_t kUseGlobalGttBit = 1 << 22;
+  static constexpr uint32_t kStoreQwordBit = 1 << 21;
+
+  static constexpr uint32_t kDwordCount = 5;
+
+  static void write64(magma::InstructionWriter* writer, AddressSpaceType address_space_type,
+                      uint64_t addr, uint64_t data) {
+    DASSERT((addr & 0x7) == 0);
+    writer->Write32(kCommandType | (kDwordCount - 2) |
+                    (address_space_type == ADDRESS_SPACE_GGTT ? kUseGlobalGttBit : 0) |
+                    kStoreQwordBit);
+    writer->Write32(magma::lower_32_bits(addr));
+    writer->Write32(magma::upper_32_bits(addr));
+    writer->Write32(magma::lower_32_bits(data));
+    writer->Write32(magma::upper_32_bits(data));
+  }
+};
+
 // intel-gfx-prm-osrc-skl-vol02a-commandreference-instructions.pdf pp.1057
 // Note: Tlb invalidations are implicit on every flush sync since Skylake
 // (GFX_MODE bit 13 "Flush TLB invalidation Mode", from Broadwell spec, removed).

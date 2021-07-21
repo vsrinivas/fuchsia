@@ -9,6 +9,7 @@
 #include <queue>
 
 #include "address_space.h"
+#include "gpu_progress.h"
 #include "hardware_status_page.h"
 #include "magma_util/register_io.h"
 #include "magma_util/status.h"
@@ -26,8 +27,6 @@ class EngineCommandStreamer {
     virtual magma::RegisterIo* register_io() = 0;
     virtual Sequencer* sequencer() = 0;
     virtual HardwareStatusPage* hardware_status_page(EngineCommandStreamerId id) = 0;
-    // Keep the device informed when we have scheduled command sequences
-    virtual void batch_submitted(uint32_t sequence_number) = 0;
   };
 
   EngineCommandStreamer(Owner* owner, EngineCommandStreamerId id, uint32_t mmio_base);
@@ -35,6 +34,8 @@ class EngineCommandStreamer {
   virtual ~EngineCommandStreamer() {}
 
   EngineCommandStreamerId id() const { return id_; }
+
+  GpuProgress* progress() { return &progress_; }
 
   // Initialize backing store for the given context on this engine command streamer.
   bool InitContext(MsdIntelContext* context) const;
@@ -64,8 +65,9 @@ class EngineCommandStreamer {
   void SubmitExeclists(MsdIntelContext* context);
   void InvalidateTlbs();
 
-  // from intel-gfx-prm-osrc-bdw-vol03-gpu_overview_3.pdf p.7
+  // from intel-gfx-prm-osrc-kbl-vol03-gpu_overview.pdf p.5
   static constexpr uint32_t kRenderEngineMmioBase = 0x2000;
+  static constexpr uint32_t kVideoEngineMmioBase = 0x12000;
 
   magma::RegisterIo* register_io() { return owner_->register_io(); }
 
@@ -77,8 +79,6 @@ class EngineCommandStreamer {
     return owner_->hardware_status_page(id);
   }
 
-  void batch_submitted(uint32_t sequence_number) { owner_->batch_submitted(sequence_number); }
-
  private:
   virtual uint32_t GetContextSize() const { return PAGE_SIZE * 2; }
 
@@ -88,6 +88,7 @@ class EngineCommandStreamer {
   Owner* owner_;
   EngineCommandStreamerId id_;
   uint32_t mmio_base_;
+  GpuProgress progress_;
 
   friend class TestEngineCommandStreamer;
 };

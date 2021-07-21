@@ -12,7 +12,6 @@
 
 #include "device_request.h"
 #include "global_context.h"
-#include "gpu_progress.h"
 #include "gtt.h"
 #include "interrupt_manager.h"
 #include "magma_util/macros.h"
@@ -25,6 +24,7 @@
 #include "platform_trace.h"
 #include "render_command_streamer.h"
 #include "sequencer.h"
+#include "video_command_streamer.h"
 
 class MsdIntelDevice : public msd_device_t,
                        public EngineCommandStreamer::Owner,
@@ -67,6 +67,10 @@ class MsdIntelDevice : public msd_device_t,
       uint64_t active_head_pointer;
       std::vector<MappedBatch*> inflight_batches;
     } render_cs;
+    struct VideoCommandStreamer {
+      uint32_t sequence_number;
+      uint64_t active_head_pointer;
+    } video_cs;
 
     bool fault_present;
     uint8_t fault_engine;
@@ -118,11 +122,6 @@ class MsdIntelDevice : public msd_device_t,
   // EngineCommandStreamer::Owner
   HardwareStatusPage* hardware_status_page(EngineCommandStreamerId id) override;
 
-  void batch_submitted(uint32_t sequence_number) override {
-    DASSERT(progress_);
-    progress_->Submitted(sequence_number, std::chrono::steady_clock::now());
-  }
-
   // MsdIntelConnection::Owner
   magma::Status SubmitBatch(std::unique_ptr<MappedBatch> batch) override;
   void DestroyContext(std::shared_ptr<ClientContext> client_context) override;
@@ -133,12 +132,13 @@ class MsdIntelDevice : public msd_device_t,
   void Destroy();
 
   bool BaseInit(void* device_handle);
-  bool RenderEngineInit(bool exec_init_batch);
+  bool InitEngines(bool exec_init_batch);
   bool RenderEngineReset();
 
   bool InitContextForRender(MsdIntelContext* context);
+  bool InitContextForVideo(MsdIntelContext* context);
 
-  void ProcessCompletedCommandBuffers();
+  void ProcessCompletedCommandBuffers(EngineCommandStreamerId id);
   void HangCheckTimeout(uint64_t timeout_ms);
 
   magma::Status ProcessBatch(std::unique_ptr<MappedBatch> batch);
@@ -146,7 +146,8 @@ class MsdIntelDevice : public msd_device_t,
   magma::Status ProcessReleaseBuffer(std::shared_ptr<AddressSpace> address_space,
                                      std::shared_ptr<MsdIntelBuffer> buffer);
   magma::Status ProcessInterrupts(uint64_t interrupt_time_ns, uint32_t master_interrupt_control,
-                                  uint32_t render_interrupt_status);
+                                  uint32_t render_interrupt_status,
+                                  uint32_t video_interrupt_status);
   magma::Status ProcessDumpStatusToLog();
 
   void EnqueueDeviceRequest(std::unique_ptr<DeviceRequest> request, bool enqueue_front = false);
@@ -169,6 +170,8 @@ class MsdIntelDevice : public msd_device_t,
   std::shared_ptr<GlobalContext> global_context() { return global_context_; }
 
   RenderEngineCommandStreamer* render_engine_cs() { return render_engine_cs_.get(); }
+
+  VideoCommandStreamer* video_command_streamer() { return video_command_streamer_.get(); }
 
   std::shared_ptr<AddressSpace> gtt() { return gtt_; }
 
@@ -194,6 +197,7 @@ class MsdIntelDevice : public msd_device_t,
   std::unique_ptr<magma::RegisterIo> register_io_;
   std::shared_ptr<Gtt> gtt_;
   std::unique_ptr<RenderEngineCommandStreamer> render_engine_cs_;
+  std::unique_ptr<VideoCommandStreamer> video_command_streamer_;
   std::shared_ptr<GlobalContext> global_context_;
   std::unique_ptr<Sequencer> sequencer_;
   std::shared_ptr<magma::PlatformBuffer> scratch_buffer_;

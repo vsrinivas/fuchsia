@@ -15,6 +15,10 @@ void MsdIntelDevice::Dump(DumpState* dump_out) {
   dump_out->render_cs.active_head_pointer = render_engine_cs_->GetActiveHeadPointer();
   dump_out->render_cs.inflight_batches = render_engine_cs_->GetInflightBatches();
 
+  dump_out->video_cs.sequence_number =
+      global_context_->hardware_status_page(video_command_streamer_->id())->read_sequence_number();
+  dump_out->video_cs.active_head_pointer = video_command_streamer_->GetActiveHeadPointer();
+
   DumpFault(dump_out, registers::AllEngineFault::read(register_io_.get()));
 
   dump_out->fault_gpu_address = kInvalidGpuAddr;
@@ -50,15 +54,20 @@ void MsdIntelDevice::FormatDump(DumpState& dump_state, std::vector<std::string>&
       "---- GPU dump begin ----\n"
       "%s build\n"
       "Device id: 0x%x Revision: 0x%x\n"
-      "RENDER_COMMAND_STREAMER\n"
-      "sequence_number 0x%x\n"
+      "RENDER_COMMAND_STREAMER "
+      "sequence_number 0x%x "
+      "active head pointer: 0x%llx\n"
+      "VIDEO_COMMAND_STREAMER "
+      "sequence_number 0x%x "
       "active head pointer: 0x%llx";
   int size =
       std::snprintf(nullptr, 0, fmt, build, device_id(), revision(),
-                    dump_state.render_cs.sequence_number, dump_state.render_cs.active_head_pointer);
+                    dump_state.render_cs.sequence_number, dump_state.render_cs.active_head_pointer,
+                    dump_state.video_cs.sequence_number, dump_state.video_cs.active_head_pointer);
   std::vector<char> buf(size + 1);
   std::snprintf(&buf[0], buf.size(), fmt, build, device_id(), revision(),
-                dump_state.render_cs.sequence_number, dump_state.render_cs.active_head_pointer);
+                dump_state.render_cs.sequence_number, dump_state.render_cs.active_head_pointer,
+                dump_state.video_cs.sequence_number, dump_state.video_cs.active_head_pointer);
   dump_out.push_back(&buf[0]);
 
   if (dump_state.fault_present) {

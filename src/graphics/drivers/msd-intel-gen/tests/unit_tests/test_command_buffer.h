@@ -70,6 +70,10 @@ class TestCommandBuffer {
   static bool InitContextForRender(MsdIntelDevice* device, MsdIntelContext* context) {
     return device->InitContextForRender(context);
   }
+
+  static bool InitContextForVideo(MsdIntelDevice* device, MsdIntelContext* context) {
+    return device->InitContextForVideo(context);
+  }
 };
 
 #endif  // TEST_COMMAND_BUFFER_H

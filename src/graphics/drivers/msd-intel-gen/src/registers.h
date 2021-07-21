@@ -322,6 +322,7 @@ class MasterInterruptControl {
  public:
   static constexpr uint32_t kOffset = 0x44200;
   static constexpr uint32_t kRenderInterruptsPendingBitMask = 1 << 0;
+  static constexpr uint32_t kVideoInterruptsPendingBitMask = 1 << 2;
   static constexpr uint32_t kDisplayEnginePipeAInterruptsPendingBit = 1 << 16;
   static constexpr uint32_t kEnableBitMask = 1 << 31;
 
@@ -337,7 +338,7 @@ class InterruptRegisterBase {
   enum MaskOp { MASK, UNMASK };
 
   static constexpr uint32_t kUserInterruptBit = 1 << 0;
-  static constexpr uint32_t kPageFaultBit = 1 << 7;
+  static constexpr uint32_t kPageFaultBit = 1 << 7;  // Only for the Interrupt0 register.
   static constexpr uint32_t kContextSwitchBit = 1 << 8;
 
  protected:
@@ -395,6 +396,37 @@ class GtInterruptIdentity0 : public InterruptRegisterBase {
 class GtInterruptEnable0 : public InterruptRegisterBase {
  public:
   static constexpr uint32_t kOffset = 0x4430C;
+
+  static void write(magma::RegisterIo* register_io, Source source, bool enable) {
+    InterruptRegisterBase::write(register_io, kOffset, source, enable);
+  }
+};
+
+// For GtInterrupt1 series the source bits correspond to VideoCS
+// (VideoCS2 in the upper 16 bits).
+// intel-gfx-prm-osrc-kbl-vol02c-commandreference-registers-part1.pdf p.926
+class GtInterruptMask1 : public InterruptRegisterBase {
+ public:
+  static constexpr uint32_t kOffset = 0x44314;
+
+  static void write(magma::RegisterIo* register_io, Source source, MaskOp op) {
+    InterruptRegisterBase::write(register_io, kOffset, source, op == MASK);
+  }
+};
+
+class GtInterruptIdentity1 : public InterruptRegisterBase {
+ public:
+  static constexpr uint32_t kOffset = 0x44318;
+
+  static uint32_t read(magma::RegisterIo* register_io) { return register_io->Read32(kOffset); }
+  static void clear(magma::RegisterIo* register_io, Source source) {
+    register_io->Write32(kOffset, source_bit(source));
+  }
+};
+
+class GtInterruptEnable1 : public InterruptRegisterBase {
+ public:
+  static constexpr uint32_t kOffset = 0x4431C;
 
   static void write(magma::RegisterIo* register_io, Source source, bool enable) {
     InterruptRegisterBase::write(register_io, kOffset, source, enable);

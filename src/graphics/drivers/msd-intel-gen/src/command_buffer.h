@@ -64,6 +64,8 @@ class CommandBuffer : public MappedBatch {
     return exec_resource_mappings_[batch_buffer_index_].get();
   }
 
+  uint64_t GetFlags() const { return command_buffer_->flags; }
+
  private:
   CommandBuffer(std::weak_ptr<ClientContext> context,
                 std::unique_ptr<magma_command_buffer> command_buffer);

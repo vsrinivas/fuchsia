@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <magma_intel_gen_defs.h>
+
 #include <gtest/gtest.h>
 #include <helper/command_buffer_helper.h>
 #include <helper/platform_device_helper.h>
@@ -16,7 +18,7 @@
 
 using AllocatingAddressSpace = FakeAllocatingAddressSpace<GpuMapping, AddressSpace>;
 
-class Test {
+class TestHwCommandBuffer : public ::testing::Test {
  public:
   class AddressSpaceOwner : public magma::AddressSpaceOwner {
    public:
@@ -26,8 +28,6 @@ class Test {
    private:
     MockBusMapper bus_mapper_;
   };
-
-  static std::unique_ptr<Test> Create() { return std::unique_ptr<Test>(new Test()); }
 
   MsdIntelDevice* device() { return MsdIntelDevice::cast(helper_->dev()->msd_dev()); }
 
@@ -81,7 +81,7 @@ class Test {
     }
   }
 
-  void TestPrepareForExecution() {
+  void TestPrepareForExecution(EngineCommandStreamerId id) {
     uint32_t batch_start_offset = 0x10;
     helper_->abi_cmd_buf()->batch_start_offset = batch_start_offset;
 
@@ -103,7 +103,6 @@ class Test {
     }
 
     auto device = MsdIntelDevice::cast(helper_->dev()->msd_dev());
-    auto engine = TestCommandBuffer::render_engine(device);
 
     ASSERT_TRUE(cmd_buf_->PrepareForExecution());
 
@@ -112,27 +111,36 @@ class Test {
     ClientContext* ctx = static_cast<ClientContext*>(context.get());
     ASSERT_NE(ctx, nullptr);
 
-    EXPECT_TRUE(TestCommandBuffer::InitContextForRender(device, context.get()));
+    switch (id) {
+      case RENDER_COMMAND_STREAMER:
+        EXPECT_TRUE(TestCommandBuffer::InitContextForRender(device, context.get()));
+        break;
+      case VIDEO_COMMAND_STREAMER:
+        EXPECT_TRUE(TestCommandBuffer::InitContextForVideo(device, context.get()));
+        break;
+    }
 
     gpu_addr_t gpu_addr;
     EXPECT_TRUE(cmd_buf_->GetGpuAddress(&gpu_addr));
     EXPECT_EQ(batch_start_offset, gpu_addr & (PAGE_SIZE - 1));
 
     // Check that context is initialized correctly
-    EXPECT_TRUE(ctx->IsInitializedForEngine(engine->id()));
-    EXPECT_NE(ctx->get_ringbuffer(engine->id()), nullptr);
-    EXPECT_NE(ctx->get_context_buffer(engine->id()), nullptr);
+    EXPECT_TRUE(ctx->IsInitializedForEngine(id));
+    EXPECT_NE(ctx->get_ringbuffer(id), nullptr);
+    EXPECT_NE(ctx->get_context_buffer(id), nullptr);
 
     // Check that context is mapped correctly
     gpu_addr_t addr;
-    EXPECT_TRUE(ctx->GetGpuAddress(engine->id(), &addr));
+    EXPECT_TRUE(ctx->GetGpuAddress(id, &addr));
     EXPECT_NE(addr, kInvalidGpuAddr);
-    EXPECT_TRUE(ctx->GetRingbufferGpuAddress(engine->id(), &addr));
+    EXPECT_TRUE(ctx->GetRingbufferGpuAddress(id, &addr));
     EXPECT_NE(addr, kInvalidGpuAddr);
     cmd_buf_.reset();
   }
 
-  void TestExecute() {
+  void TestExecute(uint64_t command_buffer_flags) {
+    helper_->set_command_buffer_flags(command_buffer_flags);
+
     CreateCommandBuffer();
 
     gpu_addr_t gpu_addr = 0;
@@ -202,7 +210,7 @@ class Test {
         helper_->msd_signal_semaphores());
   }
 
-  Test() {
+  void SetUp() override {
     auto platform_device = TestPlatformPciDevice::GetInstance();
     if (!platform_device)
       DLOG("TestCommandBuffer: No platform device");
@@ -215,8 +223,26 @@ class Test {
   std::unique_ptr<CommandBufferHelper> helper_;
 };
 
-TEST(CommandBuffer, MapUnmapResourcesGpu) { ::Test::Create()->TestMapUnmapResourcesGpu(); }
+TEST_F(TestHwCommandBuffer, MapUnmapResourcesGpu) {
+  TestHwCommandBuffer::TestMapUnmapResourcesGpu();
+}
 
-TEST(CommandBuffer, PrepareForExecution) { ::Test::Create()->TestPrepareForExecution(); }
+class TestHwCommandBuffer_RenderCommandStreamer : public TestHwCommandBuffer {};
 
-TEST(CommandBuffer, Execute) { ::Test::Create()->TestExecute(); }
+TEST_F(TestHwCommandBuffer_RenderCommandStreamer, PrepareForExecution) {
+  TestHwCommandBuffer::TestPrepareForExecution(RENDER_COMMAND_STREAMER);
+}
+
+TEST_F(TestHwCommandBuffer_RenderCommandStreamer, Execute) {
+  TestHwCommandBuffer::TestExecute(kMagmaIntelGenCommandBufferForRender);
+}
+
+class TestHwCommandBuffer_VideoCommandStreamer : public TestHwCommandBuffer {};
+
+TEST_F(TestHwCommandBuffer_VideoCommandStreamer, PrepareForExecution) {
+  TestHwCommandBuffer::TestPrepareForExecution(VIDEO_COMMAND_STREAMER);
+}
+
+TEST_F(TestHwCommandBuffer_VideoCommandStreamer, Execute) {
+  TestHwCommandBuffer::TestExecute(kMagmaIntelGenCommandBufferForVideo);
+}

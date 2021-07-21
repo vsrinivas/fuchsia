@@ -17,6 +17,7 @@
 #include "render_command_streamer.h"
 #include "render_init_batch.h"
 #include "sequencer.h"
+#include "video_command_streamer.h"
 
 using AllocatingAddressSpace = FakeAllocatingAddressSpace<GpuMapping, AddressSpace>;
 
@@ -47,7 +48,8 @@ class MockStatusPageBuffer {
 
 class TestEngineCommandStreamer : public EngineCommandStreamer::Owner,
                                   public Gtt::Owner,
-                                  public HardwareStatusPage::Owner {
+                                  public HardwareStatusPage::Owner,
+                                  public testing::TestWithParam<EngineCommandStreamerId> {
  public:
   static constexpr uint32_t kFirstSequenceNumber = 5;
 
@@ -60,7 +62,7 @@ class TestEngineCommandStreamer : public EngineCommandStreamer::Owner,
     MockBusMapper bus_mapper_;
   };
 
-  TestEngineCommandStreamer(uint32_t device_id = 0x1916) : device_id_(device_id) {
+  void SetUp() override {
     register_io_ = std::make_unique<magma::RegisterIo>(MockMmio::Create(8 * 1024 * 1024));
 
     std::weak_ptr<MsdIntelConnection> connection;
@@ -74,12 +76,34 @@ class TestEngineCommandStreamer : public EngineCommandStreamer::Owner,
     address_space_ =
         std::make_shared<AllocatingAddressSpace>(address_space_owner_.get(), 0, PAGE_SIZE * 100);
 
-    engine_cs_ = RenderEngineCommandStreamer::Create(this);
+    EngineCommandStreamerId id = GetParam();
+
+    switch (id) {
+      case RENDER_COMMAND_STREAMER:
+        engine_cs_ = RenderEngineCommandStreamer::Create(this);
+        break;
+      case VIDEO_COMMAND_STREAMER:
+        engine_cs_ = std::make_unique<VideoCommandStreamer>(this);
+        break;
+    }
+    ASSERT_TRUE(engine_cs_);
 
     sequencer_ = std::unique_ptr<Sequencer>(new Sequencer(kFirstSequenceNumber));
 
     hw_status_page_ =
         std::unique_ptr<HardwareStatusPage>(new HardwareStatusPage(this, engine_cs_->id()));
+  }
+
+  EngineCommandStreamerId id() const { return GetParam(); }
+
+  uint32_t mmio_base() {
+    switch (id()) {
+      case RENDER_COMMAND_STREAMER:
+        return 0x2000;
+      case VIDEO_COMMAND_STREAMER:
+        return 0x12000;
+    }
+    return 0;
   }
 
   void InitContext() {
@@ -90,7 +114,7 @@ class TestEngineCommandStreamer : public EngineCommandStreamer::Owner,
 
     buffer = TestContext::get_context_buffer(context_.get(), engine_cs_->id());
     ASSERT_NE(buffer, nullptr);
-    EXPECT_EQ(buffer->platform_buffer()->size(), PAGE_SIZE * 20ul);
+    EXPECT_EQ(buffer->platform_buffer()->size(), engine_cs_->GetContextSize());
 
     auto ringbuffer = context_->get_ringbuffer(engine_cs_->id());
     ASSERT_NE(ringbuffer, nullptr);
@@ -100,56 +124,65 @@ class TestEngineCommandStreamer : public EngineCommandStreamer::Owner,
 
     uint32_t* state = reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(addr) + PAGE_SIZE);
     EXPECT_EQ(state[1], 0x1100101Bul);
-    EXPECT_EQ(state[2], 0x2244ul);
-    EXPECT_EQ(state[3], 0x00090009ul);
-    EXPECT_EQ(state[4], 0x2034ul);
+    EXPECT_EQ(state[2], mmio_base() + 0x244ul);
+    switch (id()) {
+      case RENDER_COMMAND_STREAMER:
+        EXPECT_EQ(state[3], 0x00090009ul);
+        break;
+      case VIDEO_COMMAND_STREAMER:
+        EXPECT_EQ(state[3], 0x00080008ul);
+        break;
+    }
+    EXPECT_EQ(state[4], mmio_base() + 0x34ul);
     EXPECT_EQ(state[5], ringbuffer->head());
-    EXPECT_EQ(state[6], 0x2030ul);
+    EXPECT_EQ(state[6], mmio_base() + 0x30ul);
     EXPECT_EQ(state[7], 0u);
-    EXPECT_EQ(state[8], 0x2038ul);
+    EXPECT_EQ(state[8], mmio_base() + 0x38ul);
     // state[9] is not set until later
-    EXPECT_EQ(state[0xA], 0x203Cul);
+    EXPECT_EQ(state[0xA], mmio_base() + 0x3Cul);
     EXPECT_EQ(state[0xB], (31ul * PAGE_SIZE) | 1);
-    EXPECT_EQ(state[0xC], 0x2168ul);
+    EXPECT_EQ(state[0xC], mmio_base() + 0x168ul);
     EXPECT_EQ(state[0xD], 0ul);
-    EXPECT_EQ(state[0xE], 0x2140ul);
+    EXPECT_EQ(state[0xE], mmio_base() + 0x140ul);
     EXPECT_EQ(state[0xF], 0ul);
-    EXPECT_EQ(state[0x10], 0x2110ul);
+    EXPECT_EQ(state[0x10], mmio_base() + 0x110ul);
     EXPECT_EQ(state[0x11], 1ul << 5);
-    EXPECT_EQ(state[0x12], 0x211Cul);
+    EXPECT_EQ(state[0x12], mmio_base() + 0x11Cul);
     EXPECT_EQ(state[0x13], 0ul);
-    EXPECT_EQ(state[0x14], 0x2114ul);
+    EXPECT_EQ(state[0x14], mmio_base() + 0x114ul);
     EXPECT_EQ(state[0x15], 0ul);
-    EXPECT_EQ(state[0x16], 0x2118ul);
+    EXPECT_EQ(state[0x16], mmio_base() + 0x118ul);
     EXPECT_EQ(state[0x17], 0ul);
-    EXPECT_EQ(state[0x18], 0x21C0ul);
+    EXPECT_EQ(state[0x18], mmio_base() + 0x1C0ul);
     EXPECT_EQ(state[0x19], 0ul);
-    EXPECT_EQ(state[0x1A], 0x21C4ul);
+    EXPECT_EQ(state[0x1A], mmio_base() + 0x1C4ul);
     EXPECT_EQ(state[0x1B], 0ul);
-    EXPECT_EQ(state[0x1C], 0x21C8ul);
+    EXPECT_EQ(state[0x1C], mmio_base() + 0x1C8ul);
     EXPECT_EQ(state[0x1D], 0ul);
     EXPECT_EQ(state[0x21], 0x11001011ul);
-    EXPECT_EQ(state[0x22], 0x23A8ul);
+    EXPECT_EQ(state[0x22], mmio_base() + 0x3A8ul);
     EXPECT_EQ(state[0x23], 0ul);
-    EXPECT_EQ(state[0x24], 0x228Cul);
+    EXPECT_EQ(state[0x24], mmio_base() + 0x28Cul);
     // TODO(fxbug.dev/12686) - check ppgtt pdp addresses
     // EXPECT_EQ(state[0x25], pdp3_upper);
-    EXPECT_EQ(state[0x26], 0x2288ul);
+    EXPECT_EQ(state[0x26], mmio_base() + 0x288ul);
     // EXPECT_EQ(state[0x27], pdp3_lower);
-    EXPECT_EQ(state[0x28], 0x2284ul);
+    EXPECT_EQ(state[0x28], mmio_base() + 0x284ul);
     // EXPECT_EQ(state[0x29], pdp2_upper);
-    EXPECT_EQ(state[0x2A], 0x2280ul);
+    EXPECT_EQ(state[0x2A], mmio_base() + 0x280ul);
     // EXPECT_EQ(state[0x2B], pdp2_lower);
-    EXPECT_EQ(state[0x2C], 0x227Cul);
+    EXPECT_EQ(state[0x2C], mmio_base() + 0x27Cul);
     // EXPECT_EQ(state[0x2D], pdp1_upper);
-    EXPECT_EQ(state[0x2E], 0x2278ul);
+    EXPECT_EQ(state[0x2E], mmio_base() + 0x278ul);
     // EXPECT_EQ(state[0x2F], pdp1_lower);
-    EXPECT_EQ(state[0x30], 0x2274ul);
+    EXPECT_EQ(state[0x30], mmio_base() + 0x274ul);
     // EXPECT_EQ(state[0x31], pdp0_upper);
-    EXPECT_EQ(state[0x32], 0x2270ul);
+    EXPECT_EQ(state[0x32], mmio_base() + 0x270ul);
     // EXPECT_EQ(state[0x33], pdp0_lower);
-    EXPECT_EQ(state[0x41], 0x11000001ul);
-    EXPECT_EQ(state[0x42], 0x20C8ul);
+    if (id() == RENDER_COMMAND_STREAMER) {
+      EXPECT_EQ(state[0x41], 0x11000001ul);
+      EXPECT_EQ(state[0x42], mmio_base() + 0xC8ul);
+    }
     EXPECT_EQ(state[0x43], 0ul);
   }
 
@@ -174,11 +207,12 @@ class TestEngineCommandStreamer : public EngineCommandStreamer::Owner,
 
     auto render_cs = reinterpret_cast<RenderEngineCommandStreamer*>(engine_cs_.get());
 
-    auto init_batch = render_cs->CreateRenderInitBatch(device_id_);
+    constexpr uint32_t kDeviceId = 0x1916;
+    auto init_batch = render_cs->CreateRenderInitBatch(kDeviceId);
 
     {
       std::unique_ptr<RenderInitBatch> expected_batch;
-      if (DeviceId::is_gen9(device_id_))
+      if (DeviceId::is_gen9(kDeviceId))
         expected_batch = std::unique_ptr<RenderInitBatch>(new RenderInitBatchGen9());
       ASSERT_NE(expected_batch, nullptr);
       EXPECT_EQ(init_batch->size(), expected_batch->size());
@@ -247,8 +281,6 @@ class TestEngineCommandStreamer : public EngineCommandStreamer::Owner,
   }
 
   void MoveBatchToInflight() {
-    ASSERT_EQ(engine_cs_->id(), RENDER_COMMAND_STREAMER);
-
     EXPECT_TRUE(engine_cs_->InitContext(context_.get()));
     EXPECT_TRUE(context_->Map(address_space_, engine_cs_->id()));
 
@@ -274,8 +306,6 @@ class TestEngineCommandStreamer : public EngineCommandStreamer::Owner,
   }
 
   void MappingRelease() {
-    ASSERT_EQ(engine_cs_->id(), RENDER_COMMAND_STREAMER);
-
     EXPECT_TRUE(engine_cs_->InitContext(context_.get()));
     EXPECT_TRUE(context_->Map(address_space_, engine_cs_->id()));
 
@@ -378,8 +408,6 @@ class TestEngineCommandStreamer : public EngineCommandStreamer::Owner,
     return hw_status_page_.get();
   }
 
-  void batch_submitted(uint32_t sequence_number) override {}
-
   void* hardware_status_page_cpu_addr(EngineCommandStreamerId id) override {
     EXPECT_EQ(id, engine_cs_->id());
     return mock_status_page_->cpu_addr;
@@ -400,7 +428,6 @@ class TestEngineCommandStreamer : public EngineCommandStreamer::Owner,
     return nullptr;
   }
 
-  uint32_t device_id_;
   std::unique_ptr<magma::RegisterIo> register_io_;
   std::unique_ptr<AddressSpaceOwner> address_space_owner_;
   std::shared_ptr<AddressSpace> address_space_;
@@ -411,16 +438,38 @@ class TestEngineCommandStreamer : public EngineCommandStreamer::Owner,
   std::unique_ptr<HardwareStatusPage> hw_status_page_;
 };
 
-TEST(RenderEngineCommandStreamer, InitContext) { TestEngineCommandStreamer().InitContext(); }
+TEST_P(TestEngineCommandStreamer, InitContext) { TestEngineCommandStreamer::InitContext(); }
 
-TEST(RenderEngineCommandStreamer, InitHardware) { TestEngineCommandStreamer().InitHardware(); }
+TEST_P(TestEngineCommandStreamer, InitHardware) { TestEngineCommandStreamer::InitHardware(); }
 
-TEST(RenderEngineCommandStreamer, RenderInitGen9) { TestEngineCommandStreamer().RenderInit(); }
-
-TEST(RenderEngineCommandStreamer, Reset) { TestEngineCommandStreamer().Reset(); }
-
-TEST(RenderEngineCommandStreamer, MoveBatchToInflight) {
-  TestEngineCommandStreamer().MoveBatchToInflight();
+TEST_P(TestEngineCommandStreamer, RenderInitGen9) {
+  if (id() != RENDER_COMMAND_STREAMER) {
+    GTEST_SKIP();
+  }
+  TestEngineCommandStreamer::RenderInit();
 }
 
-TEST(RenderEngineCommandStreamer, MappingRelease) { TestEngineCommandStreamer().MappingRelease(); }
+TEST_P(TestEngineCommandStreamer, Reset) {
+  if (id() != RENDER_COMMAND_STREAMER) {
+    GTEST_SKIP();
+  }
+  TestEngineCommandStreamer::Reset();
+}
+
+TEST_P(TestEngineCommandStreamer, MoveBatchToInflight) {
+  TestEngineCommandStreamer::MoveBatchToInflight();
+}
+
+TEST_P(TestEngineCommandStreamer, MappingRelease) { TestEngineCommandStreamer::MappingRelease(); }
+
+INSTANTIATE_TEST_SUITE_P(
+    TestEngineCommandStreamer, TestEngineCommandStreamer,
+    testing::Values(RENDER_COMMAND_STREAMER, VIDEO_COMMAND_STREAMER),
+    [](const testing::TestParamInfo<TestEngineCommandStreamer::ParamType>& info) {
+      switch (info.param) {
+        case RENDER_COMMAND_STREAMER:
+          return "Render";
+        case VIDEO_COMMAND_STREAMER:
+          return "Video";
+      }
+    });

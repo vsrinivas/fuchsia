@@ -80,6 +80,8 @@ class CommandBufferHelper {
                                                   kSignalSemaphoreCount);
   }
 
+  void set_command_buffer_flags(uint64_t flags) { abi_cmd_buf()->flags = flags; }
+
   bool Execute() {
     auto command_buffer = std::make_unique<magma_command_buffer>(*abi_cmd_buf());
     std::vector<magma_exec_resource> resources;
