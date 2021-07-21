@@ -81,31 +81,32 @@ which are are part of the system ABI.
 
 #### Namespace
 
-A component's [namespace][glossary.namespace] is provided to a component during
-startup and lets the component interact with the rest of the system. The names
-in the namespace follow certain conventions. Many of the namespace entries
-provide access to well-known protocols, most of which are defined by FIDL.
-For example, the component can access services through the `svc` entry in this
-namespace, which conventionally contains services listed by their fully
-qualified discovery name.
-Similarly, by convention, the `pkg` entry in this namespace is mapped to
-the package from which the component was run.
+A component's [namespace][glossary.namespace] is provided during startup and
+lets the component interact with capabilities published by the rest of the
+system.
+
+For example, components can discover implementations of FIDL
+[protocols][glossary.protocol] and [services][glossary.service] through the
+`/svc` entry in this namespace, which lists them under well-known names.
+Similarly, by convention, the `pkg` namespace entry is mapped to the package
+from which the component was resolved.
 
 #### Outgoing directory {#outgoing_directory}
 
-A component can serve an [outgoing directory][glossary.outgoing-directory]
-that lets the system and other components interact with the component.
-For example, the component exposes services for other components using the
-`svc` entry in this namespace.
-Similarly, the component exposes debugging interfaces through the `debug` entry
-in this namespace.
+A component serves an [outgoing directory][glossary.outgoing-directory] to
+publish capabilities to the rest of the system.
+
+For example, components expose FIDL [protocols][glossary.protocol] and
+[services][glossary.service] to other components using the `/svc` entry in this
+directory, which lists them under well-known names.
 
 #### Data formats
 
-In addition to services, some namespaces include files with data. The data
-format used by these files is also part of the system ABI. For example,
-components access the root certificates through a namespace entry that contains
-a `certs.pem` file. The `pem` data format is therefore part of the system ABI.
+Some namespaces include files with data. The data format used by these files is
+also part of the system ABI.
+For example, components access the root certificates through a namespace entry
+that contains a `certs.pem` file. The `pem` data format is therefore part of the
+system ABI.
 
 ### Package conventions
 
@@ -184,8 +185,8 @@ system ABI.
 Processes are run in jobs, which can apply policy to the processes and jobs they
 contain. The job policy applied to processes is part of the system ABI. For
 example, components run in processes with `ZX_POL_NEW_PROCESS` set to
-`ZX_POL_ACTION_DENY`, which forces components to use the
-`fuchsia.process.Launcher` service to create processes rather than issuing the
+`ZX_POL_ACTION_DENY`. This enforces that the component use the
+`fuchsia.process.Launcher` protocol to create processes rather than issuing the
 `zx_process_create` system call directly.
 
 ### Vulkan ICD {#vulkan-icd}
@@ -236,3 +237,5 @@ that expect outgoing `ssh` connections to support this protocol.
 
 [glossary.namespace]: /docs/glossary/README.md#namespace
 [glossary.outgoing-directory]: /docs/glossary/README.md#outgoing-directory
+[glossary.protocol]: /docs/glossary/README.md#protocol
+[glossary.service]: /docs/glossary/README.md#service

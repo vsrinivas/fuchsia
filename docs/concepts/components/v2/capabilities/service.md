@@ -92,8 +92,19 @@ A service capability can be exposed from a [dynamic collection][collection].
 }
 ```
 
-The exposed service capability is an [aggregate][services-collection] of the
-services exposed by each of the components in the collection.
+When routing services exposed from the components in a collection, each
+[service instance][service-instances] entry in the client component's
+[namespace][glossary.namespace] is prefixed with the component name to allow
+multiple components in the collection to expose the same instance.
+
+The instances are named with the scheme `"$component_name,$instance_name"`.
+The `$component_name` is the name given to the
+[`fuchsia.sys2/Realm.CreateChild`][realm.fidl] API when the component is
+created. The `$instance_name` is defined by the component itself.
+
+For example, the namespace path for the `default` instance of
+`fuchsia.example.ExampleService` exposed from a component named `foo` within the
+above collection is `/svc/fuchsia.example.ExampleService/foo,default/protocol`.
 
 ### Offering {#routing-service-capability-offer}
 
@@ -116,7 +127,7 @@ This is done through an [`offer`][offer] declaration.
 
 When a component [uses][use] a service capability that has been [offered][offer]
 to it, that service is made available through the component's
-{{ widgets.glossary_simple ('namespace') }}.
+[namespace][glossary.namespace].
 
 Consider a component with the following manifest declaration:
 
@@ -166,6 +177,7 @@ For more information about the open request, see
 [life-of-a-protocol-open]: /docs/concepts/components/v2/capabilities/life_of_a_protocol_open.md
 [offer]: /docs/concepts/components/v2/component_manifests.md#offer
 [protocol-capability]: /docs/concepts/components/v2/capabilities/protocol.md
+[realm.fidl]: https://fuchsia.dev/reference/fidl/fuchsia.sys2#Realm
 [routing-example]: /examples/components/routing
-[services-collection]: /docs/concepts/components/v2/services.md#services-routed-from-collections
+[service-instances]: /docs/concepts/fidl/services.md#instances
 [use]: /docs/concepts/components/v2/component_manifests.md#use

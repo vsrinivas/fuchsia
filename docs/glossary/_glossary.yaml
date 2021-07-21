@@ -1006,12 +1006,12 @@ environment to form a full SDK."
   allowlist.</p>
   <p>In <a href=\"/docs/glossary#components-v2\">components v2</a>, a protocol is used and routed to other
   components as a <a href=\"/docs/glossary#protocol-capability\">protocol capability</a>.</p>"
-  see_also: [""]
-  related_guides: [""]
+  see_also: ["<a href=\"/docs/glossary#protocol-capability\">Protocol capability</a>"]
+  related_guides: ["<a href=\"/docs/concepts/fidl/protocols.md\">FIDL protocols</a>"]
   area: ["Components", "FIDL"]
 
 - term: "Protocol capability"
-  short_description: "A <a href=\"/docs/glossary#capability\">caqpability</a> that permits
+  short_description: "A <a href=\"/docs/glossary#capability\">capability</a> that permits
   communicating with a <a href=\"/docs/glossary#protocol\">protocol</a> over a
   <a href=\"/docs/glossary#channel\">channel</a> using a specified
   <a href=\"/docs/glossary#fidl\">FIDL</a> protocol."
@@ -1022,7 +1022,7 @@ environment to form a full SDK."
   <a href=\"/docs/glossary#use\">uses</a> the capability."
   see_also: ["<a href=\"/docs/glossary#capability-routing\">Capability routing</a>",
              "<a href=\"/docs/glossary#components-v2\">Components v2</a>"]
-  related_guides: [""]
+  related_guides: ["<a href=\"/docs/concepts/components/v2/capabilities/protocol.md\">Protocol capabilities</a>"]
   area: ["Components"]
 
 - term: "Realm"
@@ -1074,26 +1074,25 @@ environment to form a full SDK."
   short_description: "In <a href=\"/docs/glossary#fidl\">FIDL</a>, a service groups
   <a href=\"/docs/glossary#protocol\">protocols</a> to describe how one process interacts
   with another."
-  full_description: "Services can be used and provided to other components by
-  <a href=\"/docs/glossary#capability-routing\">routing</a>."
-  see_also: ["<a href=\"/docs/glossary#service-capability\">Service capability</a>",
-             "<a href=\"/docs/concepts/components/v2/services.md\">Service overview</a>"]
-  related_guides: [""]
-  area: ["FIDL", "Components"]
+  full_description: "A service is used and routed to other components as a
+  <a href=\"/docs/glossary#service-capability\">service capability</a>."
+  see_also: ["<a href=\"/docs/glossary#service-capability\">Service capability</a>"]
+  related_guides: ["<a href=\"/docs/concepts/fidl/services.md\">FIDL services</a>"]
+  area: ["Components", "FIDL"]
 
 - term: "Service capability"
   short_description: "A <a href=\"/docs/glossary#capability\">capability</a> that permits
   communicating with a <a href=\"/docs/glossary#service\">service</a> over a
   <a href=\"/docs/glossary#channel\">channel</a> using a specified
-  <a href=\"/docs/glossary#fidl\">FIDL</a> service. The server end of the channel is held
+  <a href=\"/docs/glossary#fidl\">FIDL</a> service."
+  full_description: "The server end of the channel is held
   by the <a href=\"/docs/glossary#component-instance\">component instance</a> that provides
   the capability. The client end of the channel is given to the
   <a href=\"/docs/glossary#component-instance\">component instance</a> that
   <a href=\"/docs/glossary#use\">uses</a> the capability."
-  full_description: ""
-  see_also: ["<a href=\"/docs/glossary#capability-routing\">Capabilityrouting</a>",
+  see_also: ["<a href=\"/docs/glossary#capability-routing\">Capability routing</a>",
              "<a href=\"/docs/glossary#components-v2\">Components v2</a>"]
-  related_guides: [""]
+  related_guides: ["<a href=\"/docs/concepts/components/v2/capabilities/service.md\">Service capabilities</a>"]
   area: ["Components"]
 
 - term: "Session"

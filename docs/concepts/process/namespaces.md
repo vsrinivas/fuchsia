@@ -223,7 +223,7 @@ There are some typical objects that a component namespace might contain:
   - `data/`: data, such as assets, within the package
 - `data/`: local persistent storage (read-write, private to the package)
 - `tmp/`: temporary storage (read-write, private to the package)
-- `svc/`: services offered to the component
+- `svc/`: protocols and services offered to a component
   - `fuchsia.process.Launcher`: launch processes
   - `fuchsia.logger.Log`: log messages
   - `vendor.topic.Interface`: service defined by a _vendor_
@@ -244,19 +244,32 @@ Filesystems make files available in namespaces.
 A filesystem is simply a component that publishes file-like objects
 from someone else's namespace.
 
+### Protocols
+
+[Protocols][glossary.protocol] are accessed through namespaces.
+
+A **protocol handle** is a channel object backed by an implementation of a
+FIDL protocol, which can be discovered using the namespace.
+A protocol name corresponds to a path within the `/svc` branch of the namespace
+from which a component can access the implementation.
+
+For example, the default Fuchsia logging protocol is `fuchsia.logger.Log` and
+its path in the namespace is `/svc/fuchsia.logger.Log`.
+
+For more details on protocols and components,
+see [protocol capabilities][protocol-capabilities].
+
 ### Services
 
-Services live in namespaces.
+[Services][glossary.service] are accessed through namespaces.
 
-A service is a well-known object that provides an implementation of a FIDL
-protocol, which can be discovered using the namespace.
+A **service handle** is a directory that contains related FIDL protocols.
+Implementations of those protocols can be discovered using the namespace.
+A service name corresponds to a path within the `/svc` branch of the namespace
+from which a component can access the implementation.
 
-A service name corresponds to a path within the `svc` branch of the namespace
-from which a component can access an implementation of the service.
-
-For example, the name of the default Fuchsia logging service is
-`fuchsia.logger.Log` and its location in the namespace is
-`svc/fuchsia.logger.Log`.
+For more details on services and components,
+see [service capabilities][service-capabilities].
 
 ### Components
 
@@ -267,13 +280,10 @@ within some environment and given a namespace.
 
 A component participates in the Fuchsia namespace in two ways:
 
-1. It can use objects from the namespace received from its environment,
-   notably to access its own package contents and incoming services.
-
-2. It can publish objects through its environment in the form of a namespace,
-   parts of which its environment may subsequently make available to other
-   components upon request.  This is how services are implemented by
-   components.
+1.  It can **use** objects from the namespace provided to it, such as
+    incoming protocols and services or its own package contents.
+2.  It can **publish** objects through its outgoing directory in the form of a
+    namespace to other components.
 
 ### Environments
 
@@ -294,4 +304,8 @@ depending on the features listed in their
 which are exposed as files in the `/config` namespace entry. These are
 defined by the feature set of the component.
 
+[glossary.protocol]: /docs/glossary/README.md#protocol
+[glossary.service]: /docs/glossary/README.md#service
 [hub]: /docs/concepts/components/v2/hub.md
+[protocol-capabilities]: /docs/concepts/components/v2/capabilities/protocol.md
+[service-capabilities]: /docs/concepts/components/v2/capabilities/service.md

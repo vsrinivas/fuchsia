@@ -126,10 +126,10 @@ You can also customize the namespace path:
 For more information about the open request, see
 [life of a protocol open][life-of-a-protocol-open].
 
-For a working example of routing a protocol capability from one component to
-another, see [`//examples/components/routing`][routing-example].
+Note: For a working example of routing a protocol capability between components,
+see [`//examples/components/routing`][routing-example].
 
-## Consuming protocol capabilities provided by the framework
+## Protocol capabilities provided by the framework
 
 Some protocol capabilities are provided by the component framework, and thus
 can be [used][use] by components without their parents [offering][offer] them.

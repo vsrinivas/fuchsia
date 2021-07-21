@@ -24,8 +24,6 @@ toc:
   path: /docs/concepts/components/v2/realms.md
 - title: "Environments"
   path: /docs/concepts/components/v2/environments.md
-- title: "Services"
-  path: /docs/concepts/components/v2/services.md
 - title: "Component URLs"
   path: /docs/concepts/components/component_urls.md
 - title: "Capabilities"

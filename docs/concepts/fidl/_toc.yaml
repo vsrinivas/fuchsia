@@ -8,3 +8,7 @@
 toc:
 - title: "Overview"
   path: /docs/concepts/fidl/overview.md
+- title: "Protocols"
+  path: /docs/concepts/fidl/protocols.md
+- title: "Services"
+  path: /docs/concepts/fidl/services.md
