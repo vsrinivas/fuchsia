@@ -83,6 +83,19 @@ zx_status_t RadarUtil::Run(
   return radarutil.UnregisterVmos();
 }
 
+RadarUtil::~RadarUtil() {
+  if (client_) {
+    // Block until the FIDL client is torn down to avoid |client_| calling into
+    // a destroyed |RadarUtil| object from the radarutil-client-thread.
+    client_.AsyncTeardown();
+    sync_completion_wait(&client_teardown_completion_, ZX_TIME_INFINITE);
+  }
+}
+
+fidl::AnyTeardownObserver RadarUtil::teardown_observer() {
+  return fidl::ObserveTeardown([this] { sync_completion_signal(&client_teardown_completion_); });
+}
+
 zx_status_t RadarUtil::ParseArgs(int argc, char** argv) {
   int opt, vmos;
   while ((opt = getopt(argc, argv, "hp:t:v:")) != -1) {
@@ -141,8 +154,7 @@ zx_status_t RadarUtil::ConnectToDevice(fidl::ClientEnd<BurstReaderProvider> devi
     return status;
   }
 
-  std::shared_ptr<EventHandler> event_handler(new EventHandler(this));
-  client_.Bind(std::move(client_end), loop_.dispatcher(), std::move(event_handler));
+  client_.Bind(std::move(client_end), loop_.dispatcher(), this, teardown_observer());
 
   fidl::WireSyncClient<BurstReaderProvider> provider_client(std::move(device));
   auto result = provider_client.Connect(std::move(server_end));

@@ -16,7 +16,7 @@
 
 namespace radarutil {
 
-class RadarUtil {
+class RadarUtil : public fidl::WireAsyncEventHandler<fuchsia_hardware_radar::RadarBurstReader> {
  public:
   static zx_status_t Run(int argc, char** argv,
                          fidl::ClientEnd<fuchsia_hardware_radar::RadarBurstReaderProvider> device);
@@ -29,21 +29,10 @@ class RadarUtil {
   static constexpr size_t kDefaultVmoCount = 10;
   static constexpr zx::duration kDefaultBurstProcessTime = zx::nsec(0);
 
-  class EventHandler : public fidl::WireAsyncEventHandler<BurstReader> {
-   public:
-    explicit EventHandler(RadarUtil* parent) : parent_(parent) {}
-
-    void OnBurst(fidl::WireResponse<BurstReader::OnBurst>* event) override {
-      parent_->OnBurst(event);
-    }
-
-    void Unbound(fidl::UnbindInfo info) override { parent_->Unbound(info); }
-
-   private:
-    RadarUtil* const parent_;
-  };
-
   RadarUtil() : loop_(&kAsyncLoopConfigNeverAttachToThread) {}
+  ~RadarUtil() override;
+
+  fidl::AnyTeardownObserver teardown_observer();
 
   zx_status_t ParseArgs(int argc, char** argv);
   zx_status_t ConnectToDevice(fidl::ClientEnd<BurstReaderProvider> device);
@@ -53,11 +42,12 @@ class RadarUtil {
 
   int WorkerThread();
 
-  void OnBurst(fidl::WireResponse<BurstReader::OnBurst>* event);
-  void Unbound(fidl::UnbindInfo info) {}
+  void OnBurst(fidl::WireResponse<BurstReader::OnBurst>* event) override;
+  void on_fidl_error(fidl::UnbindInfo info) override {}
 
   async::Loop loop_;
-  fidl::Client<BurstReader> client_;
+  fidl::WireSharedClient<BurstReader> client_;
+  sync_completion_t client_teardown_completion_;
   zx::duration run_time_ = kDefaultRunTime;
   size_t vmo_count_ = kDefaultVmoCount;
   zx::duration burst_process_time_ = kDefaultBurstProcessTime;
