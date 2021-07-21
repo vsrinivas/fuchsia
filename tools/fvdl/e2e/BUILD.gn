@@ -37,7 +37,9 @@ group("tests") {
   testonly = true
   deps = [
     ":fvdl_common_test($host_toolchain)",
-    ":fvdl_intree_test($host_toolchain)",
+
+    # TODO(fxbug.dev/81092): Re-enable when not flaky.
+    # ":fvdl_intree_test($host_toolchain)",
     ":fvdl_sdk_test($host_toolchain)",
   ]
 }
