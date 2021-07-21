@@ -4,6 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
+import("//build/drivers/fuchsia_driver_component.gni")
 
 config("factory") {
   defines = [ "FACTORY_BUILD" ]
@@ -36,7 +37,8 @@ driver_bind_rules("luis-bind") {
 }
 
 template("sherlock_driver") {
-  driver_module(target_name) {
+  driver_module(target_name + "-driver") {
+    output_name = invoker.target_name
     forward_variables_from(invoker, "*")
 
     configs += [
@@ -142,6 +144,10 @@ template("sherlock_driver") {
     } else {
       deps += [ ":sherlock-bind" ]
     }
+  }
+
+  fuchsia_driver_component(target_name) {
+    deps = [ ":${target_name}-driver" ]
   }
 }
 
