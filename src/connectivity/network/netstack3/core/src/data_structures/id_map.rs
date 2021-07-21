@@ -562,7 +562,9 @@ impl<'a, K: EntryKey, T> OccupiedEntry<'a, K, T> {
 
 /// A view into an in-place entry in a map that can be vacant or occupied.
 pub enum Entry<'a, K, T> {
+    /// A vacant entry.
     Vacant(VacantEntry<'a, K, T>),
+    /// An occupied entry.
     Occupied(OccupiedEntry<'a, K, T>),
 }
 
