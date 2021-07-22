@@ -1,0 +1,37 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/reboot_on_terminate_policy_bin",
+    },
+    children: [
+        {
+            name: "critical_child_not_allowlisted",
+            url: "#meta/echo_server.cm",
+            on_terminate: "reboot",
+        },
+        {
+            name: "shutdown_shim",
+            url: "#meta/shutdown-shim.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: [ "fidl.test.components.Trigger" ],
+        },
+        {
+            protocol: "fuchsia.sys2.Realm",
+            from: "framework",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: "#critical_child_not_allowlisted",
+        },
+    ],
+}

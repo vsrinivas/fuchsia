@@ -1,0 +1,25 @@
+{
+    debug: false,
+    maintain_utc_clock: false,
+    out_dir_contents: "svc",
+    use_builtin_process_launcher: false,
+    namespace_capabilities: [
+        {
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.boot.WriteOnlyLog",
+                "fidl.test.components.Trigger",
+                "fuchsia.process.Launcher",
+            ],
+        },
+    ],
+    builtin_pkg_resolver: "appmgr_bridge",
+    reboot_on_terminate_enabled: true,
+    security_policy: {
+        child_policy: {
+            reboot_on_terminate: [
+                "/critical_child",
+            ],
+        },
+    },
+}

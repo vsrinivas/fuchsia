@@ -1,0 +1,63 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/reboot_on_terminate_success_bin",
+    },
+    children: [
+        {
+            name: "critical_child",
+            url: "#meta/hello-world.cm",
+
+            // When this component exits, it should trigger reboot.
+            startup: "eager",
+            on_terminate: "reboot",
+        },
+        {
+            name: "shutdown_shim",
+            url: "#meta/shutdown-shim.cm",
+        },
+    ],
+    capabilities: [
+        { protocol: "fuchsia.device.manager.SystemStateTransition" },
+    ],
+    use: [
+        {
+            protocol: [ "fidl.test.components.Trigger" ],
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.boot.WriteOnlyLog",
+            from: "parent",
+            to: "#shutdown_shim",
+        },
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: "#critical_child",
+        },
+        {
+            protocol: "fuchsia.sys2.SystemController",
+            from: "parent",
+            to: "#shutdown_shim",
+        },
+
+        // shutdown_shim expects to have this so we need to mock it
+        {
+            protocol: "fuchsia.device.manager.SystemStateTransition",
+            from: "self",
+            to: "#shutdown_shim",
+        },
+    ],
+    expose: [
+        // Used by component_manager to trigger reboot
+        {
+            protocol: "fuchsia.hardware.power.statecontrol.Admin",
+            from: "#shutdown_shim",
+        },
+    ],
+}

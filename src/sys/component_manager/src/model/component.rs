@@ -661,7 +661,9 @@ impl ComponentInstance {
                     }
                     if !shut_down && self.on_terminate == fsys::OnTerminate::Reboot {
                         warn!(
-                            "Component with on_terminate=REBOOT terminated. Rebooting the system"
+                            "Component with on_terminate=REBOOT terminated: {}. \
+                            Rebooting the system",
+                            self.abs_moniker
                         );
                         let top_instance = self.top_instance().await?;
                         top_instance.trigger_reboot().await;

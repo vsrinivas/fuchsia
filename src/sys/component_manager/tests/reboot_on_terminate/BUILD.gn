@@ -1,0 +1,122 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/component/config.gni")
+import("//build/components.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_test.gni")
+
+group("tests") {
+  testonly = true
+  deps = []
+
+  # TODO(https://fxbug.dev/77163): This test launches a nested component manager
+  # and doesn't route debug data service, causing the test to log on error
+  # level, which fails because of restricted log severity in tests.
+  if (!is_coverage) {
+    deps += [ ":reboot_on_terminate_test" ]
+  }
+}
+
+rustc_test("reboot_on_terminate_test_bin") {
+  edition = "2018"
+  deps = [
+    "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-component-test",
+    "//src/sys/component_manager/tests/fidl:components-rustc",
+    "//src/sys/lib/cm_rust",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:log",
+  ]
+
+  source_root = "src/integration_test.rs"
+  sources = [ "src/integration_test.rs" ]
+}
+
+rustc_binary("reboot_on_terminate_success_bin") {
+  testonly = true
+  edition = "2018"
+  deps = [
+    "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/sys/component_manager/tests/fidl:components-rustc",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:log",
+  ]
+
+  source_root = "src/reboot_on_terminate_success.rs"
+  sources = [ "src/reboot_on_terminate_success.rs" ]
+}
+
+rustc_binary("reboot_on_terminate_policy_bin") {
+  testonly = true
+  edition = "2018"
+  deps = [
+    "//examples/components/routing/fidl:echo-rustc",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-component",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/sys/component_manager/tests/fidl:components-rustc",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:matches",
+  ]
+
+  source_root = "src/reboot_on_terminate_policy.rs"
+  sources = [ "src/reboot_on_terminate_policy.rs" ]
+}
+
+fuchsia_component("reboot_on_terminate_success") {
+  testonly = true
+  manifest = "meta/reboot_on_terminate_success.cml"
+  restricted_features = [ "on_terminate" ]
+  deps = [ ":reboot_on_terminate_success_bin" ]
+}
+
+fuchsia_component("reboot_on_terminate_policy") {
+  testonly = true
+  manifest = "meta/reboot_on_terminate_policy.cml"
+  restricted_features = [ "on_terminate" ]
+  deps = [ ":reboot_on_terminate_policy_bin" ]
+}
+
+component_config("config") {
+  testonly = true
+  sources = [ "config.json5" ]
+  dest = "data/component_manager_config"
+}
+
+fuchsia_component("component_manager") {
+  testonly = true
+  manifest = "meta/component_manager.cml"
+  deps = [
+    ":config",
+    "//src/sys/component_manager:bin",
+  ]
+}
+
+fuchsia_unittest_package("reboot_on_terminate_test") {
+  manifest = "meta/integration_test.cml"
+  deps = [
+    ":component_manager",
+    ":reboot_on_terminate_policy",
+    ":reboot_on_terminate_success",
+    ":reboot_on_terminate_test_bin",
+    "//examples/components/basic:hello-world",
+    "//examples/components/routing/echo_server:echo_server_component",
+    "//src/power/shutdown-shim/tests:shutdown_shim_component",
+  ]
+}

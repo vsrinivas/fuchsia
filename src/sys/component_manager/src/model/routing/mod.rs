@@ -171,40 +171,42 @@ impl CapabilityProvider for DefaultComponentCapabilityProvider {
         server_end: &mut zx::Channel,
     ) -> Result<OptionalTask, ModelError> {
         let capability = Arc::new(Mutex::new(Some(channel::take_channel(server_end))));
-        // Start the source component, if necessary
-        let path = self.path.to_path_buf().attach(relative_path);
-        let source = self
-            .source
-            .upgrade()?
-            .bind(&BindReason::AccessCapability {
-                target: ExtendedMoniker::ComponentInstance(self.target.moniker.clone()),
-                path: self.path.clone(),
-            })
-            .await?;
+        let res = async {
+            // Start the source component, if necessary
+            let source = self
+                .source
+                .upgrade()?
+                .bind(&BindReason::AccessCapability {
+                    target: ExtendedMoniker::ComponentInstance(self.target.moniker.clone()),
+                    path: self.path.clone(),
+                })
+                .await?;
 
-        let event = Event::new(
-            &self.target.upgrade()?,
-            Ok(EventPayload::CapabilityRequested {
-                source_moniker: source.abs_moniker.clone(),
-                name: self.name.to_string(),
-                capability: capability.clone(),
-            }),
-        );
-        source.hooks.dispatch(&event).await?;
+            let event = Event::new(
+                &self.target.upgrade()?,
+                Ok(EventPayload::CapabilityRequested {
+                    source_moniker: source.abs_moniker.clone(),
+                    name: self.name.to_string(),
+                    capability: capability.clone(),
+                }),
+            );
+            source.hooks.dispatch(&event).await?;
+            Result::<Arc<ComponentInstance>, ModelError>::Ok(source)
+        }
+        .await;
 
         // If the capability transported through the event above wasn't transferred
         // out, then we can open the capability through the component's outgoing directory.
         // If some hook consumes the capability, then we don't bother looking in the outgoing
         // directory.
         let capability = capability.lock().await.take();
-        if let Some(mut server_end_for_event) = capability {
-            if let Err(e) =
-                source.open_outgoing(flags, open_mode, path, &mut server_end_for_event).await
-            {
-                // Pass back the channel to propagate the epitaph.
-                *server_end = channel::take_channel(&mut server_end_for_event);
-                return Err(e);
-            }
+        if let Some(mut server_end_in) = capability {
+            // Pass back the channel so the caller can set the epitaph, if necessary.
+            *server_end = channel::take_channel(&mut server_end_in);
+            let path = self.path.to_path_buf().attach(relative_path);
+            res?.open_outgoing(flags, open_mode, path, server_end).await?;
+        } else {
+            let _ = res?;
         }
         Ok(None.into())
     }
