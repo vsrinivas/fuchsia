@@ -26,7 +26,49 @@ use fidl_fuchsia_ui_scenic::ScenicProxy;
 use fuchsia_async::{self as fasync};
 use futures::{channel::mpsc::UnboundedSender, TryFutureExt};
 use keymaps::Keymap;
-use std::collections::HashMap;
+use std::{collections::HashMap, time::Duration};
+
+#[allow(unused)]
+const LOW_REPEAT_KEY_FREQ: Duration = Duration::from_millis(250);
+const HIGH_REPEAT_KEY_FREQ: Duration = Duration::from_millis(50);
+
+pub(crate) struct AutoRepeatContext {
+    app_sender: UnboundedSender<MessageInternal>,
+    view_id: ViewKey,
+    #[allow(unused)]
+    keyboard_autorepeat_task: Option<fasync::Task<()>>,
+}
+
+pub(crate) trait AutoRepeatTimer {
+    fn schedule_autorepeat_timer(&mut self, device_id: &DeviceId);
+    fn cancel_autorepeat_timer(&mut self) {}
+}
+
+impl AutoRepeatContext {
+    pub(crate) fn new(app_sender: &UnboundedSender<MessageInternal>, view_id: ViewKey) -> Self {
+        Self { app_sender: app_sender.clone(), view_id, keyboard_autorepeat_task: None }
+    }
+}
+
+impl AutoRepeatTimer for AutoRepeatContext {
+    fn schedule_autorepeat_timer(&mut self, device_id: &DeviceId) {
+        let timer = fasync::Timer::new(fuchsia_async::Time::after(HIGH_REPEAT_KEY_FREQ.into()));
+        let app_sender = self.app_sender.clone();
+        let device_id = device_id.clone();
+        let view_id = self.view_id;
+        let task = fasync::Task::local(async move {
+            timer.await;
+            app_sender
+                .unbounded_send(MessageInternal::KeyboardAutoRepeat(device_id, view_id))
+                .expect("unbounded_send");
+        });
+        self.keyboard_autorepeat_task = Some(task);
+    }
+
+    fn cancel_autorepeat_timer(&mut self) {
+        self.keyboard_autorepeat_task = None;
+    }
+}
 
 pub(crate) struct FrameBufferAppStrategy<'a> {
     pub frame_buffer: FrameBufferPtr,
@@ -34,6 +76,7 @@ pub(crate) struct FrameBufferAppStrategy<'a> {
     pub keymap: &'a Keymap<'a>,
     pub view_key: ViewKey,
     pub input_report_handlers: HashMap<DeviceId, InputReportHandler<'a>>,
+    pub context: AutoRepeatContext,
 }
 
 #[async_trait(?Send)]
@@ -118,7 +161,7 @@ impl<'a> AppStrategy for FrameBufferAppStrategy<'a> {
         input_report: &hid_input_report::InputReport,
     ) -> Vec<input::Event> {
         let handler = self.input_report_handlers.get_mut(device_id).expect("input_report_handler");
-        handler.handle_input_report(device_id, input_report)
+        handler.handle_input_report(device_id, input_report, &mut self.context)
     }
 
     fn handle_register_input_device(
@@ -130,11 +173,17 @@ impl<'a> AppStrategy for FrameBufferAppStrategy<'a> {
         self.input_report_handlers.insert(
             device_id.clone(),
             InputReportHandler::new(
+                device_id.clone(),
                 frame_buffer_size,
                 self.display_rotation,
                 device_descriptor,
                 self.keymap,
             ),
         );
+    }
+
+    fn handle_keyboard_autorepeat(&mut self, device_id: &input::DeviceId) -> Vec<input::Event> {
+        let handler = self.input_report_handlers.get_mut(device_id).expect("input_report_handler");
+        handler.handle_keyboard_autorepeat(device_id, &mut self.context)
     }
 }

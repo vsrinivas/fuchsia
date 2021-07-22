@@ -403,7 +403,9 @@ impl ViewAssistant for ButtonViewAssistant {
         const M: u32 = 109;
         const R: u32 = 114;
         if let Some(code_point) = keyboard_event.code_point {
-            if keyboard_event.phase == input::keyboard::Phase::Pressed {
+            if keyboard_event.phase == input::keyboard::Phase::Pressed
+                || keyboard_event.phase == input::keyboard::Phase::Repeat
+            {
                 match code_point {
                     C => self.cycle_cross_alignment(),
                     M => self.cycle_main_alignment(),

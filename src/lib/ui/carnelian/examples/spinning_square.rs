@@ -277,7 +277,9 @@ impl ViewAssistant for SpinningSquareViewAssistant {
         const B: u32 = 'b' as u32;
         const F: u32 = 'f' as u32;
         if let Some(code_point) = keyboard_event.code_point {
-            if keyboard_event.phase == input::keyboard::Phase::Pressed {
+            if keyboard_event.phase == input::keyboard::Phase::Pressed
+                || keyboard_event.phase == input::keyboard::Phase::Repeat
+            {
                 match code_point {
                     SPACE => self.toggle_rounded(),
                     B => self.move_backward(),

@@ -74,20 +74,29 @@ mod pointer_tests {
 mod device_id_tests {
     use crate::input::DeviceId;
 
-    pub fn create_test_device_id() -> DeviceId {
+    pub(crate) fn create_test_device_id() -> DeviceId {
         DeviceId("test-device-id-1".to_string())
     }
 }
 
 mod input_report_tests {
     use super::*;
-    use crate::input::{
-        consumer_control, keyboard,
-        report::InputReportHandler,
-        report::TouchScale,
-        touch, DeviceId, {mouse, EventType},
+    use crate::{
+        app::strategies::framebuffer::AutoRepeatTimer,
+        input::{
+            consumer_control, keyboard,
+            report::InputReportHandler,
+            report::TouchScale,
+            touch, DeviceId, {mouse, EventType},
+        },
     };
     use itertools::assert_equal;
+
+    struct TestAutoRepeatContext;
+
+    impl AutoRepeatTimer for TestAutoRepeatContext {
+        fn schedule_autorepeat_timer(&mut self, _device_id: &DeviceId) {}
+    }
 
     fn make_input_handler() -> InputReportHandler<'static> {
         let test_size = size2(1024, 768);
@@ -99,6 +108,7 @@ mod input_report_tests {
             y_span: 4095.0,
         };
         InputReportHandler::new_with_scale(
+            device_id_tests::create_test_device_id(),
             test_size,
             DisplayRotation::Deg0,
             Some(touch_scale),
@@ -110,12 +120,16 @@ mod input_report_tests {
     fn test_typed_string() {
         let reports = test_data::hello_world_keyboard_reports();
 
+        let mut context = TestAutoRepeatContext;
+
         let mut input_handler = make_input_handler();
 
         let device_id = DeviceId("keyboard-1".to_string());
         let chars_from_events = reports
             .iter()
-            .map(|input_report| input_handler.handle_input_report(&device_id, input_report))
+            .map(|input_report| {
+                input_handler.handle_input_report(&device_id, input_report, &mut context)
+            })
             .flatten()
             .filter_map(|event| match event.event_type {
                 EventType::Keyboard(keyboard_event) => match keyboard_event.phase {
@@ -138,9 +152,13 @@ mod input_report_tests {
 
         let mut input_handler = make_input_handler();
 
+        let mut context = TestAutoRepeatContext;
+
         let events = reports
             .iter()
-            .map(|input_report| input_handler.handle_input_report(&device_id, input_report))
+            .map(|input_report| {
+                input_handler.handle_input_report(&device_id, input_report, &mut context)
+            })
             .flatten();
 
         let mut start_point = IntPoint::zero();
@@ -176,10 +194,14 @@ mod input_report_tests {
 
         let device_id = DeviceId("touch-1".to_string());
 
+        let mut context = TestAutoRepeatContext;
+
         let mut input_handler = make_input_handler();
         let events = reports
             .iter()
-            .map(|input_report| input_handler.handle_input_report(&device_id, input_report))
+            .map(|input_report| {
+                input_handler.handle_input_report(&device_id, input_report, &mut context)
+            })
             .flatten();
 
         let mut start_point = IntPoint::zero();
@@ -220,11 +242,15 @@ mod input_report_tests {
 
         let device_id = DeviceId("cc-1".to_string());
 
+        let mut context = TestAutoRepeatContext;
+
         let mut input_handler = make_input_handler();
         let events: Vec<(consumer_control::Phase, hid_input_report::ConsumerControlButton)> =
             reports
                 .iter()
-                .map(|input_report| input_handler.handle_input_report(&device_id, input_report))
+                .map(|input_report| {
+                    input_handler.handle_input_report(&device_id, input_report, &mut context)
+                })
                 .flatten()
                 .filter_map(|event| match event.event_type {
                     EventType::ConsumerControl(consumer_control_event) => {

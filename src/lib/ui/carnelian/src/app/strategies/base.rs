@@ -4,7 +4,10 @@
 
 use crate::{
     app::{
-        strategies::{framebuffer::FrameBufferAppStrategy, scenic::ScenicAppStrategy},
+        strategies::{
+            framebuffer::{AutoRepeatContext, FrameBufferAppStrategy},
+            scenic::ScenicAppStrategy,
+        },
         AppAssistantPtr, Config, FrameBufferPtr, InternalSender, MessageInternal, RenderOptions,
     },
     geometry::IntSize,
@@ -76,6 +79,9 @@ pub(crate) trait AppStrategy {
         _device_id: &input::DeviceId,
         _input_report: &hid_input_report::InputReport,
     ) -> Vec<input::Event> {
+        Vec::new()
+    }
+    fn handle_keyboard_autorepeat(&mut self, _device_id: &input::DeviceId) -> Vec<input::Event> {
         Vec::new()
     }
     fn handle_register_input_device(
@@ -159,6 +165,7 @@ pub(crate) async fn create_app_strategy(
             keymap: select_keymap(&keymap_name),
             view_key: next_view_key,
             input_report_handlers: HashMap::new(),
+            context: AutoRepeatContext::new(&internal_sender, next_view_key),
         };
 
         internal_sender

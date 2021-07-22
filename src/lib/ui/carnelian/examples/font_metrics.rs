@@ -287,7 +287,9 @@ impl ViewAssistant for FontMetricsViewAssistant {
         const EQUALS: u32 = '=' as u32;
         const MINUS: u32 = '-' as u32;
         if let Some(code_point) = keyboard_event.code_point {
-            if keyboard_event.phase == input::keyboard::Phase::Pressed {
+            if keyboard_event.phase == input::keyboard::Phase::Pressed
+                || keyboard_event.phase == input::keyboard::Phase::Repeat
+            {
                 match code_point {
                     T => self.new_sample_text(),
                     F => self.show_next_face(),

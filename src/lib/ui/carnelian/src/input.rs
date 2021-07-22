@@ -83,6 +83,19 @@ impl Modifiers {
             caps_lock: pressed_keys.contains(&fidl_fuchsia_input::Key::CapsLock),
         }
     }
+
+    pub(crate) fn is_modifier(key: &fidl_fuchsia_input::Key) -> bool {
+        match key {
+            fidl_fuchsia_input::Key::LeftShift
+            | fidl_fuchsia_input::Key::RightShift
+            | fidl_fuchsia_input::Key::LeftAlt
+            | fidl_fuchsia_input::Key::RightAlt
+            | fidl_fuchsia_input::Key::LeftCtrl
+            | fidl_fuchsia_input::Key::RightCtrl
+            | fidl_fuchsia_input::Key::CapsLock => true,
+            _ => false,
+        }
+    }
 }
 
 pub mod mouse {

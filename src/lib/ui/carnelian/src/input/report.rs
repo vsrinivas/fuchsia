@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use crate::{
+    app::strategies::framebuffer::{AutoRepeatContext, AutoRepeatTimer},
     drawing::DisplayRotation,
     geometry::LimitToBounds,
     input::{
@@ -71,11 +72,32 @@ impl TouchScale {
     }
 }
 
+fn create_keyboard_event(
+    event_time: u64,
+    device_id: &DeviceId,
+    phase: keyboard::Phase,
+    key: fidl_fuchsia_input::Key,
+    modifiers: &Modifiers,
+    keymap: &Keymap<'_>,
+) -> Event {
+    let hid_usage = input3_key_to_hid_usage(key);
+    let code_point =
+        keymap.hid_usage_to_code_point_for_mods(hid_usage, modifiers.shift, modifiers.caps_lock);
+    let keyboard_event = keyboard::Event { phase, code_point, hid_usage, modifiers: *modifiers };
+    Event {
+        event_time,
+        device_id: device_id.clone(),
+        event_type: EventType::Keyboard(keyboard_event),
+    }
+}
+
 pub(crate) struct InputReportHandler<'a> {
+    device_id: DeviceId,
     view_size: IntSize,
     display_rotation: DisplayRotation,
     touch_scale: Option<TouchScale>,
     keymap: &'a Keymap<'a>,
+    repeating: Option<fidl_fuchsia_input::Key>,
     cursor_position: IntPoint,
     pressed_mouse_buttons: HashSet<u8>,
     pressed_keys: HashSet<fidl_fuchsia_input::Key>,
@@ -85,6 +107,7 @@ pub(crate) struct InputReportHandler<'a> {
 
 impl<'a> InputReportHandler<'a> {
     pub fn new(
+        device_id: DeviceId,
         size: IntSize,
         display_rotation: DisplayRotation,
         device_descriptor: &hid_input_report::DeviceDescriptor,
@@ -109,19 +132,22 @@ impl<'a> InputReportHandler<'a> {
                     None
                 }
             });
-        Self::new_with_scale(size, display_rotation, touch_scale, keymap)
+        Self::new_with_scale(device_id, size, display_rotation, touch_scale, keymap)
     }
 
     pub fn new_with_scale(
+        device_id: DeviceId,
         size: IntSize,
         display_rotation: DisplayRotation,
         touch_scale: Option<TouchScale>,
         keymap: &'a Keymap<'a>,
     ) -> Self {
         Self {
+            device_id: device_id.clone(),
             view_size: size,
             display_rotation,
             keymap,
+            repeating: None,
             touch_scale,
             cursor_position: IntPoint::zero(),
             pressed_mouse_buttons: HashSet::new(),
@@ -218,30 +244,8 @@ impl<'a> InputReportHandler<'a> {
         event_time: u64,
         device_id: &DeviceId,
         keyboard: &hid_input_report::KeyboardInputReport,
+        context: &mut dyn AutoRepeatTimer,
     ) -> Vec<Event> {
-        fn create_keyboard_event(
-            event_time: u64,
-            device_id: &DeviceId,
-            phase: keyboard::Phase,
-            key: fidl_fuchsia_input::Key,
-            modifiers: &Modifiers,
-            keymap: &Keymap<'_>,
-        ) -> Event {
-            let hid_usage = input3_key_to_hid_usage(key);
-            let code_point = keymap.hid_usage_to_code_point_for_mods(
-                hid_usage,
-                modifiers.shift,
-                modifiers.caps_lock,
-            );
-            let keyboard_event =
-                keyboard::Event { phase, code_point, hid_usage, modifiers: *modifiers };
-            Event {
-                event_time,
-                device_id: device_id.clone(),
-                event_type: EventType::Keyboard(keyboard_event),
-            }
-        }
-
         let pressed_keys: HashSet<fidl_fuchsia_input::Key> =
             if let Some(ref pressed_keys) = keyboard.pressed_keys3 {
                 HashSet::from_iter(pressed_keys.iter().map(|key| *key))
@@ -251,7 +255,12 @@ impl<'a> InputReportHandler<'a> {
 
         let modifiers = Modifiers::from_pressed_keys_3(&pressed_keys);
 
+        let mut first_non_modifier: Option<fidl_fuchsia_input::Key> = None;
+
         let newly_pressed = pressed_keys.difference(&self.pressed_keys).map(|key| {
+            if first_non_modifier.is_none() && !Modifiers::is_modifier(key) {
+                first_non_modifier = Some(*key);
+            }
             create_keyboard_event(
                 event_time,
                 device_id,
@@ -262,7 +271,13 @@ impl<'a> InputReportHandler<'a> {
             )
         });
 
+        let mut repeating: Option<fidl_fuchsia_input::Key> = self.repeating.clone();
+
         let released = self.pressed_keys.difference(&pressed_keys).map(|key| {
+            if repeating.as_ref() == Some(key) {
+                repeating = None;
+            }
+
             create_keyboard_event(
                 event_time,
                 device_id,
@@ -275,7 +290,35 @@ impl<'a> InputReportHandler<'a> {
 
         let events = newly_pressed.chain(released).collect();
         self.pressed_keys = pressed_keys;
+        self.repeating = first_non_modifier.or(repeating);
+        if self.repeating.is_some() {
+            context.schedule_autorepeat_timer(&self.device_id);
+        }
         events
+    }
+
+    pub fn handle_keyboard_autorepeat(
+        &mut self,
+        device_id: &DeviceId,
+        context: &mut AutoRepeatContext,
+    ) -> Vec<Event> {
+        if let Some(key) = self.repeating.as_ref() {
+            let repeat_time = fuchsia_zircon::Time::get_monotonic();
+            let modifiers = Modifiers::from_pressed_keys_3(&self.pressed_keys);
+            context.schedule_autorepeat_timer(&self.device_id);
+            let repeat = create_keyboard_event(
+                repeat_time.into_nanos() as u64,
+                device_id,
+                keyboard::Phase::Repeat,
+                *key,
+                &modifiers,
+                self.keymap,
+            );
+            vec![repeat]
+        } else {
+            context.cancel_autorepeat_timer();
+            Vec::new()
+        }
     }
 
     fn handle_touch_input_report(
@@ -429,6 +472,7 @@ impl<'a> InputReportHandler<'a> {
         &mut self,
         device_id: &DeviceId,
         input_report: &hid_input_report::InputReport,
+        context: &mut dyn AutoRepeatTimer,
     ) -> Vec<Event> {
         let mut events = Vec::new();
         let event_time = input_report.event_time.unwrap_or(0) as u64;
@@ -436,7 +480,9 @@ impl<'a> InputReportHandler<'a> {
             events.extend(self.handle_mouse_input_report(event_time, device_id, mouse));
         }
         if let Some(keyboard) = input_report.keyboard.as_ref() {
-            events.extend(self.handle_keyboard_input_report(event_time, &device_id, keyboard));
+            events.extend(
+                self.handle_keyboard_input_report(event_time, &device_id, keyboard, context),
+            );
         }
         if let Some(touch) = input_report.touch.as_ref() {
             events.extend(self.handle_touch_input_report(event_time, &device_id, touch));

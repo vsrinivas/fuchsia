@@ -232,7 +232,9 @@ impl ViewAssistant for LayoutsViewAssistant {
         const D: u32 = 100;
         const R: u32 = 114;
         if let Some(code_point) = keyboard_event.code_point {
-            if keyboard_event.phase == input::keyboard::Phase::Pressed {
+            if keyboard_event.phase == input::keyboard::Phase::Pressed
+                || keyboard_event.phase == input::keyboard::Phase::Repeat
+            {
                 match code_point {
                     ONE => self.cycle1(),
                     TWO => self.cycle2(),

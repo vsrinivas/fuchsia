@@ -26,7 +26,7 @@ use serde::Deserialize;
 use std::{cell::RefCell, collections::BTreeMap, fs, path::PathBuf, pin::Pin, rc::Rc};
 use toml;
 
-mod strategies;
+pub(crate) mod strategies;
 
 /// Type alias for a non-sync future
 pub type LocalBoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + 'a>>;
@@ -199,6 +199,7 @@ pub(crate) enum MessageInternal {
     TargetedMessage(ViewKey, Message),
     RegisterDevice(DeviceId, hid_input_report::DeviceDescriptor),
     InputReport(DeviceId, ViewKey, hid_input_report::InputReport),
+    KeyboardAutoRepeat(DeviceId, ViewKey),
     OwnershipChanged(bool),
     DropDisplayResources,
 }
@@ -317,7 +318,11 @@ impl App {
             }
             MessageInternal::InputReport(device_id, view_id, input_report) => {
                 let input_events = self.strategy.handle_input_report(&device_id, &input_report);
-
+                let view = self.get_view(view_id);
+                view.handle_input_events(input_events);
+            }
+            MessageInternal::KeyboardAutoRepeat(device_id, view_id) => {
+                let input_events = self.strategy.handle_keyboard_autorepeat(&device_id);
                 let view = self.get_view(view_id);
                 view.handle_input_events(input_events);
             }
