@@ -256,7 +256,7 @@ enum x86_extended_register_feature {
 
 /* Identify which extended registers are supported.  Also initialize
  * the FPU if present */
-void x86_extended_register_init(void);
+void x86_extended_register_init();
 
 /* Enable the requested feature on this CPU, return true on success.
  * It is currently assumed that if a feature is enabled on one CPU, the caller
@@ -264,16 +264,16 @@ void x86_extended_register_init(void);
 bool x86_extended_register_enable_feature(enum x86_extended_register_feature);
 
 /* Return the size required for all requested features. */
-size_t x86_extended_register_size(void);
+size_t x86_extended_register_size();
 
 /* Return the size required for all supported features, whether requested or not. */
-size_t x86_extended_register_max_size(void);
+size_t x86_extended_register_max_size();
 
 /* Return all potentially supported (although possibly not currently enabled) state bits for xcr0 */
-uint64_t x86_extended_xcr0_component_bitmap(void);
+uint64_t x86_extended_xcr0_component_bitmap();
 
 /* Returns whether or not xsave is supported by the CPU */
-bool x86_xsave_supported(void);
+bool x86_xsave_supported();
 
 /* Initialize a state vector. The passed in buffer must be X86_EXTENDED_REGISTER_SIZE big and it
  * must be 64-byte aligned. This function will initialize it for use in save and restore. */
@@ -360,7 +360,7 @@ typedef struct x86_debug_state {
 
 /* Disables the HW debug functionalities for the current thread.
  * There is no "enable" call. To do this, use the x86_write_debug_state call. */
-void x86_disable_debug_state(void);
+void x86_disable_debug_state();
 
 /* Checks whether the given state is valid to install on a running thread.
  * Will mask out reserved values on DR6 and DR7. This is for the caller convenience, considering

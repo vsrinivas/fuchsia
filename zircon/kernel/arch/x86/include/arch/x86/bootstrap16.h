@@ -31,17 +31,17 @@
 extern "C" {
 
 // Markers for the application processor bootstrap code region
-extern void x86_bootstrap16_start(void);
-extern void x86_bootstrap16_end(void);
+extern void x86_bootstrap16_start();
+extern void x86_bootstrap16_end();
 
 // 64-bit entry points that bootstrap might transition to
 
 // Entry point used for secondary CPU initialization
-extern void _x86_secondary_cpu_long_mode_entry(void);
+extern void _x86_secondary_cpu_long_mode_entry();
 
 // Entry point used for suspend-to-RAM resume vector.
 // Note that this does not restore %rdi, and it touches below the saved %rsp.
-extern void _x86_suspend_wakeup(void);
+extern void _x86_suspend_wakeup();
 
 } // extern "C"
 

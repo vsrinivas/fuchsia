@@ -86,7 +86,7 @@ void arm64_context_switch(vaddr_t* old_sp, vaddr_t new_sp, vaddr_t new_tpidr);
 void arm64_uspace_entry(iframe_t* iframe, vaddr_t kstack) __NO_RETURN;
 #endif
 
-void arm64_el1_exception_base(void);
+void arm64_el1_exception_base();
 void arm64_sync_exception(iframe_t* iframe, uint exception_flags, uint32_t esr);
 
 void platform_irq(iframe_t* frame);
@@ -101,7 +101,7 @@ void arm64_fpu_context_switch(Thread* oldthread, Thread* newthread);
 void arm64_fpu_save_state(Thread* t);
 void arm64_fpu_restore_state(Thread* t);
 
-uint64_t arm64_get_boot_el(void);
+uint64_t arm64_get_boot_el();
 
 /*
  * Creates a stack and sets the stack pointer for the specified secondary CPU.

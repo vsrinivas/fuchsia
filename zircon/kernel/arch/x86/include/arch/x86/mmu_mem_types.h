@@ -10,7 +10,7 @@
 
 #include <kernel/cpu.h>
 
-void x86_mmu_mem_type_init(void);
+void x86_mmu_mem_type_init();
 void x86_pat_sync(cpu_mask_t targets);
 
 #endif  // ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_MMU_MEM_TYPES_H_

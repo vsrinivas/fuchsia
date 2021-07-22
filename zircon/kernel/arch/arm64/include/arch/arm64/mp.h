@@ -61,7 +61,7 @@ struct arm64_percpu {
 
 void arch_init_cpu_map(uint cluster_count, const uint* cluster_cpus);
 void arch_register_mpid(uint cpu_id, uint64_t mpid);
-void arm64_init_percpu_early(void);
+void arm64_init_percpu_early();
 
 // Use the x20 register to always point at the local cpu structure for fast access.
 // x20 is the first available callee-saved register that clang will allow to be marked
@@ -71,7 +71,7 @@ static inline void arm64_write_percpu_ptr(struct arm64_percpu* percpu) {
   __asm__ volatile("mov x20, %0" :: "r"(percpu));
 }
 
-static inline struct arm64_percpu* arm64_read_percpu_ptr(void) {
+static inline struct arm64_percpu* arm64_read_percpu_ptr() {
   struct arm64_percpu* p;
   __asm__("mov %0, x20" : "=r"(p));
   return p;
@@ -92,11 +92,11 @@ static inline void arm64_write_percpu_u32(size_t offset, uint32_t val) {
 }
 
 // Return a pointer to the high-level percpu struct for the calling CPU.
-static inline struct percpu* arch_get_curr_percpu(void) {
+static inline struct percpu* arch_get_curr_percpu() {
   return arm64_read_percpu_ptr()->high_level_percpu;
 }
 
-static inline cpu_num_t arch_curr_cpu_num(void) {
+static inline cpu_num_t arch_curr_cpu_num() {
   return arm64_read_percpu_u32(offsetof(struct arm64_percpu, cpu_num));
 }
 
@@ -107,7 +107,7 @@ static inline void arch_set_num_cpus(uint cpu_count) {
   arm_num_cpus = cpu_count;
 }
 
-static inline uint arch_max_num_cpus(void) {
+static inline uint arch_max_num_cpus() {
   extern uint arm_num_cpus;
 
   return arm_num_cpus;

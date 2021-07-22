@@ -14,24 +14,24 @@
 struct iframe_t;
 
 // Early platform initialization, before UART, MMU, kernel command line args, etc.
-void arch_early_init(void);
+void arch_early_init();
 
 // Perform any set up required before virtual memory is enabled, or the heap is set up.
-void arch_prevm_init(void);
+void arch_prevm_init();
 
 // Perform any set up required after heap/MMU is available.
-void arch_init(void);
+void arch_init();
 
 // Perform any per-CPU set up required.
-void arch_late_init_percpu(void);
+void arch_late_init_percpu();
 
 // Called just before initiating a system suspend to give the arch layer a
 // chance to save state.  Must be called with interrupts disabled.
-void arch_suspend(void);
+void arch_suspend();
 
 // Called immediately after resuming from a system suspend to let the arch layer
 // reinitialize arch components.  Must be called with interrupts disabled.
-void arch_resume(void);
+void arch_resume();
 
 // Initialize |iframe| for running a userspace thread.
 // The rest of the current thread's state must already have been

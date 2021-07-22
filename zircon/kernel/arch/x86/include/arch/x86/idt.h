@@ -77,7 +77,7 @@ extern "C" void idt_setup(struct idt *idt);
 /*
  * @brief Setup the read-only remapping of the IDT.
  */
-void idt_setup_readonly(void);
+void idt_setup_readonly();
 
 /*
  * @brief Switch to thie given IDT
@@ -97,6 +97,6 @@ static inline void idt_load(struct idt *idt) {
 /*
  * @brief Get the read-only IDT.
  */
-struct idt *idt_get_readonly(void);
+struct idt *idt_get_readonly();
 
 #endif  // ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_IDT_H_

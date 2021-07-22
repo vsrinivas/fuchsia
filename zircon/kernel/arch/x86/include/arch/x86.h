@@ -58,7 +58,7 @@ void x86_64_context_switch(vaddr_t* oldsp, vaddr_t newsp);
 void x86_uspace_entry(const struct iframe_t* iframe) __NO_RETURN;
 #endif
 
-void x86_syscall(void);
+void x86_syscall();
 
 void x86_syscall_process_pending_signals(struct syscall_regs_t* gregs);
 
@@ -130,10 +130,10 @@ typedef struct {
 
 typedef tss_64_t tss_t;
 
-static inline void x86_clts(void) { __asm__ __volatile__("clts"); }
-static inline void x86_hlt(void) { __asm__ __volatile__("hlt"); }
-static inline void x86_sti(void) { __asm__ __volatile__("sti"); }
-static inline void x86_cli(void) { __asm__ __volatile__("cli"); }
+static inline void x86_clts() { __asm__ __volatile__("clts"); }
+static inline void x86_hlt() { __asm__ __volatile__("hlt"); }
+static inline void x86_sti() { __asm__ __volatile__("sti"); }
+static inline void x86_cli() { __asm__ __volatile__("cli"); }
 static inline void x86_ltr(uint16_t sel) { __asm__ __volatile__("ltr %%ax" ::"a"(sel)); }
 static inline void x86_lidt(uintptr_t base) { __asm volatile("lidt (%0)" ::"r"(base) : "memory"); }
 static inline void x86_lgdt(uintptr_t base) { __asm volatile("lgdt (%0)" ::"r"(base) : "memory"); }
@@ -202,7 +202,7 @@ static inline void clear_in_cr0(ulong mask) {
       :);
 }
 
-static inline ulong x86_get_cr2(void) {
+static inline ulong x86_get_cr2() {
   ulong rv;
 
   __asm__ __volatile__("mov %%cr2, %0" : "=r"(rv));
@@ -210,7 +210,7 @@ static inline ulong x86_get_cr2(void) {
   return rv;
 }
 
-static inline ulong x86_get_cr3(void) {
+static inline ulong x86_get_cr3() {
   ulong rv;
 
   __asm__ __volatile__("mov %%cr3, %0" : "=r"(rv));
@@ -221,14 +221,14 @@ static inline void x86_set_cr3(ulong in_val) {
   __asm__ __volatile__("mov %0,%%cr3 \n\t" : : "r"(in_val));
 }
 
-static inline ulong x86_get_cr0(void) {
+static inline ulong x86_get_cr0() {
   ulong rv;
 
   __asm__ __volatile__("mov %%cr0, %0 \n\t" : "=r"(rv));
   return rv;
 }
 
-static inline ulong x86_get_cr4(void) {
+static inline ulong x86_get_cr4() {
   ulong rv;
 
   __asm__ __volatile__("mov %%cr4, %0 \n\t" : "=r"(rv));
@@ -247,7 +247,7 @@ static inline void x86_set_cr4(ulong in_val) {
   static inline void set_##REG(uint16_t value) {          \
     __asm__ volatile("mov %0, %%" #REG : : "r"(value));   \
   }                                                       \
-  static inline uint16_t get_##REG(void) {                \
+  static inline uint16_t get_##REG() {                \
     uint16_t value;                                       \
     __asm__ volatile("mov %%" #REG ", %0" : "=r"(value)); \
     return value;                                         \
@@ -296,14 +296,14 @@ zx_status_t write_msr_safe(uint32_t msr_id, uint64_t val);
 // Write value |val| into MSR |msr_id| on cpu |cpu|.
 void write_msr_on_cpu(cpu_num_t cpu, uint32_t msr_id, uint64_t val);
 
-static inline bool x86_is_paging_enabled(void) {
+static inline bool x86_is_paging_enabled() {
   if (x86_get_cr0() & X86_CR0_PG)
     return true;
 
   return false;
 }
 
-static inline bool x86_is_PAE_enabled(void) {
+static inline bool x86_is_PAE_enabled() {
   if (x86_is_paging_enabled() == false)
     return false;
 
@@ -335,7 +335,7 @@ static inline void x86_write_gs_offset32(uintptr_t offset, uint32_t val) {
 
 typedef uint64_t x86_flags_t;
 
-static inline uint64_t x86_save_flags(void) {
+static inline uint64_t x86_save_flags() {
   uint64_t state;
 
   __asm__ volatile(
@@ -430,10 +430,10 @@ void x86_monitor(volatile void* addr);
 void x86_mwait(uint32_t hints);
 
 // Enable interrupts and halt this processor. Requires interrupts are disabled on entry.
-void x86_enable_ints_and_hlt(void);
+void x86_enable_ints_and_hlt();
 
-void mds_buff_overwrite(void);
-void x86_ras_fill(void);
+void mds_buff_overwrite();
+void x86_ras_fill();
 
 } // extern C
 

@@ -47,34 +47,34 @@ enum apic_interrupt_dst_mode {
 };
 
 // Functionality provided by the local APIC
-void apic_vm_init(void);
-void apic_local_init(void);
-uint8_t apic_local_id(void);
-uint8_t apic_bsp_id(void);  // The APIC ID of the bootstrap processor
+void apic_vm_init();
+void apic_local_init();
+uint8_t apic_local_id();
+uint8_t apic_bsp_id();  // The APIC ID of the bootstrap processor
 void apic_irq_set(unsigned int vector, bool enable);
 void apic_send_ipi(uint8_t vector, uint32_t dst_apic_id, enum apic_interrupt_delivery_mode dm);
 void apic_send_self_ipi(uint8_t vector, enum apic_interrupt_delivery_mode dm);
 void apic_send_broadcast_ipi(uint8_t vector, enum apic_interrupt_delivery_mode dm);
 void apic_send_broadcast_self_ipi(uint8_t vector, enum apic_interrupt_delivery_mode dm);
 void apic_send_mask_ipi(uint8_t vector, cpu_mask_t mask, enum apic_interrupt_delivery_mode dm);
-void apic_issue_eoi(void);
+void apic_issue_eoi();
 
 zx_status_t apic_timer_set_oneshot(uint32_t count, uint8_t divisor, bool masked);
 void apic_timer_set_tsc_deadline(uint64_t deadline, bool masked);
 zx_status_t apic_timer_set_periodic(uint32_t count, uint8_t divisor);
-uint32_t apic_timer_current_count(void);
-void apic_timer_mask(void);
-void apic_timer_unmask(void);
-void apic_timer_stop(void);
+uint32_t apic_timer_current_count();
+void apic_timer_mask();
+void apic_timer_unmask();
+void apic_timer_stop();
 
-void apic_pmi_mask(void);
-void apic_pmi_unmask(void);
+void apic_pmi_mask();
+void apic_pmi_unmask();
 
-void apic_error_interrupt_handler(void);
-void apic_timer_interrupt_handler(void);
+void apic_error_interrupt_handler();
+void apic_timer_interrupt_handler();
 
 // platform code needs to implement this
-void platform_handle_apic_timer_tick(void);
+void platform_handle_apic_timer_tick();
 
 // Information about the system IO APICs
 struct io_apic_descriptor {
@@ -133,10 +133,10 @@ uint32_t apic_io_isa_to_global(uint8_t isa_irq);
 // These functions must be invoked with interrupts disabled.  They save/restore the
 // current redirection table entries to/from memory.  They are intended for use
 // with suspend-to-RAM.
-void apic_io_save(void);
-void apic_io_restore(void);
+void apic_io_save();
+void apic_io_restore();
 
-void apic_local_debug(void);
-void apic_io_debug(void);
+void apic_local_debug();
+void apic_io_debug();
 
 #endif  // ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_APIC_H_

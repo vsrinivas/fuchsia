@@ -17,7 +17,7 @@
 typedef bool interrupt_saved_state_t;
 
 __WARN_UNUSED_RESULT
-static inline interrupt_saved_state_t arch_interrupt_save(void) {
+static inline interrupt_saved_state_t arch_interrupt_save() {
   interrupt_saved_state_t state = false;
   if (!arch_ints_disabled()) {
     state = true;

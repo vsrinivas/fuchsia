@@ -50,7 +50,7 @@
 
 void x86_set_tss_io_bitmap(IoBitmap& bitmap);
 void x86_clear_tss_io_bitmap(IoBitmap& bitmap);
-void x86_reset_tss_io_bitmap(void);
+void x86_reset_tss_io_bitmap();
 
 typedef uint16_t seg_sel_t;
 
@@ -59,7 +59,7 @@ void set_global_desc_64(seg_sel_t sel, uint64_t base, uint32_t limit, uint8_t pr
                         uint8_t sys, uint8_t type, uint8_t gran, uint8_t bits);
 
 /* tss stuff */
-void x86_initialize_percpu_tss(void);
+void x86_initialize_percpu_tss();
 
 void x86_set_tss_sp(vaddr_t sp);
 void x86_clear_tss_busy(seg_sel_t sel);
@@ -78,8 +78,8 @@ static inline void gdt_load(uintptr_t base) {
   x86_lgdt((uintptr_t)&gdtr);
 }
 
-void gdt_setup(void);
-uintptr_t gdt_get(void);
+void gdt_setup();
+uintptr_t gdt_get();
 
 #endif
 

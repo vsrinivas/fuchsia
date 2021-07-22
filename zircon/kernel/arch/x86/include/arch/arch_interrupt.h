@@ -18,7 +18,7 @@
 typedef x86_flags_t interrupt_saved_state_t;
 
 __WARN_UNUSED_RESULT
-static inline interrupt_saved_state_t arch_interrupt_save(void) {
+static inline interrupt_saved_state_t arch_interrupt_save() {
   interrupt_saved_state_t state = x86_save_flags();
   if ((state & X86_FLAGS_IF) != 0) {
     x86_cli();

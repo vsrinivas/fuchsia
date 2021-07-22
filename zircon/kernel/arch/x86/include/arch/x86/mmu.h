@@ -125,11 +125,11 @@ extern volatile pt_entry_t pdp_high[];
 bool x86_is_vaddr_canonical(vaddr_t vaddr);
 bool x86_mmu_check_paddr(paddr_t paddr);
 
-void x86_mmu_percpu_init(void);
-void x86_mmu_early_init(void);
-void x86_mmu_init(void);
+void x86_mmu_percpu_init();
+void x86_mmu_early_init();
+void x86_mmu_init();
 
-paddr_t x86_kernel_cr3(void);
+paddr_t x86_kernel_cr3();
 
 #endif  // !__ASSEMBLER__
 

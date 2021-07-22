@@ -65,14 +65,14 @@ struct x86_cpuid_bit {
   (struct x86_cpuid_bit) { (enum x86_cpuid_leaf_num)(leaf), (word), (bit) }
 
 /* Invoked on each CPU prior to lk_main being called. */
-void x86_feature_early_init_percpu(void);
+void x86_feature_early_init_percpu();
 
 /* Invoked on boot CPU after command line and UART enabled, but before
  * code patching or the MMU are enabled. */
-void x86_cpu_feature_init(void);
+void x86_cpu_feature_init();
 
 /* Invoked on each CPU late in init sequence. */
-void x86_cpu_feature_late_init_percpu(void);
+void x86_cpu_feature_late_init_percpu();
 
 static inline const struct cpuid_leaf* x86_get_cpuid_leaf(enum x86_cpuid_leaf_num leaf) {
   extern struct cpuid_leaf _cpuid[MAX_SUPPORTED_CPUID + 1];
@@ -127,7 +127,7 @@ static inline bool x86_feature_test(struct x86_cpuid_bit bit) {
   }
 }
 
-void x86_feature_debug(void);
+void x86_feature_debug();
 
 /* add feature bits to test here */
 /* format: X86_CPUID_BIT(cpuid leaf, register (eax-edx:0-3), bit) */
@@ -216,7 +216,7 @@ struct x86_model_info {
   uint32_t patch_level;
 };
 
-const struct x86_model_info* x86_get_model(void);
+const struct x86_model_info* x86_get_model();
 
 enum x86_microarch_list {
   X86_MICROARCH_UNKNOWN,
@@ -248,26 +248,26 @@ enum x86_hypervisor_list {
 
 extern enum x86_hypervisor_list x86_hypervisor;
 
-static inline bool x86_hypervisor_has_pv_clock(void) {
+static inline bool x86_hypervisor_has_pv_clock() {
   extern bool g_hypervisor_has_pv_clock;
   return g_hypervisor_has_pv_clock;
 }
 
-static inline bool x86_hypervisor_has_pv_eoi(void) {
+static inline bool x86_hypervisor_has_pv_eoi() {
   extern bool g_hypervisor_has_pv_eoi;
   return g_hypervisor_has_pv_eoi;
 }
 
-static inline bool x86_hypervisor_has_pv_ipi(void) {
+static inline bool x86_hypervisor_has_pv_ipi() {
   extern bool g_hypervisor_has_pv_ipi;
   return g_hypervisor_has_pv_ipi;
 }
 
 /* returns 0 if unknown, otherwise value in Hz */
-typedef uint64_t (*x86_get_timer_freq_func_t)(void);
+typedef uint64_t (*x86_get_timer_freq_func_t)();
 
 /* attempt to reboot the system; may fail and simply return */
-typedef void (*x86_reboot_system_func_t)(void);
+typedef void (*x86_reboot_system_func_t)();
 
 /* attempt to set a reason flag and reboot the system; may fail and simply return */
 typedef void (*x86_reboot_reason_func_t)(uint64_t reason);
@@ -288,57 +288,57 @@ typedef struct {
   x86_idle_states_t idle_states;
 } x86_microarch_config_t;
 
-static inline const x86_microarch_config_t* x86_get_microarch_config(void) {
+static inline const x86_microarch_config_t* x86_get_microarch_config() {
   extern const x86_microarch_config_t* x86_microarch_config;
   return x86_microarch_config;
 }
 
-static inline bool x86_cpu_has_ibpb(void) {
+static inline bool x86_cpu_has_ibpb() {
   extern bool g_has_ibpb;
   return g_has_ibpb;
 }
 
-static inline bool x86_cpu_should_ras_fill_on_ctxt_switch(void) {
+static inline bool x86_cpu_should_ras_fill_on_ctxt_switch() {
   extern bool g_ras_fill_on_ctxt_switch;
   return g_ras_fill_on_ctxt_switch;
 }
 
-static inline bool x86_cpu_vulnerable_to_rsb_underflow(void) {
+static inline bool x86_cpu_vulnerable_to_rsb_underflow() {
   extern bool g_cpu_vulnerable_to_rsb_underflow;
   return g_cpu_vulnerable_to_rsb_underflow;
 }
 
-static inline bool x86_cpu_should_ibpb_on_ctxt_switch(void) {
+static inline bool x86_cpu_should_ibpb_on_ctxt_switch() {
   extern bool g_should_ibpb_on_ctxt_switch;
   return g_should_ibpb_on_ctxt_switch;
 }
 
-static inline bool x86_cpu_should_mitigate_ssb(void) {
+static inline bool x86_cpu_should_mitigate_ssb() {
   extern bool g_ssb_mitigated;
   return g_ssb_mitigated;
 }
 
-static inline bool x86_cpu_should_l1d_flush_on_vmentry(void) {
+static inline bool x86_cpu_should_l1d_flush_on_vmentry() {
   extern bool g_l1d_flush_on_vmentry;
   return g_l1d_flush_on_vmentry;
 }
 
-static inline bool x86_cpu_should_md_clear_on_user_return(void) {
+static inline bool x86_cpu_should_md_clear_on_user_return() {
   extern bool g_md_clear_on_user_return;
   return g_md_clear_on_user_return;
 }
 
-static inline bool x86_cpu_has_enhanced_ibrs(void) {
+static inline bool x86_cpu_has_enhanced_ibrs() {
   extern bool g_has_enhanced_ibrs;
   return g_has_enhanced_ibrs;
 }
 
 // Vendor-specific per-cpu init functions, in amd.cpp/intel.cpp
-void x86_amd_init_percpu(void);
-void x86_intel_init_percpu(void);
+void x86_amd_init_percpu();
+void x86_intel_init_percpu();
 bool x86_intel_cpu_has_rsb_fallback(const cpu_id::CpuId* cpuid, MsrAccess* msr);
-uint32_t x86_amd_get_patch_level(void);
-uint32_t x86_intel_get_patch_level(void);
+uint32_t x86_amd_get_patch_level();
+uint32_t x86_intel_get_patch_level();
 
 const x86_microarch_config_t* get_microarch_config(const cpu_id::CpuId* cpuid);
 bool x86_intel_idle_state_may_empty_rsb(X86IdleState*);

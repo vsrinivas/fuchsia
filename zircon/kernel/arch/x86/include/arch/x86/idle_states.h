@@ -61,7 +61,7 @@ static inline bool x86_is_base_idle_state(const x86_idle_state_t* state) {
 
 // Returns a read-only pointer to the list of idle states supported by the
 // system.
-const x86_idle_states_t* x86_get_idle_states(void);
+const x86_idle_states_t* x86_get_idle_states();
 
 // Returns the number of states in |states|.
 // If |states| is invalid (i.e. does not contain X86_CSTATE_C1), returns -1.
