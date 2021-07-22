@@ -47,37 +47,47 @@ struct Type;
 struct StructType;
 
 struct StructField {
-  StructField(types::Resourceness resourceness, uint32_t offset, const Type* type)
-      : resourceness(resourceness), offset(offset), type(type) {}
+  StructField(types::Resourceness resourceness, uint32_t offset_v1, uint32_t offset_v2,
+              const Type* type)
+      : resourceness(resourceness), offset_v1(offset_v1), offset_v2(offset_v2), type(type) {}
 
   types::Resourceness resourceness;
-  const uint32_t offset;
+  const uint32_t offset_v1;
+  const uint32_t offset_v2;
   const Type* type;
 };
 
 struct StructPadding {
-  StructPadding(uint32_t offset, std::variant<uint16_t, uint32_t, uint64_t> mask)
-      : offset(offset), mask(mask) {}
+  StructPadding(uint32_t offset_v1, uint32_t offset_v2,
+                std::variant<uint16_t, uint32_t, uint64_t> mask)
+      : offset_v1(offset_v1), offset_v2(offset_v2), mask(mask) {}
 
   // TODO(bprosnitz) This computes a mask for a single padding segment.
   // It is inefficient if multiple padding segments can be covered by a single mask.
   // (e.g. struct{uint8, uint16, uint8, uint16} has two padding segments but can
   // be covered by a single uint64 mask)
-  static StructPadding FromLength(uint32_t offset, uint32_t length) {
+  static StructPadding FromLength(uint32_t offset_v1, uint32_t offset_v2, uint32_t length) {
     assert(length != 0 && "padding shouldn't be created for zero-length offsets");
     if (length <= 2) {
-      return StructPadding(offset & ~1, BuildMask<uint16_t>(offset & 1, length));
+      assert((offset_v1 & 1) == (offset_v2 & 1));
+      return StructPadding(offset_v1 & ~1, offset_v2 & ~1,
+                           BuildMask<uint16_t>(offset_v1 & 1, length));
     } else if (length <= 4) {
-      return StructPadding(offset & ~3, BuildMask<uint32_t>(offset & 3, length));
+      assert((offset_v1 & 3) == (offset_v2 & 3));
+      return StructPadding(offset_v1 & ~3, offset_v2 & ~3,
+                           BuildMask<uint32_t>(offset_v1 & 3, length));
     } else if (length < 8) {
-      return StructPadding(offset & ~7, BuildMask<uint64_t>(offset & 7, length));
+      assert((offset_v1 & 7) == (offset_v2 & 7));
+      return StructPadding(offset_v1 & ~7, offset_v2 & ~7,
+                           BuildMask<uint64_t>(offset_v1 & 7, length));
     } else {
       assert(false && "length should be < 8");
     }
     __builtin_unreachable();
   }
 
-  const uint32_t offset;
+  const uint32_t offset_v1;
+  const uint32_t offset_v2;
   const std::variant<uint16_t, uint32_t, uint64_t> mask;
 
  private:
@@ -128,11 +138,13 @@ struct Type {
     kVector,
   };
 
-  Type(Kind kind, std::string coded_name, uint32_t size, bool is_coding_needed, bool is_noop)
+  Type(Kind kind, std::string coded_name, uint32_t size_v1, uint32_t size_v2, bool is_coding_needed,
+       bool is_noop)
       : is_coding_needed(is_coding_needed),
         is_noop(is_noop),
         kind(kind),
-        size(size),
+        size_v1(size_v1),
+        size_v2(size_v2),
         coded_name(std::move(coded_name)) {}
 
   const bool is_coding_needed;
@@ -143,14 +155,15 @@ struct Type {
   // is_noop = false.
   bool is_noop;
   const Kind kind;
-  uint32_t size;
+  uint32_t size_v1;
+  uint32_t size_v2;
   const std::string coded_name;
 };
 
 struct PrimitiveType : public Type {
   PrimitiveType(std::string name, types::PrimitiveSubtype subtype, uint32_t size,
                 CodingContext context)
-      : Type(Kind::kPrimitive, std::move(name), size, true,
+      : Type(Kind::kPrimitive, std::move(name), size, size, true,
              subtype != types::PrimitiveSubtype::kBool),
         subtype(subtype) {}
 
@@ -160,7 +173,7 @@ struct PrimitiveType : public Type {
 struct EnumType : public Type {
   EnumType(std::string name, types::PrimitiveSubtype subtype, uint32_t size,
            std::vector<uint64_t> members, std::string qname, types::Strictness strictness)
-      : Type(Kind::kEnum, std::move(name), size, true, false),
+      : Type(Kind::kEnum, std::move(name), size, size, true, false),
         subtype(subtype),
         members(std::move(members)),
         qname(std::move(qname)),
@@ -175,7 +188,7 @@ struct EnumType : public Type {
 struct BitsType : public Type {
   BitsType(std::string name, types::PrimitiveSubtype subtype, uint32_t size, uint64_t mask,
            std::string qname, types::Strictness strictness)
-      : Type(Kind::kBits, std::move(name), size, true, false),
+      : Type(Kind::kBits, std::move(name), size, size, true, false),
         subtype(subtype),
         mask(mask),
         qname(std::move(qname)),
@@ -190,7 +203,7 @@ struct BitsType : public Type {
 struct HandleType : public Type {
   HandleType(std::string name, types::HandleSubtype subtype, types::RightsWrappedType rights,
              types::Nullability nullability)
-      : Type(Kind::kHandle, std::move(name), 4u, true, false),
+      : Type(Kind::kHandle, std::move(name), 4u, 4u, true, false),
         subtype(subtype),
         rights(rights),
         nullability(nullability) {}
@@ -202,14 +215,16 @@ struct HandleType : public Type {
 
 struct ProtocolHandleType : public Type {
   ProtocolHandleType(std::string name, types::Nullability nullability)
-      : Type(Kind::kProtocolHandle, std::move(name), 4u, true, false), nullability(nullability) {}
+      : Type(Kind::kProtocolHandle, std::move(name), 4u, 4u, true, false),
+        nullability(nullability) {}
 
   const types::Nullability nullability;
 };
 
 struct RequestHandleType : public Type {
   RequestHandleType(std::string name, types::Nullability nullability)
-      : Type(Kind::kRequestHandle, std::move(name), 4u, true, false), nullability(nullability) {}
+      : Type(Kind::kRequestHandle, std::move(name), 4u, 4u, true, false),
+        nullability(nullability) {}
 
   const types::Nullability nullability;
 };
@@ -217,9 +232,9 @@ struct RequestHandleType : public Type {
 struct StructPointerType;
 
 struct StructType : public Type {
-  StructType(std::string name, std::vector<StructElement> elements, uint32_t size,
-             std::string qname)
-      : Type(Kind::kStruct, std::move(name), size, true, false),
+  StructType(std::string name, std::vector<StructElement> elements, uint32_t size_v1,
+             uint32_t size_v2, std::string qname)
+      : Type(Kind::kStruct, std::move(name), size_v1, size_v2, true, false),
         elements(std::move(elements)),
         qname(std::move(qname)) {
     FIDL_CHECK(elements.size() <= std::numeric_limits<uint16_t>::max(),
@@ -232,8 +247,8 @@ struct StructType : public Type {
 };
 
 struct StructPointerType : public Type {
-  StructPointerType(std::string name, const Type* type, const uint32_t pointer_size)
-      : Type(Kind::kStructPointer, std::move(name), pointer_size, true, false),
+  StructPointerType(std::string name, const Type* type)
+      : Type(Kind::kStructPointer, std::move(name), 8u, 8u, true, false),
         element_type(static_cast<const StructType*>(type)) {
     assert(type->kind == Type::Kind::kStruct);
   }
@@ -242,9 +257,9 @@ struct StructPointerType : public Type {
 };
 
 struct TableType : public Type {
-  TableType(std::string name, std::vector<TableField> fields, uint32_t size, std::string qname,
+  TableType(std::string name, std::vector<TableField> fields, std::string qname,
             types::Resourceness resourceness)
-      : Type(Kind::kTable, std::move(name), size, true, false),
+      : Type(Kind::kTable, std::move(name), 16u, 16u, true, false),
         fields(std::move(fields)),
         qname(std::move(qname)),
         resourceness(resourceness) {}
@@ -258,7 +273,7 @@ struct XUnionType : public Type {
   XUnionType(std::string name, std::vector<XUnionField> fields, std::string qname,
              types::Nullability nullability, types::Strictness strictness,
              types::Resourceness resourceness)
-      : Type(Kind::kXUnion, std::move(name), 24u, true, false),
+      : Type(Kind::kXUnion, std::move(name), 24u, 16u, true, false),
         fields(std::move(fields)),
         qname(std::move(qname)),
         nullability(nullability),
@@ -276,7 +291,7 @@ struct XUnionType : public Type {
 struct MessageType : public Type {
   MessageType(std::string name, std::vector<StructElement> elements, uint32_t size,
               std::string qname)
-      : Type(Kind::kMessage, std::move(name), size, true, false),
+      : Type(Kind::kMessage, std::move(name), size, size, true, false),
         elements(std::move(elements)),
         qname(std::move(qname)) {}
 
@@ -287,7 +302,7 @@ struct MessageType : public Type {
 struct ProtocolType : public Type {
   explicit ProtocolType(std::vector<std::unique_ptr<MessageType>> messages_during_compile)
       // N.B. ProtocolTypes are never used in the eventual coding table generation.
-      : Type(Kind::kProtocol, "", 0, false, false),
+      : Type(Kind::kProtocol, "", 0, 0, false, false),
         messages_during_compile(std::move(messages_during_compile)) {}
 
   // Note: the messages are moved from the protocol type into the
@@ -300,22 +315,28 @@ struct ProtocolType : public Type {
 };
 
 struct ArrayType : public Type {
-  ArrayType(std::string name, const Type* element_type, uint32_t array_size, uint32_t element_size,
+  ArrayType(std::string name, const Type* element_type, uint32_t array_size_v1,
+            uint32_t array_size_v2, uint32_t element_size_v1, uint32_t element_size_v2,
             CodingContext context)
-      : Type(Kind::kArray, std::move(name), array_size, true, element_type->is_noop),
+      : Type(Kind::kArray, std::move(name), array_size_v1, array_size_v2, true,
+             element_type->is_noop),
         element_type(element_type),
-        element_size(element_size) {
-    FIDL_CHECK(element_size <= std::numeric_limits<uint16_t>::max(),
-               "coding table stores element_size in uint16_t");
+        element_size_v1(element_size_v1),
+        element_size_v2(element_size_v2) {
+    FIDL_CHECK(element_size_v1 <= std::numeric_limits<uint16_t>::max(),
+               "coding table stores element_size_v1 in uint16_t");
+    FIDL_CHECK(element_size_v2 <= std::numeric_limits<uint16_t>::max(),
+               "coding table stores element_size_v2 in uint16_t");
   }
 
   const Type* const element_type;
-  const uint32_t element_size;
+  const uint32_t element_size_v1;
+  const uint32_t element_size_v2;
 };
 
 struct StringType : public Type {
   StringType(std::string name, uint32_t max_size, types::Nullability nullability)
-      : Type(Kind::kString, std::move(name), 16u, true, false),
+      : Type(Kind::kString, std::move(name), 16u, 16u, true, false),
         max_size(max_size),
         nullability(nullability) {}
 
@@ -329,20 +350,23 @@ enum struct MemcpyCompatibility {
 };
 
 struct VectorType : public Type {
-  VectorType(std::string name, const Type* element_type, uint32_t max_count, uint32_t element_size,
-             types::Nullability nullability, MemcpyCompatibility element_memcpy_compatibility)
+  VectorType(std::string name, const Type* element_type, uint32_t max_count,
+             uint32_t element_size_v1, uint32_t element_size_v2, types::Nullability nullability,
+             MemcpyCompatibility element_memcpy_compatibility)
       // Note: vectors have is_noop = false, but there is the potential to optimize this in the
       // future.
-      : Type(Kind::kVector, std::move(name), 16u, true, false),
+      : Type(Kind::kVector, std::move(name), 16u, 16u, true, false),
         element_type(element_type),
         max_count(max_count),
-        element_size(element_size),
+        element_size_v1(element_size_v1),
+        element_size_v2(element_size_v2),
         nullability(nullability),
         element_memcpy_compatibility(element_memcpy_compatibility) {}
 
   const Type* const element_type;
   const uint32_t max_count;
-  const uint32_t element_size;
+  const uint32_t element_size_v1;
+  const uint32_t element_size_v2;
   const types::Nullability nullability;
   const MemcpyCompatibility element_memcpy_compatibility;
 };

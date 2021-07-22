@@ -46,7 +46,7 @@ const struct FidlCodedStruct fidl_test_nullable_StructWithNullableVectorTable = 
 static const struct FidlStructElement Fields42fidl_test_nullable_StructWithNullableUnion[] = {
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&fidl_test_nullable_SimpleUnionNullableRefTable)}}
 };
-const struct FidlCodedStruct fidl_test_nullable_StructWithNullableUnionTable = {.tag=kFidlTypeStruct, .elements=Fields42fidl_test_nullable_StructWithNullableUnion, .element_count=1u, .size_v1=24u, .size_v2=24u, .name="fidl.test.nullable/StructWithNullableUnion"};
+const struct FidlCodedStruct fidl_test_nullable_StructWithNullableUnionTable = {.tag=kFidlTypeStruct, .elements=Fields42fidl_test_nullable_StructWithNullableUnion, .element_count=1u, .size_v1=24u, .size_v2=16u, .name="fidl.test.nullable/StructWithNullableUnion"};
 
 static const struct FidlStructElement Fields43fidl_test_nullable_StructWithNullableStruct[] = {
     /*FidlStructPadding*/{.field=/*FidlStructField*/{.header=/*FidlStructElementHeader*/{.element_type=kFidlStructElementType_Field, .is_resource=kFidlIsResource_NotResource},.offset_v1=0u, .offset_v2=0u, .field_type=(fidl_type_t*)(&Pointer31fidl_test_nullable_Int32WrapperTable)}}

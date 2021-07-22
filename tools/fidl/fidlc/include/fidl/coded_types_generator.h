@@ -19,7 +19,7 @@ class CodedTypesGenerator {
  public:
   explicit CodedTypesGenerator(const flat::Library* library) : library_(library) {}
 
-  void CompileCodedTypes(const WireFormat wire_format);
+  void CompileCodedTypes();
 
   const flat::Library* library() const { return library_; }
   const std::vector<std::unique_ptr<coded::Type>>& coded_types() const { return coded_types_; }
@@ -33,19 +33,20 @@ class CodedTypesGenerator {
 
  private:
   // Returns a pointer owned by coded_types_.
-  const coded::Type* CompileType(const flat::Type* type, coded::CodingContext context,
-                                 const WireFormat wire_format);
-  void CompileFields(const flat::Decl* decl, const WireFormat wire_format);
-  void CompileDecl(const flat::Decl* decl, const WireFormat wire_format);
-  void CompileXRef(const coded::Type* type, const WireFormat wire_format);
+  const coded::Type* CompileType(const flat::Type* type, coded::CodingContext context);
+  void CompileFields(const flat::Decl* decl);
+  void CompileDecl(const flat::Decl* decl);
+  void CompileXRef(const coded::Type* type);
 
   // Representation of the fields of a struct member after it has been flattened.
   struct FlattenedStructMember {
-    FlattenedStructMember(const flat::StructMember& member, const WireFormat wire_format);
+    FlattenedStructMember(const flat::StructMember& member);
     const flat::Type* type;
     const SourceSpan name;
-    const uint32_t inline_size;
-    uint32_t offset;
+    const uint32_t inline_size_v1;
+    const uint32_t inline_size_v2;
+    uint32_t offset_v1;
+    uint32_t offset_v2;
     uint32_t padding;
   };
 
@@ -55,8 +56,7 @@ class CodedTypesGenerator {
   // struct B { A y; int8 z; };
   // becomes the equivalent of
   // struct B { int8 x; int8 z; };
-  std::vector<FlattenedStructMember> FlattenedStructMembers(const flat::Struct& input,
-                                                            const WireFormat wire_format);
+  std::vector<FlattenedStructMember> FlattenedStructMembers(const flat::Struct& input);
 
   const flat::Library* library_;
 
