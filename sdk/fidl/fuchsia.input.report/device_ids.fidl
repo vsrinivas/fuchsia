@@ -20,4 +20,6 @@ type VendorGoogleProductId = strict enum : uint32 {
     /// Below are the non-HID VendorIds
     FOCALTECH_TOUCHSCREEN = 0x00010001;
     AMS_LIGHT_SENSOR = 0x00010002;
+    GOLDFISH_ACCELERATION_SENSOR = 0x901D0001;
+    GOLDFISH_GYROSCOPE_SENSOR = 0x901D0002;
 };
