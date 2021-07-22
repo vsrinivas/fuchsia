@@ -1346,10 +1346,7 @@ success("CorrectPaddedUnionStruct") {
         ],
         v2 = [
             num(1):8,
-            num(8):4, num(0):2, num(0):2,
-
-            0x01,
-            padding:7,
+            num(1):4, num(0):2, num(1):2,
         ],
     }
 }
