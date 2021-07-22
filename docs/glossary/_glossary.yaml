@@ -974,7 +974,7 @@ environment to form a full SDK."
   device."
   full_description: ""
   see_also: [""]
-  related_guides: ["<a href=\"/docs/gdevelopment/hardware/paving.md\">Guide for installing Fuchsia with paver</a>"]
+  related_guides: ["<a href=\"/docs/development/hardware/paving.md\">Guide for installing Fuchsia with paver</a>"]
   area: ["System", "Devices"]
 
 - term: "Platform source tree"
