@@ -8,10 +8,11 @@ import("//src/storage/testing/isolated_devmgr.gni")
 
 group("tests") {
   testonly = true
-  deps = [
-    ":blobfs-integration-package",
-    ":blobfs-large-integration-package",
-  ]
+  deps = [ ":blobfs-large-integration-package" ]
+  if (!is_coverage) {
+    # TODO(https://fxbug.dev/81190): Re-enable this test once it passes on coverage builders
+    deps += [ ":blobfs-integration-package" ]
+  }
 }
 
 static_library("blobfs_integration_fixtures") {
