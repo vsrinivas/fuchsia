@@ -104,3 +104,7 @@ for a specific architecture.
 
 Note: The default value may vary for each architechture.
 )""")
+
+DEFINE_OPTION("kernel.wallclock", WallclockType, x86_wallclock, {WallclockType::kAutoDetect}, R"""(
+This option can be used to force the selection of a particular wall clock on pc builds.
+)""")

@@ -405,6 +405,14 @@ void BootOptions::PrintValue(const RootJobBehavior& value, FILE* out) {
   Enum<RootJobBehavior>(EnumPrinter{value, out});
 }
 
+bool BootOptions::Parse(std::string_view value, WallclockType BootOptions::*member) {
+  return Enum<WallclockType>(EnumParser{value, &(this->*member)}).Check();
+}
+
+void BootOptions::PrintValue(const WallclockType& value, FILE* out) {
+  Enum<WallclockType>(EnumPrinter{value, out});
+}
+
 #if BOOT_OPTIONS_TESTONLY_OPTIONS
 
 bool BootOptions::Parse(std::string_view value, TestEnum BootOptions::*member) {

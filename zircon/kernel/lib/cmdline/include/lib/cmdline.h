@@ -122,9 +122,4 @@ class Cmdline {
 
 extern Cmdline gCmdline;
 
-// TODO(53594): migrate these to BootOptions.
-namespace kernel_option {
-static constexpr const char kWallclock[] = "kernel.wallclock";
-}  // namespace kernel_option
-
 #endif  // ZIRCON_KERNEL_LIB_CMDLINE_INCLUDE_LIB_CMDLINE_H_

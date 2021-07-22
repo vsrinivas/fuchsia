@@ -76,6 +76,15 @@ constexpr auto Enum<RootJobBehavior> = [](auto&& Switch) {
       .Case("shutdown", RootJobBehavior::kShutdown);
 };
 
+template <>
+constexpr auto Enum<WallclockType> = [](auto&& Switch) {
+  return Switch  //
+      .Case("auto", WallclockType::kAutoDetect)
+      .Case("tsc", WallclockType::kTsc)
+      .Case("pit", WallclockType::kPit)
+      .Case("hpet", WallclockType::kHpet);
+};
+
 #if BOOT_OPTIONS_GENERATOR || defined(__x86_64__)
 
 template <>

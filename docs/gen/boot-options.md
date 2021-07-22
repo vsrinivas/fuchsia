@@ -741,4 +741,9 @@ for a specific architecture.
 
 Note: The default value may vary for each architechture.
 
+### kernel.wallclock=[auto | tsc | pit | hpet]
+**Default:** `auto`
+
+This option can be used to force the selection of a particular wall clock on pc builds.
+
 TODO: put something here

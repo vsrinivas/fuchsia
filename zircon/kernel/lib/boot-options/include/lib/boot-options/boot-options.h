@@ -116,6 +116,7 @@ struct BootOptions {
   OPTION_TYPE(SerialDebugSyscalls);
   OPTION_TYPE(PageTableEvictionPolicy);
   OPTION_TYPE(RootJobBehavior);
+  OPTION_TYPE(WallclockType);
 #if BOOT_OPTIONS_TESTONLY_OPTIONS
   OPTION_TYPE(TestEnum);
   OPTION_TYPE(TestStruct);
