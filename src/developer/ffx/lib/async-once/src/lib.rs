@@ -6,7 +6,7 @@ use async_lock::Mutex;
 use once_cell::sync::OnceCell;
 use std::future::Future;
 
-pub struct Once<T: 'static> {
+pub struct Once<T> {
     mutex: Mutex<()>,
     value: OnceCell<T>,
 }
