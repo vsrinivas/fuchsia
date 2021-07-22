@@ -69,6 +69,7 @@ pub struct SecurityPolicy {
     job_policy: Option<JobPolicyAllowlists>,
     capability_policy: Option<Vec<CapabilityAllowlistEntry>>,
     debug_registration_policy: Option<Vec<DebugRegistrationAllowlistEntry>>,
+    child_policy: Option<ChildPolicyAllowlists>,
 }
 
 #[derive(Deserialize, Debug, Default)]
@@ -77,6 +78,12 @@ pub struct JobPolicyAllowlists {
     ambient_mark_vmo_exec: Option<Vec<String>>,
     main_process_critical: Option<Vec<String>>,
     create_raw_processes: Option<Vec<String>>,
+}
+
+#[derive(Deserialize, Debug, Default)]
+#[serde(deny_unknown_fields)]
+pub struct ChildPolicyAllowlists {
+    reboot_on_terminate: Option<Vec<String>>,
 }
 
 #[derive(Deserialize, Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -247,13 +254,14 @@ impl TryFrom<Config> for component_internal::Config {
 fn translate_security_policy(
     security_policy: Option<SecurityPolicy>,
 ) -> component_internal::SecurityPolicy {
-    let SecurityPolicy { job_policy, capability_policy, debug_registration_policy } =
+    let SecurityPolicy { job_policy, capability_policy, debug_registration_policy, child_policy } =
         security_policy.unwrap_or_default();
     component_internal::SecurityPolicy {
         job_policy: job_policy.map(translate_job_policy),
         capability_policy: capability_policy.map(translate_capability_policy),
         debug_registration_policy: debug_registration_policy
             .map(translate_debug_registration_policy),
+        child_policy: child_policy.map(translate_child_policy),
         ..component_internal::SecurityPolicy::EMPTY
     }
 }
@@ -266,6 +274,15 @@ fn translate_job_policy(
         main_process_critical: job_policy.main_process_critical,
         create_raw_processes: job_policy.create_raw_processes,
         ..component_internal::JobPolicyAllowlists::EMPTY
+    }
+}
+
+fn translate_child_policy(
+    child_policy: ChildPolicyAllowlists,
+) -> component_internal::ChildPolicyAllowlists {
+    component_internal::ChildPolicyAllowlists {
+        reboot_on_terminate: child_policy.reboot_on_terminate,
+        ..component_internal::ChildPolicyAllowlists::EMPTY
     }
 }
 
@@ -482,6 +499,9 @@ mod tests {
                         environment_name: "my_env",
                     },
                 ],
+                child_policy: {
+                    reboot_on_terminate: [ "/buz" ],
+                },
             },
             namespace_capabilities: [
                 {
@@ -570,6 +590,10 @@ mod tests {
                             ..component_internal::DebugRegistrationPolicyAllowlists::EMPTY
                         }
                     ),
+                    child_policy: Some(component_internal::ChildPolicyAllowlists {
+                        reboot_on_terminate: Some(vec!["/buz".to_string()]),
+                        ..component_internal::ChildPolicyAllowlists::EMPTY
+                    }),
                     ..component_internal::SecurityPolicy::EMPTY
                 }),
                 namespace_capabilities: Some(vec![
@@ -678,7 +702,8 @@ mod tests {
         File::create(&input_path).unwrap().write_all(input.as_bytes()).unwrap();
 
         let another_input_path = tmp_dir.path().join("bar.json");
-        let another_input = "{\"list_children_batch_size\": 42, \"reboot_on_terminate_enabled\": true}";
+        let another_input =
+            "{\"list_children_batch_size\": 42, \"reboot_on_terminate_enabled\": true}";
         File::create(&another_input_path).unwrap().write_all(another_input.as_bytes()).unwrap();
 
         let args =

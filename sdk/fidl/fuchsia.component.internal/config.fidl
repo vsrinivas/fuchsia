@@ -113,6 +113,8 @@ type SecurityPolicy = table {
     2: capability_policy CapabilityPolicyAllowlists;
     /// Debug capability registration policy.
     3: debug_registration_policy DebugRegistrationPolicyAllowlists;
+    /// Component child options policy.
+    4: child_policy ChildPolicyAllowlists;
 };
 
 /// A single entry in an allowlist, expressed in one of three forms:
@@ -250,4 +252,11 @@ type DebugRegistrationAllowlistEntry = table {
 /// Defines the total set of debug capability allowlists.
 type DebugRegistrationPolicyAllowlists = table {
     1: allowlist vector<DebugRegistrationAllowlistEntry>:MAX_ALLOWLIST_SIZE;
+};
+
+/// Allowlists for privileged child options.
+type ChildPolicyAllowlists = table {
+    /// Allowlist entry monikers of component instances allowed to have the
+    /// `on_terminate=REBOOT` in their `children` declaration.
+    1: reboot_on_terminate vector<AllowlistEntryMoniker>:MAX_ALLOWLIST_SIZE;
 };

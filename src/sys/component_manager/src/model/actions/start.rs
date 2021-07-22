@@ -11,6 +11,7 @@ use {
         error::ModelError,
         hooks::{Event, EventError, EventErrorPayload, EventPayload, RuntimeInfo},
         namespace::IncomingNamespace,
+        policy::GlobalPolicyChecker,
         runner::Runner,
     },
     ::routing::component_instance::ComponentInstanceInterface,
@@ -81,8 +82,10 @@ async fn do_start(
         })?;
 
         // Generate the Runtime which will be set in the Execution.
+        let checker = component.try_get_policy_checker()?;
         let (pending_runtime, start_info, controller_server_end) = make_execution_runtime(
             &component,
+            &checker,
             component_info.resolved_url.clone(),
             component_info.package,
             &component_info.decl,
@@ -174,6 +177,7 @@ pub fn should_return_early(
 /// the component).
 async fn make_execution_runtime(
     component: &Arc<ComponentInstance>,
+    checker: &GlobalPolicyChecker,
     url: String,
     package: Option<Package>,
     decl: &cm_rust::ComponentDecl,
@@ -183,10 +187,7 @@ async fn make_execution_runtime(
 > {
     match component.on_terminate {
         fsys::OnTerminate::Reboot => {
-            let context = component.try_get_context()?;
-            if !context.runtime_config().reboot_on_terminate_enabled {
-                return Err(ModelError::unsupported("on_terminate=REBOOT"));
-            }
+            checker.reboot_on_terminate_allowed(&component.abs_moniker)?;
         }
         fsys::OnTerminate::None => {}
     }

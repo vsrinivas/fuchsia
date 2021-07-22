@@ -117,6 +117,7 @@ pub enum AllowlistEntry {
 pub struct SecurityPolicy {
     /// Allowlists for Zircon job policy.
     pub job_policy: JobPolicyAllowlists,
+
     /// Capability routing policies. The key contains all the information required
     /// to uniquely identify any routable capability and the set of monikers
     /// define the set of component paths that are allowed to access this specific
@@ -129,6 +130,10 @@ pub struct SecurityPolicy {
     /// their environment `environment_name`.
     pub debug_capability_policy:
         HashMap<CapabilityAllowlistKey, HashSet<(AbsoluteMoniker, String)>>,
+
+    /// Allowlists component child policy. These allowlists control what components are allowed
+    /// to set privileged options on their children.
+    pub child_policy: ChildPolicyAllowlists,
 }
 
 /// Allowlists for Zircon job policy. Part of runtime security policy.
@@ -154,6 +159,14 @@ pub struct JobPolicyAllowlists {
     /// Components must request this policy by including "job_policy_create_raw_processes: true" in
     /// their manifest's program object and must be using the ELF runner.
     pub create_raw_processes: Vec<AllowlistEntry>,
+}
+
+/// Allowlists for child option policy. Part of runtime security policy.
+#[derive(Debug, Default, PartialEq, Eq, Clone)]
+pub struct ChildPolicyAllowlists {
+    /// Absolute monikers of component instances allowed to have the
+    /// `on_terminate=REBOOT` in their `children` declaration.
+    pub reboot_on_terminate: Vec<AllowlistEntry>,
 }
 
 /// The available capability sources for capability allow lists. This is a strict
@@ -192,9 +205,9 @@ impl Default for RuntimeConfig {
             out_dir_contents: OutDirContents::None,
             root_component_url: Default::default(),
             component_id_index_path: None,
-            reboot_on_terminate_enabled: false,
             log_all_events: false,
             builtin_boot_resolver: BuiltinBootResolver::None,
+            reboot_on_terminate_enabled: false,
         }
     }
 }
@@ -347,11 +360,13 @@ impl TryFrom<component_internal::Config> for RuntimeConfig {
             out_dir_contents: config.out_dir_contents.unwrap_or(default.out_dir_contents),
             root_component_url,
             component_id_index_path: config.component_id_index_path,
-            reboot_on_terminate_enabled: config.reboot_on_terminate_enabled.unwrap_or(false),
             log_all_events,
             builtin_boot_resolver: config
                 .builtin_boot_resolver
                 .unwrap_or(default.builtin_boot_resolver),
+            reboot_on_terminate_enabled: config
+                .reboot_on_terminate_enabled
+                .unwrap_or(default.reboot_on_terminate_enabled),
         })
     }
 }
@@ -511,7 +526,14 @@ impl TryFrom<component_internal::SecurityPolicy> for SecurityPolicy {
         let debug_capability_policy =
             parse_debug_capability_policy(security_policy.debug_registration_policy)?;
 
-        Ok(SecurityPolicy { job_policy, capability_policy, debug_capability_policy })
+        let child_policy = if let Some(child_policy) = &security_policy.child_policy {
+            let reboot_on_terminate = parse_allowlist_entries(&child_policy.reboot_on_terminate)?;
+            ChildPolicyAllowlists { reboot_on_terminate }
+        } else {
+            ChildPolicyAllowlists::default()
+        };
+
+        Ok(SecurityPolicy { job_policy, capability_policy, debug_capability_policy, child_policy })
     }
 }
 
@@ -595,8 +617,8 @@ mod tests {
             out_dir_contents: None,
             root_component_url: None,
             component_id_index_path: None,
-            reboot_on_terminate_enabled: None,
             log_all_events: None,
+            reboot_on_terminate_enabled: None,
             ..component_internal::Config::EMPTY
         }, RuntimeConfig {
             debug:false, list_children_batch_size: 5,
@@ -679,6 +701,10 @@ mod tests {
                                 ..component_internal::DebugRegistrationAllowlistEntry::EMPTY
                             },
                         ]), ..component_internal::DebugRegistrationPolicyAllowlists::EMPTY}),
+                    child_policy: Some(component_internal::ChildPolicyAllowlists {
+                        reboot_on_terminate: Some(vec!["/something/important".to_string()]),
+                        ..component_internal::ChildPolicyAllowlists::EMPTY
+                    }),
                     ..component_internal::SecurityPolicy::EMPTY
                 }),
                 num_threads: Some(24),
@@ -698,9 +724,9 @@ mod tests {
                 out_dir_contents: Some(component_internal::OutDirContents::Svc),
                 root_component_url: Some(FOO_PKG_URL.to_string()),
                 component_id_index_path: Some("/boot/config/component_id_index".to_string()),
-                reboot_on_terminate_enabled: Some(true),
                 log_all_events: Some(true),
                 builtin_boot_resolver: Some(component_internal::BuiltinBootResolver::None),
+                reboot_on_terminate_enabled: Some(true),
                 ..component_internal::Config::EMPTY
             },
             RuntimeConfig {
@@ -770,6 +796,11 @@ mod tests {
                         ].iter().cloned())
                         ),
                     ].iter().cloned()),
+                    child_policy: ChildPolicyAllowlists {
+                        reboot_on_terminate: vec![
+                            AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["something:0", "important:0"])),
+                        ],
+                    },
                 },
                 num_threads: 24,
                 namespace_capabilities: vec![
@@ -787,9 +818,9 @@ mod tests {
                 out_dir_contents: OutDirContents::Svc,
                 root_component_url: Some(Url::new(FOO_PKG_URL.to_string()).unwrap()),
                 component_id_index_path: Some("/boot/config/component_id_index".to_string()),
-                reboot_on_terminate_enabled: true,
                 log_all_events: true,
                 builtin_boot_resolver: BuiltinBootResolver::None,
+                reboot_on_terminate_enabled: true,
             }
         ),
     }
@@ -848,7 +879,6 @@ mod tests {
             out_dir_contents: None,
             root_component_url: None,
             component_id_index_path: None,
-            reboot_on_terminate_enabled: None,
         ..component_internal::Config::EMPTY
     }, PolicyConfigError, PolicyConfigError::EmptyAllowlistedCapability),
     invalid_capability_policy_empty_source_moniker => (component_internal::Config {

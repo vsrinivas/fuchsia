@@ -26,8 +26,14 @@ pub enum PolicyError {
     #[error("security policy was unavailable to check")]
     PolicyUnavailable,
 
+    #[error("feature \"{policy}\" used by \"{moniker}\" is not supported by this instance of component manager")]
+    Unsupported { policy: String, moniker: AbsoluteMoniker },
+
     #[error("security policy disallows \"{policy}\" job policy for \"{moniker}\"")]
     JobPolicyDisallowed { policy: String, moniker: AbsoluteMoniker },
+
+    #[error("security policy disallows \"{policy}\" child policy for \"{moniker}\"")]
+    ChildPolicyDisallowed { policy: String, moniker: AbsoluteMoniker },
 
     #[error("security policy was unable to extract the source from the routed capability")]
     InvalidCapabilitySource,
@@ -50,8 +56,16 @@ pub enum PolicyError {
 }
 
 impl PolicyError {
+    fn unsupported(policy: impl Into<String>, moniker: &AbsoluteMoniker) -> Self {
+        PolicyError::Unsupported { policy: policy.into(), moniker: moniker.clone() }
+    }
+
     fn job_policy_disallowed(policy: impl Into<String>, moniker: &AbsoluteMoniker) -> Self {
         PolicyError::JobPolicyDisallowed { policy: policy.into(), moniker: moniker.clone() }
+    }
+
+    fn child_policy_disallowed(policy: impl Into<String>, moniker: &AbsoluteMoniker) -> Self {
+        PolicyError::ChildPolicyDisallowed { policy: policy.into(), moniker: moniker.clone() }
     }
 
     fn capability_use_disallowed(
@@ -261,6 +275,28 @@ impl GlobalPolicyChecker {
             target_moniker,
         ))
     }
+
+    /// Returns Ok(()) if `target_moniker` is allowed to have `on_terminate=REBOOT` set.
+    pub fn reboot_on_terminate_allowed(
+        &self,
+        target_moniker: &AbsoluteMoniker,
+    ) -> Result<(), PolicyError> {
+        if !self.config.reboot_on_terminate_enabled {
+            return Err(PolicyError::unsupported("reboot_on_terminate", target_moniker));
+        }
+        if self
+            .config
+            .security_policy
+            .child_policy
+            .reboot_on_terminate
+            .iter()
+            .any(|entry| allowlist_entry_matches(entry, &target_moniker))
+        {
+            Ok(())
+        } else {
+            Err(PolicyError::child_policy_disallowed("reboot_on_terminate", target_moniker))
+        }
+    }
 }
 
 fn allowlist_entry_matches(
@@ -361,7 +397,9 @@ impl ScopedPolicyChecker {
 mod tests {
     use {
         super::*,
-        crate::config::{JobPolicyAllowlists, RuntimeConfig, SecurityPolicy},
+        crate::config::{
+            ChildPolicyAllowlists, JobPolicyAllowlists, RuntimeConfig, SecurityPolicy,
+        },
         matches::assert_matches,
         moniker::{AbsoluteMoniker, ChildMoniker},
         std::collections::HashMap,
@@ -447,6 +485,12 @@ mod tests {
                 },
                 capability_policy: HashMap::new(),
                 debug_capability_policy: HashMap::new(),
+                child_policy: ChildPolicyAllowlists {
+                    reboot_on_terminate: vec![
+                        AllowlistEntry::Exact(allowed1.clone()),
+                        AllowlistEntry::Exact(allowed2.clone()),
+                    ],
+                },
             },
             ..Default::default()
         });
@@ -499,6 +543,7 @@ mod tests {
                 },
                 capability_policy: HashMap::new(),
                 debug_capability_policy: HashMap::new(),
+                child_policy: ChildPolicyAllowlists { reboot_on_terminate: vec![] },
             },
             ..Default::default()
         });
@@ -526,7 +571,7 @@ mod tests {
     }
 
     #[test]
-    fn scoped_policy_checker_critical_allowed() {
+    fn scoped_policy_checker_main_process_critical_allowed() {
         macro_rules! assert_critical_allowed_matches {
             ($config:expr, $moniker:expr, $expected:pat) => {
                 let result = ScopedPolicyChecker::new($config.clone(), $moniker.clone())
@@ -568,6 +613,7 @@ mod tests {
                 },
                 capability_policy: HashMap::new(),
                 debug_capability_policy: HashMap::new(),
+                child_policy: ChildPolicyAllowlists { reboot_on_terminate: vec![] },
             },
             ..Default::default()
         });
@@ -581,5 +627,82 @@ mod tests {
         drop(strong_config);
         assert_critical_allowed_matches!(config, allowed1, Err(PolicyError::PolicyUnavailable));
         assert_critical_allowed_matches!(config, allowed2, Err(PolicyError::PolicyUnavailable));
+    }
+
+    #[test]
+    fn scoped_policy_checker_reboot_policy_allowed() {
+        macro_rules! assert_reboot_allowed_matches {
+            ($config:expr, $moniker:expr, $expected:pat) => {
+                let result = GlobalPolicyChecker::new($config.clone())
+                    .reboot_on_terminate_allowed(&$moniker);
+                assert_matches!(result, $expected);
+            };
+        }
+        macro_rules! assert_reboot_disallowed {
+            ($config:expr, $moniker:expr) => {
+                assert_reboot_allowed_matches!(
+                    $config,
+                    $moniker,
+                    Err(PolicyError::ChildPolicyDisallowed { .. })
+                );
+            };
+        }
+
+        // Empty config and enabled.
+        let config =
+            Arc::new(RuntimeConfig { reboot_on_terminate_enabled: true, ..Default::default() });
+        assert_reboot_disallowed!(config, AbsoluteMoniker::root());
+        assert_reboot_disallowed!(config, AbsoluteMoniker::from(vec!["foo:0"]));
+
+        // Nonempty config and enabled.
+        let allowed1 = AbsoluteMoniker::from(vec!["foo:0", "bar:0"]);
+        let allowed2 = AbsoluteMoniker::from(vec!["baz:0", "fiz:0"]);
+        let config = Arc::new(RuntimeConfig {
+            security_policy: SecurityPolicy {
+                job_policy: JobPolicyAllowlists {
+                    ambient_mark_vmo_exec: vec![],
+                    main_process_critical: vec![],
+                    create_raw_processes: vec![],
+                },
+                capability_policy: HashMap::new(),
+                debug_capability_policy: HashMap::new(),
+                child_policy: ChildPolicyAllowlists {
+                    reboot_on_terminate: vec![
+                        AllowlistEntry::Exact(allowed1.clone()),
+                        AllowlistEntry::Exact(allowed2.clone()),
+                    ],
+                },
+            },
+            reboot_on_terminate_enabled: true,
+            ..Default::default()
+        });
+        assert_reboot_allowed_matches!(config, allowed1, Ok(()));
+        assert_reboot_allowed_matches!(config, allowed2, Ok(()));
+        assert_reboot_disallowed!(config, AbsoluteMoniker::root());
+        assert_reboot_disallowed!(config, allowed1.parent().unwrap());
+        assert_reboot_disallowed!(config, allowed1.child(ChildMoniker::from("baz:0")));
+
+        // Nonempty config and disabled.
+        let config = Arc::new(RuntimeConfig {
+            security_policy: SecurityPolicy {
+                job_policy: JobPolicyAllowlists {
+                    ambient_mark_vmo_exec: vec![],
+                    main_process_critical: vec![],
+                    create_raw_processes: vec![],
+                },
+                capability_policy: HashMap::new(),
+                debug_capability_policy: HashMap::new(),
+                child_policy: ChildPolicyAllowlists {
+                    reboot_on_terminate: vec![AllowlistEntry::Exact(allowed1.clone())],
+                },
+            },
+            ..Default::default()
+        });
+        assert_reboot_allowed_matches!(config, allowed1, Err(PolicyError::Unsupported { .. }));
+        assert_reboot_allowed_matches!(
+            config,
+            AbsoluteMoniker::root(),
+            Err(PolicyError::Unsupported { .. })
+        );
     }
 }

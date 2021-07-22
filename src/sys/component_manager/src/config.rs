@@ -6,6 +6,7 @@
 pub type RuntimeConfig = ::routing::config::RuntimeConfig;
 pub type SecurityPolicy = ::routing::config::SecurityPolicy;
 pub type JobPolicyAllowlists = ::routing::config::JobPolicyAllowlists;
+pub type ChildPolicyAllowlists = ::routing::config::ChildPolicyAllowlists;
 pub type CapabilityAllowlistSource = ::routing::config::CapabilityAllowlistSource;
 pub type CapabilityAllowlistKey = ::routing::config::CapabilityAllowlistKey;
 pub type PolicyConfigError = ::routing::config::PolicyConfigError;

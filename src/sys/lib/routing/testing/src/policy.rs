@@ -14,8 +14,8 @@ use {
         capability_source::{CapabilitySourceInterface, ComponentCapability, InternalCapability},
         component_instance::ComponentInstanceInterface,
         config::{
-            AllowlistEntry, CapabilityAllowlistKey, CapabilityAllowlistSource, JobPolicyAllowlists,
-            RuntimeConfig, SecurityPolicy,
+            AllowlistEntry, CapabilityAllowlistKey, CapabilityAllowlistSource,
+            ChildPolicyAllowlists, JobPolicyAllowlists, RuntimeConfig, SecurityPolicy,
         },
         policy::GlobalPolicyChecker,
     },
@@ -582,6 +582,7 @@ impl CapabilityAllowlistConfigBuilder {
                 },
                 capability_policy: self.capability_policy.clone(),
                 debug_capability_policy: self.debug_capability_policy.clone(),
+                child_policy: ChildPolicyAllowlists { reboot_on_terminate: vec![] },
             },
             ..Default::default()
         });

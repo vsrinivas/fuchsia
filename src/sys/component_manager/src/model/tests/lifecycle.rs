@@ -5,6 +5,7 @@
 use {
     crate::{
         builtin_environment::BuiltinEnvironment,
+        config::AllowlistEntry,
         model::{
             actions::{ActionKey, ActionSet, ShutdownAction, StartAction, StopAction},
             binding::Binder,
@@ -13,6 +14,7 @@ use {
             events::registry::EventSubscription,
             hooks::{EventPayload, EventType, HooksRegistration},
             model::Model,
+            policy::PolicyError,
             testing::{
                 mocks::*, out_dir::OutDir, routing_test_helpers::RoutingTestBuilder,
                 test_helpers::*, test_hook::TestHook,
@@ -482,7 +484,7 @@ async fn bind_action_sequence() {
 }
 
 #[fuchsia::test]
-async fn reboot_disallowed() {
+async fn reboot_on_terminate_disabled() {
     let components = vec![
         (
             "root",
@@ -498,11 +500,45 @@ async fn reboot_disallowed() {
     ];
     let test = RoutingTestBuilder::new("root", components)
         .set_reboot_on_terminate_enabled(false)
+        .set_reboot_on_terminate_policy(vec![AllowlistEntry::Exact(vec!["system:0"].into())])
         .build()
         .await;
 
     let res = test.model.bind(&vec!["system:0"].into(), &BindReason::Debug).await;
-    assert_matches!(res, Err(ModelError::Unsupported { feature }) if &feature == "on_terminate=REBOOT");
+    assert_matches!(res, Err(ModelError::PolicyError {
+        err: PolicyError::Unsupported {
+            policy, moniker
+        }
+    }) if &policy == "reboot_on_terminate" && moniker == AbsoluteMoniker::from(vec!["system:0"]));
+}
+
+#[fuchsia::test]
+async fn reboot_on_terminate_disallowed() {
+    let components = vec![
+        (
+            "root",
+            ComponentDeclBuilder::new()
+                .add_child(
+                    ChildDeclBuilder::new_lazy_child("system")
+                        .on_terminate(fsys::OnTerminate::Reboot)
+                        .build(),
+                )
+                .build(),
+        ),
+        ("system", ComponentDeclBuilder::new().build()),
+    ];
+    let test = RoutingTestBuilder::new("root", components)
+        .set_reboot_on_terminate_enabled(true)
+        .set_reboot_on_terminate_policy(vec![AllowlistEntry::Exact(vec!["other:0"].into())])
+        .build()
+        .await;
+
+    let res = test.model.bind(&vec!["system:0"].into(), &BindReason::Debug).await;
+    assert_matches!(res, Err(ModelError::PolicyError {
+        err: PolicyError::ChildPolicyDisallowed {
+            policy, moniker
+        }
+    }) if &policy == "reboot_on_terminate" && moniker == AbsoluteMoniker::from(vec!["system:0"]));
 }
 
 const REBOOT_PROTOCOL: &str = fstatecontrol::AdminMarker::DEBUG_NAME;
@@ -537,6 +573,7 @@ async fn on_terminate_stop_triggers_reboot() {
         create_service_directory_entry::<fstatecontrol::AdminMarker>();
     let test = RoutingTestBuilder::new("root", components)
         .set_reboot_on_terminate_enabled(true)
+        .set_reboot_on_terminate_policy(vec![AllowlistEntry::Exact(vec!["system:0"].into())])
         .add_outgoing_path(
             "root",
             CapabilityPath::try_from(&reboot_protocol_path as &str).unwrap(),
@@ -595,6 +632,7 @@ async fn on_terminate_exit_triggers_reboot() {
         create_service_directory_entry::<fstatecontrol::AdminMarker>();
     let test = RoutingTestBuilder::new("root", components)
         .set_reboot_on_terminate_enabled(true)
+        .set_reboot_on_terminate_policy(vec![AllowlistEntry::Exact(vec!["system:0"].into())])
         .add_outgoing_path(
             "root",
             CapabilityPath::try_from(&reboot_protocol_path as &str).unwrap(),
@@ -649,6 +687,7 @@ async fn reboot_shutdown_does_not_trigger_reboot() {
         create_service_directory_entry::<fstatecontrol::AdminMarker>();
     let test = RoutingTestBuilder::new("root", components)
         .set_reboot_on_terminate_enabled(true)
+        .set_reboot_on_terminate_policy(vec![AllowlistEntry::Exact(vec!["system:0"].into())])
         .add_outgoing_path(
             "root",
             CapabilityPath::try_from(&reboot_protocol_path as &str).unwrap(),
@@ -697,6 +736,7 @@ async fn on_terminate_with_missing_reboot_protocol_panics() {
     ];
     let test = RoutingTestBuilder::new("root", components)
         .set_reboot_on_terminate_enabled(true)
+        .set_reboot_on_terminate_policy(vec![AllowlistEntry::Exact(vec!["system:0"].into())])
         .build()
         .await;
 
@@ -745,6 +785,7 @@ async fn on_terminate_with_failed_reboot_panics() {
         create_service_directory_entry::<fstatecontrol::AdminMarker>();
     let test = RoutingTestBuilder::new("root", components)
         .set_reboot_on_terminate_enabled(true)
+        .set_reboot_on_terminate_policy(vec![AllowlistEntry::Exact(vec!["system:0"].into())])
         .add_outgoing_path(
             "root",
             CapabilityPath::try_from(&reboot_protocol_path as &str).unwrap(),

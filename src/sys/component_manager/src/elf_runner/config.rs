@@ -147,7 +147,10 @@ mod tests {
     use {
         super::*,
         crate::{
-            config::{AllowlistEntry, JobPolicyAllowlists, RuntimeConfig, SecurityPolicy},
+            config::{
+                AllowlistEntry, ChildPolicyAllowlists, JobPolicyAllowlists, RuntimeConfig,
+                SecurityPolicy,
+            },
             model::policy::{PolicyError, ScopedPolicyChecker},
         },
         fidl_fuchsia_data as fdata,
@@ -171,6 +174,7 @@ mod tests {
                     },
                     capability_policy: HashMap::new(),
                     debug_capability_policy: HashMap::new(),
+                    child_policy: ChildPolicyAllowlists { reboot_on_terminate: vec![] },
                 },
                 ..Default::default()
             })

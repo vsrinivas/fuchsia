@@ -6,7 +6,10 @@ use {
     crate::{
         builtin::runner::BuiltinRunnerFactory,
         builtin_environment::{BuiltinEnvironment, BuiltinEnvironmentBuilder},
-        config::{AllowlistEntry, CapabilityAllowlistKey, RuntimeConfig, SecurityPolicy},
+        config::{
+            AllowlistEntry, CapabilityAllowlistKey, ChildPolicyAllowlists, RuntimeConfig,
+            SecurityPolicy,
+        },
         model::{
             binding::Binder,
             component::{BindReason, ComponentInstance, InstanceState},
@@ -82,6 +85,7 @@ pub struct RoutingTestBuilder {
     custom_outgoing_host_fns: HashMap<String, HostFn>,
     capability_policy: HashMap<CapabilityAllowlistKey, HashSet<AllowlistEntry>>,
     debug_capability_policy: HashMap<CapabilityAllowlistKey, HashSet<(AbsoluteMoniker, String)>>,
+    child_policy: ChildPolicyAllowlists,
     reboot_on_terminate_enabled: bool,
 }
 
@@ -139,6 +143,11 @@ impl RoutingTestBuilder {
 
     pub fn set_reboot_on_terminate_enabled(mut self, val: bool) -> Self {
         self.reboot_on_terminate_enabled = val;
+        self
+    }
+
+    pub fn set_reboot_on_terminate_policy(mut self, allowlist: Vec<AllowlistEntry>) -> Self {
+        self.child_policy.reboot_on_terminate = allowlist;
         self
     }
 
@@ -270,6 +279,7 @@ impl RoutingTest {
             security_policy: SecurityPolicy {
                 capability_policy: builder.capability_policy.clone(),
                 debug_capability_policy: builder.debug_capability_policy.clone(),
+                child_policy: builder.child_policy.clone(),
                 ..Default::default()
             },
             component_id_index_path: builder.component_id_index_path.clone(),
