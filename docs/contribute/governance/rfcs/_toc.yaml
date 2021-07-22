@@ -237,5 +237,7 @@ toc:
   path: /docs/contribute/governance/rfcs/0113_efficient_envelopes.md
 - title: "RFC-0114: Inlining small values in FIDL envelopes"
   path: /docs/contribute/governance/rfcs/0114_fidl_envelope_inlining.md
+- title: "RFC-0115: Build Types"
+  path: /docs/contribute/governance/rfcs/0115_build_types.md
 - title: "RFC-0116: Wire format support for sparser FIDL tables"
   path: /docs/contribute/governance/rfcs/0116_fidl_sparser_tables.md

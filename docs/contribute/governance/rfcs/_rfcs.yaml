@@ -1458,6 +1458,19 @@
   submitted: '2021-06-24'
   reviewed: '2021-07-21'
 
+- name: 'RFC-0115'
+  title: 'Build Types'
+  short_description: 'A canonical definition of product build types.'
+  authors: ['amituttam@google.com']
+  file: '0115_build_types.md'
+  area: ['System']
+  issue: []
+  gerrit_change_id: ['552446']
+  status: 'Accepted'
+  reviewers: ['abarth@google.com', 'raggi@google.com', 'wittrock@google.com', 'ampearce@google.com', 'maniscalco@google.com', 'frousseau@google.com']
+  submitted: '2021-07-06'
+  reviewed: '2021-07-21'
+
 - name: 'RFC-0116'
   title: 'Wire format support for sparser FIDL tables'
   short_description: 'This RFC introduces changes to the FIDL wire format that optimize tables for a sparser distribution of present ordinals.'
