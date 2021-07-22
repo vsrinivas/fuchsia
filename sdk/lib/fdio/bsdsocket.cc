@@ -102,6 +102,11 @@ int socket(int domain, int type, int protocol) {
       }
       client_end.channel() = result->result.mutable_response().s.TakeChannel();
     } break;
+    case SOCK_RAW:
+      if (protocol == 0) {
+        return ERRNO(EPROTONOSUPPORT);
+      }
+      return ERRNO(EPERM);
     default:
       return ERRNO(EPROTONOSUPPORT);
   }

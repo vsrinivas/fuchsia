@@ -180,6 +180,10 @@ TEST(LocalhostTest, RawSocketsNotSupported) {
   // No raw INET sockets.
   ASSERT_EQ(socket(AF_INET, SOCK_RAW, 0), -1);
   ASSERT_EQ(errno, EPROTONOSUPPORT) << strerror(errno);
+  ASSERT_EQ(socket(AF_INET, SOCK_RAW, IPPROTO_UDP), -1);
+  ASSERT_EQ(errno, EPERM) << strerror(errno);
+  ASSERT_EQ(socket(AF_INET, SOCK_RAW, IPPROTO_RAW), -1);
+  ASSERT_EQ(errno, EPERM) << strerror(errno);
 
   // No packet sockets.
   ASSERT_EQ(socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL)), -1);
