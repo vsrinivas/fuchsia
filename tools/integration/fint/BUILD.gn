@@ -7,121 +7,123 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/go/golden_go_proto.gni")
 
-golden_go_proto("build_artifacts") {
-  sources = [ "proto/build_artifacts.proto" ]
+if (is_host) {
+  golden_go_proto("build_artifacts") {
+    sources = [ "proto/build_artifacts.proto" ]
 
-  # For access to google.protobuf.Struct type.
-  import_protobuf_full = true
-}
-golden_go_proto("context") {
-  sources = [ "proto/context.proto" ]
-}
-golden_go_proto("set_artifacts") {
-  sources = [ "proto/set_artifacts.proto" ]
-}
-golden_go_proto("static") {
-  sources = [ "proto/static.proto" ]
-  generate_descriptor_set = true
-}
+    # For access to google.protobuf.Struct type.
+    import_protobuf_full = true
+  }
+  golden_go_proto("context") {
+    sources = [ "proto/context.proto" ]
+  }
+  golden_go_proto("set_artifacts") {
+    sources = [ "proto/set_artifacts.proto" ]
+  }
+  golden_go_proto("static") {
+    sources = [ "proto/static.proto" ]
+    generate_descriptor_set = true
+  }
 
-go_library("proto_lib") {
-  source_dir = "proto"
-  sources = [
-    "build_artifacts.pb.go",
-    "context.pb.go",
-    "set_artifacts.pb.go",
-    "static.pb.go",
-  ]
-  deps = [
-    # Necessary because protoc-gen-go imports the Struct type from
-    # github.com/golang/protobuf/ptypes/struct.
-    # TODO(https://fxbug.dev/70570): Remove this when we're on protoc 3.14.0 or
-    # higher.
-    "//third_party/golibs:github.com/golang/protobuf",
-    "//third_party/golibs:google.golang.org/protobuf",
-  ]
-  non_go_deps = [
-    ":build_artifacts",
-    ":context",
-    ":set_artifacts",
-    ":static",
-  ]
-}
+  go_library("proto_lib") {
+    source_dir = "proto"
+    sources = [
+      "build_artifacts.pb.go",
+      "context.pb.go",
+      "set_artifacts.pb.go",
+      "static.pb.go",
+    ]
+    deps = [
+      # Necessary because protoc-gen-go imports the Struct type from
+      # github.com/golang/protobuf/ptypes/struct.
+      # TODO(https://fxbug.dev/70570): Remove this when we're on protoc 3.14.0 or
+      # higher.
+      "//third_party/golibs:github.com/golang/protobuf",
+      "//third_party/golibs:google.golang.org/protobuf",
+    ]
+    non_go_deps = [
+      ":build_artifacts",
+      ":context",
+      ":set_artifacts",
+      ":static",
+    ]
+  }
 
-go_library("fint_lib") {
-  sources = [
-    "build.go",
-    "build_test.go",
-    "common.go",
-    "ninja.go",
-    "ninja_test.go",
-    "parse.go",
-    "parse_test.go",
-    "set.go",
-    "set_test.go",
-    "should_build.go",
-    "should_build_test.go",
-  ]
+  go_library("fint_lib") {
+    sources = [
+      "build.go",
+      "build_test.go",
+      "common.go",
+      "ninja.go",
+      "ninja_test.go",
+      "parse.go",
+      "parse_test.go",
+      "set.go",
+      "set_test.go",
+      "should_build.go",
+      "should_build_test.go",
+    ]
 
-  deps = [
-    ":proto_lib",
-    "//third_party/golibs:github.com/google/go-cmp",
-    "//third_party/golibs:github.com/google/subcommands",
-    "//third_party/golibs:google.golang.org/protobuf",
-    "//tools/build",
-    "//tools/lib/color",
-    "//tools/lib/command",
-    "//tools/lib/hostplatform",
-    "//tools/lib/isatty",
-    "//tools/lib/jsonutil",
-    "//tools/lib/logger",
-    "//tools/lib/osmisc",
-    "//tools/lib/subprocess",
-  ]
-}
+    deps = [
+      ":proto_lib",
+      "//third_party/golibs:github.com/google/go-cmp",
+      "//third_party/golibs:github.com/google/subcommands",
+      "//third_party/golibs:google.golang.org/protobuf",
+      "//tools/build",
+      "//tools/lib/color",
+      "//tools/lib/command",
+      "//tools/lib/hostplatform",
+      "//tools/lib/isatty",
+      "//tools/lib/jsonutil",
+      "//tools/lib/logger",
+      "//tools/lib/osmisc",
+      "//tools/lib/subprocess",
+    ]
+  }
 
-go_test("fint_lib_tests") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/integration/fint" ]
-  deps = [ ":fint_lib" ]
-}
+  go_test("fint_lib_tests") {
+    gopackages = [ "go.fuchsia.dev/fuchsia/tools/integration/fint" ]
+    deps = [ ":fint_lib" ]
+  }
 
-go_library("main") {
-  source_dir = "cmd/fint"
-  sources = [
-    "cmd_build.go",
-    "cmd_set.go",
-    "cmd_set_test.go",
-    "common.go",
-    "main.go",
-  ]
+  go_library("main") {
+    source_dir = "cmd/fint"
+    sources = [
+      "cmd_build.go",
+      "cmd_set.go",
+      "cmd_set_test.go",
+      "common.go",
+      "main.go",
+    ]
 
-  deps = [
-    ":fint_lib",
-    ":proto_lib",
-    "//third_party/golibs:github.com/google/subcommands",
-    "//third_party/golibs:google.golang.org/protobuf",
-    "//tools/lib/color",
-    "//tools/lib/command",
-    "//tools/lib/jsonutil",
-    "//tools/lib/logger",
-    "//tools/lib/osmisc",
-  ]
-}
+    deps = [
+      ":fint_lib",
+      ":proto_lib",
+      "//third_party/golibs:github.com/google/subcommands",
+      "//third_party/golibs:google.golang.org/protobuf",
+      "//tools/lib/color",
+      "//tools/lib/command",
+      "//tools/lib/jsonutil",
+      "//tools/lib/logger",
+      "//tools/lib/osmisc",
+    ]
+  }
 
-go_test("main_tests") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/integration/fint/cmd/fint" ]
-  deps = [ ":main" ]
-}
+  go_test("main_tests") {
+    gopackages = [ "go.fuchsia.dev/fuchsia/tools/integration/fint/cmd/fint" ]
+    deps = [ ":main" ]
+  }
 
-go_binary("fint") {
-  gopackage = "go.fuchsia.dev/fuchsia/tools/integration/fint/cmd/fint"
-  deps = [ ":main" ]
+  go_binary("fint") {
+    gopackage = "go.fuchsia.dev/fuchsia/tools/integration/fint/cmd/fint"
+    deps = [ ":main" ]
+  }
 }
 
 group("tests") {
   testonly = true
   deps = [
-    ":fint_lib_tests",
-    ":main_tests",
+    ":fint_lib_tests($host_toolchain)",
+    ":main_tests($host_toolchain)",
   ]
 }
