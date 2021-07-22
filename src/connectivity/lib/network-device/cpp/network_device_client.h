@@ -235,6 +235,7 @@ class NetworkDeviceClient : public internal::DeviceEventHandlerProxy<NetworkDevi
     uint32_t inbound_flags() const;
     uint32_t return_flags() const;
 
+    void SetPortId(uint8_t port_id);
     void SetFrameType(netdev::wire::FrameType type);
     void SetTxRequest(netdev::wire::TxFlags tx_flags);
 

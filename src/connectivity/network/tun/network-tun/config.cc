@@ -91,7 +91,7 @@ BaseDeviceConfig::BaseDeviceConfig(const fuchsia_net_tun::wire::BaseDeviceConfig
   }
 }
 
-DeviceConfig::DeviceConfig(const fuchsia_net_tun::wire::DeviceConfig2& config)
+DeviceConfig::DeviceConfig(const fuchsia_net_tun::wire::DeviceConfig& config)
     : BaseDeviceConfig([&config]() {
         if (config.has_base()) {
           return BaseDeviceConfig(config.base());

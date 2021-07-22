@@ -48,6 +48,10 @@ class TunCtl : public fidl::WireServer<fuchsia_net_tun::Control> {
   const fbl::DoublyLinkedList<std::unique_ptr<TunDevice>>& devices() const { return devices_; }
 
  private:
+  template <typename F>
+  void CreateDeviceGeneric(fuchsia_net_tun::wire::DeviceConfig& config,
+                           fidl::ServerEnd<F> server_end);
+
   void TryFireShutdownCallback();
   async_dispatcher_t* dispatcher_;
   fit::callback<void()> shutdown_callback_;

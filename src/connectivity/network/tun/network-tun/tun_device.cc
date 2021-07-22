@@ -50,7 +50,7 @@ TunDevice::TunDevice(fit::callback<void(TunDevice*)> teardown, DeviceConfig conf
       loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
 
 zx::status<std::unique_ptr<TunDevice>> TunDevice::Create(
-    fit::callback<void(TunDevice*)> teardown, const fuchsia_net_tun::wire::DeviceConfig2& config) {
+    fit::callback<void(TunDevice*)> teardown, const fuchsia_net_tun::wire::DeviceConfig& config) {
   fbl::AllocChecker ac;
   std::unique_ptr<TunDevice> tun(new (&ac) TunDevice(std::move(teardown), DeviceConfig(config)));
   if (!ac.check()) {
@@ -94,17 +94,17 @@ TunDevice::~TunDevice() {
 }
 
 void TunDevice::Bind(fidl::ServerEnd<fuchsia_net_tun::Device2> req) {
-  binding_ = fidl::BindServer<NewDevice>(
+  legacy_binding_ = fidl::BindServer<LegacyDevice>(
       loop_.dispatcher(), std::move(req), this,
-      [](NewDevice* impl, fidl::UnbindInfo, fidl::ServerEnd<fuchsia_net_tun::Device2>) {
+      [](LegacyDevice* impl, fidl::UnbindInfo, fidl::ServerEnd<fuchsia_net_tun::Device2>) {
         static_cast<TunDevice*>(impl)->Teardown();
       });
 }
 
-void TunDevice::BindLegacy(fidl::ServerEnd<fuchsia_net_tun::Device> req) {
-  legacy_binding_ = fidl::BindServer<LegacyDevice>(
+void TunDevice::Bind(fidl::ServerEnd<fuchsia_net_tun::Device> req) {
+  binding_ = fidl::BindServer<NewDevice>(
       loop_.dispatcher(), std::move(req), this,
-      [](LegacyDevice* impl, fidl::UnbindInfo, fidl::ServerEnd<fuchsia_net_tun::Device>) {
+      [](NewDevice* impl, fidl::UnbindInfo, fidl::ServerEnd<fuchsia_net_tun::Device>) {
         static_cast<TunDevice*>(impl)->Teardown();
       });
 }
@@ -275,12 +275,11 @@ void TunDevice::WriteFrame(fuchsia_net_tun::wire::Frame frame, WriteFrameCallbac
     return;
   }
   fidl::VectorView<uint8_t>& frame_data = frame.data();
-  // TODO(https://fxbug.dev/75528): Validate that frame requires port after soft transition.
-  uint8_t port_id = frame.has_port() ? frame.port() : kLegacyDefaultPort;
-  if (port_id >= fuchsia_hardware_network::wire::kMaxPorts) {
+  if (!frame.has_port() || frame.port() >= fuchsia_hardware_network::wire::kMaxPorts) {
     callback(ZX_ERR_INVALID_ARGS);
     return;
   }
+  uint8_t& port_id = frame.port();
 
   bool ready = RunWriteFrame();
   if (ready) {
@@ -376,83 +375,59 @@ void TunDevice::GetSignals(NewDevice::GetSignalsRequestView request,
   GetSignalsGeneric<NewDevice>(request, completer);
 }
 
-void TunDevice::GetState(GetStateRequestView request, GetStateCompleter::Sync& completer) {
-  // Not load bearing for out-of-tree soft transition, not implemented.
-  // See https://fxbug.dev/75528.
-  FX_LOGF(ERROR, "tun", "legacy GetState not implemented");
-  completer.Close(ZX_ERR_NOT_SUPPORTED);
-}
+template <typename F>
+void TunDevice::AddPortGeneric(typename F::AddPortRequestView& request) {
+  zx_status_t status = [&request, this]() {
+    std::optional maybe_port_config = DevicePortConfig::Create(request->config);
 
-void TunDevice::WatchState(WatchStateRequestView request, WatchStateCompleter::Sync& completer) {
-  // Not load bearing for out-of-tree soft transition, not implemented.
-  // See https://fxbug.dev/75528.
-  FX_LOGF(ERROR, "tun", "legacy WatchState not implemented");
-  completer.Close(ZX_ERR_NOT_SUPPORTED);
-}
-
-void TunDevice::SetOnline(SetOnlineRequestView request, SetOnlineCompleter::Sync& completer) {
-  ports_[kLegacyDefaultPort]->SetOnline(request->online);
-  completer.Reply();
-}
-
-void TunDevice::ConnectProtocols(ConnectProtocolsRequestView request,
-                                 ConnectProtocolsCompleter::Sync& completer) {
-  if (request->protos.has_network_device()) {
-    fidl::ServerEnd device = std::move(request->protos.network_device());
-    if (device_) {
-      zx_status_t status = device_->Bind(std::move(device));
-      if (status != ZX_OK) {
-        FX_LOGF(ERROR, "tun", "Failed to bind to network device: %s", zx_status_get_string(status));
-      }
+    if (!maybe_port_config.has_value()) {
+      return ZX_ERR_INVALID_ARGS;
     }
-  }
-  if (request->protos.has_mac_addressing()) {
-    fidl::ServerEnd mac = std::move(request->protos.mac_addressing());
-    const std::unique_ptr<MacAdapter>& mac_adapter = ports_[kLegacyDefaultPort]->adapter().mac();
-    if (mac_adapter) {
-      zx_status_t status = mac_adapter->Bind(loop_.dispatcher(), std::move(mac));
-      if (status != ZX_OK) {
-        FX_LOGF(ERROR, "tun", "Failed to bind to mac addressing: %s", zx_status_get_string(status));
-      }
+    DevicePortConfig& port_config = maybe_port_config.value();
+    std::unique_ptr<Port>& port_slot = ports_[port_config.port_id];
+    if (port_slot) {
+      return ZX_ERR_ALREADY_EXISTS;
     }
-  }
-}
 
-zx_status_t TunDevice::AddPort(const fuchsia_net_tun::wire::DevicePortConfig& config,
-                               fidl::ServerEnd<fuchsia_net_tun::Port>& request) {
-  std::optional maybe_port_config = DevicePortConfig::Create(config);
-  if (!maybe_port_config.has_value()) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-  DevicePortConfig& port_config = maybe_port_config.value();
-  std::unique_ptr<Port>& port_slot = ports_[port_config.port_id];
-  if (port_slot) {
-    return ZX_ERR_ALREADY_EXISTS;
-  }
-
-  zx::status maybe_port = Port::Create(this, port_config);
-  if (maybe_port.is_error()) {
-    return maybe_port.status_value();
-  }
-  port_slot = std::move(maybe_port.value());
-  if (request.is_valid()) {
-    port_slot->Bind(std::move(request));
-  }
-  return ZX_OK;
-}
-
-void TunDevice::AddPort(AddPortRequestView request, AddPortCompleter::Sync& _completer) {
-  zx_status_t status = AddPort(request->config, request->port);
+    zx::status maybe_port = Port::Create(this, port_config);
+    if (maybe_port.is_error()) {
+      return maybe_port.status_value();
+    }
+    port_slot = std::move(maybe_port.value());
+    port_slot->Bind(std::move(request->port));
+    return ZX_OK;
+  }();
   if (status != ZX_OK) {
     request->port.Close(status);
   }
 }
 
-void TunDevice::GetDevice(GetDeviceRequestView request, GetDeviceCompleter::Sync& _completer) {
+void TunDevice::AddPort(NewDevice::AddPortRequestView request,
+                        NewDevice::AddPortCompleter::Sync& _completer) {
+  AddPortGeneric<NewDevice>(request);
+}
+
+void TunDevice::AddPort(LegacyDevice::AddPortRequestView request,
+                        LegacyDevice::AddPortCompleter::Sync& _completer) {
+  AddPortGeneric<LegacyDevice>(request);
+}
+
+template <typename F>
+void TunDevice::GetDeviceGeneric(typename F::GetDeviceRequestView& request) {
   zx_status_t status = device_->Bind(std::move(request->device));
   if (status != ZX_OK) {
     FX_LOGF(ERROR, "tun", "Failed to bind to network device: %s", zx_status_get_string(status));
   }
+}
+
+void TunDevice::GetDevice(NewDevice::GetDeviceRequestView request,
+                          NewDevice::GetDeviceCompleter::Sync& _completer) {
+  GetDeviceGeneric<NewDevice>(request);
+}
+
+void TunDevice::GetDevice(LegacyDevice::GetDeviceRequestView request,
+                          LegacyDevice::GetDeviceCompleter::Sync& _completer) {
+  GetDeviceGeneric<LegacyDevice>(request);
 }
 
 void TunDevice::OnTxAvail(DeviceAdapter* device) {

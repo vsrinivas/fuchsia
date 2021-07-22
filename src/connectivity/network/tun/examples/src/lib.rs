@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use anyhow::{Context as _, Error};
+use fidl::endpoints::Proxy;
 use net_declare::{fidl_ip, fidl_mac, fidl_subnet};
 
 struct IpLayerConfig {
@@ -38,12 +39,15 @@ const CONFIG_FOR_TUN_LIKE: IpLayerConfig = IpLayerConfig {
     bob_ip: fidl_ip!("192.168.86.2"),
 };
 
-/// Creates a new [`fidl_fuchsia_net_tun::DeviceConfig`] using for examples
-/// using the provided `frame_type` and `mac`.
-fn new_device_config(
+/// The port identifier used in examples.
+const PORT_ID: u8 = 0;
+
+/// Creates a new [`fidl_fuchsia_net_tun::DeviceConfig`] and
+/// [`fidl_fuchsia_net_tun::DevicePortConfig`] using the provided `frame_type` and `mac`.
+fn new_device_and_port_config(
     frame_types: Vec<fidl_fuchsia_hardware_network::FrameType>,
     mac: Option<fidl_fuchsia_net::MacAddress>,
-) -> fidl_fuchsia_net_tun::DeviceConfig {
+) -> (fidl_fuchsia_net_tun::DeviceConfig, fidl_fuchsia_net_tun::DevicePortConfig) {
     let rx_types = frame_types;
     let tx_types = rx_types
         .iter()
@@ -53,30 +57,40 @@ fn new_device_config(
             supported_flags: fidl_fuchsia_hardware_network::TxFlags::empty(),
         })
         .collect();
-    fidl_fuchsia_net_tun::DeviceConfig {
-        base: Some(fidl_fuchsia_net_tun::BaseConfig {
+    let device_config = fidl_fuchsia_net_tun::DeviceConfig {
+        base: Some(fidl_fuchsia_net_tun::BaseDeviceConfig {
+            // Discard frame metadata. It is reported through the `read_frame`
+            // method.
+            report_metadata: Some(false),
+            min_tx_buffer_length: None,
+            ..fidl_fuchsia_net_tun::BaseDeviceConfig::EMPTY
+        }),
+        // Blocking will cause the read and write frame methods to block. See
+        // the documentation on fuchsia.net.tun/DeviceConfig for more details.
+        blocking: Some(true),
+
+        ..fidl_fuchsia_net_tun::DeviceConfig::EMPTY
+    };
+    let port_config = fidl_fuchsia_net_tun::DevicePortConfig {
+        base: Some(fidl_fuchsia_net_tun::BasePortConfig {
+            // The port identifier that we'll use to refer to this port.
+            id: Some(PORT_ID),
             // Device MTU reported to Netstack.
             mtu: Some(1500),
             // The frame types we're going to accept. TAP and TUN examples will
             // request different frame types.
             rx_types: Some(rx_types),
             tx_types: Some(tx_types),
-            // Discard frame metadata. It is reported through the `read_frame`
-            // method.
-            report_metadata: Some(false),
-            min_tx_buffer_length: None,
-            ..fidl_fuchsia_net_tun::BaseConfig::EMPTY
+            ..fidl_fuchsia_net_tun::BasePortConfig::EMPTY
         }),
-        // Create the device with the link online signal.
+        // Create the port with the link online signal.
         online: Some(true),
-        // Blocking will cause the read and write frame methods to block. See
-        // the documentation on fuchsia.net.tun/DeviceConfig for more details.
-        blocking: Some(true),
         // Use the MAC requested by the caller. TAP-like devices require a MAC
         // address, while TUN-like devices don't.
         mac,
-        ..fidl_fuchsia_net_tun::DeviceConfig::EMPTY
-    }
+        ..fidl_fuchsia_net_tun::DevicePortConfig::EMPTY
+    };
+    (device_config, port_config)
 }
 
 /// An example of configuring and operating a TAP-like interface using
@@ -88,35 +102,49 @@ async fn tap_like_over_network_tun() -> Result<(), Error> {
         fuchsia_component::client::connect_to_protocol::<fidl_fuchsia_net_tun::ControlMarker>()
             .context("failed to connect to service")?;
 
-    let (tun_device, server_end) =
-        fidl::endpoints::create_proxy::<fidl_fuchsia_net_tun::DeviceMarker>()
-            .context("failed to create device endpoints")?;
-
     // Define the tun device configuration we want to use.
     // For a TAP-like device, the frame type must be Ethernet, and we must
     // provide a MAC address for the virtual interface.
-    let config = new_device_config(
+    let (device_config, port_config) = new_device_and_port_config(
         vec![fidl_fuchsia_hardware_network::FrameType::Ethernet],
         Some(CONFIG_FOR_TAP_LIKE.alice_mac),
     );
 
     // Request device creation.
-    let () = tun.create_device(config, server_end).context("failed to create device")?;
+    let (tun_device, server_end) =
+        fidl::endpoints::create_proxy::<fidl_fuchsia_net_tun::DeviceMarker>()
+            .context("failed to create device endpoints")?;
+    let () = tun.create_device(device_config, server_end).context("failed to create device")?;
+    // Add a port.
+    let (_tun_port, server_end) =
+        fidl::endpoints::create_proxy::<fidl_fuchsia_net_tun::PortMarker>()
+            .context("failed to create port endpoints")?;
+    let () = tun_device.add_port(port_config, server_end).context("failed to add port")?;
 
     // Get the Netstack ends of the tun Ethernet device.
-    let (network_device, netdevice_server_end) =
-        fidl::endpoints::create_endpoints::<fidl_fuchsia_hardware_network::DeviceMarker>()
-            .context("failed to create netdevice endpoints")?;
-    let (mac, mac_server_end) =
-        fidl::endpoints::create_endpoints::<fidl_fuchsia_hardware_network::MacAddressingMarker>()
-            .context("failed to create netdevice endpoints")?;
-    let () = tun_device
-        .connect_protocols(fidl_fuchsia_net_tun::Protocols {
-            network_device: Some(netdevice_server_end),
-            mac_addressing: Some(mac_server_end),
-            ..fidl_fuchsia_net_tun::Protocols::EMPTY
-        })
-        .context("failed to connect protocols")?;
+    let (network_device, mac) = {
+        let (network_device, netdevice_server_end) =
+            fidl::endpoints::create_proxy::<fidl_fuchsia_hardware_network::DeviceMarker>()
+                .context("failed to create netdevice proxy")?;
+        let (port, port_server_end) =
+            fidl::endpoints::create_proxy::<fidl_fuchsia_hardware_network::PortMarker>()
+                .context("failed to create port proxy")?;
+        let (mac, mac_server_end) = fidl::endpoints::create_endpoints::<
+            fidl_fuchsia_hardware_network::MacAddressingMarker,
+        >()
+        .context("failed to create mac endpoints")?;
+
+        let () =
+            tun_device.get_device(netdevice_server_end).context("failed to connect protocols")?;
+        let () = network_device.get_port(PORT_ID, port_server_end).context("get_port failed")?;
+        let () = port.get_mac(mac_server_end).context("get_mac failed")?;
+        let network_device: fidl::endpoints::ClientEnd<_> = network_device
+            .into_channel()
+            .expect("failed to get inner channel")
+            .into_zx_channel()
+            .into();
+        (network_device, mac)
+    };
 
     // Connect to Netstack and install the device.
     let stack =
@@ -174,6 +202,7 @@ async fn tap_like_over_network_tun() -> Result<(), Error> {
     // and wait for the Netstack to respond.
     let () = tun_device
         .write_frame(fidl_fuchsia_net_tun::Frame {
+            port: Some(PORT_ID),
             frame_type: Some(fidl_fuchsia_hardware_network::FrameType::Ethernet),
             data: Some(helpers::bob_pings_alice_for_tap_like(&CONFIG_FOR_TAP_LIKE)),
             meta: None,
@@ -187,6 +216,8 @@ async fn tap_like_over_network_tun() -> Result<(), Error> {
     // Read frames until we see the echo response.
     loop {
         let fidl_fuchsia_net_tun::Frame {
+            // Port over which the frame was sent.
+            port,
             // The frame's type will always be Ethernet in this example. If multiple
             // frame types are supported (like IPv4 and IPv6, for example) that
             // information will be here.
@@ -203,6 +234,7 @@ async fn tap_like_over_network_tun() -> Result<(), Error> {
             .map_err(fuchsia_zircon::Status::from_raw)
             .context("read_frame failed")?;
         let data = data.ok_or_else(|| anyhow::anyhow!("received Frame with missing data field"))?;
+        assert_eq!(port, Some(PORT_ID));
         assert_eq!(frame_type, Some(fidl_fuchsia_hardware_network::FrameType::Ethernet));
         match helpers::get_icmp_response_for_tap_like(&data[..])
             .context("failed to parse ICMP response")?
@@ -217,6 +249,7 @@ async fn tap_like_over_network_tun() -> Result<(), Error> {
                     assert_eq!(sender_ip, CONFIG_FOR_TAP_LIKE.ip_layer.alice_subnet.addr);
                     let () = tun_device
                         .write_frame(fidl_fuchsia_net_tun::Frame {
+                            port: Some(PORT_ID),
                             frame_type: Some(fidl_fuchsia_hardware_network::FrameType::Ethernet),
                             data: Some(helpers::build_bob_arp_response(&CONFIG_FOR_TAP_LIKE)),
                             meta: None,
@@ -248,14 +281,10 @@ async fn tun_like_over_network_tun() -> Result<(), Error> {
         fuchsia_component::client::connect_to_protocol::<fidl_fuchsia_net_tun::ControlMarker>()
             .context("failed to connect to service")?;
 
-    let (tun_device, server_end) =
-        fidl::endpoints::create_proxy::<fidl_fuchsia_net_tun::DeviceMarker>()
-            .context("failed to create device endpoints")?;
-
     // Define the tun device configuration we want to use. For a TUN-like
     // device, the frame types must be IPv4 and IPv6, and we don't provide a MAC
     // address.
-    let config = new_device_config(
+    let (device_config, port_config) = new_device_and_port_config(
         vec![
             fidl_fuchsia_hardware_network::FrameType::Ipv4,
             fidl_fuchsia_hardware_network::FrameType::Ipv6,
@@ -264,19 +293,21 @@ async fn tun_like_over_network_tun() -> Result<(), Error> {
     );
 
     // Request device creation.
-    let () = tun.create_device(config, server_end).context("failed to create device")?;
+    let (tun_device, server_end) =
+        fidl::endpoints::create_proxy::<fidl_fuchsia_net_tun::DeviceMarker>()
+            .context("failed to create device endpoints")?;
+    let () = tun.create_device(device_config, server_end).context("failed to create device")?;
+    // Add a port.
+    let (_tun_port, server_end) =
+        fidl::endpoints::create_proxy::<fidl_fuchsia_net_tun::PortMarker>()
+            .context("failed to create port endpoints")?;
+    let () = tun_device.add_port(port_config, server_end).context("failed to add port")?;
 
     // Get the Netstack end of the tun IPv4/IPv6 device.
     let (network_device, netdevice_server_end) =
         fidl::endpoints::create_endpoints::<fidl_fuchsia_hardware_network::DeviceMarker>()
             .context("failed to create netdevice endpoints")?;
-    let () = tun_device
-        .connect_protocols(fidl_fuchsia_net_tun::Protocols {
-            network_device: Some(netdevice_server_end),
-            mac_addressing: None,
-            ..fidl_fuchsia_net_tun::Protocols::EMPTY
-        })
-        .context("failed to connect protocols")?;
+    let () = tun_device.get_device(netdevice_server_end).context("failed to get device")?;
 
     // Connect to Netstack and install the device.
     let stack =
@@ -332,6 +363,7 @@ async fn tun_like_over_network_tun() -> Result<(), Error> {
     // and wait for the Netstack to respond.
     let () = tun_device
         .write_frame(fidl_fuchsia_net_tun::Frame {
+            port: Some(PORT_ID),
             frame_type: Some(fidl_fuchsia_hardware_network::FrameType::Ipv4),
             data: Some(helpers::bob_pings_alice_for_tun_like(&CONFIG_FOR_TUN_LIKE)),
             meta: None,
@@ -345,6 +377,8 @@ async fn tun_like_over_network_tun() -> Result<(), Error> {
     // Read frames until we see the echo response.
     loop {
         let fidl_fuchsia_net_tun::Frame {
+            // Port over which the frame was sent.
+            port,
             // A TUN-like device can receive IPv4 or IPv6 frames, in this
             // example we're going to be looking only into IPv4 packets.
             frame_type,
@@ -359,6 +393,7 @@ async fn tun_like_over_network_tun() -> Result<(), Error> {
             .context("read_frame FIDL error")?
             .map_err(fuchsia_zircon::Status::from_raw)
             .context("read_frame failed")?;
+        assert_eq!(port, Some(PORT_ID));
         match frame_type {
             Some(fidl_fuchsia_hardware_network::FrameType::Ipv4) => (),
             Some(fidl_fuchsia_hardware_network::FrameType::Ipv6) => continue,

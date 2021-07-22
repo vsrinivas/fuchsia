@@ -36,47 +36,6 @@ type Signals = strict bits : uint32 {
 // the NetworkDevice interface, as receive buffers must be at least MTU-sized for valid operation.
 const MAX_MTU uint32 = 16384;
 
-// TODO(https://fxbug.dev/75528): Remove after soft transition.
-/// Common configuration used to create a `Device` or `DevicePair`.
-@deprecated("use port-based device instead")
-type BaseConfig = table {
-    /// Device MTU (maximum transmit unit).
-    ///
-    /// If a value greater than `MAX_MTU` is provided, creating a device will fail.
-    /// Defaults to `MAX_MTU`.
-    1: mtu uint32;
-    /// Supported Rx frame types for device. Required.
-    ///
-    /// Must be non-empty, otherwise creating the device will fail.
-    2: rx_types vector<fuchsia.hardware.network.FrameType>:fuchsia.hardware.network.MAX_FRAME_TYPES;
-    /// Supported Tx frame types on device. Required.
-    ///
-    /// Must be non-empty, otherwise creating the device will fail.
-    3: tx_types
-            vector<fuchsia.hardware.network.FrameTypeSupport>:fuchsia.hardware.network.MAX_FRAME_TYPES;
-    /// Report frame metadata on receiving frames. Defaults to `false`.
-    4: report_metadata bool;
-    /// Minimum requested TX buffer length, in bytes. Defaults to zero.
-    5: min_tx_buffer_length uint32;
-};
-
-// TODO(https://fxbug.dev/75528): Remove after soft transition.
-/// Configuration used to create a [`fuchsia.net.tun/Device`].
-@deprecated("use port-based device instead")
-type DeviceConfig = table {
-    /// Common configuration. Required.
-    1: base BaseConfig;
-    /// Start device with link online. Defaults to `false`.
-    2: online bool;
-    /// If `true`, [`fuchsia.net.tun/Device.WriteFrame`] and [`fuchsia.net.tun/Device.ReadFrame`]
-    /// will block returning until the corresponding buffers are available to complete the call.
-    /// Defaults to `false`.
-    3: blocking bool;
-    /// MAC address to report. If provided, device will support the
-    /// [`fuchsia.hardware.network/MacAddressing`] protocol through `ConnectProtocols`.
-    4: mac fuchsia.net.MacAddress;
-};
-
 /// Logical device port configuration.
 type BasePortConfig = table {
     /// Port identifier. Required.
@@ -97,7 +56,7 @@ type BasePortConfig = table {
             vector<fuchsia.hardware.network.FrameTypeSupport>:fuchsia.hardware.network.MAX_FRAME_TYPES;
 };
 
-/// Logical port configuration for [`fuchsia.net.tun/Device2`] ports.
+/// Logical port configuration for [`fuchsia.net.tun/Device`] ports.
 type DevicePortConfig = table {
     /// Base port configuration. Required.
     1: base BasePortConfig;
@@ -133,13 +92,20 @@ type BaseDeviceConfig = table {
     3: min_rx_buffer_length uint32;
 };
 
-/// Configuration used to create a [`fuchsia.net.tun/Device2`].
-type DeviceConfig2 = table {
+/// Configuration used to create a [`fuchsia.net.tun/Device`].
+type DeviceConfig = table {
     /// Base device configuration. Defaults to empty.
     1: base BaseDeviceConfig;
-    /// If `true`, [`fuchsia.net.tun/Device2.WriteFrame`] and [`fuchsia.net.tun/Device2.ReadFrame`]
+    /// If `true`, [`fuchsia.net.tun/Device.WriteFrame`] and [`fuchsia.net.tun/Device.ReadFrame`]
     /// will block returning until the corresponding buffers are available to complete the call.
     /// Defaults to `false`.
+    2: blocking bool;
+};
+
+// TODO(https://fxbug.dev/75528): Remove after soft transition.
+@deprecated("use DeviceConfig instead")
+type DeviceConfig2 = table {
+    1: base BaseDeviceConfig;
     2: blocking bool;
 };
 
@@ -192,20 +158,6 @@ type FrameMetadata = struct {
     flags uint32;
 };
 
-// TODO(https://fxbug.dev/75528): Remove after soft transition.
-/// Collection of request protocols that tun devices can offer.
-@deprecated("use port-based device instead")
-type Protocols = resource table {
-    /// Connection request to the [`fuchsia.hardware.network/Device`] protocol.
-    ///
-    /// The request is always fulfilled.
-    1: network_device server_end:fuchsia.hardware.network.Device;
-    /// Connection request to the [`fuchsia.hardware.network/MacAddressing`] protocol.
-    ///
-    /// The request will be immediately closed if the device was not created with a MAC address.
-    2: mac_addressing server_end:fuchsia.hardware.network.MacAddressing;
-};
-
 /// A frame written to or read from a [`fuchsia.net.tun/Device`].
 ///
 /// Required fields must always be provided to [`fuchsia.net.tun/Port.WriteFrame`] and are always
@@ -217,83 +169,11 @@ type Frame = table {
     2: data bytes:MAX_MTU;
     /// Metadata associated with the frame.
     3: meta FrameMetadata;
-    /// Frame's destination or source port identifier.
-    ///
-    /// Interpreted as 0 if not present.
-    // TODO(https://fxbug.dev/75528): Make this field required after soft transition.
+    /// Frame's destination or source port identifier. Required.
     4: port fuchsia.hardware.network.port_id;
 };
 
-// TODO(https://fxbug.dev/75528): Remove after soft transition. As part of the soft transition into
-// multiport devices, this protocol acts like a Device2 with one fixed port that is added on
-// creation. That allows it to provide port related methods until the soft transition is complete.
-/// Provides control over the created device.
-///
-/// The lifetime of the device is tied to the channel over which this protocol is served; closing a
-/// `Device` channel will trigger the destruction and deallocation of the underlying device, as well
-/// as all associated endpoints.
-@deprecated("use port-based device instead")
-protocol Device {
-    /// Writes a frame to the device (data coming from network-end).
-    /// Returns `ZX_ERR_BAD_STATE` if the device is offline.
-    ///
-    /// If the device was created with the [`fuchsia.net.tun/DeviceConfig.blocking`] option set to
-    /// `true`, calls to `WriteFrame` will block until there is one buffer available to fulfill the
-    /// request. Up to [`fuchsia.net.tun/MAX_PENDING_OPERATIONS`] calls to `WriteFrame` may be
-    /// enqueued in such a way, after which `ZX_ERR_NO_RESOURCES` is returned.
-    ///
-    /// Alternatively, if `blocking` is set to `false` calls to `WriteFrame` will return
-    /// `ZX_ERR_SHOULD_WAIT` if there are no buffers available to fulfill the request.
-    WriteFrame(struct {
-        frame Frame;
-    }) -> (struct {}) error zx.status;
-    /// Gets the next frame from the device (data coming from host-end).
-    ///
-    /// If the device was created with the [`fuchsia.net.tun/DeviceConfig.blocking`] option set to
-    /// `true`, calls to `ReadFrame` will block until there is a frame available to be read. Up to
-    /// [`fuchsia.net.tun/MAX_PENDING_OPERATIONS`] calls to `ReadFrame` may be enqueued in such a
-    /// way, after which `ZX_ERR_NO_RESOURCES` is returned.
-    ///
-    /// Alternatively, if `blocking` is set to `false` calls to `ReadFrame` will return
-    /// `ZX_ERR_SHOULD_WAIT` if there are no frames to be read.
-    ReadFrame() -> (struct {
-        frame Frame;
-    }) error zx.status;
-    /// Retrieves an eventpair that is signalled with `SIGNAL_READABLE` and `SIGNAL_WRITABLE` when
-    /// read and write buffers are available, respectively.
-    GetSignals() -> (resource struct {
-        signals zx.handle:EVENTPAIR;
-    });
-    /// Gets a snapshot of the port's internal state.
-    GetState() -> (struct {
-        state InternalState;
-    });
-    /// Observes changes to internal state.
-    ///
-    /// The first call will always return the current internal state, subsequent calls will block
-    /// until the internal state differs from the last one returned from a `WatchState` call.
-    ///
-    /// `WatchState` does not provide full history of internal state changes. It is possible that
-    /// intermediary internal state changes are missed in between `WatchState` calls.
-    WatchState() -> (struct {
-        state InternalState;
-    });
-    /// Sets the device's online status.
-    ///
-    /// The online status is visible through [`fuchsia.hardware.network/Port.GetStatus`]. Once
-    /// `SetOnline` returns, the status reported through `GetStatus` is guaranteed to be the one
-    /// passed to `SetOnline`, no guarantees can be made otherwise due to the asynchronous nature of
-    /// multi-channel operations.
-    SetOnline(struct {
-        online bool;
-    }) -> ();
-    /// Connects to the requested protocols for this `Device`.
-    ConnectProtocols(resource struct {
-        protos Protocols;
-    });
-};
-
-/// A logical port attached to a [`fuchsia.net.tun/Device2`].
+/// A logical port attached to a [`fuchsia.net.tun/Device`].
 ///
 /// The lifetime of the logical port is tied to the channel over which this protocol is served;
 /// closing a `Port` channel will trigger the destruction of the associated
@@ -329,7 +209,7 @@ protocol Port {
 /// The lifetime of the device is tied to the channel over which this protocol is served; closing a
 /// `Device` channel will trigger the destruction and deallocation of the underlying device, as well
 /// as all associated ports and endpoints.
-protocol Device2 {
+protocol Device {
     /// Writes a frame to the device (data coming from network-end).
     /// Returns `ZX_ERR_BAD_STATE` if the device is offline.
     ///
@@ -368,6 +248,27 @@ protocol Device2 {
         port server_end:Port;
     });
     /// Connects to the underlying device endpoint.
+    GetDevice(resource struct {
+        device server_end:fuchsia.hardware.network.Device;
+    });
+};
+
+// TODO(https://fxbug.dev/75528): Remove after soft transition.
+@deprecated("use Device instead")
+protocol Device2 {
+    WriteFrame(struct {
+        frame Frame;
+    }) -> (struct {}) error zx.status;
+    ReadFrame() -> (struct {
+        frame Frame;
+    }) error zx.status;
+    GetSignals() -> (resource struct {
+        signals zx.handle:EVENTPAIR;
+    });
+    AddPort(resource struct {
+        config DevicePortConfig;
+        port server_end:Port;
+    });
     GetDevice(resource struct {
         device server_end:fuchsia.hardware.network.Device;
     });
@@ -415,18 +316,18 @@ protocol DevicePair {
 /// `Control` allows creating an arbitrary number of `Device`s and `DevicePair`s.
 @discoverable
 protocol Control {
-    // TODO(https://fxbug.dev/75528): Remove after soft transition.
     /// Creates a `Device` with given `config`.
     /// If `config` is not valid or the device could not be created, `device` is closed with an
     /// error epitaph.
-    @deprecated("use port-based device instead")
     CreateDevice(resource struct {
         config DeviceConfig;
         device server_end:Device;
     });
+    // TODO(https://fxbug.dev/75528): Remove after soft transition.
     /// Creates a `Device2` with given `config`.
     /// If `config` is not valid or the device could not be created, `device` is closed with an
     /// error epitaph.
+    @deprecated("use CreateDevice instead")
     CreateDevice2(resource struct {
         config DeviceConfig2;
         device server_end:Device2;

@@ -29,7 +29,7 @@ const TUN_PORT_ID: u8 = 0;
 
 #[derive(Debug)]
 pub struct TunNetworkInterface {
-    tun_dev: ftun::Device2Proxy,
+    tun_dev: ftun::DeviceProxy,
     tun_port: ftun::PortProxy,
     stack: fnetstack::StackProxy,
     stack_sync: Mutex<fnetstack::StackSynchronousProxy>,
@@ -41,11 +41,11 @@ impl TunNetworkInterface {
     pub async fn try_new(name: Option<String>) -> Result<TunNetworkInterface, Error> {
         let tun_control = connect_to_protocol::<ftun::ControlMarker>()?;
 
-        let (tun_dev, req) = create_proxy::<ftun::Device2Marker>()?;
+        let (tun_dev, req) = create_proxy::<ftun::DeviceMarker>()?;
 
         tun_control
-            .create_device2(
-                ftun::DeviceConfig2 { blocking: Some(true), ..ftun::DeviceConfig2::EMPTY },
+            .create_device(
+                ftun::DeviceConfig { blocking: Some(true), ..ftun::DeviceConfig::EMPTY },
                 req,
             )
             .context("failed to create tun pair")?;

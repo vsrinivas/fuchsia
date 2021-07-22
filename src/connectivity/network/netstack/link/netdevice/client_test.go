@@ -112,9 +112,9 @@ func tunCtl(t *testing.T) *tun.ControlWithCtxInterface {
 	return tunCtl
 }
 
-func newTunDeviceRequest(t *testing.T) (tun.Device2WithCtxInterfaceRequest, *tun.Device2WithCtxInterface) {
+func newTunDeviceRequest(t *testing.T) (tun.DeviceWithCtxInterfaceRequest, *tun.DeviceWithCtxInterface) {
 	t.Helper()
-	deviceRequest, device, err := tun.NewDevice2WithCtxInterfaceRequest()
+	deviceRequest, device, err := tun.NewDeviceWithCtxInterfaceRequest()
 	if err != nil {
 		t.Fatalf("failed to create tun device request: %s", err)
 	}
@@ -196,16 +196,16 @@ func newTunDevicePairRequest(t *testing.T) (tun.DevicePairWithCtxInterfaceReques
 	return deviceRequest, device
 }
 
-func createTunWithConfig(t *testing.T, ctx context.Context, config tun.DeviceConfig2) *tun.Device2WithCtxInterface {
+func createTunWithConfig(t *testing.T, ctx context.Context, config tun.DeviceConfig) *tun.DeviceWithCtxInterface {
 	t.Helper()
 	deviceRequest, device := newTunDeviceRequest(t)
-	if err := tunCtl(t).CreateDevice2(ctx, config, deviceRequest); err != nil {
+	if err := tunCtl(t).CreateDevice(ctx, config, deviceRequest); err != nil {
 		t.Fatalf("tunCtl.CreateDevice failed: %s", err)
 	}
 	return device
 }
 
-func addPortWithConfig(t *testing.T, ctx context.Context, tunDev *tun.Device2WithCtxInterface, config tun.DevicePortConfig) *tun.PortWithCtxInterface {
+func addPortWithConfig(t *testing.T, ctx context.Context, tunDev *tun.DeviceWithCtxInterface, config tun.DevicePortConfig) *tun.PortWithCtxInterface {
 	t.Helper()
 	portRequest, port := newTunPortRequest(t)
 	if err := tunDev.AddPort(ctx, config, portRequest); err != nil {
@@ -214,13 +214,13 @@ func addPortWithConfig(t *testing.T, ctx context.Context, tunDev *tun.Device2Wit
 	return port
 }
 
-func createTunWithOnline(t *testing.T, ctx context.Context, online bool) (*tun.Device2WithCtxInterface, *tun.PortWithCtxInterface) {
+func createTunWithOnline(t *testing.T, ctx context.Context, online bool) (*tun.DeviceWithCtxInterface, *tun.PortWithCtxInterface) {
 	t.Helper()
 
 	var baseDeviceConfig tun.BaseDeviceConfig
 	baseDeviceConfig.SetMinTxBufferLength(uint32(TunMinTxLength))
 
-	var deviceConfig tun.DeviceConfig2
+	var deviceConfig tun.DeviceConfig
 	deviceConfig.SetBlocking(true)
 	deviceConfig.SetBase(baseDeviceConfig)
 
@@ -285,11 +285,11 @@ func createTunPair(t *testing.T, ctx context.Context, frameTypes []network.Frame
 	return device
 }
 
-func createTunClientPair(t *testing.T, ctx context.Context) (*tun.Device2WithCtxInterface, *tun.PortWithCtxInterface, *MacAddressingClient) {
+func createTunClientPair(t *testing.T, ctx context.Context) (*tun.DeviceWithCtxInterface, *tun.PortWithCtxInterface, *MacAddressingClient) {
 	return createTunClientPairWithOnline(t, ctx, true)
 }
 
-func createTunClientPairWithOnline(t *testing.T, ctx context.Context, online bool) (*tun.Device2WithCtxInterface, *tun.PortWithCtxInterface, *MacAddressingClient) {
+func createTunClientPairWithOnline(t *testing.T, ctx context.Context, online bool) (*tun.DeviceWithCtxInterface, *tun.PortWithCtxInterface, *MacAddressingClient) {
 	t.Helper()
 	tundev, tunport := createTunWithOnline(t, ctx, online)
 	netdev, mac := connectProtos(t, ctx, tundev, TunPortId)
@@ -307,7 +307,7 @@ func createTunClientPairWithOnline(t *testing.T, ctx context.Context, online boo
 	return tundev, tunport, client
 }
 
-func connectProtos(t *testing.T, ctx context.Context, tunDevice *tun.Device2WithCtxInterface, portId uint8) (*network.DeviceWithCtxInterface, *network.MacAddressingWithCtxInterface) {
+func connectProtos(t *testing.T, ctx context.Context, tunDevice *tun.DeviceWithCtxInterface, portId uint8) (*network.DeviceWithCtxInterface, *network.MacAddressingWithCtxInterface) {
 	t.Helper()
 	devReq, dev := newNetworkDeviceRequest(t)
 	macReq, mac := newMacAddressingRequest(t)
@@ -527,6 +527,7 @@ func TestReceivePacket(t *testing.T) {
 		var frame tun.Frame
 		frame.SetFrameType(network.FrameTypeEthernet)
 		frame.SetData(referenceFrame[:sendSize])
+		frame.SetPort(TunPortId)
 		status, err := tunDev.WriteFrame(ctx, frame)
 		if err != nil {
 			t.Fatalf("WriteFrame failed: %s", err)

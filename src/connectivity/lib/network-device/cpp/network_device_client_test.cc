@@ -43,7 +43,8 @@ class TestEventHandler : public fidl::WireAsyncEventHandler<T> {
 
 class NetDeviceTest : public gtest::RealLoopFixture {
  public:
-  static constexpr uint8_t kPortId = 0;
+  // Use a non zero number to prevent default memory initialization from hiding bugs.
+  static constexpr uint8_t kPortId = 4;
   NetDeviceTest() : gtest::RealLoopFixture() {}
 
   bool RunLoopUntilOrFailure(fit::function<bool()> f) {
@@ -51,8 +52,8 @@ class NetDeviceTest : public gtest::RealLoopFixture {
                                      zx::duration::infinite());
   }
 
-  tun::wire::DeviceConfig2 DefaultDeviceConfig() {
-    tun::wire::DeviceConfig2 config(alloc_);
+  tun::wire::DeviceConfig DefaultDeviceConfig() {
+    tun::wire::DeviceConfig config(alloc_);
     config.set_blocking(alloc_, true);
     return config;
   }
@@ -97,8 +98,8 @@ class NetDeviceTest : public gtest::RealLoopFixture {
     return config;
   }
 
-  zx::status<fidl::ClientEnd<tun::Device2>> OpenTunDevice(tun::wire::DeviceConfig2 config) {
-    zx::status device_endpoints = fidl::CreateEndpoints<tun::Device2>();
+  zx::status<fidl::ClientEnd<tun::Device>> OpenTunDevice(tun::wire::DeviceConfig config) {
+    zx::status device_endpoints = fidl::CreateEndpoints<tun::Device>();
     if (device_endpoints.is_error()) {
       return device_endpoints.take_error();
     }
@@ -108,14 +109,14 @@ class NetDeviceTest : public gtest::RealLoopFixture {
     }
     fidl::WireSyncClient tun = fidl::BindSyncClient(std::move(tunctl.value()));
     if (zx_status_t status =
-            tun.CreateDevice2(std::move(config), std::move(device_endpoints->server)).status();
+            tun.CreateDevice(std::move(config), std::move(device_endpoints->server)).status();
         status != ZX_OK) {
       return zx::error(status);
     }
     return zx::ok(std::move(device_endpoints->client));
   }
 
-  zx::status<fidl::ClientEnd<tun::Port>> AddTunPort(const fidl::ClientEnd<tun::Device2>& client,
+  zx::status<fidl::ClientEnd<tun::Port>> AddTunPort(const fidl::ClientEnd<tun::Device>& client,
                                                     tun::wire::DevicePortConfig config) {
     zx::status port_endpoints = fidl::CreateEndpoints<tun::Port>();
     if (port_endpoints.is_error()) {
@@ -129,8 +130,8 @@ class NetDeviceTest : public gtest::RealLoopFixture {
     return zx::ok(std::move(port_endpoints->client));
   }
 
-  zx::status<std::pair<fidl::WireSharedClient<tun::Device2>, fidl::WireSharedClient<tun::Port>>>
-  OpenTunDeviceAndPort(tun::wire::DeviceConfig2 device_config,
+  zx::status<std::pair<fidl::WireSharedClient<tun::Device>, fidl::WireSharedClient<tun::Port>>>
+  OpenTunDeviceAndPort(tun::wire::DeviceConfig device_config,
                        tun::wire::DevicePortConfig port_config) {
     zx::status device = OpenTunDevice(std::move(device_config));
     if (device.is_error()) {
@@ -142,12 +143,12 @@ class NetDeviceTest : public gtest::RealLoopFixture {
     }
     return zx::ok(std::make_pair(
         fidl::WireSharedClient(std::move(*device), dispatcher(),
-                               std::make_unique<TestEventHandler<tun::Device2>>("tun device")),
+                               std::make_unique<TestEventHandler<tun::Device>>("tun device")),
         fidl::WireSharedClient(std::move(*port), dispatcher(),
                                std::make_unique<TestEventHandler<tun::Port>>("tun port"))));
   }
 
-  zx::status<std::pair<fidl::WireSharedClient<tun::Device2>, fidl::WireSharedClient<tun::Port>>>
+  zx::status<std::pair<fidl::WireSharedClient<tun::Device>, fidl::WireSharedClient<tun::Port>>>
   OpenTunDeviceAndPort() {
     return OpenTunDeviceAndPort(DefaultDeviceConfig(), DefaultDevicePortConfig());
   }
@@ -259,15 +260,16 @@ TEST_F(NetDeviceTest, TestRxTx) {
   tun::wire::Frame frame(alloc_);
   frame.set_frame_type(alloc_, netdev::wire::FrameType::kEthernet);
   frame.set_data(alloc_, fidl::VectorView<uint8_t>::FromExternal(send_data));
+  frame.set_port(alloc_, kPortId);
   tun_device->WriteFrame(
-      std::move(frame), [&wrote_frame](fidl::WireResponse<tun::Device2::WriteFrame>* response) {
-        const tun::wire::Device2WriteFrameResult& result = response->result;
+      std::move(frame), [&wrote_frame](fidl::WireResponse<tun::Device::WriteFrame>* response) {
+        const tun::wire::DeviceWriteFrameResult& result = response->result;
         wrote_frame = true;
         switch (result.which()) {
-          case tun::wire::Device2WriteFrameResult::Tag::kErr:
+          case tun::wire::DeviceWriteFrameResult::Tag::kErr:
             FAIL() << "Failed to write to device " << zx_status_get_string(result.err());
             break;
-          case tun::wire::Device2WriteFrameResult::Tag::kResponse:
+          case tun::wire::DeviceWriteFrameResult::Tag::kResponse:
             break;
         }
       });
@@ -275,14 +277,14 @@ TEST_F(NetDeviceTest, TestRxTx) {
       << "Timed out waiting for frame; done=" << done << ", wrote_frame=" << wrote_frame;
 
   done = false;
-  tun_device->ReadFrame([&done, &send_data](fidl::WireResponse<tun::Device2::ReadFrame>* response) {
+  tun_device->ReadFrame([&done, &send_data](fidl::WireResponse<tun::Device::ReadFrame>* response) {
     done = true;
-    const tun::wire::Device2ReadFrameResult& result = response->result;
+    const tun::wire::DeviceReadFrameResult& result = response->result;
     switch (result.which()) {
-      case tun::wire::Device2ReadFrameResult::Tag::kErr:
+      case tun::wire::DeviceReadFrameResult::Tag::kErr:
         FAIL() << "Failed to read from device " << zx_status_get_string(result.err());
         break;
-      case tun::wire::Device2ReadFrameResult::Tag::kResponse:
+      case tun::wire::DeviceReadFrameResult::Tag::kResponse:
         ASSERT_EQ(result.response().frame.frame_type(), netdev::wire::FrameType::kEthernet);
         const fidl::VectorView<uint8_t>& data = result.response().frame.data();
         ASSERT_TRUE(
@@ -294,6 +296,7 @@ TEST_F(NetDeviceTest, TestRxTx) {
   auto tx = client->AllocTx();
   ASSERT_TRUE(tx.is_valid());
   tx.data().SetFrameType(fuchsia_hardware_network::wire::FrameType::kEthernet);
+  tx.data().SetPortId(kPortId);
   ASSERT_EQ(tx.data().Write(send_data.data(), send_data.size()), send_data.size());
   ASSERT_OK(tx.Send());
 
@@ -326,15 +329,16 @@ TEST_F(NetDeviceTest, TestEcho) {
       frame.set_frame_type(alloc_, netdev::wire::FrameType::kEthernet);
       frame.set_data(alloc_, fidl::VectorView<uint8_t>::FromExternal(
                                  reinterpret_cast<uint8_t*>(&frame_count), sizeof(frame_count)));
+      frame.set_port(alloc_, kPortId);
       tun_device->WriteFrame(
           std::move(frame),
-          [&write_bridge, &write_frame](fidl::WireResponse<tun::Device2::WriteFrame>* response) {
-            const tun::wire::Device2WriteFrameResult& result = response->result;
+          [&write_bridge, &write_frame](fidl::WireResponse<tun::Device::WriteFrame>* response) {
+            const tun::wire::DeviceWriteFrameResult& result = response->result;
             switch (result.which()) {
-              case tun::wire::Device2WriteFrameResult::Tag::kErr:
+              case tun::wire::DeviceWriteFrameResult::Tag::kErr:
                 write_bridge.completer.complete_error(result.err());
                 break;
-              case tun::wire::Device2WriteFrameResult::Tag::kResponse:
+              case tun::wire::DeviceWriteFrameResult::Tag::kResponse:
                 // Write another frame.
                 write_frame();
                 break;
@@ -353,6 +357,7 @@ TEST_F(NetDeviceTest, TestEcho) {
       ASSERT_TRUE(tx.is_valid()) << "Tx alloc failed at echo " << echoed;
       tx.data().SetFrameType(buffer.data().frame_type());
       tx.data().SetTxRequest(fuchsia_hardware_network::wire::TxFlags());
+      tx.data().SetPortId(kPortId);
       auto wr = tx.data().Write(buffer.data());
       EXPECT_EQ(wr, buffer.data().len());
       EXPECT_EQ(tx.Send(), ZX_OK);
@@ -371,13 +376,13 @@ TEST_F(NetDeviceTest, TestEcho) {
   fpromise::bridge<void, zx_status_t> read_bridge;
   receive_frame = [&waiting, &tun_device, &read_bridge, &receive_frame]() {
     tun_device->ReadFrame([&read_bridge, &receive_frame,
-                           &waiting](fidl::WireResponse<tun::Device2::ReadFrame>* response) {
-      const tun::wire::Device2ReadFrameResult& result = response->result;
+                           &waiting](fidl::WireResponse<tun::Device::ReadFrame>* response) {
+      const tun::wire::DeviceReadFrameResult& result = response->result;
       switch (result.which()) {
-        case tun::wire::Device2ReadFrameResult::Tag::kErr:
+        case tun::wire::DeviceReadFrameResult::Tag::kErr:
           read_bridge.completer.complete_error(result.err());
           break;
-        case tun::wire::Device2ReadFrameResult::Tag::kResponse:
+        case tun::wire::DeviceReadFrameResult::Tag::kResponse:
           EXPECT_EQ(result.response().frame.frame_type(), netdev::wire::FrameType::kEthernet);
           EXPECT_FALSE(result.response().frame.has_meta());
           if (size_t count = result.response().frame.data().count(); count != sizeof(uint32_t)) {
@@ -428,6 +433,7 @@ TEST_F(NetDeviceTest, TestEchoPair) {
     ASSERT_TRUE(tx.is_valid()) << "Tx alloc failed at echo";
     tx.data().SetFrameType(buffer.data().frame_type());
     tx.data().SetTxRequest(fuchsia_hardware_network::wire::TxFlags());
+    tx.data().SetPortId(kPortId);
     uint32_t pload;
     EXPECT_EQ(buffer.data().Read(&pload, sizeof(pload)), sizeof(pload));
     pload = ~pload;
@@ -467,6 +473,7 @@ TEST_F(NetDeviceTest, TestEchoPair) {
     auto tx = right->AllocTx();
     ASSERT_TRUE(tx.is_valid());
     tx.data().SetFrameType(fuchsia_hardware_network::wire::FrameType::kEthernet);
+    tx.data().SetPortId(kPortId);
     ASSERT_EQ(tx.data().Write(&i, sizeof(i)), sizeof(i));
     ASSERT_OK(tx.Send());
   }
@@ -593,6 +600,7 @@ TEST_F(NetDeviceTest, PadTxFrames) {
     }
     ASSERT_TRUE(tx.is_valid());
     tx.data().SetFrameType(fuchsia_hardware_network::wire::FrameType::kEthernet);
+    tx.data().SetPortId(kPortId);
     EXPECT_EQ(tx.data().Write(frame.data(), frame.size()), frame.size());
     EXPECT_EQ(tx.Send(), ZX_OK);
 
@@ -603,14 +611,14 @@ TEST_F(NetDeviceTest, PadTxFrames) {
 
     // Retrieve the frame and assert it's what we expect.
     bool done = false;
-    tun_device->ReadFrame([&done, &expect](fidl::WireResponse<tun::Device2::ReadFrame>* response) {
+    tun_device->ReadFrame([&done, &expect](fidl::WireResponse<tun::Device::ReadFrame>* response) {
       done = true;
-      const tun::wire::Device2ReadFrameResult& result = response->result;
+      const tun::wire::DeviceReadFrameResult& result = response->result;
       switch (result.which()) {
-        case tun::wire::Device2ReadFrameResult::Tag::kErr:
+        case tun::wire::DeviceReadFrameResult::Tag::kErr:
           ADD_FAILURE() << "Read frame failed " << zx_status_get_string(result.err());
           break;
-        case tun::wire::Device2ReadFrameResult::Tag::kResponse:
+        case tun::wire::DeviceReadFrameResult::Tag::kResponse:
           auto& frame = result.response().frame;
           ASSERT_EQ(frame.frame_type(), netdev::wire::FrameType::kEthernet);
           ASSERT_TRUE(std::equal(std::begin(frame.data()), std::end(frame.data()), expect.begin(),

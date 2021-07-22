@@ -752,6 +752,10 @@ void NetworkDeviceClient::BufferData::SetFrameType(netdev::wire::FrameType type)
   part(0).desc_->frame_type = static_cast<uint8_t>(type);
 }
 
+void NetworkDeviceClient::BufferData::SetPortId(uint8_t port_id) {
+  part(0).desc_->port_id = port_id;
+}
+
 netdev::wire::InfoType NetworkDeviceClient::BufferData::info_type() const {
   return static_cast<netdev::wire::InfoType>(part(0).desc_->frame_type);
 }

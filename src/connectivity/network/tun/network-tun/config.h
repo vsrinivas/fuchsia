@@ -67,7 +67,7 @@ class BaseDeviceConfig {
 
 class DeviceConfig : public BaseDeviceConfig {
  public:
-  explicit DeviceConfig(const fuchsia_net_tun::wire::DeviceConfig2& config);
+  explicit DeviceConfig(const fuchsia_net_tun::wire::DeviceConfig& config);
   DeviceConfig(DeviceConfig&&) = default;
 
   bool blocking = false;

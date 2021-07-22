@@ -324,14 +324,14 @@ async fn test_ip_endpoint_packets() {
         fuchsia_component::client::connect_to_protocol::<fidl_fuchsia_net_tun::ControlMarker>()
             .expect("failed to connect to tun service");
 
-    let (tun_dev, req) = fidl::endpoints::create_proxy::<fidl_fuchsia_net_tun::Device2Marker>()
+    let (tun_dev, req) = fidl::endpoints::create_proxy::<fidl_fuchsia_net_tun::DeviceMarker>()
         .expect("failed to create endpoints");
     let () = tun
-        .create_device2(
-            fidl_fuchsia_net_tun::DeviceConfig2 {
+        .create_device(
+            fidl_fuchsia_net_tun::DeviceConfig {
                 base: None,
                 blocking: Some(true),
-                ..fidl_fuchsia_net_tun::DeviceConfig2::EMPTY
+                ..fidl_fuchsia_net_tun::DeviceConfig::EMPTY
             },
             req,
         )
@@ -455,7 +455,7 @@ async fn test_ip_endpoint_packets() {
     pin_utils::pin_mut!(read_frame);
 
     async fn write_frame_and_read_with_timeout<S>(
-        tun_dev: &fidl_fuchsia_net_tun::Device2Proxy,
+        tun_dev: &fidl_fuchsia_net_tun::DeviceProxy,
         frame: fidl_fuchsia_net_tun::Frame,
         read_frame: &mut S,
     ) -> Result<Option<S::Ok>>

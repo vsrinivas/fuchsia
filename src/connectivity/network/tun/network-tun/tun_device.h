@@ -27,8 +27,8 @@ class TunTest;
 
 // TODO(https://fxbug.dev/75528): Remove after soft transition. Aliases are here to allow for easy
 // disambiguation.
-using LegacyDevice = fidl::WireServer<fuchsia_net_tun::Device>;
-using NewDevice = fidl::WireServer<fuchsia_net_tun::Device2>;
+using LegacyDevice = fidl::WireServer<fuchsia_net_tun::Device2>;
+using NewDevice = fidl::WireServer<fuchsia_net_tun::Device>;
 
 // Implements `fuchsia.net.tun.Device`.
 //
@@ -40,54 +40,36 @@ class TunDevice : public fbl::DoublyLinkedListable<std::unique_ptr<TunDevice>>,
                   public DeviceAdapterParent {
  public:
   static constexpr size_t kMaxPendingOps = fuchsia_net_tun::wire::kMaxPendingOperations;
-  // TODO(https://fxbug.dev/75528): Remove port fallback after soft transition.
-  static constexpr uint8_t kLegacyDefaultPort = 0;
 
   // Creates a new `TunDevice` with `config`.
   // `teardown` is called when all the bound client channels are closed.
   static zx::status<std::unique_ptr<TunDevice>> Create(
-      fit::callback<void(TunDevice*)> teardown, const fuchsia_net_tun::wire::DeviceConfig2& config);
+      fit::callback<void(TunDevice*)> teardown, const fuchsia_net_tun::wire::DeviceConfig& config);
   ~TunDevice() override;
 
-  // TODO(https://fxbug.dev/75528): Remove protocol agnostic forms after soft transition.
-  using WriteFrameCallback = fit::callback<void(zx_status_t)>;
-  void WriteFrame(fuchsia_net_tun::wire::Frame frame, WriteFrameCallback callback);
-  using ReadFrameCallback = fit::callback<void(zx::status<fuchsia_net_tun::wire::Frame>)>;
-  void ReadFrame(ReadFrameCallback callback);
-  zx_status_t AddPort(const fuchsia_net_tun::wire::DevicePortConfig& config,
-                      fidl::ServerEnd<fuchsia_net_tun::Port>& request);
-  template <typename F>
-  void WriteFrameGeneric(typename F::WriteFrameRequestView& request,
-                         typename F::WriteFrameCompleter::Sync& completer);
-  template <typename F>
-  void ReadFrameGeneric(typename F::ReadFrameRequestView& request,
-                        typename F::ReadFrameCompleter::Sync& completer);
-  template <typename F>
-  void GetSignalsGeneric(typename F::GetSignalsRequestView& request,
-                         typename F::GetSignalsCompleter::Sync& completer);
-
-  // fuchsia.net.tun.Device implementation:
+  // fuchsia.net.tun.Device2 implementation:
   void WriteFrame(LegacyDevice::WriteFrameRequestView request,
                   LegacyDevice::WriteFrameCompleter::Sync& completer) override;
   void ReadFrame(LegacyDevice::ReadFrameRequestView request,
                  LegacyDevice::ReadFrameCompleter::Sync& completer) override;
-  void GetState(GetStateRequestView request, GetStateCompleter::Sync& completer) override;
-  void WatchState(WatchStateRequestView request, WatchStateCompleter::Sync& completer) override;
-  void SetOnline(SetOnlineRequestView request, SetOnlineCompleter::Sync& completer) override;
-  void ConnectProtocols(ConnectProtocolsRequestView request,
-                        ConnectProtocolsCompleter::Sync& completer) override;
   void GetSignals(LegacyDevice::GetSignalsRequestView request,
                   LegacyDevice::GetSignalsCompleter::Sync& completer) override;
+  void AddPort(LegacyDevice::AddPortRequestView request,
+               LegacyDevice::AddPortCompleter::Sync& _completer) override;
+  void GetDevice(LegacyDevice::GetDeviceRequestView request,
+                 LegacyDevice::GetDeviceCompleter::Sync& _completer) override;
 
-  // fuchsia.net.tun.Device2 implementation:
+  // fuchsia.net.tun.Device implementation:
   void WriteFrame(NewDevice::WriteFrameRequestView request,
                   NewDevice::WriteFrameCompleter::Sync& completer) override;
   void ReadFrame(NewDevice::ReadFrameRequestView request,
                  NewDevice::ReadFrameCompleter::Sync& completer) override;
   void GetSignals(NewDevice::GetSignalsRequestView request,
                   NewDevice::GetSignalsCompleter::Sync& completer) override;
-  void AddPort(AddPortRequestView request, AddPortCompleter::Sync& _completer) override;
-  void GetDevice(GetDeviceRequestView request, GetDeviceCompleter::Sync& _completer) override;
+  void AddPort(NewDevice::AddPortRequestView request,
+               NewDevice::AddPortCompleter::Sync& _completer) override;
+  void GetDevice(NewDevice::GetDeviceRequestView request,
+                 NewDevice::GetDeviceCompleter::Sync& _completer) override;
 
   // DeviceAdapterParent implementation:
   const BaseDeviceConfig& config() const override { return config_; };
@@ -98,8 +80,8 @@ class TunDevice : public fbl::DoublyLinkedListable<std::unique_ptr<TunDevice>>,
   // Requests are served over this device's owned loop.
   // NOTE: at this moment only one binding is supported, if the device is already bound the previous
   // channel is closed.
+  void Bind(fidl::ServerEnd<fuchsia_net_tun::Device> req);
   void Bind(fidl::ServerEnd<fuchsia_net_tun::Device2> req);
-  void BindLegacy(fidl::ServerEnd<fuchsia_net_tun::Device> req);
 
  protected:
   friend testing::TunTest;
@@ -145,6 +127,27 @@ class TunDevice : public fbl::DoublyLinkedListable<std::unique_ptr<TunDevice>>,
     std::optional<fidl::ServerBindingRef<fuchsia_net_tun::Port>> binding_;
   };
 
+  // TODO(https://fxbug.dev/75528): Remove protocol agnostic forms after soft transition.
+  using WriteFrameCallback = fit::callback<void(zx_status_t)>;
+  void WriteFrame(fuchsia_net_tun::wire::Frame frame, WriteFrameCallback callback);
+  using ReadFrameCallback = fit::callback<void(zx::status<fuchsia_net_tun::wire::Frame>)>;
+  void ReadFrame(ReadFrameCallback callback);
+  zx_status_t AddPort(const fuchsia_net_tun::wire::DevicePortConfig& config,
+                      fidl::ServerEnd<fuchsia_net_tun::Port>& request);
+  template <typename F>
+  void WriteFrameGeneric(typename F::WriteFrameRequestView& request,
+                         typename F::WriteFrameCompleter::Sync& completer);
+  template <typename F>
+  void ReadFrameGeneric(typename F::ReadFrameRequestView& request,
+                        typename F::ReadFrameCompleter::Sync& completer);
+  template <typename F>
+  void GetSignalsGeneric(typename F::GetSignalsRequestView& request,
+                         typename F::GetSignalsCompleter::Sync& completer);
+  template <typename F>
+  void AddPortGeneric(typename F::AddPortRequestView& request);
+  template <typename F>
+  void GetDeviceGeneric(typename F::GetDeviceRequestView& request);
+
   TunDevice(fit::callback<void(TunDevice*)> teardown, DeviceConfig config);
   // Completes a single WriteFrame request. Returns true iff a reply was sent on the callback.
   template <typename F, typename C>
@@ -163,8 +166,8 @@ class TunDevice : public fbl::DoublyLinkedListable<std::unique_ptr<TunDevice>>,
 
   async::Loop loop_;
   std::optional<thrd_t> loop_thread_;
-  std::optional<fidl::ServerBindingRef<fuchsia_net_tun::Device2>> binding_;
-  std::optional<fidl::ServerBindingRef<fuchsia_net_tun::Device>> legacy_binding_;
+  std::optional<fidl::ServerBindingRef<fuchsia_net_tun::Device>> binding_;
+  std::optional<fidl::ServerBindingRef<fuchsia_net_tun::Device2>> legacy_binding_;
   std::unique_ptr<DeviceAdapter> device_;
 
   std::array<std::unique_ptr<Port>, MAX_PORTS> ports_;
@@ -184,7 +187,7 @@ class TunDevice : public fbl::DoublyLinkedListable<std::unique_ptr<TunDevice>>,
 
     PendingWriteRequest(const fuchsia_net_tun::wire::Frame& frame, WriteFrameCallback callback)
         : callback(std::move(callback)) {
-      port_id = frame.has_port() ? frame.port() : kLegacyDefaultPort;
+      port_id = frame.port();
       frame_type = frame.frame_type();
       std::copy(std::begin(frame.data()), std::end(frame.data()), std::back_inserter(data));
       if (frame.has_meta()) {

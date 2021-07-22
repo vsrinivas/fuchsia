@@ -57,7 +57,7 @@ zx::status<fidl::ClientEnd<fuchsia_hardware_network::StatusWatcher>> GetStatusWa
 }
 
 zx::status<fidl::ClientEnd<fuchsia_hardware_network::MacAddressing>> GetMacAddressing(
-    fidl::WireSyncClient<fuchsia_net_tun::Device2>& tun, uint8_t port_id) {
+    fidl::WireSyncClient<fuchsia_net_tun::Device>& tun, uint8_t port_id) {
   zx::status endpoints = fidl::CreateEndpoints<fuchsia_hardware_network::MacAddressing>();
   if (endpoints.is_error()) {
     return endpoints.take_error();
@@ -470,8 +470,8 @@ class TunTest : public gtest::RealLoopFixture {
     return config;
   }
 
-  fuchsia_net_tun::wire::DeviceConfig2 DefaultDeviceConfig() {
-    fuchsia_net_tun::wire::DeviceConfig2 config(alloc_);
+  fuchsia_net_tun::wire::DeviceConfig DefaultDeviceConfig() {
+    fuchsia_net_tun::wire::DeviceConfig config(alloc_);
     config.set_blocking(alloc_, true);
     return config;
   }
@@ -496,9 +496,9 @@ class TunTest : public gtest::RealLoopFixture {
     return config;
   }
 
-  zx::status<fidl::ClientEnd<fuchsia_net_tun::Device2>> CreateDevice(
-      fuchsia_net_tun::wire::DeviceConfig2 config) {
-    zx::status endpoints = fidl::CreateEndpoints<fuchsia_net_tun::Device2>();
+  zx::status<fidl::ClientEnd<fuchsia_net_tun::Device>> CreateDevice(
+      fuchsia_net_tun::wire::DeviceConfig config) {
+    zx::status endpoints = fidl::CreateEndpoints<fuchsia_net_tun::Device>();
     if (endpoints.is_error()) {
       return endpoints.take_error();
     }
@@ -507,7 +507,7 @@ class TunTest : public gtest::RealLoopFixture {
       return tun.take_error();
     }
     fidl::WireResult result =
-        tun.value().CreateDevice2(std::move(config), std::move(endpoints->server));
+        tun.value().CreateDevice(std::move(config), std::move(endpoints->server));
     if (!result.ok()) {
       return zx::error(result.status());
     }
@@ -515,8 +515,8 @@ class TunTest : public gtest::RealLoopFixture {
   }
 
   zx::status<
-      std::pair<fidl::ClientEnd<fuchsia_net_tun::Device2>, fidl::ClientEnd<fuchsia_net_tun::Port>>>
-  CreateDeviceAndPort(fuchsia_net_tun::wire::DeviceConfig2 device_config,
+      std::pair<fidl::ClientEnd<fuchsia_net_tun::Device>, fidl::ClientEnd<fuchsia_net_tun::Port>>>
+  CreateDeviceAndPort(fuchsia_net_tun::wire::DeviceConfig device_config,
                       fuchsia_net_tun::wire::DevicePortConfig port_config) {
     zx::status device = CreateDevice(std::move(device_config));
     if (device.is_error()) {
@@ -880,7 +880,7 @@ TEST_F(TunTest, NoMac) {
 }
 
 TEST_F(TunTest, SimpleRxTx) {
-  fuchsia_net_tun::wire::DeviceConfig2 device_config = DefaultDeviceConfig();
+  fuchsia_net_tun::wire::DeviceConfig device_config = DefaultDeviceConfig();
   fuchsia_net_tun::wire::DevicePortConfig port_config = DefaultDevicePortConfig();
   port_config.set_online(alloc_, true);
   device_config.set_blocking(alloc_, false);
@@ -906,14 +906,14 @@ TEST_F(TunTest, SimpleRxTx) {
   {
     fidl::WireResult read_frame_wire_result = tun.ReadFrame();
     ASSERT_OK(read_frame_wire_result.status());
-    fuchsia_net_tun::wire::Device2ReadFrameResult read_frame_result =
+    fuchsia_net_tun::wire::DeviceReadFrameResult read_frame_result =
         read_frame_wire_result.value().result;
     switch (read_frame_result.which()) {
-      case fuchsia_net_tun::wire::Device2ReadFrameResult::Tag::kResponse:
+      case fuchsia_net_tun::wire::DeviceReadFrameResult::Tag::kResponse:
         GTEST_FAIL() << "Got frame with " << read_frame_result.response().frame.data().count()
                      << "bytes, expected error";
         break;
-      case fuchsia_net_tun::wire::Device2ReadFrameResult::Tag::kErr:
+      case fuchsia_net_tun::wire::DeviceReadFrameResult::Tag::kErr:
         ASSERT_STATUS(read_frame_result.err(), ZX_ERR_SHOULD_WAIT);
         break;
     }
@@ -929,10 +929,10 @@ TEST_F(TunTest, SimpleRxTx) {
   {
     fidl::WireResult read_frame_wire_result = tun.ReadFrame();
     ASSERT_OK(read_frame_wire_result.status());
-    fuchsia_net_tun::wire::Device2ReadFrameResult read_frame_result =
+    fuchsia_net_tun::wire::DeviceReadFrameResult read_frame_result =
         read_frame_wire_result.value().result;
     switch (read_frame_result.which()) {
-      case fuchsia_net_tun::wire::Device2ReadFrameResult::Tag::kResponse:
+      case fuchsia_net_tun::wire::DeviceReadFrameResult::Tag::kResponse:
         ASSERT_EQ(read_frame_result.response().frame.frame_type(),
                   fuchsia_hardware_network::wire::FrameType::kEthernet);
         ASSERT_EQ(read_frame_result.response().frame.port(), kDefaultTestPort);
@@ -940,7 +940,7 @@ TEST_F(TunTest, SimpleRxTx) {
             SimpleClient::ValidateData(read_frame_result.response().frame.data(), 0x00));
         ASSERT_FALSE(read_frame_result.response().frame.has_meta());
         break;
-      case fuchsia_net_tun::wire::Device2ReadFrameResult::Tag::kErr:
+      case fuchsia_net_tun::wire::DeviceReadFrameResult::Tag::kErr:
         GTEST_FAIL() << "ReadFrame failed: " << zx_status_get_string(read_frame_result.err());
         break;
     }
@@ -953,7 +953,7 @@ TEST_F(TunTest, SimpleRxTx) {
 
   // Attempting to send a frame without any available buffers should fail with should_wait and the
   // writable signal should not be set.
-  fuchsia_net_tun::wire::Device2WriteFrameResult write_frame_result;
+  fuchsia_net_tun::wire::DeviceWriteFrameResult write_frame_result;
   {
     fuchsia_net_tun::wire::Frame frame(alloc_);
     frame.set_frame_type(alloc_, fuchsia_hardware_network::wire::FrameType::kEthernet);
@@ -963,13 +963,13 @@ TEST_F(TunTest, SimpleRxTx) {
     fidl::WireResult write_frame_wire_result = tun.WriteFrame(std::move(frame));
     ASSERT_OK(write_frame_wire_result.status());
 
-    fuchsia_net_tun::wire::Device2WriteFrameResult write_frame_result =
+    fuchsia_net_tun::wire::DeviceWriteFrameResult write_frame_result =
         write_frame_wire_result.value().result;
     switch (write_frame_result.which()) {
-      case fuchsia_net_tun::wire::Device2WriteFrameResult::Tag::kResponse:
+      case fuchsia_net_tun::wire::DeviceWriteFrameResult::Tag::kResponse:
         GTEST_FAIL() << "WriteFrame succeeded unexpectedly";
         break;
-      case fuchsia_net_tun::wire::Device2WriteFrameResult::Tag::kErr:
+      case fuchsia_net_tun::wire::DeviceWriteFrameResult::Tag::kErr:
         ASSERT_STATUS(write_frame_result.err(), ZX_ERR_SHOULD_WAIT);
         ASSERT_STATUS(
             signals.wait_one(static_cast<uint32_t>(fuchsia_net_tun::wire::Signals::kWritable),
@@ -993,12 +993,12 @@ TEST_F(TunTest, SimpleRxTx) {
     fidl::WireResult write_frame_wire_result = tun.WriteFrame(std::move(frame));
     ASSERT_OK(write_frame_wire_result.status());
 
-    fuchsia_net_tun::wire::Device2WriteFrameResult write_frame_result =
+    fuchsia_net_tun::wire::DeviceWriteFrameResult write_frame_result =
         write_frame_wire_result.value().result;
     switch (write_frame_result.which()) {
-      case fuchsia_net_tun::wire::Device2WriteFrameResult::Tag::kResponse:
+      case fuchsia_net_tun::wire::DeviceWriteFrameResult::Tag::kResponse:
         break;
-      case fuchsia_net_tun::wire::Device2WriteFrameResult::Tag::kErr:
+      case fuchsia_net_tun::wire::DeviceWriteFrameResult::Tag::kErr:
         GTEST_FAIL() << "WriteFrame failed: " << zx_status_get_string(write_frame_result.err());
         break;
     }
@@ -1197,6 +1197,89 @@ TEST_F(TunTest, PairInfallibleWrites) {
   EXPECT_EQ(desc, 0x01);
 }
 
+TEST_F(TunTest, RejectsMissingFrameFields) {
+  zx::status device_and_port =
+      CreateDeviceAndPort(DefaultDeviceConfig(), DefaultDevicePortConfig());
+
+  ASSERT_OK(device_and_port.status_value());
+  auto& [device_client_end, port_client_end] = *device_and_port;
+  fidl::WireSyncClient tun = fidl::BindSyncClient(std::move(device_client_end));
+  fidl::WireSyncClient tun_port = fidl::BindSyncClient(std::move(port_client_end));
+
+  std::vector<uint8_t> empty_vec;
+
+  const struct {
+    const char* name;
+    fit::function<void(fuchsia_net_tun::wire::Frame&)> update_frame;
+    zx_status_t expect;
+  } kTests[] = {
+      {
+          .name = "baseline",
+          .update_frame = [](fuchsia_net_tun::wire::Frame& frame) {},
+          // Baseline, port is offline.
+          .expect = ZX_ERR_BAD_STATE,
+      },
+      {
+          .name = "no frame type",
+          .update_frame =
+              [](fuchsia_net_tun::wire::Frame& frame) { frame.set_frame_type(nullptr); },
+          .expect = ZX_ERR_INVALID_ARGS,
+      },
+      {
+          .name = "no data",
+          .update_frame = [](fuchsia_net_tun::wire::Frame& frame) { frame.set_data(nullptr); },
+          .expect = ZX_ERR_INVALID_ARGS,
+      },
+      {
+          .name = "empty data",
+          .update_frame =
+              [this, &empty_vec](fuchsia_net_tun::wire::Frame& frame) {
+                frame.set_data(alloc_, fidl::VectorView<uint8_t>::FromExternal(empty_vec));
+              },
+          .expect = ZX_ERR_INVALID_ARGS,
+      },
+      {
+          .name = "no port ID",
+          .update_frame = [](fuchsia_net_tun::wire::Frame& frame) { frame.set_port(nullptr); },
+          .expect = ZX_ERR_INVALID_ARGS,
+      },
+      {
+          .name = "invalid port ID",
+          .update_frame =
+              [this](fuchsia_net_tun::wire::Frame& frame) {
+                frame.set_port(alloc_, fuchsia_hardware_network::wire::kMaxPorts);
+              },
+          .expect = ZX_ERR_INVALID_ARGS,
+      },
+  };
+
+  for (const auto& test : kTests) {
+    SCOPED_TRACE(test.name);
+    // Build a valid frame then let each test case update it to make it invalid.
+    fuchsia_net_tun::wire::Frame frame(alloc_);
+    frame.set_frame_type(alloc_, fuchsia_hardware_network::wire::FrameType::kEthernet);
+    uint8_t data[] = {0x01, 0x02, 0x03};
+    frame.set_data(alloc_, fidl::VectorView<uint8_t>::FromExternal(data));
+    frame.set_port(alloc_, kDefaultTestPort);
+
+    test.update_frame(frame);
+
+    fidl::WireResult write_frame_wire_result = tun.WriteFrame(std::move(frame));
+    ASSERT_OK(write_frame_wire_result.status());
+
+    fuchsia_net_tun::wire::DeviceWriteFrameResult write_frame_result =
+        write_frame_wire_result.value().result;
+    switch (write_frame_result.which()) {
+      case fuchsia_net_tun::wire::DeviceWriteFrameResult::Tag::kResponse:
+        GTEST_FAIL() << "WriteFrame succeeded unexpectedly";
+        break;
+      case fuchsia_net_tun::wire::DeviceWriteFrameResult::Tag::kErr:
+        ASSERT_STATUS(write_frame_result.err(), test.expect);
+        break;
+    }
+  }
+}
+
 TEST_F(TunTest, RejectsIfOffline) {
   zx::status device_and_port =
       CreateDeviceAndPort(DefaultDeviceConfig(), DefaultDevicePortConfig());
@@ -1222,13 +1305,13 @@ TEST_F(TunTest, RejectsIfOffline) {
     fidl::WireResult write_frame_wire_result = tun.WriteFrame(std::move(frame));
     ASSERT_OK(write_frame_wire_result.status());
 
-    fuchsia_net_tun::wire::Device2WriteFrameResult write_frame_result =
+    fuchsia_net_tun::wire::DeviceWriteFrameResult write_frame_result =
         write_frame_wire_result.value().result;
     switch (write_frame_result.which()) {
-      case fuchsia_net_tun::wire::Device2WriteFrameResult::Tag::kResponse:
+      case fuchsia_net_tun::wire::DeviceWriteFrameResult::Tag::kResponse:
         GTEST_FAIL() << "WriteFrame succeeded unexpectedly";
         break;
-      case fuchsia_net_tun::wire::Device2WriteFrameResult::Tag::kErr:
+      case fuchsia_net_tun::wire::DeviceWriteFrameResult::Tag::kErr:
         ASSERT_STATUS(write_frame_result.err(), ZX_ERR_BAD_STATE);
         break;
     }
@@ -1254,17 +1337,17 @@ TEST_F(TunTest, RejectsIfOffline) {
 
     fidl::WireResult read_frame_wire_result = tun.ReadFrame();
     ASSERT_OK(read_frame_wire_result.status());
-    fuchsia_net_tun::wire::Device2ReadFrameResult read_frame_result =
+    fuchsia_net_tun::wire::DeviceReadFrameResult read_frame_result =
         read_frame_wire_result.value().result;
     switch (read_frame_result.which()) {
-      case fuchsia_net_tun::wire::Device2ReadFrameResult::Tag::kResponse: {
+      case fuchsia_net_tun::wire::DeviceReadFrameResult::Tag::kResponse: {
         ASSERT_EQ(read_frame_result.response().frame.frame_type(),
                   fuchsia_hardware_network::wire::FrameType::kEthernet);
         ASSERT_NO_FATAL_FAILURE(
             SimpleClient::ValidateData(read_frame_result.response().frame.data(), 0x00));
         ASSERT_FALSE(read_frame_result.response().frame.has_meta());
       } break;
-      case fuchsia_net_tun::wire::Device2ReadFrameResult::Tag::kErr:
+      case fuchsia_net_tun::wire::DeviceReadFrameResult::Tag::kErr:
         GTEST_FAIL() << "ReadFrame failed: " << zx_status_get_string(read_frame_result.err());
         break;
     }
@@ -1373,7 +1456,7 @@ TEST_F(TunTest, PairEcho) {
 }
 
 TEST_F(TunTest, ReportsInternalTxErrors) {
-  fuchsia_net_tun::wire::DeviceConfig2 device_config = DefaultDeviceConfig();
+  fuchsia_net_tun::wire::DeviceConfig device_config = DefaultDeviceConfig();
   fuchsia_net_tun::wire::DevicePortConfig port_config = DefaultDevicePortConfig();
   port_config.set_online(alloc_, true);
   // We need tun to be nonblocking so we're able to excite the path that attempts to copy a tx
@@ -1424,9 +1507,9 @@ TEST_F(TunTest, ReportsInternalTxErrors) {
     ASSERT_STATUS(status, ZX_ERR_SHOULD_WAIT);
     fidl::WireResult read_frame_wire_result = tun.ReadFrame();
     ASSERT_OK(read_frame_wire_result.status());
-    fuchsia_net_tun::wire::Device2ReadFrameResult read_frame_result =
+    fuchsia_net_tun::wire::DeviceReadFrameResult read_frame_result =
         read_frame_wire_result.value().result;
-    ASSERT_EQ(read_frame_result.which(), fuchsia_net_tun::wire::Device2ReadFrameResult::Tag::kErr);
+    ASSERT_EQ(read_frame_result.which(), fuchsia_net_tun::wire::DeviceReadFrameResult::Tag::kErr);
     ASSERT_STATUS(read_frame_result.err(), ZX_ERR_SHOULD_WAIT);
   }
   const buffer_descriptor_t* desc = client.descriptor(descriptor);
@@ -1437,7 +1520,7 @@ TEST_F(TunTest, ReportsInternalTxErrors) {
 TEST_F(TunTest, ChainsRxBuffers) {
   constexpr uint32_t kRxBufferSize = 16;
   constexpr uint16_t kChainedBuffers = 3;
-  fuchsia_net_tun::wire::DeviceConfig2 device_config = DefaultDeviceConfig();
+  fuchsia_net_tun::wire::DeviceConfig device_config = DefaultDeviceConfig();
   fuchsia_net_tun::wire::DevicePortConfig port_config = DefaultDevicePortConfig();
   port_config.set_online(alloc_, true);
   fuchsia_net_tun::wire::BaseDeviceConfig base_device_config(alloc_);
@@ -1476,7 +1559,7 @@ TEST_F(TunTest, ChainsRxBuffers) {
   fidl::WireResult write_frame_wire_result = tun.WriteFrame(std::move(frame));
   ASSERT_OK(write_frame_wire_result.status());
   ASSERT_EQ(write_frame_wire_result.value().result.which(),
-            fuchsia_net_tun::wire::Device2WriteFrameResult::Tag::kResponse)
+            fuchsia_net_tun::wire::DeviceWriteFrameResult::Tag::kResponse)
       << zx_status_get_string(write_frame_wire_result.value().result.err());
 
   uint16_t desc_idx;
