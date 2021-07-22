@@ -527,7 +527,7 @@ impl InspectData {
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use crate::utils::connect_channel_to_service;
+    use crate::utils::connect_channel_to_driver;
     use inspect::assert_data_tree;
     use matches::assert_matches;
     use std::cell::Cell;
@@ -769,7 +769,7 @@ pub mod tests {
     /// The connection is tested to be valid by verifying a message is able to successfully be
     /// passed through the channel.
     #[fasync::run_singlethreaded(test)]
-    async fn test_connect_proxy() {
+    async fn test_connect_to_driver() {
         use vfs::{directory::entry::DirectoryEntry, pseudo_directory};
 
         // Set up a fake directory structure that contains a fake driver at class/fake.
@@ -819,13 +819,14 @@ pub mod tests {
         let (proxy, server_end) =
             fidl::endpoints::create_proxy::<fdevicemgr::SystemStateTransitionMarker>().unwrap();
 
-        // We need to run `connect_channel_to_service` in a separate thread because the underlying
+        // We need to run `connect_channel_to_driver` in a separate thread because the underlying
         // fdio calls block the calling thread. Since the Directory and fake driver are set up on
         // the initial thread, this would otherwise result in a deadlock.
         fasync::unblock(|| {
-            // Use `connect_channel_to_service` instead of using `connect_proxy` directly because
-            // connect_proxy requires an Executor (when `into_proxy` is called on the ClientEnd).
-            connect_channel_to_service(server_end, &"/dev/class/fake".to_string()).unwrap()
+            // Use `connect_channel_to_driver` instead of using `connect_to_driver` directly because
+            // `connect_to_driver` requires an Executor (when `into_proxy` is called on the
+            // ClientEnd).
+            connect_channel_to_driver(server_end, &"/dev/class/fake".to_string()).unwrap()
         })
         .await;
 

@@ -38,18 +38,18 @@ fn wait_for_path(path: &std::path::Path) -> Result<(), anyhow::Error> {
     }
 }
 
-/// Creates a FIDL proxy and connects its ServerEnd to the service at the specified path.
-pub fn connect_proxy<T: fidl::endpoints::ServiceMarker>(
+/// Creates a FIDL proxy and connects its ServerEnd to the driver at the specified path.
+pub fn connect_to_driver<T: fidl::endpoints::ServiceMarker>(
     path: &String,
 ) -> Result<T::Proxy, anyhow::Error> {
     let (proxy, server_end) = fidl::endpoints::create_proxy::<T>()?;
-    connect_channel_to_service(server_end, path)?;
+    connect_channel_to_driver(server_end, path)?;
     Ok(proxy)
 }
 
-/// Connects a ServerEnd to the service at the specified path. Calls `wait_for_path` to ensure the
+/// Connects a ServerEnd to the driver at the specified path. Calls `wait_for_path` to ensure the
 /// path exists before attempting a connection.
-pub fn connect_channel_to_service<T: fidl::endpoints::ServiceMarker>(
+pub fn connect_channel_to_driver<T: fidl::endpoints::ServiceMarker>(
     server_end: fidl::endpoints::ServerEnd<T>,
     path: &String,
 ) -> Result<(), anyhow::Error> {
@@ -60,7 +60,7 @@ pub fn connect_channel_to_service<T: fidl::endpoints::ServiceMarker>(
     wait_for_path(&std::path::Path::new(path))?;
 
     fdio::service_connect(path, server_end.into_channel())
-        .map_err(|s| anyhow::format_err!("Failed to connect to service at {}: {}", path, s))?;
+        .map_err(|s| anyhow::format_err!("Failed to connect to driver at {}: {}", path, s))?;
 
     Ok(())
 }

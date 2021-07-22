@@ -12,7 +12,6 @@
     "type": "SystemShutdownHandler",
     "name": "sys_shutdown",
     "config": {
-      "component_manager_path": "/svc/fuchsia.sys2.SystemController",
       "shutdown_timeout_s": 3600
     },
     "dependencies": {

@@ -7,7 +7,6 @@ use crate::message::{Message, MessageReturn};
 use crate::node::Node;
 use crate::shutdown_request::ShutdownRequest;
 use crate::types::Seconds;
-use crate::utils::connect_proxy;
 use anyhow::{format_err, Error};
 use async_trait::async_trait;
 use fidl_fuchsia_hardware_power_statecontrol as fpowercontrol;
@@ -50,7 +49,6 @@ use std::rc::Rc;
 pub struct SystemShutdownHandlerBuilder<'a, 'b> {
     driver_manager_handler: Rc<dyn Node>,
     shutdown_watcher: Option<Rc<dyn Node>>,
-    component_mgr_path: Option<String>,
     component_mgr_proxy: Option<fsys::SystemControllerProxy>,
     shutdown_timeout: Option<Seconds>,
     force_shutdown_func: Box<dyn Fn()>,
@@ -63,7 +61,6 @@ impl<'a, 'b> SystemShutdownHandlerBuilder<'a, 'b> {
         Self {
             driver_manager_handler,
             shutdown_watcher: None,
-            component_mgr_path: None,
             component_mgr_proxy: None,
             shutdown_timeout: None,
             force_shutdown_func: Box::new(force_shutdown),
@@ -79,7 +76,6 @@ impl<'a, 'b> SystemShutdownHandlerBuilder<'a, 'b> {
     ) -> Self {
         #[derive(Deserialize)]
         struct Config {
-            component_manager_path: String,
             shutdown_timeout_s: Option<f64>,
         }
 
@@ -97,8 +93,7 @@ impl<'a, 'b> SystemShutdownHandlerBuilder<'a, 'b> {
 
         let data: JsonData = json::from_value(json_data).unwrap();
         let mut builder = Self::new(nodes[&data.dependencies.driver_manager_handler_node].clone())
-            .with_service_fs(service_fs)
-            .with_component_mgr_path(data.config.component_manager_path);
+            .with_service_fs(service_fs);
 
         if let Some(timeout) = data.config.shutdown_timeout_s {
             builder = builder.with_shutdown_timeout(Seconds(timeout))
@@ -109,11 +104,6 @@ impl<'a, 'b> SystemShutdownHandlerBuilder<'a, 'b> {
         }
 
         builder
-    }
-
-    pub fn with_component_mgr_path(mut self, path: String) -> Self {
-        self.component_mgr_path = Some(path);
-        self
     }
 
     pub fn with_service_fs(
@@ -163,12 +153,7 @@ impl<'a, 'b> SystemShutdownHandlerBuilder<'a, 'b> {
         let component_mgr_proxy = if let Some(proxy) = self.component_mgr_proxy {
             proxy
         } else {
-            connect_proxy::<fsys::SystemControllerMarker>(
-                &self
-                    .component_mgr_path
-                    .ok_or(format_err!("Must specify Component Manager path or proxy"))?
-                    .to_string(),
-            )?
+            fuchsia_component::client::connect_to_protocol::<fsys::SystemControllerMarker>()?
         };
 
         let node = Rc::new(SystemShutdownHandler {
@@ -490,9 +475,7 @@ pub mod tests {
         let json_data = json::json!({
             "type": "SystemShutdownHandler",
             "name": "system_shutdown_handler",
-            "config": {
-                "component_manager_path": "/svc/fake"
-            },
+            "config": {},
             "dependencies": {
                 "driver_manager_handler_node": "dev_mgr"
             }

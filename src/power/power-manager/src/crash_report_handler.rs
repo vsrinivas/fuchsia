@@ -6,7 +6,6 @@ use crate::error::PowerManagerError;
 use crate::log_if_err;
 use crate::message::{Message, MessageReturn};
 use crate::node::Node;
-use crate::utils::connect_proxy;
 use anyhow::{format_err, Error};
 use async_trait::async_trait;
 use fidl_fuchsia_feedback as fidl_feedback;
@@ -30,8 +29,6 @@ use std::rc::Rc;
 ///       CrashReporter service in order to file crash reports.
 ///
 
-/// Path to the CrashReporter service.
-const CRASH_REPORTER_SVC: &'static str = "/svc/fuchsia.feedback.CrashReporter";
 type GetProxyFn = Box<dyn Fn() -> Result<fidl_feedback::CrashReporterProxy, anyhow::Error>>;
 
 /// The maximum number of pending crash report requests. This is needed because the FIDL API to file
@@ -78,10 +75,7 @@ impl CrashReportHandlerBuilder {
 }
 
 pub fn default_get_proxy_fn() -> Result<fidl_feedback::CrashReporterProxy, anyhow::Error> {
-    let proxy =
-        connect_proxy::<fidl_feedback::CrashReporterMarker>(&CRASH_REPORTER_SVC.to_string())
-            .map_err(|e| anyhow::format_err!("Failed to connect to crash reporter svc: {}", e))?;
-    Ok(proxy)
+    fuchsia_component::client::connect_to_protocol::<fidl_feedback::CrashReporterMarker>()
 }
 
 pub struct CrashReportHandler {

@@ -254,18 +254,12 @@
           "config": {
             "type": "object",
             "properties": {
-              "component_manager_path": {
-                "type": "string"
-              },
               "shutdown_timeout_s": {
                 "type": "number",
                 "minimum": 0,
                 "exclusiveMinimum": true
               }
-            },
-            "required": [
-              "component_manager_path"
-            ]
+            }
           },
           "dependencies": {
             "type": "object",

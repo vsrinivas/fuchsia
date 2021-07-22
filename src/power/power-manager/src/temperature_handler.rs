@@ -7,7 +7,7 @@ use crate::log_if_err;
 use crate::message::{Message, MessageReturn};
 use crate::node::Node;
 use crate::types::{Celsius, Nanoseconds, Seconds};
-use crate::utils::connect_proxy;
+use crate::utils::connect_to_driver;
 use anyhow::{format_err, Error};
 use async_trait::async_trait;
 use fidl_fuchsia_hardware_thermal as fthermal;
@@ -95,7 +95,7 @@ impl<'a> TemperatureHandlerBuilder<'a> {
     pub fn build(self) -> Result<Rc<TemperatureHandler>, Error> {
         // Optionally use the default proxy
         let proxy = if self.driver_proxy.is_none() {
-            connect_proxy::<fthermal::DeviceMarker>(&self.driver_path)?
+            connect_to_driver::<fthermal::DeviceMarker>(&self.driver_path)?
         } else {
             self.driver_proxy.unwrap()
         };

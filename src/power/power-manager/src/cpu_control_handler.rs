@@ -7,7 +7,7 @@ use crate::error::PowerManagerError;
 use crate::message::{Message, MessageReturn};
 use crate::node::Node;
 use crate::types::{Farads, Hertz, Volts, Watts};
-use crate::utils::connect_proxy;
+use crate::utils::connect_to_driver;
 use anyhow::{format_err, Context, Error};
 use async_trait::async_trait;
 use fidl_fuchsia_hardware_cpu_ctrl as fcpuctrl;
@@ -202,7 +202,7 @@ impl<'a> CpuControlHandlerBuilder<'a> {
     pub async fn build(self) -> Result<Rc<CpuControlHandler>, Error> {
         // Optionally use the default proxy
         let proxy = if self.cpu_ctrl_proxy.is_none() {
-            connect_proxy::<fcpuctrl::DeviceMarker>(&self.cpu_driver_path)
+            connect_to_driver::<fcpuctrl::DeviceMarker>(&self.cpu_driver_path)
                 .context("Failed connecting to CPU driver")?
         } else {
             self.cpu_ctrl_proxy.unwrap()

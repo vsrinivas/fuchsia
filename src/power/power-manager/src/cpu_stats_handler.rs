@@ -7,7 +7,7 @@ use crate::log_if_err;
 use crate::message::{Message, MessageReturn};
 use crate::node::Node;
 use crate::types::{Milliseconds, Nanoseconds};
-use crate::utils::{connect_proxy, get_current_timestamp};
+use crate::utils::get_current_timestamp;
 use anyhow::{format_err, Error};
 use async_trait::async_trait;
 use fidl_fuchsia_kernel as fstats;
@@ -32,9 +32,6 @@ use std::rc::Rc;
 ///
 /// FIDL dependencies:
 ///     - fuchsia.kernel.Stats: the node connects to this service to query kernel information
-
-/// The Kernel Stats service that we'll be communicating with
-const CPU_STATS_SVC: &'static str = "/svc/fuchsia.kernel.Stats";
 
 /// A builder for constructing the CpuStatsHandler node
 #[derive(Default)]
@@ -94,7 +91,7 @@ impl<'a> CpuStatsHandlerBuilder<'a> {
     pub async fn build(self) -> Result<Rc<CpuStatsHandler>, Error> {
         // Optionally use the default proxy
         let proxy = if self.stats_svc_proxy.is_none() {
-            connect_proxy::<fstats::StatsMarker>(&CPU_STATS_SVC.to_string())?
+            fuchsia_component::client::connect_to_protocol::<fstats::StatsMarker>()?
         } else {
             self.stats_svc_proxy.unwrap()
         };

@@ -5,7 +5,7 @@ use crate::error::PowerManagerError;
 use crate::message::{Message, MessageReturn};
 use crate::node::Node;
 use crate::shutdown_request::ShutdownRequest;
-use crate::utils::connect_proxy;
+use crate::utils::connect_to_driver;
 use anyhow::{format_err, Error};
 use async_trait::async_trait;
 use fidl_fuchsia_hardware_input::{DeviceMarker as LidMarker, DeviceProxy as LidProxy};
@@ -167,7 +167,7 @@ impl<'a> LidShutdownBuilder<'a> {
     /// report descriptor is found.
     async fn open_sensor(filename: &PathBuf) -> Result<LidProxy, Error> {
         let path = Path::new(INPUT_DEVICES_DIRECTORY).join(filename);
-        let device = connect_proxy::<LidMarker>(&String::from(
+        let device = connect_to_driver::<LidMarker>(&String::from(
             path.to_str().ok_or(format_err!("Could not read path {:?}", path))?,
         ))?;
         if let Ok(device_descriptor) = device.get_report_desc().await {

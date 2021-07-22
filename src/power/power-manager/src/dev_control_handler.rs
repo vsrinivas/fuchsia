@@ -6,7 +6,7 @@ use crate::error::PowerManagerError;
 use crate::log_if_err;
 use crate::message::{Message, MessageReturn};
 use crate::node::Node;
-use crate::utils::connect_proxy;
+use crate::utils::connect_to_driver;
 use anyhow::{format_err, Error};
 use async_trait::async_trait;
 use fidl_fuchsia_device as fdev;
@@ -75,7 +75,7 @@ impl<'a> DeviceControlHandlerBuilder<'a> {
     pub fn build(self) -> Result<Rc<DeviceControlHandler>, Error> {
         // Optionally use the default proxy
         let proxy = if self.driver_proxy.is_none() {
-            connect_proxy::<fdev::ControllerMarker>(&self.driver_path)?
+            connect_to_driver::<fdev::ControllerMarker>(&self.driver_path)?
         } else {
             self.driver_proxy.unwrap()
         };
