@@ -710,6 +710,8 @@ impl<P: Hash + Eq, H> Default for ArpTable<P, H> {
 
 #[cfg(test)]
 mod tests {
+    #![deny(unused_results)]
+
     use net_types::ethernet::Mac;
     use net_types::ip::Ipv4Addr;
     use packet::{ParseBuffer, Serializer};
@@ -881,10 +883,7 @@ mod tests {
         );
 
         // We should have cached the sender's address information.
-        assert_eq!(
-            ctx.get_ref().arp_state.table.lookup(TEST_REMOTE_IPV4).unwrap(),
-            &TEST_REMOTE_MAC
-        );
+        assert_eq!(ctx.get_ref().arp_state.table.lookup(TEST_REMOTE_IPV4), Some(&TEST_REMOTE_MAC));
         // Gratuitous ARPs should not prompt a response.
         assert_eq!(ctx.frames().len(), 0);
     }
@@ -905,10 +904,7 @@ mod tests {
         );
 
         // We should have cached the sender's address information.
-        assert_eq!(
-            ctx.get_ref().arp_state.table.lookup(TEST_REMOTE_IPV4).unwrap(),
-            &TEST_REMOTE_MAC
-        );
+        assert_eq!(ctx.get_ref().arp_state.table.lookup(TEST_REMOTE_IPV4), Some(&TEST_REMOTE_MAC));
         // Gratuitous ARPs should not send a response.
         assert_eq!(ctx.frames().len(), 0);
     }
@@ -921,7 +917,7 @@ mod tests {
 
         let mut ctx = DummyContext::default();
 
-        lookup(&mut ctx, (), TEST_LOCAL_MAC, TEST_REMOTE_IPV4);
+        assert_eq!(lookup(&mut ctx, (), TEST_LOCAL_MAC, TEST_REMOTE_IPV4), None);
 
         // We should have installed a single retry timer.
         validate_single_retry_timer(&ctx, DEFAULT_ARP_REQUEST_PERIOD, TEST_REMOTE_IPV4);
@@ -936,10 +932,7 @@ mod tests {
         );
 
         // The response should now be in our cache.
-        assert_eq!(
-            ctx.get_ref().arp_state.table.lookup(TEST_REMOTE_IPV4).unwrap(),
-            &TEST_REMOTE_MAC
-        );
+        assert_eq!(ctx.get_ref().arp_state.table.lookup(TEST_REMOTE_IPV4), Some(&TEST_REMOTE_MAC));
 
         // The retry timer should be canceled, and replaced by an entry
         // expiration timer.
@@ -1012,7 +1005,7 @@ mod tests {
         let device_id_0: usize = 0;
         let device_id_1: usize = 1;
 
-        lookup(&mut ctx, device_id_0, TEST_LOCAL_MAC, TEST_REMOTE_IPV4);
+        assert_eq!(lookup(&mut ctx, device_id_0, TEST_LOCAL_MAC, TEST_REMOTE_IPV4), None);
 
         // We should have installed a single retry timer.
         assert_eq!(ctx.timers().len(), 1);
@@ -1034,7 +1027,7 @@ mod tests {
         let mut ctx = DummyContext::default();
 
         // Perform the lookup.
-        lookup(&mut ctx, (), TEST_LOCAL_MAC, TEST_REMOTE_IPV4);
+        assert_eq!(lookup(&mut ctx, (), TEST_LOCAL_MAC, TEST_REMOTE_IPV4), None);
 
         // We should have sent a single ARP request.
         validate_last_arp_packet(
@@ -1062,10 +1055,7 @@ mod tests {
         );
 
         // The response should now be in our cache.
-        assert_eq!(
-            ctx.get_ref().arp_state.table.lookup(TEST_REMOTE_IPV4).unwrap(),
-            &TEST_REMOTE_MAC
-        );
+        assert_eq!(ctx.get_ref().arp_state.table.lookup(TEST_REMOTE_IPV4), Some(&TEST_REMOTE_MAC));
 
         // We should have notified the device layer.
         assert_eq!(ctx.get_ref().addr_resolved.as_slice(), [(TEST_REMOTE_IPV4, TEST_REMOTE_MAC)]);
@@ -1093,12 +1083,12 @@ mod tests {
         );
 
         // Perform the lookup.
-        lookup(&mut ctx, (), TEST_LOCAL_MAC, TEST_REMOTE_IPV4);
+        assert_eq!(lookup(&mut ctx, (), TEST_LOCAL_MAC, TEST_REMOTE_IPV4), Some(TEST_REMOTE_MAC));
 
         // We should not have sent any ARP request.
         assert_eq!(ctx.frames().len(), 0);
         // We should not have set a retry timer.
-        assert!(ctx.cancel_timer(ArpTimerId::new_request_retry((), TEST_REMOTE_IPV4)).is_none());
+        assert_eq!(ctx.cancel_timer(ArpTimerId::new_request_retry((), TEST_REMOTE_IPV4)), None);
     }
 
     #[test]
@@ -1108,7 +1098,7 @@ mod tests {
 
         let mut ctx = DummyContext::default();
 
-        lookup(&mut ctx, (), TEST_LOCAL_MAC, TEST_REMOTE_IPV4);
+        assert_eq!(lookup(&mut ctx, (), TEST_LOCAL_MAC, TEST_REMOTE_IPV4), None);
 
         // `i` represents the `i`th request, so we start it at 1 since we
         // already sent one request during the call to `lookup`.
@@ -1128,8 +1118,8 @@ mod tests {
 
             // Check the number of remaining tries.
             assert_eq!(
-                ctx.get_ref().arp_state.table.get_remaining_tries(TEST_REMOTE_IPV4).unwrap(),
-                DEFAULT_ARP_REQUEST_MAX_TRIES - i
+                ctx.get_ref().arp_state.table.get_remaining_tries(TEST_REMOTE_IPV4),
+                Some(DEFAULT_ARP_REQUEST_MAX_TRIES - i)
             );
 
             // There should be a single ARP request retry timer installed.
@@ -1162,7 +1152,7 @@ mod tests {
         assert_eq!(ctx.timers().len(), 0);
 
         // The table entry should have been completely removed.
-        assert!(ctx.get_ref().arp_state.table.table.get(&TEST_REMOTE_IPV4).is_none());
+        assert_eq!(ctx.get_ref().arp_state.table.table.get(&TEST_REMOTE_IPV4), None);
 
         // We should have notified the device layer of the failure.
         assert_eq!(ctx.get_ref().addr_resolution_failed.as_slice(), [TEST_REMOTE_IPV4]);
@@ -1185,10 +1175,7 @@ mod tests {
         );
 
         // Make sure we cached the sender's address information.
-        assert_eq!(
-            lookup(&mut ctx, (), TEST_LOCAL_MAC, TEST_REMOTE_IPV4).unwrap(),
-            TEST_REMOTE_MAC
-        );
+        assert_eq!(lookup(&mut ctx, (), TEST_LOCAL_MAC, TEST_REMOTE_IPV4), Some(TEST_REMOTE_MAC));
 
         // We should have sent an ARP response.
         validate_last_arp_packet(
@@ -1207,8 +1194,9 @@ mod tests {
     fn test_arp_table() {
         let mut t: ArpTable<Ipv4Addr, Mac> = ArpTable::default();
         assert_eq!(t.lookup(Ipv4Addr::new([10, 0, 0, 1])), None);
-        t.insert_dynamic(Ipv4Addr::new([10, 0, 0, 1]), Mac::new([1, 2, 3, 4, 5, 6]));
-        assert_eq!(*t.lookup(Ipv4Addr::new([10, 0, 0, 1])).unwrap(), Mac::new([1, 2, 3, 4, 5, 6]));
+        let mac = Mac::new([1, 2, 3, 4, 5, 6]);
+        assert!(t.insert_dynamic(Ipv4Addr::new([10, 0, 0, 1]), mac));
+        assert_eq!(t.lookup(Ipv4Addr::new([10, 0, 0, 1])), Some(&mac));
         assert_eq!(t.lookup(Ipv4Addr::new([10, 0, 0, 2])), None);
     }
 
@@ -1241,7 +1229,7 @@ mod tests {
         );
 
         // The lookup should fail.
-        assert!(lookup(network.context("local"), (), TEST_LOCAL_MAC, TEST_REMOTE_IPV4).is_none());
+        assert_eq!(lookup(network.context("local"), (), TEST_LOCAL_MAC, TEST_REMOTE_IPV4), None);
         // We should have sent an ARP request.
         validate_last_arp_packet(
             network.context("local"),
@@ -1268,8 +1256,8 @@ mod tests {
         // The remote should have populated its ARP cache with the local's
         // information.
         assert_eq!(
-            network.context("remote").get_ref().arp_state.table.lookup(TEST_LOCAL_IPV4).unwrap(),
-            &TEST_LOCAL_MAC
+            network.context("remote").get_ref().arp_state.table.lookup(TEST_LOCAL_IPV4),
+            Some(&TEST_LOCAL_MAC)
         );
         // The remote should have sent an ARP response.
         validate_last_arp_packet(
@@ -1291,8 +1279,8 @@ mod tests {
         // The local should have populated its cache with the remote's
         // information.
         assert_eq!(
-            network.context("local").get_ref().arp_state.table.lookup(TEST_REMOTE_IPV4).unwrap(),
-            &TEST_REMOTE_MAC
+            network.context("local").get_ref().arp_state.table.lookup(TEST_REMOTE_IPV4),
+            Some(&TEST_REMOTE_MAC)
         );
         // The retry timer should be canceled, and replaced by an entry
         // expiration timer.
@@ -1314,10 +1302,10 @@ mod tests {
         let ip = TEST_REMOTE_IPV4;
         let mac0 = Mac::new([1, 2, 3, 4, 5, 6]);
         let mac1 = Mac::new([6, 5, 4, 3, 2, 1]);
-        table.insert_dynamic(ip, mac0);
-        assert_eq!(*table.lookup(ip).unwrap(), mac0);
+        assert!(table.insert_dynamic(ip, mac0));
+        assert_eq!(table.lookup(ip), Some(&mac0));
         table.insert_static(ip, mac1);
-        assert_eq!(*table.lookup(ip).unwrap(), mac1);
+        assert_eq!(table.lookup(ip), Some(&mac1));
     }
 
     #[test]
@@ -1327,9 +1315,9 @@ mod tests {
         let mac0 = Mac::new([1, 2, 3, 4, 5, 6]);
         let mac1 = Mac::new([6, 5, 4, 3, 2, 1]);
         table.insert_static(ip, mac0);
-        assert_eq!(*table.lookup(ip).unwrap(), mac0);
+        assert_eq!(table.lookup(ip), Some(&mac0));
         table.insert_static(ip, mac1);
-        assert_eq!(*table.lookup(ip).unwrap(), mac1);
+        assert_eq!(table.lookup(ip), Some(&mac1));
     }
 
     #[test]
@@ -1340,7 +1328,7 @@ mod tests {
         table.set_waiting(ip, 4);
         assert_eq!(table.lookup(ip), None);
         table.insert_static(ip, mac1);
-        assert_eq!(*table.lookup(ip).unwrap(), mac1);
+        assert_eq!(table.lookup(ip), Some(&mac1));
     }
 
     #[test]
@@ -1350,8 +1338,8 @@ mod tests {
         let mac1 = Mac::new([6, 5, 4, 3, 2, 1]);
         table.set_waiting(ip, 4);
         assert_eq!(table.lookup(ip), None);
-        table.insert_dynamic(ip, mac1);
-        assert_eq!(*table.lookup(ip).unwrap(), mac1);
+        assert!(table.insert_dynamic(ip, mac1));
+        assert_eq!(table.lookup(ip), Some(&mac1));
     }
 
     #[test]
@@ -1360,10 +1348,10 @@ mod tests {
         let ip = TEST_REMOTE_IPV4;
         let mac0 = Mac::new([1, 2, 3, 4, 5, 6]);
         let mac1 = Mac::new([6, 5, 4, 3, 2, 1]);
-        table.insert_dynamic(ip, mac0);
-        assert_eq!(*table.lookup(ip).unwrap(), mac0);
-        table.insert_dynamic(ip, mac1);
-        assert_eq!(*table.lookup(ip).unwrap(), mac1);
+        assert!(table.insert_dynamic(ip, mac0));
+        assert_eq!(table.lookup(ip), Some(&mac0));
+        assert!(table.insert_dynamic(ip, mac1));
+        assert_eq!(table.lookup(ip), Some(&mac1));
     }
 
     #[test]
@@ -1373,9 +1361,9 @@ mod tests {
         let mac0 = Mac::new([1, 2, 3, 4, 5, 6]);
         let mac1 = Mac::new([6, 5, 4, 3, 2, 1]);
         table.insert_static(ip, mac0);
-        assert_eq!(*table.lookup(ip).unwrap(), mac0);
-        table.insert_dynamic(ip, mac1);
-        assert_eq!(*table.lookup(ip).unwrap(), mac0);
+        assert_eq!(table.lookup(ip), Some(&mac0));
+        assert!(!table.insert_dynamic(ip, mac1));
+        assert_eq!(table.lookup(ip), Some(&mac0));
     }
 
     #[test]
@@ -1387,10 +1375,13 @@ mod tests {
 
         // Perform a lookup in order to kick off a request and install a retry
         // timer.
-        lookup(&mut ctx, (), TEST_LOCAL_MAC, TEST_REMOTE_IPV4);
+        assert_eq!(lookup(&mut ctx, (), TEST_LOCAL_MAC, TEST_REMOTE_IPV4), None);
 
         // We should be in the Waiting state.
-        assert!(ctx.get_ref().arp_state.table.get_remaining_tries(TEST_REMOTE_IPV4).is_some());
+        assert_eq!(
+            ctx.get_ref().arp_state.table.get_remaining_tries(TEST_REMOTE_IPV4),
+            Some(DEFAULT_ARP_REQUEST_MAX_TRIES - 1)
+        );
         // We should have an ARP request retry timer set.
         validate_single_retry_timer(&ctx, DEFAULT_ARP_REQUEST_PERIOD, TEST_REMOTE_IPV4);
 
@@ -1414,10 +1405,7 @@ mod tests {
         insert_dynamic(&mut ctx, (), TEST_REMOTE_IPV4, TEST_REMOTE_MAC);
 
         // We should have the address in cache.
-        assert_eq!(
-            ctx.get_ref().arp_state.table.lookup(TEST_REMOTE_IPV4).unwrap(),
-            &TEST_REMOTE_MAC
-        );
+        assert_eq!(ctx.get_ref().arp_state.table.lookup(TEST_REMOTE_IPV4), Some(&TEST_REMOTE_MAC));
         // We should have an ARP entry expiration timer set.
         validate_single_entry_timer(&ctx, DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD, TEST_REMOTE_IPV4);
 
@@ -1438,10 +1426,7 @@ mod tests {
         insert_dynamic(&mut ctx, (), TEST_REMOTE_IPV4, TEST_REMOTE_MAC);
 
         // We should have the address in cache.
-        assert_eq!(
-            ctx.get_ref().arp_state.table.lookup(TEST_REMOTE_IPV4).unwrap(),
-            &TEST_REMOTE_MAC
-        );
+        assert_eq!(ctx.get_ref().arp_state.table.lookup(TEST_REMOTE_IPV4), Some(&TEST_REMOTE_MAC));
         // We should have an ARP entry expiration timer set.
         validate_single_entry_timer(&ctx, DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD, TEST_REMOTE_IPV4);
 
@@ -1451,7 +1436,7 @@ mod tests {
         // The right amount of time should have elapsed.
         assert_eq!(ctx.now(), DummyInstant::from(DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD));
         // The entry should have been removed.
-        assert!(ctx.get_ref().arp_state.table.table.get(&TEST_REMOTE_IPV4).is_none());
+        assert_eq!(ctx.get_ref().arp_state.table.table.get(&TEST_REMOTE_IPV4), None);
         // The timer should have been canceled.
         assert_eq!(ctx.timers().len(), 0);
         // The device layer should have been notified.
@@ -1477,10 +1462,7 @@ mod tests {
         assert_eq!(ctx.trigger_timers_until_instant(DummyInstant::from(Duration::from_secs(5))), 0);
 
         // The entry should still be there.
-        assert_eq!(
-            ctx.get_ref().arp_state.table.lookup(TEST_REMOTE_IPV4).unwrap(),
-            &TEST_REMOTE_MAC
-        );
+        assert_eq!(ctx.get_ref().arp_state.table.lookup(TEST_REMOTE_IPV4), Some(&TEST_REMOTE_MAC));
 
         // Receive the gratuitous ARP response.
         send_arp_packet(
@@ -1500,10 +1482,7 @@ mod tests {
             0
         );
         // The entry should still be there.
-        assert_eq!(
-            ctx.get_ref().arp_state.table.lookup(TEST_REMOTE_IPV4).unwrap(),
-            &TEST_REMOTE_MAC
-        );
+        assert_eq!(ctx.get_ref().arp_state.table.lookup(TEST_REMOTE_IPV4), Some(&TEST_REMOTE_MAC));
 
         // Trigger the entry expiration timer.
         assert!(ctx.trigger_next_timer());
@@ -1513,7 +1492,7 @@ mod tests {
             DummyInstant::from(Duration::from_secs(5) + DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD)
         );
         // The entry should be gone.
-        assert!(ctx.get_ref().arp_state.table.lookup(TEST_REMOTE_IPV4).is_none());
+        assert_eq!(ctx.get_ref().arp_state.table.lookup(TEST_REMOTE_IPV4), None);
         // The device layer should have been notified.
         assert_eq!(ctx.get_ref().addr_resolution_expired, [TEST_REMOTE_IPV4]);
     }
