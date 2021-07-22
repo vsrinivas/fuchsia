@@ -28,6 +28,7 @@ class PointerinjectorRegistry : public fuchsia::ui::pointerinjector::Registry {
                           TouchInjectFunc inject_touch_hit_tested,
                           MouseInjectFunc inject_mouse_exclusive,
                           MouseInjectFunc inject_mouse_hit_tested,
+                          fit::function<void(StreamId stream_id)> cancel_mouse_stream,
                           inspect::Node inspect_node = inspect::Node());
 
   // |fuchsia.ui.pointerinjector.Registry|
@@ -50,6 +51,7 @@ class PointerinjectorRegistry : public fuchsia::ui::pointerinjector::Registry {
   const TouchInjectFunc inject_touch_hit_tested_;
   const MouseInjectFunc inject_mouse_exclusive_;
   const MouseInjectFunc inject_mouse_hit_tested_;
+  const fit::function<void(StreamId stream_id)> cancel_mouse_stream_;
 
   std::shared_ptr<const view_tree::Snapshot> view_tree_snapshot_ =
       std::make_shared<const view_tree::Snapshot>();

@@ -24,6 +24,8 @@ source_set("input") {
     "input_system.cc",
     "input_system.h",
     "internal_pointer_event.h",
+    "mouse_injector.cc",
+    "mouse_injector.h",
     "mouse_source.cc",
     "mouse_source.h",
     "pointerinjector_registry.cc",

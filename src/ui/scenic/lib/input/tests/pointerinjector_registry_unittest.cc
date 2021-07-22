@@ -4,6 +4,7 @@
 
 #include "src/ui/scenic/lib/input/pointerinjector_registry.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/view_ref_pair.h>
 
 #include <gmock/gmock.h>
@@ -57,10 +58,11 @@ class PointerinjectorRegistryTest : public gtest::TestLoopFixture {
  public:
   PointerinjectorRegistryTest()
       : registry_(/*context*/ nullptr,
-                  /*inject_touch_exclusive*/ [](auto...) {},
-                  /*inject_touch_hit_tested*/ [](auto...) {},
-                  /*inject_mouse_exclusive*/ [](auto...) {},
-                  /*inject_mouse_hit_tested*/ [](auto...) {}, inspect::Node()) {}
+                  /*inject_touch_exclusive=*/[](auto...) {},
+                  /*inject_touch_hit_tested=*/[](auto...) {},
+                  /*inject_mouse_exclusive=*/[](auto...) {},
+                  /*inject_mouse_hit_tested=*/[](auto...) {},
+                  /*cancel_mouse_stream=*/[](auto...) {}, inspect::Node()) {}
 
  protected:
   struct ScenePair {
@@ -534,7 +536,8 @@ TEST_F(PointerinjectorRegistryTest,
       [&hit_tested_touch_used](auto...) { hit_tested_touch_used = true; },
       /*inject_mouse_exclusive*/ [&exclusive_mouse_used](auto...) { exclusive_mouse_used = true; },
       /*inject_mouse_hit_tested*/
-      [&hit_tested_mouse_used](auto...) { hit_tested_mouse_used = true; });
+      [&hit_tested_mouse_used](auto...) { hit_tested_mouse_used = true; },
+      /*cancel_mouse_stream=*/[](auto...) {});
   const auto [parent, child] = SetupSceneWithParentAndChildViews(&registry);
 
   fuchsia::ui::pointerinjector::DevicePtr injector;
@@ -572,7 +575,8 @@ TEST_F(PointerinjectorRegistryTest,
       [&hit_tested_touch_used](auto...) { hit_tested_touch_used = true; },
       /*inject_mouse_exclusive*/ [&exclusive_mouse_used](auto...) { exclusive_mouse_used = true; },
       /*inject_mouse_hit_tested*/
-      [&hit_tested_mouse_used](auto...) { hit_tested_mouse_used = true; });
+      [&hit_tested_mouse_used](auto...) { hit_tested_mouse_used = true; },
+      /*cancel_mouse_stream=*/[](auto...) {});
   const auto [parent, child] = SetupSceneWithParentAndChildViews(&registry);
 
   fuchsia::ui::pointerinjector::DevicePtr injector;
@@ -597,86 +601,185 @@ TEST_F(PointerinjectorRegistryTest,
   EXPECT_FALSE(hit_tested_mouse_used);
 }
 
-// TODO(fxrev.dev/76639): Uncomment and fix these when MouseInjector is added.
-// TEST_F(PointerinjectorRegistryTest,
-//        MouseDeviceAndExclusivePolicy_ShouldTriggerExclusiveMouseInjectFunc) {
-//   bool exclusive_touch_used = false;
-//   bool hit_tested_touch_used = false;
-//   bool exclusive_mouse_used = false;
-//   bool hit_tested_mouse_used = false;
-//   scenic_impl::input::PointerinjectorRegistry registry(
-//       /*context*/ nullptr,
-//       /*inject_touch_exclusive*/ [&exclusive_touch_used](auto...) { exclusive_touch_used = true;
-//       },
-//       /*inject_touch_hit_tested*/
-//       [&hit_tested_touch_used](auto...) { hit_tested_touch_used = true; },
-//       /*inject_mouse_exclusive*/ [&exclusive_mouse_used](auto...) { exclusive_mouse_used = true;
-//       },
-//       /*inject_mouse_hit_tested*/
-//       [&hit_tested_mouse_used](auto...) { hit_tested_mouse_used = true; });
-//   const auto [parent, child] = SetupSceneWithParentAndChildViews(&registry);
+TEST_F(PointerinjectorRegistryTest,
+       MouseDeviceAndExclusivePolicy_ShouldTriggerExclusiveMouseInjectFunc) {
+  bool exclusive_touch_used = false;
+  bool hit_tested_touch_used = false;
+  bool exclusive_mouse_used = false;
+  bool hit_tested_mouse_used = false;
+  scenic_impl::input::PointerinjectorRegistry registry(
+      /*context*/ nullptr,
+      /*inject_touch_exclusive*/ [&exclusive_touch_used](auto...) { exclusive_touch_used = true; },
+      /*inject_touch_hit_tested*/
+      [&hit_tested_touch_used](auto...) { hit_tested_touch_used = true; },
+      /*inject_mouse_exclusive*/ [&exclusive_mouse_used](auto...) { exclusive_mouse_used = true; },
+      /*inject_mouse_hit_tested*/
+      [&hit_tested_mouse_used](auto...) { hit_tested_mouse_used = true; },
+      /*cancel_mouse_stream=*/[](auto...) {});
+  const auto [parent, child] = SetupSceneWithParentAndChildViews(&registry);
 
-//   fuchsia::ui::pointerinjector::DevicePtr injector;
-//   bool register_callback_fired = false;
-//   bool error_callback_fired = false;
-//   injector.set_error_handler(
-//       [&error_callback_fired](zx_status_t status) { error_callback_fired = true; });
-//   fuchsia::ui::pointerinjector::Config config = ConfigTemplate(parent.view_ref, child.view_ref);
-//   config.set_device_type(DeviceType::MOUSE);
-//   config.set_dispatch_policy(DispatchPolicy::EXCLUSIVE_TARGET);
-//   registry.Register(std::move(config), injector.NewRequest(),
-//                     [&register_callback_fired] { register_callback_fired = true; });
-//   RunLoopUntilIdle();
-//   EXPECT_TRUE(register_callback_fired);
-//   EXPECT_FALSE(error_callback_fired);
+  fuchsia::ui::pointerinjector::DevicePtr injector;
+  bool register_callback_fired = false;
+  bool error_callback_fired = false;
+  injector.set_error_handler(
+      [&error_callback_fired](zx_status_t status) { error_callback_fired = true; });
+  fuchsia::ui::pointerinjector::Config config = ConfigTemplate(parent.view_ref, child.view_ref);
+  config.set_device_type(DeviceType::MOUSE);
+  config.set_dispatch_policy(DispatchPolicy::EXCLUSIVE_TARGET);
+  registry.Register(std::move(config), injector.NewRequest(),
+                    [&register_callback_fired] { register_callback_fired = true; });
+  RunLoopUntilIdle();
+  EXPECT_TRUE(register_callback_fired);
+  EXPECT_FALSE(error_callback_fired);
 
-//   injector->Inject(EventsTemplate(), [] {});
-//   RunLoopUntilIdle();
-//   EXPECT_FALSE(exclusive_touch_used);
-//   EXPECT_FALSE(hit_tested_touch_used);
-//   EXPECT_TRUE(exclusive_mouse_used);
-//   EXPECT_FALSE(hit_tested_mouse_used);
-// }
+  injector->Inject(EventsTemplate(), [] {});
+  RunLoopUntilIdle();
+  EXPECT_FALSE(exclusive_touch_used);
+  EXPECT_FALSE(hit_tested_touch_used);
+  EXPECT_TRUE(exclusive_mouse_used);
+  EXPECT_FALSE(hit_tested_mouse_used);
+}
 
-// TEST_F(PointerinjectorRegistryTest,
-//        MouseDeviceAndHitTestPolicy_ShouldTriggerHitTestedMouseInjectFunc) {
-//   bool exclusive_touch_used = false;
-//   bool hit_tested_touch_used = false;
-//   bool exclusive_mouse_used = false;
-//   bool hit_tested_mouse_used = false;
-//   scenic_impl::input::PointerinjectorRegistry registry(
-//       /*context*/ nullptr,
-//       /*inject_touch_exclusive*/ [&exclusive_touch_used](auto...) { exclusive_touch_used = true;
-//       },
-//       /*inject_touch_hit_tested*/
-//       [&hit_tested_touch_used](auto...) { hit_tested_touch_used = true; },
-//       /*inject_mouse_exclusive*/ [&exclusive_mouse_used](auto...) { exclusive_mouse_used = true;
-//       },
-//       /*inject_mouse_hit_tested*/
-//       [&hit_tested_mouse_used](auto...) { hit_tested_mouse_used = true; });
-//   const auto [parent, child] = SetupSceneWithParentAndChildViews(&registry);
+TEST_F(PointerinjectorRegistryTest,
+       MouseDeviceAndHitTestPolicy_ShouldTriggerHitTestedMouseInjectFunc) {
+  bool exclusive_touch_used = false;
+  bool hit_tested_touch_used = false;
+  bool exclusive_mouse_used = false;
+  bool hit_tested_mouse_used = false;
+  scenic_impl::input::PointerinjectorRegistry registry(
+      /*context*/ nullptr,
+      /*inject_touch_exclusive*/ [&exclusive_touch_used](auto...) { exclusive_touch_used = true; },
+      /*inject_touch_hit_tested*/
+      [&hit_tested_touch_used](auto...) { hit_tested_touch_used = true; },
+      /*inject_mouse_exclusive*/ [&exclusive_mouse_used](auto...) { exclusive_mouse_used = true; },
+      /*inject_mouse_hit_tested*/
+      [&hit_tested_mouse_used](auto...) { hit_tested_mouse_used = true; },
+      /*cancel_mouse_stream=*/[](auto...) {});
+  const auto [parent, child] = SetupSceneWithParentAndChildViews(&registry);
 
-//   fuchsia::ui::pointerinjector::DevicePtr injector;
-//   bool register_callback_fired = false;
-//   bool error_callback_fired = false;
-//   injector.set_error_handler(
-//       [&error_callback_fired](zx_status_t status) { error_callback_fired = true; });
-//   fuchsia::ui::pointerinjector::Config config = ConfigTemplate(parent.view_ref, child.view_ref);
-//   config.set_device_type(DeviceType::MOUSE);
-//   config.set_dispatch_policy(DispatchPolicy::MOUSE_HOVER_AND_LATCH_IN_TARGET);
-//   registry.Register(std::move(config), injector.NewRequest(),
-//                     [&register_callback_fired] { register_callback_fired = true; });
-//   RunLoopUntilIdle();
-//   EXPECT_TRUE(register_callback_fired);
-//   EXPECT_FALSE(error_callback_fired);
+  fuchsia::ui::pointerinjector::DevicePtr injector;
+  bool register_callback_fired = false;
+  bool error_callback_fired = false;
+  injector.set_error_handler(
+      [&error_callback_fired](zx_status_t status) { error_callback_fired = true; });
+  fuchsia::ui::pointerinjector::Config config = ConfigTemplate(parent.view_ref, child.view_ref);
+  config.set_device_type(DeviceType::MOUSE);
+  config.set_dispatch_policy(DispatchPolicy::MOUSE_HOVER_AND_LATCH_IN_TARGET);
+  registry.Register(std::move(config), injector.NewRequest(),
+                    [&register_callback_fired] { register_callback_fired = true; });
+  RunLoopUntilIdle();
+  EXPECT_TRUE(register_callback_fired);
+  EXPECT_FALSE(error_callback_fired);
 
-//   injector->Inject(EventsTemplate(), [] {});
-//   RunLoopUntilIdle();
-//   EXPECT_FALSE(exclusive_touch_used);
-//   EXPECT_FALSE(hit_tested_touch_used);
-//   EXPECT_FALSE(exclusive_mouse_used);
-//   EXPECT_TRUE(hit_tested_mouse_used);
-// }
+  injector->Inject(EventsTemplate(), [] {});
+  RunLoopUntilIdle();
+  EXPECT_FALSE(exclusive_touch_used);
+  EXPECT_FALSE(hit_tested_touch_used);
+  EXPECT_FALSE(exclusive_mouse_used);
+  EXPECT_TRUE(hit_tested_mouse_used);
+}
+
+TEST_F(PointerinjectorRegistryTest,
+       MouseInjectorChannelDying_ShouldTriggerCancelMouseStreamCallback) {
+  uint32_t cancel_mouse_stream_count = 0;
+  scenic_impl::input::PointerinjectorRegistry registry(
+      /*context*/ nullptr,
+      /*inject_touch_exclusive*/ [](auto...) {},
+      /*inject_touch_hit_tested*/ [](auto...) {},
+      /*inject_mouse_exclusive*/ [](auto...) {},
+      /*inject_mouse_hit_tested*/ [](auto...) {},
+      /*cancel_mouse_stream=*/
+      [&cancel_mouse_stream_count](auto...) { cancel_mouse_stream_count++; });
+  const auto [parent, child] = SetupSceneWithParentAndChildViews(&registry);
+
+  {
+    fuchsia::ui::pointerinjector::DevicePtr injector;
+    bool register_callback_fired = false;
+    bool error_callback_fired = false;
+    injector.set_error_handler(
+        [&error_callback_fired](zx_status_t status) { error_callback_fired = true; });
+    fuchsia::ui::pointerinjector::Config config = ConfigTemplate(parent.view_ref, child.view_ref);
+    config.set_device_type(DeviceType::MOUSE);
+    config.set_dispatch_policy(DispatchPolicy::MOUSE_HOVER_AND_LATCH_IN_TARGET);
+    registry.Register(std::move(config), injector.NewRequest(),
+                      [&register_callback_fired] { register_callback_fired = true; });
+    RunLoopUntilIdle();
+    EXPECT_TRUE(register_callback_fired);
+    EXPECT_FALSE(error_callback_fired);
+    EXPECT_EQ(cancel_mouse_stream_count, 0u);
+
+    // Begin two streams.
+    injector->Inject(EventsTemplate(), [] {});
+    {
+      auto events = EventsTemplate();
+      events.back().mutable_data()->pointer_sample().set_pointer_id(2);
+      injector->Inject(std::move(events), [] {});
+    }
+    RunLoopUntilIdle();
+    EXPECT_EQ(cancel_mouse_stream_count, 0u);
+  }  // injector goes out of scope.
+
+  RunLoopUntilIdle();
+  // We get a cancel call for the ongoing stream.
+  EXPECT_EQ(cancel_mouse_stream_count, 2u);
+}
+
+TEST_F(PointerinjectorRegistryTest,
+       MouseInjector_CancelEvent_ShouldTriggerCancelMouseStreamCallback) {
+  uint32_t cancel_mouse_stream_count = false;
+  scenic_impl::input::PointerinjectorRegistry registry(
+      /*context*/ nullptr,
+      /*inject_touch_exclusive*/ [](auto...) {},
+      /*inject_touch_hit_tested*/ [](auto...) {},
+      /*inject_mouse_exclusive*/ [](auto...) {},
+      /*inject_mouse_hit_tested*/ [](auto...) {},
+      /*cancel_mouse_stream=*/
+      [&cancel_mouse_stream_count](auto...) { cancel_mouse_stream_count++; });
+  const auto [parent, child] = SetupSceneWithParentAndChildViews(&registry);
+
+  fuchsia::ui::pointerinjector::DevicePtr injector;
+  bool register_callback_fired = false;
+  bool error_callback_fired = false;
+  injector.set_error_handler(
+      [&error_callback_fired](zx_status_t status) { error_callback_fired = true; });
+  fuchsia::ui::pointerinjector::Config config = ConfigTemplate(parent.view_ref, child.view_ref);
+  config.set_device_type(DeviceType::MOUSE);
+  config.set_dispatch_policy(DispatchPolicy::MOUSE_HOVER_AND_LATCH_IN_TARGET);
+  registry.Register(std::move(config), injector.NewRequest(),
+                    [&register_callback_fired] { register_callback_fired = true; });
+  RunLoopUntilIdle();
+  EXPECT_TRUE(register_callback_fired);
+  EXPECT_FALSE(error_callback_fired);
+  EXPECT_EQ(cancel_mouse_stream_count, 0u);
+
+  // Begin a stream.
+  injector->Inject(EventsTemplate(), [] {});
+  RunLoopUntilIdle();
+  EXPECT_EQ(cancel_mouse_stream_count, 0u);
+
+  {
+    auto events = EventsTemplate();
+    events.back().mutable_data()->pointer_sample().set_phase(
+        fuchsia::ui::pointerinjector::EventPhase::CANCEL);
+    injector->Inject(std::move(events), [] {});
+    RunLoopUntilIdle();
+    EXPECT_EQ(cancel_mouse_stream_count, 1u);
+  }
+
+  // Begin another stream.
+  injector->Inject(EventsTemplate(), [] {});
+  RunLoopUntilIdle();
+  EXPECT_EQ(cancel_mouse_stream_count, 1u);
+
+  {
+    auto events = EventsTemplate();
+    events.back().mutable_data()->pointer_sample().set_phase(
+        fuchsia::ui::pointerinjector::EventPhase::REMOVE);
+    injector->Inject(std::move(events), [] {});
+    RunLoopUntilIdle();
+    EXPECT_EQ(cancel_mouse_stream_count, 2u);
+  }
+}
 
 // Parameterized tests for malformed viewport arguments.
 // Use pairs of optional extents and matrices. Because test parameters must be copyable.
