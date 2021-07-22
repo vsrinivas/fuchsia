@@ -538,7 +538,7 @@ where
             }
         };
 
-        if path.as_ref() == "." {
+        if path.is_dot() {
             // Note that we reject both OPEN_FLAG_CREATE and OPEN_FLAG_CREATE_IF_ABSENT, rather
             // than just OPEN_FLAG_CREATE_IF_ABSENT. This matches the behaviour of the C++
             // filesystems.

@@ -20,18 +20,21 @@ pub struct Path {
 }
 
 impl Path {
-    /// DEPRECATED
-    pub fn empty() -> Path {
+    /// Returns a path for dot, i.e. the current directory.  The `next` will return None for this
+    /// path.
+    pub fn dot() -> Path {
+        // We use an empty string to avoid allocations.  as_ref() handles this correctly below and
+        // will return ".".
         Path { is_dir: false, inner: String::new(), next: 0 }
     }
 
-    /// Returns a path for dot, i.e. the current directory.
-    pub fn dot() -> Path {
-        Path { is_dir: false, inner: ".".to_string(), next: 1 }
+    pub fn is_dot(&self) -> bool {
+        self.inner.is_empty()
     }
 
     /// Splits a `path` string into components, also checking if it is in a canonical form,
-    /// disallowing any ".." components, as well as empty component names.
+    /// disallowing any ".." components, as well as empty component names.  A lone "/" is translated
+    /// to "." (the canonical form).
     pub fn validate_and_split<Source>(path: Source) -> Result<Path, Status>
     where
         Source: Into<String>,
@@ -45,14 +48,7 @@ impl Path {
         }
 
         match path.as_str() {
-            "." => Ok(Self::dot()),
-            "/" => {
-                // Need to have a special case for this, as otherwise, the code below will treat
-                // this path as having one empty component - string before the first '/'.  Also,
-                // `into_string` does not return the trailing '/' when the last component has been
-                // reached.  One can argue for a path like this it has already have happened.
-                Ok(Path { is_dir: true, inner: path, next: 1 })
-            }
+            "." | "/" => Ok(Self::dot()),
             _ => {
                 let is_dir = path.ends_with('/');
 
@@ -87,7 +83,8 @@ impl Path {
         self.next >= self.inner.len()
     }
 
-    /// Returns `true` if the original string contained '/' as the last symbol.
+    /// Returns `true` if the canonical path contains '/' as the last symbol.  Note that is_dir is
+    /// `false` for ".", even though a directory is implied.  The canonical form for "/" is ".".
     pub fn is_dir(&self) -> bool {
         self.is_dir
     }
@@ -136,7 +133,7 @@ impl Path {
         }
     }
 
-    /// Returns a referenc to a position of the string that names the next component, without
+    /// Returns a reference to a position of the string that names the next component, without
     /// moving the internal pointer.  So calling `peek()` multiple times in a row would return the
     /// same result.  See also [`Self::next()`].
     pub fn peek(&self) -> Option<&str> {
@@ -165,7 +162,14 @@ impl Path {
 
 impl AsRef<str> for Path {
     fn as_ref(&self) -> &str {
-        &self.inner
+        if self.is_dot() {
+            "."
+        } else if self.inner.starts_with("/") {
+            // Prefer to return a canonical path.
+            &self.inner[1..]
+        } else {
+            &self.inner
+        }
     }
 }
 
@@ -214,8 +218,9 @@ mod tests {
             path: "/",
             mut path => {
                 assert!(path.is_empty());
-                assert!(path.is_dir());
+                assert!(!path.is_dir());  // It is converted into ".".
                 assert!(!path.is_single_component());
+                assert_eq!(path.as_ref(), ".");
                 assert_eq!(path.peek(), None);
                 assert_eq!(path.next(), None);
                 assert_eq!(path.into_string(), String::new());
@@ -419,6 +424,7 @@ mod tests {
                 assert!(!path.is_empty());
                 assert!(!path.is_dir());
                 assert!(!path.is_single_component());
+                assert_eq!(path.as_ref(), "a/b/c");
                 assert_eq!(path.peek(), Some("a"));
                 assert_eq!(path.peek(), Some("a"));
                 assert_eq!(path.next(), Some("a"));
@@ -502,5 +508,21 @@ mod tests {
                 assert_eq!(path.next(), Some(string.as_str()));
             }
         };
+    }
+
+    #[test]
+    fn dot() {
+        for mut path in
+            [Path::dot(), Path::validate_and_split(".").expect("validate_and_split failed")]
+        {
+            assert!(path.is_dot());
+            assert!(path.is_empty());
+            assert!(!path.is_dir());
+            assert!(!path.is_single_component());
+            assert_eq!(path.next(), None);
+            assert_eq!(path.peek(), None);
+            assert_eq!(path.as_ref(), ".");
+            assert_eq!(path.into_string(), "");
+        }
     }
 }

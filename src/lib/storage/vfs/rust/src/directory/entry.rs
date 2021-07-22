@@ -74,15 +74,17 @@ impl fmt::Debug for EntryInfo {
 /// Pseudo directories contain items that implement this trait.  Pseudo directories refer to the
 /// items they contain as `Arc<dyn DirectoryEntry>`.
 pub trait DirectoryEntry: Sync + Send {
-    /// Opens a connection to this item if the `path` is empty or a connection to an item inside
-    /// this one otherwise.  `path` should not contain any "." or ".." components.  Those are not
-    /// processed in any special way.
+    /// Opens a connection to this item if the `path` is "." or a connection to an item inside this
+    /// one otherwise.  `path` will not contain any "." or ".." components.
     ///
-    /// `flags` holds one or more of the `OPEN_RIGHT_*`, `OPEN_FLAG_*` constants, while `mode`
-    /// holds one of the `MODE_TYPE_*` constants, possibly, along with some bits in the
-    /// `MODE_PROTECTION_MASK` section.  Processing of the `flags` value is specific to the item -
-    /// in particular, the `OPEN_RIGHT_*` flags need to match the item capabilities.  `MODE_TYPE_*`
-    /// flag need to match the item type, or an error should be generated.
+    /// `flags` holds one or more of the `OPEN_RIGHT_*`, `OPEN_FLAG_*` constants.  Processing of the
+    /// `flags` value is specific to the item - in particular, the `OPEN_RIGHT_*` flags need to
+    /// match the item capabilities.  See the io.fidl documentation for the precise semantics of the
+    /// `mode` argument.  Some validation of the `flags` and `mode` fields will have taken place
+    /// prior to this call; `flags` and `mode` will be consistent with each other.
+    ///
+    /// It is the responsibility of the implementation to strip POSIX flags if the path crosses
+    /// a boundary that does not have the required permissions.
     ///
     /// It is the responsibility of the implementation to send an `OnOpen` even on the channel
     /// contained by `server_end` in case `OPEN_FLAG_STATUS` was present in `flags`, and to
