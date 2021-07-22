@@ -64,7 +64,7 @@ auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 // Create the actual view and view holder.
 scenic::View view(session, std::move(view_token), "View");
 scenic::ViewHolder view_holder(session, std::move(view_holder_token),
-                               “ViewHolder");
+                               "ViewHolder");
 // Set the bounding box dimensions on the view holder.
 view_holder.SetViewProperties({.bounding_box{.min{0, 0, -200}, .max{500, 500, 0}},
                                .inset_from_min{20, 30, 0},
