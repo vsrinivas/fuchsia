@@ -102,13 +102,6 @@ type DeviceConfig = table {
     2: blocking bool;
 };
 
-// TODO(https://fxbug.dev/75528): Remove after soft transition.
-@deprecated("use DeviceConfig instead")
-type DeviceConfig2 = table {
-    1: base BaseDeviceConfig;
-    2: blocking bool;
-};
-
 /// Configuration used to create a [`fuchsia.net.tun/DevicePair`].
 type DevicePairConfig = table {
     /// Base device configuration. Defaults to empty.
@@ -253,27 +246,6 @@ protocol Device {
     });
 };
 
-// TODO(https://fxbug.dev/75528): Remove after soft transition.
-@deprecated("use Device instead")
-protocol Device2 {
-    WriteFrame(struct {
-        frame Frame;
-    }) -> (struct {}) error zx.status;
-    ReadFrame() -> (struct {
-        frame Frame;
-    }) error zx.status;
-    GetSignals() -> (resource struct {
-        signals zx.handle:EVENTPAIR;
-    });
-    AddPort(resource struct {
-        config DevicePortConfig;
-        port server_end:Port;
-    });
-    GetDevice(resource struct {
-        device server_end:fuchsia.hardware.network.Device;
-    });
-};
-
 /// Provides control over a pair of network devices.
 ///
 /// A `DevicePair` is a simpler version of `Device` that "shorts" two network device interfaces,
@@ -322,15 +294,6 @@ protocol Control {
     CreateDevice(resource struct {
         config DeviceConfig;
         device server_end:Device;
-    });
-    // TODO(https://fxbug.dev/75528): Remove after soft transition.
-    /// Creates a `Device2` with given `config`.
-    /// If `config` is not valid or the device could not be created, `device` is closed with an
-    /// error epitaph.
-    @deprecated("use CreateDevice instead")
-    CreateDevice2(resource struct {
-        config DeviceConfig2;
-        device server_end:Device2;
     });
     /// Creates a `DevicePair` with given `config`.
     /// If `config` is not valid or the device could not be created, `device_pair` is closed

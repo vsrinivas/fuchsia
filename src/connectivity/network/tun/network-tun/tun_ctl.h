@@ -32,8 +32,6 @@ class TunCtl : public fidl::WireServer<fuchsia_net_tun::Control> {
 
   void CreateDevice(CreateDeviceRequestView request,
                     CreateDeviceCompleter::Sync& completer) override;
-  void CreateDevice2(CreateDevice2RequestView request,
-                     CreateDevice2Completer::Sync& completer) override;
   void CreatePair(CreatePairRequestView request, CreatePairCompleter::Sync& completer) override;
 
   // Schedules `shutdown_callback` to be called once all devices and device pairs are torn down and
@@ -48,10 +46,6 @@ class TunCtl : public fidl::WireServer<fuchsia_net_tun::Control> {
   const fbl::DoublyLinkedList<std::unique_ptr<TunDevice>>& devices() const { return devices_; }
 
  private:
-  template <typename F>
-  void CreateDeviceGeneric(fuchsia_net_tun::wire::DeviceConfig& config,
-                           fidl::ServerEnd<F> server_end);
-
   void TryFireShutdownCallback();
   async_dispatcher_t* dispatcher_;
   fit::callback<void()> shutdown_callback_;

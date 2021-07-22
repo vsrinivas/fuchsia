@@ -13,29 +13,7 @@
 namespace network {
 namespace tun {
 
-void TunCtl::CreateDevice2(CreateDevice2RequestView request,
-                           CreateDevice2Completer::Sync& completer) {
-  // Copy all configuration into migration type.
-  fidl::FidlAllocator alloc;
-  fuchsia_net_tun::wire::DeviceConfig config(alloc);
-  fuchsia_net_tun::wire::DeviceConfig2& input = request->config;
-  if (input.has_base()) {
-    config.set_base(alloc, input.base());
-  }
-  if (input.has_blocking()) {
-    config.set_blocking(alloc, input.blocking());
-  }
-
-  CreateDeviceGeneric(config, std::move(request->device));
-}
-
 void TunCtl::CreateDevice(CreateDeviceRequestView request, CreateDeviceCompleter::Sync& completer) {
-  CreateDeviceGeneric(request->config, std::move(request->device));
-}
-
-template <typename F>
-void TunCtl::CreateDeviceGeneric(fuchsia_net_tun::wire::DeviceConfig& config,
-                                 fidl::ServerEnd<F> server_end) {
   zx::status tun_device = TunDevice::Create(
       [this](TunDevice* dev) {
         async::PostTask(dispatcher_, [this, dev]() {
@@ -43,15 +21,15 @@ void TunCtl::CreateDeviceGeneric(fuchsia_net_tun::wire::DeviceConfig& config,
           TryFireShutdownCallback();
         });
       },
-      config);
+      request->config);
 
   if (tun_device.is_error()) {
     FX_LOGF(ERROR, "tun", "TunCtl: TunDevice creation failed: %s", tun_device.status_string());
-    server_end.Close(tun_device.error_value());
+    request->device.Close(tun_device.error_value());
     return;
   }
   auto& value = tun_device.value();
-  value->Bind(std::move(server_end));
+  value->Bind(std::move(request->device));
   devices_.push_back(std::move(value));
   FX_LOG(INFO, "tun", "TunCtl: Created TunDevice");
 }

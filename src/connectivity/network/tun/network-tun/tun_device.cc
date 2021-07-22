@@ -93,20 +93,10 @@ TunDevice::~TunDevice() {
   FX_VLOG(1, "tun", "TunDevice destroyed");
 }
 
-void TunDevice::Bind(fidl::ServerEnd<fuchsia_net_tun::Device2> req) {
-  legacy_binding_ = fidl::BindServer<LegacyDevice>(
-      loop_.dispatcher(), std::move(req), this,
-      [](LegacyDevice* impl, fidl::UnbindInfo, fidl::ServerEnd<fuchsia_net_tun::Device2>) {
-        static_cast<TunDevice*>(impl)->Teardown();
-      });
-}
-
 void TunDevice::Bind(fidl::ServerEnd<fuchsia_net_tun::Device> req) {
-  binding_ = fidl::BindServer<NewDevice>(
-      loop_.dispatcher(), std::move(req), this,
-      [](NewDevice* impl, fidl::UnbindInfo, fidl::ServerEnd<fuchsia_net_tun::Device>) {
-        static_cast<TunDevice*>(impl)->Teardown();
-      });
+  binding_ = fidl::BindServer(loop_.dispatcher(), std::move(req), this,
+                              [](TunDevice* impl, fidl::UnbindInfo,
+                                 fidl::ServerEnd<fuchsia_net_tun::Device>) { impl->Teardown(); });
 }
 
 void TunDevice::Teardown() {
@@ -116,7 +106,7 @@ void TunDevice::Teardown() {
 }
 
 template <typename F, typename C>
-bool TunDevice::WriteWith(F fn, C& callback) {
+bool TunDevice::WriteWith(F fn, C& completer) {
   zx::status avail = fn();
   switch (zx_status_t status = avail.status_value(); status) {
     case ZX_OK:
@@ -124,7 +114,7 @@ bool TunDevice::WriteWith(F fn, C& callback) {
         // Clear the writable signal if no more buffers are available afterwards.
         signals_self_.signal_peer(uint32_t(fuchsia_net_tun::wire::Signals::kWritable), 0);
       }
-      callback(ZX_OK);
+      completer.ReplySuccess();
       return true;
     case ZX_ERR_SHOULD_WAIT:
       if (IsBlocking()) {
@@ -132,7 +122,7 @@ bool TunDevice::WriteWith(F fn, C& callback) {
       }
       __FALLTHROUGH;
     default:
-      callback(status);
+      completer.ReplyError(status);
       return true;
   }
 }
@@ -149,7 +139,7 @@ bool TunDevice::RunWriteFrame() {
           return device_->WriteRxFrame(port->adapter(), pending.frame_type, pending.data,
                                        pending.meta);
         },
-        pending.callback);
+        pending.completer);
     if (!handled) {
       return false;
     }
@@ -192,7 +182,7 @@ void TunDevice::RunReadFrame() {
         frame.set_meta(
             fidl::ObjectView<fuchsia_net_tun::wire::FrameMetadata>::FromExternal(&meta.value()));
       }
-      pending_read_frame_.front()(zx::ok(frame));
+      pending_read_frame_.front().ReplySuccess(frame);
       pending_read_frame_.pop();
       if (avail == 0) {
         // clear Signals::READABLE if we don't have any more tx buffers.
@@ -204,7 +194,7 @@ void TunDevice::RunReadFrame() {
       if (IsBlocking()) {
         return;
       }
-      pending_read_frame_.front()(zx::error(ZX_ERR_SHOULD_WAIT));
+      pending_read_frame_.front().ReplyError(ZX_ERR_SHOULD_WAIT);
       pending_read_frame_.pop();
     }
   }
@@ -259,24 +249,24 @@ void TunDevice::Port::PostRunStateChange() {
   });
 }
 
-void TunDevice::WriteFrame(fuchsia_net_tun::wire::Frame frame, WriteFrameCallback callback) {
+void TunDevice::WriteFrame(WriteFrameRequestView request, WriteFrameCompleter::Sync& completer) {
   if (pending_write_frame_.size() >= kMaxPendingOps) {
-    callback(ZX_ERR_NO_RESOURCES);
+    completer.ReplyError(ZX_ERR_NO_RESOURCES);
     return;
   }
-
+  fuchsia_net_tun::wire::Frame& frame = request->frame;
   if (!frame.has_frame_type()) {
-    callback(ZX_ERR_INVALID_ARGS);
+    completer.ReplyError(ZX_ERR_INVALID_ARGS);
     return;
   }
   fuchsia_hardware_network::wire::FrameType& frame_type = frame.frame_type();
   if (!frame.has_data() || frame.data().empty()) {
-    callback(ZX_ERR_INVALID_ARGS);
+    completer.ReplyError(ZX_ERR_INVALID_ARGS);
     return;
   }
   fidl::VectorView<uint8_t>& frame_data = frame.data();
   if (!frame.has_port() || frame.port() >= fuchsia_hardware_network::wire::kMaxPorts) {
-    callback(ZX_ERR_INVALID_ARGS);
+    completer.ReplyError(ZX_ERR_INVALID_ARGS);
     return;
   }
   uint8_t& port_id = frame.port();
@@ -295,88 +285,30 @@ void TunDevice::WriteFrame(fuchsia_net_tun::wire::Frame frame, WriteFrameCallbac
           }
           return device_->WriteRxFrame(port->adapter(), frame_type, frame_data, meta);
         },
-        callback);
+        completer);
     if (handled) {
       return;
     }
   }
-  pending_write_frame_.emplace(frame, std::move(callback));
+  pending_write_frame_.emplace(frame, completer.ToAsync());
 }
 
-template <typename F>
-void TunDevice::WriteFrameGeneric(typename F::WriteFrameRequestView& request,
-                                  typename F::WriteFrameCompleter::Sync& completer) {
-  WriteFrame(request->frame, [completer = completer.ToAsync()](zx_status_t status) mutable {
-    if (status != ZX_OK) {
-      completer.ReplyError(status);
-    } else {
-      completer.ReplySuccess();
-    }
-  });
-}
-
-void TunDevice::WriteFrame(LegacyDevice::WriteFrameRequestView request,
-                           LegacyDevice::WriteFrameCompleter::Sync& completer) {
-  WriteFrameGeneric<LegacyDevice>(request, completer);
-}
-
-void TunDevice::WriteFrame(NewDevice::WriteFrameRequestView request,
-                           NewDevice::WriteFrameCompleter::Sync& completer) {
-  WriteFrameGeneric<NewDevice>(request, completer);
-}
-
-void TunDevice::ReadFrame(ReadFrameCallback callback) {
+void TunDevice::ReadFrame(ReadFrameRequestView request, ReadFrameCompleter::Sync& completer) {
   if (pending_read_frame_.size() >= kMaxPendingOps) {
-    callback(zx::error(ZX_ERR_NO_RESOURCES));
+    completer.ReplyError(ZX_ERR_NO_RESOURCES);
     return;
   }
-  pending_read_frame_.push(std::move(callback));
+  pending_read_frame_.push(completer.ToAsync());
   RunReadFrame();
 }
 
-template <typename F>
-void TunDevice::ReadFrameGeneric(typename F::ReadFrameRequestView& request,
-                                 typename F::ReadFrameCompleter::Sync& completer) {
-  ReadFrame(
-      [completer = completer.ToAsync()](zx::status<fuchsia_net_tun::wire::Frame> response) mutable {
-        if (response.is_error()) {
-          completer.ReplyError(response.status_value());
-        } else {
-          completer.ReplySuccess(std::move(*response));
-        }
-      });
-}
-
-void TunDevice::ReadFrame(LegacyDevice::ReadFrameRequestView request,
-                          LegacyDevice::ReadFrameCompleter::Sync& completer) {
-  ReadFrameGeneric<LegacyDevice>(request, completer);
-}
-
-void TunDevice::ReadFrame(NewDevice::ReadFrameRequestView request,
-                          NewDevice::ReadFrameCompleter::Sync& completer) {
-  ReadFrameGeneric<NewDevice>(request, completer);
-}
-
-template <typename F>
-void TunDevice::GetSignalsGeneric(typename F::GetSignalsRequestView& request,
-                                  typename F::GetSignalsCompleter::Sync& completer) {
+void TunDevice::GetSignals(GetSignalsRequestView request, GetSignalsCompleter::Sync& completer) {
   zx::eventpair dup;
   signals_peer_.duplicate(ZX_RIGHTS_BASIC, &dup);
   completer.Reply(std::move(dup));
 }
 
-void TunDevice::GetSignals(LegacyDevice::GetSignalsRequestView request,
-                           LegacyDevice::GetSignalsCompleter::Sync& completer) {
-  GetSignalsGeneric<LegacyDevice>(request, completer);
-}
-
-void TunDevice::GetSignals(NewDevice::GetSignalsRequestView request,
-                           NewDevice::GetSignalsCompleter::Sync& completer) {
-  GetSignalsGeneric<NewDevice>(request, completer);
-}
-
-template <typename F>
-void TunDevice::AddPortGeneric(typename F::AddPortRequestView& request) {
+void TunDevice::AddPort(AddPortRequestView request, AddPortCompleter::Sync& _completer) {
   zx_status_t status = [&request, this]() {
     std::optional maybe_port_config = DevicePortConfig::Create(request->config);
 
@@ -402,32 +334,11 @@ void TunDevice::AddPortGeneric(typename F::AddPortRequestView& request) {
   }
 }
 
-void TunDevice::AddPort(NewDevice::AddPortRequestView request,
-                        NewDevice::AddPortCompleter::Sync& _completer) {
-  AddPortGeneric<NewDevice>(request);
-}
-
-void TunDevice::AddPort(LegacyDevice::AddPortRequestView request,
-                        LegacyDevice::AddPortCompleter::Sync& _completer) {
-  AddPortGeneric<LegacyDevice>(request);
-}
-
-template <typename F>
-void TunDevice::GetDeviceGeneric(typename F::GetDeviceRequestView& request) {
+void TunDevice::GetDevice(GetDeviceRequestView request, GetDeviceCompleter::Sync& _completer) {
   zx_status_t status = device_->Bind(std::move(request->device));
   if (status != ZX_OK) {
     FX_LOGF(ERROR, "tun", "Failed to bind to network device: %s", zx_status_get_string(status));
   }
-}
-
-void TunDevice::GetDevice(NewDevice::GetDeviceRequestView request,
-                          NewDevice::GetDeviceCompleter::Sync& _completer) {
-  GetDeviceGeneric<NewDevice>(request);
-}
-
-void TunDevice::GetDevice(LegacyDevice::GetDeviceRequestView request,
-                          LegacyDevice::GetDeviceCompleter::Sync& _completer) {
-  GetDeviceGeneric<LegacyDevice>(request);
 }
 
 void TunDevice::OnTxAvail(DeviceAdapter* device) {
