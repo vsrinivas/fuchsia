@@ -12,6 +12,7 @@
 #include <lib/device-protocol/pdev.h>
 #include <lib/inspect/cpp/inspector.h>
 #include <lib/mmio/mmio.h>
+#include <zircon/errors.h>
 
 #include <map>
 #include <memory>
@@ -58,6 +59,26 @@ std::optional<fidl::WireSyncClient<amlogic_cpu::fuchsia_thermal::Device>> Create
   }
 
   return fidl::WireSyncClient<amlogic_cpu::fuchsia_thermal::Device>(std::move(channel_local));
+}
+
+zx_status_t GetDeviceName(bool big_little, PowerDomain power_domain, char const** name) {
+  if (!big_little) {
+    *name = "domain-0";
+  } else {
+    switch (power_domain) {
+      case PowerDomain::kBigClusterPowerDomain:
+        *name = "big-cluster";
+        break;
+      case PowerDomain::kLittleClusterPowerDomain:
+        *name = "little-cluster";
+        break;
+      default:
+        zxlogf(ERROR, "aml-cpu: Got invalid power domain %u", static_cast<uint32_t>(power_domain));
+        *name = "invalid";
+        return ZX_ERR_INVALID_ARGS;
+    }
+  }
+  return ZX_OK;
 }
 
 }  // namespace
@@ -207,7 +228,13 @@ zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
 
     cpu_device->SetCpuInfo(cpu_version_packed);
 
-    status = cpu_device->DdkAdd(ddk::DeviceAddArgs("cpu")
+    char const* name;
+    status = GetDeviceName(info->big_little, static_cast<PowerDomain>(i), &name);
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    status = cpu_device->DdkAdd(ddk::DeviceAddArgs(name)
                                     .set_flags(DEVICE_ADD_NON_BINDABLE)
                                     .set_proto_id(ZX_PROTOCOL_CPU_CTRL)
                                     .set_performance_states({perf_states, perf_state_count})

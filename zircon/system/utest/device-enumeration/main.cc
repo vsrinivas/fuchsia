@@ -204,8 +204,12 @@ TEST_F(DeviceEnumerationTest, Vim3Test) {
       "pd-big-core",
       "pd-little-core",
       "sys/platform/05:06:26",  // power
-      "aml-cpu",
-      "sys/platform/05:06:1e",  // cpu
+
+      // CPU devices.
+      "sys/platform/05:06:1e",
+      "aml-cpu/a311d-arm-a73",
+      "aml-cpu/a311d-arm-a53",
+
       "fusb302",
 
       // Thermal
@@ -268,6 +272,7 @@ TEST_F(DeviceEnumerationTest, AstroTest) {
       // CPU Device.
       "sys/platform/03:03:6",
       "class/cpu-ctrl/000",
+      "aml-cpu/s905d2-arm-a53",
       // LED.
       "class/light/000",
       // RAM (DDR) control.
@@ -461,10 +466,12 @@ TEST_F(DeviceEnumerationTest, SherlockTest) {
       "sys/platform/05:04:24/ram",
       "sys/platform/00:00:29",  // registers device
 
-      // CPU Device.
+      // CPU Devices.
       "sys/platform/03:05:6",
       "class/cpu-ctrl/000",
       "class/cpu-ctrl/001",
+      "aml-cpu/big-cluster",
+      "aml-cpu/little-cluster",
 
       // Thermal devices.
       "sys/platform/05:04:a",
@@ -549,15 +556,15 @@ TEST_F(DeviceEnumerationTest, EveTest) {
 
 TEST_F(DeviceEnumerationTest, NucTest) {
   static const char* kDevicePaths[] = {
-    "pci-00:02.0/intel_i915/intel-gpu-core",
-    "pci-00:02.0/intel_i915/display-controller",
-    "pci-00:14.0/xhci/usb-bus",
-    "pci-00:15.0/i2c-bus-9d60",
-    "pci-00:15.1/i2c-bus-9d61",
-    "pci-00:17.0/ahci",
-    "pci-00:1f.3/intel-hda-000",
-    "pci-00:1f.3/intel-hda-controller",
-    "pci-00:1f.6/e1000",
+      "pci-00:02.0/intel_i915/intel-gpu-core",
+      "pci-00:02.0/intel_i915/display-controller",
+      "pci-00:14.0/xhci/usb-bus",
+      "pci-00:15.0/i2c-bus-9d60",
+      "pci-00:15.1/i2c-bus-9d61",
+      "pci-00:17.0/ahci",
+      "pci-00:1f.3/intel-hda-000",
+      "pci-00:1f.3/intel-hda-controller",
+      "pci-00:1f.6/e1000",
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));

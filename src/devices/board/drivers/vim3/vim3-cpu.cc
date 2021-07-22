@@ -142,8 +142,8 @@ constexpr amlogic_cpu::operating_point_t operating_points[] = {
 };
 
 constexpr amlogic_cpu::perf_domain_t performance_domains[] = {
-    {.id = kPdArmA73, .core_count = 4, .name = "A311D ARM A73"},
-    {.id = kPdArmA53, .core_count = 2, .name = "A311D ARM A53"},
+    {.id = kPdArmA73, .core_count = 4, .name = "a311d-arm-a73"},
+    {.id = kPdArmA53, .core_count = 2, .name = "a311d-arm-a53"},
 };
 
 const pbus_metadata_t cpu_metadata[] = {

@@ -145,8 +145,8 @@ constexpr amlogic_cpu::operating_point_t operating_points[] = {
 };
 
 constexpr amlogic_cpu::perf_domain_t performance_domains[] = {
-    {.id = kPdArmA73, .relative_performance = 255, .name = "T931 ARM A73"},
-    {.id = kPdArmA53, .relative_performance = 128, .name = "T931 ARM A53"},
+    {.id = kPdArmA73, .relative_performance = 255, .name = "t931-arm-a73"},
+    {.id = kPdArmA53, .relative_performance = 128, .name = "t931-arm-a53"},
 };
 
 static const pbus_metadata_t cpu_metadata[] = {

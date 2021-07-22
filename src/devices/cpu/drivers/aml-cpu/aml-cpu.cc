@@ -210,7 +210,7 @@ zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
 
     device->SetCpuInfo(cpu_version_packed);
 
-    st = device->DdkAdd(ddk::DeviceAddArgs("cpu")
+    st = device->DdkAdd(ddk::DeviceAddArgs(perf_domain.name)
                             .set_flags(DEVICE_ADD_NON_BINDABLE)
                             .set_proto_id(ZX_PROTOCOL_CPU_CTRL)
                             .set_performance_states({perf_states.get(), perf_state_count})
