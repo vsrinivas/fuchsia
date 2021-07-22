@@ -42,7 +42,7 @@ fn repository_query(repo_name: &str) -> String {
 }
 
 fn registration_query(repo_name: &str, target_nodename: &str) -> String {
-    format!("{}.{}.{}", CONFIG_KEY_REPOSITORIES, repo_name, target_nodename)
+    format!("{}.{}.{}", CONFIG_KEY_REGISTRATIONS, repo_name, target_nodename)
 }
 
 struct ServerInfo {
