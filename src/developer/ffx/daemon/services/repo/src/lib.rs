@@ -15,7 +15,7 @@ use {
     fuchsia_zircon_status::Status,
     futures::{FutureExt as _, StreamExt as _},
     itertools::Itertools as _,
-    pkg::repository::{Repository, RepositoryManager, RepositoryServer, LISTEN_PORT},
+    pkg::repository::{listen_addr, Repository, RepositoryManager, RepositoryServer},
     serde_json::{self, Value},
     services::prelude::*,
     std::{
@@ -68,8 +68,7 @@ impl Repo {
     async fn start_server(&self, addr: net::SocketAddr) -> Result<()> {
         log::info!("Starting repository server on {}", addr);
 
-        // FIXME(http://fxbug.dev/77146) We currently can only run on 127.0.0.1:8085 and [::1]:8085.
-        let required_addr = (net::Ipv6Addr::LOCALHOST, LISTEN_PORT).into();
+        let required_addr = (net::Ipv6Addr::LOCALHOST, listen_addr().await?.port()).into();
         if addr != required_addr {
             return Err(anyhow!(
                 "repository currently only supports {}, not {}",
@@ -284,10 +283,14 @@ impl Repo {
             bridge::RepositoryError::InternalError
         })?;
 
-        // TODO(fxbug.dev/77015): parameterize the mirror_url value here once we are dynamically assigning ports.
+        let listen_addr =
+            ffx_config::get::<String, _>("repository.server.listen").await.map_err(|e| {
+                log::error!("failed to get listen addr from config: {:?}", e);
+                bridge::RepositoryError::InternalError
+            })?;
         let config = repo
             .get_config(
-                &format!("localhost:{}/{}", LISTEN_PORT, repo.name()),
+                &format!("{}/{}", listen_addr, repo.name()),
                 target_info.storage_type.clone().map(|storage_type| storage_type.into()),
             )
             .await
@@ -645,14 +648,10 @@ impl FidlService for Repo {
         self.load_repositories_from_config().await;
         self.load_registrations_from_config(cx).await;
 
-        match ffx_config::get::<String, _>("repository.server.listen").await {
+        match listen_addr().await {
             Ok(address) => {
-                if let Ok(address) = address.parse::<net::SocketAddr>() {
-                    if let Err(err) = self.start_server(address).await {
-                        log::warn!("Failed to start repository server: {:#?}", err);
-                    }
-                } else {
-                    log::warn!("Invalid value for repository.server.listen")
+                if let Err(err) = self.start_server(address).await {
+                    log::warn!("Failed to start repository server: {:#?}", err);
                 }
             }
             Err(err) => {
@@ -716,7 +715,7 @@ mod tests {
     fn test_repo_config() -> RepositoryConfig {
         RepositoryConfig {
             mirrors: Some(vec![MirrorConfig {
-                mirror_url: Some(format!("http://localhost:8085/{}", REPO_NAME)),
+                mirror_url: Some(format!("http://[::1]:8085/{}", REPO_NAME)),
                 subscribe: Some(true),
                 ..MirrorConfig::EMPTY
             }]),

@@ -45,7 +45,7 @@ pub use file_system::FileSystemRepository;
 pub use http_repository::package_download;
 pub use manager::RepositoryManager;
 pub use pm::PmRepository;
-pub use server::{RepositoryServer, RepositoryServerBuilder, LISTEN_PORT};
+pub use server::{listen_addr, RepositoryServer, RepositoryServerBuilder};
 
 /// A unique ID which is given to every repository.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]

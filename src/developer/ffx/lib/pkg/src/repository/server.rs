@@ -32,10 +32,6 @@ use {
     },
 };
 
-// FIXME(http://fxbug.dev/77015): ffx doesn't have the ability to dynamically create and tear down
-// the ssh tunnel, so we need to hardcode the port.
-pub const LISTEN_PORT: u16 = 8085;
-
 // FIXME: This value was chosen basically at random.
 const AUTO_BUFFER_SIZE: usize = 10;
 
@@ -46,6 +42,11 @@ const MAX_PARSE_RETRIES: usize = 5000;
 const PARSE_RETRY_DELAY: Duration = Duration::from_micros(100);
 
 type SseResponseCreatorMap = RwLock<HashMap<RepositoryId, Arc<SseResponseCreator>>>;
+
+pub async fn listen_addr() -> Result<std::net::SocketAddr> {
+    let address = ffx_config::get::<String, _>("repository.server.listen").await?;
+    Ok(address.parse::<std::net::SocketAddr>()?)
+}
 
 /// RepositoryManager represents the web server that serves [Repositories](Repository) to a target.
 pub struct RepositoryServer {

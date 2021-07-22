@@ -32,6 +32,7 @@ if (is_host) {
       "//src/developer/ffx/lib/async-once:lib",
       "//src/developer/ffx/lib/errors:lib",
       "//src/developer/ffx/lib/netext:lib",
+      "//src/developer/ffx/lib/pkg",
       "//src/developer/ffx/lib/services:lib",
       "//src/developer/ffx/lib/timeout:lib",
       "//src/developer/ffx/logger/data:lib",
