@@ -73,7 +73,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:matches",
   ]
 
-  # TODO(fxbug.dev/56138): Fix the leaks and remove this.
+  # TODO(fxbug.dev/81181): Fix the leaks and remove this.
   non_rust_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 
   sources = [
@@ -192,6 +192,9 @@ rustc_test("encoding_integration_bin") {
     "//third_party/rust_crates:slab",
     "//third_party/rust_crates:thiserror",
   ]
+
+  # TODO(fxbug.dev/81181): Fix the leaks and remove this.
+  non_rust_deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 
   sources = [
     "src/avrcp_relay.rs",

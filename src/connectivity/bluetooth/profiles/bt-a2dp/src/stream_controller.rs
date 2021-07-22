@@ -3,11 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{format_err, Error},
-    core::{
-        pin::Pin,
-        task::{Context, Poll},
-    },
+    anyhow::Error,
+    bt_a2dp::permits::{Permit, Permits},
+    core::pin::Pin,
+    core::task::{Context, Poll},
     fidl::endpoints::RequestStream,
     fidl_fuchsia_bluetooth_internal_a2dp::{
         ControllerRequest, ControllerRequestStream, ControllerSuspendResponder,
@@ -16,12 +15,12 @@ use {
     fuchsia_async as fasync,
     fuchsia_bluetooth::types::PeerId,
     fuchsia_component::server::{ServiceFs, ServiceObj},
-    futures::{
-        select,
-        stream::{SelectAll, Stream},
-        StreamExt,
-    },
+    futures::select,
+    futures::stream::{SelectAll, Stream},
+    futures::StreamExt,
     log::{info, trace, warn},
+    std::cell::RefCell,
+    std::sync::{Arc, Weak},
 };
 
 /// An interface for managing the state of streaming connections with remote peers.
@@ -36,16 +35,28 @@ pub trait StreamController {
 }
 
 /// Owns the set of streaming Permits used to suspend & release A2DP streams.
-// TODO(fxbug.dev/77016): Implement PermitsManager to wrap around `Permits` structure and
-// provide a way to manage acquired Permits and assign them to `StreamController::suspend` requests.
 #[derive(Clone)]
-pub struct PermitsManager;
+pub struct PermitsManager {
+    permits: Permits,
+    held: RefCell<Weak<Vec<Permit>>>,
+}
 
-// TODO(fxbug.dev/77016): Implement StreamController here to assign acquired permits as the `Token`.
+impl From<Permits> for PermitsManager {
+    fn from(permits: Permits) -> Self {
+        Self { permits, held: RefCell::new(Weak::new()) }
+    }
+}
+
 impl StreamController for PermitsManager {
-    type Token = ();
+    type Token = Arc<Vec<Permit>>;
+    // TOOD(fxbug.dev/77016): Use id to actually grab only the permits owned by PeerId
     fn suspend(&self, _id: Option<PeerId>) -> Result<Self::Token, Error> {
-        Err(format_err!("Not implemented"))
+        if let Some(token) = self.held.borrow().upgrade() {
+            return Ok(token);
+        }
+        let token = Arc::new(self.permits.seize());
+        self.held.replace(Arc::downgrade(&token));
+        Ok(token)
     }
 }
 
@@ -185,15 +196,15 @@ pub fn add_stream_controller_capability<SC: StreamController + Clone + Send + 's
 mod tests {
     use super::*;
     use {
-        fidl::{
-            client::QueryResponseFut,
-            endpoints::{create_proxy, create_proxy_and_stream},
-        },
+        anyhow::format_err,
+        fidl::client::QueryResponseFut,
+        fidl::endpoints::{create_proxy, create_proxy_and_stream},
         fidl_fuchsia_bluetooth_internal_a2dp::{
             ControllerMarker, ControllerProxy, StreamSuspenderEvent, StreamSuspenderMarker,
             StreamSuspenderProxy,
         },
         futures::channel::mpsc,
+        parking_lot::Mutex,
     };
 
     #[derive(Debug, PartialEq)]
@@ -492,5 +503,43 @@ mod tests {
         // The server task should then complete since both the `Controller` request stream and outstanding
         // tokens have been exhausted.
         server.await;
+    }
+
+    #[fuchsia::test]
+    fn permit_manager_seizes_permits() {
+        const TOTAL_PERMITS: usize = 2;
+        let permits = Permits::new(TOTAL_PERMITS);
+
+        let manager = PermitsManager::from(permits.clone());
+
+        let permit_holder = Arc::new(Mutex::new(None));
+
+        let revoke_from_holder_fn = {
+            let holder = permit_holder.clone();
+            move || holder.lock().take().expect("should be holding Permit")
+        };
+
+        let permit = permits.get_revokable(revoke_from_holder_fn.clone());
+        permit_holder.lock().insert(permit.expect("permit"));
+
+        let token = manager.suspend(None).expect("suspend permits");
+
+        // Can't get a permit, token holds them all, and took the one we had.
+        assert!(permits.get_revokable(revoke_from_holder_fn.clone()).is_none());
+        assert!(permit_holder.lock().is_none(), "permit should have been revoked");
+
+        let token2 = manager.suspend(None).expect("second suspension");
+        drop(token);
+
+        // Can't get a permit, because token2 is still holding a token suspending everything.
+        assert!(permits.get_revokable(revoke_from_holder_fn.clone()).is_none());
+
+        // Can get another permit after the second client drops.
+        drop(token2);
+        let permit = permits.get_revokable(revoke_from_holder_fn).expect("permit");
+        permit_holder.lock().insert(permit);
+        drop(permit_holder);
+        drop(manager);
+        drop(permits);
     }
 }
