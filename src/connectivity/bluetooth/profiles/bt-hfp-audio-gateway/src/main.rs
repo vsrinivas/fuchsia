@@ -16,6 +16,7 @@ use crate::{
     profile::register_audio_gateway,
 };
 
+mod a2dp;
 mod audio;
 mod config;
 mod error;

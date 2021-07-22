@@ -17,8 +17,9 @@ use {
     fuchsia_async::Task,
     fuchsia_bluetooth::types::PeerId,
     futures::{channel::mpsc, Future, FutureExt, SinkExt, TryFutureExt},
+    parking_lot::Mutex,
     profile_client::ProfileEvent,
-    std::sync::{Arc, Mutex},
+    std::sync::Arc,
 };
 
 #[cfg(test)]

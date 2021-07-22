@@ -27,6 +27,7 @@
         {
             protocol: [
                 "fuchsia.bluetooth.bredr.Profile",
+                "fuchsia.bluetooth.internal.a2dp.Controller",
                 "fuchsia.media.AudioDeviceEnumerator",
             ],
             from: "parent",
