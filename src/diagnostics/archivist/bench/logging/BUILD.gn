@@ -1,0 +1,20 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//src/diagnostics/archivist/build/archivist.gni")
+
+archivist_optimized_binary("bin") {
+  output_name = "archivist_logging_benchmarks"
+  edition = "2018"
+
+  deps = [
+    "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
+    "//src/developer/fuchsia-criterion",
+    "//src/diagnostics/archivist:lib",
+    "//src/lib/fuchsia-async",
+  ]
+
+  sources = [ "src/main.rs" ]
+}

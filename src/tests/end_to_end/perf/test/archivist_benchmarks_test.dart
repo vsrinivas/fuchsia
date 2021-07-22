@@ -14,4 +14,10 @@ void main() {
     await helper.runTestCommand(
         (resultsFile) => '/bin/archivist_redaction_benchmarks $resultsFile');
   }, timeout: Timeout.none);
+
+  test('archivist_logging_benchmarks', () async {
+    final helper = await PerfTestHelper.make();
+    await helper.runTestCommand(
+        (resultsFile) => '/bin/archivist_logging_benchmarks $resultsFile');
+  }, timeout: Timeout.none);
 }
