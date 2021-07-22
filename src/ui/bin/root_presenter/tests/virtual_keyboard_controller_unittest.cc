@@ -29,6 +29,7 @@ class FakeVirtualKeyboardCoordinator : public VirtualKeyboardCoordinator {
       bool is_visible, fuchsia::input::virtualkeyboard::VisibilityChangeReason reason) override {
     FX_NOTIMPLEMENTED();
   }
+  void NotifyManagerError(zx_status_t error) override { FX_NOTIMPLEMENTED(); }
   void RequestTypeAndVisibility(fuchsia::input::virtualkeyboard::TextType text_type,
                                 bool is_visible) override {
     requested_text_type_ = text_type;

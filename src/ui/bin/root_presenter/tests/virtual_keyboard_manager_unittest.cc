@@ -30,6 +30,7 @@ class FakeVirtualKeyboardCoordinator : public VirtualKeyboardCoordinator {
     is_visible_ = is_visible;
     change_reason_ = reason;
   }
+  void NotifyManagerError(zx_status_t error) override { manager_error_ = error; }
   void RequestTypeAndVisibility(fuchsia::input::virtualkeyboard::TextType text_type,
                                 bool is_visibile) override {
     FX_NOTIMPLEMENTED();
@@ -38,6 +39,7 @@ class FakeVirtualKeyboardCoordinator : public VirtualKeyboardCoordinator {
   // Test support.
   const auto& is_visible() { return is_visible_; };
   const auto& change_reason() { return change_reason_; }
+  const auto& manager_error() { return manager_error_; }
 
   fxl::WeakPtr<FakeVirtualKeyboardCoordinator> GetWeakPtr() {
     return weak_ptr_factory_.GetWeakPtr();
@@ -46,6 +48,7 @@ class FakeVirtualKeyboardCoordinator : public VirtualKeyboardCoordinator {
  private:
   std::optional<bool> is_visible_;
   std::optional<fuchsia::input::virtualkeyboard::VisibilityChangeReason> change_reason_;
+  std::optional<zx_status_t> manager_error_;
   fxl::WeakPtrFactory<FakeVirtualKeyboardCoordinator> weak_ptr_factory_;
 };
 
@@ -61,14 +64,12 @@ class VirtualKeyboardManagerTest : public gtest::TestLoopFixture {
 };
 
 TEST_F(VirtualKeyboardManagerTest, CtorDoesNotCrash) {
-  VirtualKeyboardManager(coordinator(), context_provider()->context(),
-                         fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC);
+  VirtualKeyboardManager(coordinator(), fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC);
 }
 
 TEST_F(VirtualKeyboardManagerTest, FirstWatchReturnsImmediately) {
   bool was_called = false;
-  VirtualKeyboardManager(coordinator(), context_provider()->context(),
-                         fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC)
+  VirtualKeyboardManager(coordinator(), fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC)
       .WatchTypeAndVisibility([&was_called](fuchsia::input::virtualkeyboard::TextType text_type,
                                             bool is_visible) { was_called = true; });
   ASSERT_TRUE(was_called);
@@ -76,15 +77,14 @@ TEST_F(VirtualKeyboardManagerTest, FirstWatchReturnsImmediately) {
 
 TEST_F(VirtualKeyboardManagerTest, InitialVisibilityIsFalse) {
   std::optional<bool> is_visible;
-  VirtualKeyboardManager(coordinator(), context_provider()->context(),
-                         fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC)
+  VirtualKeyboardManager(coordinator(), fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC)
       .WatchTypeAndVisibility([&](fuchsia::input::virtualkeyboard::TextType text_type,
                                   bool is_vis) { is_visible = is_vis; });
   ASSERT_EQ(false, is_visible);
 }
 
 TEST_F(VirtualKeyboardManagerTest, SecondWatchHangsUntilChange) {
-  VirtualKeyboardManager manager(coordinator(), context_provider()->context(),
+  VirtualKeyboardManager manager(coordinator(),
                                  fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC);
 
   // Make the initial call to WatchTypeAndVisibility(), which invokes its callback immediately, so
@@ -92,8 +92,8 @@ TEST_F(VirtualKeyboardManagerTest, SecondWatchHangsUntilChange) {
   manager.WatchTypeAndVisibility(
       [](fuchsia::input::virtualkeyboard::TextType text_type, bool is_visible) {});
 
-  // Invoke WatchTypeAndVisibility() again without changing either parameter. This call should _not_
-  // invoke its callback yet.
+  // Invoke WatchTypeAndVisibility() again without changing either parameter. This call should
+  // _not_ invoke its callback yet.
   bool was_called = false;
   manager.WatchTypeAndVisibility([&](fuchsia::input::virtualkeyboard::TextType text_type,
                                      bool is_visible) { was_called = true; });
@@ -109,7 +109,7 @@ TEST_F(VirtualKeyboardManagerTest, SecondWatchHangsUntilChange) {
 }
 
 TEST_F(VirtualKeyboardManagerTest, SecondWatchReturnsImmediatelyIfAlreadyChanged) {
-  VirtualKeyboardManager manager(coordinator(), context_provider()->context(),
+  VirtualKeyboardManager manager(coordinator(),
                                  fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC);
 
   // Make the initial call to WatchTypeAndVisibility(), which invokes its callback immediately, so
@@ -130,7 +130,7 @@ TEST_F(VirtualKeyboardManagerTest, SecondWatchReturnsImmediatelyIfAlreadyChanged
 TEST_F(VirtualKeyboardManagerTest, FirstWatchCallbackIsOnlyInvokedOnce) {
   // Make the initial call to WatchTypeAndVisibility(), which invokes its callback immediately.
   size_t n_calls = 0;
-  VirtualKeyboardManager manager(coordinator(), context_provider()->context(),
+  VirtualKeyboardManager manager(coordinator(),
                                  fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC);
   manager.WatchTypeAndVisibility([&n_calls](fuchsia::input::virtualkeyboard::TextType text_type,
                                             bool is_visible) { ++n_calls; });
@@ -143,7 +143,7 @@ TEST_F(VirtualKeyboardManagerTest, FirstWatchCallbackIsOnlyInvokedOnce) {
 TEST_F(VirtualKeyboardManagerTest, SecondWatchCallbackIsOnlyInvokedOnce) {
   // Make the initial call to WatchTypeAndVisibility(), which invokes its callback immediately,
   // so that we know we're exercising the second-and-later logic below.
-  VirtualKeyboardManager manager(coordinator(), context_provider()->context(),
+  VirtualKeyboardManager manager(coordinator(),
                                  fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC);
   manager.WatchTypeAndVisibility(
       [](fuchsia::input::virtualkeyboard::TextType text_type, bool is_visible) {});
@@ -160,10 +160,10 @@ TEST_F(VirtualKeyboardManagerTest, SecondWatchCallbackIsOnlyInvokedOnce) {
   ASSERT_EQ(1u, n_callbacks);
 }
 
-TEST_F(VirtualKeyboardManagerTest, ConcurrentWatchesNeitherGetsReply) {
+TEST_F(VirtualKeyboardManagerTest, ConcurrentWatchesReportErrorToCoordinator) {
   // Make the initial call to WatchTypeAndVisibility(), which invokes its callback immediately,
   // so that we know we're exercising the second-and-later logic below.
-  VirtualKeyboardManager manager(coordinator(), context_provider()->context(),
+  VirtualKeyboardManager manager(coordinator(),
                                  fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC);
   manager.WatchTypeAndVisibility(
       [](fuchsia::input::virtualkeyboard::TextType text_type, bool is_visible) {});
@@ -178,14 +178,7 @@ TEST_F(VirtualKeyboardManagerTest, ConcurrentWatchesNeitherGetsReply) {
   manager.WatchTypeAndVisibility([&](fuchsia::input::virtualkeyboard::TextType text_type,
                                      bool visibility) { was_second_callback_called = true; });
 
-  // Update the configuration.
-  manager.OnTypeOrVisibilityChange(fuchsia::input::virtualkeyboard::TextType::PHONE, false);
-
-  // Concurrent watches are a violation of protocol, which terminate the client connection.
-  // Unit tests can't exercise connection handling, but they _can_ verify that the callbacks
-  // aren't invoked.
-  ASSERT_FALSE(was_first_callback_called);
-  ASSERT_FALSE(was_second_callback_called);
+  ASSERT_EQ(ZX_ERR_BAD_STATE, coordinator()->manager_error());
 }
 
 class VirtualKeyboardManagerWatchTestFixture
@@ -197,7 +190,7 @@ TEST_P(VirtualKeyboardManagerWatchTestFixture, WatchProvidesCorrectValues) {
   const auto& [expected_text_type, expected_visibility] = GetParam();
   std::optional<fuchsia::input::virtualkeyboard::TextType> actual_text_type;
   std::optional<bool> actual_visibility;
-  VirtualKeyboardManager manager(coordinator(), context_provider()->context(),
+  VirtualKeyboardManager manager(coordinator(),
                                  fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC);
   manager.OnTypeOrVisibilityChange(expected_text_type, expected_visibility);
   manager.WatchTypeAndVisibility(
@@ -218,8 +211,7 @@ INSTANTIATE_TEST_SUITE_P(
 
 TEST_F(VirtualKeyboardManagerTest, NotifyInvokesCallback) {
   bool was_called = false;
-  VirtualKeyboardManager(coordinator(), context_provider()->context(),
-                         fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC)
+  VirtualKeyboardManager(coordinator(), fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC)
       .Notify(true, fuchsia::input::virtualkeyboard::VisibilityChangeReason::USER_INTERACTION,
               [&was_called]() { was_called = true; });
   ASSERT_TRUE(was_called);
@@ -228,7 +220,7 @@ TEST_F(VirtualKeyboardManagerTest, NotifyInvokesCallback) {
 TEST_F(VirtualKeyboardManagerTest, NotifyInvokesCallbackEvenIfCoordinatorIsNull) {
   bool was_called = false;
   std::optional<FakeVirtualKeyboardCoordinator> coordinator(std::in_place);
-  VirtualKeyboardManager manager(coordinator->GetWeakPtr(), context_provider()->context(),
+  VirtualKeyboardManager manager(coordinator->GetWeakPtr(),
                                  fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC);
   coordinator.reset();
   manager.Notify(true, fuchsia::input::virtualkeyboard::VisibilityChangeReason::USER_INTERACTION,
@@ -243,8 +235,7 @@ class VirtualKeyboardManagerNotifyTestFixture
 
 TEST_P(VirtualKeyboardManagerNotifyTestFixture, InformsCoordinator) {
   const auto& [expected_visibility, expected_reason] = GetParam();
-  VirtualKeyboardManager(coordinator(), context_provider()->context(),
-                         fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC)
+  VirtualKeyboardManager(coordinator(), fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC)
       .Notify(expected_visibility, expected_reason, []() {});
   EXPECT_EQ(expected_visibility, coordinator()->is_visible());
   EXPECT_EQ(expected_reason, coordinator()->change_reason());

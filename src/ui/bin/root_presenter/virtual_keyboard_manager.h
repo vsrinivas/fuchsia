@@ -19,7 +19,6 @@ class VirtualKeyboardCoordinator;
 class VirtualKeyboardManager : public fuchsia::input::virtualkeyboard::Manager {
  public:
   explicit VirtualKeyboardManager(fxl::WeakPtr<VirtualKeyboardCoordinator> coordinator,
-                                  sys::ComponentContext* component_context,
                                   fuchsia::input::virtualkeyboard::TextType initial_text_type);
 
   // |fuchsia.input.virtualkeyboard.Manager|
@@ -44,9 +43,6 @@ class VirtualKeyboardManager : public fuchsia::input::virtualkeyboard::Manager {
     }
   };
 
-  // Binds `request` to `manager_binding_`, iff `manager_binding_` is unbound.
-  void MaybeBind(fidl::InterfaceRequest<fuchsia::input::virtualkeyboard::Manager> request);
-
   // Responds to the hanging get to WatchTypeAndVisibility(), iff
   // * there is a hanging get pending, and
   // * pending_config_ difers from last_sent_config_
@@ -69,7 +65,6 @@ class VirtualKeyboardManager : public fuchsia::input::virtualkeyboard::Manager {
   std::optional<KeyboardConfig> pending_config_;
 
   fxl::WeakPtr<VirtualKeyboardCoordinator> coordinator_;
-  fidl::Binding<fuchsia::input::virtualkeyboard::Manager> manager_binding_;
   WatchTypeAndVisibilityCallback watch_callback_;
 };
 
