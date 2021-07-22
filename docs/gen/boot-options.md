@@ -596,6 +596,11 @@ The option allows a notice to be printed when the root job is either terminated,
 
 Tells the kernel to start its own shell on the kernel console instead of a userspace sh.
 
+### kernel.smp.ht=\<bool>
+**Default:** `true`
+
+This options specifies whether the HyperThreading(ht) logical CPUs should be enabled or not.
+
 
 ## Options available only on arm64 machines
 

@@ -124,7 +124,6 @@ extern Cmdline gCmdline;
 
 // TODO(53594): migrate these to BootOptions.
 namespace kernel_option {
-static constexpr const char kSmpHt[] = "kernel.smp.ht";
 static constexpr const char kSmpMaxCpus[] = "kernel.smp.maxcpus";
 static constexpr const char kWallclock[] = "kernel.wallclock";
 }  // namespace kernel_option

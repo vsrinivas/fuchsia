@@ -574,6 +574,10 @@ DEFINE_OPTION("kernel.shell", bool, shell, {false}, R"""(
 Tells the kernel to start its own shell on the kernel console instead of a userspace sh.
 )""")
 
+DEFINE_OPTION("kernel.smp.ht", bool, smp_ht_enabled, {true}, R"""(
+This options specifies whether the HyperThreading(ht) logical CPUs should be enabled or not.
+)""")
+
 // Machine-specific options are included here for all the kernel places.
 // In the generator program, they're included separately.
 

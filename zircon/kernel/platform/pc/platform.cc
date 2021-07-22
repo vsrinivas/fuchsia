@@ -685,7 +685,7 @@ static size_t bsp_apic_id_index;
 
 static void traverse_topology(uint32_t) {
   // Filter out hyperthreads if we've been told not to init them
-  const bool use_ht = gCmdline.GetBool(kernel_option::kSmpHt, true);
+  const bool use_ht = gBootOptions->smp_ht_enabled;
 
   // We're implicitly running on the BSP
   const uint32_t bsp_apic_id = apic_local_id();

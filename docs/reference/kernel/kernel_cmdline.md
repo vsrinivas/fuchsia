@@ -318,11 +318,6 @@ All other values are currently undefined.
 This option caps the number of CPUs to initialize.  It cannot be greater than
 *SMP\_MAX\_CPUS* for a specific architecture.
 
-## kernel.smp.ht=\<bool>
-
-This option can be used to disable the initialization of hyperthread logical
-CPUs.  Defaults to true.
-
 ## kernel.wallclock=\<name>
 
 This option can be used to force the selection of a particular wall clock.  It
