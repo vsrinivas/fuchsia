@@ -6,6 +6,7 @@
 
 #include <bits.h>
 #include <lib/affine/ratio.h>
+#include <lib/arch/cache.h>
 #include <platform.h>
 #include <trace.h>
 #include <zircon/syscalls/hypervisor.h>
@@ -171,6 +172,9 @@ static void clean_invalidate_cache(zx_paddr_t table, size_t index_shift) {
       clean_invalidate_cache(paddr, index_shift - adjust_shift);
     }
   }
+
+  // Invalidate guest i-cache,
+  arch::InvalidateGlobalInstructionCache();
 }
 
 static zx_status_t handle_system_instruction(uint32_t iss, uint64_t* hcr, GuestState* guest_state,
@@ -187,28 +191,37 @@ static zx_status_t handle_system_instruction(uint32_t iss, uint64_t* hcr, GuestS
         return ZX_ERR_NOT_SUPPORTED;
       }
 
-      // From ARM DDI 0487B.b, Section D10.2.89: If the value of HCR_EL2.{DC,
-      // TGE} is not {0, 0} then in Non-secure state the PE behaves as if the
-      // value of the SCTLR_EL1.M field is 0 for all purposes other than
-      // returning the value of a direct read of the field.
-      //
-      // Therefore if SCTLR_EL1.M is set to 1, we need to set HCR_EL2.DC to 0
-      // and invalidate the guest physical address space.
       uint32_t sctlr_el1 = reg & UINT32_MAX;
-      if (sctlr_el1 & SCTLR_ELX_M) {
-        *hcr &= ~HCR_EL2_DC;
-        // Additionally, if the guest has also set SCTLR_EL1.C to 1, we no
-        // longer need to trap writes to virtual memory control registers,
-        // so we can set HCR_EL2.TVM to 0 to improve performance.
-        if (sctlr_el1 & SCTLR_ELX_C) {
-          *hcr &= ~HCR_EL2_TVM;
-        }
+
+      // If the MMU is being enabled and caches are on, invalidate the caches.
+      //
+      // At this point the guest may reasonably assume that the caches are
+      // clear, but accesses by the host (either directly or even by just
+      // a speculative CPU load) may have led to them containing data. If this
+      // has happened, a guest's write to raw memory may be hidden by a stale
+      // cache entry.
+      //
+      // Invalidating the caches removes all stale data from cache. It's not
+      // a problem if a cache line is brought back into the cache after we
+      // invalidate: it will correctly contain the guest's data.
+      bool mmu_enabled = (sctlr_el1 & SCTLR_ELX_M) != 0;
+      bool dcaches_enabled = (sctlr_el1 & SCTLR_ELX_C) != 0;
+      if (mmu_enabled && dcaches_enabled) {
+        // Clean/invalidate the pages. We don't strictly need the clean, but it
+        // doesn't hurt.
         clean_invalidate_cache(gpas->arch_aspace()->arch_table_phys(), MMU_GUEST_TOP_SHIFT);
+
+        // Stop trapping MMU register accesses to improve performance.
+        //
+        // We'll start monitoring again if the guest does a set/way cache
+        // operation.
+        *hcr &= ~HCR_EL2_TVM;
       }
-      guest_state->system_state.sctlr_el1 = sctlr_el1;
 
       LTRACEF("guest sctlr_el1: %#x\n", sctlr_el1);
       LTRACEF("guest hcr_el2: %#lx\n", *hcr);
+
+      guest_state->system_state.sctlr_el1 = sctlr_el1;
       next_pc(guest_state);
       return ZX_OK;
     }
@@ -251,10 +264,53 @@ static zx_status_t handle_system_instruction(uint32_t iss, uint64_t* hcr, GuestS
       next_pc(guest_state);
       return ZX_ERR_NEXT;
     }
-  }
+    case SystemRegister::DC_ISW:
+    case SystemRegister::DC_CISW:
+    case SystemRegister::DC_CSW: {
+      // Clean and invalidate the cache.
+      //
+      // The guest will typically need to iterate over a large number of
+      // sets/ways to do a full clean/invalidate. To avoid doing several full
+      // cache cleans in a row, we only do a cache operation when the guest is
+      // operating on set/way 0.
+      //
+      // The guest can't know the mapping between set/way and physical memory,
+      // so are required to iterate through every set/way. If the guest
+      // doesn't do this, they shouldn't be surprised if not everything has
+      // been cleaned.
+      uint32_t set_way = BITS_SHIFT(reg, 31, 4);
+      if (set_way == 0) {
+        clean_invalidate_cache(gpas->arch_aspace()->arch_table_phys(), MMU_GUEST_TOP_SHIFT);
+      }
 
-  dprintf(CRITICAL, "Unhandled system register %#x\n", static_cast<uint16_t>(si.sysreg));
-  return ZX_ERR_NOT_SUPPORTED;
+      // If the MMU or caches are off, start monitoring guest SCTLR register
+      // accesses so we can determine when the MMU/caches are turned on again.
+      //
+      // When the MMU or caches are turned off and the guest has just cleared
+      // caches, the guest can reasonably assume that the caches will remain
+      // clear, and that they won't need to invalidate them again prior to the
+      // MMU being turned on again.
+      //
+      // We (the host) can't guarantee that the we won't inadvertently cause
+      // the cache lines to load again (e.g., through speculative CPU
+      // accesses). Instead, we start monitoring for when the guest turns on
+      // the MMU again, and clean/invalidate caches then. This ensures that
+      // any writes done by the guest while caches are disabled won't be
+      // hidden by stale cache lines.
+      uint32_t sctlr_el1 = guest_state->system_state.sctlr_el1;
+      bool mmu_enabled = (sctlr_el1 & SCTLR_ELX_M) != 0;
+      bool dcaches_enabled = (sctlr_el1 & SCTLR_ELX_C) != 0;
+      if (!mmu_enabled || !dcaches_enabled) {
+        *hcr |= HCR_EL2_TVM;
+      }
+
+      next_pc(guest_state);
+      return ZX_OK;
+    }
+    default:
+      dprintf(CRITICAL, "Unhandled system register %#x\n", static_cast<uint16_t>(si.sysreg));
+      return ZX_ERR_NOT_SUPPORTED;
+  }
 }
 
 static zx_status_t handle_instruction_abort(GuestState* guest_state,

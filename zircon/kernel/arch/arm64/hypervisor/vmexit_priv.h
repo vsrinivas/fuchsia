@@ -80,6 +80,11 @@ enum class SystemRegister : uint16_t {
 
   // Interrupt Controller System Registers. See GIC v3/v4 Architecture Spec Section 8.2.
   ICC_SGI1R_EL1   = 0b11101000 << 8 /* op */ | 0b11001011 /* cr */,
+
+  // Data cache operations by set/way.
+  DC_ISW          = 0b01010000 << 8 /* op */ | 0b01110110 /* cr */,
+  DC_CISW         = 0b01010000 << 8 /* op */ | 0b01111110 /* cr */,
+  DC_CSW          = 0b01010000 << 8 /* op */ | 0b01111010 /* cr */,
 };
 
 // System instruction that caused a VM exit.

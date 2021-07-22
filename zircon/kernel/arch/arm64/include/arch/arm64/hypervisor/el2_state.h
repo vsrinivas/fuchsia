@@ -25,10 +25,10 @@
 #define HCR_EL2_IMO         BIT_64(4)
 #define HCR_EL2_AMO         BIT_64(5)
 #define HCR_EL2_VI          BIT_64(7)
-#define HCR_EL2_DC          BIT_64(12)
 #define HCR_EL2_TWI         BIT_64(13)
 #define HCR_EL2_TWE         BIT_64(14)
 #define HCR_EL2_TSC         BIT_64(19)
+#define HCR_EL2_TSW         BIT_64(22)  // Trap set/way cache maintenance operations.
 #define HCR_EL2_TVM         BIT_64(26)
 #define HCR_EL2_RW          BIT_64(31)
 
