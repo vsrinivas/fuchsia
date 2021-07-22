@@ -1419,6 +1419,19 @@
   submitted: '2021-06-17'
   reviewed: '2021-06-25'
 
+- name: 'RFC-0110'
+  title: 'Reboot for termination of critical components'
+  short_description: 'v2 component feature providing parity with v1 critical_components'
+  authors: ['geb@google.com']
+  file: 'NNNN_reboot_for_critical_components.md'
+  area: ['Component Framework']
+  issue: ['']
+  gerrit_change_id: ['535167']
+  status: 'Accepted'
+  reviewers: [ 'thatguy@google.com, brunodalbo@google.com, pschickel@google.com, shayba@google.com, surajmalhotra@google.com, claridge@google.com, computerdruid@google.com, mnck@google.com, ypomortsev@google.com, hjfreyer@google.com' ]
+  submitted: '2021-05-26'
+  reviewed: '2021-07-21'
+
 - name: 'RFC-0112'
   title: 'ACPI support on x86'
   short_description: 'Improvements to ACPI support on x86.'

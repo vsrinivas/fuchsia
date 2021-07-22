@@ -231,6 +231,8 @@ toc:
   path: /docs/contribute/governance/rfcs/0108_component_binder_protocol.md
 - title: "RFC-0109: Fast UDP sockets"
   path: /docs/contribute/governance/rfcs/0109_socket_datagram_socket.md
+- title: "RFC-0110: Reboot for termination of critical components"
+  path: /docs/contribute/governance/rfcs/0110_reboot_for_critical_components.md
 - title: "RFC-0112: ACPI support on x86"
   path: /docs/contribute/governance/rfcs/0112_acpi_support_on_x86.md
 - title: "RFC-0113: Efficient envelopes"
