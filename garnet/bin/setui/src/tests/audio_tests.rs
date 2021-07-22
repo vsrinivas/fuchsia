@@ -27,6 +27,7 @@ use {
     fuchsia_zircon::Status,
     futures::lock::Mutex,
     matches::assert_matches,
+    std::collections::HashMap,
     std::sync::Arc,
 };
 
@@ -618,4 +619,83 @@ async fn test_missing_one_returns_ok(setting: AudioStreamSettings) {
         .await
         .expect("set completed");
     assert_eq!(result, Ok(()));
+}
+
+// Tests that a set call for a stream that isn't in the audio settings fails.
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_invalid_stream_fails() {
+    // Create a service registry with a fake audio core service that suppresses client errors, since
+    // the invalid set call will cause the connection to close.
+    let service_registry = ServiceRegistry::create();
+    let audio_core_service_handle =
+        audio_core_service::Builder::new().set_suppress_client_errors(true).build();
+    service_registry.lock().await.register_service(audio_core_service_handle.clone());
+
+    let input_device_registry_service_handle =
+        Arc::new(Mutex::new(InputDeviceRegistryService::new()));
+    service_registry.lock().await.register_service(input_device_registry_service_handle.clone());
+
+    let sound_player_service_handle = Arc::new(Mutex::new(SoundPlayerService::new()));
+    service_registry.lock().await.register_service(sound_player_service_handle.clone());
+
+    // AudioInfo has to have 5 streams, but make them all the same stream type so that we can
+    // perform a set call with a stream that isn't in the AudioInfo.
+    let mut counters = HashMap::new();
+    counters.insert(AudioStreamType::Background, 0);
+
+    let test_audio_info = AudioInfo {
+        streams: [
+            AudioStream {
+                stream_type: AudioStreamType::Background,
+                source: AudioSettingSource::User,
+                user_volume_level: 0.5,
+                user_volume_muted: true,
+            },
+            AudioStream {
+                stream_type: AudioStreamType::Background,
+                source: AudioSettingSource::User,
+                user_volume_level: 0.5,
+                user_volume_muted: true,
+            },
+            AudioStream {
+                stream_type: AudioStreamType::Background,
+                source: AudioSettingSource::User,
+                user_volume_level: 0.5,
+                user_volume_muted: true,
+            },
+            AudioStream {
+                stream_type: AudioStreamType::Background,
+                source: AudioSettingSource::User,
+                user_volume_level: 0.5,
+                user_volume_muted: true,
+            },
+            AudioStream {
+                stream_type: AudioStreamType::Background,
+                source: AudioSettingSource::User,
+                user_volume_level: 0.5,
+                user_volume_muted: true,
+            },
+        ],
+        input: AudioInputInfo { mic_mute: true },
+        modified_counters: Some(counters),
+    };
+
+    // Start the environment with the hand-crafted data.
+    let storage_factory = InMemoryStorageFactory::with_initial_data(&test_audio_info);
+    let env = EnvironmentBuilder::new(Arc::new(storage_factory))
+        .service(ServiceRegistry::serve(service_registry))
+        .agents(&[restore_agent::blueprint::create()])
+        .fidl_interfaces(&[Interface::Audio])
+        .spawn_and_get_nested_environment(ENV_NAME)
+        .await
+        .unwrap();
+
+    // Connect to the service and make a watch call that should succeed.
+    let audio_proxy = env.connect_to_protocol::<AudioMarker>().unwrap();
+    audio_proxy.watch().await.expect("watch completed");
+
+    // Make a set call with the media stream, which isn't present and should fail.
+    let mut audio_settings = AudioSettings::EMPTY;
+    audio_settings.streams = Some(vec![CHANGED_MEDIA_STREAM_SETTINGS]);
+    audio_proxy.set(audio_settings).await.expect("set completed").expect_err("set should fail");
 }

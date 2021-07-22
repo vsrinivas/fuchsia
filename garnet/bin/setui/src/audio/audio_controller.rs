@@ -130,31 +130,34 @@ impl VolumeController {
         update_from: UpdateFrom,
         push_to_audio_core: bool,
     ) -> Result<bool, ControllerError> {
-        let new_vec;
+        let mut new_vec = vec![];
         let (stored_value, new_streams) = match &update_from {
             UpdateFrom::AudioInfo(audio_info) => (None, audio_info.streams.iter()),
             UpdateFrom::NewStreams(streams) => {
                 let stored_value = self.client.read_setting::<AudioInfo>().await;
-                new_vec = streams
-                    .iter()
-                    .map(|set_stream| {
-                        let stored_stream = stored_value
-                            .streams
-                            .iter()
-                            .find(|stream| stream.stream_type == set_stream.stream_type)
-                            .expect("Stored value should already exist on new set");
-                        AudioStream {
-                            stream_type: stored_stream.stream_type,
-                            source: set_stream.source,
-                            user_volume_level: set_stream
-                                .user_volume_level
-                                .unwrap_or(stored_stream.user_volume_level),
-                            user_volume_muted: set_stream
-                                .user_volume_muted
-                                .unwrap_or(stored_stream.user_volume_muted),
-                        }
-                    })
-                    .collect::<Vec<_>>();
+                for set_stream in streams.iter() {
+                    let stored_stream = stored_value
+                        .streams
+                        .iter()
+                        .find(|stream| stream.stream_type == set_stream.stream_type)
+                        .ok_or_else(|| {
+                            return ControllerError::InvalidArgument(
+                                SettingType::Audio,
+                                "stream".into(),
+                                format!("{:?}", set_stream).into(),
+                            );
+                        })?;
+                    new_vec.push(AudioStream {
+                        stream_type: stored_stream.stream_type,
+                        source: set_stream.source,
+                        user_volume_level: set_stream
+                            .user_volume_level
+                            .unwrap_or(stored_stream.user_volume_level),
+                        user_volume_muted: set_stream
+                            .user_volume_muted
+                            .unwrap_or(stored_stream.user_volume_muted),
+                    });
+                }
                 (Some(stored_value), new_vec.iter())
             }
         };
