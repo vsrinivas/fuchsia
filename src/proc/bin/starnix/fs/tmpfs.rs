@@ -11,6 +11,7 @@ use super::*;
 use crate::devices::*;
 use crate::fs::pipe::Pipe;
 use crate::fs::SymlinkNode;
+use crate::mm::vmo::round_up_to_system_page_size;
 use crate::types::*;
 
 pub struct TmpFs {
@@ -109,6 +110,27 @@ impl TmpfsFileNode {
 impl FsNodeOps for TmpfsFileNode {
     fn open(&self, _node: &FsNode, _flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {
         Ok(Box::new(VmoFileObject::new(self.vmo.clone())))
+    }
+
+    fn truncate(&self, node: &FsNode, length: u64) -> Result<(), Errno> {
+        let mut info = node.info_write();
+        let storage = round_up_to_system_page_size(length as usize);
+        let shrink = storage < info.storage_size;
+        if storage != info.storage_size {
+            self.vmo.set_size(storage as u64).map_err(|_| ENOMEM)?;
+            info.storage_size = storage;
+        }
+        info.size = length as usize;
+        let time = fuchsia_runtime::utc_time();
+        info.time_access = time;
+        info.time_modify = time;
+        // Make sure there is no stale data if the file
+        // is truncated smaller then larger.
+        let padding = (info.storage_size - info.size) as u64;
+        if shrink && padding > 0 {
+            self.vmo.op_range(zx::VmoOp::ZERO, length, padding).map_err(|_| EIO)?;
+        }
+        Ok(())
     }
 
     fn unlinked(&self, node: &FsNodeHandle) {

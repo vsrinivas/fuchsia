@@ -9,6 +9,8 @@ use std::mem;
 use std::ops;
 use zerocopy::{AsBytes, FromBytes};
 
+use crate::mm::vmo::round_up_to_page_size;
+
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Ord, PartialOrd, AsBytes, FromBytes)]
 #[repr(transparent)]
 pub struct UserAddress(u64);
@@ -29,7 +31,7 @@ impl UserAddress {
     }
 
     pub fn round_up(&self, increment: u64) -> UserAddress {
-        UserAddress((self.0 + (increment - 1)) & !(increment - 1))
+        UserAddress(round_up_to_page_size(self.0 as usize, increment as usize) as u64)
     }
 
     pub fn is_null(&self) -> bool {

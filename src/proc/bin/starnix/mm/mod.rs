@@ -5,6 +5,7 @@
 mod futex_table;
 mod memory_manager;
 pub mod syscalls;
+pub mod vmo;
 
 pub use futex_table::*;
 pub use memory_manager::*;

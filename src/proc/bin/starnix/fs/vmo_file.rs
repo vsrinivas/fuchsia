@@ -8,7 +8,7 @@ use std::sync::Arc;
 use super::*;
 use crate::fd_impl_seekable;
 use crate::logging::impossible_error;
-use crate::mm::PAGE_SIZE;
+use crate::mm::vmo::round_up_to_system_page_size;
 use crate::task::*;
 use crate::types::*;
 use crate::vmex_resource::VMEX_RESOURCE;
@@ -42,6 +42,8 @@ impl FileOps for VmoFileObject {
         self.vmo.read(&mut buf[..], offset as u64).map_err(|_| EIO)?;
         // TODO(steveaustin) - write_each might might be more efficient
         task.mm.write_all(data, &mut buf[..])?;
+        // TODO(steveaustin) - omit updating time_access to allow info to be immutable
+        // and thus allow simultaneous reads.
         info.time_access = fuchsia_runtime::utc_time();
         Ok(to_read)
     }
@@ -59,15 +61,8 @@ impl FileOps for VmoFileObject {
         let mut update_content_size = false;
         if write_end > info.size {
             if write_end > info.storage_size {
-                let mut new_size = write_end as u64;
-                // TODO(steveaustin) move the padding logic
-                // to a library where it can be shared with
-                // similar code in pipe
-                let padding = new_size as u64 % *PAGE_SIZE;
-                if padding > 0 {
-                    new_size += padding;
-                }
-                self.vmo.set_size(new_size).map_err(|_| ENOMEM)?;
+                let new_size = round_up_to_system_page_size(write_end);
+                self.vmo.set_size(new_size as u64).map_err(|_| ENOMEM)?;
                 info.storage_size = new_size as usize;
             }
             update_content_size = true;
