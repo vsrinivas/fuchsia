@@ -1,33 +1,16 @@
 {
     "include": [
-        "syslog/client.shard.cmx",
-        "//src/connectivity/network/lib/net_interfaces/client.shard.cmx"
+        "//src/connectivity/network/lib/net_interfaces/client.shard.cmx",
+        "syslog/client.shard.cmx"
     ],
     "program": {
         "binary": "bin/feedback_data"
     },
     "sandbox": {
         "features": [
-            "build-info",
-            "config-data",
             "isolated-cache-storage",
             "isolated-persistent-storage",
             "isolated-temp"
-        ],
-        "services": [
-            "fuchsia.boot.ReadOnlyLog",
-            "fuchsia.diagnostics.FeedbackArchiveAccessor",
-            "fuchsia.feedback.DeviceIdProvider",
-            "fuchsia.feedback.LastRebootInfoProvider",
-            "fuchsia.hwinfo.Board",
-            "fuchsia.hwinfo.Product",
-            "fuchsia.logger.Log",
-            "fuchsia.metrics.MetricEventLoggerFactory",
-            "fuchsia.process.Launcher",
-            "fuchsia.sysinfo.SysInfo",
-            "fuchsia.tracing.provider.Registry",
-            "fuchsia.ui.scenic.Scenic",
-            "fuchsia.update.channelcontrol.ChannelControl"
         ]
     }
 }

@@ -1,8 +1,0 @@
-{
-    "include": [
-        "syslog/client.shard.cmx"
-    ],
-    "program": {
-        "binary": "bin/last_reboot_info_provider_unittest_exe"
-    }
-}

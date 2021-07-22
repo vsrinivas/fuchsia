@@ -59,6 +59,25 @@ constexpr StorageSize kSnapshotArchivesMaxSize = StorageSize::Megabytes(5);
 // fully realized.
 constexpr zx::duration kSnapshotSharedRequestWindow = zx::sec(5);
 
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// Feedback data
+///////////////////////////////////////////////////////////////////////////////////////////////////
+constexpr char kFeedbackDataConfigPath[] = "/pkg/data/feedback_data/config.json";
+
+constexpr char kDeviceIdPath[] = "/data/device_id.txt";
+constexpr char kCurrentLogsDir[] = "/cache/current_system_logs";
+constexpr char kPreviousLogsFilePath[] = "/tmp/log.system.previous_boot.txt";
+constexpr char kPreviousBootIdPath[] = "/tmp/boot_id.txt";
+constexpr char kCurrentBootIdPath[] = "/data/boot_id.txt";
+constexpr char kPreviousBuildVersionPath[] = "/tmp/build_version.txt";
+constexpr char kCurrentBuildVersionPath[] = "/data/build_version.txt";
+constexpr char kDataRegisterPath[] = "/tmp/data_register.json";
+constexpr char kLimitInspectDataPath[] = "/config/data/feedback_data/limit_inspect_data";
+
+// Use this file to determine whether or not a previous instance of the component was instructed to
+// terminated system log recording.
+constexpr char kDoNotLaunchSystemLogRecorder[] = "/tmp/do_not_launch_system_log_recorder.txt";
+
 }  // namespace forensics::feedback
 
 #endif  // SRC_DEVELOPER_FORENSICS_FEEDBACK_CONSTANTS_H_

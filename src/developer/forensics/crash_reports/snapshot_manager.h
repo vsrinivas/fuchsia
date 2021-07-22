@@ -39,8 +39,9 @@ using SnapshotUuid = std::string;
 // Uuid from GetUuid and will automatically delete a snapshot when each client has called Release.
 class SnapshotManager {
  public:
-  SnapshotManager(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-                  timekeeper::Clock* clock, zx::duration shared_request_window,
+  SnapshotManager(async_dispatcher_t* dispatcher, timekeeper::Clock* clock,
+                  fuchsia::feedback::DataProvider* data_provider,
+                  zx::duration shared_request_window,
                   const std::string& garbage_collected_snapshots_path,
                   StorageSize max_annotations_size, StorageSize max_archives_size);
 
@@ -101,9 +102,6 @@ class SnapshotManager {
     std::shared_ptr<Snapshot::Archive> archive;
   };
 
-  // Connect to fuchsia.feedback.DataProvider.
-  void Connect();
-
   // Determine if the most recent SnapshotRequest's delayed call to
   // fuchsia.feedback.DataProvider/GetSnapshopt has executed.
   bool UseLatestRequest() const;
@@ -141,7 +139,7 @@ class SnapshotManager {
   std::shared_ptr<sys::ServiceDirectory> services_;
   timekeeper::Clock* clock_;
 
-  fuchsia::feedback::DataProviderPtr data_provider_;
+  fuchsia::feedback::DataProvider* data_provider_;
 
   zx::duration shared_request_window_;
 

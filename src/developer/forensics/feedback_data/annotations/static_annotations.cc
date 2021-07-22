@@ -31,6 +31,8 @@ const AnnotationKeys kSupportedAnnotations = {
     kAnnotationDeviceBoardName,
     kAnnotationSystemBootIdCurrent,
     kAnnotationSystemBootIdPrevious,
+    kAnnotationSystemLastRebootReason,
+    kAnnotationSystemLastRebootUptime,
 };
 
 AnnotationOr ReadStringFromFilepath(const std::string& filepath) {
@@ -50,7 +52,9 @@ AnnotationOr BuildAnnotationOr(const AnnotationKey& key,
                                const ErrorOr<std::string>& current_boot_id,
                                const ErrorOr<std::string>& previous_boot_id,
                                const ErrorOr<std::string>& current_build_version,
-                               const ErrorOr<std::string>& previous_build_version) {
+                               const ErrorOr<std::string>& previous_build_version,
+                               const ErrorOr<std::string>& last_reboot_reason,
+                               const ErrorOr<std::string>& last_reboot_uptime) {
   if (key == kAnnotationBuildBoard) {
     return ReadAnnotationOrFromFilepath(key, "/config/build-info/board");
   } else if (key == kAnnotationBuildProduct) {
@@ -73,6 +77,10 @@ AnnotationOr BuildAnnotationOr(const AnnotationKey& key,
     return current_boot_id;
   } else if (key == kAnnotationSystemBootIdPrevious) {
     return previous_boot_id;
+  } else if (key == kAnnotationSystemLastRebootReason) {
+    return last_reboot_reason;
+  } else if (key == kAnnotationSystemLastRebootUptime) {
+    return last_reboot_uptime;
   }
   // We should never attempt to build a non-static annotation as a static annotation.
   FX_LOGS(FATAL) << "Attempting to get non-static annotation " << key << " as a static annotation";
@@ -85,12 +93,17 @@ Annotations GetStaticAnnotations(const AnnotationKeys& allowlist,
                                  const ErrorOr<std::string>& current_boot_id,
                                  const ErrorOr<std::string>& previous_boot_id,
                                  const ErrorOr<std::string>& current_build_version,
-                                 const ErrorOr<std::string>& previous_build_version) {
+                                 const ErrorOr<std::string>& previous_build_version,
+                                 const ErrorOr<std::string>& last_reboot_reason,
+                                 const ErrorOr<std::string>& last_reboot_uptime
+
+) {
   Annotations annotations;
 
   for (const auto& key : RestrictAllowlist(allowlist, kSupportedAnnotations)) {
-    annotations.insert({key, BuildAnnotationOr(key, current_boot_id, previous_boot_id,
-                                               current_build_version, previous_build_version)});
+    annotations.insert(
+        {key, BuildAnnotationOr(key, current_boot_id, previous_boot_id, current_build_version,
+                                previous_build_version, last_reboot_reason, last_reboot_uptime)});
   }
   return annotations;
 }

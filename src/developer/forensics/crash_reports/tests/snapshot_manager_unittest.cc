@@ -68,14 +68,16 @@ class SnapshotManagerTest : public UnitTestFixture {
         path_(files::JoinPath(tmp_dir_.path(), "garbage_collected_snapshots.txt")) {}
 
  protected:
-  void SetUp() override {
+  void SetUpDefaultSnapshotManager() {
     SetUpSnapshotManager(StorageSize::Megabytes(1u), StorageSize::Megabytes(1u));
   }
 
   void SetUpSnapshotManager(StorageSize max_annotations_size, StorageSize max_archives_size) {
+    FX_CHECK(data_provider_server_);
     clock_.Set(zx::time(0u));
-    snapshot_manager_ = std::make_unique<SnapshotManager>(
-        dispatcher(), services(), &clock_, kWindow, path_, max_annotations_size, max_archives_size);
+    snapshot_manager_ =
+        std::make_unique<SnapshotManager>(dispatcher(), &clock_, data_provider_server_.get(),
+                                          kWindow, path_, max_annotations_size, max_archives_size);
   }
 
   std::set<std::string> ReadGarbageCollectedSnapshots() {
@@ -98,9 +100,6 @@ class SnapshotManagerTest : public UnitTestFixture {
 
   void SetUpDataProviderServer(std::unique_ptr<stubs::DataProviderBase> data_provider_server) {
     data_provider_server_ = std::move(data_provider_server);
-    if (data_provider_server_) {
-      InjectServiceProvider(data_provider_server_.get());
-    }
   }
 
   void ScheduleGetSnapshotUuidAndThen(const zx::duration timeout,
@@ -127,6 +126,7 @@ class SnapshotManagerTest : public UnitTestFixture {
 
 TEST_F(SnapshotManagerTest, Check_GetSnapshotUuid) {
   SetUpDefaultDataProviderServer();
+  SetUpDefaultSnapshotManager();
 
   std::optional<std::string> uuid{std::nullopt};
   ScheduleGetSnapshotUuidAndThen(zx::duration::infinite(),
@@ -141,6 +141,7 @@ TEST_F(SnapshotManagerTest, Check_GetSnapshotUuid) {
 
 TEST_F(SnapshotManagerTest, Check_GetSnapshotUuidRequestsCombined) {
   SetUpDefaultDataProviderServer();
+  SetUpDefaultSnapshotManager();
 
   const size_t kNumRequests{5u};
 
@@ -183,6 +184,7 @@ TEST_F(SnapshotManagerTest, Check_GetSnapshotUuidRequestsCombined) {
 
 TEST_F(SnapshotManagerTest, Check_Get) {
   SetUpDefaultDataProviderServer();
+  SetUpDefaultSnapshotManager();
 
   std::optional<std::string> uuid{std::nullopt};
   ScheduleGetSnapshotUuidAndThen(zx::duration::infinite(),
@@ -200,6 +202,7 @@ TEST_F(SnapshotManagerTest, Check_Get) {
 
 TEST_F(SnapshotManagerTest, Check_SetsDebugAnnotations) {
   SetUpDefaultDataProviderServer();
+  SetUpDefaultSnapshotManager();
 
   std::optional<std::string> uuid{std::nullopt};
   ScheduleGetSnapshotUuidAndThen(zx::duration::infinite(),
@@ -217,27 +220,6 @@ TEST_F(SnapshotManagerTest, Check_SetsDebugAnnotations) {
   annotations["debug.snapshot.shared-request.uuid"] = uuid.value();
 
   EXPECT_THAT(snapshot.LockAnnotations()->Raw(), UnorderedElementsAreArray(Vector(annotations)));
-}
-
-TEST_F(SnapshotManagerTest, Check_ConnectionFailure) {
-  const size_t kNumRequests{5u};
-  std::vector<std::string> uuids;
-  for (size_t i = 0; i < kNumRequests; ++i) {
-    ScheduleGetSnapshotUuidAndThen(
-        zx::duration::infinite(),
-        ([&uuids](const std::string& new_uuid) { uuids.push_back(new_uuid); }));
-    clock_.Set(clock_.Now() + kWindow);
-  }
-  RunLoopFor(kWindow);
-
-  ASSERT_EQ(uuids.size(), kNumRequests);
-  for (const auto& uuid : uuids) {
-    auto snapshot = snapshot_manager_->GetSnapshot(uuid);
-    ASSERT_TRUE(snapshot.LockAnnotations());
-    EXPECT_THAT(snapshot.LockAnnotations()->Raw(),
-                Contains(Pair("debug.snapshot.error", ToReason(Error::kConnectionError))));
-    EXPECT_FALSE(snapshot.LockArchive());
-  }
 }
 
 TEST_F(SnapshotManagerTest, Check_AnnotationsMaxSizeIsEnforced) {
@@ -277,6 +259,7 @@ TEST_F(SnapshotManagerTest, Check_AnnotationsMaxSizeIsEnforced) {
 
 TEST_F(SnapshotManagerTest, Check_Release) {
   SetUpDefaultDataProviderServer();
+  SetUpDefaultSnapshotManager();
 
   std::optional<std::string> uuid{std::nullopt};
   ScheduleGetSnapshotUuidAndThen(zx::duration::infinite(),
@@ -346,6 +329,7 @@ TEST_F(SnapshotManagerTest, Check_ArchivesMaxSizeIsEnforced) {
 
 TEST_F(SnapshotManagerTest, Check_Timeout) {
   SetUpDefaultDataProviderServer();
+  SetUpDefaultSnapshotManager();
 
   std::optional<std::string> uuid{std::nullopt};
   ScheduleGetSnapshotUuidAndThen(zx::sec(0),
@@ -362,6 +346,8 @@ TEST_F(SnapshotManagerTest, Check_Timeout) {
 }
 
 TEST_F(SnapshotManagerTest, Check_UuidForNoSnapshotUuid) {
+  SetUpDefaultDataProviderServer();
+  SetUpDefaultSnapshotManager();
   auto snapshot = snapshot_manager_->GetSnapshot(SnapshotManager::UuidForNoSnapshotUuid());
   EXPECT_THAT(snapshot.LockAnnotations()->Raw(), UnorderedElementsAreArray({
                                                      Pair("debug.snapshot.error", "missing uuid"),
@@ -372,6 +358,7 @@ TEST_F(SnapshotManagerTest, Check_UuidForNoSnapshotUuid) {
 
 TEST_F(SnapshotManagerTest, Check_Shutdown) {
   SetUpDefaultDataProviderServer();
+  SetUpDefaultSnapshotManager();
 
   std::optional<std::string> uuid{std::nullopt};
   ScheduleGetSnapshotUuidAndThen(zx::duration::infinite(),
@@ -405,6 +392,7 @@ TEST_F(SnapshotManagerTest, Check_Shutdown) {
 
 TEST_F(SnapshotManagerTest, Check_DefaultToNotPersisted) {
   SetUpDefaultDataProviderServer();
+  SetUpDefaultSnapshotManager();
 
   std::string uuid("UNKNOWN");
   auto snapshot = snapshot_manager_->GetSnapshot(uuid);
@@ -417,6 +405,7 @@ TEST_F(SnapshotManagerTest, Check_DefaultToNotPersisted) {
 
 TEST_F(SnapshotManagerTest, Check_ReadPreviouslyGarbageCollected) {
   SetUpDefaultDataProviderServer();
+  SetUpDefaultSnapshotManager();
 
   std::optional<std::string> uuid{std::nullopt};
   ScheduleGetSnapshotUuidAndThen(zx::duration::infinite(),

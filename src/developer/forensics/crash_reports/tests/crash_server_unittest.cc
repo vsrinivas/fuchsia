@@ -16,6 +16,7 @@
 
 #include "src/developer/forensics/crash_reports/constants.h"
 #include "src/developer/forensics/crash_reports/snapshot_manager.h"
+#include "src/developer/forensics/testing/stubs/data_provider.h"
 #include "src/developer/forensics/testing/stubs/loader.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
 #include "src/lib/timekeeper/test_clock.h"
@@ -35,7 +36,8 @@ const Report kReport{
 class CrashServerTest : public UnitTestFixture {
  protected:
   CrashServerTest()
-      : snapshot_manager_(dispatcher(), services(), &clock_, zx::min(0),
+      : data_provider_server_(std::make_unique<stubs::DataProviderReturnsEmptySnapshot>()),
+        snapshot_manager_(dispatcher(), &clock_, data_provider_server_.get(), zx::min(0),
                           kGarbageCollectedSnapshotsPath, StorageSize::Bytes(0u),
                           StorageSize::Bytes(0u)),
         tags_() {
@@ -57,6 +59,7 @@ class CrashServerTest : public UnitTestFixture {
   std::unique_ptr<stubs::Loader> loader_server_;
 
   timekeeper::TestClock clock_;
+  std::unique_ptr<stubs::DataProviderBase> data_provider_server_;
   SnapshotManager snapshot_manager_;
   LogTags tags_;
   std::unique_ptr<CrashServer> crash_server_;

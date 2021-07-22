@@ -152,7 +152,7 @@ class DataProviderTest : public UnitTestFixture {
     datastore_ = std::make_unique<Datastore>(
         dispatcher(), services(), cobalt_.get(), annotation_allowlist, attachment_allowlist,
         Error::kMissingValue, Error::kMissingValue, Error::kMissingValue, Error::kMissingValue,
-        inspect_data_budget_.get());
+        Error::kMissingValue, Error::kMissingValue, inspect_data_budget_.get());
     data_provider_ = std::make_unique<DataProvider>(
         dispatcher(), services(), &clock_, /*is_first_instance=*/true, annotation_allowlist,
         attachment_allowlist, cobalt_.get(), datastore_.get(), inspect_data_budget_.get());

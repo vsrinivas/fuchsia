@@ -33,7 +33,6 @@
 #include "src/developer/forensics/testing/stubs/device_id_provider.h"
 #include "src/developer/forensics/testing/stubs/diagnostics_archive.h"
 #include "src/developer/forensics/testing/stubs/diagnostics_batch_iterator.h"
-#include "src/developer/forensics/testing/stubs/last_reboot_info_provider.h"
 #include "src/developer/forensics/testing/stubs/product_info_provider.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
 #include "src/developer/forensics/utils/cobalt/logger.h"
@@ -93,7 +92,8 @@ class DatastoreTest : public UnitTestFixture {
         dispatcher(), services(), cobalt_.get(), annotation_allowlist, attachment_allowlist,
         ErrorOr<std::string>("current_boot_id"), ErrorOr<std::string>("previous_boot_id"),
         ErrorOr<std::string>("current_build_version"),
-        ErrorOr<std::string>("previous_build_version"), inspect_data_budget_.get());
+        ErrorOr<std::string>("previous_build_version"), ErrorOr<std::string>("last_reboot_reason"),
+        ErrorOr<std::string>("last_reboot_uptime"), inspect_data_budget_.get());
   }
 
   void SetUpBoardProviderServer(std::unique_ptr<stubs::BoardInfoProviderBase> server) {
@@ -130,14 +130,6 @@ class DatastoreTest : public UnitTestFixture {
     diagnostics_server_ = std::move(server);
     if (diagnostics_server_) {
       InjectServiceProvider(diagnostics_server_.get(), kArchiveAccessorName);
-    }
-  }
-
-  void SetUpLastRebootInfoProviderServer(
-      std::unique_ptr<stubs::LastRebootInfoProviderBase> server) {
-    last_reboot_info_provider_server_ = std::move(server);
-    if (last_reboot_info_provider_server_) {
-      InjectServiceProvider(last_reboot_info_provider_server_.get());
     }
   }
 
@@ -195,7 +187,6 @@ class DatastoreTest : public UnitTestFixture {
   std::unique_ptr<stubs::ChannelControlBase> channel_provider_server_;
   std::unique_ptr<stubs::DeviceIdProviderBase> device_id_provider_server_;
   std::unique_ptr<stubs::DiagnosticsArchiveBase> diagnostics_server_;
-  std::unique_ptr<stubs::LastRebootInfoProviderBase> last_reboot_info_provider_server_;
   std::unique_ptr<stubs::ProductInfoProviderBase> product_provider_server_;
 };
 
@@ -286,33 +277,6 @@ TEST_F(DatastoreTest, GetAnnotations_DeviceId) {
               }));
 
   ASSERT_TRUE(files::DeletePath(kDeviceIdPath, /*recursive=*/false));
-}
-
-TEST_F(DatastoreTest, GetAnnotations_LastRebootInfo) {
-  const zx::duration uptime = zx::hour(10);
-  const auto uptime_str = FormatDuration(uptime);
-  ASSERT_TRUE(uptime_str.has_value());
-
-  fuchsia::feedback::LastReboot last_reboot;
-  last_reboot.set_graceful(true).set_uptime(uptime.get());
-  SetUpLastRebootInfoProviderServer(
-      std::make_unique<stubs::LastRebootInfoProvider>(std::move(last_reboot)));
-  SetUpDatastore(
-      {
-          kAnnotationSystemLastRebootReason,
-          kAnnotationSystemLastRebootUptime,
-      },
-      kDefaultAttachmentsToAvoidSpuriousLogs);
-
-  ::fpromise::result<Annotations> annotations = GetAnnotations();
-  ASSERT_TRUE(annotations.is_ok());
-  EXPECT_THAT(annotations.take_value(),
-              ElementsAreArray({
-                  Pair(kAnnotationSystemLastRebootReason, AnnotationOr("graceful")),
-                  Pair(kAnnotationSystemLastRebootUptime, AnnotationOr(uptime_str.value())),
-              }));
-
-  EXPECT_THAT(GetStaticAnnotations(), IsEmpty());
 }
 
 TEST_F(DatastoreTest, GetAnnotations_ProductInfo) {

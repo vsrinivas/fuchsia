@@ -35,7 +35,8 @@ class CrashReports {
   };
 
   CrashReports(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-               timekeeper::Clock* clock, inspect::Node* inspect_root, Options options);
+               timekeeper::Clock* clock, inspect::Node* inspect_root,
+               fuchsia::feedback::DataProvider* data_provider, Options options);
 
   void Handle(::fidl::InterfaceRequest<fuchsia::feedback::CrashReporter> request,
               ::fit::function<void(zx_status_t)> error_handler);

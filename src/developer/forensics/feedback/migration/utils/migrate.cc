@@ -14,7 +14,8 @@
 
 namespace forensics::feedback {
 
-::fpromise::promise<std::tuple<::fpromise::result<void, Error>, ::fpromise::result<void, Error>>>
+::fpromise::promise<std::tuple<::fpromise::result<void, Error>, ::fpromise::result<void, Error>,
+                               ::fpromise::result<void, Error>>>
 MigrateData(async_dispatcher_t* dispatcher, const std::shared_ptr<sys::ServiceDirectory>& services,
             const std::optional<MigrationLog>& migration_log, const zx::duration timeout) {
   fbl::unique_fd data_fd(open("/data", O_DIRECTORY | O_RDWR, 0777));
@@ -32,6 +33,9 @@ MigrateData(async_dispatcher_t* dispatcher, const std::shared_ptr<sys::ServiceDi
 
   ::fpromise::promise<void, Error> migrate_crash_reports_data =
       ::fpromise::make_result_promise<void, Error>(::fpromise::ok());
+
+  ::fpromise::promise<void, Error> migrate_feedback_data_data =
+      ::fpromise::make_result_promise<void, Error>(::fpromise::ok());
   if (data_fd.is_valid() && cache_fd.is_valid() && migration_log) {
     if (!migration_log->Contains(MigrationLog::Component::kLastReboot)) {
       migrate_last_reboot_data =
@@ -42,10 +46,16 @@ MigrateData(async_dispatcher_t* dispatcher, const std::shared_ptr<sys::ServiceDi
       migrate_crash_reports_data =
           MigrateCrashReportsData(dispatcher, services, data_fd, cache_fd, timeout);
     }
+
+    if (!migration_log->Contains(MigrationLog::Component::kFeedbackData)) {
+      migrate_feedback_data_data =
+          MigrateFeedbackDataData(dispatcher, services, data_fd, cache_fd, timeout);
+    }
   }
 
   return ::fpromise::join_promises(std::move(migrate_last_reboot_data),
-                                   std::move(migrate_crash_reports_data));
+                                   std::move(migrate_crash_reports_data),
+                                   std::move(migrate_feedback_data_data));
 }
 
 ::fpromise::promise<void, Error> MigrateLastRebootData(
@@ -112,6 +122,40 @@ MigrateData(async_dispatcher_t* dispatcher, const std::shared_ptr<sys::ServiceDi
         }
 
         FX_LOGS(INFO) << "Completed migrating crash reports";
+        return ::fpromise::ok();
+      });
+}
+
+::fpromise::promise<void, Error> MigrateFeedbackDataData(
+    async_dispatcher_t* dispatcher, const std::shared_ptr<sys::ServiceDirectory>& services,
+    const fbl::unique_fd& data_fd, const fbl::unique_fd& cache_fd, const zx::duration timeout) {
+  auto feedback_data = std::make_shared<FeedbackDataDirectoryMigrator>(dispatcher);
+  if (services->Connect(feedback_data->NewRequest()) != ZX_OK) {
+    FX_LOGS(ERROR) << "Failed to connect to FeedbackDataDirectoryMigrator";
+    return ::fpromise::make_error_promise(Error::kConnectionError);
+  }
+
+  return feedback_data->GetDirectories(timeout).then(
+      // Duplicate the file descriptors and capture the Directory migrator pointer.
+      [data_fd = data_fd.duplicate(), cache_fd = cache_fd.duplicate(), feedback_data](
+          const ::fpromise::result<FeedbackDataDirectoryMigrator::Directories, Error>& result)
+          -> ::fpromise::result<void, Error> {
+        if (!result.is_ok()) {
+          FX_LOGS(ERROR) << "Failed to get directories from feedback data for migration: "
+                         << ToString(result.error());
+          return ::fpromise::error(result.error());
+        }
+
+        const auto& [old_data_fd, old_cache_fd] = result.value();
+        if (!Migrate(old_data_fd, data_fd)) {
+          FX_LOGS(ERROR) << "Failed to migrate feedback data's /data directory";
+        }
+
+        if (!Migrate(old_cache_fd, cache_fd)) {
+          FX_LOGS(ERROR) << "Failed to migrate feedback data's /cache directory";
+        }
+
+        FX_LOGS(INFO) << "Completed migrating feedback data";
         return ::fpromise::ok();
       });
 }

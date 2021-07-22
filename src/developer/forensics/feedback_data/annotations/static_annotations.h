@@ -19,7 +19,9 @@ Annotations GetStaticAnnotations(const AnnotationKeys& allowlist,
                                  const ErrorOr<std::string>& current_boot_id,
                                  const ErrorOr<std::string>& previous_boot_id,
                                  const ErrorOr<std::string>& current_build_version,
-                                 const ErrorOr<std::string>& previous_build_version);
+                                 const ErrorOr<std::string>& previous_build_version,
+                                 const ErrorOr<std::string>& last_reboot_reason,
+                                 const ErrorOr<std::string>& last_reboot_uptime);
 
 }  // namespace feedback_data
 }  // namespace forensics

@@ -4,7 +4,6 @@
 
 import("//build/components.gni")
 import("//build/config.gni")
-import("//src/hwinfo/hwinfo_config.gni")
 
 visibility = [ ":*" ]
 
@@ -185,7 +184,6 @@ executable("datastore_unittest_exe") {
     "//src/developer/forensics/testing/stubs:cobalt",
     "//src/developer/forensics/testing/stubs:device_id_provider",
     "//src/developer/forensics/testing/stubs:diagnostics",
-    "//src/developer/forensics/testing/stubs:last_reboot_info_provider",
     "//src/developer/forensics/testing/stubs:product_info_provider",
     "//src/developer/forensics/utils:logs",
     "//src/developer/forensics/utils:time",
@@ -197,6 +195,23 @@ executable("datastore_unittest_exe") {
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/zx",
+  ]
+}
+
+executable("default_annotations_unittest_exe") {
+  testonly = true
+
+  # "default_annotations_unittest" is rather generic for the default_output_dir that is set
+  # to root_out_dir so instead we write the binary to target_out_dir.
+  output_dir = target_out_dir
+  sources = [ "default_annotations_unittest.cc" ]
+
+  deps = [
+    "//src/developer/forensics/feedback_data:default_annotations",
+    "//src/lib/files",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
   ]
 }
 
@@ -215,104 +230,6 @@ executable("device_id_provider_unittest_exe") {
     "//src/lib/uuid:uuid",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
-  ]
-}
-
-executable("feedback_data_integration_test_exe") {
-  testonly = true
-
-  sources = [ "feedback_data_integration_test.cc" ]
-
-  deps = [
-    ":zx_object_util",
-    "//garnet/public/lib/fostr/fidl/fuchsia.feedback",
-    "//sdk/fidl/fuchsia.feedback",
-    "//sdk/fidl/fuchsia.hwinfo",
-    "//sdk/fidl/fuchsia.logger",
-    "//sdk/fidl/fuchsia.sys",
-    "//sdk/fidl/fuchsia.update.channelcontrol",
-    "//sdk/lib/fidl/cpp",
-    "//sdk/lib/inspect/contrib/cpp:archive_reader",
-    "//sdk/lib/sys/cpp",
-    "//sdk/lib/sys/cpp/testing:integration",
-    "//sdk/lib/syslog/cpp",
-    "//src/developer/forensics/feedback_data:constants",
-    "//src/developer/forensics/testing:gmatchers",
-    "//src/developer/forensics/testing/fakes:cobalt",
-    "//src/developer/forensics/utils:archive",
-    "//src/developer/forensics/utils/cobalt",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/lib/uuid:uuid",
-    "//src/ui/lib/escher/test/common:gtest_vulkan",
-    "//third_party/googletest:gmock",
-    "//third_party/googletest:gtest",
-    "//third_party/rapidjson",
-    "//zircon/public/lib/zx",
-  ]
-}
-
-executable("main_service_unittest_exe") {
-  testonly = true
-
-  # "main_service_unittest" is rather generic for the default_output_dir that
-  # is set to root_out_dir so instead we write the binary to target_out_dir.
-  output_dir = target_out_dir
-
-  sources = [ "main_service_unittest.cc" ]
-
-  deps = [
-    "//sdk/lib/syslog/cpp",
-    "//src/developer/forensics/feedback_data:constants",
-    "//src/developer/forensics/feedback_data:main_service",
-    "//src/developer/forensics/feedback_data/system_log_recorder:reader",
-    "//src/developer/forensics/feedback_data/system_log_recorder/encoding:production",
-    "//src/developer/forensics/feedback_data/system_log_recorder/encoding:version",
-    "//src/developer/forensics/testing:gtest_with_syslog_main",
-    "//src/developer/forensics/testing:log_message",
-    "//src/developer/forensics/testing:unit_test_fixture",
-    "//src/developer/forensics/testing/stubs:cobalt",
-    "//src/developer/forensics/utils:logs",
-    "//src/lib/timekeeper:testing",
-    "//third_party/googletest:gmock",
-    "//third_party/googletest:gtest",
-    "//zircon/system/ulib/inspect",
-  ]
-}
-
-executable("namespace_init_unittest_exe") {
-  testonly = true
-
-  sources = [ "namespace_init_unittest.cc" ]
-
-  deps = [
-    "//sdk/fidl/fuchsia.feedback",
-    "//sdk/lib/syslog/cpp",
-    "//src/developer/forensics/feedback_data:namespace_init",
-    "//src/developer/forensics/feedback_data/system_log_recorder:reader",
-    "//src/developer/forensics/feedback_data/system_log_recorder/encoding:production",
-    "//src/developer/forensics/feedback_data/system_log_recorder/encoding:version",
-    "//src/developer/forensics/testing:gtest_with_syslog_main",
-    "//src/developer/forensics/testing:log_message",
-    "//src/developer/forensics/testing:unit_test_fixture",
-    "//src/developer/forensics/utils:logs",
-    "//src/lib/files",
-    "//src/lib/timekeeper:testing",
-    "//third_party/googletest:gmock",
-    "//third_party/googletest:gtest",
-  ]
-}
-
-executable("inspect_exe") {
-  testonly = true
-
-  sources = [ "inspect_exe.cc" ]
-
-  deps = [
-    "//sdk/lib/sys/cpp",
-    "//sdk/lib/sys/inspect/cpp",
-    "//src/lib/fxl",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 }
 
@@ -393,31 +310,6 @@ executable("kernel_log_ptr_integration_test_exe") {
   ]
 }
 
-executable("last_reboot_info_provider_unittest_exe") {
-  testonly = true
-
-  # "last_reboot_info_provider_unittest" is also used by last-reboot.
-  output_dir = target_out_dir
-
-  sources = [ "last_reboot_info_provider_unittest.cc" ]
-
-  deps = [
-    "//src/developer/forensics/feedback_data:constants",
-    "//src/developer/forensics/feedback_data/annotations:last_reboot_info_provider",
-    "//src/developer/forensics/feedback_data/annotations:types",
-    "//src/developer/forensics/testing:gtest_with_syslog_main",
-    "//src/developer/forensics/testing:unit_test_fixture",
-    "//src/developer/forensics/testing/stubs:cobalt",
-    "//src/developer/forensics/testing/stubs:last_reboot_info_provider",
-    "//src/developer/forensics/utils:time",
-    "//src/lib/fxl",
-    "//src/lib/timekeeper:testing",
-    "//third_party/googletest:gmock",
-    "//third_party/googletest:gtest",
-    "//zircon/public/lib/async-cpp",
-  ]
-}
-
 executable("product_info_provider_unittest_exe") {
   testonly = true
 
@@ -495,13 +387,6 @@ source_set("zx_object_util") {
 ###############################################################################
 # RESOURCES
 ###############################################################################
-resource("main_service_unittest_config") {
-  sources = [ "configs/main_service_unittest.json" ]
-
-  # main_service.cc expects a config at /pkg/data/feedback_data/config.json
-  outputs = [ "data/feedback_data/config.json" ]
-}
-
 resource("test_configs") {
   sources = [
     "configs/bad_schema_duplicated_attachment_key.json",
@@ -519,47 +404,6 @@ resource("test_image") {
       [ "//src/developer/forensics/testing/resources/checkerboard_100.png" ]
 
   outputs = [ "data/checkerboard_100.png" ]
-}
-
-###############################################################################
-# CONFIGS
-###############################################################################
-hwinfo_config_validate("fake_hwinfo_product_config_validate") {
-  type = "product"
-  config = "configs/hwinfo_product_config.json"
-}
-
-hwinfo_config_validate("fake_hwinfo_board_config_validate") {
-  type = "board"
-  config = "configs/hwinfo_board_config.json"
-}
-
-config_data("fake_hwinfo_product_config") {
-  for_pkg = "fake_hwinfo"
-
-  sources = [ rebase_path("configs/hwinfo_product_config.json") ]
-
-  outputs = [ "product_config.json" ]
-
-  deps = [ ":fake_hwinfo_product_config_validate" ]
-}
-
-config_data("fake_hwinfo_board_config") {
-  for_pkg = "fake_hwinfo"
-
-  sources = [ rebase_path("configs/hwinfo_board_config.json") ]
-
-  outputs = [ "board_config.json" ]
-
-  deps = [ ":fake_hwinfo_board_config_validate" ]
-}
-
-config_data("fake_hwinfo_factory_config") {
-  for_pkg = "fake_factory_store_providers"
-
-  sources = [ "configs/hwinfo_factory_config.json" ]
-
-  outputs = [ "fuchsia.factory.MiscFactoryStoreProvider.config" ]
 }
 
 ###############################################################################
@@ -635,20 +479,20 @@ fuchsia_component("datastore_unittest") {
   deps = [ ":datastore_unittest_exe" ]
 }
 
+fuchsia_component("default_annotations_unittest") {
+  testonly = true
+
+  manifest = "meta/default_annotations_unittest.cml"
+
+  deps = [ ":default_annotations_unittest_exe" ]
+}
+
 fuchsia_component("device_id_provider_unittest") {
   testonly = true
 
   manifest = "meta/device_id_provider_unittest.cmx"
 
   deps = [ ":device_id_provider_unittest_exe" ]
-}
-
-fuchsia_component("feedback_data_integration_test") {
-  testonly = true
-
-  manifest = "meta/feedback_data_integration_test.cmx"
-
-  deps = [ ":feedback_data_integration_test_exe" ]
 }
 
 fuchsia_component("inspect_data_budget_unittest") {
@@ -667,14 +511,6 @@ fuchsia_component("inspect_unittest") {
   deps = [ ":inspect_unittest_exe" ]
 }
 
-fuchsia_component("inspect_test_app") {
-  testonly = true
-
-  manifest = "meta/inspect_test_app.cmx"
-
-  deps = [ ":inspect_exe" ]
-}
-
 fuchsia_component("metadata_unittest") {
   testonly = true
 
@@ -689,33 +525,6 @@ fuchsia_component("kernel_log_ptr_integration_test") {
   manifest = "meta/kernel_log_ptr_integration_test.cmx"
 
   deps = [ ":kernel_log_ptr_integration_test_exe" ]
-}
-
-fuchsia_component("last_reboot_info_provider_unittest") {
-  testonly = true
-
-  manifest = "meta/last_reboot_info_provider_unittest.cmx"
-
-  deps = [ ":last_reboot_info_provider_unittest_exe" ]
-}
-
-fuchsia_component("main_service_unittest") {
-  testonly = true
-
-  manifest = "meta/main_service_unittest.cmx"
-
-  deps = [
-    ":main_service_unittest_config",
-    ":main_service_unittest_exe",
-  ]
-}
-
-fuchsia_component("namespace_init_unittest") {
-  testonly = true
-
-  manifest = "meta/namespace_init_unittest.cmx"
-
-  deps = [ ":namespace_init_unittest_exe" ]
 }
 
 fuchsia_component("product_info_provider_unittest") {
@@ -755,24 +564,22 @@ fuchsia_test_package("feedback-data-tests") {
     ":data_provider_controller_unittest",
     ":data_register_unittest",
     ":datastore_unittest",
+    ":default_annotations_unittest",
     ":device_id_provider_unittest",
-    ":feedback_data_integration_test",
     ":inspect_data_budget_unittest",
     ":inspect_unittest",
     ":metadata_unittest",
     ":kernel_log_ptr_integration_test",
-    ":last_reboot_info_provider_unittest",
-    ":main_service_unittest",
-    ":namespace_init_unittest",
     ":product_info_provider_unittest",
     ":screenshot_ptr_unittest",
     ":system_log_unittest",
   ]
 
-  deps = [
-    # needed for feedback_data_integration_test
-    ":inspect_test_app",
-  ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
 ###############################################################################
@@ -782,18 +589,14 @@ group("tests") {
   testonly = true
 
   deps = [
-    ":fake_hwinfo_board_config",
-    ":fake_hwinfo_product_config",
     ":feedback-data-tests",
 
     # Packages for the components that we are injecting in the integration tests.
     "//src/cobalt/bin/testing/mock_cobalt",
     "//src/developer/forensics:copy-pkg",
-    "//src/developer/forensics/testing/fakes:fake-last-reboot-info-provider",
     "//src/devices/sysmem/bin/sysmem_connector",
     "//src/diagnostics/archivist:archivist-for-embedding",
     "//src/graphics/bin/vulkan_loader",
-    "//src/hwinfo:fake_legacy_hwinfo",
     "//src/sys/pkg/bin/system-update-checker",
   ]
 

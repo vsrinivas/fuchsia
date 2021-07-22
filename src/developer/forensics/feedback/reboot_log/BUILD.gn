@@ -9,6 +9,8 @@ visibility = [ "//src/developer/forensics/*" ]
 ###############################################################################
 source_set("reboot_log") {
   sources = [
+    "annotations.cc",
+    "annotations.h",
     "graceful_reboot_reason.cc",
     "graceful_reboot_reason.h",
     "reboot_log.cc",
@@ -22,6 +24,8 @@ source_set("reboot_log") {
     "//sdk/fidl/fuchsia.hardware.power.statecontrol",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/syslog/cpp",
+    "//src/developer/forensics/utils:errors",
+    "//src/developer/forensics/utils:time",
     "//src/developer/forensics/utils/cobalt",
   ]
 
