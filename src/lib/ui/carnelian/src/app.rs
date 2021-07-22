@@ -22,6 +22,7 @@ use futures::{
     future::{Either, Future},
     StreamExt,
 };
+use lazy_static::lazy_static;
 use serde::Deserialize;
 use std::{cell::RefCell, collections::BTreeMap, fs, path::PathBuf, pin::Pin, rc::Rc};
 use toml;
@@ -54,12 +55,68 @@ where
     virtcon_mode_from_str(&str).map_err(serde::de::Error::custom)
 }
 
-#[derive(Debug, Default, Deserialize)]
+const fn keyboard_autorepeat_default() -> bool {
+    true
+}
+
+fn duration_from_millis(time_in_millis: u64) -> Result<std::time::Duration, Error> {
+    Ok(std::time::Duration::from_millis(time_in_millis))
+}
+
+fn deserialize_millis<'de, D>(deserializer: D) -> Result<std::time::Duration, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let ms = u64::deserialize(deserializer)?;
+    duration_from_millis(ms).map_err(serde::de::Error::custom)
+}
+
+const fn keyboard_autorepeat_slow_interval_default() -> std::time::Duration {
+    const KEYBOARD_AUTOREPEAT_SLOW_INTERVAL: std::time::Duration =
+        std::time::Duration::from_millis(250);
+    KEYBOARD_AUTOREPEAT_SLOW_INTERVAL
+}
+
+const fn keyboard_autorepeat_fast_interval_default() -> std::time::Duration {
+    const KEYBOARD_AUTOREPEAT_FAST_INTERVAL: std::time::Duration =
+        std::time::Duration::from_millis(50);
+    KEYBOARD_AUTOREPEAT_FAST_INTERVAL
+}
+
+#[derive(Debug, Deserialize)]
 pub struct Config {
+    #[serde(default = "keyboard_autorepeat_default")]
+    pub keyboard_autorepeat: bool,
+    #[serde(
+        default = "keyboard_autorepeat_slow_interval_default",
+        deserialize_with = "deserialize_millis"
+    )]
+    pub keyboard_autorepeat_slow_interval: std::time::Duration,
+    #[serde(
+        default = "keyboard_autorepeat_fast_interval_default",
+        deserialize_with = "deserialize_millis"
+    )]
+    pub keyboard_autorepeat_fast_interval: std::time::Duration,
     #[serde(default)]
     pub use_spinel: bool,
     #[serde(default, deserialize_with = "deserialize_virtcon_mode")]
     pub virtcon_mode: Option<VirtconMode>,
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            keyboard_autorepeat: keyboard_autorepeat_default(),
+            keyboard_autorepeat_slow_interval: keyboard_autorepeat_slow_interval_default(),
+            keyboard_autorepeat_fast_interval: keyboard_autorepeat_fast_interval_default(),
+            use_spinel: false,
+            virtcon_mode: None,
+        }
+    }
+}
+
+lazy_static! {
+    pub static ref CONFIG: Config = App::load_config().expect("failed loading config");
 }
 
 pub(crate) type InternalSender = UnboundedSender<MessageInternal>;
@@ -172,7 +229,6 @@ pub type FrameBufferPtr = Rc<RefCell<FrameBuffer>>;
 /// Struct that implements module-wide responsibilities, currently limited
 /// to creating views on request.
 pub struct App {
-    config: Config,
     strategy: AppStrategyPtr,
     view_controllers: BTreeMap<ViewKey, ViewController>,
     next_key: ViewKey,
@@ -210,14 +266,8 @@ pub type AssistantCreator<'a> = LocalBoxFuture<'a, Result<AppAssistantPtr, Error
 pub type AssistantCreatorFunc = Box<dyn FnOnce(&AppContext) -> AssistantCreator<'_>>;
 
 impl App {
-    fn new(
-        config: Config,
-        sender: InternalSender,
-        strategy: AppStrategyPtr,
-        assistant: AppAssistantPtr,
-    ) -> App {
+    fn new(sender: InternalSender, strategy: AppStrategyPtr, assistant: AppAssistantPtr) -> App {
         App {
-            config,
             strategy,
             view_controllers: BTreeMap::new(),
             next_key: FIRST_VIEW_KEY,
@@ -230,16 +280,14 @@ impl App {
     /// Starts an application based on Carnelian. The `assistant` parameter will
     /// be used to create new views when asked to do so by the Fuchsia view system.
     pub fn run(assistant_creator_func: AssistantCreatorFunc) -> Result<(), Error> {
-        let config = Self::load_config().expect("failed loading config");
         let mut executor = fasync::LocalExecutor::new().context("Error creating executor")?;
         let (internal_sender, mut internal_receiver) = unbounded::<MessageInternal>();
         let f = async {
             let app_context = AppContext { sender: internal_sender.clone() };
             let assistant_creator = assistant_creator_func(&app_context);
             let assistant = assistant_creator.await?;
-            let strat =
-                create_app_strategy(&assistant, &config, FIRST_VIEW_KEY, &internal_sender).await?;
-            let mut app = App::new(config, internal_sender, strat, assistant);
+            let strat = create_app_strategy(&assistant, FIRST_VIEW_KEY, &internal_sender).await?;
+            let mut app = App::new(internal_sender, strat, assistant);
             app.app_init_common().await?;
             while let Some(message) = internal_receiver.next().await {
                 app.handle_message(message).await.expect("handle_message failed");
@@ -347,17 +395,15 @@ impl App {
     /// first update call, or until a five second timeout. The Result returned is the
     /// result of the test, an Ok(()) result means the test passed.
     pub fn test(assistant_creator_func: AssistantCreatorFunc) -> Result<(), Error> {
-        let config = Self::load_config().context("loading config failed in test")?;
         let mut executor = fasync::LocalExecutor::new().context("Error creating executor")?;
         let (internal_sender, mut internal_receiver) = unbounded::<MessageInternal>();
         let f = async {
             let app_context = AppContext { sender: internal_sender.clone() };
             let assistant_creator = assistant_creator_func(&app_context);
             let assistant = assistant_creator.await?;
-            let strat =
-                create_app_strategy(&assistant, &config, FIRST_VIEW_KEY, &internal_sender).await?;
+            let strat = create_app_strategy(&assistant, FIRST_VIEW_KEY, &internal_sender).await?;
             strat.create_view_for_testing(&internal_sender)?;
-            let mut app = App::new(config, internal_sender, strat, assistant);
+            let mut app = App::new(internal_sender, strat, assistant);
             let mut frame_count = 0;
             app.app_init_common().await?;
             loop {
@@ -491,7 +537,7 @@ impl App {
 
     fn get_render_options(&self) -> RenderOptions {
         let mut render_options = self.assistant.get_render_options();
-        if self.config.use_spinel {
+        if CONFIG.use_spinel {
             render_options.use_spinel = true;
         }
         render_options

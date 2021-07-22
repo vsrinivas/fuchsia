@@ -3,7 +3,10 @@
 // found in the LICENSE file.
 
 use crate::{
-    app::strategies::framebuffer::{AutoRepeatContext, AutoRepeatTimer},
+    app::{
+        strategies::framebuffer::{AutoRepeatContext, AutoRepeatTimer},
+        CONFIG,
+    },
     drawing::DisplayRotation,
     geometry::LimitToBounds,
     input::{
@@ -291,7 +294,7 @@ impl<'a> InputReportHandler<'a> {
         let events = newly_pressed.chain(released).collect();
         self.pressed_keys = pressed_keys;
         self.repeating = first_non_modifier.or(repeating);
-        if self.repeating.is_some() {
+        if CONFIG.keyboard_autorepeat && self.repeating.is_some() {
             context.schedule_autorepeat_timer(&self.device_id);
         }
         events

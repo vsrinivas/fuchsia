@@ -5,7 +5,7 @@
 use crate::{
     app::{
         strategies::base::AppStrategy, FrameBufferPtr, InternalSender, MessageInternal,
-        RenderOptions,
+        RenderOptions, CONFIG,
     },
     drawing::DisplayRotation,
     geometry::IntSize,
@@ -26,17 +26,14 @@ use fidl_fuchsia_ui_scenic::ScenicProxy;
 use fuchsia_async::{self as fasync};
 use futures::{channel::mpsc::UnboundedSender, TryFutureExt};
 use keymaps::Keymap;
-use std::{collections::HashMap, time::Duration};
-
-#[allow(unused)]
-const LOW_REPEAT_KEY_FREQ: Duration = Duration::from_millis(250);
-const HIGH_REPEAT_KEY_FREQ: Duration = Duration::from_millis(50);
+use std::collections::HashMap;
 
 pub(crate) struct AutoRepeatContext {
     app_sender: UnboundedSender<MessageInternal>,
     view_id: ViewKey,
     #[allow(unused)]
     keyboard_autorepeat_task: Option<fasync::Task<()>>,
+    repeat_interval: std::time::Duration,
 }
 
 pub(crate) trait AutoRepeatTimer {
@@ -46,13 +43,20 @@ pub(crate) trait AutoRepeatTimer {
 
 impl AutoRepeatContext {
     pub(crate) fn new(app_sender: &UnboundedSender<MessageInternal>, view_id: ViewKey) -> Self {
-        Self { app_sender: app_sender.clone(), view_id, keyboard_autorepeat_task: None }
+        Self {
+            app_sender: app_sender.clone(),
+            view_id,
+            keyboard_autorepeat_task: None,
+            repeat_interval: CONFIG.keyboard_autorepeat_slow_interval,
+        }
     }
 }
 
 impl AutoRepeatTimer for AutoRepeatContext {
     fn schedule_autorepeat_timer(&mut self, device_id: &DeviceId) {
-        let timer = fasync::Timer::new(fuchsia_async::Time::after(HIGH_REPEAT_KEY_FREQ.into()));
+        self.repeat_interval =
+            (self.repeat_interval * 3 / 4).max(CONFIG.keyboard_autorepeat_fast_interval);
+        let timer = fasync::Timer::new(fuchsia_async::Time::after(self.repeat_interval.into()));
         let app_sender = self.app_sender.clone();
         let device_id = device_id.clone();
         let view_id = self.view_id;
@@ -67,6 +71,7 @@ impl AutoRepeatTimer for AutoRepeatContext {
 
     fn cancel_autorepeat_timer(&mut self) {
         self.keyboard_autorepeat_task = None;
+        self.repeat_interval = CONFIG.keyboard_autorepeat_slow_interval;
     }
 }
 
