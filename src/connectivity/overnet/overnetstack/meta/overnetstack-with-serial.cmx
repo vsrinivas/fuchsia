@@ -6,7 +6,11 @@
         "binary": "bin/overnetstack"
     },
     "sandbox": {
+        "dev": [
+            "class/serial"
+        ],
         "services": [
+            "fuchsia.hardware.serial.NewDeviceProxy",
             "fuchsia.net.mdns.Publisher",
             "fuchsia.net.mdns.Subscriber",
             "fuchsia.posix.socket.Provider"
