@@ -63,15 +63,16 @@ TEST(ServerEnd, Close) {
 
     fidl::UnbindInfo recorded_unbind_info() const { return recorded_unbind_info_; }
 
-    void Unbound(fidl::UnbindInfo unbind_info) override { recorded_unbind_info_ = unbind_info; }
+    void on_fidl_error(fidl::UnbindInfo unbind_info) override {
+      recorded_unbind_info_ = unbind_info;
+    }
 
    private:
     fidl::UnbindInfo recorded_unbind_info_;
   };
 
-  auto event_handler = std::make_shared<EventHandler>();
-  fidl::Client<llcpp_test::Frobinator> client(std::move(endpoints->client), loop.dispatcher(),
-                                              event_handler);
+  EventHandler event_handler;
+  fidl::WireClient client(std::move(endpoints->client), loop.dispatcher(), &event_handler);
 
   fidl::ServerEnd<llcpp_test::Frobinator> server_end(std::move(endpoints->server));
   EXPECT_TRUE(server_end.is_valid());
@@ -81,8 +82,8 @@ TEST(ServerEnd, Close) {
   EXPECT_FALSE(server_end.is_valid());
 
   loop.RunUntilIdle();
-  EXPECT_EQ(fidl::Reason::kPeerClosed, event_handler->recorded_unbind_info().reason());
-  EXPECT_EQ(kSysError, event_handler->recorded_unbind_info().status());
+  EXPECT_EQ(fidl::Reason::kPeerClosed, event_handler.recorded_unbind_info().reason());
+  EXPECT_EQ(kSysError, event_handler.recorded_unbind_info().status());
 }
 
 TEST(ServerEnd, CloseTwice) {

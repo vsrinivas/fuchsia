@@ -28,7 +28,7 @@ class ::fidl::WireAsyncEventHandler<fidl_testing::TestProtocol>
   WireAsyncEventHandler() = default;
   ~WireAsyncEventHandler() override = default;
 
-  void Unbound(::fidl::UnbindInfo info) override {}
+  void on_fidl_error(::fidl::UnbindInfo info) override {}
 };
 
 template <>

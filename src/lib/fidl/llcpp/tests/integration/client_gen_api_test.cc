@@ -46,7 +46,7 @@ TEST(GenAPITestCase, TwoWayAsyncManaged) {
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(loop.StartThread());
-  fidl::Client<Example> client(std::move(local), loop.dispatcher());
+  fidl::WireSharedClient<Example> client(std::move(local), loop.dispatcher());
 
   static constexpr char data[] = "TwoWay() sync managed";
   auto server_binding = fidl::BindServer(loop.dispatcher(), std::move(remote),
@@ -96,7 +96,7 @@ TEST(GenAPITestCase, TwoWayAsyncCallerAllocated) {
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(loop.StartThread());
-  fidl::Client<Example> client(std::move(local), loop.dispatcher());
+  fidl::WireSharedClient<Example> client(std::move(local), loop.dispatcher());
 
   static constexpr char data[] = "TwoWay() sync caller-allocated";
   auto server_binding = fidl::BindServer(loop.dispatcher(), std::move(remote),
@@ -138,7 +138,8 @@ TEST(GenAPITestCase, EventManaged) {
   };
 
   auto event_handler = std::make_shared<EventHandler>();
-  fidl::Client<Example> client(std::move(local), loop.dispatcher(), event_handler);
+  fidl::WireSharedClient<Example> client(std::move(local), loop.dispatcher(), event_handler.get(),
+                                         fidl::ShareUntilTeardown(event_handler));
 
   auto server_binding = fidl::BindServer(loop.dispatcher(), std::move(remote),
                                          std::make_unique<Server>(data, strlen(data)));
@@ -158,7 +159,7 @@ TEST(GenAPITestCase, ConsumeEventsWhenEventHandlerIsAbsent) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(loop.StartThread());
 
-  fidl::Client<Example> client(std::move(local), loop.dispatcher());
+  fidl::WireSharedClient<Example> client(std::move(local), loop.dispatcher());
   fidl::WireEventSender<Example> event_sender(std::move(remote));
 
   // Send an unhandled event. The event should be silently discarded since
@@ -181,8 +182,8 @@ TEST(GenAPITestCase, ConsumeEventsWhenEventHandlerMethodIsAbsent) {
 
   class EventHandler : public fidl::WireAsyncEventHandler<Example> {};
 
-  fidl::Client<Example> client(std::move(local), loop.dispatcher(),
-                               std::make_shared<EventHandler>());
+  fidl::WireSharedClient<Example> client(std::move(local), loop.dispatcher(),
+                                         std::make_unique<EventHandler>());
   fidl::WireEventSender<Example> event_sender(std::move(remote));
 
   // Send an unhandled event. The event should be silently discarded since
@@ -211,7 +212,7 @@ TEST(GenAPITestCase, Epitaph) {
    public:
     explicit EventHandler(sync_completion_t& unbound) : unbound_(unbound) {}
 
-    void Unbound(fidl::UnbindInfo info) override {
+    void on_fidl_error(fidl::UnbindInfo info) override {
       EXPECT_EQ(fidl::Reason::kPeerClosed, info.reason());
       EXPECT_EQ(ZX_ERR_BAD_STATE, info.status());
       sync_completion_signal(&unbound_);
@@ -221,8 +222,8 @@ TEST(GenAPITestCase, Epitaph) {
     sync_completion_t& unbound_;
   };
 
-  fidl::Client<Example> client(std::move(local), loop.dispatcher(),
-                               std::make_shared<EventHandler>(unbound));
+  fidl::WireSharedClient<Example> client(std::move(local), loop.dispatcher(),
+                                         std::make_unique<EventHandler>(unbound));
 
   // Send an epitaph and wait for on_unbound to run.
   ASSERT_OK(fidl_epitaph_write(remote.channel().get(), ZX_ERR_BAD_STATE));
@@ -232,7 +233,7 @@ TEST(GenAPITestCase, Epitaph) {
 TEST(GenAPITestCase, UnbindInfoEncodeError) {
   class ErrorServer : public fidl::WireServer<Example> {
    public:
-    explicit ErrorServer() {}
+    explicit ErrorServer() = default;
 
     void TwoWay(TwoWayRequestView request, TwoWayCompleter::Sync& completer) override {
       // Fail to send the reply due to an encoding error (the buffer is too small).
@@ -254,7 +255,7 @@ TEST(GenAPITestCase, UnbindInfoEncodeError) {
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(loop.StartThread());
-  fidl::Client<Example> client(std::move(local), loop.dispatcher());
+  fidl::WireSharedClient<Example> client(std::move(local), loop.dispatcher());
 
   sync_completion_t done;
   fidl::OnUnboundFn<ErrorServer> on_unbound =
@@ -288,14 +289,14 @@ TEST(GenAPITestCase, UnbindInfoDecodeError) {
 
   class EventHandler : public fidl::WireAsyncEventHandler<Example> {
    public:
-    EventHandler(sync_completion_t& done) : done_(done) {}
+    explicit EventHandler(sync_completion_t& done) : done_(done) {}
 
     void OnEvent(fidl::WireResponse<Example::OnEvent>* event) override {
       FAIL();
       sync_completion_signal(&done_);
     }
 
-    void Unbound(fidl::UnbindInfo info) override {
+    void on_fidl_error(fidl::UnbindInfo info) override {
       EXPECT_EQ(fidl::Reason::kDecodeError, info.reason());
       sync_completion_signal(&done_);
     };
@@ -304,8 +305,8 @@ TEST(GenAPITestCase, UnbindInfoDecodeError) {
     sync_completion_t& done_;
   };
 
-  fidl::Client<Example> client(std::move(local), loop.dispatcher(),
-                               std::make_shared<EventHandler>(done));
+  fidl::WireSharedClient<Example> client(std::move(local), loop.dispatcher(),
+                                         std::make_unique<EventHandler>(done));
 
   // Set up an Example.OnEvent() message but send it without the payload. This should trigger a
   // decoding error.
@@ -340,7 +341,7 @@ TEST(GenAPITestCase, UnbindPreventsSubsequentCalls) {
   auto endpoints = fidl::CreateEndpoints<Example>();
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  fidl::Client<Example> client(std::move(endpoints->client), loop.dispatcher());
+  fidl::WireSharedClient<Example> client(std::move(endpoints->client), loop.dispatcher());
 
   auto server = std::make_unique<Server>();
   auto* server_ptr = server.get();
@@ -355,7 +356,7 @@ TEST(GenAPITestCase, UnbindPreventsSubsequentCalls) {
   ASSERT_OK(loop.RunUntilIdle());
   EXPECT_EQ(1, server_ptr->num_one_way());
 
-  client.Unbind();
+  client.AsyncTeardown();
   ASSERT_OK(loop.RunUntilIdle());
   EXPECT_EQ(1, server_ptr->num_one_way());
 
@@ -378,7 +379,7 @@ TEST(GenAPITestCase, ResponseContextOwnershipReleasedOnError) {
   }
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  fidl::Client<Example> client(std::move(client_end), loop.dispatcher());
+  fidl::WireSharedClient<Example> client(std::move(client_end), loop.dispatcher());
   loop.StartThread("client-test");
 
   class TestResponseContext final : public fidl::WireResponseContext<Example::TwoWay> {

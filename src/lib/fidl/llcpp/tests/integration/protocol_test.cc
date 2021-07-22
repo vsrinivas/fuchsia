@@ -263,7 +263,9 @@ TEST(EventSenderTest, SendEvent) {
   };
 
   auto event_handler = std::make_shared<EventHandler>(loop);
-  fidl::Client<test::Frobinator> client(std::move(client_end), loop.dispatcher(), event_handler);
+  fidl::WireSharedClient<test::Frobinator> client(std::move(client_end), loop.dispatcher(),
+                                                  event_handler.get(),
+                                                  fidl::ShareUntilTeardown(event_handler));
 
   loop.Run();
   ASSERT_TRUE(event_handler->received());

@@ -97,11 +97,12 @@ class HandleRightsTest : public ::testing::Test {
     return fidl::WireSyncClient<test::HandleRights>(std::move(client_end_));
   }
 
-  fidl::Client<test::HandleRights> AsyncClient(
+  fidl::WireSharedClient<test::HandleRights> AsyncClient(
       std::shared_ptr<fidl::WireAsyncEventHandler<test::HandleRights>> handler) {
     EXPECT_TRUE(client_end_.is_valid());
-    return fidl::Client<test::HandleRights>(std::move(client_end_), loop_->dispatcher(),
-                                            std::move(handler));
+    return fidl::WireSharedClient<test::HandleRights>(std::move(client_end_), loop_->dispatcher(),
+                                                      handler.get(),
+                                                      fidl::ShareUntilTeardown(std::move(handler)));
   }
 
  private:

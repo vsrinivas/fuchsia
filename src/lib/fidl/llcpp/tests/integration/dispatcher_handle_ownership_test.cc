@@ -50,7 +50,7 @@ TEST(DispatcherHandleOwnership, ServerReceiveOneWay) {
   };
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   fidl::BindServer(loop.dispatcher(), std::move(remote), std::make_unique<Server>());
-  fidl::Client client(std::move(local), loop.dispatcher());
+  fidl::WireClient client(std::move(local), loop.dispatcher());
 
   auto [observer, send] = CreateEventPair();
   fidl::FidlAllocator allocator;
@@ -95,7 +95,7 @@ TEST(DispatcherHandleOwnership, ClientReceiveTwoWay) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   auto server = std::make_shared<Server>();
   fidl::BindServer(loop.dispatcher(), std::move(remote), server);
-  fidl::Client client(std::move(local), loop.dispatcher());
+  fidl::WireClient client(std::move(local), loop.dispatcher());
 
   // Test the managed overload.
   {
@@ -159,7 +159,8 @@ TEST(DispatcherHandleOwnership, ClientReceiveEvent) {
     }
   };
 
-  fidl::Client client(std::move(local), loop.dispatcher(), std::make_shared<EventHandler>());
+  EventHandler event_handler;
+  fidl::WireClient client(std::move(local), loop.dispatcher(), &event_handler);
   ASSERT_OK(loop.RunUntilIdle());
   zx_signals_t signals;
   ASSERT_OK(observer.wait_one(ZX_EVENTPAIR_PEER_CLOSED, zx::time::infinite_past(), &signals));
