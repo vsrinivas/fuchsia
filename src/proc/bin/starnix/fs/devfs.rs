@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::sync::Arc;
-
 use super::*;
 use crate::devices::AnonNodeDevice;
 use crate::fd_impl_seekable;
@@ -11,20 +9,13 @@ use crate::fs::NullFile;
 use crate::task::*;
 use crate::types::*;
 
-pub struct DevFs {
-    root: FsNodeHandle,
-}
+pub struct DevFs;
+impl FileSystemOps for DevFs {}
 
 impl DevFs {
     pub fn new() -> FileSystemHandle {
         let devfs_dev = AnonNodeDevice::new(0);
-        Arc::new(DevFs { root: FsNode::new_root(DevfsDirectory, devfs_dev) })
-    }
-}
-
-impl FileSystem for DevFs {
-    fn root(&self) -> &FsNodeHandle {
-        &self.root
+        FileSystem::new(DevFs, FsNode::new_root(DevfsDirectory, devfs_dev))
     }
 }
 

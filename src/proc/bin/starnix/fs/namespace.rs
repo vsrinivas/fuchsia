@@ -14,11 +14,27 @@ use super::{FileHandle, FileObject, FsContext, FsNodeHandle, FsStr, FsString, Un
 use crate::types::*;
 
 /// A file system that can be mounted in a namespace.
-pub trait FileSystem {
-    fn root(&self) -> &FsNodeHandle;
+pub struct FileSystem {
+    root: FsNodeHandle,
+    _ops: Box<dyn FileSystemOps + Send + Sync>,
 }
 
-pub type FileSystemHandle = Arc<dyn FileSystem + Sync + Send>;
+impl FileSystem {
+    pub fn new(
+        ops: impl FileSystemOps + Send + Sync + 'static,
+        root: FsNodeHandle,
+    ) -> FileSystemHandle {
+        Arc::new(FileSystem { root, _ops: Box::new(ops) })
+    }
+    pub fn root(&self) -> &FsNodeHandle {
+        &self.root
+    }
+}
+
+/// The filesystem-implementation-specific data for FileSystem.
+pub trait FileSystemOps {}
+
+pub type FileSystemHandle = Arc<FileSystem>;
 
 /// A mount namespace.
 ///

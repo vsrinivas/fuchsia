@@ -1,11 +1,10 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use parking_lot::Mutex;
 use std::sync::Weak;
 
 use super::*;
-use crate::fs::tmpfs::TmpfsState;
+use crate::fs::tmpfs::TmpFs;
 use crate::types::*;
 
 /// A node that represents a symlink to another node.
@@ -14,11 +13,11 @@ pub struct SymlinkNode {
     target: FsString,
 
     /// The file system to which this file belongs.
-    fs: Weak<Mutex<TmpfsState>>,
+    fs: Weak<TmpFs>,
 }
 
 impl SymlinkNode {
-    pub fn new(fs: Weak<Mutex<TmpfsState>>, target: &FsStr) -> Self {
+    pub fn new(fs: Weak<TmpFs>, target: &FsStr) -> Self {
         SymlinkNode { fs, target: target.to_owned() }
     }
 }
@@ -35,6 +34,6 @@ impl FsNodeOps for SymlinkNode {
     }
 
     fn unlinked(&self, node: &FsNodeHandle) {
-        self.fs.upgrade().map(|fs| fs.lock().unregister(node));
+        self.fs.upgrade().unwrap().unregister(node);
     }
 }

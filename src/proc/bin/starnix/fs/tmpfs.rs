@@ -13,47 +13,33 @@ use crate::fs::pipe::Pipe;
 use crate::fs::SymlinkNode;
 use crate::types::*;
 
-#[derive(Default)]
-pub struct TmpfsState {
-    nodes: HashMap<ino_t, FsNodeHandle>,
-}
-
-impl TmpfsState {
-    pub fn register(&mut self, node: &FsNodeHandle) {
-        self.nodes.insert(node.info().inode_num, Arc::clone(node));
-    }
-
-    pub fn unregister(&mut self, node: &FsNodeHandle) {
-        self.nodes.remove(&node.info().inode_num);
-    }
-}
-
 pub struct TmpFs {
-    root: FsNodeHandle,
-    _state: Arc<Mutex<TmpfsState>>,
+    nodes: Mutex<HashMap<ino_t, FsNodeHandle>>,
 }
+impl FileSystemOps for Arc<TmpFs> {}
 
 impl TmpFs {
     pub fn new() -> FileSystemHandle {
         let tmpfs_dev = AnonNodeDevice::new(0);
-        let state = Arc::new(Mutex::new(TmpfsState::default()));
-        let fs = TmpFs {
-            root: FsNode::new_root(TmpfsDirectory { fs: Arc::downgrade(&state) }, tmpfs_dev),
-            _state: state,
-        };
-        Arc::new(fs)
+        let fs = Arc::new(TmpFs { nodes: Mutex::new(HashMap::new()) });
+        FileSystem::new(
+            fs.clone(),
+            FsNode::new_root(TmpfsDirectory { fs: Arc::downgrade(&fs) }, tmpfs_dev),
+        )
     }
-}
 
-impl FileSystem for TmpFs {
-    fn root(&self) -> &FsNodeHandle {
-        &self.root
+    pub fn register(&self, node: &FsNodeHandle) {
+        self.nodes.lock().insert(node.info().inode_num, Arc::clone(node));
+    }
+
+    pub fn unregister(&self, node: &FsNodeHandle) {
+        self.nodes.lock().remove(&node.info().inode_num);
     }
 }
 
 struct TmpfsDirectory {
     /// The file system to which this directory belongs.
-    fs: Weak<Mutex<TmpfsState>>,
+    fs: Weak<TmpFs>,
 }
 
 impl FsNodeOps for TmpfsDirectory {
@@ -68,7 +54,7 @@ impl FsNodeOps for TmpfsDirectory {
     fn mkdir(&self, _parent: &FsNode, mut child: FsNode) -> Result<FsNodeHandle, Errno> {
         child.set_ops(TmpfsDirectory { fs: self.fs.clone() });
         let child = child.into_handle();
-        self.fs.upgrade().map(|fs| fs.lock().register(&child));
+        self.fs.upgrade().unwrap().register(&child);
         Ok(child)
     }
 
@@ -79,7 +65,7 @@ impl FsNodeOps for TmpfsDirectory {
             _ => return Err(EACCES),
         }
         let child = child.into_handle();
-        self.fs.upgrade().map(|fs| fs.lock().register(&child));
+        self.fs.upgrade().unwrap().register(&child);
         Ok(child)
     }
 
@@ -87,7 +73,7 @@ impl FsNodeOps for TmpfsDirectory {
         assert!(child.info_mut().mode.fmt() == FileMode::IFLNK);
         child.set_ops(SymlinkNode::new(self.fs.clone(), target));
         let child = child.into_handle();
-        self.fs.upgrade().map(|fs| fs.lock().register(&child));
+        self.fs.upgrade().unwrap().register(&child);
         Ok(child)
     }
 
@@ -101,20 +87,20 @@ impl FsNodeOps for TmpfsDirectory {
     }
 
     fn unlinked(&self, node: &FsNodeHandle) {
-        self.fs.upgrade().map(|fs| fs.lock().unregister(node));
+        self.fs.upgrade().unwrap().unregister(node);
     }
 }
 
 struct TmpfsFileNode {
     /// The file system to which this file belongs.
-    fs: Weak<Mutex<TmpfsState>>,
+    fs: Weak<TmpFs>,
 
     /// The memory that backs this file.
     vmo: Arc<zx::Vmo>,
 }
 
 impl TmpfsFileNode {
-    fn new(fs: Weak<Mutex<TmpfsState>>) -> Result<TmpfsFileNode, Errno> {
+    fn new(fs: Weak<TmpFs>) -> Result<TmpfsFileNode, Errno> {
         let vmo = zx::Vmo::create_with_opts(VmoOptions::RESIZABLE, 0).map_err(|_| ENOMEM)?;
         Ok(TmpfsFileNode { fs, vmo: Arc::new(vmo) })
     }
@@ -126,20 +112,20 @@ impl FsNodeOps for TmpfsFileNode {
     }
 
     fn unlinked(&self, node: &FsNodeHandle) {
-        self.fs.upgrade().map(|fs| fs.lock().unregister(node));
+        self.fs.upgrade().unwrap().unregister(node);
     }
 }
 
 struct TmpfsFifoNode {
     /// The file system to which this file belongs.
-    fs: Weak<Mutex<TmpfsState>>,
+    fs: Weak<TmpFs>,
 
     /// The pipe located at this node.
     pipe: Arc<Mutex<Pipe>>,
 }
 
 impl TmpfsFifoNode {
-    fn new(fs: Weak<Mutex<TmpfsState>>) -> TmpfsFifoNode {
+    fn new(fs: Weak<TmpFs>) -> TmpfsFifoNode {
         TmpfsFifoNode { fs, pipe: Pipe::new() }
     }
 }
@@ -150,7 +136,7 @@ impl FsNodeOps for TmpfsFifoNode {
     }
 
     fn unlinked(&self, node: &FsNodeHandle) {
-        self.fs.upgrade().map(|fs| fs.lock().unregister(node));
+        self.fs.upgrade().unwrap().unregister(node);
     }
 }
 

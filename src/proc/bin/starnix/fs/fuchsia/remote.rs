@@ -15,21 +15,14 @@ use crate::task::*;
 use crate::types::*;
 use crate::vmex_resource::VMEX_RESOURCE;
 
-pub struct RemoteFs {
-    root: FsNodeHandle,
-}
+pub struct RemoteFs;
+impl FileSystemOps for RemoteFs {}
 
 impl RemoteFs {
     pub fn new(root: zx::Channel, rights: u32) -> FileSystemHandle {
         let remotefs = AnonNodeDevice::new(0); // TODO: Get from device registry.
         let zxio = Arc::new(Zxio::create(root.into_handle()).unwrap());
-        Arc::new(RemoteFs { root: FsNode::new_root(RemoteNode { zxio, rights }, remotefs) })
-    }
-}
-
-impl FileSystem for RemoteFs {
-    fn root(&self) -> &FsNodeHandle {
-        &self.root
+        FileSystem::new(RemoteFs, FsNode::new_root(RemoteNode { zxio, rights }, remotefs))
     }
 }
 
