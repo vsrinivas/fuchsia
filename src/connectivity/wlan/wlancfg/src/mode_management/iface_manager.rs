@@ -1203,7 +1203,7 @@ mod tests {
         super::*,
         crate::{
             access_point::types,
-            client::{scan::ScanResultUpdate, types as client_types},
+            client::types as client_types,
             config_management::{
                 Credential, NetworkIdentifier, SavedNetworksManager, SecurityType,
             },
@@ -4927,63 +4927,7 @@ mod tests {
     #[fuchsia::test]
     fn test_reconnect_on_network_selection_results() {
         let mut exec = fuchsia_async::TestExecutor::new().expect("failed to create an executor");
-
-        // Create a configured ClientIfaceContainer.
-        let mut test_values = test_setup(&mut exec);
-
-        // Insert a saved network.
-        let ssid = TEST_SSID.as_bytes().to_vec();
-        let network_id = NetworkIdentifier::new(ssid.clone(), SecurityType::Wpa);
-        let credential = Credential::Password(TEST_PASSWORD.as_bytes().to_vec());
-        let temp_dir = TempDir::new().expect("failed to create temporary directory");
-        let path = temp_dir.path().join(rand_string());
-        let tmp_path = temp_dir.path().join(rand_string());
-        let (saved_networks, mut stash_server) =
-            exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server(path, tmp_path));
-        test_values.saved_networks = Arc::new(saved_networks);
-
-        // Update the saved networks with knowledge of the test SSID and credentials.
-        {
-            let save_network_fut = test_values.saved_networks.store(network_id, credential.clone());
-            pin_mut!(save_network_fut);
-            assert_variant!(exec.run_until_stalled(&mut save_network_fut), Poll::Pending);
-
-            process_stash_write(&mut exec, &mut stash_server);
-        }
-
-        // Create a network selector.
-        let selector = Arc::new(NetworkSelector::new(
-            test_values.saved_networks.clone(),
-            create_mock_cobalt_sender(),
-            inspect::Inspector::new().root().create_child("network_selector"),
-        ));
-
-        // Inject a scan result into the network selector.
-        {
-            let scan_results = vec![client_types::ScanResult {
-                ssid: ssid.clone(),
-                security_type_detailed: client_types::SecurityTypeDetailed::Wpa1,
-                entries: vec![client_types::Bss {
-                    bssid: [20, 30, 40, 50, 60, 70],
-                    rssi: -15,
-                    timestamp_nanos: 0,
-                    compatible: true,
-                    observed_in_passive_scan: false,
-                    snr_db: 20,
-                    channel: fidl_fuchsia_wlan_common::WlanChannel {
-                        primary: 8,
-                        cbw: fidl_fuchsia_wlan_common::ChannelBandwidth::Cbw20,
-                        secondary80: 0,
-                    },
-                    bss_desc: fake_fidl_bss!(Open, bssid: [20, 30, 40, 50, 60, 70]),
-                }],
-                compatibility: client_types::Compatibility::Supported,
-            }];
-            let mut network_selector_updater = selector.generate_scan_result_updater();
-            let update_fut = network_selector_updater.update_scan_results(&scan_results);
-            pin_mut!(update_fut);
-            assert_variant!(exec.run_until_stalled(&mut update_fut), Poll::Ready(()));
-        }
+        let test_values = test_setup(&mut exec);
 
         // Create an interface manager with an unconfigured client interface.
         let (mut iface_manager, _sme_stream) =
@@ -4998,11 +4942,18 @@ mod tests {
         let mut reconnect_monitor_interval = 1;
         let mut connectivity_monitor_timer =
             fasync::Interval::new(zx::Duration::from_seconds(reconnect_monitor_interval));
-        let iface_manager_client = Arc::new(Mutex::new(FakeIfaceManagerRequester::new()));
-        let network = exec.run_singlethreaded(
-            selector.find_best_connection_candidate(iface_manager_client, &vec![]),
-        );
-        assert!(network.is_some());
+
+        // Create a candidate network.
+        let ssid = TEST_SSID.as_bytes().to_vec();
+        let network_id = NetworkIdentifier::new(ssid.clone(), SecurityType::Wpa);
+        let credential = Credential::Password(TEST_PASSWORD.as_bytes().to_vec());
+        let network = Some(client_types::ConnectionCandidate {
+            network: network_id.into(),
+            credential: credential,
+            bss: Some(fake_fidl_bss!(Open, bssid: [20, 30, 40, 50, 60, 70])),
+            observed_in_passive_scan: Some(true),
+            multiple_bss_candidates: Some(true),
+        });
 
         {
             // Run reconnection attempt
@@ -5046,63 +4997,7 @@ mod tests {
     #[fuchsia::test]
     fn test_idle_client_remains_after_failed_reconnection() {
         let mut exec = fuchsia_async::TestExecutor::new().expect("failed to create an executor");
-
-        // Create a configured ClientIfaceContainer.
-        let mut test_values = test_setup(&mut exec);
-
-        // Insert a saved network.
-        let ssid = TEST_SSID.as_bytes().to_vec();
-        let network_id = NetworkIdentifier::new(ssid.clone(), SecurityType::Wpa);
-        let credential = Credential::Password(TEST_PASSWORD.as_bytes().to_vec());
-        let temp_dir = TempDir::new().expect("failed to create temporary directory");
-        let path = temp_dir.path().join(rand_string());
-        let tmp_path = temp_dir.path().join(rand_string());
-        let (saved_networks, mut stash_server) =
-            exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server(path, tmp_path));
-        test_values.saved_networks = Arc::new(saved_networks);
-
-        // Update the saved networks with knowledge of the test SSID and credentials.
-        {
-            let save_network_fut = test_values.saved_networks.store(network_id, credential.clone());
-            pin_mut!(save_network_fut);
-            assert_variant!(exec.run_until_stalled(&mut save_network_fut), Poll::Pending);
-
-            process_stash_write(&mut exec, &mut stash_server);
-        }
-
-        // Create a network selector.
-        let selector = Arc::new(NetworkSelector::new(
-            test_values.saved_networks.clone(),
-            create_mock_cobalt_sender(),
-            inspect::Inspector::new().root().create_child("network_selector"),
-        ));
-
-        // Inject a scan result into the network selector.
-        {
-            let scan_results = vec![client_types::ScanResult {
-                ssid: ssid.clone(),
-                security_type_detailed: client_types::SecurityTypeDetailed::Wpa1,
-                entries: vec![client_types::Bss {
-                    bssid: [20, 30, 40, 50, 60, 70],
-                    rssi: -15,
-                    timestamp_nanos: 0,
-                    compatible: true,
-                    observed_in_passive_scan: false,
-                    snr_db: 20,
-                    channel: fidl_fuchsia_wlan_common::WlanChannel {
-                        primary: 8,
-                        cbw: fidl_fuchsia_wlan_common::ChannelBandwidth::Cbw20,
-                        secondary80: 0,
-                    },
-                    bss_desc: fake_fidl_bss!(Open, bssid: [20, 30, 40, 50, 60, 70]),
-                }],
-                compatibility: client_types::Compatibility::Supported,
-            }];
-            let mut network_selector_updater = selector.generate_scan_result_updater();
-            let update_fut = network_selector_updater.update_scan_results(&scan_results);
-            pin_mut!(update_fut);
-            assert_variant!(exec.run_until_stalled(&mut update_fut), Poll::Ready(()));
-        }
+        let test_values = test_setup(&mut exec);
 
         // Create an interface manager with an unconfigured client interface.
         let (mut iface_manager, _sme_stream) =
@@ -5117,11 +5012,18 @@ mod tests {
         let mut reconnect_monitor_interval = 1;
         let mut connectivity_monitor_timer =
             fasync::Interval::new(zx::Duration::from_seconds(reconnect_monitor_interval));
-        let iface_manager_client = Arc::new(Mutex::new(FakeIfaceManagerRequester::new()));
-        let network = exec.run_singlethreaded(
-            selector.find_best_connection_candidate(iface_manager_client, &vec![]),
-        );
-        assert!(network.is_some());
+
+        // Create a candidate network.
+        let ssid = TEST_SSID.as_bytes().to_vec();
+        let network_id = NetworkIdentifier::new(ssid.clone(), SecurityType::Wpa);
+        let credential = Credential::Password(TEST_PASSWORD.as_bytes().to_vec());
+        let network = Some(client_types::ConnectionCandidate {
+            network: network_id.into(),
+            credential: credential,
+            bss: Some(fake_fidl_bss!(Open, bssid: [20, 30, 40, 50, 60, 70])),
+            observed_in_passive_scan: Some(true),
+            multiple_bss_candidates: Some(true),
+        });
 
         {
             // Run reconnection attempt
