@@ -69,3 +69,33 @@ type TableWithGaps = table {
 type StructOfTableWithGaps = struct {
     table TableWithGaps;
 };
+
+type TableFieldInlined = table {
+    1: f int32;
+};
+
+type TableFieldInlinedStruct = struct {
+    t TableFieldInlined;
+};
+
+type TableFieldInlinedHandle = resource table {
+    1: f handle:CHANNEL;
+};
+
+type TableFieldInlinedHandleStruct = resource struct {
+    t TableFieldInlinedHandle;
+};
+
+type TableFieldOutOfLine = table {
+    1: f int64;
+};
+
+type TableFieldOutOfLineStruct = struct {
+    t TableFieldOutOfLine;
+};
+
+type TableFieldUnknown = resource table {};
+
+type TableFieldUnknownStruct = resource struct {
+    t TableFieldUnknown;
+};

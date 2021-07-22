@@ -16,6 +16,7 @@ conformance_suite_gidl_files = [
   "//src/tests/fidl/conformance_suite/recursive_depth.gidl",
   "//src/tests/fidl/conformance_suite/strings.gidl",
   "//src/tests/fidl/conformance_suite/strings_utf8.gen.gidl",
+  "//src/tests/fidl/conformance_suite/tables.gidl",
   "//src/tests/fidl/conformance_suite/transformer.gidl",
   "//src/tests/fidl/conformance_suite/union.gidl",
 ]

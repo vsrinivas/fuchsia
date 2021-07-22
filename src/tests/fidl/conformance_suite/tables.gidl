@@ -1,0 +1,136 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// Tests tables whose fields are inlined into the envelope in the wire
+// format.
+success("TableFieldInlined") {
+    bindings_allowlist = [],
+    value = TableFieldInlinedStruct {
+        t: TableFieldInlined {
+            f: 123,
+        },
+    },
+    bytes = {
+        v2 = [
+            num(1):8,
+            repeat(0xff):8,
+
+            num(123):4, num(0):2, num(1):2,
+        ]
+    }
+}
+
+// Tests a table whose handle field is inlined into the envelope in the wire
+// format.
+success("TableFieldInlinedHandle") {
+    bindings_allowlist = [],
+    handle_defs = {
+        #0 = channel(),
+    },
+    value = TableFieldInlinedHandleStruct {
+        t: TableFieldInlinedHandle {
+            f: #0,
+        },
+    },
+    bytes = {
+        v2 = [
+            num(1):8,
+            repeat(0xff):8,
+
+            repeat(0xff):4, num(1):2, num(1):2,
+        ]
+    },
+    handles = {
+        v2 = [#0],
+    }
+}
+
+// Tests tables whose fields are stored out of line in the wire format.
+success("TableFieldOutOfLine") {
+    bindings_allowlist = [],
+    value = TableFieldOutOfLineStruct {
+        t: TableFieldOutOfLine {
+            f: 123,
+        },
+    },
+    bytes = {
+        v2 = [
+            num(1):8,
+            repeat(0xff):8,
+
+            num(8):4, num(0):2, num(0):2,
+
+            num(123):8,
+        ]
+    }
+}
+
+// Tests a table in which a value is inlined into an unknown field.
+success("TableFieldUnknownInlined") {
+    bindings_allowlist = [],
+    value = TableFieldUnknownStruct {
+        t: TableFieldUnknown {
+            1: {
+                bytes = [num(123):4],
+            }
+        },
+    },
+    bytes = {
+        v2 = [
+            num(1):8,
+            repeat(0xff):8,
+
+            num(123):4, num(0):2, num(1):2,
+        ]
+    }
+}
+
+// Tests a table in which a handle value is inlined into an unknown field.
+success("TableFieldUnknownInlinedHandle") {
+    bindings_allowlist = [],
+    handle_defs = {
+        #0 = channel(),
+    },
+    value = TableFieldUnknownStruct {
+        t: TableFieldUnknown {
+            1: {
+                bytes = [repeat(0xff):4],
+                handles = [#0],
+            }
+        },
+    },
+    bytes = {
+        v2 = [
+            num(1):8,
+            repeat(0xff):8,
+
+            repeat(0xff):4, num(1):2, num(1):2,
+        ]
+    },
+    handles = {
+        v2 = [#0],
+    }
+}
+
+// Tests a table in which a value is stored out of line in an unknown field.
+success("TableFieldUnknownOutOfLine") {
+    bindings_allowlist = [],
+    value = TableFieldUnknownStruct {
+        t: TableFieldUnknown {
+            1: {
+                bytes = [num(123):8],
+            },
+        },
+    },
+    bytes = {
+        v2 = [
+            num(1):8,
+            repeat(0xff):8,
+
+            num(8):4, num(0):2, num(0):2,
+
+            num(123):8,
+        ]
+    }
+}
