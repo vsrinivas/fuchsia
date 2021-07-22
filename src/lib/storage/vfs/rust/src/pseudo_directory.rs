@@ -46,10 +46,10 @@ mod tests {
         assert!(
             MAX_FILENAME == in_macros,
             "\n`fidl_fuchsia_io::MAX_FILENAME` and the value hardcoded in \
-             `pseudo-fs/macros/src/lib.rs` have diverged.\n\
-             Please update the `MAX_FILENAME` value in `pseudo-fs/macros/src/lib.rs`.\n\
+             `vfs/rust/macros/src/lib.rs` have diverged.\n\
+             Please update the `MAX_FILENAME` value in `vfs/rust/macros/src/lib.rs`.\n\
              `fidl_fuchsia_io::MAX_FILENAME`: {}\n\
-             pseudo-fs/macros/src/lib.rs:MAX_FILENAME: {}",
+             vfs/rust/macros/src/lib.rs:MAX_FILENAME: {}",
             MAX_FILENAME,
             in_macros
         );
