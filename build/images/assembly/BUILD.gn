@@ -302,6 +302,7 @@ file_args = {
 }
 
 generated_product_config("product_config") {
+  testonly = true
   output_path = files.assembly_config
   base_packages = [
     "//:additional_base_driver_packages",
@@ -339,6 +340,7 @@ if (use_vbmeta) {
 }
 
 generated_board_config("board_config") {
+  testonly = true
   output_path = files.board_config
   if (use_vbmeta) {
     deps = [ vbmeta_label ]

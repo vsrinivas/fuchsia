@@ -58,8 +58,8 @@ template("generated_board_config") {
                            [
                              "deps",
                              "salt_file",
+                             "testonly",
                            ])
-    testonly = true
     public_deps = [ recovery_label ]
     if (defined(deps)) {
       public_deps += deps
