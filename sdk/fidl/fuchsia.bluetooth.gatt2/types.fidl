@@ -176,9 +176,10 @@ type Descriptor = table {
     3: permissions AttributePermissions;
 };
 
-/// Represents the supported options to read a characteristic or descriptor
-/// value from a server.
-type ReadOptions = table {
+/// Represents the supported options to read a long characteristic or descriptor
+/// value from a server. Long values are those that may not fit in a single
+/// message (longer than 22 bytes).
+type LongReadOptions = table {
     /// The byte to start the read at. Must be less than the length of the value.
     /// Optional.
     /// Default: 0
@@ -187,18 +188,25 @@ type ReadOptions = table {
     /// Optional.
     /// Default: `MAX_VALUE_LENGTH`
     2: max_bytes uint16;
-    /// If true, read the complete value of the characteristic/descriptor. This
-    /// may require many messages, and therefore cause high latency.
-    ///
-    /// If false, read only the portion of the value that fits into a single
-    /// message (at least 22 bytes). This will be low latency, and is useful for
-    /// situations where a truncated value is acceptable. Possible truncation is
-    /// indicated by the `maybe_truncated` parameter in the response. `max_bytes`
-    /// will be ignored.
-    ///
+};
+
+/// Represents the options for reading a short characteristic or descriptor
+/// value from a server. Short values are those that fit in a single message,
+/// which is at least 22 bytes. This is an empty placeholder for now, as there
+/// are no options.
+type ShortReadOptions = struct {};
+
+/// Represents the supported options to read a characteristic or descriptor
+/// value from a server.
+type ReadOptions = flexible union {
+    /// Perform a short read, which may be truncated (as indicated by the
+    /// maybe_truncated in the result)
+    /// Most reads in GATT services are short reads (<= 22 bytes).
+    1: short_read ShortReadOptions;
+    /// If present, perform a long read using the indicated options.
     /// Optional.
-    /// Default: true
-    3: read_complete_value bool;
+    /// Default: A short read will be performed.
+    2: long_read LongReadOptions;
 };
 
 /// Represents the supported options to write a characteristic value to a server.
