@@ -39,7 +39,7 @@ func processFlutterLicenses(licenses *Licenses, config *Config, metrics *Metrics
 	for _, path := range config.FlutterLicenses {
 		data, err := parseFlutterLicenseFile(path)
 		if err != nil {
-			return nil
+			return err
 		}
 		for _, d := range data {
 			licenses.MatchSingleLicenseFile(d, path, metrics, file_tree)

@@ -108,6 +108,12 @@ func Run(ctx context.Context, config *Config) error {
 	}
 	r.End()
 
+	r = trace.StartRegion(ctx, "processChromiumLicenses")
+	if err = processChromiumLicenses(licenses, config, metrics, file_tree); err != nil {
+		log.Printf("error processing chromium licenses: %v", err)
+	}
+	r.End()
+
 	r = trace.StartRegion(ctx, "processNoticeTxtFiles")
 	if err = processNoticeTxtFiles(licenses, config, metrics, file_tree); err != nil {
 		log.Printf("error processing NOTICE.txt files: %v", err)

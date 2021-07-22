@@ -40,6 +40,7 @@ go_library("templates") {
 
 go_library("lib") {
   sources = [
+    "chromium.go",
     "config.go",
     "config_test.go",
     "file.go",

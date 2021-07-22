@@ -37,6 +37,7 @@ type Config struct {
 	LicensePatternDir     string                 `json:"licensePatternDir"`
 	CustomProjectLicenses []CustomProjectLicense `json:"customProjectLicenses"`
 	FlutterLicenses       []string               `json:"flutterLicenses"`
+	ChromiumLicenses      []string               `json:"chromiumLicenses"`
 	NoticeTxtFiles        []string               `json:"noticeTxtFiles"`
 	LicenseAllowList      map[string][]string    `json:"licenseAllowList"`
 
@@ -124,6 +125,7 @@ func (c *Config) Merge(other *Config) {
 	}
 	c.CustomProjectLicenses = append(c.CustomProjectLicenses, other.CustomProjectLicenses...)
 	c.FlutterLicenses = append(c.FlutterLicenses, other.FlutterLicenses...)
+	c.ChromiumLicenses = append(c.ChromiumLicenses, other.ChromiumLicenses...)
 	c.NoticeTxtFiles = append(c.NoticeTxtFiles, other.NoticeTxtFiles...)
 	c.NoticeFiles = append(c.NoticeFiles, other.NoticeFiles...)
 
