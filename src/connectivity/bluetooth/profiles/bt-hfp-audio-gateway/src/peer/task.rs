@@ -506,7 +506,7 @@ impl PeerTask {
             }
         });
 
-        self.active_sco.insert(vigil);
+        self.active_sco = Some(vigil);
         Ok(())
     }
 

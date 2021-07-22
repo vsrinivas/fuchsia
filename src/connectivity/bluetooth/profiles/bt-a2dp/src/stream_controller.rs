@@ -520,7 +520,7 @@ mod tests {
         };
 
         let permit = permits.get_revokable(revoke_from_holder_fn.clone());
-        permit_holder.lock().insert(permit.expect("permit"));
+        *permit_holder.lock() = Some(permit.expect("permit"));
 
         let token = manager.suspend(None).expect("suspend permits");
 
@@ -537,7 +537,7 @@ mod tests {
         // Can get another permit after the second client drops.
         drop(token2);
         let permit = permits.get_revokable(revoke_from_holder_fn).expect("permit");
-        permit_holder.lock().insert(permit);
+        *permit_holder.lock() = Some(permit);
         drop(permit_holder);
         drop(manager);
         drop(permits);
