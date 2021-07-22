@@ -5,12 +5,14 @@
  to this file.
 
  -->
-
+ 
 # fpublish
 
 ```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
 
 Usage: fpublish <far-file>
+  -data-path string
+    	Specifies the data path for SDK tools. Defaults to $HOME/.fuchsia.
   -device-name string
     	Specifies the device name to use to look up configuration information regarding the package repo location. If not specified, the default device configured using fconfig is used.
   -help

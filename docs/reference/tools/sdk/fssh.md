@@ -11,6 +11,8 @@
 ```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
 
 Usage: fssh [options] [args]
+  -data-path string
+    	Specifies the data path for SDK tools. Defaults to $HOME/.fuchsia
   -device-ip string
     	Serves packages to a device with the given device ip address. Cannot be used with --device-name."
     			  If neither --device-name nor --device-ip are specified, the device-name configured using fconfig is used.

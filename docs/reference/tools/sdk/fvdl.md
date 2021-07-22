@@ -37,6 +37,14 @@ __Commands:__
 
 ```
 
+## development.
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+Unrecognized argument: development.
+
+```
+
 ## kill
 
 ```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
@@ -92,7 +100,7 @@ __Options:__
 
 ```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
 
-Usage: fvdl start [-H] [-N] [--host-gpu] [--software-gpu] [--hidpi-scaling] [-u <upscript>] [-p <pointing-device>] [-w <window-width>] [-h <window-height>] [-s <image-size>] [-f <device-proto>] [-e <aemu-path>] [--aemu-version <aemu-version>] [-d <vdl-path>] [--vdl-version <vdl-version>] [-x <grpcwebproxy>] [-X <grpcwebproxy-path>] [--grpcwebproxy-version <grpcwebproxy-version>] [-v <sdk-version>] [--gcs-bucket <gcs-bucket>] [--image-name <image-name>] [-l <emulator-log>] [--port-map <port-map>] [--vdl-output <vdl-output>] [-c <kernel-args>] [--nointeractive] [-i] [--debugger] [-m] [--emu-only] [--nopackageserver] [--packages-to-serve <packages-to-serve>] [--package-server-log <package-server-log>] [--amber-unpack-root <amber-unpack-root>] [--envs <envs>] [--noacceleration] [--package-server-port <package-server-port>] [-V]
+Usage: fvdl start [-H] [-N] [--host-gpu] [--software-gpu] [--hidpi-scaling] [-u <upscript>] [-p <pointing-device>] [-w <window-width>] [-h <window-height>] [-s <image-size>] [-F <device-proto>] [-e <aemu-path>] [--aemu-version <aemu-version>] [-d <vdl-path>] [--vdl-version <vdl-version>] [-x <grpcwebproxy>] [-X <grpcwebproxy-path>] [--grpcwebproxy-version <grpcwebproxy-version>] [-v <sdk-version>] [--gcs-bucket <gcs-bucket>] [--image-name <image-name>] [-l <emulator-log>] [--port-map <port-map>] [--vdl-output <vdl-output>] [-c <kernel-args>] [--nointeractive] [-i] [--debugger] [-m] [--emu-only] [--nopackageserver] [--packages-to-serve <packages-to-serve>] [--package-server-log <package-server-log>] [--amber-unpack-root <amber-unpack-root>] [--envs <envs...>] [--noacceleration] [--package-server-port <package-server-port>] [-a <amber-files>] [-f <fvm-image>] [-k <kernel-image>] [-z <zbi-image>] [-A <image-architecture>] [--ssh <ssh>] [-V]
 
 Starting Fuchsia Emulator
 
@@ -118,7 +126,7 @@ __Options:__
   -h, --window-height
                     emulator window height. Default to 800.
   -s, --image-size  extends storage size to <size> bytes. Default is "2G".
-  -f, --device-proto
+  -F, --device-proto
                     path to fuchsia virtual device configuration, if not
                     specified a generic one will be generated.
   -e, --aemu-path   path to aemu location. When running in fuchsia repo,
@@ -154,7 +162,7 @@ __Options:__
                     gs://fuchsia/development/LATEST_LINUX`.
   --gcs-bucket      gcs bucket name. Default is "fuchsia".
   --image-name      image file name used to fetch from gcs. Default is
-                    "qemu-x64". To view availabe image names run `gsutil ls -l
+                    "qemu-x64". To view available image names run `gsutil ls -l
                     gs://fuchsia/development/$(gsutil cat
                     gs://fuchsia/development/LATEST_LINUX)/images`.
   -l, --emulator-log
@@ -177,7 +185,10 @@ __Options:__
   -i, --cache-image bool, download and re-use image files in the cached location
                     ~/.fuchsia/<image_name>/<sdk_version>/. If not set
                     (default), image files will be stored in a temp location and
-                    removed with `kill` subcommand.
+                    removed with `kill` subcommand. If image location is
+                    specified with --kernel-image, --zbi-image, --fvm-image
+                    etc., the cached image will be overwritten for the specified
+                    image file.
   --debugger        bool, pause on launch and wait for a debugger process to
                     attach before resuming
   -m, --monitor     bool, launches emulator in qemu console No local services
@@ -206,6 +217,27 @@ __Options:__
                     macOS.
   --package-server-port
                     int, port to an existing package server running on the host.
+  -a, --amber-files string, absolute path to amber-files location, path name
+                    must end with 'amber-files'.
+  -f, --fvm-image   string, absolute path to fvm image file location.
+  -k, --kernel-image
+                    string, absolute path to kernel image file location. If
+                    specified --zbi-image and --image-architecture must also be
+                    specified. When running with --sdk option, this will skip
+                    downloading fuchsia image prebuilts from GCS.
+  -z, --zbi-image   string, absolute path to zircon image file location. If
+                    specified --kernel-image and --image-architecture must also
+                    be specified. When running with --sdk option, this will skip
+                    downloading fuchsia image prebuilts from GCS.
+  -A, --image-architecture
+                    string, specifies image architecture, accepted values are
+                    'arm64' or 'x64'. Required if image override flags (i.e
+                    --fvm-image, --kernel-image, --zbi-image, or --amber-files)
+                    are specified.
+  --ssh             string, specifies an alternative path for ssh keys. The
+                    emulator defaults to the user's $HOME/.ssh directory if none
+                    is specified. The path indicated must contain the files
+                    `fuchsia_authorized_keys` and `fuchsia_ed25519`.
   -V, --verbose     bool, enables extra logging for debugging
   --help            display usage information
 

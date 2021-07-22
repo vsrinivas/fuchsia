@@ -120,6 +120,10 @@ __Options:__
                     several processes.
                     At least one of '--remote-pid', '--remote-name', '--remote-job-id',
                     '--remote-job-name, 'run' must be specified.
+      --from=dump   The input comes from stdin which is the log output of one or several programs.
+                    The lines in the log which dump syscalls are decoded and replaced by the
+                    decoded version.
+                    All other lines are unchanged.
       --from=<path> The input comes from a previously recorded session (protobuf format). Path gives
                     the name of the file to read. If path is '-' then the standard input is used.
 

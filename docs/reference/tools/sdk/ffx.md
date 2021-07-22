@@ -5,12 +5,12 @@
  to this file.
 
  -->
-
+ 
 # ffx
 
 ```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
 
-Usage: ffx [-c <config>] [-e <env>] [-t <target>] [-T <timeout>] [-v] [<command>] [<args>]
+Usage: ffx [-c <config...>] [-e <env>] [-t <target>] [-T <timeout>] [<command>] [<args>]
 
 Fuchsia's developer tool
 
@@ -24,7 +24,6 @@ __Options:__
   -e, --env         override default environment settings
   -t, --target      apply operations across single or multiple targets
   -T, --timeout     override default proxy timeout
-  -v, --verbose     use verbose output
   --help            display usage information
 
 ```
@@ -33,7 +32,7 @@ __Commands:__
 
 ```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
 
-  net               target device network configuration
+  net               View and manage target network configuration
   assembly          Assemble images
   component         Discover and manage components
   config            View and switch default and user configurations
@@ -41,12 +40,16 @@ __Commands:__
   daemon            Interact with/control the ffx daemon
   debug             Start a debugging session.
   doctor            Run common checks for the ffx tool and host environment
+  driver            Support driver development workflows
   efi               Manipulate efi partition
-  vdl               Start and manage Fuchsia emulators
+  emu               Start and manage Fuchsia emulators
+  flutter           Interact with Flutter components on the target.
+  inspect           Query component nodes exposed via the Inspect API
   overnet           Interact with the Overnet mesh
   package           Create and publish Fuchsia packages
   platform          Manage platform build prerequisites
-  repository
+  profile           Profile run-time information from various subsystems
+  repository        Inspect and manage package repositories
   scrutiny          Audit the security of Fuchsia
   sdk               Modify or query the installed SDKs
   self-test         Execute the ffx self-test (e2e) suite
@@ -166,7 +169,7 @@ __Commands:__
 
 ```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
 
-Usage: ffx assembly vbmeta sign --name <name> --image-path <image-path> --key <key> --key-metadata <key-metadata> [--salt-file <salt-file>] [--additional-descriptor <additional-descriptor>] --output <output> [--salt-outfile <salt-outfile>]
+Usage: ffx assembly vbmeta sign --name <name> --image-path <image-path> --key <key> --key-metadata <key-metadata> [--salt-file <salt-file>] [--additional-descriptor <additional-descriptor...>] --output <output> [--salt-outfile <salt-outfile>]
 
 create and sign a vbmeta image.
 
@@ -215,8 +218,8 @@ __Commands:__
 
 ```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
 
-  bind              Binds to the v2 component designated by the provided
-                    relative moniker
+  bind              Binds to the component designated by the provided relative
+                    moniker
   knock             Connect to a service on the target
   list              List all components, with the option of listing only cmx/cml
                     components
@@ -224,6 +227,8 @@ __Commands:__
   run-legacy        Run a v1 component on the target
   select            Lists components matching a selector
   show              Show useful information about a component
+  stop              Stops the component designated by the provided relative
+                    moniker
   test              Run test suite
 
 ```
@@ -234,7 +239,7 @@ __Commands:__
 
 Usage: ffx component bind <moniker>
 
-Binds to the v2 component designated by the provided relative moniker
+Binds to the component designated by the provided relative moniker
 
 ```
 
@@ -245,18 +250,26 @@ __Options:__
   --help            display usage information
 
 Examples:
-  To bind to the v2 component designated by the moniker:
-
+  To bind to the component designated by the moniker:
+  
       $ ffx component bind core/brightness_manager
 
 Notes:
-  Binds to the v2 component designated by the provided relative moniker
-      relative to the v2 component to which the protocol is scoped.
-      This will resolve the v2 component if it's not already resolved, and will start the v2 component
-      if it isn't already running.
+  Binds to the component designated by the provided moniker relative to the
+      root of the component topology.
+      This will resolve the component if it's not already resolved, and will start the
+      component if it isn't already running. 
 
 Error codes:
-  1 Failed to bind to the v2 component with moniker <moniker>.
+  1 Failed to bind to the component with moniker <moniker>.
+
+```
+
+### components
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+Unrecognized argument: components
 
 ```
 
@@ -278,18 +291,18 @@ __Options:__
 
 Examples:
   To connect to a service:
-
+  
       $ ffx component knock 'core/appmgr:out:fuchsia.hwinfo.Product'
 
 Notes:
   Knock verifies the existence of a service exposed by a component by
   attempting to connect to it. The command expects a <selector> with the
   following format:
-
+  
   `<component moniker>:(in|out|exposed)[:<service name>].`
-
+  
   Note that wildcards can be used but must match exactly one service.
-
+  
   The `component select` command can be used to explore the component
   topology to compose the correct selector for use in `component knock`.
 
@@ -320,30 +333,30 @@ __Options:__
 
 Examples:
   To list all components in the topology:
-
+  
       $ ffx component list
-
+  
       To list all cmx components in the topology:
-
+  
       $ ffx component list --only cmx
-
+  
       To list all cml components in the topology:
-
-      $ ffx comopnent list --only cml
-
+  
+      $ ffx component list --only cml
+  
       To list all running components in the topology:
-
+  
       $ ffx component list --only running
-
+  
       To list all stopped components in the topology:
-
+  
       $ ffx component list --only stopped
 
 Notes:
   Lists all the components on the running target. If no <only> is entered,
   the default option outputs a tree of all components on the system. If a valid <only>
   is entered, the command outputs a tree of only cmx/cml/running/stopped components in the system.
-
+  
   If the command fails or times out, ensure RCS is running on the target.
   This can be verified by running `ffx target list` and seeing the status
   on the RCS column.
@@ -353,11 +366,27 @@ Error codes:
 
 ```
 
+### moniker
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+Unrecognized argument: moniker
+
+```
+
+### moniker
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+Unrecognized argument: moniker
+
+```
+
 ### run
 
 ```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
 
-Usage: ffx component run <url>
+Usage: ffx component run <url> [-n <name>]
 
 Create and run a v2 component instance in an isolated realm
 
@@ -367,17 +396,19 @@ __Options:__
 
 ```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
 
+  -n, --name        name of this instance. If not specified, the component name
+                    will be chosen as the instance name.
   --help            display usage information
 
 Examples:
   To run the 'hello_world_rust' component:
-
+  
       $ ffx component run \
-      fuchsia-pkg://fuchsia.com/hello_world_rust#meta/hello_world_rust.cm
+      fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world-rust.cm
 
 Notes:
   The <url> must follow the format:
-
+  
   `fuchsia-pkg://fuchsia.com/<package>#meta/<component>.cm`
 
 ```
@@ -401,19 +432,19 @@ __Options:__
 
 Examples:
   To run the 'hello_world_rust' component:
-
+  
       $ ffx component run-legacy \
       fuchsia-pkg://fuchsia.com/hello_world_rust#meta/hello_world_rust.cmx
-
+  
   To run the Remote Control Service:
-
+  
       $ ffx component run-legacy \
       fuchsia-pkg://fuchsia.com/remote-control#meta/remote-control-runner.cmx
 
 Notes:
   Runs a specified v1 component on the target. The <url> must follow the
   format:
-
+  
   `fuchsia-pkg://fuchsia.com/<package>#meta/<component>.cmx`.
 
 ```
@@ -445,28 +476,28 @@ __Commands:__
 
 Examples:
   To show services exposed by remote-control:
-
+  
       $ ffx component select moniker remote-control:expose:*'
-
+  
   Or to show all services offered by v1 components:
-
+  
       $ ffx component select moniker core/appmgr:out:*
-
+      
   Or to show all components that expose a capability:
-
+  
       $ ffx component select capability fuchsia.sys.Loader
 
 Notes:
-  Component select allows for
+  Component select allows for 
   1). looking up various services exposed by the
   component. The command expects a <selector> with the following format:
-
+  
   `<component moniker>:(in|out|exposed)[:<service name>]`
-
+  
   Wildcards may be used anywhere in the selector.
-
-  2). looking up components that expose a capability. The command takes in
-  a capability name consists of a string containing the characters a to z,
+  
+  2). looking up components that expose a capability. The command takes in 
+  a capability name consists of a string containing the characters a to z, 
   A to Z, 0 to 9, underscore (_), hyphen (-), or the full stop character (.).
 
 Error codes:
@@ -528,15 +559,15 @@ __Options:__
 
 Examples:
   To show information about a component with full url:
-
+  
       $ ffx component show fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm
-
+  
       To show information about a component with partial url:
-
+  
       $ ffx component show appmgr.cm
-
+  
       To show information about a component with name:
-
+  
       $ ffx component show appmgr
 
 Notes:
@@ -550,11 +581,44 @@ Filter format: component_name / url / partial url.
 
 ```
 
+### stop
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+Usage: ffx component stop <moniker> [-r]
+
+Stops the component designated by the provided relative moniker
+
+```
+
+__Options:__
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+  -r, --recursive   whether or not to stop the component recursively
+  --help            display usage information
+
+Examples:
+  To stop the component designated by the moniker:
+  
+      $ ffx component stop core/brightness_manager
+
+Notes:
+  Stops the component designated by the provided moniker relative to the
+      root of the component topology.
+      This will resolve the component if it's not already resolved, and will stop the
+      component if it is already running.
+
+Error codes:
+  1 Failed to stop the component with moniker <moniker>.
+
+```
+
 ### test
 
 ```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
 
-Usage: ffx component test <test_url> [-t <timeout>] [--test-filter <test-filter>] [--list] [--run-disabled] [--filter-ansi] [--parallel <parallel>] [--count <count>] [--min-severity-logs <min-severity-logs>] [--max-severity-logs <max-severity-logs>] [--experimental-output-directory <experimental-output-directory>]
+Usage: ffx component test <test_url> [-t <timeout>] [--test-filter <test-filter...>] [--list] [--run-disabled] [--filter-ansi] [--parallel <parallel>] [--count <count>] [--min-severity-logs <min-severity-logs>] [--max-severity-logs <max-severity-logs>] [--experimental-output-directory <experimental-output-directory>]
 
 Run test suite
 
@@ -565,8 +629,9 @@ __Options:__
 ```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
 
   -t, --timeout     test timeout
-  --test-filter     a glob pattern for matching tests. Can be specified multiple
-                    times to pass in multiple patterns.
+  --test-filter     glob pattern for matching tests. Can be specified multiple
+                    times to pass in multiple patterns. example: --test-filter
+                    glob1 --test-filter glob2.
   --list            list tests in the suite
   --run-disabled    run tests that have been marked disabled/ignored
   --filter-ansi     filter ANSI escape sequences from output
@@ -584,7 +649,7 @@ __Options:__
 
 Notes:
   Runs a test or suite implementing the `fuchsia.test.Suite` protocol.
-
+  
   Note that if running multiple iterations of a test and an iteration times
   out, no further iterations will be executed.
 
@@ -1009,7 +1074,7 @@ __Options:__
 
 ```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
 
-Usage: ffx daemon log
+Usage: ffx daemon log [-f] [-l <line-count>]
 
 Dumps the daemon log
 
@@ -1019,6 +1084,8 @@ __Options:__
 
 ```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
 
+  -f, --follow      print appended logs as they happen
+  -l, --line-count  display most recent log lines.
   --help            display usage information
 
 ```
@@ -1091,7 +1158,7 @@ __Commands:__
 
 ```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
 
-Usage: ffx debug fidl [--from <from>] [--to <to>] [--format <format>] [--with <with>] [--with-process-info] [--stack <stack>] [--syscalls <syscalls>] [--exclude-syscalls <exclude-syscalls>] [--messages <messages>] [--exclude-messages <exclude-messages>] [--trigger <trigger>] [--thread <thread>] [--dump-messages] [--remote-pid <remote-pid>] [--remote-name <remote-name>] [--extra-name <extra-name>] [--remote-job-id <remote-job-id>] [--remote-job-name <remote-job-name>]
+Usage: ffx debug fidl [--from <from>] [--to <to>] [--format <format>] [--with <with...>] [--with-process-info] [--stack <stack>] [--syscalls <syscalls...>] [--exclude-syscalls <exclude-syscalls...>] [--messages <messages...>] [--exclude-messages <exclude-messages...>] [--trigger <trigger...>] [--thread <thread...>] [--dump-messages] [--remote-pid <remote-pid...>] [--remote-name <remote-name...>] [--extra-name <extra-name...>] [--remote-job-id <remote-job-id...>] [--remote-job-name <remote-job-name...>]
 
 uses fidlcat to automatically manage breakpoints to trace the fidl messages and/or the syscalls
 
@@ -1105,11 +1172,15 @@ __Options:__
                     default input. The input comes from the live monitoring of
                     one or several processes. At least one of '--remote-pid',
                     '--remote-name', '--remote-job-id', --'remote-job-name',
-                    'run' must be specified. <path>: playback. Used to replay a
-                    session previously recorded with --to <path> (protobuf
-                    format). Path gives the name of the file to read. If path is
-                    '-' then the standard input is used. This option must be
-                    used at most once.
+                    'run' must be specified. dump: The input comes from stdin
+                    which is the log output of one or several programs. The
+                    lines in the log which dump syscalls are decoded and
+                    replaced by the decoded version. All other lines are
+                    unchanged. <path>: playback. Used to replay a session
+                    previously recorded with --to <path> (protobuf format). Path
+                    gives the name of the file to read. If path is '-' then the
+                    standard input is used. This option must be used at most
+                    once.
   --to              the session is saved to the specified file (binary protobuf
                     format). When a session is saved, you can replay it using
                     "--from <path>". The raw data is saved. That means that the
@@ -1195,6 +1266,154 @@ __Options:__
 
 ```
 
+### the
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+Usage: ffx debug [<socket_location>] [<command>] [<args>]
+
+Start a debugging session.
+
+```
+
+__Options:__
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+  --help            display usage information
+
+```
+
+__Commands:__
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+  fidl              uses fidlcat to automatically manage breakpoints to trace
+                    the fidl messages and/or the syscalls
+  zxdb              launches zxdb to debug programs
+
+```
+
+#### fidl
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+Usage: ffx debug fidl [--from <from>] [--to <to>] [--format <format>] [--with <with...>] [--with-process-info] [--stack <stack>] [--syscalls <syscalls...>] [--exclude-syscalls <exclude-syscalls...>] [--messages <messages...>] [--exclude-messages <exclude-messages...>] [--trigger <trigger...>] [--thread <thread...>] [--dump-messages] [--remote-pid <remote-pid...>] [--remote-name <remote-name...>] [--extra-name <extra-name...>] [--remote-job-id <remote-job-id...>] [--remote-job-name <remote-job-name...>]
+
+uses fidlcat to automatically manage breakpoints to trace the fidl messages and/or the syscalls
+
+```
+
+__Options:__
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+  --from            specifies the source. Source can be: device: this is the
+                    default input. The input comes from the live monitoring of
+                    one or several processes. At least one of '--remote-pid',
+                    '--remote-name', '--remote-job-id', --'remote-job-name',
+                    'run' must be specified. dump: The input comes from stdin
+                    which is the log output of one or several programs. The
+                    lines in the log which dump syscalls are decoded and
+                    replaced by the decoded version. All other lines are
+                    unchanged. <path>: playback. Used to replay a session
+                    previously recorded with --to <path> (protobuf format). Path
+                    gives the name of the file to read. If path is '-' then the
+                    standard input is used. This option must be used at most
+                    once.
+  --to              the session is saved to the specified file (binary protobuf
+                    format). When a session is saved, you can replay it using
+                    "--from <path>". The raw data is saved. That means that the
+                    data saved is independent from what is displayed.
+  --format          the display format for the session dump. The available
+                    formats are: pretty: the session is pretty printed (with
+                    colors). This is the default output if --with is not used.
+                    json: the session is printed using a json format. textproto:
+                    the session is printed using a text protobuf format. none:
+                    nothing is displayed on the standard output (this option
+                    only makes sense when used with `--to` or with `--with`).
+                    When there is no output, fidlcat is faster (this is better
+                    to monitor real time components). This is the default output
+                    when --with is used.
+  --with            specifies an extra summarized output. summary: at the end of
+                    the session, a summary of the session is displayed on the
+                    standard output. top: at the end of the session, generate a
+                    view that groups the output by process, protocol, and
+                    method. The groups are sorted by number of events, so groups
+                    with more associated events are listed earlier.
+                    group-by-thread: for each thread display a short version of
+                    all the events. An equal sign followed by a path can be
+                    concatanated to the option to output the result in a file
+                    instead of the standard output (for example: --with
+                    summary=/tmp/x). This option can be used several times.
+  --with-process-info
+                    display the process name, process id and thread id on each
+                    line (useful for grep).
+  --stack           define the amount of stack frame to display 0: none (default
+                    value) 1: call site (1 to 4 levels) 2: full stack frame
+                    (adds some overhead)
+  --syscalls        a regular expression which selects the syscalls to decode
+                    and display. This option can be specified multiple times. By
+                    default, only zx_channel_.* syscalls are displayed. To
+                    display all the syscalls, use: --syscalls ".*"
+  --exclude-syscalls
+                    a regular expression which selects the syscalls to not
+                    decode and display. This option can be specified multiple
+                    times. To be displayed, a syscall must verify --syscalls and
+                    not verify --exclude-syscalls. To display all the syscalls
+                    but the zx_handle syscalls, use: --syscalls ".*"
+                    --exclude-syscalls "zx_handle_.*"
+  --messages        a regular expression which selects the messages to display.
+                    To display a message, the method name must satisfy the
+                    regexp. This option can be specified multiple times. Message
+                    filtering works on the method's fully qualified name.
+  --exclude-messages
+                    a regular expression which selects the messages to not
+                    display. If a message method name satisfy the regexp, the
+                    message is not displayed (even if it satisfies --messages).
+                    This option can be specified multiple times. Message
+                    filtering works on the method's fully qualified name.
+  --trigger         start displaying messages and syscalls only when a message
+                    for which the method name satisfies the filter is found.
+                    This option can be specified multiple times. Message
+                    filtering works on the method's fully qualified name.
+  --thread          only display the events for the specified thread. This
+                    option can be specified multiple times. By default all the
+                    events are displayed.
+  --dump-messages   always does a hexadecimal dump of the messages even if we
+                    can decode them.
+  --remote-pid      the koid of the remote process to trace.
+  --remote-name     the <name> of a process. Fidlcat will monitor all existing
+                    and future processes whose names includes <name> (<name> is
+                    a substring of the process name). This option can be
+                    specified multiple times. When used with --remote-job-id or
+                    --remote-job-name, only the processes from the selected jobs
+                    are taken into account.
+  --extra-name      like --remote-name, it monitors some processes. However, for
+                    these processes, monitoring starts only when one of of the
+                    "--remote-name" process is launched. Also, fidlcat stops
+                    when the last "--remote-name" process stops (even if some
+                    "--extra-name"  processes are still monitored). This option
+                    can be specified multiple times.
+  --remote-job-id   the koid of a remote job for which we want to monitor all
+                    the processes. Only jobs created before fidlcat is launched
+                    are monitored. This option can be specified multiple times.
+  --remote-job-name the name of a remote job for which we want to monitor all
+                    the processes. All the jobs which contain <name> in their
+                    name are used. Only jobs created before fidlcat is launched
+                    are monitored. This option can be specified multiple times.
+  --help            display usage information
+
+```
+
+#### the
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+Unrecognized argument: the
+
+```
+
 #### zxdb
 
 ```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
@@ -1235,7 +1454,7 @@ __Options:__
 
 ```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
 
-Usage: ffx doctor [--record] [--retry-count <retry-count>] [--retry-delay <retry-delay>] [--restart-daemon] [--output-dir <output-dir>]
+Usage: ffx doctor [--record] [--no-config] [--retry-count <retry-count>] [--retry-delay <retry-delay>] [--restart-daemon] [--output-dir <output-dir>]
 
 Run common checks for the ffx tool and host environment
 
@@ -1246,6 +1465,7 @@ __Options:__
 ```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
 
   --record          generates an output zip file with logs
+  --no-config       do not include the ffx configuration file
   --retry-count     number of times to retry failed connection attempts
   --retry-delay     timeout delay in ms during connection attempt
   --restart-daemon  force restart the daemon, even if the connection is working
@@ -1254,26 +1474,256 @@ __Options:__
 
 Examples:
   To run diagnostics:
-
+  
       $ ffx doctor
-
+  
   To capture the output and additional logs:
-
+  
       $ ffx doctor --record
-
+  
   By default, this outputs the zip in the current directory.
-
+  
   To override output dir:
-
+  
       $ ffx doctor --record --output-dir /tmp/ffx
 
 Notes:
   The `doctor` subcommand automatically attempts to repair common target
   interaction issues and provides useful diagnostic information to the user.
-
+  
   By default, running `ffx doctor` attempts to establish a connection with
   the daemon, and restarts the daemon if there is no connection. The default
   `retry_count` is '3' and the default 'retry_delay` is '2000' milliseconds.
+
+```
+
+## driver
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+Usage: ffx driver <command> [<args>]
+
+Support driver development workflows
+
+```
+
+__Options:__
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+  --help            display usage information
+
+```
+
+__Commands:__
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+  debug-bind        Allows you to debug bind decisions.
+  dump              Dump device tree
+  list              List drivers
+  list-devices      List devices
+  register          Informs the driver manager that a new driver package is
+                    available. The driver manager will cache a copy of the
+                    driver
+  restart           Restart all Driver Hosts containing the driver specified by
+                    driver path. ZX_ERR_NOT_FOUND indicates that there is no
+                    driver matching the given path
+
+```
+
+### available.
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+Unrecognized argument: available.
+
+```
+
+### debug-bind
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+Usage: ffx driver debug-bind <driver_path> <device_path> [-p] [-i]
+
+Allows you to debug bind decisions.
+
+```
+
+__Options:__
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+  -p, --print-properties
+                    print out the device properties.
+  -i, --print-instructions
+                    print out the bind program instructions.
+  --help            display usage information
+
+Examples:
+  To debug why a driver did or didn't bind to a particular device:
+  
+    $ ffx driver debug-bind '/boot/driver/usb_video.so' 'sys/platform/pci/00:1f.6'
+
+Error codes:
+  1 Failed to connect to the bind debugger service
+
+```
+
+### driver
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+Unrecognized argument: driver
+
+```
+
+### driver
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+Unrecognized argument: driver
+
+```
+
+### driver
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+Unrecognized argument: driver
+
+```
+
+### dump
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+Usage: ffx driver dump [-v]
+
+Dump device tree
+
+```
+
+__Options:__
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+  -v, --verbose     list all device properties.
+  --help            display usage information
+
+Examples:
+  To dump the device tree:
+  
+      $ ffx driver dump
+
+Error codes:
+  1 Failed to connect to the driver development service
+
+```
+
+### list
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+Usage: ffx driver list [-v]
+
+List drivers
+
+```
+
+__Options:__
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+  -v, --verbose     list all driver properties.
+  --help            display usage information
+
+Examples:
+  To list all drivers with properties:
+  
+      $ ffx driver list -v
+
+Error codes:
+  1 Failed to connect to the driver development service
+
+```
+
+### list-devices
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+Usage: ffx driver list-devices [<device>] [-v]
+
+List devices
+
+```
+
+__Options:__
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+  -v, --verbose     list all device properties.
+  --help            display usage information
+
+Examples:
+  To list all devices:
+  
+      $ ffx driver list-devices -v
+
+Error codes:
+  1 Failed to connect to the driver development service
+
+```
+
+### register
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+Usage: ffx driver register <url>
+
+Informs the driver manager that a new driver package is available. The driver manager will cache a copy of the driver
+
+```
+
+__Options:__
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+  --help            display usage information
+
+Examples:
+  To register a driver
+  
+      $ ffx driver register 'fuchsia-pkg://fuchsia.com/example_driver#meta/example_driver.cmx'
+
+Error codes:
+  1 Failed to connect to the driver registrar service
+
+```
+
+### restart
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+Usage: ffx driver restart <driver_path>
+
+Restart all Driver Hosts containing the driver specified by driver path. ZX_ERR_NOT_FOUND indicates that there is no driver matching the given path
+
+```
+
+__Options:__
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+  --help            display usage information
+
+Examples:
+  To restart a driver:
+  
+      $ ffx driver restart '/boot/driver/e1000.so'
+
+Error codes:
+  1 Failed to connect to the driver manager service
 
 ```
 
@@ -1302,6 +1752,16 @@ __Commands:__
   create            Creates efi partition, copies zircon.bin, bootdata.bin,
                     EFI/BOOT/BOOTX64.EFI, zedboot.bin, etc...
 
+```
+
+### EFI/BOOT/BOOTX64.EFI,
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+Unrecognized argument: EFI/BOOT/BOOTX64.EFI,
+
+```
+
 ### create
 
 ```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
@@ -1326,13 +1786,464 @@ __Options:__
 
 ```
 
+## emu
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+Usage: ffx emu [--sdk] <command> [<args>]
+
+Start and manage Fuchsia emulators
+
+```
+
+__Options:__
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+  --sdk             running in fuchsia sdk (not inside the fuchsia code
+                    repository)
+  --help            display usage information
+
+```
+
+__Commands:__
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+  start             Starting Fuchsia Emulator
+  kill              Killing Fuchsia Emulator
+  remote            This is a placeholder for a new feature in active
+                    development. Please stand by...
+
+```
+
+### development.
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+Unrecognized argument: development.
+
+```
+
+### kill
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+Usage: ffx emu kill [-d <vdl-path>] [--launched-proto <launched-proto>]
+
+Killing Fuchsia Emulator
+
+```
+
+__Options:__
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+  -d, --vdl-path    device_launcher binary location. Defaults to looking in
+                    prebuilt/vdl/device_launcher
+  --launched-proto  required, file containing device_launcher process artifact
+                    location.
+  --help            display usage information
+
+```
+
+### remote
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+Usage: ffx emu remote <host> [<args...>] [--dir <dir>] [--no-build] [--stream] [--no-emu] [--no-turn] [--no-open] [--display <display>] [--port <port>]
+
+This is a placeholder for a new feature in active development. Please stand by...
+
+```
+
+__Options:__
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+  --dir             defaults to ~/fuchsia, the path to the FUCHSIA_DIR on <host>
+  --no-build        do not build, just pull artifacts already present
+  --stream          stream output from remote emulator using WebRTC instead of
+                    fetching artifacts
+  --no-emu          only tunnel, do not start remote emulator
+  --no-turn         do not use turn configuration for remote emulator
+  --no-open         do not open https://web-femu.appspot.com, just run remote
+                    emulator
+  --display         do not start remote virtual display, use DPY instead
+  --port            port used on local machine to connect with remote emulator
+                    over HTTP (default: 8080)
+  --help            display usage information
+
+```
+
+### start
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+Usage: ffx emu start [-H] [-N] [--host-gpu] [--software-gpu] [--hidpi-scaling] [-u <upscript>] [-p <pointing-device>] [-w <window-width>] [-h <window-height>] [-s <image-size>] [-F <device-proto>] [-e <aemu-path>] [--aemu-version <aemu-version>] [-d <vdl-path>] [--vdl-version <vdl-version>] [-x <grpcwebproxy>] [-X <grpcwebproxy-path>] [--grpcwebproxy-version <grpcwebproxy-version>] [-v <sdk-version>] [--gcs-bucket <gcs-bucket>] [--image-name <image-name>] [-l <emulator-log>] [--port-map <port-map>] [--vdl-output <vdl-output>] [-c <kernel-args>] [--nointeractive] [-i] [--debugger] [-m] [--emu-only] [--nopackageserver] [--packages-to-serve <packages-to-serve>] [--package-server-log <package-server-log>] [--amber-unpack-root <amber-unpack-root>] [--envs <envs...>] [--noacceleration] [--package-server-port <package-server-port>] [-a <amber-files>] [-f <fvm-image>] [-k <kernel-image>] [-z <zbi-image>] [-A <image-architecture>] [--ssh <ssh>] [-V]
+
+Starting Fuchsia Emulator
+
+```
+
+__Options:__
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+  -H, --headless    bool, run emulator in headless mode.
+  -N, --tuntap      bool, run emulator with emulated nic via tun/tap.
+  --host-gpu        bool, run emulator with host GPU acceleration, this doesn't
+                    work on remote-desktop with --headless.
+  --software-gpu    bool, run emulator without host GPU acceleration, default.
+  --hidpi-scaling   bool, enable pixel scaling on HiDPI devices.
+  -u, --upscript    path to tun/tap upscript, this script will be executed
+                    before booting up FEMU.
+  -p, --pointing-device
+                    set pointing device used on emulator: mouse or touch screen.
+                    Allowed values are "touch", "mouse". Default is "touch".
+  -w, --window-width
+                    emulator window width. Default to 1280.
+  -h, --window-height
+                    emulator window height. Default to 800.
+  -s, --image-size  extends storage size to <size> bytes. Default is "2G".
+  -F, --device-proto
+                    path to fuchsia virtual device configuration, if not
+                    specified a generic one will be generated.
+  -e, --aemu-path   path to aemu location. When running in fuchsia repo,
+                    defaults to looking in prebuilt/third_party/aemu/PLATFORM.
+                    When running in fuchsia sdk, defaults to looking in
+                    $HOME/.fuchsia/femu.
+  --aemu-version    label used to download AEMU from CIPD. Default is
+                    "integration". Download only happens if aemu binary cannot
+                    be found from known paths.
+  -d, --vdl-path    device_launcher binary location. When running in fuchsia
+                    repo, defaults to looking in prebuilt/vdl/device_launcher.
+                    When running in fuchsia sdk, defaults to looking in
+                    directory containing `fvdl`.
+  --vdl-version     label used to download vdl from CIPD. Default is "latest".
+                    Download only happens if vdl (device_launcher) binary cannot
+                    be found from known paths.
+  -x, --grpcwebproxy
+                    enable WebRTC HTTP service on port, if set to 0 a random
+                    port will be picked
+  -X, --grpcwebproxy-path
+                    location of grpcwebproxy, When running in fuchsia repo,
+                    defaults to looking in prebuilt/third_party/grpcwebproxy
+                    When running in fuchsia sdk, defaults to looking in
+                    $HOME/.fuchsia/femu.
+  --grpcwebproxy-version
+                    label used to download grpcwebproxy from CIPD. Default is
+                    "latest". Download only happens if --grpcwebproxy is set and
+                    grpcwebproxy binary cannot be found from known paths or path
+                    specified by --grpcwebproxy_path.
+  -v, --sdk-version fuchsia sdk ID used to fetch from gcs, if specified, the
+                    emulator will launch with fuchsia sdk files fetched from
+                    gcs. To find the latest version run `gsutil cat
+                    gs://fuchsia/development/LATEST_LINUX`.
+  --gcs-bucket      gcs bucket name. Default is "fuchsia".
+  --image-name      image file name used to fetch from gcs. Default is
+                    "qemu-x64". To view available image names run `gsutil ls -l
+                    gs://fuchsia/development/$(gsutil cat
+                    gs://fuchsia/development/LATEST_LINUX)/images`.
+  -l, --emulator-log
+                    file path to store emulator log. Default is a temp file that
+                    is deleted after `fvdl` exits.
+  --port-map        host port mapping for user-networking mode. This flag will
+                    be ignored if --tuntap is used. If not specified, an ssh
+                    port on host will be randomly picked and forwarded. ex:
+                    hostfwd=tcp::<host_port>-:<guest_port>,hostfwd=tcp::<host_port>-:<guest_port>
+  --vdl-output      file destination to write `device_launcher` output. Required
+                    for --nointeractive mode. Default is a temp file that is
+                    deleted after `fvdl` exits. Specify this flag if you plan to
+                    use the `kill` subcommand.
+  -c, --kernel-args extra kernel flags to pass into aemu.
+  --nointeractive   bool, turn off interactive mode. if turned off, fvdl will
+                    not land user in ssh console. A ssh port will still be
+                    forwarded. User needs to specify --vdl-output flag with this
+                    mode, and manually call the `kill` subcommand to perform
+                    clean shutdown.
+  -i, --cache-image bool, download and re-use image files in the cached location
+                    ~/.fuchsia/<image_name>/<sdk_version>/. If not set
+                    (default), image files will be stored in a temp location and
+                    removed with `kill` subcommand. If image location is
+                    specified with --kernel-image, --zbi-image, --fvm-image
+                    etc., the cached image will be overwritten for the specified
+                    image file.
+  --debugger        bool, pause on launch and wait for a debugger process to
+                    attach before resuming
+  -m, --monitor     bool, launches emulator in qemu console No local services
+                    such as package_server will be running in this mode.
+  --emu-only        bool, launches user in femu serial console, this flag is
+                    required for bringup image. No local services such as
+                    package_server will be running in this mode.
+  --nopackageserver bool, disable automatically launching package server.
+  --packages-to-serve
+                    comma separated string of fuchsia package urls, extra
+                    packages to serve after starting FEMU. Requires
+                    --nopackageserver=false
+  --package-server-log
+                    file path to store package server log. Default is a stdout.
+                    Requires --nopackageserver=false
+  --amber-unpack-root
+                    path to unpack archived_package downloaded from GCS. This
+                    only applies when fvdl is downloading images files from GCS
+                    (ex: --gcs-bucket, --sdk-verion, --image-name flags are
+                    specified). If not specified, a temporary path will be used.
+  --envs            environment variables for emulator. The argument can be
+                    repeated for multiple times to add multiple arguments. If
+                    not specified, only the default environment variables
+                    (DISPLAY) will be set to run the emulator.
+  --noacceleration  bool, disable acceleration using KVM on Linux and HVF on
+                    macOS.
+  --package-server-port
+                    int, port to an existing package server running on the host.
+  -a, --amber-files string, absolute path to amber-files location, path name
+                    must end with 'amber-files'.
+  -f, --fvm-image   string, absolute path to fvm image file location.
+  -k, --kernel-image
+                    string, absolute path to kernel image file location. If
+                    specified --zbi-image and --image-architecture must also be
+                    specified. When running with --sdk option, this will skip
+                    downloading fuchsia image prebuilts from GCS.
+  -z, --zbi-image   string, absolute path to zircon image file location. If
+                    specified --kernel-image and --image-architecture must also
+                    be specified. When running with --sdk option, this will skip
+                    downloading fuchsia image prebuilts from GCS.
+  -A, --image-architecture
+                    string, specifies image architecture, accepted values are
+                    'arm64' or 'x64'. Required if image override flags (i.e
+                    --fvm-image, --kernel-image, --zbi-image, or --amber-files)
+                    are specified.
+  --ssh             string, specifies an alternative path for ssh keys. The
+                    emulator defaults to the user's $HOME/.ssh directory if none
+                    is specified. The path indicated must contain the files
+                    `fuchsia_authorized_keys` and `fuchsia_ed25519`.
+  -V, --verbose     bool, enables extra logging for debugging
+  --help            display usage information
+
+```
+
+## flutter
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+Usage: ffx flutter <command> [<args>]
+
+Interact with Flutter components on the target.
+
+```
+
+__Options:__
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+  --help            display usage information
+
+```
+
+__Commands:__
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+  tunnel            Establishes a port forward between the local host and the
+                    dart vm service port.
+
+Notes:
+  The `flutter` subcommand is an entry workflow and contains various subcommands
+  for flutter component management and interaction.
+
+```
+
+### dart
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+Unrecognized argument: dart
+
+```
+
+### tunnel
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+Usage: ffx flutter tunnel
+
+Establishes a port forward between the local host and the dart vm service port.
+
+```
+
+__Options:__
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+  --help            display usage information
+
+Notes:
+  Determines the vm_service_port in the Flutter runner on the target Fuchsia device. An ssh
+  tunnel is then established between localhost(127.0.0.1) at an available port and the target device at
+  the vm_service_port.
+  
+  A url for the location of the listening socket is printed out for users.
+
+```
+
+## inspect
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+Usage: ffx inspect [-f <format>] <command> [<args>]
+
+Query component nodes exposed via the Inspect API
+
+```
+
+__Options:__
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+  -f, --format      the format to be used to display the results (json, text).
+  --help            display usage information
+
+```
+
+__Commands:__
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+  list              List components that expose inspect
+  list-accessors    List ArchiveAccessor files.
+  selectors         List available selectors
+  show              Print inspect hierarchies
+
+```
+
+### list
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+Usage: ffx inspect list [--manifest <manifest>] [--with-url] [--accessor-path <accessor-path>]
+
+List components that expose inspect
+
+```
+
+__Options:__
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+  --manifest        the name of the manifest file that we are interested in. If
+                    this is provided, the output will only contain monikers for
+                    components whose url contains the provided name.
+  --with-url        also print the URL of the component.
+  --accessor-path   the path from where to get the ArchiveAccessor connection.
+                    If the given path is a directory, the command will look for
+                    a `fuchsia.diagnostics.ArchiveAccessor` service file. If the
+                    given path is a service file, the command will attempt to
+                    connect to it as an ArchiveAccessor.
+  --help            display usage information
+
+Notes:
+  Lists all components (relative to the scope where the archivist receives events from)
+  of components that expose inspect.
+  
+  For v1: this is the realm path plus the realm name
+  
+  For v2: this is the moniker without the instances ids.
+
+```
+
+### list-accessors
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+Usage: ffx inspect list-accessors [<paths...>]
+
+List ArchiveAccessor files.
+
+```
+
+__Options:__
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+  --help            display usage information
+
+Notes:
+  Lists all ArchiveAccessor files under the provided paths.
+  All paths are implicitly rooted under `/hub-v2`.
+  If no paths are provided, it'll list everything under /hub-v2.
+  It is possible to reach v1 components by starting with the path prefix
+  children/core/children/appmgr/exec/out/hub.
+
+```
+
+### selectors
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+Usage: ffx inspect selectors [<selectors...>] [--manifest <manifest>] [--accessor-path <accessor-path>]
+
+List available selectors
+
+```
+
+__Options:__
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+  --manifest        the name of the manifest file that we are interested in. If
+                    this is provided, the output will only contain monikers for
+                    components whose url contains the provided name.
+  --accessor-path   the path from where to get the ArchiveAccessor connection.
+                    If the given path is a directory, the command will look for
+                    a `fuchsia.diagnostics.ArchiveAccessor` service file. If the
+                    given path is a service file, the command will attempt to
+                    connect to it as an ArchiveAccessor.
+  --help            display usage information
+
+Notes:
+  Lists all available full selectors (component selector + tree selector).
+  If a selector is provided, it’ll only print selectors for that component.
+  If a full selector (component + tree) is provided, it lists all selectors under the given node.
+
+```
+
+### show
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+Usage: ffx inspect show [<selectors...>] [--manifest <manifest>] [--accessor-path <accessor-path>]
+
+Print inspect hierarchies
+
+```
+
+__Options:__
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+  --manifest        the name of the manifest file that we are interested in. If
+                    this is provided, the output will only contain monikers for
+                    components whose url contains the provided name.
+  --accessor-path   the path from where to get the ArchiveAccessor connection.
+                    If the given path is a directory, the command will look for
+                    a `fuchsia.diagnostics.ArchiveAccessor` service file. If the
+                    given path is a service file, the command will attempt to
+                    connect to it as an ArchiveAccessor.
+  --help            display usage information
+
+Notes:
+  Prints the inspect hierarchies that match the given selectors.
+
+```
+
 ## net
 
 ```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
 
 Usage: ffx net <command> [<args>]
 
-target device network configuration
+View and manage target network configuration
 
 ```
 
@@ -1460,6 +2371,22 @@ __Commands:__
 
 ```
 
+#### NAT
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+Unrecognized argument: NAT
+
+```
+
+#### RDR
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+Unrecognized argument: RDR
+
+```
+
 #### disable
 
 ```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
@@ -1565,6 +2492,14 @@ __Options:__
 ```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
 
   --help            display usage information
+
+```
+
+#### rules
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+Unrecognized argument: rules
 
 ```
 
@@ -2276,6 +3211,22 @@ __Options:__
 
 ```
 
+##### provided
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+Unrecognized argument: provided
+
+```
+
+##### provided
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+Unrecognized argument: provided
+
+```
+
 ##### update
 
 ```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
@@ -2333,6 +3284,14 @@ __Options:__
 
 ```
 
+#### configuration
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+Unrecognized argument: configuration
+
+```
+
 #### del
 
 ```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
@@ -2366,6 +3325,14 @@ __Options:__
 ```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
 
   --help            display usage information
+
+```
+
+#### the
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+Unrecognized argument: the
 
 ```
 
@@ -2509,6 +3476,14 @@ __Commands:__
 
 ```
 
+### experts
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+Unrecognized argument: experts
+
+```
+
 ### full-map
 
 ```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
@@ -2613,9 +3588,9 @@ Entries may be specified as:
 - @<manifest-file>: Read each line of this
                     file as an entry. This is not recursive; you can't put
                     another @<manifest-file>
+  download          download Package from TUF package server.
   export            export a package archive
   import            import a package archive
-  download          download Package from TUF package server.
 
 ```
 
@@ -2623,7 +3598,7 @@ Entries may be specified as:
 
 ```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
 
-Usage: ffx package build [<entries...>] [--source-dir <source-dir>] [--hash-out <hash-out>] [--depfile <depfile>]
+Usage: ffx package build [<entries...>] [-s <source-dir>] [--hash-out <hash-out>]
 
 Builds a package.
 
@@ -2637,10 +3612,9 @@ __Options:__
 
 ```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
 
-  --source-dir      base directory for the <src> part of entries; defaults to
+  -s, --source-dir  base directory for the <src> part of entries; defaults to
                     the current directory
   --hash-out        write the package hash to this file instead of stdout
-  --depfile         write a gcc-format depfile for use in build systems
   --help            display usage information
 
 ```
@@ -2690,13 +3664,13 @@ __Options:__
 
 ```
 
-## repository
+## profile
 
 ```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
 
-Usage: ffx repository <command> [<args>]
+Usage: ffx profile <command> [<args>]
 
-
+Profile run-time information from various subsystems
 
 ```
 
@@ -2712,19 +3686,111 @@ __Commands:__
 
 ```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
 
-  add
+  cpu               Query CPU-related information
+
+```
+
+### cpu
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+Usage: ffx profile cpu <command> [<args>]
+
+Query CPU-related information
+
+```
+
+__Options:__
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+  --help            display usage information
+
+```
+
+__Commands:__
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+  load              Measure CPU load over the specified duration
+
+```
+
+#### load
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+Usage: ffx profile cpu load -d <duration>
+
+Measure CPU load over the specified duration
+
+```
+
+__Options:__
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+  -d, --duration    duration over which to measure the CPU load
+  --help            display usage information
+
+Examples:
+  To measure the CPU load over a two second duration
+  
+      $ ffx profile cpu load --duration 2
+      
+
+Notes:
+  This command uses the GetCpuLoad method of the fuchsia.kernel.Stats service to query the
+  the load from each active CPU core in the system. The measured CPU load from each core is
+  printed in the following format:
+  
+      CPU 0: 0.66%
+      CPU 1: 1.56%
+      CPU 2: 0.83%
+      CPU 3: 0.71%
+      Total: 3.76%
+  
+  The valid range for each CPU load is [0-100]%. The "Total" value represents the summation
+  of the load percentages of all CPU cores and is valid in the range [0-100*[NUM_CPU]]%
+  
+
+```
+
+## repository
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+Usage: ffx repository <command> [<args>]
+
+Inspect and manage package repositories
+
+```
+
+__Options:__
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+  --help            display usage information
+
+```
+
+__Commands:__
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+  add-from-pm       
   list              List all repositories
-  remove
-  serve
+  packages          List the packages inside a repository
+  remove            
   target            ....
 
 ```
 
-### add
+### add-from-pm
 
 ```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
 
-Usage: ffx repository add <repo_path> [--name <name>]
+Usage: ffx repository add-from-pm <name> <pm_repo_path>
 
 
 
@@ -2734,7 +3800,6 @@ __Options:__
 
 ```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
 
-  --name            repositories will be named `NAME`. Defaults to `devhost`.
   --help            display usage information
 
 ```
@@ -2757,6 +3822,26 @@ __Options:__
 
 ```
 
+### packages
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+Usage: ffx repository packages <name> [--full-hash]
+
+List the packages inside a repository
+
+```
+
+__Options:__
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+  --full-hash       if true, package hashes will be displayed in full (i.e. not
+                    truncated).
+  --help            display usage information
+
+```
+
 ### remove
 
 ```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
@@ -2771,27 +3856,6 @@ __Options:__
 
 ```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
 
-  --help            display usage information
-
-```
-
-### serve
-
-```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
-
-Usage: ffx repository serve [-a <listen-address>]
-
-
-
-```
-
-__Options:__
-
-```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
-
-  -a, --listen-address
-                    serve repositories on this address. `ADDRESS` is optional.
-                    Defaults to `localhost:8085`.
   --help            display usage information
 
 ```
@@ -2818,15 +3882,17 @@ __Commands:__
 
 ```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
 
-  register
+  deregister        
+  list              
+  register          
 
 ```
 
-#### register
+#### deregister
 
 ```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
 
-Usage: ffx repository target register [<name>] [--alias <alias>]
+Usage: ffx repository target deregister <name>
 
 
 
@@ -2836,6 +3902,43 @@ __Options:__
 
 ```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
 
+  --help            display usage information
+
+```
+
+#### list
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+Usage: ffx repository target list
+
+
+
+```
+
+__Options:__
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+  --help            display usage information
+
+```
+
+#### register
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+Usage: ffx repository target register [<name>] [--storage-type <storage-type>] [--alias <alias...>]
+
+
+
+```
+
+__Options:__
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+  --storage-type    enable persisting this repository across reboots.
   --alias           set up a rewrite rule mapping each `alias` host to to the
                     repository identified by `name`.
   --help            display usage information
@@ -2918,7 +4021,7 @@ __Options:__
 
 Examples:
   To extract a Blobfs block file:
-
+  
           $ffx scrutiny extract blobfs blob.blk /tmp/blobs
 
 Notes:
@@ -2944,7 +4047,7 @@ __Options:__
 
 Examples:
   To extract a FVM file:
-
+  
           $ffx scrutiny extract fvm fvm.blk /tmp/fvm
 
 Notes:
@@ -2970,7 +4073,7 @@ __Options:__
 
 Examples:
   To extract a Fuchsia package from a url:
-
+  
           $ffx scrutiny extract package fuchsia-pkg://fuchsia.com/foo /tmp/foo
 
 Notes:
@@ -2996,7 +4099,7 @@ __Options:__
 
 Examples:
   To extract a Zircon Boot Image:
-
+  
           $ffx scrutiny extract zbi foo.zbi /tmp/foo
 
 Notes:
@@ -3026,7 +4129,35 @@ __Commands:__
 
 ```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
 
+  components        Lists all the components in the build
   package           Lists all the files in a package
+  packages          Lists all the packages in the build
+
+```
+
+#### components
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+Usage: ffx scrutiny list components
+
+Lists all the components in the build
+
+```
+
+__Options:__
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+  --help            display usage information
+
+Examples:
+  To list all the components in the build:
+  
+          $ffx scrutiny list components 
+
+Notes:
+  Lists all the components in the build in a json format.
 
 ```
 
@@ -3048,11 +4179,37 @@ __Options:__
 
 Examples:
   To list all the files in a package:
-
+  
           $ffx scrutiny list package fuchsia-pkg://fuchsia.com/foo
 
 Notes:
   Lists all the package contents in json format.
+
+```
+
+#### packages
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+Usage: ffx scrutiny list packages
+
+Lists all the packages in the build
+
+```
+
+__Options:__
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+  --help            display usage information
+
+Examples:
+  To list all the packages in the build:
+  
+          $ffx scrutiny list packages
+
+Notes:
+  Lists all the packages in the build in a json format.
 
 ```
 
@@ -3080,20 +4237,20 @@ __Options:__
 
 Examples:
   To start an interactive shell session:
-
+  
       $ ffx scrutiny shell
-
+  
   To run commands directly:
-
+  
       $ ffx scrutiny shell components
       $ ffx scrutiny shell "search.packages --files fdio"
-
+      
 
 Notes:
   Launches an interactive scrutiny shell where scrutiny specific
   commands can be run. This will also launch a server on port 127.0.0.1:8080
   by default that provides visual auditing tools.
-
+  
   Inside the shell run help for a full list of available commands. If you wish to
   integrate Scrutiny as part of a wider script check out the --script option.
 
@@ -3129,7 +4286,7 @@ __Commands:__
 
 ```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
 
-Usage: ffx scrutiny verify routes
+Usage: ffx scrutiny verify routes [<capability>]
 
 Verifies protocol and directory routes in Fuchsia
 
@@ -3143,8 +4300,10 @@ __Options:__
 
 Examples:
   To verify the routes on your current build:
-
+  
           $ffx scrutiny verify routes
+          $ffx scrutiny verify routes directory
+          $ffx scrutiny verify routes protocol
 
 Notes:
   Verifies all protocol and directory routes.
@@ -3244,7 +4403,7 @@ __Options:__
 
 ```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
 
-Usage: ffx self-test [--timeout <timeout>] [--case-timeout <case-timeout>] [--include-target <include-target>]
+Usage: ffx self-test [--timeout <timeout>] [--case-timeout <case-timeout>] [--include-target <include-target>] [<command>] [<args>]
 
 Execute the ffx self-test (e2e) suite
 
@@ -3257,6 +4416,32 @@ __Options:__
   --timeout         maximum runtime of entire test suite in seconds
   --case-timeout    maximum run time of a single test case in seconds
   --include-target  include target interaction tests
+  --help            display usage information
+
+```
+
+__Commands:__
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+  experiment        A fake experiment for the ffx self-test (e2e) suite
+
+```
+
+### experiment
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+Usage: ffx self-test experiment
+
+A fake experiment for the ffx self-test (e2e) suite
+
+```
+
+__Options:__
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
   --help            display usage information
 
 ```
@@ -3323,7 +4508,7 @@ __Options:__
 
 ```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
 
-  --keymap          the keymap to use, one of US_QWERTY,FR_AZERTY
+  --keymap          the keymap to use, one of US_QWERTY,FR_AZERTY,US_DVORAK
   --help            display usage information
 
 ```
@@ -3427,7 +4612,7 @@ __Options:__
 
 Examples:
   To start a shell inside starnix:
-
+  
       $ ffx starnix shell
 
 ```
@@ -3450,7 +4635,7 @@ __Options:__
 
 Examples:
   To start a component inside starnix:
-
+  
       $ ffx starnix start <url>
 
 ```
@@ -3489,15 +4674,16 @@ __Commands:__
   show              Display relevant information for the target
   snapshot          Takes a snapshot of the target's state
   update            Update base system software on target
+  wait              Wait until the target becomes available.
 
 Notes:
   The `target` subcommand contains various commands for target management
   and interaction.
-
+  
   Typically, this is the entry workflow for users, allowing for target
   discovery and provisioning before moving on to `component` or `session`
   workflows once the system is up and running on the target.
-
+  
   Most of the commands depend on the RCS (Remote Control Service) on the
   target.
 
@@ -3521,17 +4707,17 @@ __Options:__
 
 Examples:
   To add a remote target forwarded via ssh:
-
+  
       $ ffx target add 127.0.0.1:8022
-
+  
   Or to add a target using its IPV6:
-
+  
       $ ffx target add fe80::32fd:38ff:fea8:a00a
 
 Notes:
   Manually add a target based on its IP address. The command accepts IPV4
   or IPV6 addresses, including a port number: `<addr> = <ip addr:port>`.
-
+  
   Typically, the daemon automatically discovers targets as they come online.
   However, manually adding a target allows for specifying a port number or
   address, often used for remote workflows.
@@ -3566,11 +4752,11 @@ __Commands:__
 
 Examples:
   For one-off overrides for the default use `--target` option:
-
+  
       $ ffx --target <target name> <subcommand>
-
+  
   Or use the `--config` option:
-
+  
       $ ffx --config target.default=<target name> <subcommand>
 
 Notes:
@@ -3622,22 +4808,22 @@ __Options:__
 
 Examples:
   To set the default target:
-
+  
      $ ffx target default set <target name>
-
+  
   To set the 'target.default` key at the global configuration:
-
+  
      $ ffx target default set -l global <target name>
-
+  
   To specify a default target for a specific build directory:
-
+  
      $ ffx target default set -l build -b ~/fuchsia/out <target name>
 
 Notes:
   Sets the `target.default` configuration key. By default sets the key in
   the 'User Configuration'. Can be used in conjuction with `ffx target list`
   to list the names of the discovered targets.
-
+  
   After setting the default target, `ffx target list` will mark the default
   with a `*` in the output list.
 
@@ -3663,15 +4849,15 @@ __Options:__
 
 Examples:
   To clear the default target:
-
+  
       $ ffx target default unset
-
+  
   To clear the `target.default` key from global configuration:
-
+  
       $ ffx target default unset -l global
-
+  
   To specify a specific build directory:
-
+  
       $ ffx target default unset -l build -b ~/fuchsia/out
 
 Notes:
@@ -3684,7 +4870,7 @@ Notes:
 
 ```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
 
-Usage: ffx target flash <manifest> [<product>] [--oem-stage <oem-stage>] [--ssh-key <ssh-key>] [--no-bootloader-reboot]
+Usage: ffx target flash <manifest> [<product>] [--oem-stage <oem-stage...>] [--ssh-key <ssh-key>] [--no-bootloader-reboot] [--skip-verify]
 
 Flash an image to a target device
 
@@ -3700,15 +4886,17 @@ __Options:__
   --no-bootloader-reboot
                     the device should not reboot after bootloader images are
                     flashed
+  --skip-verify     skip hardware verification.  This is dangerous, please be
+                    sure the images you are flashing match the device
   --help            display usage information
 
 Examples:
   To flash a specific image:
-
+  
       $ ffx target flash ~/fuchsia/out/flash.json fuchsia
-
+  
   To include SSH keys as well:
-
+  
       $ ffx target flash
       --ssh-key ~/fuchsia/.ssh/authorized_keys
       ~/fuchsia/out/default/flash.json
@@ -3717,18 +4905,18 @@ Examples:
 Notes:
   Flashes an image to a target device using the fastboot protocol.
   Requires a specific <manifest> file and <product> name as an input.
-
+  
   This is only applicable to a physical device and not an emulator target.
   The target device is typically connected via a micro-USB connection to
   the host system.
-
+  
   The <manifest> format is a JSON file generated when building a fuchsia
   <product> and can be found in the build output directory.
-
+  
   The `--oem-stage` option can be supplied multiple times for several OEM
   files. The format expects a single OEM command to execute after staging
   the given file.
-
+  
   The format for the `--oem-stage` parameter is a comma separated pair:
   '<OEM_COMMAND>,<FILE_TO_STAGE>'
 
@@ -3754,7 +4942,7 @@ __Options:__
 Notes:
   Return the SSH address of the default target defined in the
   `target.default` key. By default this comes from the 'User Configuration'.
-
+  
   The command takes a <timeout> value in seconds with a default of `1.0`
   and overrides the value in the `target.interaction.timeout` key.
 
@@ -3782,12 +4970,12 @@ __Options:__
 
 Examples:
   To list targets in short form:
-
+  
       $ ffx target list --format s
       fe80::4415:3606:fb52:e2bc%zx-f80ff974f283 pecan-guru-clerk-rhyme
-
+  
   To list targets with only their addresses:
-
+  
       $ ffx target list --format a
       fe80::4415:3606:fb52:e2bc%zx-f80ff974f283
 
@@ -3796,25 +4984,25 @@ Notes:
   manually added targets. The daemon also proactively discovers targets as
   they come online. Use `ffx target list` to always get the latest list
   of targets.
-
+  
   The default target is marked with a '*' next to the node name. The table
   has the following columns:
-
+  
       NAME = The name of the target.
       TYPE = The product type of the target, currently always 'Unknown'.
       STATE = The high-level state of the target, currently always 'Unknown'.
       AGE = Shows the last time the daemon was able to discover the target.
       ADDRS/IP = The discovered and known addresses of the target.
       RCS = Indicates if the Remote Control Service is running on the target.
-
+  
   The NAME column shows the target's advertised name. When the target is
   in early boot state such as fastboot, shows 'FastbootDevice' with the
   `product` and `serial` attributes instead.
-
+  
   By default, the `list` command outputs in a tabular format. To override
   the format, pass `--format` and can take the following options: 'simple'
-  , 'tabular|table|tab', 'addresses|addrs|addr', 'json|JSON' or in short form 's', 't',
-   'a', 'j'.
+  , 'tabular|table|tab', 'addresses|addrs|addr', 'name-only', 'json|JSON' or
+  in short form 's', 't', 'a', 'n', 'j'.
 
 Error codes:
   2 If a nodename is supplied, an error code of 2 will be returned if the nodename cannot be resolved
@@ -3825,7 +5013,7 @@ Error codes:
 
 ```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
 
-Usage: ffx target log [--filter <filter>] [--exclude <exclude>] [--color <color>] [--ignore-symbolizer-failure] [--time <time>] [--moniker <moniker>] [--exclude-moniker <exclude-moniker>] [--min-severity <min-severity>] <command> [<args>]
+Usage: ffx target log [--filter <filter...>] [--exclude <exclude...>] [--color <color>] [--ignore-symbolizer-failure] [--show-process-info] [--time <time>] [--moniker <moniker...>] [--exclude-moniker <exclude-moniker...>] [--min-severity <min-severity>] <command> [<args>]
 
 Display logs from a target device
 
@@ -3840,6 +5028,8 @@ __Options:__
   --color           toggle coloring logs according to severity
   --ignore-symbolizer-failure
                     ignore any failure to find the symbolizer binary.
+  --show-process-info
+                    shows process-id and thread-id in log output
   --time            how to display log timestamps
   --moniker         filter log entries using component selectors
   --exclude-moniker exclude log entries matching a component selector
@@ -3859,31 +5049,31 @@ __Commands:__
 Examples:
   Dump the most recent logs and stream new ones as they happen:
     $ ffx target log watch
-
+  
   Stream new logs without dumping recent ones, filtering for severity of at least "WARN":
     $ ffx target log --min-severity warn watch --dump false
-
+  
   Dump all logs from components with a moniker, url, or message containing "remote-control":
     $ ffx target log --filter remote-control dump
-
+  
   Stream logs from components with moniker, url or message that do not include "sys":
     $ ffx target log --exclude sys watch
-
+  
   Dump ERROR logs with moniker, url or message containing either "klog" or "remote-control.cm",
   but which do not contain "sys":
     $ ffx target log --min-severity error --filter klog --filter remote-control.cm --exclude sys dump
-
+  
   Dump logs with monikers matching component selectors, instead of text matches:
     $ ffx target log --moniker "core/remote-*" --exclude-moniker "sys/*" dump
 
 Notes:
   Filters must be provided to the top-level `target log` command,
   *not* to the sub-command (see examples above)
-
+  
   The `--moniker` argument expects a component selector. See this page for
   documentation:
   https://fuchsia.dev/reference/fidl/fuchsia.diagnostics#ComponentSelector.
-
+  
   You may find the `component select` command useful for exploring the topology
   and identifying the selector that matches the component(s) of interest.
 
@@ -3910,6 +5100,14 @@ __Options:__
   --to-monotonic    show only logs until a certain time (as a monotonic
                     timestamp in seconds from the target).
   --help            display usage information
+
+```
+
+#### recent
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+Unrecognized argument: recent
 
 ```
 
@@ -3951,7 +5149,7 @@ __Options:__
 Notes:
   Power off a target. Uses the 'fuchsia.hardware.power.statecontrol.Admin'
   FIDL API to send the power off command.
-
+  
   The 'fuchsia.hardware.power.statecontrol.Admin' is exposed via the 'appmgr'
   component. To verify that the target exposes this service, `ffx component
   select` or `ffx component knock` can be used.
@@ -3982,11 +5180,11 @@ __Options:__
 Notes:
   Reboot a target. Uses the 'fuchsia.hardware.power.statecontrol.Admin'
   FIDL API to send the reboot command.
-
-  By default, target boots fully. This behavior can be overridden by passing
+  
+  By default, target boots fully. This behavior can be overrided by passing
   in either `--bootloader` or `--recovery` to boot into the bootloader or
   recovery, respectively.
-
+  
   The 'fuchsia.hardware.power.statecontrol.Admin' is exposed via the 'appmgr'
   component. To verify that the target exposes this service, `ffx component
   select` or `ffx component knock` can be used.
@@ -4014,11 +5212,11 @@ __Options:__
 
 Examples:
   To remove a target by its target name:
-
+  
       $ ffx target remove correct-horse-battery-staple
-
+  
   Or to remove a target using its IP address:
-
+  
       $ ffx target remove fe80::32fd:38ff:fea8:a00a
 
 Notes:
@@ -4049,11 +5247,11 @@ __Options:__
 
 Notes:
   Displays a detailed iformation about the target.
-
+  
   The default output is intended for a human reader. This output can be
   decorated with machine readable labels (--label) and descriptions of
   each field (--desc).
-
+  
   The 'label' fields in the machine readable output (--json) will remain
   stable across software updates and is not localized (compare to 'title'
   which may change or be localized). The 'value' field will be one of:
@@ -4068,7 +5266,7 @@ Error codes:
 
 ```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
 
-Usage: ffx target snapshot [-d <dir>]
+Usage: ffx target snapshot [-d <dir>] [--dump-annotations]
 
 Takes a snapshot of the target's state
 
@@ -4079,11 +5277,13 @@ __Options:__
 ```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
 
   -d, --dir         valid directory where the snapshot will be stored.
+  --dump-annotations
+                    print annotations
   --help            display usage information
 
 Examples:
   Store the target's snapshot in the current directory:
-
+  
       $ ffx target snapshot -d .
       Exported ./snapshot.zip
 
@@ -4091,7 +5291,7 @@ Notes:
   This command connects to a running target to acquire its snapshot, which contains
   useful debugging information about the target. The `--dir` can be supplied to override the default
   snapshot directory `/tmp/snapshots/YYYYMMDD_HHMMSS/`.
-
+  
   Snapshot contents:
   - Build information and annotations
   - Kernel and system logs
@@ -4232,7 +5432,7 @@ __Options:__
 
 Notes:
   This lists all the known next or target update channels on the system.
-
+  
   Returns an empty list if no other update channels are configured.
 
 Error codes:
@@ -4258,11 +5458,11 @@ __Options:__
 
 Examples:
   To list all the known update channels:
-
+  
       $ ffx target update channel list
-
+  
   Then, use a valid channel from the list:
-
+  
       $ ffx target update channel set <channel>
 
 Notes:
@@ -4270,7 +5470,7 @@ Notes:
   `ffx target update check-now`, ensures the update is check against the
   next or target channel. When the update is successful, next or target
   channel becomes the current channel.
-
+  
   Use `ffx target update channel list` to list known system update
   channels.
 
@@ -4301,17 +5501,17 @@ __Options:__
 
 Examples:
   To check for update and monitor progress:
-
+  
       $ ffx target update check-now --monitor
 
 Notes:
   Triggers an update check operation and performs the update if available.
   Interfaces using the 'fuchsia.update Manager' protocol with the system
   update service on the target.
-
+  
   The command takes in an optional `--monitor` switch to watch the progress
   of the update. The output is displayed in `stdout`.
-
+  
   The command also takes an optional `--service-initiated` switch to indicate
   a separate service has initiated a check for update.
 
@@ -4336,11 +5536,11 @@ __Options:__
 
 Examples:
   With a known update package URL, trigger an update:
-
+  
       $ ffx target update force-install fuchsia-pkg://fuchsia.com/update
-
+  
   Also trigger a reboot after update:
-
+  
       $ ffx target update force-install
       fuchsia-pkg://fuchsia.com/update
       --reboot
@@ -4348,14 +5548,36 @@ Examples:
 Notes:
   Directly invoke the system updater to install the provided update,
   bypassing any update checks.
-
+  
   Interfaces using the 'fuchsia.update.installer' protocol to update the
   system. Requires an <update_pkg_url> in the following format:
-
+  
   `fuchsia-pkg://fuchsia.com/update`
-
+  
   Takes an optional `--reboot <true|false>` to trigger a system reboot
   after update has been successfully applied.
+
+```
+
+### wait
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+Usage: ffx target wait [-t <timeout>]
+
+Wait until the target becomes available.
+
+```
+
+__Options:__
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+  -t, --timeout     the timeout in seconds [default = 60]
+  --help            display usage information
+
+Error codes:
+  1 Timeout while getting ssh address
 
 ```
 
@@ -4415,7 +5637,7 @@ Notes:
 
 ```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
 
-Usage: ffx test result [--directory <directory>]
+Usage: ffx test result <command> [<args>]
 
 Manage test results
 
@@ -4425,11 +5647,122 @@ __Options:__
 
 ```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
 
-  --directory       when set, display the results of the specified directory.
   --help            display usage information
+
+```
+
+__Commands:__
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+  show              Display test results
+  list              List test results
+  delete            Delete test results
+  save              Save test results
 
 Notes:
   Inspect and manage the results from previous test runs
+
+```
+
+#### delete
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+Usage: ffx test result delete [--index <index>] [--name <name>]
+
+Delete test results
+
+```
+
+__Options:__
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+  --index           when set, display the results of a run with specified index.
+  --name            when set, display the results of a run with specified name.
+  --help            display usage information
+
+Notes:
+  Manually delete a previous test run result.
+  
+  Either --index or --name must be specified.
+
+```
+
+#### list
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+Usage: ffx test result list
+
+List test results
+
+```
+
+__Options:__
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+  --help            display usage information
+
+Notes:
+  Display a list of previous test runs
+
+```
+
+#### save
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+Usage: ffx test result save --index <index> --name <name>
+
+Save test results
+
+```
+
+__Options:__
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+  --index           the index of the test result to save.
+  --name            the name to assign the saved test result.
+  --help            display usage information
+
+Notes:
+  Mark a test result so it is not garbage collected.
+  
+  By default, ffx test only retains the last 'n' test results, as configured
+  with 'test.save_count'. A test result saved and given a name using the save
+  command will be exempted from this cleanup and will not be counted towards the
+  total number of saved test results.
+
+```
+
+#### show
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+Usage: ffx test result show [--directory <directory>] [--index <index>] [--name <name>]
+
+Display test results
+
+```
+
+__Options:__
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+  --directory       when set, display the results of the specified directory.
+  --index           when set, display the results of a run with specified index.
+  --name            when set, display the results of a run with specified name.
+  --help            display usage information
+
+Notes:
+  Display the results of a previous test run.
+  
+  When no options are provided, displays the results of the most recent test run.
+  
 
 ```
 
@@ -4437,7 +5770,7 @@ Notes:
 
 ```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
 
-Usage: ffx test run <test_url> [-t <timeout>] [--test-filter <test-filter>] [--run-disabled] [--filter-ansi] [--parallel <parallel>] [--count <count>] [--min-severity-logs <min-severity-logs>] [--max-severity-logs <max-severity-logs>] [--output-directory <output-directory>] [--disable-output-directory]
+Usage: ffx test run <test_url> [-t <timeout>] [--test-filter <test-filter...>] [--run-disabled] [--filter-ansi] [--parallel <parallel>] [--count <count>] [--min-severity-logs <min-severity-logs>] [--max-severity-logs <max-severity-logs>] [--output-directory <output-directory>] [--disable-output-directory]
 
 Run test suite
 
@@ -4448,8 +5781,9 @@ __Options:__
 ```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
 
   -t, --timeout     test timeout
-  --test-filter     a glob pattern for matching tests. Can be specified multiple
-                    times to pass in multiple patterns.
+  --test-filter     glob pattern for matching tests. Can be specified multiple
+                    times to pass in multiple patterns. example: --test-filter
+                    glob1 --test-filter glob2.
   --run-disabled    run tests that have been marked disabled/ignored
   --filter-ansi     filter ANSI escape sequences from output
   --parallel        run tests in parallel
@@ -4468,7 +5802,7 @@ __Options:__
 
 Notes:
   Runs a test or suite implementing the `fuchsia.test.Suite` protocol.
-
+  
   Note that if running multiple iterations of a test and an iteration times
   out, no further iterations will be executed.
 
@@ -4497,7 +5831,8 @@ __Commands:__
 ```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
 
   list-providers    List the target's trace providers
-  record            Record a trace
+  start             Record a trace
+  stop              Record a trace
 
 ```
 
@@ -4519,11 +5854,11 @@ __Options:__
 
 ```
 
-### record
+### start
 
 ```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
 
-Usage: ffx trace record [--buffer-size <buffer-size>] [--categories <categories>] [--duration <duration>] [--output <output>]
+Usage: ffx trace start [--buffer-size <buffer-size>] [--categories <categories>] [--duration <duration>] [--output <output>]
 
 Record a trace
 
@@ -4546,13 +5881,13 @@ __Options:__
 
 ```
 
-## vdl
+### stop
 
 ```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
 
-Usage: ffx vdl [--sdk] <command> [<args>]
+Usage: ffx trace stop [--output <output>]
 
-Start and manage Fuchsia emulators
+Record a trace
 
 ```
 
@@ -4560,193 +5895,7 @@ __Options:__
 
 ```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
 
-  --sdk             running in fuchsia sdk (not inside the fuchsia code
-                    repository)
-  --help            display usage information
-
-```
-
-__Commands:__
-
-```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
-
-  start             Starting Fuchsia Emulator
-  kill              Killing Fuchsia Emulator
-  remote            This is a placeholder for a new feature in active
-                    development. Please stand by...
-
-```
-
-### kill
-
-```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
-
-Usage: ffx vdl kill [-d <vdl-path>] [--launched-proto <launched-proto>]
-
-Killing Fuchsia Emulator
-
-```
-
-__Options:__
-
-```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
-
-  -d, --vdl-path    device_launcher binary location. Defaults to looking in
-                    prebuilt/vdl/device_launcher
-  --launched-proto  required, file containing device_launcher process artifact
-                    location.
-  --help            display usage information
-
-```
-
-### remote
-
-```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
-
-Usage: ffx vdl remote <host> [<args...>] [--dir <dir>] [--no-build] [--stream] [--no-emu] [--no-turn] [--no-open] [--display <display>] [--port <port>]
-
-This is a placeholder for a new feature in active development. Please stand by...
-
-```
-
-__Options:__
-
-```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
-
-  --dir             defaults to ~/fuchsia, the path to the FUCHSIA_DIR on <host>
-  --no-build        do not build, just pull artifacts already present
-  --stream          stream output from remote emulator using WebRTC instead of
-                    fetching artifacts
-  --no-emu          only tunnel, do not start remote emulator
-  --no-turn         do not use turn configuration for remote emulator
-  --no-open         do not open https://web-femu.appspot.com, just run remote
-                    emulator
-  --display         do not start remote virtual display, use DPY instead
-  --port            port used on local machine to connect with remote emulator
-                    over HTTP (default: 8080)
-  --help            display usage information
-
-```
-
-### start
-
-```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
-
-Usage: ffx vdl start [-H] [-N] [--host-gpu] [--software-gpu] [--hidpi-scaling] [-u <upscript>] [-p <pointing-device>] [-w <window-width>] [-h <window-height>] [-s <image-size>] [-f <device-proto>] [-e <aemu-path>] [--aemu-version <aemu-version>] [-d <vdl-path>] [--vdl-version <vdl-version>] [-x <grpcwebproxy>] [-X <grpcwebproxy-path>] [--grpcwebproxy-version <grpcwebproxy-version>] [-v <sdk-version>] [--gcs-bucket <gcs-bucket>] [--image-name <image-name>] [-l <emulator-log>] [--port-map <port-map>] [--vdl-output <vdl-output>] [-c <kernel-args>] [--nointeractive] [-i] [--debugger] [-m] [--emu-only] [--nopackageserver] [--packages-to-serve <packages-to-serve>] [--package-server-log <package-server-log>] [--amber-unpack-root <amber-unpack-root>] [--envs <envs>] [--noacceleration] [--package-server-port <package-server-port>] [-V]
-
-Starting Fuchsia Emulator
-
-```
-
-__Options:__
-
-```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
-
-  -H, --headless    bool, run emulator in headless mode.
-  -N, --tuntap      bool, run emulator with emulated nic via tun/tap.
-  --host-gpu        bool, run emulator with host GPU acceleration, this doesn't
-                    work on remote-desktop with --headless.
-  --software-gpu    bool, run emulator without host GPU acceleration, default.
-  --hidpi-scaling   bool, enable pixel scaling on HiDPI devices.
-  -u, --upscript    path to tun/tap upscript, this script will be executed
-                    before booting up FEMU.
-  -p, --pointing-device
-                    set pointing device used on emulator: mouse or touch screen.
-                    Allowed values are "touch", "mouse". Default is "touch".
-  -w, --window-width
-                    emulator window width. Default to 1280.
-  -h, --window-height
-                    emulator window height. Default to 800.
-  -s, --image-size  extends storage size to <size> bytes. Default is "2G".
-  -f, --device-proto
-                    path to fuchsia virtual device configuration, if not
-                    specified a generic one will be generated.
-  -e, --aemu-path   path to aemu location. When running in fuchsia repo,
-                    defaults to looking in prebuilt/third_party/aemu/PLATFORM.
-                    When running in fuchsia sdk, defaults to looking in
-                    $HOME/.fuchsia/femu.
-  --aemu-version    label used to download AEMU from CIPD. Default is
-                    "integration". Download only happens if aemu binary cannot
-                    be found from known paths.
-  -d, --vdl-path    device_launcher binary location. When running in fuchsia
-                    repo, defaults to looking in prebuilt/vdl/device_launcher.
-                    When running in fuchsia sdk, defaults to looking in
-                    directory containing `fvdl`.
-  --vdl-version     label used to download vdl from CIPD. Default is "latest".
-                    Download only happens if vdl (device_launcher) binary cannot
-                    be found from known paths.
-  -x, --grpcwebproxy
-                    enable WebRTC HTTP service on port, if set to 0 a random
-                    port will be picked
-  -X, --grpcwebproxy-path
-                    location of grpcwebproxy, When running in fuchsia repo,
-                    defaults to looking in prebuilt/third_party/grpcwebproxy
-                    When running in fuchsia sdk, defaults to looking in
-                    $HOME/.fuchsia/femu.
-  --grpcwebproxy-version
-                    label used to download grpcwebproxy from CIPD. Default is
-                    "latest". Download only happens if --grpcwebproxy is set and
-                    grpcwebproxy binary cannot be found from known paths or path
-                    specified by --grpcwebproxy_path.
-  -v, --sdk-version fuchsia sdk ID used to fetch from gcs, if specified, the
-                    emulator will launch with fuchsia sdk files fetched from
-                    gcs. To find the latest version run `gsutil cat
-                    gs://fuchsia/development/LATEST_LINUX`.
-  --gcs-bucket      gcs bucket name. Default is "fuchsia".
-  --image-name      image file name used to fetch from gcs. Default is
-                    "qemu-x64". To view availabe image names run `gsutil ls -l
-                    gs://fuchsia/development/$(gsutil cat
-                    gs://fuchsia/development/LATEST_LINUX)/images`.
-  -l, --emulator-log
-                    file path to store emulator log. Default is a temp file that
-                    is deleted after `fvdl` exits.
-  --port-map        host port mapping for user-networking mode. This flag will
-                    be ignored if --tuntap is used. If not specified, an ssh
-                    port on host will be randomly picked and forwarded. ex:
-                    hostfwd=tcp::<host_port>-:<guest_port>,hostfwd=tcp::<host_port>-:<guest_port>
-  --vdl-output      file destination to write `device_launcher` output. Required
-                    for --nointeractive mode. Default is a temp file that is
-                    deleted after `fvdl` exits. Specify this flag if you plan to
-                    use the `kill` subcommand.
-  -c, --kernel-args extra kernel flags to pass into aemu.
-  --nointeractive   bool, turn off interactive mode. if turned off, fvdl will
-                    not land user in ssh console. A ssh port will still be
-                    forwarded. User needs to specify --vdl-output flag with this
-                    mode, and manually call the `kill` subcommand to perform
-                    clean shutdown.
-  -i, --cache-image bool, download and re-use image files in the cached location
-                    ~/.fuchsia/<image_name>/<sdk_version>/. If not set
-                    (default), image files will be stored in a temp location and
-                    removed with `kill` subcommand.
-  --debugger        bool, pause on launch and wait for a debugger process to
-                    attach before resuming
-  -m, --monitor     bool, launches emulator in qemu console No local services
-                    such as package_server will be running in this mode.
-  --emu-only        bool, launches user in femu serial console, this flag is
-                    required for bringup image. No local services such as
-                    package_server will be running in this mode.
-  --nopackageserver bool, disable automatically launching package server.
-  --packages-to-serve
-                    comma separated string of fuchsia package urls, extra
-                    packages to serve after starting FEMU. Requires
-                    --nopackageserver=false
-  --package-server-log
-                    file path to store package server log. Default is a stdout.
-                    Requires --nopackageserver=false
-  --amber-unpack-root
-                    path to unpack archived_package downloaded from GCS. This
-                    only applies when fvdl is downloading images files from GCS
-                    (ex: --gcs-bucket, --sdk-verion, --image-name flags are
-                    specified). If not specified, a temporary path will be used.
-  --envs            environment variables for emulator. The argument can be
-                    repeated for multiple times to add multiple arguments. If
-                    not specified, only the default environment variables
-                    (DISPLAY) will be set to run the emulator.
-  --noacceleration  bool, disable acceleration using KVM on Linux and HVF on
-                    macOS.
-  --package-server-port
-                    int, port to an existing package server running on the host.
-  -V, --verbose     bool, enables extra logging for debugging
+  --output          name of output trace file.  Defaults to trace.fxt.
   --help            display usage information
 
 ```

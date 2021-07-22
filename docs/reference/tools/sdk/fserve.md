@@ -15,6 +15,8 @@ Usage: fserve [options]
     	Specify the GCS bucket for the prebuilt packages.
   -clean
     	Cleans the package repository first.
+  -data-path string
+    	Specifies the data path for SDK tools. Defaults to $HOME/.fuchsia.
   -device-ip string
     	Serves packages to a device with the given device ip address. Cannot be used with --device-name."
     		  If neither --device-name nor --device-ip are specified, the device-name configured using fconfig is used.
@@ -31,6 +33,8 @@ Usage: fserve [options]
     	Output verbosity, can be fatal, error, warning, info, debug or trace. (default info)
   -name string
     	Name is used as the update channel identifier, as reported by fuchsia.update.channel.Provider. (default "devhost")
+  -package-archive string
+    	Specify the source package archive in .tgz or directory format. If specified, no packages are downloaded from GCS.
   -persist
     	Persist repository metadata to allow serving resolved packages across reboot.
   -prepare

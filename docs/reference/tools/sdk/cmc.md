@@ -51,7 +51,7 @@ cmc-check-includes
 check if given includes are present in a given component manifest
 
 USAGE:
-    cmc check-includes [OPTIONS] <FILE> --includepath <includepath> [expect]...
+    cmc check-includes [OPTIONS] <FILE> [--] [expect]...
 
 FLAGS:
     -h, --help       
@@ -67,21 +67,21 @@ __OPTIONS:__
 
 ```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
 
-    -d, --depfile <depfile>            
+    -d, --depfile <depfile>               
             depfile for includes
             
             If specified, include paths will be listed here, delimited by newlines.
-    -f, --fromfile <fromfile>          
+    -f, --fromfile <fromfile>             
             response file for includes to expect
             
             If specified, additional includes to expect will be read from the path provided. The input format is
             delimited by newlines.
-    -p, --includepath <includepath>    
-            base path for resolving includes
+    -p, --includepath <includepath>...    
+            base paths for resolving includes [default: ]
 
-    -r, --includeroot <includeroot>    
-            base path for resolving include paths that start with "//" Temporarily optional for a soft transition. If
-            not specified, will take the value of `includepath`.
+    -r, --includeroot <includeroot>       
+            base path for resolving include paths that start with "//" [default: ]
+
 
 ARGS:
     <FILE>         
@@ -100,7 +100,7 @@ cmc-compile
 compile a CML file
 
 USAGE:
-    cmc compile [OPTIONS] <FILE> --includepath <includepath>
+    cmc compile [OPTIONS] <FILE>
 
 FLAGS:
     -h, --help       
@@ -128,12 +128,12 @@ __OPTIONS:__
     -f, --features <features>...
             The set of non-standard features to compile with. Only applies to CML files.
 
-    -p, --includepath <includepath>                                
-            base path for resolving includes
+    -p, --includepath <includepath>...                             
+            base paths for resolving includes [default: ]
 
     -r, --includeroot <includeroot>
-            base path for resolving include paths that start with "//" Temporarily optional for a soft transition. If
-            not specified, will take the value of `includepath`.
+            base path for resolving include paths that start with "//" [default: ]
+
     -o, --output <output>
             file to write the formatted results to, will print to stdout if not provided
 
@@ -194,7 +194,7 @@ cmc-include
 add contents from includes if any
 
 USAGE:
-    cmc include [OPTIONS] <FILE> --includepath <includepath>
+    cmc include [OPTIONS] <FILE>
 
 FLAGS:
     -h, --help       
@@ -210,17 +210,17 @@ __OPTIONS:__
 
 ```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
 
-    -d, --depfile <depfile>            
+    -d, --depfile <depfile>               
             depfile for includes
             
             If specified, include paths will be listed here, delimited by newlines.
-    -p, --includepath <includepath>    
-            base path for resolving includes
+    -p, --includepath <includepath>...    
+            base paths for resolving includes [default: ]
 
-    -r, --includeroot <includeroot>    
-            base path for resolving include paths that start with "//" Temporarily optional for a soft transition. If
-            not specified, will take the value of `includepath`.
-    -o, --output <output>              
+    -r, --includeroot <includeroot>       
+            base path for resolving include paths that start with "//" [default: ]
+
+    -o, --output <output>                 
             file to write the merged results to, will print to stdout if not provided
 
 
