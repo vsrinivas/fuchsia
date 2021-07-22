@@ -15,7 +15,7 @@ use {
         server::{
             errors::map_to_status,
             file::FxFile,
-            node::{FxNode, GetResult},
+            node::{FxNode, GetResult, OpenedNode},
             volume::FxVolume,
         },
     },
@@ -169,11 +169,14 @@ impl FxDirectory {
         flags: u32,
         mode: u32,
         mut path: Path,
-    ) -> Result<Arc<dyn FxNode>, Error> {
+    ) -> Result<OpenedNode<dyn FxNode>, Error> {
+        if path.is_empty() {
+            return Ok(OpenedNode::new(self.clone()));
+        }
         let store = self.store();
         let fs = store.filesystem();
         let mut current_node = self.clone() as Arc<dyn FxNode>;
-        while !path.is_empty() {
+        loop {
             let last_segment = path.is_single_component();
             let current_dir =
                 current_node.into_any().downcast::<FxDirectory>().map_err(|_| FxfsError::NotDir)?;
@@ -192,7 +195,7 @@ impl FxDirectory {
                 Right(fs.read_lock(&keys).await)
             };
 
-            current_node = match current_dir.directory.lookup(name).await? {
+            match current_dir.directory.lookup(name).await? {
                 Some((object_id, object_descriptor)) => {
                     if transaction_or_guard.is_left() && flags & OPEN_FLAG_CREATE_IF_ABSENT != 0 {
                         bail!(FxfsError::AlreadyExists);
@@ -212,13 +215,21 @@ impl FxDirectory {
                             ObjectDescriptor::Volume => bail!(FxfsError::Inconsistent),
                         }
                     }
-                    self.volume()
+                    current_node = self
+                        .volume()
                         .get_or_load_node(object_id, object_descriptor, Some(self.clone()))
-                        .await?
+                        .await?;
+                    if last_segment {
+                        // We must make sure to take an open-count whilst we are holding a read
+                        // lock.
+                        return Ok(OpenedNode::new(current_node));
+                    }
                 }
                 None => {
                     if let Left(mut transaction) = transaction_or_guard {
-                        let node = current_dir.create_child(&mut transaction, name, mode).await?;
+                        let node = OpenedNode::new(
+                            current_dir.create_child(&mut transaction, name, mode).await?,
+                        );
                         if let GetResult::Placeholder(p) =
                             self.volume().cache().get_or_reserve(node.object_id()).await
                         {
@@ -228,20 +239,19 @@ impl FxDirectory {
                                     current_dir.did_add(name);
                                 })
                                 .await?;
+                            return Ok(node);
                         } else {
                             // We created a node, but the object ID was already used in the cache,
                             // which suggests a object ID was reused (which would either be a bug or
                             // corruption).
                             bail!(FxfsError::Inconsistent);
                         }
-                        node
                     } else {
                         bail!(FxfsError::NotFound);
                     }
                 }
             };
         }
-        Ok(current_node)
     }
 
     async fn create_child(
@@ -290,7 +300,7 @@ impl FxDirectory {
 
 impl Drop for FxDirectory {
     fn drop(&mut self) {
-        self.volume().cache().remove(self.object_id());
+        self.volume().cache().remove(self);
     }
 }
 
@@ -317,6 +327,10 @@ impl FxNode for FxDirectory {
     fn try_into_directory_entry(self: Arc<Self>) -> Option<Arc<dyn DirectoryEntry>> {
         Some(self)
     }
+
+    fn open_count_add_one(&self) {}
+
+    fn open_count_sub_one(&self) {}
 }
 
 #[async_trait]
@@ -462,15 +476,24 @@ impl DirectoryEntry for FxDirectory {
             match self.lookup(flags, mode, path).await {
                 Err(e) => send_on_open_with_error(flags, server_end, map_to_status(e)),
                 Ok(node) => {
-                    if let Ok(dir) = node.clone().into_any().downcast::<FxDirectory>() {
+                    if node.is::<FxDirectory>() {
                         MutableConnection::create_connection(
                             cloned_scope,
-                            OpenDirectory::new(dir),
+                            OpenDirectory::new(
+                                node.downcast::<FxDirectory>()
+                                    .unwrap_or_else(|_| unreachable!())
+                                    .take(),
+                            ),
                             flags,
                             server_end,
                         );
-                    } else if let Ok(file) = node.into_any().downcast::<FxFile>() {
-                        file.clone().open(cloned_scope, flags, mode, Path::dot(), server_end);
+                    } else if node.is::<FxFile>() {
+                        FxFile::create_connection(
+                            node.downcast::<FxFile>().unwrap_or_else(|_| unreachable!()),
+                            cloned_scope,
+                            flags,
+                            server_end,
+                        );
                     } else {
                         unreachable!();
                     }
@@ -495,7 +518,7 @@ impl Directory for FxDirectory {
             async move {
                 self.lookup(0, 0, Path::validate_and_split(name)?)
                     .await
-                    .map(|n| n.try_into_directory_entry().unwrap())
+                    .map(|n| (*n).clone().try_into_directory_entry().unwrap())
                     .map_err(map_to_status)
             }
             .boxed(),

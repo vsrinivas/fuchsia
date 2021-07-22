@@ -87,6 +87,12 @@ impl TestFixture {
         // indicate a reference cycle or other leak.
         Status::ok(state.root.close().await.expect("FIDL call failed")).expect("close root failed");
         let (filesystem, volume) = state.into();
+
+        // Wait for all tasks to finish running.  If we don't do this, it's possible that we haven't
+        // yet noticed that a connection has closed, and so tasks can still be running and they can
+        // hold references to the volume which we want to unwrap.
+        self.scope.wait().await;
+
         Arc::try_unwrap(volume.into_volume())
             .map_err(|_| "References to volume still exist")
             .unwrap();

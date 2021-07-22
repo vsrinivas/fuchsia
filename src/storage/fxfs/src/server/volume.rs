@@ -102,11 +102,12 @@ impl FxVolume {
     pub(super) async fn maybe_purge_file(&self, object_id: u64) -> Result<(), Error> {
         if let Some(node) = self.cache.get(object_id) {
             if let Ok(file) = node.into_any().downcast::<FxFile>() {
-                if file.open_count() > 0 {
+                if !file.try_mark_purging() {
                     return Ok(());
                 }
             }
         }
+        // If this fails, the graveyard should clean it up on next mount.
         self.store
             .tombstone(object_id, Options { borrow_metadata_space: true, ..Default::default() })
             .await?;

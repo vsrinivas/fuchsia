@@ -4,7 +4,6 @@
 
 use {
     crate::{
-        debug_assert_not_too_long,
         lsm_tree::{
             skip_list_layer::SkipListLayer,
             types::{Item, ItemRef, Layer, LayerIterator, MutableLayer},
@@ -50,7 +49,7 @@ use {
 // take a snapshot.
 pub async fn fsck(filesystem: &Arc<FxFilesystem>) -> Result<(), Error> {
     log::info!("Starting fsck");
-    let _guard = debug_assert_not_too_long!(filesystem.write_lock(&[LockKey::Filesystem]));
+    let _guard = filesystem.write_lock(&[LockKey::Filesystem]).await;
 
     let object_manager = filesystem.object_manager();
     let graveyard = object_manager.graveyard().ok_or(anyhow!("Missing graveyard!"))?;

@@ -6,8 +6,8 @@ use {
     crate::server::directory::FxDirectory,
     futures::future::poll_fn,
     std::{
-        any::Any,
-        collections::HashMap,
+        any::{Any, TypeId},
+        collections::{hash_map::Entry, HashMap},
         sync::{Arc, Mutex, Weak},
         task::{Poll, Waker},
         vec::Vec,
@@ -22,6 +22,8 @@ pub trait FxNode: Any + Send + Sync + 'static {
     fn set_parent(&self, parent: Arc<FxDirectory>);
     fn into_any(self: Arc<Self>) -> Arc<dyn Any + Send + Sync + 'static>;
     fn try_into_directory_entry(self: Arc<Self>) -> Option<Arc<dyn DirectoryEntry>>;
+    fn open_count_add_one(&self);
+    fn open_count_sub_one(&self);
 }
 
 struct PlaceholderInner {
@@ -48,6 +50,8 @@ impl FxNode for Placeholder {
     fn try_into_directory_entry(self: Arc<Self>) -> Option<Arc<dyn DirectoryEntry>> {
         None
     }
+    fn open_count_add_one(&self) {}
+    fn open_count_sub_one(&self) {}
 }
 
 /// PlaceholderOwner is a reserved slot in the node cache.
@@ -146,13 +150,67 @@ impl NodeCache {
 
     /// Removes a node from the cache. Calling this on a placeholder is an error; instead, the
     /// placeholder should simply be dropped.
-    pub fn remove(&self, object_id: u64) {
-        self.0.lock().unwrap().map.remove(&object_id);
+    pub fn remove(&self, node: &dyn FxNode) {
+        let mut this = self.0.lock().unwrap();
+        if let Entry::Occupied(o) = this.map.entry(node.object_id()) {
+            // If this method is called when a node is being dropped, then upgrade will fail and
+            // it's possible the cache has been populated with another node, so to avoid that race,
+            // we must check that the node in the cache is the node we want to remove.
+            if std::ptr::eq(o.get().as_ptr(), node) {
+                o.remove();
+            }
+        }
     }
 
     /// Returns the given node if present in the cache.
     pub fn get(&self, object_id: u64) -> Option<Arc<dyn FxNode>> {
         self.0.lock().unwrap().map.get(&object_id).and_then(Weak::upgrade)
+    }
+}
+
+// Wraps a node with an open count.
+pub struct OpenedNode<N: FxNode + ?Sized>(Arc<N>);
+
+impl<N: FxNode + ?Sized> OpenedNode<N> {
+    pub fn new(node: Arc<N>) -> Self {
+        node.open_count_add_one();
+        OpenedNode(node)
+    }
+
+    /// Downcasts to something that implements FxNode.
+    pub fn downcast<T: FxNode>(self) -> Result<OpenedNode<T>, Self> {
+        if self.is::<T>() {
+            Ok(OpenedNode(
+                self.take().into_any().downcast::<T>().unwrap_or_else(|_| unreachable!()),
+            ))
+        } else {
+            Err(self)
+        }
+    }
+
+    /// Takes the wrapped node.  The caller takes responsibility for dropping the open count.
+    pub fn take(self) -> Arc<N> {
+        let this = std::mem::ManuallyDrop::new(self);
+        unsafe { std::mem::transmute_copy(&this.0) }
+    }
+
+    /// Returns true if this is an instance of T.
+    pub fn is<T: 'static>(&self) -> bool {
+        self.0.as_ref().type_id() == TypeId::of::<T>()
+    }
+}
+
+impl<N: FxNode + ?Sized> Drop for OpenedNode<N> {
+    fn drop(&mut self) {
+        self.0.open_count_sub_one();
+    }
+}
+
+impl<N: FxNode + ?Sized> std::ops::Deref for OpenedNode<N> {
+    type Target = Arc<N>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
 
@@ -193,10 +251,12 @@ mod tests {
         fn try_into_directory_entry(self: Arc<Self>) -> Option<Arc<dyn DirectoryEntry>> {
             None
         }
+        fn open_count_add_one(&self) {}
+        fn open_count_sub_one(&self) {}
     }
     impl Drop for FakeNode {
         fn drop(&mut self) {
-            self.1.remove(self.0);
+            self.1.remove(self);
         }
     }
 

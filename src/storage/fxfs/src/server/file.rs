@@ -8,7 +8,12 @@ use {
         object_store::{
             filesystem::SyncOptions, round_down, transaction::Options, StoreObjectHandle, Timestamp,
         },
-        server::{directory::FxDirectory, errors::map_to_status, node::FxNode, volume::FxVolume},
+        server::{
+            directory::FxDirectory,
+            errors::map_to_status,
+            node::{FxNode, OpenedNode},
+            volume::FxVolume,
+        },
     },
     anyhow::Error,
     async_trait::async_trait,
@@ -70,11 +75,37 @@ impl FxFile {
         transaction.commit().await?;
         Ok((content.len() as u64, offset + content.len() as u64))
     }
+
+    pub fn create_connection(
+        this: OpenedNode<FxFile>,
+        scope: ExecutionScope,
+        flags: u32,
+        server_end: ServerEnd<NodeMarker>,
+    ) {
+        FileConnection::<FxFile>::create_connection(
+            // Note readable/writable do not override what's set in flags, they merely tell the
+            // FileConnection that it's valid to open the file readable/writable.
+            scope.clone(),
+            connection::util::OpenFile::new(this.take(), scope),
+            flags,
+            server_end,
+            /*readable=*/ true,
+            /*writable=*/ true,
+        );
+    }
+
+    /// If the open count is zero, marks the file as being purged.  This is designed to be
+    /// thread-safe such that if two threads both try and purge at the same time, only one will win.
+    pub fn try_mark_purging(&self) -> bool {
+        self.open_count
+            .compare_exchange(0, usize::MAX, Ordering::Relaxed, Ordering::Relaxed)
+            .is_ok()
+    }
 }
 
 impl Drop for FxFile {
     fn drop(&mut self) {
-        self.handle.owner().cache().remove(self.object_id());
+        self.handle.owner().cache().remove(self);
     }
 }
 
@@ -98,6 +129,14 @@ impl FxNode for FxFile {
     fn try_into_directory_entry(self: Arc<Self>) -> Option<Arc<dyn DirectoryEntry>> {
         Some(self)
     }
+
+    fn open_count_add_one(&self) {
+        assert!(self.open_count.fetch_add(1, Ordering::Relaxed) != usize::MAX);
+    }
+
+    fn open_count_sub_one(&self) {
+        assert!(self.open_count.fetch_sub(1, Ordering::Relaxed) > 0);
+    }
 }
 
 impl DirectoryEntry for FxFile {
@@ -113,19 +152,7 @@ impl DirectoryEntry for FxFile {
             send_on_open_with_error(flags, server_end, Status::NOT_FILE);
             return;
         }
-        // Since close decrements open_count, we need to increment it here as we create OpenFile
-        // since it will call close when dropped.
-        self.open_count.fetch_add(1, Ordering::Relaxed);
-        FileConnection::<FxFile>::create_connection(
-            // Note readable/writable do not override what's set in flags, they merely tell the
-            // FileConnection that it's valid to open the file readable/writable.
-            scope.clone(),
-            connection::util::OpenFile::new(self, scope),
-            flags,
-            server_end,
-            /*readable=*/ true,
-            /*writable=*/ true,
-        );
+        Self::create_connection(OpenedNode::new(self), scope, flags, server_end);
     }
 
     fn entry_info(&self) -> EntryInfo {
@@ -269,9 +296,15 @@ mod tests {
             self as fio, SeekOrigin, MODE_TYPE_FILE, OPEN_FLAG_APPEND, OPEN_FLAG_CREATE,
             OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
         },
+        fidl_fuchsia_io2::UnlinkOptions,
         fuchsia_async as fasync,
         fuchsia_zircon::Status,
+        futures::join,
         io_util::{read_file_bytes, write_file_bytes},
+        std::sync::{
+            atomic::{self, AtomicBool},
+            Arc,
+        },
         storage_device::{fake_device::FakeDevice, DeviceHolder},
     };
 
@@ -693,5 +726,64 @@ mod tests {
 
         close_file_checked(file).await;
         fixture.close().await;
+    }
+
+    #[fasync::run(10, test)]
+    async fn test_unlink_with_open_race() {
+        let fixture = Arc::new(TestFixture::new().await);
+        let fixture1 = fixture.clone();
+        let fixture2 = fixture.clone();
+        let fixture3 = fixture.clone();
+        let done = Arc::new(AtomicBool::new(false));
+        let done1 = done.clone();
+        let done2 = done.clone();
+        join!(
+            fasync::Task::spawn(async move {
+                let root = fixture1.root();
+                while !done1.load(atomic::Ordering::Relaxed) {
+                    let file = open_file_checked(
+                        &root,
+                        OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+                        MODE_TYPE_FILE,
+                        "foo",
+                    )
+                    .await;
+                    file.write(b"hello").await.expect("write failed");
+                }
+            }),
+            fasync::Task::spawn(async move {
+                let root = fixture2.root();
+                while !done2.load(atomic::Ordering::Relaxed) {
+                    let file = open_file_checked(
+                        &root,
+                        OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+                        MODE_TYPE_FILE,
+                        "foo",
+                    )
+                    .await;
+                    file.write(b"hello").await.expect("write failed");
+                }
+            }),
+            fasync::Task::spawn(async move {
+                let root = fixture3.root();
+                for _ in 0..300 {
+                    let file = open_file_checked(
+                        &root,
+                        OPEN_FLAG_CREATE | OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+                        MODE_TYPE_FILE,
+                        "foo",
+                    )
+                    .await;
+                    assert_eq!(file.close().await.expect("FIDL call failed"), 0);
+                    root.unlink2("foo", UnlinkOptions::EMPTY)
+                        .await
+                        .expect("FIDL call failed")
+                        .expect("unlink failed");
+                }
+                done.store(true, atomic::Ordering::Relaxed);
+            })
+        );
+
+        Arc::try_unwrap(fixture).unwrap_or_else(|_| panic!()).close().await;
     }
 }
