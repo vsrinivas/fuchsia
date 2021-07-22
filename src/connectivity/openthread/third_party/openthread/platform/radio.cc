@@ -262,3 +262,11 @@ otError otPlatRadioGetRegion(otInstance *a_instance, uint16_t *a_region_code)
     OT_UNUSED_VARIABLE(a_instance);
     return sRadioSpinel.GetRadioRegion(a_region_code);
 }
+
+void otPlatRadioSetMacKey(otInstance *a_instance, uint8_t a_key_id_mode, uint8_t a_key_id,
+                          const otMacKey *a_prev_key, const otMacKey *a_curr_key,
+                          const otMacKey *a_next_key) {
+  SuccessOrDie(
+      sRadioSpinel.SetMacKey(a_key_id_mode, a_key_id, *a_prev_key, *a_curr_key, *a_next_key));
+  OT_UNUSED_VARIABLE(a_instance);
+}
