@@ -10,7 +10,7 @@ use {
     async_lock::Mutex,
     async_trait::async_trait,
     errors::ffx_bail,
-    ffx_config::get,
+    ffx_config::{get, print_config},
     ffx_core::{build_info, ffx_plugin},
     ffx_doctor_args::DoctorCommand,
     fidl::endpoints::create_proxy,
@@ -21,7 +21,7 @@ use {
     std::sync::Arc,
     std::{
         collections::HashMap,
-        io::{stdout, Write},
+        io::{stdout, BufWriter, Write},
         path::PathBuf,
         process::Command,
         time::Duration,
@@ -37,6 +37,8 @@ mod recorder;
 const DEFAULT_TARGET_CONFIG: &str = "target.default";
 const DOCTOR_OUTPUT_FILENAME: &str = "doctor_output.txt";
 const PLATFORM_INFO_FILENAME: &str = "platform.json";
+const USER_CONFIG_FILENAME: &str = "user_config.txt";
+const RECORD_CONFIG_SETTING: &str = "doctor.record_config";
 
 macro_rules! success_or_continue {
     ($fut:expr, $handler:ident, $v:ident, $e:expr) => {
@@ -290,12 +292,58 @@ impl DefaultDoctorStepHandler {
     }
 }
 
+async fn get_config_permission<W: Write>(mut writer: W) -> Result<bool> {
+    match get(RECORD_CONFIG_SETTING).await {
+        Ok(true) => {
+            writeln!(
+                &mut writer,
+                "Config recording is enabled - config data will be recorded. You can change this \
+                     with `ffx config set doctor.record_config false"
+            )?;
+            return Ok(true);
+        }
+        Ok(false) => {
+            writeln!(
+                &mut writer,
+                "Config recording is disabled - config data will not be recorded. You can change \
+                     this with `ffx config set doctor.record_config true"
+            )?;
+            return Ok(false);
+        }
+        _ => (),
+    }
+
+    let permission: bool;
+    loop {
+        let mut input = String::new();
+        writeln!(&mut writer, "Do you want to include your config data `ffx config get`? [y/n]")?;
+        // TODO(fxbug.dev/81228) Use a generic read type instead of stdin
+        std::io::stdin().read_line(&mut input)?;
+        permission = match input.to_lowercase().trim() {
+            "yes" | "y" => true,
+            "no" | "n" => false,
+            _ => continue,
+        };
+        break;
+    }
+
+    writeln!(
+        &mut writer,
+        "You can permanently enable or disable including config data in doctor records with:"
+    )?;
+    writeln!(&mut writer, "`ffx config set {} [true|false]`", RECORD_CONFIG_SETTING)?;
+    fuchsia_async::Timer::new(Duration::from_millis(1000)).await;
+
+    Ok(permission)
+}
+
 fn format_err(e: &Error) -> String {
     format!("{}\n\t{:?}", FAILED_WITH_ERROR, e)
 }
 
 struct DoctorRecorderParameters {
     record: bool,
+    user_config_enabled: bool,
     log_root: Option<PathBuf>,
     output_dir: Option<PathBuf>,
     recorder: Arc<Mutex<dyn Recorder>>,
@@ -378,6 +426,19 @@ pub async fn doctor_cmd_impl<W: Write + Send + Sync + 'static>(
         }
     };
 
+    let user_config_enabled = if !record || cmd.no_config {
+        false
+    } else {
+        match get_config_permission(&mut writer).await {
+            Ok(b) => b,
+            Err(e) => {
+                writeln!(&mut writer, "Failed to get permission to record config data: {}", e)?;
+                writeln!(&mut writer, "Config data will not be recorded")?;
+                false
+            }
+        }
+    };
+
     let recorder = Arc::new(Mutex::new(DoctorRecorder::new()));
     let mut handler = DefaultDoctorStepHandler::new(recorder.clone(), Box::new(writer));
     let default_target = get(DEFAULT_TARGET_CONFIG)
@@ -393,7 +454,13 @@ pub async fn doctor_cmd_impl<W: Write + Send + Sync + 'static>(
         cmd.restart_daemon,
         build_info().build_version,
         default_target,
-        DoctorRecorderParameters { record, log_root, output_dir, recorder: recorder.clone() },
+        DoctorRecorderParameters {
+            record,
+            user_config_enabled,
+            log_root,
+            output_dir,
+            recorder: recorder.clone(),
+        },
     )
     .await?;
 
@@ -415,6 +482,13 @@ fn get_platform_info() -> Result<String> {
     });
 
     Ok(serde_json::to_string_pretty(&platform_info)?)
+}
+
+async fn get_user_config() -> Result<String> {
+    let mut writer = BufWriter::new(Vec::new());
+    print_config(&mut writer, &None).await?;
+    let config_str = String::from_utf8(writer.into_inner()?)?;
+    Ok(config_str)
 }
 
 async fn doctor(
@@ -463,6 +537,15 @@ async fn doctor(
             let mut r = record_params.recorder.lock().await;
             r.add_sources(vec![daemon_log, fe_log]);
             r.add_content(PLATFORM_INFO_FILENAME, platform_info);
+
+            if record_params.user_config_enabled {
+                let config_str = match get_user_config().await {
+                    Ok(s) => s,
+                    Err(e) => format!("Could not get config data output: {}", e),
+                };
+                r.add_content(USER_CONFIG_FILENAME, config_str);
+            }
+
             r.generate(output_dir)?
         };
 
@@ -1189,6 +1272,7 @@ mod test {
     fn record_params_no_record() -> DoctorRecorderParameters {
         DoctorRecorderParameters {
             record: false,
+            user_config_enabled: false,
             log_root: None,
             output_dir: None,
             recorder: Arc::new(Mutex::new(DisabledRecorder::new())),
@@ -1208,6 +1292,7 @@ mod test {
             recorder.clone(),
             DoctorRecorderParameters {
                 record: true,
+                user_config_enabled: false,
                 log_root: Some(root.clone()),
                 output_dir: Some(root.clone()),
                 recorder: recorder.clone(),

@@ -34,6 +34,9 @@ pub struct DoctorCommand {
     #[argh(switch, description = "generates an output zip file with logs")]
     pub record: bool,
 
+    #[argh(switch, description = "do not include the ffx configuration file")]
+    pub no_config: bool,
+
     #[argh(
         option,
         default = "3",
