@@ -46,7 +46,6 @@ if (is_kernel) {
       "object_wait.cc",
       "pager.cc",
       "port.cc",
-      "priv.cc",
       "profile.cc",
       "resource.cc",
       "socket.cc",

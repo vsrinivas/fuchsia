@@ -263,7 +263,7 @@ static zx_status_t vmo_coalesce_pages(zx_handle_t vmo_hdl, const size_t extra_by
 // zx_status_t zx_system_mexec_payload_get
 zx_status_t sys_system_mexec_payload_get(zx_handle_t resource, user_out_ptr<void> user_buffer,
                                          size_t buffer_size) {
-  if (!DebuggingSyscallsEnabled()) {
+  if (!gBootOptions->enable_debugging_syscalls) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -321,7 +321,7 @@ zx_status_t sys_system_mexec_payload_get(zx_handle_t resource, user_out_ptr<void
 // zx_status_t zx_system_mexec
 NO_ASAN zx_status_t sys_system_mexec(zx_handle_t resource, zx_handle_t kernel_vmo,
                                      zx_handle_t bootimage_vmo) {
-  if (!DebuggingSyscallsEnabled()) {
+  if (!gBootOptions->enable_debugging_syscalls) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 

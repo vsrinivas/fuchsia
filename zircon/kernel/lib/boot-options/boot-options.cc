@@ -28,7 +28,7 @@ constexpr auto kDefaultValue = MemberPtr;
 
 }  // namespace
 
-BootOptions* gBootOptions = nullptr;
+const BootOptions* gBootOptions = nullptr;
 
 using namespace std::string_view_literals;
 
@@ -230,7 +230,7 @@ void BootOptions::SetMany(std::string_view cmdline, FILE* complain) {
 #endif
 }
 
-int BootOptions::Show(std::string_view key, bool defaults, FILE* out) {
+int BootOptions::Show(std::string_view key, bool defaults, FILE* out) const {
   if (auto option = FindOption(key)) {
     switch (*option) {
 #define DEFINE_OPTION(name, type, member, init, doc)        \
@@ -245,7 +245,7 @@ int BootOptions::Show(std::string_view key, bool defaults, FILE* out) {
   return -1;
 }
 
-void BootOptions::Show(bool defaults, FILE* out) {
+void BootOptions::Show(bool defaults, FILE* out) const {
 #define DEFINE_OPTION(name, type, member, init, doc) \
   ShowOption<Index::member, type>(member, defaults, out);
 #include <lib/boot-options/options.inc>

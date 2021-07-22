@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <inttypes.h>
+#include <lib/boot-options/boot-options.h>
 #include <lib/ktrace.h>
 #include <lib/user_copy/user_ptr.h>
 #include <lib/userabi/vdso.h>
@@ -394,7 +395,7 @@ zx_status_t sys_process_write_memory(zx_handle_t handle, zx_vaddr_t vaddr,
                                      user_out_ptr<size_t> _actual) {
   LTRACEF("vaddr 0x%" PRIxPTR ", size %zu\n", vaddr, buffer_size);
 
-  if (!DebuggingSyscallsEnabled()) {
+  if (!gBootOptions->enable_debugging_syscalls) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 

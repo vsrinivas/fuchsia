@@ -17,8 +17,12 @@ int Set(int argc, const cmd_args* argv, uint32_t flags) {
     return -1;
   }
 
+  // gBootOptions is a pointer-to-const so we must const_cast in order to set options.  This is
+  // inherently dangerous and racy, and should only be done in a development context.
+  auto* boot_options = const_cast<BootOptions*>(gBootOptions);
+
   for (const auto& arg : ktl::span(argv, argc).subspan(1)) {
-    gBootOptions->SetMany(arg.str, stdout);
+    boot_options->SetMany(arg.str, stdout);
   }
 
   return 0;

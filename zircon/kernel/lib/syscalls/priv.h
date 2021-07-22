@@ -63,11 +63,6 @@ class user_out_handle final {
   HandleOwner h_;
 };
 
-// Returns |true| if debugging syscalls have been enabled (see kernel.enable-debugging-syscalls).
-bool DebuggingSyscallsEnabled();
-
-SerialDebugSyscalls SerialSyscallsEnabled();
-
 // One of these macros is invoked by kernel.inc for each syscall.
 
 // These don't have kernel entry points.

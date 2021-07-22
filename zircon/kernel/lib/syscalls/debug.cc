@@ -4,6 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <lib/boot-options/boot-options.h>
+#include <lib/boot-options/types.h>
 #include <lib/console.h>
 #include <lib/debuglog.h>
 #include <lib/io.h>
@@ -26,7 +28,6 @@
 #include <object/resource.h>
 #include <platform/debug.h>
 
-#include "lib/boot-options/types.h"
 #include "priv.h"
 
 #define LOCAL_TRACE 0
@@ -38,7 +39,7 @@ zx_status_t sys_debug_read(zx_handle_t handle, user_out_ptr<char> ptr, size_t ma
                            user_out_ptr<size_t> len) {
   LTRACEF("ptr %p\n", ptr.get());
 
-  if (SerialSyscallsEnabled() != SerialDebugSyscalls::kEnabled) {
+  if (gBootOptions->enable_serial_syscalls != SerialDebugSyscalls::kEnabled) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -81,8 +82,8 @@ zx_status_t sys_debug_read(zx_handle_t handle, user_out_ptr<char> ptr, size_t ma
 zx_status_t sys_debug_write(user_in_ptr<const char> ptr, size_t len) {
   LTRACEF("ptr %p, len %zu\n", ptr.get(), len);
 
-  if (SerialSyscallsEnabled() != SerialDebugSyscalls::kEnabled &&
-      SerialSyscallsEnabled() != SerialDebugSyscalls::kOutputOnly) {
+  if (gBootOptions->enable_serial_syscalls != SerialDebugSyscalls::kEnabled &&
+      gBootOptions->enable_serial_syscalls != SerialDebugSyscalls::kOutputOnly) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -108,7 +109,7 @@ zx_status_t sys_debug_write(user_in_ptr<const char> ptr, size_t len) {
 zx_status_t sys_debug_send_command(zx_handle_t handle, user_in_ptr<const char> ptr, size_t len) {
   LTRACEF("ptr %p, len %zu\n", ptr.get(), len);
 
-  if (!DebuggingSyscallsEnabled()) {
+  if (!gBootOptions->enable_debugging_syscalls) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -134,7 +135,7 @@ zx_status_t sys_debug_send_command(zx_handle_t handle, user_in_ptr<const char> p
 zx_status_t sys_ktrace_read(zx_handle_t handle, user_out_ptr<void> _data, uint32_t offset,
                             size_t len, user_out_ptr<size_t> _actual) {
   // See also ktrace_init() in zircon/kernel/lib/ktrace/ktrace.cc.
-  if (!DebuggingSyscallsEnabled()) {
+  if (!gBootOptions->enable_debugging_syscalls) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -155,7 +156,7 @@ zx_status_t sys_ktrace_read(zx_handle_t handle, user_out_ptr<void> _data, uint32
 zx_status_t sys_ktrace_control(zx_handle_t handle, uint32_t action, uint32_t options,
                                user_inout_ptr<void> _ptr) {
   // See also ktrace_init() in zircon/kernel/lib/ktrace/ktrace.cc.
-  if (!DebuggingSyscallsEnabled()) {
+  if (!gBootOptions->enable_debugging_syscalls) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -181,7 +182,7 @@ zx_status_t sys_ktrace_control(zx_handle_t handle, uint32_t action, uint32_t opt
 // zx_status_t zx_ktrace_write
 zx_status_t sys_ktrace_write(zx_handle_t handle, uint32_t event_id, uint32_t arg0, uint32_t arg1) {
   // See also ktrace_init() in zircon/kernel/lib/ktrace/ktrace.cc.
-  if (!DebuggingSyscallsEnabled()) {
+  if (!gBootOptions->enable_debugging_syscalls) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -202,7 +203,7 @@ zx_status_t sys_ktrace_write(zx_handle_t handle, uint32_t event_id, uint32_t arg
 // zx_status_t zx_mtrace_control
 zx_status_t sys_mtrace_control(zx_handle_t handle, uint32_t kind, uint32_t action, uint32_t options,
                                user_inout_ptr<void> ptr, size_t size) {
-  if (!DebuggingSyscallsEnabled()) {
+  if (!gBootOptions->enable_debugging_syscalls) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 

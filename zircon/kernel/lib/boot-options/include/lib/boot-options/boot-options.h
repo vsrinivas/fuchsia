@@ -35,7 +35,7 @@ struct BootOptions;  // Declared below.
 // handed off to the kernel proper.  A global by this name exists both in
 // physboot with the physical address pointer and in the kernel with the
 // virtual address pointer.
-extern BootOptions* gBootOptions;
+extern const BootOptions* gBootOptions;
 
 struct BootOptions {
   // General string values get this done to each character.
@@ -86,10 +86,10 @@ struct BootOptions {
   void SetMany(std::string_view cmdline, FILE* complain = nullptr);
 
   // Display the key, its value, and its default.
-  int Show(std::string_view key, bool defaults = true, FILE* out = stdout);
+  int Show(std::string_view key, bool defaults = true, FILE* out = stdout) const;
 
   // Display all keys, values, and defaults.
-  void Show(bool defaults = true, FILE* out = stdout);
+  void Show(bool defaults = true, FILE* out = stdout) const;
 
   // Write out "key=value".
   template <typename T>
