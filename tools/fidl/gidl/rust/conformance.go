@@ -90,6 +90,7 @@ fn test_{{ .Name }}_decode() {
 	// Forget handles before dropping the expected value, to avoid double closing them.
 	struct ForgetHandles({{ .ValueType }});
 	impl std::ops::Drop for ForgetHandles {
+		#[allow(unused_parens)]
 		fn drop(&mut self) {
 			{{ .ForgetHandles }}
 		}

@@ -13,9 +13,8 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
-// Returns Rust code that resets all handles in expr (a variable or an field
-// access expression like "foo.bar.baz") to the invalid handle without closing
-// the original handles.
+// Returns Rust code that resets all handles in expr (an expression of type
+// "&mut _") to the invalid handle without closing the original handles.
 func buildForgetHandles(expr string, value gidlir.Value, decl gidlmixer.Declaration) string {
 	var b forgetHandleBuilder
 	b.visit(expr, value, decl)
@@ -33,7 +32,7 @@ func (b *forgetHandleBuilder) write(format string, args ...interface{}) {
 func (b *forgetHandleBuilder) visit(expr string, value gidlir.Value, decl gidlmixer.Declaration) {
 	switch value := value.(type) {
 	case gidlir.Handle, gidlir.HandleWithRights:
-		b.write("std::mem::forget(std::mem::replace(&mut %s, Handle::invalid().into()));\n", expr)
+		b.write("std::mem::forget(std::mem::replace(%s, Handle::invalid().into()));\n", expr)
 	case gidlir.Record:
 		decl := decl.(gidlmixer.RecordDeclaration)
 		switch decl.(type) {
@@ -43,7 +42,7 @@ func (b *forgetHandleBuilder) visit(expr string, value gidlir.Value, decl gidlmi
 				if !ok {
 					panic(fmt.Sprintf("field %s not found", field.Key.Name))
 				}
-				b.visit(fmt.Sprintf("%s.%s", expr, field.Key.Name), field.Value, fieldDecl)
+				b.visit(fmt.Sprintf("(&mut %s.%s)", expr, field.Key.Name), field.Value, fieldDecl)
 			}
 		case *gidlmixer.TableDecl:
 			hasUnknown := false
@@ -56,7 +55,7 @@ func (b *forgetHandleBuilder) visit(expr string, value gidlir.Value, decl gidlmi
 				if !ok {
 					panic(fmt.Sprintf("field %s not found", field.Key.Name))
 				}
-				b.visit(fmt.Sprintf("%s.%s.unwrap()", expr, field.Key.Name), field.Value, fieldDecl)
+				b.visit(fmt.Sprintf("%s.%s.as_mut().unwrap()", expr, field.Key.Name), field.Value, fieldDecl)
 			}
 			if decl.IsResourceType() && hasUnknown {
 				b.write(`for data in %s.unknown_data.as_mut().unwrap().values_mut() {
@@ -82,7 +81,7 @@ func (b *forgetHandleBuilder) visit(expr string, value gidlir.Value, decl gidlmi
 				if inner.Len() == 0 {
 					break
 				}
-				b.write(`match &mut %s {
+				b.write(`match %s {
 	%s::%s(x) => {
 		%s
 	}
@@ -95,7 +94,7 @@ func (b *forgetHandleBuilder) visit(expr string, value gidlir.Value, decl gidlmi
 					if !decl.IsResourceType() {
 						panic("non-resource type should not have unknown handles")
 					}
-					b.write(`match &mut %s {
+					b.write(`match %s {
 	#[allow(deprecated)]
 	%s::__Unknown { data, .. } => {
 		for h in data.handles.drain(..) { std::mem::forget(h); }
@@ -109,7 +108,7 @@ func (b *forgetHandleBuilder) visit(expr string, value gidlir.Value, decl gidlmi
 	case []gidlir.Value:
 		elemDecl := decl.(gidlmixer.ListDeclaration).Elem()
 		for i, elem := range value {
-			b.visit(fmt.Sprintf("%s[%d]", expr, i), elem, elemDecl)
+			b.visit(fmt.Sprintf("(&mut %s[%d])", expr, i), elem, elemDecl)
 		}
 	}
 }
