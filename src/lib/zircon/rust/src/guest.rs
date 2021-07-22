@@ -7,6 +7,7 @@ use crate::{AsHandleRef, Handle, HandleBased, HandleRef, Port, Status};
 use fuchsia_zircon_sys as sys;
 
 /// Wrapper type for guest physical addresses.
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[repr(transparent)]
 pub struct GPAddr(pub usize);
 
