@@ -14,7 +14,7 @@
 #include <zircon/syscalls/exception.h>
 #include <zircon/types.h>
 
-class ExceptionHandler {
+class ExceptionHandler : public fidl::WireAsyncEventHandler<fuchsia_exception::Handler> {
  public:
   ExceptionHandler(async_dispatcher_t* dispatcher, zx_handle_t exception_handler_svc);
 
@@ -29,7 +29,7 @@ class ExceptionHandler {
   // Send |server_endpoit_| to the server of fuchsia.exception.Handler.
   void ConnectToServer();
 
-  void OnUnbind(fidl::UnbindInfo info);
+  void on_fidl_error(fidl::UnbindInfo info) override;
 
   async_dispatcher_t* dispatcher_;
   zx_handle_t exception_handler_svc_;
@@ -37,7 +37,7 @@ class ExceptionHandler {
   // Becomes true if exceptions cannot be sent to the exception handling service. Once we reach that
   // state, we will never handle exceptions again.
   bool drop_exceptions_;
-  fidl::Client<fuchsia_exception::Handler> connection_;
+  fidl::WireClient<fuchsia_exception::Handler> connection_;
 
   // The other endpoint of |connection_| before it has been sent to the server.
   fidl::ServerEnd<fuchsia_exception::Handler> server_endpoint_;

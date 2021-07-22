@@ -34,26 +34,15 @@ void ExceptionHandler::SetUpClient() {
     return;
   }
 
-  class EventHandler : public fidl::WireAsyncEventHandler<fuchsia_exception::Handler> {
-   public:
-    EventHandler(ExceptionHandler* handler) : handler_(handler) {}
-
-    void Unbound(fidl::UnbindInfo info) { handler_->OnUnbind(info); }
-
-   private:
-    ExceptionHandler* handler_;
-  };
-
-  connection_ = fidl::Client<fuchsia_exception::Handler>();
-  connection_.Bind(std::move(exception_handler_endpoints->client), dispatcher_,
-                   std::make_shared<EventHandler>(this));
+  connection_ = {};
+  connection_.Bind(std::move(exception_handler_endpoints->client), dispatcher_, this);
   server_endpoint_ = std::move(exception_handler_endpoints->server);
 }
 
-void ExceptionHandler::OnUnbind(const fidl::UnbindInfo info) {
-  // If the unbind was not an error, don't reconnect and stop sending exceptions to
-  // fuchsia.exception.Handler. This should only happen in tests.
-  if (info.status() == ZX_OK || info.status() == ZX_ERR_CANCELED) {
+void ExceptionHandler::on_fidl_error(const fidl::UnbindInfo info) {
+  // If the unbind was only due to dispatcher shutdown, don't reconnect and stop sending exceptions
+  // to fuchsia.exception.Handler. This should only happen in tests.
+  if (info.reason() == fidl::Reason::kDispatcherError && info.status() == ZX_ERR_CANCELED) {
     drop_exceptions_ = true;
     return;
   }
