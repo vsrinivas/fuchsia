@@ -78,6 +78,7 @@ sampler_configuration("production_sampler") {
     "config/ftl.json",
     "config/fvm.json",
     "config/netstack.json",
+    "config/sdmmc.json",
     "config/sysmem.json",
     "config/system-update-committer.json",
     "config/connectivity-wlan.json",
