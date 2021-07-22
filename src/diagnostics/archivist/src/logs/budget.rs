@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{archivist::ComponentRemover, logs::container::LogsArtifactsContainer};
+use crate::{container::ComponentIdentity, logs::container::LogsArtifactsContainer};
+use futures::channel::mpsc;
 use parking_lot::Mutex;
 use std::sync::{Arc, Weak};
-use tracing::debug;
+use tracing::{debug, error};
 
 #[derive(Clone)]
 pub struct BudgetManager {
@@ -19,13 +20,13 @@ impl BudgetManager {
                 capacity,
                 current: 0,
                 containers: vec![],
-                remover: Default::default(),
+                remover: None,
             })),
         }
     }
 
-    pub fn set_remover(&self, remover: ComponentRemover) {
-        self.state.lock().remover = remover;
+    pub fn set_remover(&self, remover: mpsc::UnboundedSender<Arc<ComponentIdentity>>) {
+        self.state.lock().remover = Some(remover);
     }
 
     pub fn add_container(&self, container: Arc<LogsArtifactsContainer>) {
@@ -40,7 +41,7 @@ impl BudgetManager {
 struct BudgetState {
     current: usize,
     capacity: usize,
-    remover: ComponentRemover,
+    remover: Option<mpsc::UnboundedSender<Arc<ComponentIdentity>>>,
 
     /// Log containers are stored in a `Vec` which is regularly sorted instead of a `BinaryHeap`
     /// because `BinaryHeap`s are broken with interior mutability in the contained type which would
@@ -84,9 +85,12 @@ impl BudgetState {
             if !self.containers[i].should_retain() {
                 let container = self.containers.remove(i);
                 container.terminate();
-                let identity = &container.identity;
-                debug!(%identity, "Removing now that we've popped the last message.");
-                self.remover.maybe_remove_component(identity);
+                debug!(identity = %container.identity, "Removing now that we've popped the last message.");
+                if let Some(remover) = &self.remover {
+                    remover.unbounded_send(container.identity.clone()).unwrap_or_else(|err| {
+                        error!(%err, identity = %container.identity, "Failed to send identity for removal");
+                    });
+                }
             } else {
                 i += 1;
             }
