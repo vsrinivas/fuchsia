@@ -3,7 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::{get_missing_blobs, verify_fetches_succeed, write_blob, write_meta_far, TestEnv},
+    crate::{
+        get_missing_blobs, replace_retained_packages, verify_fetches_succeed, write_blob,
+        write_meta_far, write_needed_blobs, TestEnv,
+    },
     blobfs_ramdisk::BlobfsRamdisk,
     fidl_fuchsia_io::{DirectoryMarker, FileMarker},
     fidl_fuchsia_pkg::{BlobInfo, NeededBlobsMarker, PackageCacheMarker},
@@ -182,7 +185,7 @@ async fn dynamic_index_inital_state() {
     assert_data_tree!(
         hierarchy,
         root: contains {
-            "index": {
+            "index": contains {
                 "dynamic" : {}
             }
         }
@@ -219,7 +222,7 @@ async fn dynamic_index_with_cache_packages() {
     assert_data_tree!(
         hierarchy,
         root: contains {
-            "index": {
+            "index": contains {
                 "dynamic": {
                     cache_package.meta_far_merkle_root().to_string() => {
                         "state" : "active",
@@ -266,7 +269,7 @@ async fn dynamic_index_needed_blobs() {
     assert_data_tree!(
         hierarchy,
         root: contains {
-            "index": {
+            "index": contains {
                 "dynamic": {
                     pkg.meta_far_merkle_root().to_string() => {
                         "state": "pending",
@@ -280,7 +283,7 @@ async fn dynamic_index_needed_blobs() {
     let () = write_blob(&meta_far.contents, meta_blob).await.unwrap();
     env.wait_for_inspect_state(tree_assertion!(
         "root": contains {
-            "index": {
+            "index": contains {
                 "dynamic": contains {
                     pkg.meta_far_merkle_root().to_string() => contains {
                         "state": "with_meta_far",
@@ -297,7 +300,7 @@ async fn dynamic_index_needed_blobs() {
     assert_data_tree!(
         hierarchy,
         root: contains {
-            "index": {
+            "index": contains {
                 "dynamic": {
                     pkg.meta_far_merkle_root().to_string() => {
                         "state": "with_meta_far",
@@ -318,7 +321,7 @@ async fn dynamic_index_needed_blobs() {
     assert_data_tree!(
         hierarchy,
         root: contains {
-            "index": {
+            "index": contains {
                 "dynamic": {
                     pkg.meta_far_merkle_root().to_string() => {
                         "state": "active",
@@ -365,7 +368,7 @@ async fn dynamic_index_package_hash_update() {
     assert_data_tree!(
         hierarchy,
         root: contains {
-            "index": {
+            "index": contains {
                 "dynamic": {
                     pkg.meta_far_merkle_root().to_string() => {
                         "state": "active",
@@ -394,7 +397,7 @@ async fn dynamic_index_package_hash_update() {
     assert_data_tree!(
         hierarchy,
         root: contains {
-            "index": {
+            "index": contains {
                 "dynamic": {
                     updated_hash => {
                         "state": "active",
@@ -577,8 +580,8 @@ async fn package_cache_concurrent_gets() {
     let package2 = PackageBuilder::new("b-blob").build().await.unwrap();
     let env = TestEnv::builder().build().await;
 
-    let mut meta_blob_info =
-        BlobInfo { blob_id: BlobId::from(*package.meta_far_merkle_root()).into(), length: 42 };
+    let blob_id = BlobId::from(*package.meta_far_merkle_root());
+    let mut meta_blob_info = BlobInfo { blob_id: blob_id.into(), length: 42 };
 
     let (_needed_blobs, needed_blobs_server_end) =
         fidl::endpoints::create_proxy::<NeededBlobsMarker>().unwrap();
@@ -602,8 +605,8 @@ async fn package_cache_concurrent_gets() {
         .connect_to_protocol_at_exposed_dir::<PackageCacheMarker>()
         .expect("connect to package cache");
 
-    let mut meta_blob_info2 =
-        BlobInfo { blob_id: BlobId::from(*package2.meta_far_merkle_root()).into(), length: 7 };
+    let blob_id2 = BlobId::from(*package2.meta_far_merkle_root());
+    let mut meta_blob_info2 = BlobInfo { blob_id: blob_id2.into(), length: 7 };
     let (_needed_blobs2, needed_blobs_server_end2) =
         fidl::endpoints::create_proxy::<NeededBlobsMarker>().unwrap();
     let (_dir, dir_server_end2) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
@@ -662,4 +665,267 @@ async fn package_cache_concurrent_gets() {
             ("c236d12eece5f32d66fa0cd102e5540e76c5e894b4443ded8d443353adf571a7", 42u64)
         ]
     );
+    env.stop().await;
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn retained_index_inital_state() {
+    let env = TestEnv::builder().build().await;
+
+    let hierarchy = env.inspect_hierarchy().await;
+    assert_data_tree!(
+        hierarchy,
+        root: contains {
+            "index": contains {
+                "retained" : {
+                    "generation" : 0u64,
+                    "last-set" : AnyProperty,
+                    "entries" : {},
+                }
+            }
+        }
+    );
+    env.stop().await;
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn retained_index_updated_and_persisted() {
+    let env = TestEnv::builder().build().await;
+    let packages = vec![
+        PackageBuilder::new("pkg-a").build().await.unwrap(),
+        PackageBuilder::new("multi-pkg-a")
+            .add_resource_at("bin/foo", "a-bin-foo".as_bytes())
+            .add_resource_at("data/content", "a-data-content".as_bytes())
+            .build()
+            .await
+            .unwrap(),
+    ];
+    let blob_ids =
+        packages.iter().map(|pkg| BlobId::from(*pkg.meta_far_merkle_root())).collect::<Vec<_>>();
+
+    replace_retained_packages(&env.proxies.retained_packages, &blob_ids.as_slice()).await;
+
+    let mut meta_blob_info = BlobInfo { blob_id: blob_ids[0].into(), length: 0 };
+
+    let (needed_blobs, needed_blobs_server_end) =
+        fidl::endpoints::create_proxy::<NeededBlobsMarker>().unwrap();
+    let (_dir, dir_server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+    let get_fut = env
+        .proxies
+        .package_cache
+        .get(
+            &mut meta_blob_info,
+            &mut std::iter::empty(),
+            needed_blobs_server_end,
+            Some(dir_server_end),
+        )
+        .map_ok(|res| res.map_err(zx::Status::from_raw));
+
+    let hierarchy = env.inspect_hierarchy().await;
+    assert_data_tree!(
+        hierarchy,
+        root: contains {
+            "index": contains {
+                "retained" : {
+                    "generation" : 1u64,
+                    "last-set" : AnyProperty,
+                    "entries" : {
+                        blob_ids[0].to_string() => {
+                            "last-set": AnyProperty,
+                            "state": "need-meta-far",
+                        },
+                        blob_ids[1].to_string() => {
+                            "last-set": AnyProperty,
+                            "state": "need-meta-far",
+                        }
+                    },
+                }
+            }
+        }
+    );
+
+    let (meta_far, _contents) = packages[0].contents();
+    write_meta_far(&needed_blobs, meta_far).await;
+
+    // Writing meta far triggers index update, however that's done concurrently
+    // with the test, and there's no clear signal available through FIDL API.
+
+    env.wait_for_inspect_state(tree_assertion!(
+        root: contains {
+            "index": contains {
+                "retained" : {
+                    "generation" : 1u64,
+                    "last-set" : AnyProperty,
+                    "entries" : contains {
+                        blob_ids[0].to_string() => {
+                            "last-set": AnyProperty,
+                            "state": "known",
+                            "blobs-count": 0u64
+                        }
+                    },
+                }
+            }
+        }
+    ))
+    .await;
+
+    let mut meta_blob_info2 =
+        BlobInfo { blob_id: BlobId::from(*packages[1].meta_far_merkle_root()).into(), length: 0 };
+
+    let (needed_blobs2, needed_blobs_server_end2) =
+        fidl::endpoints::create_proxy::<NeededBlobsMarker>().unwrap();
+    let (_dir2, dir_server_end2) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+    let get_fut2 = env
+        .proxies
+        .package_cache
+        .get(
+            &mut meta_blob_info2,
+            &mut std::iter::empty(),
+            needed_blobs_server_end2,
+            Some(dir_server_end2),
+        )
+        .map_ok(|res| res.map_err(zx::Status::from_raw));
+
+    let (meta_far2, _contents2) = packages[1].contents();
+    write_meta_far(&needed_blobs2, meta_far2).await;
+
+    // Writing meta far triggers index update, however that's done concurrently
+    // with the test, and there's no clear signal available through FIDL API.
+
+    env.wait_for_inspect_state(tree_assertion!(
+        root: contains {
+            "index": contains {
+                "retained" : {
+                    "generation" : 1u64,
+                    "last-set" : AnyProperty,
+                    "entries" : contains {
+                        blob_ids[1].to_string() => {
+                            "last-set": AnyProperty,
+                            "state": "known",
+                            "blobs-count": 2u64
+                        },
+                    },
+                }
+            }
+        }
+    ))
+    .await;
+
+    drop(needed_blobs);
+    drop(needed_blobs2);
+    assert_matches!(get_fut.await.unwrap(), Err(_));
+    assert_matches!(get_fut2.await.unwrap(), Err(_));
+
+    let hierarchy = env.inspect_hierarchy().await;
+    assert_data_tree!(
+        hierarchy,
+        root: contains {
+            "index": contains {
+                "retained" : {
+                    "generation" : 1u64,
+                    "last-set" : AnyProperty,
+                    "entries" : {
+                        blob_ids[0].to_string() => {
+                            "last-set": AnyProperty,
+                            "state": "known",
+                            "blobs-count": 0u64
+                        },
+                        blob_ids[1].to_string() => {
+                            "last-set": AnyProperty,
+                            "state": "known",
+                            "blobs-count": 2u64
+                        },
+                    },
+                }
+            }
+        }
+    );
+    env.stop().await;
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn index_updated_mid_package_write() {
+    let env = TestEnv::builder().build().await;
+    let package = PackageBuilder::new("multi-pkg-a")
+        .add_resource_at("bin/foo", "a-bin-foo".as_bytes())
+        .add_resource_at("data/content", "a-data-content".as_bytes())
+        .build()
+        .await
+        .unwrap();
+    let blob_id = BlobId::from(*package.meta_far_merkle_root());
+    let mut meta_blob_info = BlobInfo { blob_id: blob_id.into(), length: 0 };
+
+    let (needed_blobs, needed_blobs_server_end) =
+        fidl::endpoints::create_proxy::<NeededBlobsMarker>().unwrap();
+    let (dir, dir_server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+    let get_fut = env
+        .proxies
+        .package_cache
+        .get(
+            &mut meta_blob_info,
+            &mut std::iter::empty(),
+            needed_blobs_server_end,
+            Some(dir_server_end),
+        )
+        .map_ok(|res| res.map_err(zx::Status::from_raw));
+
+    let (meta_far, contents) = package.contents();
+    write_meta_far(&needed_blobs, meta_far).await;
+
+    replace_retained_packages(&env.proxies.retained_packages, &vec![blob_id.into()]).await;
+
+    // Writing meta far triggers index update, however that's done concurrently
+    // with the test, and there's no clear signal available through FIDL API.
+
+    env.wait_for_inspect_state(tree_assertion!(
+        root: contains {
+            "index": contains {
+                "retained" : {
+                    "generation" : 1u64,
+                    "last-set" : AnyProperty,
+                    "entries" : {
+                        blob_id.to_string() => {
+                            "last-set": AnyProperty,
+                            "state": "known",
+                            "blobs-count": 2u64,
+                        },
+                    },
+                }
+            }
+        }
+    ))
+    .await;
+
+    write_needed_blobs(&needed_blobs, contents).await;
+    let () = get_fut.await.unwrap().unwrap();
+    let () = package.verify_contents(&dir).await.unwrap();
+
+    let hierarchy = env.inspect_hierarchy().await;
+    assert_data_tree!(
+        hierarchy,
+        root: contains {
+            "index": {
+                "dynamic": {
+                    blob_id.to_string() => {
+                        "state" : "active",
+                        "time": AnyProperty,
+                        "required_blobs": 2u64,
+                        "path": "multi-pkg-a/0",
+                    },
+                },
+                "retained" : {
+                    "generation" : 1u64,
+                    "last-set" : AnyProperty,
+                    "entries" : {
+                        blob_id.to_string() => {
+                            "last-set": AnyProperty,
+                            "state": "known",
+                            "blobs-count": 2u64,
+                        },
+                    },
+                }
+            }
+        }
+    );
+    env.stop().await;
 }

@@ -12,10 +12,11 @@ use {
     fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, FileMarker, FileProxy},
     fidl_fuchsia_io2::Operations,
     fidl_fuchsia_pkg::{
-        BlobInfo, BlobInfoIteratorMarker, NeededBlobsMarker, NeededBlobsProxy, PackageCacheMarker,
-        PackageCacheProxy, RetainedPackagesMarker, RetainedPackagesProxy,
+        BlobIdIteratorMarker, BlobInfo, BlobInfoIteratorMarker, NeededBlobsMarker,
+        NeededBlobsProxy, PackageCacheMarker, PackageCacheProxy, RetainedPackagesMarker,
+        RetainedPackagesProxy,
     },
-    fidl_fuchsia_pkg_ext::BlobId,
+    fidl_fuchsia_pkg_ext::{serve_fidl_iterator, BlobId},
     fidl_fuchsia_space::{ManagerMarker as SpaceManagerMarker, ManagerProxy as SpaceManagerProxy},
     fidl_fuchsia_update::{CommitStatusProviderMarker, CommitStatusProviderProxy},
     fuchsia_async as fasync,
@@ -218,6 +219,19 @@ async fn verify_package_cached(proxy: &PackageCacheProxy, pkg: &Package) {
 
     // `dir` is resolved to package directory.
     let () = pkg.verify_contents(&dir).await.unwrap();
+}
+
+pub async fn replace_retained_packages(
+    proxy: &RetainedPackagesProxy,
+    packages: &[fidl_fuchsia_pkg_ext::BlobId],
+) {
+    let packages = packages.iter().cloned().map(Into::into).collect::<Vec<_>>();
+    let (iterator_client_end, iterator_stream) =
+        fidl::endpoints::create_request_stream::<BlobIdIteratorMarker>().unwrap();
+    let serve_iterator_fut = serve_fidl_iterator(packages, iterator_stream);
+    let (replace_retained_result, ()) =
+        futures::join!(proxy.replace(iterator_client_end), serve_iterator_fut);
+    assert_matches!(replace_retained_result, Ok(()));
 }
 
 async fn verify_packages_cached(proxy: &PackageCacheProxy, packages: &[Package]) {

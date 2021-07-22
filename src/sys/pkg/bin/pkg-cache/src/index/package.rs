@@ -41,7 +41,7 @@ impl PackageIndex {
     pub fn new(node: finspect::Node) -> Self {
         Self {
             dynamic: DynamicIndex::new(node.create_child("dynamic")),
-            retained: RetainedIndex::new(),
+            retained: RetainedIndex::new(node.create_child("retained")),
             node,
         }
     }
@@ -151,8 +151,6 @@ pub async fn fulfill_meta_far_blob(
 }
 
 /// Replaces the retained index with one that tracks the given meta far hashes.
-// TODO(fxbug.dev/77363) use this, remove dead_code allow
-#[allow(dead_code)]
 pub async fn set_retained_index(
     index: &Arc<Mutex<PackageIndex>>,
     blobfs: &blobfs::Client,

@@ -4,31 +4,19 @@
 
 use {
     crate::{
-        verify_fetches_succeed, verify_packages_cached, write_meta_far, write_needed_blobs, TestEnv,
+        replace_retained_packages, verify_fetches_succeed, verify_packages_cached, write_meta_far,
+        write_needed_blobs, TestEnv,
     },
     blobfs_ramdisk::BlobfsRamdisk,
     fidl_fuchsia_io::DirectoryMarker,
-    fidl_fuchsia_pkg::{BlobIdIteratorMarker, BlobInfo, NeededBlobsMarker, RetainedPackagesProxy},
-    fidl_fuchsia_pkg_ext::{serve_fidl_iterator, BlobId},
+    fidl_fuchsia_pkg::{BlobInfo, NeededBlobsMarker},
+    fidl_fuchsia_pkg_ext::BlobId,
     fuchsia_pkg_testing::{PackageBuilder, SystemImageBuilder},
     fuchsia_zircon as zx,
     futures::TryFutureExt,
     matches::assert_matches,
     pkgfs_ramdisk::PkgfsRamdisk,
 };
-
-async fn replace_retained_packages(
-    proxy: &RetainedPackagesProxy,
-    packages: Vec<fidl_fuchsia_pkg::BlobId>,
-) {
-    let (iterator_client_end, iterator_stream) =
-        fidl::endpoints::create_request_stream::<BlobIdIteratorMarker>().unwrap();
-    let serve_iterator_fut = serve_fidl_iterator(packages, iterator_stream);
-    let (replace_retained_result, serve_iterator_result) =
-        futures::join!(proxy.replace(iterator_client_end), serve_iterator_fut);
-    assert_matches!(serve_iterator_result, ());
-    assert_matches!(replace_retained_result, Ok(()));
-}
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn cached_packages_are_retained() {
@@ -69,10 +57,10 @@ async fn cached_packages_are_retained() {
     let env = TestEnv::builder().pkgfs(pkgfs).build().await;
 
     let blob_ids =
-        packages.iter().map(|pkg| BlobId::from(*pkg.meta_far_merkle_root()).into()).collect();
+        packages.iter().map(|pkg| BlobId::from(*pkg.meta_far_merkle_root())).collect::<Vec<_>>();
 
     // Mark packages as retained.
-    replace_retained_packages(&env.proxies.retained_packages, blob_ids).await;
+    replace_retained_packages(&env.proxies.retained_packages, &blob_ids.as_slice()).await;
 
     assert_matches!(env.proxies.space_manager.gc().await, Ok(Ok(())));
 
@@ -102,8 +90,7 @@ async fn packages_are_retained_gc_mid_process() {
     let blob_id = BlobId::from(*package.meta_far_merkle_root());
 
     // Start installing a package (write the meta far).
-    let mut meta_blob_info =
-        BlobInfo { blob_id: BlobId::from(*package.meta_far_merkle_root()).into(), length: 0 };
+    let mut meta_blob_info = BlobInfo { blob_id: blob_id.into(), length: 0 };
 
     let (needed_blobs, needed_blobs_server_end) =
         fidl::endpoints::create_proxy::<NeededBlobsMarker>().unwrap();
@@ -123,7 +110,7 @@ async fn packages_are_retained_gc_mid_process() {
     write_meta_far(&needed_blobs, meta_far).await;
 
     // Add the packages as retained.
-    replace_retained_packages(&env.proxies.retained_packages, vec![blob_id.into()]).await;
+    replace_retained_packages(&env.proxies.retained_packages, &vec![blob_id.into()]).await;
 
     // Clear the retained index and GC.
     assert_matches!(env.proxies.retained_packages.clear().await, Ok(()));
@@ -153,10 +140,10 @@ async fn cached_and_released_packages_are_removed() {
             .unwrap(),
     ];
     let blob_ids =
-        packages.iter().map(|pkg| BlobId::from(*pkg.meta_far_merkle_root()).into()).collect();
+        packages.iter().map(|pkg| BlobId::from(*pkg.meta_far_merkle_root())).collect::<Vec<_>>();
 
     // Mark packages as retained.
-    replace_retained_packages(&env.proxies.retained_packages, blob_ids).await;
+    replace_retained_packages(&env.proxies.retained_packages, &blob_ids.as_slice()).await;
 
     // Cache the packages.
     let () = verify_fetches_succeed(&env.proxies.package_cache, &packages).await;
