@@ -42,10 +42,10 @@ use {
         prelude::*,
     },
     io_util,
-    parking_lot::{Mutex, RwLock},
+    parking_lot::RwLock,
     std::{
         path::{Path, PathBuf},
-        sync::{Arc, Weak},
+        sync::Arc,
     },
     tracing::{debug, error, info, warn},
 };
@@ -60,7 +60,7 @@ pub struct LogOpts {
 /// either calling or not calling methods on the builder like `install_controller_service`.
 pub struct ArchivistBuilder {
     /// Archive state, including the diagnostics repo which currently stores all logs.
-    state: ArchivistState,
+    archivist: Archivist,
 
     /// True if pipeline exists.
     pipeline_exists: bool,
@@ -204,7 +204,7 @@ impl ArchivistBuilder {
         // TODO(fxbug.dev/55736): Refactor this code so that we don't store
         // diagnostics data N times if we have N pipelines. We should be
         // storing a single copy regardless of the number of pipelines.
-        let archivist_state = ArchivistState::new(
+        let archivist = Archivist::new(
             archivist_configuration,
             vec![
                 all_access_pipeline.clone(),
@@ -261,7 +261,7 @@ impl ArchivistBuilder {
         let events_node = diagnostics::root().create_child("event_stats");
         Ok(Self {
             fs,
-            state: archivist_state,
+            archivist,
             log_receiver,
             log_sender,
             listen_receiver,
@@ -275,7 +275,7 @@ impl ArchivistBuilder {
     }
 
     pub fn data_repo(&self) -> &DataRepo {
-        &self.state.diagnostics_repo
+        &self.archivist.diagnostics_repo
     }
 
     pub fn log_sender(&self) -> &mpsc::UnboundedSender<Task<()>> {
@@ -434,11 +434,20 @@ impl ArchivistBuilder {
         let run_outgoing = self.fs.collect::<()>();
         // collect events.
         let events = self.event_source_registry.take_stream().await.expect("Created event stream");
-        let logs_budget = self.state.logs_budget.handle();
+
+        let (snd, rcv) = mpsc::unbounded::<Arc<ComponentIdentity>>();
+        self.archivist.logs_budget.set_remover(snd);
+        let component_removal_task = fasync::Task::spawn(Self::process_removal_of_components(
+            rcv,
+            data_repo.clone(),
+            self.archivist.diagnostics_pipelines.clone(),
+        ));
+
+        let logs_budget = self.archivist.logs_budget.handle();
         let run_event_collection_task = fasync::Task::spawn(Self::collect_component_events(
             events,
             self.log_sender.clone(),
-            self.state,
+            self.archivist,
             self.pipeline_exists,
         ));
 
@@ -453,6 +462,8 @@ impl ArchivistBuilder {
             debug!("Flushing to listeners.");
             listen_receiver.for_each_concurrent(None, |rx| async move { rx.await }).await;
             debug!("Log listeners and batch iterators stopped.");
+            component_removal_task.cancel().await;
+            debug!("Not processing more component removal requests.");
         };
 
         let (abortable_fut, abort_handle) = abortable(run_outgoing);
@@ -478,10 +489,20 @@ impl ArchivistBuilder {
         future::join3(abortable_fut, stop_fut, all_msg).map(|_| Ok(())).await
     }
 
+    async fn process_removal_of_components(
+        mut removal_requests: mpsc::UnboundedReceiver<Arc<ComponentIdentity>>,
+        diagnostics_repo: DataRepo,
+        diagnostics_pipelines: Arc<Vec<Arc<RwLock<Pipeline>>>>,
+    ) {
+        while let Some(identity) = removal_requests.next().await {
+            maybe_remove_component(&identity, &diagnostics_repo, &diagnostics_pipelines);
+        }
+    }
+
     async fn collect_component_events(
         events: ComponentEventStream,
         log_sender: mpsc::UnboundedSender<Task<()>>,
-        state: ArchivistState,
+        archivist: Archivist,
         pipeline_exists: bool,
     ) {
         if !pipeline_exists {
@@ -489,27 +510,43 @@ impl ArchivistBuilder {
         } else {
             component::health().set_ok();
         }
-        state.run(events, log_sender).await
+        archivist.process_events(events, log_sender).await
     }
 }
 
-/// ArchivistState owns the tools needed to persist data
+fn maybe_remove_component(
+    identity: &ComponentIdentity,
+    diagnostics_repo: &DataRepo,
+    diagnostics_pipelines: &[Arc<RwLock<Pipeline>>],
+) {
+    if !diagnostics_repo.is_live(&identity) {
+        debug!(%identity, "Removing component from repository.");
+        diagnostics_repo.write().data_directories.remove(&identity.unique_key);
+
+        // TODO(fxbug.dev/55736): The pipeline specific updates should be happening asynchronously.
+        for pipeline in diagnostics_pipelines {
+            pipeline.write().remove(&identity.relative_moniker);
+        }
+    }
+}
+
+/// Archivist owns the tools needed to persist data
 /// to the archive, as well as the service-specific repositories
 /// that are populated by the archivist server and exposed in the
 /// service sessions.
-pub struct ArchivistState {
+pub struct Archivist {
     /// Writer for the archive. If a path was not configured it will be `None`.
     writer: Option<archive::ArchiveWriter>,
     log_node: BoundedListNode,
     configuration: configs::Config,
-    diagnostics_pipelines: Vec<Arc<RwLock<Pipeline>>>,
+    diagnostics_pipelines: Arc<Vec<Arc<RwLock<Pipeline>>>>,
     pub diagnostics_repo: DataRepo,
 
     /// The overall capacity we enforce for log messages across containers.
     logs_budget: BudgetManager,
 }
 
-impl ArchivistState {
+impl Archivist {
     pub fn new(
         configuration: configs::Config,
         diagnostics_pipelines: Vec<Arc<RwLock<Pipeline>>>,
@@ -524,62 +561,30 @@ impl ArchivistState {
 
         inspect_log!(log_node, event: "Archivist started");
 
-        Ok(ArchivistState {
+        Ok(Archivist {
             writer,
             log_node,
             configuration,
-            diagnostics_pipelines,
+            diagnostics_pipelines: Arc::new(diagnostics_pipelines),
             diagnostics_repo,
             logs_budget,
         })
     }
 
-    pub async fn run(
-        self,
+    pub async fn process_events(
+        mut self,
         mut events: ComponentEventStream,
         log_sender: mpsc::UnboundedSender<Task<()>>,
     ) {
-        let state = Arc::new(Mutex::new(self));
-        let remover = ComponentRemover { inner: Arc::downgrade(&state) };
-        state.lock().logs_budget.set_remover(remover);
-
-        let archivist = Archivist { state, log_sender };
         while let Some(event) = events.next().await {
-            archivist.clone().process_event(event).await.unwrap_or_else(|e| {
-            let mut state = archivist.lock();
-            inspect_log!(state.log_node, event: "Failed to log event", result: format!("{:?}", e));
-            error!(?e, "Failed to log event");
-        });
+            let res = self.process_event(event, &log_sender).await;
+            res.unwrap_or_else(|e| {
+                inspect_log!(self.log_node, event: "Failed to log event", result: format!("{:?}", e));
+                error!(?e, "Failed to log event");
+            });
         }
     }
 
-    fn maybe_remove_component(&mut self, identity: &ComponentIdentity) {
-        if !self.diagnostics_repo.is_live(identity) {
-            debug!(%identity, "Removing component from repository.");
-            self.diagnostics_repo.write().data_directories.remove(&identity.unique_key);
-
-            // TODO(fxbug.dev/55736): The pipeline specific updates should be happening asynchronously.
-            for pipeline in &self.diagnostics_pipelines {
-                pipeline.write().remove(&identity.relative_moniker);
-            }
-        }
-    }
-}
-
-#[derive(Clone)]
-pub struct Archivist {
-    state: Arc<Mutex<ArchivistState>>,
-    log_sender: mpsc::UnboundedSender<Task<()>>,
-}
-
-impl std::ops::Deref for Archivist {
-    type Target = Mutex<ArchivistState>;
-    fn deref(&self) -> &Self::Target {
-        &*self.state
-    }
-}
-
-impl Archivist {
     async fn populate_inspect_repo(&self, diagnostics_ready_data: DiagnosticsReadyEvent) {
         // The DiagnosticsReadyEvent should always contain a directory_proxy. Its existence
         // as an Option is only to support mock objects for equality in tests.
@@ -587,11 +592,8 @@ impl Archivist {
 
         let identity = diagnostics_ready_data.metadata.identity.clone();
 
-        let locked_state = &self.lock();
-
         // Update the central repository to reference the new diagnostics source.
-        locked_state
-            .diagnostics_repo
+        self.diagnostics_repo
             .write()
             .add_inspect_artifacts(
                 identity.clone(),
@@ -605,7 +607,7 @@ impl Archivist {
         // Let each pipeline know that a new component arrived, and allow the pipeline
         // to eagerly bucket static selectors based on that component's moniker.
         // TODO(fxbug.dev/55736): The pipeline specific updates should be happening asynchronously.
-        for pipeline in &locked_state.diagnostics_pipelines {
+        for pipeline in self.diagnostics_pipelines.iter() {
             pipeline.write().add_inspect_artifacts(&identity.relative_moniker).unwrap_or_else(
                 |e| {
                     warn!(%identity, ?e, "Failed to add inspect artifacts to pipeline wrapper");
@@ -621,7 +623,7 @@ impl Archivist {
         event_timestamp: zx::Time,
         component_start_time: Option<zx::Time>,
     ) {
-        if let Err(e) = self.lock().diagnostics_repo.write().add_new_component(
+        if let Err(e) = self.diagnostics_repo.write().add_new_component(
             identity.clone(),
             event_timestamp,
             component_start_time,
@@ -631,14 +633,17 @@ impl Archivist {
     }
 
     fn mark_component_stopped(&self, identity: &ComponentIdentity) {
-        let mut this = self.state.lock();
         // TODO(fxbug.dev/53939): Get inspect data from repository before removing
         // for post-mortem inspection.
-        this.diagnostics_repo.write().mark_stopped(&identity.unique_key);
-        this.maybe_remove_component(identity);
+        self.diagnostics_repo.write().mark_stopped(&identity.unique_key);
+        maybe_remove_component(identity, &self.diagnostics_repo, &self.diagnostics_pipelines);
     }
 
-    async fn process_event(self, event: ComponentEvent) -> Result<(), Error> {
+    async fn process_event(
+        &mut self,
+        event: ComponentEvent,
+        log_sender: &mpsc::UnboundedSender<Task<()>>,
+    ) -> Result<(), Error> {
         match event {
             ComponentEvent::Start(start) => {
                 let archived_metadata = start.metadata.clone();
@@ -670,31 +675,27 @@ impl Archivist {
                 Ok(())
             }
             ComponentEvent::LogSinkRequested(event) => {
-                let locked_state = self.state.lock();
-                let data_repo = &locked_state.diagnostics_repo;
+                let data_repo = &self.diagnostics_repo;
                 let container = data_repo.write().get_log_container(event.metadata.identity);
-                container.handle_log_sink(event.requests, self.log_sender.clone());
+                container.handle_log_sink(event.requests, log_sender.clone());
                 Ok(())
             }
         }
     }
 
     async fn archive_event(
-        &self,
+        &mut self,
         _event_name: &str,
         _event_data: EventMetadata,
     ) -> Result<(), Error> {
-        let mut state = self.lock();
-        let ArchivistState { writer, log_node, configuration, .. } = &mut *state;
-
-        let writer = if let Some(w) = writer.as_mut() {
+        let writer = if let Some(w) = self.writer.as_mut() {
             w
         } else {
             return Ok(());
         };
 
-        let max_archive_size_bytes = configuration.max_archive_size_bytes;
-        let max_event_group_size_bytes = configuration.max_event_group_size_bytes;
+        let max_archive_size_bytes = self.configuration.max_archive_size_bytes;
+        let max_event_group_size_bytes = self.configuration.max_event_group_size_bytes;
 
         // TODO(fxbug.dev/53939): Get inspect data from repository before removing
         // for post-mortem inspection.
@@ -735,7 +736,7 @@ impl Archivist {
 
         if current_group_stats.size >= max_event_group_size_bytes {
             let (path, stats) = writer.rotate_log()?;
-            inspect_log!(log_node, event:"Rotated log",
+            inspect_log!(self.log_node, event:"Rotated log",
                      new_path: path.to_string_lossy().to_string());
             writer.add_group_stat(&path, stats);
         }
@@ -743,28 +744,33 @@ impl Archivist {
         let archived_size = writer.archived_size();
         let mut current_archive_size = current_group_stats.size + archived_size;
         if current_archive_size > max_archive_size_bytes {
-            let dates = writer.get_archive().get_dates().unwrap_or_else(|e| {
-                warn!("Garbage collection failure");
-                inspect_log!(log_node, event: "Failed to get dates for garbage collection",
-                         reason: format!("{:?}", e));
-                vec![]
-            });
+            let dates = match writer.get_archive().get_dates() {
+                Ok(dates) => dates,
+                Err(e) => {
+                    warn!("Garbage collection failure");
+                    inspect_log!(self.log_node, event: "Failed to get dates for garbage collection",
+                             reason: format!("{:?}", e));
+                    vec![]
+                }
+            };
 
             for date in dates {
-                let groups =
-                    writer.get_archive().get_event_file_groups(&date).unwrap_or_else(|e| {
+                let groups = match writer.get_archive().get_event_file_groups(&date) {
+                    Ok(groups) => groups,
+                    Err(e) => {
                         warn!("Garbage collection failure");
-                        inspect_log!(log_node, event: "Failed to get event file",
-                             date: &date,
-                             reason: format!("{:?}", e));
+                        inspect_log!(self.log_node, event: "Failed to get event file",
+                                 date: &date,
+                                 reason: format!("{:?}", e));
                         vec![]
-                    });
+                    }
+                };
 
                 for group in groups {
                     let path = group.log_file_path();
                     match group.delete() {
                         Err(e) => {
-                            inspect_log!(log_node, event: "Failed to remove group",
+                            inspect_log!(self.log_node, event: "Failed to remove group",
                                  path: &path,
                                  reason: format!(
                                      "{:?}", e));
@@ -773,7 +779,7 @@ impl Archivist {
                         Ok(stat) => {
                             current_archive_size -= stat.size;
                             writer.remove_group_stat(&PathBuf::from(&path));
-                            inspect_log!(log_node, event: "Garbage collected group",
+                            inspect_log!(self.log_node, event: "Garbage collected group",
                                      path: &path,
                                      removed_files: stat.file_count as u64,
                                      removed_bytes: stat.size as u64);
@@ -788,21 +794,6 @@ impl Archivist {
         }
 
         Ok(())
-    }
-}
-
-/// Provides weak access to ArchivistState for BudgetManager to use when it pops the last message
-/// from the buffer of a stopped component.
-#[derive(Clone, Default)]
-pub struct ComponentRemover {
-    inner: Weak<Mutex<ArchivistState>>,
-}
-
-impl ComponentRemover {
-    pub fn maybe_remove_component(&self, identity: &ComponentIdentity) {
-        if let Some(this) = self.inner.upgrade() {
-            this.lock().maybe_remove_component(identity);
-        }
     }
 }
 
