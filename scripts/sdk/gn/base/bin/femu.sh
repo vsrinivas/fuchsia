@@ -131,9 +131,15 @@ case $1 in
       fx-error "--setup-ufw is only supported on Linux with ufw firewall"
       exit 1
     fi
+    # This should be the same as //tools/devshell/setup-ufw
     sudo ufw allow proto udp from fe80::/10 to any port 33331:33340 comment 'Fuchsia Netboot Protocol'
     sudo ufw allow proto tcp from fe80::/10 to any port 8083 comment 'Fuchsia Package Server'
     sudo ufw allow proto udp from fe80::/10 port 33340 comment 'Fuchsia Netboot TFTP Source Port'
+    sudo ufw allow proto udp from fe80::/10 port 5353 comment 'Fuchsia MDNS'
+    sudo ufw allow proto udp from fc00::/7 to any port 33331:33340 comment 'Fuchsia Netboot Protocol'
+    sudo ufw allow proto tcp from fc00::/7 to any port 8083 comment 'Fuchsia Package Server'
+    sudo ufw allow proto udp from fc00::/7 port 33340 comment 'Fuchsia Netboot TFTP Source Port'
+    sudo ufw allow proto udp from fc00::/7 port 5353 comment 'Fuchsia MDNS'
     set +xv
     exit 0
     ;;
