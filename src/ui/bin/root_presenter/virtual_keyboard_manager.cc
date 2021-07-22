@@ -20,25 +20,23 @@
 namespace root_presenter {
 
 VirtualKeyboardManager::VirtualKeyboardManager(
-    fxl::WeakPtr<VirtualKeyboardCoordinator> coordinator, sys::ComponentContext* component_context,
+    fxl::WeakPtr<VirtualKeyboardCoordinator> coordinator,
     fuchsia::input::virtualkeyboard::TextType initial_text_type)
-    : coordinator_(std::move(coordinator)), manager_binding_(this) {
-  FX_DCHECK(component_context);
+    : coordinator_(std::move(coordinator)) {
   pending_config_ = KeyboardConfig{.text_type = initial_text_type, .is_visible = false};
-  component_context->outgoing()->AddPublicService<fuchsia::input::virtualkeyboard::Manager>(
-      [this](fidl::InterfaceRequest<fuchsia::input::virtualkeyboard::Manager> request) {
-        MaybeBind(std::move(request));
-      });
 }
 
 void VirtualKeyboardManager::WatchTypeAndVisibility(WatchTypeAndVisibilityCallback callback) {
   FX_LOGS(INFO) << __FUNCTION__;
   if (watch_callback_) {
-    // The caller has violated the constraints of the protocol. Close the connection
-    // to signal the error, and reset the callback, to ensure that other method calls
-    // on |this| don't write to the closed connection.
-    manager_binding_.Close(ZX_ERR_BAD_STATE);
-    watch_callback_ = {};
+    // The caller has violated the constraints of the protocol. Report the error
+    // to the coordinator. The coordinator will close the connection, and destroy
+    // this VirtualKeyboardManager.
+    if (coordinator_) {
+      coordinator_->NotifyManagerError(ZX_ERR_BAD_STATE);
+    } else {
+      FX_LOGS(WARNING) << "Ignorning redundant WatchTypeAndVisibility() call";
+    }
     return;
   }
 
@@ -49,7 +47,7 @@ void VirtualKeyboardManager::WatchTypeAndVisibility(WatchTypeAndVisibilityCallba
 void VirtualKeyboardManager::Notify(bool is_visible,
                                     fuchsia::input::virtualkeyboard::VisibilityChangeReason reason,
                                     NotifyCallback callback) {
-  FX_LOGS(INFO) << __FUNCTION__;
+  FX_LOGS(INFO) << __FUNCTION__ << " is_visible=" << is_visible;
   if (coordinator_) {
     coordinator_->NotifyVisibilityChange(is_visible, reason);
   } else {
@@ -64,19 +62,6 @@ void VirtualKeyboardManager::OnTypeOrVisibilityChange(
   if (last_sent_config_ != proposed_config) {
     pending_config_ = proposed_config;
     MaybeNotifyWatcher();
-  }
-}
-
-void VirtualKeyboardManager::MaybeBind(
-    fidl::InterfaceRequest<fuchsia::input::virtualkeyboard::Manager> request) {
-  if (manager_binding_.is_bound()) {
-    FX_LOGS(WARNING) << "Ignoring interface request; already bound";
-  } else {
-    manager_binding_.Bind(std::move(request));
-    manager_binding_.set_error_handler([](zx_status_t status) {
-      FX_LOGS(WARNING) << "manager closed with status=" << status << " ("
-                       << zx_status_get_string(status) << ")";
-    });
   }
 }
 

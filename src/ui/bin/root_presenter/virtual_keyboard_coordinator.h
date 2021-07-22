@@ -10,6 +10,7 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/sys/cpp/component_context.h>
+#include <zircon/types.h>
 
 #include <memory>
 
@@ -34,6 +35,10 @@ class VirtualKeyboardCoordinator {
   // Requests a change in the visibility and/or text type of the virtual keyboard.
   virtual void RequestTypeAndVisibility(fuchsia::input::virtualkeyboard::TextType text_type,
                                         bool is_visibile) = 0;
+
+  // Reports an error from the Manager. The coordinator should close the corresponding FIDL
+  // connection with `error`.
+  virtual void NotifyManagerError(zx_status_t error) = 0;
 };
 
 // Coordinates all activities for a single virtual keyboard.
@@ -61,6 +66,7 @@ class FidlBoundVirtualKeyboardCoordinator
   // |VirtualKeyboardCoordinator|
   void NotifyVisibilityChange(
       bool is_visible, fuchsia::input::virtualkeyboard::VisibilityChangeReason reason) override;
+  void NotifyManagerError(zx_status_t error) override;
   void RequestTypeAndVisibility(fuchsia::input::virtualkeyboard::TextType text_type,
                                 bool is_visible) override;
 
@@ -70,18 +76,43 @@ class FidlBoundVirtualKeyboardCoordinator
   }
 
  private:
+  struct KeyboardConfig {
+    fuchsia::input::virtualkeyboard::TextType text_type;
+    bool is_visible;
+  };
+
   // |fuchsia.input.virtualkeyboard.ControllerCreator|
   void Create(fuchsia::ui::views::ViewRef view_ref,
               fuchsia::input::virtualkeyboard::TextType text_type,
               fidl::InterfaceRequest<fuchsia::input::virtualkeyboard::Controller>
                   controller_request) override;
 
+  // Creates a VirtualKeyboardManager and binds the manager to the provided channel.
+  void BindManager(fidl::InterfaceRequest<fuchsia::input::virtualkeyboard::Manager>);
+
+  // Destroys the VirtualKeyboardManager, and closes the associated channel with
+  // the provided status as the epitaph.
+  void HandleManagerBindingError(zx_status_t);
+
   fidl::BindingSet<fuchsia::input::virtualkeyboard::ControllerCreator> creator_bindings_;
   fidl::BindingSet<fuchsia::input::virtualkeyboard::Controller,
                    std::unique_ptr<VirtualKeyboardController>>
       controller_bindings_;
 
-  std::optional<VirtualKeyboardManager> manager_;
+  std::optional<fidl::Binding<fuchsia::input::virtualkeyboard::Manager,
+                              std::unique_ptr<VirtualKeyboardManager>>>
+      manager_binding_;
+
+  // The configuration to request of the new VirtualKeyboardManager.
+  //
+  // * Used to buffer configuration changes when there is no manager
+  //   client connected.
+  // * Equal to `nullopt`, except in the transient state where
+  //   * `this` received a RequestTypeAndVisibility() call
+  //     when there was no manager connected, and
+  //   * no manager has connected since the RequestTypeAndVisibility()
+  //     call.
+  std::optional<KeyboardConfig> pending_manager_config_;
 
   // Must be last, to invalidate weak pointers held by other fields before their
   // destructors are called.

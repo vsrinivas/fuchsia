@@ -366,7 +366,7 @@ TEST_F(VirtualKeyboardFidlTest, FirstManagerClientHasPriority) {
   ASSERT_NE(ZX_OK, client2_status) << "status = " << zx_status_get_string(client2_status);
 }
 
-TEST_F(VirtualKeyboardFidlTest, NewManagerClientCanConnectAfterFirstDisconnects) {
+TEST_F(VirtualKeyboardFidlTest, NewManagerClientCanConnectAndNotifyAfterFirstDisconnects) {
   {
     // First client connects and calls Notify().
     zx_status_t status = ZX_OK;
@@ -393,6 +393,43 @@ TEST_F(VirtualKeyboardFidlTest, NewManagerClientCanConnectAfterFirstDisconnects)
   }
 }
 
+TEST_F(VirtualKeyboardFidlTest, NewManagerClientCanConnectAndWatchAfterFirstDisconnects) {
+  {
+    // Create first Manager client, and have the client call WatchTypeAndVisibility().
+    zx_status_t status = ZX_OK;
+    auto client = CreateManagerClient();
+    bool did_watch_complete = false;
+    client.set_error_handler([&status](zx_status_t stat) { status = stat; });
+    client->WatchTypeAndVisibility([&did_watch_complete](fuchsia::input::virtualkeyboard::TextType,
+                                                         bool) { did_watch_complete = true; });
+
+    // Manager client connection should be ok, and the client's WatchTypeAndVisibility() call
+    // should have returned.
+    RunLoopUntilIdle();
+    ASSERT_EQ(ZX_OK, status) << "status = " << zx_status_get_string(status);
+    ASSERT_TRUE(did_watch_complete);
+  }
+
+  // Run event loop, to process side-effects of `client` going away.
+  RunLoopUntilIdle();
+
+  {
+    // Create second Manager client, and have the client call WatchTypeAndVisibility().
+    zx_status_t status = ZX_OK;
+    auto client = CreateManagerClient();
+    bool did_watch_complete = false;
+    client.set_error_handler([&status](zx_status_t stat) { status = stat; });
+    client->WatchTypeAndVisibility([&did_watch_complete](fuchsia::input::virtualkeyboard::TextType,
+                                                         bool) { did_watch_complete = true; });
+
+    // Manager client connection should be ok, and the client's WatchTypeAndVisibility() call
+    // should have returned.
+    RunLoopUntilIdle();
+    ASSERT_EQ(ZX_OK, status) << "status = " << zx_status_get_string(status);
+    ASSERT_TRUE(did_watch_complete);
+  }
+}
+
 TEST_F(VirtualKeyboardFidlTest, ManagerDisconnectsOnConcurrentWatches) {
   // Connect client.
   zx_status_t status = ZX_OK;
@@ -410,6 +447,36 @@ TEST_F(VirtualKeyboardFidlTest, ManagerDisconnectsOnConcurrentWatches) {
 
   // Verify that the channel was closed, with the expected epitaph.
   ASSERT_EQ(ZX_ERR_BAD_STATE, status) << "status = " << zx_status_get_string(status);
+}
+
+TEST_F(VirtualKeyboardFidlTest, ClientDisconnectionNotifiesControllersThatKeyboardIsHidden) {
+  // Create controller, and set visibility to true.
+  auto [controller, view_ref_control] = CreateControllerClient();
+  controller->RequestShow();
+  RunLoopUntilIdle();
+
+  // Send a watch request, which will complete immediately.
+  std::optional<bool> first_watcher_visibility;
+  controller->WatchVisibility(
+      [&first_watcher_visibility](bool vis) { first_watcher_visibility = vis; });
+  RunLoopUntilIdle();
+  ASSERT_EQ(true, first_watcher_visibility);
+
+  // Create manager.
+  std::optional<fuchsia::input::virtualkeyboard::ManagerPtr> manager = CreateManagerClient();
+
+  // Set up a watch.
+  std::optional<bool> second_visibility_result;
+  controller->WatchVisibility(
+      [&second_visibility_result](bool vis) { second_visibility_result = vis; });
+  RunLoopUntilIdle();
+
+  // Disconnect the maanger.
+  manager.reset();
+  RunLoopUntilIdle();
+
+  // Verify that the controller learned that the keyboard was hidden.
+  ASSERT_EQ(false, second_visibility_result);
 }
 
 TEST_F(VirtualKeyboardFidlTest, NewManagerClientCanConnectAfterFirstIsDisconnectedByError) {
@@ -563,6 +630,37 @@ TEST_F(VirtualKeyboardFidlTest, WatchTypeAndVisibility_ReceivesConfigSetBeforeMa
   RunLoopUntilIdle();
 
   ASSERT_EQ(true, is_visible);
+}
+
+TEST_F(VirtualKeyboardFidlTest,
+       WatchTypeAndVisibility_SecondNewManagerDoesNotReceiveBufferedConfig) {
+  // Create a Controller, and request that the keyboard be shown.
+  auto [controller, view_ref_control] =
+      CreateControllerClient(fuchsia::input::virtualkeyboard::TextType::NUMERIC);
+  controller->RequestShow();
+  RunLoopUntilIdle();
+
+  {
+    // Create first manager.
+    auto manager = CreateManagerClient();
+
+    // Get configuration.
+    manager->WatchTypeAndVisibility(
+        [](fuchsia::input::virtualkeyboard::TextType type, bool is_vis) {});
+    RunLoopUntilIdle();
+  }
+
+  {
+    // Create second manager.
+    auto manager = CreateManagerClient();
+
+    // Get configuration.
+    std::optional<fuchsia::input::virtualkeyboard::TextType> text_type;
+    manager->WatchTypeAndVisibility(
+        [&](fuchsia::input::virtualkeyboard::TextType type, bool is_vis) { text_type = type; });
+    RunLoopUntilIdle();
+    ASSERT_NE(fuchsia::input::virtualkeyboard::TextType::NUMERIC, text_type);
+  }
 }
 
 TEST_F(VirtualKeyboardFidlTest,
