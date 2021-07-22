@@ -19,7 +19,7 @@ fbl::RefPtr<InitTask> InitTask::Create(fbl::RefPtr<Device> device, Completion co
 }
 
 void InitTask::Run() {
-  LOGF(INFO, "Running init task for device %p '%s'", device_.get(), device_->name().data());
+  VLOGF(1, "Running init task for device %p '%s'", device_.get(), device_->name().data());
 
   // If the init task exists for a device, it should always run before
   // other tasks for a device.

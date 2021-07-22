@@ -114,8 +114,8 @@ zx_status_t Device::Create(
     fbl::Array<zx_device_prop_t> props, fbl::Array<StrProperty> str_props,
     fidl::ServerEnd<fuchsia_device_manager::Coordinator> coordinator_request,
     fidl::ClientEnd<fuchsia_device_manager::DeviceController> device_controller,
-    bool want_init_task, bool skip_autobind, zx::vmo inspect,
-    zx::channel client_remote, fbl::RefPtr<Device>* device) {
+    bool want_init_task, bool skip_autobind, zx::vmo inspect, zx::channel client_remote,
+    fbl::RefPtr<Device>* device) {
   fbl::RefPtr<Device> real_parent;
   // If our parent is a proxy, for the purpose of devfs, we need to work with
   // *its* parent which is the device that it is proxying.
@@ -125,9 +125,9 @@ zx_status_t Device::Create(
     real_parent = parent;
   }
 
-  auto dev = fbl::MakeRefCounted<Device>(
-      coordinator, std::move(name), std::move(driver_path), std::move(args), real_parent,
-      protocol_id, std::move(inspect), std::move(client_remote));
+  auto dev = fbl::MakeRefCounted<Device>(coordinator, std::move(name), std::move(driver_path),
+                                         std::move(args), real_parent, protocol_id,
+                                         std::move(inspect), std::move(client_remote));
   if (!dev) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -330,8 +330,8 @@ zx_status_t Device::SendInit(InitCompletion completion) {
 
   VLOGF(1, "Initializing device %p '%s'", this, name_.data());
   auto result = device_controller()->Init([dev = fbl::RefPtr(this)](auto* response) {
-    LOGF(INFO, "Initialized device %p '%s': %s", dev.get(), dev->name().data(),
-         zx_status_get_string(response->status));
+    VLOGF(1, "Initialized device %p '%s': %s", dev.get(), dev->name().data(),
+          zx_status_get_string(response->status));
     dev->CompleteInit(response->status);
   });
   if (!result.ok()) {
@@ -767,8 +767,8 @@ void Device::AddDevice(AddDeviceRequestView request, AddDeviceCompleter::Sync& c
       parent, std::move(request->device_controller), std::move(request->coordinator),
       request->property_list.props.data(), request->property_list.props.count(),
       request->property_list.str_props.data(), request->property_list.str_props.count(), name,
-      request->protocol_id, driver_path, args, skip_autobind, request->has_init,
-      kEnableAlwaysInit, std::move(request->inspect), std::move(request->client_remote), &device);
+      request->protocol_id, driver_path, args, skip_autobind, request->has_init, kEnableAlwaysInit,
+      std::move(request->inspect), std::move(request->client_remote), &device);
   if (device != nullptr && (request->device_add_config &
                             fuchsia_device_manager::wire::AddDeviceConfig::kAllowMultiComposite)) {
     device->flags |= DEV_CTX_ALLOW_MULTI_COMPOSITE;
