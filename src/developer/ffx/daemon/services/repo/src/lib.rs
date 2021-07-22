@@ -12,6 +12,7 @@ use {
     fidl_fuchsia_pkg::RepositoryManagerMarker,
     fidl_fuchsia_pkg_rewrite::{EngineMarker, LiteralRule, Rule},
     fuchsia_async as fasync,
+    fuchsia_zircon_status::Status,
     futures::{FutureExt as _, StreamExt as _},
     itertools::Itertools as _,
     pkg::repository::{Repository, RepositoryManager, RepositoryServer, LISTEN_PORT},
@@ -298,7 +299,7 @@ impl Repo {
         match proxy.add(config.into()).await {
             Ok(Ok(())) => {}
             Ok(Err(err)) => {
-                log::warn!("Failed to add config: {:#?}", err);
+                log::warn!("Failed to add config: {:#?}", Status::from_raw(err));
                 return Err(bridge::RepositoryError::RepositoryManagerError);
             }
             Err(err) => {
@@ -349,7 +350,10 @@ impl Repo {
                         return Err(bridge::RepositoryError::RewriteEngineError);
                     }
                     Ok(Err(err)) => {
-                        log::warn!("Adding rewrite rule returned failure. Error was: {:#?}", err);
+                        log::warn!(
+                            "Adding rewrite rule returned failure. Error was: {:#?}",
+                            Status::from_raw(err)
+                        );
                         return Err(bridge::RepositoryError::RewriteEngineError);
                     }
                     Ok(_) => {}
@@ -359,7 +363,10 @@ impl Repo {
             match transaction_proxy.commit().await {
                 Ok(Ok(())) => {}
                 Ok(Err(err)) => {
-                    log::warn!("Committing rewrite rule returned failure. Error was: {:#?}", err);
+                    log::warn!(
+                        "Committing rewrite rule returned failure. Error was: {:#?}",
+                        Status::from_raw(err)
+                    );
                     return Err(bridge::RepositoryError::RewriteEngineError);
                 }
                 Err(err) => {
@@ -428,7 +435,11 @@ impl Repo {
         match proxy.remove(&repo.repo_url()).await {
             Ok(Ok(())) => {}
             Ok(Err(err)) => {
-                log::warn!("failed to deregister repo {:?}: {:?}", repo_name, err);
+                log::warn!(
+                    "failed to deregister repo {:?}: {:?}",
+                    repo_name,
+                    Status::from_raw(err)
+                );
                 return Err(bridge::RepositoryError::InternalError);
             }
             Err(err) => {
