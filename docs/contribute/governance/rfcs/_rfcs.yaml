@@ -1419,6 +1419,19 @@
   submitted: '2021-06-17'
   reviewed: '2021-06-25'
 
+- name: 'RFC-0112'
+  title: 'ACPI support on x86'
+  short_description: 'Improvements to ACPI support on x86.'
+  authors: ['simonshields@google.com']
+  file: '0112_acpi_support_on_x86.md'
+  area: ['Devices']
+  issue: ['78198']
+  gerrit_change_id: ['542001']
+  status: 'Accepted'
+  reviewers: [ 'abarth@google.com', 'adanis@google.com', 'cja@google.com', 'cpu@google.com', 'kostyak@google.com', 'surajmalhotra@google.com', 'travisg@google.com' ]
+  submitted: '2021-06-11'
+  reviewed: '2021-07-21'
+
 - name: 'RFC-0113'
   title: 'Efficient envelopes'
   short_description: 'This FTP proposes a more compact encoding for envelopes.'
