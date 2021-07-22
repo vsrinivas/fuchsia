@@ -1,0 +1,69 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/bind/bind.gni")
+import("//build/components.gni")
+import("//build/config/fuchsia/rules.gni")
+import("//build/test.gni")
+
+driver_bind_rules("cr50-spi_bind") {
+  rules = "cr50-spi.bind"
+  header_output = "cr50-spi_bind.h"
+  tests = "bind_tests.json"
+  deps = [ "//src/devices/bind/fuchsia.acpi" ]
+}
+
+common_deps = [
+  ":cr50-spi_bind",
+  "//sdk/banjo/fuchsia.hardware.spi:fuchsia.hardware.spi_banjo_cpp",
+  "//sdk/fidl/fuchsia.hardware.spi:fuchsia.hardware.spi_llcpp",
+  "//src/devices/lib/acpi",
+  "//src/devices/lib/driver",
+  "//src/lib/ddktl",
+  "//zircon/system/ulib/async:async-cpp",
+  "//zircon/system/ulib/async-loop:async-loop-cpp",
+  "//zircon/system/ulib/inspect",
+  "//zircon/system/ulib/zx",
+]
+
+driver_module("cr50-spi-driver") {
+  sources = [ "cr50-spi.cc" ]
+  deps = common_deps
+}
+
+fuchsia_system_package("cr50-spi-pkg") {
+  package_name = "cr50-spi"
+  deps = [ ":cr50-spi-driver" ]
+}
+
+test("cr50-spi-test-bin") {
+  output_name = "cr50-spi-test"
+  sources = [
+    "cr50-spi-test.cc",
+    "cr50-spi.cc",
+  ]
+  deps = common_deps + [
+           "//sdk/lib/inspect/testing/cpp:zxtest",
+           "//src/devices/lib/acpi/mock:mock-acpi",
+           "//src/devices/testing/mock-ddk",
+           "//zircon/system/ulib/async-loop:async-loop-cpp",
+           "//zircon/system/ulib/zxtest",
+         ]
+}
+
+fuchsia_unittest_package("cr50-spi-test") {
+  deps = [ ":cr50-spi-test-bin" ]
+}
+
+group("cr50-spi") {
+  deps = [ ":cr50-spi-pkg" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":cr50-spi-test",
+    ":cr50-spi_bind_test",
+  ]
+}

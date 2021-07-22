@@ -47,6 +47,7 @@ group("tests") {
     "tests:tests",
     "thermal:tests",
     "tools:tests",
+    "tpm:tests",
     "usb:tests",
     "usb/tests",
   ]

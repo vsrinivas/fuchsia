@@ -22,7 +22,10 @@ avb_key =
 avb_atx_metadata =
     "//third_party/android/platform/external/avb/test/data/atx_metadata.bin"
 
-_common_bootfs_deps = [ "//boards/kernel_cmdline:chromebook-x64" ]
+_common_bootfs_deps = [
+  "//boards/kernel_cmdline:chromebook-x64",
+  "//src/devices/tpm/drivers/cr50-spi",
+]
 
 board_bootfs_labels += _common_bootfs_deps
 
