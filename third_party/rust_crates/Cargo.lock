@@ -1062,6 +1062,7 @@ dependencies = [
  "async-lock",
  "async-net",
  "async-trait",
+ "atomic-waker",
  "base64 0.9.3",
  "bincode",
  "bitfield",

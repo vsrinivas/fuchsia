@@ -9,14 +9,11 @@ use {argh::FromArgs, ffx_core::ffx_command};
 #[argh(
     subcommand,
     name = "tunnel",
-    description = "Establishes a port forward between the dart vm service port and a local host."
-)]
-pub struct TunnelCommand {
-    #[argh(positional)]
-    /// vmservice_port. The port exposed by the dart vm on a Fuchsia device.
-    pub vm_service_port: u16,
+    description = "Establishes a port forward between the local host and the dart vm service port.",
+    note = "Determines the vm_service_port in the Flutter runner on the target Fuchsia device. An ssh
+tunnel is then established between localhost(127.0.0.1) at an available port and the target device at
+the vm_service_port.
 
-    #[argh(option)]
-    /// name. The name of a Flutter application running on the target device.
-    pub name: Option<String>,
-}
+A url for the location of the listening socket is printed out for users."
+)]
+pub struct TunnelCommand {}

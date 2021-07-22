@@ -6,7 +6,13 @@ use {argh::FromArgs, ffx_core::ffx_command, ffx_flutter_sub_command::Subcommand}
 
 #[ffx_command()]
 #[derive(FromArgs, Debug, PartialEq)]
-#[argh(subcommand, name = "flutter", description = "Entry point to Flutter development tools.")]
+#[argh(
+    subcommand,
+    name = "flutter",
+    description = "Interact with Flutter components on the target.",
+    note = "The `flutter` subcommand is an entry workflow and contains various subcommands
+for flutter component management and interaction."
+)]
 pub struct FlutterCommand {
     #[argh(subcommand)]
     pub subcommand: Subcommand,

@@ -9,15 +9,20 @@ ffx_plugin("ffx_flutter_tunnel") {
   edition = "2021"
   with_unit_tests = false
   deps = [
+    "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
     "//src/developer/ffx:ffx_lib_args",
+    "//src/developer/ffx/lib/errors:lib",
     "//src/developer/ffx/lib/netext:lib",
     "//src/developer/ffx/plugins/emulator:ffx_emulator",
+    "//src/developer/ffx/plugins/flutter/tunnel/ctrl-c:ffx_flutter_tunnel_ctrlc",
+    "//src/developer/ffx/plugins/inspect/common:ffx_inspect_common",
+    "//src/diagnostics/iquery:lib",
+    "//src/lib/diagnostics/hierarchy/rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
-    "//third_party/rust_crates:async-net",
-    "//third_party/rust_crates:signal-hook",
   ]
+
   sources = [
     "src/args.rs",
     "src/lib.rs",

@@ -1,0 +1,19 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_library.gni")
+
+rustc_library("ffx_flutter_tunnel_ctrlc") {
+  name = "ffx_flutter_tunnel_ctrlc"
+  version = "0.1.0"
+  edition = "2021"
+
+  deps = [
+    "//third_party/rust_crates:atomic-waker",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:signal-hook",
+  ]
+
+  sources = [ "src/lib.rs" ]
+}

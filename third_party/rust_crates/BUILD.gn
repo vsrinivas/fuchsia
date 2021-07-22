@@ -62,6 +62,10 @@ group("async-trait") {
   deps = [ ":async-trait-v0_1_40($host_toolchain)" ]
 }
 
+group("atomic-waker") {
+  deps = [ ":atomic-waker-v1_0_0" ]
+}
+
 group("base64") {
   deps = [ ":base64-v0_9_3" ]
 }
