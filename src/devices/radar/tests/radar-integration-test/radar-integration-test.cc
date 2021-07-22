@@ -11,6 +11,8 @@
 #include <lib/zx/channel.h>
 #include <stdio.h>
 
+#include <future>
+
 #include <fbl/unique_fd.h>
 #include <zxtest/zxtest.h>
 
@@ -30,27 +32,15 @@ class RadarIntegrationTest : public zxtest::Test {
   void SetUp() override { loop_.StartThread("radar-integration-test dispatcher"); }
 
  protected:
-  void MakeRadarClient(fidl::Client<BurstReader>* out_client) { MakeRadarClient({}, out_client); }
+  std::future<void> MakeRadarClient(fidl::WireSharedClient<BurstReader>* out_client) {
+    return MakeRadarClient({}, out_client);
+  }
 
-  void MakeRadarClient(fit::function<void(const BurstResult&)> burst_handler,
-                       fidl::Client<BurstReader>* out_client) {
-    fbl::unique_fd device(open(kRadarDevicePath, O_RDWR));
-    ASSERT_TRUE(device.is_valid());
-
-    fidl::WireSyncClient<BurstReaderProvider> provider_client;
-    ASSERT_OK(fdio_get_service_handle(device.release(),
-                                      provider_client.mutable_channel()->reset_and_get_address()));
-
-    fidl::ClientEnd<BurstReader> client_end;
-    fidl::ServerEnd<BurstReader> server_end;
-    ASSERT_OK(zx::channel::create(0, &client_end.channel(), &server_end.channel()));
-
-    const auto result = provider_client.Connect(std::move(server_end));
-    ASSERT_TRUE(result.ok());
-    ASSERT_TRUE(result->result.is_response());
-
-    out_client->Bind(std::move(client_end), loop_.dispatcher(),
-                     std::make_shared<EventHandler>(std::move(burst_handler)));
+  std::future<void> MakeRadarClient(fit::function<void(const BurstResult&)> burst_handler,
+                                    fidl::WireSharedClient<BurstReader>* out_client) {
+    std::future<void> out_client_torn_down;
+    MakeRadarClient(std::move(burst_handler), out_client, &out_client_torn_down);
+    return out_client_torn_down;
   }
 
   static void CheckBurst(const std::array<uint8_t, kBurstSize>& burst) {
@@ -78,10 +68,39 @@ class RadarIntegrationTest : public zxtest::Test {
   }
 
  private:
+  void MakeRadarClient(fit::function<void(const BurstResult&)> burst_handler,
+                       fidl::WireSharedClient<BurstReader>* out_client,
+                       std::future<void>* out_client_torn_down) {
+    fbl::unique_fd device(open(kRadarDevicePath, O_RDWR));
+    ASSERT_TRUE(device.is_valid());
+
+    fidl::WireSyncClient<BurstReaderProvider> provider_client;
+    ASSERT_OK(fdio_get_service_handle(device.release(),
+                                      provider_client.mutable_channel()->reset_and_get_address()));
+
+    zx::status endpoints = fidl::CreateEndpoints<BurstReader>();
+    ASSERT_OK(endpoints.status_value());
+    auto [client_end, server_end] = std::move(*endpoints);
+
+    const auto result = provider_client.Connect(std::move(server_end));
+    ASSERT_TRUE(result.ok());
+    ASSERT_TRUE(result->result.is_response());
+
+    std::promise<void> client_torn_down_promise;
+    *out_client_torn_down = client_torn_down_promise.get_future();
+    out_client->Bind(std::move(client_end), loop_.dispatcher(),
+                     std::make_unique<EventHandler>(std::move(burst_handler),
+                                                    std::move(client_torn_down_promise)));
+  }
+
   class EventHandler : public fidl::WireAsyncEventHandler<BurstReader> {
    public:
-    explicit EventHandler(fit::function<void(const BurstResult&)> burst_handler)
-        : burst_handler_(std::move(burst_handler)) {}
+    explicit EventHandler(fit::function<void(const BurstResult&)> burst_handler,
+                          std::promise<void> client_torn_down_promise)
+        : burst_handler_(std::move(burst_handler)),
+          client_torn_down_promise_(std::move(client_torn_down_promise)) {}
+
+    ~EventHandler() override { client_torn_down_promise_.set_value(); }
 
     void OnBurst(fidl::WireResponse<BurstReader::OnBurst>* event) override {
       if (burst_handler_) {
@@ -89,17 +108,18 @@ class RadarIntegrationTest : public zxtest::Test {
       }
     }
 
-    void Unbound(fidl::UnbindInfo info) override {}
+    void on_fidl_error(fidl::UnbindInfo info) override {}
 
    private:
     fit::function<void(const BurstResult&)> burst_handler_;
+    std::promise<void> client_torn_down_promise_;
   };
 
   async::Loop loop_;
 };
 
 TEST_F(RadarIntegrationTest, BurstSize) {
-  fidl::Client<BurstReader> client;
+  fidl::WireSharedClient<BurstReader> client;
   ASSERT_NO_FAILURES(MakeRadarClient(&client));
 
   auto result = client->GetBurstSize_Sync();
@@ -108,8 +128,9 @@ TEST_F(RadarIntegrationTest, BurstSize) {
 }
 
 TEST_F(RadarIntegrationTest, Reconnect) {
-  fidl::Client<BurstReader> client1;
-  ASSERT_NO_FAILURES(MakeRadarClient(&client1));
+  fidl::WireSharedClient<BurstReader> client1;
+  std::future<void> client1_torn_down;
+  ASSERT_NO_FAILURES(client1_torn_down = MakeRadarClient(&client1));
 
   {
     const auto result = client1->GetBurstSize_Sync();
@@ -119,9 +140,10 @@ TEST_F(RadarIntegrationTest, Reconnect) {
 
   // Unbind and close our end of the channel. We should eventually be able to reconnect, after the
   // driver has cleaned up after the last client.
-  client1.WaitForChannel().channel().reset();
+  client1 = {};
+  client1_torn_down.wait();
 
-  fidl::Client<BurstReader> client2;
+  fidl::WireSharedClient<BurstReader> client2;
   ASSERT_NO_FAILURES(MakeRadarClient(&client2));
 
   {
@@ -139,7 +161,7 @@ TEST_F(RadarIntegrationTest, BurstFormat) {
 
   uint32_t received_id = {};
 
-  fidl::Client<BurstReader> client;
+  fidl::WireSharedClient<BurstReader> client;
   ASSERT_NO_FAILURES(MakeRadarClient(
       [&](const BurstResult& result) {
         if (result.is_response()) {
@@ -199,7 +221,7 @@ TEST_F(RadarIntegrationTest, ReadManyBursts) {
 
   uint32_t received_burst_count = 0;
 
-  fidl::Client<BurstReader> client;
+  fidl::WireSharedClient<BurstReader> client;
   ASSERT_NO_FAILURES(MakeRadarClient(
       [&](const BurstResult& result) {
         if (result.is_response()) {
@@ -259,7 +281,7 @@ TEST_F(RadarIntegrationTest, ReadManyBurstsMultipleClients) {
   fidl::FidlAllocator allocator;
 
   struct {
-    fidl::Client<BurstReader> client;
+    fidl::WireSharedClient<BurstReader> client;
     sync_completion_t completion;
     uint32_t received_burst_count = 0;
   } clients[3] = {};
