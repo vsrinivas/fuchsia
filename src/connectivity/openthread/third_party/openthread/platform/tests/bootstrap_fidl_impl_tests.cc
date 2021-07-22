@@ -51,7 +51,9 @@ class BootstrapThreadImplTest : public gtest::TestLoopFixture {
   }
 
  protected:
-  fidl::Client<fuchsia_lowpan_bootstrap::Thread>& bootstrap_client() { return bootstrap_client_; }
+  fidl::WireClient<fuchsia_lowpan_bootstrap::Thread>& bootstrap_client() {
+    return bootstrap_client_;
+  }
   TestableBootstrapThreadImpl& bootstrap_impl() { return *bootstrap_impl_; }
 
   void ResetServerImpl(bool should_serve,
@@ -64,18 +66,18 @@ class BootstrapThreadImplTest : public gtest::TestLoopFixture {
   }
 
   void ReconnectClient(fidl::ClientEnd<fuchsia_lowpan_bootstrap::Thread> client_end) {
-    event_handler_ = std::make_shared<EventHandler>();
-    event_handler_->client_bound_ = true;
-    event_handler_->client_unbind_status_ = ZX_OK;
-    bootstrap_client_ = fidl::Client(std::move(client_end), dispatcher(), event_handler_);
+    event_handler_ = EventHandler{};
+    event_handler_.client_bound_ = true;
+    event_handler_.client_unbind_status_ = ZX_OK;
+    bootstrap_client_ = fidl::WireClient(std::move(client_end), dispatcher(), &event_handler_);
     RunLoopUntilIdle();
   }
 
-  bool client_bound() { return event_handler_->client_bound_; }
-  zx_status_t client_unbind_status() { return event_handler_->client_unbind_status_; }
+  bool client_bound() { return event_handler_.client_bound_; }
+  zx_status_t client_unbind_status() { return event_handler_.client_unbind_status_; }
 
  private:
-  fidl::Client<fuchsia_lowpan_bootstrap::Thread> bootstrap_client_;
+  fidl::WireClient<fuchsia_lowpan_bootstrap::Thread> bootstrap_client_;
   std::unique_ptr<TestableBootstrapThreadImpl> bootstrap_impl_;
 
   // Event handler on client side:
@@ -83,7 +85,7 @@ class BootstrapThreadImplTest : public gtest::TestLoopFixture {
    public:
     EventHandler() = default;
 
-    void Unbound(fidl::UnbindInfo info) override {
+    void on_fidl_error(fidl::UnbindInfo info) override {
       client_bound_ = false;
       client_unbind_status_ = info.status();
     }
@@ -92,7 +94,7 @@ class BootstrapThreadImplTest : public gtest::TestLoopFixture {
     zx_status_t client_unbind_status_ = ZX_OK;
   };
 
-  std::shared_ptr<EventHandler> event_handler_;
+  EventHandler event_handler_;
 };
 
 // Test Cases ------------------------------------------------------------------
