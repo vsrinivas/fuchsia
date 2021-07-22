@@ -1,5 +1,5 @@
 <!-- mdformat off(templates not supported) -->
-{% set rfcid = "RFC-0000" %}
+{% set rfcid = "RFC-0114" %}
 {% include "docs/contribute/governance/rfcs/_common/_rfc_header.md" %}
 # {{ rfc.name }}: {{ rfc.title }}
 <!-- SET the `rfcid` VAR ABOVE. DO NOT EDIT ANYTHING ELSE ABOVE THIS LINE. -->
@@ -30,7 +30,7 @@ envelope, the object can be directly stored in the envelope.
 ## Design
 
 This RFC design assumes the approval of
-[RFC-0032](0032_efficient_envelopes.md), which introduces efficient envelopes.
+[RFC-0113](0113_efficient_envelopes.md), which introduces efficient envelopes.
 
 A new inlined value format will be used for the following types:
 
@@ -205,6 +205,6 @@ performance improvement.
 
 ## Prior art and references
 
-[RFC-0032](0032_efficient_envelopes.md)
+[RFC-0113](0113_efficient_envelopes.md)
 introduced efficient envelopes, which form the basis for the envelope structure
 used in this RFC.

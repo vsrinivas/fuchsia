@@ -3,9 +3,10 @@
 # {{ rfc.name }}: {{ rfc.title }}
 <!-- SET the `rfcid` VAR ABOVE. DO NOT EDIT ANYTHING ELSE ABOVE THIS LINE. -->
 
-**A version of this RFC was resubmitted and accepted as RFC-0113**
+Note: A version of this RFC was resubmitted and accepted as
+[RFC-0113](0113_efficient_envelopes.md)
 
-Note: Formerly known as [FTP](../deprecated-ftp-process.md)-032.
+**Formerly known as [FTP](../deprecated-ftp-process.md)-032.**
 
 _"Turning Envelopes into Postcards"_
 
