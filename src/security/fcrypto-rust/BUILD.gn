@@ -1,0 +1,53 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//src/lib/fuchsia-cxx/rust_cxx_ffi_library.gni")
+
+rust_cxx_ffi_library("fcrypto-rust") {
+  name = "fcrypto_rust"
+  rust_source_root = "ffi.rs"
+  rust_sources = [ "ffi.rs" ]
+  bridge_sources = [ "ffi.rs" ]
+  rust_deps = [
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/lib/zircon/rust:fuchsia-zircon-sys",
+    "//third_party/rust_crates:cxx",
+  ]
+  cpp_sources = [
+    "ffi.cc",
+    "ffi.h",
+  ]
+  public_deps = [ "//src/security/fcrypto" ]
+}
+
+rustc_test("fcrypto-rust-ffi-test") {
+  name = "fcrypto_rust_ffi_test"
+  edition = "2018"
+
+  source_root = "ffi_test.rs"
+  sources = [ "ffi_test.rs" ]
+
+  deps = [
+    ":fcrypto-rust",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/lib/zircon/rust:fuchsia-zircon-sys",
+    "//third_party/rust_crates:cxx",
+  ]
+}
+
+fuchsia_component("fcrypto-rust-test") {
+  testonly = true
+  manifest = "meta/fcrypto-rust-ffi-test.cml"
+  deps = [ ":fcrypto-rust-ffi-test" ]
+}
+
+fuchsia_test_package("fcrypto-rust-tests") {
+  test_components = [ ":fcrypto-rust-test" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":fcrypto-rust-tests" ]
+}

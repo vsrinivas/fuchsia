@@ -17,6 +17,7 @@ group("tests") {
     "codelab:tests",
     "csa_helper:tests",
     "fcrypto:tests",
+    "fcrypto-rust:tests",
     "kms:tests",
     "scrutiny:tests",
     "tee_manager:tests",
