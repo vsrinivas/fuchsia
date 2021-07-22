@@ -4,8 +4,8 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
+import("//build/tracer/tracer.gni")
 import("//build/zircon/migrated_targets.gni")
-
 import("version_string.gni")
 
 declare_args() {
@@ -42,9 +42,6 @@ if (current_toolchain == default_toolchain) {
     }
   } else {
     action("version-string.bin") {
-      # TODO(fxbug.dev/68558): figure out why this is failing on bot and remove.
-      hermetic_deps = false
-
       visibility = [
         ":*",
         "//zircon/kernel:*",
@@ -52,6 +49,10 @@ if (current_toolchain == default_toolchain) {
       script = "git-version-string.sh"
       outputs = [ kernel_version_string_file ]
       sources = [ "$kernel_version_git_checkout/.git/HEAD" ]
+
+      # fxbug.dev/68558: git dirty check is incompatible with should_trace
+      kernel_version_git_dirty_check =
+          kernel_version_git_dirty_check && !build_should_trace_actions
       if (kernel_version_git_dirty_check) {
         sources += [ "$kernel_version_git_checkout/.git/index" ]
       }

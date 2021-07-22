@@ -1,0 +1,14 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+declare_args() {
+  # If enabled, all filesystem activity by actions will be traced and checked
+  # against their declared inputs and outputs and depfiles (if present).
+  # An action that accesses undeclared inputs or outputs will fail the build.
+  build_should_trace_actions = false
+
+  # If enabled, run each affected action twice (once with renamed outputs)
+  # and compare the outputs' contents for reproducibility.
+  check_repeatability = false
+}
