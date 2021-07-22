@@ -1,5 +1,6 @@
 {
     "service_list": [
+        "fuchsia.diagnostics.internal.KcounterController",
         "fuchsia.diagnostics.internal.PersistenceController",
         "fuchsia.diagnostics.internal.LogStatsController",
         "fuchsia.diagnostics.internal.SamplerController"

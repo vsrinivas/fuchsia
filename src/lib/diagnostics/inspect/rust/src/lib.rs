@@ -293,7 +293,7 @@ impl Inspector {
     }
 
     /// Creates an no-op inspector from the given Vmo. If the VMO is corrupted, reading can fail.
-    fn no_op_from_vmo(vmo: Arc<zx::Vmo>) -> Inspector {
+    pub fn no_op_from_vmo(vmo: Arc<zx::Vmo>) -> Inspector {
         Inspector { vmo: Some(vmo), root_node: Arc::new(Node::new_no_op()) }
     }
 

@@ -1,0 +1,11 @@
+{
+    include: [ "//src/sys/test_runners/inspect/default.shard.cml" ],
+    program: {
+        accessor: "ALL",
+        timeout_seconds: "60",
+        cases: [
+            // diagnostics-kcounter produces valid Inspect containing at least handles.
+            "core/diagnostics-kcounter:root/handles*",
+        ],
+    },
+}

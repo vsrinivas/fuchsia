@@ -751,6 +751,7 @@
         {
             protocol: [
                 "fuchsia.diagnostics.internal.DetectController",
+                "fuchsia.diagnostics.internal.KcounterController",
                 "fuchsia.diagnostics.internal.LogStatsController",
                 "fuchsia.diagnostics.internal.PersistenceController",
                 "fuchsia.diagnostics.internal.SamplerController",

@@ -24,6 +24,7 @@ enum CreateChildArgs {
     LogStats(log_stats::CommandLine),
     Sampler(sampler::Args),
     Persistence(persistence::CommandLine),
+    Kcounter(kcounter::CommandLine),
 }
 
 #[fasync::run_singlethreaded]
@@ -33,6 +34,7 @@ async fn main() -> Result<(), Error> {
         Some(detect::PROGRAM_NAME) => detect::PROGRAM_NAME,
         Some(sampler::PROGRAM_NAME) => sampler::PROGRAM_NAME,
         Some(persistence::PROGRAM_NAME) => persistence::PROGRAM_NAME,
+        Some(kcounter::PROGRAM_NAME) => kcounter::PROGRAM_NAME,
         // If the name is invalid, don't quit yet - give argh a chance to log
         // help text. Then the program will exit.
         _ => "launcher",
@@ -44,5 +46,6 @@ async fn main() -> Result<(), Error> {
         CreateChildArgs::Persistence(args) => persistence::main(args).await,
         CreateChildArgs::LogStats(_args) => log_stats::main().await,
         CreateChildArgs::Sampler(args) => sampler::main(args).await,
+        CreateChildArgs::Kcounter(_args) => kcounter::main().await,
     }
 }

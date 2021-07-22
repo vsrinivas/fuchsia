@@ -50,6 +50,10 @@
             url: "fuchsia-pkg://fuchsia.com/diagnostics-persistence#meta/diagnostics-persistence.cm",
         },
         {
+            name: "diagnostics-kcounter",
+            url: "fuchsia-pkg://fuchsia.com/diagnostics-kcounter#meta/diagnostics-kcounter.cm",
+        },
+        {
             name: "http-client",
             url: "fuchsia-pkg://fuchsia.com/http-client#meta/http-client.cm",
         },
@@ -401,6 +405,7 @@
                 "#detect",
                 "#device_settings",
                 "#dhcpd",
+                "#diagnostics-kcounter",
                 "#diagnostics-persistence",
                 "#font_provider",
                 "#http-client",
@@ -424,6 +429,11 @@
                 "#universe-resolver",
                 "#vulkan_loader",
             ],
+        },
+        {
+            protocol: [ "fuchsia.kernel.Counter" ],
+            from: "parent",
+            to: "#diagnostics-kcounter",
         },
         {
             protocol: [
@@ -842,6 +852,10 @@
         {
             protocol: [ "fuchsia.diagnostics.internal.DetectController" ],
             from: "#detect",
+        },
+        {
+            protocol: [ "fuchsia.diagnostics.internal.KcounterController" ],
+            from: "#diagnostics-kcounter",
         },
         {
             protocol: [ "fuchsia.diagnostics.internal.PersistenceController" ],

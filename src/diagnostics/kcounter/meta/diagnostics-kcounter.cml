@@ -1,0 +1,25 @@
+{
+    include: [
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/launcher",
+        args: [ "kcounter" ],
+    },
+    capabilities: [
+        {
+            protocol: [ "fuchsia.diagnostics.internal.KcounterController" ],
+        },
+    ],
+    use: [
+        { protocol: "fuchsia.kernel.Counter" },
+    ],
+    expose: [
+        {
+            protocol: [ "fuchsia.diagnostics.internal.KcounterController" ],
+            from: "self",
+        },
+    ],
+}

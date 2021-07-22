@@ -76,6 +76,7 @@ base_package_labels += [
   "//src/diagnostics/config/persistence",
   "//src/diagnostics/config/triage:triage-detect",
   "//src/diagnostics/detect:triage-detect",
+  "//src/diagnostics/kcounter:diagnostics-kcounter",
   "//src/diagnostics/persistence:diagnostics-persistence",
   "//src/diagnostics/log-stats:package",
   "//src/diagnostics/sampler",
