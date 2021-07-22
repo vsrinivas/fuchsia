@@ -630,6 +630,14 @@ nearest power of 2 from the cpu timer counter.
 If set, tries to initialize the dap debug aperture at a hard coded address for the particular
 system on chip. Currently accepted values are amlogic-t931g, amlogic-s905d2, and amlogic-s905d3g.
 
+### kernel.smp.maxcpus=\<uint32_t>
+**Default:** `0x10`
+
+This option caps the number of CPUs to initialize.  It cannot be greater than *SMP\_MAX\_CPUS*
+for a specific architecture.
+
+Note: The default value may vary for each architechture.
+
 
 ## Options available only on x86 machines
 
@@ -724,5 +732,13 @@ electrical budget. This may provide improved interactive performance at the cost
 of performance variability. Some workloads may benefit from disabling Turbo; if
 this command line flag is set to false, turbo is disabled for all CPUs in the
 system.
+
+### kernel.smp.maxcpus=\<uint32_t>
+**Default:** `0x20`
+
+This option caps the number of CPUs to initialize.  It cannot be greater than *SMP\_MAX\_CPUS* 
+for a specific architecture.
+
+Note: The default value may vary for each architechture.
 
 TODO: put something here

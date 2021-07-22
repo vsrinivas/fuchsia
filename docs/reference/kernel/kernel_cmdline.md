@@ -313,11 +313,6 @@ All numbers may be in any base accepted by *strtoul*().
 
 All other values are currently undefined.
 
-## kernel.smp.maxcpus=\<num>
-
-This option caps the number of CPUs to initialize.  It cannot be greater than
-*SMP\_MAX\_CPUS* for a specific architecture.
-
 ## kernel.wallclock=\<name>
 
 This option can be used to force the selection of a particular wall clock.  It

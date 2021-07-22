@@ -729,7 +729,7 @@ static void traverse_topology(uint32_t) {
   }
 
   // Find the CPU count limit
-  uint32_t max_cpus = gCmdline.GetUInt32(kernel_option::kSmpMaxCpus, SMP_MAX_CPUS);
+  uint32_t max_cpus = gBootOptions->smp_max_cpus;
   if (max_cpus > SMP_MAX_CPUS || max_cpus <= 0) {
     printf("invalid kernel.smp.maxcpus value, defaulting to %d\n", SMP_MAX_CPUS);
     max_cpus = SMP_MAX_CPUS;

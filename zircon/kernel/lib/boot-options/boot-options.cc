@@ -221,6 +221,13 @@ void BootOptions::SetMany(std::string_view cmdline, FILE* complain) {
       }
     }
   }
+
+// Set smp_max_cpus to the arch specific value.
+#if defined(__x86_64__)
+  smp_max_cpus = x86_smp_max_cpus;
+#elif defined(__aarch64__) || defined(__arm64__) || defined(_M_ARM64)
+  smp_max_cpus = arm64_smp_max_cpus;
+#endif
 }
 
 int BootOptions::Show(std::string_view key, bool defaults, FILE* out) {

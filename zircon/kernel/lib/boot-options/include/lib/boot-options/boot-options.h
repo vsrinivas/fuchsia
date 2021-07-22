@@ -149,6 +149,8 @@ struct BootOptions {
 
   // Describes the source of the serial option.
   OptionSource serial_source = OptionSource::kDefault;
+
+  uint32_t smp_max_cpus = 0;
 };
 
 #endif  // ZIRCON_KERNEL_LIB_BOOT_OPTIONS_INCLUDE_LIB_BOOT_OPTIONS_BOOT_OPTIONS_H_

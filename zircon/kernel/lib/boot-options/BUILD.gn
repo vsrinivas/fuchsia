@@ -4,10 +4,9 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-import("//build/zircon/migrated_targets.gni")
-
 import("//build/compiled_action.gni")
 import("//build/toolchain/toolchain_environment.gni")
+import("//build/zircon/migrated_targets.gni")
 
 if (current_toolchain == default_toolchain) {
   compiled_action("json") {

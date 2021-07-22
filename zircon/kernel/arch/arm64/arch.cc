@@ -14,7 +14,6 @@
 #include <lib/arch/intrin.h>
 #include <lib/arch/sysreg.h>
 #include <lib/boot-options/boot-options.h>
-#include <lib/cmdline.h>
 #include <lib/console.h>
 #include <platform.h>
 #include <stdlib.h>
@@ -219,7 +218,7 @@ void arch_init() TA_NO_THREAD_SAFETY_ANALYSIS {
   arm64_feature_debug(true);
 
   uint32_t max_cpus = arch_max_num_cpus();
-  uint32_t cmdline_max_cpus = gCmdline.GetUInt32(kernel_option::kSmpMaxCpus, max_cpus);
+  uint32_t cmdline_max_cpus = gBootOptions->smp_max_cpus;
   if (cmdline_max_cpus > max_cpus || cmdline_max_cpus <= 0) {
     printf("invalid kernel.smp.maxcpus value, defaulting to %u\n", max_cpus);
     cmdline_max_cpus = max_cpus;

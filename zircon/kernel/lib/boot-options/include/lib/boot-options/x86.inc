@@ -9,7 +9,8 @@
 //
 // These are the x86-specific boot options.
 
-DEFINE_OPTION("kernel.x86.disable_spec_mitigations", bool, x86_disable_spec_mitigations, {false}, R"""(
+DEFINE_OPTION("kernel.x86.disable_spec_mitigations", bool, x86_disable_spec_mitigations, {false},
+              R"""(
 If set, disables all speculative execution information leak mitigations.
 
 If unset, the per-mitigation defaults will be used.
@@ -20,7 +21,8 @@ This settings enables HWP (hardware P-states) on supported chips. This feature
 lets Intel CPUs automatically scale their own clock speed.
 )""")
 
-DEFINE_OPTION("kernel.x86.hwp_policy", IntelHwpPolicy, x86_hwp_policy, {IntelHwpPolicy::kBiosSpecified}, R"""(
+DEFINE_OPTION("kernel.x86.hwp_policy", IntelHwpPolicy, x86_hwp_policy,
+              {IntelHwpPolicy::kBiosSpecified}, R"""(
 Set a power/performance tradeoff policy of the CPU. x86 CPUs with HWP
 (hardware P-state) support can be configured to autonomusly scale their
 frequency to favour different policies.
@@ -93,4 +95,12 @@ electrical budget. This may provide improved interactive performance at the cost
 of performance variability. Some workloads may benefit from disabling Turbo; if
 this command line flag is set to false, turbo is disabled for all CPUs in the
 system.
+)""")
+
+// TODO(fxb/80082): Unify arch agnostic options.
+DEFINE_OPTION("kernel.smp.maxcpus", uint32_t, x86_smp_max_cpus, {32}, R"""(
+This option caps the number of CPUs to initialize.  It cannot be greater than *SMP\_MAX\_CPUS* 
+for a specific architecture.
+
+Note: The default value may vary for each architechture.
 )""")
