@@ -12,7 +12,16 @@
   #size-cells = <2>;
 
   chosen {
-    // Will be populated at run-time.
+    // Instruct Linux to use pre-configured addresses in PCI BARs.
+    //
+    // Our emulated PCI bus allocates BARs itself, and doesn't support MMIO
+    // BARs being moved around in memory. Tell Linux to use the preconfigured
+    // addresses.
+    //
+    // c.f. https://www.kernel.org/doc/Documentation/devicetree/bindings/pci/host-generic-pci.txt
+    linux,pci-probe-only = <1>;
+
+    // Additional fields populated at run-time.
   };
 
   cpus {
