@@ -30,7 +30,6 @@ pub struct TableOfContentsItem {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct FidlJson {
-    pub version: String,
     pub name: String,
     #[serde(default)]
     pub maybe_attributes: Vec<Value>,
@@ -70,7 +69,6 @@ impl FidlJson {
     pub fn sort_declarations(&mut self) {
         let cmp_name = |a: &Value, b: &Value| a["name"].as_str().cmp(&b["name"].as_str());
         let FidlJson {
-            version: _,
             name: _,
             maybe_attributes: _,
             library_dependencies: _,
@@ -144,7 +142,6 @@ mod test {
     fn sort_declarations_test() {
         let mut f = FidlJson {
             name: "fuchsia.test".to_string(),
-            version: "0.0.1".to_string(),
             maybe_attributes: vec![json!({"name": "doc", "value": "Fuchsia Test API"})],
             library_dependencies: Vec::new(),
             bits_declarations: serde_json::from_str("[{\"name\": \"ABit\"},{\"name\": \"LastBit\"},{\"name\": \"AnotherBit\"}]").unwrap(),

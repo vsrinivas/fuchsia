@@ -27,7 +27,6 @@ impl MarkdownTemplate<'_> {
         for &(name, template, expect) in &[
             ("header", include_str!("partials/header.hbs"), "Failed to include header"),
             ("header_dir", include_str!("partials/header_dir.hbs"), "Failed to include header_dir"),
-            ("footer", include_str!("partials/footer.hbs"), "Failed to include footer"),
         ] {
             handlebars.register_template_string(name, template).expect(expect);
         }
@@ -213,7 +212,6 @@ mod test {
 
         let main_fidl_doc = json!({
             "table_of_contents": table_of_contents,
-            "fidldoc_version": "0.0.4",
             "config": fidl_config,
             "search": declarations,
             "url_path": "/",
@@ -248,7 +246,6 @@ mod test {
 
         let main_fidl_doc = json!({
             "table_of_contents": table_of_contents,
-            "fidldoc_version": "0.0.4",
             "config": fidl_config,
             "search": declarations,
             "url_path": "/",

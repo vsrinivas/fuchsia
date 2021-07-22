@@ -22,5 +22,3 @@
 
 </devsite-filter>
 </div>
-
-Generated with fidldoc v0.0.4

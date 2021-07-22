@@ -32,7 +32,6 @@ if (is_host) {
     "src/templates/markdown/partials/declarations/type_aliases.hbs",
     "src/templates/markdown/partials/declarations/protocols.hbs",
     "src/templates/markdown/partials/types/doc.hbs",
-    "src/templates/markdown/partials/footer.hbs",
     "src/templates/markdown/partials/declarations/bits.hbs",
     "src/templates/markdown/partials/declarations/unions.hbs",
     "src/templates/markdown/main.hbs",

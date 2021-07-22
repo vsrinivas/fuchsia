@@ -26,8 +26,6 @@ use templates::html::HtmlTemplate;
 use templates::markdown::MarkdownTemplate;
 use templates::FidldocTemplate;
 
-static FIDLDOC_VERSION: &str = "0.0.4";
-static SUPPORTED_FIDLJSON: &str = "0.0.1";
 static FIDLDOC_CONFIG_PATH: &str = "fidldoc.config.json";
 static ATTR_NAME_DOC: &'static str = "doc";
 static ATTR_NAME_NO_DOC: &'static str = "no_doc";
@@ -149,7 +147,6 @@ fn run(opt: Opt) -> Result<(), Error> {
         // Modifications to the fidldoc object
         let main_fidl_doc = json!({
             "table_of_contents": table_of_contents,
-            "fidldoc_version": FIDLDOC_VERSION,
             "config": fidl_config,
             "search": declarations,
             "url_path": url_path,
@@ -397,7 +394,6 @@ fn render_fidl_interface(
 ) -> Result<(), Error> {
     // Modifications to the fidldoc object
     let fidl_doc = json!({
-        "version": package_fidl_json.version,
         "name": package_fidl_json.name,
         "maybe_attributes": package_fidl_json.maybe_attributes,
         "library_dependencies": package_fidl_json.library_dependencies,
@@ -412,7 +408,6 @@ fn render_fidl_interface(
         "declaration_order": package_fidl_json.declaration_order,
         "declarations": package_fidl_json.declarations,
         "table_of_contents": table_of_contents,
-        "fidldoc_version": FIDLDOC_VERSION,
         "config": fidl_config,
         "tag": tag,
         "search": declarations,
@@ -464,14 +459,6 @@ fn read_fidldoc_config(config_path: &Path) -> Result<Value, Error> {
 }
 
 fn should_process_fidl_json(fidl_json: &FidlJson) -> bool {
-    if fidl_json.version != SUPPORTED_FIDLJSON {
-        error!(
-            "Error parsing {}: fidldoc does not support version {}, only {}",
-            fidl_json.name, fidl_json.version, SUPPORTED_FIDLJSON
-        );
-        return false;
-    }
-
     if fidl_json
         .maybe_attributes
         .iter()
@@ -587,7 +574,6 @@ mod test {
             "fuchsia.media".to_string(),
             FidlJson {
                 name: "fuchsia.media".to_string(),
-                version: "0.0.1".to_string(),
                 maybe_attributes: Vec::new(),
                 library_dependencies: Vec::new(),
                 bits_declarations: Vec::new(),
@@ -606,7 +592,6 @@ mod test {
             "fuchsia.auth".to_string(),
             FidlJson {
                 name: "fuchsia.auth".to_string(),
-                version: "0.0.1".to_string(),
                 // Note that this ATTR_NAME_DOC is UpperCamelCased - this should still
                 // pass.
                 maybe_attributes: vec![json!({"name": ATTR_NAME_DOC, "value": "Fuchsia Auth API"})],
@@ -627,7 +612,6 @@ mod test {
             "fuchsia.camera.common".to_string(),
             FidlJson {
                 name: "fuchsia.camera.common".to_string(),
-                version: "0.0.1".to_string(),
                 maybe_attributes: vec![json!({"some_key": "key", "some_value": "not_description"})],
                 library_dependencies: Vec::new(),
                 bits_declarations: Vec::new(),
@@ -737,7 +721,6 @@ mod test {
     fn should_process_test() {
         let fidl_json = FidlJson {
             name: "fuchsia.camera.common".to_string(),
-            version: SUPPORTED_FIDLJSON.to_string(),
             maybe_attributes: vec![json!({"name": "not no_doc", "value": ""})],
             library_dependencies: Vec::new(),
             bits_declarations: Vec::new(),
@@ -755,31 +738,9 @@ mod test {
     }
 
     #[test]
-    fn check_version_test() {
-        let fidl_json = FidlJson {
-            name: "fuchsia.camera.common".to_string(),
-            version: "not a valid version string".to_string(),
-            maybe_attributes: vec![json!({"name": "not no_doc", "value": ""})],
-            library_dependencies: Vec::new(),
-            bits_declarations: Vec::new(),
-            const_declarations: Vec::new(),
-            enum_declarations: Vec::new(),
-            interface_declarations: Vec::new(),
-            table_declarations: Vec::new(),
-            type_alias_declarations: Vec::new(),
-            struct_declarations: Vec::new(),
-            union_declarations: Vec::new(),
-            declaration_order: Vec::new(),
-            declarations: Map::new(),
-        };
-        assert_eq!(should_process_fidl_json(&fidl_json), false);
-    }
-
-    #[test]
     fn check_nodoc_attribute_test() {
         let fidl_json = FidlJson {
             name: "fuchsia.camera.common".to_string(),
-            version: SUPPORTED_FIDLJSON.to_string(),
             maybe_attributes: vec![json!({"name": ATTR_NAME_NO_DOC, "value": ""})],
             library_dependencies: Vec::new(),
             bits_declarations: Vec::new(),
@@ -800,7 +761,6 @@ mod test {
     fn check_documentation_ok() {
         let fidl_json = FidlJson {
             name: "fuchsia.camera.common".to_string(),
-            version: SUPPORTED_FIDLJSON.to_string(),
             maybe_attributes: Vec::new(),
             library_dependencies: Vec::new(),
             bits_declarations: Vec::new(),
@@ -834,7 +794,6 @@ mod test {
     fn check_documentation_nok() {
         let fidl_json = FidlJson {
             name: "fuchsia.camera.common".to_string(),
-            version: SUPPORTED_FIDLJSON.to_string(),
             maybe_attributes: Vec::new(),
             library_dependencies: Vec::new(),
             bits_declarations: Vec::new(),
