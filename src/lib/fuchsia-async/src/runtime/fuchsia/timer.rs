@@ -160,6 +160,7 @@ mod test {
         LocalExecutor, SendExecutor, TestExecutor, Timer,
     };
     use fuchsia_zircon::prelude::*;
+    use fuchsia_zircon::Duration;
     use futures::prelude::*;
 
     #[test]
@@ -191,6 +192,16 @@ mod test {
         let mut future = Timer::new(deadline);
         assert_eq!(Poll::Pending, exec.run_until_stalled(&mut future));
         assert_eq!(Some(deadline), exec.wake_next_timer());
+        assert_eq!(Poll::Ready(()), exec.run_until_stalled(&mut future));
+    }
+
+    #[test]
+    fn timer_before_now_fires_immediately() {
+        let mut exec = TestExecutor::new().unwrap();
+        let deadline = Time::from(Time::now() - Duration::from_nanos(1));
+        let mut future = Timer::new(deadline);
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut future));
+        assert!(exec.wake_expired_timers());
         assert_eq!(Poll::Ready(()), exec.run_until_stalled(&mut future));
     }
 
