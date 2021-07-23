@@ -419,6 +419,24 @@ success("UnionEnvelopeInlining_HandleValue_Inlined") {
     }
 }
 
+// Tests decode of a value in a union that can be represented inline in the
+// envelope but is incorrectly using the out of line representation.
+decode_failure("UnionOutOfLineEnvelopeWhenInlineRequired") {
+    bindings_allowlist = [go],
+    type = EnvelopeInliningTestUnionStruct,
+    bytes = {
+        v2 = [
+            // primary object
+            num(1):8, // ordinal
+            num(8):4, num(0):2, num(0):2, // present
+
+            // secondary object
+            num(100):8,
+        ],
+    },
+    err = INVALID_INLINE_BIT_IN_ENVELOPE,
+}
+
 encode_failure("RequiredFlexibleValueUnionZeroOrdinalNoPayload") {
     // TODO(fxbug.dev/7805): Fix in Go and Dart.
     // C and LLCPP cannot construct unknown variants.

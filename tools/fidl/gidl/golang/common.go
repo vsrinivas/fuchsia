@@ -340,6 +340,7 @@ var goErrorCodeNames = map[gidlir.ErrorCode]string{
 	gidlir.StringTooLong:                "ErrStringTooLong",
 	gidlir.TooFewHandles:                "ErrNotEnoughHandles",
 	gidlir.UnionFieldNotSet:             "ErrInvalidXUnionTag",
+	gidlir.InvalidInlineBitInEnvelope:   "ErrInvalidInlineBitValueInEnvelope",
 }
 
 func goErrorCode(code gidlir.ErrorCode) (string, error) {

@@ -25,6 +25,7 @@ const (
 	StringTooLong                ErrorCode = "STRING_TOO_LONG"
 	TooFewHandles                ErrorCode = "TOO_FEW_HANDLES"
 	UnionFieldNotSet             ErrorCode = "UNION_FIELD_NOT_SET"
+	InvalidInlineBitInEnvelope   ErrorCode = "INVALID_INLINE_BIT_IN_ENVELOPE"
 )
 
 var AllErrorCodes = map[ErrorCode]struct{}{
@@ -46,4 +47,5 @@ var AllErrorCodes = map[ErrorCode]struct{}{
 	StringTooLong:                {},
 	TooFewHandles:                {},
 	UnionFieldNotSet:             {},
+	InvalidInlineBitInEnvelope:   {},
 }

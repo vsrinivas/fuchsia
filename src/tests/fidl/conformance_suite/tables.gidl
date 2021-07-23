@@ -134,3 +134,21 @@ success("TableFieldUnknownOutOfLine") {
         ]
     }
 }
+
+// Tests decode of a value in a table that can be represented inline in the
+// envelope but is incorrectly using the out of line representation.
+decode_failure("TableOutOfLineEnvelopeWhenInlineRequired") {
+    bindings_allowlist = [go],
+    type = TableFieldInlinedStruct,
+    bytes = {
+        v2 = [
+            num(1):8,
+            repeat(0xff):8,
+
+            num(8):4, num(0):2, num(0):2,
+
+            num(123):8,
+        ]
+    },
+    err = INVALID_INLINE_BIT_IN_ENVELOPE,
+}
