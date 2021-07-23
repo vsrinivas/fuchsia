@@ -341,7 +341,58 @@ if (use_vbmeta) {
 
 generated_board_config("board_config") {
   testonly = true
+  board_name = board_name
   output_path = files.board_config
+  recovery = recovery_label
+  use_esp = target_cpu != "arm64" && !use_vboot
+
+  # minfs arguments
+  if (!bootfs_only) {
+    minfs =
+        rebase_path("$root_build_dir/obj/build/images/data.blk", root_build_dir)
+    if (minfs_product_minimum_inodes != false) {
+      minfs_minimum_inodes = minfs_product_minimum_inodes
+    } else if (minfs_board_minimum_inodes != false) {
+      minfs_minimum_inodes = minfs_board_minimum_inodes
+    }
+    if (minfs_product_minimum_data_bytes != false) {
+      minfs_minimum_data_bytes = minfs_product_minimum_data_bytes
+    } else if (minfs_board_minimum_data_bytes != false) {
+      minfs_minimum_data_bytes = minfs_board_minimum_data_bytes
+    }
+    if (minfs_product_maximum_bytes != false) {
+      minfs_maximum_bytes = minfs_product_maximum_bytes
+    } else if (minfs_board_maximum_bytes != false) {
+      minfs_maximum_bytes = minfs_board_maximum_bytes
+    }
+  }
+
+  # blobfs arguments
+  blob_layout_format = blob_layout_format
+  compress_blobs = compress_blobs
+  if (!bootfs_only) {
+    if (blobfs_product_minimum_inodes != false) {
+      blobfs_minimum_inodes = blobfs_product_minimum_inodes
+    } else if (blobfs_board_minimum_inodes != false) {
+      blobfs_minimum_inodes = blobfs_board_minimum_inodes
+    }
+    if (blobfs_product_minimum_data_bytes != false) {
+      blobfs_minimum_data_bytes = blobfs_product_minimum_data_bytes
+    } else if (blobfs_board_minimum_data_bytes != false) {
+      blobfs_minimum_data_bytes = blobfs_board_minimum_data_bytes
+    }
+    if (blobfs_product_maximum_bytes != false) {
+      blobfs_maximum_bytes = blobfs_product_maximum_bytes
+    } else if (blobfs_board_maximum_bytes != false) {
+      blobfs_maximum_bytes = blobfs_board_maximum_bytes
+    }
+  }
+
+  # fvm arguments
+  if (!bootfs_only) {
+    fvm_slice_size = fvm_slice_size
+  }
+
   if (use_vbmeta) {
     deps = [ vbmeta_label ]
     salt_file = vbmeta_salt
@@ -368,6 +419,9 @@ ffx_action("images") {
     ":board_config",
     ":product_config",
   ]
+  if (use_vbmeta) {
+    deps += [ vbmeta_label ]
+  }
 
   args = []
   if (verbose_image_assembly) {

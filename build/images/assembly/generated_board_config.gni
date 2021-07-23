@@ -12,66 +12,133 @@ import("//build/info/info.gni")
 import("//build/product.gni")
 import("//build/zbi/zbi.gni")
 
-# Arguments:
-#  output_path: Path to write the board config (required)
-#  salt_file: Path to a pre-defined salt to use in the vbmeta (optional)
+# Generates a board config to be consumed by the Image Assembler.
+#
+# Arguments
+#   board_name (required)
+#     [string] The name of the board.
+#
+#   output_path (required)
+#     [path] Board config output location.
+#
+#   salt_file (optional)
+#     [path] Pre-defined salt to use in VBMeta.
+#
+#   recovery (optional)
+#     [label] Recovery label to include in the update package.
+#
+#   use_esp (optional)
+#     [bool] Whether to include ESP bootloaders in the update package.
+#
+# MinFS arguments
+#   minfs (optional)
+#     [path] Path to prebuilt MinFS block file.
+#
+#   minfs_minimum_inodes, minfs_minimum_data_bytes, minfs_maximum_bytes (optional)
+#     [int] Size options for minfs to pass to the fvm tool.
+#
+# BlobFS arguments
+#   blob_layout_format (required)
+#     [string] Layout of the blobs (compact or padded).
+#
+#   compress_blobs (optional)
+#     [bool] Whether the blobs in BlobFS should be compressed.
+#
+#   blobfs_minimum_inodes, blobfs_minimum_data_bytes, blobfs_maximum_bytes (optional)
+#     [int] Size options for blobfs to pass to the fvm tool.
+#
+# FVM arguments
+#   embed_fvm_in_zbi (optional)
+#     [bool] Whether the FVM should be embedded into the ZBI as a ramdisk.
+#
+#   fvm_slice_size (required)
+#     [int] The slice size of the FVM.
+#
 template("generated_board_config") {
-  assert(defined(invoker.output_path), "Need to define the output path")
+  assert(defined(invoker.board_name), "Need to define board_name")
+  assert(defined(invoker.output_path), "Need to define output_path")
+  assert(defined(invoker.blob_layout_format), "Need to define blob_layout_form")
+  assert(defined(invoker.fvm_slice_size), "Need to define fvm_slice_size")
 
-  ####
-  #
-  # Deal with "bringup" and other zbi-only builds.
-  #
-  # These builds set `bootfs_only` to true, and do not include a base/system_image
-  # package, pkgfs, blobfs, fvm, etc.
-  #
-  # This declares an inverted variable that has easier reading and is less likely
-  # to miss the `!` operator:
-  #
-  uses_base_package = !bootfs_only
-
-  # This is copied from //build/images/BUILD.gn
-  use_esp = target_cpu != "arm64" && !use_vboot
-
-  # Determine if either the EMMC or NAND FVM should be built and its parameters.
-  if (uses_base_package) {
-    fastboot_fvm_type = false
-  }
-  if (fvm_partition != "" && !bootfs_only) {
-    fvm_compression = false
-    if (fvm_fastboot_compression != "default") {
-      fvm_compression = fvm_fastboot_compression
-    }
-    if (fvm_emmc_partition_size != false) {
-      fastboot_fvm_type = "emmc"
-    } else if (fvm_ftl_nand_block_count != false) {
-      fastboot_fvm_type = "nand"
-    } else {
-      assert(
-          false,
-          "|fvm_partition| is specified. But failed to determine the target format.")
-    }
+  use_esp = false
+  if (defined(invoker.use_esp)) {
+    use_esp = invoker.use_esp
   }
 
   generated_file(target_name) {
     forward_variables_from(invoker,
                            [
-                             "deps",
                              "salt_file",
                              "testonly",
                            ])
-    public_deps = [ recovery_label ]
-    if (defined(deps)) {
-      public_deps += deps
+    deps = []
+    if (defined(invoker.deps)) {
+      deps += invoker.deps
     }
     if (use_esp) {
-      public_deps += [ "//build/images:esp" ]
+      deps += [ "//build/images:esp" ]
     }
+    if (defined(invoker.recovery)) {
+      deps += [ invoker.recovery ]
+    }
+
     outputs = [ invoker.output_path ]
     output_conversion = "json"
 
+    if (fvm_partition != "" && !bootfs_only) {
+      if (fvm_fastboot_compression != "default") {
+        fastboot_fvm_compression = fvm_fastboot_compression
+      }
+      if (fvm_emmc_partition_size != false) {
+        fastboot_fvm_type = "emmc"
+      } else if (fvm_ftl_nand_block_count != false) {
+        fastboot_fvm_type = "nand"
+      } else {
+        assert(
+            false,
+            "|fvm_partition| is specified. But failed to determine the target format.")
+      }
+    }
+
+    if (!bootfs_only) {
+      if (defined(invoker.minfs)) {
+        minfs_parameters = {
+          MinFS = {
+            path = invoker.minfs
+            name = "data"
+
+            if (defined(invoker.minfs_minimum_inodes)) {
+              minimum_inodes = invoker.minfs_minimum_inodes
+            }
+            if (defined(invoker.minfs_minimum_data_bytes)) {
+              minimum_data_bytes = invoker.minfs_minimum_data_bytes
+            }
+            if (defined(invoker.minfs_maximum_bytes)) {
+              maximum_bytes = invoker.minfs_maximum_bytes
+            }
+          }
+        }
+      }
+
+      blobfs_parameters = {
+        BlobFS = {
+          name = "blob"
+
+          if (defined(invoker.blobfs_minimum_inodes)) {
+            minimum_inodes = invoker.blobfs_minimum_inodes
+          }
+          if (defined(invoker.blobfs_minimum_data_bytes)) {
+            minimum_data_bytes = invoker.blobfs_minimum_data_bytes
+          }
+          if (defined(invoker.blobfs_maximum_bytes)) {
+            maximum_bytes = invoker.blobfs_maximum_bytes
+          }
+        }
+      }
+    }
+
     contents = {
-      board_name = board_name
+      board_name = invoker.board_name
       arch = target_cpu
       zbi = {
         partition = zircon_a_partition
@@ -81,6 +148,9 @@ template("generated_board_config") {
           name = "zbi"
         }
         max_size = 0
+        if (defined(invoker.embed_fvm_in_zbi)) {
+          embed_fvm_in_zbi = invoker.embed_fvm_in_zbi
+        }
         compression = zbi_compression
 
         if (use_vboot) {
@@ -112,13 +182,16 @@ template("generated_board_config") {
       }
 
       blobfs = {
-        layout = blob_layout_format
+        layout = invoker.blob_layout_format
+        if (defined(invoker.compress_blobs)) {
+          compress = invoker.compress_blobs
+        }
       }
 
-      if (uses_base_package) {
+      if (!bootfs_only) {
         fvm = {
           partition = fvm_partition
-          slice_size = fvm_slice_size
+          slice_size = invoker.fvm_slice_size
           reserved_slices = fvm_reserved_slices
 
           if (fvm_max_disk_size != false) {
@@ -126,21 +199,21 @@ template("generated_board_config") {
           }
 
           # Generated a fastboot-supported FVM if needed.
-          if (fastboot_fvm_type != false) {
+          if (defined(fastboot_fvm_type)) {
             fastboot = {
               if (fastboot_fvm_type == "emmc") {
                 # Format for EMMC.
                 Emmc = {
-                  if (fvm_compression != false) {
-                    compression = fvm_compression
+                  if (defined(fastboot_fvm_compression)) {
+                    compression = fastboot_fvm_compression
                   }
                   length = fvm_emmc_partition_size
                 }
               } else if (fastboot_fvm_type == "nand") {
                 # Format for NAND.
                 Nand = {
-                  if (fvm_compression != false) {
-                    compression = fvm_compression
+                  if (defined(fastboot_fvm_compression)) {
+                    compression = fastboot_fvm_compression
                   }
                   page_size = fvm_ftl_nand_page_size
                   oob_size = fvm_ftl_nand_oob_size
@@ -151,62 +224,14 @@ template("generated_board_config") {
             }
           }
 
-          filesystems = [
-            {
-              MinFS = {
-                path = rebase_path("$root_build_dir/obj/build/images/data.blk",
-                                   root_build_dir)
-                name = "data"
-
-                # Set the minimum inodes.
-                if (minfs_product_minimum_inodes != false) {
-                  minimum_inodes = minfs_product_minimum_inodes
-                } else if (minfs_board_minimum_inodes != false) {
-                  minimum_inodes = minfs_board_minimum_inodes
-                }
-
-                # Set the minimum data bytes.
-                if (minfs_product_minimum_data_bytes != false) {
-                  minimum_data_bytes = minfs_product_minimum_data_bytes
-                } else if (minfs_board_minimum_data_bytes != false) {
-                  minimum_data_bytes = minfs_board_minimum_data_bytes
-                }
-
-                # Set the maximum bytes.
-                if (minfs_product_maximum_bytes != false) {
-                  maximum_bytes = minfs_product_maximum_bytes
-                } else if (minfs_board_maximum_bytes != false) {
-                  maximum_bytes = minfs_board_maximum_bytes
-                }
-              }
-            },
-            {
-              BlobFS = {
-                name = "blob"
-
-                # Set the minimum inodes.
-                if (blobfs_product_minimum_inodes != false) {
-                  minimum_inodes = blobfs_product_minimum_inodes
-                } else if (blobfs_board_minimum_inodes != false) {
-                  minimum_inodes = blobfs_board_minimum_inodes
-                }
-
-                # Set the minimum data bytes.
-                if (blobfs_product_minimum_data_bytes != false) {
-                  minimum_data_bytes = blobfs_product_minimum_data_bytes
-                } else if (blobfs_board_minimum_data_bytes != false) {
-                  minimum_data_bytes = blobfs_board_minimum_data_bytes
-                }
-
-                # Set the maximum bytes.
-                if (blobfs_product_maximum_bytes != false) {
-                  maximum_bytes = blobfs_product_maximum_bytes
-                } else if (blobfs_board_maximum_bytes != false) {
-                  maximum_bytes = blobfs_board_maximum_bytes
-                }
-              }
-            },
-          ]
+          if (defined(invoker.minfs)) {
+            filesystems = [
+              minfs_parameters,
+              blobfs_parameters,
+            ]
+          } else {
+            filesystems = [ blobfs_parameters ]
+          }
         }
       }
 
@@ -255,52 +280,54 @@ template("generated_board_config") {
       #
       # TODO(fxbug.dev/77535)
       #
-      recovery = {
-        # Inspect the recovery label's name, as the in-tree recovery and zedboot
-        # builds have different naming behavior.
-        #
-        # This different naming behavior is an artifact of the current build
-        # process and GN logic, and can all go away after `ffx assembly` is the
-        # only implementation used in-tree.
-        #
-        # At that time, these are always:
-        #  name = "recovery"
-        #  zbi = <path to ZBI that contains recovery>
+      if (defined(invoker.recovery)) {
+        recovery = {
+          # Inspect the recovery label's name, as the in-tree recovery and zedboot
+          # builds have different naming behavior.
+          #
+          # This different naming behavior is an artifact of the current build
+          # process and GN logic, and can all go away after `ffx assembly` is the
+          # only implementation used in-tree.
+          #
+          # At that time, these are always:
+          #  name = "recovery"
+          #  zbi = <path to ZBI that contains recovery>
 
-        # Use the `name` variable for this, because all vars that we use in this
-        # scope will end up in the generated JSON, so let's not use any temporary
-        # vars and just mutate the fields we need to have in the final until they
-        # have the right values.
-        #
+          # Use the `name` variable for this, because all vars that we use in this
+          # scope will end up in the generated JSON, so let's not use any temporary
+          # vars and just mutate the fields we need to have in the final until they
+          # have the right values.
+          #
 
-        # Get the 'name' field of the recovery implementation's GN target.
-        #  e.g. "zedboot" for "//build/images:zedboot"
-        name = get_label_info(recovery_label, "name")
+          # Get the 'name' field of the recovery implementation's GN target.
+          #  e.g. "zedboot" for "//build/images:zedboot"
+          name = get_label_info(invoker.recovery, "name")
 
-        if (name == "zedboot") {
-          # Zedboot's name is different depending on if, and how, it's post-
-          # processed for booting by the board's bootloaders.
-          if (custom_signing_script != "") {
-            name = "zedboot.signed"
-            zbi = "zedboot.zbi.signed"
-          } else if (use_vboot) {
-            name = "zedboot.signed"
-            zbi = "zedboot.vboot"
+          if (name == "zedboot") {
+            # Zedboot's name is different depending on if, and how, it's post-
+            # processed for booting by the board's bootloaders.
+            if (custom_signing_script != "") {
+              name = "zedboot.signed"
+              zbi = "zedboot.zbi.signed"
+            } else if (use_vboot) {
+              name = "zedboot.signed"
+              zbi = "zedboot.vboot"
+            } else {
+              zbi = "zedboot.zbi"
+            }
+
+            if (use_vbmeta) {
+              vbmeta = "zedboot.vbmeta"
+            }
           } else {
-            zbi = "zedboot.zbi"
-          }
+            # All recovery options result in a "recovery.zbi", not the default of
+            # "${name}.zbi", and need to be named "recovery" in the update package.
+            name = "recovery"
+            zbi = "recovery.zbi"
 
-          if (use_vbmeta) {
-            vbmeta = "zedboot.vbmeta"
-          }
-        } else {
-          # All recovery options result in a "recovery.zbi", not the default of
-          # "${name}.zbi", and need to be named "recovery" in the update package.
-          name = "recovery"
-          zbi = "recovery.zbi"
-
-          if (use_vbmeta) {
-            vbmeta = "recovery.vbmeta"
+            if (use_vbmeta) {
+              vbmeta = "recovery.vbmeta"
+            }
           }
         }
       }
