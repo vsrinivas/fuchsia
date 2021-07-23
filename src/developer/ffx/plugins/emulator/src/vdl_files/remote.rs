@@ -7,6 +7,8 @@ use crate::types::{FuchsiaPaths, InTreePaths};
 use anyhow::{format_err, Result};
 use errors::ffx_bail;
 use ffx_emulator_args::RemoteCommand;
+use fuchsia_async::{Duration, LocalExecutor};
+use fuchsia_hyper::new_https_client;
 use home::home_dir;
 use std::env;
 use std::fs::create_dir_all;
@@ -14,7 +16,6 @@ use std::net::TcpListener;
 use std::process::{Command, Output, Stdio};
 use std::str;
 use std::thread;
-use std::time::Duration;
 
 impl VDLFiles {
     // Launches an ssh command to the remote host, passing the arguments on the command line and
@@ -98,32 +99,38 @@ impl VDLFiles {
                 ffx_bail!("Running on unsupported OS {}", env::consts::OS);
             }
         };
-        let url = format!("http://localhost:{}", port);
-        let timeout = 10;
-        for waited in 0..timeout {
-            let mut result = Command::new("curl")
-                .arg("-sI")
-                .arg(&url)
-                .output()
-                .expect("Curl could't get started");
-            if result.status.success() {
-                result =
-                    command.arg(format!("https://web-femu.appspot.com/?port={}", port)).output()?;
-                if !result.status.success() {
-                    ffx_bail!(
-                        "Couldn't launch Chrome: {}",
-                        String::from_utf8(result.stderr).expect("Couldn't parse stderr")
-                    );
-                }
-                break;
-            } else if timeout > waited {
-                println!("Waiting for emulator ({} seconds left)...", timeout - waited);
-                thread::sleep(Duration::from_secs(1));
-            } else {
-                ffx_bail!("No emulator after waiting {} seconds, giving up.", timeout);
+        let mut executor = LocalExecutor::new().unwrap();
+        executor.run_singlethreaded(async move {
+            let timeout = 10;
+            for waited in 0..timeout {
+                let client = new_https_client();
+                let url = format!("http://localhost:{}", port).parse().unwrap();
+                let res = client.get(url).await;
+                match res {
+                    Ok(_) => {
+                        let result = command
+                            .arg(format!("https://web-femu.appspot.com/?port={}", port))
+                            .output()?;
+                        if !result.status.success() {
+                            ffx_bail!(
+                                "Couldn't launch Chrome: {}",
+                                String::from_utf8(result.stderr).expect("Couldn't parse stderr")
+                            );
+                        }
+                        break;
+                    }
+                    Err(_) => {
+                        if timeout > waited {
+                            println!("Waiting for emulator ({} seconds left)...", timeout - waited);
+                            thread::sleep(Duration::from_secs(1));
+                        } else {
+                            ffx_bail!("No emulator after waiting {} seconds, giving up.", timeout);
+                        }
+                    }
+                };
             }
-        }
-        Ok(())
+            Ok(())
+        })
     }
 
     // Root of the "remote" vdl command. Communicates with a remote host over ssh to (optionally)
@@ -160,7 +167,11 @@ impl VDLFiles {
         let mut result =
             VDLFiles::remote_ssh_command(&ssh_base_args, &[], &format!("ls {}", &fx_path), false)?;
         if !result.status.success() {
-            ffx_bail!("failed to find {} on $host, please specify --dir", &fx_path);
+            ffx_bail!(
+                "failed to find {} on {}, please specify --dir",
+                &fx_path,
+                &remote_command.host
+            );
         }
 
         let emu_targets = "multiboot.bin fuchsia.zbi obj/build/images/fvm.blk";
