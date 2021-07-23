@@ -11,7 +11,7 @@ mod element_repository;
 use {
     crate::element_repository::{ElementEventHandler, ElementManagerServer, ElementRepository},
     anyhow::{Context as _, Error},
-    fidl::endpoints::{ClientEnd, DiscoverableService, Proxy},
+    fidl::endpoints::{ClientEnd, Proxy},
     fidl_fuchsia_session::{
         ElementManagerMarker, ElementManagerRequestStream, GraphicalPresenterMarker,
     },
@@ -38,6 +38,10 @@ use {
     std::sync::{Arc, Weak},
 };
 
+// TODO(fxbug.dev/75869): Remove when soft-transition is done.
+#[allow(deprecated)]
+use fidl::endpoints::DiscoverableService;
+
 enum ExposedServices {
     ElementManager(ElementManagerRequestStream),
     Presentation(PresentationRequestStream),
@@ -56,6 +60,8 @@ async fn launch_ermine() -> Result<(App, zx::Channel), Error> {
     let (client_chan, server_chan) = zx::Channel::create().unwrap();
 
     let mut launch_options = LaunchOptions::new();
+    // TODO(fxbug.dev/75869): Remove when soft-transition is done.
+    #[allow(deprecated)]
     launch_options.set_additional_services(
         vec![
             PresentationMarker::SERVICE_NAME.to_string(),
@@ -67,15 +73,10 @@ async fn launch_ermine() -> Result<(App, zx::Channel), Error> {
     // Check if shell is overridden. Otherwise use the default ermine shell.
     let shell_url = match fs::read_to_string("/config/data/shell") {
         Ok(url) => url,
-        Err(_) => "fuchsia-pkg://fuchsia.com/ermine#meta/ermine.cmx".to_string()
+        Err(_) => "fuchsia-pkg://fuchsia.com/ermine#meta/ermine.cmx".to_string(),
     };
 
-    let app = launch_with_options(
-        &launcher,
-        shell_url,
-        None,
-        launch_options,
-    )?;
+    let app = launch_with_options(&launcher, shell_url, None, launch_options)?;
 
     Ok((app, server_chan))
 }
@@ -94,7 +95,11 @@ async fn expose_services(
     fs.take_and_serve_directory_handle()?;
 
     // Add services served over `server_chan`.
+    // TODO(fxbug.dev/75869): Remove when soft-transition is done.
+    #[allow(deprecated)]
     fs.add_fidl_service_at(ElementManagerMarker::SERVICE_NAME, ExposedServices::ElementManager);
+    // TODO(fxbug.dev/75869): Remove when soft-transition is done.
+    #[allow(deprecated)]
     fs.add_fidl_service_at(PresentationMarker::SERVICE_NAME, ExposedServices::Presentation);
     fs.serve_connection(server_chan).unwrap();
 
