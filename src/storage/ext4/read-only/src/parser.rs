@@ -201,7 +201,10 @@ impl<T: 'static + Reader> Parser<T> {
     /// Errors if the Inode does not map to a Directory.
     ///
     /// Currently only supports a single block of DirEntrys, with only one extent entry.
-    fn entries_from_inode(&self, inode: Arc<INode>) -> Result<Vec<Arc<DirEntry2>>, ParsingError> {
+    pub fn entries_from_inode(
+        &self,
+        inode: &Arc<INode>,
+    ) -> Result<Vec<Arc<DirEntry2>>, ParsingError> {
         let root_extent = inode.root_extent_header()?;
         // TODO(vfcc): Will use entry_count when we support having N entries.
         let block_size = self.block_size()?;
@@ -257,7 +260,7 @@ impl<T: 'static + Reader> Parser<T> {
     /// When dynamic loading of files is supported, this is the required mechanism.
     pub fn entry_at_path(&self, path: &Path) -> Result<Arc<DirEntry2>, ParsingError> {
         let root_inode = self.root_inode()?;
-        let root_entries = self.entries_from_inode(root_inode)?;
+        let root_entries = self.entries_from_inode(&root_inode)?;
         let mut entry_map = DirEntry2::as_hash_map(root_entries)?;
 
         let mut components = path.components().peekable();
@@ -278,7 +281,7 @@ impl<T: 'static + Reader> Parser<T> {
                             EntryType::Directory => {
                                 let inode = self.inode(entry.e2d_ino.get())?;
                                 entry_map =
-                                    DirEntry2::as_hash_map(self.entries_from_inode(inode)?)?;
+                                    DirEntry2::as_hash_map(self.entries_from_inode(&inode)?)?;
                             }
                             _ => {
                                 break;
@@ -304,8 +307,8 @@ impl<T: 'static + Reader> Parser<T> {
     /// Read all raw data for a given file (directory entry).
     ///
     /// Currently does not support extent trees, only basic "flat" trees.
-    pub fn read_file(&self, entry: Arc<DirEntry2>) -> Result<Vec<u8>, ParsingError> {
-        let inode = self.inode(entry.e2d_ino.get())?;
+    pub fn read_file(&self, inode: u32) -> Result<Vec<u8>, ParsingError> {
+        let inode = self.inode(inode)?;
         let root_extent = inode.root_extent_header()?;
         let entry_count = root_extent.eh_ecount.get();
         let mut size_remaining = inode.size();
@@ -373,7 +376,7 @@ impl<T: 'static + Reader> Parser<T> {
     where
         R: FnMut(&Parser<T>, Vec<&str>, Arc<DirEntry2>) -> Result<bool, ParsingError>,
     {
-        let entries = self.entries_from_inode(inode)?;
+        let entries = self.entries_from_inode(&inode)?;
         for entry in entries {
             let entry_name = entry.name()?;
             if entry_name == "." || entry_name == ".." {
@@ -405,7 +408,7 @@ impl<T: 'static + Reader> Parser<T> {
             let entry_type = EntryType::from_u8(entry.e2d_type)?;
             match entry_type {
                 EntryType::RegularFile => {
-                    let data = my_self.read_file(entry)?;
+                    let data = my_self.read_file(entry.e2d_ino.into())?;
                     let bytes = data.as_slice();
                     tree.add_entry(path.clone(), read_only_const(bytes))
                         .map_err(|_| ParsingError::BadFile(path.join("/")))?;
@@ -439,7 +442,7 @@ mod tests {
         let parser = super::Parser::new(VecReader::new(data));
         assert!(parser.super_block().expect("Super Block").check_magic().is_ok());
         let root_inode = parser.root_inode().expect("Parse INode");
-        let entries = parser.entries_from_inode(root_inode).expect("List entries");
+        let entries = parser.entries_from_inode(&root_inode).expect("List entries");
         let mut expected_entries = vec!["file1", "lost+found", "..", "."];
 
         for de in &entries {
@@ -454,7 +457,7 @@ mod tests {
         let parser = super::Parser::new(VecReader::new(data));
         assert!(parser.super_block().expect("Super Block").check_magic().is_ok());
         let root_inode = parser.root_inode().expect("Parse INode");
-        let entries = parser.entries_from_inode(root_inode).expect("List entries");
+        let entries = parser.entries_from_inode(&root_inode).expect("List entries");
         let mut expected_entries = vec!["inner", "file1", "lost+found", "..", "."];
 
         for de in &entries {
@@ -488,7 +491,7 @@ mod tests {
         assert_eq!(entry.e2d_ino.get(), 15);
         assert_eq!(entry.name().unwrap(), "file1");
 
-        let data = parser.read_file(entry).expect("File data");
+        let data = parser.read_file(entry.e2d_ino.into()).expect("File data");
         let compare = "file1 contents.\n";
         assert_eq!(data.len(), compare.len());
         assert_eq!(str::from_utf8(data.as_slice()).expect("File data"), compare);
@@ -539,7 +542,7 @@ mod tests {
                 let entry_type = EntryType::from_u8(entry.e2d_type).expect("Entry Type");
                 match entry_type {
                     EntryType::RegularFile => {
-                        let data = my_self.read_file(entry).expect("File data");
+                        let data = my_self.read_file(entry.e2d_ino.into()).expect("File data");
 
                         let mut hasher = Sha256::new();
                         hasher.input(&data);

@@ -88,12 +88,14 @@ struct LoadedElf {
 }
 
 // TODO: Improve the error reporting produced by this function by mapping ElfParseError to Errno more precisely.
-fn elf_parse_error_to_errno(_: elf_parse::ElfParseError) -> Errno {
+fn elf_parse_error_to_errno(err: elf_parse::ElfParseError) -> Errno {
+    log::warn!("elf parse error: {:?}", err);
     EINVAL
 }
 
 // TODO: Improve the error reporting produced by this function by mapping ElfLoadError to Errno more precisely.
-fn elf_load_error_to_errno(_: elf_load::ElfLoadError) -> Errno {
+fn elf_load_error_to_errno(err: elf_load::ElfLoadError) -> Errno {
+    log::warn!("elf load error: {:?}", err);
     EINVAL
 }
 

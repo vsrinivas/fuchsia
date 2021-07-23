@@ -404,8 +404,9 @@ impl FsNode {
             let child = init_fn(child)?;
             assert!(
                 child.info().mode & FileMode::IFMT != FileMode::EMPTY,
-                "FsNodeOps initialization did not populate the FileMode in FsNodeInfo."
+                "FsNode initialization did not populate the FileMode in FsNodeInfo."
             );
+            assert!(child.ops.is_some(), "FsNodeOps initialization did not populate ops");
             let weak_child = Arc::downgrade(&child);
             // Stash the Arc so it doesn't get immediately freed
             new_child_handle = Some(child);

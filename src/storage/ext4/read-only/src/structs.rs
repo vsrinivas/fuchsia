@@ -528,7 +528,7 @@ impl From<ReaderError> for ParsingError {
 }
 
 /// Directory Entry types.
-#[derive(PartialEq)]
+#[derive(Debug, PartialEq)]
 #[repr(u8)]
 pub enum EntryType {
     Unknown = 0x0,
@@ -755,6 +755,10 @@ impl DirEntry2 {
         str::from_utf8(&self.e2d_name[0..self.e2d_namlen as usize]).map_err(|_| {
             ParsingError::DirEntry2NonUtf8(self.e2d_name[0..self.e2d_namlen as usize].to_vec())
         })
+    }
+
+    pub fn name_bytes(&self) -> &[u8] {
+        &self.e2d_name[0..self.e2d_namlen as usize]
     }
 
     /// Generate a hash table of the given directory entries.
