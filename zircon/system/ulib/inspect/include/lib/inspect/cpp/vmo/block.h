@@ -121,6 +121,7 @@ struct Field final {
 
   template <typename U>
   static constexpr U Get(uint64_t word) {
+    static_assert(sizeof(U) >= SizeInBytes(), "attempt to narrow value lossily");
     return static_cast<U>((word >> (begin % 64)) & kMask);
   }
 
