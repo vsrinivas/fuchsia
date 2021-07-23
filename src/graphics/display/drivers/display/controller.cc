@@ -37,6 +37,16 @@ namespace fidl_display = fuchsia_hardware_display;
 
 namespace {
 
+// Use the same default watchdog timeout as scenic, which may help ensure watchdog logs/errors
+// happen close together and can be correlated.
+constexpr uint64_t kWatchdogWarningIntervalMs = 15000;
+constexpr uint64_t kWatchdogTimeoutMs = 45000;
+
+// vsync delivery is considered to be stalled if at least this amount of time has elapsed since
+// vsync was last observed.
+constexpr zx::duration kVsyncStallThreshold = zx::sec(10);
+constexpr zx::duration kVsyncMonitorInterval = kVsyncStallThreshold / 2;
+
 struct I2cBus {
   ddk::I2cImplProtocolClient i2c;
   uint32_t bus_id;
@@ -492,8 +502,10 @@ void Controller::DisplayControllerInterfaceOnDisplayVsync(uint64_t display_id, z
   TRACE_INSTANT("gfx", "VSYNC", TRACE_SCOPE_THREAD, "display_id", display_id);
   TRACE_DURATION("gfx", "Display::Controller::OnDisplayVsync", "display_id", display_id);
   last_vsync_ns_property_.Set(timestamp);
-  last_vsync_interval_ns_property_.Set(timestamp - last_vsync_timestamp_);
-  last_vsync_timestamp_ = timestamp;
+  last_vsync_interval_ns_property_.Set(timestamp - last_vsync_timestamp_.load().get());
+  last_vsync_timestamp_ = zx::time(timestamp);
+  vsync_stalled_ = false;
+
   fbl::AutoLock lock(mtx());
   size_t found_handles = 0;
   DisplayInfo* info = nullptr;
@@ -1019,6 +1031,22 @@ void Controller::OpenController(OpenControllerRequestView request,
       CreateClient(/*is_vc=*/false, std::move(request->device), request->controller.TakeChannel()));
 }
 
+void Controller::OnVsyncMonitor() {
+  if (vsync_stalled_) {
+    return;
+  }
+
+  if ((zx::clock::get_monotonic() - last_vsync_timestamp_.load()) > kVsyncStallThreshold) {
+    vsync_stalled_ = true;
+    vsync_stalls_detected_.Add(1);
+  }
+
+  zx_status_t status = vsync_monitor_.PostDelayed(loop_.dispatcher(), kVsyncMonitorInterval);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to schedule vsync monitor: %s", zx_status_get_string(status));
+  }
+}
+
 zx_status_t Controller::Bind(std::unique_ptr<display::Controller>* device_ptr) {
   ZX_DEBUG_ASSERT_MSG(device_ptr && device_ptr->get() == this, "Wrong controller passed to Bind()");
 
@@ -1082,6 +1110,12 @@ zx_status_t Controller::Bind(std::unique_ptr<display::Controller>* device_ptr) {
     dc_capture_.SetDisplayCaptureInterface(this, &display_capture_interface_protocol_ops_);
   }
 
+  status = vsync_monitor_.PostDelayed(loop_.dispatcher(), kVsyncMonitorInterval);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to schedule vsync monitor: %s", zx_status_get_string(status));
+    return status;
+  }
+
   return ZX_OK;
 }
 
@@ -1093,6 +1127,7 @@ void Controller::DdkUnbind(ddk::UnbindTxn txn) {
 }
 
 void Controller::DdkRelease() {
+  vsync_monitor_.Cancel();
   // Clients may have active work holding mtx_ in loop_.dispatcher(), so shut it down without mtx_
   loop_.Shutdown();
   // Set an empty config so that the display driver releases resources.
@@ -1100,11 +1135,6 @@ void Controller::DdkRelease() {
   dc_.ApplyConfiguration(&configs, 0);
   delete this;
 }
-
-// Use the same default watchdog timeout as scenic, which may help ensure watchdog logs/errors
-// happen close together and can be correlated.
-static constexpr uint64_t kWatchdogWarningIntervalMs = 15000;
-static constexpr uint64_t kWatchdogTimeoutMs = 45000;
 
 Controller::Controller(zx_device_t* parent)
     : ControllerParent(parent),
@@ -1116,6 +1146,11 @@ Controller::Controller(zx_device_t* parent)
   root_ = inspector_.GetRoot().CreateChild("display");
   last_vsync_ns_property_ = root_.CreateUint("last_vsync_timestamp_ns", 0);
   last_vsync_interval_ns_property_ = root_.CreateUint("last_vsync_interval_ns", 0);
+  last_valid_apply_config_timestamp_ns_property_ =
+      root_.CreateUint("last_valid_apply_config_timestamp_ns", 0);
+  last_valid_apply_config_interval_ns_property_ =
+      root_.CreateUint("last_valid_apply_config_interval_ns", 0);
+  vsync_stalls_detected_ = root_.CreateUint("vsync_stalls", 0);
 }
 
 Controller::~Controller() { zxlogf(INFO, "Controller::~Controller"); }
