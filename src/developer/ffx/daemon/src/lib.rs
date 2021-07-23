@@ -5,7 +5,7 @@
 use {
     anyhow::{Context, Result},
     errors::{ffx_error, FfxError},
-    fidl::endpoints::ServiceMarker,
+    fidl::endpoints::ProtocolMarker,
     fidl_fuchsia_developer_bridge::{DaemonMarker, DaemonProxy},
     fidl_fuchsia_overnet_protocol::NodeId,
     futures::prelude::*,

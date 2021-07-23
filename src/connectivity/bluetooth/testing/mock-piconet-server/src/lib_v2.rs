@@ -7,7 +7,7 @@ use {
     anyhow::{format_err, Context, Error},
     fidl::{
         encoding::Decodable,
-        endpoints::{self as f_end, DiscoverableService},
+        endpoints::{self as f_end, DiscoverableProtocolMarker},
     },
     fidl_fuchsia_bluetooth_bredr as bredr,
     fidl_fuchsia_logger::LogSinkMarker,
@@ -89,7 +89,7 @@ impl PiconetMemberSpec {
 }
 
 fn mock_profile_service_path(mock: &PiconetMemberSpec) -> String {
-    format!("{}{}", bredr::ProfileMarker::SERVICE_NAME, mock.id)
+    format!("{}{}", bredr::ProfileMarker::PROTOCOL_NAME, mock.id)
 }
 
 pub struct PiconetMember {
@@ -254,7 +254,7 @@ async fn add_profile_to_topology<'a>(
         builder,
         mock_piconet_member_name.clone(),
         spec.id,
-        bredr::ProfileMarker::SERVICE_NAME.to_string(),
+        bredr::ProfileMarker::PROTOCOL_NAME.to_string(),
         spec.observer.take(),
     )
     .await?;
@@ -836,10 +836,10 @@ mod tests {
         // check that the piconet member has a use declaration for ProfileTest
         let use_decl = UseDecl::Protocol(UseProtocolDecl {
             source: UseSource::Parent,
-            source_name: CapabilityName(bredr::ProfileTestMarker::SERVICE_NAME.to_string()),
+            source_name: CapabilityName(bredr::ProfileTestMarker::PROTOCOL_NAME.to_string()),
             target_path: CapabilityPath {
                 dirname: "/svc".to_string(),
-                basename: bredr::ProfileTestMarker::SERVICE_NAME.to_string(),
+                basename: bredr::ProfileTestMarker::PROTOCOL_NAME.to_string(),
             },
             dependency_type: DependencyType::Strong,
         });
@@ -856,7 +856,7 @@ mod tests {
 
         // Check that the root offers ProfileTest to the piconet member from
         // the Mock Piconet Server
-        let profile_test_name = CapabilityName(bredr::ProfileTestMarker::SERVICE_NAME.to_string());
+        let profile_test_name = CapabilityName(bredr::ProfileTestMarker::PROTOCOL_NAME.to_string());
         let root = topology.get_decl(&vec![].into()).await.expect("failed to get root");
         let offer_profile_test = OfferDecl::Protocol(OfferProtocolDecl {
             source: OfferSource::Child(super::mock_piconet_server_moniker().to_string()),
@@ -900,7 +900,7 @@ mod tests {
 
         // Profile is exposed by interposer
         let profile_capability_name =
-            CapabilityName(bredr::ProfileMarker::SERVICE_NAME.to_string());
+            CapabilityName(bredr::ProfileMarker::PROTOCOL_NAME.to_string());
         let profile_expose = ExposeDecl::Protocol(ExposeProtocolDecl {
             source: ExposeSource::Self_,
             source_name: profile_capability_name.clone(),
@@ -914,13 +914,13 @@ mod tests {
         interposer.exposes.contains(&profile_expose);
 
         // ProfileTest is used by interposer
-        let profile_test_name = CapabilityName(bredr::ProfileTestMarker::SERVICE_NAME.to_string());
+        let profile_test_name = CapabilityName(bredr::ProfileTestMarker::PROTOCOL_NAME.to_string());
         let profile_test_use = UseDecl::Protocol(UseProtocolDecl {
             source: UseSource::Parent,
             source_name: profile_test_name.clone(),
             target_path: CapabilityPath {
                 dirname: "/svc".to_string(),
-                basename: bredr::ProfileTestMarker::SERVICE_NAME.to_string(),
+                basename: bredr::ProfileTestMarker::PROTOCOL_NAME.to_string(),
             },
             dependency_type: DependencyType::Strong,
         });
@@ -948,7 +948,7 @@ mod tests {
         assert!(root.offers.contains(&profile_test_offer));
 
         // LogSink is offered by test root to interposer and profile.
-        let log_capability_name = CapabilityName(LogSinkMarker::SERVICE_NAME.to_string());
+        let log_capability_name = CapabilityName(LogSinkMarker::PROTOCOL_NAME.to_string());
         let log_offer = OfferDecl::Protocol(OfferProtocolDecl {
             source: OfferSource::Parent,
             source_name: log_capability_name.clone(),
@@ -995,7 +995,7 @@ mod tests {
 
         // validate routes
         let profile_capability_name =
-            CapabilityName(bredr::ProfileMarker::SERVICE_NAME.to_string());
+            CapabilityName(bredr::ProfileMarker::PROTOCOL_NAME.to_string());
 
         // `Profile` is offered by root to bt-rfcomm from interposer.
         let profile_offer1 = OfferDecl::Protocol(OfferProtocolDecl {

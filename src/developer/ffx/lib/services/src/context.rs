@@ -40,31 +40,31 @@ impl Context {
         Self { inner: Rc::new(t) }
     }
 
-    pub async fn open_target_proxy<S>(
+    pub async fn open_target_proxy<P>(
         &self,
         target_identifier: Option<String>,
         selector: &'static str,
-    ) -> Result<S::Proxy>
+    ) -> Result<P::Proxy>
     where
-        S: fidl::endpoints::DiscoverableService,
+        P: fidl::endpoints::DiscoverableProtocolMarker,
     {
-        let (_, proxy) = self.open_target_proxy_with_info::<S>(target_identifier, selector).await?;
+        let (_, proxy) = self.open_target_proxy_with_info::<P>(target_identifier, selector).await?;
         Ok(proxy)
     }
 
-    pub async fn open_target_proxy_with_info<S>(
+    pub async fn open_target_proxy_with_info<P>(
         &self,
         target_identifier: Option<String>,
         selector: &'static str,
-    ) -> Result<(bridge::Target, S::Proxy)>
+    ) -> Result<(bridge::Target, P::Proxy)>
     where
-        S: fidl::endpoints::DiscoverableService,
+        P: fidl::endpoints::DiscoverableProtocolMarker,
     {
         let (info, channel) = self
             .inner
             .open_target_proxy_with_info(target_identifier, selectors::parse_selector(selector)?)
             .await?;
-        let proxy = S::Proxy::from_channel(
+        let proxy = P::Proxy::from_channel(
             fidl::AsyncChannel::from_channel(channel).context("making async channel")?,
         );
         Ok((info, proxy))

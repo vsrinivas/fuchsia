@@ -11,7 +11,7 @@ use {
     crate::fidl_processor::settings::RequestContext,
     crate::handler::base::Request,
     crate::request_respond,
-    fidl::endpoints::ServiceMarker,
+    fidl::endpoints::ProtocolMarker,
     fidl_fuchsia_settings::{
         DoNotDisturbMarker, DoNotDisturbRequest, DoNotDisturbSettings, DoNotDisturbWatchResponder,
         Error,

@@ -4,7 +4,7 @@
 
 mod integration_tests;
 
-use fidl::endpoints::DiscoverableService as _;
+use fidl::endpoints::DiscoverableProtocolMarker as _;
 use fidl_fuchsia_net as fnet;
 use fidl_fuchsia_net_icmp as fnet_icmp;
 use fidl_fuchsia_net_stack as fnet_stack;
@@ -50,12 +50,12 @@ async fn create_environments<'a>(
                 name.clone(),
                 vec![
                     netemul_environment::LaunchService {
-                        name: fnet_stack::StackMarker::SERVICE_NAME.to_string(),
+                        name: fnet_stack::StackMarker::PROTOCOL_NAME.to_string(),
                         url: NETSTACK_URL.to_string(),
                         arguments: Vec::new(),
                     },
                     netemul_environment::LaunchService {
-                        name: fnet_icmp::ProviderMarker::SERVICE_NAME.to_string(),
+                        name: fnet_icmp::ProviderMarker::PROTOCOL_NAME.to_string(),
                         url: NETSTACK_URL.to_string(),
                         arguments: Vec::new(),
                     },

@@ -6,7 +6,7 @@
 
 use {
     anyhow::{Context, Error},
-    fidl::endpoints::ServiceMarker,
+    fidl::endpoints::ProtocolMarker,
     fidl_test_placeholders as fecho, fuchsia_async as fasync,
     fuchsia_component::client::{
         launch_with_options, launcher, App, AppBuilder, LaunchOptions, Stdio,

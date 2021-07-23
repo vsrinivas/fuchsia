@@ -20,44 +20,65 @@ use {
 #[cfg(target_os = "fuchsia")]
 use fuchsia_zircon as zx;
 
-/// A marker for a particular FIDL service.
+// TODO(fxbug.dev/75869): Remove after soft-transition is complete.
+#[doc(hidden)]
+#[deprecated = "Use fidl::endpoints::ProtocolMarker instead"]
+pub trait ServiceMarker: ProtocolMarker {
+    // const NAME: &'static str = <Self as ProtocolMarker>::NAME;
+    // const DEBUG_NAME: &'static str = <Self as ProtocolMarker>::DEBUG_NAME;
+}
+#[allow(deprecated)]
+impl<T: ProtocolMarker> ServiceMarker for T {}
+
+// TODO(fxbug.dev/75869): Remove after soft-transition is complete.
+#[doc(hidden)]
+#[deprecated = "Use fidl::endpoints::DiscoverableProtocolMarker instead"]
+pub trait DiscoverableService: DiscoverableProtocolMarker {
+    // TODO(fxbug.dev/75869): Remove after soft-transition is complete.
+    #[doc(hidden)]
+    const SERVICE_NAME: &'static str = <Self as DiscoverableProtocolMarker>::PROTOCOL_NAME;
+}
+#[allow(deprecated)]
+impl<T: DiscoverableProtocolMarker> DiscoverableService for T {}
+
+/// A marker for a particular FIDL protocol.
 ///
-/// Implementations of this trait can be used to manufacture instances of a FIDL service
-/// and get metadata about a particular service.
-pub trait ServiceMarker: Sized + Send + Sync + 'static {
+/// Implementations of this trait can be used to manufacture instances of a FIDL protocol
+/// and get metadata about a particular protocol.
+pub trait ProtocolMarker: Sized + Send + Sync + 'static {
     /// The type of the structure against which FIDL requests are made.
     /// Queries made against the proxy are sent to the paired `ServerEnd`.
-    type Proxy: Proxy<Service = Self>;
+    type Proxy: Proxy<Protocol = Self>;
 
     /// The type of the stream of requests coming into a server.
-    type RequestStream: RequestStream<Service = Self>;
+    type RequestStream: RequestStream<Protocol = Self>;
 
-    /// The name of the service suitable for debug purposes.
+    /// The name of the protocol suitable for debug purposes.
     ///
     /// This will be removed-- users should switch to either
-    /// `DEBUG_NAME` or `DiscoverableService::SERVICE_NAME`.
+    /// `DEBUG_NAME` or `DiscoverableProtocolMarker::PROTOCOL_NAME`.
     const NAME: &'static str = Self::DEBUG_NAME;
 
-    /// The name of the service suitable for debug purposes.
+    /// The name of the protocol suitable for debug purposes.
     ///
-    /// For discoverable services, this should be identical to
-    /// `<Self as DiscoverableService>::SERVICE_NAME`.
+    /// For discoverable protocols, this should be identical to
+    /// `<Self as DiscoverableProtocolMarker>::PROTOCOL_NAME`.
     const DEBUG_NAME: &'static str;
 }
 
-/// A marker for a particular FIDL service that is also discoverable.
+/// A marker for a particular FIDL protocol that is also discoverable.
 ///
-/// Discoverable services may be referred to by a string name, and can be
+/// Discoverable protocols may be referred to by a string name, and can be
 /// conveniently exported in a service directory via an entry of that name.
-pub trait DiscoverableService: ServiceMarker {
-    /// The name of the service (to be used for service lookup and discovery).
-    const SERVICE_NAME: &'static str = <Self as ServiceMarker>::DEBUG_NAME;
+pub trait DiscoverableProtocolMarker: ProtocolMarker {
+    /// The name of the protocol (to be used for service lookup and discovery).
+    const PROTOCOL_NAME: &'static str = <Self as ProtocolMarker>::DEBUG_NAME;
 }
 
 /// A type which allows querying a remote FIDL server over a channel.
 pub trait Proxy: Sized + Send + Sync {
     /// The service which this `Proxy` controls.
-    type Service: ServiceMarker<Proxy = Self>;
+    type Protocol: ProtocolMarker<Proxy = Self>;
 
     /// Create a proxy over the given channel.
     fn from_channel(inner: AsyncChannel) -> Self;
@@ -93,7 +114,7 @@ pub trait Proxy: Sized + Send + Sync {
 /// A stream of requests coming into a FIDL server over a channel.
 pub trait RequestStream: Sized + Send + Stream + TryStream<Error = crate::Error> + Unpin {
     /// The service which this `RequestStream` serves.
-    type Service: ServiceMarker<RequestStream = Self>;
+    type Protocol: ProtocolMarker<RequestStream = Self>;
 
     /// A type that can be used to send events and shut down the request stream.
     type ControlHandle;
@@ -119,7 +140,7 @@ pub trait RequestStream: Sized + Send + Stream + TryStream<Error = crate::Error>
 }
 
 /// The Request type associated with a Marker.
-pub type Request<Marker> = <<Marker as ServiceMarker>::RequestStream as futures::TryStream>::Ok;
+pub type Request<Marker> = <<Marker as ProtocolMarker>::RequestStream as futures::TryStream>::Ok;
 
 /// A marker for a particular FIDL Unified Service.
 #[cfg(target_os = "fuchsia")]
@@ -174,10 +195,10 @@ pub trait MemberOpener {
 pub fn spawn_local_stream_handler<P, F, Fut>(f: F) -> Result<P, Error>
 where
     P: Proxy,
-    F: FnMut(Request<P::Service>) -> Fut + 'static,
+    F: FnMut(Request<P::Protocol>) -> Fut + 'static,
     Fut: Future<Output = ()> + 'static,
 {
-    let (proxy, stream) = create_proxy_and_stream::<P::Service>()?;
+    let (proxy, stream) = create_proxy_and_stream::<P::Protocol>()?;
     fasync::Task::local(for_each_or_log(stream, f)).detach();
     Ok(proxy)
 }
@@ -187,10 +208,10 @@ where
 pub fn spawn_stream_handler<P, F, Fut>(f: F) -> Result<P, Error>
 where
     P: Proxy,
-    F: FnMut(Request<P::Service>) -> Fut + 'static + Send,
+    F: FnMut(Request<P::Protocol>) -> Fut + 'static + Send,
     Fut: Future<Output = ()> + 'static + Send,
 {
-    let (proxy, stream) = create_proxy_and_stream::<P::Service>()?;
+    let (proxy, stream) = create_proxy_and_stream::<P::Protocol>()?;
     fasync::Task::spawn(for_each_or_log(stream, f)).detach();
     Ok(proxy)
 }
@@ -230,7 +251,7 @@ impl<T> ClientEnd<T> {
     }
 }
 
-impl<T: ServiceMarker> ClientEnd<T> {
+impl<T: ProtocolMarker> ClientEnd<T> {
     /// Convert the `ClientEnd` into a `Proxy` through which FIDL calls may be made.
     pub fn into_proxy(self) -> Result<T::Proxy, Error> {
         Ok(T::Proxy::from_channel(
@@ -263,7 +284,7 @@ impl<T> From<Channel> for ClientEnd<T> {
     }
 }
 
-impl<T: ServiceMarker> ::std::fmt::Debug for ClientEnd<T> {
+impl<T: ProtocolMarker> ::std::fmt::Debug for ClientEnd<T> {
     fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
         write!(f, "ClientEnd(name={}, channel={:?})", T::DEBUG_NAME, self.inner)
     }
@@ -297,7 +318,7 @@ impl<T> ServerEnd<T> {
     /// Create a stream of requests off of the channel.
     pub fn into_stream(self) -> Result<T::RequestStream, Error>
     where
-        T: ServiceMarker,
+        T: ProtocolMarker,
     {
         Ok(T::RequestStream::from_channel(
             AsyncChannel::from_channel(self.inner).map_err(Error::AsyncChannel)?,
@@ -310,7 +331,7 @@ impl<T> ServerEnd<T> {
         self,
     ) -> Result<(T::RequestStream, <T::RequestStream as RequestStream>::ControlHandle), Error>
     where
-        T: ServiceMarker,
+        T: ProtocolMarker,
     {
         let stream = self.into_stream()?;
         let control_handle = stream.control_handle();
@@ -347,7 +368,7 @@ impl<T> From<Channel> for ServerEnd<T> {
     }
 }
 
-impl<T: ServiceMarker> ::std::fmt::Debug for ServerEnd<T> {
+impl<T: ProtocolMarker> ::std::fmt::Debug for ServerEnd<T> {
     fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
         write!(f, "ServerEnd(name={}, channel={:?})", T::DEBUG_NAME, self.inner)
     }
@@ -358,7 +379,7 @@ impl<T> HandleBased for ServerEnd<T> {}
 handle_based_codable![ClientEnd :- <T,>, ServerEnd :- <T,>,];
 
 /// Creates client and server endpoints connected to by a channel.
-pub fn create_endpoints<T: ServiceMarker>() -> Result<(ClientEnd<T>, ServerEnd<T>), Error> {
+pub fn create_endpoints<T: ProtocolMarker>() -> Result<(ClientEnd<T>, ServerEnd<T>), Error> {
     let (client, server) = Channel::create().map_err(|e| Error::ChannelPairCreate(e.into()))?;
     let client_end = ClientEnd::<T>::new(client);
     let server_end = ServerEnd::new(server);
@@ -369,7 +390,7 @@ pub fn create_endpoints<T: ServiceMarker>() -> Result<(ClientEnd<T>, ServerEnd<T
 ///
 /// Useful for sending channel handles to calls that take arguments
 /// of type `request<SomeInterface>`
-pub fn create_proxy<T: ServiceMarker>() -> Result<(T::Proxy, ServerEnd<T>), Error> {
+pub fn create_proxy<T: ProtocolMarker>() -> Result<(T::Proxy, ServerEnd<T>), Error> {
     let (client, server) = create_endpoints()?;
     Ok((client.into_proxy()?, server))
 }
@@ -378,7 +399,7 @@ pub fn create_proxy<T: ServiceMarker>() -> Result<(T::Proxy, ServerEnd<T>), Erro
 ///
 /// Useful for sending channel handles to calls that take arguments
 /// of type `SomeInterface`
-pub fn create_request_stream<T: ServiceMarker>() -> Result<(ClientEnd<T>, T::RequestStream), Error>
+pub fn create_request_stream<T: ProtocolMarker>() -> Result<(ClientEnd<T>, T::RequestStream), Error>
 {
     let (client, server) = create_endpoints()?;
     Ok((client, server.into_stream()?))
@@ -388,7 +409,7 @@ pub fn create_request_stream<T: ServiceMarker>() -> Result<(ClientEnd<T>, T::Req
 ///
 /// Useful for testing where both the request stream and proxy are
 /// used in the same process.
-pub fn create_proxy_and_stream<T: ServiceMarker>() -> Result<(T::Proxy, T::RequestStream), Error> {
+pub fn create_proxy_and_stream<T: ProtocolMarker>() -> Result<(T::Proxy, T::RequestStream), Error> {
     let (client, server) = create_endpoints::<T>()?;
     Ok((client.into_proxy()?, server.into_stream()?))
 }

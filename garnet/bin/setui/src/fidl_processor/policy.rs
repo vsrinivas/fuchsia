@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl::endpoints::{Request, ServiceMarker};
+use fidl::endpoints::{ProtocolMarker, Request};
 
 use crate::fidl_processor::processor::{ProcessingUnit, RequestResultCreator};
 use crate::message::base::Audience;
@@ -27,8 +27,8 @@ macro_rules! policy_request_respond {
 /// request is processed. The returned value is a result with an optional
 /// request, containing None if not processed and the original request
 /// otherwise.
-pub type RequestCallback<S> =
-    Box<dyn Fn(RequestContext, Request<S>) -> RequestResultCreator<'static, S>>;
+pub type RequestCallback<P> =
+    Box<dyn Fn(RequestContext, Request<P>) -> RequestResultCreator<'static, P>>;
 
 /// `RequestContext` is passed to each request callback to provide resources for policy requests.
 #[derive(Clone)]
@@ -67,33 +67,33 @@ impl RequestContext {
 /// to the constructed type.
 ///
 /// [`RequestCallback`]: type.RequestCallback.html
-pub struct PolicyProcessingUnit<S>
+pub struct PolicyProcessingUnit<P>
 where
-    S: ServiceMarker,
+    P: ProtocolMarker,
 {
-    callback: RequestCallback<S>,
+    callback: RequestCallback<P>,
 }
 
-impl<S> PolicyProcessingUnit<S>
+impl<P> PolicyProcessingUnit<P>
 where
-    S: ServiceMarker,
+    P: ProtocolMarker,
 {
-    pub(crate) fn new(callback: RequestCallback<S>) -> Self {
+    pub(crate) fn new(callback: RequestCallback<P>) -> Self {
         Self { callback }
     }
 }
 
-impl<S> ProcessingUnit<S> for PolicyProcessingUnit<S>
+impl<P> ProcessingUnit<P> for PolicyProcessingUnit<P>
 where
-    S: ServiceMarker,
+    P: ProtocolMarker,
 {
     fn process(
         &self,
         service_messenger: service::message::Messenger,
-        request: Request<S>,
+        request: Request<P>,
         // Policy requests don't use hanging gets, so the exit sender is unused.
         _exit_tx: ExitSender,
-    ) -> RequestResultCreator<'static, S> {
+    ) -> RequestResultCreator<'static, P> {
         let context = RequestContext { service_messenger };
         (self.callback)(context, request)
     }

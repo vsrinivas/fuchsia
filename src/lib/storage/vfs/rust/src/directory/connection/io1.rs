@@ -708,7 +708,7 @@ mod tests {
             node_proxy.describe().await,
             Err(fidl::Error::ClientChannelClosed {
                 status: zx::Status::NOT_FOUND,
-                service_name: "(anonymous) Node",
+                protocol_name: "(anonymous) Node",
             })
         );
     }
@@ -742,7 +742,7 @@ mod tests {
             event_stream.try_next().await,
             Err(fidl::Error::ClientChannelClosed {
                 status: zx::Status::NOT_FOUND,
-                service_name: "(anonymous) Node",
+                protocol_name: "(anonymous) Node",
             })
         );
         assert_matches!(event_stream.try_next().await, Ok(None));
@@ -781,7 +781,7 @@ mod tests {
             node_proxy.describe().await,
             Err(fidl::Error::ClientChannelClosed {
                 status: zx::Status::NOT_FOUND,
-                service_name: "(anonymous) Node",
+                protocol_name: "(anonymous) Node",
             })
         );
     }
@@ -828,7 +828,7 @@ mod tests {
             event_stream.try_next().await,
             Err(fidl::Error::ClientChannelClosed {
                 status: zx::Status::NOT_FOUND,
-                service_name: "(anonymous) Node",
+                protocol_name: "(anonymous) Node",
             })
         );
         assert_matches!(event_stream.try_next().await, Ok(None));

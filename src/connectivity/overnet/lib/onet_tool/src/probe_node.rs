@@ -4,7 +4,7 @@
 
 use {
     anyhow::{Context as _, Error},
-    fidl::endpoints::ServiceMarker,
+    fidl::endpoints::ProtocolMarker,
     fidl_fuchsia_overnet_protocol::{DiagnosticMarker, DiagnosticProxy, NodeId, ProbeResult},
     hoist::{hoist, OvernetInstance},
 };

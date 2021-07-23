@@ -14,7 +14,7 @@ use {
     crate::tests::test_failure_utils::create_test_env_with_failures,
     crate::EnvironmentBuilder,
     anyhow::format_err,
-    fidl::endpoints::{ServerEnd, ServiceMarker},
+    fidl::endpoints::{ProtocolMarker, ServerEnd},
     fidl::Error::ClientChannelClosed,
     fidl_fuchsia_settings::{
         DisplayMarker, DisplayProxy, DisplaySettings, Error as FidlError, IntlMarker,

@@ -5,7 +5,7 @@
 use {
     anyhow::{format_err, Context, Error},
     async_trait::async_trait,
-    fidl::endpoints::{create_endpoints, ServerEnd, ServiceMarker},
+    fidl::endpoints::{create_endpoints, ProtocolMarker, ServerEnd},
     fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys,
     fuchsia_component::client::connect_channel_to_protocol,
     fuchsia_zircon as zx,
@@ -326,7 +326,7 @@ macro_rules! create_event {
                 }
 
                 $(
-                    pub fn [<take_ $server_protocol_name>]<T: ServiceMarker>(&mut self)
+                    pub fn [<take_ $server_protocol_name>]<T: ProtocolMarker>(&mut self)
                             -> Option<T::RequestStream> {
                         self.result.as_mut()
                             .ok()

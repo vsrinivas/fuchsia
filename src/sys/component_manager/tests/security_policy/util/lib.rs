@@ -5,17 +5,19 @@
 use {
     anyhow::{Context, Error},
     component_events::{events::*, matcher::EventMatcher},
-    fidl::endpoints::{create_proxy, DiscoverableService},
+    fidl::endpoints::{create_proxy, DiscoverableProtocolMarker},
     fidl_fuchsia_component as fcomp,
     fidl_fuchsia_io::DirectoryProxy,
     fidl_fuchsia_sys2 as fsys, fuchsia_component,
     test_utils_lib::opaque_test::{OpaqueTest, OpaqueTestBuilder},
 };
 
-fn connect_to_root_service<S: DiscoverableService>(test: &OpaqueTest) -> Result<S::Proxy, Error> {
+fn connect_to_root_service<P: DiscoverableProtocolMarker>(
+    test: &OpaqueTest,
+) -> Result<P::Proxy, Error> {
     let mut service_path = test.get_hub_v2_path();
-    service_path.extend(&["exec", "expose", S::SERVICE_NAME]);
-    fuchsia_component::client::connect_to_protocol_at_path::<S>(service_path.to_str().unwrap())
+    service_path.extend(&["exec", "expose", P::PROTOCOL_NAME]);
+    fuchsia_component::client::connect_to_protocol_at_path::<P>(service_path.to_str().unwrap())
 }
 
 pub async fn start_policy_test(

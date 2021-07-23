@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    fidl::endpoints::DiscoverableService,
+    fidl::endpoints::DiscoverableProtocolMarker,
     fidl_fuchsia_bluetooth_bredr as bredr,
     fuchsia_bluetooth::types::{PeerId, Uuid},
     fuchsia_component_test::{builder::Capability, RealmInstance},
@@ -69,7 +69,7 @@ async fn setup_test_topology() -> (RealmInstance, ProfileObserver, PiconetMember
         .await
         .expect("failed to add mock piconet member");
     // Add bt-rfcomm which is under test.
-    let expose = vec![Capability::protocol(bredr::ProfileMarker::SERVICE_NAME)];
+    let expose = vec![Capability::protocol(bredr::ProfileMarker::PROTOCOL_NAME)];
     let rfcomm = test_harness
         .add_profile_with_capabilities(
             RFCOMM_MONIKER.to_string(),

@@ -5,7 +5,7 @@
 use crate::tests::fakes::base::Service;
 
 use anyhow::{format_err, Error};
-use fidl::endpoints::{ServerEnd, ServiceMarker};
+use fidl::endpoints::{ProtocolMarker, ServerEnd};
 use fidl_fuchsia_camera3::{
     DeviceRequest, DeviceWatcherMarker, DeviceWatcherRequest, WatchDevicesEvent,
 };

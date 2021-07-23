@@ -74,7 +74,7 @@ impl FakeArchiveIteratorResponse {
 }
 
 pub fn setup_fake_rcs() -> RemoteControlProxy {
-    let (proxy, mut stream) = fidl::endpoints::create_proxy_and_stream::<<fidl_fuchsia_developer_remotecontrol::RemoteControlProxy as fidl::endpoints::Proxy>::Service>().unwrap();
+    let (proxy, mut stream) = fidl::endpoints::create_proxy_and_stream::<<fidl_fuchsia_developer_remotecontrol::RemoteControlProxy as fidl::endpoints::Proxy>::Protocol>().unwrap();
     fuchsia_async::Task::local(async move {
         let hub = Arc::new(fake_hub_directory());
         while let Ok(Some(req)) = stream.try_next().await {
@@ -146,7 +146,7 @@ impl FakeBridgeData {
 pub fn setup_fake_diagnostics_bridge(
     expected_data: Vec<FakeBridgeData>,
 ) -> RemoteDiagnosticsBridgeProxy {
-    let (proxy, mut stream) = fidl::endpoints::create_proxy_and_stream::<<fidl_fuchsia_developer_remotecontrol::RemoteDiagnosticsBridgeProxy as fidl::endpoints::Proxy>::Service>().unwrap();
+    let (proxy, mut stream) = fidl::endpoints::create_proxy_and_stream::<<fidl_fuchsia_developer_remotecontrol::RemoteDiagnosticsBridgeProxy as fidl::endpoints::Proxy>::Protocol>().unwrap();
     fuchsia_async::Task::local(async move {
         'req: while let Ok(Some(req)) = stream.try_next().await {
             match req {

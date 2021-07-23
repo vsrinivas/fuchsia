@@ -10,7 +10,7 @@ use {
         },
         matcher::EventMatcher,
     },
-    fidl::endpoints::ServiceMarker,
+    fidl::endpoints::ProtocolMarker,
     fidl_fidl_test_components as ftest, fuchsia_async as fasync,
     futures::{channel::mpsc, SinkExt, StreamExt},
     std::sync::Arc,

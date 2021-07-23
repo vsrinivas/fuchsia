@@ -989,7 +989,7 @@ mod tests {
     use {
         super::*,
         anyhow::Error,
-        fidl::endpoints::{Proxy, ServerEnd, ServiceMarker},
+        fidl::endpoints::{ProtocolMarker, Proxy, ServerEnd},
         fidl_fuchsia_io as fio,
         fidl_test_processbuilder::{UtilMarker, UtilProxy},
         fuchsia_async as fasync,

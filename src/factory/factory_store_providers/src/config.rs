@@ -5,7 +5,7 @@
 use {
     crate::validators::{new_validator_context_by_name, Validator},
     anyhow::Error,
-    fidl::endpoints::DiscoverableService,
+    fidl::endpoints::DiscoverableProtocolMarker,
     fuchsia_syslog as syslog,
     serde::Deserialize,
     serde_json::{self, value::Value},
@@ -55,9 +55,9 @@ impl Config {
 
     pub fn load<T>() -> Result<Self, Error>
     where
-        T: DiscoverableService,
+        T: DiscoverableProtocolMarker,
     {
-        let config_data_file = format!("/config/data/{}.config", &T::SERVICE_NAME);
+        let config_data_file = format!("/config/data/{}.config", &T::PROTOCOL_NAME);
         syslog::fx_log_info!("Loading {}", &config_data_file);
         Config::load_file(&config_data_file)
     }

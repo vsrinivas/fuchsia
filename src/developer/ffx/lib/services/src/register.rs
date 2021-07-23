@@ -219,7 +219,7 @@ mod test {
     use super::*;
     use crate::{DaemonServiceProvider, FidlService, FidlStreamHandler};
     use async_trait::async_trait;
-    use fidl::endpoints::DiscoverableService;
+    use fidl::endpoints::DiscoverableProtocolMarker;
     use fidl_fuchsia_developer_bridge as bridge;
     use fidl_fuchsia_diagnostics as diagnostics;
     use fidl_fuchsia_ffx_test as ffx_test;
@@ -267,7 +267,8 @@ mod test {
 
     fn create_noop_register() -> ServiceRegister {
         let service_string =
-            <<NoopService as FidlService>::Service as DiscoverableService>::SERVICE_NAME.to_owned();
+            <<NoopService as FidlService>::Service as DiscoverableProtocolMarker>::PROTOCOL_NAME
+                .to_owned();
         let mut map = NameToStreamHandlerMap::new();
         map.insert(service_string.clone(), Box::new(FidlStreamHandler::<NoopService>::default()));
         ServiceRegister::new(map)
@@ -278,7 +279,7 @@ mod test {
         let (noop_proxy, server) = fidl::endpoints::create_endpoints::<ffx_test::NoopMarker>()?;
         register
             .open(
-                ffx_test::NoopMarker::SERVICE_NAME.to_owned(),
+                ffx_test::NoopMarker::PROTOCOL_NAME.to_owned(),
                 Context::new(TestDaemon::default()),
                 fidl::AsyncChannel::from_channel(server.into_channel())?,
             )
@@ -302,7 +303,7 @@ mod test {
         register.shutdown(Context::new(TestDaemon::default())).await?;
         let res = register
             .open(
-                ffx_test::NoopMarker::SERVICE_NAME.to_owned(),
+                ffx_test::NoopMarker::PROTOCOL_NAME.to_owned(),
                 Context::new(TestDaemon::default()),
                 fidl::AsyncChannel::from_channel(server.into_channel())?,
             )

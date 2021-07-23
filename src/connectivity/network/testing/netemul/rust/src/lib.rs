@@ -223,17 +223,17 @@ impl<'a> TestRealm<'a> {
     /// Connects to a service within the realm.
     pub fn connect_to_service<S>(&self) -> Result<S::Proxy>
     where
-        S: fidl::endpoints::ServiceMarker + fidl::endpoints::DiscoverableService,
+        S: fidl::endpoints::DiscoverableProtocolMarker,
     {
         let get_proxy = || {
             let (proxy, server) = zx::Channel::create().context("create channel")?;
             let () = self
                 .realm
-                .connect_to_service(S::SERVICE_NAME, None, server)
+                .connect_to_service(S::PROTOCOL_NAME, None, server)
                 .context("connect to service")?;
             fuchsia_async::Channel::from_channel(proxy).context("fuchsia_async channel creation")
         };
-        let proxy = get_proxy().context(S::SERVICE_NAME)?;
+        let proxy = get_proxy().context(S::PROTOCOL_NAME)?;
         Ok(<S::Proxy as fidl::endpoints::Proxy>::from_channel(proxy))
     }
 

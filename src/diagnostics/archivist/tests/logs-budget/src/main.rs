@@ -9,7 +9,7 @@ use archivist_lib::{
 use diagnostics_data::{Data, LogError, Logs, Severity};
 use diagnostics_hierarchy::trie::TrieIterableNode;
 use diagnostics_reader::{ArchiveReader, Inspect, SubscriptionResultsStream};
-use fidl::endpoints::ServiceMarker;
+use fidl::endpoints::ProtocolMarker;
 use fidl_fuchsia_diagnostics::ArchiveAccessorMarker;
 use fidl_fuchsia_logger::LogSinkMarker;
 use fidl_fuchsia_sys::{ComponentControllerEvent::OnTerminated, LauncherProxy};

@@ -4,7 +4,7 @@
 
 use {
     anyhow::{Context, Error},
-    fidl::endpoints::{Proxy, ServiceMarker},
+    fidl::endpoints::{ProtocolMarker, Proxy},
     fidl_fuchsia_developer_remotecontrol::ServiceMatch,
     fidl_fuchsia_diagnostics::{Selector, StringSelector, TreeSelector},
     fidl_fuchsia_io as io, fidl_fuchsia_sys2 as fsys,

@@ -8,8 +8,8 @@ use {
     crate::DEFAULT_SERVICE_INSTANCE,
     anyhow::{format_err, Context as _, Error},
     fidl::endpoints::{
-        DiscoverableService, MemberOpener, Proxy, ServerEnd, ServiceMarker, UnifiedServiceMarker,
-        UnifiedServiceProxy,
+        DiscoverableProtocolMarker, MemberOpener, ProtocolMarker, Proxy, ServerEnd,
+        UnifiedServiceMarker, UnifiedServiceProxy,
     },
     fidl_fuchsia_io::DirectoryProxy,
     fidl_fuchsia_sys::{
@@ -42,14 +42,14 @@ use {
 const SVC_DIR: &'static str = "/svc";
 
 /// A protocol connection request that allows checking if the protocol exists.
-pub struct ProtocolConnector<D: Borrow<DirectoryProxy>, S: DiscoverableService> {
+pub struct ProtocolConnector<D: Borrow<DirectoryProxy>, P: DiscoverableProtocolMarker> {
     svc_dir: D,
-    _svc_marker: PhantomData<S>,
+    _svc_marker: PhantomData<P>,
 }
 
-impl<D: Borrow<DirectoryProxy>, S: DiscoverableService> ProtocolConnector<D, S> {
-    /// Returns a new `ProtocolConnector` to `S` in the specified service directory.
-    fn new(svc_dir: D) -> ProtocolConnector<D, S> {
+impl<D: Borrow<DirectoryProxy>, P: DiscoverableProtocolMarker> ProtocolConnector<D, P> {
+    /// Returns a new `ProtocolConnector` to `P` in the specified service directory.
+    fn new(svc_dir: D) -> ProtocolConnector<D, P> {
         ProtocolConnector { svc_dir, _svc_marker: PhantomData }
     }
 
@@ -58,13 +58,13 @@ impl<D: Borrow<DirectoryProxy>, S: DiscoverableService> ProtocolConnector<D, S> 
     /// This method requires a round trip to the service directory to check for
     /// existence.
     pub async fn exists(&self) -> Result<bool, Error> {
-        match files_async::dir_contains(self.svc_dir.borrow(), S::NAME).await {
+        match files_async::dir_contains(self.svc_dir.borrow(), P::NAME).await {
             Ok(v) => Ok(v),
             // If the service directory is unavailable, then mask the error as if
             // the protocol does not exist.
             Err(files_async::Error::Fidl(
                 _,
-                fidl::Error::ClientChannelClosed { status, service_name: _ },
+                fidl::Error::ClientChannelClosed { status, protocol_name: _ },
             )) if status == zx::Status::PEER_CLOSED => Ok(false),
             Err(e) => Err(Error::new(e).context("error checking for service entry in directory")),
         }
@@ -80,7 +80,7 @@ impl<D: Borrow<DirectoryProxy>, S: DiscoverableService> ProtocolConnector<D, S> 
             .open(
                 fidl_fuchsia_io::OPEN_RIGHT_READABLE,
                 0, /* mode */
-                S::NAME,
+                P::NAME,
                 fidl::endpoints::ServerEnd::new(server_end),
             )
             .context("error connecting to protocol")
@@ -90,12 +90,12 @@ impl<D: Borrow<DirectoryProxy>, S: DiscoverableService> ProtocolConnector<D, S> 
     ///
     /// Note, this method does not check if the protocol exists. It is up to the
     /// caller to call `exists` to check for existence.
-    pub fn connect(self) -> Result<S::Proxy, Error> {
+    pub fn connect(self) -> Result<P::Proxy, Error> {
         let (proxy, server) = zx::Channel::create().context("error creating zx channels")?;
         let () = self.connect_with(server).context("error connecting with server channel")?;
         let proxy =
             fasync::Channel::from_channel(proxy).context("error creating proxy from channel")?;
-        Ok(S::Proxy::from_channel(proxy))
+        Ok(P::Proxy::from_channel(proxy))
     }
 }
 
@@ -107,18 +107,18 @@ pub fn clone_namespace_svc() -> Result<fidl_fuchsia_io::DirectoryProxy, Error> {
 
 /// Return a FIDL protocol connector at the default service directory in the
 /// application's root namespace.
-pub fn new_protocol_connector<S: DiscoverableService>(
-) -> Result<ProtocolConnector<DirectoryProxy, S>, Error> {
-    new_protocol_connector_at::<S>(SVC_DIR)
+pub fn new_protocol_connector<P: DiscoverableProtocolMarker>(
+) -> Result<ProtocolConnector<DirectoryProxy, P>, Error> {
+    new_protocol_connector_at::<P>(SVC_DIR)
 }
 
 /// Return a FIDL protocol connector at the specified service directory in the
 /// application's root namespace.
 ///
 /// The service directory path must be an absolute path.
-pub fn new_protocol_connector_at<S: DiscoverableService>(
+pub fn new_protocol_connector_at<P: DiscoverableProtocolMarker>(
     service_directory_path: &str,
-) -> Result<ProtocolConnector<DirectoryProxy, S>, Error> {
+) -> Result<ProtocolConnector<DirectoryProxy, P>, Error> {
     let dir = io_util::directory::open_in_namespace(
         service_directory_path,
         fidl_fuchsia_io::OPEN_RIGHT_READABLE,
@@ -129,25 +129,25 @@ pub fn new_protocol_connector_at<S: DiscoverableService>(
 }
 
 /// Return a FIDL protocol connector at the specified service directory.
-pub fn new_protocol_connector_in_dir<S: DiscoverableService>(
+pub fn new_protocol_connector_in_dir<P: DiscoverableProtocolMarker>(
     dir: &DirectoryProxy,
-) -> ProtocolConnector<&DirectoryProxy, S> {
+) -> ProtocolConnector<&DirectoryProxy, P> {
     ProtocolConnector::new(dir)
 }
 
 /// Connect to a FIDL protocol using the provided channel.
-pub fn connect_channel_to_protocol<S: DiscoverableService>(
+pub fn connect_channel_to_protocol<P: DiscoverableProtocolMarker>(
     server_end: zx::Channel,
 ) -> Result<(), Error> {
-    connect_channel_to_protocol_at::<S>(server_end, SVC_DIR)
+    connect_channel_to_protocol_at::<P>(server_end, SVC_DIR)
 }
 
 /// Connect to a FIDL protocol using the provided channel and namespace prefix.
-pub fn connect_channel_to_protocol_at<S: DiscoverableService>(
+pub fn connect_channel_to_protocol_at<P: DiscoverableProtocolMarker>(
     server_end: zx::Channel,
     service_directory_path: &str,
 ) -> Result<(), Error> {
-    let protocol_path = format!("{}/{}", service_directory_path, S::SERVICE_NAME);
+    let protocol_path = format!("{}/{}", service_directory_path, P::PROTOCOL_NAME);
     connect_channel_to_protocol_at_path(server_end, &protocol_path)
 }
 
@@ -161,42 +161,42 @@ pub fn connect_channel_to_protocol_at_path(
 }
 
 /// Connect to a FIDL protocol using the application root namespace.
-pub fn connect_to_protocol<S: DiscoverableService>() -> Result<S::Proxy, Error> {
-    connect_to_protocol_at::<S>(SVC_DIR)
+pub fn connect_to_protocol<P: DiscoverableProtocolMarker>() -> Result<P::Proxy, Error> {
+    connect_to_protocol_at::<P>(SVC_DIR)
 }
 
 /// Connect to a FIDL protocol using the provided namespace prefix.
-pub fn connect_to_protocol_at<S: DiscoverableService>(
+pub fn connect_to_protocol_at<P: DiscoverableProtocolMarker>(
     service_prefix: &str,
-) -> Result<S::Proxy, Error> {
+) -> Result<P::Proxy, Error> {
     let (proxy, server) = zx::Channel::create()?;
-    connect_channel_to_protocol_at::<S>(server, service_prefix)?;
+    connect_channel_to_protocol_at::<P>(server, service_prefix)?;
     let proxy = fasync::Channel::from_channel(proxy)?;
-    Ok(S::Proxy::from_channel(proxy))
+    Ok(P::Proxy::from_channel(proxy))
 }
 
 /// Connect to a FIDL protocol using the provided path.
-pub fn connect_to_protocol_at_path<S: ServiceMarker>(
+pub fn connect_to_protocol_at_path<P: ProtocolMarker>(
     protocol_path: &str,
-) -> Result<S::Proxy, Error> {
+) -> Result<P::Proxy, Error> {
     let (proxy, server) = zx::Channel::create()?;
     connect_channel_to_protocol_at_path(server, protocol_path)?;
     let proxy = fasync::Channel::from_channel(proxy)?;
-    Ok(S::Proxy::from_channel(proxy))
+    Ok(P::Proxy::from_channel(proxy))
 }
 
 /// Connect to an instance of a FIDL protocol hosted in `directory`.
-pub fn connect_to_protocol_at_dir_root<S: DiscoverableService>(
+pub fn connect_to_protocol_at_dir_root<P: DiscoverableProtocolMarker>(
     directory: &DirectoryProxy,
-) -> Result<S::Proxy, Error> {
-    connect_to_named_protocol_at_dir_root::<S>(directory, S::SERVICE_NAME)
+) -> Result<P::Proxy, Error> {
+    connect_to_named_protocol_at_dir_root::<P>(directory, P::PROTOCOL_NAME)
 }
 
 /// Connect to an instance of a FIDL protocol hosted in `directory` using the given `filename`.
-pub fn connect_to_named_protocol_at_dir_root<S: DiscoverableService>(
+pub fn connect_to_named_protocol_at_dir_root<P: DiscoverableProtocolMarker>(
     directory: &DirectoryProxy,
     filename: &str,
-) -> Result<S::Proxy, Error> {
+) -> Result<P::Proxy, Error> {
     let proxy = io_util::open_node(
         directory,
         &PathBuf::from(filename),
@@ -204,22 +204,22 @@ pub fn connect_to_named_protocol_at_dir_root<S: DiscoverableService>(
         fidl_fuchsia_io::MODE_TYPE_SERVICE,
     )
     .context("Failed to open protocol in directory")?;
-    let proxy = S::Proxy::from_channel(proxy.into_channel().unwrap());
+    let proxy = P::Proxy::from_channel(proxy.into_channel().unwrap());
     Ok(proxy)
 }
 
 /// Connect to an instance of a FIDL protocol hosted in `directory`, in the `svc/` subdir.
-pub fn connect_to_protocol_at_dir_svc<S: DiscoverableService>(
+pub fn connect_to_protocol_at_dir_svc<P: DiscoverableProtocolMarker>(
     directory: &DirectoryProxy,
-) -> Result<S::Proxy, Error> {
+) -> Result<P::Proxy, Error> {
     let proxy = io_util::open_node(
         directory,
-        &PathBuf::from(format!("svc/{}", S::SERVICE_NAME)),
+        &PathBuf::from(format!("svc/{}", P::PROTOCOL_NAME)),
         fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
         fidl_fuchsia_io::MODE_TYPE_SERVICE,
     )
     .context("Failed to open protocol in directory")?;
-    let proxy = S::Proxy::from_channel(proxy.into_channel().unwrap());
+    let proxy = P::Proxy::from_channel(proxy.into_channel().unwrap());
     Ok(proxy)
 }
 
@@ -342,13 +342,13 @@ pub async fn open_childs_exposed_directory(
 
 /// Connects to a FIDL protocol exposed by a child that's within the `/svc` directory. Only works in
 /// CFv2, and only works if this component uses `fuchsia.sys2.Realm`.
-pub async fn connect_to_childs_protocol<S: DiscoverableService>(
+pub async fn connect_to_childs_protocol<P: DiscoverableProtocolMarker>(
     child_name: String,
     collection_name: Option<String>,
-) -> Result<S::Proxy, Error> {
+) -> Result<P::Proxy, Error> {
     let child_exposed_directory =
         open_childs_exposed_directory(child_name, collection_name).await?;
-    connect_to_protocol_at_dir_root::<S>(&child_exposed_directory)
+    connect_to_protocol_at_dir_root::<P>(&child_exposed_directory)
 }
 
 /// Adds a new directory handle to the namespace for the new process.
@@ -496,21 +496,21 @@ impl App {
 
     /// Connect to a protocol provided by the `App`.
     #[inline]
-    pub fn connect_to_protocol<S: DiscoverableService>(&self) -> Result<S::Proxy, Error> {
+    pub fn connect_to_protocol<P: DiscoverableProtocolMarker>(&self) -> Result<P::Proxy, Error> {
         let (client_channel, server_channel) = zx::Channel::create()?;
-        self.pass_to_protocol::<S>(server_channel)?;
-        Ok(S::Proxy::from_channel(fasync::Channel::from_channel(client_channel)?))
+        self.pass_to_protocol::<P>(server_channel)?;
+        Ok(P::Proxy::from_channel(fasync::Channel::from_channel(client_channel)?))
     }
 
     /// Connect to a protocol provided by the `App`.
     #[inline]
-    pub fn connect_to_named_protocol<S: DiscoverableService>(
+    pub fn connect_to_named_protocol<P: DiscoverableProtocolMarker>(
         &self,
         protocol_name: &str,
-    ) -> Result<S::Proxy, Error> {
+    ) -> Result<P::Proxy, Error> {
         let (client_channel, server_channel) = zx::Channel::create()?;
         self.pass_to_named_protocol(protocol_name, server_channel)?;
-        Ok(S::Proxy::from_channel(fasync::Channel::from_channel(client_channel)?))
+        Ok(P::Proxy::from_channel(fasync::Channel::from_channel(client_channel)?))
     }
 
     /// Connect to a FIDL service provided by the `App`.
@@ -521,11 +521,11 @@ impl App {
 
     /// Connect to a protocol by passing a channel for the server.
     #[inline]
-    pub fn pass_to_protocol<S: DiscoverableService>(
+    pub fn pass_to_protocol<P: DiscoverableProtocolMarker>(
         &self,
         server_channel: zx::Channel,
     ) -> Result<(), Error> {
-        self.pass_to_named_protocol(S::SERVICE_NAME, server_channel)
+        self.pass_to_named_protocol(P::PROTOCOL_NAME, server_channel)
     }
 
     /// Connect to a protocol by name.
@@ -921,7 +921,7 @@ impl fmt::Debug for OutputError {
 
 #[cfg(test)]
 mod tests {
-    use fidl::endpoints::DiscoverableService as _;
+    use fidl::endpoints::DiscoverableProtocolMarker as _;
     use fidl_fuchsia_component_client_test::{
         ServiceAMarker, ServiceAProxy, ServiceBMarker, ServiceBProxy,
     };
@@ -953,7 +953,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_svc_connector_connect_with_dir() -> Result<(), Error> {
         let dir = pseudo_directory! {
-            ServiceBMarker::SERVICE_NAME => read_only_static("read_only"),
+            ServiceBMarker::PROTOCOL_NAME => read_only_static("read_only"),
         };
         let (dir_proxy, dir_server) =
             fidl::endpoints::create_proxy::<fidl_fuchsia_io::DirectoryMarker>()?;

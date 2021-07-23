@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use anyhow::{Context as _, Error};
-use fidl::endpoints::ServiceMarker;
+use fidl::endpoints::ProtocolMarker;
 use fidl_fuchsia_hardware_ethernet as fethernet;
 use fidl_fuchsia_net_filter as ffilter;
 use fidl_fuchsia_net_neighbor as fneighbor;
@@ -47,28 +47,28 @@ struct Connector;
 
 #[async_trait::async_trait]
 impl net_cli::ServiceConnector<fstack::StackMarker> for Connector {
-    async fn connect(&self) -> Result<<fstack::StackMarker as ServiceMarker>::Proxy, Error> {
+    async fn connect(&self) -> Result<<fstack::StackMarker as ProtocolMarker>::Proxy, Error> {
         connect_to_protocol::<fstack::StackMarker>()
     }
 }
 
 #[async_trait::async_trait]
 impl net_cli::ServiceConnector<fnetstack::NetstackMarker> for Connector {
-    async fn connect(&self) -> Result<<fnetstack::NetstackMarker as ServiceMarker>::Proxy, Error> {
+    async fn connect(&self) -> Result<<fnetstack::NetstackMarker as ProtocolMarker>::Proxy, Error> {
         connect_to_protocol::<fnetstack::NetstackMarker>()
     }
 }
 
 #[async_trait::async_trait]
 impl net_cli::ServiceConnector<ffilter::FilterMarker> for Connector {
-    async fn connect(&self) -> Result<<ffilter::FilterMarker as ServiceMarker>::Proxy, Error> {
+    async fn connect(&self) -> Result<<ffilter::FilterMarker as ProtocolMarker>::Proxy, Error> {
         connect_to_protocol::<ffilter::FilterMarker>()
     }
 }
 
 #[async_trait::async_trait]
 impl net_cli::ServiceConnector<fstack::LogMarker> for Connector {
-    async fn connect(&self) -> Result<<fstack::LogMarker as ServiceMarker>::Proxy, Error> {
+    async fn connect(&self) -> Result<<fstack::LogMarker as ProtocolMarker>::Proxy, Error> {
         connect_to_protocol::<fstack::LogMarker>()
     }
 }
@@ -77,14 +77,14 @@ impl net_cli::ServiceConnector<fstack::LogMarker> for Connector {
 impl net_cli::ServiceConnector<fneighbor::ControllerMarker> for Connector {
     async fn connect(
         &self,
-    ) -> Result<<fneighbor::ControllerMarker as ServiceMarker>::Proxy, Error> {
+    ) -> Result<<fneighbor::ControllerMarker as ProtocolMarker>::Proxy, Error> {
         connect_to_protocol::<fneighbor::ControllerMarker>()
     }
 }
 
 #[async_trait::async_trait]
 impl net_cli::ServiceConnector<fneighbor::ViewMarker> for Connector {
-    async fn connect(&self) -> Result<<fneighbor::ViewMarker as ServiceMarker>::Proxy, Error> {
+    async fn connect(&self) -> Result<<fneighbor::ViewMarker as ProtocolMarker>::Proxy, Error> {
         connect_to_protocol::<fneighbor::ViewMarker>()
     }
 }

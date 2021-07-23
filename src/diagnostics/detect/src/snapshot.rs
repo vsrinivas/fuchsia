@@ -74,7 +74,7 @@ pub struct CrashReportHandlerBuilder {
 
 // This function is from fuchsia-mirror/garnet/bin/power_manager/src/utils.rs
 /// Create and connect a FIDL proxy to the service at `path`
-fn connect_proxy<T: fidl::endpoints::ServiceMarker>(
+fn connect_proxy<T: fidl::endpoints::ProtocolMarker>(
     path: &String,
 ) -> Result<T::Proxy, anyhow::Error> {
     let (proxy, server) = fidl::endpoints::create_proxy::<T>()

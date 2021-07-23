@@ -3,19 +3,19 @@
 // found in the LICENSE file.
 
 use anyhow::Error;
-use fidl::endpoints::DiscoverableService;
+use fidl::endpoints::DiscoverableProtocolMarker;
 use fuchsia_component::client::connect_to_protocol;
 
 pub trait ServiceConnect: Send + Sync {
-    fn connect_to_service<S: DiscoverableService>(&self) -> Result<S::Proxy, Error>;
+    fn connect_to_service<P: DiscoverableProtocolMarker>(&self) -> Result<P::Proxy, Error>;
 }
 
 #[derive(Debug, Clone)]
 pub struct ServiceConnector;
 
 impl ServiceConnect for ServiceConnector {
-    fn connect_to_service<S: DiscoverableService>(&self) -> Result<S::Proxy, Error> {
-        connect_to_protocol::<S>()
+    fn connect_to_service<P: DiscoverableProtocolMarker>(&self) -> Result<P::Proxy, Error> {
+        connect_to_protocol::<P>()
     }
 }
 
@@ -42,8 +42,8 @@ mod test {
     }
 
     impl ServiceConnect for NamespacedServiceConnector {
-        fn connect_to_service<S: DiscoverableService>(&self) -> Result<S::Proxy, Error> {
-            connect_to_protocol_at::<S>(self.0.as_str())
+        fn connect_to_service<P: DiscoverableProtocolMarker>(&self) -> Result<P::Proxy, Error> {
+            connect_to_protocol_at::<P>(self.0.as_str())
         }
     }
 
@@ -51,7 +51,7 @@ mod test {
     pub struct FailServiceConnector;
 
     impl ServiceConnect for FailServiceConnector {
-        fn connect_to_service<S: DiscoverableService>(&self) -> Result<S::Proxy, Error> {
+        fn connect_to_service<P: DiscoverableProtocolMarker>(&self) -> Result<P::Proxy, Error> {
             return Err(format_err!("no services here"));
         }
     }

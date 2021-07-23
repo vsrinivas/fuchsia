@@ -89,13 +89,13 @@ pub enum Error {
         "A message was received for ordinal value {} \
                    that the FIDL service {} does not understand.",
         ordinal,
-        service_name
+        protocol_name
     )]
     UnknownOrdinal {
         /// The unknown ordinal.
         ordinal: u64,
         /// The name of the service for which the message was intended.
-        service_name: &'static str,
+        protocol_name: &'static str,
     },
 
     /// Invalid bits value for a strict bits type.
@@ -196,13 +196,13 @@ pub enum Error {
 
     /// A FIDL client's channel was closed. Contains an epitaph if one was sent by the server, or
     /// `zx_status::Status::PEER_CLOSED` otherwise.
-    #[error("A FIDL client's channel to the service {} was closed: {}", service_name, status)]
+    #[error("A FIDL client's channel to the service {} was closed: {}", protocol_name, status)]
     ClientChannelClosed {
         /// The epitaph or `zx_status::Status::PEER_CLOSED`.
         #[source]
         status: zx_status::Status,
         /// The name of the service at the other end of the channel.
-        service_name: &'static str,
+        protocol_name: &'static str,
     },
 
     /// There was an error creating a channel to be used for a FIDL client-server pair.

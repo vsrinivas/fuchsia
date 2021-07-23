@@ -4,7 +4,7 @@
 
 use {
     anyhow::{format_err, Context, Error},
-    fidl::endpoints::DiscoverableService,
+    fidl::endpoints::DiscoverableProtocolMarker,
     fidl_fuchsia_bluetooth_component::{LifecycleMarker, LifecycleProxy, LifecycleState},
     fidl_fuchsia_sys::{LauncherMarker, LauncherProxy},
     fuchsia_component::{client, fuchsia_single_component_package_url},
@@ -22,7 +22,9 @@ pub trait LifecycleProxyConnector {
 
     /// Returns true if the protocol `S` exists in the environment, false if not, or an Error
     /// if checking could not be completed.
-    fn check_protocol<S: DiscoverableService>(&self) -> BoxFuture<'static, Result<bool, Error>>;
+    fn check_protocol<S: DiscoverableProtocolMarker>(
+        &self,
+    ) -> BoxFuture<'static, Result<bool, Error>>;
 
     /// Return a LauncherProxy that can be used to start up components. An Error will be
     /// returned if the protocol is unavailable.
@@ -46,7 +48,9 @@ pub struct AvrcpTarget;
 impl LifecycleProxyConnector for AvrcpTarget {
     const PROTOCOL_PROVIDING_URL: &'static str = AVRCP_TARGET_URL;
 
-    fn check_protocol<S: DiscoverableService>(&self) -> BoxFuture<'static, Result<bool, Error>> {
+    fn check_protocol<S: DiscoverableProtocolMarker>(
+        &self,
+    ) -> BoxFuture<'static, Result<bool, Error>> {
         async {
             let svc_dir = client::new_protocol_connector::<S>()?;
             svc_dir.exists().await
@@ -136,10 +140,10 @@ mod tests {
         fn new(launcher: Option<LauncherProxy>, lifecycle: Option<LifecycleProxy>) -> Self {
             let mut supported_services = vec![];
             if launcher.is_some() {
-                supported_services.push(LauncherMarker::SERVICE_NAME.to_string());
+                supported_services.push(LauncherMarker::PROTOCOL_NAME.to_string());
             }
             if lifecycle.is_some() {
-                supported_services.push(LifecycleMarker::SERVICE_NAME.to_string());
+                supported_services.push(LifecycleMarker::PROTOCOL_NAME.to_string());
             }
             Self { supported_services, launcher, lifecycle }
         }
@@ -150,10 +154,10 @@ mod tests {
         /// manually implement the `Launcher` protocol.
         const PROTOCOL_PROVIDING_URL: &'static str = "foobar";
 
-        fn check_protocol<S: DiscoverableService>(
+        fn check_protocol<S: DiscoverableProtocolMarker>(
             &self,
         ) -> BoxFuture<'static, Result<bool, Error>> {
-            let contains = self.supported_services.contains(&S::SERVICE_NAME.to_string());
+            let contains = self.supported_services.contains(&S::PROTOCOL_NAME.to_string());
             async move { Ok(contains) }.boxed()
         }
 

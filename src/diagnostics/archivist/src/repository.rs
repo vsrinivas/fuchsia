@@ -23,7 +23,7 @@ use {
         trie::{self, TrieIterableNode},
         InspectHierarchyMatcher,
     },
-    fidl::endpoints::ServiceMarker,
+    fidl::endpoints::ProtocolMarker,
     fidl_fuchsia_diagnostics::{self, Selector, StreamMode},
     fidl_fuchsia_io::{DirectoryProxy, CLONE_FLAG_SAME_RIGHTS},
     fidl_fuchsia_logger::{LogInterestSelector, LogMarker, LogRequest, LogRequestStream},

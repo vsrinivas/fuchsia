@@ -9,7 +9,7 @@
 use {
     super::Overnet,
     anyhow::{Context as _, Error},
-    fidl::endpoints::{ClientEnd, RequestStream, ServerEnd, ServiceMarker},
+    fidl::endpoints::{ClientEnd, ProtocolMarker, RequestStream, ServerEnd},
     fidl_fuchsia_overnet::{
         Peer, ServiceConsumerProxyInterface, ServiceProviderRequest, ServiceProviderRequestStream,
         ServicePublisherProxyInterface,

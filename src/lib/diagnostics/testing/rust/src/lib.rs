@@ -40,7 +40,7 @@
 
 use diagnostics_data::{Data, DiagnosticsData, InspectData};
 use diagnostics_reader::{ArchiveReader, ComponentSelector};
-use fidl::endpoints::ServiceMarker;
+use fidl::endpoints::ProtocolMarker;
 use fidl_fuchsia_diagnostics::{ArchiveAccessorMarker, ArchiveAccessorProxy};
 use fidl_fuchsia_logger::{LogFilterOptions, LogLevelFilter, LogMarker, LogMessage, LogSinkMarker};
 use fidl_fuchsia_sys::{ComponentControllerEvent::*, LauncherProxy};

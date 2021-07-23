@@ -4,7 +4,7 @@
 
 use {
     anyhow::{format_err, Error},
-    fidl::endpoints::{DiscoverableService, Proxy, ServerEnd},
+    fidl::endpoints::{DiscoverableProtocolMarker, Proxy, ServerEnd},
     fidl_fuchsia_io as fio, fidl_fuchsia_realm_builder as ftrb, fuchsia_async as fasync,
     futures::lock::Mutex,
     futures::{future::BoxFuture, TryStreamExt},
@@ -60,18 +60,18 @@ pub struct MockHandles {
 
 impl MockHandles {
     /// Connects to a FIDL protocol and returns a proxy to that protocol.
-    pub fn connect_to_service<S: DiscoverableService>(&self) -> Result<S::Proxy, Error> {
+    pub fn connect_to_service<P: DiscoverableProtocolMarker>(&self) -> Result<P::Proxy, Error> {
         let svc_dir_proxy = self
             .namespace
             .get(&"/svc".to_string())
             .ok_or(format_err!("the mock's namespace doesn't have a /svc directory"))?;
         let node_proxy = io_util::open_node(
             svc_dir_proxy,
-            Path::new(S::SERVICE_NAME),
+            Path::new(P::PROTOCOL_NAME),
             fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
             fio::MODE_TYPE_SERVICE,
         )?;
-        Ok(S::Proxy::from_channel(node_proxy.into_channel().unwrap()))
+        Ok(P::Proxy::from_channel(node_proxy.into_channel().unwrap()))
     }
 
     /// Clones a directory from the mock's namespace.

@@ -4,7 +4,9 @@
 
 use {
     anyhow::{format_err, Error},
-    fidl::endpoints::{create_endpoints, create_proxy, ClientEnd, Proxy, ServerEnd, ServiceMarker},
+    fidl::endpoints::{
+        create_endpoints, create_proxy, ClientEnd, ProtocolMarker, Proxy, ServerEnd,
+    },
     fidl_fuchsia_component_runner as fcrunner, fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio,
     fidl_fuchsia_realm_builder as ftrb, fidl_fuchsia_sys as fsysv1, files_async,
     fuchsia_async as fasync,

@@ -10,7 +10,7 @@ use {
     },
     anyhow::{anyhow, Error},
     async_trait::async_trait,
-    fidl::endpoints::ServiceMarker,
+    fidl::endpoints::ProtocolMarker,
     fidl_fuchsia_logger::LogSinkMarker,
     fidl_fuchsia_process as fproc, fuchsia_async as fasync,
     fuchsia_runtime::{HandleInfo, HandleType},

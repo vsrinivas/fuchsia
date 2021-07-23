@@ -4,7 +4,7 @@
 use {
     anyhow::{format_err, Context, Error},
     fdio,
-    fidl::endpoints::DiscoverableService,
+    fidl::endpoints::DiscoverableProtocolMarker,
     fidl_fuchsia_inspect::TreeMarker,
     fidl_fuchsia_sys::{
         ComponentControllerEvent, EnvironmentControllerEvent, EnvironmentControllerProxy,
@@ -187,7 +187,7 @@ fn listen_for_component_events(
     let (event_provider, server_end) =
         fidl::endpoints::create_proxy::<ComponentEventProviderMarker>().context("create proxy")?;
     service_provider.connect_to_service(
-        ComponentEventProviderMarker::SERVICE_NAME,
+        ComponentEventProviderMarker::PROTOCOL_NAME,
         server_end.into_channel(),
     )?;
 
@@ -234,7 +234,7 @@ async fn test_with_diagnostics() -> Result<(), Error> {
             fidl::endpoints::create_proxy::<TreeMarker>().expect("Create Tree proxy");
         fdio::service_connect_at(
             directory.channel(),
-            TreeMarker::SERVICE_NAME,
+            TreeMarker::PROTOCOL_NAME,
             server_end.into_channel(),
         )
         .expect("Connect to Tree service");

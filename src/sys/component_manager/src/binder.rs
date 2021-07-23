@@ -301,7 +301,7 @@ mod tests {
             event_receiver.next().await,
             Some(Err(fidl::Error::ClientChannelClosed {
                 status: zx::Status::NOT_FOUND,
-                service_name: "binder_service"
+                protocol_name: "binder_service"
             }))
         );
         assert_matches!(event_receiver.next().await, None);

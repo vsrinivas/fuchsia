@@ -4,7 +4,7 @@
 
 use {
     anyhow::Error,
-    fidl::endpoints::{create_proxy, ServiceMarker},
+    fidl::endpoints::{create_proxy, ProtocolMarker},
     fidl_fuchsia_device_manager as fdevicemanager,
     fidl_fuchsia_hardware_power_statecontrol as fstatecontrol, fidl_fuchsia_io as fio,
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,

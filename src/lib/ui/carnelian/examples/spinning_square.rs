@@ -18,7 +18,7 @@ use carnelian::{
     ViewKey,
 };
 use euclid::{point2, size2, vec2, Angle, Transform2D};
-use fidl::endpoints::{RequestStream, ServiceMarker};
+use fidl::endpoints::{ProtocolMarker, RequestStream};
 use fidl_test_placeholders::{EchoMarker, EchoRequest, EchoRequestStream};
 use fuchsia_async as fasync;
 use fuchsia_zircon::{Event, Time};

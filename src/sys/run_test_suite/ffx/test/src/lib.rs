@@ -14,7 +14,7 @@ use {
         ShowResultCommand, TestCommand, TestSubcommand,
     },
     fidl::endpoints::create_proxy,
-    fidl::endpoints::ServiceMarker,
+    fidl::endpoints::ProtocolMarker,
     fidl_fuchsia_developer_remotecontrol as fremotecontrol,
     fidl_fuchsia_test_manager as ftest_manager,
     ftest_manager::{RunBuilderMarker, RunBuilderProxy},

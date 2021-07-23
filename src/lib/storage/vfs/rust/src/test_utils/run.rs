@@ -12,7 +12,7 @@ use crate::{
 };
 
 use {
-    fidl::endpoints::{create_proxy, ServiceMarker},
+    fidl::endpoints::{create_proxy, ProtocolMarker},
     fuchsia_async::TestExecutor,
     std::{future::Future, pin::Pin, sync::Arc, task::Poll},
 };
@@ -28,7 +28,7 @@ pub fn run_server_client<Marker, GetClient, GetClientRes>(
     server: Arc<dyn DirectoryEntry>,
     get_client: GetClient,
 ) where
-    Marker: ServiceMarker,
+    Marker: ProtocolMarker,
     GetClient: FnOnce(Marker::Proxy) -> GetClientRes,
     GetClientRes: Future<Output = ()>,
 {
@@ -116,7 +116,7 @@ pub fn test_server_client<'test_refs, Marker, GetClient, GetClientRes>(
     get_client: GetClient,
 ) -> AsyncServerClientTestParams<'test_refs, Marker>
 where
-    Marker: ServiceMarker,
+    Marker: ProtocolMarker,
     GetClient: FnOnce(Marker::Proxy) -> GetClientRes + 'test_refs,
     GetClientRes: Future<Output = ()> + 'test_refs,
 {
@@ -143,7 +143,7 @@ pub fn test_server_client_with_mode<'test_refs, Marker, GetClient, GetClientRes>
     get_client: GetClient,
 ) -> AsyncServerClientTestParams<'test_refs, Marker>
 where
-    Marker: ServiceMarker,
+    Marker: ProtocolMarker,
     GetClient: FnOnce(Marker::Proxy) -> GetClientRes + 'test_refs,
     GetClientRes: Future<Output = ()> + 'test_refs,
 {
@@ -182,7 +182,7 @@ where
 #[must_use = "Need to call `run` to actually run the test"]
 pub struct AsyncServerClientTestParams<'test_refs, Marker>
 where
-    Marker: ServiceMarker,
+    Marker: ProtocolMarker,
 {
     exec: Option<TestExecutor>,
     flags: u32,
@@ -217,7 +217,7 @@ macro_rules! field_setter {
 
 impl<'test_refs, Marker> AsyncServerClientTestParams<'test_refs, Marker>
 where
-    Marker: ServiceMarker,
+    Marker: ProtocolMarker,
 {
     field_setter!(exec, TestExecutor);
     field_setter!(mode, u32);

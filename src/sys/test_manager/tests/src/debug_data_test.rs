@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    fidl::endpoints::ServiceMarker, fidl_fuchsia_debugdata::DebugDataMarker,
+    fidl::endpoints::ProtocolMarker, fidl_fuchsia_debugdata::DebugDataMarker,
     fuchsia_component::client::connect_to_protocol, fuchsia_zircon_status as zx_status,
     matches::assert_matches,
 };
@@ -20,7 +20,7 @@ async fn can_connect_to_debug_data_service() {
         error,
         fidl::Error::ClientChannelClosed {
             status: zx_status::Status::NOT_SUPPORTED,
-            service_name: DebugDataMarker::NAME
+            protocol_name: DebugDataMarker::NAME
         }
     );
 }

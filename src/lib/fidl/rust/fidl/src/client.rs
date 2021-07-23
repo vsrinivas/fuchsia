@@ -132,7 +132,7 @@ impl Client {
     ///
     /// `channel` is the asynchronous channel over which data is sent and received.
     /// `event_ordinals` are the ordinals on which events will be received.
-    pub fn new(channel: AsyncChannel, service_name: &'static str) -> Client {
+    pub fn new(channel: AsyncChannel, protocol_name: &'static str) -> Client {
         // Initialize tracing. This is a no-op if FIDL userspace tracing is
         // disabled or if the function was already called.
         create_trace_provider();
@@ -142,7 +142,7 @@ impl Client {
                 message_interests: Mutex::new(Slab::<MessageInterest>::new()),
                 event_channel: Mutex::default(),
                 epitaph: Mutex::default(),
-                service_name,
+                protocol_name,
             }),
         }
     }
@@ -242,7 +242,7 @@ impl Client {
                 Err(Error::ClientChannelClosed {
                     // Try to receive the epitaph.
                     status: self.inner.recv_all()?.unwrap_or(zx_status::Status::PEER_CLOSED),
-                    service_name: self.inner.service_name,
+                    protocol_name: self.inner.protocol_name,
                 })
             }
             Err(e) => Err(Error::ClientWrite(e.into())),
@@ -516,8 +516,8 @@ struct ClientInner {
     /// The server provided epitaph, or None if the channel is not closed.
     epitaph: Mutex<Option<zx_status::Status>>,
 
-    /// The `ServiceMarker::DEBUG_NAME` for the service this client connects to.
-    service_name: &'static str,
+    /// The `ProtocolMarker::DEBUG_NAME` for the service this client connects to.
+    protocol_name: &'static str,
 }
 
 impl ClientInner {
@@ -550,7 +550,7 @@ impl ClientInner {
             if let Some(status) = epitaph {
                 Poll::Ready(Err(Error::ClientChannelClosed {
                     status,
-                    service_name: self.service_name,
+                    protocol_name: self.protocol_name,
                 }))
             } else {
                 Poll::Pending
@@ -593,7 +593,7 @@ impl ClientInner {
             if let Some(status) = epitaph {
                 Poll::Ready(Err(Error::ClientChannelClosed {
                     status,
-                    service_name: self.service_name,
+                    protocol_name: self.protocol_name,
                 }))
             } else {
                 Poll::Pending
@@ -749,17 +749,17 @@ pub mod sync {
         // Underlying channel
         channel: zx::Channel,
 
-        // The `ServiceMarker::DEBUG_NAME` for the service this client connects to.
-        service_name: &'static str,
+        // The `ProtocolMarker::DEBUG_NAME` for the service this client connects to.
+        protocol_name: &'static str,
     }
 
     impl Client {
         /// Create a new synchronous FIDL client.
-        pub fn new(channel: zx::Channel, service_name: &'static str) -> Self {
+        pub fn new(channel: zx::Channel, protocol_name: &'static str) -> Self {
             // Initialize tracing. This is a no-op if FIDL userspace tracing is
             // disabled or if the function was already called.
             create_trace_provider();
-            Client { channel, service_name }
+            Client { channel, protocol_name }
         }
 
         /// Get the underlying channel out of the client.
@@ -852,7 +852,7 @@ pub mod sync {
             if err == zx_status::Status::PEER_CLOSED {
                 Error::ClientChannelClosed {
                     status: zx_status::Status::PEER_CLOSED,
-                    service_name: self.service_name,
+                    protocol_name: self.protocol_name,
                 }
             } else {
                 variant(err)
@@ -915,7 +915,7 @@ mod tests {
     #[test]
     fn sync_client() -> Result<(), Error> {
         let (client_end, server_end) = zx::Channel::create().context("chan create")?;
-        let client = sync::Client::new(client_end, "test_service");
+        let client = sync::Client::new(client_end, "test_protocol");
         client.send(&mut SEND_DATA.clone(), SEND_ORDINAL).context("sending")?;
         let mut received = MessageBufEtc::new();
         server_end.read_etc(&mut received).context("reading")?;
@@ -927,7 +927,7 @@ mod tests {
     #[test]
     fn sync_client_with_response() -> Result<(), Error> {
         let (client_end, server_end) = zx::Channel::create().context("chan create")?;
-        let client = sync::Client::new(client_end, "test_service");
+        let client = sync::Client::new(client_end, "test_protocol");
         thread::spawn(move || {
             // Server
             let mut received = MessageBufEtc::new();
@@ -954,7 +954,7 @@ mod tests {
     #[test]
     fn sync_client_with_event_and_response() -> Result<(), Error> {
         let (client_end, server_end) = zx::Channel::create().context("chan create")?;
-        let client = sync::Client::new(client_end, "test_service");
+        let client = sync::Client::new(client_end, "test_protocol");
         thread::spawn(move || {
             // Server
             let mut received = MessageBufEtc::new();
@@ -993,7 +993,7 @@ mod tests {
     #[test]
     fn sync_client_with_racing_events() -> Result<(), Error> {
         let (client_end, server_end) = zx::Channel::create().context("chan create")?;
-        let client1 = Arc::new(sync::Client::new(client_end, "test_service"));
+        let client1 = Arc::new(sync::Client::new(client_end, "test_protocol"));
         let client2 = client1.clone();
 
         let thread1 = thread::spawn(move || {
@@ -1018,14 +1018,14 @@ mod tests {
     #[test]
     fn sync_client_peer_closed() -> Result<(), Error> {
         let (client_end, server_end) = zx::Channel::create().context("chan create")?;
-        let client = sync::Client::new(client_end, "test_service");
+        let client = sync::Client::new(client_end, "test_protocol");
         // Close the server channel.
         drop(server_end);
         assert_matches!(
             client.send(&mut SEND_DATA.clone(), SEND_ORDINAL),
             Err(crate::Error::ClientChannelClosed {
                 status: zx_status::Status::PEER_CLOSED,
-                service_name: "test_service",
+                protocol_name: "test_protocol",
             })
         );
         Ok(())
@@ -1036,7 +1036,7 @@ mod tests {
     #[test]
     fn sync_client_does_not_receive_epitaphs() -> Result<(), Error> {
         let (client_end, server_end) = zx::Channel::create().context("chan create")?;
-        let client = sync::Client::new(client_end, "test_service");
+        let client = sync::Client::new(client_end, "test_protocol");
         // Close the server channel with an epitaph.
         server_end
             .close_with_epitaph(zx_status::Status::UNAVAILABLE)
@@ -1045,7 +1045,7 @@ mod tests {
             client.send(&mut SEND_DATA.clone(), SEND_ORDINAL),
             Err(crate::Error::ClientChannelClosed {
                 status: zx_status::Status::PEER_CLOSED,
-                service_name: "test_service",
+                protocol_name: "test_protocol",
             })
         );
         Ok(())
@@ -1055,7 +1055,7 @@ mod tests {
     async fn client() {
         let (client_end, server_end) = zx::Channel::create().unwrap();
         let client_end = AsyncChannel::from_channel(client_end).unwrap();
-        let client = Client::new(client_end, "test_service");
+        let client = Client::new(client_end, "test_protocol");
 
         let server = AsyncChannel::from_channel(server_end).unwrap();
         let receiver = async move {
@@ -1080,7 +1080,7 @@ mod tests {
     async fn client_with_response() {
         let (client_end, server_end) = zx::Channel::create().unwrap();
         let client_end = AsyncChannel::from_channel(client_end).unwrap();
-        let client = Client::new(client_end, "test_service");
+        let client = Client::new(client_end, "test_protocol");
 
         let server = AsyncChannel::from_channel(server_end).unwrap();
         let mut buffer = MessageBufEtc::new();
@@ -1115,7 +1115,7 @@ mod tests {
     async fn client_with_response_receives_epitaph() {
         let (client_end, server_end) = zx::Channel::create().unwrap();
         let client_end = AsyncChannel::from_channel(client_end).unwrap();
-        let client = Client::new(client_end, "test_service");
+        let client = Client::new(client_end, "test_protocol");
 
         let server = AsyncChannel::from_channel(server_end).unwrap();
         let mut buffer = zx::MessageBufEtc::new();
@@ -1135,7 +1135,7 @@ mod tests {
                 result,
                 Err(crate::Error::ClientChannelClosed {
                     status: zx_status::Status::UNAVAILABLE,
-                    service_name: "test_service"
+                    protocol_name: "test_protocol"
                 })
             );
         };
@@ -1151,7 +1151,7 @@ mod tests {
     async fn event_cant_be_taken_twice() {
         let (client_end, _) = zx::Channel::create().unwrap();
         let client_end = AsyncChannel::from_channel(client_end).unwrap();
-        let client = Client::new(client_end, "test_service");
+        let client = Client::new(client_end, "test_protocol");
         let _foo = client.take_event_receiver();
         client.take_event_receiver();
     }
@@ -1160,7 +1160,7 @@ mod tests {
     async fn event_can_be_taken_after_drop() {
         let (client_end, _) = zx::Channel::create().unwrap();
         let client_end = AsyncChannel::from_channel(client_end).unwrap();
-        let client = Client::new(client_end, "test_service");
+        let client = Client::new(client_end, "test_protocol");
         let foo = client.take_event_receiver();
         drop(foo);
         client.take_event_receiver();
@@ -1170,7 +1170,7 @@ mod tests {
     async fn receiver_termination_test() {
         let (client_end, _) = zx::Channel::create().unwrap();
         let client_end = AsyncChannel::from_channel(client_end).unwrap();
-        let client = Client::new(client_end, "test_service");
+        let client = Client::new(client_end, "test_protocol");
         let mut foo = client.take_event_receiver();
         assert!(!foo.is_terminated(), "receiver should not report terminated before being polled");
         let _ = foo.next().await;
@@ -1185,7 +1185,7 @@ mod tests {
     async fn receiver_cant_be_polled_more_than_once_on_closed_stream() {
         let (client_end, _) = zx::Channel::create().unwrap();
         let client_end = AsyncChannel::from_channel(client_end).unwrap();
-        let client = Client::new(client_end, "test_service");
+        let client = Client::new(client_end, "test_protocol");
         let foo = client.take_event_receiver();
         drop(foo);
         let mut bar = client.take_event_receiver();
@@ -1199,7 +1199,7 @@ mod tests {
     async fn receiver_panics_when_polled_after_receiving_epitaph_then_none() {
         let (client_end, server_end) = zx::Channel::create().unwrap();
         let client_end = AsyncChannel::from_channel(client_end).unwrap();
-        let client = Client::new(client_end, "test_service");
+        let client = Client::new(client_end, "test_protocol");
         let mut stream = client.take_event_receiver();
 
         epitaph::write_epitaph_impl(&server_end, zx_status::Status::UNAVAILABLE)
@@ -1210,7 +1210,7 @@ mod tests {
             stream.next().await,
             Some(Err(crate::Error::ClientChannelClosed {
                 status: zx_status::Status::UNAVAILABLE,
-                service_name: "test_service"
+                protocol_name: "test_protocol"
             }))
         );
         assert_matches!(stream.next().await, None);
@@ -1222,7 +1222,7 @@ mod tests {
     async fn event_can_be_taken() {
         let (client_end, _) = zx::Channel::create().unwrap();
         let client_end = AsyncChannel::from_channel(client_end).unwrap();
-        let client = Client::new(client_end, "test_service");
+        let client = Client::new(client_end, "test_protocol");
         client.take_event_receiver();
     }
 
@@ -1230,7 +1230,7 @@ mod tests {
     async fn event_received() {
         let (client_end, server_end) = zx::Channel::create().unwrap();
         let client_end = AsyncChannel::from_channel(client_end).unwrap();
-        let client = Client::new(client_end, "test_service");
+        let client = Client::new(client_end, "test_protocol");
 
         // Send the event from the server
         let server = AsyncChannel::from_channel(server_end).unwrap();
@@ -1266,7 +1266,7 @@ mod tests {
     async fn receiver_can_be_taken_after_end_of_stream() {
         let (client_end, server_end) = zx::Channel::create().unwrap();
         let client_end = AsyncChannel::from_channel(client_end).unwrap();
-        let client = Client::new(client_end, "test_service");
+        let client = Client::new(client_end, "test_protocol");
 
         // Send the event from the server
         let server = AsyncChannel::from_channel(server_end).unwrap();
@@ -1312,7 +1312,7 @@ mod tests {
     async fn event_incompatible_format() {
         let (client_end, server_end) = zx::Channel::create().unwrap();
         let client_end = AsyncChannel::from_channel(client_end).unwrap();
-        let client = Client::new(client_end, "test_service");
+        let client = Client::new(client_end, "test_protocol");
 
         // Send the event from the server
         let server = AsyncChannel::from_channel(server_end).unwrap();
@@ -1347,7 +1347,7 @@ mod tests {
 
         let (client_end, server_end) = zx::Channel::create().unwrap();
         let client_end = AsyncChannel::from_channel(client_end).unwrap();
-        let client = Client::new(client_end, "test_service");
+        let client = Client::new(client_end, "test_protocol");
 
         let mut event_receiver = client.take_event_receiver();
 
@@ -1405,7 +1405,7 @@ mod tests {
 
         let (client_end, server_end) = zx::Channel::create().unwrap();
         let client_end = AsyncChannel::from_channel(client_end).unwrap();
-        let client = Client::new(client_end, "test_service");
+        let client = Client::new(client_end, "test_protocol");
 
         let mut event_receiver = client.take_event_receiver();
 
@@ -1464,7 +1464,7 @@ mod tests {
             response1_future.poll_unpin(response1_cx),
             Poll::Ready(Err(crate::Error::ClientChannelClosed {
                 status: zx_status::Status::UNAVAILABLE,
-                service_name: "test_service"
+                protocol_name: "test_protocol"
             }))
         );
 
@@ -1482,7 +1482,7 @@ mod tests {
             response2_future.poll_unpin(response2_cx),
             Poll::Ready(Err(crate::Error::ClientChannelClosed {
                 status: zx_status::Status::UNAVAILABLE,
-                service_name: "test_service"
+                protocol_name: "test_protocol"
             }))
         );
 
@@ -1494,7 +1494,7 @@ mod tests {
     async fn client_allows_take_event_stream_even_if_event_delivered() {
         let (client_end, server_end) = zx::Channel::create().unwrap();
         let client_end = AsyncChannel::from_channel(client_end).unwrap();
-        let client = Client::new(client_end, "test_service");
+        let client = Client::new(client_end, "test_protocol");
 
         // first simulate an event coming in, even though nothing has polled
         send_transaction(TransactionHeader::new(0, 5), &server_end);
@@ -1542,7 +1542,7 @@ mod tests {
         ] {
             let (client_end, server_end) = zx::Channel::create().unwrap();
             let client_end = AsyncChannel::from_channel(client_end).unwrap();
-            let client = Client::new(client_end, "test_service");
+            let client = Client::new(client_end, "test_protocol");
 
             // Immediately close the FIDL channel with an epitaph.
             let server_end = AsyncChannel::from_channel(server_end).unwrap();
@@ -1571,7 +1571,7 @@ mod tests {
                 match err {
                     Some(crate::Error::ClientChannelClosed {
                         status: zx_status::Status::UNAVAILABLE,
-                        service_name: "test_service",
+                        protocol_name: "test_protocol",
                     }) => (),
                     Some(err) => panic!(
                         "expected epitaph, got {:#?}.\nindex: {:?}, two_actions: {:?}",
@@ -1596,7 +1596,7 @@ mod tests {
         let mut executor = fasync::TestExecutor::new().unwrap();
         let (client_end, server_end) = zx::Channel::create().unwrap();
         let client_end = AsyncChannel::from_channel(client_end).unwrap();
-        let client = Client::new(client_end, "test_service");
+        let client = Client::new(client_end, "test_protocol");
 
         let server = AsyncChannel::from_channel(server_end).unwrap();
 

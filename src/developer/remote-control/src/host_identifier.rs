@@ -18,8 +18,8 @@ pub struct HostIdentifier {
     pub(crate) boot_timestamp_nanos: u64,
 }
 
-fn connect_to_protocol<S: fidl::endpoints::DiscoverableService>() -> Result<S::Proxy> {
-    fuchsia_component::client::connect_to_protocol::<S>().context(S::SERVICE_NAME)
+fn connect_to_protocol<P: fidl::endpoints::DiscoverableProtocolMarker>() -> Result<P::Proxy> {
+    fuchsia_component::client::connect_to_protocol::<P>().context(P::PROTOCOL_NAME)
 }
 
 impl HostIdentifier {

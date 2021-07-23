@@ -4,7 +4,7 @@
 
 use {
     anyhow::Error,
-    fidl::endpoints::{create_proxy, DiscoverableService, ServerEnd, ServiceMarker},
+    fidl::endpoints::{create_proxy, DiscoverableProtocolMarker, ProtocolMarker, ServerEnd},
     fidl_fuchsia_io::{self as fio, DirectoryMarker, DirectoryProxy},
     fuchsia_async as fasync,
     fuchsia_component::server::{ServiceFs, ServiceObj},
@@ -24,12 +24,12 @@ pub async fn process_request_stream<S, Event>(
     mut stream: S::RequestStream,
     mut sender: mpsc::Sender<Event>,
 ) where
-    S: DiscoverableService,
+    S: DiscoverableProtocolMarker,
     Event: std::convert::From<<S::RequestStream as TryStream>::Ok>,
     <S::RequestStream as TryStream>::Ok: std::fmt::Debug,
 {
     while let Some(request) = stream.try_next().await.expect("serving request stream failed") {
-        info!("Received {} service request: {:?}", S::SERVICE_NAME, request);
+        info!("Received {} service request: {:?}", S::PROTOCOL_NAME, request);
         sender.send(request.into()).await.expect("should send");
     }
 }
@@ -43,13 +43,13 @@ pub fn add_fidl_service_handler<S, Event: 'static>(
     fs: &mut ServiceFs<ServiceObj<'_, ()>>,
     sender: mpsc::Sender<Event>,
 ) where
-    S: DiscoverableService,
+    S: DiscoverableProtocolMarker,
     Event: std::convert::From<S::RequestStream> + std::marker::Send,
 {
     fs.dir("svc").add_fidl_service(move |req_stream: S::RequestStream| {
         let mut s = sender.clone();
         fasync::Task::local(async move {
-            info!("Received connection for {}", S::SERVICE_NAME);
+            info!("Received connection for {}", S::PROTOCOL_NAME);
             s.send(req_stream.into()).await.expect("should send");
         })
         .detach()
@@ -63,15 +63,15 @@ pub async fn mock_component<S, Event: 'static>(
     handles: MockHandles,
 ) -> Result<(), Error>
 where
-    S: DiscoverableService,
-    Event: std::convert::From<<<S as ServiceMarker>::RequestStream as TryStream>::Ok>
+    S: DiscoverableProtocolMarker,
+    Event: std::convert::From<<<S as ProtocolMarker>::RequestStream as TryStream>::Ok>
         + std::marker::Send,
-    <<S as ServiceMarker>::RequestStream as TryStream>::Ok: std::fmt::Debug,
+    <<S as ProtocolMarker>::RequestStream as TryStream>::Ok: std::fmt::Debug,
 {
     let mut fs = ServiceFs::new();
     fs.dir("svc").add_fidl_service(move |req_stream: S::RequestStream| {
         let sender_clone = sender.clone();
-        info!("Received connection for {}", S::SERVICE_NAME);
+        info!("Received connection for {}", S::PROTOCOL_NAME);
         fasync::Task::local(process_request_stream::<S, _>(req_stream, sender_clone)).detach();
     });
 

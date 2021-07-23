@@ -883,7 +883,7 @@ mod tests {
     use matches::assert_matches;
     use omaha_client::{common::App, protocol::Cohort};
 
-    fn spawn_fidl_server<M: fidl::endpoints::ServiceMarker>(
+    fn spawn_fidl_server<M: fidl::endpoints::ProtocolMarker>(
         fidl: Rc<RefCell<stub::StubFidlServer>>,
         service: fn(M::RequestStream) -> IncomingServices,
     ) -> M::Proxy {
@@ -1374,7 +1374,7 @@ mod tests {
                 error.downcast::<fidl::Error>().unwrap(),
                 fidl::Error::ClientChannelClosed {
                     status: zx::Status::PEER_CLOSED,
-                    service_name: "fuchsia.hardware.power.statecontrol.Admin"
+                    protocol_name: "fuchsia.hardware.power.statecontrol.Admin"
                 }
             );
         });
@@ -1382,7 +1382,7 @@ mod tests {
             proxy.perform_pending_reboot().await,
             Err(fidl::Error::ClientChannelClosed {
                 status: zx::Status::PEER_CLOSED,
-                service_name: "fuchsia.update.Manager"
+                protocol_name: "fuchsia.update.Manager"
             })
         );
     }

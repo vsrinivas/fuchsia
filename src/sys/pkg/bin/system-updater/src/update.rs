@@ -6,7 +6,7 @@ use {
     anyhow::{anyhow, bail, Context, Error},
     async_trait::async_trait,
     epoch::EpochFile,
-    fidl::endpoints::ServiceMarker as _,
+    fidl::endpoints::ProtocolMarker as _,
     fidl_fuchsia_io::DirectoryProxy,
     fidl_fuchsia_paver::DataSinkProxy,
     fidl_fuchsia_pkg::{

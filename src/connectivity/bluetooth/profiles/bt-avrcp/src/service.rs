@@ -4,7 +4,7 @@
 
 use {
     anyhow::{format_err, Error},
-    fidl::endpoints::{RequestStream, ServiceMarker},
+    fidl::endpoints::{ProtocolMarker, RequestStream},
     fidl_fuchsia_bluetooth_avrcp::*,
     fidl_fuchsia_bluetooth_avrcp_test::*,
     fuchsia_async as fasync,

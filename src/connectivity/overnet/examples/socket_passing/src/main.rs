@@ -5,7 +5,7 @@
 use {
     anyhow::{Context as _, Error},
     argh::FromArgs,
-    fidl::endpoints::{ClientEnd, RequestStream, ServiceMarker},
+    fidl::endpoints::{ClientEnd, ProtocolMarker, RequestStream},
     fidl_fuchsia_overnet::{ServiceProviderRequest, ServiceProviderRequestStream},
     fidl_fuchsia_overnet_socketpassingexample as socketpassing,
     futures::{future::try_join, prelude::*},

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    fidl::endpoints::ServiceMarker,
+    fidl::endpoints::ProtocolMarker,
     fidl_fidl_test_components as ftest, fidl_fuchsia_device_manager as fdevicemanager,
     fuchsia_async as fasync,
     fuchsia_component::{client, server::ServiceFs},

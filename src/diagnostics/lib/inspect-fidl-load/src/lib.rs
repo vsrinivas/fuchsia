@@ -14,7 +14,7 @@ use {
 
 /// Checks if a file points to a deprecated Inspect FIDL service.
 pub async fn is_valid_file(filename: &str) -> bool {
-    if filename != <InspectMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME {
+    if filename != <InspectMarker as fidl::endpoints::ProtocolMarker>::DEBUG_NAME {
         return false;
     }
     if let Ok(proxy) = io_util::open_file_in_namespace(&filename, io_util::OPEN_RIGHT_READABLE) {

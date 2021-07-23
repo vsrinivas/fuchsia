@@ -7,7 +7,7 @@ use {
     anyhow::Error,
     async_trait::async_trait,
     cm_rust::CapabilityName,
-    fidl::endpoints::ServiceMarker,
+    fidl::endpoints::ProtocolMarker,
     fidl_fuchsia_kernel as fkernel,
     fuchsia_zircon::{self as zx, HandleBased, Resource, ResourceInfo},
     futures::prelude::*,
@@ -45,7 +45,7 @@ impl ResourceCapability for IoportResource {
 
     async fn server_loop(
         self: Arc<Self>,
-        mut stream: <Self::Marker as ServiceMarker>::RequestStream,
+        mut stream: <Self::Marker as ProtocolMarker>::RequestStream,
     ) -> Result<(), Error> {
         while let Some(fkernel::IoportResourceRequest::Get { responder }) =
             stream.try_next().await?

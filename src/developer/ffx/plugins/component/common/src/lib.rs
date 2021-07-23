@@ -5,7 +5,7 @@
 use {
     anyhow::{Error, Result},
     errors::ffx_bail,
-    fidl::endpoints::{Proxy, ServiceMarker},
+    fidl::endpoints::{ProtocolMarker, Proxy},
     fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys,
     moniker::{ChildMonikerBase, RelativeMoniker, RelativeMonikerBase},
     std::path::PathBuf,

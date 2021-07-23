@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use anyhow::{format_err, Context as _, Error};
-use fidl::endpoints::ServiceMarker;
+use fidl::endpoints::ProtocolMarker;
 use fidl_fuchsia_net_interfaces::StateMarker;
 use fidl_fuchsia_netemul_environment::{
     EnvironmentOptions, LaunchService, LoggerOptions, ManagedEnvironmentMarker, VirtualDevice,

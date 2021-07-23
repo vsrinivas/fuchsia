@@ -13,7 +13,7 @@ use {
     },
     anyhow::{format_err, Error},
     async_trait::async_trait,
-    fidl::endpoints::{ServerEnd, ServiceMarker},
+    fidl::endpoints::{ProtocolMarker, ServerEnd},
     fuchsia_async as fasync,
     fuchsia_zircon::{self as zx, ResourceInfo},
     log::warn,
@@ -34,14 +34,14 @@ pub trait BuiltinCapability {
     const NAME: &'static str;
 
     /// Service marker for the capability.
-    type Marker: ServiceMarker;
+    type Marker: ProtocolMarker;
 
     /// Serves an instance of the capability given an appropriate RequestStream.
     /// Returns when the channel backing the RequestStream is closed or an
     /// unrecoverable error occurs.
     async fn serve(
         self: Arc<Self>,
-        mut stream: <Self::Marker as ServiceMarker>::RequestStream,
+        mut stream: <Self::Marker as ProtocolMarker>::RequestStream,
     ) -> Result<(), Error>;
 
     /// Returns the registration hooks for the capability.
@@ -70,13 +70,13 @@ pub trait ResourceCapability {
     const NAME: &'static str;
 
     /// Service marker for the capability.
-    type Marker: ServiceMarker;
+    type Marker: ProtocolMarker;
 
     fn get_resource_info(self: &Arc<Self>) -> Result<ResourceInfo, Error>;
 
     async fn server_loop(
         self: Arc<Self>,
-        mut stream: <Self::Marker as ServiceMarker>::RequestStream,
+        mut stream: <Self::Marker as ProtocolMarker>::RequestStream,
     ) -> Result<(), Error>;
 
     fn matches_routed_capability(&self, capability: &InternalCapability) -> bool;
@@ -89,7 +89,7 @@ impl<R: ResourceCapability + Send + Sync> BuiltinCapability for R {
 
     async fn serve(
         self: Arc<Self>,
-        stream: <R::Marker as ServiceMarker>::RequestStream,
+        stream: <R::Marker as ProtocolMarker>::RequestStream,
     ) -> Result<(), Error> {
         let resource_info = self.get_resource_info()?;
         if (resource_info.kind != R::KIND || resource_info.base != 0 || resource_info.size != 0) {

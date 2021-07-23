@@ -7,7 +7,7 @@ use {
         events::{DirectoryReady, Event, EventSource},
         matcher::EventMatcher,
     },
-    fidl::endpoints::{create_proxy, DiscoverableService, ServerEnd},
+    fidl::endpoints::{create_proxy, DiscoverableProtocolMarker, ServerEnd},
     fidl_fidl_test_components as ftest,
     fidl_fuchsia_io::{self as fio, DirectoryProxy},
     files_async, fuchsia_async as fasync,
@@ -52,8 +52,8 @@ async fn main() {
 
     // For successful CapablityReady events, this is a map of the directory to expected contents
     let mut all_expected_entries = hashmap! {
-        "normal".to_string() => vec![ftest::TriggerMarker::SERVICE_NAME.to_string()],
-        "nested".to_string() => vec![format!("inner/{}", ftest::TriggerMarker::SERVICE_NAME).to_string()],
+        "normal".to_string() => vec![ftest::TriggerMarker::PROTOCOL_NAME.to_string()],
+        "nested".to_string() => vec![format!("inner/{}", ftest::TriggerMarker::PROTOCOL_NAME).to_string()],
     };
 
     let mut err_event_names = vec!["insufficient_rights", "not_published"];

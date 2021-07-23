@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use anyhow::Error;
-use fidl::endpoints::{ClientEnd, ServiceMarker};
+use fidl::endpoints::{ClientEnd, ProtocolMarker};
 use fuchsia_zircon as zx;
 use glob::glob;
 
@@ -10,7 +10,7 @@ use glob::glob;
 ///
 /// Returns a proxy to the first path that matches a pattern in `glob_paths`,
 /// or None if no matching paths exist.
-pub fn connect_in_paths<T: ServiceMarker>(glob_paths: &[&str]) -> Result<Option<T::Proxy>, Error> {
+pub fn connect_in_paths<T: ProtocolMarker>(glob_paths: &[&str]) -> Result<Option<T::Proxy>, Error> {
     let proxy = glob_paths
         .iter()
         .map(|glob_path| {

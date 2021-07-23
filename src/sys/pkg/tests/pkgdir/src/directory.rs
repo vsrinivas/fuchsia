@@ -542,7 +542,7 @@ async fn verify_meta_as_file_opened(node: NodeProxy, _flag: u32) -> Result<(), E
 async fn verify_open_failed(node: NodeProxy) -> Result<(), Error> {
     match node.describe().await {
         Ok(node_info) => Err(anyhow!("node should be closed: {:?}", node_info)),
-        Err(fidl::Error::ClientChannelClosed { status, service_name: _ })
+        Err(fidl::Error::ClientChannelClosed { status, protocol_name: _ })
             if status == zx::Status::PEER_CLOSED =>
         {
             Ok(())

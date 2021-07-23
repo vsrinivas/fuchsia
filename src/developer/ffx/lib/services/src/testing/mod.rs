@@ -9,7 +9,7 @@ use {
     crate::{Context, FidlService},
     fidl::endpoints::create_endpoints,
     fidl::endpoints::Proxy,
-    fidl::{endpoints::ServiceMarker, AsyncChannel},
+    fidl::{endpoints::ProtocolMarker, AsyncChannel},
     fuchsia_async::Task,
     std::cell::RefCell,
     std::rc::Rc,
@@ -31,10 +31,10 @@ use {
 pub async fn create_proxy<F: FidlService + 'static>(
     f: Rc<RefCell<F>>,
     fake_daemon: &FakeDaemon,
-) -> (<F::Service as ServiceMarker>::Proxy, Task<()>) {
+) -> (<F::Service as ProtocolMarker>::Proxy, Task<()>) {
     let (client, server) = create_endpoints::<F::Service>().unwrap();
     let client = AsyncChannel::from_channel(client.into_channel()).unwrap();
-    let client = <F::Service as ServiceMarker>::Proxy::from_channel(client);
+    let client = <F::Service as ProtocolMarker>::Proxy::from_channel(client);
     let cx = Context::new(fake_daemon.clone());
     let svc = f.clone();
     svc.borrow_mut().start(&cx).await.unwrap();

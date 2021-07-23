@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use anyhow::{format_err, Context as _, Error};
-use fidl::endpoints::{create_proxy, ServiceMarker};
+use fidl::endpoints::{create_proxy, ProtocolMarker};
 use fidl_fuchsia_hardware_serial::{
     NewDeviceProxy, NewDeviceProxy_Marker, NewDeviceReadResult, NewDeviceWriteResult,
 };

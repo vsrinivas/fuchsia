@@ -5,7 +5,7 @@
 //!
 //! This library contains the necessary functions to serve inspect from a component.
 
-use fidl::endpoints::DiscoverableService;
+use fidl::endpoints::DiscoverableProtocolMarker;
 use fidl_fuchsia_inspect::TreeMarker;
 use fidl_fuchsia_io::{DirectoryMarker, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE};
 use fuchsia_component::server::{ServiceFs, ServiceObjTrait};
@@ -33,7 +33,7 @@ pub fn serve<'a, ServiceObjTy: ServiceObjTrait>(
         fidl::endpoints::create_proxy::<DirectoryMarker>().map_err(|e| Error::fidl(e.into()))?;
     let inspector_for_fs = inspector.clone();
     let dir = pseudo_directory! {
-        TreeMarker::SERVICE_NAME => pseudo_fs_service::host(move |stream| {
+        TreeMarker::PROTOCOL_NAME => pseudo_fs_service::host(move |stream| {
             let inspector = inspector_for_fs.clone();
             async move {
                 service::handle_request_stream(
@@ -85,7 +85,7 @@ mod tests {
         let path = format!(
             "/hub/children/coll:{}/exec/out/diagnostics/{}",
             app.child_name(),
-            TreeMarker::SERVICE_NAME
+            TreeMarker::PROTOCOL_NAME
         );
         let (tree, server_end) =
             fidl::endpoints::create_proxy::<TreeMarker>().expect("failed to create proxy");

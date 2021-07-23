@@ -6,7 +6,7 @@
 
 use {
     anyhow::Error,
-    fidl::endpoints::{create_proxy, Proxy, RequestStream, ServiceMarker},
+    fidl::endpoints::{create_proxy, ProtocolMarker, Proxy, RequestStream},
     fidl_fuchsia_hardware_input as finput,
     fidl_fuchsia_hardware_power_statecontrol as statecontrol,
     fidl_fuchsia_io::{

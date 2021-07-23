@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 use crate::tests::fakes::base::Service;
 use anyhow::{format_err, Error};
-use fidl::endpoints::{ServerEnd, ServiceMarker};
+use fidl::endpoints::{ProtocolMarker, ServerEnd};
 use fidl_fuchsia_hardware_power_statecontrol::{AdminRequest, RebootReason};
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;

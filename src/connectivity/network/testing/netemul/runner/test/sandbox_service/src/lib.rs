@@ -6,7 +6,7 @@
 mod tests {
     use {
         anyhow::{format_err, Context as _, Error},
-        fidl::endpoints::ServiceMarker,
+        fidl::endpoints::ProtocolMarker,
         fidl_fuchsia_netemul_environment::{
             EnvironmentOptions, LaunchService, LoggerOptions, ManagedEnvironmentMarker,
             ManagedEnvironmentProxy,

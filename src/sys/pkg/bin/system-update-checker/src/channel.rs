@@ -384,7 +384,7 @@ pub enum Error {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fidl::endpoints::{DiscoverableService, RequestStream};
+    use fidl::endpoints::{DiscoverableProtocolMarker, RequestStream};
     use fidl_fuchsia_boot::{ArgumentsRequest, ArgumentsRequestStream};
     use fidl_fuchsia_cobalt::{SystemDataUpdaterRequest, SystemDataUpdaterRequestStream};
     use fidl_fuchsia_pkg::{
@@ -562,10 +562,10 @@ mod tests {
         }
 
         impl ServiceConnect for FlakeyServiceConnector {
-            fn connect_to_service<S: DiscoverableService>(
+            fn connect_to_service<P: DiscoverableProtocolMarker>(
                 &self,
-            ) -> Result<S::Proxy, anyhow::Error> {
-                let mode = if S::SERVICE_NAME == SystemDataUpdaterMarker::SERVICE_NAME {
+            ) -> Result<P::Proxy, anyhow::Error> {
+                let mode = if P::PROTOCOL_NAME == SystemDataUpdaterMarker::PROTOCOL_NAME {
                     // Only flake connections to cobalt.
                     self.state.lock().connect_count += 1;
                     self.state.lock().mode.clone()
@@ -577,12 +577,12 @@ mod tests {
                         return Err(anyhow::format_err!("test error on connect"))
                     }
                     Some(FlakeMode::DropConnection) => {
-                        let (proxy, _stream) = fidl::endpoints::create_proxy::<S>().unwrap();
+                        let (proxy, _stream) = fidl::endpoints::create_proxy::<P>().unwrap();
                         Ok(proxy)
                     }
                     Some(FlakeMode::StatusOnCall(status)) => {
                         let (proxy, stream) =
-                            fidl::endpoints::create_proxy_and_stream::<S>().unwrap();
+                            fidl::endpoints::create_proxy_and_stream::<P>().unwrap();
                         let mut stream: SystemDataUpdaterRequestStream = stream.cast_stream();
 
                         let state = self.state.clone();
@@ -605,10 +605,10 @@ mod tests {
                     }
                     None => {
                         let (proxy, stream) =
-                            fidl::endpoints::create_proxy_and_stream::<S>().unwrap();
+                            fidl::endpoints::create_proxy_and_stream::<P>().unwrap();
 
-                        match S::SERVICE_NAME {
-                            SystemDataUpdaterMarker::SERVICE_NAME => {
+                        match P::PROTOCOL_NAME {
+                            SystemDataUpdaterMarker::PROTOCOL_NAME => {
                                 let mut stream: SystemDataUpdaterRequestStream =
                                     stream.cast_stream();
 
@@ -631,7 +631,7 @@ mod tests {
                                 })
                                 .detach();
                             }
-                            ArgumentsMarker::SERVICE_NAME => {
+                            ArgumentsMarker::PROTOCOL_NAME => {
                                 serve_ota_channel_arguments(
                                     stream.cast_stream(),
                                     "stable",
@@ -848,12 +848,16 @@ mod tests {
     }
 
     impl ServiceConnect for ArgumentsServiceConnector {
-        fn connect_to_service<S: DiscoverableService>(&self) -> Result<S::Proxy, anyhow::Error> {
-            let (proxy, stream) = fidl::endpoints::create_proxy_and_stream::<S>().unwrap();
-            match S::SERVICE_NAME {
-                ArgumentsMarker::SERVICE_NAME => self.handle_arguments_stream(stream.cast_stream()),
-                EngineMarker::SERVICE_NAME => self.handle_engine_stream(stream.cast_stream()),
-                _ => panic!("Unsupported service {}", S::DEBUG_NAME),
+        fn connect_to_service<P: DiscoverableProtocolMarker>(
+            &self,
+        ) -> Result<P::Proxy, anyhow::Error> {
+            let (proxy, stream) = fidl::endpoints::create_proxy_and_stream::<P>().unwrap();
+            match P::PROTOCOL_NAME {
+                ArgumentsMarker::PROTOCOL_NAME => {
+                    self.handle_arguments_stream(stream.cast_stream())
+                }
+                EngineMarker::PROTOCOL_NAME => self.handle_engine_stream(stream.cast_stream()),
+                _ => panic!("Unsupported service {}", P::DEBUG_NAME),
             }
             Ok(proxy)
         }
@@ -931,9 +935,11 @@ mod tests {
     }
 
     impl ServiceConnect for RepoMgrServiceConnector {
-        fn connect_to_service<S: DiscoverableService>(&self) -> Result<S::Proxy, anyhow::Error> {
-            let (proxy, stream) = fidl::endpoints::create_proxy_and_stream::<S>().unwrap();
-            assert_eq!(S::SERVICE_NAME, RepositoryManagerMarker::SERVICE_NAME);
+        fn connect_to_service<P: DiscoverableProtocolMarker>(
+            &self,
+        ) -> Result<P::Proxy, anyhow::Error> {
+            let (proxy, stream) = fidl::endpoints::create_proxy_and_stream::<P>().unwrap();
+            assert_eq!(P::PROTOCOL_NAME, RepositoryManagerMarker::PROTOCOL_NAME);
             let mut stream: RepositoryManagerRequestStream = stream.cast_stream();
             let channels = self.channels.clone();
 

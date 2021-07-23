@@ -6,7 +6,7 @@ use {
     anyhow::{Context as _, Error},
     diagnostics_data::{hierarchy, Data, DiagnosticsHierarchy, Property},
     fake_archive_accessor::FakeArchiveAccessor,
-    fidl::endpoints::ServiceMarker,
+    fidl::endpoints::ProtocolMarker,
     fidl_fuchsia_test_manager as ftest_manager,
     ftest_manager::{CaseStatus, RunOptions, SuiteStatus},
     fuchsia_async as fasync,

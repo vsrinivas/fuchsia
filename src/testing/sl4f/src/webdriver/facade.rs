@@ -4,7 +4,7 @@
 
 use crate::webdriver::types::{EnableDevToolsResult, GetDevToolsPortsResult};
 use anyhow::{format_err, Error};
-use fidl::endpoints::{create_proxy, create_request_stream, ClientEnd, ServerEnd, ServiceMarker};
+use fidl::endpoints::{create_proxy, create_request_stream, ClientEnd, ProtocolMarker, ServerEnd};
 use fidl_fuchsia_web::{
     ContextMarker, ContextProviderMarker, ContextProviderProxy, CreateContextParams, DebugMarker,
     DebugProxy, DevToolsListenerMarker, DevToolsListenerRequest, DevToolsListenerRequestStream,

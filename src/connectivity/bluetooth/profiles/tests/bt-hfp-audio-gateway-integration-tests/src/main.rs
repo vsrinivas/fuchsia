@@ -6,7 +6,7 @@ use {
     anyhow::format_err,
     at_commands::{self as at, SerDe},
     bitflags::bitflags,
-    fidl::{encoding::Decodable, endpoints::DiscoverableService},
+    fidl::{encoding::Decodable, endpoints::DiscoverableProtocolMarker},
     fidl_fuchsia_bluetooth_bredr as bredr,
     fidl_fuchsia_bluetooth_hfp::HfpMarker,
     fuchsia_async::{DurationExt, TimeoutExt},
@@ -164,7 +164,7 @@ async fn test_hfp_search_and_connect() {
         .expect("failed to add mock piconet member");
     // Add the HFP profile under test. Specify the `f.b.hfp.Hfp` protocol as an additional
     // capability so that the TestCallManager can access it from the test realm service directory.
-    let additional_capabilities = vec![Capability::protocol(HfpMarker::SERVICE_NAME)];
+    let additional_capabilities = vec![Capability::protocol(HfpMarker::PROTOCOL_NAME)];
     let mut hfp_under_test = test_harness
         .add_profile_with_capabilities(
             HFP_AG_MONIKER.to_string(),
@@ -264,7 +264,7 @@ async fn test_hfp_full_slc_init_procedure() {
         .expect("failed to add mock piconet member");
     // Add the HFP profile under test. Specify the `f.b.hfp.Hfp` protocol as an additional
     // capability so that the TestCallManager can access it from the test realm service directory.
-    let additional_capabilities = vec![Capability::protocol(HfpMarker::SERVICE_NAME)];
+    let additional_capabilities = vec![Capability::protocol(HfpMarker::PROTOCOL_NAME)];
     let mut hfp_under_test = test_harness
         .add_profile_with_capabilities(
             HFP_AG_MONIKER.to_string(),

@@ -4,7 +4,7 @@
 use crate::audio::default_audio_info;
 use crate::tests::fakes::base::Service;
 use anyhow::{format_err, Error};
-use fidl::endpoints::{ServerEnd, ServiceMarker};
+use fidl::endpoints::{ProtocolMarker, ServerEnd};
 use fidl_fuchsia_media::{AudioRenderUsage, Usage};
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;

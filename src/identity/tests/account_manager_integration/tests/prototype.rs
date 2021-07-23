@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use anyhow::Error;
-use fidl::endpoints::{create_proxy, ServiceMarker};
+use fidl::endpoints::{create_proxy, ProtocolMarker};
 use fidl_fuchsia_identity_account::{
     AccountManagerMarker, AccountManagerProxy, Error as ApiError, Lifetime,
 };

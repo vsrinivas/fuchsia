@@ -8,7 +8,7 @@ use {
     async_once::Once,
     async_trait::async_trait,
     core::marker::PhantomData,
-    fidl::endpoints::{DiscoverableService, Request, RequestStream, ServiceMarker},
+    fidl::endpoints::{DiscoverableProtocolMarker, ProtocolMarker, Request, RequestStream},
     fidl::server::ServeInner,
     futures::future::{LocalBoxFuture, Shared},
     futures::prelude::*,
@@ -18,13 +18,13 @@ use {
 
 #[async_trait(?Send)]
 pub trait FidlService: Unpin + Default {
-    type Service: DiscoverableService;
+    type Service: DiscoverableProtocolMarker;
     type StreamHandler: StreamHandler + Default;
 
     async fn serve<'a>(
         &'a self,
         cx: &'a Context,
-        mut stream: <Self::Service as ServiceMarker>::RequestStream,
+        mut stream: <Self::Service as ProtocolMarker>::RequestStream,
     ) -> Result<()> {
         while let Ok(Some(req)) = stream.try_next().await {
             self.handle(cx, req).await?
@@ -93,7 +93,7 @@ where
         cx: Context,
         server: Arc<ServeInner>,
     ) -> Result<LocalBoxFuture<'static, Result<()>>> {
-        let stream = <F::Service as ServiceMarker>::RequestStream::from_inner(server, false);
+        let stream = <F::Service as ProtocolMarker>::RequestStream::from_inner(server, false);
         let mut svc = F::default();
         svc.start(&cx).await?;
         let fut = Box::pin(async move {
@@ -184,7 +184,7 @@ where
         server: Arc<ServeInner>,
     ) -> Result<LocalBoxFuture<'static, Result<()>>> {
         self.start_service(&cx).await?;
-        let stream = <F::Service as ServiceMarker>::RequestStream::from_inner(server, false);
+        let stream = <F::Service as ProtocolMarker>::RequestStream::from_inner(server, false);
         let service = Rc::downgrade(&self.service);
         let fut = async move {
             if let Some(service) = service.upgrade() {

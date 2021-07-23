@@ -12,7 +12,7 @@ use {
     crate::input::input_controller::DEFAULT_MIC_NAME,
     crate::input::types::{DeviceState, DeviceStateSource, InputDevice, InputDeviceType},
     crate::request_respond,
-    fidl::endpoints::ServiceMarker,
+    fidl::endpoints::ProtocolMarker,
     fidl_fuchsia_settings::{
         Error, InputDeviceSettings, InputMarker, InputRequest, InputSettings,
         InputState as FidlInputState, InputWatch2Responder, InputWatchResponder, Microphone,

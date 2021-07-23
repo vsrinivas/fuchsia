@@ -8,7 +8,7 @@ mod validators;
 use {
     anyhow::{format_err, Error},
     config::{Config, ConfigContext, FactoryConfig},
-    fidl::endpoints::{create_proxy, Request, RequestStream, ServerEnd, ServiceMarker},
+    fidl::endpoints::{create_proxy, ProtocolMarker, Request, RequestStream, ServerEnd},
     fidl_fuchsia_boot::FactoryItemsMarker,
     fidl_fuchsia_factory::{
         AlphaFactoryStoreProviderMarker, AlphaFactoryStoreProviderRequest,
@@ -193,7 +193,7 @@ async fn handle_request_stream<RS, G>(
 where
     RS: RequestStream,
     G: FnMut(
-        Request<RS::Service>,
+        Request<RS::Protocol>,
     ) -> Option<fidl::endpoints::ServerEnd<fidl_fuchsia_io::DirectoryMarker>>,
 {
     while let Some(request) = stream.try_next().await? {
@@ -204,7 +204,7 @@ where
             ) {
                 syslog::fx_log_err!(
                     "Failed to clone directory connection for {}: {:?}",
-                    RS::Service::DEBUG_NAME,
+                    RS::Protocol::DEBUG_NAME,
                     err
                 );
             }

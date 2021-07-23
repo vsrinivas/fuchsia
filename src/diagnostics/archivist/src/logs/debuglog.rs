@@ -14,7 +14,7 @@ use crate::{
 };
 use async_trait::async_trait;
 use diagnostics_data::{BuilderArgs, LogsDataBuilder};
-use fidl::endpoints::ServiceMarker;
+use fidl::endpoints::ProtocolMarker;
 use fidl_fuchsia_boot::ReadOnlyLogMarker;
 use fuchsia_async as fasync;
 use fuchsia_component::client::connect_to_protocol;

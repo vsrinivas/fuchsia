@@ -139,7 +139,7 @@ mod test {
     use {
         super::*,
         crate::device::test::{create_ramdisk, format},
-        fidl::endpoints::DiscoverableService,
+        fidl::endpoints::DiscoverableProtocolMarker,
         fidl_fuchsia_fs::{AdminMarker, FilesystemInfoQuery, QueryMarker},
         fuchsia_zircon as zx,
     };
@@ -160,11 +160,11 @@ mod test {
         let fs_future = fs.for_each_concurrent(10_000, |request| device.handle(request));
         let connection_future = async {
             let (query, remote) = fidl::endpoints::create_proxy::<QueryMarker>().unwrap();
-            fdio::service_connect_at(&svc_dir, QueryMarker::SERVICE_NAME, remote.into_channel())
+            fdio::service_connect_at(&svc_dir, QueryMarker::PROTOCOL_NAME, remote.into_channel())
                 .expect("Connection to query svc succeeds");
 
             let (admin, remote) = fidl::endpoints::create_proxy::<AdminMarker>().unwrap();
-            fdio::service_connect_at(&svc_dir, AdminMarker::SERVICE_NAME, remote.into_channel())
+            fdio::service_connect_at(&svc_dir, AdminMarker::PROTOCOL_NAME, remote.into_channel())
                 .expect("Connection to admin svc succeeds");
 
             let (_root_dir, remote) =

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::policy_request_respond;
-use fidl::endpoints::ServiceMarker;
+use fidl::endpoints::ProtocolMarker;
 use fidl_fuchsia_settings_policy::{
     Property, VolumePolicyControllerAddPolicyResponder, VolumePolicyControllerAddPolicyResult,
     VolumePolicyControllerGetPropertiesResponder, VolumePolicyControllerMarker,

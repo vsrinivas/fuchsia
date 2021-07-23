@@ -6,7 +6,7 @@ use {
     crate::component_tree::{ComponentNode, ComponentTree, NodeEnvironment, NodePath},
     async_trait::async_trait,
     cm_rust::{ComponentDecl, ExposeDecl, UseDecl},
-    fidl::endpoints::ServiceMarker,
+    fidl::endpoints::ProtocolMarker,
     fidl_fuchsia_sys2 as fsys, fuchsia_zircon_status as zx_status,
     moniker::{
         AbsoluteMoniker, AbsoluteMonikerBase, ChildMoniker, ChildMonikerBase, PartialChildMoniker,
@@ -509,9 +509,7 @@ mod tests {
 
         match root_instance.try_get_parent()? {
             ExtendedInstanceInterface::AboveRoot(_) => {}
-            _ => {
-                panic!("root instance's parent should be `AboveRoot`")
-            }
+            _ => panic!("root instance's parent should be `AboveRoot`"),
         }
         match child_instance.try_get_parent()? {
             ExtendedInstanceInterface::Component(component) => {
@@ -530,9 +528,7 @@ mod tests {
         assert_eq!(root_environment.name(), None);
         match root_environment.parent() {
             WeakExtendedInstanceInterface::AboveRoot(_) => {}
-            _ => {
-                panic!("root environment's parent should be `AboveRoot`")
-            }
+            _ => panic!("root environment's parent should be `AboveRoot`"),
         }
 
         assert_eq!(child_environment.name(), None);

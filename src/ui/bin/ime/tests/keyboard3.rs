@@ -5,7 +5,7 @@
 
 use {
     anyhow::{Context as _, Result},
-    fidl::endpoints::{create_request_stream, ServiceMarker as _},
+    fidl::endpoints::{create_request_stream, ProtocolMarker as _},
     fidl_fuchsia_input as input, fidl_fuchsia_ui_input3 as ui_input3,
     fidl_fuchsia_ui_keyboard_focus as fidl_focus, fidl_fuchsia_ui_views as ui_views,
     fuchsia_async as fasync,
@@ -68,11 +68,11 @@ impl TestEnvironment {
     fn connect_to_env_service<P>(&self) -> Result<P>
     where
         P: fidl::endpoints::Proxy,
-        P::Service: fidl::endpoints::DiscoverableService,
+        P::Protocol: fidl::endpoints::DiscoverableProtocolMarker,
     {
-        fx_log_debug!("Connecting to nested environment's {}", P::Service::DEBUG_NAME);
-        self.env.connect_to_protocol::<P::Service>().with_context(|| {
-            format!("Failed to connect to nested environment's {}", P::Service::DEBUG_NAME)
+        fx_log_debug!("Connecting to nested environment's {}", P::Protocol::DEBUG_NAME);
+        self.env.connect_to_protocol::<P::Protocol>().with_context(|| {
+            format!("Failed to connect to nested environment's {}", P::Protocol::DEBUG_NAME)
         })
     }
 

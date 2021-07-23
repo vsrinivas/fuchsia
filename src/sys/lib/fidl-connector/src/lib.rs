@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    fidl::endpoints::{DiscoverableService, Proxy, ServiceMarker},
+    fidl::endpoints::{DiscoverableProtocolMarker, ProtocolMarker, Proxy},
     fuchsia_component::client::connect_to_protocol_at_path,
     parking_lot::RwLock,
     std::sync::Arc,
@@ -24,18 +24,18 @@ pub trait Connect {
 /// received a peer closed signal. This means it is possible `ServiceReconnector` to return a
 /// closed channel, but it should eventually reconnect once the FIDL service is restarted.
 #[derive(Clone)]
-pub struct ServiceReconnector<S>
+pub struct ServiceReconnector<P>
 where
-    S: DiscoverableService,
-    <S as ServiceMarker>::Proxy: Clone,
+    P: DiscoverableProtocolMarker,
+    <P as ProtocolMarker>::Proxy: Clone,
 {
-    inner: Arc<ServiceReconnectorInner<S>>,
+    inner: Arc<ServiceReconnectorInner<P>>,
 }
 
-impl<S> ServiceReconnector<S>
+impl<P> ServiceReconnector<P>
 where
-    S: DiscoverableService,
-    <S as ServiceMarker>::Proxy: Clone,
+    P: DiscoverableProtocolMarker,
+    <P as ProtocolMarker>::Proxy: Clone,
 {
     /// Return a FIDL service connector at the default service directory in the
     /// application's root namespace.
@@ -48,44 +48,44 @@ where
     ///
     /// The service directory path must be an absolute path.
     pub fn with_service_at(service_directory_path: &str) -> Self {
-        let service_path = format!("{}/{}", service_directory_path, S::SERVICE_NAME);
+        let service_path = format!("{}/{}", service_directory_path, P::PROTOCOL_NAME);
         Self::with_service_at_path(service_path)
     }
 
     /// Return a FIDL service connector at the specified service path.
-    pub fn with_service_at_path<P: Into<String>>(service_path: P) -> Self {
+    pub fn with_service_at_path<S: Into<String>>(service_path: S) -> Self {
         let service_path = service_path.into();
         Self { inner: Arc::new(ServiceReconnectorInner { proxy: RwLock::new(None), service_path }) }
     }
 }
 
-impl<S> Connect for ServiceReconnector<S>
+impl<P> Connect for ServiceReconnector<P>
 where
-    S: DiscoverableService,
-    <S as ServiceMarker>::Proxy: Clone,
+    P: DiscoverableProtocolMarker,
+    <P as ProtocolMarker>::Proxy: Clone,
 {
-    type Proxy = S::Proxy;
+    type Proxy = P::Proxy;
 
     fn connect(&self) -> Result<Self::Proxy, anyhow::Error> {
         self.inner.connect()
     }
 }
 
-struct ServiceReconnectorInner<S>
+struct ServiceReconnectorInner<P>
 where
-    S: ServiceMarker,
-    <S as ServiceMarker>::Proxy: Clone,
+    P: ProtocolMarker,
+    <P as ProtocolMarker>::Proxy: Clone,
 {
-    proxy: RwLock<Option<<S as ServiceMarker>::Proxy>>,
+    proxy: RwLock<Option<<P as ProtocolMarker>::Proxy>>,
     service_path: String,
 }
 
-impl<S> Connect for ServiceReconnectorInner<S>
+impl<P> Connect for ServiceReconnectorInner<P>
 where
-    S: DiscoverableService,
-    <S as ServiceMarker>::Proxy: Clone,
+    P: DiscoverableProtocolMarker,
+    <P as ProtocolMarker>::Proxy: Clone,
 {
-    type Proxy = S::Proxy;
+    type Proxy = P::Proxy;
 
     fn connect(&self) -> Result<Self::Proxy, anyhow::Error> {
         if let Some(ref proxy) = *self.proxy.read() {
@@ -107,7 +107,7 @@ where
             }
         }
 
-        let p = connect_to_protocol_at_path::<S>(&self.service_path)?;
+        let p = connect_to_protocol_at_path::<P>(&self.service_path)?;
         *proxy = Some(p.clone());
         Ok(p)
     }

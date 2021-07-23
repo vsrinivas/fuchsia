@@ -4,7 +4,7 @@
 
 use std::sync::Arc;
 
-use fidl::endpoints::{Request as FidlRequest, ServiceMarker};
+use fidl::endpoints::{ProtocolMarker, Request as FidlRequest};
 use fuchsia_async as fasync;
 use futures::lock::Mutex;
 
@@ -29,14 +29,14 @@ macro_rules! request_respond {
         $error:expr,
         $marker:ty $(,)?
     ) => {{
-        use ::fidl::endpoints::ServiceMarker;
+        use ::fidl::endpoints::ProtocolMarker;
         use $crate::fidl_common::FidlResponseErrorLogger;
 
         match $context.request($setting_type, $request).await {
             Ok(_) => $responder.send(&mut $success),
             _ => $responder.send(&mut $error),
         }
-        .log_fidl_response_error(<$marker as ServiceMarker>::DEBUG_NAME);
+        .log_fidl_response_error(<$marker as ProtocolMarker>::DEBUG_NAME);
     }};
 }
 
@@ -45,8 +45,8 @@ macro_rules! request_respond {
 /// request is processed. The returned value is a result with an optional
 /// request, containing None if not processed and the original request
 /// otherwise.
-pub(crate) type RequestCallback<S, T, ST, K> =
-    Box<dyn Fn(RequestContext<T, ST, K>, FidlRequest<S>) -> RequestResultCreator<'static, S>>;
+pub(crate) type RequestCallback<P, T, ST, K> =
+    Box<dyn Fn(RequestContext<T, ST, K>, FidlRequest<P>) -> RequestResultCreator<'static, P>>;
 
 type ChangeFunction<T> = Box<dyn Fn(&T, &T) -> bool + Send + Sync + 'static>;
 
@@ -139,20 +139,20 @@ where
 /// to the constructed type.
 ///
 /// [`RequestCallback`]: type.RequestCallback.html
-pub(crate) struct SettingProcessingUnit<S, T, ST, K>
+pub(crate) struct SettingProcessingUnit<P, T, ST, K>
 where
-    S: ServiceMarker,
+    P: ProtocolMarker,
     T: From<SettingInfo> + Send + Sync + 'static,
     ST: Sender<T> + Send + Sync + 'static,
     K: Eq + Hash + Clone + Send + Sync + 'static,
 {
-    callback: RequestCallback<S, T, ST, K>,
+    callback: RequestCallback<P, T, ST, K>,
     hanging_get_handler: Arc<Mutex<HangingGetHandler<T, ST, K>>>,
 }
 
-impl<S, T, ST, K> SettingProcessingUnit<S, T, ST, K>
+impl<P, T, ST, K> SettingProcessingUnit<P, T, ST, K>
 where
-    S: ServiceMarker,
+    P: ProtocolMarker,
     T: From<SettingInfo> + Send + Sync + 'static,
     ST: Sender<T> + Send + Sync + 'static,
     K: Eq + Hash + Clone + Send + Sync + 'static,
@@ -160,7 +160,7 @@ where
     pub(crate) async fn new(
         setting_type: SettingType,
         messenger: service::message::Messenger,
-        callback: RequestCallback<S, T, ST, K>,
+        callback: RequestCallback<P, T, ST, K>,
     ) -> Self {
         Self {
             callback,
@@ -169,9 +169,9 @@ where
     }
 }
 
-impl<S, T, ST, K> Drop for SettingProcessingUnit<S, T, ST, K>
+impl<P, T, ST, K> Drop for SettingProcessingUnit<P, T, ST, K>
 where
-    S: ServiceMarker,
+    P: ProtocolMarker,
     T: From<SettingInfo> + Send + Sync + 'static,
     ST: Sender<T> + Send + Sync + 'static,
     K: Eq + Hash + Clone + Send + Sync + 'static,
@@ -185,9 +185,9 @@ where
     }
 }
 
-impl<S, T, ST, K> ProcessingUnit<S> for SettingProcessingUnit<S, T, ST, K>
+impl<P, T, ST, K> ProcessingUnit<P> for SettingProcessingUnit<P, T, ST, K>
 where
-    S: ServiceMarker,
+    P: ProtocolMarker,
     T: From<SettingInfo> + Send + Sync + 'static,
     ST: Sender<T> + Send + Sync + 'static,
     K: Eq + Hash + Clone + Send + Sync + 'static,
@@ -195,9 +195,9 @@ where
     fn process(
         &self,
         service_messenger: crate::service::message::Messenger,
-        request: FidlRequest<S>,
+        request: FidlRequest<P>,
         exit_tx: ExitSender,
-    ) -> RequestResultCreator<'static, S> {
+    ) -> RequestResultCreator<'static, P> {
         let context = RequestContext {
             service_messenger,
             hanging_get_handler: self.hanging_get_handler.clone(),

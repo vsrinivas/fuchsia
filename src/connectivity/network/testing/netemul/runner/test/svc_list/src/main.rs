@@ -7,7 +7,7 @@ use anyhow::{format_err, Context as _, Error};
 use std::path::Path;
 
 use fidl;
-use fidl::endpoints::ServiceMarker;
+use fidl::endpoints::ProtocolMarker;
 use fidl_fuchsia_netemul_environment::{
     EnvironmentOptions, LaunchService, LoggerOptions, ManagedEnvironmentMarker, VirtualDevice,
 };

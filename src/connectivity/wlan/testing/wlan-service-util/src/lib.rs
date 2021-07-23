@@ -90,7 +90,7 @@ mod tests {
         wlan_common::assert_variant,
     };
 
-    pub(crate) fn setup_fake_service<M: fidl::endpoints::ServiceMarker>(
+    pub(crate) fn setup_fake_service<M: fidl::endpoints::ProtocolMarker>(
     ) -> (fuchsia_async::TestExecutor, M::Proxy, M::RequestStream) {
         let exec = fuchsia_async::TestExecutor::new().expect("creating executor");
         let (proxy, server) = fidl::endpoints::create_proxy::<M>().expect("creating proxy");

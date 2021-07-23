@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl::endpoints::{DiscoverableService, ServerEnd};
+use fidl::endpoints::{DiscoverableProtocolMarker, ServerEnd};
 use fidl_fuchsia_time_external::PushSourceMarker;
 use fidl_test_time::TimeSourceControlMarker;
 use fuchsia_async as fasync;
@@ -19,7 +19,7 @@ async fn main() {
         .expect("failed to connect to control service");
 
     let mut fs = ServiceFs::new();
-    fs.dir("svc").add_service_at(PushSourceMarker::SERVICE_NAME, |chan| Some(chan));
+    fs.dir("svc").add_service_at(PushSourceMarker::PROTOCOL_NAME, |chan| Some(chan));
 
     fs.take_and_serve_directory_handle().expect("Failed to serve directory");
     fs.for_each_concurrent(None, |chan: zx::Channel| async {

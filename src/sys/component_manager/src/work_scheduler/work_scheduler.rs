@@ -142,7 +142,7 @@ mod path_tests {
             WORKER_CAPABILITY_NAME, WORK_SCHEDULER_CAPABILITY_NAME,
             WORK_SCHEDULER_CONTROL_CAPABILITY_NAME,
         },
-        fidl::endpoints::ServiceMarker,
+        fidl::endpoints::ProtocolMarker,
         fidl_fuchsia_sys2 as fsys,
     };
 

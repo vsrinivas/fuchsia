@@ -147,14 +147,12 @@ impl std::fmt::Display for StepType {
             StepType::SpawningDaemon => SPAWNING_DAEMON.to_string(),
             StepType::ConnectingToDaemon => CONNECTING_TO_DAEMON.to_string(),
             StepType::CommunicatingWithDaemon => COMMUNICATING_WITH_DAEMON.to_string(),
-            StepType::DaemonVersion(version_info) => {
-                format!(
-                    "{}Daemon version: {}{}",
-                    style::Bold,
-                    version_info.build_version.as_ref().unwrap_or(&"Unknown".to_string()),
-                    style::Reset,
-                )
-            }
+            StepType::DaemonVersion(version_info) => format!(
+                "{}Daemon version: {}{}",
+                style::Bold,
+                version_info.build_version.as_ref().unwrap_or(&"Unknown".to_string()),
+                style::Reset,
+            ),
             StepType::ListingTargets(filter) => {
                 if filter.is_empty() {
                     String::from(LISTING_TARGETS_NO_FILTER)
@@ -740,7 +738,7 @@ mod test {
         anyhow::anyhow,
         async_lock::Mutex,
         async_trait::async_trait,
-        fidl::endpoints::{spawn_local_stream_handler, Request, ServerEnd, ServiceMarker},
+        fidl::endpoints::{spawn_local_stream_handler, ProtocolMarker, Request, ServerEnd},
         fidl_fuchsia_developer_bridge::{
             DaemonRequest, RemoteControlState, Target, TargetState, TargetType,
         },
@@ -1021,7 +1019,7 @@ mod test {
 
     fn serve_stream<T, F, Fut>(stream: T::RequestStream, mut f: F)
     where
-        T: ServiceMarker,
+        T: ProtocolMarker,
         F: FnMut(Request<T>) -> Fut + 'static + std::marker::Send,
         Fut: Future<Output = ()> + 'static + std::marker::Send,
     {

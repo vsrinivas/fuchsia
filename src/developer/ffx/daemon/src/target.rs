@@ -14,7 +14,7 @@ use {
     bridge::{DaemonError, TargetAddrInfo, TargetIpPort},
     chrono::{DateTime, Utc},
     ffx_daemon_core::events::{self, EventSynthesizer},
-    fidl::endpoints::ServiceMarker,
+    fidl::endpoints::ProtocolMarker,
     fidl_fuchsia_developer_bridge as bridge,
     fidl_fuchsia_developer_bridge::TargetState,
     fidl_fuchsia_developer_remotecontrol::{

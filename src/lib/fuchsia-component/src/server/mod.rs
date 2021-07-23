@@ -9,7 +9,7 @@ use {
     anyhow::{format_err, Context as _, Error},
     byteorder::{LittleEndian, WriteBytesExt as _},
     fidl::endpoints::{
-        DiscoverableService, Proxy as _, RequestStream, ServerEnd, UnifiedServiceMarker,
+        DiscoverableProtocolMarker, Proxy as _, RequestStream, ServerEnd, UnifiedServiceMarker,
         UnifiedServiceRequest,
     },
     fidl_fuchsia_io::{
@@ -247,13 +247,13 @@ fn add_entry<ServiceObjTy: ServiceObjTrait>(
 /// Not intended for direct use. Use the `add_proxy_service`
 /// function instead.
 #[doc(hidden)]
-pub struct Proxy<S, O>(PhantomData<(S, fn() -> O)>);
+pub struct Proxy<P, O>(PhantomData<(P, fn() -> O)>);
 
-impl<S: DiscoverableService, O> Service for Proxy<S, O> {
+impl<P: DiscoverableProtocolMarker, O> Service for Proxy<P, O> {
     type Output = O;
     fn connect(&mut self, channel: zx::Channel) -> Option<O> {
-        if let Err(e) = crate::client::connect_channel_to_protocol::<S>(channel) {
-            eprintln!("failed to proxy request to {}: {:?}", S::SERVICE_NAME, e);
+        if let Err(e) = crate::client::connect_channel_to_protocol::<P>(channel) {
+            eprintln!("failed to proxy request to {}: {:?}", P::PROTOCOL_NAME, e);
         }
         None
     }
@@ -263,17 +263,17 @@ impl<S: DiscoverableService, O> Service for Proxy<S, O> {
 ///
 /// Not intended for direct use. Use the `add_proxy_service_to` function instead.
 #[doc(hidden)]
-pub struct ProxyTo<S, O> {
+pub struct ProxyTo<P, O> {
     directory_request: Arc<zx::Channel>,
-    _phantom: PhantomData<(S, fn() -> O)>,
+    _phantom: PhantomData<(P, fn() -> O)>,
 }
 
-impl<S: DiscoverableService, O> Service for ProxyTo<S, O> {
+impl<P: DiscoverableProtocolMarker, O> Service for ProxyTo<P, O> {
     type Output = O;
     fn connect(&mut self, channel: zx::Channel) -> Option<O> {
-        if let Err(e) = fdio::service_connect_at(&self.directory_request, S::SERVICE_NAME, channel)
+        if let Err(e) = fdio::service_connect_at(&self.directory_request, P::PROTOCOL_NAME, channel)
         {
-            eprintln!("failed to proxy request to {}: {:?}", S::SERVICE_NAME, e);
+            eprintln!("failed to proxy request to {}: {:?}", P::PROTOCOL_NAME, e);
         }
         None
     }
@@ -290,13 +290,13 @@ struct LaunchData {
 /// Not intended for direct use. Use the `add_component_proxy_service`
 /// function instead.
 #[doc(hidden)]
-pub struct ComponentProxy<S: DiscoverableService, O> {
+pub struct ComponentProxy<P: DiscoverableProtocolMarker, O> {
     launch_data: Option<LaunchData>,
     launched_app: Option<crate::client::App>,
-    _marker: PhantomData<(S, O)>,
+    _marker: PhantomData<(P, O)>,
 }
 
-impl<S: DiscoverableService, O> Service for ComponentProxy<S, O> {
+impl<P: DiscoverableProtocolMarker, O> Service for ComponentProxy<P, O> {
     type Output = O;
     fn connect(&mut self, channel: zx::Channel) -> Option<Self::Output> {
         let res = (|| {
@@ -308,7 +308,7 @@ impl<S: DiscoverableService, O> Service for ComponentProxy<S, O> {
                 )?);
             }
             if let Some(app) = self.launched_app.as_ref() {
-                app.pass_to_named_protocol(S::SERVICE_NAME, channel.into())?;
+                app.pass_to_named_protocol(P::PROTOCOL_NAME, channel.into())?;
             }
             Ok::<(), Error>(())
         })();
@@ -382,10 +382,10 @@ macro_rules! add_functions {
         where
             F: FnMut(RS) -> ServiceObjTy::Output,
             RS: RequestStream,
-            RS::Service: DiscoverableService,
+            RS::Protocol: DiscoverableProtocolMarker,
             FidlService<F, RS, ServiceObjTy::Output>: Into<ServiceObjTy>,
         {
-            self.add_fidl_service_at(RS::Service::SERVICE_NAME, service)
+            self.add_fidl_service_at(RS::Protocol::PROTOCOL_NAME, service)
         }
 
         /// Adds a FIDL service to the directory at the given path.
@@ -401,7 +401,7 @@ macro_rules! add_functions {
         where
             F: FnMut(RS) -> ServiceObjTy::Output,
             RS: RequestStream,
-            RS::Service: DiscoverableService,
+            RS::Protocol: DiscoverableProtocolMarker,
             FidlService<F, RS, ServiceObjTy::Output>: Into<ServiceObjTy>,
         {
             self.add_service_at(path, FidlService::from(service))
@@ -521,47 +521,47 @@ macro_rules! add_functions {
 
         /// Adds a service that proxies requests to the current environment.
         // NOTE: we'd like to be able to remove the type parameter `O` here,
-        //  but unfortunately the bound `ServiceObjTy: From<Proxy<S, ServiceObjTy::Output>>`
+        //  but unfortunately the bound `ServiceObjTy: From<Proxy<P, ServiceObjTy::Output>>`
         //  makes type checking angry.
-        pub fn add_proxy_service<S: DiscoverableService, O>(&mut self) -> &mut Self
+        pub fn add_proxy_service<P: DiscoverableProtocolMarker, O>(&mut self) -> &mut Self
         where
-            ServiceObjTy: From<Proxy<S, O>>,
+            ServiceObjTy: From<Proxy<P, O>>,
             ServiceObjTy: ServiceObjTrait<Output = O>,
         {
-            self.add_service_at(S::SERVICE_NAME, Proxy::<S, ServiceObjTy::Output>(PhantomData))
+            self.add_service_at(P::PROTOCOL_NAME, Proxy::<P, ServiceObjTy::Output>(PhantomData))
         }
 
         /// Adds a service that proxies requests to the given component.
         // NOTE: we'd like to be able to remove the type parameter `O` here,
-        //  but unfortunately the bound `ServiceObjTy: From<Proxy<S, ServiceObjTy::Output>>`
+        //  but unfortunately the bound `ServiceObjTy: From<Proxy<P, ServiceObjTy::Output>>`
         //  makes type checking angry.
-        pub fn add_proxy_service_to<S: DiscoverableService, O>(
+        pub fn add_proxy_service_to<P: DiscoverableProtocolMarker, O>(
             &mut self,
             directory_request: Arc<zx::Channel>,
         ) -> &mut Self
         where
-            ServiceObjTy: From<ProxyTo<S, O>>,
+            ServiceObjTy: From<ProxyTo<P, O>>,
             ServiceObjTy: ServiceObjTrait<Output = O>,
         {
             self.add_service_at(
-                S::SERVICE_NAME,
-                ProxyTo::<S, ServiceObjTy::Output> { directory_request, _phantom: PhantomData },
+                P::PROTOCOL_NAME,
+                ProxyTo::<P, ServiceObjTy::Output> { directory_request, _phantom: PhantomData },
             )
         }
 
         /// Add a service to the `ServicesServer` that will launch a component
         /// upon request, proxying requests to the launched component.
-        pub fn add_component_proxy_service<S: DiscoverableService, O>(
+        pub fn add_component_proxy_service<P: DiscoverableProtocolMarker, O>(
             &mut self,
             component_url: String,
             arguments: Option<Vec<String>>,
         ) -> &mut Self
         where
-            ServiceObjTy: From<ComponentProxy<S, O>>,
+            ServiceObjTy: From<ComponentProxy<P, O>>,
             ServiceObjTy: ServiceObjTrait<Output = O>,
         {
             self.add_service_at(
-                S::SERVICE_NAME,
+                P::PROTOCOL_NAME,
                 ComponentProxy {
                     launch_data: Some(LaunchData { component_url, arguments }),
                     launched_app: None,
@@ -873,25 +873,25 @@ impl NestedEnvironment {
 
     /// Connect to a protocol provided by this environment.
     #[inline]
-    pub fn connect_to_service<S: DiscoverableService>(&self) -> Result<S::Proxy, Error> {
-        self.connect_to_protocol::<S>()
+    pub fn connect_to_service<P: DiscoverableProtocolMarker>(&self) -> Result<P::Proxy, Error> {
+        self.connect_to_protocol::<P>()
     }
 
     /// Connect to a protocol provided by this environment.
     #[inline]
-    pub fn connect_to_protocol<S: DiscoverableService>(&self) -> Result<S::Proxy, Error> {
+    pub fn connect_to_protocol<P: DiscoverableProtocolMarker>(&self) -> Result<P::Proxy, Error> {
         let (client_channel, server_channel) = zx::Channel::create()?;
-        self.pass_to_protocol::<S>(server_channel)?;
-        Ok(S::Proxy::from_channel(fasync::Channel::from_channel(client_channel)?))
+        self.pass_to_protocol::<P>(server_channel)?;
+        Ok(P::Proxy::from_channel(fasync::Channel::from_channel(client_channel)?))
     }
 
     /// Connect to a protocol by passing a channel for the server.
     #[inline]
-    pub fn pass_to_protocol<S: DiscoverableService>(
+    pub fn pass_to_protocol<P: DiscoverableProtocolMarker>(
         &self,
         server_channel: zx::Channel,
     ) -> Result<(), Error> {
-        self.pass_to_named_protocol(S::SERVICE_NAME, server_channel)
+        self.pass_to_named_protocol(P::PROTOCOL_NAME, server_channel)
     }
 
     /// Connect to a protocol by name.

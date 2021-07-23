@@ -6,8 +6,8 @@ use crate::modular::types::{
     BasemgrResult, KillBasemgrResult, LaunchModRequest, RestartSessionResult, StartBasemgrRequest,
 };
 use anyhow::{Context, Error};
+use fidl::endpoints::ProtocolMarker;
 use fidl::endpoints::ServerEnd;
-use fidl::endpoints::ServiceMarker;
 use fidl_fuchsia_io as fio;
 use fidl_fuchsia_mem as fmem;
 use fidl_fuchsia_modular::{

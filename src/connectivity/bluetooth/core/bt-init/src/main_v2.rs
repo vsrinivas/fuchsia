@@ -6,7 +6,7 @@ use {
     anyhow::{Context as _, Error},
     async_trait::async_trait,
     fdio,
-    fidl::endpoints::{DiscoverableService, Proxy},
+    fidl::endpoints::{DiscoverableProtocolMarker, Proxy},
     fidl_fuchsia_bluetooth_bredr::ProfileMarker,
     fidl_fuchsia_bluetooth_snoop::SnoopMarker,
     fidl_fuchsia_io::DirectoryProxy,
@@ -90,18 +90,18 @@ fn main() -> Result<(), Error> {
     let run_bluetooth = async move {
         let underlying_profile_svc = open_childs_service_directory(&mut ComponentClient).await?;
         let mut fs = server::ServiceFs::new();
-        fs.dir("svc").add_service_at(ProfileMarker::SERVICE_NAME, |chan| {
-            Some((ProfileMarker::SERVICE_NAME, chan))
+        fs.dir("svc").add_service_at(ProfileMarker::PROTOCOL_NAME, |chan| {
+            Some((ProfileMarker::PROTOCOL_NAME, chan))
         });
         fs.take_and_serve_directory_handle()?;
 
-        info!("initialization complete, begin serving {}", ProfileMarker::SERVICE_NAME);
+        info!("initialization complete, begin serving {}", ProfileMarker::PROTOCOL_NAME);
         let outer_fs = fs.for_each(move |(name, chan)| {
-            if name != ProfileMarker::SERVICE_NAME {
+            if name != ProfileMarker::PROTOCOL_NAME {
                 error!(
                     "Received unexpected service {} when we only expect to serve {}",
                     name,
-                    ProfileMarker::SERVICE_NAME
+                    ProfileMarker::PROTOCOL_NAME
                 );
                 return future::ready(());
             }

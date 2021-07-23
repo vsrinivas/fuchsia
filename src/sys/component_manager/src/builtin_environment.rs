@@ -58,7 +58,7 @@ use {
     anyhow::{bail, format_err, Context as _, Error},
     cm_rust::{CapabilityName, RunnerRegistration},
     cm_types::Url,
-    fidl::endpoints::{create_endpoints, create_proxy, ServerEnd, ServiceMarker},
+    fidl::endpoints::{create_endpoints, create_proxy, ProtocolMarker, ServerEnd},
     fidl_fuchsia_component_internal::{BuiltinBootResolver, BuiltinPkgResolver, OutDirContents},
     fidl_fuchsia_diagnostics_types::Task as DiagnosticsTask,
     fidl_fuchsia_io::{

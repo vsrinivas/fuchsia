@@ -5,12 +5,13 @@
 //! Provides utilities for test realms.
 
 use {
-    anyhow::Context as _, async_trait::async_trait, fidl::endpoints::DiscoverableService as _,
-    fidl_fuchsia_net_filter as fnet_filter, fidl_fuchsia_net_interfaces as fnet_interfaces,
-    fidl_fuchsia_net_name as fnet_name, fidl_fuchsia_net_neighbor as fnet_neighbor,
-    fidl_fuchsia_net_routes as fnet_routes, fidl_fuchsia_net_stack as fnet_stack,
-    fidl_fuchsia_netemul as fnetemul, fidl_fuchsia_netstack as fnetstack,
-    fidl_fuchsia_posix_socket as fposix_socket, fidl_fuchsia_stash as fstash,
+    anyhow::Context as _, async_trait::async_trait,
+    fidl::endpoints::DiscoverableProtocolMarker as _, fidl_fuchsia_net_filter as fnet_filter,
+    fidl_fuchsia_net_interfaces as fnet_interfaces, fidl_fuchsia_net_name as fnet_name,
+    fidl_fuchsia_net_neighbor as fnet_neighbor, fidl_fuchsia_net_routes as fnet_routes,
+    fidl_fuchsia_net_stack as fnet_stack, fidl_fuchsia_netemul as fnetemul,
+    fidl_fuchsia_netstack as fnetstack, fidl_fuchsia_posix_socket as fposix_socket,
+    fidl_fuchsia_stash as fstash,
 };
 
 use crate::Result;
@@ -37,19 +38,19 @@ impl NetstackVersion {
     pub fn get_services(&self) -> &[&'static str] {
         match self {
             NetstackVersion::Netstack2 => &[
-                fnet_filter::FilterMarker::SERVICE_NAME,
-                fnet_interfaces::StateMarker::SERVICE_NAME,
-                fnet_neighbor::ControllerMarker::SERVICE_NAME,
-                fnet_neighbor::ViewMarker::SERVICE_NAME,
-                fnet_routes::StateMarker::SERVICE_NAME,
-                fnet_stack::LogMarker::SERVICE_NAME,
-                fnet_stack::StackMarker::SERVICE_NAME,
-                fnetstack::NetstackMarker::SERVICE_NAME,
-                fposix_socket::ProviderMarker::SERVICE_NAME,
+                fnet_filter::FilterMarker::PROTOCOL_NAME,
+                fnet_interfaces::StateMarker::PROTOCOL_NAME,
+                fnet_neighbor::ControllerMarker::PROTOCOL_NAME,
+                fnet_neighbor::ViewMarker::PROTOCOL_NAME,
+                fnet_routes::StateMarker::PROTOCOL_NAME,
+                fnet_stack::LogMarker::PROTOCOL_NAME,
+                fnet_stack::StackMarker::PROTOCOL_NAME,
+                fnetstack::NetstackMarker::PROTOCOL_NAME,
+                fposix_socket::ProviderMarker::PROTOCOL_NAME,
             ],
             NetstackVersion::Netstack3 => &[
-                fnet_stack::StackMarker::SERVICE_NAME,
-                fposix_socket::ProviderMarker::SERVICE_NAME,
+                fnet_stack::StackMarker::PROTOCOL_NAME,
+                fposix_socket::ProviderMarker::PROTOCOL_NAME,
             ],
         }
     }
@@ -103,13 +104,13 @@ fn use_log_sink() -> Option<fnetemul::ChildUses> {
     Some(fnetemul::ChildUses::Capabilities(vec![fnetemul::Capability::LogSink(fnetemul::Empty {})]))
 }
 
-fn service_dep<S>(component_name: &'static str) -> fnetemul::ChildDep
+fn service_dep<P>(component_name: &'static str) -> fnetemul::ChildDep
 where
-    S: fidl::endpoints::DiscoverableService,
+    P: fidl::endpoints::DiscoverableProtocolMarker,
 {
     fnetemul::ChildDep {
         name: Some(component_name.into()),
-        capability: Some(fnetemul::ExposedCapability::Service(S::SERVICE_NAME.to_string())),
+        capability: Some(fnetemul::ExposedCapability::Service(P::PROTOCOL_NAME.to_string())),
         ..fnetemul::ChildDep::EMPTY
     }
 }
@@ -129,14 +130,16 @@ impl<'a> From<&'a KnownServiceProvider> for fnetemul::ChildDef {
             KnownServiceProvider::SecureStash => fnetemul::ChildDef {
                 name: Some(constants::secure_stash::COMPONENT_NAME.to_string()),
                 url: Some(constants::secure_stash::COMPONENT_URL.to_string()),
-                exposes: Some(vec![fstash::SecureStoreMarker::SERVICE_NAME.to_string()]),
+                exposes: Some(vec![fstash::SecureStoreMarker::PROTOCOL_NAME.to_string()]),
                 uses: use_log_sink(),
                 ..fnetemul::ChildDef::EMPTY
             },
             KnownServiceProvider::DhcpServer => fnetemul::ChildDef {
                 name: Some(constants::dhcp_server::COMPONENT_NAME.to_string()),
                 url: Some(constants::dhcp_server::COMPONENT_URL.to_string()),
-                exposes: Some(vec![fidl_fuchsia_net_dhcp::Server_Marker::SERVICE_NAME.to_string()]),
+                exposes: Some(
+                    vec![fidl_fuchsia_net_dhcp::Server_Marker::PROTOCOL_NAME.to_string()],
+                ),
                 uses: Some(fnetemul::ChildUses::Capabilities(vec![
                     fnetemul::Capability::LogSink(fnetemul::Empty {}),
                     fnetemul::Capability::ChildDep(service_dep::<fnet_name::LookupMarker>(
@@ -158,7 +161,7 @@ impl<'a> From<&'a KnownServiceProvider> for fnetemul::ChildDef {
                 name: Some(constants::dhcpv6_client::COMPONENT_NAME.to_string()),
                 url: Some(constants::dhcpv6_client::COMPONENT_URL.to_string()),
                 exposes: Some(vec![
-                    fidl_fuchsia_net_dhcpv6::ClientProviderMarker::SERVICE_NAME.to_string()
+                    fidl_fuchsia_net_dhcpv6::ClientProviderMarker::PROTOCOL_NAME.to_string()
                 ]),
                 uses: Some(fnetemul::ChildUses::Capabilities(vec![
                     fnetemul::Capability::LogSink(fnetemul::Empty {}),
@@ -172,8 +175,8 @@ impl<'a> From<&'a KnownServiceProvider> for fnetemul::ChildDef {
                 name: Some(constants::dns_resolver::COMPONENT_NAME.to_string()),
                 url: Some(constants::dns_resolver::COMPONENT_URL.to_string()),
                 exposes: Some(vec![
-                    fnet_name::LookupAdminMarker::SERVICE_NAME.to_string(),
-                    fnet_name::LookupMarker::SERVICE_NAME.to_string(),
+                    fnet_name::LookupAdminMarker::PROTOCOL_NAME.to_string(),
+                    fnet_name::LookupMarker::PROTOCOL_NAME.to_string(),
                 ]),
                 uses: Some(fnetemul::ChildUses::Capabilities(vec![
                     fnetemul::Capability::LogSink(fnetemul::Empty {}),
@@ -280,23 +283,23 @@ pub trait TestSandboxExt {
 
     /// Helper function to create a new Netstack realm and connect to a
     /// netstack service on it.
-    fn new_netstack<N, S, T>(&self, name: T) -> Result<(netemul::TestRealm<'_>, S::Proxy)>
+    fn new_netstack<N, P, S>(&self, name: S) -> Result<(netemul::TestRealm<'_>, P::Proxy)>
     where
         N: Netstack,
-        S: fidl::endpoints::ServiceMarker + fidl::endpoints::DiscoverableService,
-        T: Into<String>;
+        P: fidl::endpoints::DiscoverableProtocolMarker,
+        S: Into<String>;
 
     /// Helper function to create a new Netstack realm and a new unattached
     /// endpoint.
-    async fn new_netstack_and_device<N, E, S, T>(
+    async fn new_netstack_and_device<N, E, P, S>(
         &self,
-        name: T,
-    ) -> Result<(netemul::TestRealm<'_>, S::Proxy, netemul::TestEndpoint<'_>)>
+        name: S,
+    ) -> Result<(netemul::TestRealm<'_>, P::Proxy, netemul::TestEndpoint<'_>)>
     where
         N: Netstack,
         E: netemul::Endpoint,
-        S: fidl::endpoints::ServiceMarker + fidl::endpoints::DiscoverableService,
-        T: Into<String> + Copy + Send;
+        P: fidl::endpoints::DiscoverableProtocolMarker,
+        S: Into<String> + Copy + Send;
 }
 
 #[async_trait]
@@ -334,32 +337,32 @@ impl TestSandboxExt for netemul::TestSandbox {
 
     /// Helper function to create a new Netstack realm and connect to a netstack
     /// service on it.
-    fn new_netstack<N, S, T>(&self, name: T) -> Result<(netemul::TestRealm<'_>, S::Proxy)>
+    fn new_netstack<N, P, S>(&self, name: S) -> Result<(netemul::TestRealm<'_>, P::Proxy)>
     where
         N: Netstack,
-        S: fidl::endpoints::ServiceMarker + fidl::endpoints::DiscoverableService,
-        T: Into<String>,
+        P: fidl::endpoints::DiscoverableProtocolMarker,
+        S: Into<String>,
     {
         let realm =
             self.create_netstack_realm::<N, _>(name).context("failed to create test realm")?;
         let netstack_proxy =
-            realm.connect_to_service::<S>().context("failed to connect to netstack")?;
+            realm.connect_to_service::<P>().context("failed to connect to netstack")?;
         Ok((realm, netstack_proxy))
     }
 
     /// Helper function to create a new Netstack realm and a new unattached
     /// endpoint.
-    async fn new_netstack_and_device<N, E, S, T>(
+    async fn new_netstack_and_device<N, E, P, S>(
         &self,
-        name: T,
-    ) -> Result<(netemul::TestRealm<'_>, S::Proxy, netemul::TestEndpoint<'_>)>
+        name: S,
+    ) -> Result<(netemul::TestRealm<'_>, P::Proxy, netemul::TestEndpoint<'_>)>
     where
         N: Netstack,
         E: netemul::Endpoint,
-        S: fidl::endpoints::ServiceMarker + fidl::endpoints::DiscoverableService,
-        T: Into<String> + Copy + Send,
+        P: fidl::endpoints::DiscoverableProtocolMarker,
+        S: Into<String> + Copy + Send,
     {
-        let (realm, stack) = self.new_netstack::<N, S, _>(name)?;
+        let (realm, stack) = self.new_netstack::<N, P, _>(name)?;
         let endpoint =
             self.create_endpoint::<E, _>(name).await.context("failed to create endpoint")?;
         Ok((realm, stack, endpoint))

@@ -903,7 +903,7 @@ impl Drop for ScopedNamespaceDir<'_> {
 /// Contains functions to use capabilities in routing tests.
 pub mod capability_util {
     use {
-        super::*, anyhow::format_err, cm_rust::NativeIntoFidl, fidl::endpoints::ServiceMarker,
+        super::*, anyhow::format_err, cm_rust::NativeIntoFidl, fidl::endpoints::ProtocolMarker,
         fidl_fuchsia_sys2::EventSourceMarker, matches::assert_matches, std::path::PathBuf,
     };
 
@@ -1057,7 +1057,7 @@ pub mod capability_util {
         );
     }
 
-    pub async fn connect_to_svc_in_namespace<T: ServiceMarker>(
+    pub async fn connect_to_svc_in_namespace<T: ProtocolMarker>(
         namespace: &ManagedNamespace,
         path: &CapabilityPath,
     ) -> T::Proxy {
@@ -1074,7 +1074,7 @@ pub mod capability_util {
         client_end.into_proxy().unwrap()
     }
 
-    pub async fn connect_to_instance_svc_in_namespace<T: ServiceMarker>(
+    pub async fn connect_to_instance_svc_in_namespace<T: ProtocolMarker>(
         namespace: &ManagedNamespace,
         path: &CapabilityPath,
         instance: &str,

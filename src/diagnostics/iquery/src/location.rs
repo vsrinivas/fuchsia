@@ -4,7 +4,7 @@
 
 use {
     anyhow::{format_err, Error},
-    fidl::endpoints::DiscoverableService,
+    fidl::endpoints::DiscoverableProtocolMarker,
     fidl_fuchsia_inspect::TreeMarker,
     fidl_fuchsia_inspect_deprecated::InspectMarker,
     fidl_fuchsia_io::NodeInfo,
@@ -19,9 +19,12 @@ use {
 
 lazy_static! {
     static ref EXPECTED_FILES: Vec<(String, InspectType)> = vec![
-        (<TreeMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME.to_string(), InspectType::Tree),
         (
-            <InspectMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME.to_string(),
+            <TreeMarker as fidl::endpoints::ProtocolMarker>::DEBUG_NAME.to_string(),
+            InspectType::Tree
+        ),
+        (
+            <InspectMarker as fidl::endpoints::ProtocolMarker>::DEBUG_NAME.to_string(),
             InspectType::DeprecatedFidl,
         ),
         (".inspect".to_string(), InspectType::Vmo),
@@ -117,12 +120,12 @@ impl FromStr for InspectLocation {
         InspectLocation::try_from(PathBuf::from(s))
             .or_else(|_| {
                 let mut path = PathBuf::from(s);
-                path.push(InspectMarker::SERVICE_NAME);
+                path.push(InspectMarker::PROTOCOL_NAME);
                 InspectLocation::try_from(path)
             })
             .or_else(|_| {
                 let mut path = PathBuf::from(s);
-                path.push(TreeMarker::SERVICE_NAME);
+                path.push(TreeMarker::PROTOCOL_NAME);
                 InspectLocation::try_from(path)
             })
     }
@@ -135,9 +138,9 @@ impl TryFrom<PathBuf> for InspectLocation {
         match path.file_name() {
             None => return Err(format_err!("Failed to get filename")),
             Some(filename) => {
-                if filename == InspectMarker::SERVICE_NAME && path.exists() {
+                if filename == InspectMarker::PROTOCOL_NAME && path.exists() {
                     Ok(InspectLocation { inspect_type: InspectType::DeprecatedFidl, path })
-                } else if filename == TreeMarker::SERVICE_NAME && path.exists() {
+                } else if filename == TreeMarker::PROTOCOL_NAME && path.exists() {
                     Ok(InspectLocation { inspect_type: InspectType::Tree, path })
                 } else if filename.to_string_lossy().ends_with(".inspect") {
                     Ok(InspectLocation { inspect_type: InspectType::Vmo, path })

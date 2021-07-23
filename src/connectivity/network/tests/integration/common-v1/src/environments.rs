@@ -72,33 +72,33 @@ impl KnownServices {
     /// Gets the service name and its Fuchsia package URL.
     pub fn get_name_url(&self) -> (&'static str, &'static str) {
         match self {
-            KnownServices::Stack(v) => (<net_stack::StackMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
+            KnownServices::Stack(v) => (<net_stack::StackMarker as fidl::endpoints::DiscoverableProtocolMarker>::PROTOCOL_NAME,
                                         v.get_url()),
-            KnownServices::Netstack(v) => (<fidl_fuchsia_netstack::NetstackMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
+            KnownServices::Netstack(v) => (<fidl_fuchsia_netstack::NetstackMarker as fidl::endpoints::DiscoverableProtocolMarker>::PROTOCOL_NAME,
                                            v.get_url()),
-            KnownServices::SocketProvider(v) => (<fidl_fuchsia_posix_socket::ProviderMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
+            KnownServices::SocketProvider(v) => (<fidl_fuchsia_posix_socket::ProviderMarker as fidl::endpoints::DiscoverableProtocolMarker>::PROTOCOL_NAME,
                                                  v.get_url()),
-            KnownServices::Filter(v) => (<fidl_fuchsia_net_filter::FilterMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
+            KnownServices::Filter(v) => (<fidl_fuchsia_net_filter::FilterMarker as fidl::endpoints::DiscoverableProtocolMarker>::PROTOCOL_NAME,
                                          v.get_url()),
-            KnownServices::RoutesState(v) => (<fidl_fuchsia_net_routes::StateMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
+            KnownServices::RoutesState(v) => (<fidl_fuchsia_net_routes::StateMarker as fidl::endpoints::DiscoverableProtocolMarker>::PROTOCOL_NAME,
                                               v.get_url()),
-            KnownServices::InterfacesState(v) => (<fidl_fuchsia_net_interfaces::StateMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
+            KnownServices::InterfacesState(v) => (<fidl_fuchsia_net_interfaces::StateMarker as fidl::endpoints::DiscoverableProtocolMarker>::PROTOCOL_NAME,
                                                  v.get_url()),
-            KnownServices::Log(v) => (<fidl_fuchsia_net_stack::LogMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
+            KnownServices::Log(v) => (<fidl_fuchsia_net_stack::LogMarker as fidl::endpoints::DiscoverableProtocolMarker>::PROTOCOL_NAME,
                                       v.get_url()),
-            KnownServices::NeighborView(v) => (<fidl_fuchsia_net_neighbor::ViewMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
+            KnownServices::NeighborView(v) => (<fidl_fuchsia_net_neighbor::ViewMarker as fidl::endpoints::DiscoverableProtocolMarker>::PROTOCOL_NAME,
                                                v.get_url()),
-            KnownServices::NeighborController(v) => (<fidl_fuchsia_net_neighbor::ControllerMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
+            KnownServices::NeighborController(v) => (<fidl_fuchsia_net_neighbor::ControllerMarker as fidl::endpoints::DiscoverableProtocolMarker>::PROTOCOL_NAME,
                                                      v.get_url()),
-            KnownServices::SecureStash => (<fidl_fuchsia_stash::SecureStoreMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
+            KnownServices::SecureStash => (<fidl_fuchsia_stash::SecureStoreMarker as fidl::endpoints::DiscoverableProtocolMarker>::PROTOCOL_NAME,
                                            "fuchsia-pkg://fuchsia.com/netstack-integration-tests#meta/stash_secure.cmx"),
-            KnownServices::DhcpServer => (<fidl_fuchsia_net_dhcp::Server_Marker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
+            KnownServices::DhcpServer => (<fidl_fuchsia_net_dhcp::Server_Marker as fidl::endpoints::DiscoverableProtocolMarker>::PROTOCOL_NAME,
                                           "fuchsia-pkg://fuchsia.com/netstack-integration-tests#meta/dhcpd.cmx"),
-            KnownServices::Dhcpv6Client => (<fidl_fuchsia_net_dhcpv6::ClientProviderMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
+            KnownServices::Dhcpv6Client => (<fidl_fuchsia_net_dhcpv6::ClientProviderMarker as fidl::endpoints::DiscoverableProtocolMarker>::PROTOCOL_NAME,
                                             "fuchsia-pkg://fuchsia.com/netstack-integration-tests#meta/dhcpv6-client.cmx"),
-            KnownServices::Lookup => (<fidl_fuchsia_net_name::LookupMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
+            KnownServices::Lookup => (<fidl_fuchsia_net_name::LookupMarker as fidl::endpoints::DiscoverableProtocolMarker>::PROTOCOL_NAME,
                                            "fuchsia-pkg://fuchsia.com/netstack-integration-tests#meta/dns-resolver.cmx"),
-            KnownServices::LookupAdmin => (<fidl_fuchsia_net_name::LookupAdminMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME,
+            KnownServices::LookupAdmin => (<fidl_fuchsia_net_name::LookupAdminMarker as fidl::endpoints::DiscoverableProtocolMarker>::PROTOCOL_NAME,
                                            "fuchsia-pkg://fuchsia.com/netstack-integration-tests#meta/dns-resolver.cmx"),
         }
     }
@@ -223,23 +223,23 @@ pub trait TestSandboxExt {
 
     /// Helper function to create a new Netstack environment and connect to a
     /// netstack service on it.
-    fn new_netstack<N, S, T>(&self, name: T) -> Result<(netemul::TestEnvironment<'_>, S::Proxy)>
+    fn new_netstack<N, P, S>(&self, name: S) -> Result<(netemul::TestEnvironment<'_>, P::Proxy)>
     where
         N: Netstack,
-        S: fidl::endpoints::ServiceMarker + fidl::endpoints::DiscoverableService,
-        T: Into<String>;
+        P: fidl::endpoints::DiscoverableProtocolMarker,
+        S: Into<String>;
 
     /// Helper function to create a new Netstack environment and a new
     /// unattached endpoint.
-    async fn new_netstack_and_device<N, E, S, T>(
+    async fn new_netstack_and_device<N, E, P, S>(
         &self,
-        name: T,
-    ) -> Result<(netemul::TestEnvironment<'_>, S::Proxy, netemul::TestEndpoint<'_>)>
+        name: S,
+    ) -> Result<(netemul::TestEnvironment<'_>, P::Proxy, netemul::TestEndpoint<'_>)>
     where
         N: Netstack,
         E: netemul::Endpoint,
-        S: fidl::endpoints::ServiceMarker + fidl::endpoints::DiscoverableService,
-        T: Into<String> + Copy + Send;
+        P: fidl::endpoints::DiscoverableProtocolMarker,
+        S: Into<String> + Copy + Send;
 }
 
 #[async_trait]
@@ -287,33 +287,33 @@ impl TestSandboxExt for netemul::TestSandbox {
 
     /// Helper function to create a new Netstack environment and connect to a
     /// netstack service on it.
-    fn new_netstack<N, S, T>(&self, name: T) -> Result<(netemul::TestEnvironment<'_>, S::Proxy)>
+    fn new_netstack<N, P, S>(&self, name: S) -> Result<(netemul::TestEnvironment<'_>, P::Proxy)>
     where
         N: Netstack,
-        S: fidl::endpoints::ServiceMarker + fidl::endpoints::DiscoverableService,
-        T: Into<String>,
+        P: fidl::endpoints::DiscoverableProtocolMarker,
+        S: Into<String>,
     {
         let env = self
             .create_netstack_environment::<N, _>(name)
             .context("failed to create test environment")?;
         let netstack_proxy =
-            env.connect_to_service::<S>().context("failed to connect to netstack")?;
+            env.connect_to_service::<P>().context("failed to connect to netstack")?;
         Ok((env, netstack_proxy))
     }
 
     /// Helper function to create a new Netstack environment and a new
     /// unattached endpoint.
-    async fn new_netstack_and_device<N, E, S, T>(
+    async fn new_netstack_and_device<N, E, P, S>(
         &self,
-        name: T,
-    ) -> Result<(netemul::TestEnvironment<'_>, S::Proxy, netemul::TestEndpoint<'_>)>
+        name: S,
+    ) -> Result<(netemul::TestEnvironment<'_>, P::Proxy, netemul::TestEndpoint<'_>)>
     where
         N: Netstack,
         E: netemul::Endpoint,
-        S: fidl::endpoints::ServiceMarker + fidl::endpoints::DiscoverableService,
-        T: Into<String> + Copy + Send,
+        P: fidl::endpoints::DiscoverableProtocolMarker,
+        S: Into<String> + Copy + Send,
     {
-        let (env, stack) = self.new_netstack::<N, S, _>(name)?;
+        let (env, stack) = self.new_netstack::<N, P, _>(name)?;
         let endpoint =
             self.create_endpoint::<E, _>(name).await.context("failed to create endpoint")?;
         Ok((env, stack, endpoint))

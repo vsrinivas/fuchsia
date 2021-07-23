@@ -19,7 +19,7 @@ use {
     },
     async_trait::async_trait,
     cm_rust::{CapabilityPath, ComponentDecl},
-    fidl::endpoints::{ServerEnd, ServiceMarker},
+    fidl::endpoints::{ProtocolMarker, ServerEnd},
     fidl_fuchsia_io::{DirectoryProxy, NodeMarker, CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_DIRECTORY},
     fidl_fuchsia_sys2::LifecycleControllerMarker,
     fuchsia_trace as trace, fuchsia_zircon as zx,

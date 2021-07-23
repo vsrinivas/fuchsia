@@ -26,7 +26,7 @@ use {
         RunnerRegistration,
     },
     cm_rust_testing::*,
-    fidl::endpoints::ServiceMarker,
+    fidl::endpoints::ProtocolMarker,
     fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_hardware_power_statecontrol as fstatecontrol, fidl_fuchsia_sys2 as fsys,
     fuchsia_async as fasync, fuchsia_zircon as zx,
@@ -592,9 +592,7 @@ async fn on_terminate_stop_triggers_reboot() {
     let recv_reboot = async move {
         let reason = match receiver.next().await.unwrap() {
             fstatecontrol::AdminRequest::Reboot { reason, .. } => reason,
-            _ => {
-                panic!("unexpected request")
-            }
+            _ => panic!("unexpected request"),
         };
         assert_eq!(reason, fstatecontrol::RebootReason::CriticalComponentFailure);
     };
@@ -649,9 +647,7 @@ async fn on_terminate_exit_triggers_reboot() {
     test.mock_runner.abort_controller(&info.channel_id);
     let reason = match receiver.next().await.unwrap() {
         fstatecontrol::AdminRequest::Reboot { reason, .. } => reason,
-        _ => {
-            panic!("unexpected request")
-        }
+        _ => panic!("unexpected request"),
     };
     assert_eq!(reason, fstatecontrol::RebootReason::CriticalComponentFailure);
     assert!(test.model.top_instance().has_reboot_task().await);
@@ -806,9 +802,7 @@ async fn on_terminate_with_failed_reboot_panics() {
             let mut res = Err(zx::sys::ZX_ERR_INTERNAL);
             responder.send(&mut res).unwrap();
         }
-        _ => {
-            panic!("unexpected request")
-        }
+        _ => panic!("unexpected request"),
     };
     let () = pending().await;
 }

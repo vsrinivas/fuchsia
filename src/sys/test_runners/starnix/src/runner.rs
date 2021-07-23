@@ -53,14 +53,10 @@ pub async fn handle_runner_requests(
                     )
                     .await
                     {
-                        Ok(_) => {
-                            fuchsia_syslog::fx_log_info!(
-                                "Finished serving test suite for component."
-                            )
-                        }
-                        Err(e) => {
-                            fuchsia_syslog::fx_log_err!("Error serving test suite: {:?}", e)
-                        }
+                        Ok(_) => fuchsia_syslog::fx_log_info!(
+                            "Finished serving test suite for component."
+                        ),
+                        Err(e) => fuchsia_syslog::fx_log_err!("Error serving test suite: {:?}", e),
                     }
                 })
                 .detach();
@@ -122,7 +118,7 @@ async fn serve_test_suite(
 mod tests {
     use {
         super::*,
-        fidl::endpoints::{create_proxy, DiscoverableService},
+        fidl::endpoints::{create_proxy, DiscoverableProtocolMarker},
         fidl_fuchsia_component_runner::ComponentControllerMarker,
         fidl_fuchsia_io as fio, fidl_fuchsia_test as ftest, fuchsia_async as fasync,
     };
@@ -155,6 +151,6 @@ mod tests {
         let svc_dir = io_util::open_directory(&directory_proxy, svc_path, fio::OPEN_RIGHT_READABLE)
             .expect("Couldn't open svc.");
         let svc_contents = list_directory(&svc_dir).await;
-        assert_eq!(svc_contents, vec![ftest::SuiteMarker::SERVICE_NAME]);
+        assert_eq!(svc_contents, vec![ftest::SuiteMarker::PROTOCOL_NAME]);
     }
 }

@@ -7,7 +7,7 @@ use {
     anyhow::Error,
     async_trait::async_trait,
     cm_rust::CapabilityName,
-    fidl::endpoints::ServiceMarker,
+    fidl::endpoints::ProtocolMarker,
     fidl_fuchsia_kernel as fkernel,
     fuchsia_zircon::{self as zx, HandleBased, Resource, ResourceInfo},
     futures::prelude::*,
@@ -43,7 +43,7 @@ impl ResourceCapability for IrqResource {
 
     async fn server_loop(
         self: Arc<Self>,
-        mut stream: <Self::Marker as ServiceMarker>::RequestStream,
+        mut stream: <Self::Marker as ProtocolMarker>::RequestStream,
     ) -> Result<(), Error> {
         while let Some(fkernel::IrqResourceRequest::Get { responder }) = stream.try_next().await? {
             responder.send(self.resource.duplicate_handle(zx::Rights::SAME_RIGHTS)?)?;

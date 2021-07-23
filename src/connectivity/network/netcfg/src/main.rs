@@ -393,7 +393,7 @@ fn static_source_from_ip(f: std::net::IpAddr) -> fnet_name::DnsServer_ {
 
 /// Connect to a service, returning an error if the service does not exist in
 /// the service directory.
-async fn svc_connect<S: fidl::endpoints::DiscoverableService>(
+async fn svc_connect<S: fidl::endpoints::DiscoverableProtocolMarker>(
     svc_dir: &fio::DirectoryProxy,
 ) -> Result<S::Proxy, anyhow::Error> {
     optional_svc_connect::<S>(svc_dir).await?.ok_or(anyhow::anyhow!("service does not exist"))
@@ -401,7 +401,7 @@ async fn svc_connect<S: fidl::endpoints::DiscoverableService>(
 
 /// Attempt to connect to a service, returning `None` if the service does not
 /// exist in the service directory.
-async fn optional_svc_connect<S: fidl::endpoints::DiscoverableService>(
+async fn optional_svc_connect<S: fidl::endpoints::DiscoverableProtocolMarker>(
     svc_dir: &fio::DirectoryProxy,
 ) -> Result<Option<S::Proxy>, anyhow::Error> {
     let req = new_protocol_connector_in_dir::<S>(&svc_dir);

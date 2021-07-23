@@ -7,7 +7,7 @@ use {
     crate::errors::ArgumentError,
     anyhow::Context,
     async_trait::async_trait,
-    fidl::endpoints::{ServerEnd, ServiceMarker},
+    fidl::endpoints::{ProtocolMarker, ServerEnd},
     fidl_fuchsia_component_runner as fcrunner, fidl_fuchsia_io as fio,
     fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy},
     fidl_fuchsia_ldsvc::{LoaderMarker, LoaderRequest},
@@ -582,8 +582,8 @@ where
     Ok(())
 }
 
-fn take_server_end<S: ServiceMarker>(end: &mut ServerEnd<S>) -> ServerEnd<S> {
-    let invalid_end: ServerEnd<S> = zx::Handle::invalid().into();
+fn take_server_end<P: ProtocolMarker>(end: &mut ServerEnd<P>) -> ServerEnd<P> {
+    let invalid_end: ServerEnd<P> = zx::Handle::invalid().into();
     mem::replace(end, invalid_end)
 }
 

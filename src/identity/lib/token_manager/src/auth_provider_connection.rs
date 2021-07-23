@@ -4,7 +4,7 @@
 
 use crate::{ResultExt as TokenManagerResultExt, TokenManagerError};
 use anyhow::{format_err, Context as _};
-use fidl::endpoints::{create_endpoints, ClientEnd, DiscoverableService, ServerEnd};
+use fidl::endpoints::{create_endpoints, ClientEnd, DiscoverableProtocolMarker, ServerEnd};
 use fidl_fuchsia_auth::{AuthProviderConfig, Status};
 use fidl_fuchsia_identity_external::{OauthMarker, OauthOpenIdConnectMarker, OpenIdConnectMarker};
 use fuchsia_component::client::{launch, launcher, App};
@@ -100,7 +100,7 @@ impl AuthProviderConnection {
 }
 
 /// A marker trait for identifying services that may be provided by an auth provider.
-pub trait AuthProviderService: DiscoverableService {}
+pub trait AuthProviderService: DiscoverableProtocolMarker {}
 
 impl AuthProviderService for OauthMarker {}
 impl AuthProviderService for OpenIdConnectMarker {}

@@ -5,7 +5,7 @@
 #![cfg(test)]
 
 use {
-    fidl::endpoints::DiscoverableService as _,
+    fidl::endpoints::DiscoverableProtocolMarker as _,
     fidl::endpoints::Proxy as _,
     fidl_fuchsia_io as fio, fidl_fuchsia_io2 as fio2, fidl_fuchsia_logger as flogger,
     fidl_fuchsia_netstack as fnetstack,
@@ -71,24 +71,24 @@ async fn start_with_cache_no_space() {
         .await
         .expect("failed to add netstack component")
         .add_route(CapabilityRoute {
-            capability: Capability::protocol(fnetstack::NetstackMarker::SERVICE_NAME),
+            capability: Capability::protocol(fnetstack::NetstackMarker::PROTOCOL_NAME),
             source: RouteEndpoint::component(NETSTACK_MONIKER),
             targets: vec![RouteEndpoint::AboveRoot],
         })
         .unwrap_or_else(|e| {
             panic!(
                 "failed to expose {} from netstack: {}",
-                fnetstack::NetstackMarker::SERVICE_NAME,
+                fnetstack::NetstackMarker::PROTOCOL_NAME,
                 e,
             )
         })
         .add_route(CapabilityRoute {
-            capability: Capability::protocol(flogger::LogSinkMarker::SERVICE_NAME),
+            capability: Capability::protocol(flogger::LogSinkMarker::PROTOCOL_NAME),
             source: RouteEndpoint::AboveRoot,
             targets: vec![RouteEndpoint::component(NETSTACK_MONIKER)],
         })
         .unwrap_or_else(|e| {
-            panic!("failed to offer {} to netstack: {}", flogger::LogSinkMarker::SERVICE_NAME, e)
+            panic!("failed to offer {} to netstack: {}", flogger::LogSinkMarker::PROTOCOL_NAME, e)
         })
         .add_component(
             MOCK_CACHE_MONIKER,

@@ -8,7 +8,7 @@ use {
         events::error::{EventError, MonikerError},
     },
     async_trait::async_trait,
-    fidl::endpoints::{ServerEnd, ServiceMarker},
+    fidl::endpoints::{ProtocolMarker, ServerEnd},
     fidl_fuchsia_inspect::TreeProxy,
     fidl_fuchsia_inspect_deprecated::InspectProxy,
     fidl_fuchsia_io::DirectoryProxy,

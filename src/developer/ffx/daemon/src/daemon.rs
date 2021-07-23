@@ -22,7 +22,9 @@ use {
     ffx_core::{build_info, TryStreamUtilExt},
     ffx_daemon_core::events::{self, EventHandler},
     ffx_daemon_services::create_service_register_map,
-    fidl::endpoints::{ClientEnd, DiscoverableService, Proxy, RequestStream, ServiceMarker},
+    fidl::endpoints::{
+        ClientEnd, DiscoverableProtocolMarker, ProtocolMarker, Proxy, RequestStream,
+    },
     fidl_fuchsia_developer_bridge::{
         self as bridge, DaemonError, DaemonMarker, DaemonRequest, DaemonRequestStream,
         DiagnosticsStreamError, RepositoryRegistryMarker, StreamMode,
@@ -315,7 +317,9 @@ impl Daemon {
 
     async fn start_services(&mut self) -> Result<()> {
         let cx = services::Context::new(self.clone());
-        self.service_register.start(RepositoryRegistryMarker::SERVICE_NAME.to_string(), cx).await?;
+        self.service_register
+            .start(RepositoryRegistryMarker::PROTOCOL_NAME.to_string(), cx)
+            .await?;
         Ok(())
     }
 
@@ -368,7 +372,7 @@ impl Daemon {
     }
 
     async fn start_mdns_event_forwarding(&mut self) -> Result<()> {
-        let mdns = self.open_service_proxy(bridge::MdnsMarker::SERVICE_NAME.to_owned()).await?;
+        let mdns = self.open_service_proxy(bridge::MdnsMarker::PROTOCOL_NAME.to_owned()).await?;
         let mdns = bridge::MdnsProxy::from_channel(fidl::handle::AsyncChannel::from_channel(mdns)?);
         let event_queue = self.event_queue.clone();
         self.tasks.push(Rc::new(Task::local(async move {
@@ -532,9 +536,7 @@ impl Daemon {
                                 })
                                 .collect(),
                             _ => match self.target_collection.get_connected(value) {
-                                Some(t) => {
-                                    vec![t.as_ref().into()]
-                                }
+                                Some(t) => vec![t.as_ref().into()],
                                 None => vec![],
                             },
                         }

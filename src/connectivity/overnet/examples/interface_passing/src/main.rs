@@ -5,7 +5,7 @@
 use {
     anyhow::{Context as _, Error},
     clap::{App, Arg, SubCommand},
-    fidl::endpoints::{ClientEnd, RequestStream, ServerEnd, ServiceMarker},
+    fidl::endpoints::{ClientEnd, ProtocolMarker, RequestStream, ServerEnd},
     fidl_fuchsia_overnet::{ServiceProviderRequest, ServiceProviderRequestStream},
     fidl_fuchsia_overnet_examples_interfacepassing as interfacepassing,
     fidl_test_placeholders as echo,

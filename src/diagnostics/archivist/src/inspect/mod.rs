@@ -362,7 +362,7 @@ mod tests {
         diagnostics_hierarchy::trie::TrieIterableNode,
         diagnostics_hierarchy::DiagnosticsHierarchy,
         fdio,
-        fidl::endpoints::{create_proxy_and_stream, DiscoverableService},
+        fidl::endpoints::{create_proxy_and_stream, DiscoverableProtocolMarker},
         fidl_fuchsia_diagnostics::{BatchIteratorMarker, BatchIteratorProxy, StreamMode},
         fidl_fuchsia_inspect::TreeMarker,
         fidl_fuchsia_io::DirectoryMarker,
@@ -507,7 +507,7 @@ mod tests {
                 let extra_data = collector.take_data().expect("collector missing data");
                 assert_eq!(1, extra_data.len());
 
-                let extra = extra_data.get(TreeMarker::SERVICE_NAME);
+                let extra = extra_data.get(TreeMarker::PROTOCOL_NAME);
                 assert!(extra.is_some());
 
                 match extra.unwrap() {

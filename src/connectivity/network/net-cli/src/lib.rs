@@ -44,7 +44,7 @@ pub struct Device {
 
 /// An interface for acquiring a proxy to a FIDL service.
 #[async_trait::async_trait]
-pub trait ServiceConnector<S: fidl::endpoints::ServiceMarker> {
+pub trait ServiceConnector<S: fidl::endpoints::ProtocolMarker> {
     /// Acquires a proxy to the parameterized FIDL interface.
     async fn connect(&self) -> Result<S::Proxy, Error>;
 }
@@ -166,7 +166,7 @@ async fn tabulate_interfaces_info(interfaces: Vec<fstack::InterfaceInfo>) -> Res
 async fn connect_with_context<S, C>(connector: &C) -> Result<S::Proxy, Error>
 where
     C: ServiceConnector<S>,
-    S: fidl::endpoints::ServiceMarker,
+    S: fidl::endpoints::ProtocolMarker,
 {
     connector.connect().await.with_context(|| format!("failed to connect to {}", S::NAME))
 }
@@ -785,7 +785,7 @@ fn write_neigh_entry<W: std::io::Write>(
 #[cfg(test)]
 mod tests {
     use anyhow::Error;
-    use fidl::endpoints::ServiceMarker;
+    use fidl::endpoints::ProtocolMarker;
     use fidl_fuchsia_net as fnet;
     use fuchsia_async::{self as fasync, TimeoutExt as _};
     use futures::prelude::*;
@@ -806,7 +806,7 @@ mod tests {
 
     #[async_trait::async_trait]
     impl ServiceConnector<StackMarker> for TestConnector {
-        async fn connect(&self) -> Result<<fstack::StackMarker as ServiceMarker>::Proxy, Error> {
+        async fn connect(&self) -> Result<<fstack::StackMarker as ProtocolMarker>::Proxy, Error> {
             match &self.stack {
                 Some(stack) => Ok(stack.clone()),
                 None => Err(anyhow::anyhow!("connector has no stack instance")),
@@ -818,7 +818,7 @@ mod tests {
     impl ServiceConnector<NetstackMarker> for TestConnector {
         async fn connect(
             &self,
-        ) -> Result<<fnetstack::NetstackMarker as ServiceMarker>::Proxy, Error> {
+        ) -> Result<<fnetstack::NetstackMarker as ProtocolMarker>::Proxy, Error> {
             match &self.netstack {
                 Some(netstack) => Ok(netstack.clone()),
                 None => Err(anyhow::anyhow!("connector has no netstack instance")),
@@ -828,14 +828,14 @@ mod tests {
 
     #[async_trait::async_trait]
     impl ServiceConnector<ffilter::FilterMarker> for TestConnector {
-        async fn connect(&self) -> Result<<ffilter::FilterMarker as ServiceMarker>::Proxy, Error> {
+        async fn connect(&self) -> Result<<ffilter::FilterMarker as ProtocolMarker>::Proxy, Error> {
             Err(anyhow::anyhow!("connect filter unimplemented for test connector"))
         }
     }
 
     #[async_trait::async_trait]
     impl ServiceConnector<LogMarker> for TestConnector {
-        async fn connect(&self) -> Result<<fstack::LogMarker as ServiceMarker>::Proxy, Error> {
+        async fn connect(&self) -> Result<<fstack::LogMarker as ProtocolMarker>::Proxy, Error> {
             Err(anyhow::anyhow!("connect log unimplemented for test connector"))
         }
     }
@@ -844,14 +844,14 @@ mod tests {
     impl ServiceConnector<fneighbor::ControllerMarker> for TestConnector {
         async fn connect(
             &self,
-        ) -> Result<<fneighbor::ControllerMarker as ServiceMarker>::Proxy, Error> {
+        ) -> Result<<fneighbor::ControllerMarker as ProtocolMarker>::Proxy, Error> {
             Err(anyhow::anyhow!("connect neighbor controller unimplemented for test connector"))
         }
     }
 
     #[async_trait::async_trait]
     impl ServiceConnector<fneighbor::ViewMarker> for TestConnector {
-        async fn connect(&self) -> Result<<fneighbor::ViewMarker as ServiceMarker>::Proxy, Error> {
+        async fn connect(&self) -> Result<<fneighbor::ViewMarker as ProtocolMarker>::Proxy, Error> {
             Err(anyhow::anyhow!("connect neighbor view unimplemented for test connector"))
         }
     }

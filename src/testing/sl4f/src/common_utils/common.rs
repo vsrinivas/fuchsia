@@ -96,16 +96,16 @@ pub fn parse_write_value(args_raw: Value) -> Result<Vec<u8>, Error> {
 
 /// Given a RwLock of an optional FIDL service proxy, returns a cached connection to the service,
 /// or try to connect and cache the connection for later.
-pub fn get_proxy_or_connect<S>(lock: &RwLock<Option<S::Proxy>>) -> Result<S::Proxy, Error>
+pub fn get_proxy_or_connect<P>(lock: &RwLock<Option<P::Proxy>>) -> Result<P::Proxy, Error>
 where
-    S: fidl::endpoints::DiscoverableService,
-    S::Proxy: Clone,
+    P: fidl::endpoints::DiscoverableProtocolMarker,
+    P::Proxy: Clone,
 {
     let lock = lock.upgradable_read();
     if let Some(proxy) = lock.as_ref() {
         Ok(proxy.clone())
     } else {
-        let proxy = connect_to_protocol::<S>()?;
+        let proxy = connect_to_protocol::<P>()?;
         *RwLockUpgradableReadGuard::upgrade(lock) = Some(proxy.clone());
         Ok(proxy)
     }

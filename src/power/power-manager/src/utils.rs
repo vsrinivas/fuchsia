@@ -39,7 +39,7 @@ fn wait_for_path(path: &std::path::Path) -> Result<(), anyhow::Error> {
 }
 
 /// Creates a FIDL proxy and connects its ServerEnd to the driver at the specified path.
-pub async fn connect_to_driver<T: fidl::endpoints::ServiceMarker>(
+pub async fn connect_to_driver<T: fidl::endpoints::ProtocolMarker>(
     path: &String,
 ) -> Result<T::Proxy, anyhow::Error> {
     let (proxy, server_end) = fidl::endpoints::create_proxy::<T>()?;
@@ -49,7 +49,7 @@ pub async fn connect_to_driver<T: fidl::endpoints::ServiceMarker>(
 
 /// Connects a ServerEnd to the driver at the specified path. Calls `wait_for_path` to ensure the
 /// path exists before attempting a connection.
-pub async fn connect_channel_to_driver<T: fidl::endpoints::ServiceMarker>(
+pub async fn connect_channel_to_driver<T: fidl::endpoints::ProtocolMarker>(
     server_end: fidl::endpoints::ServerEnd<T>,
     path: &String,
 ) -> Result<(), anyhow::Error> {

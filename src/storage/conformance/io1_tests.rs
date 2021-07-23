@@ -4,7 +4,7 @@
 
 use {
     fdio::fdio_sys::V_IRWXU,
-    fidl::endpoints::{create_endpoints, create_proxy, Proxy, ServiceMarker},
+    fidl::endpoints::{create_endpoints, create_proxy, ProtocolMarker, Proxy},
     fidl_fuchsia_io as io,
     fidl_fuchsia_io2::{UnlinkFlags, UnlinkOptions},
     fidl_fuchsia_io_test as io_test, fidl_fuchsia_mem,
@@ -46,13 +46,13 @@ async fn assert_on_open_not_received(node_proxy: &io::NodeProxy) {
 }
 
 /// Converts a generic `NodeProxy` to either a file or directory proxy.
-fn convert_node_proxy<T: ServiceMarker>(proxy: io::NodeProxy) -> T::Proxy {
+fn convert_node_proxy<T: ProtocolMarker>(proxy: io::NodeProxy) -> T::Proxy {
     T::Proxy::from_channel(proxy.into_channel().expect("Cannot convert node proxy to channel"))
 }
 
 /// Helper function to open the desired node in the root folder.
 /// Asserts that open_node_status succeeds.
-async fn open_node<T: ServiceMarker>(
+async fn open_node<T: ProtocolMarker>(
     dir: &io::DirectoryProxy,
     flags: u32,
     mode: u32,
@@ -64,7 +64,7 @@ async fn open_node<T: ServiceMarker>(
 }
 
 /// Helper function to open the desired node in the root folder.
-async fn open_node_status<T: ServiceMarker>(
+async fn open_node_status<T: ProtocolMarker>(
     dir: &io::DirectoryProxy,
     flags: u32,
     mode: u32,

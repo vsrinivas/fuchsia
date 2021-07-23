@@ -148,10 +148,10 @@ type TableMember struct {
 
 type Protocol struct {
 	fidlgen.Protocol
-	ECI         EncodedCompoundIdentifier
-	Name        string
-	Methods     []Method
-	ServiceName string
+	ECI          EncodedCompoundIdentifier
+	Name         string
+	Methods      []Method
+	ProtocolName string
 }
 
 type Method struct {
@@ -860,11 +860,11 @@ const maximumAllowedParameters = 12
 
 func (c *compiler) compileProtocol(val fidlgen.Protocol) Protocol {
 	r := Protocol{
-		Protocol:    val,
-		ECI:         val.Name,
-		Name:        c.compileCamelCompoundIdentifier(val.Name),
-		Methods:     []Method{},
-		ServiceName: strings.Trim(val.GetServiceName(), "\""),
+		Protocol:     val,
+		ECI:          val.Name,
+		Name:         c.compileCamelCompoundIdentifier(val.Name),
+		Methods:      []Method{},
+		ProtocolName: strings.Trim(val.GetServiceName(), "\""),
 	}
 
 	for _, v := range val.Methods {

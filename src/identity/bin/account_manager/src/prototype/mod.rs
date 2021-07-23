@@ -13,7 +13,7 @@ mod account_transfer_control;
 use account_manager_peer::AccountManagerPeer;
 use account_transfer_control::AccountTransferControl;
 use anyhow::Error;
-use fidl::endpoints::{create_request_stream, RequestStream, ServiceMarker};
+use fidl::endpoints::{create_request_stream, ProtocolMarker, RequestStream};
 use fidl_fuchsia_identity_transfer::{AccountManagerPeerMarker, AccountManagerPeerRequestStream};
 use fidl_fuchsia_overnet::{
     ServiceProviderMarker, ServiceProviderRequest, ServiceProviderRequestStream,

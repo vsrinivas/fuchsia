@@ -4,7 +4,7 @@
 
 use {
     anyhow::{Context as _, Error},
-    fidl::endpoints::{DiscoverableService, ServiceMarker},
+    fidl::endpoints::{DiscoverableProtocolMarker, ProtocolMarker},
     fuchsia_component_test::ScopedInstance,
     futures::lock::Mutex,
     std::collections::HashMap,
@@ -27,7 +27,7 @@ impl ProviderFactory {
     // require support to dynamically offer a capability to a component.
     pub async fn get_provider<T>(&self, fonts_cm: &'static str) -> Result<T::Proxy, Error>
     where
-        T: ServiceMarker + DiscoverableService,
+        T: ProtocolMarker + DiscoverableProtocolMarker,
     {
         let mut providers = self.providers.lock().await;
         if !providers.contains_key(fonts_cm) {
@@ -50,7 +50,7 @@ pub struct TypedProviderFactory<T> {
 
 impl<T> TypedProviderFactory<T>
 where
-    T: ServiceMarker + DiscoverableService,
+    T: ProtocolMarker + DiscoverableProtocolMarker,
 {
     pub fn new() -> Self {
         Self { inner: ProviderFactory::new(), _marker: std::marker::PhantomData }

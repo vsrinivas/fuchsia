@@ -353,7 +353,7 @@ mod test {
     use ascendd;
     use async_lock::Mutex;
     use async_net::unix::UnixListener;
-    use fidl::endpoints::{ClientEnd, RequestStream, ServiceMarker};
+    use fidl::endpoints::{ClientEnd, ProtocolMarker, RequestStream};
     use fidl_fuchsia_developer_bridge::{DaemonMarker, DaemonRequest, DaemonRequestStream};
     use fidl_fuchsia_overnet::{ServiceProviderRequest, ServiceProviderRequestStream};
     use fuchsia_async::Task;

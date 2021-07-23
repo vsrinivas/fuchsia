@@ -11,7 +11,7 @@ use {
     cm_rust::{
         CapabilityDecl, CapabilityPath, ComponentDecl, ExposeDecl, ExposeDeclCommon, UseDecl,
     },
-    fidl::endpoints::ServiceMarker,
+    fidl::endpoints::ProtocolMarker,
     fidl_fuchsia_sys2 as fsys, fuchsia_zircon_status as zx_status,
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMonikerBase},
     routing::{

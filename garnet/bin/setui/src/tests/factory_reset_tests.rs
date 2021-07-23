@@ -166,7 +166,7 @@ async fn test_error_propagation() {
         factory_reset_proxy.watch().await,
         Err(fidl::Error::ClientChannelClosed {
             status: fuchsia_zircon::Status::UNAVAILABLE,
-            service_name: "fuchsia.settings.FactoryReset"
+            protocol_name: "fuchsia.settings.FactoryReset"
         })
     );
 }

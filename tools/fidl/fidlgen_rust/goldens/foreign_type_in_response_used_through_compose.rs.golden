@@ -29,7 +29,7 @@ const _FIDL_TRACE_BINDINGS_RUST: u32 = 6;
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct TopMarker;
 
-impl fidl::endpoints::ServiceMarker for TopMarker {
+impl fidl::endpoints::ProtocolMarker for TopMarker {
     type Proxy = TopProxy;
     type RequestStream = TopRequestStream;
     const DEBUG_NAME: &'static str = "(anonymous) Top";
@@ -50,8 +50,8 @@ pub struct TopSynchronousProxy {
 #[cfg(target_os = "fuchsia")]
 impl TopSynchronousProxy {
     pub fn new(channel: fidl::Channel) -> Self {
-        let service_name = <TopMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME;
-        Self { client: fidl::client::sync::Client::new(channel, service_name) }
+        let protocol_name = <TopMarker as fidl::endpoints::ProtocolMarker>::DEBUG_NAME;
+        Self { client: fidl::client::sync::Client::new(channel, protocol_name) }
     }
 
     pub fn into_channel(self) -> fidl::Channel {
@@ -76,7 +76,7 @@ pub struct TopProxy {
 }
 
 impl fidl::endpoints::Proxy for TopProxy {
-    type Service = TopMarker;
+    type Protocol = TopMarker;
 
     fn from_channel(inner: fidl::AsyncChannel) -> Self {
         Self::new(inner)
@@ -94,8 +94,8 @@ impl fidl::endpoints::Proxy for TopProxy {
 impl TopProxy {
     /// Create a new Proxy for Top
     pub fn new(channel: fidl::AsyncChannel) -> Self {
-        let service_name = <TopMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME;
-        Self { client: fidl::client::Client::new(channel, service_name) }
+        let protocol_name = <TopMarker as fidl::endpoints::ProtocolMarker>::DEBUG_NAME;
+        Self { client: fidl::client::Client::new(channel, protocol_name) }
     }
 
     /// Get a Stream of events from the remote end of the Top protocol
@@ -171,7 +171,7 @@ impl TopEvent {
         match tx_header.ordinal() {
             _ => Err(fidl::Error::UnknownOrdinal {
                 ordinal: tx_header.ordinal(),
-                service_name: <TopMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
+                protocol_name: <TopMarker as fidl::endpoints::ProtocolMarker>::DEBUG_NAME,
             }),
         }
     }
@@ -225,7 +225,7 @@ impl futures::stream::FusedStream for TopRequestStream {
 }
 
 impl fidl::endpoints::RequestStream for TopRequestStream {
-    type Service = TopMarker;
+    type Protocol = TopMarker;
 
     /// Consume a channel to make a TopRequestStream
     fn from_channel(channel: fidl::AsyncChannel) -> Self {
@@ -304,7 +304,7 @@ impl futures::Stream for TopRequestStream {
                 }
                 _ => Err(fidl::Error::UnknownOrdinal {
                     ordinal: header.ordinal(),
-                    service_name: <TopMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
+                    protocol_name: <TopMarker as fidl::endpoints::ProtocolMarker>::DEBUG_NAME,
                 }),
             }))
         })
@@ -346,7 +346,7 @@ impl TopRequestMessage {
             }
             _ => Err(fidl::Error::UnknownOrdinal {
                 ordinal: header.ordinal(),
-                service_name: <TopMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
+                protocol_name: <TopMarker as fidl::endpoints::ProtocolMarker>::DEBUG_NAME,
             }),
         }
     }

@@ -11,7 +11,7 @@
 use fuchsia_inspect::Property as UsablePropertyTrait;
 use {
     anyhow::{format_err, Context as _, Error},
-    fidl::endpoints::{create_request_stream, DiscoverableService},
+    fidl::endpoints::{create_request_stream, DiscoverableProtocolMarker},
     fidl_fuchsia_inspect::TreeMarker,
     fidl_fuchsia_io::{
         DirectoryMarker, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
@@ -87,7 +87,7 @@ impl Publisher {
         self.dir
             .clone()
             .add_entry(
-                TreeMarker::SERVICE_NAME,
+                TreeMarker::PROTOCOL_NAME,
                 host(move |stream| {
                     let inspector_clone = inspector.clone();
                     async move {
@@ -107,7 +107,7 @@ impl Publisher {
 
     fn unpublish(&mut self) {
         if self.inspector.is_some() {
-            self.dir.clone().remove_entry(TreeMarker::SERVICE_NAME, false).expect("remove entry");
+            self.dir.clone().remove_entry(TreeMarker::PROTOCOL_NAME, false).expect("remove entry");
         }
         self.inspector = None;
     }

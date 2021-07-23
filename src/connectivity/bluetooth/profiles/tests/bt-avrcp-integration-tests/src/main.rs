@@ -5,7 +5,9 @@
 use {
     anyhow::{format_err, Context},
     fidl::encoding::Decodable,
-    fidl::endpoints::{create_endpoints, create_proxy, create_request_stream, DiscoverableService},
+    fidl::endpoints::{
+        create_endpoints, create_proxy, create_request_stream, DiscoverableProtocolMarker,
+    },
     fidl_fuchsia_bluetooth_avrcp::{
         AbsoluteVolumeHandlerMarker, AbsoluteVolumeHandlerRequest,
         AbsoluteVolumeHandlerRequestStream, ControllerMarker, PeerManagerMarker,
@@ -45,7 +47,7 @@ impl AvrcpIntegrationTest {
                 AVRCP_URL_V2.to_string(),
                 None,
                 vec![],
-                vec![Capability::protocol(PeerManagerMarker::SERVICE_NAME)],
+                vec![Capability::protocol(PeerManagerMarker::PROTOCOL_NAME)],
             )
             .await
             .unwrap();

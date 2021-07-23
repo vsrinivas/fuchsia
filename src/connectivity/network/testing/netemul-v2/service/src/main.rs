@@ -4,7 +4,7 @@
 
 use {
     anyhow::Context as _,
-    fidl::endpoints::{DiscoverableService, ServerEnd},
+    fidl::endpoints::{DiscoverableProtocolMarker, ServerEnd},
     fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio, fidl_fuchsia_io2 as fio2,
     fidl_fuchsia_logger as flogger, fidl_fuchsia_net_tun as fnet_tun,
     fidl_fuchsia_netemul::{
@@ -183,11 +183,11 @@ async fn create_realm_instance(
                             fnetemul::Capability::NetemulSyncManager(fnetemul::Empty {}) => todo!(),
                             fnetemul::Capability::NetemulNetworkContext(fnetemul::Empty {}) => {
                                 let () = route_network_context_to_component(&mut builder, &name)?;
-                                fnetemul_network::NetworkContextMarker::SERVICE_NAME.into()
+                                fnetemul_network::NetworkContextMarker::PROTOCOL_NAME.into()
                             }
                             fnetemul::Capability::LogSink(fnetemul::Empty {}) => {
                                 let () = route_log_sink_to_component(&mut builder, &name)?;
-                                flogger::LogSinkMarker::SERVICE_NAME.into()
+                                flogger::LogSinkMarker::PROTOCOL_NAME.into()
                             }
                             fnetemul::Capability::ChildDep(fnetemul::ChildDep {
                                 name: source,
@@ -481,7 +481,7 @@ fn route_network_context_to_component(
     component: &str,
 ) -> Result<(), fcomponent::error::Error> {
     let _: &mut RealmBuilder = builder.add_route(CapabilityRoute {
-        capability: Capability::protocol(fnetemul_network::NetworkContextMarker::SERVICE_NAME),
+        capability: Capability::protocol(fnetemul_network::NetworkContextMarker::PROTOCOL_NAME),
         source: RouteEndpoint::component(NETEMUL_SERVICES_COMPONENT_NAME),
         targets: vec![RouteEndpoint::component(component)],
     })?;
@@ -493,7 +493,7 @@ fn route_log_sink_to_component(
     component: &str,
 ) -> Result<(), fcomponent::error::Error> {
     let _: &mut RealmBuilder = builder.add_route(CapabilityRoute {
-        capability: Capability::protocol(flogger::LogSinkMarker::SERVICE_NAME),
+        capability: Capability::protocol(flogger::LogSinkMarker::PROTOCOL_NAME),
         source: RouteEndpoint::AboveRoot,
         targets: vec![RouteEndpoint::component(component)],
     })?;
@@ -508,7 +508,7 @@ async fn run_netemul_services(
     let mut fs = ServiceFs::new();
     let _: &mut ServiceFsDir<'_, _> = fs
         .dir("svc")
-        .add_service_at(fnetemul_network::NetworkContextMarker::SERVICE_NAME, |channel| {
+        .add_service_at(fnetemul_network::NetworkContextMarker::PROTOCOL_NAME, |channel| {
             Some(ServerEnd::<fnetemul_network::NetworkContextMarker>::new(channel))
         });
     let () = fs.add_remote(DEVFS, devfs);
@@ -586,14 +586,14 @@ async fn setup_network_realm(
         .await
         .context("error adding isolated-devmgr component")?
         .add_route(CapabilityRoute {
-            capability: Capability::protocol(fnetemul_network::NetworkContextMarker::SERVICE_NAME),
+            capability: Capability::protocol(fnetemul_network::NetworkContextMarker::PROTOCOL_NAME),
             source: RouteEndpoint::component(NETWORK_CONTEXT_COMPONENT_NAME),
             targets: vec![RouteEndpoint::AboveRoot],
         })
         .with_context(|| {
             format!(
                 "error adding route exposing capability '{}' from component '{}'",
-                fnetemul_network::NetworkContextMarker::SERVICE_NAME,
+                fnetemul_network::NetworkContextMarker::PROTOCOL_NAME,
                 NETWORK_CONTEXT_COMPONENT_NAME
             )
         })?
@@ -609,30 +609,30 @@ async fn setup_network_realm(
             )
         })?
         .add_route(CapabilityRoute {
-            capability: Capability::protocol(fnet_tun::ControlMarker::SERVICE_NAME),
+            capability: Capability::protocol(fnet_tun::ControlMarker::PROTOCOL_NAME),
             source: RouteEndpoint::AboveRoot,
             targets: vec![RouteEndpoint::component(NETWORK_CONTEXT_COMPONENT_NAME)],
         })
         .with_context(|| {
             format!(
                 "error adding route offering capability '{}' to component '{}'",
-                fnet_tun::ControlMarker::SERVICE_NAME,
+                fnet_tun::ControlMarker::PROTOCOL_NAME,
                 NETWORK_CONTEXT_COMPONENT_NAME
             )
         })?
         .add_route(CapabilityRoute {
-            capability: Capability::protocol(fprocess::LauncherMarker::SERVICE_NAME),
+            capability: Capability::protocol(fprocess::LauncherMarker::PROTOCOL_NAME),
             source: RouteEndpoint::AboveRoot,
             targets: vec![RouteEndpoint::component(ISOLATED_DEVMGR_COMPONENT_NAME)],
         })
         .with_context(|| {
             format!(
                 "error adding route offering capability '{}' to components",
-                fprocess::LauncherMarker::SERVICE_NAME,
+                fprocess::LauncherMarker::PROTOCOL_NAME,
             )
         })?
         .add_route(CapabilityRoute {
-            capability: Capability::protocol(flogger::LogSinkMarker::SERVICE_NAME),
+            capability: Capability::protocol(flogger::LogSinkMarker::PROTOCOL_NAME),
             source: RouteEndpoint::AboveRoot,
             targets: vec![
                 RouteEndpoint::component(NETWORK_CONTEXT_COMPONENT_NAME),
@@ -642,7 +642,7 @@ async fn setup_network_realm(
         .with_context(|| {
             format!(
                 "error adding route offering capability '{}' to components",
-                flogger::LogSinkMarker::SERVICE_NAME,
+                flogger::LogSinkMarker::PROTOCOL_NAME,
             )
         })?;
     let mut realm = builder.build();
@@ -786,12 +786,12 @@ mod tests {
             TestRealm { realm }
         }
 
-        fn connect_to_service<S: DiscoverableService>(&self) -> S::Proxy {
+        fn connect_to_service<S: DiscoverableProtocolMarker>(&self) -> S::Proxy {
             let (proxy, server) = zx::Channel::create().expect("failed to create zx::Channel");
             let () = self
                 .realm
-                .connect_to_service(S::SERVICE_NAME, None, server)
-                .with_context(|| format!("{}", S::SERVICE_NAME))
+                .connect_to_service(S::PROTOCOL_NAME, None, server)
+                .with_context(|| format!("{}", S::PROTOCOL_NAME))
                 .expect("failed to connect");
             let proxy = fasync::Channel::from_channel(proxy)
                 .expect("failed to create fasync::Channel from zx::Channel");
@@ -806,7 +806,7 @@ mod tests {
         fnetemul::ChildDef {
             url: Some(COUNTER_PACKAGE_URL.to_string()),
             name: Some(COUNTER_COMPONENT_NAME.to_string()),
-            exposes: Some(vec![CounterMarker::SERVICE_NAME.to_string()]),
+            exposes: Some(vec![CounterMarker::PROTOCOL_NAME.to_string()]),
             uses: Some(fnetemul::ChildUses::Capabilities(vec![fnetemul::Capability::LogSink(
                 fnetemul::Empty {},
             )])),
@@ -1193,7 +1193,7 @@ mod tests {
                 children: Some(vec![fnetemul::ChildDef {
                     url: Some(COUNTER_PACKAGE_URL.to_string()),
                     name: Some(COUNTER_COMPONENT_NAME.to_string()),
-                    exposes: Some(vec![CounterMarker::SERVICE_NAME.to_string()]),
+                    exposes: Some(vec![CounterMarker::PROTOCOL_NAME.to_string()]),
                     uses: Some(fnetemul::ChildUses::All(fnetemul::Empty {})),
                     ..fnetemul::ChildDef::EMPTY
                 }]),
@@ -1208,7 +1208,7 @@ mod tests {
                 .expect("failed to create network context proxy");
         let () = counter
             .connect_to_service(
-                fnetemul_network::NetworkContextMarker::SERVICE_NAME,
+                fnetemul_network::NetworkContextMarker::PROTOCOL_NAME,
                 server_end.into_channel(),
             )
             .expect("failed to connect to network context through counter");
@@ -1341,7 +1341,7 @@ mod tests {
                     fnetemul::ChildDef {
                         url: Some(COUNTER_PACKAGE_URL.to_string()),
                         name: Some("counter-with-network-context".to_string()),
-                        exposes: Some(vec![CounterMarker::SERVICE_NAME.to_string()]),
+                        exposes: Some(vec![CounterMarker::PROTOCOL_NAME.to_string()]),
                         uses: Some(fnetemul::ChildUses::Capabilities(vec![
                             fnetemul::Capability::LogSink(fnetemul::Empty {}),
                             fnetemul::Capability::NetemulNetworkContext(fnetemul::Empty {}),
@@ -1362,7 +1362,7 @@ mod tests {
                 .expect("failed to create network context proxy");
         let () = counter
             .connect_to_service(
-                fnetemul_network::NetworkContextMarker::SERVICE_NAME,
+                fnetemul_network::NetworkContextMarker::PROTOCOL_NAME,
                 server_end.into_channel(),
             )
             .expect("failed to connect to network context through counter");
@@ -1421,7 +1421,7 @@ mod tests {
                         fnetemul::Capability::ChildDep(fnetemul::ChildDep {
                             name: None,
                             capability: Some(fnetemul::ExposedCapability::Service(
-                                CounterMarker::SERVICE_NAME.to_string(),
+                                CounterMarker::PROTOCOL_NAME.to_string(),
                             )),
                             ..fnetemul::ChildDep::EMPTY
                         }),
@@ -1469,7 +1469,7 @@ mod tests {
                         fnetemul::Capability::ChildDep(fnetemul::ChildDep {
                             name: Some("root".to_string()),
                             capability: Some(fnetemul::ExposedCapability::Service(
-                                flogger::LogSinkMarker::SERVICE_NAME.to_string(),
+                                flogger::LogSinkMarker::PROTOCOL_NAME.to_string(),
                             )),
                             ..fnetemul::ChildDep::EMPTY
                         }),
@@ -1490,7 +1490,7 @@ mod tests {
                                 // counter-a does not exist.
                                 name: Some("counter-a".to_string()),
                                 capability: Some(fnetemul::ExposedCapability::Service(
-                                    CounterMarker::SERVICE_NAME.to_string(),
+                                    CounterMarker::PROTOCOL_NAME.to_string(),
                                 )),
                                 ..fnetemul::ChildDep::EMPTY
                             }),
@@ -1538,7 +1538,8 @@ mod tests {
             )) {
                 Err(fidl::Error::ClientChannelClosed {
                     status,
-                    service_name: <ManagedRealmMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
+                    protocol_name:
+                        <ManagedRealmMarker as fidl::endpoints::ProtocolMarker>::DEBUG_NAME,
                 }) if status == epitaph => (),
                 event => panic!(
                     "test case failed: \"{}\": expected channel close with epitaph {}, got \
@@ -1692,9 +1693,7 @@ mod tests {
             fnetemul_network::EndpointBacking::Ethertap => {
                 format!("@/dev/test/tapctl/{}/ethernet", device_name)
             }
-            fnetemul_network::EndpointBacking::NetworkDevice => {
-                format!("/netemul/{}", device_name)
-            }
+            fnetemul_network::EndpointBacking::NetworkDevice => format!("/netemul/{}", device_name),
         }
     }
 
@@ -1864,7 +1863,7 @@ mod tests {
                     fnetemul::ChildDef {
                         url: Some(COUNTER_PACKAGE_URL.to_string()),
                         name: Some("counter-with-devfs".to_string()),
-                        exposes: Some(vec![CounterMarker::SERVICE_NAME.to_string()]),
+                        exposes: Some(vec![CounterMarker::PROTOCOL_NAME.to_string()]),
                         uses: Some(fnetemul::ChildUses::Capabilities(vec![
                             fnetemul::Capability::LogSink(fnetemul::Empty {}),
                             fnetemul::Capability::NetemulDevfs(fnetemul::Empty {}),

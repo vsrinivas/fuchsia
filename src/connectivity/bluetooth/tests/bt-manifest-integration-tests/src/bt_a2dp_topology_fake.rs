@@ -4,7 +4,7 @@
 
 use {
     anyhow::Error,
-    fidl::endpoints::DiscoverableService,
+    fidl::endpoints::DiscoverableProtocolMarker,
     fidl_fuchsia_bluetooth_a2dp::{AudioModeMarker, AudioModeRequestStream},
     fidl_fuchsia_bluetooth_avdtp as fidl_avdtp, fidl_fuchsia_bluetooth_avrcp as fidl_avrcp,
     fidl_fuchsia_bluetooth_bredr::ProfileMarker,
@@ -43,18 +43,18 @@ async fn main() -> Result<(), Error> {
     let mut fs = ServiceFs::new();
     fs.dir("svc")
         .add_fidl_service(|stream: AudioModeRequestStream| {
-            fasync::Task::local(process_request_stream(stream, AudioModeMarker::SERVICE_NAME))
+            fasync::Task::local(process_request_stream(stream, AudioModeMarker::PROTOCOL_NAME))
                 .detach();
         })
         .add_fidl_service(|stream: fidl_avdtp::PeerManagerRequestStream| {
             fasync::Task::local(process_request_stream(
                 stream,
-                fidl_avdtp::PeerManagerMarker::SERVICE_NAME,
+                fidl_avdtp::PeerManagerMarker::PROTOCOL_NAME,
             ))
             .detach();
         })
         .add_fidl_service(|stream: ControllerRequestStream| {
-            fasync::Task::local(process_request_stream(stream, ControllerMarker::SERVICE_NAME))
+            fasync::Task::local(process_request_stream(stream, ControllerMarker::PROTOCOL_NAME))
                 .detach();
         });
     fs.take_and_serve_directory_handle().expect("Unable to serve ServiceFs requests");

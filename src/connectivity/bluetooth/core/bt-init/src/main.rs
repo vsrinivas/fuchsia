@@ -4,7 +4,7 @@
 
 use {
     anyhow::{format_err, Context as _, Error},
-    fidl::endpoints::{DiscoverableService, ServiceMarker},
+    fidl::endpoints::{DiscoverableProtocolMarker, ProtocolMarker},
     fidl_fuchsia_bluetooth_bredr::ProfileMarker,
     fidl_fuchsia_bluetooth_gatt::Server_Marker,
     fidl_fuchsia_bluetooth_le::{CentralMarker, PeripheralMarker},
@@ -45,9 +45,9 @@ async fn launch_rfcomm(
     // modify bt-rfcomm to accommodate this issue.
     let mut rfcomm_fs = server::ServiceFs::new();
     rfcomm_fs
-        .add_service_at(ProfileMarker::SERVICE_NAME, move |chan| {
+        .add_service_at(ProfileMarker::PROTOCOL_NAME, move |chan| {
             info!("Connecting bt-rfcomm's Profile Service to bt-gap");
-            bt_gap.pass_to_named_protocol(ProfileMarker::SERVICE_NAME, chan).ok();
+            bt_gap.pass_to_named_protocol(ProfileMarker::PROTOCOL_NAME, chan).ok();
             None
         })
         .add_proxy_service::<fidl_fuchsia_logger::LogSinkMarker, _>()
@@ -102,11 +102,11 @@ fn handle_service_req<T: AppAdapter>(
     bt_gap: &T,
 ) {
     let res = match (service_name, bt_rfcomm) {
-        (ProfileMarker::SERVICE_NAME, Some(bt_rfcomm)) => {
+        (ProfileMarker::PROTOCOL_NAME, Some(bt_rfcomm)) => {
             info!("Passing {} handle to bt-rfcomm", service_name);
             bt_rfcomm.pass_channel_to_named_service(service_name, server_channel)
         }
-        (RfcommTestMarker::SERVICE_NAME, Some(bt_rfcomm)) => {
+        (RfcommTestMarker::PROTOCOL_NAME, Some(bt_rfcomm)) => {
             info!("Passing {} handle to bt-rfcomm", service_name);
             bt_rfcomm.pass_channel_to_named_service(service_name, server_channel)
         }
@@ -226,17 +226,17 @@ mod tests {
         let bt_gap = MockApp { last_channel: RefCell::new(None) };
         let bt_rfcomm = MockApp { last_channel: RefCell::new(None) };
         // When bt_rfcomm is present, Profile requests get routed to bt_rfcomm
-        handle_service_req(ProfileMarker::SERVICE_NAME, server_end, Some(&bt_rfcomm), &bt_gap);
+        handle_service_req(ProfileMarker::PROTOCOL_NAME, server_end, Some(&bt_rfcomm), &bt_gap);
         assert_channels_connected(&client_end, bt_rfcomm.last_channel.borrow().as_ref().unwrap());
 
         // When bt_rfcomm is present, non-Profile requests get routed to bt_gap
         let (client_end, server_end) = zx::Channel::create().unwrap();
-        handle_service_req(AccessMarker::SERVICE_NAME, server_end, Some(&bt_rfcomm), &bt_gap);
+        handle_service_req(AccessMarker::PROTOCOL_NAME, server_end, Some(&bt_rfcomm), &bt_gap);
         assert_channels_connected(&client_end, bt_gap.last_channel.borrow().as_ref().unwrap());
 
         // When bt_rfcomm is not present, Profile requests get routed directly to bt_gap
         let (client_end, server_end) = zx::Channel::create().unwrap();
-        handle_service_req(ProfileMarker::SERVICE_NAME, server_end, None, &bt_gap);
+        handle_service_req(ProfileMarker::PROTOCOL_NAME, server_end, None, &bt_gap);
         assert_channels_connected(&client_end, bt_gap.last_channel.borrow().as_ref().unwrap());
     }
 }

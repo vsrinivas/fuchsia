@@ -13,7 +13,7 @@ use {
     carnelian::{
         drawing::DisplayRotation, make_message, AppAssistant, AppContext, ViewAssistantPtr, ViewKey,
     },
-    fidl::endpoints::ServiceMarker,
+    fidl::endpoints::ProtocolMarker,
     fidl_fuchsia_virtualconsole::SessionManagerMarker,
     fuchsia_async as fasync, fuchsia_zircon as zx,
     std::fs::File,

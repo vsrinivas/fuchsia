@@ -24,7 +24,7 @@ use {
     },
     cm_rust::{CapabilityName, ChildDecl, ComponentDecl, EventMode, NativeIntoFidl},
     cm_types::Url,
-    fidl::endpoints::{self, Proxy, ServiceMarker},
+    fidl::endpoints::{self, ProtocolMarker, Proxy},
     fidl_fidl_examples_echo as echo, fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_io::{
         DirectoryMarker, DirectoryProxy, CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_SERVICE,
@@ -132,9 +132,7 @@ pub async fn has_child<'a>(component: &'a ComponentInstance, moniker: &'a str) -
     match *component.lock_state().await {
         InstanceState::Resolved(ref s) => s.all_children().contains_key(&moniker.into()),
         InstanceState::Purged => false,
-        _ => {
-            panic!("not resolved")
-        }
+        _ => panic!("not resolved"),
     }
 }
 
@@ -142,9 +140,7 @@ pub async fn has_child<'a>(component: &'a ComponentInstance, moniker: &'a str) -
 pub async fn get_instance_id<'a>(component: &'a ComponentInstance, moniker: &'a str) -> u32 {
     match *component.lock_state().await {
         InstanceState::Resolved(ref s) => s.get_live_child_instance_id(&moniker.into()).unwrap(),
-        _ => {
-            panic!("not resolved")
-        }
+        _ => panic!("not resolved"),
     }
 }
 
@@ -153,9 +149,7 @@ pub async fn get_live_children(component: &ComponentInstance) -> HashSet<Partial
     match *component.lock_state().await {
         InstanceState::Resolved(ref s) => s.live_children().map(|(m, _)| m.clone()).collect(),
         InstanceState::Purged => HashSet::new(),
-        _ => {
-            panic!("not resolved")
-        }
+        _ => panic!("not resolved"),
     }
 }
 
@@ -166,9 +160,7 @@ pub async fn get_live_child<'a>(
 ) -> Arc<ComponentInstance> {
     match *component.lock_state().await {
         InstanceState::Resolved(ref s) => s.get_live_child(&child.into()).unwrap().clone(),
-        _ => {
-            panic!("not resolved")
-        }
+        _ => panic!("not resolved"),
     }
 }
 
@@ -259,16 +251,16 @@ pub async fn call_echo<'a>(root_proxy: &'a DirectoryProxy, path: &'a str) -> Str
 }
 
 /// Create a `DirectoryEntry` and `Channel` pair. The created `DirectoryEntry`
-/// provides the service `S`, sending all requests to the returned channel.
-pub fn create_service_directory_entry<S>(
-) -> (Arc<dyn DirectoryEntry>, futures::channel::mpsc::Receiver<fidl::endpoints::Request<S>>)
+/// provides the service `P`, sending all requests to the returned channel.
+pub fn create_service_directory_entry<P>(
+) -> (Arc<dyn DirectoryEntry>, futures::channel::mpsc::Receiver<fidl::endpoints::Request<P>>)
 where
-    S: fidl::endpoints::ServiceMarker,
-    fidl::endpoints::Request<S>: Send,
+    P: fidl::endpoints::ProtocolMarker,
+    fidl::endpoints::Request<P>: Send,
 {
     use futures::sink::SinkExt;
     let (sender, receiver) = futures::channel::mpsc::channel(0);
-    let entry = service::host(move |mut stream: S::RequestStream| {
+    let entry = service::host(move |mut stream: P::RequestStream| {
         let mut sender = sender.clone();
         async move {
             while let Ok(Some(request)) = stream.try_next().await {

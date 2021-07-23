@@ -7,7 +7,7 @@
 
 use anyhow::Context as _;
 use ffx_core::ffx_plugin;
-use fidl::endpoints::ServiceMarker;
+use fidl::endpoints::ProtocolMarker;
 use fidl_fuchsia_developer_remotecontrol as fremotecontrol;
 use fidl_fuchsia_net_filter as ffilter;
 use fidl_fuchsia_net_neighbor as fneighbor;
@@ -25,7 +25,7 @@ struct FfxConnector {
     remote_control: fremotecontrol::RemoteControlProxy,
 }
 
-async fn remotecontrol_connect<S: ServiceMarker>(
+async fn remotecontrol_connect<S: ProtocolMarker>(
     remote_control: &fremotecontrol::RemoteControlProxy,
     selector: &str,
 ) -> Result<S::Proxy, anyhow::Error> {
@@ -44,7 +44,7 @@ async fn remotecontrol_connect<S: ServiceMarker>(
 impl net_cli::ServiceConnector<fstack::StackMarker> for FfxConnector {
     async fn connect(
         &self,
-    ) -> Result<<fstack::StackMarker as ServiceMarker>::Proxy, anyhow::Error> {
+    ) -> Result<<fstack::StackMarker as ProtocolMarker>::Proxy, anyhow::Error> {
         let Self { remote_control } = &self;
         remotecontrol_connect::<fstack::StackMarker>(remote_control, STACK_SELECTOR).await
     }
@@ -54,7 +54,7 @@ impl net_cli::ServiceConnector<fstack::StackMarker> for FfxConnector {
 impl net_cli::ServiceConnector<fnetstack::NetstackMarker> for FfxConnector {
     async fn connect(
         &self,
-    ) -> Result<<fnetstack::NetstackMarker as ServiceMarker>::Proxy, anyhow::Error> {
+    ) -> Result<<fnetstack::NetstackMarker as ProtocolMarker>::Proxy, anyhow::Error> {
         let Self { remote_control } = &self;
         remotecontrol_connect::<fnetstack::NetstackMarker>(remote_control, NETSTACK_SELECTOR).await
     }
@@ -64,7 +64,7 @@ impl net_cli::ServiceConnector<fnetstack::NetstackMarker> for FfxConnector {
 impl net_cli::ServiceConnector<ffilter::FilterMarker> for FfxConnector {
     async fn connect(
         &self,
-    ) -> Result<<ffilter::FilterMarker as ServiceMarker>::Proxy, anyhow::Error> {
+    ) -> Result<<ffilter::FilterMarker as ProtocolMarker>::Proxy, anyhow::Error> {
         let Self { remote_control } = &self;
         remotecontrol_connect::<ffilter::FilterMarker>(remote_control, FILTER_SELECTOR).await
     }
@@ -72,7 +72,7 @@ impl net_cli::ServiceConnector<ffilter::FilterMarker> for FfxConnector {
 
 #[async_trait::async_trait]
 impl net_cli::ServiceConnector<fstack::LogMarker> for FfxConnector {
-    async fn connect(&self) -> Result<<fstack::LogMarker as ServiceMarker>::Proxy, anyhow::Error> {
+    async fn connect(&self) -> Result<<fstack::LogMarker as ProtocolMarker>::Proxy, anyhow::Error> {
         let Self { remote_control } = &self;
         remotecontrol_connect::<fstack::LogMarker>(remote_control, LOG_SELECTOR).await
     }
@@ -82,7 +82,7 @@ impl net_cli::ServiceConnector<fstack::LogMarker> for FfxConnector {
 impl net_cli::ServiceConnector<fneighbor::ControllerMarker> for FfxConnector {
     async fn connect(
         &self,
-    ) -> Result<<fneighbor::ControllerMarker as ServiceMarker>::Proxy, anyhow::Error> {
+    ) -> Result<<fneighbor::ControllerMarker as ProtocolMarker>::Proxy, anyhow::Error> {
         let Self { remote_control } = &self;
         remotecontrol_connect::<fneighbor::ControllerMarker>(
             remote_control,
@@ -96,7 +96,7 @@ impl net_cli::ServiceConnector<fneighbor::ControllerMarker> for FfxConnector {
 impl net_cli::ServiceConnector<fneighbor::ViewMarker> for FfxConnector {
     async fn connect(
         &self,
-    ) -> Result<<fneighbor::ViewMarker as ServiceMarker>::Proxy, anyhow::Error> {
+    ) -> Result<<fneighbor::ViewMarker as ProtocolMarker>::Proxy, anyhow::Error> {
         let Self { remote_control } = &self;
         remotecontrol_connect::<fneighbor::ViewMarker>(remote_control, NEIGHBOR_VIEW_SELECTOR).await
     }

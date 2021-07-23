@@ -4,7 +4,7 @@
 
 use {
     anyhow::{Context as _, Error},
-    fidl::endpoints::ServiceMarker,
+    fidl::endpoints::ProtocolMarker,
     fidl_fuchsia_net_dhcp::{Server_Marker, Server_Proxy},
     fuchsia_async as fasync,
 };

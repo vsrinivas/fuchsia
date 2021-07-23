@@ -243,10 +243,10 @@ impl<'a> TestEnvironment<'a> {
     /// Connects to a service within the environment.
     pub fn connect_to_service<S>(&self) -> Result<S::Proxy>
     where
-        S: fidl::endpoints::ServiceMarker + fidl::endpoints::DiscoverableService,
+        S: fidl::endpoints::DiscoverableProtocolMarker,
     {
         let (proxy, server) = zx::Channel::create()?;
-        let () = self.environment.connect_to_service(S::SERVICE_NAME, server)?;
+        let () = self.environment.connect_to_service(S::PROTOCOL_NAME, server)?;
         let proxy = fuchsia_async::Channel::from_channel(proxy)?;
         Ok(<S::Proxy as fidl::endpoints::Proxy>::from_channel(proxy))
     }

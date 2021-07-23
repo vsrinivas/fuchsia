@@ -98,8 +98,8 @@ pub(super) trait Device {
     /// devices.
     const PATH: &'static str;
 
-    /// The service this device implements.
-    type ServiceMarker: fidl::endpoints::ServiceMarker;
+    /// The protocol this device implements.
+    type ProtocolMarker: fidl::endpoints::ProtocolMarker;
 
     /// The type returned by [`device_info_and_mac`].
     type DeviceInfo: DeviceInfo;
@@ -111,7 +111,7 @@ pub(super) trait Device {
     /// of the device.
     ///
     /// It is expected that the node at `filepath` implements `fuchsia.device/Controller`
-    /// and `Self::ServiceMarker`.
+    /// and `Self::ProtocolMarker`.
     async fn get_topo_path_and_device(
         filepath: &std::path::PathBuf,
     ) -> Result<(String, Self::DeviceInstance), errors::Error>;
@@ -146,7 +146,7 @@ pub(super) enum EthernetDevice {}
 impl Device for EthernetDevice {
     const NAME: &'static str = "ethdev";
     const PATH: &'static str = "class/ethernet";
-    type ServiceMarker = feth::DeviceMarker;
+    type ProtocolMarker = feth::DeviceMarker;
     type DeviceInfo = feth_ext::EthernetInfo;
     type DeviceInstance = feth::DeviceProxy;
 
@@ -226,7 +226,7 @@ pub(super) struct NetworkDeviceInstance {
 impl Device for NetworkDevice {
     const NAME: &'static str = "netdev";
     const PATH: &'static str = "class/network";
-    type ServiceMarker = fhwnet::DeviceInstanceMarker;
+    type ProtocolMarker = fhwnet::DeviceInstanceMarker;
     type DeviceInfo = fhwnet::PortInfo;
     type DeviceInstance = NetworkDeviceInstance;
 
@@ -361,7 +361,7 @@ impl Device for NetworkDevice {
 ///
 /// It is expected that the node at `filepath` implements `fuchsia.device/Controller`
 /// and `S`.
-async fn get_topo_path_and_device<S: fidl::endpoints::ServiceMarker>(
+async fn get_topo_path_and_device<S: fidl::endpoints::ProtocolMarker>(
     filepath: &std::path::PathBuf,
 ) -> Result<(String, S::Proxy), errors::Error> {
     let filepath = filepath

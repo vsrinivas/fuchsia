@@ -11,7 +11,7 @@
 use {
     async_trait::async_trait,
     fidl,
-    fidl::endpoints::{DiscoverableService, Proxy, UnifiedServiceMarker},
+    fidl::endpoints::{DiscoverableProtocolMarker, Proxy, UnifiedServiceMarker},
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_mem as fmem,
     fidl_fuchsia_session::{Annotation, Annotations, ElementSpec, Value},
     fidl_fuchsia_sys as fsys, fidl_fuchsia_sys2 as fsys2, fuchsia_async as fasync,
@@ -276,16 +276,18 @@ impl Element {
     /// Connect to a service provided by the `Element`.
     ///
     /// # Type Parameters
-    /// - S: A FIDL service `Marker` type.
+    /// - P: A FIDL service `Marker` type.
     ///
     /// # Returns
     /// - A service `Proxy` matching the `Marker`, or an error if the service is not available from
     /// the `Element`.
     #[inline]
-    pub fn connect_to_service<S: DiscoverableService>(&self) -> Result<S::Proxy, anyhow::Error> {
+    pub fn connect_to_service<P: DiscoverableProtocolMarker>(
+        &self,
+    ) -> Result<P::Proxy, anyhow::Error> {
         let (client_channel, server_channel) = zx::Channel::create()?;
-        self.connect_to_service_with_channel::<S>(server_channel)?;
-        Ok(S::Proxy::from_channel(fasync::Channel::from_channel(client_channel)?))
+        self.connect_to_service_with_channel::<P>(server_channel)?;
+        Ok(P::Proxy::from_channel(fasync::Channel::from_channel(client_channel)?))
     }
 
     /// Connect to a FIDL Unified Service provided by the `Element`.
@@ -306,7 +308,7 @@ impl Element {
     /// Connect to a service by passing a channel for the server.
     ///
     /// # Type Parameters
-    /// - S: A FIDL service `Marker` type.
+    /// - P: A FIDL service `Marker` type.
     ///
     /// # Parameters
     /// - server_channel: The server-side endpoint of a channel pair, to bind to the requested
@@ -315,11 +317,11 @@ impl Element {
     /// # Returns
     /// - Result::Ok or an error if the service is not available from the `Element`.
     #[inline]
-    pub fn connect_to_service_with_channel<S: DiscoverableService>(
+    pub fn connect_to_service_with_channel<P: DiscoverableProtocolMarker>(
         &self,
         server_channel: zx::Channel,
     ) -> Result<(), anyhow::Error> {
-        self.connect_to_named_service_with_channel(S::SERVICE_NAME, server_channel)
+        self.connect_to_named_service_with_channel(P::PROTOCOL_NAME, server_channel)
     }
 
     /// Connect to a service by name.

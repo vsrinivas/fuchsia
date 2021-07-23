@@ -4,7 +4,7 @@
 use {
     crate::events::types::InspectData,
     anyhow::{format_err, Error},
-    fidl::endpoints::{DiscoverableService, Proxy},
+    fidl::endpoints::{DiscoverableProtocolMarker, Proxy},
     fidl_fuchsia_inspect::TreeMarker,
     fidl_fuchsia_inspect_deprecated::InspectMarker,
     fidl_fuchsia_io::{DirectoryProxy, NodeInfo},
@@ -137,13 +137,13 @@ impl InspectDataCollector {
         };
     }
 
-    fn maybe_load_service<S: DiscoverableService>(
+    fn maybe_load_service<P: DiscoverableProtocolMarker>(
         &self,
         dir_proxy: &DirectoryProxy,
         entry: &files_async::DirEntry,
-    ) -> Result<Option<S::Proxy>, Error> {
-        if entry.name.ends_with(S::SERVICE_NAME) {
-            let (proxy, server) = fidl::endpoints::create_proxy::<S>()?;
+    ) -> Result<Option<P::Proxy>, Error> {
+        if entry.name.ends_with(P::PROTOCOL_NAME) {
+            let (proxy, server) = fidl::endpoints::create_proxy::<P>()?;
             fdio::service_connect_at(
                 dir_proxy.as_channel().as_ref(),
                 &entry.name,
@@ -184,7 +184,7 @@ mod tests {
         crate::events::types::InspectData,
         diagnostics_hierarchy::DiagnosticsHierarchy,
         fdio,
-        fidl::endpoints::DiscoverableService,
+        fidl::endpoints::DiscoverableProtocolMarker,
         fidl_fuchsia_inspect::TreeMarker,
         fuchsia_async as fasync,
         fuchsia_component::server::ServiceFs,
@@ -323,7 +323,7 @@ mod tests {
                 let extra_data = collector.take_data().expect("collector missing data");
                 assert_eq!(1, extra_data.len());
 
-                let extra = extra_data.get(TreeMarker::SERVICE_NAME);
+                let extra = extra_data.get(TreeMarker::PROTOCOL_NAME);
                 assert!(extra.is_some());
 
                 match extra.unwrap() {

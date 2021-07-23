@@ -47,7 +47,7 @@ struct Driver {
     proxy: ftemperature::DeviceProxy,
 }
 
-pub fn connect_proxy<T: fidl::endpoints::ServiceMarker>(path: &str) -> Result<T::Proxy> {
+pub fn connect_proxy<T: fidl::endpoints::ProtocolMarker>(path: &str) -> Result<T::Proxy> {
     let (proxy, server) = fidl::endpoints::create_proxy::<T>()
         .map_err(|e| format_err!("Failed to create proxy: {}", e))?;
 

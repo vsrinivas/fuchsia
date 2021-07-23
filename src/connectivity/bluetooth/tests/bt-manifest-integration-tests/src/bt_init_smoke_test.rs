@@ -6,7 +6,7 @@ use {
     anyhow::Error,
     bt_manifest_integration_lib::{add_fidl_service_handler, mock_dev},
     fdio,
-    fidl::endpoints::{DiscoverableService, Proxy},
+    fidl::endpoints::{DiscoverableProtocolMarker, Proxy},
     fidl_fuchsia_bluetooth_bredr::{ProfileMarker, ProfileProxy},
     fidl_fuchsia_bluetooth_gatt as fbgatt, fidl_fuchsia_bluetooth_le as fble,
     fidl_fuchsia_bluetooth_rfcomm_test::{RfcommTestMarker, RfcommTestProxy},
@@ -119,14 +119,17 @@ async fn mock_provider(sender: mpsc::Sender<Event>, handles: MockHandles) -> Res
     let mut fs = ServiceFs::new();
     let svc_dir = handles.clone_from_namespace("svc")?;
     let sender_clone = Some(sender.clone());
-    fs.dir("svc").add_service_at(SecureStoreMarker::SERVICE_NAME, move |chan| {
+    fs.dir("svc").add_service_at(SecureStoreMarker::PROTOCOL_NAME, move |chan| {
         let mut s = sender_clone.clone();
         let svc_dir = Clone::clone(&svc_dir);
         fasync::Task::local(async move {
-            info!("Proxying {} connection to real implementation", SecureStoreMarker::SERVICE_NAME);
+            info!(
+                "Proxying {} connection to real implementation",
+                SecureStoreMarker::PROTOCOL_NAME
+            );
             fdio::service_connect_at(
                 svc_dir.as_channel().as_ref(),
-                SecureStoreMarker::SERVICE_NAME,
+                SecureStoreMarker::PROTOCOL_NAME,
                 chan,
             )
             .expect("unable to forward secure store");
@@ -148,13 +151,13 @@ async fn mock_provider(sender: mpsc::Sender<Event>, handles: MockHandles) -> Res
 }
 
 // Helper for the common case of routing between bt-init and its mock client.
-fn route_from_bt_init_to_mock_client<S: DiscoverableService>(builder: &mut RealmBuilder) {
+fn route_from_bt_init_to_mock_client<S: DiscoverableProtocolMarker>(builder: &mut RealmBuilder) {
     builder
         .add_protocol_route::<S>(
             RouteEndpoint::component(BT_INIT_MONIKER),
             vec![RouteEndpoint::component(MOCK_CLIENT_MONIKER)],
         )
-        .expect(&format!("failed routing {} from bt-init to mock client", S::SERVICE_NAME));
+        .expect(&format!("failed routing {} from bt-init to mock client", S::PROTOCOL_NAME));
 }
 
 /// Tests that the v2 bt-init component has the correct topology and verifies

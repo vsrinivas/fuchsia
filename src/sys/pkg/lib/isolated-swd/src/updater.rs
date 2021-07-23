@@ -4,7 +4,7 @@
 use {
     crate::{cache::Cache, resolver::Resolver},
     anyhow::{anyhow, Context, Error},
-    fidl::endpoints::{ClientEnd, DiscoverableService},
+    fidl::endpoints::{ClientEnd, DiscoverableProtocolMarker},
     fidl_fuchsia_io::DirectoryMarker,
     fidl_fuchsia_paver::{BootManagerMarker, Configuration, PaverMarker, PaverProxy},
     fidl_fuchsia_pkg::{PackageCacheMarker, PackageResolverMarker},
@@ -83,7 +83,7 @@ impl Updater {
 
         let (paver_proxy, remote) =
             fidl::endpoints::create_proxy::<PaverMarker>().context("Creating paver proxy")?;
-        fdio::service_connect_at(&paver, PaverMarker::SERVICE_NAME, remote.into_channel())
+        fdio::service_connect_at(&paver, PaverMarker::PROTOCOL_NAME, remote.into_channel())
             .context("Connecting to paver")?;
 
         let env = fs.create_salted_nested_environment("isolated-swd-updater-env")?;

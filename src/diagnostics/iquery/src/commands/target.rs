@@ -7,7 +7,7 @@ use {
     async_trait::async_trait,
     diagnostics_data::{Data, DiagnosticsData},
     diagnostics_reader::ArchiveReader,
-    fidl::endpoints::DiscoverableService,
+    fidl::endpoints::DiscoverableProtocolMarker,
     fidl_fuchsia_diagnostics::{ArchiveAccessorMarker, ArchiveAccessorProxy},
     fidl_fuchsia_io as fio,
     files_async::{self, DirentKind},
@@ -95,7 +95,7 @@ async fn connect_to_archive_at(glob_path: &str) -> Result<ArchiveAccessorProxy, 
                         while let Some(result) = stream.next().await {
                             if let Ok(entry) = result {
                                 if entry.kind == DirentKind::Service
-                                    && entry.name.ends_with(ArchiveAccessorMarker::SERVICE_NAME)
+                                    && entry.name.ends_with(ArchiveAccessorMarker::PROTOCOL_NAME)
                                 {
                                     let accessor_path = format!("{}/{}", path_str, entry.name);
                                     return client::connect_to_protocol_at_path::<

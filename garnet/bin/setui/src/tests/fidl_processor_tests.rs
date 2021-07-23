@@ -8,7 +8,7 @@ use crate::message::MessageHubUtil;
 use crate::service;
 use crate::ExitSender;
 use anyhow::format_err;
-use fidl::endpoints::{Request, ServiceMarker};
+use fidl::endpoints::{ProtocolMarker, Request};
 use fidl_fuchsia_settings::{
     Error, PrivacyMarker, PrivacyProxy, PrivacyRequest, PrivacySetResult, PrivacySettings,
 };
@@ -17,36 +17,36 @@ use futures::task::Poll;
 use futures::{pin_mut, FutureExt};
 use matches::assert_matches;
 
-type RequestCallback<S> = Box<dyn Fn(Request<S>, ExitSender) -> RequestResultCreator<'static, S>>;
+type RequestCallback<P> = Box<dyn Fn(Request<P>, ExitSender) -> RequestResultCreator<'static, P>>;
 
 /// A super simple processing unit that just calls its `RequestCallback` immediately when `process`
 /// is called.
-struct TestProcessingUnit<S = PrivacyMarker>
+struct TestProcessingUnit<P = PrivacyMarker>
 where
-    S: ServiceMarker,
+    P: ProtocolMarker,
 {
-    callback: RequestCallback<S>,
+    callback: RequestCallback<P>,
 }
 
-impl<S> TestProcessingUnit<S>
+impl<P> TestProcessingUnit<P>
 where
-    S: ServiceMarker,
+    P: ProtocolMarker,
 {
-    fn new(callback: RequestCallback<S>) -> Self {
+    fn new(callback: RequestCallback<P>) -> Self {
         Self { callback }
     }
 }
 
-impl<S> ProcessingUnit<S> for TestProcessingUnit<S>
+impl<P> ProcessingUnit<P> for TestProcessingUnit<P>
 where
-    S: ServiceMarker,
+    P: ProtocolMarker,
 {
     fn process(
         &self,
         _service_messenger: service::message::Messenger,
-        request: Request<S>,
+        request: Request<P>,
         exit_tx: ExitSender,
-    ) -> RequestResultCreator<'static, S> {
+    ) -> RequestResultCreator<'static, P> {
         (self.callback)(request, exit_tx)
     }
 }

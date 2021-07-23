@@ -4,7 +4,7 @@
 
 use archivist_lib::logs::message::fx_log_packet_t;
 use fidl::{
-    endpoints::{ClientEnd, ServerEnd, ServiceMarker},
+    endpoints::{ClientEnd, ProtocolMarker, ServerEnd},
     Socket, SocketOpts,
 };
 use fidl_fuchsia_diagnostics_test::ControllerMarker;

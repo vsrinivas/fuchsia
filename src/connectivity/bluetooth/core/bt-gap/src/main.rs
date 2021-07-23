@@ -7,7 +7,7 @@
 use {
     anyhow::{format_err, Context as _, Error},
     async_helpers::hanging_get::asynchronous as hanging_get,
-    fidl::endpoints::{DiscoverableService, ServiceMarker},
+    fidl::endpoints::{DiscoverableProtocolMarker, ProtocolMarker},
     fidl_fuchsia_bluetooth::Appearance,
     fidl_fuchsia_bluetooth_bredr::ProfileMarker,
     fidl_fuchsia_bluetooth_gatt::{LocalServiceDelegateRequest, Server_Marker},
@@ -234,8 +234,8 @@ async fn serve_fidl(hd: HostDispatcher, inspect: fuchsia_inspect::Inspector) -> 
             host_service_handler(&hd, Server_Marker::DEBUG_NAME, LeGatt),
         )
         .add_service_at(
-            ProfileMarker::SERVICE_NAME,
-            host_service_handler(&hd, ProfileMarker::SERVICE_NAME, Profile),
+            ProfileMarker::PROTOCOL_NAME,
+            host_service_handler(&hd, ProfileMarker::PROTOCOL_NAME, Profile),
         )
         // TODO(fxbug.dev/1496) - according fuchsia.bluetooth.sys/bootstrap.fidl, the bootstrap service should
         // only be available before initialization, and only allow a single commit before becoming

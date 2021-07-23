@@ -5,7 +5,7 @@
 use std::sync::Arc;
 
 use anyhow::{format_err, Error};
-use fidl::endpoints::{ServerEnd, ServiceMarker};
+use fidl::endpoints::{ProtocolMarker, ServerEnd};
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 use futures::TryStreamExt;

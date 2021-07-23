@@ -7,7 +7,7 @@
 use {
     crate::{error::*, mock, Moniker, Realm},
     anyhow, cm_rust,
-    fidl::endpoints::DiscoverableService,
+    fidl::endpoints::DiscoverableProtocolMarker,
     fidl_fuchsia_io2 as fio2, fidl_fuchsia_realm_builder as ffrb, fuchsia_async as fasync,
     futures::{future::BoxFuture, FutureExt},
     maplit::hashmap,
@@ -353,13 +353,13 @@ impl RealmBuilder {
 
     /// Adds a protocol capability route between the `source` endpoint and
     /// the provided `targets`.
-    pub fn add_protocol_route<S: DiscoverableService>(
+    pub fn add_protocol_route<P: DiscoverableProtocolMarker>(
         &mut self,
         source: RouteEndpoint,
         targets: Vec<RouteEndpoint>,
     ) -> Result<&mut Self, Error> {
         self.add_route(CapabilityRoute {
-            capability: Capability::protocol(S::SERVICE_NAME),
+            capability: Capability::protocol(P::PROTOCOL_NAME),
             source,
             targets,
         })

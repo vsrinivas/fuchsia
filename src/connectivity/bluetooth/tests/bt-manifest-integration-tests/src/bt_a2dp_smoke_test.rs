@@ -5,7 +5,7 @@
 use {
     anyhow::Error,
     bt_manifest_integration_lib::add_fidl_service_handler,
-    fidl::endpoints::DiscoverableService,
+    fidl::endpoints::DiscoverableProtocolMarker,
     fidl_fuchsia_bluetooth_a2dp as fidl_a2dp, fidl_fuchsia_bluetooth_avdtp as fidl_avdtp,
     fidl_fuchsia_bluetooth_avrcp as fidl_avrcp,
     fidl_fuchsia_bluetooth_bredr::{ProfileMarker, ProfileRequestStream},
@@ -170,7 +170,7 @@ const A2DP_CLIENT_MONIKER: &str = "fake-a2dp-client";
 /// Local name of the component which provides services used by A2DP in the Realm.
 const SERVICE_PROVIDER_MONIKER: &str = "fake-service-provider";
 
-fn add_a2dp_dependency_route<S: DiscoverableService>(builder: &mut RealmBuilder) {
+fn add_a2dp_dependency_route<S: DiscoverableProtocolMarker>(builder: &mut RealmBuilder) {
     builder
         .add_protocol_route::<S>(
             RouteEndpoint::component(SERVICE_PROVIDER_MONIKER),

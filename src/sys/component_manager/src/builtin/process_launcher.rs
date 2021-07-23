@@ -372,7 +372,7 @@ mod tests {
         super::*,
         crate::model::hooks::Hooks,
         anyhow::{format_err, Context},
-        fidl::endpoints::{ClientEnd, Proxy, ServerEnd, ServiceMarker},
+        fidl::endpoints::{ClientEnd, ProtocolMarker, Proxy, ServerEnd},
         fidl_fuchsia_io as fio,
         fidl_test_processbuilder::{UtilMarker, UtilProxy},
         fuchsia_async as fasync,

@@ -4,7 +4,7 @@
 
 use account_common::{AccountManagerError, ResultExt};
 use anyhow::{format_err, Context as _};
-use fidl::endpoints::{DiscoverableService, ServerEnd};
+use fidl::endpoints::{DiscoverableProtocolMarker, ServerEnd};
 use fidl_fuchsia_identity_account::Error as ApiError;
 use fidl_fuchsia_identity_authentication::StorageUnlockMechanismMarker;
 use fuchsia_component::client::{launch, launcher, App};
@@ -76,6 +76,6 @@ impl AuthenticatorConnection {
 }
 
 /// A marker trait for identifying services that may be provided by an authenticator.
-pub trait AuthenticatorService: DiscoverableService {}
+pub trait AuthenticatorService: DiscoverableProtocolMarker {}
 
 impl AuthenticatorService for StorageUnlockMechanismMarker {}

@@ -7,7 +7,7 @@ use crate::message::base::MessengerType;
 use crate::service;
 
 use anyhow::{format_err, Error};
-use fidl::endpoints::{DiscoverableService, Proxy, ServiceMarker};
+use fidl::endpoints::{DiscoverableProtocolMarker, ProtocolMarker, Proxy};
 use futures::future::{BoxFuture, OptionFuture};
 
 use fuchsia_async as fasync;
@@ -44,47 +44,47 @@ impl ServiceContext {
         maybe.await
     }
 
-    /// Connect to a service with the given ServiceMarker.
+    /// Connect to a service with the given ProtocolMarker.
     ///
     /// If a GenerateService was specified at creation, the name of the service marker will be used
     /// to generate a service.
-    pub(crate) async fn connect<S: DiscoverableService>(
+    pub(crate) async fn connect<P: DiscoverableProtocolMarker>(
         &self,
-    ) -> Result<ExternalServiceProxy<S::Proxy>, Error> {
+    ) -> Result<ExternalServiceProxy<P::Proxy>, Error> {
         let proxy = if let Some(generate_service) = &self.generate_service {
             let (client, server) = zx::Channel::create()?;
-            ((generate_service)(S::SERVICE_NAME, server)).await?;
-            S::Proxy::from_channel(fasync::Channel::from_channel(client)?)
+            ((generate_service)(P::PROTOCOL_NAME, server)).await?;
+            P::Proxy::from_channel(fasync::Channel::from_channel(client)?)
         } else {
-            connect_to_protocol::<S>()?
+            connect_to_protocol::<P>()?
         };
 
         Ok(ExternalServiceProxy::new(proxy, self.make_publisher().await))
     }
 
-    pub(crate) async fn connect_with_publisher<S: DiscoverableService>(
+    pub(crate) async fn connect_with_publisher<P: DiscoverableProtocolMarker>(
         &self,
         publisher: Publisher,
-    ) -> Result<ExternalServiceProxy<S::Proxy>, Error> {
+    ) -> Result<ExternalServiceProxy<P::Proxy>, Error> {
         let proxy = if let Some(generate_service) = &self.generate_service {
             let (client, server) = zx::Channel::create()?;
-            ((generate_service)(S::SERVICE_NAME, server)).await?;
-            S::Proxy::from_channel(fasync::Channel::from_channel(client)?)
+            ((generate_service)(P::PROTOCOL_NAME, server)).await?;
+            P::Proxy::from_channel(fasync::Channel::from_channel(client)?)
         } else {
-            connect_to_protocol::<S>()?
+            connect_to_protocol::<P>()?
         };
 
         Ok(ExternalServiceProxy::new(proxy, Some(publisher)))
     }
 
-    /// Connect to a service with the given name and ServiceMarker.
+    /// Connect to a service with the given name and ProtocolMarker.
     ///
     /// If a GenerateService was specified at creation, the given name will be used to generate a
     /// service.
-    pub(crate) async fn connect_named<S: ServiceMarker>(
+    pub(crate) async fn connect_named<P: ProtocolMarker>(
         &self,
         service_name: &str,
-    ) -> Result<ExternalServiceProxy<S::Proxy>, Error> {
+    ) -> Result<ExternalServiceProxy<P::Proxy>, Error> {
         if let Some(generate_service) = &self.generate_service {
             let (client, server) = zx::Channel::create()?;
             if (generate_service)(service_name, server).await.is_err() {
@@ -92,7 +92,7 @@ impl ServiceContext {
             }
 
             Ok(ExternalServiceProxy::new(
-                S::Proxy::from_channel(fasync::Channel::from_channel(client)?),
+                P::Proxy::from_channel(fasync::Channel::from_channel(client)?),
                 self.make_publisher().await,
             ))
         } else {
@@ -100,15 +100,15 @@ impl ServiceContext {
         }
     }
 
-    /// Connect to a service at the given path and ServiceMarker.
+    /// Connect to a service at the given path and ProtocolMarker.
     ///
     /// If a GenerateService was specified at creation, the name of the service marker will be used
     /// to generate a service and the path will be ignored.
-    pub(crate) async fn connect_path<S: ServiceMarker>(
+    pub(crate) async fn connect_path<P: ProtocolMarker>(
         &self,
         path: &str,
-    ) -> Result<ExternalServiceProxy<S::Proxy>, Error> {
-        let (proxy, server) = fidl::endpoints::create_proxy::<S>()?;
+    ) -> Result<ExternalServiceProxy<P::Proxy>, Error> {
+        let (proxy, server) = fidl::endpoints::create_proxy::<P>()?;
         fdio::service_connect(path, server.into_channel())?;
 
         Ok(ExternalServiceProxy::new(proxy, self.make_publisher().await))
@@ -120,13 +120,13 @@ impl ServiceContext {
     ///
     /// If a GenerateService was specified at creation, the name of the service marker will be used
     /// to generate a service and the path will be ignored.
-    pub(crate) async fn connect_device_path<S: DiscoverableService>(
+    pub(crate) async fn connect_device_path<P: DiscoverableProtocolMarker>(
         &self,
         glob_pattern: &str,
-    ) -> Result<ExternalServiceProxy<S::Proxy>, Error> {
+    ) -> Result<ExternalServiceProxy<P::Proxy>, Error> {
         if self.generate_service.is_some() {
             // If a generate_service is already specified, just connect through there
-            return self.connect::<S>().await;
+            return self.connect::<P>().await;
         }
 
         let found_path = glob(glob_pattern)?
@@ -138,7 +138,7 @@ impl ServiceContext {
             found_path.to_str().ok_or_else(|| format_err!("failed to convert path to str"))?;
 
         Ok(ExternalServiceProxy::new(
-            connect_to_protocol_at_path::<S>(path_str)?,
+            connect_to_protocol_at_path::<P>(path_str)?,
             self.make_publisher().await,
         ))
     }
@@ -173,7 +173,7 @@ where
     fn inspect_result<T>(&self, result: &Result<T, fidl::Error>) {
         if let Err(fidl::Error::ClientChannelClosed { .. }) = result {
             if let Some(p) = self.publisher.as_ref() {
-                p.send_event(Event::Closed(P::Service::DEBUG_NAME));
+                p.send_event(Event::Closed(P::Protocol::DEBUG_NAME));
             }
         }
     }

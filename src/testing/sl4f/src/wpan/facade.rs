@@ -211,7 +211,7 @@ impl WpanFacade {
 mod tests {
     use super::*;
     use crate::wpan::types::{MacAddressFilterItemDto, MacAddressFilterModeDto};
-    use fidl::endpoints::ServiceMarker;
+    use fidl::endpoints::ProtocolMarker;
     use fidl_fuchsia_lowpan_device::{DeviceExtraMarker, DeviceMarker};
     use fidl_fuchsia_lowpan_test::DeviceTestMarker;
     use fuchsia_async as fasync;
@@ -232,7 +232,7 @@ mod tests {
             Self { dummy_device: DummyDevice::default() }
         }
 
-        fn create_endpoints<T: ServiceMarker>() -> (RwLock<Option<T::Proxy>>, T::RequestStream) {
+        fn create_endpoints<T: ProtocolMarker>() -> (RwLock<Option<T::Proxy>>, T::RequestStream) {
             let (client_ep, server_ep) = fidl::endpoints::create_endpoints::<T>().unwrap();
             (RwLock::new(Some(client_ep.into_proxy().unwrap())), server_ep.into_stream().unwrap())
         }

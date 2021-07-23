@@ -76,11 +76,11 @@ fn generate_fake_test_proxy_method(
     quote! {
         #[cfg(test)]
         fn #method_name<R:'static>(mut handle_request: R) -> #qualified_proxy_type
-            where R: FnMut(fidl::endpoints::Request<<#qualified_proxy_type as fidl::endpoints::Proxy>::Service>) + std::marker::Send
+            where R: FnMut(fidl::endpoints::Request<<#qualified_proxy_type as fidl::endpoints::Proxy>::Protocol>) + std::marker::Send
         {
             use futures::TryStreamExt;
             let (proxy, mut stream) =
-                fidl::endpoints::create_proxy_and_stream::<<#qualified_proxy_type as fidl::endpoints::Proxy>::Service>().unwrap();
+                fidl::endpoints::create_proxy_and_stream::<<#qualified_proxy_type as fidl::endpoints::Proxy>::Protocol>().unwrap();
             fuchsia_async::Task::local(async move {
                 while let Ok(Some(req)) = stream.try_next().await {
                     handle_request(req);
@@ -92,11 +92,11 @@ fn generate_fake_test_proxy_method(
 
         #[cfg(test)]
         fn #oneshot_method_name<R:'static>(mut handle_request: R) -> #qualified_proxy_type
-            where R: FnMut(fidl::endpoints::Request<<#qualified_proxy_type as fidl::endpoints::Proxy>::Service>) + std::marker::Send
+            where R: FnMut(fidl::endpoints::Request<<#qualified_proxy_type as fidl::endpoints::Proxy>::Protocol>) + std::marker::Send
         {
             use futures::TryStreamExt;
             let (proxy, mut stream) =
-                fidl::endpoints::create_proxy_and_stream::<<#qualified_proxy_type as fidl::endpoints::Proxy>::Service>().unwrap();
+                fidl::endpoints::create_proxy_and_stream::<<#qualified_proxy_type as fidl::endpoints::Proxy>::Protocol>().unwrap();
             fuchsia_async::Task::local(async move {
                 if let Ok(Some(req)) = stream.try_next().await {
                     handle_request(req);
@@ -352,11 +352,11 @@ fn generate_daemon_service_proxy(
             // TODO(awdavies): When there is a component to test if a service exists, add the test
             // command for it in the daemon.
             let implementation = quote! {
-                let (#output, #server_end) = fidl::endpoints::create_endpoints::<<#path as fidl::endpoints::Proxy>::Service>()?;
+                let (#output, #server_end) = fidl::endpoints::create_endpoints::<<#path as fidl::endpoints::Proxy>::Protocol>()?;
                 let #output = #output.into_proxy()?;
                 let #output_fut;
                 {
-                    let svc_name = <<#path as fidl::endpoints::Proxy>::Service as fidl::endpoints::DiscoverableService>::SERVICE_NAME;
+                    let svc_name = <<#path as fidl::endpoints::Proxy>::Protocol as fidl::endpoints::DiscoverableProtocolMarker>::PROTOCOL_NAME;
                     use futures::TryFutureExt;
                     #output_fut = injector.daemon_factory().await?.connect_to_service(
                         svc_name,
@@ -448,7 +448,7 @@ fn generate_proxy_from_selector(
 ) -> TokenStream {
     quote! {
         let (#output, #server_end) =
-            fidl::endpoints::create_proxy::<<#path as fidl::endpoints::Proxy>::Service>()?;
+            fidl::endpoints::create_proxy::<<#path as fidl::endpoints::Proxy>::Protocol>()?;
         let #selector =
             selectors::parse_selector(#mapping_lit)?;
         let #output_fut =

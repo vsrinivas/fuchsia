@@ -4,7 +4,7 @@
 
 use {
     anyhow::{bail, Context, Result},
-    fidl::endpoints::{create_proxy, DiscoverableService},
+    fidl::endpoints::{create_proxy, DiscoverableProtocolMarker},
     fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys,
     fuchsia_component::client::connect_to_protocol_at_dir_root,
     fuchsia_zircon::Status,
@@ -39,13 +39,15 @@ impl Hub {
 
     /// Connect to a given protocol from the component's exposed directory.
     /// The component must have been resolved by this point.
-    pub async fn connect_to_exposed_protocol<S: DiscoverableService>(&self) -> Result<S::Proxy> {
+    pub async fn connect_to_exposed_protocol<P: DiscoverableProtocolMarker>(
+        &self,
+    ) -> Result<P::Proxy> {
         let in_dir = self
             .dir
             .open_directory("resolved/expose", HUB_RIGHTS)
             .await
             .context("Could not open resolved/expose directory")?;
-        connect_to_protocol_at_dir_root::<S>(&in_dir.proxy)
+        connect_to_protocol_at_dir_root::<P>(&in_dir.proxy)
             .context("Could not open protocol from resolved/expose")
     }
 

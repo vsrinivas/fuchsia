@@ -473,7 +473,7 @@ fidl_struct! {
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct SomeProtocolMarker;
 
-impl fidl::endpoints::ServiceMarker for SomeProtocolMarker {
+impl fidl::endpoints::ProtocolMarker for SomeProtocolMarker {
     type Proxy = SomeProtocolProxy;
     type RequestStream = SomeProtocolRequestStream;
     const DEBUG_NAME: &'static str = "(anonymous) SomeProtocol";
@@ -490,8 +490,8 @@ pub struct SomeProtocolSynchronousProxy {
 #[cfg(target_os = "fuchsia")]
 impl SomeProtocolSynchronousProxy {
     pub fn new(channel: fidl::Channel) -> Self {
-        let service_name = <SomeProtocolMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME;
-        Self { client: fidl::client::sync::Client::new(channel, service_name) }
+        let protocol_name = <SomeProtocolMarker as fidl::endpoints::ProtocolMarker>::DEBUG_NAME;
+        Self { client: fidl::client::sync::Client::new(channel, protocol_name) }
     }
 
     pub fn into_channel(self) -> fidl::Channel {
@@ -511,7 +511,7 @@ pub struct SomeProtocolProxy {
 }
 
 impl fidl::endpoints::Proxy for SomeProtocolProxy {
-    type Service = SomeProtocolMarker;
+    type Protocol = SomeProtocolMarker;
 
     fn from_channel(inner: fidl::AsyncChannel) -> Self {
         Self::new(inner)
@@ -529,8 +529,8 @@ impl fidl::endpoints::Proxy for SomeProtocolProxy {
 impl SomeProtocolProxy {
     /// Create a new Proxy for SomeProtocol
     pub fn new(channel: fidl::AsyncChannel) -> Self {
-        let service_name = <SomeProtocolMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME;
-        Self { client: fidl::client::Client::new(channel, service_name) }
+        let protocol_name = <SomeProtocolMarker as fidl::endpoints::ProtocolMarker>::DEBUG_NAME;
+        Self { client: fidl::client::Client::new(channel, protocol_name) }
     }
 
     /// Get a Stream of events from the remote end of the SomeProtocol protocol
@@ -587,7 +587,7 @@ impl SomeProtocolEvent {
         match tx_header.ordinal() {
             _ => Err(fidl::Error::UnknownOrdinal {
                 ordinal: tx_header.ordinal(),
-                service_name: <SomeProtocolMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
+                protocol_name: <SomeProtocolMarker as fidl::endpoints::ProtocolMarker>::DEBUG_NAME,
             }),
         }
     }
@@ -628,7 +628,7 @@ impl futures::stream::FusedStream for SomeProtocolRequestStream {
 }
 
 impl fidl::endpoints::RequestStream for SomeProtocolRequestStream {
-    type Service = SomeProtocolMarker;
+    type Protocol = SomeProtocolMarker;
 
     /// Consume a channel to make a SomeProtocolRequestStream
     fn from_channel(channel: fidl::AsyncChannel) -> Self {
@@ -691,8 +691,8 @@ impl futures::Stream for SomeProtocolRequestStream {
             std::task::Poll::Ready(Some(match header.ordinal() {
                 _ => Err(fidl::Error::UnknownOrdinal {
                     ordinal: header.ordinal(),
-                    service_name:
-                        <SomeProtocolMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
+                    protocol_name:
+                        <SomeProtocolMarker as fidl::endpoints::ProtocolMarker>::DEBUG_NAME,
                 }),
             }))
         })
@@ -718,7 +718,7 @@ impl SomeProtocolRequestMessage {
         match header.ordinal() {
             _ => Err(fidl::Error::UnknownOrdinal {
                 ordinal: header.ordinal(),
-                service_name: <SomeProtocolMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME,
+                protocol_name: <SomeProtocolMarker as fidl::endpoints::ProtocolMarker>::DEBUG_NAME,
             }),
         }
     }

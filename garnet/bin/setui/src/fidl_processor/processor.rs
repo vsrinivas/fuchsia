@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use anyhow::Error;
-use fidl::endpoints::{Request, ServiceMarker};
+use fidl::endpoints::{ProtocolMarker, Request};
 use futures::future::LocalBoxFuture;
 use futures::{FutureExt, StreamExt, TryStreamExt};
 
@@ -19,14 +19,14 @@ use crate::service;
 use crate::ExitSender;
 use std::hash::Hash;
 
-pub type RequestResultCreator<'a, S> = LocalBoxFuture<'a, Result<Option<Request<S>>, Error>>;
-pub type RequestStream<S> = <S as ServiceMarker>::RequestStream;
+pub type RequestResultCreator<'a, P> = LocalBoxFuture<'a, Result<Option<Request<P>>, Error>>;
+pub type RequestStream<P> = <P as ProtocolMarker>::RequestStream;
 
 /// `ProcessingUnit` is an entity that is able to process a stream request and indicate whether the
 /// request was consumed.
-pub(crate) trait ProcessingUnit<S>
+pub(crate) trait ProcessingUnit<P>
 where
-    S: ServiceMarker,
+    P: ProtocolMarker,
 {
     /// Processes a request provided by the fidl processor.
     ///
@@ -42,28 +42,28 @@ where
     fn process(
         &self,
         service_messenger: service::message::Messenger,
-        request: Request<S>,
+        request: Request<P>,
         exit_tx: ExitSender,
-    ) -> RequestResultCreator<'static, S>;
+    ) -> RequestResultCreator<'static, P>;
 }
 
 /// `BaseFidlProcessor` delegates request processing for setting requests across a number of
 /// processing units. There should be a single FidlProcessor per stream.
-pub struct BaseFidlProcessor<S>
+pub struct BaseFidlProcessor<P>
 where
-    S: ServiceMarker,
+    P: ProtocolMarker,
 {
-    request_stream: RequestStream<S>,
+    request_stream: RequestStream<P>,
     service_messenger: service::message::Messenger,
-    processing_units: Vec<Box<dyn ProcessingUnit<S>>>,
+    processing_units: Vec<Box<dyn ProcessingUnit<P>>>,
 }
 
-impl<S> BaseFidlProcessor<S>
+impl<P> BaseFidlProcessor<P>
 where
-    S: ServiceMarker,
+    P: ProtocolMarker,
 {
     pub(crate) fn new(
-        request_stream: RequestStream<S>,
+        request_stream: RequestStream<P>,
         service_messenger: service::message::Messenger,
     ) -> Self {
         Self { request_stream, service_messenger, processing_units: Vec::new() }
@@ -71,9 +71,9 @@ where
 
     #[cfg(test)]
     pub(crate) fn with_processing_units(
-        request_stream: RequestStream<S>,
+        request_stream: RequestStream<P>,
         service_messenger: service::message::Messenger,
-        processing_units: Vec<Box<dyn ProcessingUnit<S>>>,
+        processing_units: Vec<Box<dyn ProcessingUnit<P>>>,
     ) -> Self {
         Self { request_stream, service_messenger, processing_units }
     }
@@ -123,19 +123,19 @@ where
 /// and receive messages through the service MessageHub.
 ///
 /// [`BaseFidlProcessor`]: struct.BaseFidlProcessor.html
-pub struct SettingsFidlProcessor<S>
+pub struct SettingsFidlProcessor<P>
 where
-    S: ServiceMarker,
+    P: ProtocolMarker,
 {
-    base_processor: BaseFidlProcessor<S>,
+    base_processor: BaseFidlProcessor<P>,
 }
 
-impl<S> SettingsFidlProcessor<S>
+impl<P> SettingsFidlProcessor<P>
 where
-    S: ServiceMarker,
+    P: ProtocolMarker,
 {
     pub(crate) async fn new(
-        stream: RequestStream<S>,
+        stream: RequestStream<P>,
         service_messenger: service::message::Messenger,
     ) -> Self {
         Self { base_processor: BaseFidlProcessor::new(stream, service_messenger) }
@@ -145,14 +145,14 @@ where
     pub(crate) async fn register<V, SV, K>(
         &mut self,
         setting_type: SettingType,
-        callback: SettingsRequestCallback<S, V, SV, K>,
+        callback: SettingsRequestCallback<P, V, SV, K>,
     ) where
         V: From<SettingInfo> + Send + Sync + 'static,
         SV: Sender<V> + Send + Sync + 'static,
         K: Eq + Hash + Clone + Send + Sync + 'static,
     {
         let processing_unit = Box::new(
-            SettingProcessingUnit::<S, V, SV, K>::new(
+            SettingProcessingUnit::<P, V, SV, K>::new(
                 setting_type,
                 self.base_processor.service_messenger.clone(),
                 callback,
@@ -171,27 +171,27 @@ where
 /// send and receive messages through the policy message hub.
 ///
 /// [`BaseFidlProcessor`]: struct.BaseFidlProcessor.html
-pub struct PolicyFidlProcessor<S>
+pub struct PolicyFidlProcessor<P>
 where
-    S: ServiceMarker,
+    P: ProtocolMarker,
 {
-    base_processor: BaseFidlProcessor<S>,
+    base_processor: BaseFidlProcessor<P>,
 }
 
-impl<S> PolicyFidlProcessor<S>
+impl<P> PolicyFidlProcessor<P>
 where
-    S: ServiceMarker,
+    P: ProtocolMarker,
 {
     pub(crate) async fn new(
-        stream: RequestStream<S>,
+        stream: RequestStream<P>,
         service_messenger: service::message::Messenger,
     ) -> Self {
         Self { base_processor: BaseFidlProcessor::new(stream, service_messenger) }
     }
 
     /// Registers a fidl processing unit for policy requests.
-    pub(crate) async fn register(&mut self, callback: PolicyRequestCallback<S>) {
-        let processing_unit = Box::new(PolicyProcessingUnit::<S>::new(callback));
+    pub(crate) async fn register(&mut self, callback: PolicyRequestCallback<P>) {
+        let processing_unit = Box::new(PolicyProcessingUnit::<P>::new(callback));
         self.base_processor.processing_units.push(processing_unit);
     }
 

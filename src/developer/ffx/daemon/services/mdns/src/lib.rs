@@ -5,7 +5,7 @@ use {
     anyhow::{anyhow, Result},
     async_trait::async_trait,
     ffx_core::TryStreamUtilExt,
-    fidl::endpoints::ServiceMarker,
+    fidl::endpoints::ProtocolMarker,
     fidl_fuchsia_developer_bridge as bridge,
     fuchsia_async::Task,
     futures::TryStreamExt,
@@ -163,7 +163,7 @@ impl FidlService for Mdns {
     async fn serve<'a>(
         &'a self,
         cx: &'a Context,
-        stream: <Self::Service as ServiceMarker>::RequestStream,
+        stream: <Self::Service as ProtocolMarker>::RequestStream,
     ) -> Result<()> {
         // This is necessary as we'll be hanging forever waiting on incoming
         // traffic. This will exit early if the stream is closed at any point.

@@ -243,13 +243,13 @@ macro_rules! fidl_hanging_get_responder {
                 use $crate::fidl_common::FidlResponseErrorLogger;
 
                 self.send(data).log_fidl_response_error(
-                    <$marker_type as ::fidl::endpoints::ServiceMarker>::DEBUG_NAME);
+                    <$marker_type as ::fidl::endpoints::ProtocolMarker>::DEBUG_NAME);
             }
 
             fn on_error(self, error: &anyhow::Error) {
                 ::fuchsia_syslog::fx_log_err!(
                     "error occurred watching for service: {:?}. Error is: {:?}",
-                    <$marker_type as ::fidl::endpoints::ServiceMarker>::DEBUG_NAME,
+                    <$marker_type as ::fidl::endpoints::ProtocolMarker>::DEBUG_NAME,
                     error
                 );
                 crate::shutdown_responder_with_error!(self, error);
@@ -267,13 +267,13 @@ macro_rules! fidl_result_sender_for_responder {
                 use $crate::fidl_common::FidlResponseErrorLogger;
 
                 self.send(&mut result).log_fidl_response_error(
-                <$marker_type as ::fidl::endpoints::ServiceMarker>::DEBUG_NAME);
+                <$marker_type as ::fidl::endpoints::ProtocolMarker>::DEBUG_NAME);
             }
 
             fn on_error(self, error:&anyhow::Error) {
                 ::fuchsia_syslog::fx_log_err!(
                     "error occurred watching for service: {:?}. Error is: {:?}",
-                    <$marker_type as ::fidl::endpoints::ServiceMarker>::DEBUG_NAME,
+                    <$marker_type as ::fidl::endpoints::ProtocolMarker>::DEBUG_NAME,
                     error
                 );
                 crate::shutdown_responder_with_error!(self, error);

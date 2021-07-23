@@ -12,7 +12,7 @@ use {
     crate::config::Config,
     crate::device_server::{serve_application_passthrough, serve_device_info_passthrough},
     anyhow::{format_err, Context as _, Error},
-    fidl::endpoints::ServiceMarker,
+    fidl::endpoints::ProtocolMarker,
     fidl_fuchsia_hardware_tee::{DeviceConnectorMarker, DeviceConnectorProxy},
     fidl_fuchsia_tee::{self as fuchsia_tee, DeviceInfoMarker},
     fuchsia_async as fasync,

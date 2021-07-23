@@ -7,7 +7,7 @@
 
 use {
     anyhow::{Context, Error},
-    fidl::endpoints::DiscoverableService,
+    fidl::endpoints::DiscoverableProtocolMarker,
     fidl_fuchsia_sys::{
         EnvironmentControllerEvent, EnvironmentControllerProxy, EnvironmentMarker,
         EnvironmentOptions, EnvironmentProxy, ServiceProviderMarker,
@@ -79,7 +79,7 @@ fn listen_for_component_events(
     let (event_provider, server_end) =
         fidl::endpoints::create_proxy::<ComponentEventProviderMarker>().context("create proxy")?;
     service_provider.connect_to_service(
-        ComponentEventProviderMarker::SERVICE_NAME,
+        ComponentEventProviderMarker::PROTOCOL_NAME,
         server_end.into_channel(),
     )?;
 

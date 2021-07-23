@@ -5,13 +5,13 @@
 //! Helper methods for the `NodeProxy` objects.
 
 use {
-    fidl::endpoints::{create_proxy, ServerEnd, ServiceMarker},
+    fidl::endpoints::{create_proxy, ProtocolMarker, ServerEnd},
     fidl_fuchsia_io::{DirectoryProxy, FileProxy, NodeMarker, NodeProxy},
 };
 
 pub fn open_get_proxy<M>(proxy: &DirectoryProxy, flags: u32, mode: u32, path: &str) -> M::Proxy
 where
-    M: ServiceMarker,
+    M: ProtocolMarker,
 {
     let (new_proxy, new_server_end) =
         create_proxy::<M>().expect("Failed to create connection endpoints");
@@ -39,7 +39,7 @@ pub trait NodeProxyApi {
 /// clone() method.
 pub fn clone_get_proxy<M, Proxy>(proxy: &Proxy, flags: u32) -> M::Proxy
 where
-    M: ServiceMarker,
+    M: ProtocolMarker,
     Proxy: NodeProxyApi,
 {
     let (new_proxy, new_server_end) =

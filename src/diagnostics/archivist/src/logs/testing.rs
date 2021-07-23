@@ -13,7 +13,7 @@ use crate::{
 };
 use async_trait::async_trait;
 use diagnostics_log_encoding::{encode::Encoder, Record};
-use fidl::endpoints::ServiceMarker;
+use fidl::endpoints::ProtocolMarker;
 use fidl_fuchsia_io::DirectoryProxy;
 use fidl_fuchsia_logger::{
     LogFilterOptions, LogLevelFilter, LogMarker, LogMessage, LogProxy, LogSinkMarker, LogSinkProxy,

@@ -8,7 +8,7 @@ use {
     crate::router::Router,
     anyhow::{format_err, Context as _, Error},
     fidl::{
-        endpoints::{ClientEnd, RequestStream, ServiceMarker},
+        endpoints::{ClientEnd, ProtocolMarker, RequestStream},
         AsyncChannel, Channel,
     },
     fidl_fuchsia_overnet::{ServiceProviderRequest, ServiceProviderRequestStream},
@@ -111,7 +111,9 @@ async fn handle_diagnostic_requests(
                         node_description: if_probe_has_bit(
                             selector,
                             ProbeSelector::NodeDescription,
-                            futures::future::ready(node_description(get_router()?.implementation())),
+                            futures::future::ready(node_description(
+                                get_router()?.implementation(),
+                            )),
                         )
                         .await,
                         links: if_probe_has_bit(

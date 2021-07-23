@@ -6,7 +6,7 @@ use {
     crate::error::*,
     anyhow::{format_err, Context as _},
     cm_rust::{self, FidlIntoNative, NativeIntoFidl},
-    fidl::endpoints::{self, ClientEnd, DiscoverableService, Proxy, ServerEnd},
+    fidl::endpoints::{self, ClientEnd, DiscoverableProtocolMarker, Proxy, ServerEnd},
     fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio, fidl_fuchsia_realm_builder as ffrb,
     fidl_fuchsia_sys2 as fsys,
     fuchsia_component::client as fclient,
@@ -519,28 +519,28 @@ impl ScopedInstance {
     }
 
     /// Connect to an instance of a FIDL protocol hosted in the component's exposed directory`,
-    pub fn connect_to_protocol_at_exposed_dir<S: DiscoverableService>(
+    pub fn connect_to_protocol_at_exposed_dir<P: DiscoverableProtocolMarker>(
         &self,
-    ) -> Result<S::Proxy, anyhow::Error> {
-        fclient::connect_to_protocol_at_dir_root::<S>(&self.exposed_dir)
+    ) -> Result<P::Proxy, anyhow::Error> {
+        fclient::connect_to_protocol_at_dir_root::<P>(&self.exposed_dir)
     }
 
     /// Connect to an instance of a FIDL protocol hosted in the component's exposed directory`,
-    pub fn connect_to_named_protocol_at_exposed_dir<S: DiscoverableService>(
+    pub fn connect_to_named_protocol_at_exposed_dir<P: DiscoverableProtocolMarker>(
         &self,
         protocol_name: &str,
-    ) -> Result<S::Proxy, anyhow::Error> {
-        fclient::connect_to_named_protocol_at_dir_root::<S>(&self.exposed_dir, protocol_name)
+    ) -> Result<P::Proxy, anyhow::Error> {
+        fclient::connect_to_named_protocol_at_dir_root::<P>(&self.exposed_dir, protocol_name)
     }
 
     /// Connects to an instance of a FIDL protocol hosted in the component's exposed directory
     /// using the given `server_end`.
-    pub fn connect_request_to_protocol_at_exposed_dir<S: DiscoverableService>(
+    pub fn connect_request_to_protocol_at_exposed_dir<P: DiscoverableProtocolMarker>(
         &self,
-        server_end: ServerEnd<S>,
+        server_end: ServerEnd<P>,
     ) -> Result<(), anyhow::Error> {
         self.connect_request_to_named_service_at_exposed_dir(
-            S::SERVICE_NAME,
+            P::PROTOCOL_NAME,
             server_end.into_channel(),
         )
     }

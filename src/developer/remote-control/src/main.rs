@@ -4,7 +4,7 @@
 
 use {
     anyhow::{Context as _, Error},
-    fidl::endpoints::{ClientEnd, RequestStream, ServiceMarker},
+    fidl::endpoints::{ClientEnd, ProtocolMarker, RequestStream},
     fidl_fuchsia_developer_remotecontrol as rcs,
     fidl_fuchsia_overnet::{ServiceProviderRequest, ServiceProviderRequestStream},
     fuchsia_async as fasync,

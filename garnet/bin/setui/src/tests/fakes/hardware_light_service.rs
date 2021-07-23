@@ -5,8 +5,8 @@
 use crate::light::types::{LightType, LightValue};
 use crate::tests::fakes::base::Service;
 use anyhow::{format_err, Error};
+use fidl::endpoints::ProtocolMarker;
 use fidl::endpoints::ServerEnd;
-use fidl::endpoints::ServiceMarker;
 use fidl_fuchsia_hardware_light::{Info, LightMarker, LightRequest, Rgb};
 use fuchsia_async as fasync;
 use fuchsia_zircon::Channel;

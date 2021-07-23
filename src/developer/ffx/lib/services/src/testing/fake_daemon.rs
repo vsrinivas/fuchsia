@@ -9,7 +9,7 @@ use {
     },
     anyhow::{anyhow, bail, Context as _, Result},
     async_trait::async_trait,
-    fidl::endpoints::{DiscoverableService, Proxy, Request, RequestStream, ServiceMarker},
+    fidl::endpoints::{DiscoverableProtocolMarker, ProtocolMarker, Proxy, Request, RequestStream},
     fidl::server::ServeInner,
     fidl_fuchsia_developer_bridge as bridge, fidl_fuchsia_diagnostics as diagnostics,
     futures::future::LocalBoxFuture,
@@ -18,14 +18,14 @@ use {
     std::sync::Arc,
 };
 
-pub struct ClosureStreamHandler<S: DiscoverableService> {
-    func: Rc<dyn Fn(&Context, Request<S>) -> Result<()>>,
+pub struct ClosureStreamHandler<P: DiscoverableProtocolMarker> {
+    func: Rc<dyn Fn(&Context, Request<P>) -> Result<()>>,
 }
 
 #[async_trait(?Send)]
-impl<S> StreamHandler for ClosureStreamHandler<S>
+impl<P> StreamHandler for ClosureStreamHandler<P>
 where
-    S: DiscoverableService,
+    P: DiscoverableProtocolMarker,
 {
     async fn start(&self, _cx: Context) -> Result<()> {
         Ok(())
@@ -36,7 +36,7 @@ where
         cx: Context,
         server: Arc<ServeInner>,
     ) -> Result<LocalBoxFuture<'static, Result<()>>> {
-        let mut stream = <S as ServiceMarker>::RequestStream::from_inner(server, false);
+        let mut stream = <P as ProtocolMarker>::RequestStream::from_inner(server, false);
         let weak_func = Rc::downgrade(&self.func);
         let fut = Box::pin(async move {
             while let Ok(Some(req)) = stream.try_next().await {
@@ -61,12 +61,12 @@ pub struct FakeDaemon {
 }
 
 impl FakeDaemon {
-    pub async fn open_proxy<S: DiscoverableService>(&self) -> S::Proxy {
+    pub async fn open_proxy<P: DiscoverableProtocolMarker>(&self) -> P::Proxy {
         let client = fidl::AsyncChannel::from_channel(
-            self.open_service_proxy(S::SERVICE_NAME.to_string()).await.unwrap(),
+            self.open_service_proxy(P::PROTOCOL_NAME.to_string()).await.unwrap(),
         )
         .unwrap();
-        S::Proxy::from_channel(client)
+        P::Proxy::from_channel(client)
     }
 
     pub async fn shutdown(&self) -> Result<()> {
@@ -144,16 +144,16 @@ impl FakeDaemonBuilder {
         self
     }
 
-    pub fn register_instanced_service_closure<S, F>(mut self, f: F) -> Self
+    pub fn register_instanced_service_closure<P, F>(mut self, f: F) -> Self
     where
-        S: DiscoverableService,
-        F: Fn(&Context, Request<S>) -> Result<()> + 'static,
+        P: DiscoverableProtocolMarker,
+        F: Fn(&Context, Request<P>) -> Result<()> + 'static,
     {
         if let Some(_) = self.map.insert(
-            S::SERVICE_NAME.to_owned(),
-            Box::new(ClosureStreamHandler::<S> { func: Rc::new(f) }),
+            P::PROTOCOL_NAME.to_owned(),
+            Box::new(ClosureStreamHandler::<P> { func: Rc::new(f) }),
         ) {
-            panic!("duplicate service registered: {:#?}", S::SERVICE_NAME);
+            panic!("duplicate service registered: {:#?}", P::PROTOCOL_NAME);
         }
         self
     }
@@ -164,9 +164,9 @@ impl FakeDaemonBuilder {
     {
         if let Some(_) = self
             .map
-            .insert(F::Service::SERVICE_NAME.to_owned(), Box::new(F::StreamHandler::default()))
+            .insert(F::Service::PROTOCOL_NAME.to_owned(), Box::new(F::StreamHandler::default()))
         {
-            panic!("duplicate service registered under: {}", F::Service::SERVICE_NAME);
+            panic!("duplicate service registered under: {}", F::Service::PROTOCOL_NAME);
         }
         self
     }

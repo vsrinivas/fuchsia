@@ -5,7 +5,7 @@ extern crate proc_macro;
 
 use {
     services::FidlService,
-    fidl::endpoints::DiscoverableService,
+    fidl::endpoints::DiscoverableProtocolMarker,
     proc_macro::TokenStream,
     quote::quote,
     std::collections::HashMap,
@@ -16,7 +16,7 @@ use {
 pub fn generate_service_map(_item: TokenStream) -> TokenStream {
     let mut map = HashMap::<&str, &str>::new();
     {% for dep in deps %}
-    let {{ dep.lib }}_name = <<{{ dep.lib }}::ServiceType as FidlService>::Service as DiscoverableService>::SERVICE_NAME;
+    let {{ dep.lib }}_name = <<{{ dep.lib }}::ServiceType as FidlService>::Service as DiscoverableProtocolMarker>::PROTOCOL_NAME;
     match map.entry({{ dep.lib }}_name) {
         Entry::Occupied(e) => {
             panic!("Service endpoint for {} already registered with library at {}", {{ dep.lib }}_name, e.get());
@@ -26,13 +26,13 @@ pub fn generate_service_map(_item: TokenStream) -> TokenStream {
     {% endfor %}
     let res = quote! {
         {
-            use fidl::endpoints::DiscoverableService;
+            use fidl::endpoints::DiscoverableProtocolMarker;
             use services::{FidlStreamHandler, FidlService};
             use services::NameToStreamHandlerMap;
             let mut map = NameToStreamHandlerMap::new();
             {% for dep in deps %}
             map.insert(
-                <<{{ dep.lib }}::ServiceType as FidlService>::Service as DiscoverableService>::SERVICE_NAME.to_owned(),
+                <<{{ dep.lib }}::ServiceType as FidlService>::Service as DiscoverableProtocolMarker>::PROTOCOL_NAME.to_owned(),
                 Box::new(<{{dep.lib }}::ServiceType as FidlService>::StreamHandler::default()),
             );
             {% endfor %}

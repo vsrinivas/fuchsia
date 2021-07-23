@@ -661,7 +661,7 @@ used for fake proxies in client-side unit tests.
 #### Discoverable
 
 For protocols annotated with the `@discoverable` attribute, the Marker type
-additionally implements the `fidl::endpoints::DiscoverableService` trait.
+additionally implements the `fidl::endpoints::DiscoverableProtocolMarker` trait.
 
 ## Explicit encoding and decoding {#encoding-decoding}
 
