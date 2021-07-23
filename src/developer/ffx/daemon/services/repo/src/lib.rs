@@ -708,8 +708,8 @@ mod tests {
         },
     };
 
-    const REPO_NAME: &str = "some_repo";
-    const TARGET_NODENAME: &str = "some_target";
+    const REPO_NAME: &str = "some-repo";
+    const TARGET_NODENAME: &str = "some-target";
     const EMPTY_REPO_PATH: &str = "host_x64/test_data/ffx_daemon_service_repo/empty-repo";
 
     fn test_repo_config() -> RepositoryConfig {
@@ -1171,8 +1171,8 @@ mod tests {
             assert_matches!(
                 ffx_config::get::<Value, _>(&registration_query(REPO_NAME, TARGET_NODENAME)).await,
                 Ok(reg) if reg == serde_json::json!({
-                    "repo_name": "some_repo",
-                    "target_identifier": "some_target",
+                    "repo_name": "some-repo",
+                    "target_identifier": "some-target",
                     "aliases": ["fuchsia.com", "example.com"],
                     "storage_type": "ephemeral",
                 })
