@@ -2,22 +2,29 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/dart/fidl_move.gni")
-import("//build/flutter/flutter_app.gni")
+import("//build/components.gni")
+import("//build/dart/dart_library.gni")
+import("//build/flutter/flutter_component.gni")
 
-flutter_app("one-flutter") {
-  main_dart = "one-flutter.dart"
-  manifest = "pubspec.yaml"
-  meta = [
-    {
-      path = rebase_path("meta/one-flutter.cmx")
-      dest = "one-flutter.cmx"
-    },
-  ]
+dart_library("lib") {
+  package_name = "one-flutter"
+  sources = [ "one-flutter.dart" ]
   deps = [
     "//sdk/dart/fuchsia_services",
     "//sdk/dart/zircon",
     "//src/ui/tests/integration_input_tests/touch:test.touch",
     "//third_party/dart-pkg/git/flutter/packages/flutter",
   ]
+}
+
+flutter_component("one-flutter-component") {
+  component_name = "one-flutter"
+  manifest = "meta/one-flutter.cmx"
+  main_package = "one-flutter"
+  main_dart = "one-flutter.dart"
+  deps = [ ":lib" ]
+}
+
+fuchsia_package("one-flutter") {
+  deps = [ ":one-flutter-component" ]
 }
