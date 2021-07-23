@@ -7,6 +7,8 @@
 //! This module contains end-to-end and other high-level benchmarks for the
 //! netstack.
 
+#![deny(unused_results)]
+
 use core::time::Duration;
 
 use net_types::ip::Ipv4;
@@ -33,7 +35,9 @@ use crate::testutil::benchmarks::{black_box, Bencher};
 use crate::testutil::{DummyEventDispatcherBuilder, DummyInstant, FakeCryptoRng, DUMMY_CONFIG_V4};
 use crate::transport::udp::UdpEventDispatcher;
 use crate::transport::TransportLayerEventDispatcher;
-use crate::{EventDispatcher, IpLayerEventDispatcher, StackStateBuilder, TimerId};
+use crate::{
+    EventDispatcher, IpLayerEventDispatcher, Ipv4StateBuilder, StackStateBuilder, TimerId,
+};
 
 // NOTE: Extra tests that are too expensive to run during benchmarks can be
 // added by gating them on the `debug_assertions` configuration option. This
@@ -57,7 +61,7 @@ impl<B: BufferMut> DeviceLayerEventDispatcher<B> for BenchmarkEventDispatcher {
         _device: DeviceId,
         frame: S,
     ) -> Result<(), S> {
-        black_box(frame.serialize_no_alloc_outer()).map_err(|(_, ser)| ser)?;
+        let _: B = black_box(frame.serialize_no_alloc_outer()).map_err(|(_, ser)| ser)?;
         #[cfg(debug_assertions)]
         {
             self.frames_sent += 1;
@@ -141,7 +145,7 @@ impl EventDispatcher for BenchmarkEventDispatcher {
 // sizes.
 fn bench_forward_minimum<B: Bencher>(b: &mut B, frame_size: usize) {
     let mut state_builder = StackStateBuilder::default();
-    state_builder.ipv4_builder().forward(true);
+    let _: &mut Ipv4StateBuilder = state_builder.ipv4_builder().forward(true);
 
     // Most tests do not need NDP's DAD or router solicitation so disable it
     // here.
