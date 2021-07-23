@@ -7,7 +7,7 @@ use core::time::Duration;
 
 use crate::context::InstantContext;
 
-// TODO(joshlf): Remove this once Duration::SECOND is stabilized.
+// TODO(https://github.com/rust-lang/rust/issues/57391): Replace this with Duration::SECOND.
 const SECOND: Duration = Duration::from_secs(1);
 
 /// Instead of actually storing the number of tokens, we store the number of
@@ -340,7 +340,7 @@ mod tests {
         let mut bucket = TokenBucket::new(enforced_rate);
         b.iter(|| {
             ctx.sleep(sleep);
-            black_box(bucket.try_take(black_box(&ctx)));
+            let _: bool = black_box(bucket.try_take(black_box(&ctx)));
         });
     }
 
@@ -362,12 +362,12 @@ mod tests {
 #[test]
 fn test_token_bucket_new() {
     // Test that `new` doesn't panic if given 2^56 - 1.
-    TokenBucket::<()>::new((1 << 56) - 1);
+    let _: TokenBucket<()> = TokenBucket::<()>::new((1 << 56) - 1);
 }
 
 #[test]
 #[should_panic]
 fn test_token_bucket_new_panics() {
     // Test that `new` panics if given 2^56
-    TokenBucket::<()>::new(1 << 56);
+    let _: TokenBucket<()> = TokenBucket::<()>::new(1 << 56);
 }

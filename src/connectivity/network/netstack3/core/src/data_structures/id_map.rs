@@ -669,7 +669,7 @@ mod tests {
     #[test]
     fn test_push() {
         let mut map = IdMap::new();
-        map.insert(1, 2);
+        assert_eq!(map.insert(1, 2), None);
         assert_eq!(map.data, vec![free_none(), Allocated(2)]);
         assert_eq!(map.freelist, Some(FreeList::singleton(0)));
         assert_eq!(map.push(1), 0);
@@ -683,50 +683,50 @@ mod tests {
     #[test]
     fn test_get() {
         let mut map = IdMap::new();
-        map.push(1);
-        map.insert(2, 3);
+        assert_eq!(map.push(1), 0);
+        assert_eq!(map.insert(2, 3), None);
         assert_eq!(map.data, vec![Allocated(1), free_none(), Allocated(3)]);
         assert_eq!(map.freelist, Some(FreeList::singleton(1)));
         assert_eq!(*map.get(0).unwrap(), 1);
-        assert!(map.get(1).is_none());
+        assert_eq!(map.get(1), None);
         assert_eq!(*map.get(2).unwrap(), 3);
-        assert!(map.get(3).is_none());
+        assert_eq!(map.get(3), None);
     }
 
     #[test]
     fn test_get_mut() {
         let mut map = IdMap::new();
-        map.push(1);
-        map.insert(2, 3);
+        assert_eq!(map.push(1), 0);
+        assert_eq!(map.insert(2, 3), None);
         assert_eq!(map.data, vec![Allocated(1), free_none(), Allocated(3)]);
         assert_eq!(map.freelist, Some(FreeList::singleton(1)));
         *map.get_mut(2).unwrap() = 10;
         assert_eq!(*map.get(0).unwrap(), 1);
         assert_eq!(*map.get(2).unwrap(), 10);
 
-        assert!(map.get_mut(1).is_none());
-        assert!(map.get_mut(3).is_none());
+        assert_eq!(map.get_mut(1), None);
+        assert_eq!(map.get_mut(3), None);
     }
 
     #[test]
     fn test_is_empty() {
         let mut map = IdMap::<i32>::new();
         assert!(map.is_empty());
-        map.push(1);
+        assert_eq!(map.push(1), 0);
         assert!(!map.is_empty());
     }
 
     #[test]
     fn test_remove() {
         let mut map = IdMap::new();
-        map.push(1);
-        map.push(2);
-        map.push(3);
+        assert_eq!(map.push(1), 0);
+        assert_eq!(map.push(2), 1);
+        assert_eq!(map.push(3), 2);
         assert_eq!(map.data, vec![Allocated(1), Allocated(2), Allocated(3)]);
         assert_eq!(map.freelist, None);
         assert_eq!(map.remove(1).unwrap(), 2);
 
-        assert!(map.remove(1).is_none());
+        assert_eq!(map.remove(1), None);
         assert_eq!(map.data, vec![Allocated(1), free_none(), Allocated(3)]);
         assert_eq!(map.freelist, Some(FreeList::singleton(1)));
     }
@@ -734,8 +734,8 @@ mod tests {
     #[test]
     fn test_remove_compress() {
         let mut map = IdMap::new();
-        map.insert(0, 1);
-        map.insert(2, 3);
+        assert_eq!(map.insert(0, 1), None);
+        assert_eq!(map.insert(2, 3), None);
         assert_eq!(map.data, vec![Allocated(1), free_none(), Allocated(3)]);
         assert_eq!(map.freelist, Some(FreeList::singleton(1)));
         assert_eq!(map.remove(2).unwrap(), 3);
@@ -748,13 +748,13 @@ mod tests {
     #[test]
     fn test_insert() {
         let mut map = IdMap::new();
-        assert!(map.insert(1, 2).is_none());
+        assert_eq!(map.insert(1, 2), None);
         assert_eq!(map.data, vec![free_none(), Allocated(2)]);
         assert_eq!(map.freelist, Some(FreeList::singleton(0)));
-        assert!(map.insert(3, 4).is_none());
+        assert_eq!(map.insert(3, 4), None);
         assert_eq!(map.data, vec![free_head(2), Allocated(2), free_tail(0), Allocated(4)]);
         assert_eq!(map.freelist, Some(FreeList { head: 0, tail: 2 }));
-        assert!(map.insert(0, 1).is_none());
+        assert_eq!(map.insert(0, 1), None);
         assert_eq!(map.data, vec![Allocated(1), Allocated(2), free_none(), Allocated(4)]);
         assert_eq!(map.freelist, Some(FreeList::singleton(2)));
         assert_eq!(map.insert(3, 5).unwrap(), 4);
@@ -765,9 +765,9 @@ mod tests {
     #[test]
     fn test_iter() {
         let mut map = IdMap::new();
-        map.insert(1, 0);
-        map.insert(3, 1);
-        map.insert(6, 2);
+        assert_eq!(map.insert(1, 0), None);
+        assert_eq!(map.insert(3, 1), None);
+        assert_eq!(map.insert(6, 2), None);
         assert_eq!(
             map.data,
             vec![
@@ -793,9 +793,9 @@ mod tests {
     #[test]
     fn test_iter_mut() {
         let mut map = IdMap::new();
-        map.insert(1, 0);
-        map.insert(3, 1);
-        map.insert(6, 2);
+        assert_eq!(map.insert(1, 0), None);
+        assert_eq!(map.insert(3, 1), None);
+        assert_eq!(map.insert(6, 2), None);
         assert_eq!(
             map.data,
             vec![
@@ -834,7 +834,7 @@ mod tests {
 
         let mut map = IdMap::new();
         for i in 0..8 {
-            map.push(i);
+            assert_eq!(map.push(i), i);
         }
 
         let old_map = map.clone();
@@ -978,15 +978,15 @@ mod tests {
             let mut remove_seq: Vec<usize> = (0..NELEMS - 1).collect();
             remove_seq.shuffle(&mut rng);
             for i in &remove_seq {
-                map.remove(*i);
+                assert_ne!(map.remove(*i), None);
             }
             for i in remove_seq.iter().rev() {
                 // We should be able to push into the array in the same order.
                 assert_eq!(map.push(*i), *i);
             }
-            map.remove(NELEMS - 1);
+            assert_ne!(map.remove(NELEMS - 1), None);
             for i in &remove_seq {
-                map.remove(*i);
+                assert_ne!(map.remove(*i), None);
             }
             assert!(map.is_empty());
         }
@@ -995,11 +995,11 @@ mod tests {
     #[test]
     fn test_compress_freelist() {
         let mut map = IdMap::new();
-        for _ in 0..100 {
-            map.push(0);
+        for i in 0..100 {
+            assert_eq!(map.push(0), i);
         }
         for i in 0..100 {
-            map.remove(i);
+            assert_eq!(map.remove(i), Some(0));
         }
         assert_eq!(map.data.len(), 0);
         assert_eq!(map.freelist, None);
@@ -1009,7 +1009,7 @@ mod tests {
     fn test_insert_beyond_end_freelist() {
         let mut map = IdMap::new();
         for i in 0..10 {
-            map.insert(2 * i + 1, 0);
+            assert_eq!(map.insert(2 * i + 1, 0), None);
         }
         for i in 0..10 {
             assert_eq!(map.push(1), 2 * i);
@@ -1020,11 +1020,11 @@ mod tests {
     fn test_double_free() {
         const MAX_KEY: usize = 100;
         let mut map1 = IdMap::new();
-        map1.insert(MAX_KEY, 2);
+        assert_eq!(map1.insert(MAX_KEY, 2), None);
         let mut map2 = IdMap::new();
-        map2.insert(MAX_KEY, 2);
+        assert_eq!(map2.insert(MAX_KEY, 2), None);
         for i in 0..MAX_KEY {
-            assert!(map1.remove(i).is_none());
+            assert_eq!(map1.remove(i), None);
             // Removing an already free entry should be a no-op.
             assert_eq!(map1.data, map2.data);
             assert_eq!(map1.freelist, map2.freelist);
