@@ -1024,7 +1024,7 @@ TEST(State, SetLargeProperty) {
 
 TEST(State, SetPropertyOutOfMemory) {
   auto state = InitState(16 * 1024);  // Only 16K of space, property will not fit.
-  ASSERT_TRUE(state != NULL);
+  ASSERT_TRUE(state != nullptr);
 
   std::vector<uint8_t> vec;
   for (int i = 0; i < 65000; i++) {

@@ -13,10 +13,12 @@
 #include <lib/inspect/cpp/vmo/block.h>
 #include <lib/inspect/cpp/vmo/heap.h>
 #include <lib/inspect/cpp/vmo/types.h>
+#include <zircon/types.h>
 
 #include <iterator>
 #include <map>
 #include <mutex>
+#include <utility>
 
 namespace inspect {
 
@@ -255,12 +257,11 @@ class State final {
   }
 
   // Helper to set the value of a string across its extents.
-  zx_status_t InnerSetStringExtents(BlockIndex string_index, const char* value, size_t length)
+  std::pair<BlockIndex, zx_status_t> InnerCreateExtentChain(const char* value, size_t length)
       __TA_REQUIRES(mutex_);
 
-  // Helper to free all extents for a given string.
-  // This leaves the string value allocated and empty.
-  void InnerFreeStringExtents(BlockIndex string_index) __TA_REQUIRES(mutex_);
+  // Helper to free all extents for a given first index in the extent chain.
+  void InnerFreeExtentChain(BlockIndex extent_index) __TA_REQUIRES(mutex_);
 
   // Helper to create a new name block with the given name.
   zx_status_t CreateName(const std::string& name, BlockIndex* out) __TA_REQUIRES(mutex_);

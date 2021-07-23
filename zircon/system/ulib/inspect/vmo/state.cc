@@ -7,6 +7,7 @@
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/inspect/cpp/vmo/block.h>
 #include <lib/inspect/cpp/vmo/state.h>
+#include <zircon/assert.h>
 
 #include <functional>
 #include <sstream>
@@ -311,9 +312,14 @@ WrapperType State::InnerCreateProperty(const std::string& name, BlockIndex paren
   if (status != ZX_OK) {
     return WrapperType();
   }
+
   auto* block = heap_->GetBlock(value_index);
-  block->payload.u64 = PropertyBlockPayload::Flags::Make(format);
-  status = InnerSetStringExtents(value_index, value, length);
+  BlockIndex first_extent_index;
+  std::tie(first_extent_index, status) = InnerCreateExtentChain(value, length);
+  block->payload.u64 = PropertyBlockPayload::TotalLength::Make(length) |
+                       PropertyBlockPayload::ExtentIndex::Make(first_extent_index) |
+                       PropertyBlockPayload::Flags::Make(format);
+
   if (status != ZX_OK) {
     heap_->Free(name_index);
     heap_->Free(value_index);
@@ -574,7 +580,19 @@ void State::InnerSetProperty(WrapperType* property, const char* value, size_t le
   std::lock_guard<std::mutex> lock(mutex_);
   AutoGenerationIncrement gen(header_, heap_.get());
 
-  InnerSetStringExtents(property->value_index_, value, length);
+  auto* block = heap_->GetBlock(property->value_index_);
+  InnerFreeExtentChain(PropertyBlockPayload::ExtentIndex::Get<BlockIndex>(block->payload.u64));
+
+  BlockIndex first_extent_index;
+  zx_status_t status;
+  std::tie(first_extent_index, status) = InnerCreateExtentChain(value, length);
+
+  const auto length_maybe_zeroed = status == ZX_OK ? length : 0;
+
+  block->payload.u64 = PropertyBlockPayload::TotalLength::Make(length_maybe_zeroed) |
+                       PropertyBlockPayload::ExtentIndex::Make(first_extent_index) |
+                       PropertyBlockPayload::Flags::Make(
+                           PropertyBlockPayload::Flags::Get<uint8_t>(block->payload.u64));
 }
 
 void State::SetStringProperty(StringProperty* property, const std::string& value) {
@@ -705,7 +723,8 @@ void State::InnerFreePropertyWithExtents(WrapperType* property) {
 
   DecrementParentRefcount(property->value_index_);
 
-  InnerFreeStringExtents(property->value_index_);
+  const auto* block = heap_->GetBlock(property->value_index_);
+  InnerFreeExtentChain(PropertyBlockPayload::ExtentIndex::Get<BlockIndex>(block->payload.u64));
 
   heap_->Free(property->name_index_);
   heap_->Free(property->value_index_);
@@ -787,9 +806,9 @@ void State::FreeLazyNode(LazyNode* object) {
     object->state_ = nullptr;
   }
 
-  // Cancel the Holder without State locked. This avoids a deadlock in which we could be locking the
-  // holder with the state lock held, meanwhile the callback itself is modifying state (with holder
-  // locked).
+  // Cancel the Holder without State locked. This avoids a deadlock in which we could be locking
+  // the holder with the state lock held, meanwhile the callback itself is modifying state (with
+  // holder locked).
   //
   // At this point in time, the LazyNode is still *live* and the callback may be getting executed.
   // Following this cancel call, the LazyNode is no longer live and the callback will never be
@@ -822,8 +841,8 @@ fpromise::promise<Inspector> State::CallLinkCallback(const std::string& name) {
   // Call the callback.
   // This occurs without state locked, but deletion of the LazyNode synchronizes on the internal
   // mutex in the Holder. If the LazyNode is deleted before this call, the callback will not be
-  // executed. If the LazyNode is being deleted concurrent with this call, it will be delayed until
-  // after the callback returns.
+  // executed. If the LazyNode is being deleted concurrent with this call, it will be delayed
+  // until after the callback returns.
   return holder.call();
 }
 
@@ -876,57 +895,35 @@ zx_status_t State::InnerCreateValue(const std::string& name, BlockType type,
   return ZX_OK;
 }
 
-void State::InnerFreeStringExtents(BlockIndex string_index) {
-  auto* str = heap_->GetBlock(string_index);
-  if (!str || GetType(str) != BlockType::kBufferValue) {
-    return;
-  }
+// This function accepts either a BufferValue index or an Extent index.
+// If passed a BufferValue, it will proceed to the extent in the ExtentIndex field.
+void State::InnerFreeExtentChain(BlockIndex index) {
+  auto* extent = heap_->GetBlock(index);
+  ZX_DEBUG_ASSERT_MSG(IsExtent(extent) || index == 0,
+                      "must pass extent index to InnerFreeExtentChain");
 
-  auto extent_index = PropertyBlockPayload::ExtentIndex::Get<BlockIndex>(str->payload.u64);
-  auto* extent = heap_->GetBlock(extent_index);
   while (IsExtent(extent)) {
     auto next_extent = ExtentBlockFields::NextExtentIndex::Get<BlockIndex>(extent->header);
-    heap_->Free(extent_index);
-    extent_index = next_extent;
-    extent = heap_->GetBlock(extent_index);
+    heap_->Free(index);
+    index = next_extent;
+    extent = heap_->GetBlock(index);
   }
-
-  // Leave the string value allocated (and empty).
-  str->payload.u64 = PropertyBlockPayload::TotalLength::Make(0) |
-                     PropertyBlockPayload::ExtentIndex::Make(0) |
-                     PropertyBlockPayload::Flags::Make(
-                         PropertyBlockPayload::Flags::Get<uint8_t>(str->payload.u64));
 }
 
-zx_status_t State::InnerSetStringExtents(BlockIndex string_index, const char* value,
-                                         size_t length) {
-  InnerFreeStringExtents(string_index);
-
-  auto* block = heap_->GetBlock(string_index);
-
-  if (length == 0) {
-    // The extent index is 0 if no extents were needed (the value is empty).
-    block->payload.u64 = PropertyBlockPayload::TotalLength::Make(length) |
-                         PropertyBlockPayload::ExtentIndex::Make(0) |
-                         PropertyBlockPayload::Flags::Make(
-                             PropertyBlockPayload::Flags::Get<uint8_t>(block->payload.u64));
-    return ZX_OK;
-  }
+std::pair<BlockIndex, zx_status_t> State::InnerCreateExtentChain(const char* value, size_t length) {
+  if (length == 0)
+    return {0, ZX_OK};
 
   BlockIndex extent_index;
   zx_status_t status;
   status = heap_->Allocate(std::min(kMaxOrderSize, BlockSizeForPayload(length)), &extent_index);
   if (status != ZX_OK) {
-    return status;
+    return {0, status};
   }
-
-  block->payload.u64 = PropertyBlockPayload::TotalLength::Make(length) |
-                       PropertyBlockPayload::ExtentIndex::Make(extent_index) |
-                       PropertyBlockPayload::Flags::Make(
-                           PropertyBlockPayload::Flags::Get<uint8_t>(block->payload.u64));
 
   // Thread the value through extents, creating new extents as needed.
   size_t offset = 0;
+  const BlockIndex first_extent_index = extent_index;
   while (offset < length) {
     auto* extent = heap_->GetBlock(extent_index);
 
@@ -942,14 +939,14 @@ zx_status_t State::InnerSetStringExtents(BlockIndex string_index, const char* va
       status = heap_->Allocate(std::min(kMaxOrderSize, BlockSizeForPayload(length - offset)),
                                &extent_index);
       if (status != ZX_OK) {
-        InnerFreeStringExtents(string_index);
-        return status;
+        InnerFreeExtentChain(first_extent_index);
+        return {0, status};
       }
       ExtentBlockFields::NextExtentIndex::Set(&extent->header, extent_index);
     }
   }
 
-  return ZX_OK;
+  return {first_extent_index, ZX_OK};
 }
 
 std::string State::UniqueLinkName(const std::string& prefix) {
