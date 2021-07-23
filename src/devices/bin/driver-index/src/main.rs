@@ -74,6 +74,80 @@ fn node_to_device_property(
     Ok(device_properties)
 }
 
+// Load the `component_url` driver out of `dir` which should be the root directory
+// of that component. Will return Ok(None) if `component_url` is a valid component
+// but it's not a driver component.
+async fn load_driver(
+    dir: &fio::DirectoryProxy,
+    component_url: url::Url,
+) -> Result<Option<ResolvedDriver>, anyhow::Error> {
+    let component = io_util::open_file(
+        &dir,
+        std::path::Path::new(
+            component_url
+                .fragment()
+                .ok_or(anyhow::anyhow!("{}: URL is missing fragment", component_url.as_str()))?,
+        ),
+        fio::OPEN_RIGHT_READABLE,
+    )?;
+    let component: fsys::ComponentDecl = io_util::read_file_fidl(&component)
+        .await
+        .with_context(|| format!("{}: Failed to read component", component_url.as_str()))?;
+    let component = component.fidl_into_native();
+
+    let runner = match component.get_runner() {
+        Some(r) => r,
+        None => return Ok(None),
+    };
+    if runner.str() != "driver" {
+        return Ok(None);
+    }
+
+    let bind_path = get_rules_string_value(&component, "bind")
+        .ok_or(anyhow::anyhow!("{}: Missing bind path", component_url.as_str()))?;
+    let bind = io_util::open_file(&dir, std::path::Path::new(&bind_path), fio::OPEN_RIGHT_READABLE)
+        .with_context(|| format!("{}: Failed to open bind", component_url.as_str()))?;
+    let bind = io_util::read_file_bytes(&bind)
+        .await
+        .with_context(|| format!("{}: Failed to read bind", component_url.as_str()))?;
+    let bind = DecodedBindRules::new(bind)
+        .with_context(|| format!("{}: Failed to parse bind", component_url.as_str()))?;
+
+    let driver_path = get_rules_string_value(&component, "binary")
+        .ok_or(anyhow::anyhow!("{}: Missing binary path", component_url.as_str()))?;
+
+    Ok(Some(ResolvedDriver {
+        component_url: component_url,
+        driver_path: driver_path,
+        bind_rules: bind,
+    }))
+}
+
+#[allow(dead_code)]
+async fn load_boot_drivers(dir: fio::DirectoryProxy) -> Result<Vec<ResolvedDriver>, anyhow::Error> {
+    let meta =
+        io_util::open_directory(&dir, std::path::Path::new("meta"), fio::OPEN_RIGHT_READABLE)
+            .context("boot: Failed to open meta")?;
+
+    let entries = files_async::readdir(&meta).await.context("boot: failed to read meta")?;
+
+    let mut drivers = std::vec::Vec::new();
+    for entry in entries
+        .iter()
+        .filter(|entry| entry.kind == files_async::DirentKind::File)
+        .filter(|entry| entry.name.ends_with(".cm"))
+    {
+        let url = "fuchsia-boot:///#meta/".to_string() + &entry.name;
+        let url = url::Url::parse(&url)?;
+        let driver = load_driver(&dir, url).await?;
+        if let Some(driver) = driver {
+            log::info!("Found boot driver: {}", driver.component_url.to_string());
+            drivers.push(driver);
+        }
+    }
+    Ok(drivers)
+}
+
 struct ResolvedDriver {
     component_url: url::Url,
     driver_path: String,
@@ -96,35 +170,16 @@ impl ResolvedDriver {
         base_url.set_fragment(None);
 
         let res = resolver.resolve(&base_url.as_str(), &mut std::iter::empty(), dir_server_end);
-        res.await?.map_err(|e| anyhow::anyhow!("Failed to resolve package: {:?}", e))?;
+        res.await?.map_err(|e| {
+            anyhow::anyhow!("{}: Failed to resolve package: {:?}", component_url.as_str(), e)
+        })?;
 
-        let component = io_util::open_file(
-            &dir,
-            std::path::Path::new(
-                component_url.fragment().ok_or(anyhow::anyhow!("URL is missing fragment"))?,
-            ),
-            fio::OPEN_RIGHT_READABLE,
-        )?;
-        let component: fsys::ComponentDecl =
-            io_util::read_file_fidl(&component).await.context("Failed to read component")?;
-        let component = component.fidl_into_native();
+        let driver = load_driver(&dir, component_url.clone()).await?;
 
-        let bind_path = get_rules_string_value(&component, "bind")
-            .ok_or(anyhow::anyhow!("Missing bind path"))?;
-        let bind =
-            io_util::open_file(&dir, std::path::Path::new(&bind_path), fio::OPEN_RIGHT_READABLE)
-                .context("Failed to open bind")?;
-        let bind = io_util::read_file_bytes(&bind).await.context("Failed to read bind")?;
-        let bind = DecodedBindRules::new(bind)?;
-
-        let driver_path = get_rules_string_value(&component, "binary")
-            .ok_or(anyhow::anyhow!("Missing driver path"))?;
-
-        Ok(ResolvedDriver {
-            component_url: component_url,
-            driver_path: driver_path,
-            bind_rules: bind,
-        })
+        return driver.ok_or(anyhow::anyhow!(
+            "{}: Component was not a driver-component",
+            component_url.as_str()
+        ));
     }
 
     fn matches(
@@ -138,6 +193,10 @@ impl ResolvedDriver {
             },
             properties,
         )
+        .map_err(|e| {
+            log::error!("Driver {}: bind error: {}", self, e);
+            e
+        })
     }
 
     fn create_matched_driver(&self) -> fdf::MatchedDriver {
@@ -160,14 +219,16 @@ enum BaseRepo {
 }
 
 struct Indexer {
+    boot_repo: Vec<ResolvedDriver>,
+
     // base_repo needs to be in a RefCell because it starts out NotResolved,
     // but will eventually resolve when base packages are available.
     base_repo: RefCell<BaseRepo>,
 }
 
 impl Indexer {
-    fn new(base_repo: BaseRepo) -> Indexer {
-        Indexer { base_repo: RefCell::new(base_repo) }
+    fn new(boot_repo: Vec<ResolvedDriver>, base_repo: BaseRepo) -> Indexer {
+        Indexer { boot_repo: boot_repo, base_repo: RefCell::new(base_repo) }
     }
 
     fn load_base_repo(&self, base_repo: BaseRepo) {
@@ -186,6 +247,15 @@ impl Indexer {
         if args.properties.is_none() {
             return Err(Status::INVALID_ARGS.into_raw());
         }
+        let properties = args.properties.unwrap();
+        let properties = node_to_device_property(&properties)?;
+
+        for driver in &self.boot_repo {
+            if Ok(true) == driver.matches(&properties) {
+                return Ok(driver.create_matched_driver());
+            }
+        }
+
         let base_repo = self.base_repo.borrow();
         let base_drivers = match base_repo.deref() {
             BaseRepo::Resolved(drivers) => drivers,
@@ -193,55 +263,34 @@ impl Indexer {
                 return Err(Status::NOT_FOUND.into_raw());
             }
         };
-        let properties = args.properties.unwrap();
-        let properties = node_to_device_property(&properties)?;
         for driver in base_drivers {
-            match driver.matches(&properties) {
-                Ok(true) => {
-                    return Ok(driver.create_matched_driver());
-                }
-                Ok(false) => {
-                    continue;
-                }
-                Err(e) => {
-                    log::error!("Driver {}: bind error: {}", driver, e);
-                    continue;
-                }
+            if Ok(true) == driver.matches(&properties) {
+                return Ok(driver.create_matched_driver());
             }
         }
         Err(Status::NOT_FOUND.into_raw())
     }
 
     fn match_drivers_v1(&self, args: fdf::NodeAddArgs) -> fdf::DriverIndexMatchDriversV1Result {
-        let mut matched_drivers = std::vec::Vec::new();
-
         if args.properties.is_none() {
             return Err(Status::INVALID_ARGS.into_raw());
         }
-        let base_repo = self.base_repo.borrow();
-        let base_drivers = match base_repo.deref() {
-            BaseRepo::Resolved(drivers) => drivers,
-            BaseRepo::NotResolved(_) => {
-                return Err(Status::NOT_FOUND.into_raw());
-            }
-        };
         let properties = args.properties.unwrap();
         let properties = node_to_device_property(&properties)?;
-        for driver in base_drivers {
-            match driver.matches(&properties) {
-                Ok(true) => {
-                    matched_drivers.push(driver.create_matched_driver());
-                }
-                Ok(false) => {
-                    continue;
-                }
-                Err(e) => {
-                    log::error!("Driver {}: bind error: {}", driver, e);
-                    continue;
-                }
-            }
-        }
-        Ok(matched_drivers)
+
+        let base_repo = self.base_repo.borrow();
+        let base_repo_iter = match base_repo.deref() {
+            BaseRepo::Resolved(drivers) => drivers.iter(),
+            BaseRepo::NotResolved(_) => [].iter(),
+        };
+
+        Ok(self
+            .boot_repo
+            .iter()
+            .chain(base_repo_iter)
+            .filter(|driver| driver.matches(&properties).unwrap_or(false))
+            .map(|driver| driver.create_matched_driver())
+            .collect())
     }
 }
 
@@ -342,7 +391,7 @@ async fn main() -> Result<(), anyhow::Error> {
         fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_pkg::PackageResolverMarker>()
             .unwrap();
 
-    let index = Rc::new(Indexer::new(BaseRepo::NotResolved(std::vec![])));
+    let index = Rc::new(Indexer::new(vec![], BaseRepo::NotResolved(std::vec![])));
     let (res1, res2, _) = futures::future::join3(
         package_resolver::serve(resolver_stream),
         load_base_drivers(index.clone(), resolver),
@@ -417,7 +466,7 @@ mod tests {
         let (proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<fdf::DriverIndexMarker>().unwrap();
 
-        let index = Rc::new(Indexer::new(BaseRepo::NotResolved(std::vec![])));
+        let index = Rc::new(Indexer::new(std::vec![], BaseRepo::NotResolved(std::vec![])));
 
         // Run two tasks: the fake resolver and the task that loads the base drivers.
         let load_base_drivers_task = load_base_drivers(index.clone(), resolver).fuse();
@@ -532,7 +581,7 @@ mod tests {
         let (proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<fdf::DriverIndexMarker>().unwrap();
 
-        let index = Rc::new(Indexer::new(base_repo));
+        let index = Rc::new(Indexer::new(std::vec![], base_repo));
 
         let index_task = run_index_server(index.clone(), stream).fuse();
         let test_task = async move {
@@ -554,6 +603,79 @@ mod tests {
                 "fuchsia-pkg://fuchsia.com/package#driver/my-driver2.cm",
                 result[1].url.as_ref().unwrap().as_str(),
             );
+        }
+        .fuse();
+
+        futures::pin_mut!(index_task, test_task);
+        futures::select! {
+            result = index_task => {
+                panic!("Index task finished: {:?}", result);
+            },
+            () = test_task => {},
+        }
+    }
+
+    // This test relies on two drivers existing in the /pkg/ directory of the
+    // test package.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_boot_drivers() {
+        fuchsia_syslog::init().unwrap();
+        let boot = io_util::open_directory_in_namespace("/pkg", fio::OPEN_RIGHT_READABLE).unwrap();
+        let drivers = load_boot_drivers(boot).await.unwrap();
+
+        let (proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<fdf::DriverIndexMarker>().unwrap();
+
+        let index = Rc::new(Indexer::new(drivers, BaseRepo::NotResolved(vec![])));
+
+        let index_task = run_index_server(index.clone(), stream).fuse();
+        let test_task = async move {
+            // Check the value from the 'test-bind' binary. This should match my-driver.cm
+            let property = fdf::NodeProperty {
+                key: Some(bind::ddk_bind_constants::BIND_PROTOCOL),
+                value: Some(1),
+                ..fdf::NodeProperty::EMPTY
+            };
+            let args =
+                fdf::NodeAddArgs { properties: Some(vec![property]), ..fdf::NodeAddArgs::EMPTY };
+            let result = proxy.match_driver(args).await.unwrap().unwrap();
+            assert_eq!(
+                "fuchsia-boot:///#meta/test-bind-component.cm".to_string(),
+                result.url.unwrap(),
+            );
+            assert_eq!(
+                "fuchsia-boot:///#driver/fake-driver.so".to_string(),
+                result.driver_url.unwrap(),
+            );
+
+            // Check the value from the 'test-bind2' binary. This should match my-driver2.cm
+            let property = fdf::NodeProperty {
+                key: Some(bind::ddk_bind_constants::BIND_PROTOCOL),
+                value: Some(2),
+                ..fdf::NodeProperty::EMPTY
+            };
+            let args =
+                fdf::NodeAddArgs { properties: Some(vec![property]), ..fdf::NodeAddArgs::EMPTY };
+            let result = proxy.match_driver(args).await.unwrap().unwrap();
+            assert_eq!(
+                "fuchsia-boot:///#meta/test-bind2-component.cm".to_string(),
+                result.url.unwrap(),
+            );
+            assert_eq!(
+                "fuchsia-boot:///#driver/fake-driver2.so".to_string(),
+                result.driver_url.unwrap(),
+            );
+
+            // Check an unknown value. This should return the NOT_FOUND error.
+            let property = fdf::NodeProperty {
+                key: Some(bind::ddk_bind_constants::BIND_PROTOCOL),
+                value: Some(3),
+                ..fdf::NodeProperty::EMPTY
+            };
+            let args =
+                fdf::NodeAddArgs { properties: Some(vec![property]), ..fdf::NodeAddArgs::EMPTY };
+            let result = proxy.match_driver(args).await.unwrap();
+            assert_eq!(result, Err(Status::NOT_FOUND.into_raw()));
         }
         .fuse();
 

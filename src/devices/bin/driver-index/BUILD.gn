@@ -39,6 +39,7 @@ rustc_binary("bin") {
   with_unit_tests = true
 
   deps = [
+    "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
     "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework-rustc",
