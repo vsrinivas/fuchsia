@@ -224,10 +224,8 @@ VK_TEST_F(FramebufferAllocatorTest, CacheReclamation) {
   // Make a single set of textures (depth and 2 color attachments) that will be
   // used to make a framebuffer.
   auto depth_format_result = escher->device()->caps().GetMatchingDepthFormat();
-  vk::Format depth_format = depth_format_result.value;
   if (depth_format_result.result != vk::Result::eSuccess) {
     FX_LOGS(ERROR) << "No depth stencil format is supported on this device.";
-    depth_format = vk::Format::eUndefined;
   }
 
   auto textures = MakeFramebufferTextures(escher, 1, kWidth, kHeight, 1, vk::Format::eB8G8R8A8Unorm,
