@@ -15,4 +15,5 @@ extend uint fuchsia.BIND_NAND_CLASS {
   FTL = 2, // NAND device is a FTL partition.
   BBS = 3, // NAND device is a bad block skip partition.
   TEST = 4, // Test device.
+  INTEL_FLASH_DESCRIPTOR = 5, // NAND device contains an Intel flash descriptor.
 };

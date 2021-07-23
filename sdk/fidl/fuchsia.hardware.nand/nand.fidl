@@ -12,6 +12,9 @@ type Class = strict enum : uint32 {
     FTL = 2; // NAND device is a FTL partition.
     BBS = 3; // NAND device is a bad block skip partition.
     TEST = 4; // Test device.
+
+    /// NAND device contains an Intel flash descriptor.
+    INTEL_FLASH_DESCRIPTOR = 5;
 };
 
 @for_deprecated_c_bindings
