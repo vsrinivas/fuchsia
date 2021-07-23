@@ -60,7 +60,7 @@
             "type": "array"
         },
         "kind": {
-            "description": "Represents the kind of an SDK element",
+            "description": "Represents the type of an SDK element",
             "type": "string"
         },
         "sdk_element": {
@@ -71,7 +71,7 @@
                     "type": "string"
                 },
                 "type": {
-                    "$ref": "#/definitions/type",
+                    "$ref": "#/definitions/kind",
                     "description": "The type of the element"
                 }
             },
@@ -87,10 +87,6 @@
                 "arm64",
                 "x64"
             ],
-            "type": "string"
-        },
-        "type": {
-            "description": "Represents the type of an SDK element",
             "type": "string"
         },
         "version": {

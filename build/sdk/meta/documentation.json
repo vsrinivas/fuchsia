@@ -1,46 +1,45 @@
 {
-  "$schema": "http://json-schema.org/draft-04/schema#",
-  "id": "http://fuchsia.com/schemas/sdk/documentation.json",
-  "description": "A set of documents",
-  "type": "object",
-  "allOf": [
-    {
-      "$ref": "common.json#/definitions/sdk_element"
-    },
-    {
-      "properties": {
-        "type": {
-          "allOf": [
-            {
-              "$ref": "common.json#/definitions/type"
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "allOf": [
+        {
+            "$ref": "common.json#/definitions/sdk_element"
+        },
+        {
+            "additionalProperties": false,
+            "properties": {
+                "docs": {
+                    "description": "The list of documents pertaining to the set",
+                    "items": {
+                        "$ref": "common.json#/definitions/file"
+                    },
+                    "minItems": 1,
+                    "type": "array"
+                },
+                "name": {
+                    "description": "Name of the document set",
+                    "type": "string"
+                },
+                "type": {
+                    "allOf": [
+                        {
+                            "$ref": "common.json#/definitions/kind"
+                        },
+                        {
+                            "enum": [
+                                "documentation"
+                            ]
+                        }
+                    ]
+                }
             },
-            {
-              "enum": [
-                "documentation"
-              ]
-            }
-          ]
-        },
-        "name": {
-          "description": "Name of the document set",
-          "type": "string"
-        },
-        "docs": {
-          "description": "The list of documents pertaining to the set",
-          "type": "array",
-          "minItems": 1,
-          "items": {
-            "$ref": "common.json#/definitions/file"
-          }
+            "required": [
+                "docs",
+                "name",
+                "type"
+            ]
         }
-      },
-      "required": [
-        "docs",
-
-        "name",
-        "type"
-      ],
-      "additionalProperties": false
-    }
-  ]
+    ],
+    "description": "A set of documents",
+    "id": "http://fuchsia.com/schemas/sdk/documentation.json",
+    "type": "object"
 }

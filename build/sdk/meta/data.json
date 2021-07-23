@@ -22,7 +22,7 @@
                 "type": {
                     "allOf": [
                         {
-                            "$ref": "common.json#/definitions/type"
+                            "$ref": "common.json#/definitions/kind"
                         },
                         {
                             "enum": [

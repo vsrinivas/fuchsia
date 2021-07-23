@@ -1,72 +1,71 @@
 {
-  "$schema": "http://json-schema.org/draft-04/schema#",
-  "id": "http://fuchsia.com/schemas/sdk/host_tool.json",
-  "description": "A host tool",
-  "type": "object",
-  "allOf": [
-    {
-      "$ref": "common.json#/definitions/sdk_element"
-    },
-    {
-      "properties": {
-        "type": {
-          "allOf": [
-            {
-              "$ref": "common.json#/definitions/type"
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "allOf": [
+        {
+            "$ref": "common.json#/definitions/sdk_element"
+        },
+        {
+            "additionalProperties": false,
+            "properties": {
+                "files": {
+                    "$ref": "#/definitions/fileGroup",
+                    "description": "The list of files pertaining to the element"
+                },
+                "name": {
+                    "description": "Name of the tool",
+                    "type": "string"
+                },
+                "root": {
+                    "description": "The root of the element in the SDK",
+                    "type": "string"
+                },
+                "target_files": {
+                    "additionalProperties": false,
+                    "description": "The target-specific files, per architecture",
+                    "maxProperties": 2,
+                    "minProperties": 1,
+                    "properties": {
+                        "arm64": {
+                            "$ref": "#/definitions/fileGroup",
+                            "description": "Files for the arm64 architecture"
+                        },
+                        "x64": {
+                            "$ref": "#/definitions/fileGroup",
+                            "description": "Files for the x64 architecture"
+                        }
+                    },
+                    "type": "object"
+                },
+                "type": {
+                    "allOf": [
+                        {
+                            "$ref": "common.json#/definitions/kind"
+                        },
+                        {
+                            "enum": [
+                                "host_tool"
+                            ]
+                        }
+                    ]
+                }
             },
-            {
-              "enum": [
-                "host_tool"
-              ]
-            }
-          ]
-        },
-        "name": {
-          "description": "Name of the tool",
-          "type": "string"
-        },
-        "root": {
-          "description": "The root of the element in the SDK",
-          "type": "string"
-        },
-        "files": {
-          "description": "The list of files pertaining to the element",
-          "$ref": "#/definitions/fileGroup"
-        },
-        "target_files": {
-          "description": "The target-specific files, per architecture",
-          "type": "object",
-          "properties": {
-            "x64": {
-              "description": "Files for the x64 architecture",
-              "$ref": "#/definitions/fileGroup"
-            },
-            "arm64": {
-              "description": "Files for the arm64 architecture",
-              "$ref": "#/definitions/fileGroup"
-            }
-          },
-          "additionalProperties": false,
-          "minProperties": 1,
-          "maxProperties": 2
+            "required": [
+                "root",
+                "name",
+                "type"
+            ]
         }
-      },
-      "required": [
-        "root",
-
-        "name",
-        "type"
-      ],
-      "additionalProperties": false
-    }
-  ],
-  "definitions": {
-    "fileGroup": {
-      "description": "A collection of files",
-      "type": "array",
-      "items": {
-        "$ref": "common.json#/definitions/file"
-      }
-    }
-  }
+    ],
+    "definitions": {
+        "fileGroup": {
+            "description": "A collection of files",
+            "items": {
+                "$ref": "common.json#/definitions/file"
+            },
+            "type": "array"
+        }
+    },
+    "description": "A host tool",
+    "id": "http://fuchsia.com/schemas/sdk/host_tool.json",
+    "type": "object"
 }
