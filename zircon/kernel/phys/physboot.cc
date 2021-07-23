@@ -204,7 +204,7 @@ void UnredactEntropyMixin(zbitl::ByteView payload) {
         word.remove_prefix(kPrefix.size());
         memcpy(const_cast<char*>(word.data()), gBootOptions->entropy_mixin.hex.data(),
                std::min(gBootOptions->entropy_mixin.len, word.size()));
-        gBootOptions->entropy_mixin = {};
+        const_cast<BootOptions*>(gBootOptions)->entropy_mixin = {};
         break;
       }
     }
