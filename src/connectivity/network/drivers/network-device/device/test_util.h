@@ -322,8 +322,8 @@ class TestSession {
   zx_status_t Close();
   zx_status_t WaitClosed(zx::time deadline);
   void ZeroVmo();
-  buffer_descriptor_t* ResetDescriptor(uint16_t index);
-  buffer_descriptor_t* descriptor(uint16_t index);
+  buffer_descriptor_t& ResetDescriptor(uint16_t index);
+  buffer_descriptor_t& descriptor(uint16_t index);
   uint8_t* buffer(uint64_t offset);
 
   zx_status_t FetchRx(uint16_t* descriptors, size_t count, size_t* actual) const;

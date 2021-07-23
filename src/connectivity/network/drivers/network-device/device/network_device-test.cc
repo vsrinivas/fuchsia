@@ -368,10 +368,10 @@ TEST_F(NetworkDeviceTest, RxBufferBuild) {
                               .chain = true,
                           }};
   for (const auto& setup : kDescriptorSetup) {
-    buffer_descriptor_t* desc = session.ResetDescriptor(setup.descriptor);
-    desc->head_length = setup.space_head;
-    desc->tail_length = setup.space_tail;
-    desc->data_length -= setup.space_head + setup.space_tail;
+    buffer_descriptor_t& desc = session.ResetDescriptor(setup.descriptor);
+    desc.head_length = setup.space_head;
+    desc.tail_length = setup.space_tail;
+    desc.data_length -= setup.space_head + setup.space_tail;
   }
 
   uint16_t all_descs[std::size(kDescriptorSetup)] = {kDescriptor0, kDescriptor1, kDescriptor2};
@@ -399,9 +399,9 @@ TEST_F(NetworkDeviceTest, RxBufferBuild) {
     ASSERT_TRUE(rx);
     const rx_space_buffer_t& space = rx->space();
     ASSERT_EQ(space.region.vmo, want_vmo);
-    buffer_descriptor_t* descriptor = session.descriptor(descriptor_setup.descriptor);
-    ASSERT_EQ(space.region.offset, descriptor->offset + descriptor->head_length);
-    ASSERT_EQ(space.region.length, descriptor->data_length + descriptor->tail_length);
+    buffer_descriptor_t& descriptor = session.descriptor(descriptor_setup.descriptor);
+    ASSERT_EQ(space.region.offset, descriptor.offset + descriptor.head_length);
+    ASSERT_EQ(space.region.length, descriptor.data_length + descriptor.tail_length);
 
     rx->return_part().offset = descriptor_setup.offset;
     rx->return_part().length = descriptor_setup.length;
@@ -436,27 +436,27 @@ TEST_F(NetworkDeviceTest, RxBufferBuild) {
   // Finally check all the stuff that was returned.
   for (const auto& setup : kDescriptorSetup) {
     SCOPED_TRACE(setup.descriptor);
-    buffer_descriptor_t* desc = session.descriptor(setup.descriptor);
-    EXPECT_EQ(desc->offset, session.canonical_offset(setup.descriptor));
+    buffer_descriptor_t& desc = session.descriptor(setup.descriptor);
+    EXPECT_EQ(desc.offset, session.canonical_offset(setup.descriptor));
     if (setup.descriptor == kDescriptor1) {
       // This descriptor should have a chain.
-      EXPECT_EQ(desc->chain_length, 1u);
-      EXPECT_EQ(desc->nxt, kDescriptor2);
+      EXPECT_EQ(desc.chain_length, 1u);
+      EXPECT_EQ(desc.nxt, kDescriptor2);
     } else {
-      EXPECT_EQ(desc->chain_length, 0u);
+      EXPECT_EQ(desc.chain_length, 0u);
     }
     if (setup.descriptor == kDescriptor2) {
       // The chained descriptor's port metadata is not set.
-      EXPECT_EQ(desc->port_id, 0);
+      EXPECT_EQ(desc.port_id, 0);
     } else {
-      EXPECT_EQ(desc->port_id, kPort13);
+      EXPECT_EQ(desc.port_id, kPort13);
     }
     if (setup.flags.has_value()) {
-      EXPECT_EQ(desc->inbound_flags, static_cast<uint32_t>(*setup.flags));
+      EXPECT_EQ(desc.inbound_flags, static_cast<uint32_t>(*setup.flags));
     }
-    EXPECT_EQ(desc->head_length, setup.offset);
-    EXPECT_EQ(desc->data_length, setup.length);
-    EXPECT_EQ(desc->tail_length, kDefaultBufferLength - setup.length - setup.offset);
+    EXPECT_EQ(desc.head_length, setup.offset);
+    EXPECT_EQ(desc.data_length, setup.length);
+    EXPECT_EQ(desc.tail_length, kDefaultBufferLength - setup.length - setup.offset);
   }
 }
 
@@ -473,25 +473,36 @@ TEST_F(NetworkDeviceTest, TxBufferBuild) {
   // - A descriptor with head and tail removed
   // - A chained descriptor with simple data lengths.
   uint16_t all_descs[kDescTests + 1] = {0, 1, 2};
-  buffer_descriptor_t* desc = session.ResetDescriptor(kDescriptorIndex0);
-  desc->port_id = kPort13;
-  desc = session.ResetDescriptor(kDescriptorIndex1);
-  desc->port_id = kPort13;
-  desc->head_length = 16;
-  desc->tail_length = 32;
-  desc->data_length -= desc->head_length + desc->tail_length;
-  desc = session.ResetDescriptor(kDescriptorIndex2);
-  desc->port_id = kPort13;
-  desc->data_length = 10;
-  desc->chain_length = 2;
-  desc->nxt = 3;
-  desc = session.ResetDescriptor(kDescriptorIndex3);
-  desc->data_length = 20;
-  desc->chain_length = 1;
-  desc->nxt = 4;
-  desc = session.ResetDescriptor(kDescriptorIndex4);
-  desc->data_length = 30;
-  desc->chain_length = 0;
+  {
+    buffer_descriptor_t& desc = session.ResetDescriptor(kDescriptorIndex0);
+    desc.port_id = kPort13;
+  }
+  {
+    buffer_descriptor_t& desc = session.ResetDescriptor(kDescriptorIndex1);
+    desc.port_id = kPort13;
+    desc.head_length = 16;
+    desc.tail_length = 32;
+    desc.data_length -= desc.head_length + desc.tail_length;
+  }
+  {
+    buffer_descriptor_t& desc = session.ResetDescriptor(kDescriptorIndex2);
+    desc.port_id = kPort13;
+    desc.data_length = 10;
+    desc.chain_length = 2;
+    desc.nxt = 3;
+  }
+  {
+    buffer_descriptor_t& desc = session.ResetDescriptor(kDescriptorIndex3);
+    desc.data_length = 20;
+    desc.chain_length = 1;
+    desc.nxt = 4;
+  }
+  {
+    buffer_descriptor_t& desc = session.ResetDescriptor(kDescriptorIndex4);
+    desc.data_length = 30;
+    desc.chain_length = 0;
+  }
+
   size_t sent;
   ASSERT_OK(session.SendTx(all_descs, kDescTests, &sent));
   ASSERT_EQ(sent, kDescTests);
@@ -501,17 +512,19 @@ TEST_F(NetworkDeviceTest, TxBufferBuild) {
   auto tx = impl_.PopTxBuffer();
   ASSERT_TRUE(tx);
   ASSERT_EQ(tx->buffer().data_count, 1u);
-  ASSERT_EQ(tx->buffer().data_list[0].offset, session.descriptor(kDescriptorIndex0)->offset);
+  ASSERT_EQ(tx->buffer().data_list[0].offset, session.descriptor(kDescriptorIndex0).offset);
   ASSERT_EQ(tx->buffer().data_list[0].length, kDefaultBufferLength);
   return_session.Enqueue(std::move(tx));
   // check second descriptor:
   tx = impl_.PopTxBuffer();
   ASSERT_TRUE(tx);
   ASSERT_EQ(tx->buffer().data_count, 1u);
-  desc = session.descriptor(kDescriptorIndex1);
-  ASSERT_EQ(tx->buffer().data_list[0].offset, desc->offset + desc->head_length);
-  ASSERT_EQ(tx->buffer().data_list[0].length,
-            kDefaultBufferLength - desc->head_length - desc->tail_length);
+  {
+    buffer_descriptor_t& desc = session.descriptor(kDescriptorIndex1);
+    ASSERT_EQ(tx->buffer().data_list[0].offset, desc.offset + desc.head_length);
+    ASSERT_EQ(tx->buffer().data_list[0].length,
+              kDefaultBufferLength - desc.head_length - desc.tail_length);
+  }
   tx->set_status(ZX_ERR_UNAVAILABLE);
   return_session.Enqueue(std::move(tx));
   // check third descriptor:
@@ -523,9 +536,9 @@ TEST_F(NetworkDeviceTest, TxBufferBuild) {
     for (const buffer_region_t& region :
          fbl::Span(tx->buffer().data_list, tx->buffer().data_count)) {
       SCOPED_TRACE(descriptor);
-      buffer_descriptor_t* d = session.descriptor(descriptor++);
-      ASSERT_EQ(region.offset, d->offset);
-      ASSERT_EQ(region.length, d->data_length);
+      buffer_descriptor_t& d = session.descriptor(descriptor++);
+      ASSERT_EQ(region.offset, d.offset);
+      ASSERT_EQ(region.length, d.data_length);
     }
   }
   tx->set_status(ZX_ERR_NOT_SUPPORTED);
@@ -543,16 +556,22 @@ TEST_F(NetworkDeviceTest, TxBufferBuild) {
   EXPECT_EQ(all_descs[1], 1u);
   EXPECT_EQ(all_descs[2], 2u);
   // check the status of the returned descriptors
-  desc = session.descriptor(kDescriptorIndex0);
-  EXPECT_EQ(desc->return_flags, 0u);
-  desc = session.descriptor(kDescriptorIndex1);
-  EXPECT_EQ(desc->return_flags,
-            static_cast<uint32_t>(netdev::wire::TxReturnFlags::kTxRetError |
-                                  netdev::wire::TxReturnFlags::kTxRetNotAvailable));
-  desc = session.descriptor(kDescriptorIndex2);
-  EXPECT_EQ(desc->return_flags,
-            static_cast<uint32_t>(netdev::wire::TxReturnFlags::kTxRetError |
-                                  netdev::wire::TxReturnFlags::kTxRetNotSupported));
+  {
+    buffer_descriptor_t& desc = session.descriptor(kDescriptorIndex0);
+    EXPECT_EQ(desc.return_flags, 0u);
+  }
+  {
+    buffer_descriptor_t& desc = session.descriptor(kDescriptorIndex1);
+    EXPECT_EQ(desc.return_flags,
+              static_cast<uint32_t>(netdev::wire::TxReturnFlags::kTxRetError |
+                                    netdev::wire::TxReturnFlags::kTxRetNotAvailable));
+  }
+  {
+    buffer_descriptor_t& desc = session.descriptor(kDescriptorIndex2);
+    EXPECT_EQ(desc.return_flags,
+              static_cast<uint32_t>(netdev::wire::TxReturnFlags::kTxRetError |
+                                    netdev::wire::TxReturnFlags::kTxRetNotSupported));
+  }
 }
 
 TEST_F(NetworkDeviceTest, SessionEpitaph) {
@@ -639,8 +658,8 @@ TEST_F(NetworkDeviceTest, TwoSessionsTx) {
   ASSERT_EQ(rd, 0u);
   ASSERT_OK(session_b.FetchTx(&rd));
   ASSERT_EQ(rd, 1u);
-  ASSERT_EQ(session_a.descriptor(kDescriptorIndex0)->return_flags, 0u);
-  ASSERT_EQ(session_b.descriptor(kDescriptorIndex1)->return_flags,
+  ASSERT_EQ(session_a.descriptor(kDescriptorIndex0).return_flags, 0u);
+  ASSERT_EQ(session_b.descriptor(kDescriptorIndex1).return_flags,
             static_cast<uint32_t>(netdev::wire::TxReturnFlags::kTxRetError |
                                   netdev::wire::TxReturnFlags::kTxRetNotAvailable));
 }
@@ -685,9 +704,9 @@ TEST_F(NetworkDeviceTest, TwoSessionsRx) {
     ASSERT_OK(session.FetchRx(descriptors, kBufferCount, &rd));
     ASSERT_EQ(rd, kBufferCount);
     for (uint32_t i = 0; i < kBufferCount; i++) {
-      auto* desc = session.descriptor(descriptors[i]);
-      ASSERT_EQ(desc->data_length, kDataLen);
-      auto* data = session.buffer(desc->offset);
+      buffer_descriptor_t& desc = session.descriptor(descriptors[i]);
+      ASSERT_EQ(desc.data_length, kDataLen);
+      auto* data = session.buffer(desc.offset);
       for (uint32_t j = 0; j < kDataLen; j++) {
         ASSERT_EQ(*data, static_cast<uint8_t>(i));
         data++;
@@ -728,9 +747,9 @@ TEST_F(NetworkDeviceTest, ListenSession) {
   uint16_t desc_idx;
   ASSERT_OK(session_b.FetchRx(&desc_idx));
   ASSERT_EQ(desc_idx, 0u);
-  auto* desc = session_b.descriptor(kDescriptorIndex0);
-  ASSERT_EQ(desc->data_length, send_buff.size());
-  auto* data = session_b.buffer(desc->offset);
+  buffer_descriptor_t& desc = session_b.descriptor(kDescriptorIndex0);
+  ASSERT_EQ(desc.data_length, send_buff.size());
+  auto* data = session_b.buffer(desc.offset);
   ASSERT_EQ(std::basic_string_view(data, send_buff.size()),
             std::basic_string_view(send_buff.data(), send_buff.size()));
 }
@@ -746,8 +765,8 @@ TEST_F(NetworkDeviceTest, ClosingPrimarySession) {
   ASSERT_OK(WaitSessionStarted());
   ASSERT_OK(session_b.AttachPort(port13_));
   ASSERT_OK(WaitSessionStarted());
-  buffer_descriptor_t* d = session_a.ResetDescriptor(kDescriptorIndex0);
-  d->data_length = kDefaultBufferLength / 2;
+  buffer_descriptor_t& d = session_a.ResetDescriptor(kDescriptorIndex0);
+  d.data_length = kDefaultBufferLength / 2;
   session_b.ResetDescriptor(kDescriptorIndex1);
   ASSERT_OK(session_a.SendRx(kDescriptorIndex0));
   ASSERT_OK(WaitRxAvailable());
@@ -783,7 +802,7 @@ TEST_F(NetworkDeviceTest, ClosingPrimarySession) {
   uint16_t desc;
   ASSERT_OK(session_b.FetchRx(&desc));
   ASSERT_EQ(desc, target_descriptor);
-  ASSERT_EQ(session_b.descriptor(desc)->data_length, kReturnLength);
+  ASSERT_EQ(session_b.descriptor(desc).data_length, kReturnLength);
 }
 
 TEST_F(NetworkDeviceTest, DelayedStart) {
@@ -799,8 +818,8 @@ TEST_F(NetworkDeviceTest, DelayedStart) {
   // But we haven't actually called the callback.
   // We should be able to pause and unpause session_a while we're still holding the device.
   // we can send Tx data and it won't reach the device until TriggerStart is called.
-  buffer_descriptor_t* desc = session_a.ResetDescriptor(kDescriptorIndex0);
-  desc->port_id = kPort13;
+  buffer_descriptor_t& desc = session_a.ResetDescriptor(kDescriptorIndex0);
+  desc.port_id = kPort13;
   ASSERT_OK(session_a.SendTx(kDescriptorIndex0));
   ASSERT_OK(session_a.DetachPort(port13_));
   ASSERT_OK(session_a.AttachPort(port13_));
@@ -852,8 +871,8 @@ TEST_F(NetworkDeviceTest, DelayedStop) {
 
   // With the session running, send down a tx frame and then close the session. The session should
   // NOT be closed until we actually both call TriggerStop and return the outstanding buffer.
-  buffer_descriptor_t* desc = session_a.ResetDescriptor(kDescriptorIndex0);
-  desc->port_id = kPort13;
+  buffer_descriptor_t& desc = session_a.ResetDescriptor(kDescriptorIndex0);
+  desc.port_id = kPort13;
   ASSERT_OK(session_a.SendTx(kDescriptorIndex0));
   ASSERT_OK(WaitTx());
   ASSERT_OK(session_a.Close());
@@ -887,8 +906,8 @@ TEST_P(RxTxParamTest, WaitsForAllBuffersReturned) {
   ASSERT_OK(WaitStart());
   session.ResetDescriptor(kDescriptorIndex0);
   ASSERT_OK(session.SendRx(kDescriptorIndex0));
-  buffer_descriptor_t* desc = session.ResetDescriptor(kDescriptorIndex1);
-  desc->port_id = kPort13;
+  buffer_descriptor_t& desc = session.ResetDescriptor(kDescriptorIndex1);
+  desc.port_id = kPort13;
   ASSERT_OK(session.SendTx(kDescriptorIndex1));
   ASSERT_OK(WaitTx());
   ASSERT_OK(WaitRxAvailable());
@@ -959,8 +978,8 @@ TEST_F(NetworkDeviceTest, TeardownWithReclaim) {
   ASSERT_OK(WaitStart());
   session_a.ResetDescriptor(kDescriptorIndex0);
   ASSERT_OK(session_a.SendRx(kDescriptorIndex0));
-  buffer_descriptor_t* desc = session_a.ResetDescriptor(kDescriptorIndex1);
-  desc->port_id = kPort13;
+  buffer_descriptor_t& desc = session_a.ResetDescriptor(kDescriptorIndex1);
+  desc.port_id = kPort13;
   ASSERT_OK(session_a.SendTx(kDescriptorIndex1));
   ASSERT_OK(WaitTx());
   ASSERT_OK(WaitRxAvailable());
@@ -980,16 +999,20 @@ TEST_F(NetworkDeviceTest, TxHeadLength) {
   ASSERT_OK(OpenSession(&session));
   ASSERT_OK(session.AttachPort(port13_));
   session.ZeroVmo();
-  buffer_descriptor_t* desc = session.ResetDescriptor(kDescriptorIndex0);
-  desc->port_id = kPort13;
-  desc->head_length = kHeadLength;
-  desc->data_length = 1;
-  *session.buffer(desc->offset + desc->head_length) = 0xAA;
-  desc = session.ResetDescriptor(kDescriptorIndex1);
-  desc->port_id = kPort13;
-  desc->head_length = kHeadLength * 2;
-  desc->data_length = 1;
-  *session.buffer(desc->offset + desc->head_length) = 0xBB;
+  {
+    buffer_descriptor_t& desc = session.ResetDescriptor(kDescriptorIndex0);
+    desc.port_id = kPort13;
+    desc.head_length = kHeadLength;
+    desc.data_length = 1;
+    *session.buffer(desc.offset + desc.head_length) = 0xAA;
+  }
+  {
+    buffer_descriptor_t& desc = session.ResetDescriptor(kDescriptorIndex1);
+    desc.port_id = kPort13;
+    desc.head_length = kHeadLength * 2;
+    desc.data_length = 1;
+    *session.buffer(desc.offset + desc.head_length) = 0xBB;
+  }
   uint16_t descs[] = {0, 1};
   size_t sent;
   ASSERT_OK(session.SendTx(descs, 2, &sent));
@@ -1033,9 +1056,9 @@ TEST_F(NetworkDeviceTest, InvalidTxFrameType) {
   ASSERT_OK(OpenSession(&session));
   ASSERT_OK(session.AttachPort(port13_));
   ASSERT_OK(WaitStart());
-  buffer_descriptor_t* desc = session.ResetDescriptor(kDescriptorIndex0);
-  desc->port_id = kPort13;
-  desc->frame_type = static_cast<uint8_t>(netdev::wire::FrameType::kIpv4);
+  buffer_descriptor_t& desc = session.ResetDescriptor(kDescriptorIndex0);
+  desc.port_id = kPort13;
+  desc.frame_type = static_cast<uint8_t>(netdev::wire::FrameType::kIpv4);
   ASSERT_OK(session.SendTx(kDescriptorIndex0));
   // Session should be killed because of contract breach:
   ASSERT_OK(session.WaitClosed(TEST_DEADLINE));
@@ -1114,8 +1137,8 @@ TEST_F(NetworkDeviceTest, ReturnTxInline) {
   ASSERT_OK(session.AttachPort(port13_));
   ASSERT_OK(WaitStart());
   {
-    buffer_descriptor_t* desc = session.ResetDescriptor(0x02);
-    desc->port_id = kPort13;
+    buffer_descriptor_t& desc = session.ResetDescriptor(0x02);
+    desc.port_id = kPort13;
   }
   ASSERT_OK(session.SendTx(0x02));
   ASSERT_OK(session.tx_fifo().wait_one(ZX_FIFO_READABLE, TEST_DEADLINE, nullptr));
@@ -1168,8 +1191,8 @@ TEST_F(NetworkDeviceTest, RejectsSmallRxBuffers) {
   ASSERT_OK(OpenSession(&session));
   ASSERT_OK(session.AttachPort(port13_));
   ASSERT_OK(WaitStart());
-  buffer_descriptor_t* desc = session.ResetDescriptor(kDescriptorIndex0);
-  desc->data_length = kMinRxLength - 1;
+  buffer_descriptor_t& desc = session.ResetDescriptor(kDescriptorIndex0);
+  desc.data_length = kMinRxLength - 1;
   ASSERT_OK(session.SendRx(kDescriptorIndex0));
   // Session should be killed because of contract breach:
   ASSERT_OK(session.WaitClosed(TEST_DEADLINE));
@@ -1186,9 +1209,9 @@ TEST_F(NetworkDeviceTest, RejectsSmallTxBuffers) {
   ASSERT_OK(OpenSession(&session));
   ASSERT_OK(session.AttachPort(port13_));
   ASSERT_OK(WaitStart());
-  buffer_descriptor_t* desc = session.ResetDescriptor(kDescriptorIndex0);
-  desc->port_id = kPort13;
-  desc->data_length = kMinTxLength - 1;
+  buffer_descriptor_t& desc = session.ResetDescriptor(kDescriptorIndex0);
+  desc.port_id = kPort13;
+  desc.data_length = kMinTxLength - 1;
   ASSERT_OK(session.SendTx(kDescriptorIndex0));
   // Session should be killed because of contract breach:
   ASSERT_OK(session.WaitClosed(TEST_DEADLINE));
@@ -1346,9 +1369,9 @@ TEST_F(NetworkDeviceTest, OnlyReceiveOnSubscribedPorts) {
   std::array<uint16_t, 2> descriptors = {0, 1};
 
   for (auto desc : descriptors) {
-    auto* descriptor = session.ResetDescriptor(desc);
+    buffer_descriptor_t& descriptor = session.ResetDescriptor(desc);
     // Garble descriptor port.
-    descriptor->port_id = MAX_PORTS - 1;
+    descriptor.port_id = MAX_PORTS - 1;
   }
   size_t actual;
   ASSERT_OK(session.SendRx(descriptors.data(), descriptors.size(), &actual));
@@ -1371,7 +1394,7 @@ TEST_F(NetworkDeviceTest, OnlyReceiveOnSubscribedPorts) {
   // Only one of the descriptors makes it back into the session.
   ASSERT_EQ(actual, 1u);
   uint16_t returned = descriptors[0];
-  ASSERT_EQ(session.descriptor(returned)->port_id, kPort13);
+  ASSERT_EQ(session.descriptor(returned).port_id, kPort13);
 
   // The unused descriptor comes right back to us.
   ASSERT_OK(WaitRxAvailable());
@@ -1432,8 +1455,8 @@ TEST_F(NetworkDeviceTest, TxOnUnattachedPort) {
   ASSERT_OK(session.AttachPort(port13_));
   ASSERT_OK(WaitStart());
   constexpr uint16_t kDesc = 0;
-  buffer_descriptor_t* desc = session.ResetDescriptor(kDesc);
-  desc->port_id = MAX_PORTS - 1;
+  buffer_descriptor_t& desc = session.ResetDescriptor(kDesc);
+  desc.port_id = MAX_PORTS - 1;
   ASSERT_OK(session.SendTx(kDesc));
   // Should be returned with an error.
   zx_signals_t observed;
@@ -1443,7 +1466,7 @@ TEST_F(NetworkDeviceTest, TxOnUnattachedPort) {
   uint16_t read_desc = 0xFFFF;
   ASSERT_OK(session.FetchTx(&read_desc));
   ASSERT_EQ(read_desc, kDesc);
-  ASSERT_EQ(desc->return_flags,
+  ASSERT_EQ(desc.return_flags,
             static_cast<uint32_t>(netdev::wire::TxReturnFlags::kTxRetError |
                                   netdev::wire::TxReturnFlags::kTxRetNotAvailable));
 }
@@ -1531,9 +1554,9 @@ TEST_F(NetworkDeviceTest, SessionRejectsChainedRxSpace) {
   ASSERT_OK(WaitStart());
   session.ResetDescriptor(kDescriptorIndex1);
   {
-    buffer_descriptor_t* desc = session.ResetDescriptor(kDescriptorIndex0);
-    desc->chain_length = 1;
-    desc->nxt = 1;
+    buffer_descriptor_t& desc = session.ResetDescriptor(kDescriptorIndex0);
+    desc.chain_length = 1;
+    desc.nxt = 1;
   }
   ASSERT_OK(session.SendRx(kDescriptorIndex0));
   // Session will be closed because of bad descriptor.
@@ -1597,8 +1620,8 @@ TEST_P(RxTxBufferReturnTest, TestRaceFramesWithDeviceStop) {
     ASSERT_OK(OpenSession(&session));
     ASSERT_OK(session.AttachPort(port13_));
     ASSERT_OK(WaitStart());
-    buffer_descriptor_t* desc = session.ResetDescriptor(i);
-    desc->port_id = kPort13;
+    buffer_descriptor_t& desc = session.ResetDescriptor(i);
+    desc.port_id = kPort13;
     fit::function<void()> manual_return;
     switch (rxtx) {
       case RxTxSwitch::Rx:
@@ -1897,9 +1920,9 @@ TEST_F(NetworkDeviceTest, MultiplePortsAndSessions) {
       ASSERT_OK(s.session.AttachPort(port));
     }
     for (auto desc : descriptors) {
-      auto* descriptor = s.session.ResetDescriptor(desc);
+      buffer_descriptor_t& descriptor = s.session.ResetDescriptor(desc);
       // Garble descriptor port.
-      descriptor->port_id = MAX_PORTS - 1;
+      descriptor.port_id = MAX_PORTS - 1;
     }
     size_t actual;
     ASSERT_OK(s.session.SendRx(descriptors.data(), descriptors.size(), &actual));
@@ -1931,7 +1954,7 @@ TEST_F(NetworkDeviceTest, MultiplePortsAndSessions) {
 
     auto desc_iter = returned_descriptors.begin();
     for (auto& port : s.attach_ports) {
-      ASSERT_EQ(s.session.descriptor(*desc_iter++)->port_id, port.id());
+      ASSERT_EQ(s.session.descriptor(*desc_iter++).port_id, port.id());
     }
   }
 }
@@ -1969,8 +1992,8 @@ TEST_F(NetworkDeviceTest, ListenSessionPortFiltering) {
   {
     std::array<uint16_t, kPortCount> descriptors = {0, 1};
     for (uint8_t i = 0; i < kPortCount; i++) {
-      buffer_descriptor_t* desc = primary_session.ResetDescriptor(descriptors[i]);
-      desc->port_id = ports[i].id();
+      buffer_descriptor_t& desc = primary_session.ResetDescriptor(descriptors[i]);
+      desc.port_id = ports[i].id();
     }
     size_t actual;
     ASSERT_OK(primary_session.SendTx(descriptors.data(), descriptors.size(), &actual));
@@ -1981,7 +2004,7 @@ TEST_F(NetworkDeviceTest, ListenSessionPortFiltering) {
   // Observe the listening session only receive for the port it attached to.
   uint16_t desc;
   ASSERT_OK(listen_session.FetchRx(&desc));
-  ASSERT_EQ(listen_session.descriptor(desc)->port_id, ports[0].id());
+  ASSERT_EQ(listen_session.descriptor(desc).port_id, ports[0].id());
   ASSERT_STATUS(listen_session.FetchRx(&desc), ZX_ERR_SHOULD_WAIT);
 }
 
@@ -2236,18 +2259,18 @@ TEST_P(BadDescriptorTest, SessionIsKilledOnBadDescriptor) {
       txn.Commit();
     } break;
     case DescriptorSource::ListenSessionRx: {
-      buffer_descriptor_t* desc = primary.ResetDescriptor(kGoodTxDescriptor);
-      desc->port_id = kPort13;
+      buffer_descriptor_t& desc = primary.ResetDescriptor(kGoodTxDescriptor);
+      desc.port_id = kPort13;
       ASSERT_OK(primary.SendTx(kGoodTxDescriptor));
     } break;
     case DescriptorSource::Tx:
       ASSERT_OK(primary.SendTx(kDescriptorCount));
       break;
     case DescriptorSource::TxChain: {
-      buffer_descriptor_t* desc = primary.ResetDescriptor(kGoodTxDescriptor);
-      desc->port_id = kPort13;
-      desc->chain_length = 1;
-      desc->nxt = kDescriptorCount;
+      buffer_descriptor_t& desc = primary.ResetDescriptor(kGoodTxDescriptor);
+      desc.port_id = kPort13;
+      desc.chain_length = 1;
+      desc.nxt = kDescriptorCount;
       ASSERT_OK(primary.SendTx(kGoodTxDescriptor));
     } break;
   }
@@ -2324,8 +2347,8 @@ TEST_F(NetworkDeviceTest, SecondarySessionWithRxOffsetAndChaining) {
     SCOPED_TRACE(s.name);
     ASSERT_OK(OpenSession(&s.session, s.flags, kDefaultDescriptorCount, kBufferLength, s.name));
     for (uint16_t desc = 0; desc < std::size(buffers) * s.descriptor_count; desc++) {
-      buffer_descriptor_t* d = s.session.ResetDescriptor(desc);
-      d->data_length = kBufferLength / s.descriptor_count;
+      buffer_descriptor_t& d = s.session.ResetDescriptor(desc);
+      d.data_length = kBufferLength / s.descriptor_count;
       ASSERT_OK(s.session.SendRx(desc));
     }
     ASSERT_OK(s.session.AttachPort(port13_));
@@ -2361,25 +2384,28 @@ TEST_F(NetworkDeviceTest, SecondarySessionWithRxOffsetAndChaining) {
 
       uint16_t desc_idx;
       ASSERT_OK(s.session.FetchRx(&desc_idx));
-      buffer_descriptor_t* desc = s.session.descriptor(desc_idx);
-      if (s.flags & netdev::wire::SessionFlags::kPrimary) {
-        ASSERT_EQ(desc->chain_length, 0);
-      } else {
-        ASSERT_EQ(desc->chain_length,
-                  std::max(static_cast<uint8_t>(b.length * s.descriptor_count / kBufferLength),
-                           static_cast<uint8_t>(1)) -
-                      1);
+      {
+        buffer_descriptor_t& desc = s.session.descriptor(desc_idx);
+        if (s.flags & netdev::wire::SessionFlags::kPrimary) {
+          ASSERT_EQ(desc.chain_length, 0);
+        } else {
+          ASSERT_EQ(desc.chain_length,
+                    std::max(static_cast<uint8_t>(b.length * s.descriptor_count / kBufferLength),
+                             static_cast<uint8_t>(1)) -
+                        1);
+        }
       }
       uint8_t received[kBufferLength];
       auto wr = std::begin(received);
       for (;;) {
-        ASSERT_LE(static_cast<size_t>(std::distance(std::begin(received), wr)) + desc->data_length,
+        buffer_descriptor_t& desc = s.session.descriptor(desc_idx);
+        ASSERT_LE(static_cast<size_t>(std::distance(std::begin(received), wr)) + desc.data_length,
                   std::size(received));
-        wr = std::copy_n(s.session.buffer(desc->offset + desc->head_length), desc->data_length, wr);
-        if (desc->chain_length == 0) {
+        wr = std::copy_n(s.session.buffer(desc.offset + desc.head_length), desc.data_length, wr);
+        if (desc.chain_length == 0) {
           break;
         }
-        desc = s.session.descriptor(desc->nxt);
+        desc_idx = desc.nxt;
       }
       ASSERT_EQ(static_cast<size_t>(std::distance(std::begin(received), wr)),
                 b.reference_data.size());
@@ -2407,17 +2433,17 @@ TEST_F(NetworkDeviceTest, BufferChainingOnListenTx) {
   constexpr uint16_t kTxDescriptor = 0;
 
   for (uint16_t i = 0; i < kRxDescriptorCount; i++) {
-    buffer_descriptor_t* desc = listen.ResetDescriptor(i);
-    desc->data_length = kRxDescriptorLen;
+    buffer_descriptor_t& desc = listen.ResetDescriptor(i);
+    desc.data_length = kRxDescriptorLen;
     ASSERT_OK(listen.SendRx(i));
   }
 
-  buffer_descriptor_t* tx_desc = primary.ResetDescriptor(kTxDescriptor);
-  tx_desc->port_id = kPort13;
-  tx_desc->data_length = kTxLen;
-  tx_desc->head_length = kTxHeadLen;
+  buffer_descriptor_t& tx_desc = primary.ResetDescriptor(kTxDescriptor);
+  tx_desc.port_id = kPort13;
+  tx_desc.data_length = kTxLen;
+  tx_desc.head_length = kTxHeadLen;
   uint8_t b = 0;
-  fbl::Span tx_data(primary.buffer(tx_desc->offset + kTxHeadLen), kTxLen);
+  fbl::Span tx_data(primary.buffer(tx_desc.offset + kTxHeadLen), kTxLen);
   for (uint8_t& d : tx_data) {
     d = b++;
   }
@@ -2431,14 +2457,14 @@ TEST_F(NetworkDeviceTest, BufferChainingOnListenTx) {
   uint8_t expect_chain_length = kRxDescriptorCount - 1;
   for (uint16_t i = 0; i < kRxDescriptorCount; i++) {
     SCOPED_TRACE(i);
-    buffer_descriptor_t* rx_desc = listen.descriptor(rx_desc_index);
-    ASSERT_EQ(rx_desc->chain_length, expect_chain_length--);
-    fbl::Span data(listen.buffer(rx_desc->offset), rx_desc->data_length);
+    buffer_descriptor_t& rx_desc = listen.descriptor(rx_desc_index);
+    ASSERT_EQ(rx_desc.chain_length, expect_chain_length--);
+    fbl::Span data(listen.buffer(rx_desc.offset), rx_desc.data_length);
     ASSERT_EQ(data.size(), std::min(kRxDescriptorLen, kTxLen - offset));
     ASSERT_EQ(toHexString(fbl::Span(data.begin(), data.size())),
               toHexString(tx_data.subspan(offset, data.size())));
-    rx_desc_index = rx_desc->nxt;
-    offset += rx_desc->data_length;
+    rx_desc_index = rx_desc.nxt;
+    offset += rx_desc.data_length;
   }
   ASSERT_EQ(offset, kTxLen);
 }

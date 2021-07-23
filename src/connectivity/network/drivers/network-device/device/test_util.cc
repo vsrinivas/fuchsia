@@ -450,9 +450,9 @@ zx_status_t TestSession::WaitClosed(zx::time deadline) {
   return session_.channel().wait_one(ZX_CHANNEL_PEER_CLOSED, deadline, nullptr);
 }
 
-buffer_descriptor_t* TestSession::ResetDescriptor(uint16_t index) {
-  buffer_descriptor_t* desc = descriptor(index);
-  *desc = {
+buffer_descriptor_t& TestSession::ResetDescriptor(uint16_t index) {
+  buffer_descriptor_t& desc = descriptor(index);
+  desc = {
       .frame_type = static_cast<uint8_t>(netdev::wire::FrameType::kEthernet),
       .info_type = static_cast<uint32_t>(netdev::wire::InfoType::kNoInfo),
       .offset = canonical_offset(index),
@@ -463,12 +463,10 @@ buffer_descriptor_t* TestSession::ResetDescriptor(uint16_t index) {
 
 void TestSession::ZeroVmo() { memset(data_.start(), 0x00, buffer_length_ * descriptors_count_); }
 
-buffer_descriptor_t* TestSession::descriptor(uint16_t index) {
-  if (index < descriptors_count_) {
-    return reinterpret_cast<buffer_descriptor_t*>(reinterpret_cast<uint8_t*>(descriptors_.start()) +
-                                                  (index * sizeof(buffer_descriptor_t)));
-  }
-  return nullptr;
+buffer_descriptor_t& TestSession::descriptor(uint16_t index) {
+  ZX_ASSERT_MSG(index < descriptors_count_, "descriptor %d out of bounds (count = %d)", index,
+                descriptors_count_);
+  return *(reinterpret_cast<buffer_descriptor_t*>(descriptors_.start()) + index);
 }
 
 uint8_t* TestSession::buffer(uint64_t offset) {
@@ -493,13 +491,13 @@ zx_status_t TestSession::SendTx(const uint16_t* descriptor, size_t count, size_t
 
 zx_status_t TestSession::SendTxData(uint8_t port_id, uint16_t descriptor_index,
                                     const std::vector<uint8_t>& data) {
-  auto* desc = ResetDescriptor(descriptor_index);
+  buffer_descriptor_t& desc = ResetDescriptor(descriptor_index);
   zx_status_t status;
-  if ((status = data_vmo_.write(&data.at(0), desc->offset, data.size())) != ZX_OK) {
+  if ((status = data_vmo_.write(&data.at(0), desc.offset, data.size())) != ZX_OK) {
     return status;
   }
-  desc->port_id = port_id;
-  desc->data_length = static_cast<uint32_t>(data.size());
+  desc.port_id = port_id;
+  desc.data_length = static_cast<uint32_t>(data.size());
   return SendTx(descriptor_index);
 }
 
