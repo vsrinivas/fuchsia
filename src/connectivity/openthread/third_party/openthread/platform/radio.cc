@@ -251,16 +251,14 @@ extern "C" void otPlatDiagAlarmCallback(otInstance *a_instance) { OT_UNUSED_VARI
 
 #endif  // OPENTHREAD_CONFIG_DIAG_ENABLE
 
-otError otPlatRadioSetRegion(otInstance *a_instance, uint16_t a_region_code)
-{
-    OT_UNUSED_VARIABLE(a_instance);
-    return sRadioSpinel.SetRadioRegion(a_region_code);
+otError otPlatRadioSetRegion(otInstance *a_instance, uint16_t a_region_code) {
+  OT_UNUSED_VARIABLE(a_instance);
+  return sRadioSpinel.SetRadioRegion(a_region_code);
 }
 
-otError otPlatRadioGetRegion(otInstance *a_instance, uint16_t *a_region_code)
-{
-    OT_UNUSED_VARIABLE(a_instance);
-    return sRadioSpinel.GetRadioRegion(a_region_code);
+otError otPlatRadioGetRegion(otInstance *a_instance, uint16_t *a_region_code) {
+  OT_UNUSED_VARIABLE(a_instance);
+  return sRadioSpinel.GetRadioRegion(a_region_code);
 }
 
 void otPlatRadioSetMacKey(otInstance *a_instance, uint8_t a_key_id_mode, uint8_t a_key_id,
@@ -269,4 +267,98 @@ void otPlatRadioSetMacKey(otInstance *a_instance, uint8_t a_key_id_mode, uint8_t
   SuccessOrDie(
       sRadioSpinel.SetMacKey(a_key_id_mode, a_key_id, *a_prev_key, *a_curr_key, *a_next_key));
   OT_UNUSED_VARIABLE(a_instance);
+}
+
+extern "C" bool otPlatRadioIsEnabled(otInstance *a_instance) {
+  OT_UNUSED_VARIABLE(a_instance);
+  return sRadioSpinel.IsEnabled();
+}
+
+extern "C" const char *otPlatRadioGetVersionString(otInstance *a_instance) {
+  OT_UNUSED_VARIABLE(a_instance);
+  return sRadioSpinel.GetVersion();
+}
+
+extern "C" otError otPlatRadioGetFemLnaGain(otInstance *a_instance, int8_t *a_gain) {
+  OT_UNUSED_VARIABLE(a_instance);
+  assert(a_gain != nullptr);
+  return sRadioSpinel.GetFemLnaGain(*a_gain);
+}
+
+extern "C" otError otPlatRadioSetFemLnaGain(otInstance *a_instance, int8_t a_gain) {
+  OT_UNUSED_VARIABLE(a_instance);
+  return sRadioSpinel.SetFemLnaGain(a_gain);
+}
+
+#if OPENTHREAD_CONFIG_PLATFORM_RADIO_COEX_ENABLE
+extern "C" otError otPlatRadioSetCoexEnabled(otInstance *a_instance, bool a_enabled) {
+  OT_UNUSED_VARIABLE(a_instance);
+  return sRadioSpinel.SetCoexEnabled(a_enabled);
+}
+
+extern "C" bool otPlatRadioIsCoexEnabled(otInstance *a_instance) {
+  OT_UNUSED_VARIABLE(a_instance);
+  return sRadioSpinel.IsCoexEnabled();
+}
+
+extern "C" otError otPlatRadioGetCoexMetrics(otInstance *a_instance,
+                                             otRadioCoexMetrics *a_coex_metrics) {
+  OT_UNUSED_VARIABLE(a_instance);
+
+  otError error = OT_ERROR_NONE;
+
+  VerifyOrExit(a_coex_metrics != nullptr, error = OT_ERROR_INVALID_ARGS);
+
+  error = sRadioSpinel.GetCoexMetrics(*a_coex_metrics);
+
+exit:
+  return error;
+}
+#endif
+
+extern "C" uint32_t otPlatRadioGetSupportedChannelMask(otInstance *a_instance) {
+  OT_UNUSED_VARIABLE(a_instance);
+  return sRadioSpinel.GetRadioChannelMask(false);
+}
+
+extern "C" uint32_t otPlatRadioGetPreferredChannelMask(otInstance *a_instance) {
+  OT_UNUSED_VARIABLE(a_instance);
+  return sRadioSpinel.GetRadioChannelMask(true);
+}
+
+extern "C" otRadioState otPlatRadioGetState(otInstance *a_instance) {
+  OT_UNUSED_VARIABLE(a_instance);
+  return sRadioSpinel.GetState();
+}
+
+extern "C" void otPlatRadioSetMacFrameCounter(otInstance *a_instance,
+                                              uint32_t a_mac_frame_counter) {
+  SuccessOrDie(sRadioSpinel.SetMacFrameCounter(a_mac_frame_counter));
+  OT_UNUSED_VARIABLE(a_instance);
+}
+
+extern "C" uint64_t otPlatRadioGetNow(otInstance *a_instance) {
+  OT_UNUSED_VARIABLE(a_instance);
+  return sRadioSpinel.GetNow();
+}
+
+extern "C" uint8_t otPlatRadioGetCslAccuracy(otInstance *a_instance) {
+  OT_UNUSED_VARIABLE(a_instance);
+
+  return 0;
+}
+
+extern "C" otError otPlatRadioSetChannelMaxTransmitPower(otInstance *a_instance, uint8_t a_channel,
+                                                         int8_t a_max_power) {
+  OT_UNUSED_VARIABLE(a_instance);
+  return sRadioSpinel.SetChannelMaxTransmitPower(a_channel, a_max_power);
+}
+
+extern "C" otError otPlatRadioReceiveAt(otInstance *a_instance, uint8_t a_channel, uint32_t a_start,
+                                        uint32_t a_duration) {
+  OT_UNUSED_VARIABLE(a_instance);
+  OT_UNUSED_VARIABLE(a_channel);
+  OT_UNUSED_VARIABLE(a_start);
+  OT_UNUSED_VARIABLE(a_duration);
+  return OT_ERROR_NOT_IMPLEMENTED;
 }

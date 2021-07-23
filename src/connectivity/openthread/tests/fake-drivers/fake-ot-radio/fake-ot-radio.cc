@@ -41,6 +41,8 @@ constexpr uint8_t kProtocolVer = 0x01;
 constexpr uint8_t kPropCaps = 0x5;
 constexpr uint8_t kPropHwAddr = 0x8;
 constexpr uint8_t kPhyRxSensitivity = 0x27;
+constexpr uint8_t kPhyChan = 0x22;
+constexpr uint8_t kRegionCode = 0x2c;
 constexpr uint8_t kPropGetRadioCap[] = {0x8b, 0x24};
 constexpr uint8_t kPropGetB001[] = {0xb0, 0x1};
 constexpr uint8_t kPropGet8210[] = {0x82, 0x10};
@@ -56,11 +58,13 @@ constexpr uint8_t kPropCapsReply[] = {0x80, 0x6,  0x5, 0x5,  0xc,  0x18,
 constexpr uint8_t kPropHwAddrReply[] = {0x80, 0x6,  0x8,  0x18, 0xb4, 0x30,
                                         0x5,  0xf8, 0xdf, 0x51, 0x39};
 constexpr uint8_t kPhyRxSensitivityReply[] = {0x80, 0x6, 0x27, 0x9c};
+constexpr uint8_t kPhyChanReply[] = {0x80, 0x6,  0x22, 0xb,  0xc,  0xd,  0xe,  0xf,  0x10, 0x11,
+                                     0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a};
+constexpr uint8_t kRegionCodeReply[] = {0x80, 0x6, 0x2c, 0x55, 0x53};
 constexpr uint8_t kPropGetRadioCapReply[] = {0x80, 0x6, 0x8b, 0x24, 0x6d};
 constexpr uint8_t kPropGetB001Reply[] = {0x80, 0x6, 0xb0, 0x1, 0x3};
 constexpr uint8_t kPropGet8210Reply[] = {0x80, 0x6, 0x82, 0x10, 0xdc, 0xc7,
                                          0x1,  0x0, 0x0,  0x0,  0x0,  0x0};
-
 constexpr uint8_t kSpinelFrameHeader = 0x80;
 constexpr uint8_t kSpinelHeaderInvalid = 0xFF;
 
@@ -249,6 +253,12 @@ void FakeOtRadioDevice::FrameHandler(::fidl::VectorView<uint8_t> data) {
         break;
       case kPhyRxSensitivity:
         reply.assign(std::begin(kPhyRxSensitivityReply), std::end(kPhyRxSensitivityReply));
+        break;
+      case kPhyChan:
+        reply.assign(std::begin(kPhyChanReply), std::end(kPhyChanReply));
+        break;
+      case kRegionCode:
+        reply.assign(std::begin(kRegionCodeReply), std::end(kRegionCodeReply));
         break;
       default:
         if (memcmp(kPropGetRadioCap, &data.data()[kCmdLoc + 1], sizeof(kPropGetRadioCap)) == 0) {
