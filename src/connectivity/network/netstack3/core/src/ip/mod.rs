@@ -4,6 +4,8 @@
 
 //! The Internet Protocol, versions 4 and 6.
 
+#![deny(unused_results)]
+
 #[macro_use]
 pub(crate) mod path_mtu;
 
@@ -1062,7 +1064,7 @@ pub(crate) fn receive_ipv4_packet<B: BufferMut, D: BufferDispatcher<B>>(
                     trace!("receive_ipv4_packet: forwarding");
 
                     packet.set_ttl(ttl - 1);
-                    drop_packet_and_undo_parse!(packet, buffer);
+                    let (_, _, _, _) = drop_packet_and_undo_parse!(packet, buffer);
                     if crate::device::send_ip_frame(ctx, dest.device, dest.next_hop, buffer)
                         .is_err()
                     {
@@ -2674,8 +2676,8 @@ mod tests {
         let b = "bob";
         let dummy_config = I::DUMMY_CONFIG;
         let mut state_builder = StackStateBuilder::default();
-        state_builder.ipv4_builder().forward(true);
-        state_builder.ipv6_builder().forward(true);
+        let _: &mut Ipv4StateBuilder = state_builder.ipv4_builder().forward(true);
+        let _: &mut Ipv6StateBuilder = state_builder.ipv6_builder().forward(true);
         let mut ndp_configs = crate::device::ndp::NdpConfigurations::default();
         ndp_configs.set_dup_addr_detect_transmits(None);
         ndp_configs.set_max_router_solicitations(None);
@@ -2747,7 +2749,7 @@ mod tests {
 
         let dummy_config = Ipv6::DUMMY_CONFIG;
         let mut state_builder = StackStateBuilder::default();
-        state_builder.ipv6_builder().forward(true);
+        let _: &mut Ipv6StateBuilder = state_builder.ipv6_builder().forward(true);
         let mut ndp_configs = crate::device::ndp::NdpConfigurations::default();
         ndp_configs.set_dup_addr_detect_transmits(None);
         ndp_configs.set_max_router_solicitations(None);
@@ -3256,7 +3258,8 @@ mod tests {
         let ip_address = I::LOOPBACK_ADDRESS;
         let ctx =
             DummyEventDispatcherBuilder::from_config(cfg.clone()).build::<DummyEventDispatcher>();
-        lookup_route(&ctx, ip_address);
+        let destination = lookup_route(&ctx, ip_address);
+        unreachable!("should have panicked, got destination {:?}", destination);
     }
 
     #[test]

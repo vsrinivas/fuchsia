@@ -15,6 +15,8 @@
 //!
 //! [RFC 4606]: https://tools.ietf.org/html/rfc4604
 
+#![allow(unused_results)]
+
 // This macro is used by tests in both the `igmp` and `mld` modules.
 
 /// Assert that the GMP state machine for `$group` is in the given state.

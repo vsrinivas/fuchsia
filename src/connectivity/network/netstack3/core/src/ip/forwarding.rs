@@ -275,30 +275,23 @@ impl<I: Ip, D: Clone + Debug + PartialEq> ForwardingTable<I, D> {
     // TODO(ghanan): Come up with a more performant algorithm.
     fn regen_active(&mut self) {
         let mut subnets = HashSet::new();
-        let mut new_active = Vec::new();
 
         // Insert all the subnets we have paths for.
-        for e in self.installed.iter() {
-            // We already tried to find a path to `subnet`, skip.
-            if subnets.contains(&e.subnet) {
-                continue;
-            }
-
-            // Mark `subnet` so we know we already tried to find a route to it.
-            subnets.insert(e.subnet);
-
-            // If a route to `subnet` exists, store it in our new active routes
-            // cache.
-            //
-            // TODO(ghanan): When regenerating the active table, use the new
-            //               active table as we generate it to help with
-            //               lookups?
-            if let Some(dest) = self.regen_active_helper(&e.subnet) {
-                new_active.push(ActiveEntry { subnet: e.subnet, dest });
-            }
-        }
-
-        self.active = new_active;
+        self.active = self
+            .installed
+            .iter()
+            .filter(|entry| subnets.insert(entry.subnet)) // Skip duplicates.
+            .filter_map(|entry| {
+                // If a route to `subnet` exists, store it in our new active routes
+                // cache.
+                //
+                // TODO(ghanan): When regenerating the active table, use the new
+                //               active table as we generate it to help with
+                //               lookups?
+                self.regen_active_helper(&entry.subnet)
+                    .map(|dest| ActiveEntry { subnet: entry.subnet, dest })
+            })
+            .collect();
     }
 
     /// Find the final destination a packet destined to an address in `subnet`

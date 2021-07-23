@@ -4,8 +4,6 @@
 
 //! The Internet Control Message Protocol (ICMP).
 
-#![deny(unused_results)]
-
 use alloc::vec::Vec;
 use core::fmt::Debug;
 

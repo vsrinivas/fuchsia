@@ -815,7 +815,7 @@ mod tests {
 
         // TTL is specified.
         let mut builder = Ipv4SocketBuilder::default();
-        builder.ttl(NonZeroU8::new(1).unwrap());
+        let _: &mut Ipv4SocketBuilder = builder.ttl(NonZeroU8::new(1).unwrap());
         assert!(
             IpSocketContext::<Ipv4>::new_ip_socket(
                 &mut ctx,
@@ -921,7 +921,7 @@ mod tests {
 
         // TTL is specified.
         let mut builder = Ipv6SocketBuilder::default();
-        builder.hop_limit(1);
+        let _: &mut Ipv6SocketBuilder = builder.hop_limit(1);
         assert!(
             IpSocketContext::<Ipv6>::new_ip_socket(
                 &mut ctx,
@@ -1000,7 +1000,7 @@ mod tests {
 
         // Create a normal, routable socket.
         let mut builder = Ipv4SocketBuilder::default();
-        builder.ttl(NonZeroU8::new(1).unwrap());
+        let _: &mut Ipv4SocketBuilder = builder.ttl(NonZeroU8::new(1).unwrap());
         let mut sock = IpSocketContext::<Ipv4>::new_ip_socket(
             &mut ctx,
             None,
@@ -1068,7 +1068,7 @@ mod tests {
 
         // Create a normal, routable socket.
         let mut builder = Ipv6SocketBuilder::default();
-        builder.hop_limit(1);
+        let _: &mut Ipv6SocketBuilder = builder.hop_limit(1);
         let mut sock = IpSocketContext::<Ipv6>::new_ip_socket(
             &mut ctx,
             None,

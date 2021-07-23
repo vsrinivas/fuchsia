@@ -30,8 +30,6 @@
 //! + 40 byte IPv6 header). If a link supports an MTU greater than the maximum
 //! size of a non-jumbogram packet, the packet should not be fragmented.
 
-#![deny(unused_results)]
-
 use alloc::collections::HashMap;
 use alloc::collections::{BTreeSet, BinaryHeap};
 use alloc::vec::Vec;
