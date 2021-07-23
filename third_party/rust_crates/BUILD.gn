@@ -810,6 +810,10 @@ group("toml") {
   deps = [ ":toml-v0_5_6" ]
 }
 
+group("toml_edit") {
+  deps = [ ":toml_edit-v0_2_1" ]
+}
+
 group("tracing") {
   deps = [ ":tracing-v0_1_25" ]
 }
@@ -1898,7 +1902,7 @@ rust_library("byteorder-v1_3_1") {
 
 rust_library("bytes-v0_5_4") {
   crate_name = "bytes"
-  crate_root = "//third_party/rust_crates/vendor/bytes/src/lib.rs"
+  crate_root = "//third_party/rust_crates/vendor/bytes-0.5.4/src/lib.rs"
   output_name = "bytes-b8d56db65f2354f4"
   configs -= [
     "//build/config/rust:edition_2018",
@@ -1914,6 +1918,29 @@ rust_library("bytes-v0_5_4") {
     "--edition=2018",
     "-Cmetadata=b8d56db65f2354f4",
     "-Cextra-filename=-b8d56db65f2354f4",
+    "--cfg=feature=\"default\"",
+    "--cfg=feature=\"std\"",
+  ]
+}
+
+rust_library("bytes-v1_0_1") {
+  crate_name = "bytes"
+  crate_root = "//third_party/rust_crates/vendor/bytes/src/lib.rs"
+  output_name = "bytes-95481d3375f8e2b1"
+  configs -= [
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
+  ]
+
+  deps = []
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=95481d3375f8e2b1",
+    "-Cextra-filename=-95481d3375f8e2b1",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
@@ -2209,6 +2236,32 @@ rust_library("codespan-reporting-v0_9_5") {
     "--edition=2018",
     "-Cmetadata=32ae5083927f74fe",
     "-Cextra-filename=-32ae5083927f74fe",
+  ]
+}
+
+rust_library("combine-v4_6_1") {
+  crate_name = "combine"
+  crate_root = "//third_party/rust_crates/forks/combine/src/lib.rs"
+  output_name = "combine-34104a60ff055e3e"
+  configs -= [
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":bytes-v1_0_1" ]
+  deps += [ ":memchr-v2_3_3" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=34104a60ff055e3e",
+    "-Cextra-filename=-34104a60ff055e3e",
+    "--cfg=feature=\"bytes\"",
+    "--cfg=feature=\"default\"",
+    "--cfg=feature=\"std\"",
   ]
 }
 
@@ -9869,6 +9922,30 @@ rust_library("toml-v0_5_6") {
     "-Cmetadata=2563c91c8a85577d",
     "-Cextra-filename=-2563c91c8a85577d",
     "--cfg=feature=\"default\"",
+  ]
+}
+
+rust_library("toml_edit-v0_2_1") {
+  crate_name = "toml_edit"
+  crate_root = "//third_party/rust_crates/vendor/toml_edit/src/lib.rs"
+  output_name = "toml_edit-21fcacc5489f3304"
+  configs -= [
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":chrono-v0_4_11" ]
+  deps += [ ":combine-v4_6_1" ]
+  deps += [ ":linked-hash-map-v0_5_3" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=21fcacc5489f3304",
+    "-Cextra-filename=-21fcacc5489f3304",
   ]
 }
 

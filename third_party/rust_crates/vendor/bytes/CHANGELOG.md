@@ -1,3 +1,52 @@
+# 1.0.1 (January 11, 2021)
+
+### Changed
+- mark `Vec::put_slice` with `#[inline]` (#459)
+
+### Fixed
+- Fix deprecation warning (#457)
+- use `Box::into_raw` instead of `mem::forget`-in-disguise (#458)
+
+# 1.0.0 (December 22, 2020)
+
+### Changed
+- Rename Buf/BufMut, methods to chunk/chunk_mut (#450)
+
+### Removed
+- remove unused Buf implementation. (#449)
+
+# 0.6.0 (October 21, 2020)
+
+API polish in preparation for a 1.0 release.
+
+### Changed
+- `BufMut` is now an `unsafe` trait (#432).
+- `BufMut::bytes_mut()` returns `&mut UninitSlice`, a type owned by `bytes` to
+  avoid undefined behavior (#433).
+- `Buf::copy_to_bytes(len)` replaces `Buf::into_bytes()` (#439).
+- `Buf`/`BufMut` utility methods are moved onto the trait and `*Ext` traits are
+  removed (#431).
+
+### Removed
+- `BufMut::bytes_vectored_mut()` (#430).
+- `new` methods on combinator types (#434).
+
+# 0.5.6 (July 13, 2020)
+
+- Improve `BytesMut` to reuse buffer when fully `advance`d.
+- Mark `BytesMut::{as_mut, set_len}` with `#[inline]`.
+- Relax synchronization when cloning in shared vtable of `Bytes`.
+- Move `loom` to `dev-dependencies`.
+
+# 0.5.5 (June 18, 2020)
+
+### Added
+- Allow using the `serde` feature in `no_std` environments (#385).
+
+### Fix
+- Fix `BufMut::advance_mut` to panic if advanced passed the capacity (#354)..
+- Fix `BytesMut::freeze` ignoring amount previously `advance`d (#352).
+
 # 0.5.4 (January 23, 2020)
 
 ### Added

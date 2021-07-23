@@ -1,0 +1,26 @@
+# What is this crate used for?
+
+At the time of writing, this crate is a dependency of https://docs.rs/toml_edit.
+
+# Are there any use restrictions? i.e. only for development hosts
+
+No.
+
+# What differs from upstream?
+
+This fork is using upstream commit 7f330b0cacd61131df88c919074ffa8136100299 from version
+4.6.1-alpha.0 which had not been published to crates.io as 4.6.1 at the time of writing. The latest
+version on crates.io at the time of writing was 4.6.0. Publication has been requested in
+https://github.com/Marwes/combine/issues/320.
+
+The version number in Cargo.toml was modified to remove the alpha suffix that prevented cargo from
+resolving it for toml_edit's dependency. No other modifications have been made.
+
+# Are there any restrictions to how it should be rolled?
+
+No, although ideally we would delete this fork rather than continue updating it once upstream has
+published to crates.io.
+
+# Is there anything else which makes this dependency "special"?
+
+No.

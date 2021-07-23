@@ -1,22 +1,33 @@
-use core::{cmp, fmt, hash, isize, slice, usize};
+use core::iter::{FromIterator, Iterator};
 use core::mem::{self, ManuallyDrop};
 use core::ops::{Deref, DerefMut};
 use core::ptr::{self, NonNull};
-use core::iter::{FromIterator, Iterator};
+use core::{cmp, fmt, hash, isize, slice, usize};
 
-use alloc::{vec::Vec, string::String, boxed::Box, borrow::{Borrow, BorrowMut}};
+use alloc::{
+    borrow::{Borrow, BorrowMut},
+    boxed::Box,
+    string::String,
+    vec::Vec,
+};
 
-use crate::{Bytes, Buf, BufMut};
+use crate::buf::{IntoIter, UninitSlice};
 use crate::bytes::Vtable;
-use crate::buf::IntoIter;
+#[allow(unused)]
+use crate::loom::sync::atomic::AtomicMut;
 use crate::loom::sync::atomic::{self, AtomicPtr, AtomicUsize, Ordering};
+use crate::{Buf, BufMut, Bytes};
 
 /// A unique reference to a contiguous slice of memory.
 ///
 /// `BytesMut` represents a unique view into a potentially shared memory region.
 /// Given the uniqueness guarantee, owners of `BytesMut` handles are able to
-/// mutate the memory. It is similar to a `Vec<u8>` but with less copies and
-/// allocations.
+/// mutate the memory.
+///
+/// `BytesMut` can be thought of as containing a `buf: Arc<Vec<u8>>`, an offset
+/// into `buf`, a slice length, and a guarantee that no other `BytesMut` for the
+/// same `buf` overlaps with its slice. That guarantee means that a write lock
+/// is not required.
 ///
 /// # Growth
 ///
@@ -107,8 +118,7 @@ impl BytesMut {
     /// Creates a new `BytesMut` with the specified capacity.
     ///
     /// The returned `BytesMut` will be able to hold at least `capacity` bytes
-    /// without reallocating. If `capacity` is under `4 * size_of::<usize>() - 1`,
-    /// then `BytesMut` will not allocate.
+    /// without reallocating.
     ///
     /// It is important to note that this function does not specify the length
     /// of the returned `BytesMut`, but only the capacity.
@@ -233,7 +243,9 @@ impl BytesMut {
                 let (off, _) = self.get_vec_pos();
                 let vec = rebuild_vec(self.ptr.as_ptr(), self.len, self.cap, off);
                 mem::forget(self);
-                vec.into()
+                let mut b: Bytes = vec.into();
+                b.advance(off);
+                b
             }
         } else {
             debug_assert_eq!(self.kind(), KIND_ARC);
@@ -242,9 +254,7 @@ impl BytesMut {
             let len = self.len;
             let data = AtomicPtr::new(self.data as _);
             mem::forget(self);
-            unsafe {
-                Bytes::with_vtable(ptr, len, data, &SHARED_VTABLE)
-            }
+            unsafe { Bytes::with_vtable(ptr, len, data, &SHARED_VTABLE) }
         }
     }
 
@@ -386,7 +396,9 @@ impl BytesMut {
     /// [`split_off`]: #method.split_off
     pub fn truncate(&mut self, len: usize) {
         if len <= self.len() {
-            unsafe { self.set_len(len); }
+            unsafe {
+                self.set_len(len);
+            }
         }
     }
 
@@ -433,7 +445,7 @@ impl BytesMut {
             let additional = new_len - len;
             self.reserve(additional);
             unsafe {
-                let dst = self.bytes_mut().as_mut_ptr();
+                let dst = self.chunk_mut().as_mut_ptr();
                 ptr::write_bytes(dst, value, additional);
                 self.set_len(new_len);
             }
@@ -467,6 +479,7 @@ impl BytesMut {
     ///
     /// assert_eq!(&b[..], b"hello world");
     /// ```
+    #[inline]
     pub unsafe fn set_len(&mut self, len: usize) {
         debug_assert!(len <= self.cap, "set_len out of bounds");
         self.len = len;
@@ -550,9 +563,8 @@ impl BytesMut {
             unsafe {
                 let (off, prev) = self.get_vec_pos();
 
-                // Only reuse space if we stand to gain at least capacity/2
-                // bytes of space back
-                if off >= additional && off >= (self.cap / 2) {
+                // Only reuse space if we can satisfy the requested additional space.
+                if self.capacity() - self.len() + off >= additional {
                     // There's space - reuse it
                     //
                     // Just move the pointer back to the start after copying
@@ -567,7 +579,8 @@ impl BytesMut {
                     self.cap += off;
                 } else {
                     // No space - allocate more
-                    let mut v = ManuallyDrop::new(rebuild_vec(self.ptr.as_ptr(), self.len, self.cap, off));
+                    let mut v =
+                        ManuallyDrop::new(rebuild_vec(self.ptr.as_ptr(), self.len, self.cap, off));
                     v.reserve(additional);
 
                     // Update the info
@@ -582,7 +595,6 @@ impl BytesMut {
 
         debug_assert_eq!(kind, KIND_ARC);
         let shared: *mut Shared = self.data as _;
-
 
         // Reserving involves abandoning the currently shared buffer and
         // allocating a new vector with the requested capacity.
@@ -627,9 +639,7 @@ impl BytesMut {
                 // check.
                 let double = v.capacity().checked_shl(1).unwrap_or(new_cap);
 
-                new_cap = cmp::max(
-                    cmp::max(double, new_cap),
-                    original_capacity);
+                new_cap = cmp::max(cmp::max(double, new_cap), original_capacity);
             } else {
                 new_cap = cmp::max(new_cap, original_capacity);
             }
@@ -674,18 +684,16 @@ impl BytesMut {
         self.reserve(cnt);
 
         unsafe {
-            let dst = self.maybe_uninit_bytes();
+            let dst = self.uninit_slice();
             // Reserved above
             debug_assert!(dst.len() >= cnt);
 
-            ptr::copy_nonoverlapping(
-                extend.as_ptr(),
-                dst.as_mut_ptr() as *mut u8,
-                cnt);
-
+            ptr::copy_nonoverlapping(extend.as_ptr(), dst.as_mut_ptr() as *mut u8, cnt);
         }
 
-        unsafe { self.advance_mut(cnt); }
+        unsafe {
+            self.advance_mut(cnt);
+        }
     }
 
     /// Absorbs a `BytesMut` that was previously split off.
@@ -750,16 +758,12 @@ impl BytesMut {
 
     #[inline]
     fn as_slice(&self) -> &[u8] {
-        unsafe {
-            slice::from_raw_parts(self.ptr.as_ptr(), self.len)
-        }
+        unsafe { slice::from_raw_parts(self.ptr.as_ptr(), self.len) }
     }
 
     #[inline]
     fn as_slice_mut(&mut self) -> &mut [u8] {
-        unsafe {
-            slice::from_raw_parts_mut(self.ptr.as_ptr(), self.len)
-        }
+        unsafe { slice::from_raw_parts_mut(self.ptr.as_ptr(), self.len) }
     }
 
     unsafe fn set_start(&mut self, start: usize) {
@@ -788,7 +792,7 @@ impl BytesMut {
                 // on 64 bit systems and will only happen on 32 bit systems
                 // when shifting past 134,217,727 bytes. As such, we don't
                 // worry too much about performance here.
-                self.promote_to_shared(/*ref_count = */1);
+                self.promote_to_shared(/*ref_count = */ 1);
             }
         }
 
@@ -820,10 +824,10 @@ impl BytesMut {
         }
 
         let ptr = unsafe { self.ptr.as_ptr().offset(self.len as isize) };
-        if ptr == other.ptr.as_ptr() &&
-           self.kind() == KIND_ARC &&
-           other.kind() == KIND_ARC &&
-           self.data == other.data
+        if ptr == other.ptr.as_ptr()
+            && self.kind() == KIND_ARC
+            && other.kind() == KIND_ARC
+            && self.data == other.data
         {
             // Contiguous blocks, just combine directly
             self.len += other.len;
@@ -884,7 +888,7 @@ impl BytesMut {
             increment_shared(self.data);
             ptr::read(self)
         } else {
-            self.promote_to_shared(/*ref_count = */2);
+            self.promote_to_shared(/*ref_count = */ 2);
             ptr::read(self)
         }
     }
@@ -906,12 +910,12 @@ impl BytesMut {
     }
 
     #[inline]
-    fn maybe_uninit_bytes(&mut self) -> &mut [mem::MaybeUninit<u8>] {
+    fn uninit_slice(&mut self) -> &mut UninitSlice {
         unsafe {
             let ptr = self.ptr.as_ptr().offset(self.len as isize);
             let len = self.cap - self.len;
 
-            slice::from_raw_parts_mut(ptr as *mut mem::MaybeUninit<u8>, len)
+            UninitSlice::from_raw_parts_mut(ptr, len)
         }
     }
 }
@@ -940,7 +944,7 @@ impl Buf for BytesMut {
     }
 
     #[inline]
-    fn bytes(&self) -> &[u8] {
+    fn chunk(&self) -> &[u8] {
         self.as_slice()
     }
 
@@ -952,15 +956,17 @@ impl Buf for BytesMut {
             cnt,
             self.remaining(),
         );
-        unsafe { self.set_start(cnt); }
+        unsafe {
+            self.set_start(cnt);
+        }
     }
 
-    fn to_bytes(&mut self) -> crate::Bytes {
-        self.split().freeze()
+    fn copy_to_bytes(&mut self, len: usize) -> crate::Bytes {
+        self.split_to(len).freeze()
     }
 }
 
-impl BufMut for BytesMut {
+unsafe impl BufMut for BytesMut {
     #[inline]
     fn remaining_mut(&self) -> usize {
         usize::MAX - self.len()
@@ -969,24 +975,32 @@ impl BufMut for BytesMut {
     #[inline]
     unsafe fn advance_mut(&mut self, cnt: usize) {
         let new_len = self.len() + cnt;
-        assert!(new_len <= self.cap, "new_len = {}; capacity = {}", new_len, self.cap);
+        assert!(
+            new_len <= self.cap,
+            "new_len = {}; capacity = {}",
+            new_len,
+            self.cap
+        );
         self.len = new_len;
     }
 
     #[inline]
-    fn bytes_mut(&mut self) -> &mut [mem::MaybeUninit<u8>] {
+    fn chunk_mut(&mut self) -> &mut UninitSlice {
         if self.capacity() == self.len() {
             self.reserve(64);
         }
-        self.maybe_uninit_bytes()
+        self.uninit_slice()
     }
 
     // Specialize these methods so they can skip checking `remaining_mut`
     // and `advance_mut`.
 
-    fn put<T: crate::Buf>(&mut self, mut src: T) where Self: Sized {
+    fn put<T: crate::Buf>(&mut self, mut src: T)
+    where
+        Self: Sized,
+    {
         while src.has_remaining() {
-            let s = src.bytes();
+            let s = src.chunk();
             let l = s.len();
             self.extend_from_slice(s);
             src.advance(l);
@@ -1015,6 +1029,7 @@ impl Deref for BytesMut {
 }
 
 impl AsMut<[u8]> for BytesMut {
+    #[inline]
     fn as_mut(&mut self) -> &mut [u8] {
         self.as_slice_mut()
     }
@@ -1063,8 +1078,7 @@ impl Ord for BytesMut {
     }
 }
 
-impl Eq for BytesMut {
-}
+impl Eq for BytesMut {}
 
 impl Default for BytesMut {
     #[inline]
@@ -1074,7 +1088,10 @@ impl Default for BytesMut {
 }
 
 impl hash::Hash for BytesMut {
-    fn hash<H>(&self, state: &mut H) where H: hash::Hasher {
+    fn hash<H>(&self, state: &mut H)
+    where
+        H: hash::Hasher,
+    {
         let s: &[u8] = self.as_ref();
         s.hash(state);
     }
@@ -1134,7 +1151,10 @@ impl<'a> IntoIterator for &'a BytesMut {
 }
 
 impl Extend<u8> for BytesMut {
-    fn extend<T>(&mut self, iter: T) where T: IntoIterator<Item = u8> {
+    fn extend<T>(&mut self, iter: T)
+    where
+        T: IntoIterator<Item = u8>,
+    {
         let iter = iter.into_iter();
 
         let (lower, _) = iter.size_hint();
@@ -1151,7 +1171,10 @@ impl Extend<u8> for BytesMut {
 }
 
 impl<'a> Extend<&'a u8> for BytesMut {
-    fn extend<T>(&mut self, iter: T) where T: IntoIterator<Item = &'a u8> {
+    fn extend<T>(&mut self, iter: T)
+    where
+        T: IntoIterator<Item = &'a u8>,
+    {
         self.extend(iter.into_iter().map(|b| *b))
     }
 }
@@ -1229,7 +1252,10 @@ impl Shared {
 
 fn original_capacity_to_repr(cap: usize) -> usize {
     let width = PTR_WIDTH - ((cap >> MIN_ORIGINAL_CAPACITY_WIDTH).leading_zeros() as usize);
-    cmp::min(width, MAX_ORIGINAL_CAPACITY_WIDTH - MIN_ORIGINAL_CAPACITY_WIDTH)
+    cmp::min(
+        width,
+        MAX_ORIGINAL_CAPACITY_WIDTH - MIN_ORIGINAL_CAPACITY_WIDTH,
+    )
 }
 
 fn original_capacity_from_repr(repr: usize) -> usize {
@@ -1397,7 +1423,8 @@ impl PartialOrd<BytesMut> for String {
 }
 
 impl<'a, T: ?Sized> PartialEq<&'a T> for BytesMut
-    where BytesMut: PartialEq<T>
+where
+    BytesMut: PartialEq<T>,
 {
     fn eq(&self, other: &&'a T) -> bool {
         *self == **other
@@ -1405,7 +1432,8 @@ impl<'a, T: ?Sized> PartialEq<&'a T> for BytesMut
 }
 
 impl<'a, T: ?Sized> PartialOrd<&'a T> for BytesMut
-    where BytesMut: PartialOrd<T>
+where
+    BytesMut: PartialOrd<T>,
 {
     fn partial_cmp(&self, other: &&'a T) -> Option<cmp::Ordering> {
         self.partial_cmp(*other)
@@ -1472,7 +1500,7 @@ static SHARED_VTABLE: Vtable = Vtable {
 };
 
 unsafe fn shared_v_clone(data: &AtomicPtr<()>, ptr: *const u8, len: usize) -> Bytes {
-    let shared = data.load(Ordering::Acquire) as *mut Shared;
+    let shared = data.load(Ordering::Relaxed) as *mut Shared;
     increment_shared(shared);
 
     let data = AtomicPtr::new(shared as _);
@@ -1480,8 +1508,9 @@ unsafe fn shared_v_clone(data: &AtomicPtr<()>, ptr: *const u8, len: usize) -> By
 }
 
 unsafe fn shared_v_drop(data: &mut AtomicPtr<()>, _ptr: *const u8, _len: usize) {
-    let shared = (*data.get_mut()) as *mut Shared;
-    release_shared(shared as *mut Shared);
+    data.with_mut(|shared| {
+        release_shared(*shared as *mut Shared);
+    });
 }
 
 // compile-fails
@@ -1519,11 +1548,11 @@ fn _split_must_use() {}
 // fuzz tests
 #[cfg(all(test, loom))]
 mod fuzz {
-    use std::sync::Arc;
+    use loom::sync::Arc;
     use loom::thread;
 
-    use crate::Bytes;
     use super::BytesMut;
+    use crate::Bytes;
 
     #[test]
     fn bytes_mut_cloning_frozen() {

@@ -145,6 +145,7 @@ thiserror = "1.0.23"
 timebomb = "0.1.2"
 tokio = { version = "0.2.16", default-features = false }
 toml = "0.5"
+toml_edit = "0.2.1"
 tracing = { version = "0.1.25", features = ["log"] }
 tracing-core = "0.1.17"
 tracing-futures = "0.2.5"
@@ -254,9 +255,11 @@ zip = { version = "0.5.5", default-features = false, features = ["deflate"] }
 # Keep this sorted alphabetically, please.
 backtrace-sys = { path = "empty/backtrace-sys" }
 cmake = { path = "empty/cmake"}
+# TODO(fxbug.dev/NNNNN) re-vendor when combine makes next release after 4.6.0
+combine = { path = "forks/combine" }
+crossterm_winapi = { path = "empty/crossterm_winapi" }
 # TODO(fxbug.dev/56201): Vendor fatfs when upstream makes a new release.
 # See https://github.com/rafalh/rust-fatfs/pull/37#issuecomment-653760603 for more information.
-crossterm_winapi = { path = "empty/crossterm_winapi" }
 fatfs = { path = "forks/fatfs" } # TODO(fxbug.dev/75491) remove
 fuchsia-cprng = { path = "../../src/lib/zircon/rust/fuchsia-cprng" }
 futures-timer = { path = "empty/futures-timer" }

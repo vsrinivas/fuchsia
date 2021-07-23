@@ -1,8 +1,9 @@
-#![deny(warnings, rust_2018_idioms)]
+#![warn(rust_2018_idioms)]
 
-use bytes::{buf::IoSliceMut, BufMut, BytesMut};
-use std::usize;
-use std::fmt::Write;
+use bytes::buf::UninitSlice;
+use bytes::{BufMut, BytesMut};
+use core::fmt::Write;
+use core::usize;
 
 #[test]
 fn test_vec_as_mut_buf() {
@@ -10,7 +11,7 @@ fn test_vec_as_mut_buf() {
 
     assert_eq!(buf.remaining_mut(), usize::MAX);
 
-    assert!(buf.bytes_mut().len() >= 64);
+    assert!(buf.chunk_mut().len() >= 64);
 
     buf.put(&b"zomg"[..]);
 
@@ -45,13 +46,12 @@ fn test_put_u16() {
 }
 
 #[test]
+#[should_panic(expected = "cannot advance")]
 fn test_vec_advance_mut() {
-    // Regression test for carllerche/bytes#108.
+    // Verify fix for #354
     let mut buf = Vec::with_capacity(8);
     unsafe {
         buf.advance_mut(12);
-        assert_eq!(buf.len(), 12);
-        assert!(buf.capacity() >= 12, "capacity: {}", buf.capacity());
     }
 }
 
@@ -66,22 +66,6 @@ fn test_clone() {
 }
 
 #[test]
-fn test_bufs_vec_mut() {
-    let b1: &mut [u8] = &mut [];
-    let b2: &mut [u8] = &mut [];
-    let mut dst = [IoSliceMut::from(b1), IoSliceMut::from(b2)];
-
-    // with no capacity
-    let mut buf = BytesMut::new();
-    assert_eq!(buf.capacity(), 0);
-    assert_eq!(1, buf.bytes_vectored_mut(&mut dst[..]));
-
-    // with capacity
-    let mut buf = BytesMut::with_capacity(64);
-    assert_eq!(1, buf.bytes_vectored_mut(&mut dst[..]));
-}
-
-#[test]
 fn test_mut_slice() {
     let mut v = vec![0, 0, 0, 0];
     let mut s = &mut v[..];
@@ -92,13 +76,13 @@ fn test_mut_slice() {
 fn test_deref_bufmut_forwards() {
     struct Special;
 
-    impl BufMut for Special {
+    unsafe impl BufMut for Special {
         fn remaining_mut(&self) -> usize {
             unreachable!("remaining_mut");
         }
 
-        fn bytes_mut(&mut self) -> &mut [std::mem::MaybeUninit<u8>] {
-            unreachable!("bytes_mut");
+        fn chunk_mut(&mut self) -> &mut UninitSlice {
+            unreachable!("chunk_mut");
         }
 
         unsafe fn advance_mut(&mut self, _: usize) {
@@ -115,4 +99,31 @@ fn test_deref_bufmut_forwards() {
     (&mut Special as &mut dyn BufMut).put_u8(b'x');
     (Box::new(Special) as Box<dyn BufMut>).put_u8(b'x');
     Box::new(Special).put_u8(b'x');
+}
+
+#[test]
+#[should_panic]
+fn write_byte_panics_if_out_of_bounds() {
+    let mut data = [b'b', b'a', b'r'];
+
+    let slice = unsafe { UninitSlice::from_raw_parts_mut(data.as_mut_ptr(), 3) };
+    slice.write_byte(4, b'f');
+}
+
+#[test]
+#[should_panic]
+fn copy_from_slice_panics_if_different_length_1() {
+    let mut data = [b'b', b'a', b'r'];
+
+    let slice = unsafe { UninitSlice::from_raw_parts_mut(data.as_mut_ptr(), 3) };
+    slice.copy_from_slice(b"a");
+}
+
+#[test]
+#[should_panic]
+fn copy_from_slice_panics_if_different_length_2() {
+    let mut data = [b'b', b'a', b'r'];
+
+    let slice = unsafe { UninitSlice::from_raw_parts_mut(data.as_mut_ptr(), 3) };
+    slice.copy_from_slice(b"abcd");
 }
