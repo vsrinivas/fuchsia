@@ -85,12 +85,54 @@ components. For a detailed walkthrough about what happens during capability
 routing, see the [Capabilities overview][doc-capabilities]
 and [Life of a protocol open][doc-protocol-open].
 
+#### Capability types {#capability-types}
+
+The following capabilities can be routed:
+
+-   `protocol`: A filesystem node that can be used to open a channel to
+    a FIDL protocol.
+-   `directory`: A filesystem directory.
+-   `storage`: A writable filesystem directory that is isolated to the
+    component using it.
+-   `runner`: A capability that allows a component to use a particular
+    [runner][doc-runners].
+-   `resolver`: A capability that, when registered in an
+    [environment](#environments), causes a component with a particular URL
+    scheme to be resolved with that [resolver][doc-resolvers].
+
+`protocol`, `directory` and `storage` capabilities are routed to components
+that `use` them. `resolver` and `runner` capabilities are routed to
+[environments](#environments) that include them.
+
+#### Routing terminology {#routing-terminology}
+
+Routing terminology divides into the following categories:
+
+1) Declarations of how capabilities are routed between the component, its
+   parent, and its children:
+    - `offer`: Declares that the capability listed is made available to a
+      [child component][doc-children] instance or a
+      [child collection][doc-collection].
+    - `expose`: Declares that the capabilities listed are made available to the
+      parent component or to the framework. It is valid to `expose` from self
+      or from a child component.
+
+2) Declarations of capabilities consumed or provided by the component:
+    - `use`: For executable components, declares that this component
+      requires the capability in its [namespace] at runtime. Used capabilities
+      are assumed to be from `parent` unless otherwise specified. Capabilities
+      used from `parent` must be offered the capability from its parent.
+    - `capabilities`: Declares capabilities that this component. Capabilities
+      that are offered or exposed from `self` must appear here. These
+      capabilities often map to a node in the [outgoing
+      directory][glossary.outgoing directory]
+
 #### Framework protocols {#framework-protocols}
 
 A *framework protocol* is a protocol provided by the component framework.
 Because the component framework itself provides the protocol, any component may
-`use` it without an explicit `offer`. Fuchsia supports the following framework
-protocols:
+`use` it without an accompanying `offer` from its parent. Fuchsia supports the
+following framework protocols:
 
 -   [`fuchsia.sys2.Realm`][fidl-realm]: Allows a component to manage and bind to
     its children. Scoped to the component's realm.
@@ -714,5 +756,7 @@ This section may be omitted.
 [glossary.component manifest]: /docs/glossary/README.md#component-manifest
 [glossary.component manifest source]: /docs/glossary/README.md#component-manifest-source
 [glossary.hub]: /docs/glossary/README.md#hub
+[glossary.outgoing directory]: /docs/glossary/README.md#outgoing-directory
+[glossary.namespace]: /docs/glossary/README.md#namespace
 [glossary.package]: /docs/glossary/README.md#package
 [src-cmc]: /tools/cmc
