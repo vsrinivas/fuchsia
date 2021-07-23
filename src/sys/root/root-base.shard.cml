@@ -225,6 +225,13 @@
             to: "#bootstrap",
         },
     ],
+    expose: [
+        // For reboot_on_terminate
+        {
+            protocol: "fuchsia.hardware.power.statecontrol.Admin",
+            from: "#bootstrap",
+        },
+    ],
     environments: [
         {
             name: "core-env",
