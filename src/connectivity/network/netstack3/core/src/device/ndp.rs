@@ -18,7 +18,12 @@
 //!
 //! [RFC 4861]: https://tools.ietf.org/html/rfc4861
 
-use alloc::collections::{HashMap, HashSet};
+#![deny(unused_results)]
+
+use alloc::collections::{
+    hash_map::{self, HashMap},
+    HashSet,
+};
 use alloc::vec::Vec;
 use core::fmt::Debug;
 use core::marker::PhantomData;
@@ -1406,7 +1411,7 @@ impl<D: LinkDevice, Instant> NdpState<D, Instant> {
     /// 6.3.2].
     ///
     /// [RFC 4861 section 6.3.2]: https://tools.ietf.org/html/rfc4861#section-6.3.2
-    pub(crate) fn recalculate_reachable_time(&mut self) -> Duration {
+    pub(crate) fn recalculate_reachable_time(&mut self) {
         let base = self.base_reachable_time;
         let half = base / 2;
         let reachable_time = half + thread_rng().gen_range(Duration::new(0, 0), base);
@@ -1416,7 +1421,6 @@ impl<D: LinkDevice, Instant> NdpState<D, Instant> {
         assert!((reachable_time >= half) && (reachable_time <= (base + half)));
 
         self.reachable_time = reachable_time;
-        reachable_time
     }
 
     /// Set the time between retransmissions of Neighbor Solicitation messages
@@ -1552,7 +1556,7 @@ fn handle_timer<D: LinkDevice, C: NdpContext<D>>(ctx: &mut C, id: NdpTimerId<D, 
                     // again
                     *transmit_counter += 1;
                     send_neighbor_solicitation(ctx, id.device_id, neighbor_addr);
-                    ctx.schedule_timer(
+                    let _: Option<C::Instant> = ctx.schedule_timer(
                         retrans_timer,
                         NdpTimerId::new_link_address_resolution(id.device_id, neighbor_addr).into(),
                     );
@@ -1571,19 +1575,18 @@ fn handle_timer<D: LinkDevice, C: NdpContext<D>>(ctx: &mut C, id: NdpTimerId<D, 
         }
         InnerNdpTimerId::DadNsTransmit { addr } => {
             // Get device NDP state.
-            //
-            // We know this call to unwrap will not fail because we will only
-            // reach here if DAD has been started for some device - address
-            // pair. When we start DAD, we setup the `NdpState` so we should
-            // have a valid entry.
             let ndp_state = ctx.get_state_mut_with(id.device_id);
-            let remaining = *ndp_state.dad_transmits_remaining.get(&addr).unwrap();
+            let entry = match ndp_state.dad_transmits_remaining.entry(addr) {
+                hash_map::Entry::Vacant(entry) => {
+                    let _: hash_map::VacantEntry<'_, _, _> = entry;
+                    unreachable!("handle_timer: timer for address {:?} duplicate address detection should not exist if no retransmit state exists", addr);
+                }
+                hash_map::Entry::Occupied(entry) => entry,
+            };
 
             // We have finished.
-            if remaining == 0 {
-                // We know `unwrap` will not fail because we just succesfully
-                // called `get` then `unwrap` earlier.
-                ndp_state.dad_transmits_remaining.remove(&addr).unwrap();
+            if *entry.get() == 0 {
+                let _: u8 = entry.remove();
 
                 // `unique_address_determined` may panic if we attempt to
                 // resolve an `addr` that is not tentative on the device with id
@@ -1771,7 +1774,7 @@ where
 
             // Also schedule a timer to retransmit in case we don't get neighbor
             // advertisements back.
-            ctx.schedule_timer(
+            let _: Option<C::Instant> = ctx.schedule_timer(
                 retrans_timer,
                 NdpTimerId::new_link_address_resolution(device_id, lookup_addr).into(),
             );
@@ -1939,7 +1942,7 @@ impl<H> NeighborTable<H> {
         let mut state = NeighborState::new();
         state.state = NeighborEntryState::Incomplete { transmit_counter: 1 };
 
-        self.table.insert(neighbor, state);
+        let _: Option<_> = self.table.insert(neighbor, state);
     }
 
     /// Get the neighbor's state, if it exists.
@@ -1957,7 +1960,7 @@ impl<H> NeighborTable<H> {
 
     /// Delete the neighbor's state, if it exists.
     fn delete_neighbor_state(&mut self, neighbor: &UnicastAddr<Ipv6Addr>) {
-        self.table.remove(neighbor);
+        let _: Option<_> = self.table.remove(neighbor);
     }
 }
 
@@ -2070,7 +2073,8 @@ fn stop_periodic_router_advertisements<D: LinkDevice, C: NdpContext<D>>(
     //
     // May panic if we are not currently scheduled to send a periodic router
     // advertisements.
-    ctx.cancel_timer(NdpTimerId::new_router_advertisement_transmit(device_id).into()).unwrap();
+    let _: C::Instant =
+        ctx.cancel_timer(NdpTimerId::new_router_advertisement_transmit(device_id).into()).unwrap();
 }
 
 /// Schedule next unsolicited Router Advertisement message.
@@ -2180,7 +2184,7 @@ fn schedule_next_router_advertisement_instant<D: LinkDevice, C: NdpContext<D>>(
         );
 
         // Schedule the timeout to send the router advertisement.
-        ctx.schedule_timer_instant(instant, timer_id);
+        let _: Option<C::Instant> = ctx.schedule_timer_instant(instant, timer_id);
     } else {
         trace!(
             "ndp::schedule_next_router_advertisement: the next router advertisement for device {:?} at {:?}, is before the new one at {:?}, so doing nothing",
@@ -2226,7 +2230,8 @@ fn stop_soliciting_routers<D: LinkDevice, C: NdpContext<D>>(ctx: &mut C, device_
 
     assert!(!ctx.is_router(device_id));
 
-    ctx.cancel_timer(NdpTimerId::new_router_solicitation(device_id).into());
+    let _: Option<C::Instant> =
+        ctx.cancel_timer(NdpTimerId::new_router_solicitation(device_id).into());
 
     // No more router solicitations remaining since we are cancelling.
     ctx.get_state_mut_with(device_id).router_solicitations_remaining = 0;
@@ -2266,7 +2271,7 @@ fn do_router_solicitation<D: LinkDevice, C: NdpContext<D>>(ctx: &mut C, device_i
         return;
     } else {
         // TODO(ghanan): Make the interval between messages configurable.
-        ctx.schedule_timer(
+        let _: Option<C::Instant> = ctx.schedule_timer(
             RTR_SOLICITATION_INTERVAL,
             NdpTimerId::new_router_solicitation(device_id).into(),
         );
@@ -2353,12 +2358,14 @@ fn cancel_duplicate_address_detection<D: LinkDevice, C: NdpContext<D>>(
 ) {
     trace!("ndp::cancel_duplicate_address_detection: cancelling duplicate address detection for address {:?} on device {:?}", tentative_addr, device_id);
 
-    ctx.cancel_timer(NdpTimerId::new_dad_ns_transmission(device_id, tentative_addr).into());
+    let _: Option<C::Instant> =
+        ctx.cancel_timer(NdpTimerId::new_dad_ns_transmission(device_id, tentative_addr).into());
 
     // `unwrap` may panic if we have no entry in `dad_transmits_remaining` for
     // `tentative_addr` which means that we are not performing DAD on
     // `tentative_add`. This case is documented as a panic condition.
-    ctx.get_state_mut_with(device_id).dad_transmits_remaining.remove(&tentative_addr).unwrap();
+    let _: u8 =
+        ctx.get_state_mut_with(device_id).dad_transmits_remaining.remove(&tentative_addr).unwrap();
 }
 
 /// Send another DAD message (Neighbor Solicitation).
@@ -2395,7 +2402,7 @@ fn do_duplicate_address_detection<D: LinkDevice, C: NdpContext<D>>(
         &[NdpOptionBuilder::SourceLinkLayerAddress(src_ll.bytes())],
     );
 
-    ctx.schedule_timer(
+    let _: Option<C::Instant> = ctx.schedule_timer(
         retrans_timer,
         NdpTimerId::new_dad_ns_transmission(device_id, tentative_addr).into(),
     );
@@ -2845,7 +2852,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
 
                 // Reset invalidation timeout.
                 trace!("receive_ndp_packet: NDP RA: updating invalidation timer to {:?} for router: {:?}", router_lifetime, src_ip);
-                ctx.schedule_timer(router_lifetime.get(), timer_id);
+                let _: Option<C::Instant> = ctx.schedule_timer(router_lifetime.get(), timer_id);
             } else {
                 if ndp_state.has_default_router(&src_ip) {
                     trace!("receive_ndp_packet: NDP RA has zero-valued router lifetime, invaliding router: {:?}", src_ip);
@@ -3010,9 +3017,10 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                                     // We do not need a timer to mark the prefix
                                     // as invalid when it has an infinite
                                     // lifetime.
-                                    ctx.cancel_timer(timer_id);
+                                    let _: Option<C::Instant> = ctx.cancel_timer(timer_id);
                                 } else {
-                                    ctx.schedule_timer(valid_lifetime.get(), timer_id);
+                                    let _: Option<C::Instant> =
+                                        ctx.schedule_timer(valid_lifetime.get(), timer_id);
                                 }
                             } else if ndp_state.has_prefix(&addr_sub) {
                                 trace!("receive_ndp_packet: on-link prefix is known and has valid lifetime = 0, so invaliding");
@@ -3025,7 +3033,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
 
                                 // Cancel the prefix invalidation timeout if it
                                 // exists.
-                                ctx.cancel_timer(timer_id);
+                                let _: Option<C::Instant> = ctx.cancel_timer(timer_id);
 
                                 let ndp_state = ctx.get_state_mut_with(device_id);
                                 ndp_state.invalidate_prefix(addr_sub);
@@ -3113,16 +3121,16 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                                     if entry.state().is_deprecated() {
                                         ctx.unique_address_determined(device_id, addr);
                                     }
-                                    ctx.schedule_timer_instant(
+                                    let _: Option<C::Instant> = ctx.schedule_timer_instant(
                                         preferred_until_duration,
                                         NdpTimerId::new_deprecate_slaac_address(device_id, addr)
                                             .into(),
                                     );
                                 } else if !entry.state().is_deprecated() {
                                     ctx.deprecate_slaac_addr(device_id, &addr);
-                                    ctx.cancel_timer(NdpTimerId::new_deprecate_slaac_address(
-                                        device_id, addr,
-                                    ));
+                                    let _: Option<C::Instant> = ctx.cancel_timer(
+                                        NdpTimerId::new_deprecate_slaac_address(device_id, addr),
+                                    );
                                 }
 
                                 // As per RFC 4862 section 5.5.3.e, the specific
@@ -3477,7 +3485,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                     ndp_state.neighbors.set_link_address(src_ip, address, message.solicited_flag());
 
                     // Cancel the resolution timeout.
-                    ctx.cancel_timer(
+                    let _: Option<C::Instant> = ctx.cancel_timer(
                         NdpTimerId::new_link_address_resolution(device_id, src_ip).into(),
                     );
 
@@ -3645,8 +3653,6 @@ fn generate_global_address(
 
 #[cfg(test)]
 mod tests {
-    #![deny(unused_results)]
-
     use super::*;
 
     use core::convert::{TryFrom, TryInto};
