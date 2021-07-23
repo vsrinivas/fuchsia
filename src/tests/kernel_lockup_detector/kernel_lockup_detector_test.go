@@ -13,12 +13,12 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/emulator/emulatortest"
 )
 
-var args = []string{
+var common_args = []string{
 	"kernel.lockup-detector.heartbeat-period-ms=50",
-	"kernel.lockup-detector.heartbeat-age-threshold-ms=200",
-	"kernel.lockup-detector.critical-section-threshold-ms=200",
-	// Make sure the fatal thresholds are explicitly disabled.  We don't want the
-	// device to spontaneously reboot during testing.
+	// By default, disable all of the thresholds (both fatal and non-fatal).  During each of the
+	// tests, we will re-enable only the specific threshold we want to enable.
+	"kernel.lockup-detector.heartbeat-age-threshold-ms=0",
+	"kernel.lockup-detector.critical-section-threshold-ms=0",
 	"kernel.lockup-detector.heartbeat-age-fatal-threshold-ms=0",
 	"kernel.lockup-detector.critical-section-fatal-threshold-ms=0",
 	// Upon booting run "k", which will print a usage message.  By waiting for the usage
@@ -36,7 +36,9 @@ func TestKernelLockupDetectorCriticalSection(t *testing.T) {
 
 	// Enable the lockup detector.
 	//
-	device.KernelArgs = append(device.KernelArgs, args...)
+	device.KernelArgs = append(device.KernelArgs, common_args...)
+	device.KernelArgs = append(device.KernelArgs,
+		"kernel.lockup-detector.critical-section-threshold-ms=200")
 	d := distro.Create(device)
 
 	// Boot.
@@ -60,7 +62,9 @@ func TestKernelLockupDetectorHeartbeat(t *testing.T) {
 	})
 	arch := distro.TargetCPU()
 	device := emulator.DefaultVirtualDevice(string(arch))
-	device.KernelArgs = append(device.KernelArgs, args...)
+	device.KernelArgs = append(device.KernelArgs, common_args...)
+	device.KernelArgs = append(device.KernelArgs,
+		"kernel.lockup-detector.heartbeat-age-threshold-ms=200")
 	d := distro.Create(device)
 
 	// Boot.
@@ -78,6 +82,81 @@ func TestKernelLockupDetectorHeartbeat(t *testing.T) {
 	// one responsible for the lockup.
 	d.WaitForLogMessage("lockup-test")
 	d.WaitForLogMessage("done")
+}
+
+func TestKernelLockupDetectorFatalCriticalSection(t *testing.T) {
+	exDir := execDir(t)
+	distro := emulatortest.UnpackFrom(t, filepath.Join(exDir, "test_data"), emulator.DistributionParams{
+		Emulator: emulator.Qemu,
+	})
+	arch := distro.TargetCPU()
+	device := emulator.DefaultVirtualDevice(string(arch))
+
+	// Enable the lockup detector.
+	//
+	device.KernelArgs = append(device.KernelArgs, common_args...)
+	device.KernelArgs = append(device.KernelArgs,
+		"kernel.lockup-detector.critical-section-fatal-threshold-ms=500")
+	d := distro.Create(device)
+
+	// Boot.
+	d.Start()
+
+	// Wait for the system to finish booting.
+	d.WaitForLogMessage("usage: k <command>")
+
+	// Force a lockup, and expect a reboot to be the result.  Look for
+	// the "welcome to Zircon" message as our indication that the system
+	// has rebooted.
+	d.RunCommand("k lockup test_critical_section 1 1000")
+	d.WaitForLogMessage("welcome to Zircon")
+
+	// TODO(fxbug.dev/81295): Our emulated x64 environment does not currently
+	// support crashlogs, however our ARM64 environment does.  If we are on ARM,
+	// check the crashlog startup banner to make certain that the system didn't
+	// just reboot, but that it did so because of a SOFTWARE WATCHDOG event.
+	if arch == emulator.Arm64 {
+		d.WaitForLogMessage("SW Reason \"SW WATCHDOG\"")
+	}
+
+	// Wait for the system to finish booting (again).
+	d.WaitForLogMessage("usage: k <command>")
+}
+
+func TestKernelLockupDetectorFatalHeartbeat(t *testing.T) {
+	exDir := execDir(t)
+	distro := emulatortest.UnpackFrom(t, filepath.Join(exDir, "test_data"), emulator.DistributionParams{
+		Emulator: emulator.Qemu,
+	})
+	arch := distro.TargetCPU()
+	device := emulator.DefaultVirtualDevice(string(arch))
+	device.KernelArgs = append(device.KernelArgs, common_args...)
+	device.KernelArgs = append(device.KernelArgs,
+		"kernel.lockup-detector.heartbeat-age-fatal-threshold-ms=500")
+	d := distro.Create(device)
+
+	// Boot.
+	d.Start()
+
+	// Wait for the system to finish booting.
+	d.WaitForLogMessage("usage: k <command>")
+
+	// Force a lockup, and expect a reboot to be the result.  Look for
+	// the "welcome to Zircon" message as our indication that the system
+	// has rebooted.
+	d.RunCommand("k lockup test_spinlock 1 1000")
+	d.WaitForLogMessage("welcome to Zircon")
+
+	// TODO(fxbug.dev/81295): Our emulated x64 environment does not currently
+	// support crashlogs, however our ARM64 environment does.  If we are on ARM,
+	// check the crashlog startup banner to make certain that the system didn't
+	// just reboot, but that it did so because of a SOFTWARE WATCHDOG event.
+	if arch == emulator.Arm64 {
+		d.WaitForLogMessage("SW Reason \"SW WATCHDOG\"")
+	}
+
+	// Wait for the system to finish booting (again).
+	d.WaitForLogMessage("usage: k <command>")
 }
 
 func execDir(t *testing.T) string {

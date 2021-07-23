@@ -217,6 +217,8 @@ func StringInLogsChecks() (ret []FailureModeCheck) {
 			{startString: "RUN   TestKernelLockupDetectorCriticalSection", endString: ": TestKernelLockupDetectorCriticalSection"},
 			{startString: "RUN   TestKernelLockupDetectorHeartbeat", endString: ": TestKernelLockupDetectorHeartbeat"},
 			{startString: "RUN   TestPmmCheckerOopsAndPanic", endString: ": TestPmmCheckerOopsAndPanic"},
+			{startString: "RUN   TestKernelLockupDetectorFatalCriticalSection", endString: ": TestKernelLockupDetectorFatalCriticalSection"},
+			{startString: "RUN   TestKernelLockupDetectorFatalHeartbeat", endString: ": TestKernelLockupDetectorFatalHeartbeat"},
 		}
 		// Match specific OOPS types before finally matching the generic type.
 		ret = append(ret, &stringInLogCheck{String: "lockup_detector: no heartbeat from", Type: lt, AttributeToTest: true, ExceptBlocks: oopsExceptBlocks})
@@ -228,6 +230,8 @@ func StringInLogsChecks() (ret []FailureModeCheck) {
 			{startString: "RUN   TestSMAPViolation", endString: "PASS: TestSMAPViolation"},
 			{startString: "RUN   TestPmmCheckerOopsAndPanic", endString: "PASS: TestPmmCheckerOopsAndPanic"},
 			{startString: "RUN   TestCrashAssert", endString: "PASS: TestCrashAssert"},
+			{startString: "RUN   TestKernelLockupDetectorFatalCriticalSection", endString: ": TestKernelLockupDetectorFatalCriticalSection"},
+			{startString: "RUN   TestKernelLockupDetectorFatalHeartbeat", endString: ": TestKernelLockupDetectorFatalHeartbeat"},
 		}})
 
 		// For fxbug.dev/71784.
