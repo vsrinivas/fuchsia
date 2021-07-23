@@ -4,9 +4,11 @@
 #![cfg(test)]
 
 pub mod cobalt;
+pub mod fakes;
 pub mod generate_struct;
 pub mod sme_stream;
 
 pub use cobalt::*;
+pub use fakes::*;
 pub use generate_struct::*;
 pub use sme_stream::*;

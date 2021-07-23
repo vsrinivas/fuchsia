@@ -108,6 +108,7 @@ rustc_binary("bin") {
     "src/util/mod.rs",
     "src/util/state_machine.rs",
     "src/util/testing/cobalt.rs",
+    "src/util/testing/fakes.rs",
     "src/util/testing/generate_struct.rs",
     "src/util/testing/mod.rs",
     "src/util/testing/sme_stream.rs",
