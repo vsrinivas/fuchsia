@@ -21,10 +21,13 @@ rustc_library("sampler-config") {
     "//third_party/rust_crates:serde_json5",
   ]
 
+  test_deps = [ "//third_party/rust_crates:tempfile" ]
+
   sources = [ "src/lib.rs" ]
 }
 
 fuchsia_unittest_package("sampler-config-tests") {
+  manifest = "meta/test.cml"
   deps = [ ":sampler-config_test" ]
 }
 

@@ -7,6 +7,7 @@ group("tests") {
   deps = [
     "inspect-fetcher:tests",
     "inspect-fidl-load:tests",
+    "sampler-config:tests",
     "selectors:tests",
     "streams/dart:tests",
     "testing:tests",

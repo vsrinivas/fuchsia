@@ -47,7 +47,6 @@ rustc_library("lib") {
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:matches",
     "//third_party/rust_crates:parking_lot",
-    "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:thiserror",
   ]
 
