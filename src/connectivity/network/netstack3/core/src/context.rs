@@ -37,6 +37,8 @@
 //!
 //! [`ArpContext`]: crate::device::arp::ArpContext
 
+#![deny(unused_results)]
+
 use core::time::Duration;
 
 use packet::{BufferMut, Serializer};
@@ -560,7 +562,7 @@ pub(crate) mod testutil {
     ///
     /// `InstantAndData` implements `Ord` and `Eq` to be used in a `BinaryHeap`
     /// and ordered by `DummyInstant`.
-    #[derive(Clone)]
+    #[derive(Clone, Debug)]
     struct InstantAndData<D>(DummyInstant, D);
 
     impl<D> InstantAndData<D> {
@@ -777,8 +779,8 @@ pub(crate) mod testutil {
 
     impl CounterContext for DummyCounterContext {
         fn increment_counter(&mut self, key: &'static str) {
-            let val = self.counters.get(&key).cloned().unwrap_or(0);
-            self.counters.insert(key, val + 1);
+            let val = self.counters.entry(key).or_insert(0);
+            *val += 1;
         }
     }
 
@@ -1152,6 +1154,7 @@ pub(crate) mod testutil {
         ) -> StepResult
         where
             DummyContext<S, TimerId, SendMeta>: TimerHandler<TimerId>,
+            TimerId: std::fmt::Debug,
         {
             self.collect_frames();
 
@@ -1202,7 +1205,7 @@ pub(crate) mod testutil {
                         break;
                     }
                     timers.push(*id);
-                    ctx.timers.timers.pop();
+                    assert_ne!(ctx.timers.timers.pop(), None);
                 }
 
                 for t in timers {
@@ -1336,7 +1339,7 @@ pub(crate) mod testutil {
             // No timer with id `0` exists yet.
             assert!(ctx.scheduled_instant(0).is_none());
 
-            ctx.schedule_timer(ONE_SEC, 0);
+            assert_eq!(ctx.schedule_timer(ONE_SEC, 0), None);
 
             // Timer with id `0` scheduled to execute at `ONE_SEC_INSTANT`.
             assert_eq!(ctx.scheduled_instant(0).unwrap(), ONE_SEC_INSTANT);
@@ -1359,7 +1362,7 @@ pub(crate) mod testutil {
 
             // If we schedule a timer but then cancel it, it shouldn't fire.
             ctx = Default::default();
-            ctx.schedule_timer(ONE_SEC, 0);
+            assert_eq!(ctx.schedule_timer(ONE_SEC, 0), None);
             assert_eq!(ctx.cancel_timer(0), Some(ONE_SEC_INSTANT));
             assert!(!ctx.trigger_next_timer());
             assert_eq!(ctx.get_ref().as_slice(), []);
@@ -1367,17 +1370,17 @@ pub(crate) mod testutil {
             // If we schedule a timer but then schedule the same ID again, the
             // second timer should overwrite the first one.
             ctx = Default::default();
-            ctx.schedule_timer(Duration::from_secs(0), 0);
-            ctx.schedule_timer(ONE_SEC, 0);
+            assert_eq!(ctx.schedule_timer(Duration::from_secs(0), 0), None);
+            assert_eq!(ctx.schedule_timer(ONE_SEC, 0), Some(Duration::from_secs(0).into()));
             assert_eq!(ctx.cancel_timer(0), Some(ONE_SEC_INSTANT));
 
             // If we schedule three timers and then run `trigger_timers_until`
             // with the appropriate value, only two of them should fire.
             ctx = Default::default();
-            ctx.schedule_timer(Duration::from_secs(0), 0);
-            ctx.schedule_timer(Duration::from_secs(1), 1);
-            ctx.schedule_timer(Duration::from_secs(2), 2);
-            ctx.trigger_timers_until_instant(ONE_SEC_INSTANT);
+            assert_eq!(ctx.schedule_timer(Duration::from_secs(0), 0), None,);
+            assert_eq!(ctx.schedule_timer(Duration::from_secs(1), 1), None,);
+            assert_eq!(ctx.schedule_timer(Duration::from_secs(2), 2), None,);
+            assert_eq!(ctx.trigger_timers_until_instant(ONE_SEC_INSTANT), 2);
 
             // The first two timers should have fired.
             assert_eq!(
