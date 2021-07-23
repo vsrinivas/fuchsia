@@ -203,6 +203,7 @@ impl<'a> CpuControlHandlerBuilder<'a> {
         // Optionally use the default proxy
         let proxy = if self.cpu_ctrl_proxy.is_none() {
             connect_to_driver::<fcpuctrl::DeviceMarker>(&self.cpu_driver_path)
+                .await
                 .context("Failed connecting to CPU driver")?
         } else {
             self.cpu_ctrl_proxy.unwrap()

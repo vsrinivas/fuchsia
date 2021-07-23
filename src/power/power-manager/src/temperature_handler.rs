@@ -92,10 +92,10 @@ impl<'a> TemperatureHandlerBuilder<'a> {
         self
     }
 
-    pub fn build(self) -> Result<Rc<TemperatureHandler>, Error> {
+    pub async fn build(self) -> Result<Rc<TemperatureHandler>, Error> {
         // Optionally use the default proxy
         let proxy = if self.driver_proxy.is_none() {
-            connect_to_driver::<fthermal::DeviceMarker>(&self.driver_path)?
+            connect_to_driver::<fthermal::DeviceMarker>(&self.driver_path).await?
         } else {
             self.driver_proxy.unwrap()
         };
@@ -244,6 +244,7 @@ impl InspectData {
 #[cfg(test)]
 pub mod tests {
     use super::*;
+    use async_utils::PollExt as _;
     use fuchsia_inspect::testing::TreeAssertion;
     use futures::TryStreamExt;
     use inspect::assert_data_tree;
@@ -276,7 +277,7 @@ pub mod tests {
 
     /// Sets up a test TemperatureHandler node that receives temperature readings from the
     /// provided closure.
-    pub fn setup_test_node(
+    pub async fn setup_test_node(
         get_temperature: impl FnMut() -> Celsius + 'static,
         cache_duration: zx::Duration,
     ) -> Rc<TemperatureHandler> {
@@ -286,6 +287,7 @@ pub mod tests {
         )
         .with_cache_duration(cache_duration)
         .build()
+        .await
         .unwrap()
     }
 
@@ -308,7 +310,7 @@ pub mod tests {
             index = (index + 1) % temperature_readings.len();
             Celsius(value)
         };
-        let node = setup_test_node(get_temperature, zx::Duration::from_millis(0));
+        let node = setup_test_node(get_temperature, zx::Duration::from_millis(0)).await;
 
         // Send ReadTemperature message and check for expected value.
         for expected_reading in expected_readings {
@@ -331,7 +333,12 @@ pub mod tests {
 
         let sensor_temperature_clone = sensor_temperature.clone();
         let get_temperature = move || sensor_temperature_clone.get();
-        let node = setup_test_node(get_temperature, zx::Duration::from_millis(500));
+        let node = executor
+            .run_until_stalled(&mut Box::pin(setup_test_node(
+                get_temperature,
+                zx::Duration::from_millis(500),
+            )))
+            .unwrap();
 
         let run = move |executor: &mut fasync::TestExecutor, duration_ms: i64| {
             executor.set_fake_time(executor.now() + zx::Duration::from_millis(duration_ms));
@@ -363,7 +370,7 @@ pub mod tests {
     /// Tests that an unsupported message is handled gracefully and an error is returned.
     #[fasync::run_singlethreaded(test)]
     async fn test_unsupported_msg() {
-        let node = setup_test_node(|| Celsius(0.0), zx::Duration::from_millis(0));
+        let node = setup_test_node(|| Celsius(0.0), zx::Duration::from_millis(0)).await;
         match node.handle_message(&Message::GetCpuLoads).await {
             Err(PowerManagerError::Unsupported) => {}
             e => panic!("Unexpected return value: {:?}", e),
@@ -381,6 +388,7 @@ pub mod tests {
         )
         .with_inspect_root(inspector.root())
         .build()
+        .await
         .unwrap();
 
         // The node will read the current temperature and log the sample into Inspect. Read enough

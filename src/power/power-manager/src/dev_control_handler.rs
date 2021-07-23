@@ -72,10 +72,10 @@ impl<'a> DeviceControlHandlerBuilder<'a> {
         self
     }
 
-    pub fn build(self) -> Result<Rc<DeviceControlHandler>, Error> {
+    pub async fn build(self) -> Result<Rc<DeviceControlHandler>, Error> {
         // Optionally use the default proxy
         let proxy = if self.driver_proxy.is_none() {
-            connect_to_driver::<fdev::ControllerMarker>(&self.driver_path)?
+            connect_to_driver::<fdev::ControllerMarker>(&self.driver_path).await?
         } else {
             self.driver_proxy.unwrap()
         };
@@ -268,7 +268,7 @@ pub mod tests {
         proxy
     }
 
-    pub fn setup_test_node(
+    pub async fn setup_test_node(
         get_performance_state: impl Fn() -> u32 + 'static,
         set_performance_state: impl FnMut(u32) + 'static,
     ) -> Rc<DeviceControlHandler> {
@@ -277,10 +277,11 @@ pub mod tests {
             setup_fake_driver(get_performance_state, set_performance_state),
         )
         .build()
+        .await
         .unwrap()
     }
 
-    pub fn setup_simple_test_node() -> Rc<DeviceControlHandler> {
+    pub async fn setup_simple_test_node() -> Rc<DeviceControlHandler> {
         let perf_state = Rc::new(Cell::new(0));
         let perf_state_clone_1 = perf_state.clone();
         let perf_state_clone_2 = perf_state.clone();
@@ -288,13 +289,13 @@ pub mod tests {
         let set_performance_state = move |state| {
             perf_state_clone_2.set(state);
         };
-        setup_test_node(get_performance_state, set_performance_state)
+        setup_test_node(get_performance_state, set_performance_state).await
     }
 
     /// Tests that an unsupported message is handled gracefully and an Unsupported error is returned
     #[fasync::run_singlethreaded(test)]
     async fn test_unsupported_msg() {
-        let node = setup_simple_test_node();
+        let node = setup_simple_test_node().await;
         match node.handle_message(&Message::ReadTemperature).await {
             Err(PowerManagerError::Unsupported) => {}
             e => panic!("Unexpected return value: {:?}", e),
@@ -305,7 +306,7 @@ pub mod tests {
     /// device controller FIDL APIs.
     #[fasync::run_singlethreaded(test)]
     async fn test_performance_state() {
-        let node = setup_simple_test_node();
+        let node = setup_simple_test_node().await;
 
         // Send SetPerformanceState message to set a state of 1
         let commanded_perf_state = 1;
@@ -356,6 +357,7 @@ pub mod tests {
         )
         .with_inspect_root(inspector.root())
         .build()
+        .await
         .unwrap();
 
         assert_data_tree!(

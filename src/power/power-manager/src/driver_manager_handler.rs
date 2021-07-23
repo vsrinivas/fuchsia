@@ -819,16 +819,9 @@ pub mod tests {
         let (proxy, server_end) =
             fidl::endpoints::create_proxy::<fdevicemgr::SystemStateTransitionMarker>().unwrap();
 
-        // We need to run `connect_channel_to_driver` in a separate thread because the underlying
-        // fdio calls block the calling thread. Since the Directory and fake driver are set up on
-        // the initial thread, this would otherwise result in a deadlock.
-        fasync::unblock(|| {
-            // Use `connect_channel_to_driver` instead of using `connect_to_driver` directly because
-            // `connect_to_driver` requires an Executor (when `into_proxy` is called on the
-            // ClientEnd).
-            connect_channel_to_driver(server_end, &"/dev/class/fake".to_string()).unwrap()
-        })
-        .await;
+        // Use `connect_channel_to_driver` instead of using `connect_to_driver` directly because
+        // `connect_to_driver` requires an Executor (when `into_proxy` is called on the ClientEnd).
+        connect_channel_to_driver(server_end, &"/dev/class/fake".to_string()).await.unwrap();
 
         // Verify we can make a FIDL call to the fake driver and get a successful response
         assert!(proxy

@@ -39,17 +39,17 @@ fn wait_for_path(path: &std::path::Path) -> Result<(), anyhow::Error> {
 }
 
 /// Creates a FIDL proxy and connects its ServerEnd to the driver at the specified path.
-pub fn connect_to_driver<T: fidl::endpoints::ServiceMarker>(
+pub async fn connect_to_driver<T: fidl::endpoints::ServiceMarker>(
     path: &String,
 ) -> Result<T::Proxy, anyhow::Error> {
     let (proxy, server_end) = fidl::endpoints::create_proxy::<T>()?;
-    connect_channel_to_driver(server_end, path)?;
+    connect_channel_to_driver(server_end, path).await?;
     Ok(proxy)
 }
 
 /// Connects a ServerEnd to the driver at the specified path. Calls `wait_for_path` to ensure the
 /// path exists before attempting a connection.
-pub fn connect_channel_to_driver<T: fidl::endpoints::ServiceMarker>(
+pub async fn connect_channel_to_driver<T: fidl::endpoints::ServiceMarker>(
     server_end: fidl::endpoints::ServerEnd<T>,
     path: &String,
 ) -> Result<(), anyhow::Error> {
@@ -57,7 +57,8 @@ pub fn connect_channel_to_driver<T: fidl::endpoints::ServiceMarker>(
     // to drivers, a connection to a missing driver path would succeed but calls to it would fail.
     // So instead of requiring us to implement logic at a higher layer to poll repeatedly until a
     // driver is present, just verify the path exists here using the appropriate watcher APIs.
-    wait_for_path(&std::path::Path::new(path))?;
+    let path_clone = path.clone();
+    fuchsia_async::unblock(move || wait_for_path(&std::path::Path::new(&path_clone))).await?;
 
     fdio::service_connect(path, server_end.into_channel())
         .map_err(|s| anyhow::format_err!("Failed to connect to driver at {}: {}", path, s))?;

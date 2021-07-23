@@ -337,7 +337,8 @@ impl<'a> ThermalPolicyTest<'a> {
         let temperature_node = temperature_handler::tests::setup_test_node(
             Simulator::make_temperature_fetcher(&sim),
             fuchsia_zircon::Duration::from_millis(50),
-        );
+        )
+        .await;
         let cpu_stats_node =
             cpu_stats_handler::tests::setup_test_node(Simulator::make_idle_times_fetcher(&sim))
                 .await;
@@ -348,7 +349,8 @@ impl<'a> ThermalPolicyTest<'a> {
         let cpu_dev_handler = dev_control_handler::tests::setup_test_node(
             Simulator::make_p_state_getter(&sim),
             Simulator::make_p_state_setter(&sim),
-        );
+        )
+        .await;
 
         // Note that the model capacitance used by the control node could differ from the one
         // used by the simulator. This could be leveraged to simulate discrepancies between

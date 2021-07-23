@@ -169,7 +169,8 @@ impl<'a> LidShutdownBuilder<'a> {
         let path = Path::new(INPUT_DEVICES_DIRECTORY).join(filename);
         let device = connect_to_driver::<LidMarker>(&String::from(
             path.to_str().ok_or(format_err!("Could not read path {:?}", path))?,
-        ))?;
+        ))
+        .await?;
         if let Ok(device_descriptor) = device.get_report_desc().await {
             if device_descriptor.len() < HID_LID_DESCRIPTOR.len() {
                 return Err(format_err!("Short HID header"));

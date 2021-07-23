@@ -121,7 +121,8 @@ impl PowerManager {
                     json_data,
                     &self.nodes,
                 )
-                .build()?
+                .build()
+                .await?
             }
             "DriverManagerHandler" => {
                 driver_manager_handler::DriverManagerHandlerBuilder::new_from_json(
@@ -166,11 +167,14 @@ impl PowerManager {
                 service_fs,
             )
             .build()?,
-            "TemperatureHandler" => temperature_handler::TemperatureHandlerBuilder::new_from_json(
-                json_data,
-                &self.nodes,
-            )
-            .build()?,
+            "TemperatureHandler" => {
+                temperature_handler::TemperatureHandlerBuilder::new_from_json(
+                    json_data,
+                    &self.nodes,
+                )
+                .build()
+                .await?
+            }
             "ThermalLimiter" => thermal_limiter::ThermalLimiterBuilder::new_from_json(
                 json_data,
                 &self.nodes,
