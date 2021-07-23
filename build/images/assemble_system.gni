@@ -264,6 +264,15 @@ template("assemble_system") {
            [ rebase_path(depfile, root_build_dir) ]
   }
 
+  # Generate an empty cache_packages file to be consistent with other
+  # image assemblers used in the build.
+  cache_packages_file = "$target_out_dir/${image_name}_cache_packages"
+  cache_packages_target = "${image_name}_empty_cache_packages"
+  generated_file(cache_packages_target) {
+    outputs = [ cache_packages_file ]
+    contents = ""
+  }
+
   system_image_fuchsia_system_packages("${image_name}_fuchsia_packages") {
     forward_variables_from(invoker, [ "testonly" ])
     deps = system_image_deps
@@ -275,13 +284,15 @@ template("assemble_system") {
     forward_variables_from(invoker, [ "testonly" ])
 
     deps = [
+      ":${cache_packages_target}",
       ":${image_name}_fuchsia_packages",
       ":${image_name}_pkgsvr_index",
     ]
     json = "//build/images/system_meta_package_json"
     pkgsvr_index = get_target_outputs(":${image_name}_pkgsvr_index")
 
-    system_image_fuchsia_packages_list = get_target_outputs(deps[0])
+    system_image_fuchsia_packages_list =
+        get_target_outputs(":${image_name}_fuchsia_packages")
     system_image_fuchsia_packages_manifest =
         system_image_fuchsia_packages_list[0]
 
@@ -295,6 +306,8 @@ template("assemble_system") {
       "--entry=meta/package=" + rebase_path(json, root_build_dir),
       "--entry=data/static_packages=" +
           rebase_path(pkgsvr_index[0], root_build_dir),
+      "--entry=data/cache_packages=" +
+          rebase_path(cache_packages_file, root_build_dir),
     ]
   }
 
