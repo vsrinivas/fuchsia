@@ -43,6 +43,6 @@ protocol DriverIndex {
     MatchDriversV1(struct {
         args NodeAddArgs;
     }) -> (struct {
-        driver vector<MatchedDriver>:MAX;
+        drivers vector<MatchedDriver>:MAX;
     }) error zx.status;
 };
