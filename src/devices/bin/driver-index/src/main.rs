@@ -16,6 +16,8 @@ use fuchsia_zircon::{zx_status_t, Status};
 use futures::prelude::*;
 use serde::Deserialize;
 use std::cell::RefCell;
+use std::ops::Deref;
+use std::ops::DerefMut;
 use std::rc::Rc;
 
 mod package_resolver;
@@ -158,16 +160,18 @@ enum BaseRepo {
 }
 
 struct Indexer {
-    base_repo: BaseRepo,
+    // base_repo needs to be in a RefCell because it starts out NotResolved,
+    // but will eventually resolve when base packages are available.
+    base_repo: RefCell<BaseRepo>,
 }
 
 impl Indexer {
     fn new(base_repo: BaseRepo) -> Indexer {
-        Indexer { base_repo: base_repo }
+        Indexer { base_repo: RefCell::new(base_repo) }
     }
 
-    fn load_base_repo(&mut self, base_repo: BaseRepo) {
-        if let BaseRepo::NotResolved(waiters) = &mut self.base_repo {
+    fn load_base_repo(&self, base_repo: BaseRepo) {
+        if let BaseRepo::NotResolved(waiters) = self.base_repo.borrow_mut().deref_mut() {
             while let Some(waiter) = waiters.pop() {
                 match waiter.send().or_else(ignore_peer_closed) {
                     Err(e) => log::error!("Error sending to base_waiter: {:?}", e),
@@ -175,14 +179,15 @@ impl Indexer {
                 }
             }
         }
-        self.base_repo = base_repo;
+        self.base_repo.replace(base_repo);
     }
 
     fn match_driver(&self, args: fdf::NodeAddArgs) -> fdf::DriverIndexMatchDriverResult {
         if args.properties.is_none() {
             return Err(Status::INVALID_ARGS.into_raw());
         }
-        let base_drivers = match &self.base_repo {
+        let base_repo = self.base_repo.borrow();
+        let base_drivers = match base_repo.deref() {
             BaseRepo::Resolved(drivers) => drivers,
             BaseRepo::NotResolved(_) => {
                 return Err(Status::NOT_FOUND.into_raw());
@@ -213,7 +218,8 @@ impl Indexer {
         if args.properties.is_none() {
             return Err(Status::INVALID_ARGS.into_raw());
         }
-        let base_drivers = match &self.base_repo {
+        let base_repo = self.base_repo.borrow();
+        let base_drivers = match base_repo.deref() {
             BaseRepo::Resolved(drivers) => drivers,
             BaseRepo::NotResolved(_) => {
                 return Err(Status::NOT_FOUND.into_raw());
@@ -240,7 +246,7 @@ impl Indexer {
 }
 
 async fn run_index_server(
-    indexer: Rc<RefCell<Indexer>>,
+    indexer: Rc<Indexer>,
     stream: DriverIndexRequestStream,
 ) -> Result<(), anyhow::Error> {
     stream
@@ -250,12 +256,12 @@ async fn run_index_server(
             match request {
                 DriverIndexRequest::MatchDriver { args, responder } => {
                     responder
-                        .send(&mut indexer.borrow().match_driver(args))
+                        .send(&mut indexer.match_driver(args))
                         .or_else(ignore_peer_closed)
                         .context("error responding to MatchDriver")?;
                 }
                 DriverIndexRequest::WaitForBaseDrivers { responder } => {
-                    match &mut indexer.borrow_mut().base_repo {
+                    match indexer.base_repo.borrow_mut().deref_mut() {
                         BaseRepo::Resolved(_) => {
                             responder
                                 .send()
@@ -269,7 +275,7 @@ async fn run_index_server(
                 }
                 DriverIndexRequest::MatchDriversV1 { args, responder } => {
                     responder
-                        .send(&mut indexer.borrow().match_drivers_v1(args))
+                        .send(&mut indexer.match_drivers_v1(args))
                         .or_else(ignore_peer_closed)
                         .context("error responding to MatchDriversV1")?;
                 }
@@ -281,7 +287,7 @@ async fn run_index_server(
 }
 
 async fn load_base_drivers(
-    indexer: Rc<RefCell<Indexer>>,
+    indexer: Rc<Indexer>,
     resolver: fidl_fuchsia_pkg::PackageResolverProxy,
 ) -> Result<(), anyhow::Error> {
     let (dir, dir_server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()?;
@@ -318,7 +324,7 @@ async fn load_base_drivers(
         log::info!("Found base driver: {}", resolved_driver.component_url.to_string());
         resolved_drivers.push(resolved_driver);
     }
-    indexer.borrow_mut().load_base_repo(BaseRepo::Resolved(resolved_drivers));
+    indexer.load_base_repo(BaseRepo::Resolved(resolved_drivers));
     Ok(())
 }
 
@@ -336,7 +342,7 @@ async fn main() -> Result<(), anyhow::Error> {
         fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_pkg::PackageResolverMarker>()
             .unwrap();
 
-    let index = Rc::new(RefCell::new(Indexer::new(BaseRepo::NotResolved(std::vec![]))));
+    let index = Rc::new(Indexer::new(BaseRepo::NotResolved(std::vec![])));
     let (res1, res2, _) = futures::future::join3(
         package_resolver::serve(resolver_stream),
         load_base_drivers(index.clone(), resolver),
@@ -411,7 +417,7 @@ mod tests {
         let (proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<fdf::DriverIndexMarker>().unwrap();
 
-        let index = Rc::new(RefCell::new(Indexer::new(BaseRepo::NotResolved(std::vec![]))));
+        let index = Rc::new(Indexer::new(BaseRepo::NotResolved(std::vec![])));
 
         // Run two tasks: the fake resolver and the task that loads the base drivers.
         let load_base_drivers_task = load_base_drivers(index.clone(), resolver).fuse();
@@ -526,7 +532,7 @@ mod tests {
         let (proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<fdf::DriverIndexMarker>().unwrap();
 
-        let index = Rc::new(RefCell::new(Indexer::new(base_repo)));
+        let index = Rc::new(Indexer::new(base_repo));
 
         let index_task = run_index_server(index.clone(), stream).fuse();
         let test_task = async move {
