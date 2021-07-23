@@ -52,7 +52,7 @@ use {
     async_utils::event::Event,
     bincode::serialize_into,
     byteorder::{ByteOrder, LittleEndian},
-    futures::{self, future::poll_fn},
+    futures::{self, future::poll_fn, FutureExt},
     once_cell::sync::OnceCell,
     rand::Rng,
     serde::{Deserialize, Serialize},
@@ -63,6 +63,7 @@ use {
         task::{Poll, Waker},
         vec::Vec,
     },
+    storage_device::buffer::Buffer,
 };
 
 // The journal file is written to in blocks of this size.
@@ -175,8 +176,11 @@ struct Inner {
     // Tells the flush task to terminate.
     terminate: bool,
 
-    // The error we encountered when flushing, if any.
-    flush_error: Option<Error>,
+    // Disable compactions.
+    disable_compactions: bool,
+
+    // True if compactions are running.
+    compaction_running: bool,
 
     // Waker for the sync task for when it's waiting for the flush task to finish.
     sync_waker: Option<Waker>,
@@ -206,7 +210,8 @@ impl Journal {
                 writer: JournalWriter::new(BLOCK_SIZE as usize, starting_checksum),
                 flush_waker: None,
                 terminate: false,
-                flush_error: None,
+                disable_compactions: false,
+                compaction_running: false,
                 sync_waker: None,
                 flushed_offset: 0,
                 discard_offset: None,
@@ -781,9 +786,6 @@ impl Journal {
             inner.super_block = new_super_block;
             inner.super_block_to_write = super_block_to_write.next();
             inner.zero_offset = Some(round_down(old_super_block_offset, BLOCK_SIZE));
-            if let Some(event) = inner.reclaim_event.take() {
-                event.signal();
-            }
         }
 
         Ok(())
@@ -839,7 +841,7 @@ impl Journal {
             let mut inner = self.inner.lock().unwrap();
             if inner.flushed_offset >= checkpoint_offset {
                 Poll::Ready(Ok(()))
-            } else if inner.flush_error.is_some() || inner.terminate {
+            } else if inner.terminate {
                 Poll::Ready(Err(FxfsError::JournalFlushError))
             } else {
                 inner.sync_waker = Some(ctx.waker().clone());
@@ -877,23 +879,12 @@ impl Journal {
         self.inner.lock().unwrap().super_block.clone()
     }
 
-    /// Returns whether or not a flush should be performed.  This is only updated after committing a
-    /// transaction.
-    pub fn should_flush(&self) -> bool {
-        // The / 2 is here because after compacting, we cannot reclaim the space until the
-        // _next_ time we flush the device since the super-block is not guaranteed to persist
-        // until then.
-        self.objects.last_end_offset()
-            - self.inner.lock().unwrap().super_block.journal_checkpoint.file_offset
-            > RECLAIM_SIZE / 2
-    }
-
     /// Waits for there to be sufficient space in the journal.
     pub async fn check_journal_space(&self) -> Result<(), Error> {
         loop {
             let _ = debug_assert_not_too_long!({
                 let mut inner = self.inner.lock().unwrap();
-                if inner.flush_error.is_some() {
+                if inner.terminate {
                     // If the flush error is set, this will never make progress, since we can't
                     // extent the journal any more.
                     break Err(anyhow!(FxfsError::JournalFlushError).context("Journal closed"));
@@ -903,11 +894,15 @@ impl Journal {
                 {
                     break Ok(());
                 }
+                if inner.disable_compactions {
+                    break Err(anyhow!(FxfsError::JournalFlushError).context("Journal closed"));
+                }
                 let event = inner.reclaim_event.get_or_insert_with(|| Event::new());
                 event.wait_or_dropped()
             });
         }
     }
+
     fn block_size(&self) -> u64 {
         BLOCK_SIZE
     }
@@ -927,6 +922,9 @@ impl Journal {
                 inner.writer.write_mutations(transaction);
                 checkpoint
             };
+            // TODO(csuter): The call here probably isn't drop-safe.  If the future gets dropped, it
+            // will leave things in a bad state and subsequent threads might try and commit another
+            // transaction which has the potential to fire assertions.
             let maybe_mutation =
                 self.objects.apply_transaction(transaction, &checkpoint_before).await;
             checkpoint_after = {
@@ -936,10 +934,6 @@ impl Journal {
                 }
                 inner.writer.write_record(&JournalRecord::Commit);
 
-                if let Some(flush_waker) = inner.flush_waker.take() {
-                    flush_waker.wake();
-                }
-
                 inner.writer.journal_file_checkpoint()
             };
         }
@@ -948,56 +942,128 @@ impl Journal {
             &checkpoint_before,
             checkpoint_after.file_offset,
         );
+
+        if let Some(waker) = self.inner.lock().unwrap().flush_waker.take() {
+            waker.wake();
+        }
+
         checkpoint_before.file_offset
     }
 
-    /// This task will flush journal data to the device when there is data that needs flushing.
-    /// It will return after the terminate method has been called.
+    /// This task will flush journal data to the device when there is data that needs flushing, and
+    /// trigger compactions when short of journal space.  It will return after the terminate method
+    /// has been called, or an error is encountered with either flushing or compaction.
     pub async fn flush_task(&self) {
-        loop {
-            if let Some((offset, buf)) = poll_fn(|ctx| {
-                let mut inner = self.inner.lock().unwrap();
-                if let Some(handle) = self.handle.get() {
-                    if let Some(offset_and_buf) = inner.writer.take_buffer(handle) {
-                        return Poll::Ready(Some(offset_and_buf));
-                    } else {
-                        if inner.terminate {
-                            return Poll::Ready(None);
-                        }
-                    }
-                }
-                inner.flush_waker = Some(ctx.waker().clone());
-                Poll::Pending
-            })
-            .await
-            {
-                let result = self.handle.get().unwrap().overwrite(offset, buf.as_ref()).await;
-                let mut inner = self.inner.lock().unwrap();
-                if let Err(e) = result {
-                    // TODO(csuter): if writes to the journal start failing then we should prevent
-                    // the creation of new transactions.
-                    log::error!("Failed to flush journal: {:?}", e);
-                    inner.flush_error = Some(e);
-                }
+        // Clean up in case we're dropped.
+        struct Defer<'a>(&'a Journal);
+        impl Drop for Defer<'_> {
+            fn drop(&mut self) {
+                let mut inner = self.0.inner.lock().unwrap();
+                inner.terminate = true;
+                inner.compaction_running = false;
                 if let Some(waker) = inner.sync_waker.take() {
                     waker.wake();
                 }
-                if inner.flush_error.is_some() {
-                    // Also wake up anyone waiting for a journal reclaim, since otherwise they will
-                    // hang indefinitely.
+                inner.reclaim_event = None;
+            }
+        }
+        let _defer = Defer(self);
+
+        let mut flush_fut = None;
+        let mut compact_fut = None;
+        poll_fn(|ctx| loop {
+            {
+                let mut inner = self.inner.lock().unwrap();
+                if flush_fut.is_none() {
+                    if let Some(handle) = self.handle.get() {
+                        if let Some((offset, buf)) = inner.writer.take_buffer(handle) {
+                            flush_fut = Some(self.flush(offset, buf).boxed());
+                        }
+                    }
+                }
+                if inner.terminate && flush_fut.is_none() && compact_fut.is_none() {
+                    return Poll::Ready(());
+                }
+                // The / 2 is here because after compacting, we cannot reclaim the space until the
+                // _next_ time we flush the device since the super-block is not guaranteed to
+                // persist until then.
+                if compact_fut.is_none()
+                    && !inner.terminate
+                    && !inner.disable_compactions
+                    && self.objects.last_end_offset()
+                        - inner.super_block.journal_checkpoint.file_offset
+                        > RECLAIM_SIZE / 2
+                {
+                    compact_fut = Some(self.compact().boxed());
+                    inner.compaction_running = true;
+                }
+                inner.flush_waker = Some(ctx.waker().clone());
+            }
+            let mut pending = true;
+            if let Some(fut) = flush_fut.as_mut() {
+                if let Poll::Ready(result) = fut.poll_unpin(ctx) {
+                    if let Err(e) = result {
+                        log::info!("Flush error: {:?}", e);
+                        return Poll::Ready(());
+                    }
+                    flush_fut = None;
+                    pending = false;
+                }
+            }
+            if let Some(fut) = compact_fut.as_mut() {
+                if let Poll::Ready(result) = fut.poll_unpin(ctx) {
+                    if let Err(e) = result {
+                        log::info!("Compaction error: {:?}", e);
+                        return Poll::Ready(());
+                    }
+                    compact_fut = None;
+                    let mut inner = self.inner.lock().unwrap();
+                    inner.compaction_running = false;
                     inner.reclaim_event = None;
+                    pending = false;
+                }
+            }
+            if pending {
+                return Poll::Pending;
+            }
+        })
+        .await;
+    }
+
+    async fn flush(&self, offset: u64, buf: Buffer<'_>) -> Result<(), Error> {
+        self.handle.get().unwrap().overwrite(offset, buf.as_ref()).await?;
+        let mut inner = self.inner.lock().unwrap();
+        if let Some(waker) = inner.sync_waker.take() {
+            waker.wake();
+        }
+        inner.flushed_offset = offset + buf.len() as u64;
+        Ok(())
+    }
+
+    async fn compact(&self) -> Result<(), Error> {
+        log::debug!("Compaction starting");
+        trace_duration!("Journal::compact");
+        self.objects.flush().await?;
+        self.write_super_block().await?;
+        log::debug!("Compaction finished");
+        Ok(())
+    }
+
+    pub async fn stop_compactions(&self) {
+        loop {
+            let _ = debug_assert_not_too_long!({
+                let mut inner = self.inner.lock().unwrap();
+                inner.disable_compactions = true;
+                if !inner.compaction_running {
                     return;
                 }
-                inner.flushed_offset = offset + buf.len() as u64;
-            } else {
-                if let Some(waker) = self.inner.lock().unwrap().sync_waker.take() {
-                    waker.wake();
-                }
-                return;
-            }
+                let event = inner.reclaim_event.get_or_insert_with(|| Event::new());
+                event.wait_or_dropped()
+            });
         }
     }
 
+    /// Terminate the flush task.
     pub fn terminate(&self) {
         let mut inner = self.inner.lock().unwrap();
         inner.terminate = true;
@@ -1050,14 +1116,13 @@ mod tests {
 
         let (super_block_a, _) =
             SuperBlock::read(device.clone(), SuperBlockCopy::A).await.expect("read failed");
-        let (super_block_b, _) =
-            SuperBlock::read(device.clone(), SuperBlockCopy::B).await.expect("read failed");
-        assert!(super_block_a.generation > super_block_b.generation);
+
+        // The second super-block won't be valid at this time so there's no point reading it.
 
         let fs = FxFilesystem::open(device).await.expect("open failed");
         let root_store = fs.root_store();
         // Generate enough work to induce a journal flush.
-        for _ in 0..1000 {
+        for _ in 0..2000 {
             let mut transaction = fs
                 .clone()
                 .new_transaction(&[], Options::default())
@@ -1072,11 +1137,27 @@ mod tests {
         let device = fs.take_device().await;
         device.reopen();
 
-        let (super_block_a, _) =
+        let (super_block_a_after, _) =
             SuperBlock::read(device.clone(), SuperBlockCopy::A).await.expect("read failed");
-        let (super_block_b, _) =
+        let (super_block_b_after, _) =
             SuperBlock::read(device.clone(), SuperBlockCopy::B).await.expect("read failed");
-        assert!(super_block_b.generation > super_block_a.generation);
+
+        // It's possible that multiple super-blocks were written, so cater for that.
+
+        // The sequence numbers should be one apart.
+        assert_eq!(
+            (super_block_b_after.generation as i64 - super_block_a_after.generation as i64).abs(),
+            1
+        );
+
+        // At leaast one super-block should have been written.
+        assert!(
+            std::cmp::max(super_block_a_after.generation, super_block_b_after.generation)
+                > super_block_a.generation
+        );
+
+        // They should have the same oddness.
+        assert_eq!(super_block_a_after.generation & 1, super_block_a.generation & 1);
     }
 
     #[fasync::run_singlethreaded(test)]

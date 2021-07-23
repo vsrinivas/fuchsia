@@ -139,7 +139,6 @@ pub struct FxFilesystem {
     objects: Arc<ObjectManager>,
     journal: Journal,
     lock_manager: LockManager,
-    compaction_task: Mutex<Option<fasync::Task<()>>>,
     flush_task: Mutex<Option<fasync::Task<()>>>,
     device_sender: OnceCell<Sender<DeviceHolder>>,
     closed: AtomicBool,
@@ -164,7 +163,6 @@ impl FxFilesystem {
             objects,
             journal,
             lock_manager: LockManager::new(),
-            compaction_task: Mutex::new(None),
             flush_task: Mutex::new(None),
             device_sender: OnceCell::new(),
             closed: AtomicBool::new(false),
@@ -189,7 +187,6 @@ impl FxFilesystem {
             objects,
             journal,
             lock_manager: LockManager::new(),
-            compaction_task: Mutex::new(None),
             flush_task: Mutex::new(None),
             device_sender: OnceCell::new(),
             closed: AtomicBool::new(false),
@@ -224,13 +221,10 @@ impl FxFilesystem {
 
     pub async fn close(&self) -> Result<(), Error> {
         assert_eq!(self.closed.swap(true, atomic::Ordering::SeqCst), false);
-        let compaction_task = self.compaction_task.lock().unwrap().take();
-        if let Some(task) = compaction_task {
-            debug_assert_not_too_long!(task);
-        }
         if let Some(graveyard) = self.objects.graveyard() {
             debug_assert_not_too_long!(graveyard.wait_for_reap());
         }
+        self.journal.stop_compactions().await;
         let sync_status =
             self.journal.sync(SyncOptions { flush_device: true, ..Default::default() }).await;
         if sync_status.is_err() {
@@ -245,27 +239,6 @@ impl FxFilesystem {
         // crash instead of exiting gracefully.
         self.device().close().await.expect("Failed to close device");
         sync_status.map(|_| ())
-    }
-
-    async fn compact(self: Arc<Self>) {
-        loop {
-            log::debug!("Compaction starting");
-            trace_duration!("FxFilesystem::compact");
-            if let Err(e) = self.objects.flush().await {
-                log::error!("Compaction encountered error: {:?}", e);
-                return;
-            }
-            if let Err(e) = self.journal.write_super_block().await {
-                log::error!("Error writing journal super-block: {:?}", e);
-                return;
-            }
-            log::debug!("Compaction finished");
-            let mut compaction_task = self.compaction_task.lock().unwrap();
-            if !self.journal.should_flush() || self.closed.load(atomic::Ordering::SeqCst) {
-                *compaction_task = None;
-                break;
-            }
-        }
     }
 
     pub fn super_block(&self) -> SuperBlock {
@@ -391,13 +364,6 @@ impl TransactionHandler for FxFilesystem {
             }
         }
         let journal_offset = self.journal.commit(transaction).await?;
-        let mut compaction_task = self.compaction_task.lock().unwrap();
-        if compaction_task.is_none()
-            && !self.closed.load(atomic::Ordering::SeqCst)
-            && self.journal.should_flush()
-        {
-            *compaction_task = Some(fasync::Task::spawn(self.clone().compact()));
-        }
         Ok(journal_offset)
     }
 
