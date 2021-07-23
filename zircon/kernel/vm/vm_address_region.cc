@@ -74,6 +74,17 @@ zx_status_t VmAddressRegion::CreateSubVmarInternal(size_t offset, size_t size, u
 
   Guard<Mutex> guard{aspace_->lock()};
   if (state_ != LifeCycleState::ALIVE) {
+    // fxbug.dev/76417 This extra logging is to help down a rare flake and should be removed once
+    // this bug is resolved.
+    {
+      printf("Attempted %s on a non-alive vmar:\n", __FUNCTION__);
+      // Separately dump this VMAR in case it has been disconnected from the parent aspace and does
+      // not appear in the verbose aspace_->DumpLocked afterwards.
+      DumpLocked(1, false);
+      printf("Parent aspace information:\n");
+      aspace_->DumpLocked(true);
+    }
+
     return ZX_ERR_BAD_STATE;
   }
 
@@ -574,8 +585,8 @@ void VmAddressRegion::DumpLocked(uint depth, bool verbose) const {
   for (uint i = 0; i < depth; ++i) {
     printf("  ");
   }
-  printf("vmar %p [%#" PRIxPTR " %#" PRIxPTR "] sz %#zx ref %d '%s'\n", this, base_,
-         base_ + (size_ - 1), size_, ref_count_debug(), name_);
+  printf("vmar %p [%#" PRIxPTR " %#" PRIxPTR "] sz %#zx ref %d state %d '%s'\n", this, base_,
+         base_ + (size_ - 1), size_, ref_count_debug(), (int)state_, name_);
   for (const auto& child : subregions_) {
     AssertHeld(child.lock_ref());
     child.DumpLocked(depth + 1, verbose);

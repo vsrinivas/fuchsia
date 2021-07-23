@@ -106,8 +106,9 @@ void VmMapping::DumpLocked(uint depth, bool verbose) const {
   }
   char vmo_name[32];
   object_->get_name(vmo_name, sizeof(vmo_name));
-  printf("map %p [%#" PRIxPTR " %#" PRIxPTR "] sz %#zx mmufl %#x\n", this, base_, base_ + size_ - 1,
-         size_, arch_mmu_flags_locked());
+  printf("map %p [%#" PRIxPTR " %#" PRIxPTR "] sz %#zx mmufl %#x state %d mergeable %s\n", this,
+         base_, base_ + size_ - 1, size_, arch_mmu_flags_locked(), (int)state_,
+         mergeable_ == Mergeable::YES ? "true" : "false");
   for (uint i = 0; i < depth + 1; ++i) {
     printf("  ");
   }

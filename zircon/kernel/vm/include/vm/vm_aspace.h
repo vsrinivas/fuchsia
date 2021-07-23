@@ -86,6 +86,7 @@ class VmAspace : public fbl::DoublyLinkedListable<VmAspace*>, public fbl::RefCou
   void AttachToThread(Thread* t);
 
   void Dump(bool verbose) const;
+  void DumpLocked(bool verbose) const;
 
   static void DropAllUserPageTables();
   void DropUserPageTables();

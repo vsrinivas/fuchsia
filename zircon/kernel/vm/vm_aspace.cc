@@ -602,11 +602,14 @@ zx_status_t VmAspace::AccessedFault(vaddr_t va) {
 }
 
 void VmAspace::Dump(bool verbose) const {
-  canary_.Assert();
-  printf("as %p [%#" PRIxPTR " %#" PRIxPTR "] sz %#zx fl %#x ref %d '%s'\n", this, base_,
-         base_ + size_ - 1, size_, flags_, ref_count_debug(), name_);
-
   Guard<Mutex> guard{&lock_};
+  DumpLocked(verbose);
+}
+
+void VmAspace::DumpLocked(bool verbose) const {
+  canary_.Assert();
+  printf("as %p [%#" PRIxPTR " %#" PRIxPTR "] sz %#zx fl %#x ref %d '%s' destroyed %d\n", this,
+         base_, base_ + size_ - 1, size_, flags_, ref_count_debug(), name_, aspace_destroyed_);
 
   if (verbose && root_vmar_) {
     AssertHeld(root_vmar_->lock_ref());
