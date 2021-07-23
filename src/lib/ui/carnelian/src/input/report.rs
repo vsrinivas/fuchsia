@@ -5,7 +5,7 @@
 use crate::{
     app::{
         strategies::framebuffer::{AutoRepeatContext, AutoRepeatTimer},
-        CONFIG,
+        Config,
     },
     drawing::DisplayRotation,
     geometry::LimitToBounds,
@@ -294,7 +294,7 @@ impl<'a> InputReportHandler<'a> {
         let events = newly_pressed.chain(released).collect();
         self.pressed_keys = pressed_keys;
         self.repeating = first_non_modifier.or(repeating);
-        if CONFIG.keyboard_autorepeat && self.repeating.is_some() {
+        if Config::get().keyboard_autorepeat && self.repeating.is_some() {
             context.schedule_autorepeat_timer(&self.device_id);
         }
         events

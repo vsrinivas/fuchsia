@@ -706,7 +706,7 @@ mod tests {
     use euclid::{approxeq::ApproxEq, size2, vec2};
     use fuchsia_async::{self as fasync, Time, TimeoutExt};
     use fuchsia_framebuffer::{sysmem::BufferCollectionAllocator, FrameUsage};
-    use lazy_static::lazy_static;
+    use once_cell::sync::Lazy;
 
     const DEFAULT_TIMEOUT: fuchsia_zircon::Duration = fuchsia_zircon::Duration::from_seconds(5);
 
@@ -715,11 +715,8 @@ mod tests {
     static FONT_DATA: &'static [u8] = include_bytes!(
         "../../../../../prebuilt/third_party/fonts/robotoslab/RobotoSlab-Regular.ttf"
     );
-
-    lazy_static! {
-        pub static ref FONT_FACE: FontFace =
-            FontFace::new(&FONT_DATA).expect("Failed to create font");
-    }
+    static FONT_FACE: Lazy<FontFace> =
+        Lazy::new(|| FontFace::new(&FONT_DATA).expect("Failed to create font"));
 
     #[fasync::run_singlethreaded(test)]
     async fn test_text_bounding_box() {

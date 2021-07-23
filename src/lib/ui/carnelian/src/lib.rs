@@ -60,7 +60,7 @@
 //! }
 //! ```
 
-mod app;
+pub mod app;
 /// Color related items
 pub mod color;
 /// Drawing related items

@@ -22,7 +22,7 @@ use futures::{
     future::{Either, Future},
     StreamExt,
 };
-use lazy_static::lazy_static;
+use once_cell::sync::OnceCell;
 use serde::Deserialize;
 use std::{cell::RefCell, collections::BTreeMap, fs, path::PathBuf, pin::Pin, rc::Rc};
 use toml;
@@ -103,6 +103,14 @@ pub struct Config {
     pub virtcon_mode: Option<VirtconMode>,
 }
 
+impl Config {
+    pub(crate) fn get() -> &'static Config {
+        // Some input tests access the config. Rather than requiring setup everywhere,
+        // default the config values for testing purposes.
+        CONFIG.get_or_init(|| Config::default())
+    }
+}
+
 impl Default for Config {
     fn default() -> Self {
         Self {
@@ -115,9 +123,7 @@ impl Default for Config {
     }
 }
 
-lazy_static! {
-    pub static ref CONFIG: Config = App::load_config().expect("failed loading config");
-}
+pub(crate) static CONFIG: OnceCell<Config> = OnceCell::new();
 
 pub(crate) type InternalSender = UnboundedSender<MessageInternal>;
 
@@ -218,6 +224,9 @@ pub trait AppAssistant {
     fn get_display_resource_release_delay(&self) -> std::time::Duration {
         std::time::Duration::from_secs(5)
     }
+
+    /// Filter Carnelian configuration at runtime, if needed.
+    fn filter_config(&mut self, _config: &mut Config) {}
 }
 
 /// Reference to an application assistant.
@@ -277,6 +286,13 @@ impl App {
         }
     }
 
+    fn load_and_filter_config(assistant: &mut AppAssistantPtr) -> Result<(), Error> {
+        let mut config = Self::load_config()?;
+        assistant.filter_config(&mut config);
+        CONFIG.set(config).expect("config set");
+        Ok(())
+    }
+
     /// Starts an application based on Carnelian. The `assistant` parameter will
     /// be used to create new views when asked to do so by the Fuchsia view system.
     pub fn run(assistant_creator_func: AssistantCreatorFunc) -> Result<(), Error> {
@@ -285,7 +301,8 @@ impl App {
         let f = async {
             let app_context = AppContext { sender: internal_sender.clone() };
             let assistant_creator = assistant_creator_func(&app_context);
-            let assistant = assistant_creator.await?;
+            let mut assistant = assistant_creator.await?;
+            Self::load_and_filter_config(&mut assistant)?;
             let strat = create_app_strategy(&assistant, FIRST_VIEW_KEY, &internal_sender).await?;
             let mut app = App::new(internal_sender, strat, assistant);
             app.app_init_common().await?;
@@ -400,7 +417,8 @@ impl App {
         let f = async {
             let app_context = AppContext { sender: internal_sender.clone() };
             let assistant_creator = assistant_creator_func(&app_context);
-            let assistant = assistant_creator.await?;
+            let mut assistant = assistant_creator.await?;
+            Self::load_and_filter_config(&mut assistant)?;
             let strat = create_app_strategy(&assistant, FIRST_VIEW_KEY, &internal_sender).await?;
             strat.create_view_for_testing(&internal_sender)?;
             let mut app = App::new(internal_sender, strat, assistant);
@@ -537,7 +555,7 @@ impl App {
 
     fn get_render_options(&self) -> RenderOptions {
         let mut render_options = self.assistant.get_render_options();
-        if CONFIG.use_spinel {
+        if Config::get().use_spinel {
             render_options.use_spinel = true;
         }
         render_options
