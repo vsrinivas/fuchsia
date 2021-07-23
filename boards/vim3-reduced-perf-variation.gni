@@ -1,0 +1,13 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This board produces a vim3 image which attempts to tune to have a more
+# stable performance profile, which can be useful for benchmarking.
+#
+# So far this does not include any settings that reduce overall performance
+# for the sake of more consistent performance.
+
+import("vim3.gni")
+
+board_bootfs_labels += [ "//boards/kernel_cmdline:reduced-perf-variation" ]
