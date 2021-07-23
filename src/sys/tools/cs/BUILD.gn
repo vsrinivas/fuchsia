@@ -81,8 +81,9 @@ fuchsia_unittest_package("cs-unittests") {
 group("tests") {
   testonly = true
 
-  deps = [
-    ":cs-unittests",
-    "tests:cs-tests",
-  ]
+  deps = [ ":cs-unittests" ]
+  if (!is_coverage) {
+    # TODO(https://fxbug.dev/81307) Re-enable this test once it passes on coverage builders
+    deps += [ "tests:cs-tests" ]
+  }
 }
