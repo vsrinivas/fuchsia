@@ -6,6 +6,8 @@
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
+- title: "Build Workstation"
+  path: /docs/development/build/build_workstation.md
 - title: "fx workflows"
   path: /docs/development/build/fx.md
 - title: "Build and pave quickstart"

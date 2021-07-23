@@ -48,8 +48,11 @@ In this example:
   * `qemu-x64` is a board that refers to the x64 architecture on FEMU, which
      is based on the open source emulator QEMU.
 
-Additionally, the example command below sets a build configuration that builds
+Additionally, the example command below sets your build configuration to build
 Fuchsia's `workstation` product for an `x64` architecture machine or device:
+
+Note: For more information on Workstation, see
+[Build Workstation][build-workstation].
 
 ```posix-terminal
 fx set workstation.x64
@@ -146,5 +149,6 @@ However, if you want to run Fuchsia on a hardware device, see
 
 <!-- Reference links -->
 
+[build-workstation]: /docs/development/build/build_workstation.md
 [fx-set-reference]: https://fuchsia.dev/reference/tools/fx/cmd/set
 [fx-build-reference]: https://fuchsia.dev/reference/tools/fx/cmd/build
