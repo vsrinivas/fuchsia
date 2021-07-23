@@ -42,6 +42,31 @@ constexpr zx::duration kRetryStep = zx::msec(200);
 constexpr uint32_t kTerminaStartupListenerPort = 7777;
 constexpr uint32_t kTerminaMaitredPort = 8888;
 
+// Linux kernel command line params for additional serial debug logs during boot.
+constexpr std::string_view kLinuxKernelSerialDebugCmdline[] = {
+// Add early UART output from kernel.
+#if defined(__x86_64__)
+    "earlycon=uart,io,0x3f8",
+#else
+    "earlycon=pl011,0x808300000",
+#endif
+
+    // Tell Linux to keep the console in polling mode instead of trying to switch
+    // to a real UART driver. The latter assumes a working transmit interrupt,
+    // but we don't implement one yet.
+    //
+    // TODO(fxbug.dev/48616): Ideally, Machina's UART would support IRQs allowing
+    // us to just use the full UART driver.
+    "keep_bootcon",
+
+    // Tell Linux to not try and use the UART as a console, but use the virtual
+    // console tty0 instead.
+    //
+    // TODO(fxbug.dev/48616): If Machina's UART had full IRQ support, using
+    // ttyS0 as a console would be fine.
+    "console=tty0",
+};
+
 bool RunLoopUntil(async::Loop* loop, fit::function<bool()> condition, zx::time deadline) {
   while (zx::clock::get_monotonic() < deadline) {
     // Check our condition.
@@ -292,27 +317,10 @@ zx_status_t DebianEnclosedGuest::LaunchInfo(std::string* url,
                                             fuchsia::virtualization::GuestConfig* cfg) {
   *url = kDebianGuestUrl;
 
-  // Add early UART output from kernel.
-#if defined(__x86_64__)
-  cfg->mutable_cmdline_add()->push_back("earlycon=uart,io,0x3f8");
-#else
-  cfg->mutable_cmdline_add()->push_back("earlycon=pl011,0x808300000");
-#endif
-
-  // Tell Linux to keep the console in polling mode instead of trying to switch
-  // to a real UART driver. The latter assumes a working transmit interrupt,
-  // but we don't implement one yet.
-  //
-  // TODO(fxbug.dev/48616): Ideally, Machina's UART would support IRQs allowing
-  // us to just use the full UART driver.
-  cfg->mutable_cmdline_add()->push_back("keep_bootcon");
-
-  // Tell Linux to not try and use the UART as a console, but use the virtual
-  // console tty0 instead.
-  //
-  // TODO(fxbug.dev/48616): If Machina's UART had full IRQ support, using
-  // ttyS0 as a console would be fine.
-  cfg->mutable_cmdline_add()->push_back("console=tty0");
+  // Enable kernel debugging serial output.
+  for (std::string_view cmd : kLinuxKernelSerialDebugCmdline) {
+    cfg->mutable_cmdline_add()->emplace_back(cmd);
+  }
 
   return ZX_OK;
 }
@@ -391,6 +399,12 @@ zx_status_t TerminaEnclosedGuest::LaunchInfo(std::string* url,
       fuchsia::virtualization::BlockFormat::RAW,
       fidl::InterfaceHandle<fuchsia::io::File>(std::move(channel)),
   });
+
+  // Enable kernel debugging serial output.
+  for (std::string_view cmd : kLinuxKernelSerialDebugCmdline) {
+    cfg->mutable_cmdline_add()->emplace_back(cmd);
+  }
+
   return ZX_OK;
 }
 
