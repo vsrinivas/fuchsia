@@ -55,14 +55,14 @@ std::shared_ptr<T> MakeShared(T&& t) {
 
 }  // namespace
 
-SnapshotManager::SnapshotManager(async_dispatcher_t* dispatcher,
-                                 std::shared_ptr<sys::ServiceDirectory> services,
-                                 timekeeper::Clock* clock, zx::duration shared_request_window,
+SnapshotManager::SnapshotManager(async_dispatcher_t* dispatcher, timekeeper::Clock* clock,
+                                 fuchsia::feedback::DataProvider* data_provider,
+                                 zx::duration shared_request_window,
                                  const std::string& garbage_collected_snapshots_path,
                                  StorageSize max_annotations_size, StorageSize max_archives_size)
     : dispatcher_(dispatcher),
-      services_(std::move(services)),
       clock_(clock),
+      data_provider_(data_provider),
       shared_request_window_(shared_request_window),
       garbage_collected_snapshots_path_(garbage_collected_snapshots_path),
       max_annotations_size_(max_annotations_size),
@@ -94,33 +94,6 @@ SnapshotManager::SnapshotManager(async_dispatcher_t* dispatcher,
   for (std::string uuid; getline(file, uuid);) {
     garbage_collected_snapshots_.insert(uuid);
   }
-}
-
-void SnapshotManager::Connect() {
-  if (data_provider_.is_bound()) {
-    return;
-  }
-
-  data_provider_ = services_->Connect<fuchsia::feedback::DataProvider>();
-
-  // On disconnect, complete all pending requests with a default snapshot.
-  data_provider_.set_error_handler([this](const zx_status_t status) {
-    FX_PLOGS(WARNING, status) << "Lost connection to fuchisa.feedback.DataProvider";
-
-    for (auto& request : requests_) {
-      if (!request->is_pending) {
-        continue;
-      }
-
-      FidlSnapshot snapshot;
-      AddAnnotation("debug.snapshot.error", ToReason(Error::kConnectionError), &snapshot);
-      CompleteWithSnapshot(request->uuid, std::move(snapshot));
-    }
-
-    // Call EnforceSizeLimits after the for-loop to not invalidate |request_| while it's being
-    // iterated over.
-    EnforceSizeLimits();
-  });
 }
 
 Snapshot SnapshotManager::GetSnapshot(const SnapshotUuid& uuid) {
@@ -257,8 +230,6 @@ void SnapshotManager::Shutdown() {
     }
     request->blocked_promises.clear();
   }
-
-  data_provider_.Unbind();
 }
 
 SnapshotUuid SnapshotManager::MakeNewSnapshotRequest(const zx::time start_time,
@@ -279,10 +250,6 @@ SnapshotUuid SnapshotManager::MakeNewSnapshotRequest(const zx::time start_time,
                       });
 
   requests_.back()->delayed_get_snapshot.set_handler([this, timeout, uuid]() {
-    if (!data_provider_.is_bound()) {
-      Connect();
-    }
-
     GetSnapshotParameters params;
 
     // Give 15s for the packaging of the snapshot and the round-trip between the client and

@@ -12,13 +12,13 @@ namespace forensics::feedback {
 CrashReports::CrashReports(async_dispatcher_t* dispatcher,
                            std::shared_ptr<sys::ServiceDirectory> services,
                            timekeeper::Clock* clock, inspect::Node* inspect_root,
-                           const Options options)
+                           fuchsia::feedback::DataProvider* data_provider, const Options options)
     : dispatcher_(dispatcher),
       info_context_(
           std::make_shared<crash_reports::InfoContext>(inspect_root, clock, dispatcher, services)),
       tags_(),
       crash_server_(dispatcher, services, kCrashServerUrl, &tags_),
-      snapshot_manager_(dispatcher, services, clock, options.snapshot_manager_window_duration,
+      snapshot_manager_(dispatcher, clock, data_provider, options.snapshot_manager_window_duration,
                         kGarbageCollectedSnapshotsPath,
                         options.snapshot_manager_max_annotations_size,
                         options.snapshot_manager_max_archives_size),

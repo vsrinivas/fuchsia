@@ -4,7 +4,7 @@
 
 import("//build/config.gni")
 
-visibility = [ "//src/developer/forensics/feedback_data/*" ]
+visibility = [ "//src/developer/forensics/*" ]
 
 ###############################################################################
 # SOURCES
@@ -171,6 +171,24 @@ source_set("data_register") {
   ]
 }
 
+source_set("default_annotations") {
+  sources = [
+    "default_annotations.cc",
+    "default_annotations.h",
+  ]
+
+  public_deps = [
+    "//src/developer/forensics/feedback:constants",
+    "//src/developer/forensics/utils:errors",
+  ]
+
+  deps = [
+    "//sdk/lib/syslog/cpp",
+    "//src/lib/files",
+    "//src/lib/fxl",
+  ]
+}
+
 source_set("device_id_provider") {
   sources = [
     "device_id_provider.cc",
@@ -199,54 +217,6 @@ source_set("errors") {
     "//sdk/lib/syslog/cpp",
     "//src/developer/forensics/utils:errors",
   ]
-}
-
-source_set("main_service") {
-  sources = [
-    "main_service.cc",
-    "main_service.h",
-  ]
-
-  public_deps = [
-    ":config",
-    ":data_provider",
-    ":data_provider_controller",
-    ":data_register",
-    ":datastore",
-    ":device_id_provider",
-    ":errors",
-    ":inspect_manager",
-    "//sdk/fidl/fuchsia.process.lifecycle",
-    "//src/developer/forensics/utils/cobalt",
-    "//src/lib/fxl",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-  ]
-
-  deps = [
-    ":constants",
-    "//sdk/lib/fidl/cpp",
-    "//sdk/lib/sys/cpp",
-    "//sdk/lib/syslog/cpp",
-    "//src/developer/forensics/feedback_data/attachments:attachment_providers",
-    "//src/developer/forensics/utils:previous_boot_file",
-    "//src/lib/files",
-    "//src/lib/fxl",
-    "//src/lib/uuid",
-    "//zircon/public/lib/zx",
-  ]
-}
-
-source_set("inspect_manager") {
-  public = [ "inspect_manager.h" ]
-
-  sources = [
-    "inspect_manager.cc",
-    "inspect_manager.h",
-  ]
-
-  public_deps = [ "//src/developer/forensics/utils:inspect_node_manager" ]
-
-  deps = [ "//src/developer/forensics/utils:inspect_protocol_stats" ]
 }
 
 source_set("inspect_budget") {
@@ -298,36 +268,12 @@ source_set("main") {
   ]
 
   deps = [
-    ":main_service",
-    ":namespace_init",
-    "//sdk/fidl/fuchsia.feedback",
-    "//sdk/lib/fidl/cpp",
     "//sdk/lib/syslog/cpp",
-    "//src/developer/forensics/utils/component",
-    "//src/lib/uuid",
-    "//zircon/public/lib/zx",
+    "//src/developer/forensics/feedback/fidl:fuchsia.feedback.internal",
+    "//src/developer/forensics/feedback/migration/shell:main",
   ]
 
-  visibility += [ "//src/developer/forensics/*" ]
-}
-
-source_set("namespace_init") {
-  sources = [
-    "namespace_init.cc",
-    "namespace_init.h",
-  ]
-
-  public_deps = [ "//src/developer/forensics/utils/cobalt" ]
-
-  deps = [
-    ":constants",
-    "//sdk/lib/fit",
-    "//src/developer/forensics/feedback_data/system_log_recorder:reader",
-    "//src/developer/forensics/feedback_data/system_log_recorder/encoding:production",
-    "//src/developer/forensics/feedback_data/system_log_recorder/encoding:version",
-    "//src/lib/files",
-    "//src/lib/fxl",
-  ]
+  visibility += [ "//src/developer/forensics:*" ]
 }
 
 ###############################################################################

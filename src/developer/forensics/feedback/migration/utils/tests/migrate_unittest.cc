@@ -31,6 +31,12 @@ using CrashReportsDirectoryMigrator =
 using CrashReportsDirectoryMigratorClosesConnection = DirectoryMigratorStubClosesConnection<
     fuchsia::feedback::internal::CrashReportsDirectoryMigrator>;
 
+using FeedbackDataDirectoryMigrator =
+    DirectoryMigratorStub<fuchsia::feedback::internal::FeedbackDataDirectoryMigrator>;
+
+using FeedbackDataDirectoryMigratorClosesConnection = DirectoryMigratorStubClosesConnection<
+    fuchsia::feedback::internal::FeedbackDataDirectoryMigrator>;
+
 class MigrateTest : public UnitTestFixture {
  public:
   MigrateTest() : executor_(dispatcher()) {
@@ -63,6 +69,20 @@ class MigrateTest : public UnitTestFixture {
 
     executor_.schedule_task(
         MigrateCrashReportsData(dispatcher(), services(), to_data_fd_, to_cache_fd_, timeout)
+            .then([&](::fpromise::result<void, Error>& r) { result = std::move(r); }));
+    RunLoopUntilIdle();
+
+    FX_CHECK(result);
+
+    return *result;
+  }
+
+  ::fpromise::result<void, Error> MigrateFeedbackData(
+      const zx::duration timeout = zx::duration::infinite()) {
+    std::optional<::fpromise::result<void, Error>> result;
+
+    executor_.schedule_task(
+        MigrateFeedbackDataData(dispatcher(), services(), to_data_fd_, to_cache_fd_, timeout)
             .then([&](::fpromise::result<void, Error>& r) { result = std::move(r); }));
     RunLoopUntilIdle();
 
@@ -155,6 +175,42 @@ TEST_F(MigrateTest, MigrateCrashReportsDataConnectionErrors) {
   InjectServiceProvider(&last_reboot_server);
 
   EXPECT_FALSE(MigrateCrashReports().is_ok());
+}
+
+TEST_F(MigrateTest, MigrateFeedbackDataData) {
+  files::ScopedTempDir data_dir;
+  files::ScopedTempDir cache_dir;
+
+  FeedbackDataDirectoryMigrator feedback_data_server(data_dir.path(), cache_dir.path());
+  InjectServiceProvider(&feedback_data_server);
+
+  EXPECT_TRUE(files::WriteFile(files::JoinPath(data_dir.path(), "data.txt"), "data"));
+  EXPECT_TRUE(files::WriteFile(files::JoinPath(cache_dir.path(), "cache.txt"), "cache"));
+
+  EXPECT_TRUE(MigrateFeedbackData().is_ok());
+
+  // The original files should be deleted.
+  EXPECT_FALSE(files::IsFile(files::JoinPath(data_dir.path(), "data.txt")));
+  EXPECT_FALSE(files::IsFile(files::JoinPath(cache_dir.path(), "cache.txt")));
+
+  // The new files should have the content of the original files.
+  EXPECT_TRUE(files::IsFile(files::JoinPath(DataRoot(), "data.txt")));
+  EXPECT_TRUE(files::IsFile(files::JoinPath(CacheRoot(), "cache.txt")));
+
+  std::string content;
+
+  ASSERT_TRUE(files::ReadFileToString(files::JoinPath(DataRoot(), "data.txt"), &content));
+  EXPECT_EQ(content, "data");
+
+  ASSERT_TRUE(files::ReadFileToString(files::JoinPath(CacheRoot(), "cache.txt"), &content));
+  EXPECT_EQ(content, "cache");
+}
+
+TEST_F(MigrateTest, MigrateFeedbackDataDataConnectionErrors) {
+  FeedbackDataDirectoryMigratorClosesConnection feedback_data_server;
+  InjectServiceProvider(&feedback_data_server);
+
+  EXPECT_FALSE(MigrateFeedbackData().is_ok());
 }
 
 }  // namespace

@@ -46,7 +46,8 @@ class Datastore {
             const ErrorOr<std::string>& previous_boot_id,
             const ErrorOr<std::string>& current_build_version,
             const ErrorOr<std::string>& previous_build_version,
-            InspectDataBudget* inspect_data_budget);
+            const ErrorOr<std::string>& last_reboot_reason,
+            const ErrorOr<std::string>& last_reboot_uptime, InspectDataBudget* inspect_data_budget);
 
   ::fpromise::promise<Annotations> GetAnnotations(zx::duration timeout);
   ::fpromise::promise<Attachments> GetAttachments(zx::duration timeout);

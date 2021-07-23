@@ -29,4 +29,14 @@ std::optional<crash_reports::Config> GetCrashReportsConfig(const std::string& de
   return config;
 }
 
+std::optional<feedback_data::Config> GetFeedbackDataConfig(const std::string& path) {
+  feedback_data::Config config;
+  if (const zx_status_t status = feedback_data::ParseConfig(path, &config); status != ZX_OK) {
+    FX_PLOGS(ERROR, status) << "Failed to read config file at " << path;
+    return std::nullopt;
+  }
+
+  return config;
+}
+
 }  // namespace forensics::feedback

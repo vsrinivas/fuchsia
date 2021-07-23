@@ -63,5 +63,33 @@ TEST(ConfigTest, GetCrashReportsConfig) {
   EXPECT_FALSE(GetCrashReportsConfig(invalid_config_path, invalid_config_path));
 }
 
+TEST(ConfigTest, GetFeedbackDataConfig) {
+  files::ScopedTempDir temp_dir;
+
+  std::string config_path;
+  ASSERT_TRUE(temp_dir.NewTempFileWithData(R"({
+    "annotation_allowlist": [
+      "annotation_one",
+      "annotation_two"
+    ],
+    "attachment_allowlist": [
+      "attachment_one"
+    ]
+})",
+                                           &config_path));
+
+  EXPECT_FALSE(GetFeedbackDataConfig("/bad/path"));
+
+  const auto config = GetFeedbackDataConfig(config_path);
+  ASSERT_TRUE(config);
+  EXPECT_EQ(config->annotation_allowlist, std::set<std::string>({
+                                              "annotation_one",
+                                              "annotation_two",
+                                          }));
+  EXPECT_EQ(config->attachment_allowlist, std::set<std::string>({
+                                              "attachment_one",
+                                          }));
+}
+
 }  // namespace
 }  // namespace forensics::feedback

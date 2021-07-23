@@ -4,6 +4,7 @@
 
 import("//build/components.gni")
 import("//build/config.gni")
+import("//src/hwinfo/hwinfo_config.gni")
 
 ###############################################################################
 # EXECUTABLES
@@ -28,16 +29,64 @@ executable("feedback_integration_test_exe") {
   sources = [ "feedback_integration_test.cc" ]
 
   deps = [
+    ":zx_object_util",
+    "//garnet/public/lib/fostr/fidl/fuchsia.feedback",
     "//sdk/fidl/fuchsia.feedback",
+    "//sdk/fidl/fuchsia.hwinfo",
+    "//sdk/fidl/fuchsia.logger",
     "//sdk/fidl/fuchsia.mem",
+    "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.update.channelcontrol",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/inspect/contrib/cpp:archive_reader",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/syslog/cpp",
+    "//src/developer/forensics/feedback_data:constants",
+    "//src/developer/forensics/testing:gmatchers",
     "//src/developer/forensics/testing/fakes:cobalt",
+    "//src/developer/forensics/utils:archive",
     "//src/developer/forensics/utils/cobalt",
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/uuid:uuid",
+    "//src/ui/lib/escher/test/common:gtest_vulkan",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
+    "//third_party/rapidjson",
     "//zircon/public/lib/zx",
+  ]
+}
+
+executable("feedback_data_unittest_exe") {
+  testonly = true
+
+  sources = [ "feedback_data_unittest.cc" ]
+
+  deps = [
+    "//src/developer/forensics/feedback:main_service",
+    "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//src/developer/forensics/testing:unit_test_fixture",
+    "//src/developer/forensics/testing/stubs:cobalt",
+    "//src/developer/forensics/utils/cobalt",
+    "//src/lib/files",
+    "//src/lib/timekeeper:testing",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+executable("inspect_exe") {
+  testonly = true
+
+  sources = [ "inspect_exe.cc" ]
+
+  deps = [
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/inspect/cpp",
+    "//src/lib/fxl",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 }
 
@@ -97,10 +146,32 @@ executable("namespace_init_unittest_exe") {
   deps = [
     "//sdk/lib/syslog/cpp",
     "//src/developer/forensics/feedback:namespace_init",
+    "//src/developer/forensics/feedback_data/system_log_recorder:reader",
+    "//src/developer/forensics/feedback_data/system_log_recorder/encoding:production",
+    "//src/developer/forensics/feedback_data/system_log_recorder/encoding:version",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//src/developer/forensics/testing:log_message",
+    "//src/developer/forensics/testing:unit_test_fixture",
+    "//src/developer/forensics/utils:logs",
     "//src/lib/files",
+    "//src/lib/timekeeper:testing",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
+  ]
+}
+
+###############################################################################
+# SOURCES
+###############################################################################
+source_set("zx_object_util") {
+  sources = [
+    "zx_object_util.cc",
+    "zx_object_util.h",
+  ]
+
+  public_deps = [
+    "//sdk/lib/syslog/cpp",
+    "//zircon/public/lib/zx",
   ]
 }
 
@@ -121,6 +192,36 @@ config_data("valid_crash_reports_override_config") {
   sources = [ "configs/valid_crash_reports_override.json" ]
 
   outputs = [ "crash_reports/override_config.json" ]
+}
+
+hwinfo_config_validate("fake_hwinfo_product_config_validate") {
+  type = "product"
+  config = "configs/hwinfo_product_config.json"
+}
+
+hwinfo_config_validate("fake_hwinfo_board_config_validate") {
+  type = "board"
+  config = "configs/hwinfo_board_config.json"
+}
+
+config_data("fake_hwinfo_product_config") {
+  for_pkg = "fake_hwinfo"
+
+  sources = [ rebase_path("configs/hwinfo_product_config.json") ]
+
+  outputs = [ "product_config.json" ]
+
+  deps = [ ":fake_hwinfo_product_config_validate" ]
+}
+
+config_data("fake_hwinfo_board_config") {
+  for_pkg = "fake_hwinfo"
+
+  sources = [ rebase_path("configs/hwinfo_board_config.json") ]
+
+  outputs = [ "board_config.json" ]
+
+  deps = [ ":fake_hwinfo_board_config_validate" ]
 }
 
 ###############################################################################
@@ -168,6 +269,22 @@ fuchsia_component(
   ]
 }
 
+fuchsia_component("feedback_data_unittest") {
+  testonly = true
+
+  manifest = "meta/feedback_data_unittest.cml"
+
+  deps = [ ":feedback_data_unittest_exe" ]
+}
+
+fuchsia_component("inspect_test_app") {
+  testonly = true
+
+  manifest = "meta/inspect_test_app.cmx"
+
+  deps = [ ":inspect_exe" ]
+}
+
 fuchsia_component("last_reboot_unittest") {
   testonly = true
 
@@ -196,36 +313,50 @@ fuchsia_component("namespace_init_unittest") {
 # PACKAGES
 ###############################################################################
 fuchsia_test_package("feedback-tests") {
-  test_specs = {
-    log_settings = {
-      max_severity = "ERROR"
-    }
-  }
   test_components = [
     ":config_unittest",
     ":feedback_integration_test",
     ":feedback_integration_test_invalid_crash_reports_override_config",
     ":feedback_integration_test_valid_crash_reports_override_config",
+    ":feedback_data_unittest",
     ":last_reboot_unittest",
     ":main_service_unittest",
     ":namespace_init_unittest",
   ]
+
+  deps = [
+    # needed for feedback_data_integration_test
+    ":inspect_test_app",
+  ]
+
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
 group("tests") {
   testonly = true
 
-  # Packages for the components that we are injecting in the integration tests.
   deps = [
+    ":fake_hwinfo_board_config",
+    ":fake_hwinfo_product_config",
     ":feedback-tests",
+
+    # Packages for the components that we are injecting in the integration tests.
     "//src/cobalt/bin/testing/mock_cobalt",
     "//src/connectivity/network/netstack",
     "//src/developer/forensics:copy-pkg",
     "//src/developer/forensics:copy-pkg-invalid-crash-reports-override-config",
     "//src/developer/forensics:copy-pkg-valid-crash-reports-override-config",
-    "//src/developer/forensics/testing/fakes:fake-data-provider",
-    "//src/developer/forensics/testing/fakes:fake-device-id-provider",
+    "//src/devices/sysmem/bin/sysmem_connector",
     "//src/diagnostics/archivist",
+    "//src/diagnostics/archivist:archivist-for-embedding",
+    "//src/factory/fake_factory_store_providers",
+    "//src/graphics/bin/vulkan_loader",
+    "//src/hwinfo:fake_legacy_hwinfo",
+    "//src/hwinfo:hwinfo_tests_factory_config",
     "//src/sys/pkg/bin/system-update-checker",
     "//src/sys/time/timekeeper",
   ]

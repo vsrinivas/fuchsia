@@ -19,6 +19,7 @@
 #include "src/developer/forensics/crash_reports/reporting_policy_watcher.h"
 #include "src/developer/forensics/crash_reports/tests/stub_crash_server.h"
 #include "src/developer/forensics/testing/stubs/cobalt_logger_factory.h"
+#include "src/developer/forensics/testing/stubs/data_provider.h"
 #include "src/developer/forensics/testing/stubs/network_reachability_provider.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
 #include "src/developer/forensics/utils/cobalt/metrics.h"
@@ -144,10 +145,11 @@ class QueueTest : public UnitTestFixture {
 
   void SetUpQueue(const std::vector<CrashServer::UploadStatus>& upload_attempt_results =
                       std::vector<CrashServer::UploadStatus>{}) {
+    data_provider_server_ = std::make_unique<stubs::DataProviderReturnsEmptySnapshot>();
     report_id_ = 1;
     snapshot_manager_ = std::make_unique<SnapshotManager>(
-        dispatcher(), services(), &clock_, zx::sec(5), kGarbageCollectedSnapshotsPath,
-        StorageSize::Gigabytes(1), StorageSize::Gigabytes(1));
+        dispatcher(), &clock_, data_provider_server_.get(), zx::sec(5),
+        kGarbageCollectedSnapshotsPath, StorageSize::Gigabytes(1), StorageSize::Gigabytes(1));
     crash_server_ = std::make_unique<StubCrashServer>(dispatcher(), services(),
                                                       upload_attempt_results, kUploadResponseDelay);
 
@@ -199,6 +201,7 @@ class QueueTest : public UnitTestFixture {
   NetworkWatcher network_watcher_;
   timekeeper::TestClock clock_;
   std::unique_ptr<stubs::NetworkReachabilityProvider> network_reachability_provider_;
+  std::unique_ptr<stubs::DataProviderBase> data_provider_server_;
   std::unique_ptr<SnapshotManager> snapshot_manager_;
   std::unique_ptr<StubCrashServer> crash_server_;
   std::shared_ptr<InfoContext> info_context_;

@@ -18,16 +18,25 @@
             "isolated-temp"
         ],
         "services": [
-            "fuchsia.feedback.DataProvider",
+            "fuchsia.boot.ReadOnlyLog",
+            "fuchsia.diagnostics.FeedbackArchiveAccessor",
             "fuchsia.feedback.DeviceIdProvider",
             "fuchsia.feedback.internal.CrashReportsDirectoryMigrator",
+            "fuchsia.feedback.internal.FeedbackDataDirectoryMigrator",
             "fuchsia.feedback.internal.LastRebootDirectoryMigrator",
             "fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister",
+            "fuchsia.hwinfo.Board",
+            "fuchsia.hwinfo.Product",
+            "fuchsia.logger.Log",
             "fuchsia.metrics.MetricEventLoggerFactory",
             "fuchsia.net.http.Loader",
             "fuchsia.net.name.Lookup",
             "fuchsia.posix.socket.Provider",
+            "fuchsia.process.Launcher",
             "fuchsia.settings.Privacy",
+            "fuchsia.sysinfo.SysInfo",
+            "fuchsia.tracing.provider.Registry",
+            "fuchsia.ui.scenic.Scenic",
             "fuchsia.update.channelcontrol.ChannelControl"
         ]
     }

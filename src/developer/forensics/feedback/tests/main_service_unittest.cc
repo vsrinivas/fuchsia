@@ -14,6 +14,7 @@
 #include "src/developer/forensics/testing/stubs/crash_reporter.h"
 #include "src/developer/forensics/testing/stubs/reboot_methods_watcher_register.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
+#include "src/lib/fxl/strings/substitute.h"
 #include "src/lib/timekeeper/async_test_clock.h"
 
 namespace forensics::feedback {
@@ -27,14 +28,17 @@ using inspect::testing::UintIs;
 using ::testing::IsSupersetOf;
 using ::testing::UnorderedElementsAreArray;
 
+constexpr bool kIsFirstInstance = true;
+
 class MainServiceTest : public UnitTestFixture {
  public:
   MainServiceTest()
       : clock_(dispatcher()),
+        cobalt_(dispatcher(), services(), &clock_),
         main_service_(
-            dispatcher(), services(), &clock_, &InspectRoot(),
+            dispatcher(), services(), &clock_, &InspectRoot(), &cobalt_,
             LastReboot::Options{
-                .is_first_instance = true,
+                .is_first_instance = kIsFirstInstance,
                 .reboot_log = RebootLog(RebootReason::kUserRequest, "reboot log", zx::sec(100)),
                 .graceful_reboot_reason_write_path = "n/a",
                 .oom_crash_reporting_delay = zx::sec(1),
@@ -46,16 +50,44 @@ class MainServiceTest : public UnitTestFixture {
                 .snapshot_manager_window_duration = zx::sec(0),
                 .build_version = ErrorOr<std::string>("build_version"),
                 .default_annotations = {},
+            },
+            FeedbackData::Options{
+                .config{},
+                .is_first_instance = kIsFirstInstance,
+                .limit_inspect_data = false,
+                .spawn_system_log_recorder = false,
+                .delete_previous_boot_logs_time = std::nullopt,
+                .device_id_path = "",
+                .current_boot_id = Error::kMissingValue,
+                .previous_boot_id = Error::kMissingValue,
+                .current_build_version = Error::kMissingValue,
+                .previous_build_version = Error::kMissingValue,
+                .last_reboot_reason = Error::kMissingValue,
+                .last_reboot_uptime = Error::kMissingValue,
             }) {
     AddHandler(main_service_.GetHandler<fuchsia::feedback::LastRebootInfoProvider>());
     AddHandler(main_service_.GetHandler<fuchsia::feedback::CrashReporter>());
     AddHandler(main_service_.GetHandler<fuchsia::feedback::CrashReportingProductRegister>());
+    AddHandler(main_service_.GetHandler<fuchsia::feedback::ComponentDataRegister>());
+    AddHandler(main_service_.GetHandler<fuchsia::feedback::DataProvider>());
+    AddHandler(main_service_.GetHandler<fuchsia::feedback::DataProviderController>());
+    AddHandler(main_service_.GetHandler<fuchsia::feedback::DeviceIdProvider>());
   }
 
  private:
   timekeeper::AsyncTestClock clock_;
+  cobalt::Logger cobalt_;
   MainService main_service_;
 };
+
+auto ProtocolMatcher(const std::string& feedback_protocol, const size_t total_num_connections,
+                     const size_t current_num_connections) {
+  return NodeMatches(AllOf(NameMatches(fxl::Substitute("fuchsia.feedback.$0", feedback_protocol)),
+                           PropertyList(UnorderedElementsAreArray({
+                               UintIs("total_num_connections", total_num_connections),
+                               UintIs("current_num_connections", current_num_connections),
+                           }))));
+}
 
 TEST_F(MainServiceTest, LastReboot) {
   fuchsia::feedback::LastRebootInfoProviderPtr last_reboot_info_provider_ptr_;
@@ -67,53 +99,33 @@ TEST_F(MainServiceTest, LastReboot) {
   RunLoopUntilIdle();
 
   EXPECT_TRUE(called);
-  EXPECT_THAT(
-      InspectTree(),
-      ChildrenMatch(IsSupersetOf({
-          AllOf(NodeMatches(NameMatches("fidl")),
-                ChildrenMatch(UnorderedElementsAreArray({
-                    NodeMatches(AllOf(NameMatches("fuchsia.feedback.LastRebootInfoProvider"),
-                                      PropertyList(UnorderedElementsAreArray({
-                                          UintIs("total_num_connections", 1u),
-                                          UintIs("current_num_connections", 1u),
-                                      })))),
-                    NodeMatches(AllOf(NameMatches("fuchsia.feedback.CrashReporter"),
-                                      PropertyList(UnorderedElementsAreArray({
-                                          UintIs("total_num_connections", 0u),
-                                          UintIs("current_num_connections", 0u),
-                                      })))),
-                    NodeMatches(AllOf(NameMatches("fuchsia.feedback.CrashReportingProductRegister"),
-                                      PropertyList(UnorderedElementsAreArray({
-                                          UintIs("total_num_connections", 0u),
-                                          UintIs("current_num_connections", 0u),
-                                      })))),
-                }))),
-      })));
+  EXPECT_THAT(InspectTree(), ChildrenMatch(IsSupersetOf({
+                                 AllOf(NodeMatches(NameMatches("fidl")),
+                                       ChildrenMatch(IsSupersetOf({
+                                           ProtocolMatcher("LastRebootInfoProvider", 1u, 1u),
+                                           ProtocolMatcher("CrashReporter", 0u, 0u),
+                                           ProtocolMatcher("CrashReportingProductRegister", 0u, 0u),
+                                           ProtocolMatcher("ComponentDataRegister", 0u, 0u),
+                                           ProtocolMatcher("DataProvider", 0u, 0u),
+                                           ProtocolMatcher("DataProviderController", 0u, 0u),
+                                           ProtocolMatcher("DeviceIdProvider", 2u, 2u),
+                                       }))),
+                             })));
 
   last_reboot_info_provider_ptr_.Unbind();
   RunLoopUntilIdle();
-  EXPECT_THAT(
-      InspectTree(),
-      ChildrenMatch(IsSupersetOf({
-          AllOf(NodeMatches(NameMatches("fidl")),
-                ChildrenMatch(UnorderedElementsAreArray({
-                    NodeMatches(AllOf(NameMatches("fuchsia.feedback.LastRebootInfoProvider"),
-                                      PropertyList(UnorderedElementsAreArray({
-                                          UintIs("total_num_connections", 1u),
-                                          UintIs("current_num_connections", 0u),
-                                      })))),
-                    NodeMatches(AllOf(NameMatches("fuchsia.feedback.CrashReporter"),
-                                      PropertyList(UnorderedElementsAreArray({
-                                          UintIs("total_num_connections", 0u),
-                                          UintIs("current_num_connections", 0u),
-                                      })))),
-                    NodeMatches(AllOf(NameMatches("fuchsia.feedback.CrashReportingProductRegister"),
-                                      PropertyList(UnorderedElementsAreArray({
-                                          UintIs("total_num_connections", 0u),
-                                          UintIs("current_num_connections", 0u),
-                                      })))),
-                }))),
-      })));
+  EXPECT_THAT(InspectTree(), ChildrenMatch(IsSupersetOf({
+                                 AllOf(NodeMatches(NameMatches("fidl")),
+                                       ChildrenMatch(IsSupersetOf({
+                                           ProtocolMatcher("LastRebootInfoProvider", 1u, 0u),
+                                           ProtocolMatcher("CrashReporter", 0u, 0u),
+                                           ProtocolMatcher("CrashReportingProductRegister", 0u, 0u),
+                                           ProtocolMatcher("ComponentDataRegister", 0u, 0u),
+                                           ProtocolMatcher("DataProvider", 0u, 0u),
+                                           ProtocolMatcher("DataProviderController", 0u, 0u),
+                                           ProtocolMatcher("DeviceIdProvider", 2u, 2u),
+                                       }))),
+                             })));
 }
 
 TEST_F(MainServiceTest, CrashReports) {
@@ -139,54 +151,102 @@ TEST_F(MainServiceTest, CrashReports) {
   RunLoopUntilIdle();
   EXPECT_TRUE(crash_reporter_called);
   EXPECT_TRUE(crash_reporting_product_register_called);
-  EXPECT_THAT(
-      InspectTree(),
-      ChildrenMatch(IsSupersetOf({
-          AllOf(NodeMatches(NameMatches("fidl")),
-                ChildrenMatch(UnorderedElementsAreArray({
-                    NodeMatches(AllOf(NameMatches("fuchsia.feedback.LastRebootInfoProvider"),
-                                      PropertyList(UnorderedElementsAreArray({
-                                          UintIs("total_num_connections", 0u),
-                                          UintIs("current_num_connections", 0u),
-                                      })))),
-                    NodeMatches(AllOf(NameMatches("fuchsia.feedback.CrashReporter"),
-                                      PropertyList(UnorderedElementsAreArray({
-                                          UintIs("total_num_connections", 1u),
-                                          UintIs("current_num_connections", 1u),
-                                      })))),
-                    NodeMatches(AllOf(NameMatches("fuchsia.feedback.CrashReportingProductRegister"),
-                                      PropertyList(UnorderedElementsAreArray({
-                                          UintIs("total_num_connections", 1u),
-                                          UintIs("current_num_connections", 1u),
-                                      })))),
-                }))),
-      })));
+  EXPECT_THAT(InspectTree(), ChildrenMatch(IsSupersetOf({
+                                 AllOf(NodeMatches(NameMatches("fidl")),
+                                       ChildrenMatch(IsSupersetOf({
+                                           ProtocolMatcher("LastRebootInfoProvider", 0u, 0u),
+                                           ProtocolMatcher("CrashReporter", 1u, 1u),
+                                           ProtocolMatcher("CrashReportingProductRegister", 1u, 1u),
+                                           ProtocolMatcher("ComponentDataRegister", 0u, 0u),
+                                           ProtocolMatcher("DataProvider", 0u, 0u),
+                                           ProtocolMatcher("DataProviderController", 0u, 0u),
+                                           ProtocolMatcher("DeviceIdProvider", 2u, 2u),
+                                       }))),
+                             })));
 
   crash_reporter_ptr_.Unbind();
   crash_reporting_product_register_ptr_.Unbind();
   RunLoopUntilIdle();
-  EXPECT_THAT(
-      InspectTree(),
-      ChildrenMatch(IsSupersetOf({
-          AllOf(NodeMatches(NameMatches("fidl")),
-                ChildrenMatch(UnorderedElementsAreArray({
-                    NodeMatches(AllOf(NameMatches("fuchsia.feedback.LastRebootInfoProvider"),
-                                      PropertyList(UnorderedElementsAreArray({
-                                          UintIs("total_num_connections", 0u),
-                                          UintIs("current_num_connections", 0u),
-                                      })))),
-                    NodeMatches(AllOf(NameMatches("fuchsia.feedback.CrashReporter"),
-                                      PropertyList(UnorderedElementsAreArray({
-                                          UintIs("total_num_connections", 1u),
-                                          UintIs("current_num_connections", 0u),
-                                      })))),
-                    NodeMatches(AllOf(NameMatches("fuchsia.feedback.CrashReportingProductRegister"),
-                                      PropertyList(UnorderedElementsAreArray({
-                                          UintIs("total_num_connections", 1u),
-                                          UintIs("current_num_connections", 0u),
-                                      })))),
-                }))),
-      })));
+  EXPECT_THAT(InspectTree(), ChildrenMatch(IsSupersetOf({
+                                 AllOf(NodeMatches(NameMatches("fidl")),
+                                       ChildrenMatch(IsSupersetOf({
+                                           ProtocolMatcher("LastRebootInfoProvider", 0u, 0u),
+                                           ProtocolMatcher("CrashReporter", 1u, 0u),
+                                           ProtocolMatcher("CrashReportingProductRegister", 1u, 0u),
+                                           ProtocolMatcher("ComponentDataRegister", 0u, 0u),
+                                           ProtocolMatcher("DataProvider", 0u, 0u),
+                                           ProtocolMatcher("DataProviderController", 0u, 0u),
+                                           ProtocolMatcher("DeviceIdProvider", 2u, 2u),
+                                       }))),
+                             })));
+}
+
+TEST_F(MainServiceTest, FeedbackData) {
+  fuchsia::feedback::ComponentDataRegisterPtr component_data_ptr_;
+  services()->Connect(component_data_ptr_.NewRequest(dispatcher()));
+
+  fuchsia::feedback::DataProviderPtr data_provider_ptr_;
+  services()->Connect(data_provider_ptr_.NewRequest(dispatcher()));
+
+  fuchsia::feedback::DataProviderControllerPtr data_provider_controller_ptr_;
+  services()->Connect(data_provider_controller_ptr_.NewRequest(dispatcher()));
+
+  fuchsia::feedback::DeviceIdProviderPtr device_id_provider_ptr_;
+  services()->Connect(device_id_provider_ptr_.NewRequest(dispatcher()));
+
+  bool component_data_called = false;
+  component_data_ptr_->Upsert(fuchsia::feedback::ComponentData{},
+                              [&component_data_called]() { component_data_called = true; });
+
+  bool data_provider_called = false;
+  data_provider_ptr_->GetSnapshot(
+      fuchsia::feedback::GetSnapshotParameters{},
+      [&data_provider_called](fuchsia::feedback::Snapshot) { data_provider_called = true; });
+
+  bool data_provider_controller_called = false;
+  data_provider_controller_ptr_->DisableAndDropPersistentLogs(
+      [&data_provider_controller_called]() { data_provider_controller_called = true; });
+
+  bool device_id_provider_called = false;
+  device_id_provider_ptr_->GetId(
+      [&device_id_provider_called](std::string) { device_id_provider_called = true; });
+
+  RunLoopUntilIdle();
+  EXPECT_TRUE(component_data_called);
+  EXPECT_TRUE(data_provider_called);
+  EXPECT_TRUE(data_provider_controller_called);
+  EXPECT_TRUE(device_id_provider_called);
+  EXPECT_THAT(InspectTree(), ChildrenMatch(IsSupersetOf({
+                                 AllOf(NodeMatches(NameMatches("fidl")),
+                                       ChildrenMatch(IsSupersetOf({
+                                           ProtocolMatcher("LastRebootInfoProvider", 0u, 0u),
+                                           ProtocolMatcher("CrashReporter", 0u, 0u),
+                                           ProtocolMatcher("CrashReportingProductRegister", 0u, 0u),
+                                           ProtocolMatcher("ComponentDataRegister", 1u, 1u),
+                                           ProtocolMatcher("DataProvider", 1u, 1u),
+                                           ProtocolMatcher("DataProviderController", 1u, 1u),
+                                           ProtocolMatcher("DeviceIdProvider", 3u, 3u),
+                                       }))),
+                             })));
+
+  component_data_ptr_.Unbind();
+  data_provider_ptr_.Unbind();
+  data_provider_controller_ptr_.Unbind();
+  device_id_provider_ptr_.Unbind();
+
+  RunLoopUntilIdle();
+  EXPECT_THAT(InspectTree(), ChildrenMatch(IsSupersetOf({
+                                 AllOf(NodeMatches(NameMatches("fidl")),
+                                       ChildrenMatch(IsSupersetOf({
+                                           ProtocolMatcher("LastRebootInfoProvider", 0u, 0u),
+                                           ProtocolMatcher("CrashReporter", 0u, 0u),
+                                           ProtocolMatcher("CrashReportingProductRegister", 0u, 0u),
+                                           ProtocolMatcher("ComponentDataRegister", 1u, 0u),
+                                           ProtocolMatcher("DataProvider", 1u, 0u),
+                                           ProtocolMatcher("DataProviderController", 1u, 0u),
+                                           ProtocolMatcher("DeviceIdProvider", 3u, 2u),
+                                       }))),
+                             })));
 }
 
 }  // namespace

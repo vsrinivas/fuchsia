@@ -1,0 +1,17 @@
+{
+    include: [
+        "//src/connectivity/network/lib/net_interfaces/client.shard.cml",
+        "//src/sys/test_runners/gtest/default.shard.cml",
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/feedback_data_unittest_exe",
+    },
+    use: [
+        {
+            storage: "tmp",
+            path: "/tmp",
+        },
+    ],
+}
