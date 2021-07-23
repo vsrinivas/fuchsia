@@ -54,6 +54,12 @@ kernel_cmdline("toulouse") {
 
 kernel_cmdline("x64-reduced-perf-variation") {
   args = [
+    # Disable serial console printing during early boot, a phase during which
+    # UART communication is single-threaded and synchronous. In production,
+    # the serial console will be disabled, and so early boot benchmarks that
+    # include this work is sensibly avoided.
+    "kernel.phys.verbose=false",
+
     # Disable Intel Turbo Boost. Turbo Boost provides a significant speed-up to
     # many workloads, but — because CPU frequencies vary based on previous work,
     # work in other cores, system temperature, etc — makes performance of systems
