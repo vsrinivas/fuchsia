@@ -18,8 +18,6 @@
 //!
 //! [RFC 4861]: https://tools.ietf.org/html/rfc4861
 
-#![deny(unused_results)]
-
 use alloc::collections::{
     hash_map::{self, HashMap},
     HashSet,

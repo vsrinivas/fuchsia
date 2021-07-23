@@ -4,6 +4,8 @@
 
 //! The device layer.
 
+#![deny(unused_results)]
+
 pub(crate) mod arp;
 pub(crate) mod ethernet;
 pub(crate) mod link;
@@ -838,7 +840,8 @@ pub fn remove_device<D: EventDispatcher>(
         DeviceProtocol::Ethernet => {
             // TODO(rheacock): Generate any final frames to send here.
             crate::device::ethernet::deinitialize(ctx, device.id.into());
-            ctx.state_mut()
+            let _: DeviceState<_> = ctx
+                .state_mut()
                 .device
                 .ethernet
                 .remove(device.id)

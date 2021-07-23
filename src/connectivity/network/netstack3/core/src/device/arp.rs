@@ -4,8 +4,6 @@
 
 //! The Address Resolution Protocol (ARP).
 
-#![deny(unused_results)]
-
 use alloc::collections::hash_map::Entry;
 use alloc::collections::HashMap;
 use core::hash::Hash;

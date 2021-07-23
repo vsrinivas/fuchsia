@@ -4,8 +4,6 @@
 
 //! The Ethernet protocol.
 
-#![deny(unused_results)]
-
 use alloc::boxed::Box;
 use alloc::collections::HashMap;
 use alloc::collections::VecDeque;
