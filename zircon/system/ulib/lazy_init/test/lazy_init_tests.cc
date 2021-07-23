@@ -88,7 +88,7 @@ void lazy_init_test() {
 
   const auto initialization_test = [] { test_value.Initialize(); };
 
-  ASSERT_NO_DEATH(initialization_test, "Testing intialization.\n");
+  ASSERT_NO_DEATH(initialization_test, "Testing initialization.\n");
   ++expected_constructions;
 
   EXPECT_EQ(expected_constructions, Type::constructions());
@@ -97,15 +97,15 @@ void lazy_init_test() {
   // Make sure that the const accessors (Get and the -> operator) are defined
   // for each specialization of LazyInit.
   const LazyInitType& const_test_value = test_value_storage.value;
-  const_test_value.Get().ConstMethod();   // Get()
-  const_test_value->ConstMethod();        // -> operator
+  const_test_value.Get().ConstMethod();  // Get()
+  const_test_value->ConstMethod();       // -> operator
   const_test_value.GetAddressUnchecked()->ConstMethod();
 
   if (Check == CheckType::None) {
-    ASSERT_NO_DEATH(initialization_test, "Testing re-intialization.\n");
+    ASSERT_NO_DEATH(initialization_test, "Testing re-initialization.\n");
     ++expected_constructions;
   } else {
-    ASSERT_DEATH(initialization_test, "Testing re-intialization.\n");
+    ASSERT_DEATH(initialization_test, "Testing re-initialization.\n");
   }
 
   EXPECT_EQ(expected_constructions, Type::constructions());
@@ -166,6 +166,17 @@ TEST(LazyInitTest, BasicChecksWithDtor) { lazy_init_test<CheckType::Basic, Destr
 
 TEST(LazyInitTest, AtomicChecksWithDtor) {
   lazy_init_test<CheckType::Atomic, Destructor::Enabled>();
+}
+
+class TypeWithPrivateCtor {
+  friend lazy_init::Access;
+  explicit TypeWithPrivateCtor(int arg) {}
+};
+
+// Verify that LazyInit can be used with private constructors as long as they befriend LazyInit.
+TEST(LazyInitTest, PrivateCtor) {
+  LazyInit<TypeWithPrivateCtor, CheckType::None, Destructor::Disabled> instance;
+  instance.Initialize(0);
 }
 
 }  // anonymous namespace

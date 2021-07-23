@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_LAZY_INIT_LAZY_INIT_H_
+#define LIB_LAZY_INIT_LAZY_INIT_H_
 
 #include <zircon/assert.h>
 
@@ -12,95 +13,10 @@
 #include <type_traits>
 #include <utility>
 
+#include "internal.h"
+#include "options.h"
+
 namespace lazy_init {
-
-// Enum that specifies what kind of debug init checks to perform for a
-// lazy-initialized global variable.
-enum class CheckType {
-  // No checks are performed.
-  None,
-
-  // Initalization checks are performed. If multiple threads will access the
-  // global variable, initialization must be manually serialized with respect
-  // to the guard variable.
-  Basic,
-
-  // Initialization checks are performed using atomic operations. Checks are
-  // guaranteed to be consistent, even when races occur over initialization.
-  Atomic,
-
-  // The default check type as specified by the build. This is the check type
-  // used when not explicitly specified. It may also be specified explicitly
-  // to defer to the build configuration when setting other options.
-  // TODO(eieio): Add the build arg and conditional logic.
-  Default = None,
-};
-
-// Enum that specifies whether to enable a lazy-initialized global variable's
-// destructor. Disabling global destructors avoids destructor registration.
-// However, destructors can be conditionally enabled on builds that require
-// them, such as ASAN.
-enum class Destructor {
-  Disabled,
-  Enabled,
-
-  // The default destructor enablement as specified by the build. This is the
-  // enablement used when not explicitly specified. It may also be specified
-  // explicitly to defer to the build configuration when setting other
-  // options.
-  // TODO(eieio): Add the build arg and conditional logic.
-  Default = Disabled,
-};
-
-namespace internal {
-
-// Empty type that is trivially constructible/destructible.
-struct Empty {};
-
-// Lazy-initialized storage type for trivially destructible value types.
-template <typename T, bool = std::is_trivially_destructible_v<T>>
-union LazyInitStorage {
-  constexpr LazyInitStorage() : empty{} {}
-
-  // Trivial destructor required so that the overall union is also trivially
-  // destructible.
-  ~LazyInitStorage() = default;
-
-  constexpr T& operator*() { return value; }
-  constexpr T* operator->() { return &value; }
-  constexpr T* GetStorageAddress() { return &value; }
-
-  constexpr const T& operator*() const { return value; }
-  constexpr const T* operator->() const { return &value; }
-  constexpr const T* GetStorageAddress() const { return &value; }
-
-  Empty empty;
-  T value;
-};
-
-// Lazy-initialized storage type for non-trivially destructible value types.
-template <typename T>
-union LazyInitStorage<T, false> {
-  constexpr LazyInitStorage() : empty{} {}
-
-  // Non-trivial destructor required when at least one variant is non-
-  // trivially destructible, making the overall union also non-trivially
-  // destructible.
-  ~LazyInitStorage() {}
-
-  constexpr T& operator*() { return value; }
-  constexpr T* operator->() { return &value; }
-  constexpr T* GetStorageAddress() { return &value; }
-
-  constexpr const T& operator*() const { return value; }
-  constexpr const T* operator->() const { return &value; }
-  constexpr const T* GetStorageAddress() const { return &value; }
-
-  Empty empty;
-  T value;
-};
-
-}  // namespace internal
 
 // Wrapper type for global variables that removes automatic constructor and
 // destructor generation and provides explicit control over initialization.
@@ -109,8 +25,34 @@ union LazyInitStorage<T, false> {
 //
 // This is the base type that specifies the default parameters that control
 // consistency checks and global destructor generation options.
+//
+// See lib/lazy_init/options.h for a description of CheckType and Destructor
+// option values.
+//
+// Note, T must be construtible by LazyInit, however, its constructor need not
+// be public if Access is declared as a friend. For example:
+//
+//   class Foo {
+//     friend lazy_init::Access;
+//
+//     Foo(int arg);
+//   };
+//
 template <typename T, CheckType = CheckType::Default, Destructor = Destructor::Default>
 class LazyInit;
+
+// Utility type to provide access to non-public constructors. Types with private
+// or protected constructors that need lazy initialization must friend Access.
+class Access {
+  template <typename, CheckType, Destructor>
+  friend class LazyInit;
+
+  // Constructs the given storage using the constructor matching T(Args...).
+  template <typename T, typename... Args>
+  static void Initialize(T* value, Args&&... args) {
+    new (value) T(std::forward<Args>(args)...);
+  }
+};
 
 // Specialization that does not provide consistency checks.
 template <typename T>
@@ -128,10 +70,9 @@ class LazyInit<T, CheckType::None, Destructor::Disabled> {
   // ensure that initialization is not already performed.
   // Returns a reference to the newly constructed global.
   template <typename... Args>
-  std::enable_if_t<std::is_constructible_v<T, Args...>, T&> Initialize(Args&&... args) {
+  T& Initialize(Args&&... args) {
     static_assert(alignof(LazyInit) >= alignof(T));
-
-    new (&storage_) T(std::forward<Args>(args)...);
+    Access::Initialize(&storage_.value, std::forward<Args>(args)...);
     return *storage_;
   }
 
@@ -183,13 +124,12 @@ class LazyInit<T, CheckType::Basic, Destructor::Disabled> {
   // not already performed.
   // Returns a reference to the newly constructed global.
   template <typename... Args>
-  std::enable_if_t<std::is_constructible_v<T, Args...>, T&> Initialize(Args&&... args) {
+  T& Initialize(Args&&... args) {
     static_assert(alignof(LazyInit) >= alignof(T));
 
     ZX_ASSERT(!*initialized_);
     *initialized_ = true;
-    new (&storage_) T(std::forward<Args>(args)...);
-
+    Access::Initialize(&storage_.value, std::forward<Args>(args)...);
     return *storage_;
   }
 
@@ -207,7 +147,7 @@ class LazyInit<T, CheckType::Basic, Destructor::Disabled> {
   }
 
   // Accesses the wrapped global by pointer. Asserts that initialization is
-  // already perfromed, however, it is up the caller to ensure that the
+  // already performed, however, it is up the caller to ensure that the
   // effects of initialization are visible.
   T* operator->() { return &Get(); }
   const T* operator->() const { return &Get(); }
@@ -258,11 +198,11 @@ class LazyInit<T, CheckType::Atomic, Destructor::Disabled> {
   // not already performed.
   // Returns a reference to the newly constructed global.
   template <typename... Args>
-  std::enable_if_t<std::is_constructible_v<T, Args...>, T&> Initialize(Args&&... args) {
+  T& Initialize(Args&&... args) {
     static_assert(alignof(LazyInit) >= alignof(T));
 
     TransitionState(State::Uninitialized, State::Constructing);
-    new (&storage_) T(std::forward<Args>(args)...);
+    Access::Initialize(&storage_.value, std::forward<Args>(args)...);
     state_->store(State::Initialized, std::memory_order_release);
 
     return *storage_;
@@ -282,7 +222,7 @@ class LazyInit<T, CheckType::Atomic, Destructor::Disabled> {
   }
 
   // Accesses the wrapped global by pointer. Asserts that initialization is
-  // already perfromed. The effects of initialization are guaranteed to be
+  // already performed. The effects of initialization are guaranteed to be
   // visible if the assertion passes.
   T* operator->() { return &Get(); }
   const T* operator->() const { return &Get(); }
@@ -351,3 +291,5 @@ class LazyInit<T, Check, Destructor::Enabled> : public LazyInit<T, Check, Destru
 };
 
 }  // namespace lazy_init
+
+#endif  // LIB_LAZY_INIT_LAZY_INIT_H_
