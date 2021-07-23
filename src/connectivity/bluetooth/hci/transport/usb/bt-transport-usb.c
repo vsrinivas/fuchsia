@@ -18,6 +18,7 @@
 #include <zircon/device/bt-hci.h>
 #include <zircon/status.h>
 #include <zircon/syscalls/port.h>
+#include <zircon/types.h>
 
 #include <usb/usb-request.h>
 #include <usb/usb.h>
@@ -699,6 +700,23 @@ static zx_protocol_device_t hci_device_proto = {
     .release = hci_release,
 };
 
+zx_status_t alloc_bt_usb_packets(hci_t* hci, int limit, uint64_t data_size, uint8_t ep_address,
+                                 size_t req_size, list_node_t* list) {
+  zx_status_t status;
+  for (int i = 0; i < limit; i++) {
+    usb_request_t* req;
+    status = instrumented_request_alloc(hci, &req, data_size, ep_address, req_size);
+    if (status != ZX_OK) {
+      return status;
+    }
+    status = usb_req_list_add_head(list, req, hci->parent_req_size);
+    if (status != ZX_OK) {
+      return status;
+    }
+  }
+  return ZX_OK;
+}
+
 zx_status_t hci_bind(void* ctx, zx_device_t* device) {
   zxlogf(DEBUG, "hci_bind");
   usb_protocol_t usb;
@@ -772,32 +790,20 @@ zx_status_t hci_bind(void* ctx, zx_device_t* device) {
 
   hci->parent_req_size = usb_get_request_size(&hci->usb);
   size_t req_size = hci->parent_req_size + sizeof(usb_req_internal_t) + sizeof(void*);
-  for (int i = 0; i < EVENT_REQ_COUNT; i++) {
-    usb_request_t* req;
-    status = instrumented_request_alloc(hci, &req, intr_max_packet, intr_addr, req_size);
-    if (status != ZX_OK) {
-      goto fail;
-    }
-    status = usb_req_list_add_head(&hci->free_event_reqs, req, hci->parent_req_size);
-    ZX_DEBUG_ASSERT(status == ZX_OK);
+  status = alloc_bt_usb_packets(hci, EVENT_REQ_COUNT, intr_max_packet, intr_addr, req_size,
+                                &hci->free_event_reqs);
+  if (status != ZX_OK) {
+    goto fail;
   }
-  for (int i = 0; i < ACL_READ_REQ_COUNT; i++) {
-    usb_request_t* req;
-    status = instrumented_request_alloc(hci, &req, ACL_MAX_FRAME_SIZE, bulk_in_addr, req_size);
-    if (status != ZX_OK) {
-      goto fail;
-    }
-    status = usb_req_list_add_head(&hci->free_acl_read_reqs, req, hci->parent_req_size);
-    ZX_DEBUG_ASSERT(status == ZX_OK);
+  status = alloc_bt_usb_packets(hci, ACL_READ_REQ_COUNT, ACL_MAX_FRAME_SIZE, bulk_in_addr, req_size,
+                                &hci->free_acl_read_reqs);
+  if (status != ZX_OK) {
+    goto fail;
   }
-  for (int i = 0; i < ACL_WRITE_REQ_COUNT; i++) {
-    usb_request_t* req;
-    status = instrumented_request_alloc(hci, &req, ACL_MAX_FRAME_SIZE, bulk_out_addr, req_size);
-    if (status != ZX_OK) {
-      goto fail;
-    }
-    status = usb_req_list_add_head(&hci->free_acl_write_reqs, req, hci->parent_req_size);
-    ZX_DEBUG_ASSERT(status == ZX_OK);
+  status = alloc_bt_usb_packets(hci, ACL_WRITE_REQ_COUNT, ACL_MAX_FRAME_SIZE, bulk_out_addr,
+                                req_size, &hci->free_acl_write_reqs);
+  if (status != ZX_OK) {
+    goto fail;
   }
 
   mtx_lock(&hci->mutex);
