@@ -120,6 +120,27 @@ pub enum ProcedureError {
     Channel(fuchsia_zircon::Status),
 }
 
+impl ProcedureError {
+    pub fn info(&self) -> String {
+        use ProcedureError::*;
+        match self {
+            UnexpectedAg(update) => format!("Unexpected AG Update: {}", update),
+            UnparsableHf(_) => "Unparsable HF message".into(),
+            UnexpectedHf(_) => "Unexpected HF command".into(),
+            InvalidHfArgument(_) => "Invalid HF Argument".into(),
+            UnexpectedRequest | AlreadyTerminated | NotImplemented | Channel(..) => {
+                format!("{:?}", self)
+            }
+        }
+    }
+
+    /// Return true if the error was caused by the direct action of the peer sending a message.
+    pub fn caused_by_peer(&self) -> bool {
+        use ProcedureError::*;
+        matches!(self, UnparsableHf(_) | UnexpectedHf(_) | InvalidHfArgument(_))
+    }
+}
+
 impl From<fuchsia_zircon::Status> for ProcedureError {
     fn from(src: fuchsia_zircon::Status) -> Self {
         ProcedureError::Channel(src)

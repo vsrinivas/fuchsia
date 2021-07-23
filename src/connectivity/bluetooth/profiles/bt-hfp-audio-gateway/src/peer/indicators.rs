@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {at_commands as at, core::fmt::Debug};
+use {at_commands as at, core::fmt::Debug, tracing::warn};
 
 use crate::peer::{
     calls::types::{Call, CallHeld, CallSetup},
@@ -104,7 +104,7 @@ impl HfIndicators {
                 HfIndicator::BatteryLevel(v)
             }
             ind => {
-                log::warn!("Received HF indicator update for disabled indicator: {:?}", ind);
+                warn!("Received HF indicator update for disabled indicator: {:?}", ind);
                 return Err(());
             }
         };
@@ -221,7 +221,7 @@ impl From<AgIndicator> for AgUpdate {
 /// disabled.
 ///
 /// By default, all indicators are set to enabled.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Copy)]
 pub struct AgIndicatorsReporting {
     is_enabled: bool,
 

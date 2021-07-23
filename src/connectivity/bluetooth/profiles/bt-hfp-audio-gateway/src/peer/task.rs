@@ -21,13 +21,13 @@ use {
         stream::{empty, Empty},
         FutureExt, StreamExt,
     },
-    log::{debug, info, warn},
     profile_client::ProfileEvent,
     std::{
         convert::TryInto,
         fmt,
         sync::{Arc, Mutex},
     },
+    tracing::{debug, info, warn},
     vigil::{DropWatch, Vigil},
 };
 
@@ -120,9 +120,10 @@ impl PeerTask {
         _protocol: Vec<ProtocolDescriptor>,
         channel: fuchsia_bluetooth::types::Channel,
     ) {
-        info!("connection request from peer {:?}", self.id);
         if self.connection.connected() {
-            info!("overwriting existing connection");
+            info!("Overwriting existing connection to {:?}", self.id);
+        } else {
+            info!("Connection request from {:?}", self.id);
         }
         self.connection.connect(channel);
     }
@@ -132,6 +133,7 @@ impl PeerTask {
         if self.connection.connected() {
             return Ok(());
         }
+        info!("Initiating connection to peer");
         let channel = self
             .profile_proxy
             .connect(&mut self.id.into(), &mut params)
@@ -146,7 +148,7 @@ impl PeerTask {
         protocol: Option<Vec<ProtocolDescriptor>>,
         _attributes: Vec<Attribute>,
     ) {
-        info!("search results received for peer {:?}", self.id);
+        info!("Search results received for {:?}", self.id);
 
         let server_channel = match protocol.as_ref().map(server_channel_from_protocol) {
             Some(Some(sc)) => sc,
@@ -162,7 +164,7 @@ impl PeerTask {
 
         if self.connection_behavior.autoconnect {
             if let Err(e) = self.connect(params).await {
-                info!("Error connecting to peer {:?}: {:?}", self.id, e);
+                info!("Error inititating connecting to peer {:?}: {:?}", self.id, e);
             }
         }
     }
@@ -234,6 +236,7 @@ impl PeerTask {
 
     /// Processes a `request` for information from an HFP procedure.
     async fn procedure_request(&mut self, request: SlcRequest) {
+        debug!("HF procedure request ({:?}): {:?}", self.id, request);
         let marker = (&request).into();
         match request {
             SlcRequest::GetAgFeatures { response } => {
@@ -381,10 +384,13 @@ impl PeerTask {
                     }
                 }
                 // New request on the gain control protocol
-                request = self.gain_control.select_next_some() =>
-                       self.connection.receive_ag_request(ProcedureMarker::VolumeControl, request.into()).await,
+                request = self.gain_control.select_next_some() => {
+                    info!("Handling {:?}", request);
+                    self.connection.receive_ag_request(ProcedureMarker::VolumeControl, request.into()).await;
+                },
                 // A new call state has been received from the call service
                 update = self.calls.select_next_some() => {
+                    info!("Handling {:?}", update);
                     // TODO(fxbug.dev/75538): for in-band ring  setup audio if should_ring is true
                     self.ringer.ring(self.calls.should_ring());
                     if update.callwaiting {
@@ -449,7 +455,7 @@ impl PeerTask {
             HfIndicator::BatteryLevel(v) => {
                 if let Some(handler) = &mut self.handler {
                     if let Err(e) = handler.report_headset_battery_level(v) {
-                        log::warn!("Couldn't report headset battery level: {:?}", e);
+                        warn!("Couldn't report headset battery level: {:?}", e);
                     }
                 }
             }

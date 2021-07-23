@@ -16,6 +16,7 @@ use {
         matches,
         sync::{Arc, Mutex},
     },
+    tracing::{debug, info},
 };
 
 use crate::{
@@ -87,9 +88,7 @@ impl Hfp {
                     self.handle_test_request(request).await?;
                 }
                 removed = self.peers.next() => {
-                    if let Some(removed) = removed {
-                        log::debug!("peer removed: {}", removed);
-                    }
+                    removed.map(|id| debug!("Peer removed: {}", id));
                 }
                 complete => {
                     break;
@@ -103,7 +102,7 @@ impl Hfp {
         &mut self,
         request: hfp_test::HfpTestRequest,
     ) -> Result<(), Error> {
-        log::info!("Handling test request: {:?}", request);
+        info!("Handling test request: {:?}", request);
         use hfp_test::HfpTestRequest::*;
         match request {
             BatteryIndicator { level, .. } => {
@@ -151,7 +150,7 @@ impl Hfp {
     /// Handle a single `CallManagerEvent` from `call_manager`.
     async fn handle_new_call_manager(&mut self, proxy: CallManagerProxy) -> Result<(), Error> {
         if matches!(&self.call_manager, Some(manager) if !manager.is_closed()) {
-            log::info!("Call manager already set. Closing new connection");
+            info!("Call manager already set. Closing new connection");
             return Ok(());
         }
 
@@ -178,9 +177,9 @@ impl Hfp {
     ) -> Result<(), ()> {
         proxy.peer_connected(&mut id.into(), server_end).await.map_err(|e| {
             if e.is_closed() {
-                log::info!("CallManager channel closed.");
+                info!("CallManager channel closed.");
             } else {
-                log::info!("CallManager channel closed with error: {}", e);
+                info!("CallManager channel closed with error: {}", e);
             }
         })
     }
@@ -295,7 +294,7 @@ mod tests {
             .service_found(&mut bt::PeerId { value: 1 }, None, &mut vec![].iter_mut())
             .await?;
 
-        log::info!("profile server done");
+        info!("profile server done");
         Ok(server)
     }
 

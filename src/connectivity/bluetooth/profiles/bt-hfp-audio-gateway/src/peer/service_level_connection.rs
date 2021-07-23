@@ -16,8 +16,8 @@ use {
         stream::{FusedStream, Stream, StreamExt},
         AsyncWrite, AsyncWriteExt,
     },
-    log::{debug, info, warn},
     std::{collections::HashMap, collections::VecDeque, io::Cursor},
+    tracing::{debug, info, warn},
 };
 
 use super::{
@@ -110,6 +110,22 @@ impl SlcState {
     }
 }
 
+/// Contains a snapshot of the SLC state that was initialized by the SLC Initialization procedure.
+/// Only data that should be logged at the start of a connection is included.
+struct SlcInitializationDebug<'a>(&'a SlcState);
+
+use std::fmt;
+impl<'a> fmt::Debug for SlcInitializationDebug<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("SlcState")
+            .field("hf_features", &self.0.hf_features)
+            .field("hf_supported_codecs", &self.0.hf_supported_codecs)
+            .field("hf_indicators", &self.0.hf_indicators)
+            .field("ag_indicator_events_reporting", &self.0.ag_indicator_events_reporting)
+            .finish_non_exhaustive()
+    }
+}
+
 /// Provides an API for managing data packets to be sent over the provided `channel`.
 ///   - Provides a way to queue data to be sent.
 ///   - Provides a way to drain and asynchronously send the queued data to the remote.
@@ -141,7 +157,7 @@ impl<T: Stream + AsyncWrite + Unpin> DataController<T> {
         let bytes = std::mem::take(&mut self.buffer);
         let result = self.channel.write_all(&bytes).await;
         if let Ok(_) = result {
-            info!("Sent {:?}", String::from_utf8_lossy(&bytes));
+            debug!("Sent {:?}", String::from_utf8_lossy(&bytes));
         }
         self.buffer_cursor = 0;
         self.needs_flush = false;
@@ -280,6 +296,7 @@ impl ServiceLevelConnection {
         // stale procedure requests.
         self.reset();
         self.connection = Some(DataController::new(channel));
+        debug!("Initializing Service Level Connection");
     }
 
     /// Connects and initializes the provided `channel` with `state`.
@@ -296,6 +313,7 @@ impl ServiceLevelConnection {
     /// Note: This should only be called when the SLCI Procedure has successfully finished
     /// or in testing scenarios.
     fn set_initialized(&mut self) {
+        info!("Service Level Connection initialized: {:?}", SlcInitializationDebug(&self.state));
         self.state.initialized = true;
     }
 
@@ -367,7 +385,17 @@ impl ServiceLevelConnection {
         // Different error cases may warrant different SLC behavior. For example, errors
         // before the SLC is initialized may warrant complete channel shutdown. Fix this method
         // to make the error handling policy decisions.
-        info!("Error in procedure update: {:?}", error);
+
+        // Only log errors that are caused by the peer at debug level. Invalid messages received
+        // from the peer is out of our control, so should not be logged at info level.
+        // Debug logs more verbose error details.
+        if error.caused_by_peer() {
+            // This is most often not indicative of an error in the case of an `UnparsableHf` since
+            // HFP peers frequently "test" for support of specific AT Commands by sending them.
+            debug!("Sending error to peer in response to: {}", error);
+        } else {
+            info!("Sending error to peer in response to: {}", error.info());
+        }
         self.queue_messages_to_peer(vec![at::Response::Error])
     }
 
@@ -477,7 +505,6 @@ impl ServiceLevelConnection {
             }
 
             if let Some(err) = parse_result.error {
-                warn!("Received unparseable AT command: {:?}", &err);
                 procedure_requests.push(ProcedureError::UnparsableHf(err).into());
             } else {
                 // If there's no error and we're out of parsed values, we've done everything we can.

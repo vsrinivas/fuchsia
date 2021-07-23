@@ -8,8 +8,8 @@ use fidl_fuchsia_hardware_audio::{self as audio, DaiFormat, PcmFormat};
 use fidl_fuchsia_media as media;
 use fuchsia_audio_dai::{self as dai, DaiAudioDevice, DigitalAudioInterface};
 use fuchsia_bluetooth::types::PeerId;
-use log::{info, warn};
 use thiserror::Error;
+use tracing::{info, warn};
 
 #[derive(Error, Debug)]
 pub enum AudioError {

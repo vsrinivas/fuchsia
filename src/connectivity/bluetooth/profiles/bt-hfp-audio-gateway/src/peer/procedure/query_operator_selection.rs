@@ -6,7 +6,7 @@ use super::{Procedure, ProcedureError, ProcedureMarker, ProcedureRequest};
 
 use crate::peer::{service_level_connection::SlcState, slc_request::SlcRequest, update::AgUpdate};
 
-use at_commands as at;
+use {at_commands as at, tracing::info};
 
 /// The maximum number of characters of a long alphanumeric name.
 /// Defined in HFP v1.9, Section 4.8.
@@ -17,8 +17,9 @@ pub fn format_operator_name(format: at::NetworkOperatorNameFormat, mut name: Str
     match format {
         at::NetworkOperatorNameFormat::LongAlphanumeric => {
             if name.len() > MAX_LONG_ALPHANUMERIC_NAME_SIZE {
-                log::info!("Truncating network operator name: {}", name);
+                let full_name = name.clone();
                 name.truncate(MAX_LONG_ALPHANUMERIC_NAME_SIZE);
+                info!("Truncating network operator name \"{}\" to \"{}\"", full_name, name);
             }
         }
     }
