@@ -118,7 +118,9 @@ zx_status_t Tas5720::Reinitialize() {
   if (status != ZX_OK) {
     return status;
   }
-  status = WriteReg(kRegDigitalControl2, (tdm_slot_) | 0x10);  // TDM slot, Muted.
+  constexpr uint8_t kReservedBitsSet = 0x80;
+  status =
+      WriteReg(kRegDigitalControl2, kReservedBitsSet | (tdm_slot_) | 0x10);  // TDM slot, Muted.
   if (status != ZX_OK) {
     return status;
   }
