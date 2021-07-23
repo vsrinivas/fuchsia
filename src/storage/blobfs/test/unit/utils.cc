@@ -5,6 +5,7 @@
 #include "src/storage/blobfs/test/unit/utils.h"
 
 #include <memory>
+#include <vector>
 
 #include <gtest/gtest.h>
 #include <safemath/checked_math.h>
@@ -113,7 +114,7 @@ void InitializeAllocator(size_t blocks, size_t nodes, MockSpaceManager* space_ma
 // Force the allocator to become maximally fragmented by allocating
 // every-other block within up to |blocks|.
 void ForceFragmentation(Allocator* allocator, size_t blocks) {
-  fbl::Vector<ReservedExtent> extents[blocks];
+  std::vector<ReservedExtent> extents[blocks];
   for (size_t i = 0; i < blocks; i++) {
     ASSERT_EQ(allocator->ReserveBlocks(1, &extents[i]), ZX_OK);
     ASSERT_EQ(1ul, extents[i].size());
@@ -125,7 +126,7 @@ void ForceFragmentation(Allocator* allocator, size_t blocks) {
 }
 
 // Save the extents within |in| in a non-reserved vector |out|.
-void CopyExtents(const fbl::Vector<ReservedExtent>& in, fbl::Vector<Extent>* out) {
+void CopyExtents(const std::vector<ReservedExtent>& in, std::vector<Extent>* out) {
   out->reserve(in.size());
   for (size_t i = 0; i < in.size(); i++) {
     out->push_back(in[i].extent());
@@ -133,7 +134,7 @@ void CopyExtents(const fbl::Vector<ReservedExtent>& in, fbl::Vector<Extent>* out
 }
 
 // Save the nodes within |in| in a non-reserved vector |out|.
-void CopyNodes(const fbl::Vector<ReservedNode>& in, fbl::Vector<uint32_t>* out) {
+void CopyNodes(const std::vector<ReservedNode>& in, std::vector<uint32_t>* out) {
   out->reserve(in.size());
   for (size_t i = 0; i < in.size(); i++) {
     out->push_back(in[i].index());

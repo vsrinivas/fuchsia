@@ -22,6 +22,7 @@
 #include <zircon/syscalls.h>
 
 #include <algorithm>
+#include <iterator>
 #include <memory>
 #include <string_view>
 #include <utility>
@@ -75,8 +76,8 @@ struct Blob::WriteInfo {
 
   uint64_t bytes_written = 0;
 
-  fbl::Vector<ReservedExtent> extents;
-  fbl::Vector<ReservedNode> node_indices;
+  std::vector<ReservedExtent> extents;
+  std::vector<ReservedNode> node_indices;
 
   std::optional<BlobCompressor> compressor;
 
@@ -246,8 +247,8 @@ zx_status_t Blob::SpaceAllocate(uint32_t block_count) {
 
   fs::Ticker ticker(blobfs_->GetMetrics()->Collecting());
 
-  fbl::Vector<ReservedExtent> extents;
-  fbl::Vector<ReservedNode> nodes;
+  std::vector<ReservedExtent> extents;
+  std::vector<ReservedNode> nodes;
 
   // Reserve space for the blob.
   const uint64_t reserved_blocks = blobfs_->GetAllocator()->ReservedBlockCount();
@@ -280,9 +281,9 @@ zx_status_t Blob::SpaceAllocate(uint32_t block_count) {
   }
 
   write_info_->extents = std::move(extents);
-  while (!nodes.is_empty()) {
-    write_info_->node_indices.push_back(nodes.erase(0));
-  }
+  write_info_->node_indices.insert(write_info_->node_indices.end(),
+                                   std::make_move_iterator(nodes.begin()),
+                                   std::make_move_iterator(nodes.end()));
   block_count_ = block_count;
   blobfs_->GetMetrics()->UpdateAllocation(blob_size_, ticker.End());
   return ZX_OK;

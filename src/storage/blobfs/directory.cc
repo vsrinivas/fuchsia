@@ -15,6 +15,7 @@
 
 #include <string_view>
 #include <utility>
+#include <vector>
 
 #include <fbl/ref_ptr.h>
 
@@ -180,7 +181,7 @@ void Directory::GetAllocatedRegions(GetAllocatedRegionsRequestView request,
                 offsetof(BlockRegion, length));
   zx::vmo vmo;
   zx_status_t status = ZX_OK;
-  fbl::Vector<BlockRegion> buffer = blobfs_->GetAllocator()->GetAllocatedRegions();
+  std::vector<BlockRegion> buffer = blobfs_->GetAllocator()->GetAllocatedRegions();
   uint64_t allocations = buffer.size();
   if (allocations != 0) {
     status = zx::vmo::create(sizeof(BlockRegion) * allocations, 0, &vmo);

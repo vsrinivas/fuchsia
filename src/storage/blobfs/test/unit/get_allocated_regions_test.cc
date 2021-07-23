@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <memory>
+#include <vector>
 
 #include <gtest/gtest.h>
 #include <id_allocator/id_allocator.h>
@@ -15,7 +16,7 @@ namespace {
 
 using id_allocator::IdAllocator;
 
-void MakeBitmapFrom(const fbl::Vector<uint8_t>& bit_vector, RawBitmap* out_bitmap) {
+void MakeBitmapFrom(const std::vector<uint8_t>& bit_vector, RawBitmap* out_bitmap) {
   ASSERT_EQ(out_bitmap->Reset(bit_vector.size()), ZX_OK);
   for (size_t i = 0; i < bit_vector.size(); i++) {
     if (bit_vector[i] == 1) {
@@ -38,7 +39,7 @@ TEST(GetAllocatedRegionsTest, Full) {
   RawBitmap block_map;
   fzl::ResizeableVmoMapper node_map;
 
-  fbl::Vector<uint8_t> bit_vector = {1};
+  std::vector<uint8_t> bit_vector = {1};
   MakeBitmapFrom(bit_vector, &block_map);
 
   std::unique_ptr<IdAllocator> id_allocator;
@@ -48,7 +49,7 @@ TEST(GetAllocatedRegionsTest, Full) {
                       std::move(id_allocator));
   allocator.SetLogging(false);
 
-  fbl::Vector<BlockRegion> regions = allocator.GetAllocatedRegions();
+  std::vector<BlockRegion> regions = allocator.GetAllocatedRegions();
   ASSERT_EQ(1ul, regions.size());
   ASSERT_EQ(0ul, regions[0].offset);
   ASSERT_EQ(1ul, regions[0].length);
@@ -59,7 +60,7 @@ TEST(GetAllocatedRegionsTest, Fragmented) {
   RawBitmap block_map;
   fzl::ResizeableVmoMapper node_map;
 
-  fbl::Vector<uint8_t> bit_vector = {1, 0, 1, 0, 1};
+  std::vector<uint8_t> bit_vector = {1, 0, 1, 0, 1};
   MakeBitmapFrom(bit_vector, &block_map);
 
   std::unique_ptr<IdAllocator> id_allocator;
@@ -69,7 +70,7 @@ TEST(GetAllocatedRegionsTest, Fragmented) {
                       std::move(id_allocator));
   allocator.SetLogging(false);
 
-  fbl::Vector<BlockRegion> regions = allocator.GetAllocatedRegions();
+  std::vector<BlockRegion> regions = allocator.GetAllocatedRegions();
   ASSERT_EQ(3ul, regions.size());
   ASSERT_EQ(0ul, regions[0].offset);
   ASSERT_EQ(1ul, regions[0].length);
@@ -84,7 +85,7 @@ TEST(GetAllocatedRegionsTest, Length) {
   RawBitmap block_map;
   fzl::ResizeableVmoMapper node_map;
 
-  fbl::Vector<uint8_t> bit_vector = {0, 1, 1, 0};
+  std::vector<uint8_t> bit_vector = {0, 1, 1, 0};
   MakeBitmapFrom(bit_vector, &block_map);
 
   std::unique_ptr<IdAllocator> id_allocator;
@@ -94,7 +95,7 @@ TEST(GetAllocatedRegionsTest, Length) {
                       std::move(id_allocator));
   allocator.SetLogging(false);
 
-  fbl::Vector<BlockRegion> regions = allocator.GetAllocatedRegions();
+  std::vector<BlockRegion> regions = allocator.GetAllocatedRegions();
   ASSERT_EQ(1ul, regions.size());
   ASSERT_EQ(1ul, regions[0].offset);
   ASSERT_EQ(2ul, regions[0].length);

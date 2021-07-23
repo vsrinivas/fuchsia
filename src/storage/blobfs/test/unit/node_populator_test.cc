@@ -5,6 +5,7 @@
 #include "src/storage/blobfs/iterator/node_populator.h"
 
 #include <memory>
+#include <vector>
 
 #include <gtest/gtest.h>
 
@@ -34,8 +35,8 @@ TEST(NodePopulatorTest, Null) {
   std::unique_ptr<Allocator> allocator;
   InitializeAllocator(1, 1, &space_manager, &allocator);
 
-  fbl::Vector<ReservedExtent> extents;
-  fbl::Vector<ReservedNode> nodes;
+  std::vector<ReservedExtent> extents;
+  std::vector<ReservedNode> nodes;
   ASSERT_EQ(allocator->ReserveNodes(1, &nodes), ZX_OK);
   const uint32_t node_index = nodes[0].index();
   NodePopulator populator(allocator.get(), std::move(extents), std::move(nodes));
@@ -60,11 +61,11 @@ TEST(NodePopulatorTest, WalkOne) {
   std::unique_ptr<Allocator> allocator;
   InitializeAllocator(1, 1, &space_manager, &allocator);
 
-  fbl::Vector<ReservedNode> nodes;
+  std::vector<ReservedNode> nodes;
   ASSERT_EQ(allocator->ReserveNodes(1, &nodes), ZX_OK);
   const uint32_t node_index = nodes[0].index();
 
-  fbl::Vector<ReservedExtent> extents;
+  std::vector<ReservedExtent> extents;
   ASSERT_EQ(allocator->ReserveBlocks(1, &extents), ZX_OK);
   ASSERT_EQ(1ul, extents.size());
   const Extent allocated_extent = extents[0].extent();
@@ -113,16 +114,16 @@ TEST(NodePopulatorTest, WalkAllInlineExtents) {
   InitializeAllocator(kBlockCount, 1, &space_manager, &allocator);
   ForceFragmentation(allocator.get(), kBlockCount);
 
-  fbl::Vector<ReservedNode> nodes;
+  std::vector<ReservedNode> nodes;
   ASSERT_EQ(allocator->ReserveNodes(1, &nodes), ZX_OK);
 
-  fbl::Vector<ReservedExtent> extents;
+  std::vector<ReservedExtent> extents;
   ASSERT_EQ(allocator->ReserveBlocks(kInlineMaxExtents, &extents), ZX_OK);
   ASSERT_EQ(kInlineMaxExtents, extents.size());
 
-  fbl::Vector<Extent> allocated_extents;
+  std::vector<Extent> allocated_extents;
   CopyExtents(extents, &allocated_extents);
-  fbl::Vector<uint32_t> allocated_nodes;
+  std::vector<uint32_t> allocated_nodes;
   CopyNodes(nodes, &allocated_nodes);
 
   NodePopulator populator(allocator.get(), std::move(extents), std::move(nodes));
@@ -172,16 +173,16 @@ TEST(NodePopulatorTest, WalkManyNodes) {
 
   constexpr size_t kExpectedExtents = kInlineMaxExtents + 1;
 
-  fbl::Vector<ReservedNode> nodes;
+  std::vector<ReservedNode> nodes;
   ASSERT_EQ(allocator->ReserveNodes(kNodeCount, &nodes), ZX_OK);
 
-  fbl::Vector<ReservedExtent> extents;
+  std::vector<ReservedExtent> extents;
   ASSERT_EQ(allocator->ReserveBlocks(kExpectedExtents, &extents), ZX_OK);
   ASSERT_EQ(kExpectedExtents, extents.size());
 
-  fbl::Vector<Extent> allocated_extents;
+  std::vector<Extent> allocated_extents;
   CopyExtents(extents, &allocated_extents);
-  fbl::Vector<uint32_t> allocated_nodes;
+  std::vector<uint32_t> allocated_nodes;
   CopyNodes(nodes, &allocated_nodes);
 
   NodePopulator populator(allocator.get(), std::move(extents), std::move(nodes));
@@ -244,16 +245,16 @@ TEST(NodePopulatorTest, WalkManyContainers) {
   ForceFragmentation(allocator.get(), kBlockCount);
 
   // Allocate the initial nodes and blocks.
-  fbl::Vector<ReservedNode> nodes;
-  fbl::Vector<ReservedExtent> extents;
+  std::vector<ReservedNode> nodes;
+  std::vector<ReservedExtent> extents;
   ASSERT_EQ(allocator->ReserveNodes(kNodeCount, &nodes), ZX_OK);
   ASSERT_EQ(allocator->ReserveBlocks(kExpectedExtents, &extents), ZX_OK);
   ASSERT_EQ(kExpectedExtents, extents.size());
 
   // Keep a copy of the nodes and blocks, since we are passing both to the
   // node populator, but want to verify them afterwards.
-  fbl::Vector<Extent> allocated_extents;
-  fbl::Vector<uint32_t> allocated_nodes;
+  std::vector<Extent> allocated_extents;
+  std::vector<uint32_t> allocated_nodes;
   CopyExtents(extents, &allocated_extents);
   CopyNodes(nodes, &allocated_nodes);
 
@@ -330,16 +331,16 @@ TEST(NodePopulatorTest, WalkExtraNodes) {
   ForceFragmentation(allocator.get(), kBlockCount);
 
   // Allocate the initial nodes and blocks.
-  fbl::Vector<ReservedNode> nodes;
-  fbl::Vector<ReservedExtent> extents;
+  std::vector<ReservedNode> nodes;
+  std::vector<ReservedExtent> extents;
   ASSERT_EQ(allocator->ReserveNodes(kAllocatedNodes, &nodes), ZX_OK);
   ASSERT_EQ(allocator->ReserveBlocks(kAllocatedExtents, &extents), ZX_OK);
   ASSERT_EQ(kAllocatedExtents, extents.size());
 
   // Keep a copy of the nodes and blocks, since we are passing both to the
   // node populator, but want to verify them afterwards.
-  fbl::Vector<Extent> allocated_extents;
-  fbl::Vector<uint32_t> allocated_nodes;
+  std::vector<Extent> allocated_extents;
+  std::vector<uint32_t> allocated_nodes;
   CopyExtents(extents, &allocated_extents);
   CopyNodes(nodes, &allocated_nodes);
 
@@ -404,16 +405,16 @@ TEST(NodePopulatorTest, WalkExtraExtents) {
   ForceFragmentation(allocator.get(), kBlockCount);
 
   // Allocate the initial nodes and blocks.
-  fbl::Vector<ReservedNode> nodes;
-  fbl::Vector<ReservedExtent> extents;
+  std::vector<ReservedNode> nodes;
+  std::vector<ReservedExtent> extents;
   ASSERT_EQ(allocator->ReserveNodes(kAllocatedNodes, &nodes), ZX_OK);
   ASSERT_EQ(allocator->ReserveBlocks(kAllocatedExtents, &extents), ZX_OK);
   ASSERT_EQ(kAllocatedExtents, extents.size());
 
   // Keep a copy of the nodes and blocks, since we are passing both to the
   // node populator, but want to verify them afterwards.
-  fbl::Vector<Extent> allocated_extents;
-  fbl::Vector<uint32_t> allocated_nodes;
+  std::vector<Extent> allocated_extents;
+  std::vector<uint32_t> allocated_nodes;
   CopyExtents(extents, &allocated_extents);
   CopyNodes(nodes, &allocated_nodes);
 

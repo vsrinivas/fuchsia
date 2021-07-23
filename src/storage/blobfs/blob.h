@@ -23,7 +23,6 @@
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/macros.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/vector.h>
 #include <storage/buffer/owned_vmoid.h>
 
 #include "src/lib/digest/digest.h"

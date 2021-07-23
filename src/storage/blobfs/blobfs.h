@@ -33,7 +33,6 @@
 #include <fbl/macros.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/vector.h>
 #include <storage/operation/unbuffered_operations_builder.h>
 
 #include "src/lib/digest/digest.h"

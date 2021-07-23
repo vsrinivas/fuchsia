@@ -67,7 +67,8 @@ zx_status_t Format::Create(const char* path, const char* type, std::unique_ptr<F
 zx_status_t Format::Check(fbl::unique_fd fd, off_t start, off_t end,
                           const fbl::Vector<size_t>& extent_lengths, disk_format_t part) {
   if (part == DISK_FORMAT_BLOBFS) {
-    return blobfs::blobfs_fsck(std::move(fd), start, end, extent_lengths);
+    std::vector<size_t> extent_sizes(extent_lengths.begin(), extent_lengths.end());
+    return blobfs::blobfs_fsck(std::move(fd), start, end, extent_sizes);
   } else if (part == DISK_FORMAT_MINFS) {
     return minfs::SparseFsck(std::move(fd), start, end, extent_lengths);
   }

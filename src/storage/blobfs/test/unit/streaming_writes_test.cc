@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <block-client/cpp/fake-device.h>
-#include <fbl/vector.h>
 #include <gtest/gtest.h>
 
 #include "src/storage/blobfs/blob.h"

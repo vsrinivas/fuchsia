@@ -14,11 +14,11 @@
 #include <zircon/types.h>
 
 #include <algorithm>
+#include <vector>
 
 #include <bitmap/raw-bitmap.h>
 #include <bitmap/rle-bitmap.h>
 #include <fbl/algorithm.h>
-#include <fbl/vector.h>
 #include <storage/buffer/owned_vmoid.h>
 
 #include "src/lib/storage/vfs/cpp/trace.h"
@@ -123,7 +123,7 @@ zx::status<bool> Allocator::IsBlockAllocated(uint64_t block_number) const {
 }
 
 zx_status_t Allocator::ReserveBlocks(uint64_t num_blocks,
-                                     fbl::Vector<ReservedExtent>* out_extents) {
+                                     std::vector<ReservedExtent>* out_extents) {
   zx_status_t status;
   uint64_t actual_blocks;
 
@@ -143,7 +143,7 @@ zx_status_t Allocator::ReserveBlocks(uint64_t num_blocks,
     if ((status = space_manager_->AddBlocks(num_blocks, &block_map_) != ZX_OK) ||
         (status = FindBlocks(hint, num_blocks, out_extents, &actual_blocks)) != ZX_OK) {
       LogAllocationFailure(num_blocks);
-      out_extents->reset();
+      out_extents->clear();
       return ZX_ERR_NO_SPACE;
     }
   }
@@ -170,11 +170,11 @@ ReservedExtent Allocator::FreeBlocks(const Extent& extent) {
   return ExtentReserver::Reserve(extent);
 }
 
-zx_status_t Allocator::ReserveNodes(uint64_t num_nodes, fbl::Vector<ReservedNode>* out_nodes) {
+zx_status_t Allocator::ReserveNodes(uint64_t num_nodes, std::vector<ReservedNode>* out_nodes) {
   for (uint64_t i = 0; i < num_nodes; i++) {
     zx::status<ReservedNode> node = ReserveNode();
     if (node.is_error()) {
-      out_nodes->reset();
+      out_nodes->clear();
       return node.status_value();
     }
     out_nodes->push_back(std::move(node).value());
@@ -367,7 +367,7 @@ bool Allocator::FindUnallocatedExtent(uint64_t start, uint64_t block_length, uin
 bool Allocator::MunchUnreservedExtents(bitmap::RleBitmap::const_iterator reserved_iterator,
                                        uint64_t remaining_blocks, uint64_t start,
                                        uint64_t block_length,
-                                       fbl::Vector<ReservedExtent>* out_extents,
+                                       std::vector<ReservedExtent>* out_extents,
                                        bitmap::RleBitmap::const_iterator* out_reserved_iterator,
                                        uint64_t* out_remaining_blocks, uint64_t* out_start,
                                        uint64_t* out_block_length) {
@@ -441,7 +441,7 @@ bool Allocator::MunchUnreservedExtents(bitmap::RleBitmap::const_iterator reserve
 }
 
 zx_status_t Allocator::FindBlocks(uint64_t start, uint64_t num_blocks,
-                                  fbl::Vector<ReservedExtent>* out_extents,
+                                  std::vector<ReservedExtent>* out_extents,
                                   uint64_t* out_actual_blocks) {
   std::scoped_lock lock(mutex());
 
@@ -535,8 +535,8 @@ void Allocator::LogAllocationFailure(uint64_t num_blocks) const {
 }
 
 // Finds all allocated regions in the bitmap and returns a vector of their offsets and lengths.
-fbl::Vector<BlockRegion> Allocator::GetAllocatedRegions() const {
-  fbl::Vector<BlockRegion> out_regions;
+std::vector<BlockRegion> Allocator::GetAllocatedRegions() const {
+  std::vector<BlockRegion> out_regions;
   uint64_t offset = 0;
   uint64_t end = 0;
   while (!block_map_.Scan(end, block_map_.size(), false, &offset)) {

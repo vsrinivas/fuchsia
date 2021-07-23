@@ -7,7 +7,7 @@
 #include <stdint.h>
 #include <zircon/types.h>
 
-#include <fbl/vector.h>
+#include <vector>
 
 #include "src/storage/blobfs/allocator/allocator.h"
 #include "src/storage/blobfs/format.h"
@@ -15,8 +15,8 @@
 
 namespace blobfs {
 
-NodePopulator::NodePopulator(Allocator* allocator, fbl::Vector<ReservedExtent> extents,
-                             fbl::Vector<ReservedNode> nodes)
+NodePopulator::NodePopulator(Allocator* allocator, std::vector<ReservedExtent> extents,
+                             std::vector<ReservedNode> nodes)
     : allocator_(allocator), extents_(std::move(extents)), nodes_(std::move(nodes)) {
   ZX_DEBUG_ASSERT(extents_.size() <= kMaxBlobExtents);
   ZX_DEBUG_ASSERT(nodes_.size() >=

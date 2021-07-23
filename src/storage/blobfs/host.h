@@ -28,6 +28,7 @@
 #include <mutex>
 #include <optional>
 #include <variant>
+#include <vector>
 
 #include <bitmap/raw-bitmap.h>
 #include <bitmap/storage.h>
@@ -38,7 +39,6 @@
 #include <fbl/span.h>
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
-#include <fbl/vector.h>
 
 #include "src/lib/digest/digest.h"
 #include "src/storage/blobfs/blob_layout.h"
@@ -292,7 +292,7 @@ zx_status_t UsedSize(const fbl::unique_fd& fd, uint64_t* out_size, off_t start =
 zx_status_t blobfs_create(std::unique_ptr<Blobfs>* out, fbl::unique_fd blockfd);
 
 zx_status_t blobfs_fsck(fbl::unique_fd fd, off_t start, off_t end,
-                        const fbl::Vector<size_t>& extent_lengths);
+                        const std::vector<size_t>& extent_lengths);
 
 // Create a blobfs from a sparse file.
 // |start| indicates where the blobfs partition starts within the file (in bytes).
@@ -300,7 +300,7 @@ zx_status_t blobfs_fsck(fbl::unique_fd fd, off_t start, off_t end,
 // |extent_lengths| contains the length (in bytes) of each blobfs extent: currently this includes
 // the superblock, block bitmap, inode table, and data blocks.
 zx_status_t blobfs_create_sparse(std::unique_ptr<Blobfs>* out, fbl::unique_fd fd, off_t start,
-                                 off_t end, const fbl::Vector<size_t>& extent_vector);
+                                 off_t end, const std::vector<size_t>& extent_vector);
 
 // Write each blob contained in this image into |output_dir| as a standalone file, with the merkle
 // root hash as the filename.

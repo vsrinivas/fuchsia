@@ -7,10 +7,10 @@
 
 #include <memory>
 #include <optional>
+#include <vector>
 
 #include <block-client/cpp/block-device.h>
 #include <fbl/auto_lock.h>
-#include <fbl/vector.h>
 #include <gtest/gtest.h>
 
 #include "src/storage/blobfs/allocator/allocator.h"
@@ -103,7 +103,7 @@ class MockTransactionManager : public TransactionManager, public block_client::B
  private:
   std::shared_ptr<BlobfsMetrics> metrics_ = std::make_shared<BlobfsMetrics>(false);
   Superblock superblock_{};
-  fbl::Vector<std::optional<zx::vmo>> attached_vmos_ __TA_GUARDED(lock_);
+  std::vector<std::optional<zx::vmo>> attached_vmos_ __TA_GUARDED(lock_);
   TransactionCallback transaction_callback_ __TA_GUARDED(lock_);
   fbl::Mutex lock_;
 };
@@ -135,10 +135,10 @@ void InitializeAllocator(size_t blocks, size_t nodes, MockSpaceManager* space_ma
 void ForceFragmentation(Allocator* allocator, size_t blocks);
 
 // Save the extents within |in| in a non-reserved vector |out|.
-void CopyExtents(const fbl::Vector<ReservedExtent>& in, fbl::Vector<Extent>* out);
+void CopyExtents(const std::vector<ReservedExtent>& in, std::vector<Extent>* out);
 
 // Save the nodes within |in| in a non-reserved vector |out|.
-void CopyNodes(const fbl::Vector<ReservedNode>& in, fbl::Vector<uint32_t>* out);
+void CopyNodes(const std::vector<ReservedNode>& in, std::vector<uint32_t>* out);
 
 // Reads |size| bytes from the |device| at byte offset |dev_offset| into |buf|.
 // Expects |size| and |dev_offset| to be multiple of |device| block size.

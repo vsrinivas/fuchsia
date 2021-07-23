@@ -8,6 +8,7 @@
 #include <inttypes.h>
 #include <lib/cksum.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/zx/status.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -27,16 +28,16 @@
 #include <string>
 #include <utility>
 #include <variant>
+#include <vector>
 
 #include <fbl/algorithm.h>
 #include <fbl/array.h>
 #include <fbl/macros.h>
+#include <fbl/unique_fd.h>
 #include <fs-host/common.h>
 #include <safemath/checked_math.h>
 #include <safemath/safe_conversions.h>
 
-#include "fbl/unique_fd.h"
-#include "lib/zx/status.h"
 #include "src/lib/digest/digest.h"
 #include "src/lib/digest/merkle-tree.h"
 #include "src/lib/digest/node-digest.h"
@@ -509,7 +510,7 @@ zx_status_t blobfs_create(std::unique_ptr<Blobfs>* out, fbl::unique_fd fd) {
 }
 
 zx_status_t blobfs_create_sparse(std::unique_ptr<Blobfs>* out, fbl::unique_fd fd, off_t start,
-                                 off_t end, const fbl::Vector<size_t>& extent_vector) {
+                                 off_t end, const std::vector<size_t>& extent_vector) {
   if (start >= end) {
     FX_LOGS(ERROR) << "Insufficient space allocated";
     return ZX_ERR_INVALID_ARGS;
@@ -545,7 +546,7 @@ zx_status_t blobfs_create_sparse(std::unique_ptr<Blobfs>* out, fbl::unique_fd fd
 }
 
 zx_status_t blobfs_fsck(fbl::unique_fd fd, off_t start, off_t end,
-                        const fbl::Vector<size_t>& extent_lengths) {
+                        const std::vector<size_t>& extent_lengths) {
   std::unique_ptr<Blobfs> blob;
   zx_status_t status;
   if ((status = blobfs_create_sparse(&blob, std::move(fd), start, end, extent_lengths)) != ZX_OK) {

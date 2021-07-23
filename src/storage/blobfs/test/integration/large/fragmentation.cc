@@ -11,6 +11,7 @@
 #include <array>
 #include <atomic>
 #include <thread>
+#include <vector>
 
 #include <gtest/gtest.h>
 
@@ -34,7 +35,7 @@ TEST_P(FragmentationTest, Fragmentation) {
   constexpr size_t kSmallSize = (1 << 16);
   constexpr size_t kLargeSize = (1 << 17);
 
-  fbl::Vector<fbl::String> small_blobs;
+  std::vector<fbl::String> small_blobs;
 
   bool do_small_blob = true;
   bool capture_large_blob_storage_space_usage = true;

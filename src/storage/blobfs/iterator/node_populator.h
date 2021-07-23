@@ -9,8 +9,9 @@
 #include <stdint.h>
 #include <zircon/types.h>
 
+#include <vector>
+
 #include <fbl/function.h>
-#include <fbl/vector.h>
 
 #include "src/storage/blobfs/allocator/allocator.h"
 #include "src/storage/blobfs/allocator/extent_reserver.h"
@@ -24,8 +25,8 @@ namespace blobfs {
 //      nodes.size() >= NodeCountForExtents(extents.size())
 class NodePopulator {
  public:
-  NodePopulator(Allocator* allocator, fbl::Vector<ReservedExtent> extents,
-                fbl::Vector<ReservedNode> nodes);
+  NodePopulator(Allocator* allocator, std::vector<ReservedExtent> extents,
+                std::vector<ReservedNode> nodes);
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(NodePopulator);
 
@@ -59,8 +60,8 @@ class NodePopulator {
 
  private:
   Allocator* allocator_;
-  fbl::Vector<ReservedExtent> extents_;
-  fbl::Vector<ReservedNode> nodes_;
+  std::vector<ReservedExtent> extents_;
+  std::vector<ReservedNode> nodes_;
 };
 
 }  // namespace blobfs

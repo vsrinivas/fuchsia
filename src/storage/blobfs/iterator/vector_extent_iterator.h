@@ -9,7 +9,7 @@
 #include <stdint.h>
 #include <zircon/types.h>
 
-#include <fbl/vector.h>
+#include <vector>
 
 #include "src/storage/blobfs/allocator/extent_reserver.h"
 #include "src/storage/blobfs/format.h"
@@ -22,7 +22,7 @@ namespace blobfs {
 // This iterator is useful for accessing blocks of blobs which have not yet been committed to disk.
 class VectorExtentIterator : public ExtentIterator {
  public:
-  VectorExtentIterator(const fbl::Vector<ReservedExtent>& extents);
+  explicit VectorExtentIterator(const std::vector<ReservedExtent>& extents);
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(VectorExtentIterator);
 
   // ExtentIterator interface.
@@ -31,7 +31,7 @@ class VectorExtentIterator : public ExtentIterator {
   uint64_t BlockIndex() const final;
 
  private:
-  const fbl::Vector<ReservedExtent>& extents_;
+  const std::vector<ReservedExtent>& extents_;
   size_t extent_index_ = 0;
   uint64_t block_count_ = 0;
 };

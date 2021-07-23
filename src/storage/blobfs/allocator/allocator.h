@@ -15,12 +15,12 @@
 
 #include <optional>
 #include <shared_mutex>
+#include <vector>
 
 #include <bitmap/raw-bitmap.h>
 #include <bitmap/rle-bitmap.h>
 #include <fbl/algorithm.h>
 #include <fbl/function.h>
-#include <fbl/vector.h>
 #include <id_allocator/id_allocator.h>
 #include <storage/buffer/vmoid_registry.h>
 
@@ -99,7 +99,7 @@ class Allocator : private ExtentReserver, private NodeReserverInterface, public 
   //
   // On success, appends the (possibly non-contiguous) region of allocated blocks to |out_extents|.
   // On failure, |out_extents| is cleared.
-  zx_status_t ReserveBlocks(uint64_t num_blocks, fbl::Vector<ReservedExtent>* out_extents);
+  zx_status_t ReserveBlocks(uint64_t num_blocks, std::vector<ReservedExtent>* out_extents);
 
   // Marks blocks as allocated which have previously been reserved to the bitmap.
   void MarkBlocksAllocated(const ReservedExtent& reserved_extent);
@@ -115,7 +115,7 @@ class Allocator : private ExtentReserver, private NodeReserverInterface, public 
   //
   // On success, appends the (possibly non-contiguous) nodes to |out_nodes|. On failure, |out_nodes|
   // is cleared.
-  zx_status_t ReserveNodes(uint64_t num_nodes, fbl::Vector<ReservedNode>* out_nodes);
+  zx_status_t ReserveNodes(uint64_t num_nodes, std::vector<ReservedNode>* out_nodes);
 
   // blobfs::NodeReserverInterface interface.
   zx::status<ReservedNode> ReserveNode() override;
@@ -136,7 +136,7 @@ class Allocator : private ExtentReserver, private NodeReserverInterface, public 
   zx_status_t FreeNode(uint32_t node_index);
 
   // Record the location and size of all non-free block regions.
-  fbl::Vector<BlockRegion> GetAllocatedRegions() const;
+  std::vector<BlockRegion> GetAllocatedRegions() const;
 
   // Called when InodePtr goes out of scope.
   void DropInodePtr() override;
@@ -176,7 +176,7 @@ class Allocator : private ExtentReserver, private NodeReserverInterface, public 
   // pool. Otherwise, no collisions with pending reservations exist.
   bool MunchUnreservedExtents(bitmap::RleBitmap::const_iterator reserved_iterator,
                               uint64_t remaining_blocks, uint64_t start, uint64_t block_length,
-                              fbl::Vector<ReservedExtent>* out_extents,
+                              std::vector<ReservedExtent>* out_extents,
                               bitmap::RleBitmap::const_iterator* out_reserved_iterator,
                               uint64_t* out_remaining_blocks, uint64_t* out_start,
                               uint64_t* out_block_length) __TA_REQUIRES(mutex());
@@ -189,7 +189,7 @@ class Allocator : private ExtentReserver, private NodeReserverInterface, public 
   // number of found blocks will be returned in |out_actual_blocks|. This result is guaranteed to be
   // less than or equal to |num_blocks|.
   zx_status_t FindBlocks(uint64_t start, uint64_t num_blocks,
-                         fbl::Vector<ReservedExtent>* out_extents, uint64_t* out_actual_blocks);
+                         std::vector<ReservedExtent>* out_extents, uint64_t* out_actual_blocks);
 
   zx_status_t FindNode(uint32_t* node_index_out);
 

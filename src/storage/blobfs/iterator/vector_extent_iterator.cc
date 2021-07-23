@@ -7,13 +7,13 @@
 #include <stdint.h>
 #include <zircon/types.h>
 
-#include <fbl/vector.h>
+#include <vector>
 
 #include "src/storage/blobfs/format.h"
 
 namespace blobfs {
 
-VectorExtentIterator::VectorExtentIterator(const fbl::Vector<ReservedExtent>& extents)
+VectorExtentIterator::VectorExtentIterator(const std::vector<ReservedExtent>& extents)
     : extents_(extents) {}
 
 bool VectorExtentIterator::Done() const { return extent_index_ == extents_.size(); }

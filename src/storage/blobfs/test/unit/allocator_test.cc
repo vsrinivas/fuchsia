@@ -7,9 +7,9 @@
 #include <zircon/errors.h>
 
 #include <memory>
+#include <vector>
 
 #include <block-client/cpp/fake-device.h>
-#include <fbl/vector.h>
 #include <gtest/gtest.h>
 
 #include "src/storage/blobfs/blobfs.h"
@@ -34,7 +34,7 @@ TEST(AllocatorTest, Null) {
                       std::move(nodes_bitmap));
   allocator.SetLogging(false);
 
-  fbl::Vector<ReservedExtent> extents;
+  std::vector<ReservedExtent> extents;
   ASSERT_EQ(ZX_ERR_NO_SPACE, allocator.ReserveBlocks(1, &extents));
   ASSERT_TRUE(allocator.ReserveNode().is_error());
 }
@@ -45,7 +45,7 @@ TEST(AllocatorTest, Single) {
   InitializeAllocator(1, 1, &space_manager, &allocator);
 
   // We can allocate a single unit.
-  fbl::Vector<ReservedExtent> extents;
+  std::vector<ReservedExtent> extents;
   ASSERT_EQ(allocator->ReserveBlocks(1, &extents), ZX_OK);
   zx::status<ReservedNode> node = allocator->ReserveNode();
   ASSERT_TRUE(node.is_ok());
@@ -56,7 +56,7 @@ TEST(AllocatorTest, SingleCollision) {
   std::unique_ptr<Allocator> allocator;
   InitializeAllocator(1, 1, &space_manager, &allocator);
 
-  fbl::Vector<ReservedExtent> extents;
+  std::vector<ReservedExtent> extents;
   ASSERT_EQ(allocator->ReserveBlocks(1, &extents), ZX_OK);
   zx::status<ReservedNode> maybe_node = allocator->ReserveNode();
   ASSERT_TRUE(maybe_node.is_ok());
@@ -64,7 +64,7 @@ TEST(AllocatorTest, SingleCollision) {
   uint32_t node_index = node.index();
 
   // Check the situation where allocation intersects with the in-flight reservation map.
-  fbl::Vector<ReservedExtent> failed_extents;
+  std::vector<ReservedExtent> failed_extents;
   ASSERT_EQ(ZX_ERR_NO_SPACE, allocator->ReserveBlocks(1, &failed_extents));
   ASSERT_TRUE(allocator->ReserveNode().is_error());
 
@@ -78,7 +78,7 @@ TEST(AllocatorTest, SingleCollision) {
   // available for use once more.
   Extent extent = extents[0].extent();
   allocator->FreeNode(node_index);
-  extents.reset();
+  extents.clear();
   allocator->FreeBlocks(extent);
   ASSERT_EQ(allocator->ReserveBlocks(1, &extents), ZX_OK);
   ASSERT_TRUE(allocator->ReserveNode().is_ok());
@@ -92,16 +92,16 @@ TEST(AllocatorTest, PrefixCollision) {
   InitializeAllocator(4, 4, &space_manager, &allocator);
 
   // Allocate a single extent of two blocks.
-  fbl::Vector<ReservedExtent> extents;
+  std::vector<ReservedExtent> extents;
   ASSERT_EQ(allocator->ReserveBlocks(2, &extents), ZX_OK);
   ASSERT_EQ(1ul, extents.size());
 
   // We have two blocks left; we cannot allocate three blocks.
-  fbl::Vector<ReservedExtent> failed_extents;
+  std::vector<ReservedExtent> failed_extents;
   ASSERT_EQ(ZX_ERR_NO_SPACE, allocator->ReserveBlocks(3, &failed_extents));
   allocator->MarkBlocksAllocated(extents[0]);
   Extent extent = extents[0].extent();
-  extents.reset();
+  extents.clear();
 
   // After the extents are committed (and unreserved), we still cannot
   // utilize their space.
@@ -120,24 +120,24 @@ TEST(AllocatorTest, SuffixCollision) {
   InitializeAllocator(4, 4, &space_manager, &allocator);
 
   // Allocate a single extent of two blocks.
-  fbl::Vector<ReservedExtent> prefix_extents;
+  std::vector<ReservedExtent> prefix_extents;
   ASSERT_EQ(allocator->ReserveBlocks(2, &prefix_extents), ZX_OK);
   ASSERT_EQ(1ul, prefix_extents.size());
 
   // Allocate another extent of two blocks.
-  fbl::Vector<ReservedExtent> suffix_extents;
+  std::vector<ReservedExtent> suffix_extents;
   ASSERT_EQ(allocator->ReserveBlocks(2, &suffix_extents), ZX_OK);
   ASSERT_EQ(1ul, suffix_extents.size());
 
   // Release the prefix allocation so we can test against the suffix.
-  prefix_extents.reset();
+  prefix_extents.clear();
 
   // We have two blocks left; we cannot allocate three blocks.
-  fbl::Vector<ReservedExtent> failed_extents;
+  std::vector<ReservedExtent> failed_extents;
   ASSERT_EQ(ZX_ERR_NO_SPACE, allocator->ReserveBlocks(3, &failed_extents));
   allocator->MarkBlocksAllocated(suffix_extents[0]);
   Extent extent = suffix_extents[0].extent();
-  suffix_extents.reset();
+  suffix_extents.clear();
 
   // After the extents are committed (and unreserved), we still cannot
   // utilize their space.
@@ -157,20 +157,20 @@ TEST(AllocatorTest, AllocatedBeforeReserved) {
 
   // Allocate a single extent of one block.
   {
-    fbl::Vector<ReservedExtent> prefix_extents;
+    std::vector<ReservedExtent> prefix_extents;
     ASSERT_EQ(allocator->ReserveBlocks(1, &prefix_extents), ZX_OK);
     ASSERT_EQ(1ul, prefix_extents.size());
     allocator->MarkBlocksAllocated(prefix_extents[0]);
   }
 
   // Reserve another extent of one block.
-  fbl::Vector<ReservedExtent> suffix_extents;
+  std::vector<ReservedExtent> suffix_extents;
   ASSERT_EQ(allocator->ReserveBlocks(1, &suffix_extents), ZX_OK);
   ASSERT_EQ(1ul, suffix_extents.size());
 
   // We should still be able to reserve the remaining two blocks in a single
   // extent.
-  fbl::Vector<ReservedExtent> extents;
+  std::vector<ReservedExtent> extents;
   ASSERT_EQ(allocator->ReserveBlocks(2, &extents), ZX_OK);
   ASSERT_EQ(1ul, extents.size());
 }
@@ -183,14 +183,14 @@ TEST(AllocatorTest, ReservedBeforeAllocated) {
   InitializeAllocator(4, 4, &space_manager, &allocator);
 
   // Reserve an extent of one block.
-  fbl::Vector<ReservedExtent> reserved_extents;
+  std::vector<ReservedExtent> reserved_extents;
   ASSERT_EQ(allocator->ReserveBlocks(1, &reserved_extents), ZX_OK);
   ASSERT_EQ(1ul, reserved_extents.size());
 
   // Allocate a single extent of one block, immediately following the prior
   // reservation.
   {
-    fbl::Vector<ReservedExtent> committed_extents;
+    std::vector<ReservedExtent> committed_extents;
     ASSERT_EQ(allocator->ReserveBlocks(1, &committed_extents), ZX_OK);
     ASSERT_EQ(1ul, committed_extents.size());
     allocator->MarkBlocksAllocated(committed_extents[0]);
@@ -198,7 +198,7 @@ TEST(AllocatorTest, ReservedBeforeAllocated) {
 
   // We should still be able to reserve the remaining two blocks in a single
   // extent.
-  fbl::Vector<ReservedExtent> extents;
+  std::vector<ReservedExtent> extents;
   ASSERT_EQ(allocator->ReserveBlocks(2, &extents), ZX_OK);
   ASSERT_EQ(1ul, extents.size());
 }
@@ -220,13 +220,13 @@ TEST(AllocatorTest, InterleavedReservation) {
   //
   // [R F F F F F F F F F]
   // Reserve an extent of one block.
-  fbl::Vector<ReservedExtent> reservation_group_a;
+  std::vector<ReservedExtent> reservation_group_a;
   ASSERT_EQ(allocator->ReserveBlocks(1, &reservation_group_a), ZX_OK);
   ASSERT_EQ(1ul, reservation_group_a.size());
 
   // [R R F F F F F F F F]
   // Reserve an extent of one block.
-  fbl::Vector<ReservedExtent> reservation_group_b;
+  std::vector<ReservedExtent> reservation_group_b;
   ASSERT_EQ(allocator->ReserveBlocks(1, &reservation_group_b), ZX_OK);
   ASSERT_EQ(1ul, reservation_group_b.size());
 
@@ -234,7 +234,7 @@ TEST(AllocatorTest, InterleavedReservation) {
   // Allocate a single extent of one block, immediately following the prior
   // reservations.
   {
-    fbl::Vector<ReservedExtent> committed_extents;
+    std::vector<ReservedExtent> committed_extents;
     ASSERT_EQ(allocator->ReserveBlocks(1, &committed_extents), ZX_OK);
     ASSERT_EQ(1ul, committed_extents.size());
     allocator->MarkBlocksAllocated(committed_extents[0]);
@@ -242,17 +242,17 @@ TEST(AllocatorTest, InterleavedReservation) {
 
   // [R R C R F F F F F F]
   // Reserve an extent of one block.
-  fbl::Vector<ReservedExtent> reservation_group_c;
+  std::vector<ReservedExtent> reservation_group_c;
   ASSERT_EQ(allocator->ReserveBlocks(1, &reservation_group_c), ZX_OK);
   ASSERT_EQ(1ul, reservation_group_c.size());
 
   // [F R C R F F F F F F]
   // Free the first extent.
-  reservation_group_a.reset();
+  reservation_group_a.clear();
 
   // We should still be able to reserve the remaining two extents, split
   // across the reservations and the committed block.
-  fbl::Vector<ReservedExtent> extents;
+  std::vector<ReservedExtent> extents;
   ASSERT_EQ(allocator->ReserveBlocks(4, &extents), ZX_OK);
   ASSERT_EQ(2ul, extents.size());
 }
@@ -263,14 +263,14 @@ TEST(AllocatorTest, IsBlockAllocated) {
   InitializeAllocator(4, 4, &space_manager, &allocator);
 
   // Allocate a single extent of one block.
-  fbl::Vector<ReservedExtent> prefix_extents;
+  std::vector<ReservedExtent> prefix_extents;
   ASSERT_EQ(allocator->ReserveBlocks(1, &prefix_extents), ZX_OK);
   ASSERT_EQ(1ul, prefix_extents.size());
   allocator->MarkBlocksAllocated(prefix_extents[0]);
 
   auto extent = prefix_extents[0].extent();
   ASSERT_TRUE(allocator->IsBlockAllocated(extent.Start()).value());
-  prefix_extents.reset();
+  prefix_extents.clear();
   allocator->FreeBlocks(extent);
   ASSERT_FALSE(allocator->IsBlockAllocated(extent.Start()).value());
 }
@@ -285,31 +285,31 @@ void RunFragmentationTest(bool keep_even) {
   InitializeAllocator(kBlockCount, 4, &space_manager, &allocator);
 
   // Allocate kBlockCount extents of length one.
-  fbl::Vector<ReservedExtent> fragmentation_extents[kBlockCount];
+  std::vector<ReservedExtent> fragmentation_extents[kBlockCount];
   for (auto& fragmentation_extent : fragmentation_extents) {
     ASSERT_EQ(allocator->ReserveBlocks(1, &fragmentation_extent), ZX_OK);
   }
 
   // At this point, there shouldn't be a single block of space left.
-  fbl::Vector<ReservedExtent> failed_extents;
+  std::vector<ReservedExtent> failed_extents;
   ASSERT_EQ(ZX_ERR_NO_SPACE, allocator->ReserveBlocks(1, &failed_extents));
 
   // Free half of the extents, and demonstrate that we can use all the
   // remaining fragmented space.
-  fbl::Vector<ReservedExtent> big_extent;
+  std::vector<ReservedExtent> big_extent;
   static_assert(kBlockCount % 2 == 0, "Test assumes an even-sized allocation pool");
   for (uint64_t i = keep_even ? 1 : 0; i < kBlockCount; i += 2) {
-    fragmentation_extents[i].reset();
+    fragmentation_extents[i].clear();
   }
   ASSERT_EQ(allocator->ReserveBlocks(kBlockCount / 2, &big_extent), ZX_OK);
-  big_extent.reset();
+  big_extent.clear();
 
   // Commit the reserved extents, and observe that our ability to allocate
   // fragmented extents still persists.
   for (uint64_t i = keep_even ? 0 : 1; i < kBlockCount; i += 2) {
     ASSERT_EQ(1ul, fragmentation_extents[i].size());
     allocator->MarkBlocksAllocated(fragmentation_extents[i][0]);
-    fragmentation_extents[i].reset();
+    fragmentation_extents[i].clear();
   }
   ASSERT_EQ(allocator->ReserveBlocks(kBlockCount / 2, &big_extent), ZX_OK);
   ASSERT_EQ(kBlockCount / 2, big_extent.size());
@@ -320,7 +320,7 @@ void RunFragmentationTest(bool keep_even) {
   for (auto& i : big_extent) {
     allocator->MarkBlocksAllocated(i);
   }
-  big_extent.reset();
+  big_extent.clear();
   ASSERT_EQ(ZX_ERR_NO_SPACE, allocator->ReserveBlocks(1, &failed_extents));
 }
 
@@ -337,27 +337,27 @@ TEST(AllocatorTest, MaxExtent) {
   InitializeAllocator(kBlockCount, 4, &space_manager, &allocator);
 
   // Allocate a region which may be contained within one extent.
-  fbl::Vector<ReservedExtent> extents;
+  std::vector<ReservedExtent> extents;
   ASSERT_EQ(allocator->ReserveBlocks(kBlockCountMax, &extents), ZX_OK);
   ASSERT_EQ(1ul, extents.size());
-  extents.reset();
+  extents.clear();
 
   // Allocate a region which may not be contined within one extent.
   ASSERT_EQ(allocator->ReserveBlocks(kBlockCountMax + 1, &extents), ZX_OK);
   ASSERT_EQ(2ul, extents.size());
 
   // Demonstrate that the remaining blocks are still available.
-  fbl::Vector<ReservedExtent> remainder;
+  std::vector<ReservedExtent> remainder;
   ASSERT_EQ(allocator->ReserveBlocks(kBlockCount - (kBlockCountMax + 1), &remainder), ZX_OK);
 
   // But nothing more.
-  fbl::Vector<ReservedExtent> failed_extent;
+  std::vector<ReservedExtent> failed_extent;
   ASSERT_EQ(ZX_ERR_NO_SPACE, allocator->ReserveBlocks(1, &failed_extent));
 }
 
 void CheckNodeMapSize(Allocator* allocator, uint64_t size) {
   // Verify that we can allocate |size| nodes...
-  fbl::Vector<ReservedNode> nodes;
+  std::vector<ReservedNode> nodes;
   ASSERT_EQ(allocator->ReserveNodes(size, &nodes), ZX_OK);
 
   // ... But no more.
@@ -368,11 +368,11 @@ void CheckNodeMapSize(Allocator* allocator, uint64_t size) {
 void CheckBlockMapSize(Allocator* allocator, uint64_t size) {
   // Verify that we can allocate |size| blocks...
   ASSERT_EQ(0ul, allocator->ReservedBlockCount());
-  fbl::Vector<ReservedExtent> extents;
+  std::vector<ReservedExtent> extents;
   ASSERT_EQ(allocator->ReserveBlocks(size, &extents), ZX_OK);
 
   // ... But no more.
-  fbl::Vector<ReservedExtent> failed_extents;
+  std::vector<ReservedExtent> failed_extents;
   ASSERT_EQ(ZX_ERR_NO_SPACE, allocator->ReserveBlocks(size, &failed_extents));
 }
 
@@ -618,7 +618,7 @@ TEST(AllocatorTest, ReservedNodeCountIsCorrect) {
   std::unique_ptr<Allocator> allocator;
   InitializeAllocator(/*blocks=*/1, /*nodes=*/5, &space_manager, &allocator);
 
-  fbl::Vector<ReservedNode> reserved_nodes;
+  std::vector<ReservedNode> reserved_nodes;
   EXPECT_EQ(allocator->ReserveNodes(/*num_nodes=*/5, &reserved_nodes), ZX_OK);
   EXPECT_EQ(reserved_nodes.size(), 5ul);
   EXPECT_EQ(allocator->ReservedNodeCount(), 5u);
@@ -633,7 +633,7 @@ TEST(AllocatorTest, ReservedNodeCountIsCorrect) {
   EXPECT_EQ(allocator->ReservedNodeCount(), 3u);
 
   // Drop all reserved nodes which will unreserve the remaining 3 nodes.
-  reserved_nodes.reset();
+  reserved_nodes.clear();
   EXPECT_EQ(allocator->ReservedNodeCount(), 0u);
 }
 
@@ -657,7 +657,7 @@ TEST(AllocatorTest, MarkContainerNodeAllocatedIsCorrect) {
   std::unique_ptr<Allocator> allocator;
   InitializeAllocator(/*blocks=*/1, /*nodes=*/2, &space_manager, &allocator);
 
-  fbl::Vector<ReservedNode> reserved_nodes;
+  std::vector<ReservedNode> reserved_nodes;
   ASSERT_EQ(allocator->ReserveNodes(2, &reserved_nodes), ZX_OK);
   uint32_t inode_index = reserved_nodes[0].index();
   allocator->MarkInodeAllocated(std::move(reserved_nodes[0]));
