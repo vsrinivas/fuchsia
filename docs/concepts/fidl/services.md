@@ -1,7 +1,7 @@
 # Services
 
-A service provides a set of [FIDL][glossary.fidl] [protocols][glossary.protocol]
-over a [channel][glossary.channel].
+A service provides a set of [FIDL protocols][glossary.protocol] over a
+[channel][glossary.channel].
 Logically-related protocols can be aggregated into a service and routed as a
 single unit.
 
@@ -70,7 +70,6 @@ Services are routed to components through
 
 [fidl-reference]: /docs/reference/fidl/language/language.md
 [glossary.channel]: /docs/glossary/README.md#channel
-[glossary.fidl]: /docs/glossary/README.md#fidl
 [glossary.namespace]: /docs/glossary/README.md#namespace
 [glossary.protocol]: /docs/glossary/README.md#protocol
 [service-capability]: /docs/concepts/components/v2/capabilities/service.md

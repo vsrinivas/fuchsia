@@ -2,21 +2,21 @@
 
 <<../../_v2_banner.md>>
 
-[Service capabilities][glossary.service] allow components
+[Service capabilities][glossary.service-capability] allow components
 to connect to [FIDL services][glossary.service]
 provided either by other components or the component framework itself.
 
 Note: _Protocol_ and _service_ capabilities are distinct types of capabilities.
 A protocol represents a single instance of a
-FIDL [protocol][glossary.protocol], while a service represents zero or more
+[FIDL protocol][glossary.protocol], while a service represents zero or more
 instances of a [FIDL service][glossary.service]. See the documentation on
 [protocol capabilities][protocol-capability] for more details.
 
-## Providing service capabilities
+## Providing service capabilities {#provide}
 
 To provide a service capability, a component must define the capability and
-[route](#routing-service-capabilities) it from `self`. The component hosts the
-service capability in its [outgoing directory][glossary.outgoing directory].
+[route](#route) it from `self`. The component hosts the
+service capability in its [outgoing directory][glossary.outgoing-directory].
 
 To define the capability, add a `capabilities` declaration for it:
 
@@ -44,14 +44,12 @@ is `/svc/fuchsia.example.ExampleService`. You can also customize the path:
 }
 ```
 
-## Routing service capabilities
+## Routing service capabilities {#route}
 
-Components route service capabilities by either:
+Components route service capabilities by [exposing](#expose) them to their
+parent and [offering](#offer) them to their children.
 
--   [exposing](#routing-service-capability-expose) them,
--   or [offering](#routing-service-capability-offer) them.
-
-### Exposing {#routing-service-capability-expose}
+### Exposing {#expose}
 
 Exposing a service capability gives the component's parent access to that
 capability. This is done through an [`expose`][expose] declaration.
@@ -69,9 +67,9 @@ capability. This is done through an [`expose`][expose] declaration.
 
 The `from: "self"` directive means that the service capability is provided by
 this component. In this case the service must have a corresponding
-[definition](#providing-service-capability).
+[definition](#provide).
 
-#### Services routed from collections {#routing-service-capability-collection}
+#### Services routed from collections
 
 A service capability can be exposed from a [dynamic collection][collection].
 
@@ -106,7 +104,7 @@ For example, the namespace path for the `default` instance of
 `fuchsia.example.ExampleService` exposed from a component named `foo` within the
 above collection is `/svc/fuchsia.example.ExampleService/foo,default/protocol`.
 
-### Offering {#routing-service-capability-offer}
+### Offering {#offer}
 
 Offering a service capability gives a child component access to that capability.
 This is done through an [`offer`][offer] declaration.
@@ -123,7 +121,7 @@ This is done through an [`offer`][offer] declaration.
 }
 ```
 
-## Consuming service capabilities
+## Consuming service capabilities {#consume}
 
 When a component [uses][use] a service capability that has been [offered][offer]
 to it, that service is made available through the component's
@@ -163,13 +161,15 @@ You can also customize the namespace path:
 For more information about the open request, see
 [life of a protocol open][life-of-a-protocol-open].
 
+Note: For a working example of routing a service capability between components,
+see [`//examples/components/services`][routing-example].
+
 [collection]: /docs/concepts/components/v2/realms.md#collections
+[glossary.namespace]: /docs/glossary/README.md#namespace
+[glossary.outgoing-directory]: /docs/glossary/README.md#outgoing-directory
 [glossary.protocol]: /docs/glossary/README.md#protocol
 [glossary.service]: /docs/glossary/README.md#service
-[glossary.namespace]: /docs/glossary/README.md#namespace
-[glossary.outgoing directory]: /docs/glossary/README.md#outgoing-directory
-[glossary.protocol]: /docs/glossary/README.md#protocol-capability
-[glossary.service]: /docs/glossary/README.md#service-capability
+[glossary.service-capability]: /docs/glossary/README.md#service-capability
 [capability-routing]: /docs/concepts/components/v2/component_manifests.md#capability-routing
 [expose]: /docs/concepts/components/v2/component_manifests.md#expose
 [fidl-service]: /docs/concepts/components/v2/services.md
@@ -178,6 +178,6 @@ For more information about the open request, see
 [offer]: /docs/concepts/components/v2/component_manifests.md#offer
 [protocol-capability]: /docs/concepts/components/v2/capabilities/protocol.md
 [realm.fidl]: https://fuchsia.dev/reference/fidl/fuchsia.sys2#Realm
-[routing-example]: /examples/components/routing
+[routing-example]: /examples/components/services
 [service-instances]: /docs/concepts/fidl/services.md#instances
 [use]: /docs/concepts/components/v2/component_manifests.md#use

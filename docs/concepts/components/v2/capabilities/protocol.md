@@ -2,22 +2,22 @@
 
 <<../../_v2_banner.md>>
 
-A [protocol capability][glossary.protocol capability] allows
-components to connect to FIDL [protocols][glossary.protocol]
+A [protocol capability][glossary.protocol-capability] allows
+components to connect to [FIDL protocols][glossary.protocol]
 provided either by other components or the component framework itself.
 
 Note: _Protocol_ and _service_ capabilities are distinct types of
 capabilities. A protocol represents a single instance of a
-FIDL [protocols][glossary.protocol], while a service represents zero or
-more instances of a FIDL [service][glossary.service].
+[FIDL protocols][glossary.protocol], while a service represents zero or
+more instances of a [FIDL service][glossary.service].
 See the documentation on [service capabilities][service-capability]
 for more details.
 
-## Providing protocol capabilities
+## Providing protocol capabilities {#provide}
 
 To provide a protocol capability, a component must define the capability and
-[route](#routing-protocol-capabilities) it from `self`. The component hosts the
-protocol capability in its FIDL [outgoing directory][glossary.outgoing directory].
+[route](#route) it from `self`. The component hosts the
+protocol capability in its FIDL [outgoing directory][glossary.outgoing-directory].
 
 To define the capability, add a `capabilities` declaration for it:
 
@@ -45,11 +45,12 @@ is `/svc/fuchsia.example.ExampleProtocol`. You can also customize the path:
 }
 ```
 
-## Routing protocol capabilities
+## Routing protocol capabilities {#route}
 
-Components route protocol capabilities by either [exposing] or [offering] them.
+Components route protocol capabilities by [exposing](#expose) them to their
+parent and [offering](#offer) them to their children.
 
-### Exposing {#routing-protocol-capability-expose}
+### Exposing {#expose}
 
 Exposing a protocol capability gives the component's parent access to that
 capability. This is done through an [`expose`][expose] declaration.
@@ -67,9 +68,9 @@ capability. This is done through an [`expose`][expose] declaration.
 
 The `from: "self"` directive means that the protocol capability is provided by
 this component. In this case the protocol must have a corresponding
-[definition](#providing-protocol-capability).
+[definition](#provide).
 
-### Offering {#routing-protocol-capability-offer}
+### Offering {#offer}
 
 Offering a protocol capability gives a child component access to that capability.
 This is done through an [`offer`][offer] declaration.
@@ -86,7 +87,7 @@ This is done through an [`offer`][offer] declaration.
 }
 ```
 
-## Consuming protocol capabilities
+## Consuming protocol capabilities {#consume}
 
 When a component [uses][use] a protocol capability that has been [offered][offer]
 to it, that protocol is made available through the component's
@@ -148,11 +149,11 @@ For a list of these protocols and what they can be used for, see
 }
 ```
 
-[glossary.protocol]: /docs/glossary/README.md#protocol
-[glossary.service]: /docs/glossary/README.md#service
 [glossary.namespace]: /docs/glossary/README.md#namespace
-[glossary.outgoing directory]: /docs/glossary/README.md#outgoing-directory
-[glossary.protocol]: /docs/glossary/README.md#protocol-capability
+[glossary.outgoing-directory]: /docs/glossary/README.md#outgoing-directory
+[glossary.protocol]: /docs/glossary/README.md#protocol
+[glossary.protocol-capability]: /docs/glossary/README.md#protocol-capability
+[glossary.service]: /docs/glossary/README.md#service
 [capability-routing]: /docs/concepts/components/v2/component_manifests.md#capability-routing
 [expose]: /docs/concepts/components/v2/component_manifests.md#expose
 [framework-protocols]: /docs/concepts/components/v2/component_manifests.md#framework-protocols
