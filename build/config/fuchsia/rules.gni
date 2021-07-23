@@ -106,7 +106,8 @@ template("driver_module") {
       has_syslog_backend =
           has_syslog_backend || dep == "//sdk/lib/syslog/cpp:backend" ||
           dep == "//sdk/lib/syslog/cpp:backend_legacy" ||
-          dep == "//sdk/lib/syslog/cpp:backend_fuchsia_compat"
+          dep == "//sdk/lib/syslog/cpp:backend_fuchsia_compat" ||
+          dep == "//sdk/lib/syslog/cpp/sdk"
     }
 
     deps += [ ":$check_target" ]

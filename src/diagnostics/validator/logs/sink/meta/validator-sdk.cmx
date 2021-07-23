@@ -1,0 +1,22 @@
+{
+    "include": [
+        "syslog/client.shard.cmx"
+    ],
+    "program": {
+        "args": [
+            "--url",
+            "fuchsia-pkg://fuchsia.com/log-sink-validator-sdk#meta/sink-validator-sdk-puppet.cmx",
+            "--new-file-line-rules",
+            "--test-printf",
+            "--test-stop-listener"
+        ],
+        "binary": "bin/sink_validator"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher",
+            "fuchsia.sys.Loader"
+        ]
+    }
+}

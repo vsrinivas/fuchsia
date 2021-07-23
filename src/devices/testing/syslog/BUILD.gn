@@ -34,9 +34,23 @@ fuzzers_package("syslog-fuzzers-legacy") {
   cpp_fuzzers = [ ":syslog-fuzzer-legacy" ]
 }
 
+fuzzer("sdk-fuzzer") {
+  sources = [ "fuzz-sdk.cc" ]
+  deps = [
+    "//sdk/lib/syslog/structured_backend",
+    "//zircon/public/lib/zircon-internal",
+  ]
+  options = [ "max_len=1000000" ]
+}
+
+fuzzers_package("sdk-fuzzers") {
+  cpp_fuzzers = [ ":sdk-fuzzer" ]
+}
+
 group("tests") {
   testonly = true
   deps = [
+    ":sdk-fuzzers",
     ":syslog-fuzzers",
     ":syslog-fuzzers-legacy",
   ]

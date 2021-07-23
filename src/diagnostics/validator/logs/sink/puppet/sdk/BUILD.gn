@@ -1,0 +1,28 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+executable("sdk-puppet") {
+  output_name = "sink_validator_sdk_puppet"
+  testonly = true
+  sources = [ "puppet.cc" ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/structured_backend",
+    "//src/diagnostics/validator/logs/sink/fidl:sink-puppet",
+    "//zircon/public/lib/fidl",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+fuchsia_component("component") {
+  component_name = "sink-validator-sdk-puppet"
+  testonly = true
+  manifest = "meta/puppet.cmx"
+  deps = [ ":sdk-puppet" ]
+}

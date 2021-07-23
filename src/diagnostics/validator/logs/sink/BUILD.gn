@@ -67,6 +67,18 @@ fuchsia_unittest_package("sink-validator-tests") {
   deps = [ ":bin_test" ]
 }
 
+### SDK ###
+
+fuchsia_component("sink-validator-for-sdk") {
+  manifest = "meta/validator-sdk.cmx"
+  deps = [ ":bin" ]
+}
+
+fuchsia_test_package("log-sink-validator-sdk") {
+  deps = [ "puppet/sdk:component" ]
+  test_components = [ ":sink-validator-for-sdk" ]
+}
+
 ### C++ ###
 
 fuchsia_component("sink-validator-for-cpp") {
@@ -110,6 +122,7 @@ group("tests") {
     ":log-sink-validator-cpp",
     ":log-sink-validator-cpp-e2e",
     ":log-sink-validator-rust",
+    ":log-sink-validator-sdk",
     ":sink-validator-tests",
   ]
 }
