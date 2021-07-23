@@ -4,6 +4,8 @@
 
 //! The Address Resolution Protocol (ARP).
 
+#![deny(unused_results)]
+
 use alloc::collections::hash_map::Entry;
 use alloc::collections::HashMap;
 use core::hash::Hash;
@@ -257,7 +259,8 @@ impl<D: ArpDevice, P: PType, C: ArpContext<D, P>> ArpHandler<D, P> for C {
         // will be no-ops.
         let outstanding_request =
             self.cancel_timer(ArpTimerId::new_request_retry(device_id, addr)).is_some();
-        self.cancel_timer(ArpTimerId::new_entry_expiration(device_id, addr));
+        let _: Option<C::Instant> =
+            self.cancel_timer(ArpTimerId::new_entry_expiration(device_id, addr));
 
         // If there was an outstanding resolution request, notify the device
         // layer that it's been resolved.
@@ -399,7 +402,7 @@ impl<D: ArpDevice, P: PType, B: BufferMut, C: BufferArpContext<D, P, B>>
 
             // If we have an outstanding retry timer for this host, we should
             // cancel it since we now have the mapping in cache.
-            ctx.cancel_timer(ArpTimerId::new_request_retry(
+            let _: Option<C::Instant> = ctx.cancel_timer(ArpTimerId::new_request_retry(
                 device_id,
                 packet.sender_protocol_address(),
             ));
@@ -473,7 +476,7 @@ impl<D: ArpDevice, P: PType, B: BufferMut, C: BufferArpContext<D, P, B>>
             );
             // Since we just got the protocol -> hardware address mapping, we
             // can cancel a timer to resend a request.
-            ctx.cancel_timer(ArpTimerId::new_request_retry(
+            let _: Option<C::Instant> = ctx.cancel_timer(ArpTimerId::new_request_retry(
                 device_id,
                 packet.sender_protocol_address(),
             ));
@@ -537,7 +540,8 @@ fn insert_dynamic<D: ArpDevice, P: PType, C: ArpContext<D, P>>(
     // there.
     let expiration = ArpTimerId::new_entry_expiration(device_id, net);
     if ctx.get_state_mut_with(device_id).table.insert_dynamic(net, hw) {
-        ctx.schedule_timer(DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD, expiration);
+        let _: Option<C::Instant> =
+            ctx.schedule_timer(DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD, expiration);
     }
 }
 
@@ -595,10 +599,10 @@ fn send_arp_request<D: ArpDevice, P: PType, C: ArpContext<D, P>>(
         let id = ArpTimerId::new_request_retry(device_id, lookup_addr);
         if tries_remaining > 1 {
             // TODO(wesleyac): Configurable timer.
-            ctx.schedule_timer(DEFAULT_ARP_REQUEST_PERIOD, id);
+            let _: Option<C::Instant> = ctx.schedule_timer(DEFAULT_ARP_REQUEST_PERIOD, id);
             ctx.get_state_mut_with(device_id).table.set_waiting(lookup_addr, tries_remaining - 1);
         } else {
-            ctx.cancel_timer(id);
+            let _: Option<C::Instant> = ctx.cancel_timer(id);
             ctx.get_state_mut_with(device_id).table.remove(lookup_addr);
             ctx.address_resolution_failed(device_id, lookup_addr);
         }
@@ -647,7 +651,7 @@ impl<P: Hash + Eq, H> ArpTable<P, H> {
     #[cfg(test)]
     fn insert_static(&mut self, net: P, hw: H) {
         // A static entry overrides everything, so just insert it.
-        self.table.insert(net, ArpValue::_Static { hardware_addr: hw });
+        let _: Option<_> = self.table.insert(net, ArpValue::_Static { hardware_addr: hw });
     }
 
     /// This function tries to insert a dynamic entry into the ArpTable, the
@@ -671,14 +675,14 @@ impl<P: Hash + Eq, H> ArpTable<P, H> {
                 }
             }
             Entry::Vacant(entry) => {
-                entry.insert(new_val);
+                let _: &mut _ = entry.insert(new_val);
             }
         }
         true
     }
 
     fn remove(&mut self, net: P) {
-        self.table.remove(&net);
+        let _: Option<_> = self.table.remove(&net);
     }
 
     fn get_remaining_tries(&self, net: P) -> Option<usize> {
@@ -690,7 +694,13 @@ impl<P: Hash + Eq, H> ArpTable<P, H> {
     }
 
     fn set_waiting(&mut self, net: P, remaining_tries: usize) {
-        self.table.insert(net, ArpValue::Waiting { remaining_tries });
+        // TODO(https://fxbug.dev/81368): Remove this type.
+        //
+        // This type (ArpTable) is type system-defeating. Instead of interacting with entries in
+        // the hash map, we do these point-access, which is both suboptimal and impossible to
+        // reason about because the type information is far away. This entire module needs a
+        // rewrite, so I am just sprinkling `let _` here for now.
+        let _: Option<_> = self.table.insert(net, ArpValue::Waiting { remaining_tries });
     }
 
     fn lookup(&self, addr: P) -> Option<&H> {
@@ -710,8 +720,6 @@ impl<P: Hash + Eq, H> Default for ArpTable<P, H> {
 
 #[cfg(test)]
 mod tests {
-    #![deny(unused_results)]
-
     use net_types::ethernet::Mac;
     use net_types::ip::Ipv4Addr;
     use packet::{ParseBuffer, Serializer};
