@@ -1,0 +1,48 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config.gni")
+
+group("stable") {
+  data_deps = [
+    ":channel_map",
+    ":repo_configs",
+    ":stable_default",
+  ]
+}
+
+group("beta") {
+  data_deps = [
+    ":beta_default",
+    ":channel_map",
+    ":repo_configs",
+  ]
+}
+
+config_data("channel_map") {
+  for_pkg = "system-update-checker"
+  outputs = [ "channel_package_map.json" ]
+  sources = [ "config/channel_package_map.json" ]
+}
+
+config_data("repo_configs") {
+  for_pkg = "pkg-resolver"
+  outputs = [ "repositories/{{source_file_part}}" ]
+  sources = [
+    "config/repositories/4x15snlqjzlsgunidd0q1hj8n.fuchsia-updates.googleusercontent.com.json",
+    "config/repositories/b5cvjayvpm75pukjav4d4hurk.fuchsia-updates.googleusercontent.com.json",
+  ]
+}
+
+config_data("stable_default") {
+  for_pkg = "pkg-resolver"
+  outputs = [ "rewrites.json" ]
+  sources = [ "config/rewrites/4x15snlqjzlsgunidd0q1hj8n.fuchsia-updates.googleusercontent.com.json" ]
+}
+
+config_data("beta_default") {
+  for_pkg = "pkg-resolver"
+  outputs = [ "rewrites.json" ]
+  sources = [ "config/rewrites/b5cvjayvpm75pukjav4d4hurk.fuchsia-updates.googleusercontent.com.json" ]
+}

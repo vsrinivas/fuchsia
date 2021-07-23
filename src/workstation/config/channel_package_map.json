@@ -1,0 +1,13 @@
+{
+    "content": [
+        {
+            "channel": "beta",
+            "package": "fuchsia-pkg://b5cvjayvpm75pukjav4d4hurk.fuchsia-updates.googleusercontent.com/update"
+        },
+        {
+            "channel": "stable",
+            "package": "fuchsia-pkg://4x15snlqjzlsgunidd0q1hj8n.fuchsia-updates.googleusercontent.com/update"
+        }
+    ],
+    "version": "1"
+}

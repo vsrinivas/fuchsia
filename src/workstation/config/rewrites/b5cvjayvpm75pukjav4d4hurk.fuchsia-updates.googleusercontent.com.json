@@ -1,0 +1,11 @@
+{
+    "content": [
+        {
+            "host_match": "fuchsia.com",
+            "host_replacement": "b5cvjayvpm75pukjav4d4hurk.fuchsia-updates.googleusercontent.com",
+            "path_prefix_match": "/",
+            "path_prefix_replacement": "/"
+        }
+    ],
+    "version": "1"
+}

@@ -1,0 +1,23 @@
+{
+    "content": [
+        {
+            "mirrors": [
+                {
+                    "blob_mirror_url": "https://fuchsia-blobs.googleusercontent.com",
+                    "mirror_url": "https://4x15snlqjzlsgunidd0q1hj8n.fuchsia-updates.googleusercontent.com",
+                    "subscribe": false
+                }
+            ],
+            "repo_url": "fuchsia-pkg://4x15snlqjzlsgunidd0q1hj8n.fuchsia-updates.googleusercontent.com",
+            "root_keys": [
+                {
+                    "type": "ed25519",
+                    "value": "2285e0e34210613662c60ff935caa3e7d9e4e6d95ea91db2a05831100e85acf0"
+                }
+            ],
+            "root_threshold": 1,
+            "root_version": 4
+        }
+    ],
+    "version": "1"
+}
