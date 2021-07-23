@@ -7,6 +7,8 @@ import("//build/component/component_id_index.gni")
 import("//build/config.gni")
 import("//build/dist/generated_resource.gni")
 import("//build/drivers/driver_manifest.gni")
+import("//build/images/assembly/generated_board_config.gni")
+import("//build/images/assembly/generated_product_config.gni")
 import("//build/images/collect_blob_manifest.gni")
 import("//build/images/fvm.gni")
 import("//build/images/manifest.gni")
@@ -112,32 +114,48 @@ import("//src/sys/pkg/bin/pm/pm.gni")
 #   testonly (optional)
 #     [bool] Usual GN meanings.
 template("assemble_system") {
+  image_name = target_name
+
+  # Internal labels used for Image Assembly.
+  labels = {
+    product_config = "${image_name}_product_config"
+    board_config = "${image_name}_board_config"
+    image_assembler = "${image_name}_image_assembler"
+    zbi_matches = "${image_name}_zbi_matches"
+    zbi_manifest_matches = "${image_name}_zbi_manifest_matches"
+    blob_matches = "${image_name}_blob_matches"
+    fvm_matches = "${image_name}_fvm_matches"
+  }
+
+  # Intermediate files produced for Image Assembly.
+  files = {
+    product_config = "$target_out_dir/${image_name}_product_config.json"
+    board_config = "$target_out_dir/${image_name}_board_config.json"
+  }
+
   assert(defined(invoker.base_packages), "Need to define base_packages")
   assert(defined(invoker.bootfs_labels), "Need to define bootfs_labels")
 
-  base_packages = invoker.base_packages
-  base_driver_packages = []
-  cache_packages = []
-  universe_packages = []
+  _base_packages = invoker.base_packages
+  _base_driver_packages = []
+  _cache_packages = []
+  _universe_packages = []
   if (defined(invoker.base_driver_packages)) {
-    base_driver_packages = invoker.base_driver_packages
+    _base_driver_packages = invoker.base_driver_packages
   }
-  base_packages += base_driver_packages
+  _base_packages += _base_driver_packages
 
   if (defined(invoker.cache_packages)) {
-    cache_packages = invoker.cache_packages
+    _cache_packages = invoker.cache_packages
   }
   if (defined(invoker.universe_packages)) {
-    universe_packages = invoker.universe_packages
+    _universe_packages = invoker.universe_packages
   }
 
   system_image_deps = []
   if (defined(invoker.system_image_deps)) {
     system_image_deps += invoker.system_image_deps
   }
-
-  # Must be unique among assembled systems.
-  image_name = target_name
 
   if (defined(invoker.output_name)) {
     zbi_name = invoker.output_name
@@ -147,7 +165,7 @@ template("assemble_system") {
 
   ramdisk_fvm_in_zbi = false
   if (defined(invoker.ramdisk_fvm_in_zbi)) {
-    ramdisk_fvm_in_zbi = invoker.ramdisk_fvm_in_zbi
+    ramdisk_fvm_in_zbi = invoker.ramdisk_fvm_in_zbi && !bootfs_only
   }
 
   compress_blobs = true
@@ -171,13 +189,13 @@ template("assemble_system") {
   }
 
   # Generate the base driver manifest file that lists all available drivers
-  # collected from base_driver_packages dependency tree. This manifest file
+  # collected from _base_driver_packages dependency tree. This manifest file
   # will be included in the driver-manager-base-config package.
   base_driver_manifest_label = "${target_name}_base-driver-manifest"
   combined_driver_manifest(base_driver_manifest_label) {
     forward_variables_from(invoker, [ "testonly" ])
     manifest_name = "base-driver-manifest"
-    deps = base_driver_packages
+    deps = _base_driver_packages
   }
 
   # The driver-manager-base-config package is read by Driver Manager to
@@ -188,14 +206,16 @@ template("assemble_system") {
     package_name = "driver-manager-base-config"
     deps = [ ":${base_driver_manifest_label}" ]
   }
-  base_packages += [ ":${driver_manager_base_config_label}" ]
+  _base_packages += [ ":${driver_manager_base_config_label}" ]
 
+  # TODO(fxbug.dev/81290): Construct the shell commands package in the Image
+  # Assembler.
   if (include_shell_commands) {
     shell_commands("${target_name}_shell-commands") {
       package_name = "shell-commands"
       forward_variables_from(invoker, [ "testonly" ])
       visibility = [ ":*" ]
-      deps = base_packages + cache_packages + universe_packages
+      deps = _base_packages + _cache_packages + _universe_packages
     }
   }
 
@@ -203,8 +223,8 @@ template("assemble_system") {
   component_id_index_config("${image_name}_component_id_index_config") {
     forward_variables_from(invoker, [ "testonly" ])
 
-    # collect and merge component ID indicies from the base set.
-    deps = base_packages
+    # collect and merge component ID indices from the base set.
+    deps = _base_packages
   }
 
   component_id_index_dep = []
@@ -220,7 +240,7 @@ template("assemble_system") {
     package_name = "config-data"
     forward_variables_from(invoker, [ "testonly" ])
     visibility = [ ":*" ]
-    deps = base_packages + cache_packages + universe_packages +
+    deps = _base_packages + _cache_packages + _universe_packages +
            component_id_index_config_data_dep
     if (defined(invoker.sysmgr_golden)) {
       sysmgr_golden = invoker.sysmgr_golden
@@ -233,7 +253,7 @@ template("assemble_system") {
   group("${image_name}_base_packages") {
     forward_variables_from(invoker, [ "testonly" ])
     visibility = [ ":*" ]
-    deps = base_packages + [
+    deps = _base_packages + [
              ":${image_name}_config-data",
              pkgfs_package_label,
            ] + component_id_index_dep
@@ -589,10 +609,205 @@ template("assemble_system") {
     }
   }
 
-  group(image_name) {
+  #######
+  # Build the same images using the Image Assembler.
+  #
+
+  generated_product_config(labels.product_config) {
     forward_variables_from(invoker, [ "testonly" ])
-    public_deps = [ ":${image_name}_zbi" ]
-    deps = []
+
+    output_path = files.product_config
+    kernel_image = "//zircon/kernel"
+    base_packages = [ ":${image_name}_base_packages" ]
+    cache_packages = _cache_packages
+    boot_args = devmgr_config
+
+    bootfs_labels = invoker.bootfs_labels
+
+    # Search for more BootFS files in these targets.
+    bootfs_labels += [
+      ":${image_name}_cmdline",
+      ":${image_name}_devmgr_config",
+      ":${image_name}_system_image.manifest",
+      "//src/sys/base-resolver:bootfs",
+      "//zircon/kernel",
+    ]
+
+    if (ramdisk_fvm_in_zbi) {
+      bootfs_labels += [ "//src/storage/fshost:minfs_ramdisk" ]
+    }
+    extra_base_deps = system_image_deps
+
+    # Search for the Kernel cmdline in the BootFS dependencies.
+    cmdline_deps = invoker.bootfs_labels
+    if (defined(invoker.cmdline)) {
+      cmdline = invoker.cmdline
+    }
+  }
+
+  generated_board_config(labels.board_config) {
+    forward_variables_from(invoker, [ "testonly" ])
+    board_name = "${image_name}"
+    output_path = files.board_config
+
+    # minfs arguments
+    if (!bootfs_only) {
+      minfs =
+          rebase_path("$target_out_dir/${image_name}_data.blk", root_out_dir)
+      deps = [ ":${image_name}_data.blk" ]
+    }
+
+    # blobfs arguments
+    blob_layout_format = blob_layout_format
+    compress_blobs = compress_blobs
+
+    # fvm arguments
+    embed_fvm_in_zbi = ramdisk_fvm_in_zbi
+    if (!bootfs_only) {
+      fvm_slice_size = 1048576
+    }
+  }
+
+  ffx_action(labels.image_assembler) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "testonly",
+                           ])
+
+    # TODO(fxbug.dev/77290) - Add depfile support and then remove the following
+    hermetic_deps = false
+
+    outdir = "$target_out_dir/$image_name"
+    gendir = "$outdir/gen"
+    args = [
+      "--config",
+      "assembly_enabled=true",
+      "assembly",
+      "image",
+      "--product",
+      rebase_path(files.product_config, root_build_dir),
+      "--board",
+      rebase_path(files.board_config, root_build_dir),
+      "--gendir",
+      rebase_path(gendir, root_build_dir),
+      "--outdir",
+      rebase_path(outdir, root_build_dir),
+    ]
+
+    deps = [
+      ":${labels.board_config}",
+      ":${labels.product_config}",
+    ]
+
+    inputs = [
+      files.board_config,
+      files.product_config,
+    ]
+
+    # zbi outputs
+    outputs = [
+      "${outdir}/fuchsia.zbi",
+      "${gendir}/zbi.json",
+      "${outdir}/update.far",
+    ]
+
+    # Base package outputs, if this configuration uses them.
+    if (!bootfs_only) {
+      outputs += [
+        "${outdir}/base.far",
+        "${outdir}/blob.blk",
+        "${outdir}/fvm.blk",
+        "${outdir}/fvm.sparse.blk",
+        "${outdir}/fvm.blob.sparse.blk",
+
+        # intermediate outputs that are in gendir:
+        "${gendir}/data/static_packages",
+        "${gendir}/data/cache_packages",
+        "${gendir}/system_image/meta/package",
+        "${gendir}/update/meta/package",
+      ]
+    }
+  }
+
+  #######
+  # Compare the images from both builds to ensure they are identical.
+  #
+
+  gn_assembler_outputs = get_target_outputs(":${image_name}_zbi")
+  image_assembler_outputs = get_target_outputs(":${labels.image_assembler}")
+  verify_files_match(labels.zbi_matches) {
+    forward_variables_from(invoker, [ "testonly" ])
+    deps = [
+      ":${image_name}_zbi",
+      ":${labels.image_assembler}",
+    ]
+
+    first = gn_assembler_outputs[0]
+    second = image_assembler_outputs[0]
+  }
+
+  verify_files_match(labels.zbi_manifest_matches) {
+    forward_variables_from(invoker, [ "testonly" ])
+    deps = [
+      ":${image_name}_zbi",
+      ":${labels.image_assembler}",
+    ]
+
+    first = gn_assembler_outputs[1]
+    second = image_assembler_outputs[1]
+
+    display_text_diff_on_failure = true
+  }
+
+  if (ramdisk_fvm_in_zbi) {
+    verify_files_match(labels.blob_matches) {
+      forward_variables_from(invoker, [ "testonly" ])
+      deps = [
+        ":${image_name}_blob.blk",
+        ":${labels.image_assembler}",
+      ]
+
+      first = "$target_out_dir/${image_name}_blob.blk"
+      second = image_assembler_outputs[4]
+    }
+
+    verify_files_match(labels.fvm_matches) {
+      forward_variables_from(invoker, [ "testonly" ])
+      deps = [
+        ":${image_name}_fvm.blk",
+        ":${labels.image_assembler}",
+      ]
+
+      first = "$target_out_dir/${image_name}_fvm.blk"
+      second = image_assembler_outputs[5]
+    }
+  }
+
+  group(image_name) {
+    metadata = {
+      # We insert these barriers to prevent the dependencies of these images
+      # from leaking into images "higher up" in the dependency chain.
+      package_barrier = []
+      config_package_barrier = []
+      distribution_entries_barrier = []
+    }
+
+    forward_variables_from(invoker, [ "testonly" ])
+    public_deps = [
+      ":${image_name}_zbi",
+      ":${labels.image_assembler}",
+    ]
+    deps = [
+      ":${labels.zbi_manifest_matches}",
+      ":${labels.zbi_matches}",
+    ]
+    if (ramdisk_fvm_in_zbi) {
+      deps += [
+        ":${labels.blob_matches}",
+        ":${labels.fvm_matches}",
+      ]
+    }
     if (defined(invoker.cmdline_goldens)) {
       deps += [ ":${image_name}_cmdline_verify_files" ]
     }
