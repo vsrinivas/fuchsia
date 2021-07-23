@@ -591,6 +591,14 @@ func longKernelLog(numChars int) string {
 	return kernelLog + "\n"
 }
 
+func longPotentialKernelLog(numChars int) string {
+	log := "["
+	for i := 0; i < numChars; i++ {
+		log += "1"
+	}
+	return log
+}
+
 type hangForeverReader struct {
 	mu         sync.Mutex
 	readCalled bool
@@ -629,6 +637,12 @@ func TestParseOutKernelReader(t *testing.T) {
 			name:           "long kernel log",
 			output:         "line1" + longKernelLog(2000) + "output continued\n",
 			expectedOutput: "line1output continued\n",
+		}, {
+			name: "long potential kernel log",
+			// This should test the proper reading of logs which need to store both
+			// kernel and non-kernel logs for later processing.
+			output:         "line1" + longPotentialKernelLog(2000) + "\noutput continued[123",
+			expectedOutput: "line1" + longPotentialKernelLog(2000) + "\noutput continued[123",
 		},
 	}
 	for _, c := range cases {
