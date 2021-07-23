@@ -34,8 +34,8 @@ class {{ .Name }} final {
     // Connects to the member protocol "{{ .Name }}".
     // Returns a |fidl::ClientEnd<{{ .ProtocolType }}>| on success,
     // which can be used with |fidl::BindSyncClient| to create a synchronous
-    // client, or |fidl::Client| to create a client that supports both
-    // asynchronous and synchronous operations.
+    // client, or |fidl::WireClient| or |fidl::WireSharedClient| to create a
+    // client that supports both asynchronous and synchronous operations.
     //
     // # Errors
     //

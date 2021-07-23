@@ -66,8 +66,9 @@ class SingleMemberService final {
     // Connects to the member protocol "single_member".
     // Returns a |fidl::ClientEnd<::fidl_test_service::FirstProtocol>| on
     // success, which can be used with |fidl::BindSyncClient| to create a
-    // synchronous client, or |fidl::Client| to create a client that supports
-    // both asynchronous and synchronous operations.
+    // synchronous client, or |fidl::WireClient| or |fidl::WireSharedClient| to
+    // create a client that supports both asynchronous and synchronous
+    // operations.
     //
     // # Errors
     //
@@ -508,8 +509,9 @@ class MultiHomogeneousMemberService final {
     // Connects to the member protocol "first_member".
     // Returns a |fidl::ClientEnd<::fidl_test_service::FirstProtocol>| on
     // success, which can be used with |fidl::BindSyncClient| to create a
-    // synchronous client, or |fidl::Client| to create a client that supports
-    // both asynchronous and synchronous operations.
+    // synchronous client, or |fidl::WireClient| or |fidl::WireSharedClient| to
+    // create a client that supports both asynchronous and synchronous
+    // operations.
     //
     // # Errors
     //
@@ -539,8 +541,9 @@ class MultiHomogeneousMemberService final {
     // Connects to the member protocol "second_member".
     // Returns a |fidl::ClientEnd<::fidl_test_service::FirstProtocol>| on
     // success, which can be used with |fidl::BindSyncClient| to create a
-    // synchronous client, or |fidl::Client| to create a client that supports
-    // both asynchronous and synchronous operations.
+    // synchronous client, or |fidl::WireClient| or |fidl::WireSharedClient| to
+    // create a client that supports both asynchronous and synchronous
+    // operations.
     //
     // # Errors
     //
@@ -630,8 +633,9 @@ class MultiHeterogeneousMemberService final {
     // Connects to the member protocol "first_member".
     // Returns a |fidl::ClientEnd<::fidl_test_service::FirstProtocol>| on
     // success, which can be used with |fidl::BindSyncClient| to create a
-    // synchronous client, or |fidl::Client| to create a client that supports
-    // both asynchronous and synchronous operations.
+    // synchronous client, or |fidl::WireClient| or |fidl::WireSharedClient| to
+    // create a client that supports both asynchronous and synchronous
+    // operations.
     //
     // # Errors
     //
@@ -661,8 +665,9 @@ class MultiHeterogeneousMemberService final {
     // Connects to the member protocol "second_member".
     // Returns a |fidl::ClientEnd<::fidl_test_service::SecondProtocol>| on
     // success, which can be used with |fidl::BindSyncClient| to create a
-    // synchronous client, or |fidl::Client| to create a client that supports
-    // both asynchronous and synchronous operations.
+    // synchronous client, or |fidl::WireClient| or |fidl::WireSharedClient| to
+    // create a client that supports both asynchronous and synchronous
+    // operations.
     //
     // # Errors
     //
