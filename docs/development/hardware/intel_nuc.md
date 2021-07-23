@@ -26,19 +26,26 @@ To get started, you need the following parts:
 *  Ethernet cable
 *  Phillips-head screwdriver with a magnetic tip
 
-This table shows some example parts you can get from Amazon.
+For GPU support, get a NUC7 (Kaby Lake) or NUC8 (Coffee Lake). This list shows some example models:
+
+ * [Intel® NUC Kit NUC7i5DNKE](https://ark.intel.com/content/www/us/en/ark/products/122486/intel-nuc-kit-nuc7i5dnke.html)
+ * [Intel® NUC Kit NUC7i5DNHE](https://ark.intel.com/content/www/us/en/ark/products/122488/intel-nuc-kit-nuc7i5dnhe.html)
+ * [Intel® NUC Kit NUC7i3DNKE](https://ark.intel.com/content/www/us/en/ark/products/122495/intel-nuc-kit-nuc7i3dnke.html)
+ * [Intel® NUC Kit NUC7i3DNHE](https://ark.intel.com/content/www/us/en/ark/products/122498/intel-nuc-kit-nuc7i3dnhe.html)
+ * [Intel® NUC Kit NUC8i5BEK](https://ark.intel.com/content/www/us/en/ark/products/126147/intel-nuc-kit-nuc8i5bek.html)
+ * [Intel® NUC Kit NUC8i5BEH](https://ark.intel.com/content/www/us/en/ark/products/126148/intel-nuc-kit-nuc8i5beh.html)
+ * [Intel® NUC Kit NUC8i3BEK](https://ark.intel.com/content/www/us/en/ark/products/126149/intel-nuc-kit-nuc8i3bek.html)
+ * [Intel® NUC Kit NUC8i3BEH](https://ark.intel.com/content/www/us/en/ark/products/126150/intel-nuc-kit-nuc8i3beh.html)
+
+This table shows some example parts with links to the manufacturer's product pages:
 
 | Item | Link | Notes: |
 | ---- | ---- | ------ |
-| NUC | [B01MSZLO9P](https://www.amazon.com/gp/product/B01MSZLO9P) | Get a NUC7 (Kaby Lake) or NUC6 (Skylake) for GPU support. |
-| RAM | [B01BIWKP58](https://www.amazon.com/gp/product/B01BIWKP58) | Works fine. |
-| SSD | [B01IAGSDJ0](https://www.amazon.com/gp/product/B01IAGSDJ0) | Works fine. You only need one of these SSDs. |
-| SSD | [B00TGIVZTW](https://www.amazon.com/gp/product/B00TGIVZTW) | Works fine. |
-| SSD | [B01M9K0N8I](https://www.amazon.com/gp/product/B01M9K0N8I) | Works fine. |
-| Monitor | [B015WCV70W](https://www.amazon.com/gp/product/B015WCV70W) | Works fine. |
-| HDMI Cable | [B014I8SIJY](https://www.amazon.com/gp/product/B014I8SIJY) | Works fine. |
-| Keyboard | [B00B7GV802](https://www.amazon.com/gp/product/B00B7GV802) | Works fine. It also includes a mouse. |
-| USB 3.0 drive | [B01BGTG41W](https://www.amazon.com/gp/product/B01BGTG41W) | Works fine. |
+| RAM | [Crucial 8GB DDR4-2400 SODIMM](https://www.crucial.com/memory/ddr4/ct8g4sfs824a) | Works fine. |
+| SSD | [Samsung SSD 850 EVO SATA M.2 250GB](https://www.samsung.com/us/computing/memory-storage/solid-state-drives/ssd-850-evo-m-2-250gb-mz-n5e250bw/) | Works fine. |
+| SSD | [ADATA Ultimate SU800 M.2 2280 3D NAND SSD](https://www.adata.com/upload/downloadfile/Datasheet_SU800%20M.2%202280_EN_202003.pdf) | Works fine. |
+| SSD | [CRUCIAL MX300 SSD](https://www.crucial.com/products/ssd/mx300-ssd) | Works fine, but is discontinued. |
+| Monitor | [HP 22cwa](https://support.hp.com/au-en/document/c04837546) | Works fine. |
 
 ## 2. Prepare the NUC {#prepare-the-nuc}
 
@@ -102,7 +109,7 @@ To build a Fuchsia system image for your NUC, follow the
 [Get started with Fuchsia][get-started-with-fuchsia] guide,
 
 Make sure to use the board configuration `x64` when running
-`fx set` (for example, `fx set core.x64`).
+`fx set` (for example, `fx set workstation.x64`).
 
 ## 5. Prepare a bootstrap USB drive {#prepare-usb}
 
