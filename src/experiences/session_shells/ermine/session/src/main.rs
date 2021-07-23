@@ -11,7 +11,7 @@ mod element_repository;
 use {
     crate::element_repository::{ElementEventHandler, ElementManagerServer, ElementRepository},
     anyhow::{Context as _, Error},
-    fidl::endpoints::{ClientEnd, Proxy},
+    fidl::endpoints::{ClientEnd, DiscoverableProtocolMarker, Proxy},
     fidl_fuchsia_session::{
         ElementManagerMarker, ElementManagerRequestStream, GraphicalPresenterMarker,
     },
@@ -38,10 +38,6 @@ use {
     std::sync::{Arc, Weak},
 };
 
-// TODO(fxbug.dev/75869): Remove when soft-transition is done.
-#[allow(deprecated)]
-use fidl::endpoints::DiscoverableService;
-
 enum ExposedServices {
     ElementManager(ElementManagerRequestStream),
     Presentation(PresentationRequestStream),
@@ -60,12 +56,10 @@ async fn launch_ermine() -> Result<(App, zx::Channel), Error> {
     let (client_chan, server_chan) = zx::Channel::create().unwrap();
 
     let mut launch_options = LaunchOptions::new();
-    // TODO(fxbug.dev/75869): Remove when soft-transition is done.
-    #[allow(deprecated)]
     launch_options.set_additional_services(
         vec![
-            PresentationMarker::SERVICE_NAME.to_string(),
-            ElementManagerMarker::SERVICE_NAME.to_string(),
+            PresentationMarker::PROTOCOL_NAME.to_string(),
+            ElementManagerMarker::PROTOCOL_NAME.to_string(),
         ],
         client_chan,
     );
@@ -95,12 +89,8 @@ async fn expose_services(
     fs.take_and_serve_directory_handle()?;
 
     // Add services served over `server_chan`.
-    // TODO(fxbug.dev/75869): Remove when soft-transition is done.
-    #[allow(deprecated)]
-    fs.add_fidl_service_at(ElementManagerMarker::SERVICE_NAME, ExposedServices::ElementManager);
-    // TODO(fxbug.dev/75869): Remove when soft-transition is done.
-    #[allow(deprecated)]
-    fs.add_fidl_service_at(PresentationMarker::SERVICE_NAME, ExposedServices::Presentation);
+    fs.add_fidl_service_at(ElementManagerMarker::PROTOCOL_NAME, ExposedServices::ElementManager);
+    fs.add_fidl_service_at(PresentationMarker::PROTOCOL_NAME, ExposedServices::Presentation);
     fs.serve_connection(server_chan).unwrap();
 
     // create a reference so that we can use this within the `for_each_concurrent` generator.
