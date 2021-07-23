@@ -387,8 +387,8 @@ func Test_processInput(t *testing.T) {
 	const singleBlobSize = 4096
 	fooSrcRelPath := "foo.src"
 	input := SizeLimits{
-		ICUDataLimit: json.Number("1"),
-		CoreLimit:    json.Number("1"),
+		ICUDataLimit: json.Number("2048"),
+		CoreLimit:    json.Number("2048"),
 		ICUData:      []string{"icudtl.dat"},
 		Components: []Component{
 			{
@@ -500,7 +500,7 @@ func Test_processInput(t *testing.T) {
 	// Both the budget-only and full report should report going over-budget.
 	budgetOnlyReportOverBudget, _ := generateReport(sizes, true, false, singleBlobSize*1024)
 	fullReportOverBudget, _ := generateReport(sizes, false, false, singleBlobSize*1024)
-	ignorePerComponentBudgetOverBudget, _ := generateReport(sizes, false, true, singleBlobSize*1024)
+	ignorePerComponentBudgetOverBudget, report := generateReport(sizes, false, true, singleBlobSize*1024)
 	if !budgetOnlyReportOverBudget {
 		t.Fatalf("The budget-only report is expected to report going overbudget.")
 	}
@@ -508,7 +508,9 @@ func Test_processInput(t *testing.T) {
 		t.Fatalf("The full report is expected to report going overbudget.")
 	}
 	if ignorePerComponentBudgetOverBudget {
-		t.Fatalf("Ignoring per-component budget should not cause use to go overbudget.")
+		t.Fatalf(
+			"Ignoring per-component budget should not cause us to go overbudget. \n [%s]",
+			report)
 	}
 }
 

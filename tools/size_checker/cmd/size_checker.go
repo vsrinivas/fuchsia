@@ -105,6 +105,14 @@ type BlobFromJSON struct {
 	SourcePath string `json:"source_path"`
 }
 
+type ComponentListReport struct {
+	TotalConsumed  int64
+	TotalBudget    int64
+	TotalRemaining int64
+	OverBudget     bool
+	OutputStr      string
+}
+
 const (
 	MetaFar             = "meta.far"
 	PackageList         = "gen/build/images/blob.manifest.list"
@@ -522,11 +530,11 @@ func parseBlobfsBudget(buildDir, fileSystemSizesJSONFilename string) int64 {
 	}
 	for _, fileSystemSize := range *fileSystemSizes {
 		if fileSystemSize.Name == "blob/contents_size" {
-			budget, err := fileSystemSize.Limit.Int64()
+			blobFsContentsSize, err := fileSystemSize.Limit.Int64()
 			if err != nil {
 				log.Fatalf("Failed to parse %s as an int64: %s\n", fileSystemSize.Limit, err)
 			}
-			return budget
+			return blobFsContentsSize
 		}
 	}
 	return 0
@@ -803,9 +811,9 @@ func writeOutputSizes(sizes map[string]*ComponentSize, outPath string) error {
 	return nil
 }
 
-func generateReport(outputSizes map[string]*ComponentSize, showBudgetOnly bool, ignorePerComponentBudget bool, blobFsBudget int64) (bool, string) {
+func generateComponentListOutput(outputSizes map[string]*ComponentSize, showBudgetOnly bool, ignorePerComponentBudget bool, includedInBlobFS bool) ComponentListReport {
 	var overBudget = false
-	var totalSize int64 = 0
+	var totalConsumed int64 = 0
 	var totalBudget int64 = 0
 	var totalRemaining int64 = 0
 	var report strings.Builder
@@ -815,10 +823,20 @@ func generateReport(outputSizes map[string]*ComponentSize, showBudgetOnly bool, 
 	}
 	sort.Strings(componentNames)
 	report.WriteString("\n")
-	report.WriteString(fmt.Sprintf("%-80s | %-10s | %-10s | %-10s\n", "Component", "Size", "Budget", "Remaining"))
+	if includedInBlobFS {
+		report.WriteString(fmt.Sprintf("%-80s | %-10s | %-10s | %-10s\n", "Components included during assembly", "Size", "Budget", "Remaining"))
+	} else {
+		report.WriteString(fmt.Sprintf("%-80s | %-10s | %-10s | %-10s\n", "Components included post-assembly", "Size", "Budget", "Remaining"))
+
+	}
+
 	report.WriteString(strings.Repeat("-", 119) + "\n")
 	for _, componentName := range componentNames {
 		var componentSize = outputSizes[componentName]
+		if componentSize.IncludedInBlobFS != includedInBlobFS {
+			continue
+		}
+
 		var remainingBudget = componentSize.Budget - componentSize.Size
 		var startColorCharacter string
 		var endColorCharacter string
@@ -839,11 +857,10 @@ func generateReport(outputSizes map[string]*ComponentSize, showBudgetOnly bool, 
 			endColorCharacter = "\033[0m"
 		}
 
-		if componentSize.IncludedInBlobFS {
-			totalSize += componentSize.Size
-			totalBudget += componentSize.Budget
-			totalRemaining += remainingBudget
-		}
+		totalConsumed += componentSize.Size
+		totalBudget += componentSize.Budget
+		totalRemaining += remainingBudget
+
 		report.WriteString(
 			fmt.Sprintf("%-80s | %10s | %10s | %s%10s%s\n", componentName, formatSize(componentSize.Size), formatSize(componentSize.Budget), startColorCharacter, formatSize(remainingBudget), endColorCharacter))
 		if !showBudgetOnly {
@@ -856,21 +873,93 @@ func generateReport(outputSizes map[string]*ComponentSize, showBudgetOnly bool, 
 	}
 	report.WriteString(strings.Repeat("-", 119) + "\n")
 
-	report.WriteString(fmt.Sprintf("%-80s | %10s | %10s | %10s\n", "Total", formatSize(totalSize), formatSize(totalBudget), formatSize(totalRemaining)))
-	report.WriteString(fmt.Sprintf("%-80s | %10s | %10s | %10s\n", "Allocated System Data Budget", formatSize(totalBudget), formatSize(blobFsBudget), formatSize(blobFsBudget-totalBudget)))
+	return ComponentListReport{
+		TotalConsumed:  totalConsumed,
+		TotalBudget:    totalBudget,
+		TotalRemaining: totalRemaining,
+		OverBudget:     overBudget,
+		OutputStr:      report.String(),
+	}
+}
 
-	if totalSize > blobFsBudget {
+func generateReport(outputSizes map[string]*ComponentSize, showBudgetOnly bool, ignorePerComponentBudget bool, blobFsBudget int64) (bool, string) {
+
+	var report strings.Builder
+	var componentListReport = generateComponentListOutput(
+		outputSizes, showBudgetOnly, ignorePerComponentBudget, true)
+	var componentListReportPostAssembly = generateComponentListOutput(
+		outputSizes, showBudgetOnly, ignorePerComponentBudget, false)
+
+	report.WriteString(componentListReport.OutputStr)
+	report.WriteString(componentListReportPostAssembly.OutputStr)
+
+	var overBudget = componentListReport.OverBudget ||
+		componentListReportPostAssembly.OverBudget
+	var totalBudget = componentListReport.TotalBudget*2 +
+		componentListReportPostAssembly.TotalBudget
+
+	var totalConsumed = componentListReport.TotalConsumed*2 +
+		componentListReportPostAssembly.TotalConsumed
+	report.WriteString(
+		fmt.Sprintf(
+			"%-106s | %10s\n",
+			"Components assembled into slot A:",
+			formatSize(componentListReport.TotalConsumed)))
+	report.WriteString(
+		fmt.Sprintf(
+			"%-106s | %10s\n",
+			"Space reserved for slot B:",
+			formatSize(componentListReport.TotalConsumed)))
+	report.WriteString(
+		fmt.Sprintf(
+			"%-106s | %10s\n",
+			"Components available post-assembly:",
+			formatSize(componentListReportPostAssembly.TotalConsumed)))
+	report.WriteString(
+		strings.Repeat(" ", 108) + "+ " + strings.Repeat("-", 9) + "\n")
+	report.WriteString(
+		fmt.Sprintf(
+			"%-106s | %10s\n",
+			"Total Consumed:",
+			formatSize(totalConsumed)))
+	report.WriteString(
+		fmt.Sprintf(
+			"%-106s | %10s\n",
+			"Total Budget:",
+			formatSize(totalBudget)))
+	report.WriteString(
+		fmt.Sprintf(
+			"%-106s | %10s\n",
+			"Remaining Budget:",
+			formatSize(totalBudget-totalConsumed)))
+	// TODO(fsamuel): Replace this magic number with a variable in the board definition.
+	var blobFsSize = (blobFsBudget * 2) + 24*1024*1024
+	report.WriteString(
+		fmt.Sprintf(
+			"%-106s | %10s\n",
+			"Blobfs Capacity:",
+			formatSize(blobFsSize)))
+	report.WriteString(
+		fmt.Sprintf(
+			"%-106s | %10s\n",
+			"Unallocated Budget:",
+			formatSize(blobFsSize-totalBudget)))
+
+	if totalConsumed > totalBudget {
 		report.WriteString(
-			fmt.Sprintf("ERROR: Total data size [%s] exceeds total system data budget [%s]\n", formatSize(totalSize), formatSize(blobFsBudget)))
+			fmt.Sprintf(
+				"ERROR: Total data size [%s] exceeds total system data budget [%s]\n",
+				formatSize(totalConsumed), formatSize(totalBudget)))
 		overBudget = true
 	}
 
-	if totalBudget > blobFsBudget && !ignorePerComponentBudget {
+	if totalBudget > blobFsSize && !ignorePerComponentBudget {
 		report.WriteString(
-			fmt.Sprintf("WARNING: Total per-component data budget [%s] exceeds total system data budget [%s]\n", formatSize(totalBudget), formatSize(blobFsBudget)))
+			fmt.Sprintf(
+				"WARNING: Total per-component data budget [%s] exceeds total system data budget [%s]\n",
+				formatSize(totalBudget), formatSize(blobFsSize)))
 		overBudget = true
 	}
-
 	return overBudget, report.String()
 }
 
