@@ -25,8 +25,11 @@ namespace bitmap {
 
 class DefaultStorage {
  public:
-  DISALLOW_COPY_ASSIGN_AND_MOVE(DefaultStorage);
+  DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(DefaultStorage);
   DefaultStorage() = default;
+
+  DefaultStorage(DefaultStorage&& rhs) = default;
+  DefaultStorage& operator=(DefaultStorage&& rhs) = default;
 
   zx_status_t Allocate(size_t size) {
     fbl::AllocChecker ac;

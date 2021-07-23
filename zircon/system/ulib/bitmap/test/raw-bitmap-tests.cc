@@ -497,24 +497,24 @@ static void GrowFailure(void) {
 #define TEMPLATIZED_TEST(test, specialization) \
   TEST(RawBitmapTests, test##_##specialization) { test<RawBitmapGeneric<specialization>>(); }
 
-#define ALL_TESTS(specialization)                     \
-  TEMPLATIZED_TEST(InitializedEmpty, specialization)  \
-  TEMPLATIZED_TEST(SingleBit, specialization)         \
-  TEMPLATIZED_TEST(SetTwice, specialization)          \
-  TEMPLATIZED_TEST(ClearTwice, specialization)        \
-  TEMPLATIZED_TEST(GetReturnArg, specialization)      \
-  TEMPLATIZED_TEST(SetRange, specialization)          \
-  TEMPLATIZED_TEST(FindSimple, specialization)        \
-  TEMPLATIZED_TEST(ClearSubrange, specialization)     \
-  TEMPLATIZED_TEST(BoundaryArguments, specialization) \
-  TEMPLATIZED_TEST(ClearAll, specialization)          \
-  TEMPLATIZED_TEST(SetOutOfOrder, specialization)
+#define ALL_TESTS(specialization)                       \
+  TEMPLATIZED_TEST(InitializedEmpty, specialization)    \
+  TEMPLATIZED_TEST(SingleBit, specialization)           \
+  TEMPLATIZED_TEST(SetTwice, specialization)            \
+  TEMPLATIZED_TEST(ClearTwice, specialization)          \
+  TEMPLATIZED_TEST(GetReturnArg, specialization)        \
+  TEMPLATIZED_TEST(SetRange, specialization)            \
+  TEMPLATIZED_TEST(FindSimple, specialization)          \
+  TEMPLATIZED_TEST(ClearSubrange, specialization)       \
+  TEMPLATIZED_TEST(BoundaryArguments, specialization)   \
+  TEMPLATIZED_TEST(ClearAll, specialization)            \
+  TEMPLATIZED_TEST(SetOutOfOrder, specialization)       \
+  TEMPLATIZED_TEST(MoveConstructorTest, specialization) \
+  TEMPLATIZED_TEST(MoveAssignmentTest, specialization)
 
 ALL_TESTS(DefaultStorage)
 ALL_TESTS(VmoStorage)
 
-TEMPLATIZED_TEST(MoveConstructorTest, VmoStorage)
-TEMPLATIZED_TEST(MoveAssignmentTest, VmoStorage)
 TEMPLATIZED_TEST(GrowAcrossPage, VmoStorage)
 TEMPLATIZED_TEST(GrowShrink, VmoStorage)
 TEMPLATIZED_TEST(GrowFailure, DefaultStorage)
