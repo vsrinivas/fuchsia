@@ -77,10 +77,6 @@ libc_source_set("scudo") {
 config("common.config") {
   visibility = [ ":*" ]
   defines = [ "GWP_ASAN_HOOKS=1" ]
-  if (is_gcc) {
-    # TODO(fxbug.dev/77134): QuarantineCache::init() calls memset on this.
-    cflags = [ "-Wno-class-memaccess" ]
-  }
 }
 
 # These define the public API entry points (malloc et al).  They cannot be
