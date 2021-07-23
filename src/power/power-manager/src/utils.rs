@@ -134,6 +134,42 @@ impl CobaltIntHistogram {
     }
 }
 
+// Finds all of the node config files under the test package's "/config/data" directory. The node
+// config files are identified by a suffix of "node_config.json". The function then calls the
+// provided `test_config_file` function for each found config file, passing the JSON structure in as
+// an argument. The function returns success if each call to `test_config_file` succeeds. Otherwise,
+// the first error encountered is returned.
+#[cfg(test)]
+pub fn test_each_node_config_file(
+    test_config_file: impl Fn(&Vec<serde_json::Value>) -> Result<(), anyhow::Error>,
+) -> Result<(), anyhow::Error> {
+    use anyhow::Context as _;
+    use serde_json as json;
+    use std::fs;
+    use std::fs::File;
+    use std::io::BufReader;
+
+    let config_files = fs::read_dir("/config/data")
+        .unwrap()
+        .filter(|f| {
+            f.as_ref().unwrap().file_name().into_string().unwrap().ends_with("node_config.json")
+        })
+        .map(|f| {
+            let path = f.unwrap().path();
+            let file_path = path.to_str().unwrap().to_string();
+            let json = json::from_reader(BufReader::new(File::open(path).unwrap())).unwrap();
+            (file_path, json)
+        })
+        .collect::<Vec<_>>();
+    assert!(config_files.len() > 0, "No config files found");
+
+    for (file_path, config_file) in config_files {
+        test_config_file(&config_file).context(format!("Failed for file {}", file_path))?;
+    }
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

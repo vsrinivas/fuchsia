@@ -864,29 +864,29 @@ pub mod tests {
         assert_eq!(termination_state.get(), fpowerstatecontrol::SystemPowerState::Reboot);
     }
 
-    /// Called by power_manager::tests::test_config_files for each node config file under
-    /// node_config/.
-    ///
     /// Tests for correct ordering of nodes within each available node config file. The
     /// test verifies that if the DriverManagerHandler node is present in the config file, then it
     /// is listed before any other nodes that require a driver connection (identified as a node that
     /// contains a string config key called "driver_path").
-    pub fn test_config_file(config_file: &Vec<json::Value>) -> Result<(), Error> {
-        let driver_manager_handler_index =
-            config_file.iter().position(|config| config["type"] == "DriverManagerHandler");
-        let first_node_using_drivers_index =
-            config_file.iter().position(|config| config["config"].get("driver_path").is_some());
+    #[test]
+    pub fn test_config_file() -> Result<(), anyhow::Error> {
+        crate::utils::test_each_node_config_file(|config_file| {
+            let driver_manager_handler_index =
+                config_file.iter().position(|config| config["type"] == "DriverManagerHandler");
+            let first_node_using_drivers_index =
+                config_file.iter().position(|config| config["config"].get("driver_path").is_some());
 
-        if driver_manager_handler_index.is_some()
-            && first_node_using_drivers_index.is_some()
-            && driver_manager_handler_index.unwrap() > first_node_using_drivers_index.unwrap()
-        {
-            return Err(format_err!(
-                "Must list DriverManagerHandler node before {}",
-                config_file[first_node_using_drivers_index.unwrap()]["name"]
-            ));
-        }
+            if driver_manager_handler_index.is_some()
+                && first_node_using_drivers_index.is_some()
+                && driver_manager_handler_index.unwrap() > first_node_using_drivers_index.unwrap()
+            {
+                return Err(format_err!(
+                    "Must list DriverManagerHandler node before {}",
+                    config_file[first_node_using_drivers_index.unwrap()]["name"]
+                ));
+            }
 
-        Ok(())
+            Ok(())
+        })
     }
 }

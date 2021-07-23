@@ -197,8 +197,9 @@ impl PowerManager {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use anyhow::format_err;
     use fuchsia_async as fasync;
-    use std::fs;
+    use std::collections::HashSet;
 
     /// Tests that well-formed configuration JSON does not cause an unexpected panic in the
     /// `create_nodes` function. With this test JSON, we expect a panic with the message stated
@@ -221,38 +222,87 @@ mod tests {
             .unwrap();
     }
 
-    /// Finds all of the node config files under the test package's "/config/data" directory. The
-    /// node config files are identified by a suffix of "node_config.json". Returns an iterator of
-    /// tuples where the first element is the path to the config file and the second is a
-    /// json::Value vector representing the config file JSON array.
-    fn get_node_config_files() -> impl Iterator<Item = (String, Vec<json::Value>)> {
-        let node_config_file_paths = fs::read_dir("/config/data")
-            .unwrap()
-            .filter(|f| {
-                f.as_ref().unwrap().file_name().into_string().unwrap().ends_with("node_config.json")
-            })
-            .map(|f| f.unwrap().path());
+    /// Tests that all nodes in a given config file have a unique name.
+    #[test]
+    fn test_config_file_unique_names() -> Result<(), anyhow::Error> {
+        crate::utils::test_each_node_config_file(|config_file| {
+            let mut set = HashSet::new();
+            for node in config_file {
+                let node_name = node["name"].as_str().unwrap().to_string();
+                if set.contains(&node_name) {
+                    return Err(format_err!("Node with name {} already specified", node_name));
+                }
 
-        node_config_file_paths.map(|file| {
-            (
-                file.to_str().unwrap().to_string(),
-                json::from_reader(BufReader::new(File::open(file).unwrap())).unwrap(),
-            )
+                set.insert(node_name);
+            }
+
+            Ok(())
         })
     }
 
+    /// Tests each node config file for correct node dependency ordering. The test expects a node's
+    /// dependencies to be listed under a "dependencies" object as an array or nested object.
+    ///
+    /// For each node (`dependent_node`) in the config file, the test ensures that any node
+    /// specified within that node config's "dependencies" object (`required_node_name`) occurs in
+    /// the node config file at a position before the dependent node.
     #[test]
-    fn test_config_files() -> Result<(), Error> {
-        let config_files = get_node_config_files().collect::<Vec<_>>();
-        assert!(config_files.len() > 0, "No config files found");
-
-        for (file_path, config_file) in config_files {
-            cpu_control_handler::tests::test_config_file(&config_file)
-                .context(format!("cpu_control_handler check failed for {}", file_path))?;
-            driver_manager_handler::tests::test_config_file(&config_file)
-                .context(format!("driver_manager_handler check failed for {}", file_path))?;
+    fn test_each_node_config_file_dependency_ordering() -> Result<(), anyhow::Error> {
+        fn to_string(v: &serde_json::Value) -> String {
+            v.as_str().unwrap().to_string()
         }
 
-        Ok(())
+        // Flattens the provided JSON value to extract all child strings. This is used to extract
+        // node dependency names from a node config's "dependencies" object even for nodes with a
+        // more complex format.
+        fn flatten_node_names(obj: &serde_json::Value) -> Vec<String> {
+            use serde_json::Value;
+            match obj {
+                Value::String(s) => vec![s.to_string()],
+                Value::Array(arr) => arr.iter().map(|v| flatten_node_names(v)).flatten().collect(),
+                Value::Object(obj) => {
+                    obj.values().map(|v| flatten_node_names(v)).flatten().collect()
+                }
+                e => panic!("Invalid JSON type in dependency object: {:?}", e),
+            }
+        }
+
+        crate::utils::test_each_node_config_file(|config_file| {
+            for (dependent_idx, dependent_node) in config_file.iter().enumerate() {
+                if let Some(dependencies_obj) = dependent_node.get("dependencies") {
+                    for required_node_name in flatten_node_names(dependencies_obj) {
+                        let dependent_node_name = to_string(&dependent_node["name"]);
+                        let required_node_index = config_file
+                            .iter()
+                            .position(|n| to_string(&n["name"]) == required_node_name);
+                        match required_node_index {
+                            Some(found_at_index) if found_at_index > dependent_idx => {
+                                return Err(anyhow::format_err!(
+                                    "Dependency {} must be specified before node {}",
+                                    required_node_name,
+                                    dependent_node_name
+                                ));
+                            }
+                            Some(found_at_index) if found_at_index == dependent_idx => {
+                                return Err(anyhow::format_err!(
+                                    "Invalid to specify self as dependency for node {}",
+                                    dependent_node_name
+                                ));
+                            }
+                            None => {
+                                return Err(anyhow::format_err!(
+                                    "Missing dependency {} for node {}",
+                                    required_node_name,
+                                    dependent_node_name
+                                ));
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+            }
+
+            Ok(())
+        })
     }
 }

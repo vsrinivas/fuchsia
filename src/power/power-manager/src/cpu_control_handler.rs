@@ -962,26 +962,27 @@ pub mod tests {
         let _ = CpuControlHandlerBuilder::new_from_json(json_data, &nodes);
     }
 
-    /// Called by power_manager::tests::test_config_files for each node config file under
-    /// node_config/.
-    ///
     /// Tests that node config files do not contain instances of CpuControlHandler nodes with
     /// overlapping CPU numbers.
-    pub fn test_config_file(config_file: &Vec<json::Value>) -> Result<(), Error> {
-        let cpu_control_handlers = config_file.iter().filter(|n| n["type"] == "CpuControlHandler");
+    #[test]
+    pub fn test_config_file() -> Result<(), anyhow::Error> {
+        crate::utils::test_each_node_config_file(|config_file| {
+            let cpu_control_handlers =
+                config_file.iter().filter(|n| n["type"] == "CpuControlHandler");
 
-        let mut set = HashSet::new();
-        for node in cpu_control_handlers {
-            for cpu in node["config"]["logical_cpu_numbers"].as_array().unwrap() {
-                let cpu_idx = cpu.as_i64().unwrap();
-                if set.contains(&cpu_idx) {
-                    return Err(format_err!("CPU {} already specified", cpu_idx));
+            let mut set = HashSet::new();
+            for node in cpu_control_handlers {
+                for cpu in node["config"]["logical_cpu_numbers"].as_array().unwrap() {
+                    let cpu_idx = cpu.as_i64().unwrap();
+                    if set.contains(&cpu_idx) {
+                        return Err(format_err!("CPU {} already specified", cpu_idx));
+                    }
+
+                    set.insert(cpu_idx);
                 }
-
-                set.insert(cpu_idx);
             }
-        }
 
-        Ok(())
+            Ok(())
+        })
     }
 }
