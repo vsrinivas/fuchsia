@@ -166,6 +166,9 @@ gvisor_test_component("kill_test") {
 gvisor_test_component("lseek_test") {
 }
 
+gvisor_test_component("munmap_test") {
+}
+
 gvisor_test_component("pipe_test") {
 }
 
@@ -199,6 +202,7 @@ fuchsia_test_package("test_android_distro") {
     ":getrandom_test",
     ":kill_test",
     ":lseek_test",
+    ":munmap_test",
     ":pipe_test",
     ":sh_test",
     ":sigaction_test",
