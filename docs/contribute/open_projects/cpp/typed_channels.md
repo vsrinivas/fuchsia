@@ -126,7 +126,7 @@ the protocol implementation. We can avoid creating raw Zircon channels with the
   if (status != ZX_OK)
     return status;
   foo.HandleBar(std::move(server_end));
-  fidl::Client<Bar> bar(std::move(client_end), &dispatcher);
+  fidl::WireClient<Bar> bar(std::move(client_end), &dispatcher);
   ```
 
 * {After}
@@ -136,7 +136,7 @@ the protocol implementation. We can avoid creating raw Zircon channels with the
   if (!bar_ends.is_ok())
     return bar_ends.status_value();
   foo.HandleBar(std::move(bar_ends->server));
-  fidl::Client bar(std::move(bar_ends->client), &dispatcher);
+  fidl::WireClient bar(std::move(bar_ends->client), &dispatcher);
 
   // Alternatively, |CreateEndpoints| supports returning the client-end by address,
   // which would be useful when the client-end is an instance variable, for example
@@ -148,8 +148,8 @@ the protocol implementation. We can avoid creating raw Zircon channels with the
   foo.HandleBar(std::move(*bar_server_end));
   ```
 
-Note that the protocol template parameter to `fidl::Client` may be omitted when
-typed channels are used, leading to more succinct code.
+Note that the protocol template parameter to `fidl::WireClient` may be omitted
+when typed channels are used, leading to more succinct code.
 
 #### Sync clients
 
@@ -184,7 +184,7 @@ created ergonomic wrappers: [`service::Connect<Protocol>`][service-connect],
   status = fdio_service_connect("/svc/fuchsia.Foo", server_end.release());
   if (status != ZX_OK)
     return status;
-  fidl::Client<Foo> foo(std::move(client_end), &dispatcher);
+  fidl::WireClient<Foo> foo(std::move(client_end), &dispatcher);
   ```
 
 * {After}
@@ -197,7 +197,7 @@ created ergonomic wrappers: [`service::Connect<Protocol>`][service-connect],
   if (!client_end.is_ok())
     return client_end.status_value();
   // Note: can omit template argument
-  fidl::Client foo(std::move(*client_end), &dispatcher);
+  fidl::WireClient foo(std::move(*client_end), &dispatcher);
   ```
 
 #### Opening service directory
@@ -212,7 +212,7 @@ created ergonomic wrappers: [`service::Connect<Protocol>`][service-connect],
   status = fdio_service_connect("/svc", server_end.release());
   if (status != ZX_OK)
     return status;
-  fidl::Client<::fuchsia_io::Directory> dir(std::move(client_end));
+  fidl::WireClient<::fuchsia_io::Directory> dir(std::move(client_end));
   ```
 
 * {After}
@@ -225,7 +225,7 @@ created ergonomic wrappers: [`service::Connect<Protocol>`][service-connect],
   if (!client_end.is_ok())
     return client_end.status_value();
   // Note: can omit template argument
-  fidl::Client dir(std::move(*client_end), &dispatcher);
+  fidl::WireClient dir(std::move(*client_end), &dispatcher);
   ```
 
 ### Note: propagating protocol types
