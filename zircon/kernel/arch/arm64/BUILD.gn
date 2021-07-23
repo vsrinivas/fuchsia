@@ -141,7 +141,6 @@ if (toolchain_environment == "physmem" ||
       "//zircon/kernel/dev/psci",
       "//zircon/kernel/lib/arch",
       "//zircon/kernel/lib/boot-options",
-      "//zircon/kernel/lib/cmdline",
       "//zircon/kernel/lib/console",
       "//zircon/kernel/lib/counters",
       "//zircon/kernel/lib/crashlog",

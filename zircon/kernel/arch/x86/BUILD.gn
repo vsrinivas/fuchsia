@@ -166,7 +166,6 @@ zx_library("x86") {
     "//zircon/kernel/lib/acpi_lite",
     "//zircon/kernel/lib/arch",
     "//zircon/kernel/lib/boot-options",
-    "//zircon/kernel/lib/cmdline",
     "//zircon/kernel/lib/code-patching:headers",
     "//zircon/kernel/lib/console",
     "//zircon/kernel/lib/counters",

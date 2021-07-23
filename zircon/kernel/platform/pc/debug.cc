@@ -13,7 +13,6 @@
 #include <lib/arch/intrin.h>
 #include <lib/boot-options/boot-options.h>
 #include <lib/cbuf.h>
-#include <lib/cmdline.h>
 #include <lib/debuglog.h>
 #include <lib/zircon-internal/macros.h>
 #include <platform.h>

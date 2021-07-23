@@ -9,7 +9,6 @@
 // * Singleton instances
 
 #include <inttypes.h>
-#include <lib/cmdline.h>
 #include <lib/crashlog.h>
 #include <zircon/boot/crash-reason.h>
 #include <zircon/syscalls/object.h>

@@ -10,7 +10,6 @@
 #include <lib/arch/intrin.h>
 #include <lib/boot-options/boot-options.h>
 #include <lib/boot-options/types.h>
-#include <lib/cmdline.h>
 #include <lib/console.h>
 #include <lib/crashlog.h>
 #include <lib/debuglog.h>

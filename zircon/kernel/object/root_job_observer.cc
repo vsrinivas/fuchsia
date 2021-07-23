@@ -6,7 +6,6 @@
 
 #include <lib/boot-options/boot-options.h>
 #include <lib/boot-options/types.h>
-#include <lib/cmdline.h>
 #include <lib/debuglog.h>
 #include <platform.h>
 #include <string.h>

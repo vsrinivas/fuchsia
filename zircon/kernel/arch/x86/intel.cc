@@ -5,7 +5,6 @@
 // https://opensource.org/licenses/MIT
 
 #include <bits.h>
-#include <lib/cmdline.h>
 
 #include <arch/x86.h>
 #include <arch/x86/cpuid.h>

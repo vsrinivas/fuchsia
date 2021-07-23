@@ -7,7 +7,6 @@
 #include "vm/pmm_checker.h"
 
 #include <assert.h>
-#include <lib/cmdline.h>
 #include <lib/counters.h>
 #include <lib/instrumentation/asan.h>
 #include <platform.h>

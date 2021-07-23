@@ -17,7 +17,6 @@ zx_library("crypto") {
   deps = [
     "entropy",
     "//zircon/kernel/lib/boot-options",
-    "//zircon/kernel/lib/cmdline",
     "//zircon/kernel/lib/fbl",
     "//zircon/kernel/lib/init",
     "//zircon/kernel/lib/ktl",

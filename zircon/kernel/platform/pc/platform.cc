@@ -33,7 +33,6 @@
 #include <dev/pcie_bus_driver.h>
 #endif
 #include <lib/cksum.h>
-#include <lib/cmdline.h>
 #include <lib/debuglog.h>
 #include <lib/system-topology.h>
 #include <mexec.h>

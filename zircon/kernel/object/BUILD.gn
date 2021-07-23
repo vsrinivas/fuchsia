@@ -70,7 +70,6 @@ zx_library("object") {
     "//zircon/kernel/hypervisor",
     "//zircon/kernel/lib/arch",
     "//zircon/kernel/lib/boot-options",
-    "//zircon/kernel/lib/cmdline",
     "//zircon/kernel/lib/console",
     "//zircon/kernel/lib/counters",
     "//zircon/kernel/lib/crashlog",

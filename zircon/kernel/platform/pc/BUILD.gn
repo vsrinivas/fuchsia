@@ -36,7 +36,6 @@ zx_library("pc") {
     "//zircon/kernel/lib/arch",
     "//zircon/kernel/lib/boot-options",
     "//zircon/kernel/lib/cbuf",
-    "//zircon/kernel/lib/cmdline",
     "//zircon/kernel/lib/console",
     "//zircon/kernel/lib/counters",
     "//zircon/kernel/lib/debuglog",

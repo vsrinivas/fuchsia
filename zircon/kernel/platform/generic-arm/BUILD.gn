@@ -25,7 +25,6 @@ source_set("generic-arm") {
     "//zircon/kernel/dev/uart/pl011",
     "//zircon/kernel/lib/boot-options",
     "//zircon/kernel/lib/cbuf",
-    "//zircon/kernel/lib/cmdline",
     "//zircon/kernel/lib/console",
     "//zircon/kernel/lib/crashlog",
     "//zircon/kernel/lib/fbl",

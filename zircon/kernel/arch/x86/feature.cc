@@ -15,7 +15,6 @@
 #include <lib/arch/x86/power.h>
 #include <lib/arch/x86/speculation.h>
 #include <lib/boot-options/boot-options.h>
-#include <lib/cmdline.h>
 #include <stdint.h>
 #include <string.h>
 #include <trace.h>

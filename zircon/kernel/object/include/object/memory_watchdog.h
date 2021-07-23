@@ -8,7 +8,6 @@
 #define ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_MEMORY_WATCHDOG_H_
 
 #include <inttypes.h>
-#include <lib/cmdline.h>
 #include <lib/crashlog.h>
 #include <zircon/boot/crash-reason.h>
 #include <zircon/syscalls/object.h>
