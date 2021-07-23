@@ -21,13 +21,13 @@ group("tests") {
 # Should be pointed to by individual board file
 ot_radio_driver("sherlock") {
   board = "sherlock"
-  firmware_type = "release"
+  firmware_type = "user"
   firmware_config = "rcp"
 }
 
 ot_radio_driver("sherlock-mfg") {
   board = "sherlock"
-  firmware_type = "development"
+  firmware_type = "eng"
   firmware_config = "rcp"
 }
 
