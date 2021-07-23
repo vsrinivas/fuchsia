@@ -18,13 +18,15 @@ use {
     fuchsia_zircon as zx,
     futures::{lock::Mutex, prelude::*},
     log::{debug, error, info, warn},
+    measure_tape_for_scan_result::measure,
     std::{collections::HashMap, sync::Arc},
     stream::FuturesUnordered,
     wlan_common::channel::Channel,
 };
 
-// Arbitrary count of networks (ssid/security pairs) to output per request
-const OUTPUT_CHUNK_NETWORK_COUNT: usize = 5;
+// TODO(fxbug.dev/80422): Remove this.
+// Size of FIDL message header and FIDL error-wrapped vector header
+const FIDL_HEADER_AND_ERR_WRAPPED_VEC_HEADER_SIZE: usize = 56;
 // Delay between scanning retries when the firmware returns "ShouldWait" error code
 const SCAN_RETRY_DELAY_MS: i64 = 100;
 
@@ -434,30 +436,49 @@ fn scan_result_to_policy_scan_result(
 }
 
 /// Send batches of results to the output iterator when getNext() is called on it.
-/// Close the channel when no results are remaining.
+/// Send empty batch and close the channel when no results are remaining.
 async fn send_scan_results_over_fidl(
     output_iterator: fidl::endpoints::ServerEnd<fidl_policy::ScanResultIteratorMarker>,
     scan_results: &Vec<fidl_policy::ScanResult>,
 ) -> Result<(), Error> {
-    let mut chunks = scan_results.chunks(OUTPUT_CHUNK_NETWORK_COUNT);
-    let mut sent_some_results = false;
     // Wait to get a request for a chunk of scan results
     let (mut stream, ctrl) = output_iterator.into_stream_and_control_handle()?;
+    let max_batch_size = zx::sys::ZX_CHANNEL_MAX_MSG_BYTES as usize;
+    let mut sent_some_results = false;
+    let mut remaining_results = scan_results.iter().peekable();
+    let mut batch_size: usize;
+
+    // Verify consumer is expecting results before each batch
     loop {
         if let Some(fidl_policy::ScanResultIteratorRequest::GetNext { responder }) =
             stream.try_next().await?
         {
             sent_some_results = true;
-            if let Some(chunk) = chunks.next() {
-                let mut next_result: fidl_policy::ScanResultIteratorGetNextResult =
-                    Ok(chunk.to_vec());
-                responder.send(&mut next_result)?;
-            } else {
-                // When no results are left, send an empty vec and close the channel.
-                let mut next_result: fidl_policy::ScanResultIteratorGetNextResult = Ok(vec![]);
-                responder.send(&mut next_result)?;
+            let mut batch = vec![];
+            batch_size = FIDL_HEADER_AND_ERR_WRAPPED_VEC_HEADER_SIZE;
+            // Peek if next element exists and will fit in current batch
+            while let Some(peeked_result) = remaining_results.peek() {
+                let result_size = measure(peeked_result).num_bytes;
+                if result_size + FIDL_HEADER_AND_ERR_WRAPPED_VEC_HEADER_SIZE > max_batch_size {
+                    return Err(format_err!("Single scan result too large to send via FIDL"));
+                }
+                // Peeked result will not fit. Send batch and continue.
+                if result_size + batch_size > max_batch_size {
+                    break;
+                }
+                // Actually remove result and push to batch
+                if let Some(result) = remaining_results.next() {
+                    batch.push(result.clone());
+                    batch_size += result_size;
+                }
+            }
+            let close_channel = batch.is_empty();
+            responder.send(&mut Ok(batch))?;
+
+            // Guarantees empty batch is sent before channel is closed.
+            if close_channel {
                 ctrl.shutdown();
-                break;
+                return Ok(());
             }
         } else {
             // This will happen if the iterator request stream was closed and we expected to send
@@ -472,7 +493,6 @@ async fn send_scan_results_over_fidl(
             }
         }
     }
-    Ok(())
 }
 
 /// On the next request for results, send an error to the output iterator and
@@ -1018,6 +1038,59 @@ mod tests {
             combined_internal_aps,
             combined_fidl_aps,
         }
+    }
+
+    /// Generate a vector of FIDL scan results, each sized based on the input
+    /// vector parameter. Size, in bytes, must be greater than the baseline scan
+    /// result's size, measure below, and divisible into octets (by 8).
+    fn create_fidl_scan_results_from_size(
+        result_sizes: Vec<usize>,
+    ) -> Vec<fidl_policy::ScanResult> {
+        // Create a baseline result
+        let minimal_scan_result = fidl_policy::ScanResult {
+            id: Some(fidl_policy::NetworkIdentifier {
+                ssid: "".as_bytes().to_vec(),
+                type_: fidl_policy::SecurityType::None,
+            }),
+            entries: Some(vec![]),
+            ..fidl_policy::ScanResult::EMPTY
+        };
+        let minimal_result_size: usize = measure(&minimal_scan_result).num_bytes;
+
+        // Create result with single entry
+        let mut scan_result_with_one_bss = minimal_scan_result.clone();
+        scan_result_with_one_bss.entries = Some(vec![fidl_policy::Bss::EMPTY]);
+
+        // Size of each additional BSS entry to FIDL ScanResult
+        let empty_bss_entry_size: usize =
+            measure(&scan_result_with_one_bss).num_bytes - minimal_result_size;
+
+        // Validate size is possible
+        if result_sizes.iter().any(|size| size < &minimal_result_size || size % 8 != 0) {
+            panic!("Invalid size. Requested size must be larger than {} minimum bytes and divisible into octets (by 8)", minimal_result_size);
+        }
+
+        let mut fidl_scan_results = vec![];
+        for size in result_sizes {
+            let mut scan_result = minimal_scan_result.clone();
+
+            let num_bss_for_ap = (size - minimal_result_size) / empty_bss_entry_size;
+            // Every 8 characters for SSID adds 8 bytes (1 octet).
+            let ssid_length =
+                (size - minimal_result_size) - (num_bss_for_ap * empty_bss_entry_size);
+
+            scan_result.id = Some(fidl_policy::NetworkIdentifier {
+                ssid: (0..ssid_length).map(|_| rand::random::<u8>()).collect(),
+                type_: fidl_policy::SecurityType::None,
+            });
+            scan_result.entries = Some(vec![fidl_policy::Bss::EMPTY; num_bss_for_ap]);
+
+            // Validate result measures to expected size.
+            assert_eq!(measure(&scan_result).num_bytes, size);
+
+            fidl_scan_results.push(scan_result);
+        }
+        fidl_scan_results
     }
 
     #[fuchsia::test]
@@ -2415,5 +2488,125 @@ mod tests {
         for (input, wpa3_capable, output) in test_pairs {
             assert_eq!(fidl_security_from_sme_protection(input, wpa3_capable), output);
         }
+    }
+
+    #[fuchsia::test]
+    fn scan_result_generate_from_size() {
+        let scan_results = create_fidl_scan_results_from_size(vec![112; 4]);
+        assert_eq!(scan_results.len(), 4);
+        assert!(scan_results.iter().all(|scan_result| measure(scan_result).num_bytes == 112));
+    }
+
+    #[fuchsia::test]
+    fn scan_result_sends_max_message_size() {
+        let mut exec = fasync::TestExecutor::new().expect("failed to create and executor");
+        let (iter, iter_server) =
+            fidl::endpoints::create_proxy().expect("failed to create iterator");
+
+        // Create a single scan result at the max allowed size to send in single
+        // FIDL message.
+        let fidl_scan_results = create_fidl_scan_results_from_size(vec![
+            zx::sys::ZX_CHANNEL_MAX_MSG_BYTES as usize
+                - FIDL_HEADER_AND_ERR_WRAPPED_VEC_HEADER_SIZE,
+        ]);
+
+        let send_fut = send_scan_results_over_fidl(iter_server, &fidl_scan_results);
+        pin_mut!(send_fut);
+
+        let mut output_iter_fut = iter.get_next();
+
+        assert_variant!(exec.run_until_stalled(&mut send_fut), Poll::Pending);
+
+        assert_variant!(exec.run_until_stalled(&mut output_iter_fut), Poll::Ready(result) => {
+            let results = result.expect("Failed to get next scan results").unwrap();
+            assert_eq!(results, fidl_scan_results);
+        })
+    }
+
+    #[fuchsia::test]
+    fn scan_result_exceeding_max_size_throws_error() {
+        let mut exec = fasync::TestExecutor::new().expect("failed to create and executor");
+        let (iter, iter_server) =
+            fidl::endpoints::create_proxy().expect("failed to create iterator");
+
+        // Create a single scan result exceeding the  max allowed size to send in single
+        // FIDL message.
+        let fidl_scan_results = create_fidl_scan_results_from_size(vec![
+            (zx::sys::ZX_CHANNEL_MAX_MSG_BYTES as usize
+                - FIDL_HEADER_AND_ERR_WRAPPED_VEC_HEADER_SIZE)
+                + 8,
+        ]);
+
+        let send_fut = send_scan_results_over_fidl(iter_server, &fidl_scan_results);
+        pin_mut!(send_fut);
+
+        let _ = iter.get_next();
+
+        assert_variant!(exec.run_until_stalled(&mut send_fut), Poll::Ready(Err(_)));
+    }
+
+    #[fuchsia::test]
+    fn scan_result_sends_single_batch() {
+        let mut exec = fasync::TestExecutor::new().expect("failed to create and executor");
+        let (iter, iter_server) =
+            fidl::endpoints::create_proxy().expect("failed to create iterator");
+
+        // Create a set of scan results that does not exceed the the max message
+        // size, so it should be sent in a single batch.
+        let fidl_scan_results =
+            create_fidl_scan_results_from_size(vec![
+                zx::sys::ZX_CHANNEL_MAX_MSG_BYTES as usize / 4;
+                3
+            ]);
+
+        let send_fut = send_scan_results_over_fidl(iter_server, &fidl_scan_results);
+        pin_mut!(send_fut);
+
+        let mut output_iter_fut = iter.get_next();
+
+        assert_variant!(exec.run_until_stalled(&mut send_fut), Poll::Pending);
+
+        assert_variant!(exec.run_until_stalled(&mut output_iter_fut), Poll::Ready(result) => {
+            let results = result.expect("Failed to get next scan results").unwrap();
+            assert_eq!(results, fidl_scan_results);
+        });
+    }
+
+    #[fuchsia::test]
+    fn scan_result_sends_multiple_batches() {
+        let mut exec = fasync::TestExecutor::new().expect("failed to create and executor");
+        let (iter, iter_server) =
+            fidl::endpoints::create_proxy().expect("failed to create iterator");
+
+        // Create a set of scan results that exceed the max FIDL message size, so
+        // they should be split into batches.
+        let fidl_scan_results =
+            create_fidl_scan_results_from_size(vec![
+                zx::sys::ZX_CHANNEL_MAX_MSG_BYTES as usize / 8;
+                8
+            ]);
+
+        let send_fut = send_scan_results_over_fidl(iter_server, &fidl_scan_results);
+        pin_mut!(send_fut);
+
+        let mut output_iter_fut = iter.get_next();
+
+        assert_variant!(exec.run_until_stalled(&mut send_fut), Poll::Pending);
+
+        let mut aggregate_results = vec![];
+        assert_variant!(exec.run_until_stalled(&mut output_iter_fut), Poll::Ready(result) => {
+            let results = result.expect("Failed to get next scan results").unwrap();
+            assert_eq!(results.len(), 7);
+            aggregate_results.extend(results);
+        });
+
+        let mut output_iter_fut = iter.get_next();
+        assert_variant!(exec.run_until_stalled(&mut send_fut), Poll::Pending);
+        assert_variant!(exec.run_until_stalled(&mut output_iter_fut), Poll::Ready(result) => {
+            let results = result.expect("Failed to get next scan results").unwrap();
+            assert_eq!(results.len(), 1);
+            aggregate_results.extend(results);
+        });
+        assert_eq!(aggregate_results, fidl_scan_results);
     }
 }
