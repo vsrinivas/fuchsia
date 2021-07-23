@@ -1187,10 +1187,8 @@ zx_status_t iwl_mvm_sta_alloc_queue(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvm
   };
   zx_duration_t wdg_timeout = iwl_mvm_get_wd_timeout(mvm, NULL, false, false);
   int queue = -1;  // negative means no queue is found yet.
-  enum iwl_mvm_agg_state queue_state;
   bool shared_queue = false, inc_ssn;
   int ssn;
-  unsigned long tfd_queue_mask;
   zx_status_t ret;
 
   iwl_assert_lock_held(&mvm->mutex);
@@ -1202,7 +1200,6 @@ zx_status_t iwl_mvm_sta_alloc_queue(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvm
 #endif  // NEEDS_PORTING
 
   mtx_lock(&mvmsta->lock);
-  tfd_queue_mask = mvmsta->tfd_queue_msk;
   ssn = IEEE80211_SEQ_TO_SN(mvmsta->tid_data[tid].seq_number);
   mtx_unlock(&mvmsta->lock);
 
@@ -1310,7 +1307,6 @@ zx_status_t iwl_mvm_sta_alloc_queue(struct iwl_mvm* mvm, struct iwl_mvm_sta* mvm
   }
   mvmsta->tid_data[tid].txq_id = queue;
   mvmsta->tfd_queue_msk |= BIT(queue);
-  queue_state = mvmsta->tid_data[tid].state;
 
   if (mvmsta->reserved_queue == queue) {
     mvmsta->reserved_queue = IEEE80211_INVAL_HW_QUEUE;
