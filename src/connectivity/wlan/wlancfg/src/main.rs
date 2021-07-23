@@ -10,6 +10,7 @@ mod config_management;
 mod legacy;
 mod mode_management;
 mod regulatory_manager;
+mod telemetry;
 mod util;
 
 use {
