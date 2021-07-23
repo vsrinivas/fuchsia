@@ -4,6 +4,8 @@
 
 //! The Internet Control Message Protocol (ICMP).
 
+#![deny(unused_results)]
+
 use alloc::vec::Vec;
 use core::fmt::Debug;
 
@@ -2142,7 +2144,8 @@ mod tests {
         DummyEventDispatcher, DummyEventDispatcherBuilder, TestIpExt, DUMMY_CONFIG_V4,
         DUMMY_CONFIG_V6,
     };
-    use crate::StackStateBuilder;
+    use crate::transport::udp::UdpStateBuilder;
+    use crate::{Ipv4StateBuilder, Ipv6StateBuilder, StackStateBuilder};
 
     // Tests that require an entire IP stack.
 
@@ -2291,7 +2294,7 @@ mod tests {
         test_receive_ip_packet::<Ipv4, _, _, _, _, _>(
             |_| {},
             |builder| {
-                builder.ipv4_builder().icmpv4_builder().send_timestamp_reply(true);
+                let _: &mut Icmpv4StateBuilder = builder.ipv4_builder().icmpv4_builder().send_timestamp_reply(true);
             },
             buffer.as_mut(),
             DUMMY_CONFIG_V4.local_ip,
@@ -2398,7 +2401,8 @@ mod tests {
                 |_| {},
                 // Enable the `send_port_unreachable` feature.
                 |builder| {
-                    builder.transport_builder().udp_builder().send_port_unreachable(true);
+                    let _: &mut UdpStateBuilder =
+                        builder.transport_builder().udp_builder().send_port_unreachable(true);
                 },
                 buffer.as_mut(),
                 I::DUMMY_CONFIG.local_ip,
@@ -2442,7 +2446,7 @@ mod tests {
         test_receive_ip_packet::<Ipv4, _, _, _, _, _>(
             |_| {},
             |sb| {
-                sb.ipv4_builder().forward(true);
+                let _: &mut Ipv4StateBuilder = sb.ipv4_builder().forward(true);
             },
             &mut [0u8; 128],
             SpecifiedAddr::new(Ipv4Addr::new([1, 2, 3, 4])).unwrap(),
@@ -2459,7 +2463,7 @@ mod tests {
         test_receive_ip_packet::<Ipv6, _, _, _, _, _>(
             |_| {},
             |sb| {
-                sb.ipv6_builder().forward(true);
+                let _: &mut Ipv6StateBuilder = sb.ipv6_builder().forward(true);
             },
             &mut [0u8; 128],
             SpecifiedAddr::new(Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8]))
@@ -2476,7 +2480,7 @@ mod tests {
         test_receive_ip_packet::<Ipv4, _, IcmpDestUnreachable, _, _, _>(
             |pb| pb.fragment_offset(64),
             |sb| {
-                sb.ipv4_builder().forward(true);
+                let _: &mut Ipv4StateBuilder = sb.ipv4_builder().forward(true);
             },
             &mut [0u8; 128],
             SpecifiedAddr::new(Ipv4Addr::new([1, 2, 3, 4])).unwrap(),
@@ -2495,7 +2499,7 @@ mod tests {
         test_receive_ip_packet::<Ipv4, _, _, _, _, _>(
             |_| {},
             |builder| {
-                builder.ipv4_builder().forward(true);
+                let _: &mut Ipv4StateBuilder = builder.ipv4_builder().forward(true);
             },
             &mut [0u8; 128],
             DUMMY_CONFIG_V4.remote_ip,
@@ -2509,7 +2513,7 @@ mod tests {
         test_receive_ip_packet::<Ipv6, _, _, _, _, _>(
             |_| {},
             |builder| {
-                builder.ipv6_builder().forward(true);
+                let _: &mut Ipv6StateBuilder = builder.ipv6_builder().forward(true);
             },
             &mut [0u8; 128],
             DUMMY_CONFIG_V6.remote_ip,
@@ -2525,7 +2529,7 @@ mod tests {
         test_receive_ip_packet::<Ipv4, _, IcmpTimeExceeded, _, _, _>(
             |pb| pb.fragment_offset(64),
             |sb| {
-                sb.ipv4_builder().forward(true);
+                let _: &mut Ipv4StateBuilder = sb.ipv4_builder().forward(true);
             },
             &mut [0u8; 128],
             SpecifiedAddr::new(Ipv4Addr::new([1, 2, 3, 4])).unwrap(),
