@@ -29,6 +29,7 @@ use {
 };
 
 const _V1_CONTEXT: &Context = &Context { wire_format_version: WireFormatVersion::V1 };
+const _V2_CONTEXT: &Context = &Context { wire_format_version: WireFormatVersion::V2 };
 
 {{ range .EncodeSuccessCases }}
 {{- if .HandleDefs }}#[cfg(target_os = "fuchsia")]{{ end }}
@@ -227,7 +228,7 @@ func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, schema gidlm
 		}
 		value := visit(encodeSuccess.Value, decl)
 		for _, encoding := range encodeSuccess.Encodings {
-			if !wireFormatSupported(encoding.WireFormat) {
+			if !wireFormatSupportedForEncode(encoding.WireFormat) {
 				continue
 			}
 			encodeSuccessCases = append(encodeSuccessCases, encodeSuccessCase{
@@ -256,7 +257,7 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, schema gidlm
 		// function, where self is a wrapper around valueType.
 		forgetHandles := buildForgetHandles("self.0", decodeSuccess.Value, decl)
 		for _, encoding := range decodeSuccess.Encodings {
-			if !wireFormatSupported(encoding.WireFormat) {
+			if !wireFormatSupportedForDecode(encoding.WireFormat) {
 				continue
 			}
 			decodeSuccessCases = append(decodeSuccessCases, decodeSuccessCase{
@@ -287,7 +288,7 @@ func encodeFailureCases(gidlEncodeFailures []gidlir.EncodeFailure, schema gidlmi
 		}
 		value := visit(encodeFailure.Value, decl)
 
-		for _, wireFormat := range supportedWireFormats {
+		for _, wireFormat := range supportedEncodeWireFormats {
 			encodeFailureCases = append(encodeFailureCases, encodeFailureCase{
 				Name:       testCaseName(encodeFailure.Name, wireFormat),
 				Context:    encodingContext(wireFormat),
@@ -313,7 +314,7 @@ func decodeFailureCases(gidlDecodeFailures []gidlir.DecodeFailure, schema gidlmi
 		}
 		valueType := declName(decl)
 		for _, encoding := range decodeFailure.Encodings {
-			if !wireFormatSupported(encoding.WireFormat) {
+			if !wireFormatSupportedForDecode(encoding.WireFormat) {
 				continue
 			}
 			decodeFailureCases = append(decodeFailureCases, decodeFailureCase{
@@ -334,12 +335,24 @@ func testCaseName(baseName string, wireFormat gidlir.WireFormat) string {
 	return fidlgen.ToSnakeCase(fmt.Sprintf("%s_%s", baseName, wireFormat))
 }
 
-var supportedWireFormats = []gidlir.WireFormat{
+var supportedEncodeWireFormats = []gidlir.WireFormat{
 	gidlir.V1WireFormat,
 }
+var supportedDecodeWireFormats = []gidlir.WireFormat{
+	gidlir.V1WireFormat,
+	gidlir.V2WireFormat,
+}
 
-func wireFormatSupported(wireFormat gidlir.WireFormat) bool {
-	for _, wf := range supportedWireFormats {
+func wireFormatSupportedForEncode(wireFormat gidlir.WireFormat) bool {
+	for _, wf := range supportedEncodeWireFormats {
+		if wireFormat == wf {
+			return true
+		}
+	}
+	return false
+}
+func wireFormatSupportedForDecode(wireFormat gidlir.WireFormat) bool {
+	for _, wf := range supportedDecodeWireFormats {
 		if wireFormat == wf {
 			return true
 		}
@@ -351,6 +364,8 @@ func encodingContext(wireFormat gidlir.WireFormat) string {
 	switch wireFormat {
 	case gidlir.V1WireFormat:
 		return "_V1_CONTEXT"
+	case gidlir.V2WireFormat:
+		return "_V2_CONTEXT"
 	default:
 		panic(fmt.Sprintf("unexpected wire format %v", wireFormat))
 	}

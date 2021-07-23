@@ -2661,28 +2661,52 @@ pub fn encode_in_envelope(
 }
 
 /// Decodes and validates an envelope header. Returns `None` if absent and
-/// `Some((num_bytes, num_handles))` if present.
+/// `Some((inlined, num_bytes, num_handles))` if present.
 #[doc(hidden)] // only exported for macro use
 #[inline(always)]
 pub fn decode_envelope_header(
     decoder: &mut Decoder<'_>,
     offset: usize,
-) -> Result<Option<(u32, u32)>> {
+) -> Result<Option<(bool, u32, u32)>> {
+    let mut inlined: bool = false;
     let mut num_bytes: u32 = 0;
-    num_bytes.decode(decoder, offset)?;
-
     let mut num_handles: u32 = 0;
-    num_handles.decode(decoder, offset + 4)?;
-
     let mut present: u64 = 0;
-    present.decode(decoder, offset + 8)?;
+
+    match decoder.context.wire_format_version {
+        WireFormatVersion::V1 => {
+            num_bytes.decode(decoder, offset)?;
+            num_handles.decode(decoder, offset + 4)?;
+
+            present.decode(decoder, offset + 8)?;
+        }
+        WireFormatVersion::V2 => {
+            let mut flags: u16 = 0;
+            flags.decode(decoder, offset + 6)?;
+
+            inlined = flags & 1 != 0;
+            if inlined {
+                num_bytes = 4;
+            } else {
+                num_bytes.decode(decoder, offset)?;
+            }
+
+            let mut num_handles_v2: u16 = 0;
+            num_handles_v2.decode(decoder, offset + 4)?;
+            num_handles = num_handles_v2 as u32;
+
+            if num_bytes != 0 || num_handles != 0 {
+                present = ALLOC_PRESENT_U64;
+            }
+        }
+    }
 
     match present {
         ALLOC_PRESENT_U64 => {
-            if num_bytes % 8 != 0 {
+            if !inlined && num_bytes % 8 != 0 {
                 Err(Error::InvalidNumBytesInEnvelope)
             } else {
-                Ok(Some((num_bytes, num_handles)))
+                Ok(Some((inlined, num_bytes, num_handles)))
             }
         }
         ALLOC_ABSENT_U64 => {
@@ -2704,16 +2728,21 @@ pub fn decode_envelope_header(
 #[inline]
 pub fn decode_unknown_bytes(decoder: &mut Decoder<'_>, offset: usize) -> Result<Option<Vec<u8>>> {
     match decode_envelope_header(decoder, offset)? {
-        Some((num_bytes, num_handles)) => {
+        Some((inlined, num_bytes, num_handles)) => {
             if num_handles != 0 {
                 for _ in 0..num_handles {
                     decoder.drop_next_handle()?;
                 }
                 return Err(Error::CannotStoreUnknownHandles);
             }
-            decoder.read_out_of_line(num_bytes as usize, |decoder, offset| {
+            let decode_inner = |decoder: &mut Decoder<'_>, offset: usize| {
                 Ok(Some(decoder.buffer()[offset..offset + (num_bytes as usize)].to_vec()))
-            })
+            };
+            if inlined {
+                decode_inner(decoder, offset)
+            } else {
+                decoder.read_out_of_line(num_bytes as usize, decode_inner)
+            }
         }
         None => Ok(None),
     }
@@ -2728,10 +2757,15 @@ pub fn decode_unknown_data(
     offset: usize,
 ) -> Result<Option<UnknownData>> {
     match decode_envelope_header(decoder, offset)? {
-        Some((num_bytes, num_handles)) => {
-            decoder.read_out_of_line(num_bytes as usize, |decoder, offset| {
+        Some((inlined, num_bytes, num_handles)) => {
+            let decode_inner = |decoder: &mut Decoder<'_>, offset: usize| {
                 decode_unknown_data_contents(decoder, offset, num_bytes, num_handles).map(Some)
-            })
+            };
+            if inlined {
+                decode_inner(decoder, offset)
+            } else {
+                decoder.read_out_of_line(num_bytes as usize, decode_inner)
+            }
         }
         None => Ok(None),
     }
@@ -2931,8 +2965,12 @@ macro_rules! fidl_table {
                     _ => return Err($crate::Error::InvalidPresenceIndicator),
                 }
 
+                let envelope_size = match decoder.context().wire_format_version {
+                    $crate::encoding::WireFormatVersion::V1 => 16,
+                    $crate::encoding::WireFormatVersion::V2 => 8,
+                };
                 let len = len as usize;
-                let bytes_len = len * 16; // envelope inline_size is 16
+                let bytes_len = len * envelope_size;
                 decoder.read_out_of_line(bytes_len, |decoder, offset| {
                     // Decode the envelope for each type.
                     // u32 num_bytes
@@ -2963,37 +3001,42 @@ macro_rules! fidl_table {
                                 _unknown_data.insert(_next_ordinal_to_read, field);
                             }
                             _next_ordinal_to_read += 1;
-                            next_offset += 16;
+                            next_offset += envelope_size;
                         }
 
                         let next_out_of_line = decoder.next_out_of_line();
                         let handles_before = decoder.remaining_handles();
-                        if let Some((num_bytes, num_handles)) =
+                        if let Some((inlined, num_bytes, num_handles)) =
                             $crate::encoding::decode_envelope_header(decoder, next_offset)?
                         {
-                            decoder.read_out_of_line(
-                                decoder.inline_size_of::<$member_ty>(),
-                                |decoder, offset| {
-                                    $(
-                                        decoder.set_next_handle_subtype($member_handle_subtype);
-                                        decoder.set_next_handle_rights($member_handle_rights);
-                                    )?
-                                    let val_ref =
-                                        self.$member_name.get_or_insert_with(
-                                            || <$member_ty>::new_empty());
-                                    val_ref.decode(decoder, offset)?;
-                                    Ok(())
-                                },
-                            )?;
-                            if decoder.next_out_of_line() != (next_out_of_line + (num_bytes as usize)) {
-                                return Err($crate::Error::InvalidNumBytesInEnvelope);
+                            let mut decode_inner = |decoder: &mut $crate::encoding::Decoder<'_>, offset: usize| {
+                                $(
+                                    decoder.set_next_handle_subtype($member_handle_subtype);
+                                    decoder.set_next_handle_rights($member_handle_rights);
+                                )?
+                                let val_ref =
+                                    self.$member_name.get_or_insert_with(
+                                        || <$member_ty>::new_empty());
+                                val_ref.decode(decoder, offset)?;
+                                Ok(())
+                            };
+                            if inlined {
+                                decode_inner(decoder, next_offset)?;
+                            } else {
+                                decoder.read_out_of_line(
+                                    decoder.inline_size_of::<$member_ty>(),
+                                    decode_inner,
+                                )?;
+                                if decoder.next_out_of_line() != (next_out_of_line + (num_bytes as usize)) {
+                                    return Err($crate::Error::InvalidNumBytesInEnvelope);
+                                }
                             }
                             if handles_before != (decoder.remaining_handles() + (num_handles as usize)) {
                                 return Err($crate::Error::InvalidNumHandlesInEnvelope);
                             }
                         }
 
-                        next_offset += 16;
+                        next_offset += envelope_size;
                     )*
 
                     // Decode the remaining unknown envelopes.
@@ -3002,7 +3045,7 @@ macro_rules! fidl_table {
                         if let Some(field) = _unknown_decoder_func(decoder, next_offset)? {
                             _unknown_data.insert(_next_ordinal_to_read, field);
                         }
-                        next_offset += 16;
+                        next_offset += envelope_size;
                     }
 
                     if !_unknown_data.is_empty() {
@@ -3054,17 +3097,17 @@ macro_rules! fidl_reverse_blocks {
     };
 }
 
-/// Decodes the inline portion of a xunion. Returns `(ordinal, num_bytes, num_handles)`.
+/// Decodes the inline portion of a xunion. Returns `(ordinal, inlined, num_bytes, num_handles)`.
 #[inline]
 pub fn decode_xunion_inline_portion(
     decoder: &mut Decoder,
     offset: usize,
-) -> Result<(u64, u32, u32)> {
+) -> Result<(u64, bool, u32, u32)> {
     let mut ordinal: u64 = 0;
     ordinal.decode(decoder, offset)?;
 
     match decode_envelope_header(decoder, offset + 8)? {
-        Some((num_bytes, num_handles)) => Ok((ordinal, num_bytes, num_handles)),
+        Some((inlined, num_bytes, num_handles)) => Ok((ordinal, inlined, num_bytes, num_handles)),
         None => Err(Error::UnexpectedNullRef),
     }
 }
@@ -3079,8 +3122,11 @@ where
         8
     }
     #[inline(always)]
-    fn inline_size(_context: &Context) -> usize {
-        24
+    fn inline_size(context: &Context) -> usize {
+        match context.wire_format_version {
+            WireFormatVersion::V1 => 24,
+            WireFormatVersion::V2 => 16,
+        }
     }
 }
 
@@ -3132,7 +3178,8 @@ where
     #[inline]
     fn decode(&mut self, decoder: &mut Decoder<'_>, offset: usize) -> Result<()> {
         decoder.debug_check_bounds::<Self>(offset);
-        let (ordinal, num_bytes, num_handles) = decode_xunion_inline_portion(decoder, offset)?;
+        let (ordinal, inlined, num_bytes, num_handles) =
+            decode_xunion_inline_portion(decoder, offset)?;
         let member_inline_size = match ordinal {
             1 => {
                 // If the inline size is 0, meaning the type is (), use an inline
@@ -3145,7 +3192,7 @@ where
         };
         let next_out_of_line = decoder.next_out_of_line();
         let handles_before = decoder.remaining_handles();
-        decoder.read_out_of_line(member_inline_size, |decoder, offset| {
+        let mut decode_inner = |decoder: &mut Decoder<'_>, offset: usize| {
             match ordinal {
                 1 => {
                     if let Ok(_) = self {
@@ -3184,9 +3231,14 @@ where
                 // Should be unreachable, since we already checked above.
                 ordinal => panic!("unexpected ordinal {:?}", ordinal),
             }
-        })?;
-        if decoder.next_out_of_line() != (next_out_of_line + (num_bytes as usize)) {
-            return Err(Error::InvalidNumBytesInEnvelope);
+        };
+        if inlined {
+            decode_inner(decoder, offset + 8)?;
+        } else {
+            decoder.read_out_of_line(member_inline_size, decode_inner)?;
+            if decoder.next_out_of_line() != (next_out_of_line + (num_bytes as usize)) {
+                return Err(Error::InvalidNumBytesInEnvelope);
+            }
         }
         if handles_before != (decoder.remaining_handles() + (num_handles as usize)) {
             return Err(Error::InvalidNumHandlesInEnvelope);
@@ -3241,7 +3293,12 @@ macro_rules! fidl_union {
             #[inline(always)]
             fn inline_align(_context: &$crate::encoding::Context) -> usize { 8 }
             #[inline(always)]
-            fn inline_size(_context: &$crate::encoding::Context) -> usize { 24 }
+            fn inline_size(context: &$crate::encoding::Context) -> usize {
+                match context.wire_format_version {
+                  $crate::encoding::WireFormatVersion::V1 => 24,
+                  $crate::encoding::WireFormatVersion::V2 => 16,
+                }
+            }
         }
 
         impl $crate::encoding::Encodable for $name {
@@ -3312,8 +3369,12 @@ macro_rules! fidl_union {
                 #[allow(unused_variables)]
                 let next_out_of_line = decoder.next_out_of_line();
                 let handles_before = decoder.remaining_handles();
-                let (ordinal, num_bytes, num_handles) = $crate::encoding::decode_xunion_inline_portion(decoder, offset)?;
+                let (ordinal, inlined, num_bytes, num_handles) = $crate::encoding::decode_xunion_inline_portion(decoder, offset)?;
+
                 let member_inline_size = match ordinal {
+                    0 => {
+                        return Err($crate::Error::UnknownUnionTag)
+                    },
                     $(
                         $member_ordinal => decoder.inline_size_of::<$member_ty>(),
                     )*
@@ -3352,7 +3413,7 @@ macro_rules! fidl_union {
                     },
                 };
 
-                decoder.read_out_of_line(member_inline_size, |decoder, offset| {
+                let mut decode_inner = |decoder: &mut $crate::encoding::Decoder<'_>, offset: usize| {
                     match ordinal {
                         $(
                             $member_ordinal => {
@@ -3398,13 +3459,17 @@ macro_rules! fidl_union {
                         ordinal => panic!("unexpected ordinal {:?}", ordinal)
                     }
                     Ok(())
-                })?;
-
+                };
+                if inlined {
+                    decode_inner(decoder, offset + 8)?;
+                } else {
+                    decoder.read_out_of_line(member_inline_size, decode_inner)?;
+                    if decoder.next_out_of_line() != (next_out_of_line + (num_bytes as usize)) {
+                        return Err($crate::Error::InvalidNumBytesInEnvelope);
+                    }
+                }
                 if handles_before != (decoder.remaining_handles() + (num_handles as usize)) {
                     return Err($crate::Error::InvalidNumHandlesInEnvelope);
-                }
-                if decoder.next_out_of_line() != (next_out_of_line + (num_bytes as usize)) {
-                    return Err($crate::Error::InvalidNumBytesInEnvelope);
                 }
                 Ok(())
             }
@@ -4099,7 +4164,11 @@ mod test {
     use matches::assert_matches;
     use std::{f32, f64, fmt, i64, u64};
 
-    pub const CONTEXTS: &[&Context] = &[
+    pub const CONTEXTS: &[&Context] = &[&Context { wire_format_version: WireFormatVersion::V1 }];
+
+    // Contexts for tests where only decode is performed.
+    // This is useful for migrations where encode might not be supported yet.
+    pub const DECODE_ONLY_CONTEXTS: &[&Context] = &[
         &Context { wire_format_version: WireFormatVersion::V1 },
         &Context { wire_format_version: WireFormatVersion::V2 },
     ];
@@ -4264,6 +4333,23 @@ mod test {
                 ],
             );
         }
+    }
+
+    #[test]
+    fn result_decode_empty_ok_value_v2() {
+        identities![(), Ok::<(), i32>(()),];
+        let mut result: std::result::Result<(), u32> = Err(0);
+        Decoder::decode_with_context(
+            &Context { wire_format_version: WireFormatVersion::V2 },
+            &[
+                0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // success ordinal
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, // empty struct inline
+            ],
+            &mut [],
+            &mut result,
+        )
+        .expect("Decoding failed");
+        assert_matches!(result, Ok(()));
     }
 
     #[test]
@@ -4686,7 +4772,7 @@ mod test {
         ];
         let obj = DirectCopyStruct { a: 0x0807060504030201, b: 0x0c0b0a09, c: 0x0e0d, d: 0x100f };
 
-        for ctx in CONTEXTS {
+        for ctx in DECODE_ONLY_CONTEXTS {
             let mut out = DirectCopyStruct::new_empty();
             Decoder::decode_with_context(ctx, bytes, &mut [], &mut out).expect("Decoding failed");
             assert_eq!(out, obj);
@@ -4800,7 +4886,7 @@ mod test {
         ];
         let header = TransactionHeader { tx_id: 4, ordinal: 6, flags: [0; 3], magic_number: 1 };
 
-        for ctx in CONTEXTS {
+        for ctx in DECODE_ONLY_CONTEXTS {
             let mut out = TransactionHeader::new_empty();
             Decoder::decode_with_context(ctx, bytes, &mut [], &mut out).expect("Decoding failed");
             assert_eq!(out, header);
@@ -4857,7 +4943,7 @@ mod test {
 
     #[test]
     fn extra_data_is_disallowed() {
-        for ctx in CONTEXTS {
+        for ctx in DECODE_ONLY_CONTEXTS {
             let mut output = ();
             assert_matches!(
                 Decoder::decode_with_context(ctx, &[0], &mut [], &mut output),

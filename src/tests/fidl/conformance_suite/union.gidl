@@ -573,7 +573,7 @@ decode_failure("RequiredStrictValueUnionZeroOrdinalWithPayload") {
     bytes = {
         v1 = [
             num(0):8, // zero ordinal
-            num(24):4, num(0):4, repeat(0x00):8, // envelope
+            num(24):4, num(0):4, repeat(0xff):8, // envelope
             repeat(0xab):20, padding:4, // unknown bytes
         ],
         v2 = [
@@ -582,7 +582,7 @@ decode_failure("RequiredStrictValueUnionZeroOrdinalWithPayload") {
             repeat(0xab):20, padding:4, // unknown bytes
         ],
     },
-    err = INVALID_NUM_BYTES_IN_ENVELOPE,
+    err = UNION_FIELD_NOT_SET,
 }
 
 decode_failure("RequiredStrictResourceUnionZeroOrdinalNoPayload") {
@@ -609,7 +609,7 @@ decode_failure("RequiredStrictResourceUnionZeroOrdinalWithPayload") {
     bytes = {
         v1 = [
             num(0):8, // zero ordinal
-            num(24):4, num(0):4, repeat(0x00):8, // envelope
+            num(24):4, num(0):4, repeat(0xff):8, // envelope
             repeat(0xab):20, padding:4, // unknown bytes
         ],
         v2 = [
@@ -618,7 +618,7 @@ decode_failure("RequiredStrictResourceUnionZeroOrdinalWithPayload") {
             repeat(0xab):20, padding:4, // unknown bytes
         ],
     },
-    err = INVALID_NUM_BYTES_IN_ENVELOPE,
+    err = UNION_FIELD_NOT_SET,
 }
 
 decode_failure("RequiredFlexibleValueUnionZeroOrdinalNoPayload") {
@@ -645,7 +645,7 @@ decode_failure("RequiredFlexibleValueUnionZeroOrdinalWithPayload") {
     bytes = {
         v1 = [
             num(0):8, // zero ordinal
-            num(24):4, num(0):4, repeat(0x00):8, // envelope
+            num(24):4, num(0):4, repeat(0xff):8, // envelope
             repeat(0xab):20, padding:4, // unknown bytes
         ],
         v2 = [
@@ -654,7 +654,7 @@ decode_failure("RequiredFlexibleValueUnionZeroOrdinalWithPayload") {
             repeat(0xab):20, padding:4, // unknown bytes
         ],
     },
-    err = INVALID_NUM_BYTES_IN_ENVELOPE,
+    err = UNION_FIELD_NOT_SET,
 }
 
 decode_failure("RequiredFlexibleResourceUnionZeroOrdinalNoPayload") {
@@ -681,7 +681,7 @@ decode_failure("RequiredFlexibleResourceUnionZeroOrdinalWithPayload") {
     bytes = {
         v1 = [
             num(0):8, // zero ordinal
-            num(24):4, num(0):4, repeat(0x00):8, // envelope
+            num(24):4, num(0):4, repeat(0xff):8, // envelope
             repeat(0xab):20, padding:4, // unknown bytes
         ],
         v2 = [
@@ -690,7 +690,7 @@ decode_failure("RequiredFlexibleResourceUnionZeroOrdinalWithPayload") {
             repeat(0xab):20, padding:4, // unknown bytes
         ],
     },
-    err = INVALID_NUM_BYTES_IN_ENVELOPE,
+    err = UNION_FIELD_NOT_SET,
 }
 
 success("OptionalStrictValueUnionZeroOrdinalNoPayload") {
@@ -718,7 +718,7 @@ decode_failure("OptionalStrictValueUnionZeroOrdinalWithPayload") {
     bytes = {
         v1 = [
             num(0):8, // zero ordinal
-            num(24):4, num(0):4, repeat(0x00):8, // envelope
+            num(24):4, num(0):4, repeat(0xff):8, // envelope
             repeat(0xab):20, padding:4, // unknown bytes
         ],
         v2 = [
@@ -727,7 +727,7 @@ decode_failure("OptionalStrictValueUnionZeroOrdinalWithPayload") {
             repeat(0xab):20, padding:4, // unknown bytes
         ],
     },
-    err = INVALID_NUM_BYTES_IN_ENVELOPE,
+    err = UNION_FIELD_NOT_SET,
 }
 
 success("OptionalStrictResourceUnionZeroOrdinalNoPayload") {
@@ -755,7 +755,7 @@ decode_failure("OptionalStrictResourceUnionZeroOrdinalWithPayload") {
     bytes = {
         v1 = [
             num(0):8, // zero ordinal
-            num(24):4, num(0):4, repeat(0x00):8, // envelope
+            num(24):4, num(0):4, repeat(0xff):8, // envelope
             repeat(0xab):20, padding:4, // unknown bytes
         ],
         v2 = [
@@ -764,7 +764,7 @@ decode_failure("OptionalStrictResourceUnionZeroOrdinalWithPayload") {
             repeat(0xab):20, padding:4, // unknown bytes
         ],
     },
-    err = INVALID_NUM_BYTES_IN_ENVELOPE,
+    err = UNION_FIELD_NOT_SET,
 }
 
 success("OptionalFlexibleValueUnionZeroOrdinalNoPayload") {
@@ -791,7 +791,7 @@ decode_failure("OptionalFlexibleValueUnionZeroOrdinalWithPayload") {
     bytes = {
         v1 = [
             num(0):8, // zero ordinal
-            num(24):4, num(0):4, repeat(0x00):8, // envelope
+            num(24):4, num(0):4, repeat(0xff):8, // envelope
             repeat(0xab):20, padding:4, // unknown bytes
         ],
         v2 = [
@@ -800,7 +800,7 @@ decode_failure("OptionalFlexibleValueUnionZeroOrdinalWithPayload") {
             repeat(0xab):20, padding:4, // unknown bytes
         ],
     },
-    err = INVALID_NUM_BYTES_IN_ENVELOPE,
+    err = UNION_FIELD_NOT_SET,
 }
 
 success("OptionalFlexibleResourceUnionZeroOrdinalNoPayload") {
@@ -827,7 +827,7 @@ decode_failure("OptionalFlexibleResourceUnionZeroOrdinalWithPayload") {
     bytes = {
         v1 = [
             num(0):8, // zero ordinal
-            num(24):4, num(0):4, repeat(0x00):8, // envelope
+            num(24):4, num(0):4, repeat(0xff):8, // envelope
             repeat(0xab):20, padding:4, // unknown bytes
         ],
         v2 = [
@@ -836,7 +836,7 @@ decode_failure("OptionalFlexibleResourceUnionZeroOrdinalWithPayload") {
             repeat(0xab):20, padding:4, // unknown bytes
         ],
     },
-    err = INVALID_NUM_BYTES_IN_ENVELOPE,
+    err = UNION_FIELD_NOT_SET,
 }
 
 encode_failure("RequiredStrictValueUnionDefaultInitialized") {
