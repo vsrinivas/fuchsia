@@ -3645,6 +3645,8 @@ fn generate_global_address(
 
 #[cfg(test)]
 mod tests {
+    #![deny(unused_results)]
+
     use super::*;
 
     use core::convert::{TryFrom, TryInto};
@@ -3670,10 +3672,10 @@ mod tests {
     };
     use crate::testutil::{
         self, get_counter_val, run_for, set_logger_for_test, trigger_next_timer,
-        DummyEventDispatcher, DummyEventDispatcherBuilder, DummyInstant, DummyNetwork, TestIpExt,
-        DUMMY_CONFIG_V6,
+        DummyEventDispatcher, DummyEventDispatcherBuilder, DummyInstant, DummyNetwork, StepResult,
+        TestIpExt, DUMMY_CONFIG_V6,
     };
-    use crate::{Context, Instant, StackStateBuilder, TimerId, TimerIdInner};
+    use crate::{Context, Instant, Ipv6StateBuilder, StackStateBuilder, TimerId, TimerIdInner};
 
     type IcmpParseArgs = packet_formats::icmp::IcmpParseArgs<Ipv6Addr>;
 
@@ -4282,7 +4284,10 @@ mod tests {
         add_ip_addr_subnet(&mut ctx, dev_id, AddrSubnet::new(local_ip().get(), 128).unwrap())
             .unwrap();
 
-        lookup::<EthernetLinkDevice, _>(&mut ctx, dev_id.id().into(), remote_ip());
+        assert_eq!(
+            lookup::<EthernetLinkDevice, _>(&mut ctx, dev_id.id().into(), remote_ip()),
+            None
+        );
 
         // Check that we send the original neighbor solicitation, then resend a
         // few times if we don't receive a response.
@@ -4306,9 +4311,9 @@ mod tests {
     fn test_address_resolution() {
         set_logger_for_test();
         let mut local = DummyEventDispatcherBuilder::default();
-        local.add_device(TEST_LOCAL_MAC);
+        assert_eq!(local.add_device(TEST_LOCAL_MAC), 0);
         let mut remote = DummyEventDispatcherBuilder::default();
-        remote.add_device(TEST_REMOTE_MAC);
+        assert_eq!(remote.add_device(TEST_REMOTE_MAC), 0);
         let device_id = DeviceId::new_ethernet(0);
 
         let mut net = DummyNetwork::new(
@@ -4361,7 +4366,7 @@ mod tests {
         // A timer should've been started.
         assert_eq!(net.context("local").dispatcher.timer_events().count(), 1);
 
-        net.step();
+        let _: StepResult = net.step();
         // Neighbor entry for remote should be marked as Incomplete.
         assert_eq!(
             StateContext::<NdpState<EthernetLinkDevice, DummyInstant>, _>::get_state_mut_with(
@@ -4383,7 +4388,7 @@ mod tests {
         assert_eq!(net.context("remote").dispatcher.frames_sent().len(), 1);
 
         // Forward advertisement response back to local.
-        net.step();
+        let _: StepResult = net.step();
 
         assert_eq!(
             *net.context("local").state().test_counters.get("ndp::rx_neighbor_advertisement"),
@@ -4426,7 +4431,7 @@ mod tests {
         // Upon link layer resolution, the original ping request should've been
         // sent out.
         assert_eq!(net.context("local").dispatcher.frames_sent().len(), 1);
-        net.step();
+        let _: StepResult = net.step();
         assert_eq!(
             *net.context("remote").state().test_counters.get("<IcmpIpTransportContext as BufferIpTransportContext<Ipv6>>::receive_ip_packet::echo_request"),
             1
@@ -4454,7 +4459,10 @@ mod tests {
         add_ip_addr_subnet(&mut ctx, dev_id, AddrSubnet::new(local_ip().get(), 128).unwrap())
             .unwrap();
 
-        lookup::<EthernetLinkDevice, _>(&mut ctx, dev_id.id().into(), remote_ip());
+        assert_eq!(
+            lookup::<EthernetLinkDevice, _>(&mut ctx, dev_id.id().into(), remote_ip()),
+            None
+        );
 
         // This should have scheduled a timer
         assert_eq!(ctx.dispatcher.timer_events().count(), 1);
@@ -4530,7 +4538,7 @@ mod tests {
         assert!(is_in_ip_multicast(net.context("local"), device_id, multicast_addr));
         assert!(is_in_ip_multicast(net.context("remote"), device_id, multicast_addr));
 
-        net.step();
+        let _: StepResult = net.step();
 
         // They should now realize the address they intend to use has a
         // duplicate in the local network.
@@ -4557,9 +4565,9 @@ mod tests {
         // address.
         set_logger_for_test();
         let mut local = DummyEventDispatcherBuilder::default();
-        local.add_device(TEST_LOCAL_MAC);
+        assert_eq!(local.add_device(TEST_LOCAL_MAC), 0);
         let mut remote = DummyEventDispatcherBuilder::default();
-        remote.add_device(TEST_REMOTE_MAC);
+        assert_eq!(remote.add_device(TEST_REMOTE_MAC), 0);
         let device_id = DeviceId::new_ethernet(0);
 
         let mut net = DummyNetwork::new(
@@ -4612,7 +4620,7 @@ mod tests {
         assert!(is_in_ip_multicast(net.context("local"), device_id, multicast_addr));
         assert!(is_in_ip_multicast(net.context("remote"), device_id, multicast_addr));
 
-        net.step();
+        let _: StepResult = net.step();
 
         assert_eq!(
             get_assigned_ip_addr_subnets::<_, Ipv6Addr>(net.context("remote"), device_id).count(),
@@ -4707,9 +4715,9 @@ mod tests {
         set_logger_for_test();
         let mac = Mac::new([1, 2, 3, 4, 5, 6]);
         let mut local = DummyEventDispatcherBuilder::default();
-        local.add_device(mac);
+        assert_eq!(local.add_device(mac), 0);
         let mut remote = DummyEventDispatcherBuilder::default();
-        remote.add_device(mac);
+        assert_eq!(remote.add_device(mac), 0);
         let device_id = DeviceId::new_ethernet(0);
         let mut net = DummyNetwork::new(
             vec![("local", local.build()), ("remote", remote.build())].into_iter(),
@@ -4756,7 +4764,7 @@ mod tests {
         assert_eq!(net.context("local").dispatcher.frames_sent().len(), 3);
         assert_eq!(net.context("remote").dispatcher.frames_sent().len(), 1);
 
-        net.step();
+        let _: StepResult = net.step();
 
         // Let's make sure that all timers are cancelled properly.
         assert_eq!(net.context("local").dispatcher.timer_events().count(), 0);
@@ -4797,7 +4805,9 @@ mod tests {
         assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
 
         // Send another NS.
-        run_for(&mut ctx, Duration::from_secs(1));
+        let local_timer_id =
+            NdpTimerId::new_dad_ns_transmission(dev_id.id().into(), local_ip()).into();
+        assert_eq!(run_for(&mut ctx, Duration::from_secs(1)), [local_timer_id]);
         assert_eq!(ctx.dispatcher().frames_sent().len(), 2);
 
         // Add another IP
@@ -4812,7 +4822,12 @@ mod tests {
         assert_eq!(ctx.dispatcher().frames_sent().len(), 3);
 
         // Run to the end for DAD for local ip
-        run_for(&mut ctx, Duration::from_secs(2));
+        let remote_timer_id =
+            NdpTimerId::new_dad_ns_transmission(dev_id.id().into(), remote_ip()).into();
+        assert_eq!(
+            run_for(&mut ctx, Duration::from_secs(2)),
+            [local_timer_id, remote_timer_id, local_timer_id, remote_timer_id]
+        );
         assert!(get_ip_addr_state(&ctx, dev_id, &local_ip().into_specified())
             .unwrap()
             .is_assigned());
@@ -4822,7 +4837,7 @@ mod tests {
         assert_eq!(ctx.dispatcher().frames_sent().len(), 6);
 
         // Run to the end for DAD for local ip
-        run_for(&mut ctx, Duration::from_secs(1));
+        assert_eq!(run_for(&mut ctx, Duration::from_secs(1)), [remote_timer_id]);
         assert!(get_ip_addr_state(&ctx, dev_id, &local_ip().into_specified())
             .unwrap()
             .is_assigned());
@@ -4859,7 +4874,9 @@ mod tests {
         assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
 
         // Send another NS.
-        run_for(&mut ctx, Duration::from_secs(1));
+        let local_timer_id =
+            NdpTimerId::new_dad_ns_transmission(dev_id.id().into(), local_ip()).into();
+        assert_eq!(run_for(&mut ctx, Duration::from_secs(1)), [local_timer_id]);
         assert_eq!(ctx.dispatcher().frames_sent().len(), 2);
 
         // Add another IP
@@ -4874,7 +4891,9 @@ mod tests {
         assert_eq!(ctx.dispatcher().frames_sent().len(), 3);
 
         // Run 1s
-        run_for(&mut ctx, Duration::from_secs(1));
+        let remote_timer_id =
+            NdpTimerId::new_dad_ns_transmission(dev_id.id().into(), remote_ip()).into();
+        assert_eq!(run_for(&mut ctx, Duration::from_secs(1)), [local_timer_id, remote_timer_id]);
         assert!(get_ip_addr_state(&ctx, dev_id, &local_ip().into_specified())
             .unwrap()
             .is_tentative());
@@ -4892,7 +4911,7 @@ mod tests {
         assert_eq!(ctx.dispatcher().frames_sent().len(), 5);
 
         // Run to the end for DAD for local ip
-        run_for(&mut ctx, Duration::from_secs(2));
+        assert_eq!(run_for(&mut ctx, Duration::from_secs(2)), [remote_timer_id, remote_timer_id]);
         assert!(get_ip_addr_state(&ctx, dev_id, &local_ip().into_specified()).is_none());
         assert!(get_ip_addr_state(&ctx, dev_id, &remote_ip().into_specified())
             .unwrap()
@@ -4954,7 +4973,7 @@ mod tests {
         // Test receiving NDP RS as a router (should receive)
 
         let mut state_builder = StackStateBuilder::default();
-        state_builder.ipv6_builder().forward(true);
+        let _: &mut Ipv6StateBuilder = state_builder.ipv6_builder().forward(true);
         let mut ctx = DummyEventDispatcherBuilder::from_config(config.clone())
             .build_with(state_builder, DummyEventDispatcher::default());
         set_routing_enabled::<_, Ipv6>(&mut ctx, DeviceId::new_ethernet(0), true);
@@ -5953,7 +5972,7 @@ mod tests {
         // device.
 
         let mut state_builder = StackStateBuilder::default();
-        state_builder.ipv6_builder().forward(false);
+        let _: &mut Ipv6StateBuilder = state_builder.ipv6_builder().forward(false);
         let mut ndp_configs = NdpConfigurations::default();
         ndp_configs.set_dup_addr_detect_transmits(None);
         state_builder.device_builder().set_default_ndp_configs(ndp_configs);
@@ -6007,7 +6026,7 @@ mod tests {
         // Now make the netstack and a device actually routing capable.
 
         let mut state_builder = StackStateBuilder::default();
-        state_builder.ipv6_builder().forward(true);
+        let _: &mut Ipv6StateBuilder = state_builder.ipv6_builder().forward(true);
         let mut ndp_configs = NdpConfigurations::default();
         ndp_configs.set_dup_addr_detect_transmits(None);
         state_builder.device_builder().set_default_ndp_configs(ndp_configs);
@@ -6032,11 +6051,13 @@ mod tests {
 
         // Should have sent a frame and have a router solicitation timer setup.
         assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
-        parse_icmp_packet_in_ip_packet_in_ethernet_frame::<Ipv6, _, RouterSolicitation, _>(
-            &ctx.dispatcher().frames_sent()[0].1,
-            |_| {},
-        )
-        .unwrap();
+        matches::assert_matches!(
+            parse_icmp_packet_in_ip_packet_in_ethernet_frame::<Ipv6, _, RouterSolicitation, _>(
+                &ctx.dispatcher().frames_sent()[0].1,
+                |_| {},
+            ),
+            Ok((_, _, _, _, _, _, _))
+        );
         assert_eq!(ctx.dispatcher().timer_events().filter(|x| *x.1 == timer_id).count(), 1);
 
         // Enable routing on the device.
@@ -6061,11 +6082,13 @@ mod tests {
 
         // Should have sent a router solicitation.
         assert_eq!(ctx.dispatcher().frames_sent().len(), 2);
-        parse_icmp_packet_in_ip_packet_in_ethernet_frame::<Ipv6, _, RouterSolicitation, _>(
-            &ctx.dispatcher().frames_sent()[1].1,
-            |_| {},
-        )
-        .unwrap();
+        matches::assert_matches!(
+            parse_icmp_packet_in_ip_packet_in_ethernet_frame::<Ipv6, _, RouterSolicitation, _>(
+                &ctx.dispatcher().frames_sent()[1].1,
+                |_| {},
+            ),
+            Ok((_, _, _, _, _, _, _))
+        );
         assert_eq!(ctx.dispatcher().timer_events().filter(|x| *x.1 == timer_id).count(), 1);
     }
 
@@ -6210,7 +6233,7 @@ mod tests {
         ndp_configs.set_dup_addr_detect_transmits(None);
         ndp_configs.set_max_router_solicitations(None);
         stack_builder.device_builder().set_default_ndp_configs(ndp_configs);
-        stack_builder.ipv6_builder().forward(true);
+        let _: &mut Ipv6StateBuilder = stack_builder.ipv6_builder().forward(true);
         let mut ctx = Context::new(stack_builder.build(), DummyEventDispatcher::default());
         let device =
             ctx.state_mut().add_ethernet_device(TEST_LOCAL_MAC, Ipv6::MINIMUM_LINK_MTU.into());
@@ -6245,7 +6268,7 @@ mod tests {
         let mut ndp_configs = NdpConfigurations::default();
         ndp_configs.set_max_router_solicitations(None);
         stack_builder.device_builder().set_default_ndp_configs(ndp_configs);
-        stack_builder.ipv6_builder().forward(true);
+        let _: &mut Ipv6StateBuilder = stack_builder.ipv6_builder().forward(true);
         let mut ctx = Context::new(stack_builder.build(), DummyEventDispatcher::default());
         let device =
             ctx.state_mut().add_ethernet_device(TEST_LOCAL_MAC, Ipv6::MINIMUM_LINK_MTU.into());
@@ -6286,7 +6309,7 @@ mod tests {
         ndp_configs.set_dup_addr_detect_transmits(None);
         ndp_configs.set_max_router_solicitations(None);
         stack_builder.device_builder().set_default_ndp_configs(ndp_configs);
-        stack_builder.ipv6_builder().forward(true);
+        let _: &mut Ipv6StateBuilder = stack_builder.ipv6_builder().forward(true);
         let mut ctx = Context::new(stack_builder.build(), DummyEventDispatcher::default());
         let device =
             ctx.state_mut().add_ethernet_device(TEST_LOCAL_MAC, Ipv6::MINIMUM_LINK_MTU.into());
@@ -6314,7 +6337,7 @@ mod tests {
         ndp_configs.set_max_router_solicitations(None);
         ndp_configs.set_dup_addr_detect_transmits(NonZeroU8::new(3));
         stack_builder.device_builder().set_default_ndp_configs(ndp_configs.clone());
-        stack_builder.ipv6_builder().forward(true);
+        let _: &mut Ipv6StateBuilder = stack_builder.ipv6_builder().forward(true);
         let mut ctx = Context::new(stack_builder.build(), DummyEventDispatcher::default());
         let device =
             ctx.state_mut().add_ethernet_device(TEST_LOCAL_MAC, Ipv6::MINIMUM_LINK_MTU.into());
@@ -6379,7 +6402,7 @@ mod tests {
         ndp_configs.set_dup_addr_detect_transmits(None);
         ndp_configs.set_max_router_solicitations(None);
         stack_builder.device_builder().set_default_ndp_configs(ndp_configs);
-        stack_builder.ipv6_builder().forward(true);
+        let _: &mut Ipv6StateBuilder = stack_builder.ipv6_builder().forward(true);
         let mut ctx = Context::new(stack_builder.build(), DummyEventDispatcher::default());
         let device =
             ctx.state_mut().add_ethernet_device(TEST_LOCAL_MAC, Ipv6::MINIMUM_LINK_MTU.into());
@@ -6522,7 +6545,7 @@ mod tests {
         // Test sending router advertisements (after dad).
 
         let mut state_builder = StackStateBuilder::default();
-        state_builder.ipv6_builder().forward(true);
+        let _: &mut Ipv6StateBuilder = state_builder.ipv6_builder().forward(true);
         let mut default_ndp_configs = NdpConfigurations::default();
         default_ndp_configs.set_max_router_solicitations(None);
         state_builder.device_builder().set_default_ndp_configs(default_ndp_configs.clone());
@@ -6636,7 +6659,7 @@ mod tests {
         ndp_configs.set_max_router_solicitations(None);
 
         let mut state_builder = StackStateBuilder::default();
-        state_builder.ipv6_builder().forward(true);
+        let _: &mut Ipv6StateBuilder = state_builder.ipv6_builder().forward(true);
         state_builder.device_builder().set_default_ndp_configs(ndp_configs.clone());
         let mut ctx = DummyEventDispatcherBuilder::default()
             .build_with(state_builder, DummyEventDispatcher::default());
@@ -6763,7 +6786,7 @@ mod tests {
 
         let dummy_config = Ipv6::DUMMY_CONFIG;
         let mut state_builder = StackStateBuilder::default();
-        state_builder.ipv6_builder().forward(true);
+        let _: &mut Ipv6StateBuilder = state_builder.ipv6_builder().forward(true);
         state_builder.device_builder().set_default_ndp_configs(ndp_configs.clone());
         let mut ctx = DummyEventDispatcherBuilder::default()
             .build_with(state_builder, DummyEventDispatcher::default());
@@ -6854,7 +6877,7 @@ mod tests {
         );
 
         // Skip time to right before the next Router Advertisement transmission.
-        run_for(&mut ctx, MAX_INITIAL_RTR_ADVERT_INTERVAL - MIN_RA_DELAY_TIME);
+        assert_eq!(run_for(&mut ctx, MAX_INITIAL_RTR_ADVERT_INTERVAL - MIN_RA_DELAY_TIME), []);
         let now = ctx.now();
         assert_eq!(
             ctx.dispatcher()
@@ -6910,7 +6933,7 @@ mod tests {
         let last_instant = ctx.now();
 
         // Skip time by 1s (less than `MIN_DELAY_BETWEEN_RAS`).
-        run_for(&mut ctx, MIN_DELAY_BETWEEN_RAS - Duration::from_secs(1));
+        assert_eq!(run_for(&mut ctx, MIN_DELAY_BETWEEN_RAS - Duration::from_secs(1)), []);
         assert_eq!(
             ctx.dispatcher()
                 .timer_events()
@@ -6989,7 +7012,7 @@ mod tests {
 
         let dummy_config = Ipv6::DUMMY_CONFIG;
         let mut state_builder = StackStateBuilder::default();
-        state_builder.ipv6_builder().forward(true);
+        let _: &mut Ipv6StateBuilder = state_builder.ipv6_builder().forward(true);
         state_builder.device_builder().set_default_ndp_configs(ndp_configs.clone());
         let mut ctx = DummyEventDispatcherBuilder::default()
             .build_with(state_builder, DummyEventDispatcher::default());
@@ -7133,7 +7156,7 @@ mod tests {
         let host = DummyEventDispatcherBuilder::default()
             .build_with(state_builder, DummyEventDispatcher::default());
         let mut state_builder = StackStateBuilder::default();
-        state_builder.ipv6_builder().forward(true);
+        let _: &mut Ipv6StateBuilder = state_builder.ipv6_builder().forward(true);
         state_builder.device_builder().set_default_ndp_configs(ndp_configs);
         let router = DummyEventDispatcherBuilder::default()
             .build_with(state_builder, DummyEventDispatcher::default());
@@ -7578,7 +7601,7 @@ mod tests {
         ndp_configs.set_dup_addr_detect_transmits(None);
         ndp_configs.set_max_router_solicitations(None);
         state_builder.device_builder().set_default_ndp_configs(ndp_configs);
-        state_builder.ipv6_builder().forward(true);
+        let _: &mut Ipv6StateBuilder = state_builder.ipv6_builder().forward(true);
         let mut ctx = DummyEventDispatcherBuilder::default()
             .build_with(state_builder, DummyEventDispatcher::default());
         let device =
@@ -7985,7 +8008,7 @@ mod tests {
             0
         );
 
-        assert_eq!(run_for(&mut ctx, Duration::from_secs(1)).len(), 0);
+        assert_eq!(run_for(&mut ctx, Duration::from_secs(1)), []);
 
         assert_eq!(
             NdpContext::<EthernetLinkDevice>::get_ipv6_addr_entries(&ctx, device.id().into())
@@ -8946,7 +8969,7 @@ mod tests {
         inner_test(&mut ctx, device, src_ip, dst_ip, subnet, expected_addr_sub, 1001, 7201, 7201);
 
         // Make remaining lifetime < 2 hrs.
-        assert_eq!(run_for(&mut ctx, Duration::from_secs(1000)).len(), 0);
+        assert_eq!(run_for(&mut ctx, Duration::from_secs(1000)), []);
 
         // If the remaining lifetime is <= 2 hrs & valid lifetime is less than
         // that, don't update valid lifetime.
@@ -8968,7 +8991,7 @@ mod tests {
         inner_test(&mut ctx, device, src_ip, dst_ip, subnet, expected_addr_sub, 1001, 7202, 7202);
 
         // Make remaining lifetime < 2 hrs.
-        assert_eq!(run_for(&mut ctx, Duration::from_secs(1000)).len(), 0);
+        assert_eq!(run_for(&mut ctx, Duration::from_secs(1000)), []);
 
         // If the remaining lifetime is <= 2 hrs & valid lifetime is less than
         // that, don't update valid lifetime.

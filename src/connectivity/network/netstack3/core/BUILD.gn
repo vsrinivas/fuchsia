@@ -30,6 +30,7 @@ rustc_library("netstack3-core") {
     "//src/lib/zerocopy",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:log",
+    "//third_party/rust_crates:matches",
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:rand_xorshift",
     "//third_party/rust_crates:thiserror",
