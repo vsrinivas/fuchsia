@@ -52,14 +52,42 @@ kernel_cmdline("toulouse") {
   ]
 }
 
-kernel_cmdline("x64-reduced-perf-variation") {
+# This collects settings not specific to any particular machine that are
+# recommended to minimize unintended effects on timing data.  Note that this
+# does not (as yet) include settings that may reduce overall performance, which
+# x64-reduced-perf-variation (below) does (see x64-reduced-perf-variation.gni).
+group("reduced-perf-variation") {
+  deps = [
+    ":disable-page-scanner",
+    ":quiet-early-boot",
+  ]
+}
+
+kernel_cmdline("quiet-early-boot") {
   args = [
     # Disable serial console printing during early boot, a phase during which
     # UART communication is single-threaded and synchronous. In production,
     # the serial console will be disabled, and so early boot benchmarks that
     # include this work is sensibly avoided.
     "kernel.phys.verbose=false",
+  ]
+}
 
+kernel_cmdline("disable-page-scanner") {
+  args = [
+    # Disable page scanning in all its forms. Page scanning is intended to
+    # provide a memory benefit to final systems, but the operation of the
+    # scanner and its unpredictable de-duplication or eviction of memory in use
+    # by benchmarks could cause noticeable variation.
+    "kernel.page-scanner.start-at-boot=false",
+    "kernel.page-scanner.zero-page-scans-per-second=0",
+    "kernel.page-scanner.enable-eviction=false",
+  ]
+}
+
+kernel_cmdline("x64-reduced-perf-variation") {
+  deps = [ ":reduced-perf-variation" ]
+  args = [
     # Disable Intel Turbo Boost. Turbo Boost provides a significant speed-up to
     # many workloads, but — because CPU frequencies vary based on previous work,
     # work in other cores, system temperature, etc — makes performance of systems
@@ -87,14 +115,6 @@ kernel_cmdline("x64-reduced-perf-variation") {
     # which should bring all devices to the same patch level, removing the
     # performance differences when spectre mitigations are in place.
     "kernel.x86.disable_spec_mitigations=true",
-
-    # Disable page scanning in all its forms. Page scanning is intended to
-    # provide a memory benefit to final systems, but the operation of the scanner
-    # and its unpredictable de-duplication or eviction  of memory in use by
-    # benchmarks could cause noticable variation.
-    "kernel.page-scanner.start-at-boot=false",
-    "kernel.page-scanner.zero-page-scans-per-second=0",
-    "kernel.page-scanner.enable-eviction=false",
   ]
 }
 
