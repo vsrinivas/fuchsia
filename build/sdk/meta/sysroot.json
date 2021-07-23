@@ -1,116 +1,114 @@
 {
-  "$schema": "http://json-schema.org/draft-04/schema#",
-  "id": "http://fuchsia.com/schemas/sdk/sysroot.json",
-  "description": "The sysroot",
-  "type": "object",
-  "allOf": [
-    {
-      "$ref": "common.json#/definitions/sdk_element"
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "allOf": [
+        {
+            "$ref": "common.json#/definitions/sdk_element"
+        },
+        {
+            "additionalProperties": false,
+            "properties": {
+                "name": {
+                    "enum": [
+                        "sysroot"
+                    ],
+                    "type": "string"
+                },
+                "type": {
+                    "allOf": [
+                        {
+                            "$ref": "common.json#/definitions/kind"
+                        },
+                        {
+                            "enum": [
+                                "sysroot"
+                            ]
+                        }
+                    ]
+                },
+                "versions": {
+                    "additionalProperties": false,
+                    "description": "The various versions of the sysroot, per architecture",
+                    "maxProperties": 2,
+                    "minProperties": 1,
+                    "properties": {
+                        "arm64": {
+                            "$ref": "#/definitions/version",
+                            "description": "arm64 version"
+                        },
+                        "x64": {
+                            "$ref": "#/definitions/version",
+                            "description": "x64 version"
+                        }
+                    },
+                    "type": "object"
+                }
+            },
+            "required": [
+                "versions",
+                "name",
+                "type"
+            ]
+        }
+    ],
+    "definitions": {
+        "version": {
+            "additionalProperties": false,
+            "description": "Sysroot files for a given architecture",
+            "properties": {
+                "debug_libs": {
+                    "description": "List of libraries for debugging",
+                    "items": {
+                        "$ref": "common.json#/definitions/file"
+                    },
+                    "type": "array"
+                },
+                "dist_dir": {
+                    "$ref": "common.json#/definitions/file",
+                    "description": "Path to the base directory for prebuilt libraries"
+                },
+                "dist_libs": {
+                    "description": "List of libraries for inclusion in packages",
+                    "items": {
+                        "$ref": "common.json#/definitions/file"
+                    },
+                    "type": "array"
+                },
+                "headers": {
+                    "description": "List of public headers",
+                    "items": {
+                        "$ref": "common.json#/definitions/file"
+                    },
+                    "type": "array"
+                },
+                "include_dir": {
+                    "$ref": "common.json#/definitions/file",
+                    "description": "Path to the base directory for includes"
+                },
+                "link_libs": {
+                    "description": "List of link-time libraries",
+                    "items": {
+                        "$ref": "common.json#/definitions/file"
+                    },
+                    "type": "array"
+                },
+                "root": {
+                    "$ref": "common.json#/definitions/file",
+                    "description": "Path to the root of the sysroot"
+                }
+            },
+            "required": [
+                "root",
+                "headers",
+                "include_dir",
+                "link_libs",
+                "dist_libs",
+                "debug_libs",
+                "dist_dir"
+            ],
+            "type": "object"
+        }
     },
-    {
-      "properties": {
-        "type": {
-          "allOf": [
-            {
-              "$ref": "common.json#/definitions/type"
-            },
-            {
-              "enum": [
-                "sysroot"
-              ]
-            }
-          ]
-        },
-        "name": {
-          "description": "Always 'sysroot'",
-          "type": "string",
-          "enum": [
-            "sysroot"
-          ]
-        },
-        "versions": {
-          "description": "The various versions of the sysroot, per architecture",
-          "type": "object",
-          "properties": {
-            "x64": {
-              "description": "x64 version",
-              "$ref": "#/definitions/version"
-            },
-            "arm64": {
-              "description": "arm64 version",
-              "$ref": "#/definitions/version"
-            }
-          },
-          "additionalProperties": false,
-          "minProperties": 1,
-          "maxProperties": 2
-        }
-      },
-      "required": [
-        "versions",
-
-        "name",
-        "type"
-      ],
-      "additionalProperties": false
-    }
-  ],
-  "definitions": {
-    "version": {
-      "description": "Sysroot files for a given architecture",
-      "type": "object",
-      "properties": {
-        "root": {
-          "description": "Path to the root of the sysroot",
-          "$ref": "common.json#/definitions/file"
-        },
-        "headers": {
-          "description": "List of public headers",
-          "type": "array",
-          "items": {
-            "$ref": "common.json#/definitions/file"
-          }
-        },
-        "dist_dir": {
-          "description": "Path to the base directory for prebuilt libraries",
-          "$ref": "common.json#/definitions/file"
-        },
-        "include_dir": {
-          "description": "Path to the base directory for includes",
-          "$ref": "common.json#/definitions/file"
-        },
-        "link_libs": {
-          "description": "List of link-time libraries",
-          "type": "array",
-          "items": {
-            "$ref": "common.json#/definitions/file"
-          }
-        },
-        "dist_libs": {
-          "description": "List of libraries for inclusion in packages",
-          "type": "array",
-          "items": {
-            "$ref": "common.json#/definitions/file"
-          }
-        },
-        "debug_libs": {
-          "description": "List of libraries for debugging",
-          "type": "array",
-          "items": {
-            "$ref": "common.json#/definitions/file"
-          }
-        }
-      },
-      "required": [
-        "root",
-        "headers",
-        "include_dir",
-        "link_libs",
-        "dist_libs",
-        "debug_libs",
-        "dist_dir"
-      ],
-      "additionalProperties": false
-    }
-  }
+    "description": "The sysroot",
+    "id": "http://fuchsia.com/schemas/sdk/sysroot.json",
+    "type": "object"
 }
