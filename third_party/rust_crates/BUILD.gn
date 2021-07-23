@@ -413,7 +413,7 @@ group("num-derive") {
 }
 
 group("num-traits") {
-  deps = [ ":num-traits-v0_2_11" ]
+  deps = [ ":num-traits-v0_2_14" ]
 }
 
 group("numtoa") {
@@ -2066,7 +2066,7 @@ rust_library("chrono-v0_4_11") {
 
   deps = []
   deps += [ ":num-integer-v0_1_39" ]
-  deps += [ ":num-traits-v0_2_11" ]
+  deps += [ ":num-traits-v0_2_14" ]
   deps += [ ":time-v0_1_42" ]
 
   rustenv = []
@@ -2346,7 +2346,7 @@ rust_library("criterion-v0_2_11") {
   deps += [ ":itertools-v0_8_0" ]
   deps += [ ":lazy_static-v1_4_0" ]
   deps += [ ":libc-v0_2_88" ]
-  deps += [ ":num-traits-v0_2_11" ]
+  deps += [ ":num-traits-v0_2_14" ]
   deps += [ ":rand_core-v0_3_1" ]
   deps += [ ":rand_os-v0_1_2" ]
   deps += [ ":rand_xoshiro-v0_1_0" ]
@@ -3242,7 +3242,7 @@ rust_library("euclid-v0_22_1") {
   ]
 
   deps = []
-  deps += [ ":num-traits-v0_2_11" ]
+  deps += [ ":num-traits-v0_2_14" ]
   deps += [ ":serde-v1_0_116" ]
 
   rustenv = []
@@ -3456,7 +3456,7 @@ rust_library("float-cmp-v0_8_0") {
   ]
 
   deps = []
-  deps += [ ":num-traits-v0_2_11" ]
+  deps += [ ":num-traits-v0_2_14" ]
 
   rustenv = []
 
@@ -5497,7 +5497,7 @@ rust_library("num-v0_2_0") {
   deps += [ ":num-integer-v0_1_39" ]
   deps += [ ":num-iter-v0_1_37" ]
   deps += [ ":num-rational-v0_2_1" ]
-  deps += [ ":num-traits-v0_2_11" ]
+  deps += [ ":num-traits-v0_2_14" ]
 
   rustenv = []
 
@@ -5523,7 +5523,7 @@ rust_library("num-bigint-v0_2_2") {
 
   deps = []
   deps += [ ":num-integer-v0_1_39" ]
-  deps += [ ":num-traits-v0_2_11" ]
+  deps += [ ":num-traits-v0_2_14" ]
   deps += [ ":rand-v0_5_6" ]
 
   rustenv = []
@@ -5550,7 +5550,7 @@ rust_library("num-complex-v0_2_1") {
   ]
 
   deps = []
-  deps += [ ":num-traits-v0_2_11" ]
+  deps += [ ":num-traits-v0_2_14" ]
 
   rustenv = []
 
@@ -5599,7 +5599,7 @@ rust_library("num-integer-v0_1_39") {
   ]
 
   deps = []
-  deps += [ ":num-traits-v0_2_11" ]
+  deps += [ ":num-traits-v0_2_14" ]
 
   rustenv = []
 
@@ -5624,7 +5624,7 @@ rust_library("num-iter-v0_1_37") {
 
   deps = []
   deps += [ ":num-integer-v0_1_39" ]
-  deps += [ ":num-traits-v0_2_11" ]
+  deps += [ ":num-traits-v0_2_14" ]
 
   rustenv = []
 
@@ -5651,7 +5651,7 @@ rust_library("num-rational-v0_2_1") {
   deps = []
   deps += [ ":num-bigint-v0_2_2" ]
   deps += [ ":num-integer-v0_1_39" ]
-  deps += [ ":num-traits-v0_2_11" ]
+  deps += [ ":num-traits-v0_2_14" ]
 
   rustenv = []
 
@@ -5667,10 +5667,10 @@ rust_library("num-rational-v0_2_1") {
   ]
 }
 
-rust_library("num-traits-v0_2_11") {
+rust_library("num-traits-v0_2_14") {
   crate_name = "num_traits"
   crate_root = "//third_party/rust_crates/vendor/num-traits/src/lib.rs"
-  output_name = "num_traits-a6e1ee504861eea7"
+  output_name = "num_traits-eace97eec9f18ef0"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
@@ -5683,8 +5683,8 @@ rust_library("num-traits-v0_2_11") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2015",
-    "-Cmetadata=a6e1ee504861eea7",
-    "-Cextra-filename=-a6e1ee504861eea7",
+    "-Cmetadata=eace97eec9f18ef0",
+    "-Cextra-filename=-eace97eec9f18ef0",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
     "--cfg=has_i128",
@@ -6782,7 +6782,7 @@ rust_library("proptest-v0_9_3") {
   deps += [ ":bitflags-v1_2_1" ]
   deps += [ ":byteorder-v1_3_1" ]
   deps += [ ":lazy_static-v1_4_0" ]
-  deps += [ ":num-traits-v0_2_11" ]
+  deps += [ ":num-traits-v0_2_14" ]
   deps += [ ":quick-error-v1_2_2" ]
   deps += [ ":rand-v0_6_5" ]
   deps += [ ":rand_chacha-v0_1_1" ]
@@ -9145,7 +9145,7 @@ rust_library("streaming-stats-v0_2_3") {
   ]
 
   deps = []
-  deps += [ ":num-traits-v0_2_11" ]
+  deps += [ ":num-traits-v0_2_14" ]
 
   rustenv = []
 

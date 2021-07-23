@@ -92,7 +92,7 @@ mockall = "0.9"
 nom = { version = "5.0.0", default-features = false, features = ["std", "regexp_macros"] }
 nom_locate = "2.0.0"
 num-derive = "0.2.4"
-num-traits= "0.2.5"
+num-traits= "0.2.14"
 numtoa = "0.1.0"
 once_cell = { version = "1.2.0", features = ["parking_lot"] }
 parking_lot = "0.9"
@@ -392,7 +392,7 @@ rustflags = ["--cfg=has_i128"]
 [gn.package.num-rational."0.2.1"]
 rustflags = ["--cfg=has_i128"]
 
-[gn.package.num-traits."0.2.11"]
+[gn.package.num-traits."0.2.14"]
 rustflags = ["--cfg=has_i128"]
 
 [gn.package.maybe-uninit."2.0.0"]
