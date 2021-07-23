@@ -7,7 +7,7 @@
 //! Tools for handling Fuchsia URLs.
 
 mod rule;
-pub use crate::rule::{Rule, RuleConfig, RuleInspectState};
+pub use crate::rule::{Rule, RuleConfig};
 
 mod errors;
 pub use crate::errors::{RuleDecodeError, RuleParseError};

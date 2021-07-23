@@ -12,7 +12,6 @@ rustc_library("fidl-fuchsia-pkg-rewrite-ext") {
 
   deps = [
     "//sdk/fidl/fuchsia.pkg.rewrite:fuchsia.pkg.rewrite-rustc",
-    "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fuchsia-url",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:proptest",
@@ -40,5 +39,8 @@ fuchsia_unittest_package("fidl-fuchsia-pkg-rewrite-ext-tests") {
 
 group("tests") {
   testonly = true
-  deps = [ ":fidl-fuchsia-pkg-rewrite-ext-tests" ]
+  deps = [
+    ":fidl-fuchsia-pkg-rewrite-ext-tests",
+    ":fidl-fuchsia-pkg-rewrite-ext_test($host_toolchain)",
+  ]
 }

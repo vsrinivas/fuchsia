@@ -4,7 +4,7 @@
 
 use {
     crate::errors::{RuleDecodeError, RuleParseError},
-    fidl_fuchsia_pkg_rewrite as fidl, fuchsia_inspect as inspect,
+    fidl_fuchsia_pkg_rewrite as fidl,
     fuchsia_url::pkg_url::{ParseError, PkgUrl, RepoUrl},
     serde::{Deserialize, Serialize},
     std::convert::TryFrom,
@@ -17,16 +17,6 @@ pub struct Rule {
     host_replacement: String,
     path_prefix_match: String,
     path_prefix_replacement: String,
-}
-
-#[allow(missing_docs)]
-#[derive(Debug, PartialEq, Eq)]
-pub struct RuleInspectState {
-    _host_match_property: inspect::StringProperty,
-    _host_replacement_property: inspect::StringProperty,
-    _path_prefix_match_property: inspect::StringProperty,
-    _path_prefix_replacement_property: inspect::StringProperty,
-    _node: inspect::Node,
 }
 
 /// Wraper for serializing rewrite rules to the on-disk JSON format.
@@ -75,6 +65,27 @@ impl Rule {
         Ok(Self { host_match, host_replacement, path_prefix_match, path_prefix_replacement })
     }
 
+    /// The exact hostname to match.
+    pub fn host_match(&self) -> &str {
+        &self.host_match
+    }
+
+    /// The new hostname to replace the matched `host_match` with.
+    pub fn host_replacement(&self) -> &str {
+        &self.host_replacement
+    }
+
+    /// The absolute path to a package or directory to match against.
+    pub fn path_prefix_match(&self) -> &str {
+        &self.path_prefix_match
+    }
+
+    /// The absolute path to a single package or a directory to replace the
+    /// matched `path_prefix_match` with.
+    pub fn path_prefix_replacement(&self) -> &str {
+        &self.path_prefix_replacement
+    }
+
     /// Apply this `Rule` to the given [`PkgUrl`].
     ///
     /// In order for a `Rule` to match a particular fuchsia-pkg:// URI, `host` must match `uri`'s
@@ -120,20 +131,6 @@ impl Rule {
                 resource.to_owned(),
             ),
         })
-    }
-
-    #[allow(missing_docs)]
-    pub fn create_inspect_state(&self, node: inspect::Node) -> RuleInspectState {
-        RuleInspectState {
-            _host_match_property: node.create_string("host_match", &self.host_match),
-            _host_replacement_property: node
-                .create_string("host_replacement", &self.host_replacement),
-            _path_prefix_match_property: node
-                .create_string("path_prefix_match", &self.path_prefix_match),
-            _path_prefix_replacement_property: node
-                .create_string("path_prefix_replacement", &self.path_prefix_replacement),
-            _node: node,
-        }
     }
 
     /// Determines the replacement source id, if this rule rewrites all of "fuchsia.com".
@@ -346,7 +343,6 @@ mod serde_tests {
 #[cfg(test)]
 mod rule_tests {
     use super::*;
-    use fuchsia_inspect::assert_data_tree;
     use matches::assert_matches;
     use proptest::prelude::*;
 
@@ -592,30 +588,6 @@ mod rule_tests {
                 path_prefix_match,
                 path_prefix_replacment
             ).expect("failed to create random rule")
-        }
-    }
-
-    proptest! {
-        #[test]
-        fn test_create_inspect_state_passes_through_fields(
-            rule in random_rule()
-        ) {
-            let inspector = inspect::Inspector::new();
-            let node = inspector.root().create_child("rule_node");
-
-            let _state = rule.create_inspect_state(node);
-
-            assert_data_tree!(
-                inspector,
-                root: {
-                    rule_node: {
-                        host_match: rule.host_match,
-                        host_replacement: rule.host_replacement,
-                        path_prefix_match: rule.path_prefix_match,
-                        path_prefix_replacement: rule.path_prefix_replacement,
-                    }
-                }
-            );
         }
     }
 

@@ -4,7 +4,7 @@
 
 use {
     anyhow::{anyhow, Context as _},
-    fidl_fuchsia_pkg_rewrite_ext::{Rule, RuleConfig, RuleInspectState},
+    fidl_fuchsia_pkg_rewrite_ext::{Rule, RuleConfig},
     fuchsia_inspect::{self as inspect, Property},
     fuchsia_syslog::fx_log_err,
     fuchsia_url::pkg_url::PkgUrl,
@@ -150,7 +150,7 @@ impl RewriteManager {
         states.clear();
         for (i, rule) in rules.iter().enumerate() {
             let rule_node = node.create_child(&i.to_string());
-            states.push(rule.create_inspect_state(rule_node));
+            states.push(create_rule_inspect_state(rule, rule_node));
         }
     }
 
@@ -161,6 +161,29 @@ impl RewriteManager {
             &self.dynamic_rules,
             &mut self.inspect.dynamic_rules_states,
         );
+    }
+}
+
+#[allow(missing_docs)]
+#[derive(Debug, PartialEq, Eq)]
+pub struct RuleInspectState {
+    _host_match_property: inspect::StringProperty,
+    _host_replacement_property: inspect::StringProperty,
+    _path_prefix_match_property: inspect::StringProperty,
+    _path_prefix_replacement_property: inspect::StringProperty,
+    _node: inspect::Node,
+}
+
+fn create_rule_inspect_state(rule: &Rule, node: inspect::Node) -> RuleInspectState {
+    RuleInspectState {
+        _host_match_property: node.create_string("host_match", &rule.host_match()),
+        _host_replacement_property: node
+            .create_string("host_replacement", &rule.host_replacement()),
+        _path_prefix_match_property: node
+            .create_string("path_prefix_match", &rule.path_prefix_match()),
+        _path_prefix_replacement_property: node
+            .create_string("path_prefix_replacement", &rule.path_prefix_replacement()),
+        _node: node,
     }
 }
 
@@ -747,5 +770,26 @@ pub(crate) mod tests {
 
         assert_matches!(manager.apply(transaction), Err(CommitError::DynamicConfigurationDisabled));
         assert_eq!(manager.list().cloned().collect::<Vec<_>>(), vec![]);
+    }
+
+    #[test]
+    fn test_create_rule_inspect_state_passes_through_fields() {
+        let inspector = inspect::Inspector::new();
+        let node = inspector.root().create_child("rule_node");
+
+        let rule = rule!("fuchsia.com" => "example.com", "/foo" => "/bar");
+        let _state = create_rule_inspect_state(&rule, node);
+
+        assert_data_tree!(
+            inspector,
+            root: {
+                rule_node: {
+                    host_match: rule.host_match().to_string(),
+                    host_replacement: rule.host_replacement().to_string(),
+                    path_prefix_match: rule.path_prefix_match().to_string(),
+                    path_prefix_replacement: rule.path_prefix_replacement().to_string(),
+                }
+            }
+        );
     }
 }
