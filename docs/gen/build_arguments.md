@@ -47,7 +47,7 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1417
+From //build/config/BUILDCONFIG.gn:1419
 
 ### always_zedboot
 Build boot images that prefer Zedboot over local boot (only for EFI).
@@ -61,14 +61,14 @@ TODO(fxbug.dev/67565) - remove once external sync FD extensions fully supported
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/f7e97ad5381faacd1f80cc36e150497d300d2d9e/src/intel/vulkan/BUILD.gn#27)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/51911a68cea2b50be59d08cd2d6a54aed12758b1/src/intel/vulkan/BUILD.gn#27)
 
 ### anv_use_max_ram
 Give maximum possible memory to Vulkan heap
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/f7e97ad5381faacd1f80cc36e150497d300d2d9e/src/intel/vulkan/BUILD.gn#30)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/51911a68cea2b50be59d08cd2d6a54aed12758b1/src/intel/vulkan/BUILD.gn#30)
 
 ### asan_default_options
 Default [AddressSanitizer](https://clang.llvm.org/docs/AddressSanitizer.html)
@@ -97,7 +97,7 @@ example, because the package is in base).
 
 **Current value (from the default):** `true`
 
-From //build/security.gni:118
+From //build/security.gni:126
 
 ### avb_algorithm
 
@@ -229,7 +229,7 @@ Pass the empty string for no limit.
 
 **Current value (from the default):** `""`
 
-From //src/storage/fshost/BUILD.gn:17
+From //src/storage/fshost/BUILD.gn:20
 
 ### blobfs_page_in_metrics_recording
 Set this to true when configuring gn args to enable blobfs page-in
@@ -270,7 +270,7 @@ From //boards/arm64.gni:18
 
 From //build/board.gni:22
 
-**Current value for `target_cpu = "x64"`:** `["//src/connectivity/ethernet/drivers/realtek-8111", "//src/devices/block/drivers/ahci", "//src/devices/block/drivers/mbr", "//src/devices/block/drivers/nvme", "//src/devices/block/drivers/pci-sdhci", "//src/devices/block/drivers/sdhci", "//src/devices/board/drivers/x86:platform-bus-x86", "//src/devices/bus/drivers/pci:bus-pci", "//src/devices/i2c/drivers/intel-i2c", "//src/devices/rtc/drivers/intel-rtc", "//src/devices/serial/drivers/uart16550", "//src/devices/usb/drivers/xhci-rewrite:xhci", "//src/graphics/display/drivers/intel-i915", "//src/graphics/display/drivers/simple:simple.amd-kaveri", "//src/graphics/display/drivers/simple:simple.nv", "//src/media/audio/drivers/codecs/alc5514", "//src/media/audio/drivers/codecs/alc5663", "//src/media/audio/drivers/codecs/max98927", "//src/media/audio/drivers/intel-hda/codecs/hdmi:hdmi-audio-codec", "//src/media/audio/drivers/intel-hda/codecs/realtek:realtek-audio-codec", "//src/media/audio/drivers/intel-hda/controller:intel-hda", "//src/ui/input/drivers/i2c-hid", "//src/ui/input/drivers/pc-ps2", "//zircon/third_party/dev/ethernet/e1000", "//src/connectivity/ethernet/drivers/virtio:virtio_ethernet", "//src/devices/block/drivers/virtio:virtio_block", "//src/devices/block/drivers/virtio:virtio_scsi", "//src/devices/misc/drivers/virtio-rng:virtio_rng", "//src/devices/misc/drivers/virtio-socket:virtio_socket", "//src/devices/serial/drivers/virtio-console:virtio_console", "//src/graphics/drivers/misc:goldfish_driver_modules", "//src/graphics/display/drivers/goldfish-display", "//src/graphics/drivers/virtio:virtio_gpu", "//src/ui/input/drivers/virtio:virtio_input", "//src/graphics/display/drivers/simple:simple.bochs", "//src/graphics/display/drivers/simple:simple.intel", "//src/graphics/display/drivers/simple:simple.vmware", "//src/media/audio/drivers/intel-hda/codecs/qemu:qemu-audio-codec", "//src/devices/bin/acpidump", "//src/devices/pci/bin:bootfs", "//src/media/audio/bin/ihda", "//src/power/power-manager:base_config", "//src/security/policy/zxcrypt:null", "//boards/kernel_cmdline:serial-legacy", "//src/storage/fshost:gpt_all"]`
+**Current value for `target_cpu = "x64"`:** `["//src/connectivity/ethernet/drivers/realtek-8111", "//src/devices/block/drivers/ahci", "//src/devices/block/drivers/mbr", "//src/devices/block/drivers/nvme", "//src/devices/block/drivers/pci-sdhci", "//src/devices/block/drivers/sdhci", "//src/devices/board/drivers/x86:platform-bus-x86", "//src/devices/bus/drivers/pci:bus-pci", "//src/devices/i2c/drivers/intel-i2c", "//src/devices/rtc/drivers/intel-rtc", "//src/devices/serial/drivers/uart16550", "//src/devices/spi/drivers/intel-gspi", "//src/devices/usb/drivers/xhci-rewrite:xhci", "//src/graphics/display/drivers/intel-i915", "//src/graphics/display/drivers/simple:simple.amd-kaveri", "//src/graphics/display/drivers/simple:simple.nv", "//src/media/audio/drivers/codecs/alc5514", "//src/media/audio/drivers/codecs/alc5663", "//src/media/audio/drivers/codecs/max98927", "//src/media/audio/drivers/intel-hda/codecs/hdmi:hdmi-audio-codec", "//src/media/audio/drivers/intel-hda/codecs/realtek:realtek-audio-codec", "//src/media/audio/drivers/intel-hda/controller:intel-hda", "//src/ui/input/drivers/i2c-hid", "//src/ui/input/drivers/pc-ps2", "//zircon/third_party/dev/ethernet/e1000", "//src/connectivity/ethernet/drivers/virtio:virtio_ethernet", "//src/devices/block/drivers/virtio:virtio_block", "//src/devices/block/drivers/virtio:virtio_scsi", "//src/devices/misc/drivers/virtio-rng:virtio_rng", "//src/devices/misc/drivers/virtio-socket:virtio_socket", "//src/devices/serial/drivers/virtio-console:virtio_console", "//src/graphics/drivers/misc:goldfish_driver_modules", "//src/graphics/display/drivers/goldfish-display", "//src/graphics/drivers/virtio:virtio_gpu", "//src/ui/input/drivers/virtio:virtio_input", "//src/graphics/display/drivers/simple:simple.bochs", "//src/graphics/display/drivers/simple:simple.intel", "//src/graphics/display/drivers/simple:simple.vmware", "//src/media/audio/drivers/intel-hda/codecs/qemu:qemu-audio-codec", "//src/devices/bin/acpidump", "//src/devices/pci/bin:bootfs", "//src/media/audio/bin/ihda", "//src/power/power-manager:base_config", "//src/security/policy/zxcrypt:null", "//boards/kernel_cmdline:serial-legacy", "//src/storage/fshost:gpt_all"]`
 
 From //boards/x64.gni:19
 
@@ -308,7 +308,7 @@ Board files can set this to true if they have a package with a mali libvulkan VC
 
 **Current value (from the default):** `false`
 
-From //src/graphics/lib/magma/gnbuild/magma.gni:51
+From //src/graphics/lib/magma/gnbuild/magma.gni:47
 
 ### board_name
 Board name used for paving and amber updates.
@@ -341,9 +341,9 @@ From //boards/arm64.gni:30
 
 From //build/board.gni:15
 
-**Current value for `target_cpu = "x64"`:** `["//src/power/thermd", "//src/power/thermd:config", "//garnet/packages/prod:drivers-support", "//src/hwinfo:default_board_config", "//src/graphics/lib/magma/gnbuild/magma-intel-gen:libvulkan_intel_gen", "//src/graphics/lib/goldfish-vulkan/gnbuild:goldfish-vulkan"]`
+**Current value for `target_cpu = "x64"`:** `["//src/power/thermd", "//src/power/thermd:config", "//garnet/packages/prod:drivers-support", "//src/hwinfo:default_board_config", "//src/graphics/lib/magma/gnbuild/magma-intel-gen:libvulkan_intel_gen", "//src/graphics/lib/magma/gnbuild/magma-intel-gen:libvulkan_intel_config", "//src/graphics/lib/goldfish-vulkan/gnbuild:goldfish-vulkan"]`
 
-From //boards/common/x64-common.gni:66
+From //boards/common/x64-common.gni:68
 
 **Overridden from the default:** `[]`
 
@@ -360,7 +360,7 @@ From //boards/arm64.gni:22
 
 From //build/board.gni:33
 
-**Current value for `target_cpu = "x64"`:** `["//src/connectivity/ethernet/drivers/realtek-8111", "//src/devices/block/drivers/ahci", "//src/devices/block/drivers/mbr", "//src/devices/block/drivers/nvme", "//src/devices/block/drivers/pci-sdhci", "//src/devices/block/drivers/sdhci", "//src/devices/board/drivers/x86:platform-bus-x86", "//src/devices/bus/drivers/pci:bus-pci", "//src/devices/i2c/drivers/intel-i2c", "//src/devices/rtc/drivers/intel-rtc", "//src/devices/serial/drivers/uart16550", "//src/devices/usb/drivers/xhci-rewrite:xhci", "//src/graphics/display/drivers/intel-i915", "//src/graphics/display/drivers/simple:simple.amd-kaveri", "//src/graphics/display/drivers/simple:simple.nv", "//src/media/audio/drivers/codecs/alc5514", "//src/media/audio/drivers/codecs/alc5663", "//src/media/audio/drivers/codecs/max98927", "//src/media/audio/drivers/intel-hda/codecs/hdmi:hdmi-audio-codec", "//src/media/audio/drivers/intel-hda/codecs/realtek:realtek-audio-codec", "//src/media/audio/drivers/intel-hda/controller:intel-hda", "//src/ui/input/drivers/i2c-hid", "//src/ui/input/drivers/pc-ps2", "//zircon/third_party/dev/ethernet/e1000", "//src/connectivity/ethernet/drivers/virtio:virtio_ethernet", "//src/devices/block/drivers/virtio:virtio_block", "//src/devices/block/drivers/virtio:virtio_scsi", "//src/devices/misc/drivers/virtio-rng:virtio_rng", "//src/devices/misc/drivers/virtio-socket:virtio_socket", "//src/devices/serial/drivers/virtio-console:virtio_console", "//src/graphics/drivers/misc:goldfish_driver_modules", "//src/graphics/display/drivers/goldfish-display", "//src/graphics/drivers/virtio:virtio_gpu", "//src/ui/input/drivers/virtio:virtio_input", "//src/graphics/display/drivers/simple:simple.bochs", "//src/graphics/display/drivers/simple:simple.intel", "//src/graphics/display/drivers/simple:simple.vmware", "//src/media/audio/drivers/intel-hda/codecs/qemu:qemu-audio-codec", "//src/devices/bin/acpidump", "//src/devices/pci/bin:bootfs", "//src/media/audio/bin/ihda", "//src/power/power-manager:base_config", "//src/security/policy/zxcrypt:null", "//boards/kernel_cmdline:serial-legacy"]`
+**Current value for `target_cpu = "x64"`:** `["//src/connectivity/ethernet/drivers/realtek-8111", "//src/devices/block/drivers/ahci", "//src/devices/block/drivers/mbr", "//src/devices/block/drivers/nvme", "//src/devices/block/drivers/pci-sdhci", "//src/devices/block/drivers/sdhci", "//src/devices/board/drivers/x86:platform-bus-x86", "//src/devices/bus/drivers/pci:bus-pci", "//src/devices/i2c/drivers/intel-i2c", "//src/devices/rtc/drivers/intel-rtc", "//src/devices/serial/drivers/uart16550", "//src/devices/spi/drivers/intel-gspi", "//src/devices/usb/drivers/xhci-rewrite:xhci", "//src/graphics/display/drivers/intel-i915", "//src/graphics/display/drivers/simple:simple.amd-kaveri", "//src/graphics/display/drivers/simple:simple.nv", "//src/media/audio/drivers/codecs/alc5514", "//src/media/audio/drivers/codecs/alc5663", "//src/media/audio/drivers/codecs/max98927", "//src/media/audio/drivers/intel-hda/codecs/hdmi:hdmi-audio-codec", "//src/media/audio/drivers/intel-hda/codecs/realtek:realtek-audio-codec", "//src/media/audio/drivers/intel-hda/controller:intel-hda", "//src/ui/input/drivers/i2c-hid", "//src/ui/input/drivers/pc-ps2", "//zircon/third_party/dev/ethernet/e1000", "//src/connectivity/ethernet/drivers/virtio:virtio_ethernet", "//src/devices/block/drivers/virtio:virtio_block", "//src/devices/block/drivers/virtio:virtio_scsi", "//src/devices/misc/drivers/virtio-rng:virtio_rng", "//src/devices/misc/drivers/virtio-socket:virtio_socket", "//src/devices/serial/drivers/virtio-console:virtio_console", "//src/graphics/drivers/misc:goldfish_driver_modules", "//src/graphics/display/drivers/goldfish-display", "//src/graphics/drivers/virtio:virtio_gpu", "//src/ui/input/drivers/virtio:virtio_input", "//src/graphics/display/drivers/simple:simple.bochs", "//src/graphics/display/drivers/simple:simple.intel", "//src/graphics/display/drivers/simple:simple.vmware", "//src/media/audio/drivers/intel-hda/codecs/qemu:qemu-audio-codec", "//src/devices/bin/acpidump", "//src/devices/pci/bin:bootfs", "//src/media/audio/bin/ihda", "//src/power/power-manager:base_config", "//src/security/policy/zxcrypt:null", "//boards/kernel_cmdline:serial-legacy"]`
 
 From //boards/x64.gni:13
 
@@ -387,9 +387,9 @@ From //boards/arm64.gni:24
 
 From //build/board.gni:36
 
-**Current value for `target_cpu = "x64"`:** `["//garnet/packages/prod:drivers-system", "//src/media/audio/bundles:virtual_audio_driver"]`
+**Current value for `target_cpu = "x64"`:** `["//garnet/packages/prod:drivers-system", "//src/graphics/lib/magma/gnbuild/magma-intel-gen:msd-intel-gen", "//src/media/audio/bundles:virtual_audio_driver"]`
 
-From //boards/common/x64-common.gni:61
+From //boards/common/x64-common.gni:62
 
 **Overridden from the default:** `[]`
 
@@ -421,7 +421,7 @@ From //boards/arm64.gni:20
 
 From //build/board.gni:30
 
-**Current value for `target_cpu = "x64"`:** `["//src/connectivity/ethernet/drivers/realtek-8111", "//src/devices/block/drivers/ahci", "//src/devices/block/drivers/mbr", "//src/devices/block/drivers/nvme", "//src/devices/block/drivers/pci-sdhci", "//src/devices/block/drivers/sdhci", "//src/devices/board/drivers/x86:platform-bus-x86", "//src/devices/bus/drivers/pci:bus-pci", "//src/devices/i2c/drivers/intel-i2c", "//src/devices/rtc/drivers/intel-rtc", "//src/devices/serial/drivers/uart16550", "//src/devices/usb/drivers/xhci-rewrite:xhci", "//src/graphics/display/drivers/intel-i915", "//src/graphics/display/drivers/simple:simple.amd-kaveri", "//src/graphics/display/drivers/simple:simple.nv", "//src/media/audio/drivers/codecs/alc5514", "//src/media/audio/drivers/codecs/alc5663", "//src/media/audio/drivers/codecs/max98927", "//src/media/audio/drivers/intel-hda/codecs/hdmi:hdmi-audio-codec", "//src/media/audio/drivers/intel-hda/codecs/realtek:realtek-audio-codec", "//src/media/audio/drivers/intel-hda/controller:intel-hda", "//src/ui/input/drivers/i2c-hid", "//src/ui/input/drivers/pc-ps2", "//zircon/third_party/dev/ethernet/e1000", "//src/connectivity/ethernet/drivers/virtio:virtio_ethernet", "//src/devices/block/drivers/virtio:virtio_block", "//src/devices/block/drivers/virtio:virtio_scsi", "//src/devices/misc/drivers/virtio-rng:virtio_rng", "//src/devices/misc/drivers/virtio-socket:virtio_socket", "//src/devices/serial/drivers/virtio-console:virtio_console", "//src/graphics/drivers/misc:goldfish_driver_modules", "//src/graphics/display/drivers/goldfish-display", "//src/graphics/drivers/virtio:virtio_gpu", "//src/ui/input/drivers/virtio:virtio_input", "//src/graphics/display/drivers/simple:simple.bochs", "//src/graphics/display/drivers/simple:simple.intel", "//src/graphics/display/drivers/simple:simple.vmware", "//src/media/audio/drivers/intel-hda/codecs/qemu:qemu-audio-codec", "//src/devices/bin/acpidump", "//src/devices/pci/bin:bootfs", "//src/media/audio/bin/ihda", "//src/power/power-manager:base_config", "//src/security/policy/zxcrypt:null", "//boards/kernel_cmdline:serial-legacy"]`
+**Current value for `target_cpu = "x64"`:** `["//src/connectivity/ethernet/drivers/realtek-8111", "//src/devices/block/drivers/ahci", "//src/devices/block/drivers/mbr", "//src/devices/block/drivers/nvme", "//src/devices/block/drivers/pci-sdhci", "//src/devices/block/drivers/sdhci", "//src/devices/board/drivers/x86:platform-bus-x86", "//src/devices/bus/drivers/pci:bus-pci", "//src/devices/i2c/drivers/intel-i2c", "//src/devices/rtc/drivers/intel-rtc", "//src/devices/serial/drivers/uart16550", "//src/devices/spi/drivers/intel-gspi", "//src/devices/usb/drivers/xhci-rewrite:xhci", "//src/graphics/display/drivers/intel-i915", "//src/graphics/display/drivers/simple:simple.amd-kaveri", "//src/graphics/display/drivers/simple:simple.nv", "//src/media/audio/drivers/codecs/alc5514", "//src/media/audio/drivers/codecs/alc5663", "//src/media/audio/drivers/codecs/max98927", "//src/media/audio/drivers/intel-hda/codecs/hdmi:hdmi-audio-codec", "//src/media/audio/drivers/intel-hda/codecs/realtek:realtek-audio-codec", "//src/media/audio/drivers/intel-hda/controller:intel-hda", "//src/ui/input/drivers/i2c-hid", "//src/ui/input/drivers/pc-ps2", "//zircon/third_party/dev/ethernet/e1000", "//src/connectivity/ethernet/drivers/virtio:virtio_ethernet", "//src/devices/block/drivers/virtio:virtio_block", "//src/devices/block/drivers/virtio:virtio_scsi", "//src/devices/misc/drivers/virtio-rng:virtio_rng", "//src/devices/misc/drivers/virtio-socket:virtio_socket", "//src/devices/serial/drivers/virtio-console:virtio_console", "//src/graphics/drivers/misc:goldfish_driver_modules", "//src/graphics/display/drivers/goldfish-display", "//src/graphics/drivers/virtio:virtio_gpu", "//src/ui/input/drivers/virtio:virtio_input", "//src/graphics/display/drivers/simple:simple.bochs", "//src/graphics/display/drivers/simple:simple.intel", "//src/graphics/display/drivers/simple:simple.vmware", "//src/media/audio/drivers/intel-hda/codecs/qemu:qemu-audio-codec", "//src/devices/bin/acpidump", "//src/devices/pci/bin:bootfs", "//src/media/audio/bin/ihda", "//src/power/power-manager:base_config", "//src/security/policy/zxcrypt:null", "//boards/kernel_cmdline:serial-legacy"]`
 
 From //boards/x64.gni:14
 
@@ -531,14 +531,14 @@ Targets that will be built as IMG vulkan ICDS.
 
 **Current value (from the default):** `[]`
 
-From //src/graphics/lib/magma/gnbuild/magma.gni:48
+From //src/graphics/lib/magma/gnbuild/magma.gni:44
 
 ### build_libvulkan_vsi_vip
 Targets that will be built as verisilicon vulkan ICDS.
 
 **Current value (from the default):** `[]`
 
-From //src/graphics/lib/magma/gnbuild/magma.gni:45
+From //src/graphics/lib/magma/gnbuild/magma.gni:41
 
 ### build_sdk_archives
 Whether to build SDK tarballs.
@@ -554,7 +554,7 @@ An action that accesses undeclared inputs or outputs will fail the build.
 
 **Current value (from the default):** `false`
 
-From //build/config/BUILDCONFIG.gn:651
+From //build/tracer/tracer.gni:9
 
 ### build_uefi_disk
 Generate a UEFI disk image
@@ -612,19 +612,26 @@ Include the vulkan validation layers in carnelian examples.
 
 From //src/lib/ui/carnelian/BUILD.gn:13
 
-### carnelian_static_rives_extras
-Point this to the location of external rives files to be included as extras
+### carnelian_static_images_extras
+Point this to the location of external image files to be included as extras
 
 **Current value (from the default):** `[]`
 
 From //src/lib/ui/carnelian/BUILD.gn:16
+
+### carnelian_static_rives_extras
+Point this to the location of external rive files to be included as extras
+
+**Current value (from the default):** `[]`
+
+From //src/lib/ui/carnelian/BUILD.gn:19
 
 ### carnelian_static_txts_extras
 Point this to the location of external txt files to be included as extras
 
 **Current value (from the default):** `[]`
 
-From //src/lib/ui/carnelian/BUILD.gn:19
+From //src/lib/ui/carnelian/BUILD.gn:22
 
 ### check_production_eligibility
 Whether to perform check on the build's eligibility for production.
@@ -642,7 +649,7 @@ and compare the outputs' contents for reproducibility.
 
 **Current value (from the default):** `false`
 
-From //build/config/BUILDCONFIG.gn:655
+From //build/tracer/tracer.gni:13
 
 ### check_vtables_in_rodata
 Check that all vtables in fuchsia binaries listed in binaries.json are in
@@ -670,12 +677,12 @@ primarily for external tools that use bitcode for analysis.
 
 **Current value (from the default):** `false`
 
-From //build/config/clang/clang.gni:19
+From //build/config/clang/clang.gni:17
 
 ### clang_lib_dir
 Path to Clang lib directory.
 
-**Current value (from the default):** `"../../prebuilt/third_party/clang/linux-x64/lib"`
+**Current value (from the default):** `"//prebuilt/third_party/clang/linux-x64/bin/../lib"`
 
 From //build/images/manifest.gni:13
 
@@ -691,9 +698,9 @@ From //build/config/compiler.gni:43
 The default clang toolchain provided by the prebuilt. This variable is
 additionally consumed by the Go toolchain.
 
-**Current value (from the default):** `"../../prebuilt/third_party/clang/linux-x64/bin"`
+**Current value (from the default):** `"//prebuilt/third_party/clang/linux-x64/bin"`
 
-From //build/config/clang/clang.gni:15
+From //build/config/clang/clang.gni:13
 
 ### clang_tool_dir
 Directory where the Clang toolchain binaries ("clang", "llvm-nm", etc.) are
@@ -737,7 +744,7 @@ Tells openweave to include files that require heap access.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:32](https://fuchsia.googlesource.com/third_party/openweave-core/+/c669b54240d66636510f9456177dbf4b78feda01/config.gni#32)
+From [//third_party/openweave-core/config.gni:32](https://fuchsia.googlesource.com/third_party/openweave-core/+/ecc93ac1958fb95542d0e7bbff573899ac740bae/config.gni#32)
 
 ### conformance_testing_netstack
 If true, uses a netstack tailored for network conformance testing.
@@ -754,19 +761,19 @@ TODO: redo comments
 
 **Current value (from the default):** `"core-generic"`
 
-From //build/product.gni:21
+From //build/product.gni:16
 
 ### core_realm_restrict_persistent_storage
 
 **Current value (from the default):** `true`
 
-From //build/product.gni:23
+From //build/product.gni:18
 
 ### core_realm_shards
 
 **Current value (from the default):** `[]`
 
-From //build/product.gni:22
+From //build/product.gni:17
 
 ### crash_diagnostics_dir
 Clang crash reports directory path. Use empty path to disable altogether.
@@ -779,19 +786,19 @@ From //build/config/clang/crash_diagnostics.gni:7
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/e481b16bf411407c4497e6a4cb01e2a9cae20a10/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/a62b6548384298a169bfb6afc9a7277f68392042/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_http_transport_impl
 
 **Current value (from the default):** `"libcurl"`
 
-From [//third_party/crashpad/util/net/tls.gni:21](https://chromium.googlesource.com/crashpad/crashpad/+/e481b16bf411407c4497e6a4cb01e2a9cae20a10/util/net/tls.gni#21)
+From [//third_party/crashpad/util/net/tls.gni:21](https://chromium.googlesource.com/crashpad/crashpad/+/a62b6548384298a169bfb6afc9a7277f68392042/util/net/tls.gni#21)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:30](https://chromium.googlesource.com/crashpad/crashpad/+/e481b16bf411407c4497e6a4cb01e2a9cae20a10/util/net/tls.gni#30)
+From [//third_party/crashpad/util/net/tls.gni:30](https://chromium.googlesource.com/crashpad/crashpad/+/a62b6548384298a169bfb6afc9a7277f68392042/util/net/tls.gni#30)
 
 ### cts_version
 Name of the CTS version.
@@ -806,7 +813,7 @@ Usage:
 
 **Current value (from the default):** `""`
 
-From //sdk/cts/build/cts_copy_to_sdk.gni:16
+From //sdk/cts/build/cts_version.gni:14
 
 ### current_cpu
 
@@ -1014,7 +1021,7 @@ disabled.
 
 **Current value (from the default):** `false`
 
-From //zircon/kernel/params.gni:94
+From //zircon/kernel/params.gni:101
 
 ### enable_mdns_trace
 Enables the tracing feature of mdns, which can be turned on using
@@ -1132,7 +1139,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1174
+From //build/config/BUILDCONFIG.gn:1176
 
 ### extract_minfs_metadata_on_corruption
 If extract_minfs_metadata_on_corruption is true, fshost extracts minfs metadata on finding it
@@ -1140,7 +1147,7 @@ corrupted. Setting this flag to true helps debugging corruptions.
 
 **Current value (from the default):** `false`
 
-From //src/storage/fshost/BUILD.gn:33
+From //src/storage/fshost/BUILD.gn:36
 
 ### fastboot_product
 
@@ -1263,7 +1270,16 @@ debug issues.
 
 **Current value (from the default):** `true`
 
-From //src/storage/fshost/BUILD.gn:29
+From //src/storage/fshost/BUILD.gn:32
+
+### fuchsia_async_trace_level_logging
+Determines whether the fuchsia_async library used by many Rust targets will be compiled
+with TRACE level log statements that increase binary size a measurable amount.
+TODO(fxbug.dev/80742) move this to a toolchain to allow multiple products to build together
+
+**Current value (from the default):** `true`
+
+From //build/product.gni:23
 
 ### fuchsia_sdk_root
 Consumers of the Fuchsia SDK instantiate templates for various SDK parts at
@@ -1296,6 +1312,12 @@ above changes.
 **Current value (from the default):** `[]`
 
 From //build/security.gni:81
+
+### fuchsia_verify_routes_exceptions_allowlist
+
+**Current value (from the default):** `"//src/security/policy/build/verify_routes_exceptions_allowlist.json5"`
+
+From //build/security.gni:89
 
 ### fuchsia_zbi_bootfs_filelist_goldens
 An optional lit of golden files for fuchsia.zbi bootFS file list. If
@@ -1474,7 +1496,7 @@ From //build/go/go_build.gni:22
     will have build and test results cached, and is safe to be written to
     concurrently. If overridden, this directory must be a full path.
 
-**Current value (from the default):** `"/b/s/w/ir/x/w/out/not-default/dartlang/.gocache"`
+**Current value (from the default):** `"/b/s/w/ir/x/w/fuchsia/out/not-default/dartlang/.gocache"`
 
 From //build/go/go_build.gni:18
 
@@ -1546,7 +1568,7 @@ change test environments so Vulkan tests run on boards with Mali GPUs.
 
 **Current value (from the default):** `false`
 
-From //src/graphics/lib/magma/gnbuild/magma.gni:40
+From //src/graphics/lib/magma/gnbuild/magma.gni:36
 
 ### host_byteorder
 
@@ -1658,38 +1680,38 @@ Tells inet to support additionally support async dns sockets.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:17](https://fuchsia.googlesource.com/third_party/openweave-core/+/c669b54240d66636510f9456177dbf4b78feda01/config.gni#17)
+From [//third_party/openweave-core/config.gni:17](https://fuchsia.googlesource.com/third_party/openweave-core/+/ecc93ac1958fb95542d0e7bbff573899ac740bae/config.gni#17)
 
 ### inet_want_endpoint_dns
 Tells inet to include support for the corresponding protocol.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:10](https://fuchsia.googlesource.com/third_party/openweave-core/+/c669b54240d66636510f9456177dbf4b78feda01/config.gni#10)
+From [//third_party/openweave-core/config.gni:10](https://fuchsia.googlesource.com/third_party/openweave-core/+/ecc93ac1958fb95542d0e7bbff573899ac740bae/config.gni#10)
 
 ### inet_want_endpoint_raw
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:11](https://fuchsia.googlesource.com/third_party/openweave-core/+/c669b54240d66636510f9456177dbf4b78feda01/config.gni#11)
+From [//third_party/openweave-core/config.gni:11](https://fuchsia.googlesource.com/third_party/openweave-core/+/ecc93ac1958fb95542d0e7bbff573899ac740bae/config.gni#11)
 
 ### inet_want_endpoint_tcp
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:12](https://fuchsia.googlesource.com/third_party/openweave-core/+/c669b54240d66636510f9456177dbf4b78feda01/config.gni#12)
+From [//third_party/openweave-core/config.gni:12](https://fuchsia.googlesource.com/third_party/openweave-core/+/ecc93ac1958fb95542d0e7bbff573899ac740bae/config.gni#12)
 
 ### inet_want_endpoint_tun
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:14](https://fuchsia.googlesource.com/third_party/openweave-core/+/c669b54240d66636510f9456177dbf4b78feda01/config.gni#14)
+From [//third_party/openweave-core/config.gni:14](https://fuchsia.googlesource.com/third_party/openweave-core/+/ecc93ac1958fb95542d0e7bbff573899ac740bae/config.gni#14)
 
 ### inet_want_endpoint_udp
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:13](https://fuchsia.googlesource.com/third_party/openweave-core/+/c669b54240d66636510f9456177dbf4b78feda01/config.gni#13)
+From [//third_party/openweave-core/config.gni:13](https://fuchsia.googlesource.com/third_party/openweave-core/+/ecc93ac1958fb95542d0e7bbff573899ac740bae/config.gni#13)
 
 ### is_analysis
 If set, the build will produce compilation analysis dumps, used for code
@@ -1699,7 +1721,7 @@ and the analysis overhead turned off by default.
 
 **Current value (from the default):** `false`
 
-From //build/config/BUILDCONFIG.gn:24
+From //build/config/BUILDCONFIG.gn:26
 
 ### is_debug
 Debug build.
@@ -1710,7 +1732,7 @@ From //out/not-default/args.gn:6
 
 **Overridden from the default:** `true`
 
-From //build/config/BUILDCONFIG.gn:27
+From //build/config/BUILDCONFIG.gn:29
 
 **Current value for `target_cpu = "x64"`:** `false`
 
@@ -1718,7 +1740,7 @@ From //out/not-default/args.gn:6
 
 **Overridden from the default:** `true`
 
-From //build/config/BUILDCONFIG.gn:27
+From //build/config/BUILDCONFIG.gn:29
 
 ### kernel_base
 
@@ -1938,7 +1960,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1018
+From //build/config/BUILDCONFIG.gn:1020
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -2040,14 +2062,6 @@ From //build/config/sanitizers/sanitizer_default_options.gni:35
 
 From //src/graphics/lib/magma/gnbuild/magma.gni:13
 
-### magma_enable_developer_build
-Enable this to have the msd include a suite of tests and invoke them
-automatically when the driver starts.
-
-**Current value (from the default):** `false`
-
-From //src/graphics/lib/magma/gnbuild/magma.gni:27
-
 ### magma_enable_tracing
 Enable this to include fuchsia tracing capability
 
@@ -2060,18 +2074,18 @@ The path to OpenVX headers
 
 **Current value (from the default):** `""`
 
-From //src/graphics/lib/magma/gnbuild/magma.gni:33
+From //src/graphics/lib/magma/gnbuild/magma.gni:29
 
 ### magma_openvx_package
 The path to an OpenVX implementation
 
 **Current value (from the default):** `""`
 
-From //src/graphics/lib/magma/gnbuild/magma.gni:36
+From //src/graphics/lib/magma/gnbuild/magma.gni:32
 
 ### magma_python_path
 
-**Current value (from the default):** `"/b/s/w/ir/x/w/third_party/mako"`
+**Current value (from the default):** `"/b/s/w/ir/x/w/fuchsia/third_party/mako"`
 
 From //src/graphics/lib/magma/gnbuild/magma.gni:20
 
@@ -2126,21 +2140,9 @@ From //boards/arm64.gni:37
 
 From //build/images/filesystem_limits.gni:31
 
-**Current value for `target_cpu = "x64"`:** `16777216`
-
-From //boards/common/x64-common.gni:75
-
-**Overridden from the default:** `0`
+**Current value (from the default):** `0`
 
 From //build/images/filesystem_limits.gni:31
-
-### max_fvm_size
-Maximum allowable size for the FVM in a release mode build
-Zero means no limit
-
-**Current value (from the default):** `"0"`
-
-From //build/images/max_fvm_size.gni:8
 
 ### max_log_disk_usage
 Controls how many bytes of space on disk are used to persist device logs.
@@ -2161,11 +2163,7 @@ From //boards/arm64.gni:38
 
 From //build/images/filesystem_limits.gni:34
 
-**Current value for `target_cpu = "x64"`:** `16777216`
-
-From //boards/common/x64-common.gni:76
-
-**Overridden from the default:** `0`
+**Current value (from the default):** `0`
 
 From //build/images/filesystem_limits.gni:34
 
@@ -2174,7 +2172,7 @@ Configuration file for MbedTLS.
 
 **Current value (from the default):** `"mbedtls-config.h"`
 
-From [//third_party/openthread/third_party/mbedtls/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/openthread/+/9ac8f89ef5eef4cee04afd14008cb83ce7ed2e48/third_party/mbedtls/BUILD.gn#30)
+From [//third_party/openthread/third_party/mbedtls/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/openthread/+/68af0bc2f6480ce38a67033833cbaaf4f453d151/third_party/mbedtls/BUILD.gn#30)
 
 ### meta_package_labels
 A list of labels for meta packages to be included in the monolith.
@@ -2194,6 +2192,18 @@ From //products/bringup.gni:48
 **Overridden from the default:** `[]`
 
 From //build/images/args.gni:69
+
+### min_crashlog_size
+Controls minimum amount of space of persistent RAM to reserve for the
+crashlog.  When other features (such as persistent debug logging) are
+enabled, this value controls the minimum number of bytes which will
+_always_ be reserved for the crashlog (subject to the total amount of
+available persistent RAM), regardless of how much ram is requested by other
+users of persistent RAM.  Must be a multiple of 128 bytes.
+
+**Current value (from the default):** `2048`
+
+From //zircon/kernel/lib/crashlog/params.gni:14
 
 ### minfs_board_maximum_bytes
 
@@ -2234,7 +2244,7 @@ Pass the empty string for no limit.
 
 **Current value (from the default):** `""`
 
-From //src/storage/fshost/BUILD.gn:24
+From //src/storage/fshost/BUILD.gn:27
 
 ### minfs_product_maximum_bytes
 
@@ -2258,13 +2268,13 @@ From //build/images/fvm.gni:79
 
 **Current value (from the default):** `false`
 
-From [//third_party/crashpad/third_party/mini_chromium/mini_chromium/build/platform.gni:31](https://chromium.googlesource.com/crashpad/crashpad/+/e481b16bf411407c4497e6a4cb01e2a9cae20a10/third_party/mini_chromium/mini_chromium/build/platform.gni#31)
+From [//third_party/crashpad/third_party/mini_chromium/mini_chromium/build/platform.gni:31](https://chromium.googlesource.com/crashpad/crashpad/+/a62b6548384298a169bfb6afc9a7277f68392042/third_party/mini_chromium/mini_chromium/build/platform.gni#31)
 
 ### mini_chromium_is_chromeos_lacros
 
 **Current value (from the default):** `false`
 
-From [//third_party/crashpad/third_party/mini_chromium/mini_chromium/build/platform.gni:30](https://chromium.googlesource.com/crashpad/crashpad/+/e481b16bf411407c4497e6a4cb01e2a9cae20a10/third_party/mini_chromium/mini_chromium/build/platform.gni#30)
+From [//third_party/crashpad/third_party/mini_chromium/mini_chromium/build/platform.gni:30](https://chromium.googlesource.com/crashpad/crashpad/+/a62b6548384298a169bfb6afc9a7277f68392042/third_party/mini_chromium/mini_chromium/build/platform.gni#30)
 
 ### msd_arm_enable_all_cores
 Enable all 8 cores, which is faster but emits more heat.
@@ -2307,6 +2317,12 @@ From //src/graphics/lib/magma/gnbuild/magma.gni:15
 
 From //src/graphics/lib/magma/gnbuild/magma.gni:16
 
+### msd_intel_gen_enable_hardware_unit_tests
+
+**Current value (from the default):** `false`
+
+From //src/graphics/drivers/msd-intel-gen/tests/integration/BUILD.gn:8
+
 ### netcfg_autostart
 
 **Current value (from the default):** `true`
@@ -2331,454 +2347,454 @@ Enable assertions.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openthread/etc/gn/openthread.gni:79](https://fuchsia.googlesource.com/third_party/openthread/+/9ac8f89ef5eef4cee04afd14008cb83ce7ed2e48/etc/gn/openthread.gni#79)
+From [//third_party/openthread/etc/gn/openthread.gni:79](https://fuchsia.googlesource.com/third_party/openthread/+/68af0bc2f6480ce38a67033833cbaaf4f453d151/etc/gn/openthread.gni#79)
 
 ### openthread_config_backbone_router_enable
 Enable backbone router functionality
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:82](https://fuchsia.googlesource.com/third_party/openthread/+/9ac8f89ef5eef4cee04afd14008cb83ce7ed2e48/etc/gn/openthread.gni#82)
+From [//third_party/openthread/etc/gn/openthread.gni:82](https://fuchsia.googlesource.com/third_party/openthread/+/68af0bc2f6480ce38a67033833cbaaf4f453d151/etc/gn/openthread.gni#82)
 
 ### openthread_config_border_agent_enable
 Enable border agent support
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:85](https://fuchsia.googlesource.com/third_party/openthread/+/9ac8f89ef5eef4cee04afd14008cb83ce7ed2e48/etc/gn/openthread.gni#85)
+From [//third_party/openthread/etc/gn/openthread.gni:85](https://fuchsia.googlesource.com/third_party/openthread/+/68af0bc2f6480ce38a67033833cbaaf4f453d151/etc/gn/openthread.gni#85)
 
 ### openthread_config_border_router_enable
 Enable border router support
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:88](https://fuchsia.googlesource.com/third_party/openthread/+/9ac8f89ef5eef4cee04afd14008cb83ce7ed2e48/etc/gn/openthread.gni#88)
+From [//third_party/openthread/etc/gn/openthread.gni:88](https://fuchsia.googlesource.com/third_party/openthread/+/68af0bc2f6480ce38a67033833cbaaf4f453d151/etc/gn/openthread.gni#88)
 
 ### openthread_config_border_routing_enable
 Enable border routing support
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:91](https://fuchsia.googlesource.com/third_party/openthread/+/9ac8f89ef5eef4cee04afd14008cb83ce7ed2e48/etc/gn/openthread.gni#91)
+From [//third_party/openthread/etc/gn/openthread.gni:91](https://fuchsia.googlesource.com/third_party/openthread/+/68af0bc2f6480ce38a67033833cbaaf4f453d151/etc/gn/openthread.gni#91)
 
 ### openthread_config_channel_manager_enable
 Enable channel manager support
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:94](https://fuchsia.googlesource.com/third_party/openthread/+/9ac8f89ef5eef4cee04afd14008cb83ce7ed2e48/etc/gn/openthread.gni#94)
+From [//third_party/openthread/etc/gn/openthread.gni:94](https://fuchsia.googlesource.com/third_party/openthread/+/68af0bc2f6480ce38a67033833cbaaf4f453d151/etc/gn/openthread.gni#94)
 
 ### openthread_config_channel_monitor_enable
 Enable channel monitor support
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:97](https://fuchsia.googlesource.com/third_party/openthread/+/9ac8f89ef5eef4cee04afd14008cb83ce7ed2e48/etc/gn/openthread.gni#97)
+From [//third_party/openthread/etc/gn/openthread.gni:97](https://fuchsia.googlesource.com/third_party/openthread/+/68af0bc2f6480ce38a67033833cbaaf4f453d151/etc/gn/openthread.gni#97)
 
 ### openthread_config_child_supervision_enable
 Enable child supervision support
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:100](https://fuchsia.googlesource.com/third_party/openthread/+/9ac8f89ef5eef4cee04afd14008cb83ce7ed2e48/etc/gn/openthread.gni#100)
+From [//third_party/openthread/etc/gn/openthread.gni:100](https://fuchsia.googlesource.com/third_party/openthread/+/68af0bc2f6480ce38a67033833cbaaf4f453d151/etc/gn/openthread.gni#100)
 
 ### openthread_config_coap_api_enable
 Enable coap api support
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:103](https://fuchsia.googlesource.com/third_party/openthread/+/9ac8f89ef5eef4cee04afd14008cb83ce7ed2e48/etc/gn/openthread.gni#103)
+From [//third_party/openthread/etc/gn/openthread.gni:103](https://fuchsia.googlesource.com/third_party/openthread/+/68af0bc2f6480ce38a67033833cbaaf4f453d151/etc/gn/openthread.gni#103)
 
 ### openthread_config_coap_observe_api_enable
 Enable coap observe (RFC7641) api support
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:109](https://fuchsia.googlesource.com/third_party/openthread/+/9ac8f89ef5eef4cee04afd14008cb83ce7ed2e48/etc/gn/openthread.gni#109)
+From [//third_party/openthread/etc/gn/openthread.gni:109](https://fuchsia.googlesource.com/third_party/openthread/+/68af0bc2f6480ce38a67033833cbaaf4f453d151/etc/gn/openthread.gni#109)
 
 ### openthread_config_coap_secure_api_enable
 Enable secure coap api support
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:106](https://fuchsia.googlesource.com/third_party/openthread/+/9ac8f89ef5eef4cee04afd14008cb83ce7ed2e48/etc/gn/openthread.gni#106)
+From [//third_party/openthread/etc/gn/openthread.gni:106](https://fuchsia.googlesource.com/third_party/openthread/+/68af0bc2f6480ce38a67033833cbaaf4f453d151/etc/gn/openthread.gni#106)
 
 ### openthread_config_commissioner_enable
 Enable commissioner support
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:112](https://fuchsia.googlesource.com/third_party/openthread/+/9ac8f89ef5eef4cee04afd14008cb83ce7ed2e48/etc/gn/openthread.gni#112)
+From [//third_party/openthread/etc/gn/openthread.gni:112](https://fuchsia.googlesource.com/third_party/openthread/+/68af0bc2f6480ce38a67033833cbaaf4f453d151/etc/gn/openthread.gni#112)
 
 ### openthread_config_deps
 Extra deps for OpenThread configuration.
 
 **Current value (from the default):** `[]`
 
-From [//third_party/openthread/etc/gn/openthread.gni:38](https://fuchsia.googlesource.com/third_party/openthread/+/9ac8f89ef5eef4cee04afd14008cb83ce7ed2e48/etc/gn/openthread.gni#38)
+From [//third_party/openthread/etc/gn/openthread.gni:38](https://fuchsia.googlesource.com/third_party/openthread/+/68af0bc2f6480ce38a67033833cbaaf4f453d151/etc/gn/openthread.gni#38)
 
 ### openthread_config_dhcp6_client_enable
 Enable DHCP6 client support
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:118](https://fuchsia.googlesource.com/third_party/openthread/+/9ac8f89ef5eef4cee04afd14008cb83ce7ed2e48/etc/gn/openthread.gni#118)
+From [//third_party/openthread/etc/gn/openthread.gni:118](https://fuchsia.googlesource.com/third_party/openthread/+/68af0bc2f6480ce38a67033833cbaaf4f453d151/etc/gn/openthread.gni#118)
 
 ### openthread_config_dhcp6_server_enable
 Enable DHCP6 server support
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:121](https://fuchsia.googlesource.com/third_party/openthread/+/9ac8f89ef5eef4cee04afd14008cb83ce7ed2e48/etc/gn/openthread.gni#121)
+From [//third_party/openthread/etc/gn/openthread.gni:121](https://fuchsia.googlesource.com/third_party/openthread/+/68af0bc2f6480ce38a67033833cbaaf4f453d151/etc/gn/openthread.gni#121)
 
 ### openthread_config_diag_enable
 Enable diagnostic support
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:124](https://fuchsia.googlesource.com/third_party/openthread/+/9ac8f89ef5eef4cee04afd14008cb83ce7ed2e48/etc/gn/openthread.gni#124)
+From [//third_party/openthread/etc/gn/openthread.gni:124](https://fuchsia.googlesource.com/third_party/openthread/+/68af0bc2f6480ce38a67033833cbaaf4f453d151/etc/gn/openthread.gni#124)
 
 ### openthread_config_dns_client_enable
 Enable DNS client support
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:127](https://fuchsia.googlesource.com/third_party/openthread/+/9ac8f89ef5eef4cee04afd14008cb83ce7ed2e48/etc/gn/openthread.gni#127)
+From [//third_party/openthread/etc/gn/openthread.gni:127](https://fuchsia.googlesource.com/third_party/openthread/+/68af0bc2f6480ce38a67033833cbaaf4f453d151/etc/gn/openthread.gni#127)
 
 ### openthread_config_dnssd_server_enable
 Enable DNS-SD server support
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:130](https://fuchsia.googlesource.com/third_party/openthread/+/9ac8f89ef5eef4cee04afd14008cb83ce7ed2e48/etc/gn/openthread.gni#130)
+From [//third_party/openthread/etc/gn/openthread.gni:130](https://fuchsia.googlesource.com/third_party/openthread/+/68af0bc2f6480ce38a67033833cbaaf4f453d151/etc/gn/openthread.gni#130)
 
 ### openthread_config_dua_enable
 Enable Domain Unicast Address feature for Thread 1.2
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:136](https://fuchsia.googlesource.com/third_party/openthread/+/9ac8f89ef5eef4cee04afd14008cb83ce7ed2e48/etc/gn/openthread.gni#136)
+From [//third_party/openthread/etc/gn/openthread.gni:136](https://fuchsia.googlesource.com/third_party/openthread/+/68af0bc2f6480ce38a67033833cbaaf4f453d151/etc/gn/openthread.gni#136)
 
 ### openthread_config_ecdsa_enable
 Enable ECDSA support
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:133](https://fuchsia.googlesource.com/third_party/openthread/+/9ac8f89ef5eef4cee04afd14008cb83ce7ed2e48/etc/gn/openthread.gni#133)
+From [//third_party/openthread/etc/gn/openthread.gni:133](https://fuchsia.googlesource.com/third_party/openthread/+/68af0bc2f6480ce38a67033833cbaaf4f453d151/etc/gn/openthread.gni#133)
 
 ### openthread_config_enable_builtin_mbedtls_management
 
 **Current value (from the default):** `true`
 
-From [//third_party/openthread/etc/gn/openthread.gni:233](https://fuchsia.googlesource.com/third_party/openthread/+/9ac8f89ef5eef4cee04afd14008cb83ce7ed2e48/etc/gn/openthread.gni#233)
+From [//third_party/openthread/etc/gn/openthread.gni:233](https://fuchsia.googlesource.com/third_party/openthread/+/68af0bc2f6480ce38a67033833cbaaf4f453d151/etc/gn/openthread.gni#233)
 
 ### openthread_config_file
 OpenThread config header.
 
 **Current value (from the default):** `"<openthread-config-fuchsia.h>"`
 
-From [//third_party/openthread/etc/gn/openthread.gni:35](https://fuchsia.googlesource.com/third_party/openthread/+/9ac8f89ef5eef4cee04afd14008cb83ce7ed2e48/etc/gn/openthread.gni#35)
+From [//third_party/openthread/etc/gn/openthread.gni:35](https://fuchsia.googlesource.com/third_party/openthread/+/68af0bc2f6480ce38a67033833cbaaf4f453d151/etc/gn/openthread.gni#35)
 
 ### openthread_config_full_logs
 Enable full logs
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:220](https://fuchsia.googlesource.com/third_party/openthread/+/9ac8f89ef5eef4cee04afd14008cb83ce7ed2e48/etc/gn/openthread.gni#220)
+From [//third_party/openthread/etc/gn/openthread.gni:220](https://fuchsia.googlesource.com/third_party/openthread/+/68af0bc2f6480ce38a67033833cbaaf4f453d151/etc/gn/openthread.gni#220)
 
 ### openthread_config_heap_external_enable
 Enable external heap support
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:142](https://fuchsia.googlesource.com/third_party/openthread/+/9ac8f89ef5eef4cee04afd14008cb83ce7ed2e48/etc/gn/openthread.gni#142)
+From [//third_party/openthread/etc/gn/openthread.gni:142](https://fuchsia.googlesource.com/third_party/openthread/+/68af0bc2f6480ce38a67033833cbaaf4f453d151/etc/gn/openthread.gni#142)
 
 ### openthread_config_ip6_fragmentation_enable
 Enable ipv6 fragmentation support
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:145](https://fuchsia.googlesource.com/third_party/openthread/+/9ac8f89ef5eef4cee04afd14008cb83ce7ed2e48/etc/gn/openthread.gni#145)
+From [//third_party/openthread/etc/gn/openthread.gni:145](https://fuchsia.googlesource.com/third_party/openthread/+/68af0bc2f6480ce38a67033833cbaaf4f453d151/etc/gn/openthread.gni#145)
 
 ### openthread_config_ip6_slaac_enable
 Enable support for adding of auto-configured SLAAC addresses by OpenThread
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:199](https://fuchsia.googlesource.com/third_party/openthread/+/9ac8f89ef5eef4cee04afd14008cb83ce7ed2e48/etc/gn/openthread.gni#199)
+From [//third_party/openthread/etc/gn/openthread.gni:199](https://fuchsia.googlesource.com/third_party/openthread/+/68af0bc2f6480ce38a67033833cbaaf4f453d151/etc/gn/openthread.gni#199)
 
 ### openthread_config_jam_detection_enable
 Enable jam detection support
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:148](https://fuchsia.googlesource.com/third_party/openthread/+/9ac8f89ef5eef4cee04afd14008cb83ce7ed2e48/etc/gn/openthread.gni#148)
+From [//third_party/openthread/etc/gn/openthread.gni:148](https://fuchsia.googlesource.com/third_party/openthread/+/68af0bc2f6480ce38a67033833cbaaf4f453d151/etc/gn/openthread.gni#148)
 
 ### openthread_config_joiner_enable
 Enable joiner support
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:151](https://fuchsia.googlesource.com/third_party/openthread/+/9ac8f89ef5eef4cee04afd14008cb83ce7ed2e48/etc/gn/openthread.gni#151)
+From [//third_party/openthread/etc/gn/openthread.gni:151](https://fuchsia.googlesource.com/third_party/openthread/+/68af0bc2f6480ce38a67033833cbaaf4f453d151/etc/gn/openthread.gni#151)
 
 ### openthread_config_legacy_enable
 Enable legacy network support
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:154](https://fuchsia.googlesource.com/third_party/openthread/+/9ac8f89ef5eef4cee04afd14008cb83ce7ed2e48/etc/gn/openthread.gni#154)
+From [//third_party/openthread/etc/gn/openthread.gni:154](https://fuchsia.googlesource.com/third_party/openthread/+/68af0bc2f6480ce38a67033833cbaaf4f453d151/etc/gn/openthread.gni#154)
 
 ### openthread_config_link_metrics_initiator_enable
 Enable link metrics initiator
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:157](https://fuchsia.googlesource.com/third_party/openthread/+/9ac8f89ef5eef4cee04afd14008cb83ce7ed2e48/etc/gn/openthread.gni#157)
+From [//third_party/openthread/etc/gn/openthread.gni:157](https://fuchsia.googlesource.com/third_party/openthread/+/68af0bc2f6480ce38a67033833cbaaf4f453d151/etc/gn/openthread.gni#157)
 
 ### openthread_config_link_metrics_subject_enable
 Enable link metrics subject
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:160](https://fuchsia.googlesource.com/third_party/openthread/+/9ac8f89ef5eef4cee04afd14008cb83ce7ed2e48/etc/gn/openthread.gni#160)
+From [//third_party/openthread/etc/gn/openthread.gni:160](https://fuchsia.googlesource.com/third_party/openthread/+/68af0bc2f6480ce38a67033833cbaaf4f453d151/etc/gn/openthread.gni#160)
 
 ### openthread_config_link_raw_enable
 Enable link raw service
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:163](https://fuchsia.googlesource.com/third_party/openthread/+/9ac8f89ef5eef4cee04afd14008cb83ce7ed2e48/etc/gn/openthread.gni#163)
+From [//third_party/openthread/etc/gn/openthread.gni:163](https://fuchsia.googlesource.com/third_party/openthread/+/68af0bc2f6480ce38a67033833cbaaf4f453d151/etc/gn/openthread.gni#163)
 
 ### openthread_config_log_level_dynamic_enable
 Enable dynamic log level control
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:166](https://fuchsia.googlesource.com/third_party/openthread/+/9ac8f89ef5eef4cee04afd14008cb83ce7ed2e48/etc/gn/openthread.gni#166)
+From [//third_party/openthread/etc/gn/openthread.gni:166](https://fuchsia.googlesource.com/third_party/openthread/+/68af0bc2f6480ce38a67033833cbaaf4f453d151/etc/gn/openthread.gni#166)
 
 ### openthread_config_log_output
 Log output: none, debug_uart, app, platform
 
 **Current value (from the default):** `""`
 
-From [//third_party/openthread/etc/gn/openthread.gni:76](https://fuchsia.googlesource.com/third_party/openthread/+/9ac8f89ef5eef4cee04afd14008cb83ce7ed2e48/etc/gn/openthread.gni#76)
+From [//third_party/openthread/etc/gn/openthread.gni:76](https://fuchsia.googlesource.com/third_party/openthread/+/68af0bc2f6480ce38a67033833cbaaf4f453d151/etc/gn/openthread.gni#76)
 
 ### openthread_config_mac_csl_receiver_enable
 Enable csl receiver
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:115](https://fuchsia.googlesource.com/third_party/openthread/+/9ac8f89ef5eef4cee04afd14008cb83ce7ed2e48/etc/gn/openthread.gni#115)
+From [//third_party/openthread/etc/gn/openthread.gni:115](https://fuchsia.googlesource.com/third_party/openthread/+/68af0bc2f6480ce38a67033833cbaaf4f453d151/etc/gn/openthread.gni#115)
 
 ### openthread_config_mac_filter_enable
 Enable mac filter support
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:169](https://fuchsia.googlesource.com/third_party/openthread/+/9ac8f89ef5eef4cee04afd14008cb83ce7ed2e48/etc/gn/openthread.gni#169)
+From [//third_party/openthread/etc/gn/openthread.gni:169](https://fuchsia.googlesource.com/third_party/openthread/+/68af0bc2f6480ce38a67033833cbaaf4f453d151/etc/gn/openthread.gni#169)
 
 ### openthread_config_message_use_heap
 Enable use built-in heap for message buffers
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:172](https://fuchsia.googlesource.com/third_party/openthread/+/9ac8f89ef5eef4cee04afd14008cb83ce7ed2e48/etc/gn/openthread.gni#172)
+From [//third_party/openthread/etc/gn/openthread.gni:172](https://fuchsia.googlesource.com/third_party/openthread/+/68af0bc2f6480ce38a67033833cbaaf4f453d151/etc/gn/openthread.gni#172)
 
 ### openthread_config_mle_long_routes_enable
 Enable MLE long routes extension (experimental, breaks Thread conformance]
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:175](https://fuchsia.googlesource.com/third_party/openthread/+/9ac8f89ef5eef4cee04afd14008cb83ce7ed2e48/etc/gn/openthread.gni#175)
+From [//third_party/openthread/etc/gn/openthread.gni:175](https://fuchsia.googlesource.com/third_party/openthread/+/68af0bc2f6480ce38a67033833cbaaf4f453d151/etc/gn/openthread.gni#175)
 
 ### openthread_config_mlr_enable
 Enable Multicast Listener Registration feature for Thread 1.2
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:139](https://fuchsia.googlesource.com/third_party/openthread/+/9ac8f89ef5eef4cee04afd14008cb83ce7ed2e48/etc/gn/openthread.gni#139)
+From [//third_party/openthread/etc/gn/openthread.gni:139](https://fuchsia.googlesource.com/third_party/openthread/+/68af0bc2f6480ce38a67033833cbaaf4f453d151/etc/gn/openthread.gni#139)
 
 ### openthread_config_multiple_instance_enable
 Enable multiple instances
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:181](https://fuchsia.googlesource.com/third_party/openthread/+/9ac8f89ef5eef4cee04afd14008cb83ce7ed2e48/etc/gn/openthread.gni#181)
+From [//third_party/openthread/etc/gn/openthread.gni:181](https://fuchsia.googlesource.com/third_party/openthread/+/68af0bc2f6480ce38a67033833cbaaf4f453d151/etc/gn/openthread.gni#181)
 
 ### openthread_config_ncp_hdlc_enable
 Enable NCP HDLC support
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:229](https://fuchsia.googlesource.com/third_party/openthread/+/9ac8f89ef5eef4cee04afd14008cb83ce7ed2e48/etc/gn/openthread.gni#229)
+From [//third_party/openthread/etc/gn/openthread.gni:229](https://fuchsia.googlesource.com/third_party/openthread/+/68af0bc2f6480ce38a67033833cbaaf4f453d151/etc/gn/openthread.gni#229)
 
 ### openthread_config_ncp_spi_enable
 Enable NCP SPI support
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:226](https://fuchsia.googlesource.com/third_party/openthread/+/9ac8f89ef5eef4cee04afd14008cb83ce7ed2e48/etc/gn/openthread.gni#226)
+From [//third_party/openthread/etc/gn/openthread.gni:226](https://fuchsia.googlesource.com/third_party/openthread/+/68af0bc2f6480ce38a67033833cbaaf4f453d151/etc/gn/openthread.gni#226)
 
 ### openthread_config_otns_enable
 Enable OTNS support
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:223](https://fuchsia.googlesource.com/third_party/openthread/+/9ac8f89ef5eef4cee04afd14008cb83ce7ed2e48/etc/gn/openthread.gni#223)
+From [//third_party/openthread/etc/gn/openthread.gni:223](https://fuchsia.googlesource.com/third_party/openthread/+/68af0bc2f6480ce38a67033833cbaaf4f453d151/etc/gn/openthread.gni#223)
 
 ### openthread_config_ping_sender
 Enable ping sender support
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:211](https://fuchsia.googlesource.com/third_party/openthread/+/9ac8f89ef5eef4cee04afd14008cb83ce7ed2e48/etc/gn/openthread.gni#211)
+From [//third_party/openthread/etc/gn/openthread.gni:211](https://fuchsia.googlesource.com/third_party/openthread/+/68af0bc2f6480ce38a67033833cbaaf4f453d151/etc/gn/openthread.gni#211)
 
 ### openthread_config_platform_netif_enable
 Enable platform netif support
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:184](https://fuchsia.googlesource.com/third_party/openthread/+/9ac8f89ef5eef4cee04afd14008cb83ce7ed2e48/etc/gn/openthread.gni#184)
+From [//third_party/openthread/etc/gn/openthread.gni:184](https://fuchsia.googlesource.com/third_party/openthread/+/68af0bc2f6480ce38a67033833cbaaf4f453d151/etc/gn/openthread.gni#184)
 
 ### openthread_config_platform_udp_enable
 Enable platform UDP support
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:187](https://fuchsia.googlesource.com/third_party/openthread/+/9ac8f89ef5eef4cee04afd14008cb83ce7ed2e48/etc/gn/openthread.gni#187)
+From [//third_party/openthread/etc/gn/openthread.gni:187](https://fuchsia.googlesource.com/third_party/openthread/+/68af0bc2f6480ce38a67033833cbaaf4f453d151/etc/gn/openthread.gni#187)
 
 ### openthread_config_reference_device_enable
 Enable Thread Test Harness reference device support
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:190](https://fuchsia.googlesource.com/third_party/openthread/+/9ac8f89ef5eef4cee04afd14008cb83ce7ed2e48/etc/gn/openthread.gni#190)
+From [//third_party/openthread/etc/gn/openthread.gni:190](https://fuchsia.googlesource.com/third_party/openthread/+/68af0bc2f6480ce38a67033833cbaaf4f453d151/etc/gn/openthread.gni#190)
 
 ### openthread_config_sntp_client_enable
 Enable SNTP Client support
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:202](https://fuchsia.googlesource.com/third_party/openthread/+/9ac8f89ef5eef4cee04afd14008cb83ce7ed2e48/etc/gn/openthread.gni#202)
+From [//third_party/openthread/etc/gn/openthread.gni:202](https://fuchsia.googlesource.com/third_party/openthread/+/68af0bc2f6480ce38a67033833cbaaf4f453d151/etc/gn/openthread.gni#202)
 
 ### openthread_config_srp_client_enable
 Enable SRP Client support
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:205](https://fuchsia.googlesource.com/third_party/openthread/+/9ac8f89ef5eef4cee04afd14008cb83ce7ed2e48/etc/gn/openthread.gni#205)
+From [//third_party/openthread/etc/gn/openthread.gni:205](https://fuchsia.googlesource.com/third_party/openthread/+/68af0bc2f6480ce38a67033833cbaaf4f453d151/etc/gn/openthread.gni#205)
 
 ### openthread_config_srp_server_enable
 Enable SRP Server support
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:208](https://fuchsia.googlesource.com/third_party/openthread/+/9ac8f89ef5eef4cee04afd14008cb83ce7ed2e48/etc/gn/openthread.gni#208)
+From [//third_party/openthread/etc/gn/openthread.gni:208](https://fuchsia.googlesource.com/third_party/openthread/+/68af0bc2f6480ce38a67033833cbaaf4f453d151/etc/gn/openthread.gni#208)
 
 ### openthread_config_thread_version
 Thread version: 1.1, 1.2
 
 **Current value (from the default):** `"1.2"`
 
-From [//third_party/openthread/etc/gn/openthread.gni:73](https://fuchsia.googlesource.com/third_party/openthread/+/9ac8f89ef5eef4cee04afd14008cb83ce7ed2e48/etc/gn/openthread.gni#73)
+From [//third_party/openthread/etc/gn/openthread.gni:73](https://fuchsia.googlesource.com/third_party/openthread/+/68af0bc2f6480ce38a67033833cbaaf4f453d151/etc/gn/openthread.gni#73)
 
 ### openthread_config_time_sync_enable
 Enable the time synchronization service feature
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:214](https://fuchsia.googlesource.com/third_party/openthread/+/9ac8f89ef5eef4cee04afd14008cb83ce7ed2e48/etc/gn/openthread.gni#214)
+From [//third_party/openthread/etc/gn/openthread.gni:214](https://fuchsia.googlesource.com/third_party/openthread/+/68af0bc2f6480ce38a67033833cbaaf4f453d151/etc/gn/openthread.gni#214)
 
 ### openthread_config_tmf_netdata_service_enable
 Enable support for injecting Service entries into the Thread Network Data
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:193](https://fuchsia.googlesource.com/third_party/openthread/+/9ac8f89ef5eef4cee04afd14008cb83ce7ed2e48/etc/gn/openthread.gni#193)
+From [//third_party/openthread/etc/gn/openthread.gni:193](https://fuchsia.googlesource.com/third_party/openthread/+/68af0bc2f6480ce38a67033833cbaaf4f453d151/etc/gn/openthread.gni#193)
 
 ### openthread_config_tmf_network_diag_mtd_enable
 Enable TMF network diagnostics on MTDs
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:178](https://fuchsia.googlesource.com/third_party/openthread/+/9ac8f89ef5eef4cee04afd14008cb83ce7ed2e48/etc/gn/openthread.gni#178)
+From [//third_party/openthread/etc/gn/openthread.gni:178](https://fuchsia.googlesource.com/third_party/openthread/+/68af0bc2f6480ce38a67033833cbaaf4f453d151/etc/gn/openthread.gni#178)
 
 ### openthread_config_udp_forward_enable
 Enable UDP forward support
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:217](https://fuchsia.googlesource.com/third_party/openthread/+/9ac8f89ef5eef4cee04afd14008cb83ce7ed2e48/etc/gn/openthread.gni#217)
+From [//third_party/openthread/etc/gn/openthread.gni:217](https://fuchsia.googlesource.com/third_party/openthread/+/68af0bc2f6480ce38a67033833cbaaf4f453d151/etc/gn/openthread.gni#217)
 
 ### openthread_core_config_deps
 Extra deps for OpenThread core configuration.
 
 **Current value (from the default):** `[]`
 
-From [//third_party/openthread/etc/gn/openthread.gni:50](https://fuchsia.googlesource.com/third_party/openthread/+/9ac8f89ef5eef4cee04afd14008cb83ce7ed2e48/etc/gn/openthread.gni#50)
+From [//third_party/openthread/etc/gn/openthread.gni:50](https://fuchsia.googlesource.com/third_party/openthread/+/68af0bc2f6480ce38a67033833cbaaf4f453d151/etc/gn/openthread.gni#50)
 
 ### openthread_core_config_platform_check_file
 OpenThread platform-specific config check header
 
 **Current value (from the default):** `""`
 
-From [//third_party/openthread/etc/gn/openthread.gni:47](https://fuchsia.googlesource.com/third_party/openthread/+/9ac8f89ef5eef4cee04afd14008cb83ce7ed2e48/etc/gn/openthread.gni#47)
+From [//third_party/openthread/etc/gn/openthread.gni:47](https://fuchsia.googlesource.com/third_party/openthread/+/68af0bc2f6480ce38a67033833cbaaf4f453d151/etc/gn/openthread.gni#47)
 
 ### openthread_enable_core_config_args
 Configure OpenThread via GN arguments.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openthread/etc/gn/openthread.gni:67](https://fuchsia.googlesource.com/third_party/openthread/+/9ac8f89ef5eef4cee04afd14008cb83ce7ed2e48/etc/gn/openthread.gni#67)
+From [//third_party/openthread/etc/gn/openthread.gni:67](https://fuchsia.googlesource.com/third_party/openthread/+/68af0bc2f6480ce38a67033833cbaaf4f453d151/etc/gn/openthread.gni#67)
 
 ### openthread_external_mbedtls
 Use external mbedtls. If blank, internal mbedtls will be used.
 
 **Current value (from the default):** `""`
 
-From [//third_party/openthread/etc/gn/openthread.gni:56](https://fuchsia.googlesource.com/third_party/openthread/+/9ac8f89ef5eef4cee04afd14008cb83ce7ed2e48/etc/gn/openthread.gni#56)
+From [//third_party/openthread/etc/gn/openthread.gni:56](https://fuchsia.googlesource.com/third_party/openthread/+/68af0bc2f6480ce38a67033833cbaaf4f453d151/etc/gn/openthread.gni#56)
 
 ### openthread_external_platform
 Use external platform.
 
 **Current value (from the default):** `""`
 
-From [//third_party/openthread/etc/gn/openthread.gni:53](https://fuchsia.googlesource.com/third_party/openthread/+/9ac8f89ef5eef4cee04afd14008cb83ce7ed2e48/etc/gn/openthread.gni#53)
+From [//third_party/openthread/etc/gn/openthread.gni:53](https://fuchsia.googlesource.com/third_party/openthread/+/68af0bc2f6480ce38a67033833cbaaf4f453d151/etc/gn/openthread.gni#53)
 
 ### openthread_package_name
 Package name for OpenThread.
 
 **Current value (from the default):** `"OPENTHREAD"`
 
-From [//third_party/openthread/etc/gn/openthread.gni:59](https://fuchsia.googlesource.com/third_party/openthread/+/9ac8f89ef5eef4cee04afd14008cb83ce7ed2e48/etc/gn/openthread.gni#59)
+From [//third_party/openthread/etc/gn/openthread.gni:59](https://fuchsia.googlesource.com/third_party/openthread/+/68af0bc2f6480ce38a67033833cbaaf4f453d151/etc/gn/openthread.gni#59)
 
 ### openthread_package_version
 Package version for OpenThread.
 
 **Current value (from the default):** `"1.0.0"`
 
-From [//third_party/openthread/etc/gn/openthread.gni:62](https://fuchsia.googlesource.com/third_party/openthread/+/9ac8f89ef5eef4cee04afd14008cb83ce7ed2e48/etc/gn/openthread.gni#62)
+From [//third_party/openthread/etc/gn/openthread.gni:62](https://fuchsia.googlesource.com/third_party/openthread/+/68af0bc2f6480ce38a67033833cbaaf4f453d151/etc/gn/openthread.gni#62)
 
 ### openthread_project_core_config_file
 OpenThread project-specific core config header
 
 **Current value (from the default):** `""`
 
-From [//third_party/openthread/etc/gn/openthread.gni:44](https://fuchsia.googlesource.com/third_party/openthread/+/9ac8f89ef5eef4cee04afd14008cb83ce7ed2e48/etc/gn/openthread.gni#44)
+From [//third_party/openthread/etc/gn/openthread.gni:44](https://fuchsia.googlesource.com/third_party/openthread/+/68af0bc2f6480ce38a67033833cbaaf4f453d151/etc/gn/openthread.gni#44)
 
 ### openthread_project_include_dirs
 Include directories for project specific configs.
 
 **Current value (from the default):** `[]`
 
-From [//third_party/openthread/etc/gn/openthread.gni:41](https://fuchsia.googlesource.com/third_party/openthread/+/9ac8f89ef5eef4cee04afd14008cb83ce7ed2e48/etc/gn/openthread.gni#41)
+From [//third_party/openthread/etc/gn/openthread.gni:41](https://fuchsia.googlesource.com/third_party/openthread/+/68af0bc2f6480ce38a67033833cbaaf4f453d151/etc/gn/openthread.gni#41)
 
 ### openthread_settings_ram
 Enable volatile-only storage of settings
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:196](https://fuchsia.googlesource.com/third_party/openthread/+/9ac8f89ef5eef4cee04afd14008cb83ce7ed2e48/etc/gn/openthread.gni#196)
+From [//third_party/openthread/etc/gn/openthread.gni:196](https://fuchsia.googlesource.com/third_party/openthread/+/68af0bc2f6480ce38a67033833cbaaf4f453d151/etc/gn/openthread.gni#196)
 
 ### optimize
 * `none`: really unoptimized, usually only build-tested and not run
@@ -2799,14 +2815,14 @@ Sets if we should output breakpad symbols for Fuchsia binaries.
 
 **Current value (from the default):** `false`
 
-From //build/config/BUILDCONFIG.gn:30
+From //build/config/BUILDCONFIG.gn:32
 
 ### output_gsym
 Controls whether we should output GSYM files for Fuchsia binaries.
 
 **Current value (from the default):** `false`
 
-From //build/config/BUILDCONFIG.gn:33
+From //build/config/BUILDCONFIG.gn:35
 
 ### package_flavor_selections
 Used to configure the set of package flavors desired.
@@ -2852,6 +2868,17 @@ From //build/packages/prebuilt_package_with_flavors.gni:29
 
 From //build/persist_logs.gni:13
 
+### persistent_ram_allocation_granularity
+Controls the granularity of allocation of the global pool of persistent RAM.
+All features which wish to use persistent RAM to preserve data across reboot
+must operate in allocations which are a multiple of this value.  The value
+should be a power of two, and typically should be a multiple of the
+cacheline size of the target architecture.
+
+**Current value (from the default):** `128`
+
+From //zircon/kernel/params.gni:93
+
 ### platform_enable_user_pci
 
 **Current value (from the default):** `false`
@@ -2884,7 +2911,7 @@ The path to a prebuilt libvulkan.so for an IMG GPU.
 
 **Current value (from the default):** `""`
 
-From //src/graphics/lib/magma/gnbuild/magma.gni:30
+From //src/graphics/lib/magma/gnbuild/magma.gni:26
 
 ### product_bootfs_labels
 A list of binary labels to include in ZBIs built for this product.
@@ -2904,15 +2931,6 @@ From //products/bringup.gni:40
 **Overridden from the default:** `[]`
 
 From //build/product.gni:7
-
-### product_include_updates_in_blobfs
-Include update package in blob.blk. Some products may not need the update
-package included as part of the blobfs.
-TODO(fxbug.dev/58645) Remove when no longer needed.
-
-**Current value (from the default):** `true`
-
-From //build/product.gni:15
 
 ### product_system_image_deps
 A list of binary labels to include in the system_image package.
@@ -2976,7 +2994,7 @@ above changes.
 
 **Current value (from the default):** `[]`
 
-From //build/security.gni:96
+From //build/security.gni:104
 
 ### recovery_zbi_bootfs_filelist_goldens
 An optional list of golden files for recovery.zbi bootFS file list. If
@@ -3029,7 +3047,7 @@ ignore warnings.
 
 **Current value (from the default):** `"deny"`
 
-From //build/rust/config.gni:53
+From //build/rust/config.gni:51
 
 ### rust_incremental
 Enable incremental rust compilation. Takes a path to the directory to use
@@ -3044,7 +3062,7 @@ Sets the default LTO type for rustc bulids.
 
 **Current value (from the default):** `""`
 
-From //build/rust/config.gni:45
+From //build/rust/config.gni:43
 
 ### rust_override_lto
 Overrides the LTO setting for all Rust builds, regardless of
@@ -3053,7 +3071,7 @@ Valid values are "none", "thin", and "fat".
 
 **Current value (from the default):** `""`
 
-From //build/rust/config.gni:63
+From //build/rust/config.gni:61
 
 ### rust_override_opt
 Overrides the optimization level for all Rust builds, regardless of
@@ -3062,22 +3080,22 @@ Valid values are 0-3, o, and z.
 
 **Current value (from the default):** `""`
 
-From //build/rust/config.gni:58
+From //build/rust/config.gni:56
 
 ### rust_sysroot
 Sets a custom base directory for where rust tooling
 looks for the standard library
 
-**Current value (from the default):** `"../../prebuilt/third_party/rust/linux-x64"`
+**Current value (from the default):** `"//prebuilt/third_party/rust/linux-x64"`
 
-From //build/rust/config.gni:42
+From //build/rust/config.gni:40
 
 ### rust_toolchain_triple_suffix
 Sets the fuchsia toolchain target triple suffix (after arch)
 
 **Current value (from the default):** `"fuchsia"`
 
-From //build/rust/config.gni:48
+From //build/rust/config.gni:46
 
 ### rust_v0_symbol_mangling
 Controls whether the rust compiler uses v0 symbol mangling scheme
@@ -3093,7 +3111,7 @@ From //build/config/rust/BUILD.gn:13
 ### rustc_lib_dir
 Path to rustc lib directory.
 
-**Current value (from the default):** `"../../prebuilt/third_party/rust/linux-x64/lib"`
+**Current value (from the default):** `"//prebuilt/third_party/rust/linux-x64/bin/../lib"`
 
 From //build/images/manifest.gni:16
 
@@ -3101,9 +3119,9 @@ From //build/images/manifest.gni:16
 Sets a custom base directory for `rustc` and `cargo`.
 This can be used to test custom Rust toolchains.
 
-**Current value (from the default):** `"../../prebuilt/third_party/rust/linux-x64/bin"`
+**Current value (from the default):** `"//prebuilt/third_party/rust/linux-x64/bin"`
 
-From //build/rust/config.gni:24
+From //build/rust/config.gni:22
 
 ### rustc_version_description
 Human-readable identifier for the toolchain version.
@@ -3113,7 +3131,7 @@ e.g., clang_version_description = read_file("$_rustc_lib_dir/VERSION")
 
 **Current value (from the default):** `""`
 
-From //build/rust/config.gni:38
+From //build/rust/config.gni:36
 
 ### rustc_version_string
 This is a string identifying the particular toolchain version in use.  Its
@@ -3123,9 +3141,9 @@ toolchain, so that recompilations with the new compiler can be triggered.
 When using the prebuilt, this is ignored and the CIPD instance ID of the
 prebuilt is used.
 
-**Current value (from the default):** `"ADBc9wupx1i9yY5W9s4j8uwM8V_cKCHvb_oAIHMoSskC"`
+**Current value (from the default):** `"bANU9yd4cBaxBs3IocHfPMUwOZca8YbrPfBIEMX0QYoC"`
 
-From //build/rust/config.gni:32
+From //build/rust/config.gni:30
 
 ### scenic_display_frame_number
 Draws the current frame number in the top-left corner.
@@ -3275,7 +3293,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1407
+From //build/config/BUILDCONFIG.gn:1409
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -3284,7 +3302,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1412
+From //build/config/BUILDCONFIG.gn:1414
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -3328,7 +3346,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1220
+From //build/config/BUILDCONFIG.gn:1222
 
 ### size_checker_input
 The input to the size checker.
@@ -3393,7 +3411,7 @@ Platform portability header for spinel.
 
 **Current value (from the default):** `"\"spinel_platform.h\""`
 
-From [//third_party/openthread/src/lib/spinel/BUILD.gn:32](https://fuchsia.googlesource.com/third_party/openthread/+/9ac8f89ef5eef4cee04afd14008cb83ce7ed2e48/src/lib/spinel/BUILD.gn#32)
+From [//third_party/openthread/src/lib/spinel/BUILD.gn:32](https://fuchsia.googlesource.com/third_party/openthread/+/68af0bc2f6480ce38a67033833cbaaf4f453d151/src/lib/spinel/BUILD.gn#32)
 
 ### starnix_syscalls_test_label
 
@@ -3434,6 +3452,17 @@ From //out/not-default/args.gn:7
 ### target_os
 
 **Current value (from the default):** `""`
+
+### target_persistent_debuglog_size
+Controls (in bytes) the target size of the persistent debug log, in bytes.
+Setting this to zero disables all persistent debug log functionality.  Note
+that while the system will make an attempt to secure this many bytes for the
+persistent debug log, it may not be able to due to limited persistent RAM
+resources.  Must be a multiple of 128 bytes.
+
+**Current value (from the default):** `0`
+
+From //zircon/kernel/lib/persistent-debuglog/params.gni:13
 
 ### target_sysroot
 The absolute path of the sysroot that is used with the target toolchain.
@@ -3497,7 +3526,7 @@ Default value is 'all', it is preferable to set to 'none' for production
 
 **Current value (from the default):** `"all"`
 
-From //build/security.gni:109
+From //build/security.gni:117
 
 ### thinlto_cache_dir
 ThinLTO cache directory path.
@@ -3583,7 +3612,7 @@ The other fields are the variant's effects as defined in
 }
 ```
 
-From //build/config/BUILDCONFIG.gn:136
+From //build/config/BUILDCONFIG.gn:138
 
 ### ubsan_default_options
 Default [UndefinedBehaviorSanitizer](https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html)
@@ -3614,7 +3643,7 @@ From //build/config/sanitizers/sanitizer_default_options.gni:47
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1204
+From //build/config/BUILDCONFIG.gn:1206
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
@@ -3694,7 +3723,7 @@ Controls if we enable relative-vtables for C++ targets.
 
 **Current value (from the default):** `true`
 
-From //build/config/clang/clang.gni:22
+From //build/config/clang/clang.gni:20
 
 ### use_goma
 Set to true to enable distributed compilation using Goma.
@@ -3769,7 +3798,7 @@ If true, use the new "physboot" booting path for the Zircon kernel.
 
 **Current value (from the default):** `false`
 
-From //zircon/kernel/BUILD.gn:20
+From //zircon/kernel/BUILD.gn:21
 
 ### use_prebuilt_ffmpeg
 Use a prebuilt ffmpeg binary rather than building it locally.  See
@@ -3861,7 +3890,7 @@ If true, vboot() image builds print out the exact "futility" command line.
 
 **Current value (from the default):** `false`
 
-From //build/images/vboot/vboot.gni:10
+From //build/images/vboot/vboot.gni:11
 
 ### vendor_linting
 Whether libraries under //vendor should be linted.
@@ -3958,35 +3987,35 @@ Tells openweave to support legacy WDM mode.
 
 **Current value (from the default):** `false`
 
-From [//third_party/openweave-core/config.gni:29](https://fuchsia.googlesource.com/third_party/openweave-core/+/c669b54240d66636510f9456177dbf4b78feda01/config.gni#29)
+From [//third_party/openweave-core/config.gni:29](https://fuchsia.googlesource.com/third_party/openweave-core/+/ecc93ac1958fb95542d0e7bbff573899ac740bae/config.gni#29)
 
 ### weave_build_warm
 Tells openweave to build WARM libraries.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:26](https://fuchsia.googlesource.com/third_party/openweave-core/+/c669b54240d66636510f9456177dbf4b78feda01/config.gni#26)
+From [//third_party/openweave-core/config.gni:26](https://fuchsia.googlesource.com/third_party/openweave-core/+/ecc93ac1958fb95542d0e7bbff573899ac740bae/config.gni#26)
 
 ### weave_system_config_use_sockets
 Tells openweave components to use bsd-like sockets.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:7](https://fuchsia.googlesource.com/third_party/openweave-core/+/c669b54240d66636510f9456177dbf4b78feda01/config.gni#7)
+From [//third_party/openweave-core/config.gni:7](https://fuchsia.googlesource.com/third_party/openweave-core/+/ecc93ac1958fb95542d0e7bbff573899ac740bae/config.gni#7)
 
 ### weave_with_nlfaultinjection
 Tells openweave components to support fault injection.
 
 **Current value (from the default):** `false`
 
-From [//third_party/openweave-core/config.gni:20](https://fuchsia.googlesource.com/third_party/openweave-core/+/c669b54240d66636510f9456177dbf4b78feda01/config.gni#20)
+From [//third_party/openweave-core/config.gni:20](https://fuchsia.googlesource.com/third_party/openweave-core/+/ecc93ac1958fb95542d0e7bbff573899ac740bae/config.gni#20)
 
 ### weave_with_verhoeff
 Tells openweave to support Verhoeff checksum.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openweave-core/config.gni:23](https://fuchsia.googlesource.com/third_party/openweave-core/+/c669b54240d66636510f9456177dbf4b78feda01/config.gni#23)
+From [//third_party/openweave-core/config.gni:23](https://fuchsia.googlesource.com/third_party/openweave-core/+/ecc93ac1958fb95542d0e7bbff573899ac740bae/config.gni#23)
 
 ### with_live_usb
 Whether or not to include the live_usb component in the build.
@@ -4102,7 +4131,7 @@ This allows testing for a Zircon-specific toolchain with:
 
 **Current value (from the default):** `false`
 
-From //build/config/BUILDCONFIG.gn:153
+From //build/config/BUILDCONFIG.gn:155
 
 ### zircon_tracelog
 Where to emit a tracelog from Zircon's GN run. No trace will be produced if
@@ -4139,7 +4168,7 @@ Path to the amlogic decoder firmware file. Overrides the default in the build.
 
 **Current value (from the default):** `""`
 
-From //src/media/drivers/amlogic_decoder/BUILD.gn:12
+From //src/media/drivers/amlogic_decoder/BUILD.gn:13
 
 ### arm_float_abi
 The ARM floating point mode. This is either the string "hard", "soft", or
@@ -4178,4 +4207,19 @@ From //build/config/arm.gni:28
 **Current value (from the default):** `8`
 
 From //build/config/arm.gni:12
+
+## `target_cpu = "x64"`
+
+### deprecated_x86_legacy_boot_protocol
+**TODO(fxbug.dev/32255): This is a temporary switch that will be removed.**
+
+Set this to make the ZBI compatible with older boot loaders such as a
+gigaboot or zedboot image already installed on a machine that's hard to
+update.  This is an interim workaround only for people who have machines
+that are not physically accessible to update their boot images, and will
+be removed after everyone has had a chance to get hold of their machines.
+
+**Current value (from the default):** `false`
+
+From //zircon/kernel/BUILD.gn:33
 
