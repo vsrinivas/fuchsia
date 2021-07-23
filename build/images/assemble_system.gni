@@ -317,10 +317,17 @@ template("assemble_system") {
     ]
   }
 
-  compiled_action("${image_name}_blob.blk") {
+  blobfs_tool = "//zircon/tools/blobfs(${host_toolchain})"
+  blobfs_tool_dir = get_label_info(blobfs_tool, "root_out_dir")
+  blobfs_binary = "$blobfs_tool_dir/blobfs"
+
+  action("${image_name}_blob.blk") {
     visibility = [ ":*" ]
     forward_variables_from(invoker, [ "testonly" ])
-    deps = [ ":${image_name}_blob.manifest" ]
+    deps = [
+      ":${image_name}_blob.manifest",
+      blobfs_tool,
+    ]
     blob_image_path = "$target_out_dir/$target_name"
     blob_size_list = "$target_out_dir/${image_name}_blobs.json"
     outputs = [
@@ -328,9 +335,21 @@ template("assemble_system") {
       blob_size_list,
     ]
     depfile = blob_image_path + ".d"
-    inputs = [ blob_manifest ]
-    tool = "//zircon/tools/blobfs"
-    args = [
+    inputs = [
+      blob_manifest,
+      blobfs_binary,
+    ]
+    script = "//build/images/mkblobfs.sh"
+
+    # tell the wrapper script where to find blobfs, and the image file
+    args = rebase_path([
+                         blobfs_binary,
+                         blob_image_path,
+                       ],
+                       root_build_dir)
+
+    # args for the blobfs tool itself
+    args += [
       "--depfile",
       "--json-output",
       rebase_path(blob_size_list, root_build_dir),

@@ -10,7 +10,7 @@ BLOBFS_IMAGE=$1
 shift
 
 # remove the previously generated file.
-rm $BLOBFS_IMAGE
+rm -f $BLOBFS_IMAGE
 
 # then run blobfs with no previously-written-to file present.
 $BLOBFS_TOOL $@
