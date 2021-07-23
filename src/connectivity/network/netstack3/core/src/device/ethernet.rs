@@ -4,6 +4,8 @@
 
 //! The Ethernet protocol.
 
+#![deny(unused_results)]
+
 use alloc::boxed::Box;
 use alloc::collections::HashMap;
 use alloc::collections::VecDeque;
@@ -1612,6 +1614,7 @@ fn mac_resolution_failed<C: EthernetIpDeviceContext>(
 
 #[cfg(test)]
 mod tests {
+    use matches::assert_matches;
     use packet::Buf;
     use packet_formats::icmp::{IcmpDestUnreachable, IcmpIpExt};
     use packet_formats::ip::{IpExt, IpPacketBuilder, IpProto};
@@ -1636,7 +1639,7 @@ mod tests {
         add_arp_or_ndp_table_entry, get_counter_val, new_rng, DummyEventDispatcher,
         DummyEventDispatcherBuilder, FakeCryptoRng, TestIpExt, DUMMY_CONFIG_V4,
     };
-    use crate::StackStateBuilder;
+    use crate::{Ipv4StateBuilder, Ipv6StateBuilder, StackStateBuilder};
 
     struct DummyEthernetContext {
         state: IpLinkDeviceState<DummyInstant, EthernetDeviceState<DummyInstant>>,
@@ -1749,9 +1752,9 @@ mod tests {
         )
         .build::<DummyInstant>();
         let ip = IpAddr::V4(DUMMY_CONFIG_V4.local_ip.get());
-        state.add_pending_frame(ip, Buf::new(vec![1], ..));
-        state.add_pending_frame(ip, Buf::new(vec![2], ..));
-        state.add_pending_frame(ip, Buf::new(vec![3], ..));
+        assert_matches!(state.add_pending_frame(ip, Buf::new(vec![1], ..)), None);
+        assert_matches!(state.add_pending_frame(ip, Buf::new(vec![2], ..)), None);
+        assert_matches!(state.add_pending_frame(ip, Buf::new(vec![3], ..)), None);
 
         // Check that we're accumulating correctly...
         assert_eq!(3, state.take_pending_frames(ip).unwrap().count());
@@ -1957,8 +1960,8 @@ mod tests {
         // Test with netstack fowarding
 
         let mut state_builder = StackStateBuilder::default();
-        state_builder.ipv4_builder().forward(true);
-        state_builder.ipv6_builder().forward(true);
+        let _: &mut Ipv4StateBuilder = state_builder.ipv4_builder().forward(true);
+        let _: &mut Ipv6StateBuilder = state_builder.ipv6_builder().forward(true);
         // Most tests do not need NDP's DAD or router solicitation so disable it
         // here.
         let mut ndp_configs = ndp::NdpConfigurations::default();
