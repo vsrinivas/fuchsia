@@ -6,9 +6,12 @@ use {
     anyhow::{anyhow, bail, Context, Error},
     async_trait::async_trait,
     epoch::EpochFile,
+    fidl::endpoints::ServiceMarker as _,
     fidl_fuchsia_io::DirectoryProxy,
     fidl_fuchsia_paver::DataSinkProxy,
-    fidl_fuchsia_pkg::{PackageCacheProxy, PackageResolverProxy, RetainedPackagesProxy},
+    fidl_fuchsia_pkg::{
+        PackageCacheProxy, PackageResolverProxy, RetainedPackagesMarker, RetainedPackagesProxy,
+    },
     fidl_fuchsia_space::ManagerProxy as SpaceManagerProxy,
     fidl_fuchsia_update_installer_ext::{
         FetchFailureReason, Options, PrepareFailureReason, State, UpdateInfo,
@@ -713,7 +716,14 @@ async fn replace_retained_packages(
             .collect::<Vec<_>>(),
         stream,
     )
-    .await;
+    .await
+    .unwrap_or_else(|e| {
+        fx_log_err!(
+            "error serving {} protocol: {:#}",
+            RetainedPackagesMarker::DEBUG_NAME,
+            anyhow!(e)
+        )
+    });
     replace_resp.await.context("calling RetainedPackages.Replace")
 }
 

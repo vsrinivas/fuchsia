@@ -258,7 +258,7 @@ use {
 {{- range .Uses }}
   {{ . }},
 {{- end }}
-  fuchsia_zircon as zx,
+  fuchsia_zircon_types as zx,
 };
 
 #[derive(Debug, Eq, PartialEq)]
@@ -296,8 +296,8 @@ impl SizeAgg {
   fn to_size(&self) -> Size {
     if self.maxed_out {
       return Size {
-        num_bytes: zx::sys::ZX_CHANNEL_MAX_MSG_BYTES as usize,
-        num_handles: zx::sys::ZX_CHANNEL_MAX_MSG_HANDLES as usize,
+        num_bytes: zx::ZX_CHANNEL_MAX_MSG_BYTES as usize,
+        num_handles: zx::ZX_CHANNEL_MAX_MSG_HANDLES as usize,
       };
     }
     return Size { num_bytes: self.num_bytes, num_handles: self.num_handles };

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    fidl_fuchsia_pkg_ext::{MirrorConfigInspectState, RepositoryConfig},
+    fidl_fuchsia_pkg_ext::{MirrorConfig, RepositoryConfig},
     fuchsia_inspect::{self as inspect, NumericProperty, Property, StringReference},
     fuchsia_inspect_contrib::inspectable::{Inspectable, Watch},
     std::sync::Arc,
@@ -56,8 +56,10 @@ impl Watch<Arc<RepositoryConfig>> for InspectableRepositoryConfigWatcher {
             .iter()
             .enumerate()
             .map(|(i, mirror_config)| {
-                mirror_config
-                    .create_inspect_state(self.mirror_configs_node.create_child(&i.to_string()))
+                MirrorConfigInspectState::new(
+                    mirror_config,
+                    self.mirror_configs_node.create_child(&i.to_string()),
+                )
             })
             .collect();
     }
@@ -75,6 +77,27 @@ impl Counter {
 
     pub fn increment(&self) {
         self.prop.add(1);
+    }
+}
+
+pub struct MirrorConfigInspectState {
+    _mirror_url_property: inspect::StringProperty,
+    _subscribe_property: inspect::StringProperty,
+    _blob_mirror_url_property: inspect::StringProperty,
+    _node: inspect::Node,
+}
+
+impl MirrorConfigInspectState {
+    fn new(mirror_config: &MirrorConfig, node: inspect::Node) -> Self {
+        MirrorConfigInspectState {
+            _mirror_url_property: node
+                .create_string("mirror_url", format!("{:?}", mirror_config.mirror_url())),
+            _subscribe_property: node
+                .create_string("subscribe", format!("{:?}", &mirror_config.subscribe())),
+            _blob_mirror_url_property: node
+                .create_string("blob_mirror_url", format!("{:?}", mirror_config.blob_mirror_url())),
+            _node: node,
+        }
     }
 }
 

@@ -11,7 +11,7 @@ use fidl::client::QueryResponseFut;
 use fidl_fuchsia_io::{FileMarker, FileProxy, FileRequestStream};
 use fidl_fuchsia_pkg::{
     BlobInfoIteratorMarker, BlobInfoIteratorProxy, NeededBlobsMarker, NeededBlobsProxy,
-    PackageCacheMarker, PackageCacheProxy,
+    PackageCacheProxy,
 };
 use fuchsia_pkg::PackageDirectory;
 use fuchsia_zircon_status::Status;
@@ -29,12 +29,6 @@ pub struct Client {
 }
 
 impl Client {
-    /// Returns a client connected to pkg-cache from the current component's namespace.
-    pub fn connect_in_namespace() -> Result<Self, anyhow::Error> {
-        let proxy = fuchsia_component::client::connect_to_protocol::<PackageCacheMarker>()?;
-        Ok(Self { proxy })
-    }
-
     /// Constructs a client from the given proxy.
     pub fn from_proxy(proxy: PackageCacheProxy) -> Self {
         Self { proxy }
@@ -525,9 +519,7 @@ mod tests {
         PackageCacheGetResponder, PackageCacheMarker, PackageCacheOpenResponder,
         PackageCacheRequest, PackageCacheRequestStream,
     };
-    use futures::{future::Either, pin_mut};
     use matches::assert_matches;
-    use std::task::Poll;
 
     struct MockPackageCache {
         stream: PackageCacheRequestStream,
@@ -625,6 +617,7 @@ mod tests {
             PackageDirProvider { stream: self.dir }
         }
 
+        #[cfg(target_os = "fuchsia")]
         fn fail_the_get(self) {
             self.responder
                 .send(&mut Err(Status::IO_INVALID.into_raw()))
@@ -689,6 +682,7 @@ mod tests {
             self
         }
 
+        #[cfg(target_os = "fuchsia")]
         async fn expect_abort(mut self) -> Self {
             match self.stream.next().await {
                 Some(Ok(NeededBlobsRequest::Abort { responder })) => {
@@ -935,8 +929,12 @@ mod tests {
         .await;
     }
 
+    #[cfg(target_os = "fuchsia")]
     #[test]
     fn needed_blobs_abort() {
+        use futures::{future::Either, pin_mut};
+        use std::task::Poll;
+
         let mut executor = fuchsia_async::TestExecutor::new_with_fake_time().unwrap();
 
         let fut = async {

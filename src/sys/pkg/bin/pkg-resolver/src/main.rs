@@ -5,7 +5,7 @@ use {
     anyhow::{anyhow, Context as _, Error},
     cobalt_client::traits::AsEventCode as _,
     cobalt_sw_delivery_registry as metrics,
-    fidl_fuchsia_pkg::{LocalMirrorMarker, LocalMirrorProxy},
+    fidl_fuchsia_pkg::{LocalMirrorMarker, LocalMirrorProxy, PackageCacheMarker},
     fuchsia_async as fasync,
     fuchsia_cobalt::{CobaltConnector, CobaltSender, ConnectionType},
     fuchsia_component::{client::connect_to_protocol, server::ServiceFs},
@@ -118,8 +118,9 @@ pub fn main() -> Result<(), Error> {
 async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error> {
     let config = Config::load_from_config_data_or_default();
 
-    let pkg_cache = fidl_fuchsia_pkg_ext::cache::Client::connect_in_namespace()
+    let pkg_cache_proxy = fuchsia_component::client::connect_to_protocol::<PackageCacheMarker>()
         .context("error connecting to package cache")?;
+    let pkg_cache = fidl_fuchsia_pkg_ext::cache::Client::from_proxy(pkg_cache_proxy);
     let local_mirror = if args.allow_local_mirror {
         Some(
             connect_to_protocol::<LocalMirrorMarker>()

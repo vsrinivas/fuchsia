@@ -21,6 +21,7 @@ group("tests") {
     "testing:tests",
     "tests",
     "//src/sys/lib/fidl-fuchsia-pkg-ext:tests",
+    "//src/sys/lib/fidl-fuchsia-pkg-rewrite-ext:tests",
   ]
 }
 

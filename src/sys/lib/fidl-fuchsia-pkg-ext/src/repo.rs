@@ -4,7 +4,7 @@
 
 use {
     crate::errors::{MirrorConfigError, RepositoryParseError, RepositoryUrlParseError},
-    fidl_fuchsia_pkg as fidl, fuchsia_inspect as inspect,
+    fidl_fuchsia_pkg as fidl,
     fuchsia_url::pkg_url::{PkgUrl, RepoUrl},
     http::Uri,
     http_uri_ext::HttpUriExt as _,
@@ -41,13 +41,6 @@ pub struct MirrorConfig {
     blob_mirror_url: http::Uri,
 }
 
-pub struct MirrorConfigInspectState {
-    _mirror_url_property: inspect::StringProperty,
-    _subscribe_property: inspect::StringProperty,
-    _blob_mirror_url_property: inspect::StringProperty,
-    _node: inspect::Node,
-}
-
 impl MirrorConfig {
     // Guaranteed to always have a `scheme`.
     pub fn mirror_url(&self) -> &http::Uri {
@@ -60,16 +53,6 @@ impl MirrorConfig {
     // Guaranteed to always have a `scheme`.
     pub fn blob_mirror_url(&self) -> &http::Uri {
         &self.blob_mirror_url
-    }
-    pub fn create_inspect_state(&self, node: inspect::Node) -> MirrorConfigInspectState {
-        MirrorConfigInspectState {
-            _mirror_url_property: node
-                .create_string("mirror_url", format!("{:?}", self.mirror_url)),
-            _subscribe_property: node.create_string("subscribe", format!("{:?}", &self.subscribe)),
-            _blob_mirror_url_property: node
-                .create_string("blob_mirror_url", format!("{:?}", self.blob_mirror_url)),
-            _node: node,
-        }
     }
 }
 

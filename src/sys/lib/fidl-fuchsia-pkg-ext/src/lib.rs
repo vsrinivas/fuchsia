@@ -10,9 +10,8 @@ pub use crate::types::{BlobId, BlobInfo};
 
 mod repo;
 pub use crate::repo::{
-    MirrorConfig, MirrorConfigBuilder, MirrorConfigInspectState, RepositoryConfig,
-    RepositoryConfigBuilder, RepositoryConfigs, RepositoryKey, RepositoryStorageType,
-    RepositoryUrl,
+    MirrorConfig, MirrorConfigBuilder, RepositoryConfig, RepositoryConfigBuilder,
+    RepositoryConfigs, RepositoryKey, RepositoryStorageType, RepositoryUrl,
 };
 
 mod errors;

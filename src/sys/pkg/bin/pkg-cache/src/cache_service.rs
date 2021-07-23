@@ -931,7 +931,9 @@ async fn serve_base_package_index(
             meta_far_blob_id: BlobId::from(hash.clone()).into(),
         })
         .collect::<Vec<PackageIndexEntry>>();
-    serve_fidl_iterator(package_entries, stream).await
+    serve_fidl_iterator(package_entries, stream).await.unwrap_or_else(|e| {
+        fx_log_err!("error serving PackageIndexIteratorRequestStream protocol: {:#}", anyhow!(e))
+    })
 }
 
 /// Serves the `BlobInfoIteratorRequestStream` with as many entries per request as will fit in a
@@ -940,7 +942,9 @@ async fn serve_blob_info_iterator(
     items: impl AsMut<[fidl_fuchsia_pkg::BlobInfo]>,
     stream: BlobInfoIteratorRequestStream,
 ) {
-    serve_fidl_iterator(items, stream).await
+    serve_fidl_iterator(items, stream).await.unwrap_or_else(|e| {
+        fx_log_err!("error serving BlobInfoIteratorRequestStream protocol: {:#}", anyhow!(e))
+    })
 }
 
 #[cfg(test)]

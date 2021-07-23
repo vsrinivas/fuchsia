@@ -228,7 +228,9 @@ pub async fn replace_retained_packages(
     let packages = packages.iter().cloned().map(Into::into).collect::<Vec<_>>();
     let (iterator_client_end, iterator_stream) =
         fidl::endpoints::create_request_stream::<BlobIdIteratorMarker>().unwrap();
-    let serve_iterator_fut = serve_fidl_iterator(packages, iterator_stream);
+    let serve_iterator_fut = async {
+        serve_fidl_iterator(packages, iterator_stream).await.unwrap();
+    };
     let (replace_retained_result, ()) =
         futures::join!(proxy.replace(iterator_client_end), serve_iterator_fut);
     assert_matches!(replace_retained_result, Ok(()));
