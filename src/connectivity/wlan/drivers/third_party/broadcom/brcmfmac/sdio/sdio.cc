@@ -1815,14 +1815,13 @@ static zx_status_t brcmf_sdio_txpkt_hdalign(struct brcmf_sdio* bus, struct brcmf
  */
 static zx_status_t brcmf_sdio_txpkt_prep(struct brcmf_sdio* bus, struct brcmf_netbuf_list* pktq,
                                          uint8_t chan) {
-  uint16_t head_pad, total_len;
+  uint16_t head_pad;
   struct brcmf_netbuf* pkt_next;
   uint8_t txseq;
   zx_status_t ret;
   struct brcmf_sdio_hdrinfo hd_info = {};
 
   txseq = bus->tx_seq;
-  total_len = 0;
   brcmf_netbuf_list_for_every(pktq, pkt_next) {
     /* align packet data pointer */
     ret = brcmf_sdio_txpkt_hdalign(bus, pkt_next, &head_pad);
@@ -1832,8 +1831,6 @@ static zx_status_t brcmf_sdio_txpkt_prep(struct brcmf_sdio* bus, struct brcmf_ne
     if (head_pad) {
       memset(pkt_next->data + bus->tx_hdrlen, 0, head_pad);
     }
-
-    total_len += pkt_next->len;
 
     if (pkt_next->len > std::numeric_limits<uint16_t>::max()) {
       BRCMF_ERR("brcmf_sdio_txpkt_prep failed: pkt_next len invalid (overflow)");
