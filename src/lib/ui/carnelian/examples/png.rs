@@ -65,7 +65,6 @@ fn parse_point(value: &str) -> Result<Point2D<f32>, String> {
     }
 }
 
-#[derive(Default)]
 struct PngAppAssistant {
     use_spinel: bool,
     filename: String,
@@ -73,13 +72,20 @@ struct PngAppAssistant {
     position: Option<Point2D<f32>>,
 }
 
+impl Default for PngAppAssistant {
+    fn default() -> Self {
+        let args: Args = argh::from_env();
+        let use_spinel = args.use_spinel;
+        let filename = args.file;
+        let background = args.background;
+        let position = args.position;
+
+        Self { use_spinel, filename, background, position }
+    }
+}
+
 impl AppAssistant for PngAppAssistant {
     fn setup(&mut self) -> Result<(), Error> {
-        let args: Args = argh::from_env();
-        self.use_spinel = args.use_spinel;
-        self.filename = args.file;
-        self.background = args.background;
-        self.position = args.position;
         Ok(())
     }
 
@@ -184,22 +190,20 @@ impl ViewAssistant for PngViewAssistant {
         });
 
         // Clear area where image was previously located.
-        rendering.composition.insert(
-            0,
-            Layer {
-                raster: rendering
-                    .clear_raster
-                    .as_ref()
-                    .map(|raster| raster.clone())
-                    .expect("clear raster"),
-                clip: None,
-                style: Style {
-                    fill_rule: FillRule::NonZero,
-                    fill: Fill::Solid(background),
-                    blend_mode: BlendMode::Over,
+        if let Some(clear_raster) = &rendering.clear_raster {
+            rendering.composition.insert(
+                0,
+                Layer {
+                    raster: clear_raster.clone(),
+                    clip: None,
+                    style: Style {
+                        fill_rule: FillRule::NonZero,
+                        fill: Fill::Solid(background),
+                        blend_mode: BlendMode::Over,
+                    },
                 },
-            },
-        );
+            );
+        }
         let image = render_context.get_current_image(context);
         render_context.render(&rendering.composition, None, image, &ext);
 

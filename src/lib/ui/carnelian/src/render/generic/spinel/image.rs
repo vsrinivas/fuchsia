@@ -313,11 +313,6 @@ impl VulkanImage {
     ) -> Result<Self, Error> {
         let info = reader.info();
         let color_type = info.color_type;
-        ensure!(
-            color_type == png::ColorType::RGBA || color_type == png::ColorType::RGB,
-            "unsupported color type {:#?}",
-            color_type
-        );
         let (width, height) = info.size();
         let vk = device_pointers(vk_i, device);
         let image = unsafe {
@@ -366,25 +361,33 @@ impl VulkanImage {
             let src_row = reader.next_row()?.unwrap();
             match format {
                 vk::FORMAT_R8G8B8A8_UNORM | vk::FORMAT_R8G8B8A8_SRGB => {
-                    if color_type == png::ColorType::RGB {
-                        // Transfer row and convert to BGRA.
-                        for (src, dst) in src_row.chunks(3).zip(dst_row.chunks_mut(4)) {
-                            dst.copy_from_slice(&[src[0], src[1], src[2], 0xff]);
+                    match color_type {
+                        png::ColorType::RGB | png::ColorType::Indexed => {
+                            // Transfer row and convert to BGRA.
+                            for (src, dst) in src_row.chunks(3).zip(dst_row.chunks_mut(4)) {
+                                dst.copy_from_slice(&[src[0], src[1], src[2], 0xff]);
+                            }
                         }
-                    } else {
-                        dst_row.copy_from_slice(src_row);
+                        png::ColorType::RGBA => {
+                            dst_row.copy_from_slice(src_row);
+                        }
+                        _ => panic!("unsupported color type {:#?}", color_type),
                     }
                 }
                 vk::FORMAT_B8G8R8A8_UNORM | vk::FORMAT_B8G8R8A8_SRGB => {
-                    if color_type == png::ColorType::RGB {
-                        // Transfer row and convert to BGRA.
-                        for (src, dst) in src_row.chunks(3).zip(dst_row.chunks_mut(4)) {
-                            dst.copy_from_slice(&[src[2], src[1], src[0], 0xff]);
+                    match color_type {
+                        png::ColorType::RGB | png::ColorType::Indexed => {
+                            // Transfer row and convert to BGRA.
+                            for (src, dst) in src_row.chunks(3).zip(dst_row.chunks_mut(4)) {
+                                dst.copy_from_slice(&[src[2], src[1], src[0], 0xff]);
+                            }
                         }
-                    } else {
-                        for (src, dst) in src_row.chunks(4).zip(dst_row.chunks_mut(4)) {
-                            dst.copy_from_slice(&[src[2], src[1], src[0], src[3]]);
+                        png::ColorType::RGBA => {
+                            for (src, dst) in src_row.chunks(4).zip(dst_row.chunks_mut(4)) {
+                                dst.copy_from_slice(&[src[2], src[1], src[0], src[3]]);
+                            }
                         }
+                        _ => panic!("unsupported color type {:#?}", color_type),
                     }
                 }
                 _ => bail!("Unsupported image format {}", format),
