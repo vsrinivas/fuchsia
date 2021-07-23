@@ -93,9 +93,9 @@ zx_status_t nhlt_publish_metadata(acpi::Acpi* acpi, zx_device_t* dev, uint8_t bb
   void* nhlt = (void*)(vaddr + page_offset);
 
   // Publish the NHLT as metadata on the future PCI device node...
-  // The canonical path to the PCI device is /dev/sys/platform/pci/<b:d.f>
+  // The canonical path to the PCI device is /dev/pci-<b:d.f>
   char path[PATH_MAX];
-  snprintf(path, sizeof(path), "/dev/sys/platform/pci/%02x:%02x.%01x", bbn,
+  snprintf(path, sizeof(path), "/dev/pci-%02x:%02x.%01x", bbn,
            (unsigned)((adr >> 16) & 0xFFFF), (unsigned)(adr & 0xFFFF));
   status = device_publish_metadata(dev, path, DEVICE_METADATA_ACPI_HDA_NHLT, nhlt, size);
   if (status != ZX_OK) {
