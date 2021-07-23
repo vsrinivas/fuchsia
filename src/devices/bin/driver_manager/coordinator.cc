@@ -1350,7 +1350,6 @@ void Coordinator::DriverAddedInit(Driver* drv, const char* version) {
   // Record the special fragment driver when we see it
   if (driver->libname.data() == GetFragmentDriverPath()) {
     fragment_driver_ = driver.get();
-    driver->never_autoselect = true;
   }
 
   bool fallback = false;
@@ -1402,9 +1401,6 @@ zx_status_t Coordinator::BindDriverToDevice(const fbl::RefPtr<Device>& dev, cons
 // the Coordinator.  Existing devices are inspected to see if the
 // new driver is bindable to them (unless they are already bound).
 zx_status_t Coordinator::BindDriver(Driver* drv, const AttemptBindFunc& attempt_bind) {
-  if (drv->never_autoselect) {
-    return ZX_OK;
-  }
   zx_status_t status = BindDriverToDevice(root_device_, drv, true /* autobind */, attempt_bind);
   if (status != ZX_ERR_NEXT) {
     return status;
@@ -1575,9 +1571,6 @@ zx::status<std::vector<const Driver*>> Coordinator::MatchDevice(const fbl::RefPt
 
   for (const Driver& driver : drivers_) {
     if (!autobind && drvlibname.compare(driver.libname)) {
-      continue;
-    }
-    if (driver.never_autoselect) {
       continue;
     }
     zx_status_t status = MatchDeviceToDriver(dev, &driver, autobind);

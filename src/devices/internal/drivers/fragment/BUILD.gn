@@ -10,7 +10,7 @@ import("//src/devices/bus/drivers/pci/pci.gni")
 driver_bind_rules("fragment-bind") {
   header_output = "fragment-bind.h"
   bind_output = "fragment.bindbc"
-  rules = "fragment.bind"
+  disable_autobind = true
 }
 
 driver_module("fragment-driver") {
@@ -94,7 +94,7 @@ group("fragment") {
 driver_bind_rules("fragment-proxy-bind") {
   header_output = "fragment-proxy-bind.h"
   bind_output = "fragment-proxy.bindbc"
-  rules = "fragment-proxy.bind"
+  disable_autobind = true
 }
 
 driver_module("fragment.proxy-driver") {

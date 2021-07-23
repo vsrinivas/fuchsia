@@ -306,7 +306,7 @@ zx_status_t CompositeDeviceFragment::Bind(const fbl::RefPtr<Device>& dev) {
   ZX_ASSERT(bound_device_ == nullptr);
 
   zx_status_t status = dev->coordinator->BindDriverToDevice(
-      dev, dev->coordinator->fragment_driver(), true /* autobind */);
+      dev, dev->coordinator->fragment_driver(), false /* autobind */);
   if (status != ZX_OK) {
     return status;
   }

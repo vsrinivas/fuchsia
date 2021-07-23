@@ -77,10 +77,6 @@ TEST_F(LoadDriverPackageTestCase, LoadRegisteredDriver) {
   // A new driver should be added.
   ASSERT_EQ(drivers.size_slow(), num_drivers + 1);
   ASSERT_EQ(drivers.back().libname, libname);
-
-  // Attempting to bind the fragment driver will create a proxy device, which we need to detach
-  // from its parent to avoid a memory leak.
-  coordinator().root_device()->proxy()->DetachFromParent();
 }
 
 TEST_F(LoadDriverPackageTestCase, LoadUnregisteredDriver) {
