@@ -6,25 +6,25 @@ import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
-go_library("main") {
-  source_dir = "cmd"
-  sources = [
-    "ninjatrace.go",
-    "ninjatrace_test.go",
-  ]
-  deps = [
-    "//tools/build/ninjago/compdb",
-    "//tools/build/ninjago/ninjagraph",
-    "//tools/build/ninjago/ninjalog",
-  ]
-}
-
-go_binary("ninjatrace") {
-  gopackage = "go.fuchsia.dev/fuchsia/tools/build/ninjago/ninjatrace/cmd"
-  deps = [ ":main" ]
-}
-
 if (is_host) {
+  go_library("main") {
+    source_dir = "cmd"
+    sources = [
+      "ninjatrace.go",
+      "ninjatrace_test.go",
+    ]
+    deps = [
+      "//tools/build/ninjago/compdb",
+      "//tools/build/ninjago/ninjagraph",
+      "//tools/build/ninjago/ninjalog",
+    ]
+  }
+
+  go_binary("ninjatrace") {
+    gopackage = "go.fuchsia.dev/fuchsia/tools/build/ninjago/ninjatrace/cmd"
+    deps = [ ":main" ]
+  }
+
   go_test("ninjatrace_tests") {
     output_name = "ninjatrace_tests"
     gopackages = [ "go.fuchsia.dev/fuchsia/tools/build/ninjago/ninjatrace/cmd" ]

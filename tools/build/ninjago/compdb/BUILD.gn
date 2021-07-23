@@ -5,15 +5,15 @@
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
-go_library("compdb") {
-  sources = [
-    "compdb.go",
-    "compdb_test.go",
-    "doc.go",
-  ]
-}
-
 if (is_host) {
+  go_library("compdb") {
+    sources = [
+      "compdb.go",
+      "compdb_test.go",
+      "doc.go",
+    ]
+  }
+
   go_test("compdb_tests") {
     gopackages = [ "go.fuchsia.dev/fuchsia/tools/build/ninjago/compdb" ]
     deps = [ ":compdb" ]

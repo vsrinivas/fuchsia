@@ -7,26 +7,26 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/testing/host_test_data.gni")
 
-go_library("main") {
-  sources = [
-    "main.go",
-    "main_test.go",
-  ]
-  deps = [
-    "//tools/build/ninjago/compdb",
-    "//tools/build/ninjago/ninjagraph",
-    "//tools/build/ninjago/ninjalog",
-    "//tools/lib/color",
-    "//tools/lib/logger",
-  ]
-}
-
-go_binary("buildstats") {
-  gopackage = "go.fuchsia.dev/fuchsia/tools/build/ninjago/buildstats"
-  deps = [ ":main" ]
-}
-
 if (is_host) {
+  go_library("main") {
+    sources = [
+      "main.go",
+      "main_test.go",
+    ]
+    deps = [
+      "//tools/build/ninjago/compdb",
+      "//tools/build/ninjago/ninjagraph",
+      "//tools/build/ninjago/ninjalog",
+      "//tools/lib/color",
+      "//tools/lib/logger",
+    ]
+  }
+
+  go_binary("buildstats") {
+    gopackage = "go.fuchsia.dev/fuchsia/tools/build/ninjago/buildstats"
+    deps = [ ":main" ]
+  }
+
   _testdata_path = "$target_gen_dir/testdata"
 
   host_test_data("testdata") {

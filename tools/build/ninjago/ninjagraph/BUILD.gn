@@ -6,20 +6,20 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/testing/host_test_data.gni")
 
-go_library("ninjagraph") {
-  sources = [
-    "criticalpath.go",
-    "criticalpath_test.go",
-    "ninjagraph.go",
-    "ninjagraph_test.go",
-  ]
-  deps = [
-    "//third_party/golibs:golang.org/x/sync",
-    "//tools/build/ninjago/ninjalog",
-  ]
-}
-
 if (is_host) {
+  go_library("ninjagraph") {
+    sources = [
+      "criticalpath.go",
+      "criticalpath_test.go",
+      "ninjagraph.go",
+      "ninjagraph_test.go",
+    ]
+    deps = [
+      "//third_party/golibs:golang.org/x/sync",
+      "//tools/build/ninjago/ninjalog",
+    ]
+  }
+
   _testdata_path = "$target_gen_dir/testdata"
 
   go_test("ninjagraph_tests") {

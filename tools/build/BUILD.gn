@@ -9,8 +9,8 @@ group("tools") {
   testonly = true
 
   public_deps = [
-    "//tools/build/ninjago/buildstats",
-    "//tools/build/ninjago/ninjatrace",
+    "//tools/build/ninjago/buildstats($host_toolchain)",
+    "//tools/build/ninjago/ninjatrace($host_toolchain)",
   ]
 }
 
