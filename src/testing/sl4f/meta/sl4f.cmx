@@ -24,7 +24,6 @@
             "wifi"
         ],
         "features": [
-            "build-info",
             "deprecated-shell",
             "hub"
         ],
