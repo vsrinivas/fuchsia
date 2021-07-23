@@ -235,10 +235,11 @@ mod tests {
         fuchsia_async as fasync,
         futures::{future::BoxFuture, task::Poll, StreamExt},
         pin_utils::pin_mut,
+        std::fs::File,
+        tempfile,
         test_case::test_case,
         void::Void,
         wlan_common::assert_variant,
-        wlan_dev::DeviceEnv,
     };
 
     struct TestValues {
@@ -281,11 +282,13 @@ mod tests {
         }
     }
 
-    fn fake_phy(path: &str) -> (PhyDevice, fidl_dev::PhyRequestStream) {
+    fn fake_phy() -> (PhyDevice, fidl_dev::PhyRequestStream) {
         let (proxy, server) =
             create_proxy::<fidl_dev::PhyMarker>().expect("fake_phy: create_proxy() failed");
-        let device = wlan_dev::RealDeviceEnv::device_from_path(path)
-            .expect(&format!("fake_phy: failed to open {}", path));
+        let temp_dir = tempfile::TempDir::new().expect("failed to create temp dir");
+        let test_path = temp_dir.path().join("test");
+        let file = File::create(test_path.clone()).expect("failed to open file");
+        let device = wlan_dev::Device { node: file, path: test_path };
         let stream = server.into_stream().expect("fake_phy: failed to create stream");
         (PhyDevice { proxy, device }, stream)
     }
@@ -325,7 +328,7 @@ mod tests {
         });
 
         // Add a PHY to the PhyMap.
-        let (phy, _req_stream) = fake_phy("/dev/null");
+        let (phy, _req_stream) = fake_phy();
         test_values.phys.insert(0, phy);
 
         // Request the list of available PHYs.
@@ -362,7 +365,17 @@ mod tests {
     fn test_get_dev_path_success() {
         let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
         let test_values = test_setup();
-        let (phy, _) = fake_phy("/dev/null");
+        let (phy, _) = fake_phy();
+
+        let expected_path = phy
+            .device
+            .path
+            .as_path()
+            .as_os_str()
+            .to_os_string()
+            .into_string()
+            .expect("could not convert path to string.");
+
         test_values.phys.insert(10u16, phy);
 
         let service_fut = serve_monitor_requests(
@@ -386,7 +399,7 @@ mod tests {
         assert_variant!(
             exec.run_until_stalled(&mut query_fut),
             Poll::Ready(Ok(Some(path))) => {
-                assert_eq!(path, "/dev/null");
+                assert_eq!(path, expected_path);
             }
         );
     }
@@ -422,7 +435,7 @@ mod tests {
     fn test_get_mac_roles_success() {
         let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
         let test_values = test_setup();
-        let (phy, mut phy_stream) = fake_phy("/dev/null");
+        let (phy, mut phy_stream) = fake_phy();
         test_values.phys.insert(10u16, phy);
 
         let service_fut = serve_monitor_requests(
@@ -529,7 +542,7 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut next_fut), Poll::Pending);
 
         // Add a PHY and make sure the update is received.
-        let (phy, _phy_stream) = fake_phy("/dev/null");
+        let (phy, _phy_stream) = fake_phy();
         test_values.phys.insert(0, phy);
         assert_variant!(exec.run_until_stalled(&mut watcher_fut), Poll::Pending);
         assert_variant!(
@@ -565,7 +578,7 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut service_fut), Poll::Pending);
 
         // Add a PHY before beginning to watch for devices.
-        let (phy, _phy_stream) = fake_phy("/dev/null");
+        let (phy, _phy_stream) = fake_phy();
         test_values.phys.insert(0, phy);
         assert_variant!(exec.run_until_stalled(&mut watcher_fut), Poll::Pending);
 
@@ -718,7 +731,7 @@ mod tests {
         // Setup environment
         let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
         let test_values = test_setup();
-        let (phy, mut phy_stream) = fake_phy("/dev/null");
+        let (phy, mut phy_stream) = fake_phy();
         let phy_id = 10u16;
         test_values.phys.insert(phy_id, phy);
         let alpha2 = fake_alpha2();
@@ -749,7 +762,7 @@ mod tests {
         // Setup environment
         let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
         let test_values = test_setup();
-        let (phy, mut phy_stream) = fake_phy("/dev/null");
+        let (phy, mut phy_stream) = fake_phy();
         let phy_id = 10u16;
         test_values.phys.insert(phy_id, phy);
         let alpha2 = fake_alpha2();
@@ -783,7 +796,7 @@ mod tests {
         let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
         let test_values = test_setup();
 
-        let (phy, mut phy_stream) = fake_phy("/dev/null");
+        let (phy, mut phy_stream) = fake_phy();
         let phy_id = 10u16;
         test_values.phys.insert(phy_id, phy);
         let alpha2 = fake_alpha2();
@@ -815,7 +828,7 @@ mod tests {
         // Setup environment
         let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
         let test_values = test_setup();
-        let (phy, mut phy_stream) = fake_phy("/dev/null");
+        let (phy, mut phy_stream) = fake_phy();
         let phy_id = 10u16;
         test_values.phys.insert(phy_id, phy);
 
@@ -843,7 +856,7 @@ mod tests {
         // Setup environment
         let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
         let test_values = test_setup();
-        let (phy, mut phy_stream) = fake_phy("/dev/null");
+        let (phy, mut phy_stream) = fake_phy();
         let phy_id = 10u16;
         test_values.phys.insert(phy_id, phy);
 
@@ -872,7 +885,7 @@ mod tests {
         // Setup environment
         let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
         let test_values = test_setup();
-        let (phy, mut phy_stream) = fake_phy("/dev/null");
+        let (phy, mut phy_stream) = fake_phy();
         let phy_id = 10u16;
         test_values.phys.insert(phy_id, phy);
 
@@ -914,7 +927,7 @@ mod tests {
         let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
         let mut test_values = test_setup();
 
-        let (phy, mut phy_stream) = fake_phy("/dev/null");
+        let (phy, mut phy_stream) = fake_phy();
         test_values.phys.insert(10, phy);
 
         // Initiate a CreateIface request. The returned future should not be able
@@ -1021,7 +1034,7 @@ mod tests {
         phy_map: &PhyMap,
         iface_map: &IfaceMap,
     ) -> fidl_dev::PhyRequestStream {
-        let (phy, phy_stream) = fake_phy("/dev/null");
+        let (phy, phy_stream) = fake_phy();
         phy_map.insert(10, phy);
         iface_map.insert(
             42,

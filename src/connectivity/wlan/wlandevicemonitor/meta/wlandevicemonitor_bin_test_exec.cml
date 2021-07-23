@@ -1,0 +1,61 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    children: [
+        {
+            name: "test",
+            url: "fuchsia-pkg://fuchsia.com/wlandevicemonitor-tests-v2#meta/wlandevicemonitor-test-component.cm",
+        },
+        {
+            name: "isolated_dev_mgr",
+            url: "fuchsia-pkg://fuchsia.com/wlan-devmgr-v2#meta/isolated-devmgr.cm",
+        },
+    ],
+    offer: [
+        {
+            runner: "rust_test_runner",
+            from: "parent",
+            to: [ "#test" ],
+        },
+        {
+            storage: "tmp",
+            from: "parent",
+            to: "#test",
+        },
+        {
+            protocol: "fuchsia.io.Directory",
+            from: "#isolated_dev_mgr",
+            to: "#test",
+        },
+        {
+            directory: "dev",
+            from: "#isolated_dev_mgr",
+            as: "dev",
+            to: "#test",
+        },
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: "#test",
+        },
+        {
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.process.Launcher",
+            ],
+            from: "parent",
+            to: "#isolated_dev_mgr",
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.test.Suite",
+            from: "#test",
+        },
+    ],
+}

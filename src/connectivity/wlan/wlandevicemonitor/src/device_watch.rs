@@ -103,7 +103,6 @@ mod tests {
         fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_tap as fidl_wlantap,
         fuchsia_zircon::prelude::*,
         futures::{poll, task::Poll},
-        isolated_devmgr::IsolatedDeviceEnv,
         pin_utils::pin_mut,
         std::convert::TryInto,
         wlan_common::{ie::*, test_utils::ExpectWithin},
@@ -111,7 +110,123 @@ mod tests {
         zerocopy::AsBytes,
     };
 
+    #[cfg(feature = "v2")]
+    use {fidl_fuchsia_io::DirectoryProxy, wlan_dev::DeviceEnv};
+
+    #[cfg(not(feature = "v2"))]
+    use isolated_devmgr::IsolatedDeviceEnv;
+
+    // In Component Framework v1, the isolated device manager build rule allowed for a flag that
+    // would prevent serving /dev until a certain file enumerated.  In WLAN's case, that file was
+    // /dev/test/wlantapctl.  In Components Framework v2, we need to manually wait until
+    // /dev/test/wlantapctl appears before attempting to create a WLAN PHY device.
+    #[cfg(feature = "v2")]
+    async fn wait_for_file(dir: &DirectoryProxy, name: &str) -> Result<(), anyhow::Error> {
+        let mut watcher = fuchsia_vfs_watcher::Watcher::new(io_util::clone_directory(
+            dir,
+            fidl_fuchsia_io::OPEN_RIGHT_READABLE,
+        )?)
+        .await?;
+        while let Some(msg) = watcher.try_next().await? {
+            if msg.event != fuchsia_vfs_watcher::WatchEvent::EXISTING
+                && msg.event != fuchsia_vfs_watcher::WatchEvent::ADD_FILE
+            {
+                continue;
+            }
+            if msg.filename.to_str().unwrap() == name {
+                return Ok(());
+            }
+        }
+        unreachable!();
+    }
+
+    #[cfg(feature = "v2")]
+    async fn recursive_open_node(
+        initial_dir: &DirectoryProxy,
+        name: &str,
+    ) -> Result<fidl_fuchsia_io::NodeProxy, anyhow::Error> {
+        let mut dir = io_util::clone_directory(initial_dir, fidl_fuchsia_io::OPEN_RIGHT_READABLE)?;
+
+        let path = std::path::Path::new(name);
+        let components = path.components().collect::<Vec<_>>();
+
+        for i in 0..(components.len() - 1) {
+            let component = &components[i];
+            match component {
+                std::path::Component::Normal(file) => {
+                    wait_for_file(&dir, file.to_str().unwrap()).await?;
+                    dir = io_util::open_directory(
+                        &dir,
+                        std::path::Path::new(file),
+                        io_util::OPEN_RIGHT_READABLE,
+                    )?;
+                }
+                _ => panic!("Path must contain only normal components"),
+            }
+        }
+        match components[components.len() - 1] {
+            std::path::Component::Normal(file) => {
+                wait_for_file(&dir, file.to_str().unwrap()).await?;
+                io_util::open_node(
+                    &dir,
+                    std::path::Path::new(file),
+                    fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
+                    fidl_fuchsia_io::MODE_TYPE_SERVICE,
+                )
+            }
+            _ => panic!("Path must contain only normal components"),
+        }
+    }
+
+    // TODO(78050): When all WLAN components migrate to Component Framework v2 and the v1 manifests
+    // are deprecated, enable this test.
     #[test]
+    #[cfg(feature = "v2")]
+    fn watch_phys() {
+        let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
+        let phy_watcher =
+            watch_phy_devices::<wlan_dev::RealDeviceEnv>().expect("Failed to create phy_watcher");
+        pin_mut!(phy_watcher);
+
+        // Wait for the wlantap to appear.
+        let raw_dir = wlan_dev::RealDeviceEnv::open_dir("/dev").expect("failed to open /dev/test");
+        let zircon_channel =
+            fdio::clone_channel(&raw_dir).expect("failed to clone directory channel");
+        let async_channel = fasync::Channel::from_channel(zircon_channel)
+            .expect("failed to create async channel from zircon channel");
+        let dir = fidl_fuchsia_io::DirectoryProxy::from_channel(async_channel);
+        let monitor_fut = recursive_open_node(&dir, "test/wlantapctl");
+        pin_mut!(monitor_fut);
+        exec.run_singlethreaded(async {
+            monitor_fut
+                .expect_within(5.seconds(), "wlantapctl monitor never finished")
+                .await
+                .expect("error while watching for wlantapctl")
+        });
+
+        // Now that the wlantapctl device is present, connect to it.
+        let wlantap = wlantap_client::Wlantap::open().expect("Failed to connect to wlantapctl");
+
+        // Create an intentionally unused variable instead of a plain
+        // underscore. Otherwise, this end of the channel will be
+        // dropped and cause the phy device to begin unbinding.
+        let _wlantap_phy =
+            wlantap.create_phy(create_wlantap_config()).expect("failed to create PHY");
+        exec.run_singlethreaded(async {
+            phy_watcher
+                .next()
+                .expect_within(5.seconds(), "phy_watcher did not respond")
+                .await
+                .expect("phy_watcher ended without yielding a phy")
+                .expect("phy_watcher returned an error");
+            if let Poll::Ready(..) = poll!(phy_watcher.next()) {
+                panic!("phy_watcher found more than one phy");
+            }
+        })
+    }
+
+    #[test]
+    #[cfg(not(feature = "v2"))]
     fn watch_phys() {
         let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
         let phy_watcher =
