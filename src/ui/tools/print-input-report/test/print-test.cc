@@ -84,7 +84,7 @@ class PrintInputReport : public testing::Test {
 
   std::unique_ptr<fake_input_report_device::FakeInputDevice> fake_device_;
   std::unique_ptr<async::Loop> loop_;
-  std::optional<fidl::Client<fuchsia_input_report::InputDevice>> client_;
+  std::optional<fidl::WireSharedClient<fuchsia_input_report::InputDevice>> client_;
 };
 
 TEST_F(PrintInputReport, PrintMouseInputReport) {

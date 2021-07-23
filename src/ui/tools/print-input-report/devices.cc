@@ -12,7 +12,7 @@
 namespace print_input_report {
 
 zx_status_t PrintInputDescriptor(std::string filename, Printer* printer,
-                                 fidl::Client<fuchsia_input_report::InputDevice> client,
+                                 fidl::WireSharedClient<fuchsia_input_report::InputDevice> client,
                                  fit::closure callback) {
   client->GetDescriptor(
       [filename, printer, callback = std::move(callback), _ = client.Clone()](
@@ -180,7 +180,7 @@ void PrintConsumerControlDesc(
 }
 
 void PrintInputReports(std::string filename, Printer* printer,
-                       fidl::Client<fuchsia_input_report::InputReportsReader> reader,
+                       fidl::WireSharedClient<fuchsia_input_report::InputReportsReader> reader,
                        size_t num_reads, fit::closure callback) {
   if (num_reads == 0) {
     callback();
@@ -236,8 +236,9 @@ void PrintInputReports(std::string filename, Printer* printer,
       });
 }
 
-zx::status<fidl::Client<fuchsia_input_report::InputReportsReader>> GetReaderClient(
-    fidl::Client<fuchsia_input_report::InputDevice>* client, async_dispatcher_t* dispatcher) {
+zx::status<fidl::WireSharedClient<fuchsia_input_report::InputReportsReader>> GetReaderClient(
+    fidl::WireSharedClient<fuchsia_input_report::InputDevice>* client,
+    async_dispatcher_t* dispatcher) {
   fidl::ClientEnd<fuchsia_input_report::InputReportsReader> reader_client;
   auto reader_server = fidl::CreateEndpoints(&reader_client);
 
@@ -249,7 +250,7 @@ zx::status<fidl::Client<fuchsia_input_report::InputReportsReader>> GetReaderClie
     return zx::error(result.status());
   }
 
-  return zx::ok(fidl::Client(std::move(reader_client), dispatcher));
+  return zx::ok(fidl::WireSharedClient(std::move(reader_client), dispatcher));
 }
 
 void PrintMouseInputReport(Printer* printer,

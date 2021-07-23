@@ -48,7 +48,7 @@ zx_status_t ParseUintArg(const char* arg, uint32_t min, uint32_t max, uint32_t* 
   return ZX_OK;
 }
 
-std::optional<fidl::Client<fuchsia_input_report::InputDevice>> GetClientFromPath(
+std::optional<fidl::WireSharedClient<fuchsia_input_report::InputDevice>> GetClientFromPath(
     Printer* printer, const std::string& path, async_dispatcher_t* dispatcher) {
   fbl::unique_fd fd(open(path.c_str(), O_RDWR));
   if (!fd.is_valid()) {
@@ -63,8 +63,8 @@ std::optional<fidl::Client<fuchsia_input_report::InputDevice>> GetClientFromPath
     return std::nullopt;
   }
 
-  return fidl::Client(fidl::ClientEnd<fuchsia_input_report::InputDevice>(std::move(chan)),
-                      dispatcher);
+  return fidl::WireSharedClient(fidl::ClientEnd<fuchsia_input_report::InputDevice>(std::move(chan)),
+                                dispatcher);
 }
 
 int ReadAllDevices(async::Loop* loop, Printer* printer) {
@@ -85,17 +85,17 @@ int ReadAllDevices(async::Loop* loop, Printer* printer) {
           return;
         }
 
-        auto device =
-            fidl::Client(fidl::ClientEnd<fuchsia_input_report::InputDevice>(std::move(chan)),
-                         loop->dispatcher());
+        auto device = fidl::WireSharedClient(
+            fidl::ClientEnd<fuchsia_input_report::InputDevice>(std::move(chan)),
+            loop->dispatcher());
 
         auto res = print_input_report::GetReaderClient(&device, loop->dispatcher());
         if (!res.is_ok()) {
           printer->Print("Failed to GetReaderClient\n");
           return;
         }
-        auto reader =
-            fidl::Client<fuchsia_input_report::InputReportsReader>(std::move(res.value()));
+        auto reader = fidl::WireSharedClient<fuchsia_input_report::InputReportsReader>(
+            std::move(res.value()));
         print_input_report::PrintInputReports(filename, printer, std::move(reader), UINT32_MAX);
       });
 
@@ -121,9 +121,9 @@ int ReadAllDescriptors(async::Loop* loop, Printer* printer) {
           return;
         }
 
-        auto device =
-            fidl::Client(fidl::ClientEnd<fuchsia_input_report::InputDevice>(std::move(chan)),
-                         loop->dispatcher());
+        auto device = fidl::WireSharedClient(
+            fidl::ClientEnd<fuchsia_input_report::InputDevice>(std::move(chan)),
+            loop->dispatcher());
         status = print_input_report::PrintInputDescriptor(filename, printer, std::move(device));
         if (status != 0) {
           printer->Print("Failed to PrintInputReports\n");
