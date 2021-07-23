@@ -12,7 +12,10 @@ declare_args() {
   # Include the vulkan validation layers in carnelian examples.
   carnelian_enable_vulkan_validation = is_debug
 
-  # Point this to the location of external rives files to be included as extras
+  # Point this to the location of external image files to be included as extras
+  carnelian_static_images_extras = []
+
+  # Point this to the location of external rive files to be included as extras
   carnelian_static_rives_extras = []
 
   # Point this to the location of external txt files to be included as extras
@@ -467,10 +470,10 @@ resource("robotomono") {
 
 resource("static_images") {
   sources = [
-    "examples/static/baboon.png",
-    "examples/static/cross.png",
-    "examples/static/lenna.png",
-  ]
+              "examples/static/baboon.png",
+              "examples/static/cross.png",
+              "examples/static/lenna.png",
+            ] + carnelian_static_images_extras
   outputs = [ "data/static/{{source_file_part}}" ]
 }
 
