@@ -4,6 +4,8 @@
 
 //! Testing-related utilities.
 
+#![deny(unused_results)]
+
 use std::collections::{BinaryHeap, HashMap};
 use std::fmt::{self, Debug, Formatter};
 use std::hash::Hash;
@@ -60,7 +62,7 @@ pub(crate) mod benchmarks {
     impl Bencher for TestBencher {
         fn iter<T, F: FnMut() -> T>(&mut self, mut inner: F) {
             super::set_logger_for_test();
-            inner();
+            let _: T = inner();
         }
     }
 
@@ -449,15 +451,8 @@ impl DummyEventDispatcherBuilder {
     ///
     /// `add_device_with_ip` is like `add_device`, except that it takes an
     /// associated IP address and subnet to assign to the device.
-    pub(crate) fn add_device_with_ip<A: IpAddress>(
-        &mut self,
-        mac: Mac,
-        ip: A,
-        subnet: Subnet<A>,
-    ) -> usize {
-        let idx = self.devices.len();
+    pub(crate) fn add_device_with_ip<A: IpAddress>(&mut self, mac: Mac, ip: A, subnet: Subnet<A>) {
         self.devices.push((mac, Some((ip.into(), subnet.into()))));
-        idx
     }
 
     /// Add an ARP table entry for a device's ARP table.
@@ -521,25 +516,27 @@ impl DummyEventDispatcherBuilder {
             device_routes,
             routes,
         } = self;
-        let mut idx_to_device_id =
-            HashMap::<_, _, std::collections::hash_map::RandomState>::default();
-        for (idx, (mac, ip_subnet)) in devices.into_iter().enumerate() {
-            let id = ctx.state.add_ethernet_device(mac, Ipv6::MINIMUM_LINK_MTU.into());
-            idx_to_device_id.insert(idx, id);
-            crate::device::initialize_device(&mut ctx, id);
-            match ip_subnet {
-                Some((IpAddr::V4(ip), SubnetEither::V4(subnet))) => {
-                    let addr_sub = AddrSubnet::new(ip, subnet.prefix()).unwrap();
-                    crate::device::add_ip_addr_subnet(&mut ctx, id, addr_sub).unwrap();
+        let idx_to_device_id: HashMap<_, _> = devices
+            .into_iter()
+            .enumerate()
+            .map(|(idx, (mac, ip_subnet))| {
+                let id = ctx.state.add_ethernet_device(mac, Ipv6::MINIMUM_LINK_MTU.into());
+                crate::device::initialize_device(&mut ctx, id);
+                match ip_subnet {
+                    Some((IpAddr::V4(ip), SubnetEither::V4(subnet))) => {
+                        let addr_sub = AddrSubnet::new(ip, subnet.prefix()).unwrap();
+                        crate::device::add_ip_addr_subnet(&mut ctx, id, addr_sub).unwrap();
+                    }
+                    Some((IpAddr::V6(ip), SubnetEither::V6(subnet))) => {
+                        let addr_sub = AddrSubnet::new(ip, subnet.prefix()).unwrap();
+                        crate::device::add_ip_addr_subnet(&mut ctx, id, addr_sub).unwrap();
+                    }
+                    None => {}
+                    _ => unreachable!(),
                 }
-                Some((IpAddr::V6(ip), SubnetEither::V6(subnet))) => {
-                    let addr_sub = AddrSubnet::new(ip, subnet.prefix()).unwrap();
-                    crate::device::add_ip_addr_subnet(&mut ctx, id, addr_sub).unwrap();
-                }
-                None => {}
-                _ => unreachable!(),
-            }
-        }
+                (idx, id)
+            })
+            .collect();
         for (idx, ip, mac) in arp_table_entries {
             let device = *idx_to_device_id.get(&idx).unwrap();
             crate::device::insert_static_arp_table_entry(&mut ctx, device, ip, mac);
@@ -660,6 +657,7 @@ impl Debug for DummyInstant {
 ///
 /// `InstantAndData` implements `Ord` and `Eq` to be used in a `BinaryHeap` and
 /// ordered by `DummyInstant`.
+#[derive(Debug)]
 struct InstantAndData<D>(DummyInstant, D);
 
 impl<D> InstantAndData<D> {
@@ -1066,7 +1064,7 @@ where
                     break;
                 }
                 timers.push(*id);
-                ctx.dispatcher.timer_events.pop();
+                assert_ne!(ctx.dispatcher.timer_events.pop(), None);
             }
 
             for t in timers {
@@ -1307,25 +1305,42 @@ mod tests {
         set_logger_for_test();
         let mut net = new_dummy_network_from_config(1, 2, DUMMY_CONFIG_V4);
 
-        net.context(1)
-            .dispatcher
-            .schedule_timeout(Duration::from_secs(1), TimerId(TimerIdInner::Nop(1)));
-        net.context(2)
-            .dispatcher
-            .schedule_timeout(Duration::from_secs(2), TimerId(TimerIdInner::Nop(2)));
-        net.context(2)
-            .dispatcher
-            .schedule_timeout(Duration::from_secs(3), TimerId(TimerIdInner::Nop(3)));
-        net.context(1)
-            .dispatcher
-            .schedule_timeout(Duration::from_secs(4), TimerId(TimerIdInner::Nop(4)));
-
-        net.context(1)
-            .dispatcher
-            .schedule_timeout(Duration::from_secs(5), TimerId(TimerIdInner::Nop(5)));
-        net.context(2)
-            .dispatcher
-            .schedule_timeout(Duration::from_secs(5), TimerId(TimerIdInner::Nop(6)));
+        assert_eq!(
+            net.context(1)
+                .dispatcher
+                .schedule_timeout(Duration::from_secs(1), TimerId(TimerIdInner::Nop(1))),
+            None
+        );
+        assert_eq!(
+            net.context(2)
+                .dispatcher
+                .schedule_timeout(Duration::from_secs(2), TimerId(TimerIdInner::Nop(2))),
+            None
+        );
+        assert_eq!(
+            net.context(2)
+                .dispatcher
+                .schedule_timeout(Duration::from_secs(3), TimerId(TimerIdInner::Nop(3))),
+            None
+        );
+        assert_eq!(
+            net.context(1)
+                .dispatcher
+                .schedule_timeout(Duration::from_secs(4), TimerId(TimerIdInner::Nop(4))),
+            None
+        );
+        assert_eq!(
+            net.context(1)
+                .dispatcher
+                .schedule_timeout(Duration::from_secs(5), TimerId(TimerIdInner::Nop(5))),
+            None
+        );
+        assert_eq!(
+            net.context(2)
+                .dispatcher
+                .schedule_timeout(Duration::from_secs(5), TimerId(TimerIdInner::Nop(6))),
+            None
+        );
 
         // No timers fired before.
         assert_eq!(*net.context(1).state.test_counters.get("timer::nop"), 0);
@@ -1362,15 +1377,24 @@ mod tests {
     fn test_dummy_network_until_idle() {
         set_logger_for_test();
         let mut net = new_dummy_network_from_config(1, 2, DUMMY_CONFIG_V4);
-        net.context(1)
-            .dispatcher
-            .schedule_timeout(Duration::from_secs(1), TimerId(TimerIdInner::Nop(1)));
-        net.context(2)
-            .dispatcher
-            .schedule_timeout(Duration::from_secs(2), TimerId(TimerIdInner::Nop(2)));
-        net.context(2)
-            .dispatcher
-            .schedule_timeout(Duration::from_secs(3), TimerId(TimerIdInner::Nop(3)));
+        assert_eq!(
+            net.context(1)
+                .dispatcher
+                .schedule_timeout(Duration::from_secs(1), TimerId(TimerIdInner::Nop(1))),
+            None
+        );
+        assert_eq!(
+            net.context(2)
+                .dispatcher
+                .schedule_timeout(Duration::from_secs(2), TimerId(TimerIdInner::Nop(2))),
+            None
+        );
+        assert_eq!(
+            net.context(2)
+                .dispatcher
+                .schedule_timeout(Duration::from_secs(3), TimerId(TimerIdInner::Nop(3))),
+            None
+        );
 
         net.run_until_idle_or(|net| {
             *net.context(1).state.test_counters.get("timer::nop") == 1
@@ -1441,15 +1465,24 @@ mod tests {
         )
         .unwrap();
 
-        net.context("alice")
-            .dispatcher
-            .schedule_timeout(Duration::from_millis(3), TimerId(TimerIdInner::Nop(1)));
-        net.context("bob")
-            .dispatcher
-            .schedule_timeout(Duration::from_millis(7), TimerId(TimerIdInner::Nop(2)));
-        net.context("bob")
-            .dispatcher
-            .schedule_timeout(Duration::from_millis(10), TimerId(TimerIdInner::Nop(1)));
+        assert_eq!(
+            net.context("alice")
+                .dispatcher
+                .schedule_timeout(Duration::from_millis(3), TimerId(TimerIdInner::Nop(1))),
+            None
+        );
+        assert_eq!(
+            net.context("bob")
+                .dispatcher
+                .schedule_timeout(Duration::from_millis(7), TimerId(TimerIdInner::Nop(2))),
+            None
+        );
+        assert_eq!(
+            net.context("bob")
+                .dispatcher
+                .schedule_timeout(Duration::from_millis(10), TimerId(TimerIdInner::Nop(1))),
+            None
+        );
 
         // Order of expected events is as follows:
         // - Alice's timer expires at t = 3
