@@ -176,8 +176,10 @@ void FakeNetworkDeviceImpl::NetworkDeviceImplStop(network_device_impl_stop_callb
     RxReturnTransaction rx_return(this);
     while (!rx_buffers_.is_empty()) {
       std::unique_ptr rx_buffer = rx_buffers_.pop_front();
+      // Return unfulfilled buffers with zero length and an invalid port number.
+      // Zero length buffers are returned to the pool and the port metadata is ignored.
       rx_buffer->return_part().length = 0;
-      rx_return.Enqueue(std::move(rx_buffer));
+      rx_return.Enqueue(std::move(rx_buffer), MAX_PORTS);
     }
     rx_return.Commit();
 
@@ -489,12 +491,14 @@ zx_status_t TestSession::SendTx(const uint16_t* descriptor, size_t count, size_t
   return fifos_.tx.write(sizeof(uint16_t), descriptor, count, actual);
 }
 
-zx_status_t TestSession::SendTxData(uint16_t descriptor_index, const std::vector<uint8_t>& data) {
+zx_status_t TestSession::SendTxData(uint8_t port_id, uint16_t descriptor_index,
+                                    const std::vector<uint8_t>& data) {
   auto* desc = ResetDescriptor(descriptor_index);
   zx_status_t status;
   if ((status = data_vmo_.write(&data.at(0), desc->offset, data.size())) != ZX_OK) {
     return status;
   }
+  desc->port_id = port_id;
   desc->data_length = static_cast<uint32_t>(data.size());
   return SendTx(descriptor_index);
 }

@@ -24,7 +24,8 @@ namespace testing {
 class NetDeviceDriverTest : public ::testing::Test, public fake_ddk::Bind {
  protected:
   using ReleaseOp = void(void*);
-  static constexpr uint8_t kPortId = 0;
+  // Use a nonzero port identifier to avoid default value traps.
+  static constexpr uint8_t kPortId = 11;
 
   void TearDown() override {
     if (device_created_) {

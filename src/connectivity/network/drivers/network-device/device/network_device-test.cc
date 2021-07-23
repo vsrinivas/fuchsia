@@ -66,7 +66,15 @@ using netdev::wire::RxFlags;
 class NetworkDeviceTest : public ::testing::Test {
  public:
   // A port identifier commonly used in tests.
-  static constexpr uint8_t kPort0 = 0;
+  // A nonzero identifier is chosen to avoid default value traps.
+  static constexpr uint8_t kPort13 = 13;
+
+  // Common descriptor names, to avoid magic numbers.
+  static constexpr uint16_t kDescriptorIndex0 = 0;
+  static constexpr uint16_t kDescriptorIndex1 = 1;
+  static constexpr uint16_t kDescriptorIndex2 = 2;
+  static constexpr uint16_t kDescriptorIndex3 = 3;
+  static constexpr uint16_t kDescriptorIndex4 = 4;
 
   // A minimally valid mock MacAddressing implementation.
   static constexpr mac_addr_protocol_ops_t kMockMacOps = {
@@ -182,12 +190,12 @@ class NetworkDeviceTest : public ::testing::Test {
     return device.status_value();
   }
 
-  zx_status_t CreateDeviceWithPort0() {
+  zx_status_t CreateDeviceWithPort13() {
     if (zx_status_t status = CreateDevice(); status != ZX_OK) {
       return status;
     }
-    port0_.SetStatus({.mtu = 2048});
-    port0_.AddPort(kPort0, impl_.client());
+    port13_.SetStatus({.mtu = 2048});
+    port13_.AddPort(kPort13, impl_.client());
     return ZX_OK;
   }
 
@@ -211,7 +219,7 @@ class NetworkDeviceTest : public ::testing::Test {
 
  protected:
   FakeNetworkDeviceImpl impl_;
-  FakeNetworkPortImpl port0_;
+  FakeNetworkPortImpl port13_;
   std::unique_ptr<async::Loop> loop_;
   int8_t session_counter_ = 0;
   std::unique_ptr<NetworkDeviceInterface> device_;
@@ -306,7 +314,7 @@ TEST_F(NetworkDeviceTest, InvalidRxThreshold) {
 }
 
 TEST_F(NetworkDeviceTest, OpenSession) {
-  ASSERT_OK(CreateDeviceWithPort0());
+  ASSERT_OK(CreateDeviceWithPort13());
   fidl::WireSyncClient connection = OpenConnection();
   TestSession session;
   ASSERT_OK(OpenSession(&session));
@@ -314,17 +322,17 @@ TEST_F(NetworkDeviceTest, OpenSession) {
     session.ResetDescriptor(i);
     session.SendRx(i);
   }
-  ASSERT_OK(session.AttachPort(port0_));
+  ASSERT_OK(session.AttachPort(port13_));
   ASSERT_OK(WaitStart());
   ASSERT_OK(WaitRxAvailable());
 }
 
 TEST_F(NetworkDeviceTest, RxBufferBuild) {
-  ASSERT_OK(CreateDeviceWithPort0());
+  ASSERT_OK(CreateDeviceWithPort13());
   fidl::WireSyncClient connection = OpenConnection();
   TestSession session;
   ASSERT_OK(OpenSession(&session));
-  ASSERT_OK(session.AttachPort(port0_));
+  ASSERT_OK(session.AttachPort(port13_));
   ASSERT_OK(WaitStart());
 
   constexpr uint16_t kDescriptor0 = 0;
@@ -403,13 +411,14 @@ TEST_F(NetworkDeviceTest, RxBufferBuild) {
       }
       chained_return->PushPart(std::move(rx));
     } else {
-      std::unique_ptr ret = std::make_unique<RxReturn>(std::move(rx));
+      std::unique_ptr ret = std::make_unique<RxReturn>(std::move(rx), kPort13);
       if (descriptor_setup.flags.has_value()) {
         ret->buffer().meta.flags = static_cast<uint32_t>(*descriptor_setup.flags);
       }
       return_session.Enqueue(std::move(ret));
     }
   }
+  chained_return->buffer().meta.port = kPort13;
   chained_return->buffer().meta.flags = static_cast<uint32_t>(RxFlags::kRxAccel1);
   return_session.Enqueue(std::move(chained_return));
   // Ensure no more rx buffers were actually returned:
@@ -428,7 +437,6 @@ TEST_F(NetworkDeviceTest, RxBufferBuild) {
   for (const auto& setup : kDescriptorSetup) {
     SCOPED_TRACE(setup.descriptor);
     buffer_descriptor_t* desc = session.descriptor(setup.descriptor);
-    EXPECT_EQ(desc->port_id, 0);
     EXPECT_EQ(desc->offset, session.canonical_offset(setup.descriptor));
     if (setup.descriptor == kDescriptor1) {
       // This descriptor should have a chain.
@@ -436,6 +444,12 @@ TEST_F(NetworkDeviceTest, RxBufferBuild) {
       EXPECT_EQ(desc->nxt, kDescriptor2);
     } else {
       EXPECT_EQ(desc->chain_length, 0u);
+    }
+    if (setup.descriptor == kDescriptor2) {
+      // The chained descriptor's port metadata is not set.
+      EXPECT_EQ(desc->port_id, 0);
+    } else {
+      EXPECT_EQ(desc->port_id, kPort13);
     }
     if (setup.flags.has_value()) {
       EXPECT_EQ(desc->inbound_flags, static_cast<uint32_t>(*setup.flags));
@@ -447,11 +461,11 @@ TEST_F(NetworkDeviceTest, RxBufferBuild) {
 }
 
 TEST_F(NetworkDeviceTest, TxBufferBuild) {
-  ASSERT_OK(CreateDeviceWithPort0());
+  ASSERT_OK(CreateDeviceWithPort13());
   fidl::WireSyncClient connection = OpenConnection();
   TestSession session;
   ASSERT_OK(OpenSession(&session));
-  ASSERT_OK(session.AttachPort(port0_));
+  ASSERT_OK(session.AttachPort(port13_));
   ASSERT_OK(WaitStart());
   constexpr size_t kDescTests = 3;
   // send three Rx descriptors:
@@ -459,20 +473,23 @@ TEST_F(NetworkDeviceTest, TxBufferBuild) {
   // - A descriptor with head and tail removed
   // - A chained descriptor with simple data lengths.
   uint16_t all_descs[kDescTests + 1] = {0, 1, 2};
-  session.ResetDescriptor(0);
-  auto* desc = session.ResetDescriptor(1);
+  buffer_descriptor_t* desc = session.ResetDescriptor(kDescriptorIndex0);
+  desc->port_id = kPort13;
+  desc = session.ResetDescriptor(kDescriptorIndex1);
+  desc->port_id = kPort13;
   desc->head_length = 16;
   desc->tail_length = 32;
   desc->data_length -= desc->head_length + desc->tail_length;
-  desc = session.ResetDescriptor(2);
+  desc = session.ResetDescriptor(kDescriptorIndex2);
+  desc->port_id = kPort13;
   desc->data_length = 10;
   desc->chain_length = 2;
   desc->nxt = 3;
-  desc = session.ResetDescriptor(3);
+  desc = session.ResetDescriptor(kDescriptorIndex3);
   desc->data_length = 20;
   desc->chain_length = 1;
   desc->nxt = 4;
-  desc = session.ResetDescriptor(4);
+  desc = session.ResetDescriptor(kDescriptorIndex4);
   desc->data_length = 30;
   desc->chain_length = 0;
   size_t sent;
@@ -484,14 +501,14 @@ TEST_F(NetworkDeviceTest, TxBufferBuild) {
   auto tx = impl_.PopTxBuffer();
   ASSERT_TRUE(tx);
   ASSERT_EQ(tx->buffer().data_count, 1u);
-  ASSERT_EQ(tx->buffer().data_list[0].offset, session.descriptor(0)->offset);
+  ASSERT_EQ(tx->buffer().data_list[0].offset, session.descriptor(kDescriptorIndex0)->offset);
   ASSERT_EQ(tx->buffer().data_list[0].length, kDefaultBufferLength);
   return_session.Enqueue(std::move(tx));
   // check second descriptor:
   tx = impl_.PopTxBuffer();
   ASSERT_TRUE(tx);
   ASSERT_EQ(tx->buffer().data_count, 1u);
-  desc = session.descriptor(1);
+  desc = session.descriptor(kDescriptorIndex1);
   ASSERT_EQ(tx->buffer().data_list[0].offset, desc->offset + desc->head_length);
   ASSERT_EQ(tx->buffer().data_list[0].length,
             kDefaultBufferLength - desc->head_length - desc->tail_length);
@@ -526,24 +543,24 @@ TEST_F(NetworkDeviceTest, TxBufferBuild) {
   EXPECT_EQ(all_descs[1], 1u);
   EXPECT_EQ(all_descs[2], 2u);
   // check the status of the returned descriptors
-  desc = session.descriptor(0);
+  desc = session.descriptor(kDescriptorIndex0);
   EXPECT_EQ(desc->return_flags, 0u);
-  desc = session.descriptor(1);
+  desc = session.descriptor(kDescriptorIndex1);
   EXPECT_EQ(desc->return_flags,
             static_cast<uint32_t>(netdev::wire::TxReturnFlags::kTxRetError |
                                   netdev::wire::TxReturnFlags::kTxRetNotAvailable));
-  desc = session.descriptor(2);
+  desc = session.descriptor(kDescriptorIndex2);
   EXPECT_EQ(desc->return_flags,
             static_cast<uint32_t>(netdev::wire::TxReturnFlags::kTxRetError |
                                   netdev::wire::TxReturnFlags::kTxRetNotSupported));
 }
 
 TEST_F(NetworkDeviceTest, SessionEpitaph) {
-  ASSERT_OK(CreateDeviceWithPort0());
+  ASSERT_OK(CreateDeviceWithPort13());
   fidl::WireSyncClient connection = OpenConnection();
   TestSession session;
   ASSERT_OK(OpenSession(&session));
-  ASSERT_OK(session.AttachPort(port0_));
+  ASSERT_OK(session.AttachPort(port13_));
   ASSERT_OK(WaitStart());
   ASSERT_OK(session.Close());
   // Closing the session should cause a stop.
@@ -555,41 +572,41 @@ TEST_F(NetworkDeviceTest, SessionEpitaph) {
 }
 
 TEST_F(NetworkDeviceTest, SessionPauseUnpause) {
-  ASSERT_OK(CreateDeviceWithPort0());
+  ASSERT_OK(CreateDeviceWithPort13());
   fidl::WireSyncClient connection = OpenConnection();
   TestSession session;
   // pausing and unpausing the session makes the device start and stop:
   ASSERT_OK(OpenSession(&session));
-  ASSERT_OK(session.AttachPort(port0_));
+  ASSERT_OK(session.AttachPort(port13_));
   ASSERT_OK(WaitStart());
-  ASSERT_OK(session.DetachPort(port0_));
+  ASSERT_OK(session.DetachPort(port13_));
   ASSERT_OK(WaitStop());
-  ASSERT_OK(session.AttachPort(port0_));
+  ASSERT_OK(session.AttachPort(port13_));
   ASSERT_OK(WaitStart());
-  ASSERT_OK(session.DetachPort(port0_));
+  ASSERT_OK(session.DetachPort(port13_));
   ASSERT_OK(WaitStop());
 }
 
 TEST_F(NetworkDeviceTest, TwoSessionsTx) {
-  ASSERT_OK(CreateDeviceWithPort0());
+  ASSERT_OK(CreateDeviceWithPort13());
   fidl::WireSyncClient connection = OpenConnection();
   TestSession session_a;
   ASSERT_OK(OpenSession(&session_a));
   TestSession session_b;
   ASSERT_OK(OpenSession(&session_b));
-  ASSERT_OK(session_a.AttachPort(port0_));
+  ASSERT_OK(session_a.AttachPort(port13_));
   ASSERT_OK(WaitSessionStarted());
-  ASSERT_OK(session_b.AttachPort(port0_));
+  ASSERT_OK(session_b.AttachPort(port13_));
   ASSERT_OK(WaitSessionStarted());
   ASSERT_OK(WaitStart());
-  // send something from each session, both should succeed:
+  // Send something from each session, both should succeed.
   std::vector<uint8_t> sent_buff_a({1, 2, 3, 4});
   std::vector<uint8_t> sent_buff_b({5, 6});
-  session_a.SendTxData(0, sent_buff_a);
+  session_a.SendTxData(kPort13, 0, sent_buff_a);
   ASSERT_OK(WaitTx());
-  session_b.SendTxData(1, sent_buff_b);
+  session_b.SendTxData(kPort13, 1, sent_buff_b);
   ASSERT_OK(WaitTx());
-  // wait until we have two frames waiting:
+  // Wait until we have two frames waiting.
   std::unique_ptr buff_a = impl_.PopTxBuffer();
   std::unique_ptr buff_b = impl_.PopTxBuffer();
   VmoProvider vmo_provider = impl_.VmoGetter();
@@ -600,7 +617,7 @@ TEST_F(NetworkDeviceTest, TwoSessionsTx) {
   zx::status data_status_b = buff_b->GetData(vmo_provider);
   ASSERT_OK(data_status_b.status_value());
   std::vector data_b = std::move(data_status_b.value());
-  // can't rely on ordering here:
+  // Can't rely on ordering here.
   if (data_a.size() != sent_buff_a.size()) {
     std::swap(buff_a, buff_b);
     std::swap(data_a, data_b);
@@ -609,7 +626,7 @@ TEST_F(NetworkDeviceTest, TwoSessionsTx) {
   PrintVec("data_b", data_b);
   ASSERT_EQ(data_a, sent_buff_a);
   ASSERT_EQ(data_b, sent_buff_b);
-  // return both buffers and ensure they get to the correct sessions:
+  // Return both buffers and ensure they get to the correct sessions.
   buff_a->set_status(ZX_OK);
   buff_b->set_status(ZX_ERR_UNAVAILABLE);
   TxReturnTransaction tx_ret(&impl_);
@@ -622,22 +639,22 @@ TEST_F(NetworkDeviceTest, TwoSessionsTx) {
   ASSERT_EQ(rd, 0u);
   ASSERT_OK(session_b.FetchTx(&rd));
   ASSERT_EQ(rd, 1u);
-  ASSERT_EQ(session_a.descriptor(0)->return_flags, 0u);
-  ASSERT_EQ(session_b.descriptor(1)->return_flags,
+  ASSERT_EQ(session_a.descriptor(kDescriptorIndex0)->return_flags, 0u);
+  ASSERT_EQ(session_b.descriptor(kDescriptorIndex1)->return_flags,
             static_cast<uint32_t>(netdev::wire::TxReturnFlags::kTxRetError |
                                   netdev::wire::TxReturnFlags::kTxRetNotAvailable));
 }
 
 TEST_F(NetworkDeviceTest, TwoSessionsRx) {
-  ASSERT_OK(CreateDeviceWithPort0());
+  ASSERT_OK(CreateDeviceWithPort13());
   fidl::WireSyncClient connection = OpenConnection();
   TestSession session_a;
   ASSERT_OK(OpenSession(&session_a));
   TestSession session_b;
   ASSERT_OK(OpenSession(&session_b));
-  ASSERT_OK(session_a.AttachPort(port0_));
+  ASSERT_OK(session_a.AttachPort(port13_));
   ASSERT_OK(WaitSessionStarted());
-  ASSERT_OK(session_b.AttachPort(port0_));
+  ASSERT_OK(session_b.AttachPort(port13_));
   ASSERT_OK(WaitSessionStarted());
   ASSERT_OK(WaitStart());
   constexpr uint16_t kBufferCount = 5;
@@ -658,7 +675,7 @@ TEST_F(NetworkDeviceTest, TwoSessionsRx) {
     auto buff = impl_.PopRxBuffer();
     std::vector<uint8_t> data(kDataLen, static_cast<uint8_t>(i));
     ASSERT_OK(buff->WriteData(data, vmo_provider));
-    return_session.Enqueue(std::move(buff));
+    return_session.Enqueue(std::move(buff), kPort13);
   }
   return_session.Commit();
 
@@ -688,30 +705,30 @@ TEST_F(NetworkDeviceTest, TwoSessionsRx) {
 }
 
 TEST_F(NetworkDeviceTest, ListenSession) {
-  ASSERT_OK(CreateDeviceWithPort0());
+  ASSERT_OK(CreateDeviceWithPort13());
   fidl::WireSyncClient connection = OpenConnection();
   TestSession session_a;
   ASSERT_OK(OpenSession(&session_a));
   TestSession session_b;
   ASSERT_OK(OpenSession(&session_b, netdev::wire::SessionFlags::kListenTx));
-  ASSERT_OK(session_a.AttachPort(port0_));
+  ASSERT_OK(session_a.AttachPort(port13_));
   ASSERT_OK(WaitSessionStarted());
-  ASSERT_OK(session_b.AttachPort(port0_));
+  ASSERT_OK(session_b.AttachPort(port13_));
   ASSERT_OK(WaitSessionStarted());
   ASSERT_OK(WaitStart());
   // Get an Rx descriptor ready on session b:
-  session_b.ResetDescriptor(0);
-  ASSERT_OK(session_b.SendRx(0));
+  session_b.ResetDescriptor(kDescriptorIndex0);
+  ASSERT_OK(session_b.SendRx(kDescriptorIndex0));
 
   // send data from session a:
   std::vector<uint8_t> send_buff({1, 2, 3, 4});
-  session_a.SendTxData(0, send_buff);
+  session_a.SendTxData(kPort13, 0, send_buff);
   ASSERT_OK(WaitTx());
 
   uint16_t desc_idx;
   ASSERT_OK(session_b.FetchRx(&desc_idx));
   ASSERT_EQ(desc_idx, 0u);
-  auto* desc = session_b.descriptor(0);
+  auto* desc = session_b.descriptor(kDescriptorIndex0);
   ASSERT_EQ(desc->data_length, send_buff.size());
   auto* data = session_b.buffer(desc->offset);
   ASSERT_EQ(std::basic_string_view(data, send_buff.size()),
@@ -719,20 +736,20 @@ TEST_F(NetworkDeviceTest, ListenSession) {
 }
 
 TEST_F(NetworkDeviceTest, ClosingPrimarySession) {
-  ASSERT_OK(CreateDeviceWithPort0());
+  ASSERT_OK(CreateDeviceWithPort13());
   fidl::WireSyncClient connection = OpenConnection();
   TestSession session_a;
   ASSERT_OK(OpenSession(&session_a));
   TestSession session_b;
   ASSERT_OK(OpenSession(&session_b));
-  ASSERT_OK(session_a.AttachPort(port0_));
+  ASSERT_OK(session_a.AttachPort(port13_));
   ASSERT_OK(WaitSessionStarted());
-  ASSERT_OK(session_b.AttachPort(port0_));
+  ASSERT_OK(session_b.AttachPort(port13_));
   ASSERT_OK(WaitSessionStarted());
-  buffer_descriptor_t* d = session_a.ResetDescriptor(0);
+  buffer_descriptor_t* d = session_a.ResetDescriptor(kDescriptorIndex0);
   d->data_length = kDefaultBufferLength / 2;
-  session_b.ResetDescriptor(1);
-  ASSERT_OK(session_a.SendRx(0));
+  session_b.ResetDescriptor(kDescriptorIndex1);
+  ASSERT_OK(session_a.SendRx(kDescriptorIndex0));
   ASSERT_OK(WaitRxAvailable());
   // Implementation now owns session a's RxBuffer.
   std::unique_ptr rx_buff = impl_.PopRxBuffer();
@@ -757,7 +774,7 @@ TEST_F(NetworkDeviceTest, ClosingPrimarySession) {
   constexpr uint32_t kReturnLength = 5;
   rx_buff->SetReturnLength(kReturnLength);
   RxReturnTransaction rx_transaction(&impl_);
-  rx_transaction.Enqueue(std::move(rx_buff));
+  rx_transaction.Enqueue(std::move(rx_buff), kPort13);
   rx_transaction.Commit();
 
   // Session a should be closed...
@@ -770,22 +787,23 @@ TEST_F(NetworkDeviceTest, ClosingPrimarySession) {
 }
 
 TEST_F(NetworkDeviceTest, DelayedStart) {
-  ASSERT_OK(CreateDeviceWithPort0());
+  ASSERT_OK(CreateDeviceWithPort13());
   impl_.set_auto_start(false);
   fidl::WireSyncClient connection = OpenConnection();
   TestSession session_a;
   ASSERT_OK(OpenSession(&session_a));
-  ASSERT_OK(session_a.AttachPort(port0_));
+  ASSERT_OK(session_a.AttachPort(port13_));
   ASSERT_OK(WaitSessionStarted());
   // we're dealing starting the device, so the start signal must've been triggered.
   ASSERT_OK(WaitStart());
   // But we haven't actually called the callback.
   // We should be able to pause and unpause session_a while we're still holding the device.
   // we can send Tx data and it won't reach the device until TriggerStart is called.
-  session_a.ResetDescriptor(0);
-  ASSERT_OK(session_a.SendTx(0));
-  ASSERT_OK(session_a.DetachPort(port0_));
-  ASSERT_OK(session_a.AttachPort(port0_));
+  buffer_descriptor_t* desc = session_a.ResetDescriptor(kDescriptorIndex0);
+  desc->port_id = kPort13;
+  ASSERT_OK(session_a.SendTx(kDescriptorIndex0));
+  ASSERT_OK(session_a.DetachPort(port13_));
+  ASSERT_OK(session_a.AttachPort(port13_));
   ASSERT_OK(WaitSessionStarted());
   ASSERT_FALSE(impl_.PopRxBuffer());
   ASSERT_TRUE(impl_.TriggerStart());
@@ -797,14 +815,14 @@ TEST_F(NetworkDeviceTest, DelayedStart) {
   transaction.Commit();
 
   // pause the session again and wait for stop.
-  ASSERT_OK(session_a.DetachPort(port0_));
+  ASSERT_OK(session_a.DetachPort(port13_));
   ASSERT_OK(WaitStop());
   // Then unpause and re-pause the session:
-  ASSERT_OK(session_a.AttachPort(port0_));
+  ASSERT_OK(session_a.AttachPort(port13_));
   ASSERT_OK(WaitSessionStarted());
   ASSERT_OK(WaitStart());
   // Pause the session once again, we haven't called TriggerStart yet.
-  ASSERT_OK(session_a.DetachPort(port0_));
+  ASSERT_OK(session_a.DetachPort(port13_));
 
   // As soon as we call TriggerStart, stop must be called, but not before
   ASSERT_STATUS(WaitStop(zx::deadline_after(zx::msec(20))), ZX_ERR_TIMED_OUT);
@@ -813,19 +831,19 @@ TEST_F(NetworkDeviceTest, DelayedStart) {
 }
 
 TEST_F(NetworkDeviceTest, DelayedStop) {
-  ASSERT_OK(CreateDeviceWithPort0());
+  ASSERT_OK(CreateDeviceWithPort13());
   impl_.set_auto_stop(false);
   fidl::WireSyncClient connection = OpenConnection();
   TestSession session_a;
   ASSERT_OK(OpenSession(&session_a));
-  ASSERT_OK(session_a.AttachPort(port0_));
+  ASSERT_OK(session_a.AttachPort(port13_));
   ASSERT_OK(WaitSessionStarted());
   ASSERT_OK(WaitStart());
 
-  ASSERT_OK(session_a.DetachPort(port0_));
+  ASSERT_OK(session_a.DetachPort(port13_));
   ASSERT_OK(WaitStop());
   // Unpause the session again, we haven't called TriggerStop yet
-  ASSERT_OK(session_a.AttachPort(port0_));
+  ASSERT_OK(session_a.AttachPort(port13_));
   ASSERT_OK(WaitSessionStarted());
   // As soon as we call TriggerStop, start must be called, but not before
   ASSERT_STATUS(WaitStart(zx::deadline_after(zx::msec(20))), ZX_ERR_TIMED_OUT);
@@ -834,8 +852,9 @@ TEST_F(NetworkDeviceTest, DelayedStop) {
 
   // With the session running, send down a tx frame and then close the session. The session should
   // NOT be closed until we actually both call TriggerStop and return the outstanding buffer.
-  session_a.ResetDescriptor(0);
-  ASSERT_OK(session_a.SendTx(0));
+  buffer_descriptor_t* desc = session_a.ResetDescriptor(kDescriptorIndex0);
+  desc->port_id = kPort13;
+  ASSERT_OK(session_a.SendTx(kDescriptorIndex0));
   ASSERT_OK(WaitTx());
   ASSERT_OK(session_a.Close());
   ASSERT_OK(WaitStop());
@@ -860,16 +879,17 @@ TEST_F(NetworkDeviceTest, DelayedStop) {
 }
 
 TEST_P(RxTxParamTest, WaitsForAllBuffersReturned) {
-  ASSERT_OK(CreateDeviceWithPort0());
+  ASSERT_OK(CreateDeviceWithPort13());
   fidl::WireSyncClient connection = OpenConnection();
   TestSession session;
   ASSERT_OK(OpenSession(&session));
-  ASSERT_OK(session.AttachPort(port0_));
+  ASSERT_OK(session.AttachPort(port13_));
   ASSERT_OK(WaitStart());
-  session.ResetDescriptor(0);
-  session.ResetDescriptor(1);
-  ASSERT_OK(session.SendRx(0));
-  ASSERT_OK(session.SendTx(1));
+  session.ResetDescriptor(kDescriptorIndex0);
+  ASSERT_OK(session.SendRx(kDescriptorIndex0));
+  buffer_descriptor_t* desc = session.ResetDescriptor(kDescriptorIndex1);
+  desc->port_id = kPort13;
+  ASSERT_OK(session.SendTx(kDescriptorIndex1));
   ASSERT_OK(WaitTx());
   ASSERT_OK(WaitRxAvailable());
 
@@ -898,7 +918,7 @@ TEST_P(RxTxParamTest, WaitsForAllBuffersReturned) {
         RxReturnTransaction transaction(&impl_);
         std::unique_ptr buffer = rx_buffers.pop_front();
         buffer->return_part().length = 0;
-        transaction.Enqueue(std::move(buffer));
+        transaction.Enqueue(std::move(buffer), kPort13);
         transaction.Commit();
       } break;
     }
@@ -911,15 +931,15 @@ TEST_P(RxTxParamTest, WaitsForAllBuffersReturned) {
 }
 
 TEST_F(NetworkDeviceTest, Teardown) {
-  ASSERT_OK(CreateDeviceWithPort0());
+  ASSERT_OK(CreateDeviceWithPort13());
   fidl::WireSyncClient connection = OpenConnection();
   TestSession session_a;
   ASSERT_OK(OpenSession(&session_a));
-  ASSERT_OK(session_a.AttachPort(port0_));
+  ASSERT_OK(session_a.AttachPort(port13_));
   ASSERT_OK(WaitSessionStarted());
   TestSession session_b;
   ASSERT_OK(OpenSession(&session_b));
-  ASSERT_OK(session_b.AttachPort(port0_));
+  ASSERT_OK(session_b.AttachPort(port13_));
   ASSERT_OK(WaitSessionStarted());
   TestSession session_c;
   ASSERT_OK(OpenSession(&session_c));
@@ -931,16 +951,17 @@ TEST_F(NetworkDeviceTest, Teardown) {
 }
 
 TEST_F(NetworkDeviceTest, TeardownWithReclaim) {
-  ASSERT_OK(CreateDeviceWithPort0());
+  ASSERT_OK(CreateDeviceWithPort13());
   fidl::WireSyncClient connection = OpenConnection();
   TestSession session_a;
   ASSERT_OK(OpenSession(&session_a));
-  ASSERT_OK(session_a.AttachPort(port0_));
+  ASSERT_OK(session_a.AttachPort(port13_));
   ASSERT_OK(WaitStart());
-  session_a.ResetDescriptor(0);
-  session_a.ResetDescriptor(1);
-  ASSERT_OK(session_a.SendRx(0));
-  ASSERT_OK(session_a.SendTx(1));
+  session_a.ResetDescriptor(kDescriptorIndex0);
+  ASSERT_OK(session_a.SendRx(kDescriptorIndex0));
+  buffer_descriptor_t* desc = session_a.ResetDescriptor(kDescriptorIndex1);
+  desc->port_id = kPort13;
+  ASSERT_OK(session_a.SendTx(kDescriptorIndex1));
   ASSERT_OK(WaitTx());
   ASSERT_OK(WaitRxAvailable());
   ASSERT_EQ(impl_.rx_buffer_count(), 1u);
@@ -953,17 +974,19 @@ TEST_F(NetworkDeviceTest, TeardownWithReclaim) {
 TEST_F(NetworkDeviceTest, TxHeadLength) {
   constexpr uint16_t kHeadLength = 16;
   impl_.info().tx_head_length = kHeadLength;
-  ASSERT_OK(CreateDeviceWithPort0());
+  ASSERT_OK(CreateDeviceWithPort13());
   fidl::WireSyncClient connection = OpenConnection();
   TestSession session;
   ASSERT_OK(OpenSession(&session));
-  ASSERT_OK(session.AttachPort(port0_));
+  ASSERT_OK(session.AttachPort(port13_));
   session.ZeroVmo();
-  auto* desc = session.ResetDescriptor(0);
+  buffer_descriptor_t* desc = session.ResetDescriptor(kDescriptorIndex0);
+  desc->port_id = kPort13;
   desc->head_length = kHeadLength;
   desc->data_length = 1;
   *session.buffer(desc->offset + desc->head_length) = 0xAA;
-  desc = session.ResetDescriptor(1);
+  desc = session.ResetDescriptor(kDescriptorIndex1);
+  desc->port_id = kPort13;
   desc->head_length = kHeadLength * 2;
   desc->data_length = 1;
   *session.buffer(desc->offset + desc->head_length) = 0xBB;
@@ -1004,15 +1027,16 @@ TEST_F(NetworkDeviceTest, TxHeadLength) {
 }
 
 TEST_F(NetworkDeviceTest, InvalidTxFrameType) {
-  ASSERT_OK(CreateDeviceWithPort0());
+  ASSERT_OK(CreateDeviceWithPort13());
   fidl::WireSyncClient connection = OpenConnection();
   TestSession session;
   ASSERT_OK(OpenSession(&session));
-  ASSERT_OK(session.AttachPort(port0_));
+  ASSERT_OK(session.AttachPort(port13_));
   ASSERT_OK(WaitStart());
-  auto* desc = session.ResetDescriptor(0);
+  buffer_descriptor_t* desc = session.ResetDescriptor(kDescriptorIndex0);
+  desc->port_id = kPort13;
   desc->frame_type = static_cast<uint8_t>(netdev::wire::FrameType::kIpv4);
-  ASSERT_OK(session.SendTx(0));
+  ASSERT_OK(session.SendTx(kDescriptorIndex0));
   // Session should be killed because of contract breach:
   ASSERT_OK(session.WaitClosed(TEST_DEADLINE));
   // We should NOT have received that frame:
@@ -1020,18 +1044,18 @@ TEST_F(NetworkDeviceTest, InvalidTxFrameType) {
 }
 
 TEST_F(NetworkDeviceTest, RxFrameTypeFilter) {
-  ASSERT_OK(CreateDeviceWithPort0());
+  ASSERT_OK(CreateDeviceWithPort13());
   fidl::WireSyncClient connection = OpenConnection();
   TestSession session;
   ASSERT_OK(OpenSession(&session));
-  ASSERT_OK(session.AttachPort(port0_));
+  ASSERT_OK(session.AttachPort(port13_));
   ASSERT_OK(WaitStart());
-  session.ResetDescriptor(0);
-  ASSERT_OK(session.SendRx(0));
+  session.ResetDescriptor(kDescriptorIndex0);
+  ASSERT_OK(session.SendRx(kDescriptorIndex0));
   ASSERT_OK(WaitRxAvailable());
   std::unique_ptr buff = impl_.PopRxBuffer();
   buff->SetReturnLength(10);
-  std::unique_ptr ret = std::make_unique<RxReturn>(std::move(buff));
+  std::unique_ptr ret = std::make_unique<RxReturn>(std::move(buff), kPort13);
   ret->buffer().meta.frame_type = static_cast<uint8_t>(netdev::wire::FrameType::kIpv4);
   RxReturnTransaction rx_transaction(&impl_);
   rx_transaction.Enqueue(std::move(ret));
@@ -1043,34 +1067,34 @@ TEST_F(NetworkDeviceTest, RxFrameTypeFilter) {
 
 TEST_F(NetworkDeviceTest, ObserveStatus) {
   using netdev::wire::StatusFlags;
-  ASSERT_OK(CreateDeviceWithPort0());
+  ASSERT_OK(CreateDeviceWithPort13());
   zx::status endpoints = fidl::CreateEndpoints<netdev::StatusWatcher>();
   ASSERT_OK(endpoints.status_value());
   auto [client_end, server_end] = std::move(*endpoints);
   fidl::WireSyncClient watcher = fidl::BindSyncClient(std::move(client_end));
 
-  zx::status port = OpenPort(kPort0);
+  zx::status port = OpenPort(kPort13);
   ASSERT_OK(port.status_value());
   ASSERT_OK(port->GetStatusWatcher(std::move(server_end), 3).status());
   {
     fidl::WireResult result = watcher.WatchStatus();
     ASSERT_OK(result.status());
-    ASSERT_EQ(result.value().port_status.mtu(), port0_.status().mtu);
+    ASSERT_EQ(result.value().port_status.mtu(), port13_.status().mtu);
     ASSERT_EQ(result.value().port_status.flags(), StatusFlags());
   }
   // Set online, then set offline (watcher is buffered, we should be able to observe both).
-  port0_.SetOnline(true);
-  port0_.SetOnline(false);
+  port13_.SetOnline(true);
+  port13_.SetOnline(false);
   {
     fidl::WireResult result = watcher.WatchStatus();
     ASSERT_OK(result.status());
-    ASSERT_EQ(result.value().port_status.mtu(), port0_.status().mtu);
+    ASSERT_EQ(result.value().port_status.mtu(), port13_.status().mtu);
     ASSERT_EQ(result.value().port_status.flags(), StatusFlags::kOnline);
   }
   {
     fidl::WireResult result = watcher.WatchStatus();
     ASSERT_OK(result.status());
-    ASSERT_EQ(result.value().port_status.mtu(), port0_.status().mtu);
+    ASSERT_EQ(result.value().port_status.mtu(), port13_.status().mtu);
     ASSERT_EQ(result.value().port_status.flags(), StatusFlags());
   }
 
@@ -1083,13 +1107,16 @@ TEST_F(NetworkDeviceTest, ObserveStatus) {
 // Test that returning tx buffers in the body of QueueTx is allowed and works.
 TEST_F(NetworkDeviceTest, ReturnTxInline) {
   impl_.set_immediate_return_tx(true);
-  ASSERT_OK(CreateDeviceWithPort0());
+  ASSERT_OK(CreateDeviceWithPort13());
   fidl::WireSyncClient connection = OpenConnection();
   TestSession session;
   ASSERT_OK(OpenSession(&session));
-  ASSERT_OK(session.AttachPort(port0_));
+  ASSERT_OK(session.AttachPort(port13_));
   ASSERT_OK(WaitStart());
-  session.ResetDescriptor(0x02);
+  {
+    buffer_descriptor_t* desc = session.ResetDescriptor(0x02);
+    desc->port_id = kPort13;
+  }
   ASSERT_OK(session.SendTx(0x02));
   ASSERT_OK(session.tx_fifo().wait_one(ZX_FIFO_READABLE, TEST_DEADLINE, nullptr));
   uint16_t desc;
@@ -1099,18 +1126,18 @@ TEST_F(NetworkDeviceTest, ReturnTxInline) {
 
 // Test that attaching a session with unknown Rx types will fail.
 TEST_F(NetworkDeviceTest, RejectsInvalidRxTypes) {
-  ASSERT_OK(CreateDeviceWithPort0());
+  ASSERT_OK(CreateDeviceWithPort13());
   fidl::WireSyncClient connection = OpenConnection();
   TestSession session;
   ASSERT_OK(OpenSession(&session, netdev::wire::SessionFlags::kPrimary, kDefaultDescriptorCount,
                         kDefaultBufferLength));
-  ASSERT_STATUS(session.AttachPort(kPort0, {netdev::wire::FrameType::kIpv4}), ZX_ERR_INVALID_ARGS);
+  ASSERT_STATUS(session.AttachPort(kPort13, {netdev::wire::FrameType::kIpv4}), ZX_ERR_INVALID_ARGS);
 }
 
 // Regression test for session name not respecting fidl::StringView lack of null termination
 // character.
 TEST_F(NetworkDeviceTest, SessionNameRespectsStringView) {
-  ASSERT_OK(CreateDeviceWithPort0());
+  ASSERT_OK(CreateDeviceWithPort13());
   // Cast to internal implementation to access methods directly.
   auto* dev = static_cast<internal::DeviceInterface*>(device_.get());
 
@@ -1135,15 +1162,15 @@ TEST_F(NetworkDeviceTest, SessionNameRespectsStringView) {
 TEST_F(NetworkDeviceTest, RejectsSmallRxBuffers) {
   constexpr uint32_t kMinRxLength = 60;
   impl_.info().min_rx_buffer_length = kMinRxLength;
-  ASSERT_OK(CreateDeviceWithPort0());
+  ASSERT_OK(CreateDeviceWithPort13());
   fidl::WireSyncClient connection = OpenConnection();
   TestSession session;
   ASSERT_OK(OpenSession(&session));
-  ASSERT_OK(session.AttachPort(port0_));
+  ASSERT_OK(session.AttachPort(port13_));
   ASSERT_OK(WaitStart());
-  auto* desc = session.ResetDescriptor(0);
+  buffer_descriptor_t* desc = session.ResetDescriptor(kDescriptorIndex0);
   desc->data_length = kMinRxLength - 1;
-  ASSERT_OK(session.SendRx(0));
+  ASSERT_OK(session.SendRx(kDescriptorIndex0));
   // Session should be killed because of contract breach:
   ASSERT_OK(session.WaitClosed(TEST_DEADLINE));
   // We should NOT have received that frame:
@@ -1153,15 +1180,16 @@ TEST_F(NetworkDeviceTest, RejectsSmallRxBuffers) {
 TEST_F(NetworkDeviceTest, RejectsSmallTxBuffers) {
   constexpr uint32_t kMinTxLength = 60;
   impl_.info().min_tx_buffer_length = kMinTxLength;
-  ASSERT_OK(CreateDeviceWithPort0());
+  ASSERT_OK(CreateDeviceWithPort13());
   fidl::WireSyncClient connection = OpenConnection();
   TestSession session;
   ASSERT_OK(OpenSession(&session));
-  ASSERT_OK(session.AttachPort(port0_));
+  ASSERT_OK(session.AttachPort(port13_));
   ASSERT_OK(WaitStart());
-  auto* desc = session.ResetDescriptor(0);
+  buffer_descriptor_t* desc = session.ResetDescriptor(kDescriptorIndex0);
+  desc->port_id = kPort13;
   desc->data_length = kMinTxLength - 1;
-  ASSERT_OK(session.SendTx(0));
+  ASSERT_OK(session.SendTx(kDescriptorIndex0));
   // Session should be killed because of contract breach:
   ASSERT_OK(session.WaitClosed(TEST_DEADLINE));
   // We should NOT have received that frame:
@@ -1170,13 +1198,13 @@ TEST_F(NetworkDeviceTest, RejectsSmallTxBuffers) {
 
 TEST_F(NetworkDeviceTest, RespectsRxThreshold) {
   constexpr uint64_t kReturnBufferSize = 1;
-  ASSERT_OK(CreateDeviceWithPort0());
+  ASSERT_OK(CreateDeviceWithPort13());
   fidl::WireSyncClient connection = OpenConnection();
   TestSession session;
   uint16_t descriptor_count = impl_.info().rx_depth * 2;
   ASSERT_OK(OpenSession(&session, netdev::wire::SessionFlags::kPrimary, descriptor_count));
 
-  ASSERT_OK(session.AttachPort(port0_));
+  ASSERT_OK(session.AttachPort(port13_));
   ASSERT_OK(WaitStart());
 
   std::vector<uint16_t> descriptors;
@@ -1209,7 +1237,7 @@ TEST_F(NetworkDeviceTest, RespectsRxThreshold) {
     RxReturnTransaction return_session(&impl_);
     std::unique_ptr buff = impl_.PopRxBuffer();
     buff->SetReturnLength(kReturnBufferSize);
-    return_session.Enqueue(std::move(buff));
+    return_session.Enqueue(std::move(buff), kPort13);
     return_session.Commit();
     // Check that no more buffers are enqueued.
     ASSERT_STATUS(WaitRxAvailable(zx::time::infinite_past()), ZX_ERR_TIMED_OUT)
@@ -1222,14 +1250,14 @@ TEST_F(NetworkDeviceTest, RespectsRxThreshold) {
   RxReturnTransaction return_session(&impl_);
   std::unique_ptr buff = impl_.PopRxBuffer();
   buff->SetReturnLength(kReturnBufferSize);
-  return_session.Enqueue(std::move(buff));
+  return_session.Enqueue(std::move(buff), kPort13);
   return_session.Commit();
   ASSERT_OK(WaitRxAvailable());
   ASSERT_EQ(impl_.rx_buffer_count(), impl_.info().rx_depth);
 }
 
 TEST_F(NetworkDeviceTest, RxQueueIdlesOnPausedSession) {
-  ASSERT_OK(CreateDeviceWithPort0());
+  ASSERT_OK(CreateDeviceWithPort13());
 
   struct {
     fbl::Mutex lock;
@@ -1278,9 +1306,9 @@ TEST_F(NetworkDeviceTest, RxQueueIdlesOnPausedSession) {
     ASSERT_EQ(key.value(), internal::RxQueue::kSessionSwitchKey);
   }
 
-  session.ResetDescriptor(0);
+  session.ResetDescriptor(kDescriptorIndex0);
   // Make the FIFO readable.
-  ASSERT_OK(session.SendRx(0));
+  ASSERT_OK(session.SendRx(kDescriptorIndex0));
   // It should not trigger any RxQueue events.
   {
     zx::status key = get_next_key(zx::msec(50));
@@ -1298,22 +1326,22 @@ TEST_F(NetworkDeviceTest, RxQueueIdlesOnPausedSession) {
 }
 
 TEST_F(NetworkDeviceTest, RemovingPortCausesSessionToPause) {
-  ASSERT_OK(CreateDeviceWithPort0());
+  ASSERT_OK(CreateDeviceWithPort13());
   TestSession session;
   ASSERT_OK(OpenSession(&session));
-  ASSERT_OK(session.AttachPort(port0_));
+  ASSERT_OK(session.AttachPort(port13_));
   ASSERT_OK(WaitStart());
 
   // Removing the port causes the session to pause, which should cause the data plane to stop.
-  impl_.client().RemovePort(kPort0);
+  impl_.client().RemovePort(kPort13);
   ASSERT_OK(WaitStop());
 }
 
 TEST_F(NetworkDeviceTest, OnlyReceiveOnSubscribedPorts) {
-  ASSERT_OK(CreateDeviceWithPort0());
+  ASSERT_OK(CreateDeviceWithPort13());
   TestSession session;
   ASSERT_OK(OpenSession(&session));
-  ASSERT_OK(session.AttachPort(port0_));
+  ASSERT_OK(session.AttachPort(port13_));
   ASSERT_OK(WaitStart());
   std::array<uint16_t, 2> descriptors = {0, 1};
 
@@ -1330,12 +1358,12 @@ TEST_F(NetworkDeviceTest, OnlyReceiveOnSubscribedPorts) {
   RxReturnTransaction return_session(&impl_);
   for (size_t i = 0; i < descriptors.size(); i++) {
     std::unique_ptr rx_space = impl_.PopRxBuffer();
-    uint8_t port_id = static_cast<uint8_t>(i);
+    // Set the port ID to an offset based the index, we should expect the session to only see port
+    // 13.
+    uint8_t port_id = kPort13 + i;
     // Write some data so the buffer makes it into the session.
     ASSERT_OK(rx_space->WriteData(fbl::Span(&port_id, sizeof(port_id)), impl_.VmoGetter()));
-    std::unique_ptr ret = std::make_unique<RxReturn>(std::move(rx_space));
-    // Set the port ID to the index, we should expect the session to only see port 0.
-    ret->buffer().meta.port = port_id;
+    std::unique_ptr ret = std::make_unique<RxReturn>(std::move(rx_space), port_id);
     return_session.Enqueue(std::move(ret));
   }
   return_session.Commit();
@@ -1343,7 +1371,7 @@ TEST_F(NetworkDeviceTest, OnlyReceiveOnSubscribedPorts) {
   // Only one of the descriptors makes it back into the session.
   ASSERT_EQ(actual, 1u);
   uint16_t returned = descriptors[0];
-  ASSERT_EQ(session.descriptor(returned)->port_id, kPort0);
+  ASSERT_EQ(session.descriptor(returned)->port_id, kPort13);
 
   // The unused descriptor comes right back to us.
   ASSERT_OK(WaitRxAvailable());
@@ -1351,33 +1379,33 @@ TEST_F(NetworkDeviceTest, OnlyReceiveOnSubscribedPorts) {
 }
 
 TEST_F(NetworkDeviceTest, SessionsAttachToPort) {
-  ASSERT_OK(CreateDeviceWithPort0());
+  ASSERT_OK(CreateDeviceWithPort13());
   TestSession session;
   ASSERT_OK(OpenSession(&session));
-  // Just opening a session doesn't attach to port 0.
-  ASSERT_STATUS(WaitPortActiveChanged(port0_, zx::deadline_after(zx::msec(20))), ZX_ERR_TIMED_OUT);
-  ASSERT_FALSE(port0_.active());
+  // Just opening a session doesn't attach to port 13.
+  ASSERT_STATUS(WaitPortActiveChanged(port13_, zx::deadline_after(zx::msec(20))), ZX_ERR_TIMED_OUT);
+  ASSERT_FALSE(port13_.active());
 
-  ASSERT_OK(session.AttachPort(port0_));
-  ASSERT_OK(WaitPortActiveChanged(port0_));
-  ASSERT_TRUE(port0_.active());
+  ASSERT_OK(session.AttachPort(port13_));
+  ASSERT_OK(WaitPortActiveChanged(port13_));
+  ASSERT_TRUE(port13_.active());
 
-  ASSERT_OK(session.DetachPort(port0_));
-  ASSERT_OK(WaitPortActiveChanged(port0_));
-  ASSERT_FALSE(port0_.active());
+  ASSERT_OK(session.DetachPort(port13_));
+  ASSERT_OK(WaitPortActiveChanged(port13_));
+  ASSERT_FALSE(port13_.active());
 
   // Unpause the session once again, then observe that session detaches on destruction.
-  ASSERT_OK(session.AttachPort(port0_));
-  ASSERT_OK(WaitPortActiveChanged(port0_));
-  ASSERT_TRUE(port0_.active());
+  ASSERT_OK(session.AttachPort(port13_));
+  ASSERT_OK(WaitPortActiveChanged(port13_));
+  ASSERT_TRUE(port13_.active());
 
   ASSERT_OK(session.Close());
-  ASSERT_OK(WaitPortActiveChanged(port0_));
-  ASSERT_FALSE(port0_.active());
+  ASSERT_OK(WaitPortActiveChanged(port13_));
+  ASSERT_FALSE(port13_.active());
 }
 
 TEST_F(NetworkDeviceTest, RejectsInvalidPortIds) {
-  ASSERT_OK(CreateDeviceWithPort0());
+  ASSERT_OK(CreateDeviceWithPort13());
   {
     // Add a port with an invalid ID.
     FakeNetworkPortImpl fake_port;
@@ -1390,7 +1418,7 @@ TEST_F(NetworkDeviceTest, RejectsInvalidPortIds) {
     // Add a port with a duplicate ID.
     FakeNetworkPortImpl fake_port;
     network_port_protocol_t proto = fake_port.protocol();
-    impl_.client().AddPort(kPort0, proto.ctx, proto.ops);
+    impl_.client().AddPort(kPort13, proto.ctx, proto.ops);
     ASSERT_TRUE(fake_port.removed());
   }
 }
@@ -1398,10 +1426,10 @@ TEST_F(NetworkDeviceTest, RejectsInvalidPortIds) {
 TEST_F(NetworkDeviceTest, TxOnUnattachedPort) {
   // Test that transmitting a frame to a port we're not attached to returns the buffer with an
   // error.
-  ASSERT_OK(CreateDeviceWithPort0());
+  ASSERT_OK(CreateDeviceWithPort13());
   TestSession session;
   ASSERT_OK(OpenSession(&session));
-  ASSERT_OK(session.AttachPort(port0_));
+  ASSERT_OK(session.AttachPort(port13_));
   ASSERT_OK(WaitStart());
   constexpr uint16_t kDesc = 0;
   buffer_descriptor_t* desc = session.ResetDescriptor(kDesc);
@@ -1423,25 +1451,25 @@ TEST_F(NetworkDeviceTest, TxOnUnattachedPort) {
 TEST_F(NetworkDeviceTest, RxCrossSessionChaining) {
   // Test that attempting to chain Rx buffers that originated from different sessions will cause
   // the frame to be dropped and that no descriptors will be swallowed.
-  ASSERT_OK(CreateDeviceWithPort0());
+  ASSERT_OK(CreateDeviceWithPort13());
   TestSession session_a;
   ASSERT_OK(OpenSession(&session_a));
-  ASSERT_OK(session_a.AttachPort(port0_));
+  ASSERT_OK(session_a.AttachPort(port13_));
   ASSERT_OK(WaitSessionStarted());
   ASSERT_OK(WaitStart());
   // Send a single descriptor to the device and wait for it to be available.
-  session_a.ResetDescriptor(0);
-  ASSERT_OK(session_a.SendRx(0));
+  session_a.ResetDescriptor(kDescriptorIndex0);
+  ASSERT_OK(session_a.SendRx(kDescriptorIndex0));
   ASSERT_OK(WaitRxAvailable());
   std::unique_ptr buffer_a = impl_.PopRxBuffer();
   ASSERT_TRUE(buffer_a);
   // Start a second session.
   TestSession session_b;
   ASSERT_OK(OpenSession(&session_b));
-  ASSERT_OK(session_b.AttachPort(port0_));
+  ASSERT_OK(session_b.AttachPort(port13_));
   ASSERT_OK(WaitSessionStarted());
-  session_b.ResetDescriptor(0);
-  ASSERT_OK(session_b.SendRx(0));
+  session_b.ResetDescriptor(kDescriptorIndex0);
+  ASSERT_OK(session_b.SendRx(kDescriptorIndex0));
 
   // Close session A, it should no longer be primary. Then we should receive the rx buffer from
   // session B.
@@ -1489,25 +1517,25 @@ TEST_F(NetworkDeviceTest, RxCrossSessionChaining) {
   EXPECT_EQ(space.region.length, space_b.region.length);
   {
     RxReturnTransaction transaction(&impl_);
-    transaction.Enqueue(std::move(buffer_b_again));
+    transaction.Enqueue(std::move(buffer_b_again), kPort13);
     transaction.Commit();
   }
 }
 
 TEST_F(NetworkDeviceTest, SessionRejectsChainedRxSpace) {
   // Tests that sessions do not accept chained descriptors on the Rx FIFO.
-  ASSERT_OK(CreateDeviceWithPort0());
+  ASSERT_OK(CreateDeviceWithPort13());
   TestSession session;
   ASSERT_OK(OpenSession(&session));
-  ASSERT_OK(session.AttachPort(port0_));
+  ASSERT_OK(session.AttachPort(port13_));
   ASSERT_OK(WaitStart());
-  session.ResetDescriptor(1);
+  session.ResetDescriptor(kDescriptorIndex1);
   {
-    buffer_descriptor_t* desc = session.ResetDescriptor(0);
+    buffer_descriptor_t* desc = session.ResetDescriptor(kDescriptorIndex0);
     desc->chain_length = 1;
     desc->nxt = 1;
   }
-  ASSERT_OK(session.SendRx(0));
+  ASSERT_OK(session.SendRx(kDescriptorIndex0));
   // Session will be closed because of bad descriptor.
   ASSERT_OK(session.WaitClosed(zx::time::infinite()));
 }
@@ -1557,7 +1585,7 @@ TEST_P(RxTxBufferReturnTest, TestRaceFramesWithDeviceStop) {
   // contract:
   // - NetworkDeviceImplStart and NetworkDeviceImplStop can't be called when device is already in
   // that state.
-  ASSERT_OK(CreateDeviceWithPort0());
+  ASSERT_OK(CreateDeviceWithPort13());
 
   auto [rxtx, return_method, auto_stop] = GetParam();
   impl_.set_auto_stop(auto_stop);
@@ -1567,9 +1595,10 @@ TEST_P(RxTxBufferReturnTest, TestRaceFramesWithDeviceStop) {
   for (uint16_t i = 0; i < kIterations; i++) {
     TestSession session;
     ASSERT_OK(OpenSession(&session));
-    ASSERT_OK(session.AttachPort(port0_));
+    ASSERT_OK(session.AttachPort(port13_));
     ASSERT_OK(WaitStart());
-    session.ResetDescriptor(i);
+    buffer_descriptor_t* desc = session.ResetDescriptor(i);
+    desc->port_id = kPort13;
     fit::function<void()> manual_return;
     switch (rxtx) {
       case RxTxSwitch::Rx:
@@ -1582,7 +1611,7 @@ TEST_P(RxTxBufferReturnTest, TestRaceFramesWithDeviceStop) {
           ASSERT_FALSE(impl_.PopRxBuffer());
           manual_return = [this, buffer = std::move(buffer)]() mutable {
             RxReturnTransaction transact(&impl_);
-            transact.Enqueue(std::move(buffer));
+            transact.Enqueue(std::move(buffer), kPort13);
             transact.Commit();
           };
         }
@@ -1634,7 +1663,7 @@ TEST_P(RxTxBufferReturnTest, TestRaceFramesWithDeviceStop) {
         RxReturnTransaction return_rx(&impl_);
         for (std::unique_ptr buffer = impl_.PopRxBuffer(); buffer; buffer = impl_.PopRxBuffer()) {
           buffer->return_part().length = 0;
-          return_rx.Enqueue(std::move(buffer));
+          return_rx.Enqueue(std::move(buffer), kPort13);
         }
         return_rx.Commit();
       }
@@ -1682,18 +1711,18 @@ INSTANTIATE_TEST_SUITE_P(NetworkDeviceTest, RxTxBufferReturnTest,
 
 TEST_F(NetworkDeviceTest, PortGetInfo) {
   // Test Port.GetInfo FIDL implementation.
-  ASSERT_OK(CreateDeviceWithPort0());
-  zx::status port = OpenPort(kPort0);
+  ASSERT_OK(CreateDeviceWithPort13());
+  zx::status port = OpenPort(kPort13);
   ASSERT_OK(port.status_value());
   fidl::WireResult result = port->GetInfo();
   ASSERT_OK(result.status());
   const netdev::wire::PortInfo& port_info = result.value().info;
-  const port_info_t& impl_info = port0_.port_info();
+  const port_info_t& impl_info = port13_.port_info();
   ASSERT_TRUE(port_info.has_id());
-  EXPECT_EQ(port_info.id(), kPort0);
+  EXPECT_EQ(port_info.id(), kPort13);
   ASSERT_TRUE(port_info.has_class());
   EXPECT_EQ(port_info.class_(),
-            static_cast<netdev::wire::DeviceClass>(port0_.port_info().port_class));
+            static_cast<netdev::wire::DeviceClass>(port13_.port_info().port_class));
   ASSERT_TRUE(port_info.has_rx_types());
   EXPECT_EQ(port_info.rx_types().count(), impl_info.rx_types_count);
   for (size_t i = 0; i < port_info.rx_types().count(); i++) {
@@ -1713,8 +1742,8 @@ TEST_F(NetworkDeviceTest, PortGetInfo) {
 
 TEST_F(NetworkDeviceTest, PortGetStatus) {
   // Test Port.GetStatus FIDL implementation.
-  ASSERT_OK(CreateDeviceWithPort0());
-  zx::status port = OpenPort(kPort0);
+  ASSERT_OK(CreateDeviceWithPort13());
+  zx::status port = OpenPort(kPort13);
   ASSERT_OK(port.status_value());
   constexpr struct {
     const char* name;
@@ -1735,27 +1764,27 @@ TEST_F(NetworkDeviceTest, PortGetStatus) {
   };
   for (auto& t : kTests) {
     SCOPED_TRACE(t.name);
-    port0_.SetStatus(t.status);
+    port13_.SetStatus(t.status);
     fidl::WireResult result = port->GetStatus();
     ASSERT_OK(result.status());
     const netdev::wire::PortStatus& status = result.value().status;
     ASSERT_TRUE(status.has_mtu());
-    ASSERT_EQ(status.mtu(), port0_.status().mtu);
+    ASSERT_EQ(status.mtu(), port13_.status().mtu);
     ASSERT_TRUE(status.has_flags());
-    ASSERT_EQ(status.flags(), static_cast<netdev::wire::StatusFlags>(port0_.status().flags));
+    ASSERT_EQ(status.flags(), static_cast<netdev::wire::StatusFlags>(port13_.status().flags));
   }
 }
 
 TEST_F(NetworkDeviceTest, PortGetMac) {
   // Test Port.GetMac FIDL implementation.
-  port0_.SetMac(mac_addr_protocol_t{
+  port13_.SetMac(mac_addr_protocol_t{
       // NB: Banjo types want nonconst ops, but we want mac ops to be a constant expression so it
-      // can safely outlive this scope since it is set in port0.
+      // can safely outlive this scope since it is set in port13.
       .ops = const_cast<mac_addr_protocol_ops_t*>(&kMockMacOps),
       .ctx = nullptr,
   });
-  ASSERT_OK(CreateDeviceWithPort0());
-  zx::status port = OpenPort(kPort0);
+  ASSERT_OK(CreateDeviceWithPort13());
+  zx::status port = OpenPort(kPort13);
   ASSERT_OK(port.status_value());
   zx::status endpoints = fidl::CreateEndpoints<netdev::MacAddressing>();
   ASSERT_OK(endpoints.status_value());
@@ -1773,8 +1802,8 @@ TEST_F(NetworkDeviceTest, PortGetMac) {
 TEST_F(NetworkDeviceTest, PortGetMacFails) {
   // Test Port.GetMac FIDL implementation closes the request when port doesn't support mac
   // addressing.
-  ASSERT_OK(CreateDeviceWithPort0());
-  zx::status port = OpenPort(kPort0);
+  ASSERT_OK(CreateDeviceWithPort13());
+  zx::status port = OpenPort(kPort13);
   ASSERT_OK(port.status_value());
   zx::status endpoints = fidl::CreateEndpoints<netdev::MacAddressing>();
   ASSERT_OK(endpoints.status_value());
@@ -1796,7 +1825,7 @@ TEST_F(NetworkDeviceTest, NonExistentPort) {
     zx_status_t session_error;
   } kTests[] = {
       {
-          .port_id = kPort0 + 1,
+          .port_id = kPort13 + 1,
           .name = "port doesn't exist",
           .session_error = ZX_ERR_NOT_FOUND,
       },
@@ -1887,8 +1916,7 @@ TEST_F(NetworkDeviceTest, MultiplePortsAndSessions) {
     uint8_t port_id = port.id();
     // Write some data so the buffer makes it into the session.
     ASSERT_OK(rx_space->WriteData(fbl::Span(&port_id, sizeof(port_id)), impl_.VmoGetter()));
-    std::unique_ptr ret = std::make_unique<RxReturn>(std::move(rx_space));
-    ret->buffer().meta.port = port_id;
+    std::unique_ptr ret = std::make_unique<RxReturn>(std::move(rx_space), port_id);
     return_session.Enqueue(std::move(ret));
   }
   return_session.Commit();
@@ -2005,15 +2033,15 @@ TEST_F(NetworkDeviceTest, PortWatcher) {
     ASSERT_EQ(fut.wait_for(std::chrono::milliseconds(10)), std::future_status::timeout);
   };
 
-  ASSERT_OK(CreateDeviceWithPort0());
+  ASSERT_OK(CreateDeviceWithPort13());
   fidl::WireSyncClient device = OpenConnection();
   ASSERT_OK(device.GetPortWatcher(std::move(endpoints->server)).status());
 
-  // Should list port 0 on creation.
+  // Should list port 13 on creation.
   ASSERT_NO_FATAL_FAILURE(
       expect_event(watch_next(), {
                                      .which = netdev::wire::DevicePortEvent::Tag::kExisting,
-                                     .port_id = kPort0,
+                                     .port_id = kPort13,
                                  }));
   ASSERT_NO_FATAL_FAILURE(
       expect_event(watch_next(), {
@@ -2149,7 +2177,7 @@ const std::string badDescriptorTestToString(
 
 TEST_P(BadDescriptorTest, SessionIsKilledOnBadDescriptor) {
   impl_.set_immediate_return_tx(true);
-  ASSERT_OK(CreateDeviceWithPort0());
+  ASSERT_OK(CreateDeviceWithPort13());
   TestSession primary;
   TestSession secondary;
   TestSession listen;
@@ -2184,7 +2212,7 @@ TEST_P(BadDescriptorTest, SessionIsKilledOnBadDescriptor) {
   for (auto& s : kSessions) {
     SCOPED_TRACE(s.name);
     ASSERT_OK(OpenSession(&s.session, s.flags, kDescriptorCount, kDefaultBufferLength, s.name));
-    ASSERT_OK(s.session.AttachPort(port0_));
+    ASSERT_OK(s.session.AttachPort(port13_));
     uint16_t rx_descriptors[kInitialRxDescriptors];
     const uint16_t descriptor_offset = s.send_bad_rx_descriptor ? kDescriptorCount : 0;
     for (uint16_t i = 0; i < kInitialRxDescriptors; i++) {
@@ -2204,18 +2232,20 @@ TEST_P(BadDescriptorTest, SessionIsKilledOnBadDescriptor) {
       RxReturnTransaction txn(&impl_);
       std::unique_ptr rx_buffer = impl_.PopRxBuffer();
       rx_buffer->SetReturnLength(1);
-      txn.Enqueue(std::move(rx_buffer));
+      txn.Enqueue(std::move(rx_buffer), kPort13);
       txn.Commit();
     } break;
-    case DescriptorSource::ListenSessionRx:
-      primary.ResetDescriptor(kGoodTxDescriptor);
+    case DescriptorSource::ListenSessionRx: {
+      buffer_descriptor_t* desc = primary.ResetDescriptor(kGoodTxDescriptor);
+      desc->port_id = kPort13;
       ASSERT_OK(primary.SendTx(kGoodTxDescriptor));
-      break;
+    } break;
     case DescriptorSource::Tx:
       ASSERT_OK(primary.SendTx(kDescriptorCount));
       break;
     case DescriptorSource::TxChain: {
       buffer_descriptor_t* desc = primary.ResetDescriptor(kGoodTxDescriptor);
+      desc->port_id = kPort13;
       desc->chain_length = 1;
       desc->nxt = kDescriptorCount;
       ASSERT_OK(primary.SendTx(kGoodTxDescriptor));
@@ -2258,7 +2288,7 @@ INSTANTIATE_TEST_SUITE_P(NetworkDeviceTest, BadDescriptorTest,
 
 TEST_F(NetworkDeviceTest, SecondarySessionWithRxOffsetAndChaining) {
   constexpr uint32_t kBufferLength = 32;
-  ASSERT_OK(CreateDeviceWithPort0());
+  ASSERT_OK(CreateDeviceWithPort13());
   struct {
     TestSession session;
     const char* const name;
@@ -2298,7 +2328,7 @@ TEST_F(NetworkDeviceTest, SecondarySessionWithRxOffsetAndChaining) {
       d->data_length = kBufferLength / s.descriptor_count;
       ASSERT_OK(s.session.SendRx(desc));
     }
-    ASSERT_OK(s.session.AttachPort(port0_));
+    ASSERT_OK(s.session.AttachPort(port13_));
   }
 
   ASSERT_OK(WaitRxAvailable());
@@ -2318,7 +2348,7 @@ TEST_F(NetworkDeviceTest, SecondarySessionWithRxOffsetAndChaining) {
         .offset = b.offset,
         .length = b.length,
     };
-    txn.Enqueue(std::move(rx_space));
+    txn.Enqueue(std::move(rx_space), kPort13);
   }
   txn.Commit();
 
@@ -2360,15 +2390,15 @@ TEST_F(NetworkDeviceTest, SecondarySessionWithRxOffsetAndChaining) {
 }
 
 TEST_F(NetworkDeviceTest, BufferChainingOnListenTx) {
-  ASSERT_OK(CreateDeviceWithPort0());
+  ASSERT_OK(CreateDeviceWithPort13());
   TestSession primary;
   ASSERT_OK(OpenSession(&primary, netdev::wire::SessionFlags::kPrimary, kDefaultDescriptorCount,
                         kDefaultBufferLength, "primary"));
-  ASSERT_OK(primary.AttachPort(port0_));
+  ASSERT_OK(primary.AttachPort(port13_));
   TestSession listen;
   ASSERT_OK(OpenSession(&listen, netdev::wire::SessionFlags::kListenTx, kDefaultDescriptorCount,
                         kDefaultBufferLength, "listen"));
-  ASSERT_OK(listen.AttachPort(port0_));
+  ASSERT_OK(listen.AttachPort(port13_));
 
   constexpr uint32_t kRxDescriptorLen = 30;
   constexpr uint16_t kRxDescriptorCount = 3;
@@ -2383,6 +2413,7 @@ TEST_F(NetworkDeviceTest, BufferChainingOnListenTx) {
   }
 
   buffer_descriptor_t* tx_desc = primary.ResetDescriptor(kTxDescriptor);
+  tx_desc->port_id = kPort13;
   tx_desc->data_length = kTxLen;
   tx_desc->head_length = kTxHeadLen;
   uint8_t b = 0;
@@ -2417,10 +2448,10 @@ INSTANTIATE_TEST_SUITE_P(NetworkDeviceTest, RxTxParamTest,
 
 TEST_F(NetworkDeviceTest, CanUpdatePortStatusWithinSetActive) {
   // Tests that notifying status changes inline in a port SetActive call doesn't cause a deadlock.
-  ASSERT_OK(CreateDeviceWithPort0());
+  ASSERT_OK(CreateDeviceWithPort13());
   uint32_t set_active_call_counter = 0;
-  port0_.SetOnSetActiveCallback([this, &set_active_call_counter](bool active) {
-    port0_.SetOnline(active);
+  port13_.SetOnSetActiveCallback([this, &set_active_call_counter](bool active) {
+    port13_.SetOnline(active);
     set_active_call_counter++;
   });
 
@@ -2428,7 +2459,7 @@ TEST_F(NetworkDeviceTest, CanUpdatePortStatusWithinSetActive) {
   {
     zx::status server_end = fidl::CreateEndpoints(&client_end);
     ASSERT_OK(server_end.status_value());
-    zx::status port = OpenPort(kPort0);
+    zx::status port = OpenPort(kPort13);
     ASSERT_OK(port.status_value());
     constexpr uint32_t kWatcherBuffer = 3;
     ASSERT_OK(port->GetStatusWatcher(std::move(server_end.value()), kWatcherBuffer).status());
@@ -2447,7 +2478,7 @@ TEST_F(NetworkDeviceTest, CanUpdatePortStatusWithinSetActive) {
 
   // Port goes online on SetActive callback when session attaches.
   {
-    ASSERT_OK(session.AttachPort(port0_));
+    ASSERT_OK(session.AttachPort(port13_));
     fidl::WireResult result = watcher.WatchStatus();
     ASSERT_OK(result.status());
     ASSERT_EQ(result.value().port_status.flags(), netdev::wire::StatusFlags::kOnline);
@@ -2456,7 +2487,7 @@ TEST_F(NetworkDeviceTest, CanUpdatePortStatusWithinSetActive) {
 
   // Port goes offline on SetActive callback when session detaches.
   {
-    ASSERT_OK(session.DetachPort(port0_.id()));
+    ASSERT_OK(session.DetachPort(port13_.id()));
     fidl::WireResult result = watcher.WatchStatus();
     ASSERT_OK(result.status());
     ASSERT_EQ(result.value().port_status.flags(), netdev::wire::StatusFlags());

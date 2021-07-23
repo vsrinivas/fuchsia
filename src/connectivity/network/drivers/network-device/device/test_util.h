@@ -98,7 +98,10 @@ class RxReturn : public fbl::DoublyLinkedListable<std::unique_ptr<RxReturn>> {
         }) {}
   // RxReturn can't be moved because it keeps pointers to the return buffer internally.
   RxReturn(RxReturn&&) = delete;
-  explicit RxReturn(std::unique_ptr<RxBuffer> buffer) : RxReturn() { PushPart(std::move(buffer)); }
+  RxReturn(std::unique_ptr<RxBuffer> buffer, uint8_t port_id) : RxReturn() {
+    PushPart(std::move(buffer));
+    buffer_.meta.port = port_id;
+  }
 
   // Pushes buffer space into the return buffer.
   //
@@ -327,7 +330,8 @@ class TestSession {
   zx_status_t FetchTx(uint16_t* descriptors, size_t count, size_t* actual) const;
   zx_status_t SendRx(const uint16_t* descriptor, size_t count, size_t* actual) const;
   zx_status_t SendTx(const uint16_t* descriptor, size_t count, size_t* actual) const;
-  zx_status_t SendTxData(uint16_t descriptor_index, const std::vector<uint8_t>& data);
+  zx_status_t SendTxData(uint8_t port_id, uint16_t descriptor_index,
+                         const std::vector<uint8_t>& data);
 
   zx_status_t FetchRx(uint16_t* descriptor) const {
     size_t actual;
@@ -378,8 +382,8 @@ class RxReturnTransaction {
     buffers_.push_back(std::move(buffer));
   }
 
-  void Enqueue(std::unique_ptr<RxBuffer> buffer) {
-    Enqueue(std::make_unique<RxReturn>(std::move(buffer)));
+  void Enqueue(std::unique_ptr<RxBuffer> buffer, uint8_t port_id) {
+    Enqueue(std::make_unique<RxReturn>(std::move(buffer), port_id));
   }
 
   void Commit() {
