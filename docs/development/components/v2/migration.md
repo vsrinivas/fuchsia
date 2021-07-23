@@ -316,6 +316,9 @@ To migrate this test to the Test Runner Framework, do the following:
             // Select the appropriate test runner shard here:
             // rust, gtest, go, etc.
             "//src/sys/test_runners/rust/default.shard.cml",
+            // For common includes such as the below, typically you will find
+            // a `.cmx` and a `.cml` equivalent at the same path.
+            "syslog/client.shard.cml",
         ],
         program: {
             binary: "bin/font_test",
