@@ -50,7 +50,7 @@ func writeFile(generate func(io.Writer, Root) error, tree Root, outputFilename s
 	}
 	defer generated.Close()
 
-	generatedPipe, err := fidlgen.NewFormatter(dart, "format", "-o", "show").FormatPipe(generated)
+	generatedPipe, err := fidlgen.NewFormatter(dart, "--no-analytics", "format", "-o", "show").FormatPipe(generated)
 	if err != nil {
 		return err
 	}
