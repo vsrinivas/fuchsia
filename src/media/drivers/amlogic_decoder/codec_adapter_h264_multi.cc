@@ -12,6 +12,7 @@
 
 #include <optional>
 
+#include <fbl/algorithm.h>
 #include <src/media/lib/memory_barriers/memory_barriers.h>
 
 #include "device_ctx.h"
@@ -319,15 +320,17 @@ std::list<CodecInputItem> CodecAdapterH264Multi::CoreCodecStopStreamInternal() {
     std::unique_lock<std::mutex> lock(lock_);
     bool is_cancelling_input_processing = true;
     std::condition_variable stop_input_processing_condition;
-    async::PostTask(core_loop_.dispatcher(), [this, &stop_input_processing_condition, &input_items_result, &is_cancelling_input_processing] {
-      {  // scope lock
-        std::lock_guard<std::mutex> lock(lock_);
-        ZX_DEBUG_ASSERT(input_items_result.empty());
-        input_items_result.swap(input_queue_);
-        is_cancelling_input_processing = false;
-      }  // ~lock
-      stop_input_processing_condition.notify_all();
-    });
+    async::PostTask(core_loop_.dispatcher(),
+                    [this, &stop_input_processing_condition, &input_items_result,
+                     &is_cancelling_input_processing] {
+                      {  // scope lock
+                        std::lock_guard<std::mutex> lock(lock_);
+                        ZX_DEBUG_ASSERT(input_items_result.empty());
+                        input_items_result.swap(input_queue_);
+                        is_cancelling_input_processing = false;
+                      }  // ~lock
+                      stop_input_processing_condition.notify_all();
+                    });
     while (is_cancelling_input_processing) {
       stop_input_processing_condition.wait(lock);
     }
@@ -350,6 +353,17 @@ void CodecAdapterH264Multi::CoreCodecAddBuffer(CodecPort port, const CodecBuffer
     return;
   }
   ZX_DEBUG_ASSERT(port == kOutputPort);
+
+  // This flush is to eliminate any dirty cache lines.  Our only choices are flush or flush and
+  // invalidate, so it's maybe slightly cheaper to only flush.  We don't care what's being flushed
+  // here, if anything, since the buffer will be overwritten by HW decoding into the buffer anyway.
+  //
+  // There's a flush+invalidate later after the HW is done decoding, which we do for the invalidate
+  // part.  For that flush to not overwrite anything the HW wrote to the buffer, this flush
+  // eliminates any dirty cache lines that might otherwise get flushed after HW has written to the
+  // buffer.
+  buffer->CacheFlush(0, buffer->size());
+
   all_output_buffers_.push_back(buffer);
 }
 
@@ -386,6 +400,10 @@ void CodecAdapterH264Multi::CoreCodecRecycleOutputPacket(CodecPacket* packet) {
   // until put on the free list, and has a buffer associated while in-flight.
   const CodecBuffer* buffer = packet->buffer();
   ZX_DEBUG_ASSERT(buffer);
+
+  // Eliminate any dirty CPU cache lines, so that later when we do a flush+invalidate after HW is
+  // done writing to the buffer, we won't be writing over anything the HW wrote.
+  buffer->CacheFlush(0, buffer->size());
 
   // Getting the buffer is all we needed the packet for.  The packet won't get
   // re-used until it goes back on the free list below.
@@ -570,7 +588,7 @@ CodecAdapterH264Multi::CoreCodecGetBufferCollectionConstraints(
     image_constraints.layers = 1;
     image_constraints.coded_width_divisor = 16;
     image_constraints.coded_height_divisor = 16;
-    image_constraints.bytes_per_row_divisor = 32;
+    image_constraints.bytes_per_row_divisor = H264MultiDecoder::kStrideAlignment;
     // Even though we only ever output at offset 0, sysmem defaults start_offset_divisor to the
     // image format alignment which is 2 for NV12. Since we are a producer, we should fully specify
     // here so late attach clients don't have to specify it explicitly.
@@ -704,8 +722,9 @@ void CodecAdapterH264Multi::CoreCodecMidStreamOutputBufferReConfigFinish() {
     }
     width = width_;
     height = height_;
-    // TODO(dustingreen): Get stride from sysmem.
-    stride = min_stride_;
+    stride = fbl::round_up(
+        width,
+        output_buffer_collection_info_->settings.image_format_constraints.bytes_per_row_divisor);
   }  // ~lock
   {
     std::lock_guard<std::mutex> lock(*video_->video_decoder_lock());
@@ -816,6 +835,7 @@ std::optional<H264MultiDecoder::DataInput> CodecAdapterH264Multi::ReadMoreInputD
     if (item.packet()->has_timestamp_ish()) {
       result.pts = item.packet()->timestamp_ish();
     }
+
     return result;
     // ~item
   }
@@ -1344,8 +1364,7 @@ void CodecAdapterH264Multi::OnCoreCodecFailStream(fuchsia::media::StreamError er
     std::lock_guard<std::mutex> lock(lock_);
     is_stream_failed_ = true;
   }
-  LOG(INFO, "calling events_->onCoreCodecFailStream()");
-  LOG(ERROR, "calling events_->onCoreCodecFailStream()");
+  LOG(INFO, "calling events_->onCoreCodecFailStream(): %u", static_cast<uint32_t>(error));
   events_->onCoreCodecFailStream(error);
 }
 

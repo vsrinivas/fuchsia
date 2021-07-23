@@ -152,48 +152,22 @@ void Vdec1::PowerOn() {
     kG12xXtal = 7,  // 24 MHz
   };
 
-  // "DECODE_CORRECTNESS_COMMENTS" (are here):
-  //
   // The maximum frequency used in linux is 648 MHz, but that requires using GP0, which is already
   // being used by the GPU. The linux driver also uses 200MHz in some circumstances for videos <=
   // 1080p30.
   //
-  // We'd like to pick 500 MHz, but on astro we need to run at 285.7 to avoid decode flakes at 400
-  // and 500 MHz.
-  //
-  // However, using the h264 multi decoder, we got a few intermittent decode correctness glitches
-  // when we ran at 500 MHz on astro, and still a few though less frequent at 400 MHz on astro.  At
-  // 285.7 on astro we don't see those, but we do still see some on sherlock at 285.7 MHz. It's
-  // possible we have something else misconfigured, or have a timing-dependent SW bug.
-  //
-  // For astro, running at 285.7 is very likely to be fast enough (for now) assuming linear
-  // performance per clock rate.
-  //
-  // At 24 MHz on sherlock we don't see any decode correctness glitches, but at 285.7 and up we do.
-  //
-  // All flake rates below are using use-h264-multi-decoder-flake-repro-test, which uses bear.h264.
-  //
-  // Sherlock (one particular sherlock - the one on my desk, in the particular environment, etc):
-  // 800 MHz sherlock   - ~1/12 incorrect decode (213/2529)
-  // 666 MHz sherlock   - ~1/25 incorrect decode (63/1525)
-  // 500 MHz sherlock   - ~1/3054 incorrect decode (6/18322)
-  // 285.7 MHz sherlock - ~1/2436 incorrect decode (27/65763)
-  // 24 MHz sherlock    - ~0/3156 incorrect decode (0 failures observed in 3156)
-  //
-  // Astro (the astro on my desk):
-  // 666 MHz astro   - ~1/43 incorrect decode (50/2133)
-  // 500 MHz astro   - ~1/165 incorrect decode (494/81403)
-  // 400 MHz astro   - ~1/645 incorrect decode (12/7734)
-  // 285.7 MHz astro - ~0/53199 incorrect decode (0/53199)
+  // We can run all the way up at 800 MHz without glitches, after fixing some glitches we were
+  // seeing before especially at higher clock rates.  However, 500 MHz is plenty for now, and it
+  // seems prudent to run at <= the max frequency used on linux, just in case.
   uint32_t clock_sel;
   switch (owner_->device_type()) {
     case DeviceType::kG12A:
     case DeviceType::kG12B:
     case DeviceType::kSM1:
-      clock_sel = kG12xFclkDiv7;
+      clock_sel = kG12xFclkDiv4;
       break;
     case DeviceType::kGXM:
-      clock_sel = kGxmFclkDiv7;
+      clock_sel = kGxmFclkDiv4;
       break;
   }
 
@@ -225,6 +199,7 @@ void Vdec1::PowerOn() {
   // the firmware can hang.
   DosSwReset0::Get().FromValue(0xfffffffc).WriteTo(mmio()->dosbus);
   DosSwReset0::Get().FromValue(0).WriteTo(mmio()->dosbus);
+
   powered_on_ = true;
 }
 
@@ -281,9 +256,17 @@ void Vdec1::StopDecoding() {
   if (!WaitForRegister(std::chrono::milliseconds(100), [this] {
         return (ImemDmaCtrl::Get().ReadFrom(mmio()->dosbus).reg_value() & 0x8000) == 0;
       })) {
-    DECODE_ERROR("Failed to wait for DMA completion");
+    DECODE_ERROR("Failed to wait for IMEM DMA completion");
     return;
   }
+
+  if (!WaitForRegister(std::chrono::milliseconds(100), [this] {
+        return (LmemDmaCtrl::Get().ReadFrom(mmio()->dosbus).reg_value() & 0x8000) == 0;
+      })) {
+    DECODE_ERROR("Failed to wait for LMEM DMA completion");
+    return;
+  }
+
   // Delay to ensure previous writes have executed.
   for (uint32_t i = 0; i < 3; i++) {
     DosSwReset0::Get().ReadFrom(mmio()->dosbus);
@@ -366,15 +349,19 @@ void Vdec1::InitializeStreamInput(bool use_parser, uint32_t buffer_address, uint
   Reset0Register::Get().ReadFrom(mmio()->reset);
 
   auto temp = PowerCtlVld::Get().ReadFrom(mmio()->dosbus);
-  temp.set_reg_value(temp.reg_value() | (1 << 4) | (1 << 6) | (1 << 9));
+  temp.set_reg_value(1 << 4);
+  temp.WriteTo(mmio()->dosbus);
+  temp = PowerCtlVld::Get().ReadFrom(mmio()->dosbus);
+  temp.set_reg_value(temp.reg_value() | (1 << 6) | (1 << 9));
   temp.WriteTo(mmio()->dosbus);
 
   VldMemVififoStartPtr::Get().FromValue(buffer_address).WriteTo(mmio()->dosbus);
-  VldMemVififoCurrPtr::Get().FromValue(buffer_address).WriteTo(mmio()->dosbus);
   VldMemVififoEndPtr::Get().FromValue(buffer_address + buffer_size - 8).WriteTo(mmio()->dosbus);
+  VldMemVififoCurrPtr::Get().FromValue(buffer_address).WriteTo(mmio()->dosbus);
   VldMemVififoControl::Get().FromValue(0).set_init(true).WriteTo(mmio()->dosbus);
   VldMemVififoControl::Get().FromValue(0).WriteTo(mmio()->dosbus);
   VldMemVififoBufCntl::Get().FromValue(0).set_manual(true).WriteTo(mmio()->dosbus);
+  VldMemVififoRP::Get().FromValue(buffer_address).WriteTo(mmio()->dosbus);
   VldMemVififoWP::Get().FromValue(buffer_address).WriteTo(mmio()->dosbus);
   VldMemVififoBufCntl::Get().FromValue(0).set_manual(true).set_init(true).WriteTo(mmio()->dosbus);
   VldMemVififoBufCntl::Get().FromValue(0).set_manual(true).WriteTo(mmio()->dosbus);
@@ -477,14 +464,12 @@ zx_status_t Vdec1::RestoreInputContext(InputContext* context) {
   // Dummy read to give time for the hardware to reset.
   Reset0Register::Get().ReadFrom(mmio()->reset);
 
-  auto temp = PowerCtlVld::Get().ReadFrom(mmio()->dosbus);
-  temp.set_reg_value(temp.reg_value() | (1 << 4));
   // Power on various parts of the VLD hardware. This needs to be done before
   // swapping in or else some state will remain uninitialized. Bit 9 holds
   // information related to the escape sequence status.
-  const bool kH264Video = true;
-  if (kH264Video)
-    temp.set_reg_value(temp.reg_value() | (1 << 6) | (1 << 9));
+  PowerCtlVld::Get().FromValue(0).set_reg_value(1 << 4).WriteTo(mmio()->dosbus);
+  auto temp = PowerCtlVld::Get().ReadFrom(mmio()->dosbus);
+  temp.set_reg_value(temp.reg_value() | (1 << 6) | (1 << 9));
   temp.WriteTo(mmio()->dosbus);
 
   VldMemVififoControl::Get().FromValue(0).WriteTo(mmio()->dosbus);

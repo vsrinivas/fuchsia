@@ -111,6 +111,9 @@ DEFINE_REGISTER(ImemDmaAdr, DosRegisterIo, 0x341);
 DEFINE_REGISTER(ImemDmaCount, DosRegisterIo, 0x342);
 DEFINE_REGISTER(LmemDmaCtrl, DosRegisterIo, 0x0350);
 DEFINE_REGISTER(DcacDmaCtrl, DosRegisterIo, 0x0e12);
+DEFINE_REGISTER(IqidctCtrl, DosRegisterIo, 0x0e0e);
+DEFINE_REGISTER(VcopCtrl, DosRegisterIo, 0x0e00);
+DEFINE_REGISTER(VldDecodeCtrl, DosRegisterIo, 0x0c18);
 REGISTER_NAME(DosSwReset0, DosRegisterIo, 0x3f00)
   DEF_BIT(14, vdec_afifo);
   DEF_BIT(13, vdec_ddr);
@@ -212,7 +215,12 @@ REGISTER_NAME(MdecPicDcMuxCtrl, DosRegisterIo, 0x098d)
     DEF_BIT(31, bit31); // 1 for mmu enabled
 };
 REGISTER_NAME(MdecPicDcCtrl, DosRegisterIo, 0x098e)
-    DEF_BIT(17, nv12_output); // as opposed to 3-plane YUV
+    // as opposed to 3-plane YUV
+    DEF_BIT(17, nv12_output);
+
+    // (Probably) NV21 instead of NV12, when nv12_output is true.
+    DEF_BIT(16, nv21_vs_nv12);
+
     DEF_BIT(31, bit31);
 };
 DEFINE_REGISTER(MdecPicDcStatus, DosRegisterIo, 0x098f)
@@ -270,6 +278,17 @@ DEFINE_REGISTER(ViffBitCnt, DosRegisterIo, 0x0c1a)
 DEFINE_REGISTER(M4ControlReg, DosRegisterIo, 0x0c29)
 DEFINE_REGISTER(VdecAssistMbox1ClrReg, DosRegisterIo, 0x0075)
 DEFINE_REGISTER(VdecAssistMbox1Mask, DosRegisterIo, 0x0076)
+
+REGISTER_NAME(VdecAssistCanvasBlk32, DosRegisterIo, 0x5)
+  DEF_BIT(11, canvas_blk32_wr);
+
+  // true is 32x32 or maybe 64x32 (somehow)
+  // false is linear (NV12)
+  DEF_BIT(10, canvas_blk32_is_block);
+
+  DEF_BIT(8, canvas_index_wr);
+  DEF_FIELD(7, 0, canvas_index);
+};
 
 class AncNCanvasAddr : public TypedRegisterBase<DosRegisterIo, AncNCanvasAddr, uint32_t> {
  public:

@@ -33,23 +33,7 @@ int main(int argc, char* argv[]) {
       .loop_stream_count = 20,
       .golden_sha256 = kGoldenSha256,
   };
-  // TODO(fxbug.dev/13483): The retries should not be necessary here.  These are presently needed to
-  // de-flake due to a decode correctness bug that results in a few slightly incorrect pixels
-  // sometimes.
-  constexpr uint32_t kMaxRetryCount = 2;
-  for (uint32_t i = 0; i < kMaxRetryCount; ++i) {
-    if (0 == use_video_decoder_test(kInputFilePath, kInputFileFrameCount, use_h264_multi_decoder,
-                                    /*is_secure_output=*/false, /*is_secure_input=*/false,
-                                    /*min_output_buffer_count=*/0, &test_params)) {
-      if (i != 0) {
-        printf("WARNING - fxbug.dev/13483 - internal de-flaking used - extra attempt count: %u\n",
-               i);
-      }
-      return 0;
-    }
-    printf(
-        "WARNING - fxbug.dev/13483 - decode may have flaked - internally de-flaking (for now)\n");
-  }
-  printf("Incorrect hash seen every time despite de-flaking retries.  FAIL\n");
-  return -1;
+  return use_video_decoder_test(kInputFilePath, kInputFileFrameCount, use_h264_multi_decoder,
+                                /*is_secure_output=*/false, /*is_secure_input=*/false,
+                                /*min_output_buffer_count=*/0, &test_params);
 }
