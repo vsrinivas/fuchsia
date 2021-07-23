@@ -29,7 +29,7 @@ class MidiKeyboard {
   void HandleRead(const fuchsia_hardware_midi::wire::DeviceReadResponse& response);
 
   Tones* const owner_;
-  fidl::Client<fuchsia_hardware_midi::Device> dev_;
+  fidl::WireClient<fuchsia_hardware_midi::Device> dev_;
 };
 
 }  // namespace examples
