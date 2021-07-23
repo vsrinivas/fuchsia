@@ -25,6 +25,8 @@
 #include <map>
 #include <set>
 
+#include <fbl/string_printf.h>
+
 #include "../in_stream_buffer.h"
 #include "../in_stream_file.h"
 #include "../in_stream_peeker.h"
@@ -247,7 +249,7 @@ int use_video_decoder_test(std::string input_file_path, int expected_frame_count
               luma_max_diff_x = std::max(luma_max_diff_x, x);
               luma_max_diff_y = std::max(luma_max_diff_y, y);
             }
-            if (y % 2 == 0 && x % 2 == 0) {
+            if ((y % 2 == 0) && (x % 2 == 0)) {
               uint8_t u_sample_expected =
                   i420_data[width * height + (y / 2) * (width / 2) + (x / 2)];
               uint8_t u_sample_actual =
@@ -305,6 +307,15 @@ int use_video_decoder_test(std::string input_file_path, int expected_frame_count
             LOGF("v diff - y: %d x: %d expected: 0x%02x actual: 0x%02x expected minus actual: %d",
                  y, x, expected, actual, expected - actual);
           }
+        }
+        for (int32_t y = luma_min_diff_y; y <= luma_max_diff_y; ++y) {
+          std::string line_string;
+          for (int32_t x = luma_min_diff_x; x <= luma_max_diff_x; ++x) {
+            int32_t expected = i420_data[y * width + x];
+            int32_t actual = frame_to_compare.data[y * width + x];
+            line_string += fbl::StringPrintf(" %4d", expected - actual);
+          }
+          LOGF("%s", line_string.c_str());
         }
         LOGF(
             "\n\n\nDECODED FRAME DIFFERS FROM EXPECTED - SEE ABOVE DIFFS - TEST WILL FAIL AFTER "

@@ -159,17 +159,18 @@ void CodecBuffer::CacheFlushInternal(uint32_t flush_offset, uint32_t length,
   }
   zx_status_t status;
   if (is_mapped_) {
-    uint32_t flush_type = also_invalidate ? ZX_CACHE_FLUSH_INVALIDATE : ZX_CACHE_FLUSH_DATA;
+    uint32_t flush_type =
+        also_invalidate ? ZX_CACHE_FLUSH_INVALIDATE | ZX_CACHE_FLUSH_DATA : ZX_CACHE_FLUSH_DATA;
     status = zx_cache_flush(base() + flush_offset, length, flush_type);
     if (status != ZX_OK) {
-      ZX_PANIC("zx_cache_flush() failed - status: %d", status);
+      ZX_PANIC("zx_cache_flush() failed - status: %d\n", status);
     }
   } else {
     uint32_t flush_type =
         also_invalidate ? ZX_VMO_OP_CACHE_CLEAN_INVALIDATE : ZX_VMO_OP_CACHE_CLEAN;
     status = vmo().op_range(flush_type, vmo_offset() + flush_offset, length, nullptr, 0);
     if (status != ZX_OK) {
-      ZX_PANIC("vmo().op_range() failed - status: %d", status);
+      ZX_ASSERT_MSG(status == ZX_OK, "vmo().op_range() failed - status: %d", status);
     }
   }
   BarrierAfterFlush();

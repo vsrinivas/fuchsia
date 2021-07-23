@@ -34,6 +34,7 @@ namespace amlogic_decoder {
 // An H264 decoder that can be context-switched in and out.
 class H264MultiDecoder : public VideoDecoder {
  public:
+  static constexpr uint32_t kStrideAlignment = 32;
   struct ReferenceFrame {
     bool in_use = false;
     bool in_internal_use = false;
@@ -472,6 +473,12 @@ class H264MultiDecoder : public VideoDecoder {
   // The frame_num we've seen a slice header for, but not yet a pic data done.  We use this to
   // detect a missing pic data done between slices of two different frames.
   std::optional<int> frame_num_;
+
+  std::optional<uint32_t> saved_iqidct_ctrl_;
+  std::optional<uint32_t> saved_vcop_ctrl_;
+  std::optional<uint32_t> saved_vld_decode_ctrl_;
+
+  bool configure_dpb_seen_ = false;
 };
 
 }  // namespace amlogic_decoder

@@ -82,6 +82,10 @@ bool CodecPacket::key_frame() const { return key_frame_; }
 
 void CodecPacket::CacheFlush() const { buffer()->CacheFlush(start_offset_, valid_length_bytes_); }
 
+void CodecPacket::CacheFlushAndInvalidate() const {
+  buffer()->CacheFlushAndInvalidate(start_offset_, valid_length_bytes_);
+}
+
 void CodecPacket::ClearStartOffset() { start_offset_ = kStartOffsetNotSet; }
 
 void CodecPacket::ClearValidLengthBytes() { valid_length_bytes_ = kValidLengthBytesNotSet; }

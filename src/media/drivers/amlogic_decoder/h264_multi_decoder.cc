@@ -433,8 +433,11 @@ zx_status_t H264MultiDecoder::LoadSecondaryFirmware(const uint8_t* data, uint32_
   memcpy(addr + 0x5000 + 0x2000, data + 0x2000, kSecondaryFirmwareSize);  // data copy 2
   memcpy(addr + 0x5000 + 0x3000, data + 0x5000, kSecondaryFirmwareSize);  // slice copy 2
   ZX_DEBUG_ASSERT(0x5000 + 0x3000 + kSecondaryFirmwareSize == kSecondaryFirmwareBufferSize);
+
+  // Flush the secondary firmware out to RAM.
   secondary_firmware_->CacheFlush(0, kSecondaryFirmwareBufferSize);
   BarrierAfterFlush();
+
   return ZX_OK;
 }
 
@@ -477,6 +480,8 @@ zx_status_t H264MultiDecoder::InitializeBuffers() {
       }
       firmware_ = create_result.take_value();
       memcpy(firmware_->virt_base(), data, kFirmwareSize);
+
+      // Flush the firmware out to RAM.
       firmware_->CacheFlush(0, kFirmwareSize);
       BarrierAfterFlush();
     }
@@ -530,6 +535,21 @@ zx_status_t H264MultiDecoder::InitializeBuffers() {
 
 void H264MultiDecoder::ResetHardware() {
   TRACE_DURATION("media", "H264MultiDecoder::ResetHardware");
+
+  if (!WaitForRegister(std::chrono::milliseconds(100), [this]() {
+        return !(DcacDmaCtrl::Get().ReadFrom(owner_->dosbus()).reg_value() & 0x8000);
+      })) {
+    DECODE_ERROR("Waiting for DCAC DMA timed out");
+    return;
+  }
+
+  if (!WaitForRegister(std::chrono::milliseconds(100), [this]() {
+        return !(LmemDmaCtrl::Get().ReadFrom(owner_->dosbus()).reg_value() & 0x8000);
+      })) {
+    DECODE_ERROR("Waiting for LMEM DMA timed out");
+    return;
+  }
+
   DosSwReset0::Get().FromValue(0).set_vdec_mc(1).set_vdec_iqidct(1).set_vdec_vld_part(1).WriteTo(
       owner_->dosbus());
   DosSwReset0::Get().FromValue(0).WriteTo(owner_->dosbus());
@@ -559,6 +579,8 @@ void H264MultiDecoder::ResetHardware() {
   auto temp = PowerCtlVld::Get().ReadFrom(owner_->dosbus());
   temp.set_reg_value(temp.reg_value() | (1 << 9) | (1 << 6));
   temp.WriteTo(owner_->dosbus());
+
+  PscaleCtrl::Get().FromValue(0).WriteTo(owner_->dosbus());
 
   is_hw_active_ = false;
   is_decoder_started_ = false;
@@ -605,12 +627,19 @@ zx_status_t H264MultiDecoder::InitializeHardware() {
   VdecAssistMbox1Mask::Get().FromValue(1).WriteTo(owner_->dosbus());
   {
     auto temp = MdecPicDcCtrl::Get().ReadFrom(owner_->dosbus()).set_nv12_output(true);
+    temp.WriteTo(owner_->dosbus());
+
+    temp = MdecPicDcCtrl::Get().ReadFrom(owner_->dosbus());
     temp.set_reg_value(temp.reg_value() | (0xbf << 24));
     temp.WriteTo(owner_->dosbus());
+
+    temp = MdecPicDcCtrl::Get().ReadFrom(owner_->dosbus());
     temp.set_reg_value(temp.reg_value() & ~(0xbf << 24));
     temp.WriteTo(owner_->dosbus());
+
+    MdecPicDcCtrl::Get().ReadFrom(owner_->dosbus()).set_bit31(0).WriteTo(owner_->dosbus());
   }
-  MdecPicDcCtrl::Get().ReadFrom(owner_->dosbus()).set_bit31(0).WriteTo(owner_->dosbus());
+
   MdecPicDcMuxCtrl::Get().ReadFrom(owner_->dosbus()).set_bit31(0).WriteTo(owner_->dosbus());
   MdecExtIfCfg1::Get().FromValue(0).WriteTo(owner_->dosbus());
   MdecPicDcThresh::Get().FromValue(0x404038aa).WriteTo(owner_->dosbus());
@@ -623,6 +652,20 @@ zx_status_t H264MultiDecoder::InitializeHardware() {
                                          (video_frames_.size() << 8)))
         .WriteTo(owner_->dosbus());
     for (auto& frame : video_frames_) {
+      VdecAssistCanvasBlk32::Get()
+          .FromValue(0)
+          .set_canvas_blk32_wr(true)
+          .set_canvas_blk32_is_block(false)
+          .set_canvas_index_wr(true)
+          .set_canvas_index(frame->y_canvas->index())
+          .WriteTo(owner_->dosbus());
+      VdecAssistCanvasBlk32::Get()
+          .FromValue(0)
+          .set_canvas_blk32_wr(true)
+          .set_canvas_blk32_is_block(false)
+          .set_canvas_index_wr(true)
+          .set_canvas_index(frame->uv_canvas->index())
+          .WriteTo(owner_->dosbus());
       AncNCanvasAddr::Get(frame->index)
           .FromValue((frame->uv_canvas->index() << 16) | (frame->uv_canvas->index() << 8) |
                      (frame->y_canvas->index()))
@@ -656,10 +699,22 @@ zx_status_t H264MultiDecoder::InitializeHardware() {
 
   LmemDumpAddr::Get().FromValue(truncate_to_32(lmem_->phys_base())).WriteTo(owner_->dosbus());
 
-  DebugReg1::Get().FromValue(0).WriteTo(owner_->dosbus());
-  DebugReg2::Get().FromValue(0).WriteTo(owner_->dosbus());
   // The amlogic driver writes this again, so we do also.
   MdecPicDcThresh::Get().FromValue(0x404038aa).WriteTo(owner_->dosbus());
+
+  DebugReg1::Get().FromValue(0).WriteTo(owner_->dosbus());
+  DebugReg2::Get().FromValue(0).WriteTo(owner_->dosbus());
+
+  if (saved_iqidct_ctrl_) {
+    IqidctCtrl::Get().FromValue(*saved_iqidct_ctrl_).WriteTo(owner_->dosbus());
+  }
+  if (saved_vcop_ctrl_) {
+    VcopCtrl::Get().FromValue(*saved_vcop_ctrl_).WriteTo(owner_->dosbus());
+  }
+  if (saved_vld_decode_ctrl_) {
+    VldDecodeCtrl::Get().FromValue(*saved_vld_decode_ctrl_).WriteTo(owner_->dosbus());
+  }
+
   H264DecodeInfo::Get().FromValue(1 << 13).WriteTo(owner_->dosbus());
   constexpr uint32_t kDummyDoesNothingBytesToDecode = 100000;
   H264DecodeSizeReg::Get().FromValue(kDummyDoesNothingBytesToDecode).WriteTo(owner_->dosbus());
@@ -675,7 +730,18 @@ zx_status_t H264MultiDecoder::InitializeHardware() {
   H264DecodeModeReg::Get().FromValue(kDecodeModeMultiStreamBased).WriteTo(owner_->dosbus());
   H264DecodeSeqInfo::Get().FromValue(seq_info2_).WriteTo(owner_->dosbus());
   HeadPaddingReg::Get().FromValue(0).WriteTo(owner_->dosbus());
-  InitFlagReg::Get().FromValue(have_initialized_).WriteTo(owner_->dosbus());
+  // It's unclear whether configure_dpb_seen_ is exactly what belongs here, but so far this seems to
+  // work better than anything else we've tried.  Beware that always passing 0 or 1 here may
+  // initially appear to work, but actually can cause subtle glitches decoding frames later in a
+  // stream (reason unknown).  Frame ordinal 15 of bear.h264 is known to glitch (infrequently) when
+  // this is set to constant 0 or constant 1.  It's possible that !video_frames_.empty() would work
+  // here.  If this is set to constant 0, decoding past the first frame may not work, or it may work
+  // and glitch a frame later on in the stream at low repro rate.  Using input_context() != nullptr
+  // may also work here.  When SEI, SPS, PPS are delivered separately from the first frame, this
+  // needs to be 0 roughly until the first frame is encountered.  Because we currently require
+  // frames to be delivered in their entirety, we don't yet need to know exactly how far into the
+  // first frame implies setting this to 1.
+  InitFlagReg::Get().FromValue(configure_dpb_seen_).WriteTo(owner_->dosbus());
   have_initialized_ = true;
 
   // TODO(fxbug.dev/13483): Set to 1 when SEI is supported.
@@ -723,6 +789,10 @@ void H264MultiDecoder::ConfigureDpb() {
   ZX_DEBUG_ASSERT(is_hw_active_);
   owner_->watchdog()->Cancel();
   is_hw_active_ = false;
+
+  configure_dpb_seen_ = true;
+
+  saved_iqidct_ctrl_ = IqidctCtrl::Get().ReadFrom(owner_->dosbus()).reg_value();
 
   // The HW is told to continue decoding by writing DPB sizes to AvScratch0.  This can happen
   // immediately if the BufferCollection is already suitable, or after new sysmem allocation if
@@ -777,7 +847,7 @@ void H264MultiDecoder::ConfigureDpb() {
     return;
   }
 
-  uint32_t stride = fbl::round_up(coded_width, 32u);
+  uint32_t stride = fbl::round_up(coded_width, kStrideAlignment);
   if (coded_width <= crop_info.right()) {
     LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_CropInfoError);
     LOG(ERROR, "coded_width <= crop_info.right()");
@@ -990,6 +1060,11 @@ void H264MultiDecoder::HandleSliceHeadDone() {
   ZX_DEBUG_ASSERT(state_ == DecoderState::kRunning);
   owner_->watchdog()->Cancel();
   is_hw_active_ = false;
+
+  saved_iqidct_ctrl_ = IqidctCtrl::Get().ReadFrom(owner_->dosbus()).reg_value();
+  saved_vcop_ctrl_ = VcopCtrl::Get().ReadFrom(owner_->dosbus()).reg_value();
+  saved_vld_decode_ctrl_ = VldDecodeCtrl::Get().ReadFrom(owner_->dosbus()).reg_value();
+
   // Setup reference frames and output buffers before decoding.
   params_.ReadFromLmem(&*lmem_);
   DLOG("NAL unit type: %d\n", params_.data[HardwareRenderParams::kNalUnitType]);
@@ -1126,8 +1201,9 @@ void H264MultiDecoder::HandleSliceHeadDone() {
     // Because frame_mbs_only_flag true, we know this is in units of MBs.
     sps->pic_height_in_map_units_minus1 = (hw_coded_height_ / kMacroblockDimension) - 1;
 
-    // Also available via SCRATCH2 during FW config request; more convenient to get this way though.
-    sps->frame_mbs_only_flag = params_.data[HardwareRenderParams::kFrameMbsOnlyFlag];
+    // Also available via SCRATCH2 during FW config request; since we already verified that
+    // frame_mbs_only_flag is 1 there, we can just set true here.
+    sps->frame_mbs_only_flag = true;
     if (!sps->frame_mbs_only_flag) {
       LogEvent(
           media_metrics::StreamProcessorEvents2MetricDimensionEvent_InterlacedUnsupportedError);
@@ -1588,7 +1664,9 @@ void H264MultiDecoder::HandleSliceHeadDone() {
     //
     // TODO(fxbug.dev/13483): Be more resilient to broken input data.
     LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_FrameNumError);
-    LOG(ERROR, "frame_num_ && frame_num_.value() != frame_num");
+    LOG(ERROR,
+        "frame_num_ && frame_num_.value() != frame_num -- frame_num_.value(): %u frame_num: %u",
+        frame_num_.value(), frame_num);
     OnFatalError();
     return;
   }
@@ -2086,6 +2164,10 @@ void H264MultiDecoder::HandleInterrupt() {
     case kH264DataRequest:
       LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_SwHwSyncError);
       LOG(ERROR, "Got unhandled data request");
+
+      // Not used via this path so far, but potentially needed if we start using kH264DataRequest.
+      saved_iqidct_ctrl_ = IqidctCtrl::Get().ReadFrom(owner_->dosbus()).reg_value();
+
       HandleHardwareError();
       break;
     case kH264SliceHeadDone: {
@@ -2177,8 +2259,10 @@ void H264MultiDecoder::InitializedFrames(std::vector<CodecFrame> frames, uint32_
       OnFatalError();
       return;
     }
-    io_buffer_cache_flush(&frame->buffer, 0, io_buffer_size(&frame->buffer, 0));
 
+    // Flush so that there are no dirty CPU cache lines that would potentially overwrite HW-written
+    // data.
+    io_buffer_cache_flush(&frame->buffer, 0, io_buffer_size(&frame->buffer, 0));
     BarrierAfterFlush();
 
     frame->hw_width = coded_width;
@@ -2238,6 +2322,20 @@ void H264MultiDecoder::InitializedFrames(std::vector<CodecFrame> frames, uint32_
   }
 
   for (auto& frame : video_frames_) {
+    VdecAssistCanvasBlk32::Get()
+        .FromValue(0)
+        .set_canvas_blk32_wr(true)
+        .set_canvas_blk32_is_block(false)
+        .set_canvas_index_wr(true)
+        .set_canvas_index(frame->y_canvas->index())
+        .WriteTo(owner_->dosbus());
+    VdecAssistCanvasBlk32::Get()
+        .FromValue(0)
+        .set_canvas_blk32_wr(true)
+        .set_canvas_blk32_is_block(false)
+        .set_canvas_index_wr(true)
+        .set_canvas_index(frame->uv_canvas->index())
+        .WriteTo(owner_->dosbus());
     AncNCanvasAddr::Get(frame->index)
         .FromValue((frame->uv_canvas->index() << 16) | (frame->uv_canvas->index() << 8) |
                    (frame->y_canvas->index()))
@@ -2631,7 +2729,12 @@ void H264MultiDecoder::PumpDecoder() {
   // will cause corruption if the input data isn't NAL unit aligned, but that works with existing
   // clients. In the future we could try either detecting that padding was read and caused
   // corruption, which would trigger redecoding of the frame, or we could continually feed as much
-  // input as is available and letting the decoder lag a bit behind.
+  // input as is available and let the H264Decoder lag a bit behind.  Editing out the padding seems
+  // less feasible since the fifo (whether in HW or in save/restore context) has potentially already
+  // absorbed some of the padding, and the stream offset for propagating PTS(es) through would also
+  // need fixup.  Overall, without knowing the frame boundaries on input it doesn't seem there's any
+  // way to get low latency decode using this HW.  Thankfully we do know the frame bouanaries on
+  // input though, so in practice it's not a big problem so far.
   SubmitDataToHardware(kPadding, kPaddingSize, nullptr, 0);
 
   // After this, we'll see an interrupt from the HW, either slice header or one of the out-of-data

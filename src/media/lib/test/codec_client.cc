@@ -61,6 +61,7 @@ CodecClient::CodecClient(async::Loop* loop, thrd_t loop_thread,
     sysmem_->SetDebugClientInfo(fsl::GetCurrentProcessName(), fsl::GetCurrentProcessKoid());
 
     codec_ = codec_handle.Bind();
+    codec_->EnableOnStreamFailed();
     // We want the error handler set up before any error can possibly be generated
     // by the channel so there's no chance of missing an error.  The async::Loop
     // that we'll use is already running separately from the current thread.
@@ -1030,7 +1031,7 @@ void CodecClient::OnOutputPacket(fuchsia::media::Packet output_packet, bool erro
 
     std::unique_ptr<CodecOutput> output =
         std::make_unique<CodecOutput>(stream_lifetime_ordinal, last_output_constraints_,
-                                      last_output_format_, std::move(local_packet), false);
+                                      last_output_format_, std::move(local_packet), false, false);
     if (output_constraints_action_pending_) {
       // FWIW, we wouldn't be able to detect this if we were using the
       // async::Loop thread to perform output buffer re-configuration.
@@ -1062,8 +1063,8 @@ void CodecClient::OnOutputPacket(fuchsia::media::Packet output_packet, bool erro
 void CodecClient::OnOutputEndOfStream(uint64_t stream_lifetime_ordinal,
                                       bool error_detected_before) {
   bool output_pending_notify_needed = false;
-  std::unique_ptr<CodecOutput> output =
-      std::make_unique<CodecOutput>(stream_lifetime_ordinal, nullptr, nullptr, nullptr, true);
+  std::unique_ptr<CodecOutput> output = std::make_unique<CodecOutput>(
+      stream_lifetime_ordinal, nullptr, nullptr, nullptr, true, false);
   {  // scope lock
     std::unique_lock<std::mutex> lock(lock_);
     if (output_constraints_action_pending_) {
@@ -1085,6 +1086,21 @@ void CodecClient::OnOutputEndOfStream(uint64_t stream_lifetime_ordinal,
 
 void CodecClient::OnStreamFailed(uint64_t stream_lifetime_ordinal,
                                  fuchsia::media::StreamError error) {
-  FX_LOGS(FATAL) << "OnStreamFailed: stream_lifetime_ordinal: " << stream_lifetime_ordinal
-                 << " error: " << std::hex << static_cast<uint32_t>(error);
+  FX_LOGS(INFO) << "OnStreamFailed()";
+  bool output_pending_notify_needed = false;
+  std::unique_ptr<CodecOutput> output = std::make_unique<CodecOutput>(
+      stream_lifetime_ordinal, nullptr, nullptr, nullptr, false, true);
+  {  // scope lock
+    std::unique_lock<std::mutex> lock(lock_);
+    emitted_output_.push_back(std::move(output));
+    if (!output_pending_) {
+      output_pending_ = true;
+      output_pending_notify_needed = true;
+    }
+  }  // ~lock
+  if (output_pending_notify_needed) {
+    output_pending_condition_.notify_all();
+  }
+  //  FX_LOGS(FATAL) << "OnStreamFailed: stream_lifetime_ordinal: " << stream_lifetime_ordinal
+  //                 << " error: " << std::hex << static_cast<uint32_t>(error);
 }

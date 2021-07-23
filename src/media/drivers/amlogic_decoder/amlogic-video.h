@@ -235,6 +235,7 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   std::optional<HiuRegisterIo> hiubus_;
   std::optional<AoRegisterIo> aobus_;
   std::optional<DmcRegisterIo> dmc_;
+  // These are views and must destruct before cbus_:
   std::optional<ResetRegisterIo> reset_;
   std::optional<DemuxRegisterIo> demux_;
   std::optional<ParserRegisterIo> parser_regs_;

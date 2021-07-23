@@ -35,22 +35,7 @@ int main(int argc, char* argv[]) {
       .frame_num_gaps = true,
       .min_expected_output_frame_count = 10,
   };
-  // TODO(fxbug.dev/13483): The retries should not be necessary here.  These are presently needed to
-  // de-flake due to a decode correctness bug that results in a few slightly incorrect pixels
-  // sometimes.
-  constexpr uint32_t kMaxRetryCount = 100;
-  for (uint32_t try_ordinal = 0; try_ordinal < kMaxRetryCount; ++try_ordinal) {
-    if (0 == use_video_decoder_test(kInputFilePath, kInputFileFrameCount, use_h264_decoder,
-                                    /*is_secure_output=*/false, /*is_secure_input=*/false,
-                                    /*min_output_buffer_count=*/0, &test_params)) {
-      if (try_ordinal != 0) {
-        LOGF("WARNING - fxbug.dev/13483 - internal de-flaking used - extra attempt count: %u",
-             try_ordinal);
-      }
-      return 0;
-    }
-    LOGF("WARNING - fxbug.dev/13483 - decode may have flaked - internally de-flaking (for now)");
-  }
-  LOGF("Incorrect hash seen every time despite de-flaking retries.  FAIL");
-  return -1;
+  return use_video_decoder_test(kInputFilePath, kInputFileFrameCount, use_h264_decoder,
+                                /*is_secure_output=*/false, /*is_secure_input=*/false,
+                                /*min_output_buffer_count=*/0, &test_params);
 }

@@ -73,9 +73,6 @@ int main(int argc, char* argv[]) {
       .compare_to_sw_decode = true,
       .golden_sha256 = kGoldenSha256,
   };
-  // TODO(fxbug.dev/13483): The retries should not be necessary here.  These are presently needed to
-  // de-flake due to a decode correctness bug that results in some incorrect pixels sometimes, at
-  // least on sherlock.  See DECODE_CORRECTNESS_COMMENTS in vdec1.cc.
   uint32_t fail_count = 0;
   uint32_t success_count = 0;
   constexpr uint32_t kTryCount = 20;
@@ -84,20 +81,14 @@ int main(int argc, char* argv[]) {
     if (0 == use_video_decoder_test(kInputFilePath, kInputFileFrameCount, use_h264_decoder,
                                     /*is_secure_output=*/false, /*is_secure_input=*/false,
                                     /*min_output_buffer_count=*/0, &test_params)) {
-      if (try_ordinal != 0) {
-        LOGF("WARNING - fxbug.dev/13483 - internal de-flaking used - extra attempt count: %u",
-             try_ordinal);
-      }
       ++success_count;
       continue;
     }
-    LOGF("WARNING - fxbug.dev/13483 - decode probably flaked - internally de-flaking (for now)");
     ++fail_count;
   }
   LOGF("overall counts - success_count: %u fail_count: %u", success_count, fail_count);
-  const double kEpsilon = 0.00001;
-  if (static_cast<double>(fail_count) / kTryCount >= 0.1 - kEpsilon) {
-    LOGF("Incorrect hash seen at too great a percentage of tries.  FAIL");
+  if (fail_count != 0) {
+    LOGF("Incorrect hash seen in at least one try.  FAIL");
     return -1;
   }
   return 0;
