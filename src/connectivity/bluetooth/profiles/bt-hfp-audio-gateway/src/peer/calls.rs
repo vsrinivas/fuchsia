@@ -21,12 +21,12 @@ use {
     },
     fuchsia_async as fasync,
     futures::stream::{FusedStream, Stream, StreamExt},
-    log::{debug, info, warn},
     std::{
         convert::{TryFrom, TryInto},
         pin::Pin,
         task::{Context, Poll},
     },
+    tracing::{debug, info, warn},
 };
 
 pub use {fidl_fuchsia_bluetooth_hfp::CallState, number::Number, types::Direction};

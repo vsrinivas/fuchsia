@@ -19,6 +19,7 @@ use {
         ready,
         stream::{FusedStream, Stream, StreamExt},
     },
+    tracing::info,
 };
 
 use super::update::AgUpdate;
@@ -186,7 +187,7 @@ impl From<GainRequest> for AgUpdate {
 }
 
 /// Item type returned by `<GainControl as Stream>::poll_next`.
-#[cfg_attr(test, derive(Debug))]
+#[derive(Debug)]
 pub(crate) enum GainRequest {
     Speaker(Gain),
     Microphone(Gain),
@@ -213,7 +214,7 @@ impl Stream for GainControl {
                     Ok(None) => continue,
                     Ok(Some(request)) => Some(request),
                     Err(e) => {
-                        log::info!("Error from HeadsetGain client: {}. Dropping connection", e);
+                        info!("Error from HeadsetGain client: {}. Dropping connection", e);
                         self.request_stream
                             .control_handle()
                             .shutdown_with_epitaph(zx::Status::INVALID_ARGS);
@@ -221,7 +222,7 @@ impl Stream for GainControl {
                     }
                 },
                 Some(Err(e)) => {
-                    log::info!("Error from HeadsetGain client: {}. Dropping connection", e);
+                    info!("Error from HeadsetGain client: {}. Dropping connection", e);
                     None
                 }
                 None => None,

@@ -8,8 +8,8 @@ use crate::features::CodecId;
 use crate::peer::service_level_connection::SlcState;
 
 use at_commands as at;
-use log::warn;
 use std::mem;
+use tracing::warn;
 
 #[derive(Debug, Clone)]
 pub enum CodecConnectionSetupProcedure {

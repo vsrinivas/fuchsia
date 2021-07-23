@@ -4,11 +4,10 @@
 #![recursion_limit = "1024"]
 
 use {
-    anyhow::{format_err, Context, Error},
-    fuchsia_async as fasync,
+    anyhow::{format_err, Error},
     fuchsia_component::server::ServiceFs,
     futures::{channel::mpsc, future, pin_mut},
-    log::warn,
+    tracing::{debug, error, info, warn},
 };
 
 use crate::{
@@ -28,11 +27,10 @@ mod profile;
 mod sco_connector;
 mod service_definitions;
 
-#[fasync::run_singlethreaded]
+#[fuchsia::component]
 async fn main() -> Result<(), Error> {
-    fuchsia_syslog::init().context("Could not initialize logger")?;
-
     let feature_support = AudioGatewayFeatureSupport::load()?;
+    debug!(?feature_support, "Starting HFP Audio Gateway");
     let (profile_client, profile_svc) = register_audio_gateway(feature_support)?;
 
     let (call_manager_sender, call_manager_receiver) = mpsc::channel(1);
@@ -61,26 +59,26 @@ async fn main() -> Result<(), Error> {
 
     let inspector = fuchsia_inspect::Inspector::new();
     if let Err(e) = inspect_runtime::serve(&inspector, &mut fs) {
-        warn!("Could not serve inspect: {}", e);
+        warn!("Couldn't serve inspect: {}", e);
     }
 
     let services = run_services(fs, call_manager_sender, test_request_sender);
     pin_mut!(services);
 
+    info!("HFP Audio Gateway running.");
+
     match future::select(services, hfp).await {
         future::Either::Left((Ok(()), _)) => {
-            log::warn!("Service FS directory handle closed. Exiting.");
+            warn!("Service FS directory handle closed. Exiting.");
         }
         future::Either::Left((Err(e), _)) => {
-            log::error!("Error encountered running Service FS: {}. Exiting", e);
+            error!("Error encountered running Service FS: {}. Exiting", e);
         }
         future::Either::Right((Ok(()), _)) => {
-            log::warn!(
-                "All Hfp related connections to this component have been disconnected. Exiting."
-            );
+            warn!("All HFP related connections to this component have been disconnected. Exiting.");
         }
         future::Either::Right((Err(e), _)) => {
-            log::error!("Error encountered running main Hfp loop: {}. Exiting.", e);
+            error!("Error encountered running main HFP loop: {}. Exiting.", e);
         }
     }
 

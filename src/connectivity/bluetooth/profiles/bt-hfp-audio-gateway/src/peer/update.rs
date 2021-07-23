@@ -76,6 +76,33 @@ pub enum AgUpdate {
     CodecSetup(Option<CodecId>),
 }
 
+use std::fmt;
+impl fmt::Display for AgUpdate {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use AgUpdate::*;
+        let variant = match self {
+            Features(..) => "Features",
+            ThreeWaySupport => "ThreeWaySupport",
+            IndicatorStatus(..) => "IndicatorStatus",
+            Ok => "Ok",
+            Error => "Error",
+            SupportedAgIndicators => "SupportedAgIndicators",
+            SupportedHfIndicators { .. } => "SupportedHfIndicators",
+            SupportedHfIndicatorStatus(..) => "SupportedHfIndicatorStatus",
+            NetworkOperatorName(..) => "NetworkOperatorName",
+            PhoneStatusIndicator(..) => "PhoneStatusIndicator",
+            SubscriberNumbers(..) => "SubscriberNumbers",
+            CurrentCalls(..) => "CurrentCalls",
+            Ring(..) => "Ring",
+            CallWaiting(..) => "CallWaiting",
+            SpeakerVolumeControl(..) => "SpeakerVolumeControl",
+            MicrophoneVolumeControl(..) => "MicrophoneVolumeControl",
+            CodecSetup(..) => "CodecSetup",
+        };
+        write!(f, "{}", variant)
+    }
+}
+
 impl From<AgUpdate> for ProcedureRequest {
     fn from(msg: AgUpdate) -> Self {
         match msg {

@@ -7,7 +7,7 @@ use fuchsia_async as fasync;
 use fuchsia_bluetooth::types::PeerId;
 use fuchsia_zircon as zx;
 use futures::{Future, FutureExt, StreamExt};
-use log::trace;
+use tracing::trace;
 
 use crate::error::ScoConnectError;
 use crate::features::CodecId;

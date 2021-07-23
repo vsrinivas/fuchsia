@@ -8,7 +8,7 @@ use {
     fidl_fuchsia_bluetooth_hfp_test::{HfpTestRequest, HfpTestRequestStream},
     fuchsia_component::server::{ServiceFs, ServiceObj},
     futures::{channel::mpsc::Sender, FutureExt, SinkExt, StreamExt, TryStreamExt},
-    log::info,
+    tracing::info,
 };
 
 /// The maximum number of fidl service client connections that will be serviced concurrently.
@@ -26,11 +26,11 @@ async fn handle_hfp_client_connection(
     stream: HfpRequestStream,
     call_manager: Sender<CallManagerProxy>,
 ) {
-    info!("new hfp connection");
+    info!("New HFP client connection");
     if let Err(e) = handle_hfp_client_connection_result(stream, call_manager).await {
         // An error processing client provided parameters is not a fatal error.
         // Log and return.
-        info!("hfp FIDL client error: {}", e);
+        info!("HFP FIDL client error: {}", e);
     }
 }
 
@@ -43,7 +43,7 @@ async fn handle_hfp_client_connection_result(
 ) -> Result<(), Error> {
     while let Some(request) = stream.try_next().await.context("hfp FIDL client error")? {
         let HfpRequest::Register { manager, .. } = request;
-        info!("registering call manager");
+        info!("Registering call manager");
         let proxy = manager.into_proxy().context("hfp FIDL client error")?;
         call_manager.send(proxy).await.context("component main loop halted")?;
     }
