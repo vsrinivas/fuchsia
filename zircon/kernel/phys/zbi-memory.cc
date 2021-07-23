@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <inttypes.h>
+#include <lib/boot-options/boot-options.h>
 #include <lib/memalloc/pool.h>
 #include <lib/zbitl/error_stdio.h>
 #include <lib/zbitl/view.h>
@@ -64,5 +65,7 @@ void InitMemory(void* zbi) {
   // Set up our own address space.
   ArchSetUpAddressSpaceEarly();
 
-  pool.PrintMemoryRanges(Symbolize::kProgramName_);
+  if (gBootOptions->phys_verbose) {
+    pool.PrintMemoryRanges(Symbolize::kProgramName_);
+  }
 }

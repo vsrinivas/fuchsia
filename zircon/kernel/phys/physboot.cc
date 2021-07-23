@@ -20,6 +20,7 @@
 #include <phys/boot-zbi.h>
 #include <phys/handoff.h>
 #include <phys/main.h>
+#include <phys/stdio.h>
 #include <phys/symbolize.h>
 #include <phys/zbitl-allocation.h>
 #include <pretty/cpp/sizes.h>
@@ -87,7 +88,7 @@ LoadedZircon LoadZircon(BootZbi::InputZbi& zbi, BootZbi::InputZbi::iterator kern
   BootZbi::InputZbi kernel_zbi(zbitl::AsBytes(buffer.data()));
 
   {
-    printf("physboot: STORAGE_KERNEL decompressed %s -> %s\n",
+    debugf("physboot: STORAGE_KERNEL decompressed %s -> %s\n",
            pretty::FormattedBytes(kernel_item->header->length).c_str(),
            pretty::FormattedBytes(kernel_zbi.size_bytes()).c_str());
   }
@@ -239,7 +240,9 @@ physboot: Item @ %#08x size %#08x type %#08x (%.*s) extra %#08x flags %#08x\n",
 }  // namespace
 
 void ZbiMain(void* zbi_ptr, arch::EarlyTicks ticks) {
-  Symbolize::GetInstance()->Context();
+  if (gBootOptions->phys_verbose) {
+    Symbolize::GetInstance()->Context();
+  }
 
   InitMemory(zbi_ptr);
 

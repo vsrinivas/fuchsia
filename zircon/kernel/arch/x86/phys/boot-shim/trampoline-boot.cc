@@ -16,6 +16,7 @@
 
 #include <ktl/byte.h>
 #include <phys/page-table.h>
+#include <phys/stdio.h>
 #include <phys/symbolize.h>
 
 // This describes the "trampoline" area that is set up in some memory that's
@@ -224,6 +225,6 @@ void TrampolineBoot::LogFixedAddresses() const {
   const uint64_t kernel = kFixedLoadAddress;
   const uint64_t bss = kernel + KernelLoadSize();
   const uint64_t end = kernel + KernelMemorySize();
-  printf("%s: Relocated @ [" ADDR ", " ADDR ")\n", name, kernel, bss);
-  printf("%s:       BSS @ [" ADDR ", " ADDR ")\n", name, bss, end);
+  debugf("%s: Relocated @ [" ADDR ", " ADDR ")\n", name, kernel, bss);
+  debugf("%s:       BSS @ [" ADDR ", " ADDR ")\n", name, bss, end);
 }

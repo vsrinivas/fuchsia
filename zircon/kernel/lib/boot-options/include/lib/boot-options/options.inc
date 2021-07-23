@@ -267,6 +267,16 @@ is set to 20, an imminent-out-of-memory event will be signaled at 70MB (i.e. 50M
 free memory, while out-of-memory will be signaled at 50MB free memory.
 )""")
 
+DEFINE_OPTION("kernel.phys.verbose", bool, phys_verbose, {true}, R"""(
+This controls the degree of logging to the serial console in the kernel's early
+boot phase; if false, only error-related logging will take place.
+
+One utility of this option is for benchmarking: synchronous, single-threaded
+UART writing can be relatively costly (10 chars/ms) to the entire time
+spent in physboot and it is desirable to exclude this sort of work from
+holistic time measurements.
+)""")
+
 DEFINE_OPTION("kernel.serial", uart::all::Driver, serial, {}, R"""(
 This controls what serial port is used.  If provided, it overrides the serial
 port described by the system's bootdata.  The kernel debug serial port is

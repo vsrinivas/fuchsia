@@ -272,6 +272,17 @@ For example, if `kernel.oom.outofmemory-mb` is set to 50 and `kernel.oom.imminen
 is set to 20, an imminent-out-of-memory event will be signaled at 70MB (i.e. 50MB + 20MB)
 free memory, while out-of-memory will be signaled at 50MB free memory.
 
+### kernel.phys.verbose=\<bool>
+**Default:** `true`
+
+This controls the degree of logging to the serial console in the kernel's early
+boot phase; if false, only error-related logging will take place.
+
+One utility of this option is for benchmarking: synchronous, single-threaded
+UART writing can be relatively costly (10 chars/ms) to the entire time
+spent in physboot and it is desirable to exclude this sort of work from
+holistic time measurements.
+
 ### kernel.serial=[none | legacy | qemu | \<type>,\<base>,\<irq>]
 **Default:** `none`
 

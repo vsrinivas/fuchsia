@@ -180,6 +180,16 @@ if (toolchain_environment == "kernel.phys" ||
     deps = [ "//zircon/kernel/phys/lib/memalloc" ]
   }
 
+  source_set("stdio") {
+    public = [ "include/phys/stdio.h" ]
+
+    public_configs = [ ":includes" ]
+
+    sources = [ "stdio.cc" ]
+
+    deps = [ "//zircon/kernel/lib/boot-options" ]
+  }
+
   # This is linked into the special-case phys_executable() tests that
   # are run directly as QEMU kernels.
   source_set("qemu-header") {
@@ -241,6 +251,7 @@ if (toolchain_environment == "kernel.phys" ||
       ":symbolize",
       "//zircon/kernel/arch/$zircon_cpu/phys:address-space",
       "//zircon/kernel/lib/arch",
+      "//zircon/kernel/lib/boot-options",
       "//zircon/kernel/phys/lib/memalloc",
       "//zircon/kernel/phys/lib/page-table",
       "//zircon/system/ulib/zbitl",
@@ -259,6 +270,7 @@ if (toolchain_environment == "kernel.phys" ||
     sources = [ "boot-zbi.cc" ]
     public_deps = [
       ":allocation",
+      ":stdio",
       ":symbolize",
       "//zircon/kernel/lib/arch",
       "//zircon/kernel/lib/ktl",
@@ -302,6 +314,7 @@ zbi_executable("physboot") {
     ":boot-zbi",
     ":handoff",
     ":main",
+    ":stdio",
     ":symbolize",
     ":zbitl-allocation",
     "//zircon/kernel/lib/arch",

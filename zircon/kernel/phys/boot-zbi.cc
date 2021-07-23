@@ -9,8 +9,8 @@
 #include <inttypes.h>
 #include <lib/arch/zbi-boot.h>
 #include <lib/memalloc/range.h>
-#include <stdio.h>
 
+#include <phys/stdio.h>
 #include <phys/symbolize.h>
 #include <pretty/cpp/sizes.h>
 
@@ -392,15 +392,15 @@ fitx::result<BootZbi::Error> BootZbi::Load(uint32_t extra_data_capacity,
 
 void BootZbi::LogAddresses() {
   const auto& name = Symbolize::kProgramName_;
-  printf("%s:    Kernel @ [" ADDR ", " ADDR ")  %s\n", name, KernelLoadAddress(),
+  debugf("%s:    Kernel @ [" ADDR ", " ADDR ")  %s\n", name, KernelLoadAddress(),
          KernelLoadAddress() + KernelLoadSize(), pretty::FormattedBytes(KernelLoadSize()).c_str());
-  printf("%s:       BSS @ [" ADDR ", " ADDR ")  %s\n", name, KernelLoadAddress() + KernelLoadSize(),
+  debugf("%s:       BSS @ [" ADDR ", " ADDR ")  %s\n", name, KernelLoadAddress() + KernelLoadSize(),
          KernelLoadAddress() + KernelMemorySize(),
          pretty::FormattedBytes(KernelHeader()->reserve_memory_size).c_str());
-  printf("%s:       ZBI @ [" ADDR ", " ADDR ")  %s\n", name, DataLoadAddress(),
+  debugf("%s:       ZBI @ [" ADDR ", " ADDR ")  %s\n", name, DataLoadAddress(),
          DataLoadAddress() + DataLoadSize(), pretty::FormattedBytes(DataLoadSize()).c_str());
 }
 
 void BootZbi::LogBoot(uint64_t entry) const {
-  printf("%s:     Entry @  " ADDR "  Booting...\n", Symbolize::kProgramName_, entry);
+  debugf("%s:     Entry @  " ADDR "  Booting...\n", Symbolize::kProgramName_, entry);
 }
