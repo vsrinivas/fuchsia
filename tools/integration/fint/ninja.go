@@ -6,7 +6,9 @@ package fint
 
 import (
 	"bufio"
+	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -72,6 +74,9 @@ var (
 	}
 )
 
+// Stubbable in test.
+var osStdout io.Writer = os.Stdout
+
 const (
 	// unrecognizedFailureMsg is the message we'll output if ninja fails but its
 	// output doesn't match any of the known failure modes.
@@ -96,6 +101,62 @@ func (r ninjaRunner) run(ctx context.Context, args []string, stdout, stderr io.W
 	}
 	cmd = append(cmd, args...)
 	return r.runner.Run(ctx, cmd, stdout, stderr)
+}
+
+// withoutNinjaExplain is a writer that removes all Ninja explain outputs
+// before writing to the underlying writer.
+type withoutNinjaExplain struct {
+	buf *bytes.Buffer
+	w   io.Writer
+}
+
+// Write implements io.Writer for withoutNinjaExplain.
+func (w *withoutNinjaExplain) Write(bs []byte) (int, error) {
+	if _, err := w.buf.Write(bs); err != nil {
+		return 0, err
+	}
+	for {
+		line, err := w.buf.ReadBytes('\n')
+		// Put incomplete lines back to buffer.
+		if errors.Is(err, io.EOF) {
+			w.buf.Write(line)
+			break
+		}
+		if err != nil {
+			return 0, err
+		}
+		if !explainRegex.MatchString(string(line)) {
+			w.w.Write(line)
+		}
+	}
+	return len(bs), nil
+}
+
+// Flush empties the internal buffer and forward non-ninja-explain lines.
+func (w *withoutNinjaExplain) Flush() error {
+	for {
+		line, err := w.buf.ReadBytes('\n')
+		if err != nil && !errors.Is(err, io.EOF) {
+			return err
+		}
+		if !explainRegex.MatchString(string(line)) {
+			w.w.Write(line)
+		}
+		// The last line may not finish with a '\n', so handle it before breaking.
+		if errors.Is(err, io.EOF) {
+			break
+		}
+	}
+	return nil
+}
+
+// stripNinjaExplain returns a writer that strips all Ninja explain outputs and
+// forwards the rest to input writer.
+func stripNinjaExplain(w io.Writer) *withoutNinjaExplain {
+	return &withoutNinjaExplain{
+		buf: new(bytes.Buffer),
+		w:   w,
+	}
 }
 
 // ninjaParser is a container for tracking the stdio of a ninja subprocess and
@@ -192,15 +253,15 @@ func runNinja(
 		parserErrs <- parser.parse(ctx)
 	}()
 
-	var ninjaErr error
-	func() {
+	err := func() error {
 		// Close the pipe as soon as the subprocess completes so that the pipe
 		// reader will return an EOF.
 		defer stdioWriter.Close()
 		if explain {
 			targets = append(targets, "-d", "explain")
 		}
-		ninjaErr = r.run(
+		stdout, stderr := stripNinjaExplain(osStdout), stripNinjaExplain(os.Stderr)
+		err := r.run(
 			ctx,
 			targets,
 			// Ninja writes "ninja: ..." logs to stderr, but step logs like
@@ -210,17 +271,30 @@ func runNinja(
 			// same stream and have the parser read from that stream. The writer
 			// returned by io.Pipe() is thread-safe, so there's no need to worry
 			// about interleaving characters of stdout and stderr.
-			io.MultiWriter(os.Stdout, stdioWriter),
-			io.MultiWriter(os.Stderr, stdioWriter),
+			//
+			// Ninja explain outputs are not stripped from stdout and stderr because
+			// there are too much.
+			io.MultiWriter(stdout, stdioWriter),
+			io.MultiWriter(stderr, stdioWriter),
 		)
+		if err != nil {
+			return err
+		}
+		if err := stdout.Flush(); err != nil {
+			return fmt.Errorf("flushing stdout writer: %w", err)
+		}
+		if err := stderr.Flush(); err != nil {
+			return fmt.Errorf("flushing stderr writer: %w", err)
+		}
+		return nil
 	}()
 	// Wait for parsing to complete.
 	if parserErr := <-parserErrs; parserErr != nil {
 		return "", parserErr
 	}
 
-	if ninjaErr != nil {
-		return parser.failureMessage(), ninjaErr
+	if err != nil {
+		return parser.failureMessage(), err
 	}
 
 	// No failure message necessary if Ninja succeeded.

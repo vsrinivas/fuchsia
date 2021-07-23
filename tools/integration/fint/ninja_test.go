@@ -5,7 +5,6 @@
 package fint
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -31,10 +30,6 @@ func TestRunNinja(t *testing.T) {
 		// Mock Ninja stdout.
 		stdout                 string
 		expectedFailureMessage string
-		// If not nil, runNinja will copy any explain output to this sink.
-		// The contents of the sink should match the output string below.
-		explainSink           *bytes.Buffer
-		expectedExplainOutput string
 	}{
 		{
 			name: "success",
@@ -158,16 +153,6 @@ func TestRunNinja(t *testing.T) {
             `,
 			expectedFailureMessage: unrecognizedFailureMsg,
 		},
-		{
-			name: "explain output",
-			stdout: `
-				ninja: Entering directory /foo
-				[1/1] ACTION //foo
-				ninja explain: obj/build/foo is dirty
-	     `,
-			explainSink:           bytes.NewBuffer([]byte{}),
-			expectedExplainOutput: "\t\t\t\tninja explain: obj/build/foo is dirty\n",
-		},
 	}
 
 	for _, tc := range testCases {
@@ -185,11 +170,7 @@ func TestRunNinja(t *testing.T) {
 				buildDir:  filepath.Join(t.TempDir(), "out"),
 				jobCount:  23, // Arbitrary but distinctive value.
 			}
-			explain := false
-			if tc.explainSink != nil {
-				explain = true
-			}
-			msg, err := runNinja(ctx, r, []string{"foo", "bar"}, explain, tc.explainSink)
+			msg, err := runNinja(ctx, r, []string{"foo", "bar"}, false, nil)
 			if tc.fail {
 				if !errors.Is(err, errSubprocessFailure) {
 					t.Fatalf("Expected a subprocess failure error but got: %s", err)
@@ -199,7 +180,7 @@ func TestRunNinja(t *testing.T) {
 			}
 
 			if len(sr.commandsRun) != 1 {
-				t.Fatalf("expected runNinja to run 1 command but got %d", len(sr.commandsRun))
+				t.Fatalf("Expected runNinja to run 1 command but got %d", len(sr.commandsRun))
 			}
 			cmd := sr.commandsRun[0]
 			if cmd[0] != r.ninjaPath {
@@ -210,7 +191,7 @@ func TestRunNinja(t *testing.T) {
 				if part == "-j" {
 					foundJobCount = true
 					if i+1 >= len(cmd) || cmd[i+1] != fmt.Sprintf("%d", r.jobCount) {
-						t.Errorf("wrong value for -j flag: %v", cmd)
+						t.Errorf("Wrong value for -j flag: %v", cmd)
 					}
 				}
 			}
@@ -221,12 +202,46 @@ func TestRunNinja(t *testing.T) {
 			if diff := cmp.Diff(tc.expectedFailureMessage, msg); diff != "" {
 				t.Errorf("Unexpected failure message diff (-want +got):\n%s", diff)
 			}
-			if tc.explainSink != nil {
-				if diff := cmp.Diff(tc.expectedExplainOutput, tc.explainSink.String()); diff != "" {
-					t.Errorf("unexpected explain output diff (-want +got):\n%s", diff)
-				}
-			}
 		})
+	}
+}
+
+func TestRunWithNinjaExplain(t *testing.T) {
+	origStdout := osStdout
+	t.Cleanup(func() { osStdout = origStdout })
+
+	gotStdout := new(strings.Builder)
+	osStdout = gotStdout
+
+	sr := &fakeSubprocessRunner{
+		mockStdout: []byte(`ninja: Entering directory /foo
+[1/1] ACTION //foo
+ninja explain: obj/build/foo is dirty`),
+	}
+	r := ninjaRunner{
+		runner:    sr,
+		ninjaPath: filepath.Join(t.TempDir(), "ninja"),
+		buildDir:  filepath.Join(t.TempDir(), "out"),
+		jobCount:  32, // Arbitrary but distinctive value.
+	}
+
+	explainSink := new(strings.Builder)
+
+	_, err := runNinja(context.Background(), r, []string{"foo", "bar"}, true /* explain */, explainSink)
+	if err != nil {
+		t.Fatalf("runNinja failed: %s", err)
+	}
+
+	wantExplainOutput := "ninja explain: obj/build/foo is dirty\n"
+	if diff := cmp.Diff(wantExplainOutput, explainSink.String()); diff != "" {
+		t.Errorf("Unexpected explain output diff (-want +got):\n%s", diff)
+	}
+
+	wantStdout := `ninja: Entering directory /foo
+[1/1] ACTION //foo
+`
+	if diff := cmp.Diff(wantStdout, gotStdout.String()); diff != "" {
+		t.Errorf("Unexpected stdout output diff (-want +got):\n%s", diff)
 	}
 }
 
@@ -503,4 +518,78 @@ func TestNinjaCompdb(t *testing.T) {
 	if diff := cmp.Diff(stdout, fileContents); diff != "" {
 		t.Errorf("Unexpected ninja compdb file diff (-want +got):\n%s", diff)
 	}
+}
+
+func TestStripNinjaExplain(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		input string
+		want  string
+	}{
+		{
+			name: "empty",
+		},
+		{
+			name:  "space",
+			input: " ",
+			want:  " ",
+		},
+		{
+			name: "strip ninja explains",
+			input: `ninja explain: blah
+to keep
+  ninja explain: discard
+should keep
+`,
+			want: `to keep
+should keep
+`,
+		},
+		{
+			name: "no ninja explains",
+			input: `build
+build more
+build even more
+`,
+			want: `build
+build more
+build even more
+`,
+		},
+		{
+			name:  "no newline",
+			input: "oneliner",
+			want:  "oneliner",
+		},
+		{
+			name: "ninja explain only",
+			input: `ninja explain: I have reasons
+  ninja explain: you know`,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got := new(strings.Builder)
+			w := stripNinjaExplain(got)
+
+			if _, err := w.Write([]byte(tc.input)); err != nil {
+				t.Fatalf("Write failed: %v", err)
+			}
+			w.Flush()
+			if diff := cmp.Diff(tc.want, got.String()); diff != "" {
+				t.Errorf("Got unexpected output diff when writing in one pass (-want +got):\n%s", diff)
+			}
+
+			got.Reset()
+			for _, b := range tc.input {
+				if _, err := w.Write([]byte{byte(b)}); err != nil {
+					t.Fatalf("Write failed: %v", err)
+				}
+			}
+			w.Flush()
+			if diff := cmp.Diff(tc.want, got.String()); diff != "" {
+				t.Errorf("Got unexpected output diff when writing byte by byte (-want +got):\n%s", diff)
+			}
+		})
+	}
+
 }
