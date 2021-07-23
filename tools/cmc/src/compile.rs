@@ -1679,76 +1679,6 @@ mod tests {
         },
     }}
 
-    test_compile_with_features! { FeatureSet::from(vec![Feature::OnTerminate]), {
-        test_compile_children => {
-            input = json!({
-                "children": [
-                    {
-                        "name": "logger",
-                        "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
-                    },
-                    {
-                        "name": "gmail",
-                        "url": "https://www.google.com/gmail",
-                        "startup": "eager",
-                    },
-                    {
-                        "name": "echo",
-                        "url": "fuchsia-pkg://fuchsia.com/echo/stable#meta/echo.cm",
-                        "startup": "lazy",
-                        "on_terminate": "reboot",
-                        "environment": "#myenv",
-                    },
-                ],
-                "environments": [
-                    {
-                        "name": "myenv",
-                        "extends": "realm",
-                    },
-                ],
-            }),
-            output = fsys::ComponentDecl {
-                children: Some(vec![
-                    fsys::ChildDecl {
-                        name: Some("logger".to_string()),
-                        url: Some("fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm".to_string()),
-                        startup: Some(fsys::StartupMode::Lazy),
-                        environment: None,
-                        on_terminate: None,
-                        ..fsys::ChildDecl::EMPTY
-                    },
-                    fsys::ChildDecl {
-                        name: Some("gmail".to_string()),
-                        url: Some("https://www.google.com/gmail".to_string()),
-                        startup: Some(fsys::StartupMode::Eager),
-                        environment: None,
-                        on_terminate: None,
-                        ..fsys::ChildDecl::EMPTY
-                    },
-                    fsys::ChildDecl {
-                        name: Some("echo".to_string()),
-                        url: Some("fuchsia-pkg://fuchsia.com/echo/stable#meta/echo.cm".to_string()),
-                        startup: Some(fsys::StartupMode::Lazy),
-                        environment: Some("myenv".to_string()),
-                        on_terminate: Some(fsys::OnTerminate::Reboot),
-                        ..fsys::ChildDecl::EMPTY
-                    }
-                ]),
-                environments: Some(vec![
-                    fsys::EnvironmentDecl {
-                        name: Some("myenv".to_string()),
-                        extends: Some(fsys::EnvironmentExtends::Realm),
-                        runners: None,
-                        resolvers: None,
-                        stop_timeout_ms: None,
-                        ..fsys::EnvironmentDecl::EMPTY
-                    }
-                ]),
-                ..default_component_decl()
-            },
-        },
-    }}
-
     test_compile! {
         test_compile_empty => {
             input = json!({}),
@@ -2854,6 +2784,74 @@ mod tests {
                         durability: Some(fsys::Durability::Persistent),
                         environment: None,
                         ..fsys::CollectionDecl::EMPTY
+                    }
+                ]),
+                ..default_component_decl()
+            },
+        },
+
+        test_compile_children => {
+            input = json!({
+                "children": [
+                    {
+                        "name": "logger",
+                        "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
+                    },
+                    {
+                        "name": "gmail",
+                        "url": "https://www.google.com/gmail",
+                        "startup": "eager",
+                    },
+                    {
+                        "name": "echo",
+                        "url": "fuchsia-pkg://fuchsia.com/echo/stable#meta/echo.cm",
+                        "startup": "lazy",
+                        "on_terminate": "reboot",
+                        "environment": "#myenv",
+                    },
+                ],
+                "environments": [
+                    {
+                        "name": "myenv",
+                        "extends": "realm",
+                    },
+                ],
+            }),
+            output = fsys::ComponentDecl {
+                children: Some(vec![
+                    fsys::ChildDecl {
+                        name: Some("logger".to_string()),
+                        url: Some("fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm".to_string()),
+                        startup: Some(fsys::StartupMode::Lazy),
+                        environment: None,
+                        on_terminate: None,
+                        ..fsys::ChildDecl::EMPTY
+                    },
+                    fsys::ChildDecl {
+                        name: Some("gmail".to_string()),
+                        url: Some("https://www.google.com/gmail".to_string()),
+                        startup: Some(fsys::StartupMode::Eager),
+                        environment: None,
+                        on_terminate: None,
+                        ..fsys::ChildDecl::EMPTY
+                    },
+                    fsys::ChildDecl {
+                        name: Some("echo".to_string()),
+                        url: Some("fuchsia-pkg://fuchsia.com/echo/stable#meta/echo.cm".to_string()),
+                        startup: Some(fsys::StartupMode::Lazy),
+                        environment: Some("myenv".to_string()),
+                        on_terminate: Some(fsys::OnTerminate::Reboot),
+                        ..fsys::ChildDecl::EMPTY
+                    }
+                ]),
+                environments: Some(vec![
+                    fsys::EnvironmentDecl {
+                        name: Some("myenv".to_string()),
+                        extends: Some(fsys::EnvironmentExtends::Realm),
+                        runners: None,
+                        resolvers: None,
+                        stop_timeout_ms: None,
+                        ..fsys::EnvironmentDecl::EMPTY
                     }
                 ]),
                 ..default_component_decl()

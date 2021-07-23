@@ -82,14 +82,12 @@ rustc_binary("reboot_on_terminate_policy_bin") {
 fuchsia_component("reboot_on_terminate_success") {
   testonly = true
   manifest = "meta/reboot_on_terminate_success.cml"
-  restricted_features = [ "on_terminate" ]
   deps = [ ":reboot_on_terminate_success_bin" ]
 }
 
 fuchsia_component("reboot_on_terminate_policy") {
   testonly = true
   manifest = "meta/reboot_on_terminate_policy.cml"
-  restricted_features = [ "on_terminate" ]
   deps = [ ":reboot_on_terminate_policy_bin" ]
 }
 

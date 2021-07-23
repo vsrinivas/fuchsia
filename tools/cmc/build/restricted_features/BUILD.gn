@@ -9,11 +9,3 @@ group("services") {
     "//tools/cmc:*",
   ]
 }
-
-# The allowlist of components that can use the "on_terminate" feature in CML.
-group("on_terminate") {
-  visibility = [
-    "//src/sys/component_manager/tests/reboot_on_terminate:*",
-    "//tools/cmc:*",
-  ]
-}
