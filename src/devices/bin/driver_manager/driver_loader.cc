@@ -7,8 +7,10 @@
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <sched.h>
-#include <threads.h>
 #include <unistd.h>
+#include <zircon/threads.h>
+
+#include <thread>
 
 #include <fbl/unique_fd.h>
 
@@ -17,71 +19,56 @@
 #include "src/devices/lib/log/log.h"
 
 DriverLoader::~DriverLoader() {
-  if (loading_thread_) {
-    thrd_join(loading_thread_.value(), nullptr);
+  if (system_loading_thread_) {
+    system_loading_thread_->join();
   }
 }
 
 void DriverLoader::StartSystemLoadingThread() {
-  if (loading_thread_) {
+  if (system_loading_thread_) {
     LOGF(ERROR, "DriverLoader: StartLoadingThread cannot be called twice!\n");
     return;
   }
 
-  thrd_t t;
-  int ret = thrd_create_with_name(
-      &t,
-      [](void* arg) {
-        reinterpret_cast<DriverLoader*>(arg)->LoadSystemDrivers();
-        return 0;
-      },
-      this, "driver-loader-thread");
+  system_loading_thread_ = std::thread([coordinator = coordinator_]() {
+    fbl::unique_fd fd(open("/system", O_RDONLY));
+    if (fd.get() < 0) {
+      LOGF(WARNING, "Unable to open '/system', system drivers are disabled");
+      return;
+    }
 
-  if (ret != thrd_success) {
-    LOGF(ERROR, "DriverLoader: starting a new thread failed!\n");
-    return;
-  }
+    fbl::DoublyLinkedList<std::unique_ptr<Driver>> drivers;
 
-  loading_thread_ = t;
-}
+    auto driver_added = [&drivers](Driver* drv, const char* version) {
+      std::unique_ptr<Driver> driver(drv);
+      LOGF(INFO, "Adding driver '%s' '%s'", driver->name.data(), driver->libname.data());
+      if (load_vmo(driver->libname.data(), &driver->dso_vmo)) {
+        LOGF(ERROR, "Driver '%s' '%s' could not cache DSO", driver->name.data(),
+             driver->libname.data());
+      }
+      if (version[0] == '*') {
+        // de-prioritize drivers that are "fallback"
+        drivers.push_back(std::move(driver));
+      } else {
+        drivers.push_front(std::move(driver));
+      }
+    };
 
-void DriverLoader::LoadSystemDrivers() {
-  fbl::unique_fd fd(open("/system", O_RDONLY));
-  if (fd.get() < 0) {
-    LOGF(WARNING, "Unable to open '/system', system drivers are disabled");
-    return;
-  }
+    find_loadable_drivers(coordinator->boot_args(), "/system/driver", driver_added);
 
-  find_loadable_drivers(coordinator_->boot_args(), "/system/driver",
-                        fit::bind_member(this, &DriverLoader::DriverAdded));
-  async::PostTask(coordinator_->dispatcher(),
-                  [coordinator = coordinator_, drivers = std::move(drivers_)]() mutable {
-                    coordinator->AddAndBindDrivers(std::move(drivers));
-                    coordinator->BindFallbackDrivers();
-                  });
-}
+    async::PostTask(coordinator->dispatcher(),
+                    [coordinator = coordinator, drivers = std::move(drivers)]() mutable {
+                      coordinator->AddAndBindDrivers(std::move(drivers));
+                      coordinator->BindFallbackDrivers();
+                    });
+  });
 
-void DriverLoader::DriverAdded(Driver* drv, const char* version) {
-  std::unique_ptr<Driver> driver(drv);
-  LOGF(INFO, "Adding driver '%s' '%s'", driver->name.data(), driver->libname.data());
-  if (load_vmo(driver->libname.data(), &driver->dso_vmo)) {
-    LOGF(ERROR, "Driver '%s' '%s' could not cache DSO", driver->name.data(),
-         driver->libname.data());
-  }
-  if (version[0] == '*') {
-    // de-prioritize drivers that are "fallback"
-    drivers_.push_back(std::move(driver));
-  } else {
-    drivers_.push_front(std::move(driver));
-  }
+  constexpr char name[] = "driver-loader-thread";
+  zx_object_set_property(native_thread_get_zx_handle(system_loading_thread_->native_handle()),
+                         ZX_PROP_NAME, name, sizeof(name));
 }
 
 const Driver* DriverLoader::LibnameToDriver(std::string_view libname) const {
-  for (const auto& drv : drivers_) {
-    if (libname.compare(drv.libname) == 0) {
-      return &drv;
-    }
-  }
   for (const auto& drv : driver_index_drivers_) {
     if (libname.compare(drv.libname) == 0) {
       return &drv;

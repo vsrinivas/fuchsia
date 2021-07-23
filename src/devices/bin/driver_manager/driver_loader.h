@@ -22,6 +22,7 @@ class DriverLoader {
   explicit DriverLoader(fidl::WireSyncClient<fuchsia_boot::Arguments>* boot_args,
                         Coordinator* coordinator)
       : base_resolver_(boot_args), coordinator_(coordinator) {}
+
   ~DriverLoader();
 
   // Start a Thread to service loading drivers.
@@ -35,13 +36,6 @@ class DriverLoader {
   const Driver* LibnameToDriver(std::string_view libname) const;
 
  private:
-  // Search through the filesystem for drivers, load the drivers, then pass them to Coordinator
-  // so they can be found. This needs to be called from its own thread because I/O operations are
-  // blocking. `coordinator` is not thread safe so any calls to it must be made on the
-  // `coordinator->dispatcher()` thread.
-  void LoadSystemDrivers();
-
-  void DriverAdded(Driver* drv, const char* version);
   bool MatchesLibnameDriverIndex(const std::string& driver_url, std::string_view libname);
 
   const Driver* LoadDriverUrlDriverIndex(const std::string& driver_url);
@@ -50,9 +44,8 @@ class DriverLoader {
   fbl::DoublyLinkedList<std::unique_ptr<Driver>> driver_index_drivers_;
 
   internal::BasePackageResolver base_resolver_;
-  std::optional<thrd_t> loading_thread_;
+  std::optional<std::thread> system_loading_thread_;
   Coordinator* coordinator_ = nullptr;
-  fbl::DoublyLinkedList<std::unique_ptr<Driver>> drivers_;
 };
 
 #endif  // SRC_DEVICES_BIN_DRIVER_MANAGER_DRIVER_LOADER_H_
