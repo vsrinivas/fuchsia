@@ -229,7 +229,6 @@ config("fidl-llcpp-deprecated-raw-channels") {
     "//src/storage/minfs/test:minfs-integration",
     "//src/storage/minfs/test:minfs_dirty_cache_integration",
     "//src/storage/minfs/test:minfs_micro_benchmark",
-    "//src/storage/testing:storage_driver_test_support",
     "//src/sys/appmgr:appmgr_for_test",
     "//src/sys/appmgr:bin",
     "//src/sys/appmgr:lib",
