@@ -1,8 +1,4 @@
 sdk://component_manifest/syslog
-sdk://device/generic-arm64
-sdk://device/generic-x64
-sdk://device/qemu-arm64
-sdk://device/qemu-x64
 sdk://docs/low_level
 sdk://docs/metadata_schemas
 sdk://docs/musl_license

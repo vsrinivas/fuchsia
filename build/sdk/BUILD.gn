@@ -14,7 +14,7 @@ group("tests") {
 
   deps = [
     ":sdk_common_unittests($host_toolchain)",
-    "meta:rust_test($host_toolchain)",
+    "meta:tests($host_toolchain)",
     "tests",
     "tools/merge:merge_sdk_test($host_toolchain)",
   ]

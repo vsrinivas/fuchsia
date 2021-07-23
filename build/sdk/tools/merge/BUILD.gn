@@ -33,7 +33,6 @@ rustc_binary("merge_sdk") {
     "src/merge_cc_source_library.rs",
     "src/merge_dart_library.rs",
     "src/merge_data.rs",
-    "src/merge_device_profile.rs",
     "src/merge_documentation.rs",
     "src/merge_fidl_library.rs",
     "src/merge_host_tool.rs",

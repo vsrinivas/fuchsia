@@ -9,9 +9,8 @@ use std::iter::{FromIterator, Iterator};
 use structopt::StructOpt;
 
 use sdk_metadata::{
-    BanjoLibrary, CcPrebuiltLibrary, CcSourceLibrary, DartLibrary, Data, DeviceProfile,
-    Documentation, ElementType, FidlLibrary, HostTool, JsonObject, LoadableModule, Manifest, Part,
-    Sysroot,
+    BanjoLibrary, CcPrebuiltLibrary, CcSourceLibrary, DartLibrary, Data, Documentation,
+    ElementType, FidlLibrary, HostTool, JsonObject, LoadableModule, Manifest, Part, Sysroot,
 };
 
 mod app;
@@ -24,7 +23,6 @@ mod merge_cc_prebuilt_library;
 mod merge_cc_source_library;
 mod merge_dart_library;
 mod merge_data;
-mod merge_device_profile;
 mod merge_documentation;
 mod merge_fidl_library;
 mod merge_host_tool;
@@ -41,7 +39,6 @@ use crate::merge_cc_prebuilt_library::merge_cc_prebuilt_library;
 use crate::merge_cc_source_library::merge_cc_source_library;
 use crate::merge_dart_library::merge_dart_library;
 use crate::merge_data::merge_data;
-use crate::merge_device_profile::merge_device_profile;
 use crate::merge_documentation::merge_documentation;
 use crate::merge_fidl_library::merge_fidl_library;
 use crate::merge_host_tool::merge_host_tool;
@@ -138,7 +135,6 @@ fn merge_common_part<F: TarballContent>(
         }
         ElementType::Config => merge_data(&part.meta, base, complement, output),
         ElementType::DartLibrary => merge_dart_library(&part.meta, base, complement, output),
-        ElementType::DeviceProfile => merge_device_profile(&part.meta, base, complement, output),
         ElementType::Documentation => merge_documentation(&part.meta, base, complement, output),
         ElementType::FidlLibrary => merge_fidl_library(&part.meta, base, complement, output),
         ElementType::HostTool => merge_host_tool(&part.meta, base, complement, output),
@@ -163,7 +159,6 @@ fn copy_part_as_is<F: TarballContent>(
         }
         ElementType::Config => Box::new(source.get_metadata::<Data>(&part.meta)?),
         ElementType::DartLibrary => Box::new(source.get_metadata::<DartLibrary>(&part.meta)?),
-        ElementType::DeviceProfile => Box::new(source.get_metadata::<DeviceProfile>(&part.meta)?),
         ElementType::Documentation => Box::new(source.get_metadata::<Documentation>(&part.meta)?),
         ElementType::FidlLibrary => Box::new(source.get_metadata::<FidlLibrary>(&part.meta)?),
         ElementType::HostTool => Box::new(source.get_metadata::<HostTool>(&part.meta)?),

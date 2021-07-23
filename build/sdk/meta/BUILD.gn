@@ -14,7 +14,6 @@ schemas = [
   "common.json",
   "dart_library.json",
   "data.json",
-  "device_profile.json",
   "documentation.json",
   "emu_manifest.json",
   "fidl_library.json",
@@ -47,57 +46,62 @@ source_set("schemas") {
   inputs = schemas
 }
 
-rustc_library("rust") {
-  name = "sdk_metadata"
+if (is_host) {
+  rustc_library("rust") {
+    name = "sdk_metadata"
 
-  with_unit_tests = true
+    with_unit_tests = true
 
-  edition = "2018"
+    edition = "2018"
 
-  deps = [
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:serde",
-    "//third_party/rust_crates:serde_json",
-    "//third_party/rust_crates:thiserror",
-    "//third_party/rust_crates:valico",
-  ]
+    deps = [
+      "//third_party/rust_crates:anyhow",
+      "//third_party/rust_crates:serde",
+      "//third_party/rust_crates:serde_json",
+      "//third_party/rust_crates:thiserror",
+      "//third_party/rust_crates:valico",
+    ]
 
-  non_rust_deps = [ ":schemas" ]
+    non_rust_deps = [ ":schemas" ]
 
-  sources = [
-    "src/banjo_library.rs",
-    "src/cc_prebuilt_library.rs",
-    "src/cc_source_library.rs",
-    "src/common.rs",
-    "src/dart_library.rs",
-    "src/data.rs",
-    "src/device_profile.rs",
-    "src/documentation.rs",
-    "src/fidl_library.rs",
-    "src/host_tool.rs",
-    "src/json.rs",
-    "src/lib.rs",
-    "src/loadable_module.rs",
-    "src/manifest.rs",
-    "src/sysroot.rs",
-    "src/testing.rs",
-  ]
+    sources = [
+      "src/banjo_library.rs",
+      "src/cc_prebuilt_library.rs",
+      "src/cc_source_library.rs",
+      "src/common.rs",
+      "src/dart_library.rs",
+      "src/data.rs",
+      "src/documentation.rs",
+      "src/fidl_library.rs",
+      "src/host_tool.rs",
+      "src/json.rs",
+      "src/lib.rs",
+      "src/loadable_module.rs",
+      "src/manifest.rs",
+      "src/sysroot.rs",
+      "src/testing.rs",
+    ]
 
-  inputs = [
-    "host_tool.json",
-    "dart_library.json",
-    "fidl_library.json",
-    "documentation.json",
-    "cc_source_library.json",
-    "loadable_module.json",
-    "sysroot.json",
-    "cc_prebuilt_library.json",
-    "device_profile.json",
-    "data.json",
-    "hardware.json",
-    "manifest.json",
-    "physical_device.json",
-    "banjo_library.json",
-    "common.json",
-  ]
+    inputs = [
+      "banjo_library.json",
+      "cc_prebuilt_library.json",
+      "cc_source_library.json",
+      "common.json",
+      "dart_library.json",
+      "data.json",
+      "documentation.json",
+      "fidl_library.json",
+      "hardware.json",
+      "host_tool.json",
+      "loadable_module.json",
+      "manifest.json",
+      "physical_device.json",
+      "sysroot.json",
+    ]
+  }
+
+  group("tests") {
+    testonly = true
+    deps = [ ":rust_test" ]
+  }
 }
