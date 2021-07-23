@@ -277,7 +277,7 @@ TEST_F(InputReportReaderTests, ReadInputReportsHangingGetTest) {
   async::Loop loop = async::Loop(&kAsyncLoopConfigNeverAttachToThread);
 
   // Get an async InputReportsReader.
-  fidl::Client<fuchsia_input_report::InputReportsReader> reader;
+  fidl::WireClient<fuchsia_input_report::InputReportsReader> reader;
   {
     auto endpoints = fidl::CreateEndpoints<fuchsia_input_report::InputReportsReader>();
     ASSERT_TRUE(endpoints.is_ok());
@@ -323,7 +323,7 @@ TEST_F(InputReportReaderTests, CloseReaderWithOutstandingRead) {
   async::Loop loop = async::Loop(&kAsyncLoopConfigNeverAttachToThread);
 
   // Get an async InputReportsReader.
-  fidl::Client<fuchsia_input_report::InputReportsReader> reader;
+  fidl::WireClient<fuchsia_input_report::InputReportsReader> reader;
   {
     auto endpoints = fidl::CreateEndpoints<fuchsia_input_report::InputReportsReader>();
     ASSERT_TRUE(endpoints.is_ok());
@@ -341,5 +341,5 @@ TEST_F(InputReportReaderTests, CloseReaderWithOutstandingRead) {
   loop.RunUntilIdle();
 
   // Unbind the reader now that the report is waiting.
-  reader.Unbind();
+  reader = {};
 }

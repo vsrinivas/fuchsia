@@ -311,7 +311,7 @@ TEST_F(HidDevTest, ReadInputReportsHangingGetTest) {
   // Get an InputReportsReader.
 
   async::Loop loop = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  fidl::Client<fuchsia_input_report::InputReportsReader> reader;
+  fidl::WireClient<fuchsia_input_report::InputReportsReader> reader;
   {
     auto endpoints = fidl::CreateEndpoints<fuchsia_input_report::InputReportsReader>();
     ASSERT_OK(endpoints.status_value());
@@ -363,7 +363,7 @@ TEST_F(HidDevTest, CloseReaderWithOutstandingRead) {
   // Get an InputReportsReader.
 
   async::Loop loop = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  fidl::Client<fuchsia_input_report::InputReportsReader> reader;
+  fidl::WireClient<fuchsia_input_report::InputReportsReader> reader;
   {
     auto endpoints = fidl::CreateEndpoints<fuchsia_input_report::InputReportsReader>();
     ASSERT_OK(endpoints.status_value());
@@ -382,7 +382,7 @@ TEST_F(HidDevTest, CloseReaderWithOutstandingRead) {
   loop.RunUntilIdle();
 
   // Unbind the reader now that the report is waiting.
-  reader.Unbind();
+  reader = {};
 }
 
 TEST_F(HidDevTest, SensorTest) {
