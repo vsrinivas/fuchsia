@@ -271,6 +271,7 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
 
   void DumpState(VmoWriter* vmo) const;
 
+  fidl::WireSharedClient<fdf::DriverIndex>& driver_index() { return config_.driver_index; }
   async_dispatcher_t* dispatcher() const { return dispatcher_; }
   const zx::resource& root_resource() const { return config_.root_resource; }
   fidl::WireSyncClient<fuchsia_boot::Arguments>* boot_args() const { return config_.boot_args; }
@@ -365,9 +366,6 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
   // All Drivers
   fbl::DoublyLinkedList<std::unique_ptr<Driver>> drivers_;
 
-  // Drivers we cached from the DriverIndex.
-  fbl::DoublyLinkedList<std::unique_ptr<Driver>> driver_index_drivers_;
-
   // Drivers to try last
   fbl::DoublyLinkedList<std::unique_ptr<Driver>> fallback_drivers_;
 
@@ -394,10 +392,6 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
 
   void BindAllDevicesDriverIndex();
   zx_status_t MatchAndBindDeviceDriverIndex(const fbl::RefPtr<Device>& dev);
-  std::vector<const Driver*> MatchDeviceDriverIndex(const fbl::RefPtr<Device>& dev,
-                                                    std::string_view libname = "");
-  const Driver* LoadDriverUrlDriverIndex(const std::string& driver_url);
-  bool MatchesLibnameDriverIndex(const std::string& driver_url, std::string_view libname);
 
   // Given a device, return all of the Drivers whose bind programs match with the device.
   // The returned vector is organized by priority, so if only one driver is being bound it

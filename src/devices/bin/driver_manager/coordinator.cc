@@ -107,7 +107,7 @@ Coordinator::Coordinator(CoordinatorConfig config, InspectManager* inspect_manag
                          async_dispatcher_t* dispatcher)
     : config_(std::move(config)),
       dispatcher_(dispatcher),
-      driver_loader_(config.boot_args),
+      driver_loader_(config.boot_args, this),
       suspend_handler_(this, config.suspend_fallback, config.suspend_timeout),
       inspect_manager_(inspect_manager),
       package_resolver_(config.boot_args) {
@@ -205,12 +205,8 @@ const Driver* Coordinator::LibnameToDriver(std::string_view libname) const {
       return &drv;
     }
   }
-  for (const auto& drv : driver_index_drivers_) {
-    if (libname.compare(drv.libname) == 0) {
-      return &drv;
-    }
-  }
-  return nullptr;
+
+  return driver_loader_.LibnameToDriver(libname);
 }
 
 zx_status_t Coordinator::LibnameToVmo(const fbl::String& libname, zx::vmo* out_vmo) const {
@@ -1492,7 +1488,7 @@ void Coordinator::ScheduleBaseDriverLoading() {
 }
 
 zx_status_t Coordinator::MatchAndBindDeviceDriverIndex(const fbl::RefPtr<Device>& dev) {
-  auto drivers = MatchDeviceDriverIndex(dev);
+  auto drivers = driver_loader_.MatchDeviceDriverIndex(dev);
   for (auto driver : drivers) {
     zx_status_t status = AttemptBind(driver, dev);
     if (status != ZX_OK && status != ZX_ERR_NEXT && status != ZX_ERR_ALREADY_BOUND) {
@@ -1501,103 +1497,6 @@ zx_status_t Coordinator::MatchAndBindDeviceDriverIndex(const fbl::RefPtr<Device>
     }
   }
   return ZX_OK;
-}
-
-bool Coordinator::MatchesLibnameDriverIndex(const std::string& driver_url,
-                                            std::string_view libname) {
-  if (libname.compare(driver_url) == 0) {
-    return true;
-  }
-
-  auto result = GetPathFromUrl(driver_url);
-  if (result.is_error()) {
-    return false;
-  }
-
-  return result.value().compare(libname) == 0;
-}
-
-const Driver* Coordinator::LoadDriverUrlDriverIndex(const std::string& driver_url) {
-  // Check if we've already loaded this driver. If we have then return it.
-  auto driver = LibnameToDriver(driver_url);
-  if (driver != nullptr) {
-    return driver;
-  }
-
-  // We've never seen the driver before so add it, then return it.
-  auto fetched_driver = driver_loader_.base_resolver().FetchDriver(driver_url);
-  if (fetched_driver.is_error()) {
-    LOGF(ERROR, "Error fetching driver: %s: %d", driver_url.data(), fetched_driver.error_value());
-    return nullptr;
-  }
-  driver_index_drivers_.push_back(std::move(fetched_driver.value()));
-
-  return &driver_index_drivers_.back();
-}
-
-std::vector<const Driver*> Coordinator::MatchDeviceDriverIndex(const fbl::RefPtr<Device>& dev,
-                                                               std::string_view libname) {
-  std::vector<const Driver*> matched_drivers;
-
-  if (!config_.driver_index.is_valid()) {
-    return matched_drivers;
-  }
-
-  bool autobind = libname.empty();
-
-  fidl::FidlAllocator allocator;
-  auto& props = dev->props();
-  fdf::wire::NodeAddArgs args(allocator);
-  fidl::VectorView<fdf::wire::NodeProperty> fidl_props(allocator, props.size() + 2);
-
-  fidl_props[0] = fdf::wire::NodeProperty(allocator)
-                      .set_key(allocator, BIND_PROTOCOL)
-                      .set_value(allocator, dev->protocol_id());
-  fidl_props[1] = fdf::wire::NodeProperty(allocator)
-                      .set_key(allocator, BIND_AUTOBIND)
-                      .set_value(allocator, autobind);
-  for (size_t i = 0; i < props.size(); i++) {
-    fidl_props[i + 2] = fdf::wire::NodeProperty(allocator)
-                            .set_key(allocator, props[i].id)
-                            .set_value(allocator, props[i].value);
-  }
-  args.set_properties(allocator, std::move(fidl_props));
-
-  auto result = config_.driver_index->MatchDriversV1_Sync(std::move(args));
-  if (!result.ok()) {
-    if (result.status() == ZX_ERR_PEER_CLOSED) {
-      return matched_drivers;
-    }
-
-    // If DriverManager can't connect initially then this will return CANCELED.
-    // This is normal if driver-index isn't included in the build.
-    if (result.status() != ZX_ERR_CANCELED) {
-      LOGF(ERROR, "DriverIndex: MatchDriver failed: %s", result.status_string());
-    }
-    return matched_drivers;
-  }
-  // If there's no driver to match then DriverIndex will return ZX_ERR_NOT_FOUND.
-  if (result->result.is_err()) {
-    if (result->result.err() != ZX_ERR_NOT_FOUND) {
-      LOGF(ERROR, "DriverIndex: MatchDriver returned error: %d", result->result.err());
-    }
-    return matched_drivers;
-  }
-
-  const auto& drivers = result->result.response().drivers;
-
-  for (auto driver : drivers) {
-    if (!driver.has_driver_url()) {
-      LOGF(ERROR, "DriverIndex: MatchDriver response did not have a driver_url");
-      continue;
-    }
-    std::string driver_url(driver.driver_url().get());
-    auto loaded_driver = LoadDriverUrlDriverIndex(driver_url);
-    if (libname.empty() || MatchesLibnameDriverIndex(driver_url, libname)) {
-      matched_drivers.push_back(loaded_driver);
-    }
-  }
-  return matched_drivers;
 }
 
 zx::status<std::vector<const Driver*>> Coordinator::MatchDevice(const fbl::RefPtr<Device>& dev,
@@ -1642,7 +1541,7 @@ zx::status<std::vector<const Driver*>> Coordinator::MatchDevice(const fbl::RefPt
 
   // Check the Driver Index for a driver.
   {
-    auto drivers = MatchDeviceDriverIndex(dev, drvlibname);
+    auto drivers = driver_loader_.MatchDeviceDriverIndex(dev, drvlibname);
     for (auto driver : drivers) {
       matched_drivers.push_back(driver);
     }
@@ -1723,7 +1622,7 @@ void Coordinator::AddAndBindDrivers(fbl::DoublyLinkedList<std::unique_ptr<Driver
   }
 }
 
-void Coordinator::StartLoadingNonBootDrivers() { driver_loader_.StartLoadingThread(this); }
+void Coordinator::StartLoadingNonBootDrivers() { driver_loader_.StartSystemLoadingThread(); }
 
 void Coordinator::BindFallbackDrivers() {
   for (auto& driver : fallback_drivers_) {
