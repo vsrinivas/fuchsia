@@ -496,6 +496,16 @@ runtime, as explained in [Routing terminology](#routing-terminology).
         an array of names of protocol capabilities.
     -   `directory`: The [name](#capability-names) of a directory capability.
     -   `storage`: The [name](#capability-names) of a storage capability.
+-   `from` _(optional)_: The source of the capability. Defaults to `parent`.
+    One of:
+    -   `parent`: The component's parent.
+    -   `debug`: One of [`debug_capabilities`][fidl-environment-decl] in the
+        environment assigned to this component.
+    -   `framework`: The Component Framework runtime.
+    -   `#<capability-name>`: The name of another capability from which the
+        requested capability is derived.
+    -   `#<child-name>`: A [reference](#references) to a child component
+        instance.
 -   `path` _(optional)_: The path at which to install the capability in the
     component's namespace. For protocols, defaults to `/svc/${protocol}`.
     Required for `directory` and `storage`. This property is disallowed for
@@ -539,6 +549,7 @@ explained in [Routing terminology](#routing-terminology).
 -   `from`: The source of the capability, one of:
     -   `self`: This component. Requires a corresponding
         [`capability`](#capabilities) declaration.
+    -   `framework`: The Component Framework runtime.
     -   `#<child-name>`: A [reference](#references) to a child component
         instance.
 -   `to` _(optional)_: The capability target. Either `parent` or `framework`.
@@ -599,6 +610,7 @@ explained in [Routing terminology](#routing-terminology).
         capability types.
     -   `self`: This component. Requires a corresponding
         [`capability`](#capabilities) declaration.
+    -   `framework`: The Component Framework runtime.
     -   `#<child-name>`: A [reference](#references) to a child component
         instance. This source can only be used when offering protocol,
         directory, or runner capabilities.
@@ -694,6 +706,7 @@ This section may be omitted.
 [doc-storage]: /docs/concepts/components/v2/capabilities/storage.md
 [examples-routing]: /examples/components/routing
 [fidl-component-decl]: /sdk/fidl/fuchsia.sys2/decls/component_decl.fidl
+[fidl-environment-decl]: /sdk/fidl/fuchsia.sys2/decls/environment_decl.fidl
 [fidl-io2-rights]: /sdk/fidl/fuchsia.io2/rights-abilities.fidl
 [fidl-binder]: /sdk/fidl/fuchsia.component/binder.fidl
 [fidl-realm]: /sdk/fidl/fuchsia.sys2/realm.fidl
