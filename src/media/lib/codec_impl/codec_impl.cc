@@ -1929,9 +1929,7 @@ bool CodecImpl::ValidatePartialBufferSettingsVsConstraintsLocked(
       FailLocked("single_buffer_mode (deprecated; obsolete)");
       return false;
     } else {
-      LOG(WARNING,
-          "has_single_buffer_mode() (set to false) seen - client should stop setting this, even to "
-          "false (deprecated; obsolete)");
+      LOG(WARNING, "has_single_buffer_mode() (set to false) seen - client should stop setting this, even to false (deprecated; obsolete)");
     }
   }
   ZX_DEBUG_ASSERT(partial_settings.sysmem_token().is_valid());
@@ -3014,7 +3012,7 @@ void CodecImpl::vFailLocked(bool is_fatal, const char* format, va_list args) {
       media_metrics::StreamProcessorEvents2MetricDimensionEvent_StreamProcessorFailureAnyReason);
   if (is_fatal) {
     // Logs to syslog for non-driver clients
-    FX_LOGS(ERROR) << buffer.get() << " -- " << message;
+    FX_LOGS(ERROR) << buffer.get() << " -- " << message << "\n";
     // Default logging to stderr for both driver and non-driver clients
     LOG(ERROR, "%s -- %s", buffer.get(), message);
 

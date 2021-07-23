@@ -27,8 +27,7 @@ class CodecOutput {
   CodecOutput(uint64_t stream_lifetime_ordinal,
               std::shared_ptr<const fuchsia::media::StreamOutputConstraints> constraints,
               std::shared_ptr<const fuchsia::media::StreamOutputFormat> format,
-              std::unique_ptr<const fuchsia::media::Packet> packet, bool end_of_stream,
-              bool stream_failed);
+              std::unique_ptr<const fuchsia::media::Packet> packet, bool end_of_stream);
 
   uint64_t stream_lifetime_ordinal() { return stream_lifetime_ordinal_; }
 
@@ -53,7 +52,6 @@ class CodecOutput {
   }
 
   bool end_of_stream() { return end_of_stream_; }
-  bool stream_failed() { return stream_failed_; }
 
  private:
   uint64_t stream_lifetime_ordinal_ = 0;
@@ -64,7 +62,6 @@ class CodecOutput {
   std::unique_ptr<const fuchsia::media::Packet> packet_;
 
   bool end_of_stream_ = false;
-  bool stream_failed_ = false;
 
   // TODO(dustingreen): put this on other classes in this file also.
   FXL_DISALLOW_IMPLICIT_CONSTRUCTORS(CodecOutput);

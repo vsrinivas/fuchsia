@@ -12,8 +12,6 @@
 
 namespace amlogic_decoder {
 
-constexpr bool kFirmwareIsSigned = true;
-
 FirmwareBlob::~FirmwareBlob() {
   if (vmo_)
     zx::vmar::root_self()->unmap(ptr_, fw_size_);
@@ -63,12 +61,7 @@ zx_status_t FirmwareBlob::LoadFirmware(zx_device_t* device) {
       uint8_t data_bytes[512];
     };
   };
-  uint64_t offset;
-  if (kFirmwareIsSigned) {
-    offset = kSignatureSize + kPackageHeaderSize;
-  } else {
-    offset = kPackageHeaderSize;
-  }
+  uint64_t offset = kSignatureSize + kPackageHeaderSize;
   while (offset < fw_size_) {
     if (offset + sizeof(PackageEntryHeader) > fw_size_) {
       DECODE_ERROR("PackageHeader doesn't fit in data");

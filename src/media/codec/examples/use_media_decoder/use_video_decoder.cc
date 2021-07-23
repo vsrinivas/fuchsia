@@ -771,19 +771,12 @@ void VideoDecoderRunner::Run() {
             "server emitted a stream_lifetime_ordinal that client didn't set "
             "on any input");
       }
-      if (output->end_of_stream() || output->stream_failed()) {
-        if (output->end_of_stream()) {
-          VLOGF("output end_of_stream() - stream_lifetime_ordinal: %" PRIu64,
-                output->stream_lifetime_ordinal());
-        } else {
-          ZX_ASSERT(output->stream_failed());
-          VLOGF("otuput stream_failed() - stream_lifetime_ordinal: %" PRIu64,
-                output->stream_lifetime_ordinal());
-        }
+      if (output->end_of_stream()) {
+        VLOGF("output end_of_stream() - stream_lifetime_ordinal: %" PRIu64,
+              output->stream_lifetime_ordinal());
         // For debugging a flake:
         if (params_.test_params->loop_stream_count > 1) {
-          LOGF("output %s - stream_lifetime_ordinal: %" PRIu64,
-               output->end_of_stream() ? "end_of_stream()" : "stream_failed()",
+          LOGF("output end_of_stream() - stream_lifetime_ordinal: %" PRIu64,
                output->stream_lifetime_ordinal());
         }
         // default 1

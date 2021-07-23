@@ -55,7 +55,6 @@ class CodecPacket {
   bool key_frame() const;
 
   void CacheFlush() const;
-  void CacheFlushAndInvalidate() const;
 
  private:
   // The public section is for the core codec to call - the private section is

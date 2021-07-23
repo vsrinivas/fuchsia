@@ -23,15 +23,17 @@
 #include "../util.h"
 #include "use_video_decoder_test.h"
 
-// This test can be run manually along with modifications to the decoder to help narrow down any
-// glitches.
-
 namespace {
 
 constexpr char kInputFilePath[] = "/pkg/data/bear.h264";
 constexpr int kInputFileFrameCount = 16;
 
 const char* kGoldenSha256 = "a4418265eaa493604731d6871523ac2a0d606f40cddd48e2a8cd0b0aa5f152e1";
+// astro bad hash seen lots: "1642472070f1f6753dd9254324d9867e644cbe787bd53a9303b622b589f7b8ad"
+// astro bad hash seen some: "15091f31c6911576255bc87f1f4def03bed94bfbc44796f59760bca30bcf2965"
+// sherlock bad hash seen once: "3aea6b5d6ab02e8d3e80ec7bb9628049f1da7a792b820ca1deba5a75e7e391a3"
+// sherlock bad hash seen once: "54b1de3bbb8bec34635a6b1ce6acb05aebb07aa7cb103403e6120f0c475f6e29"
+// sherlock bad hash seen once: "ca1ed4fc6bd25da2e409099b9de8c036827f17c9ef39f99d7ecdc92ab549605d"
 
 // Must be nullptr terminated.
 const char* kPerFrameGoldenSha256[] = {
@@ -71,7 +73,7 @@ const char* kPerFrameGoldenSha256[] = {
 
 int main(int argc, char* argv[]) {
   UseVideoDecoderTestParams test_params = {
-      .loop_stream_count = 1000000000,
+      .loop_stream_count = 1000000,
       .reset_hash_each_iteration = true,
       .mime_type = "video/h264",
       .per_frame_golden_sha256 = kPerFrameGoldenSha256,
