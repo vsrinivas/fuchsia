@@ -304,24 +304,29 @@ file_args = {
 generated_product_config("product_config") {
   testonly = true
   output_path = files.assembly_config
-  base_packages = [
+  kernel_image = "//zircon/kernel"
+  include_version_and_epoch = true
+
+  _base_packages = [
     "//:additional_base_driver_packages",
     "//:additional_base_packages",
     "//build/images:driver-manager-base-config",
   ]
-  base_packages += meta_package_labels
-  cache_packages = [ "//:additional_cache_packages" ]
-  kernel_image = "//zircon/kernel"
-  bootfs_labels = [ "//build/input:bootfs" ]
-  if (!bootfs_only) {
-    extra_base_deps = [ "//build/input:system_image" ]
-  }
+  _base_packages += meta_package_labels
+  _cache_packages = [ "//:additional_cache_packages" ]
 
-  # Universe packages are only added to the images for bootfs-only builds,
-  # because they must be put into BootFS. On all other builds, universe
-  # packages are only added to a package server.
+  bootfs_labels = [ "//build/input:bootfs" ]
+
   if (bootfs_only) {
-    universe_packages = [ "//:additional_universe_packages" ]
+    # BootFS-only builds put all the packages in BootFS.
+    bootfs_labels += [ "//build/input:system_image" ]
+    bootfs_labels += _base_packages + _cache_packages
+    bootfs_labels += [ "//:additional_universe_packages" ]
+  } else {
+    # All other builds, put their packages in the FVM.
+    base_packages = _base_packages
+    cache_packages = _cache_packages
+    extra_base_deps = [ "//build/input:system_image" ]
   }
 
   cmdline_deps = [ "//build/input:bootfs" ]
