@@ -194,7 +194,7 @@ macro_rules! fd_impl_seekable {
                     return Err(EINVAL);
                 }
             } else {
-                return Err(EOVERFLOW);
+                return Err(EINVAL);
             }
             Ok(*current_offset)
         }
