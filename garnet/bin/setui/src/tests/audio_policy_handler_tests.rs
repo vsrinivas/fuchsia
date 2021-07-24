@@ -7,8 +7,8 @@ use crate::agent::Lifespan;
 use crate::audio::default_audio_info;
 use crate::audio::policy::audio_policy_handler::{AudioPolicyHandler, ARG_POLICY_ID};
 use crate::audio::policy::{
-    self as audio, PolicyId, PropertyTarget, Response, State, StateBuilder, Transform,
-    TransformFlags,
+    self as audio, AudioPolicyConfig, PolicyId, PropertyTarget, Response, State, StateBuilder,
+    Transform, TransformFlags,
 };
 use crate::audio::types::AudioStreamType;
 use crate::audio::types::{AudioInfo, AudioSettingSource, AudioStream, SetAudioStream};
@@ -73,10 +73,14 @@ impl TestEnvironment {
     }
 
     async fn new() -> Self {
-        TestEnvironment::new_with_store(TestEnvironment::create_storage_factory().await).await
+        TestEnvironment::new_with_store(TestEnvironment::create_storage_factory().await, None).await
     }
 
-    async fn new_with_store(storage_factory: Arc<InMemoryStorageFactory>) -> Self {
+    // TODO(fxbug.dev/81232): take in options with a builder
+    async fn new_with_store(
+        storage_factory: Arc<InMemoryStorageFactory>,
+        audio_policy_config: Option<AudioPolicyConfig>,
+    ) -> Self {
         let store = storage_factory.get_store().await;
         let delegate = service::MessageHub::create_hub();
         let (messenger, _) =
@@ -113,9 +117,16 @@ impl TestEnvironment {
             .await
             .expect("failed to start storage");
 
-        let mut handler = AudioPolicyHandler::create(client_proxy.clone())
-            .await
-            .expect("failed to create handler");
+        let mut handler = match audio_policy_config {
+            Some(audio_policy_config) => {
+                AudioPolicyHandler::create_with_config(client_proxy.clone(), audio_policy_config)
+                    .await
+                    .expect("failed to create handler")
+            }
+            None => AudioPolicyHandler::create(client_proxy.clone())
+                .await
+                .expect("failed to create handler"),
+        };
 
         let result = handler.handle_policy_request(Request::Restore).await;
         match result {
@@ -452,7 +463,7 @@ async fn test_handler_restore_persisted_state() {
     // Write the "persisted" value to storage for the handler to read on start.
     store.write(&persisted_state, false).await.expect("write failed");
 
-    let mut env = TestEnvironment::new_with_store(storage_factory).await;
+    let mut env = TestEnvironment::new_with_store(storage_factory, None).await;
 
     // Start task to provide audio info to the handler, which it requests at startup.
     env.serve_audio_info(default_audio_info()).await;
@@ -1045,4 +1056,72 @@ async fn test_handler_min_and_max_volume_policy_scales_gets() {
         // Get requests have the expected volume level after passing through the policy handler.
         get_and_verify_media_volume(&mut env, internal_volume_level, expected_volume_level).await;
     }
+}
+
+// Verifies that build-time configuration scales external set calls.
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_handler_audio_policy_config_scales_external_sets() {
+    // Set a max volume of 0.6 through the configuration.
+    let max_volume = 0.6;
+    let mut audio_policy_config = AudioPolicyConfig { transforms: Default::default() };
+    audio_policy_config.transforms.insert(AudioStreamType::Media, vec![Transform::Max(max_volume)]);
+
+    let mut env = TestEnvironment::new_with_store(
+        TestEnvironment::create_storage_factory().await,
+        Some(audio_policy_config),
+    )
+    .await;
+
+    // A set request for max volume will be limited to the max level specified by the config.
+    set_and_verify_media_volume(&mut env, 1.0, max_volume).await;
+}
+
+// Verifies that build-time configuration scales get calls.
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_handler_audio_policy_config_scales_gets() {
+    // Set a max volume of 0.6 through the configuration.
+    let max_volume = 0.6;
+    let mut audio_policy_config = AudioPolicyConfig { transforms: Default::default() };
+    audio_policy_config.transforms.insert(AudioStreamType::Media, vec![Transform::Max(max_volume)]);
+
+    let mut env = TestEnvironment::new_with_store(
+        TestEnvironment::create_storage_factory().await,
+        Some(audio_policy_config),
+    )
+    .await;
+
+    // When the internal volume is max, it'll be limited to the max level specified by the config.
+    get_and_verify_media_volume(&mut env, max_volume, 1.0).await;
+}
+
+// Verifies that build-time configuration scales external set calls and work in conjunction with
+// policies added by clients of the volume policy FIDL api.
+#[fuchsia_async::run_until_stalled(test)]
+async fn test_handler_audio_policy_config_works_with_client_policies() {
+    // Set a max volume of 0.6 through the configuration.
+    let config_max_volume = 0.6;
+    let mut audio_policy_config = AudioPolicyConfig { transforms: Default::default() };
+    audio_policy_config
+        .transforms
+        .insert(AudioStreamType::Media, vec![Transform::Max(config_max_volume)]);
+
+    let mut env = TestEnvironment::new_with_store(
+        TestEnvironment::create_storage_factory().await,
+        Some(audio_policy_config),
+    )
+    .await;
+
+    // Set a higher max volume limit from a FIDL client.
+    set_media_volume_limit(&mut env, Transform::Max(0.8), default_audio_info()).await;
+
+    // A set request for max volume will be limited to the max level specified by the config.
+    set_and_verify_media_volume(&mut env, 1.0, config_max_volume).await;
+
+    // Set a lower max volume limit from a FIDL client.
+    let fidl_client_max_volume = 0.4;
+    set_media_volume_limit(&mut env, Transform::Max(fidl_client_max_volume), default_audio_info())
+        .await;
+
+    // A set request for max volume will be limited to the max level specified by the client.
+    set_and_verify_media_volume(&mut env, 1.0, fidl_client_max_volume).await;
 }

@@ -371,6 +371,7 @@ rustc_binary("setui-config-test") {
 resource("sample-setui-config-test-resources") {
   sources = [
     "src/tests/testdata/agent_configuration.json",
+    "src/tests/testdata/audio_policy_configuration.json",
     "src/tests/testdata/display_configuration.json",
     "src/tests/testdata/input_device_configuration.json",
     "src/tests/testdata/light_hardware_configuration.json",

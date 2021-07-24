@@ -115,6 +115,10 @@ pub struct ClientProxy {
 }
 
 impl ClientProxy {
+    pub(crate) fn messenger(&self) -> &service::message::Messenger {
+        &self.service_messenger
+    }
+
     /// Sends a setting request to the underlying setting proxy this policy handler controls.
     pub(crate) fn send_setting_request(
         &self,

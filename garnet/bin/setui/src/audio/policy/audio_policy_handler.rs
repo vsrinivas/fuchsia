@@ -56,14 +56,20 @@
 //!
 //! [`Changed`]: handler::base::Event::Changed
 
+use anyhow::{format_err, Error};
+use fuchsia_syslog::fx_log_err;
+
+use async_trait::async_trait;
+
 use crate::audio::default_audio_info;
 use crate::audio::policy::{
-    self as audio_policy, PolicyId, PropertyTarget, Request as PolicyRequest, Response, State,
-    StateBuilder, Transform, TransformFlags,
+    self as audio_policy, AudioPolicyConfig, PolicyId, PropertyTarget, Request as PolicyRequest,
+    Response, State, StateBuilder, Transform, TransformFlags,
 };
 use crate::audio::types::{AudioInfo, AudioStream, SetAudioStream};
 use crate::audio::utils::round_volume_level;
 use crate::base::{SettingInfo, SettingType};
+use crate::config::default_settings::DefaultSetting;
 use crate::handler::base::{
     Payload as HandlerPayload, Request as SettingRequest, Response as SettingResponse,
 };
@@ -73,9 +79,6 @@ use crate::policy::policy_handler::{
 };
 use crate::policy::response::Error as PolicyError;
 use crate::policy::{self as policy_base, PolicyInfo, PolicyType};
-use anyhow::{format_err, Error};
-use async_trait::async_trait;
-use fuchsia_syslog::fx_log_err;
 
 /// Used as the argument field in a ControllerError::InvalidArgument to signal the FIDL handler to
 /// signal that the policy ID was invalid.
@@ -86,6 +89,9 @@ pub(crate) const ARG_POLICY_ID: &str = "policy_id";
 pub(crate) struct AudioPolicyHandler {
     /// Policy state containing all of the transforms.
     state: State,
+
+    ///
+    audio_policy_config: AudioPolicyConfig,
 
     /// Offers access to common functionality like messaging and storage.
     client_proxy: ClientProxy,
@@ -109,7 +115,21 @@ struct VolumeLimits {
 #[async_trait]
 impl Create for AudioPolicyHandler {
     async fn create(client_proxy: ClientProxy) -> Result<Self, Error> {
-        Ok(Self { state: Default::default(), client_proxy })
+        let messenger = client_proxy.messenger().clone();
+        let transform_config = DefaultSetting::<AudioPolicyConfig, &str>::new(
+            Some(AudioPolicyConfig { transforms: Default::default() }),
+            "/config/data/audio_policy_configuration.json",
+            Some(messenger),
+            true,
+        )
+        .get_default_value()
+        .map_err(|_| format_err!("Invalid build time policy config"))?;
+
+        AudioPolicyHandler::create_with_config(
+            client_proxy,
+            transform_config.unwrap_or(AudioPolicyConfig { transforms: Default::default() }),
+        )
+        .await
     }
 }
 
@@ -199,6 +219,13 @@ impl PolicyHandler for AudioPolicyHandler {
 }
 
 impl AudioPolicyHandler {
+    pub(crate) async fn create_with_config(
+        client_proxy: ClientProxy,
+        transform_config: AudioPolicyConfig,
+    ) -> Result<Self, Error> {
+        Ok(Self { state: Default::default(), client_proxy, audio_policy_config: transform_config })
+    }
+
     /// Restores the policy state based on the configured audio streams and the previously persisted
     /// state.
     fn restore_policy_state(&mut self, persisted_state: State) {
@@ -249,6 +276,7 @@ impl AudioPolicyHandler {
         let mut max_volume: f32 = MAX_VOLUME;
         let mut min_volume: f32 = MIN_VOLUME;
 
+        // Apply policy state set by clients of the policy FIDL APIs.
         if let Some(property) = self.state.properties.get(&target) {
             for policy in property.active_policies.iter() {
                 match policy.transform {
@@ -259,6 +287,19 @@ impl AudioPolicyHandler {
                 }
             }
         }
+
+        // Apply build-time transforms.
+        if let Some(transforms) = self.audio_policy_config.transforms.get(&target) {
+            for transform in transforms.iter() {
+                match *transform {
+                    // Only the lowest max volume applies.
+                    audio_policy::Transform::Max(max) => max_volume = max_volume.min(max),
+                    // Only the highest min volume applies
+                    audio_policy::Transform::Min(min) => min_volume = min_volume.max(min),
+                }
+            }
+        }
+
         VolumeLimits { min_volume, max_volume }
     }
 

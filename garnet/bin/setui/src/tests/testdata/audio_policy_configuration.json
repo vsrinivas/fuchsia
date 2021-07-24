@@ -1,0 +1,7 @@
+{
+  "transforms": {
+    "Background": [{
+      "Max": 0.8
+    }]
+  }
+}

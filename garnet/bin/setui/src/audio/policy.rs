@@ -135,6 +135,16 @@ impl DeviceStorageCompatible for State {
     const KEY: &'static str = "audio_policy_state";
 }
 
+/// `AudioPolicyConfig` is read from config_data specified at build time to configure the behavior
+/// of the audio policy API.
+#[derive(PartialEq, Default, Debug, Clone, Serialize, Deserialize)]
+pub struct AudioPolicyConfig {
+    /// Transforms can be specified at build-time and are in effect immediately when the service
+    /// starts. These transforms cannot be viewed, added, or removed by clients of the audio policy
+    /// FIDL API.
+    pub(crate) transforms: HashMap<PropertyTarget, Vec<Transform>>,
+}
+
 /// `Property` defines the current policy configuration over a given audio
 /// stream type.
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]

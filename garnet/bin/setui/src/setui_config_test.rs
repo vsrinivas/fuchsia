@@ -7,7 +7,7 @@ use argh::FromArgs;
 use fuchsia_syslog::fx_log_info;
 use serde::de::DeserializeOwned;
 use settings::{
-    AgentConfiguration, DisplayConfiguration, EnabledPoliciesConfiguration,
+    AgentConfiguration, AudioPolicyConfig, DisplayConfiguration, EnabledPoliciesConfiguration,
     EnabledServicesConfiguration, InputConfiguration, LightHardwareConfiguration,
     LightSensorConfig, ServiceFlags,
 };
@@ -52,6 +52,10 @@ struct TestConfig {
     /// these configurations control which agents are enabled.
     #[argh(option, short = 'a')]
     agent_config: Vec<OsString>,
+
+    /// these configurations add audio policy transforms at build-time.
+    #[argh(option)]
+    audio_policy_config: Vec<OsString>,
 }
 
 fn read_config<C: DeserializeOwned>(path: &OsStr) -> Result<(), Error> {
@@ -99,6 +103,10 @@ fn main() -> Result<(), Error> {
 
     for config in test_config.agent_config.into_iter() {
         read_config::<AgentConfiguration>(&config)?;
+    }
+
+    for config in test_config.audio_policy_config.into_iter() {
+        read_config::<AudioPolicyConfig>(&config)?;
     }
 
     Ok(())

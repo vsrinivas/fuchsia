@@ -80,6 +80,7 @@ mod service;
 mod setup;
 pub mod task;
 
+pub use audio::policy::AudioPolicyConfig;
 pub use display::display_configuration::DisplayConfiguration;
 pub use display::LightSensorConfig;
 pub use input::input_device_configuration::InputConfiguration;

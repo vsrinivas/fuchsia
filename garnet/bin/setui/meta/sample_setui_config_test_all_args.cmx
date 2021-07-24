@@ -19,7 +19,9 @@
             "--light-hardware-config",
             "/pkg/data/light_hardware_configuration.json",
             "--agent-config",
-            "/pkg/data/agent_configuration.json"
+            "/pkg/data/agent_configuration.json",
+            "--audio-policy-config",
+            "/pkg/data/audio_policy_configuration.json"
         ],
         "binary": "bin/setui_config_test"
     }
