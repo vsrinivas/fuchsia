@@ -55,7 +55,8 @@ bool frame_contains(const frame_t& a, const frame_t& b) {
 
 // We allocate some variable sized stack allocations based on the number of
 // layers, so we limit the total number of layers to prevent blowing the stack.
-static constexpr uint64_t kMaxLayers = 65536;
+constexpr uint64_t kMaxLayers = 65536;
+
 }  // namespace
 
 namespace display {
