@@ -196,7 +196,7 @@ class Device final : public DdkDeviceType,
   std::deque<zx_koid_t> unfound_token_koids_ __TA_GUARDED(*loop_checker_);
 
   // This map contains all registered memory allocators.
-  std::map<fuchsia_sysmem2::wire::HeapType, std::unique_ptr<MemoryAllocator>> allocators_
+  std::map<fuchsia_sysmem2::wire::HeapType, std::shared_ptr<MemoryAllocator>> allocators_
       __TA_GUARDED(*loop_checker_);
 
   // Some memory allocators need to be registered with properties before

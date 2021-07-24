@@ -12,8 +12,8 @@
 namespace sysmem_driver {
 class ExternalMemoryAllocator : public MemoryAllocator {
  public:
-  ExternalMemoryAllocator(MemoryAllocator::Owner* owner, fidl::Client<fuchsia_sysmem2::Heap> heap,
-                          std::unique_ptr<async::Wait> wait_for_close,
+  ExternalMemoryAllocator(MemoryAllocator::Owner* owner,
+                          fidl::WireSharedClient<fuchsia_sysmem2::Heap> heap,
                           fuchsia_sysmem2::wire::HeapProperties properties);
 
   ~ExternalMemoryAllocator() override;
@@ -27,8 +27,7 @@ class ExternalMemoryAllocator : public MemoryAllocator {
 
  private:
   MemoryAllocator::Owner* owner_;
-  fidl::Client<fuchsia_sysmem2::Heap> heap_;
-  std::unique_ptr<async::Wait> wait_for_close_;
+  fidl::WireSharedClient<fuchsia_sysmem2::Heap> heap_;
 
   // From parent vmo handle to ID.
   std::map<zx_handle_t, uint64_t> allocations_;

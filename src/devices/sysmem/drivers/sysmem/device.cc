@@ -510,70 +510,62 @@ zx_status_t Device::SysmemRegisterHeap(uint64_t heap_param, zx::channel heap_con
   }
   auto heap = static_cast<fuchsia_sysmem2::wire::HeapType>(heap_param);
 
-  return async::PostTask(loop_.dispatcher(), [this, heap,
-                                              heap_connection =
-                                                  std::move(heap_connection)]() mutable {
-    std::lock_guard checker(*loop_checker_);
-    table_set_.MitigateChurn();
-    // Clean up heap allocator after peer closed channel.
-    auto wait_for_close = std::make_unique<async::Wait>(
-        heap_connection.get(), ZX_CHANNEL_PEER_CLOSED, 0,
-        async::Wait::Handler([this, heap](async_dispatcher_t* dispatcher, async::Wait* wait,
-                                          zx_status_t status, const zx_packet_signal_t* signal) {
-          std::lock_guard checker(*loop_checker_);
-          allocators_.erase(heap);
-        }));
-    // It is safe to call Begin() here before adding entry to the map as
-    // handler will run on current thread.
-    zx_status_t status = wait_for_close->Begin(dispatcher());
-    if (status != ZX_OK) {
-      DRIVER_ERROR("Device::RegisterHeap() failed wait_for_close->Begin()");
-      return;
+  class EventHandler : public fidl::WireAsyncEventHandler<fuchsia_sysmem2::Heap> {
+   public:
+    void OnRegister(fidl::WireResponse<fuchsia_sysmem2::Heap::OnRegister>* event) override {
+      std::lock_guard checker(*device_->loop_checker_);
+      // A heap should not be registered twice.
+      ZX_DEBUG_ASSERT(heap_client_.is_valid());
+      // This replaces any previously registered allocator for heap. This
+      // behavior is preferred as it avoids a potential race-condition during
+      // heap restart.
+      auto allocator = std::make_shared<ExternalMemoryAllocator>(
+          device_, std::move(heap_client_),
+          sysmem::V2CloneHeapProperties(device_->table_set_.allocator(), event->properties));
+      weak_associated_allocator_ = allocator;
+      device_->allocators_[heap_] = std::move(allocator);
     }
 
-    class EventHandler : public fidl::WireAsyncEventHandler<fuchsia_sysmem2::Heap> {
-     public:
-      EventHandler(Device* device, std::unique_ptr<fidl::Client<fuchsia_sysmem2::Heap>> heap_client,
-                   fuchsia_sysmem2::wire::HeapType heap,
-                   std::unique_ptr<async::Wait> wait_for_close)
-          : device_(device),
-            heap_client_(std::move(heap_client)),
-            heap_(heap),
-            wait_for_close_(std::move(wait_for_close)) {}
-
-      void OnRegister(fidl::WireResponse<fuchsia_sysmem2::Heap::OnRegister>* event) override {
-        std::lock_guard checker(*device_->loop_checker_);
-        // A heap should not be registered twice.
-        ZX_DEBUG_ASSERT(heap_client_);
-        // This replaces any previously registered allocator for heap (also cancels the old
-        // wait). This behavior is preferred as it avoids a potential race-condition during
-        // heap restart.
-        device_->allocators_[heap_] = std::make_unique<ExternalMemoryAllocator>(
-            device_, std::move(*heap_client_), std::move(wait_for_close_),
-            sysmem::V2CloneHeapProperties(device_->table_set_.allocator(), event->properties));
+    void on_fidl_error(fidl::UnbindInfo info) override {
+      if (info.reason() != fidl::Reason::kPeerClosed) {
+        DRIVER_ERROR("Heap failed: %s\n", info.FormatDescription().c_str());
       }
+    }
 
-      void Unbound(fidl::UnbindInfo info) override {
-        std::lock_guard checker(*device_->loop_checker_);
-        if (info.reason() != fidl::Reason::kPeerClosed && info.reason() != fidl::Reason::kClose) {
-          DRIVER_ERROR("Heap failed: %s\n", info.FormatDescription().c_str());
-          device_->allocators_.erase(heap_);
-        }
-      }
+    // Clean up heap allocator after |heap_client_| tears down, but only if the
+    // heap allocator for this |heap_| is still associated with this handler via
+    // |weak_associated_allocator_|.
+    ~EventHandler() override {
+      std::lock_guard checker(*device_->loop_checker_);
+      auto existing = device_->allocators_.find(heap_);
+      if (existing != device_->allocators_.end() &&
+          existing->second == weak_associated_allocator_.lock())
+        device_->allocators_.erase(heap_);
+    }
 
-     private:
-      Device* const device_;
-      std::unique_ptr<fidl::Client<fuchsia_sysmem2::Heap>> heap_client_;
-      const fuchsia_sysmem2::wire::HeapType heap_;
-      std::unique_ptr<async::Wait> wait_for_close_;
-    };
+    static void Bind(Device* device, fidl::ClientEnd<fuchsia_sysmem2::Heap> heap_client_end,
+                     fuchsia_sysmem2::wire::HeapType heap) {
+      auto event_handler = std::unique_ptr<EventHandler>(new EventHandler(device, heap));
+      event_handler->heap_client_.Bind(std::move(heap_client_end), device->dispatcher(),
+                                       std::move(event_handler));
+    }
 
-    auto heap_client = std::make_unique<fidl::Client<fuchsia_sysmem2::Heap>>();
-    auto heap_client_ptr = heap_client.get();
-    heap_client_ptr->Bind(std::move(heap_connection), loop_.dispatcher(),
-                          std::make_shared<EventHandler>(this, std::move(heap_client), heap,
-                                                         std::move(wait_for_close)));
-  });
+   private:
+    EventHandler(Device* device, fuchsia_sysmem2::wire::HeapType heap)
+        : device_(device), heap_(heap) {}
+
+    Device* const device_;
+    fidl::WireSharedClient<fuchsia_sysmem2::Heap> heap_client_;
+    const fuchsia_sysmem2::wire::HeapType heap_;
+    std::weak_ptr<ExternalMemoryAllocator> weak_associated_allocator_;
+  };
+
+  return async::PostTask(loop_.dispatcher(),
+                         [this, heap, heap_connection = std::move(heap_connection)]() mutable {
+                           std::lock_guard checker(*loop_checker_);
+                           table_set_.MitigateChurn();
+                           EventHandler::Bind(this, std::move(heap_connection), heap);
+                         });
 }
 
 zx_status_t Device::SysmemRegisterSecureMem(zx::channel secure_mem_connection) {

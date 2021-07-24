@@ -10,13 +10,9 @@
 
 namespace sysmem_driver {
 ExternalMemoryAllocator::ExternalMemoryAllocator(MemoryAllocator::Owner* owner,
-                                                 fidl::Client<fuchsia_sysmem2::Heap> heap,
-                                                 std::unique_ptr<async::Wait> wait_for_close,
+                                                 fidl::WireSharedClient<fuchsia_sysmem2::Heap> heap,
                                                  fuchsia_sysmem2::wire::HeapProperties properties)
-    : MemoryAllocator(owner->table_set(), std::move(properties)),
-      owner_(owner),
-      heap_(std::move(heap)),
-      wait_for_close_(std::move(wait_for_close)) {
+    : MemoryAllocator(owner->table_set(), properties), owner_(owner), heap_(std::move(heap)) {
   node_ = owner->heap_node()->CreateChild(
       fbl::StringPrintf("ExternalMemoryAllocator-%ld", id()).c_str());
   node_.CreateUint("id", id(), &properties_);
