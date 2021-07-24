@@ -20,9 +20,18 @@ protocol Counter {
     });
     /// Connects `request` to a service found at `path`.
     ///
-    /// `path` is the absolute path from the server's namespace.
+    /// + request `path` is the absolute path from the server's namespace.
+    /// + request `request` is the server end channel to the service.
     ConnectToServiceAt(resource struct {
         path string:fuchsia.component.MAX_PATH_LENGTH;
         request zx.handle:CHANNEL;
     });
+    /// Opens the directory found at `path`.
+    ///
+    /// + request `path` is the absolute path from the server's namespace.
+    /// * error `ZX_ERR_NOT_FOUND` if the directory at `path` is not in the server's namespace.
+    /// * error `ZX_ERR_IO` if there is some other unspecified error during I/O.
+    OpenStorageAt(struct {
+        path string:fuchsia.component.MAX_PATH_LENGTH;
+    }) -> (struct {}) error zx.status;
 };

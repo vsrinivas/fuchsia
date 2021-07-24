@@ -30,6 +30,26 @@ type ChildDep = table {
     2: capability ExposedCapability;
 };
 
+/// A storage capability variant specifying the type of storage the component
+/// has access to.
+type StorageVariant = strict enum: uint8 {
+    /// The `data` storage capability variant.
+    DATA = 0;
+};
+
+/// A dependency of one child component on a storage capability offered by
+/// netemul.
+type StorageDep = table {
+    /// The variant of the storage capability.
+    ///
+    /// Required.
+    1: variant StorageVariant;
+    /// The path at which the storage capability will be offered.
+    ///
+    /// Required.
+    2: path string:fuchsia.component.MAX_PATH_LENGTH;
+};
+
 /// A capability to be offered to a child component in a [`ManagedRealm`].
 type Capability = strict union {
     /// The `devfs` instance offered by netemul, where virtual devices are
@@ -49,6 +69,8 @@ type Capability = strict union {
     /// A dependency on a capability exposed by another child component in the
     /// same test realm.
     5: child_dep ChildDep;
+    /// A dependency on a storage capability offered by netemul.
+    6: storage_dep StorageDep;
 };
 
 /// The capabilities used by a child component in a [`ManagedRealm`].

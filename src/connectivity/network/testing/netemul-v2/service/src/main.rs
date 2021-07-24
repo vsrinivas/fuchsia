@@ -55,11 +55,15 @@ enum CreateRealmError {
     #[error("capability name not provided")]
     CapabilityNameNotProvided,
     #[error("duplicate capability '{0}' used by component '{1}'")]
-    DuplicateCapabilityUse(Cow<'static, str>, String),
+    DuplicateCapabilityUse(String, String),
     #[error("cannot modify program arguments of component without a program: '{0}'")]
     ModifiedNonexistentProgram(String),
     #[error("realm builder error: {0:?}")]
     RealmBuilderError(#[from] fcomponent::error::Error),
+    #[error("storage capability variant not provided")]
+    StorageCapabilityVariantNotProvided,
+    #[error("storage capability path not provided")]
+    StorageCapabilityPathNotProvided,
 }
 
 impl Into<zx::Status> for CreateRealmError {
@@ -73,9 +77,35 @@ impl Into<zx::Status> for CreateRealmError {
             | CreateRealmError::ModifiedNonexistentProgram(_)
             | CreateRealmError::RealmBuilderError(fcomponent::error::Error::FailedToRoute(
                 frealmbuilder::RealmBuilderError::MissingRouteSource,
-            )) => zx::Status::INVALID_ARGS,
+            ))
+            | CreateRealmError::StorageCapabilityVariantNotProvided
+            | CreateRealmError::StorageCapabilityPathNotProvided => zx::Status::INVALID_ARGS,
             CreateRealmError::RealmBuilderError(_) => zx::Status::INTERNAL,
         }
+    }
+}
+
+struct StorageVariant(fnetemul::StorageVariant);
+
+impl std::fmt::Display for StorageVariant {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let v = match self {
+            Self(fnetemul::StorageVariant::Data) => "data",
+        };
+        write!(f, "{}", v)
+    }
+}
+
+#[derive(Debug, Eq, Hash, PartialEq)]
+enum UniqueCapability<'a> {
+    DevFs,
+    Protocol { proto_name: Cow<'a, str> },
+    Storage { mount_path: Cow<'a, str> },
+}
+
+impl<'a> UniqueCapability<'a> {
+    fn new_protocol<P: DiscoverableProtocolMarker>() -> Self {
+        Self::Protocol { proto_name: P::PROTOCOL_NAME.into() }
     }
 }
 
@@ -169,25 +199,27 @@ async fn create_realm_instance(
                 ChildUses::Capabilities(caps) => {
                     // TODO(https://github.com/rust-lang/rust/issues/60896): use std's HashSet.
                     type HashSet<T> = HashMap<T, ()>;
-                    let mut unique_caps: HashSet<Cow<'_, _>> = HashSet::new();
+                    let mut unique_caps = HashSet::new();
                     for cap in caps {
                         // TODO(https://fxbug.dev/77069): consider introducing an abstraction here
                         // over the (fnetemul::Capability, CapabilityRoute, String) triple that is
                         // defined here for each of the built-in netemul capabilities, corresponding
                         // to their FIDL representation, routing logic, and capability name.
-                        let service_name = match cap {
+                        let cap = match cap {
                             fnetemul::Capability::NetemulDevfs(fnetemul::Empty {}) => {
                                 let () = route_devfs_to_component(&mut builder, &name)?;
-                                DEVFS.into()
+                                UniqueCapability::DevFs
                             }
                             fnetemul::Capability::NetemulSyncManager(fnetemul::Empty {}) => todo!(),
                             fnetemul::Capability::NetemulNetworkContext(fnetemul::Empty {}) => {
                                 let () = route_network_context_to_component(&mut builder, &name)?;
-                                fnetemul_network::NetworkContextMarker::PROTOCOL_NAME.into()
+                                UniqueCapability::new_protocol::<
+                                    fnetemul_network::NetworkContextMarker,
+                                >()
                             }
                             fnetemul::Capability::LogSink(fnetemul::Empty {}) => {
                                 let () = route_log_sink_to_component(&mut builder, &name)?;
-                                flogger::LogSinkMarker::PROTOCOL_NAME.into()
+                                UniqueCapability::new_protocol::<flogger::LogSinkMarker>()
                             }
                             fnetemul::Capability::ChildDep(fnetemul::ChildDep {
                                 name: source,
@@ -208,14 +240,34 @@ async fn create_realm_instance(
                                     source: RouteEndpoint::component(source),
                                     targets: vec![RouteEndpoint::component(&name)],
                                 });
-                                capability.into()
+                                UniqueCapability::Protocol { proto_name: capability.into() }
+                            }
+                            fnetemul::Capability::StorageDep(fnetemul::StorageDep {
+                                variant,
+                                path,
+                                ..
+                            }) => {
+                                let variant = variant
+                                    .ok_or(CreateRealmError::StorageCapabilityVariantNotProvided)?;
+                                let variant = StorageVariant(variant);
+                                let mount_path =
+                                    path.ok_or(CreateRealmError::StorageCapabilityPathNotProvided)?;
+                                let _: &mut RealmBuilder = builder.add_route(CapabilityRoute {
+                                    capability: Capability::storage(
+                                        variant.to_string(),
+                                        mount_path.to_string(),
+                                    ),
+                                    source: RouteEndpoint::AboveRoot,
+                                    targets: vec![RouteEndpoint::component(&name)],
+                                })?;
+                                UniqueCapability::Storage { mount_path: mount_path.into() }
                             }
                         };
-                        match unique_caps.entry(service_name) {
+                        match unique_caps.entry(cap) {
                             Entry::Occupied(entry) => {
-                                let (service_name, ()) = entry.remove_entry();
+                                let (cap, ()) = entry.remove_entry();
                                 return Err(CreateRealmError::DuplicateCapabilityUse(
-                                    service_name,
+                                    format!("{:?}", cap),
                                     name,
                                 ));
                             }
@@ -317,6 +369,8 @@ async fn create_realm_instance(
                 }
                 *dependency_type = cm_rust::DependencyType::Weak;
             }
+            // Storage declarations do not support weak dependencies.
+            cm_rust::OfferDecl::Storage(cm_rust::OfferStorageDecl { .. }) => (),
             offer => {
                 error!(
                     "unexpected type of capability offer from the root of the managed realm; found \
@@ -744,8 +798,9 @@ mod tests {
     use super::*;
     use {
         fidl::endpoints::Proxy as _, fidl_fuchsia_device as fdevice,
-        fidl_fuchsia_netemul as fnetemul, fidl_fuchsia_netemul_test::CounterMarker,
-        fixture::fixture, fuchsia_vfs_watcher as fvfs_watcher, std::convert::TryFrom as _,
+        fidl_fuchsia_netemul as fnetemul, fidl_fuchsia_netemul_test as fnetemul_test,
+        fidl_fuchsia_netemul_test::CounterMarker, fixture::fixture,
+        fuchsia_vfs_watcher as fvfs_watcher, std::convert::TryFrom as _,
     };
 
     // We can't just use a counter for the sandbox identifier, as we do in `main`, because tests
@@ -801,6 +856,9 @@ mod tests {
 
     const COUNTER_COMPONENT_NAME: &str = "counter";
     const COUNTER_PACKAGE_URL: &str = "fuchsia-pkg://fuchsia.com/netemul-v2-tests#meta/counter.cm";
+    const COUNTER_A_SERVICE_NAME: &str = "fuchsia.netemul.test.CounterA";
+    const COUNTER_B_SERVICE_NAME: &str = "fuchsia.netemul.test.CounterB";
+    const DATA_PATH: &str = "/data";
 
     fn counter_component() -> fnetemul::ChildDef {
         fnetemul::ChildDef {
@@ -1501,6 +1559,38 @@ mod tests {
                 epitaph: zx::Status::INVALID_ARGS,
             },
             TestCase {
+                name: "child depends on storage without variant",
+                children: vec![fnetemul::ChildDef {
+                    name: Some(COUNTER_COMPONENT_NAME.to_string()),
+                    url: Some(COUNTER_PACKAGE_URL.to_string()),
+                    uses: Some(fnetemul::ChildUses::Capabilities(vec![
+                        fnetemul::Capability::StorageDep(fnetemul::StorageDep {
+                            variant: None,
+                            path: Some(DATA_PATH.to_string()),
+                            ..fnetemul::StorageDep::EMPTY
+                        }),
+                    ])),
+                    ..fnetemul::ChildDef::EMPTY
+                }],
+                epitaph: zx::Status::INVALID_ARGS,
+            },
+            TestCase {
+                name: "child depends on storage without path",
+                children: vec![fnetemul::ChildDef {
+                    name: Some(COUNTER_COMPONENT_NAME.to_string()),
+                    url: Some(COUNTER_PACKAGE_URL.to_string()),
+                    uses: Some(fnetemul::ChildUses::Capabilities(vec![
+                        fnetemul::Capability::StorageDep(fnetemul::StorageDep {
+                            variant: Some(fnetemul::StorageVariant::Data),
+                            path: None,
+                            ..fnetemul::StorageDep::EMPTY
+                        }),
+                    ])),
+                    ..fnetemul::ChildDef::EMPTY
+                }],
+                epitaph: zx::Status::INVALID_ARGS,
+            },
+            TestCase {
                 name: "duplicate components",
                 children: vec![
                     fnetemul::ChildDef {
@@ -1515,6 +1605,27 @@ mod tests {
                     },
                 ],
                 epitaph: zx::Status::INTERNAL,
+            },
+            TestCase {
+                name: "storage capabilities use duplicate paths",
+                children: vec![fnetemul::ChildDef {
+                    name: Some(COUNTER_COMPONENT_NAME.to_string()),
+                    url: Some(COUNTER_PACKAGE_URL.to_string()),
+                    uses: Some(fnetemul::ChildUses::Capabilities(vec![
+                        fnetemul::Capability::StorageDep(fnetemul::StorageDep {
+                            variant: Some(fnetemul::StorageVariant::Data),
+                            path: Some(DATA_PATH.to_string()),
+                            ..fnetemul::StorageDep::EMPTY
+                        }),
+                        fnetemul::Capability::StorageDep(fnetemul::StorageDep {
+                            variant: Some(fnetemul::StorageVariant::Data),
+                            path: Some(DATA_PATH.to_string()),
+                            ..fnetemul::StorageDep::EMPTY
+                        }),
+                    ])),
+                    ..fnetemul::ChildDef::EMPTY
+                }],
+                epitaph: zx::Status::INVALID_ARGS,
             },
             // TODO(https://fxbug.dev/72043): once we allow duplicate services, verify that a child
             // exposing duplicate services results in a ZX_ERR_INTERNAL epitaph.
@@ -1553,8 +1664,6 @@ mod tests {
     #[fixture(with_sandbox)]
     #[fuchsia::test]
     async fn child_dep(sandbox: fnetemul::SandboxProxy) {
-        const COUNTER_A_SERVICE_NAME: &str = "fuchsia.netemul.test.CounterA";
-        const COUNTER_B_SERVICE_NAME: &str = "fuchsia.netemul.test.CounterB";
         let TestRealm { realm } = TestRealm::new(
             &sandbox,
             fnetemul::RealmOptions {
@@ -1917,5 +2026,63 @@ mod tests {
                 .expect("failed to get topological path");
             assert_eq!(path, format_topological_path(backing, &name));
         }
+    }
+
+    #[fixture(with_sandbox)]
+    #[fuchsia::test]
+    async fn storage_used_by_child(sandbox: fnetemul::SandboxProxy) {
+        fn connect_to_counter(
+            realm: &fnetemul::ManagedRealmProxy,
+            name: &str,
+        ) -> fnetemul_test::CounterProxy {
+            let (counter, server_end) = fidl::endpoints::create_proxy::<CounterMarker>()
+                .expect("failed to create counter proxy");
+            let () = realm
+                .connect_to_service(name, None, server_end.into_channel())
+                .expect("failed to connect to counter service");
+            counter
+        }
+        const COUNTER_WITH_STORAGE: &str = "counter-with-storage";
+        const COUNTER_WITHOUT_STORAGE: &str = "counter-without-storage";
+        const COUNTER_STORAGE_URL: &str =
+            "fuchsia-pkg://fuchsia.com/netemul-v2-tests#meta/counter_storage.cm";
+        let TestRealm { realm } = TestRealm::new(
+            &sandbox,
+            RealmOptions {
+                children: Some(vec![
+                    fnetemul::ChildDef {
+                        url: Some(COUNTER_STORAGE_URL.to_string()),
+                        name: Some(COUNTER_WITH_STORAGE.to_string()),
+                        exposes: Some(vec![COUNTER_A_SERVICE_NAME.to_string()]),
+                        uses: Some(fnetemul::ChildUses::Capabilities(vec![
+                            fnetemul::Capability::LogSink(fnetemul::Empty {}),
+                            fnetemul::Capability::StorageDep(fnetemul::StorageDep {
+                                variant: Some(fnetemul::StorageVariant::Data),
+                                path: Some(String::from(DATA_PATH)),
+                                ..fnetemul::StorageDep::EMPTY
+                            }),
+                        ])),
+                        ..fnetemul::ChildDef::EMPTY
+                    },
+                    fnetemul::ChildDef {
+                        url: Some(COUNTER_PACKAGE_URL.to_string()),
+                        name: Some(COUNTER_WITHOUT_STORAGE.to_string()),
+                        exposes: Some(vec![COUNTER_B_SERVICE_NAME.to_string()]),
+                        uses: Some(fnetemul::ChildUses::Capabilities(vec![
+                            fnetemul::Capability::LogSink(fnetemul::Empty {}),
+                        ])),
+                        ..fnetemul::ChildDef::EMPTY
+                    },
+                ]),
+                ..fnetemul::RealmOptions::EMPTY
+            },
+        );
+        let counter_storage = connect_to_counter(&realm, COUNTER_A_SERVICE_NAME);
+        let counter_without_storage = connect_to_counter(&realm, COUNTER_B_SERVICE_NAME);
+        assert_eq!(counter_storage.open_storage_at(DATA_PATH).await.unwrap(), Ok(()));
+        assert_eq!(
+            counter_without_storage.open_storage_at(DATA_PATH).await.unwrap(),
+            Err(fuchsia_zircon::Status::NOT_FOUND.into_raw())
+        )
     }
 }

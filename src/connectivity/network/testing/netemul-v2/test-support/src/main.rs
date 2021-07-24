@@ -65,6 +65,29 @@ async fn handle_counter(
                         error!("error connecting request to service at path '{}': {:?}", path, e,)
                     });
                 }
+                CounterRequest::OpenStorageAt { path, responder } => {
+                    info!("opening directory at '{}'", path);
+                    match std::fs::read_dir("/data") {
+                        Ok(std::fs::ReadDir { .. }) => responder
+                            .send(&mut Ok(()))
+                            .unwrap_or_else(|e| error!("error sending response: {:?}", e)),
+                        Err(e) => {
+                            let status = match e.kind() {
+                                std::io::ErrorKind::NotFound | std::io::ErrorKind::BrokenPipe => {
+                                    info!("failed to open directory at '{}': {:?}", path, e);
+                                    fuchsia_zircon::Status::NOT_FOUND
+                                }
+                                _ => {
+                                    error!("failed to open directory at '{}': {:?}", path, e);
+                                    fuchsia_zircon::Status::IO
+                                }
+                            };
+                            let () = responder
+                                .send(&mut Err(status.into_raw()))
+                                .unwrap_or_else(|e| error!("error sending response: {:?}", e));
+                        }
+                    }
+                }
             }
             Ok(())
         })

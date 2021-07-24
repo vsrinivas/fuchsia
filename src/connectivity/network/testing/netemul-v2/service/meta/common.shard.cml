@@ -38,5 +38,10 @@
             from: "#network-tun",
             to: "#netemul",
         },
+        {
+            storage: "data",
+            from: "parent",
+            to: "#netemul",
+        },
     ],
 }

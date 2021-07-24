@@ -23,5 +23,10 @@
             from: "parent",
             to: [ "#sandbox" ],
         },
+        {
+            storage: "data",
+            from: "parent",
+            to: [ "#sandbox" ],
+        },
     ],
 }
