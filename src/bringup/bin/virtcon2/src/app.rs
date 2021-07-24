@@ -11,7 +11,8 @@ use {
     crate::view::{EventProxy, ViewMessages, VirtualConsoleViewAssistant},
     anyhow::Error,
     carnelian::{
-        drawing::DisplayRotation, make_message, AppAssistant, AppContext, ViewAssistantPtr, ViewKey,
+        app::Config, drawing::DisplayRotation, make_message, AppAssistant, AppContext,
+        ViewAssistantPtr, ViewKey,
     },
     fidl::endpoints::ProtocolMarker,
     fidl_fuchsia_virtualconsole::SessionManagerMarker,
@@ -180,6 +181,10 @@ impl AppAssistant for VirtualConsoleAppAssistant {
 
     fn get_keymap_name(&self) -> Option<String> {
         Some(self.args.keymap.clone())
+    }
+
+    fn filter_config(&mut self, config: &mut Config) {
+        config.keyboard_autorepeat = self.args.keyrepeat;
     }
 }
 

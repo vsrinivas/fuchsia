@@ -17,6 +17,7 @@ pub const MAX_FONT_SIZE: f32 = 150.0;
 pub struct VirtualConsoleArgs {
     pub disable: bool,
     pub keep_log_visible: bool,
+    pub keyrepeat: bool,
     pub rounded_corners: bool,
     pub boot_animation: bool,
     pub color_scheme: ColorScheme,
@@ -31,19 +32,22 @@ impl VirtualConsoleArgs {
         let mut bool_keys = [
             BoolPair { key: "virtcon.disable".to_string(), defaultval: false },
             BoolPair { key: "virtcon.keep-log-visible".to_string(), defaultval: false },
+            BoolPair { key: "virtcon.keyrepeat".to_string(), defaultval: true },
             BoolPair { key: "virtcon.rounded_corners".to_string(), defaultval: false },
             BoolPair { key: "virtcon.boot_animation".to_string(), defaultval: false },
         ];
         let bool_key_refs: Vec<_> = bool_keys.iter_mut().collect();
         let mut disable = false;
         let mut keep_log_visible = false;
+        let mut keyrepeat = true;
         let mut rounded_corners = false;
         let mut boot_animation = false;
         if let Ok(values) = boot_args.get_bools(&mut bool_key_refs.into_iter()).await {
             disable = values[0];
             keep_log_visible = values[1];
-            rounded_corners = values[2];
-            boot_animation = values[3];
+            keyrepeat = values[2];
+            rounded_corners = values[3];
+            boot_animation = values[4];
         }
 
         let string_keys = vec![
@@ -86,6 +90,7 @@ impl VirtualConsoleArgs {
         Ok(VirtualConsoleArgs {
             disable,
             keep_log_visible,
+            keyrepeat,
             rounded_corners,
             boot_animation,
             color_scheme,
@@ -184,6 +189,27 @@ mod tests {
         let proxy = serve_bootargs(vars)?;
         let args = VirtualConsoleArgs::new_with_proxy(proxy).await?;
         assert_eq!(args.keep_log_visible, false);
+
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn check_keyrepeat() -> Result<(), Error> {
+        let vars: HashMap<String, String> = [("virtcon.keyrepeat", "true")]
+            .iter()
+            .map(|(a, b)| (a.to_string(), b.to_string()))
+            .collect();
+        let proxy = serve_bootargs(vars)?;
+        let args = VirtualConsoleArgs::new_with_proxy(proxy).await?;
+        assert_eq!(args.keyrepeat, true);
+
+        let vars: HashMap<String, String> = [("virtcon.keyrepeat", "false")]
+            .iter()
+            .map(|(a, b)| (a.to_string(), b.to_string()))
+            .collect();
+        let proxy = serve_bootargs(vars)?;
+        let args = VirtualConsoleArgs::new_with_proxy(proxy).await?;
+        assert_eq!(args.keyrepeat, false);
 
         Ok(())
     }
