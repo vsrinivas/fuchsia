@@ -270,6 +270,7 @@ impl<A: IpAddress> Conn<A> {
 }
 
 /// Information associated with a UDP connection.
+#[derive(Debug)]
 pub struct UdpConnInfo<A: IpAddress> {
     /// The local address associated with a UDP connection.
     pub local_ip: SpecifiedAddr<A>,
@@ -697,7 +698,19 @@ pub fn send_udp<I: IpExt, B: BufferMut, C: BufferUdpContext<I, B>>(
 
     // Not using `?` here since we need to `remove_udp_conn` even in the case of failure.
     let ret = send_udp_conn(ctx, tmp_conn, body).map_err(NetstackError::SendUdp);
-    remove_udp_conn(ctx, tmp_conn);
+    let info = remove_udp_conn(ctx, tmp_conn);
+    if cfg!(debug_assertions) {
+        matches::assert_matches!(info, UdpConnInfo {
+            local_ip: removed_local_ip,
+            local_port: removed_local_port,
+            remote_ip: removed_remote_ip,
+            remote_port: removed_remote_port,
+        } if local_ip.map(|local_ip| local_ip == removed_local_ip).unwrap_or(true) &&
+            local_port.map(|local_port| local_port == removed_local_port).unwrap_or(true) &&
+            removed_remote_ip == remote_ip && removed_remote_port == remote_port &&
+            removed_remote_port == remote_port && removed_remote_port == remote_port
+        );
+    }
 
     ret
 }
@@ -1444,7 +1457,7 @@ mod tests {
         let local_ip = local_ip::<I>();
         // Exhaust local ports to trigger FailedToAllocateLocalPort error.
         for port_num in UdpConnectionState::<I>::EPHEMERAL_RANGE {
-            DualStateContext::<UdpState<I>, _>::get_first_state_mut(&mut ctx)
+            let _: usize = DualStateContext::<UdpState<I>, _>::get_first_state_mut(&mut ctx)
                 .conn_state
                 .listeners
                 .insert(vec![Listener {
@@ -1938,16 +1951,32 @@ mod tests {
         // Create some listeners and connections.
 
         // Wildcard listeners
-        listen_udp::<I, _>(&mut ctx, None, Some(pa)).expect("listen_udp failed");
-        listen_udp::<I, _>(&mut ctx, None, Some(pb)).expect("listen_udp failed");
+        assert_eq!(
+            listen_udp::<I, _>(&mut ctx, None, Some(pa)),
+            Ok(UdpListenerId::new_wildcard(0))
+        );
+        assert_eq!(
+            listen_udp::<I, _>(&mut ctx, None, Some(pb)),
+            Ok(UdpListenerId::new_wildcard(1))
+        );
         // Specified address listeners
-        listen_udp::<I, _>(&mut ctx, Some(local_ip), Some(pc)).expect("listen_udp failed");
-        listen_udp::<I, _>(&mut ctx, Some(local_ip_2), Some(pd)).expect("listen_udp failed");
+        assert_eq!(
+            listen_udp::<I, _>(&mut ctx, Some(local_ip), Some(pc)),
+            Ok(UdpListenerId::new_specified(0))
+        );
+        assert_eq!(
+            listen_udp::<I, _>(&mut ctx, Some(local_ip_2), Some(pd)),
+            Ok(UdpListenerId::new_specified(1))
+        );
         // Connections
-        connect_udp::<I, _>(&mut ctx, Some(local_ip), Some(pe), remote_ip, remote_port)
-            .expect("connect_udp failed");
-        connect_udp::<I, _>(&mut ctx, Some(local_ip_2), Some(pf), remote_ip, remote_port)
-            .expect("connect_udp failed");
+        assert_eq!(
+            connect_udp::<I, _>(&mut ctx, Some(local_ip), Some(pe), remote_ip, remote_port),
+            Ok(UdpConnId::new(0))
+        );
+        assert_eq!(
+            connect_udp::<I, _>(&mut ctx, Some(local_ip_2), Some(pf), remote_ip, remote_port),
+            Ok(UdpConnId::new(1))
+        );
 
         let conn_state = &DualStateContext::<UdpState<I>, _>::get_first_state(&ctx).conn_state;
 

@@ -55,6 +55,8 @@
 //!       connection will be accepted from a different interface. This is part
 //!       of the "weak host model" vs "strong host model" discussion.
 
+#![deny(unused_results)]
+
 pub(crate) mod udp;
 
 use alloc::collections::HashMap;
@@ -118,8 +120,8 @@ struct ListenerAddrMap<A> {
 impl<A: Eq + Hash + Clone> ListenerAddrMap<A> {
     fn insert(&mut self, addrs: Vec<A>) -> usize {
         let listener = self.listener_to_addrs.push(addrs.clone());
-        for addr in &addrs {
-            self.addr_to_listener.insert(addr.clone(), listener);
+        for addr in addrs.into_iter() {
+            assert_eq!(self.addr_to_listener.insert(addr, listener), None);
         }
         listener
     }
@@ -136,8 +138,8 @@ impl<A: Eq + Hash> ListenerAddrMap<A> {
 
     fn remove_by_listener(&mut self, listener: usize) -> Option<Vec<A>> {
         let addrs = self.listener_to_addrs.remove(listener)?;
-        for addr in &addrs {
-            self.addr_to_listener.remove(addr).unwrap();
+        for addr in addrs.iter() {
+            assert_eq!(self.addr_to_listener.remove(addr), Some(listener));
         }
         Some(addrs)
     }
@@ -168,7 +170,7 @@ pub(crate) struct ConnAddrMap<A, C = A> {
 impl<A: Eq + Hash + Clone, C> ConnAddrMap<A, C> {
     pub(crate) fn insert(&mut self, addr: A, conn: C) -> usize {
         let id = self.id_to_conn.push(conn);
-        self.addr_to_id.insert(addr, id);
+        assert_eq!(self.addr_to_id.insert(addr, id), None);
         id
     }
 }
@@ -189,7 +191,7 @@ where
 {
     fn remove_by_id(&mut self, id: usize) -> Option<C> {
         let conn = self.id_to_conn.remove(id)?;
-        self.addr_to_id.remove(&(&conn).into()).unwrap();
+        assert_eq!(self.addr_to_id.remove(&(&conn).into()), Some(id));
         Some(conn)
     }
 
@@ -204,9 +206,9 @@ where
         &'a mut self,
         f: F,
     ) -> impl 'a + Iterator<Item = (usize, C, E)> {
-        let addr_to_id = &mut self.addr_to_id;
-        self.id_to_conn.update_retain(f).map(move |(id, conn, err)| {
-            addr_to_id.remove(&(&conn).into()).unwrap();
+        let Self { id_to_conn, addr_to_id } = self;
+        id_to_conn.update_retain(f).map(move |(id, conn, err)| {
+            assert_eq!(addr_to_id.remove(&(&conn).into()), Some(id));
             (id, conn, err)
         })
     }
