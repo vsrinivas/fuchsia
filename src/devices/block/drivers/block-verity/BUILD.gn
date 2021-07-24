@@ -180,12 +180,12 @@ test("block-verity-test") {
     "//sdk/fidl/fuchsia.hardware.block.verified:fuchsia.hardware.block.verified_llcpp",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//src/lib/digest",
+    "//src/storage/fvm:test_support",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/devmgr-launcher",
     "//zircon/system/ulib/driver-integration-test",
     "//zircon/system/ulib/fdio-caller",
-    "//zircon/system/ulib/fvm-devices",
     "//zircon/system/ulib/ramdevice-client",
   ]
 

@@ -270,7 +270,6 @@ group("deprecated_zx_wrapper_allowlist") {
     "//zircon/system/ulib/fs-test-utils/*",
     "//zircon/system/ulib/ftl-mtd/*",
     "//zircon/system/ulib/ftl/*",
-    "//zircon/system/ulib/fvm-devices/*",
     "//zircon/system/ulib/fzl/*",
     "//zircon/system/ulib/gfx-font-data/*",
     "//zircon/system/ulib/gfx/*",

@@ -7,10 +7,10 @@
 
 #include <vector>
 
-#include <fvm/test/device-ref.h>
 #include <zxtest/zxtest.h>
 
 #include "src/storage/fvm/format.h"
+#include "src/storage/fvm/test_support.h"
 
 namespace fvm {
 namespace {

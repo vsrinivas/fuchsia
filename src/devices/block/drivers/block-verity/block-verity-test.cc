@@ -18,11 +18,11 @@
 #include <cstdint>
 #include <utility>
 
-#include <fvm/test/device-ref.h>
 #include <ramdevice-client/ramdisk.h>
 #include <zxtest/zxtest.h>
 
 #include "constants.h"
+#include "src/storage/fvm/test_support.h"
 #include "verified-volume-client.h"
 
 namespace {

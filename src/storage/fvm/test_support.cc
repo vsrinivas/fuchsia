@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/storage/fvm/test_support.h"
+
 #include <errno.h>
 #include <fcntl.h>
 #include <fuchsia/device/llcpp/fidl.h>
@@ -22,7 +24,6 @@
 #include <string>
 
 #include <fs-management/fvm.h>
-#include <fvm/test/device-ref.h>
 #include <zxtest/zxtest.h>
 
 namespace fvm {

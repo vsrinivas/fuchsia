@@ -18,12 +18,12 @@ test("fvm-driver-integration") {
     "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_llcpp",
     "//src/devices/testing/no_ddk",
     "//src/lib/storage/fs_management",
+    "//src/storage/fvm:test_support",
     "//src/storage/fvm/driver:shared",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/devmgr-launcher",
     "//zircon/system/ulib/fdio-caller",
-    "//zircon/system/ulib/fvm-devices",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.

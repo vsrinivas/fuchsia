@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef FVM_TEST_DEVICE_REF_H_
-#define FVM_TEST_DEVICE_REF_H_
+#ifndef SRC_STORAGE_FVM_TEST_SUPPORT_H_
+#define SRC_STORAGE_FVM_TEST_SUPPORT_H_
 
 #include <fuchsia/hardware/block/volume/c/fidl.h>
 #include <lib/zx/channel.h>
@@ -262,4 +262,4 @@ bool IsConsistentAfterGrowth(const VolumeInfo& before, const VolumeInfo& after);
 
 }  // namespace fvm
 
-#endif  // FVM_TEST_DEVICE_REF_H_
+#endif  // SRC_STORAGE_FVM_TEST_SUPPORT_H_
