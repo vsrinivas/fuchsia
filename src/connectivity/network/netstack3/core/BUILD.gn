@@ -70,6 +70,8 @@ rustc_library("netstack3-core") {
     "src/transport/mod.rs",
     "src/transport/udp.rs",
   ]
+
+  configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
 fuchsia_unittest_package("unittest_package") {

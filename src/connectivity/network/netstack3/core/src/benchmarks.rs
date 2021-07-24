@@ -7,8 +7,6 @@
 //! This module contains end-to-end and other high-level benchmarks for the
 //! netstack.
 
-#![deny(unused_results)]
-
 use core::time::Duration;
 
 use net_types::ip::Ipv4;

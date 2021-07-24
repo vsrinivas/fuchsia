@@ -132,7 +132,6 @@ config("allow_unused_results") {
   #    --all=//build/config/rust:deny_unused_results \
   #    --allow=//build/config/rust:allow_unused_results \
   #    --ignore-suffix=-rustc,_banjo_rust
-  # TODO(https://fxbug.dev/73468): remove all references to src/connectivity/network and friends.
   visibility = [
     "//build/*",
     "//examples/*",
@@ -147,9 +146,8 @@ config("allow_unused_results") {
     "//src/connectivity/location/*",
     "//src/connectivity/lowpan/*",
     "//src/connectivity/management/*",
-    "//src/connectivity/network/net-cli/ffx/*",
+    "//src/connectivity/network/net-cli/ffx:*",
     "//src/connectivity/network/netstack:networking_metrics_rustlib",
-    "//src/connectivity/network/netstack3/core:*",
     "//src/connectivity/openthread/*",
     "//src/connectivity/overnet/*",
     "//src/connectivity/ppp/*",

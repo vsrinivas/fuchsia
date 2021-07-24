@@ -37,8 +37,6 @@
 //!
 //! [`ArpContext`]: crate::device::arp::ArpContext
 
-#![deny(unused_results)]
-
 use core::time::Duration;
 
 use packet::{BufferMut, Serializer};

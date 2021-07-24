@@ -4,8 +4,6 @@
 
 //! The device layer.
 
-#![deny(unused_results)]
-
 pub(crate) mod arp;
 pub(crate) mod ethernet;
 pub(crate) mod link;

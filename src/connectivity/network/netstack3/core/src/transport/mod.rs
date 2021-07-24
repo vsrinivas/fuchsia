@@ -55,8 +55,6 @@
 //!       connection will be accepted from a different interface. This is part
 //!       of the "weak host model" vs "strong host model" discussion.
 
-#![deny(unused_results)]
-
 pub(crate) mod udp;
 
 use alloc::collections::HashMap;

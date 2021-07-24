@@ -4,8 +4,6 @@
 
 //! The Internet Protocol, versions 4 and 6.
 
-#![deny(unused_results)]
-
 #[macro_use]
 pub(crate) mod path_mtu;
 

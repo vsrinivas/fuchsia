@@ -4,8 +4,6 @@
 
 //! Testing-related utilities.
 
-#![deny(unused_results)]
-
 use std::collections::{BinaryHeap, HashMap};
 use std::fmt::{self, Debug, Formatter};
 use std::hash::Hash;
