@@ -16,6 +16,7 @@ source_set("iwlwifi_sim_trans_ss") {
   testonly = true
 
   sources = [
+    "fake-ucode-capa-test.cc",
     "sim-default-nvm.cc",
     "sim-mvm.cc",
     "sim-nvm.cc",
