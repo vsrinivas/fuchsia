@@ -13,17 +13,13 @@ namespace fidl::fmt {
 
 std::optional<std::string> NewFormatter::Format(
     const fidl::SourceFile& source_file, const fidl::ExperimentalFlags& experimental_flags) const {
-  auto ast = Parse(source_file, experimental_flags);
-  if (ast == nullptr)
-    return std::nullopt;
-  return Print(ast, source_file.data().size());
-}
-
-std::unique_ptr<raw::File> NewFormatter::Parse(
-    const fidl::SourceFile& source_file, const fidl::ExperimentalFlags& experimental_flags) const {
   fidl::Lexer lexer(source_file, reporter_);
   fidl::Parser parser(&lexer, reporter_, experimental_flags);
-  return parser.Parse();
+  std::unique_ptr<raw::File> ast = parser.Parse();
+  if (parser.Success()) {
+    return Print(ast, source_file.data().size());
+  }
+  return std::nullopt;
 }
 
 std::string NewFormatter::Print(const std::unique_ptr<raw::File>& ast,

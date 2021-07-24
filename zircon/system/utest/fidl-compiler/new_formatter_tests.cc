@@ -16,9 +16,11 @@ std::string Format(const std::string& source, bool reformat_and_compare = true) 
   // and write.
   auto formatter = fidl::fmt::NewFormatter(40, lib.Reporter());
   auto result = formatter.Format(lib.source_file(), flags);
+
+  // If we're still going to reformat, then this is the first pass.  Otherwise, we're on the second
+  // pass.
   if (!result.has_value()) {
-    lib.PrintReports();
-    return reformat_and_compare ? "SECOND_PASS_PARSE_FAILED" : "PARSE_FAILED";
+    return reformat_and_compare ? "PARSE_FAILED" : "SECOND_PASS_PARSE_FAILED";
   }
 
   // Running the newly formatted output through the formatted another time tests that well-formatted
@@ -31,6 +33,20 @@ std::string Format(const std::string& source, bool reformat_and_compare = true) 
     return "FORMAT_PASSES_NOT_EQUAL";
   }
   return "\n" + result.value();
+}
+
+// Ensure that the formatter does not attempt to format unparsable FIDL.
+TEST(NewFormatterTests, BadErrorOnInvalidInput) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+
+type MyStruct = struct {
+  vector<bool> my_member;
+};
+)FIDL";
+
+  ASSERT_STR_EQ("PARSE_FAILED", Format(unformatted));
 }
 
 // Ensure that an already properly formatted alias declaration is not modified by another run
@@ -4183,7 +4199,7 @@ bool;
 // C11
 
 
-}
+};
 
    // C12
 
@@ -4227,7 +4243,7 @@ type // C8
 // C11
 
 
-}
+};
 
 // C12
 )FIDL";

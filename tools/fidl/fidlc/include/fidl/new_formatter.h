@@ -24,8 +24,6 @@ class NewFormatter final {
                                     const fidl::ExperimentalFlags& experimental_flags) const;
 
  private:
-  std::unique_ptr<raw::File> Parse(const fidl::SourceFile& source_file,
-                                   const fidl::ExperimentalFlags& experimental_flags) const;
   std::string Print(std::unique_ptr<raw::File> const& ast, size_t original_file_size) const;
 
   const size_t cols_;
