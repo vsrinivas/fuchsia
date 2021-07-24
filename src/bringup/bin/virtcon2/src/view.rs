@@ -437,97 +437,100 @@ impl VirtualConsoleViewAssistant {
         _context: &mut ViewAssistantContext,
         keyboard_event: &input::keyboard::Event,
     ) -> Result<bool, Error> {
-        if keyboard_event.phase == input::keyboard::Phase::Pressed {
-            let modifiers = &keyboard_event.modifiers;
-            match keyboard_event.code_point {
-                None => {
-                    const HID_USAGE_KEY_ESC: u32 = 0x29;
-                    const HID_USAGE_KEY_TAB: u32 = 0x2b;
-                    const HID_USAGE_KEY_F1: u32 = 0x3a;
-                    const HID_USAGE_KEY_F10: u32 = 0x43;
-                    const HID_USAGE_KEY_HOME: u32 = 0x4a;
-                    const HID_USAGE_KEY_PAGEUP: u32 = 0x4b;
-                    const HID_USAGE_KEY_END: u32 = 0x4d;
-                    const HID_USAGE_KEY_PAGEDOWN: u32 = 0x4e;
-                    const HID_USAGE_KEY_DOWN: u32 = 0x51;
-                    const HID_USAGE_KEY_UP: u32 = 0x52;
-                    const HID_USAGE_KEY_VOL_DOWN: u32 = 0xe8;
-                    const HID_USAGE_KEY_VOL_UP: u32 = 0xe9;
+        match keyboard_event.phase {
+            input::keyboard::Phase::Pressed | input::keyboard::Phase::Repeat => {
+                let modifiers = &keyboard_event.modifiers;
+                match keyboard_event.code_point {
+                    None => {
+                        const HID_USAGE_KEY_ESC: u32 = 0x29;
+                        const HID_USAGE_KEY_TAB: u32 = 0x2b;
+                        const HID_USAGE_KEY_F1: u32 = 0x3a;
+                        const HID_USAGE_KEY_F10: u32 = 0x43;
+                        const HID_USAGE_KEY_HOME: u32 = 0x4a;
+                        const HID_USAGE_KEY_PAGEUP: u32 = 0x4b;
+                        const HID_USAGE_KEY_END: u32 = 0x4d;
+                        const HID_USAGE_KEY_PAGEDOWN: u32 = 0x4e;
+                        const HID_USAGE_KEY_DOWN: u32 = 0x51;
+                        const HID_USAGE_KEY_UP: u32 = 0x52;
+                        const HID_USAGE_KEY_VOL_DOWN: u32 = 0xe8;
+                        const HID_USAGE_KEY_VOL_UP: u32 = 0xe9;
 
-                    match keyboard_event.hid_usage {
-                        HID_USAGE_KEY_ESC => {
-                            self.cancel_animation();
-                            return Ok(true);
-                        }
-                        HID_USAGE_KEY_F1..=HID_USAGE_KEY_F10 if modifiers.alt => {
-                            let id = keyboard_event.hid_usage - HID_USAGE_KEY_F1;
-                            self.set_active_terminal(id);
-                            return Ok(true);
-                        }
-                        HID_USAGE_KEY_TAB if modifiers.alt => {
-                            if modifiers.shift {
-                                self.previous_active_terminal();
-                            } else {
-                                self.next_active_terminal();
+                        match keyboard_event.hid_usage {
+                            HID_USAGE_KEY_ESC => {
+                                self.cancel_animation();
+                                return Ok(true);
                             }
-                            return Ok(true);
+                            HID_USAGE_KEY_F1..=HID_USAGE_KEY_F10 if modifiers.alt => {
+                                let id = keyboard_event.hid_usage - HID_USAGE_KEY_F1;
+                                self.set_active_terminal(id);
+                                return Ok(true);
+                            }
+                            HID_USAGE_KEY_TAB if modifiers.alt => {
+                                if modifiers.shift {
+                                    self.previous_active_terminal();
+                                } else {
+                                    self.next_active_terminal();
+                                }
+                                return Ok(true);
+                            }
+                            HID_USAGE_KEY_VOL_UP if modifiers.alt => {
+                                self.previous_active_terminal();
+                                return Ok(true);
+                            }
+                            HID_USAGE_KEY_VOL_DOWN if modifiers.alt => {
+                                self.next_active_terminal();
+                                return Ok(true);
+                            }
+                            HID_USAGE_KEY_UP if modifiers.alt => {
+                                self.scroll_active_terminal(Scroll::Lines(1));
+                                return Ok(true);
+                            }
+                            HID_USAGE_KEY_DOWN if modifiers.alt => {
+                                self.scroll_active_terminal(Scroll::Lines(-1));
+                                return Ok(true);
+                            }
+                            HID_USAGE_KEY_PAGEUP if modifiers.shift => {
+                                self.scroll_active_terminal(Scroll::PageUp);
+                                return Ok(true);
+                            }
+                            HID_USAGE_KEY_PAGEDOWN if modifiers.shift => {
+                                self.scroll_active_terminal(Scroll::PageDown);
+                                return Ok(true);
+                            }
+                            HID_USAGE_KEY_HOME if modifiers.shift => {
+                                self.scroll_active_terminal(Scroll::Top);
+                                return Ok(true);
+                            }
+                            HID_USAGE_KEY_END if modifiers.shift => {
+                                self.scroll_active_terminal(Scroll::Bottom);
+                                return Ok(true);
+                            }
+                            _ => {}
                         }
-                        HID_USAGE_KEY_VOL_UP if modifiers.alt => {
-                            self.previous_active_terminal();
-                            return Ok(true);
-                        }
-                        HID_USAGE_KEY_VOL_DOWN if modifiers.alt => {
-                            self.next_active_terminal();
-                            return Ok(true);
-                        }
-                        HID_USAGE_KEY_UP if modifiers.alt => {
-                            self.scroll_active_terminal(Scroll::Lines(1));
-                            return Ok(true);
-                        }
-                        HID_USAGE_KEY_DOWN if modifiers.alt => {
-                            self.scroll_active_terminal(Scroll::Lines(-1));
-                            return Ok(true);
-                        }
-                        HID_USAGE_KEY_PAGEUP if modifiers.shift => {
-                            self.scroll_active_terminal(Scroll::PageUp);
-                            return Ok(true);
-                        }
-                        HID_USAGE_KEY_PAGEDOWN if modifiers.shift => {
-                            self.scroll_active_terminal(Scroll::PageDown);
-                            return Ok(true);
-                        }
-                        HID_USAGE_KEY_HOME if modifiers.shift => {
-                            self.scroll_active_terminal(Scroll::Top);
-                            return Ok(true);
-                        }
-                        HID_USAGE_KEY_END if modifiers.shift => {
-                            self.scroll_active_terminal(Scroll::Bottom);
-                            return Ok(true);
-                        }
-                        _ => {}
                     }
-                }
-                Some(code_point) if modifiers.alt == true => {
-                    const PLUS: u32 = 43;
-                    const EQUAL: u32 = 61;
-                    const MINUS: u32 = 45;
+                    Some(code_point) if modifiers.alt == true => {
+                        const PLUS: u32 = 43;
+                        const EQUAL: u32 = 61;
+                        const MINUS: u32 = 45;
 
-                    match code_point {
-                        PLUS | EQUAL => {
-                            let new_font_size = (self.font_size + 15.0).min(MAX_FONT_SIZE);
-                            self.set_font_size(new_font_size);
-                            return Ok(true);
+                        match code_point {
+                            PLUS | EQUAL => {
+                                let new_font_size = (self.font_size + 15.0).min(MAX_FONT_SIZE);
+                                self.set_font_size(new_font_size);
+                                return Ok(true);
+                            }
+                            MINUS => {
+                                let new_font_size = (self.font_size - 15.0).max(MIN_FONT_SIZE);
+                                self.set_font_size(new_font_size);
+                                return Ok(true);
+                            }
+                            _ => {}
                         }
-                        MINUS => {
-                            let new_font_size = (self.font_size - 15.0).max(MIN_FONT_SIZE);
-                            self.set_font_size(new_font_size);
-                            return Ok(true);
-                        }
-                        _ => {}
                     }
+                    _ => {}
                 }
-                _ => {}
             }
+            _ => {}
         }
 
         Ok(false)
