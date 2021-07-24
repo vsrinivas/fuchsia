@@ -13,15 +13,38 @@ executable("unittests") {
 
   testonly = true
 
-  sources = [ "screenshot_unittest.cc" ]
+  sources = [
+    "screenshot_buffer_collection_unittests.cc",
+    "screenshot_unittest.cc",
+
+    # Registers a global Escher environment for trsting.
+    "run_all_unittests.cc",
+  ]
 
   deps = [
     "//garnet/public/lib/gtest:gtest",
     "//sdk/lib/sys/cpp/testing:unit",
-    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture:gtest",
+    "//src/ui/lib/display:hdcp_client",
     "//src/ui/scenic/lib/allocation",
+    "//src/ui/scenic/lib/gfx/tests:testing_deps",
     "//src/ui/scenic/lib/screenshot",
     "//src/ui/scenic/lib/utils",
     "//third_party/googletest:gmock",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/fostr/fidl/fuchsia.ui.scenic",
+    "//src/lib/fsl",
+    "//src/ui/examples/bouncing_ball",
+    "//src/ui/lib/escher",
+    "//src/ui/lib/escher/test/common:gtest_escher",
+    "//src/ui/scenic/lib/gfx/tests/mocks:util",
+    "//src/ui/scenic/lib/scenic/tests:testing_deps",
+    "//src/ui/scenic/lib/scenic/util",
+    "//src/ui/scenic/lib/utils",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/async-default",
   ]
 }

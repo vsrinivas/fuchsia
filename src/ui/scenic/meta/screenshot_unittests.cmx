@@ -1,5 +1,14 @@
 {
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.vulkan.loader.Loader"
+            ]
+        }
+    },
     "include": [
+        "//src/lib/vulkan/test-application.shard.cmx",
         "syslog/client.shard.cmx"
     ],
     "program": {
@@ -8,7 +17,8 @@
     "sandbox": {
         "services": [
             "fuchsia.process.Launcher",
-            "fuchsia.sysmem.Allocator"
+            "fuchsia.sysmem.Allocator",
+            "fuchsia.vulkan.loader.Loader"
         ]
     }
 }
