@@ -40,8 +40,8 @@ class MockUserPager {
                                     vmo_size, &pager_vmo_);
     // Create and return a resizable COW clone, similar to how system_updater passes in payload
     // vmo's to the paver.
-    ASSERT_OK(pager_vmo_.create_child(ZX_VMO_CHILD_COPY_ON_WRITE | ZX_VMO_CHILD_RESIZABLE, 0,
-                                      vmo_size, &vmo));
+    ASSERT_OK(pager_vmo_.create_child(
+        ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE | ZX_VMO_CHILD_RESIZABLE, 0, vmo_size, &vmo));
     out->vmo = std::move(vmo);
     out->size = vmo_size;
   }
