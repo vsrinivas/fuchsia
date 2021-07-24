@@ -63,6 +63,13 @@ group("reduced-perf-variation") {
   ]
 }
 
+# This collects settings not specific to any particular machine that are
+# recommended to make the system's performance highly representative of a
+# production setup.
+group("perf-realistic") {
+  deps = [ ":quiet-early-boot" ]
+}
+
 kernel_cmdline("quiet-early-boot") {
   args = [
     # Disable serial console printing during early boot, a phase during which
