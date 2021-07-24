@@ -1,6 +1,6 @@
 # Linux Guest
 
-See `src/virtualization/docs/README.md` for more general information.
+See `src/virtualization/README.md` for more general information.
 
 ## Updating Linux image
 
