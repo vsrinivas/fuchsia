@@ -714,117 +714,6 @@ static void TestTrimFreeHelper(char* block) TA_EXCL(TheHeapLock::Get()) {
   }
 }
 
-static void cmpct_test_trim(void) TA_EXCL(TheHeapLock::Get()) {
-  // XXX: Re-enable this test if we want, disabled due to float math
-  return;
-  WasteFreeMemory();
-
-  size_t test_sizes[200];
-  int sizes = 0;
-
-  for (size_t s = 1; s < ZX_PAGE_SIZE * 4;
-       s = static_cast<size_t>(static_cast<double>(s + 1) * 1.1)) {
-    test_sizes[sizes++] = s;
-    ZX_ASSERT(sizes < 200);
-  }
-  for (ssize_t s = -32; s <= 32; s += 8) {
-    test_sizes[sizes++] = ZX_PAGE_SIZE + s;
-    ZX_ASSERT(sizes < 200);
-  }
-
-  // Test allocations at the start of an OS allocation.
-  for (int with_second_alloc = 0; with_second_alloc < 2; with_second_alloc++) {
-    for (int i = 0; i < sizes; i++) {
-      size_t s = test_sizes[i];
-
-      char *a, *a2 = NULL;
-      a = static_cast<char*>(cmpct_alloc(s));
-      if (with_second_alloc) {
-        a2 = static_cast<char*>(cmpct_alloc(1));
-        if (s < (ZX_PAGE_SIZE >> 1)) {
-          // It is the intention of the test that a is at the start
-          // of an OS allocation and that a2 is "right after" it.
-          // Otherwise we are not testing what I thought. OS
-          // allocations are certainly not smaller than a page, so
-          // check in that case.
-          uintptr_t limit = static_cast<uintptr_t>(static_cast<double>(s) * 1.13 + 48);
-          ZX_ASSERT((uintptr_t)(a2 - a) < limit);
-        }
-      }
-      cmpct_trim();
-      size_t remaining = theheap.remaining;
-      // We should have < 1 page on either side of the a allocation.
-      ZX_ASSERT(remaining < ZX_PAGE_SIZE * 2);
-      cmpct_free(a);
-      if (with_second_alloc) {
-        // Now only a2 is holding onto the OS allocation.
-        ZX_ASSERT(theheap.remaining > remaining);
-      } else {
-        ZX_ASSERT(theheap.remaining == 0);
-      }
-      remaining = theheap.remaining;
-      cmpct_trim();
-      ZX_ASSERT(theheap.remaining <= remaining);
-      // If a was at least one page then the trim should have freed up
-      // that page.
-      if (s >= ZX_PAGE_SIZE && with_second_alloc) {
-        ZX_ASSERT(theheap.remaining < remaining);
-      }
-      if (with_second_alloc) {
-        cmpct_free(a2);
-      }
-    }
-    ZX_ASSERT(theheap.remaining == 0);
-  }
-
-  ZX_ASSERT(theheap.remaining == 0);
-
-  // Now test allocations near the end of an OS allocation.
-  for (ssize_t wobble = -64; wobble <= 64; wobble += 8) {
-    for (int i = 0; i < sizes; i++) {
-      size_t s = test_sizes[i];
-
-      if ((ssize_t)s + wobble < 0) {
-        continue;
-      }
-
-      char* start_of_os_alloc = static_cast<char*>(cmpct_alloc(1));
-
-      // If the OS allocations are very small this test does not make
-      // sense.
-      if (theheap.remaining <= s + wobble) {
-        cmpct_free(start_of_os_alloc);
-        continue;
-      }
-
-      char* big_bit_in_the_middle = static_cast<char*>(TestTrimHelper(s + wobble));
-      size_t remaining = theheap.remaining;
-
-      // If the remaining is big we started a new OS allocation and the
-      // test makes no sense.
-      if (remaining > 128 + static_cast<size_t>(static_cast<double>(s) * 1.13) + wobble) {
-        cmpct_free(start_of_os_alloc);
-        TestTrimFreeHelper(big_bit_in_the_middle);
-        continue;
-      }
-
-      cmpct_free(start_of_os_alloc);
-      remaining = theheap.remaining;
-
-      // This trim should sometimes trim a page off the end of the OS
-      // allocation.
-      cmpct_trim();
-      ZX_ASSERT(theheap.remaining <= remaining);
-      remaining = theheap.remaining;
-
-      // We should have < 1 page on either side of the big allocation.
-      ZX_ASSERT(remaining < ZX_PAGE_SIZE * 2);
-
-      TestTrimFreeHelper(big_bit_in_the_middle);
-    }
-  }
-}
-
 static void cmpct_test_buckets(void) TA_EXCL(TheHeapLock::Get()) {
   size_t rounded;
   unsigned bucket;
@@ -919,7 +808,6 @@ static void cmpct_test_get_back_newly_freed(void) TA_EXCL(TheHeapLock::Get()) {
 }
 
 static void cmpct_test_return_to_os(void) TA_EXCL(TheHeapLock::Get()) {
-  cmpct_trim();
   size_t remaining = cmpct_heap_remaining();
   // This goes in a new OS allocation since the trim above removed any free
   // area big enough to contain it.
@@ -1259,14 +1147,12 @@ void cmpct_test(void) {
   cmpct_test_buckets();
   cmpct_test_get_back_newly_freed();
   cmpct_test_return_to_os();
-  cmpct_test_trim();
   cmpct_dump(false);
   void* ptr[16];
 
   ptr[0] = cmpct_alloc(8);
   ptr[1] = cmpct_alloc(32);
   ptr[2] = cmpct_alloc(7);
-  cmpct_trim();
   ptr[3] = cmpct_alloc(0);
   ptr[4] = cmpct_alloc(98713);
   ptr[5] = cmpct_alloc(16);
@@ -1278,8 +1164,6 @@ void cmpct_test(void) {
   cmpct_free(ptr[4]);
   cmpct_free(ptr[2]);
 
-  cmpct_dump(false);
-  cmpct_trim();
   cmpct_dump(false);
 
   int i;
@@ -1319,78 +1203,3 @@ void cmpct_test(void) {
 #else
 void cmpct_test(void) {}
 #endif  // HEAP_ENABLE_TESTS
-
-void cmpct_trim(void) {
-  LOCAL_TRACE_DURATION("cmct_trim", trace);
-  // Look at free list entries that are at least as large as one page plus a
-  // header. They might be at the start or the end of a block, so we can trim
-  // them and free the page(s).
-  PREEMPT_DISABLE(preempt_disable);
-  LockGuard guard(TheHeapLock::Get());
-  LOCAL_TRACE_DURATION("locked", trace_lock);
-  for (int bucket = size_to_index_freeing(ZX_PAGE_SIZE); bucket < NUMBER_OF_BUCKETS; bucket++) {
-    free_t* next;
-    for (free_t* free_area = theheap.free_lists[bucket]; free_area != NULL; free_area = next) {
-      ZX_DEBUG_ASSERT(free_area->header.size >= ZX_PAGE_SIZE + sizeof(header_t));
-      next = free_area->next;
-      header_t* right = right_header(&free_area->header);
-      if (is_end_of_os_allocation((char*)right)) {
-        char* old_os_allocation_end = (char*)ZX_ROUNDUP((uintptr_t)right, ZX_PAGE_SIZE);
-        // The page will end with a smaller free list entry and a
-        // header-sized sentinel.
-        char* new_os_allocation_end = (char*)ZX_ROUNDUP(
-            (uintptr_t)free_area + sizeof(header_t) + sizeof(free_t), ZX_PAGE_SIZE);
-        size_t freed_up = old_os_allocation_end - new_os_allocation_end;
-        ZX_DEBUG_ASSERT(ZX_IS_PAGE_ALIGNED(freed_up));
-        // Rare, because we only look at large freelist entries, but
-        // unlucky rounding could mean we can't actually free anything
-        // here.
-        if (freed_up == 0) {
-          continue;
-        }
-        unlink_free(free_area, bucket);
-        size_t new_free_size = free_area->header.size - freed_up;
-        ZX_DEBUG_ASSERT(new_free_size >= sizeof(free_t));
-        // Right sentinel, not free, stops attempts to coalesce right.
-        create_allocation_header(free_area, new_free_size, 0, free_area);
-        // Also puts it in the correct bucket.
-        create_free_area(free_area, untag(free_area->header.left), new_free_size);
-        heap_page_free(new_os_allocation_end, freed_up >> ZX_PAGE_SHIFT);
-        theheap.size -= freed_up;
-      } else if (is_start_of_os_allocation(untag(free_area->header.left))) {
-        char* old_os_allocation_start = (char*)ZX_ROUNDDOWN((uintptr_t)free_area, ZX_PAGE_SIZE);
-        // For the sentinel, we need at least one header-size of space
-        // between the page edge and the first allocation to the right
-        // of the free area.
-        char* new_os_allocation_start = (char*)ZX_ROUNDDOWN((uintptr_t)(right - 1), ZX_PAGE_SIZE);
-        size_t freed_up = new_os_allocation_start - old_os_allocation_start;
-        ZX_DEBUG_ASSERT(ZX_IS_PAGE_ALIGNED(freed_up));
-        // This should not happen because we only look at the large
-        // free list buckets.
-        if (freed_up == 0) {
-          continue;
-        }
-        unlink_free(free_area, bucket);
-        size_t sentinel_size = sizeof(header_t);
-        size_t new_free_size = free_area->header.size - freed_up;
-        if (new_free_size < sizeof(free_t)) {
-          sentinel_size += new_free_size;
-          new_free_size = 0;
-        }
-        // Left sentinel, not free, stops attempts to coalesce left.
-        create_allocation_header(new_os_allocation_start, 0, sentinel_size, NULL);
-        if (new_free_size == 0) {
-          FixLeftPointer(right, (header_t*)new_os_allocation_start);
-        } else {
-          ZX_DEBUG_ASSERT(new_free_size >= sizeof(free_t));
-          char* new_free = new_os_allocation_start + sentinel_size;
-          // Also puts it in the correct bucket.
-          create_free_area(new_free, new_os_allocation_start, new_free_size);
-          FixLeftPointer(right, (header_t*)new_free);
-        }
-        heap_page_free(old_os_allocation_start, freed_up >> ZX_PAGE_SHIFT);
-        theheap.size -= freed_up;
-      }
-    }
-  }
-}

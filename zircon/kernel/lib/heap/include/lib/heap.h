@@ -27,9 +27,6 @@ void* calloc(size_t count, size_t size) __MALLOC;
 void free(void* ptr);
 void sized_free(void* ptr, size_t s);
 
-// tell the heap to return any free pages it can find
-void heap_trim(void);
-
 // internal apis used by the heap implementation to get/return pages to the VM
 void* heap_page_alloc(size_t pages);
 void heap_page_free(void* ptr, size_t pages);

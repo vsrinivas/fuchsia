@@ -39,6 +39,5 @@ void cmpct_init(void) TA_EXCL(TheHeapLock::Get());
 void cmpct_dump(bool panic_time) TA_EXCL(TheHeapLock::Get());
 void cmpct_get_info(size_t* used_bytes, size_t* free_bytes, size_t* cached_bytes) TA_EXCL(TheHeapLock::Get());
 void cmpct_test(void) TA_EXCL(TheHeapLock::Get());
-void cmpct_trim(void) TA_EXCL(TheHeapLock::Get());
 
 #endif  // ZIRCON_KERNEL_LIB_HEAP_CMPCTMALLOC_INCLUDE_LIB_CMPCTMALLOC_H_

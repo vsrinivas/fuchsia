@@ -125,8 +125,6 @@ void dump_stats() {
 
 void heap_init() { cmpct_init(); }
 
-void heap_trim() { cmpct_trim(); }
-
 void* malloc(size_t size) {
   DEBUG_ASSERT(!arch_blocking_disallowed());
   DEBUG_ASSERT(Thread::Current::memory_allocation_state().IsEnabled());
@@ -309,8 +307,6 @@ static int cmd_heap(int argc, const cmd_args* argv, uint32_t flags) {
   } else if (!(flags & CMD_FLAG_PANIC) && strcmp(argv[1].str, "trace") == 0) {
     heap_trace = !heap_trace;
     printf("heap trace is now %s\n", heap_trace ? "on" : "off");
-  } else if (!(flags & CMD_FLAG_PANIC) && strcmp(argv[1].str, "trim") == 0) {
-    heap_trim();
   } else {
     printf("unrecognized command\n");
     goto usage;
