@@ -188,38 +188,81 @@ fn value_to_dictionary_value(value: Value) -> Result<Option<Box<fdata::Dictionar
     }
 }
 
-// 'program' rules denote a set of dictionary entries that may specify lifestyle events with a
-// "lifecycle" prefix key.  All other entries are copied as is.
-fn translate_program(program: &cml::Program) -> Result<fsys::ProgramDecl, Error> {
-    let mut entries = Vec::new();
-    for (k, v) in &program.info {
-        match (&k[..], v) {
-            ("lifecycle", Value::Object(events)) => {
-                for (event, subscription) in events {
-                    entries.push(fdata::DictionaryEntry {
-                        key: format!("lifecycle.{}", event),
-                        value: value_to_dictionary_value(subscription.clone())?,
-                    });
-                }
-            }
-            ("lifecycle", _) => {
-                return Err(Error::validate(format!(
-                    "Unexpected entry in lifecycle section: {}",
-                    v
-                )));
-            }
-            _ => {
-                entries.push(fdata::DictionaryEntry {
-                    key: k.clone(),
-                    value: value_to_dictionary_value(v.clone())?,
-                });
-            }
+/// Converts a [`serde_json::Map<String, serde_json::Value>`] to a [`fuchsia.data.Dictionary`].
+///
+/// Values may be null, strings, arrays of strings, or objects.
+/// Object value are flattened with keys separated by a period:
+///
+/// ```json
+/// {
+///   "binary": "bin/app",
+///   "lifecycle": {
+///     "stop_event": "notify",
+///     "nested": {
+///       "foo": "bar"
+///     }
+///   }
+/// }
+/// ```
+///
+/// is flattened to:
+///
+/// ```json
+/// {
+///   "binary": "bin/app",
+///   "lifecycle.stop_event": "notify",
+///   "lifecycle.nested.foo": "bar"
+/// }
+/// ```
+fn dictionary_from_nested_map(map: Map<String, Value>) -> Result<fdata::Dictionary, Error> {
+    fn key_value_to_entries(
+        key: String,
+        value: Value,
+    ) -> Result<Vec<fdata::DictionaryEntry>, Error> {
+        if let Value::Object(map) = value {
+            let entries = map
+                .into_iter()
+                .map(|(k, v)| key_value_to_entries([key.clone(), ".".to_string(), k].concat(), v))
+                .collect::<Result<Vec<_>, _>>()?
+                .into_iter()
+                .flatten()
+                .collect();
+            return Ok(entries);
         }
+
+        let entry_value = match value {
+            Value::Null => Ok(None),
+            Value::String(s) => Ok(Some(Box::new(fdata::DictionaryValue::Str(s.clone())))),
+            Value::Array(arr) => {
+                let mut strs = vec![];
+                for val in arr {
+                    match val {
+                        Value::String(s) => strs.push(s),
+                        _ => return Err(Error::validate("Value must be string")),
+                    };
+                }
+                Ok(Some(Box::new(fdata::DictionaryValue::StrVec(strs))))
+            }
+            _ => Err(Error::validate("Value must be string or list of strings")),
+        }?;
+        Ok(vec![fdata::DictionaryEntry { key, value: entry_value }])
     }
 
+    let entries = map
+        .into_iter()
+        .map(|(k, v)| key_value_to_entries(k, v))
+        .collect::<Result<Vec<_>, _>>()?
+        .into_iter()
+        .flatten()
+        .collect();
+    Ok(fdata::Dictionary { entries: Some(entries), ..fdata::Dictionary::EMPTY })
+}
+
+/// Translates a [`cml::Program`] to a [`fuchsa.sys2.ProgramDecl`].
+fn translate_program(program: &cml::Program) -> Result<fsys::ProgramDecl, Error> {
     Ok(fsys::ProgramDecl {
         runner: program.runner.as_ref().map(|r| r.to_string()),
-        info: Some(fdata::Dictionary { entries: Some(entries), ..fdata::Dictionary::EMPTY }),
+        info: Some(dictionary_from_nested_map(program.info.clone())?),
         ..fsys::ProgramDecl::EMPTY
     })
 }
@@ -1713,13 +1756,17 @@ mod tests {
             },
         },
 
-        test_compile_program_with_lifecycle => {
+        test_compile_program_with_nested_objects => {
             input = json!({
                 "program": {
                     "runner": "elf",
                     "binary": "bin/app",
-                    "lifecycle": {
-                        "stop_event": "notify",
+                    "one": {
+                        "two": {
+                            "three.four": {
+                                "five": "six"
+                            }
+                        },
                     }
                 },
             }),
@@ -1733,8 +1780,8 @@ mod tests {
                                 value: Some(Box::new(fdata::DictionaryValue::Str("bin/app".to_string()))),
                             },
                             fdata::DictionaryEntry {
-                                key: "lifecycle.stop_event".to_string(),
-                                value: Some(Box::new(fdata::DictionaryValue::Str("notify".to_string()))),
+                                key: "one.two.three.four.five".to_string(),
+                                value: Some(Box::new(fdata::DictionaryValue::Str("six".to_string()))),
                             },
                         ]),
                         ..fdata::Dictionary::EMPTY
