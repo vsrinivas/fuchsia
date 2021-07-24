@@ -33,8 +33,12 @@ namespace arch {
 // checking for equality with this value.
 extern const BreakInstructionType kBreakInstruction;
 
+// The size of the breakpoint instruction. In theory it could be different from
+// sizeof(BreakInstructionType) but in practice they are the same for all architectures.
+constexpr size_t kBreakInstructionSize = sizeof(BreakInstructionType);
+
 // Distance offset from a software breakpoint instruction that the exception will be reported as
-// thron at. Architectures differ about what address is reported for a software breakpoint
+// thrown at. Architectures differ about what address is reported for a software breakpoint
 // exception.
 //
 //  * To convert from a software breakpoint address to the exception address, add this.
@@ -86,9 +90,6 @@ debug_ipc::ExceptionType DecodeExceptionType(const zx::thread& thread, uint32_t 
 
 // Converts an architecture-specific exception record to a cross-platform one.
 debug_ipc::ExceptionRecord FillExceptionRecord(const zx_exception_report_t& in);
-
-// Returns the instruction following the one causing the given software exception.
-uint64_t NextInstructionForSoftwareExceptionAddress(uint64_t exception_addr);
 
 // Returns true if the given opcode is a breakpoint instruction. This checked for equality with
 // kBreakInstruction and also checks other possible breakpoint encodings for the current platform.

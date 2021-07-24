@@ -5,6 +5,8 @@
 #ifndef SRC_DEVELOPER_DEBUG_DEBUG_AGENT_ARCH_TYPES_H_
 #define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_ARCH_TYPES_H_
 
+#include <cstdint>
+
 // This file contains some types that are specific to the current CPU architecture.
 
 namespace debug_agent {

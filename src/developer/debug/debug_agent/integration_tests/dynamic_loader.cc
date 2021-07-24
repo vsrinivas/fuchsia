@@ -8,6 +8,7 @@
 #include "src/developer/debug/debug_agent/integration_tests/so_wrapper.h"
 #include "src/developer/debug/debug_agent/local_stream_backend.h"
 #include "src/developer/debug/debug_agent/zircon_system_interface.h"
+#include "src/developer/debug/shared/logging/file_line_function.h"
 #include "src/developer/debug/shared/zx_status.h"
 
 namespace debug_agent {
@@ -99,9 +100,13 @@ void DynamicLoaderStreamBackend::HandleNotifyProcessExiting(debug_ipc::NotifyPro
 }
 
 void DynamicLoaderStreamBackend::ResumeAll() {
-  debug_ipc::ResumeRequest resume_request;
-  debug_ipc::ResumeReply resume_reply;
-  remote_api_->OnResume(resume_request, &resume_reply);
+  // Delay the request because we might be called in some notification callbacks and sending
+  // requests in callbacks might not be expected by the debug_agent.
+  loop_->PostTask(FROM_HERE, [this]() {
+    debug_ipc::ResumeRequest resume_request;
+    debug_ipc::ResumeReply resume_reply;
+    remote_api_->OnResume(resume_request, &resume_reply);
+  });
 }
 
 bool DynamicLoaderStreamBackend::HasModuleForFile(const debug_ipc::NotifyModules& modules,

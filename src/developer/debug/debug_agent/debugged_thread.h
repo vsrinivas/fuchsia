@@ -161,11 +161,6 @@ class DebuggedThread {
                                      std::vector<debug_ipc::BreakpointStats>& hit_breakpoints,
                                      std::vector<debug_ipc::ThreadRecord>& other_affected_threads);
 
-  // When hitting a SW breakpoint, the PC needs to be correctly re-set depending on where the CPU
-  // leaves the PC after a SW exception. This updates both the given register record and syncs it
-  // to the actual thread.
-  void FixSoftwareBreakpointAddress(ProcessBreakpoint* process_breakpoint, GeneralRegisters& regs);
-
   // Handles an exception corresponding to a ProcessBreakpoint. All Breakpoints affected will have
   // their updated stats added to *hit_breakpoints.
   //

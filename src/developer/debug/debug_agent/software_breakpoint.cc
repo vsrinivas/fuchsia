@@ -68,18 +68,18 @@ debug::Status SoftwareBreakpoint::Install() {
   // Read previous instruction contents.
   size_t actual = 0;
   if (debug::Status status = process_->process_handle().ReadMemory(
-          address(), &previous_data_, sizeof(arch::BreakInstructionType), &actual);
+          address(), &previous_data_, arch::kBreakInstructionSize, &actual);
       status.has_error())
     return status;
-  if (actual != sizeof(arch::BreakInstructionType))
+  if (actual != arch::kBreakInstructionSize)
     return debug::Status("Could not read breakpoint memory.");
 
   // Replace with breakpoint instruction.
   if (debug::Status status = process_->process_handle().WriteMemory(
-          address(), &arch::kBreakInstruction, sizeof(arch::BreakInstructionType), &actual);
+          address(), &arch::kBreakInstruction, arch::kBreakInstructionSize, &actual);
       status.has_error())
     return status;
-  if (actual != sizeof(arch::BreakInstructionType))
+  if (actual != arch::kBreakInstructionSize)
     return debug::Status("Could not write breakpoint memory.");
 
   installed_ = true;
@@ -97,8 +97,8 @@ debug::Status SoftwareBreakpoint::Uninstall() {
   arch::BreakInstructionType current_contents = 0;
   size_t actual = 0;
   debug::Status status = process_->process_handle().ReadMemory(
-      address(), &current_contents, sizeof(arch::BreakInstructionType), &actual);
-  if (status.has_error() || actual != sizeof(arch::BreakInstructionType))
+      address(), &current_contents, arch::kBreakInstructionSize, &actual);
+  if (status.has_error() || actual != arch::kBreakInstructionSize)
     return debug::Status();  // Probably unmapped, safe to ignore.
 
   if (current_contents != arch::kBreakInstruction) {
@@ -108,8 +108,8 @@ debug::Status SoftwareBreakpoint::Uninstall() {
   }
 
   status = process_->process_handle().WriteMemory(address(), &previous_data_,
-                                                  sizeof(arch::BreakInstructionType), &actual);
-  if (status.has_error() || actual != sizeof(arch::BreakInstructionType)) {
+                                                  arch::kBreakInstructionSize, &actual);
+  if (status.has_error() || actual != arch::kBreakInstructionSize) {
     FX_LOGS(WARNING) << "Unable to remove breakpoint at 0x" << std::hex << address();
   }
 
@@ -122,7 +122,7 @@ void SoftwareBreakpoint::FixupMemoryBlock(debug_ipc::MemoryBlock* block) {
     return;  // Nothing to do.
   FX_DCHECK(static_cast<size_t>(block->size) == block->data.size());
 
-  size_t src_size = sizeof(arch::BreakInstructionType);
+  size_t src_size = arch::kBreakInstructionSize;
   const uint8_t* src = reinterpret_cast<uint8_t*>(&previous_data_);
 
   // Simple implementation to prevent boundary errors (ARM instructions are 32-bits and could be

@@ -13,6 +13,7 @@
 #include <memory>
 
 #include "src/developer/debug/debug_agent/arch.h"
+#include "src/developer/debug/debug_agent/arch_types.h"
 #include "src/developer/debug/debug_agent/debug_agent.h"
 #include "src/developer/debug/debug_agent/debugged_process.h"
 #include "src/developer/debug/debug_agent/hardware_breakpoint.h"
@@ -24,6 +25,7 @@
 #include "src/developer/debug/ipc/agent_protocol.h"
 #include "src/developer/debug/ipc/message_reader.h"
 #include "src/developer/debug/ipc/message_writer.h"
+#include "src/developer/debug/ipc/records.h"
 #include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/platform_message_loop.h"
 #include "src/developer/debug/shared/stream_buffer.h"
@@ -160,6 +162,17 @@ void DebuggedThread::ResumeFromException() {
     // BeginStepOver() will takes responsibility for resuming the exception at the proper time.
     current_breakpoint_->BeginStepOver(this);
   } else {
+    // Check whether we're resuming from a hardcoded breakpoint exception. If it is, continue from
+    // the following instruction since the breakpoint instruction will never go away.
+    if (in_exception() && exception_handle_->GetType(*thread_handle_) ==
+                              debug_ipc::ExceptionType::kSoftwareBreakpoint) {
+      auto regs = thread_handle_->GetGeneralRegisters();
+      if (regs && IsBreakpointInstructionAtAddress(regs->ip())) {
+        regs->set_ip(regs->ip() + arch::kBreakInstructionSize);
+        thread_handle_->SetGeneralRegisters(*regs);
+      }
+    }
+
     // Normal exception resumption.
     InternalResumeException();
   }
@@ -506,10 +519,18 @@ DebuggedThread::OnStop DebuggedThread::UpdateForSoftwareBreakpoint(
   // architecture-specific).
   uint64_t breakpoint_address = regs.ip() - arch::kExceptionOffsetForSoftwareBreakpoint;
 
+  // When the program hits a software breakpoint, set the IP back to the exact address that
+  // triggered the breakpoint, so that
+  //  1) the backtrace is from the breakpoint instruction.
+  //  2) if it's a breakpoint that we installed, we need to evaluate the original instruction on
+  //     this address.
+  if (breakpoint_address != regs.ip()) {
+    regs.set_ip(breakpoint_address);
+    thread_handle_->SetGeneralRegisters(regs);
+  }
+
   if (SoftwareBreakpoint* found_bp = process_->FindSoftwareBreakpoint(breakpoint_address)) {
     LogHitBreakpoint(FROM_HERE, this, found_bp, breakpoint_address);
-
-    FixSoftwareBreakpointAddress(found_bp, regs);
 
     switch (process_->HandleSpecialBreakpoint(found_bp)) {
       case DebuggedProcess::SpecialBreakpointResult::kContinue: {
@@ -540,14 +561,8 @@ DebuggedThread::OnStop DebuggedThread::UpdateForSoftwareBreakpoint(
     // Note: may have deleted found_bp!
   } else if (IsBreakpointInstructionAtAddress(breakpoint_address)) {
     // Hit a software breakpoint that doesn't correspond to any current breakpoint.
-    //
-    // The breakpoint is a hardcoded instruction in the program code. In this case we want to
-    // continue from the following instruction since the breakpoint instruction will never go
-    // away.
-    regs.set_ip(arch::NextInstructionForSoftwareExceptionAddress(regs.ip()));
-    thread_handle_->SetGeneralRegisters(regs);
 
-    switch (process_->HandleSpecialBreakpoint(found_bp)) {
+    switch (process_->HandleSpecialBreakpoint(nullptr)) {
       case DebuggedProcess::SpecialBreakpointResult::kContinue: {
         DEBUG_LOG(Thread) << ThreadPreamble(this)
                           << "Hardcoded loader breakpoint, internally resuming.";
@@ -556,7 +571,7 @@ DebuggedThread::OnStop DebuggedThread::UpdateForSoftwareBreakpoint(
       case DebuggedProcess::SpecialBreakpointResult::kKeepSuspended: {
         DEBUG_LOG(Thread) << ThreadPreamble(this)
                           << "Hardcoded loader breakpoint, keeping stopped.";
-        current_breakpoint_ = found_bp;
+        current_breakpoint_ = nullptr;
         return OnStop::kIgnore;
       }
       case DebuggedProcess::SpecialBreakpointResult::kNotSpecial:
@@ -576,16 +591,6 @@ DebuggedThread::OnStop DebuggedThread::UpdateForSoftwareBreakpoint(
   }
 
   return OnStop::kNotify;
-}
-
-void DebuggedThread::FixSoftwareBreakpointAddress(ProcessBreakpoint* process_breakpoint,
-                                                  GeneralRegisters& regs) {
-  // When the program hits one of our breakpoints, set the IP back to the exact address that
-  // triggered the breakpoint. When the thread resumes, this is the address that it will resume
-  // from (after putting back the original instruction), and will be what the client wants to
-  // display to the user.
-  regs.set_ip(process_breakpoint->address());
-  thread_handle_->SetGeneralRegisters(regs);
 }
 
 void DebuggedThread::UpdateForHitProcessBreakpoint(

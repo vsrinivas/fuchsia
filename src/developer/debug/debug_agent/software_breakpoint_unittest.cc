@@ -77,7 +77,7 @@ std::vector<uint8_t> GetOriginalData() {
 // Returns the memory data buffer with the beginning overwritten by a software breakpoint.
 std::vector<uint8_t> GetOriginalDataWithBreakpoint() {
   auto result = GetOriginalData();
-  memcpy(result.data(), &arch::kBreakInstruction, sizeof(arch::kBreakInstruction));
+  memcpy(result.data(), &arch::kBreakInstruction, arch::kBreakInstructionSize);
   return result;
 }
 
@@ -101,10 +101,10 @@ bool MemoryContains(MockProcessHandle& handle, uint64_t address, const void* dat
 }
 
 bool MemoryContainsBreak(MockProcessHandle& handle, uint64_t address) {
-  return MemoryContains(handle, address, &arch::kBreakInstruction, sizeof(arch::kBreakInstruction));
+  return MemoryContains(handle, address, &arch::kBreakInstruction, arch::kBreakInstructionSize);
 }
 bool MemoryContainsOriginal(MockProcessHandle& handle, uint64_t address) {
-  return MemoryContains(handle, address, kOriginalData, sizeof(arch::kBreakInstruction));
+  return MemoryContains(handle, address, kOriginalData, arch::kBreakInstructionSize);
 }
 
 template <typename T>

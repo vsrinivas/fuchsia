@@ -31,8 +31,8 @@ class MockProcessDelegate : public Breakpoint::ProcessDelegate {
 // by architecture.
 std::vector<uint8_t> GetBreakpointMemory() {
   std::vector<uint8_t> result;
-  result.resize(sizeof(arch::BreakInstructionType));
-  memcpy(result.data(), &arch::kBreakInstruction, sizeof(arch::BreakInstructionType));
+  result.resize(arch::kBreakInstructionSize);
+  memcpy(result.data(), &arch::kBreakInstruction, arch::kBreakInstructionSize);
   return result;
 }
 

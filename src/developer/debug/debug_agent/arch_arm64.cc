@@ -409,17 +409,6 @@ debug_ipc::ExceptionRecord FillExceptionRecord(const zx_exception_report_t& in) 
   return record;
 }
 
-uint64_t NextInstructionForSoftwareExceptionAddress(uint64_t exception_addr) {
-  // For software exceptions, the exception address is the one that caused it,
-  // so next one is just 4 bytes following.
-  //
-  // TODO(brettw) handle THUMB. When a software breakpoint is hit, ESR_EL1
-  // will contain the "instruction length" field which for T32 instructions
-  // will be 0 (indicating 16-bits). This exception state somehow needs to be
-  // plumbed down to our exception handler.
-  return exception_addr + 4;
-}
-
 bool IsBreakpointInstruction(BreakInstructionType instruction) {
   // The BRK instruction could have any number associated with it, even though we only write "BRK
   // 0", so check for the low 5 and high 11 bytes as described above.

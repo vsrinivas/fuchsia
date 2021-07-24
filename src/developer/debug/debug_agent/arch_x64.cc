@@ -419,12 +419,6 @@ debug_ipc::ExceptionRecord FillExceptionRecord(const zx_exception_report_t& in) 
   return record;
 }
 
-uint64_t NextInstructionForSoftwareExceptionAddress(uint64_t exception_addr) {
-  // Exception address is the one following the instruction that caused it, so nothing needs to be
-  // done.
-  return exception_addr;
-}
-
 bool IsBreakpointInstruction(BreakInstructionType instruction) {
   // This handles the normal encoding of debug breakpoints (0xCC). It's also possible to cause an
   // interrupt 3 to happen using the opcode sequence 0xCD 0x03 but this has slightly different
