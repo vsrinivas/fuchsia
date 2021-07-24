@@ -290,7 +290,7 @@ TEST(SpiDevice, SpiFidlVmoTest) {
 
   FakeDdkSpiImpl ddk;
 
-  fidl::Client<fuchsia_hardware_spi::Device> cs0_client, cs1_client;
+  fidl::WireSharedClient<fuchsia_hardware_spi::Device> cs0_client, cs1_client;
 
   SpiDevice::Create(nullptr, fake_ddk::kFakeParent);
   EXPECT_EQ(ddk.children_.size(), std::size(ddk.kSpiChannels));
@@ -401,7 +401,7 @@ TEST(SpiDevice, SpiFidlVectorTest) {
 
   FakeDdkSpiImpl ddk;
 
-  fidl::Client<fuchsia_hardware_spi::Device> cs0_client, cs1_client;
+  fidl::WireSharedClient<fuchsia_hardware_spi::Device> cs0_client, cs1_client;
 
   SpiDevice::Create(nullptr, fake_ddk::kFakeParent);
   EXPECT_EQ(ddk.children_.size(), std::size(ddk.kSpiChannels));
@@ -464,7 +464,7 @@ TEST(SpiDevice, SpiFidlVectorErrorTest) {
 
   FakeDdkSpiImpl ddk;
 
-  fidl::Client<fuchsia_hardware_spi::Device> cs0_client, cs1_client;
+  fidl::WireSharedClient<fuchsia_hardware_spi::Device> cs0_client, cs1_client;
 
   SpiDevice::Create(nullptr, fake_ddk::kFakeParent);
   EXPECT_EQ(ddk.children_.size(), std::size(ddk.kSpiChannels));
@@ -527,7 +527,7 @@ TEST(SpiDevice, AssertCsWithSiblingTest) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   ASSERT_OK(loop.StartThread("spi-test-thread"));
 
-  fidl::Client<fuchsia_hardware_spi::Device> cs0_client, cs1_client;
+  fidl::WireSharedClient<fuchsia_hardware_spi::Device> cs0_client, cs1_client;
   SpiDevice::Create(nullptr, fake_ddk::kFakeParent);
   EXPECT_EQ(ddk.children_.size(), std::size(ddk.kSpiChannels));
 
@@ -588,7 +588,7 @@ TEST(SpiDevice, AssertCsNoSiblingTest) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   ASSERT_OK(loop.StartThread("spi-test-thread"));
 
-  fidl::Client<fuchsia_hardware_spi::Device> cs0_client;
+  fidl::WireSharedClient<fuchsia_hardware_spi::Device> cs0_client;
   SpiDevice::Create(nullptr, fake_ddk::kFakeParent);
   EXPECT_EQ(ddk.children_.size(), 1);
 
