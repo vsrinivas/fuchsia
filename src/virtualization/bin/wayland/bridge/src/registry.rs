@@ -142,14 +142,14 @@ mod tests {
 
         {
             let counts = counts.clone();
-            registry.add_global(TestInterface, move |_, _| {
+            registry.add_global(TestInterface, move |_, _, _| {
                 counts.lock().interface_1_bind_count += 1;
                 Ok(Box::new(RequestDispatcher::new(TestReceiver::new())))
             });
         }
         {
             let counts = counts.clone();
-            registry.add_global(TestInterface2, move |_, _| {
+            registry.add_global(TestInterface2, move |_, _, _| {
                 counts.lock().interface_2_bind_count += 1;
                 Ok(Box::new(RequestDispatcher::new(TestReceiver::new())))
             });
@@ -162,8 +162,8 @@ mod tests {
 
         // Bind to the globals.
         let (c1, _c2) = zx::Channel::create()?;
+        let _executor = fasync::LocalExecutor::new();
         let display = Display::new_no_scenic(registry).expect("Failed to create display");
-        let _executor = fasync::Executor::new();
         let mut client = Client::new(fasync::Channel::from_channel(c1)?, display.clone());
 
         let receivers: Vec<Box<dyn MessageReceiver>> = display
@@ -171,7 +171,7 @@ mod tests {
             .lock()
             .globals
             .iter_mut()
-            .map(|g| g.bind(0, &mut client).unwrap())
+            .map(|g| g.bind(0, 0, &mut client).unwrap())
             .collect();
         for (id, r) in receivers.into_iter().enumerate() {
             client.add_object_raw(id as u32, r, &TestInterface::REQUESTS)?;

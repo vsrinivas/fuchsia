@@ -56,7 +56,8 @@ impl Display {
     pub fn new_no_scenic(registry: Registry) -> Result<Self, Error> {
         use fuchsia_zircon as zx;
 
-        let scenic = ScenicProxy::new(fasync::Channel::from_channel(zx::Handle::invalid().into())?);
+        let (c1, _c2) = zx::Channel::create()?;
+        let scenic = ScenicProxy::new(fasync::Channel::from_channel(c1)?);
         Ok(Display {
             registry: Arc::new(Mutex::new(registry)),
             scenic: Arc::new(scenic),

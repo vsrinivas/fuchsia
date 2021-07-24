@@ -401,7 +401,6 @@ mod tests {
     use crate::test_protocol::*;
 
     fn create_client() -> Result<Client, Error> {
-        let _executor = fasync::Executor::new();
         let display = Display::new_no_scenic(RegistryBuilder::new().build())
             .expect("Failed to create display");
         let (c1, _c2) = zx::Channel::create()?;
@@ -410,6 +409,7 @@ mod tests {
 
     #[test]
     fn dispatch_message_to_request_receiver() -> Result<(), Error> {
+        let _executor = fasync::LocalExecutor::new();
         let mut client = create_client()?;
         client.add_object(0, TestReceiver::new())?;
 
@@ -421,6 +421,7 @@ mod tests {
 
     #[test]
     fn add_object_duplicate_id() -> Result<(), Error> {
+        let _executor = fasync::LocalExecutor::new();
         let mut client = create_client()?;
         assert!(client.add_object(0, TestReceiver::new()).is_ok());
         assert!(client.add_object(0, TestReceiver::new()).is_err());
@@ -429,6 +430,7 @@ mod tests {
 
     #[test]
     fn dispatch_message_to_invalid_id() -> Result<(), Error> {
+        let _executor = fasync::LocalExecutor::new();
         // Send a message to an empty map.
         let mut client = create_client()?;
 

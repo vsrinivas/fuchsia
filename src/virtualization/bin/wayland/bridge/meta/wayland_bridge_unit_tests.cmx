@@ -3,7 +3,7 @@
         "syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "bin/wayland_bridge_test"
+        "binary": "bin/wayland_bridge_bin_test"
     },
     "sandbox": {
         "services": [
