@@ -8,7 +8,7 @@ library fuchsia.component;
 /// the component that exposes it. The act of connecting to this protocol will
 /// trigger the bind. Thus, this protocol contains no methods. For more details
 /// on binding, see
-/// https://fuchsia.dev/fuchsia-src/concepts/components/v2/lifecycle?hl=en#binding.
+/// https://fuchsia.dev/fuchsia-src/concepts/components/v2/lifecycle#binding.
 ///
 /// When a component connects to protocol, the component exposing this capability
 /// will be started if it's not already running. Upon a failure to start, the
