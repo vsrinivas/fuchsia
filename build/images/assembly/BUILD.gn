@@ -13,6 +13,7 @@ import("//build/dist/resource.gni")
 import("//build/images/args.gni")
 import("//build/images/assembly/generated_board_config.gni")
 import("//build/images/assembly/generated_product_config.gni")
+import("//build/images/custom_signing.gni")
 import("//build/images/vboot/vboot.gni")
 import("//build/info/info.gni")
 import("//build/packages/package_metadata.gni")
@@ -396,6 +397,14 @@ generated_board_config("board_config") {
   # fvm arguments
   if (!bootfs_only) {
     fvm_slice_size = fvm_slice_size
+  }
+
+  # zbi arguments
+  if (custom_signing_script != "") {
+    zbi_signing_script = custom_signing_script
+  } else if (use_vboot) {
+    zbi_signing_script = vboot_action.script
+    zbi_signing_args = vboot_action.args
   }
 
   if (use_vbmeta) {

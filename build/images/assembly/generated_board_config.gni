@@ -54,6 +54,13 @@ import("//build/zbi/zbi.gni")
 #   fvm_slice_size (required)
 #     [int] The slice size of the FVM.
 #
+# ZBI arguments
+#   zbi_signing_script (optional)
+#     [path] Location of script to use to sign the ZBI.
+#
+#   zbi_signing_args (optional)
+#     [list of strings] Arguments to pass to the signing script.
+#
 template("generated_board_config") {
   assert(defined(invoker.board_name), "Need to define board_name")
   assert(defined(invoker.output_path), "Need to define output_path")
@@ -153,12 +160,14 @@ template("generated_board_config") {
         }
         compression = zbi_compression
 
-        if (use_vboot) {
+        if (defined(invoker.zbi_signing_script)) {
           # Set up the vboot script and its arguments.
           # Assembly always passes the -z and -o switches too.
           signing_script = {
-            tool = rebase_path(vboot_action.script, root_build_dir)
-            extra_arguments = vboot_action.args
+            tool = rebase_path(invoker.zbi_signing_script, root_build_dir)
+            if (defined(invoker.zbi_signing_args)) {
+              extra_arguments = invoker.zbi_signing_args
+            }
           }
         }
 
