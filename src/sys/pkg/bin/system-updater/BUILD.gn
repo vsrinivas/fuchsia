@@ -95,7 +95,7 @@ rustc_binary("bin") {
     "src/update/resolver.rs",
     "src/update/state.rs",
   ]
-  inputs = [ "$base_epoch_file" ]
+  inputs = [ base_epoch_file ]
 }
 
 fuchsia_package_with_single_component("system-updater") {

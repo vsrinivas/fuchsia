@@ -53,8 +53,9 @@ import("//build/toolchain/rbe.gni")
 #   propagates_configs
 #     Optional: public_configs should escape this toolchain via deps
 #
-#   diable_rbe
-#     Optional: set to true to build locally, overriding the global `enable_rbe`.
+#   disable_rbe
+#     Optional: set to true to build locally, overriding the global
+#     `enable_rbe`.
 #
 template("clang_toolchain") {
   toolchain(target_name) {
@@ -83,23 +84,18 @@ template("clang_toolchain") {
       prefix = invoker.prefix
     }
 
-    if (enable_rbe) {
-      _rustc_remote_wrapper =
-          rebase_path("//build/rbe/rustc-remote-wrapper.sh", root_build_dir)
-    }
-
     rebased_rust_sysroot = rebase_path(rust_sysroot, root_build_dir)
 
     # Configure Rust remote builds.
-    _rust_wrapper = ""
+    _rustc_wrapper = ""
     _rust_concurrent_jobs = concurrent_jobs.local
     _use_rbe = enable_rbe
     if (defined(invoker.disable_rbe) && invoker.disable_rbe) {
       _use_rbe = false
     }
     if (_use_rbe) {
-      # TODO(fxb/79963): allow targets to pass additional inputs to this wrapper
-      _rust_wrapper = _rustc_remote_wrapper + " -- "
+      _rustc_wrapper =
+          rebase_path(rustc_remote_wrapper, root_build_dir) + " -- "
 
       # Use remote-worker parallelism
       _rust_concurrent_jobs = concurrent_jobs.goma
@@ -251,7 +247,8 @@ template("clang_toolchain") {
         link_map_args = ""
       }
 
-      command += _rust_wrapper
+      # Possibly enable remote building for the rustc command.
+      command += _rustc_wrapper
 
       # TODO(fxbug.dev/47565): Replacement for rustenv
       command += "{{rustenv}} RUST_BACKTRACE=1 $rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target $link_map_args {{rustflags}} -o \"$unstripped_outfile\" {{rustdeps}} {{externs}}"
@@ -297,7 +294,8 @@ template("clang_toolchain") {
 
       forward_variables_from(_rust_concurrent_jobs, "*")
 
-      command = _rust_wrapper
+      # Possibly enable remote building for the rustc command.
+      command = _rustc_wrapper
 
       # TODO(fxbug.dev/47565): Replacement for rustenv
       command += "{{rustenv}} RUST_BACKTRACE=1 $rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target {{rustflags}} -o {{output}} {{rustdeps}} {{externs}}"
@@ -315,7 +313,8 @@ template("clang_toolchain") {
       forward_variables_from(_rust_concurrent_jobs, "*")
       depfile = "{{output}}.d"
 
-      command = _rust_wrapper
+      # Possibly enable remote building for the rustc command.
+      command = _rustc_wrapper
 
       # TODO(fxbug.dev/47565): Replacement for rustenv
       command += "{{rustenv}} RUST_BACKTRACE=1 $rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target {{rustflags}} -o {{output}} {{rustdeps}} {{externs}}"
@@ -376,7 +375,8 @@ template("clang_toolchain") {
         link_map_args = ""
       }
 
-      command = _rust_wrapper
+      # Possibly enable remote building for the rustc command.
+      command = _rustc_wrapper
 
       # TODO(fxbug.dev/47565): Replacement for rustenv
       command += "{{rustenv}}$ld_location_env RUST_BACKTRACE=1 $rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target $link_map_args {{rustflags}} -o \"$unstripped_outfile\" {{rustdeps}} {{externs}}"
@@ -450,7 +450,8 @@ template("clang_toolchain") {
         link_map_args = ""
       }
 
-      command += _rust_wrapper
+      # Possibly enable remote building for the rustc command.
+      command += _rustc_wrapper
       command += "{{rustenv}} RUST_BACKTRACE=1 $rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target $link_map_args {{rustflags}} -o \"$unstripped_outfile\" {{rustdeps}} {{externs}}"
       command += " && $verify_depfile -t \"{{label}}\" -d $depfile {{sources}}"
 
@@ -498,7 +499,8 @@ template("clang_toolchain") {
       forward_variables_from(_rust_concurrent_jobs, "*")
       depfile = "{{output}}.d"
 
-      command = _rust_wrapper
+      # Possibly enable remote building for the rustc command.
+      command = _rustc_wrapper
 
       # TODO(fxbug.dev/47565): Replacement for rustenv
       command += "{{rustenv}} RUST_BACKTRACE=1 $rustc --color=always --crate-name {{crate_name}} {{source}} --crate-type {{crate_type}} --emit=dep-info=$depfile,link -Zdep-info-omit-d-target {{rustflags}} -o {{output}} --extern proc_macro {{rustdeps}} {{externs}}"

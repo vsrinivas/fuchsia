@@ -160,6 +160,14 @@ template("rustc_binary") {
     package_name = invoker.name
   }
 
+  # rustc does not support dashes in crate names
+  _crate_name = string_replace(package_name, "-", "_")
+  if (defined(invoker.output_name)) {
+    _output_name = invoker.output_name
+  } else {
+    _output_name = _crate_name
+  }
+
   # if "with_unit_tests" is set to true, generate an additional rust test target
   # TODO(https://fxbug.dev/72931): accept a string.
   if (defined(invoker.with_unit_tests) && invoker.with_unit_tests == true) {
@@ -225,17 +233,25 @@ template("rustc_binary") {
     _deps += [ "//build/rust:disable_strict_sources_check_allowlist" ]
   }
 
+  _use_rbe = enable_rbe
+  if (defined(invoker.disable_rbe) && invoker.disable_rbe) {
+    _use_rbe = false
+  }
+  _remote_rbe_inputs = []
+  if (defined(invoker.inputs)) {
+    _remote_rbe_inputs = invoker.inputs
+  }
+  _local_rbe_inputs = _remote_rbe_inputs
+  if (_use_rbe) {
+    # Depend on Rust/RBE scripts and tools
+    _local_rbe_inputs += rust_rbe_deps
+  }
+
   executable(target_name) {
     crate_root = source_root
 
-    # rustc does not support dashes in crate names
-    crate_name = string_replace(package_name, "-", "_")
-
-    if (defined(invoker.output_name)) {
-      output_name = invoker.output_name
-    } else {
-      output_name = crate_name
-    }
+    crate_name = _crate_name
+    output_name = _output_name
 
     rustflags = features
 
@@ -277,19 +293,16 @@ template("rustc_binary") {
                              "visibility",
                              "output_dir",
                              "output_extension",
-                             "inputs",
                            ])
-    inputs = []
-    if (defined(invoker.inputs)) {
-      inputs = invoker.inputs
-    }
-    _use_rbe = enable_rbe
-    if (defined(invoker.disable_rbe) && invoker.disable_rbe) {
-      _use_rbe = false
-    }
-    if (_use_rbe) {
-      # Depend on Rust/RBE scripts and tools
-      inputs += rust_rbe_deps
+    inputs = _local_rbe_inputs
+    if (_use_rbe && _remote_rbe_inputs != []) {
+      # Signal to rustc-remote-wrapper.sh that there are additional
+      # inputs to upload.  This flag is stripped away from the eventual
+      # rustc command.
+      rustflags += [
+        "--remote-inputs",
+        string_join(",", rebase_path(_remote_rbe_inputs, root_build_dir)),
+      ]
     }
   }
 }

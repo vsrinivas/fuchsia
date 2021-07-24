@@ -1,8 +1,8 @@
-# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# Defines the configuration of RBE.
+# Defines the configuration of RBE and related global variables.
 
 # Prebuilt RBE binaries
 rbe_common_tools = [
@@ -18,9 +18,10 @@ rbe_common_scripts = [
   "//build/rbe/fuchsia-reproxy-wrap.sh",
 ]
 
+rustc_remote_wrapper = "//build/rbe/rustc-remote-wrapper.sh"
+
 # Dependencies for all RBE-enabled rust actions.
-rust_rbe_deps = rbe_common_tools + rbe_common_scripts +
-                [ "//build/rbe/rustc-remote-wrapper.sh" ]
+rust_rbe_deps = rbe_common_tools + rbe_common_scripts + [ rustc_remote_wrapper ]
 
 declare_args() {
   # Set to true to enable distributed compilation using RBE.

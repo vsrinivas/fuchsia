@@ -37,6 +37,11 @@ Options:
       This file lists all source files needed for this crate.
       [default: this is inferred from --emit=dep-info=FILE]
 
+If the rust-command contains --remote-inputs=..., those will be interpreted
+as extra --inputs to upload, and removed prior local and remote execution.
+The option argument is a comma-separated list of files, relative to
+\$project_root.
+
 Detected parameters:
   project_root: $project_root
 EOF
@@ -73,7 +78,6 @@ do
     --source) prev_opt=top_source ;;
     --depfile=*) depfile="$optarg" ;;
     --depfile) prev_opt=depfile ;;
-    # TODO(fxb/79963): accept additional inputs to upload
     # stop option processing
     --) shift; break ;;
     *) echo "Unknown option: $opt"; usage; exit 1 ;;
@@ -82,21 +86,9 @@ do
 done
 test -z "$prev_out" || { echo "Option is missing argument to set $prev_opt." ; exit 1;}
 
-# Copy the original command.
-# Prefix with env, in case command starts with VAR=VALUE ...
-rustc_command=(env "$@")
-
-if test "$local_only" = 1
-then
-  # Run original command and exit (no remote execution).
-  "${rustc_command[@]}"
-  exit "$?"
-fi
-
-# Otherwise, prepare for remote execution.
-
 # Modify original command to extract dep-info only (fast).
-dep_only_command=()
+# Start with `env` in case command starts with environment variables.
+dep_only_command=(env)
 
 # Infer the source_root.
 first_source=
@@ -130,9 +122,39 @@ debug_var() {
 }
 
 # Examine the rustc compile command
+comma_remote_inputs=
+
+# Compute a rustc command suitable for local and remote execution.
+# Prefix command with `env` in case it starts with local environment variables.
+rustc_command=(env)
+
 prev_opt=
-for opt in "${rustc_command[@]}"
+for opt in "$@"
 do
+  # Copy most command tokens.
+  dep_only_token="$opt"
+  # handle --option arg
+  if test -n "$prev_opt"
+  then
+    eval "$prev_opt"=\$opt
+    case "$prev_opt" in
+      comma_remote_inputs) ;;  # Remove this optarg.
+      # Copy all others.
+      *) dep_only_command+=( "$dep_only_token" )
+        rustc_command+=( "$opt" )
+        ;;
+    esac
+    prev_opt=
+    shift
+    continue
+  fi
+
+  # Extract optarg from --opt=optarg
+  case "$opt" in
+    *=?*) optarg=$(expr "X$opt" : '[^=]*=\(.*\)') ;;
+    *=) optarg= ;;
+  esac
+
   # Reject absolute paths, for the sake of build artifact portability,
   # and remote-action cache hit benefits.
   case "$opt" in
@@ -146,26 +168,23 @@ EOF
       ;;
   esac
 
-  # Copy most command tokens.
-  dep_only_token="$opt"
-  # handle --option arg
-  if test -n "$prev_opt"
-  then
-    eval "$prev_opt"=\$opt
-    prev_opt=
-    dep_only_command+=( "$dep_only_token" )
-    shift
-    continue
-  fi
-  # Extract optarg from --opt=optarg
-  case "$opt" in
-    *=?*) optarg=$(expr "X$opt" : '[^=]*=\(.*\)') ;;
-    *=) optarg= ;;
-  esac
-
   case "$opt" in
     # This is the (likely prebuilt) rustc binary.
     */rustc) rustc="$opt" ;;
+
+    # --remote-inputs signals to the remote action wrapper,
+    # and not the actual rustc command.
+    --remote-inputs=*)
+      comma_remote_inputs="$optarg"
+      # Remove this from the actual command to be executed.
+      shift
+      continue
+      ;;
+    --remote-inputs) prev_opt=comma_remote_inputs
+      # Remove this from the actual command to be executed.
+      shift
+      continue
+      ;;
 
     # -o path/to/output.rlib
     -o) prev_opt=output ;;
@@ -259,21 +278,8 @@ EOF
 
     --*=* ) ;;  # forward
 
-    # Find files referenced in prefix environment variables.
-    # TODO(fxb/79963): un-hardcode these and pass them in through another flag
-    *=*)
-        envvar=$(expr "X$opt" : '\([^=]*\)=.*')
-        case "envvar" in
-          # The following are used in src/lib/assembly/vbmeta/BUILD.gn:
-          AVB_KEY) envvar_files+=("$optarg") ;;
-          AVB_METADATA) envvar_files+=("$optarg") ;;
-          EXPECTED_VBMETA) envvar_files+=("$optarg") ;;
-          # from src/sys/pkg/bin/system-updater/BUILD.gn:
-          EPOCH_PATH) envvar_files+=("$optarg") ;;
-          # ignore all others
-          *) ;;
-        esac
-        ;;
+    # Forward other environment variables (or similar looking).
+    *=*) ;;
 
     # Capture the first named source file as the source-root.
     *.rs) test -n "$first_source" || first_source="$opt" ;;
@@ -287,12 +293,30 @@ EOF
   esac
   # Copy tokens to craft a local command for dep-info.
   dep_only_command+=( "$dep_only_token" )
+  # Copy tokens to craft a command for local and remote execution.
+  rustc_command+=("$opt")
   shift
 done
 test -z "$prev_out" || { echo "Option is missing argument to set $prev_opt." ; exit 1;}
 
+# Copy the original command.
+# Prefix with env, in case command starts with VAR=VALUE ...
+
+if test "$local_only" = 1
+then
+  # Run original command and exit (no remote execution).
+  "${rustc_command[@]}"
+  exit "$?"
+fi
+
+# Otherwise, prepare for remote execution.
+
 # Specify the rustc binary to be uploaded.
 rustc_relative="$(realpath --relative-to="$project_root" "$rustc")"
+
+# Collect extra inputs to upload for remote execution.
+extra_inputs=()
+IFS=, read -ra extra_inputs <<< "$comma_remote_inputs"
 
 # TODO(fangism): if possible, determine these shlibs statically to avoid `ldd`-ing.
 # TODO(fangism): for host-independence, use llvm-otool and `llvm-readelf -d`,
@@ -343,6 +367,7 @@ rm -f "$depfile.nolink"
 #   * system rust libraries [$depfile.nolink]
 #   * clang toolchain binaries for codegen and linking
 #       For example: -Clinker=.../lld
+#   * additional data dependencies [$extra_inputs]
 
 # Need more than the bin/ directory, but its parent dir which contains tool
 # libraries, and system libraries needed for linking.
@@ -362,6 +387,7 @@ remote_inputs=(
   "${tools_dir[@]}"
   "${link_arg_files[@]}"
   "${link_sysroot[@]}"
+  "${extra_inputs[@]}"
 )
 remote_inputs_joined="$(IFS=, ; echo "${remote_inputs[*]}")"
 
@@ -386,6 +412,7 @@ dump_vars() {
   debug_var "[$script: dep-info]" "${dep_only_command[@]}"
   debug_var "depfile inputs" "${depfile_inputs[@]}"
   debug_var "tools dir" "${tools_dir[@]}"
+  debug_var "extra inputs" "${extra_inputs[@]}"
 }
 
 dump_vars

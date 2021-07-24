@@ -99,6 +99,20 @@ template("rustc_test_internal") {
     _deps += [ "//build/rust:disable_strict_sources_check_allowlist" ]
   }
 
+  _use_rbe = enable_rbe
+  if (defined(invoker.disable_rbe) && invoker.disable_rbe) {
+    _use_rbe = false
+  }
+  _remote_rbe_inputs = []
+  if (defined(invoker.inputs)) {
+    _remote_rbe_inputs = invoker.inputs
+  }
+  _local_rbe_inputs = _remote_rbe_inputs
+  if (_use_rbe) {
+    # Depend on Rust/RBE scripts and tools
+    _local_rbe_inputs += rust_rbe_deps
+  }
+
   executable(exe_target_name) {
     # anything defined with rustc_test MUST be a test target
     testonly = true
@@ -167,22 +181,18 @@ template("rustc_test_internal") {
 
     forward_variables_from(invoker,
                            [
-                             "inputs",
                              "output_dir",
                              "visibility",
                            ])
-
-    inputs = []
-    if (defined(invoker.inputs)) {
-      inputs = invoker.inputs
-    }
-    _use_rbe = enable_rbe
-    if (defined(invoker.disable_rbe) && invoker.disable_rbe) {
-      _use_rbe = false
-    }
-    if (_use_rbe) {
-      # Depend on Rust/RBE scripts and tools
-      inputs += rust_rbe_deps
+    inputs = _local_rbe_inputs
+    if (_use_rbe && _remote_rbe_inputs != []) {
+      # Signal to rustc-remote-wrapper.sh that there are additional
+      # inputs to upload.  This flag is stripped away from the eventual
+      # rustc command.
+      rustflags += [
+        "--remote-inputs",
+        string_join(",", rebase_path(_remote_rbe_inputs, root_build_dir)),
+      ]
     }
   }
 }
