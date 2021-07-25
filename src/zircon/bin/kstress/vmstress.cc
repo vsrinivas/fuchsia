@@ -679,9 +679,9 @@ fbl::RefPtr<CowCloneTestInstance::TestData> CowCloneTestInstance::CreateTestVmo(
       page_offset = uniform_rand(parent->page_count, rng);
 
       parent_clone_start_op_id = parent->next_op_id.load();
-      zx_status_t status = parent->vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE,
-                                                    page_offset * zx_system_get_page_size(),
-                                                    page_count * zx_system_get_page_size(), &vmo);
+      zx_status_t status =
+          parent->vmo.create_child(ZX_VMO_CHILD_SNAPSHOT, page_offset * zx_system_get_page_size(),
+                                   page_count * zx_system_get_page_size(), &vmo);
       ZX_ASSERT_MSG(status == ZX_OK, "Failed to clone vmo %d", status);
       parent_clone_end_op_id = parent->next_op_id.load();
     } else {
