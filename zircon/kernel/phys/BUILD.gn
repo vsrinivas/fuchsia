@@ -243,7 +243,10 @@ if (toolchain_environment == "kernel.phys" ||
   # implicitly by zbi_executable() without adding bloat to the tiny tests that
   # don't use it.
   static_library("zbi-memory") {
-    sources = [ "zbi-memory.cc" ]
+    sources = [
+      "zbi-init-memory.cc",
+      "zbi-memory.cc",
+    ]
     deps = [
       ":allocation",
       ":main",

@@ -612,7 +612,8 @@ if (is_kernel) {
       # Inject the compatibility boot shim as the first kernel.  Note the order
       # matters here!  The zbi tool sorts kernel items first, but it's a stable
       # sort so the shim kernel item will stay before the physboot kernel item.
-      deps += [ "//zircon/kernel/arch/x86/phys/boot-shim:x86-1mb-boot-shim" ]
+      deps +=
+          [ "//zircon/kernel/arch/x86/phys/boot-shim:x86-legacy-zbi-boot-shim" ]
     }
 
     deps += [

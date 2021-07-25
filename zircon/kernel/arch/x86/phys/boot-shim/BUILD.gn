@@ -35,7 +35,7 @@ legacy_shims = [
 group("boot-shim") {
   deps = [
     ":pic-1mb-boot-shim",
-    ":x86-1mb-boot-shim",
+    ":x86-legacy-zbi-boot-shim",
   ]
   foreach(shim, legacy_shims) {
     deps += [ ":${shim.name}" ]
@@ -47,18 +47,21 @@ group("boot-shim") {
 # linked at the fixed 1M load address instead of linked at zero.  Like
 # that shim, it's simply a ZBI kernel item prepended to a bootable ZBI
 # to make the shimmed bootable ZBI--in this case, the 1M protocol ZBI.
-zbi_executable("x86-1mb-boot-shim") {
-  # The add, remove trick ensures these are removed, whether or not they're
-  # present in the default configs list.
-  configs += [ "//zircon/kernel/arch/x86/phys:load-1mb" ]
-  configs -= [ "//zircon/kernel/arch/x86/phys:load-1mb" ]
-  configs += [ "//zircon/kernel/phys:load-pic" ]
+zbi_executable("x86-legacy-zbi-boot-shim") {
+  sources = [ "x86-legacy-zbi-boot-shim.cc" ]
+  deps = [
+    "//zircon/kernel/lib/ktl",
+    "//zircon/kernel/lib/libc",
+    "//zircon/kernel/phys:allocation",
+    "//zircon/kernel/phys:boot-zbi",
+    "//zircon/kernel/phys:main",
+    "//zircon/kernel/phys:symbolize",
+    "//zircon/kernel/phys/lib/boot-shim",
+    "//zircon/system/ulib/zbitl",
+  ]
+
   configs -= [ "//zircon/kernel/phys:load-pic" ]
-
-  # Now add the one we want.
   configs += [ "//zircon/kernel/arch/x86/phys:load-1mb" ]
-
-  deps = [ "//zircon/kernel/phys/boot-shim:noop-boot-shim" ]
 }
 
 # This is the inverse shim: between a modern ZBI boot loader that
@@ -130,7 +133,7 @@ zbi_test("x86-boot-shim-tests") {
   # The order matters here!
   deps = [
     # First, the 1M shim: boot loaders in use today support the 1M protocol.
-    ":x86-1mb-boot-shim",
+    ":x86-legacy-zbi-boot-shim",
 
     # Second, the 1M->PIC shim hands off to the PIC->1M shim.
     ":pic-1mb-boot-shim",

@@ -8,7 +8,10 @@
 #define ZIRCON_KERNEL_PHYS_INCLUDE_PHYS_MAIN_H_
 
 #include <lib/arch/ticks.h>
+#include <zircon/boot/image.h>
 #include <zircon/compiler.h>
+
+#include <ktl/span.h>
 
 #if defined(ZX_STATIC_PIE)
 #include <lib/static-pie/static-pie.h>
@@ -67,6 +70,10 @@ inline void ApplyRelocations() {
 // depending on the particular phys environment.  This panics if no memory is
 // found for the allocator.
 void InitMemory(void* bootloader_data);
+
+// This does most of the InitMemory() work for ZBI executables, where
+// InitMemory() calls it with the ZBI_TYPE_MEM_CONFIG payload from the ZBI.
+void ZbiInitMemory(void* zbi, ktl::span<zbi_mem_range_t> mem_config);
 
 // Perform any architecture-specific set-up.
 void ArchSetUp();
