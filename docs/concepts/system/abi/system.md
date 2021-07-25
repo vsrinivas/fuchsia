@@ -118,7 +118,8 @@ gives two examples of important packaging conventions.
 
 By convention, the `meta` directory in a package contains metadata files that
 describe the package. The structure of this metadata, including the data formats
-used by these files, is part of the system ABI.
+used by these files such as [component manifests][glossary.component-manifest],
+is part of the system ABI.
 
 #### lib
 
@@ -235,6 +236,7 @@ This protocol is also exposed over the network through `ssh`, both by clients
 that expect incoming `ssh` connections to support this protocol and by servers
 that expect outgoing `ssh` connections to support this protocol.
 
+[glossary.component-manifest]: /docs/glossary/README.md#component-manifest
 [glossary.namespace]: /docs/glossary/README.md#namespace
 [glossary.outgoing-directory]: /docs/glossary/README.md#outgoing-directory
 [glossary.protocol]: /docs/glossary/README.md#protocol
