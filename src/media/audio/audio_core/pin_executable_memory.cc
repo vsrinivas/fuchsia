@@ -18,9 +18,10 @@
 namespace media::audio {
 
 // Memory is considered "unused" if it has not been touched for more than 30s.
-// To keep all executable memory pinned, we must run at least once every 30s.
-// To ensure we never miss a deadline, do this twice every 30s.
-static constexpr auto kTimeBetweenPins = zx::sec(15);
+// However in critical situations (to avoid OOM), memory not touched in __10s__ might be evicted.
+// To keep all executable memory pinned, we must run at least once every 10s.
+// To ensure we never miss a deadline, do this twice every 10s.
+static constexpr auto kTimeBetweenPins = zx::sec(5);
 
 PinExecutableMemory& PinExecutableMemory::Singleton() {
   static PinExecutableMemory* p = new PinExecutableMemory;
