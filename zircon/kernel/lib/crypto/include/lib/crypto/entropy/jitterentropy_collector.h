@@ -9,6 +9,7 @@
 
 #include <lib/crypto/entropy/collector.h>
 #include <lib/jitterentropy/jitterentropy.h>
+#include <lib/lazy_init/lazy_init.h>
 #include <zircon/types.h>
 
 #include <kernel/mutex.h>
@@ -50,6 +51,8 @@ class JitterentropyCollector : public Collector {
   size_t DrawEntropy(uint8_t* buf, size_t len) override;
 
  private:
+  friend lazy_init::Access;
+
   JitterentropyCollector(uint8_t* mem, size_t len);
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(JitterentropyCollector);

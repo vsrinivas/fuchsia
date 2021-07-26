@@ -6,6 +6,7 @@
 
 #include <lib/boot-options/boot-options.h>
 #include <lib/crypto/entropy/jitterentropy_collector.h>
+#include <lib/lazy_init/lazy_init.h>
 #include <zircon/errors.h>
 
 #include <ktl/atomic.h>
@@ -13,6 +14,16 @@
 #ifndef JITTERENTROPY_MEM_SIZE
 #define JITTERENTROPY_MEM_SIZE (64u * 1024u)
 #endif
+
+namespace {
+// TODO(andrewkrieger): after optimizing jitterentropy parameters
+// (see fxbug.dev/30967), replace JITTERENTROPY_MEM_SIZE by the optimal
+// size.
+uint8_t g_collector_storage[JITTERENTROPY_MEM_SIZE];
+lazy_init::LazyInit<crypto::entropy::JitterentropyCollector, lazy_init::CheckType::None,
+                    lazy_init::Destructor::Disabled>
+    g_collector;
+}  // namespace
 
 namespace crypto {
 
@@ -41,12 +52,8 @@ zx_status_t JitterentropyCollector::GetInstance(Collector** ptr) {
       // Initialization failed; keep instance == nullptr
       instance = nullptr;
     } else {
-      // TODO(andrewkrieger): after optimizing jitterentropy parameters
-      // (see fxbug.dev/30967), replace JITTERENTROPY_MEM_SIZE by the optimal
-      // size.
-      static uint8_t mem[JITTERENTROPY_MEM_SIZE];
-      static JitterentropyCollector collector(mem, sizeof(mem));
-      instance = &collector;
+      g_collector.Initialize(g_collector_storage, sizeof(g_collector_storage));
+      instance = &g_collector.Get();
     }
     initialized.store(true, ktl::memory_order_release);
   }
