@@ -15,6 +15,8 @@ class GpuProgress {
 
   void Completed(uint32_t sequence_number, std::chrono::steady_clock::time_point time);
 
+  void Reset();
+
   std::chrono::steady_clock::duration GetHangcheckTimeout(
       uint64_t max_completion_time_ms, std::chrono::steady_clock::time_point now);
 

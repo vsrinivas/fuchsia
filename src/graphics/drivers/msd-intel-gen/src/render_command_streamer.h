@@ -21,10 +21,11 @@ class RenderEngineCommandStreamer : public EngineCommandStreamer {
   void SubmitBatch(std::unique_ptr<MappedBatch> batch) override;
 
   void ProcessCompletedCommandBuffers(uint32_t last_completed_sequence);
-  void ResetCurrentContext();
   void ContextSwitched();
 
   bool IsIdle() override { return inflight_command_sequences_.empty(); }
+
+  void ResetCurrentContext() override;
 
   // This does not return ownership of the mapped batches so it is not safe
   // to safe the result and this method must be called from the device thread

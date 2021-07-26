@@ -141,8 +141,16 @@ bool MsdIntelDevice::Init(void* device_handle, bool exec_init_batch) {
   if (!BaseInit(device_handle))
     return DRETF(false, "BaseInit failed");
 
-  if (!InitEngines(exec_init_batch))
-    return DRETF(false, "InitEngines failed");
+  InitEngine(render_engine_cs());
+  InitEngine(video_command_streamer());
+
+  // WaEnableGapsTsvCreditFix
+  registers::ArbiterControl::workaround(register_io());
+
+  if (exec_init_batch) {
+    if (!RenderInitBatch())
+      return DRETF(false, "RenderInitBatch failed");
+  }
 
   return true;
 }
@@ -230,58 +238,71 @@ bool MsdIntelDevice::BaseInit(void* device_handle) {
   return true;
 }
 
-bool MsdIntelDevice::InitEngines(bool execute_init_batch) {
+void MsdIntelDevice::InitEngine(EngineCommandStreamer* engine) {
   CHECK_THREAD_IS_CURRENT(device_thread_id_);
 
-  render_engine_cs_->InitHardware();
+  engine->InitHardware();
 
-  video_command_streamer_->InitHardware();
+  switch (engine->id()) {
+    case RENDER_COMMAND_STREAMER:
+      // Enable render command streamer interrupts.
+      registers::GtInterruptMask0::write(register_io(), registers::InterruptRegisterBase::USER,
+                                         registers::InterruptRegisterBase::UNMASK);
+      registers::GtInterruptEnable0::write(register_io(), registers::InterruptRegisterBase::USER,
+                                           true);
 
-  // Enable render command streamer interrupts.
-  registers::GtInterruptMask0::write(register_io(), registers::InterruptRegisterBase::USER,
-                                     registers::InterruptRegisterBase::UNMASK);
-  registers::GtInterruptEnable0::write(register_io(), registers::InterruptRegisterBase::USER, true);
+      registers::GtInterruptMask0::write(register_io(),
+                                         registers::InterruptRegisterBase::CONTEXT_SWITCH,
+                                         registers::InterruptRegisterBase::UNMASK);
+      registers::GtInterruptEnable0::write(register_io(),
+                                           registers::InterruptRegisterBase::CONTEXT_SWITCH, true);
+      break;
 
-  registers::GtInterruptMask0::write(register_io(),
-                                     registers::InterruptRegisterBase::CONTEXT_SWITCH,
-                                     registers::InterruptRegisterBase::UNMASK);
-  registers::GtInterruptEnable0::write(register_io(),
-                                       registers::InterruptRegisterBase::CONTEXT_SWITCH, true);
+    case VIDEO_COMMAND_STREAMER:
+      // Enable video command streamer interrupts.
+      registers::GtInterruptMask1::write(register_io(), registers::InterruptRegisterBase::USER,
+                                         registers::InterruptRegisterBase::UNMASK);
+      registers::GtInterruptEnable1::write(register_io(), registers::InterruptRegisterBase::USER,
+                                           true);
 
-  // Enable video command streamer interrupts.
-  registers::GtInterruptMask1::write(register_io(), registers::InterruptRegisterBase::USER,
-                                     registers::InterruptRegisterBase::UNMASK);
-  registers::GtInterruptEnable1::write(register_io(), registers::InterruptRegisterBase::USER, true);
+      registers::GtInterruptMask1::write(register_io(),
+                                         registers::InterruptRegisterBase::CONTEXT_SWITCH,
+                                         registers::InterruptRegisterBase::UNMASK);
+      registers::GtInterruptEnable1::write(register_io(),
+                                           registers::InterruptRegisterBase::CONTEXT_SWITCH, true);
+      break;
 
-  registers::GtInterruptMask1::write(register_io(),
-                                     registers::InterruptRegisterBase::CONTEXT_SWITCH,
-                                     registers::InterruptRegisterBase::UNMASK);
-  registers::GtInterruptEnable1::write(register_io(),
-                                       registers::InterruptRegisterBase::CONTEXT_SWITCH, true);
-
-  // WaEnableGapsTsvCreditFix
-  registers::ArbiterControl::workaround(register_io());
-
-  if (execute_init_batch) {
-    auto init_batch = render_engine_cs_->CreateRenderInitBatch(device_id_);
-    if (!init_batch)
-      return DRETF(false, "failed to create render init batch");
-
-    if (!render_engine_cs_->RenderInit(global_context_, std::move(init_batch), gtt_))
-      return DRETF(false, "render_engine_cs failed RenderInit");
+    default:
+      DASSERT(false);
   }
+}
+
+bool MsdIntelDevice::RenderInitBatch() {
+  auto init_batch = render_engine_cs_->CreateRenderInitBatch(device_id_);
+  if (!init_batch)
+    return DRETF(false, "failed to create render init batch");
+
+  if (!render_engine_cs_->RenderInit(global_context_, std::move(init_batch), gtt_))
+    return DRETF(false, "render_engine_cs failed RenderInit");
 
   return true;
 }
 
-bool MsdIntelDevice::RenderEngineReset() {
-  MAGMA_LOG(WARNING, "resetting render engine");
+bool MsdIntelDevice::EngineReset(EngineCommandStreamer* engine) {
+  MAGMA_LOG(WARNING, "resetting engine %s", engine->Name());
 
-  render_engine_cs_->ResetCurrentContext();
+  engine->ResetCurrentContext();
+
+  InitEngine(engine);
 
   registers::AllEngineFault::clear(register_io_.get());
 
-  return InitEngines(true);
+  if (engine->id() == RENDER_COMMAND_STREAMER) {
+    if (!RenderInitBatch())
+      return false;
+  }
+
+  return true;
 }
 
 void MsdIntelDevice::StartDeviceThread() {
@@ -389,6 +410,46 @@ void MsdIntelDevice::EnqueueDeviceRequest(std::unique_ptr<DeviceRequest> request
   device_request_semaphore_->Signal();
 }
 
+#ifdef HANGCHECK_TIMEOUT_MS
+constexpr uint32_t kHangcheckTimeoutMs = HANGCHECK_TIMEOUT_MS;
+#else
+constexpr uint32_t kHangcheckTimeoutMs = 1000;
+#endif
+
+std::chrono::milliseconds MsdIntelDevice::GetDeviceRequestTimeoutMs(
+    const std::vector<EngineCommandStreamer*>& engines) {
+  auto timeout = std::chrono::steady_clock::duration::max();
+
+  for (auto& engine : engines) {
+    timeout = std::min(timeout, engine->progress()->GetHangcheckTimeout(
+                                    kHangcheckTimeoutMs, std::chrono::steady_clock::now()));
+  }
+
+  return std::max(std::chrono::milliseconds(0),
+                  std::chrono::ceil<std::chrono::milliseconds>(timeout));
+}
+
+void MsdIntelDevice::DeviceRequestTimedOut(const std::vector<EngineCommandStreamer*>& engines) {
+  // Sometimes the interrupt thread has been observed to be massively delayed in
+  // responding to a pending interrupt.  In that case the InterruptRequest can be posted
+  // after the timeout has expired, so always check if there is work to do before jumping
+  // to conclusions.
+  {
+    std::unique_lock<std::mutex> lock(device_request_mutex_);
+    if (!device_request_list_.empty())
+      return;
+  }
+
+  auto now = std::chrono::steady_clock::now();
+
+  for (auto& engine : engines) {
+    if (engine->progress()->GetHangcheckTimeout(kHangcheckTimeoutMs, now) <=
+        std::chrono::steady_clock::duration::zero()) {
+      HangCheckTimeout(kHangcheckTimeoutMs, engine->id());
+    }
+  }
+}
+
 int MsdIntelDevice::DeviceThreadLoop() {
   magma::PlatformThreadHelper::SetCurrentThreadName("DeviceThread");
 
@@ -401,39 +462,25 @@ int MsdIntelDevice::DeviceThreadLoop() {
 
   DLOG("DeviceThreadLoop starting thread 0x%lx", device_thread_id_->id());
 
-  while (true) {
-#ifdef HANGCHECK_TIMEOUT_MS
-    constexpr uint32_t kTimeoutMs = HANGCHECK_TIMEOUT_MS;
-#else
-    constexpr uint32_t kTimeoutMs = 1000;
-#endif
+  std::vector<EngineCommandStreamer*> engines{render_engine_cs(), video_command_streamer()};
 
-    auto timeout = std::chrono::duration_cast<std::chrono::milliseconds>(
-        render_engine_cs()->progress()->GetHangcheckTimeout(kTimeoutMs,
-                                                            std::chrono::steady_clock::now()));
+  while (true) {
+    std::chrono::milliseconds timeout_ms = GetDeviceRequestTimeoutMs(engines);
 
     // When the semaphore wait returns the semaphore will be reset.
     // The reset may race with subsequent enqueue/signals on the semaphore,
     // which is fine because we process everything available in the queue
     // before returning here to wait.
-    magma::Status status = device_request_semaphore_->Wait(timeout.count());
+    DASSERT(timeout_ms.count() >= 0);
+    magma::Status status = device_request_semaphore_->Wait(timeout_ms.count());
+
     switch (status.get()) {
       case MAGMA_STATUS_OK:
         break;
-      case MAGMA_STATUS_TIMED_OUT:
-        // Sometimes the interrupt thread has been observed to be massively delayed in
-        // responding to a pending interrupt.  In that case the InterruptRequest can be posted
-        // after the timeout has expired, so always check if there is work to do before jumping
-        // to conclusions.
-        {
-          lock.lock();
-          bool empty = device_request_list_.empty();
-          lock.unlock();
-          if (empty) {
-            HangCheckTimeout(kTimeoutMs);
-          }
-        }
+      case MAGMA_STATUS_TIMED_OUT: {
+        DeviceRequestTimedOut(engines);
         break;
+      }
       default:
         MAGMA_LOG(WARNING, "device_request_semaphore_ Wait failed: %d", status.get());
         DASSERT(false);
@@ -529,17 +576,26 @@ magma::Status MsdIntelDevice::ProcessInterrupts(uint64_t interrupt_time_ns,
     }
   }
 
-  bool fault =
-      registers::AllEngineFault::read(register_io_.get()) & registers::AllEngineFault::kValid;
+  uint32_t fault = registers::AllEngineFault::read(register_io_.get());
 
-  if (fault) {
+  if (registers::AllEngineFault::valid(fault)) {
     std::vector<std::string> dump;
     DumpToString(dump);
     MAGMA_LOG(WARNING, "GPU fault detected\n");
     for (auto& str : dump) {
       MAGMA_LOG(WARNING, "%s", str.c_str());
     }
-    RenderEngineReset();
+
+    switch (registers::AllEngineFault::engine(fault)) {
+      case registers::AllEngineFault::RCS:
+        EngineReset(render_engine_cs());
+        break;
+      case registers::AllEngineFault::VCS1:
+        EngineReset(video_command_streamer());
+        break;
+      default:
+        DASSERT(false);
+    }
   }
 
   return MAGMA_STATUS_OK;
@@ -554,37 +610,62 @@ magma::Status MsdIntelDevice::ProcessDumpStatusToLog() {
   return MAGMA_STATUS_OK;
 }
 
-void MsdIntelDevice::HangCheckTimeout(uint64_t timeout_ms) {
+void MsdIntelDevice::HangCheckTimeout(uint64_t timeout_ms, EngineCommandStreamerId id) {
   std::vector<std::string> dump;
   DumpToString(dump);
+
   uint32_t master_interrupt_control = registers::MasterInterruptControl::read(register_io_.get());
-  if (master_interrupt_control &
-      registers::MasterInterruptControl::kRenderInterruptsPendingBitMask) {
-    MAGMA_LOG(
-        WARNING,
-        "Hang check timeout (%lu ms) while pending render interrupt; slow interrupt handler?\n"
-        "last submitted sequence number 0x%x master_interrupt_control 0x%08x "
-        "last_interrupt_callback_timestamp %lu last_interrupt_timestamp %lu",
-        timeout_ms, render_engine_cs()->progress()->last_submitted_sequence_number(),
-        master_interrupt_control, last_interrupt_callback_timestamp_.load(),
-        last_interrupt_timestamp_.load());
+
+  bool pending_interrupt;
+  EngineCommandStreamer* engine;
+
+  switch (id) {
+    case RENDER_COMMAND_STREAMER:
+      pending_interrupt = (master_interrupt_control &
+                           registers::MasterInterruptControl::kRenderInterruptsPendingBitMask);
+      engine = render_engine_cs();
+      break;
+
+    case VIDEO_COMMAND_STREAMER:
+      pending_interrupt = (master_interrupt_control &
+                           registers::MasterInterruptControl::kVideoInterruptsPendingBitMask);
+      engine = video_command_streamer();
+      break;
+
+    default:
+      DASSERT(false);
+      return;
+  }
+
+  if (pending_interrupt) {
+    MAGMA_LOG(WARNING,
+              "%s: Hang check timeout (%lu ms) while pending interrupt; slow interrupt handler?\n"
+              "last submitted sequence number 0x%x master_interrupt_control 0x%08x "
+              "last_interrupt_callback_timestamp %lu last_interrupt_timestamp %lu",
+              engine->Name(), timeout_ms, engine->progress()->last_submitted_sequence_number(),
+              master_interrupt_control, last_interrupt_callback_timestamp_.load(),
+              last_interrupt_timestamp_.load());
     for (auto& str : dump) {
       MAGMA_LOG(WARNING, "%s", str.c_str());
     }
     return;
   }
+
   MAGMA_LOG(WARNING,
-            "Suspected GPU hang (%lu ms):\nlast submitted sequence number "
+            "%s: Suspected GPU hang (%lu ms):\nlast submitted sequence number "
             "0x%x master_interrupt_control 0x%08x last_interrupt_callback_timestamp %lu "
             "last_interrupt_timestamp %lu",
-            timeout_ms, render_engine_cs()->progress()->last_submitted_sequence_number(),
+            engine->Name(), timeout_ms, engine->progress()->last_submitted_sequence_number(),
             master_interrupt_control, last_interrupt_callback_timestamp_.load(),
             last_interrupt_timestamp_.load());
+
   for (auto& str : dump) {
     MAGMA_LOG(WARNING, "%s", str.c_str());
   }
+
   suspected_gpu_hang_count_ += 1;
-  RenderEngineReset();
+
+  EngineReset(engine);
 }
 
 bool MsdIntelDevice::InitContextForRender(MsdIntelContext* context) {

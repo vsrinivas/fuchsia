@@ -16,9 +16,9 @@
 #include "helper/magma_map_cpu.h"
 #include "helper/test_device_helper.h"
 #include "magma.h"
+#include "magma_intel_gen_defs.h"
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
-#include "msd_intel_gen_query.h"
 
 namespace {
 
@@ -56,7 +56,7 @@ class TestConnection : public magma::TestDeviceBase {
   static constexpr int64_t kOneSecondInNs = 1000000000;
   static constexpr uint64_t kUnmappedBufferGpuAddress = 0x1000000;  // arbitrary
 
-  void SubmitCommandBuffer(How how) {
+  void SubmitCommandBuffer(How how, uint64_t flags) {
     ASSERT_NE(connection_, nullptr);
 
     uint64_t buffer_size;
@@ -80,7 +80,8 @@ class TestConnection : public magma::TestDeviceBase {
 
     magma_command_buffer command_buffer;
     magma_exec_resource exec_resource;
-    EXPECT_TRUE(InitCommandBuffer(&command_buffer, &exec_resource, batch_buffer, buffer_size));
+    EXPECT_TRUE(
+        InitCommandBuffer(&command_buffer, &exec_resource, batch_buffer, buffer_size, flags));
     EXPECT_EQ(MAGMA_STATUS_OK,
               magma_execute_command_buffer_with_resources2(
                   connection_, context_id_, &command_buffer, &exec_resource, nullptr));
@@ -157,13 +158,14 @@ class TestConnection : public magma::TestDeviceBase {
   }
 
   bool InitCommandBuffer(magma_command_buffer* command_buffer, magma_exec_resource* exec_resource,
-                         magma_buffer_t batch_buffer, uint64_t batch_buffer_length) {
+                         magma_buffer_t batch_buffer, uint64_t batch_buffer_length,
+                         uint64_t flags) {
     command_buffer->batch_buffer_resource_index = 0;
     command_buffer->batch_start_offset = 0;
     command_buffer->resource_count = 1;
     command_buffer->wait_semaphore_count = 0;
     command_buffer->signal_semaphore_count = 0;
-    command_buffer->flags = 0;
+    command_buffer->flags = flags;
 
     exec_resource->buffer_id = magma_get_buffer_id(batch_buffer);
     exec_resource->offset = 0;
@@ -172,26 +174,26 @@ class TestConnection : public magma::TestDeviceBase {
     return true;
   }
 
-  static void Stress(uint32_t iterations) {
+  static void Stress(uint32_t iterations, uint64_t flags) {
     for (uint32_t i = 0; i < iterations; i++) {
       DLOG("iteration %d/%d", i, iterations);
-      std::thread happy([] {
+      std::thread happy([flags] {
         std::unique_ptr<TestConnection> test(new TestConnection());
         for (uint32_t count = 0; count < 100; count++) {
-          test->SubmitCommandBuffer(TestConnection::NORMAL);
+          test->SubmitCommandBuffer(TestConnection::NORMAL, flags);
         }
       });
 
-      std::thread sad([] {
+      std::thread sad([flags] {
         std::unique_ptr<TestConnection> test(new TestConnection());
         for (uint32_t count = 0; count < 100; count++) {
           if (count % 2 == 0) {
-            test->SubmitCommandBuffer(TestConnection::NORMAL);
+            test->SubmitCommandBuffer(TestConnection::NORMAL, flags);
           } else if (count % 3 == 0) {
-            test->SubmitCommandBuffer(TestConnection::FAULT);
+            test->SubmitCommandBuffer(TestConnection::FAULT, flags);
             test.reset(new TestConnection());
           } else {
-            test->SubmitCommandBuffer(TestConnection::HANG);
+            test->SubmitCommandBuffer(TestConnection::HANG, flags);
             test.reset(new TestConnection());
           }
         }
@@ -202,7 +204,7 @@ class TestConnection : public magma::TestDeviceBase {
     }
   }
 
-  void SubmitAndDisconnect() {
+  void SubmitAndDisconnect(uint64_t flags) {
     uint64_t size;
     magma_buffer_t batch_buffer;
 
@@ -214,7 +216,7 @@ class TestConnection : public magma::TestDeviceBase {
 
     magma_command_buffer command_buffer;
     magma_exec_resource exec_resource;
-    EXPECT_TRUE(InitCommandBuffer(&command_buffer, &exec_resource, batch_buffer, size));
+    EXPECT_TRUE(InitCommandBuffer(&command_buffer, &exec_resource, batch_buffer, size, flags));
     EXPECT_EQ(MAGMA_STATUS_OK,
               magma_execute_command_buffer_with_resources2(
                   connection_, context_id_, &command_buffer, &exec_resource, nullptr));
@@ -237,20 +239,45 @@ class TestConnection : public magma::TestDeviceBase {
 
 }  // namespace
 
-TEST(HangRecovery, Test) {
-  std::unique_ptr<TestConnection> test;
-  test.reset(new TestConnection());
-  test->SubmitCommandBuffer(TestConnection::NORMAL);
-  test.reset(new TestConnection());
-  test->SubmitCommandBuffer(TestConnection::FAULT);
-  test.reset(new TestConnection());
-  test->SubmitCommandBuffer(TestConnection::NORMAL);
-  test.reset(new TestConnection());
-  test->SubmitCommandBuffer(TestConnection::HANG);
-  test.reset(new TestConnection());
-  test->SubmitCommandBuffer(TestConnection::NORMAL);
+class TestHangRecovery : public testing::TestWithParam<uint64_t> {};
+
+TEST_P(TestHangRecovery, Hang) {
+  uint64_t flags = GetParam();
+  { TestConnection().SubmitCommandBuffer(TestConnection::HANG, flags); }
 }
 
-TEST(HangRecovery, DISABLED_Stress) { TestConnection::Stress(1000); }
+TEST_P(TestHangRecovery, Fault) {
+  uint64_t flags = GetParam();
+  { TestConnection().SubmitCommandBuffer(TestConnection::FAULT, flags); }
+}
 
-TEST(HangRecovery, SubmitAndDisconnect) { TestConnection().SubmitAndDisconnect(); }
+TEST_P(TestHangRecovery, Sequence) {
+  uint64_t flags = GetParam();
+  { TestConnection().SubmitCommandBuffer(TestConnection::NORMAL, flags); }
+  { TestConnection().SubmitCommandBuffer(TestConnection::FAULT, flags); }
+  { TestConnection().SubmitCommandBuffer(TestConnection::NORMAL, flags); }
+  { TestConnection().SubmitCommandBuffer(TestConnection::HANG, flags); }
+  { TestConnection().SubmitCommandBuffer(TestConnection::NORMAL, flags); }
+}
+
+TEST_P(TestHangRecovery, SubmitAndDisconnect) {
+  uint64_t flags = GetParam();
+  TestConnection().SubmitAndDisconnect(flags);
+}
+
+INSTANTIATE_TEST_SUITE_P(TestHangRecovery, TestHangRecovery,
+                         testing::Values(kMagmaIntelGenCommandBufferForRender,
+                                         kMagmaIntelGenCommandBufferForVideo),
+                         [](testing::TestParamInfo<uint64_t> info) {
+                           switch (info.param) {
+                             case kMagmaIntelGenCommandBufferForRender:
+                               return "Render";
+                             case kMagmaIntelGenCommandBufferForVideo:
+                               return "Video";
+                           }
+                           return "Unknown";
+                         });
+
+TEST(HangRecovery, DISABLED_Stress) {
+  TestConnection::Stress(1000, kMagmaIntelGenCommandBufferForRender);
+}

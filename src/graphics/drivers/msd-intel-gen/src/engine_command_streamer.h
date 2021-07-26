@@ -35,6 +35,8 @@ class EngineCommandStreamer {
 
   EngineCommandStreamerId id() const { return id_; }
 
+  const char* Name() const;
+
   GpuProgress* progress() { return &progress_; }
 
   // Initialize backing store for the given context on this engine command streamer.
@@ -43,21 +45,25 @@ class EngineCommandStreamer {
   bool InitContextWorkarounds(MsdIntelContext* context);
   bool InitContextCacheConfig(MsdIntelContext* context);
 
-  // Initialize engine command streamer hardware.
   void InitHardware();
 
   uint64_t GetActiveHeadPointer();
 
-  virtual void SubmitBatch(std::unique_ptr<MappedBatch> batch) = 0;
-
-  virtual bool IsIdle() = 0;
-
-  virtual bool Reset();
+  bool Reset();
 
   bool StartBatchBuffer(MsdIntelContext* context, uint64_t gpu_addr,
                         AddressSpaceType address_space_type);
 
+  virtual bool IsIdle() = 0;
+
+  // Queue the batch for eventual execution.
+  virtual void SubmitBatch(std::unique_ptr<MappedBatch> batch) = 0;
+
+  // Reset the engine state and kill the current context.
+  virtual void ResetCurrentContext() = 0;
+
  protected:
+  // Execute the batch immediately.
   virtual bool ExecBatch(std::unique_ptr<MappedBatch> mapped_batch) = 0;
 
   bool SubmitContext(MsdIntelContext* context, uint32_t tail);
