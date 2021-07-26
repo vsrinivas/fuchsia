@@ -27,7 +27,7 @@ pub fn get_default_graphics() -> String {
     match env::var_os("DISPLAY") {
         Some(port) => {
             // Running on chrome remote desktop
-            if port == ":20" {
+            if port == ":20" || port.to_string_lossy().starts_with(":20.") {
                 return "swiftshader_indirect".to_string();
             }
         }
@@ -72,6 +72,9 @@ mod tests {
     #[cfg(target_os = "linux")]
     fn test_crd() {
         env::set_var("DISPLAY", ":20");
+        assert_eq!(get_default_graphics(), "swiftshader_indirect");
+
+        env::set_var("DISPLAY", ":20.0");
         assert_eq!(get_default_graphics(), "swiftshader_indirect");
     }
 
