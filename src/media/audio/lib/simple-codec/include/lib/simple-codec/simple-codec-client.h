@@ -17,6 +17,7 @@
 #include <lib/zx/time.h>
 #include <threads.h>
 
+#include <future>
 #include <string>
 #include <thread>
 #include <vector>
@@ -94,7 +95,8 @@ class SimpleCodecClient {
   async_dispatcher_t* const dispatcher_;
   bool thread_started_ = false;
 
-  fidl::Client<fuchsia_hardware_audio::Codec> codec_;
+  fidl::WireSharedClient<fuchsia_hardware_audio::Codec> codec_;
+  std::future<void> codec_torn_down_;
 
   fbl::Mutex gain_state_lock_;
   zx::status<GainState> gain_state_ TA_GUARDED(gain_state_lock_) = zx::error(ZX_ERR_BAD_STATE);

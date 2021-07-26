@@ -41,7 +41,12 @@ zx_status_t SimpleCodecClient::SetProtocol(ddk::CodecProtocolClient proto_client
     return status;
   }
 
-  codec_ = fidl::Client(std::move(channel_local), dispatcher_);
+  std::promise<void> codec_torn_down_promise;
+  codec_torn_down_ = codec_torn_down_promise.get_future();
+  codec_ = fidl::WireSharedClient(
+      std::move(channel_local), dispatcher_,
+      fidl::ObserveTeardown(
+          [teardown = std::move(codec_torn_down_promise)]() mutable { teardown.set_value(); }));
 
   if (!created_with_dispatcher_ && !thread_started_) {
     status = loop_.StartThread("SimpleCodecClient thread");
@@ -222,7 +227,8 @@ void SimpleCodecClient::Unbind() {
   // Wait for any pending channel operations to complete. This ensures we don't get a WatchGainState
   // callback after the client has been freed.
   if (codec_.is_valid()) {
-    codec_.WaitForChannel();
+    codec_.AsyncTeardown();
+    codec_torn_down_.wait();
   }
   {
     fbl::AutoLock lock(&gain_state_lock_);
