@@ -90,18 +90,6 @@ Responsiblities:
 - Performs scans via the Interface Manager.
 - Distributes scan results to the requester as well as the Network Selection Manager and Emergency Location provider.
 
-### Telemetry
-
-Implemented in: [`telemetry/mod.rs`](./src/telemetry/mod.rs)
-
-Responsibilities:
-
-- Receives TelemetryEvent on network selection and network state, and keep track of
-  stats about connection uptime and downtime.
-- Maintains stats for the last one day and seven days separately, discarding stale
-  data when enough time has passed.
-- Exposes stats via Inspect.
-
 ## Examples of data flow in common situations
 
 The situations below illustrate how the modules cooperate to handle common scenarios. Similar to above, these situations aren't intended to capture every nuance of behavior.

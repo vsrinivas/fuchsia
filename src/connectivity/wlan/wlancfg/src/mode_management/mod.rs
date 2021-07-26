@@ -5,7 +5,7 @@
 use {
     crate::{
         client::network_selection::NetworkSelector, config_management::SavedNetworksManagerApi,
-        telemetry::TelemetrySender, util::listener,
+        util::listener,
     },
     anyhow::Error,
     fuchsia_cobalt::CobaltSender,
@@ -27,7 +27,6 @@ pub(crate) fn create_iface_manager(
     saved_networks: Arc<dyn SavedNetworksManagerApi>,
     network_selector: Arc<NetworkSelector>,
     cobalt_api: CobaltSender,
-    telemetry_sender: TelemetrySender,
 ) -> (Arc<Mutex<iface_manager_api::IfaceManager>>, impl Future<Output = Result<Void, Error>>) {
     let (sender, receiver) = mpsc::channel(0);
     let iface_manager_sender = Arc::new(Mutex::new(iface_manager_api::IfaceManager { sender }));
@@ -39,7 +38,6 @@ pub(crate) fn create_iface_manager(
         saved_networks,
         network_selector.clone(),
         cobalt_api,
-        telemetry_sender,
     );
     let iface_manager_service = iface_manager::serve_iface_manager_requests(
         iface_manager,
