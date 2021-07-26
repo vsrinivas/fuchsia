@@ -120,6 +120,8 @@ pub enum BindParserError {
     NodeKeyword(String),
     PrimaryKeyword(String),
     OnePrimaryNode(String),
+    InvalidNodeName(String),
+    DuplicateNodeName(String),
     UnterminatedComment,
     Unknown(String, ErrorKind),
 }

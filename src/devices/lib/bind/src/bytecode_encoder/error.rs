@@ -20,6 +20,8 @@ pub enum BindRulesEncodeError {
     JumpOffsetOutOfRange(u32),
     MatchNotSupported,
     MissingCompositeDeviceName,
+    MissingCompositeNodeName,
+    DuplicateCompositeNodeName(String),
 }
 
 impl fmt::Display for BindRulesEncodeError {

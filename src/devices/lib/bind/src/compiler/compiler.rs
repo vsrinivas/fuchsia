@@ -177,11 +177,17 @@ impl<'a> SymbolicInstructionInfo<'a> {
 }
 
 #[derive(Debug, PartialEq)]
+pub struct CompositeNode<'a> {
+    pub name: String,
+    pub instructions: Vec<SymbolicInstructionInfo<'a>>,
+}
+
+#[derive(Debug, PartialEq)]
 pub struct CompositeBindRules<'a> {
     pub device_name: String,
     pub symbol_table: SymbolTable,
-    pub primary_node_instructions: Vec<SymbolicInstructionInfo<'a>>,
-    pub additional_node_instructions: Vec<Vec<SymbolicInstructionInfo<'a>>>,
+    pub primary_node: CompositeNode<'a>,
+    pub additional_nodes: Vec<CompositeNode<'a>>,
 }
 
 pub fn compile<'a>(
@@ -235,18 +241,25 @@ pub fn compile_bind_composite<'a>(
 ) -> Result<CompositeBindRules<'a>, CompilerError> {
     let ast = bind_composite::Ast::try_from(rules_str).map_err(CompilerError::BindParserError)?;
     let symbol_table = get_symbol_table_from_libraries(&ast.using, libraries, lint)?;
-    let primary_instructions = compile_statements(ast.primary_node, &symbol_table, true)?;
-    let additional_instructions = ast
+    let primary_node = CompositeNode {
+        name: ast.primary_node.name,
+        instructions: compile_statements(ast.primary_node.statements, &symbol_table, true)?,
+    };
+    let additional_nodes = ast
         .nodes
         .into_iter()
-        .map(|node| compile_statements(node, &symbol_table, true))
-        .collect::<Result<Vec<Vec<SymbolicInstructionInfo<'_>>>, CompilerError>>()?;
+        .map(|node| {
+            let name = node.name;
+            compile_statements(node.statements, &symbol_table, true)
+                .map(|inst| CompositeNode { name: name, instructions: inst })
+        })
+        .collect::<Result<Vec<CompositeNode<'_>>, CompilerError>>()?;
 
     Ok(CompositeBindRules {
         device_name: ast.name.to_string(),
         symbol_table: symbol_table,
-        primary_node_instructions: primary_instructions,
-        additional_node_instructions: additional_instructions,
+        primary_node: primary_node,
+        additional_nodes: additional_nodes,
     })
 }
 

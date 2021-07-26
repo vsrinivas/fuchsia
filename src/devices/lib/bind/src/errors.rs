@@ -153,6 +153,12 @@ impl From<BindParserError> for UserError {
                 Some(span),
                 false,
             ),
+            BindParserError::InvalidNodeName(span) => {
+                UserError::new("E032", "Expected node name string literal", Some(span), false)
+            }
+            BindParserError::DuplicateNodeName(span) => {
+                UserError::new("E033", "Node names should be unique", Some(span), false)
+            }
             BindParserError::UnterminatedComment => {
                 UserError::new("E023", "Found an unterminated multiline comment.", None, false)
             }
@@ -442,6 +448,12 @@ impl From<BindRulesEncodeError> for UserError {
             ),
             BindRulesEncodeError::MissingCompositeDeviceName => {
                 UserError::new("E610", "Composite bind rules missing a device name", None, true)
+            }
+            BindRulesEncodeError::MissingCompositeNodeName => {
+                UserError::new("E611", "Composite bind rules missing a node name", None, true)
+            }
+            BindRulesEncodeError::DuplicateCompositeNodeName(name) => {
+                UserError::new("E612", &format!("Node name {} is duplicate", name), None, true)
             }
         }
     }

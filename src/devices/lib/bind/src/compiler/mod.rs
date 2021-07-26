@@ -9,7 +9,7 @@ pub mod symbol_table;
 
 pub use self::compiler::{
     compile, compile_bind, compile_statements, BindRules, BindRulesDecodeError, CompiledBindRules,
-    CompilerError, CompositeBindRules, SymbolicInstruction, SymbolicInstructionInfo,
+    CompilerError, CompositeBindRules, CompositeNode, SymbolicInstruction, SymbolicInstructionInfo,
 };
 
 pub use self::symbol_table::{get_deprecated_key_identifiers, Symbol, SymbolTable};
