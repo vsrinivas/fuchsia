@@ -183,9 +183,9 @@ zx_status_t zxio_vmo_get_common(const zx::vmo& vmo, size_t content_size, uint32_
     // can set ZX_PROP_NAME (or similar).
     rights |= ZX_RIGHT_SET_PROPERTY;
 
-    uint32_t options = ZX_VMO_CHILD_COPY_ON_WRITE;
+    uint32_t options = ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE;
     if (flags & fio::wire::kVmoFlagExec) {
-      // Creating a COPY_ON_WRITE child removes ZX_RIGHT_EXECUTE even if the
+      // Creating a SNAPSHOT_AT_LEAST_ON_WRITE child removes ZX_RIGHT_EXECUTE even if the
       // parent VMO has it, and we can't arbitrary add EXECUTE here on the
       // client side. Adding CHILD_NO_WRITE still creates a snapshot and a new
       // VMO object, which e.g. can have a unique ZX_PROP_NAME value, but the
@@ -202,7 +202,7 @@ zx_status_t zxio_vmo_get_common(const zx::vmo& vmo, size_t content_size, uint32_
       return status;
     }
 
-    // COPY_ON_WRITE adds ZX_RIGHT_WRITE automatically, but we shouldn't return
+    // SNAPSHOT_AT_LEAST_ON_WRITE adds ZX_RIGHT_WRITE automatically, but we shouldn't return
     // a handle with that right unless requested using VMO_FLAG_WRITE.
     // TODO(fxbug.dev/36877): Supporting VMO_FLAG_PRIVATE & VMO_FLAG_WRITE for
     // Vmofiles is a bit weird and inconsistent. See bug for more info.

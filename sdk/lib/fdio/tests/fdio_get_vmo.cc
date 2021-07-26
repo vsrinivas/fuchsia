@@ -135,11 +135,11 @@ class TestServer final : public fuchsia_io::testing::File_TestBase {
     zx::vmo result;
     if (request->flags & fuchsia_io::wire::kVmoFlagPrivate) {
       rights |= ZX_RIGHT_SET_PROPERTY;
-      uint32_t options = ZX_VMO_CHILD_COPY_ON_WRITE;
+      uint32_t options = ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE;
       if (request->flags & fuchsia_io::wire::kVmoFlagExec) {
-        // Creating a COPY_ON_WRITE child removes ZX_RIGHT_EXECUTE even if the parent VMO has it,
-        // but NO_WRITE changes this behavior so that the new handle doesn't have WRITE and
-        // preserves EXECUTE.
+        // Creating a SNAPSHOT_AT_LEAST_ON_WRITE child removes ZX_RIGHT_EXECUTE even if the parent
+        // VMO has it, but NO_WRITE changes this behavior so that the new handle doesn't have WRITE
+        // and preserves EXECUTE.
         options |= ZX_VMO_CHILD_NO_WRITE;
       }
       status = context->vmo.create_child(options, 0, zx_system_get_page_size(), &result);
