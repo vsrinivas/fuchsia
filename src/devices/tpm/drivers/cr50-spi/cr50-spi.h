@@ -6,6 +6,8 @@
 
 #include <fuchsia/hardware/spi/cpp/banjo.h>
 #include <fuchsia/hardware/spi/llcpp/fidl.h>
+#include <fuchsia/hardware/tpmimpl/cpp/banjo.h>
+#include <fuchsia/hardware/tpmimpl/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/ddk/device.h>
 #include <lib/inspect/cpp/inspector.h>
@@ -17,9 +19,11 @@
 namespace cr50::spi {
 
 class Cr50SpiDevice;
-using DeviceType = ddk::Device<Cr50SpiDevice, ddk::Initializable, ddk::Unbindable>;
+using DeviceType = ddk::Device<Cr50SpiDevice, ddk::Initializable, ddk::Unbindable,
+                               ddk::Messageable<fuchsia_hardware_tpmimpl::TpmImpl>::Mixin>;
 
-class Cr50SpiDevice : public DeviceType {
+class Cr50SpiDevice : public DeviceType,
+                      public ddk::TpmImplProtocol<Cr50SpiDevice, ddk::base_protocol> {
  public:
   Cr50SpiDevice(zx_device_t* parent, acpi::Client acpi,
                 fidl::WireSyncClient<fuchsia_hardware_spi::Device> spi)
@@ -35,6 +39,12 @@ class Cr50SpiDevice : public DeviceType {
   void DdkInit(ddk::InitTxn txn);
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
+
+  void TpmImplConnectServer(zx::channel server);
+
+  // FIDL methods.
+  void Read(ReadRequestView request, ReadCompleter::Sync& completer) override;
+  void Write(WriteRequestView request, WriteCompleter::Sync& completer) override;
 
   // For unit tests.
   inspect::Inspector& inspect() { return inspect_; }

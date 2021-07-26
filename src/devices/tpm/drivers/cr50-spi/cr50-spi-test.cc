@@ -5,6 +5,7 @@
 #include "src/devices/tpm/drivers/cr50-spi/cr50-spi.h"
 
 #include <fuchsia/hardware/spi/llcpp/fidl.h>
+#include <fuchsia/hardware/tpmimpl/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/ddk/debug.h>
 #include <lib/inspect/testing/cpp/zxtest/inspect.h>
@@ -156,6 +157,25 @@ class Cr50SpiTest : public zxtest::Test,
     messages_.emplace_back(SpiMessage(std::move(tx), std::move(rx)));
   }
 
+  void ExpectFirmware(std::string firmware) {
+    char firmware_version[96] = {0};
+    ASSERT_LT(firmware.size() + 1, 96);
+    memcpy(firmware_version, firmware.data(), firmware.size() + 1);
+
+    ExpectMessage(true, 0xf90, {0}, {});
+
+    for (size_t i = 0; i < firmware.size(); i += 32) {
+      ExpectMessage(false, 0xf90, {},
+                    std::vector<uint8_t>(reinterpret_cast<uint8_t*>(&firmware_version[i]),
+                                         reinterpret_cast<uint8_t*>(&firmware_version[i + 32])),
+                    10);
+    }
+
+    auto device = fake_root_->GetLatestChild();
+    device->InitOp();
+    device->WaitUntilInitReplyCalled();
+  }
+
  protected:
   async::Loop loop_;
   std::shared_ptr<MockDevice> fake_root_;
@@ -167,27 +187,55 @@ class Cr50SpiTest : public zxtest::Test,
 
 TEST_F(Cr50SpiTest, TestFirmwareVersion) {
   ASSERT_NO_FATAL_FAILURES(CreateDevice(false));
-  char firmware_version[96] =
+  static const std::string kFirmwareVersion =
       "B2-C:0 RO_B:0.0.11/4d655eab RW_B:0.5.9/cr50_v1.9308_87_mp.547-af2f3d63";
-
-  ExpectMessage(true, 0xf90, {0}, {});
-  ExpectMessage(false, 0xf90, {},
-                std::vector<uint8_t>(reinterpret_cast<uint8_t*>(firmware_version),
-                                     reinterpret_cast<uint8_t*>(&firmware_version[32])),
-                10);
-  ExpectMessage(false, 0xf90, {},
-                std::vector<uint8_t>(reinterpret_cast<uint8_t*>(&firmware_version[32]),
-                                     reinterpret_cast<uint8_t*>(&firmware_version[64])));
-  ExpectMessage(false, 0xf90, {},
-                std::vector<uint8_t>(reinterpret_cast<uint8_t*>(&firmware_version[64]),
-                                     reinterpret_cast<uint8_t*>(&firmware_version[96])));
-
-  auto device = fake_root_->GetLatestChild();
-  device->InitOp();
-  device->WaitUntilInitReplyCalled();
+  ASSERT_NO_FATAL_FAILURES(ExpectFirmware(kFirmwareVersion));
   ASSERT_EQ(messages_.size(), 0);
 
+  auto device = fake_root_->GetLatestChild();
   auto ctx = device->GetDeviceContext<cr50::spi::Cr50SpiDevice>();
   ASSERT_NO_FATAL_FAILURES(ReadInspect(ctx->inspect()));
-  CheckProperty(hierarchy().node(), "fw-version", inspect::StringPropertyValue(firmware_version));
+  CheckProperty(hierarchy().node(), "fw-version", inspect::StringPropertyValue(kFirmwareVersion));
+}
+
+TEST_F(Cr50SpiTest, TestTpmRead) {
+  ASSERT_NO_FATAL_FAILURES(CreateDevice(false));
+  ASSERT_NO_FATAL_FAILURES(ExpectFirmware("hello firmware"));
+
+  fidl::WireSyncClient<fuchsia_hardware_tpmimpl::TpmImpl> client;
+  auto server = fidl::CreateEndpoints(&client.client_end());
+  ASSERT_TRUE(server.is_ok());
+
+  ddk::TpmImplProtocolClient proto(fake_root_->GetLatestChild());
+  proto.ConnectServer(server->TakeChannel());
+
+  std::vector<uint8_t> expected{1, 2, 3, 4};
+  ExpectMessage(false, fuchsia_hardware_tpmimpl::wire::RegisterAddress::kTpmSts, {}, expected);
+  auto read = client.Read(0, fuchsia_hardware_tpmimpl::wire::RegisterAddress::kTpmSts, 4);
+  ASSERT_TRUE(read.ok());
+  ASSERT_TRUE(read->result.is_response());
+  auto& view = read->result.response().data;
+  ASSERT_EQ(view.count(), expected.size());
+  ASSERT_BYTES_EQ(view.data(), expected.data(), expected.size());
+  ASSERT_EQ(messages_.size(), 0);
+}
+
+TEST_F(Cr50SpiTest, TestTpmWrite) {
+  ASSERT_NO_FATAL_FAILURES(CreateDevice(false));
+  ASSERT_NO_FATAL_FAILURES(ExpectFirmware("hello firmware"));
+
+  fidl::WireSyncClient<fuchsia_hardware_tpmimpl::TpmImpl> client;
+  auto server = fidl::CreateEndpoints(&client.client_end());
+  ASSERT_TRUE(server.is_ok());
+
+  ddk::TpmImplProtocolClient proto(fake_root_->GetLatestChild());
+  proto.ConnectServer(server->TakeChannel());
+
+  std::vector<uint8_t> expected{4, 4, 2, 0};
+  ExpectMessage(true, fuchsia_hardware_tpmimpl::wire::RegisterAddress::kTpmSts, expected, {});
+  auto read = client.Write(0, fuchsia_hardware_tpmimpl::wire::RegisterAddress::kTpmSts,
+                           fidl::VectorView<uint8_t>::FromExternal(expected));
+  ASSERT_TRUE(read.ok());
+  ASSERT_TRUE(read->result.is_response());
+  ASSERT_EQ(messages_.size(), 0);
 }

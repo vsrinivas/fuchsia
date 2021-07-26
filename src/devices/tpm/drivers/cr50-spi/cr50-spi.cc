@@ -5,6 +5,7 @@
 #include "src/devices/tpm/drivers/cr50-spi/cr50-spi.h"
 
 #include <fuchsia/hardware/spi/cpp/banjo.h>
+#include <fuchsia/hardware/tpmimpl/llcpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
@@ -109,6 +110,39 @@ void Cr50SpiDevice::DdkRelease() {
     irq_thread_.join();
   }
   delete this;
+}
+
+void Cr50SpiDevice::TpmImplConnectServer(zx::channel server) {
+  fidl::BindServer(loop_.dispatcher(),
+                   fidl::ServerEnd<fuchsia_hardware_tpmimpl::TpmImpl>(std::move(server)), this);
+}
+
+void Cr50SpiDevice::Read(ReadRequestView request, ReadCompleter::Sync &completer) {
+  // Cr50 ignores locality, so we do too. See section 33 of
+  // https://trustedcomputinggroup.org/wp-content/uploads/TCG_TPM2_r1p59_Part1_Architecture_pub.pdf.
+  fidl::FidlAllocator<fuchsia_hardware_tpmimpl::wire::kTpmMaxDataTransfer> alloc;
+  if (request->count > fuchsia_hardware_tpmimpl::wire::kTpmMaxDataTransfer) {
+    completer.ReplyError(ZX_ERR_INVALID_ARGS);
+    return;
+  }
+  WaitForReady();
+  fidl::VectorView<uint8_t> buffer(alloc, request->count);
+  auto result = DoXfer(request->address, buffer, false);
+  if (result.is_error()) {
+    completer.ReplyError(result.error_value());
+  } else {
+    completer.ReplySuccess(buffer);
+  }
+}
+
+void Cr50SpiDevice::Write(WriteRequestView request, WriteCompleter::Sync &completer) {
+  WaitForReady();
+  auto result = DoXfer(request->address, request->data, true);
+  if (result.is_error()) {
+    completer.ReplyError(result.error_value());
+  } else {
+    completer.ReplySuccess();
+  }
 }
 
 void Cr50SpiDevice::LogFirmwareVersion() {
