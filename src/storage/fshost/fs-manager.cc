@@ -75,8 +75,7 @@ FsManager::~FsManager() {
 
 zx_status_t FsManager::SetupLifecycleServer(
     fidl::ServerEnd<fuchsia_process_lifecycle::Lifecycle> lifecycle_request) {
-  return LifecycleServer::Create(global_loop_->dispatcher(), this,
-                                 std::move(lifecycle_request));
+  return LifecycleServer::Create(global_loop_->dispatcher(), this, std::move(lifecycle_request));
 }
 
 // Sets up the outgoing directory, and runs it on the PA_DIRECTORY_REQUEST
@@ -200,8 +199,8 @@ zx_status_t FsManager::Initialize(
     }
   }
   if (driver_admin.is_valid()) {
-    driver_admin_ = fidl::Client<fuchsia_device_manager::Administrator>(std::move(driver_admin),
-                                                                        global_loop_->dispatcher());
+    driver_admin_ = fidl::WireSharedClient<fuchsia_device_manager::Administrator>(
+        std::move(driver_admin), global_loop_->dispatcher());
   }
   return ZX_OK;
 }

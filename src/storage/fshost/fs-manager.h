@@ -170,7 +170,7 @@ class FsManager {
   std::mutex lock_;
   bool shutdown_called_ TA_GUARDED(lock_) = false;
   sync_completion_t shutdown_;
-  fidl::Client<fuchsia_device_manager::Administrator> driver_admin_;
+  fidl::WireSharedClient<fuchsia_device_manager::Administrator> driver_admin_;
 };
 
 }  // namespace fshost
