@@ -268,9 +268,9 @@ TEST_F(FakeDdkOptee, MultiThreadTest) {
   }
 
   auto client_end1 = fidl::ClientEnd<fuchsia_tee::Application>(std::move(tee_app_client[0]));
-  fidl::Client fidl_client1(std::move(client_end1), clients_loop_.dispatcher());
+  fidl::WireSharedClient fidl_client1(std::move(client_end1), clients_loop_.dispatcher());
   auto client_end2 = fidl::ClientEnd<fuchsia_tee::Application>(std::move(tee_app_client[1]));
-  fidl::Client fidl_client2(std::move(client_end2), clients_loop_.dispatcher());
+  fidl::WireSharedClient fidl_client2(std::move(client_end2), clients_loop_.dispatcher());
   call_with_arg_handler = [&](const zx_smc_parameters_t* params, zx_smc_result_t* out) {
     if (wait) {
       sync_completion_signal(&smc_completion1);
@@ -328,9 +328,9 @@ TEST_F(FakeDdkOptee, TheadLimitCorrectOrder) {
   }
 
   auto client_end1 = fidl::ClientEnd<fuchsia_tee::Application>(std::move(tee_app_client[0]));
-  fidl::Client fidl_client1(std::move(client_end1), clients_loop_.dispatcher());
+  fidl::WireSharedClient fidl_client1(std::move(client_end1), clients_loop_.dispatcher());
   auto client_end2 = fidl::ClientEnd<fuchsia_tee::Application>(std::move(tee_app_client[1]));
-  fidl::Client fidl_client2(std::move(client_end2), clients_loop_.dispatcher());
+  fidl::WireSharedClient fidl_client2(std::move(client_end2), clients_loop_.dispatcher());
   call_with_arg_handler = [&](const zx_smc_parameters_t* params, zx_smc_result_t* out) {
     call_count++;
     if (return_thread_limit) {
@@ -394,11 +394,11 @@ TEST_F(FakeDdkOptee, TheadLimitWrongOrder) {
   }
 
   auto client_end1 = fidl::ClientEnd<fuchsia_tee::Application>(std::move(tee_app_client[0]));
-  fidl::Client fidl_client1(std::move(client_end1), clients_loop_.dispatcher());
+  fidl::WireSharedClient fidl_client1(std::move(client_end1), clients_loop_.dispatcher());
   auto client_end2 = fidl::ClientEnd<fuchsia_tee::Application>(std::move(tee_app_client[1]));
-  fidl::Client fidl_client2(std::move(client_end2), clients_loop_.dispatcher());
+  fidl::WireSharedClient fidl_client2(std::move(client_end2), clients_loop_.dispatcher());
   auto client_end3 = fidl::ClientEnd<fuchsia_tee::Application>(std::move(tee_app_client[2]));
-  fidl::Client fidl_client3(std::move(client_end3), clients_loop_.dispatcher());
+  fidl::WireSharedClient fidl_client3(std::move(client_end3), clients_loop_.dispatcher());
 
   call_with_arg_handler = [&](const zx_smc_parameters_t* params, zx_smc_result_t* out) {
     call_count++;
@@ -487,11 +487,11 @@ TEST_F(FakeDdkOptee, TheadLimitWrongOrderCascade) {
   }
 
   auto client_end1 = fidl::ClientEnd<fuchsia_tee::Application>(std::move(tee_app_client[0]));
-  fidl::Client fidl_client1(std::move(client_end1), clients_loop_.dispatcher());
+  fidl::WireSharedClient fidl_client1(std::move(client_end1), clients_loop_.dispatcher());
   auto client_end2 = fidl::ClientEnd<fuchsia_tee::Application>(std::move(tee_app_client[1]));
-  fidl::Client fidl_client2(std::move(client_end2), clients_loop_.dispatcher());
+  fidl::WireSharedClient fidl_client2(std::move(client_end2), clients_loop_.dispatcher());
   auto client_end3 = fidl::ClientEnd<fuchsia_tee::Application>(std::move(tee_app_client[2]));
-  fidl::Client fidl_client3(std::move(client_end3), clients_loop_.dispatcher());
+  fidl::WireSharedClient fidl_client3(std::move(client_end3), clients_loop_.dispatcher());
 
   {  // first client is just sleeping for a long time (without ThreadLimit)
     call_with_arg_handler = [&](const zx_smc_parameters_t* params, zx_smc_result_t* out) {

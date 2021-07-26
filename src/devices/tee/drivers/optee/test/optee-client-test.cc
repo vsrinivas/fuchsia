@@ -863,7 +863,7 @@ TEST_F(OpteeClientTestWaitQueue, WakeUpBeforeSleep) {
   fidl::BindServer(loop_.dispatcher(), std::move(server1_end), optee1_client.get());
   fidl::BindServer(loop_.dispatcher(), std::move(server2_end), optee2_client.get());
 
-  fidl::Client fidl_client1(std::move(client1_end), clients_loop_.dispatcher());
+  fidl::WireSharedClient fidl_client1(std::move(client1_end), clients_loop_.dispatcher());
   fidl::WireSyncClient<fuchsia_tee::Application> fidl_client2(std::move(client2_end));
   sync_completion_t completion;
 
@@ -952,7 +952,7 @@ TEST_F(OpteeClientTestWaitQueue, SleepWakeup) {
   fidl::BindServer(loop_.dispatcher(), std::move(server1_end), optee1_client.get());
   fidl::BindServer(loop_.dispatcher(), std::move(server2_end), optee2_client.get());
 
-  fidl::Client fidl_client1(std::move(client1_end), clients_loop_.dispatcher());
+  fidl::WireSharedClient fidl_client1(std::move(client1_end), clients_loop_.dispatcher());
   fidl::WireSyncClient<fuchsia_tee::Application> fidl_client2(std::move(client2_end));
   sync_completion_t completion;
   zx_status_t status;
