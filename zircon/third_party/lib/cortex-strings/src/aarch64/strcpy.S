@@ -74,6 +74,7 @@
 	.global \f
 	.type \f, %function
 \f:
+	.cfi_startproc
 	.endm
 
 	/* NUL detection works on the principle that (X - 1) & (~X) & 0x80
@@ -333,4 +334,5 @@ def_fn STRCPY p2align=6
 	bic	has_nul2, tmp3, tmp4
 	b	.Lfp_gt8
 
+	.cfi_endproc
 	.size	STRCPY, . - STRCPY

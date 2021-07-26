@@ -72,6 +72,7 @@
 	.global \f
 	.type \f, %function
 \f:
+	.cfi_startproc
 	.endm
 
 def_fn strchrnul
@@ -141,4 +142,5 @@ def_fn strchrnul
 	add	result, src, tmp1, lsr #1
 	ret
 
+	.cfi_endproc
 	.size	strchrnul, . - strchrnul

@@ -89,6 +89,7 @@
 	.global \f
 	.type \f, %function
 \f:
+	.cfi_startproc
 	.endm
 
 /* Copies are split into 3 main cases: small copies of up to 16 bytes,
@@ -222,4 +223,5 @@ L(copy_long):
 	stp	C_l, C_h, [dstend, -16]
 	ret
 
+	.cfi_endproc
 	.size	memcpy, . - memcpy

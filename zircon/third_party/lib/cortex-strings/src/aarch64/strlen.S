@@ -57,6 +57,7 @@
 	.global \f
 	.type \f, %function
 \f:
+	.cfi_startproc
 	.endm
 
 	/* NUL detection works on the principle that (X - 1) & (~X) & 0x80
@@ -230,4 +231,5 @@ L(page_cross):
 	csel	data2, data2, tmp2, eq
 	b	L(page_cross_entry)
 
+	.cfi_endproc
 	.size	strlen, . - strlen

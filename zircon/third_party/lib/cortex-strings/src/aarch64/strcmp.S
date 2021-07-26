@@ -35,6 +35,7 @@
 	.global \f
 	.type \f, %function
 \f:
+	.cfi_startproc
 	.endm
 
 #define REP8_01 0x0101010101010101
@@ -164,3 +165,5 @@ def_fn strcmp p2align=6
 	b.eq	.Lmisaligned8
 	sub	result, data1, data2
 	ret
+	.cfi_endproc
+	.size   strcmp, . - strcmp

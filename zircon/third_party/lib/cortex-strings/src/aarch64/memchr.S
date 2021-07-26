@@ -73,6 +73,7 @@
 	.global \f
 	.type \f, %function
 \f:
+	.cfi_startproc
 	.endm
 
 def_fn memchr
@@ -169,4 +170,5 @@ def_fn memchr
 	mov	result, #0
 	ret
 
+	.cfi_endproc
 	.size	memchr, . - memchr

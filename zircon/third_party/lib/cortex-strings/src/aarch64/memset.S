@@ -80,6 +80,7 @@
 	.global \f
 	.type \f, %function
 \f:
+	.cfi_startproc
 	.endm
 
 def_fn memset p2align=6
@@ -232,4 +233,5 @@ L(zva_other):
 4:	add	count, count, zva_len
 	b	L(tail64)
 
+	.cfi_endproc
 	.size	memset, . - memset

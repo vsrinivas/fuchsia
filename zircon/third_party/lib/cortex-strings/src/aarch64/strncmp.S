@@ -35,6 +35,7 @@
 	.global \f
 	.type \f, %function
 \f:
+	.cfi_startproc
 	.endm
 
 #define REP8_01 0x0101010101010101
@@ -219,4 +220,5 @@ def_fn strncmp
 	b.eq	1b
 	sub	result, data1, data2
 	ret
+	.cfi_endproc
 	.size strncmp, . - strncmp

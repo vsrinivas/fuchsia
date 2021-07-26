@@ -37,6 +37,7 @@
 	.global \f
 	.type \f, %function
 \f:
+	.cfi_startproc
 	.endm
 
 /* Parameters and result.  */
@@ -159,4 +160,5 @@ def_fn memcmp p2align=6
 	b.eq	1b
 	sub	result, data1, data2
 	ret
+	.cfi_endproc
 	.size memcmp, . - memcmp

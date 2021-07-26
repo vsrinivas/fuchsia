@@ -63,6 +63,7 @@
 	.global \f
 	.type \f, %function
 \f:
+	.cfi_startproc
 	.endm
 
 /* Parameters and result.  */
@@ -154,4 +155,5 @@ def_fn memmove, 6
 .Lmemcpy:
 	b	memcpy
 
+	.cfi_endproc
 	.size	memmove, . - memmove

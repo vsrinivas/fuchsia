@@ -76,6 +76,7 @@
 	.global \f
 	.type \f, %function
 \f:
+	.cfi_startproc
 	.endm
 
 def_fn strchr
@@ -156,4 +157,5 @@ def_fn strchr
 	csel	result, result, xzr, eq
 	ret
 
+	.cfi_endproc
 	.size	strchr, . - strchr

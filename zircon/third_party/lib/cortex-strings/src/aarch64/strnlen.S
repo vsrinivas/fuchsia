@@ -57,6 +57,7 @@
 	.global \f
 	.type \f, %function
 \f:
+	.cfi_startproc
 	.endm
 
 #define REP8_01 0x0101010101010101
@@ -178,4 +179,5 @@ def_fn strnlen
 	csinv	data1, data1, xzr, le
 	csel	data2, data2, data2a, le
 	b	.Lrealigned
+	.cfi_endproc
 	.size	strnlen, . - .Lstart	/* Include pre-padding in size.  */
