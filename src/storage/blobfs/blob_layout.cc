@@ -169,7 +169,9 @@ class PaddedMerkleTreeAtStartBlobLayout : public BlobLayout {
 
   bool HasMerkleTreeAndDataSharedBlock() const override { return false; }
 
-  BlobLayoutFormat Format() const override { return BlobLayoutFormat::kPaddedMerkleTreeAtStart; }
+  BlobLayoutFormat Format() const override {
+    return BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart;
+  }
 
   static zx::status<std::unique_ptr<PaddedMerkleTreeAtStartBlobLayout>> CreateFromInode(
       const Inode& inode, BlockSizeType blobfs_block_size) {
@@ -247,7 +249,7 @@ class PaddedMerkleTreeAtStartBlobLayout : public BlobLayout {
 
 const char* BlobLayoutFormatToString(BlobLayoutFormat format) {
   switch (format) {
-    case BlobLayoutFormat::kPaddedMerkleTreeAtStart:
+    case BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart:
       return "kPaddedMerkleTreeAtStart";
     case BlobLayoutFormat::kCompactMerkleTreeAtEnd:
       return "kCompactMerkleTreeAtEnd";
@@ -256,7 +258,7 @@ const char* BlobLayoutFormatToString(BlobLayoutFormat format) {
 
 const char* GetBlobLayoutFormatCommandLineArg(BlobLayoutFormat format) {
   switch (format) {
-    case BlobLayoutFormat::kPaddedMerkleTreeAtStart:
+    case BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart:
       return kPaddedMerkleTreeAtStartCommandLineArg;
     case BlobLayoutFormat::kCompactMerkleTreeAtEnd:
       return kCompactMerkleTreeAtEndCommandLineArg;
@@ -265,7 +267,7 @@ const char* GetBlobLayoutFormatCommandLineArg(BlobLayoutFormat format) {
 
 zx::status<BlobLayoutFormat> ParseBlobLayoutFormatCommandLineArg(const char* arg) {
   if (strcmp(kPaddedMerkleTreeAtStartCommandLineArg, arg) == 0) {
-    return zx::ok(BlobLayoutFormat::kPaddedMerkleTreeAtStart);
+    return zx::ok(BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart);
   }
   if (strcmp(kCompactMerkleTreeAtEndCommandLineArg, arg) == 0) {
     return zx::ok(BlobLayoutFormat::kCompactMerkleTreeAtEnd);
@@ -275,7 +277,7 @@ zx::status<BlobLayoutFormat> ParseBlobLayoutFormatCommandLineArg(const char* arg
 
 bool ShouldUseCompactMerkleTreeFormat(BlobLayoutFormat format) {
   switch (format) {
-    case BlobLayoutFormat::kPaddedMerkleTreeAtStart:
+    case BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart:
       return false;
     case BlobLayoutFormat::kCompactMerkleTreeAtEnd:
       return true;
@@ -318,7 +320,7 @@ BlobLayout::BlockCountType BlobLayout::MerkleTreeBlockCount() const {
 zx::status<std::unique_ptr<BlobLayout>> BlobLayout::CreateFromInode(
     BlobLayoutFormat format, const Inode& inode, BlockSizeType blobfs_block_size) {
   switch (format) {
-    case BlobLayoutFormat::kPaddedMerkleTreeAtStart: {
+    case BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart: {
       auto layout = PaddedMerkleTreeAtStartBlobLayout::CreateFromInode(inode, blobfs_block_size);
       if (layout.is_error()) {
         return layout.take_error();
@@ -339,7 +341,7 @@ zx::status<std::unique_ptr<BlobLayout>> BlobLayout::CreateFromSizes(
     BlobLayoutFormat format, ByteCountType file_size, ByteCountType data_size,
     BlockSizeType blobfs_block_size) {
   switch (format) {
-    case BlobLayoutFormat::kPaddedMerkleTreeAtStart: {
+    case BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart: {
       auto layout = PaddedMerkleTreeAtStartBlobLayout::CreateFromSizes(file_size, data_size,
                                                                        blobfs_block_size);
       if (layout.is_error()) {

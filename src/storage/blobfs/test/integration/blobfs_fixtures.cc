@@ -21,10 +21,10 @@ fs_test::TestFilesystemOptions BlobfsWithFvmTestParam() {
   return options;
 }
 
-fs_test::TestFilesystemOptions BlobfsWithCompactLayoutTestParam() {
+fs_test::TestFilesystemOptions BlobfsWithPaddedLayoutTestParam() {
   auto options = BlobfsDefaultTestParam();
-  options.description = "BlobfsWithCompactLayout";
-  options.blob_layout_format = BlobLayoutFormat::kCompactMerkleTreeAtEnd;
+  options.description = "BlobfsWithPaddedLayout";
+  options.blob_layout_format = BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart;
   return options;
 }
 

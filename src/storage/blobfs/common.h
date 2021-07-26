@@ -31,7 +31,7 @@ namespace blobfs {
 // Options for constructing new blobfs images.
 struct FilesystemOptions {
   // Which layout to use to store blobs.
-  BlobLayoutFormat blob_layout_format = BlobLayoutFormat::kPaddedMerkleTreeAtStart;
+  BlobLayoutFormat blob_layout_format = BlobLayoutFormat::kCompactMerkleTreeAtEnd;
 
   // The oldest minor version to mark the filesystem as formatted by. This should be left unset (to
   // the default value of kBlobfsCurrentMinorVersion); it is exposed for overriding during tests.

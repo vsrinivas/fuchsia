@@ -124,7 +124,7 @@ TEST_P(FragmentationTest, Fragmentation) {
 
 INSTANTIATE_TEST_SUITE_P(/*no prefix*/, FragmentationTest,
                          testing::Values(BlobfsDefaultTestParam(), BlobfsWithFvmTestParam(),
-                                         BlobfsWithCompactLayoutTestParam()),
+                                         BlobfsWithPaddedLayoutTestParam()),
                          testing::PrintToStringParamName());
 
 }  // namespace

@@ -60,7 +60,7 @@ TEST_P(NoSpaceTest, NoSpace) {
 
 INSTANTIATE_TEST_SUITE_P(/*no prefix*/, NoSpaceTest,
                          testing::Values(BlobfsDefaultTestParam(), BlobfsWithFvmTestParam(),
-                                         BlobfsWithCompactLayoutTestParam()),
+                                         BlobfsWithPaddedLayoutTestParam()),
                          testing::PrintToStringParamName());
 
 }  // namespace

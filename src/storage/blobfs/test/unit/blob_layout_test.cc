@@ -43,8 +43,8 @@ Inode CreateCompressedInode(ByteCountType file_size, BlockCountType block_count)
 TEST(BlobLayoutTest, FileSizeIsCorrect) {
   ByteCountType file_size = 10ul * kBlockSize + 200;
   ByteCountType data_size = 6ul * kBlockSize + 25;
-  auto blob_layout = BlobLayout::CreateFromSizes(BlobLayoutFormat::kPaddedMerkleTreeAtStart,
-                                                 file_size, data_size, kBlockSize);
+  auto blob_layout = BlobLayout::CreateFromSizes(
+      BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart, file_size, data_size, kBlockSize);
   ASSERT_TRUE(blob_layout.is_ok());
   EXPECT_EQ(blob_layout->FileSize(), file_size);
 }
@@ -52,8 +52,8 @@ TEST(BlobLayoutTest, FileSizeIsCorrect) {
 TEST(BlobLayoutTest, FileBlockAlignedSizeWithEmptyFileReturnsZero) {
   ByteCountType file_size = 0;
   ByteCountType data_size = 0;
-  auto blob_layout = BlobLayout::CreateFromSizes(BlobLayoutFormat::kPaddedMerkleTreeAtStart,
-                                                 file_size, data_size, kBlockSize);
+  auto blob_layout = BlobLayout::CreateFromSizes(
+      BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart, file_size, data_size, kBlockSize);
   ASSERT_TRUE(blob_layout.is_ok());
   EXPECT_EQ(blob_layout->FileBlockAlignedSize(), 0ul);
 }
@@ -61,8 +61,8 @@ TEST(BlobLayoutTest, FileBlockAlignedSizeWithEmptyFileReturnsZero) {
 TEST(BlobLayoutTest, FileBlockAlignedSizeWithAlignedFileSizeReturnsFileSize) {
   ByteCountType file_size = 10ul * kBlockSize;
   ByteCountType data_size = 5ul * kBlockSize;
-  auto blob_layout = BlobLayout::CreateFromSizes(BlobLayoutFormat::kPaddedMerkleTreeAtStart,
-                                                 file_size, data_size, kBlockSize);
+  auto blob_layout = BlobLayout::CreateFromSizes(
+      BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart, file_size, data_size, kBlockSize);
   ASSERT_TRUE(blob_layout.is_ok());
   EXPECT_EQ(blob_layout->FileBlockAlignedSize(), file_size);
 }
@@ -70,8 +70,8 @@ TEST(BlobLayoutTest, FileBlockAlignedSizeWithAlignedFileSizeReturnsFileSize) {
 TEST(BlobLayoutTest, FileBlockAlignedSizeWithUnalignedFileSizeReturnsNextBlockMultiple) {
   ByteCountType file_size = 10ul * kBlockSize + 500;
   ByteCountType data_size = 5ul * kBlockSize;
-  auto blob_layout = BlobLayout::CreateFromSizes(BlobLayoutFormat::kPaddedMerkleTreeAtStart,
-                                                 file_size, data_size, kBlockSize);
+  auto blob_layout = BlobLayout::CreateFromSizes(
+      BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart, file_size, data_size, kBlockSize);
   ASSERT_TRUE(blob_layout.is_ok());
   EXPECT_EQ(blob_layout->FileBlockAlignedSize(), 11ul * kBlockSize);
 }
@@ -79,8 +79,8 @@ TEST(BlobLayoutTest, FileBlockAlignedSizeWithUnalignedFileSizeReturnsNextBlockMu
 TEST(BlobLayoutTest, DataSizeUpperBoundIsCorrect) {
   ByteCountType file_size = 10ul * kBlockSize + 200;
   ByteCountType data_size = 6ul * kBlockSize + 25;
-  auto blob_layout = BlobLayout::CreateFromSizes(BlobLayoutFormat::kPaddedMerkleTreeAtStart,
-                                                 file_size, data_size, kBlockSize);
+  auto blob_layout = BlobLayout::CreateFromSizes(
+      BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart, file_size, data_size, kBlockSize);
   ASSERT_TRUE(blob_layout.is_ok());
   EXPECT_EQ(blob_layout->DataSizeUpperBound(), data_size);
 }
@@ -88,8 +88,8 @@ TEST(BlobLayoutTest, DataSizeUpperBoundIsCorrect) {
 TEST(BlobLayoutTest, DataBlockAlignedSizeWithNoDataReturnsZero) {
   ByteCountType file_size = 0;
   ByteCountType data_size = 0;
-  auto blob_layout = BlobLayout::CreateFromSizes(BlobLayoutFormat::kPaddedMerkleTreeAtStart,
-                                                 file_size, data_size, kBlockSize);
+  auto blob_layout = BlobLayout::CreateFromSizes(
+      BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart, file_size, data_size, kBlockSize);
   ASSERT_TRUE(blob_layout.is_ok());
   EXPECT_EQ(blob_layout->DataBlockAlignedSize(), 0ul);
 }
@@ -97,8 +97,8 @@ TEST(BlobLayoutTest, DataBlockAlignedSizeWithNoDataReturnsZero) {
 TEST(BlobLayoutTest, DataBlockAlignedSizeWithAlignedDataReturnsDataSizeUpperBound) {
   ByteCountType file_size = 8ul * kBlockSize + 30;
   ByteCountType data_size = 5ul * kBlockSize;
-  auto blob_layout = BlobLayout::CreateFromSizes(BlobLayoutFormat::kPaddedMerkleTreeAtStart,
-                                                 file_size, data_size, kBlockSize);
+  auto blob_layout = BlobLayout::CreateFromSizes(
+      BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart, file_size, data_size, kBlockSize);
   ASSERT_TRUE(blob_layout.is_ok());
   EXPECT_EQ(blob_layout->DataBlockAlignedSize(), data_size);
 }
@@ -106,8 +106,8 @@ TEST(BlobLayoutTest, DataBlockAlignedSizeWithAlignedDataReturnsDataSizeUpperBoun
 TEST(BlobLayoutTest, DataBlockAlignedSizeWithUnalignedDataReturnsNextBlockMultiple) {
   ByteCountType file_size = 8ul * kBlockSize + 30;
   ByteCountType data_size = 5ul * kBlockSize + 20;
-  auto blob_layout = BlobLayout::CreateFromSizes(BlobLayoutFormat::kPaddedMerkleTreeAtStart,
-                                                 file_size, data_size, kBlockSize);
+  auto blob_layout = BlobLayout::CreateFromSizes(
+      BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart, file_size, data_size, kBlockSize);
   ASSERT_TRUE(blob_layout.is_ok());
   EXPECT_EQ(blob_layout->DataBlockAlignedSize(), 6ul * kBlockSize);
 }
@@ -115,8 +115,8 @@ TEST(BlobLayoutTest, DataBlockAlignedSizeWithUnalignedDataReturnsNextBlockMultip
 TEST(BlobLayoutTest, DataBlockCountWithNoDataReturnsZero) {
   ByteCountType file_size = 0;
   ByteCountType data_size = 0;
-  auto blob_layout = BlobLayout::CreateFromSizes(BlobLayoutFormat::kPaddedMerkleTreeAtStart,
-                                                 file_size, data_size, kBlockSize);
+  auto blob_layout = BlobLayout::CreateFromSizes(
+      BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart, file_size, data_size, kBlockSize);
   ASSERT_TRUE(blob_layout.is_ok());
   EXPECT_EQ(blob_layout->DataBlockCount(), 0u);
 }
@@ -124,8 +124,8 @@ TEST(BlobLayoutTest, DataBlockCountWithNoDataReturnsZero) {
 TEST(BlobLayoutTest, DataBlockCountWithBlockAlignedDataIsCorrect) {
   ByteCountType file_size = 500ul * kBlockSize;
   ByteCountType data_size = 255ul * kBlockSize;
-  auto blob_layout = BlobLayout::CreateFromSizes(BlobLayoutFormat::kPaddedMerkleTreeAtStart,
-                                                 file_size, data_size, kBlockSize);
+  auto blob_layout = BlobLayout::CreateFromSizes(
+      BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart, file_size, data_size, kBlockSize);
   ASSERT_TRUE(blob_layout.is_ok());
   EXPECT_EQ(blob_layout->DataBlockCount(), 255u);
 }
@@ -133,8 +133,8 @@ TEST(BlobLayoutTest, DataBlockCountWithBlockAlignedDataIsCorrect) {
 TEST(BlobLayoutTest, DataBlockCountWithUnalignedDataIsCorrect) {
   ByteCountType file_size = 500ul * kBlockSize;
   ByteCountType data_size = 255ul * kBlockSize + 90;
-  auto blob_layout = BlobLayout::CreateFromSizes(BlobLayoutFormat::kPaddedMerkleTreeAtStart,
-                                                 file_size, data_size, kBlockSize);
+  auto blob_layout = BlobLayout::CreateFromSizes(
+      BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart, file_size, data_size, kBlockSize);
   ASSERT_TRUE(blob_layout.is_ok());
   EXPECT_EQ(blob_layout->DataBlockCount(), 256u);
 }
@@ -142,8 +142,8 @@ TEST(BlobLayoutTest, DataBlockCountWithUnalignedDataIsCorrect) {
 TEST(BlobLayoutTest, DataBlockOffsetWithPaddedFormatAndNoMerkleTreeReturnsZero) {
   ByteCountType file_size = 100;
   ByteCountType data_size = 50;
-  auto blob_layout = BlobLayout::CreateFromSizes(BlobLayoutFormat::kPaddedMerkleTreeAtStart,
-                                                 file_size, data_size, kBlockSize);
+  auto blob_layout = BlobLayout::CreateFromSizes(
+      BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart, file_size, data_size, kBlockSize);
   ASSERT_TRUE(blob_layout.is_ok());
   EXPECT_EQ(blob_layout->DataBlockOffset(), 0u);
 }
@@ -151,8 +151,8 @@ TEST(BlobLayoutTest, DataBlockOffsetWithPaddedFormatAndNoMerkleTreeReturnsZero) 
 TEST(BlobLayoutTest, DataBlockOffsetWithPaddedFormatReturnsEndOfMerkleTree) {
   ByteCountType file_size = 600ul * kBlockSize;
   ByteCountType data_size = 200ul * kBlockSize;
-  auto blob_layout = BlobLayout::CreateFromSizes(BlobLayoutFormat::kPaddedMerkleTreeAtStart,
-                                                 file_size, data_size, kBlockSize);
+  auto blob_layout = BlobLayout::CreateFromSizes(
+      BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart, file_size, data_size, kBlockSize);
   ASSERT_TRUE(blob_layout.is_ok());
   EXPECT_EQ(blob_layout->DataBlockOffset(), 4u);
 }
@@ -169,8 +169,8 @@ TEST(BlobLayoutTest, DataBlockOffsetWithCompactFormatReturnsZero) {
 TEST(BlobLayoutTest, MerkleTreeSizeWithPaddedFormatIsCorrect) {
   ByteCountType file_size = 600ul * kBlockSize;
   ByteCountType data_size = 50ul * kBlockSize;
-  auto blob_layout = BlobLayout::CreateFromSizes(BlobLayoutFormat::kPaddedMerkleTreeAtStart,
-                                                 file_size, data_size, kBlockSize);
+  auto blob_layout = BlobLayout::CreateFromSizes(
+      BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart, file_size, data_size, kBlockSize);
   ASSERT_TRUE(blob_layout.is_ok());
   EXPECT_EQ(blob_layout->MerkleTreeSize(), 4ul * kBlockSize);
 }
@@ -200,8 +200,8 @@ TEST(BlobLayoutTest, MerkleTreeBlockAlignedSizeWithPaddedFormatAndAlignedMerkleT
   // size the same as the node size will always produce a block aligned Merkle tree.
   ByteCountType file_size = 600ul * kNodeSize;
   ByteCountType data_size = 200ul * kNodeSize;
-  auto blob_layout = BlobLayout::CreateFromSizes(BlobLayoutFormat::kPaddedMerkleTreeAtStart,
-                                                 file_size, data_size, kNodeSize);
+  auto blob_layout = BlobLayout::CreateFromSizes(
+      BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart, file_size, data_size, kNodeSize);
   ASSERT_TRUE(blob_layout.is_ok());
   EXPECT_EQ(blob_layout->MerkleTreeBlockAlignedSize(), 4ul * kNodeSize);
 }
@@ -212,8 +212,8 @@ TEST(BlobLayoutTest, MerkleTreeBlockAlignedSizeWithPaddedFormatAndUnalignedMerkl
   ByteCountType file_size = 400ul * kNodeSize;
   ByteCountType data_size = 200ul * kNodeSize;
   ByteCountType block_size = kNodeSize * 2;
-  auto blob_layout = BlobLayout::CreateFromSizes(BlobLayoutFormat::kPaddedMerkleTreeAtStart,
-                                                 file_size, data_size, block_size);
+  auto blob_layout = BlobLayout::CreateFromSizes(
+      BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart, file_size, data_size, block_size);
   ASSERT_TRUE(blob_layout.is_ok());
   EXPECT_EQ(blob_layout->MerkleTreeBlockAlignedSize(), 2ul * block_size);
 }
@@ -239,8 +239,8 @@ TEST(BlobLayoutTest, MerkleTreeBlockAlignedSizeWithCompactFormatAndUnalignedMerk
 TEST(BlobLayoutTest, MerkleTreeBlockCountWithNoMerkleTreeReturnsZero) {
   ByteCountType file_size = kBlockSize;
   ByteCountType data_size = 300ul;
-  auto blob_layout = BlobLayout::CreateFromSizes(BlobLayoutFormat::kPaddedMerkleTreeAtStart,
-                                                 file_size, data_size, kBlockSize);
+  auto blob_layout = BlobLayout::CreateFromSizes(
+      BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart, file_size, data_size, kBlockSize);
   ASSERT_TRUE(blob_layout.is_ok());
   EXPECT_EQ(blob_layout->MerkleTreeBlockCount(), 0u);
 }
@@ -248,8 +248,8 @@ TEST(BlobLayoutTest, MerkleTreeBlockCountWithNoMerkleTreeReturnsZero) {
 TEST(BlobLayoutTest, MerkleTreeBlockCountWithBlockAlignedMerkleTreeIsCorrect) {
   ByteCountType file_size = 700ul * kBlockSize;
   ByteCountType data_size = 255ul * kBlockSize;
-  auto blob_layout = BlobLayout::CreateFromSizes(BlobLayoutFormat::kPaddedMerkleTreeAtStart,
-                                                 file_size, data_size, kBlockSize);
+  auto blob_layout = BlobLayout::CreateFromSizes(
+      BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart, file_size, data_size, kBlockSize);
   ASSERT_TRUE(blob_layout.is_ok());
   EXPECT_EQ(blob_layout->MerkleTreeBlockCount(), 4u);
 }
@@ -266,8 +266,8 @@ TEST(BlobLayoutTest, MerkleTreeBlockCountWithUnalignedMerkleTreeIsCorrect) {
 TEST(BlobLayoutTest, MerkleTreeBlockOffsetWithPaddedFormatReturnsZero) {
   ByteCountType file_size = 700ul * kBlockSize;
   ByteCountType data_size = 200ul * kBlockSize;
-  auto blob_layout = BlobLayout::CreateFromSizes(BlobLayoutFormat::kPaddedMerkleTreeAtStart,
-                                                 file_size, data_size, kBlockSize);
+  auto blob_layout = BlobLayout::CreateFromSizes(
+      BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart, file_size, data_size, kBlockSize);
   ASSERT_TRUE(blob_layout.is_ok());
   EXPECT_EQ(blob_layout->MerkleTreeBlockOffset(), 0ul);
 }
@@ -294,8 +294,8 @@ TEST(BlobLayoutTest, MerkleTreeBlockOffsetWithCompactFormatAndSharingABlockIsCor
 TEST(BlobLayoutTest, MerkleTreeOffsetWithinBlockOffsetWithPaddedFormatReturnsZero) {
   ByteCountType file_size = 700ul * kBlockSize;
   ByteCountType data_size = 200ul * kBlockSize;
-  auto blob_layout = BlobLayout::CreateFromSizes(BlobLayoutFormat::kPaddedMerkleTreeAtStart,
-                                                 file_size, data_size, kBlockSize);
+  auto blob_layout = BlobLayout::CreateFromSizes(
+      BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart, file_size, data_size, kBlockSize);
   ASSERT_TRUE(blob_layout.is_ok());
   EXPECT_EQ(blob_layout->MerkleTreeOffsetWithinBlockOffset(), 0ul);
 }
@@ -328,8 +328,8 @@ TEST(BlobLayoutTest, TotalBlockCountWithPaddedFormatIsCorrect) {
   // The Merkle tree requires 4 blocks and the data requires 200.
   ByteCountType file_size = 700ul * kBlockSize;
   ByteCountType data_size = 200ul * kBlockSize;
-  auto blob_layout = BlobLayout::CreateFromSizes(BlobLayoutFormat::kPaddedMerkleTreeAtStart,
-                                                 file_size, data_size, kBlockSize);
+  auto blob_layout = BlobLayout::CreateFromSizes(
+      BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart, file_size, data_size, kBlockSize);
   ASSERT_TRUE(blob_layout.is_ok());
   EXPECT_EQ(blob_layout->TotalBlockCount(), 200u + 4u);
 }
@@ -359,8 +359,8 @@ TEST(BlobLayoutTest, TotalBlockCountWithCompactFormatAndNonSharedBlockIsCorrect)
 TEST(BlobLayoutTest, HasMerkleTreeAndDataSharedBlockWithPaddedFormatReturnsFalse) {
   ByteCountType file_size = 4ul * kBlockSize;
   ByteCountType data_size = 4ul * kBlockSize;
-  auto blob_layout = BlobLayout::CreateFromSizes(BlobLayoutFormat::kPaddedMerkleTreeAtStart,
-                                                 file_size, data_size, kBlockSize);
+  auto blob_layout = BlobLayout::CreateFromSizes(
+      BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart, file_size, data_size, kBlockSize);
   ASSERT_TRUE(blob_layout.is_ok());
   EXPECT_EQ(blob_layout->HasMerkleTreeAndDataSharedBlock(), false);
 }
@@ -433,10 +433,10 @@ TEST(BlobLayoutTest,
 TEST(BlobLayoutTest, FormatWithPaddedFormatIsCorrect) {
   ByteCountType file_size = 0;
   ByteCountType data_size = 0;
-  auto blob_layout = BlobLayout::CreateFromSizes(BlobLayoutFormat::kPaddedMerkleTreeAtStart,
-                                                 file_size, data_size, kBlockSize);
+  auto blob_layout = BlobLayout::CreateFromSizes(
+      BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart, file_size, data_size, kBlockSize);
   ASSERT_TRUE(blob_layout.is_ok());
-  EXPECT_EQ(blob_layout->Format(), BlobLayoutFormat::kPaddedMerkleTreeAtStart);
+  EXPECT_EQ(blob_layout->Format(), BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart);
 }
 
 TEST(BlobLayoutTest, FormatWithCompactFormatIsCorrect) {
@@ -452,8 +452,9 @@ TEST(BlobLayoutTest, CreateFromInodeWithPaddedFormatAndUncompressedInodeIsCorrec
   // 21 blocks of data and 1 block for the Merkle tree.
   ByteCountType file_size = 20ul * kBlockSize + 50;
   BlockCountType block_count = 22;
-  auto blob_layout = BlobLayout::CreateFromInode(BlobLayoutFormat::kPaddedMerkleTreeAtStart,
-                                                 CreateInode(file_size, block_count), kBlockSize);
+  auto blob_layout =
+      BlobLayout::CreateFromInode(BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart,
+                                  CreateInode(file_size, block_count), kBlockSize);
   ASSERT_TRUE(blob_layout.is_ok());
   EXPECT_EQ(blob_layout->FileSize(), file_size);
   EXPECT_EQ(blob_layout->DataSizeUpperBound(), file_size);
@@ -465,7 +466,7 @@ TEST(BlobLayoutTest, CreateFromInodeWithPaddedFormatAndCompressedInodeIsCorrect)
   ByteCountType file_size = 26ul * kBlockSize + 50;
   BlockCountType block_count = 20;
   auto blob_layout =
-      BlobLayout::CreateFromInode(BlobLayoutFormat::kPaddedMerkleTreeAtStart,
+      BlobLayout::CreateFromInode(BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart,
                                   CreateCompressedInode(file_size, block_count), kBlockSize);
   ASSERT_TRUE(blob_layout.is_ok());
   EXPECT_EQ(blob_layout->FileSize(), file_size);
@@ -479,7 +480,7 @@ TEST(BlobLayoutTest,
   ByteCountType file_size = (1ul << 50) * kBlockSize;
   BlockCountType block_count = 20;
   auto blob_layout =
-      BlobLayout::CreateFromInode(BlobLayoutFormat::kPaddedMerkleTreeAtStart,
+      BlobLayout::CreateFromInode(BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart,
                                   CreateCompressedInode(file_size, block_count), kBlockSize);
   EXPECT_TRUE(blob_layout.is_error());
 }
@@ -546,8 +547,8 @@ TEST(BlobLayoutTest, CreateFromInodeWithCompactFormatAndCompressedInodeAndNotSha
 TEST(BlobLayoutTest, CreateFromSizesWithPaddedFormatAndAndTooLargeOfFileSizeIsError) {
   ByteCountType file_size = std::numeric_limits<ByteCountType>::max();
   ByteCountType data_size = 5ul * kBlockSize;
-  auto blob_layout = BlobLayout::CreateFromSizes(BlobLayoutFormat::kPaddedMerkleTreeAtStart,
-                                                 file_size, data_size, kBlockSize);
+  auto blob_layout = BlobLayout::CreateFromSizes(
+      BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart, file_size, data_size, kBlockSize);
   EXPECT_TRUE(blob_layout.is_error());
 }
 
@@ -562,8 +563,8 @@ TEST(BlobLayoutTest, CreateFromSizesWithCompactFormatAndAndTooLargeOfFileSizeIsE
 TEST(BlobLayoutTest, CreateFromSizesWithPaddedFormatAndAndTooLargeOfDataSizeIsError) {
   ByteCountType file_size = (1ul << 35) * kBlockSize;
   ByteCountType data_size = (1ul << 34) * kBlockSize;
-  auto blob_layout = BlobLayout::CreateFromSizes(BlobLayoutFormat::kPaddedMerkleTreeAtStart,
-                                                 file_size, data_size, kBlockSize);
+  auto blob_layout = BlobLayout::CreateFromSizes(
+      BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart, file_size, data_size, kBlockSize);
   EXPECT_TRUE(blob_layout.is_error());
 }
 
@@ -578,8 +579,8 @@ TEST(BlobLayoutTest, CreateFromSizesWithCompactFormatAndAndTooLargeOfDataSizeIsE
 TEST(BlobLayoutTest, CreateFromSizesWithPaddedFormatAndAndTooLargeOfMerkleTreeSizeIsError) {
   ByteCountType file_size = ((1ul << 32) + 1) * kBlockSize * 256;
   ByteCountType data_size = (1ul << 30);
-  auto blob_layout = BlobLayout::CreateFromSizes(BlobLayoutFormat::kPaddedMerkleTreeAtStart,
-                                                 file_size, data_size, kBlockSize);
+  auto blob_layout = BlobLayout::CreateFromSizes(
+      BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart, file_size, data_size, kBlockSize);
   EXPECT_TRUE(blob_layout.is_error());
 }
 
@@ -594,8 +595,8 @@ TEST(BlobLayoutTest, CreateFromSizesWithCompactFormatAndTooLargeOfMerkleTreeIsEr
 TEST(BlobLayoutTest, CreateFromSizesWithPaddedFormatAndTooLargeOfTotalBlockCountIsError) {
   ByteCountType file_size = kBlockSize * 2;
   ByteCountType data_size = ((1ul << 32) - 1) * kBlockSize;
-  auto blob_layout = BlobLayout::CreateFromSizes(BlobLayoutFormat::kPaddedMerkleTreeAtStart,
-                                                 file_size, data_size, kBlockSize);
+  auto blob_layout = BlobLayout::CreateFromSizes(
+      BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart, file_size, data_size, kBlockSize);
   EXPECT_TRUE(blob_layout.is_error());
 }
 
@@ -611,8 +612,9 @@ TEST(BlobLayoutTest,
      CreateFromInodeWithPaddedFormatAndUncompressedAndBlockCountDoesNotMatchIsError) {
   ByteCountType file_size = 26ul * kBlockSize;
   BlockCountType block_count = 20;
-  auto blob_layout = BlobLayout::CreateFromInode(BlobLayoutFormat::kPaddedMerkleTreeAtStart,
-                                                 CreateInode(file_size, block_count), kBlockSize);
+  auto blob_layout =
+      BlobLayout::CreateFromInode(BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart,
+                                  CreateInode(file_size, block_count), kBlockSize);
   EXPECT_TRUE(blob_layout.is_error());
 }
 
@@ -630,8 +632,9 @@ TEST(
     CreateFromInodeWithPaddedFormatAndCompressedAndMerkleTreeBlockCountIsLargerThanBlockCountIsError) {
   ByteCountType file_size = 513ul * kBlockSize;
   BlockCountType block_count = 2;
-  auto blob_layout = BlobLayout::CreateFromInode(BlobLayoutFormat::kPaddedMerkleTreeAtStart,
-                                                 CreateInode(file_size, block_count), kBlockSize);
+  auto blob_layout =
+      BlobLayout::CreateFromInode(BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart,
+                                  CreateInode(file_size, block_count), kBlockSize);
   EXPECT_TRUE(blob_layout.is_error());
 }
 

@@ -267,8 +267,9 @@ TEST_P(BlobfsExtractionTest, TestCorruptBlob) {
   ASSERT_GE(r1, 0) << "errno: " << strerror(errno) << std::endl;
 }
 
+// This test depends on the "padded" blobfs format. It will need updating to test compact.
 INSTANTIATE_TEST_SUITE_P(/*no prefix*/, BlobfsExtractionTest,
-                         testing::Values(blobfs::BlobfsDefaultTestParam()),
+                         testing::Values(blobfs::BlobfsWithPaddedLayoutTestParam()),
                          testing::PrintToStringParamName());
 }  // namespace
 

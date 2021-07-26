@@ -547,7 +547,7 @@ std::string GetTestParamName(
 
 INSTANTIATE_TEST_SUITE_P(
     /*no prefix*/, BlobTest,
-    testing::Combine(testing::Values(BlobLayoutFormat::kPaddedMerkleTreeAtStart,
+    testing::Combine(testing::Values(BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart,
                                      BlobLayoutFormat::kCompactMerkleTreeAtEnd),
                      testing::Values(CompressionAlgorithm::kChunked)),
     GetTestParamName);

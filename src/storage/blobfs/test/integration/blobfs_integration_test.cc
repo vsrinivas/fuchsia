@@ -1482,7 +1482,7 @@ TEST_F(BlobfsMetricIntegrationTest, CreateAndRead) {
 
 INSTANTIATE_TEST_SUITE_P(/*no prefix*/, BlobfsIntegrationTest,
                          testing::Values(BlobfsDefaultTestParam(), BlobfsWithFvmTestParam(),
-                                         BlobfsWithCompactLayoutTestParam()),
+                                         BlobfsWithPaddedLayoutTestParam()),
                          testing::PrintToStringParamName());
 
 }  // namespace

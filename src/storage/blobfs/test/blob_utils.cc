@@ -127,7 +127,7 @@ void MakeBlob(const BlobInfo& info, fbl::unique_fd* fd) {
 
 std::string GetBlobLayoutFormatNameForTests(BlobLayoutFormat format) {
   switch (format) {
-    case BlobLayoutFormat::kPaddedMerkleTreeAtStart:
+    case BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart:
       return "PaddedMerkleTreeAtStartLayout";
     case BlobLayoutFormat::kCompactMerkleTreeAtEnd:
       return "CompactMerkleTreeAtEndLayout";

@@ -267,7 +267,7 @@ BlobLayoutFormat GetBlobLayoutFormat(const Superblock& info) {
   if (info.major_version >= 0x9) {
     return BlobLayoutFormat::kCompactMerkleTreeAtEnd;
   }
-  return BlobLayoutFormat::kPaddedMerkleTreeAtStart;
+  return BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart;
 }
 
 constexpr char kBlobVmoNamePrefix[] = "blob";

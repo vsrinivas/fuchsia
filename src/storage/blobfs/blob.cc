@@ -491,7 +491,7 @@ zx_status_t Blob::Commit() {
 
   MergeBlobDataProducer producer = [&]() {
     switch (blob_layout->Format()) {
-      case BlobLayoutFormat::kPaddedMerkleTreeAtStart:
+      case BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart:
         // Write the merkle data first followed by the data.  The merkle data should be a multiple
         // of the block size so we don't need any padding.
         ZX_ASSERT_MSG(merkle.GetRemainingBytes() % kBlobfsBlockSize == 0,

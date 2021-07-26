@@ -72,7 +72,7 @@ import("//src/sys/pkg/bin/pm/pm.gni")
 #   compress_blobs (default: true)
 #     [boolean] Whether the blobs added to the blobfs image should be compressed.
 #
-#   blob_layout_format (default: "padded")
+#   blob_layout_format (default: "compact")
 #     [string] The format blobfs should store blobs in. The valid values are "padded" and
 #     "compact".
 #

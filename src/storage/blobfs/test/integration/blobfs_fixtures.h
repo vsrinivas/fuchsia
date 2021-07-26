@@ -36,7 +36,7 @@ class ParameterizedBlobfsTest : public BaseBlobfsTest,
 // Different blobfs settings to use with |ParameterizedBlobfsTest|.
 fs_test::TestFilesystemOptions BlobfsDefaultTestParam();
 fs_test::TestFilesystemOptions BlobfsWithFvmTestParam();
-fs_test::TestFilesystemOptions BlobfsWithCompactLayoutTestParam();
+fs_test::TestFilesystemOptions BlobfsWithPaddedLayoutTestParam();
 fs_test::TestFilesystemOptions BlobfsWithFixedDiskSizeTestParam(uint64_t disk_size);
 
 // A test fixture for tests that only run against blobfs with the default settings.

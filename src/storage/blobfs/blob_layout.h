@@ -17,6 +17,10 @@ namespace blobfs {
 // This enum is serialized and stored in blobfs's superblock which prevents the enum values from
 // being changed.
 enum class BlobLayoutFormat : uint8_t {
+  // THIS VALUE IS DEPRECATED. It is used only on Astro devices. It uses more space because of the
+  // additional padding to block-align the beginning blob data. Do not add new uses, it will be
+  // removed once Astro support is no longer needed.
+  //
   // The "Padded Merkle Tree at Start" layout stores the Merkle tree in the padded format at the
   // start of the blob.  The data is stored at the start of the block following the Merkle tree.
   // | block 001 | block 002 | block 003 | block 004 | block 005 | ... | block 579 | block 580 |
@@ -24,7 +28,7 @@ enum class BlobLayoutFormat : uint8_t {
   // This is the layout format that was in use prior to the layout format being added to the
   // superblock.  The new field was added to a section of the superpblock that was already zero and
   // to maintain backwards compatibility this enum value has the value zero.
-  kPaddedMerkleTreeAtStart = 0,
+  kDeprecatedPaddedMerkleTreeAtStart = 0,
 
   // The "Compact Merkle Tree at End" layout stores the data at the start of the blob.  The Merkle
   // tree is stored in the compact format after the data and aligned so it ends at the end of the

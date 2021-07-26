@@ -127,10 +127,10 @@ class MockBlobFactory {
     // The BlobLayoutFormat only impacts the format of the Merkle tree which is not relevant to
     // these tests.
     std::unique_ptr<BlobVerifier> verifier;
-    EXPECT_EQ(
-        BlobVerifier::Create(std::move(root), metrics_, merkle_tree.get(), tree_len,
-                             BlobLayoutFormat::kPaddedMerkleTreeAtStart, sz, nullptr, &verifier),
-        ZX_OK);
+    EXPECT_EQ(BlobVerifier::Create(std::move(root), metrics_, merkle_tree.get(), tree_len,
+                                   BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart, sz,
+                                   nullptr, &verifier),
+              ZX_OK);
 
     // Generate the contents as they would be stored on disk. (This includes compression if
     // applicable)

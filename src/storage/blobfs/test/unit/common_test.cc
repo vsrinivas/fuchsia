@@ -18,7 +18,7 @@ namespace {
 constexpr uint64_t kBlockCount = 1 << 10;
 
 TEST(CommonTest, PaddedBlobLayoutFormatIsRoundTrippedThroughTheSuperblock) {
-  BlobLayoutFormat format = BlobLayoutFormat::kPaddedMerkleTreeAtStart;
+  BlobLayoutFormat format = BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart;
   Superblock info;
   InitializeSuperblock(kBlockCount, {.blob_layout_format = format}, &info);
   EXPECT_EQ(GetBlobLayoutFormat(info), format);

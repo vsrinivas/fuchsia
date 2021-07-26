@@ -59,7 +59,7 @@ class FdioTest : public testing::Test {
   virtual uint64_t GetOldestMinorVersion() const { return kBlobfsCurrentMinorVersion; }
 
   virtual BlobLayoutFormat GetBlobLayoutFormat() const {
-    return BlobLayoutFormat::kPaddedMerkleTreeAtStart;
+    return BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart;
   }
 
  private:

@@ -156,7 +156,7 @@ class BlobLoaderTest : public TestWithParam<TestParamType> {
     ASSERT_TRUE(merkle.vmo().is_valid());
     ASSERT_GE(merkle.size(), merkle_tree->merkle_tree_size);
     switch (blob_layout_format_) {
-      case BlobLayoutFormat::kPaddedMerkleTreeAtStart:
+      case BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart:
         // In the padded layout the Merkle starts at the start of the vmo.
         EXPECT_EQ(
             memcmp(merkle.start(), merkle_tree->merkle_tree.get(), merkle_tree->merkle_tree_size),
@@ -314,7 +314,7 @@ constexpr std::array<CompressionAlgorithm, 2> kPagingCompressionAlgorithms = {
 
 INSTANTIATE_TEST_SUITE_P(OldFormat, BlobLoaderTest,
                          Combine(ValuesIn(kCompressionAlgorithms),
-                                 Values(BlobLayoutFormat::kPaddedMerkleTreeAtStart)),
+                                 Values(BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart)),
                          GetTestParamName);
 
 INSTANTIATE_TEST_SUITE_P(/*no prefix*/, BlobLoaderTest,

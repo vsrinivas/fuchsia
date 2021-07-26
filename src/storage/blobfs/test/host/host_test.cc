@@ -211,7 +211,7 @@ TEST(BlobfsHostCompressionTest, CompressSmallFiles) {
   auto file = CreateEmptyFile(all_zero_size);
 
   auto blob_info =
-      BlobInfo::CreateCompressed(file->fd(), BlobLayoutFormat::kPaddedMerkleTreeAtStart);
+      BlobInfo::CreateCompressed(file->fd(), BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart);
   ASSERT_TRUE(blob_info.is_ok());
 
   EXPECT_TRUE(blob_info->IsCompressed());
@@ -219,8 +219,9 @@ TEST(BlobfsHostCompressionTest, CompressSmallFiles) {
 }
 
 TEST(BlobfsHostTest, WriteBlobWithPaddedFormatIsCorrect) {
-  auto blobfs = CreateBlobfs(/*block_count=*/500,
-                             CreateFilesystemOptions(BlobLayoutFormat::kPaddedMerkleTreeAtStart));
+  auto blobfs =
+      CreateBlobfs(/*block_count=*/500,
+                   CreateFilesystemOptions(BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart));
   ASSERT_TRUE(blobfs != nullptr);
 
   // In the padded format the Merkle tree can't share a block with the data.
@@ -283,8 +284,9 @@ TEST(BlobfsHostTest, WriteCompressedBlobWithCompactFormatAndSharedBlockIsCorrect
 }
 
 TEST(BlobfsHostTest, WriteCompressedBlobWithPaddedFormatIsCorrect) {
-  auto blobfs = CreateBlobfs(/*block_count=*/500,
-                             CreateFilesystemOptions(BlobLayoutFormat::kPaddedMerkleTreeAtStart));
+  auto blobfs =
+      CreateBlobfs(/*block_count=*/500,
+                   CreateFilesystemOptions(BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart));
   ASSERT_TRUE(blobfs != nullptr);
 
   // The Merkle tree requires 1 block and the blob is compressed to under 1 block.
@@ -514,7 +516,7 @@ TEST(BlobfsHostTest, BlobInfoCreateCompressedWithSlightlyCompressibleFileWillCom
   // With the padded format, compressing the half block doesn't save any blocks so the file is not
   // compressed.
   auto padded_blob_info =
-      BlobInfo::CreateCompressed(file->fd(), BlobLayoutFormat::kPaddedMerkleTreeAtStart);
+      BlobInfo::CreateCompressed(file->fd(), BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart);
   ASSERT_TRUE(padded_blob_info.is_ok());
   EXPECT_FALSE(padded_blob_info->IsCompressed());
 

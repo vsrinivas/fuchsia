@@ -259,7 +259,7 @@ std::string GetTestName(const testing::TestParamInfo<BlobLayoutFormat>& param) {
 }
 
 INSTANTIATE_TEST_SUITE_P(/*no prefix*/, BlobVerifierTest,
-                         ::testing::Values(BlobLayoutFormat::kPaddedMerkleTreeAtStart,
+                         ::testing::Values(BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart,
                                            BlobLayoutFormat::kCompactMerkleTreeAtEnd),
                          GetTestName);
 
