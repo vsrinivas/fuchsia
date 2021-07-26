@@ -243,9 +243,9 @@ void MockVmoidRegistry::Replay(std::vector<storage::BufferedOperation>* operatio
   // be modified while leaving the original journal untouched.
   zx::vmo journal_vmo;
   uint64_t length = kBlockSize * kJournalLength;
-  ASSERT_EQ(
-      disk_buffers_.journal_vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, length, &journal_vmo),
-      ZX_OK);
+  ASSERT_EQ(disk_buffers_.journal_vmo.create_child(ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE, 0,
+                                                   length, &journal_vmo),
+            ZX_OK);
   ASSERT_EQ(mapper.Map(std::move(journal_vmo), length), ZX_OK);
   storage::VmoBuffer journal_buffer(this, std::move(mapper), kJournalVmoid, kJournalLength,
                                     kBlockSize);

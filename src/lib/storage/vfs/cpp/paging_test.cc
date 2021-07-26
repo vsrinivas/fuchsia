@@ -124,8 +124,8 @@ class PagingTestFile : public PagedVnode {
     if (auto result = EnsureCreatePagedVmo(data_.size()); result.is_error())
       return result.error_value();
 
-    if (zx_status_t status =
-            paged_vmo().create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, data_.size(), out_vmo);
+    if (zx_status_t status = paged_vmo().create_child(ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE, 0,
+                                                      data_.size(), out_vmo);
         status != ZX_OK)
       return status;
     DidClonePagedVmo();
