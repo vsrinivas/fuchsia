@@ -11,20 +11,31 @@ executable("bin") {
 
   deps = [
     "//examples/diagnostics/inspect/codelab/fidl:fuchsia.examples.inspect",
-    "//sdk/lib/sys/cpp",
+    "//sdk/fidl/fuchsia.io",
+    "//sdk/fidl/fuchsia.sys2",
+    "//sdk/lib/syslog/cpp:cpp-macros",
+    "//zircon/public/lib/zxc",
   ]
 }
 
-fuchsia_component("inspect_cpp_codelab_client") {
-  manifest = "meta/inspect_cpp_codelab_client.cmx"
-  deps = [
-    ":bin",
-    ":component_index",
-  ]
+part_ids = [
+  1,
+  2,
+  3,
+  4,
+  5,
+]
+client_components = []
+foreach(part_id, part_ids) {
+  client_name = "client_part_" + part_id
+  client_components += [ ":$client_name" ]
+
+  fuchsia_component(client_name) {
+    manifest = "meta/" + client_name + ".cml"
+    deps = [ ":bin" ]
+  }
 }
 
-# Enables the ability to `fx shell run inspect_cpp_codelab_client` instead of using the full URL.
-add_to_component_index("component_index") {
-  package_name = "inspect_cpp_codelab"
-  manifest = "meta/inspect_cpp_codelab_client.cmx"
+group("components") {
+  deps = client_components
 }

@@ -3,61 +3,13 @@
 // found in the LICENSE file.
 
 #include <fuchsia/diagnostics/cpp/fidl.h>
-#include <fuchsia/examples/inspect/cpp/fidl.h>
-#include <lib/async/cpp/executor.h>
-#include <lib/fidl/cpp/binding_set.h>
-#include <lib/sys/cpp/testing/test_with_environment.h>
 
-constexpr char reverser_url[] =
-    "fuchsia-pkg://fuchsia.com/inspect_cpp_codelab_integration_tests#meta/"
-    "inspect_cpp_codelab_part_3.cmx";
+#include <examples/diagnostics/inspect/codelab/cpp/testing/integration_test.h>
 
-constexpr char fizzbuzz_url[] =
-    "fuchsia-pkg://fuchsia.com/inspect_cpp_codelab_integration_tests#meta/"
-    "inspect_cpp_codelab_fizzbuzz.cmx";
+class IntegrationTestPart3 : public codelab::testing::IntegrationTest {};
 
-class CodelabTest : public sys::testing::TestWithEnvironment {
- protected:
-  // Options for each test.
-  struct TestOptions {
-    // If true, inject a FizzBuzz service implementation.
-    bool include_fizzbuzz_service;
-  };
-
-  fuchsia::examples::inspect::ReverserPtr StartComponentAndConnect(TestOptions options) {
-    // Create an environment for the test that simulates the "sys" realm.
-    // We optionally inject the "FizzBuzz" service if requested.
-    auto services = CreateServices();
-    if (options.include_fizzbuzz_service) {
-      services->AddServiceWithLaunchInfo({.url = fizzbuzz_url},
-                                         fuchsia::examples::inspect::FizzBuzz::Name_);
-    }
-    environment_ = CreateNewEnclosingEnvironment("sys", std::move(services));
-
-    // Start the Reverser component in the nested environment.
-    fuchsia::io::DirectoryPtr directory_request;
-    controller_ = environment_->CreateComponent(
-        {.url = reverser_url, .directory_request = directory_request.NewRequest().TakeChannel()});
-
-    // Connect to Reverser hosted by the new component.
-    fuchsia::examples::inspect::ReverserPtr ret;
-    sys::ServiceDirectory component_services(directory_request.Unbind());
-    component_services.Connect(ret.NewRequest());
-
-    bool ready = false;
-    controller_.events().OnDirectoryReady = [&] { ready = true; };
-    RunLoopUntil([&] { return ready; });
-
-    return ret;
-  }
-
- private:
-  std::unique_ptr<sys::testing::EnclosingEnvironment> environment_;
-  fuchsia::sys::ComponentControllerPtr controller_;
-};
-
-TEST_F(CodelabTest, StartWithFizzBuzz) {
-  auto ptr = StartComponentAndConnect({.include_fizzbuzz_service = true});
+TEST_F(IntegrationTestPart3, StartWithFizzBuzz) {
+  auto ptr = ConnectToReverser({.include_fizzbuzz = true});
 
   bool error = false;
   ptr.set_error_handler([&](zx_status_t unused) { error = true; });
@@ -74,8 +26,8 @@ TEST_F(CodelabTest, StartWithFizzBuzz) {
   EXPECT_EQ("olleh", result);
 }
 
-TEST_F(CodelabTest, StartWithoutFizzBuzz) {
-  auto ptr = StartComponentAndConnect({.include_fizzbuzz_service = false});
+TEST_F(IntegrationTestPart3, StartWithoutFizzBuzz) {
+  auto ptr = ConnectToReverser({.include_fizzbuzz = false});
 
   bool error = false;
   ptr.set_error_handler([&](zx_status_t unused) { error = true; });

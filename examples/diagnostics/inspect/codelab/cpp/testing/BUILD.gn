@@ -1,0 +1,23 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("inspect-cpp-codelab-testing") {
+  testonly = true
+  sources = [ "integration_test.cc" ]
+
+  public = [ "integration_test.h" ]
+
+  public_deps = [
+    "//examples/diagnostics/inspect/codelab/fidl:fuchsia.examples.inspect",
+    "//garnet/public/lib/gtest",
+    "//sdk/lib/sys/cpp/testing:realm_builder",
+  ]
+
+  deps = []
+}
+
+group("testing") {
+  testonly = true
+  deps = [ ":inspect-cpp-codelab-testing" ]
+}

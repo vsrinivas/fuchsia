@@ -17,7 +17,7 @@ source_set("lib") {
 }
 
 executable("bin") {
-  output_name = "inspect_cpp_codelab_part_4_bin"
+  output_name = "inspect_cpp_codelab_part_4"
   sources = [ "main.cc" ]
 
   deps = [
@@ -29,8 +29,8 @@ executable("bin") {
   ]
 }
 
-fuchsia_component("inspect_cpp_codelab_part_4") {
-  manifest = "meta/inspect_cpp_codelab_part_4.cmx"
+fuchsia_component("part_4") {
+  manifest = "meta/part_4.cml"
   deps = [ ":bin" ]
 }
 
@@ -58,4 +58,29 @@ fuchsia_test("test_spec") {
   package =
       "//examples/diagnostics/inspect/codelab/cpp:inspect_cpp_codelab_unittests"
   component = ":inspect_cpp_codelab_part_4_unittests"
+}
+
+executable("integration_test") {
+  testonly = true
+  output_name = "inspect_cpp_codelab_part_4_integration_test"
+  sources = [ "tests/integration_test.cc" ]
+
+  public_deps = [
+    "//examples/diagnostics/inspect/codelab/cpp/testing:inspect-cpp-codelab-testing",
+    "//garnet/public/lib/gtest",
+    "//sdk/fidl/fuchsia.diagnostics",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
+
+fuchsia_component("inspect_cpp_codelab_part_4_integration_test") {
+  testonly = true
+  manifest = "meta/integration_test.cml"
+  deps = [ ":integration_test" ]
+}
+
+fuchsia_test("integration_test_spec") {
+  package = "//examples/diagnostics/inspect/codelab/cpp:inspect_cpp_codelab_integration_tests"
+  component = ":inspect_cpp_codelab_part_4_integration_test"
 }

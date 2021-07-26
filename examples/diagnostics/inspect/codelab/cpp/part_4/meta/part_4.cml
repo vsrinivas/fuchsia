@@ -1,0 +1,22 @@
+{
+    include: [
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/inspect_cpp_codelab_part_4",
+    },
+    capabilities: [
+        { protocol: "fuchsia.examples.inspect.Reverser" },
+    ],
+    use: [
+        { protocol: "fuchsia.examples.inspect.FizzBuzz" },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.examples.inspect.Reverser",
+            from: "self",
+        },
+    ],
+}

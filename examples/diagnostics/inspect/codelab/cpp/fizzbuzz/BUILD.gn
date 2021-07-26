@@ -5,7 +5,7 @@
 import("//build/components.gni")
 
 executable("bin") {
-  output_name = "inspect_cpp_codelab_fizzbuzz_bin"
+  output_name = "inspect_cpp_codelab_fizzbuzz"
   sources = [ "main.cc" ]
 
   deps = [
@@ -18,7 +18,7 @@ executable("bin") {
   ]
 }
 
-fuchsia_component("inspect_cpp_codelab_fizzbuzz") {
-  manifest = "meta/inspect_cpp_codelab_fizzbuzz.cmx"
+fuchsia_component("fizzbuzz") {
+  manifest = "meta/inspect_cpp_codelab_fizzbuzz.cml"
   deps = [ ":bin" ]
 }

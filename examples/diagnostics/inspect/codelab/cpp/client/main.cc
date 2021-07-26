@@ -9,131 +9,78 @@
 // the codelab depends on.
 
 #include <fuchsia/examples/inspect/cpp/fidl.h>
-#include <fuchsia/sys/cpp/fidl.h>
-#include <lib/sys/cpp/service_directory.h>
-#include <stdio.h>
+#include <fuchsia/io/cpp/fidl.h>
+#include <fuchsia/sys2/cpp/fidl.h>
+#include <lib/fdio/directory.h>
+#include <lib/syslog/cpp/log_settings.h>
+#include <lib/syslog/cpp/macros.h>
+#include <lib/zx/status.h>
 
-#include <chrono>
-#include <iostream>
 #include <thread>
 
-constexpr char fizzbuzz_url[] =
-    "fuchsia-pkg://fuchsia.com/inspect_cpp_codelab#meta/inspect_cpp_codelab_fizzbuzz.cmx";
-
-std::string GetComponentUrl(const std::string& argument) {
-  return "fuchsia-pkg://fuchsia.com/inspect_cpp_codelab#meta/inspect_cpp_codelab_part_" + argument +
-         ".cmx";
-}
-
 void Usage(char* name) {
-  printf(
-      "Usage: %s <option> <string> [string...]\n  option: The server to run. For example \"1\" for "
-      "part_1\n  string: Strings provided on the command line to reverse\n",
-      name ? name : "");
+  FX_LOGS(ERROR)
+      << "Usage: " << (name ? name : "")
+      << "<string> [string...]\n string: Strings provided on the command line to reverse";
   exit(1);
 }
 
 int main(int argc, char** argv) {
-  // Parse the input argument to create a component URL.
-  // This component launches the server and connects to it, but first we need to know which part of
-  // the codelab to start.
-  std::string reverser_component_url;
-  if (argc >= 3) {
-    reverser_component_url = GetComponentUrl(argv[1]);
-  }
+  syslog::SetTags({"inspect_cpp_codelab", "client"});
 
   // If no url is specified, print the usage information and exit.
-  if (reverser_component_url == "") {
+  if (argc < 2) {
     Usage(argc >= 1 ? argv[0] : nullptr);
   }
 
-  auto incoming_services = sys::ServiceDirectory::CreateFromNamespace();
-
-  fuchsia::sys::EnvironmentSyncPtr env;
-  incoming_services->Connect(env.NewRequest());
-
-  fuchsia::sys::EnvironmentSyncPtr child_env;
-  fuchsia::sys::EnvironmentControllerSyncPtr child_env_controller;
-  fuchsia::sys::LauncherSyncPtr launcher;
-
-  zx::channel fizzbuzz_directory_client, fizzbuzz_directory_server;
-  {
-    fuchsia::io::DirectorySyncPtr req;
-    fizzbuzz_directory_server = req.NewRequest().TakeChannel();
-    fizzbuzz_directory_client = req.Unbind().TakeChannel();
+  fidl::SynchronousInterfacePtr<fuchsia::sys2::Realm> realm;
+  std::string realm_service = std::string("/svc/") + fuchsia::sys2::Realm::Name_;
+  auto status = zx::make_status(
+      fdio_service_connect(realm_service.c_str(), realm.NewRequest().TakeChannel().get()));
+  if (status.is_error()) {
+    FX_LOGS(ERROR) << "Unable to connect to realm: " << status.status_string();
+    return status.status_value();
   }
 
-  // We need to include the FizzBuzz service in the environment we are creating for the codelab.
-  // This code adds additional services to the nested environment so it knows to look for the
-  // service in the out/svc directory of the newly created component.
-  auto env_service_list = std::make_unique<fuchsia::sys::ServiceList>();
-  env_service_list->names.push_back(fuchsia::examples::inspect::FizzBuzz::Name_);
-  env_service_list->host_directory = std::move(fizzbuzz_directory_client);
-
-  // Create an environment called "codelab" to contain the new components.
-  if (ZX_OK != env->CreateNestedEnvironment(child_env.NewRequest(),
-                                            child_env_controller.NewRequest(), "codelab",
-                                            std::move(env_service_list) /* additional_services */,
-                                            {.inherit_parent_services = true} /* options */)) {
-    printf("Failed to create nested environment\n");
-    exit(1);
+  fuchsia::io::DirectorySyncPtr exposed_dir;
+  fuchsia::sys2::Realm_BindChild_Result result;
+  status = zx::make_status(realm->BindChild(fuchsia::sys2::ChildRef{.name = "reverser"},
+                                            exposed_dir.NewRequest(), &result));
+  zx::channel handle, request;
+  status = zx::make_status(zx::channel::create(0, &handle, &request));
+  if (status.is_error()) {
+    FX_LOGS(ERROR) << "Unable to create channel: " << status.status_string();
+    return status.status_value();
   }
 
-  // Get the launcher needed to create components in the nested environment.
-  if (ZX_OK != child_env->GetLauncher(launcher.NewRequest())) {
-    printf("Failed to get launcher\n");
-    exit(1);
-  }
-
-  // Launch the FizzBuzz service component by URL.
-  {
-    fuchsia::sys::LaunchInfo launch_info;
-    launch_info.url = fizzbuzz_url;
-    launch_info.directory_request = std::move(fizzbuzz_directory_server);
-    if (ZX_OK != launcher->CreateComponent(std::move(launch_info), nullptr /* controller */)) {
-      printf("Failed to launch component %s\n", fizzbuzz_url);
-      exit(1);
-    }
-  }
-
-  // Launch the component by URL.
-  fuchsia::io::DirectorySyncPtr directory_request;
-  {
-    fuchsia::sys::LaunchInfo launch_info;
-    launch_info.url = reverser_component_url;
-    launch_info.directory_request = directory_request.NewRequest().TakeChannel();
-    if (ZX_OK != launcher->CreateComponent(std::move(launch_info), nullptr /* controller */)) {
-      printf("Failed to launch component %s\n", reverser_component_url.c_str());
-      exit(1);
-    }
-  }
-
-  // Create a service directory to connect to services exposed by the created component.
-  sys::ServiceDirectory services(directory_request.Unbind());
-
-  // Connect to the reverser service provided by the launched component.
   fuchsia::examples::inspect::ReverserSyncPtr reverser;
-  services.Connect(reverser.NewRequest());
+  status = zx::make_status(exposed_dir->Open(
+      fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
+      fuchsia::io::MODE_TYPE_SERVICE, fuchsia::examples::inspect::Reverser::Name_,
+      fidl::InterfaceRequest<fuchsia::io::Node>(reverser.NewRequest().TakeChannel())));
+  if (status.is_error()) {
+    FX_LOGS(ERROR) << "Unable to connect to reverser: " << status.status_string();
+    return status.status_value();
+  }
 
   // [START reverse_loop]
   // Repeatedly send strings to be reversed to the other component.
-  for (int i = 2; i < argc; i++) {
-    printf("Input: %s\n", argv[i]);
+  for (int i = 1; i < argc; i++) {
+    FX_LOGS(INFO) << "Input: " << argv[i];
 
     std::string output;
-    if (ZX_OK != reverser->Reverse(argv[i], &output)) {
-      printf("Error: Failed to reverse string.\nPerhaps %s was not found?\n",
-             reverser_component_url.c_str());
-      exit(1);
+    status = zx::make_status(reverser->Reverse(argv[i], &output));
+    if (status.is_error()) {
+      FX_LOGS(ERROR) << "Error: Failed to reverse string.";
+      return status.status_value();
     }
 
-    printf("Output: %s\n", output.c_str());
-    fflush(stdout);
+    FX_LOGS(INFO) << "Output: " << output;
   }
   // [END reverse_loop]
 
-  printf("Done. Press Ctrl+C to exit\n");
-  fflush(stdout);
+  FX_LOGS(INFO) << "Done reversing! Please use `ffx component stop`";
+
   while (true) {
     std::this_thread::sleep_for(std::chrono::seconds(1));
   }

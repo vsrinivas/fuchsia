@@ -1,0 +1,9 @@
+{
+    include: [ "//examples/diagnostics/inspect/codelab/cpp/client/meta/common.shard.cml" ],
+    children: [
+        {
+            name: "reverser",
+            url: "fuchsia-pkg://fuchsia.com/inspect_cpp_codelab#meta/part_3.cm",
+        },
+    ],
+}

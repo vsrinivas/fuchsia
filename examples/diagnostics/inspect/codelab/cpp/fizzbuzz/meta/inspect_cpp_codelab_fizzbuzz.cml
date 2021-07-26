@@ -1,0 +1,19 @@
+{
+    include: [
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/inspect_cpp_codelab_fizzbuzz",
+    },
+    capabilities: [
+        { protocol: "fuchsia.examples.inspect.FizzBuzz" },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.examples.inspect.FizzBuzz",
+            from: "self",
+        },
+    ],
+}

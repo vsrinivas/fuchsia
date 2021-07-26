@@ -13,61 +13,62 @@ group("tests") {
   deps = [
     ":inspect_cpp_codelab_integration_tests",
     ":inspect_cpp_codelab_unittests",
-
-    # Test specs for integration tests
-    "part_1/tests:test_spec",
-    "part_2/tests:test_spec",
-    "part_3/tests:test_spec",
-    "part_4/tests:test_spec",
-    "part_5/tests:test_spec",
-
-    # Test specs for unit tests
-    "part_1:test_spec",
-    "part_2:test_spec",
-    "part_3:test_spec",
-    "part_4:test_spec",
-    "part_5:test_spec",
   ]
+}
+
+part_ids = [
+  1,
+  2,
+  3,
+  4,
+  5,
+]
+parts = []
+unittest_components = []
+integration_test_components = []
+
+foreach(part_id, part_ids) {
+  part = "part_" + part_id
+  part_unittest = "inspect_cpp_codelab_" + part + "_unittest"
+  part_integration_test = "inspect_cpp_codelab_" + part + "_integration_test"
+
+  fuchsia_unittest_component(part_unittest) {
+    deps = [ part + ":unittests" ]
+  }
+
+  fuchsia_unittest_component(part_integration_test) {
+    manifest = part + "/meta/integration_test.cml"
+    deps = [
+      "fizzbuzz",
+      part,
+      part + ":integration_test",
+    ]
+  }
+
+  unittest_components += [ ":" + part_unittest ]
+  integration_test_components += [ ":" + part_integration_test ]
+  parts += [ part ]
 }
 
 fuchsia_package("inspect_cpp_codelab") {
   deps = [
-    "client:inspect_cpp_codelab_client",
-    "fizzbuzz:inspect_cpp_codelab_fizzbuzz",
-    "part_1:inspect_cpp_codelab_part_1",
-    "part_2:inspect_cpp_codelab_part_2",
-    "part_3:inspect_cpp_codelab_part_3",
-    "part_4:inspect_cpp_codelab_part_4",
-    "part_5:inspect_cpp_codelab_part_5",
-  ]
+           "client:components",
+           "fizzbuzz",
+         ] + parts
 }
 
-fuchsia_package("inspect_cpp_codelab_unittests") {
-  testonly = true
-  deps = [
-    "part_1:inspect_cpp_codelab_part_1_unittests",
-    "part_2:inspect_cpp_codelab_part_2_unittests",
-    "part_3:inspect_cpp_codelab_part_3_unittests",
-    "part_4:inspect_cpp_codelab_part_4_unittests",
-    "part_5:inspect_cpp_codelab_part_5_unittests",
-  ]
+fuchsia_test_package("inspect_cpp_codelab_unittests") {
+  test_components = unittest_components
 }
 
-fuchsia_package("inspect_cpp_codelab_integration_tests") {
-  testonly = true
-  deps = [
-    # Include the components under test in this package. This ensures
-    # that our test is hermetic; we don't have cross-package dependencies.
-    "fizzbuzz:inspect_cpp_codelab_fizzbuzz",
-    "part_1:inspect_cpp_codelab_part_1",
-    "part_1/tests:inspect_cpp_codelab_part_1_integration_test",
-    "part_2:inspect_cpp_codelab_part_2",
-    "part_2/tests:inspect_cpp_codelab_part_2_integration_test",
-    "part_3:inspect_cpp_codelab_part_3",
-    "part_3/tests:inspect_cpp_codelab_part_3_integration_test",
-    "part_4:inspect_cpp_codelab_part_4",
-    "part_4/tests:inspect_cpp_codelab_part_4_integration_test",
-    "part_5:inspect_cpp_codelab_part_5",
-    "part_5/tests:inspect_cpp_codelab_part_5_integration_test",
-  ]
+fuchsia_test_package("inspect_cpp_codelab_integration_tests") {
+  test_components = integration_test_components
+
+  # There's expected error logs that happen in the integration test where PEER_CLOSED arises when
+  # testing without FizzBuzz being present.
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
