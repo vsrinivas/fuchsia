@@ -101,7 +101,6 @@ static int aml_i2c_irq_thread(void* arg) {
     uint32_t reg = MmioRead32(&dev->virt_regs->control);
     if (reg & AML_I2C_CONTROL_REG_ERR) {
       zx_object_signal(dev->event, 0, I2C_ERROR_SIGNAL);
-      zxlogf(ERROR, "i2c: error on bus");
     } else {
       zx_object_signal(dev->event, 0, I2C_TXN_COMPLETE_SIGNAL);
     }
