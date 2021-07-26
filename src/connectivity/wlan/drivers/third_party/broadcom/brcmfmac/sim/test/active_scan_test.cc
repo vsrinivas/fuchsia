@@ -119,7 +119,7 @@ void ActiveScanTest::Init() {
   client_ifc_.GetMacAddr(&sim_fw_mac_);
 
   default_scan_req_ = {
-      .bss_type = BSS_TYPE_INFRASTRUCTURE,
+      .bss_type_selector = fuchsia_wlan_internal_BSS_TYPE_SELECTOR_INFRASTRUCTURE,
       .scan_type = WLAN_SCAN_TYPE_ACTIVE,
       .num_channels = 5,
       .channel_list = {1, 2, 3, 4, 5},
@@ -338,7 +338,7 @@ TEST_F(ActiveScanTest, OverSizeSsid) {
   // Case contains over-size ssid in ssid field of request.
   wlanif_scan_req_t req_break_ssid = {
       .txn_id = ++client_ifc_.scan_txn_id_,
-      .bss_type = BSS_TYPE_INFRASTRUCTURE,
+      .bss_type_selector = fuchsia_wlan_internal_BSS_TYPE_SELECTOR_INFRASTRUCTURE,
       .ssid = invalid_scan_ssid,
       .scan_type = WLAN_SCAN_TYPE_ACTIVE,
       .num_channels = 5,
@@ -349,15 +349,16 @@ TEST_F(ActiveScanTest, OverSizeSsid) {
   };
 
   // Case contains over-size ssid in ssid_list in request.
-  wlanif_scan_req_t req_break_ssid_list = {.txn_id = ++client_ifc_.scan_txn_id_,
-                                           .bss_type = BSS_TYPE_INFRASTRUCTURE,
-                                           .scan_type = WLAN_SCAN_TYPE_ACTIVE,
-                                           .num_channels = 5,
-                                           .channel_list = {1, 2, 3, 4, 5},
-                                           .min_channel_time = kDwellTimeMs,
-                                           .max_channel_time = kDwellTimeMs,
-                                           .num_ssids = 2,
-                                           .ssid_list = {valid_scan_ssid, invalid_scan_ssid}};
+  wlanif_scan_req_t req_break_ssid_list = {
+      .txn_id = ++client_ifc_.scan_txn_id_,
+      .bss_type_selector = fuchsia_wlan_internal_BSS_TYPE_SELECTOR_INFRASTRUCTURE,
+      .scan_type = WLAN_SCAN_TYPE_ACTIVE,
+      .num_channels = 5,
+      .channel_list = {1, 2, 3, 4, 5},
+      .min_channel_time = kDwellTimeMs,
+      .max_channel_time = kDwellTimeMs,
+      .num_ssids = 2,
+      .ssid_list = {valid_scan_ssid, invalid_scan_ssid}};
 
   // Two active scans are scheduled,
   env_->ScheduleNotification(std::bind(&ActiveScanTest::StartScan, this, &req_break_ssid),

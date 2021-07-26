@@ -25,7 +25,7 @@ const MAX_SSIDS_PER_SCAN_REQUEST uint32 = 32;
 
 type ScanRequest = struct {
     txn_id uint64;
-    bss_type internal.BssType;
+    bss_type_selector internal.BssTypeSelector;
     bssid array<uint8, 6>;
     ssid bytes:ieee80211.MAX_SSID_BYTE_LEN;
     scan_type ScanTypes;

@@ -49,7 +49,7 @@ pub enum BssTypeDef {
     Personal = 2,
     Independent = 3,
     Mesh = 4,
-    AnyBss = 5,
+    Unknown = 255,
 }
 
 #[derive(Serialize, Deserialize)]

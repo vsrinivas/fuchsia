@@ -665,9 +665,6 @@ zx_status_t SimFirmware::BusTxData(struct brcmf_netbuf* netbuf) {
       dataFrame.addr2_ = common::MacAddr(ethFrame->h_source);
       dataFrame.addr3_ = assoc_state_.opts->bssid;
       break;
-    case BSS_TYPE_ANY_BSS:
-      // It seems that our driver typically uses this with the intention the the firmware will treat
-      // it as an infrastructure bss, so we'll do the same
     case BSS_TYPE_INFRASTRUCTURE:
       dataFrame.toDS_ = 1;
       dataFrame.fromDS_ = 0;

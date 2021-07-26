@@ -8,13 +8,31 @@ using fuchsia.wlan.common;
 @namespaced
 const MAC_ADDR_BYTE_LEN uint8 = 6;
 
+// TODO(fxbug.dev/80232): This type should really be `bits`, but since the `bits`
+// type is not supported in Banjo bindings it can't be.
+alias BssTypeSelector = uint8;
+@namespaced
+const BSS_TYPE_SELECTOR_INFRASTRUCTURE BssTypeSelector = 0b0001;
+@namespaced
+const BSS_TYPE_SELECTOR_INDEPENDENT BssTypeSelector = 0b0010;
+@namespaced
+const BSS_TYPE_SELECTOR_MESH BssTypeSelector = 0b0100;
+@namespaced
+const BSS_TYPE_SELECTOR_PERSONAL BssTypeSelector = 0b1000;
+@namespaced
+const BSS_TYPE_SELECTOR_ANY BssTypeSelector = 0b1111;
+
 type BssType = strict enum {
+    // The UNKNOWN value is added to this type instead of created a new
+    // enum like `DetectedBssType` so that language bindings can avoid the use
+    // of verbose constants like DETECTED_BSS_TYPE_INFRASTRUCTURE. The tradeoff
+    // is to handle UNKNOWN when specifying the BSS type of a new AP.
+    UNKNOWN = 0;
+
     INFRASTRUCTURE = 1;
-    PERSONAL = 2;
-    INDEPENDENT = 3;
-    MESH = 4;
-    ANY_BSS = 5;
-//LAST = ANY_BSS;
+    INDEPENDENT = 2;
+    MESH = 3;
+    PERSONAL = 4;
 };
 
 type BssConfig = struct {

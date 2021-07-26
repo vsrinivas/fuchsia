@@ -2525,13 +2525,15 @@ static void brcmf_return_scan_result(struct net_device* ndev, uint16_t channel,
 
   result.txn_id = ndev->scan_txn_id;
   memcpy(result.bss.bssid, bssid, ETH_ALEN);
-  result.bss.bss_type = BSS_TYPE_ANY_BSS;
+  // TODO(fxbug.dev/80230): The probably shouldn't be hardcoded.
+  result.bss.bss_type = BSS_TYPE_INFRASTRUCTURE;
   result.bss.beacon_period = 0;
   result.bss.timestamp = 0;
   result.bss.local_time = 0;
   result.bss.capability_info = capability;
   result.bss.channel.primary = (uint8_t)channel;
-  result.bss.channel.cbw = CHANNEL_BANDWIDTH_CBW20;  // TODO(cphoenix): Don't hard-code this.
+  // TODO(fxbug.dev/80231): This probably shouldn't be hardcoded.
+  result.bss.channel.cbw = CHANNEL_BANDWIDTH_CBW20;
   result.bss.rssi_dbm = std::min<int16_t>(0, std::max<int16_t>(-255, rssi_dbm));
   result.bss.ies_list = ie;
   result.bss.ies_count = ie_len;

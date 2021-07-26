@@ -32,7 +32,7 @@ type WlanifSsid = struct {
 
 type WlanifScanReq = struct {
     txn_id uint64;
-    bss_type fuchsia.wlan.internal.BssType;
+    bss_type_selector fuchsia.wlan.internal.BssTypeSelector;
     bssid array<uint8, fuchsia.hardware.ethernet.mac.MAC_ARRAY_LENGTH>;
     ssid WlanifSsid;
     scan_type WlanScanType;

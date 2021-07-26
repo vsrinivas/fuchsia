@@ -418,7 +418,7 @@ mod tests {
     fn scan_req() -> fidl_mlme::ScanRequest {
         fidl_mlme::ScanRequest {
             txn_id: 1337,
-            bss_type: fidl_internal::BssType::Infrastructure,
+            bss_type_selector: fidl_internal::BSS_TYPE_SELECTOR_INFRASTRUCTURE,
             bssid: BSSID.0,
             ssid: b"ssid".to_vec(),
             scan_type: fidl_mlme::ScanTypes::Passive,

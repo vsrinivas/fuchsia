@@ -260,7 +260,7 @@ void Device::StartScan(wlan_mlme::ScanRequest req) {
   impl_req.txn_id = req.txn_id;
 
   // bss_type
-  impl_req.bss_type = static_cast<bss_type_t>(req.bss_type);
+  impl_req.bss_type_selector = req.bss_type_selector;
 
   // bssid
   std::memcpy(impl_req.bssid, req.bssid.data(), ETH_ALEN);

@@ -146,7 +146,7 @@ TEST(SmeChannel, Bound) {
   // Capture incoming scan request.
   proto_ops.start_scan = [](void* ctx, const wlanif_scan_req_t* req) {
     SME_DEV(ctx)->scan_req = {{
-        .bss_type = req->bss_type,
+        .bss_type_selector = req->bss_type_selector,
         .scan_type = req->scan_type,
     }};
   };
@@ -166,7 +166,7 @@ TEST(SmeChannel, Bound) {
   // Send scan request to device.
   auto mlme_proxy = wlan_mlme::MLME_SyncProxy(std::move(ctx.mlme));
   mlme_proxy.StartScan(wlan_mlme::ScanRequest{
-      .bss_type = wlan_internal::BssType::INFRASTRUCTURE,
+      .bss_type_selector = wlan_internal::BSS_TYPE_SELECTOR_INFRASTRUCTURE,
       .scan_type = wlan_mlme::ScanTypes::PASSIVE,
   });
 
@@ -175,7 +175,7 @@ TEST(SmeChannel, Bound) {
 
   // Verify scan request.
   ASSERT_TRUE(ctx.scan_req.has_value());
-  ASSERT_EQ(ctx.scan_req->bss_type, BSS_TYPE_INFRASTRUCTURE);
+  ASSERT_EQ(ctx.scan_req->bss_type_selector, fuchsia_wlan_internal_BSS_TYPE_SELECTOR_INFRASTRUCTURE);
   ASSERT_EQ(ctx.scan_req->scan_type, WLAN_SCAN_TYPE_PASSIVE);
 
   device->EthUnbind();

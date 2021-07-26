@@ -73,7 +73,7 @@ fn get_bss_type(capability_info: CapabilityInfo) -> fidl_internal::BssType {
         (true, false) => fidl_internal::BssType::Infrastructure,
         (false, true) => fidl_internal::BssType::Independent,
         (false, false) => fidl_internal::BssType::Mesh,
-        _ => fidl_internal::BssType::AnyBss,
+        _ => fidl_internal::BssType::Unknown,
     }
 }
 

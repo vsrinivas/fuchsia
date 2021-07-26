@@ -155,8 +155,6 @@ wlan_internal::BssType ConvertBssType(uint8_t bss_type) {
       return wlan_internal::BssType::INDEPENDENT;
     case BSS_TYPE_MESH:
       return wlan_internal::BssType::MESH;
-    case BSS_TYPE_ANY_BSS:
-      return wlan_internal::BssType::ANY_BSS;
     default:
       ZX_ASSERT(0);
   }

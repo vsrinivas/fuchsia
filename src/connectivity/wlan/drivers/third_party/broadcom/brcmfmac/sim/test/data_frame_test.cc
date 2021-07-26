@@ -385,7 +385,7 @@ void DataFrameTest::StartAssoc() {
   join_req.selected_bss.ies_list = assoc_context_.ies.data();
   join_req.selected_bss.ies_count = assoc_context_.ies.size();
   join_req.selected_bss.channel = assoc_context_.channel;
-  join_req.selected_bss.bss_type = BSS_TYPE_ANY_BSS;
+  join_req.selected_bss.bss_type = BSS_TYPE_INFRASTRUCTURE;
   client_ifc_.if_impl_ops_->join_req(client_ifc_.if_impl_ctx_, &join_req);
 }
 

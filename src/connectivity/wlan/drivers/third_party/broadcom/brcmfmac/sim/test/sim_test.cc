@@ -270,7 +270,7 @@ void SimInterface::StartAssoc(const common::MacAddr& bssid, const wlan_ssid_t& s
   join_req.selected_bss.ies_list = assoc_ctx_.ies.data();
   join_req.selected_bss.ies_count = assoc_ctx_.ies.size();
   join_req.selected_bss.channel = channel;
-  join_req.selected_bss.bss_type = BSS_TYPE_ANY_BSS;
+  join_req.selected_bss.bss_type = BSS_TYPE_INFRASTRUCTURE;
   if_impl_ops_->join_req(if_impl_ctx_, &join_req);
 }
 
@@ -308,7 +308,7 @@ void SimInterface::StartScan(uint64_t txn_id, bool active) {
   size_t num_channels = kDefaultScanChannels.size();
   wlanif_scan_req_t req = {
       .txn_id = txn_id,
-      .bss_type = BSS_TYPE_INFRASTRUCTURE,
+      .bss_type_selector = fuchsia_wlan_internal_BSS_TYPE_SELECTOR_INFRASTRUCTURE,
       .scan_type = scan_type,
       .num_channels = num_channels,
       .min_channel_time = dwell_time,
