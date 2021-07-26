@@ -205,7 +205,7 @@ class SdmmcBlockDeviceTest : public zxtest::Test {
   ddk::BlockImplProtocolClient boot1_;
   ddk::BlockImplProtocolClient boot2_;
   ddk::RpmbProtocolClient rpmb_;
-  fidl::Client<fuchsia_hardware_rpmb::Rpmb> rpmb_fidl_;
+  fidl::WireSharedClient<fuchsia_hardware_rpmb::Rpmb> rpmb_fidl_;
   Bind ddk_;
   std::atomic<bool> run_threads_ = true;
   async::Loop loop_;
@@ -1480,7 +1480,7 @@ TEST_F(SdmmcBlockDeviceTest, GetRpmbClient) {
   ASSERT_OK(rpmb_ends.status_value());
   rpmb_.ConnectServer(rpmb_ends->server.TakeChannel());
 
-  fidl::Client rpmb_client(std::move(rpmb_ends->client), loop_.dispatcher());
+  fidl::WireSharedClient rpmb_client(std::move(rpmb_ends->client), loop_.dispatcher());
 
   sync_completion_t completion;
   rpmb_client->GetDeviceInfo(
