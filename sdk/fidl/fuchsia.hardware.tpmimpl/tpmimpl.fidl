@@ -1,0 +1,49 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.hardware.tpmimpl;
+
+using zx;
+
+/// TPM supports up to 255 localities.
+alias Locality = uint8;
+
+/// TPM registers. See "TCG PC Client Platform TPM Profile (PTP) Specification",
+/// section 7.3.5 (I2C-TPM Registers) and 5.5.2.1 (FIFO Register Space
+/// Addresses).
+type RegisterAddress = flexible enum : uint16 {
+    TPM_ACCESS = 0x4;
+    TPM_INT_ENABLE = 0x8;
+    TPM_INT_STATUS = 0x10;
+    TPM_INT_CAPABILITY = 0x14;
+    TPM_STS = 0x18;
+    TPM_HASH_END = 0x20;
+    TPM_DATA_FIFO = 0x24;
+    TPM_HASH_START = 0x28;
+    TPM_INTERFACE_ID = 0x30;
+};
+
+/// Maximum possible amount of data that could be transferred in a single
+/// transaction. Note that not all TPMs will support this amount, and the
+/// TPM_INT_CAPABILITY and TPM_STS registers should be queried to get the actual
+/// maximum.
+const TPM_MAX_DATA_TRANSFER uint32 = 64;
+
+/// Provides access to a TPM device.
+protocol TpmImpl {
+    /// Read |count| bytes from |address| in locality |locality|.
+    Read(struct {
+        locality Locality;
+        address RegisterAddress;
+        count uint32;
+    }) -> (struct {
+        data vector<uint8>:TPM_MAX_DATA_TRANSFER;
+    }) error zx.status;
+
+    /// Write |data| to |address| in |locality|.
+    Write(struct {
+        locality Locality;
+        address RegisterAddress;
+        data vector<uint8>:TPM_MAX_DATA_TRANSFER;
+    }) -> (struct {}) error zx.status;
+};
