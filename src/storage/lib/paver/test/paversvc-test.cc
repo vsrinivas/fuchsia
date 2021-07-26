@@ -299,9 +299,10 @@ class PaverServiceSkipBlockTest : public PaverServiceTest {
   void WaitForDevices() {
     fbl::unique_fd fd;
     ASSERT_OK(RecursiveWaitForFile(device_->devfs_root(),
-                                   "misc/nand-ctl/ram-nand-0/sysconfig/skip-block", &fd));
-    ASSERT_OK(RecursiveWaitForFile(device_->devfs_root(), "misc/nand-ctl/ram-nand-0/fvm/ftl/block",
-                                   &fvm_));
+                                   "sys/platform/00:00:2e/nand-ctl/ram-nand-0/sysconfig/skip-block",
+                                   &fd));
+    ASSERT_OK(RecursiveWaitForFile(
+        device_->devfs_root(), "sys/platform/00:00:2e/nand-ctl/ram-nand-0/fvm/ftl/block", &fvm_));
   }
 
   void FindBootManager() {

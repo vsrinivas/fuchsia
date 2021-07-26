@@ -3,12 +3,8 @@
 // found in the LICENSE file.
 
 using fuchsia.platform;
-using fuchsia.misc;
 
-if fuchsia.BIND_PROTOCOL == fuchsia.platform.BIND_PROTOCOL.DEVICE {
-  fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.platform.BIND_PLATFORM_DEV_VID.GENERIC;
-  fuchsia.BIND_PLATFORM_DEV_PID == fuchsia.platform.BIND_PLATFORM_DEV_PID.GENERIC;
-  fuchsia.BIND_PLATFORM_DEV_DID == fuchsia.platform.BIND_PLATFORM_DEV_DID.RAM_NAND;
-} else {
-  fuchsia.BIND_PROTOCOL == fuchsia.misc.BIND_PROTOCOL.PARENT;
-}
+fuchsia.BIND_PROTOCOL == fuchsia.platform.BIND_PROTOCOL.DEVICE;
+fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.platform.BIND_PLATFORM_DEV_VID.GENERIC;
+fuchsia.BIND_PLATFORM_DEV_PID == fuchsia.platform.BIND_PLATFORM_DEV_PID.GENERIC;
+fuchsia.BIND_PLATFORM_DEV_DID == fuchsia.platform.BIND_PLATFORM_DEV_DID.RAM_NAND;

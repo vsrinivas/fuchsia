@@ -1,18 +1,11 @@
 [
-  {
-    "name": "Success",
-    "expected": "match",
-    "device": {
-      "fuchsia.BIND_PROTOCOL": "fuchsia.misc.BIND_PROTOCOL.PARENT"
-    }
-  },
-  {
-    "name": "WrongProtocol",
-    "expected": "abort",
-    "device": {
-      "fuchsia.BIND_PROTOCOL": "fuchsia.misc.BIND_PROTOCOL.DEVICE"
-    }
-  },
+    {
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.misc.BIND_PROTOCOL.DEVICE"
+        },
+        "expected": "abort",
+        "name": "WrongProtocol"
+    },
     {
         "device": {
             "fuchsia.BIND_PLATFORM_DEV_DID": "fuchsia.platform.BIND_PLATFORM_DEV_DID.RAM_NAND",

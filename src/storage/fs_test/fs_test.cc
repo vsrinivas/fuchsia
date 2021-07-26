@@ -147,10 +147,11 @@ zx::status<std::pair<ramdevice_client::RamNand, std::string>> CreateRamNand(
         options.device_block_size * options.device_block_count / kPageSize / kPagesPerBlock;
   }
 
-  status = zx::make_status(wait_for_device("/dev/misc/nand-ctl", zx::sec(10).get()));
+  status =
+      zx::make_status(wait_for_device("/dev/sys/platform/00:00:2e/nand-ctl", zx::sec(10).get()));
   if (status.is_error()) {
-    std::cout << "Failed waiting for /dev/misc/nand-ctl to appear: " << status.status_string()
-              << std::endl;
+    std::cout << "Failed waiting for /dev/sys/platform/00:00:2e/nand-ctl to appear: "
+              << status.status_string() << std::endl;
     return status.take_error();
   }
 

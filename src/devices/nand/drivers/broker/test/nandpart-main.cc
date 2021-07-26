@@ -72,9 +72,10 @@ int main(int argc, char** argv) {
   }
 
   fbl::unique_fd ctl;
-  st = devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(), "misc/nand-ctl", &ctl);
+  st = devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(),
+                                                     "sys/platform/00:00:2e/nand-ctl", &ctl);
   if (st != ZX_OK) {
-    fprintf(stderr, "misc/nand-ctl failed to enumerate: %d\n", st);
+    fprintf(stderr, "sys/platform/00:00:2e/nand-ctl failed to enumerate: %d\n", st);
     return st;
   }
 

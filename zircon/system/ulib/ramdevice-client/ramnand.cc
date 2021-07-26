@@ -72,7 +72,8 @@ zx_status_t RamNandCtl::Create(fbl::RefPtr<RamNandCtl>* out) {
   }
 
   fbl::unique_fd ctl;
-  st = devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(), "misc/nand-ctl", &ctl);
+  st = devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(),
+                                                     "sys/platform/00:00:2e/nand-ctl", &ctl);
   if (st != ZX_OK) {
     fprintf(stderr, "ram_nand_ctl device failed enumerated, %d\n", st);
     return st;
@@ -153,7 +154,7 @@ zx_status_t RamNand::Create(fbl::RefPtr<RamNandCtl> ctl,
   // TODO(fxbug.dev/33003): We should be able to open relative to ctl->fd(), but
   // due to a bug, we have to be relative to devfs_root instead.
   fbl::StringBuffer<PATH_MAX> path;
-  path.Append("misc/nand-ctl/");
+  path.Append("sys/platform/00:00:2e/nand-ctl/");
   path.Append(name);
   fprintf(stderr, "Trying to open (%s)\n", path.c_str());
 

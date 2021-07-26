@@ -2,19 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef RAMDEVICE_CLIENT_RAMNAND_H_
+#define RAMDEVICE_CLIENT_RAMNAND_H_
+
+#include <fuchsia/hardware/nand/c/fidl.h>
+#include <inttypes.h>
+#include <lib/driver-integration-test/fixture.h>
+#include <zircon/compiler.h>
 
 #include <memory>
 #include <optional>
 
-#include <inttypes.h>
-
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/string.h>
-#include <fuchsia/hardware/nand/c/fidl.h>
-#include <lib/driver-integration-test/fixture.h>
-#include <zircon/compiler.h>
 
 namespace ramdevice_client {
 
@@ -40,7 +41,7 @@ class RamNandCtl : public fbl::RefCounted<RamNandCtl> {
 
 class RamNand {
  public:
-  static constexpr char kBasePath[] = "/dev/misc/nand-ctl";
+  static constexpr char kBasePath[] = "/dev/sys/platform/00:00:2e/nand-ctl";
 
   // Creates a ram_nand under ram_nand_ctl running under the main devmgr.
   static zx_status_t Create(const fuchsia_hardware_nand_RamNandInfo* config,
@@ -106,3 +107,5 @@ class RamNand {
 };
 
 }  // namespace ramdevice_client
+
+#endif  // RAMDEVICE_CLIENT_RAMNAND_H_
