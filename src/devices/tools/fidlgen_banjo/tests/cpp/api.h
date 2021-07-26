@@ -397,8 +397,8 @@ public:
     static zx_status_t CreateFromDevice(zx_device_t* parent, const char* fragment_name,
                                         ApiProtocolClient* result) {
         api_protocol_t proto;
-        zx_status_t status = device_get_fragment_protocol(
-                parent, fragment_name, ZX_PROTOCOL_API, &proto);
+        zx_status_t status = device_get_fragment_protocol(parent, fragment_name,
+                                 ZX_PROTOCOL_API, &proto);
         if (status != ZX_OK) {
             return status;
         }

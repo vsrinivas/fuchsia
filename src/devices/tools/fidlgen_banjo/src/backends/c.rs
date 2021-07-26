@@ -778,11 +778,16 @@ impl<'a, W: io::Write> CBackend<'a, W> {
     }
 
     fn codegen_alias_decl(&self, data: &TypeAlias, _ir: &FidlIr) -> Result<String, Error> {
-        Ok(format!(
-            "typedef {from}_t {to}_t;",
-            to = to_c_name(&data.name.get_name()),
-            from = to_c_name(&CompoundIdentifier(data.partial_type_ctor.name.clone()).get_name()),
-        ))
+        match data.partial_type_ctor.name.as_str() {
+            "array" => Ok("".to_string()),
+            "vector" => Ok("".to_string()),
+            _ => Ok(format!(
+                "typedef {from}_t {to}_t;",
+                to = to_c_name(&data.name.get_name()),
+                from =
+                    to_c_name(&CompoundIdentifier(data.partial_type_ctor.name.clone()).get_name()),
+            )),
+        }
     }
 
     fn codegen_includes(&self, ir: &FidlIr) -> Result<String, Error> {
