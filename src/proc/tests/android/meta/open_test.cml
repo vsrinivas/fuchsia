@@ -1,0 +1,12 @@
+{
+    include: [ "//src/sys/test_runners/starnix/default.shard.cml" ],
+    program: {
+        binary: "/data/tests/open_test",
+        args: [ "--gunit_filter=*.OTruncAndReadOnlyFile:*.ReadOnly:*.WriteOnly:*.ReadWrite:*.RelPath:*.AbsPath:*.AtRelPath:*.AtAbsPath:*.OpenNoFollowStillFollowsLinksInPath:*.Fault:*.NameTooLong:*.DotsFromRoot:*.SymlinkDirectory" ],
+        mounts: [
+            "/:remotefs:root",
+            "/data:remotefs:data",
+            "/tmp:tmpfs",
+        ],
+    },
+}

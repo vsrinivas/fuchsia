@@ -399,7 +399,7 @@ impl Task {
         dir_fd: FdNumber,
         mut path: &'a FsStr,
     ) -> Result<(NamespaceNode, &'a FsStr), Errno> {
-        let dir = if path[0] == b'/' {
+        let dir = if !path.is_empty() && path[0] == b'/' {
             path = &path[1..];
             self.fs.root.clone()
         } else if dir_fd == FdNumber::AT_FDCWD {
