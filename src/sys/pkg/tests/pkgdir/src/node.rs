@@ -163,7 +163,8 @@ async fn close_per_package_source(root_dir: DirectoryProxy) {
         let node =
             io_util::directory::open_node(root_dir, path, OPEN_RIGHT_READABLE, mode).await.unwrap();
 
-        let _ = node.close().await.unwrap();
+        let status = node.close().await.unwrap();
+        let () = zx::Status::ok(status).unwrap();
 
         matches::assert_matches!(
             node.close().await,
