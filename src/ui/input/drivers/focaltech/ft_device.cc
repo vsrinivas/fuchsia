@@ -124,6 +124,13 @@ zx_status_t FtDevice::Init() {
     return ZX_ERR_INTERNAL;
   }
 
+  // Reset the chip -- should be low for at least 1ms, and the chip should take at most 200ms to
+  // initialize.
+  reset_gpio_.ConfigOut(0);
+  zx::nanosleep(zx::deadline_after(zx::msec(5)));
+  reset_gpio_.Write(1);
+  zx::nanosleep(zx::deadline_after(zx::msec(200)));
+
   status = UpdateFirmwareIfNeeded(device_info);
   if (status != ZX_OK) {
     return status;

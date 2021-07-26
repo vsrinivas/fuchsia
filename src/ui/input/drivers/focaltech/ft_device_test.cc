@@ -106,6 +106,7 @@ class FocaltechTest : public zxtest::Test {
 
     interrupt_gpio_.ExpectConfigIn(ZX_OK, GPIO_NO_PULL)
         .ExpectGetInterrupt(ZX_OK, ZX_INTERRUPT_MODE_EDGE_LOW, std::move(interrupt));
+    reset_gpio_.ExpectConfigOut(ZX_OK, 0).ExpectWrite(ZX_OK, 1);
   }
 
  protected:
