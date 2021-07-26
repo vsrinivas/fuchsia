@@ -4,7 +4,7 @@
 
 use crate::bytecode_encoder::error::BindRulesEncodeError;
 use crate::compiler::instruction::{Condition, Instruction, InstructionInfo};
-use crate::compiler::{BindRules, BindRulesDecodeError, Symbol};
+use crate::compiler::{BindRules, BindRulesDecodeError, Symbol, SymbolicInstructionInfo};
 
 use bitfield::bitfield;
 use byteorder::ByteOrder;
@@ -166,9 +166,10 @@ pub fn encode_to_bytecode_v1(bind_rules: BindRules) -> Result<Vec<u8>, BindRules
         .collect::<Vec<_>>())
 }
 
-pub fn encode_to_string_v1(bind_rules: BindRules) -> Result<String, BindRulesEncodeError> {
-    let result = bind_rules
-        .instructions
+pub fn encode_to_string_v1<'a>(
+    instructions: Vec<SymbolicInstructionInfo<'a>>,
+) -> Result<String, BindRulesEncodeError> {
+    let result = instructions
         .into_iter()
         .map(|inst| encode_instruction(inst.to_instruction()))
         .collect::<Result<Vec<_>, BindRulesEncodeError>>()?;

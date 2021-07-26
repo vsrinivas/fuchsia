@@ -19,6 +19,7 @@ if (is_host) {
     deps = [
       "//src/devices/lib/bind:lib",
       "//third_party/rust_crates:anyhow",
+      "//third_party/rust_crates:matches",
       "//third_party/rust_crates:structopt",
     ]
 
@@ -27,7 +28,10 @@ if (is_host) {
     inputs = [
       "src/templates/bind_v1.h.template",
       "src/templates/bind_v2.h.template",
+      "src/templates/composite_bind.h.template",
+      "src/templates/fragment.template",
       "src/templates/fidl.template",
+      "src/tests/expected_composite_code",
     ]
   }
 

@@ -7,7 +7,10 @@
 use anyhow::{anyhow, Context, Error};
 use bind::bytecode_encoder::encode_v1::encode_to_string_v1;
 use bind::bytecode_encoder::encode_v2::encode_to_string_v2;
-use bind::compiler::{self, BindRules, CompiledBindRules};
+use bind::compiler::{
+    self, BindRules, CompiledBindRules, CompositeBindRules, CompositeNode, SymbolicInstruction,
+    SymbolicInstructionInfo,
+};
 use bind::debugger::offline_debugger;
 use bind::parser::bind_library;
 use bind::{linter, test};
@@ -155,10 +158,49 @@ fn write_bind_template<'a>(bind_rules: BindRules<'a>) -> Result<String, Error> {
             .write_fmt(format_args!(
                 include_str!("templates/bind_v1.h.template"),
                 bind_count = bind_rules.instructions.len(),
-                binding = encode_to_string_v1(bind_rules)?,
+                binding = encode_to_string_v1(bind_rules.instructions)?,
             ))
             .context("Failed to format output")?;
     }
+    Ok(output)
+}
+
+fn write_fragment_template<'a>(node: CompositeNode<'a>) -> Result<String, Error> {
+    let mut output = String::new();
+    let mut instructions_str = encode_to_string_v1(node.instructions)?;
+    instructions_str.push_str(&encode_to_string_v1(vec![SymbolicInstructionInfo {
+        location: None,
+        instruction: SymbolicInstruction::UnconditionalBind,
+    }])?);
+
+    output
+        .write_fmt(format_args!(
+            include_str!("templates/fragment.template"),
+            name = node.name,
+            instructions = instructions_str,
+        ))
+        .context("Failed to format output")?;
+    Ok(output)
+}
+
+fn write_composite_bind_template<'a>(bind_rules: CompositeBindRules<'a>) -> Result<String, Error> {
+    let mut fragment_list = bind_rules.primary_node.name.clone();
+    let mut fragment_definition = write_fragment_template(bind_rules.primary_node)?;
+
+    for node in bind_rules.additional_nodes {
+        fragment_list.push_str(&format!(", {}", &node.name));
+        fragment_definition.push_str(&format!("\n{}", write_fragment_template(node)?));
+    }
+
+    let mut output = String::new();
+    output
+        .write_fmt(format_args!(
+            include_str!("templates/composite_bind.h.template"),
+            device_name = bind_rules.device_name,
+            fragment_definition = fragment_definition,
+            fragment_list = fragment_list,
+        ))
+        .context("Failed to format output")?;
     Ok(output)
 }
 
@@ -285,20 +327,13 @@ fn handle_compile(
         let bytecode = compiled_bind_rules.encode_to_bytecode()?;
         output_writer.write_all(bytecode.as_slice()).context("Failed to write to output file")?;
     } else {
-        match compiled_bind_rules {
-            CompiledBindRules::Bind(bind_rules) => {
-                let template = write_bind_template(bind_rules)?;
-                output_writer
-                    .write_all(template.as_bytes())
-                    .context("Failed to write to output file")?;
+        let template = match compiled_bind_rules {
+            CompiledBindRules::Bind(bind_rules) => write_bind_template(bind_rules),
+            CompiledBindRules::CompositeBind(bind_rules) => {
+                write_composite_bind_template(bind_rules)
             }
-            CompiledBindRules::CompositeBind(_) => {
-                // TODO(fxb/80368): Generate header for composite bind.
-                unimplemented!(
-                    "Code generation not implemented for composite bind rules. See fxb/80368"
-                );
-            }
-        }
+        }?;
+        output_writer.write_all(template.as_bytes()).context("Failed to write to output file")?;
     };
 
     Ok(())
@@ -450,6 +485,7 @@ fn handle_generate(
 mod tests {
     use super::*;
     use bind::compiler::{SymbolicInstruction, SymbolicInstructionInfo};
+    use matches::assert_matches;
     use std::collections::HashMap;
 
     fn get_test_fidl_template(ast: bind_library::Ast) -> Vec<String> {
@@ -785,5 +821,16 @@ mod tests {
                 0x01, 0x02, 0x00, 0x00, 0x00 // 2
             ]
         );
+
+        let compiled_bind_rules =
+            compiler::compile(&composite_bind_rules, &vec![], false, false, true).unwrap();
+
+        assert_matches!(compiled_bind_rules, CompiledBindRules::CompositeBind(_));
+        if let CompiledBindRules::CompositeBind(bind_rules) = compiled_bind_rules {
+            assert_eq!(
+                include_str!("tests/expected_composite_code"),
+                write_composite_bind_template(bind_rules).unwrap()
+            );
+        }
     }
 }
