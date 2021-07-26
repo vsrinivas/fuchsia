@@ -24,10 +24,9 @@ class VideoCommandStreamer : public EngineCommandStreamer {
 
   bool ExecBatch(std::unique_ptr<MappedBatch> mapped_batch) override;
 
-  void ResetCurrentContext() override;
-
   void ProcessCompletedCommandBuffers(uint32_t last_completed_sequence);
   void ContextSwitched();
+  void ResetCurrentContext();
 
  private:
   void ScheduleContext();

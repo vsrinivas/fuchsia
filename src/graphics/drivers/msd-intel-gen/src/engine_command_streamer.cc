@@ -24,18 +24,6 @@ EngineCommandStreamer::EngineCommandStreamer(Owner* owner, EngineCommandStreamer
   DASSERT(owner);
 }
 
-const char* EngineCommandStreamer::Name() const {
-  switch (id()) {
-    case RENDER_COMMAND_STREAMER:
-      return "RCS";
-    case VIDEO_COMMAND_STREAMER:
-      return "VCS";
-    default:
-      DASSERT(false);
-      return "Unknown";
-  }
-}
-
 bool EngineCommandStreamer::InitContext(MsdIntelContext* context) const {
   DASSERT(context);
 
@@ -118,12 +106,6 @@ void EngineCommandStreamer::InvalidateTlbs() {
   switch (id()) {
     case RENDER_COMMAND_STREAMER: {
       auto reg = registers::RenderEngineTlbControl::Get().FromValue(0);
-      reg.invalidate().set(1);
-      reg.WriteTo(register_io());
-      break;
-    }
-    case VIDEO_COMMAND_STREAMER: {
-      auto reg = registers::VideoEngineTlbControl::Get().FromValue(0);
       reg.invalidate().set(1);
       reg.WriteTo(register_io());
       break;
@@ -448,13 +430,11 @@ bool EngineCommandStreamer::Reset() {
 
   switch (id()) {
     case RENDER_COMMAND_STREAMER:
-      engine = registers::GraphicsDeviceResetControl::RCS;
-      break;
-    case VIDEO_COMMAND_STREAMER:
-      engine = registers::GraphicsDeviceResetControl::VCS;
+      engine = registers::GraphicsDeviceResetControl::RENDER_ENGINE;
       break;
     default:
-      return DRETF(false, "Reset for %s not implemented", Name());
+      // TODO:(fxbug.dev/80909) - reset for video CS
+      return DRETF(false, "Reset for engine id %d not implemented", id());
   }
 
   registers::ResetControl::request(register_io(), mmio_base());
@@ -494,7 +474,7 @@ bool EngineCommandStreamer::Reset() {
   // Always invalidate tlbs, otherwise risk memory corruption.
   InvalidateTlbs();
 
-  DLOG("%s ready_for_reset %d reset_complete %d", Name(), ready_for_reset, reset_complete);
+  DLOG("ready_for_reset %d reset_complete %d", ready_for_reset, reset_complete);
 
   return DRETF(reset_complete, "Reset did not complete");
 }

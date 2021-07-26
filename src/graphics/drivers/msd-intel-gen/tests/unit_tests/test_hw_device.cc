@@ -432,7 +432,7 @@ class TestMsdIntelDevice : public testing::Test {
     bool pass_thru_ = false;
   };
 
-  void HangcheckTimeout(bool spurious, EngineCommandStreamerId id) {
+  void HangcheckTimeout(bool spurious) {
     magma::PlatformPciDevice* platform_device = TestPlatformPciDevice::GetInstance();
     ASSERT_NE(platform_device, nullptr);
 
@@ -451,31 +451,11 @@ class TestMsdIntelDevice : public testing::Test {
 
     // Wait for device thread to idle
     while (true) {
-      // Wait for device thread to Wait on device request semaphore
       EXPECT_EQ(MAGMA_STATUS_OK, semaphore->wait_sem_->Wait(2000).get());
-      // See if any other thread signals the device request semaphore
       magma::Status status = semaphore->signal_sem_->Wait(2000);
       if (status.get() == MAGMA_STATUS_TIMED_OUT)
         break;
       semaphore->sem_->Signal();
-    }
-
-    // Device thread is idle.  Pretend a batch was submitted some time ago.
-    // When device wakes up it should hangcheck.
-    {
-      EngineCommandStreamer* engine = nullptr;
-      switch (id) {
-        case RENDER_COMMAND_STREAMER:
-          engine = device->render_engine_cs();
-          break;
-        case VIDEO_COMMAND_STREAMER:
-          engine = device->video_command_streamer();
-          break;
-      }
-      ASSERT_TRUE(engine);
-      uint32_t sequence_number = engine->progress()->last_submitted_sequence_number() + 1;
-      engine->progress()->Submitted(sequence_number,
-                                    std::chrono::steady_clock::now() - std::chrono::seconds(5));
     }
 
     if (spurious) {
@@ -483,11 +463,8 @@ class TestMsdIntelDevice : public testing::Test {
       device->EnqueueDeviceRequest(std::make_unique<DeviceRequest<MsdIntelDevice>>());
     }
 
-    // Device thread will receive a timed out result
     semaphore->wait_return_ = MAGMA_STATUS_TIMED_OUT;
     semaphore->sem_->Signal();
-
-    // Wait for the device thread to again Wait on device request semaphore
     EXPECT_EQ(MAGMA_STATUS_OK, semaphore->wait_sem_->Wait(2000).get());
     EXPECT_EQ(device->suspected_gpu_hang_count_.load(), spurious ? 0u : 1u);
 
@@ -509,6 +486,10 @@ TEST_F(TestMsdIntelDevice, MaxFreq) { TestMsdIntelDevice::MaxFreq(); }
 
 TEST_F(TestMsdIntelDevice, QuerySliceInfo) { TestMsdIntelDevice::QuerySliceInfo(); }
 
+TEST_F(TestMsdIntelDevice, HangcheckTimeout) { TestMsdIntelDevice::HangcheckTimeout(false); }
+
+TEST_F(TestMsdIntelDevice, SpuriousHangcheckTimeout) { TestMsdIntelDevice::HangcheckTimeout(true); }
+
 class TestMsdIntelDevice_RenderCommandStreamer : public TestMsdIntelDevice {};
 
 TEST_F(TestMsdIntelDevice_RenderCommandStreamer, BatchBuffer) {
@@ -523,14 +504,6 @@ TEST_F(TestMsdIntelDevice_RenderCommandStreamer, RegisterWrite) {
   TestMsdIntelDevice::RegisterWrite(RENDER_COMMAND_STREAMER);
 }
 
-TEST_F(TestMsdIntelDevice_RenderCommandStreamer, HangcheckTimeout) {
-  TestMsdIntelDevice::HangcheckTimeout(false, RENDER_COMMAND_STREAMER);
-}
-
-TEST_F(TestMsdIntelDevice_RenderCommandStreamer, SpuriousHangcheckTimeout) {
-  TestMsdIntelDevice::HangcheckTimeout(true, RENDER_COMMAND_STREAMER);
-}
-
 class TestMsdIntelDevice_VideoCommandStreamer : public TestMsdIntelDevice {};
 
 TEST_F(TestMsdIntelDevice_VideoCommandStreamer, BatchBuffer) {
@@ -543,12 +516,4 @@ TEST_F(TestMsdIntelDevice_VideoCommandStreamer, WrapRingbuffer) {
 
 TEST_F(TestMsdIntelDevice_VideoCommandStreamer, RegisterWrite) {
   TestMsdIntelDevice::RegisterWrite(VIDEO_COMMAND_STREAMER);
-}
-
-TEST_F(TestMsdIntelDevice_VideoCommandStreamer, HangcheckTimeout) {
-  TestMsdIntelDevice::HangcheckTimeout(false, VIDEO_COMMAND_STREAMER);
-}
-
-TEST_F(TestMsdIntelDevice_VideoCommandStreamer, SpuriousHangcheckTimeout) {
-  TestMsdIntelDevice::HangcheckTimeout(true, VIDEO_COMMAND_STREAMER);
 }

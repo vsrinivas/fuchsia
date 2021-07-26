@@ -161,8 +161,9 @@ void VideoCommandStreamer::ResetCurrentContext() {
       inflight_command_sequences_.pop();
     }
 
-    progress()->Reset();
-
     context->Kill();
   }
+
+  // Reset the engine hardware
+  EngineCommandStreamer::Reset();
 }

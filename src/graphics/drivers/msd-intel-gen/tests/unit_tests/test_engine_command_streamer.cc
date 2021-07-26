@@ -336,23 +336,11 @@ class TestEngineCommandStreamer : public EngineCommandStreamer::Owner,
   void Reset() {
     class Hook : public magma::RegisterIo::Hook {
      public:
-      Hook(magma::RegisterIo* register_io, EngineCommandStreamerId id)
-          : register_io_(register_io), id_(id) {}
-
-      constexpr uint32_t mask(EngineCommandStreamerId id) {
-        switch (id) {
-          case RENDER_COMMAND_STREAMER:
-            return 1 << registers::GraphicsDeviceResetControl::kRcsResetBit;
-          case VIDEO_COMMAND_STREAMER:
-            return 1 << registers::GraphicsDeviceResetControl::kVcsResetBit;
-        }
-        return 0;
-      }
+      Hook(magma::RegisterIo* register_io) : register_io_(register_io) {}
 
       void Write32(uint32_t offset, uint32_t val) override {
         switch (offset) {
           case EngineCommandStreamer::kRenderEngineMmioBase + registers::ResetControl::kOffset:
-          case EngineCommandStreamer::kVideoEngineMmioBase + registers::ResetControl::kOffset:
             // set ready for reset bit
             if (val & 0x00010001) {
               val = register_io_->mmio()->Read32(offset) | 0x2;
@@ -360,9 +348,9 @@ class TestEngineCommandStreamer : public EngineCommandStreamer::Owner,
             }
             break;
           case registers::GraphicsDeviceResetControl::kOffset:
-            // clear the reset bit
-            if (val & mask(id_)) {
-              val = register_io_->mmio()->Read32(offset) & ~mask(id_);
+            // clear the render reset bit
+            if (val & 0x2) {
+              val = register_io_->mmio()->Read32(offset) & ~0x2;
               register_io_->mmio()->Write32(offset, val);
             }
             break;
@@ -374,10 +362,9 @@ class TestEngineCommandStreamer : public EngineCommandStreamer::Owner,
 
      private:
       magma::RegisterIo* register_io_;
-      EngineCommandStreamerId id_;
     };
 
-    register_io_->InstallHook(std::make_unique<Hook>(register_io_.get(), engine_cs_->id()));
+    register_io_->InstallHook(std::make_unique<Hook>(register_io_.get()));
 
     EXPECT_TRUE(engine_cs_->Reset());
   }
@@ -462,7 +449,12 @@ TEST_P(TestEngineCommandStreamer, RenderInitGen9) {
   TestEngineCommandStreamer::RenderInit();
 }
 
-TEST_P(TestEngineCommandStreamer, Reset) { TestEngineCommandStreamer::Reset(); }
+TEST_P(TestEngineCommandStreamer, Reset) {
+  if (id() != RENDER_COMMAND_STREAMER) {
+    GTEST_SKIP();
+  }
+  TestEngineCommandStreamer::Reset();
+}
 
 TEST_P(TestEngineCommandStreamer, MoveBatchToInflight) {
   TestEngineCommandStreamer::MoveBatchToInflight();

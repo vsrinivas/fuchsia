@@ -132,15 +132,14 @@ class MsdIntelDevice : public msd_device_t,
   void Destroy();
 
   bool BaseInit(void* device_handle);
-  void InitEngine(EngineCommandStreamer* engine);
-  bool RenderInitBatch();
-  bool EngineReset(EngineCommandStreamer* engine);
+  bool InitEngines(bool exec_init_batch);
+  bool RenderEngineReset();
 
   bool InitContextForRender(MsdIntelContext* context);
   bool InitContextForVideo(MsdIntelContext* context);
 
   void ProcessCompletedCommandBuffers(EngineCommandStreamerId id);
-  void HangCheckTimeout(uint64_t timeout_ms, EngineCommandStreamerId id);
+  void HangCheckTimeout(uint64_t timeout_ms);
 
   magma::Status ProcessBatch(std::unique_ptr<MappedBatch> batch);
   magma::Status ProcessDestroyContext(std::shared_ptr<ClientContext> client_context);
@@ -152,10 +151,6 @@ class MsdIntelDevice : public msd_device_t,
   magma::Status ProcessDumpStatusToLog();
 
   void EnqueueDeviceRequest(std::unique_ptr<DeviceRequest> request, bool enqueue_front = false);
-
-  std::chrono::milliseconds GetDeviceRequestTimeoutMs(
-      const std::vector<EngineCommandStreamer*>& engines);
-  void DeviceRequestTimedOut(const std::vector<EngineCommandStreamer*>& engines);
 
   bool WaitIdleForTest(uint32_t timeout_ms = 100);
 

@@ -154,33 +154,23 @@ class ActiveHeadPointer {
   }
 };
 
-// from intel-gfx-prm-osrc-kbl-vol02c-commandreference-registers-part1.pdf p.81
+// from intel-gfx-prm-osrc-bdw-vol02c-commandreference-registers_4.pdf p.75
 class AllEngineFault {
  public:
   static constexpr uint32_t kOffset = 0x4094;
   static constexpr uint32_t kValid = 1;
   static constexpr uint32_t kEngineShift = 12;
-  static constexpr uint32_t kEngineMask = 0x7;
+  static constexpr uint32_t kEngineMask = 0x3;
   static constexpr uint32_t kSrcShift = 3;
   static constexpr uint32_t kSrcMask = 0xFF;
   static constexpr uint32_t kTypeShift = 1;
   static constexpr uint32_t kTypeMask = 0x3;
 
-  enum Engine {
-    RCS = 0,
-    VCS1 = 1,
-    VCS2 = 2,
-    VBOX = 3,
-    BLT = 4,
-  };
-
   static uint32_t read(magma::RegisterIo* reg_io) { return reg_io->Read32(kOffset); }
   static void clear(magma::RegisterIo* reg_io) { reg_io->Write32(kOffset, 0); }
 
   static bool valid(uint32_t val) { return val & kValid; }
-  static Engine engine(uint32_t val) {
-    return static_cast<Engine>((val >> kEngineShift) & kEngineMask);
-  }
+  static uint8_t engine(uint32_t val) { return (val >> kEngineShift) & kEngineMask; }
   static uint8_t src(uint32_t val) { return (val >> kSrcShift) & kSrcMask; }
   static uint8_t type(uint32_t val) { return (val >> kTypeShift) & kTypeMask; }
 };
@@ -306,29 +296,23 @@ class ResetControl {
 // from intel-gfx-prm-osrc-skl-vol02c-commandreference-registers-part1.pdf p.755
 class GraphicsDeviceResetControl {
  public:
-  enum Engine { RCS, VCS };
+  enum Engine { RENDER_ENGINE };
 
   static constexpr uint32_t kOffset = 0x941C;
-  static constexpr uint32_t kRcsResetBit = 1;
-  static constexpr uint32_t kVcsResetBit = 1 << 1;
+  static constexpr uint32_t kRenderResetBit = 1;
 
   static void initiate_reset(magma::RegisterIo* register_io, Engine engine) {
     switch (engine) {
-      case RCS:
-        register_io->Write32(kOffset, (1 << kRcsResetBit));
-        break;
-      case VCS:
-        register_io->Write32(kOffset, (1 << kVcsResetBit));
+      case RENDER_ENGINE:
+        register_io->Write32(kOffset, (1 << kRenderResetBit));
         break;
     }
   }
 
   static bool is_reset_complete(magma::RegisterIo* register_io, Engine engine) {
     switch (engine) {
-      case RCS:
-        return (register_io->Read32(kOffset) & (1 << kRcsResetBit)) == 0;
-      case VCS:
-        return (register_io->Read32(kOffset) & (1 << kVcsResetBit)) == 0;
+      case RENDER_ENGINE:
+        return (register_io->Read32(kOffset) & (1 << kRenderResetBit)) == 0;
     }
   }
 };
@@ -567,12 +551,6 @@ class RenderEngineTlbControl : public magma::RegisterBase {
  public:
   DEF_BIT(0, invalidate);
   static auto Get() { return magma::RegisterAddr<RenderEngineTlbControl>(0x4260); }
-};
-
-class VideoEngineTlbControl : public magma::RegisterBase {
- public:
-  DEF_BIT(0, invalidate);
-  static auto Get() { return magma::RegisterAddr<VideoEngineTlbControl>(0x4264); }
 };
 
 class CacheMode1 {

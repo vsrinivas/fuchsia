@@ -48,8 +48,3 @@ std::chrono::steady_clock::duration GpuProgress::GetHangcheckTimeout(
     return std::chrono::steady_clock::duration::max();
   return hangcheck_start_time_ + std::chrono::milliseconds(max_completion_time_ms) - now;
 }
-
-void GpuProgress::Reset() {
-  DLOG("Resetting to last submitted sequence 0x%x", last_submitted_sequence_number());
-  Completed(last_submitted_sequence_number(), std::chrono::steady_clock::now());
-}
