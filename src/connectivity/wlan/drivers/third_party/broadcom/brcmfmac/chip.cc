@@ -575,6 +575,21 @@ static bool brcmf_chip_socram_banksize(struct brcmf_core_priv* core, uint8_t idx
   return !!(bankinfo & SOCRAM_BANKINFO_RETNTRAM_MASK);
 }
 
+static bool brcmf_chip_iscoreup(struct brcmf_core* pub) {
+  struct brcmf_core_priv* core;
+
+  core = containerof(pub, struct brcmf_core_priv, pub);
+  return core->chip->iscoreup(core);
+}
+
+static void brcmf_chip_resetcore(struct brcmf_core* pub, uint32_t prereset, uint32_t reset,
+                                 uint32_t postreset) {
+  struct brcmf_core_priv* core;
+
+  core = containerof(pub, struct brcmf_core_priv, pub);
+  core->chip->resetcore(core, prereset, reset, postreset);
+}
+
 static void brcmf_chip_socram_ramsize(struct brcmf_core_priv* sr, uint32_t* ramsize,
                                       uint32_t* srsize) {
   uint32_t coreinfo;
@@ -1011,6 +1026,13 @@ static zx_status_t brcmf_chip_recognition(struct brcmf_chip_priv* ci) {
   return ret;
 }
 
+static void brcmf_chip_coredisable(struct brcmf_core* pub, uint32_t prereset, uint32_t reset) {
+  struct brcmf_core_priv* core;
+
+  core = containerof(pub, struct brcmf_core_priv, pub);
+  core->chip->coredisable(core, prereset, reset);
+}
+
 static void brcmf_chip_disable_arm(struct brcmf_chip_priv* chip, uint16_t id) {
   struct brcmf_core* core;
   struct brcmf_core_priv* cpu;
@@ -1191,28 +1213,6 @@ struct brcmf_core* brcmf_chip_get_pmu(struct brcmf_chip* pub) {
 
   /* Fallback to ChipCommon core for older hardware */
   return cc;
-}
-
-bool brcmf_chip_iscoreup(struct brcmf_core* pub) {
-  struct brcmf_core_priv* core;
-
-  core = containerof(pub, struct brcmf_core_priv, pub);
-  return core->chip->iscoreup(core);
-}
-
-void brcmf_chip_coredisable(struct brcmf_core* pub, uint32_t prereset, uint32_t reset) {
-  struct brcmf_core_priv* core;
-
-  core = containerof(pub, struct brcmf_core_priv, pub);
-  core->chip->coredisable(core, prereset, reset);
-}
-
-void brcmf_chip_resetcore(struct brcmf_core* pub, uint32_t prereset, uint32_t reset,
-                          uint32_t postreset) {
-  struct brcmf_core_priv* core;
-
-  core = containerof(pub, struct brcmf_core_priv, pub);
-  core->chip->resetcore(core, prereset, reset, postreset);
 }
 
 static void brcmf_chip_cm3_set_passive(struct brcmf_chip_priv* chip) {
