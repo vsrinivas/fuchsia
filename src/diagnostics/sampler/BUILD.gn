@@ -74,6 +74,7 @@ sampler_configuration("production_sampler") {
     "config/archivist.json",
     "config/avrcp.json",
     "config/bthost.json",
+    "config/display.json",
     "config/file-usage-metrics.json",
     "config/ftl.json",
     "config/fvm.json",

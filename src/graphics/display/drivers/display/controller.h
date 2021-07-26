@@ -183,6 +183,10 @@ class Controller : public ControllerParent,
   void OpenController(OpenControllerRequestView request,
                       OpenControllerCompleter::Sync& _completer) override;
 
+  // Periodically reads |last_vsync_timestamp_| and increments |vsync_stalls_detected_| if no vsync
+  // has been observed in a given time period.
+  void OnVsyncMonitor();
+
   inspect::Inspector inspector_;
   // Currently located at bootstrap/driver_manager:root/display.
   inspect::Node root_;
@@ -216,9 +220,14 @@ class Controller : public ControllerParent,
   ddk::DisplayClampRgbImplProtocolClient dc_clamp_rgb_;
   ddk::I2cImplProtocolClient i2c_;
 
-  zx_time_t last_vsync_timestamp_{};
+  std::atomic<zx::time> last_vsync_timestamp_{};
   inspect::UintProperty last_vsync_ns_property_;
   inspect::UintProperty last_vsync_interval_ns_property_;
+
+  // Fields that track how often vsync was detected to have been stalled.
+  std::atomic_bool vsync_stalled_ = false;
+  inspect::UintProperty vsync_stalls_detected_;
+  async::TaskClosureMethod<Controller, &Controller::OnVsyncMonitor> vsync_monitor_{this};
 
   zx_time_t last_valid_apply_config_timestamp_{};
   inspect::UintProperty last_valid_apply_config_timestamp_ns_property_;
