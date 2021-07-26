@@ -602,24 +602,7 @@ void DriverRunner::Start(StartRequestView request, StartCompleter::Sync& complet
   auto driver = std::make_unique<DriverComponent>(std::move(*start));
   auto bind_driver = fidl::BindServer<DriverComponent>(
       dispatcher_, std::move(request->controller), driver.get(),
-      [this, name = node.TopoName(), collection = DriverCollection(url)](DriverComponent* driver,
-                                                                         auto, auto) {
-        drivers_.erase(*driver);
-        auto destroy_callback = [name](fidl::WireResponse<fsys::Realm::DestroyChild>* response) {
-          if (response->result.is_err()) {
-            LOGF(ERROR, "Failed to destroy component '%s': %u", name.data(),
-                 response->result.err());
-          }
-        };
-        auto destroy = realm_->DestroyChild(
-            fsys::wire::ChildRef{.name = fidl::StringView::FromExternal(name),
-                                 .collection = fidl::StringView::FromExternal(collection)},
-            std::move(destroy_callback));
-        if (!destroy.ok()) {
-          LOGF(ERROR, "Failed to destroy component '%s': %s", name.data(),
-               destroy.FormatDescription().c_str());
-        }
-      });
+      [this](DriverComponent* driver, auto, auto) { drivers_.erase(*driver); });
   node.set_driver_ref(bind_driver);
   driver->set_driver_ref(std::move(bind_driver));
   auto watch = driver->Watch(dispatcher_);

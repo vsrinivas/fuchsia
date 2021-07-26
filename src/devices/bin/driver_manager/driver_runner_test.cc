@@ -54,7 +54,6 @@ class TestRealm : public fsys::testing::Realm_TestBase {
       fit::function<void(fsys::ChildRef child, fidl::InterfaceRequest<fio::Directory> exposed_dir)>;
   using CreateChildHandler =
       fit::function<void(fsys::CollectionRef collection, fsys::ChildDecl decl)>;
-  using DestroyChildHandler = fit::function<void(fsys::ChildRef child)>;
 
   void SetBindChildHandler(BindChildHandler bind_child_handler) {
     bind_child_handler_ = std::move(bind_child_handler);
@@ -62,10 +61,6 @@ class TestRealm : public fsys::testing::Realm_TestBase {
 
   void SetCreateChildHandler(CreateChildHandler create_child_handler) {
     create_child_handler_ = std::move(create_child_handler);
-  }
-
-  void SetDestroyChildHandler(DestroyChildHandler destroy_child_handler) {
-    destroy_child_handler_ = std::move(destroy_child_handler);
   }
 
  private:
@@ -81,18 +76,12 @@ class TestRealm : public fsys::testing::Realm_TestBase {
     callback(fsys::Realm_CreateChild_Result(fpromise::ok()));
   }
 
-  void DestroyChild(fsys::ChildRef child, DestroyChildCallback callback) override {
-    destroy_child_handler_(std::move(child));
-    callback(fsys::Realm_DestroyChild_Result(fpromise::ok()));
-  }
-
   void NotImplemented_(const std::string& name) override {
     printf("Not implemented: Realm::%s\n", name.data());
   }
 
   BindChildHandler bind_child_handler_;
   CreateChildHandler create_child_handler_;
-  DestroyChildHandler destroy_child_handler_ = [](auto) {};
 };
 
 class TestDirectory : public fio::testing::Directory_TestBase {
@@ -878,21 +867,11 @@ TEST_F(DriverRunnerTest, StartSecondDriver_UnbindSecondNode) {
 
   // Unbinding the second node stops the driver bound to it.
   second_node.Unbind();
-  realm().SetDestroyChildHandler([](fsys::ChildRef child) {
-    EXPECT_EQ("root.second", child.name);
-    EXPECT_EQ("boot-drivers", child.collection);
-  });
   loop().RunUntilIdle();
   zx_signals_t signals = 0;
   ASSERT_EQ(ZX_OK, second_driver.channel().wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(),
                                                     &signals));
   ASSERT_TRUE(signals & ZX_CHANNEL_PEER_CLOSED);
-
-  // On destruction, we unbind the root node, which stops the root driver.
-  realm().SetDestroyChildHandler([](fsys::ChildRef child) {
-    EXPECT_EQ("root", child.name);
-    EXPECT_EQ("boot-drivers", child.collection);
-  });
 }
 
 // Start the second driver, and then close the associated Driver protocol

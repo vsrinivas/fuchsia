@@ -102,17 +102,17 @@
         {
             name: "driver-hosts",
             environment: "#driver-host-env",
-            durability: "transient",
+            durability: "single_run",
         },
         {
             name: "boot-drivers",
             environment: "#boot-driver-env",
-            durability: "transient",
+            durability: "single_run",
         },
         {
             name: "pkg-drivers",
             environment: "#pkg-driver-env",
-            durability: "transient",
+            durability: "single_run",
         },
     ],
     offer: [
@@ -168,7 +168,7 @@
                 "fuchsia.virtualization.Manager",
             ],
             from: "parent",
-            to: [ "#console-launcher" ],
+            to: "#console-launcher",
         },
         {
             protocol: [
@@ -177,7 +177,7 @@
                 "fuchsia.diagnostics.LegacyMetricsArchiveAccessor",
             ],
             from: "#archivist",
-            to: [ "#console-launcher" ],
+            to: "#console-launcher",
         },
         {
             directory: "boot",
