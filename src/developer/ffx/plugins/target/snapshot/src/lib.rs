@@ -4,7 +4,7 @@
 
 use {
     anyhow::{anyhow, bail, Context, Result},
-    chrono::{Datelike, Timelike, Utc},
+    chrono::{Datelike, Local, Timelike},
     ffx_core::ffx_plugin,
     ffx_snapshot_args::SnapshotCommand,
     fidl_fuchsia_feedback::{
@@ -182,7 +182,7 @@ pub async fn snapshot_impl<W: Write>(
 }
 
 fn default_output_dir() -> PathBuf {
-    let now = Utc::now();
+    let now = Local::now();
 
     Path::new("/tmp").join("snapshots").join(format!(
         "{}{:02}{:02}_{:02}{:02}{:02}",
