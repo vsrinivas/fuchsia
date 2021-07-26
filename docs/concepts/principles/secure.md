@@ -11,7 +11,7 @@ Software is delivered in hermetic packages and everything is sandboxed.
 All software that runs on the system, including applications and system
 components, receives the least privilege it needs to perform its job and
 gains access only to the information it needs to know.
-Because capabilities routing and software isolation are enforced by the
+Because capability routing and software isolation are enforced by the
 operating system, developers don’t have to build an additional
 system for security.
 
