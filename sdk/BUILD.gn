@@ -557,6 +557,19 @@ sdk("fuchsia_dart") {
     "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_sdk",
     "//tools/fidl/fidlgen_dart:fidlgen_dart_sdk_legacy($host_toolchain)",
   ]
+
+  toolchains = []
+  if (host_os == "linux") {
+    toolchains += [
+      host_x64_toolchain,
+      host_arm64_toolchain,
+    ]
+  } else if (host_os == "mac") {
+    toolchains += [ host_toolchain ]
+  }
+  foreach(toolchain, toolchains) {
+    deps += [ "//tools/fidl/fidlgen_dart:fidlgen_dart_sdk($toolchain)" ]
+  }
 }
 
 # Tools Fuchsia driver developers used on the host platform; where host is often
