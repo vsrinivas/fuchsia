@@ -46,10 +46,6 @@ Cargo.lock
 !/third_party/rust_crates/**/Cargo.lock
 Cargo.toml
 !/third_party/rust_crates/**/Cargo.toml
-go.mod
-!/third_party/golibs/**/go.mod
-go.sum
-!/third_party/golibs/**/go.sum
 CMakeLists.txt
 compile_commands.json
 cmake-build-debug/
@@ -105,6 +101,10 @@ tables_generator_tests_*.txt
 
 # rust-analyzer
 /rust-project.json
+
+# Symlinks created by `fx setup-go`.
+/go.mod
+/go.sum
 
 # jiri generate-gitmodules can be used to generate a .gitmodules file that
 # reflects the repos that jiri checked out. This is useful for tooling (like
