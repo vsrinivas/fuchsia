@@ -27,7 +27,15 @@ rustc_library("net-types") {
   configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
-fuchsia_unittest_package("tests") {
-  package_name = "net-types-tests"
+fuchsia_unittest_package("net-types-test-package") {
+  package_name = "net-types-test"
   deps = [ ":net-types_test" ]
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [
+    ":net-types-test-package",
+    ":net-types_test($host_toolchain)",
+  ]
 }

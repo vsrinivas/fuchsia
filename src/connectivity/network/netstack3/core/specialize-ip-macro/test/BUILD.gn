@@ -5,7 +5,7 @@
 import("//build/components.gni")
 import("//build/rust/rustc_library.gni")
 
-rustc_test("specialize-ip-macro-test-lib-test") {
+rustc_test("specialize-ip-macro_test") {
   version = "0.1.0"
   edition = "2018"
 
@@ -22,16 +22,15 @@ rustc_test("specialize-ip-macro-test-lib-test") {
   configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
-fuchsia_unittest_package("unittest_package") {
-  component_name = "specialize-ip-macro-test-lib-test"
-  package_name = "specialize-ip-macro-test-lib-test"
-  deps = [ ":specialize-ip-macro-test-lib-test" ]
+fuchsia_unittest_package("specialize-ip-macro-test-package") {
+  package_name = "specialize-ip-macro-test"
+  deps = [ ":specialize-ip-macro_test" ]
 }
 
 group("tests") {
   testonly = true
-  deps = [
-    ":specialize-ip-macro-test-lib-test($host_toolchain)",
-    ":unittest_package",
+  public_deps = [
+    ":specialize-ip-macro-test-package",
+    ":specialize-ip-macro_test($host_toolchain)",
   ]
 }

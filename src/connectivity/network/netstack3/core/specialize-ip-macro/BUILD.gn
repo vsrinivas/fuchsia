@@ -20,5 +20,5 @@ rustc_macro("specialize-ip-macro") {
 
 group("tests") {
   testonly = true
-  deps = [ "test:tests" ]
+  public_deps = [ "test:tests" ]
 }

@@ -21,7 +21,15 @@ rustc_library("internet-checksum") {
   configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
-fuchsia_unittest_package("tests") {
-  package_name = "internet-checksum-tests"
+fuchsia_unittest_package("internet-checksum-test-package") {
+  package_name = "internet-checksum-test"
   deps = [ ":internet-checksum_test" ]
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [
+    ":internet-checksum-test-package",
+    ":internet-checksum_test($host_toolchain)",
+  ]
 }

@@ -61,14 +61,15 @@ rustc_library("packet-formats") {
   configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
-fuchsia_unittest_package("packet-formats-test") {
+fuchsia_unittest_package("packet-formats-test-package") {
+  package_name = "packet-formats-test"
   deps = [ ":packet-formats_test" ]
 }
 
 group("tests") {
   testonly = true
-  deps = [
-    ":packet-formats-test",
+  public_deps = [
+    ":packet-formats-test-package",
     ":packet-formats_test($host_toolchain)",
   ]
 }
