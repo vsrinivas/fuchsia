@@ -98,6 +98,9 @@ void found_driver(zircon_driver_note_payload_t* note, const zx_bind_inst_t* bi,
   drv->flags = note->flags;
   drv->libname = context->libname;
   drv->name = note->name;
+  if (note->version[0] == '*') {
+    drv->fallback = true;
+  }
 
   if (context->vmo.is_valid()) {
     drv->dso_vmo = std::move(context->vmo);

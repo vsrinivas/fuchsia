@@ -34,6 +34,9 @@ struct Driver : public fbl::DoublyLinkedListable<std::unique_ptr<Driver>> {
   // Number of bytes in the bind rules.
   uint32_t binding_size = 0;
 
+  // If this is true, this driver should only be bound after /system/ comes up.
+  bool fallback = false;
+
   uint32_t flags = 0;
   zx::vmo dso_vmo;
 

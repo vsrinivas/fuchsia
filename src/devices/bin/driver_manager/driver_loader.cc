@@ -46,8 +46,8 @@ void DriverLoader::StartSystemLoadingThread() {
         LOGF(ERROR, "Driver '%s' '%s' could not cache DSO", driver->name.data(),
              driver->libname.data());
       }
-      if (version[0] == '*') {
-        // de-prioritize drivers that are "fallback"
+      // De-prioritize drivers that are "fallback".
+      if (driver->fallback) {
         drivers.push_back(std::move(driver));
       } else {
         drivers.push_front(std::move(driver));
