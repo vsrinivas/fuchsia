@@ -461,6 +461,8 @@ fuchsia_package("virtualization_test_utils_pkg") {
 }
 
 executable("hypervisor_tests") {
+  testonly = true
+
   sources = [
     "hypervisor_tests.cc",
     "hypervisor_tests_${target_cpu}.S",
@@ -471,9 +473,9 @@ executable("hypervisor_tests") {
     "//sdk/fidl/fuchsia.kernel",
     "//sdk/fidl/fuchsia.sysinfo",
     "//sdk/lib/fdio",
+    "//src/lib/fxl/test:gtest_main",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
   ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
