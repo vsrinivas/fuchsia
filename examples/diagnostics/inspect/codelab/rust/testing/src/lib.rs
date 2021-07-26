@@ -34,7 +34,7 @@ impl IntegrationTest {
                 .add_component(
                     "fizzbuzz",
                     ComponentSource::url(
-                        "fuchsia-pkg://fuchsia.com/inspect_rust_codelab#meta/fizzbuzz.cm",
+                        "fuchsia-pkg://fuchsia.com/inspect_rust_codelab_integration_tests#meta/fizzbuzz.cm",
                     ),
                 )
                 .await?;
@@ -62,7 +62,7 @@ impl IntegrationTest {
             .add_component(
                 "reverser",
                 ComponentSource::url(format!(
-                    "fuchsia-pkg://fuchsia.com/inspect_rust_codelab#meta/part_{}.cm",
+                    "fuchsia-pkg://fuchsia.com/inspect_rust_codelab_integration_tests#meta/part_{}.cm",
                     part
                 )),
             )

@@ -5,7 +5,7 @@
     ],
     program: {
         runner: "elf",
-        binary: "bin/part_1",
+        binary: "bin/inspect_rust_codelab_part_1",
     },
     capabilities: [
         { protocol: "fuchsia.examples.inspect.Reverser" },

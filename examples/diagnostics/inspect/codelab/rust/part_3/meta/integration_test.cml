@@ -5,6 +5,6 @@
         "syslog/client.shard.cml",
     ],
     program: {
-        binary: "bin/part_3_integration_test",
+        binary: "bin/inspect_rust_codelab_part_3_integration_test",
     },
 }

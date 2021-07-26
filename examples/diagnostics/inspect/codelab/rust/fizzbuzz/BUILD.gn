@@ -6,7 +6,7 @@ import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
 
 rustc_binary("bin") {
-  name = "fizzbuzz"
+  name = "inspect_rust_codelab_fizzbuzz"
   edition = "2018"
 
   deps = [

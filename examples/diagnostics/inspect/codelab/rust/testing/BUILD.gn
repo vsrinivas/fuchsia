@@ -4,7 +4,7 @@
 
 import("//build/rust/rustc_library.gni")
 
-rustc_library("inspect-codelab-testing") {
+rustc_library("inspect-rust-codelab-testing") {
   testonly = true
   version = "0.1.0"
   edition = "2018"

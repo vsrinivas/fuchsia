@@ -33,7 +33,6 @@ foreach(part_id, part_ids) {
   part_integration_test = part + "_integration_test"
 
   fuchsia_unittest_component(part_unittest) {
-    manifest = part + "/meta/unittest.cml"
     deps = [ part + ":bin_test" ]
   }
 

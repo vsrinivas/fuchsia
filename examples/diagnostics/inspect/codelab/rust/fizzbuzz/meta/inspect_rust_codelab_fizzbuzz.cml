@@ -5,7 +5,7 @@
     ],
     program: {
         runner: "elf",
-        binary: "bin/fizzbuzz",
+        binary: "bin/inspect_rust_codelab_fizzbuzz",
     },
     capabilities: [
         { protocol: "fuchsia.examples.inspect.FizzBuzz" },

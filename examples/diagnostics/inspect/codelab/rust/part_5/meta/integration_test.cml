@@ -5,7 +5,7 @@
         "syslog/client.shard.cml",
     ],
     program: {
-        binary: "bin/part_5_integration_test",
+        binary: "bin/inspect_rust_codelab_part_5_integration_test",
     },
     use: [
         { protocol: "fuchsia.diagnostics.ArchiveAccessor" },

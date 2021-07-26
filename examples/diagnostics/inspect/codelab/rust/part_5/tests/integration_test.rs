@@ -4,7 +4,7 @@
 
 use {
     anyhow::Error,
-    inspect_codelab_testing::{IntegrationTest, TestOptions},
+    inspect_rust_codelab_testing::{IntegrationTest, TestOptions},
 };
 
 // [START include_test_stuff]
