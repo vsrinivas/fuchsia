@@ -95,13 +95,6 @@ magma_status_t magma_buffer_collection_set_constraints(
     magma_sysmem_connection_t connection, magma_buffer_collection_t collection,
     magma_sysmem_buffer_constraints_t constraints);
 
-// Decodes an encoded fidl fuchsia.sysmem.SingleBufferSettings into a
-// magma_buffer_format_description_t. On success |description_out| must later be released using
-// magma_buffer_format_description_release.
-magma_status_t magma_get_buffer_format_description(
-    const void* image_data, uint64_t image_data_size,
-    magma_buffer_format_description_t* description_out);
-
 // Creates a buffer format description to describe a collection of allocated buffers. This will wait
 // until the initial buffers in the collection are allocated. On success |description_out| must
 // later be released using magma_buffer_format_description_release.

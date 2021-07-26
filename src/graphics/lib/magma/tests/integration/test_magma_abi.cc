@@ -577,53 +577,6 @@ class TestConnection {
     EXPECT_EQ(MAGMA_STATUS_OK, magma_get_error(connection_));
   }
 
-  void ImageFormat() {
-#if !defined(__Fuchsia__)
-    GTEST_SKIP();
-#else
-    fuchsia::sysmem::SingleBufferSettings buffer_settings;
-    buffer_settings.has_image_format_constraints = true;
-    buffer_settings.image_format_constraints.pixel_format.type =
-        fuchsia::sysmem::PixelFormatType::NV12;
-    buffer_settings.image_format_constraints.min_bytes_per_row = 128;
-    buffer_settings.image_format_constraints.bytes_per_row_divisor = 256;
-    buffer_settings.image_format_constraints.min_coded_height = 64;
-    buffer_settings.image_format_constraints.max_coded_height = 5096;
-    buffer_settings.image_format_constraints.max_coded_width = 5096;
-    buffer_settings.image_format_constraints.max_bytes_per_row = 0xffffffffu;
-    fidl::Encoder encoder(fidl::Encoder::NO_HEADER);
-    encoder.Alloc(
-        fidl::EncodingInlineSize<fuchsia::sysmem::SingleBufferSettings, fidl::Encoder>(&encoder));
-    buffer_settings.Encode(&encoder, 0);
-    std::vector<uint8_t> encoded_bytes = encoder.TakeBytes();
-    size_t real_size = encoded_bytes.size();
-    // Add an extra byte to ensure the size is correct.
-    encoded_bytes.push_back(0);
-    magma_buffer_format_description_t description;
-    ASSERT_EQ(MAGMA_STATUS_OK,
-              magma_get_buffer_format_description(encoded_bytes.data(), real_size, &description));
-    magma_image_plane_t planes[4];
-    EXPECT_EQ(MAGMA_STATUS_OK,
-              magma_get_buffer_format_plane_info_with_size(description, 128u, 64u, planes));
-
-    EXPECT_EQ(256u, planes[0].bytes_per_row);
-    EXPECT_EQ(0u, planes[0].byte_offset);
-    EXPECT_EQ(256u, planes[1].bytes_per_row);
-    EXPECT_EQ(256u * 64u, planes[1].byte_offset);
-    EXPECT_EQ(MAGMA_STATUS_OK,
-              magma_get_buffer_format_plane_info_with_size(description, 128u, 64u, planes));
-    EXPECT_EQ(256u, planes[0].bytes_per_row);
-    EXPECT_EQ(0u, planes[0].byte_offset);
-    EXPECT_EQ(256u, planes[1].bytes_per_row);
-    EXPECT_EQ(256u * 64u, planes[1].byte_offset);
-    magma_buffer_format_description_release(description);
-    EXPECT_EQ(MAGMA_STATUS_INVALID_ARGS, magma_get_buffer_format_description(
-                                             encoded_bytes.data(), real_size + 1, &description));
-    EXPECT_EQ(MAGMA_STATUS_INVALID_ARGS, magma_get_buffer_format_description(
-                                             encoded_bytes.data(), real_size - 1, &description));
-#endif
-  }
-
   void Sysmem(bool use_format_modifier) {
 #if !defined(__Fuchsia__)
     GTEST_SKIP();
@@ -1025,11 +978,6 @@ TEST(MagmaAbi, PollWithNotificationChannel) {
 TEST(MagmaAbi, PollWithTestChannel) { TestConnection().PollWithTestChannel(); }
 
 TEST(MagmaAbi, PollChannelClosed) { TestConnection().PollChannelClosed(); }
-
-TEST(MagmaAbi, ImageFormat) {
-  TestConnection test;
-  test.ImageFormat();
-}
 
 TEST(MagmaAbi, Sysmem) {
   TestConnection test;

@@ -187,19 +187,6 @@ magma_status_t magma_buffer_collection_set_constraints(
   return buffer_collection->SetConstraints(buffer_constraints).get();
 }
 
-magma_status_t magma_get_buffer_format_description(
-    const void* image_data, uint64_t image_data_size,
-    magma_buffer_format_description_t* description_out) {
-  std::unique_ptr<magma_sysmem::PlatformBufferDescription> description;
-  magma_status_t status = magma_sysmem::PlatformSysmemConnection::DecodeBufferDescription(
-      static_cast<const uint8_t*>(image_data), image_data_size, &description);
-  if (status != MAGMA_STATUS_OK) {
-    return DRET_MSG(status, "DecodePlatformBufferDescription failed: %d", status);
-  }
-  *description_out = reinterpret_cast<magma_buffer_format_description_t>(description.release());
-  return MAGMA_STATUS_OK;
-}
-
 magma_status_t magma_sysmem_get_description_from_collection(
     magma_sysmem_connection_t connection, magma_buffer_collection_t collection,
     magma_buffer_format_description_t* buffer_format_description_out) {

@@ -616,38 +616,6 @@ std::unique_ptr<PlatformSysmemConnection> PlatformSysmemConnection::Import(uint3
   return std::make_unique<ZirconPlatformSysmemConnection>(std::move(sysmem_allocator));
 }
 
-// static
-magma_status_t PlatformSysmemConnection::DecodeBufferDescription(
-    const uint8_t* image_data, uint64_t image_data_size,
-    std::unique_ptr<PlatformBufferDescription>* buffer_description_out) {
-  std::vector<uint8_t> copy_message(image_data, image_data + image_data_size);
-  const char* error = nullptr;
-  static_assert(fuchsia_sysmem::wire::SingleBufferSettings::MaxNumHandles == 0,
-                "Can't decode a buffer with handles");
-  zx_status_t status =
-      fidl_decode(fuchsia_sysmem::wire::SingleBufferSettings::Type, copy_message.data(),
-                  magma::to_uint32(copy_message.size()), nullptr, 0, &error);
-
-  if (status != ZX_OK)
-    return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Invalid SingleBufferSettings: %d %s", status,
-                    error);
-
-  const auto& buffer_settings =
-      *reinterpret_cast<const fuchsia_sysmem::wire::SingleBufferSettings*>(copy_message.data());
-
-  if (!buffer_settings.has_image_format_constraints) {
-    return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Buffer is not image");
-  }
-
-  // Buffer settings passed by value
-  auto description = std::make_unique<ZirconPlatformBufferDescription>(1u, buffer_settings);
-  if (!description->IsValid())
-    return DRET(MAGMA_STATUS_INTERNAL_ERROR);
-
-  *buffer_description_out = std::move(description);
-  return MAGMA_STATUS_OK;
-}
-
 bool ZirconPlatformBufferDescription::GetFormatIndex(PlatformBufferConstraints* constraints,
                                                      magma_bool_t* format_valid_out,
                                                      uint32_t format_valid_count) {
