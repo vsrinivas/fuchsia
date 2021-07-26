@@ -5,9 +5,6 @@
 #ifndef ZIRCON_SYSTEM_ULIB_TRACE_PROVIDER_PROVIDER_IMPL_H_
 #define ZIRCON_SYSTEM_ULIB_TRACE_PROVIDER_PROVIDER_IMPL_H_
 
-#include <string>
-#include <vector>
-
 #include <lib/async/cpp/wait.h>
 #include <lib/trace-engine/handler.h>
 #include <lib/trace-engine/types.h>
@@ -16,6 +13,9 @@
 #include <lib/zx/fifo.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
+
+#include <string>
+#include <vector>
 
 // Provide a definition for the opaque type declared in provider.h.
 struct trace_provider {};
@@ -41,7 +41,7 @@ class TraceProviderImpl final : public trace_provider_t {
                 const zx_packet_signal_t* signal);
 
     bool ReadMessage();
-    bool DecodeAndDispatch(uint8_t* buffer, uint32_t num_bytes, zx_handle_t* handles,
+    bool DecodeAndDispatch(uint8_t* buffer, uint32_t num_bytes, zx_handle_info_t* handles,
                            uint32_t num_handles);
     void Close();
 

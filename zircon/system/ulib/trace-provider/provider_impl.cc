@@ -95,10 +95,10 @@ bool TraceProviderImpl::Connection::ReadMessage() {
   FIDL_ALIGNDECL uint8_t buffer[16 * 1024];
   uint32_t num_bytes = 0u;
   constexpr uint32_t kNumHandles = 2;
-  zx_handle_t handles[kNumHandles];
+  zx_handle_info_t handles[kNumHandles];
   uint32_t num_handles = 0u;
   zx_status_t status =
-      channel_.read(0u, buffer, handles, sizeof(buffer), kNumHandles, &num_bytes, &num_handles);
+      channel_.read_etc(0u, buffer, handles, sizeof(buffer), kNumHandles, &num_bytes, &num_handles);
   if (status != ZX_OK) {
     fprintf(stderr, "TraceProvider: channel read failed: status=%d(%s)\n", status,
             zx_status_get_string(status));
@@ -107,7 +107,11 @@ bool TraceProviderImpl::Connection::ReadMessage() {
 
   if (!DecodeAndDispatch(buffer, num_bytes, handles, num_handles)) {
     fprintf(stderr, "TraceProvider: DecodeAndDispatch failed\n");
-    zx_handle_close_many(handles, num_handles);
+    zx_handle_t closing_handles[kNumHandles];
+    for (uint32_t i = 0; i < num_handles; i++) {
+      closing_handles[i] = handles[i].handle;
+    }
+    zx_handle_close_many(closing_handles, num_handles);
     return false;
   }
 
@@ -115,7 +119,8 @@ bool TraceProviderImpl::Connection::ReadMessage() {
 }
 
 bool TraceProviderImpl::Connection::DecodeAndDispatch(uint8_t* buffer, uint32_t num_bytes,
-                                                      zx_handle_t* handles, uint32_t num_handles) {
+                                                      zx_handle_info_t* handles,
+                                                      uint32_t num_handles) {
   if (num_bytes < sizeof(fidl_message_header_t)) {
     return false;
   }
@@ -124,8 +129,8 @@ bool TraceProviderImpl::Connection::DecodeAndDispatch(uint8_t* buffer, uint32_t 
   uint64_t ordinal = hdr->ordinal;
   switch (ordinal) {
     case fuchsia_tracing_provider_ProviderInitializeOrdinal: {
-      zx_status_t status = fidl_decode(&fuchsia_tracing_provider_ProviderInitializeRequestTable,
-                                       buffer, num_bytes, handles, num_handles, nullptr);
+      zx_status_t status = fidl_decode_etc(&fuchsia_tracing_provider_ProviderInitializeRequestTable,
+                                           buffer, num_bytes, handles, num_handles, nullptr);
       if (status != ZX_OK) {
         return false;
       }
@@ -159,8 +164,8 @@ bool TraceProviderImpl::Connection::DecodeAndDispatch(uint8_t* buffer, uint32_t 
       return true;
     }
     case fuchsia_tracing_provider_ProviderStartOrdinal: {
-      zx_status_t status = fidl_decode(&fuchsia_tracing_provider_ProviderStartRequestTable, buffer,
-                                       num_bytes, handles, num_handles, nullptr);
+      zx_status_t status = fidl_decode_etc(&fuchsia_tracing_provider_ProviderStartRequestTable,
+                                           buffer, num_bytes, handles, num_handles, nullptr);
       if (status != ZX_OK) {
         return false;
       }
@@ -190,8 +195,8 @@ bool TraceProviderImpl::Connection::DecodeAndDispatch(uint8_t* buffer, uint32_t 
       return true;
     }
     case fuchsia_tracing_provider_ProviderStopOrdinal: {
-      zx_status_t status = fidl_decode(&fuchsia_tracing_provider_ProviderStopRequestTable, buffer,
-                                       num_bytes, handles, num_handles, nullptr);
+      zx_status_t status = fidl_decode_etc(&fuchsia_tracing_provider_ProviderStopRequestTable,
+                                           buffer, num_bytes, handles, num_handles, nullptr);
       if (status != ZX_OK) {
         return false;
       }
@@ -200,8 +205,8 @@ bool TraceProviderImpl::Connection::DecodeAndDispatch(uint8_t* buffer, uint32_t 
       return true;
     }
     case fuchsia_tracing_provider_ProviderTerminateOrdinal: {
-      zx_status_t status = fidl_decode(&fuchsia_tracing_provider_ProviderTerminateRequestTable,
-                                       buffer, num_bytes, handles, num_handles, nullptr);
+      zx_status_t status = fidl_decode_etc(&fuchsia_tracing_provider_ProviderTerminateRequestTable,
+                                           buffer, num_bytes, handles, num_handles, nullptr);
       if (status != ZX_OK) {
         return false;
       }
