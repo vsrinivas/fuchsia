@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef DRIVER_INFO_DRIVER_INFO_H_
-#define DRIVER_INFO_DRIVER_INFO_H_
+#ifndef SRC_DEVICES_LIB_DRIVER_INFO_INCLUDE_DRIVER_INFO_DRIVER_INFO_H_
+#define SRC_DEVICES_LIB_DRIVER_INFO_INCLUDE_DRIVER_INFO_DRIVER_INFO_H_
 
 #include <lib/ddk/binding.h>
 #include <stdint.h>
@@ -33,4 +33,4 @@ void di_dump_bind_inst(const zx_bind_inst_t* b, char* buf, size_t buf_len);
 
 __END_CDECLS
 
-#endif  // DRIVER_INFO_DRIVER_INFO_H_
+#endif  // SRC_DEVICES_LIB_DRIVER_INFO_INCLUDE_DRIVER_INFO_DRIVER_INFO_H_

@@ -110,6 +110,7 @@ library_headers("ddk-deprecated-binding-headers") {
     "//src/devices/bus/drivers/pci:*",
     "//src/devices/bus/drivers/platform:*",
     "//src/devices/bus/drivers/platform/test:*",
+    "//src/devices/lib/driver-info:driver-info",
     "//src/devices/nand/drivers/ram-nand:*",
     "//src/devices/tests/bind-test:*",
     "//src/devices/tests/bind-test-v2:*",
@@ -121,7 +122,6 @@ library_headers("ddk-deprecated-binding-headers") {
     "//src/lib/ddk/tests:*",
     "//src/media/audio/drivers/intel-hda/controller:*",
     "//src/media/audio/lib/simple-codec:*",
-    "//zircon/system/ulib/driver-info:driver-info",
   ]
 }
 
