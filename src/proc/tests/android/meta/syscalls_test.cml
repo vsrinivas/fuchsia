@@ -1,7 +1,7 @@
 {
     include: [ "//src/sys/test_runners/starnix/default.shard.cml" ],
     program: {
-        binary: "system/bin/syscalls_test",
+        binary: "/data/tests/syscalls_test",
         mounts: [
             "/:remotefs:root",
             "/data:tmpfs",

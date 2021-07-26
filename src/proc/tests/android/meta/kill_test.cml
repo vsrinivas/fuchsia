@@ -1,9 +1,12 @@
 {
     include: [ "//src/sys/test_runners/starnix/default.shard.cml" ],
     program: {
-        binary: "system/bin/kill_test",
+        binary: "/data/tests/kill_test",
         args: [ "--gunit_filter=KillTest.CanKillAllPIDs:KillTest.CannotKillInvalidPID:KillTest.CannotKillTid" ],
         environ: [ "TEST_ON_GVISOR=1" ],
-        mounts: [ "/:remotefs:root" ],
+        mounts: [
+            "/:remotefs:root",
+            "/data:remotefs:data",
+        ],
     },
 }

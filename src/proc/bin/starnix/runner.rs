@@ -248,7 +248,10 @@ fn start_component(
 
     let mounts =
         runner::get_program_strvec(&start_info, "mounts").map(|a| a.clone()).unwrap_or(vec![]);
-    let binary_path = CString::new(runner::get_program_binary(&start_info)?)?;
+    let binary_path = CString::new(
+        runner::get_program_string(&start_info, "binary")
+            .ok_or_else(|| anyhow!("Missing \"binary\" in manifest"))?,
+    )?;
     let args = runner::get_program_strvec(&start_info, "args")
         .map(|args| {
             args.iter().map(|arg| CString::new(arg.clone())).collect::<Result<Vec<CString>, _>>()

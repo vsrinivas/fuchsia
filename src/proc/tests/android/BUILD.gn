@@ -128,7 +128,7 @@ template("gvisor_test_component") {
   resource("${test_name}_bin") {
     sources =
         [ "//prebuilt/starnix/tests/syscalls/linux-amd64/linux/${test_name}" ]
-    outputs = [ "root/system/bin/${test_name}" ]
+    outputs = [ "data/tests/${test_name}" ]
   }
 
   fuchsia_component(test_name) {

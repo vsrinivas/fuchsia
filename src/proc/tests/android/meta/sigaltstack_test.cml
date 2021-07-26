@@ -1,8 +1,11 @@
 {
     include: [ "//src/sys/test_runners/starnix/default.shard.cml" ],
     program: {
-        binary: "system/bin/sigaltstack_test",
+        binary: "/data/tests/sigaltstack_test",
         args: [ "--gunit_filter=SigaltstackTest.Success" ],
-        mounts: [ "/:remotefs:root" ],
+        mounts: [
+            "/:remotefs:root",
+            "/data:remotefs:data",
+        ],
     },
 }

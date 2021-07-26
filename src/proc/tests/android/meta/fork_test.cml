@@ -1,8 +1,11 @@
 {
     include: [ "//src/sys/test_runners/starnix/default.shard.cml" ],
     program: {
-        binary: "system/bin/fork_test",
+        binary: "/data/tests/fork_test",
         args: [ "--gunit_filter=ForkTest.*:-*.Alarm" ],
-        mounts: [ "/:remotefs:root" ],
+        mounts: [
+            "/:remotefs:root",
+            "/data:remotefs:data",
+        ],
     },
 }

@@ -1,7 +1,10 @@
 {
     include: [ "//src/sys/test_runners/starnix/default.shard.cml" ],
     program: {
-        binary: "system/bin/getrandom_test",
-        mounts: [ "/:remotefs:root" ],
+        binary: "/data/tests/getrandom_test",
+        mounts: [
+            "/:remotefs:root",
+            "/data:remotefs:data",
+        ],
     },
 }

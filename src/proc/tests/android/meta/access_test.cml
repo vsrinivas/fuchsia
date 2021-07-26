@@ -1,10 +1,11 @@
 {
     include: [ "//src/sys/test_runners/starnix/default.shard.cml" ],
     program: {
-        binary: "system/bin/access_test",
+        binary: "/data/tests/access_test",
         args: [ "--gunit_filter=*.RelativeFile:*.RelativeDir:*.AbsFile:*.AbsDir:*.RelDoesNotExist:*.AbsDoesNotExist:*.InvalidMode:*.InvalidName:*.UsrReadWrite:*.UsrReadWriteExec" ],
         mounts: [
             "/:remotefs:root",
+            "/data:remotefs:data",
             "/tmp:tmpfs",
         ],
     },

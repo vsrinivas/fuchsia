@@ -1,10 +1,11 @@
 {
     include: [ "//src/sys/test_runners/starnix/default.shard.cml" ],
     program: {
-        binary: "system/bin/pipe_test",
+        binary: "/data/tests/pipe_test",
         args: [ "--gunit_filter=-*Proc*:*StatFS*:*.Flags/named*" ],
         mounts: [
             "/:remotefs:root",
+            "/data:remotefs:data",
             "/tmp:tmpfs",
         ],
     },

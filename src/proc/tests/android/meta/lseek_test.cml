@@ -1,11 +1,11 @@
 {
     include: [ "//src/sys/test_runners/starnix/default.shard.cml" ],
     program: {
-        binary: "system/bin/lseek_test",
+        binary: "/data/tests/lseek_test",
         args: [ "--gunit_filter=-*.DirCurEnd:*.Proc*:*.SysDir:*.SeekCurrentDir:*.EtcPasswdDup" ],
-        args: [ "--gunit_filter=-*.Overflow:*.DirCurEnd:*.Proc*:*.SysDir:*.SeekCurrentDir:*.EtcPasswdDup" ],
         mounts: [
             "/:remotefs:root",
+            "/data:remotefs:data",
             "/tmp:tmpfs",
         ],
     },

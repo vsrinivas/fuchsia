@@ -1,7 +1,10 @@
 {
     include: [ "//src/sys/test_runners/starnix/default.shard.cml" ],
     program: {
-        binary: "system/bin/sigaction_test",
-        mounts: [ "/:remotefs:root" ],
+        binary: "/data/tests/sigaction_test",
+        mounts: [
+            "/:remotefs:root",
+            "/data:remotefs:data",
+        ],
     },
 }
