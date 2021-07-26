@@ -206,8 +206,15 @@ function main {
       for target in go.{mod,sum} vendor; do
         ln -s "$FUCHSIA_DIR"/third_party/golibs/$target .
       done
-      ln -s "$FUCHSIA_DIR"/tools .
-      if ! GOPROXY=off fx-command-run go build -o "$exe_path" ./tools/build/fx-set/cmd; then
+      # fx-set's only local imports (direct and transitive) are from //tools. We
+      # can symlink more top-level directories as necessary if fx-set ever needs
+      # to import their code.
+      ln -s "$FUCHSIA_DIR"/tools
+      # GOPROXY=off enforces that we only use vendored dependencies and don't
+      # download anything.
+      # GO111MODULE=on ensures that we use modules for the build even if the
+      # user has GO111MODULE=off in their local environment.
+      if ! GOPROXY=off GO111MODULE=on fx-command-run go build -o "$exe_path" ./tools/build/fx-set/cmd; then
         # TODO(fxbug.dev/68465): Remove this error handling once the Go version
         # of fx-set has been rolled out and the old `fx set` code deleted.
         if ! $dev; then # If running in dev mode, compilation failures are expected.
