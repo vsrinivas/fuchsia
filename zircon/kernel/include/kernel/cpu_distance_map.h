@@ -23,13 +23,13 @@
 #include <ktl/optional.h>
 #include <ktl/unique_ptr.h>
 
+class CpuDistanceMap;
+
+// Don't use directly.  Use CpuDistanceMap::Get().
+extern lazy_init::LazyInit<CpuDistanceMap> g_cpu_distance_map;
+
 // A compact distance matrix storing the metric distance between CPUs.
 class CpuDistanceMap {
-  static auto& GetStorage() {
-    static lazy_init::LazyInit<CpuDistanceMap> distance_map;
-    return distance_map;
-  }
-
  public:
   ~CpuDistanceMap() = default;
 
@@ -82,12 +82,12 @@ class CpuDistanceMap {
     }
   }
 
-  static CpuDistanceMap& Get() { return GetStorage().Get(); }
+  static CpuDistanceMap& Get() { return g_cpu_distance_map.Get(); }
 
   template <typename Callable>
   static void Initialize(size_t cpu_count, Callable&& callable) {
     if (auto result = Create(cpu_count, ktl::forward<Callable>(callable))) {
-      GetStorage().Initialize(ktl::move(*result));
+      g_cpu_distance_map.Initialize(ktl::move(*result));
     } else {
       dprintf(CRITICAL, "Failed to create distance map!\n");
     }
