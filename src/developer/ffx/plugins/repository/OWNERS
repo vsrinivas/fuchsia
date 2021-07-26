@@ -1,5 +1,4 @@
 include src/sys/pkg/OWNERS
-ejia@google.com
 jwing@google.com
 lijiaming@google.com
 raggi@google.com
