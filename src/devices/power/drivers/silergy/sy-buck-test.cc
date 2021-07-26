@@ -5,16 +5,18 @@
 #include "sy-buck.h"
 
 #include <lib/ddk/platform-defs.h>
-#include <lib/fake_ddk/fake_ddk.h>
 #include <lib/mock-i2c/mock-i2c.h>
 
 #include <zxtest/zxtest.h>
+
+#include "src/devices/testing/mock-ddk/mock-device.h"
 
 namespace silergy {
 
 class SyBuckTest : public SyBuck {
  public:
-  SyBuckTest(const ddk::I2cProtocolClient&& i2c) : SyBuck(fake_ddk::kFakeParent, std::move(i2c)) {}
+  SyBuckTest(zx_device_t* parent, const ddk::I2cProtocolClient&& i2c)
+      : SyBuck(parent, std::move(i2c)) {}
 
   zx_status_t Init() { return SyBuck::Init(); }
 
@@ -25,7 +27,7 @@ class SyBuckTest : public SyBuck {
 
 class SyBuckTestFixture : public zxtest::Test {
  public:
-  SyBuckTestFixture() : dut_(ddk::I2cProtocolClient(mock_i2c_.GetProto())) {}
+  SyBuckTestFixture() : dut_(fake_parent_.get(), ddk::I2cProtocolClient(mock_i2c_.GetProto())) {}
 
   void SetUp() override {
     mock_i2c_.ExpectWrite({0x03}).ExpectReadStop({0x80}).ExpectWrite({0x04}).ExpectReadStop({0x08});
@@ -34,6 +36,7 @@ class SyBuckTestFixture : public zxtest::Test {
  protected:
   void Verify() { mock_i2c_.VerifyAndClear(); }
 
+  std::shared_ptr<MockDevice> fake_parent_ = MockDevice::FakeRootParent();
   mock_i2c::MockI2c mock_i2c_;
   SyBuckTest dut_;
 };

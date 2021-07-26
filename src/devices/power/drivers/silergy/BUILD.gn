@@ -65,7 +65,7 @@ test("sy-buck-test-bin") {
     "//src/devices/i2c/lib/device-protocol-i2c",
     "//src/devices/i2c/testing/mock-i2c",
     "//src/devices/lib/driver",
-    "//src/devices/testing/fake_ddk",
+    "//src/devices/testing/mock-ddk",
     "//src/lib/ddk",
     "//src/lib/ddk:ddk-metadata-headers",
     "//src/lib/ddktl",
