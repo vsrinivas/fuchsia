@@ -155,13 +155,21 @@ class AppStateImpl with Disposable implements AppState {
   /// A flag that is set to true when the [SideBar] should be peeking.
   final sideBarPeeking = false.asObservable();
 
+  @override
+  late final alertsVisible = (() {
+    return alerts.isNotEmpty;
+  }).asComputed();
+
   /// Returns true if shell has focus and any side bars are visible.
   @override
   late final overlaysVisible = (() {
     return !oobeVisible.value &&
         !isIdle.value &&
         shellHasFocus.value &&
-        (appBarVisible.value || sideBarVisible.value || switcherVisible.value);
+        (appBarVisible.value ||
+            sideBarVisible.value ||
+            switcherVisible.value ||
+            alertsVisible.value);
   }).asComputed();
 
   @override
@@ -182,6 +190,9 @@ class AppStateImpl with Disposable implements AppState {
     return shellHasFocus.value &&
         (sideBarPeeking.value || overlayVisibility.value);
   }).asComputed();
+
+  @override
+  final alerts = <AlertInfo>[].asObservable();
 
   @override
   final errors = <String, List<String>>{}.asObservable();
@@ -490,14 +501,29 @@ class AppStateImpl with Disposable implements AppState {
     runInAction(() {
       final errorSpec = error.split('.').last;
       final description = errorSpec == 'invalidViewSpec'
-          ? 'A valid ViewHolderToken is missing'
+          ? Strings.invalidViewSpecDesc
           : errorSpec == 'rejected'
-              ? 'The request to present the view is rejected'
-              : 'Something went wrong while presenting the view';
-      errors[url] = [
-        description,
-        '$error\nhttps://fuchsia.dev/reference/fidl/fuchsia.session#ViewControllerEpitaph'
-      ];
+              ? Strings.viewPresentRejectedDesc
+              : Strings.defaultPresentErrorDesc;
+      const referenceLink =
+          'https://fuchsia.dev/reference/fidl/fuchsia.session#ViewControllerEpitaph';
+
+      if (_isPrelistedApp(url)) {
+        errors[url] = [description, '$error\n$referenceLink'];
+      } else {
+        int index = alerts.length;
+        alerts.add(AlertInfo(
+          title: description,
+          content: '${Strings.errorWhilePresenting},\n$url\n\n'
+              '${Strings.errorType}: $error\n\n'
+              '${Strings.moreErrorInformation}\n$referenceLink',
+          buttons: {
+            Strings.close: () {
+              alerts.removeAt(index);
+            }
+          },
+        ));
+      }
     });
   }
 
@@ -506,16 +532,19 @@ class AppStateImpl with Disposable implements AppState {
     print('Handling launch error $proposeError for $url');
     final errorSpec = proposeError.split('.').last;
     final description = errorSpec == 'notFound'
-        ? 'The component URL could not be resolved'
+        ? Strings.urlNotFoundDesc
         : errorSpec == 'rejected'
-            ? 'The element spec is malformed'
-            : 'Something went wrong while launching';
+            ? Strings.launchRejectedDesc
+            : Strings.defaultProposeErrorDesc;
 
     errors[url] = [
       description,
       '$proposeError\nhttps://fuchsia.dev/reference/fidl/fuchsia.session#ProposeElementError'
     ];
   }
+
+  bool _isPrelistedApp(String url) =>
+      appLaunchEntries.any((entry) => entry['url'] == url);
 
   void _clearError(String url, String errorType) {
     runInAction(() {

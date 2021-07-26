@@ -387,37 +387,58 @@ class Strings {
         desc: 'The short name for the build version label',
       );
 
-  static String get proposeElementErrorTitle => Intl.message(
-        'An error occurred while launching',
-        name: 'proposeElementErrorTitle',
-        desc: 'The title displayed in the propose element error alert dialog',
+  static String get urlNotFoundDesc => Intl.message(
+        'Can\'t find the component URL',
+        name: 'componentUrlNotFound',
+        desc: 'The description for ElementProposeError.NOT_FOUND',
       );
 
-  static String get proposeElementErrorNotFoundDesc => Intl.message(
-        'The component URL could not be resolved.',
-        name: 'proposeElementErrorNotFoundDescription',
-        desc: 'The description displayed in the alert dialog handling '
-            'ProposeElementError.NOT_FOUND',
+  static String get launchRejectedDesc => Intl.message(
+        'The element spec is malformed',
+        name: 'malformedElementSpec',
+        desc: 'The description for ElementProposeError.REJECTED',
       );
 
-  static String get proposeElementErrorRejectedDesc => Intl.message(
-        'The element spec may have been malformed.',
-        name: 'proposeElementErrorRejectedDescription',
-        desc: 'The description displayed in the alert dialog handling '
-            'ProposeElementError.REJECTED',
+  static String get defaultProposeErrorDesc => Intl.message(
+        'Something went wrong while launching',
+        name: 'elementProposeErrorDescription',
+        desc: 'The description for non-triaged element propose errors',
       );
 
-  static String get presentViewErrorTitle => Intl.message(
-        'An error occurred opening the view.',
-        name: 'presentViewErrorTitle',
-        desc: 'The title displayed in the present view error alert dialog',
+  static String get invalidViewSpecDesc => Intl.message(
+        'A valid ViewHolderToken is missing',
+        name: 'invalidViewSpecErrorDescription',
+        desc: 'The description for ViewControllerEpitaph.INVALID_VIEW_SPEC',
       );
 
-  static String get presentViewErrorDesc => Intl.message(
-        'The provided ViewSpec is malformed.',
-        name: 'presentViewErrorDescription',
-        desc: 'The description displayed in the alert dialog handling '
-            'ViewControllerEpitaph.INVALID_VIEW_SPEC',
+  static String get viewPresentRejectedDesc => Intl.message(
+        'The request to present the view is rejected',
+        name: 'viewPresentRejectedErrorDescription',
+        desc: 'The description for ViewControllerEpitaph.REJECTED',
+      );
+
+  static String get defaultPresentErrorDesc => Intl.message(
+        'Something went wrong while presenting the view',
+        name: 'presentErrorDescription',
+        desc: 'The description for non-triaged view present error.',
+      );
+
+  static String get errorWhilePresenting => Intl.message(
+        'An error occurred while presenting a component',
+        name: 'errorOccurredWhilePresentingView',
+        desc: 'The alert message for ViewControllerEpitaph type errors',
+      );
+
+  static String get errorType => Intl.message(
+        'Error Type',
+        name: 'errorType',
+        desc: 'The alert subtitle for error type',
+      );
+
+  static String get moreErrorInformation => Intl.message(
+        'For more information, please visit',
+        name: 'forMoreInformationForError',
+        desc: 'The alert message for the error reference link',
       );
 
   static String get fuchsiaWelcome => Intl.message(

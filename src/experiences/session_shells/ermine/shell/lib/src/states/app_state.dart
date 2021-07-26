@@ -31,6 +31,7 @@ import 'package:mobx/mobx.dart';
 abstract class AppState with Store {
   ObservableValue<ThemeData> get theme;
   ObservableValue<bool> get hasDarkTheme;
+  ObservableValue<bool> get alertsVisible;
   ObservableValue<bool> get appBarVisible;
   ObservableValue<bool> get sideBarVisible;
   ObservableValue<bool> get overlaysVisible;
@@ -40,6 +41,7 @@ abstract class AppState with Store {
   ObservableValue<bool> get viewsVisible;
   ObservableValue<ViewState> get topView;
   ObservableValue<ViewState?> get switchTarget;
+  ObservableList<AlertInfo> get alerts;
   ObservableList<ViewState> get views;
   ObservableMap<String, List<String>> get errors;
   ObservableStream<Locale> get localeStream;
@@ -80,4 +82,14 @@ abstract class AppState with Store {
       ),
     );
   }
+}
+
+class AlertInfo {
+  String? title;
+  String? content;
+  Map<String, VoidCallback> buttons;
+
+  AlertInfo({required this.buttons, this.title, this.content})
+      : assert(title != null || content != null),
+        assert(buttons.isNotEmpty);
 }

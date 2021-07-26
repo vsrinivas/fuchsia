@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 import 'package:ermine/src/states/app_state.dart';
+import 'package:ermine/src/widgets/alert_dialogs.dart';
 import 'package:ermine/src/widgets/app_bar.dart';
 import 'package:ermine/src/widgets/app_switcher.dart';
 import 'package:ermine/src/widgets/scrim.dart';
@@ -45,6 +46,9 @@ class Overlays extends StatelessWidget {
 
             // App Switcher.
             if (state.switcherVisible.value) AppSwitcher(state),
+
+            // Alerts.
+            if (state.alertsVisible.value) AlertDialogs(state),
           ],
         ),
       );

@@ -84,7 +84,6 @@ class PresenterService extends GraphicalPresenter {
     } else {
       final error = ViewControllerEpitaph.invalidViewSpec;
       if (url != null) {
-        // TODO(fxb/79944): Handle the errors thrown by non-pre-listed apps.
         onError(url, error.toString());
       }
       viewController.close(error);
