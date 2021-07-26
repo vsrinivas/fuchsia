@@ -96,7 +96,7 @@ impl TestSandbox {
     /// Creates a new empty sandbox.
     pub fn new() -> Result<TestSandbox> {
         fuchsia_component::client::connect_to_protocol::<fnetemul::SandboxMarker>()
-            .context("failed to connect to sandbox service")
+            .context("failed to connect to sandbox protocol")
             .map(|sandbox| TestSandbox { sandbox })
     }
 
@@ -120,7 +120,7 @@ impl TestSandbox {
         Ok(TestRealm { realm, name, _sandbox: self })
     }
 
-    /// Creates a realm with no services.
+    /// Creates a realm with no components.
     pub fn create_empty_realm(&self, name: impl Into<String>) -> Result<TestRealm<'_>> {
         self.create_realm(name, std::iter::empty::<fnetemul::ChildDef>())
     }
@@ -220,8 +220,8 @@ pub struct TestRealm<'a> {
 }
 
 impl<'a> TestRealm<'a> {
-    /// Connects to a service within the realm.
-    pub fn connect_to_service<S>(&self) -> Result<S::Proxy>
+    /// Connects to a protocol within the realm.
+    pub fn connect_to_protocol<S>(&self) -> Result<S::Proxy>
     where
         S: fidl::endpoints::DiscoverableProtocolMarker,
     {
@@ -229,8 +229,8 @@ impl<'a> TestRealm<'a> {
             let (proxy, server) = zx::Channel::create().context("create channel")?;
             let () = self
                 .realm
-                .connect_to_service(S::PROTOCOL_NAME, None, server)
-                .context("connect to service")?;
+                .connect_to_protocol(S::PROTOCOL_NAME, None, server)
+                .context("connect to protocol")?;
             fuchsia_async::Channel::from_channel(proxy).context("fuchsia_async channel creation")
         };
         let proxy = get_proxy().context(S::PROTOCOL_NAME)?;
@@ -304,7 +304,7 @@ impl<'a> TestRealm<'a> {
         // Wait for Netstack to observe interface up so callers can safely
         // assume the state of the world on return.
         let interface_state = self
-            .connect_to_service::<fnet_interfaces::StateMarker>()
+            .connect_to_protocol::<fnet_interfaces::StateMarker>()
             .context("failed to connect to fuchsia.net.interfaces/State")?;
         let () = fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
             fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)?,
@@ -358,7 +358,7 @@ impl<'a> TestRealm<'a> {
         proto: fidl_fuchsia_posix_socket::DatagramSocketProtocol,
     ) -> Result<socket2::Socket> {
         let socket_provider = self
-            .connect_to_service::<fposix_socket::ProviderMarker>()
+            .connect_to_protocol::<fposix_socket::ProviderMarker>()
             .context("failed to connect to socket provider")?;
         let sock = socket_provider
             .datagram_socket(domain, proto)
@@ -378,7 +378,7 @@ impl<'a> TestRealm<'a> {
         proto: fidl_fuchsia_posix_socket::StreamSocketProtocol,
     ) -> Result<socket2::Socket> {
         let socket_provider = self
-            .connect_to_service::<fposix_socket::ProviderMarker>()
+            .connect_to_protocol::<fposix_socket::ProviderMarker>()
             .context("failed to connect to socket provider")?;
         let sock = socket_provider
             .stream_socket(domain, proto)
@@ -599,8 +599,8 @@ impl<'a> TestEndpoint<'a> {
     /// Consumes this `TestEndpoint` and tries to add it to the Netstack in
     /// `realm`, returning a [`TestInterface`] on success.
     pub async fn into_interface_in_realm(self, realm: &TestRealm<'a>) -> Result<TestInterface<'a>> {
-        let stack = realm.connect_to_service::<fnet_stack::StackMarker>()?;
-        let netstack = realm.connect_to_service::<fnetstack::NetstackMarker>()?;
+        let stack = realm.connect_to_protocol::<fnet_stack::StackMarker>()?;
+        let netstack = realm.connect_to_protocol::<fnetstack::NetstackMarker>()?;
         let id = self
             .add_to_stack(&stack)
             .await

@@ -13,8 +13,8 @@ type Empty = struct {};
 
 /// A capability exposed by a component in a [`ManagedRealm`].
 type ExposedCapability = strict union {
-    /// The name of the exposed service.
-    1: service string:fuchsia.component.MAX_PATH_LENGTH;
+    /// The name of the exposed protocol.
+    1: protocol fuchsia.component.name;
 };
 
 /// A dependency of one child component on a capability exposed by another in
@@ -95,11 +95,11 @@ type ChildDef = table {
     ///
     /// Required.
     2: name fuchsia.component.name;
-    /// Services that this child exposes to the realm.
+    /// Protocols that this child exposes to the realm.
     ///
     /// If not set, interpreted as an empty vector.
-    3: exposes vector<string:fuchsia.component.MAX_PATH_LENGTH>:MAX;
-    /// Services that this child uses.
+    3: exposes vector<fuchsia.component.name>:MAX;
+    /// Capabilities that this child uses.
     ///
     /// If not set, interpreted as [`ChildUses.all`].
     4: uses ChildUses;
@@ -126,15 +126,14 @@ type RealmOptions = resource table {
     1: name string:MAX;
     /// Child components to dynamically create in this realm.
     ///
-    /// If not set, interpreted as an empty vector (no additional services will
-    /// be registered).
+    /// If not set, interpreted as an empty vector.
     2: children vector<ChildDef>:MAX;
 };
 
 /// `ManagedRealm` is a netemul-managed realm.
 ///
 /// A `ManagedRealm` is hermetic with respect to capabilities except for
-///  * netemul-defined services to allow networking and synchronization
+///  * netemul-provided capabilities to allow networking and synchronization
 ///  * logging
 ///
 /// `ManagedRealm` also provides a `devfs` instance: a directory standing for a
@@ -151,19 +150,19 @@ protocol ManagedRealm {
     GetMoniker() -> (struct {
         moniker string:fuchsia.component.MAX_MONIKER_LENGTH;
     });
-    /// Connects to a service named `service_name` provided by a child in this
+    /// Connects to a protocol named `protocol_name` provided by a child in this
     /// realm.
     ///
     /// If `child_name` is not provided, connects to the first child offering
-    /// `service_name`.
+    /// `protocol_name`.
     ///
-    /// + request `service_name` the name of the service to connect to.
+    /// + request `protocol_name` the name of the protocol to connect to.
     /// + request `child_name` the name of the child component that is exposing
-    ///     the requested service.
+    ///     the requested protocol.
     /// + request `req` a channel to be bound to an implementation of the
-    ///     service.
-    ConnectToService(resource struct {
-        service_name string:fuchsia.component.MAX_PATH_LENGTH;
+    ///     protocol.
+    ConnectToProtocol(resource struct {
+        protocol_name fuchsia.component.name;
         child_name fuchsia.component.name:optional;
         req zx.handle:CHANNEL;
     });

@@ -62,7 +62,7 @@ async fn create_realm<'a>(
 
     // Get IPv6 address.
     let interfaces = realm
-        .connect_to_service::<fidl_fuchsia_net_interfaces::StateMarker>()
+        .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
         .context("failed to connect to interfaces.State")?;
     let (ipv6, loopback_id) = fidl_fuchsia_net_interfaces_ext::wait_interface(
         fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interfaces)
@@ -135,7 +135,7 @@ fn get_entry_iterator(
     options: fidl_fuchsia_net_neighbor::EntryIteratorOptions,
 ) -> Result<impl futures::Stream<Item = Result<fidl_fuchsia_net_neighbor::EntryIteratorItem>>> {
     let view = realm
-        .connect_to_service::<fidl_fuchsia_net_neighbor::ViewMarker>()
+        .connect_to_protocol::<fidl_fuchsia_net_neighbor::ViewMarker>()
         .context("failed to connect to fuchsia.net.neighbor/View")?;
     let (proxy, server_end) =
         fidl::endpoints::create_proxy::<fidl_fuchsia_net_neighbor::EntryIteratorMarker>()
@@ -529,7 +529,7 @@ async fn neigh_clear_entries_errors() -> Result {
     // Connect to the service and check some error cases.
     let controller = alice
         .realm
-        .connect_to_service::<fidl_fuchsia_net_neighbor::ControllerMarker>()
+        .connect_to_protocol::<fidl_fuchsia_net_neighbor::ControllerMarker>()
         .context("failed to connect to Controller")?;
     // Clearing neighbors on loopback interface is not supported.
     assert_eq!(
@@ -568,7 +568,7 @@ async fn neigh_clear_entries() -> Result {
 
     let controller = alice
         .realm
-        .connect_to_service::<fidl_fuchsia_net_neighbor::ControllerMarker>()
+        .connect_to_protocol::<fidl_fuchsia_net_neighbor::ControllerMarker>()
         .context("failed to connect to Controller")?;
 
     let entries =
@@ -684,7 +684,7 @@ async fn neigh_add_remove_entry() -> Result {
 
     let controller = alice
         .realm
-        .connect_to_service::<fidl_fuchsia_net_neighbor::ControllerMarker>()
+        .connect_to_protocol::<fidl_fuchsia_net_neighbor::ControllerMarker>()
         .context("failed to connect to Controller")?;
 
     // Entries start out empty.
@@ -836,7 +836,7 @@ async fn neigh_unreachability_config_errors() -> Result {
 
     let view = alice
         .realm
-        .connect_to_service::<fidl_fuchsia_net_neighbor::ViewMarker>()
+        .connect_to_protocol::<fidl_fuchsia_net_neighbor::ViewMarker>()
         .context("failed to connect to View")?;
     assert_eq!(
         view.get_unreachability_config(alice.ep.id() + 100, fidl_fuchsia_net::IpVersion::V4)
@@ -848,7 +848,7 @@ async fn neigh_unreachability_config_errors() -> Result {
 
     let controller = alice
         .realm
-        .connect_to_service::<fidl_fuchsia_net_neighbor::ControllerMarker>()
+        .connect_to_protocol::<fidl_fuchsia_net_neighbor::ControllerMarker>()
         .context("failed to connect to Controller")?;
     assert_eq!(
         controller
@@ -909,11 +909,11 @@ async fn neigh_unreachability_config() -> Result {
 
     let view = alice
         .realm
-        .connect_to_service::<fidl_fuchsia_net_neighbor::ViewMarker>()
+        .connect_to_protocol::<fidl_fuchsia_net_neighbor::ViewMarker>()
         .context("failed to connect to View")?;
     let controller = alice
         .realm
-        .connect_to_service::<fidl_fuchsia_net_neighbor::ControllerMarker>()
+        .connect_to_protocol::<fidl_fuchsia_net_neighbor::ControllerMarker>()
         .context("failed to connect to Controller")?;
 
     let view = &view;

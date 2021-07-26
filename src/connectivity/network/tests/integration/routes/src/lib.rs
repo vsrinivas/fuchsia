@@ -30,7 +30,7 @@ async fn test_resolve_loopback_route() {
         .create_netstack_realm::<Netstack2, _>("resolve_loopback_route")
         .expect("failed to create realm");
     let routes = realm
-        .connect_to_service::<fidl_fuchsia_net_routes::StateMarker>()
+        .connect_to_protocol::<fidl_fuchsia_net_routes::StateMarker>()
         .expect("failed to connect to routes/State");
     let routes = &routes;
 
@@ -73,10 +73,10 @@ async fn test_resolve_route() {
         .expect("failed to create client realm");
 
     let host_netstack = host
-        .connect_to_service::<fidl_fuchsia_netstack::NetstackMarker>()
+        .connect_to_protocol::<fidl_fuchsia_netstack::NetstackMarker>()
         .expect("failed to connect to netstack");
     let host_interface_state = host
-        .connect_to_service::<fidl_fuchsia_net_interfaces::StateMarker>()
+        .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
         .expect("failed to connect to fuchsia.net.interfaces/State");
 
     let host_ep = host
@@ -111,7 +111,7 @@ async fn test_resolve_route() {
         .expect("failed to create server realm");
 
     let gateway_interface_state = gateway
-        .connect_to_service::<fidl_fuchsia_net_interfaces::StateMarker>()
+        .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
         .expect("failed to connect to fuchsia.net.interfaces/State");
 
     let gateway_ep = gateway
@@ -143,7 +143,7 @@ async fn test_resolve_route() {
     .expect("failed to observe gateway IPv6 address assignment");
 
     let routes = host
-        .connect_to_service::<fidl_fuchsia_net_routes::StateMarker>()
+        .connect_to_protocol::<fidl_fuchsia_net_routes::StateMarker>()
         .expect("failed to connect to routes/State");
     let routes = &routes;
 
@@ -251,7 +251,7 @@ async fn test_resolve_default_route_while_dhcp_is_running() {
         .expect("failed to create client realm");
 
     let netstack = realm
-        .connect_to_service::<fidl_fuchsia_netstack::NetstackMarker>()
+        .connect_to_protocol::<fidl_fuchsia_netstack::NetstackMarker>()
         .expect("failed to connect to netstack");
 
     let ep = realm
@@ -260,7 +260,7 @@ async fn test_resolve_default_route_while_dhcp_is_running() {
         .expect("host failed to join network");
 
     let routes = realm
-        .connect_to_service::<fidl_fuchsia_net_routes::StateMarker>()
+        .connect_to_protocol::<fidl_fuchsia_net_routes::StateMarker>()
         .expect("failed to connect to routes/State");
 
     let resolved = routes
@@ -280,7 +280,7 @@ async fn test_resolve_default_route_while_dhcp_is_running() {
     let () = ep.add_ip_addr(EP_ADDR).await.expect("failed to add address");
 
     let neigh = realm
-        .connect_to_service::<fidl_fuchsia_net_neighbor::ControllerMarker>()
+        .connect_to_protocol::<fidl_fuchsia_net_neighbor::ControllerMarker>()
         .expect("failed to connect to neighbor API");
     let () = neigh
         .add_entry(ep.id(), &mut GATEWAY_ADDR.clone(), &mut GATEWAY_MAC.clone())

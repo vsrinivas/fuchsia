@@ -48,7 +48,7 @@ async fn set_interface_status_unknown_interface() -> Result {
         sandbox.new_netstack::<Netstack2, fidl_fuchsia_netstack::NetstackMarker, _>(name)?;
 
     let interface_state = realm
-        .connect_to_service::<fidl_fuchsia_net_interfaces::StateMarker>()
+        .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
         .context("connect to fuchsia.net.interfaces/State service")?;
     let interfaces = fidl_fuchsia_net_interfaces_ext::existing(
         fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)?,
@@ -104,7 +104,7 @@ async fn add_ethernet_device() -> Result {
         .context("add_ethernet_device failed")?;
 
     let interface_state = realm
-        .connect_to_service::<fidl_fuchsia_net_interfaces::StateMarker>()
+        .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
         .context("connect to fuchsia.net.interfaces/State service")?;
     let mut state = fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(id.into());
     let (device_class, online) = fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
@@ -143,7 +143,7 @@ async fn test_no_duplicate_interface_names() -> Result {
         )
         .context("failed to create realm")?;
     let netstack = realm
-        .connect_to_service::<fidl_fuchsia_netstack::NetstackMarker>()
+        .connect_to_protocol::<fidl_fuchsia_netstack::NetstackMarker>()
         .context("failed to connect to netstack")?;
     // Create one endpoint of each type so we can use all the APIs that add an
     // interface. Note that fuchsia.net.stack/Stack.AddEthernetInterface does
@@ -331,7 +331,7 @@ async fn set_remove_interface_address_errors() -> Result {
         .context("failed to create realm")?;
 
     let interface_state = realm
-        .connect_to_service::<fidl_fuchsia_net_interfaces::StateMarker>()
+        .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
         .context("connect to fuchsia.net.interfaces/State service")?;
     let interfaces = fidl_fuchsia_net_interfaces_ext::existing(
         fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)?,
@@ -417,7 +417,7 @@ async fn test_log_packets() {
         let realm = sandbox.create_realm(name, [netstack]).expect("failed to create realm");
 
         let netstack_proxy = realm
-            .connect_to_service::<net_stack::LogMarker>()
+            .connect_to_protocol::<net_stack::LogMarker>()
             .expect("failed to connect to netstack");
         (realm, netstack_proxy)
     };
@@ -494,7 +494,7 @@ async fn disable_interface_loopback() -> Result {
         .context("failed to create realm")?;
 
     let interface_state = realm
-        .connect_to_service::<fidl_fuchsia_net_interfaces::StateMarker>()
+        .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
         .context("connect to fuchsia.net.interfaces/State service")?;
 
     let stream = fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)
@@ -546,7 +546,7 @@ async fn test_add_remove_interface<E: netemul::Endpoint>(name: &str) -> Result {
     let id = device.add_to_stack(&stack).await.context("failed to add device")?;
 
     let interface_state = realm
-        .connect_to_service::<fidl_fuchsia_net_interfaces::StateMarker>()
+        .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
         .context("connect to fuchsia.net.interfaces/State service")?;
     let (watcher, watcher_server) =
         ::fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces::WatcherMarker>()?;
@@ -604,7 +604,7 @@ async fn test_close_interface<E: netemul::Endpoint>(enabled: bool, name: &str) -
     }
 
     let interface_state = realm
-        .connect_to_service::<fidl_fuchsia_net_interfaces::StateMarker>()
+        .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
         .context("connect to fuchsia.net.interfaces/State service")?;
     let (watcher, watcher_server) =
         ::fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces::WatcherMarker>()?;
@@ -657,7 +657,7 @@ async fn test_down_close_race<E: netemul::Endpoint>(name: &str) -> Result {
         .create_netstack_realm::<Netstack2, _>(name)
         .context("failed to create netstack realm")?;
     let interface_state = realm
-        .connect_to_service::<fidl_fuchsia_net_interfaces::StateMarker>()
+        .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
         .context("connect to fuchsia.net.interfaces/State service")?;
     let (watcher, watcher_server) =
         ::fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces::WatcherMarker>()?;
@@ -733,7 +733,7 @@ async fn test_close_data_race<E: netemul::Endpoint>(name: &str) -> Result {
     const MCAST_ADDR: std::net::IpAddr = std_ip!("224.0.0.1");
 
     let interface_state = realm
-        .connect_to_service::<fidl_fuchsia_net_interfaces::StateMarker>()
+        .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
         .context("connect to fuchsia.net.interfaces/State service")?;
     let (watcher, watcher_server) =
         ::fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces::WatcherMarker>()?;
@@ -844,7 +844,7 @@ async fn test_interfaces_watcher_race() -> Result {
         .create_netstack_realm::<Netstack2, _>("interfaces_watcher_race")
         .context("failed to create netstack realm")?;
     let interface_state = realm
-        .connect_to_service::<fidl_fuchsia_net_interfaces::StateMarker>()
+        .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
         .context("failed to connect to fuchsia.net.interfaces/State")?;
     for _ in 0..100 {
         let (watcher, server) =
@@ -966,7 +966,7 @@ async fn test_interfaces_watcher() -> Result {
         .new_netstack::<Netstack2, fidl_fuchsia_net_stack::StackMarker, _>("interfaces_watcher")?;
 
     let interface_state = realm
-        .connect_to_service::<fidl_fuchsia_net_interfaces::StateMarker>()
+        .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
         .context("failed to connect to fuchsia.net.interfaces/State")?;
 
     let initialize_watcher = || async {
@@ -1496,7 +1496,7 @@ async fn test_forwarding<E: netemul::Endpoint, I: IcmpIpExt>(
     let (_net2, fake_ep2, iface2) = net_ep_iface(2, iface2_addr).await;
 
     let interface_state = realm
-        .connect_to_service::<fidl_fuchsia_net_interfaces::StateMarker>()
+        .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
         .expect("failed to connect to fuchsia.net.interfaces/State");
 
     let ((), ()) = futures::future::join(
@@ -1507,7 +1507,7 @@ async fn test_forwarding<E: netemul::Endpoint, I: IcmpIpExt>(
 
     if let Some(config) = forwarding_config {
         let stack = realm
-            .connect_to_service::<net_stack::StackMarker>()
+            .connect_to_protocol::<net_stack::StackMarker>()
             .expect("error connecting to stack");
 
         match config {
@@ -1535,7 +1535,7 @@ async fn test_forwarding<E: netemul::Endpoint, I: IcmpIpExt>(
     }
 
     let neighbor_controller = realm
-        .connect_to_service::<fidl_fuchsia_net_neighbor::ControllerMarker>()
+        .connect_to_protocol::<fidl_fuchsia_net_neighbor::ControllerMarker>()
         .expect("failed to connect to Controller");
     let dst_ip_fidl: <I::Addr as NetTypesIpAddressExt>::Fidl = dst_ip.into_ext();
     let () = neighbor_controller

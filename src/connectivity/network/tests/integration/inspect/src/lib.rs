@@ -123,7 +123,7 @@ async fn inspect_nic() -> Result {
         .context("failed to join network with netdevice endpoint")?;
 
     let interfaces_state = realm
-        .connect_to_service::<fidl_fuchsia_net_interfaces::StateMarker>()
+        .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
         .context("failed to connect to fuchsia.net.interfaces/State")?;
 
     // Wait for the world to stabilize and capture the state to verify inspect
@@ -179,7 +179,7 @@ async fn inspect_nic() -> Result {
     const BOB_IP: fidl_fuchsia_net::IpAddress = fidl_ip!("192.168.0.1");
     const BOB_MAC: fidl_fuchsia_net::MacAddress = fidl_mac!("02:0A:0B:0C:0D:0E");
     let () = realm
-        .connect_to_service::<fidl_fuchsia_net_neighbor::ControllerMarker>()
+        .connect_to_protocol::<fidl_fuchsia_net_neighbor::ControllerMarker>()
         .context("failed to connect to Controller")?
         .add_entry(eth.id(), &mut BOB_IP.clone(), &mut BOB_MAC.clone())
         .await
@@ -365,7 +365,7 @@ async fn inspect_routing_table() -> Result {
         .context("failed to create realm")?;
 
     let netstack = realm
-        .connect_to_service::<fidl_fuchsia_netstack::NetstackMarker>()
+        .connect_to_protocol::<fidl_fuchsia_netstack::NetstackMarker>()
         .context("failed to connect to fuchsia.netstack/Netstack")?;
 
     // Capture the state of the routing table to verify the inspect data, and
@@ -580,7 +580,7 @@ async fn inspect_for_sampler() {
         .expect("failed to create realm");
     // Connect to netstack service to spawn a netstack instance.
     let _netstack = realm
-        .connect_to_service::<fidl_fuchsia_netstack::NetstackMarker>()
+        .connect_to_protocol::<fidl_fuchsia_netstack::NetstackMarker>()
         .expect("failed to connect to fuchsia.netstack/Netstack");
 
     // We can pass any sample rate here. It is not used at all in this test.

@@ -377,8 +377,8 @@ where
         .context("failed to configure networking")?;
 
     let netstack = realm
-        .connect_to_service::<fnetstack::NetstackMarker>()
-        .context("failed to connect to netstack service")?;
+        .connect_to_protocol::<fnetstack::NetstackMarker>()
+        .context("failed to connect to netstack protocol")?;
 
     Ok((network, realm, netstack, iface, fake_ep))
 }

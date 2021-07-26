@@ -104,13 +104,13 @@ fn use_log_sink() -> Option<fnetemul::ChildUses> {
     Some(fnetemul::ChildUses::Capabilities(vec![fnetemul::Capability::LogSink(fnetemul::Empty {})]))
 }
 
-fn service_dep<P>(component_name: &'static str) -> fnetemul::ChildDep
+fn protocol_dep<P>(component_name: &'static str) -> fnetemul::ChildDep
 where
     P: fidl::endpoints::DiscoverableProtocolMarker,
 {
     fnetemul::ChildDep {
         name: Some(component_name.into()),
-        capability: Some(fnetemul::ExposedCapability::Service(P::PROTOCOL_NAME.to_string())),
+        capability: Some(fnetemul::ExposedCapability::Protocol(P::PROTOCOL_NAME.to_string())),
         ..fnetemul::ChildDep::EMPTY
     }
 }
@@ -142,16 +142,18 @@ impl<'a> From<&'a KnownServiceProvider> for fnetemul::ChildDef {
                 ),
                 uses: Some(fnetemul::ChildUses::Capabilities(vec![
                     fnetemul::Capability::LogSink(fnetemul::Empty {}),
-                    fnetemul::Capability::ChildDep(service_dep::<fnet_name::LookupMarker>(
+                    fnetemul::Capability::ChildDep(protocol_dep::<fnet_name::LookupMarker>(
                         constants::dns_resolver::COMPONENT_NAME,
                     )),
-                    fnetemul::Capability::ChildDep(service_dep::<fnet_neighbor::ControllerMarker>(
+                    fnetemul::Capability::ChildDep(
+                        protocol_dep::<fnet_neighbor::ControllerMarker>(
+                            constants::netstack::COMPONENT_NAME,
+                        ),
+                    ),
+                    fnetemul::Capability::ChildDep(protocol_dep::<fposix_socket::ProviderMarker>(
                         constants::netstack::COMPONENT_NAME,
                     )),
-                    fnetemul::Capability::ChildDep(service_dep::<fposix_socket::ProviderMarker>(
-                        constants::netstack::COMPONENT_NAME,
-                    )),
-                    fnetemul::Capability::ChildDep(service_dep::<fstash::SecureStoreMarker>(
+                    fnetemul::Capability::ChildDep(protocol_dep::<fstash::SecureStoreMarker>(
                         constants::secure_stash::COMPONENT_NAME,
                     )),
                 ])),
@@ -165,7 +167,7 @@ impl<'a> From<&'a KnownServiceProvider> for fnetemul::ChildDef {
                 ]),
                 uses: Some(fnetemul::ChildUses::Capabilities(vec![
                     fnetemul::Capability::LogSink(fnetemul::Empty {}),
-                    fnetemul::Capability::ChildDep(service_dep::<fposix_socket::ProviderMarker>(
+                    fnetemul::Capability::ChildDep(protocol_dep::<fposix_socket::ProviderMarker>(
                         constants::netstack::COMPONENT_NAME,
                     )),
                 ])),
@@ -180,10 +182,10 @@ impl<'a> From<&'a KnownServiceProvider> for fnetemul::ChildDef {
                 ]),
                 uses: Some(fnetemul::ChildUses::Capabilities(vec![
                     fnetemul::Capability::LogSink(fnetemul::Empty {}),
-                    fnetemul::Capability::ChildDep(service_dep::<fnet_routes::StateMarker>(
+                    fnetemul::Capability::ChildDep(protocol_dep::<fnet_routes::StateMarker>(
                         constants::netstack::COMPONENT_NAME,
                     )),
-                    fnetemul::Capability::ChildDep(service_dep::<fposix_socket::ProviderMarker>(
+                    fnetemul::Capability::ChildDep(protocol_dep::<fposix_socket::ProviderMarker>(
                         constants::netstack::COMPONENT_NAME,
                     )),
                 ])),
@@ -346,7 +348,7 @@ impl TestSandboxExt for netemul::TestSandbox {
         let realm =
             self.create_netstack_realm::<N, _>(name).context("failed to create test realm")?;
         let netstack_proxy =
-            realm.connect_to_service::<P>().context("failed to connect to netstack")?;
+            realm.connect_to_protocol::<P>().context("failed to connect to netstack")?;
         Ok((realm, netstack_proxy))
     }
 

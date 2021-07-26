@@ -174,9 +174,9 @@ async fn install_ip_device(
     device: fidl::endpoints::ClientEnd<fidl_fuchsia_hardware_network::DeviceMarker>,
     addrs: &mut [fidl_fuchsia_net::Subnet],
 ) -> u64 {
-    let stack = realm.connect_to_service::<fidl_fuchsia_net_stack::StackMarker>().unwrap();
+    let stack = realm.connect_to_protocol::<fidl_fuchsia_net_stack::StackMarker>().unwrap();
     let interface_state =
-        realm.connect_to_service::<fidl_fuchsia_net_interfaces::StateMarker>().unwrap();
+        realm.connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>().unwrap();
     let id = stack
         .add_interface(
             fidl_fuchsia_net_stack::InterfaceConfig {
@@ -262,7 +262,7 @@ async fn test_ip_endpoints_socket() {
 
     let tun =
         fuchsia_component::client::connect_to_protocol::<fidl_fuchsia_net_tun::ControlMarker>()
-            .expect("failed to connect to tun service");
+            .expect("failed to connect to tun protocol");
 
     let (tun_pair, req) = fidl::endpoints::create_proxy::<fidl_fuchsia_net_tun::DevicePairMarker>()
         .expect("failed to create endpoints");
@@ -322,7 +322,7 @@ async fn test_ip_endpoint_packets() {
 
     let tun =
         fuchsia_component::client::connect_to_protocol::<fidl_fuchsia_net_tun::ControlMarker>()
-            .expect("failed to connect to tun service");
+            .expect("failed to connect to tun protocol");
 
     let (tun_dev, req) = fidl::endpoints::create_proxy::<fidl_fuchsia_net_tun::DeviceMarker>()
         .expect("failed to create endpoints");

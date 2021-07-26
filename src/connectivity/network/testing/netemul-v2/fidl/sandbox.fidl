@@ -15,7 +15,7 @@ using fuchsia.netemul.sync;
 /// that are exposed to any `ManagedRealm`s created by the `Sandbox`.
 ///
 /// The lifetime of the created realms (and the context services) is bound to
-/// the connection to the `Sandbox` service. If the channel is closed, all the
+/// the connection to the `Sandbox` protocol. If the channel is closed, all the
 /// realms and the components created within them will be terminated.
 @discoverable
 protocol Sandbox {

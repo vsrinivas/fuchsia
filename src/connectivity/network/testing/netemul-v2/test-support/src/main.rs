@@ -38,31 +38,31 @@ async fn handle_counter(
                         .send(d.value)
                         .unwrap_or_else(|e| error!("error sending response: {:?}", e));
                 }
-                CounterRequest::ConnectToService { service_name, request, control_handle: _ } => {
-                    info!("connecting to service '{}'", service_name);
+                CounterRequest::ConnectToProtocol { protocol_name, request, control_handle: _ } => {
+                    info!("connecting to protocol '{}'", protocol_name);
                     let () = client::connect_channel_to_protocol_at_path(
                         request,
-                        &format!("{}/{}", SVC_DIR, service_name),
+                        &format!("{}/{}", SVC_DIR, protocol_name),
                     )
                     .unwrap_or_else(|e| {
                         error!(
                             "error connecting request to protocol '{}' in '{}' directory: {:?}",
-                            service_name, SVC_DIR, e,
+                            protocol_name, SVC_DIR, e,
                         )
                     });
                 }
-                CounterRequest::ConnectToServiceAt { path, request, control_handle: _ } => {
-                    info!("connecting to service at '{}'", path);
+                CounterRequest::ConnectToProtocolAt { path, request, control_handle: _ } => {
+                    info!("connecting to protocol at '{}'", path);
                     let () = fdio::open(
                         &path,
                         // TODO(https://fxbug.dev/77059): remove write
                         // permissions once they are no longer required to
-                        // connect to services.
+                        // connect to protocols.
                         fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
                         request,
                     )
                     .unwrap_or_else(|e| {
-                        error!("error connecting request to service at path '{}': {:?}", path, e,)
+                        error!("error connecting request to protocol at path '{}': {:?}", path, e)
                     });
                 }
                 CounterRequest::OpenStorageAt { path, responder } => {

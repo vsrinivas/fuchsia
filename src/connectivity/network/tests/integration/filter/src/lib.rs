@@ -310,7 +310,7 @@ async fn test_filter<E: netemul::Endpoint>(name: &str, test: Test) -> Result {
         .await
         .context("client failed to join network")?;
     let client_filter = client
-        .connect_to_service::<fnetfilter::FilterMarker>()
+        .connect_to_protocol::<fnetfilter::FilterMarker>()
         .context("client failed to connect to filter service")?;
 
     let server = sandbox
@@ -325,7 +325,7 @@ async fn test_filter<E: netemul::Endpoint>(name: &str, test: Test) -> Result {
         .await
         .context("server failed to join network")?;
     let server_filter = server
-        .connect_to_service::<fnetfilter::FilterMarker>()
+        .connect_to_protocol::<fnetfilter::FilterMarker>()
         .context("server failed to connect to filter service")?;
 
     let Test { proto, client_updates, server_updates, expected_traffic } = test;

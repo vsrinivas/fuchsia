@@ -13,16 +13,17 @@ protocol Counter {
     Increment() -> (struct {
         value uint32;
     });
-    /// Connects `request` to a service named `service_name`.
-    ConnectToService(resource struct {
-        service_name string:fuchsia.component.MAX_PATH_LENGTH;
+    /// Connects `request` to a protocol in the `/svc` directory named
+    /// `protocol_name`.
+    ConnectToProtocol(resource struct {
+        protocol_name fuchsia.component.name;
         request zx.handle:CHANNEL;
     });
-    /// Connects `request` to a service found at `path`.
+    /// Connects `request` to a protocol found at `path`.
     ///
     /// + request `path` is the absolute path from the server's namespace.
-    /// + request `request` is the server end channel to the service.
-    ConnectToServiceAt(resource struct {
+    /// + request `request` is the server end channel to the protocol.
+    ConnectToProtocolAt(resource struct {
         path string:fuchsia.component.MAX_PATH_LENGTH;
         request zx.handle:CHANNEL;
     });
