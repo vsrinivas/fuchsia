@@ -175,7 +175,7 @@ async fn start_with_cache_no_space() {
         zx::Channel::create().expect("failed to create zircon channel");
     let () = realm_instance
         .root
-        .connect_request_to_named_service_at_exposed_dir(DIAGNOSTICS_DIR_NAME, server_channel)
+        .connect_request_to_named_protocol_at_exposed_dir(DIAGNOSTICS_DIR_NAME, server_channel)
         .expect("failed to open diagnostics directory exposed from netstack");
     let client_channel = fuchsia_async::Channel::from_channel(client_channel)
         .expect("failed to create async channel");

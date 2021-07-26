@@ -424,7 +424,7 @@ impl ManagedRealm {
                     );
                     let () = realm
                         .root
-                        .connect_request_to_named_service_at_exposed_dir(&service_name, req)
+                        .connect_request_to_named_protocol_at_exposed_dir(&service_name, req)
                         .with_context(|| {
                             format!("failed to open protocol {} in directory", service_name)
                         })?;

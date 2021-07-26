@@ -45,7 +45,7 @@ impl PiconetMemberSpec {
         topology: &RealmInstance,
     ) -> Result<bredr::ProfileProxy, anyhow::Error> {
         let (client, server) = f_end::create_endpoints::<bredr::ProfileMarker>()?;
-        topology.root.connect_request_to_named_service_at_exposed_dir(
+        topology.root.connect_request_to_named_protocol_at_exposed_dir(
             &mock_profile_service_path(self),
             server.into_channel(),
         )?;
