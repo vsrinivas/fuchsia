@@ -10,4 +10,7 @@ mod rule;
 pub use crate::rule::{Rule, RuleConfig};
 
 mod errors;
-pub use crate::errors::{RuleDecodeError, RuleParseError};
+pub use crate::errors::{EditTransactionError, RuleDecodeError, RuleParseError};
+
+mod transaction;
+pub use crate::transaction::{do_transaction, EditTransaction};

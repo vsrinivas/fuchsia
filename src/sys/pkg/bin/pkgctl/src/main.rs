@@ -21,8 +21,8 @@ use {
     fidl_fuchsia_pkg_ext::{
         BlobId, RepositoryConfig, RepositoryConfigBuilder, RepositoryStorageType,
     },
-    fidl_fuchsia_pkg_rewrite::{EditTransactionProxy, EngineMarker, EngineProxy},
-    fidl_fuchsia_pkg_rewrite_ext::{Rule as RewriteRule, RuleConfig},
+    fidl_fuchsia_pkg_rewrite::EngineMarker,
+    fidl_fuchsia_pkg_rewrite_ext::{do_transaction, Rule as RewriteRule, RuleConfig},
     fidl_fuchsia_space::ManagerMarker as SpaceManagerMarker,
     files_async, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
@@ -33,11 +33,9 @@ use {
     std::{
         convert::{TryFrom, TryInto},
         fs::File,
-        future::Future,
         io,
         process::exit,
     },
-    thiserror::Error,
 };
 
 mod args;
@@ -301,8 +299,8 @@ async fn main_helper(command: Command) -> Result<i32, anyhow::Error> {
                     }
                 }
                 RuleSubCommand::Clear(RuleClearCommand {}) => {
-                    do_transaction(engine, |transaction| async move {
-                        transaction.reset_all().map_err(EditTransactionError::Fidl)?;
+                    do_transaction(&engine, |transaction| async move {
+                        transaction.reset_all()?;
                         Ok(transaction)
                     })
                     .await?;
@@ -337,18 +335,13 @@ async fn main_helper(command: Command) -> Result<i32, anyhow::Error> {
                         RuleReplaceSubCommand::Json(RuleReplaceJsonCommand { config }) => config,
                     };
 
-                    do_transaction(engine, |transaction| {
+                    do_transaction(&engine, |transaction| {
                         async move {
-                            transaction.reset_all().map_err(EditTransactionError::Fidl)?;
+                            transaction.reset_all()?;
                             // add() inserts rules as highest priority, so iterate over our
                             // prioritized list of rules so they end up in the right order.
                             for rule in rules.iter().rev() {
-                                let () = transaction
-                                    .add(&mut rule.clone().into())
-                                    .await
-                                    .map_err(EditTransactionError::Fidl)?
-                                    .map_err(zx::Status::from_raw)
-                                    .map_err(EditTransactionError::AddError)?;
+                                let () = transaction.add(rule.clone()).await?;
                             }
                             Ok(transaction)
                         }
@@ -386,54 +379,6 @@ async fn main_helper(command: Command) -> Result<i32, anyhow::Error> {
                 .map(|_| 0i32)
         }
     }
-}
-
-#[derive(Debug, Error)]
-enum EditTransactionError {
-    #[error("internal fidl error")]
-    Fidl(#[source] fidl::Error),
-
-    #[error("commit error")]
-    CommitError(#[source] zx::Status),
-
-    #[error("add error")]
-    AddError(#[source] zx::Status),
-}
-
-/// Perform a rewrite rule edit transaction, retrying as necessary if another edit transaction runs
-/// concurrently.
-///
-/// The given callback `cb` should perform the needed edits to the state of the rewrite rules but
-/// not attempt to `commit()` the transaction. `do_transaction` will internally attempt to commit
-/// the transaction and trigger a retry if necessary.
-async fn do_transaction<T, R>(engine: EngineProxy, cb: T) -> Result<(), EditTransactionError>
-where
-    T: Fn(EditTransactionProxy) -> R,
-    R: Future<Output = Result<EditTransactionProxy, EditTransactionError>>,
-{
-    // Make a reasonable effort to retry the edit after a concurrent edit, but don't retry forever.
-    for _ in 0..100 {
-        let (transaction, transaction_server_end) =
-            fidl::endpoints::create_proxy().map_err(EditTransactionError::Fidl)?;
-        let () = engine
-            .start_edit_transaction(transaction_server_end)
-            .map_err(EditTransactionError::Fidl)?;
-
-        let transaction = cb(transaction).await?;
-
-        let response = transaction.commit().await.map_err(EditTransactionError::Fidl)?;
-
-        // Retry edit transaction on concurrent edit
-        return match response.map_err(zx::Status::from_raw) {
-            Ok(()) => Ok(()),
-            Err(zx::Status::UNAVAILABLE) => {
-                continue;
-            }
-            Err(status) => Err(EditTransactionError::CommitError(status)),
-        };
-    }
-
-    Err(EditTransactionError::CommitError(zx::Status::UNAVAILABLE))
 }
 
 async fn fetch_repos(
