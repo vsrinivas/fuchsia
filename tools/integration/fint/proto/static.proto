@@ -138,4 +138,8 @@ message Static {
 
   // Whether we're performing an incremental build.
   bool incremental = 32;
+
+  // Whether to let Ninja determine when to run gn gen instead of
+  // unconditionally running it.
+  bool automatic_gen = 33;
 }
