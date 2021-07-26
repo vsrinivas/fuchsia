@@ -10,6 +10,7 @@
 
 #include <mutex>
 
+#include "src/virtualization/bin/vmm/arch/x64/rtc_mc146818.h"
 #include "src/virtualization/bin/vmm/io.h"
 
 // clang-format off
@@ -66,6 +67,8 @@ class CmosHandler : public IoHandler {
   zx_status_t WriteCmosRegister(uint8_t cmos_index, uint8_t value);
   mutable std::mutex mutex_;
   uint8_t index_ __TA_GUARDED(mutex_) = 0;
+
+  RtcMc146818 rtc_;
 };
 
 class I8042Handler : public IoHandler {

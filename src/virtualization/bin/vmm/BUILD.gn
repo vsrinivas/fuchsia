@@ -99,6 +99,8 @@ source_set("lib") {
       "arch/x64/memory.cc",
       "arch/x64/page_table.cc",
       "arch/x64/page_table.h",
+      "arch/x64/rtc_mc146818.cc",
+      "arch/x64/rtc_mc146818.h",
       "arch/x64/vcpu.cc",
     ]
   }
@@ -190,6 +192,7 @@ executable("vmm_unittests") {
       "arch/x64/decode_unittest.cc",
       "arch/x64/io_apic_unittest.cc",
       "arch/x64/page_table_unittest.cc",
+      "arch/x64/rtc_mc146818_unittest.cc",
     ]
   }
 

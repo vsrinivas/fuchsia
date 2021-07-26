@@ -7,9 +7,9 @@
 #include <endian.h>
 #include <lib/syslog/cpp/macros.h>
 #include <stdio.h>
+#include <time.h>
 
 #include "src/virtualization/bin/vmm/guest.h"
-#include "src/virtualization/bin/vmm/rtc.h"
 
 __BEGIN_CDECLS;
 #include <libfdt.h>
@@ -45,7 +45,7 @@ zx_status_t Pl031::Read(uint64_t addr, IoValue* value) {
 
   switch (static_cast<Pl031Register>(addr)) {
     case Pl031Register::DR:
-      value->u32 = rtc_time();
+      value->u32 = time(nullptr);
       return ZX_OK;
 
     case Pl031Register::CR:

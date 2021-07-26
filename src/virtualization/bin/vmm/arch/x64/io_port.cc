@@ -9,7 +9,6 @@
 
 #include "src/virtualization/bin/vmm/bits.h"
 #include "src/virtualization/bin/vmm/guest.h"
-#include "src/virtualization/bin/vmm/rtc.h"
 
 // clang-format off
 
@@ -28,24 +27,7 @@ constexpr uint16_t kCmosIndexPort               = 0;
 constexpr uint16_t kCmosDataPort                = 1;
 
 // CMOS register addresses.
-constexpr uint8_t kCmosRegisterRtcSeconds       = 0;
-constexpr uint8_t kCmosRegisterRtcSecondsAlarm  = 1;
-constexpr uint8_t kCmosRegisterRtcMinutes       = 2;
-constexpr uint8_t kCmosRegisterRtcMinutesAlarm  = 3;
-constexpr uint8_t kCmosRegisterRtcHours         = 4;
-constexpr uint8_t kCmosRegisterRtcHoursAlarm    = 5;
-constexpr uint8_t kCmosRegisterRtcDayOfMonth    = 7;
-constexpr uint8_t kCmosRegisterRtcMonth         = 8;
-constexpr uint8_t kCmosRegisterRtcYear          = 9;
-constexpr uint8_t kCmosRegisterA                = 10;
-constexpr uint8_t kCmosRegisterB                = 11;
-constexpr uint8_t kCmosRegisterC                = 12;
 constexpr uint8_t kCmosRegisterShutdownStatus   = 15;
-
-// CMOS register B flags.
-constexpr uint8_t kCmosRegisterBDaylightSavings = 1 << 0;
-constexpr uint8_t kCmosRegisterBHourFormat      = 1 << 1;
-constexpr uint8_t kCmosRegisterBInterruptMask   = 0x70;
 
 // I8042 relative port mappings.
 constexpr uint16_t kI8042DataPort               = 0x0;
@@ -184,10 +166,6 @@ zx_status_t Pm1Handler::Write(uint64_t addr, const IoValue& value) {
   return ZX_OK;
 }
 
-static uint8_t to_bcd(int binary) {
-  return static_cast<uint8_t>(((binary / 10) << 4) | (binary % 10));
-}
-
 zx_status_t CmosHandler::Init(Guest* guest) {
   return guest->CreateMapping(TrapType::PIO_SYNC, kCmosBase, kCmosSize, 0, this);
 }
@@ -232,86 +210,24 @@ zx_status_t CmosHandler::Write(uint64_t addr, const IoValue& value) {
 }
 
 zx_status_t CmosHandler::ReadCmosRegister(uint8_t cmos_index, uint8_t* value) {
-  time_t now = rtc_time();
-  struct tm tm;
-  if (localtime_r(&now, &tm) == nullptr) {
-    return ZX_ERR_INTERNAL;
-  }
-  switch (cmos_index) {
-    case kCmosRegisterRtcSeconds:
-      *value = to_bcd(tm.tm_sec);
-      break;
-    case kCmosRegisterRtcMinutes:
-      *value = to_bcd(tm.tm_min);
-      break;
-    case kCmosRegisterRtcHours:
-      *value = to_bcd(tm.tm_hour);
-      break;
-    case kCmosRegisterRtcDayOfMonth:
-      *value = to_bcd(tm.tm_mday);
-      break;
-    case kCmosRegisterRtcMonth:
-      // struct tm represents months as 0-11, RTC uses 1-12.
-      *value = to_bcd(tm.tm_mon + 1);
-      break;
-    case kCmosRegisterRtcYear: {
-      // RTC expects the number of years since 2000.
-      int year = tm.tm_year - 100;
-      if (year < 0) {
-        year = 0;
-      }
-      *value = to_bcd(year);
-      break;
-    }
-    case kCmosRegisterA:
-      // Ensure that UIP is 0. Other values (clock frequency) are obsolete.
-      *value = 0;
-      break;
-    case kCmosRegisterB:
-      *value = kCmosRegisterBHourFormat;
-      if (tm.tm_isdst) {
-        *value |= kCmosRegisterBDaylightSavings;
-      }
-      break;
-    // Alarms are not implemented but allow reads of the registers.
-    case kCmosRegisterRtcSecondsAlarm:
-    case kCmosRegisterRtcMinutesAlarm:
-    case kCmosRegisterRtcHoursAlarm:
-    case kCmosRegisterC:
-      *value = 0;
-      break;
-    default:
-      FX_LOGS(ERROR) << "Unsupported CMOS register read 0x" << std::hex
-                     << static_cast<uint32_t>(cmos_index);
-      return ZX_ERR_NOT_SUPPORTED;
-  }
-  return ZX_OK;
+  // Currently the RTC is the only implemented CMOS registers
+  if (RtcMc146818::IsValidRegister(cmos_index))
+    return rtc_.ReadRegister(static_cast<RtcMc146818::Register>(cmos_index), value);
+  FX_LOGS(ERROR) << "Unsupported CMOS register read 0x" << std::hex
+                 << static_cast<uint32_t>(cmos_index);
+  return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t CmosHandler::WriteCmosRegister(uint8_t cmos_index, uint8_t value) {
-  switch (cmos_index) {
-    case kCmosRegisterA:
-      return ZX_OK;
-    case kCmosRegisterB:
-      // No interrupts are implemented.
-      if (value & kCmosRegisterBInterruptMask) {
-        return ZX_ERR_NOT_SUPPORTED;
-      }
-      return ZX_OK;
-    case kCmosRegisterRtcSeconds:
-    case kCmosRegisterRtcMinutes:
-    case kCmosRegisterRtcHours:
-    case kCmosRegisterRtcDayOfMonth:
-    case kCmosRegisterRtcMonth:
-    case kCmosRegisterRtcYear:
-    case kCmosRegisterShutdownStatus:
-      // Ignore attempts to write to the RTC or shutdown status register.
-      return ZX_OK;
-    default:
-      FX_LOGS(ERROR) << "Unsupported CMOS register write 0x" << std::hex
-                     << static_cast<uint32_t>(cmos_index);
-      return ZX_ERR_NOT_SUPPORTED;
+  if (RtcMc146818::IsValidRegister(cmos_index))
+    return rtc_.WriteRegister(static_cast<RtcMc146818::Register>(cmos_index), value);
+  if (cmos_index == kCmosRegisterShutdownStatus) {
+    // Ignore attempts to write to shutdown status register.
+    return ZX_OK;
   }
+  FX_LOGS(ERROR) << "Unsupported CMOS register write 0x" << std::hex
+                 << static_cast<uint32_t>(cmos_index);
+  return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t I8042Handler::Init(Guest* guest) {

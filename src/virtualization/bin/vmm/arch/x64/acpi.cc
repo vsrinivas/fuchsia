@@ -16,6 +16,7 @@
 #include <fbl/unique_fd.h>
 
 #include "src/virtualization/bin/vmm/arch/x64/io_port.h"
+#include "src/virtualization/bin/vmm/arch/x64/rtc_mc146818.h"
 
 static uint8_t acpi_checksum(void* table, uint32_t length) {
   uint8_t sum = 0;
@@ -120,6 +121,7 @@ zx_status_t create_acpi_table(const AcpiConfig& cfg, const PhysMem& phys_mem) {
   fadt->Pm1EventLength = (ACPI_PM1_REGISTER_WIDTH / 8) * 2 /* enable and status registers */;
   fadt->Pm1aControlBlock = kPm1ControlPort;
   fadt->Pm1ControlLength = ACPI_PM1_REGISTER_WIDTH / 8;
+  fadt->Century = static_cast<uint8_t>(RtcMc146818::Register::kCentury);
   // Table ID must match RSDT.
   acpi_header(&fadt->Header, "ZX ACPI", ACPI_SIG_FADT, 6, sizeof(ACPI_TABLE_FADT));
 
