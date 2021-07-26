@@ -253,8 +253,9 @@ TEST_F(GoodixTest, FirmwareTest) {
 
   // Initial reset
   reset.ExpectConfigOut(ZX_OK, 0).ExpectWrite(ZX_OK, 1);
-  intr.ExpectConfigOut(ZX_OK, 0).ExpectConfigIn(ZX_OK, 0).ExpectGetInterrupt(
-      ZX_OK, ZX_INTERRUPT_MODE_EDGE_LOW, {});
+  intr.ExpectConfigOut(ZX_OK, 0)
+      .ExpectConfigIn(ZX_OK, GPIO_PULL_UP)
+      .ExpectGetInterrupt(ZX_OK, ZX_INTERRUPT_MODE_EDGE_LOW, {});
 
   // Entering update mode
   reset.ExpectConfigOut(ZX_OK, 0).ExpectConfigOut(ZX_OK, 1);
@@ -262,8 +263,10 @@ TEST_F(GoodixTest, FirmwareTest) {
 
   // Leaving update mode
   reset.ExpectConfigOut(ZX_OK, 0).ExpectConfigOut(ZX_OK, 1).ExpectConfigIn(ZX_OK, 0);
-  intr.ExpectConfigIn(ZX_OK, 0).ExpectConfigOut(ZX_OK, 0).ExpectConfigOut(ZX_OK, 0).ExpectConfigIn(
-      ZX_OK, 0);
+  intr.ExpectConfigIn(ZX_OK, GPIO_PULL_UP)
+      .ExpectConfigOut(ZX_OK, 0)
+      .ExpectConfigOut(ZX_OK, 0)
+      .ExpectConfigIn(ZX_OK, GPIO_PULL_UP);
 
   Gt92xxTest device(i2c.GetProto(), intr.GetProto(), reset.GetProto());
   EXPECT_OK(device.Init());
@@ -283,8 +286,9 @@ TEST_F(GoodixTest, FirmwareCurrent) {
 
   // Initial reset
   reset.ExpectConfigOut(ZX_OK, 0).ExpectWrite(ZX_OK, 1);
-  intr.ExpectConfigOut(ZX_OK, 0).ExpectConfigIn(ZX_OK, 0).ExpectGetInterrupt(
-      ZX_OK, ZX_INTERRUPT_MODE_EDGE_LOW, {});
+  intr.ExpectConfigOut(ZX_OK, 0)
+      .ExpectConfigIn(ZX_OK, GPIO_PULL_UP)
+      .ExpectGetInterrupt(ZX_OK, ZX_INTERRUPT_MODE_EDGE_LOW, {});
 
   Gt92xxTest device(i2c.GetProto(), intr.GetProto(), reset.GetProto());
   EXPECT_OK(device.Init());
@@ -305,8 +309,9 @@ TEST_F(GoodixTest, FirmwareNotApplicable) {
 
   // Initial reset
   reset.ExpectConfigOut(ZX_OK, 0).ExpectWrite(ZX_OK, 1);
-  intr.ExpectConfigOut(ZX_OK, 0).ExpectConfigIn(ZX_OK, 0).ExpectGetInterrupt(
-      ZX_OK, ZX_INTERRUPT_MODE_EDGE_LOW, {});
+  intr.ExpectConfigOut(ZX_OK, 0)
+      .ExpectConfigIn(ZX_OK, GPIO_PULL_UP)
+      .ExpectGetInterrupt(ZX_OK, ZX_INTERRUPT_MODE_EDGE_LOW, {});
 
   Gt92xxTest device(i2c.GetProto(), intr.GetProto(), reset.GetProto());
   EXPECT_OK(device.Init());
@@ -330,8 +335,9 @@ TEST_F(GoodixTest, ForceFirmwareUpdate) {
 
   // Initial reset
   reset.ExpectConfigOut(ZX_OK, 0).ExpectWrite(ZX_OK, 1);
-  intr.ExpectConfigOut(ZX_OK, 0).ExpectConfigIn(ZX_OK, 0).ExpectGetInterrupt(
-      ZX_OK, ZX_INTERRUPT_MODE_EDGE_LOW, {});
+  intr.ExpectConfigOut(ZX_OK, 0)
+      .ExpectConfigIn(ZX_OK, GPIO_PULL_UP)
+      .ExpectGetInterrupt(ZX_OK, ZX_INTERRUPT_MODE_EDGE_LOW, {});
 
   // Entering update mode
   reset.ExpectConfigOut(ZX_OK, 0).ExpectConfigOut(ZX_OK, 1);
@@ -339,8 +345,10 @@ TEST_F(GoodixTest, ForceFirmwareUpdate) {
 
   // Leaving update mode
   reset.ExpectConfigOut(ZX_OK, 0).ExpectConfigOut(ZX_OK, 1).ExpectConfigIn(ZX_OK, 0);
-  intr.ExpectConfigIn(ZX_OK, 0).ExpectConfigOut(ZX_OK, 0).ExpectConfigOut(ZX_OK, 0).ExpectConfigIn(
-      ZX_OK, 0);
+  intr.ExpectConfigIn(ZX_OK, GPIO_PULL_UP)
+      .ExpectConfigOut(ZX_OK, 0)
+      .ExpectConfigOut(ZX_OK, 0)
+      .ExpectConfigIn(ZX_OK, GPIO_PULL_UP);
 
   Gt92xxTest device(i2c.GetProto(), intr.GetProto(), reset.GetProto());
   EXPECT_OK(device.Init());
@@ -358,7 +366,7 @@ TEST_F(GoodixTest, BadFirmwareChecksum) {
 
   // Initial reset
   reset.ExpectConfigOut(ZX_OK, 0).ExpectWrite(ZX_OK, 1);
-  intr.ExpectConfigOut(ZX_OK, 0).ExpectConfigIn(ZX_OK, 0);
+  intr.ExpectConfigOut(ZX_OK, 0).ExpectConfigIn(ZX_OK, GPIO_PULL_UP);
 
   corrupt_firmware_checksum = true;
 
@@ -380,7 +388,7 @@ TEST_F(GoodixTest, ReadbackCheckFail) {
 
   // Initial reset
   reset.ExpectConfigOut(ZX_OK, 0).ExpectWrite(ZX_OK, 1);
-  intr.ExpectConfigOut(ZX_OK, 0).ExpectConfigIn(ZX_OK, 0);
+  intr.ExpectConfigOut(ZX_OK, 0).ExpectConfigIn(ZX_OK, GPIO_PULL_UP);
 
   // Entering update mode
   reset.ExpectConfigOut(ZX_OK, 0).ExpectConfigOut(ZX_OK, 1);

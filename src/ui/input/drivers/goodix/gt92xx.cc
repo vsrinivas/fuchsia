@@ -263,7 +263,7 @@ void Gt92xxDevice::HWReset() {
 
   reset_gpio_.Write(1);                              // Release the reset
   zx_nanosleep(zx_deadline_after(ZX_MSEC(5 + 50)));  // Interrupt still output low
-  int_gpio_.ConfigIn(0);                             // Make interrupt pin an input again;
+  int_gpio_.ConfigIn(GPIO_PULL_UP);                  // Make interrupt pin an input again;
   zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));      // Wait for reset before sending config
 }
 

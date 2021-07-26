@@ -71,8 +71,9 @@ TEST(GoodixTest, Init) {
 
   reset_mock.ExpectConfigOut(ZX_OK, 0).ExpectWrite(ZX_OK, 1);
 
-  intr_mock.ExpectConfigOut(ZX_OK, 0).ExpectConfigIn(ZX_OK, 0).ExpectGetInterrupt(
-      ZX_OK, ZX_INTERRUPT_MODE_EDGE_LOW, std::move(irq));
+  intr_mock.ExpectConfigOut(ZX_OK, 0)
+      .ExpectConfigIn(ZX_OK, GPIO_PULL_UP)
+      .ExpectGetInterrupt(ZX_OK, ZX_INTERRUPT_MODE_EDGE_LOW, std::move(irq));
 
   const gpio_protocol_t* reset = reset_mock.GetProto();
   const gpio_protocol_t* intr = intr_mock.GetProto();
@@ -108,8 +109,9 @@ TEST(GoodixTest, InitForceConfig) {
 
   reset_mock.ExpectConfigOut(ZX_OK, 0).ExpectWrite(ZX_OK, 1);
 
-  intr_mock.ExpectConfigOut(ZX_OK, 0).ExpectConfigIn(ZX_OK, 0).ExpectGetInterrupt(
-      ZX_OK, ZX_INTERRUPT_MODE_EDGE_LOW, std::move(irq));
+  intr_mock.ExpectConfigOut(ZX_OK, 0)
+      .ExpectConfigIn(ZX_OK, GPIO_PULL_UP)
+      .ExpectGetInterrupt(ZX_OK, ZX_INTERRUPT_MODE_EDGE_LOW, std::move(irq));
 
   const gpio_protocol_t* reset = reset_mock.GetProto();
   const gpio_protocol_t* intr = intr_mock.GetProto();

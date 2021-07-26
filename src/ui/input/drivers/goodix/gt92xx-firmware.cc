@@ -282,7 +282,7 @@ zx_status_t Gt92xxDevice::EnterUpdateMode() {
 }
 
 void Gt92xxDevice::LeaveUpdateMode() {
-  int_gpio_.ConfigIn(0);  // 1. INT input
+  int_gpio_.ConfigIn(GPIO_PULL_UP);  // 1. INT input
 
   // General reset
 
@@ -299,7 +299,7 @@ void Gt92xxDevice::LeaveUpdateMode() {
   int_gpio_.ConfigOut(0);                           // 2.8. INT output low
   zx::nanosleep(zx::deadline_after(zx::msec(50)));  // 2.9. Sleep 50ms
 
-  int_gpio_.ConfigIn(0);  // 2.10. INT input
+  int_gpio_.ConfigIn(GPIO_PULL_UP);  // 2.10. INT input
 
   // Device requires 50ms delay between setting INT to input and sending config (per datasheet)
   zx::nanosleep(zx::deadline_after(zx::msec(50)));
