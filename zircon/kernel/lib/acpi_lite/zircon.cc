@@ -11,6 +11,12 @@
 
 #include <vm/physmap.h>
 
+namespace {
+// AcpiParser requires a ZirconPhysmemReader instance that outlives
+// it. We share a single global instance for all AcpiParser instances.
+acpi_lite::ZirconPhysmemReader g_physmem_reader;
+}  // anonymous namespace
+
 namespace acpi_lite {
 
 zx::status<const void*> ZirconPhysmemReader::PhysToPtr(uintptr_t phys, size_t length) {
@@ -38,11 +44,7 @@ zx::status<const void*> ZirconPhysmemReader::PhysToPtr(uintptr_t phys, size_t le
 
 // Create a new AcpiParser, starting at the given Root System Description Pointer (RSDP).
 zx::status<AcpiParser> AcpiParserInit(zx_paddr_t rsdp_pa) {
-  // AcpiParser requires a ZirconPhysmemReader instance that outlives
-  // it. We share a single static instance for all AcpiParser instances.
-  static ZirconPhysmemReader reader;
-
-  return AcpiParser::Init(reader, rsdp_pa);
+  return AcpiParser::Init(g_physmem_reader, rsdp_pa);
 }
 
 }  // namespace acpi_lite
