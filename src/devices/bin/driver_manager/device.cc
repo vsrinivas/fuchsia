@@ -478,14 +478,13 @@ void Device::CreateUnbindRemoveTasks(UnbindTaskOpts opts) {
   }
 }
 
-zx_status_t Device::SendUnbind(UnbindCompletion completion) {
+zx_status_t Device::SendUnbind(UnbindCompletion& completion) {
   if (unbind_completion_) {
     // We already have a pending unbind
     return ZX_ERR_UNAVAILABLE;
   }
   VLOGF(1, "Unbinding device %p '%s'", this, name_.data());
   set_state(Device::State::kUnbinding);
-  unbind_completion_ = std::move(completion);
   auto result = device_controller()->Unbind([dev = fbl::RefPtr(this)](auto* response) {
     LOGF(INFO, "Unbound device %p '%s': %s", dev.get(), dev->name().data(),
          zx_status_get_string(response->result.is_err() ? response->result.err() : ZX_OK));
@@ -494,17 +493,19 @@ zx_status_t Device::SendUnbind(UnbindCompletion completion) {
   if (!result.ok()) {
     return result.status();
   }
+  // Only take ownership if sending succeeded, as otherwise the caller
+  // will want to handle calling the completion.
+  unbind_completion_ = std::move(completion);
   return ZX_OK;
 }
 
-zx_status_t Device::SendCompleteRemove(RemoveCompletion completion) {
+zx_status_t Device::SendCompleteRemove(RemoveCompletion& completion) {
   if (remove_completion_) {
     // We already have a pending remove.
     return ZX_ERR_UNAVAILABLE;
   }
   VLOGF(1, "Completing removal of device %p '%s'", this, name_.data());
   set_state(Device::State::kUnbinding);
-  remove_completion_ = std::move(completion);
   auto result = device_controller()->CompleteRemoval([dev = fbl::RefPtr(this)](auto* response) {
     LOGF(INFO, "Removed device %p '%s': %s", dev.get(), dev->name().data(),
          zx_status_get_string(response->result.is_err() ? response->result.err() : ZX_OK));
@@ -513,6 +514,9 @@ zx_status_t Device::SendCompleteRemove(RemoveCompletion completion) {
   if (!result.ok()) {
     return result.status();
   }
+  // Only take ownership if sending succeeded, as otherwise the caller
+  // will want to handle calling the completion.
+  remove_completion_ = std::move(completion);
   return ZX_OK;
 }
 

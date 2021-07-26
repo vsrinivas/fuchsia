@@ -148,7 +148,7 @@ void UnbindTask::Run() {
   // as composite device disassociation may occur.
   ScheduleUnbindChildren();
 
-  auto completion = [this](zx_status_t status) {
+  Device::UnbindCompletion completion = [this](zx_status_t status) {
     // If this unbind task failed, force remove all devices from the driver_host.
     bool failed_unbind = status != ZX_OK && status != ZX_ERR_UNAVAILABLE;
     if (failed_unbind && device_->state() != Device::State::kDead) {
@@ -169,7 +169,7 @@ void UnbindTask::Run() {
   bool send_unbind = (device_->host() != nullptr) && do_unbind_;
   zx_status_t status = ZX_OK;
   if (send_unbind) {
-    status = device_->SendUnbind(std::move(completion));
+    status = device_->SendUnbind(completion);
     if (status == ZX_OK) {
       // Sent the unbind request, the driver_host will call our completion when ready.
       return;
@@ -200,7 +200,16 @@ fbl::RefPtr<RemoveTask> RemoveTask::Create(fbl::RefPtr<Device> device, Completio
 
 void RemoveTask::Run() {
   LOGF(INFO, "Running remove task for device %p '%s'", device_.get(), device_->name().data());
-  auto completion = [this](zx_status_t status) {
+  Device::RemoveCompletion completion = [this](zx_status_t status) {
+    // If this task fails, the coordinator will forcibly remove the device
+    // and drop the last reference to this task. We need to keep an extra
+    // reference to ensure it stays alive until |Complete|.
+    //
+    // This is not an issue with UnbindTasks, as they will always add at least
+    // one dependent (the corresponding RemoveTask), which adds an additional
+    // reference not dropped until the end of the task's |Complete|.
+    fbl::RefPtr<Task> keep_alive(this);
+
     // If this remove task failed, force remove all devices from the driver_host.
     bool failed_remove = status != ZX_OK && status != ZX_ERR_UNAVAILABLE;
     if (failed_remove && device_->state() != Device::State::kDead) {
@@ -216,7 +225,7 @@ void RemoveTask::Run() {
 
   zx_status_t status = ZX_OK;
   if (device_->host() != nullptr) {
-    status = device_->SendCompleteRemove(std::move(completion));
+    status = device_->SendCompleteRemove(completion);
     if (status == ZX_OK) {
       // Sent the remove request, the driver_host will call our completion when ready.
       return;

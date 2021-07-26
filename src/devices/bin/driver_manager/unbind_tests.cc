@@ -566,3 +566,57 @@ TEST_F(UnbindTestCase, ForcedRemovalBeforeRemoveTask) {
   ASSERT_NULL(child_device->device->GetActiveUnbind());
   ASSERT_NULL(child_device->device->GetActiveRemove());
 }
+
+TEST_F(UnbindTestCase, SendUnbindFails) {
+  size_t parent_index;
+  ASSERT_NO_FATAL_FAILURES(
+      AddDevice(platform_bus()->device, "parent", 0 /* protocol id */, "", &parent_index));
+
+  auto* parent_device = device(parent_index);
+
+  size_t child_index;
+  ASSERT_NO_FATAL_FAILURES(
+      AddDevice(parent_device->device, "child", 0 /* protocol id */, "", &child_index));
+
+  auto* child_device = device(child_index);
+
+  // Make sending unbind requests to the child device fail.
+  // On receiving an unbind request, the coordinator should fail the unbind task
+  // and forcibly remove the device.
+  child_device->device->device_controller()->AsyncTeardown();
+  coordinator_loop()->RunUntilIdle();
+
+  ASSERT_NO_FATAL_FAILURES(coordinator().ScheduleRemove(parent_device->device));
+  coordinator_loop()->RunUntilIdle();
+
+  // Check that both devices are dead and have no pending unbind or remove tasks.
+  ASSERT_EQ(Device::State::kDead, parent_device->device->state());
+  ASSERT_NULL(parent_device->device->GetActiveUnbind());
+  ASSERT_NULL(parent_device->device->GetActiveRemove());
+
+  ASSERT_EQ(Device::State::kDead, child_device->device->state());
+  ASSERT_NULL(child_device->device->GetActiveUnbind());
+  ASSERT_NULL(parent_device->device->GetActiveRemove());
+}
+
+TEST_F(UnbindTestCase, SendRemoveFails) {
+  size_t device_index;
+  ASSERT_NO_FATAL_FAILURES(
+      AddDevice(platform_bus()->device, "device", 0 /* protocol id */, "", &device_index));
+
+  auto* test_device = device(device_index);
+
+  // Make sending unbind requests to the device fail.
+  // On receiving a remove request, the coordinator should fail the remove task
+  // and forcibly remove the device.
+  test_device->device->device_controller()->AsyncTeardown();
+  coordinator_loop()->RunUntilIdle();
+
+  ASSERT_NO_FATAL_FAILURES(coordinator().ScheduleRemove(test_device->device));
+  coordinator_loop()->RunUntilIdle();
+
+  // Check the device is dead and has no pending unbind or remove tasks.
+  ASSERT_EQ(Device::State::kDead, test_device->device->state());
+  ASSERT_NULL(test_device->device->GetActiveUnbind());
+  ASSERT_NULL(test_device->device->GetActiveRemove());
+}

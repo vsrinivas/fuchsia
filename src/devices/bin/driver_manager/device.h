@@ -329,10 +329,12 @@ class Device
   using RemoveCompletion = fit::callback<void(zx_status_t)>;
   // Issue an Unbind request to this device, which will run the unbind hook.
   // When the response comes in, the given completion will be invoked.
-  zx_status_t SendUnbind(UnbindCompletion completion);
+  // If successful, returns ZX_OK and takes ownership of |completion|.
+  zx_status_t SendUnbind(UnbindCompletion& completion);
   // Issue a CompleteRemove request to this device.
   // When the response comes in, the given completion will be invoked.
-  zx_status_t SendCompleteRemove(RemoveCompletion completion);
+  // If successful, returns ZX_OK and takes ownership of |completion|.
+  zx_status_t SendCompleteRemove(RemoveCompletion& completion);
 
   // Break the relationship between this device object and its parent
   void DetachFromParent();
