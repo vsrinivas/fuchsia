@@ -41,7 +41,7 @@ use {
     services::{DaemonServiceProvider, ServiceError, ServiceRegister},
     std::cell::Cell,
     std::net::SocketAddr,
-    std::rc::{Rc, Weak},
+    std::rc::Rc,
     std::sync::Arc,
     std::time::{Duration, Instant},
 };
@@ -70,58 +70,38 @@ pub struct DaemonEventHandler {
     // to shared state, as it could be the handler's parent state that is
     // holding the event queue itself (as is the case with the target collection
     // here).
-    target_collection: Weak<TargetCollection>,
+    target_collection: Rc<TargetCollection>,
     config_reader: Rc<dyn ConfigReader>,
 }
 
 impl DaemonEventHandler {
-    fn new(target_collection: Weak<TargetCollection>) -> Self {
+    fn new(target_collection: Rc<TargetCollection>) -> Self {
         Self { target_collection, config_reader: Rc::new(DefaultConfigReader::default()) }
     }
 
-    fn handle_mdns<'a>(
-        &self,
-        t: TargetInfo,
-        tc: &'a TargetCollection,
-        cr: Weak<dyn ConfigReader>,
-    ) -> impl Future<Output = ()> + 'a {
+    async fn handle_mdns(&self, t: TargetInfo) {
         log::trace!(
             "Found new target via mdns: {}",
             t.nodename.clone().unwrap_or("<unknown>".to_string())
         );
-        let target = tc.merge_insert(Target::from_target_info(t.clone()));
-        async move {
-            let nodename = target.nodename();
+        let new_target = Target::from_target_info(t.clone());
+        new_target.update_connection_state(|_| ConnectionState::Mdns(Instant::now()));
 
-            let t_clone = target.clone();
-            let autoconnect_fut = async move {
-                if let Some(cr) = cr.upgrade() {
-                    if let Some(s) = cr.get("target.default").await.ok().flatten() {
-                        if nodename.as_ref().map(|x| x == &s).unwrap_or(false) {
-                            log::trace!(
-                                "Doing autoconnect for default target: {}",
-                                nodename.as_ref().map(|x| x.as_str()).unwrap_or("<unknown>")
-                            );
-                            t_clone.run_host_pipe();
-                        }
-                    }
-                }
-            };
+        let target = self.target_collection.merge_insert(new_target);
+        let nodename = target.nodename();
 
-            let _ = autoconnect_fut.await;
-
-            // Updates state last so that if tasks are waiting on this state, everything is
-            // already running and there aren't any races.
-            target.update_connection_state(|s| match s {
-                ConnectionState::Disconnected | ConnectionState::Mdns(_) => {
-                    ConnectionState::Mdns(Instant::now())
-                }
-                _ => s,
-            });
+        if let Some(s) = self.config_reader.get("target.default").await.ok().flatten() {
+            if nodename.as_ref().map(|x| x == &s).unwrap_or(false) {
+                log::trace!(
+                    "Doing autoconnect for default target: {}",
+                    nodename.as_ref().map(|x| x.as_str()).unwrap_or("<unknown>")
+                );
+                target.run_host_pipe();
+            }
         }
     }
 
-    async fn handle_overnet_peer(&self, node_id: u64, tc: &TargetCollection) {
+    async fn handle_overnet_peer(&self, node_id: u64) {
         let rcs = match RcsConnection::new(&mut NodeId { id: node_id }) {
             Ok(rcs) => rcs,
             Err(e) => {
@@ -139,19 +119,19 @@ impl DaemonEventHandler {
         };
 
         log::trace!("Target from Overnet {} is {}", node_id, target.nodename_str());
-        let target = tc.merge_insert(target);
+        let target = self.target_collection.merge_insert(target);
         target.run_logger();
     }
 
-    fn handle_fastboot(&self, t: TargetInfo, tc: &TargetCollection, over_network: bool) {
+    fn handle_fastboot(&self, t: TargetInfo, over_network: bool) {
         log::trace!(
             "Found new target via fastboot: {}",
             t.nodename.clone().unwrap_or("<unknown>".to_string())
         );
         let target = if over_network {
-            tc.merge_insert(Target::from_fastboot_target_info(t.into()))
+            self.target_collection.merge_insert(Target::from_fastboot_target_info(t.into()))
         } else {
-            tc.merge_insert(Target::from_target_info(t.into()))
+            self.target_collection.merge_insert(Target::from_target_info(t.into()))
         };
         target.update_connection_state(|s| match s {
             ConnectionState::Disconnected | ConnectionState::Fastboot(_) => {
@@ -161,12 +141,12 @@ impl DaemonEventHandler {
         });
     }
 
-    async fn handle_zedboot(&self, t: TargetInfo, tc: &TargetCollection) {
+    async fn handle_zedboot(&self, t: TargetInfo) {
         log::trace!(
             "Found new target via zedboot: {}",
             t.nodename.clone().unwrap_or("<unknown>".to_string())
         );
-        let target = tc.merge_insert(Target::from_netsvc_target_info(t.into()));
+        let target = self.target_collection.merge_insert(Target::from_netsvc_target_info(t.into()));
         target.update_connection_state(|s| match s {
             ConnectionState::Disconnected | ConnectionState::Zedboot(_) => {
                 ConnectionState::Zedboot(Instant::now())
@@ -237,34 +217,26 @@ impl DaemonServiceProvider for Daemon {
 #[async_trait(?Send)]
 impl EventHandler<DaemonEvent> for DaemonEventHandler {
     async fn on_event(&self, event: DaemonEvent) -> Result<bool> {
-        let tc = match self.target_collection.upgrade() {
-            Some(t) => t,
-            None => {
-                log::debug!("dropped target collection");
-                return Ok(true); // We're done, as the parent has been dropped.
-            }
-        };
-
         log::info!("! DaemonEvent::{:?}", event);
 
         match event {
             DaemonEvent::WireTraffic(traffic) => match traffic {
                 WireTrafficType::Mdns(t) => {
                     if t.is_fastboot {
-                        self.handle_fastboot(t, &tc, true /*over network*/);
+                        self.handle_fastboot(t, true /*over network*/);
                     } else {
-                        self.handle_mdns(t, &tc, Rc::downgrade(&self.config_reader)).await;
+                        self.handle_mdns(t).await;
                     }
                 }
                 WireTrafficType::Fastboot(t) => {
-                    self.handle_fastboot(t, &tc, false /*over network*/);
+                    self.handle_fastboot(t, false /*over network*/);
                 }
                 WireTrafficType::Zedboot(t) => {
-                    self.handle_zedboot(t, &tc).await;
+                    self.handle_zedboot(t).await;
                 }
             },
             DaemonEvent::OvernetPeer(node_id) => {
-                self.handle_overnet_peer(node_id, &tc).await;
+                self.handle_overnet_peer(node_id).await;
             }
             _ => (),
         }
@@ -325,7 +297,7 @@ impl Daemon {
 
     /// Start all discovery tasks
     async fn start_discovery(&mut self) -> Result<()> {
-        let daemon_event_handler = DaemonEventHandler::new(Rc::downgrade(&self.target_collection));
+        let daemon_event_handler = DaemonEventHandler::new(self.target_collection.clone());
         self.event_queue.add_handler(daemon_event_handler).await;
 
         // TODO: these tasks could and probably should be managed by the daemon
@@ -1178,8 +1150,10 @@ mod test {
         let tc = Rc::new(TargetCollection::new());
         tc.merge_insert(t.clone());
 
+        let before_update = Instant::now();
+
         let handler = DaemonEventHandler {
-            target_collection: Rc::downgrade(&tc),
+            target_collection: tc.clone(),
             config_reader: Rc::new(FakeConfigReader {
                 query_expected: "target.default".to_owned(),
                 value: "florp".to_owned(),
@@ -1193,23 +1167,16 @@ mod test {
             .await
             .unwrap());
 
-        // This is a bit of a hack to check the target state without digging
-        // into internals. This also avoids running into a race waiting for an
-        // event to be propagated.
-        t.update_connection_state(|s| {
-            if let ConnectionState::Mdns(ref _t) = s {
-                s
-            } else {
-                panic!("state not updated by event, should be set to MDNS state.");
-            }
-        });
-
         assert!(!t.is_host_pipe_running());
+        assert_matches!(t.get_connection_state(), ConnectionState::Mdns(t) if t > before_update);
+
+        let before_second_update = Instant::now();
+        assert!(before_update < before_second_update);
 
         // This handler will now return the value of the default target as
         // intended.
         let handler = DaemonEventHandler {
-            target_collection: Rc::downgrade(&tc),
+            target_collection: tc.clone(),
             config_reader: Rc::new(FakeConfigReader {
                 query_expected: "target.default".to_owned(),
                 value: "this-town-aint-big-enough-for-the-three-of-us".to_owned(),
@@ -1223,11 +1190,8 @@ mod test {
             .await
             .unwrap());
 
-        while !t.is_host_pipe_running() {
-            Timer::new(Duration::from_millis(10)).await
-        }
-
-        // TODO(awdavies): RCS, Fastboot, etc. events.
+        assert!(t.is_host_pipe_running());
+        assert_matches!(t.get_connection_state(), ConnectionState::Mdns(t) if t > before_second_update);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

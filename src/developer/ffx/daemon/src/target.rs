@@ -618,33 +618,13 @@ impl Target {
         self.state.borrow().clone()
     }
 
-    /// Allows a client to atomically update the connection state based on what
-    /// is returned from the predicate.
+    /// Propose a target connection state transition from the state passed to the provided FnOnce to
+    /// the state returned by the FnOnce. Some proposals are adjusted before application, as below.
+    /// If the target state reaches RCS, an RcsActivated event is produced. If the proposal results
+    /// in a state change, a ConnectionStateChanged event is produced.
     ///
-    /// For example, if the client wants to update the connection state to RCS
-    /// connected, but only if the target is already disconnected, it would
-    /// look like this:
-    ///
-    /// ```rust
-    ///   let rcs_connection = ...;
-    ///   target.update_connection_state(move |s| {
-    ///     match s {
-    ///       ConnectionState::Disconnected => ConnectionState::Rcs(rcs_connection),
-    ///       _ => s
-    ///     }
-    ///   }).await;
-    /// ```
-    ///
-    /// The client must always return the state, as this is swapped with the
-    /// current target state in-place.
-    ///
-    /// Some state edges are adjusted or controlled by this method, for
-    /// example, a state change of a Manually added target to
-    /// Disconnected will always result in entering the Manual state
-    /// instead.
-    ///
-    /// If the state changes, this will push a `ConnectionStateChanged` event
-    /// to the event queue.
+    ///   RCS  ->   MDNS          =>  RCS (does not drop RCS state)
+    ///   *    ->   Disconnected  =>  Manual if the device is manual
     pub fn update_connection_state<F>(&self, func: F)
     where
         F: FnOnce(ConnectionState) -> ConnectionState + Sized,
@@ -652,10 +632,20 @@ impl Target {
         let former_state = self.get_connection_state();
         let mut new_state = (func)(former_state.clone());
 
-        if new_state == ConnectionState::Disconnected {
-            if self.is_manual() {
-                new_state = ConnectionState::Manual
+        match &new_state {
+            ConnectionState::Disconnected => {
+                if self.is_manual() {
+                    new_state = ConnectionState::Manual;
+                }
             }
+            ConnectionState::Mdns(_) => {
+                // Do not transition connection state for RCS -> MDNS.
+                if former_state.is_rcs() {
+                    self.update_last_response(Utc::now());
+                    return;
+                }
+            }
+            _ => {}
         }
 
         if former_state == new_state {
@@ -1283,7 +1273,14 @@ impl TargetCollection {
             to_update.addrs_extend(addrs.drain(..).collect::<Vec<TargetAddrEntry>>());
             to_update.update_boot_timestamp(new_target.boot_timestamp_nanos());
 
-            to_update.update_connection_state(|_| new_target.get_connection_state());
+            to_update.update_connection_state(|current_state| {
+                let new_state = new_target.get_connection_state();
+                match (&current_state, &new_state) {
+                    // Don't downgrade a targets connection state / drop RCS
+                    (ConnectionState::Rcs(_), ConnectionState::Mdns(_)) => current_state,
+                    _ => new_state,
+                }
+            });
 
             to_update.events.push(TargetEvent::Rediscovered).unwrap_or_else(|err| {
                 log::warn!("unable to enqueue rediscovered event: {:#}", err)
@@ -1959,6 +1956,19 @@ mod test {
             ConnectionState::Mdns(instant_clone)
         });
         assert_eq!(ConnectionState::Mdns(instant), t.get_connection_state());
+    }
+
+    #[test]
+    fn test_target_connection_state_will_not_drop_rcs_on_mdns_events() {
+        let t = Target::new_named("hello-kitty");
+        let rcs_state = ConnectionState::Rcs(RcsConnection::new(&mut NodeId { id: 1234 }).unwrap());
+        t.set_state(rcs_state.clone());
+
+        // Attempt to set the state to ConnectionState::Mdns, this transition should fail, as in
+        // this transition RCS should be retained.
+        t.update_connection_state(|_| ConnectionState::Mdns(Instant::now()));
+
+        assert_eq!(t.get_connection_state(), rcs_state);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
