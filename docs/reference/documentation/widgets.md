@@ -95,8 +95,10 @@ This widget does not use parameters, make sure to specify the
 These widgets are specifically created to work with the glossary terms defined
 in [//docs/glossary/_glossary.yaml][glossary-yaml].
 
-For simplicity, it is recommended that you use one of the markdown versions of
-the widgets.
+
+In order to enable over-hover definitions, you must use one of the syntaxes listed below. The
+markdown version is recommended. Using any other syntax will result in simple links without
+over-hover definitions.
 
 For more information on adding a term to the glossary, see
 [Adding glossary entries][glossary-add].
