@@ -247,6 +247,14 @@ Areas for future work:
 
 *   Kernel support for source code coverage from ZBI tests.
 
+## Further reading
+
+*   [Code Coverage Best Practices][gtb-coverage-best]{:.external}
+*   [Measuring Coverage at Google][gtb-coverage-measure]{:.external}
+*   [Understand Your Coverage Data][gtb-coverage-understand]{:.external}
+*   [Measuring Coverage at Google][gtb-coverage-measure]{:.external}
+*   [How Much Testing is Enough?][gtb-testing-enough]{:.external}
+
 [assert-no-deps]: https://gn.googlesource.com/gn/+/HEAD/docs/reference.md#var_assert_no_deps
 [cfv2]: /docs/concepts/components/v2/
 [core_bundle]: https://cs.opensource.google/fuchsia/fuchsia/+/main:bundles/buildbot/BUILD.gn;l=58;drc=9e1506dfbe789637c709fcc4ad43896f5044f947
@@ -260,6 +268,10 @@ Areas for future work:
 [fx-smoke-test]: https://fuchsia.dev/reference/tools/fx/cmd/smoke-test
 [fxr541525]: https://fuchsia-review.googlesource.com/c/fuchsia/+/541525
 [gerrit]: https://fuchsia-review.googlesource.com/
+[gtb-coverage-best]: https://testing.googleblog.com/2020/08/code-coverage-best-practices.html
+[gtb-coverage-measure]: https://testing.googleblog.com/2014/07/measuring-coverage-at-google.html
+[gtb-coverage-understand]: https://testing.googleblog.com/2008/03/tott-understanding-your-coverage-data.html
+[gtb-testing-enough]: https://testing.googleblog.com/2021/06/how-much-testing-is-enough.html
 [llvm-cov]: https://llvm.org/docs/CommandGuide/llvm-cov.html
 [llvm-coverage-mapping-format]: https://llvm.org/docs/CoverageMappingFormat.html
 [llvm-coverage]: https://clang.llvm.org/docs/SourceBasedCodeCoverage.html
