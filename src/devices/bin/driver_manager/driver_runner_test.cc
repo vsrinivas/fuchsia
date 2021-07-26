@@ -25,6 +25,7 @@
 namespace fdata = fuchsia_data;
 namespace fdf = fuchsia::driver::framework;
 namespace fio = fuchsia::io;
+namespace fprocess = fuchsia_process;
 namespace frunner = fuchsia_component_runner;
 namespace fsys = fuchsia::sys2;
 
@@ -63,6 +64,10 @@ class TestRealm : public fsys::testing::Realm_TestBase {
     create_child_handler_ = std::move(create_child_handler);
   }
 
+  fidl::VectorView<fprocess::wire::HandleInfo> GetHandles() {
+    return fidl::VectorView<fprocess::wire::HandleInfo>::FromExternal(handles_);
+  }
+
  private:
   void BindChild(fsys::ChildRef child, fidl::InterfaceRequest<fio::Directory> exposed_dir,
                  BindChildCallback callback) override {
@@ -72,6 +77,13 @@ class TestRealm : public fsys::testing::Realm_TestBase {
 
   void CreateChild(fsys::CollectionRef collection, fsys::ChildDecl decl, fsys::CreateChildArgs args,
                    CreateChildCallback callback) override {
+    handles_.clear();
+    for (auto& info : *args.mutable_numbered_handles()) {
+      handles_.push_back(fprocess::wire::HandleInfo{
+          .handle = std::move(info.handle),
+          .id = info.id,
+      });
+    }
     create_child_handler_(std::move(collection), std::move(decl));
     callback(fsys::Realm_CreateChild_Result(fpromise::ok()));
   }
@@ -82,6 +94,7 @@ class TestRealm : public fsys::testing::Realm_TestBase {
 
   BindChildHandler bind_child_handler_;
   CreateChildHandler create_child_handler_;
+  std::vector<fprocess::wire::HandleInfo> handles_;
 };
 
 class TestDirectory : public fio::testing::Directory_TestBase {
@@ -267,7 +280,8 @@ class DriverRunnerTest : public gtest::TestLoopFixture {
     start_info.set_resolved_url(allocator, allocator, driver.url)
         .set_program(allocator, std::move(program))
         .set_ns(allocator)
-        .set_outgoing_dir(allocator, std::move(outgoing_endpoints->server));
+        .set_outgoing_dir(allocator, std::move(outgoing_endpoints->server))
+        .set_numbered_handles(allocator, realm().GetHandles());
 
     auto controller_endpoints = fidl::CreateEndpoints<frunner::ComponentController>();
     EXPECT_EQ(ZX_OK, controller_endpoints.status_value());

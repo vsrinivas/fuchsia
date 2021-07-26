@@ -4,6 +4,7 @@
 
 #include "src/devices/bin/driver_manager/driver_runner.h"
 
+#include <fuchsia/process/llcpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl/llcpp/server.h>
@@ -23,12 +24,15 @@
 namespace fdata = fuchsia_data;
 namespace fdf = fuchsia_driver_framework;
 namespace fio = fuchsia_io;
+namespace fprocess = fuchsia_process;
 namespace frunner = fuchsia_component_runner;
 namespace fsys = fuchsia_sys2;
 
 using InspectStack = std::stack<std::pair<inspect::Node*, const Node*>>;
 
 namespace {
+
+constexpr uint32_t kTokenId = PA_HND(PA_USER0, 0);
 
 void InspectNode(inspect::Inspector& inspector, InspectStack& stack) {
   std::forward_list<inspect::Node> roots;
@@ -536,18 +540,56 @@ zx::status<> DriverRunner::StartRootDriver(std::string_view url) {
 }
 
 zx::status<> DriverRunner::StartDriver(Node& node, std::string_view url) {
-  auto create_result = CreateComponent(node.TopoName(), std::string(url), DriverCollection(url));
-  if (create_result.is_error()) {
-    return create_result.take_error();
+  zx::event token;
+  zx_status_t status = zx::event::create(0, &token);
+  if (status != ZX_OK) {
+    return zx::error(status);
   }
-  node.set_driver_dir(std::move(*create_result));
-  driver_args_.emplace(url, node);
+  zx_info_handle_basic_t info{};
+  status = token.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
+  if (status != ZX_OK) {
+    return zx::error(status);
+  }
+  auto create =
+      CreateComponent(node.TopoName(), std::string(url), DriverCollection(url), std::move(token));
+  if (create.is_error()) {
+    return create.take_error();
+  }
+  node.set_driver_dir(std::move(*create));
+  driver_args_.emplace(info.koid, node);
   return zx::ok();
 }
 
 void DriverRunner::Start(StartRequestView request, StartCompleter::Sync& completer) {
-  std::string url(request->start_info.resolved_url().get());
-  auto it = driver_args_.find(url);
+  auto url = request->start_info.resolved_url().get();
+
+  // When we start a driver, we associate an unforgeable token (the KOID of a
+  // zx::event) with the start request, through the use of the numbered_handles
+  // field. We do this so:
+  //  1. We can securely validate the origin of the request
+  //  2. We avoid collisions that can occur when relying on the package URL
+  //  3. We avoid relying on the resolved URL matching the package URL
+  if (!request->start_info.has_numbered_handles()) {
+    LOGF(ERROR, "Failed to start driver '%.*s', invalid request for driver",
+         static_cast<int>(url.size()), url.data());
+    completer.Close(ZX_ERR_INVALID_ARGS);
+    return;
+  }
+  auto& handles = request->start_info.numbered_handles();
+  if (handles.count() != 1 || !handles[0].handle || handles[0].id != kTokenId) {
+    LOGF(ERROR, "Failed to start driver '%.*s', invalid request for driver",
+         static_cast<int>(url.size()), url.data());
+    completer.Close(ZX_ERR_INVALID_ARGS);
+    return;
+  }
+  zx_info_handle_basic_t info{};
+  zx_status_t status =
+      handles[0].handle.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
+  if (status != ZX_OK) {
+    completer.Close(ZX_ERR_INVALID_ARGS);
+    return;
+  }
+  auto it = driver_args_.find(info.koid);
   if (it == driver_args_.end()) {
     LOGF(ERROR, "Failed to start driver '%.*s', unknown request for driver",
          static_cast<int>(url.size()), url.data());
@@ -745,22 +787,24 @@ zx::status<std::unique_ptr<DriverHostComponent>> DriverRunner::StartDriverHost()
 
 zx::status<fidl::ClientEnd<fio::Directory>> DriverRunner::CreateComponent(std::string name,
                                                                           std::string url,
-                                                                          std::string collection) {
+                                                                          std::string collection,
+                                                                          zx::handle token) {
   auto endpoints = fidl::CreateEndpoints<fio::Directory>();
   if (endpoints.is_error()) {
     return endpoints.take_error();
   }
   auto bind_callback = [name, url](fidl::WireResponse<fsys::Realm::BindChild>* response) {
     if (response->result.is_err()) {
-      LOGF(ERROR, "Failed to bind component '%s': '%s' %u", name.data(), url.data(),
+      LOGF(ERROR, "Failed to bind component '%s' (%s): %u", name.data(), url.data(),
            response->result.err());
     }
   };
-  auto create_callback = [this, name, collection, server_end = std::move(endpoints->server),
+  auto create_callback = [this, name, url, collection, server_end = std::move(endpoints->server),
                           bind_callback = std::move(bind_callback)](
                              fidl::WireResponse<fsys::Realm::CreateChild>* response) mutable {
     if (response->result.is_err()) {
-      LOGF(ERROR, "Failed to create component '%s': %u", name.data(), response->result.err());
+      LOGF(ERROR, "Failed to create component '%s' (%s): %u", name.data(), url.data(),
+           response->result.err());
       return;
     }
     auto bind = realm_->BindChild(
@@ -768,7 +812,7 @@ zx::status<fidl::ClientEnd<fio::Directory>> DriverRunner::CreateComponent(std::s
                              .collection = fidl::StringView::FromExternal(collection)},
         std::move(server_end), std::move(bind_callback));
     if (!bind.ok()) {
-      LOGF(ERROR, "Failed to bind component '%s': %s", name.data(),
+      LOGF(ERROR, "Failed to bind component '%s' (%s): %s", name.data(), url.data(),
            bind.FormatDescription().c_str());
     }
   };
@@ -778,6 +822,15 @@ zx::status<fidl::ClientEnd<fio::Directory>> DriverRunner::CreateComponent(std::s
       .set_url(allocator, fidl::StringView::FromExternal(url))
       .set_startup(allocator, fsys::wire::StartupMode::kLazy);
   fsys::wire::CreateChildArgs child_args(allocator);
+  fprocess::wire::HandleInfo handle_info;
+  if (token) {
+    handle_info = {
+        .handle = std::move(token),
+        .id = kTokenId,
+    };
+    child_args.set_numbered_handles(
+        allocator, fidl::VectorView<fprocess::wire::HandleInfo>::FromExternal(&handle_info, 1));
+  }
   auto create = realm_->CreateChild(
       fsys::wire::CollectionRef{.name = fidl::StringView::FromExternal(collection)},
       std::move(child_decl), std::move(child_args), std::move(create_callback));
