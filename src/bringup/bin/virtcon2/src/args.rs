@@ -13,6 +13,10 @@ use {
 pub const MIN_FONT_SIZE: f32 = 15.0;
 pub const MAX_FONT_SIZE: f32 = 150.0;
 
+const DEFAULT_KEYMAP: &'static str = "US_QWERTY";
+const DEFAULT_FONT_SIZE: f32 = 15.0;
+const DEFAULT_SCROLLBACK_ROWS: u32 = 1024;
+
 #[derive(Debug, Default)]
 pub struct VirtualConsoleArgs {
     pub disable: bool,
@@ -60,11 +64,11 @@ impl VirtualConsoleArgs {
             "virtcon.scrollback_rows",
         ];
         let mut color_scheme = ColorScheme::default();
-        let mut keymap = "US_QWERTY".to_string();
+        let mut keymap = DEFAULT_KEYMAP.to_string();
         let mut display_rotation = DisplayRotation::default();
-        let mut font_size = 15.0;
+        let mut font_size = DEFAULT_FONT_SIZE;
         let mut dpi = vec![];
-        let mut scrollback_rows = 1024;
+        let mut scrollback_rows = DEFAULT_SCROLLBACK_ROWS;
         if let Ok(values) = boot_args.get_strings(&mut string_keys.into_iter()).await {
             if let Some(value) = values[0].as_ref() {
                 color_scheme = ColorScheme::from_str(value)?;
