@@ -43,5 +43,16 @@ zx_status_t platform_halt_secondary_cpus(zx_time_t deadline) {
   // "Unplug" online secondary CPUs before halting them.
   cpu_mask_t primary = cpu_num_to_mask(BOOT_CPU_ID);
   cpu_mask_t mask = mp_get_online_mask() & ~primary;
-  return mp_unplug_cpu_mask(mask, deadline);
+  zx_status_t status = mp_unplug_cpu_mask(mask, deadline);
+  if (status == ZX_OK) {
+    return ZX_OK;
+  }
+
+  // mp_unplug_cpu_mask failed.  Perhaps another thread was trying to shutdown the secondary CPUs.
+  // If the primary CPU is the only one left, then we've done our job.
+  if (status == ZX_ERR_BAD_STATE && mp_get_online_mask() == primary) {
+    return ZX_OK;
+  }
+
+  return status;
 }
