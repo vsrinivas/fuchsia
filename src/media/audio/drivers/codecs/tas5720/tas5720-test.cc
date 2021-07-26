@@ -42,7 +42,7 @@ class Tas5720Test : public zxtest::Test {
         .ExpectReadStop({0xff})
         .ExpectWriteStop({0x01, 0xfe})  // Enter shutdown (part of stop).
         .ExpectWriteStop({0x02, 0x45})  // Digital control defaults. Left justified.
-        .ExpectWriteStop({0x03, 0x10})  // Digital control defaults. Slot 0, muted.
+        .ExpectWriteStop({0x03, 0x90})  // Digital control defaults. Slot 0, muted.
         .ExpectWriteStop({0x06, 0x5d})  // Analog defaults.
         .ExpectWriteStop({0x10, 0xff})  // clippers disabled.
         .ExpectWriteStop({0x11, 0xfc})  // clippers disabled.
@@ -52,8 +52,8 @@ class Tas5720Test : public zxtest::Test {
         .ExpectWriteStop({0x06, 0x51})  // Default gain.
         .ExpectWriteStop({0x04, 0xa1})  // Default gain.
         .ExpectWrite({0x03})
-        .ExpectReadStop({0x00})
-        .ExpectWriteStop({0x03, 0x10});  // Muted.
+        .ExpectReadStop({0x80})
+        .ExpectWriteStop({0x03, 0x90});  // Muted.
   }
   mock_i2c::MockI2c mock_i2c_;
 };
@@ -143,7 +143,7 @@ TEST_F(Tas5720Test, CodecReset) {
       .ExpectReadStop({0xff})
       .ExpectWriteStop({0x01, 0xfe})  // Enter shutdown (part of stop).
       .ExpectWriteStop({0x02, 0x45})  // Digital control defaults. TODO set I2S.
-      .ExpectWriteStop({0x03, 0x10})  // Digital control defaults. Slot 0, muted.
+      .ExpectWriteStop({0x03, 0x90})  // Digital control defaults. Slot 0, muted.
       .ExpectWriteStop({0x06, 0x5d})  // Analog defaults.
       .ExpectWriteStop({0x10, 0xff})  // clippers disabled.
       .ExpectWriteStop({0x11, 0xfc})  // clippers disabled.
@@ -153,8 +153,8 @@ TEST_F(Tas5720Test, CodecReset) {
       .ExpectWriteStop({0x06, 0x51})  // Default gain.
       .ExpectWriteStop({0x04, 0xa1})  // Default gain.
       .ExpectWrite({0x03})
-      .ExpectReadStop({0x00})
-      .ExpectWriteStop({0x03, 0x10});  // Muted.
+      .ExpectReadStop({0x80})
+      .ExpectWriteStop({0x03, 0x90});  // Muted.
 
   mock_i2c_.ExpectWrite({0x01}).ExpectReadStop({0xff}).ExpectWriteStop({0x01, 0xfe});  // Shutdown.
 
@@ -372,7 +372,7 @@ TEST(Tas5720Test, InstanceCount) {
       .ExpectReadStop({0xff})
       .ExpectWriteStop({0x01, 0xfe})  // Enter shutdown (part of stop).
       .ExpectWriteStop({0x02, 0x45})  // Digital control defaults. TODO set I2S.
-      .ExpectWriteStop({0x03, 0x10})  // Digital control defaults. Slot 2, muted.
+      .ExpectWriteStop({0x03, 0x90})  // Digital control defaults. Slot 2, muted.
       .ExpectWriteStop({0x06, 0x5d})  // Analog defaults.
       .ExpectWriteStop({0x10, 0xff})  // clippers disabled.
       .ExpectWriteStop({0x11, 0xfc})  // clippers disabled.
@@ -382,8 +382,8 @@ TEST(Tas5720Test, InstanceCount) {
       .ExpectWriteStop({0x06, 0x51})  // Default gain.
       .ExpectWriteStop({0x04, 0xa1})  // Default gain.
       .ExpectWrite({0x03})
-      .ExpectReadStop({0x00})
-      .ExpectWriteStop({0x03, 0x10});  // Muted.
+      .ExpectReadStop({0x80})
+      .ExpectWriteStop({0x03, 0x90});  // Muted.
 
   auto codec = SimpleCodecServer::Create<Tas5720Codec>(mock_i2c.GetProto());
   ASSERT_NOT_NULL(codec);
