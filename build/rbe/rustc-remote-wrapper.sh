@@ -468,7 +468,11 @@ else
 ======== Remote Rust build action FAILED ========
 This could either be a failure with the original command, or something
 wrong with the remote version of the command.
+
 Try the command locally first, without RBE, and make sure that works.
+Add 'disable_rbe = true' to the problematic Rust target in GN,
+or 'fx set' without '--rbe' to disable globally.
+
 Once it passes locally, re-enable RBE.
 If the remote version still fails, file a bug, and CC the Fuchsia Build Team
 with the following info below:
@@ -489,6 +493,30 @@ EOF
     reproxy_errors="$tmpdir"/reproxy.ERROR
     echo "The last lines of $reproxy_errors might explain a remote failure:"
     if test -r "$reproxy_errors" ; then tail "$reproxy_errors" ; fi
+
+    # Attempt to diagnose common symptoms.
+    if grep -q "Fail to dial" "$reproxy_errors"
+    then
+      cat <<EOF
+"Fail to dial" could indicate that reproxy is not running.
+Did you run with 'fx build'?
+If not, you may need to wrap your build command with:
+
+  $project_root/build/rbe/fuchsia-reproxy-wrap.sh -- YOUR-COMMAND
+
+'Proxy started successfully.' indicates that reproxy is running.
+
+EOF
+    fi
+
+    if grep -q "Error connecting to remote execution client: rpc error: code = PermissionDenied" "$reproxy_errors"
+    then
+      cat <<EOF
+You might not have permssion to access the RBE instance.
+Contact fuchsia-build-team@google.com for support.
+
+EOF
+    fi
   }
   exit "$status"
 fi
