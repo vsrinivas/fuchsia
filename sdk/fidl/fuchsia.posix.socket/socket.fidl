@@ -50,8 +50,11 @@ protocol BaseSocket {
         addr fuchsia.net.SocketAddress;
     }) error fuchsia.posix.Errno;
     /// Shuts down part of the socket.
-    // TODO(https://fxbug.dev/78129): This method is required during the ABI transition. Once
-    // BaseSocket provides the Shutdown method and that every client uses it, remove Shutdown2.
+    Shutdown(struct {
+        mode ShutdownMode;
+    }) -> (struct {}) error fuchsia.posix.Errno;
+    // TODO(https://fxbug.dev/78129): Remove after ABI transition.
+    @deprecated("Use Shutdown instead")
     Shutdown2(struct {
         mode ShutdownMode;
     }) -> (struct {}) error fuchsia.posix.Errno;
@@ -384,13 +387,6 @@ type SendMsgFlags = strict bits : uint16 {
 /// All methods on this type are nonblocking; their exact behaviors match their Linux counterparts.
 protocol DatagramSocket {
     compose BaseSocket;
-
-    // TODO(https://fxbug.dev/78129): After ABI transition, move this method into BaseSocket.
-    /// Shuts down part of the socket.
-    @deprecated("Use Shutdown2 instead")
-    Shutdown(struct {
-        mode ShutdownMode;
-    }) -> (struct {}) error fuchsia.posix.Errno;
 
     /// Receives a message from the socket.
     RecvMsg(struct {

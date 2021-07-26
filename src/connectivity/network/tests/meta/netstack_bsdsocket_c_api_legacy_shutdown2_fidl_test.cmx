@@ -13,7 +13,7 @@
     "program": {
         "binary": "test/netstack_bsdsocket_c_api_test",
         "env_vars": [
-            "LEGACY_STREAM_SOCKET_SHUTDOWN=1"
+            "LEGACY_SHUTDOWN2_FIDL=1"
         ]
     },
     "sandbox": {

@@ -281,7 +281,6 @@ func TestEndpoint_Close(t *testing.T) {
 		name string
 	}{
 		{ch: eps.closing, name: "closing"},
-		{ch: eps.mu.loopPollDone, name: "loopPollDone"},
 		{ch: eps.mu.loopReadDone, name: "loopReadDone"},
 		{ch: eps.mu.loopWriteDone, name: "loopWriteDone"},
 	}
@@ -485,7 +484,6 @@ func TestTCPEndpointMapAcceptAfterReset(t *testing.T) {
 		name string
 	}{
 		{ch: eps.closing, name: "closing"},
-		{ch: eps.mu.loopPollDone, name: "loopPollDone"},
 		{ch: eps.mu.loopReadDone, name: "loopReadDone"},
 		{ch: eps.mu.loopWriteDone, name: "loopWriteDone"},
 	}

@@ -27,6 +27,21 @@ namespace fnet = fuchsia_net;
 
 namespace {
 
+// TODO(https://fxbug.dev/78129): Remove after ABI transition.
+bool use_legacy_shutdown2_fidl() {
+  static std::once_flag once;
+  static bool legacy;
+
+  std::call_once(once, [&]() {
+    legacy = []() {
+      constexpr char kLegacyShutdown2Fidl[] = "LEGACY_SHUTDOWN2_FIDL";
+      const char* const legacy_env = getenv(kLegacyShutdown2Fidl);
+      return legacy_env && strcmp(legacy_env, "1") == 0;
+    }();
+  });
+  return legacy;
+}
+
 // A helper structure to keep a socket address and the variants allocations in stack.
 struct SocketAddress {
   fnet::wire::SocketAddress address;
@@ -1133,8 +1148,23 @@ struct BaseSocket {
       default:
         return ZX_ERR_INVALID_ARGS;
     }
-    // TODO(https://fxbug.dev/78129): Use Shutdown instead of Shutdown2 after ABI transition.
-    auto response = client().Shutdown2(mode);
+
+    if (use_legacy_shutdown2_fidl()) {
+      auto response = client().Shutdown2(mode);
+      zx_status_t status = response.status();
+      if (status != ZX_OK) {
+        return status;
+      }
+      auto const& result = response.Unwrap()->result;
+      if (result.is_err()) {
+        *out_code = static_cast<int16_t>(result.err());
+        return ZX_OK;
+      }
+      *out_code = 0;
+      return ZX_OK;
+    }
+
+    auto response = client().Shutdown(mode);
     zx_status_t status = response.status();
     if (status != ZX_OK) {
       return status;
@@ -1342,21 +1372,6 @@ Errno zxsio_posix_ioctl(int req, va_list va, F fallback) {
     default:
       return fallback(req, va);
   }
-}
-
-// TODO(https://fxbug.dev/78129): Remove after ABI transition.
-bool use_legacy_stream_socket_shutdown() {
-  static std::once_flag once;
-  static bool legacy;
-
-  std::call_once(once, [&]() {
-    legacy = []() {
-      constexpr char kLegacyStreamSocketShutdown[] = "LEGACY_STREAM_SOCKET_SHUTDOWN";
-      const char* const legacy_env = getenv(kLegacyStreamSocketShutdown);
-      return legacy_env && strcmp(legacy_env, "1") == 0;
-    }();
-  });
-  return legacy;
 }
 
 }  // namespace
@@ -1899,19 +1914,6 @@ struct stream_socket : public zxio {
   }
 
   zx_status_t shutdown(int how, int16_t* out_code) override {
-    if (use_legacy_stream_socket_shutdown()) {
-      *out_code = 0;
-      zx_signals_t observed;
-      zx_status_t status = zxio_stream_socket().pipe.socket.wait_one(
-          ZX_SOCKET_PEER_CLOSED, zx::time::infinite_past(), &observed);
-      if (status == ZX_OK || status == ZX_ERR_TIMED_OUT) {
-        if (observed & ZX_SOCKET_PEER_CLOSED) {
-          return ZX_ERR_NOT_CONNECTED;
-        }
-        return zxio::shutdown(how, out_code);
-      }
-      return status;
-    }
     return BaseSocket(zxio_stream_socket().client).shutdown(how, out_code);
   }
 

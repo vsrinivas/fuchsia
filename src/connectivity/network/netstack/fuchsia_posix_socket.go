@@ -962,7 +962,7 @@ type endpointWithSocket struct {
 
 		// loop{Read,Write,Poll}Done are signaled iff loop{Read,Write,Poll} have
 		// exited, respectively.
-		loopPollDone, loopReadDone, loopWriteDone <-chan struct{}
+		loopReadDone, loopWriteDone <-chan struct{}
 	}
 
 	// closing is signaled iff close has been called.
@@ -1042,36 +1042,6 @@ func (eps *endpointWithSocket) HUp() {
 	})
 }
 
-// TODO(https://fxbug.dev/78129): Remove loopPoll after ABI transition.
-func (eps *endpointWithSocket) loopPoll(ch chan<- struct{}) {
-	defer close(ch)
-
-	sigs := zx.Signals(zx.SignalSocketWriteDisabled | localSignalClosing)
-
-	for {
-		obs, err := zxwait.WaitContext(context.Background(), zx.Handle(eps.local), sigs)
-		if err != nil {
-			panic(err)
-		}
-
-		if obs&sigs&zx.SignalSocketWriteDisabled != 0 {
-			sigs ^= zx.SignalSocketWriteDisabled
-			switch err := eps.ep.Shutdown(tcpip.ShutdownRead); err.(type) {
-			case nil, *tcpip.ErrNotConnected:
-				// Shutdown can return ErrNotConnected if the endpoint was connected
-				// but no longer is.
-			default:
-				panic(err)
-			}
-		}
-
-		if obs&localSignalClosing != 0 {
-			// We're shutting down.
-			return
-		}
-	}
-}
-
 type endpointWithEvent struct {
 	endpoint
 
@@ -1119,8 +1089,16 @@ func (epe *endpointWithEvent) shutdown(how socket.ShutdownMode) (posix.Errno, er
 	return 0, nil
 }
 
-// TODO(https://fxbug.dev/78129): After ABI transition, create a copy of this
-// Shutdown2 method but name it Shutdown.
+func (epe *endpointWithEvent) Shutdown(_ fidl.Context, how socket.ShutdownMode) (socket.BaseSocketShutdownResult, error) {
+	if errno, err := epe.shutdown(how); err != nil {
+		return socket.BaseSocketShutdownResult{}, err
+	} else if errno != 0 {
+		return socket.BaseSocketShutdownResultWithErr(errno), nil
+	}
+	return socket.BaseSocketShutdownResultWithResponse(socket.BaseSocketShutdownResponse{}), nil
+}
+
+// TODO(https://fxbug.dev/78129): Remove after ABI transition.
 func (epe *endpointWithEvent) Shutdown2(_ fidl.Context, how socket.ShutdownMode) (socket.BaseSocketShutdown2Result, error) {
 	if errno, err := epe.shutdown(how); err != nil {
 		return socket.BaseSocketShutdown2Result{}, err
@@ -1128,16 +1106,6 @@ func (epe *endpointWithEvent) Shutdown2(_ fidl.Context, how socket.ShutdownMode)
 		return socket.BaseSocketShutdown2ResultWithErr(errno), nil
 	}
 	return socket.BaseSocketShutdown2ResultWithResponse(socket.BaseSocketShutdown2Response{}), nil
-}
-
-// TODO(https://fxbug.dev/78129): After ABI transition, delete this function.
-func (epe *endpointWithEvent) Shutdown(_ fidl.Context, how socket.ShutdownMode) (socket.DatagramSocketShutdownResult, error) {
-	if errno, err := epe.shutdown(how); err != nil {
-		return socket.DatagramSocketShutdownResult{}, err
-	} else if errno != 0 {
-		return socket.DatagramSocketShutdownResultWithErr(errno), nil
-	}
-	return socket.DatagramSocketShutdownResultWithResponse(socket.DatagramSocketShutdownResponse{}), nil
 }
 
 const localSignalClosing = zx.SignalUser1
@@ -1167,7 +1135,6 @@ func (eps *endpointWithSocket) close() {
 		// this routine will wait for them to return.
 		eps.mu.Lock()
 		channels := []<-chan struct{}{
-			eps.mu.loopPollDone,
 			eps.mu.loopReadDone,
 			eps.mu.loopWriteDone,
 		}
@@ -1211,9 +1178,6 @@ func (eps *endpointWithSocket) Listen(_ fidl.Context, backlog int16) (socket.Str
 	// incorrectly handling events on connected sockets.
 	eps.onListen.Do(func() {
 		eps.pending.supported = waiter.EventIn
-		// Start polling for any shutdown events from the client as shutdown is
-		// allowed on a listening stream socket.
-		eps.startPollLoop()
 		var entry waiter.Entry
 		cb := func() {
 			err := eps.pending.update()
@@ -1245,18 +1209,6 @@ func (eps *endpointWithSocket) Listen(_ fidl.Context, backlog int16) (socket.Str
 	_ = syslog.DebugTf("listen", "%p: backlog=%d", eps, backlog)
 
 	return socket.StreamSocketListenResultWithResponse(socket.StreamSocketListenResponse{}), nil
-}
-
-func (eps *endpointWithSocket) startPollLoop() {
-	eps.mu.Lock()
-	defer eps.mu.Unlock()
-	select {
-	case <-eps.closing:
-	default:
-		ch := make(chan struct{})
-		eps.mu.loopPollDone = ch
-		go eps.loopPoll(ch)
-	}
 }
 
 func (eps *endpointWithSocket) startReadWriteLoops() {
@@ -1306,7 +1258,6 @@ func (eps *endpointWithSocket) Connect(ctx fidl.Context, address fidlnet.SocketA
 				once.Do(func() {
 					go eps.wq.EventUnregister(&entry)
 					if m&waiter.EventErr == 0 {
-						eps.startPollLoop()
 						eps.startReadWriteLoops()
 					} else {
 						eps.HUp()
@@ -1599,8 +1550,7 @@ func (eps *endpointWithSocket) loopRead(ch chan<- struct{}) {
 				case zx.ErrBadState:
 					// Writing has been disabled for this socket endpoint.
 					// TODO(https://fxbug.dev/78892): we might not need to shutdown the
-					// endpoint here, since it is done by the loopPoll goroutine and by
-					// the Shutdown fidl method.
+					// endpoint here, since it is done by the Shutdown fidl method.
 					switch err := eps.ep.Shutdown(tcpip.ShutdownRead); err.(type) {
 					case nil:
 					case *tcpip.ErrNotConnected:
@@ -1624,9 +1574,7 @@ func (eps *endpointWithSocket) loopRead(ch chan<- struct{}) {
 	}
 }
 
-// TODO(https://fxbug.dev/78129): After ABI transition, create a copy of this
-// Shutdown2 method but name it Shutdown.
-func (eps *endpointWithSocket) Shutdown2(_ fidl.Context, how socket.ShutdownMode) (socket.BaseSocketShutdown2Result, error) {
+func (eps *endpointWithSocket) shutdown(how socket.ShutdownMode) (posix.Errno, error) {
 	var disposition, dispositionPeer uint32
 
 	if how&socket.ShutdownModeWrite != 0 {
@@ -1638,21 +1586,21 @@ func (eps *endpointWithSocket) Shutdown2(_ fidl.Context, how socket.ShutdownMode
 		how ^= socket.ShutdownModeRead
 	}
 	if how != 0 || (disposition == 0 && dispositionPeer == 0) {
-		return socket.BaseSocketShutdown2ResultWithErr(posix.ErrnoEinval), nil
+		return posix.ErrnoEinval, nil
 	}
 
 	if h := eps.local.Handle(); !h.IsValid() {
-		return socket.BaseSocketShutdown2ResultWithErr(tcpipErrorToCode(&tcpip.ErrNotConnected{})), nil
+		return tcpipErrorToCode(&tcpip.ErrNotConnected{}), nil
 	}
 
 	if err := eps.peer.SetDisposition(disposition, dispositionPeer); err != nil {
-		return socket.BaseSocketShutdown2Result{}, err
+		return 0, err
 	}
 
 	// Only handle a shutdown read on the endpoint here. Shutdown write is
 	// performed by the loopWrite goroutine: it ensures that it happens *after*
 	// all the buffered data in the zircon socket was read.
-	if how&socket.ShutdownModeRead != 0 {
+	if dispositionPeer&zx.SocketDispositionWriteDisabled != 0 {
 		switch err := eps.ep.Shutdown(tcpip.ShutdownRead); err.(type) {
 		case nil, *tcpip.ErrNotConnected:
 			// Shutdown can return ErrNotConnected if the endpoint was connected
@@ -1662,6 +1610,25 @@ func (eps *endpointWithSocket) Shutdown2(_ fidl.Context, how socket.ShutdownMode
 		}
 	}
 
+	return 0, nil
+}
+
+func (eps *endpointWithSocket) Shutdown(_ fidl.Context, how socket.ShutdownMode) (socket.BaseSocketShutdownResult, error) {
+	if errno, err := eps.shutdown(how); err != nil {
+		return socket.BaseSocketShutdownResult{}, err
+	} else if errno != 0 {
+		return socket.BaseSocketShutdownResultWithErr(errno), nil
+	}
+	return socket.BaseSocketShutdownResultWithResponse(socket.BaseSocketShutdownResponse{}), nil
+}
+
+// TODO(https://fxbug.dev/78129): Remove after ABI transition.
+func (eps *endpointWithSocket) Shutdown2(_ fidl.Context, how socket.ShutdownMode) (socket.BaseSocketShutdown2Result, error) {
+	if errno, err := eps.shutdown(how); err != nil {
+		return socket.BaseSocketShutdown2Result{}, err
+	} else if errno != 0 {
+		return socket.BaseSocketShutdown2ResultWithErr(errno), nil
+	}
 	return socket.BaseSocketShutdown2ResultWithResponse(socket.BaseSocketShutdown2Response{}), nil
 }
 

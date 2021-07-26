@@ -113,14 +113,18 @@ static constexpr zxio_ops_t zxio_pipe_ops = []() {
   };
 
   ops.shutdown = [](zxio_t* io, zxio_shutdown_options_t options) {
-    // TODO(https://fxbug.dev/78129): Update to zx::socket::set_disposition() once stream sockets
-    // in fdio stop using this zxio shutdown operation.
-    static_assert(ZX_SOCKET_SHUTDOWN_READ == ZXIO_SHUTDOWN_OPTIONS_READ);
-    static_assert(ZX_SOCKET_SHUTDOWN_WRITE == ZXIO_SHUTDOWN_OPTIONS_WRITE);
-    if ((options & ZX_SOCKET_SHUTDOWN_MASK) != options) {
+    if ((options & ZXIO_SHUTDOWN_OPTIONS_MASK) != options) {
       return ZX_ERR_INVALID_ARGS;
     }
-    return zxio_get_pipe(io).socket.shutdown(options);
+    uint32_t disposition = 0;
+    if (options & ZXIO_SHUTDOWN_OPTIONS_WRITE) {
+      disposition = ZX_SOCKET_DISPOSITION_WRITE_DISABLED;
+    }
+    uint32_t disposition_peer = 0;
+    if (options & ZXIO_SHUTDOWN_OPTIONS_READ) {
+      disposition_peer = ZX_SOCKET_DISPOSITION_WRITE_DISABLED;
+    }
+    return zxio_get_pipe(io).socket.set_disposition(disposition, disposition_peer);
   };
 
   return ops;
