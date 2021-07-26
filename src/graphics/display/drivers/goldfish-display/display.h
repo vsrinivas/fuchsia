@@ -121,6 +121,8 @@ class Display : public DisplayType,
     zx::time expected_next_flush = zx::time::infinite_past();
   };
 
+  // TODO(fxbug.dev/81211): Remove these pipe IO functions and use
+  // //src/devices/lib/goldfish/pipe_io instead.
   zx_status_t WriteLocked(uint32_t cmd_size) TA_REQ(lock_);
   zx_status_t ReadResultLocked(uint32_t* result, uint32_t count) TA_REQ(lock_);
   zx_status_t ExecuteCommandLocked(uint32_t cmd_size, uint32_t* result) TA_REQ(lock_);

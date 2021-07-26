@@ -107,6 +107,8 @@ class Control : public ControlType,
   // server-side channel is bound to |heap|.
   zx_status_t RegisterAndBindHeap(fuchsia_sysmem2::wire::HeapType heap_type, Heap* heap);
 
+  // TODO(fxbug.dev/81211): Remove these pipe IO functions and use
+  // //src/devices/lib/goldfish/pipe_io instead.
   int32_t WriteLocked(uint32_t cmd_size, int32_t* consumed_size) TA_REQ(lock_);
   void WriteLocked(uint32_t cmd_size) TA_REQ(lock_);
   zx_status_t ReadResultLocked(void* result, size_t size) TA_REQ(lock_);

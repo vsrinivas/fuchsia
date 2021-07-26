@@ -1,0 +1,56 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/bind/bind.gni")
+import("//build/components.gni")
+import("//build/config/fuchsia/rules.gni")
+import("//build/test.gni")
+
+source_set("pipe_io") {
+  sources = [
+    "pipe_auto_reader.cc",
+    "pipe_auto_reader.h",
+    "pipe_io.cc",
+    "pipe_io.h",
+  ]
+
+  public_deps = [
+    "//sdk/banjo/fuchsia.hardware.goldfish.pipe:fuchsia.hardware.goldfish.pipe_banjo_cpp",
+    "//sdk/fidl/fuchsia.hardware.goldfish:fuchsia.hardware.goldfish_llcpp",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/async:async-cpp",
+  ]
+}
+
+test("pipe_io_unittest") {
+  output_name = "pipe_io_unittest"
+  sources = [ "tests/pipe_io_test.cc" ]
+  deps = [
+    ":pipe_io",
+    "//src/devices/testing/fake_ddk",
+    "//src/devices/testing/goldfish/fake_pipe",
+    "//src/lib/testing/loop_fixture",
+    "//third_party/googletest:gtest",
+    "//third_party/googletest:gtest_main",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/public/lib/zx",
+  ]
+
+  configs += [ "//build/config:all_source" ]
+}
+
+fuchsia_unittest_package("pipe_io_test_package") {
+  package_name = "goldfish_pipe_io_test"
+  deps = [ ":pipe_io_unittest" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":pipe_io_test_package" ]
+}
