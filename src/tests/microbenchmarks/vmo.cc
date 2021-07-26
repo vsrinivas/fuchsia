@@ -166,7 +166,7 @@ bool VmoCloneTest(perftest::RepeatState* state, uint32_t copy_size, uint32_t map
     }
 
     zx::vmo clone;
-    ASSERT_OK(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, copy_size, &clone));
+    ASSERT_OK(vmo.create_child(ZX_VMO_CHILD_SNAPSHOT, 0, copy_size, &clone));
     state->NextStep();
 
     clone.reset();
@@ -194,7 +194,7 @@ bool VmoMapCloneTest(perftest::RepeatState* state, uint32_t copy_size) {
 
   while (state->KeepRunning()) {
     zx::vmo clone;
-    ASSERT_OK(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, copy_size, &clone));
+    ASSERT_OK(vmo.create_child(ZX_VMO_CHILD_SNAPSHOT, 0, copy_size, &clone));
     state->NextStep();
 
     zx_vaddr_t addr = 0;
@@ -237,7 +237,7 @@ bool VmoCloneReadOrWriteTest(perftest::RepeatState* state, uint32_t copy_size, b
 
   while (state->KeepRunning()) {
     zx::vmo clone;
-    ASSERT_OK(vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, copy_size, &clone));
+    ASSERT_OK(vmo.create_child(ZX_VMO_CHILD_SNAPSHOT, 0, copy_size, &clone));
     state->NextStep();
 
     const zx::vmo& target = do_target_clone ? clone : vmo;
