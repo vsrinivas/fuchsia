@@ -532,6 +532,8 @@ go_library("go.uber.org/atomic") {
     "nocmp.go",
     "string.go",
     "string_ext.go",
+    "time.go",
+    "time_ext.go",
     "uint32.go",
     "uint64.go",
     "uintptr.go",
