@@ -134,7 +134,7 @@ mod tests {
             _id: u32,
             title: String,
         ) -> Result<Terminal<Self::Listener>, Error> {
-            Ok(Terminal::new(TestListener::default(), title, ColorScheme::default(), None))
+            Ok(Terminal::new(TestListener::default(), title, ColorScheme::default(), 1024, None))
         }
         fn request_update(&self, _id: u32) {}
     }

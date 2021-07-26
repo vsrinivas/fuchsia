@@ -28,6 +28,7 @@ struct VirtualConsoleClient {
     app_context: AppContext,
     view_key: ViewKey,
     color_scheme: ColorScheme,
+    scrollback_rows: u32,
 }
 
 impl VirtualConsoleClient {
@@ -39,7 +40,8 @@ impl VirtualConsoleClient {
         pty_fd: Option<File>,
     ) -> Result<Terminal<EventProxy>, Error> {
         let event_proxy = EventProxy::new(&self.app_context, self.view_key, id);
-        let terminal = Terminal::new(event_proxy, title, self.color_scheme, pty_fd);
+        let terminal =
+            Terminal::new(event_proxy, title, self.color_scheme, self.scrollback_rows, pty_fd);
         let terminal_clone = terminal.try_clone()?;
         self.app_context.queue_message(
             self.view_key,
@@ -119,7 +121,8 @@ impl VirtualConsoleAppAssistant {
             panic!("Trying to start debuglog without a view.");
         }
         let color_scheme = self.args.color_scheme;
-        let client = VirtualConsoleClient { app_context, view_key, color_scheme };
+        let scrollback_rows = self.args.scrollback_rows;
+        let client = VirtualConsoleClient { app_context, view_key, color_scheme, scrollback_rows };
         Log::start(read_only_debuglog, &client, DEBUGLOG_ID)
     }
 
@@ -174,7 +177,8 @@ impl AppAssistant for VirtualConsoleAppAssistant {
             panic!("Trying to service session manager connection without a view.");
         }
         let color_scheme = self.args.color_scheme;
-        let client = VirtualConsoleClient { app_context, view_key, color_scheme };
+        let scrollback_rows = self.args.scrollback_rows;
+        let client = VirtualConsoleClient { app_context, view_key, color_scheme, scrollback_rows };
         self.session_manager.bind(&client, channel);
         Ok(())
     }

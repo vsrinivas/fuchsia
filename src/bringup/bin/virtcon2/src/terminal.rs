@@ -47,6 +47,7 @@ impl<T> Terminal<T> {
         event_listener: T,
         title: String,
         color_scheme: ColorScheme,
+        scrollback_rows: u32,
         pty_fd: Option<File>,
     ) -> Self {
         // Initial size info used before we know what the real size is.
@@ -60,7 +61,8 @@ impl<T> Terminal<T> {
             padding_y: 0.0,
             dpr: 1.0,
         };
-        let config: TerminalConfig = color_scheme.into();
+        let mut config: TerminalConfig = color_scheme.into();
+        config.scrolling.set_history(scrollback_rows);
         let term =
             Rc::new(RefCell::new(Term::new(&config, &size_info, Clipboard::new(), event_listener)));
 
@@ -69,7 +71,7 @@ impl<T> Terminal<T> {
 
     #[cfg(test)]
     fn new_for_test(event_listener: T, pty_fd: File) -> Self {
-        Self::new(event_listener, String::new(), ColorScheme::default(), Some(pty_fd))
+        Self::new(event_listener, String::new(), ColorScheme::default(), 1024, Some(pty_fd))
     }
 
     pub fn clone_term(&self) -> Rc<RefCell<Term<T>>> {

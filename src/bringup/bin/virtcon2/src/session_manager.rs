@@ -178,7 +178,13 @@ mod tests {
             _make_active: bool,
             pty_fd: File,
         ) -> Result<Terminal<Self::Listener>, Error> {
-            Ok(Terminal::new(TestListener::default(), title, ColorScheme::default(), Some(pty_fd)))
+            Ok(Terminal::new(
+                TestListener::default(),
+                title,
+                ColorScheme::default(),
+                1024,
+                Some(pty_fd),
+            ))
         }
         fn request_update(&self, _id: u32) {}
     }

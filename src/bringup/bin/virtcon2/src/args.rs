@@ -25,6 +25,7 @@ pub struct VirtualConsoleArgs {
     pub display_rotation: DisplayRotation,
     pub font_size: f32,
     pub dpi: Vec<u32>,
+    pub scrollback_rows: u32,
 }
 
 impl VirtualConsoleArgs {
@@ -56,12 +57,14 @@ impl VirtualConsoleArgs {
             "virtcon.display_rotation",
             "virtcon.font_size",
             "virtcon.dpi",
+            "virtcon.scrollback_rows",
         ];
         let mut color_scheme = ColorScheme::default();
         let mut keymap = "US_QWERTY".to_string();
         let mut display_rotation = DisplayRotation::default();
         let mut font_size = 15.0;
         let mut dpi = vec![];
+        let mut scrollback_rows = 1024;
         if let Ok(values) = boot_args.get_strings(&mut string_keys.into_iter()).await {
             if let Some(value) = values[0].as_ref() {
                 color_scheme = ColorScheme::from_str(value)?;
@@ -85,6 +88,9 @@ impl VirtualConsoleArgs {
                     value.split(",").map(|x| x.parse::<u32>()).collect();
                 dpi = result?;
             }
+            if let Some(value) = values[5].as_ref() {
+                scrollback_rows = value.parse::<u32>()?;
+            }
         }
 
         Ok(VirtualConsoleArgs {
@@ -98,6 +104,7 @@ impl VirtualConsoleArgs {
             display_rotation,
             font_size,
             dpi,
+            scrollback_rows,
         })
     }
 }
@@ -351,6 +358,19 @@ mod tests {
         let proxy = serve_bootargs(vars)?;
         let args = VirtualConsoleArgs::new_with_proxy(proxy).await?;
         assert_eq!(args.dpi, vec![160, 320, 480, 640]);
+
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn check_scrollback_rows() -> Result<(), Error> {
+        let vars: HashMap<String, String> = [("virtcon.scrollback_rows", "10000")]
+            .iter()
+            .map(|(a, b)| (a.to_string(), b.to_string()))
+            .collect();
+        let proxy = serve_bootargs(vars)?;
+        let args = VirtualConsoleArgs::new_with_proxy(proxy).await?;
+        assert_eq!(args.scrollback_rows, 10_000);
 
         Ok(())
     }
