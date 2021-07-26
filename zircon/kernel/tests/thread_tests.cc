@@ -75,8 +75,9 @@ static int mutex_thread(void* arg) {
   return 0;
 }
 
+static Mutex imutex;
+
 static int mutex_test() {
-  static Mutex imutex;
   printf("preinitialized mutex:\n");
   hexdump(&imutex, sizeof(imutex));
 

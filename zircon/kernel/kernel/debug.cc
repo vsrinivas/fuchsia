@@ -192,94 +192,92 @@ void RecurringCallback::Toggle() {
   }
 }
 
+RecurringCallback g_threadload_callback([]() {
+  static struct cpu_stats old_stats[SMP_MAX_CPUS];
+  static zx_duration_t last_idle_time[SMP_MAX_CPUS];
+
+  printf(
+      "cpu    load"
+      " sched (cs ylds pmpts irq_pmpts)"
+      "  sysc"
+      " ints (hw  tmr tmr_cb)"
+      " ipi (rs  gen)\n");
+  for (cpu_num_t i = 0; i < percpu::processor_count(); i++) {
+    Guard<MonitoredSpinLock, NoIrqSave> thread_lock_guard{ThreadLock::Get(), SOURCE_TAG};
+
+    // dont display time for inactive cpus
+    if (!mp_is_cpu_active(i)) {
+      continue;
+    }
+    const auto& percpu = percpu::Get(i);
+
+    zx_duration_t idle_time = percpu.stats.idle_time;
+
+    // if the cpu is currently idle, add the time since it went idle up until now to the idle
+    // counter
+    bool is_idle = !!mp_is_cpu_idle(i);
+    if (is_idle) {
+      zx_duration_t recent_idle_time = zx_time_sub_time(
+          current_time(), percpu.idle_thread.scheduler_state().last_started_running());
+      idle_time = zx_duration_add_duration(idle_time, recent_idle_time);
+    }
+
+    zx_duration_t delta_time = zx_duration_sub_duration(idle_time, last_idle_time[i]);
+    zx_duration_t busy_time;
+    if (ZX_SEC(1) > delta_time) {
+      busy_time = zx_duration_sub_duration(ZX_SEC(1), delta_time);
+    } else {
+      busy_time = 0;
+    }
+    zx_duration_t busypercent = zx_duration_mul_int64(busy_time, 10000) / ZX_SEC(1);
+
+    printf(
+        "%3u"
+        " %3u.%02u%%"
+        " %9lu %4lu %5lu %9lu"
+        " %5lu"
+        " %8lu %4lu %6lu"
+        " %8lu %4lu"
+        "\n",
+        i, static_cast<uint>(busypercent / 100), static_cast<uint>(busypercent % 100),
+        percpu.stats.context_switches - old_stats[i].context_switches,
+        percpu.stats.yields - old_stats[i].yields, percpu.stats.preempts - old_stats[i].preempts,
+        percpu.stats.irq_preempts - old_stats[i].irq_preempts,
+        percpu.stats.syscalls - old_stats[i].syscalls,
+        percpu.stats.interrupts - old_stats[i].interrupts,
+        percpu.stats.timer_ints - old_stats[i].timer_ints,
+        percpu.stats.timers - old_stats[i].timers,
+        percpu.stats.reschedule_ipis - old_stats[i].reschedule_ipis,
+        percpu.stats.generic_ipis - old_stats[i].generic_ipis);
+
+    old_stats[i] = percpu.stats;
+    last_idle_time[i] = idle_time;
+  }
+});
+
+RecurringCallback g_threadq_callback([]() {
+  printf("----------------------------------------------------\n");
+  for (cpu_num_t i = 0; i < percpu::processor_count(); i++) {
+    Guard<MonitoredSpinLock, NoIrqSave> thread_lock_guard{ThreadLock::Get(), SOURCE_TAG};
+
+    if (!mp_is_cpu_active(i)) {
+      continue;
+    }
+
+    printf("thread queue cpu %2u:\n", i);
+    percpu::Get(i).scheduler.Dump();
+  }
+  printf("\n");
+});
+
 }  // anonymous namespace
 
 static int cmd_threadload(int argc, const cmd_args* argv, uint32_t flags) {
-  static RecurringCallback cb([]() {
-    static struct cpu_stats old_stats[SMP_MAX_CPUS];
-    static zx_duration_t last_idle_time[SMP_MAX_CPUS];
-
-    printf(
-        "cpu    load"
-        " sched (cs ylds pmpts irq_pmpts)"
-        "  sysc"
-        " ints (hw  tmr tmr_cb)"
-        " ipi (rs  gen)\n");
-    for (cpu_num_t i = 0; i < percpu::processor_count(); i++) {
-      Guard<MonitoredSpinLock, NoIrqSave> thread_lock_guard{ThreadLock::Get(), SOURCE_TAG};
-
-      // dont display time for inactive cpus
-      if (!mp_is_cpu_active(i)) {
-        continue;
-      }
-      const auto& percpu = percpu::Get(i);
-
-      zx_duration_t idle_time = percpu.stats.idle_time;
-
-      // if the cpu is currently idle, add the time since it went idle up until now to the idle
-      // counter
-      bool is_idle = !!mp_is_cpu_idle(i);
-      if (is_idle) {
-        zx_duration_t recent_idle_time = zx_time_sub_time(
-            current_time(), percpu.idle_thread.scheduler_state().last_started_running());
-        idle_time = zx_duration_add_duration(idle_time, recent_idle_time);
-      }
-
-      zx_duration_t delta_time = zx_duration_sub_duration(idle_time, last_idle_time[i]);
-      zx_duration_t busy_time;
-      if (ZX_SEC(1) > delta_time) {
-        busy_time = zx_duration_sub_duration(ZX_SEC(1), delta_time);
-      } else {
-        busy_time = 0;
-      }
-      zx_duration_t busypercent = zx_duration_mul_int64(busy_time, 10000) / ZX_SEC(1);
-
-      printf(
-          "%3u"
-          " %3u.%02u%%"
-          " %9lu %4lu %5lu %9lu"
-          " %5lu"
-          " %8lu %4lu %6lu"
-          " %8lu %4lu"
-          "\n",
-          i, static_cast<uint>(busypercent / 100), static_cast<uint>(busypercent % 100),
-          percpu.stats.context_switches - old_stats[i].context_switches,
-          percpu.stats.yields - old_stats[i].yields, percpu.stats.preempts - old_stats[i].preempts,
-          percpu.stats.irq_preempts - old_stats[i].irq_preempts,
-          percpu.stats.syscalls - old_stats[i].syscalls,
-          percpu.stats.interrupts - old_stats[i].interrupts,
-          percpu.stats.timer_ints - old_stats[i].timer_ints,
-          percpu.stats.timers - old_stats[i].timers,
-          percpu.stats.reschedule_ipis - old_stats[i].reschedule_ipis,
-          percpu.stats.generic_ipis - old_stats[i].generic_ipis);
-
-      old_stats[i] = percpu.stats;
-      last_idle_time[i] = idle_time;
-    }
-  });
-
-  cb.Toggle();
-
+  g_threadload_callback.Toggle();
   return 0;
 }
 
 static int cmd_threadq(int argc, const cmd_args* argv, uint32_t flags) {
-  static RecurringCallback callback([]() {
-    printf("----------------------------------------------------\n");
-    for (cpu_num_t i = 0; i < percpu::processor_count(); i++) {
-      Guard<MonitoredSpinLock, NoIrqSave> thread_lock_guard{ThreadLock::Get(), SOURCE_TAG};
-
-      if (!mp_is_cpu_active(i)) {
-        continue;
-      }
-
-      printf("thread queue cpu %2u:\n", i);
-      percpu::Get(i).scheduler.Dump();
-    }
-    printf("\n");
-  });
-
-  callback.Toggle();
-
+  g_threadq_callback.Toggle();
   return 0;
 }

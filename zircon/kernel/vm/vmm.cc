@@ -138,6 +138,8 @@ void vmm_set_active_aspace_locked(VmAspace* aspace) {
   vmm_set_active_aspace_internal<NullGuard>(aspace, &null_lock);
 }
 
+static fbl::RefPtr<VmAspace> test_aspace;
+
 static int cmd_vmm(int argc, const cmd_args* argv, uint32_t flags) {
   if (argc < 2) {
   notenoughargs:
@@ -157,7 +159,6 @@ static int cmd_vmm(int argc, const cmd_args* argv, uint32_t flags) {
     return ZX_ERR_INTERNAL;
   }
 
-  static fbl::RefPtr<VmAspace> test_aspace;
   if (!test_aspace) {
     test_aspace = fbl::RefPtr(VmAspace::kernel_aspace());
   }

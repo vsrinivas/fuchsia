@@ -220,6 +220,8 @@ LK_INIT_HOOK(
     },
     LK_INIT_LEVEL_USER - 1)
 
+static Timer dump_free_mem_timer;
+
 static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
   const bool is_panic = flags & CMD_FLAG_PANIC;
   auto usage = [cmd_name = argv[0].str, is_panic]() -> int {
@@ -279,17 +281,16 @@ static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
     return usage();
   } else if (!strcmp(argv[1].str, "free")) {
     static bool show_mem = false;
-    static Timer timer;
 
     if (!show_mem) {
       printf("pmm free: issue the same command to stop.\n");
       zx_time_t deadline = zx_time_add_duration(current_time(), ZX_SEC(1));
       const TimerSlack slack{ZX_MSEC(20), TIMER_SLACK_CENTER};
       const Deadline slackDeadline(deadline, slack);
-      timer.Set(slackDeadline, &pmm_dump_timer, nullptr);
+      dump_free_mem_timer.Set(slackDeadline, &pmm_dump_timer, nullptr);
       show_mem = true;
     } else {
-      timer.Cancel();
+      dump_free_mem_timer.Cancel();
       show_mem = false;
     }
   } else if (!strcmp(argv[1].str, "oom")) {
