@@ -677,7 +677,7 @@ zx_status_t Blob::CloneDataVmo(zx_rights_t rights, zx::vmo* out_vmo, size_t* out
   }
 
   zx::vmo clone;
-  status = paged_vmo().create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, blob_size_, &clone);
+  status = paged_vmo().create_child(ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE, 0, blob_size_, &clone);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to create child VMO: " << zx_status_get_string(status);
     return status;
