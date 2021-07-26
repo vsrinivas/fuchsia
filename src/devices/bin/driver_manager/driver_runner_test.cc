@@ -312,7 +312,7 @@ class DriverRunnerTest : public gtest::TestLoopFixture {
     }
     loop().RunUntilIdle();
 
-    StartDriverHost("driver_hosts", "driver_host-0");
+    StartDriverHost("driver-hosts", "driver-host-0");
     auto controller = StartDriver(driver_runner, {
                                                      .url = "fuchsia-boot:///#meta/root-driver.cm",
                                                      .binary = "driver/root-driver.so",
@@ -653,7 +653,7 @@ TEST_F(DriverRunnerTest, StartSecondDriver_NewDriverHost) {
     EXPECT_EQ("fuchsia.package.Protocol", capabilities[0].offers()[0]);
     EXPECT_TRUE(capabilities[0].exposed_dir().is_valid());
   });
-  StartDriverHost("driver_hosts", "driver_host-1");
+  StartDriverHost("driver-hosts", "driver-host-1");
   StartDriver(driver_runner, {
                                  .url = "fuchsia-boot:///#meta/second-driver.cm",
                                  .binary = "driver/second-driver.so",
@@ -869,7 +869,7 @@ TEST_F(DriverRunnerTest, StartSecondDriver_UnbindSecondNode) {
     EXPECT_EQ(ZX_OK, second_node.Bind(std::move(*start_args.mutable_node()), loop().dispatcher()));
   });
 
-  StartDriverHost("driver_hosts", "driver_host-1");
+  StartDriverHost("driver-hosts", "driver-host-1");
   auto second_driver =
       StartDriver(driver_runner, {
                                      .url = "fuchsia-boot:///#meta/second-driver.cm",
@@ -932,7 +932,7 @@ TEST_F(DriverRunnerTest, StartSecondDriver_CloseSecondDriver) {
     EXPECT_EQ(ZX_OK, second_node.Bind(std::move(*start_args.mutable_node()), loop().dispatcher()));
   });
 
-  StartDriverHost("driver_hosts", "driver_host-1");
+  StartDriverHost("driver-hosts", "driver-host-1");
   auto second_driver =
       StartDriver(driver_runner, {
                                      .url = "fuchsia-boot:///#meta/second-driver.cm",
@@ -1009,7 +1009,7 @@ TEST_F(DriverRunnerTest, StartDriverChain_UnbindSecondNode) {
       }
     });
 
-    StartDriverHost("driver_hosts", "driver_host-" + std::to_string(i));
+    StartDriverHost("driver-hosts", "driver-host-" + std::to_string(i));
     drivers.emplace_back(StartDriver(driver_runner, {
                                                         .url = "fuchsia-boot:///#meta/node-" +
                                                                std::to_string(i - 1) + "-driver.cm",
@@ -1066,7 +1066,7 @@ TEST_F(DriverRunnerTest, StartSecondDriver_UnbindRootNode) {
     BindDriver(std::move(request), std::move(second_node));
   });
 
-  StartDriverHost("driver_hosts", "driver_host-1");
+  StartDriverHost("driver-hosts", "driver-host-1");
   auto second_driver =
       StartDriver(driver_runner, {
                                      .url = "fuchsia-boot:///#meta/second-driver.cm",
@@ -1118,7 +1118,7 @@ TEST_F(DriverRunnerTest, StartSecondDriver_StopRootDriver) {
     BindDriver(std::move(request), std::move(node));
   });
 
-  StartDriverHost("driver_hosts", "driver_host-1");
+  StartDriverHost("driver-hosts", "driver-host-1");
   auto second_driver =
       StartDriver(driver_runner, {
                                      .url = "fuchsia-boot:///#meta/second-driver.cm",
@@ -1177,7 +1177,7 @@ TEST_F(DriverRunnerTest, StartSecondDriver_BlockOnSecondDriver) {
         second_node = std::move(driver.node());
       });
 
-  StartDriverHost("driver_hosts", "driver_host-1");
+  StartDriverHost("driver-hosts", "driver-host-1");
   auto second_driver =
       StartDriver(driver_runner, {
                                      .url = "fuchsia-boot:///#meta/second-driver.cm",

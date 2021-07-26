@@ -742,8 +742,8 @@ zx::status<DriverRunner::CompositeArgsIterator> DriverRunner::AddToCompositeArgs
 }
 
 zx::status<std::unique_ptr<DriverHostComponent>> DriverRunner::StartDriverHost() {
-  auto name = "driver_host-" + std::to_string(next_driver_host_id_++);
-  auto create = CreateComponent(name, "#meta/driver_host2.cm", "driver_hosts");
+  auto name = "driver-host-" + std::to_string(next_driver_host_id_++);
+  auto create = CreateComponent(name, "#meta/driver_host2.cm", "driver-hosts");
   if (create.is_error()) {
     return create.take_error();
   }

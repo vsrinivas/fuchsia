@@ -100,8 +100,8 @@
     ],
     collections: [
         {
-            name: "driver_hosts",
-            environment: "#driver_host-env",
+            name: "driver-hosts",
+            environment: "#driver-host-env",
             durability: "transient",
         },
         {
@@ -231,7 +231,7 @@
                 "fuchsia.tracing.provider.Registry",
             ],
             from: "parent",
-            to: "#driver_hosts",
+            to: "#driver-hosts",
         },
         {
             protocol: [
@@ -656,7 +656,7 @@
                 "#console-launcher",
                 "#decompressor",
                 "#device_name_provider",
-                "#driver_hosts",
+                "#driver-hosts",
                 "#driver_index",
                 "#driver_manager",
                 "#fshost",
@@ -906,7 +906,7 @@
             __stop_timeout_ms: 60000,
         },
         {
-            name: "driver_host-env",
+            name: "driver-host-env",
             extends: "realm",
 
             // 2 seconds

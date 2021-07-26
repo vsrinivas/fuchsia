@@ -20,8 +20,8 @@
     ],
     collections: [
         {
-            name: "driver_hosts",
-            environment: "#driver_host-env",
+            name: "driver-hosts",
+            environment: "#driver-host-env",
             durability: "transient",
         },
         {
@@ -86,8 +86,8 @@
             from: "parent",
             to: [
                 "#boot-drivers",
+                "#driver-hosts",
                 "#driver-manager-support",
-                "#driver_hosts",
                 "#driver_index",
                 "#driver_manager",
                 "#pkg-drivers",
@@ -103,7 +103,7 @@
             __stop_timeout_ms: 60000,
         },
         {
-            name: "driver_host-env",
+            name: "driver-host-env",
             extends: "realm",
 
             // 2 seconds

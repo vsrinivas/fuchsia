@@ -76,7 +76,7 @@ async fn driver_runner_test() -> Result<(), anyhow::Error> {
     //   /boot-drivers:{TOPOLOGICAL_NAME}:{INSTANCE_NUMBER}
     //   /pkg-drivers:{TOPOLOGICAL_NAME}:{INSTANCE_NUMBER}
     // Driver hosts live in a collection, and their monikers will look like:
-    //   /driver_hosts:driver_host-{DRIVER_NUMBER}:{INSTANCE_NUMBER}
+    //   /driver-hosts:driver-host-{DRIVER_NUMBER}:{INSTANCE_NUMBER}
     // We don't know how consistent the INSTANCE_NUMBER is so we regex match it with '\d+'.
     let events = vec![
         EventMatcher::ok().r#type(events::Started::TYPE).moniker(r".*/driver_manager:\d+"),
@@ -84,7 +84,7 @@ async fn driver_runner_test() -> Result<(), anyhow::Error> {
         EventMatcher::ok().r#type(events::Started::TYPE).moniker(r".*/pkg-drivers:root:\d+"),
         EventMatcher::ok()
             .r#type(events::Started::TYPE)
-            .moniker(r".*/driver_hosts:driver_host-0:\d+"),
+            .moniker(r".*/driver-hosts:driver-host-0:\d+"),
     ];
     check_events(events, &mut started_stream).await?;
 
