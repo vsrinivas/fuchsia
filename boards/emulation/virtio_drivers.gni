@@ -17,4 +17,5 @@ virtio_drivers = [
   "//src/graphics/display/drivers/goldfish-display",
   "//src/graphics/drivers/virtio:virtio_gpu",
   "//src/ui/input/drivers/virtio:virtio_input",
+  "//src/ui/input/drivers/goldfish_sensor:sensor_driver",
 ]
