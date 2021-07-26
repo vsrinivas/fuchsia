@@ -190,9 +190,10 @@ static void uart_rx_poll(Timer* t, zx_time_t now, void* arg) {
   platform_drain_debug_uart_rx();
 }
 
+static Timer uart_rx_poll_timer;
+
 // Create a polling thread for the UART.
 static void platform_debug_start_uart_timer() {
-  static Timer uart_rx_poll_timer;
   static bool started = false;
 
   if (!started) {
