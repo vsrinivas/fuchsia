@@ -132,7 +132,6 @@ dart_library("lib") {
     "//sdk/fidl/fuchsia.ui.brightness",
     "//sdk/fidl/fuchsia.ui.focus",
     "//sdk/fidl/fuchsia.ui.input",
-    "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/fidl/fuchsia.ui.remotewidgets",
     "//sdk/fidl/fuchsia.ui.shortcut",
     "//sdk/fidl/fuchsia.ui.views",

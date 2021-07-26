@@ -37,8 +37,6 @@
             "fuchsia.ui.input.InputDeviceRegistry",
             "fuchsia.ui.input.PointerCaptureListenerRegistry",
             "fuchsia.ui.input3.Keyboard",
-            "fuchsia.ui.policy.Presentation",
-            "fuchsia.ui.policy.Presenter",
             "fuchsia.ui.scenic.Scenic",
             "fuchsia.ui.shortcut.Registry",
             "fuchsia.update.channelcontrol.ChannelControl"

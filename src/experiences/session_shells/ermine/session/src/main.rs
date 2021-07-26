@@ -16,11 +16,10 @@ use {
         ElementManagerMarker, ElementManagerRequestStream, GraphicalPresenterMarker,
     },
     fidl_fuchsia_session_scene,
-    fidl_fuchsia_session_scene::{ManagerMarker, ManagerProxy},
+    fidl_fuchsia_session_scene::ManagerMarker,
     fidl_fuchsia_sys::LauncherMarker,
     fidl_fuchsia_sys2 as fsys,
     fidl_fuchsia_ui_app::ViewProviderMarker,
-    fidl_fuchsia_ui_policy::{PresentationMarker, PresentationRequest, PresentationRequestStream},
     fidl_fuchsia_ui_views as ui_views,
     fidl_fuchsia_ui_views::ViewRefInstalledMarker,
     fuchsia_async as fasync,
@@ -31,7 +30,6 @@ use {
     fuchsia_zircon as zx,
     futures::try_join,
     futures::StreamExt,
-    futures::TryStreamExt,
     legacy_element_management::SimpleElementManager,
     std::fs,
     std::rc::Rc,
@@ -40,7 +38,6 @@ use {
 
 enum ExposedServices {
     ElementManager(ElementManagerRequestStream),
-    Presentation(PresentationRequestStream),
 }
 
 /// The maximum number of open requests to this component.
@@ -57,10 +54,7 @@ async fn launch_ermine() -> Result<(App, zx::Channel), Error> {
 
     let mut launch_options = LaunchOptions::new();
     launch_options.set_additional_services(
-        vec![
-            PresentationMarker::PROTOCOL_NAME.to_string(),
-            ElementManagerMarker::PROTOCOL_NAME.to_string(),
-        ],
+        vec![ElementManagerMarker::PROTOCOL_NAME.to_string()],
         client_chan,
     );
 
@@ -77,20 +71,16 @@ async fn launch_ermine() -> Result<(App, zx::Channel), Error> {
 
 async fn expose_services(
     element_server: ElementManagerServer<SimpleElementManager>,
-    scene_manager: Arc<ManagerProxy>,
     server_chan: zx::Channel,
 ) -> Result<(), Error> {
     let mut fs = ServiceFs::new();
 
     // Add services for component outgoing directory.
-    fs.dir("svc")
-        .add_fidl_service(ExposedServices::ElementManager)
-        .add_fidl_service(ExposedServices::Presentation);
+    fs.dir("svc").add_fidl_service(ExposedServices::ElementManager);
     fs.take_and_serve_directory_handle()?;
 
     // Add services served over `server_chan`.
     fs.add_fidl_service_at(ElementManagerMarker::PROTOCOL_NAME, ExposedServices::ElementManager);
-    fs.add_fidl_service_at(PresentationMarker::PROTOCOL_NAME, ExposedServices::Presentation);
     fs.serve_connection(server_chan).unwrap();
 
     // create a reference so that we can use this within the `for_each_concurrent` generator.
@@ -102,30 +92,10 @@ async fn expose_services(
                 // TODO(47079): handle error
                 let _ = element_server_ref.handle_request(request_stream).await;
             }
-            ExposedServices::Presentation(request_stream) => {
-                // TODO(47079): handle error
-                let _ =
-                    handle_presentation_request_stream(request_stream, scene_manager.clone()).await;
-            }
         }
     })
     .await;
     Ok(())
-}
-
-/// The presentation's pointer events are forwarded to the scene manager,
-/// since the scene manager component contains the input pipeline.
-pub async fn handle_presentation_request_stream(
-    mut request_stream: PresentationRequestStream,
-    scene_manager: Arc<ManagerProxy>,
-) {
-    while let Ok(Some(request)) = request_stream.try_next().await {
-        match request {
-            PresentationRequest::CapturePointerEventsHack { listener, .. } => {
-                let _ = scene_manager.capture_pointer_events(listener);
-            }
-        }
-    }
 }
 
 async fn set_view_focus(
@@ -185,8 +155,7 @@ async fn main() -> Result<(), Error> {
 
     let set_focus_fut = set_view_focus(Arc::downgrade(&scene_manager), view_ref);
 
-    let services_fut =
-        expose_services(element_repository.make_server(), scene_manager, element_channel);
+    let services_fut = expose_services(element_repository.make_server(), element_channel);
     let element_manager_fut = element_repository.run_with_handler(&mut handler);
     let focus_fut = input_pipeline::focus_listening::handle_focus_changes();
 
