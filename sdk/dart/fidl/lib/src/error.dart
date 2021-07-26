@@ -11,6 +11,7 @@ enum FidlErrorCode {
   fidlInvalidPresenceIndicator,
   fidlInvalidNumBytesInEnvelope,
   fidlInvalidNumHandlesInEnvelope,
+  fidlInvalidInlineMarkerInEnvelope,
   fidlTooManyHandles,
   fidlTooFewHandles,
   fidlStringTooLong,

@@ -940,7 +940,16 @@ class StructType<T extends Struct> extends SimpleFidlType<T> {
   }
 }
 
-const int _kEnvelopeSize = 16;
+int envelopeSize(WireFormat wireFormat) {
+  switch (wireFormat) {
+    case WireFormat.v1:
+      return 16;
+    case WireFormat.v2:
+      return 8;
+    default:
+      throw FidlError('unknown wire format');
+  }
+}
 
 void _encodeEnvelopePresent<T, I extends Iterable<T>>(
     Encoder encoder, int offset, int depth, T field, FidlType<T, I> fieldType) {
@@ -961,33 +970,143 @@ void _encodeEnvelopeAbsent(Encoder encoder, int offset) {
   encoder..encodeUint64(0, offset)..encodeUint64(kAllocAbsent, offset + 8);
 }
 
+enum EnvelopeContentLocation {
+  inline,
+  outOfLine,
+}
+
+enum EnvelopePresence {
+  present,
+  absent,
+}
+
 class EnvelopeHeader {
   int numBytes;
   int numHandles;
-  int fieldPresent;
-  EnvelopeHeader(this.numBytes, this.numHandles, this.fieldPresent);
+  EnvelopePresence presence;
+  EnvelopeContentLocation contentLocation;
+  EnvelopeHeader(
+      this.numBytes, this.numHandles, this.presence, this.contentLocation);
 }
 
 T? _decodeEnvelope<T>(
     Decoder decoder, int offset, int depth, SimpleFidlType<T>? fieldType,
     {bool isEmpty = false}) {
   final header = _decodeEnvelopeHeader(decoder, offset);
-  return _decodeEnvelopeContent(decoder, header, fieldType, depth, isEmpty);
+  return _decodeEnvelopeContent(
+      decoder, header, offset, fieldType, depth, isEmpty);
+}
+
+EnvelopeHeader _decodeV1EnvelopeHeader(Decoder decoder, int offset) {
+  int numBytes = decoder.decodeUint32(offset);
+  int numHandles = decoder.decodeUint32(offset + 4);
+  switch (decoder.decodeUint64(offset + 8)) {
+    case kAllocPresent:
+      if (numBytes % 8 != 0) {
+        throw FidlError('improperly aligned byte count',
+            FidlErrorCode.fidlInvalidNumBytesInEnvelope);
+      }
+      return EnvelopeHeader(
+        numBytes,
+        numHandles,
+        EnvelopePresence.present,
+        EnvelopeContentLocation.outOfLine,
+      );
+    case kAllocAbsent:
+      if (numBytes != 0)
+        throw FidlError('absent envelope with non-zero bytes',
+            FidlErrorCode.fidlInvalidNumBytesInEnvelope);
+      if (numHandles != 0)
+        throw FidlError('absent envelope with non-zero handles',
+            FidlErrorCode.fidlInvalidNumHandlesInEnvelope);
+      return EnvelopeHeader(
+        numBytes,
+        numHandles,
+        EnvelopePresence.absent,
+        EnvelopeContentLocation.outOfLine,
+      );
+    default:
+      throw FidlError(
+          'Bad reference encoding', FidlErrorCode.fidlInvalidPresenceIndicator);
+  }
+}
+
+EnvelopeHeader _decodeV2EnvelopeHeader(Decoder decoder, int offset) {
+  int numHandles = decoder.decodeUint16(offset + 4);
+  switch (decoder.decodeUint16(offset + 6)) {
+    case 0: // out of line content
+      int numBytes = decoder.decodeUint32(offset);
+      if (numBytes % 8 != 0) {
+        throw FidlError('improperly aligned byte count',
+            FidlErrorCode.fidlInvalidNumBytesInEnvelope);
+      }
+      return EnvelopeHeader(
+        numBytes,
+        numHandles,
+        (numBytes != 0 || numHandles != 0)
+            ? EnvelopePresence.present
+            : EnvelopePresence.absent,
+        EnvelopeContentLocation.outOfLine,
+      );
+    case 1: // inlined content
+      return EnvelopeHeader(
+        0,
+        numHandles,
+        EnvelopePresence.present,
+        EnvelopeContentLocation.inline,
+      );
+    default:
+      throw FidlError('invalid inline marker in envelope',
+          FidlErrorCode.fidlInvalidInlineMarkerInEnvelope);
+  }
 }
 
 EnvelopeHeader _decodeEnvelopeHeader(Decoder decoder, int offset) {
-  return EnvelopeHeader(
-    decoder.decodeUint32(offset),
-    decoder.decodeUint32(offset + 4),
-    decoder.decodeUint64(offset + 8),
-  );
+  switch (decoder.wireFormat) {
+    case WireFormat.v1:
+      return _decodeV1EnvelopeHeader(decoder, offset);
+    case WireFormat.v2:
+      return _decodeV2EnvelopeHeader(decoder, offset);
+    default:
+      throw FidlError('unknown wire format');
+  }
 }
 
-T? _decodeEnvelopeContent<T, I extends Iterable<T>>(Decoder decoder,
-    EnvelopeHeader header, FidlType<T, I>? fieldType, int depth, bool isEmpty) {
-  switch (header.fieldPresent) {
-    case kAllocPresent:
+T? _decodeEnvelopeContent<T, I extends Iterable<T>>(
+    Decoder decoder,
+    EnvelopeHeader header,
+    int headerOffset,
+    FidlType<T, I>? fieldType,
+    int depth,
+    bool isEmpty) {
+  switch (header.presence) {
+    case EnvelopePresence.present:
       if (isEmpty) throw FidlError('expected empty envelope');
+
+      if (header.contentLocation == EnvelopeContentLocation.inline) {
+        if (fieldType != null) {
+          final claimedHandles = decoder.countClaimedHandles();
+          final field = fieldType.decode(decoder, headerOffset, depth + 1);
+          final numHandlesConsumed =
+              decoder.countClaimedHandles() - claimedHandles;
+          if (header.numHandles != numHandlesConsumed) {
+            throw FidlError('envelope handles were mis-sized',
+                FidlErrorCode.fidlInvalidNumHandlesInEnvelope);
+          }
+          return field;
+        }
+        for (int i = 0; i < header.numHandles; i++) {
+          final handleInfo = decoder.claimHandle();
+          try {
+            handleInfo.handle.close();
+            // ignore: avoid_catches_without_on_clauses
+          } catch (e) {
+            // best effort
+          }
+        }
+        return null;
+      }
+
       if (fieldType != null) {
         final fieldOffset = decoder.claimMemory(
             fieldType.inlineSize(decoder.wireFormat), depth);
@@ -1019,7 +1138,7 @@ T? _decodeEnvelopeContent<T, I extends Iterable<T>>(Decoder decoder,
         }
       }
       return null;
-    case kAllocAbsent:
+    case EnvelopePresence.absent:
       if (header.numBytes != 0)
         throw FidlError('absent envelope with non-zero bytes',
             FidlErrorCode.fidlInvalidNumBytesInEnvelope);
@@ -1027,9 +1146,6 @@ T? _decodeEnvelopeContent<T, I extends Iterable<T>>(Decoder decoder,
         throw FidlError('absent envelope with non-zero handles',
             FidlErrorCode.fidlInvalidNumHandlesInEnvelope);
       return null;
-    default:
-      throw FidlError(
-          'Bad reference encoding', FidlErrorCode.fidlInvalidPresenceIndicator);
   }
 }
 
@@ -1078,7 +1194,8 @@ class TableType<T extends Table> extends SimpleFidlType<T> {
       ..encodeUint64(kAllocPresent, offset + 8);
 
     // Sizing
-    int envelopeOffset = encoder.alloc(maxOrdinal * _kEnvelopeSize, depth);
+    int envelopeOffset =
+        encoder.alloc(maxOrdinal * envelopeSize(encoder.wireFormat), depth);
 
     // Envelopes, and fields.
     for (int i = 0; i <= maxIndex; i++) {
@@ -1106,7 +1223,7 @@ class TableType<T extends Table> extends SimpleFidlType<T> {
       } else {
         _encodeEnvelopeAbsent(encoder, envelopeOffset);
       }
-      envelopeOffset += _kEnvelopeSize;
+      envelopeOffset += envelopeSize(encoder.wireFormat);
     }
   }
 
@@ -1132,8 +1249,8 @@ class TableType<T extends Table> extends SimpleFidlType<T> {
     }
 
     // Offsets.
-    int envelopeOffset =
-        decoder.claimMemory(maxOrdinal * _kEnvelopeSize, depth);
+    int envelopeOffset = decoder.claimMemory(
+        maxOrdinal * envelopeSize(decoder.wireFormat), depth);
 
     // Envelopes, and fields.
     final Map<int, dynamic> argv = {};
@@ -1150,6 +1267,7 @@ class TableType<T extends Table> extends SimpleFidlType<T> {
       final field = _decodeEnvelopeContent(
           decoder,
           header,
+          envelopeOffset,
           fieldType ??
               UnknownRawDataType(
                   numBytes: header.numBytes, numHandles: header.numHandles),
@@ -1163,7 +1281,7 @@ class TableType<T extends Table> extends SimpleFidlType<T> {
           unknownData[ordinal] = field;
         }
       }
-      envelopeOffset += _kEnvelopeSize;
+      envelopeOffset += envelopeSize(decoder.wireFormat);
     }
 
     return ctor(argv, unknownData);
@@ -1209,6 +1327,7 @@ T? _decodeUnion<T extends XUnion>(
       final unknownData = _decodeEnvelopeContent(
           decoder,
           header,
+          envelopeOffset,
           UnknownRawDataType(
               numBytes: header.numBytes, numHandles: header.numHandles),
           depth,
@@ -1224,8 +1343,8 @@ T? _decodeUnion<T extends XUnion>(
       _maybeThrowOnUnknownHandles(resource, unknownData);
       return ctor(ordinal, unknownData);
     }
-    final field =
-        _decodeEnvelopeContent(decoder, header, fieldType, depth, false);
+    final field = _decodeEnvelopeContent(
+        decoder, header, envelopeOffset, fieldType, depth, false);
     if (field == null) throw FidlError('Bad xunion: missing content');
     return ctor(ordinal, field);
   }
