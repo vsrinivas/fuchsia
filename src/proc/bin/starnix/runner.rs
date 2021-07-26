@@ -32,6 +32,7 @@ use std::sync::Arc;
 
 use crate::auth::Credentials;
 use crate::fs::devfs::DevFs;
+use crate::fs::ext4::ExtFilesystem;
 use crate::fs::fuchsia::{create_file_from_handle, RemoteFs};
 use crate::fs::tmpfs::TmpFs;
 use crate::fs::*;
@@ -41,7 +42,6 @@ use crate::syscalls::decls::SyscallDecl;
 use crate::syscalls::table::dispatch_syscall;
 use crate::syscalls::*;
 use crate::task::*;
-use crate::types::*;
 
 // TODO: Should we move this code into fuchsia_zircon? It seems like part of a better abstraction
 // for exception channels.
@@ -205,7 +205,37 @@ fn files_from_numbered_handles(
     Ok(files)
 }
 
-async fn start_component(
+fn create_filesystem_from_spec<'a>(
+    pkg: &fio::DirectorySynchronousProxy,
+    spec: &'a str,
+) -> Result<(&'a [u8], FileSystemHandle), Error> {
+    let mut iter = spec.splitn(3, ':');
+    let mount_point =
+        iter.next().ok_or_else(|| anyhow!("mount point is missing from {:?}", spec))?;
+    let fs_type = iter.next().ok_or_else(|| anyhow!("fs type is missing from {:?}", spec))?;
+    let fs_path = iter.next();
+    let fs = match fs_type {
+        "tmpfs" => TmpFs::new(),
+        "devfs" => DevFs::new(),
+        "remotefs" => {
+            let fs_path = fs_path.ok_or_else(|| anyhow!("remotefs requires specifying a path"))?;
+            let rights = fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE;
+            let root = syncio::directory_open_directory_async(&pkg, &fs_path, rights)
+                .map_err(|e| anyhow!("Failed to open root: {}", e))?;
+            RemoteFs::new(root.into_channel(), rights)
+        }
+        "ext4" => {
+            let fs_path = fs_path.ok_or_else(|| anyhow!("ext4 requires specifying a path"))?;
+            let vmo =
+                syncio::directory_open_vmo(&pkg, &fs_path, fio::VMO_FLAG_READ, zx::Time::INFINITE)?;
+            ExtFilesystem::new(vmo)?
+        }
+        _ => anyhow::bail!("invalid fs type {:?}", fs_type),
+    };
+    Ok((mount_point.as_bytes(), fs))
+}
+
+fn start_component(
     kernel: Arc<Kernel>,
     start_info: ComponentStartInfo,
     controller: ServerEnd<ComponentControllerMarker>,
@@ -216,33 +246,22 @@ async fn start_component(
         start_info.numbered_handles,
     );
 
-    let root_path = runner::get_program_string(&start_info, "root")
-        .ok_or_else(|| anyhow!("No root in component manifest"))?
-        .to_owned();
+    let mounts =
+        runner::get_program_strvec(&start_info, "mounts").map(|a| a.clone()).unwrap_or(vec![]);
     let binary_path = CString::new(runner::get_program_binary(&start_info)?)?;
-
     let args = runner::get_program_strvec(&start_info, "args")
         .map(|args| {
             args.iter().map(|arg| CString::new(arg.clone())).collect::<Result<Vec<CString>, _>>()
         })
         .unwrap_or(Ok(vec![]))?;
-    let mount = runner::get_program_strvec(&start_info, "mount")
-        .map(|mounts| {
-            mounts
-                .iter()
-                .map(|mount| CString::new(mount.clone()))
-                .collect::<Result<Vec<CString>, _>>()
-        })
-        .unwrap_or(Ok(vec![]))?;
-
-    let user_passwd = runner::get_program_string(&start_info, "user").unwrap_or("fuchsia:x:42:42");
-    let credentials = Credentials::from_passwd(user_passwd)?;
-
     let environ = runner::get_program_strvec(&start_info, "environ")
         .map(|args| {
             args.iter().map(|arg| CString::new(arg.clone())).collect::<Result<Vec<CString>, _>>()
         })
         .unwrap_or(Ok(vec![]))?;
+    let user_passwd = runner::get_program_string(&start_info, "user").unwrap_or("fuchsia:x:42:42");
+    let credentials = Credentials::from_passwd(user_passwd)?;
+
     info!("start_component environment: {:?}", environ);
 
     let ns = start_info.ns.ok_or_else(|| anyhow!("Missing namespace"))?;
@@ -255,36 +274,25 @@ async fn start_component(
             .ok_or_else(|| anyhow!("Missing directory handlee in pkg namespace entry"))?
             .into_channel(),
     );
-    let root = syncio::directory_open_directory_async(
+
+    // The mounts are appplied in the order listed. Mounting will fail if the designated mount
+    // point doesn't exist in a previous mount. The root must be first so other mounts can be
+    // applied on top of it.
+    let mut mounts_iter = mounts.iter();
+    let (root_point, root_fs) = create_filesystem_from_spec(
         &pkg,
-        &root_path,
-        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
-    )
-    .map_err(|e| anyhow!("Failed to open root: {}", e))?;
-
-    let files = files_from_numbered_handles(start_info.numbered_handles, &kernel)?;
-
-    let remotefs =
-        RemoteFs::new(root.into_channel(), fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE);
-
-    let fs = FsContext::new(remotefs);
-    for mnt in mount {
-        let mut field_iter = mnt.as_bytes().splitn(2, |c| *c == b':');
-        let mut mount_point =
-            field_iter.next().ok_or_else(|| anyhow!("mount point is missing from {:?}", mnt))?;
-        if mount_point.len() > 0 && mount_point[0] == b'/' {
-            mount_point = &mount_point[1..];
-        }
-        let fs_type =
-            field_iter.next().ok_or_else(|| anyhow!("fs type is missing from {:?}", mnt))?;
-        let child_fs = match fs_type {
-            b"tmpfs" => Ok(TmpFs::new()),
-            b"devfs" => Ok(DevFs::new()),
-            _ => Err(EINVAL),
-        }?;
-
+        mounts_iter.next().ok_or_else(|| anyhow!("Mounts list is empty"))?,
+    )?;
+    if root_point != b"/" {
+        anyhow::bail!("First mount in mounts list is not the root");
+    }
+    let fs = FsContext::new(root_fs);
+    for mount_spec in mounts_iter {
+        let (mount_point, child_fs) = create_filesystem_from_spec(&pkg, mount_spec)?;
         fs.lookup_node(fs.root.clone(), mount_point)?.mount(child_fs)?;
     }
+
+    let files = files_from_numbered_handles(start_info.numbered_handles, &kernel)?;
 
     let task_owner = Task::create_process(&kernel, &binary_path, 0, files, fs, credentials, None)?;
 
@@ -319,7 +327,7 @@ pub async fn start_runner(
             fcrunner::ComponentRunnerRequest::Start { start_info, controller, .. } => {
                 let kernel = kernel.clone();
                 fasync::Task::local(async move {
-                    if let Err(e) = start_component(kernel, start_info, controller).await {
+                    if let Err(e) = start_component(kernel, start_info, controller) {
                         error!("failed to start component: {}", e);
                     }
                 })

@@ -2,6 +2,6 @@
     include: [ "//src/sys/test_runners/starnix/default.shard.cml" ],
     program: {
         binary: "system/bin/getrandom_test",
-        root: "root",
+        mounts: [ "/:remotefs:root" ],
     },
 }

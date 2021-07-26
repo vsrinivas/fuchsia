@@ -60,6 +60,11 @@ tar_resource("android_system_image") {
   subdir = "root"
 }
 
+resource("android_system_image_ext") {
+  sources = [ "//prebuilt/starnix/android-image-amd64/system.img" ]
+  outputs = [ "data/system.img" ]
+}
+
 fuchsia_component("init") {
   manifest = "meta/init.cml"
 }
@@ -187,6 +192,7 @@ gvisor_test_component("symlink_test") {
 fuchsia_test_package("test_android_distro") {
   deps = [
     ":android_system_image",
+    ":android_system_image_ext",
     ":init",
     ":sh",
     ":syscalls_test",

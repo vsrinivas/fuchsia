@@ -3,7 +3,9 @@
     program: {
         binary: "system/bin/symlink_test",
         args: [ "--gunit_filter=-SymlinkTest.CannotCreateSymlinkInReadOnlyDir:SymlinkTest.SymlinkAtDegradedPermissions:SymlinkTest.ReadlinkAtDegradedPermissions:AbsAndRelTarget/ParamSymlinkTest*" ],
-        root: "root",
-        mount: [ "/tmp:tmpfs" ],
+        mounts: [
+            "/:remotefs:root",
+            "/tmp:tmpfs",
+        ],
     },
 }

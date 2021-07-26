@@ -3,6 +3,6 @@
         runner: "starnix",
         binary: "system/bin/sh",
         args: [ "-i" ],
-        root: "root",
+        mounts: [ "/:remotefs:root" ],
     },
 }

@@ -1,7 +1,10 @@
 {
     program: {
         runner: "starnix",
-        binary: "system/bin/hello_world",
-        root: "root",
+        binary: "system/bin/init",
+        mounts: [
+            "/:ext4:data/system.img",
+            "/dev:tmpfs",
+        ],
     },
 }

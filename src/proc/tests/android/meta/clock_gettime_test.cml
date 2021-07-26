@@ -4,6 +4,6 @@
         binary: "system/bin/clock_gettime_test",
         args: [ "--gunit_filter=-ClockGettime.JavaThreadTime:ClockGettime/MonotonicClockTest.IsMonotonic*" ],
         environ: [ "TEST_ON_GVISOR=1" ],
-        root: "root",
+        mounts: [ "/:remotefs:root" ],
     },
 }

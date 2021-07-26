@@ -2,8 +2,8 @@
     include: [ "//src/sys/test_runners/starnix/default.shard.cml" ],
     program: {
         binary: "system/bin/syscalls_test",
-        root: "root",
-        mount: [
+        mounts: [
+            "/:remotefs:root",
             "/data:tmpfs",
             "/tmp:tmpfs",
         ],

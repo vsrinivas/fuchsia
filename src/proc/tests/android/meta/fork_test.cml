@@ -3,6 +3,6 @@
     program: {
         binary: "system/bin/fork_test",
         args: [ "--gunit_filter=ForkTest.*:-*.Alarm" ],
-        root: "root",
+        mounts: [ "/:remotefs:root" ],
     },
 }

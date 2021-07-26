@@ -2,6 +2,6 @@
     program: {
         runner: "starnix",
         binary: "hello_starnix",
-        root: "bin",
+        mounts: [ "/:remotefs:bin" ],
     },
 }

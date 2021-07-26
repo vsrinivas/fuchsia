@@ -3,7 +3,9 @@
     program: {
         binary: "system/bin/access_test",
         args: [ "--gunit_filter=*.RelativeFile:*.RelativeDir:*.AbsFile:*.AbsDir:*.RelDoesNotExist:*.AbsDoesNotExist:*.InvalidMode:*.InvalidName:*.UsrReadWrite:*.UsrReadWriteExec" ],
-        root: "root",
-        mount: [ "/tmp:tmpfs" ],
+        mounts: [
+            "/:remotefs:root",
+            "/tmp:tmpfs",
+        ],
     },
 }

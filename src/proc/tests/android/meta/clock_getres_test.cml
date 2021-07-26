@@ -3,6 +3,6 @@
     program: {
         binary: "system/bin/clock_getres_test",
         environ: [ "TEST_ON_GVISOR=1" ],
-        root: "root",
+        mounts: [ "/:remotefs:root" ],
     },
 }

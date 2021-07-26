@@ -3,7 +3,9 @@
     program: {
         binary: "system/bin/pipe_test",
         args: [ "--gunit_filter=-*Proc*:*StatFS*:*.Flags/named*" ],
-        root: "root",
-        mount: [ "/tmp:tmpfs" ],
+        mounts: [
+            "/:remotefs:root",
+            "/tmp:tmpfs",
+        ],
     },
 }

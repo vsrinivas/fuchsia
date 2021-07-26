@@ -4,6 +4,6 @@
         binary: "system/bin/kill_test",
         args: [ "--gunit_filter=KillTest.CanKillAllPIDs:KillTest.CannotKillInvalidPID:KillTest.CannotKillTid" ],
         environ: [ "TEST_ON_GVISOR=1" ],
-        root: "root",
+        mounts: [ "/:remotefs:root" ],
     },
 }
