@@ -139,11 +139,11 @@ zx_status_t VnodeVmo::GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) {
   if (flags & fuchsia_io::wire::kVmoFlagPrivate) {
     // Only allow object_set_property on private VMO.
     rights |= ZX_RIGHT_SET_PROPERTY;
-    // Creating a COPY_ON_WRITE child removes ZX_RIGHT_EXECUTE even if the parent VMO has it. Adding
-    // CHILD_NO_WRITE still creates a snapshot and a new VMO object, which e.g. can have a unique
-    // ZX_PROP_NAME value, but the returned handle lacks WRITE and maintains EXECUTE.
+    // Creating a SNAPSHOT_AT_LEAST_ON_WRITE child removes ZX_RIGHT_EXECUTE even if the parent VMO
+    // has it. Adding CHILD_NO_WRITE still creates a snapshot and a new VMO object, which e.g. can
+    // have a unique ZX_PROP_NAME value, but the returned handle lacks WRITE and maintains EXECUTE.
     zx_status_t status = zx_vmo_create_child(
-        vmo_, ZX_VMO_CHILD_COPY_ON_WRITE | ZX_VMO_CHILD_NO_WRITE, 0, length_, &vmo);
+        vmo_, ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE | ZX_VMO_CHILD_NO_WRITE, 0, length_, &vmo);
     if (status != ZX_OK) {
       return status;
     }
@@ -164,12 +164,13 @@ zx_status_t VnodeVmo::GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) {
 }
 
 zx_status_t VnodeVmo::MakeLocalClone() {
-  // Creating a COPY_ON_WRITE child removes ZX_RIGHT_EXECUTE even if the parent VMO has it. Adding
-  // CHILD_NO_WRITE still creates a snapshot and a new VMO object, which e.g. can have a unique
-  // ZX_PROP_NAME value, but the returned handle lacks WRITE and maintains EXECUTE.
+  // Creating a SNAPSHOT_AT_LEAST_ON_WRITE child removes ZX_RIGHT_EXECUTE even if the parent VMO has
+  // it. Adding CHILD_NO_WRITE still creates a snapshot and a new VMO object, which e.g. can have a
+  // unique ZX_PROP_NAME value, but the returned handle lacks WRITE and maintains EXECUTE.
   zx_handle_t tmp_vmo;
-  zx_status_t status = zx_vmo_create_child(vmo_, ZX_VMO_CHILD_COPY_ON_WRITE | ZX_VMO_CHILD_NO_WRITE,
-                                           offset_, length_, &tmp_vmo);
+  zx_status_t status =
+      zx_vmo_create_child(vmo_, ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE | ZX_VMO_CHILD_NO_WRITE,
+                          offset_, length_, &tmp_vmo);
   if (status != ZX_OK) {
     return status;
   }

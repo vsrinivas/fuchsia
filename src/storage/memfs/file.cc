@@ -57,8 +57,8 @@ zx_status_t VnodeFile::GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) {
   zx::vmo result;
   if (flags & fuchsia_io::wire::kVmoFlagPrivate) {
     rights |= ZX_RIGHT_SET_PROPERTY;  // Only allow object_set_property on private VMO.
-    if ((status = vmo_.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, content_size, &result)) !=
-        ZX_OK) {
+    if ((status = vmo_.create_child(ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE, 0, content_size,
+                                    &result)) != ZX_OK) {
       return status;
     }
 
