@@ -1,3 +1,5 @@
+use std::os::unix::prelude::AsRawFd;
+
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
@@ -269,10 +271,11 @@ async fn recv_loop(sock: Rc<UdpSocket>, mdns_service: Weak<MdnsServiceInner>) {
             Ok(msg) => msg,
             Err(e) => {
                 log::warn!(
-                    "unable to parse message received on {}: {:?}",
-                    sock.peer_addr()
+                    "unable to parse message received on {} from {}: {:?}",
+                    sock.local_addr()
                         .map(|s| format!("{}", s))
-                        .unwrap_or("<disconnected>".to_string()),
+                        .unwrap_or(format!("fd:{}", sock.as_raw_fd())),
+                    addr,
                     e
                 );
                 continue;
