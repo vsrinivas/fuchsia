@@ -8,6 +8,7 @@
 
 use {
     crate::{dirs_to_test, repeat_by_n},
+    fidl::endpoints::create_proxy,
     fidl::AsHandleRef,
     fidl_fuchsia_io::{
         DirectoryProxy, FileProxy, SeekOrigin, MAX_BUF, OPEN_RIGHT_READABLE, VMO_FLAG_EXACT,
@@ -48,6 +49,8 @@ async fn read_per_package_source(root_dir: DirectoryProxy) {
         assert_seek_past_end(&root_dir, path, SeekOrigin::Start).await;
         assert_seek_past_end(&root_dir, path, SeekOrigin::Current).await;
         assert_seek_past_end_end_origin(&root_dir, path).await;
+
+        assert_clone_success(&root_dir, path).await;
     }
 
     assert_read_exceeds_buffer_success(&root_dir, "exceeds_max_buf").await;
@@ -302,4 +305,16 @@ async fn test_get_buffer_success(
     );
 
     buffer
+}
+
+async fn assert_clone_success(package_root: &DirectoryProxy, path: &str) {
+    let parent =
+        open_file(package_root, path, OPEN_RIGHT_READABLE).await.expect("open parent directory");
+    let (clone, server_end) = create_proxy::<fidl_fuchsia_io::FileMarker>().expect("create_proxy");
+    let node_request = fidl::endpoints::ServerEnd::new(server_end.into_channel());
+    parent.clone(OPEN_RIGHT_READABLE, node_request).expect("cloned node");
+
+    let (status, bytes) = clone.read(MAX_BUF).await.unwrap();
+    let () = zx::Status::ok(status).unwrap();
+    assert_eq!(std::str::from_utf8(&bytes).unwrap(), path);
 }

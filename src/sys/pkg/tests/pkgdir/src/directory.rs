@@ -7,16 +7,17 @@ use {
     anyhow::{anyhow, Context as _, Error},
     fidl::endpoints::create_proxy,
     fidl_fuchsia_io::{
-        DirectoryProxy, NodeInfo, NodeMarker, NodeProxy, MODE_TYPE_BLOCK_DEVICE,
-        MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, MODE_TYPE_SERVICE, MODE_TYPE_SOCKET, OPEN_FLAG_APPEND,
-        OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY,
-        OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY, OPEN_FLAG_NO_REMOTE, OPEN_FLAG_POSIX,
-        OPEN_FLAG_TRUNCATE, OPEN_RIGHT_ADMIN, OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE,
-        OPEN_RIGHT_WRITABLE,
+        DirectoryProxy, NodeInfo, NodeMarker, NodeProxy, CLONE_FLAG_SAME_RIGHTS,
+        MODE_TYPE_BLOCK_DEVICE, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, MODE_TYPE_SERVICE,
+        MODE_TYPE_SOCKET, OPEN_FLAG_APPEND, OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT,
+        OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY, OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY,
+        OPEN_FLAG_NO_REMOTE, OPEN_FLAG_POSIX, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_ADMIN,
+        OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
     files_async::{DirEntry, DirentKind},
     fuchsia_zircon as zx,
     futures::future::Future,
+    io_util::directory::open_directory,
     itertools::Itertools as _,
     std::{
         clone::Clone,
@@ -549,6 +550,112 @@ async fn verify_open_failed(node: NodeProxy) -> Result<(), Error> {
         }
         Err(e) => Err(e).context("failed with unexpected error"),
     }
+}
+
+#[fuchsia::test]
+async fn clone() {
+    for dir in dirs_to_test().await {
+        clone_per_package_source(dir).await
+    }
+}
+
+async fn clone_per_package_source(root_dir: DirectoryProxy) {
+    for flag in [
+        OPEN_RIGHT_READABLE,
+        OPEN_RIGHT_WRITABLE,
+        OPEN_RIGHT_ADMIN,
+        OPEN_RIGHT_EXECUTABLE,
+        OPEN_FLAG_APPEND,
+        OPEN_FLAG_NO_REMOTE,
+        OPEN_FLAG_DESCRIBE,
+        CLONE_FLAG_SAME_RIGHTS,
+    ] {
+        assert_clone_directory_overflow(
+            &root_dir,
+            ".",
+            flag,
+            vec![
+                DirEntry { name: "dir".to_string(), kind: DirentKind::Directory },
+                DirEntry {
+                    name: "dir_overflow_readdirents".to_string(),
+                    kind: DirentKind::Directory,
+                },
+                DirEntry { name: "exceeds_max_buf".to_string(), kind: DirentKind::File },
+                DirEntry { name: "file".to_string(), kind: DirentKind::File },
+                DirEntry { name: "meta".to_string(), kind: DirentKind::Directory },
+            ],
+        )
+        .await;
+        assert_clone_directory_no_overflow(
+            &root_dir,
+            "dir",
+            flag,
+            vec![
+                DirEntry { name: "dir".to_string(), kind: DirentKind::Directory },
+                DirEntry { name: "file".to_string(), kind: DirentKind::File },
+            ],
+        )
+        .await;
+        assert_clone_directory_overflow(
+            &root_dir,
+            "meta",
+            flag,
+            vec![
+                DirEntry { name: "contents".to_string(), kind: DirentKind::File },
+                DirEntry { name: "dir".to_string(), kind: DirentKind::Directory },
+                DirEntry {
+                    name: "dir_overflow_readdirents".to_string(),
+                    kind: DirentKind::Directory,
+                },
+                DirEntry { name: "exceeds_max_buf".to_string(), kind: DirentKind::File },
+                DirEntry { name: "file".to_string(), kind: DirentKind::File },
+                DirEntry { name: "package".to_string(), kind: DirentKind::File },
+            ],
+        )
+        .await;
+        assert_clone_directory_no_overflow(
+            &root_dir,
+            "meta/dir",
+            flag,
+            vec![
+                DirEntry { name: "dir".to_string(), kind: DirentKind::Directory },
+                DirEntry { name: "file".to_string(), kind: DirentKind::File },
+            ],
+        )
+        .await;
+    }
+}
+
+async fn assert_clone_directory_no_overflow(
+    package_root: &DirectoryProxy,
+    path: &str,
+    flags: u32,
+    expected_dirents: Vec<DirEntry>,
+) {
+    let parent = open_directory(package_root, path, 0).await.expect("open parent directory");
+    let (clone, server_end) =
+        create_proxy::<fidl_fuchsia_io::DirectoryMarker>().expect("create_proxy");
+
+    let node_request = fidl::endpoints::ServerEnd::new(server_end.into_channel());
+    parent.clone(flags, node_request).expect("cloned node");
+
+    assert_read_dirents_no_overflow(&clone, expected_dirents).await;
+}
+
+async fn assert_clone_directory_overflow(
+    package_root: &DirectoryProxy,
+    path: &str,
+    flags: u32,
+    expected_dirents: Vec<DirEntry>,
+) {
+    let parent = open_directory(package_root, path, 0).await.expect("open parent directory");
+    let (clone, server_end) =
+        create_proxy::<fidl_fuchsia_io::DirectoryMarker>().expect("create_proxy");
+
+    let node_request = fidl::endpoints::ServerEnd::new(server_end.into_channel());
+    parent.clone(flags, node_request).expect("cloned node");
+
+    assert_read_dirents_overflow(&clone, expected_dirents).await;
 }
 
 #[fuchsia::test]
