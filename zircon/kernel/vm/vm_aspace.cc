@@ -12,6 +12,7 @@
 #include <lib/crypto/global_prng.h>
 #include <lib/crypto/prng.h>
 #include <lib/ktrace.h>
+#include <lib/lazy_init/lazy_init.h>
 #include <lib/userabi/vdso.h>
 #include <lib/zircon-internal/macros.h>
 #include <stdlib.h>
@@ -51,27 +52,33 @@ struct VmAspaceListGlobal {};
 static DECLARE_MUTEX(VmAspaceListGlobal) aspace_list_lock;
 static fbl::DoublyLinkedList<VmAspace*> aspaces TA_GUARDED(aspace_list_lock);
 
+namespace {
+// the singleton kernel address space
+lazy_init::LazyInit<VmAspace, lazy_init::CheckType::None, lazy_init::Destructor::Disabled>
+    g_kernel_aspace;
+lazy_init::LazyInit<VmAddressRegion, lazy_init::CheckType::None, lazy_init::Destructor::Disabled>
+    g_kernel_root_vmar;
+}  // namespace
+
 // Called once at boot to initialize the singleton kernel address
 // space. Thread safety analysis is disabled since we don't need to
 // lock yet.
 void VmAspace::KernelAspaceInitPreHeap() TA_NO_THREAD_SAFETY_ANALYSIS {
-  // the singleton kernel address space
-  static VmAspace _kernel_aspace(KERNEL_ASPACE_BASE, KERNEL_ASPACE_SIZE, VmAspace::TYPE_KERNEL,
-                                 "kernel");
+
+  g_kernel_aspace.Initialize(KERNEL_ASPACE_BASE, KERNEL_ASPACE_SIZE, VmAspace::TYPE_KERNEL, "kernel");
 
 #if LK_DEBUGLEVEL > 1
-  _kernel_aspace.Adopt();
+  g_kernel_aspace->Adopt();
 #endif
 
-  static VmAddressRegion _kernel_root_vmar(_kernel_aspace);
+  g_kernel_root_vmar.Initialize(g_kernel_aspace.Get());
+  g_kernel_aspace->root_vmar_ = fbl::AdoptRef(&g_kernel_root_vmar.Get());
 
-  _kernel_aspace.root_vmar_ = fbl::AdoptRef(&_kernel_root_vmar);
-
-  zx_status_t status = _kernel_aspace.Init();
+  zx_status_t status = g_kernel_aspace->Init();
   ASSERT(status == ZX_OK);
 
   // save a pointer to the singleton kernel address space
-  VmAspace::kernel_aspace_ = &_kernel_aspace;
+  VmAspace::kernel_aspace_ = &g_kernel_aspace.Get();
   aspaces.push_front(kernel_aspace_);
 }
 

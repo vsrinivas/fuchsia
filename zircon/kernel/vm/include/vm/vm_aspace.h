@@ -203,7 +203,9 @@ class VmAspace : public fbl::DoublyLinkedListable<VmAspace*>, public fbl::RefCou
   }
 
  private:
-  // can only be constructed via factory
+  friend lazy_init::Access;
+
+  // can only be constructed via factory or LazyInit
   VmAspace(vaddr_t base, size_t size, uint32_t flags, const char* name);
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(VmAspace);
