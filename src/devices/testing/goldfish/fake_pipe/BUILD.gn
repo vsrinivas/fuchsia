@@ -1,0 +1,24 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("fake_pipe") {
+  testonly = true
+
+  sources = [
+    "fake_pipe.cc",
+    "fake_pipe.h",
+  ]
+
+  public_deps = [
+    "//sdk/banjo/fuchsia.hardware.goldfish.pipe:fuchsia.hardware.goldfish.pipe_banjo_cpp",
+    "//sdk/lib/fit",
+    "//src/devices/testing/fake-bti",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fzl",
+  ]
+}

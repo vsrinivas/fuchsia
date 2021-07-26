@@ -70,6 +70,7 @@ class VmoMapping {
   void* ptr_ = nullptr;
 };
 
+// TODO(fxbug.dev/80642): Use //src/devices/lib/goldfish/fake_pipe instead.
 class FakePipe : public ddk::GoldfishPipeProtocol<FakePipe, ddk::base_protocol> {
  public:
   struct HeapInfo {
