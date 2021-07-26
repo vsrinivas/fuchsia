@@ -111,16 +111,16 @@ class MlmeMsg : public BaseMlmeMsg {
     // Extract the message contents and decode in-place (i.e., fixup all the
     // out-of-line pointers to be offsets into the span).
     auto payload = span.subspan(reader.ReadBytes());
-    const char* err_msg = nullptr;
-    auto status = fidl_decode(M::FidlType, payload.data(), payload.size(), nullptr, 0, &err_msg);
-    if (status != ZX_OK) {
-      errorf("could not decode received message: %s\n", err_msg);
-      return {};
-    }
 
     // Construct a fidl Message and decode it into M.
     fidl::HLCPPIncomingMessage msg(fidl::BytePart(payload.data(), payload.size(), payload.size()),
                                    fidl::HandleInfoPart());
+    const char* err_msg = nullptr;
+    zx_status_t status = msg.Decode(M::FidlType, &err_msg);
+    if (status != ZX_OK) {
+      errorf("could not decode received message: %s\n", err_msg);
+      return {};
+    }
     fidl::Decoder decoder(std::move(msg));
     return {{fidl::DecodeAs<M>(&decoder, 0), h->ordinal, h->txid}};
   }
