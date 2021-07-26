@@ -14,6 +14,7 @@ use {
             iface_manager_types::*,
             phy_manager::{CreateClientIfacesReason, PhyManagerApi},
         },
+        telemetry::TelemetrySender,
         util::{future_with_metadata, listener},
     },
     anyhow::{format_err, Error},
@@ -74,6 +75,7 @@ async fn create_client_state_machine(
     network_selector: Arc<NetworkSelector>,
     connect_req: Option<(client_types::ConnectRequest, oneshot::Sender<()>)>,
     cobalt_api: CobaltSender,
+    telemetry_sender: TelemetrySender,
 ) -> Result<
     (
         Box<dyn client_fsm::ClientApi + Send>,
@@ -103,6 +105,7 @@ async fn create_client_state_machine(
         connect_req,
         network_selector,
         cobalt_api,
+        telemetry_sender,
     );
 
     let metadata =
@@ -127,6 +130,7 @@ pub(crate) struct IfaceManagerService {
         FuturesUnordered<future_with_metadata::FutureWithMetadata<(), StateMachineMetadata>>,
     cobalt_api: CobaltSender,
     clients_enabled_time: Option<zx::Time>,
+    telemetry_sender: TelemetrySender,
 }
 
 impl IfaceManagerService {
@@ -138,6 +142,7 @@ impl IfaceManagerService {
         saved_networks: Arc<dyn SavedNetworksManagerApi>,
         network_selector: Arc<NetworkSelector>,
         cobalt_api: CobaltSender,
+        telemetry_sender: TelemetrySender,
     ) -> Self {
         IfaceManagerService {
             phy_manager: phy_manager.clone(),
@@ -151,6 +156,7 @@ impl IfaceManagerService {
             fsm_futures: FuturesUnordered::new(),
             cobalt_api,
             clients_enabled_time: None,
+            telemetry_sender,
         }
     }
 
@@ -424,6 +430,7 @@ impl IfaceManagerService {
                     self.network_selector.clone(),
                     Some((connect_req, sender)),
                     self.cobalt_api.clone(),
+                    self.telemetry_sender.clone(),
                 )
                 .await?;
                 client_iface.client_state_machine = Some(new_client);
@@ -510,6 +517,7 @@ impl IfaceManagerService {
                     self.network_selector.clone(),
                     Some((connect_req.clone(), sender)),
                     self.cobalt_api.clone(),
+                    self.telemetry_sender.clone(),
                 )
                 .await?;
 
@@ -553,6 +561,7 @@ impl IfaceManagerService {
                     self.network_selector.clone(),
                     None,
                     self.cobalt_api.clone(),
+                    self.telemetry_sender.clone(),
                 )
                 .await?;
 
@@ -1209,6 +1218,7 @@ mod tests {
             },
             mode_management::phy_manager::{self, PhyManagerError},
             regulatory_manager::REGION_CODE_LEN,
+            telemetry::{TelemetryEvent, TelemetrySender},
             util::testing::{
                 create_mock_cobalt_sender, create_mock_cobalt_sender_and_receiver,
                 generate_random_bss_desc, poll_sme_req,
@@ -1292,6 +1302,8 @@ mod tests {
         pub node: inspect::Node,
         pub cobalt_api: CobaltSender,
         pub cobalt_receiver: mpsc::Receiver<CobaltEvent>,
+        pub telemetry_sender: TelemetrySender,
+        pub telemetry_receiver: mpsc::Receiver<TelemetryEvent>,
     }
 
     fn rand_string() -> String {
@@ -1322,10 +1334,13 @@ mod tests {
         let inspector = inspect::Inspector::new();
         let node = inspector.root().create_child("phy_manager");
         let (cobalt_api, cobalt_receiver) = create_mock_cobalt_sender_and_receiver();
+        let (telemetry_sender, telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
+        let telemetry_sender = TelemetrySender::new(telemetry_sender);
         let network_selector = Arc::new(NetworkSelector::new(
             saved_networks.clone(),
             cobalt_api.clone(),
             inspector.root().create_child("network_selection"),
+            telemetry_sender.clone(),
         ));
 
         TestValues {
@@ -1342,6 +1357,8 @@ mod tests {
             network_selector,
             cobalt_api,
             cobalt_receiver,
+            telemetry_sender,
+            telemetry_receiver,
         }
     }
 
@@ -1573,6 +1590,7 @@ mod tests {
             test_values.saved_networks.clone(),
             test_values.network_selector.clone(),
             test_values.cobalt_api.clone(),
+            test_values.telemetry_sender.clone(),
         );
 
         if configured {
@@ -1627,6 +1645,7 @@ mod tests {
             test_values.saved_networks.clone(),
             test_values.network_selector.clone(),
             test_values.cobalt_api.clone(),
+            test_values.telemetry_sender.clone(),
         );
 
         iface_manager.aps.push(ap_container);
@@ -1702,6 +1721,7 @@ mod tests {
             test_values.saved_networks,
             test_values.network_selector,
             test_values.cobalt_api,
+            test_values.telemetry_sender,
         );
         let scan_fut = iface_manager.scan(fidl_fuchsia_wlan_sme::ScanRequest::Passive(
             fidl_fuchsia_wlan_sme::PassiveScanRequest {},
@@ -2192,6 +2212,7 @@ mod tests {
             test_values.saved_networks,
             test_values.network_selector,
             test_values.cobalt_api,
+            test_values.telemetry_sender,
         );
 
         // Call connect on the IfaceManager
@@ -2326,6 +2347,7 @@ mod tests {
             test_values.saved_networks,
             test_values.network_selector,
             test_values.cobalt_api,
+            test_values.telemetry_sender,
         );
 
         // Call disconnect on the IfaceManager
@@ -2474,6 +2496,7 @@ mod tests {
             test_values.saved_networks,
             test_values.network_selector,
             test_values.cobalt_api,
+            test_values.telemetry_sender,
         );
         iface_manager.clients_enabled_time = Some(zx::Time::get_monotonic());
 
@@ -2606,6 +2629,7 @@ mod tests {
             test_values.saved_networks,
             test_values.network_selector,
             test_values.cobalt_api,
+            test_values.telemetry_sender,
         );
 
         // Call stop_client_connections.
@@ -2737,6 +2761,7 @@ mod tests {
             test_values.saved_networks,
             test_values.network_selector,
             test_values.cobalt_api,
+            test_values.telemetry_sender,
         );
 
         {
@@ -2845,6 +2870,7 @@ mod tests {
             test_values.saved_networks,
             test_values.network_selector,
             test_values.cobalt_api,
+            test_values.telemetry_sender,
         );
 
         // Call start_ap.
@@ -2973,6 +2999,7 @@ mod tests {
             test_values.saved_networks,
             test_values.network_selector,
             test_values.cobalt_api,
+            test_values.telemetry_sender,
         );
         let fut =
             iface_manager.stop_ap(TEST_SSID.as_bytes().to_vec(), TEST_PASSWORD.as_bytes().to_vec());
@@ -3103,6 +3130,7 @@ mod tests {
             test_values.saved_networks,
             test_values.network_selector,
             test_values.cobalt_api,
+            test_values.telemetry_sender,
         );
 
         let fut = iface_manager.stop_all_aps();
@@ -3385,6 +3413,7 @@ mod tests {
             test_values.saved_networks,
             test_values.network_selector,
             test_values.cobalt_api,
+            test_values.telemetry_sender,
         );
 
         {
@@ -3488,6 +3517,7 @@ mod tests {
             test_values.saved_networks,
             test_values.network_selector,
             test_values.cobalt_api,
+            test_values.telemetry_sender,
         );
 
         {
@@ -3558,6 +3588,7 @@ mod tests {
             test_values.saved_networks,
             test_values.network_selector,
             test_values.cobalt_api,
+            test_values.telemetry_sender,
         );
 
         {
@@ -3894,10 +3925,12 @@ mod tests {
 
         // Create other components to run the service.
         let iface_manager_client = Arc::new(Mutex::new(FakeIfaceManagerRequester::new()));
+        let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
         let network_selector = Arc::new(NetworkSelector::new(
             test_values.saved_networks,
             create_mock_cobalt_sender(),
             inspect::Inspector::new().root().create_child("network_selector"),
+            TelemetrySender::new(telemetry_sender),
         ));
 
         // Create mpsc channel to handle requests.
@@ -3945,10 +3978,12 @@ mod tests {
 
         // Create other components to run the service.
         let iface_manager_client = Arc::new(Mutex::new(FakeIfaceManagerRequester::new()));
+        let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
         let network_selector = Arc::new(NetworkSelector::new(
             test_values.saved_networks,
             create_mock_cobalt_sender(),
             inspect::Inspector::new().root().create_child("network_selector"),
+            TelemetrySender::new(telemetry_sender),
         ));
 
         // Create mpsc channel to handle requests.
@@ -3985,10 +4020,12 @@ mod tests {
 
         // Create other components to run the service.
         let iface_manager_client = Arc::new(Mutex::new(FakeIfaceManagerRequester::new()));
+        let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
         let network_selector = Arc::new(NetworkSelector::new(
             test_values.saved_networks,
             create_mock_cobalt_sender(),
             inspect::Inspector::new().root().create_child("network_selector"),
+            TelemetrySender::new(telemetry_sender),
         ));
 
         // Create mpsc channel to handle requests.
@@ -4129,14 +4166,17 @@ mod tests {
             test_values.saved_networks.clone(),
             test_values.network_selector,
             test_values.cobalt_api,
+            test_values.telemetry_sender,
         );
 
         // Create other components to run the service.
         let iface_manager_client = Arc::new(Mutex::new(FakeIfaceManagerRequester::new()));
+        let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
         let network_selector = Arc::new(NetworkSelector::new(
             test_values.saved_networks,
             create_mock_cobalt_sender(),
             inspect::Inspector::new().root().create_child("network_selector"),
+            TelemetrySender::new(telemetry_sender),
         ));
 
         // Create mpsc channel to handle requests.
@@ -4252,6 +4292,7 @@ mod tests {
             test_values.saved_networks.clone(),
             test_values.network_selector.clone(),
             test_values.cobalt_api,
+            test_values.telemetry_sender,
         );
 
         // Report a new interface.
@@ -4325,6 +4366,7 @@ mod tests {
                     test_values.saved_networks.clone(),
                     test_values.network_selector.clone(),
                     test_values.cobalt_api,
+                    test_values.telemetry_sender,
                 );
                 (iface_manager, None)
             }
@@ -4403,6 +4445,7 @@ mod tests {
             test_values.saved_networks.clone(),
             test_values.network_selector.clone(),
             test_values.cobalt_api,
+            test_values.telemetry_sender,
         );
 
         // Make start client connections request
@@ -4473,6 +4516,7 @@ mod tests {
             test_values.saved_networks.clone(),
             test_values.network_selector.clone(),
             test_values.cobalt_api,
+            test_values.telemetry_sender,
         );
 
         // Make stop client connections request
@@ -4695,6 +4739,7 @@ mod tests {
             test_values.saved_networks.clone(),
             test_values.network_selector,
             test_values.cobalt_api,
+            test_values.telemetry_sender,
         );
 
         // Update the saved networks with knowledge of the test SSID and credentials.
@@ -4822,10 +4867,12 @@ mod tests {
         >::new();
 
         // Create a network selector to be used by the network selection request.
+        let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
         let selector = Arc::new(NetworkSelector::new(
             test_values.saved_networks.clone(),
             create_mock_cobalt_sender(),
             inspect::Inspector::new().root().create_child("network_selector"),
+            TelemetrySender::new(telemetry_sender),
         ));
 
         // Setup the test to prevent a network selection from happening for whatever reason was specified.
@@ -5073,10 +5120,12 @@ mod tests {
         }
 
         // Create a network selector.
+        let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
         let selector = Arc::new(NetworkSelector::new(
             test_values.saved_networks.clone(),
             create_mock_cobalt_sender(),
             inspect::Inspector::new().root().create_child("network_selector"),
+            TelemetrySender::new(telemetry_sender),
         ));
 
         // Create an interface manager with an unconfigured client interface.
@@ -5121,10 +5170,12 @@ mod tests {
     fn test_terminated_ap() {
         let mut exec = fuchsia_async::TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup(&mut exec);
+        let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
         let selector = Arc::new(NetworkSelector::new(
             test_values.saved_networks.clone(),
             create_mock_cobalt_sender(),
             inspect::Inspector::new().root().create_child("network_selector"),
+            TelemetrySender::new(telemetry_sender),
         ));
 
         // Create an interface manager with an unconfigured client interface.
@@ -5270,6 +5321,7 @@ mod tests {
             test_values.saved_networks.clone(),
             test_values.network_selector.clone(),
             test_values.cobalt_api.clone(),
+            test_values.telemetry_sender.clone(),
         );
 
         // If the test calls for it, create an AP interface to test that the IfaceManager preserves

@@ -22,6 +22,7 @@ use {
             create_iface_manager, iface_manager_api::IfaceManagerApi, phy_manager::PhyManager,
         },
         regulatory_manager::RegulatoryManager,
+        telemetry::serve_telemetry,
     },
     anyhow::{format_err, Context as _, Error},
     fidl::{endpoints::RequestStream, handle::AsyncChannel},
@@ -251,11 +252,15 @@ async fn run_all_futures() -> Result<(), Error> {
     let (cobalt_api, cobalt_fut) =
         CobaltConnector::default().serve(ConnectionType::project_id(metrics::PROJECT_ID));
 
+    let (telemetry_sender, telemetry_fut) =
+        serve_telemetry(component::inspector().root().create_child("client_stats"));
+
     let saved_networks = Arc::new(SavedNetworksManager::new(cobalt_api.clone()).await?);
     let network_selector = Arc::new(NetworkSelector::new(
         saved_networks.clone(),
         cobalt_api.clone(),
         component::inspector().root().create_child("network_selector"),
+        telemetry_sender.clone(),
     ));
 
     let phy_manager = Arc::new(Mutex::new(PhyManager::new(
@@ -279,6 +284,7 @@ async fn run_all_futures() -> Result<(), Error> {
         saved_networks.clone(),
         network_selector.clone(),
         cobalt_api.clone(),
+        telemetry_sender.clone(),
     );
 
     let legacy_client = IfaceRef::new();
@@ -326,6 +332,7 @@ async fn run_all_futures() -> Result<(), Error> {
         metrics_fut,
         regulatory_fut,
         lifecycle_fut,
+        telemetry_fut.map(Ok),
     )?;
     Ok(())
 }

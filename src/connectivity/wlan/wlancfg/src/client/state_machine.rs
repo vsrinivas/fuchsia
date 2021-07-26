@@ -6,6 +6,7 @@ use {
     crate::{
         client::{network_selection, sme_credential_from_policy, types},
         config_management::SavedNetworksManagerApi,
+        telemetry::{TelemetryEvent, TelemetrySender},
         util::{
             listener::{
                 ClientListenerMessageSender, ClientNetworkState, ClientStateUpdate,
@@ -121,6 +122,7 @@ pub async fn serve(
     connect_request: Option<(types::ConnectRequest, oneshot::Sender<()>)>,
     network_selector: Arc<network_selection::NetworkSelector>,
     cobalt_api: CobaltSender,
+    telemetry_sender: TelemetrySender,
 ) {
     let next_network = match connect_request {
         Some((req, sender)) => Some(ConnectingOptions {
@@ -143,6 +145,7 @@ pub async fn serve(
         saved_networks_manager: saved_networks_manager,
         network_selector,
         cobalt_api,
+        telemetry_sender,
     };
     let state_machine =
         disconnecting_state(common_options, disconnect_options).into_state_machine();
@@ -171,6 +174,7 @@ struct CommonStateOptions {
     saved_networks_manager: Arc<dyn SavedNetworksManagerApi>,
     network_selector: Arc<network_selection::NetworkSelector>,
     cobalt_api: CobaltSender,
+    telemetry_sender: TelemetrySender,
 }
 
 fn handle_none_request() -> Result<State, ExitReason> {
@@ -490,6 +494,7 @@ async fn connecting_state<'a>(
                                     status: None
                                 },
                             );
+                            common_options.telemetry_sender.send(TelemetryEvent::Connected);
                             return Ok(
                                 connected_state(common_options, ConnectedOptions{ currently_fulfilled_request: options.connect_request, bssid: *bssid }).into_state()
                             );
@@ -665,6 +670,7 @@ async fn connected_state(
                                 reason: types::DisconnectReason::DisconnectDetectedFromSme
                             };
                             info!("Detected disconnection from network, will attempt reconnection");
+                            common_options.telemetry_sender.send(TelemetryEvent::Disconnected { track_subsequent_downtime: true });
                             return Ok(disconnecting_state(common_options, options).into_state());
                         }
                     }
@@ -685,6 +691,7 @@ async fn connected_state(
                             next_network: None,
                             reason
                         };
+                        common_options.telemetry_sender.send(TelemetryEvent::Disconnected { track_subsequent_downtime: false });
                         return Ok(disconnecting_state(common_options, options).into_state());
                     }
                     Some(ManualRequest::Connect((new_connect_request, new_responder))) => {
@@ -712,6 +719,7 @@ async fn connected_state(
                                 }
                             };
                             info!("Connection to new network requested, disconnecting from current network");
+                            common_options.telemetry_sender.send(TelemetryEvent::Disconnected { track_subsequent_downtime: false });
                             return Ok(disconnecting_state(common_options, options).into_state())
                         }
                     }
@@ -731,6 +739,7 @@ mod tests {
                 network_config::{self, Credential, FailureReason},
                 SavedNetworksManager,
             },
+            telemetry::{TelemetryEvent, TelemetrySender},
             util::{
                 listener,
                 testing::{
@@ -762,6 +771,7 @@ mod tests {
         client_req_sender: mpsc::Sender<ManualRequest>,
         update_receiver: mpsc::UnboundedReceiver<listener::ClientListenerMessage>,
         cobalt_events: mpsc::Receiver<CobaltEvent>,
+        telemetry_receiver: mpsc::Receiver<TelemetryEvent>,
     }
 
     async fn test_setup() -> TestValues {
@@ -776,10 +786,13 @@ mod tests {
                 .expect("Failed to create saved networks manager"),
         );
         let (cobalt_api, cobalt_events) = create_mock_cobalt_sender_and_receiver();
+        let (telemetry_sender, telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
+        let telemetry_sender = TelemetrySender::new(telemetry_sender);
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks_manager.clone(),
             create_mock_cobalt_sender(),
             inspect::Inspector::new().root().create_child("network_selector"),
+            telemetry_sender.clone(),
         ));
 
         TestValues {
@@ -790,11 +803,13 @@ mod tests {
                 saved_networks_manager: saved_networks_manager,
                 network_selector,
                 cobalt_api,
+                telemetry_sender,
             },
             sme_req_stream,
             client_req_sender,
             update_receiver,
             cobalt_events,
+            telemetry_receiver,
         }
     }
 
@@ -844,10 +859,13 @@ mod tests {
             exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server(path, tmp_path));
         let saved_networks_manager = Arc::new(saved_networks);
         let (cobalt_api, mut cobalt_events) = create_mock_cobalt_sender_and_receiver();
+        let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
+        let telemetry_sender = TelemetrySender::new(telemetry_sender);
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks_manager.clone(),
             create_mock_cobalt_sender(),
             inspect::Inspector::new().root().create_child("network_selector"),
+            telemetry_sender.clone(),
         ));
         let next_network_ssid = "bar";
         let bss_desc = generate_random_bss_desc();
@@ -895,6 +913,7 @@ mod tests {
             saved_networks_manager: saved_networks_manager.clone(),
             network_selector,
             cobalt_api: cobalt_api,
+            telemetry_sender,
         };
         let initial_state = connecting_state(common_options, connecting_options);
         let fut = run_state_machine(initial_state);
@@ -1008,10 +1027,13 @@ mod tests {
             exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server(path, tmp_path));
         let saved_networks_manager = Arc::new(saved_networks);
         let (cobalt_api, mut cobalt_events) = create_mock_cobalt_sender_and_receiver();
+        let (telemetry_sender, mut telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
+        let telemetry_sender = TelemetrySender::new(telemetry_sender);
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks_manager.clone(),
             create_mock_cobalt_sender(),
             inspect::Inspector::new().root().create_child("network_selector"),
+            telemetry_sender.clone(),
         ));
         let next_network_ssid = "bar";
         let bss_desc = generate_random_bss_desc();
@@ -1059,6 +1081,7 @@ mod tests {
             saved_networks_manager: saved_networks_manager.clone(),
             network_selector,
             cobalt_api: cobalt_api,
+            telemetry_sender,
         };
         let initial_state = connecting_state(common_options, connecting_options);
         let fut = run_state_machine(initial_state);
@@ -1066,6 +1089,11 @@ mod tests {
 
         // Run the state machine
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
+        // Check that StartNetworkSelection telemetry event is sent
+        assert_variant!(telemetry_receiver.try_next(), Ok(Some(event)) => {
+            assert_variant!(event, TelemetryEvent::StartNetworkSelection { .. });
+        });
 
         // Ensure a scan request is sent to the SME and send back a result
         let expected_scan_request = fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
@@ -1127,6 +1155,11 @@ mod tests {
             assert_eq!(updates, client_state_update);
         });
 
+        // Check that NetworkSelectionDecision telemetry event is sent
+        assert_variant!(telemetry_receiver.try_next(), Ok(Some(event)) => {
+            assert_variant!(event, TelemetryEvent::NetworkSelectionDecision { .. });
+        });
+
         // Progress the state machine
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
         process_stash_write(&mut exec, &mut stash_server);
@@ -1159,6 +1192,9 @@ mod tests {
         );
         assert_eq!(true, saved_networks[0].has_ever_connected);
         assert_eq!(network_config::PROB_HIDDEN_DEFAULT, saved_networks[0].hidden_probability);
+
+        // Check that connected telemetry event is sent
+        assert_variant!(telemetry_receiver.try_next(), Ok(Some(TelemetryEvent::Connected)));
 
         // Progress the state machine
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
@@ -1193,10 +1229,13 @@ mod tests {
             exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server(path, tmp_path));
         let saved_networks_manager = Arc::new(saved_networks);
         let (cobalt_api, _cobalt_events) = create_mock_cobalt_sender_and_receiver();
+        let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
+        let telemetry_sender = TelemetrySender::new(telemetry_sender);
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks_manager.clone(),
             create_mock_cobalt_sender(),
             inspect::Inspector::new().root().create_child("network_selector"),
+            telemetry_sender.clone(),
         ));
         let next_network_ssid = "bar";
         let bss_desc = generate_random_bss_desc();
@@ -1244,6 +1283,7 @@ mod tests {
             saved_networks_manager: saved_networks_manager.clone(),
             network_selector,
             cobalt_api: cobalt_api,
+            telemetry_sender,
         };
         let initial_state = connecting_state(common_options, connecting_options);
         let fut = run_state_machine(initial_state);
@@ -1454,10 +1494,13 @@ mod tests {
             exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server(path, tmp_path));
         let saved_networks_manager = Arc::new(saved_networks);
         let (cobalt_api, mut cobalt_events) = create_mock_cobalt_sender_and_receiver();
+        let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
+        let telemetry_sender = TelemetrySender::new(telemetry_sender);
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks_manager.clone(),
             create_mock_cobalt_sender(),
             inspect::Inspector::new().root().create_child("network_selector"),
+            telemetry_sender.clone(),
         ));
         let next_network_ssid = "bar";
         let bss_desc = generate_random_bss_desc();
@@ -1498,6 +1541,7 @@ mod tests {
             saved_networks_manager: saved_networks_manager.clone(),
             network_selector,
             cobalt_api: cobalt_api,
+            telemetry_sender,
         };
         let initial_state = connecting_state(common_options, connecting_options);
         let fut = run_state_machine(initial_state);
@@ -1653,10 +1697,13 @@ mod tests {
         );
         let (_client_req_sender, client_req_stream) = mpsc::channel(1);
         let (cobalt_api, mut cobalt_events) = create_mock_cobalt_sender_and_receiver();
+        let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
+        let telemetry_sender = TelemetrySender::new(telemetry_sender);
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks_manager.clone(),
             create_mock_cobalt_sender(),
             inspect::Inspector::new().root().create_child("network_selector"),
+            telemetry_sender.clone(),
         ));
         let common_options = CommonStateOptions {
             proxy: sme_proxy,
@@ -1665,6 +1712,7 @@ mod tests {
             saved_networks_manager: saved_networks_manager.clone(),
             network_selector,
             cobalt_api: cobalt_api,
+            telemetry_sender,
         };
 
         let next_network_ssid = "bar";
@@ -1792,10 +1840,13 @@ mod tests {
         );
         let (_client_req_sender, client_req_stream) = mpsc::channel(1);
         let (cobalt_api, mut cobalt_events) = create_mock_cobalt_sender_and_receiver();
+        let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
+        let telemetry_sender = TelemetrySender::new(telemetry_sender);
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks_manager.clone(),
             create_mock_cobalt_sender(),
             inspect::Inspector::new().root().create_child("network_selector"),
+            telemetry_sender.clone(),
         ));
 
         let common_options = CommonStateOptions {
@@ -1805,6 +1856,7 @@ mod tests {
             saved_networks_manager: saved_networks_manager.clone(),
             network_selector,
             cobalt_api: cobalt_api,
+            telemetry_sender,
         };
 
         let next_network_ssid = "bar";
@@ -2407,6 +2459,7 @@ mod tests {
     fn connected_state_gets_disconnect_request() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = exec.run_singlethreaded(test_setup());
+        let mut telemetry_receiver = test_values.telemetry_receiver;
 
         let network_ssid = "test";
         let bss_desc = generate_random_bss_desc();
@@ -2506,6 +2559,11 @@ mod tests {
             DISCONNECTION_METRIC_ID,
             types::DisconnectReason::FidlStopClientConnectionsRequest
         );
+
+        // Disconnect telemetry event sent
+        assert_variant!(telemetry_receiver.try_next(), Ok(Some(event)) => {
+            assert_eq!(event, TelemetryEvent::Disconnected { track_subsequent_downtime: false });
+        });
     }
 
     #[fuchsia::test]
@@ -2519,12 +2577,15 @@ mod tests {
             exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server(path, tmp_path));
         let saved_networks_manager = Arc::new(saved_networks);
         test_values.common_options.saved_networks_manager = saved_networks_manager.clone();
+        let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks_manager.clone(),
             create_mock_cobalt_sender(),
             inspect::Inspector::new().root().create_child("network_selector"),
+            TelemetrySender::new(telemetry_sender),
         ));
         test_values.common_options.network_selector = network_selector;
+        let mut telemetry_receiver = test_values.telemetry_receiver;
 
         let network_ssid = "flaky-network".as_bytes().to_vec();
         let security = types::SecurityType::Wpa2;
@@ -2592,6 +2653,11 @@ mod tests {
         assert_variant!(disconnects.as_slice(), [disconnect] => {
             assert_eq!(disconnect.bssid, bss_desc.bssid);
         });
+
+        // Disconnect telemetry event sent
+        assert_variant!(telemetry_receiver.try_next(), Ok(Some(event)) => {
+            assert_eq!(event, TelemetryEvent::Disconnected { track_subsequent_downtime: true });
+        });
     }
 
     #[fuchsia::test]
@@ -2605,10 +2671,12 @@ mod tests {
             exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server(path, tmp_path));
         let saved_networks_manager = Arc::new(saved_networks);
         test_values.common_options.saved_networks_manager = saved_networks_manager.clone();
+        let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks_manager.clone(),
             create_mock_cobalt_sender(),
             inspect::Inspector::new().root().create_child("network_selector"),
+            TelemetrySender::new(telemetry_sender),
         ));
         test_values.common_options.network_selector = network_selector;
 
@@ -2733,6 +2801,7 @@ mod tests {
     fn connected_state_gets_duplicate_connect_request() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = exec.run_singlethreaded(test_setup());
+        let mut telemetry_receiver = test_values.telemetry_receiver;
 
         let network_ssid = "test";
         let bss_desc = generate_random_bss_desc();
@@ -2802,12 +2871,16 @@ mod tests {
 
         // No cobalt metrics logged
         validate_no_cobalt_events!(test_values.cobalt_events);
+
+        // No telemetry event is sent
+        assert_variant!(telemetry_receiver.try_next(), Err(_));
     }
 
     #[fuchsia::test]
     fn connected_state_gets_different_connect_request() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = exec.run_singlethreaded(test_setup());
+        let mut telemetry_receiver = test_values.telemetry_receiver;
 
         let first_network_ssid = "foo";
         let second_network_ssid = "bar";
@@ -2929,6 +3002,11 @@ mod tests {
             assert_eq!(updates, client_state_update);
         });
 
+        // Disconnect telemetry event sent
+        assert_variant!(telemetry_receiver.try_next(), Ok(Some(event)) => {
+            assert_eq!(event, TelemetryEvent::Disconnected { track_subsequent_downtime: false });
+        });
+
         // Check the responder was acknowledged
         assert_variant!(exec.run_until_stalled(&mut connect_receiver2), Poll::Ready(Ok(())));
 
@@ -3005,10 +3083,13 @@ mod tests {
             exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server(path, tmp_path));
         let saved_networks_manager = Arc::new(saved_networks);
         let (cobalt_api, mut cobalt_events) = create_mock_cobalt_sender_and_receiver();
+        let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
+        let telemetry_sender = TelemetrySender::new(telemetry_sender);
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks_manager.clone(),
             create_mock_cobalt_sender(),
             inspect::Inspector::new().root().create_child("network_selector"),
+            telemetry_sender.clone(),
         ));
         let network_ssid = "foo";
         let bss_desc = generate_random_bss_desc();
@@ -3043,6 +3124,7 @@ mod tests {
             saved_networks_manager: saved_networks_manager.clone(),
             network_selector,
             cobalt_api: cobalt_api,
+            telemetry_sender,
         };
         let options = ConnectedOptions {
             currently_fulfilled_request: connect_request.clone(),
@@ -3493,6 +3575,7 @@ mod tests {
             Some((connect_req, sender)),
             test_values.common_options.network_selector,
             test_values.common_options.cobalt_api,
+            test_values.common_options.telemetry_sender,
         );
         pin_mut!(fut);
 
@@ -3560,6 +3643,7 @@ mod tests {
             Some((connect_req, sender)),
             test_values.common_options.network_selector,
             test_values.common_options.cobalt_api,
+            test_values.common_options.telemetry_sender,
         );
         pin_mut!(fut);
 
@@ -3618,6 +3702,7 @@ mod tests {
             Some((connect_req, sender)),
             test_values.common_options.network_selector,
             test_values.common_options.cobalt_api,
+            test_values.common_options.telemetry_sender,
         );
         pin_mut!(fut);
 
@@ -3744,6 +3829,7 @@ mod tests {
             Some((connect_req, sender)),
             test_values.common_options.network_selector,
             test_values.common_options.cobalt_api,
+            test_values.common_options.telemetry_sender,
         );
         pin_mut!(fut);
 
