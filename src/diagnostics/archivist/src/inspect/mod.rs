@@ -292,7 +292,7 @@ impl ReaderServer {
             client_selectors = {
                 let matching_selectors = selectors::match_component_moniker_against_selectors(
                     &pumped_inspect_data.identity.relative_moniker,
-                    configured_selectors,
+                    configured_selectors.as_slice(),
                 )
                 .unwrap_or_else(|err| {
                     error!(
