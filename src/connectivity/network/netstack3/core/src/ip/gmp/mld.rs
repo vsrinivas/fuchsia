@@ -276,12 +276,12 @@ impl<I: Instant> From<MldGroupState<I>> for GmpStateMachine<I, MldProtocolSpecif
 }
 
 impl<I: Instant> MulticastGroupSet<Ipv6Addr, MldGroupState<I>> {
-    fn report_timer_expired(&mut self, addr: MulticastAddr<Ipv6Addr>) -> MldResult<()> {
+    fn report_timer_expired(
+        &mut self,
+        addr: MulticastAddr<Ipv6Addr>,
+    ) -> MldResult<Actions<MldProtocolSpecific>> {
         match self.get_mut(&addr) {
-            Some(MldGroupState(state)) => {
-                state.report_timer_expired();
-                Ok(())
-            }
+            Some(MldGroupState(state)) => Ok(state.report_timer_expired()),
             None => Err(MldError::NotAMember { addr: addr.get() }),
         }
     }
@@ -304,17 +304,9 @@ impl<D, DeviceId> MldReportDelay<D, DeviceId> {
 impl<D: LinkDevice, C: MldContext<D>> TimerHandler<MldReportDelay<D, C::DeviceId>> for C {
     fn handle_timer(&mut self, timer: MldReportDelay<D, C::DeviceId>) {
         let MldReportDelay { device, group_addr, _marker } = timer;
-        // TODO(rheacock): Handle the case where this returns an error.
-        let _ = send_mld_packet::<_, _, &[u8], _>(
-            self,
-            device,
-            group_addr,
-            MulticastListenerReport,
-            group_addr,
-            (),
-        );
-        if let Err(e) = self.get_state_mut_with(device).report_timer_expired(group_addr) {
-            error!("MLD timer fired, but an error has occurred: {}", e);
+        match self.get_state_mut_with(device).report_timer_expired(group_addr) {
+            Ok(actions) => run_actions(self, device, actions, group_addr),
+            Err(e) => error!("MLD timer fired, but an error has occurred: {}", e),
         }
     }
 }
@@ -363,11 +355,12 @@ fn run_action<D: LinkDevice, C: MldContext<D>>(
 ) -> MldResult<()> {
     match action {
         Action::Generic(GmpAction::ScheduleReportTimer(delay)) => {
-            ctx.schedule_timer(delay, MldReportDelay::new(device, group_addr));
+            let _: Option<C::Instant> =
+                ctx.schedule_timer(delay, MldReportDelay::new(device, group_addr));
             Ok(())
         }
         Action::Generic(GmpAction::StopReportTimer) => {
-            ctx.cancel_timer(MldReportDelay::new(device, group_addr));
+            let _: Option<C::Instant> = ctx.cancel_timer(MldReportDelay::new(device, group_addr));
             Ok(())
         }
         Action::Generic(GmpAction::SendLeave) => send_mld_packet::<_, _, &[u8], _>(
@@ -387,8 +380,9 @@ fn run_action<D: LinkDevice, C: MldContext<D>>(
             (),
         ),
         Action::Specific(ImmediateIdleState) => {
-            ctx.cancel_timer(MldReportDelay::new(device, group_addr));
-            ctx.get_state_mut_with(device).report_timer_expired(group_addr)
+            let _: Option<C::Instant> = ctx.cancel_timer(MldReportDelay::new(device, group_addr));
+            let actions = ctx.get_state_mut_with(device).report_timer_expired(group_addr)?;
+            Ok(run_actions(ctx, device, actions, group_addr))
         }
     }
 }
@@ -446,7 +440,7 @@ mod tests {
     use crate::context::testutil::{DummyInstant, DummyTimerContextExt};
     use crate::context::DualStateContext;
     use crate::device::link::testutil::{DummyLinkDevice, DummyLinkDeviceId};
-    use crate::ip::gmp::{Action, GmpAction, MemberState};
+    use crate::ip::gmp::{Action, MemberState};
     use crate::testutil;
     use crate::testutil::{new_rng, FakeCryptoRng};
 
@@ -526,12 +520,11 @@ mod tests {
         // `MaxRespDelay` to be 0. If this is the case, the host should send the
         // report immediately instead of setting a timer.
         let mut rng = new_rng(0);
-        let (mut s, _actions) = GmpStateMachine::join_group(&mut rng, Instant::now());
+        let (mut s, _actions) =
+            GmpStateMachine::<_, MldProtocolSpecific>::join_group(&mut rng, Instant::now());
         let actions = s.query_received(&mut rng, Duration::from_secs(0), Instant::now());
         let vec = actions.into_iter().collect::<Vec<Action<_>>>();
-        assert_eq!(vec.len(), 2);
-        assert_eq!(vec[0], Action::Generic(GmpAction::SendReport(MldProtocolSpecific)));
-        assert_eq!(vec[1], Action::Specific(ImmediateIdleState));
+        assert_eq!(vec, [Action::Specific(ImmediateIdleState)]);
     }
 
     const MY_IP: SpecifiedAddr<Ipv6Addr> = unsafe {
@@ -651,7 +644,7 @@ mod tests {
     #[test]
     fn test_mld_simple_integration() {
         let mut ctx = DummyContext::default();
-        ctx.gmp_join_group(DummyLinkDeviceId, GROUP_ADDR);
+        assert_eq!(ctx.gmp_join_group(DummyLinkDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
 
         receive_mld_query(&mut ctx, Duration::from_secs(10), GROUP_ADDR);
         assert!(ctx.trigger_next_timer());
@@ -671,7 +664,7 @@ mod tests {
     fn test_mld_immediate_query() {
         testutil::set_logger_for_test();
         let mut ctx = DummyContext::default();
-        ctx.gmp_join_group(DummyLinkDeviceId, GROUP_ADDR);
+        assert_eq!(ctx.gmp_join_group(DummyLinkDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
         assert_eq!(ctx.frames().len(), 1);
 
         receive_mld_query(&mut ctx, Duration::from_secs(0), GROUP_ADDR);
@@ -689,7 +682,7 @@ mod tests {
     #[test]
     fn test_mld_integration_fallback_from_idle() {
         let mut ctx = DummyContext::default();
-        ctx.gmp_join_group(DummyLinkDeviceId, GROUP_ADDR);
+        assert_eq!(ctx.gmp_join_group(DummyLinkDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
         assert_eq!(ctx.frames().len(), 1);
 
         assert!(ctx.trigger_next_timer());
@@ -718,7 +711,7 @@ mod tests {
     #[test]
     fn test_mld_integration_immediate_query_wont_fallback() {
         let mut ctx = DummyContext::default();
-        ctx.gmp_join_group(DummyLinkDeviceId, GROUP_ADDR);
+        assert_eq!(ctx.gmp_join_group(DummyLinkDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
         assert_eq!(ctx.frames().len(), 1);
 
         assert!(ctx.trigger_next_timer());
@@ -751,7 +744,7 @@ mod tests {
         // This seed was carefully chosen to produce a substantial duration
         // value below.
         ctx.seed_rng(123456);
-        ctx.gmp_join_group(DummyLinkDeviceId, GROUP_ADDR);
+        assert_eq!(ctx.gmp_join_group(DummyLinkDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
         assert_eq!(ctx.timers().len(), 1);
         let instant1 = ctx.timers()[0].0.clone();
         let start = ctx.now();
@@ -776,7 +769,7 @@ mod tests {
     #[test]
     fn test_mld_integration_last_send_leave() {
         let mut ctx = DummyContext::default();
-        ctx.gmp_join_group(DummyLinkDeviceId, GROUP_ADDR);
+        assert_eq!(ctx.gmp_join_group(DummyLinkDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
         assert_eq!(ctx.timers().len(), 1);
         // The initial unsolicited report.
         assert_eq!(ctx.frames().len(), 1);
@@ -805,7 +798,7 @@ mod tests {
     #[test]
     fn test_mld_integration_not_last_dont_send_leave() {
         let mut ctx = DummyContext::default();
-        ctx.gmp_join_group(DummyLinkDeviceId, GROUP_ADDR);
+        assert_eq!(ctx.gmp_join_group(DummyLinkDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
         assert_eq!(ctx.timers().len(), 1);
         assert_eq!(ctx.frames().len(), 1);
         receive_mld_report(&mut ctx, GROUP_ADDR);
@@ -827,7 +820,7 @@ mod tests {
     fn test_mld_with_link_local() {
         let mut ctx = DummyContext::default();
         ctx.get_mut().ipv6_link_local = Some(MY_MAC.to_ipv6_link_local().addr());
-        ctx.gmp_join_group(DummyLinkDeviceId, GROUP_ADDR);
+        assert_eq!(ctx.gmp_join_group(DummyLinkDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
         assert!(ctx.trigger_next_timer());
         for (_, frame) in ctx.frames() {
             ensure_frame(&frame, 131, GROUP_ADDR, GROUP_ADDR);

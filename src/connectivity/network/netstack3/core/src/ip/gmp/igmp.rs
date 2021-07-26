@@ -407,7 +407,9 @@ impl<I: Instant> From<IgmpGroupState<I>> for GmpStateMachine<I, Igmpv2ProtocolSp
 
 impl<I: Instant> GmpStateMachine<I, Igmpv2ProtocolSpecific> {
     fn v1_router_present_timer_expired(&mut self) {
-        self.update_with_protocol_specific(Igmpv2ProtocolSpecific { v1_router_present: false });
+        let Actions(actions) =
+            self.update_with_protocol_specific(Igmpv2ProtocolSpecific { v1_router_present: false });
+        assert_eq!(actions, []);
     }
 }
 
@@ -437,10 +439,12 @@ fn run_action<D: LinkDevice, C: IgmpContext<D>>(
 ) -> IgmpResult<(), C::DeviceId> {
     match action {
         Action::Generic(GmpAction::ScheduleReportTimer(duration)) => {
-            ctx.schedule_timer(duration, IgmpTimerId::new_report_delay(device, group_addr));
+            let _: Option<C::Instant> =
+                ctx.schedule_timer(duration, IgmpTimerId::new_report_delay(device, group_addr));
         }
         Action::Generic(GmpAction::StopReportTimer) => {
-            ctx.cancel_timer(IgmpTimerId::new_report_delay(device, group_addr));
+            let _: Option<C::Instant> =
+                ctx.cancel_timer(IgmpTimerId::new_report_delay(device, group_addr));
         }
         Action::Generic(GmpAction::SendLeave) => {
             send_igmp_message::<_, _, IgmpLeaveGroup>(
@@ -471,7 +475,8 @@ fn run_action<D: LinkDevice, C: IgmpContext<D>>(
             }
         }
         Action::Specific(Igmpv2Actions::ScheduleV1RouterPresentTimer(duration)) => {
-            ctx.schedule_timer(duration, IgmpTimerId::new_v1_router_present(device));
+            let _: Option<C::Instant> =
+                ctx.schedule_timer(duration, IgmpTimerId::new_v1_router_present(device));
         }
     }
     Ok(())
@@ -570,14 +575,21 @@ mod tests {
     fn test_igmp_state_with_igmpv1_router() {
         let mut rng = new_rng(0);
         let (mut s, _actions) = GmpStateMachine::join_group(&mut rng, time::Instant::now());
-        s.query_received(&mut rng, Duration::from_secs(0), time::Instant::now());
+        let Actions(actions) =
+            s.query_received(&mut rng, Duration::from_secs(0), time::Instant::now());
+        assert_eq!(
+            actions,
+            [Action::Specific(Igmpv2Actions::ScheduleV1RouterPresentTimer(
+                DEFAULT_V1_ROUTER_PRESENT_TIMEOUT
+            ))]
+        );
         let actions = s.report_timer_expired();
-        at_least_one_action(
+        assert!(at_least_one_action(
             actions,
             Action::<Igmpv2ProtocolSpecific>::Generic(GmpAction::SendReport(
                 Igmpv2ProtocolSpecific { v1_router_present: true },
             )),
-        );
+        ));
     }
 
     #[test]
@@ -587,7 +599,14 @@ mod tests {
             &mut rng,
             time::Instant::now(),
         );
-        s.query_received(&mut rng, Duration::from_secs(0), time::Instant::now());
+        let Actions(actions) =
+            s.query_received(&mut rng, Duration::from_secs(0), time::Instant::now());
+        assert_eq!(
+            actions,
+            [Action::Specific(Igmpv2Actions::ScheduleV1RouterPresentTimer(
+                DEFAULT_V1_ROUTER_PRESENT_TIMEOUT
+            ))]
+        );
         match s.get_inner() {
             MemberState::Delaying(state) => {
                 assert!(state.get_protocol_specific().v1_router_present);
@@ -601,8 +620,16 @@ mod tests {
             }
             _ => panic!("Wrong State!"),
         }
-        s.query_received(&mut rng, Duration::from_secs(0), time::Instant::now());
-        s.report_received();
+        let Actions(actions) =
+            s.query_received(&mut rng, Duration::from_secs(0), time::Instant::now());
+        assert_eq!(
+            actions,
+            [Action::Specific(Igmpv2Actions::ScheduleV1RouterPresentTimer(
+                DEFAULT_V1_ROUTER_PRESENT_TIMEOUT
+            ))]
+        );
+        let Actions(actions) = s.report_received();
+        assert_eq!(actions, [Action::Generic(GmpAction::StopReportTimer)]);
         s.v1_router_present_timer_expired();
         match s.get_inner() {
             MemberState::Idle(state) => {
@@ -661,7 +688,7 @@ mod tests {
     #[test]
     fn test_igmp_simple_integration() {
         let mut ctx = setup_simple_test_environment();
-        ctx.gmp_join_group(DummyLinkDeviceId, GROUP_ADDR);
+        assert_eq!(ctx.gmp_join_group(DummyLinkDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
 
         receive_igmp_query(&mut ctx, Duration::from_secs(10));
         assert!(ctx.trigger_next_timer());
@@ -675,7 +702,7 @@ mod tests {
     #[test]
     fn test_igmp_integration_fallback_from_idle() {
         let mut ctx = setup_simple_test_environment();
-        ctx.gmp_join_group(DummyLinkDeviceId, GROUP_ADDR);
+        assert_eq!(ctx.gmp_join_group(DummyLinkDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
         assert_eq!(ctx.frames().len(), 1);
 
         assert!(ctx.trigger_next_timer());
@@ -701,7 +728,7 @@ mod tests {
     fn test_igmp_integration_igmpv1_router_present() {
         let mut ctx = setup_simple_test_environment();
 
-        ctx.gmp_join_group(DummyLinkDeviceId, GROUP_ADDR);
+        assert_eq!(ctx.gmp_join_group(DummyLinkDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
         assert_eq!(ctx.timers().len(), 1);
         let instant1 = ctx.timers()[0].0.clone();
 
@@ -754,7 +781,7 @@ mod tests {
         let mut ctx = setup_simple_test_environment();
         // This seed value was chosen to later produce a timer duration > 100ms.
         ctx.seed_rng(123456);
-        ctx.gmp_join_group(DummyLinkDeviceId, GROUP_ADDR);
+        assert_eq!(ctx.gmp_join_group(DummyLinkDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
         assert_eq!(ctx.timers().len(), 1);
         let instant1 = ctx.timers()[0].0.clone();
         let start = ctx.now();
@@ -777,7 +804,7 @@ mod tests {
     #[test]
     fn test_igmp_integration_last_send_leave() {
         let mut ctx = setup_simple_test_environment();
-        ctx.gmp_join_group(DummyLinkDeviceId, GROUP_ADDR);
+        assert_eq!(ctx.gmp_join_group(DummyLinkDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
         assert_eq!(ctx.timers().len(), 1);
         // The initial unsolicited report.
         assert_eq!(ctx.frames().len(), 1);
@@ -803,7 +830,7 @@ mod tests {
     #[test]
     fn test_igmp_integration_not_last_dont_send_leave() {
         let mut ctx = setup_simple_test_environment();
-        ctx.gmp_join_group(DummyLinkDeviceId, GROUP_ADDR);
+        assert_eq!(ctx.gmp_join_group(DummyLinkDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
         assert_eq!(ctx.timers().len(), 1);
         assert_eq!(ctx.frames().len(), 1);
         receive_igmp_report(&mut ctx);
@@ -820,8 +847,11 @@ mod tests {
     #[test]
     fn test_receive_general_query() {
         let mut ctx = setup_simple_test_environment();
-        ctx.gmp_join_group(DummyLinkDeviceId, GROUP_ADDR);
-        ctx.gmp_join_group(DummyLinkDeviceId, GROUP_ADDR_2);
+        assert_eq!(ctx.gmp_join_group(DummyLinkDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
+        assert_eq!(
+            ctx.gmp_join_group(DummyLinkDeviceId, GROUP_ADDR_2),
+            GroupJoinResult::Joined(())
+        );
         assert_eq!(ctx.timers().len(), 2);
         // The initial unsolicited report.
         assert_eq!(ctx.frames().len(), 2);
