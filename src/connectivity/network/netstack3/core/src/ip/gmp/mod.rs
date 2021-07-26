@@ -4,7 +4,7 @@
 
 //! Group Management Protocols (GMPs).
 //!
-//! This module provides implementations of the Internet Group Managent Protocol
+//! This module provides implementations of the Internet Group Management Protocol
 //! (IGMP) and the Multicast Listener Discovery (MLD) protocol. These allow
 //! hosts to join IPv4 and IPv6 multicast groups respectively.
 //!
@@ -156,7 +156,6 @@ impl<A: IpAddress, T> MulticastGroupSet<A, T> {
     /// count of 1, and the list of actions returned by `join_group` is
     /// returned. Otherwise, if the group was already joined, its reference
     /// count is incremented.
-    #[cfg_attr(not(test), allow(unused))] // TODO(joshlf): Remove once this is used.
     fn join_group_gmp<I: Instant, P: ProtocolSpecific + Default, R: Rng>(
         &mut self,
         group: MulticastAddr<A>,
@@ -184,7 +183,6 @@ impl<A: IpAddress, T> MulticastGroupSet<A, T> {
     /// reference count on the group. If the reference count reaches 0, the
     /// group is left using [`GmpStateMachine::leave_group`] and the list of
     /// actions returned by `leave_group` is returned.
-    #[cfg_attr(not(test), allow(unused))] // TODO(joshlf): Remove once this is used.
     fn leave_group_gmp<I: Instant, P: ProtocolSpecific>(
         &mut self,
         group: MulticastAddr<A>,
@@ -868,14 +866,6 @@ mod test {
     }
 
     #[test]
-    fn test_gmp_state_delay_dont_reset_timer() {
-        let (mut s, _actions) = DummyGmpStateMachine::join_group(&mut new_rng(0), Instant::now());
-        let actions = s.query_received(&mut new_rng(0), Duration::from_secs(100), Instant::now());
-        for _ in actions {
-            panic!("There should be no actions at all")
-        }
-    }
-    #[test]
     fn test_gmp_state_delay_no_reset_timer() {
         let (mut s, _actions) = DummyGmpStateMachine::join_group(&mut new_rng(0), Instant::now());
         let Actions(actions) = s.query_received(
@@ -887,7 +877,7 @@ mod test {
     }
 
     #[test]
-    fn test_gmp_state_deley_reset_timer() {
+    fn test_gmp_state_delay_reset_timer() {
         let (mut s, _actions) = DummyGmpStateMachine::join_group(&mut new_rng(0), Instant::now());
         let actions = s.query_received(&mut new_rng(0), Duration::from_millis(1), Instant::now());
         assert!(at_least_one_report(actions, Duration::from_millis(1)))
