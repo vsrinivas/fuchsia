@@ -85,7 +85,7 @@ pub struct RunCommand {
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(
     subcommand,
-    name = "list",
+    name = "list-cases",
     description = "List test suite cases",
     note = "Lists the set of test cases available in a test suite"
 )]
