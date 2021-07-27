@@ -484,6 +484,7 @@ mod tests {
         crate::{
             access_point::state_machine as ap_fsm,
             config_management::{Credential, NetworkConfig, SecurityType, WPA_PSK_BYTE_LEN},
+            telemetry::{TelemetryEvent, TelemetrySender},
             util::testing::{create_mock_cobalt_sender, fakes::FakeSavedNetworksManager},
         },
         async_trait::async_trait,
@@ -696,6 +697,7 @@ mod tests {
         update_sender: mpsc::UnboundedSender<listener::ClientListenerMessage>,
         listener_updates: mpsc::UnboundedReceiver<listener::ClientListenerMessage>,
         client_provider_lock: Arc<Mutex<()>>,
+        _telemetry_receiver: mpsc::Receiver<TelemetryEvent>,
     }
 
     // setup channels and proxies needed for the tests to use use the Client Provider and
@@ -715,10 +717,12 @@ mod tests {
         ];
         let saved_networks =
             Arc::new(FakeSavedNetworksManager::new_with_saved_configs(presaved_default_configs));
+        let (telemetry_sender, telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks.clone(),
             create_mock_cobalt_sender(),
             inspect::Inspector::new().root().create_child("network_selector"),
+            TelemetrySender::new(telemetry_sender),
         ));
         let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
             .expect("failed to create ClientProvider proxy");
@@ -744,6 +748,7 @@ mod tests {
             update_sender,
             listener_updates,
             client_provider_lock: Arc::new(Mutex::new(())),
+            _telemetry_receiver: telemetry_receiver,
         }
     }
 
@@ -1265,10 +1270,12 @@ mod tests {
     fn save_network() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let saved_networks = Arc::new(FakeSavedNetworksManager::new());
+        let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks.clone(),
             create_mock_cobalt_sender(),
             inspect::Inspector::new().root().create_child("network_selector"),
+            TelemetrySender::new(telemetry_sender),
         ));
 
         let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
@@ -1325,10 +1332,12 @@ mod tests {
     fn save_network_with_disconnected_iface() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let saved_networks = Arc::new(FakeSavedNetworksManager::new());
+        let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks.clone(),
             create_mock_cobalt_sender(),
             inspect::Inspector::new().root().create_child("network_selector"),
+            TelemetrySender::new(telemetry_sender),
         ));
 
         let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
@@ -1401,10 +1410,12 @@ mod tests {
     fn save_network_overwrite_disconnects() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let saved_networks = Arc::new(FakeSavedNetworksManager::new());
+        let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks.clone(),
             create_mock_cobalt_sender(),
             inspect::Inspector::new().root().create_child("network_selector"),
+            TelemetrySender::new(telemetry_sender),
         ));
         let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
             .expect("failed to create ClientProvider proxy");
@@ -1472,10 +1483,12 @@ mod tests {
         let mut saved_networks = FakeSavedNetworksManager::new();
         saved_networks.fail_all_stores = true;
         let saved_networks = Arc::new(saved_networks);
+        let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks.clone(),
             create_mock_cobalt_sender(),
             inspect::Inspector::new().root().create_child("network_selector"),
+            TelemetrySender::new(telemetry_sender),
         ));
 
         let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
@@ -1535,10 +1548,12 @@ mod tests {
     fn test_remove_a_network() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let saved_networks = Arc::new(FakeSavedNetworksManager::new());
+        let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks.clone(),
             create_mock_cobalt_sender(),
             inspect::Inspector::new().root().create_child("network_selector"),
+            TelemetrySender::new(telemetry_sender),
         ));
         let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
             .expect("failed to create ClientProvider proxy");
@@ -1675,10 +1690,12 @@ mod tests {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let saved_networks =
             Arc::new(FakeSavedNetworksManager::new_with_saved_configs(saved_configs));
+        let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks.clone(),
             create_mock_cobalt_sender(),
             inspect::Inspector::new().root().create_child("network_selector"),
+            TelemetrySender::new(telemetry_sender),
         ));
         let (provider, requests) = create_proxy::<fidl_policy::ClientProviderMarker>()
             .expect("failed to create ClientProvider proxy");
@@ -2007,10 +2024,12 @@ mod tests {
     fn no_client_interface() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let saved_networks = Arc::new(FakeSavedNetworksManager::new());
+        let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks.clone(),
             create_mock_cobalt_sender(),
             inspect::Inspector::new().root().create_child("network_selector"),
+            TelemetrySender::new(telemetry_sender),
         ));
         let iface_manager = Arc::new(Mutex::new(FakeIfaceManagerNoIfaces {}));
 

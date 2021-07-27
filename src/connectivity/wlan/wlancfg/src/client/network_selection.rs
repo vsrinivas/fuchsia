@@ -12,6 +12,7 @@ use {
             self, ConnectFailure, Credential, Disconnect, FailureReason, SavedNetworksManagerApi,
         },
         mode_management::iface_manager_api::IfaceManagerApi,
+        telemetry::{self, TelemetryEvent, TelemetrySender},
     },
     async_trait::async_trait,
     fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_policy as fidl_policy,
@@ -73,6 +74,7 @@ pub struct NetworkSelector {
     hasher: WlanHasher,
     _inspect_node_root: Arc<Mutex<InspectNode>>,
     inspect_node_for_network_selections: Arc<Mutex<InspectBoundedListNode>>,
+    telemetry_sender: TelemetrySender,
 }
 
 struct ScanResultCache {
@@ -216,6 +218,7 @@ impl NetworkSelector {
         saved_network_manager: Arc<dyn SavedNetworksManagerApi>,
         cobalt_api: CobaltSender,
         inspect_node: InspectNode,
+        telemetry_sender: TelemetrySender,
     ) -> Self {
         let inspect_node_for_network_selection = InspectBoundedListNode::new(
             inspect_node.create_child("network_selection"),
@@ -233,6 +236,7 @@ impl NetworkSelector {
             inspect_node_for_network_selections: Arc::new(Mutex::new(
                 inspect_node_for_network_selection,
             )),
+            telemetry_sender,
         }
     }
 
@@ -334,6 +338,10 @@ impl NetworkSelector {
         iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
         ignore_list: &Vec<types::NetworkIdentifier>,
     ) -> Option<types::ConnectionCandidate> {
+        self.telemetry_sender.send(TelemetryEvent::StartNetworkSelection {
+            network_selection_type: telemetry::NetworkSelectionType::Undirected,
+        });
+
         self.perform_scan(iface_manager.clone()).await;
         let scan_result_guard = self.scan_result_cache.lock().await;
         let networks = merge_saved_networks_and_scan_data(
@@ -342,14 +350,23 @@ impl NetworkSelector {
             &self.hasher,
         )
         .await;
+        // TODO(fxbug.dev/78170): When there's a scan error, this should be an `Err`, not `Ok(0)`.
+        let num_candidates = Ok(networks.len());
 
         let mut inspect_node = self.inspect_node_for_network_selections.lock().await;
-        match select_best_connection_candidate(networks, ignore_list, &mut inspect_node) {
-            Some((selected, channel, bssid)) => {
-                Some(augment_bss_with_active_scan(selected, channel, bssid, iface_manager).await)
-            }
-            None => None,
-        }
+        let result =
+            match select_best_connection_candidate(networks, ignore_list, &mut inspect_node) {
+                Some((selected, channel, bssid)) => Some(
+                    augment_bss_with_active_scan(selected, channel, bssid, iface_manager).await,
+                ),
+                None => None,
+            };
+
+        self.telemetry_sender.send(TelemetryEvent::NetworkSelectionDecision {
+            num_candidates,
+            selected_any: result.is_some(),
+        });
+        result
     }
 
     /// Find a suitable BSS for the given network.
@@ -358,12 +375,16 @@ impl NetworkSelector {
         sme_proxy: fidl_sme::ClientSmeProxy,
         network: types::NetworkIdentifier,
     ) -> Option<types::ConnectionCandidate> {
+        self.telemetry_sender.send(TelemetryEvent::StartNetworkSelection {
+            network_selection_type: telemetry::NetworkSelectionType::Directed,
+        });
+
         // TODO: check if we have recent enough scan results that we can pull from instead?
         let scan_results =
             scan::perform_directed_active_scan(&sme_proxy, &network.ssid, None).await;
 
-        match scan_results {
-            Err(_) => None,
+        let (result, num_candidates) = match scan_results {
+            Err(_) => (None, Err(())),
             Ok(scan_results) => {
                 let networks = merge_saved_networks_and_scan_data(
                     &self.saved_network_manager,
@@ -371,18 +392,29 @@ impl NetworkSelector {
                     &self.hasher,
                 )
                 .await;
+                let num_candidates = Ok(networks.len());
                 let ignore_list = vec![];
                 let mut inspect_node = self.inspect_node_for_network_selections.lock().await;
-                select_best_connection_candidate(networks, &ignore_list, &mut inspect_node).map(
-                    |(candidate, _, _)| {
-                        // Strip out the information about passive vs active scan, because we can't know
-                        // if this network would have been observed in a passive scan (since we never
-                        // performed a passive scan).
-                        types::ConnectionCandidate { observed_in_passive_scan: None, ..candidate }
-                    },
-                )
+                let result =
+                    select_best_connection_candidate(networks, &ignore_list, &mut inspect_node)
+                        .map(|(candidate, _, _)| {
+                            // Strip out the information about passive vs active scan, because we can't know
+                            // if this network would have been observed in a passive scan (since we never
+                            // performed a passive scan).
+                            types::ConnectionCandidate {
+                                observed_in_passive_scan: None,
+                                ..candidate
+                            }
+                        });
+                (result, num_candidates)
             }
-        }
+        };
+
+        self.telemetry_sender.send(TelemetryEvent::NetworkSelectionDecision {
+            num_candidates,
+            selected_any: result.is_some(),
+        });
+        result
     }
 }
 
@@ -679,6 +711,7 @@ mod tests {
         iface_manager: Arc<Mutex<FakeIfaceManager>>,
         sme_stream: fidl_sme::ClientSmeRequestStream,
         inspector: inspect::Inspector,
+        telemetry_receiver: mpsc::Receiver<TelemetryEvent>,
     }
 
     async fn test_setup() -> TestValues {
@@ -687,9 +720,14 @@ mod tests {
         let saved_network_manager = Arc::new(SavedNetworksManager::new_for_test().await.unwrap());
         let inspector = inspect::Inspector::new();
         let inspect_node = inspector.root().create_child("net_select_test");
+        let (telemetry_sender, telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
 
-        let network_selector =
-            Arc::new(NetworkSelector::new(saved_network_manager.clone(), cobalt_api, inspect_node));
+        let network_selector = Arc::new(NetworkSelector::new(
+            saved_network_manager.clone(),
+            cobalt_api,
+            inspect_node,
+            TelemetrySender::new(telemetry_sender),
+        ));
         let (client_sme, remote) =
             create_proxy::<fidl_sme::ClientSmeMarker>().expect("error creating proxy");
         let iface_manager = Arc::new(Mutex::new(FakeIfaceManager::new(client_sme)));
@@ -701,6 +739,7 @@ mod tests {
             iface_manager,
             sme_stream: remote.into_stream().expect("failed to create stream"),
             inspector,
+            telemetry_receiver,
         }
     }
 
@@ -1988,6 +2027,7 @@ mod tests {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = exec.run_singlethreaded(test_setup());
         let network_selector = test_values.network_selector;
+        let mut telemetry_receiver = test_values.telemetry_receiver;
 
         // create some identifiers
         let test_id_1 = types::NetworkIdentifier {
@@ -2045,6 +2085,13 @@ mod tests {
             .find_best_connection_candidate(test_values.iface_manager.clone(), &ignore_list);
         pin_mut!(network_selection_fut);
         assert_variant!(exec.run_until_stalled(&mut network_selection_fut), Poll::Pending);
+
+        // Verify that StartNetworkSelection telemetry event is sent
+        assert_variant!(telemetry_receiver.try_next(), Ok(Some(event)) => {
+            assert_eq!(event, TelemetryEvent::StartNetworkSelection {
+                network_selection_type: telemetry::NetworkSelectionType::Undirected,
+            });
+        });
 
         // Check that a scan request was sent to the sme and send back results
         let expected_scan_request = fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {});
@@ -2236,6 +2283,14 @@ mod tests {
                 }
             },
         });
+
+        // Verify that NetworkSelectionDecision telemetry event is sent
+        assert_variant!(telemetry_receiver.try_next(), Ok(Some(event)) => {
+            assert_eq!(event, TelemetryEvent::NetworkSelectionDecision {
+                num_candidates: Ok(2),
+                selected_any: true,
+            });
+        });
     }
 
     #[fuchsia::test]
@@ -2342,6 +2397,7 @@ mod tests {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = exec.run_singlethreaded(test_setup());
         let network_selector = test_values.network_selector;
+        let mut telemetry_receiver = test_values.telemetry_receiver;
 
         // create identifiers
         let test_id_1 = types::NetworkIdentifier {
@@ -2372,6 +2428,13 @@ mod tests {
             network_selector.find_connection_candidate_for_network(sme_proxy, test_id_1.clone());
         pin_mut!(network_selection_fut);
         assert_variant!(exec.run_until_stalled(&mut network_selection_fut), Poll::Pending);
+
+        // Verify that StartNetworkSelection telemetry event is sent
+        assert_variant!(telemetry_receiver.try_next(), Ok(Some(event)) => {
+            assert_eq!(event, TelemetryEvent::StartNetworkSelection {
+                network_selection_type: telemetry::NetworkSelectionType::Directed,
+            });
+        });
 
         // Check that a scan request was sent to the sme and send back results
         let expected_scan_request = fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
@@ -2430,6 +2493,14 @@ mod tests {
                 multiple_bss_candidates: Some(false),
             })
         );
+
+        // Verify that NetworkSelectionDecision telemetry event is sent
+        assert_variant!(telemetry_receiver.try_next(), Ok(Some(event)) => {
+            assert_eq!(event, TelemetryEvent::NetworkSelectionDecision {
+                num_candidates: Ok(1),
+                selected_any: true,
+            });
+        });
     }
 
     #[fuchsia::test]
@@ -2437,6 +2508,7 @@ mod tests {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = exec.run_singlethreaded(test_setup());
         let network_selector = test_values.network_selector;
+        let mut telemetry_receiver = test_values.telemetry_receiver;
 
         // create identifiers
         let test_id_1 = types::NetworkIdentifier {
@@ -2455,6 +2527,13 @@ mod tests {
             network_selector.find_connection_candidate_for_network(sme_proxy, test_id_1);
         pin_mut!(network_selection_fut);
         assert_variant!(exec.run_until_stalled(&mut network_selection_fut), Poll::Pending);
+
+        // Verify that StartNetworkSelection telemetry event is sent
+        assert_variant!(telemetry_receiver.try_next(), Ok(Some(event)) => {
+            assert_eq!(event, TelemetryEvent::StartNetworkSelection {
+                network_selection_type: telemetry::NetworkSelectionType::Directed,
+            });
+        });
 
         // Return an error on the scan
         assert_variant!(
@@ -2475,6 +2554,14 @@ mod tests {
         // Check that nothing is returned
         let results = exec.run_singlethreaded(&mut network_selection_fut);
         assert_eq!(results, None);
+
+        // Verify that NetworkSelectionDecision telemetry event is sent
+        assert_variant!(telemetry_receiver.try_next(), Ok(Some(event)) => {
+            assert_eq!(event, TelemetryEvent::NetworkSelectionDecision {
+                num_candidates: Err(()),
+                selected_any: false,
+            });
+        });
     }
 
     fn generate_random_bss() -> types::Bss {
