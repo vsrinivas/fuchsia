@@ -15,9 +15,6 @@ declare_args() {
   # Embed LLVM bitcode as .llvmbc section in ELF files. This is intended
   # primarily for external tools that use bitcode for analysis.
   clang_embed_bitcode = false
-
-  # Controls if we enable relative-vtables for C++ targets.
-  use_cxx_relative_vtables = true
 }
 
 # The value of clang_prefix relative to root_build_dir, useful

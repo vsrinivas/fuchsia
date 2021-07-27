@@ -81,23 +81,6 @@ config("compiler_target") {
   ldflags = cflags
 }
 
-# Explicitly enable or disable relative vtables depending on
-# `use_cxx_relative_vtables`. This overrides the compiler default. RV is
-# enabled by default on Fuchsia. This is primarily available for external
-# projects that depend on this file.
-#
-# TODO(fxbug.dev/45314): We should remove this config altogether once we know
-# there aren't any external users that use this BUILD.gn file.
-config("compiler_relative_vtables") {
-  if (use_cxx_relative_vtables) {
-    cflags_cc = [ "-fexperimental-relative-c++-abi-vtables" ]
-    ldflags = [ "-fexperimental-relative-c++-abi-vtables" ]
-  } else {
-    cflags_cc = [ "-fno-experimental-relative-c++-abi-vtables" ]
-    ldflags = [ "-fno-experimental-relative-c++-abi-vtables" ]
-  }
-}
-
 config("compiler_cpu") {
   cflags = []
   if (current_cpu == "x64") {
