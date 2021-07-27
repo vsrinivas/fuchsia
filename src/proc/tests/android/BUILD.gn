@@ -180,6 +180,12 @@ gvisor_test_component("open_test") {
 gvisor_test_component("pipe_test") {
 }
 
+gvisor_test_component("pread64_test") {
+}
+
+gvisor_test_component("pwrite64_test") {
+}
+
 gvisor_test_component("sigaction_test") {
 }
 
@@ -214,6 +220,8 @@ fuchsia_test_package("test_android_distro") {
     ":munmap_test",
     ":open_test",
     ":pipe_test",
+    ":pread64_test",
+    ":pwrite64_test",
     ":sh_test",
     ":sigaction_test",
     ":sigprocmask_test",

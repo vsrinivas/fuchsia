@@ -36,6 +36,9 @@ impl FileOps for VmoFileObject {
         let mut info = file.node().info_write();
         let file_length = info.size;
         let want_read = UserBuffer::get_total_length(data);
+        if want_read > MAX_LFS_FILESIZE - offset {
+            return Err(EINVAL);
+        }
         let to_read =
             if file_length < offset + want_read { file_length - offset } else { want_read };
         let mut buf = vec![0u8; to_read];
@@ -57,6 +60,9 @@ impl FileOps for VmoFileObject {
     ) -> Result<usize, Errno> {
         let mut info = file.node().info_write();
         let want_write = UserBuffer::get_total_length(data);
+        if want_write > MAX_LFS_FILESIZE - offset {
+            return Err(EINVAL);
+        }
         let write_end = offset + want_write;
         let mut update_content_size = false;
         if write_end > info.size {

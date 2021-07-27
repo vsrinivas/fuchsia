@@ -13,6 +13,8 @@ use crate::syscalls::SyscallResult;
 use crate::task::*;
 use crate::types::*;
 
+pub const MAX_LFS_FILESIZE: usize = 0x7fffffffffffffff;
+
 pub enum SeekOrigin {
     SET,
     CUR,
