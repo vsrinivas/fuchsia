@@ -24,6 +24,7 @@ executable("unittests") {
     "injector_unittest.cc",
     "mouse_delivery_test.cc",
     "mouse_source_test.cc",
+    "mouse_test.cc",
     "pointer_capture_test.cc",
     "pointerinjector_registry_unittest.cc",
     "touch_source_test.cc",

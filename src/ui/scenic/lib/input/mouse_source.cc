@@ -118,6 +118,8 @@ void MouseSource::Watch(WatchCallback callback) {
 
 void MouseSource::UpdateStream(const StreamId stream_id, const InternalMouseEvent& event,
                                const view_tree::BoundingBox view_bounds, const bool view_exit) {
+  // Must handle |view_exit| first, since the event and view_bounds are likely to be wrong when
+  // true, since it's sent as a consequence of a broken scene graph.
   if (view_exit) {
     const auto erased = tracked_streams_.erase(stream_id);
     FX_DCHECK(erased == 1) << "First event of a stream can't have MouseViewStatus::EXITED";

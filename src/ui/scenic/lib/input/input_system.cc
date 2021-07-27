@@ -16,13 +16,11 @@
 #include "src/ui/scenic/lib/gfx/resources/compositor/layer.h"
 #include "src/ui/scenic/lib/gfx/resources/compositor/layer_stack.h"
 #include "src/ui/scenic/lib/input/constants.h"
-#include "src/ui/scenic/lib/input/helper.h"
 #include "src/ui/scenic/lib/input/internal_pointer_event.h"
 #include "src/ui/scenic/lib/utils/helpers.h"
 #include "src/ui/scenic/lib/utils/math.h"
 
-namespace scenic_impl {
-namespace input {
+namespace scenic_impl::input {
 
 using AccessibilityPointerEvent = fuchsia::ui::input::accessibility::PointerEvent;
 using fuchsia::ui::input::InputEvent;
@@ -181,14 +179,8 @@ CommandDispatcherUniquePtr InputSystem::CreateCommandDispatcher(
 
 fuchsia::ui::input::accessibility::PointerEvent InputSystem::CreateAccessibilityEvent(
     const InternalPointerEvent& event) {
-  zx_koid_t view_ref_koid = ZX_KOID_INVALID;
-  {
-    // Find top-hit target and send it to accessibility.
-    const std::vector<zx_koid_t> hits = HitTest(event, /*semantic_hit_test*/ true);
-    if (!hits.empty()) {
-      view_ref_koid = hits.front();
-    }
-  }
+  // Find top-hit target and send it to accessibility.
+  const zx_koid_t view_ref_koid = TopHitTest(event, /*semantic_hit_test*/ true);
 
   glm::vec2 top_hit_view_local;
   if (view_ref_koid != ZX_KOID_INVALID) {
@@ -274,6 +266,16 @@ void InputSystem::RegisterTouchSource(
   FX_DCHECK(success2);
 }
 
+void InputSystem::RegisterMouseSource(
+    fidl::InterfaceRequest<fuchsia::ui::pointer::MouseSource> mouse_source_request,
+    zx_koid_t client_view_ref_koid) {
+  const auto [_, success] = mouse_sources_.try_emplace(
+      client_view_ref_koid, std::move(mouse_source_request),
+      /*error_handler*/
+      [this, client_view_ref_koid] { mouse_sources_.erase(client_view_ref_koid); });
+  FX_DCHECK(success);
+}
+
 void InputSystem::RegisterListener(
     fidl::InterfaceHandle<fuchsia::ui::input::PointerCaptureListener> listener_handle,
     fuchsia::ui::views::ViewRef view_ref, RegisterListenerCallback success_callback) {
@@ -299,23 +301,24 @@ void InputSystem::RegisterListener(
   success_callback(true);
 }
 
-std::vector<zx_koid_t> InputSystem::HitTest(const InternalPointerEvent& event,
-                                            bool semantic_hit_test) const {
-  if (IsOutsideViewport(event.viewport, event.position_in_viewport)) {
+std::vector<zx_koid_t> InputSystem::HitTest(const Viewport& viewport,
+                                            const glm::vec2 position_in_viewport,
+                                            const zx_koid_t context, const zx_koid_t target,
+                                            const bool semantic_hit_test) const {
+  if (IsOutsideViewport(viewport, position_in_viewport)) {
     return {};
   }
 
-  const std::optional<glm::mat4> world_from_context_transform =
-      GetWorldFromViewTransform(event.context);
+  const std::optional<glm::mat4> world_from_context_transform = GetWorldFromViewTransform(context);
   if (!world_from_context_transform) {
     return {};
   }
 
   const auto world_from_viewport_transform =
-      world_from_context_transform.value() * event.viewport.context_from_viewport_transform;
+      world_from_context_transform.value() * viewport.context_from_viewport_transform;
   const auto world_space_point =
-      utils::TransformPointerCoords(event.position_in_viewport, world_from_viewport_transform);
-  return view_tree_snapshot_->HitTest(event.target, world_space_point, semantic_hit_test);
+      utils::TransformPointerCoords(position_in_viewport, world_from_viewport_transform);
+  return view_tree_snapshot_->HitTest(target, world_space_point, semantic_hit_test);
 }
 
 void InputSystem::DispatchPointerCommand(const fuchsia::ui::input::SendPointerInputCmd& command,
@@ -420,7 +423,7 @@ void InputSystem::DispatchPointerCommand(const fuchsia::ui::input::SendPointerIn
                          << ") had an unexpected event: " << internal_event.phase;
         return;
       }
-      InjectMouseEventHitTested(internal_event);
+      LegacyInjectMouseEventHitTested(internal_event);
       break;
     }
     default:
@@ -436,12 +439,6 @@ void InputSystem::InjectTouchEventExclusive(const InternalPointerEvent& event, S
 
   auto it = touch_contenders_.find(event.target);
   if (it != touch_contenders_.end()) {
-    // Copy the event and replace the viewport transform with the correct one in relation to the
-    // target.
-    InternalPointerEvent event_copy = event;
-    event_copy.viewport.receiver_from_viewport_transform =
-        GetDestinationFromViewportTransform(event, event.target);
-
     auto& touch_source = it->second.touch_source;
     // Calling EndContest() before the first event causes them to be combined in the first message
     // to the client.
@@ -449,7 +446,7 @@ void InputSystem::InjectTouchEventExclusive(const InternalPointerEvent& event, S
       touch_source.EndContest(stream_id, /*awarded_win*/ true);
     }
     touch_source.UpdateStream(
-        stream_id, event_copy,
+        stream_id, EventWithReceiverFromViewportTransform(event, event.target),
         /*is_end_of_stream*/ event.phase == Phase::kRemove || event.phase == Phase::kCancel,
         view_tree_snapshot_->view_tree.at(event.target).bounding_box);
   } else {
@@ -544,10 +541,8 @@ std::vector<ContenderId> InputSystem::CollectContenders(StreamId stream_id,
     contenders.push_back(a11y_contender_id_);
   }
 
-  const std::vector<zx_koid_t> hits = HitTest(event, /*semantic_hit_test*/ false);
-  if (!hits.empty()) {
-    const zx_koid_t top_koid = hits.front();
-
+  const zx_koid_t top_koid = TopHitTest(event, /*semantic_hit_test*/ false);
+  if (top_koid != ZX_KOID_INVALID) {
     // Find TouchSource contenders in priority order from furthest (valid) ancestor to top hit view.
     std::vector<zx_koid_t> ancestors = GetAncestorChainTopToBottom(top_koid, event.target);
     for (auto koid : ancestors) {
@@ -674,7 +669,7 @@ void InputSystem::DestroyArenaIfComplete(StreamId stream_id) {
 //    cursors(!) do not roll up to any View (as expected), but may appear in the
 //    hit test; our dispatch needs to account for such behavior.
 // TODO(fxbug.dev/24288): Enhance trackpad support.
-void InputSystem::InjectMouseEventHitTested(const InternalPointerEvent& event) {
+void InputSystem::LegacyInjectMouseEventHitTested(const InternalPointerEvent& event) {
   const uint32_t device_id = event.device_id;
   const Phase pointer_phase = event.phase;
 
@@ -715,9 +710,8 @@ void InputSystem::InjectMouseEventHitTested(const InternalPointerEvent& event) {
   // Deal with unlatched MOVE events.
   if (pointer_phase == Phase::kChange && mouse_targets_.count(device_id) == 0) {
     // Find top-hit target and send it this move event.
-    const std::vector<zx_koid_t> hits = HitTest(event, /*semantic_hit_test*/ false);
-    if (!hits.empty()) {
-      const zx_koid_t top_view_koid = hits.front();
+    const zx_koid_t top_view_koid = TopHitTest(event, /*semantic_hit_test*/ false);
+    if (top_view_koid != ZX_KOID_INVALID) {
       ReportPointerEventToGfxLegacyView(event, top_view_koid,
                                         fuchsia::ui::input::PointerEventType::MOUSE);
     }
@@ -725,6 +719,97 @@ void InputSystem::InjectMouseEventHitTested(const InternalPointerEvent& event) {
 
   // Send pointer event to capture listeners.
   ReportPointerEventToPointerCaptureListener(event);
+}
+
+void InputSystem::SendEventToMouse(zx_koid_t receiver, const InternalMouseEvent& event,
+                                   const StreamId stream_id, bool view_exit) {
+  const auto it = mouse_sources_.find(receiver);
+  if (it != mouse_sources_.end()) {
+    if (view_exit) {
+      // Bounding box and correct transform does not matter on view exit (since we don't send any
+      // pointer samples), and we are likely working with a broken ViewTree, so skip them.
+      it->second.UpdateStream(stream_id, event, {}, view_exit);
+    } else {
+      it->second.UpdateStream(stream_id, EventWithReceiverFromViewportTransform(event, receiver),
+                              view_tree_snapshot_->view_tree.at(receiver).bounding_box, view_exit);
+    }
+  }
+}
+
+void InputSystem::InjectMouseEventExclusive(const InternalMouseEvent& event,
+                                            const StreamId stream_id) {
+  FX_DCHECK(view_tree_snapshot_->IsDescendant(event.target, event.context))
+      << "Should never allow injection into broken scene graph";
+  FX_DCHECK(current_exclusive_mouse_receivers_.count(stream_id) == 0 ||
+            current_exclusive_mouse_receivers_.at(stream_id) == event.target);
+  current_exclusive_mouse_receivers_[stream_id] = event.target;
+  SendEventToMouse(event.target, event, stream_id, /*view_exit=*/false);
+}
+
+void InputSystem::InjectMouseEventHitTested(const InternalMouseEvent& event,
+                                            const StreamId stream_id) {
+  FX_DCHECK(view_tree_snapshot_->IsDescendant(event.target, event.context))
+      << "Should never allow injection into broken scene graph";
+  // Grab the current mouse receiver or create a new one.
+  MouseReceiver& mouse_receiver = current_mouse_receivers_[stream_id];
+
+  // Update the latch state.
+  const bool button_down = !event.buttons.pressed.empty();
+  mouse_receiver.latched = mouse_receiver.latched && button_down;
+
+  // If the scene graph breaks while latched -> send a "View Exited" event and invalidate the
+  // receiver for the remainder of the latch.
+  if (mouse_receiver.latched &&
+      !view_tree_snapshot_->IsDescendant(mouse_receiver.view_koid, event.target) &&
+      mouse_receiver.view_koid != event.target) {
+    SendEventToMouse(mouse_receiver.view_koid, event, stream_id, /*view_exit=*/true);
+    mouse_receiver.view_koid = ZX_KOID_INVALID;
+    return;
+  }
+
+  // If not latched, choose the current target by finding the top view.
+  if (!mouse_receiver.latched) {
+    const zx_koid_t top_koid = TopHitTest(event, /*semantic_hit_test*/ false);
+
+    // Determine the currently hovered view. If it's different than previously, send the
+    // previous one a "View Exited" event.
+    if (mouse_receiver.view_koid != top_koid) {
+      SendEventToMouse(mouse_receiver.view_koid, event, stream_id, /*view_exit=*/true);
+    }
+    mouse_receiver.view_koid = top_koid;
+
+    // Button down on an unlatched stream -> latch it to the top-most view.
+    if (button_down) {
+      mouse_receiver.latched = true;
+      // TODO(fxbug.dev/80994): Change focus.
+    }
+  }
+
+  // Finally, send the event to the hovered/latched view.
+  SendEventToMouse(mouse_receiver.view_koid, event, stream_id, /*view_exit=*/false);
+}
+
+void InputSystem::CancelMouseStream(StreamId stream_id) {
+  zx_koid_t receiver = ZX_KOID_INVALID;
+  {
+    const auto it = current_mouse_receivers_.find(stream_id);
+    if (it != current_mouse_receivers_.end()) {
+      receiver = it->second.view_koid;
+      current_mouse_receivers_.erase(it);
+    }
+  }
+  {
+    const auto it = current_exclusive_mouse_receivers_.find(stream_id);
+    if (it != current_exclusive_mouse_receivers_.end()) {
+      receiver = it->second;
+      current_exclusive_mouse_receivers_.erase(it);
+    }
+  }
+
+  const auto it = mouse_sources_.find(receiver);
+  if (it != mouse_sources_.end()) {
+    it->second.UpdateStream(stream_id, {}, {}, /*view_exit=*/true);
+  }
 }
 
 // TODO(fxbug.dev/48150): Delete when we delete the PointerCapture functionality.
@@ -807,14 +892,4 @@ std::optional<glm::mat4> InputSystem::GetDestinationViewFromSourceViewTransform(
   return destination_from_world_transform.value() * world_from_source_transform.value();
 }
 
-Mat3ColumnMajorArray InputSystem::GetDestinationFromViewportTransform(
-    const InternalPointerEvent& event, zx_koid_t destination) const {
-  FX_DCHECK(view_tree_snapshot_->view_tree.count(destination) != 0);
-  const glm::mat4 destination_from_viewport_transform =
-      GetDestinationViewFromSourceViewTransform(/*source*/ event.context, destination).value() *
-      event.viewport.context_from_viewport_transform;
-  return Mat4ToMat3ColumnMajorArray(destination_from_viewport_transform);
-}
-
-}  // namespace input
-}  // namespace scenic_impl
+}  // namespace scenic_impl::input

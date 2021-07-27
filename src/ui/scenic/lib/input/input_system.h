@@ -17,8 +17,10 @@
 #include "src/ui/scenic/lib/input/a11y_registry.h"
 #include "src/ui/scenic/lib/input/gesture_arena.h"
 #include "src/ui/scenic/lib/input/gfx_legacy_contender.h"
+#include "src/ui/scenic/lib/input/helper.h"
 #include "src/ui/scenic/lib/input/injector.h"
 #include "src/ui/scenic/lib/input/input_command_dispatcher.h"
+#include "src/ui/scenic/lib/input/mouse_source.h"
 #include "src/ui/scenic/lib/input/pointerinjector_registry.h"
 #include "src/ui/scenic/lib/input/touch_source.h"
 #include "src/ui/scenic/lib/scenic/system.h"
@@ -66,6 +68,10 @@ class InputSystem : public System, public fuchsia::ui::input::PointerCaptureList
       fidl::InterfaceRequest<fuchsia::ui::pointer::TouchSource> touch_source_request,
       zx_koid_t client_view_ref_koid);
 
+  void RegisterMouseSource(
+      fidl::InterfaceRequest<fuchsia::ui::pointer::MouseSource> mouse_source_request,
+      zx_koid_t client_view_ref_koid);
+
   // |fuchsia.ui.pointercapture.ListenerRegistry|
   void RegisterListener(
       fidl::InterfaceHandle<fuchsia::ui::input::PointerCaptureListener> listener_handle,
@@ -95,15 +101,38 @@ class InputSystem : public System, public fuchsia::ui::input::PointerCaptureList
 
   // Injects a touch event directly to the View with koid |event.target|.
   void InjectTouchEventExclusive(const InternalPointerEvent& event, StreamId stream_id);
-
   // Injects a touch event by hit testing for appropriate targets.
   void InjectTouchEventHitTested(const InternalPointerEvent& event, StreamId stream_id);
-  void InjectMouseEventHitTested(const InternalPointerEvent& event);
+
+  // Injects a mouse event directly to the View with koid |event.target|.
+  void InjectMouseEventExclusive(const InternalMouseEvent& event, StreamId stream_id);
+  // Injects a mouse event by hit testing for appropriate targets.
+  void InjectMouseEventHitTested(const InternalMouseEvent& event, StreamId stream_id);
+  // Sends a "View exit" event to the current receiver of |stream_id|, if there is one, and resets
+  // the tracking state for the mouse stream.
+  void CancelMouseStream(StreamId stream_id);
+
+  // Injects a mouse event using the GFX legacy API. Deprecated.
+  void LegacyInjectMouseEventHitTested(const InternalPointerEvent& event);
 
  private:
   // Perform a hit test with |event| in |view_tree| and returns the koids of all hit views, in order
   // from geometrically closest to furthest from the |event|.
-  std::vector<zx_koid_t> HitTest(const InternalPointerEvent& event, bool semantic_hit_test) const;
+  std::vector<zx_koid_t> HitTest(const Viewport& viewport, glm::vec2 position_in_viewport,
+                                 zx_koid_t context, zx_koid_t target, bool semantic_hit_test) const;
+
+  template <typename T>
+  std::vector<zx_koid_t> HitTest(const T& event, bool semantic_hit_test) const {
+    return HitTest(event.viewport, event.position_in_viewport, event.context, event.target,
+                   semantic_hit_test);
+  }
+
+  // Returns the koid of the top hit, or ZX_KOID_INVALID if there is none.
+  template <typename T>
+  zx_koid_t TopHitTest(const T& event, bool semantic_hit_test) const {
+    const auto hits = HitTest(event, semantic_hit_test);
+    return hits.empty() ? ZX_KOID_INVALID : hits.front();
+  }
 
   // Send a copy of the event to the singleton listener of the pointer capture API if there is one.
   // TODO(fxbug.dev/48150): Delete when we delete the PointerCapture functionality.
@@ -112,6 +141,10 @@ class InputSystem : public System, public fuchsia::ui::input::PointerCaptureList
   // Enqueue the pointer event into the EventReporter of a View.
   void ReportPointerEventToGfxLegacyView(const InternalPointerEvent& event, zx_koid_t view_ref_koid,
                                          fuchsia::ui::input::PointerEventType type) const;
+
+  // Locates and sends an event to the MouseSource identified by |receiver|, if one exists.
+  void SendEventToMouse(zx_koid_t receiver, const InternalMouseEvent& event, StreamId stream_id,
+                        bool view_exit);
 
   // Takes a ViewRef koid and creates a GfxLegacyContender that delivers events to the corresponding
   // SessionListener on contest victory.
@@ -148,8 +181,24 @@ class InputSystem : public System, public fuchsia::ui::input::PointerCaptureList
   // Returns the 2D-transform from the viewport space of |event| to the destination view space as
   // a mat3 in column-major array form.
   // Prereq: |destination| must exist in the |view_tree_snapshot_|.
-  Mat3ColumnMajorArray GetDestinationFromViewportTransform(const InternalPointerEvent& event,
-                                                           zx_koid_t destination) const;
+  template <typename T>
+  Mat3ColumnMajorArray GetDestinationFromViewportTransform(const T& event,
+                                                           zx_koid_t destination) const {
+    FX_DCHECK(view_tree_snapshot_->view_tree.count(destination) != 0);
+    const glm::mat4 destination_from_viewport_transform =
+        GetDestinationViewFromSourceViewTransform(/*source*/ event.context, destination).value() *
+        event.viewport.context_from_viewport_transform;
+    return Mat4ToMat3ColumnMajorArray(destination_from_viewport_transform);
+  }
+
+  // Returns a copy of |event| with a new |receiver_from_viewport_transform| set on the viewport.
+  template <typename T>
+  T EventWithReceiverFromViewportTransform(const T& event, zx_koid_t receiver) const {
+    T event_copy = event;
+    event_copy.viewport.receiver_from_viewport_transform =
+        GetDestinationFromViewportTransform(event, event.target);
+    return event_copy;
+  }
 
   // For a view hierarchy where |top| is an ancestor of |bottom|, returns |bottom|'s ancestor
   // hierarchy starting at |top| and ending at |bottom|.
@@ -225,6 +274,21 @@ class InputSystem : public System, public fuchsia::ui::input::PointerCaptureList
 
   const ContenderId a11y_contender_id_ = 1;
   ContenderId next_contender_id_ = 2;
+
+  //// Mouse state
+  // Struct for tracking the mouse state of a particular event stream.
+  struct MouseReceiver {
+    zx_koid_t view_koid = ZX_KOID_INVALID;
+    bool latched = false;
+  };
+  // Currently hovered/latched view for each mouse stream.
+  std::unordered_map<StreamId, MouseReceiver> current_mouse_receivers_;
+  // Currently targeted mouse receiver for exclusive streams.
+  std::unordered_map<StreamId, zx_koid_t> current_exclusive_mouse_receivers_;
+  // All MouseSource instances. Each instance can be the receiver of any number of mouse streams,
+  // and each stream is captured in either |current_mouse_receivers_| or
+  // |current_exclusive_mouse_receivers_|.
+  std::unordered_map<zx_koid_t, MouseSource> mouse_sources_;
 };
 
 }  // namespace scenic_impl::input
