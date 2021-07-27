@@ -252,34 +252,20 @@ zip = { version = "0.5.5", default-features = false, features = ["deflate"] }
 # For crates we don't want to vendor, follow instructions at
 # //docs/development/languages/rust/external_crates.md.
 [patch.crates-io]
-# Keep this sorted alphabetically, please.
+# Keep each section sorted alphabetically, please.
+
+### In-tree Crates: crates which are on crates.io but which we build from our in-tree copy
+fuchsia-cprng = { path = "../../src/lib/zircon/rust/fuchsia-cprng" }
+
+### Empty Forks: empty forks kept only for satisfying cargo's resolution
 backtrace-sys = { path = "empty/backtrace-sys" }
 cmake = { path = "empty/cmake"}
-# TODO(fxbug.dev/NNNNN) re-vendor when combine makes next release after 4.6.0
-combine = { path = "forks/combine" }
 crossterm_winapi = { path = "empty/crossterm_winapi" }
-# TODO(fxbug.dev/56201): Vendor fatfs when upstream makes a new release.
-# See https://github.com/rafalh/rust-fatfs/pull/37#issuecomment-653760603 for more information.
-fatfs = { path = "forks/fatfs" } # TODO(fxbug.dev/75491) remove
-fuchsia-cprng = { path = "../../src/lib/zircon/rust/fuchsia-cprng" }
 futures-timer = { path = "empty/futures-timer" }
 js-sys = { path = "empty/js-sys" }
-libm = { path = "forks/libm" }
-memchr = { path = "forks/memchr" }
 miow = { path = "empty/miow" }
-nom_locate = { path = "forks/nom_locate" }
 ntapi = { path = "empty/ntapi" }
 pkg-config = { path = "empty/pkg-config" }
-regex-automata = { path = "forks/regex-automata" }
-rust-crypto = { path = "mirrors/rust-crypto" }
-rustls = { path = "forks/rustls" }
-security-framework = { path = "forks/security-framework" }
-serde_json5 = { path = "mirrors/serde_json5" } # TODO(fxbug.dev/75491) remove
-streaming-stats = { path = "forks/streaming-stats" }
-# termcolor 1.1.0 w/ UNLICENSE file removed per OSRB
-termcolor = { path = "forks/termcolor" }
-tracing-core = { path = "forks/tracing-core" }
-trust-dns-resolver = { path = "forks/trust-dns-resolver" }
 wasm-bindgen-futures = { path = "empty/wasm-bindgen-futures" }
 web-sys = { path = "empty/web-sys" }
 wepoll-binding = { path = "empty/wepoll-binding" }
@@ -288,7 +274,28 @@ winapi-i686-pc-windows-gnu = { path = "empty/winapi-i686-pc-windows-gnu" }
 winapi-x86_64-pc-windows-gnu = { path = "empty/winapi-x86_64-pc-windows-gnu" }
 winapi = { path = "empty/winapi" }
 winapi-util = { path = "empty/winapi-util" }
+
+### Forks: vendored crates whose code doesn't match the upstream version
+# TODO(fxbug.dev/NNNNN) re-vendor when combine makes next release after 4.6.0
+combine = { path = "forks/combine" }
+# TODO(fxbug.dev/56201): Vendor fatfs when upstream makes a new release.
+# See https://github.com/rafalh/rust-fatfs/pull/37#issuecomment-653760603 for more information.
+fatfs = { path = "forks/fatfs" } # TODO(fxbug.dev/75491) remove
+libm = { path = "forks/libm" }
+memchr = { path = "forks/memchr" }
+nom_locate = { path = "forks/nom_locate" }
+regex-automata = { path = "forks/regex-automata" }
+rustls = { path = "forks/rustls" }
+security-framework = { path = "forks/security-framework" }
+streaming-stats = { path = "forks/streaming-stats" }
+termcolor = { path = "forks/termcolor" }
+tracing-core = { path = "forks/tracing-core" }
+trust-dns-resolver = { path = "forks/trust-dns-resolver" }
 zstd-sys = { path = "forks/zstd-sys" }
+
+### Mirrors: forked crates managed as separate git repos
+rust-crypto = { path = "mirrors/rust-crypto" }
+serde_json5 = { path = "mirrors/serde_json5" } # TODO(fxbug.dev/75491) remove
 
 #################################################################################
 ###                            Cargo GNaw Configs                             ###
