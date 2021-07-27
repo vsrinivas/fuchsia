@@ -405,6 +405,8 @@ impl PeerTask {
                     // If any call is in the active state, then ensure we have an audio connection
                     if self.calls.is_call_active() {
                         self.ensure_audio_connection().await;
+                    } else {
+                        self.audio_connection_release();
                     }
                 }
                 request = self.connection.next() => {
@@ -523,6 +525,8 @@ impl PeerTask {
         }
     }
 
+    /// Close the SCO audio connection and release the pause token on A2DP streaming.
+    /// If there is no connection present, this is a no-op.
     fn audio_connection_release(&mut self) {
         drop(self.active_sco.take());
     }
@@ -1342,6 +1346,20 @@ mod tests {
         assert!(exec.run_until_stalled(&mut new_remote.next()).is_pending());
     }
 
+    /// Run a PeerTask until it has no more work left to do, then return it.
+    /// This function generates its own PeerTask channel for convenience. This means that
+    /// the channel cannot be used to send messages to a running PeerTask.
+    #[track_caller]
+    fn run_peer_until_stalled(exec: &mut fasync::TestExecutor, peer: PeerTask) -> PeerTask {
+        let (_sender, receiver) = mpsc::channel(0);
+        let run_fut = peer.run(receiver);
+        pin_mut!(run_fut);
+        exec.run_until_stalled(&mut run_fut)
+            .expect_pending("shouldn't be done while _sender is live");
+        drop(_sender);
+        exec.run_until_stalled(&mut run_fut).unwrap()
+    }
+
     async fn expect_sco_connection(
         profile_requests: &mut ProfileRequestStream,
         result: Result<(), ScoErrorCode>,
@@ -1363,6 +1381,39 @@ mod tests {
                 None
             }
         }
+    }
+
+    /// Setup a new audio connection between the PeerTask and an upstream ProfileRequestStream.
+    /// This helper function asserts that the SCO connection is created and that the audio
+    /// connection has started up.
+    #[track_caller]
+    fn setup_audio(
+        exec: &mut fasync::TestExecutor,
+        peer: &mut PeerTask,
+        profile_requests: &mut ProfileRequestStream,
+    ) -> Option<fidl::Socket> {
+        let audio_connection_fut = peer.setup_audio_connection(None);
+        pin_mut!(audio_connection_fut);
+
+        exec.run_until_stalled(&mut audio_connection_fut).expect_pending("shouldn't be done yet");
+
+        // Expect a sco connection, and have it succeed.
+        let sco_complete_fut = expect_sco_connection(profile_requests, Ok(()));
+        pin_mut!(sco_complete_fut);
+        let result = exec.run_singlethreaded(&mut futures::future::select(
+            audio_connection_fut,
+            sco_complete_fut,
+        ));
+
+        let (remote_sco, mut audio_connection_fut) = match result {
+            Either::Right(r) => r,
+            Either::Left(_) => panic!("Audio connection future shouldn't have finished"),
+        };
+
+        let res = exec.run_until_stalled(&mut audio_connection_fut).expect("should be done");
+        res.expect("should have started up okay");
+
+        remote_sco
     }
 
     #[fuchsia::test]
@@ -1429,31 +1480,7 @@ mod tests {
 
         let audio_control = peer.audio_control.clone();
 
-        let remote_sco = {
-            let audio_connection_fut = peer.setup_audio_connection(None);
-            pin_mut!(audio_connection_fut);
-
-            exec.run_until_stalled(&mut audio_connection_fut)
-                .expect_pending("shouldn't be done yet");
-
-            // Expect a sco connection, and have it succeed.
-            let sco_complete_fut = expect_sco_connection(&mut profile_requests, Ok(()));
-            pin_mut!(sco_complete_fut);
-            let result = exec.run_singlethreaded(&mut futures::future::select(
-                audio_connection_fut,
-                sco_complete_fut,
-            ));
-
-            let (remote_sco, mut audio_connection_fut) = match result {
-                Either::Right(r) => r,
-                Either::Left(_) => panic!("Audio connection future shouldn't have finished"),
-            };
-
-            let res = exec.run_until_stalled(&mut audio_connection_fut).expect("should be done");
-            res.expect("should have started up okay");
-
-            remote_sco
-        };
+        let remote_sco = setup_audio(&mut exec, &mut peer, &mut profile_requests);
 
         // Should have started up the test audio control.
         {
@@ -1476,5 +1503,62 @@ mod tests {
         // Should have stopped the audio - check by trying to stop it again, it should be an error
         let mut lock = audio_control.lock();
         let _ = lock.stop().expect_err("should already be stopped");
+    }
+
+    #[fuchsia::test]
+    fn sco_connection_closed_when_call_ends() {
+        let mut exec = fasync::TestExecutor::new().unwrap();
+        // SLC is connected at the start of the test.
+        let (connection, _old_remote) = create_and_connect_slc();
+        let (mut peer, _sender, _receiver, mut profile_requests) =
+            setup_peer_task(Some(connection));
+
+        assert!(peer.connection.connected());
+
+        let _remote_sco = setup_audio(&mut exec, &mut peer, &mut profile_requests);
+
+        // Run the PeerTask to handle all audio setup tasks
+        let mut peer = run_peer_until_stalled(&mut exec, peer);
+
+        assert!(peer.active_sco.is_some());
+
+        // Create the Call Manager side of a PeerHandler.
+        let (proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<PeerHandlerMarker>().unwrap();
+
+        // Send an update to hold a call which will tear down the audio connection.
+        fasync::Task::local(async move {
+            let mut stream = wait_for_call_stream(stream).await;
+
+            // Send the held call response
+            let responder = stream.next().await.unwrap();
+            let (client_end, _call_stream) = fidl::endpoints::create_request_stream().unwrap();
+            let next_call = NextCall {
+                call: Some(client_end),
+                remote: Some("1234567".to_string()),
+                state: Some(CallState::OngoingHeld),
+                direction: Some(CallDirection::MobileTerminated),
+                ..NextCall::EMPTY
+            };
+            responder.send(next_call).expect("Successfully send call information");
+
+            // Call manager should collect all further requests, without responding.
+            stream.collect::<Vec<_>>().await;
+        })
+        .detach();
+
+        // Wire up the HFP side of PeerHandler by passing the proxy into the PeerTask.
+        {
+            let handle_fut = peer.peer_request(PeerRequest::Handle(proxy));
+            pin_mut!(handle_fut);
+            assert!(exec.run_until_stalled(&mut handle_fut).is_ready());
+        }
+
+        // Run the PeerTask to handle all pending work.
+        let peer = run_peer_until_stalled(&mut exec, peer);
+
+        // The SCO connection should be removed after the PeerTask has handled the Terminated call
+        // update.
+        assert!(peer.active_sco.is_none());
     }
 }
