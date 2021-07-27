@@ -23,7 +23,11 @@
 
 namespace zbitl {
 
-// Forward declaration; defined in image.h.
+// Forward-declared; defined below.
+template <typename Storage>
+class View;
+
+// Forward-declared; defined in image.h.
 template <typename Storage>
 class Image;
 
@@ -176,6 +180,54 @@ struct ZbiTraits {
   using container_header_type = zbi_header_t;
   using item_header_type = zbi_header_t;
 
+  template <typename StorageTraits>
+  class item_header_wrapper {
+   private:
+    using TraitsHeader = typename StorageTraits::template LocalizedReadResult<item_header_type>;
+
+   public:
+    explicit item_header_wrapper(const TraitsHeader& header)
+        : stored_([&header]() {
+            if constexpr (kCopy) {
+              static_assert(std::is_same_v<item_header_type, TraitsHeader>);
+              return header;
+            } else {
+              static_assert(
+                  std::is_same_v<std::reference_wrapper<const item_header_type>, TraitsHeader>);
+              return &(header.get());
+            }
+          }()) {}
+
+    item_header_wrapper() = default;
+    item_header_wrapper(const item_header_wrapper&) = default;
+    item_header_wrapper(item_header_wrapper&&) noexcept = default;
+    item_header_wrapper& operator=(const item_header_wrapper&) = default;
+    item_header_wrapper& operator=(item_header_wrapper&&) noexcept = default;
+
+    const item_header_type& operator*() const {
+      if constexpr (kCopy) {
+        return stored_;
+      } else {
+        return *stored_;
+      }
+    }
+
+    const item_header_type* operator->() const { return &**this; }
+
+   private:
+    // Accesses kCopy.
+    friend View<typename StorageTraits::storage_type>;
+
+    static constexpr bool kCopy = std::is_same_v<TraitsHeader, item_header_type>;
+    static constexpr bool kReference =
+        std::is_same_v<TraitsHeader, std::reference_wrapper<const item_header_type>>;
+    static_assert(kCopy || kReference,
+                  "zbitl::StorageTraits specialization's Header function returns wrong type");
+
+    using HeaderStorage = std::conditional_t<kCopy, item_header_type, const item_header_type*>;
+    HeaderStorage stored_;
+  };
+
   static constexpr const char* kContainerType = "zbitl::View";
   static constexpr uint32_t kItemAlignment = ZBI_ALIGNMENT;
   static constexpr uint32_t kPayloadPaddingAlignment = ZBI_ALIGNMENT;
@@ -311,6 +363,7 @@ class View {
   using Traits = ExtendedStorageTraits<storage_type>;
   using storage_error_type = typename Traits::ErrorTraits::error_type;
   using Error = typename ContainerTraits::template Error<typename Traits::ErrorTraits>;
+  using item_header_wrapper = typename ContainerTraits::template item_header_wrapper<Traits>;
 
   View() = default;
   View(const View&) = default;
@@ -342,54 +395,6 @@ class View {
                   "%s destroyed after successful iteration without check",
                   ContainerTraits::kContainerType);
   }
-
-  /// TODO(fxbug.dev/68585): Move to ZbiTraits.
-  class item_header_wrapper {
-   private:
-    using TraitsHeader = typename Traits::template LocalizedReadResult<item_header_type>;
-
-   public:
-    explicit item_header_wrapper(const TraitsHeader& header)
-        : stored_([&header]() {
-            if constexpr (kCopy) {
-              static_assert(std::is_same_v<item_header_type, TraitsHeader>);
-              return header;
-            } else {
-              static_assert(
-                  std::is_same_v<std::reference_wrapper<const item_header_type>, TraitsHeader>);
-              return &(header.get());
-            }
-          }()) {}
-
-    item_header_wrapper() = default;
-    item_header_wrapper(const item_header_wrapper&) = default;
-    item_header_wrapper(item_header_wrapper&&) noexcept = default;
-    item_header_wrapper& operator=(const item_header_wrapper&) = default;
-    item_header_wrapper& operator=(item_header_wrapper&&) noexcept = default;
-
-    const item_header_type& operator*() const {
-      if constexpr (kCopy) {
-        return stored_;
-      } else {
-        return *stored_;
-      }
-    }
-
-    const item_header_type* operator->() const { return &**this; }
-
-   private:
-    // Accesses kCopy.
-    friend View;
-
-    static constexpr bool kCopy = std::is_same_v<TraitsHeader, item_header_type>;
-    static constexpr bool kReference =
-        std::is_same_v<TraitsHeader, std::reference_wrapper<const item_header_type>>;
-    static_assert(kCopy || kReference,
-                  "zbitl::StorageTraits specialization's Header function returns wrong type");
-
-    using HeaderStorage = std::conditional_t<kCopy, item_header_type, const item_header_type*>;
-    HeaderStorage stored_;
-  };
 
   /// The payload type is provided by the StorageTraits specialization.  It's
   /// opaque to View, but must be default-constructible, copy-constructible,
