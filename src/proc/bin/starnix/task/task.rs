@@ -454,7 +454,32 @@ impl Task {
                 parent.mknod(basename, FileMode::IFREG | access, 0)?
             }
         };
-        node.open(flags)
+
+        let file = node.open(flags)?;
+
+        if flags.contains(OpenFlags::TRUNC) {
+            let node = file.node();
+            let mode = node.info().mode;
+            match mode.fmt() {
+                FileMode::IFREG => {
+                    // You might think we should check file.can_write() at this
+                    // point, which is what the docs suggest, but apparently we
+                    // are supposed to truncate the file if this task can write
+                    // to the underlying node, even if we are opening the file
+                    // as read-only. See OpenTest.CanTruncateReadOnly.
+
+                    // TODO(security): We should really do an access check for whether
+                    // this task can write to this file.
+                    if mode.contains(FileMode::IWUSR) {
+                        node.truncate(0)?;
+                    }
+                }
+                FileMode::IFDIR => return Err(EISDIR),
+                _ => (),
+            }
+        }
+
+        Ok(file)
     }
 
     /// A wrapper for FsContext::lookup_parent_at that resolves the given

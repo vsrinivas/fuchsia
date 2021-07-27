@@ -20,6 +20,22 @@ impl FileMode {
     pub const IFIFO: FileMode = FileMode(uapi::S_IFIFO);
     pub const IFSOCK: FileMode = FileMode(uapi::S_IFSOCK);
 
+    pub const ISUID: FileMode = FileMode(uapi::S_ISUID);
+    pub const ISGID: FileMode = FileMode(uapi::S_ISGID);
+    pub const ISVTX: FileMode = FileMode(uapi::S_ISVTX);
+    pub const IRWXU: FileMode = FileMode(uapi::S_IRWXU);
+    pub const IRUSR: FileMode = FileMode(uapi::S_IRUSR);
+    pub const IWUSR: FileMode = FileMode(uapi::S_IWUSR);
+    pub const IXUSR: FileMode = FileMode(uapi::S_IXUSR);
+    pub const IRWXG: FileMode = FileMode(uapi::S_IRWXG);
+    pub const IRGRP: FileMode = FileMode(uapi::S_IRGRP);
+    pub const IWGRP: FileMode = FileMode(uapi::S_IWGRP);
+    pub const IXGRP: FileMode = FileMode(uapi::S_IXGRP);
+    pub const IRWXO: FileMode = FileMode(uapi::S_IRWXO);
+    pub const IROTH: FileMode = FileMode(uapi::S_IROTH);
+    pub const IWOTH: FileMode = FileMode(uapi::S_IWOTH);
+    pub const IXOTH: FileMode = FileMode(uapi::S_IXOTH);
+
     pub const IFMT: FileMode = FileMode(uapi::S_IFMT);
 
     pub const DEFAULT_UMASK: FileMode = FileMode(0o022);
@@ -32,6 +48,10 @@ impl FileMode {
 
     pub fn bits(&self) -> u32 {
         self.0
+    }
+
+    pub fn contains(&self, other: FileMode) -> bool {
+        *self & other != FileMode::EMPTY
     }
 
     pub fn fmt(&self) -> FileMode {

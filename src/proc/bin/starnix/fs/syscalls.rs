@@ -229,10 +229,10 @@ pub fn sys_faccessat(
         return Ok(SUCCESS);
     }
 
-    // TODO: These access checks are not quite correct because they don't
-    // consider the current uid and they don't consider GRO or OTH bits.
-    // Really, these checks should be done by the auth system once that
-    // exists.
+    // TODO(security): These access checks are not quite correct because
+    // they don't consider the current uid and they don't consider GRO or
+    // OTH bits. Really, these checks should be done by the auth system once
+    // that exists.
     let stat = node.stat()?;
     if mode & X_OK != 0 && stat.st_mode & S_IXUSR == 0 {
         return Err(EACCES);
