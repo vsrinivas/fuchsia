@@ -104,7 +104,10 @@ source_set("core") {
 # tests.
 source_set("pcie") {
   visibility = [ "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/*" ]
-  configs += [ "//build/config:all_source" ]
+  configs += [
+    "//build/config:all_source",
+    "//build/config:Wno-unused-but-set-variable",
+  ]
   sources = [
     "pcie/bind.cc",
     "pcie/drv.c",
