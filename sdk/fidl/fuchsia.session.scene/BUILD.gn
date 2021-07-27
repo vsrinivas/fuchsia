@@ -11,7 +11,6 @@ fidl("fuchsia.session.scene") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.ui.app",
-    "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/fidl/fuchsia.ui.views",
   ]
 }

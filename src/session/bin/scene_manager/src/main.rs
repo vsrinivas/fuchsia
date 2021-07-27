@@ -9,7 +9,6 @@ use {
     fidl_fuchsia_input_keymap as fkeymap,
     fidl_fuchsia_session_scene::{ManagerRequest, ManagerRequestStream},
     fidl_fuchsia_ui_accessibility_view::{RegistryRequest, RegistryRequestStream},
-    fidl_fuchsia_ui_policy::PointerCaptureListenerHackProxy,
     fidl_fuchsia_ui_scenic::ScenicMarker,
     fuchsia_async as fasync,
     fuchsia_component::{client::connect_to_protocol, server::ServiceFs},
@@ -23,10 +22,6 @@ use {
 
 mod input_device_registry_server;
 mod input_pipeline;
-#[macro_use]
-mod input_testing_utilities;
-mod mouse_pointer_hack;
-mod touch_pointer_hack;
 
 enum ExposedServices {
     AccessibilityViewRegistry(RegistryRequestStream),
@@ -136,12 +131,8 @@ pub async fn handle_manager_request_stream(
     >,
     text_handler: text_settings::Handler,
 ) {
-    let listeners: Vec<PointerCaptureListenerHackProxy> = vec![];
-    let pointer_listeners = Arc::new(Mutex::new(listeners));
-
     if let Ok(input_pipeline) = input_pipeline::handle_input(
         scene_manager.clone(),
-        pointer_listeners.clone(),
         input_device_registry_request_stream_receiver,
         text_handler,
     )
@@ -164,9 +155,6 @@ pub async fn handle_manager_request_stream(
                 if let Ok(mut response) = scene_manager.focuser.request_focus(&mut view_ref).await {
                     let _ = responder.send(&mut response);
                 }
-            }
-            ManagerRequest::CapturePointerEvents { listener, .. } => {
-                pointer_listeners.lock().await.push(listener.into_proxy().unwrap());
             }
         };
     }

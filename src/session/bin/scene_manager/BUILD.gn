@@ -25,7 +25,6 @@ rustc_binary("scene_manager_bin") {
     "//sdk/fidl/fuchsia.ui.accessibility.view:fuchsia.ui.accessibility.view-rustc",
     "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app-rustc",
     "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
-    "//sdk/fidl/fuchsia.ui.policy:fuchsia.ui.policy-rustc",
     "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic-rustc",
     "//sdk/fidl/fuchsia.ui.shortcut:fuchsia.ui.shortcut-rustc",
     "//src/lib/fidl/rust/fidl",
@@ -52,10 +51,7 @@ rustc_binary("scene_manager_bin") {
   sources = [
     "src/input_device_registry_server.rs",
     "src/input_pipeline.rs",
-    "src/input_testing_utilities.rs",
     "src/main.rs",
-    "src/mouse_pointer_hack.rs",
-    "src/touch_pointer_hack.rs",
   ]
 }
 

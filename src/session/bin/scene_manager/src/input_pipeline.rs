@@ -3,11 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    crate::mouse_pointer_hack::*,
-    crate::touch_pointer_hack::*,
     anyhow::{Context, Error},
     fidl_fuchsia_input_injection::InputDeviceRegistryRequestStream,
-    fidl_fuchsia_ui_policy::PointerCaptureListenerHackProxy,
     fidl_fuchsia_ui_shortcut as ui_shortcut, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
     fuchsia_syslog::fx_log_warn,
@@ -35,15 +32,12 @@ use {
 ///
 /// # Parameters
 /// - `scene_manager`: The scene manager used by the session.
-/// - `pointer_hack_server`: The pointer hack server, used to fetch listeners for pointer
-///    hack input handlers.
 /// - `input_device_registry_request_stream_receiver`: A receiving end of a MPSC channel for
 ///   `InputDeviceRegistry` messages.
 /// - `text_settings_handler`: An input pipeline stage that decorates `InputEvent`s with
 ///    text settings (e.g. desired keymap IDs).
 pub async fn handle_input(
     scene_manager: Arc<Mutex<FlatSceneManager>>,
-    pointer_hack_listeners: Arc<Mutex<Vec<PointerCaptureListenerHackProxy>>>,
     input_device_registry_request_stream_receiver: futures::channel::mpsc::UnboundedReceiver<
         InputDeviceRegistryRequestStream,
     >,
@@ -55,7 +49,7 @@ pub async fn handle_input(
             input_device::InputDeviceType::Touch,
             input_device::InputDeviceType::Keyboard,
         ],
-        input_handlers(scene_manager, pointer_hack_listeners, text_settings_handler).await,
+        input_handlers(scene_manager, text_settings_handler).await,
     )
     .await
     .context("Failed to create InputPipeline.")?;
@@ -74,7 +68,6 @@ pub async fn handle_input(
 
 async fn input_handlers(
     scene_manager: Arc<Mutex<FlatSceneManager>>,
-    pointer_hack_listeners: Arc<Mutex<Vec<PointerCaptureListenerHackProxy>>>,
     text_settings_handler: text_settings::Handler,
 ) -> Vec<Box<dyn InputHandler>> {
     let mut handlers: Vec<Box<dyn InputHandler>> = vec![];
@@ -84,9 +77,6 @@ async fn input_handlers(
         // Add the text settings handler early in the pipeline to use the
         // keymap settings in the remainder of the pipeline.
         add_text_settings_handler(text_settings_handler, &mut handlers);
-        // Touch and mouse hack handlers are inserted first.
-        add_touch_hack(&locked_scene_manager, pointer_hack_listeners.clone(), &mut handlers).await;
-        add_mouse_hack(&locked_scene_manager, pointer_hack_listeners.clone(), &mut handlers).await;
         add_keymap_handler(&mut handlers);
         // Shortcut needs to go before IME.
         add_shortcut_handler(&mut handlers).await;
@@ -171,33 +161,6 @@ async fn add_mouse_handler(
         }
     })
     .detach();
-}
-
-async fn add_mouse_hack(
-    scene_manager: &FlatSceneManager,
-    pointer_hack_listeners: Arc<Mutex<Vec<PointerCaptureListenerHackProxy>>>,
-    handlers: &mut Vec<Box<dyn InputHandler>>,
-) {
-    let mouse_hack = MousePointerHack::new(
-        scene_manager.display_size.size(),
-        1.0 / scene_manager.display_metrics.pixels_per_pip(),
-        pointer_hack_listeners.clone(),
-    );
-    handlers.push(Box::new(mouse_hack));
-}
-
-async fn add_touch_hack(
-    scene_manager: &FlatSceneManager,
-    pointer_hack_listeners: Arc<Mutex<Vec<PointerCaptureListenerHackProxy>>>,
-    handlers: &mut Vec<Box<dyn InputHandler>>,
-) {
-    let touch_hack = TouchPointerHack::new(
-        scene_manager.display_size.size(),
-        1.0 / scene_manager.display_metrics.pixels_per_pip(),
-        pointer_hack_listeners.clone(),
-    );
-
-    handlers.push(Box::new(touch_hack));
 }
 
 pub async fn handle_input_device_registry_request_streams(

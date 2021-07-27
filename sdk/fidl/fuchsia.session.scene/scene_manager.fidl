@@ -4,7 +4,6 @@
 library fuchsia.session.scene;
 
 using fuchsia.ui.app;
-using fuchsia.ui.policy;
 using fuchsia.ui.views;
 
 /// A protocol used to manage the scene graph of the session.
@@ -34,12 +33,4 @@ protocol Manager {
     RequestFocus(resource struct {
         view_ref fuchsia.ui.views.ViewRef;
     }) -> (struct {}) error fuchsia.ui.views.Error;
-
-    /// Adds a listener for "raw" pointer events.
-    ///
-    /// This exists to support legacy clients, and new uses are discouraged. This method
-    /// will be removed prior to the inclusion of `Manager` in the SDK.
-    CapturePointerEvents(resource struct {
-        listener client_end:fuchsia.ui.policy.PointerCaptureListenerHACK;
-    });
 };
