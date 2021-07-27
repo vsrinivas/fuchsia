@@ -27,19 +27,13 @@ use {
     },
 };
 
-enum Reaper {
-    Idle,
-    Paused,
-    Task(fasync::Task<()>),
-}
-
 /// A graveyard exists as a place to park objects that should be deleted when they are no longer in
 /// use.  How objects enter and leave the graveyard is up to the caller to decide.  The intention is
 /// that at mount time, any objects in the graveyard will get removed.
 pub struct Graveyard {
     store: Arc<ObjectStore>,
     object_id: u64,
-    reaper_task: Mutex<Reaper>,
+    reaper_task: Mutex<Option<fasync::Task<()>>>,
 }
 
 impl Graveyard {
@@ -72,11 +66,7 @@ impl Graveyard {
                 },
             ),
         );
-        Ok(Arc::new(Graveyard {
-            store: store.clone(),
-            object_id,
-            reaper_task: Mutex::new(Reaper::Idle),
-        }))
+        Ok(Arc::new(Graveyard { store: store.clone(), object_id, reaper_task: Mutex::new(None) }))
     }
 
     /// Starts an asynchronous task to reap the graveyard for all entries older than
@@ -84,17 +74,17 @@ impl Graveyard {
     /// If a task is already started, this has no effect, even if that task was targeting an older
     /// |journal_offset|.
     pub fn reap_async(self: Arc<Self>, journal_offset: u64) {
-        let mut reaper_task = self.reaper_task.lock().unwrap();
-        if let Reaper::Idle = &*reaper_task {
-            *reaper_task =
-                Reaper::Task(fasync::Task::spawn(self.clone().reap_task(journal_offset)));
-        }
+        self.clone()
+            .reaper_task
+            .lock()
+            .unwrap()
+            .get_or_insert_with(|| fasync::Task::spawn(self.reap_task(journal_offset)));
     }
 
     /// Returns a future which completes when the ongoing reap task (if it exists) completes.
     pub async fn wait_for_reap(&self) {
-        let task = std::mem::replace(&mut *self.reaper_task.lock().unwrap(), Reaper::Paused);
-        if let Reaper::Task(task) = task {
+        let task = self.reaper_task.lock().unwrap().take();
+        if let Some(task) = task {
             task.await;
         }
     }
@@ -106,7 +96,6 @@ impl Graveyard {
             Ok(deleted) => log::info!("Reaping graveyard done, removed {} elements", deleted),
             Err(e) => log::error!("Reaping graveyard encountered error: {:?}", e),
         };
-        *self.reaper_task.lock().unwrap() = Reaper::Idle;
     }
 
     async fn reap_task_inner(self: &Arc<Self>, journal_offset: u64) -> Result<usize, Error> {
@@ -166,7 +155,7 @@ impl Graveyard {
             Ok(Arc::new(Graveyard {
                 store: store.clone(),
                 object_id,
-                reaper_task: Mutex::new(Reaper::Idle),
+                reaper_task: Mutex::new(None),
             }))
         } else {
             bail!("Found an object, but it's not a graveyard");
