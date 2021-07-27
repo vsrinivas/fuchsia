@@ -245,6 +245,11 @@ that apply to every product configuration.
     ffx scrutiny shell "search.components --url {{ '<var label="component">my_component.cm</var>' }}$"
     ```
 
+Note: it is valid to `use` from `self` in the unusual case that your component
+both consumes and publishes the same protocol. You'll know this is the case
+when the "services" section in your `.cmx` references a protocol that is mapped
+to the same component's URL in a `services.config` file.
+
 ## Migrate the tests {#migrate-tests}
 
 In most cases, tests for v1 components are themselves v1 components. The first
