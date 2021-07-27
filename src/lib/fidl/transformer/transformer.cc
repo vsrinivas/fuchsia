@@ -32,13 +32,13 @@ struct WireEnvelopeV2 {
   uint16_t flags;
 };
 
-constexpr uint16_t EmptyFlags = 0x00;
-constexpr uint16_t InlinedEnvelopeFlag = 0x01;
+constexpr uint16_t kEmptyFlags = 0x00;
+constexpr uint16_t kInlinedEnvelopeFlag = 0x01;
 constexpr bool ValidFlags(const WireEnvelopeV2 envelope) {
-  return (envelope.flags & ~InlinedEnvelopeFlag) == 0;
+  return (envelope.flags & ~kInlinedEnvelopeFlag) == 0;
 }
 constexpr bool IsInlined(const WireEnvelopeV2 envelope) {
-  return (envelope.flags & InlinedEnvelopeFlag) != 0;
+  return (envelope.flags & kInlinedEnvelopeFlag) != 0;
 }
 
 struct WireTableHeader {
@@ -416,7 +416,7 @@ class Transformer {
       dst<WireEnvelopeV2>(dst_offset) = WireEnvelopeV2{
           .num_bytes = src_envelope.num_bytes,
           .num_handles = static_cast<uint16_t>(src_envelope.num_handles),
-          .flags = EmptyFlags,
+          .flags = kEmptyFlags,
       };
       memcpy(&dst_bytes_[dst_next_out_of_line_], &src_bytes_[src_next_out_of_line_],
              src_envelope.num_bytes);
@@ -427,7 +427,7 @@ class Transformer {
       // Inlined value.
       WireEnvelopeV2 dst_envelope{
           .num_handles = static_cast<uint16_t>(src_envelope.num_handles),
-          .flags = InlinedEnvelopeFlag,
+          .flags = kInlinedEnvelopeFlag,
       };
       memcpy(dst_envelope.inlined_value, &src_bytes_[src_next_out_of_line_],
              sizeof(dst_envelope.inlined_value));
@@ -443,7 +443,7 @@ class Transformer {
     dst<WireEnvelopeV2>(dst_offset) = WireEnvelopeV2{
         .num_bytes = dst_next_out_of_line_ - checkpoint_dst_next_out_of_line,
         .num_handles = static_cast<uint16_t>(src_envelope.num_handles),
-        .flags = EmptyFlags,
+        .flags = kEmptyFlags,
     };
     return ZX_OK;
   }
