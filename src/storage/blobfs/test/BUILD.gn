@@ -63,7 +63,6 @@ test("blobfs_unittest") {
   sources = [
     "unit/allocated_extent_iterator_test.cc",
     "unit/allocator_test.cc",
-    "unit/base_allocator_test.cc",
     "unit/blob_cache_test.cc",
     "unit/blob_layout_test.cc",
     "unit/blob_loader_test.cc",
@@ -99,7 +98,6 @@ test("blobfs_unittest") {
     "//src/lib/chunked-compression",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/storage/fs_management",
-    "//src/lib/testing/predicates",
     "//src/storage/blobfs",
     "//src/storage/blobfs:decompressor_impl",
     "//src/storage/blobfs:fuchsia.blobfs.internal",
