@@ -267,10 +267,15 @@ async fn recv_loop(sock: Rc<UdpSocket>, mdns_service: Weak<MdnsServiceInner>) {
             }
         };
 
+        // Note: important, otherwise non-local responders could add themselves.
+        if !addr.ip().is_local_addr() {
+            continue;
+        }
+
         let msg = match buf.parse::<dns::Message<_>>() {
             Ok(msg) => msg,
             Err(e) => {
-                log::warn!(
+                log::trace!(
                     "unable to parse message received on {} from {}: {:?}",
                     sock.local_addr()
                         .map(|s| format!("{}", s))
@@ -281,11 +286,6 @@ async fn recv_loop(sock: Rc<UdpSocket>, mdns_service: Weak<MdnsServiceInner>) {
                 continue;
             }
         };
-
-        // Note: important, otherwise non-local responders could add themselves.
-        if !addr.ip().is_local_addr() {
-            continue;
-        }
 
         if !is_fuchsia_response(&msg) && !is_fastboot_response(&msg) {
             continue;
