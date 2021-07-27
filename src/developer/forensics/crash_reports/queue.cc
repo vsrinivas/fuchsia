@@ -234,6 +234,9 @@ void Queue::Upload() {
           case CrashServer::UploadStatus::kThrottled:
             Retire(std::move(*active_report_), RetireReason::kThrottled);
             break;
+          case CrashServer::UploadStatus::kTimedOut:
+            Retire(std::move(*active_report_), RetireReason::kTimedOut);
+            break;
           case CrashServer::UploadStatus::kFailure:
             if (active_report_->delete_post_upload) {
               Retire(std::move(*active_report_), RetireReason::kDelete);
@@ -272,6 +275,9 @@ void Queue::Retire(const PendingReport pending_report, const Queue::RetireReason
       break;
     case RetireReason::kThrottled:
       FX_LOGST(INFO, tags) << "Upload throttled by server";
+      break;
+    case RetireReason::kTimedOut:
+      FX_LOGST(INFO, tags) << "Upload timed out, not re-trying";
       break;
     case RetireReason::kDelete:
       FX_LOGST(INFO, tags) << "Deleted local report";
@@ -440,6 +446,9 @@ void Queue::UploadMetrics::Retire(const PendingReport& pending_report,
       break;
     case RetireReason::kThrottled:
       info_.MarkReportAsThrottledByServer(upload_attempts_[pending_report.report_id]);
+      break;
+    case RetireReason::kTimedOut:
+      info_.MarkReportAsTimedOut(upload_attempts_[pending_report.report_id]);
       break;
     case RetireReason::kArchive:
       info_.MarkReportAsArchived();

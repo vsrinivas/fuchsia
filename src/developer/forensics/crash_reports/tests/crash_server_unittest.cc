@@ -66,7 +66,7 @@ class CrashServerTest : public UnitTestFixture {
 };
 
 TEST_F(CrashServerTest, Fails_OnError) {
-  SetUpLoader({stubs::LoaderResponse::WithError(fuchsia::net::http::Error::DEADLINE_EXCEEDED)});
+  SetUpLoader({stubs::LoaderResponse::WithError(fuchsia::net::http::Error::CONNECT)});
 
   std::optional<CrashServer::UploadStatus> upload_status{std::nullopt};
   crash_server().MakeRequest(
@@ -76,6 +76,19 @@ TEST_F(CrashServerTest, Fails_OnError) {
 
   ASSERT_TRUE(upload_status.has_value());
   EXPECT_EQ(upload_status.value(), CrashServer::UploadStatus::kFailure);
+}
+
+TEST_F(CrashServerTest, Fails_OnTimeout) {
+  SetUpLoader({stubs::LoaderResponse::WithError(fuchsia::net::http::Error::DEADLINE_EXCEEDED)});
+
+  std::optional<CrashServer::UploadStatus> upload_status{std::nullopt};
+  crash_server().MakeRequest(
+      kReport, GetSnapshot(kSnapshotUuid),
+      [&](CrashServer::UploadStatus status, std::string) { upload_status = status; });
+  RunLoopUntilIdle();
+
+  ASSERT_TRUE(upload_status.has_value());
+  EXPECT_EQ(upload_status.value(), CrashServer::UploadStatus::kTimedOut);
 }
 
 TEST_F(CrashServerTest, Fails_StatusCodeBelow200) {

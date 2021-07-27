@@ -4,6 +4,7 @@
 
 #include "src/developer/forensics/crash_reports/crash_server.h"
 
+#include <fuchsia/net/http/cpp/fidl.h>
 #include <lib/fostr/fidl/fuchsia/net/http/formatting.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
@@ -173,7 +174,11 @@ void CrashServer::MakeRequest(const Report& report, Snapshot snapshot,
 
     if (response.has_error()) {
       FX_LOGST(WARNING, tags.c_str()) << "Experienced network error: " << response.error();
-      callback(CrashServer::UploadStatus::kFailure, "");
+      if (response.error() == fuchsia::net::http::Error::DEADLINE_EXCEEDED) {
+        callback(CrashServer::UploadStatus::kTimedOut, "");
+      } else {
+        callback(CrashServer::UploadStatus::kFailure, "");
+      }
       return;
     }
 
