@@ -9,7 +9,7 @@ use diagnostics_hierarchy::Property;
 use fuchsia_async as fasync;
 use fuchsia_inspect::testing::TreeAssertion;
 use fuchsia_zircon as zx;
-use futures::{FutureExt as _, StreamExt as _, TryStreamExt as _};
+use futures::StreamExt as _;
 use itertools::Itertools as _;
 use net_declare::{fidl_ip, fidl_mac, fidl_subnet};
 use net_types::ip::{self as net_types_ip, Ip as _};
@@ -536,38 +536,23 @@ async fn inspect_dhcp<E: netemul::Endpoint>(
         assertion
     });
 
-    const POLL_INTERVAL: zx::Duration = zx::Duration::from_millis(100);
-    const TIMEOUT: std::time::Duration = std::time::Duration::from_millis(60000);
+    let mut interval = fuchsia_async::Interval::new(zx::Duration::from_seconds(1));
 
-    let inspect_stats_stream = fasync::Interval::new(POLL_INTERVAL)
-        .then(|()| {
-            get_inspect_data(
-                &realm,
-                "netstack",
-                std::iter::once(DISCARD_STATS_NAME).chain(path).into_iter().rev().join("/"),
-                "interfaces",
-            )
-        })
-        .fuse();
-
-    futures::pin_mut!(inspect_stats_stream);
-
-    let timeout_fut = fasync::Timer::new(TIMEOUT).fuse();
-
-    futures::pin_mut!(timeout_fut);
-
-    // We poll for the inspect data here because we aren't synchronized
-    // with the processing of the packets by the DHCP client.
     loop {
-        futures::select! {
-            data = inspect_stats_stream.try_next() => {
-                let data = data.expect("get_inspect_data failed").expect("dhcp inspect stats: unexpected err");
-                println!("Got inspect data: {:#?}", data);
-                if let Ok(_) = tree_assertion.run(&data) {
-                    return;
-                }
-            },
-            () = timeout_fut => panic!("inspect data lacked expected dhcp stats"),
+        assert_eq!(interval.next().await, Some(()));
+        let data = get_inspect_data(
+            &realm,
+            "netstack",
+            std::iter::once(DISCARD_STATS_NAME).chain(path).into_iter().rev().join("/"),
+            "interfaces",
+        )
+        .await
+        .expect("failed to get inspect data");
+        match tree_assertion.run(&data) {
+            Ok(()) => break,
+            Err(err) => {
+                println!("Got mismatched inspect data with err: {:?}", err);
+            }
         }
     }
 }
