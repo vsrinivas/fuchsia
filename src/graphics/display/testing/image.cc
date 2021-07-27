@@ -184,7 +184,8 @@ Image* Image::Create(fidl::WireSyncClient<fhd::Controller>* dc, uint32_t width, 
 
   auto info_result = collection->WaitForBuffersAllocated();
   if (!info_result.ok() || info_result->status != ZX_OK) {
-    fprintf(stderr, "Failed to wait for buffers allocated\n");
+    fprintf(stderr, "Failed to wait for buffers allocated: %s",
+            info_result.FormatDescription().c_str());
     return nullptr;
   }
 

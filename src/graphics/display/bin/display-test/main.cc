@@ -616,6 +616,7 @@ void usage(void) {
       "--format-set D N         : Set Display D to format N (use dump option for choices)\n"
       "--grayscale              : Display images in grayscale mode (default off)\n"
       "--num-frames N           : Run test in N number of frames (default 120)\n"
+      "                           N can be an integer or 'infinite'\n"
       "--delay N                : Add delay (ms) between Vsync complete and next configuration\n"
       "--capture                : Capture each display frame and verify\n"
       "--fgcolor 0xaarrggbb     : Set foreground color\n"
@@ -704,7 +705,7 @@ int main(int argc, const char* argv[]) {
   fbl::Vector<Display> displays;
   fbl::Vector<fbl::Vector<uint64_t>> display_layers;
   fbl::Vector<std::unique_ptr<VirtualLayer>> layers;
-  int32_t num_frames = 120;  // default to 120 frames
+  std::optional<int32_t> num_frames = 120;  // default to 120 frames. std::nullopt means infinite
   int32_t delay = 0;
   bool capture = false;
   bool verify_capture = false;
@@ -799,7 +800,11 @@ int main(int argc, const char* argv[]) {
       argv++;
       argc--;
     } else if (strcmp(argv[0], "--num-frames") == 0) {
-      num_frames = atoi(argv[1]);
+      if (strcmp(argv[1], "infinite") == 0) {
+        num_frames = std::nullopt;
+      } else {
+        num_frames = atoi(argv[1]);
+      }
       argv += 2;
       argc -= 2;
     } else if (strcmp(argv[0], "--controller") == 0) {
@@ -944,7 +949,7 @@ int main(int argc, const char* argv[]) {
   }
 
   // Call apply_config for each frame by default.
-  int32_t max_apply_configs = num_frames;
+  std::optional<int32_t> max_apply_configs(num_frames);
 
   fbl::AllocChecker ac;
   if (testbundle == INTEL) {
@@ -1107,7 +1112,7 @@ int main(int argc, const char* argv[]) {
     printf("Capturing every frame. Verification is %s\n", verify_capture ? "enabled" : "disabled");
   }
   bool capture_result = true;
-  for (int i = 0; i < num_frames; i++) {
+  for (int i = 0; !num_frames || i < num_frames; i++) {
     for (auto& layer : layers) {
       // Step before waiting, since not every layer is used every frame
       // so we won't necessarily need to wait.
@@ -1139,7 +1144,7 @@ int main(int argc, const char* argv[]) {
         return -1;
       }
     }
-    if (i < max_apply_configs) {
+    if (!max_apply_configs || i < max_apply_configs) {
       for (uint32_t cpv = 0; cpv < configs_per_vsync; cpv++) {
         if (!apply_config()) {
           return -1;
