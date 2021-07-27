@@ -462,7 +462,10 @@ impl Channel {
         with_handle(self.0, |h, side| {
             if let HdlRef::Channel(obj) = h {
                 if !obj.liveness.is_open() {
-                    return Err(zx_status::Status::PEER_CLOSED);
+                    // Move the handles outside this closure before dropping them.  If any are
+                    // channels in the same shard as this channel, dropping them will attempt to
+                    // re-acquire the lock held by with_handle.
+                    return Err(handles_vec);
                 }
                 obj.q
                     .side_mut(side)
@@ -473,6 +476,7 @@ impl Channel {
                 unreachable!();
             }
         })
+        .map_err(|_handles_to_drop| zx_status::Status::PEER_CLOSED)
     }
 }
 
@@ -1516,6 +1520,34 @@ mod test {
         assert_eq!(buf.bytes(), &[1, 2, 3]);
         assert_eq!(buf.n_handles(), 1);
         assert_ne!(buf.handles[0], Handle::invalid());
+    }
+
+    #[test]
+    fn channel_write_etc_closes_handles_in_same_shard_on_peer_closed() {
+        // Create 2 channel pairs, ensuring both are allocated in the same shard.
+        let (a, b) = Channel::create().unwrap();
+        let (a_shard, _, _, _) = unpack_handle(a.0);
+
+        let (c, _d) = loop {
+            let (c, d) = Channel::create().unwrap();
+            let (c_shard, _, _, _) = unpack_handle(c.0);
+
+            if a_shard == c_shard {
+                break (c, d);
+            }
+        };
+
+        let hd = HandleDisposition {
+            handle_op: HandleOp::Move(c.into()),
+            object_type: ObjectType::NONE,
+            rights: Rights::SAME_RIGHTS,
+            result: Status::OK,
+        };
+
+        // Ensure that write_etc does not deadlock while trying to close c, which is in the same
+        // shard and is guarded by the same mutex as a.
+        drop(b);
+        assert_eq!(a.write_etc(&[1, 2, 3], &mut [hd]), Err(Status::PEER_CLOSED));
     }
 
     #[test]
