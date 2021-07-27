@@ -333,12 +333,6 @@ template("zx_library") {
         foreach(header, invoker.sdk_headers) {
           public += [ "include/$header" ]
         }
-      } else if (defined(invoker.sdk_headers) && sdkable) {
-        # Add the headers to `sources` to ensure sdk_atom checks the API properly.
-        extra_headers = []
-        foreach(header, invoker.sdk_headers) {
-          extra_headers += [ "include/$header" ]
-        }
       }
 
       if (!defined(public_configs)) {
