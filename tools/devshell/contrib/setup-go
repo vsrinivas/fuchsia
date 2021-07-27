@@ -67,6 +67,7 @@ function setup {
   link "third_party/golibs/go.mod" go.mod
   link "third_party/golibs/go.sum" go.sum
 
+  mkdir -p vendor
   find third_party/golibs/vendor -mindepth 1 -maxdepth 1 | while read -r file; do
     base="$(basename "$file")"
     link "../third_party/golibs/vendor/$base" "vendor/$base"
