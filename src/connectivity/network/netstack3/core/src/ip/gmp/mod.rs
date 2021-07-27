@@ -773,6 +773,7 @@ impl<I: Instant, P: ProtocolSpecific> GmpStateMachine<I, P> {
 mod test {
     use std::time::{Duration, Instant};
 
+    use matches::assert_matches;
     use never::Never;
 
     use super::*;
@@ -826,25 +827,6 @@ mod test {
 
     type DummyGmpStateMachine = GmpStateMachine<Instant, DummyProtocolSpecific>;
 
-    fn at_least_one_action(
-        actions: Actions<DummyProtocolSpecific>,
-        action: Action<DummyProtocolSpecific>,
-    ) -> bool {
-        actions.into_iter().any(|a| a == action)
-    }
-
-    // Whether there is at least one `SendReport` action within `upper` in the
-    // future.
-    fn at_least_one_report(actions: Actions<DummyProtocolSpecific>, upper: Duration) -> bool {
-        actions.into_iter().any(|a| {
-            if let Action::Generic(GmpAction::ScheduleReportTimer(d)) = a {
-                d <= upper
-            } else {
-                false
-            }
-        })
-    }
-
     #[test]
     fn test_gmp_state_non_member_to_delay_should_set_flag() {
         let (s, _actions) = DummyGmpStateMachine::join_group(&mut new_rng(0), Instant::now());
@@ -856,20 +838,23 @@ mod test {
 
     #[test]
     fn test_gmp_state_non_member_to_delay_actions() {
-        let (_state, actions) = DummyGmpStateMachine::join_group(&mut new_rng(0), Instant::now());
-        assert!(at_least_one_action(
-            actions,
-            Action::<DummyProtocolSpecific>::Generic(GmpAction::SendReport(DummyProtocolSpecific,))
-        ));
-        let (_state, actions) = DummyGmpStateMachine::join_group(&mut new_rng(0), Instant::now());
-        assert!(at_least_one_report(actions, DEFAULT_UNSOLICITED_REPORT_INTERVAL));
+        let (_state, Actions(actions)) =
+            DummyGmpStateMachine::join_group(&mut new_rng(0), Instant::now());
+        assert_matches!(
+            actions.as_slice(),
+            [
+                Action::Generic(GmpAction::SendReport(DummyProtocolSpecific)),
+                Action::Generic(GmpAction::ScheduleReportTimer(d))
+            ] if *d <= DEFAULT_UNSOLICITED_REPORT_INTERVAL
+        );
     }
 
     #[test]
     fn test_gmp_state_delay_no_reset_timer() {
-        let (mut s, _actions) = DummyGmpStateMachine::join_group(&mut new_rng(0), Instant::now());
+        let mut rng = new_rng(0);
+        let (mut s, _actions) = DummyGmpStateMachine::join_group(&mut rng, Instant::now());
         let Actions(actions) = s.query_received(
-            &mut new_rng(0),
+            &mut rng,
             DEFAULT_UNSOLICITED_REPORT_INTERVAL + Duration::from_secs(1),
             Instant::now(),
         );
@@ -878,9 +863,13 @@ mod test {
 
     #[test]
     fn test_gmp_state_delay_reset_timer() {
-        let (mut s, _actions) = DummyGmpStateMachine::join_group(&mut new_rng(0), Instant::now());
-        let actions = s.query_received(&mut new_rng(0), Duration::from_millis(1), Instant::now());
-        assert!(at_least_one_report(actions, Duration::from_millis(1)))
+        let mut rng = new_rng(0);
+        let (mut s, _actions) = DummyGmpStateMachine::join_group(&mut rng, Instant::now());
+        let Actions(actions) = s.query_received(&mut rng, Duration::from_millis(1), Instant::now());
+        assert_eq!(
+            actions,
+            [Action::Generic(GmpAction::ScheduleReportTimer(Duration::from_micros(1)))]
+        );
     }
 
     #[test]
@@ -911,46 +900,52 @@ mod test {
 
     #[test]
     fn test_gmp_state_leave_should_send_leave() {
-        let (s, _actions) = DummyGmpStateMachine::join_group(&mut new_rng(0), Instant::now());
-        let actions = s.leave_group();
-        assert!(at_least_one_action(
+        let mut rng = new_rng(0);
+        let (s, _actions) = DummyGmpStateMachine::join_group(&mut rng, Instant::now());
+        let Actions(actions) = s.leave_group();
+        assert_eq!(
             actions,
-            Action::<DummyProtocolSpecific>::Generic(GmpAction::SendLeave)
-        ));
-        let (mut s, _actions) = DummyGmpStateMachine::join_group(&mut new_rng(0), Instant::now());
+            [Action::Generic(GmpAction::SendLeave), Action::Generic(GmpAction::StopReportTimer)]
+        );
+        let (mut s, _actions) = DummyGmpStateMachine::join_group(&mut rng, Instant::now());
         let Actions(actions) = s.report_timer_expired();
         assert_eq!(actions, [Action::Generic(GmpAction::SendReport(DummyProtocolSpecific))]);
-        let actions = s.leave_group();
-        assert!(at_least_one_action(
-            actions,
-            Action::<DummyProtocolSpecific>::Generic(GmpAction::SendLeave)
-        ));
+        let Actions(actions) = s.leave_group();
+        assert_eq!(actions, [Action::Generic(GmpAction::SendLeave)]);
     }
 
     #[test]
     fn test_gmp_state_delay_to_other_states_should_stop_timer() {
-        let (s, _actions) = DummyGmpStateMachine::join_group(&mut new_rng(0), Instant::now());
-        let actions = s.leave_group();
-        assert!(at_least_one_action(
+        let mut rng = new_rng(0);
+        let (s, _actions) = DummyGmpStateMachine::join_group(&mut rng, Instant::now());
+        let Actions(actions) = s.leave_group();
+        assert_eq!(
             actions,
-            Action::<DummyProtocolSpecific>::Generic(GmpAction::StopReportTimer)
-        ));
-        let (mut s, _actions) = DummyGmpStateMachine::join_group(&mut new_rng(0), Instant::now());
-        let actions = s.report_received();
-        assert!(at_least_one_action(
-            actions,
-            Action::<DummyProtocolSpecific>::Generic(GmpAction::StopReportTimer)
-        ));
+            [Action::Generic(GmpAction::SendLeave), Action::Generic(GmpAction::StopReportTimer)]
+        );
+        let (mut s, _actions) = DummyGmpStateMachine::join_group(&mut rng, Instant::now());
+        let Actions(actions) = s.report_received();
+        assert_eq!(actions, [Action::Generic(GmpAction::StopReportTimer)]);
     }
 
     #[test]
     fn test_gmp_state_other_states_to_delay_should_start_timer() {
-        let (mut s, actions) = DummyGmpStateMachine::join_group(&mut new_rng(0), Instant::now());
-        assert!(at_least_one_report(actions, DEFAULT_UNSOLICITED_REPORT_INTERVAL));
+        let mut rng = new_rng(0);
+        let (mut s, Actions(actions)) = DummyGmpStateMachine::join_group(&mut rng, Instant::now());
+        assert_matches!(
+            actions.as_slice(),
+            [
+                Action::Generic(GmpAction::SendReport(DummyProtocolSpecific)),
+                Action::Generic(GmpAction::ScheduleReportTimer(d))
+            ] if *d <= DEFAULT_UNSOLICITED_REPORT_INTERVAL
+        );
         let Actions(actions) = s.report_received();
         assert_eq!(actions, [Action::Generic(GmpAction::StopReportTimer)]);
-        let actions = s.query_received(&mut new_rng(0), Duration::from_secs(1), Instant::now());
-        assert!(at_least_one_report(actions, Duration::from_secs(1)));
+        let Actions(actions) = s.query_received(&mut rng, Duration::from_secs(1), Instant::now());
+        assert_eq!(
+            actions,
+            [Action::Generic(GmpAction::ScheduleReportTimer(Duration::from_micros(1)))]
+        );
     }
 
     #[test]
@@ -963,11 +958,8 @@ mod test {
             MemberState::Idle(s) => assert!(!s.get_state().last_reporter),
             _ => panic!("Wrong State!"),
         }
-        let actions = s.leave_group();
-        assert!(at_least_one_action(
-            actions,
-            Action::<DummyProtocolSpecific>::Generic(GmpAction::SendLeave)
-        ));
+        let Actions(actions) = s.leave_group();
+        assert_eq!(actions, [Action::Generic(GmpAction::SendLeave)]);
     }
 
     #[test]
