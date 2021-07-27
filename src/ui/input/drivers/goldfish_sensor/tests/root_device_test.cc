@@ -37,7 +37,7 @@ class FakeInputDevice : public InputDevice {
             [rootdevice](InputDevice* dev) { rootdevice->input_devices()->RemoveDevice(dev); }),
         name_(name) {}
 
-  virtual ~FakeInputDevice() { g_devices_.erase(name_); }
+  ~FakeInputDevice() override { g_devices_.erase(name_); }
 
   zx_status_t OnReport(const SensorReport& rpt) override {
     std::vector<double> new_report;
