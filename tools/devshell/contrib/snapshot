@@ -79,10 +79,9 @@ if [[ -z "${output_dir}" ]]; then
   fi
 fi
 
-# TODO(fxbug.dev/70281) Double the wait time every monday
-fx-warn "Consider running ffx target snapshot instead. fx snapshot is being deprecated and will \
-take longer and longer."
-sleep 8
+fx-warn "Consider running \`ffx target snapshot\` instead. fx snapshot is being deprecated in \
+September 2021, and waits for 16s before grabbing a snapshot."
+sleep 16
 
 # At this point, we know that we have a valid output directory.
 
