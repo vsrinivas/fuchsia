@@ -7,10 +7,13 @@ use {
     fidl::endpoints::RequestStream,
     fidl_fuchsia_bluetooth_host::{HostControlHandle, HostMarker, HostRequest, HostRequestStream},
     fidl_fuchsia_bluetooth_sys::HostInfo as FidlHostInfo,
-    fuchsia_bluetooth::types::{Address, BondingData, HostId, HostInfo, Peer, PeerId},
+    fuchsia_bluetooth::types::{
+        bonding_data::example, Address, BondingData, HostId, HostInfo, Peer, PeerId,
+    },
     futures::{future, join, stream::StreamExt},
     parking_lot::RwLock,
     std::{path::Path, sync::Arc},
+    test_util::assert_gt,
 };
 
 use crate::host_device::{HostDevice, HostListener};
@@ -115,6 +118,42 @@ async fn test_discovery_session() -> Result<(), Error> {
     let is_discovering = host.info().discovering.clone();
     assert!(!is_discovering);
 
+    Ok(())
+}
+
+// Create a HostDevice with a fake channel, restore bonds, check that the FIDL method is called
+// over multiple paginated iterations
+#[fuchsia_async::run_until_stalled(test)]
+async fn host_device_restore_bonds() -> Result<(), Error> {
+    let (client, server) = fidl::endpoints::create_proxy_and_stream::<HostMarker>()?;
+    let address = Address::Public([0, 0, 0, 0, 0, 0]);
+    let host = HostDevice::mock(HostId(1), address, Path::new("/dev/class/bt-host/test"), client);
+
+    // TODO(fxbug.dev/80564): Assume that 256 bonds is enough to cause HostDevice to use multiple
+    // FIDL calls to transmit all of the bonds (at this time, the maximum message size is 64 KiB
+    // and a fully-populated BondingData without peer service records is close to 700 B).
+    let bonds = (0..=255).map(|i| {
+        example::bond(Address::Public([i, i, i, i, i, i]), Address::Public([i, i, i, i, i, i]))
+    });
+    let restore_bonds = host.restore_bonds(bonds.collect());
+
+    // Create testing Host server that responds to each request with a completed future until
+    // restore_bonds yields a result
+    let mut num_restore_bonds_calls: i32 = 0;
+    let run_host = server.take_until(restore_bonds).for_each(|request| {
+        match request {
+            Ok(HostRequest::RestoreBonds { responder, .. }) => {
+                // Succeed always by not sending back any rejected bonds
+                let _ = responder.send(&mut std::iter::empty());
+                num_restore_bonds_calls += 1;
+            }
+            x => panic!("Expected RestoreBonds Request but got: {:?}", x),
+        }
+        future::ready(())
+    });
+
+    let _ = run_host.await;
+    assert_gt!(num_restore_bonds_calls, 1);
     Ok(())
 }
 
