@@ -218,6 +218,7 @@ class Osd {
   void DisableGamma();
   zx_status_t ConfigAfbc();
   zx_status_t SetGamma(GammaChannel channel, const float* data);
+  void SetColorCorrection(uint32_t rdma_table_idx, const display_config_t* config);
   zx_status_t WaitForGammaAddressReady();
   zx_status_t WaitForGammaWriteReady();
   void WaitForRdmaIdle() __TA_REQUIRES(rdma_lock_);

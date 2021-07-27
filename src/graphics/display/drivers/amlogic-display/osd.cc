@@ -286,6 +286,90 @@ int Osd::GetNextAvailableRdmaTableIndex() {
   return -1;
 }
 
+void Osd::SetColorCorrection(uint32_t rdma_table_idx,
+                             const display_config_t* config) {
+  if (!config->cc_flags) {
+    // Disable color conversion engine
+    SetRdmaTableValue(rdma_table_idx, IDX_MATRIX_EN_CTRL,
+                      vpu_mmio_->Read32(VPU_VPP_POST_MATRIX_EN_CTRL) & ~(1 << 0));
+    return;
+  }
+
+  // Set enable bit
+  SetRdmaTableValue(rdma_table_idx, IDX_MATRIX_EN_CTRL,
+                    vpu_mmio_->Read32(VPU_VPP_POST_MATRIX_EN_CTRL) | (1 << 0));
+
+  // Load PreOffset values (or 0 if none entered)
+  auto offset0_1 = (config->cc_flags & COLOR_CONVERSION_PREOFFSET
+                    ? (FloatToFixed2_10(config->cc_preoffsets[0]) << 16 |
+                       FloatToFixed2_10(config->cc_preoffsets[1]) << 0)
+                    : 0);
+  SetRdmaTableValue(rdma_table_idx, IDX_MATRIX_PRE_OFFSET0_1, offset0_1);
+  auto offset2 = (config->cc_flags & COLOR_CONVERSION_PREOFFSET
+                  ? (FloatToFixed2_10(config->cc_preoffsets[2]) << 0)
+                  : 0);
+  SetRdmaTableValue(rdma_table_idx, IDX_MATRIX_PRE_OFFSET2, offset2);
+  // TODO(b/182481217): remove when this bug is closed.
+  DISP_SPEW("pre offset0_1=%u offset2=%u\n", offset0_1, offset2);
+
+  // Load PostOffset values (or 0 if none entered)
+  offset0_1 = (config->cc_flags & COLOR_CONVERSION_POSTOFFSET
+               ? (FloatToFixed2_10(config->cc_postoffsets[0]) << 16 |
+                  FloatToFixed2_10(config->cc_postoffsets[1]) << 0)
+               : 0);
+  offset2 = (config->cc_flags & COLOR_CONVERSION_PREOFFSET
+             ? (FloatToFixed2_10(config->cc_postoffsets[2]) << 0)
+             : 0);
+  SetRdmaTableValue(rdma_table_idx, IDX_MATRIX_OFFSET0_1, offset0_1);
+  SetRdmaTableValue(rdma_table_idx, IDX_MATRIX_OFFSET2, offset2);
+  // TODO(b/182481217): remove when this bug is closed.
+  DISP_SPEW("post offset0_1=%u offset2=%u\n", offset0_1, offset2);
+
+  float identity[3][3] = {
+    {
+      1,
+      0,
+      0,
+    },
+    {
+      0,
+      1,
+      0,
+    },
+    {
+      0,
+      0,
+      1,
+    },
+  };
+
+  // This will include either the entered coefficient matrix or the identity matrix
+  float final[3][3] = {};
+
+  for (uint32_t i = 0; i < 3; i++) {
+    for (uint32_t j = 0; j < 3; j++) {
+      final[i][j] = config->cc_flags & COLOR_CONVERSION_COEFFICIENTS
+                    ? config->cc_coefficients[i][j]
+                    : identity[i][j];
+    }
+  }
+
+  // Load up the coefficient matrix registers
+  auto coef00_01 = FloatToFixed3_10(final[0][0]) << 16 | FloatToFixed3_10(final[0][1]) << 0;
+  auto coef02_10 = FloatToFixed3_10(final[0][2]) << 16 | FloatToFixed3_10(final[1][0]) << 0;
+  auto coef11_12 = FloatToFixed3_10(final[1][1]) << 16 | FloatToFixed3_10(final[1][2]) << 0;
+  auto coef20_21 = FloatToFixed3_10(final[2][0]) << 16 | FloatToFixed3_10(final[2][1]) << 0;
+  auto coef22 = FloatToFixed3_10(final[2][2]) << 0;
+  SetRdmaTableValue(rdma_table_idx, IDX_MATRIX_COEF00_01, coef00_01);
+  SetRdmaTableValue(rdma_table_idx, IDX_MATRIX_COEF02_10, coef02_10);
+  SetRdmaTableValue(rdma_table_idx, IDX_MATRIX_COEF11_12, coef11_12);
+  SetRdmaTableValue(rdma_table_idx, IDX_MATRIX_COEF20_21, coef20_21);
+  SetRdmaTableValue(rdma_table_idx, IDX_MATRIX_COEF22, coef22);
+  // TODO(b/182481217): remove when this bug is closed.
+  DISP_SPEW("color correction regs 00_01=%xu 02_12=%xu 11_12=%xu 20_21=%u 22=%xu\n", coef00_01, coef02_10,
+            coef11_12, coef20_21, coef22);
+}
+
 void Osd::FlipOnVsync(uint8_t idx, const display_config_t* config) {
   auto info = reinterpret_cast<ImageInfo*>(config[0].layer_list[0]->cfg.primary.image.handle);
   const int next_table_idx = GetNextAvailableRdmaTableIndex();
@@ -432,86 +516,7 @@ void Osd::FlipOnVsync(uint8_t idx, const display_config_t* config) {
     SetAfbcRdmaTableValue(AfbcCommandReg::Get().FromValue(0).set_direct_swap(0).reg_value());
   }
 
-  // Perform color correction if needed
-  if (config->cc_flags) {
-    // Set enable bit
-    SetRdmaTableValue(next_table_idx, IDX_MATRIX_EN_CTRL,
-                      vpu_mmio_->Read32(VPU_VPP_POST_MATRIX_EN_CTRL) | (1 << 0));
-
-    // Load PreOffset values (or 0 if none entered)
-    auto offset0_1 = (config->cc_flags & COLOR_CONVERSION_PREOFFSET
-                          ? (FloatToFixed2_10(config->cc_preoffsets[0]) << 16 |
-                             FloatToFixed2_10(config->cc_preoffsets[1]) << 0)
-                          : 0);
-    SetRdmaTableValue(next_table_idx, IDX_MATRIX_PRE_OFFSET0_1, offset0_1);
-    auto offset2 = (config->cc_flags & COLOR_CONVERSION_PREOFFSET
-                        ? (FloatToFixed2_10(config->cc_preoffsets[2]) << 0)
-                        : 0);
-    SetRdmaTableValue(next_table_idx, IDX_MATRIX_PRE_OFFSET2, offset2);
-    // TODO(b/182481217): remove when this bug is closed.
-    DISP_SPEW("pre offset0_1=%u offset2=%u\n", offset0_1, offset2);
-
-    // Load PostOffset values (or 0 if none entered)
-    offset0_1 = (config->cc_flags & COLOR_CONVERSION_POSTOFFSET
-                     ? (FloatToFixed2_10(config->cc_postoffsets[0]) << 16 |
-                        FloatToFixed2_10(config->cc_postoffsets[1]) << 0)
-                     : 0);
-    offset2 = (config->cc_flags & COLOR_CONVERSION_PREOFFSET
-                   ? (FloatToFixed2_10(config->cc_postoffsets[2]) << 0)
-                   : 0);
-    SetRdmaTableValue(next_table_idx, IDX_MATRIX_OFFSET0_1, offset0_1);
-    SetRdmaTableValue(next_table_idx, IDX_MATRIX_OFFSET2, offset2);
-    // TODO(b/182481217): remove when this bug is closed.
-    DISP_SPEW("post offset0_1=%u offset2=%u\n", offset0_1, offset2);
-
-    float identity[3][3] = {
-        {
-            1,
-            0,
-            0,
-        },
-        {
-            0,
-            1,
-            0,
-        },
-        {
-            0,
-            0,
-            1,
-        },
-    };
-
-    // This will include either the entered coefficient matrix or the identity matrix
-    float final[3][3] = {};
-
-    for (uint32_t i = 0; i < 3; i++) {
-      for (uint32_t j = 0; j < 3; j++) {
-        final[i][j] = config->cc_flags & COLOR_CONVERSION_COEFFICIENTS
-                          ? config->cc_coefficients[i][j]
-                          : identity[i][j];
-      }
-    }
-
-    // Load up the coefficient matrix registers
-    auto coef00_01 = FloatToFixed3_10(final[0][0]) << 16 | FloatToFixed3_10(final[0][1]) << 0;
-    auto coef02_10 = FloatToFixed3_10(final[0][2]) << 16 | FloatToFixed3_10(final[1][0]) << 0;
-    auto coef11_12 = FloatToFixed3_10(final[1][1]) << 16 | FloatToFixed3_10(final[1][2]) << 0;
-    auto coef20_21 = FloatToFixed3_10(final[2][0]) << 16 | FloatToFixed3_10(final[2][1]) << 0;
-    auto coef22 = FloatToFixed3_10(final[2][2]) << 0;
-    SetRdmaTableValue(next_table_idx, IDX_MATRIX_COEF00_01, coef00_01);
-    SetRdmaTableValue(next_table_idx, IDX_MATRIX_COEF02_10, coef02_10);
-    SetRdmaTableValue(next_table_idx, IDX_MATRIX_COEF11_12, coef11_12);
-    SetRdmaTableValue(next_table_idx, IDX_MATRIX_COEF20_21, coef20_21);
-    SetRdmaTableValue(next_table_idx, IDX_MATRIX_COEF22, coef22);
-    // TODO(b/182481217): remove when this bug is closed.
-    DISP_SPEW("ccm 00_01=%xu 02_12=%xu 11_12=%xu 20_21=%u 22=%xu\n", coef00_01, coef02_10,
-              coef11_12, coef20_21, coef22);
-  } else {
-    // Disable color conversion engine
-    SetRdmaTableValue(next_table_idx, IDX_MATRIX_EN_CTRL,
-                      vpu_mmio_->Read32(VPU_VPP_POST_MATRIX_EN_CTRL) & ~(1 << 0));
-  }
+  SetColorCorrection(next_table_idx, config);
 
   // update last element of table which will be used to indicate whether RDMA operation was
   // completed or not
