@@ -21,6 +21,7 @@ rustc_test("integration_tests_bin") {
     "//sdk/fidl/fuchsia.sys.internal:fuchsia.sys.internal-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/diagnostics/archivist:lib",
+    "//src/diagnostics/archivist/tests/v2/components/fidl:fidl-rustc",
     "//src/lib/diagnostics/data/rust",
     "//src/lib/diagnostics/hierarchy/rust",
     "//src/lib/diagnostics/reader/rust",
@@ -38,6 +39,7 @@ rustc_test("integration_tests_bin") {
     "//third_party/rust_crates:difference",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:lazy_static",
+    "//third_party/rust_crates:rand",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:tracing",
   ]
@@ -51,6 +53,7 @@ rustc_test("integration_tests_bin") {
     "src/inspect/truncation.rs",
     "src/lib.rs",
     "src/logs/attribution.rs",
+    "src/logs/budget.rs",
     "src/logs/crash.rs",
     "src/logs/lifecycle.rs",
     "src/logs/mod.rs",
@@ -58,6 +61,7 @@ rustc_test("integration_tests_bin") {
     "src/logs/sorting.rs",
     "src/logs/utils.rs",
     "src/test_topology.rs",
+    "src/utils.rs",
   ]
   inputs = [
     "test_data/unified_reader_all_golden.json",
@@ -83,6 +87,13 @@ fuchsia_component("archivist_for_integration") {
   manifest = "meta/archivist_for_integration.cml"
 }
 
+fuchsia_component("archivist-with-small-caches") {
+  component_name = "archivist-with-small-caches"
+  testonly = true
+  deps = [ "//src/diagnostics/archivist:bin" ]
+  manifest = "meta/archivist-with-small-caches.cml"
+}
+
 fuchsia_component("archivist_integration_tests") {
   testonly = true
   deps = [ ":integration_tests_bin" ]
@@ -92,6 +103,11 @@ fuchsia_component("archivist_integration_tests") {
 resource("test_archivist_config") {
   sources = [ "configs/archivist_config.json" ]
   outputs = [ "data/config/archivist_config.json" ]
+}
+
+resource("small-caches-config") {
+  sources = [ "configs/small-caches-config.json" ]
+  outputs = [ "data/config/small-caches-config.json" ]
 }
 
 resource("filter_feedback") {
@@ -107,8 +123,10 @@ resource("do_not_filter_feedback") {
 fuchsia_test_package("archivist-integration-tests-v2") {
   test_components = [ ":archivist_integration_tests" ]
   deps = [
+    ":archivist-with-small-caches",
     ":archivist_for_integration",
     ":archivist_for_integration_with_log_connector",
+    ":small-caches-config",
     ":test_archivist_config",
     "components",
     "//src/diagnostics/iquery/test/test_component",

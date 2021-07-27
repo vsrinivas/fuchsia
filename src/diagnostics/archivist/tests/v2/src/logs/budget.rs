@@ -1,26 +1,26 @@
-// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::{constants::*, test_topology, utils};
+use anyhow::Error;
 use archivist_lib::{
     configs::parse_config,
     logs::message::{fx_log_packet_t, METADATA_SIZE},
 };
+use component_events::{events::*, matcher::ExitStatusMatcher};
 use diagnostics_data::{Data, LogError, Logs, Severity};
 use diagnostics_hierarchy::trie::TrieIterableNode;
 use diagnostics_reader::{ArchiveReader, Inspect, SubscriptionResultsStream};
-use fidl::endpoints::ProtocolMarker;
-use fidl_fuchsia_diagnostics::ArchiveAccessorMarker;
-use fidl_fuchsia_logger::LogSinkMarker;
-use fidl_fuchsia_sys::{ComponentControllerEvent::OnTerminated, LauncherProxy};
-use fidl_test_logs_budget::{
+use fidl_fuchsia_archivist_tests::{
     SocketPuppetControllerRequest, SocketPuppetControllerRequestStream, SocketPuppetProxy,
 };
+use fidl_fuchsia_diagnostics::ArchiveAccessorMarker;
+use fidl_fuchsia_io::DirectoryMarker;
+use fidl_fuchsia_sys2::{ChildRef, EventSourceMarker, RealmMarker};
 use fuchsia_async::{Task, Timer};
-use fuchsia_component::{
-    client::{launch, launch_with_options, App, LaunchOptions},
-    server::ServiceFs,
-};
+use fuchsia_component::{client, server::ServiceFs};
+use fuchsia_component_test::{builder::*, mock, RealmInstance};
 use fuchsia_zircon as zx;
 use futures::{
     channel::mpsc::{self, Receiver},
@@ -30,34 +30,32 @@ use rand::{prelude::SliceRandom, rngs::StdRng, SeedableRng};
 use std::{collections::BTreeMap, ops::Deref, time::Duration};
 use tracing::{debug, info, trace};
 
-const ARCHIVIST_URL: &str =
-    "fuchsia-pkg://fuchsia.com/test-logs-budget#meta/archivist-with-small-caches.cmx";
-
 const TEST_PACKET_LEN: usize = 49;
+const MAX_PUPPETS: usize = 5;
 
-#[fuchsia_async::run_singlethreaded]
-async fn main() {
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_budget() {
     fuchsia_syslog::init().unwrap();
     fuchsia_syslog::set_severity(fuchsia_syslog::levels::DEBUG);
 
     info!("testing that the archivist's log buffers correctly enforce their budget");
 
     info!("creating nested environment for collecting diagnostics");
-    let mut env = PuppetEnv::create().await;
+    let mut env = PuppetEnv::create(MAX_PUPPETS).await;
 
     info!("check that archivist log state is clean");
     env.assert_archivist_state_matches_expected().await;
 
-    for i in 0..5 {
+    for i in 0..MAX_PUPPETS {
         env.launch_puppet(i).await;
     }
     env.validate().await;
 }
 
 struct PuppetEnv {
-    launcher: LauncherProxy,
+    max_puppets: usize,
+    instance: RealmInstance,
     controllers: Receiver<SocketPuppetControllerRequestStream>,
-    _archivist: App,
     messages_allowed_in_cache: usize,
     messages_sent: Vec<MessageReceipt>,
     launched_monikers: Vec<String>,
@@ -66,57 +64,65 @@ struct PuppetEnv {
     log_reader: ArchiveReader,
     log_subscription: SubscriptionResultsStream<Logs>,
     rng: StdRng,
-    _serve_fs: Task<()>,
     _log_errors: Task<()>,
 }
 
 impl PuppetEnv {
-    async fn create() -> Self {
-        let (mut sender, controllers) = mpsc::channel(1);
-        let mut fs = ServiceFs::new();
-        fs.add_fidl_service(move |requests: SocketPuppetControllerRequestStream| {
-            debug!("got controller request, forwarding back to main");
-            sender.start_send(requests).unwrap();
-        });
+    async fn create(max_puppets: usize) -> Self {
+        let (sender, controllers) = mpsc::channel(1);
+        let mut builder = test_topology::create(test_topology::Options {
+            archivist_url: ARCHIVIST_WITH_SMALL_CACHES,
+        })
+        .await
+        .expect("create base topology");
+        builder
+            .add_component(
+                "mocks-server",
+                ComponentSource::Mock(mock::Mock::new(move |mock_handles: mock::MockHandles| {
+                    Box::pin(run_mocks(mock_handles, sender.clone()))
+                })),
+            )
+            .await
+            .unwrap();
 
-        let env = fs.create_salted_nested_environment("diagnostics").unwrap();
-        let launcher = env.launcher().clone();
-        let _serve_fs = Task::spawn(async move {
-            let _env = env; // move env into the task so it stays alive
-            fs.collect::<()>().await
-        });
-
-        // creating a proxy to logsink in our own environment, otherwise embedded archivist just
-        // eats its own logs via logconnector
-        let options = {
-            let mut options = LaunchOptions::new();
-            let (dir_client, dir_server) = zx::Channel::create().unwrap();
-            let mut fs = ServiceFs::new();
-            fs.add_proxy_service::<LogSinkMarker, _>().serve_connection(dir_server).unwrap();
-            Task::spawn(fs.collect()).detach();
-            options.set_additional_services(vec![LogSinkMarker::NAME.to_string()], dir_client);
-            options
-        };
-
-        info!("starting our archivist");
-        let _archivist =
-            launch_with_options(&launcher, ARCHIVIST_URL.to_string(), None, options).unwrap();
-        let config = parse_config("/pkg/data/embedding-config.json").unwrap();
-
-        let mut archivist_events = _archivist.controller().take_event_stream();
-        if let OnTerminated { .. } = archivist_events.next().await.unwrap().unwrap() {
-            panic!("archivist terminated early");
+        for i in 0..max_puppets {
+            let name = format!("test/puppet-{}", i);
+            builder
+                .add_component(name.clone(), ComponentSource::url(SOCKET_PUPPET_COMPONENT_URL))
+                .await
+                .unwrap()
+                .add_route(CapabilityRoute {
+                    capability: Capability::protocol(
+                        "fuchsia.archivist.tests.SocketPuppetController",
+                    ),
+                    source: RouteEndpoint::component("mocks-server"),
+                    targets: vec![RouteEndpoint::component(name.clone())],
+                })
+                .unwrap()
+                .add_route(CapabilityRoute {
+                    capability: Capability::protocol("fuchsia.logger.LogSink"),
+                    source: RouteEndpoint::component("test/archivist"),
+                    targets: vec![RouteEndpoint::component(name)],
+                })
+                .unwrap();
         }
 
+        info!("starting our instance");
+        let mut realm = builder.build();
+        test_topology::expose_test_realm_protocol(&mut realm).await;
+        let instance = realm.create().await.expect("create instance");
+
+        let config = parse_config("/pkg/data/config/small-caches-config.json").unwrap();
         let messages_allowed_in_cache = config.logs.max_cached_original_bytes / TEST_PACKET_LEN;
 
-        let archive = || _archivist.connect_to_protocol::<ArchiveAccessorMarker>().unwrap();
+        let archive =
+            || instance.root.connect_to_protocol_at_exposed_dir::<ArchiveAccessorMarker>().unwrap();
         let mut inspect_reader = ArchiveReader::new();
         inspect_reader
             .with_archive(archive())
             .with_minimum_schema_count(1) // we only request inspect from our archivist
-            .add_selector("archivist-with-small-caches.cmx:root/logs_buffer")
-            .add_selector("archivist-with-small-caches.cmx:root/sources");
+            .add_selector("archivist:root/logs_buffer")
+            .add_selector("archivist:root/sources");
         let mut log_reader = ArchiveReader::new();
         log_reader
             .with_archive(archive())
@@ -132,9 +138,9 @@ impl PuppetEnv {
         });
 
         Self {
-            launcher,
+            max_puppets,
             controllers,
-            _archivist,
+            instance,
             messages_allowed_in_cache,
             messages_sent: vec![],
             launched_monikers: vec![],
@@ -143,16 +149,18 @@ impl PuppetEnv {
             log_reader,
             log_subscription,
             rng: StdRng::seed_from_u64(0xA455),
-            _serve_fs,
             _log_errors,
         }
     }
 
     async fn launch_puppet(&mut self, id: usize) {
-        let url =
-            format!("fuchsia-pkg://fuchsia.com/test-logs-budget#meta/socket-puppet{}.cmx", id);
-        info!(%url, "launching puppet");
-        let app = launch(&self.launcher, url, None).unwrap();
+        assert!(id < self.max_puppets);
+        let mut child_ref = ChildRef { name: format!("puppet-{}", id), collection: None };
+
+        let (_client_end, server_end) =
+            fidl::endpoints::create_endpoints::<DirectoryMarker>().unwrap();
+        let realm = self.instance.root.connect_to_protocol_at_exposed_dir::<RealmMarker>().unwrap();
+        realm.bind_child(&mut child_ref, server_end).await.unwrap().unwrap();
 
         debug!("waiting for controller request");
         let mut controller = self.controllers.next().await.unwrap();
@@ -169,14 +177,18 @@ impl PuppetEnv {
             _ => panic!("did not expect that"),
         };
 
-        let moniker = format!("socket-puppet{}.cmx", id);
-        let puppet = Puppet { app, moniker, proxy };
+        let moniker = format!(
+            "fuchsia_component_test_collection:{}/test/puppet-{}",
+            self.instance.root.child_name(),
+            id
+        );
+        let puppet = Puppet { id, moniker: moniker.clone(), proxy };
 
         info!("having the puppet connect to LogSink");
         puppet.connect_to_log_sink().await.unwrap();
 
         info!("observe the puppet appears in archivist's inspect output");
-        self.launched_monikers.push(puppet.moniker.clone());
+        self.launched_monikers.push(moniker);
         self.running_puppets.push(puppet);
 
         // wait for archivist to catch up with what we launched
@@ -264,8 +276,7 @@ impl PuppetEnv {
         let mut dropped_message_warnings = BTreeMap::new();
         for observed in observed_logs {
             if observed.metadata.errors.is_some() {
-                let moniker = observed.moniker.split(":").next().unwrap().to_string();
-                dropped_message_warnings.insert(moniker, observed);
+                dropped_message_warnings.insert(observed.moniker.clone(), observed);
             } else {
                 let expected = expected_logs.next().unwrap();
                 assert_eq!(expected, &observed);
@@ -293,16 +304,31 @@ impl PuppetEnv {
         // messages for the stopped component and actually dropping it
         let iteration_for_killing_a_puppet = self.messages_allowed_in_cache;
 
+        let event_source =
+            EventSource::from_proxy(client::connect_to_protocol::<EventSourceMarker>().unwrap());
+        let mut event_stream = event_source
+            .subscribe(vec![EventSubscription::new(vec![Stopped::NAME], EventMode::Async)])
+            .await
+            .unwrap();
+
         info!("having the puppets log packets until overflow");
         for i in 0..overall_messages_to_log {
             trace!(i, "loop ticked");
             if i == iteration_for_killing_a_puppet {
-                let mut to_stop = self.running_puppets.pop().unwrap();
+                let to_stop = self.running_puppets.pop().unwrap();
                 let receipt = to_stop.emit_packet().await;
                 self.check_receipt(receipt).await;
 
-                to_stop.app.kill().unwrap();
-                to_stop.app.wait().await.unwrap();
+                let id = to_stop.id;
+                drop(to_stop);
+
+                utils::wait_for_component_stopped_event(
+                    &self.instance.root.child_name(),
+                    &format!("puppet-{}", id),
+                    ExitStatusMatcher::Clean,
+                    &mut event_stream,
+                )
+                .await;
             }
 
             let puppet = self.running_puppets.choose(&mut self.rng).unwrap();
@@ -330,7 +356,7 @@ impl PuppetEnv {
 struct Puppet {
     proxy: SocketPuppetProxy,
     moniker: String,
-    app: App,
+    id: usize,
 }
 
 impl std::fmt::Debug for Puppet {
@@ -356,6 +382,19 @@ impl Deref for Puppet {
     fn deref(&self) -> &Self::Target {
         &self.proxy
     }
+}
+
+async fn run_mocks(
+    mock_handles: mock::MockHandles,
+    mut sender: mpsc::Sender<SocketPuppetControllerRequestStream>,
+) -> Result<(), Error> {
+    let mut fs = ServiceFs::new();
+    fs.dir("svc").add_fidl_service(move |stream: SocketPuppetControllerRequestStream| {
+        sender.start_send(stream).unwrap();
+    });
+    fs.serve_connection(mock_handles.outgoing_dir.into_channel())?;
+    fs.collect::<()>().await;
+    Ok(())
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]

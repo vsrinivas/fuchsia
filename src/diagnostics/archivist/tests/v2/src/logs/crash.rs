@@ -2,14 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{constants::*, test_topology};
-use component_events::{events::*, matcher::*};
+use crate::{constants::*, test_topology, utils};
+use component_events::matcher::ExitStatusMatcher;
 use diagnostics_reader::{assert_data_tree, ArchiveReader, Logs, Severity};
 use fidl_fuchsia_diagnostics::ArchiveAccessorMarker;
 use fidl_fuchsia_io::DirectoryMarker;
-use fidl_fuchsia_sys2::{ChildRef, EventSourceMarker, RealmMarker};
+use fidl_fuchsia_sys2::{ChildRef, RealmMarker};
 use fuchsia_async::Task;
-use fuchsia_component::client;
 use futures::prelude::*;
 
 #[fuchsia::test]
@@ -36,29 +35,18 @@ async fn logs_from_crashing_component() {
         }
     });
 
-    let event_source =
-        EventSource::from_proxy(client::connect_to_protocol::<EventSourceMarker>().unwrap());
-    let mut event_stream = event_source
-        .subscribe(vec![EventSubscription::new(vec![Stopped::NAME], EventMode::Async)])
-        .await
-        .unwrap();
-
     let mut child_ref = ChildRef { name: "log_and_crash".to_string(), collection: None };
-    reader.retry_if_empty(true);
     // launch our child and wait for it to exit before asserting on its logs
     let (_client_end, server_end) = fidl::endpoints::create_endpoints::<DirectoryMarker>().unwrap();
     let realm = instance.root.connect_to_protocol_at_exposed_dir::<RealmMarker>().unwrap();
     realm.bind_child(&mut child_ref, server_end).await.unwrap().unwrap();
 
-    EventMatcher::ok()
-        .stop(Some(ExitStatusMatcher::AnyCrash))
-        .moniker(format!(
-            "./fuchsia_component_test_collection:{}:\\d+/test:\\d+/log_and_crash:\\d+",
-            instance.root.child_name()
-        ))
-        .wait::<Stopped>(&mut event_stream)
-        .await
-        .unwrap();
+    utils::wait_for_component_stopped(
+        &instance.root.child_name(),
+        "log_and_crash",
+        ExitStatusMatcher::AnyCrash,
+    )
+    .await;
 
     let crasher_info = logs.next().await.unwrap();
     assert_eq!(crasher_info.metadata.severity, Severity::Info);

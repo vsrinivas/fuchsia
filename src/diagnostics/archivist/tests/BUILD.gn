@@ -10,7 +10,6 @@ group("tests") {
   deps = [
     ":archivist-integration-tests",
     "logs-basic-integration",
-    "logs-budget",
     "logs/cpp:test-spec",
     "logs/cpp:test-spec-structured",
     "v2:tests",

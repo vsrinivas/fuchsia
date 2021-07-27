@@ -45,17 +45,17 @@ pub async fn create(opts: Options) -> Result<RealmBuilder, Error> {
         })?
         .add_route(CapabilityRoute {
             capability: Capability::Event(Event::Started, cm_rust::EventMode::Async),
-            source: RouteEndpoint::component("test"),
+            source: RouteEndpoint::AboveRoot,
             targets: vec![RouteEndpoint::component("test/archivist")],
         })?
         .add_route(CapabilityRoute {
             capability: Capability::Event(Event::Stopped, cm_rust::EventMode::Async),
-            source: RouteEndpoint::component("test"),
+            source: RouteEndpoint::AboveRoot,
             targets: vec![RouteEndpoint::component("test/archivist")],
         })?
         .add_route(CapabilityRoute {
             capability: Capability::Event(Event::Running, cm_rust::EventMode::Async),
-            source: RouteEndpoint::component("test"),
+            source: RouteEndpoint::AboveRoot,
             targets: vec![RouteEndpoint::component("test/archivist")],
         })?
         .add_route(CapabilityRoute {

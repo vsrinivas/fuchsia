@@ -5,6 +5,7 @@
 use crate::{
     constants::*,
     test_topology::{self, expose_test_realm_protocol},
+    utils,
 };
 use component_events::{events::*, matcher::*};
 use diagnostics_reader::{assert_data_tree, ArchiveReader, Data, Logs};
@@ -158,7 +159,6 @@ async fn test_logs_lifecycle() {
 
     let event_source =
         EventSource::from_proxy(client::connect_to_protocol::<EventSourceMarker>().unwrap());
-
     let mut event_stream = event_source
         .subscribe(vec![EventSubscription::new(vec![Stopped::NAME], EventMode::Async)])
         .await
@@ -173,15 +173,13 @@ async fn test_logs_lifecycle() {
         let realm = instance.root.connect_to_protocol_at_exposed_dir::<RealmMarker>().unwrap();
         realm.bind_child(&mut child_ref, server_end).await.unwrap().unwrap();
 
-        EventMatcher::ok()
-            .stop(Some(ExitStatusMatcher::Clean))
-            .moniker(format!(
-                "./fuchsia_component_test_collection:{}:\\d+/test:\\d+/log_and_exit:\\d+",
-                instance.root.child_name()
-            ))
-            .wait::<Stopped>(&mut event_stream)
-            .await
-            .unwrap();
+        utils::wait_for_component_stopped_event(
+            &instance.root.child_name(),
+            "log_and_exit",
+            ExitStatusMatcher::Clean,
+            &mut event_stream,
+        )
+        .await;
 
         check_message(&moniker, subscription.next().await.unwrap());
 

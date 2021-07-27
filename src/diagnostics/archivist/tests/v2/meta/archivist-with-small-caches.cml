@@ -1,0 +1,17 @@
+{
+    include: [
+        "//src/diagnostics/archivist/meta/common.shard.cml",
+        "//src/diagnostics/archivist/tests/v2/meta/test.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/archivist",
+        args: [
+            "--disable-klog",
+            "--disable-log-connector",
+            "--disable-component-event-provider",
+            "--config-path",
+            "/pkg/data/config/small-caches-config.json",
+        ],
+    },
+}

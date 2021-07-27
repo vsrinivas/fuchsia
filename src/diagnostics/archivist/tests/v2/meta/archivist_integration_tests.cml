@@ -35,5 +35,20 @@
             to: "#fuchsia_component_test_collection",
             filter: { name: "fuchsia.logger.LogSink" },
         },
+        {
+            event: "stopped",
+            from: "framework",
+            to: "#fuchsia_component_test_collection",
+        },
+        {
+            event: "started",
+            from: "framework",
+            to: "#fuchsia_component_test_collection",
+        },
+        {
+            event: "running",
+            from: "framework",
+            to: "#fuchsia_component_test_collection",
+        },
     ],
 }

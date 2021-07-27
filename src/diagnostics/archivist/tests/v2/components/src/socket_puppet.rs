@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 use fidl::endpoints::create_request_stream;
-use fidl_fuchsia_logger::LogSinkMarker;
-use fidl_test_logs_budget::{
+use fidl_fuchsia_archivist_tests::{
     SocketPuppetControllerMarker, SocketPuppetMarker, SocketPuppetRequest,
 };
+use fidl_fuchsia_logger::LogSinkMarker;
 use fuchsia_component::client::connect_to_protocol;
 use fuchsia_zircon as zx;
 use futures::StreamExt;

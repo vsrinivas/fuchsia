@@ -1,0 +1,10 @@
+{
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/logs_integration_cpp_tests",
+    },
+    use: [
+        { protocol: "fuchsia.logger.Log" },
+    ],
+}

@@ -78,12 +78,37 @@ fuchsia_component("log_and_crash_component") {
   manifest = "meta/log-and-crash.cml"
 }
 
+rustc_binary("socket_puppet_bin") {
+  testonly = true
+  name = "socket_puppet"
+  source_root = "src/socket_puppet.rs"
+
+  deps = [
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
+    "//src/diagnostics/archivist/tests/v2/components/fidl:fidl-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:futures",
+  ]
+
+  sources = [ "src/socket_puppet.rs" ]
+}
+
+fuchsia_component("socket-puppet") {
+  testonly = true
+  manifest = "meta/socket-puppet.cml"
+  deps = [ ":socket_puppet_bin" ]
+}
+
 group("components") {
   testonly = true
   deps = [
     ":component_with_children",
     ":log_and_crash_component",
     ":log_and_exit_component",
+    ":socket-puppet",
     ":stub_inspect_component",
   ]
 }
