@@ -2,7 +2,7 @@
     include: [ "//src/sys/test_runners/starnix/default.shard.cml" ],
     program: {
         binary: "/data/tests/open_test",
-        args: [ "--gunit_filter=*.OTrunc:*.OTruncAndReadOnlyDir:*.OTruncAndReadOnlyFile:*.ReadOnly:*.WriteOnly:*.ReadWrite:*.RelPath:*.AbsPath:*.AtRelPath:*.AtAbsPath:*.OpenNoFollowStillFollowsLinksInPath:*.Fault:*.Truncate:*.NameTooLong:*.DotsFromRoot:*.SymlinkDirectory:*.CanTruncateReadOnly" ],
+        args: [ "--gunit_filter=*.OTrunc:*.OTruncAndReadOnlyDir:*.OTruncAndReadOnlyFile:*.MustCreateExisting:*.ReadOnly:*.WriteOnly:*.ReadWrite:*.RelPath:*.AbsPath:*.AtRelPath:*.AtAbsPath:*.OpenNoFollowStillFollowsLinksInPath:*.Fault:*.Truncate:*.NameTooLong:*.DotsFromRoot:*.SymlinkDirectory:*.CanTruncateReadOnly" ],
         mounts: [
             "/:remotefs:root",
             "/data:remotefs:data",
