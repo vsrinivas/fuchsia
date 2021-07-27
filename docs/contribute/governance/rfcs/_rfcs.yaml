@@ -1432,6 +1432,19 @@
   submitted: '2021-05-26'
   reviewed: '2021-07-21'
 
+- name: 'RFC-0111'
+  title: 'Initial Fuchsia hardware platform specifications'
+  short_description: 'An initial minimum set of requirements, contribution processes and support standards for hardware platforms to run Fuchsia.'
+  authors: ['kadolor@google.com', 'andresoportus@google.com', 'curtisgalloway@google.com']
+  file: '0111_fuchsia_hardware_specifications.md'
+  area: ['Governance']
+  issue: []
+  gerrit_change_id: ['540102']
+  status: 'Accepted'
+  reviewers: ['abarth@google.com', 'johngro@google.com', 'cpu@google.com', 'jsankey@google.com', 'surajmalhotra@google.com']
+  submitted: '2021-06-07'
+  reviewed: '20201-07-21'
+
 - name: 'RFC-0112'
   title: 'ACPI support on x86'
   short_description: 'Improvements to ACPI support on x86.'
