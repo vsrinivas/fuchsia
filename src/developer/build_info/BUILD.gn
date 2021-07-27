@@ -36,7 +36,10 @@ fuchsia_component("build-info-legacy") {
 }
 
 fuchsia_package("build-info-service") {
-  deps = [ ":build-info" ]
+  deps = [
+    ":build-info",
+    ":build-info-legacy",
+  ]
 }
 
 core_shard("build_info_core_shard") {
