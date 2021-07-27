@@ -428,7 +428,6 @@ fn send_mld_packet<D: LinkDevice, C: MldContext<D>, B: ByteSlice, M: IcmpMldv1Me
 #[cfg(test)]
 mod tests {
     use std::convert::TryInto;
-    use std::time::Instant;
 
     use net_types::ethernet::Mac;
     use packet::ParseBuffer;
@@ -520,9 +519,11 @@ mod tests {
         // `MaxRespDelay` to be 0. If this is the case, the host should send the
         // report immediately instead of setting a timer.
         let mut rng = new_rng(0);
-        let (mut s, _actions) =
-            GmpStateMachine::<_, MldProtocolSpecific>::join_group(&mut rng, Instant::now());
-        let actions = s.query_received(&mut rng, Duration::from_secs(0), Instant::now());
+        let (mut s, _actions) = GmpStateMachine::<_, MldProtocolSpecific>::join_group(
+            &mut rng,
+            DummyInstant::default(),
+        );
+        let actions = s.query_received(&mut rng, Duration::from_secs(0), DummyInstant::default());
         let vec = actions.into_iter().collect::<Vec<Action<_>>>();
         assert_eq!(vec, [Action::Specific(ImmediateIdleState)]);
     }

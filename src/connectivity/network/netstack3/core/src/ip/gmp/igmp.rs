@@ -486,7 +486,6 @@ fn run_action<D: LinkDevice, C: IgmpContext<D>>(
 mod tests {
     use super::*;
     use std::convert::TryInto;
-    use std::time;
 
     use net_types::ip::AddrSubnet;
     use packet::serialize::{Buf, InnerPacketBuilder, Serializer};
@@ -574,9 +573,9 @@ mod tests {
     #[test]
     fn test_igmp_state_with_igmpv1_router() {
         let mut rng = new_rng(0);
-        let (mut s, _actions) = GmpStateMachine::join_group(&mut rng, time::Instant::now());
+        let (mut s, _actions) = GmpStateMachine::join_group(&mut rng, DummyInstant::default());
         let Actions(actions) =
-            s.query_received(&mut rng, Duration::from_secs(0), time::Instant::now());
+            s.query_received(&mut rng, Duration::from_secs(0), DummyInstant::default());
         assert_eq!(
             actions,
             [Action::Specific(Igmpv2Actions::ScheduleV1RouterPresentTimer(
@@ -597,10 +596,10 @@ mod tests {
         let mut rng = new_rng(0);
         let (mut s, _actions) = GmpStateMachine::<_, Igmpv2ProtocolSpecific>::join_group(
             &mut rng,
-            time::Instant::now(),
+            DummyInstant::default(),
         );
         let Actions(actions) =
-            s.query_received(&mut rng, Duration::from_secs(0), time::Instant::now());
+            s.query_received(&mut rng, Duration::from_secs(0), DummyInstant::default());
         assert_eq!(
             actions,
             [Action::Specific(Igmpv2Actions::ScheduleV1RouterPresentTimer(
@@ -621,7 +620,7 @@ mod tests {
             _ => panic!("Wrong State!"),
         }
         let Actions(actions) =
-            s.query_received(&mut rng, Duration::from_secs(0), time::Instant::now());
+            s.query_received(&mut rng, Duration::from_secs(0), DummyInstant::default());
         assert_eq!(
             actions,
             [Action::Specific(Igmpv2Actions::ScheduleV1RouterPresentTimer(
