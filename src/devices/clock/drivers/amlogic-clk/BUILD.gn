@@ -82,7 +82,7 @@ test("amlogic-clk-test-bin") {
     "//src/devices/bus/lib/device-protocol-platform-device",
     "//src/devices/lib/amlogic",
     "//src/devices/lib/mmio",
-    "//src/devices/testing/fake_ddk",
+    "//src/devices/testing/no_ddk",
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",

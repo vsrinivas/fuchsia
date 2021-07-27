@@ -61,7 +61,7 @@ test("usb-cdc-ecm-unittest") {
   deps = [
     ":usb-cdc-ecm-lib",
     "//sdk/lib/fdio",
-    "//src/devices/testing/fake_ddk",
+    "//src/devices/testing/no_ddk",
     "//zircon/public/lib/zxtest",
   ]
 }
@@ -76,7 +76,7 @@ fuzzer("usb-cdc-ecm-descriptor-fuzzer") {
   deps = [
     ":usb-cdc-ecm-lib",
     "//sdk/lib/fdio",
-    "//src/devices/testing/fake_ddk",
+    "//src/devices/testing/no_ddk",
     "//zircon/public/lib/zxtest",
   ]
 }

@@ -53,8 +53,8 @@ test("registers-test") {
   deps = [
     ":common",
     ":registers_bind",
-    "//src/devices/testing/fake_ddk",
     "//src/devices/testing/mock-mmio-reg",
+    "//src/devices/testing/no_ddk",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
   ]

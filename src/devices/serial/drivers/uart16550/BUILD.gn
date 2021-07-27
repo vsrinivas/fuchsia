@@ -101,7 +101,7 @@ test("uart16550-test-bin") {
   sources = [ "uart16550-test.cc" ]
   deps = [
     ":uart16550_lib_for_testing",
-    "//src/devices/testing/fake_ddk",
+    "//src/devices/testing/no_ddk",
     "//zircon/public/lib/hwreg-mock",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",

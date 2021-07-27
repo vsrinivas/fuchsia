@@ -64,7 +64,7 @@ test("aml-light-test") {
     "//sdk/banjo/fuchsia.hardware.pwm:fuchsia.hardware.pwm_banjo_cpp_mock",
     "//sdk/fidl/fuchsia.hardware.light:fuchsia.hardware.light_llcpp",
     "//src/devices/lib/amlogic",
-    "//src/devices/testing/fake_ddk",
+    "//src/devices/testing/no_ddk",
     "//src/lib/ddk",
     "//src/lib/ddk:ddk-metadata-headers",
     "//src/lib/ddktl",

@@ -25,7 +25,8 @@ test("iommu-test") {
   sources = [ "iommu-test.cc" ]
   deps = [
     "//src/devices/lib/iommu",
-    "//src/devices/testing/fake_ddk",
+    "//src/devices/testing/no_ddk",
+    "//src/lib/ddk",
     "//third_party/acpica",
     "//zircon/public/lib/zxtest",
   ]

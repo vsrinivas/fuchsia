@@ -52,7 +52,7 @@ test("fusb302-test-bin") {
     ":common",
     "//sdk/lib/inspect/testing/cpp:zxtest",
     "//src/devices/i2c/testing/mock-i2c",
-    "//src/devices/testing/fake_ddk",
+    "//src/devices/testing/no_ddk",
     "//zircon/public/lib/mock-function",
     "//zircon/public/lib/zxtest",
   ]

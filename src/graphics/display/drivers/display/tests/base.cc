@@ -11,7 +11,6 @@
 
 #include "../../fake/fake-display.h"
 #include "../controller.h"
-#include "lib/fake_ddk/fake_ddk.h"
 #include "src/devices/sysmem/drivers/sysmem/device.h"
 
 namespace display {

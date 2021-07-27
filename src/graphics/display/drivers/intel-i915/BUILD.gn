@@ -79,7 +79,7 @@ test("intel-i915-test") {
   deps = [
     ":common_srcs",
     "//src/devices/pci/testing:pci-protocol-fake",
-    "//src/devices/testing/fake_ddk",
+    "//src/devices/testing/no_ddk",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",

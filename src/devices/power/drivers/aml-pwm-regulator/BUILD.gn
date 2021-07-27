@@ -52,7 +52,7 @@ test("aml-pwm-regulator-test-bin") {
     ":common",
     "//sdk/banjo/fuchsia.hardware.pwm:fuchsia.hardware.pwm_banjo_cpp_mock",
     "//src/devices/lib/metadata:llcpp",
-    "//src/devices/testing/fake_ddk",
+    "//src/devices/testing/no_ddk",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
   ]
