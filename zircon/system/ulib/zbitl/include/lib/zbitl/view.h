@@ -51,6 +51,40 @@ struct ExampleContainerTraits {
   /// The type of an item header, expected to be POD.
   struct item_header_type {};
 
+  /// The user-facing representation of an item header, which wraps the
+  /// format's raw item_header_type. Being a C-style struct with fields
+  /// possibly only relevant to a parser, the raw item header type may not be a
+  /// relatively useful type to expose to the user.
+  ///
+  /// In practice, the wrapper either stores the `item_header_type` directly
+  /// or it holds a pointer into someplace owned or viewed by an associated
+  /// Storage object.  In the latter case, i.e. when Storage represents
+  /// something already in memory, `item_header_wrapper` should be no larger
+  /// than a plain pointer.
+  template <typename StorageTraits>
+  class item_header_wrapper {
+   private:
+    using TraitsHeader = typename StorageTraits::template LocalizedReadResult<item_header_type>;
+
+   public:
+    /// Constructible from an item header, as it would result from a localized
+    /// read.
+    explicit item_header_wrapper(const TraitsHeader& header) {}
+
+    /// Default constructible, copyable, movable, copy-assignable, and move-
+    /// assignable.
+    item_header_wrapper() = default;
+    item_header_wrapper(const item_header_wrapper&) = default;
+    item_header_wrapper(item_header_wrapper&&) noexcept = default;
+    item_header_wrapper& operator=(const item_header_wrapper&) = default;
+    item_header_wrapper& operator=(item_header_wrapper&&) noexcept = default;
+
+    /// The header can be dereferenced as if the type were
+    /// `const item_header_t*` (i.e. `*header` or `header->member`).
+    const item_header_type& operator*() const { return std::declval<const item_header_wrapper&>(); }
+    const item_header_type* operator->() const { return nullptr; }
+  };
+
   /// Error encapsulates errors encountered in navigating the container, either
   /// those coming from the storage backend or from structural issues with the
   /// container itself. ErrorTraits corresponds to the `ErrorTraits` member
@@ -113,9 +147,22 @@ struct ExampleContainerTraits {
   static Error<typename StorageTraits::ErrorTraits> ToError(
       typename StorageTraits::storage_type& storage,  //
       std::string_view reason,                        //
-      uint32_t item_offset,   // Offset of the item in the iteration context.
-      uint32_t error_offset,  // Offset at which the error occurred.
-      std::optional<item_header_type> header = std::nullopt,  //
+      /// If the error occurred within the context of a particular item, this
+      /// is its offset; else, for problems with the overall container, this is
+      /// zero.
+      uint32_t item_offset,
+      /// Offset at which the error occurred.
+      uint32_t error_offset,
+      /// If the error occurred within the context of a particular item, this
+      /// is a pointer to its header; else, for problems with the overall
+      /// container, this is nullptr. In particular, we expect `header` to be
+      /// null iff `item_offset` is zero. When `header` is obtained through an
+      /// iterator, the former's lifetime is expected to be tied to the
+      /// latter's.
+      ///
+      /// std::optional<item_header_type> is not used here to account for any
+      /// flexible array members, which std::optional forbids.
+      const item_header_type* header = nullptr,
       std::optional<typename StorageTraits::ErrorTraits::error_type> storage_error = std::nullopt) {
     return {};
   }
@@ -176,11 +223,11 @@ struct ZbiTraits {
 
   template <typename StorageTraits>
   static Error<typename StorageTraits::ErrorTraits> ToError(
-      typename StorageTraits::storage_type& storage,          //
-      std::string_view reason,                                //
-      uint32_t item_offset,                                   //
-      uint32_t error_offset,                                  //
-      std::optional<item_header_type> header = std::nullopt,  //
+      typename StorageTraits::storage_type& storage,  //
+      std::string_view reason,                        //
+      uint32_t item_offset,                           //
+      uint32_t error_offset,                          //
+      const item_header_type* header = nullptr,       //
       std::optional<typename StorageTraits::ErrorTraits::error_type> storage_error = std::nullopt) {
     return {reason, error_offset, storage_error};
   }
@@ -296,22 +343,31 @@ class View {
                   ContainerTraits::kContainerType);
   }
 
-  /// The header is represented by an opaque type that can be dereferenced as
-  /// if it were `const item_header_t*`, i.e. `*header` or `header->member`.
-  /// Either it stores the `item_header_type` directly or it holds a pointer
-  /// into someplace owned or viewed by the Storage object.  In the latter
-  /// case, i.e. when Storage represents something already in memory,
-  /// `item_header_wrapper` should be no larger than a plain pointer.
+  /// TODO(fxbug.dev/68585): Move to ZbiTraits.
   class item_header_wrapper {
+   private:
+    using TraitsHeader = typename Traits::template LocalizedReadResult<item_header_type>;
+
    public:
+    explicit item_header_wrapper(const TraitsHeader& header)
+        : stored_([&header]() {
+            if constexpr (kCopy) {
+              static_assert(std::is_same_v<item_header_type, TraitsHeader>);
+              return header;
+            } else {
+              static_assert(
+                  std::is_same_v<std::reference_wrapper<const item_header_type>, TraitsHeader>);
+              return &(header.get());
+            }
+          }()) {}
+
     item_header_wrapper() = default;
     item_header_wrapper(const item_header_wrapper&) = default;
-    item_header_wrapper(item_header_wrapper&&) = default;
+    item_header_wrapper(item_header_wrapper&&) noexcept = default;
     item_header_wrapper& operator=(const item_header_wrapper&) = default;
-    item_header_wrapper& operator=(item_header_wrapper&&) = default;
+    item_header_wrapper& operator=(item_header_wrapper&&) noexcept = default;
 
-    /// `*header` always copies, so lifetime of `this` doesn't matter.
-    item_header_type operator*() const {
+    const item_header_type& operator*() const {
       if constexpr (kCopy) {
         return stored_;
       } else {
@@ -319,52 +375,20 @@ class View {
       }
     }
 
-    /// `header->member` refers to the header in place, so never do
-    /// `&header->member` but always dereference a member directly.
-    const item_header_type* operator->() const {
-      if constexpr (kCopy) {
-        return &stored_;
-      } else {
-        return stored_;
-      }
-    }
-
-    /// A size accessor that avoids copying.
-    uint32_t size() const {
-      if constexpr (kCopy) {
-        return ContainerTraits::PayloadSize(stored_);
-      } else {
-        return ContainerTraits::PayloadSize(*stored_);
-      }
-    }
+    const item_header_type* operator->() const { return &**this; }
 
    private:
-    using TraitsHeader = typename Traits::template LocalizedReadResult<item_header_type>;
+    // Accesses kCopy.
+    friend View;
+
     static constexpr bool kCopy = std::is_same_v<TraitsHeader, item_header_type>;
     static constexpr bool kReference =
         std::is_same_v<TraitsHeader, std::reference_wrapper<const item_header_type>>;
     static_assert(kCopy || kReference,
                   "zbitl::StorageTraits specialization's Header function returns wrong type");
 
-    friend View;
-    template <typename ImageStorage>
-    friend class Image;
-
     using HeaderStorage = std::conditional_t<kCopy, item_header_type, const item_header_type*>;
     HeaderStorage stored_;
-
-    // This can only be used by begin(), below - and by Image's Append.
-    template <typename T>
-    explicit item_header_wrapper(const T& header)
-        : stored_([&header]() {
-            if constexpr (kCopy) {
-              static_assert(std::is_same_v<item_header_type, T>);
-              return header;
-            } else {
-              static_assert(std::is_same_v<std::reference_wrapper<const item_header_type>, T>);
-              return &(header.get());
-            }
-          }()) {}
   };
 
   /// The payload type is provided by the StorageTraits specialization.  It's
@@ -599,7 +623,7 @@ class View {
 
       const uint32_t payload_offset =
           ContainerTraits::PayloadOffset(*value_.header, next_item_offset);
-      const uint32_t payload_size = value_.header.size();
+      const uint32_t payload_size = ContainerTraits::PayloadSize(*value_.header);
       const uint32_t padded_payload_size =
           (payload_size + ContainerTraits::kPayloadPaddingAlignment - 1) &
           -ContainerTraits::kPayloadPaddingAlignment;
@@ -627,7 +651,7 @@ class View {
     void Fail(std::string_view sv, std::optional<storage_error_type> storage_error = std::nullopt,
               std::optional<uint32_t> error_offset = std::nullopt) {
       view_->Fail(ContainerTraits::template ToError<Traits>(
-          view_->storage(), sv, offset_, error_offset.value_or(offset_), *value_.header,
+          view_->storage(), sv, offset_, error_offset.value_or(offset_), &(*value_.header),
           std::move(storage_error)));
       *this = view_->end();
     }
@@ -646,8 +670,8 @@ class View {
     auto to_error = [this](
                         std::string_view reason, uint32_t error_offset = 0,
                         std::optional<storage_error_type> storage_error = std::nullopt) -> Error {
-      return ContainerTraits::template ToError<Traits>(storage(), reason, 0, error_offset,
-                                                       std::nullopt, std::move(storage_error));
+      return ContainerTraits::template ToError<Traits>(storage(), reason, 0, error_offset, nullptr,
+                                                       std::move(storage_error));
     };
     auto capacity_error = Traits::Capacity(storage());
     if (capacity_error.is_error()) {
