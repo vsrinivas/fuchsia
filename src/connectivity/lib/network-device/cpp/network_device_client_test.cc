@@ -31,10 +31,8 @@ class TestEventHandler : public fidl::WireAsyncEventHandler<T> {
  public:
   TestEventHandler(const char* name) : name_(name) {}
 
-  virtual void Unbound(fidl::UnbindInfo info) override {
-    if (!info.ok()) {
-      FAIL() << "Lost connection to " << name_ << ": " << info;
-    }
+  virtual void on_fidl_error(fidl::UnbindInfo info) override {
+    FAIL() << "Lost connection to " << name_ << ": " << info;
   }
 
  private:
