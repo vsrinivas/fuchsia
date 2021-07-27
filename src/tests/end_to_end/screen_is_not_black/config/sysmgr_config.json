@@ -1,5 +1,0 @@
-{
-  "apps": [
-    "fuchsia-pkg://fuchsia.com/kcounter_inspect#meta/kcounter_inspect.cmx"
-  ]
-}

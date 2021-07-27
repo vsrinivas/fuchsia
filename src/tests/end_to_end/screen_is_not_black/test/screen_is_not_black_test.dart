@@ -218,9 +218,9 @@ void main(List<String> args) {
     final Uptime uptime = await findRebootTimestamp(inspect);
 
     // Collect all health nodes and other metrics relevant for the boot process
-    // from the running programs.  Some programs, like 'timekeeper' and `kcounter_inspect`
-    // are more interesting since they have metrics useful for analyzing the timing of the
-    // boot process.
+    // from the running programs.  Some programs, like 'timekeeper' and
+    // `diagnostics-kcounter` are more interesting since they have metrics
+    // useful for analyzing the timing of the boot process.
     final diagnostics = await inspect.snapshotAll();
     for (final inspectResult in diagnostics) {
       final label = inspectResult['moniker'];
