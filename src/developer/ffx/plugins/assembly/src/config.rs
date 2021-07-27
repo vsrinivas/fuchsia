@@ -142,7 +142,8 @@ pub struct ZbiConfig {
     /// The partition name to flash the ZBI.
     pub partition: String,
 
-    /// The name of the ZBI (fuchsia or recovery).
+    /// The name to give the output ZBI file.
+    /// (e.g. "fuchsia" results in "fuchsia.zbi")
     #[serde(default = "default_zbi_name")]
     pub name: String,
 

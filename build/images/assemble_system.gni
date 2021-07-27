@@ -158,12 +158,6 @@ template("assemble_system") {
     system_image_deps += invoker.system_image_deps
   }
 
-  if (defined(invoker.output_name)) {
-    zbi_name = invoker.output_name
-  } else {
-    zbi_name = "${target_name}.zbi"
-  }
-
   ramdisk_fvm_in_zbi = false
   if (defined(invoker.ramdisk_fvm_in_zbi)) {
     ramdisk_fvm_in_zbi = invoker.ramdisk_fvm_in_zbi && !bootfs_only
@@ -559,7 +553,12 @@ template("assemble_system") {
     if (defined(invoker.output_dir)) {
       output_dir = invoker.output_dir
     }
-    output_name = zbi_name
+
+    output_name = "${image_name}.zbi"
+    if (defined(invoker.output_name)) {
+      output_name = invoker.output_name
+    }
+
     output_extension = ""
 
     forward_variables_from(invoker,
@@ -659,6 +658,7 @@ template("assemble_system") {
     forward_variables_from(invoker, [ "testonly" ])
     board_name = "${image_name}"
     output_path = files.board_config
+    zbi_name = "${image_name}"
 
     # minfs arguments
     if (!bootfs_only) {
@@ -717,7 +717,7 @@ template("assemble_system") {
 
     # zbi outputs
     outputs = [
-      "${outdir}/fuchsia.zbi",
+      "${outdir}/${image_name}.zbi",
       "${gendir}/zbi.json",
       "${outdir}/update.far",
     ]

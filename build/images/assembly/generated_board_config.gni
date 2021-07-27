@@ -55,6 +55,10 @@ import("//build/zbi/zbi.gni")
 #     [int] The slice size of the FVM.
 #
 # ZBI arguments
+#   zbi_name (required)
+#     [string] The name to give the ZBI in the out directory.
+#     Typically: fuchsia, recovery, etc.
+#
 #   zbi_signing_script (optional)
 #     [path] Location of script to use to sign the ZBI.
 #
@@ -66,6 +70,7 @@ template("generated_board_config") {
   assert(defined(invoker.output_path), "Need to define output_path")
   assert(defined(invoker.blob_layout_format), "Need to define blob_layout_form")
   assert(defined(invoker.fvm_slice_size), "Need to define fvm_slice_size")
+  assert(defined(invoker.zbi_name), "Need to define zbi_name")
 
   use_esp = false
   if (defined(invoker.use_esp)) {
@@ -148,12 +153,8 @@ template("generated_board_config") {
       board_name = invoker.board_name
       arch = target_cpu
       zbi = {
+        name = invoker.zbi_name
         partition = zircon_a_partition
-        if (custom_signing_script != "" || use_vboot) {
-          name = "zbi.signed"
-        } else {
-          name = "zbi"
-        }
         max_size = 0
         if (defined(invoker.embed_fvm_in_zbi)) {
           embed_fvm_in_zbi = invoker.embed_fvm_in_zbi

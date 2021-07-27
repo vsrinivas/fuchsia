@@ -141,11 +141,7 @@ files = {
 
   # The ZBI output
   zbi = "${target_out_dir}/fuchsia.zbi"
-
-  # If the ZBI is going to be "signed", or vendor-script-processed, then write
-  # the _actual_ ZBI to this path, and the one that will be used in the update
-  # package to the above path.
-  zbi_unsigned = "${zbi}.unsigned"
+  zbi_signed = "${zbi}.signed"
 
   # ZBI output manifest
   zbi_manifest = "${target_out_dir}/gen/zbi.json"
@@ -277,9 +273,6 @@ file_args = {
 
   update_pkg = rebase_path(files.update_pkg, root_build_dir)
 
-  # vboot input
-  zbi_unsigned = rebase_path(files.zbi_unsigned, root_build_dir)
-
   #####
   # Files used for validation against external label outputs (temporary)
   #
@@ -351,6 +344,7 @@ generated_board_config("board_config") {
   output_path = files.board_config
   recovery = recovery_label
   use_esp = target_cpu != "arm64" && !use_vboot
+  zbi_name = "fuchsia"
 
   # minfs arguments
   if (!bootfs_only) {
@@ -500,7 +494,9 @@ ffx_action("images") {
   if (use_vboot) {
     deps += vboot_action.deps
     inputs += vboot_action.inputs
-    outputs += [ files.zbi_unsigned ]
+  }
+  if (custom_signing_script != "" || use_vboot) {
+    outputs += [ files.zbi_signed ]
   }
 }
 
@@ -668,8 +664,13 @@ verify_files_match("zbi_matches") {
     dep_labels.fuchsia_zbi,
   ]
 
-  first = files.zbi
-  second = files.fuchsia_zbi
+  first = files.fuchsia_zbi
+
+  if (custom_signing_script != "" || use_vboot) {
+    second = files.zbi_signed
+  } else {
+    second = files.zbi
+  }
 }
 
 verify_files_match("zbi_manifest_matches") {

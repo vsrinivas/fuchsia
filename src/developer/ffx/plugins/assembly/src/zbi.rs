@@ -89,11 +89,7 @@ pub fn construct_zbi(
     zbi_builder.set_output_manifest(&gendir.as_ref().join("zbi.json"));
 
     // Build and return the ZBI.
-    let zbi_path = if board.zbi.signing_script.is_none() {
-        outdir.as_ref().join("fuchsia.zbi")
-    } else {
-        outdir.as_ref().join("fuchsia.zbi.unsigned")
-    };
+    let zbi_path = outdir.as_ref().join(format!("{}.zbi", &board.zbi.name));
     zbi_builder.build(gendir, zbi_path.as_path())?;
     Ok(zbi_path)
 }
@@ -102,11 +98,12 @@ pub fn construct_zbi(
 /// the bootloaders, then perform that task here.
 pub fn vendor_sign_zbi(
     outdir: impl AsRef<Path>,
+    board: &BoardConfig,
     signing_config: &ZbiSigningScript,
     zbi: impl AsRef<Path>,
 ) -> Result<PathBuf> {
     // The resultant file path
-    let signed_path = outdir.as_ref().join("fuchsia.zbi");
+    let signed_path = outdir.as_ref().join(format!("{}.zbi.signed", board.zbi.name));
 
     // The parameters of the script that are required:
     let mut args = Vec::new();
@@ -220,11 +217,33 @@ mod tests {
     #[test]
     fn vendor_sign() {
         let dir = tempdir().unwrap();
-        let expected_output = dir.path().join("fuchsia.zbi");
+        let expected_output = dir.path().join("fuchsia.zbi.signed");
+
+        let backstop_path = dir.path().join("backstop.txt");
+        std::fs::write(&backstop_path, "12345\n").unwrap();
 
         // Create a fake zbi.
-        let zbi_path = dir.path().join("fuchsia.zbi.unsigned");
+        let zbi_path = dir.path().join("fuchsia.zbi");
         std::fs::write(&zbi_path, "fake zbi").unwrap();
+
+        // Create fake board definitions.
+        let board_config = BoardConfig {
+            board_name: "board".to_string(),
+            vbmeta: None,
+            bootloaders: Vec::new(),
+            zbi: ZbiConfig {
+                partition: "zbi".to_string(),
+                name: "fuchsia".to_string(),
+                max_size: 0,
+                embed_fvm_in_zbi: false,
+                compression: "zstd".to_string(),
+                signing_script: None,
+                backstop_file: backstop_path,
+            },
+            blobfs: BlobFSConfig::default(),
+            fvm: None,
+            recovery: None,
+        };
 
         // Create the signing tool that ensures that we pass the correct arguments.
         let tool_string = format!(
@@ -257,7 +276,8 @@ mod tests {
         let signing_config = ZbiSigningScript { tool: tool_path, extra_arguments };
 
         // Sign the zbi.
-        let signed_zbi_path = vendor_sign_zbi(dir.path(), &signing_config, &zbi_path).unwrap();
+        let signed_zbi_path =
+            vendor_sign_zbi(dir.path(), &board_config, &signing_config, &zbi_path).unwrap();
         assert_eq!(signed_zbi_path, expected_output);
     }
 

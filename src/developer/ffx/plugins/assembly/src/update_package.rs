@@ -42,7 +42,9 @@ pub fn construct_update(
         update_pkg_builder.add_file(version_file, "version")?;
     }
     update_pkg_builder.add_file(&board_name, "board")?;
-    update_pkg_builder.add_file(zbi, &board.zbi.name)?;
+
+    let zbi_destination = if board.zbi.signing_script.is_some() { "zbi.signed" } else { "zbi" };
+    update_pkg_builder.add_file(zbi, zbi_destination)?;
 
     if let Some(vbmeta) = vbmeta {
         update_pkg_builder.add_file(vbmeta, "fuchsia.vbmeta")?;
@@ -183,9 +185,9 @@ mod tests {
         let contents = std::str::from_utf8(&contents).unwrap();
         let expected_contents = "\
             board=9c579992f6e9f8cbd4ba81af6e23b1d5741e280af60f795e9c2bbcc76c4b7065\n\
-            fuchsia=2162b78584bc362ffae4dddca33b9ccb55c38b725279f2f191b852f3c5558348\n\
             fuchsia.vbmeta=4dfd304408a2608ac4a7a6d173d4d55eb0a8411c536c581746b7f705c4b00919\n\
             packages.json=3b42e8113041a6ae16f5996e55185324f6a9f986d93f7ee546ae857e10bd79f5\n\
+            zbi=2162b78584bc362ffae4dddca33b9ccb55c38b725279f2f191b852f3c5558348\n\
         "
         .to_string();
         assert_eq!(contents, expected_contents);

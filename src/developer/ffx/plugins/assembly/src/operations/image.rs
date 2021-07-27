@@ -76,7 +76,7 @@ pub fn assemble(args: ImageArgs) -> Result<()> {
     // package and the
     let zbi_for_update_path = if let Some(signing_config) = &board.zbi.signing_script {
         info!("Vendor signing the ZBI");
-        vendor_sign_zbi(&outdir, signing_config, &zbi_path)?
+        vendor_sign_zbi(&outdir, &board, signing_config, &zbi_path)?
     } else {
         zbi_path
     };
