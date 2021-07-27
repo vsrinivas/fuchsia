@@ -10,7 +10,7 @@
 #include <fuchsia/hardware/power/statecontrol/cpp/fidl_test_base.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/devmgr-integration-test/fixture.h>
+#include <lib/driver-integration-test/fixture.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -30,7 +30,7 @@
 
 namespace {
 
-using devmgr_integration_test::IsolatedDevmgr;
+using driver_integration_test::IsolatedDevmgr;
 using ::testing::Test;
 
 const uint32_t kBlockCount = 1024 * 256;
@@ -38,7 +38,7 @@ const uint32_t kBlockSize = 512;
 const uint32_t kSliceSize = (1 << 20);
 const size_t kDeviceSize = kBlockCount * kBlockSize;
 const char* kDataName = "fdr-data";
-const char* kRamCtlPath = "misc/ramctl";
+const char* kRamCtlPath = "sys/platform/00:00:2d/ramctl";
 const size_t kKeyBytes = 32;  // Generate a 256-bit key for the zxcrypt volume
 
 class MockAdmin : public fuchsia::hardware::power::statecontrol::testing::Admin_TestBase {
@@ -69,13 +69,12 @@ class FactoryResetTest : public Test {
   // zxcrypt, etc.
   void SetUp() override {
     devmgr_.reset(new IsolatedDevmgr());
-    auto args = IsolatedDevmgr::DefaultArgs();
+    IsolatedDevmgr::Args args;
     args.disable_block_watcher = true;
 
-    args.sys_device_driver = devmgr_integration_test::IsolatedDevmgr::kSysdevDriver;
-    args.load_drivers.push_back(devmgr_integration_test::IsolatedDevmgr::kSysdevDriver);
+    args.load_drivers.push_back("/boot/driver/platform-bus.so");
     args.driver_search_paths.push_back("/boot/driver");
-    ASSERT_EQ(IsolatedDevmgr::Create(std::move(args), devmgr_.get()), ZX_OK);
+    ASSERT_EQ(IsolatedDevmgr::Create(&args, devmgr_.get()), ZX_OK);
 
     CreateRamdisk();
     CreateFvmPartition();

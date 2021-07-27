@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/devmgr-integration-test/fixture.h>
-#include <lib/devmgr-launcher/launch.h>
+#include <lib/driver-integration-test/fixture.h>
 
 #include <vector>
 
@@ -87,20 +86,20 @@ void GrowFvm(const fbl::unique_fd& devfs_root, const GrowParams& params, Ramdisk
   }
 }
 
+using driver_integration_test::IsolatedDevmgr;
+
 class FvmResizeTest : public zxtest::Test {
  public:
   void SetUp() override {
-    devmgr_launcher::Args args = devmgr_integration_test::IsolatedDevmgr::DefaultArgs();
+    IsolatedDevmgr::Args args;
     args.disable_block_watcher = true;
-    args.sys_device_driver = devmgr_integration_test::IsolatedDevmgr::kSysdevDriver;
-    args.load_drivers.push_back(devmgr_integration_test::IsolatedDevmgr::kSysdevDriver);
     args.driver_search_paths.push_back("/boot/driver");
 
-    ASSERT_OK(devmgr_integration_test::IsolatedDevmgr::Create(std::move(args), &devmgr_));
+    ASSERT_OK(IsolatedDevmgr::Create(&args, &devmgr_));
   }
 
  protected:
-  devmgr_integration_test::IsolatedDevmgr devmgr_;
+  IsolatedDevmgr devmgr_;
 };
 
 TEST_F(FvmResizeTest, PreallocatedMetadataGrowsCorrectly) {

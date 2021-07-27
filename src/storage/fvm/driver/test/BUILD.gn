@@ -21,8 +21,7 @@ test("fvm-driver-integration") {
     "//src/storage/fvm:test_support",
     "//src/storage/fvm/driver:shared",
     "//zircon/public/lib/zxtest",
-    "//zircon/system/ulib/devmgr-integration-test",
-    "//zircon/system/ulib/devmgr-launcher",
+    "//zircon/system/ulib/driver-integration-test",
     "//zircon/system/ulib/fdio-caller",
   ]
 
@@ -46,8 +45,7 @@ isolated_devmgr_unittest_package("fvm-driver-integration-test") {
     ":fvm-driver-integration",
     "//src/devices/block/drivers/core",
     "//src/devices/block/drivers/ramdisk",
-    "//src/devices/misc/drivers/test",
-    "//src/devices/tests/sysdev",
+    "//src/devices/bus/drivers/platform",
     "//src/storage/fvm/driver",
   ]
 }

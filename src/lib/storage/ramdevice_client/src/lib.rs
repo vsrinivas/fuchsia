@@ -9,7 +9,7 @@
 //!
 //! ```
 //! "sandbox": {
-//!     "dev": [ "misc/ramctl" ]
+//!     "dev": [ "sys/platform/00:00:2d/ramctl" ]
 //! }
 //! ```
 //!

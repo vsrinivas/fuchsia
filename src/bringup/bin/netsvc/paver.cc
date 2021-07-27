@@ -346,14 +346,15 @@ zx_status_t Paver::OpenDataSink(
     fprintf(stderr, "netsvc: Unable to read from vmo\n");
     return status;
   }
-  if (partition_info.block_device_path[ZX_MAX_NAME_LEN] != '\0') {
+  if (partition_info.block_device_path[NB_PATH_MAX] != '\0') {
     fprintf(stderr, "netsvc: Invalid block device path specified\n");
     return ZX_ERR_INVALID_ARGS;
   }
 
   constexpr char kDevfsPrefix[] = "/dev/";
   if (strncmp(kDevfsPrefix, partition_info.block_device_path, strlen(kDevfsPrefix)) != 0) {
-    fprintf(stderr, "netsvc: Invalid block device path specified\n");
+    fprintf(stderr, "netsvc: Invalid block device path specified %s\n",
+            partition_info.block_device_path);
     return ZX_ERR_INVALID_ARGS;
   }
 

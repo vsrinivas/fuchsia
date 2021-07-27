@@ -12,7 +12,7 @@
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/devmgr-integration-test/fixture.h>
+#include <lib/driver-integration-test/fixture.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/namespace.h>
@@ -88,16 +88,18 @@ typedef struct {
   size_t number;
 } partition_entry_t;
 
+using driver_integration_test::IsolatedDevmgr;
+
 class FvmTest : public zxtest::Test {
  public:
   void SetUp() override {
-    devmgr_launcher::Args args = devmgr_integration_test::IsolatedDevmgr::DefaultArgs();
+    IsolatedDevmgr::Args args;
     args.disable_block_watcher = true;
     args.driver_search_paths.push_back("/boot/driver");
 
-    ASSERT_OK(devmgr_integration_test::IsolatedDevmgr::Create(std::move(args), &devmgr_));
-    ASSERT_OK(
-        wait_for_device_at(devfs_root().get(), "misc/ramctl", zx::duration::infinite().get()));
+    ASSERT_OK(IsolatedDevmgr::Create(&args, &devmgr_));
+    ASSERT_OK(wait_for_device_at(devfs_root().get(), "sys/platform/00:00:2d/ramctl",
+                                 zx::duration::infinite().get()));
 
     ASSERT_OK(loop_.StartThread());
     zx::channel memfs_root;
@@ -145,7 +147,7 @@ class FvmTest : public zxtest::Test {
 
  protected:
   async::Loop loop_ = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  devmgr_integration_test::IsolatedDevmgr devmgr_;
+  IsolatedDevmgr devmgr_;
   memfs_filesystem_t* memfs_ = nullptr;
   ramdisk_client_t* ramdisk_ = nullptr;
   mount_options_t mounting_options_ = default_mount_options;

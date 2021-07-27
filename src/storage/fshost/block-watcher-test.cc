@@ -377,7 +377,7 @@ TEST(AddDeviceTestCase, MinfsRamdiskMounts) {
   Config config(manager_options);
   BlockDeviceManager manager(&config);
   auto options = MockBlockDevice::FvmOptions();
-  constexpr std::string_view kBasePath = "/dev/misc/ramctl/mock_device/block";
+  constexpr std::string_view kBasePath = "/dev/sys/platform/00:00:2d/ramctl/mock_device/block";
   options.topological_path = kBasePath;
   MockBlockDevice fvm_device(options);
   EXPECT_EQ(manager.AddDevice(fvm_device), ZX_OK);
@@ -396,7 +396,7 @@ TEST(AddDeviceTestCase, MinfsRamdiskDeviceNotRamdiskDoesNotMount) {
   Config config(options);
   BlockDeviceManager manager(&config);
   auto fvm_options = MockBlockDevice::FvmOptions();
-  fvm_options.topological_path = "/dev/misc/ramctl/mock_device/block";
+  fvm_options.topological_path = "/dev/sys/platform/00:00:2d/ramctl/mock_device/block";
   MockBlockDevice ramdisk_fvm_device(fvm_options);
   EXPECT_EQ(manager.AddDevice(ramdisk_fvm_device), ZX_OK);
   MockBlockDevice fvm_device(MockBlockDevice::FvmOptions());

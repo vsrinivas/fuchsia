@@ -43,6 +43,10 @@ fuchsia_component("pkgdir-integration-test") {
 }
 
 isolated_devmgr_v2_component("isolated-devmgr") {
+  deps = [
+    "//src/devices/bus/drivers/platform",
+    "//src/storage/testing:storage_drivers",
+  ]
 }
 
 fuchsia_component("test-root") {
@@ -61,7 +65,6 @@ fuchsia_test_package("pkgdir-integration-tests") {
     ":isolated-devmgr",
     ":pkgdir-integration-test",
     "pkg-harness",
-    "//src/storage/testing:storage_drivers",
   ]
 }
 

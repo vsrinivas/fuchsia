@@ -42,7 +42,7 @@
 #include <ramdevice-client/ramdisk.h>
 
 #define RAMCTL_DEV_PATH "/dev"
-#define RAMCTL_PATH "misc/ramctl"
+#define RAMCTL_PATH "sys/platform/00:00:2d/ramctl"
 #define BLOCK_EXTENSION "block"
 
 static zx_status_t driver_watcher_cb(int dirfd, int event, const char* fn, void* cookie) {

@@ -5,6 +5,7 @@
 #include "src/storage/lib/paver/fvm.h"
 
 #include <lib/devmgr-integration-test/fixture.h>
+#include <lib/driver-integration-test/fixture.h>
 
 #include <fs-management/fvm.h>
 #include <zxtest/zxtest.h>
@@ -15,8 +16,8 @@
 
 namespace {
 
-using devmgr_integration_test::IsolatedDevmgr;
 using devmgr_integration_test::RecursiveWaitForFile;
+using driver_integration_test::IsolatedDevmgr;
 
 constexpr size_t kSliceSize = kBlockSize * 2;
 constexpr uint8_t kFvmType[GPT_GUID_LEN] = GUID_FVM_VALUE;
@@ -37,16 +38,15 @@ constexpr fvm::SparseImage SparseHeaderForSliceSizeAndMaxDiskSize(size_t slice_s
 class FvmTest : public zxtest::Test {
  public:
   FvmTest() {
-    devmgr_launcher::Args args;
-    args.sys_device_driver = IsolatedDevmgr::kSysdevDriver;
+    IsolatedDevmgr::Args args;
     args.driver_search_paths.push_back("/boot/driver");
     args.driver_search_paths.push_back("/boot/driver/test");
     args.disable_block_watcher = true;
 
-    ASSERT_OK(IsolatedDevmgr::Create(std::move(args), &devmgr_));
+    ASSERT_OK(IsolatedDevmgr::Create(&args, &devmgr_));
 
     fbl::unique_fd ctl;
-    ASSERT_OK(RecursiveWaitForFile(devmgr_.devfs_root(), "misc/ramctl", &ctl));
+    ASSERT_OK(RecursiveWaitForFile(devmgr_.devfs_root(), "sys/platform/00:00:2d/ramctl", &ctl));
   }
 
   void CreateRamdisk() { CreateRamdiskWithBlockCount(); }
@@ -150,12 +150,14 @@ TEST_F(FvmTest, AllocateEmptyPartitions) {
 
   ASSERT_OK(paver::AllocateEmptyPartitions(devfs_root(), fvm_part));
 
-  fbl::unique_fd blob(
-      openat(devfs_root().get(), "misc/ramctl/ramdisk-0/block/fvm/blobfs-p-1/block", O_RDONLY));
+  fbl::unique_fd blob(openat(devfs_root().get(),
+                             "sys/platform/00:00:2d/ramctl/ramdisk-0/block/fvm/blobfs-p-1/block",
+                             O_RDONLY));
   ASSERT_TRUE(blob.is_valid());
 
-  fbl::unique_fd data(
-      openat(devfs_root().get(), "misc/ramctl/ramdisk-0/block/fvm/minfs-p-2/block", O_RDONLY));
+  fbl::unique_fd data(openat(devfs_root().get(),
+                             "sys/platform/00:00:2d/ramctl/ramdisk-0/block/fvm/minfs-p-2/block",
+                             O_RDONLY));
   ASSERT_TRUE(data.is_valid());
 }
 
@@ -167,14 +169,16 @@ TEST_F(FvmTest, Unbind) {
 
   ASSERT_OK(paver::AllocateEmptyPartitions(devfs_root(), fvm_part));
 
-  fbl::unique_fd blob(
-      openat(devfs_root().get(), "misc/ramctl/ramdisk-0/block/fvm/blobfs-p-1/block", O_RDONLY));
+  fbl::unique_fd blob(openat(devfs_root().get(),
+                             "sys/platform/00:00:2d/ramctl/ramdisk-0/block/fvm/blobfs-p-1/block",
+                             O_RDONLY));
   ASSERT_TRUE(blob.is_valid());
 
-  fbl::unique_fd data(
-      openat(devfs_root().get(), "misc/ramctl/ramdisk-0/block/fvm/minfs-p-2/block", O_RDONLY));
+  fbl::unique_fd data(openat(devfs_root().get(),
+                             "sys/platform/00:00:2d/ramctl/ramdisk-0/block/fvm/minfs-p-2/block",
+                             O_RDONLY));
   ASSERT_TRUE(data.is_valid());
-  ASSERT_OK(paver::FvmUnbind(devfs_root(), "/dev/misc/ramctl/ramdisk-0/block"));
+  ASSERT_OK(paver::FvmUnbind(devfs_root(), "/dev/sys/platform/00:00:2d/ramctl/ramdisk-0/block"));
   fvm_part.reset();
   blob.reset();
   data.reset();
@@ -188,12 +192,14 @@ TEST_F(FvmTest, UnbindInvalidPath) {
 
   ASSERT_OK(paver::AllocateEmptyPartitions(devfs_root(), fvm_part));
 
-  fbl::unique_fd blob(
-      openat(devfs_root().get(), "misc/ramctl/ramdisk-0/block/fvm/blobfs-p-1/block", O_RDONLY));
+  fbl::unique_fd blob(openat(devfs_root().get(),
+                             "sys/platform/00:00:2d/ramctl/ramdisk-0/block/fvm/blobfs-p-1/block",
+                             O_RDONLY));
   ASSERT_TRUE(blob.is_valid());
 
-  fbl::unique_fd data(
-      openat(devfs_root().get(), "misc/ramctl/ramdisk-0/block/fvm/minfs-p-2/block", O_RDONLY));
+  fbl::unique_fd data(openat(devfs_root().get(),
+                             "sys/platform/00:00:2d/ramctl/ramdisk-0/block/fvm/minfs-p-2/block",
+                             O_RDONLY));
   ASSERT_TRUE(data.is_valid());
 
   // Path too short
@@ -205,7 +211,7 @@ TEST_F(FvmTest, UnbindInvalidPath) {
   path[sizeof(path) - 1] = '\0';
   ASSERT_EQ(paver::FvmUnbind(devfs_root(), path), ZX_ERR_INVALID_ARGS);
 
-  ASSERT_OK(paver::FvmUnbind(devfs_root(), "/dev/misc/ramctl/ramdisk-0/block"));
+  ASSERT_OK(paver::FvmUnbind(devfs_root(), "/dev/sys/platform/00:00:2d/ramctl/ramdisk-0/block"));
   fvm_part.reset();
   blob.reset();
   data.reset();

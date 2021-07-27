@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file
 
+#include "lib/driver-integration-test/fixture.h"
+
 #include <errno.h>
 #include <fcntl.h>
 #include <fuchsia/device/llcpp/fidl.h>
@@ -30,7 +32,7 @@ namespace fs_test_utils {
 
 namespace {
 
-constexpr char kRamdiskCtlPath[] = "misc/ramctl";
+constexpr char kRamdiskCtlPath[] = "sys/platform/00:00:2d/ramctl";
 
 constexpr char kDevPath[] = "/dev";
 // Used as path for referencing devices bound to the isolated devmgr
@@ -331,13 +333,13 @@ zx_status_t Fixture::SetUpTestCase() {
 
   // Create the devmgr instance and bind it
   if (options_.isolated_devmgr) {
-    devmgr_launcher::Args args = devmgr_integration_test::IsolatedDevmgr::DefaultArgs();
+    using driver_integration_test::IsolatedDevmgr;
+    IsolatedDevmgr::Args args;
     args.disable_block_watcher = true;
-    args.sys_device_driver = devmgr_integration_test::IsolatedDevmgr::kSysdevDriver;
-    args.load_drivers.push_back(devmgr_integration_test::IsolatedDevmgr::kSysdevDriver);
+    args.load_drivers.push_back("/boot/driver/platform-bus.so");
     args.driver_search_paths.push_back("/boot/driver");
 
-    result = devmgr_integration_test::IsolatedDevmgr::Create(std::move(args), &devmgr_);
+    result = IsolatedDevmgr::Create(&args, &devmgr_);
 
     if (result != ZX_OK) {
       return result;

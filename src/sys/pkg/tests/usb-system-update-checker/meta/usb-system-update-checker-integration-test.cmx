@@ -18,7 +18,7 @@
     },
     "sandbox": {
         "dev": [
-            "misc/ramctl"
+            "sys/platform/00:00:2d/ramctl"
         ],
         "features": [
             "isolated-temp"

@@ -250,7 +250,7 @@ impl RamdiskBuilder {
     /// Starts a new ramdisk.
     pub fn start(self) -> Result<Ramdisk, Error> {
         let mut client = RamdiskClient::builder(RAMDISK_BLOCK_SIZE, self.block_count);
-        // TODO(fxbug.dev/63402) unconditionally use /dev/misc/ramctl once all clients are on CFv2.
+        // TODO(fxbug.dev/63402) unconditionally use /dev/sys/platform/00:00:2d/ramctl once all clients are on CFv2.
         //
         // CFv1 clients have the isolated devmgr directory injected as a service named
         // "fuchsia.test.IsolatedDevmgr".
@@ -260,10 +260,10 @@ impl RamdiskBuilder {
             client.isolated_dev_root();
         } else {
             ramdevice_client::wait_for_device(
-                "/dev/misc/ramctl",
+                "/dev/sys/platform/00:00:2d/ramctl",
                 std::time::Duration::from_secs(10),
             )
-            .context("/dev/misc/ramctl did not appear")?;
+            .context("/dev/sys/platform/00:00:2d/ramctl did not appear")?;
         }
         let client = client.build()?;
         let proxy = NodeProxy::new(fuchsia_async::Channel::from_channel(client.open()?)?);

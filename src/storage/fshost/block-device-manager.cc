@@ -39,7 +39,7 @@ std::pair<std::string_view, std::string_view> SplitPath(std::string_view path) {
 }
 
 bool IsRamdisk(const BlockDeviceInterface& device) {
-  constexpr std::string_view kRamdiskPrefix = "/dev/misc/ramctl/";
+  constexpr std::string_view kRamdiskPrefix = "/dev/sys/platform/00:00:2d/ramctl/";
   return device.topological_path().compare(0, kRamdiskPrefix.length(), kRamdiskPrefix) == 0;
 }
 

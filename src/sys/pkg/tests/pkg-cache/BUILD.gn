@@ -79,6 +79,10 @@ fuchsia_component("pkg-cache-integration-test") {
 }
 
 isolated_devmgr_v2_component("isolated-devmgr-component") {
+  deps = [
+    "//src/devices/bus/drivers/platform",
+    "//src/storage/testing:storage_drivers",
+  ]
 }
 
 fuchsia_component("test-root") {
@@ -97,7 +101,6 @@ fuchsia_test_package("pkg-cache-integration-tests") {
     ":isolated-devmgr-component",
     ":pkg-cache-integration-test",
     "//src/diagnostics/archivist:archivist-for-embedding-v2",
-    "//src/storage/testing:storage_drivers",
     "//src/sys/pkg/bin/pkg-cache:component",
     "//src/sys/pkg/bin/system-update-committer:component",
   ]

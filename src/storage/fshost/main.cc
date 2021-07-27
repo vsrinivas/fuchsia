@@ -64,24 +64,26 @@ zx_status_t get_ramdisk(zx::vmo* ramdisk_vmo) {
                                ramdisk_vmo->reset_and_get_address(), &length);
 }
 
-zx_status_t MiscDeviceAdded(int dirfd, int event, const char* fn, void* cookie) {
-  if (event != WATCH_EVENT_ADD_FILE || strcmp(fn, "ramctl") != 0) {
-    return ZX_OK;
+int RamctlWatcher(void* arg) {
+  zx_status_t status = wait_for_device("/dev/sys/platform/00:00:2d/ramctl", ZX_TIME_INFINITE);
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "failed to open /dev/sys/platform/00:00:2d/ramctl: " << strerror(errno);
+    return -1;
   }
 
-  zx::vmo ramdisk_vmo(static_cast<zx_handle_t>(reinterpret_cast<uintptr_t>(cookie)));
+  zx::vmo ramdisk_vmo(static_cast<zx_handle_t>(reinterpret_cast<uintptr_t>(arg)));
 
   zbi_header_t header;
-  zx_status_t status = ramdisk_vmo.read(&header, 0, sizeof(header));
+  status = ramdisk_vmo.read(&header, 0, sizeof(header));
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "cannot read ZBI_TYPE_STORAGE_RAMDISK item header: "
                    << zx_status_get_string(status);
-    return ZX_ERR_STOP;
+    return -1;
   }
   if (!(header.flags & ZBI_FLAG_VERSION) || header.magic != ZBI_ITEM_MAGIC ||
       header.type != ZBI_TYPE_STORAGE_RAMDISK) {
     FX_LOGS(ERROR) << "invalid ZBI_TYPE_STORAGE_RAMDISK item header";
-    return ZX_ERR_STOP;
+    return -1;
   }
 
   zx::vmo vmo;
@@ -90,13 +92,13 @@ zx_status_t MiscDeviceAdded(int dirfd, int event, const char* fn, void* cookie) 
     if (status != ZX_OK) {
       FX_LOGS(ERROR) << "cannot create VMO for uncompressed RAMDISK: "
                      << zx_status_get_string(status);
-      return ZX_ERR_STOP;
+      return -1;
     }
     status = zbi_bootfs::Decompress(ramdisk_vmo, sizeof(zbi_header_t), header.length, vmo, 0,
                                     header.extra);
     if (status != ZX_OK) {
       FX_LOGS(ERROR) << "failed to decompress RAMDISK: " << zx_status_get_string(status);
-      return ZX_ERR_STOP;
+      return -1;
     }
   } else {
     // TODO(fxbug.dev/34597): The old code ignored uncompressed items too, and
@@ -105,7 +107,7 @@ zx_status_t MiscDeviceAdded(int dirfd, int event, const char* fn, void* cookie) 
     // if uncompressed (or maybe bootsvc deals with decompression in the first
     // place so the uncompressed VMO is always what we get).
     FX_LOGS(ERROR) << "ignoring uncompressed RAMDISK item in ZBI";
-    return ZX_ERR_STOP;
+    return -1;
   }
 
   ramdisk_client* client;
@@ -115,16 +117,6 @@ zx_status_t MiscDeviceAdded(int dirfd, int event, const char* fn, void* cookie) 
   } else {
     FX_LOGS(INFO) << "ZBI_TYPE_STORAGE_RAMDISK attached";
   }
-  return ZX_ERR_STOP;
-}
-
-int RamctlWatcher(void* arg) {
-  fbl::unique_fd dirfd(open("/dev/misc", O_DIRECTORY | O_RDONLY));
-  if (!dirfd) {
-    FX_LOGS(ERROR) << "failed to open /dev/misc: " << strerror(errno);
-    return -1;
-  }
-  fdio_watch_directory(dirfd.get(), &MiscDeviceAdded, ZX_TIME_INFINITE, arg);
   return 0;
 }
 

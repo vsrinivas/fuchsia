@@ -4,7 +4,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/devmgr-integration-test/fixture.h>
+#include <lib/driver-integration-test/fixture.h>
 #include <lib/fdio/namespace.h>
 #include <lib/memfs/memfs.h>
 
@@ -12,20 +12,20 @@
 #include <unittest/unittest.h>
 
 int main(int argc, char** argv) {
-  devmgr_launcher::Args args = devmgr_integration_test::IsolatedDevmgr::DefaultArgs();
+  using driver_integration_test::IsolatedDevmgr;
+  IsolatedDevmgr::Args args;
   args.disable_block_watcher = false;
-  args.sys_device_driver = devmgr_integration_test::IsolatedDevmgr::kSysdevDriver;
-  args.load_drivers.push_back(devmgr_integration_test::IsolatedDevmgr::kSysdevDriver);
   args.driver_search_paths.push_back("/boot/driver");
 
-  devmgr_integration_test::IsolatedDevmgr devmgr;
-  auto status = devmgr_integration_test::IsolatedDevmgr::Create(std::move(args), &devmgr);
+  IsolatedDevmgr devmgr;
+  auto status = IsolatedDevmgr::Create(&args, &devmgr);
 
   if (status != ZX_OK) {
     return EXIT_FAILURE;
   }
   fbl::unique_fd fd;
-  status = devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(), "misc/ramctl", &fd);
+  status = devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(),
+                                                         "sys/platform/00:00:2d/ramctl", &fd);
   if (status != ZX_OK) {
     return EXIT_FAILURE;
   }

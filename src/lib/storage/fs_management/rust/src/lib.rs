@@ -545,8 +545,11 @@ mod tests {
 
     fn ramdisk(block_size: u64) -> RamdiskClient {
         isolated_driver_manager::launch_isolated_driver_manager().unwrap();
-        ramdevice_client::wait_for_device("/dev/misc/ramctl", std::time::Duration::from_secs(30))
-            .unwrap();
+        ramdevice_client::wait_for_device(
+            "/dev/sys/platform/00:00:2d/ramctl",
+            std::time::Duration::from_secs(30),
+        )
+        .unwrap();
         RamdiskClient::create(block_size, 1 << 16).unwrap()
     }
 

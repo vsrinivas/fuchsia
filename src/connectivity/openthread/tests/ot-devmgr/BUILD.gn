@@ -18,6 +18,5 @@ isolated_devmgr_component("ot-devmgr-component-integration") {
     "//src/connectivity/openthread/tests/fake-drivers/fake-ot-radio:fake-ot-radio-driver",
     "//src/devices/board/drivers/integration-test",
     "//src/devices/bus/drivers/platform",
-    "//src/devices/tests/sysdev",
   ]
 }

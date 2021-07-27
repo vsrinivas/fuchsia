@@ -59,6 +59,10 @@ fuchsia_component("unit-tests-driver") {
 }
 
 isolated_devmgr_v2_component("isolated-devmgr-component") {
+  deps = [
+    "//src/devices/bus/drivers/platform",
+    "//src/storage/testing:storage_drivers",
+  ]
 }
 
 fuchsia_test_package("unit-tests-package") {
@@ -72,9 +76,6 @@ fuchsia_test_package("unit-tests-package") {
   deps = [
     ":isolated-devmgr-component",
     ":unit-tests-driver",
-
-    # For isolated-devmgr-component:
-    "//src/storage/testing:storage_drivers",
   ]
 }
 

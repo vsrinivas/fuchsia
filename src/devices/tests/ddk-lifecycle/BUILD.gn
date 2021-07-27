@@ -76,7 +76,6 @@ isolated_devmgr_unittest_package("ddk-lifecycle-test-package") {
     ":ddk-lifecycle-test",
     "//src/devices/board/drivers/integration-test",
     "//src/devices/bus/drivers/platform",
-    "//src/devices/tests/sysdev",
   ]
   test_specs = {
     log_settings = {

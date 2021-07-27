@@ -171,8 +171,11 @@ mod tests {
         let mut builder = RamdiskClientBuilder::new(512, ramdisk_size / 512);
         isolated_driver_manager::launch_isolated_driver_manager()
             .expect("launching isolated driver manager succeeds");
-        ramdevice_client::wait_for_device("/dev/misc/ramctl", std::time::Duration::from_secs(10))
-            .expect("ramctl appears");
+        ramdevice_client::wait_for_device(
+            "/dev/sys/platform/00:00:2d/ramctl",
+            std::time::Duration::from_secs(10),
+        )
+        .expect("ramctl appears");
         let ramdisk = builder.build().expect("creating ramdisk succeeds");
         let channel = ramdisk.open().expect("opening ramdisk succeeds");
 

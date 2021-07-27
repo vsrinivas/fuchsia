@@ -164,10 +164,7 @@ isolated_devmgr_component("virtual-audio-devmgr") {
     "--wait_for=sys/platform/00:00:2f/virtual_audio",
   ]
 
-  deps = [
-    "//src/devices/tests/sysdev",
-    "//src/media/audio/drivers/virtual_audio:virtual_audio_driver",
-  ]
+  deps = [ "//src/media/audio/drivers/virtual_audio:virtual_audio_driver" ]
 }
 
 driver_bind_rules("crash-device-bind") {
@@ -209,7 +206,6 @@ fuchsia_component("isolated-devmgr-tests") {
     "//src/devices/board/drivers/integration-test",
     "//src/devices/bus/drivers/platform",
     "//src/devices/rtc/drivers/fallback",
-    "//src/devices/tests/sysdev",
   ]
 }
 

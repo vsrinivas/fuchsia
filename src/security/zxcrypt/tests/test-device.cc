@@ -86,27 +86,22 @@ TestDevice::~TestDevice() {
 }
 
 void TestDevice::SetupDevmgr() {
-  devmgr_launcher::Args args;
+  driver_integration_test::IsolatedDevmgr::Args args;
   // Assume we're using the zxcrypt.so and ramdisk driver from /boot.  It's
   // not quite hermetic the way we might like, but it's good enough in
   // practice -- zxcrypt is part of the bootfs anyway, so on any system you'd
   // be able to install and use zxcrypt, you'd have the same lib in /boot.
   args.driver_search_paths.push_back("/boot/driver");
 
-  // Preload the sysdev driver.
-  args.load_drivers.push_back(devmgr_integration_test::IsolatedDevmgr::kSysdevDriver);
-  // And make sure it's the test sysdev driver.
-  args.sys_device_driver = devmgr_integration_test::IsolatedDevmgr::kSysdevDriver;
-
   // We explicitly bind drivers ourselves, and don't want the block watcher
   // racing with us to call Bind.
   args.disable_block_watcher = true;
 
-  ASSERT_EQ(devmgr_integration_test::IsolatedDevmgr::Create(std::move(args), &devmgr_), ZX_OK);
+  ASSERT_EQ(driver_integration_test::IsolatedDevmgr::Create(&args, &devmgr_), ZX_OK);
   fbl::unique_fd ctl;
-  ASSERT_EQ(
-      devmgr_integration_test::RecursiveWaitForFile(devmgr_.devfs_root(), "misc/ramctl", &ctl),
-      ZX_OK);
+  ASSERT_EQ(devmgr_integration_test::RecursiveWaitForFile(devmgr_.devfs_root(),
+                                                          "sys/platform/00:00:2d/ramctl", &ctl),
+            ZX_OK);
 }
 
 void TestDevice::Create(size_t device_size, size_t block_size, bool fvm, Volume::Version version) {

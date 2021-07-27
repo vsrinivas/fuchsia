@@ -20,7 +20,7 @@ isolated_devmgr_component("my-devmgr") {
   ]
 
   deps = [
-    "//src/devices/tests/sysdev",
+    "//src/devices/bus/drivers/platform",
     "//path/to/my/driver:my-driver",
   ]
 }

@@ -103,7 +103,6 @@ isolated_devmgr_unittest_package("ddk-fidl-test-package") {
     ":fidl-llcpp-driver",
     "//src/devices/board/drivers/integration-test",
     "//src/devices/bus/drivers/platform",
-    "//src/devices/tests/sysdev",
   ]
 }
 

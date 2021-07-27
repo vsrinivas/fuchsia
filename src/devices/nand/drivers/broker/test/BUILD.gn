@@ -82,6 +82,5 @@ isolated_devmgr_unittest_package("nandpart-broker-test") {
     "//src/devices/nand/drivers/nandpart",
     "//src/devices/nand/drivers/ram-nand",
     "//src/devices/nand/drivers/skip-block",
-    "//src/devices/tests/sysdev",
   ]
 }

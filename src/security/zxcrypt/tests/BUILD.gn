@@ -34,7 +34,7 @@ test("zxcrypt") {
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/block-client",
-    "//zircon/system/ulib/devmgr-integration-test",
+    "//zircon/system/ulib/driver-integration-test",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/ramdevice-client",
@@ -54,7 +54,7 @@ isolated_devmgr_unittest_package("zxcrypt-test") {
     "//src/devices/block/drivers/core",
     "//src/devices/block/drivers/ramdisk",
     "//src/devices/block/drivers/zxcrypt",
-    "//src/devices/tests/sysdev",
+    "//src/devices/bus/drivers/platform",
     "//src/storage/fvm/driver",
   ]
 }

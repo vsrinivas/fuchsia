@@ -37,9 +37,10 @@ int main(int argc, char** argv) {
     return -1;
   }
   fbl::unique_fd out;
-  zx_status_t status = devmgr_integration_test::RecursiveWaitForFile(dev, "misc/ramctl", &out);
+  zx_status_t status =
+      devmgr_integration_test::RecursiveWaitForFile(dev, "sys/platform/00:00:2d/ramctl", &out);
   if (status != ZX_OK) {
-    fprintf(stderr, "RecursiveWaitForFile(dev, \"misc/ramctl\"): %s\n",
+    fprintf(stderr, "RecursiveWaitForFile(dev, \"sys/platform/00:00:2d/ramctl\"): %s\n",
             zx_status_get_string(status));
     return -1;
   }

@@ -137,7 +137,7 @@ class ChromebookX64AbrTests : public zxtest::Test {
     ASSERT_OK(IsolatedDevmgr::Create(&args, &devmgr_));
     fbl::unique_fd fd;
     ASSERT_OK(RecursiveWaitForFile(devmgr_.devfs_root(), "sys/platform", &fd));
-    ASSERT_OK(RecursiveWaitForFile(devmgr_.devfs_root(), "misc/ramctl", &fd));
+    ASSERT_OK(RecursiveWaitForFile(devmgr_.devfs_root(), "sys/platform/00:00:2d/ramctl", &fd));
     ASSERT_NO_FATAL_FAILURES(
         BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, kDiskBlocks, kBlockSize, &disk_));
     fake_svc_.fake_boot_args().GetArgumentsMap().emplace("zvb.current_slot", "_a");
@@ -269,7 +269,7 @@ class CurrentSlotUuidTest : public zxtest::Test {
 
     ASSERT_OK(IsolatedDevmgr::Create(&args, &devmgr_));
     fbl::unique_fd fd;
-    ASSERT_OK(RecursiveWaitForFile(devmgr_.devfs_root(), "misc/ramctl", &fd));
+    ASSERT_OK(RecursiveWaitForFile(devmgr_.devfs_root(), "sys/platform/00:00:2d/ramctl", &fd));
     ASSERT_NO_FATAL_FAILURES(
         BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, kDiskBlocks, kBlockSize, &disk_));
   }

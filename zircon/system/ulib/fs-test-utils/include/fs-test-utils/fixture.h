@@ -5,8 +5,7 @@
 #ifndef FS_TEST_UTILS_FIXTURE_H_
 #define FS_TEST_UTILS_FIXTURE_H_
 
-#include <lib/devmgr-integration-test/fixture.h>
-#include <lib/devmgr-launcher/launch.h>
+#include <lib/driver-integration-test/fixture.h>
 #include <lib/zx/time.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -214,7 +213,7 @@ class Fixture {
   ResourceState ramdisk_state_ = ResourceState::kUnallocated;
 
   // Isolated devmgr if requested.
-  devmgr_integration_test::IsolatedDevmgr devmgr_;
+  driver_integration_test::IsolatedDevmgr devmgr_;
 
   fbl::unique_fd devfs_root_;
   const char* root_path_;

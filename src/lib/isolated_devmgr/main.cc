@@ -103,8 +103,6 @@ int main(int argc, const char** argv) {
       new fbl::Vector<board_test::DeviceEntry>());
 
   // fill up defaults:
-  args.sys_device_driver = "/boot/driver/test/sysdev.so";
-  args.load_drivers.push_back("/boot/driver/test/sysdev.so");
   args.stdio = fbl::unique_fd(open("/dev/null", O_RDWR));
   args.disable_block_watcher = true;
 
@@ -142,6 +140,11 @@ int main(int argc, const char** argv) {
       Usage();
       return ISO_DEV_MGR_RET_ERR;
     }
+  }
+
+  if (args.sys_device_driver == nullptr) {
+    args.sys_device_driver = "/boot/driver/test/sysdev.so";
+    args.load_drivers.push_back("/boot/driver/test/sysdev.so");
   }
 
   // Pass-through any additional namespaces that we want to provide to the devmgr. These are

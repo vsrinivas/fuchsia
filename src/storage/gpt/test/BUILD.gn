@@ -39,7 +39,7 @@ isolated_devmgr_v2_component("ramdisk-devmgr") {
   deps = [
     "//src/devices/block/drivers/core",
     "//src/devices/block/drivers/ramdisk",
-    "//src/devices/tests/sysdev:renamed_sys_binary",
+    "//src/devices/bus/drivers/platform",
   ]
 }
 

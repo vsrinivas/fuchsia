@@ -20,7 +20,7 @@ static zx::status<> WaitForRamctl(zx::duration time = kDefaultWaitTime) {
   if (status.is_error()) {
     return status.take_error();
   }
-  status = zx::make_status(wait_for_device("/dev/misc/ramctl", time.get()));
+  status = zx::make_status(wait_for_device("/dev/sys/platform/00:00:2d/ramctl", time.get()));
   if (status.is_error()) {
     FX_LOGS(ERROR) << "Timed-out waiting for ramctl: " << status.status_string();
     return status.take_error();

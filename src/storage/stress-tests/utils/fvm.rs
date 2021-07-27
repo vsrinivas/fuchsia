@@ -35,7 +35,7 @@ use {
 // by component manager.
 pub const DEV_PATH: &'static str = "/hub/exec/expose/dev";
 pub const BLOCK_PATH: &'static str = "/hub/exec/expose/dev/class/block";
-pub const RAMCTL_PATH: &'static str = "/hub/exec/expose/dev/misc/ramctl";
+pub const RAMCTL_PATH: &'static str = "/hub/exec/expose/dev/sys/platform/00:00:2d/ramctl";
 
 #[link(name = "fs-management")]
 extern "C" {
@@ -162,7 +162,8 @@ pub async fn get_volume_path(instance_guid: &Guid) -> PathBuf {
             let volume_path_str = volume_path.to_str().unwrap();
 
             // Connect to the Volume FIDL protocol
-            let volume_proxy = connect_to_protocol_at_path::<VolumeMarker>(volume_path_str).unwrap();
+            let volume_proxy =
+                connect_to_protocol_at_path::<VolumeMarker>(volume_path_str).unwrap();
             if does_guid_match(&volume_proxy, &instance_guid).await {
                 return volume_path;
             }

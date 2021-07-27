@@ -5,6 +5,7 @@
 #ifndef SYSROOT_ZIRCON_BOOT_NETBOOT_H_
 #define SYSROOT_ZIRCON_BOOT_NETBOOT_H_
 
+#include <limits.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <zircon/types.h>
@@ -111,9 +112,11 @@ typedef struct board_info {
   uint8_t mac_address[8];
 } board_info_t;
 
+#define NB_PATH_MAX 4096
+
 typedef struct modify_partition_table_info {
   // Path of block device to initialize or wipe.
-  char block_device_path[ZX_MAX_NAME_LEN + 1];
+  char block_device_path[NB_PATH_MAX + 1];
 } modify_partition_table_info_t;
 
 typedef struct nbmsg_t {

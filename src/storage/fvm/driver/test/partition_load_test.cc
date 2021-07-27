@@ -5,8 +5,7 @@
 #include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/hardware/block/partition/llcpp/fidl.h>
 #include <fuchsia/hardware/block/volume/llcpp/fidl.h>
-#include <lib/devmgr-integration-test/fixture.h>
-#include <lib/devmgr-launcher/launch.h>
+#include <lib/driver-integration-test/fixture.h>
 #include <lib/fdio/cpp/caller.h>
 #include <sys/types.h>
 
@@ -27,26 +26,27 @@ namespace {
 constexpr uint64_t kBlockSize = 512;
 constexpr uint64_t kSliceSize = 1 << 20;
 
+using driver_integration_test::IsolatedDevmgr;
+
 class FvmVPartitionLoadTest : public zxtest::Test {
  public:
   static void SetUpTestCase() {
-    devmgr_launcher::Args args = devmgr_integration_test::IsolatedDevmgr::DefaultArgs();
+    IsolatedDevmgr::Args args;
     args.disable_block_watcher = true;
-    args.sys_device_driver = devmgr_integration_test::IsolatedDevmgr::kSysdevDriver;
-    args.load_drivers.push_back(devmgr_integration_test::IsolatedDevmgr::kSysdevDriver);
+    args.load_drivers.push_back("/boot/driver/platform-bus.so");
     args.driver_search_paths.push_back("/boot/driver");
 
-    devmgr_ = std::make_unique<devmgr_integration_test::IsolatedDevmgr>();
-    ASSERT_OK(devmgr_integration_test::IsolatedDevmgr::Create(std::move(args), devmgr_.get()));
+    devmgr_ = std::make_unique<IsolatedDevmgr>();
+    ASSERT_OK(IsolatedDevmgr::Create(&args, devmgr_.get()));
   }
 
   static void TearDownTestCase() { devmgr_.reset(); }
 
  protected:
-  static std::unique_ptr<devmgr_integration_test::IsolatedDevmgr> devmgr_;
+  static std::unique_ptr<IsolatedDevmgr> devmgr_;
 };
 
-std::unique_ptr<devmgr_integration_test::IsolatedDevmgr> FvmVPartitionLoadTest::devmgr_ = nullptr;
+std::unique_ptr<IsolatedDevmgr> FvmVPartitionLoadTest::devmgr_ = nullptr;
 
 TEST_F(FvmVPartitionLoadTest, LoadPartitionWithPlaceHolderGuidIsUpdated) {
   constexpr uint64_t kBlockCount = (50 * kSliceSize) / kBlockSize;

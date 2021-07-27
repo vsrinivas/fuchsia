@@ -33,8 +33,7 @@ storage_isolated_devmgr_unittest_v2_component("ramdisk-test") {
     ":ramdisk",
     "//src/devices/block/drivers/core",
     "//src/devices/block/drivers/ramdisk",
-    "//src/devices/misc/drivers/test",
-    "//src/devices/tests/sysdev",
+    "//src/devices/bus/drivers/platform",
   ]
 }
 

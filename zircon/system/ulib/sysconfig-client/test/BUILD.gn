@@ -36,6 +36,5 @@ isolated_devmgr_unittest_package("sysconfig-sync-client-test-package") {
     "//src/devices/nand/drivers/nandpart",
     "//src/devices/nand/drivers/ram-nand",
     "//src/devices/nand/drivers/skip-block",
-    "//src/devices/tests/sysdev",
   ]
 }

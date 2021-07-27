@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include <fuchsia/hardware/test/c/fidl.h>
 #include <fuchsia/hardware/test/llcpp/fidl.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/driver-integration-test/fixture.h>
 #include <lib/fdio/fd.h>
@@ -18,7 +19,6 @@
 
 #include <vector>
 
-#include <lib/ddk/metadata.h>
 #include <zxtest/zxtest.h>
 
 using driver_integration_test::IsolatedDevmgr;
@@ -35,7 +35,6 @@ void CheckTransaction(const board_test::DeviceEntry& entry, const char* driver_p
   args.device_list.push_back(entry);
 
   args.load_drivers.push_back(driver_path);
-  args.load_drivers.push_back(devmgr_integration_test::IsolatedDevmgr::kSysdevDriver);
 
   // Create the isolated Devmgr.
   zx_status_t status = IsolatedDevmgr::Create(&args, &devmgr);

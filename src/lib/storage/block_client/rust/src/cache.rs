@@ -308,8 +308,11 @@ mod tests {
     pub fn make_ramdisk() -> (RamdiskClient, RemoteBlockClientSync) {
         isolated_driver_manager::launch_isolated_driver_manager()
             .expect("launch_isolated_driver_manager failed");
-        ramdevice_client::wait_for_device("/dev/misc/ramctl", std::time::Duration::from_secs(30))
-            .expect("ramctl did not appear");
+        ramdevice_client::wait_for_device(
+            "/dev/sys/platform/00:00:2d/ramctl",
+            std::time::Duration::from_secs(30),
+        )
+        .expect("ramctl did not appear");
         let ramdisk = RamdiskClient::create(RAMDISK_BLOCK_SIZE, RAMDISK_BLOCK_COUNT)
             .expect("RamdiskClient::create failed");
         let remote_block_device =
@@ -512,8 +515,11 @@ mod tests {
     fn test_ramdisk_with_large_block_size_returns_error() {
         isolated_driver_manager::launch_isolated_driver_manager()
             .expect("launch_isolated_driver_manager failed");
-        ramdevice_client::wait_for_device("/dev/misc/ramctl", std::time::Duration::from_secs(30))
-            .expect("ramctl did not appear");
+        ramdevice_client::wait_for_device(
+            "/dev/sys/platform/00:00:2d/ramctl",
+            std::time::Duration::from_secs(30),
+        )
+        .expect("ramctl did not appear");
         let ramdisk =
             RamdiskClient::create(super::BLOCK_SIZE * 2, 10).expect("RamdiskClient::create failed");
         let remote_block_device =

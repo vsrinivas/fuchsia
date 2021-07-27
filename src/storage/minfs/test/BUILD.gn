@@ -70,7 +70,6 @@ test("minfs-integration") {
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_llcpp",
-    "//src/devices/tests/sysdev",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/storage/fs_management",
     "//src/storage/fs_test",

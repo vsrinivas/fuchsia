@@ -348,8 +348,6 @@ __EXPORT
 devmgr_launcher::Args IsolatedDevmgr::DefaultArgs() {
   devmgr_launcher::Args args;
   args.sys_device_driver = kSysdevDriver;
-  args.load_drivers.push_back("/boot/driver/test.so");
-  args.driver_search_paths.push_back("/boot/driver/test");
   return args;
 }
 

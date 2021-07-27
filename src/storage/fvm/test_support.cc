@@ -29,7 +29,7 @@
 namespace fvm {
 namespace {
 
-constexpr char kRamdiskCtlPath[] = "misc/ramctl";
+constexpr char kRamdiskCtlPath[] = "sys/platform/00:00:2d/ramctl";
 constexpr zx::duration kDeviceWaitTime = zx::sec(3);
 
 zx_status_t RebindBlockDevice(DeviceRef* device) {

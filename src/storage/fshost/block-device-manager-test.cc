@@ -48,7 +48,8 @@ TEST(BlockDeviceManager, BlobfsLimit) {
 
   // Make a blobfs that looks like it's in a ramdisk, the limit should not be set.
   MockBlockDevice::Options ramdisk_opts = MockBlobfsDevice::BlobfsOptions();
-  ramdisk_opts.topological_path = "/dev/misc/ramctl" + ramdisk_opts.topological_path;
+  ramdisk_opts.topological_path =
+      "/dev/sys/platform/00:00:2d/ramctl" + ramdisk_opts.topological_path;
   MockBlockDevice ramdisk_blobfs(ramdisk_opts);
   manager.AddDevice(ramdisk_blobfs);
   ASSERT_FALSE(ramdisk_blobfs.max_size());
@@ -145,7 +146,7 @@ TEST_F(BlockDeviceManagerIntegration, MaxSize) {
   ASSERT_TRUE(fd);
   EXPECT_TRUE(fs_type == VFS_TYPE_MINFS || fs_type == VFS_TYPE_FXFS);
 
-  // FVM will be at something like "/dev/misc/ramctl/ramdisk-1/block/fvm"
+  // FVM will be at something like "/dev/sys/platform/00:00:2d/ramctl/ramdisk-1/block/fvm"
   std::string fvm_path = ramdisk_or.value().path() + "/fvm";
   fbl::unique_fd fvm_fd(open(fvm_path.c_str(), O_RDONLY));
   ASSERT_TRUE(fvm_fd);

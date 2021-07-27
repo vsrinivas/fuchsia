@@ -362,7 +362,7 @@ class GptDevicePartitionerTests : public zxtest::Test {
     ASSERT_OK(IsolatedDevmgr::Create(&args, &devmgr_));
 
     fbl::unique_fd fd;
-    ASSERT_OK(RecursiveWaitForFile(devmgr_.devfs_root(), "misc/ramctl", &fd));
+    ASSERT_OK(RecursiveWaitForFile(devmgr_.devfs_root(), "sys/platform/00:00:2d/ramctl", &fd));
     ASSERT_OK(RecursiveWaitForFile(devmgr_.devfs_root(), "sys/platform", &fd));
   }
 
@@ -1253,7 +1253,7 @@ class FixedDevicePartitionerTests : public zxtest::Test {
     ASSERT_OK(IsolatedDevmgr::Create(&args, &devmgr_));
 
     fbl::unique_fd fd;
-    ASSERT_OK(RecursiveWaitForFile(devmgr_.devfs_root(), "misc/ramctl", &fd));
+    ASSERT_OK(RecursiveWaitForFile(devmgr_.devfs_root(), "sys/platform/00:00:2d/ramctl", &fd));
   }
 
   IsolatedDevmgr devmgr_;
@@ -2502,7 +2502,7 @@ class As370PartitionerTests : public zxtest::Test {
 
     fbl::unique_fd fd;
     ASSERT_OK(RecursiveWaitForFile(devmgr_.devfs_root(), "sys/platform", &fd));
-    ASSERT_OK(RecursiveWaitForFile(devmgr_.devfs_root(), "misc/ramctl", &fd));
+    ASSERT_OK(RecursiveWaitForFile(devmgr_.devfs_root(), "sys/platform/00:00:2d/ramctl", &fd));
   }
 
   IsolatedDevmgr devmgr_;

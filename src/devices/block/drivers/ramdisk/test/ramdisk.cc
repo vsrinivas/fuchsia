@@ -58,7 +58,7 @@ class Environment : public testing::Environment {
  public:
   void SetUp() override {
     ASSERT_EQ(isolated_devmgr::OneTimeSetUp().status_value(), ZX_OK);
-    ASSERT_EQ(wait_for_device("/dev/misc/ramctl", ZX_TIME_INFINITE), ZX_OK);
+    ASSERT_EQ(wait_for_device("/dev/sys/platform/00:00:2d/ramctl", ZX_TIME_INFINITE), ZX_OK);
   }
 };
 

@@ -86,7 +86,6 @@ isolated_devmgr_unittest_package("ddk-fallback-test-package") {
     ":ddk-not-fallback-test",
     "//src/devices/board/drivers/integration-test",
     "//src/devices/bus/drivers/platform",
-    "//src/devices/tests/sysdev",
   ]
 }
 

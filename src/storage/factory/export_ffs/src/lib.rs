@@ -455,8 +455,11 @@ mod tests {
         );
 
         isolated_driver_manager::launch_isolated_driver_manager().unwrap();
-        ramdevice_client::wait_for_device("/dev/misc/ramctl", std::time::Duration::from_secs(10))
-            .unwrap();
+        ramdevice_client::wait_for_device(
+            "/dev/sys/platform/00:00:2d/ramctl",
+            std::time::Duration::from_secs(10),
+        )
+        .unwrap();
         let ramdisk = RamdiskClient::create(512, 1 << 16).unwrap();
         let channel = ramdisk.open().unwrap();
 

@@ -1743,7 +1743,7 @@ class PaverServiceBlockTest : public PaverServiceTest {
  protected:
   void SpawnIsolatedDevmgr() {
     devmgr_launcher::Args args;
-    args.sys_device_driver = IsolatedDevmgr::kSysdevDriver;
+    args.sys_device_driver = "/boot/driver/platform-bus.so";
     args.driver_search_paths.push_back("/boot/driver");
     args.disable_block_watcher = false;
 
@@ -1754,7 +1754,7 @@ class PaverServiceBlockTest : public PaverServiceTest {
                                devmgr_.fshost_outgoing_dir());
 
     fbl::unique_fd fd;
-    ASSERT_OK(RecursiveWaitForFile(devmgr_.devfs_root(), "misc/ramctl", &fd));
+    ASSERT_OK(RecursiveWaitForFile(devmgr_.devfs_root(), "sys/platform/00:00:2d/ramctl", &fd));
     static_cast<paver::Paver*>(provider_ctx_)->set_devfs_root(devmgr_.devfs_root().duplicate());
     static_cast<paver::Paver*>(provider_ctx_)->set_svc_root(std::move(fake_svc_.svc_chan()));
   }
@@ -1866,7 +1866,7 @@ class PaverServiceGptDeviceTest : public PaverServiceTest {
                                devmgr_.fshost_outgoing_dir());
 
     fbl::unique_fd fd;
-    ASSERT_OK(RecursiveWaitForFile(devmgr_.devfs_root(), "misc/ramctl", &fd));
+    ASSERT_OK(RecursiveWaitForFile(devmgr_.devfs_root(), "sys/platform/00:00:2d/ramctl", &fd));
     ASSERT_OK(RecursiveWaitForFile(devmgr_.devfs_root(), "sys/platform", &fd));
     static_cast<paver::Paver*>(provider_ctx_)->set_dispatcher(loop_.dispatcher());
     static_cast<paver::Paver*>(provider_ctx_)->set_devfs_root(devmgr_.devfs_root().duplicate());

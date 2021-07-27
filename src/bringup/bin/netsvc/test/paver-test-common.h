@@ -474,7 +474,7 @@ class PaverTest : public zxtest::Test {
   void SpawnBlockDevice() {
     fbl::unique_fd fd;
     ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(fake_dev_.devmgr_.devfs_root(),
-                                                            "misc/ramctl", &fd));
+                                                            "sys/platform/00:00:2d/ramctl", &fd));
     ASSERT_OK(ramdisk_create_at(fake_dev_.devmgr_.devfs_root().get(), zx_system_get_page_size(),
                                 100, &ramdisk_));
     std::string expected = std::string("/dev/") + ramdisk_get_path(ramdisk_);

@@ -448,7 +448,6 @@ storage_isolated_devmgr_unittest_v2_component("fshost-integration-test") {
     "//src/devices/block/drivers/gpt",
     "//src/devices/block/drivers/ramdisk",
     "//src/devices/bus/drivers/platform",
-    "//src/devices/tests/sysdev",
   ]
 }
 

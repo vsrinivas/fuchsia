@@ -40,7 +40,6 @@ isolated_devmgr_component("tel-devmgr-qmi") {
     "//src/connectivity/telephony/drivers/qmi-fake-transport:fake_qmi_driver",
     "//src/devices/board/drivers/integration-test",
     "//src/devices/bus/drivers/platform",
-    "//src/devices/tests/sysdev",
   ]
 }
 

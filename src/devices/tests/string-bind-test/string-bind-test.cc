@@ -30,6 +30,7 @@ class StringBindTest : public testing::Test {
     auto args = IsolatedDevmgr::DefaultArgs();
 
     args.driver_search_paths.push_back("/boot/driver");
+    args.driver_search_paths.push_back("/boot/driver/test");
 
     ASSERT_EQ(IsolatedDevmgr::Create(std::move(args), &devmgr_), ZX_OK);
     ASSERT_NE(devmgr_.svc_root_dir().channel(), ZX_HANDLE_INVALID);

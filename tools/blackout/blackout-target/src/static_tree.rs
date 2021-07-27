@@ -234,8 +234,11 @@ mod tests {
         let tree: DirectoryEntry = rng.sample(dist);
 
         launch_isolated_driver_manager().expect("failed to launch isolated driver manager");
-        ramdevice_client::wait_for_device("/dev/misc/ramctl", std::time::Duration::from_secs(10))
-            .expect("ramctl did not appear");
+        ramdevice_client::wait_for_device(
+            "/dev/sys/platform/00:00:2d/ramctl",
+            std::time::Duration::from_secs(10),
+        )
+        .expect("ramctl did not appear");
         let ramdisk = RamdiskClient::create(512, 1 << 16).expect("failed to make ramdisk");
         let device_path = ramdisk.get_path();
 

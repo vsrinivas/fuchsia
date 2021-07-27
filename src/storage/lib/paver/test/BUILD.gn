@@ -91,7 +91,6 @@ isolated_devmgr_unittest_package("paver-test") {
     "//src/devices/nand/drivers/nandpart",
     "//src/devices/nand/drivers/ram-nand",
     "//src/devices/nand/drivers/skip-block",
-    "//src/devices/tests/sysdev",
     "//src/storage/fvm/driver",
   ]
 }

@@ -19,15 +19,15 @@ group("storage_drivers") {
 }
 
 isolated_devmgr_v2_component("isolated-devmgr-component") {
+  deps = [
+    ":storage_drivers",
+    "//src/devices/bus/drivers/platform",
+  ]
 }
 
 fuchsia_package("storage-isolated-devmgr") {
   testonly = true
-  deps = [
-    ":isolated-devmgr-component",
-    ":storage_drivers",
-    "//src/devices/bus/drivers/platform",
-  ]
+  deps = [ ":isolated-devmgr-component" ]
 }
 
 source_set("storage_driver_test_support") {

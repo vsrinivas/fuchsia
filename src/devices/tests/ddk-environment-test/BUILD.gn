@@ -73,7 +73,6 @@ isolated_devmgr_unittest_package("ddk-environment-test-package") {
     ":ddk-environment-test",
     "//src/devices/board/drivers/integration-test",
     "//src/devices/bus/drivers/platform",
-    "//src/devices/tests/sysdev",
   ]
 }
 

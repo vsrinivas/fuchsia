@@ -18,6 +18,7 @@ TEST(MetadataTest, RunTests) {
   auto args = IsolatedDevmgr::DefaultArgs();
 
   args.driver_search_paths.push_back("/boot/driver");
+  args.driver_search_paths.push_back("/boot/driver/test");
 
   IsolatedDevmgr devmgr;
   ASSERT_OK(IsolatedDevmgr::Create(std::move(args), &devmgr));

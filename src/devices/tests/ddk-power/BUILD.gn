@@ -110,7 +110,6 @@ isolated_devmgr_unittest_package("ddk-power-test-package") {
     ":ddk-power-test-child",
     "//src/devices/board/drivers/integration-test",
     "//src/devices/bus/drivers/platform",
-    "//src/devices/tests/sysdev",
   ]
 }
 

@@ -6,6 +6,7 @@
 #define SRC_SECURITY_ZXCRYPT_TESTS_TEST_DEVICE_H_
 
 #include <lib/devmgr-integration-test/fixture.h>
+#include <lib/driver-integration-test/fixture.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
@@ -227,7 +228,7 @@ class TestDevice final {
   // underlying ramdisk.  We do this so that the system's devmgr's
   // block-watcher doesn't try to bind drivers to/mount/unseal our
   // ramdisk-backed volumes.
-  devmgr_integration_test::IsolatedDevmgr devmgr_;
+  driver_integration_test::IsolatedDevmgr devmgr_;
 
   // The ramdisk client
   ramdisk_client_t* ramdisk_;
