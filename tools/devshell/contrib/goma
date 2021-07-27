@@ -91,7 +91,7 @@ if [[ ! -x "$GOMA_AUTH" || ! -x "$GOMA_CTL" ]]; then
 fi
 
 function main {
-  local login_args=() update=false use_http2=true use_local_cache=true
+  local login_args=() update=false use_http2=true use_local_cache=true use_ats=false
 
   while [ $# -gt 0 ]; do
     case "$1" in
@@ -109,6 +109,10 @@ function main {
       ;;
     --disable-local-cache)
       use_local_cache=false
+      shift
+      ;;
+    --enable-ats)
+      use_ats=true
       shift
       ;;
     --local-cache-dir)
@@ -160,8 +164,15 @@ function main {
     echo "*** to restart goma without HTTP2 proxy."
     echo ""
   fi
+  if ! $use_ats; then
+    echo "*** Goma Arbitrary Toolchain Support(ATS) is disabled."
+    echo "*** If you would like to use this feature, please run: "
+    echo "*** \`fx goma --kill && fx goma --enable-ats\`"
+    echo "*** to restart goma with ATS."
+    echo ""
+  fi
 
-  GOMACTL_USE_PROXY="$use_http2" GOMA_LOCAL_OUTPUT_CACHE_DIR="$goma_tmp_dir" "$PYTHON_CMD" "$GOMA_CTL" ensure_start
+  GOMA_ARBITRARY_TOOLCHAIN_SUPPORT="$use_ats" GOMACTL_USE_PROXY="$use_http2" GOMA_LOCAL_OUTPUT_CACHE_DIR="$goma_tmp_dir" "$PYTHON_CMD" "$GOMA_CTL" ensure_start
 }
 
 function kill-goma {
