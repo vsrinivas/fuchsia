@@ -325,41 +325,22 @@ void Osd::SetColorCorrection(uint32_t rdma_table_idx,
   // TODO(b/182481217): remove when this bug is closed.
   DISP_SPEW("post offset0_1=%u offset2=%u\n", offset0_1, offset2);
 
-  float identity[3][3] = {
-    {
-      1,
-      0,
-      0,
-    },
-    {
-      0,
-      1,
-      0,
-    },
-    {
-      0,
-      0,
-      1,
-    },
+  const float identity[3][3] = {
+    {1, 0, 0,},
+    {0, 1, 0,},
+    {0, 0, 1,},
   };
 
-  // This will include either the entered coefficient matrix or the identity matrix
-  float final[3][3] = {};
-
-  for (uint32_t i = 0; i < 3; i++) {
-    for (uint32_t j = 0; j < 3; j++) {
-      final[i][j] = config->cc_flags & COLOR_CONVERSION_COEFFICIENTS
-                    ? config->cc_coefficients[i][j]
-                    : identity[i][j];
-    }
-  }
+  const auto* ccm = (config->cc_flags & COLOR_CONVERSION_COEFFICIENTS)
+                    ? config->cc_coefficients
+                    : identity;
 
   // Load up the coefficient matrix registers
-  auto coef00_01 = FloatToFixed3_10(final[0][0]) << 16 | FloatToFixed3_10(final[0][1]) << 0;
-  auto coef02_10 = FloatToFixed3_10(final[0][2]) << 16 | FloatToFixed3_10(final[1][0]) << 0;
-  auto coef11_12 = FloatToFixed3_10(final[1][1]) << 16 | FloatToFixed3_10(final[1][2]) << 0;
-  auto coef20_21 = FloatToFixed3_10(final[2][0]) << 16 | FloatToFixed3_10(final[2][1]) << 0;
-  auto coef22 = FloatToFixed3_10(final[2][2]) << 0;
+  auto coef00_01 = FloatToFixed3_10(ccm[0][0]) << 16 | FloatToFixed3_10(ccm[0][1]) << 0;
+  auto coef02_10 = FloatToFixed3_10(ccm[0][2]) << 16 | FloatToFixed3_10(ccm[1][0]) << 0;
+  auto coef11_12 = FloatToFixed3_10(ccm[1][1]) << 16 | FloatToFixed3_10(ccm[1][2]) << 0;
+  auto coef20_21 = FloatToFixed3_10(ccm[2][0]) << 16 | FloatToFixed3_10(ccm[2][1]) << 0;
+  auto coef22 = FloatToFixed3_10(ccm[2][2]) << 0;
   SetRdmaTableValue(rdma_table_idx, IDX_MATRIX_COEF00_01, coef00_01);
   SetRdmaTableValue(rdma_table_idx, IDX_MATRIX_COEF02_10, coef02_10);
   SetRdmaTableValue(rdma_table_idx, IDX_MATRIX_COEF11_12, coef11_12);
