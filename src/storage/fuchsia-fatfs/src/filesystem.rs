@@ -13,6 +13,7 @@ use {
     async_trait::async_trait,
     fatfs::{self, validate_filename, DefaultTimeProvider, FsOptions, LossyOemCpConverter},
     fuchsia_async::{Task, Time, Timer},
+    fuchsia_zircon::Event,
     fuchsia_zircon::{Duration, Status},
     futures::prelude::*,
     std::{
@@ -94,6 +95,7 @@ pub struct FatFilesystem {
     inner: Mutex<FatFilesystemInner>,
     dirty_task: Mutex<Option<Task<()>>>,
     buffer_allocator: BufferAllocator,
+    fs_id: Event,
 }
 
 // The buffer allocator will draw from a heap buffer, which means that we can't do direct I/O from
@@ -120,6 +122,7 @@ impl FatFilesystem {
             inner,
             dirty_task: Mutex::new(None),
             buffer_allocator: create_buffer_allocator(bs),
+            fs_id: Event::create()?,
         });
         Ok((result.clone(), result.root_dir()))
     }
@@ -133,8 +136,13 @@ impl FatFilesystem {
             inner,
             dirty_task: Mutex::new(None),
             buffer_allocator: create_buffer_allocator(bs),
+            fs_id: Event::create().unwrap(),
         });
         (result.clone(), result.root_dir())
+    }
+
+    pub fn fs_id(&self) -> &Event {
+        &self.fs_id
     }
 
     /// Get the FatDirectory that represents the root directory of this filesystem.

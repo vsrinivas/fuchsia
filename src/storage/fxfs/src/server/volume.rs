@@ -102,7 +102,7 @@ impl FxVolume {
     pub(super) async fn maybe_purge_file(&self, object_id: u64) -> Result<(), Error> {
         if let Some(node) = self.cache.get(object_id) {
             if let Ok(file) = node.into_any().downcast::<FxFile>() {
-                if !file.try_mark_purging() {
+                if !file.mark_purged() {
                     return Ok(());
                 }
             }

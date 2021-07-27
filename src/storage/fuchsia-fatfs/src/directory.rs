@@ -9,17 +9,19 @@ use {
         refs::{FatfsDirRef, FatfsFileRef},
         types::{Dir, DirEntry},
         util::{dos_to_unix_time, fatfs_error_to_status, unix_to_dos_time},
+        MAX_FILENAME_LEN,
     },
     async_trait::async_trait,
     fatfs::validate_filename,
     fidl::endpoints::ServerEnd,
+    fidl_fuchsia_fs::FsType,
     fidl_fuchsia_io::{
-        self as fio, NodeAttributes, NodeMarker, DIRENT_TYPE_DIRECTORY, DIRENT_TYPE_FILE,
-        INO_UNKNOWN, MODE_TYPE_DIRECTORY, MODE_TYPE_MASK, OPEN_FLAG_CREATE,
+        self as fio, FilesystemInfo, NodeAttributes, NodeMarker, DIRENT_TYPE_DIRECTORY,
+        DIRENT_TYPE_FILE, INO_UNKNOWN, MODE_TYPE_DIRECTORY, MODE_TYPE_MASK, OPEN_FLAG_CREATE,
         OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DIRECTORY, WATCH_MASK_EXISTING,
     },
     fuchsia_async as fasync,
-    fuchsia_zircon::Status,
+    fuchsia_zircon::{AsHandleRef, Status},
     std::{
         any::Any,
         borrow::Borrow,
@@ -748,6 +750,36 @@ impl Directory for FatDirectory {
     fn close(&self) -> Result<(), Status> {
         self.close_ref(&self.filesystem.lock().unwrap());
         Ok(())
+    }
+
+    fn query_filesystem(&self) -> Result<FilesystemInfo, Status> {
+        let fs_lock = self.filesystem.lock().unwrap();
+
+        let cluster_size = fs_lock.cluster_size() as u64;
+        let total_clusters = fs_lock.total_clusters()? as u64;
+        let free_clusters = fs_lock.free_clusters()? as u64;
+        let total_bytes = cluster_size * total_clusters;
+        let used_bytes = cluster_size * (total_clusters - free_clusters);
+
+        // "fatfs"
+        let name = [
+            0x66, 0x61, 0x74, 0x66, 0x73, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+        ];
+
+        Ok(FilesystemInfo {
+            total_bytes,
+            used_bytes,
+            total_nodes: 0,
+            used_nodes: 0,
+            free_shared_pool_bytes: 0,
+            fs_id: self.filesystem.fs_id().get_koid()?.raw_koid(),
+            block_size: cluster_size as u32,
+            max_filename_size: MAX_FILENAME_LEN,
+            fs_type: FsType::Fatfs.into_primitive(),
+            padding: 0,
+            name,
+        })
     }
 }
 

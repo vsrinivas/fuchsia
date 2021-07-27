@@ -21,11 +21,21 @@ use {
     },
     anyhow::{bail, Context, Error},
     fuchsia_async::{self as fasync},
+    futures::{
+        channel::mpsc::{unbounded, UnboundedReceiver, UnboundedSender},
+        StreamExt,
+    },
     std::{
         ops::Bound,
         sync::{Arc, Mutex},
     },
 };
+
+enum ReaperTask {
+    None,
+    Pending(UnboundedReceiver<(u64, u64)>),
+    Running(fasync::Task<()>),
+}
 
 /// A graveyard exists as a place to park objects that should be deleted when they are no longer in
 /// use.  How objects enter and leave the graveyard is up to the caller to decide.  The intention is
@@ -33,10 +43,21 @@ use {
 pub struct Graveyard {
     store: Arc<ObjectStore>,
     object_id: u64,
-    reaper_task: Mutex<Option<fasync::Task<()>>>,
+    reaper_task: Mutex<ReaperTask>,
+    channel: UnboundedSender<(u64, u64)>,
 }
 
 impl Graveyard {
+    fn new(store: Arc<ObjectStore>, object_id: u64) -> Arc<Self> {
+        let (sender, receiver) = unbounded();
+        Arc::new(Graveyard {
+            store,
+            object_id,
+            reaper_task: Mutex::new(ReaperTask::Pending(receiver)),
+            channel: sender,
+        })
+    }
+
     pub fn store(&self) -> &Arc<ObjectStore> {
         &self.store
     }
@@ -66,7 +87,7 @@ impl Graveyard {
                 },
             ),
         );
-        Ok(Arc::new(Graveyard { store: store.clone(), object_id, reaper_task: Mutex::new(None) }))
+        Ok(Self::new(store.clone(), object_id))
     }
 
     /// Starts an asynchronous task to reap the graveyard for all entries older than
@@ -74,28 +95,45 @@ impl Graveyard {
     /// If a task is already started, this has no effect, even if that task was targeting an older
     /// |journal_offset|.
     pub fn reap_async(self: Arc<Self>, journal_offset: u64) {
-        self.clone()
-            .reaper_task
-            .lock()
-            .unwrap()
-            .get_or_insert_with(|| fasync::Task::spawn(self.reap_task(journal_offset)));
+        let mut reaper_task = self.reaper_task.lock().unwrap();
+        if let ReaperTask::Pending(_) = &*reaper_task {
+            if let ReaperTask::Pending(receiver) =
+                std::mem::replace(&mut *reaper_task, ReaperTask::None)
+            {
+                *reaper_task = ReaperTask::Running(fasync::Task::spawn(
+                    self.clone().reap_task(journal_offset, receiver),
+                ));
+            } else {
+                unreachable!();
+            }
+        }
     }
 
     /// Returns a future which completes when the ongoing reap task (if it exists) completes.
     pub async fn wait_for_reap(&self) {
-        let task = self.reaper_task.lock().unwrap().take();
-        if let Some(task) = task {
+        self.channel.close_channel();
+        let task = std::mem::replace(&mut *self.reaper_task.lock().unwrap(), ReaperTask::None);
+        if let ReaperTask::Running(task) = task {
             task.await;
         }
     }
 
-    async fn reap_task(self: Arc<Self>, journal_offset: u64) {
+    async fn reap_task(
+        self: Arc<Self>,
+        journal_offset: u64,
+        mut receiver: UnboundedReceiver<(u64, u64)>,
+    ) {
         log::info!("Reaping graveyard starting, gen: {}", journal_offset);
         trace_duration!("Graveyard::reap");
         match self.reap_task_inner(journal_offset).await {
             Ok(deleted) => log::info!("Reaping graveyard done, removed {} elements", deleted),
             Err(e) => log::error!("Reaping graveyard encountered error: {:?}", e),
         };
+        while let Some((store_id, object_id)) = receiver.next().await {
+            if let Err(e) = self.tombstone(store_id, object_id).await {
+                log::error!("Tombstone error for {}.{}: {:?}", store_id, object_id, e);
+            }
+        }
     }
 
     async fn reap_task_inner(self: &Arc<Self>, journal_offset: u64) -> Result<usize, Error> {
@@ -113,36 +151,41 @@ impl Graveyard {
             purge_items
         };
         let num_purged = purge_items.len();
-        let fs = self.store().filesystem();
-        let object_manager = fs.object_manager();
         for (store_id, id) in purge_items {
-            // Since the reaping might be happening early in the mount, some stores might not be
-            // open yet.
-            let store = object_manager
-                .open_store(store_id)
-                .await
-                .context(format!("Failed to open store {}", store_id))?;
-            // TODO(csuter): we shouldn't assume that all objects in the root stores use the
-            // metadata reservation.
-            let options = if store_id == object_manager.root_parent_store_object_id()
-                || store_id == object_manager.root_store_object_id()
-            {
-                Options {
-                    skip_journal_checks: true,
-                    borrow_metadata_space: true,
-                    allocator_reservation: Some(object_manager.metadata_reservation()),
-                    ..Default::default()
-                }
-            } else {
-                Options {
-                    skip_journal_checks: true,
-                    borrow_metadata_space: true,
-                    ..Default::default()
-                }
-            };
-            store.tombstone(id, options).await.context("Failed to tombstone object")?;
+            if let Err(e) = self.tombstone(store_id, id).await {
+                log::error!("Tombstone error for {}.{}: {:?}", store_id, id, e);
+            }
         }
         Ok(num_purged)
+    }
+
+    // Queues an object for tombstoning.
+    pub fn queue_tombstone(&self, store_id: u64, object_id: u64) {
+        let _ = self.channel.unbounded_send((store_id, object_id));
+    }
+
+    async fn tombstone(&self, store_id: u64, object_id: u64) -> Result<(), Error> {
+        let fs = self.store().filesystem();
+        let object_manager = fs.object_manager();
+        let store = object_manager
+            .open_store(store_id)
+            .await
+            .context(format!("Failed to open store {}", store_id))?;
+        // TODO(csuter): we shouldn't assume that all objects in the root stores use the
+        // metadata reservation.
+        let options = if store_id == object_manager.root_parent_store_object_id()
+            || store_id == object_manager.root_store_object_id()
+        {
+            Options {
+                skip_journal_checks: true,
+                borrow_metadata_space: true,
+                allocator_reservation: Some(object_manager.metadata_reservation()),
+                ..Default::default()
+            }
+        } else {
+            Options { skip_journal_checks: true, borrow_metadata_space: true, ..Default::default() }
+        };
+        store.tombstone(object_id, options).await.context("Failed to tombstone object")
     }
 
     /// Opens a graveyard object in `store`.
@@ -152,11 +195,7 @@ impl Graveyard {
             value: ObjectValue::Object { kind: ObjectKind::Graveyard, .. }, ..
         } = store.tree.find(&ObjectKey::object(object_id)).await?.ok_or(FxfsError::NotFound)?
         {
-            Ok(Arc::new(Graveyard {
-                store: store.clone(),
-                object_id,
-                reaper_task: Mutex::new(None),
-            }))
+            Ok(Self::new(store.clone(), object_id))
         } else {
             bail!("Found an object, but it's not a graveyard");
         }

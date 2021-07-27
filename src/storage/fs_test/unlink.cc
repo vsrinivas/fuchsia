@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <sys/statfs.h>
 #include <unistd.h>
 
 #include <string>
@@ -133,6 +134,51 @@ TEST_P(UnlinkTest, OpenElsewhereLongName) {
 
   // Now, opening the file should fail without O_CREAT
   ASSERT_EQ(open(path.c_str(), O_RDWR, 0644), -1);
+}
+
+TEST_P(UnlinkTest, SpaceReturned) {
+  const std::string path1 = GetPath("file1");
+  fbl::unique_fd fd1(open(path1.c_str(), O_RDWR | O_CREAT, 0644));
+  ASSERT_TRUE(fd1);
+  constexpr int kBufSize = 1024 * 1024;
+  auto buf = std::make_unique<uint8_t[]>(kBufSize);
+  ASSERT_EQ(write(fd1.get(), buf.get(), kBufSize), kBufSize);
+
+  const std::string path2 = GetPath("file2");
+  fbl::unique_fd fd2(open(path2.c_str(), O_RDWR | O_CREAT, 0644));
+  ASSERT_TRUE(fd2);
+  ASSERT_EQ(write(fd2.get(), buf.get(), kBufSize), kBufSize);
+
+  struct statfs statfs_buf;
+  ASSERT_EQ(statfs(GetPath("").c_str(), &statfs_buf), 0);
+
+  auto free_space = [](const struct statfs& s) { return s.f_bavail * s.f_bsize; };
+
+  const auto initial_free_space = free_space(statfs_buf);
+
+  fd1.reset();
+  ASSERT_EQ(unlink(path1.c_str()), 0);
+  ASSERT_EQ(unlink(path2.c_str()), 0);
+
+  ASSERT_EQ(statfs(GetPath("").c_str(), &statfs_buf), 0);
+
+  // Some filesystems use space for metadata, so allow for that.
+  const int kMetadataSize = 128 * 1024;
+
+  const auto free_space_after_deleting_one_file = free_space(statfs_buf);
+  EXPECT_GE(free_space_after_deleting_one_file, initial_free_space + kBufSize - kMetadataSize);
+
+  fd2.reset();
+
+  // After closing the second file, we should get the space back soon afterwards
+  // (but not necessarily immediately).
+  for (;;) {
+    ASSERT_EQ(statfs(GetPath("").c_str(), &statfs_buf), 0);
+    if (free_space(statfs_buf) >= free_space_after_deleting_one_file + kBufSize - kMetadataSize) {
+      break;
+    }
+    usleep(100);
+  }
 }
 
 TEST_P(UnlinkTest, Remove) {

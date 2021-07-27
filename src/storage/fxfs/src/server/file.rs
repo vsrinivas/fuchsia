@@ -43,6 +43,11 @@ use {
     },
 };
 
+// When the top bit of the open count is set, it means the file has been deleted and when the count
+// drops to zero, it will be tombstoned.  Once it has dropped to zero, it cannot be opened again
+// (assertions will fire).
+const PURGED: usize = 1 << (usize::BITS - 1);
+
 /// FxFile represents an open connection to a file.
 pub struct FxFile {
     handle: StoreObjectHandle<FxVolume>,
@@ -94,12 +99,21 @@ impl FxFile {
         );
     }
 
-    /// If the open count is zero, marks the file as being purged.  This is designed to be
-    /// thread-safe such that if two threads both try and purge at the same time, only one will win.
-    pub fn try_mark_purging(&self) -> bool {
-        self.open_count
-            .compare_exchange(0, usize::MAX, Ordering::Relaxed, Ordering::Relaxed)
-            .is_ok()
+    /// Marks the file as being purged.  Returns true if there are no open references.
+    pub fn mark_purged(&self) -> bool {
+        let mut old = self.open_count.load(Ordering::Relaxed);
+        loop {
+            assert_eq!(old & PURGED, 0);
+            match self.open_count.compare_exchange_weak(
+                old,
+                old | PURGED,
+                Ordering::Relaxed,
+                Ordering::Relaxed,
+            ) {
+                Ok(_) => return old == 0,
+                Err(x) => old = x,
+            }
+        }
     }
 }
 
@@ -131,11 +145,22 @@ impl FxNode for FxFile {
     }
 
     fn open_count_add_one(&self) {
-        assert!(self.open_count.fetch_add(1, Ordering::Relaxed) != usize::MAX);
+        let old = self.open_count.fetch_add(1, Ordering::Relaxed);
+        assert!(old != PURGED && old != PURGED - 1);
     }
 
     fn open_count_sub_one(&self) {
-        assert!(self.open_count.fetch_sub(1, Ordering::Relaxed) > 0);
+        let old = self.open_count.fetch_sub(1, Ordering::Relaxed);
+        assert!(old & !PURGED > 0);
+        if old == PURGED + 1 {
+            let store = self.handle.store();
+            store
+                .filesystem()
+                .object_manager()
+                .graveyard()
+                .unwrap()
+                .queue_tombstone(store.store_object_id(), self.object_id());
+        }
     }
 }
 
@@ -269,7 +294,7 @@ impl File for FxFile {
     }
 
     async fn close(&self) -> Result<(), Status> {
-        assert!(self.open_count.fetch_sub(1, Ordering::Relaxed) > 0);
+        self.open_count_sub_one();
         Ok(())
     }
 

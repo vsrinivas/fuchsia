@@ -8,7 +8,7 @@ use {
     fidl_fuchsia_fs::{AdminRequest, FilesystemInfo, FilesystemInfoQuery, FsType, QueryRequest},
     fidl_fuchsia_io::{OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
     fuchsia_syslog::{fx_log_err, fx_log_warn},
-    fuchsia_zircon::{Event, HandleBased, Rights, Status},
+    fuchsia_zircon::{HandleBased, Rights, Status},
     std::pin::Pin,
     std::sync::Arc,
     vfs::{
@@ -43,7 +43,7 @@ pub use types::Disk;
 /// and short file names can't encode the full 16-bit range of UCS-2.
 /// This is the minimum possible value. For instance, a 300 byte UTF-8 string could fit inside 255
 /// UCS-2 codepoints (if it had some 16 bit characters), but a 300 byte ASCII string would not fit.
-const MAX_FILENAME_LEN: u32 = 255;
+pub const MAX_FILENAME_LEN: u32 = 255;
 
 pub trait RootDirectory: DirectoryEntry + Directory {}
 impl<T: DirectoryEntry + Directory> RootDirectory for T {}
@@ -51,19 +51,18 @@ impl<T: DirectoryEntry + Directory> RootDirectory for T {}
 pub struct FatFs {
     inner: Pin<Arc<FatFilesystem>>,
     root: Arc<FatDirectory>,
-    fs_id: Event,
 }
 
 impl FatFs {
     /// Create a new FatFs using the given ReadWriteSeek as the disk.
     pub fn new(disk: Box<dyn Disk>) -> Result<Self, Error> {
         let (inner, root) = FatFilesystem::new(disk, FsOptions::new())?;
-        Ok(FatFs { inner, root, fs_id: Event::create()? })
+        Ok(FatFs { inner, root })
     }
 
     #[cfg(test)]
     pub fn from_filesystem(inner: Pin<Arc<FatFilesystem>>, root: Arc<FatDirectory>) -> Self {
-        FatFs { inner, root, fs_id: Event::create().expect("Event::create succeeds") }
+        FatFs { inner, root }
     }
 
     #[cfg(any(test, fuzz))]
@@ -71,7 +70,6 @@ impl FatFs {
         self.root.clone()
     }
 
-    #[cfg(any(test, fuzz))]
     pub fn filesystem(&self) -> &FatFilesystem {
         return &self.inner;
     }
@@ -107,7 +105,7 @@ impl FatFs {
         }
 
         if query.contains(FilesystemInfoQuery::FsId) {
-            result.fs_id = Some(self.fs_id.duplicate_handle(Rights::BASIC)?);
+            result.fs_id = Some(self.inner.fs_id().duplicate_handle(Rights::BASIC)?);
         }
 
         if query.contains(FilesystemInfoQuery::BlockSize) {
