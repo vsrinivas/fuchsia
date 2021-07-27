@@ -95,8 +95,8 @@ constexpr size_t kSuperblockOffset = 0;
 // superblock is not there for the purpose of solving random corruption issues i.e. a random
 // corruption of the primary superblock will still render the volume unusable.  It only exists to
 // guard against the potential for corruption whilst updating the primary superblock.  In practice,
-// after a write to a device but before a sucessful flush, we will either see the data before the
-// write or after the write and not some indeterminate state inbetween so it's unlikely that the
+// after a write to a device but before a successful flush, we will either see the data before the
+// write or after the write and not some indeterminate state between so it's unlikely that the
 // primary superblock wouldn't be readable, but if it's easy to do so, we should be resilient to the
 // case where data is in an indeterminate state between write and flush, and we should have tests
 // for this.  A backup superblock solves this issue.  Regarding random corruption: there are other
@@ -250,14 +250,14 @@ constexpr uint64_t kStartBlockMinimum = 1;  // Smallest 'data' block possible.
 
 using digest::Digest;
 
-typedef uint64_t BlockOffsetType;
+using BlockOffsetType = uint64_t;
 constexpr size_t kBlockOffsetBits = 48;
 constexpr BlockOffsetType kBlockOffsetMax = (1LLU << kBlockOffsetBits) - 1;
 constexpr uint64_t kBlockOffsetMask = kBlockOffsetMax;
 
-typedef uint16_t BlockCountType;
+using BlockCountType = uint16_t;
 constexpr size_t kBlockCountBits = 16;
-constexpr size_t kBlockCountMax = std::numeric_limits<BlockCountType>::max();
+constexpr size_t kBlockCountMax = (1LLU << kBlockCountBits) - 1;
 constexpr uint64_t kBlockCountMask = kBlockCountMax << kBlockOffsetBits;
 
 class Extent {
@@ -313,7 +313,7 @@ inline std::ostream& operator<<(std::ostream& stream, const Extent (&extents)[N]
 static_assert(sizeof(Extent) == sizeof(uint64_t), "Extent class should only contain data");
 
 // The number of extents within a single blob.
-typedef uint16_t ExtentCountType;
+using ExtentCountType = uint16_t;
 
 // The largest number of extents which can compose a blob.
 constexpr size_t kMaxBlobExtents = std::numeric_limits<ExtentCountType>::max();

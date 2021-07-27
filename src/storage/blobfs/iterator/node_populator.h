@@ -13,7 +13,7 @@
 
 #include <fbl/function.h>
 
-#include "src/storage/blobfs/allocator/allocator.h"
+#include "src/storage/blobfs/allocator/base_allocator.h"
 #include "src/storage/blobfs/allocator/extent_reserver.h"
 #include "src/storage/blobfs/format.h"
 
@@ -25,7 +25,7 @@ namespace blobfs {
 //      nodes.size() >= NodeCountForExtents(extents.size())
 class NodePopulator {
  public:
-  NodePopulator(Allocator* allocator, std::vector<ReservedExtent> extents,
+  NodePopulator(BaseAllocator* allocator, std::vector<ReservedExtent> extents,
                 std::vector<ReservedNode> nodes);
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(NodePopulator);
@@ -59,7 +59,7 @@ class NodePopulator {
   zx_status_t Walk(OnNodeCallback on_node, OnExtentCallback on_extent);
 
  private:
-  Allocator* allocator_;
+  BaseAllocator* allocator_;
   std::vector<ReservedExtent> extents_;
   std::vector<ReservedNode> nodes_;
 };

@@ -41,6 +41,7 @@
 #include <fbl/unique_fd.h>
 
 #include "src/lib/digest/digest.h"
+#include "src/storage/blobfs/allocator/host_allocator.h"
 #include "src/storage/blobfs/blob_layout.h"
 #include "src/storage/blobfs/common.h"
 #include "src/storage/blobfs/format.h"
@@ -135,7 +136,7 @@ union info_block_t {
   Superblock info;
 };
 
-class Blobfs : public fbl::RefCounted<Blobfs>, public NodeFinder {
+class Blobfs : public fbl::RefCounted<Blobfs> {
  public:
   DISALLOW_COPY_ASSIGN_AND_MOVE(Blobfs);
 
@@ -152,15 +153,13 @@ class Blobfs : public fbl::RefCounted<Blobfs>, public NodeFinder {
                                                     const info_block_t& info_block,
                                                     const fbl::Array<size_t>& extent_lengths);
 
-  ~Blobfs() override = default;
-
   // Adds a blob to the filesystem.
   zx::status<> AddBlob(const BlobInfo& blob_info);
 
   // Access the |node_index|-th inode.
-  zx::status<InodePtr> GetNode(uint32_t node_index) final;
+  zx::status<InodePtr> GetNode(uint32_t node_index);
 
-  NodeFinder* GetNodeFinder() { return this; }
+  NodeFinder* GetNodeFinder() { return allocator_.get(); }
 
   bool CheckBlocksAllocated(uint64_t start_block, uint64_t end_block,
                             uint64_t* first_unset = nullptr) const;
@@ -176,43 +175,23 @@ class Blobfs : public fbl::RefCounted<Blobfs>, public NodeFinder {
   zx::status<std::unique_ptr<Superblock>> ReadBackupSuperblock();
 
  private:
-  // Stores a pointer to an inode's metadata and the matching block number.
-  class InodeBlock {
-   public:
-    InodeBlock(uint64_t block_number, Inode* inode, const Digest& digest)
-        : block_number_(block_number) {
-      inode_ = inode;
-      digest.CopyTo(inode_->merkle_root_hash, sizeof(inode_->merkle_root_hash));
-    }
-
-    uint64_t GetBlockNumber() const { return block_number_; }
-
-    Inode* GetInode() { return inode_; }
-
-   private:
-    uint64_t block_number_;
-    Inode* inode_;
-  };
-
   friend class BlobfsChecker;
 
   Blobfs(fbl::unique_fd fd, off_t offset, const info_block_t& info_block,
          const fbl::Array<size_t>& extent_lengths);
 
-  // Checks to see if a blob already exists, and if not allocates a new node.
-  zx::status<std::unique_ptr<InodeBlock>> NewBlob(const Digest& digest);
+  // Finds the index of the inode with the given |digest|. Returns ZX_ERR_NOT_FOUND if there is no
+  // inode with that digest.
+  zx::status<uint32_t> FindInodeByDigest(const Digest& digest);
 
-  // Allocate |block_count| blocks in memory starting at the returned block number.
-  zx::status<uint64_t> AllocateBlocks(uint64_t block_count);
-
-  zx::status<> WriteData(Inode* inode, const BlobInfo& blob_info);
-  zx::status<> WriteBitmap(uint64_t data_start_block, uint64_t data_block_count);
-  zx::status<> WriteNode(std::unique_ptr<InodeBlock> ino_block);
+  zx::status<> WriteData(const BlobInfo& blob_info, const std::vector<ReservedExtent>& extents);
+  zx::status<> WriteBlockBitmap(const Extent& extent);
+  zx::status<> WriteNode(uint32_t node_index);
   zx::status<> WriteInfo();
 
-  zx::status<> LoadBitmap();
+  zx::status<RawBitmap> LoadBlockBitmap();
 
-  zx::status<> LoadNodeMap();
+  zx::status<std::vector<Inode>> LoadNodeMap();
 
   // Read |block_count| blocks starting at |start_block| into |data|.
   zx::status<> ReadBlocks(uint64_t start_block, uint64_t block_count, void* data);
@@ -230,14 +209,11 @@ class Blobfs : public fbl::RefCounted<Blobfs>, public NodeFinder {
   // Write |data| into block |block_number|.
   zx::status<> WriteBlock(uint64_t block_number, const void* data);
 
-  zx::status<> ResetCache();
-
   zx_status_t LoadAndVerifyBlob(uint32_t node_index);
   fpromise::result<std::vector<uint8_t>, std::string> LoadDataAndVerifyBlob(uint32_t inode_index);
 
-  RawBitmap block_map_{};
-
-  std::unique_ptr<Inode[]> nodes_;
+  std::vector<Inode> node_map_;
+  std::unique_ptr<HostAllocator> allocator_;
 
   fbl::unique_fd blockfd_;
   off_t offset_;

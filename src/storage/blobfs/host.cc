@@ -7,6 +7,7 @@
 #include <fcntl.h>
 #include <inttypes.h>
 #include <lib/cksum.h>
+#include <lib/stdcompat/span.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/status.h>
 #include <stdarg.h>
@@ -43,6 +44,9 @@
 #include "src/lib/digest/node-digest.h"
 #include "src/lib/storage/vfs/cpp/journal/initializer.h"
 #include "src/lib/storage/vfs/cpp/transaction/transaction_handler.h"
+#include "src/storage/blobfs/allocator/extent_reserver.h"
+#include "src/storage/blobfs/allocator/host_allocator.h"
+#include "src/storage/blobfs/allocator/node_reserver.h"
 #include "src/storage/blobfs/blob_layout.h"
 #include "src/storage/blobfs/common.h"
 #include "src/storage/blobfs/compression/chunked.h"
@@ -53,6 +57,10 @@
 #include "src/storage/blobfs/fsck_host.h"
 #include "src/storage/blobfs/iterator/allocated_extent_iterator.h"
 #include "src/storage/blobfs/iterator/block_iterator.h"
+#include "src/storage/blobfs/iterator/extent_iterator.h"
+#include "src/storage/blobfs/iterator/node_populator.h"
+#include "src/storage/blobfs/iterator/vector_extent_iterator.h"
+#include "src/storage/blobfs/node_finder.h"
 
 using digest::Digest;
 using digest::MerkleTreeCreator;
@@ -594,64 +602,65 @@ zx::status<std::unique_ptr<Blobfs>> Blobfs::Create(fbl::unique_fd blockfd_, off_
   auto fs =
       std::unique_ptr<Blobfs>(new Blobfs(std::move(blockfd_), offset, info_block, extent_lengths));
 
-  if (zx::status<> status = fs->LoadBitmap(); status.is_error()) {
-    FX_LOGS(ERROR) << "Failed to load bitmaps";
-    return status.take_error();
-  }
-  if (zx::status<> status = fs->LoadNodeMap(); status.is_error()) {
+  auto node_map = fs->LoadNodeMap();
+  if (node_map.is_error()) {
     FX_LOGS(ERROR) << "Failed to load node map";
-    return status.take_error();
+    return node_map.take_error();
   }
+  fs->node_map_ = std::move(node_map).value();
+
+  auto block_bitmap = fs->LoadBlockBitmap();
+  if (block_bitmap.is_error()) {
+    FX_LOGS(ERROR) << "Failed to load bitmaps";
+    return block_bitmap.take_error();
+  }
+
+  auto host_allocator =
+      HostAllocator::Create(std::move(block_bitmap).value(), cpp20::span<Inode>(fs->node_map_));
+  if (host_allocator.is_error()) {
+    return host_allocator.take_error();
+  }
+  fs->allocator_ = std::move(host_allocator).value();
 
   return zx::ok(std::move(fs));
 }
 
-zx::status<> Blobfs::LoadBitmap() {
-  if (zx_status_t status = block_map_.Reset(block_map_block_count_ * kBlobfsBlockBits);
+zx::status<RawBitmap> Blobfs::LoadBlockBitmap() {
+  RawBitmap block_bitmap;
+  if (zx_status_t status = block_bitmap.Reset(block_map_block_count_ * kBlobfsBlockBits);
       status != ZX_OK) {
     return zx::error(status);
   }
-  if (zx_status_t status = block_map_.Shrink(info_.data_block_count); status != ZX_OK) {
+  if (zx_status_t status = block_bitmap.Shrink(info_.data_block_count); status != ZX_OK) {
     return zx::error(status);
   }
-  return ReadBlocks(block_map_start_block_, block_map_block_count_,
-                    block_map_.StorageUnsafe()->GetData());
+  if (zx::status<> status = ReadBlocks(block_map_start_block_, block_map_block_count_,
+                                       block_bitmap.StorageUnsafe()->GetData());
+      status.is_error()) {
+    return status.take_error();
+  }
+  return zx::ok(std::move(block_bitmap));
 }
 
-zx::status<> Blobfs::LoadNodeMap() {
+zx::status<std::vector<Inode>> Blobfs::LoadNodeMap() {
   const size_t nodes_to_load = fbl::round_up(Info().inode_count, kBlobfsInodesPerBlock);
-  nodes_ = std::make_unique<Inode[]>(nodes_to_load);
-  return ReadBlocks(node_map_start_block_, node_map_block_count_, nodes_.get());
+  std::vector<Inode> node_map(nodes_to_load);
+  if (zx::status<> status =
+          ReadBlocks(node_map_start_block_, node_map_block_count_, node_map.data());
+      status.is_error()) {
+    return status.take_error();
+  }
+  return zx::ok(std::move(node_map));
 }
 
-zx::status<std::unique_ptr<Blobfs::InodeBlock>> Blobfs::NewBlob(const Digest& digest) {
-  std::optional<size_t> free_inode;
-
-  for (size_t i = 0; i < info_.inode_count; ++i) {
-    const Inode& inode = nodes_[i];
-
-    if (inode.header.IsAllocated() && !inode.header.IsExtentContainer()) {
-      if (digest == inode.merkle_root_hash) {
-        FX_LOGS(ERROR) << "Blob already exists " << digest.ToString();
-        return zx::error(ZX_ERR_ALREADY_EXISTS);
-      }
-    } else if (!free_inode.has_value()) {
-      // If |ino| has not already been set to a valid value, set it to the first free value we find.
-      // We still check all the remaining inodes to avoid adding a duplicate blob.
-      free_inode = i;
+zx::status<uint32_t> Blobfs::FindInodeByDigest(const Digest& digest) {
+  for (uint32_t node_index = 0; node_index < info_.inode_count; ++node_index) {
+    Inode& inode = node_map_[node_index];
+    if (inode.header.IsAllocated() && inode.header.IsInode() && digest == inode.merkle_root_hash) {
+      return zx::ok(node_index);
     }
   }
-
-  if (!free_inode.has_value()) {
-    FX_LOGS(ERROR) << "No inode resources left. All " << info_.inode_count << " inodes are in use.";
-    return zx::error(ZX_ERR_NO_RESOURCES);
-  }
-
-  size_t bno = (*free_inode / kBlobfsInodesPerBlock) + NodeMapStartBlock(info_);
-  auto ino_block = std::make_unique<InodeBlock>(bno, &nodes_[*free_inode], digest);
-
-  info_.alloc_inode_count++;
-  return zx::ok(std::move(ino_block));
+  return zx::error(ZX_ERR_NOT_FOUND);
 }
 
 zx::status<> Blobfs::AddBlob(const BlobInfo& blob_info) {
@@ -660,53 +669,92 @@ zx::status<> Blobfs::AddBlob(const BlobInfo& blob_info) {
     return zx::error(ZX_ERR_INVALID_ARGS);
   }
 
-  auto inode_block = NewBlob(blob_info.GetDigest());
-  if (inode_block.is_error()) {
-    FX_LOGS(ERROR) << "error: Failed to allocate a new blob " << inode_block.status_value();
-    return inode_block.take_error();
+  // Make sure that the blob hasn't already been added.
+  if (auto existing_node = FindInodeByDigest(blob_info.GetDigest());
+      existing_node.status_value() != ZX_ERR_NOT_FOUND) {
+    if (existing_node.is_ok()) {
+      FX_LOGS(ERROR) << "Blob already exists " << blob_info.GetDigest().ToString();
+      return zx::error(ZX_ERR_ALREADY_EXISTS);
+    }
+    return existing_node.take_error();
   }
 
-  Inode* inode = inode_block->GetInode();
-  inode->blob_size = blob_layout.FileSize();
-  inode->block_count = blob_layout.TotalBlockCount();
-  inode->header.flags |=
-      kBlobFlagAllocated |
-      (blob_info.IsCompressed() ? HostCompressor::InodeHeaderCompressionFlags() : 0);
-
-  // TODO(fxbug.rev/74008) Currently, host-side tools can only generate single-extent blobs. This
-  // should be fixed.
-  if (inode->block_count > kBlockCountMax) {
-    FX_LOGS(ERROR) << "error: Blobs larger than " << kBlockCountMax
-                   << " blocks not yet implemented";
+  // Reserve blocks for the blob's data.
+  std::vector<ReservedExtent> extents;
+  if (zx_status_t status = allocator_->ReserveBlocks(blob_layout.TotalBlockCount(), &extents);
+      status != ZX_OK) {
+    FX_LOGS(ERROR) << "Failed to reserve enough blocks: " << status;
+    return zx::error(status);
+  }
+  if (extents.size() > kMaxBlobExtents) {
+    FX_LOGS(ERROR) << "Block reservation requires too many extents (" << extents.size() << " vs "
+                   << kMaxBlobExtents << " max)";
     return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
 
-  if (inode->block_count > 0) {
-    auto start_block = AllocateBlocks(inode->block_count);
-    if (start_block.is_error()) {
-      FX_LOGS(ERROR) << "error: No blocks available " << inode->block_count;
-      return start_block.take_error();
-    }
-    inode->extents[0].SetStart(start_block.value());
-    inode->extents[0].SetLength(static_cast<BlockCountType>(inode->block_count));
-    inode->extent_count = 1;
-  } else {
-    inode->extent_count = 0;
-  }
-
-  if (zx::status<> status = WriteData(inode, blob_info); status.is_error()) {
+  // Write out the blob's data.
+  if (zx::status<> status = WriteData(blob_info, extents); status.is_error()) {
     FX_LOGS(ERROR) << "Blobfs WriteData failed " << status.status_value();
     return status;
   }
-  if (zx::status<> status = WriteBitmap(inode->extents[0].Start(), inode->block_count);
-      status.is_error()) {
-    FX_LOGS(ERROR) << "Blobfs WriteBitmap failed " << status.status_value();
-    return status;
+
+  // Update the block bitmap and write it out.
+  for (const ReservedExtent& reserved_extent : extents) {
+    allocator_->MarkBlocksAllocated(reserved_extent);
+    if (zx::status<> status = WriteBlockBitmap(reserved_extent.extent()); status.is_error()) {
+      FX_LOGS(ERROR) << "Blobfs WriteBlockBitmap failed " << status.status_value();
+      return status;
+    }
   }
-  if (zx::status<> status = WriteNode(std::move(inode_block).value()); status.is_error()) {
-    FX_LOGS(ERROR) << "Blobfs WriteNode failed " << status.status_value();
-    return status;
+
+  // Reserve the inode + extent containers to hold all of the extents.
+  uint32_t node_count = NodePopulator::NodeCountForExtents(extents.size());
+  std::vector<ReservedNode> nodes;
+  if (zx_status_t status = allocator_->ReserveNodes(node_count, &nodes); status != ZX_OK) {
+    FX_LOGS(ERROR) << "Failed to reserve enough nodes: " << status;
+    return zx::error(status);
   }
+  std::vector<uint32_t> node_indices;
+  node_indices.reserve(nodes.size());
+  for (const auto& node : nodes) {
+    node_indices.push_back(node.index());
+  }
+
+  // Place the extents into the inode and container nodes.
+  auto on_node = [](uint32_t node_index) {};
+  auto on_extent = [](ReservedExtent& reserved_extent) {
+    return NodePopulator::IterationCommand::Continue;
+  };
+  NodePopulator node_populator(allocator_.get(), std::move(extents), std::move(nodes));
+  if (zx_status_t status = node_populator.Walk(on_node, on_extent); status != ZX_OK) {
+    FX_LOGS(ERROR) << "Failed to populate nodes with extents: " << status;
+    return zx::error(status);
+  }
+
+  // Fill in the inode.
+  auto inode = GetNode(node_indices[0]);
+  if (inode.is_error()) {
+    return inode.take_error();
+  }
+  inode->blob_size = blob_layout.FileSize();
+  inode->block_count = blob_layout.TotalBlockCount();
+  blob_info.GetDigest().CopyTo(inode->merkle_root_hash);
+  inode->header.flags |=
+      (blob_info.IsCompressed() ? HostCompressor::InodeHeaderCompressionFlags() : 0);
+
+  // Write out all nodes.
+  // The nodes can't be in written in |on_node| because the NodePopulator modifies the nodes after
+  // calling |on_node|.
+  for (uint32_t node_index : node_indices) {
+    if (zx::status<> status = WriteNode(node_index); status.is_error()) {
+      FX_LOGS(ERROR) << "Blobfs WriteNode failed " << status.status_value();
+      return status;
+    }
+  }
+
+  // Update and write out the Superblock.
+  info_.alloc_block_count += blob_layout.TotalBlockCount();
+  info_.alloc_inode_count += node_count;
   if (zx::status<> status = WriteInfo(); status.is_error()) {
     FX_LOGS(ERROR) << "Blobfs WriteInfo failed " << status.status_value();
     return status;
@@ -715,39 +763,25 @@ zx::status<> Blobfs::AddBlob(const BlobInfo& blob_info) {
   return zx::ok();
 }
 
-zx::status<uint64_t> Blobfs::AllocateBlocks(uint64_t block_count) {
-  size_t start_block;
-  if (zx_status_t status = block_map_.Find(false, 0, block_map_.size(), block_count, &start_block);
-      status != ZX_OK) {
-    return zx::error(status);
-  }
-  if (zx_status_t status = block_map_.Set(start_block, start_block + block_count);
-      status != ZX_OK) {
-    return zx::error(status);
-  }
-
-  info_.alloc_block_count += block_count;
-  return zx::ok(start_block);
-}
-
-zx::status<> Blobfs::WriteBitmap(uint64_t data_start_block, uint64_t data_block_count) {
-  uint64_t block_bitmap_start_block = data_start_block / kBlobfsBlockBits;
+zx::status<> Blobfs::WriteBlockBitmap(const Extent& extent) {
+  uint64_t block_bitmap_start_block = extent.Start() / kBlobfsBlockBits;
   uint64_t block_bitmap_end_block =
-      fbl::round_up(data_start_block + data_block_count, kBlobfsBlockBits) / kBlobfsBlockBits;
-  const void* bmstart = block_map_.StorageUnsafe()->GetData();
+      fbl::round_up(extent.Start() + extent.Length(), kBlobfsBlockBits) / kBlobfsBlockBits;
+  const void* bmstart = allocator_->GetBlockBitmapData();
   const void* data = fs::GetBlock(kBlobfsBlockSize, bmstart, block_bitmap_start_block);
   uint64_t absolute_block_number = block_map_start_block_ + block_bitmap_start_block;
   uint64_t block_count = block_bitmap_end_block - block_bitmap_start_block;
   return WriteBlocks(absolute_block_number, block_count, data);
 }
 
-zx::status<> Blobfs::WriteNode(std::unique_ptr<InodeBlock> ino_block) {
-  size_t inode_block_index =
-      (ino_block->GetBlockNumber() - NodeMapStartBlock(info_)) * kBlobfsInodesPerBlock;
-  return WriteBlock(ino_block->GetBlockNumber(), &nodes_[inode_block_index]);
+zx::status<> Blobfs::WriteNode(uint32_t node_index) {
+  uint64_t node_block = node_index / kBlobfsInodesPerBlock;
+  return WriteBlock(node_map_start_block_ + node_block,
+                    fs::GetBlock(kBlobfsBlockSize, node_map_.data(), node_block));
 }
 
-zx::status<> Blobfs::WriteData(Inode* inode, const BlobInfo& blob_info) {
+zx::status<> Blobfs::WriteData(const BlobInfo& blob_info,
+                               const std::vector<ReservedExtent>& extents) {
   const BlobLayout& blob_layout = blob_info.GetBlobLayout();
   if (blob_layout.TotalBlockCount() == 0) {
     // Nothing to write.
@@ -778,12 +812,24 @@ zx::status<> Blobfs::WriteData(Inode* inode, const BlobInfo& blob_info) {
     memcpy(buf.get() + merkle_offset, merkle_tree.data(), merkle_tree.size());
   }
 
-  uint32_t blob_start_block = data_start_block_ + inode->extents[0].Start();
-  if (zx::status<> status = WriteBlocks(blob_start_block, blob_layout.TotalBlockCount(), buf.get());
-      status.is_error()) {
-    FX_LOGS(ERROR) << "Failed to write a blob: " << status.status_value();
-    return status;
+  VectorExtentIterator extent_iter(extents);
+  uint64_t buf_block_offset = 0;
+  while (!extent_iter.Done()) {
+    zx::status<const Extent*> extent = extent_iter.Next();
+    if (extent.is_error()) {
+      return extent.take_error();
+    }
+
+    const void* extent_data = fs::GetBlock(GetBlockSize(), buf.get(), buf_block_offset);
+    if (zx::status<> status =
+            WriteBlocks(data_start_block_ + (*extent)->Start(), (*extent)->Length(), extent_data);
+        status.is_error()) {
+      FX_LOGS(ERROR) << "Failed to write extent data: " << status.status_value();
+      return status;
+    }
+    buf_block_offset += (*extent)->Length();
   }
+
   return zx::ok();
 }
 
@@ -805,28 +851,19 @@ zx::status<> Blobfs::WriteBlock(uint64_t block_number, const void* data) {
   return WriteBlocks(block_number, /*block_count=*/1, data);
 }
 
-zx::status<InodePtr> Blobfs::GetNode(uint32_t index) {
-  if (index >= info_.inode_count) {
-    return zx::error(ZX_ERR_INVALID_ARGS);
-  }
-  return zx::ok(InodePtr(&nodes_[index], InodePtrDeleter(this)));
+zx::status<InodePtr> Blobfs::GetNode(uint32_t node_index) {
+  return allocator_->GetNode(node_index);
 }
 
-// TODO(smklein): Consider deduplicating the host and target allocation systems.
 bool Blobfs::CheckBlocksAllocated(uint64_t start_block, uint64_t end_block,
                                   uint64_t* first_unset) const {
-  size_t unset_bit;
-  bool allocated = block_map_.Get(start_block, end_block, &unset_bit);
-  if (!allocated && first_unset != nullptr) {
-    *first_unset = static_cast<uint64_t>(unset_bit);
-  }
-  return allocated;
+  return allocator_->CheckBlocksAllocated(start_block, end_block, first_unset);
 }
 
 zx::status<> Blobfs::ReadBlocksForInode(uint32_t node_index, uint64_t start_block,
                                         uint64_t block_count, uint8_t* data) {
   zx::status<AllocatedExtentIterator> extent_iterator_or =
-      AllocatedExtentIterator::Create(this, node_index);
+      AllocatedExtentIterator::Create(GetNodeFinder(), node_index);
   if (extent_iterator_or.is_error()) {
     return extent_iterator_or.take_error();
   }

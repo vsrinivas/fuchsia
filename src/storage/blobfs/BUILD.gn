@@ -48,11 +48,14 @@ static_library("blobfs") {
     "fsck.h",
     "fsck_host.h",
     "host.h",
+    "iterator/node_populator.h",
     "mkfs.h",
     "mount.h",
     "node_finder.h",
   ]
   sources = [
+    "allocator/base_allocator.cc",
+    "allocator/base_allocator.h",
     "allocator/extent_reserver.cc",
     "allocator/extent_reserver.h",
     "allocator/node_reserver.cc",
@@ -78,6 +81,7 @@ static_library("blobfs") {
     "iterator/block_iterator.h",
     "iterator/block_iterator_provider.h",
     "iterator/extent_iterator.h",
+    "iterator/node_populator.cc",
     "iterator/vector_extent_iterator.cc",
     "iterator/vector_extent_iterator.h",
   ]
@@ -92,6 +96,7 @@ static_library("blobfs") {
     "//src/storage/lib/watchdog",
     "//zircon/public/lib/bitmap",
     "//zircon/public/lib/zxc",
+    "//zircon/system/ulib/id_allocator",
     "//zircon/system/ulib/range",
     "//zircon/system/ulib/storage/buffer",
   ]
@@ -134,7 +139,6 @@ static_library("blobfs") {
       "format.cc",
       "fsck.cc",
       "health_check_service.cc",
-      "iterator/node_populator.cc",
       "metrics.cc",
       "mount.cc",
       "pager/page_watcher.cc",
@@ -178,13 +182,14 @@ static_library("blobfs") {
       "//zircon/system/ulib/fidl-async:fidl-async-cpp",
       "//zircon/system/ulib/fidl-utils",
       "//zircon/system/ulib/fzl",
-      "//zircon/system/ulib/id_allocator",
       "//zircon/system/ulib/trace",
       "//zircon/system/ulib/trace-engine",
       "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
     ]
   } else {
     sources += [
+      "allocator/host_allocator.cc",
+      "allocator/host_allocator.h",
       "fsck_host.cc",
       "host.cc",
     ]

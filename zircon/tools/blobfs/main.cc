@@ -15,11 +15,15 @@
 #include <utility>
 #include <vector>
 
+#include <fbl/algorithm.h>
+#include <fbl/unique_fd.h>
+
 #include "blobfs.h"
 #include "src/storage/blobfs/blob_layout.h"
 #include "src/storage/blobfs/format.h"
 #include "src/storage/blobfs/fsck_host.h"
 #include "src/storage/blobfs/host.h"
+#include "src/storage/blobfs/iterator/node_populator.h"
 
 namespace {
 
@@ -254,11 +258,16 @@ zx_status_t BlobfsCreator::CalculateRequiredSize(off_t* out) {
   auto it = std::unique(blob_info_list_.begin(), blob_info_list_.end(), compare);
   blob_info_list_.erase(it, blob_info_list_.end());
 
+  uint64_t required_node_count = 0;
   for (const auto& blob_info : blob_info_list_) {
-    data_blocks_ += blob_info.GetBlobLayout().TotalBlockCount();
+    uint32_t block_count = blob_info.GetBlobLayout().TotalBlockCount();
+    data_blocks_ += block_count;
+    uint64_t extent_count =
+        fbl::round_up(block_count, blobfs::kBlockCountMax) / blobfs::kBlockCountMax;
+    required_node_count += blobfs::NodePopulator::NodeCountForExtents(extent_count);
   }
 
-  required_inodes_ = std::max(blobfs::kBlobfsDefaultInodeCount, uint64_t{blob_info_list_.size()});
+  required_inodes_ = std::max(blobfs::kBlobfsDefaultInodeCount, required_node_count);
 
   blobfs::Superblock info;
   // Initialize enough of |info| to be able to compute the number of bytes the image will occupy.
