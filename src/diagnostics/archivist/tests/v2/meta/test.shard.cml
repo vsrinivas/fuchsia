@@ -13,10 +13,6 @@
             rights: [ "r*" ],
             path: "/config/data",
         },
-        {
-            storage: "data",
-            path: "/data",
-        },
     ],
     expose: [
         {

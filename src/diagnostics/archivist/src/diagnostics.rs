@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use {
-    crate::archive::EventFileGroupStatsMap,
     anyhow::Error,
     fuchsia_component::server::{ServiceFs, ServiceObjTrait},
     fuchsia_inspect::{
@@ -12,48 +11,12 @@ use {
         UintLinearHistogramProperty, UintProperty,
     },
     fuchsia_zircon::{self as zx, Duration},
-    lazy_static::lazy_static,
     parking_lot::Mutex,
     std::collections::BTreeMap,
     std::sync::Arc,
 };
 
-lazy_static! {
-    static ref GROUPS: Arc<Mutex<Groups>> = Arc::new(Mutex::new(Groups::new(
-        component::inspector().root().create_child("archived_events")
-    )));
-}
-
 const INSPECTOR_SIZE: usize = 2 * 1024 * 1024 /* 2MB */;
-
-enum GroupData {
-    Node(Node),
-    Count(UintProperty),
-}
-
-struct Groups {
-    node: Node,
-    children: Vec<GroupData>,
-}
-
-impl Groups {
-    fn new(node: Node) -> Self {
-        Groups { node, children: vec![] }
-    }
-
-    fn replace(&mut self, stats: &EventFileGroupStatsMap) {
-        self.children.clear();
-        for (name, stat) in stats {
-            let node = self.node.create_child(name);
-            let files = node.create_uint("file_count", stat.file_count as u64);
-            let size = node.create_uint("size_in_bytes", stat.size);
-
-            self.children.push(GroupData::Node(node));
-            self.children.push(GroupData::Count(files));
-            self.children.push(GroupData::Count(size));
-        }
-    }
-}
 
 pub fn init() {
     component::init_inspector_with_size(INSPECTOR_SIZE);
@@ -68,10 +31,6 @@ pub fn serve(service_fs: &mut ServiceFs<impl ServiceObjTrait>) -> Result<(), Err
     component::serve_inspect_stats();
     inspect_runtime::serve(component::inspector(), service_fs)?;
     Ok(())
-}
-
-pub(crate) fn set_group_stats(stats: &EventFileGroupStatsMap) {
-    GROUPS.lock().replace(stats);
 }
 
 pub struct AccessorStats {
@@ -532,9 +491,7 @@ impl Drop for ConnectionStats {
 mod test {
     use {
         super::*,
-        crate::archive::EventFileGroupStats,
         fuchsia_inspect::{assert_data_tree, health::Reporter, testing::AnyProperty, Inspector},
-        std::iter::FromIterator,
     };
 
     #[test]
@@ -564,30 +521,6 @@ mod test {
             "fuchsia.inspect.Health": {
                 status: "OK",
                 start_timestamp_nanos: AnyProperty,
-            }
-        });
-    }
-
-    #[test]
-    fn group_stats() {
-        let inspector = Inspector::new();
-        let mut group = Groups::new(inspector.root().create_child("archived_events"));
-        group.replace(&EventFileGroupStatsMap::from_iter(vec![
-            ("a/b".to_string(), EventFileGroupStats { file_count: 1, size: 2 }),
-            ("c/d".to_string(), EventFileGroupStats { file_count: 3, size: 4 }),
-        ]));
-
-        assert_data_tree!(inspector,
-        root: contains {
-            archived_events: {
-               "a/b": {
-                    file_count: 1u64,
-                    size_in_bytes: 2u64
-               },
-               "c/d": {
-                   file_count: 3u64,
-                   size_in_bytes: 4u64
-               }
             }
         });
     }

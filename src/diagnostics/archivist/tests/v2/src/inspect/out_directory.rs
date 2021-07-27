@@ -37,8 +37,7 @@ async fn verify_out(hub_out_path: &Path) -> Result<(), Error> {
     // archivist but unfortunately snapshot is the only supported mode at the moment.
     loop {
         if let Ok(mut result) = read_entries(hub_out_path).await {
-            let mut expected =
-                vec!["archive".to_string(), "diagnostics".to_string(), "svc".to_string()];
+            let mut expected = vec!["diagnostics".to_string(), "svc".to_string()];
             result.sort();
             expected.sort();
             if result == expected {
@@ -51,9 +50,6 @@ async fn verify_out(hub_out_path: &Path) -> Result<(), Error> {
     let result = read_entries(&hub_out_path.join("diagnostics")).await.unwrap();
     let expected = vec!["fuchsia.inspect.Tree".to_string()];
     assert_eq!(expected, result,);
-
-    let diagnostics_entries = read_entries(&hub_out_path.join("archive")).await.unwrap();
-    assert_eq!(diagnostics_entries.len(), 1);
 
     Ok(())
 }

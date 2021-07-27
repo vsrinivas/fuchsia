@@ -5,17 +5,13 @@
 use {
     crate::{
         accessor::ArchiveAccessor,
-        archive, configs, constants,
-        constants::INSPECT_LOG_WINDOW_SIZE,
+        configs, constants,
         container::ComponentIdentity,
         diagnostics,
         events::{
             source_registry::EventSourceRegistry,
             sources::{StaticEventStream, UnattributedLogSinkSource},
-            types::{
-                ComponentEvent, ComponentEventStream, DiagnosticsReadyEvent, EventMetadata,
-                EventSource,
-            },
+            types::{ComponentEvent, ComponentEventStream, DiagnosticsReadyEvent, EventSource},
         },
         logs::{budget::BudgetManager, redact::Redactor, socket::LogMessageSocket},
         pipeline::Pipeline,
@@ -30,10 +26,9 @@ use {
     fuchsia_async::{self as fasync, Task},
     fuchsia_component::{
         client::connect_to_protocol,
-        server::{ServiceFs, ServiceObj, ServiceObjTrait},
+        server::{ServiceFs, ServiceObj},
     },
     fuchsia_inspect::{component, health::Reporter},
-    fuchsia_inspect_contrib::{inspect_log, nodes::BoundedListNode},
     fuchsia_runtime::{take_startup_handle, HandleInfo, HandleType},
     fuchsia_zircon as zx,
     futures::{
@@ -41,12 +36,8 @@ use {
         future::{self, abortable},
         prelude::*,
     },
-    io_util,
     parking_lot::RwLock,
-    std::{
-        path::{Path, PathBuf},
-        sync::Arc,
-    },
+    std::{path::Path, sync::Arc},
     tracing::{debug, error, info, warn},
 };
 
@@ -113,28 +104,13 @@ impl ArchivistBuilder {
         let mut fs = ServiceFs::new();
         diagnostics::serve(&mut fs)?;
 
-        let writer = archivist_configuration.archive_path.as_ref().and_then(|archive_path| {
-            maybe_create_archive(&mut fs, archive_path)
-                .or_else(|e| {
-                    // TODO(fxbug.dev/57271): this is not expected in regular builds of the archivist. It's
-                    // happening when starting the zircon_guest (fx shell guest launch zircon_guest)
-                    // We'd normally fail if we couldn't create the archive, but for now we include
-                    // a warning.
-                    warn!(
-                        path = %archive_path.display(), ?e,
-                        "Failed to create archive"
-                    );
-                    Err(e)
-                })
-                .ok()
-        });
-
         let pipelines_node = diagnostics::root().create_child("pipelines");
         let feedback_pipeline_node = pipelines_node.create_child("feedback");
         let legacy_pipeline_node = pipelines_node.create_child("legacy_metrics");
-        let pipelines_path = &archivist_configuration.pipelines_path;
-        let feedback_path = format!("{}/feedback", pipelines_path.display());
-        let legacy_metrics_path = format!("{}/legacy_metrics", pipelines_path.display());
+        let feedback_path =
+            format!("{}/feedback", archivist_configuration.pipelines_path.display());
+        let legacy_metrics_path =
+            format!("{}/legacy_metrics", archivist_configuration.pipelines_path.display());
         let mut feedback_config = configs::PipelineConfig::from_directory(
             &feedback_path,
             configs::EmptyBehavior::DoNotFilter,
@@ -205,7 +181,6 @@ impl ArchivistBuilder {
         // diagnostics data N times if we have N pipelines. We should be
         // storing a single copy regardless of the number of pipelines.
         let archivist = Archivist::new(
-            archivist_configuration,
             vec![
                 all_access_pipeline.clone(),
                 feedback_pipeline.clone(),
@@ -213,7 +188,6 @@ impl ArchivistBuilder {
             ],
             diagnostics_repo,
             logs_budget,
-            writer,
         )?;
 
         let all_accessor_stats = Arc::new(diagnostics::AccessorStats::new(
@@ -535,10 +509,6 @@ fn maybe_remove_component(
 /// that are populated by the archivist server and exposed in the
 /// service sessions.
 pub struct Archivist {
-    /// Writer for the archive. If a path was not configured it will be `None`.
-    writer: Option<archive::ArchiveWriter>,
-    log_node: BoundedListNode,
-    configuration: configs::Config,
     diagnostics_pipelines: Arc<Vec<Arc<RwLock<Pipeline>>>>,
     pub diagnostics_repo: DataRepo,
 
@@ -548,23 +518,11 @@ pub struct Archivist {
 
 impl Archivist {
     pub fn new(
-        configuration: configs::Config,
         diagnostics_pipelines: Vec<Arc<RwLock<Pipeline>>>,
         diagnostics_repo: DataRepo,
         logs_budget: BudgetManager,
-        writer: Option<archive::ArchiveWriter>,
     ) -> Result<Self, Error> {
-        let mut log_node = BoundedListNode::new(
-            diagnostics::root().create_child("events"),
-            INSPECT_LOG_WINDOW_SIZE,
-        );
-
-        inspect_log!(log_node, event: "Archivist started");
-
         Ok(Archivist {
-            writer,
-            log_node,
-            configuration,
             diagnostics_pipelines: Arc::new(diagnostics_pipelines),
             diagnostics_repo,
             logs_budget,
@@ -577,11 +535,7 @@ impl Archivist {
         log_sender: mpsc::UnboundedSender<Task<()>>,
     ) {
         while let Some(event) = events.next().await {
-            let res = self.process_event(event, &log_sender).await;
-            res.unwrap_or_else(|e| {
-                inspect_log!(self.log_node, event: "Failed to log event", result: format!("{:?}", e));
-                error!(?e, "Failed to log event");
-            });
+            self.process_event(event, &log_sender).await;
         }
     }
 
@@ -643,28 +597,23 @@ impl Archivist {
         &mut self,
         event: ComponentEvent,
         log_sender: &mpsc::UnboundedSender<Task<()>>,
-    ) -> Result<(), Error> {
+    ) {
         match event {
             ComponentEvent::Start(start) => {
-                let archived_metadata = start.metadata.clone();
                 debug!(identity = %start.metadata.identity, "Adding new component.");
                 self.add_new_component(start.metadata.identity, start.metadata.timestamp, None);
-                self.archive_event("START", archived_metadata).await
             }
             ComponentEvent::Running(running) => {
-                let archived_metadata = running.metadata.clone();
                 debug!(identity = %running.metadata.identity, "Component is running.");
                 self.add_new_component(
                     running.metadata.identity,
                     running.metadata.timestamp,
                     Some(running.component_start_time),
                 );
-                self.archive_event("RUNNING", archived_metadata.clone()).await
             }
             ComponentEvent::Stop(stop) => {
                 debug!(identity = %stop.metadata.identity, "Component stopped");
                 self.mark_component_stopped(&stop.metadata.identity);
-                self.archive_event("STOP", stop.metadata).await
             }
             ComponentEvent::DiagnosticsReady(diagnostics_ready) => {
                 debug!(
@@ -672,144 +621,14 @@ impl Archivist {
                     "Diagnostics directory is ready.",
                 );
                 self.populate_inspect_repo(diagnostics_ready).await;
-                Ok(())
             }
             ComponentEvent::LogSinkRequested(event) => {
                 let data_repo = &self.diagnostics_repo;
                 let container = data_repo.write().get_log_container(event.metadata.identity);
                 container.handle_log_sink(event.requests, log_sender.clone());
-                Ok(())
             }
         }
     }
-
-    async fn archive_event(
-        &mut self,
-        _event_name: &str,
-        _event_data: EventMetadata,
-    ) -> Result<(), Error> {
-        let writer = if let Some(w) = self.writer.as_mut() {
-            w
-        } else {
-            return Ok(());
-        };
-
-        let max_archive_size_bytes = self.configuration.max_archive_size_bytes;
-        let max_event_group_size_bytes = self.configuration.max_event_group_size_bytes;
-
-        // TODO(fxbug.dev/53939): Get inspect data from repository before removing
-        // for post-mortem inspection.
-        //let log = writer.get_log().new_event(event_name, event_data.component_id);
-        // if let Some(data_map) = event_data.component_data_map {
-        //     for (path, object) in data_map {
-        //         match object {
-        //             InspectData::Empty
-        //             | InspectData::DeprecatedFidl(_)
-        //             | InspectData::Tree(_, None) => {}
-        //             InspectData::Vmo(vmo) | InspectData::Tree(_, Some(vmo)) => {
-        //                 let mut contents = vec![0u8; vmo.get_size()? as usize];
-        //                 vmo.read(&mut contents[..], 0)?;
-
-        //                 // Truncate the bytes down to the last non-zero 4096-byte page of data.
-        //                 // TODO(fxbug.dev/4703): Handle truncation of VMOs without reading the whole thing.
-        //                 let mut last_nonzero = 0;
-        //                 for (i, v) in contents.iter().enumerate() {
-        //                     if *v != 0 {
-        //                         last_nonzero = i;
-        //                     }
-        //                 }
-        //                 if last_nonzero % 4096 != 0 {
-        //                     last_nonzero = last_nonzero + 4096 - last_nonzero % 4096;
-        //                 }
-        //                 contents.resize(last_nonzero, 0);
-
-        //                 log = log.add_event_file(path, &contents);
-        //             }
-        //             InspectData::File(contents) => {
-        //                 log = log.add_event_file(path, &contents);
-        //             }
-        //         }
-        //     }
-        // }
-
-        let current_group_stats = writer.get_log().get_stats();
-
-        if current_group_stats.size >= max_event_group_size_bytes {
-            let (path, stats) = writer.rotate_log()?;
-            inspect_log!(self.log_node, event:"Rotated log",
-                     new_path: path.to_string_lossy().to_string());
-            writer.add_group_stat(&path, stats);
-        }
-
-        let archived_size = writer.archived_size();
-        let mut current_archive_size = current_group_stats.size + archived_size;
-        if current_archive_size > max_archive_size_bytes {
-            let dates = match writer.get_archive().get_dates() {
-                Ok(dates) => dates,
-                Err(e) => {
-                    warn!("Garbage collection failure");
-                    inspect_log!(self.log_node, event: "Failed to get dates for garbage collection",
-                             reason: format!("{:?}", e));
-                    vec![]
-                }
-            };
-
-            for date in dates {
-                let groups = match writer.get_archive().get_event_file_groups(&date) {
-                    Ok(groups) => groups,
-                    Err(e) => {
-                        warn!("Garbage collection failure");
-                        inspect_log!(self.log_node, event: "Failed to get event file",
-                                 date: &date,
-                                 reason: format!("{:?}", e));
-                        vec![]
-                    }
-                };
-
-                for group in groups {
-                    let path = group.log_file_path();
-                    match group.delete() {
-                        Err(e) => {
-                            inspect_log!(self.log_node, event: "Failed to remove group",
-                                 path: &path,
-                                 reason: format!(
-                                     "{:?}", e));
-                            continue;
-                        }
-                        Ok(stat) => {
-                            current_archive_size -= stat.size;
-                            writer.remove_group_stat(&PathBuf::from(&path));
-                            inspect_log!(self.log_node, event: "Garbage collected group",
-                                     path: &path,
-                                     removed_files: stat.file_count as u64,
-                                     removed_bytes: stat.size as u64);
-                        }
-                    };
-
-                    if current_archive_size < max_archive_size_bytes {
-                        return Ok(());
-                    }
-                }
-            }
-        }
-
-        Ok(())
-    }
-}
-
-fn maybe_create_archive<ServiceObjTy: ServiceObjTrait>(
-    fs: &mut ServiceFs<ServiceObjTy>,
-    archive_path: &PathBuf,
-) -> Result<archive::ArchiveWriter, Error> {
-    let writer = archive::ArchiveWriter::open(archive_path.clone())?;
-    fs.add_remote(
-        "archive",
-        io_util::open_directory_in_namespace(
-            &archive_path.to_string_lossy(),
-            io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
-        )?,
-    );
-    Ok(writer)
 }
 
 #[cfg(test)]
@@ -826,9 +645,6 @@ mod tests {
 
     fn init_archivist() -> ArchivistBuilder {
         let config = configs::Config {
-            archive_path: None,
-            max_archive_size_bytes: 10,
-            max_event_group_size_bytes: 10,
             num_threads: 1,
             logs: configs::LogsConfig {
                 max_cached_original_bytes: LEGACY_DEFAULT_MAXIMUM_CACHED_LOGS_BYTES,

@@ -67,7 +67,6 @@ rustc_library("lib") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:byteorder",
-    "//third_party/rust_crates:chrono",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:itertools",
     "//third_party/rust_crates:lazy_static",
@@ -90,7 +89,6 @@ rustc_library("lib") {
 
   sources = [
     "src/accessor.rs",
-    "src/archive.rs",
     "src/archivist.rs",
     "src/configs.rs",
     "src/constants.rs",

@@ -22,15 +22,6 @@ fn default_pipelines_path() -> PathBuf {
 
 #[derive(Deserialize, Debug, PartialEq, Eq)]
 pub struct Config {
-    /// Path to which archived data will be written. No storage will be performed if left empty.
-    pub archive_path: Option<PathBuf>,
-
-    /// The maximum size the archive can be.
-    pub max_archive_size_bytes: u64,
-
-    /// The maximum size of a single event file group.
-    pub max_event_group_size_bytes: u64,
-
     /// Number of threads the archivist has available to use.
     pub num_threads: usize,
 
@@ -238,16 +229,12 @@ mod tests {
                   "logs": {
                     "max_cached_original_bytes": 500
                   },
-                  "max_archive_size_bytes": 10485760,
-                  "max_event_group_size_bytes": 262144,
                   "num_threads": 4
                 }"#;
 
         write_test_config_to_file(&test_config_file_name, test_config);
         let parsed_config = parse_config(&test_config_file_name).unwrap();
         assert_eq!(parsed_config.logs.max_cached_original_bytes, 500);
-        assert_eq!(parsed_config.max_archive_size_bytes, 10485760);
-        assert_eq!(parsed_config.max_event_group_size_bytes, 262144);
         assert_eq!(parsed_config.num_threads, 4);
     }
 
@@ -263,16 +250,12 @@ mod tests {
                   "logs": {
                     "max_cached_original_bytes": 500
                   },
-                  "max_archive_size_bytes": 10485760,
-                  "max_event_group_size_bytes": 262144,
                   "num_threads": 1
                 }"#;
 
         write_test_config_to_file(&test_config_file_name, test_config);
         let parsed_config = parse_config(&test_config_file_name).unwrap();
         assert_eq!(parsed_config.logs.max_cached_original_bytes, 500);
-        assert_eq!(parsed_config.max_archive_size_bytes, 10485760);
-        assert_eq!(parsed_config.max_event_group_size_bytes, 262144);
         assert_eq!(parsed_config.num_threads, 1);
     }
 
@@ -285,7 +268,7 @@ mod tests {
         let test_config_file_name = config_path.join("test_config.json");
         let test_config = r#"
                 {
-                  "max_archive_size_bytes": 10485760,
+                  "num_threads": 4,
                   "bad_field": "hello world",
                 }"#;
 

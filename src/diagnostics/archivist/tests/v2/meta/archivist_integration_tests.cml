@@ -30,11 +30,6 @@
             subdir: "archivist",
         },
         {
-            storage: "data",
-            from: "parent",
-            to: [ "#fuchsia_component_test_collection" ],
-        },
-        {
             event: "capability_requested",
             from: "framework",
             to: "#fuchsia_component_test_collection",
