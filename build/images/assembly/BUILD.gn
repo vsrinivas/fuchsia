@@ -64,240 +64,165 @@ group("assembly") {
 
 #####
 #
-# Labels used internally in this file
-labels = {
-  board_config = "board_config.json"
+# File Paths used by Image Assembly
+#
+#  These are all the files that are inputs, outputs, or intermediates that are
+#  used by the actions in this file.
+#
+files = {
+  outdir = target_out_dir
+  gendir = "${target_out_dir}/gen"
+
+  product_config = "${outdir}/product_config.json"
+  board_config = "${outdir}/board_config.json"
+
+  base_static_packages = "${gendir}/data/static_packages"
+  base_cache_packages = "${gendir}/data/cache_packages"
+  base_meta_package = "${gendir}/system_image/meta/package"
+
+  base_package = "${outdir}/base.far"
+  zbi = "${outdir}/fuchsia.zbi"
+  zbi_signed = "${outdir}/fuchsia.zbi.signed"
+  zbi_manifest = "${gendir}/zbi.json"
+  vbmeta = "${outdir}/fuchsia.vbmeta"
+
+  update_package = "${outdir}/update.far"
+  update_meta_package = "${gendir}/update/meta/package"
+
+  blobfs = "${outdir}/blob.blk"
+
+  fvm = "${outdir}/fvm.blk"
+  fvm_sparse = "${outdir}/fvm.sparse.blk"
+  fvm_blob_sparse = "${outdir}/fvm.blob.sparse.blk"
+  fvm_fastboot = "${outdir}/fvm.fastboot.blk"
 }
 
-# Labels whose outputs are used by Image Assembly, and are deps in this file
-dep_labels = {
-  ####
-  # External labels whose outputs are compared against for validity (temporary)
-  #
-  system_image_pkg = "//build/images:system_image.meta"
+old_labels = {
+  base_package = "//build/images:system_image.meta"
 
   # `bootfs_only` is only set by 'bringup', which uses different assembly
   # targets and differently named files in the previous assembly implementation
   # than `core` and above.  That difference should go away as
   # //build/images/BUILD.gn is ported over to using ffx assembly.
   if (bootfs_only) {
-    fuchsia_zbi = "//build/images/bringup"
-    fuchsia_zbi_manifest = fuchsia_zbi
+    zbi = "//build/images/bringup"
+    zbi_manifest = zbi
 
     if (use_vbmeta) {
-      fuchsia_vbmeta = "//build/images/bringup:bringup.vbmeta"
+      vbmeta = "//build/images/bringup:bringup.vbmeta"
     }
   } else {
     if (custom_signing_script != "" || use_vboot) {
-      fuchsia_zbi = "//build/images:signed"
+      zbi = "//build/images:signed"
     } else {
-      fuchsia_zbi = "//build/images:fuchsia"
+      zbi = "//build/images:fuchsia"
     }
-    fuchsia_zbi_manifest = "//build/images:fuchsia_unverified"
+    zbi_manifest = "//build/images:fuchsia_unverified"
 
     if (use_vbmeta) {
-      fuchsia_vbmeta = "//build/images:fuchsia.vbmeta"
+      vbmeta = "//build/images:fuchsia.vbmeta"
     }
   }
-  prev_update_pkg = "//build/images:update.meta"
-  prev_blobfs = "//build/images:blob.blk"
-  prev_fvm = "//build/images:fvm.blk"
-  prev_sparse_fvm = "//build/images:fvm.sparse.blk"
-  prev_sparse_blob_fvm = "//build/images:fvm.blob.sparse.blk"
-  prev_fastboot_fvm = "//build/images:fvm.fastboot.blk"
 
-  ####
-  # Internal labels, in "dep" format:
-  #
-  board_config = ":" + labels.board_config
+  update_package = "//build/images:update.meta"
+  blobfs = "//build/images:blob.blk"
+  fvm = "//build/images:fvm.blk"
+  fvm_sparse = "//build/images:fvm.sparse.blk"
+  fvm_blob_sparse = "//build/images:fvm.blob.sparse.blk"
+  fvm_fastboot = "//build/images:fvm.fastboot.blk"
 }
 
-#####
-#
-# File Paths used by Image Assembly
-#
-#  These are all the files that are inputs, outputs, or intermediates that are
-#  used by the actions in this file.
-#
-#  files.foo = The "inputs" or "outputs" usage of the file "foo"
-#  files_args.foo = The same path, but rebased on $root_build_dir, for passing
-#                   as a tool argument.
-#
-files = {
-  assembly_config = "${target_out_dir}/config.json"
-  board_config = "${target_out_dir}/board_config.json"
-
-  # The working directories for the ffx assembly image task.
-  gendir = "${target_out_dir}/gen"
-  outdir = target_out_dir
-
-  # Intermediates used by base package creation.
-  gen_base_static_packages = "${gendir}/data/static_packages"
-  gen_base_cache_packages = "${gendir}/data/cache_packages"
-  gen_base_meta_package = "${gendir}/system_image/meta/package"
-
-  # The base package output.
-  base_pkg = "${target_out_dir}/base.far"
-
-  # The ZBI output
-  zbi = "${target_out_dir}/fuchsia.zbi"
-  zbi_signed = "${zbi}.signed"
-
-  # ZBI output manifest
-  zbi_manifest = "${target_out_dir}/gen/zbi.json"
-
-  # The vbmeta (if created)
-  vbmeta = "${target_out_dir}/fuchsia.vbmeta"
-
-  # Intermediates used by update package creation.
-  gen_update_meta_package = "${gendir}/update/meta/package"
-
-  # The update package output
-  update_pkg = "${target_out_dir}/update.far"
-
-  # The BlobFS output
-  blobfs = "${target_out_dir}/blob.blk"
-
-  # The FVM output
-  fvm = "${target_out_dir}/fvm.blk"
-  sparse_fvm = "${target_out_dir}/fvm.sparse.blk"
-  sparse_blob_fvm = "${target_out_dir}/fvm.blob.sparse.blk"
-  fastboot_fvm = "${target_out_dir}/fvm.fastboot.blk"
-
-  #####
-  # Files used for validation against external label outputs (temporary)
-  #
-
-  # The base package re-extraction (temporary) output dir
-  extracted_base_pkg = "${target_out_dir}/extracted_base_pkg"
-
-  # The extracted base package contents
-  extracted_base_meta_contents = "${extracted_base_pkg}/meta/contents"
-  extracted_base_meta_package = "${extracted_base_pkg}/meta/package"
-
-  # The system-image package itself (from //build/images:system-image.meta)
-  system_image_pkg =
-      get_label_info(dep_labels.system_image_pkg, "target_out_dir") +
-      "/system_image.meta/meta.far"
-
-  # The system-image package re-extraction (temporary) output dir
-  extracted_sysimg_pkg = "${target_out_dir}/extracted_sysimg_pkg"
-
-  # The extracted base package contents
-  extracted_sysimg_meta_contents = "${extracted_sysimg_pkg}/meta/contents"
-  extracted_sysimg_meta_package = "${extracted_sysimg_pkg}/meta/package"
+old_files = {
+  base_package = get_label_info(old_labels.base_package, "target_out_dir") +
+                 "/system_image.meta/meta.far"
 
   # bootfs_only is only set by 'bringup', which uses different assembly targets
   # in the previous assembly implements.
   if (bootfs_only) {
     # The zbi created by //build/images/bringup
-    fuchsia_zbi = "${root_build_dir}/bringup.zbi"
-    fuchsia_zbi_manifest = "${fuchsia_zbi}.json"
+    zbi = "${root_build_dir}/bringup.zbi"
+    zbi_manifest = "${zbi}.json"
 
     # The vbmeta for bringup.
-    fuchsia_vbmeta = "${root_build_dir}/bringup.vbmeta"
-    fuchsia_vbmeta_salt = "${fuchsia_vbmeta}.salt"
+    vbmeta = "${root_build_dir}/bringup.vbmeta"
+    vbmeta_salt = "${vbmeta}.salt"
   } else {
     if (custom_signing_script != "") {
       # The vendor-processed zbi created by //build/images:signed
-      fuchsia_zbi = "${root_build_dir}/fuchsia.zbi.signed"
+      zbi = "${root_build_dir}/fuchsia.zbi.signed"
     } else if (use_vboot) {
       # The vboot-processed zbi created by //build/images:signed
-      fuchsia_zbi = "${root_build_dir}/fuchsia.zbi.vboot"
+      zbi = "${root_build_dir}/fuchsia.zbi.vboot"
     } else {
       # The zbi created by //build/images:fuchsia
-      fuchsia_zbi = "${root_build_dir}/fuchsia.zbi"
+      zbi = "${root_build_dir}/fuchsia.zbi"
     }
-    fuchsia_zbi_manifest = "${root_build_dir}/fuchsia_unverified.zbi.json"
+    zbi_manifest = "${root_build_dir}/fuchsia_unverified.zbi.json"
 
-    # The vbmeta for fuchsia_zbi
-    fuchsia_vbmeta = "${root_build_dir}/fuchsia.vbmeta"
-    fuchsia_vbmeta_salt = "${fuchsia_vbmeta}.salt"
+    # The vbmeta for zbi
+    vbmeta = "${root_build_dir}/fuchsia.vbmeta"
+    vbmeta_salt = "${vbmeta}.salt"
   }
 
-  # The update package re-extraction (temporary) output dir
-  extracted_update_pkg = "${target_out_dir}/extracted_update_pkg"
-
-  # The extracted update package contents
-  extracted_update_meta_contents = "${extracted_update_pkg}/meta/contents"
-  extracted_update_meta_package = "${extracted_update_pkg}/meta/package"
-
-  # The previous update package created by //build/images:fuchsia.vbmeta
-  prev_update_pkg = "${root_build_dir}/obj/build/images/update.meta/meta.far"
-
-  # The previous update package re-extraction (temporary) output dir
-  extracted_prev_update_pkg = "${target_out_dir}/extracted_fuchsia_update_pkg"
-
-  # The extracted previous update package contents
-  extracted_prev_update_meta_contents =
-      "${extracted_prev_update_pkg}/meta/contents"
-  extracted_prev_update_meta_package =
-      "${extracted_prev_update_pkg}/meta/package"
-
-  # The blobfs created by //build/images:blob.blk
-  prev_blobfs = "${root_build_dir}/obj/build/images/blob.blk"
-
-  # The minfs created by //build/images:data.blk
-  prev_minfs = "${root_build_dir}/obj/build/images/data.blk"
-
-  # The fvms created by the GN build.
-  prev_fvm = "${root_build_dir}/obj/build/images/fvm.blk"
-  prev_sparse_fvm = "${root_build_dir}/obj/build/images/fvm.sparse.blk"
-  prev_sparse_blob_fvm =
-      "${root_build_dir}/obj/build/images/fvm.blob.sparse.blk"
-  prev_fastboot_fvm = "${root_build_dir}/obj/build/images/fvm.fastboot.blk"
+  update_package = "${root_build_dir}/obj/build/images/update.meta/meta.far"
+  blobfs = "${root_build_dir}/obj/build/images/blob.blk"
+  minfs = "${root_build_dir}/obj/build/images/data.blk"
+  fvm = "${root_build_dir}/obj/build/images/fvm.blk"
+  fvm_sparse = "${root_build_dir}/obj/build/images/fvm.sparse.blk"
+  fvm_blob_sparse = "${root_build_dir}/obj/build/images/fvm.blob.sparse.blk"
+  fvm_fastboot = "${root_build_dir}/obj/build/images/fvm.fastboot.blk"
 }
 
-#####
-# File path arguments used by Image Assembly (rebased for tool usage)
-#
-# This are most of the above files, rebased on root_build_dir, for use when
-# calling tools with the paths.
-#
-# This is the hard way of doing `file_args = rebase_path(files, root_build_dir)`
-file_args = {
-  assembly_config = rebase_path(files.assembly_config, root_build_dir)
-  board_config = rebase_path(files.board_config, root_build_dir)
+if (uses_base_package) {
+  extracted_files = {
+    outdir = target_out_dir
+    gendir = "${target_out_dir}/gen"
 
+    base_package_dir = "${outdir}/extracted_base_pkg"
+    base_meta_contents = "${base_package_dir}/meta/contents"
+    base_meta_package = "${base_package_dir}/meta/package"
+
+    # The system-image package re-extraction (temporary) output dir
+    old_base_package_dir = "${outdir}/extracted_old_base_pkg"
+    old_base_meta_contents = "${old_base_package_dir}/meta/contents"
+    old_base_meta_package = "${old_base_package_dir}/meta/package"
+
+    update_package_dir = "${outdir}/extracted_update_pkg"
+    update_meta_contents = "${update_package_dir}/meta/contents"
+    update_meta_package = "${update_package_dir}/meta/package"
+
+    old_update_package_dir = "${target_out_dir}/extracted_old_update_pkg"
+    old_update_meta_contents = "${old_update_package_dir}/meta/contents"
+    old_update_meta_package = "${old_update_package_dir}/meta/package"
+  }
+}
+
+rebased_files = {
   gendir = rebase_path(files.gendir, root_build_dir)
   outdir = rebase_path(files.outdir, root_build_dir)
+  product_config = rebase_path(files.product_config, root_build_dir)
+  board_config = rebase_path(files.board_config, root_build_dir)
+  minfs = rebase_path(old_files.minfs, root_build_dir)
 
-  gen_base_static_packages =
-      rebase_path(files.gen_base_static_packages, root_build_dir)
-  gen_base_cache_packages =
-      rebase_path(files.gen_base_cache_packages, root_build_dir)
-
-  base_pkg = rebase_path(files.base_pkg, root_build_dir)
-  zbi = rebase_path(files.zbi, root_build_dir)
-  zbi_manifest = rebase_path(files.zbi_manifest, root_build_dir)
-
-  update_pkg = rebase_path(files.update_pkg, root_build_dir)
-
-  #####
-  # Files used for validation against external label outputs (temporary)
-  #
-
-  extracted_base_pkg = rebase_path(files.extracted_base_pkg, root_build_dir)
-
-  system_image_pkg = rebase_path(files.system_image_pkg, root_build_dir)
-  extracted_sysimg_pkg = rebase_path(files.extracted_sysimg_pkg, root_build_dir)
-
-  fuchsia_zbi = rebase_path(files.fuchsia_zbi, root_build_dir)
-
-  if (defined(files.fuchsia_vbmeta)) {
-    fuchsia_vbmeta = rebase_path(files.fuchsia_vbmeta, root_build_dir)
-    fuchsia_vbmeta_salt = rebase_path(files.fuchsia_vbmeta_salt, root_build_dir)
+  if (uses_base_package) {
+    old_base_package = rebase_path(old_files.base_package, root_build_dir)
+    old_base_package_dir =
+        rebase_path(extracted_files.old_base_package_dir, root_build_dir)
+    base_package = rebase_path(files.base_package, root_build_dir)
+    base_package_dir =
+        rebase_path(extracted_files.base_package_dir, root_build_dir)
+    old_update_package = rebase_path(old_files.update_package, root_build_dir)
+    old_update_package_dir =
+        rebase_path(extracted_files.old_update_package_dir, root_build_dir)
+    update_package = rebase_path(files.update_package, root_build_dir)
+    update_package_dir =
+        rebase_path(extracted_files.update_package_dir, root_build_dir)
   }
-
-  extracted_update_pkg = rebase_path(files.extracted_update_pkg, root_build_dir)
-  prev_update_pkg = rebase_path(files.prev_update_pkg, root_build_dir)
-  extracted_prev_update_pkg =
-      rebase_path(files.extracted_prev_update_pkg, root_build_dir)
 }
 
 generated_product_config("product_config") {
   testonly = true
-  output_path = files.assembly_config
+  output_path = files.product_config
   kernel_image = "//zircon/kernel"
   include_version_and_epoch = true
 
@@ -348,8 +273,7 @@ generated_board_config("board_config") {
 
   # minfs arguments
   if (!bootfs_only) {
-    minfs =
-        rebase_path("$root_build_dir/obj/build/images/data.blk", root_build_dir)
+    minfs = rebased_files.minfs
     if (minfs_product_minimum_inodes != false) {
       minfs_minimum_inodes = minfs_product_minimum_inodes
     } else if (minfs_board_minimum_inodes != false) {
@@ -441,17 +365,17 @@ ffx_action("images") {
     "assembly",
     "image",
     "--product",
-    file_args.assembly_config,
+    rebased_files.product_config,
     "--board",
-    file_args.board_config,
+    rebased_files.board_config,
     "--gendir",
-    file_args.gendir,
+    rebased_files.gendir,
     "--outdir",
-    file_args.outdir,
+    rebased_files.outdir,
   ]
 
   inputs = [
-    files.assembly_config,
+    files.product_config,
     files.board_config,
   ]
 
@@ -460,21 +384,21 @@ ffx_action("images") {
   # Base package outputs, if this configuration uses them
   if (uses_base_package) {
     outputs += [
-      files.base_pkg,
+      files.base_package,
       files.blobfs,
       files.fvm,
-      files.sparse_fvm,
-      files.sparse_blob_fvm,
+      files.fvm_sparse,
+      files.fvm_blob_sparse,
 
       # intermediate outputs that are in gendir:
-      files.gen_base_static_packages,
-      files.gen_base_cache_packages,
-      files.gen_base_meta_package,
-      files.gen_update_meta_package,
+      files.base_static_packages,
+      files.base_cache_packages,
+      files.base_meta_package,
+      files.update_meta_package,
     ]
 
     if (build_fastboot_fvm) {
-      outputs += [ files.fastboot_fvm ]
+      outputs += [ files.fvm_fastboot ]
     }
   }
 
@@ -482,11 +406,11 @@ ffx_action("images") {
   outputs += [
     files.zbi,
     files.zbi_manifest,
-    files.update_pkg,
+    files.update_package,
   ]
 
   if (use_vbmeta) {
-    inputs += [ files.fuchsia_vbmeta_salt ]
+    inputs += [ old_files.vbmeta_salt ]
     outputs += [ files.vbmeta ]
   }
 
@@ -516,14 +440,14 @@ group("input_validation_checks") {
   deps = []
   if (uses_base_package) {
     deps += [
-      ":cache_index.matches",
-      ":pkgsvr_index.matches",
+      ":cache_index_matches",
+      ":pkgsvr_index_matches",
     ]
   }
 }
 
 if (uses_base_package) {
-  verify_files_match("pkgsvr_index.matches") {
+  verify_files_match("pkgsvr_index_matches") {
     testonly = true
     deps = [
       ":images",
@@ -531,12 +455,12 @@ if (uses_base_package) {
     ]
 
     first = "$root_build_dir/obj/build/images/pkgsvr_index"
-    second = files.gen_base_static_packages
+    second = files.base_static_packages
 
     display_text_diff_on_failure = true
   }
 
-  verify_files_match("cache_index.matches") {
+  verify_files_match("cache_index_matches") {
     testonly = true
     deps = [
       ":images",
@@ -544,7 +468,7 @@ if (uses_base_package) {
     ]
 
     first = "$root_build_dir/obj/build/images/cache_index"
-    second = files.gen_base_cache_packages
+    second = files.base_cache_packages
 
     display_text_diff_on_failure = true
   }
@@ -589,44 +513,44 @@ group("output_validation_checks") {
 
 if (uses_base_package) {
   # Extract system-image's package's contents for inspection
-  compiled_action("extract_system_image_pkg") {
+  compiled_action("extract_old_base_package") {
     testonly = true
     tool = "//src/sys/pkg/bin/far:bin"
     tool_output_name = "far"
 
     args = [
       "extract",
-      "--archive=${file_args.system_image_pkg}",
-      "--output=${file_args.extracted_sysimg_pkg}",
+      "--archive=${rebased_files.old_base_package}",
+      "--output=${rebased_files.old_base_package_dir}",
     ]
 
-    inputs = [ files.system_image_pkg ]
+    inputs = [ old_files.base_package ]
 
     outputs = [
-      files.extracted_sysimg_meta_contents,
-      files.extracted_sysimg_meta_package,
+      extracted_files.old_base_meta_contents,
+      extracted_files.old_base_meta_package,
     ]
 
     deps = [ "//build/images:system_image.meta" ]
   }
 
   # Extract base package's contents for inspection
-  compiled_action("extract_base_pkg") {
+  compiled_action("extract_base_package") {
     testonly = true
     tool = "//src/sys/pkg/bin/far:bin"
     tool_output_name = "far"
 
     args = [
       "extract",
-      "--archive=${file_args.base_pkg}",
-      "--output=${file_args.extracted_base_pkg}",
+      "--archive=${rebased_files.base_package}",
+      "--output=${rebased_files.base_package_dir}",
     ]
 
-    inputs = [ files.base_pkg ]
+    inputs = [ files.base_package ]
 
     outputs = [
-      files.extracted_base_meta_contents,
-      files.extracted_base_meta_package,
+      extracted_files.base_meta_contents,
+      extracted_files.base_meta_package,
     ]
 
     deps = [ ":images" ]
@@ -635,12 +559,12 @@ if (uses_base_package) {
   verify_files_match("base_pkg_meta_contents_matches") {
     testonly = true
     deps = [
-      ":extract_base_pkg",
-      ":extract_system_image_pkg",
+      ":extract_base_package",
+      ":extract_old_base_package",
     ]
 
-    first = files.extracted_sysimg_meta_contents
-    second = files.extracted_base_meta_contents
+    first = extracted_files.old_base_meta_contents
+    second = extracted_files.base_meta_contents
 
     display_text_diff_on_failure = true
   }
@@ -652,8 +576,8 @@ if (uses_base_package) {
       "//build/images:system_image.meta",
     ]
 
-    first = files.system_image_pkg
-    second = files.base_pkg
+    first = old_files.base_package
+    second = files.base_package
   }
 }
 
@@ -661,10 +585,10 @@ verify_files_match("zbi_matches") {
   testonly = true
   deps = [
     ":images",
-    dep_labels.fuchsia_zbi,
+    old_labels.zbi,
   ]
 
-  first = files.fuchsia_zbi
+  first = old_files.zbi
 
   if (custom_signing_script != "" || use_vboot) {
     second = files.zbi_signed
@@ -677,10 +601,10 @@ verify_files_match("zbi_manifest_matches") {
   testonly = true
   deps = [
     ":images",
-    dep_labels.fuchsia_zbi_manifest,
+    old_labels.zbi_manifest,
   ]
 
-  first = files.fuchsia_zbi_manifest
+  first = old_files.zbi_manifest
   second = files.zbi_manifest
 
   display_text_diff_on_failure = true
@@ -691,10 +615,10 @@ if (use_vbmeta) {
     testonly = true
     deps = [
       ":images",
-      dep_labels.fuchsia_vbmeta,
+      old_labels.vbmeta,
     ]
 
-    first = files.fuchsia_vbmeta
+    first = old_files.vbmeta
     second = files.vbmeta
   }
 }
@@ -704,11 +628,11 @@ if (uses_base_package) {
     testonly = true
     deps = [
       ":images",
-      dep_labels.prev_update_pkg,
+      old_labels.update_package,
     ]
 
-    first = files.prev_update_pkg
-    second = files.update_pkg
+    first = old_files.update_package
+    second = files.update_package
   }
 
   # Extract update package's contents for inspection
@@ -719,15 +643,15 @@ if (uses_base_package) {
 
     args = [
       "extract",
-      "--archive=${file_args.update_pkg}",
-      "--output=${file_args.extracted_update_pkg}",
+      "--archive=${rebased_files.update_package}",
+      "--output=${rebased_files.update_package_dir}",
     ]
 
-    inputs = [ files.update_pkg ]
+    inputs = [ files.update_package ]
 
     outputs = [
-      files.extracted_update_meta_contents,
-      files.extracted_update_meta_package,
+      extracted_files.update_meta_contents,
+      extracted_files.update_meta_package,
     ]
 
     deps = [ ":images" ]
@@ -741,18 +665,18 @@ if (uses_base_package) {
 
     args = [
       "extract",
-      "--archive=${file_args.prev_update_pkg}",
-      "--output=${file_args.extracted_prev_update_pkg}",
+      "--archive=${rebased_files.old_update_package}",
+      "--output=${rebased_files.old_update_package_dir}",
     ]
 
-    inputs = [ files.prev_update_pkg ]
+    inputs = [ old_files.update_package ]
 
     outputs = [
-      files.extracted_prev_update_meta_contents,
-      files.extracted_prev_update_meta_package,
+      extracted_files.old_update_meta_contents,
+      extracted_files.old_update_meta_package,
     ]
 
-    deps = [ dep_labels.prev_update_pkg ]
+    deps = [ old_labels.update_package ]
   }
 
   verify_files_match("update_pkg_meta_contents_matches") {
@@ -762,8 +686,8 @@ if (uses_base_package) {
       ":extract_update_pkg",
     ]
 
-    first = files.extracted_prev_update_meta_contents
-    second = files.extracted_update_meta_contents
+    first = extracted_files.old_update_meta_contents
+    second = extracted_files.update_meta_contents
 
     display_text_diff_on_failure = true
   }
@@ -775,8 +699,8 @@ if (uses_base_package) {
       ":extract_update_pkg",
     ]
 
-    first = files.extracted_prev_update_meta_package
-    second = files.extracted_update_meta_package
+    first = extracted_files.old_update_meta_package
+    second = extracted_files.update_meta_package
 
     display_text_diff_on_failure = true
   }
@@ -785,10 +709,10 @@ if (uses_base_package) {
     testonly = true
     deps = [
       ":images",
-      dep_labels.prev_blobfs,
+      old_labels.blobfs,
     ]
 
-    first = files.prev_blobfs
+    first = old_files.blobfs
     second = files.blobfs
   }
 
@@ -796,10 +720,10 @@ if (uses_base_package) {
     testonly = true
     deps = [
       ":images",
-      dep_labels.prev_fvm,
+      old_labels.fvm,
     ]
 
-    first = files.prev_fvm
+    first = old_files.fvm
     second = files.fvm
   }
 
@@ -807,22 +731,22 @@ if (uses_base_package) {
     testonly = true
     deps = [
       ":images",
-      dep_labels.prev_sparse_fvm,
+      old_labels.fvm_sparse,
     ]
 
-    first = files.prev_sparse_fvm
-    second = files.sparse_fvm
+    first = old_files.fvm_sparse
+    second = files.fvm_sparse
   }
 
   verify_files_match("sparse_blob_fvm_matches") {
     testonly = true
     deps = [
       ":images",
-      dep_labels.prev_sparse_blob_fvm,
+      old_labels.fvm_blob_sparse,
     ]
 
-    first = files.prev_sparse_blob_fvm
-    second = files.sparse_blob_fvm
+    first = old_files.fvm_blob_sparse
+    second = files.fvm_blob_sparse
   }
 
   if (build_fastboot_fvm) {
@@ -830,11 +754,11 @@ if (uses_base_package) {
       testonly = true
       deps = [
         ":images",
-        dep_labels.prev_fastboot_fvm,
+        old_labels.fvm_fastboot,
       ]
 
-      first = files.prev_fastboot_fvm
-      second = files.fastboot_fvm
+      first = old_files.fvm_fastboot
+      second = files.fvm_fastboot
     }
   }
 }
