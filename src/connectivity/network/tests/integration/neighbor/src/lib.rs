@@ -1044,7 +1044,8 @@ async fn neigh_unreachable_entries() -> Result {
     // TODO(https://fxbug.dev/59425): Use hanging get instead of polling.
     let mut interval = fuchsia_async::Interval::new(zx::Duration::from_seconds(1));
 
-    while let Some(()) = interval.next().await {
+    loop {
+        assert_eq!(interval.next().await, Some(()));
         let mut entries =
             list_existing_entries(&alice.realm).await.context("failed to get entries for alice")?;
         let entry =
