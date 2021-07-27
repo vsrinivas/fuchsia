@@ -821,6 +821,7 @@ config("Wno-unused-but-set-variable") {
     "//src/connectivity/network/tools/nc/third_party/openbsd-netcat/*",
     "//src/connectivity/wlan/drivers/third_party/*",
     "//src/graphics/drivers/msd-intel-gen/src",
+    "//src/media/codec/codecs/sw/low_layer/aac:*",
     "//third_party/*",
     "//vendor/*",
     "//zircon/third_party/uapp/dash",
