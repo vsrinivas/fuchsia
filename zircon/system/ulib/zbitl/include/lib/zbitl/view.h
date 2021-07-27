@@ -78,10 +78,6 @@ struct ExampleContainerTraits {
   /// storage (as is the case with BOOTFS).
   static constexpr bool kPayloadsAreContained = false;
 
-  /// Whether the container format permits mutations of its contents (provided
-  /// the backing storage is writable).
-  static constexpr bool kIsMutableFormat = false;
-
   /// Returns the size of a container, as it is encoded in the header. The size
   /// includes that of the header. It is the responsibility of the caller to
   /// validate the returned size against the actual storage capacity.
@@ -89,12 +85,6 @@ struct ExampleContainerTraits {
 
   /// Returns the exact size of an item's payload (excluding padding).
   static uint32_t PayloadSize(const item_header_type& header) { return 0; }
-
-  /// Updates the size of the associated payload. It is the responsibility of
-  /// the caller to ensure that this size is sensible; no check is performed.
-  /// This trait is only required if `kIsMutable` is true.
-  template <typename T = ExampleContainerTraits, typename = std::enable_if_t<T::kIsMutable>>
-  static void SetPayloadSize(item_header_type& header, uint32_t new_size) {}
 
   /// Returns the offset at which a payload is to be found, given the
   /// associated item header and that header's offset into the container.
@@ -116,14 +106,6 @@ struct ExampleContainerTraits {
 
   static fitx::result<std::string_view> CheckItemHeader(const item_header_type& header) {
     return fitx::error{"unimplemented"};
-  }
-
-  /// Modify a header so that it passes checks. This can be used to mint new
-  /// items from a designated initializer that omits uninteresting bits.
-  /// This trait is only required if `kIsMutable` is true.
-  template <typename T = ExampleContainerTraits, typename = std::enable_if_t<T::kIsMutable>>
-  static item_header_type SanitizeHeader(item_header_type header) {
-    return header;
   }
 
   /// Converts the context of an iteration failure into an Error.
@@ -151,17 +133,12 @@ struct ZbiTraits {
   static constexpr uint32_t kItemAlignment = ZBI_ALIGNMENT;
   static constexpr uint32_t kPayloadPaddingAlignment = ZBI_ALIGNMENT;
   static constexpr bool kPayloadsAreContained = true;
-  static constexpr bool kIsMutable = true;
 
   static uint32_t ContainerSize(const container_header_type& header) {
     return sizeof(header) + header.length;
   }
 
   static uint32_t PayloadSize(const item_header_type& header) { return header.length; }
-
-  static void SetPayloadSize(item_header_type& header, uint32_t new_size) {
-    header.length = new_size;
-  }
 
   static uint32_t PayloadOffset(const item_header_type& header, uint32_t item_offset) {
     return item_offset + sizeof(header);
@@ -173,9 +150,6 @@ struct ZbiTraits {
 
   static fitx::result<std::string_view> CheckContainerHeader(const container_header_type& header);
   static fitx::result<std::string_view> CheckItemHeader(const item_header_type& header);
-
-  // Aliased from <lib/zbitl/checking.h>.
-  static constexpr auto SanitizeHeader = &::zbitl::SanitizeHeader;
 
   template <typename ErrorTraits>
   struct Error {
@@ -762,12 +736,10 @@ class View {
   //
   // This method is not available if zbitl::StorageTraits<storage_type>
   // doesn't support mutation.
-  template <typename T = Traits, typename = std::enable_if_t<T::CanWrite()>,
-            typename C = ContainerTraits, typename = std::enable_if_t<C::kIsMutable>>
-  fitx::result<storage_error_type> EditHeader(const iterator& item,
-                                              const item_header_type& header) {
+  template <typename T = Traits, typename = std::enable_if_t<T::CanWrite()>>
+  fitx::result<storage_error_type> EditHeader(const iterator& item, const zbi_header_t& header) {
     item.Assert(__func__);
-    if (auto result = WriteHeader(header, item.item_offset(), item.value_.header.size());
+    if (auto result = WriteHeader(header, item.item_offset(), item.value_.header->length);
         result.error_value()) {
       return result.take_error();
     }
@@ -777,11 +749,10 @@ class View {
   // When the iterator is mutable and not a temporary, make the next
   // operator*() consistent with the new header if it worked.  For kReference
   // storage types, the change is reflected intrinsically.
-  template <typename T = Traits, typename = std::enable_if_t<T::CanWrite()>,
-            typename C = ContainerTraits, typename = std::enable_if_t<C::kIsMutable>>
-  fitx::result<storage_error_type> EditHeader(iterator& item, const item_header_type& header) {
+  template <typename T = Traits, typename = std::enable_if_t<T::CanWrite()>>
+  fitx::result<storage_error_type> EditHeader(iterator& item, const zbi_header_t& header) {
     item.Assert(__func__);
-    auto result = WriteHeader(header, item.item_offset(), item.value_.header.size());
+    auto result = WriteHeader(header, item.item_offset(), item.value_.header->length);
     if constexpr (item_header_wrapper::kCopy) {
       if (result.is_ok()) {
         item.value_.header.stored_ = result.value();
@@ -1151,12 +1122,11 @@ class View {
   // WriteHeader sanitizes and optionally updates the length of a provided
   // header, writes it to the provided offset, and returns the modified header
   // on success.
-  template <typename C = ContainerTraits, typename = std::enable_if_t<C::kIsMutable>>
-  fitx::result<storage_error_type, item_header_type> WriteHeader(
-      item_header_type header, uint32_t offset, std::optional<uint32_t> new_length = std::nullopt) {
-    header = ContainerTraits::SanitizeHeader(header);
+  fitx::result<storage_error_type, zbi_header_t> WriteHeader(
+      zbi_header_t header, uint32_t offset, std::optional<uint32_t> new_length = std::nullopt) {
+    header = SanitizeHeader(header);
     if (new_length.has_value()) {
-      ContainerTraits::SetPayloadSize(header, new_length.value());
+      header.length = new_length.value();
     }
     if (auto result = Traits::Write(storage(), offset, AsBytes(header)); result.is_error()) {
       return fitx::error{std::move(result.error_value())};
