@@ -53,6 +53,13 @@ pub struct FsNode {
     /// This data is used to populate the stat_t structure.
     info: RwLock<FsNodeInfo>,
 
+    /// A RwLock to synchronize append operations for this node.
+    ///
+    /// FileObjects writing with O_APPEND should grab a write() lock on this
+    /// field to ensure they operate sequentially. FileObjects writing without
+    /// O_APPEND should grab read() lock so that they can operate in parallel.
+    pub append_lock: RwLock<()>,
+
     /// A partial cache of the children of this node.
     ///
     /// FsNodes are added to this cache when they are looked up and removed
@@ -207,8 +214,9 @@ impl FsNode {
             device,
             parent,
             local_name,
-            children: RwLock::new(HashMap::new()),
             info: RwLock::new(info),
+            append_lock: RwLock::new(()),
+            children: RwLock::new(HashMap::new()),
         }
     }
 

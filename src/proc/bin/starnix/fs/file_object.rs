@@ -168,6 +168,9 @@ macro_rules! fd_impl_seekable {
             data: &[UserBuffer],
         ) -> Result<usize, Errno> {
             let mut offset = file.offset.lock();
+            if file.flags().contains(OpenFlags::APPEND) {
+                *offset = file.node().info().size as off_t;
+            }
             let size = self.write_at(file, task, *offset as usize, data)?;
             *offset += size as off_t;
             Ok(size)
@@ -311,7 +314,19 @@ impl FileObject {
         if !self.can_write() {
             return Err(EBADF);
         }
-        self.blocking_op(task, || self.ops().write(self, task, data), FdEvents::POLLOUT)
+        self.blocking_op(
+            task,
+            || {
+                if self.flags().contains(OpenFlags::APPEND) {
+                    let _guard = self.node().append_lock.write();
+                    self.ops().write(self, task, data)
+                } else {
+                    let _guard = self.node().append_lock.read();
+                    self.ops().write(self, task, data)
+                }
+            },
+            FdEvents::POLLOUT,
+        )
     }
 
     pub fn write_at(
@@ -323,7 +338,14 @@ impl FileObject {
         if !self.can_write() {
             return Err(EBADF);
         }
-        self.blocking_op(task, || self.ops().write_at(self, task, offset, data), FdEvents::POLLOUT)
+        self.blocking_op(
+            task,
+            || {
+                let _guard = self.node().append_lock.read();
+                self.ops().write_at(self, task, offset, data)
+            },
+            FdEvents::POLLOUT,
+        )
     }
 
     pub fn seek(&self, task: &Task, offset: off_t, whence: SeekOrigin) -> Result<off_t, Errno> {
