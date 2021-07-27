@@ -175,18 +175,32 @@ void Directory::Open(uint32_t open_flags, uint32_t parent_flags, uint32_t mode, 
   }
   bool node_is_dir = n->IsDirectory();
 
-  if (Flags::IsPosix(open_flags) && !Flags::IsWritable(open_flags) &&
-      !Flags::IsWritable(parent_flags)) {
-    // Posix compatibility flag allows the child dir connection to inherit
-    // every right from its immediate parent. Here we know there exists
-    // a read-only directory somewhere along the Open() chain, so remove
-    // this flag to rid the child connection the ability to inherit read-write
-    // right from e.g. crossing a read-write mount point down the line.
+  // Explicitly expand OPEN_FLAG_POSIX into new set of equivalent flags.
+  // TODO(fxbug.dev/40862): Remove entire branch when removing OPEN_FLAG_POSIX.
+  if (open_flags & fuchsia::io::OPEN_FLAG_POSIX) {
+    open_flags |= fuchsia::io::OPEN_FLAG_POSIX_WRITABLE | fuchsia::io::OPEN_FLAG_POSIX_EXECUTABLE;
     open_flags &= ~fuchsia::io::OPEN_FLAG_POSIX;
+  }
+
+  // The POSIX compatibility flags allow the child dir connection to inherit
+  // write/execute rights from its immediate parent. We remove the right inheritance
+  // anywhere the parent node does not have the relevant right.
+  if (Flags::IsPosixWritable(open_flags) && !Flags::IsWritable(parent_flags)) {
+    open_flags &= ~fuchsia::io::OPEN_FLAG_POSIX_WRITABLE;
+  }
+  if (Flags::IsPosixExecutable(open_flags) && !Flags::IsExecutable(parent_flags)) {
+    open_flags &= ~fuchsia::io::OPEN_FLAG_POSIX_EXECUTABLE;
   }
 
   if (n->IsRemote() && new_path_len > 0) {
     fuchsia::io::DirectoryPtr temp_dir;
+    // Temporarily pass old POSIX flag since not all remote nodes support the new flags yet.
+    // TODO(fxbug.dev/40862): Remove this branch when all SDK users have been updated.
+    if (Flags::IsPosixWritable(open_flags) || Flags::IsPosixExecutable(open_flags)) {
+      open_flags &=
+          ~(fuchsia::io::OPEN_FLAG_POSIX_WRITABLE | fuchsia::io::OPEN_FLAG_POSIX_EXECUTABLE);
+      open_flags |= fuchsia::io::OPEN_FLAG_POSIX;
+    }
     status = n->Serve(open_flags | fuchsia::io::OPEN_FLAG_DIRECTORY,
                       temp_dir.NewRequest().TakeChannel());
     if (status != ZX_OK) {
@@ -197,19 +211,17 @@ void Directory::Open(uint32_t open_flags, uint32_t parent_flags, uint32_t mode, 
     return;
   }
 
+  // Perform POSIX rights expansion if required.
   if (node_is_dir) {
-    // grant POSIX clients additional rights
-    if (Flags::IsPosix(open_flags)) {
-      uint32_t parent_rights = parent_flags & Flags::kFsRights;
-      bool admin = Flags::IsAdminable(open_flags);
-      open_flags |= parent_rights;
-      open_flags &= ~fuchsia::io::OPEN_RIGHT_ADMIN;
-      if (admin) {
-        open_flags |= fuchsia::io::OPEN_RIGHT_ADMIN;
-      }
-      open_flags &= ~fuchsia::io::OPEN_FLAG_POSIX;
-    }
+    if (Flags::IsPosixWritable(open_flags))
+      open_flags |= (parent_flags & fuchsia::io::OPEN_RIGHT_WRITABLE);
+    if (Flags::IsPosixExecutable(open_flags))
+      open_flags |= (parent_flags & fuchsia::io::OPEN_RIGHT_EXECUTABLE);
+    // Strip flags now that rights have been expanded.
+    open_flags &=
+        ~(fuchsia::io::OPEN_FLAG_POSIX_WRITABLE | fuchsia::io::OPEN_FLAG_POSIX_EXECUTABLE);
   }
+
   if (path_is_dir) {
     open_flags |= fuchsia::io::OPEN_FLAG_DIRECTORY;
   }

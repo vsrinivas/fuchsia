@@ -166,6 +166,8 @@ class PseudoFile extends Vnode {
     var allowedFlags = openFlagDescribe |
         openFlagNodeReference |
         openFlagPosix |
+        openFlagPosixWritable |
+        openFlagPosixExecutable |
         cloneFlagSameRights;
     if (_readFn != null) {
       allowedFlags |= openRightReadable;

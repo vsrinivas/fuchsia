@@ -8,7 +8,8 @@ use {
     fidl_fuchsia_io::{
         OPEN_FLAGS_ALLOWED_WITH_NODE_REFERENCE, OPEN_FLAG_APPEND, OPEN_FLAG_CREATE,
         OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY,
-        OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY, OPEN_FLAG_POSIX, OPEN_FLAG_TRUNCATE,
+        OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY, OPEN_FLAG_POSIX,
+        OPEN_FLAG_POSIX_EXECUTABLE, OPEN_FLAG_POSIX_WRITABLE, OPEN_FLAG_TRUNCATE,
         OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
     fuchsia_zircon as zx,
@@ -56,8 +57,8 @@ pub fn new_connection_validate_flags(
         flags &= !OPEN_FLAG_NOT_DIRECTORY;
     }
 
-    // For files OPEN_FLAG_POSIX is just ignored, as it has meaning only for directories.
-    flags &= !OPEN_FLAG_POSIX;
+    // For files the OPEN_FLAG_POSIX flags are ignored, as they have meaning only for directories.
+    flags &= !(OPEN_FLAG_POSIX | OPEN_FLAG_POSIX_WRITABLE | OPEN_FLAG_POSIX_EXECUTABLE);
 
     let allowed_flags = OPEN_FLAG_NODE_REFERENCE
         | OPEN_FLAG_DESCRIBE

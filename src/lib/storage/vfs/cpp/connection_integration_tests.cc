@@ -191,6 +191,48 @@ TEST_F(ConnectionTest, NodeGetSetFlagsOnDirectory) {
       dir_get_result_2.Unwrap()->flags);
 }
 
+TEST_F(ConnectionTest, PosixFlagDirectoryRightExpansion) {
+  // Create connection to VFS with all rights.
+  zx::channel client_end, server_end;
+  ASSERT_OK(zx::channel::create(0u, &client_end, &server_end));
+  ASSERT_OK(ConnectClient(std::move(server_end)));
+
+  // Combinations of POSIX flags to be tested.
+  // TODO(fxbug.dev/40862): Remove OPEN_FLAG_POSIX.
+  const uint32_t OPEN_FLAG_COMBINATIONS[]{
+      fio::wire::kOpenFlagPosixWritable, fio::wire::kOpenFlagPosixExecutable,
+      fio::wire::kOpenFlagPosixWritable | fio::wire::kOpenFlagPosixExecutable,
+      fio::wire::kOpenFlagPosix};
+
+  for (const uint32_t OPEN_FLAGS : OPEN_FLAG_COMBINATIONS) {
+    // Connect to drectory specifying the flag combination we want to test.
+    zx::channel dc1, dc2;
+    ASSERT_OK(zx::channel::create(0u, &dc1, &dc2));
+    ASSERT_OK(fdio_open_at(client_end.get(), "dir", fio::wire::kOpenRightReadable | OPEN_FLAGS,
+                           dc2.release()));
+
+    // Ensure flags match those which we expect.
+    auto dir_get_result = fidl::WireCall<fio::Node>(zx::unowned_channel(dc1)).NodeGetFlags();
+    EXPECT_OK(dir_get_result.Unwrap()->s);
+    auto dir_flags = dir_get_result.Unwrap()->flags;
+    EXPECT_NE(fio::wire::kOpenRightReadable & dir_flags, 0);
+    // Each POSIX flag should be expanded to its respective right(s).
+    if (OPEN_FLAGS & (fio::wire::kOpenFlagPosix | fio::wire::kOpenFlagPosixWritable))
+      EXPECT_NE(fio::wire::kOpenRightWritable & dir_flags, 0);
+    if (OPEN_FLAGS & (fio::wire::kOpenFlagPosix | fio::wire::kOpenFlagPosixExecutable))
+      EXPECT_NE(fio::wire::kOpenRightExecutable & dir_flags, 0);
+
+    // Repeat test, but for file, which should not have any expanded rights.
+    zx::channel fc1, fc2;
+    ASSERT_OK(zx::channel::create(0u, &fc1, &fc2));
+    ASSERT_OK(fdio_open_at(client_end.get(), "file", fio::wire::kOpenRightReadable | OPEN_FLAGS,
+                           fc2.release()));
+    auto file_get_result = fidl::WireCall<fio::File>(zx::unowned_channel(fc1)).GetFlags();
+    EXPECT_OK(file_get_result.status());
+    EXPECT_EQ(fio::wire::kOpenRightReadable, file_get_result.Unwrap()->flags);
+  }
+}
+
 TEST_F(ConnectionTest, FileGetSetFlagsOnFile) {
   // Create connection to vfs
   zx::channel client_end, server_end;

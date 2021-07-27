@@ -71,6 +71,10 @@ constexpr const char* FlagToString(uint32_t flag) {
       return "FLAG_DESCRIBE";
     case ZX_FS_FLAG_POSIX:
       return "FLAG_POSIX";
+    case ZX_FS_FLAG_POSIX_WRITABLE:
+      return "ZX_FS_FLAG_POSIX_WRITABLE";
+    case ZX_FS_FLAG_POSIX_EXECUTABLE:
+      return "FLAG_POSIX_EXECUTABLE";
     case ZX_FS_FLAG_NOT_DIRECTORY:
       return "FLAG_NOT_DIRECTORY";
     case ZX_FS_FLAG_CLONE_SAME_RIGHTS:
@@ -131,8 +135,10 @@ void PrintIntoStringBuffer(fbl::StringBuffer<N>* sb, VnodeConnectionOptions opti
       append("node_reference");
     if (options.flags.describe)
       append("describe");
-    if (options.flags.posix)
-      append("posix");
+    if (options.flags.posix_write)
+      append("posix_write");
+    if (options.flags.posix_execute)
+      append("posix_execute");
     if (options.flags.clone_same_rights)
       append("clone_same_rights");
   }

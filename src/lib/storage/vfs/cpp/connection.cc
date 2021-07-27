@@ -86,16 +86,16 @@ bool PrevalidateFlags(uint32_t flags) {
 
 zx_status_t EnforceHierarchicalRights(Rights parent_rights, VnodeConnectionOptions child_options,
                                       VnodeConnectionOptions* out_options) {
-  if (child_options.flags.posix) {
-    if (!parent_rights.write && !child_options.rights.write && !parent_rights.execute &&
-        !child_options.rights.execute) {
-      // Posix compatibility flag allows the child dir connection to inherit every right from its
-      // immediate parent. Here we know there exists a read-only directory somewhere along the
-      // Open() chain, so remove this flag to rid the child connection the ability to inherit
-      // read-write right from e.g. crossing a read-write mount point down the line, or similarly
-      // with the execute right.
-      child_options.flags.posix = false;
-    }
+  // The POSIX compatibiltiy flags allow the child directory connection to inherit the writable
+  // and executable rights.  If there exists a directory without the corresponding right along
+  // the Open() chain, we remove that POSIX flag preventing it from being inherited down the line
+  // (this applies both for local and remote mount points, as the latter may be served using
+  // a connection with vastly greater rights).
+  if (child_options.flags.posix_write && !parent_rights.write) {
+    child_options.flags.posix_write = false;
+  }
+  if (child_options.flags.posix_execute && !parent_rights.execute) {
+    child_options.flags.posix_execute = false;
   }
   if (!child_options.rights.StricterOrSameAs(parent_rights)) {
     // Client asked for some right but we do not have it

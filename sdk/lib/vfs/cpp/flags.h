@@ -17,6 +17,10 @@ class Flags {
 
   static bool IsWritable(uint32_t flags) { return (flags & fuchsia::io::OPEN_RIGHT_WRITABLE) != 0; }
 
+  static bool IsExecutable(uint32_t flags) {
+    return (flags & fuchsia::io::OPEN_RIGHT_EXECUTABLE) != 0;
+  }
+
   static bool IsAdminable(uint32_t flags) { return (flags & fuchsia::io::OPEN_RIGHT_ADMIN) != 0; }
 
   static bool IsDirectory(uint32_t flags) {
@@ -39,12 +43,18 @@ class Flags {
     return (flags & fuchsia::io::CLONE_FLAG_SAME_RIGHTS) != 0;
   }
 
-  static bool IsPosix(uint32_t flags) { return (flags & fuchsia::io::OPEN_FLAG_POSIX) != 0; }
+  static bool IsPosixWritable(uint32_t flags) {
+    return (flags & fuchsia::io::OPEN_FLAG_POSIX_WRITABLE) != 0;
+  }
+
+  static bool IsPosixExecutable(uint32_t flags) {
+    return (flags & fuchsia::io::OPEN_FLAG_POSIX_EXECUTABLE) != 0;
+  }
 
   // All known rights.
-  static constexpr uint32_t kFsRights = fuchsia::io::OPEN_RIGHT_READABLE |
-                                        fuchsia::io::OPEN_RIGHT_WRITABLE |
-                                        fuchsia::io::OPEN_RIGHT_ADMIN;
+  static constexpr uint32_t kFsRights =
+      fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE |
+      fuchsia::io::OPEN_RIGHT_EXECUTABLE | fuchsia::io::OPEN_RIGHT_ADMIN;
 
   // All lower 16 bits are reserved for future rights extensions.
   static constexpr uint32_t kFsRightsSpace = 0x0000FFFF;

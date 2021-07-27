@@ -78,8 +78,9 @@ static_assert(O_NOREMOTE == ZX_FS_FLAG_NOREMOTE, "Open Flag mismatch");
 #define ZXIO_FS_MASK \
   (O_PATH | O_ADMIN | O_CREAT | O_EXCL | O_TRUNC | O_DIRECTORY | O_APPEND | O_NOREMOTE)
 
-#define ZXIO_FS_FLAGS \
-  (ZXIO_FS_MASK | ZX_FS_FLAG_POSIX | ZX_FS_FLAG_NOT_DIRECTORY | ZX_FS_FLAG_CLONE_SAME_RIGHTS)
+#define ZXIO_FS_FLAGS                                                                          \
+  (ZXIO_FS_MASK | ZX_FS_FLAG_POSIX | ZX_FS_FLAG_POSIX_WRITABLE | ZX_FS_FLAG_POSIX_EXECUTABLE | \
+   ZX_FS_FLAG_NOT_DIRECTORY | ZX_FS_FLAG_CLONE_SAME_RIGHTS)
 
 // Verify that the remaining O_* flags don't overlap with the ZXIO_FS flags.
 static_assert(!(O_RDONLY & ZXIO_FS_FLAGS), "Unexpected collision with ZXIO_FS_FLAGS");

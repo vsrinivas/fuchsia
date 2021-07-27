@@ -233,7 +233,7 @@ void DirectoryConnection::Open(OpenRequestView request, OpenCompleter::Sync& com
   // Reject the Open() call if we haven't gotten OPEN_FLAG_NODE_REFERENCE,
   // nor have any OPEN_RIGHT_* or OPEN_FLAG_POSIX.
   if (!open_options.flags.node_reference && !open_options.rights.any() &&
-      !open_options.flags.posix) {
+      !open_options.flags.posix_write && !open_options.flags.posix_execute) {
     return write_error(std::move(request->object), ZX_ERR_INVALID_ARGS);
   }
 

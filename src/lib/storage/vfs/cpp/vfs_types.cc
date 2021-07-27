@@ -40,8 +40,17 @@ VnodeConnectionOptions VnodeConnectionOptions::FromIoV1Flags(uint32_t fidl_flags
   if (fidl_flags & fio::wire::kOpenFlagDescribe) {
     options.flags.describe = true;
   }
+  // Expand existing POSIX flag into new equivalent flags.
+  // TODO(fxbug.dev/40862): Remove this branch when removing OPEN_FLAG_POSIX.
   if (fidl_flags & fio::wire::kOpenFlagPosix) {
-    options.flags.posix = true;
+    options.flags.posix_write = true;
+    options.flags.posix_execute = true;
+  }
+  if (fidl_flags & fio::wire::kOpenFlagPosixWritable) {
+    options.flags.posix_write = true;
+  }
+  if (fidl_flags & fio::wire::kOpenFlagPosixExecutable) {
+    options.flags.posix_execute = true;
   }
   if (fidl_flags & fio::wire::kOpenFlagNotDirectory) {
     options.flags.not_directory = true;
@@ -95,7 +104,14 @@ uint32_t VnodeConnectionOptions::ToIoV1Flags() const {
   if (flags.describe) {
     fidl_flags |= fio::wire::kOpenFlagDescribe;
   }
-  if (flags.posix) {
+  if (flags.posix_write) {
+    // TODO(fxbug.dev/40862): Replace kOpenFlagPosix with kOpenFlagPosixWritable after out-of-tree
+    // SDK users have been updated.
+    fidl_flags |= fio::wire::kOpenFlagPosix;
+  }
+  if (flags.posix_execute) {
+    // TODO(fxbug.dev/40862): Replace kOpenFlagPosix with kOpenFlagPosixExecutable after out-of-tree
+    // SDK users have been updated.
     fidl_flags |= fio::wire::kOpenFlagPosix;
   }
   if (flags.not_directory) {

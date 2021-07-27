@@ -188,20 +188,17 @@ Vfs::OpenResult Vfs::OpenLocked(fbl::RefPtr<Vnode> vndir, std::string_view path,
     return ZX_ERR_ACCESS_DENIED;
   }
 
-  if (vn->Supports(fs::VnodeProtocol::kDirectory) && options.flags.posix) {
-    // Save this before modifying |options| below.
-    bool admin = options.rights.admin;
-
+  if (vn->Supports(fs::VnodeProtocol::kDirectory) &&
+      (options.flags.posix_write || options.flags.posix_execute)) {
     // This is such that POSIX open() can open a directory with O_RDONLY, and still get the
     // write/execute right if the parent directory connection has the write/execute right
     // respectively.  With the execute right in particular, the resulting connection may be passed
     // to fdio_get_vmo_exec() which requires the execute right. This transfers write and execute
     // from the parent, if present.
-    auto inheritable_rights = Rights::WriteExec();
+    Rights inheritable_rights{};
+    inheritable_rights.write = options.flags.posix_write;
+    inheritable_rights.execute = options.flags.posix_execute;
     options.rights |= parent_rights & inheritable_rights;
-
-    // The ADMIN right is not inherited. It must be explicitly specified.
-    options.rights.admin = admin;
   }
   auto validated_options = vn->ValidateOptions(options);
   if (validated_options.is_error()) {

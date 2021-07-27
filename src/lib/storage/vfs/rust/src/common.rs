@@ -8,8 +8,9 @@ use {
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
         NodeAttributes, NodeMarker, CLONE_FLAG_SAME_RIGHTS, OPEN_FLAG_APPEND, OPEN_FLAG_DESCRIBE,
-        OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_POSIX, OPEN_RIGHT_ADMIN, OPEN_RIGHT_EXECUTABLE,
-        OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+        OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_POSIX, OPEN_FLAG_POSIX_EXECUTABLE,
+        OPEN_FLAG_POSIX_WRITABLE, OPEN_RIGHT_ADMIN, OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE,
+        OPEN_RIGHT_WRITABLE,
     },
     fuchsia_zircon::Status,
     std::convert::TryFrom,
@@ -58,8 +59,8 @@ pub fn inherit_rights_for_clone(parent_flags: u32, mut flags: u32) -> Result<u32
         return Err(Status::ACCESS_DENIED);
     }
 
-    // Ignore the POSIX flag for clone.
-    flags &= !OPEN_FLAG_POSIX;
+    // Ignore the POSIX flags for clone.
+    flags &= !(OPEN_FLAG_POSIX | OPEN_FLAG_POSIX_WRITABLE | OPEN_FLAG_POSIX_EXECUTABLE);
 
     Ok(flags)
 }

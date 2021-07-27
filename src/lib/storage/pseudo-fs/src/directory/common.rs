@@ -12,8 +12,9 @@ use {
         MAX_FILENAME, MODE_PROTECTION_MASK, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE,
         OPEN_FLAGS_ALLOWED_WITH_NODE_REFERENCE, OPEN_FLAG_APPEND, OPEN_FLAG_CREATE,
         OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY,
-        OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_POSIX, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_ADMIN,
-        OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+        OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_POSIX, OPEN_FLAG_POSIX_EXECUTABLE,
+        OPEN_FLAG_POSIX_WRITABLE, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_ADMIN, OPEN_RIGHT_READABLE,
+        OPEN_RIGHT_WRITABLE,
     },
     fuchsia_zircon::Status,
     static_assertions::assert_eq_size,
@@ -39,10 +40,13 @@ pub fn new_connection_validate_flags(mut flags: u32, mode: u32) -> Result<u32, S
         flags &= OPEN_FLAGS_ALLOWED_WITH_NODE_REFERENCE;
     }
 
+    // TODO(fxb/37534): Add support for execute rights.
+    flags &= !OPEN_FLAG_POSIX_EXECUTABLE;
+
     // For directories OPEN_FLAG_POSIX means WRITABLE permission.  Parent connection must have
-    // already checked the flag, so if it is present it just measn WRITABLE.
-    if flags & OPEN_FLAG_POSIX != 0 {
-        flags &= !OPEN_FLAG_POSIX;
+    // already checked the flag, so if it is present it just means WRITABLE.
+    if flags & (OPEN_FLAG_POSIX | OPEN_FLAG_POSIX_WRITABLE) != 0 {
+        flags &= !(OPEN_FLAG_POSIX | OPEN_FLAG_POSIX_WRITABLE);
         flags |= OPEN_RIGHT_WRITABLE;
     }
 
@@ -69,14 +73,17 @@ pub fn new_connection_validate_flags(mut flags: u32, mode: u32) -> Result<u32, S
 }
 
 /// Directories need to make sure that connections to child entries do not receive more rights than
-/// the conneciton to the directory itself.  Plus there is special handling of the OPEN_FLAG_POSIX
-/// flag.  This function should be called before calling [`new_connection_validate_flags`] if both
-/// are needed.
+/// the connection to the directory itself.  Plus there is special handling of the OPEN_FLAG_POSIX
+/// and OPEN_FLAG_POSIX_EXECUTABLE flags. This function should be called before calling
+/// [`new_connection_validate_flags`] if both are needed.
 pub fn check_child_connection_flags(parent_flags: u32, mut flags: u32) -> Result<u32, Status> {
+    // TODO(fxb/37534): Add support for execute rights.
+    flags &= !OPEN_FLAG_POSIX_EXECUTABLE;
+
     if parent_flags & OPEN_RIGHT_WRITABLE == 0 {
         // OPEN_FLAG_POSIX is effectively OPEN_RIGHT_WRITABLE, but with "soft fail", when the
         // target is a directory, so we need to remove it.
-        flags &= !OPEN_FLAG_POSIX;
+        flags &= !(OPEN_FLAG_POSIX | OPEN_FLAG_POSIX_WRITABLE);
     }
 
     if stricter_or_same_rights(parent_flags, flags) {

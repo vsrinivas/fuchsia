@@ -65,6 +65,8 @@ class Service<T> extends Vnode {
     var unsupportedFlags = ~(openRightReadable |
         openRightWritable |
         openFlagPosix |
+        openFlagPosixWritable |
+        openFlagPosixExecutable |
         cloneFlagSameRights);
     if (flags & unsupportedFlags != 0) {
       return ZX.ERR_NOT_SUPPORTED;

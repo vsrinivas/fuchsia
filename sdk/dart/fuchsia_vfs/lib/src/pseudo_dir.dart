@@ -106,12 +106,22 @@ class PseudoDir extends Vnode {
 
     var connectFlags = filterForNodeReference(flags);
 
-    if (Flags.isPosix(connectFlags)) {
-      // grant POSIX clients additional rights
-      var parentRights = parentFlags & Flags.fsRightsDefault;
-      connectFlags |= parentRights;
+    // Explicitly expand OPEN_FLAG_POSIX into new equivalent flags.
+    // TODO(fxbug.dev/40862): Remove entire branch when OPEN_FLAG_POSIX is removed.
+    if ((connectFlags & openFlagPosix) != 0) {
+      connectFlags |= openFlagPosixWritable | openFlagPosixExecutable;
       connectFlags &= ~openFlagPosix;
     }
+
+    // Grant POSIX clients additional rights.
+    if (Flags.isPosixWritable(connectFlags)) {
+      connectFlags |= parentFlags & openRightWritable;
+    }
+    if (Flags.isPosixExecutable(connectFlags)) {
+      connectFlags |= parentFlags & openRightExecutable;
+    }
+    // Clear any remaining POSIX right expansion flags.
+    connectFlags &= ~(openFlagPosixWritable | openFlagPosixExecutable);
 
     var status = _validateFlags(connectFlags);
     if (status != ZX.OK) {
@@ -249,6 +259,8 @@ class PseudoDir extends Vnode {
         openFlagNodeReference |
         openFlagDescribe |
         openFlagPosix |
+        openFlagPosixWritable |
+        openFlagPosixExecutable |
         cloneFlagSameRights;
     var prohibitedFlags = openFlagCreate |
         openFlagCreateIfAbsent |

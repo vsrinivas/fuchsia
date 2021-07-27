@@ -28,9 +28,14 @@ class Flags {
     return (flags & cloneFlagSameRights) != 0;
   }
 
-  /// Returns true if the OPEN_FLAG_POSIX bit is set in |flags|.
-  static bool isPosix(int flags) {
-    return (flags & openFlagPosix) != 0;
+  /// Returns true if the OPEN_FLAG_POSIX_WRITABLE bit is set in |flags|.
+  static bool isPosixWritable(int flags) {
+    return (flags & openFlagPosixWritable) != 0;
+  }
+
+  /// Returns true if the OPEN_FLAG_POSIX_EXECUTABLE bit is set in |flags|.
+  static bool isPosixExecutable(int flags) {
+    return (flags & openFlagPosixExecutable) != 0;
   }
 
   /// Returns true if the rights flags in |flagsA| does not exceed

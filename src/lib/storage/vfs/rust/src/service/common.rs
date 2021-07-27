@@ -9,7 +9,8 @@ use {
         MODE_PROTECTION_MASK, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, MODE_TYPE_MASK,
         MODE_TYPE_SERVICE, OPEN_FLAGS_ALLOWED_WITH_NODE_REFERENCE, OPEN_FLAG_DESCRIBE,
         OPEN_FLAG_DIRECTORY, OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY, OPEN_FLAG_POSIX,
-        OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+        OPEN_FLAG_POSIX_EXECUTABLE, OPEN_FLAG_POSIX_WRITABLE, OPEN_RIGHT_READABLE,
+        OPEN_RIGHT_WRITABLE,
     },
     fuchsia_zircon::Status,
     libc::{S_IRUSR, S_IWUSR},
@@ -47,8 +48,8 @@ pub fn new_connection_validate_flags(mut flags: u32, mode: u32) -> Result<u32, S
     // A service is not a directory.
     flags &= !OPEN_FLAG_NOT_DIRECTORY;
 
-    // For services OPEN_FLAG_POSIX is just ignored, as it has meaning only for directories.
-    flags &= !OPEN_FLAG_POSIX;
+    // For services the OPEN_FLAG_POSIX flags are ignored as they have meaning only for directories.
+    flags &= !(OPEN_FLAG_POSIX | OPEN_FLAG_POSIX_WRITABLE | OPEN_FLAG_POSIX_EXECUTABLE);
 
     if flags & OPEN_FLAG_DIRECTORY != 0 {
         return Err(Status::NOT_DIR);
@@ -69,6 +70,8 @@ pub fn new_connection_validate_flags(mut flags: u32, mode: u32) -> Result<u32, S
             & (OPEN_FLAG_DIRECTORY
                 | OPEN_FLAG_NOT_DIRECTORY
                 | OPEN_FLAG_POSIX
+                | OPEN_FLAG_POSIX_WRITABLE
+                | OPEN_FLAG_POSIX_EXECUTABLE
                 | OPEN_FLAG_NODE_REFERENCE)
             == 0
     );
@@ -100,7 +103,8 @@ mod tests {
         fidl_fuchsia_io::{
             MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, MODE_TYPE_SERVICE, MODE_TYPE_SOCKET,
             OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY, OPEN_FLAG_NODE_REFERENCE,
-            OPEN_FLAG_NOT_DIRECTORY, OPEN_FLAG_POSIX, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+            OPEN_FLAG_NOT_DIRECTORY, OPEN_FLAG_POSIX, OPEN_FLAG_POSIX_EXECUTABLE,
+            OPEN_FLAG_POSIX_WRITABLE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
         },
         fuchsia_zircon::Status,
     };
@@ -176,14 +180,29 @@ mod tests {
     #[test]
     fn node_reference_posix() {
         // OPEN_FLAG_POSIX is ignored for services.
-        ncvf_ok(OPEN_FLAG_NODE_REFERENCE | OPEN_FLAG_POSIX, 0, OPEN_FLAG_NODE_REFERENCE);
         ncvf_ok(
-            OPEN_FLAG_NODE_REFERENCE | OPEN_FLAG_DESCRIBE | OPEN_FLAG_POSIX,
+            OPEN_FLAG_NODE_REFERENCE
+                | OPEN_FLAG_POSIX
+                | OPEN_FLAG_POSIX_WRITABLE
+                | OPEN_FLAG_POSIX_EXECUTABLE,
+            0,
+            OPEN_FLAG_NODE_REFERENCE,
+        );
+        ncvf_ok(
+            OPEN_FLAG_NODE_REFERENCE
+                | OPEN_FLAG_DESCRIBE
+                | OPEN_FLAG_POSIX
+                | OPEN_FLAG_POSIX_WRITABLE
+                | OPEN_FLAG_POSIX_EXECUTABLE,
             0,
             OPEN_FLAG_NODE_REFERENCE | OPEN_FLAG_DESCRIBE,
         );
         ncvf_ok(
-            OPEN_FLAG_NODE_REFERENCE | READ_WRITE | OPEN_FLAG_POSIX,
+            OPEN_FLAG_NODE_REFERENCE
+                | READ_WRITE
+                | OPEN_FLAG_POSIX
+                | OPEN_FLAG_POSIX_WRITABLE
+                | OPEN_FLAG_POSIX_EXECUTABLE,
             0,
             OPEN_FLAG_NODE_REFERENCE,
         );
@@ -192,8 +211,20 @@ mod tests {
     #[test]
     fn service_posix() {
         // OPEN_FLAG_POSIX is ignored for services.
-        ncvf_ok(READ_WRITE | OPEN_FLAG_POSIX, 0, READ_WRITE);
-        ncvf_err(READ_WRITE | OPEN_FLAG_DESCRIBE | OPEN_FLAG_POSIX, 0, Status::INVALID_ARGS);
+        ncvf_ok(
+            READ_WRITE | OPEN_FLAG_POSIX | OPEN_FLAG_POSIX_WRITABLE | OPEN_FLAG_POSIX_EXECUTABLE,
+            0,
+            READ_WRITE,
+        );
+        ncvf_err(
+            READ_WRITE
+                | OPEN_FLAG_DESCRIBE
+                | OPEN_FLAG_POSIX
+                | OPEN_FLAG_POSIX_WRITABLE
+                | OPEN_FLAG_POSIX_EXECUTABLE,
+            0,
+            Status::INVALID_ARGS,
+        );
     }
 
     #[test]

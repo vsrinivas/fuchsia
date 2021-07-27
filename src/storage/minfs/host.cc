@@ -468,7 +468,7 @@ DIR* emu_opendir(const char* name) {
   std::string_view path(name + PREFIX_SIZE);
   fs::VnodeConnectionOptions options;
   options.rights.read = true;
-  options.flags.posix = true;
+  options.flags.posix_write = true;
   auto result =
       fake_fs.fake_vfs->Open(fake_fs.fake_root, path, options, fs::Rights::ReadWrite(), 0);
   if (result.is_error()) {

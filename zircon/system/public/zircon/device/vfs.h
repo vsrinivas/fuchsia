@@ -39,6 +39,8 @@
 #define ZX_FS_FLAG_POSIX 0x01000000U
 #define ZX_FS_FLAG_NOT_DIRECTORY 0x02000000U
 #define ZX_FS_FLAG_CLONE_SAME_RIGHTS 0x04000000U
+#define ZX_FS_FLAG_POSIX_WRITABLE 0x08000000U
+#define ZX_FS_FLAG_POSIX_EXECUTABLE 0x10000000U
 
 // Watch event messages are sent via the provided channel and take the form:
 // { uint8_t event; uint8_t namelen; uint8_t name[namelen]; }

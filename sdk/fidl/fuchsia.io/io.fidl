@@ -154,24 +154,44 @@ const OPEN_FLAGS_ALLOWED_WITH_NODE_REFERENCE uint32 = 0x02c80000;
 /// Requests that an "OnOpen" event is sent to the interface request.
 /// The event will contain a non-null NodeInfo if the open/clone is successful.
 const OPEN_FLAG_DESCRIBE uint32 = 0x00800000;
-/// Specify this flag to request POSIX-compatibility. Currently, it affects permission handling.
-/// During Open:
+/// Specify this flag to request POSIX-compatibility with respect to execute and write permissions.
+/// This flag implies OPEN_FLAG_POSIX_WRITABLE and OPEN_FLAG_POSIX_EXECUTABLE.
+///
+/// Use of this flag is being deprecated, and should be replaced with a combination of
+/// OPEN_FLAG_POSIX_WRITABLE and/or OPEN_FLAG_POSIX_EXECUTABLE.
+const OPEN_FLAG_POSIX uint32 = 0x01000000;
+/// Specify this flag to request POSIX-compatibility with respect to write permission handling.
+/// Currently, it affects permission handling specifically during Open:
 /// - If the target path is a directory, the rights on the new connection expand to include
 ///   `OPEN_RIGHT_WRITABLE` if and only if the current connection and all intermediate mount points
-///   are writable, and to include `OPEN_RIGHT_EXECUTABLE` if and only if the current connection and
-///   all intermediate mount points are executable.
+///   are writable.
 /// - Otherwise, this flag is ignored. It is an access denied error to request more rights
 ///   than those on the current connection, or any intermediate mount points.
 ///
-/// If the posix compatibility flag is not specified, opening always uses the requested rights,
-/// failing the operation with access denied error if requested rights exceeds the rights attached
-/// to the current connection.
+/// If this flag is omitted, opening always uses the requested rights, failing the operation with
+/// access denied error if requested rights exceeds the rights attached to the current connection.
 ///
 /// If the requesting connection is read-only and the requested rights are read-only, the flag
 /// may be ignored by the server, and is not forwarded downstream. This is an implementation detail,
 /// necessary to enforce hierarchical permissions across mount points, and should have no effect
 /// on the expected behavior for clients.
-const OPEN_FLAG_POSIX uint32 = 0x01000000;
+const OPEN_FLAG_POSIX_WRITABLE uint32 = 0x08000000;
+/// Specify this flag to request POSIX-compatibility with respect to execute permission handling.
+/// Currently, it affects permission handling specifically during Open:
+/// - If the target path is a directory, the rights on the new connection expand to include
+///   `OPEN_RIGHT_EXECUTABLE` if and only if the current connection and all intermediate mount
+///   points are executable.
+/// - Otherwise, this flag is ignored. It is an access denied error to request more rights
+///   than those on the current connection, or any intermediate mount points.
+///
+/// If this flag is omitted, opening always uses the requested rights, failing the operation with
+/// access denied error if requested rights exceeds the rights attached to the current connection.
+///
+/// If the requesting connection is read-only and the requested rights are read-only, the flag
+/// may be ignored by the server, and is not forwarded downstream. This is an implementation detail,
+/// necessary to enforce hierarchical permissions across mount points, and should have no effect
+/// on the expected behavior for clients.
+const OPEN_FLAG_POSIX_EXECUTABLE uint32 = 0x10000000;
 /// Assert that the object to be opened is not a directory.
 /// Return an error if the target object is a directory.
 const OPEN_FLAG_NOT_DIRECTORY uint32 = 0x02000000;

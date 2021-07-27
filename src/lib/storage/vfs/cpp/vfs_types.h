@@ -226,8 +226,9 @@ struct VnodeConnectionOptions {
     fbl::BitFieldMember<uint32_t, 6, 1> no_remote;
     fbl::BitFieldMember<uint32_t, 7, 1> node_reference;
     fbl::BitFieldMember<uint32_t, 8, 1> describe;
-    fbl::BitFieldMember<uint32_t, 9, 1> posix;
-    fbl::BitFieldMember<uint32_t, 10, 1> clone_same_rights;
+    fbl::BitFieldMember<uint32_t, 9, 1> posix_write;
+    fbl::BitFieldMember<uint32_t, 10, 1> posix_execute;
+    fbl::BitFieldMember<uint32_t, 11, 1> clone_same_rights;
 
     constexpr Flags() = default;
 
