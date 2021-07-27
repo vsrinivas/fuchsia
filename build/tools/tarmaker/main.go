@@ -13,6 +13,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 )
 
@@ -69,7 +70,14 @@ func createTar(archive string, mappings map[string]string) error {
 	tw := tar.NewWriter(w)
 	defer tw.Close()
 
-	for dest, src := range mappings {
+	// Sort by destination path to ensure deterministic output.
+	destPaths := make([]string, 0, len(mappings))
+	for dst := range mappings {
+		destPaths = append(destPaths, dst)
+	}
+	sort.Strings(destPaths)
+	for _, dest := range destPaths {
+		src := mappings[dest]
 		info, err := os.Stat(src)
 		if err != nil {
 			return err
