@@ -516,13 +516,6 @@ func setBufferSize(size uint64, set func(int64, bool), limits func() (min, max i
 
 	{
 		size := int64(size)
-		min, max := limits()
-		if size > max {
-			size = max
-		}
-		if size < min {
-			size = min
-		}
 
 		// packetOverheadFactor is used to multiply the value provided by the user on
 		// a setsockopt(2) for setting the send/receive buffer sizes sockets.
@@ -532,6 +525,15 @@ func setBufferSize(size uint64, set func(int64, bool), limits func() (min, max i
 		} else {
 			size *= packetOverheadFactor
 		}
+
+		min, max := limits()
+		if size > max {
+			size = max
+		}
+		if size < min {
+			size = min
+		}
+
 		set(size, true /* notify */)
 	}
 }
