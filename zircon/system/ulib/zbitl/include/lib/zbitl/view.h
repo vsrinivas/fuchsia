@@ -226,12 +226,13 @@ class View : public internal::Container<View<Storage>, Storage, internal::ZbiTra
 
   // Public API defined internally. For error-related methods, please see the
   // docstring above for more detail.
-  using Base::begin;         // iterator begin();
-  using Base::end;           // iterator end();
-  using Base::ignore_error;  // void ignore_error();
-  using Base::size_bytes;    // size_t size_bytes();
-  using Base::storage;       // storage_type& storage();
-  using Base::take_error;    // fitx::result<Error> take_error();
+  using Base::begin;             // iterator begin();
+  using Base::container_header;  // fitx::result<Error, zbi_header_t> container_header();
+  using Base::end;               // iterator end();
+  using Base::ignore_error;      // void ignore_error();
+  using Base::size_bytes;        // size_t size_bytes();
+  using Base::storage;           // storage_type& storage();
+  using Base::take_error;        // fitx::result<Error> take_error();
 
   /// An error type encompassing both read and write failures in accessing the
   /// source and destination storage objects in the context of a copy

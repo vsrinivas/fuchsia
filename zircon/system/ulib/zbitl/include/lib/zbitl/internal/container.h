@@ -453,49 +453,6 @@ class Container {
     }
   };
 
-  // This returns its own error state and does not affect the `take_error()`
-  // state of the Container.
-  fitx::result<Error, container_header_type> container_header() {
-    auto to_error = [this](
-                        std::string_view reason, uint32_t error_offset = 0,
-                        std::optional<storage_error_type> storage_error = std::nullopt) -> Error {
-      return ContainerTraits::template ToError<Traits>(storage(), reason, 0, error_offset, nullptr,
-                                                       std::move(storage_error));
-    };
-    auto capacity_error = Traits::Capacity(storage());
-    if (capacity_error.is_error()) {
-      return fitx::error{to_error("cannot determine storage capacity", 0,
-                                  std::move(capacity_error).error_value())};
-    }
-    uint32_t capacity = capacity_error.value();
-
-    // Minimal bounds check before trying to read.
-    if (capacity < sizeof(container_header_type)) {
-      return fitx::error(to_error("container header doesn't fit. Truncated?", capacity));
-    }
-
-    // Read and validate the container header.
-    auto header_error = ContainerHeader();
-    if (header_error.is_error()) {
-      // Failed to read the container header.
-      return fitx::error{
-          to_error("cannot read container header", 0, std::move(header_error).error_value())};
-    }
-
-    container_header_type header = std::move(header_error).value();
-
-    auto check_error = ContainerTraits::CheckContainerHeader(header);
-    if (check_error.is_error()) {
-      return fitx::error{to_error(check_error.error_value())};
-    }
-    const uint32_t size = ContainerTraits::ContainerSize(header);
-    if (size < sizeof(header) || size > capacity) {
-      return fitx::error{to_error("container doesn't fit. Truncated?")};
-    }
-
-    return fitx::ok(header);
-  }
-
   /// After calling begin(), it's mandatory to call take_error() before
   /// destroying the Container object.  An iteration that encounters an error
   /// will simply end early, i.e. begin() or operator++() will yield an
@@ -553,6 +510,49 @@ class Container {
   fitx::result<storage_error_type, typename Traits::template LocalizedReadResult<item_header_type>>
   ItemHeader(uint32_t offset) {
     return Traits::template LocalizedRead<item_header_type>(storage(), offset);
+  }
+
+  // This returns its own error state and does not affect the `take_error()`
+  // state of the Container.
+  fitx::result<Error, container_header_type> container_header() {
+    auto to_error = [this](
+                        std::string_view reason, uint32_t error_offset = 0,
+                        std::optional<storage_error_type> storage_error = std::nullopt) -> Error {
+      return ContainerTraits::template ToError<Traits>(storage(), reason, 0, error_offset, nullptr,
+                                                       std::move(storage_error));
+    };
+    auto capacity_error = Traits::Capacity(storage());
+    if (capacity_error.is_error()) {
+      return fitx::error{to_error("cannot determine storage capacity", 0,
+                                  std::move(capacity_error).error_value())};
+    }
+    uint32_t capacity = capacity_error.value();
+
+    // Minimal bounds check before trying to read.
+    if (capacity < sizeof(container_header_type)) {
+      return fitx::error(to_error("container header doesn't fit. Truncated?", capacity));
+    }
+
+    // Read and validate the container header.
+    auto header_error = ContainerHeader();
+    if (header_error.is_error()) {
+      // Failed to read the container header.
+      return fitx::error{
+          to_error("cannot read container header", 0, std::move(header_error).error_value())};
+    }
+
+    container_header_type header = std::move(header_error).value();
+
+    auto check_error = ContainerTraits::CheckContainerHeader(header);
+    if (check_error.is_error()) {
+      return fitx::error{to_error(check_error.error_value())};
+    }
+    const uint32_t size = ContainerTraits::ContainerSize(header);
+    if (size < sizeof(header) || size > capacity) {
+      return fitx::error{to_error("container doesn't fit. Truncated?")};
+    }
+
+    return fitx::ok(header);
   }
 
   // Returns [offset, length] in the storage to cover the given item range.
