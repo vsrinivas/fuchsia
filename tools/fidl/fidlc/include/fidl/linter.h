@@ -6,9 +6,9 @@
 #define TOOLS_FIDL_FIDLC_INCLUDE_FIDL_LINTER_H_
 
 #include <array>
-#include <deque>
 #include <regex>
 #include <set>
+#include <stack>
 #include <utility>
 
 #include <fidl/check_def.h>
@@ -80,76 +80,6 @@ class Linter {
     fit::function<std::string(std::string)> convert;
   };
 
-  // Holds information about a nesting context in a FIDL file, for checks
-  // that must compare information about the context with information about
-  // a nested entity. The outer-most context is the FIDL file itself
-  // (including the file's declared library name). Contexts nested in a
-  // file's context include type definitions with nested entities, such as
-  // enum, bits, struct, table, and union.
-  class Context {
-   public:
-    struct RepeatsContextNames;
-
-    Context(std::string type, std::string id, CheckDef context_check)
-        : type_(std::move(type)), id_(std::move(id)), context_check_(std::move(context_check)) {}
-
-    // Enables move construction and assignment
-    Context(Context&& rhs) = default;
-    Context& operator=(Context&&) = default;
-
-    // no copy or assign (move-only or pass by reference)
-    Context(const Context&) = delete;
-    Context& operator=(const Context&) = delete;
-
-    std::string type() const { return type_; }
-
-    std::string id() const { return id_; }
-
-    // A |vector| of information about potential violations of the FIDL rubric
-    // rule that prohibits repeating names from the outer type or library.
-    // Exceptions to this rule cannot be determined until all nested identifiers
-    // are reviewed, so this vector saves the required information until that
-    // time.
-    std::vector<RepeatsContextNames>& name_repeaters() { return name_repeaters_; }
-
-    const std::set<std::string>& words() {
-      if (words_.empty()) {
-        auto words = utils::id_to_words(id_);
-        words_.insert(words.begin(), words.end());
-      }
-      return words_;
-    }
-
-    const CheckDef& context_check() const { return context_check_; }
-
-    template <typename... Args>
-    void AddRepeatsContextNames(Args&&... args) {
-      name_repeaters_.emplace_back(args...);
-    }
-
-    // Stores minimum information needed to construct a |Finding| if a
-    // nested identifier repeats names from one of its contexts.
-    // Determination is deferred until all nested identifiers are evaluated
-    // because some cases of repeated names are allowed if the repeated
-    // names help differentiate two identifiers that represent different
-    // parts of the concept represented by the context identifier.
-    struct RepeatsContextNames {
-      RepeatsContextNames(std::string a_type, SourceSpan a_span, std::set<std::string> a_repeats)
-          : type(std::move(a_type)), span(a_span), repeats(std::move(a_repeats)) {}
-
-      const std::string type;
-      const SourceSpan span;
-      const std::set<std::string> repeats;
-    };
-
-   private:
-    std::string type_;
-    std::string id_;
-    std::set<std::string> words_;
-    CheckDef context_check_;
-    std::vector<RepeatsContextNames> name_repeaters_;
-  };
-
   const std::set<std::string>& permitted_library_prefixes() const;
   std::string kPermittedLibraryPrefixesas_string() const;
 
@@ -167,9 +97,6 @@ class Linter {
                             Substitutions substitutions = {}, std::string suggestion_template = "",
                             std::string replacement_template = "");
 
-  const Finding* AddRepeatedNameFinding(const Context& context,
-                                        const Context::RepeatsContextNames& name_repeater);
-
   // Initialization and checks at the start of a new file. The |Linter|
   // can be called multiple times with many different files.
   void NewFile(const raw::File& element);
@@ -179,15 +106,7 @@ class Linter {
                            const std::unique_ptr<raw::Identifier>& identifier,
                            const CheckDef& check_def, const CaseType& case_type);
 
-  // CheckRepeatedName() does not add Finding objects immediately. It checks for
-  // potential violations, but must wait until ExitContext() so the potential
-  // violation can be compared to its peers.
-  void CheckRepeatedName(const std::string& type, const std::unique_ptr<raw::Identifier>& id);
-
-  template <typename... Args>
-  void EnterContext(Args&&... args) {
-    context_stack_.emplace_front(args...);
-  }
+  void EnterContext(const std::string& type) { type_stack_.push(type); }
 
   // Pops the context stack. If any contained types repeat names from the
   // context, this function compares the nested identifiers with each other.
@@ -214,7 +133,6 @@ class Linter {
   // (https://google.github.io/styleguide/cppguide.html#Static_and_Global_Variables)
   const CheckDef kLibraryNameDepthCheck;
   const CheckDef kLibraryNameComponentCheck;
-  const CheckDef kRepeatsLibraryNameCheck;
   const CheckDef kLibraryPrefixCheck;
   const CheckDef kInvalidCopyrightCheck;
 
@@ -228,7 +146,16 @@ class Linter {
   const std::set<std::string> kPermittedLibraryPrefixes;
   const std::set<std::string> kStopWords;
 
-  std::deque<Context> context_stack_;
+  // Stores the stack of type contexts (roughly analogous to the NamingContext
+  // in flat/name.h, but storing the type rather than name), so that it is
+  // possible to determine the parent/containing type from within an On* visitor.
+  // For example, the `context_stack_` when calling OnOrdinaledMember for member
+  // `foo` in:
+  //
+  // type Data = struct { inner union { 1: foo uint8; }; };
+  //
+  // would be: ["struct", "union"].
+  std::stack<std::string> type_stack_;
 
   size_t line_comments_checked_ = 0;
 
@@ -308,12 +235,10 @@ class Linter {
   // populated only for the duration of the Visit(), to lint a given FIDL
   // file.
   //
-  // Some lint checks can only be assessed after processing more of the FIDL
-  // (for example, "name-repeats-enclosing-type-name" checks cannot be added
-  // until all members of the enclosing type are available). Other checks on
-  // the same members will be added as they are encountered. Since |Finding|
-  // objects are collected out of source order, an ordered collection
-  // ensures |Finding| objects are in sorted order.
+  // Some lint checks can only be assessed after processing more of the FIDL.
+  // Other checks on the same members will be added as they are encountered.
+  // Since |Finding| objects are collected out of source order, an ordered
+  // collection ensures |Finding| objects are in sorted order.
   //
   // |Finding| objects must be returned in source order (filename, starting
   // character, and ending character).

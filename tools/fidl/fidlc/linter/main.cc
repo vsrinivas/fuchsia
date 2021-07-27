@@ -126,12 +126,6 @@ int main(int argc, char* argv[]) {
   // The following checks can be opted-in via command line option "included-checks",
   // but are otherwise disabled for the reasons described in the comments:
 
-  // The name-repeats-* checks are very noisy, and sometimes produce
-  // unexpected findings. Rules are being refined, but for now, these
-  // are suppressed.
-  excluded_and_disabled_checks.insert("name-repeats-library-name");
-  excluded_and_disabled_checks.insert("name-repeats-enclosing-type-name");
-
   // This check does currently highlight some potential issues with
   // formatting and with 2-slash comments that will be converted to
   // 3-slash Doc-Comments, but the rule cannot currently check 3-slash

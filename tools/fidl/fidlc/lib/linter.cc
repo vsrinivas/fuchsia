@@ -226,8 +226,7 @@ void Linter::NewFile(const raw::File& element) {
       }
     }
   }
-  EnterContext("library", NameLibrary(element.library_decl->path->components),
-               kRepeatsLibraryNameCheck);
+  EnterContext("library");
 }
 
 const Finding* Linter::CheckCase(const std::string& type,
@@ -244,40 +243,6 @@ const Finding* Linter::CheckCase(const std::string& type,
                       "change '${IDENTIFIER}' to '${REPLACEMENT}'", "${REPLACEMENT}");
   }
   return nullptr;
-}
-
-void Linter::CheckRepeatedName(const std::string& type,
-                               const std::unique_ptr<raw::Identifier>& identifier) {
-  std::string id = to_string(identifier);
-  auto split_id = utils::id_to_words(id, kStopWords);
-  std::set<std::string> words;
-  words.insert(split_id.begin(), split_id.end());
-  for (auto& context : context_stack_) {
-    std::set<std::string> repeats;
-    std::set_intersection(words.begin(), words.end(), context.words().begin(),
-                          context.words().end(), std::inserter(repeats, repeats.begin()));
-    if (!repeats.empty()) {
-      context.AddRepeatsContextNames(type, identifier->span(), repeats);
-    }
-  }
-}
-
-const Finding* Linter::AddRepeatedNameFinding(const Context& context,
-                                              const Context::RepeatsContextNames& name_repeater) {
-  std::string repeated_names;
-  for (const auto& repeat : name_repeater.repeats) {
-    if (!repeated_names.empty()) {
-      repeated_names.append(", ");
-    }
-    repeated_names.append(repeat);
-  }
-  return AddFinding(name_repeater.span, context.context_check(),
-                    {
-                        {"TYPE", name_repeater.type},
-                        {"REPEATED_NAMES", repeated_names},
-                        {"CONTEXT_TYPE", context.type()},
-                        {"CONTEXT_ID", context.id()},
-                    });
 }
 
 std::string Linter::GetCopyrightSuggestion() {
@@ -329,43 +294,7 @@ bool Linter::CopyrightCheckIsComplete() {
          good_copyright_lines_found_ >= kCopyrightLines.size();
 }
 
-void Linter::ExitContext() {
-  Context context = std::move(context_stack_.front());
-  context_stack_.pop_front();
-
-  // Check the |RepeatsContextNames| objects in context.name_repeaters(), and
-  // produce Finding objects for any identifier that is not allowed to repeat
-  // a name from this |Context|.
-  //
-  // This check addresses the FIDL Rubric rule:
-  //
-  //     Member names must not repeat names from the enclosing type (or
-  //     library) unless the member name is ambiguous without a name from
-  //     the enclosing type...
-  //
-  //     ...a type DeviceToRoom--that associates a smart device with the room
-  //     it's located in--may need to have members device_id and room_name,
-  //     because id and name are ambiguous; they could refer to either the
-  //     device or the room.
-  auto& repeaters = context.name_repeaters();
-  for (size_t i = 1; i < repeaters.size(); i++) {
-    std::set<std::string> diffs;
-    std::set_difference(repeaters[i - 1].repeats.begin(), repeaters[i - 1].repeats.end(),
-                        repeaters[i].repeats.begin(), repeaters[i].repeats.end(),
-                        std::inserter(diffs, diffs.begin()));
-    if (!diffs.empty()) {
-      // If there are any differences, we have to assume they may be
-      // disambiguating, which is allowed.
-      return;
-    }
-  }
-  // If multiple name repeaters in a given context all repeat the same thing,
-  // then it's obvious they don't disambiguate anything, so add Findings for
-  // each violator.
-  for (auto& repeater : repeaters) {
-    AddRepeatedNameFinding(context, repeater);
-  }
-}
+void Linter::ExitContext() { type_stack_.pop(); }
 
 Linter::Linter()
     : kLibraryNameDepthCheck(DefineCheck("too-many-nested-libraries",
@@ -374,10 +303,6 @@ Linter::Linter()
           DefineCheck("disallowed-library-name-component",
                       "Library names must not contain the following components: common, service, "
                       "util, base, f<letter>l, zx<word>")),
-      kRepeatsLibraryNameCheck(
-          DefineCheck("name-repeats-library-name",
-                      "${TYPE} names (${REPEATED_NAMES}) must not repeat names from the "
-                      "library '${CONTEXT_ID}'")),
       kLibraryPrefixCheck(DefineCheck("wrong-prefix-for-platform-source-library",
                                       "FIDL library name is not currently allowed")),
       kInvalidCopyrightCheck(
@@ -508,10 +433,6 @@ Linter::Linter()
       DefineCheck("invalid-case-for-decl-member", "${TYPE} must be named in lower_snake_case");
   auto modifiers_order = DefineCheck(
       "modifier-order", "Strictness modifier on ${TYPE} must always precede the resource modifier");
-  auto name_repeats_enclosing_type_name =
-      DefineCheck("name-repeats-enclosing-type-name",
-                  "${TYPE} names (${REPEATED_NAMES}) must not repeat names from the "
-                  "enclosing ${CONTEXT_TYPE} '${CONTEXT_ID}'");
   auto todo_should_not_be_doc_comment =
       DefineCheck("todo-should-not-be-doc-comment",
                   "TODO comment should use a non-flow-through comment marker");
@@ -590,11 +511,6 @@ Linter::Linter()
       });
   // clang-format on
 
-  callbacks_.OnAliasDeclaration([&linter = *this]
-                                //
-                                (const raw::AliasDeclaration& element) {
-                                  linter.CheckRepeatedName("type alias", element.alias);
-                                });
   callbacks_.OnUsing([&linter = *this,
                       case_check = DefineCheck("invalid-case-for-using-alias",
                                                "Using aliases must be named in lower_snake_case"),
@@ -604,7 +520,6 @@ Linter::Linter()
                        if (element.maybe_alias != nullptr) {
                          linter.CheckCase("using alias", element.maybe_alias, case_check,
                                           case_type);
-                         linter.CheckRepeatedName("using alias", element.maybe_alias);
                        }
                      });
 
@@ -613,7 +528,6 @@ Linter::Linter()
       //
       (const raw::ConstDeclaration& element) {
         linter.CheckCase("constants", element.identifier, case_check, case_type);
-        linter.CheckRepeatedName("constant", element.identifier);
         linter.in_const_declaration_ = true;
       });
 
@@ -623,21 +537,20 @@ Linter::Linter()
       (const raw::ConstDeclaration& element) { linter.in_const_declaration_ = false; });
 
   callbacks_.OnProtocolDeclaration(
-      [&linter = *this, context_check = name_repeats_enclosing_type_name,
+      [&linter = *this,
        name_contains_service_check = DefineCheck("protocol-name-includes-service",
                                                  "Protocols must not include the name 'service.'")]
       //
       (const raw::ProtocolDeclaration& element) {
         linter.CheckCase("protocols", element.identifier, linter.invalid_case_for_decl_name(),
                          linter.decl_case_type_for_style());
-        linter.CheckRepeatedName("protocol", element.identifier);
         for (const auto& word : utils::id_to_words(to_string(element.identifier))) {
           if (word == "service") {
             linter.AddFinding(element.identifier, name_contains_service_check);
             break;
           }
         }
-        linter.EnterContext("protocol", to_string(element.identifier), context_check);
+        linter.EnterContext("protocol");
       });
   callbacks_.OnMethod([&linter = *this]
                       //
@@ -645,7 +558,6 @@ Linter::Linter()
                         linter.CheckCase("methods", element.identifier,
                                          linter.invalid_case_for_decl_name(),
                                          linter.decl_case_type_for_style());
-                        linter.CheckRepeatedName("method", element.identifier);
                       });
   callbacks_.OnEvent(
       [&linter = *this, event_check = DefineCheck("event-names-must-start-with-on",
@@ -671,7 +583,6 @@ Linter::Linter()
                             },
                             "change '${IDENTIFIER}' to '${REPLACEMENT}'", "${REPLACEMENT}");
         }
-        linter.CheckRepeatedName("event", element.identifier);
       });
   callbacks_.OnParameter(
       [&linter = *this, case_check = invalid_case_for_decl_member, &case_type = lower_snake_]
@@ -705,76 +616,69 @@ Linter::Linter()
         }
       });
 
-  callbacks_.OnBitsDeclaration(
-      [&linter = *this, context_check = name_repeats_enclosing_type_name]
-      //
-      (const raw::BitsDeclaration& element) {
-        linter.CheckCase("bitfields", element.identifier, linter.invalid_case_for_decl_name(),
-                         linter.decl_case_type_for_style());
-        linter.CheckRepeatedName("bitfield", element.identifier);
-        linter.EnterContext("bitfield", to_string(element.identifier), context_check);
-      });
+  callbacks_.OnBitsDeclaration([&linter = *this]
+                               //
+                               (const raw::BitsDeclaration& element) {
+                                 linter.CheckCase("bitfields", element.identifier,
+                                                  linter.invalid_case_for_decl_name(),
+                                                  linter.decl_case_type_for_style());
+                                 linter.EnterContext("bitfield");
+                               });
   callbacks_.OnBitsMember(
       [&linter = *this, case_check = invalid_case_for_constant, &case_type = upper_snake_]
       //
       (const raw::BitsMember& element) {
         linter.CheckCase("bitfield members", element.identifier, case_check, case_type);
-        linter.CheckRepeatedName("bitfield member", element.identifier);
       });
   callbacks_.OnExitBitsDeclaration([&linter = *this]
                                    //
                                    (const raw::BitsDeclaration& element) { linter.ExitContext(); });
 
-  callbacks_.OnEnumDeclaration(
-      [&linter = *this, context_check = name_repeats_enclosing_type_name]
-      //
-      (const raw::EnumDeclaration& element) {
-        linter.CheckCase("enums", element.identifier, linter.invalid_case_for_decl_name(),
-                         linter.decl_case_type_for_style());
-        linter.CheckRepeatedName("enum", element.identifier);
-        linter.EnterContext("enum", to_string(element.identifier), context_check);
-      });
+  callbacks_.OnEnumDeclaration([&linter = *this]
+                               //
+                               (const raw::EnumDeclaration& element) {
+                                 linter.CheckCase("enums", element.identifier,
+                                                  linter.invalid_case_for_decl_name(),
+                                                  linter.decl_case_type_for_style());
+                                 linter.EnterContext("enum");
+                               });
   callbacks_.OnEnumMember(
       [&linter = *this, case_check = invalid_case_for_constant, &case_type = upper_snake_]
       //
       (const raw::EnumMember& element) {
         linter.CheckCase("enum members", element.identifier, case_check, case_type);
-        linter.CheckRepeatedName("enum member", element.identifier);
       });
   callbacks_.OnExitEnumDeclaration([&linter = *this]
                                    //
                                    (const raw::EnumDeclaration& element) { linter.ExitContext(); });
 
-  callbacks_.OnStructDeclaration(
-      [&linter = *this, context_check = name_repeats_enclosing_type_name]
-      //
-      (const raw::StructDeclaration& element) {
-        linter.CheckCase("structs", element.identifier, linter.invalid_case_for_decl_name(),
-                         linter.decl_case_type_for_style());
-        linter.CheckRepeatedName("struct", element.identifier);
-        linter.EnterContext("struct", to_string(element.identifier), context_check);
-      });
+  callbacks_.OnStructDeclaration([&linter = *this]
+                                 //
+                                 (const raw::StructDeclaration& element) {
+                                   linter.CheckCase("structs", element.identifier,
+                                                    linter.invalid_case_for_decl_name(),
+                                                    linter.decl_case_type_for_style());
+                                   linter.EnterContext("struct");
+                                 });
   callbacks_.OnStructMember(
       [&linter = *this, case_check = invalid_case_for_decl_member, &case_type = lower_snake_]
       //
       (const raw::StructMember& element) {
         linter.CheckCase("struct members", element.identifier, case_check, case_type);
-        linter.CheckRepeatedName("struct member", element.identifier);
       });
   callbacks_.OnExitStructDeclaration(
       [&linter = *this]
       //
       (const raw::StructDeclaration& element) { linter.ExitContext(); });
 
-  callbacks_.OnTableDeclaration(
-      [&linter = *this, context_check = name_repeats_enclosing_type_name]
-      //
-      (const raw::TableDeclaration& element) {
-        linter.CheckCase("tables", element.identifier, linter.invalid_case_for_decl_name(),
-                         linter.decl_case_type_for_style());
-        linter.CheckRepeatedName("table", element.identifier);
-        linter.EnterContext("table", to_string(element.identifier), context_check);
-      });
+  callbacks_.OnTableDeclaration([&linter = *this]
+                                //
+                                (const raw::TableDeclaration& element) {
+                                  linter.CheckCase("tables", element.identifier,
+                                                   linter.invalid_case_for_decl_name(),
+                                                   linter.decl_case_type_for_style());
+                                  linter.EnterContext("table");
+                                });
   callbacks_.OnTableMember(
       [&linter = *this, case_check = invalid_case_for_decl_member, &case_type = lower_snake_]
       //
@@ -782,22 +686,20 @@ Linter::Linter()
         if (element.maybe_used == nullptr)
           return;
         linter.CheckCase("table members", element.maybe_used->identifier, case_check, case_type);
-        linter.CheckRepeatedName("table member", element.maybe_used->identifier);
       });
   callbacks_.OnExitTableDeclaration(
       [&linter = *this]
       //
       (const raw::TableDeclaration& element) { linter.ExitContext(); });
 
-  callbacks_.OnUnionDeclaration(
-      [&linter = *this, context_check = name_repeats_enclosing_type_name]
-      //
-      (const raw::UnionDeclaration& element) {
-        linter.CheckCase("unions", element.identifier, linter.invalid_case_for_decl_name(),
-                         linter.decl_case_type_for_style());
-        linter.CheckRepeatedName("union", element.identifier);
-        linter.EnterContext("union", to_string(element.identifier), context_check);
-      });
+  callbacks_.OnUnionDeclaration([&linter = *this]
+                                //
+                                (const raw::UnionDeclaration& element) {
+                                  linter.CheckCase("unions", element.identifier,
+                                                   linter.invalid_case_for_decl_name(),
+                                                   linter.decl_case_type_for_style());
+                                  linter.EnterContext("union");
+                                });
   callbacks_.OnUnionMember(
       [&linter = *this, case_check = invalid_case_for_decl_member, &case_type = lower_snake_]
       //
@@ -805,7 +707,6 @@ Linter::Linter()
         if (element.maybe_used == nullptr)
           return;
         linter.CheckCase("union members", element.maybe_used->identifier, case_check, case_type);
-        linter.CheckRepeatedName("union member", element.maybe_used->identifier);
       });
   callbacks_.OnExitUnionDeclaration(
       [&linter = *this]
@@ -857,7 +758,7 @@ Linter::Linter()
         }
       });
   callbacks_.OnTypeDecl(
-      [&linter = *this, context_check = name_repeats_enclosing_type_name]
+      [&linter = *this]
       //
       (const raw::TypeDecl& element) {
         std::string context_type;
@@ -888,15 +789,14 @@ Linter::Linter()
 
         linter.CheckCase(context_type + "s", element.identifier,
                          linter.invalid_case_for_decl_name(), linter.decl_case_type_for_style());
-        linter.CheckRepeatedName(context_type, element.identifier);
-        linter.EnterContext(context_type, to_string(element.identifier), context_check);
+        linter.EnterContext(context_type);
       });
   callbacks_.OnLayout(
       [&linter = *this, explict_flexible_modifier_check = explict_flexible_modifier,
        modifiers_order_check = modifiers_order]
       //
       (const raw::Layout& element) {
-        std::string parent_type = linter.context_stack_.front().type();
+        std::string parent_type = linter.type_stack_.top();
         // The "parent_type" for type declarations is set in the OnTypeDecl callback.  This callback
         // is not invoked in the case of protocol request/response parameter lists, resulting a
         // "protocol" naming context instead.  However, since protocol request/response parameter
@@ -936,31 +836,27 @@ Linter::Linter()
       (const raw::OrdinaledLayoutMember& element) {
         if (element.reserved)
           return;
-        std::string parent_type = linter.context_stack_.front().type();
+        std::string parent_type = linter.type_stack_.top();
         linter.CheckCase(parent_type + " members", element.identifier, case_check, case_type);
-        linter.CheckRepeatedName(parent_type + " member", element.identifier);
       });
   callbacks_.OnStructLayoutMember(
       [&linter = *this, case_check = invalid_case_for_decl_member, &case_type = lower_snake_]
       //
       (const raw::StructLayoutMember& element) {
-        std::string parent_type = linter.context_stack_.front().type();
+        std::string parent_type = linter.type_stack_.top();
         if (parent_type == "protocol") {
           linter.CheckCase("parameters", element.identifier, case_check, case_type);
-          linter.CheckRepeatedName("parameters member", element.identifier);
           return;
         }
 
         linter.CheckCase("struct members", element.identifier, case_check, case_type);
-        linter.CheckRepeatedName("struct member", element.identifier);
       });
   callbacks_.OnValueLayoutMember(
       [&linter = *this, case_check = invalid_case_for_constant, &case_type = upper_snake_]
       //
       (const raw::ValueLayoutMember& element) {
-        std::string parent_type = linter.context_stack_.front().type();
+        std::string parent_type = linter.type_stack_.top();
         linter.CheckCase(parent_type + " members", element.identifier, case_check, case_type);
-        linter.CheckRepeatedName(parent_type + " member", element.identifier);
       });
   callbacks_.OnExitTypeDecl([&linter = *this]
                             //
