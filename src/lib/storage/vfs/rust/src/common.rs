@@ -17,7 +17,8 @@ use {
 };
 
 /// Set of known rights.
-const FS_RIGHTS: u32 = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_RIGHT_ADMIN;
+const FS_RIGHTS: u32 =
+    OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_RIGHT_EXECUTABLE | OPEN_RIGHT_ADMIN;
 
 /// Flags visible to GetFlags. These are flags that have meaning after the open call; all other
 /// flags are only significant at open time.

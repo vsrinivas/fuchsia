@@ -28,12 +28,12 @@
     use: [
         {
             directory: "system-delayed",
-            rights: [ "r*" ],
+            rights: [ "rx*" ],
             path: "/system",
         },
         {
             directory: "pkgfs-delayed",
-            rights: [ "r*" ],
+            rights: [ "rx*" ],
             path: "/pkgfs",
         },
         {

@@ -10,12 +10,10 @@ use {
     anyhow::Error,
     fidl::endpoints::{Proxy, ServerEnd},
     fidl_fuchsia_io2 as fio2,
-    fuchsia_component::server::ServiceFs,
     fuchsia_component_test::builder::{
         Capability, CapabilityRoute, ComponentSource, RealmBuilder, RouteEndpoint,
     },
     fuchsia_component_test::mock::MockHandles,
-    futures::StreamExt,
 };
 
 type Directory = std::sync::Arc<
@@ -27,29 +25,19 @@ async fn serve_fake_filesystem(
     pkgfs: Directory,
     handles: MockHandles,
 ) -> Result<(), anyhow::Error> {
-    let (pkgfs_proxy, pkgfs_service) =
-        fidl::endpoints::create_proxy::<fidl_fuchsia_io::DirectoryMarker>()?;
-    pkgfs.open(
-        vfs::execution_scope::ExecutionScope::new(),
-        fidl_fuchsia_io::OPEN_RIGHT_READABLE,
+    let fs_scope = vfs::execution_scope::ExecutionScope::new();
+    let root: Directory = vfs::pseudo_directory! {
+        "pkgfs" => pkgfs,
+        "system" => system
+    };
+    root.open(
+        fs_scope.clone(),
+        fidl_fuchsia_io::OPEN_RIGHT_READABLE | fidl_fuchsia_io::OPEN_RIGHT_EXECUTABLE,
         0,
         vfs::path::Path::dot(),
-        ServerEnd::new(pkgfs_service.into_channel()),
+        ServerEnd::new(handles.outgoing_dir.into_channel()),
     );
-    let (system_proxy, system_service) =
-        fidl::endpoints::create_proxy::<fidl_fuchsia_io::DirectoryMarker>()?;
-    system.open(
-        vfs::execution_scope::ExecutionScope::new(),
-        fidl_fuchsia_io::OPEN_RIGHT_READABLE,
-        0,
-        vfs::path::Path::dot(),
-        ServerEnd::new(system_service.into_channel()),
-    );
-    let mut fs = ServiceFs::new();
-    fs.add_remote("pkgfs", pkgfs_proxy);
-    fs.add_remote("system", system_proxy);
-    fs.serve_connection(handles.outgoing_dir.into_channel()).expect("serve mock ServiceFs");
-    fs.collect::<()>().await;
+    fs_scope.wait().await;
     Ok::<(), anyhow::Error>(())
 }
 
@@ -137,7 +125,7 @@ async fn create_realm(
     let fake_filesystem = RouteEndpoint::component("fake_filesystem");
     let driver_manager = RouteEndpoint::component("driver_manager");
     builder.add_route(CapabilityRoute {
-        capability: Capability::directory("pkgfs-delayed", "/pkgfs", fio2::R_STAR_DIR),
+        capability: Capability::directory("pkgfs-delayed", "/pkgfs", fio2::RX_STAR_DIR),
         source: fake_filesystem.clone(),
         targets: vec![driver_manager.clone()],
     })?;
@@ -151,7 +139,7 @@ async fn create_realm(
         targets: vec![driver_manager.clone()],
     })?;
     builder.add_route(CapabilityRoute {
-        capability: Capability::directory("system-delayed", "/system", fio2::R_STAR_DIR),
+        capability: Capability::directory("system-delayed", "/system", fio2::RX_STAR_DIR),
         source: fake_filesystem.clone(),
         targets: vec![driver_manager.clone()],
     })?;
@@ -200,7 +188,7 @@ async fn load_package_firmware_test() -> Result<(), Error> {
     };
     let driver_dir = vfs::remote::remote_dir(io_util::open_directory_in_namespace(
         "/pkg/driver/test",
-        io_util::OPEN_RIGHT_READABLE,
+        io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_EXECUTABLE,
     )?);
     let meta_dir = vfs::remote::remote_dir(io_util::open_directory_in_namespace(
         "/pkg/meta",
@@ -286,7 +274,7 @@ async fn load_system_firmware_test() -> Result<(), Error> {
     let firmware_file = vfs::file::vmo::asynchronous::read_only_static(b"this is some firmware\n");
     let driver_dir = vfs::remote::remote_dir(io_util::open_directory_in_namespace(
         "/pkg/driver/test",
-        io_util::OPEN_RIGHT_READABLE,
+        io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_EXECUTABLE,
     )?);
     let system: Directory = vfs::pseudo_directory! {
         "driver" => driver_dir,

@@ -13,16 +13,16 @@ use {
         OPEN_FLAG_APPEND, OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DESCRIBE,
         OPEN_FLAG_DIRECTORY, OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY, OPEN_FLAG_POSIX,
         OPEN_FLAG_POSIX_EXECUTABLE, OPEN_FLAG_POSIX_WRITABLE, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_ADMIN,
-        OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+        OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
     fuchsia_zircon as zx,
-    libc::{S_IRUSR, S_IWUSR},
+    libc::{S_IRUSR, S_IWUSR, S_IXUSR},
     static_assertions::assert_eq_size,
     std::{io::Write, mem::size_of},
 };
 
 /// POSIX emulation layer access attributes for all directories created with empty().
-pub const POSIX_DIRECTORY_PROTECTION_ATTRIBUTES: u32 = S_IRUSR | S_IWUSR;
+pub const POSIX_DIRECTORY_PROTECTION_ATTRIBUTES: u32 = S_IRUSR | S_IWUSR | S_IXUSR;
 
 /// Checks flags provided for a new connection.  Returns adjusted flags (cleaning up some
 /// ambiguities) or a fidl Status error, in case new new connection flags are not permitting the
@@ -44,15 +44,15 @@ pub fn new_connection_validate_flags(mut flags: u32) -> Result<u32, zx::Status> 
         return Err(zx::Status::NOT_FILE);
     }
 
-    // TODO(fxb/37534): Add support for execute rights.
-    flags &= !OPEN_FLAG_POSIX_EXECUTABLE;
-
-    // For directories OPEN_FLAG_POSIX means WRITABLE permission.  Parent connection must have
-    // already checked the flag, so if it is present it just means WRITABLE.
+    // Parent connection must have already checked the POSIX flags, so if present we expand
+    // those respective rights and remove the flags.
+    if flags & (OPEN_FLAG_POSIX | OPEN_FLAG_POSIX_EXECUTABLE) != 0 {
+        flags |= OPEN_RIGHT_EXECUTABLE;
+    }
     if flags & (OPEN_FLAG_POSIX | OPEN_FLAG_POSIX_WRITABLE) != 0 {
-        flags &= !(OPEN_FLAG_POSIX | OPEN_FLAG_POSIX_WRITABLE);
         flags |= OPEN_RIGHT_WRITABLE;
     }
+    flags &= !(OPEN_FLAG_POSIX | OPEN_FLAG_POSIX_WRITABLE | OPEN_FLAG_POSIX_EXECUTABLE);
 
     let allowed_flags = OPEN_FLAG_NODE_REFERENCE
         | OPEN_FLAG_DESCRIBE
@@ -60,7 +60,8 @@ pub fn new_connection_validate_flags(mut flags: u32) -> Result<u32, zx::Status> 
         | OPEN_FLAG_CREATE_IF_ABSENT
         | OPEN_FLAG_DIRECTORY
         | OPEN_RIGHT_READABLE
-        | OPEN_RIGHT_WRITABLE;
+        | OPEN_RIGHT_WRITABLE
+        | OPEN_RIGHT_EXECUTABLE;
 
     let prohibited_flags = OPEN_FLAG_APPEND | OPEN_FLAG_TRUNCATE;
 
@@ -110,13 +111,15 @@ pub fn check_child_connection_flags(
         return Err(zx::Status::INVALID_ARGS);
     }
 
-    // TODO(fxb/37534): Add support for execute rights.
-    flags &= !OPEN_FLAG_POSIX_EXECUTABLE;
-
+    // Remove POSIX flags when the respective rights are not available ("soft fail").
+    if parent_flags & (OPEN_RIGHT_EXECUTABLE | OPEN_RIGHT_WRITABLE) == 0 {
+        flags &= !OPEN_FLAG_POSIX;
+    }
+    if parent_flags & OPEN_RIGHT_EXECUTABLE == 0 {
+        flags &= !OPEN_FLAG_POSIX_EXECUTABLE;
+    }
     if parent_flags & OPEN_RIGHT_WRITABLE == 0 {
-        // OPEN_FLAG_POSIX/OPEN_FLAG_POSIX_WRITABLE is effectively OPEN_RIGHT_WRITABLE, but with
-        // "soft fail", when the target is a directory, so we need to remove it.
-        flags &= !(OPEN_FLAG_POSIX | OPEN_FLAG_POSIX_WRITABLE);
+        flags &= !OPEN_FLAG_POSIX_WRITABLE;
     }
 
     if flags & OPEN_FLAG_CREATE != 0 && parent_flags & OPEN_RIGHT_WRITABLE == 0 {
@@ -178,7 +181,8 @@ mod tests {
         fidl_fuchsia_io::{
             OPEN_FLAG_APPEND, OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DESCRIBE,
             OPEN_FLAG_DIRECTORY, OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY,
-            OPEN_FLAG_POSIX, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_ADMIN, OPEN_RIGHT_READABLE,
+            OPEN_FLAG_POSIX, OPEN_FLAG_POSIX_EXECUTABLE, OPEN_FLAG_POSIX_WRITABLE,
+            OPEN_FLAG_TRUNCATE, OPEN_RIGHT_ADMIN, OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE,
             OPEN_RIGHT_WRITABLE,
         },
         fuchsia_zircon as zx,
@@ -228,10 +232,24 @@ mod tests {
 
     #[test]
     fn new_connection_validate_flags_posix() {
-        for open_flags in
-            build_flag_combinations(OPEN_FLAG_POSIX, OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE)
-        {
-            ncvf_ok(open_flags, OPEN_RIGHT_WRITABLE | (open_flags & !OPEN_FLAG_POSIX));
+        for open_flags in build_flag_combinations(
+            0,
+            OPEN_RIGHT_READABLE
+                | OPEN_FLAG_POSIX
+                | OPEN_FLAG_POSIX_EXECUTABLE
+                | OPEN_FLAG_POSIX_WRITABLE,
+        ) {
+            let mut expected_rights = open_flags & OPEN_RIGHT_READABLE;
+            if (open_flags & OPEN_FLAG_POSIX) != 0 {
+                expected_rights |= OPEN_RIGHT_WRITABLE | OPEN_RIGHT_EXECUTABLE;
+            }
+            if (open_flags & OPEN_FLAG_POSIX_WRITABLE) != 0 {
+                expected_rights |= OPEN_RIGHT_WRITABLE
+            }
+            if (open_flags & OPEN_FLAG_POSIX_EXECUTABLE) != 0 {
+                expected_rights |= OPEN_RIGHT_EXECUTABLE
+            }
+            ncvf_ok(open_flags, expected_rights);
         }
     }
 
