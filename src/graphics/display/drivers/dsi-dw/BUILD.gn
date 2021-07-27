@@ -71,7 +71,7 @@ test("dsi-dw-test") {
   sources = [ "dsi-dw-test.cc" ]
   deps = [
     ":common_srcs",
-    "//src/devices/testing/fake_ddk",
+    "//src/devices/testing/mock-ddk",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
