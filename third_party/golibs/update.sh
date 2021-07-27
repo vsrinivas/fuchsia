@@ -61,6 +61,7 @@ IMPORTS_STR=$(
   echo "${IMPORTS[*]}"
 )
 
+THIS_SCRIPT=$(realpath --relative-to="$FUCHSIA_DIR" "$0")
 printf '// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
@@ -69,7 +70,7 @@ printf '// Copyright 2021 The Fuchsia Authors. All rights reserved.
 
 package imports
 
-import (\n%s\n)' "$0" "$IMPORTS_STR" | $GOFMT -s >imports.go
+import (\n%s\n)' "//$THIS_SCRIPT" "$IMPORTS_STR" | $GOFMT -s >imports.go
 
 $GO get -u gvisor.dev/gvisor@go
 $GO get -u
