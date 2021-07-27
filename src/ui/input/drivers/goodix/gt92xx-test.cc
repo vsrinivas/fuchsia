@@ -7,7 +7,6 @@
 #include <fuchsia/hardware/gpio/cpp/banjo-mock.h>
 #include <fuchsia/hardware/gpio/cpp/banjo.h>
 #include <lib/ddk/metadata.h>
-#include <lib/fake_ddk/fake_ddk.h>
 #include <lib/mock-i2c/mock-i2c.h>
 
 #include <atomic>
@@ -16,12 +15,15 @@
 #include <hid/gt92xx.h>
 #include <zxtest/zxtest.h>
 
+#include "src/devices/testing/mock-ddk/mock-device.h"
+
 namespace goodix {
 
 class Gt92xxTest : public Gt92xxDevice {
  public:
-  Gt92xxTest(ddk::I2cChannel i2c, ddk::GpioProtocolClient intr, ddk::GpioProtocolClient reset)
-      : Gt92xxDevice(fake_ddk::kFakeParent, i2c, intr, reset) {}
+  Gt92xxTest(ddk::I2cChannel i2c, ddk::GpioProtocolClient intr, ddk::GpioProtocolClient reset,
+             zx_device_t* parent)
+      : Gt92xxDevice(parent, i2c, intr, reset) {}
 
   void Running(bool run) { Gt92xxDevice::running_.store(run); }
 
@@ -80,7 +82,8 @@ TEST(GoodixTest, Init) {
 
   ddk::I2cChannel i2c(mock_i2c.GetProto());
 
-  Gt92xxTest device(i2c, intr, reset);
+  auto fake_parent = MockDevice::FakeRootParent();
+  Gt92xxTest device(i2c, intr, reset, fake_parent.get());
 
   mock_i2c
       .ExpectWrite({static_cast<uint8_t>(GT_REG_CONFIG_DATA >> 8),
@@ -118,7 +121,8 @@ TEST(GoodixTest, InitForceConfig) {
 
   ddk::I2cChannel i2c(mock_i2c.GetProto());
 
-  Gt92xxTest device(i2c, intr, reset);
+  auto fake_parent = MockDevice::FakeRootParent();
+  Gt92xxTest device(i2c, intr, reset, fake_parent.get());
 
   fbl::Vector conf_data = Gt92xxDevice::GetConfData();
   EXPECT_NE(conf_data[sizeof(uint16_t)], 0x00);
@@ -163,7 +167,8 @@ TEST(GoodixTest, TestReport) {
 
   ddk::I2cChannel i2c(mock_i2c.GetProto());
 
-  Gt92xxTest device(i2c, intr_mock.GetProto(), reset_mock.GetProto());
+  auto fake_parent = MockDevice::FakeRootParent();\
+  Gt92xxTest device(i2c, intr_mock.GetProto(), reset_mock.GetProto(), fake_parent.get());
   EXPECT_OK(device.StartThread());
   zx_nanosleep(zx_deadline_after(ZX_MSEC(10)));
 

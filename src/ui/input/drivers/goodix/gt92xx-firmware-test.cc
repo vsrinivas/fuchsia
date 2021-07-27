@@ -6,7 +6,6 @@
 #include <fuchsia/hardware/gpio/cpp/banjo-mock.h>
 #include <fuchsia/hardware/gpio/cpp/banjo.h>
 #include <lib/fake-i2c/fake-i2c.h>
-#include <lib/fake_ddk/fake_ddk.h>
 #include <lib/fzl/vmo-mapper.h>
 
 #include <array>
@@ -14,6 +13,7 @@
 #include <zxtest/zxtest.h>
 
 #include "gt92xx.h"
+#include "src/devices/testing/mock-ddk/mock-device.h"
 
 namespace {
 
@@ -208,8 +208,9 @@ class FakeTouchDevice : public fake_i2c::FakeI2c {
 
 class Gt92xxTest : public Gt92xxDevice {
  public:
-  Gt92xxTest(ddk::I2cChannel i2c, ddk::GpioProtocolClient intr, ddk::GpioProtocolClient reset)
-      : Gt92xxDevice(fake_ddk::kFakeParent, i2c, intr, reset) {}
+  Gt92xxTest(ddk::I2cChannel i2c, ddk::GpioProtocolClient intr, ddk::GpioProtocolClient reset,
+             zx_device_t* parent)
+      : Gt92xxDevice(parent, i2c, intr, reset) {}
 
   void Running(bool run) { Gt92xxDevice::running_.store(run); }
 
@@ -268,7 +269,8 @@ TEST_F(GoodixTest, FirmwareTest) {
       .ExpectConfigOut(ZX_OK, 0)
       .ExpectConfigIn(ZX_OK, GPIO_PULL_UP);
 
-  Gt92xxTest device(i2c.GetProto(), intr.GetProto(), reset.GetProto());
+  auto fake_parent = MockDevice::FakeRootParent();
+  Gt92xxTest device(i2c.GetProto(), intr.GetProto(), reset.GetProto(), fake_parent.get());
   EXPECT_OK(device.Init());
   EXPECT_TRUE(i2c.FirmwareWritten());
   EXPECT_EQ(i2c.CurrentState(), FakeTouchDevice::kReady);
@@ -290,7 +292,8 @@ TEST_F(GoodixTest, FirmwareCurrent) {
       .ExpectConfigIn(ZX_OK, GPIO_PULL_UP)
       .ExpectGetInterrupt(ZX_OK, ZX_INTERRUPT_MODE_EDGE_LOW, {});
 
-  Gt92xxTest device(i2c.GetProto(), intr.GetProto(), reset.GetProto());
+  auto fake_parent = MockDevice::FakeRootParent();
+  Gt92xxTest device(i2c.GetProto(), intr.GetProto(), reset.GetProto(), fake_parent.get());
   EXPECT_OK(device.Init());
   EXPECT_FALSE(i2c.FirmwareWritten());
   EXPECT_EQ(i2c.CurrentState(), FakeTouchDevice::kIdle);
@@ -313,7 +316,8 @@ TEST_F(GoodixTest, FirmwareNotApplicable) {
       .ExpectConfigIn(ZX_OK, GPIO_PULL_UP)
       .ExpectGetInterrupt(ZX_OK, ZX_INTERRUPT_MODE_EDGE_LOW, {});
 
-  Gt92xxTest device(i2c.GetProto(), intr.GetProto(), reset.GetProto());
+  auto fake_parent = MockDevice::FakeRootParent();
+  Gt92xxTest device(i2c.GetProto(), intr.GetProto(), reset.GetProto(), fake_parent.get());
   EXPECT_OK(device.Init());
   EXPECT_FALSE(i2c.FirmwareWritten());
   EXPECT_EQ(i2c.CurrentState(), FakeTouchDevice::kIdle);
@@ -350,7 +354,8 @@ TEST_F(GoodixTest, ForceFirmwareUpdate) {
       .ExpectConfigOut(ZX_OK, 0)
       .ExpectConfigIn(ZX_OK, GPIO_PULL_UP);
 
-  Gt92xxTest device(i2c.GetProto(), intr.GetProto(), reset.GetProto());
+  auto fake_parent = MockDevice::FakeRootParent();
+  Gt92xxTest device(i2c.GetProto(), intr.GetProto(), reset.GetProto(), fake_parent.get());
   EXPECT_OK(device.Init());
   EXPECT_TRUE(i2c.FirmwareWritten());
   EXPECT_EQ(i2c.CurrentState(), FakeTouchDevice::kReady);
@@ -370,7 +375,8 @@ TEST_F(GoodixTest, BadFirmwareChecksum) {
 
   corrupt_firmware_checksum = true;
 
-  Gt92xxTest device(i2c.GetProto(), intr.GetProto(), reset.GetProto());
+  auto fake_parent = MockDevice::FakeRootParent();
+  Gt92xxTest device(i2c.GetProto(), intr.GetProto(), reset.GetProto(), fake_parent.get());
   EXPECT_NOT_OK(device.Init());
   EXPECT_FALSE(i2c.FirmwareWritten());
   EXPECT_EQ(i2c.CurrentState(), FakeTouchDevice::kIdle);
@@ -394,7 +400,8 @@ TEST_F(GoodixTest, ReadbackCheckFail) {
   reset.ExpectConfigOut(ZX_OK, 0).ExpectConfigOut(ZX_OK, 1);
   intr.ExpectConfigOut(ZX_OK, 0);
 
-  Gt92xxTest device(i2c.GetProto(), intr.GetProto(), reset.GetProto());
+  auto fake_parent = MockDevice::FakeRootParent();
+  Gt92xxTest device(i2c.GetProto(), intr.GetProto(), reset.GetProto(), fake_parent.get());
   EXPECT_NOT_OK(device.Init());
   EXPECT_TRUE(i2c.FirmwareWritten());
   EXPECT_EQ(i2c.CurrentState(), FakeTouchDevice::kReadingDspIsp);
