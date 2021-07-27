@@ -174,8 +174,18 @@ async fn scan(
 ) -> Result<(), anyhow::Error> {
     let handle = txn.into_stream()?.control_handle();
     let receiver = sme.lock().unwrap().on_scan_command(scan_request);
-    let result = receiver.await.unwrap_or(Err(fidl_mlme::ScanResultCode::InternalError));
-    let send_result = send_scan_results(handle, result);
+    let receiver_result = receiver.await;
+    let send_result = match receiver_result {
+        Err(e) => {
+            let mut fidl_err = fidl_sme::ScanError {
+                code: fidl_sme::ScanErrorCode::InternalError,
+                message: format!("Scan receiver error: {:?}", e),
+            };
+            handle.send_on_error(&mut fidl_err)
+        }
+        Ok(scan_results) => send_scan_results(handle, scan_results),
+    };
+
     filter_out_peer_closed(send_result)?;
     Ok(())
 }
@@ -278,40 +288,50 @@ async fn handle_info_event(
 
 fn send_scan_results(
     handle: fidl_sme::ScanTransactionControlHandle,
-    result: ScanResultList,
+    scan_results: ScanResultList,
 ) -> Result<(), fidl::Error> {
     // Maximum number of scan results to send at a time so we don't exceed FIDL msg size limit.
     // A scan result may contain all IEs, which is at most 2304 bytes since that's the maximum
     // frame size. Let's be conservative and assume each scan result is 3k bytes.
     // At 15, maximum size is 45k bytes, which is well under the 64k bytes limit.
     const MAX_ON_SCAN_RESULT: usize = 15;
-    match result {
-        Ok(scan_result_list) => {
-            info!("Sending scan results for {} APs", scan_result_list.len());
-            for chunk in &scan_result_list.into_iter().chunks(MAX_ON_SCAN_RESULT) {
-                let mut fidl_scan_result_list =
+    match scan_results {
+        Ok(scan_results) => {
+            info!("Sending scan results for {} APs", scan_results.len());
+            for chunk in &scan_results.into_iter().chunks(MAX_ON_SCAN_RESULT) {
+                let mut fidl_scan_results =
                     chunk.into_iter().map(convert_scan_result).collect::<Vec<_>>();
-                handle.send_on_result(&mut fidl_scan_result_list.iter_mut())?;
+                handle.send_on_result(&mut fidl_scan_results.iter_mut())?;
             }
             handle.send_on_finished()?;
         }
         Err(e) => {
             let mut fidl_err = match e {
+                fidl_mlme::ScanResultCode::Success => fidl_sme::ScanError {
+                    code: fidl_sme::ScanErrorCode::InternalError,
+                    message: "Scanning returned Err with fidl_mlme::ScanResultCode::Success"
+                        .to_string(),
+                },
                 fidl_mlme::ScanResultCode::NotSupported => fidl_sme::ScanError {
                     code: fidl_sme::ScanErrorCode::NotSupported,
                     message: "Scanning not supported by device".to_string(),
                 },
+                fidl_mlme::ScanResultCode::InvalidArgs => fidl_sme::ScanError {
+                    code: fidl_sme::ScanErrorCode::InternalError,
+                    message: "Scanning failed because of invalid arguments passed to MLME"
+                        .to_string(),
+                },
+                fidl_mlme::ScanResultCode::InternalError => fidl_sme::ScanError {
+                    code: fidl_sme::ScanErrorCode::InternalMlmeError,
+                    message: "Scanning ended with internal MLME error".to_string(),
+                },
                 fidl_mlme::ScanResultCode::ShouldWait => fidl_sme::ScanError {
                     code: fidl_sme::ScanErrorCode::ShouldWait,
-                    message: "Scanning is temporarily unavailable".to_string(),
+                    message: "Scanning temporarily unavailable".to_string(),
                 },
                 fidl_mlme::ScanResultCode::CanceledByDriverOrFirmware => fidl_sme::ScanError {
                     code: fidl_sme::ScanErrorCode::CanceledByDriverOrFirmware,
-                    message: "Scanning was canceled by driver or FW".to_string(),
-                },
-                _ => fidl_sme::ScanError {
-                    code: fidl_sme::ScanErrorCode::InternalError,
-                    message: "Internal error occurred".to_string(),
+                    message: "Scanning canceled by driver or FW".to_string(),
                 },
             };
             handle.send_on_error(&mut fidl_err)?;
@@ -371,9 +391,9 @@ mod tests {
     };
 
     #[test_case(
-        fidl_mlme::ScanResultCode::ShouldWait,
-        fidl_sme::ScanErrorCode::ShouldWait,
-        "Scanning is temporarily unavailable"
+        fidl_mlme::ScanResultCode::Success,
+        fidl_sme::ScanErrorCode::InternalError,
+        "Scanning returned Err with fidl_mlme::ScanResultCode::Success"
     )]
     #[test_case(
         fidl_mlme::ScanResultCode::NotSupported,
@@ -381,19 +401,24 @@ mod tests {
         "Scanning not supported by device"
     )]
     #[test_case(
-        fidl_mlme::ScanResultCode::CanceledByDriverOrFirmware,
-        fidl_sme::ScanErrorCode::CanceledByDriverOrFirmware,
-        "Scanning was canceled by driver or FW"
-    )]
-    #[test_case(
         fidl_mlme::ScanResultCode::InvalidArgs,
         fidl_sme::ScanErrorCode::InternalError,
-        "Internal error occurred"
+        "Scanning failed because of invalid arguments passed to MLME"
     )]
     #[test_case(
         fidl_mlme::ScanResultCode::InternalError,
-        fidl_sme::ScanErrorCode::InternalError,
-        "Internal error occurred"
+        fidl_sme::ScanErrorCode::InternalMlmeError,
+        "Scanning ended with internal MLME error"
+    )]
+    #[test_case(
+        fidl_mlme::ScanResultCode::ShouldWait,
+        fidl_sme::ScanErrorCode::ShouldWait,
+        "Scanning temporarily unavailable"
+    )]
+    #[test_case(
+        fidl_mlme::ScanResultCode::CanceledByDriverOrFirmware,
+        fidl_sme::ScanErrorCode::CanceledByDriverOrFirmware,
+        "Scanning canceled by driver or FW"
     )]
     fn test_send_scan_error(
         scan_code: fidl_mlme::ScanResultCode,
