@@ -252,7 +252,7 @@ yield its set of names and values:
 ```gn
 foo = {
   x = global_tuning + 42
-  If (some_global && other_thing == "foobar") {
+  if (some_global && other_thing == "foobar") {
     y = 2
   }
 }
