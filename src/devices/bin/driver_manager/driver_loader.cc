@@ -24,13 +24,13 @@ DriverLoader::~DriverLoader() {
   }
 }
 
-void DriverLoader::StartSystemLoadingThread() {
+void DriverLoader::StartSystemLoadingThread(Coordinator* coordinator) {
   if (system_loading_thread_) {
     LOGF(ERROR, "DriverLoader: StartLoadingThread cannot be called twice!\n");
     return;
   }
 
-  system_loading_thread_ = std::thread([coordinator = coordinator_]() {
+  system_loading_thread_ = std::thread([coordinator]() {
     fbl::unique_fd fd(open("/system", O_RDONLY));
     if (fd.get() < 0) {
       LOGF(WARNING, "Unable to open '/system', system drivers are disabled");
@@ -77,6 +77,20 @@ const Driver* DriverLoader::LibnameToDriver(std::string_view libname) const {
   return nullptr;
 }
 
+void DriverLoader::WaitForBaseDrivers(fit::callback<void()> callback) {
+  auto result = driver_index_->WaitForBaseDrivers(
+      [this, callback = std::move(callback)](
+          fidl::WireResponse<fdf::DriverIndex::WaitForBaseDrivers>* response) mutable {
+        include_fallback_drivers_ = true;
+        callback();
+      });
+
+  // TODO(dgilhooley): Change this back to an ERROR once DriverIndex is used in all tests.
+  if (result.status() != ZX_OK) {
+    LOGF(INFO, "Failed to connect to DriverIndex: %d", result.status());
+  }
+}
+
 const Driver* DriverLoader::LoadDriverUrlDriverIndex(const std::string& driver_url) {
   // Check if we've already loaded this driver. If we have then return it.
   auto driver = LibnameToDriver(driver_url);
@@ -85,7 +99,7 @@ const Driver* DriverLoader::LoadDriverUrlDriverIndex(const std::string& driver_u
   }
 
   // We've never seen the driver before so add it, then return it.
-  auto fetched_driver = base_resolver_.FetchDriver(driver_url);
+  auto fetched_driver = base_resolver_->FetchDriver(driver_url);
   if (fetched_driver.is_error()) {
     LOGF(ERROR, "Error fetching driver: %s: %d", driver_url.data(), fetched_driver.error_value());
     return nullptr;
@@ -111,17 +125,14 @@ bool DriverLoader::MatchesLibnameDriverIndex(const std::string& driver_url,
 
 std::vector<const Driver*> DriverLoader::MatchDeviceDriverIndex(const fbl::RefPtr<Device>& dev,
                                                                 std::string_view libname) {
-  std::vector<const Driver*> matched_drivers;
-
-  if (!coordinator_->driver_index().is_valid()) {
-    return matched_drivers;
+  if (!driver_index_.is_valid()) {
+    return std::vector<const Driver*>();
   }
 
   bool autobind = libname.empty();
 
   fidl::FidlAllocator allocator;
   auto& props = dev->props();
-  fdf::wire::NodeAddArgs args(allocator);
   fidl::VectorView<fdf::wire::NodeProperty> fidl_props(allocator, props.size() + 2);
 
   fidl_props[0] = fdf::wire::NodeProperty(allocator)
@@ -135,9 +146,22 @@ std::vector<const Driver*> DriverLoader::MatchDeviceDriverIndex(const fbl::RefPt
                             .set_key(allocator, props[i].id)
                             .set_value(allocator, props[i].value);
   }
-  args.set_properties(allocator, std::move(fidl_props));
+  return MatchPropertiesDriverIndex(fidl_props, libname);
+}
 
-  auto result = coordinator_->driver_index()->MatchDriversV1_Sync(std::move(args));
+std::vector<const Driver*> DriverLoader::MatchPropertiesDriverIndex(
+    fidl::VectorView<fdf::wire::NodeProperty> props, std::string_view libname) {
+  std::vector<const Driver*> matched_drivers;
+  std::vector<const Driver*> matched_fallback_drivers;
+  if (!driver_index_.is_valid()) {
+    return matched_drivers;
+  }
+
+  fidl::FidlAllocator allocator;
+  fdf::wire::NodeAddArgs args(allocator);
+  args.set_properties(allocator, std::move(props));
+
+  auto result = driver_index_->MatchDriversV1_Sync(std::move(args));
   if (!result.ok()) {
     if (result.status() == ZX_ERR_PEER_CLOSED) {
       return matched_drivers;
@@ -168,8 +192,17 @@ std::vector<const Driver*> DriverLoader::MatchDeviceDriverIndex(const fbl::RefPt
     std::string driver_url(driver.driver_url().get());
     auto loaded_driver = LoadDriverUrlDriverIndex(driver_url);
     if (libname.empty() || MatchesLibnameDriverIndex(driver_url, libname)) {
-      matched_drivers.push_back(loaded_driver);
+      if (loaded_driver->fallback) {
+        if (include_fallback_drivers_ || !libname.empty()) {
+          matched_fallback_drivers.push_back(loaded_driver);
+        }
+      } else {
+        matched_drivers.push_back(loaded_driver);
+      }
     }
   }
+
+  matched_drivers.insert(matched_drivers.end(), matched_fallback_drivers.begin(),
+                         matched_fallback_drivers.end());
   return matched_drivers;
 }

@@ -107,7 +107,9 @@ Coordinator::Coordinator(CoordinatorConfig config, InspectManager* inspect_manag
                          async_dispatcher_t* dispatcher)
     : config_(std::move(config)),
       dispatcher_(dispatcher),
-      driver_loader_(config.boot_args, this),
+      base_resolver_(config_.boot_args),
+      driver_loader_(config_.boot_args, std::move(config_.driver_index), &base_resolver_,
+                     config_.require_system),
       suspend_handler_(this, config.suspend_fallback, config.suspend_timeout),
       inspect_manager_(inspect_manager),
       package_resolver_(config.boot_args) {
@@ -1170,7 +1172,7 @@ zx_status_t Coordinator::AttemptBind(const Driver* drv, const fbl::RefPtr<Device
   // cannot bind driver to already bound device
   if ((dev->flags & DEV_CTX_BOUND) &&
       !(dev->flags & (DEV_CTX_MULTI_BIND | DEV_CTX_ALLOW_MULTI_COMPOSITE))) {
-    return ZX_ERR_BAD_STATE;
+    return ZX_ERR_ALREADY_BOUND;
   }
   if (!(dev->flags & DEV_CTX_MUST_ISOLATE)) {
     // non-busdev is pretty simple
@@ -1378,7 +1380,7 @@ zx_status_t Coordinator::BindDriverToDevice(const fbl::RefPtr<Device>& dev, cons
 
   status = attempt_bind(drv, dev);
   if (status != ZX_OK) {
-    LOGF(ERROR, "Failed to bind driver '%s' to device '%s': %s", drv->name.data(),
+    LOGF(ERROR, "%s: Failed to bind driver '%s' to device '%s': %s", __func__, drv->name.data(),
          dev->name().data(), zx_status_get_string(status));
   }
   if (status == ZX_ERR_NEXT) {
@@ -1461,23 +1463,34 @@ void Coordinator::BindAllDevicesDriverIndex() {
 }
 
 void Coordinator::ScheduleBaseDriverLoading() {
-  auto result = config_.driver_index->WaitForBaseDrivers(
-      [this](fidl::WireResponse<fdf::DriverIndex::WaitForBaseDrivers>* response) {
-        BindAllDevicesDriverIndex();
-      });
-  if (!result.ok()) {
-    // TODO(dgilhooley): Change this back to an ERROR once DriverIndex is included in the build.
-    LOGF(INFO, "Failed to connect to DriverIndex: %d", result.status());
-  }
+  driver_loader_.WaitForBaseDrivers([this]() { BindAllDevicesDriverIndex(); });
 }
 
 zx_status_t Coordinator::MatchAndBindDeviceDriverIndex(const fbl::RefPtr<Device>& dev) {
+  if ((dev->flags & DEV_CTX_BOUND) && !(dev->flags & DEV_CTX_ALLOW_MULTI_COMPOSITE) &&
+      !(dev->flags & DEV_CTX_MULTI_BIND)) {
+    return ZX_ERR_ALREADY_BOUND;
+  }
+
+  if (dev->should_skip_autobind()) {
+    return ZX_ERR_NEXT;
+  }
+
+  if (!dev->is_bindable() && !(dev->is_composite_bindable())) {
+    return ZX_ERR_NEXT;
+  }
+
   auto drivers = driver_loader_.MatchDeviceDriverIndex(dev);
   for (auto driver : drivers) {
     zx_status_t status = AttemptBind(driver, dev);
-    if (status != ZX_OK && status != ZX_ERR_NEXT && status != ZX_ERR_ALREADY_BOUND) {
-      LOGF(ERROR, "Failed to bind driver '%s' to device '%s': %s", driver->libname.data(),
-           dev->name().data(), zx_status_get_string(status));
+    // If we get this here it means we've successfully bound one driver
+    // and the device isn' multi-bind.
+    if (status == ZX_ERR_ALREADY_BOUND) {
+      return ZX_OK;
+    }
+    if (status != ZX_OK) {
+      LOGF(ERROR, "%s: Failed to bind driver '%s' to device '%s': %s", __func__,
+           driver->libname.data(), dev->name().data(), zx_status_get_string(status));
     }
   }
   return ZX_OK;
@@ -1574,8 +1587,8 @@ zx_status_t Coordinator::BindDevice(const fbl::RefPtr<Device>& dev, std::string_
   for (const Driver* driver : drivers) {
     zx_status_t status = AttemptBind(driver, dev);
     if (status != ZX_OK) {
-      LOGF(ERROR, "Failed to bind driver '%s' to device '%s': %s", driver->name.data(),
-           dev->name().data(), zx_status_get_string(status));
+      LOGF(ERROR, "%s: Failed to bind driver '%s' to device '%s': %s", __func__, dev->name().data(),
+           zx_status_get_string(status));
     }
   }
 
@@ -1606,7 +1619,7 @@ void Coordinator::AddAndBindDrivers(fbl::DoublyLinkedList<std::unique_ptr<Driver
   }
 }
 
-void Coordinator::StartLoadingNonBootDrivers() { driver_loader_.StartSystemLoadingThread(); }
+void Coordinator::StartLoadingNonBootDrivers() { driver_loader_.StartSystemLoadingThread(this); }
 
 void Coordinator::BindFallbackDrivers() {
   for (auto& driver : fallback_drivers_) {

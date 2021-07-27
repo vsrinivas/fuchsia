@@ -271,7 +271,6 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
 
   void DumpState(VmoWriter* vmo) const;
 
-  fidl::WireSharedClient<fdf::DriverIndex>& driver_index() { return config_.driver_index; }
   async_dispatcher_t* dispatcher() const { return dispatcher_; }
   const zx::resource& root_resource() const { return config_.root_resource; }
   fidl::WireSyncClient<fuchsia_boot::Arguments>* boot_args() const { return config_.boot_args; }
@@ -360,6 +359,8 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
   bool power_manager_registered_ = false;
   LoaderServiceConnector loader_service_connector_;
   fidl::WireSharedClient<fuchsia_power_manager::DriverManagerRegistration> power_manager_client_;
+
+  internal::BasePackageResolver base_resolver_;
   DriverLoader driver_loader_;
 
   // All Drivers
