@@ -31,7 +31,6 @@ class View;
 template <typename Storage>
 class Image;
 
-/// TODO(fxbug.dev/68585): Move this into <lib/zbitl/internal/container.h>
 ///
 /// ExampleContainerTraits serves as an definitional examplar for how
 /// "container traits" should be structured. Container traits provide types,
