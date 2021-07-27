@@ -21,6 +21,7 @@ web.ContextProxy createWebContext() {
   final webFeatures = web.ContextFeatureFlags.network |
       web.ContextFeatureFlags.audio |
       web.ContextFeatureFlags.hardwareVideoDecoder |
+      web.ContextFeatureFlags.keyboard |
       web.ContextFeatureFlags.vulkan;
   final web.CreateContextParams params = web.CreateContextParams(
       serviceDirectory: InterfaceHandle<fidl_io.Directory>(channel),
