@@ -185,10 +185,6 @@ zx_status_t Coordinator::InitCoreDevices(std::string_view sys_device_driver) {
                                              ZX_PROTOCOL_ROOT, zx::vmo(), zx::channel());
   root_device_->flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE | DEV_CTX_MULTI_BIND;
 
-  misc_device_ = fbl::MakeRefCounted<Device>(this, "misc", fbl::String(), "misc,", root_device_,
-                                             ZX_PROTOCOL_MISC_PARENT, zx::vmo(), zx::channel());
-  misc_device_->flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE | DEV_CTX_MULTI_BIND;
-
   sys_device_ = fbl::MakeRefCounted<Device>(this, "sys", sys_device_driver, "sys,", root_device_, 0,
                                             zx::vmo(), zx::channel());
   sys_device_->flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE;
@@ -250,7 +246,6 @@ void Coordinator::DumpDevice(VmoWriter* vmo, const Device* dev, size_t indent) c
 
 void Coordinator::DumpState(VmoWriter* vmo) const {
   DumpDevice(vmo, root_device_.get(), 0);
-  DumpDevice(vmo, misc_device_.get(), 1);
   DumpDevice(vmo, sys_device_.get(), 1);
   DumpDevice(vmo, test_device_.get(), 1);
 }
@@ -1401,10 +1396,6 @@ zx_status_t Coordinator::BindDriver(Driver* drv, const AttemptBindFunc& attempt_
   if (status != ZX_ERR_NEXT) {
     return status;
   }
-  status = BindDriverToDevice(misc_device_, drv, true /* autobind */, attempt_bind);
-  if (status != ZX_ERR_NEXT) {
-    return status;
-  }
   status = BindDriverToDevice(test_device_, drv, true /* autobind */, attempt_bind);
   if (status != ZX_ERR_NEXT) {
     return status;
@@ -1449,11 +1440,6 @@ void Coordinator::BindAllDevicesDriverIndex() {
   zx_status_t status = MatchAndBindDeviceDriverIndex(root_device_);
   if (status != ZX_OK && status != ZX_ERR_NEXT) {
     LOGF(ERROR, "DriverIndex failed to match root_device: %d", status);
-    return;
-  }
-  status = MatchAndBindDeviceDriverIndex(misc_device_);
-  if (status != ZX_OK && status != ZX_ERR_NEXT) {
-    LOGF(ERROR, "DriverIndex failed to match misc_device: %d", status);
     return;
   }
   status = MatchAndBindDeviceDriverIndex(test_device_);
@@ -1967,7 +1953,6 @@ void Coordinator::DumpBindingProperties(DumpBindingPropertiesRequestView request
                                         DumpBindingPropertiesCompleter::Sync& completer) {
   VmoWriter writer{std::move(request->output)};
   DumpDeviceProps(&writer, root_device_.get());
-  DumpDeviceProps(&writer, misc_device_.get());
   DumpDeviceProps(&writer, sys_device_.get());
   DumpDeviceProps(&writer, test_device_.get());
   completer.Reply(writer.status(), writer.written(), writer.available());

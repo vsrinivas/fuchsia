@@ -610,8 +610,7 @@ zx_status_t devfs_publish(const fbl::RefPtr<Device>& parent, const fbl::RefPtr<D
     return ZX_ERR_NO_MEMORY;
   }
 
-  if ((dev->protocol_id() == ZX_PROTOCOL_TEST_PARENT) ||
-      (dev->protocol_id() == ZX_PROTOCOL_MISC_PARENT) || (dev->protocol_id() == ZX_PROTOCOL_MISC)) {
+  if ((dev->protocol_id() == ZX_PROTOCOL_TEST_PARENT) || (dev->protocol_id() == ZX_PROTOCOL_MISC)) {
     // misc devices are singletons, not a class
     // in the sense of other device classes.
     // They do not get aliases in /dev/class/misc/...

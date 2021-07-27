@@ -45,7 +45,7 @@ static thread_local CreationContext* g_creation_context;
 void set_bind_context(internal::BindContext* ctx) { g_bind_context = ctx; }
 
 void set_creation_context(CreationContext* ctx) {
-  ZX_DEBUG_ASSERT(!ctx  || ctx->coordinator_client);
+  ZX_DEBUG_ASSERT(!ctx || ctx->coordinator_client);
   g_creation_context = ctx;
 }
 
@@ -254,7 +254,7 @@ zx_status_t DriverHostContext::DeviceValidate(const fbl::RefPtr<zx_device_t>& de
     LOGD(ERROR, *dev, "Invalid ops for device %p", dev.get());
     return ZX_ERR_INVALID_ARGS;
   }
-  if ((dev->protocol_id() == ZX_PROTOCOL_MISC_PARENT) || (dev->protocol_id() == ZX_PROTOCOL_ROOT)) {
+  if ((dev->protocol_id() == ZX_PROTOCOL_ROOT)) {
     LOGD(ERROR, *dev, "Invalid protocol for device %p: %#x", dev.get(), dev->protocol_id());
     // These protocols is only allowed for the special
     // singleton misc or root parent devices.

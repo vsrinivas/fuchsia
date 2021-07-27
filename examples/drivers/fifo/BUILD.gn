@@ -10,7 +10,7 @@ driver_bind_rules("demo-fifo-bind") {
   rules = "demo-fifo.bind"
   header_output = "demo-fifo-bind.h"
   tests = "tests.json"
-  deps = [ "//src/devices/bind/fuchsia.misc" ]
+  deps = [ "//src/devices/bind/fuchsia.test" ]
 }
 
 group("fifo") {

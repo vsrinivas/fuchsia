@@ -400,7 +400,6 @@ int main(int argc, char** argv) {
   }
 
   devfs_init(coordinator.root_device(), loop.dispatcher());
-  devfs_publish(coordinator.root_device(), coordinator.misc_device());
   devfs_publish(coordinator.root_device(), coordinator.sys_device());
   devfs_publish(coordinator.root_device(), coordinator.test_device());
   devfs_connect_diagnostics(coordinator.inspect_manager().diagnostics_client());

@@ -310,7 +310,6 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
   }
 
   const fbl::RefPtr<Device>& root_device() { return root_device_; }
-  const fbl::RefPtr<Device>& misc_device() { return misc_device_; }
   const fbl::RefPtr<Device>& sys_device() { return sys_device_; }
   const fbl::RefPtr<Device>& test_device() { return test_device_; }
 
@@ -379,7 +378,6 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
   fbl::DoublyLinkedList<std::unique_ptr<CompositeDevice>> composite_devices_;
 
   fbl::RefPtr<Device> root_device_;
-  fbl::RefPtr<Device> misc_device_;
   fbl::RefPtr<Device> sys_device_;
   fbl::RefPtr<Device> test_device_;
 

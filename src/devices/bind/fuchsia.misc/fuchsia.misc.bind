@@ -6,5 +6,4 @@ library fuchsia.misc;
 
 extend uint fuchsia.BIND_PROTOCOL {
   DEVICE = 28,
-  PARENT = 29,
 };

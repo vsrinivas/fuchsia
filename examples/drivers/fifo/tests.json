@@ -8,7 +8,7 @@
     },
     {
         "device": {
-            "fuchsia.BIND_PROTOCOL": "fuchsia.misc.BIND_PROTOCOL.PARENT"
+            "fuchsia.BIND_PROTOCOL": "fuchsia.test.BIND_PROTOCOL.PARENT"
         },
         "expected": "match",
         "name": "demo-fifo"
