@@ -15,6 +15,7 @@
 #include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantics_source.h"
 #include "src/ui/a11y/lib/testing/view_ref_helper.h"
 #include "src/ui/a11y/lib/util/util.h"
+#include "src/ui/a11y/lib/view/tests/mocks/mock_accessibility_view.h"
 
 namespace a11y {
 namespace {
@@ -47,16 +48,14 @@ class FocusChainManagerTest : public gtest::TestLoopFixture {
 
  protected:
   void SetUp() override {
-    auto focuser_handle = focuser_bindings_.AddBinding(&mock_focuser_);
-    manager_ = std::make_unique<FocusChainManager>(focuser_handle.Bind(), &mock_semantics_source_);
+    manager_ = std::make_unique<FocusChainManager>(&mock_a11y_view_, &mock_semantics_source_);
   }
 
   // Test subject.
   std::unique_ptr<FocusChainManager> manager_;
 
-  accessibility_test::MockFocuser mock_focuser_;
+  accessibility_test::MockAccessibilityView mock_a11y_view_;
   accessibility_test::MockSemanticsSource mock_semantics_source_;
-  fidl::BindingSet<fuchsia::ui::views::Focuser> focuser_bindings_;
 
   accessibility_test::ViewRefHelper root_view_;
   accessibility_test::ViewRefHelper view_a_;
@@ -158,32 +157,37 @@ TEST_F(FocusChainManagerTest, AccessibilityFocusChainRequesterViewHasSemantics) 
   bool success = false;
   requester->ChangeFocusToView(view_a_.koid(), [&success](bool result) { success = result; });
   RunLoopUntilIdle();
+  auto requested_view_ref = mock_a11y_view_.focused_view_ref();
+  ASSERT_TRUE(requested_view_ref.has_value());
+  EXPECT_EQ(a11y::GetKoid(std::move(requested_view_ref.value())), view_a_.koid());
+
+  mock_a11y_view_.invoke_focus_callback({});
   EXPECT_TRUE(success);
-  EXPECT_TRUE(mock_focuser_.GetFocusRequestReceived());
-  EXPECT_EQ(mock_focuser_.GetViewRefKoid(), view_a_.koid());
 }
 
 TEST_F(FocusChainManagerTest, AccessibilityFocusChainRequesterViewDoesNotHaveSemantics) {
   // View is not providing semantics, so request is denied.
   auto* requester = manager_.get();
-  bool success = true;  // expects false later.
   // Set return value for ViewHasSemantics() to false.
   mock_semantics_source_.set_view_has_semantics(false);
-  requester->ChangeFocusToView(view_a_.koid(), [&success](bool result) { success = result; });
+  requester->ChangeFocusToView(view_a_.koid(), [](bool /* unused */) {});
   RunLoopUntilIdle();
-  EXPECT_FALSE(success);
-  EXPECT_FALSE(mock_focuser_.GetFocusRequestReceived());
+  auto requested_view_ref = mock_a11y_view_.focused_view_ref();
+  EXPECT_FALSE(requested_view_ref.has_value());
 }
 
 TEST_F(FocusChainManagerTest, AccessibilityFocusChainRequesterFocuserDenies) {
   mock_semantics_source_.AddViewRef(view_a_.Clone());
-  mock_focuser_.SetThrowError(true);
   auto* requester = manager_.get();
-  bool success = true;  // Expects true later.
+  bool success = true;  // Expects false later.
   requester->ChangeFocusToView(view_a_.koid(), [&success](bool result) { success = result; });
   RunLoopUntilIdle();
+  auto requested_view_ref = mock_a11y_view_.focused_view_ref();
+  ASSERT_TRUE(requested_view_ref.has_value());
+
+  mock_a11y_view_.invoke_focus_callback(
+      fuchsia::ui::views::Focuser_RequestFocus_Result::WithErr(fuchsia::ui::views::Error::DENIED));
   EXPECT_FALSE(success);
-  EXPECT_TRUE(mock_focuser_.GetFocusRequestReceived());
 }
 
 TEST_F(FocusChainManagerTest, AccessibilityFocusChainRequesterViewHasVisibleVirtualkeyboard) {
@@ -196,7 +200,8 @@ TEST_F(FocusChainManagerTest, AccessibilityFocusChainRequesterViewHasVisibleVirt
   EXPECT_TRUE(success);
   // The request should be successful, but the focus chain does not update to the view with the
   // virtual keyboard.
-  EXPECT_FALSE(mock_focuser_.GetFocusRequestReceived());
+  auto requested_view_ref = mock_a11y_view_.focused_view_ref();
+  EXPECT_FALSE(requested_view_ref.has_value());
 }
 
 }  // namespace

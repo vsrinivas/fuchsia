@@ -16,7 +16,7 @@ class MockAccessibilityView : public a11y::AccessibilityViewInterface {
   MockAccessibilityView() = default;
   ~MockAccessibilityView() override = default;
 
-  // |AccessibilityViewInterface |
+  // |AccessibilityViewInterface|
   std::optional<fuchsia::ui::gfx::ViewProperties> get_a11y_view_properties() override {
     return a11y_view_properties_;
   }
@@ -26,24 +26,42 @@ class MockAccessibilityView : public a11y::AccessibilityViewInterface {
     a11y_view_properties_ = a11y_view_properties;
   }
 
-  // |AccessibilityViewInterface |
-  std::optional<fuchsia::ui::views::ViewRef> view_ref() override { return std::move(view_ref_); }
-
-  void set_view_ref(std::optional<fuchsia::ui::views::ViewRef> view_ref) {
-    view_ref_ = std::move(view_ref);
+  // |AccessibilityViewInterface|
+  std::optional<fuchsia::ui::views::ViewRef> view_ref() override {
+    return std::move(a11y_view_ref_);
   }
 
-  // |AccessibilityViewInterface |
+  void set_view_ref(std::optional<fuchsia::ui::views::ViewRef> view_ref) {
+    a11y_view_ref_ = std::move(view_ref);
+  }
+
+  // |AccessibilityViewInterface|
   void add_view_properties_changed_callback(ViewPropertiesChangedCallback callback) override {
-    callback_ = std::move(callback);
+    view_properties_changed_callback_ = std::move(callback);
   }
 
   void add_scene_ready_callback(SceneReadyCallback callback) override {}
 
+  // |AccessibilityViewInterface|
+  void RequestFocus(fuchsia::ui::views::ViewRef view_ref, RequestFocusCallback callback) override {
+    focused_view_ref_ = std::move(view_ref);
+    focus_callback_ = std::move(callback);
+  }
+
+  std::optional<fuchsia::ui::views::ViewRef> focused_view_ref() {
+    return std::move(focused_view_ref_);
+  }
+
+  void invoke_focus_callback(fuchsia::ui::views::Focuser_RequestFocus_Result value) {
+    focus_callback_(std::move(value));
+  }
+
  private:
   std::optional<fuchsia::ui::gfx::ViewProperties> a11y_view_properties_;
-  std::optional<fuchsia::ui::views::ViewRef> view_ref_;
-  ViewPropertiesChangedCallback callback_;
+  std::optional<fuchsia::ui::views::ViewRef> a11y_view_ref_;
+  ViewPropertiesChangedCallback view_properties_changed_callback_;
+  RequestFocusCallback focus_callback_;
+  std::optional<fuchsia::ui::views::ViewRef> focused_view_ref_;
 };
 
 }  // namespace accessibility_test

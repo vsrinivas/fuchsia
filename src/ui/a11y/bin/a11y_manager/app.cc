@@ -49,15 +49,8 @@ App::App(sys::ComponentContext* context, a11y::ViewManager* view_manager,
       gesture_listener_registry_bindings_.GetHandler(gesture_listener_registry_));
 
   // Inits Focus Chain focuser support / listening Focus Chain updates.
-  focuser_registry_ = context->svc()->Connect<fuchsia::ui::views::accessibility::FocuserRegistry>();
-  focuser_registry_.set_error_handler([](zx_status_t status) {
-    FX_LOGS(ERROR) << "Error from fuchsia::ui::views::accessibility::FocuserRegistry"
-                   << zx_status_get_string(status);
-  });
-  fuchsia::ui::views::FocuserPtr focuser;
-  focuser_registry_->RegisterFocuser(focuser.NewRequest());
   focus_chain_manager_ =
-      std::make_unique<a11y::FocusChainManager>(std::move(focuser), view_manager_);
+      std::make_unique<a11y::FocusChainManager>(view_manager_->a11y_view(), view_manager_);
 
   // |focus_chain_manager_| listens for Focus Chain updates. Connects to the listener registry and
   // start listening.

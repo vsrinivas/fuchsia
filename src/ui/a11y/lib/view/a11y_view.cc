@@ -231,4 +231,10 @@ void AccessibilityView::add_scene_ready_callback(SceneReadyCallback callback) {
   }
 }
 
+void AccessibilityView::RequestFocus(fuchsia::ui::views::ViewRef view_ref,
+                                     RequestFocusCallback callback) {
+  FX_DCHECK(focuser_);
+  focuser_->RequestFocus(std::move(view_ref), std::move(callback));
+}
+
 }  // namespace a11y

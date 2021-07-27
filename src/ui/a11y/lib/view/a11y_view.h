@@ -29,6 +29,7 @@ class AccessibilityViewInterface {
  public:
   using ViewPropertiesChangedCallback = fit::function<bool(fuchsia::ui::gfx::ViewProperties)>;
   using SceneReadyCallback = fit::function<bool()>;
+  using RequestFocusCallback = fit::function<void(fuchsia::ui::views::Focuser_RequestFocus_Result)>;
 
   AccessibilityViewInterface() = default;
   virtual ~AccessibilityViewInterface() = default;
@@ -49,6 +50,10 @@ class AccessibilityViewInterface {
   // Returns the view ref of the a11y view if the a11y view is ready.
   // If the a11y view is not yet ready, this method returns std::nullopt.
   virtual std::optional<fuchsia::ui::views::ViewRef> view_ref() = 0;
+
+  // Attempts to transfer focus to the view corresponding to |view_ref|.
+  virtual void RequestFocus(fuchsia::ui::views::ViewRef view_ref,
+                            RequestFocusCallback callback) = 0;
 };
 
 // The AccessibilityView class represents the accessibility-owned view
@@ -64,7 +69,7 @@ class AccessibilityView : public AccessibilityViewInterface {
                     fuchsia::ui::scenic::ScenicPtr scenic);
   ~AccessibilityView() override = default;
 
-  // |AccessibilityViewInterface |
+  // |AccessibilityViewInterface|
   std::optional<fuchsia::ui::gfx::ViewProperties> get_a11y_view_properties() override {
     return a11y_view_properties_;
   }
@@ -73,14 +78,17 @@ class AccessibilityView : public AccessibilityViewInterface {
            proxy_view_holder_properties_set_;
   }
 
-  // |AccessibilityViewInterface |
+  // |AccessibilityViewInterface|
   std::optional<fuchsia::ui::views::ViewRef> view_ref() override;
 
-  // |AccessibilityViewInterface |
+  // |AccessibilityViewInterface|
   void add_view_properties_changed_callback(ViewPropertiesChangedCallback callback) override;
 
-  // |AccessibilityViewInterface |
+  // |AccessibilityViewInterface|
   void add_scene_ready_callback(SceneReadyCallback callback) override;
+
+  // |AccessibilityViewInterface|
+  void RequestFocus(fuchsia::ui::views::ViewRef view_ref, RequestFocusCallback callback) override;
 
  private:
   void OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events);

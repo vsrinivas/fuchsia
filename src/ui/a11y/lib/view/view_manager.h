@@ -124,6 +124,9 @@ class ViewManager : public fuchsia::accessibility::semantics::SemanticsManager,
   // |InjectorManagerInterface|
   bool MarkViewReadyForInjection(zx_koid_t koid, bool ready) override;
 
+  // Returns a pointer to the a11y view.
+  AccessibilityViewInterface* a11y_view() { return a11y_view_.get(); }
+
  private:
   // Helper function to retrieve the semantic tree corresponding to |koid|.
   // Returns nullptr if no such tree is found.

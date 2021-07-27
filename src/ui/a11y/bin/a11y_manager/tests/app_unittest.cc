@@ -515,7 +515,6 @@ TEST_F(AppUnitTest, InitializesFocusChain) {
   RunLoopUntilIdle();
 
   ASSERT_TRUE(mock_focus_chain_.listener());
-  ASSERT_TRUE(mock_focus_chain_.HasRegisteredFocuser());
 }
 
 // Makes sure FocusChain is wired up with the screen reader, when screen reader is enabled.

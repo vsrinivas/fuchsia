@@ -13,9 +13,10 @@
 
 namespace a11y {
 
-FocusChainManager::FocusChainManager(fuchsia::ui::views::FocuserPtr focuser,
+FocusChainManager::FocusChainManager(AccessibilityViewInterface* a11y_view,
                                      SemanticsSource* semantics_source)
-    : focuser_(std::move(focuser)), semantics_source_(semantics_source) {
+    : a11y_view_(a11y_view), semantics_source_(semantics_source) {
+  FX_DCHECK(a11y_view_);
   FX_DCHECK(semantics_source_);
 }
 
@@ -100,7 +101,13 @@ void FocusChainManager::ChangeFocusToView(zx_koid_t view_ref_koid,
   }
 
   auto view_ref = semantics_source_->ViewRefClone(view_ref_koid);
-  focuser_->RequestFocus(std::move(*view_ref), [callback = std::move(callback)](auto result) {
+
+  if (!view_ref.has_value()) {
+    callback(false);
+    return;
+  }
+
+  a11y_view_->RequestFocus(std::move(*view_ref), [callback = std::move(callback)](auto result) {
     if (result.is_err()) {
       callback(false);
     } else {
