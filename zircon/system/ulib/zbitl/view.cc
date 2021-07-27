@@ -4,7 +4,7 @@
 
 #include <lib/zbitl/view.h>
 
-namespace zbitl::internal {
+namespace zbitl {
 
 using namespace std::literals;
 
@@ -43,4 +43,4 @@ fitx::result<std::string_view> ZbiTraits::CheckContainerHeader(const zbi_header_
   return fitx::ok();
 }
 
-}  // namespace zbitl::internal
+}  // namespace zbitl
