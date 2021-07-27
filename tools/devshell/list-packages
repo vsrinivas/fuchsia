@@ -66,42 +66,63 @@ function main {
     esac
   done
 
-  # Default to universe if no options are provided.
-  if [[ ${#package_sets[@]} -eq 0 ]]; then
-    package_sets+=( "${universe_packages_list}" )
-  fi
+  if is_feature_enabled "legacy_serve"; then
+    # Default to universe if no options are provided.
+    if [[ ${#package_sets[@]} -eq 0 ]]; then
+      package_sets+=( "${universe_packages_list}" )
+    fi
 
-  if [[ ${#package_sets[@]} -ne 1 ]]; then
-    fx-error "Cannot supply multiple package set filters."
-    return 1
-  fi
+    if [[ ${#package_sets[@]} -ne 1 ]]; then
+      fx-error "Cannot supply multiple package set filters."
+      return 1
+    fi
 
-  # Search the provided package set.
-  results=($(grep "${search_query}" "${package_sets[0]}"))
+    # Search the provided package set.
+    results=($(grep "${search_query}" "${package_sets[0]}"))
 
-  # Pass through a non-zero return value when no results are found.
-  if [[ ${#results[@]} -eq 0 ]]; then
-    return 1
-  fi
+    # Pass through a non-zero return value when no results are found.
+    if [[ ${#results[@]} -eq 0 ]]; then
+      return 1
+    fi
 
-  # Verbose searches through all package sets and tags each result.
-  if "${verbose}"; then
-    all_packages=( "${base_packages_list}" "${cache_packages_list}" "${universe_packages_list}" )
-    for i in "${!results[@]}"; do
-      package="${results[$i]}"
-      tags=($(grep "^${package}$" "${all_packages[@]}"))
+    # Verbose searches through all package sets and tags each result.
+    if "${verbose}"; then
+      all_packages=( "${base_packages_list}" "${cache_packages_list}" "${universe_packages_list}" )
+      for i in "${!results[@]}"; do
+        package="${results[$i]}"
+        tags=($(grep "^${package}$" "${all_packages[@]}"))
 
-      for j in "${!tags[@]}"; do
-        package_file=$(basename "${tags[$j]%:*}")
-        tags[$j]="${package_file%_packages.list}"
+        for j in "${!tags[@]}"; do
+          package_file=$(basename "${tags[$j]%:*}")
+          tags[$j]="${package_file%_packages.list}"
+        done
+
+        results[$i]="${package} [${tags[*]}]"
       done
+    fi
 
-      results[$i]="${package} [${tags[*]}]"
-    done
+    # Print all matching patterns with discovered sets.
+    printf '%s\n' "${results[@]}"
+  else
+    if [[ "$#[package_sets[@]}" -gt 0 ]]; then
+      fx-error "Flags '--base', '--cache', or '--universe' are not yet supported"
+      fx-error "by ffx repository. See http://fxbug.dev/81512 for more details"
+      return 1
+    fi
+
+    if [[ "$verbose" ]]; then
+      fx-error "Flag '--verbose' is not yet supported by ffx repository"
+      fx-error "See http://fxbug.dev/81512 for more details"
+      return 1
+    fi
+
+    fx-command-run ffx --config ffx_repository=true repository packages
+    err=$?
+    if [[ $err -ne 0 ]]; then
+      fx-error "Unable to list packages from the repository"
+      return $err
+    fi
   fi
-
-  # Print all matching patterns with discovered sets.
-  printf '%s\n' "${results[@]}"
   return 0
 }
 
