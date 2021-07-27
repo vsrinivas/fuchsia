@@ -49,15 +49,18 @@ __EXPORT
 extern const init_options_t default_init_options;
 
 typedef struct mkfs_options {
-  uint32_t fvm_data_slices;
-  bool verbose;
+  uint32_t fvm_data_slices = 1;
+  bool verbose = false;
+
   // The number of sectors per cluster on a FAT file systems or zero for the default.
-  int sectors_per_cluster;
-  // Format blobfs should store blobs in.  The valid values are "padded" and "compact".
-  const char* blob_layout_format;
+  int sectors_per_cluster = 0;
+
+  // Set to use the deprecated padded blobfs format.
+  bool deprecated_padded_blobfs_format = false;
+
   // The initial number of inodes to allocate space for. If 0, a default is used. Only supported
   // for blobfs.
-  uint64_t num_inodes;
+  uint64_t num_inodes = 0;
 } mkfs_options_t;
 
 __EXPORT

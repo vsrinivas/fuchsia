@@ -52,8 +52,9 @@ zx_status_t BlobfsCreator::Usage() {
 
   fprintf(stderr, "\nblobfs specific options:\n");
   fprintf(stderr,
-          "\t--blob_layout_format [padded|compact]\tFormat blobfs should store blobs in. Only "
-          "valid for the commands: mkfs, and create.\n");
+          "\t--deprecated_padded_format\tFormat blobfs using the deprecated format that uses more "
+          "space.\n"
+          "Valid for the commands: mkfs and create.\n");
   // Additional information about manifest format.
   fprintf(stderr, "\nEach manifest line must adhere to one of the following formats:\n");
   fprintf(stderr, "\t'dst/path=src/path'\n");
@@ -141,10 +142,23 @@ zx_status_t BlobfsCreator::ProcessCustom(int argc, char** argv, uint8_t* process
     *processed = required_args;
     return ZX_OK;
   }
+
+  if (strcmp(argv[0], "--deprecated_padded_format") == 0) {
+    if (GetCommand() != Command::kMkfs) {
+      fprintf(stderr, "%s is only valid for mkfs and create\n", argv[0]);
+      return ZX_ERR_INVALID_ARGS;
+    }
+    blob_layout_format_ = blobfs::BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart;
+    *processed = 1;
+    return ZX_OK;
+  }
+
+  // TODO(fxbug.dev/81353) Remove this flag. It duplicates the --deprecated_padded_format flag
+  // above and is left here to facilitate a soft transition with out-of-tree uses of this script.
   if (strcmp(argv[0], "--blob_layout_format") == 0) {
     constexpr uint8_t required_args = 2;
     if (GetCommand() != Command::kMkfs) {
-      fprintf(stderr, "%s is only valid for mkfs, and create\n", argv[0]);
+      fprintf(stderr, "%s is only valid for mkfs and create\n", argv[0]);
       return ZX_ERR_INVALID_ARGS;
     }
     if (argc < required_args) {
@@ -161,6 +175,7 @@ zx_status_t BlobfsCreator::ProcessCustom(int argc, char** argv, uint8_t* process
     *processed = required_args;
     return ZX_OK;
   }
+
   fprintf(stderr, "Argument not found: %s\n", argv[0]);
   return ZX_ERR_INVALID_ARGS;
 }

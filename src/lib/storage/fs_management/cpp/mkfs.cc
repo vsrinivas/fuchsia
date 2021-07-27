@@ -61,9 +61,8 @@ zx_status_t MkfsNativeFs(const char* binary, const char* device_path, LaunchCall
     }
   }
 
-  if (options->blob_layout_format) {
-    argv.push_back("--blob_layout_format");
-    argv.push_back(options->blob_layout_format);
+  if (options->deprecated_padded_blobfs_format) {
+    argv.push_back("--deprecated_padded_format");
   }
 
   std::string inodes_str;

@@ -53,7 +53,7 @@ mod tests {
     fn construct() {
         let dir = tempdir().unwrap();
         let product_config = ProductConfig::default();
-        let blobfs_config = BlobFSConfig { layout: "padded".to_string(), compress: true };
+        let blobfs_config = BlobFSConfig { layout: "compact".to_string(), compress: true };
 
         // Create a fake base package.
         let base_path = dir.path().join("base.far");

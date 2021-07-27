@@ -15,7 +15,7 @@ use std::path::Path;
 /// Example usage:
 ///
 /// ```
-/// let builder = BlobFSBuilder::new("padded");
+/// let builder = BlobFSBuilder::new("compact");
 /// builder.set_compressed(false);
 /// builder.add_package("path/to/package_manifest.json")?;
 /// builder.add_file("path/to/file.txt")?;
@@ -113,9 +113,19 @@ fn build_blobfs_args(
         "create".to_string(),
         "--manifest".to_string(),
         blob_manifest_path.as_ref().path_to_string()?,
-        "--blob_layout_format".to_string(),
-        blob_layout,
     ]);
+
+    // TODO(fxbug.dev/81353): Remove "padded" and use only "deprecated_padded" for the value once
+    // all uses have been updated.
+    match blob_layout.as_str() {
+        "deprecated_padded" | "padded" => {
+            args.push("--deprecated_padded_format".to_string());
+        }
+        "compact" => {}
+        _ => {
+            anyhow::bail!("blob_layout is invalid");
+        }
+    }
     Ok(args)
 }
 
@@ -145,8 +155,6 @@ mod tests {
                 "create",
                 "--manifest",
                 "blob.manifest",
-                "--blob_layout_format",
-                "compact",
             ]
         );
     }
@@ -154,7 +162,7 @@ mod tests {
     #[test]
     fn blobfs_args_no_compress() {
         let args = build_blobfs_args(
-            "compact".to_string(),
+            "deprecated_padded".to_string(),
             false,
             "blob.manifest",
             "blobs.json",
@@ -170,8 +178,7 @@ mod tests {
                 "create",
                 "--manifest",
                 "blob.manifest",
-                "--blob_layout_format",
-                "compact",
+                "--deprecated_padded_format",
             ]
         );
     }

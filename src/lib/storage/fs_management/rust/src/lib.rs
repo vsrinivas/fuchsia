@@ -337,8 +337,10 @@ impl<FSC: FSConfig> Drop for Filesystem<FSC> {
 
 /// Layout of blobs in blobfs
 pub enum BlobLayout {
-    /// Merkle tree is stored in a separate block
-    Padded,
+    /// Merkle tree is stored in a separate block. This is deprecated and used only on Astro
+    /// devices (it takes more space).
+    DeprecatedPadded,
+
     /// Merkle tree is appended to the last block of data
     Compact,
 }
@@ -364,7 +366,7 @@ pub struct Blobfs {
     pub verbose: bool,
     pub readonly: bool,
     pub metrics: bool,
-    pub blob_layout: Option<BlobLayout>,
+    pub blob_deprecated_padded_format: bool,
     pub blob_compression: Option<BlobCompression>,
     pub blob_eviction_policy: Option<BlobEvictionPolicy>,
 }
@@ -396,12 +398,8 @@ impl FSConfig for Blobfs {
     }
     fn format_args(&self) -> Vec<&CStr> {
         let mut args = vec![];
-        if let Some(layout) = &self.blob_layout {
-            args.push(cstr!("--blob_layout_format"));
-            args.push(match layout {
-                BlobLayout::Padded => cstr!("padded"),
-                BlobLayout::Compact => cstr!("compact"),
-            });
+        if self.blob_deprecated_padded_format {
+            args.push(cstr!("--deprecated_padded_format"));
         }
         args
     }
@@ -535,9 +533,7 @@ impl FSConfig for Factoryfs {
 #[cfg(test)]
 mod tests {
     use {
-        super::{
-            BlobCompression, BlobEvictionPolicy, BlobLayout, Blobfs, Factoryfs, Filesystem, Minfs,
-        },
+        super::{BlobCompression, BlobEvictionPolicy, Blobfs, Factoryfs, Filesystem, Minfs},
         fuchsia_zircon::HandleBased,
         ramdevice_client::RamdiskClient,
         std::io::{Read, Seek, Write},
@@ -569,7 +565,7 @@ mod tests {
             verbose: true,
             metrics: true,
             readonly: true,
-            blob_layout: Some(BlobLayout::Compact),
+            blob_deprecated_padded_format: false,
             blob_compression: Some(BlobCompression::Uncompressed),
             blob_eviction_policy: Some(BlobEvictionPolicy::EvictImmediately),
         };

@@ -256,15 +256,7 @@ const char* BlobLayoutFormatToString(BlobLayoutFormat format) {
   }
 }
 
-const char* GetBlobLayoutFormatCommandLineArg(BlobLayoutFormat format) {
-  switch (format) {
-    case BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart:
-      return kPaddedMerkleTreeAtStartCommandLineArg;
-    case BlobLayoutFormat::kCompactMerkleTreeAtEnd:
-      return kCompactMerkleTreeAtEndCommandLineArg;
-  }
-}
-
+// TODO(fxbug.dev/81353) this function can be removed when the old command-line flag is removed.
 zx::status<BlobLayoutFormat> ParseBlobLayoutFormatCommandLineArg(const char* arg) {
   if (strcmp(kPaddedMerkleTreeAtStartCommandLineArg, arg) == 0) {
     return zx::ok(BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart);

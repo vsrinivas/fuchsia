@@ -64,7 +64,7 @@ struct TestFilesystemOptions {
   bool zero_fill = false;
 
   // The format blobfs should store blobs in.
-  std::optional<blobfs::BlobLayoutFormat> blob_layout_format;
+  blobfs::BlobLayoutFormat blob_layout_format = blobfs::BlobLayoutFormat::kCompactMerkleTreeAtEnd;
 
   // If using ram_nand, the number of writes after which writes should fail.
   uint32_t fail_after;

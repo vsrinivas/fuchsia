@@ -186,9 +186,8 @@ int usage() {
       "         -e|--eviction_policy |pol| Policy for when to evict pager-backed blobs with no\n"
       "                                    handles. |pol| can be one of NEVER_EVICT or\n"
       "                                    EVICT_IMMEDIATELY.\n"
-      "         -b|--blob_layout_format [padded|compact]\n"
-      "                                    The format blobfs should use to store blobs.  Only\n"
-      "                                    valid for mkfs.\n"
+      "         --deprecated_padded_format Turns on the deprecated format that uses more disk\n"
+      "                                    space. Only valid for mkfs on Astro devices.\n"
       "         -i|--num_inodes n          The initial number of inodes to allocate space for.\n"
       "                                    Only valid for mkfs.\n"
       "         -s|--sandbox_decompression Run blob decompression in a sandboxed component.\n"
@@ -209,9 +208,12 @@ int usage() {
 
 zx::status<Options> ProcessArgs(int argc, char** argv, CommandFunction* func) {
   Options options{};
+
+  // This option has no short flag, use int value beyond a char.
+  constexpr int kDeprecatedPaddedFormat = 256;
+
   while (1) {
     static struct option opts[] = {
-
         {"verbose", no_argument, nullptr, 'v'},
         {"readonly", no_argument, nullptr, 'r'},
         {"metrics", no_argument, nullptr, 'm'},
@@ -219,7 +221,7 @@ zx::status<Options> ProcessArgs(int argc, char** argv, CommandFunction* func) {
         {"compression", required_argument, nullptr, 'c'},
         {"compression_level", required_argument, nullptr, 'l'},
         {"eviction_policy", required_argument, nullptr, 'e'},
-        {"blob_layout_format", required_argument, nullptr, 'b'},
+        {"deprecated_padded_format", no_argument, nullptr, kDeprecatedPaddedFormat},
         {"num_inodes", required_argument, nullptr, 'i'},
         {"sandbox_decompression", no_argument, nullptr, 's'},
         {"paging_threads", no_argument, nullptr, 't'},
@@ -278,13 +280,9 @@ zx::status<Options> ProcessArgs(int argc, char** argv, CommandFunction* func) {
       case 'v':
         options.mount_options.verbose = true;
         break;
-      case 'b': {
-        auto format = blobfs::ParseBlobLayoutFormatCommandLineArg(optarg);
-        if (format.is_error()) {
-          fprintf(stderr, "Invalid blob layout format: %s\n", optarg);
-          return zx::error(usage());
-        }
-        options.mkfs_options.blob_layout_format = format.value();
+      case kDeprecatedPaddedFormat: {
+        options.mkfs_options.blob_layout_format =
+            blobfs::BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart;
         break;
       }
       case 's': {

@@ -60,8 +60,7 @@ class BlobfsCreator : public FsCreator {
   std::vector<blobfs::BlobInfo> blob_info_list_;
 
   // The format blobfs should use to store blobs.
-  blobfs::BlobLayoutFormat blob_layout_format_ =
-      blobfs::BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart;
+  blobfs::BlobLayoutFormat blob_layout_format_ = blobfs::BlobLayoutFormat::kCompactMerkleTreeAtEnd;
 
   // The number of inodes required in the resultant blobfs image.
   uint64_t required_inodes_ = 0;

@@ -147,7 +147,7 @@ const mkfs_options_t default_mkfs_options = {
     .fvm_data_slices = 1,
     .verbose = false,
     .sectors_per_cluster = 0,
-    .blob_layout_format = nullptr,
+    .deprecated_padded_blobfs_format = false,
     .num_inodes = 0,
 };
 

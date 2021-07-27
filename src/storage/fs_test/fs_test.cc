@@ -519,10 +519,8 @@ class BlobfsInstance : public FilesystemInstance {
 
   zx::status<> Format(const TestFilesystemOptions& options) override {
     mkfs_options_t mkfs_options = default_mkfs_options;
-    if (options.blob_layout_format) {
-      mkfs_options.blob_layout_format =
-          blobfs::GetBlobLayoutFormatCommandLineArg(options.blob_layout_format.value());
-    }
+    mkfs_options.deprecated_padded_blobfs_format =
+        options.blob_layout_format == blobfs::BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart;
     mkfs_options.num_inodes = options.num_inodes;
     return FsFormat(device_path_, DISK_FORMAT_BLOBFS, mkfs_options);
   }

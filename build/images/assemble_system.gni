@@ -73,8 +73,9 @@ import("//src/sys/pkg/bin/pm/pm.gni")
 #     [boolean] Whether the blobs added to the blobfs image should be compressed.
 #
 #   blob_layout_format (default: "compact")
-#     [string] The format blobfs should store blobs in. The valid values are "padded" and
-#     "compact".
+#     [string] The format blobfs should store blobs in. The valid values are "deprecated_padded" and
+#     "compact". The deprecated padded format is supported only for Astro devices and will be
+#     removed in the future (it wastes space).
 #
 #   output_dir (optional; default: target_out_dir)
 #     [string] The output directory into which the final system ZBI is written.
@@ -395,9 +396,18 @@ template("assemble_system") {
       "create",
       "--manifest",
       rebase_path(blob_manifest, root_build_dir),
-      "--blob_layout_format",
-      blob_layout_format,
     ]
+
+    # TODO(fxbug.dev/81353): Remove "padded" and use only "deprecated_padded" for the value once
+    # all assignments are updated.
+    if (blob_layout_format == "padded" ||
+        blob_layout_format == "deprecated_padded") {
+      args += [ "--deprecated_padded_format" ]
+    } else {
+      # The only other defined value is "compact".
+      assert(blob_layout_format == "compact",
+             "blob_layout_format must be 'deprecated_padded' or 'compact'.")
+    }
   }
 
   compiled_action("${image_name}_data.blk") {
