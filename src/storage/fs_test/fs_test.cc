@@ -287,8 +287,8 @@ zx::status<std::pair<RamDevice, std::string>> CreateRamDevice(
 }
 
 zx::status<> FsFormat(const std::string& device_path, disk_format_t format,
-                      const mkfs_options_t& options) {
-  auto status = zx::make_status(mkfs(device_path.c_str(), format, launch_stdio_sync, &options));
+                      const MkfsOptions& options) {
+  auto status = zx::make_status(mkfs(device_path.c_str(), format, launch_stdio_sync, options));
   if (status.is_error()) {
     std::cout << "Could not format " << disk_format_string(format)
               << " file system: " << status.status_string() << std::endl;
@@ -298,7 +298,7 @@ zx::status<> FsFormat(const std::string& device_path, disk_format_t format,
 }
 
 zx::status<> FsMount(const std::string& device_path, const std::string& mount_path,
-                     disk_format_t format, const mount_options_t& mount_options,
+                     disk_format_t format, const MountOptions& mount_options,
                      zx::channel* outgoing_directory) {
   auto fd = fbl::unique_fd(open(device_path.c_str(), O_RDWR));
   if (!fd) {
@@ -306,7 +306,7 @@ zx::status<> FsMount(const std::string& device_path, const std::string& mount_pa
     return zx::error(ZX_ERR_BAD_STATE);
   }
 
-  mount_options_t options = mount_options;
+  MountOptions options = mount_options;
   options.bind_to_namespace = true;
   if (outgoing_directory) {
     zx::channel server;
@@ -326,7 +326,7 @@ zx::status<> FsMount(const std::string& device_path, const std::string& mount_pa
 
   // |fd| is consumed by mount.
   auto status = zx::make_status(mount(fd.release(), StripTrailingSlash(mount_path).c_str(), format,
-                                      &options, launch_stdio_async));
+                                      options, launch_stdio_async));
   if (status.is_error()) {
     std::cout << "Could not mount " << disk_format_string(format)
               << " file system: " << status.status_string() << std::endl;
@@ -518,14 +518,14 @@ class BlobfsInstance : public FilesystemInstance {
       : device_(std::move(device)), device_path_(std::move(device_path)) {}
 
   zx::status<> Format(const TestFilesystemOptions& options) override {
-    mkfs_options_t mkfs_options = default_mkfs_options;
+    MkfsOptions mkfs_options;
     mkfs_options.deprecated_padded_blobfs_format =
         options.blob_layout_format == blobfs::BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart;
     mkfs_options.num_inodes = options.num_inodes;
     return FsFormat(device_path_, DISK_FORMAT_BLOBFS, mkfs_options);
   }
 
-  zx::status<> Mount(const std::string& mount_path, const mount_options_t& options) override {
+  zx::status<> Mount(const std::string& mount_path, const MountOptions& options) override {
     return FsMount(device_path_, mount_path, DISK_FORMAT_BLOBFS, options, &outgoing_directory_);
   }
 
@@ -535,14 +535,14 @@ class BlobfsInstance : public FilesystemInstance {
   }
 
   zx::status<> Fsck() override {
-    fsck_options_t options{
+    FsckOptions options{
         .verbose = false,
         .never_modify = true,
         .always_modify = false,
         .force = true,
     };
     return zx::make_status(
-        fsck(device_path_.c_str(), DISK_FORMAT_BLOBFS, &options, launch_stdio_sync));
+        fsck(device_path_.c_str(), DISK_FORMAT_BLOBFS, options, launch_stdio_sync));
   }
 
   zx::status<std::string> DevicePath() const override { return zx::ok(std::string(device_path_)); }
@@ -615,7 +615,7 @@ TestFilesystem::~TestFilesystem() {
   }
 }
 
-zx::status<> TestFilesystem::MountWithOptions(const mount_options_t& options) {
+zx::status<> TestFilesystem::Mount(const MountOptions& options) {
   auto status = filesystem_->Mount(mount_path_, options);
   if (status.is_ok()) {
     mounted_ = true;

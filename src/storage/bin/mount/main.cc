@@ -31,8 +31,7 @@ int usage(void) {
   return -1;
 }
 
-int parse_args(int argc, char** argv, mount_options_t* options, char** devicepath,
-               char** mountpath) {
+int parse_args(int argc, char** argv, MountOptions* options, char** devicepath, char** mountpath) {
   while (1) {
     static struct option opts[] = {
         {"readonly", no_argument, NULL, 'r'}, {"metrics", no_argument, NULL, 'm'},
@@ -77,9 +76,8 @@ int parse_args(int argc, char** argv, mount_options_t* options, char** devicepat
 int main(int argc, char** argv) {
   char* devicepath;
   char* mountpath;
-  mount_options_t options = default_mount_options;
-  int r;
-  if ((r = parse_args(argc, argv, &options, &devicepath, &mountpath))) {
+  MountOptions options;
+  if (int r = parse_args(argc, argv, &options, &devicepath, &mountpath)) {
     return r;
   }
 
@@ -93,7 +91,7 @@ int main(int argc, char** argv) {
     return -1;
   }
   disk_format_t df = detect_disk_format(fd);
-  zx_status_t status = mount(fd, mountpath, df, &options, launch_logs_async);
+  zx_status_t status = mount(fd, mountpath, df, options, launch_logs_async);
   if (status != ZX_OK) {
     fprintf(stderr, "fs_mount: Error while mounting: %d\n", status);
   }

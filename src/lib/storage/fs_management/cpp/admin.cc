@@ -32,7 +32,7 @@ void UnmountHandle(zx_handle_t export_root, bool wait_until_ready) {
   fs::Vfs::UnmountHandle(std::move(root), wait_until_ready ? zx::time::infinite() : zx::time(0));
 }
 
-zx::status<> InitNativeFs(const char* binary, zx::channel device, const init_options_t& options,
+zx::status<> InitNativeFs(const char* binary, zx::channel device, const InitOptions& options,
                           OutgoingDirectory outgoing_directory) {
   zx_status_t status;
   constexpr size_t kNumHandles = 2;
@@ -119,7 +119,7 @@ zx::status<zx::channel> GetFsRootHandle(zx::unowned_channel export_root, uint32_
   return zx::ok(std::move(root_client));
 }
 
-zx::status<> FsInit(zx::channel device, disk_format_t df, const init_options_t& options,
+zx::status<> FsInit(zx::channel device, disk_format_t df, const InitOptions& options,
                     OutgoingDirectory outgoing_directory) {
   switch (df) {
     case DISK_FORMAT_MINFS:
@@ -151,21 +151,8 @@ zx::status<> FsInit(zx::channel device, disk_format_t df, const init_options_t& 
 
 }  // namespace fs_management
 
-const init_options_t default_init_options = {
-    .readonly = false,
-    .verbose_mount = false,
-    .collect_metrics = false,
-    .wait_until_ready = true,
-    .write_compression_algorithm = nullptr,
-    .write_compression_level = -1,
-    .cache_eviction_policy = nullptr,
-    .fsck_after_every_transaction = false,
-    .sandbox_decompression = false,
-    .callback = launch_stdio_async,
-};
-
 __EXPORT
-zx_status_t fs_init(zx_handle_t device_handle, disk_format_t df, const init_options_t* options,
+zx_status_t fs_init(zx_handle_t device_handle, disk_format_t df, const InitOptions& options,
                     zx_handle_t* out_export_root) {
   fs_management::OutgoingDirectory handles;
   zx::channel client;
@@ -173,7 +160,7 @@ zx_status_t fs_init(zx_handle_t device_handle, disk_format_t df, const init_opti
   if (status != ZX_OK)
     return status;
   handles.client = zx::unowned_channel(client);
-  status = FsInit(zx::channel(device_handle), df, *options, std::move(handles)).status_value();
+  status = FsInit(zx::channel(device_handle), df, options, std::move(handles)).status_value();
   if (status != ZX_OK)
     return status;
   *out_export_root = client.release();

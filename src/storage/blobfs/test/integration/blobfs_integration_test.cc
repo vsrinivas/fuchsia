@@ -1123,9 +1123,9 @@ TEST_P(BlobfsIntegrationTest, ReadOnly) {
   blob_fd.reset();
 
   EXPECT_EQ(fs().Unmount().status_value(), ZX_OK);
-  mount_options_t options = default_mount_options;
+  ::MountOptions options;
   options.readonly = true;
-  EXPECT_EQ(fs().MountWithOptions(options).status_value(), ZX_OK);
+  EXPECT_EQ(fs().Mount(options).status_value(), ZX_OK);
 
   // We can read old blobs
   blob_fd.reset(open(info->path, O_RDONLY));
@@ -1268,8 +1268,7 @@ TEST_F(BlobfsWithFvmTest, CorruptAtMount) {
   fbl::unique_fd fd(open(fs().DevicePath().value().c_str(), O_RDWR));
   ASSERT_TRUE(fd);
 
-  mount_options_t options = default_mount_options;
-  ASSERT_NE(mount(fd.release(), fs().mount_path().c_str(), DISK_FORMAT_BLOBFS, &options,
+  ASSERT_NE(mount(fd.release(), fs().mount_path().c_str(), DISK_FORMAT_BLOBFS, ::MountOptions(),
                   launch_stdio_async),
             ZX_OK);
 

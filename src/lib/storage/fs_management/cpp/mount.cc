@@ -77,9 +77,9 @@ zx_status_t MakeDirAndRemoteMount(const char* path, zx::channel root) {
   return resp.value().s;
 }
 
-zx_status_t StartFilesystem(fbl::unique_fd device_fd, disk_format_t df,
-                            const mount_options_t* options, LaunchCallback cb,
-                            OutgoingDirectory outgoing_directory, zx::channel* out_data_root) {
+zx_status_t StartFilesystem(fbl::unique_fd device_fd, disk_format_t df, const MountOptions& options,
+                            LaunchCallback cb, OutgoingDirectory outgoing_directory,
+                            zx::channel* out_data_root) {
   // get the device handle from the device_fd
   zx_status_t status;
   zx::channel device;
@@ -89,18 +89,18 @@ zx_status_t StartFilesystem(fbl::unique_fd device_fd, disk_format_t df,
   }
 
   // convert mount options to init options
-  init_options_t init_options = {
-      .readonly = options->readonly,
-      .verbose_mount = options->verbose_mount,
-      .collect_metrics = options->collect_metrics,
-      .wait_until_ready = options->wait_until_ready,
-      .write_compression_algorithm = options->write_compression_algorithm,
+  InitOptions init_options = {
+      .readonly = options.readonly,
+      .verbose_mount = options.verbose_mount,
+      .collect_metrics = options.collect_metrics,
+      .wait_until_ready = options.wait_until_ready,
+      .write_compression_algorithm = options.write_compression_algorithm,
       // TODO(jfsulliv): This is currently only used in tests. Plumb through mount options if
       // needed.
       .write_compression_level = -1,
-      .cache_eviction_policy = options->cache_eviction_policy,
-      .fsck_after_every_transaction = options->fsck_after_every_transaction,
-      .sandbox_decompression = options->sandbox_decompression,
+      .cache_eviction_policy = options.cache_eviction_policy,
+      .fsck_after_every_transaction = options.fsck_after_every_transaction,
+      .sandbox_decompression = options.sandbox_decompression,
       .callback = cb,
   };
 
@@ -115,7 +115,7 @@ zx_status_t StartFilesystem(fbl::unique_fd device_fd, disk_format_t df,
   // Extract the handle to the root of the filesystem from the export root. The POSIX flag will
   // cause the writable and executable rights to be inherited (if present).
   uint32_t flags = fio::wire::kOpenRightReadable | fio::wire::kOpenFlagPosix;
-  if (options->admin)
+  if (options.admin)
     flags |= fio::wire::kOpenRightAdmin;
   auto handle_or = GetFsRootHandle(zx::unowned_channel(export_root), flags);
   if (handle_or.is_error()) {
@@ -127,36 +127,6 @@ zx_status_t StartFilesystem(fbl::unique_fd device_fd, disk_format_t df,
 
 }  // namespace
 }  // namespace fs_management
-
-const mount_options_t default_mount_options = {
-    .readonly = false,
-    .verbose_mount = false,
-    .collect_metrics = false,
-    .wait_until_ready = true,
-    .create_mountpoint = false,
-    .write_compression_algorithm = nullptr,
-    .cache_eviction_policy = nullptr,
-    .fsck_after_every_transaction = false,
-    .admin = true,
-    .outgoing_directory = {ZX_HANDLE_INVALID, ZX_HANDLE_INVALID},
-    .bind_to_namespace = false,
-    .sandbox_decompression = false,
-};
-
-const mkfs_options_t default_mkfs_options = {
-    .fvm_data_slices = 1,
-    .verbose = false,
-    .sectors_per_cluster = 0,
-    .deprecated_padded_blobfs_format = false,
-    .num_inodes = 0,
-};
-
-const fsck_options_t default_fsck_options = {
-    .verbose = false,
-    .never_modify = false,
-    .always_modify = false,
-    .force = false,
-};
 
 enum DiskFormatLogVerbosity {
   Silent,
@@ -272,9 +242,9 @@ disk_format_t detect_disk_format_log_unknown(int fd) {
 }
 
 __EXPORT
-zx_status_t fmount(int dev_fd, int mount_fd, disk_format_t df, const mount_options_t* options,
+zx_status_t fmount(int dev_fd, int mount_fd, disk_format_t df, const MountOptions& options,
                    LaunchCallback cb) {
-  if (options->bind_to_namespace) {
+  if (options.bind_to_namespace) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -282,8 +252,8 @@ zx_status_t fmount(int dev_fd, int mount_fd, disk_format_t df, const mount_optio
   zx::channel data_root;
   fbl::unique_fd device_fd(dev_fd);
 
-  fs_management::OutgoingDirectory handles{zx::unowned_channel(options->outgoing_directory.client),
-                                           zx::channel(options->outgoing_directory.server)};
+  fs_management::OutgoingDirectory handles{zx::unowned_channel(options.outgoing_directory.client),
+                                           zx::channel(options.outgoing_directory.server)};
   zx::channel client;
   if (!*handles.client) {
     zx_status_t status = zx::channel::create(0, &client, &handles.server);
@@ -326,14 +296,14 @@ zx_status_t mount_root_handle(zx_handle_t root_handle, const char* mount_path) {
 }
 
 __EXPORT
-zx_status_t mount(int dev_fd, const char* mount_path, disk_format_t df,
-                  const mount_options_t* options, LaunchCallback cb) {
+zx_status_t mount(int dev_fd, const char* mount_path, disk_format_t df, const MountOptions& options,
+                  LaunchCallback cb) {
   zx_status_t status;
   zx::channel data_root;
   fbl::unique_fd device_fd(dev_fd);
 
-  fs_management::OutgoingDirectory handles{zx::unowned_channel(options->outgoing_directory.client),
-                                           zx::channel(options->outgoing_directory.server)};
+  fs_management::OutgoingDirectory handles{zx::unowned_channel(options.outgoing_directory.client),
+                                           zx::channel(options.outgoing_directory.server)};
   zx::channel client;
   if (!*handles.client) {
     zx_status_t status = zx::channel::create(0, &client, &handles.server);
@@ -352,7 +322,7 @@ zx_status_t mount(int dev_fd, const char* mount_path, disk_format_t df,
   if (mount_path == nullptr)
     return ZX_OK;
 
-  if (options->bind_to_namespace) {
+  if (options.bind_to_namespace) {
     fdio_ns_t* ns;
     if ((status = fdio_ns_get_installed(&ns)) != ZX_OK) {
       return status;
@@ -360,7 +330,7 @@ zx_status_t mount(int dev_fd, const char* mount_path, disk_format_t df,
     return fdio_ns_bind(ns, mount_path, data_root.release());
   } else {
     // mount the channel in the requested location
-    if (options->create_mountpoint) {
+    if (options.create_mountpoint) {
       return fs_management::MakeDirAndRemoteMount(mount_path, std::move(data_root));
     }
     return mount_root_handle(data_root.release(), mount_path);

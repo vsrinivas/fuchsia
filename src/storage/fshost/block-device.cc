@@ -70,8 +70,7 @@ const char kAllowAuthoringFactoryConfigFile[] = "/boot/config/allow-authoring-fa
 // GUID of the device does not match a known valid one. Returns
 // ZX_ERR_NOT_SUPPORTED if the GUID is a system GUID. Returns ZX_OK if an
 // attempt to mount is made, without checking mount success.
-zx_status_t MountData(FilesystemMounter* mounter, zx::channel block_device,
-                      mount_options_t* options) {
+zx_status_t MountData(FilesystemMounter* mounter, zx::channel block_device, MountOptions* options) {
   fuchsia_hardware_block_partition_GUID type_guid;
   zx_status_t io_status, status;
   io_status = fuchsia_hardware_block_partition_PartitionGetTypeGuid(block_device.get(), &status,
@@ -622,7 +621,7 @@ zx_status_t BlockDevice::MountFilesystem() {
   switch (format_) {
     case DISK_FORMAT_FACTORYFS: {
       FX_LOGS(INFO) << "BlockDevice::MountFilesystem(factoryfs)";
-      mount_options_t options = default_mount_options;
+      MountOptions options;
       options.collect_metrics = false;
       options.readonly = true;
 
@@ -635,7 +634,7 @@ zx_status_t BlockDevice::MountFilesystem() {
     }
     case DISK_FORMAT_BLOBFS: {
       FX_LOGS(INFO) << "BlockDevice::MountFilesystem(blobfs)";
-      mount_options_t options = default_mount_options;
+      MountOptions options;
       options.collect_metrics = true;
       std::optional<std::string> algorithm = std::nullopt;
       std::optional<std::string> eviction_policy = std::nullopt;
@@ -663,7 +662,7 @@ zx_status_t BlockDevice::MountFilesystem() {
       return ZX_OK;
     }
     case DISK_FORMAT_MINFS: {
-      mount_options_t options = default_mount_options;
+      MountOptions options;
       FX_LOGS(INFO) << "BlockDevice::MountFilesystem(data partition)";
       zx_status_t status = MountData(mounter_, std::move(block_device), &options);
       if (status != ZX_OK) {

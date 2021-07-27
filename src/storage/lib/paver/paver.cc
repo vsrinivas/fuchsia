@@ -306,9 +306,9 @@ zx::status<> PartitionPave(const DevicePartitioner& partitioner, zx::vmo payload
   // the block server can deadlock due to a read fault, putting the device in an unrecoverable
   // state.
   //
-  // TODO(fxbug.dev/48145): If it's possible for payload_vmo to be a root pager-backed VMO, we will need to
-  // lock it instead of simply committing its pages, to opt it out of eviction. The assert below
-  // verifying that it's a pager-backed clone will need to be removed as well.
+  // TODO(fxbug.dev/48145): If it's possible for payload_vmo to be a root pager-backed VMO, we will
+  // need to lock it instead of simply committing its pages, to opt it out of eviction. The assert
+  // below verifying that it's a pager-backed clone will need to be removed as well.
   zx_info_vmo_t info;
   auto status =
       zx::make_status(payload_vmo.get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
@@ -713,10 +713,10 @@ zx::status<> DataSinkImpl::WriteDataFile(fidl::StringView filename,
       return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
 
-  mount_options_t opts(default_mount_options);
+  MountOptions opts;
   opts.create_mountpoint = true;
   if (status = zx::make_status(
-          mount(mountpoint_dev_fd.get(), mount_path, DISK_FORMAT_MINFS, &opts, launch_logs_async));
+          mount(mountpoint_dev_fd.get(), mount_path, DISK_FORMAT_MINFS, opts, launch_logs_async));
       status.is_error()) {
     ERROR("mount error: %s\n", status.status_string());
     return status.take_error();

@@ -49,8 +49,7 @@ int usage(void) {
   return -1;
 }
 
-int parse_args(int argc, char** argv, mkfs_options_t* options, disk_format_t* df,
-               char** devicepath) {
+int parse_args(int argc, char** argv, MkfsOptions* options, disk_format_t* df, char** devicepath) {
   static const struct option cmds[] = {
       {"help", no_argument, NULL, 'h'},
       {"verbose", no_argument, NULL, 'v'},
@@ -110,7 +109,7 @@ int parse_args(int argc, char** argv, mkfs_options_t* options, disk_format_t* df
 
 }  // namespace
 int main(int argc, char** argv) {
-  mkfs_options_t options = default_mkfs_options;
+  MkfsOptions options;
   char* devicepath;
   disk_format_t df;
   int r;
@@ -120,7 +119,7 @@ int main(int argc, char** argv) {
   if (options.verbose) {
     printf("fs_mkfs: Formatting device [%s]\n", devicepath);
   }
-  if ((r = mkfs(devicepath, df, launch_stdio_sync, &options)) < 0) {
+  if ((r = mkfs(devicepath, df, launch_stdio_sync, options)) < 0) {
     fprintf(stderr, "fs_mkfs: Failed to format device: %d\n", r);
   }
   return r;

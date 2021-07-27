@@ -24,7 +24,7 @@ struct OutgoingDirectory {
 zx::status<zx::channel> GetFsRootHandle(zx::unowned_channel export_root, uint32_t flags);
 
 // Launches the specified filesystem.
-zx::status<> FsInit(zx::channel device, disk_format_t df, const init_options_t& options,
+zx::status<> FsInit(zx::channel device, disk_format_t df, const InitOptions& options,
                     OutgoingDirectory outgoing_directory);
 
 }  // namespace fs_management

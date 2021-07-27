@@ -51,12 +51,10 @@ TEST_F(FshostExposedDirTest, ExposesDiagnosticsAndServicesForBlobfs) {
     auto fvm_partition_or = storage::CreateFvmPartition(ramdisk_or->path(), kSliceSize, options);
     ASSERT_EQ(fvm_partition_or.status_value(), ZX_OK);
 
-    // format the blobfs partition
-    ASSERT_EQ(mkfs(fvm_partition_or->c_str(), DISK_FORMAT_BLOBFS, launch_stdio_sync,
-                   &default_mkfs_options),
+    // Format the blobfs partition.
+    ASSERT_EQ(mkfs(fvm_partition_or->c_str(), DISK_FORMAT_BLOBFS, launch_stdio_sync, MkfsOptions()),
               ZX_OK);
-    ASSERT_EQ(fsck(fvm_partition_or->c_str(), DISK_FORMAT_BLOBFS, &default_fsck_options,
-                   launch_stdio_sync),
+    ASSERT_EQ(fsck(fvm_partition_or->c_str(), DISK_FORMAT_BLOBFS, FsckOptions(), launch_stdio_sync),
               ZX_OK);
   }
 

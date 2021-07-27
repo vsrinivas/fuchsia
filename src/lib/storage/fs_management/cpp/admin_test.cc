@@ -27,7 +27,8 @@ class OutgoingDirectoryTest : public zxtest::Test {
   void SetUp() final {
     ASSERT_OK(ramdisk_create(512, 1 << 16, &ramdisk_));
     const char* ramdisk_path = ramdisk_get_path(ramdisk_);
-    ASSERT_OK(mkfs(ramdisk_path, format_, launch_stdio_sync, &default_mkfs_options));
+
+    ASSERT_OK(mkfs(ramdisk_path, format_, launch_stdio_sync, MkfsOptions()));
     state_ = kFormatted;
   }
 
@@ -62,7 +63,7 @@ class OutgoingDirectoryTest : public zxtest::Test {
               0);
   }
 
-  void StartFilesystem(const init_options_t* options) {
+  void StartFilesystem(const InitOptions& options) {
     ASSERT_EQ(state_, kFormatted);
 
     zx::channel device, device_server;
@@ -118,7 +119,7 @@ class OutgoingDirectoryTest : public zxtest::Test {
   disk_format_t format_;
 };
 
-static constexpr init_options_t readonly_options = {
+static constexpr InitOptions kReadonlyOptions = {
     .readonly = true,
     .verbose_mount = false,
     .collect_metrics = false,
@@ -139,38 +140,38 @@ class OutgoingDirectoryMinfs : public OutgoingDirectoryTest {
 };
 
 TEST_F(OutgoingDirectoryBlobfs, OutgoingDirectoryReadWriteDataRootIsValidBlobfs) {
-  StartFilesystem(&default_init_options);
+  StartFilesystem(InitOptions());
   CheckDataRoot();
 }
 
 TEST_F(OutgoingDirectoryBlobfs, OutgoingDirectoryReadOnlyDataRootIsValidBlobfs) {
-  StartFilesystem(&readonly_options);
+  StartFilesystem(kReadonlyOptions);
   CheckDataRoot();
 }
 
 TEST_F(OutgoingDirectoryMinfs, OutgoingDirectoryReadWriteDataRootIsValidMinfs) {
-  StartFilesystem(&default_init_options);
+  StartFilesystem(InitOptions());
   CheckDataRoot();
 }
 
 TEST_F(OutgoingDirectoryMinfs, OutgoingDirectoryReadOnlyDataRootIsValidMinfs) {
-  StartFilesystem(&readonly_options);
+  StartFilesystem(kReadonlyOptions);
   CheckDataRoot();
 }
 
 TEST_F(OutgoingDirectoryMinfs, CanWriteToReadWriteMinfsDataRoot) {
-  StartFilesystem(&default_init_options);
+  StartFilesystem(InitOptions());
   WriteTestFile();
 }
 
 TEST_F(OutgoingDirectoryMinfs, CannotWriteToReadOnlyMinfsDataRoot) {
   // write an initial test file onto a writable filesystem
-  StartFilesystem(&default_init_options);
+  StartFilesystem(InitOptions());
   WriteTestFile();
   StopFilesystem();
 
   // start the filesystem in read-only mode
-  StartFilesystem(&readonly_options);
+  StartFilesystem(kReadonlyOptions);
   zx::channel data_root;
   GetDataRoot(&data_root);
   fidl::WireSyncClient<fio::Directory> data_client(std::move(data_root));
@@ -205,7 +206,7 @@ TEST_F(OutgoingDirectoryMinfs, CannotWriteToReadOnlyMinfsDataRoot) {
 }
 
 TEST_F(OutgoingDirectoryMinfs, CannotWriteToOutgoingDirectory) {
-  StartFilesystem(&default_init_options);
+  StartFilesystem(InitOptions());
   zx::unowned_channel export_root;
   GetExportRoot(&export_root);
 

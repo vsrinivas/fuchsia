@@ -249,9 +249,8 @@ bool UseBlockDeviceIsOk() {
 
   auto clean_up = fit::defer([&ramdisk]() { ramdisk_destroy(ramdisk); });
 
-  mkfs_options_t mkfs_options = default_mkfs_options;
   ASSERT_EQ(
-      mkfs(options.block_device_path.c_str(), DISK_FORMAT_BLOBFS, launch_stdio_sync, &mkfs_options),
+      mkfs(options.block_device_path.c_str(), DISK_FORMAT_BLOBFS, launch_stdio_sync, MkfsOptions()),
       ZX_OK);
 
   Fixture fixture(options);
@@ -295,9 +294,8 @@ bool UseBlockDeviceWithFvmIsOk() {
 
   auto clean_up = fit::defer([&ramdisk]() { ramdisk_destroy(ramdisk); });
 
-  mkfs_options_t mkfs_options = default_mkfs_options;
   ASSERT_EQ(
-      mkfs(options.block_device_path.c_str(), DISK_FORMAT_BLOBFS, launch_stdio_sync, &mkfs_options),
+      mkfs(options.block_device_path.c_str(), DISK_FORMAT_BLOBFS, launch_stdio_sync, MkfsOptions()),
       ZX_OK);
 
   Fixture fixture(options);
@@ -346,9 +344,8 @@ bool SkipFormatIsOk() {
 
   auto clean_up = fit::defer([&ramdisk]() { ramdisk_destroy(ramdisk); });
 
-  mkfs_options_t mkfs_options = default_mkfs_options;
   ASSERT_EQ(
-      mkfs(options.block_device_path.c_str(), DISK_FORMAT_BLOBFS, launch_stdio_sync, &mkfs_options),
+      mkfs(options.block_device_path.c_str(), DISK_FORMAT_BLOBFS, launch_stdio_sync, MkfsOptions()),
       ZX_OK);
 
   Fixture fixture(options);

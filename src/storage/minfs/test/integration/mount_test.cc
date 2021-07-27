@@ -44,9 +44,7 @@ class MountTestTemplate : public testing::Test {
     ramdisk_ = storage::RamDisk::Create(/*block_size=*/512, /*block_count=*/1 << 16).value();
 
     ramdisk_path_ = ramdisk_->path();
-    ASSERT_EQ(
-        mkfs(ramdisk_path_.c_str(), DISK_FORMAT_MINFS, launch_stdio_sync, &default_mkfs_options),
-        0);
+    ASSERT_EQ(mkfs(ramdisk_path_.c_str(), DISK_FORMAT_MINFS, launch_stdio_sync, MkfsOptions()), 0);
 
     int ramdisk_block_fd = ramdisk_get_block_fd(ramdisk_->client());
     zx::channel block_channel;
@@ -97,7 +95,7 @@ class MountTestTemplate : public testing::Test {
                                .metrics = false,
                                .verbose = true,
                                .repair_filesystem = repairable,
-                               .fvm_data_slices = default_mkfs_options.fvm_data_slices};
+                               .fvm_data_slices = MkfsOptions().fvm_data_slices};
   }
 
   const zx::channel& root_client_end() { return root_client_end_; }

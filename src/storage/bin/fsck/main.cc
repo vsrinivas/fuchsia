@@ -41,8 +41,7 @@ int usage(void) {
   return -1;
 }
 
-int parse_args(int argc, char** argv, fsck_options_t* options, disk_format_t* df,
-               char** devicepath) {
+int parse_args(int argc, char** argv, FsckOptions* options, disk_format_t* df, char** devicepath) {
   *df = DISK_FORMAT_UNKNOWN;
   while (argc > 1) {
     if (!strcmp(argv[1], "-v")) {
@@ -76,7 +75,7 @@ int main(int argc, char** argv) {
   char* devicepath;
   disk_format_t df;
   int r;
-  fsck_options_t options = default_fsck_options;
+  FsckOptions options;
   if ((r = parse_args(argc, argv, &options, &df, &devicepath))) {
     return r;
   }
@@ -85,7 +84,7 @@ int main(int argc, char** argv) {
     printf("fs_fsck: Checking device [%s]\n", devicepath);
   }
 
-  if ((r = fsck(devicepath, df, &options, launch_stdio_sync)) < 0) {
+  if ((r = fsck(devicepath, df, options, launch_stdio_sync)) < 0) {
     fprintf(stderr, "fs_fsck: Failed to check device: %d\n", r);
   }
   return r;

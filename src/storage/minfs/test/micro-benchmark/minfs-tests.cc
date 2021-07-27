@@ -193,8 +193,6 @@ class MinfsMicroBenchmarkFixture : public fs_test::BaseFilesystemTest {
   void TearDown() override { UnmountAndCompareBlockMetrics(); }
 
  private:
-  mount_options_t GetMountOptions() { return default_mount_options; }
-
   // Creates a filesystem and mounts it. Clears block metrics after creating the
   // filesystem but before mounting it.
   void SetUpFs() {
@@ -248,7 +246,7 @@ class MinfsMicroBenchmarkFixture : public fs_test::BaseFilesystemTest {
 constexpr BlockDeviceSizes kDefaultBlockDeviceSizes = {8192, 1 << 13};
 
 constexpr const minfs::Superblock kMinfsZeroedSuperblock = {};
-constexpr const mkfs_options_t kMinfsDefaultMkfsOptions = {
+constexpr const MkfsOptions kMinfsDefaultMkfsOptions = {
     .fvm_data_slices = 1,
     .verbose = false,
 };

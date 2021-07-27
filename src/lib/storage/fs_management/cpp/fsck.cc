@@ -26,7 +26,7 @@
 
 namespace {
 
-zx_status_t FsckNativeFs(const char* device_path, const fsck_options_t* options, LaunchCallback cb,
+zx_status_t FsckNativeFs(const char* device_path, const FsckOptions& options, LaunchCallback cb,
                          const char* cmd_path) {
   fbl::unique_fd device_fd;
   device_fd.reset(open(device_path, O_RDWR));
@@ -43,7 +43,7 @@ zx_status_t FsckNativeFs(const char* device_path, const fsck_options_t* options,
 
   fbl::Vector<const char*> argv;
   argv.push_back(cmd_path);
-  if (options->verbose) {
+  if (options.verbose) {
     argv.push_back("-v");
   }
   // TODO(smklein): Add support for modify, force flags. Without them,
@@ -58,16 +58,16 @@ zx_status_t FsckNativeFs(const char* device_path, const fsck_options_t* options,
   return status;
 }
 
-zx_status_t FsckFat(const char* device_path, const fsck_options_t* options, LaunchCallback cb) {
+zx_status_t FsckFat(const char* device_path, const FsckOptions& options, LaunchCallback cb) {
   fbl::Vector<const char*> argv;
   const std::string tool_path = fs_management::GetBinaryPath("fsck-msdosfs");
   argv.push_back(tool_path.c_str());
-  if (options->never_modify) {
+  if (options.never_modify) {
     argv.push_back("-n");
-  } else if (options->always_modify) {
+  } else if (options.always_modify) {
     argv.push_back("-y");
   }
-  if (options->force) {
+  if (options.force) {
     argv.push_back("-f");
   }
   argv.push_back(device_path);
@@ -80,7 +80,7 @@ zx_status_t FsckFat(const char* device_path, const fsck_options_t* options, Laun
 }  // namespace
 
 __EXPORT
-zx_status_t fsck(const char* device_path, disk_format_t df, const fsck_options_t* options,
+zx_status_t fsck(const char* device_path, disk_format_t df, const FsckOptions& options,
                  LaunchCallback cb) {
   switch (df) {
     case DISK_FORMAT_FACTORYFS:

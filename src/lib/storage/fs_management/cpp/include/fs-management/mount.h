@@ -10,40 +10,47 @@
 #include <fs-management/admin.h>
 #include <fs-management/launch.h>
 
-typedef struct mount_options {
-  bool readonly;
-  bool verbose_mount;
-  bool collect_metrics;
+struct MountOptions {
+  bool readonly = false;
+  bool verbose_mount = false;
+  bool collect_metrics = false;
+
   // Ensures that requests to the mountpoint will be propagated to the underlying FS
-  bool wait_until_ready;
+  bool wait_until_ready = true;
+
   // Create the mountpoint directory if it doesn't already exist.
   // Must be false if passed to "fmount".
-  bool create_mountpoint;
+  bool create_mountpoint = false;
+
   // An optional compression algorithm specifier for the filesystem to use when storing files (if
   // the filesystem supports it).
-  const char* write_compression_algorithm;
+  const char* write_compression_algorithm = nullptr;
+
   // An optional cache eviction policy specifier for the filesystem to use for in-memory data (if
   // the filesystem supports it).
-  const char* cache_eviction_policy;
+  const char* cache_eviction_policy = nullptr;
+
   // If set, run fsck after every transaction.
-  bool fsck_after_every_transaction;
+  bool fsck_after_every_transaction = false;
+
   // If set, attach the filesystem with O_ADMIN, which will allow the use of the DirectoryAdmin
   // protocol.
-  bool admin;
+  bool admin = true;
+
   // If set, provides the handle pair for the filesystem processes's outgoing directory. If
   // unspecified, it is assumed the caller doesn't need it. The server handle is *always* consumed,
   // even on error; the client handle is unowned.
   struct {
-    zx_handle_t client, server;
+    zx_handle_t client = ZX_HANDLE_INVALID;
+    zx_handle_t server = ZX_HANDLE_INVALID;
   } outgoing_directory;
-  // If true, bind to the namespace rather than using a remote-mount.
-  bool bind_to_namespace;
-  // If true, puts decompression in a sandboxed process.
-  bool sandbox_decompression;
-} mount_options_t;
 
-__EXPORT
-extern const mount_options_t default_mount_options;
+  // If true, bind to the namespace rather than using a remote-mount.
+  bool bind_to_namespace = false;
+
+  // If true, puts decompression in a sandboxed process.
+  bool sandbox_decompression = false;
+};
 
 // Given the following:
 //  - A device containing a filesystem image of a known format
@@ -58,12 +65,12 @@ extern const mount_options_t default_mount_options;
 // device_fd is always consumed. If the callback is reached, then the 'device_fd'
 // is transferred via handles to the callback arguments.
 zx_status_t mount(int device_fd, const char* mount_path, disk_format_t df,
-                  const mount_options_t* options, LaunchCallback cb);
+                  const MountOptions& options, LaunchCallback cb);
 
 // 'mount_fd' is used in lieu of the mount_path. It is not consumed (i.e.,
 // it will still be open after this function completes, regardless of
 // success or failure).
-zx_status_t fmount(int device_fd, int mount_fd, disk_format_t df, const mount_options_t* options,
+zx_status_t fmount(int device_fd, int mount_fd, disk_format_t df, const MountOptions& options,
                    LaunchCallback cb);
 
 // Mounts the filesystem being served via root_handle (which is consumed) at mount_path.

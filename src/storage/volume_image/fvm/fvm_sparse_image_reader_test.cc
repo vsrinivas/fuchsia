@@ -143,13 +143,13 @@ TEST(FvmSparseImageReaderTest, PartitionsInImagePassFsck) {
     fd.reset();
 
     // And finally run fsck on the volume.
-    fsck_options_t options{
+    FsckOptions options{
         .verbose = false,
         .never_modify = true,
         .always_modify = false,
         .force = true,
     };
-    EXPECT_EQ(fsck(path, DISK_FORMAT_MINFS, &options, launch_stdio_sync), 0);
+    EXPECT_EQ(fsck(path, DISK_FORMAT_MINFS, options, launch_stdio_sync), 0);
   }
 
   // Attempt to fsck blobfs.
@@ -161,13 +161,13 @@ TEST(FvmSparseImageReaderTest, PartitionsInImagePassFsck) {
     fd.reset();
 
     // And finally run fsck on the volume.
-    fsck_options_t options{
+    FsckOptions options{
         .verbose = false,
         .never_modify = true,
         .always_modify = false,
         .force = true,
     };
-    EXPECT_EQ(fsck(path, DISK_FORMAT_BLOBFS, &options, launch_stdio_sync), 0);
+    EXPECT_EQ(fsck(path, DISK_FORMAT_BLOBFS, options, launch_stdio_sync), 0);
   }
 }
 

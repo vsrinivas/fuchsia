@@ -23,7 +23,7 @@ class MinfsProperties {
   };
 
   constexpr MinfsProperties(BlockDeviceSizes block_device_sizes, disk_format_t format,
-                            mkfs_options_t mkfs_options, minfs::Superblock superblock)
+                            const MkfsOptions& mkfs_options, minfs::Superblock superblock)
       : block_device_sizes_(block_device_sizes),
         format_(format),
         mkfs_options_(mkfs_options),
@@ -52,7 +52,6 @@ class MinfsProperties {
 
   const BlockDeviceSizes& DeviceSizes() const { return block_device_sizes_; }
   const disk_format_t& DiskFormat() const { return format_; }
-  const mkfs_options_t& MkfsOptions() const { return mkfs_options_; }
   const minfs::Superblock& Superblock() const { return superblock_; }
   void SetSuperblock(const minfs::Superblock& src) {
     memcpy(&superblock_, &src, sizeof(superblock_));
@@ -103,7 +102,7 @@ class MinfsProperties {
 
   BlockDeviceSizes block_device_sizes_;
   disk_format_t format_;
-  mkfs_options_t mkfs_options_;
+  MkfsOptions mkfs_options_;
   minfs::Superblock superblock_;
 };
 

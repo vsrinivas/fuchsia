@@ -31,7 +31,7 @@
 namespace {
 
 zx_status_t MkfsNativeFs(const char* binary, const char* device_path, LaunchCallback cb,
-                         const mkfs_options_t* options, bool support_fvm) {
+                         const MkfsOptions& options, bool support_fvm) {
   fbl::unique_fd device_fd;
   device_fd.reset(open(device_path, O_RDWR));
   if (!device_fd) {
@@ -46,29 +46,29 @@ zx_status_t MkfsNativeFs(const char* binary, const char* device_path, LaunchCall
   }
   fbl::Vector<const char*> argv;
   argv.push_back(binary);
-  if (options->verbose) {
+  if (options.verbose) {
     argv.push_back("-v");
   }
 
   fbl::StringBuffer<20> fvm_data_slices;
-  // TODO(manalib) restructure this code to do something more sensible instead of
-  // support_fvm bool.
+  // TODO(manalib) restructure this code to do something more sensible instead of support_fvm bool.
   if (support_fvm) {
-    if (options->fvm_data_slices > default_mkfs_options.fvm_data_slices) {
+    MkfsOptions default_options;  // Use to get the default value.
+    if (options.fvm_data_slices > default_options.fvm_data_slices) {
       argv.push_back("--fvm_data_slices");
-      fvm_data_slices.AppendPrintf("%u", options->fvm_data_slices);
+      fvm_data_slices.AppendPrintf("%u", options.fvm_data_slices);
       argv.push_back(fvm_data_slices.c_str());
     }
   }
 
-  if (options->deprecated_padded_blobfs_format) {
+  if (options.deprecated_padded_blobfs_format) {
     argv.push_back("--deprecated_padded_format");
   }
 
   std::string inodes_str;
-  if (options->num_inodes > 0) {
+  if (options.num_inodes > 0) {
     argv.push_back("--num_inodes");
-    inodes_str = std::to_string(options->num_inodes);
+    inodes_str = std::to_string(options.num_inodes);
     argv.push_back(inodes_str.c_str());
   }
 
@@ -82,13 +82,13 @@ zx_status_t MkfsNativeFs(const char* binary, const char* device_path, LaunchCall
   return status;
 }
 
-zx_status_t MkfsFat(const char* device_path, LaunchCallback cb, const mkfs_options_t* options) {
+zx_status_t MkfsFat(const char* device_path, LaunchCallback cb, const MkfsOptions& options) {
   const std::string tool_path = fs_management::GetBinaryPath("mkfs-msdosfs");
   std::string sectors_per_cluster;
   std::vector<const char*> argv = {tool_path.c_str()};
-  if (options->sectors_per_cluster != 0) {
+  if (options.sectors_per_cluster != 0) {
     argv.push_back("-c");
-    sectors_per_cluster = std::to_string(options->sectors_per_cluster);
+    sectors_per_cluster = std::to_string(options.sectors_per_cluster);
     argv.push_back(sectors_per_cluster.c_str());
   }
   argv.push_back(device_path);
@@ -100,7 +100,7 @@ zx_status_t MkfsFat(const char* device_path, LaunchCallback cb, const mkfs_optio
 
 __EXPORT
 zx_status_t mkfs(const char* device_path, disk_format_t df, LaunchCallback cb,
-                 const mkfs_options_t* options) {
+                 const MkfsOptions& options) {
   switch (df) {
     case DISK_FORMAT_FACTORYFS:
       return MkfsNativeFs(fs_management::GetBinaryPath("factoryfs").c_str(), device_path, cb,

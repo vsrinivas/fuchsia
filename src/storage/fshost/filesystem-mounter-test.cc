@@ -154,18 +154,16 @@ class MounterTestWithDispatcher : public MounterTest {
 TEST_F(MounterTestWithDispatcher, DurableMount) {
   TestMounter mounter(dispatcher(), manager(), &config_);
 
-  mount_options_t options = default_mount_options;
   mounter.ExpectFilesystem(FilesystemType::kMinfs);
-  ASSERT_OK(mounter.MountDurable(zx::channel(), options));
+  ASSERT_OK(mounter.MountDurable(zx::channel(), MountOptions()));
   ASSERT_TRUE(mounter.DurableMounted());
 }
 
 TEST_F(MounterTestWithDispatcher, FactoryMount) {
   TestMounter mounter(dispatcher(), manager(), &config_);
 
-  mount_options_t options = default_mount_options;
   mounter.ExpectFilesystem(FilesystemType::kFactoryfs);
-  ASSERT_OK(mounter.MountFactoryFs(zx::channel(), options));
+  ASSERT_OK(mounter.MountFactoryFs(zx::channel(), MountOptions()));
 
   ASSERT_TRUE(mounter.FactoryMounted());
 }
@@ -174,9 +172,8 @@ TEST_F(MounterTestWithDispatcher, PkgfsWillNotMountBeforeData) {
   config_ = Config(Config::Options{{Config::kWaitForData, {}}});
   TestMounter mounter(dispatcher(), manager(), &config_);
 
-  mount_options_t options = default_mount_options;
   mounter.ExpectFilesystem(FilesystemType::kBlobfs);
-  ASSERT_OK(mounter.MountBlob(zx::channel(), options));
+  ASSERT_OK(mounter.MountBlob(zx::channel(), MountOptions()));
 
   ASSERT_TRUE(mounter.BlobMounted());
   ASSERT_FALSE(mounter.DataMounted());
@@ -187,9 +184,8 @@ TEST_F(MounterTestWithDispatcher, PkgfsWillNotMountBeforeData) {
 TEST_F(MounterTestWithDispatcher, PkgfsWillNotMountBeforeDataUnlessExplicitlyRequested) {
   TestMounter mounter(dispatcher(), manager(), &config_);
 
-  mount_options_t options = default_mount_options;
   mounter.ExpectFilesystem(FilesystemType::kBlobfs);
-  ASSERT_OK(mounter.MountBlob(zx::channel(), options));
+  ASSERT_OK(mounter.MountBlob(zx::channel(), MountOptions()));
 
   ASSERT_TRUE(mounter.BlobMounted());
   ASSERT_FALSE(mounter.DataMounted());
@@ -201,9 +197,8 @@ TEST_F(MounterTestWithDispatcher, PkgfsWillNotMountBeforeBlob) {
   config_ = Config(Config::Options{{Config::kWaitForData, {}}});
   TestMounter mounter(dispatcher(), manager(), &config_);
 
-  mount_options_t options = default_mount_options;
   mounter.ExpectFilesystem(FilesystemType::kMinfs);
-  ASSERT_OK(mounter.MountData(zx::channel(), options));
+  ASSERT_OK(mounter.MountData(zx::channel(), MountOptions()));
 
   ASSERT_FALSE(mounter.BlobMounted());
   ASSERT_TRUE(mounter.DataMounted());
@@ -215,11 +210,10 @@ TEST_F(MounterTestWithDispatcher, PkgfsMountsWithBlobAndData) {
   config_ = Config(Config::Options{{Config::kWaitForData, {}}});
   TestMounter mounter(dispatcher(), manager(), &config_);
 
-  mount_options_t options = default_mount_options;
   mounter.ExpectFilesystem(FilesystemType::kBlobfs);
-  ASSERT_OK(mounter.MountBlob(zx::channel(), options));
+  ASSERT_OK(mounter.MountBlob(zx::channel(), MountOptions()));
   mounter.ExpectFilesystem(FilesystemType::kMinfs);
-  ASSERT_OK(mounter.MountData(zx::channel(), options));
+  ASSERT_OK(mounter.MountData(zx::channel(), MountOptions()));
 
   ASSERT_TRUE(mounter.BlobMounted());
   ASSERT_TRUE(mounter.DataMounted());

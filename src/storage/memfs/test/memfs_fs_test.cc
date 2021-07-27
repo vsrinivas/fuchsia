@@ -29,7 +29,7 @@ class MemfsInstance : public fs_test::FilesystemInstance {
         memfs_create_filesystem(loop_.dispatcher(), &fs_, root_.reset_and_get_address()));
   }
 
-  zx::status<> Mount(const std::string& mount_path, const mount_options_t& options) override {
+  zx::status<> Mount(const std::string& mount_path, const MountOptions& options) override {
     if (!root_) {
       // Already mounted.
       return zx::error(ZX_ERR_BAD_STATE);

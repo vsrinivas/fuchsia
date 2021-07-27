@@ -57,13 +57,13 @@ class JsonInstance : public FilesystemInstance {
         device_path_(std::move(device_path)) {}
 
   virtual zx::status<> Format(const TestFilesystemOptions& options) override {
-    mkfs_options_t mkfs_options = default_mkfs_options;
+    MkfsOptions mkfs_options;
     mkfs_options.sectors_per_cluster = filesystem_.sectors_per_cluster();
     return FsFormat(device_path_, filesystem_.format(), mkfs_options);
   }
 
-  zx::status<> Mount(const std::string& mount_path, const mount_options_t& options) override {
-    mount_options_t new_options = options;
+  zx::status<> Mount(const std::string& mount_path, const MountOptions& options) override {
+    MountOptions new_options = options;
     new_options.admin = filesystem_.use_directory_admin_to_unmount();
     return FsMount(device_path_, mount_path, filesystem_.format(), new_options,
                    &outgoing_directory_);
@@ -83,14 +83,14 @@ class JsonInstance : public FilesystemInstance {
   }
 
   zx::status<> Fsck() override {
-    fsck_options_t options{
+    FsckOptions options{
         .verbose = false,
         .never_modify = true,
         .always_modify = false,
         .force = true,
     };
     return zx::make_status(
-        fsck(device_path_.c_str(), filesystem_.format(), &options, launch_stdio_sync));
+        fsck(device_path_.c_str(), filesystem_.format(), options, launch_stdio_sync));
   }
 
   zx::status<std::string> DevicePath() const override { return zx::ok(std::string(device_path_)); }

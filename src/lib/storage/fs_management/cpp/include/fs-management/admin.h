@@ -19,36 +19,40 @@
 #define PATH_VOLUME "/volume"
 #define PATH_DEV_BLOCK "/dev/class/block"
 
-typedef struct init_options {
-  bool readonly;
-  bool verbose_mount;
-  bool collect_metrics;
+struct InitOptions {
+  bool readonly = false;
+  bool verbose_mount = false;
+  bool collect_metrics = false;
+
   // Ensures that requests to the mountpoint will be propagated to the underlying FS
-  bool wait_until_ready;
+  bool wait_until_ready = true;
+
   // An optional compression algorithm specifier for the filesystem to use when storing files (if
   // the filesystem supports it).
-  const char* write_compression_algorithm;
+  const char* write_compression_algorithm = nullptr;
+
   // An optional compression level for the filesystem to use when storing files (if the filesystem
   // and the configured |write_compression_algorithm| supports it).
   // Setting to < 0 indicates no value (the filesystem chooses a default if necessary).
-  int write_compression_level;
+  int write_compression_level = -1;
+
   // An optional eviction policy specifier for the filesystem to use for in-memory structures (if
   // the filesystem supports it).
-  const char* cache_eviction_policy;
+  const char* cache_eviction_policy = nullptr;
+
   // If true, run fsck after every transaction (if supported). This is for testing/debugging
   // purposes.
-  bool fsck_after_every_transaction;
+  bool fsck_after_every_transaction = false;
+
   // If true, decompression is run in a sandbox component.
-  bool sandbox_decompression;
+  bool sandbox_decompression = false;
+
   // Provide a launch callback function pointer for configuring how the underlying filesystem
   // process is launched.
-  LaunchCallback callback;
-} init_options_t;
+  LaunchCallback callback = &launch_stdio_async;
+};
 
-__EXPORT
-extern const init_options_t default_init_options;
-
-typedef struct mkfs_options {
+struct MkfsOptions {
   uint32_t fvm_data_slices = 1;
   bool verbose = false;
 
@@ -61,28 +65,23 @@ typedef struct mkfs_options {
   // The initial number of inodes to allocate space for. If 0, a default is used. Only supported
   // for blobfs.
   uint64_t num_inodes = 0;
-} mkfs_options_t;
+};
 
-__EXPORT
-extern const mkfs_options_t default_mkfs_options;
+struct FsckOptions {
+  bool verbose = false;
 
-typedef struct fsck_options {
-  bool verbose;
   // At MOST one of the following '*_modify' flags may be true.
-  bool never_modify;   // Fsck still looks for problems, but it does not try to resolve them.
-  bool always_modify;  // Fsck never asks to resolve problems; it assumes it should fix them.
-  bool force;          // Force fsck to check the filesystem integrity, even if it is "clean".
-} fsck_options_t;
-
-__EXPORT
-extern const fsck_options_t default_fsck_options;
+  bool never_modify = false;   // Fsck still looks for problems, but does not try to resolve them.
+  bool always_modify = false;  // Fsck never asks to resolve problems; it will always do it.
+  bool force = false;          // Force fsck to check the filesystem integrity, even if "clean".
+};
 
 // Format the provided device with a requested disk format.
 zx_status_t mkfs(const char* device_path, disk_format_t df, LaunchCallback cb,
-                 const mkfs_options_t* options);
+                 const MkfsOptions& options);
 
 // Check and repair a device with a requested disk format.
-zx_status_t fsck(const char* device_path, disk_format_t df, const fsck_options_t* options,
+zx_status_t fsck(const char* device_path, disk_format_t df, const FsckOptions& options,
                  LaunchCallback cb);
 
 // Initialize the filesystem present on |device_handle|, returning a connection to the outgoing
@@ -96,7 +95,7 @@ zx_status_t fsck(const char* device_path, disk_format_t df, const fsck_options_t
 // filesystem-specific operations.
 //
 // |device_handle| is always consumed.
-zx_status_t fs_init(zx_handle_t device_handle, disk_format_t df, const init_options_t* options,
+zx_status_t fs_init(zx_handle_t device_handle, disk_format_t df, const InitOptions& options,
                     zx_handle_t* out_export_root);
 
 // Get a connection to the root of the filesystem, given a filesystem outgoing directory.

@@ -241,7 +241,7 @@ zx_status_t Fixture::Mount() {
     return ZX_OK;
   }
 
-  mount_options_t mount_options = default_mount_options;
+  MountOptions mount_options;
   mount_options.create_mountpoint = true;
   mount_options.wait_until_ready = true;
   if (options_.write_compression_algorithm) {
@@ -250,7 +250,7 @@ zx_status_t Fixture::Mount() {
 
   disk_format_t format = detect_disk_format(fd.get());
   zx_status_t result =
-      mount(fd.release(), fs_path_.c_str(), format, &mount_options, launch_stdio_async);
+      mount(fd.release(), fs_path_.c_str(), format, mount_options, launch_stdio_async);
   if (result != ZX_OK) {
     LOG_ERROR(result, "Failed to mount device at %s.\nblock_device_path:%s\n", fs_path_.c_str(),
               GetFsBlockDevice().c_str());
@@ -271,12 +271,13 @@ zx_status_t Fixture::Fsck() const {
   }
 
   // set up the fsck options
-  fsck_options_t fsck_options = default_fsck_options;
-  fsck_options.never_modify = true;
-  fsck_options.force = true;
+  FsckOptions fsck_options{
+      .never_modify = true,
+      .force = true,
+  };
 
   // run fsck
-  zx_status_t result = fsck(block_dev.c_str(), options_.fs_type, &fsck_options, launch_stdio_sync);
+  zx_status_t result = fsck(block_dev.c_str(), options_.fs_type, fsck_options, launch_stdio_sync);
   if (result != ZX_OK) {
     LOG_ERROR(result, "Fsck failed on device at block_device_path:%s\n", block_dev.c_str());
     return result;
@@ -304,10 +305,9 @@ zx_status_t Fixture::Umount() {
 
 zx_status_t Fixture::Format() const {
   // Format device.
-  mkfs_options_t mkfs_options = default_mkfs_options;
   fbl::String block_device_path = GetFsBlockDevice();
   zx_status_t result =
-      mkfs(block_device_path.c_str(), options_.fs_type, launch_stdio_sync, &mkfs_options);
+      mkfs(block_device_path.c_str(), options_.fs_type, launch_stdio_sync, MkfsOptions());
   if (result != ZX_OK) {
     LOG_ERROR(result, "Failed to format block device.\nblock_device_path:%s\n",
               block_device_path.c_str());
@@ -315,8 +315,7 @@ zx_status_t Fixture::Format() const {
   }
 
   // Verify format.
-  fsck_options_t fsck_options = default_fsck_options;
-  result = fsck(block_device_path.c_str(), options_.fs_type, &fsck_options, launch_stdio_sync);
+  result = fsck(block_device_path.c_str(), options_.fs_type, FsckOptions(), launch_stdio_sync);
   if (result != ZX_OK) {
     LOG_ERROR(result, "Block device format has errors.\nblock_device_path:%s\n",
               block_device_path.c_str());
