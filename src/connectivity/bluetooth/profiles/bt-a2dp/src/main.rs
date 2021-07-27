@@ -11,6 +11,7 @@ use {
         connected_peers::ConnectedPeers,
         media_types::*,
         peer::ControllerPool,
+        permits::Permits,
         stream,
     },
     bt_a2dp_metrics as metrics,
@@ -504,6 +505,11 @@ fn setup_profiles(
     Ok(profile)
 }
 
+/// The number of allowed active streams across the whole profile.
+/// If a peer attempts to start an audio stream and there are already this many active, it will
+/// be suspended immediately.
+const ACTIVE_STREAM_LIMIT: usize = 1;
+
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     let config = A2dpConfiguration::load_default()?;
@@ -551,10 +557,12 @@ async fn main() -> Result<(), Error> {
     let profile_svc = fuchsia_component::client::connect_to_protocol::<bredr::ProfileMarker>()
         .context("Failed to connect to Bluetooth Profile service")?;
 
+    let permits = Permits::new(ACTIVE_STREAM_LIMIT);
+
     let mut peers = ConnectedPeers::new(
         stream_builder.streams()?,
         stream_builder.negotiation(),
-        1,
+        permits.clone(),
         profile_svc.clone(),
         Some(cobalt.clone()),
     );
@@ -590,7 +598,7 @@ async fn main() -> Result<(), Error> {
         let peers = peers.clone();
         move |s| handle_audio_mode_connection(peers.clone(), s)
     });
-    add_stream_controller_capability(&mut fs, PermitsManager);
+    add_stream_controller_capability(&mut fs, PermitsManager::from(permits));
 
     if let Err(e) = fs.take_and_serve_directory_handle() {
         warn!("Unable to serve service directory: {}", e);
@@ -679,7 +687,7 @@ mod tests {
         let peers = Arc::new(Mutex::new(ConnectedPeers::new(
             stream::Streams::new(),
             CodecNegotiation::build(vec![], avdtp::EndpointType::Sink).unwrap(),
-            1,
+            Permits::new(1),
             proxy,
             Some(cobalt_sender),
         )));

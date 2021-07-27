@@ -166,7 +166,7 @@ impl ConnectedPeers {
     pub fn new(
         streams: Streams,
         codec_negotiation: CodecNegotiation,
-        max_streams_active: usize,
+        permits: Permits,
         profile: ProfileProxy,
         cobalt_sender: Option<CobaltSender>,
     ) -> Self {
@@ -176,7 +176,7 @@ impl ConnectedPeers {
             streams,
             codec_negotiation,
             profile,
-            permits: Permits::new(max_streams_active),
+            permits,
             inspect: inspect::Node::default(),
             inspect_peer_direction: inspect::StringProperty::default(),
             cobalt_sender,
@@ -502,7 +502,7 @@ mod tests {
         let peers = ConnectedPeers::new(
             Streams::new(),
             CodecNegotiation::build(vec![], avdtp::EndpointType::Sink).unwrap(),
-            1,
+            Permits::new(1),
             proxy,
             Some(cobalt_sender),
         );
@@ -683,8 +683,13 @@ mod tests {
             sbc_source_codec.clone(),
         ));
 
-        let peers =
-            ConnectedPeers::new(streams, negotiation.clone(), 1, proxy, Some(cobalt_sender));
+        let peers = ConnectedPeers::new(
+            streams,
+            negotiation.clone(),
+            Permits::new(1),
+            proxy,
+            Some(cobalt_sender),
+        );
 
         (exec, peers, stream, sbc_sink_codec, aac_sink_codec)
     }
