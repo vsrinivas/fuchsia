@@ -80,7 +80,7 @@ import("//src/sys/pkg/bin/pm/pm.gni")
 #   output_dir (optional; default: target_out_dir)
 #     [string] The output directory into which the final system ZBI is written.
 #
-#   output_name (optional; default: target_name.zbi)
+#   output_name (optional; default: <target_name>.zbi)
 #     [string] The name of the final system ZBI file.
 #
 #   cmdline_goldens (optional)
@@ -122,16 +122,19 @@ template("assemble_system") {
     product_config = "${image_name}_product_config"
     board_config = "${image_name}_board_config"
     image_assembler = "${image_name}_image_assembler"
-    zbi_matches = "${image_name}_zbi_matches"
-    zbi_manifest_matches = "${image_name}_zbi_manifest_matches"
-    blob_matches = "${image_name}_blob_matches"
-    fvm_matches = "${image_name}_fvm_matches"
+    copy_images = "${image_name}_copy_images"
+    config_data = "${image_name}_config-data"
+    minfs = "${image_name}_data.blk"
+    shell_commands = "${image_name}_shell_commands"
   }
 
   # Intermediate files produced for Image Assembly.
   files = {
     product_config = "$target_out_dir/${image_name}_product_config.json"
     board_config = "$target_out_dir/${image_name}_board_config.json"
+    zbi = "$target_out_dir/${image_name}/${image_name}.zbi"
+    blobfs_manifest = "$target_out_dir/${image_name}/gen/blob.manifest"
+    minfs = "$target_out_dir/${image_name}_data.blk"
   }
 
   assert(defined(invoker.base_packages), "Need to define base_packages")
@@ -206,7 +209,7 @@ template("assemble_system") {
   # TODO(fxbug.dev/81290): Construct the shell commands package in the Image
   # Assembler.
   if (include_shell_commands) {
-    shell_commands("${target_name}_shell-commands") {
+    shell_commands(labels.shell_commands) {
       package_name = "shell-commands"
       forward_variables_from(invoker, [ "testonly" ])
       visibility = [ ":*" ]
@@ -231,7 +234,7 @@ template("assemble_system") {
         [ ":${image_name}_component_id_index_config-config-data" ]
   }
 
-  config_package("${image_name}_config-data") {
+  config_package(labels.config_data) {
     package_name = "config-data"
     forward_variables_from(invoker, [ "testonly" ])
     visibility = [ ":*" ]
@@ -245,166 +248,7 @@ template("assemble_system") {
     }
   }
 
-  group("${image_name}_base_packages") {
-    forward_variables_from(invoker, [ "testonly" ])
-    visibility = [ ":*" ]
-    deps = _base_packages + [
-             ":${image_name}_config-data",
-             pkgfs_package_label,
-           ] + component_id_index_dep
-    if (include_shell_commands) {
-      deps += [ ":${image_name}_shell-commands" ]
-    }
-  }
-
-  meta_far_merkle_index = "$target_out_dir/${image_name}_meta_far_merkle_index"
-  generate_package_metadata("${image_name}_meta_far_merkle_index") {
-    forward_variables_from(invoker, [ "testonly" ])
-    visibility = [ ":*" ]
-    outputs = [ meta_far_merkle_index ]
-    data_keys = [ "meta_far_merkle_index_entries" ]
-    deps = [ ":${image_name}_base_packages" ]
-  }
-
-  action("${image_name}_pkgsvr_index") {
-    visibility = [ ":*" ]
-    forward_variables_from(invoker, [ "testonly" ])
-    inputs = [ meta_far_merkle_index ]
-    outputs = [ "${target_out_dir}/${target_name}" ]
-    deps = [ ":${image_name}_meta_far_merkle_index" ]
-    depfile = "${target_out_dir}/${target_name}.d"
-    script = "//build/images/manifest_content_expand.sh"
-    args = rebase_path(inputs, root_build_dir) +
-           rebase_path(outputs, root_build_dir) +
-           [ rebase_path(depfile, root_build_dir) ]
-  }
-
-  # Generate an empty cache_packages file to be consistent with other
-  # image assemblers used in the build.
-  cache_packages_file = "$target_out_dir/${image_name}_cache_packages"
-  cache_packages_target = "${image_name}_empty_cache_packages"
-  generated_file(cache_packages_target) {
-    outputs = [ cache_packages_file ]
-    contents = ""
-  }
-
-  system_image_fuchsia_system_packages("${image_name}_fuchsia_packages") {
-    forward_variables_from(invoker, [ "testonly" ])
-    deps = system_image_deps
-    filter_packages = "system_only"
-  }
-
-  generate_manifest("${image_name}_system_image.manifest") {
-    visibility = [ ":*" ]
-    forward_variables_from(invoker, [ "testonly" ])
-
-    deps = [
-      ":${cache_packages_target}",
-      ":${image_name}_fuchsia_packages",
-      ":${image_name}_pkgsvr_index",
-    ]
-    json = "//build/images/system_meta_package_json"
-    pkgsvr_index = get_target_outputs(":${image_name}_pkgsvr_index")
-
-    system_image_fuchsia_packages_list =
-        get_target_outputs(":${image_name}_fuchsia_packages")
-    system_image_fuchsia_packages_manifest =
-        system_image_fuchsia_packages_list[0]
-
-    sources = [
-      json,
-      pkgsvr_index[0],
-      system_image_fuchsia_packages_manifest,
-    ]
-    args = [
-      "@" + rebase_path(system_image_fuchsia_packages_manifest, root_build_dir),
-      "--entry=meta/package=" + rebase_path(json, root_build_dir),
-      "--entry=data/static_packages=" +
-          rebase_path(pkgsvr_index[0], root_build_dir),
-      "--entry=data/cache_packages=" +
-          rebase_path(cache_packages_file, root_build_dir),
-    ]
-  }
-
-  pm_build("${image_name}_system_image.meta") {
-    visibility = [ ":*" ]
-    forward_variables_from(invoker, [ "testonly" ])
-    manifest = ":${image_name}_system_image.manifest"
-    package_name = "system_image"
-  }
-
-  blob_manifest = "$target_out_dir/${image_name}_blob.manifest"
-  collect_blob_manifest("${image_name}_blob.manifest") {
-    forward_variables_from(invoker, [ "testonly" ])
-    visibility = [ ":*" ]
-    outputs = [ blob_manifest ]
-    public_deps = [
-      ":${image_name}_base_packages",
-      ":${image_name}_system_image.meta",
-      pkgfs_package_label,
-    ]
-  }
-
-  blobfs_tool = "//zircon/tools/blobfs(${host_toolchain})"
-  blobfs_tool_dir = get_label_info(blobfs_tool, "root_out_dir")
-  blobfs_binary = "$blobfs_tool_dir/blobfs"
-
-  action("${image_name}_blob.blk") {
-    visibility = [ ":*" ]
-    forward_variables_from(invoker, [ "testonly" ])
-    deps = [
-      ":${image_name}_blob.manifest",
-      blobfs_tool,
-    ]
-    blob_image_path = "$target_out_dir/$target_name"
-    blob_size_list = "$target_out_dir/${image_name}_blobs.json"
-    outputs = [
-      blob_image_path,
-      blob_size_list,
-    ]
-    depfile = blob_image_path + ".d"
-    inputs = [
-      blob_manifest,
-      blobfs_binary,
-    ]
-    script = "//build/images/mkblobfs.sh"
-
-    # tell the wrapper script where to find blobfs, and the image file
-    args = rebase_path([
-                         blobfs_binary,
-                         blob_image_path,
-                       ],
-                       root_build_dir)
-
-    # args for the blobfs tool itself
-    args += [
-      "--depfile",
-      "--json-output",
-      rebase_path(blob_size_list, root_build_dir),
-    ]
-    if (compress_blobs) {
-      args += [ "--compress" ]
-    }
-    args += [
-      rebase_path(blob_image_path, root_build_dir),
-      "create",
-      "--manifest",
-      rebase_path(blob_manifest, root_build_dir),
-    ]
-
-    # TODO(fxbug.dev/81353): Remove "padded" and use only "deprecated_padded" for the value once
-    # all assignments are updated.
-    if (blob_layout_format == "padded" ||
-        blob_layout_format == "deprecated_padded") {
-      args += [ "--deprecated_padded_format" ]
-    } else {
-      # The only other defined value is "compact".
-      assert(blob_layout_format == "compact",
-             "blob_layout_format must be 'deprecated_padded' or 'compact'.")
-    }
-  }
-
-  compiled_action("${image_name}_data.blk") {
+  compiled_action(labels.minfs) {
     data_image_path = "$target_out_dir/${target_name}"
     visibility = [ ":*" ]
     forward_variables_from(invoker, [ "testonly" ])
@@ -416,210 +260,8 @@ template("assemble_system") {
     ]
   }
 
-  generate_fvm("${image_name}_fvm.blk") {
-    # Referenced by guest_package.
-    forward_variables_from(invoker, [ "testonly" ])
-    output_name = "$target_out_dir/$target_name"
-
-    # This target is only ever used for a ram-based FVM, so the slice size chosen does not need
-    # to be the same as used in other places.
-    args = [
-      "create",
-      "--slice",
-      "1048576",
-    ]
-    partitions = [
-      {
-        type = "blob"
-        dep = ":${image_name}_blob.blk"
-      },
-      {
-        type = "data"
-        dep = ":${image_name}_data.blk"
-      },
-    ]
-  }
-
-  zbi_input("${image_name}_fvm.blk_ramdisk") {
-    forward_variables_from(invoker, [ "testonly" ])
-
-    type = "ramdisk"
-    args = [ "--compress=$zbi_compression" ]
-
-    # Use data_deps and not deps so that the contents of the fvm don't get
-    # included in the dependent zbi.
-    data_deps = [ ":${image_name}_fvm.blk" ]
-
-    sources = [ "$target_out_dir/${image_name}_fvm.blk" ]
-  }
-
-  action("${image_name}_devmgr_config.txt") {
-    visibility = [ ":*" ]
-    forward_variables_from(invoker, [ "testonly" ])
-    script = "//build/images/manifest.py"
-    inputs = [ build_info_files.minimum_utc_stamp ]
-    outputs = [ "$target_out_dir/$target_name" ]
-    args = [ "--output=" + rebase_path(outputs[0], root_build_dir) ]
-    sources = []
-    deps = [ ":${image_name}_system_image.manifest" ]
-
-    pkgfs = "bin/" + pkgfs_binary_name
-    pkgfs_label = pkgfs_package_label
-    pkgfs_pkg_out_dir = get_label_info(pkgfs_label, "target_out_dir") + "/" +
-                        get_label_info(pkgfs_label, "name")
-    pkgfs_blob_manifest = "$pkgfs_pkg_out_dir/meta/contents"
-    system_image_merkleroot =
-        "$target_out_dir/${image_name}_system_image.meta/meta.far.merkle"
-
-    deps += [
-      ":${image_name}_system_image.meta",
-      "//build/info:latest-commit-date",
-      pkgfs_label,
-    ]
-
-    sources += [
-      pkgfs_blob_manifest,
-      system_image_merkleroot,
-    ]
-
-    args += [
-      "--entry=devmgr.require-system=true",
-
-      "--contents",
-      "--rewrite=*=zircon.system.pkgfs.cmd={target}+{source}",
-      "--entry=${pkgfs}=" +
-          rebase_path(system_image_merkleroot, root_build_dir),
-      "--no-contents",
-      "--reset-rewrite",
-
-      "--rewrite=*=zircon.system.pkgfs.file.{target}={source}",
-      "--manifest=" + rebase_path(pkgfs_blob_manifest, root_build_dir),
-      "--reset-rewrite",
-    ]
-
-    # Add the backstop UTC value from the integration repo latest commit
-    args += [
-      "--contents",
-      "--entry=clock.backstop=" +
-          rebase_path(build_info_files.minimum_utc_stamp, root_build_dir),
-      "--no-contents",
-      "--reset-rewrite",
-    ]
-
-    foreach(entry, devmgr_config) {
-      args += [ "--entry=$entry" ]
-    }
-  }
-
-  devmgr_config("${image_name}_devmgr_config") {
-    label = ":${image_name}_devmgr_config.txt"
-    forward_variables_from(invoker, [ "testonly" ])
-  }
-
-  zbi_input("${image_name}_cmdline") {
-    type = "cmdline"
-    args = []
-    if (defined(invoker.cmdline)) {
-      foreach(arg, invoker.cmdline) {
-        args += [ "--entry=$arg" ]
-      }
-    }
-    if (defined(invoker.cmdline_inputs)) {
-      sources = invoker.cmdline_inputs
-    }
-  }
-
-  check_production_tag = false
-  if (defined(invoker.check_production_tag)) {
-    check_production_tag = invoker.check_production_tag
-  }
-
-  zbi("${image_name}_zbi") {
-    metadata = {
-      # We insert a package barrier because the packages inside this ZBI
-      # shouldn't leak to targets that depend on the ZBI. For example,
-      # suppose we store this ZBI inside a package() that is assembled into
-      # another Fuchsia system. We don't want the parent system to incorporate
-      # the packages from the ZBI into its own package list.
-      package_barrier = []
-      config_package_barrier = []
-      distribution_entries_barrier = []
-
-      if (defined(invoker.metadata)) {
-        forward_variables_from(invoker.metadata, "*")
-      }
-    }
-
-    if (defined(invoker.output_dir)) {
-      output_dir = invoker.output_dir
-    }
-
-    output_name = "${image_name}.zbi"
-    if (defined(invoker.output_name)) {
-      output_name = invoker.output_name
-    }
-
-    output_extension = ""
-
-    forward_variables_from(invoker,
-                           [
-                             "testonly",
-                             "visibility",
-                           ])
-    deps = [
-      ":${image_name}_cmdline",
-      ":${image_name}_devmgr_config",
-      ":${image_name}_system_image.manifest",
-      "//src/sys/base-resolver:bootfs",
-      "//zircon/kernel",
-    ]
-    deps += invoker.bootfs_labels
-
-    if (ramdisk_fvm_in_zbi) {
-      deps += [
-        ":${image_name}_fvm.blk_ramdisk",
-        "//src/storage/fshost:minfs_ramdisk",
-      ]
-    }
-
-    if (check_production_tag) {
-      assert_no_deps = [ "//build/validate:non_production_tag" ]
-    }
-  }
-  if (defined(invoker.cmdline_goldens) || defined(invoker.bootfs_goldens) ||
-      defined(invoker.static_pkgs_golden)) {
-    zbi_outputs = get_target_outputs(":${image_name}_zbi")
-  }
-
-  if (defined(invoker.cmdline_goldens)) {
-    verify_kernel_cmdline("${image_name}_cmdline_verify_files") {
-      forward_variables_from(invoker, [ "testonly" ])
-      zbi = zbi_outputs[0]
-      goldens = invoker.cmdline_goldens
-      zbi_target = ":${image_name}_zbi"
-    }
-  }
-  if (defined(invoker.bootfs_goldens)) {
-    verify_bootfs_filelist("${image_name}_bootfs_verify_files") {
-      forward_variables_from(invoker, [ "testonly" ])
-      zbi = zbi_outputs[0]
-      goldens = invoker.bootfs_goldens
-      zbi_target = ":${image_name}_zbi"
-    }
-  }
-  if (defined(invoker.static_pkgs_goldens)) {
-    verify_static_pkgs("${image_name}_static_pkgs_verify_files") {
-      forward_variables_from(invoker, [ "testonly" ])
-      zbi = zbi_outputs[0]
-      zbi_target = ":${image_name}_zbi"
-      blobfs_manifest = blob_manifest
-      blobfs_manifest_target = ":${image_name}_blob.manifest"
-      goldens = invoker.static_pkgs_goldens
-    }
-  }
-
   #######
-  # Build the same images using the Image Assembler.
+  # Build the images using the Image Assembler.
   #
 
   generated_product_config(labels.product_config) {
@@ -627,17 +269,24 @@ template("assemble_system") {
 
     output_path = files.product_config
     kernel_image = "//zircon/kernel"
-    base_packages = [ ":${image_name}_base_packages" ]
+
+    base_packages = _base_packages
+    base_packages += component_id_index_dep
+    base_packages += [
+      ":${labels.config_data}",
+      pkgfs_package_label,
+    ]
+    if (include_shell_commands) {
+      base_packages += [ ":${labels.shell_commands}" ]
+    }
+
     cache_packages = _cache_packages
     boot_args = devmgr_config
 
+    # Search for BootFS files in these targets.
     bootfs_labels = invoker.bootfs_labels
-
-    # Search for more BootFS files in these targets.
+    bootfs_labels += component_id_index_dep
     bootfs_labels += [
-      ":${image_name}_cmdline",
-      ":${image_name}_devmgr_config",
-      ":${image_name}_system_image.manifest",
       "//src/sys/base-resolver:bootfs",
       "//zircon/kernel",
     ]
@@ -662,9 +311,8 @@ template("assemble_system") {
 
     # minfs arguments
     if (!bootfs_only) {
-      minfs =
-          rebase_path("$target_out_dir/${image_name}_data.blk", root_out_dir)
-      deps = [ ":${image_name}_data.blk" ]
+      minfs = rebase_path(files.minfs, root_out_dir)
+      deps = [ ":${labels.minfs}" ]
     }
 
     # blobfs arguments
@@ -678,12 +326,29 @@ template("assemble_system") {
     }
   }
 
+  check_production_tag = false
+  if (defined(invoker.check_production_tag)) {
+    check_production_tag = invoker.check_production_tag
+  }
+
   ffx_action(labels.image_assembler) {
     forward_variables_from(invoker,
                            [
                              "deps",
                              "testonly",
+                             "visibility",
                            ])
+    metadata = {
+      # We insert these barriers to prevent the dependencies of these images
+      # from leaking into images "higher up" in the dependency chain.
+      package_barrier = []
+      config_package_barrier = []
+      distribution_entries_barrier = []
+
+      if (defined(invoker.metadata)) {
+        forward_variables_from(invoker.metadata, "*")
+      }
+    }
 
     # TODO(fxbug.dev/77290) - Add depfile support and then remove the following
     hermetic_deps = false
@@ -717,7 +382,7 @@ template("assemble_system") {
 
     # zbi outputs
     outputs = [
-      "${outdir}/${image_name}.zbi",
+      files.zbi,
       "${gendir}/zbi.json",
       "${outdir}/update.far",
     ]
@@ -732,92 +397,85 @@ template("assemble_system") {
         "${outdir}/fvm.blob.sparse.blk",
 
         # intermediate outputs that are in gendir:
+        files.blobfs_manifest,
         "${gendir}/data/static_packages",
         "${gendir}/data/cache_packages",
         "${gendir}/system_image/meta/package",
         "${gendir}/update/meta/package",
       ]
     }
+
+    if (check_production_tag) {
+      assert_no_deps = [ "//build/validate:non_production_tag" ]
+    }
   }
 
   #######
-  # Compare the images from both builds to ensure they are identical.
+  # Optionally, copy the resulting ZBI to the specified directory.
   #
 
-  gn_assembler_outputs = get_target_outputs(":${image_name}_zbi")
-  image_assembler_outputs = get_target_outputs(":${labels.image_assembler}")
-  verify_files_match(labels.zbi_matches) {
-    forward_variables_from(invoker, [ "testonly" ])
-    deps = [
-      ":${image_name}_zbi",
-      ":${labels.image_assembler}",
-    ]
+  if (defined(invoker.output_dir)) {
+    assert(
+        invoker.output_dir != target_out_dir,
+        "The specified output directory must be different from the default target_out_dir")
+    out = get_target_outputs(":${labels.image_assembler}")
+    zbi = out[0]
 
-    first = gn_assembler_outputs[0]
-    second = image_assembler_outputs[0]
-  }
-
-  verify_files_match(labels.zbi_manifest_matches) {
-    forward_variables_from(invoker, [ "testonly" ])
-    deps = [
-      ":${image_name}_zbi",
-      ":${labels.image_assembler}",
-    ]
-
-    first = gn_assembler_outputs[1]
-    second = image_assembler_outputs[1]
-
-    display_text_diff_on_failure = true
-  }
-
-  if (ramdisk_fvm_in_zbi) {
-    verify_files_match(labels.blob_matches) {
-      forward_variables_from(invoker, [ "testonly" ])
-      deps = [
-        ":${image_name}_blob.blk",
-        ":${labels.image_assembler}",
-      ]
-
-      first = "$target_out_dir/${image_name}_blob.blk"
-      second = image_assembler_outputs[4]
+    # The output name is the same as the original file by default.
+    output_name = "${image_name}.zbi"
+    if (defined(invoker.output_name)) {
+      output_name = invoker.output_name
     }
 
-    verify_files_match(labels.fvm_matches) {
-      forward_variables_from(invoker, [ "testonly" ])
-      deps = [
-        ":${image_name}_fvm.blk",
-        ":${labels.image_assembler}",
-      ]
+    copy(labels.copy_images) {
+      sources = [ zbi ]
+      outputs = [ "${invoker.output_dir}/${output_name}" ]
+      deps = [ ":${labels.image_assembler}" ]
+    }
+  }
 
-      first = "$target_out_dir/${image_name}_fvm.blk"
-      second = image_assembler_outputs[5]
+  #######
+  # Check the golden files.
+  #
+
+  if (defined(invoker.cmdline_goldens)) {
+    verify_kernel_cmdline("${image_name}_cmdline_verify_files") {
+      forward_variables_from(invoker, [ "testonly" ])
+      zbi = files.zbi
+      goldens = invoker.cmdline_goldens
+      zbi_target = ":${labels.image_assembler}"
+    }
+  }
+  if (defined(invoker.bootfs_goldens)) {
+    verify_bootfs_filelist("${image_name}_bootfs_verify_files") {
+      forward_variables_from(invoker, [ "testonly" ])
+      zbi = files.zbi
+      goldens = invoker.bootfs_goldens
+      zbi_target = ":${labels.image_assembler}"
+    }
+  }
+  if (defined(invoker.static_pkgs_goldens)) {
+    verify_static_pkgs("${image_name}_static_pkgs_verify_files") {
+      forward_variables_from(invoker, [ "testonly" ])
+      zbi = files.zbi
+      zbi_target = ":${labels.image_assembler}"
+      blobfs_manifest = files.blobfs_manifest
+      blobfs_manifest_target = ":${labels.image_assembler}"
+      goldens = invoker.static_pkgs_goldens
     }
   }
 
   group(image_name) {
-    metadata = {
-      # We insert these barriers to prevent the dependencies of these images
-      # from leaking into images "higher up" in the dependency chain.
-      package_barrier = []
-      config_package_barrier = []
-      distribution_entries_barrier = []
+    forward_variables_from(invoker, [ "testonly" ])
+
+    # public_deps is used, so that the outputs of these dependencies are
+    # available to external targets.
+    public_deps = [ ":${labels.image_assembler}" ]
+    if (defined(invoker.output_dir)) {
+      public_deps += [ ":${labels.copy_images}" ]
     }
 
-    forward_variables_from(invoker, [ "testonly" ])
-    public_deps = [
-      ":${image_name}_zbi",
-      ":${labels.image_assembler}",
-    ]
-    deps = [
-      ":${labels.zbi_manifest_matches}",
-      ":${labels.zbi_matches}",
-    ]
-    if (ramdisk_fvm_in_zbi) {
-      deps += [
-        ":${labels.blob_matches}",
-        ":${labels.fvm_matches}",
-      ]
-    }
+    deps = []
     if (defined(invoker.cmdline_goldens)) {
       deps += [ ":${image_name}_cmdline_verify_files" ]
     }

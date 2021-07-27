@@ -111,12 +111,14 @@ assemble_system("recovery-eng") {
 
   sysmgr_golden = "sysmgr-eng-golden.json"
 
+  # TODO(fxbug.dev/81569): Move this metadata to assemble_system.gni.
   metadata = {
     images = [
       {
         label = get_label_info(":$target_name", "label_with_toolchain")
         name = "recovery-eng"
-        path = rebase_path("$target_out_dir/recovery-eng.zbi", root_build_dir)
+        path = rebase_path("$target_out_dir/recovery-eng/recovery-eng.zbi",
+                           root_build_dir)
         type = "zbi"
       },
     ]
@@ -157,8 +159,8 @@ if (is_host) {
   host_test_data("test_data") {
     out_dir = get_label_info(":anything($target_toolchain)", "target_out_dir")
     sources = [
-      "${out_dir}/recovery-eng.zbi",
-      "${out_dir}/recovery-fdr.zbi",
+      "${out_dir}/recovery-eng/recovery-eng.zbi",
+      "${out_dir}/recovery-fdr/recovery-fdr.zbi",
     ]
     deps = [
       ":recovery-eng($target_toolchain)",

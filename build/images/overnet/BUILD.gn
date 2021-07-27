@@ -60,12 +60,14 @@ assemble_system("overnet") {
   ramdisk_fvm_in_zbi = true
   include_component_id_index = true
 
+  # TODO(fxbug.dev/81569): Move this metadata to assemble_system.gni.
   metadata = {
     images = [
       {
         label = get_label_info(":$target_name", "label_with_toolchain")
         name = "overnet"
-        path = rebase_path("$target_out_dir/overnet.zbi", root_build_dir)
+        path =
+            rebase_path("$target_out_dir/overnet/overnet.zbi", root_build_dir)
         type = "zbi"
       },
     ]
