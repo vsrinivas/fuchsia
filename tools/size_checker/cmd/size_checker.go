@@ -518,7 +518,7 @@ func parseBlobsJSON(
 	}
 }
 
-func parseBlobfsBudget(buildDir, fileSystemSizesJSONFilename string) int64 {
+func parseBlobfsCapacity(buildDir, fileSystemSizesJSONFilename string) int64 {
 	fileSystemSizesJSON := filepath.Join(buildDir, fileSystemSizesJSONFilename)
 	fileSystemSizesJSONData, err := ioutil.ReadFile(fileSystemSizesJSON)
 	if err != nil {
@@ -529,7 +529,7 @@ func parseBlobfsBudget(buildDir, fileSystemSizesJSONFilename string) int64 {
 		log.Fatal(unmarshalError(fileSystemSizesJSON, err))
 	}
 	for _, fileSystemSize := range *fileSystemSizes {
-		if fileSystemSize.Name == "blob/contents_size" {
+		if fileSystemSize.Name == "blob/capacity" {
 			blobFsContentsSize, err := fileSystemSize.Limit.Int64()
 			if err != nil {
 				log.Fatalf("Failed to parse %s as an int64: %s\n", fileSystemSize.Limit, err)
@@ -882,7 +882,7 @@ func generateComponentListOutput(outputSizes map[string]*ComponentSize, showBudg
 	}
 }
 
-func generateReport(outputSizes map[string]*ComponentSize, showBudgetOnly bool, ignorePerComponentBudget bool, blobFsBudget int64) (bool, string) {
+func generateReport(outputSizes map[string]*ComponentSize, showBudgetOnly bool, ignorePerComponentBudget bool, blobFsCapacity int64) (bool, string) {
 
 	var report strings.Builder
 	var componentListReport = generateComponentListOutput(
@@ -932,18 +932,16 @@ func generateReport(outputSizes map[string]*ComponentSize, showBudgetOnly bool, 
 			"%-106s | %10s\n",
 			"Remaining Budget:",
 			formatSize(totalBudget-totalConsumed)))
-	// TODO(fsamuel): Replace this magic number with a variable in the board definition.
-	var blobFsSize = (blobFsBudget * 2) + 24*1024*1024
 	report.WriteString(
 		fmt.Sprintf(
 			"%-106s | %10s\n",
 			"Blobfs Capacity:",
-			formatSize(blobFsSize)))
+			formatSize(blobFsCapacity)))
 	report.WriteString(
 		fmt.Sprintf(
 			"%-106s | %10s\n",
 			"Unallocated Budget:",
-			formatSize(blobFsSize-totalBudget)))
+			formatSize(blobFsCapacity-totalBudget)))
 
 	if totalConsumed > totalBudget {
 		report.WriteString(
@@ -953,11 +951,11 @@ func generateReport(outputSizes map[string]*ComponentSize, showBudgetOnly bool, 
 		overBudget = true
 	}
 
-	if totalBudget > blobFsSize && !ignorePerComponentBudget {
+	if totalBudget > blobFsCapacity && !ignorePerComponentBudget {
 		report.WriteString(
 			fmt.Sprintf(
 				"WARNING: Total per-component data budget [%s] exceeds total system data budget [%s]\n",
-				formatSize(totalBudget), formatSize(blobFsSize)))
+				formatSize(totalBudget), formatSize(blobFsCapacity)))
 		overBudget = true
 	}
 	return overBudget, report.String()
@@ -1010,8 +1008,8 @@ See //tools/size_checker for more details.`)
 		}
 	}
 
-	blobFsBudget := parseBlobfsBudget(buildDir, FileSystemSizesJSON)
-	overBudget, report := generateReport(outputSizes, showBudgetOnly, ignorePerComponentBudget, blobFsBudget)
+	blobFsCapacity := parseBlobfsCapacity(buildDir, FileSystemSizesJSON)
+	overBudget, report := generateReport(outputSizes, showBudgetOnly, ignorePerComponentBudget, blobFsCapacity)
 
 	if overBudget {
 		log.Fatal(report)
