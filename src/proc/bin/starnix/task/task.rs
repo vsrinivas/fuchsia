@@ -443,14 +443,22 @@ impl Task {
         let (dir, path) = self.resolve_dir_fd(dir_fd, path)?;
         let (parent, basename) = self.fs.lookup_parent(dir, path)?;
 
+        let nofollow = flags.contains(OpenFlags::NOFOLLOW);
         let must_create = flags.contains(OpenFlags::CREAT) && flags.contains(OpenFlags::EXCL);
-        let symlink_mode =
-            if must_create { SymlinkFollowing::Disabled } else { SymlinkFollowing::Enabled };
+
+        let symlink_mode = if nofollow || must_create {
+            SymlinkFollowing::Disabled
+        } else {
+            SymlinkFollowing::Enabled
+        };
 
         let node = match parent.lookup(&self.fs, basename, symlink_mode) {
             Ok(node) => {
                 if must_create {
                     return Err(EEXIST);
+                }
+                if nofollow && node.node.info().mode.is_lnk() {
+                    return Err(ELOOP);
                 }
                 node
             }
