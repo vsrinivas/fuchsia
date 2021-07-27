@@ -14,6 +14,9 @@ namespace {
 
 class VerbAttach : public AttachCommandTest {};
 
+// This should match ZX_MAX_NAME_LEN, but we don't want to include zircon headers here.
+constexpr size_t kZirconMaxNameLength = 32;
+
 }  // namespace
 
 TEST_F(VerbAttach, Bad) {
@@ -74,6 +77,22 @@ TEST_F(VerbAttach, Filter) {
       "Waiting for process matching \"foo\".\n"
       "Type \"filter\" to see the current filters.",
       event.output.AsString());
+
+  // Extra long filter case.
+  const std::string kSuperLongName = "super_long_name_with_over_32_characters";
+  console().ProcessInputLine("attach " + kSuperLongName);
+  console().GetOutputEvent();  // Eat warning.
+  event = console().GetOutputEvent();
+  EXPECT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
+  EXPECT_EQ("The filter is trimmed to " + std::to_string(kZirconMaxNameLength) +
+                " characters because it's the maximum length for a process name in Zircon.",
+            event.output.AsString());
+  event = console().GetOutputEvent();
+  EXPECT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
+  EXPECT_EQ("Waiting for process matching \"" + kSuperLongName.substr(0, kZirconMaxNameLength) +
+                "\".\n"
+                "Type \"filter\" to see the current filters.",
+            event.output.AsString());
 
   // Don't allow attaching by wildcard without a job. This one doesn't have the job warning since
   // it's an error case.

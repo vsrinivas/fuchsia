@@ -89,6 +89,9 @@ Examples
       name.
 )";
 
+// This should match ZX_MAX_NAME_LEN, but we don't want to include zircon headers here.
+constexpr size_t kZirconMaxNameLength = 32;
+
 bool HasAttachedJob(const System* system) {
   for (const Job* job : system->GetJobs()) {
     if (job->state() == Job::State::kAttached)
@@ -134,7 +137,7 @@ Err RunVerbAttach(ConsoleContext* context, const Command& cmd, CommandCallback c
     return Err("Wrong number of arguments to attach.");
 
   Job* job = cmd.HasNoun(Noun::kJob) && cmd.job() ? cmd.job() : nullptr;
-  const std::string& pattern = cmd.args()[0];
+  std::string pattern = cmd.args()[0];
   if (!job && pattern == Filter::kAllProcessesPattern) {
     // Bad things happen if we try to attach to all processes in the system, try to make this
     // more difficult by preventing attaching to * with no specific job.
@@ -156,9 +159,17 @@ Err RunVerbAttach(ConsoleContext* context, const Command& cmd, CommandCallback c
     Console::get()->Output(warning);
   }
 
+  if (pattern.size() > kZirconMaxNameLength) {
+    Console::get()->Output(OutputBuffer(
+        Syntax::kWarning,
+        "The filter is trimmed to " + std::to_string(kZirconMaxNameLength) +
+            " characters because it's the maximum length for a process name in Zircon."));
+    pattern.resize(kZirconMaxNameLength);
+  }
+
   Filter* filter = context->session()->system().CreateNewFilter();
   filter->SetJob(job);
-  filter->SetPattern(cmd.args()[0]);
+  filter->SetPattern(pattern);
 
   context->SetActiveFilter(filter);
 
@@ -166,7 +177,7 @@ Err RunVerbAttach(ConsoleContext* context, const Command& cmd, CommandCallback c
   // that are less familiar with the debugger and might be unsure what's happening (this is normally
   // one of the first things people do in the debugger. The filter number is usually not relevant
   // anyway.
-  Console::get()->Output("Waiting for process matching \"" + cmd.args()[0] +
+  Console::get()->Output("Waiting for process matching \"" + pattern +
                          "\".\n"
                          "Type \"filter\" to see the current filters.");
   if (callback) {
