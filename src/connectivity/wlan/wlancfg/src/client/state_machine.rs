@@ -146,6 +146,7 @@ pub async fn serve(
         network_selector,
         cobalt_api,
         telemetry_sender,
+        iface_id,
     };
     let state_machine =
         disconnecting_state(common_options, disconnect_options).into_state_machine();
@@ -175,6 +176,7 @@ struct CommonStateOptions {
     network_selector: Arc<network_selection::NetworkSelector>,
     cobalt_api: CobaltSender,
     telemetry_sender: TelemetrySender,
+    iface_id: u16,
 }
 
 fn handle_none_request() -> Result<State, ExitReason> {
@@ -494,7 +496,9 @@ async fn connecting_state<'a>(
                                     status: None
                                 },
                             );
-                            common_options.telemetry_sender.send(TelemetryEvent::Connected);
+                            common_options.telemetry_sender.send(TelemetryEvent::Connected {
+                                iface_id: common_options.iface_id,
+                            });
                             return Ok(
                                 connected_state(common_options, ConnectedOptions{ currently_fulfilled_request: options.connect_request, bssid: *bssid }).into_state()
                             );
@@ -804,6 +808,7 @@ mod tests {
                 network_selector,
                 cobalt_api,
                 telemetry_sender,
+                iface_id: 1,
             },
             sme_req_stream,
             client_req_sender,
@@ -914,6 +919,7 @@ mod tests {
             network_selector,
             cobalt_api: cobalt_api,
             telemetry_sender,
+            iface_id: 1,
         };
         let initial_state = connecting_state(common_options, connecting_options);
         let fut = run_state_machine(initial_state);
@@ -1082,6 +1088,7 @@ mod tests {
             network_selector,
             cobalt_api: cobalt_api,
             telemetry_sender,
+            iface_id: 1,
         };
         let initial_state = connecting_state(common_options, connecting_options);
         let fut = run_state_machine(initial_state);
@@ -1194,7 +1201,10 @@ mod tests {
         assert_eq!(network_config::PROB_HIDDEN_DEFAULT, saved_networks[0].hidden_probability);
 
         // Check that connected telemetry event is sent
-        assert_variant!(telemetry_receiver.try_next(), Ok(Some(TelemetryEvent::Connected)));
+        assert_variant!(
+            telemetry_receiver.try_next(),
+            Ok(Some(TelemetryEvent::Connected { iface_id: 1 }))
+        );
 
         // Progress the state machine
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
@@ -1284,6 +1294,7 @@ mod tests {
             network_selector,
             cobalt_api: cobalt_api,
             telemetry_sender,
+            iface_id: 1,
         };
         let initial_state = connecting_state(common_options, connecting_options);
         let fut = run_state_machine(initial_state);
@@ -1542,6 +1553,7 @@ mod tests {
             network_selector,
             cobalt_api: cobalt_api,
             telemetry_sender,
+            iface_id: 1,
         };
         let initial_state = connecting_state(common_options, connecting_options);
         let fut = run_state_machine(initial_state);
@@ -1713,6 +1725,7 @@ mod tests {
             network_selector,
             cobalt_api: cobalt_api,
             telemetry_sender,
+            iface_id: 1,
         };
 
         let next_network_ssid = "bar";
@@ -1857,6 +1870,7 @@ mod tests {
             network_selector,
             cobalt_api: cobalt_api,
             telemetry_sender,
+            iface_id: 1,
         };
 
         let next_network_ssid = "bar";
@@ -3125,6 +3139,7 @@ mod tests {
             network_selector,
             cobalt_api: cobalt_api,
             telemetry_sender,
+            iface_id: 1,
         };
         let options = ConnectedOptions {
             currently_fulfilled_request: connect_request.clone(),

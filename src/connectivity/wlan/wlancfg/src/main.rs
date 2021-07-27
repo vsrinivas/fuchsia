@@ -252,8 +252,10 @@ async fn run_all_futures() -> Result<(), Error> {
     let (cobalt_api, cobalt_fut) =
         CobaltConnector::default().serve(ConnectionType::project_id(metrics::PROJECT_ID));
 
-    let (telemetry_sender, telemetry_fut) =
-        serve_telemetry(component::inspector().root().create_child("client_stats"));
+    let (telemetry_sender, telemetry_fut) = serve_telemetry(
+        wlan_svc.clone(),
+        component::inspector().root().create_child("client_stats"),
+    );
 
     let saved_networks = Arc::new(SavedNetworksManager::new(cobalt_api.clone()).await?);
     let network_selector = Arc::new(NetworkSelector::new(
