@@ -15,9 +15,8 @@
 #include <fbl/ref_ptr.h>
 
 #include "src/lib/digest/digest.h"
-#include "src/lib/storage/vfs/cpp/vnode.h"
+#include "src/lib/storage/vfs/cpp/paged_vnode.h"
 #include "src/storage/blobfs/cache_policy.h"
-#include "src/storage/blobfs/vfs_types.h"
 
 namespace blobfs {
 
@@ -28,11 +27,11 @@ using digest::Digest;
 class BlobCache;
 
 // An abstract blob-backed Vnode, which is managed by the BlobCache.
-class CacheNode : public VnodeType,
+class CacheNode : public fs::PagedVnode,
                   private fbl::Recyclable<CacheNode>,
                   public fbl::WAVLTreeContainable<CacheNode*> {
  public:
-  explicit CacheNode(VfsType* vfs, const Digest& digest,
+  explicit CacheNode(fs::PagedVfs* vfs, const Digest& digest,
                      std::optional<CachePolicy> override_cache_policy = std::nullopt);
   virtual ~CacheNode() = default;
 

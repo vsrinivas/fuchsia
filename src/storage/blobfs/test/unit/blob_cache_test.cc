@@ -36,12 +36,10 @@ class TestNode : public CacheNode, fbl::Recyclable<TestNode> {
 
   void ActivateLowMemory() final { using_memory_ = false; }
 
-#if defined(ENABLE_BLOBFS_NEW_PAGER)
   // fs::PagedVnode implementation.
   void VmoRead(uint64_t offset, uint64_t length) override {
     ASSERT_TRUE(false);  // Should not get called in these tests.
   }
-#endif
 
   bool UsingMemory() { return using_memory_; }
 

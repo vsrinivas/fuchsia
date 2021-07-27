@@ -21,7 +21,6 @@
 
 #include "src/lib/digest/digest.h"
 #include "src/lib/storage/vfs/cpp/vfs.h"
-#include "src/lib/storage/vfs/cpp/vfs_types.h"
 #include "src/lib/storage/vfs/cpp/vnode.h"
 #include "src/storage/blobfs/blob_cache.h"
 

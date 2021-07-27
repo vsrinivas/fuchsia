@@ -9,16 +9,9 @@
 
 namespace blobfs {
 
-CacheNode::CacheNode(VfsType* vfs, const digest::Digest& digest,
+CacheNode::CacheNode(fs::PagedVfs* vfs, const digest::Digest& digest,
                      std::optional<CachePolicy> override_cache_policy)
-    : VnodeType(
-#if defined(ENABLE_BLOBFS_NEW_PAGER)
-          vfs
-#endif
-          ),
-      digest_(digest),
-      overriden_cache_policy_(override_cache_policy) {
-}
+    : fs::PagedVnode(vfs), digest_(digest), overriden_cache_policy_(override_cache_policy) {}
 
 void CacheNode::RecycleNode() {
   if (ShouldCache()) {

@@ -42,7 +42,6 @@
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 #include "src/lib/storage/vfs/cpp/scoped_vnode_open.h"
 #include "src/lib/storage/vfs/cpp/ticker.h"
-#include "src/lib/storage/vfs/cpp/vfs_types.h"
 #include "src/storage/blobfs/allocator/extent_reserver.h"
 #include "src/storage/blobfs/allocator/node_reserver.h"
 #include "src/storage/blobfs/blob.h"
@@ -109,7 +108,7 @@ zx_status_t LoadSuperblock(const fuchsia_hardware_block_BlockInfo& block_info, i
 
 zx::status<std::unique_ptr<Blobfs>> Blobfs::Create(async_dispatcher_t* dispatcher,
                                                    std::unique_ptr<BlockDevice> device,
-                                                   VfsType* vfs, const MountOptions& options,
+                                                   fs::PagedVfs* vfs, const MountOptions& options,
                                                    zx::resource vmex_resource) {
   TRACE_DURATION("blobfs", "Blobfs::Create");
 
@@ -815,8 +814,8 @@ bool Blobfs::StreamingWritesEnabled() {
 #endif  // __Fuchsia__
 }
 
-Blobfs::Blobfs(async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> device, VfsType* vfs,
-               const Superblock* info, Writability writable,
+Blobfs::Blobfs(async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> device,
+               fs::PagedVfs* vfs, const Superblock* info, Writability writable,
                CompressionSettings write_compression_settings, zx::resource vmex_resource,
                std::optional<CachePolicy> pager_backed_cache_policy,
                std::function<std::unique_ptr<cobalt_client::Collector>()> collector_factory,
@@ -830,13 +829,11 @@ Blobfs::Blobfs(async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> devi
       vmex_resource_(std::move(vmex_resource)),
       metrics_(CreateMetrics(std::move(collector_factory), metrics_flush_time)),
       pager_backed_cache_policy_(pager_backed_cache_policy) {
-#if ENABLE_BLOBFS_NEW_PAGER
   ZX_ASSERT(vfs_);
 
   // It's easy to forget to initialize the PagedVfs in tests which will cause mysterious failures
   // later.
   ZX_ASSERT(vfs_->is_initialized());
-#endif
 }
 
 std::unique_ptr<BlockDevice> Blobfs::Reset() {
@@ -853,11 +850,7 @@ std::unique_ptr<BlockDevice> Blobfs::Reset() {
   // Shutdown all internal connections to blobfs.
   GetCache().ForAllOpenNodes([](fbl::RefPtr<CacheNode> cache_node) {
     auto blob = fbl::RefPtr<Blob>::Downcast(std::move(cache_node));
-#if defined(ENABLE_BLOBFS_NEW_PAGER)
     blob->WillTeardownFilesystem();
-#else
-    blob->CloneWatcherTeardown();
-#endif
     return ZX_OK;
   });
 

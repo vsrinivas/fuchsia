@@ -24,13 +24,11 @@ zx_status_t BlobfsTestSetupBase::Mount(std::unique_ptr<BlockDevice> device,
                                        const MountOptions& options) {
   EXPECT_EQ(blobfs_, nullptr);  // Should not already be mounted.
 
-  vfs_ = std::make_unique<VfsType>(dispatcher());
-#if ENABLE_BLOBFS_NEW_PAGER
+  vfs_ = std::make_unique<fs::PagedVfs>(dispatcher());
   if (auto status = vfs_->Init(); status.is_error()) {
     vfs_.reset();
     return status.error_value();
   }
-#endif
 
   auto blobfs_or = Blobfs::Create(dispatcher(), std::move(device), vfs_.get(), options);
   if (blobfs_or.is_error())

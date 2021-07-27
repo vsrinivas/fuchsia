@@ -22,16 +22,12 @@ zx::status<std::unique_ptr<Runner>> Runner::Create(async::Loop* loop,
                                                    zx::resource vmex_resource) {
   // The runner owns the blobfs, but the runner needs to be created first because it is the Vfs
   // object that Blobfs uses.
-#if ENABLE_BLOBFS_NEW_PAGER
   std::unique_ptr<Runner> runner(new Runner(loop, options.paging_threads));
   if (auto status = runner->Init(); status.is_error())
     return status.take_error();
 
   // All of our pager threads get the deadline profile for scheduling.
   blobfs::pager::SetDeadlineProfile(runner->GetPagerThreads());
-#else
-  std::unique_ptr<Runner> runner(new Runner(loop));
-#endif
 
   auto blobfs_or = Blobfs::Create(loop->dispatcher(), std::move(device), runner.get(), options,
                                   std::move(vmex_resource));
@@ -45,7 +41,7 @@ zx::status<std::unique_ptr<Runner>> Runner::Create(async::Loop* loop,
 }
 
 Runner::Runner(async::Loop* loop, int32_t paging_threads)
-    : VfsType(loop->dispatcher(), paging_threads), loop_(loop) {}
+    : fs::PagedVfs(loop->dispatcher(), paging_threads), loop_(loop) {}
 
 Runner::~Runner() = default;
 

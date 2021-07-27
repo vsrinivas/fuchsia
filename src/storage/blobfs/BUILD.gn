@@ -18,13 +18,6 @@ declare_args() {
   blobfs_enable_streaming_writes = false
 }
 
-config("blobfs_config") {
-  if (is_fuchsia) {
-    # TODO(fxbug.dev/51111) Convert to new pager and remove this define.
-    defines = [ "ENABLE_BLOBFS_NEW_PAGER" ]
-  }
-}
-
 static_library("blobfs") {
   friend = [
     ":decompressor_impl",
@@ -208,8 +201,6 @@ static_library("blobfs") {
       "BLOBFS_ENABLE_STREAMING_WRITES",
     ]
   }
-
-  public_configs = [ ":blobfs_config" ]
 }
 
 fidl("fuchsia.blobfs.internal") {

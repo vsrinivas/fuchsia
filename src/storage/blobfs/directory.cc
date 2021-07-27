@@ -21,7 +21,6 @@
 
 #include "src/lib/digest/digest.h"
 #include "src/lib/storage/vfs/cpp/metrics/events.h"
-#include "src/lib/storage/vfs/cpp/vfs_types.h"
 #include "src/storage/blobfs/blob.h"
 #include "src/storage/blobfs/blobfs.h"
 #include "src/storage/blobfs/metrics.h"

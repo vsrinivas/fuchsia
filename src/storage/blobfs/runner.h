@@ -12,13 +12,11 @@
 #include <lib/zx/status.h>
 
 #include "src/lib/storage/vfs/cpp/managed_vfs.h"
-#include "src/lib/storage/vfs/cpp/vfs.h"
-#include "src/lib/storage/vfs/cpp/vnode.h"
+#include "src/lib/storage/vfs/cpp/paged_vfs.h"
 #include "src/storage/blobfs/blobfs.h"
 #include "src/storage/blobfs/health_check_service.h"
 #include "src/storage/blobfs/mount.h"
 #include "src/storage/blobfs/query.h"
-#include "src/storage/blobfs/vfs_types.h"
 
 namespace blobfs {
 
@@ -28,7 +26,7 @@ class QueryService;
 //
 // Using this interface, a caller can initialize a Blobfs object and access the filesystem hierarchy
 // through the ulib/fs Vnode classes, but not modify the internal structure of the filesystem.
-class Runner : public VfsType {
+class Runner : public fs::PagedVfs {
  public:
   DISALLOW_COPY_ASSIGN_AND_MOVE(Runner);
 

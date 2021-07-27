@@ -10,10 +10,10 @@
 
 #include <memory>
 
+#include "src/lib/storage/vfs/cpp/paged_vfs.h"
 #include "src/storage/blobfs/blobfs.h"
 #include "src/storage/blobfs/blobfs_checker.h"
 #include "src/storage/blobfs/iterator/extent_iterator.h"
-#include "src/storage/blobfs/vfs_types.h"
 #include "zircon/errors.h"
 
 namespace blobfs {
@@ -31,11 +31,9 @@ zx_status_t Fsck(std::unique_ptr<block_client::BlockDevice> device, const MountO
     return status;
   }
 
-  auto vfs = std::make_unique<VfsType>(loop.dispatcher());
-#if ENABLE_BLOBFS_NEW_PAGER
+  auto vfs = std::make_unique<fs::PagedVfs>(loop.dispatcher());
   if (auto status = vfs->Init(); status.is_error())
     return status.error_value();
-#endif
 
   auto blobfs_or = Blobfs::Create(loop.dispatcher(), std::move(device), vfs.get(), options);
   if (blobfs_or.is_error()) {

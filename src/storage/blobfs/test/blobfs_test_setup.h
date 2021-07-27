@@ -7,9 +7,9 @@
 
 #include <memory>
 
+#include "src/lib/storage/vfs/cpp/paged_vfs.h"
 #include "src/storage/blobfs/blobfs.h"
 #include "src/storage/blobfs/common.h"
-#include "src/storage/blobfs/vfs_types.h"
 
 namespace blobfs {
 
@@ -31,7 +31,7 @@ class BlobfsTestSetupBase {
   async_dispatcher_t* dispatcher() { return GetLoop().dispatcher(); }
 
   // These pointers will be null when not mounted.
-  VfsType* vfs() { return vfs_.get(); }
+  fs::PagedVfs* vfs() { return vfs_.get(); }
   Blobfs* blobfs() { return blobfs_.get(); }
 
   // Creates a fake block device, formats it with the given options, and mounts it.
@@ -58,7 +58,7 @@ class BlobfsTestSetupBase {
   // Should be called in the derived class' destructor.
   void DestroyBlobfs();
 
-  std::unique_ptr<VfsType> vfs_;
+  std::unique_ptr<fs::PagedVfs> vfs_;
   std::unique_ptr<Blobfs> blobfs_;
 };
 

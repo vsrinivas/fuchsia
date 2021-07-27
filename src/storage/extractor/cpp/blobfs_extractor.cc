@@ -97,7 +97,7 @@ class FsWalker {
   fbl::unique_fd input_fd_;
 
   // Pointer to vfs.
-  std::unique_ptr<blobfs::VfsType> vfs_;
+  std::unique_ptr<fs::PagedVfs> vfs_;
 };
 
 blobfs::MountOptions ReadOnlyOptions() {
@@ -118,12 +118,9 @@ zx::status<std::unique_ptr<blobfs::Blobfs>> FsWalker::CreateBlobfs(async_dispatc
     std::cerr << "Error creating Remote Block Device";
   }
 
-  vfs_ = std::make_unique<blobfs::VfsType>(dispatcher);
-
-#if ENABLE_BLOBFS_NEW_PAGER
+  vfs_ = std::make_unique<fs::PagedVfs>(dispatcher);
   if (auto status = vfs_->Init(); status.is_error())
     return zx::error(status.error_value());
-#endif
 
   auto blobfs_or =
       blobfs::Blobfs::Create(dispatcher, std::move(device), vfs_.get(), ReadOnlyOptions());

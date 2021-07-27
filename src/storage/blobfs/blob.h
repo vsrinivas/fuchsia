@@ -28,7 +28,6 @@
 #include "src/lib/digest/digest.h"
 #include "src/lib/storage/vfs/cpp/journal/data_streamer.h"
 #include "src/lib/storage/vfs/cpp/vfs.h"
-#include "src/lib/storage/vfs/cpp/vfs_types.h"
 #include "src/lib/storage/vfs/cpp/vnode.h"
 #include "src/storage/blobfs/allocator/allocator.h"
 #include "src/storage/blobfs/allocator/extent_reserver.h"
@@ -92,10 +91,8 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   zx_status_t GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) final __TA_EXCLUDES(mutex_);
   void Sync(SyncCallback on_complete) final __TA_EXCLUDES(mutex_);
 
-#if defined(ENABLE_BLOBFS_NEW_PAGER)
   // fs::PagedVnode implementation.
   void VmoRead(uint64_t offset, uint64_t length) override __TA_EXCLUDES(mutex_);
-#endif
 
   // Required for memory management, see the class comment above Vnode for more.
   void fbl_recycle() { RecycleNode(); }
@@ -125,26 +122,9 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
 
   void CompleteSync() __TA_EXCLUDES(mutex_);
 
-#if defined(ENABLE_BLOBFS_NEW_PAGER)
   // Notification that the associated Blobfs is tearing down. This will clean up any extra
   // references such that the Blob can be deleted.
   void WillTeardownFilesystem();
-#else
-  // When blob VMOs are cloned and returned to clients, blobfs watches the original VMO handle for
-  // the signal |ZX_VMO_ZERO_CHILDREN|. While this signal is not set, the blob's Vnode keeps an
-  // extra reference to itself to prevent teardown while clients are using this Vmo. This reference
-  // is internally called the "clone watcher".
-  //
-  // This function may be called on a blob to tell it to forcefully release the "reference to
-  // itself" that is kept when the blob is mapped.
-  //
-  // Returns this reference, if it exists, to provide control over when the Vnode destructor is
-  // executed.
-  //
-  // TODO(fxbug.dev/51111) This is not used with the new pager. Remove this code when the transition
-  // is complete.
-  fbl::RefPtr<Blob> CloneWatcherTeardown() __TA_EXCLUDES(mutex_);
-#endif
 
   // Marks the blob as deletable, and attempt to purge it.
   zx_status_t QueueUnlink() __TA_EXCLUDES(mutex_);
@@ -186,10 +166,8 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
       __TA_EXCLUDES(mutex_);
   zx_status_t CloseNode() override __TA_EXCLUDES(mutex_);
 
-#if defined(ENABLE_BLOBFS_NEW_PAGER)
   // PagedVnode protected overrides:
   void OnNoPagedVmoClones() override __TA_REQUIRES(mutex_);
-#endif
 
   // blobfs::CacheNode implementation:
   BlobCache& GetCache() final;
@@ -218,12 +196,6 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   // clones it may have) are open.
   zx_status_t CloneDataVmo(zx_rights_t rights, zx::vmo* out_vmo, size_t* out_size)
       __TA_REQUIRES(mutex_);
-
-#if !defined(ENABLE_BLOBFS_NEW_PAGER)
-  // Receives notifications when all clones vended by CloneDataVmo() are released.
-  void HandleNoClones(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
-                      const zx_packet_signal_t* signal) __TA_EXCLUDES(mutex_);
-#endif
 
   // Invokes |Purge()| if the vnode is purgeable.
   zx_status_t TryPurge() __TA_REQUIRES(mutex_);
@@ -290,7 +262,6 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   // True if this node should be unlinked when closed.
   bool deletable_ __TA_GUARDED(mutex_) = false;
 
-#if defined(ENABLE_BLOBFS_NEW_PAGER)
   // When paging we can dynamically notice that a blob is corrupt. The read operation will set this
   // flag if a corruption is encoutered at runtime and future operations will fail.
   //
@@ -309,7 +280,6 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
 
   // In the old pager this is kepd in the PageWatcher.
   pager::UserPagerInfo pager_info_ __TA_GUARDED(mutex_);
-#endif
 
   bool tearing_down_ __TA_GUARDED(mutex_) = false;
 
@@ -346,19 +316,6 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   // This value is only used when !IsPagerBacked().
   zx::vmo unpaged_backing_data_ __TA_GUARDED(mutex_);
 
-#if !defined(ENABLE_BLOBFS_NEW_PAGER)
-  // The vmo registered with the pager. This will be valid for blobs that support paging (readable
-  // and using the right compression formats). See also unpaged_backing_data_.
-  //
-  // In the new pager, these members are in the PagedVmo base class.
-  zx::vmo paged_vmo_ __TA_GUARDED(mutex_);
-  const zx::vmo& paged_vmo() const __TA_REQUIRES_SHARED(mutex_) { return paged_vmo_; }
-  fbl::RefPtr<fs::Vnode> FreePagedVmo() __TA_REQUIRES(mutex_) {
-    paged_vmo_.reset();
-    return nullptr;
-  }
-#endif
-
   // VMO mappings for the blob's merkle tree and data.
   // Data is stored in a separate VMO from the merkle tree for several reasons:
   //   - While data may be paged, the merkle tree (i.e. verification metadata) should always be
@@ -368,21 +325,6 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   // For small blobs, merkle_mapping_ may be absent, since small blobs may not have any stored
   // merkle tree.
   fzl::OwnedVmoMapper merkle_mapping_ __TA_GUARDED(mutex_);
-
-#if !defined(ENABLE_BLOBFS_NEW_PAGER)
-  // In the new pager the PagedVnode base class provides this function. Defining an identical
-  // function for the old pager allows fewer divergences in this class' logic.
-  bool has_clones() const { return !!clone_ref_; }
-#endif
-
-#if !defined(ENABLE_BLOBFS_NEW_PAGER)
-  // Watches any clones of "paged_vmo()" provided to clients. Observes the ZX_VMO_ZERO_CHILDREN
-  // signal.
-  //
-  // TODO(fxbug.dev/51111) This is not used with the new pager. Remove this code when the transition
-  // is complete.
-  async::WaitMethod<Blob, &Blob::HandleNoClones> clone_watcher_ __TA_GUARDED(mutex_);
-#endif
 
   // Keeps a reference to the blob alive (from within itself) until there are no cloned VMOs in
   // used.
@@ -402,11 +344,6 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   // Data used exclusively during writeback.
   struct WriteInfo;
   std::unique_ptr<WriteInfo> write_info_ __TA_GUARDED(mutex_);
-
-#if !defined(ENABLE_BLOBFS_NEW_PAGER)
-  // Reads in the blob's pages on demand. Used only in the old pager path.
-  std::unique_ptr<pager::PageWatcher> page_watcher_ __TA_GUARDED(mutex_);
-#endif
 };
 
 // Returns true if the given inode supports paging.

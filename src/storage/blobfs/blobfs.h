@@ -37,7 +37,7 @@
 
 #include "src/lib/digest/digest.h"
 #include "src/lib/storage/vfs/cpp/journal/journal.h"
-#include "src/lib/storage/vfs/cpp/vfs.h"
+#include "src/lib/storage/vfs/cpp/paged_vfs.h"
 #include "src/lib/storage/vfs/cpp/vnode.h"
 #include "src/storage/blobfs/allocator/allocator.h"
 #include "src/storage/blobfs/allocator/extent_reserver.h"
@@ -76,7 +76,7 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   // create executable blobs. See vmex_resource() getter.
   static zx::status<std::unique_ptr<Blobfs>> Create(async_dispatcher_t* dispatcher,
                                                     std::unique_ptr<BlockDevice> device,
-                                                    VfsType* vfs = nullptr,
+                                                    fs::PagedVfs* vfs = nullptr,
                                                     const MountOptions& options = MountOptions(),
                                                     zx::resource vmex_resource = zx::resource());
 
@@ -86,7 +86,7 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
 
   // The Vfs object associated with this Blobfs instance, if any. The Vfs will exist only when
   // running on the target and will be null otherwise.
-  VfsType* vfs() const { return vfs_; }
+  fs::PagedVfs* vfs() const { return vfs_; }
 
   pager::UserPager* pager() const { return pager_.get(); }
 
@@ -226,7 +226,7 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   friend class BlobfsChecker;
   FidlBlobCorruptionNotifier blob_corruption_notifier_;
 
-  Blobfs(async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> device, VfsType* vfs,
+  Blobfs(async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> device, fs::PagedVfs* vfs,
          const Superblock* info, Writability writable,
          CompressionSettings write_compression_settings, zx::resource vmex_resource,
          std::optional<CachePolicy> pager_backed_cache_policy,
@@ -306,7 +306,7 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
       zx::duration metrics_flush_time);
 
   // Possibly-null reference to the Vfs associated with this object. See vfs() getter.
-  VfsType* vfs_ = nullptr;
+  fs::PagedVfs* vfs_ = nullptr;
 
   std::unique_ptr<fs::Journal> journal_;
   Superblock info_;
