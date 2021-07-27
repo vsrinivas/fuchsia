@@ -3023,6 +3023,13 @@ macro_rules! fidl_table {
                             if inlined {
                                 decode_inner(decoder, next_offset)?;
                             } else {
+                                match decoder.context().wire_format_version {
+                                    $crate::encoding::WireFormatVersion::V2 =>
+                                        if decoder.inline_size_of::<$member_ty>() <= 4 {
+                                            return Err($crate::Error::InvalidInlineBitInEnvelope);
+                                        },
+                                    _ => (),
+                                };
                                 decoder.read_out_of_line(
                                     decoder.inline_size_of::<$member_ty>(),
                                     decode_inner,
@@ -3235,6 +3242,14 @@ where
         if inlined {
             decode_inner(decoder, offset + 8)?;
         } else {
+            match decoder.context().wire_format_version {
+                WireFormatVersion::V2 => {
+                    if member_inline_size <= 4 {
+                        return Err(Error::InvalidInlineBitInEnvelope);
+                    }
+                }
+                _ => (),
+            };
             decoder.read_out_of_line(member_inline_size, decode_inner)?;
             if decoder.next_out_of_line() != (next_out_of_line + (num_bytes as usize)) {
                 return Err(Error::InvalidNumBytesInEnvelope);
@@ -3463,6 +3478,13 @@ macro_rules! fidl_union {
                 if inlined {
                     decode_inner(decoder, offset + 8)?;
                 } else {
+                    match decoder.context().wire_format_version {
+                        $crate::encoding::WireFormatVersion::V2 =>
+                            if member_inline_size <= 4 {
+                                return Err($crate::Error::InvalidInlineBitInEnvelope);
+                            },
+                        _ => (),
+                    };
                     decoder.read_out_of_line(member_inline_size, decode_inner)?;
                     if decoder.next_out_of_line() != (next_out_of_line + (num_bytes as usize)) {
                         return Err($crate::Error::InvalidNumBytesInEnvelope);

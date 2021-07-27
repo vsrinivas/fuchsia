@@ -1362,13 +1362,7 @@ decode_failure("BadPaddedUnionStructLowerByte") {
             0x01,
             0xee, padding:6, // should be padding:7
         ],
-        v2 = [
-            num(1):8,
-            num(8):4, num(0):2, num(0):2,
-
-            0x01,
-            0xee, padding:6, // should be padding:7
-        ],
+        // v2 inlines so it doesn't have the same padding bytes as v1
     },
     err = INVALID_PADDING_BYTE,
 }
@@ -1385,13 +1379,7 @@ decode_failure("BadPaddedUnionStructUpperByte") {
             0x01,
             padding:6, 0xee, // should be padding:7
         ],
-        v2 = [
-            num(1):8,
-            num(8):4, num(0):2, num(0):2,
-
-            0x01,
-            padding:6, 0xee, // should be padding:7
-        ],
+        // v2 inlines so it doesn't have the same padding bytes as v1
     },
     err = INVALID_PADDING_BYTE,
 }

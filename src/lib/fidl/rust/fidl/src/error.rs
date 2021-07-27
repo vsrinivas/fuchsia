@@ -123,6 +123,10 @@ pub enum Error {
     #[error("Invalid presence indicator.")]
     InvalidPresenceIndicator,
 
+    /// An inline bit is unset when the type size is known to be <= 4 bytes.
+    #[error("Invalid inline bit in envelope.")]
+    InvalidInlineBitInEnvelope,
+
     /// An envelope in the FIDL message had an unexpected number of bytes.
     #[error("Invalid number of bytes in FIDL envelope.")]
     InvalidNumBytesInEnvelope,

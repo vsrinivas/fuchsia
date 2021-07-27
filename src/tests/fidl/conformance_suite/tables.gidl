@@ -174,7 +174,7 @@ success("TableFieldUnknownOutOfLine") {
 // Tests decode of a value in a table that can be represented inline in the
 // envelope but is incorrectly using the out of line representation.
 decode_failure("TableOutOfLineEnvelopeWhenInlineRequired") {
-    bindings_allowlist = [go,transformer],
+    bindings_allowlist = [go,rust,transformer],
     type = TableFieldInlinedStruct,
     bytes = {
         v2 = [

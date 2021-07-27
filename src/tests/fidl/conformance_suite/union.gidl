@@ -418,7 +418,7 @@ success("UnionEnvelopeInlining_HandleValue_Inlined") {
 // Tests decode of a value in a union that can be represented inline in the
 // envelope but is incorrectly using the out of line representation.
 decode_failure("UnionOutOfLineEnvelopeWhenInlineRequired") {
-    bindings_allowlist = [go],
+    bindings_allowlist = [go,rust],
     type = EnvelopeInliningTestUnionStruct,
     bytes = {
         v2 = [
