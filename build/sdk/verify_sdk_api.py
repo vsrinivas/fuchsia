@@ -5,6 +5,7 @@
 
 import argparse
 import json
+import os
 import platform
 import sys
 
@@ -73,7 +74,9 @@ def main():
         type = 'Warning' if args.warn else 'Error'
         print('%s: SDK contents have changed!' % type)
         print('Please acknowledge this change by running:')
-        print('  cp ' + args.updated + ' ' + args.reference)
+        print(
+            '  cp ' + os.path.abspath(args.updated) + ' ' +
+            os.path.abspath(args.reference))
         if not args.warn:
             return 1
 
