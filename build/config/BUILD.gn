@@ -807,7 +807,7 @@ config("Wno-unused-but-set-parameter") {
   cflags = [ "-Wno-unused-but-set-parameter" ]
   visibility = [
     "//third_party/android/device/generic/goldfish-opengl:libvulkan_goldfish",
-    "//vendor/amlogic/*",
+    "//vendor/*",
     "//zircon/third_party/uapp/dash",
   ]
 }
@@ -822,13 +822,8 @@ config("Wno-unused-but-set-variable") {
     "//src/connectivity/wlan/drivers/third_party/atheros/ath10k/*",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/*",
     "//src/graphics/drivers/msd-intel-gen/src",
-    "//third_party/Vulkan-ValidationLayers/*",
-    "//third_party/android/device/generic/goldfish-opengl/*",
-    "//third_party/icu/*",
-    "//third_party/mesa/src/compiler/nir/*",
-    "//third_party/mesa/src/intel/vulkan/*",
-    "//third_party/zstd/*",
-    "//vendor/arm/*",
+    "//third_party/*",
+    "//vendor/*",
     "//zircon/third_party/uapp/dash",
   ]
 }
