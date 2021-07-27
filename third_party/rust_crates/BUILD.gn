@@ -977,7 +977,7 @@ rust_library("adler32-v1_0_4") {
 
 rust_library("aho-corasick-v0_7_10") {
   crate_name = "aho_corasick"
-  crate_root = "//third_party/rust_crates/vendor/aho-corasick/src/lib.rs"
+  crate_root = "//third_party/rust_crates/ask2patch/aho-corasick/src/lib.rs"
   output_name = "aho_corasick-4442fbca81319248"
   configs -= [
     "//build/config/rust:edition_2018",
@@ -1877,7 +1877,7 @@ rust_library("bytecount-v0_6_0") {
 
 rust_library("byteorder-v1_3_1") {
   crate_name = "byteorder"
-  crate_root = "//third_party/rust_crates/vendor/byteorder/src/lib.rs"
+  crate_root = "//third_party/rust_crates/ask2patch/byteorder/src/lib.rs"
   output_name = "byteorder-e4429ddc31d502a7"
   configs -= [
     "//build/config/rust:edition_2018",
@@ -2757,7 +2757,7 @@ rust_library("crossterm_winapi-v0_7_0") {
 
 rust_library("csv-v1_1_3") {
   crate_name = "csv"
-  crate_root = "//third_party/rust_crates/vendor/csv/src/lib.rs"
+  crate_root = "//third_party/rust_crates/ask2patch/csv/src/lib.rs"
   output_name = "csv-c447310fd6863403"
   configs -= [
     "//build/config/rust:edition_2018",
@@ -2783,7 +2783,7 @@ rust_library("csv-v1_1_3") {
 
 rust_library("csv-core-v0_1_10") {
   crate_name = "csv_core"
-  crate_root = "//third_party/rust_crates/vendor/csv-core/src/lib.rs"
+  crate_root = "//third_party/rust_crates/ask2patch/csv-core/src/lib.rs"
   output_name = "csv_core-736f88686751ea8f"
   configs -= [
     "//build/config/rust:edition_2018",
@@ -8388,7 +8388,7 @@ rust_library("safemem-v0_3_0") {
 
 rust_library("same-file-v1_0_4") {
   crate_name = "same_file"
-  crate_root = "//third_party/rust_crates/vendor/same-file/src/lib.rs"
+  crate_root = "//third_party/rust_crates/ask2patch/same-file/src/lib.rs"
   output_name = "same_file-460d9eb4eb179eea"
   configs -= [
     "//build/config/rust:edition_2018",
@@ -10974,7 +10974,7 @@ rust_library("waker-fn-v1_1_0") {
 
 rust_library("walkdir-v2_3_1") {
   crate_name = "walkdir"
-  crate_root = "//third_party/rust_crates/vendor/walkdir/src/lib.rs"
+  crate_root = "//third_party/rust_crates/ask2patch/walkdir/src/lib.rs"
   output_name = "walkdir-3afd3201e5295e86"
   configs -= [
     "//build/config/rust:edition_2018",

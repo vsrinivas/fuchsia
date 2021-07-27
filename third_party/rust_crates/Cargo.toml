@@ -257,6 +257,14 @@ zip = { version = "0.5.5", default-features = false, features = ["deflate"] }
 ### In-tree Crates: crates which are on crates.io but which we build from our in-tree copy
 fuchsia-cprng = { path = "../../src/lib/zircon/rust/fuchsia-cprng" }
 
+### Ask to Patch: crates which require a policy exception to contribute to.
+aho-corasick = { path = "ask2patch/aho-corasick" }
+byteorder = { path = "ask2patch/byteorder" }
+csv = { path = "ask2patch/csv" }
+csv-core = { path = "ask2patch/csv-core" }
+same-file = { path = "ask2patch/same-file" }
+walkdir = { path = "ask2patch/walkdir" }
+
 ### Empty Forks: empty forks kept only for satisfying cargo's resolution
 backtrace-sys = { path = "empty/backtrace-sys" }
 cmake = { path = "empty/cmake"}
