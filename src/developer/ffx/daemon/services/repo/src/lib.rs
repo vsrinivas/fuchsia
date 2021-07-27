@@ -6,11 +6,11 @@ use {
     async_lock::{Mutex, RwLock},
     async_trait::async_trait,
     ffx_config::{self, ConfigLevel},
-    fidl::endpoints::create_proxy,
     fidl_fuchsia_developer_bridge as bridge,
     fidl_fuchsia_developer_bridge_ext::{RepositorySpec, RepositoryTarget},
     fidl_fuchsia_pkg::RepositoryManagerMarker,
-    fidl_fuchsia_pkg_rewrite::{EngineMarker, LiteralRule, Rule},
+    fidl_fuchsia_pkg_rewrite::EngineMarker,
+    fidl_fuchsia_pkg_rewrite_ext::{do_transaction, EditTransaction, EditTransactionError, Rule},
     fuchsia_async as fasync,
     fuchsia_zircon_status::Status,
     futures::{FutureExt as _, StreamExt as _},
@@ -312,6 +312,23 @@ impl Repo {
         }
 
         if !target_info.aliases.is_empty() {
+            let alias_rules = target_info
+                .aliases
+                .iter()
+                .map(|alias| {
+                    Rule::new(
+                        alias.to_string(),
+                        repo.name().to_string(),
+                        "/".to_string(),
+                        "/".to_string(),
+                    )
+                })
+                .collect::<Result<Vec<_>, _>>()
+                .map_err(|err| {
+                    log::warn!("failed to construct rule: {:#?}", err);
+                    bridge::RepositoryError::RewriteEngineError
+                })?;
+
             let rewrite_proxy = match cx
                 .open_target_proxy::<EngineMarker>(
                     target_info.target_identifier.clone(),
@@ -330,53 +347,14 @@ impl Repo {
                 }
             };
 
-            let (transaction_proxy, server_end) = create_proxy().map_err(|err| {
-                log::warn!("Failed to create Rewrite transaction: {:#?}", err);
+            do_transaction(&rewrite_proxy, |transaction| {
+                self.create_aliases(transaction, &alias_rules)
+            })
+            .await
+            .map_err(|err| {
+                log::warn!("failed to create transactions: {:#?}", err);
                 bridge::RepositoryError::RewriteEngineError
             })?;
-
-            rewrite_proxy.start_edit_transaction(server_end).map_err(|err| {
-                log::warn!("Failed to start edit transaction: {:#?}", err);
-                bridge::RepositoryError::RewriteEngineError
-            })?;
-
-            for alias in target_info.aliases.iter() {
-                let rule = LiteralRule {
-                    host_match: alias.to_string(),
-                    host_replacement: repo.name().to_string(),
-                    path_prefix_match: "/".to_string(),
-                    path_prefix_replacement: "/".to_string(),
-                };
-                match transaction_proxy.add(&mut Rule::Literal(rule)).await {
-                    Err(err) => {
-                        log::warn!("Failed to add rewrite rule. Error was: {:#?}", err);
-                        return Err(bridge::RepositoryError::RewriteEngineError);
-                    }
-                    Ok(Err(err)) => {
-                        log::warn!(
-                            "Adding rewrite rule returned failure. Error was: {:#?}",
-                            Status::from_raw(err)
-                        );
-                        return Err(bridge::RepositoryError::RewriteEngineError);
-                    }
-                    Ok(_) => {}
-                }
-            }
-
-            match transaction_proxy.commit().await {
-                Ok(Ok(())) => {}
-                Ok(Err(err)) => {
-                    log::warn!(
-                        "Committing rewrite rule returned failure. Error was: {:#?}",
-                        Status::from_raw(err)
-                    );
-                    return Err(bridge::RepositoryError::RewriteEngineError);
-                }
-                Err(err) => {
-                    log::warn!("Failed to commit rewrite rule. Error was: {:#?}", err);
-                    return Err(bridge::RepositoryError::RewriteEngineError);
-                }
-            }
         }
 
         if save_config == SaveConfig::Save {
@@ -397,6 +375,30 @@ impl Repo {
             .insert((target_info.repo_name.clone(), target_nodename), target_info);
 
         Ok(())
+    }
+
+    async fn create_aliases(
+        &self,
+        transaction: EditTransaction,
+        alias_rules: &[Rule],
+    ) -> std::result::Result<EditTransaction, EditTransactionError> {
+        // Prepend the alias rules to the front so they take priority.
+        let mut rules = alias_rules.iter().cloned().rev().collect::<Vec<_>>();
+        rules.extend(transaction.list_dynamic().await?);
+
+        // Clear the list, since we'll be adding it back later.
+        transaction.reset_all()?;
+
+        // Remove duplicated rules while preserving order.
+        rules.dedup();
+
+        // Add the rules back into the transaction. We do it in reverse, because `.add()`
+        // always inserts rules into the front of the list.
+        for rule in rules.into_iter().rev() {
+            transaction.add(rule).await?
+        }
+
+        Ok(transaction)
     }
 
     async fn deregister_target(
@@ -698,7 +700,10 @@ mod tests {
             MirrorConfig, RepositoryConfig, RepositoryKeyConfig, RepositoryManagerRequest,
             RepositoryStorageType,
         },
-        fidl_fuchsia_pkg_rewrite::{EditTransactionRequest, EngineMarker, EngineRequest},
+        fidl_fuchsia_pkg_rewrite::{
+            EditTransactionRequest, EngineMarker, EngineRequest, RuleIteratorRequest,
+        },
+        futures::TryStreamExt,
         matches::assert_matches,
         services::testing::FakeDaemonBuilder,
         std::{
@@ -711,6 +716,14 @@ mod tests {
     const REPO_NAME: &str = "some-repo";
     const TARGET_NODENAME: &str = "some-target";
     const EMPTY_REPO_PATH: &str = "host_x64/test_data/ffx_daemon_service_repo/empty-repo";
+
+    macro_rules! rule {
+        ($host_match:expr => $host_replacement:expr,
+         $path_prefix_match:expr => $path_prefix_replacement:expr) => {
+            Rule::new($host_match, $host_replacement, $path_prefix_match, $path_prefix_replacement)
+                .unwrap()
+        };
+    }
 
     fn test_repo_config() -> RepositoryConfig {
         RepositoryConfig {
@@ -804,23 +817,62 @@ mod tests {
 
     impl FakeEngine {
         fn new() -> (Self, impl Fn(&Context, Request<EngineMarker>) -> Result<()> + 'static) {
+            Self::with_rules(vec![])
+        }
+
+        fn with_rules(
+            rules: Vec<Rule>,
+        ) -> (Self, impl Fn(&Context, Request<EngineMarker>) -> Result<()> + 'static) {
+            let rules = Arc::new(Mutex::new(rules));
             let events = Arc::new(Mutex::new(Vec::new()));
             let events_closure = Arc::clone(&events);
 
             let closure = move |_cx: &Context, req| {
                 match req {
                     EngineRequest::StartEditTransaction { transaction, control_handle: _ } => {
+                        let rules = Arc::clone(&rules);
                         let events_closure = Arc::clone(&events_closure);
                         fasync::Task::local(async move {
                             let mut stream = transaction.into_stream().unwrap();
                             while let Some(request) = stream.next().await {
                                 let request = request.unwrap();
                                 match request {
-                                    EditTransactionRequest::Add { rule, responder } => {
+                                    EditTransactionRequest::ResetAll { control_handle: _ } => {
+                                        events_closure.lock().unwrap().push(EngineEvent::ResetAll);
+                                    }
+                                    EditTransactionRequest::ListDynamic {
+                                        iterator,
+                                        control_handle: _,
+                                    } => {
                                         events_closure
                                             .lock()
                                             .unwrap()
-                                            .push(EngineEvent::EditTransactionAdd { rule });
+                                            .push(EngineEvent::ListDynamic);
+                                        let mut stream = iterator.into_stream().unwrap();
+
+                                        let mut rules = rules.lock().unwrap().clone().into_iter();
+
+                                        while let Some(req) = stream.try_next().await.unwrap() {
+                                            let RuleIteratorRequest::Next { responder } = req;
+                                            events_closure
+                                                .lock()
+                                                .unwrap()
+                                                .push(EngineEvent::IteratorNext);
+
+                                            if let Some(rule) = rules.next() {
+                                                let rule = rule.into();
+                                                responder.send(&mut vec![rule].iter_mut()).unwrap();
+                                            } else {
+                                                responder.send(&mut vec![].into_iter()).unwrap();
+                                            }
+                                        }
+                                    }
+                                    EditTransactionRequest::Add { rule, responder } => {
+                                        events_closure.lock().unwrap().push(
+                                            EngineEvent::EditTransactionAdd {
+                                                rule: rule.try_into().unwrap(),
+                                            },
+                                        );
                                         responder.send(&mut Ok(())).unwrap()
                                     }
                                     EditTransactionRequest::Commit { responder } => {
@@ -829,9 +881,6 @@ mod tests {
                                             .unwrap()
                                             .push(EngineEvent::EditTransactionCommit);
                                         responder.send(&mut Ok(())).unwrap()
-                                    }
-                                    _ => {
-                                        panic!("unexpected EditTransaction request: {:?}", request)
                                     }
                                 }
                             }
@@ -854,6 +903,9 @@ mod tests {
 
     #[derive(Debug, PartialEq)]
     enum EngineEvent {
+        ResetAll,
+        ListDynamic,
+        IteratorNext,
         EditTransactionAdd { rule: Rule },
         EditTransactionCommit,
     }
@@ -1005,21 +1057,14 @@ mod tests {
             assert_eq!(
                 fake_engine.take_events(),
                 vec![
+                    EngineEvent::ListDynamic,
+                    EngineEvent::IteratorNext,
+                    EngineEvent::ResetAll,
                     EngineEvent::EditTransactionAdd {
-                        rule: Rule::Literal(LiteralRule {
-                            host_match: "fuchsia.com".to_string(),
-                            host_replacement: REPO_NAME.to_string(),
-                            path_prefix_match: "/".to_string(),
-                            path_prefix_replacement: "/".to_string(),
-                        }),
+                        rule: rule!("fuchsia.com" => REPO_NAME, "/" => "/"),
                     },
                     EngineEvent::EditTransactionAdd {
-                        rule: Rule::Literal(LiteralRule {
-                            host_match: "example.com".to_string(),
-                            host_replacement: REPO_NAME.to_string(),
-                            path_prefix_match: "/".to_string(),
-                            path_prefix_replacement: "/".to_string(),
-                        }),
+                        rule: rule!("example.com" => REPO_NAME, "/" => "/"),
                     },
                     EngineEvent::EditTransactionCommit,
                 ],
@@ -1135,21 +1180,14 @@ mod tests {
             assert_eq!(
                 fake_engine.take_events(),
                 vec![
+                    EngineEvent::ListDynamic,
+                    EngineEvent::IteratorNext,
+                    EngineEvent::ResetAll,
                     EngineEvent::EditTransactionAdd {
-                        rule: Rule::Literal(LiteralRule {
-                            host_match: "fuchsia.com".to_string(),
-                            host_replacement: REPO_NAME.to_string(),
-                            path_prefix_match: "/".to_string(),
-                            path_prefix_replacement: "/".to_string(),
-                        }),
+                        rule: rule!("fuchsia.com" => REPO_NAME, "/" => "/"),
                     },
                     EngineEvent::EditTransactionAdd {
-                        rule: Rule::Literal(LiteralRule {
-                            host_match: "example.com".to_string(),
-                            host_replacement: REPO_NAME.to_string(),
-                            path_prefix_match: "/".to_string(),
-                            path_prefix_replacement: "/".to_string(),
-                        }),
+                        rule: rule!("example.com" => REPO_NAME, "/" => "/"),
                     },
                     EngineEvent::EditTransactionCommit,
                 ],
@@ -1193,6 +1231,71 @@ mod tests {
             assert_matches!(
                 ffx_config::get::<Value, _>(&registration_query(REPO_NAME, TARGET_NODENAME)).await,
                 Err(_)
+            );
+        })
+    }
+
+    #[serial_test::serial]
+    #[test]
+    fn test_register_deduplicates_rules() {
+        run_test(async {
+            let (_fake_repo_manager, fake_repo_manager_closure) = FakeRepositoryManager::new();
+            let (fake_engine, fake_engine_closure) = FakeEngine::with_rules(vec![
+                rule!("fuchsia.com" => REPO_NAME, "/" => "/"),
+                rule!("fuchsia.com" => "example.com", "/" => "/"),
+                rule!("fuchsia.com" => "example.com", "/" => "/"),
+                rule!("fuchsia.com" => "mycorp.com", "/" => "/"),
+            ]);
+
+            let daemon = FakeDaemonBuilder::new()
+                .register_instanced_service_closure::<RepositoryManagerMarker, _>(
+                    fake_repo_manager_closure,
+                )
+                .register_instanced_service_closure::<EngineMarker, _>(fake_engine_closure)
+                .register_fidl_service::<Repo>()
+                .nodename(TARGET_NODENAME.to_string())
+                .build();
+
+            let proxy = daemon.open_proxy::<bridge::RepositoryRegistryMarker>().await;
+            add_repo(&proxy).await;
+
+            proxy
+                .register_target(bridge::RepositoryTarget {
+                    repo_name: Some(REPO_NAME.to_string()),
+                    target_identifier: Some(TARGET_NODENAME.to_string()),
+                    storage_type: Some(bridge::RepositoryStorageType::Ephemeral),
+                    aliases: Some(vec!["fuchsia.com".to_string(), "example.com".to_string()]),
+                    ..bridge::RepositoryTarget::EMPTY
+                })
+                .await
+                .expect("communicated with proxy")
+                .expect("target registration to succeed");
+
+            // Adding the registration should have set up rewrite rules.
+            assert_eq!(
+                fake_engine.take_events(),
+                vec![
+                    EngineEvent::ListDynamic,
+                    EngineEvent::IteratorNext,
+                    EngineEvent::IteratorNext,
+                    EngineEvent::IteratorNext,
+                    EngineEvent::IteratorNext,
+                    EngineEvent::IteratorNext,
+                    EngineEvent::ResetAll,
+                    EngineEvent::EditTransactionAdd {
+                        rule: rule!("fuchsia.com" => "mycorp.com", "/" => "/"),
+                    },
+                    EngineEvent::EditTransactionAdd {
+                        rule: rule!("fuchsia.com" => "example.com", "/" => "/"),
+                    },
+                    EngineEvent::EditTransactionAdd {
+                        rule: rule!("fuchsia.com" => REPO_NAME, "/" => "/"),
+                    },
+                    EngineEvent::EditTransactionAdd {
+                        rule: rule!("example.com" => REPO_NAME, "/" => "/"),
+                    },
+                    EngineEvent::EditTransactionCommit,
+                ],
             );
         })
     }
