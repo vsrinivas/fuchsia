@@ -6,6 +6,7 @@ use fidl_fuchsia_bluetooth_internal_a2dp as a2dp;
 use fuchsia_bluetooth::types::PeerId;
 use fuchsia_zircon as zx;
 use futures::{Future, FutureExt, StreamExt};
+use tracing::warn;
 
 /// A client for fuchsia.bluetooth.internal.a2dp.
 pub struct Control {
@@ -42,20 +43,22 @@ impl Control {
 
         async move {
             let (suspender_proxy, suspend_fut) = res?;
-            match suspend_fut.await {
-                Err(fidl::Error::ClientChannelClosed { status, .. })
-                    if status == zx::Status::NOT_FOUND =>
-                {
-                    // Proxy is not available because we can't connect (delayed).
-                    return Ok(None);
-                }
-                Err(e) => return Err(e),
-                Ok(()) => {}
-            };
-
             match suspender_proxy.take_event_stream().next().await {
                 Some(Ok(a2dp::StreamSuspenderEvent::OnSuspended {})) => Ok(Some(suspender_proxy)),
-                _ => Err(fidl::Error::OutOfRange),
+                x => {
+                    warn!("Failed to suspend A2DP: {:?}", x);
+                    // Check to see the result of the suspend future.  It should finish, and it
+                    // might have finished because we couldn't connect (delayed)
+                    match suspend_fut.await {
+                        Err(fidl::Error::ClientChannelClosed { status, .. })
+                            if status == zx::Status::NOT_FOUND =>
+                        {
+                            Ok(None)
+                        }
+                        Err(e) => Err(e),
+                        Ok(()) => Err(fidl::Error::OutOfRange),
+                    }
+                }
             }
         }
         .right_future()
@@ -79,12 +82,12 @@ mod tests {
         let pause_fut = control.pause(None);
         futures::pin_mut!(pause_fut);
 
-        exec.run_singlethreaded(&mut pause_fut).expect("should be okay");
+        let _ = exec.run_singlethreaded(&mut pause_fut).expect("should be Ok");
 
         let pause_single_fut = control.pause(Some(PeerId(1)));
         futures::pin_mut!(pause_single_fut);
 
-        exec.run_singlethreaded(&mut pause_single_fut).expect("should be okay");
+        let _ = exec.run_singlethreaded(&mut pause_single_fut).expect("should be Ok");
     }
 
     fn expect_suspend_request(
@@ -126,33 +129,32 @@ mod tests {
         let pause_fut = control.pause(Some(PeerId(1)));
         futures::pin_mut!(pause_fut);
 
-        let (responder, mut stream1) =
+        let (responder_one, mut stream1) =
             expect_suspend_request(&mut exec, &mut control_requests, Some(PeerId(1)));
-
-        responder.send().expect("should send response okay");
 
         exec.run_until_stalled(&mut pause_fut).expect_pending("shouldn't be done");
 
-        stream1.control_handle().send_on_suspended().expect("should send on suspended event");
+        let _ = stream1.control_handle().send_on_suspended().expect("send on suspended event");
 
         let token = exec.run_until_stalled(&mut pause_fut).expect("done now").expect("token ok");
 
         // Should be able to have overlapping pauses.
         let pause_fut = control.pause(None);
         futures::pin_mut!(pause_fut);
-        let (responder, mut stream2) =
+        let (responder_two, mut stream2) =
             expect_suspend_request(&mut exec, &mut control_requests, None);
-        responder.send().expect("should send response okay");
         stream2.control_handle().send_on_suspended().expect("should send on suspended event");
         let token2 = exec.run_until_stalled(&mut pause_fut).expect("done now").expect("token ok");
 
         drop(token);
 
         expect_suspender_close(&mut exec, &mut stream1);
+        let _ = responder_one.send().unwrap();
 
         drop(token2);
 
         expect_suspender_close(&mut exec, &mut stream2);
+        let _ = responder_two.send().unwrap();
     }
 
     #[test]
@@ -165,13 +167,14 @@ mod tests {
         let pause_fut = control.pause(Some(PeerId(1)));
         futures::pin_mut!(pause_fut);
 
-        let (responder, _stream1) =
+        let (responder, stream1) =
             expect_suspend_request(&mut exec, &mut control_requests, Some(PeerId(1)));
 
         drop(responder);
         drop(control_requests);
+        drop(stream1);
 
-        exec.run_singlethreaded(&mut pause_fut).expect_err("token error");
+        let _ = exec.run_singlethreaded(&mut pause_fut).expect_err("pause error");
     }
 
     #[test]
@@ -187,12 +190,11 @@ mod tests {
         let (responder, stream1) =
             expect_suspend_request(&mut exec, &mut control_requests, Some(PeerId(1)));
 
-        responder.send().expect("should send response okay");
-
         exec.run_until_stalled(&mut pause_fut).expect_pending("shouldn't be done");
 
         drop(stream1);
+        let _ = responder.send().expect("should send response okay");
 
-        exec.run_singlethreaded(&mut pause_fut).expect_err("token error");
+        let _ = exec.run_singlethreaded(&mut pause_fut).expect_err("pause error");
     }
 }
