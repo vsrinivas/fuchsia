@@ -96,6 +96,7 @@ mod input_report_tests {
 
     impl AutoRepeatTimer for TestAutoRepeatContext {
         fn schedule_autorepeat_timer(&mut self, _device_id: &DeviceId) {}
+        fn continue_autorepeat_timer(&mut self, _device_id: &DeviceId) {}
     }
 
     fn make_input_handler() -> InputReportHandler<'static> {

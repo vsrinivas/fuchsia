@@ -38,6 +38,7 @@ pub(crate) struct AutoRepeatContext {
 
 pub(crate) trait AutoRepeatTimer {
     fn schedule_autorepeat_timer(&mut self, device_id: &DeviceId);
+    fn continue_autorepeat_timer(&mut self, device_id: &DeviceId);
     fn cancel_autorepeat_timer(&mut self) {}
 }
 
@@ -50,12 +51,8 @@ impl AutoRepeatContext {
             repeat_interval: Config::get().keyboard_autorepeat_slow_interval,
         }
     }
-}
 
-impl AutoRepeatTimer for AutoRepeatContext {
-    fn schedule_autorepeat_timer(&mut self, device_id: &DeviceId) {
-        self.repeat_interval =
-            (self.repeat_interval * 3 / 4).max(Config::get().keyboard_autorepeat_fast_interval);
+    fn schedule(&mut self, device_id: &DeviceId) {
         let timer = fasync::Timer::new(fuchsia_async::Time::after(self.repeat_interval.into()));
         let app_sender = self.app_sender.clone();
         let device_id = device_id.clone();
@@ -68,10 +65,28 @@ impl AutoRepeatTimer for AutoRepeatContext {
         });
         self.keyboard_autorepeat_task = Some(task);
     }
+}
+
+impl AutoRepeatTimer for AutoRepeatContext {
+    fn schedule_autorepeat_timer(&mut self, device_id: &DeviceId) {
+        self.repeat_interval = Config::get().keyboard_autorepeat_slow_interval;
+        self.schedule(device_id);
+    }
+
+    fn continue_autorepeat_timer(&mut self, device_id: &DeviceId) {
+        self.repeat_interval =
+            (self.repeat_interval * 3 / 4).max(Config::get().keyboard_autorepeat_fast_interval);
+        self.schedule(device_id);
+    }
 
     fn cancel_autorepeat_timer(&mut self) {
-        self.keyboard_autorepeat_task = None;
-        self.repeat_interval = Config::get().keyboard_autorepeat_slow_interval;
+        let task = self.keyboard_autorepeat_task.take();
+        if let Some(task) = task {
+            fasync::Task::local(async move {
+                task.cancel().await;
+            })
+            .detach();
+        }
     }
 }
 

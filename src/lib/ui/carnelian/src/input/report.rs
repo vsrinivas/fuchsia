@@ -308,7 +308,7 @@ impl<'a> InputReportHandler<'a> {
         if let Some(key) = self.repeating.as_ref() {
             let repeat_time = fuchsia_zircon::Time::get_monotonic();
             let modifiers = Modifiers::from_pressed_keys_3(&self.pressed_keys);
-            context.schedule_autorepeat_timer(&self.device_id);
+            context.continue_autorepeat_timer(&self.device_id);
             let repeat = create_keyboard_event(
                 repeat_time.into_nanos() as u64,
                 device_id,
