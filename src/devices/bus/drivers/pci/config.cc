@@ -15,46 +15,6 @@
 
 namespace pci {
 
-// Storage for register constexprs
-constexpr PciReg16 Config::kVendorId;
-constexpr PciReg16 Config::kDeviceId;
-constexpr PciReg16 Config::kCommand;
-constexpr PciReg16 Config::kStatus;
-constexpr PciReg8 Config::kRevisionId;
-constexpr PciReg8 Config::kProgramInterface;
-constexpr PciReg8 Config::kSubClass;
-constexpr PciReg8 Config::kBaseClass;
-constexpr PciReg8 Config::kCacheLineSize;
-constexpr PciReg8 Config::kLatencyTimer;
-constexpr PciReg8 Config::kHeaderType;
-constexpr PciReg8 Config::kBist;
-constexpr PciReg32 Config::kCardbusCisPtr;
-constexpr PciReg16 Config::kSubsystemVendorId;
-constexpr PciReg16 Config::kSubsystemId;
-constexpr PciReg32 Config::kExpansionRomAddress;
-constexpr PciReg8 Config::kCapabilitiesPtr;
-constexpr PciReg8 Config::kInterruptLine;
-constexpr PciReg8 Config::kInterruptPin;
-constexpr PciReg8 Config::kMinGrant;
-constexpr PciReg8 Config::kMaxLatency;
-constexpr PciReg8 Config::kPrimaryBusId;
-constexpr PciReg8 Config::kSecondaryBusId;
-constexpr PciReg8 Config::kSubordinateBusId;
-constexpr PciReg8 Config::kSecondaryLatencyTimer;
-constexpr PciReg8 Config::kIoBase;
-constexpr PciReg8 Config::kIoLimit;
-constexpr PciReg16 Config::kSecondaryStatus;
-constexpr PciReg16 Config::kMemoryBase;
-constexpr PciReg16 Config::kMemoryLimit;
-constexpr PciReg16 Config::kPrefetchableMemoryBase;
-constexpr PciReg16 Config::kPrefetchableMemoryLimit;
-constexpr PciReg32 Config::kPrefetchableMemoryBaseUpper;
-constexpr PciReg32 Config::kPrefetchableMemoryLimitUpper;
-constexpr PciReg16 Config::kIoBaseUpper;
-constexpr PciReg16 Config::kIoLimitUpper;
-constexpr PciReg32 Config::kBridgeExpansionRomAddress;
-constexpr PciReg16 Config::kBridgeControl;
-
 // MMIO Config Implementation
 zx_status_t MmioConfig::Create(pci_bdf_t bdf, ddk::MmioBuffer* ecam, uint8_t start_bus,
                                uint8_t end_bus, std::unique_ptr<Config>* config) {
@@ -80,7 +40,7 @@ void MmioConfig::Write(PciReg16 addr, uint16_t val) const { view_.Write(val, add
 
 void MmioConfig::Write(PciReg32 addr, uint32_t val) const { view_.Write(val, addr.offset()); }
 
-const char* MmioConfig::type(void) const { return "mmio"; }
+const char* MmioConfig::type() const { return "mmio"; }
 
 // Proxy Config Implementation
 zx_status_t ProxyConfig::Create(pci_bdf_t bdf, ddk::PcirootProtocolClient* proto,
@@ -92,35 +52,35 @@ zx_status_t ProxyConfig::Create(pci_bdf_t bdf, ddk::PcirootProtocolClient* proto
 
 uint8_t ProxyConfig::Read(const PciReg8 addr) const {
   uint8_t tmp;
-  ZX_ASSERT(pciroot_->ConfigRead8(&bdf_, addr.offset(), &tmp) == ZX_OK);
+  ZX_ASSERT(pciroot_->ConfigRead8(&bdf(), addr.offset(), &tmp) == ZX_OK);
   return tmp;
 }
 
 uint16_t ProxyConfig::Read(const PciReg16 addr) const {
   uint16_t tmp;
-  ZX_ASSERT(pciroot_->ConfigRead16(&bdf_, addr.offset(), &tmp) == ZX_OK);
+  ZX_ASSERT(pciroot_->ConfigRead16(&bdf(), addr.offset(), &tmp) == ZX_OK);
   return tmp;
 }
 
 uint32_t ProxyConfig::Read(const PciReg32 addr) const {
   uint32_t tmp;
-  ZX_ASSERT(pciroot_->ConfigRead32(&bdf_, addr.offset(), &tmp) == ZX_OK);
+  ZX_ASSERT(pciroot_->ConfigRead32(&bdf(), addr.offset(), &tmp) == ZX_OK);
   return tmp;
 }
 
 void ProxyConfig::Write(PciReg8 addr, uint8_t val) const {
-  ZX_ASSERT(pciroot_->ConfigWrite8(&bdf_, addr.offset(), val) == ZX_OK);
+  ZX_ASSERT(pciroot_->ConfigWrite8(&bdf(), addr.offset(), val) == ZX_OK);
 }
 
 void ProxyConfig::Write(PciReg16 addr, uint16_t val) const {
-  ZX_ASSERT(pciroot_->ConfigWrite16(&bdf_, addr.offset(), val) == ZX_OK);
+  ZX_ASSERT(pciroot_->ConfigWrite16(&bdf(), addr.offset(), val) == ZX_OK);
 }
 
 void ProxyConfig::Write(PciReg32 addr, uint32_t val) const {
-  ZX_ASSERT(pciroot_->ConfigWrite32(&bdf_, addr.offset(), val) == ZX_OK);
+  ZX_ASSERT(pciroot_->ConfigWrite32(&bdf(), addr.offset(), val) == ZX_OK);
 }
 
-const char* ProxyConfig::type(void) const { return "proxy"; }
+const char* ProxyConfig::type() const { return "proxy"; }
 
 void Config::DumpConfig(uint16_t len) const {
   printf("%u bytes of raw config (type: %s)\n", len, type());

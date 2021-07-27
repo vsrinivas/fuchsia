@@ -92,35 +92,35 @@ constexpr zx_paddr_t bdf_to_ecam_offset(pci_bdf_t bdf, uint8_t start_bus) {
 
 class PciReg8 {
  public:
+  constexpr PciReg8() = default;
   constexpr explicit PciReg8(uint16_t offset) : offset_(offset) {}
-  constexpr PciReg8() : offset_(0u) {}
   constexpr uint16_t offset() const { return offset_; }
-  inline bool operator==(const PciReg8& other) { return (offset() == other.offset()); }
+  inline bool operator==(const PciReg8& other) const { return (offset() == other.offset()); }
 
  private:
-  uint16_t offset_;
+  uint16_t offset_ = 0;
 };
 
 class PciReg16 {
  public:
+  constexpr PciReg16() = default;
   constexpr explicit PciReg16(uint16_t offset) : offset_(offset) {}
-  constexpr PciReg16() : offset_(0u) {}
   constexpr uint16_t offset() const { return offset_; }
-  inline bool operator==(const PciReg8& other) { return (offset() == other.offset()); }
+  inline bool operator==(const PciReg8& other) const { return (offset() == other.offset()); }
 
  private:
-  uint16_t offset_;
+  uint16_t offset_ = 0;
 };
 
 class PciReg32 {
  public:
+  constexpr PciReg32() = default;
   constexpr explicit PciReg32(uint16_t offset) : offset_(offset) {}
-  constexpr PciReg32() : offset_(0u) {}
   constexpr uint16_t offset() const { return offset_; }
-  inline bool operator==(const PciReg8& other) { return (offset() == other.offset()); }
+  inline bool operator==(const PciReg8& other) const { return (offset() == other.offset()); }
 
  private:
-  uint16_t offset_;
+  uint16_t offset_ = 0;
 };
 
 // Config supplies the factory for creating the appropriate pci config
@@ -185,25 +185,27 @@ class Config {
   static constexpr PciReg16 kBridgeControl = PciReg16(0x3E);
 
   inline const pci_bdf_t& bdf() const { return bdf_; }
-  inline const char* addr(void) const { return addr_; }
-  virtual const char* type(void) const = 0;
+  inline const char* addr() const { return addr_; }
+  virtual const char* type() const = 0;
   // Return a copy of the MmioView backing the Config's MMIO space, if supported.
   virtual zx::status<ddk::MmioView> get_view() const { return zx::error(ZX_ERR_NOT_SUPPORTED); }
 
   // Virtuals
   void DumpConfig(uint16_t len) const;
-  virtual uint8_t Read(const PciReg8 addr) const = 0;
-  virtual uint16_t Read(const PciReg16 addr) const = 0;
-  virtual uint32_t Read(const PciReg32 addr) const = 0;
-  virtual void Write(const PciReg8 addr, uint8_t val) const = 0;
-  virtual void Write(const PciReg16 addr, uint16_t val) const = 0;
-  virtual void Write(const PciReg32 addr, uint32_t val) const = 0;
-  virtual ~Config() {}
+  virtual uint8_t Read(PciReg8 addr) const = 0;
+  virtual uint16_t Read(PciReg16 addr) const = 0;
+  virtual uint32_t Read(PciReg32 addr) const = 0;
+  virtual void Write(PciReg8 addr, uint8_t val) const = 0;
+  virtual void Write(PciReg16 addr, uint16_t val) const = 0;
+  virtual void Write(PciReg32 addr, uint32_t val) const = 0;
+  virtual ~Config() = default;
 
  protected:
-  Config(pci_bdf_t bdf) : bdf_(bdf) {
+  explicit Config(pci_bdf_t bdf) : bdf_(bdf) {
     snprintf(addr_, sizeof(addr_), "%02x:%02x.%01x", bdf_.bus_id, bdf_.device_id, bdf_.function_id);
   }
+
+ private:
   const pci_bdf_t bdf_;
   char addr_[8];
 };
@@ -215,18 +217,18 @@ class MmioConfig : public Config {
  public:
   static zx_status_t Create(pci_bdf_t bdf, ddk::MmioBuffer* ecam_, uint8_t start_bus,
                             uint8_t end_bus, std::unique_ptr<Config>* config);
-  uint8_t Read(const PciReg8 addr) const final;
-  uint16_t Read(const PciReg16 addr) const final;
-  uint32_t Read(const PciReg32 addr) const final;
-  void Write(const PciReg8 addr, uint8_t val) const final;
-  void Write(const PciReg16 addr, uint16_t val) const final;
-  void Write(const PciReg32 addr, uint32_t val) const override;
-  const char* type(void) const override;
-  virtual zx::status<ddk::MmioView> get_view() const final { return zx::ok(ddk::MmioView(view_)); }
+  uint8_t Read(PciReg8 addr) const final;
+  uint16_t Read(PciReg16 addr) const final;
+  uint32_t Read(PciReg32 addr) const final;
+  void Write(PciReg8 addr, uint8_t val) const final;
+  void Write(PciReg16 addr, uint16_t val) const final;
+  void Write(PciReg32 addr, uint32_t val) const override;
+  const char* type() const override;
+  zx::status<ddk::MmioView> get_view() const final { return zx::ok(ddk::MmioView(view_)); }
 
  private:
   friend class FakeMmioConfig;
-  MmioConfig(pci_bdf_t bdf, ddk::MmioView&& view) : Config(bdf), view_(std::move(view)) {}
+  MmioConfig(pci_bdf_t bdf, ddk::MmioView&& view) : Config(bdf), view_(view) {}
   const ddk::MmioView view_;
 };
 
@@ -242,13 +244,13 @@ class ProxyConfig final : public Config {
  public:
   static zx_status_t Create(pci_bdf_t bdf, ddk::PcirootProtocolClient* proto,
                             std::unique_ptr<Config>* config);
-  uint8_t Read(const PciReg8 addr) const final;
-  uint16_t Read(const PciReg16 addr) const final;
-  uint32_t Read(const PciReg32 addr) const final;
-  void Write(const PciReg8 addr, uint8_t val) const final;
-  void Write(const PciReg16 addr, uint16_t val) const final;
-  void Write(const PciReg32 addr, uint32_t val) const final;
-  const char* type(void) const final;
+  uint8_t Read(PciReg8 addr) const final;
+  uint16_t Read(PciReg16 addr) const final;
+  uint32_t Read(PciReg32 addr) const final;
+  void Write(PciReg8 addr, uint8_t val) const final;
+  void Write(PciReg16 addr, uint16_t val) const final;
+  void Write(PciReg32 addr, uint32_t val) const final;
+  const char* type() const final;
 
  private:
   ProxyConfig(pci_bdf_t bdf, ddk::PcirootProtocolClient* proto) : Config(bdf), pciroot_(proto) {}
