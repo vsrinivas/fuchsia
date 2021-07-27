@@ -85,24 +85,25 @@ components. For a detailed walkthrough about what happens during capability
 routing, see the [Capabilities overview][doc-capabilities]
 and [Life of a protocol open][doc-protocol-open].
 
+#### Capability names {#capability-names}
+
+Every capability in a `.cml` has a name so that it can be referred to in
+routing declarations. A capability name consists of a string containing the
+characters `a` to `z`, `A` to `Z`, `0` to `9`, underscore (`_`), hyphen (`-`),
+or the full stop character (`.`).
+
 #### Capability types {#capability-types}
 
 The following capabilities can be routed:
 
--   `protocol`: A filesystem node that can be used to open a channel to
-    a FIDL protocol.
--   `directory`: A filesystem directory.
--   `storage`: A writable filesystem directory that is isolated to the
-    component using it.
--   `runner`: A capability that allows a component to use a particular
-    [runner][doc-runners].
--   `resolver`: A capability that, when registered in an
-    [environment](#environments), causes a component with a particular URL
-    scheme to be resolved with that [resolver][doc-resolvers].
-
-`protocol`, `directory` and `storage` capabilities are routed to components
-that `use` them. `resolver` and `runner` capabilities are routed to
-[environments](#environments) that include them.
+| type | description | routed to |
+|------|-------------|-----------|
+| `protocol` | A filesystem node that is used to open a channel backed by a FIDL protocol. | components |
+| `service` | A filesystem directory that is used to open a channel to one of several [service][doc-service] instances. | components |
+| `directory` | A filesystem directory. | components |
+| `storage` | A writable filesystem directory that is isolated to the component using it. | components |
+| `resolver` | A capability that, when registered in an [environment](#environments), causes a component with a particular URL scheme to be resolved with that [resolver][doc-resolvers]. | [environments](#environments) |
+| `runner` | A capability that, when registered in an [environment](#environments), allows the framework to use that [runner][doc-runners] when starting components. | [environments](#environments) |
 
 #### Routing terminology {#routing-terminology}
 
@@ -138,6 +139,7 @@ following framework protocols:
     its children. Scoped to the component's realm.
 -   [`fuchsia.component.Binder`][fidl-binder]: Allows a component to start
     another component.
+
 #### Framework directories {#framework-directories}
 
 A *framework directory* is a directory provided by the component framework.
@@ -147,12 +149,6 @@ following framework directories:
 
 -   [hub][glossary.hub]: Allows a component to perform runtime introspection of
     itself and its children.
-
-#### Capability names {#capability-names}
-
-Capabilities are identified by a capability name. A capability name consists of
-a string containing the characters `a` to `z`, `A` to `Z`, `0` to `9`,
-underscore (`_`), hyphen (`-`), or the full stop character (`.`).
 
 #### Directory rights {#directory-rights}
 
@@ -745,6 +741,7 @@ This section may be omitted.
 [doc-resolvers]: /docs/concepts/components/v2/capabilities/resolvers.md
 [doc-runners]: /docs/concepts/components/v2/capabilities/runners.md
 [doc-static-children]: realms.md#static-children
+[doc-service]: /docs/concepts/components/v2/capabilities/service.md
 [doc-storage]: /docs/concepts/components/v2/capabilities/storage.md
 [examples-routing]: /examples/components/routing
 [fidl-component-decl]: /sdk/fidl/fuchsia.sys2/decls/component_decl.fidl
