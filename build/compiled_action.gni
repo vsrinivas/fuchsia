@@ -84,6 +84,7 @@ template("_compiled_action_target") {
     forward_variables_from(invoker,
                            [
                              "all_outputs_fresh",
+                             "assert_no_deps",
                              "data_deps",
                              "depfile",
                              "deps",

@@ -70,6 +70,7 @@ template("ffx_action") {
   compiled_action(target_name) {
     forward_variables_from(invoker,
                            [
+                             "assert_no_deps",
                              "hermetic_deps",
                              "data_deps",
                              "depfile",
