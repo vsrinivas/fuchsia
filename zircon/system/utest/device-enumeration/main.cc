@@ -619,8 +619,6 @@ TEST_F(DeviceEnumerationTest, QemuX64Q35Test) {
       // Verify goldfish pipe child devices created.
       "sys/platform/acpi/acpi-_SB_/acpi-GFPP/goldfish-pipe/goldfish-pipe-control",
       "sys/platform/acpi/acpi-_SB_/acpi-GFPP/goldfish-pipe/goldfish-pipe-sensor",
-      // Verify goldfish-sensor root device is created.
-      "sys/platform/acpi/acpi-_SB_/acpi-GFPP/goldfish-pipe/goldfish-pipe-sensor/goldfish-sensor",
       "sys/platform/acpi/acpi-_SB_/acpi-GFSK",
       "sys/platform/acpi/acpi-_SB_/acpi-GFSK/goldfish-sync",
 
