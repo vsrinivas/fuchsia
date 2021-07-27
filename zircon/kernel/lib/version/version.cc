@@ -13,6 +13,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <ktl/byte.h>
+#include <ktl/span.h>
 #include <lk/init.h>
 #include <vm/vm.h>
 
@@ -39,11 +41,11 @@ struct build_id_note {
 #define NT_GNU_BUILD_ID 3
 #define NOTE_NAME "GNU"
   char name[(sizeof(NOTE_NAME) + 3) & -4];
-  uint8_t id[];
+  ktl::byte id[];
 };
 
 extern "C" const struct build_id_note __build_id_note_start;
-extern "C" const uint8_t __build_id_note_end[];
+extern "C" const ktl::byte __build_id_note_end[];
 
 void init_build_id(uint level) {
   const build_id_note* const note = &__build_id_note_start;
@@ -52,12 +54,13 @@ void init_build_id(uint level) {
       &note->id[note->descsz] != __build_id_note_end) {
     panic("ELF build ID note has bad format!\n");
   }
-  if (note->descsz * 2 >= sizeof(gElfBuildIdString)) {
-    panic("ELF build ID is %u bytes, expected %u or fewer\n", note->descsz,
-          (uint32_t)(sizeof(gElfBuildIdString) / 2));
+  ktl::span<const ktl::byte> id = ElfBuildId();
+  if (id.size() * 2 >= sizeof(gElfBuildIdString)) {
+    panic("ELF build ID is %zu bytes, expected %zu or fewer\n", id.size(),
+          sizeof(gElfBuildIdString) / 2);
   }
-  for (uint32_t i = 0; i < note->descsz; ++i) {
-    snprintf(&gElfBuildIdString[i * 2], 3, "%02x", note->id[i]);
+  for (size_t i = 0; i < id.size(); ++i) {
+    snprintf(&gElfBuildIdString[i * 2], 3, "%02x", static_cast<unsigned int>(id[i]));
   }
 }
 
@@ -82,6 +85,11 @@ void print_mmap(FILE* f, uintptr_t bias, const void* begin, const void* end, con
 const char* version_string() { return kVersionString; }
 
 const char* elf_build_id_string() { return gElfBuildIdString; }
+
+ktl::span<const ktl::byte> ElfBuildId() {
+  const build_id_note* const note = &__build_id_note_start;
+  return {note->id, note->descsz};
+}
 
 void print_version() {
   dprintf(ALWAYS, "version:\n");

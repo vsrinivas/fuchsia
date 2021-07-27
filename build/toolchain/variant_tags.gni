@@ -59,6 +59,10 @@ all_variant_tags = [
   # The `coverage` tag is used for coverage instrumentation.
   "coverage",
 
+  # The `llvm-profdata` tag is used for all instrumentation that emits the
+  # `llvm-profdata` format.
+  "llvm-profdata",
+
   # The `lto` tag is used for LTO and ThinLTO.
   "lto",
 

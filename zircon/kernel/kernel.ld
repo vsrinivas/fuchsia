@@ -108,6 +108,11 @@ SECTIONS
         PROVIDE_HIDDEN(__build_id_note_start = .);
         *(.note.gnu.build-id)
         PROVIDE_HIDDEN(__build_id_note_end = .);
+        /*
+         * Record the build ID size, without the note header (including name)
+         * of 16 bytes.  This is used below.
+         */
+        HIDDEN(__build_id_size = ABSOLUTE(__build_id_note_end - __build_id_note_start) - 16);
     } :rodata :note
 
     .rodata : {
@@ -239,6 +244,21 @@ SECTIONS
          */
         PROVIDE_HIDDEN(__llvm_profile_start = .);
         KEEP(*(__llvm_profile_header))
+
+        /*
+         * Immediately after the header comes the build ID block.  This
+         * consists of a byte count (uint64_t) followed by build ID bytes.
+         * We emit the byte count directly here and leave space for the
+         * build ID bytes.  The runtime code will fill in the contents at
+         * __llvm_profile_build_id_bytes[] by copying bytes from the note
+         * payload the linker filled in at link time.
+         */
+        PROVIDE_HIDDEN(__llvm_profile_build_id_size = .);
+        QUAD(__build_id_size);
+        PROVIDE_HIDDEN(__llvm_profile_build_id_bytes = .);
+        . += __build_id_size;
+
+        . = ALIGN(8);
         PROVIDE_HIDDEN(__start___llvm_prf_data = .);
     } :data
     __llvm_prf_data : {

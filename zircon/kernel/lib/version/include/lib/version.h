@@ -8,6 +8,8 @@
 #ifndef ZIRCON_KERNEL_LIB_VERSION_INCLUDE_LIB_VERSION_H_
 #define ZIRCON_KERNEL_LIB_VERSION_INCLUDE_LIB_VERSION_H_
 
+#include <ktl/span.h>
+#include <ktl/byte.h>
 #include <stdio.h>
 
 // This is the string returned by zx_system_get_version_string.
@@ -15,6 +17,9 @@ const char* version_string();
 
 // This is a string of lowercase hexadecimal digits.
 const char* elf_build_id_string();
+
+// This is the raw build ID bytes.
+ktl::span<const ktl::byte> ElfBuildId();
 
 void print_version(void);
 

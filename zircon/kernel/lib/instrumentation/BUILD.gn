@@ -45,12 +45,15 @@ zx_library("instrumentation") {
 # so a symbol by that name must be defined at link time regardless; this file
 # also defines it.
 source_set("profile") {
-  _profile_config = [ "//build/config/profile" ]
-  _has_profile = toolchain_variant.configs + _profile_config -
-                 _profile_config != toolchain_variant.configs
+  _has_profile = toolchain_variant.tags + [ "llvm-profdata" ] -
+                 [ "llvm-profdata" ] != toolchain_variant.tags
 
   if (_has_profile) {
     sources = [ "profile.cc" ]
+    deps = [
+      "//zircon/kernel/lib/init",
+      "//zircon/kernel/lib/version",
+    ]
 
     if (current_os == "win") {
       # The LLVM header file describing the instrumentation data tests this.

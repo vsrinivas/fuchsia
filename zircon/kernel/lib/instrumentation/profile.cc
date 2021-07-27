@@ -4,7 +4,15 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <lib/version.h>
+#include <string.h>
+#include <zircon/assert.h>
+
 #include <cstdint>
+
+#include <ktl/byte.h>
+#include <ktl/span.h>
+#include <lk/init.h>
 
 #include <profile/InstrProfData.inc>
 
@@ -27,8 +35,7 @@ extern "C" {
 // This is sometimes emitted by the compiler with a different value.
 // The header is expected to use whichever value this had at link time.
 // This supplies the default value when the compiler doesn't supply it.
-[[gnu::weak]] extern const uint64_t INSTR_PROF_RAW_VERSION_VAR =
-    INSTR_PROF_RAW_VERSION;
+[[gnu::weak]] extern const uint64_t INSTR_PROF_RAW_VERSION_VAR = INSTR_PROF_RAW_VERSION;
 
 // The compiler emits phantom references to this as a way to ensure
 // that the runtime is linked in.
@@ -88,13 +95,11 @@ extern const __llvm_profile_data DataEnd __asm__(
 
 extern const char NamesStart __asm__(
     INSTR_PROF_QUOTE(INSTR_PROF_SECT_START(INSTR_PROF_NAME_COMMON)));
-extern const char NamesEnd __asm__(
-    INSTR_PROF_QUOTE(INSTR_PROF_SECT_STOP(INSTR_PROF_NAME_COMMON)));
+extern const char NamesEnd __asm__(INSTR_PROF_QUOTE(INSTR_PROF_SECT_STOP(INSTR_PROF_NAME_COMMON)));
 
 extern uint64_t CountersStart __asm__(
     INSTR_PROF_QUOTE(INSTR_PROF_SECT_START(INSTR_PROF_CNTS_COMMON)));
-extern uint64_t CountersEnd __asm__(
-    INSTR_PROF_QUOTE(INSTR_PROF_SECT_STOP(INSTR_PROF_CNTS_COMMON)));
+extern uint64_t CountersEnd __asm__(INSTR_PROF_QUOTE(INSTR_PROF_SECT_STOP(INSTR_PROF_CNTS_COMMON)));
 
 }  // extern "C"
 
@@ -102,11 +107,15 @@ extern uint64_t CountersEnd __asm__(
 
 // These are used by the INSTR_PROF_RAW_HEADER initializers.
 
-constexpr uint64_t __llvm_profile_get_magic() {
-  return INSTR_PROF_RAW_MAGIC_64;
-}
+constexpr uint64_t __llvm_profile_get_magic() { return INSTR_PROF_RAW_MAGIC_64; }
 
 uint64_t __llvm_profile_get_version() { return INSTR_PROF_RAW_VERSION_VAR; }
+
+// TODO(fxbug.dev/81362): this is used by the InstrProfData.inc code in the new
+// version but not the old.  Remove this attribute after the new toolchain has
+// landed.
+[[gnu::unused]]
+uint64_t __llvm_write_binary_ids(void* ignored) { return sizeof(uint64_t) + ElfBuildId().size(); }
 
 #define DataSize (&DataEnd - &DataStart)
 #define PaddingBytesBeforeCounters 0
@@ -119,9 +128,30 @@ uint64_t __llvm_profile_get_version() { return INSTR_PROF_RAW_VERSION_VAR; }
 // The linker script places this at the start of a page-aligned region
 // where it's followed by the compiler-generated sections.
 [[gnu::section("__llvm_profile_header"), gnu::used]] struct {
-#define INSTR_PROF_RAW_HEADER(Type, Name, Initializer) \
-  Type Name##_ = Initializer;
+#define INSTR_PROF_RAW_HEADER(Type, Name, Initializer) Type Name##_ = Initializer;
 #include <profile/InstrProfData.inc>
 } __llvm_profile_header;
 
+// Defined by the kernel.ld linker script (which see).
+extern "C" const uint64_t __llvm_profile_build_id_size;
+extern "C" ktl::byte __llvm_profile_build_id_bytes[];
+
+// The build ID is embedded by the linker in one place, but we need it also
+// embedded in a second place to form part of the profdata format.  Even though
+// our profdata format layout is done at link time via the linker script, the
+// linker won't fill in the build ID contents in two places, only in the ELF
+// note.  So we have to update the profdata image in place.  The kernel.ld bits
+// that place the header already filled in the size of the build ID at link
+// time, right after the header, and then left a gap of that many bytes for the
+// build ID to be filled in.
+void InitLlvmProfileBuildId(unsigned int level) {
+  ktl::span<const ktl::byte> link_build_id = ElfBuildId();
+  ktl::span<ktl::byte> profdata_build_id{__llvm_profile_build_id_bytes,
+                                         __llvm_profile_build_id_size};
+  ZX_ASSERT(profdata_build_id.size_bytes() == link_build_id.size_bytes());
+  memcpy(profdata_build_id.data(), link_build_id.data(), link_build_id.size_bytes());
+}
+
 }  // namespace
+
+LK_INIT_HOOK(InitLlvmProfileBuildId, InitLlvmProfileBuildId, LK_INIT_LEVEL_ARCH_LATE + 1)
