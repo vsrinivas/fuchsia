@@ -224,12 +224,14 @@ VK_TEST_F(FramebufferAllocatorTest, CacheReclamation) {
   // Make a single set of textures (depth and 2 color attachments) that will be
   // used to make a framebuffer.
   auto depth_format_result = escher->device()->caps().GetMatchingDepthFormat();
+  vk::Format depth_format = depth_format_result.value;
   if (depth_format_result.result != vk::Result::eSuccess) {
     FX_LOGS(ERROR) << "No depth stencil format is supported on this device.";
+    depth_format = vk::Format::eUndefined;
   }
 
   auto textures = MakeFramebufferTextures(escher, 1, kWidth, kHeight, 1, vk::Format::eB8G8R8A8Unorm,
-                                          vk::Format::eB8G8R8A8Unorm, vk::Format::eUndefined);
+                                          vk::Format::eB8G8R8A8Unorm, depth_format);
   auto framebuffer = ObtainFramebuffers(&allocator, textures);
 
   // Obtaining a Framebuffer using the same textures should result in the same
@@ -280,11 +282,11 @@ VK_TEST_F(FramebufferAllocatorTest, LazyRenderPassCreation) {
 
   auto textures_bgra =
       MakeFramebufferTextures(escher, 2, kWidth, kHeight, 1, vk::Format::eB8G8R8A8Unorm,
-                              vk::Format::eB8G8R8A8Unorm, vk::Format::eUndefined);
+                              vk::Format::eB8G8R8A8Unorm, depth_format);
 
   auto textures_rgba =
       MakeFramebufferTextures(escher, 1, kWidth, kHeight, 1, vk::Format::eR8G8B8A8Unorm,
-                              vk::Format::eR8G8B8A8Unorm, vk::Format::eUndefined);
+                              vk::Format::eR8G8B8A8Unorm, depth_format);
 
   RenderPassInfo rpi_bgra0 = MakeRenderPassInfo(textures_bgra[0]);
   RenderPassInfo rpi_bgra1 = MakeRenderPassInfo(textures_bgra[1]);
