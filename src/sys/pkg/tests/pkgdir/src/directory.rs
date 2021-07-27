@@ -552,6 +552,7 @@ async fn verify_open_failed(node: NodeProxy) -> Result<(), Error> {
     }
 }
 
+// TODO(fxbug.dev/81447) enhance Clone tests.
 #[fuchsia::test]
 async fn clone() {
     for dir in dirs_to_test().await {

@@ -29,45 +29,35 @@ async fn read() {
 }
 
 async fn read_per_package_source(root_dir: DirectoryProxy) {
-    for path in ["file", "meta/file"] {
-        assert_read_max_buffer_success(&root_dir, path).await;
-        assert_read_buffer_success(&root_dir, path).await;
-        assert_read_past_end(&root_dir, path).await;
-
-        assert_read_at_max_buffer_success(&root_dir, path).await;
-        assert_read_at_success(&root_dir, path).await;
-
-        assert_seek_success(&root_dir, path, SeekOrigin::Start).await;
-        assert_seek_success(&root_dir, path, SeekOrigin::Current).await;
-
-        assert_seek_affects_read(&root_dir, path).await;
-
-        assert_read_at_does_not_affect_seek(&root_dir, path, SeekOrigin::Start).await;
-        assert_read_at_does_not_affect_seek(&root_dir, path, SeekOrigin::Current).await;
-        assert_read_at_does_not_affect_seek_end_origin(&root_dir, path).await;
-
-        assert_seek_past_end(&root_dir, path, SeekOrigin::Start).await;
-        assert_seek_past_end(&root_dir, path, SeekOrigin::Current).await;
-        assert_seek_past_end_end_origin(&root_dir, path).await;
-
-        assert_clone_success(&root_dir, path).await;
+    for (path, expected_contents) in [("file", "file"), ("meta/file", "meta/file")] {
+        assert_read_max_buffer_success(&root_dir, path, expected_contents).await;
+        assert_read_buffer_success(&root_dir, path, expected_contents).await;
+        assert_read_past_end(&root_dir, path, expected_contents).await;
     }
 
     assert_read_exceeds_buffer_success(&root_dir, "exceeds_max_buf").await;
     assert_read_exceeds_buffer_success(&root_dir, "meta/exceeds_max_buf").await;
 }
 
-async fn assert_read_max_buffer_success(root_dir: &DirectoryProxy, path: &str) {
+async fn assert_read_max_buffer_success(
+    root_dir: &DirectoryProxy,
+    path: &str,
+    expected_contents: &str,
+) {
     let file = open_file(&root_dir, path, OPEN_RIGHT_READABLE).await.unwrap();
     let (status, bytes) = file.read(MAX_BUF).await.unwrap();
     let () = zx::Status::ok(status).unwrap();
-    assert_eq!(std::str::from_utf8(&bytes).unwrap(), path);
+    assert_eq!(std::str::from_utf8(&bytes).unwrap(), expected_contents);
 }
 
-async fn assert_read_buffer_success(root_dir: &DirectoryProxy, path: &str) {
+async fn assert_read_buffer_success(
+    root_dir: &DirectoryProxy,
+    path: &str,
+    expected_contents: &str,
+) {
     let mut rng = rand::thread_rng();
-    let buffer_size = rng.gen_range(0, path.len());
-    let expected_contents = &path[0..buffer_size];
+    let buffer_size = rng.gen_range(0, expected_contents.len());
+    let expected_contents = &expected_contents[0..buffer_size];
 
     let file = open_file(&root_dir, path, OPEN_RIGHT_READABLE).await.unwrap();
     let (status, bytes) = file.read(buffer_size.try_into().unwrap()).await.unwrap();
@@ -75,15 +65,55 @@ async fn assert_read_buffer_success(root_dir: &DirectoryProxy, path: &str) {
     assert_eq!(std::str::from_utf8(&bytes).unwrap(), expected_contents);
 }
 
-async fn assert_read_past_end(root_dir: &DirectoryProxy, path: &str) {
+async fn assert_read_past_end(root_dir: &DirectoryProxy, path: &str, expected_contents: &str) {
     let file = open_file(&root_dir, path, OPEN_RIGHT_READABLE).await.unwrap();
     let (status, bytes) = file.read(MAX_BUF).await.unwrap();
     let () = zx::Status::ok(status).unwrap();
-    assert_eq!(std::str::from_utf8(&bytes).unwrap(), path);
+    assert_eq!(std::str::from_utf8(&bytes).unwrap(), expected_contents);
 
     let (status, bytes) = file.read(MAX_BUF).await.unwrap();
     let () = zx::Status::ok(status).unwrap();
     assert_eq!(bytes, &[]);
+}
+
+async fn assert_read_exceeds_buffer_success(root_dir: &DirectoryProxy, path: &str) {
+    let file = open_file(&root_dir, path, OPEN_RIGHT_READABLE).await.unwrap();
+
+    // Read the first MAX_BUF contents.
+    let (status, bytes) = file.read(MAX_BUF).await.unwrap();
+    let () = zx::Status::ok(status).unwrap();
+    assert_eq!(
+        std::str::from_utf8(&bytes).unwrap(),
+        &repeat_by_n('a', fidl_fuchsia_io::MAX_BUF.try_into().unwrap())
+    );
+
+    // There should be one remaining "a".
+    let (status, bytes) = file.read(MAX_BUF).await.unwrap();
+    let () = zx::Status::ok(status).unwrap();
+    assert_eq!(std::str::from_utf8(&bytes).unwrap(), "a");
+
+    // Since we are now at the end of the file, bytes should be empty.
+    let (status, bytes) = file.read(MAX_BUF).await.unwrap();
+    let () = zx::Status::ok(status).unwrap();
+    assert_eq!(bytes, &[]);
+}
+
+#[fuchsia::test]
+async fn read_at() {
+    for dir in dirs_to_test().await {
+        read_at_per_package_source(dir).await
+    }
+}
+
+async fn read_at_per_package_source(root_dir: DirectoryProxy) {
+    for path in ["file", "meta/file"] {
+        assert_read_at_max_buffer_success(&root_dir, path).await;
+        assert_read_at_success(&root_dir, path).await;
+
+        assert_read_at_does_not_affect_seek(&root_dir, path, SeekOrigin::Start).await;
+        assert_read_at_does_not_affect_seek(&root_dir, path, SeekOrigin::Current).await;
+        assert_read_at_does_not_affect_seek_end_origin(&root_dir, path).await;
+    }
 }
 
 async fn assert_read_at_max_buffer_success(root_dir: &DirectoryProxy, path: &str) {
@@ -103,38 +133,6 @@ async fn assert_read_at_success(root_dir: &DirectoryProxy, path: &str) {
     let file = open_file(&root_dir, path, OPEN_RIGHT_READABLE).await.unwrap();
     let (status, bytes) =
         file.read_at(count.try_into().unwrap(), offset.try_into().unwrap()).await.unwrap();
-    let () = zx::Status::ok(status).unwrap();
-    assert_eq!(std::str::from_utf8(&bytes).unwrap(), expected_contents);
-}
-
-async fn assert_seek_success(root_dir: &DirectoryProxy, path: &str, seek_origin: SeekOrigin) {
-    let mut rng = rand::thread_rng();
-    let expected_position = rng.gen_range(0, path.len());
-
-    let file = open_file(&root_dir, path, OPEN_RIGHT_READABLE).await.unwrap();
-    let (status, position) =
-        file.seek(expected_position.try_into().unwrap(), seek_origin).await.unwrap();
-    let () = zx::Status::ok(status).unwrap();
-    assert_eq!(position, expected_position as u64);
-}
-
-async fn assert_seek_affects_read(root_dir: &DirectoryProxy, path: &str) {
-    let file = open_file(&root_dir, path, OPEN_RIGHT_READABLE).await.unwrap();
-    let (_, bytes) = file.read(MAX_BUF).await.unwrap();
-    assert_eq!(std::str::from_utf8(&bytes).unwrap(), path);
-
-    let (_, bytes) = file.read(MAX_BUF).await.unwrap();
-    assert_eq!(bytes, &[]);
-
-    let mut rng = rand::thread_rng();
-    let seek_offset = rng.gen_range(0, path.len());
-    let expected_contents = &path[path.len() - seek_offset..];
-    let (status, position) = file.seek((seek_offset as i64) * -1, SeekOrigin::End).await.unwrap();
-    let () = zx::Status::ok(status).unwrap();
-
-    assert_eq!(position, (path.len() - seek_offset) as u64);
-
-    let (status, bytes) = file.read(MAX_BUF).await.unwrap();
     let () = zx::Status::ok(status).unwrap();
     assert_eq!(std::str::from_utf8(&bytes).unwrap(), expected_contents);
 }
@@ -182,26 +180,56 @@ async fn assert_read_at_does_not_affect_seek_end_origin(root_dir: &DirectoryProx
     assert_eq!(std::str::from_utf8(&bytes).unwrap(), path);
 }
 
-async fn assert_read_exceeds_buffer_success(root_dir: &DirectoryProxy, path: &str) {
+#[fuchsia::test]
+async fn seek() {
+    for dir in dirs_to_test().await {
+        seek_per_package_source(dir).await
+    }
+}
+
+async fn seek_per_package_source(root_dir: DirectoryProxy) {
+    for path in ["file", "meta/file"] {
+        assert_seek_success(&root_dir, path, SeekOrigin::Start).await;
+        assert_seek_success(&root_dir, path, SeekOrigin::Current).await;
+
+        assert_seek_affects_read(&root_dir, path).await;
+
+        assert_seek_past_end(&root_dir, path, SeekOrigin::Start).await;
+        assert_seek_past_end(&root_dir, path, SeekOrigin::Current).await;
+        assert_seek_past_end_end_origin(&root_dir, path).await;
+    }
+}
+
+async fn assert_seek_success(root_dir: &DirectoryProxy, path: &str, seek_origin: SeekOrigin) {
+    let mut rng = rand::thread_rng();
+    let expected_position = rng.gen_range(0, path.len());
+
     let file = open_file(&root_dir, path, OPEN_RIGHT_READABLE).await.unwrap();
-
-    // Read the first MAX_BUF contents.
-    let (status, bytes) = file.read(MAX_BUF).await.unwrap();
+    let (status, position) =
+        file.seek(expected_position.try_into().unwrap(), seek_origin).await.unwrap();
     let () = zx::Status::ok(status).unwrap();
-    assert_eq!(
-        std::str::from_utf8(&bytes).unwrap(),
-        &repeat_by_n('a', fidl_fuchsia_io::MAX_BUF.try_into().unwrap())
-    );
+    assert_eq!(position, expected_position as u64);
+}
 
-    // There should be one remaining "a".
-    let (status, bytes) = file.read(MAX_BUF).await.unwrap();
-    let () = zx::Status::ok(status).unwrap();
-    assert_eq!(std::str::from_utf8(&bytes).unwrap(), "a");
+async fn assert_seek_affects_read(root_dir: &DirectoryProxy, path: &str) {
+    let file = open_file(&root_dir, path, OPEN_RIGHT_READABLE).await.unwrap();
+    let (_, bytes) = file.read(MAX_BUF).await.unwrap();
+    assert_eq!(std::str::from_utf8(&bytes).unwrap(), path);
 
-    // Since we are now at the end of the file, bytes should be empty.
-    let (status, bytes) = file.read(MAX_BUF).await.unwrap();
-    let () = zx::Status::ok(status).unwrap();
+    let (_, bytes) = file.read(MAX_BUF).await.unwrap();
     assert_eq!(bytes, &[]);
+
+    let mut rng = rand::thread_rng();
+    let seek_offset = rng.gen_range(0, path.len());
+    let expected_contents = &path[path.len() - seek_offset..];
+    let (status, position) = file.seek((seek_offset as i64) * -1, SeekOrigin::End).await.unwrap();
+    let () = zx::Status::ok(status).unwrap();
+
+    assert_eq!(position, (path.len() - seek_offset) as u64);
+
+    let (status, bytes) = file.read(MAX_BUF).await.unwrap();
+    let () = zx::Status::ok(status).unwrap();
+    assert_eq!(std::str::from_utf8(&bytes).unwrap(), expected_contents);
 }
 
 async fn assert_seek_past_end(root_dir: &DirectoryProxy, path: &str, seek_origin: SeekOrigin) {
@@ -305,6 +333,20 @@ async fn test_get_buffer_success(
     );
 
     buffer
+}
+
+#[fuchsia::test]
+async fn clone() {
+    for dir in dirs_to_test().await {
+        clone_per_package_source(dir).await
+    }
+}
+
+// TODO(fxbug.dev/81447) test Clones for meta as file. Currently, if we try and test Cloning
+// meta as file, it will hang.
+async fn clone_per_package_source(root_dir: DirectoryProxy) {
+    assert_clone_success(&root_dir, "file").await;
+    assert_clone_success(&root_dir, "meta/file").await;
 }
 
 async fn assert_clone_success(package_root: &DirectoryProxy, path: &str) {
