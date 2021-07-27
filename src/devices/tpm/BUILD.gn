@@ -4,10 +4,16 @@
 
 group("drivers") {
   testonly = true
-  deps = [ "drivers/cr50-spi" ]
+  deps = [
+    "drivers/cr50-spi",
+    "drivers/tpm",
+  ]
 }
 
 group("tests") {
   testonly = true
-  deps = [ "drivers/cr50-spi:tests" ]
+  deps = [
+    "drivers/cr50-spi:tests",
+    "drivers/tpm:tests",
+  ]
 }

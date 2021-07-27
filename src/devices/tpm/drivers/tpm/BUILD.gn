@@ -1,0 +1,66 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/bind/bind.gni")
+import("//build/components.gni")
+import("//build/config/fuchsia/rules.gni")
+import("//build/test.gni")
+
+driver_bind_rules("tpm_bind") {
+  rules = "tpm.bind"
+  header_output = "tpm_bind.h"
+  tests = "bind_tests.json"
+  deps = [ "//src/devices/bind/fuchsia.tpm" ]
+}
+
+common_deps = [
+  ":tpm_bind",
+  "//sdk/banjo/fuchsia.hardware.tpmimpl:fuchsia.hardware.tpmimpl_banjo_cpp",
+  "//sdk/fidl/fuchsia.hardware.tpmimpl:fuchsia.hardware.tpmimpl_llcpp",
+  "//src/devices/lib/driver",
+  "//src/lib/ddktl",
+  "//zircon/system/ulib/async-loop:async-loop-cpp",
+  "//zircon/system/ulib/hwreg",
+  "//zircon/system/ulib/zx",
+]
+
+driver_module("tpm-driver") {
+  sources = [ "tpm.cc" ]
+  deps = common_deps
+}
+
+fuchsia_system_package("tpm-pkg") {
+  package_name = "tpm"
+  deps = [ ":tpm-driver" ]
+
+  allowed_in_extra_deps = true
+}
+
+test("tpm-driver-test-bin") {
+  output_name = "tpm-driver-test"
+  sources = [
+    "tpm-test.cc",
+    "tpm.cc",
+  ]
+  deps = common_deps + [
+           "//src/devices/testing/mock-ddk",
+           "//zircon/system/ulib/zxtest",
+         ]
+}
+
+fuchsia_unittest_package("tpm-driver-test") {
+  deps = [ ":tpm-driver-test-bin" ]
+}
+
+group("tpm") {
+  deps = [ ":tpm-pkg" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":tpm-driver-test",
+    ":tpm_bind_test",
+  ]
+}

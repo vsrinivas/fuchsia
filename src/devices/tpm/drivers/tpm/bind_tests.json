@@ -1,0 +1,16 @@
+[
+    {
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.spi.BIND_PROTOCOL.IMPL"
+        },
+        "expected": "abort",
+        "name": "Wrong protocol"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.tpm.BIND_PROTOCOL.IMPL"
+        },
+        "expected": "match",
+        "name": "Match"
+    }
+]
