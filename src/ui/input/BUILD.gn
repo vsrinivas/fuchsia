@@ -13,7 +13,6 @@ group("drivers") {
     "drivers/cypress",
     "drivers/focaltech",
     "drivers/ft8201:ft8201-module",
-    "drivers/goldfish_sensor:sensor_driver",
     "drivers/goodix",
     "drivers/hid",
     "drivers/hid-buttons",
