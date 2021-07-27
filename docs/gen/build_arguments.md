@@ -2089,6 +2089,12 @@ From //src/graphics/lib/magma/gnbuild/magma.gni:32
 
 From //src/graphics/lib/magma/gnbuild/magma.gni:20
 
+### blobfs_capacity
+Maximum allowable contents for the /blob in a release mode build for
+both slot A and B of the system.
+Zero means no limit.
+
+**Current value (from the default):** `"0"`
 ### max_blob_contents_size
 Maximum allowable contents for the /blob in a release mode build.
 Zero means no limit.

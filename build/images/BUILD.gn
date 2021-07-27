@@ -1241,6 +1241,8 @@ filesystem_sizes_args += [
   rebase_path(minfs_tool_path, root_build_dir),
   "--max-fvm-contents-size",
   "$fvm_max_disk_size_default_zero",
+  "--blobfs-capacity",
+  blobfs_capacity,
   "--max-blob-contents-size",
   max_blob_contents_size,
   "--max-blob-image-size",

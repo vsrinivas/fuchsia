@@ -9,6 +9,11 @@ declare_args() {
   # of how they are stored).
   max_blob_contents_size = "0"
 
+  # Maximum allowable contents for the /blob in a release mode build for
+  # both slot A and slot B of the system.
+  # Zero means no limit.
+  blobfs_capacity = "0"
+
   # Maximum allowable image_size for /blob in a release mode build.
   # Zero means no limit.
   # image_size refers to the total image size, including both contents and

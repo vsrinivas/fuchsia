@@ -11,6 +11,14 @@ import subprocess
 import sys
 
 
+class Capacity(object):
+
+    def __init__(self, name, capacity, debug=None):
+        self.name = name
+        self.size = capacity
+        self.limit = capacity
+        self.debug = debug
+
 class CmdSize(object):
 
     def __init__(self, name, cmd, limit, debug=None):
@@ -43,9 +51,13 @@ def main():
     parser.add_argument(
         '--max-fvm-contents-size', help='Total size limit for FVM')
     parser.add_argument(
+        '--blobfs-capacity',
+        default='0',
+        help='Maximum size for blobfs contents in both slot A and B')
+    parser.add_argument(
         '--max-blob-contents-size',
         default='0',
-        help='Maximum size for blob contents')
+        help='Maximum size for blobfs contents')
     parser.add_argument(
         '--max-blob-image-size',
         default='0',
@@ -79,6 +91,8 @@ def main():
         blob_tool_prefix = [args.blobfs_tool, args.blob_blk]
         data_points.extend(
             [
+                Capacity(
+                    'blob/capacity', args.blobfs_capacity),
                 CmdSize(
                     'blob/contents_size',
                     blob_tool_prefix + ['used-data-size'],
