@@ -74,6 +74,13 @@ fuchsia_component("vk_validation_component") {
   ]
 }
 
+# Produces a component requiring a file with spaces in its name.
+fuchsia_component("test_component_with_spaces") {
+  manifest = "meta/test_component.cmx"
+  manifest_output_name = "test_component_renamed"
+  data = [ "file with spaces.txt" ]
+}
+
 fuchsia_component("with_resources") {
   manifest = "meta/test_component.cmx"
   manifest_output_name = "resource-user"
@@ -111,6 +118,7 @@ fuchsia_package("package") {
   deps = [
     ":test_component_renamed_cm",
     ":test_component_renamed_cmx",
+    ":test_component_with_spaces",
     ":test_override_component",
   ]
 }

@@ -22,6 +22,7 @@ import imp
 import os
 import platform
 from subprocess import Popen, PIPE
+import re
 import sys
 import unittest
 
@@ -172,6 +173,7 @@ class GnTester(object):
 
         # Verify package dep file for built project
         expected = {
+            '../../tests/package/file with spaces.txt',
             'gen/tests/package/package/test_component_renamed.cm',
             'gen/tests/package/package/test_component_renamed.cmx',
             'gen/tests/package/package/original.cmx', 'lib/libfdio.so',
@@ -187,7 +189,8 @@ class GnTester(object):
             if len(parts) != 2:
                 raise AssertionError(
                     'Expected file: deps, but got %s' % dep_file_contents)
-            actual = {p.strip() for p in parts[1].split(' ') if p.strip()}
+            split_parts = (p.replace('\\ ', ' ') for p in re.split(r'(?<!\\) ', parts[1]))
+            actual = {p.strip() for p in split_parts if p.strip()}
             missing = expected - actual
             unexpected = actual - expected
 
@@ -211,7 +214,7 @@ class GnTester(object):
         if not (ninja_no_work_string in stdout or ninja_no_work_string in stderr):
             msg = 'Rebuild of test project did not result in noop.\n'
             msg += 'Expected std out to contain "%s" but got:\n\n' % ninja_no_work_string
-            msg += '"%s"' % stdout
+            msg += '"stdout:\n%s\nstderr:\n%s"' % (stdout, stderr)
             raise AssertionError(msg)
         print("Test project rebuilt successfully")
 
