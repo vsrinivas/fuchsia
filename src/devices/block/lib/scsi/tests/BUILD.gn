@@ -30,7 +30,7 @@ test("scsilib-disk-test-bin") {
     "//src/devices/block/lib/scsi",
     "//src/devices/lib/driver",
     "//src/devices/testing/fake-bti",
-    "//src/devices/testing/fake_ddk",
+    "//src/devices/testing/mock-ddk",
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",

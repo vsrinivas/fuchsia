@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <endian.h>
-#include <lib/fake_ddk/fake_ddk.h>
 #include <lib/fit/function.h>
 #include <lib/scsi/scsilib.h>
 #include <lib/scsi/scsilib_controller.h>
@@ -16,23 +15,9 @@
 #include <fbl/condition_variable.h>
 #include <zxtest/zxtest.h>
 
+#include "src/devices/testing/mock-ddk/mock-device.h"
+
 namespace {
-
-// Binder captures a scsi::Disk when device_add() is invoked inside the DDK.
-class Binder : public fake_ddk::Bind {
- public:
-  zx_status_t DeviceAdd(zx_driver_t* drv, zx_device_t* parent, device_add_args_t* args,
-                        zx_device_t** out) {
-    device_ = reinterpret_cast<scsi::Disk*>(args->ctx);
-    return Base::DeviceAdd(drv, parent, args, out);
-  }
-
-  scsi::Disk* device() const { return device_; }
-
- private:
-  using Base = fake_ddk::Bind;
-  scsi::Disk* device_;
-};
 
 // ScsiController for test; allows us to set expectations and fakes command responses.
 class ScsiControllerForTest : public scsi::Controller {
@@ -252,15 +237,12 @@ TEST_F(ScsilibDiskTest, TestCreateDestroy) {
       },
       /*times=*/2);
 
-  Binder bind;
-  EXPECT_EQ(scsi::Disk::Create(&controller_, fake_ddk::kFakeParent, kTarget, kLun, kTransferSize),
+  std::shared_ptr<MockDevice> fake_parent = MockDevice::FakeRootParent();
+  EXPECT_EQ(scsi::Disk::Create(&controller_, fake_parent.get(), kTarget, kLun, kTransferSize),
             ZX_OK);
-  EXPECT_EQ(bind.device()->DdkGetSize(), kFakeBlocks * kBlockSize);
-
-  bind.device()->DdkAsyncRemove();
-  EXPECT_OK(bind.WaitUntilRemove());
-  bind.device()->DdkRelease();
-  EXPECT_TRUE(bind.Ok());
+  ASSERT_EQ(1, fake_parent->child_count());
+  auto* dev = fake_parent->GetLatestChild()->GetDeviceContext<scsi::Disk>();
+  EXPECT_EQ(dev->DdkGetSize(), kFakeBlocks * kBlockSize);
 }
 
 // Test creating a disk and executing read commands.
@@ -271,9 +253,10 @@ TEST_F(ScsilibDiskTest, TestCreateReadDestroy) {
 
   SetupDefaultCreateExpectations();
 
-  Binder bind;
-  EXPECT_EQ(scsi::Disk::Create(&controller_, fake_ddk::kFakeParent, kTarget, kLun, kTransferSize),
+  std::shared_ptr<MockDevice> fake_parent = MockDevice::FakeRootParent();
+  EXPECT_EQ(scsi::Disk::Create(&controller_, fake_parent.get(), kTarget, kLun, kTransferSize),
             ZX_OK);
+  ASSERT_EQ(1, fake_parent->child_count());
 
   // To test SCSI Read functionality, create a fake "disk" backing store in memory and service
   // reads from it. Fill block 1 with a test pattern of 0x01.
@@ -320,7 +303,8 @@ TEST_F(ScsilibDiskTest, TestCreateReadDestroy) {
   controller_.AsyncIoInit();
   {
     fbl::AutoLock lock(&iowait_.lock_);
-    bind.device()->BlockImplQueue(&read, done, &iowait_);  // NOTE: Assumes asynchronous controller
+    auto* dev = fake_parent->GetLatestChild()->GetDeviceContext<scsi::Disk>();
+    dev->BlockImplQueue(&read, done, &iowait_);  // NOTE: Assumes asynchronous controller
     iowait_.cv_.Wait(&iowait_.lock_);
   }
   // Make sure the contents of the VMO we read into match the expected test pattern
@@ -330,10 +314,6 @@ TEST_F(ScsilibDiskTest, TestCreateReadDestroy) {
     EXPECT_EQ(check_buffer[i], 0x01);
   }
   controller_.AsyncIoRelease();
-  bind.device()->DdkAsyncRemove();
-  EXPECT_OK(bind.WaitUntilRemove());
-  bind.device()->DdkRelease();
-  EXPECT_TRUE(bind.Ok());
 }
 
 }  // namespace
