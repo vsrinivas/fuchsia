@@ -33,6 +33,7 @@ import (
 	_ "golang.org/x/net/ipv6"
 	_ "golang.org/x/sync/errgroup"
 	_ "golang.org/x/sys/unix"
+	_ "gonum.org/v1/gonum/dsp/fourier"
 	_ "gonum.org/v1/gonum/integrate/quad"
 	_ "google.golang.org/api/googleapi"
 	_ "google.golang.org/grpc"

@@ -5,7 +5,7 @@ go 1.16
 require (
 	cloud.google.com/go v0.88.0 // indirect
 	cloud.google.com/go/storage v1.16.0
-	github.com/creack/pty v1.1.13
+	github.com/creack/pty v1.1.14
 	github.com/dustin/go-humanize v1.0.0
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/golang/glog v0.0.0-20210429001901-424d2337a529
@@ -23,7 +23,7 @@ require (
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.7.0
 	golang.org/x/crypto v0.0.0-20210711020723-a769d52b0f97
-	golang.org/x/net v0.0.0-20210716203947-853a461950ff
+	golang.org/x/net v0.0.0-20210726213435-c6fcb2dbf985
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	golang.org/x/sys v0.0.0-20210630005230-0f9fa26af87c
 	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac // indirect
@@ -34,5 +34,5 @@ require (
 	google.golang.org/grpc/cmd/protoc-gen-go-grpc v1.1.0
 	google.golang.org/protobuf v1.27.1
 	gopkg.in/yaml.v2 v2.4.0
-	gvisor.dev/gvisor v0.0.0-20210726173116-77242d29b311
+	gvisor.dev/gvisor v0.0.0-20210726235120-ab1c2bd3680f
 )

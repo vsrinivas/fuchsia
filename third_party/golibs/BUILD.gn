@@ -1396,6 +1396,21 @@ go_library("gonum.org/v1/gonum") {
   name = "gonum.org/v1/gonum/..."
   source_dir = "vendor/gonum.org/v1/gonum"
   sources = [
+    "dsp/fourier/doc.go",
+    "dsp/fourier/fourier.go",
+    "dsp/fourier/internal/fftpack/array_bounds_checks.go",
+    "dsp/fourier/internal/fftpack/array_no_bounds_checks.go",
+    "dsp/fourier/internal/fftpack/cfft.go",
+    "dsp/fourier/internal/fftpack/cosq.go",
+    "dsp/fourier/internal/fftpack/cost.go",
+    "dsp/fourier/internal/fftpack/doc.go",
+    "dsp/fourier/internal/fftpack/helpers.go",
+    "dsp/fourier/internal/fftpack/rfft.go",
+    "dsp/fourier/internal/fftpack/sinq.go",
+    "dsp/fourier/internal/fftpack/sint.go",
+    "dsp/fourier/quarter.go",
+    "dsp/fourier/radix24.go",
+    "dsp/fourier/sincos.go",
     "floats/doc.go",
     "floats/floats.go",
     "floats/scalar/doc.go",
