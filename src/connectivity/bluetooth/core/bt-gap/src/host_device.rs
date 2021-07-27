@@ -11,7 +11,7 @@ use {
         inspect::Inspectable,
         types::{Address, BondingData, HostData, HostId, HostInfo, Peer, PeerId},
     },
-    futures::{Future, FutureExt, StreamExt, TryFutureExt},
+    futures::{future::try_join_all, Future, FutureExt, StreamExt, TryFutureExt},
     log::{error, info, trace, warn},
     parking_lot::RwLock,
     pin_utils::pin_mut,
@@ -177,10 +177,25 @@ impl HostDevice {
         &self,
         bonds: Vec<BondingData>,
     ) -> impl Future<Output = types::Result<Vec<sys::BondingData>>> {
-        self.0
-            .proxy
-            .restore_bonds(&mut bonds.into_iter().map(sys::BondingData::from))
-            .map_err(|e| e.into())
+        // TODO(fxbug.dev/80564): Due to the maximum message size, the RestoreBonds call has an
+        // upper limit on the number of bonds that may be restored at once. However, this limit is
+        // based on the complexity of fields packed into sys::BondingData, which can be measured
+        // dynamically with measure-tape as the vector is built. Maximizing the number of bonds per
+        // call may improve performance. Instead, a conservative fixed maximum is chosen here (at
+        // this time, the maximum message size is 64 KiB and a fully-populated BondingData without
+        // peer service records is close to 700 B).
+        const MAX_BONDS_PER_RESTORE_BONDS: usize = 16;
+        let bonds_chunks = bonds.chunks(MAX_BONDS_PER_RESTORE_BONDS);
+
+        // Bonds that can't be restored are sent back in Ok(Vec<_>), which would not cause
+        // try_join_all to bail early
+        try_join_all(bonds_chunks.map(|c| {
+            self.0
+                .proxy
+                .restore_bonds(&mut c.into_iter().cloned().map(sys::BondingData::from))
+                .map_err(|e| e.into())
+        }))
+        .map_ok(|v| v.into_iter().flatten().collect())
     }
 
     pub fn set_connectable(&self, value: bool) -> impl Future<Output = types::Result<()>> {

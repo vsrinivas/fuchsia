@@ -79,6 +79,8 @@ rustc_binary("bin") {
     "src/watch_peers.rs",
   ]
 
+  test_deps = [ "//src/lib/test_util" ]
+
   configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
