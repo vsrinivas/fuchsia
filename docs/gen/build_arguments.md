@@ -211,6 +211,15 @@ required for the filesystem.
 
 From //build/images/fvm.gni:76
 
+### blobfs_capacity
+Maximum allowable contents for the /blob in a release mode build for
+both slot A and slot B of the system.
+Zero means no limit.
+
+**Current value (from the default):** `"0"`
+
+From //build/images/filesystem_limits.gni:15
+
 ### blobfs_enable_streaming_writes
 Set this to true when configuring gn args to enable blobfs streaming writes.
 This is a compile time argument which allows us to conditionally enable blobfs streaming writes
@@ -786,19 +795,19 @@ From //build/config/clang/crash_diagnostics.gni:7
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/a62b6548384298a169bfb6afc9a7277f68392042/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/058c1c2d9c82993aeb0b62e614e96698163b8165/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_http_transport_impl
 
 **Current value (from the default):** `"libcurl"`
 
-From [//third_party/crashpad/util/net/tls.gni:21](https://chromium.googlesource.com/crashpad/crashpad/+/a62b6548384298a169bfb6afc9a7277f68392042/util/net/tls.gni#21)
+From [//third_party/crashpad/util/net/tls.gni:21](https://chromium.googlesource.com/crashpad/crashpad/+/058c1c2d9c82993aeb0b62e614e96698163b8165/util/net/tls.gni#21)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:30](https://chromium.googlesource.com/crashpad/crashpad/+/a62b6548384298a169bfb6afc9a7277f68392042/util/net/tls.gni#30)
+From [//third_party/crashpad/util/net/tls.gni:30](https://chromium.googlesource.com/crashpad/crashpad/+/058c1c2d9c82993aeb0b62e614e96698163b8165/util/net/tls.gni#30)
 
 ### cts_version
 Name of the CTS version.
@@ -2089,12 +2098,6 @@ From //src/graphics/lib/magma/gnbuild/magma.gni:32
 
 From //src/graphics/lib/magma/gnbuild/magma.gni:20
 
-### blobfs_capacity
-Maximum allowable contents for the /blob in a release mode build for
-both slot A and B of the system.
-Zero means no limit.
-
-**Current value (from the default):** `"0"`
 ### max_blob_contents_size
 Maximum allowable contents for the /blob in a release mode build.
 Zero means no limit.
@@ -2113,7 +2116,7 @@ metadata.
 
 **Current value (from the default):** `"0"`
 
-From //build/images/filesystem_limits.gni:16
+From //build/images/filesystem_limits.gni:21
 
 ### max_data_contents_size
 Maximum allowable contents_size for /data in a release mode build.
@@ -2123,7 +2126,7 @@ of how they are stored).
 
 **Current value (from the default):** `"0"`
 
-From //build/images/filesystem_limits.gni:22
+From //build/images/filesystem_limits.gni:27
 
 ### max_data_image_size
 Maximum allowable image_size for /data in a release mode build.
@@ -2133,7 +2136,7 @@ metadata.
 
 **Current value (from the default):** `"0"`
 
-From //build/images/filesystem_limits.gni:28
+From //build/images/filesystem_limits.gni:33
 
 ### max_fuchsia_zbi_size
 Maximum allowable size for fuchsia.zbi
@@ -2144,11 +2147,11 @@ From //boards/arm64.gni:37
 
 **Overridden from the default:** `0`
 
-From //build/images/filesystem_limits.gni:31
+From //build/images/filesystem_limits.gni:36
 
 **Current value (from the default):** `0`
 
-From //build/images/filesystem_limits.gni:31
+From //build/images/filesystem_limits.gni:36
 
 ### max_log_disk_usage
 Controls how many bytes of space on disk are used to persist device logs.
@@ -2167,11 +2170,11 @@ From //boards/arm64.gni:38
 
 **Overridden from the default:** `0`
 
-From //build/images/filesystem_limits.gni:34
+From //build/images/filesystem_limits.gni:39
 
 **Current value (from the default):** `0`
 
-From //build/images/filesystem_limits.gni:34
+From //build/images/filesystem_limits.gni:39
 
 ### mbedtls_config_file
 Configuration file for MbedTLS.
@@ -2274,13 +2277,13 @@ From //build/images/fvm.gni:79
 
 **Current value (from the default):** `false`
 
-From [//third_party/crashpad/third_party/mini_chromium/mini_chromium/build/platform.gni:31](https://chromium.googlesource.com/crashpad/crashpad/+/a62b6548384298a169bfb6afc9a7277f68392042/third_party/mini_chromium/mini_chromium/build/platform.gni#31)
+From [//third_party/crashpad/third_party/mini_chromium/mini_chromium/build/platform.gni:31](https://chromium.googlesource.com/crashpad/crashpad/+/058c1c2d9c82993aeb0b62e614e96698163b8165/third_party/mini_chromium/mini_chromium/build/platform.gni#31)
 
 ### mini_chromium_is_chromeos_lacros
 
 **Current value (from the default):** `false`
 
-From [//third_party/crashpad/third_party/mini_chromium/mini_chromium/build/platform.gni:30](https://chromium.googlesource.com/crashpad/crashpad/+/a62b6548384298a169bfb6afc9a7277f68392042/third_party/mini_chromium/mini_chromium/build/platform.gni#30)
+From [//third_party/crashpad/third_party/mini_chromium/mini_chromium/build/platform.gni:30](https://chromium.googlesource.com/crashpad/crashpad/+/058c1c2d9c82993aeb0b62e614e96698163b8165/third_party/mini_chromium/mini_chromium/build/platform.gni#30)
 
 ### msd_arm_enable_all_cores
 Enable all 8 cores, which is faster but emits more heat.
