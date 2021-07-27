@@ -15,6 +15,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr-rustc",
     "//sdk/fidl/fuchsia.bluetooth.hfp:fuchsia.bluetooth.hfp-rustc",
     "//sdk/fidl/fuchsia.bluetooth.hfp.test:fuchsia.bluetooth.hfp.test-rustc",
+    "//sdk/fidl/fuchsia.bluetooth.internal.a2dp:fuchsia.bluetooth.internal.a2dp-rustc",
     "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio-rustc",
     "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
     "//src/connectivity/bluetooth/lib/async-helpers",
@@ -37,6 +38,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:bitflags",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:num-traits",
+    "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:regex",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
@@ -51,6 +53,7 @@ rustc_binary("bin") {
   ]
 
   sources = [
+    "src/a2dp.rs",
     "src/audio.rs",
     "src/config.rs",
     "src/error.rs",

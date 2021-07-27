@@ -10,12 +10,9 @@ use {
     fidl_fuchsia_bluetooth_hfp_test as hfp_test,
     fuchsia_bluetooth::types::PeerId,
     futures::{channel::mpsc::Receiver, select, stream::StreamExt},
+    parking_lot::Mutex,
     profile_client::{ProfileClient, ProfileEvent},
-    std::{
-        collections::hash_map::Entry,
-        matches,
-        sync::{Arc, Mutex},
-    },
+    std::{collections::hash_map::Entry, matches, sync::Arc},
     tracing::{debug, info},
 };
 
