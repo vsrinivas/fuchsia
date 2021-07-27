@@ -21,6 +21,8 @@ use {
     std::{cmp, convert::TryInto},
 };
 
+const TEST_PKG_HASH: &str = "4679b8a4d2853fa935f4c63511f402ab387f1afbc26cf9addec3a24f2c5dc598";
+
 #[fuchsia::test]
 async fn read() {
     for dir in dirs_to_test().await {
@@ -29,7 +31,9 @@ async fn read() {
 }
 
 async fn read_per_package_source(root_dir: DirectoryProxy) {
-    for (path, expected_contents) in [("file", "file"), ("meta/file", "meta/file")] {
+    for (path, expected_contents) in
+        [("file", "file"), ("meta/file", "meta/file"), ("meta", TEST_PKG_HASH)]
+    {
         assert_read_max_buffer_success(&root_dir, path, expected_contents).await;
         assert_read_buffer_success(&root_dir, path, expected_contents).await;
         assert_read_past_end(&root_dir, path, expected_contents).await;
@@ -114,6 +118,12 @@ async fn read_at_per_package_source(root_dir: DirectoryProxy) {
         assert_read_at_does_not_affect_seek(&root_dir, path, SeekOrigin::Current).await;
         assert_read_at_does_not_affect_seek_end_origin(&root_dir, path).await;
     }
+
+    // ReadAt for "meta as file" is unsupported.
+    let file = open_file(&root_dir, "meta", OPEN_RIGHT_READABLE).await.unwrap();
+    let (status, bytes) = file.read_at(MAX_BUF, 0).await.unwrap();
+    assert_eq!(zx::Status::ok(status), Err(zx::Status::NOT_SUPPORTED));
+    assert_eq!(bytes, &[]);
 }
 
 async fn assert_read_at_max_buffer_success(root_dir: &DirectoryProxy, path: &str) {
@@ -198,6 +208,14 @@ async fn seek_per_package_source(root_dir: DirectoryProxy) {
         assert_seek_past_end(&root_dir, path, SeekOrigin::Current).await;
         assert_seek_past_end_end_origin(&root_dir, path).await;
     }
+
+    // Seek for "meta as file" is unsupported.
+    let file = open_file(&root_dir, "meta", OPEN_RIGHT_READABLE).await.unwrap();
+    let mut rng = rand::thread_rng();
+    let seek_offset = rng.gen_range(0, TEST_PKG_HASH.len()) as i64;
+    let (status, position) = file.seek(seek_offset, SeekOrigin::Current).await.unwrap();
+    assert_eq!(zx::Status::ok(status), Err(zx::Status::NOT_SUPPORTED));
+    assert_eq!(position, 0);
 }
 
 async fn assert_seek_success(root_dir: &DirectoryProxy, path: &str, seek_origin: SeekOrigin) {
