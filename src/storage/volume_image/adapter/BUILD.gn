@@ -61,6 +61,7 @@ source_set("commands") {
   sources = [
     "commands/arguments.cc",
     "commands/create.cc",
+    "commands/extend.cc",
     "commands/pave.cc",
   ]
   public = [ "commands.h" ]
@@ -300,6 +301,7 @@ source_set("adapter-tests") {
     "blobfs_partition_test.cc",
     "commands/arguments_test.cc",
     "commands/create_test.cc",
+    "commands/extend_test.cc",
     "commands/pave_test.cc",
     "empty_partition_test.cc",
     "minfs_partition_test.cc",
@@ -314,6 +316,7 @@ source_set("adapter-tests") {
     "//src/storage/fvm",
     "//src/storage/gpt",
     "//src/storage/minfs",
+    "//src/storage/volume_image/fvm:fvm-image-extend",
     "//src/storage/volume_image/fvm:fvm-sparse-image",
     "//src/storage/volume_image/utils:block-utils",
     "//src/storage/volume_image/utils:fd-io",

@@ -191,6 +191,8 @@ struct ExtendParams {
   bool should_use_max_partition_size = false;
 };
 
+fpromise::result<void, std::string> Extend(const ExtendParams& params);
+
 }  // namespace storage::volume_image
 
 #endif  // SRC_STORAGE_VOLUME_IMAGE_ADAPTER_COMMANDS_H_

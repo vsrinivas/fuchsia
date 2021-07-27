@@ -84,6 +84,18 @@ fpromise::result<fvm::Metadata, std::string> GetMetadata(
 
 }  // namespace
 
+fpromise::result<uint64_t, std::string> FvmImageGetSize(const Reader& source_image) {
+  std::vector<uint8_t> primary_metadata_buffer;
+  std::vector<uint8_t> secondary_metadata_buffer;
+
+  auto metadata_or = GetMetadata(source_image, primary_metadata_buffer, secondary_metadata_buffer);
+  if (metadata_or.is_error()) {
+    return metadata_or.take_error_result();
+  }
+  const auto& header = metadata_or.value().GetHeader();
+  return fpromise::ok(header.fvm_partition_size);
+}
+
 fpromise::result<void, std::string> FvmImageExtend(const Reader& source_image,
                                                    const FvmOptions& options,
                                                    Writer& target_image) {
@@ -104,7 +116,7 @@ fpromise::result<void, std::string> FvmImageExtend(const Reader& source_image,
     return fpromise::error("Must provide a target size to extend to.");
   }
 
-  if (options.target_volume_size.value() < source_image.length()) {
+  if (options.target_volume_size.value() < header.fvm_partition_size) {
     return fpromise::error("Cannot extend a source image to a smaller image size.");
   }
 

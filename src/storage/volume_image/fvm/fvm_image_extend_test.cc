@@ -559,5 +559,50 @@ TEST(FvmImageGetTrimmedSizeTest, TrimmedValueWithAllocatedSlicesIsOk) {
   EXPECT_EQ(trim_size_result.value(), std::max(metadata_end, last_slice_end));
 }
 
+TEST(FvmImageGetSizeTest, ValidHeaderWithBadMetadataIsError) {
+  const auto options = MakeOptions();
+  const auto header = MakeHeader(options, kDefaultSliceCount);
+
+  // This reader just copyes over and over a valid header. This means, that both Superblocks are
+  // 'valid', but the rest of the metadata is wrong. This should be caught when trying to synthesize
+  // the metadata.
+  DelegateReader reader(
+      [&header](auto offset, auto buffer) {
+        StreamContents(
+            offset,
+            fbl::Span<const uint8_t>(reinterpret_cast<const uint8_t*>(&header), sizeof(header)),
+            buffer);
+        return fpromise::ok();
+      },
+      kDefaultImageSize);
+
+  ASSERT_TRUE(FvmImageGetSize(reader).is_error());
+}
+
+TEST(FvmImageGetSize, ReturnsFvmPartitionSizeFromHeader) {
+  auto options = MakeOptions();
+  const auto header = MakeHeader(options, kDefaultSliceCount);
+  options.target_volume_size = header.fvm_partition_size;
+
+  // '4 GB image'.
+  constexpr uint64_t kImageSize = 4u * (1ull << 32);
+
+  std::vector<fvm::VPartitionEntry> partitions = {MakePartitionEntry("partition-1-2-3", 0),
+                                                  MakePartitionEntry("partition-2-3-4", 0)};
+
+  auto metadata_or = fvm::Metadata::Synthesize(header, partitions, fbl::Span<fvm::SliceEntry>());
+  ASSERT_TRUE(metadata_or.is_ok()) << metadata_or.error_value();
+
+  DelegateReader reader(
+      [&metadata_or, &options](auto offset, auto buffer) {
+        return ValidFvmRead(metadata_or.value(), options, kImageSize, offset, buffer);
+      },
+      kDefaultImageSize);
+  auto size_or = FvmImageGetSize(reader);
+
+  ASSERT_TRUE(size_or.is_ok()) << size_or.error();
+  EXPECT_EQ(size_or.value(), header.fvm_partition_size);
+}
+
 }  // namespace
 }  // namespace storage::volume_image
