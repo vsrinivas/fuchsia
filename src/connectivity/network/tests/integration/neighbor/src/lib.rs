@@ -1000,9 +1000,9 @@ async fn neigh_unreachability_config() -> Result {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn neigh_unreachable_entries() -> Result {
-    let sandbox = TestSandbox::new().context("failed to create sandbox")?;
-    let network = sandbox.create_network("net").await.context("failed to create network")?;
+async fn neigh_unreachable_entries() {
+    let sandbox = TestSandbox::new().expect("failed to create sandbox");
+    let network = sandbox.create_network("net").await.expect("failed to create network");
 
     let alice = create_realm(
         &sandbox,
@@ -1013,11 +1013,11 @@ async fn neigh_unreachable_entries() -> Result {
         ALICE_MAC,
     )
     .await
-    .context("failed to setup alice realm")?;
+    .expect("failed to setup alice realm");
 
     // No Neighbors should exist initially.
     let initial_entries =
-        list_existing_entries(&alice.realm).await.context("failed to get entries for alice")?;
+        list_existing_entries(&alice.realm).await.expect("failed to get entries for alice");
     assert!(initial_entries.is_empty(), "expected empty set of entries: {:?}", initial_entries);
 
     // Intentionally fail to send a packet to Bob so we can create a neighbor
@@ -1032,10 +1032,10 @@ async fn neigh_unreachable_entries() -> Result {
     assert_eq!(
         fuchsia_async::net::UdpSocket::bind_in_realm(&alice.realm, alice_addr)
             .await
-            .context("failed to create client socket")?
+            .expect("failed to create client socket")
             .send_to(PAYLOAD.as_bytes(), bob_addr)
             .await
-            .context("UDP send_to failed")?,
+            .expect("UDP send_to failed"),
         PAYLOAD.as_bytes().len()
     );
 
@@ -1047,9 +1047,8 @@ async fn neigh_unreachable_entries() -> Result {
     loop {
         assert_eq!(interval.next().await, Some(()));
         let mut entries =
-            list_existing_entries(&alice.realm).await.context("failed to get entries for alice")?;
-        let entry =
-            entries.remove(&(alice.ep.id(), BOB_IP)).context("missing IPv4 neighbor entry")?;
+            list_existing_entries(&alice.realm).await.expect("failed to get entries for alice");
+        let entry = entries.remove(&(alice.ep.id(), BOB_IP)).expect("missing IPv4 neighbor entry");
         assert!(entries.is_empty(), "unexpected neighbors remaining in list: {:?}", entries);
 
         matches::assert_matches!(
@@ -1070,6 +1069,4 @@ async fn neigh_unreachable_entries() -> Result {
         assert_eq!(entry.state, Some(fidl_fuchsia_net_neighbor::EntryState::Incomplete));
         println!("Found incomplete entry, waiting for the transition to unreachable...");
     }
-
-    Ok(())
 }
