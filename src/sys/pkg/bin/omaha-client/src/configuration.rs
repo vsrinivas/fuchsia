@@ -98,6 +98,11 @@ impl ClientConfiguration {
                 }
             });
 
+        let product_id = get_productid_from_vbmeta().await.unwrap_or_else(|e| {
+            warn!("Failed to get single product id from vbmeta {:?}", e);
+            None
+        });
+
         // Construct the only app that Fuchsia has
         let app = App::builder(appid.clone(), Self::parse_version(version))
             .with_cohort(Cohort {
@@ -106,6 +111,7 @@ impl ClientConfiguration {
                 ..Cohort::default()
             })
             .with_extra("channel", channel_name.clone().unwrap_or_default())
+            .with_extra("product_id", product_id.unwrap_or_default())
             .build();
         let app_set = AppSet::new(vec![app]);
 
@@ -158,6 +164,19 @@ pub async fn get_config(version: &str) -> Config {
 
 pub fn get_version() -> Result<String, io::Error> {
     fs::read_to_string("/config/build-info/version").map(|s| s.trim_end().to_string())
+}
+
+async fn get_productid_from_vbmeta() -> Result<Option<String>, Error> {
+    let proxy = fuchsia_component::client::connect_to_protocol::<ArgumentsMarker>()?;
+    get_productid_from_vbmeta_impl(proxy).await
+}
+
+async fn get_productid_from_vbmeta_impl(proxy: ArgumentsProxy) -> Result<Option<String>, Error> {
+    let res = proxy.get_string("product_id").await;
+    match res {
+        Ok(id) => Ok(id),
+        Err(e) => Err(anyhow!("error getting product id : {:?}", e)),
+    }
 }
 
 async fn get_appid_and_channel_from_vbmeta() -> Result<(Option<String>, Option<String>), Error> {
@@ -216,6 +235,7 @@ mod tests {
         assert_eq!(apps[0].version, Version::from([1, 2, 3, 4]));
         assert_eq!(apps[0].cohort.name, None);
         assert_eq!(apps[0].cohort.hint, None);
+        assert_eq!(apps[0].extra_fields["product_id"], "");
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -305,6 +325,46 @@ mod tests {
                     assert_eq!(keys, vec!["omaha_app_id", "ota_channel"]);
                     let vec: Vec<Option<&str>> = vec![Some("test-appid"), Some("test-channel")];
                     responder.send(&mut vec.into_iter()).expect("send failed");
+                }
+                request => panic!("Unexpected request: {:?}", request),
+            }
+        };
+        future::join(fut, stream_fut).await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_get_productid_from_vbmeta() {
+        let (proxy, mut stream) = create_proxy_and_stream::<ArgumentsMarker>().unwrap();
+        let fut = async move {
+            let product_id = get_productid_from_vbmeta_impl(proxy).await.unwrap();
+            assert_eq!(product_id, Some("test-productid".to_string()));
+        };
+        let stream_fut = async move {
+            match stream.next().await.unwrap() {
+                Ok(ArgumentsRequest::GetString { key, responder }) => {
+                    assert_eq!(key, "product_id".to_string());
+                    let ret = Some("test-productid");
+                    responder.send(ret).expect("send failed");
+                }
+                request => panic!("Unexpected request: {:?}", request),
+            }
+        };
+        future::join(fut, stream_fut).await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_get_productid_from_vbmeta_missing() {
+        let (proxy, mut stream) = create_proxy_and_stream::<ArgumentsMarker>().unwrap();
+        let fut = async move {
+            let product_id = get_productid_from_vbmeta_impl(proxy).await.unwrap();
+            assert_eq!(product_id, None);
+        };
+        let stream_fut = async move {
+            match stream.next().await.unwrap() {
+                Ok(ArgumentsRequest::GetString { key, responder }) => {
+                    assert_eq!(key, "product_id".to_string());
+                    let ret = None;
+                    responder.send(ret).expect("send failed");
                 }
                 request => panic!("Unexpected request: {:?}", request),
             }
