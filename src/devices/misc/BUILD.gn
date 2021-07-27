@@ -8,6 +8,7 @@ group("drivers") {
     "drivers/builtin",
     "drivers/cpu-trace",
     "drivers/test",
+    "drivers/test-parent:test-parent-sys",
     "drivers/virtio-rng:virtio_rng",
     "drivers/virtio-socket:virtio_socket",
   ]
