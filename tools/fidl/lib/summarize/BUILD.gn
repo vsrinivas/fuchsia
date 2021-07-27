@@ -28,7 +28,7 @@ if (is_host) {
   }
 
   go_library("gopkg") {
-    name = "go.fuchsia.dev/fuchsia/tools/fidl/lib/summarize/..."
+    name = "go.fuchsia.dev/fuchsia/tools/fidl/lib/summarize"
     sources = [
       "aliases.go",
       "bits.go",
