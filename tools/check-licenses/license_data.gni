@@ -20,6 +20,10 @@
 #     [list] Map of license pattern file (.lic) to list of directories
 #     where the license can be used.
 #
+#   out_dir (optional)
+#     [string] Directory where generated NOTICE files will be placed. Defaults
+#     to target_out_dir.
+#
 #   testonly, visibility
 template("license_data") {
   action(target_name) {
@@ -28,7 +32,7 @@ template("license_data") {
                              "configs",
                              "license_allow_list",
                              "notice_txt",
-                             "outputs",
+                             "out_dir",
                              "skip_dirs",
                              "testonly",
                              "visibility",
@@ -47,9 +51,13 @@ template("license_data") {
     }
     sources = configs
 
+    if (!defined(out_dir)) {
+      out_dir = target_out_dir
+    }
+
     outputs = [
-      "$target_out_dir/NOTICE.html.gz",
-      "$target_out_dir/NOTICE.txt.gz",
+      "$out_dir/NOTICE.html.gz",
+      "$out_dir/NOTICE.txt.gz",
     ]
 
     args = [
@@ -66,7 +74,7 @@ template("license_data") {
       "--config_file",
       string_join(",", rebase_path(configs, "//")),
       "--out_dir",
-      rebase_path(target_out_dir, "//"),
+      rebase_path(out_dir, "//"),
       "--gn_path",
       rebase_path("//prebuilt/third_party/gn/${host_os}-${host_cpu}/gn", "//"),
       "--build_dir",
