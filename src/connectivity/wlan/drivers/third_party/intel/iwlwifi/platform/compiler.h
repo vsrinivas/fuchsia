@@ -24,7 +24,7 @@ typedef uint16_t __le16;
 typedef uint8_t __s8;
 typedef uint8_t __u8;
 
-#define BIT(x) (1 << (x))
+#define BIT(x) (1UL << (x))
 
 #define DIV_ROUND_UP(num, div) (((num) + (div)-1) / (div))
 
