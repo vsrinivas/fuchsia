@@ -10,6 +10,7 @@
 #include <system_error>
 #include <utility>
 
+#include "lib/stdcompat/array.h"
 #include "src/storage/fvm/format.h"
 #include "src/storage/volume_image/adapter/commands.h"
 #include "src/storage/volume_image/options.h"
@@ -350,12 +351,37 @@ fpromise::result<PaveParams, std::string> PaveParams::FromArguments(
   return fpromise::ok(params);
 }
 
+fpromise::result<ExtendParams, std::string> ExtendParams::FromArguments(
+    fbl::Span<std::string_view> arguments) {
+  ExtendParams params;
+  if (arguments.size() < 3) {
+    return fpromise::error("Not enough arguments for 'extend' command.");
+  }
+  auto command = CommandFromString(arguments[2]);
+  if (command != Command::kExtend) {
+    return fpromise::error("Extend must be invoked with command 'extend'.");
+  }
+
+  params.image_path = arguments[1];
+
+  if (auto result = GetSizeArgumentValue(arguments, "--length", params.length); result.is_error()) {
+    return result.take_error_result();
+  }
+
+  params.should_use_max_partition_size =
+      FindArgumentByName(arguments, "--length-is-lowerbound").has_value();
+  params.should_trim = FindArgumentByName(arguments, "--resize-image-file-to-fit").has_value();
+
+  return fpromise::ok(params);
+}
+
 Command CommandFromString(std::string_view command_str) {
-  static constexpr std::array<std::pair<std::string_view, Command>, 3> kCommandStringToCommand = {
+  static constexpr auto kCommandStringToCommand = cpp20::to_array({
       std::make_pair("create", Command::kCreate),
       std::make_pair("sparse", Command::kCreateSparse),
       std::make_pair("pave", Command::kPave),
-  };
+      std::make_pair("extend", Command::kExtend),
+  });
   for (const auto [str, command] : kCommandStringToCommand) {
     if (str == command_str) {
       return command;

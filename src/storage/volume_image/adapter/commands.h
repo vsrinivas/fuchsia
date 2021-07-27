@@ -29,6 +29,7 @@ enum class Command {
   kCreate,
   kCreateSparse,
   kPave,
+  kExtend,
   kUnsupported,
 };
 
@@ -166,6 +167,29 @@ struct PaveParams {
 
 // Given an input sparse fvm image, it will write the expanded contents to the path.
 fpromise::result<void, std::string> Pave(const PaveParams& params);
+
+struct ExtendParams {
+  // Returns arguments from |arguments| as a |ExtendParams| instance. Validation is done by the
+  // |ExtendParams| consumers.
+  static fpromise::result<ExtendParams, std::string> FromArguments(
+      fbl::Span<std::string_view> arguments);
+
+  // Path to the file where the FVM image is contained.
+  std::string image_path;
+
+  // When set provides a hard maximum on the generated image 'expanded' size, that is
+  // a sparse image when paved, cannot exceed such length. This consists on a limit
+  // to the metadata and allocated slices size.
+  std::optional<uint64_t> length;
+
+  // After modifying the image, remove trailing unallocated slices from the slice region without
+  // changing the metadata.
+  bool should_trim = false;
+
+  // If true, will pick as |fvm::Header::fvm_partition_size| to use the maximum between the provided
+  // |length| and the existing image |fvm::Header::fvm_partition_size|.
+  bool should_use_max_partition_size = false;
+};
 
 }  // namespace storage::volume_image
 

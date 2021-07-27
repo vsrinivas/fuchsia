@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/stdcompat/array.h>
+
 #include <array>
 #include <cstdint>
 
@@ -13,7 +15,6 @@
 #include "src/storage/volume_image/fvm/fvm_sparse_image.h"
 #include "src/storage/volume_image/options.h"
 #include "src/storage/volume_image/utils/guid.h"
-#include "zircon/hw/gpt.h"
 
 namespace storage::volume_image {
 namespace {
@@ -416,6 +417,53 @@ TEST(ArgumentTest, PaveParamsFromArgsWithDiskTypeIsOk) {
     EXPECT_EQ(pave_params.max_bad_blocks.value(), 25u);
     EXPECT_FALSE(pave_params.is_output_embedded);
     EXPECT_FALSE(pave_params.offset.has_value());
+  }
+}
+
+TEST(ArgumentTest, ExtendParamsFromArgsIsOk) {
+  auto kArgs = cpp20::to_array<std::string_view>({
+      "fvm",
+      "test_fvm.sparse.blk",
+      "extend",
+      "--length",
+      "10M",
+      "--resize-image-file-to-fit",
+      "--length-is-lowerbound",
+  });
+
+  {
+    auto params_or = ExtendParams::FromArguments(kArgs);
+    ASSERT_TRUE(params_or.is_ok()) << params_or.error();
+    auto params = params_or.take_value();
+
+    EXPECT_EQ(params.image_path, kArgs[1]);
+    EXPECT_EQ(params.length.value(), 10 * kMega);
+    EXPECT_TRUE(params.should_trim);
+    EXPECT_TRUE(params.should_use_max_partition_size);
+  }
+
+  {
+    auto args_without_trim = fbl::Span<std::string_view>(kArgs).subspan(0, kArgs.size() - 1);
+    auto params_or = ExtendParams::FromArguments(args_without_trim);
+    ASSERT_TRUE(params_or.is_ok()) << params_or.error();
+    auto params = params_or.take_value();
+
+    EXPECT_EQ(params.image_path, kArgs[1]);
+    EXPECT_EQ(params.length.value(), 10 * kMega);
+    EXPECT_TRUE(params.should_trim);
+    EXPECT_FALSE(params.should_use_max_partition_size);
+  }
+
+  {
+    auto args_without_trim_or_fit = fbl::Span<std::string_view>(kArgs).subspan(0, kArgs.size() - 2);
+    auto params_or = ExtendParams::FromArguments(args_without_trim_or_fit);
+    ASSERT_TRUE(params_or.is_ok()) << params_or.error();
+    auto params = params_or.take_value();
+
+    EXPECT_EQ(params.image_path, kArgs[1]);
+    EXPECT_EQ(params.length.value(), 10 * kMega);
+    EXPECT_FALSE(params.should_trim);
+    EXPECT_FALSE(params.should_use_max_partition_size);
   }
 }
 
