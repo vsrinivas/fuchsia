@@ -73,7 +73,7 @@ test("aml-uart-test-bin") {
     "//src/devices/lib/amlogic",
     "//src/devices/lib/mmio",
     "//src/devices/testing/fake-mmio-reg",
-    "//src/devices/testing/fake_ddk",
+    "//src/devices/testing/mock-ddk",
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//zircon/public/lib/fbl",

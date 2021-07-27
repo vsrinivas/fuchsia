@@ -9,19 +9,19 @@
 #include <fuchsia/hardware/serial/c/banjo.h>
 #include <fuchsia/hardware/serial/c/fidl.h>
 #include <fuchsia/hardware/serialimpl/async/c/banjo.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/platform-device.h>
-#include <lib/fake_ddk/fake_ddk.h>
 #include <lib/zx/event.h>
 
 #include <vector>
 
-#include <lib/ddk/metadata.h>
 #include <fake-mmio-reg/fake-mmio-reg.h>
 #include <zxtest/zxtest.h>
 
 #include "registers.h"
 #include "src/devices/bus/testing/fake-pdev/fake-pdev.h"
+#include "src/devices/testing/mock-ddk/mock-device.h"
 
 namespace {
 
@@ -157,25 +157,6 @@ class DeviceState {
   zx::unowned_interrupt irq_signaller_;
 };
 
-class Ddk : public fake_ddk::Bind {
- public:
-  Ddk() {}
-  bool added() { return add_called_; }
-  const device_add_args_t& args() { return add_args_; }
-
- private:
-  zx_status_t DeviceAdd(zx_driver_t* drv, zx_device_t* parent, device_add_args_t* args,
-                        zx_device_t** out) override {
-    zx_status_t status = fake_ddk::Bind::DeviceAdd(drv, parent, args, out);
-    if (status != ZX_OK) {
-      return status;
-    }
-    add_args_ = *args;
-    return ZX_OK;
-  }
-  device_add_args_t add_args_;
-};
-
 class AmlUartHarness : public zxtest::Test {
  public:
   void SetUp() override {
@@ -184,33 +165,28 @@ class AmlUartHarness : public zxtest::Test {
         .serial_vid = PDEV_VID_BROADCOM,
         .serial_pid = PDEV_PID_BCM43458,
     };
-    ddk_.SetMetadata(DEVICE_METADATA_SERIAL_PORT_INFO, &kSerialInfo, sizeof(kSerialInfo));
+    fake_parent_->SetMetadata(DEVICE_METADATA_SERIAL_PORT_INFO, &kSerialInfo, sizeof(kSerialInfo));
 
     state_.set_irq_signaller(pdev_.CreateVirtualInterrupt(0));
-    ddk_.SetProtocol(ZX_PROTOCOL_PDEV, pdev_.proto());
-    auto uart = std::make_unique<serial::AmlUart>(fake_ddk::kFakeParent, pdev_.proto(), kSerialInfo,
+    fake_parent_->AddProtocol(ZX_PROTOCOL_PDEV, pdev_.proto()->ops, pdev_.proto()->ctx);
+    auto uart = std::make_unique<serial::AmlUart>(fake_parent_.get(), pdev_.proto(), kSerialInfo,
                                                   state_.GetMmio());
     zx_status_t status = uart->Init();
     ASSERT_OK(status);
+    device_ = uart.get();
     // The AmlUart* is now owned by the fake_ddk.
     uart.release();
-    device_.reset(static_cast<serial::AmlUart*>(ddk_.args().ctx));
   }
 
-  void TearDown() override {
-    auto device = device_.release();
-    device->DdkRelease();
-  }
-
-  serial::AmlUart& Device() { return *device_.get(); }
+  serial::AmlUart& Device() { return *device_; }
 
   DeviceState& device_state() { return state_; }
 
  private:
-  Ddk ddk_;
+  std::shared_ptr<MockDevice> fake_parent_ = MockDevice::FakeRootParent();
   DeviceState state_;
   fake_pdev::FakePDev pdev_;
-  std::unique_ptr<serial::AmlUart> device_;
+  serial::AmlUart* device_;
 };
 
 TEST_F(AmlUartHarness, SerialImplAsyncGetInfo) {
