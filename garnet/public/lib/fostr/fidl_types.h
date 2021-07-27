@@ -21,24 +21,6 @@
 #endif
 
 namespace fostr {
-namespace internal {
-
-static constexpr size_t kMaxBytesToDump = 256;
-static constexpr size_t kTruncatedDumpSize = 64;
-
-template <typename Iter>
-void insert_sequence_container(std::ostream& os, Iter begin, Iter end) {
-  if (begin == end) {
-    os << "<empty>";
-  }
-
-  int index = 0;
-  for (; begin != end; ++begin) {
-    os << NewLine << "[" << index++ << "] " << *begin;
-  }
-}
-
-}  // namespace internal
 
 // Wrapper type to disambiguate formatting operator overloads.
 //
@@ -56,6 +38,25 @@ struct Formatted {
   explicit Formatted(const T& v) : value(v) {}
   const T& value;
 };
+
+namespace internal {
+
+static constexpr size_t kMaxBytesToDump = 256;
+static constexpr size_t kTruncatedDumpSize = 64;
+
+template <typename Iter>
+void insert_sequence_container(std::ostream& os, Iter begin, Iter end) {
+  if (begin == end) {
+    os << "<empty>";
+  }
+
+  int index = 0;
+  for (; begin != end; ++begin) {
+    os << NewLine << "[" << index++ << "] " << Indent << Formatted(*begin) << Outdent;
+  }
+}
+
+}  // namespace internal
 
 template <typename T>
 std::ostream& operator<<(std::ostream& os, const Formatted<T>& value);
@@ -80,7 +81,7 @@ std::ostream& operator<<(std::ostream& os, const Formatted<std::vector<T>>& valu
     return os << "<empty>";
   }
 
-  fostr::internal::insert_sequence_container(os, value.value.cbegin(), value.value.cend());
+  internal::insert_sequence_container(os, value.value.cbegin(), value.value.cend());
   return os;
 }
 
@@ -102,36 +103,35 @@ std::ostream& operator<<(std::ostream& os,
 
   int index = 0;
   for (const std::array<T, M>& item : value.value) {  // N items
-    os << fostr::NewLine << "[" << index++ << "]:" << fostr::Indent << Formatted(item)
-       << fostr::Outdent;
+    os << NewLine << "[" << index++ << "]:" << Indent << Formatted(item) << Outdent;
   }
   return os;
 }
 
 template <typename T, size_t N>
 std::ostream& operator<<(std::ostream& os, const Formatted<std::array<T, N>>& value) {
-  fostr::internal::insert_sequence_container(os, value.value.cbegin(), value.value.cend());
+  internal::insert_sequence_container(os, value.value.cbegin(), value.value.cend());
   return os;
 }
 
 template <size_t N>
 std::ostream& operator<<(std::ostream& os, const Formatted<std::array<uint8_t, N>>& value) {
-  if (N <= fostr::internal::kMaxBytesToDump) {
-    return os << fostr::HexDump(value.value.data(), N, 0);
+  if (N <= internal::kMaxBytesToDump) {
+    return os << HexDump(value.value.data(), N, 0);
   }
 
-  return os << fostr::HexDump(value.value.data(), fostr::internal::kTruncatedDumpSize, 0)
-            << fostr::NewLine << "(truncated, " << N << " bytes total)";
+  return os << HexDump(value.value.data(), internal::kTruncatedDumpSize, 0) << NewLine
+            << "(truncated, " << N << " bytes total)";
 }
 
 template <size_t N>
 std::ostream& operator<<(std::ostream& os, const Formatted<std::array<int8_t, N>>& value) {
-  if (N <= fostr::internal::kMaxBytesToDump) {
-    return os << fostr::HexDump(value.value.data(), N, 0);
+  if (N <= internal::kMaxBytesToDump) {
+    return os << HexDump(value.value.data(), N, 0);
   }
 
-  return os << fostr::HexDump(value.value.data(), fostr::internal::kTruncatedDumpSize, 0)
-            << fostr::NewLine << "(truncated, " << N << " bytes total)";
+  return os << HexDump(value.value.data(), internal::kTruncatedDumpSize, 0) << NewLine
+            << "(truncated, " << N << " bytes total)";
 }
 
 }  // namespace fostr

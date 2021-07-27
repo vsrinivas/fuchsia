@@ -497,6 +497,28 @@ TEST(FidlTypes, StdVector) {
       os.str());
 }
 
+TEST(FidlTypes, StdVectorOfVectors) {
+  using fidl::operator<<;
+  std::ostringstream os;
+  std::vector<std::vector<std::string>> empty_vector;
+  std::vector<std::vector<std::string>> utensil_vector = {
+      {"knife", "spork"}, {}, {"runcible spoon"}};
+
+  // The fostr::NewLine was added to repro fxb/80062 and test for regressions.
+  os << fostr::Indent << fostr::NewLine << "empty:" << Formatted(empty_vector)
+     << ", utensil:" << Formatted(utensil_vector);
+
+  EXPECT_EQ(
+      "\n    empty:<empty>, utensil:"
+      "\n    [0] "
+      "\n        [0] knife"
+      "\n        [1] spork"
+      "\n    [1] <empty>"
+      "\n    [2] "
+      "\n        [0] runcible spoon",
+      os.str());
+}
+
 TEST(FidlTypes, StdVectorOfUint8) {
   using fidl::operator<<;
   std::ostringstream os;
