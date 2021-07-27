@@ -9,6 +9,7 @@ group("stable") {
     ":channel_map",
     ":repo_configs",
     ":stable_default",
+    "//src/sys/pkg/bin/system-update-checker:auto_update",
   ]
 }
 
@@ -17,6 +18,7 @@ group("beta") {
     ":beta_default",
     ":channel_map",
     ":repo_configs",
+    "//src/sys/pkg/bin/system-update-checker:auto_update",
   ]
 }
 
