@@ -134,7 +134,6 @@ success("GoldenTableStruct") {
     },
 }
 success("GoldenUnionStruct") {
-    bindings_denylist = [transformer],
     value = GoldenUnionStruct {
         v: GoldenUnion{
             v: 1,
@@ -154,7 +153,6 @@ success("GoldenUnionStruct") {
     },
 }
 success("GoldenNullableUnionStructNonNull") {
-    bindings_denylist = [transformer],
     value = GoldenNullableUnionStruct {
         v: GoldenUnion{
             v: 1,
@@ -174,7 +172,6 @@ success("GoldenNullableUnionStructNonNull") {
     },
 }
 success("GoldenNullableUnionStructNull") {
-    bindings_denylist = [transformer],
     value = GoldenNullableUnionStruct {
         v: null,
     },

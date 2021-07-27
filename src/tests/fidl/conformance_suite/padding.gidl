@@ -1329,8 +1329,7 @@ decode_failure("BadPaddingInBetweenOutOfLineObjects7Byte") {
 }
 
 success("CorrectPaddedUnionStruct") {
-    bindings_denylist = [transformer],
-    value = PaddedUnionStruct {
+        value = PaddedUnionStruct {
         u: PaddedUnion {
             field: 0x01,
         },

@@ -702,8 +702,7 @@ decode_failure("ResourceTableUnknownBytesNonMultipleOf8") {
 }
 
 success("InlineXUnionInStruct") {
-    bindings_denylist = [transformer],
-    value = TestInlineXUnionInStruct {
+        value = TestInlineXUnionInStruct {
         before: "before",
         xu: SampleXUnion {
             u: 0xdeadbeef,
@@ -751,8 +750,7 @@ success("InlineXUnionInStruct") {
 }
 
 success("OptionalXUnionInStructAbsent") {
-    bindings_denylist = [transformer],
-    value = TestOptionalXUnionInStruct {
+        value = TestOptionalXUnionInStruct {
         before: "before",
         // no SampleXUnion
         after: "after",
@@ -843,8 +841,7 @@ decode_failure("OptionalXUnionInStructAbsentInvalidNumHandles") {
 }
 
 success("OptionalXUnionInStructPresent") {
-    bindings_denylist = [transformer],
-    value = TestOptionalXUnionInStruct {
+        value = TestOptionalXUnionInStruct {
         before: "before",
         xu: SampleXUnion {
             u: 0xdeadbeef,
@@ -1311,8 +1308,7 @@ decode_failure("XUnionInTableXUnionPresentInvalidNumHandles") {
 }
 
 success("StrictXUnion") {
-    bindings_denylist = [transformer],
-    value = TestStrictXUnionInStruct {
+        value = TestStrictXUnionInStruct {
         xu: SampleStrictXUnion {
             u: 0xdeadbeef,
         },

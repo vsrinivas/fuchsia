@@ -3,8 +3,7 @@
 // found in the LICENSE file.
 
 success("UnionWithBoundString") {
-    bindings_denylist = [transformer],
-    value = UnionWithBoundStringStruct {
+        value = UnionWithBoundStringStruct {
         v: UnionWithBoundString {
             boundFiveStr: "abcd",
         },
@@ -47,8 +46,7 @@ encode_failure("UnionWithBoundString_ExceedsBounds") {
 }
 
 success("UnionMigration_SingleVariant") {
-    bindings_denylist = [transformer],
-    value = SingleVariantUnionStruct {
+        value = SingleVariantUnionStruct {
         u: SingleVariantUnion {
             x: 42,
         },
@@ -338,7 +336,6 @@ decode_failure("FlexibleResourceUnionUnknownBytesNonMultipleOf8") {
 }
 
 success("UnionEnvelopeInlining_SmallValue_Inlined") {
-    bindings_denylist = [transformer],
     value = EnvelopeInliningTestUnionStruct {
         u: EnvelopeInliningTestUnion {
             small: 100,
@@ -363,7 +360,7 @@ success("UnionEnvelopeInlining_SmallValue_Inlined") {
 
 success("UnionEnvelopeInlining_LargeValue_Outlined") {
     // TODO(fxbug.dev/80658) Determine why this test is failing in the fuzzer.
-    bindings_denylist = [transformer, fuzzer_corpus],
+    bindings_denylist = [fuzzer_corpus],
     value = EnvelopeInliningTestUnionStruct {
         u: EnvelopeInliningTestUnion {
             large: 100,
@@ -390,7 +387,6 @@ success("UnionEnvelopeInlining_LargeValue_Outlined") {
 }
 
 success("UnionEnvelopeInlining_HandleValue_Inlined") {
-    bindings_denylist = [transformer],
     handle_defs = {
         #0 = event(),
     },
@@ -768,8 +764,7 @@ decode_failure("OptionalStrictResourceUnionZeroOrdinalWithPayload") {
 }
 
 success("OptionalFlexibleValueUnionZeroOrdinalNoPayload") {
-    bindings_denylist = [transformer],
-    value = TestOptionalFlexibleXUnionInStruct {
+        value = TestOptionalFlexibleXUnionInStruct {
         xu: null,
     },
     bytes = {
@@ -804,8 +799,7 @@ decode_failure("OptionalFlexibleValueUnionZeroOrdinalWithPayload") {
 }
 
 success("OptionalFlexibleResourceUnionZeroOrdinalNoPayload") {
-    bindings_denylist = [transformer],
-    value = TestOptionalFlexibleResourceXUnionInStruct {
+        value = TestOptionalFlexibleResourceXUnionInStruct {
         xu: null,
     },
     bytes = {

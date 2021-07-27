@@ -32,8 +32,7 @@ success("Sandwich1Case1") {
 }
 
 success("Sandwich1Case1WithHdr") {
-    bindings_denylist = [transformer],
-    value = Sandwich1Message {
+        value = Sandwich1Message {
         header: TransactionHeader {
             tx_id: 0xf3f2f1f0,
             flags: [0xf4, 0xf5, 0xf6],
@@ -92,8 +91,7 @@ success("Sandwich1Case1WithHdr") {
 }
 
 success("Sandwich1WithOptUnionPresent") {
-    bindings_denylist = [transformer],
-    value = Sandwich1WithOptUnion {
+        value = Sandwich1WithOptUnion {
         before: 0x04030201,
         opt_union: UnionSize8Align4 {
             variant: 0x0c0b0a09,
@@ -134,8 +132,7 @@ success("Sandwich1WithOptUnionPresent") {
 }
 
 success("Sandwich1WithOptUnionAbsent") {
-    bindings_denylist = [transformer],
-    value = Sandwich1WithOptUnion {
+        value = Sandwich1WithOptUnion {
         before: 0x04030201,
         after: 0x08070605,
     },
@@ -170,8 +167,7 @@ success("Sandwich1WithOptUnionAbsent") {
 }
 
 success("Sandwich2Case1") {
-    bindings_denylist = [transformer],
-    value = Sandwich2 {
+        value = Sandwich2 {
         before: 0x04030201,
         the_union: UnionSize12Align4 {
             variant: [0xa0, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5],
@@ -215,8 +211,7 @@ success("Sandwich2Case1") {
 }
 
 success("Sandwich3Case1") {
-    bindings_denylist = [transformer],
-    value = Sandwich3 {
+        value = Sandwich3 {
         before: 0x04030201,
         the_union: UnionSize24Align8 {
             variant: StructSize16Align8 {
@@ -267,8 +262,7 @@ success("Sandwich3Case1") {
 }
 
 success("Sandwich4Case1") {
-    bindings_denylist = [transformer],
-    value = Sandwich4 {
+        value = Sandwich4 {
         before: 0x04030201,
         the_union: UnionSize36Align4 {
             variant: [
@@ -333,8 +327,7 @@ success("Sandwich4Case1") {
 }
 
 success("Sandwich4Case1WithHdr") {
-    bindings_denylist = [transformer],
-    value = Sandwich4Message {
+        value = Sandwich4Message {
         header: TransactionHeader {
             tx_id: 0,
             flags: [0, 0, 0],
@@ -417,8 +410,7 @@ success("Sandwich4Case1WithHdr") {
 }
 
 success("Sandwich5Case1") {
-    bindings_denylist = [transformer],
-    value = Sandwich5 {
+        value = Sandwich5 {
         before: 0x04030201,
         union_of_union: UnionOfUnion {
             size8align4: UnionSize8Align4 {
@@ -473,8 +465,7 @@ success("Sandwich5Case1") {
 }
 
 success("Sandwich5Case1WithHdr") {
-    bindings_denylist = [transformer],
-    value = Sandwich5Message {
+        value = Sandwich5Message {
         header: TransactionHeader {
             tx_id: 0xf3f2f1f0,
             flags: [0xf4, 0xf5, 0xf6],
@@ -547,8 +538,7 @@ success("Sandwich5Case1WithHdr") {
 }
 
 success("Sandwich5Case2") {
-    bindings_denylist = [transformer],
-    value = Sandwich5 {
+        value = Sandwich5 {
         before: 0x04030201,
         union_of_union: UnionOfUnion {
             size24align8: UnionSize24Align8 {
@@ -613,8 +603,7 @@ success("Sandwich5Case2") {
 }
 
 success("Sandwich5Case2WithHdr") {
-    bindings_denylist = [transformer],
-    value = Sandwich5Message {
+        value = Sandwich5Message {
         header: TransactionHeader {
             tx_id: 0xf3f2f1f0,
             flags: [0xf4, 0xf5, 0xf6],
@@ -697,8 +686,7 @@ success("Sandwich5Case2WithHdr") {
 }
 
 success("Sandwich6Case1") {
-    bindings_denylist = [transformer],
-    value = Sandwich6 {
+        value = Sandwich6 {
         before: 0x04030201,
         the_union: UnionWithVector {
             vector_of_uint8: [
@@ -754,8 +742,7 @@ success("Sandwich6Case1") {
 }
 
 success("Sandwich6Case1AbsentVector") {
-    bindings_denylist = [transformer],
-    value = Sandwich6 {
+        value = Sandwich6 {
         before: 0x04030201,
         the_union: UnionWithVector {
             vector_of_uint8: []
@@ -803,8 +790,7 @@ success("Sandwich6Case1AbsentVector") {
 }
 
 success("Sandwich6Case2") {
-    bindings_denylist = [transformer],
-    value = Sandwich6 {
+        value = Sandwich6 {
         before: 0x04030201,
         the_union: UnionWithVector {
             s: "soft migrations rock!",
@@ -866,8 +852,7 @@ success("Sandwich6Case2") {
 }
 
 success("Sandwich6Case3") {
-    bindings_denylist = [transformer],
-    value = Sandwich6 {
+        value = Sandwich6 {
         before: 0x04030201,
         the_union: UnionWithVector {
             vector_s3_a1: [
@@ -935,8 +920,7 @@ success("Sandwich6Case3") {
 }
 
 success("Sandwich6Case4") {
-    bindings_denylist = [transformer],
-    value = Sandwich6 {
+        value = Sandwich6 {
         before: 0x04030201,
         the_union: UnionWithVector {
             vector_s3_a2: [
@@ -1007,8 +991,7 @@ success("Sandwich6Case4") {
 }
 
 success("Sandwich6Case5") {
-    bindings_denylist = [transformer],
-    value = Sandwich6 {
+        value = Sandwich6 {
         before: 0x04030201,
         the_union: UnionWithVector {
             // TODO(fxbug.dev/36441): Support handles in GIDL.
@@ -1071,8 +1054,7 @@ success("Sandwich6Case5") {
 }
 
 success("Sandwich6Case6") {
-    bindings_denylist = [transformer],
-    value = Sandwich6 {
+        value = Sandwich6 {
         before: 0x04030201,
         the_union: UnionWithVector {
             array_s3_a1: [
@@ -1127,8 +1109,7 @@ success("Sandwich6Case6") {
 }
 
 success("Sandwich6Case7") {
-    bindings_denylist = [transformer],
-    value = Sandwich6 {
+        value = Sandwich6 {
         before: 0x04030201,
         the_union: UnionWithVector {
             array_s3_a2: [
@@ -1181,8 +1162,7 @@ success("Sandwich6Case7") {
 }
 
 success("Sandwich6Case8") {
-    bindings_denylist = [transformer],
-    value = Sandwich6 {
+        value = Sandwich6 {
         before: 0x04030201,
         the_union: UnionWithVector {
             vector_union: [
@@ -1249,8 +1229,7 @@ success("Sandwich6Case8") {
 }
 
 success("Sandwich7Case1") {
-    bindings_denylist = [transformer],
-    value = Sandwich7 {
+        value = Sandwich7 {
         before: 0x14131211,
         opt_sandwich1: Sandwich1 {
             before: 0x04030201,
@@ -1305,8 +1284,7 @@ success("Sandwich7Case1") {
 }
 
 success("Sandwich7Case1WithHdr") {
-    bindings_denylist = [transformer],
-    value = Sandwich7Message {
+        value = Sandwich7Message {
         header: TransactionHeader {
             tx_id: 0xf3f2f1f0,
             flags: [0xf4, 0xf5, 0xf6],
@@ -1854,8 +1832,7 @@ success("Table_UnionWithVector_StructSandwich") {
 }
 
 success("ArrayStruct") {
-    bindings_denylist = [transformer],
-    value = ArrayStruct {
+        value = ArrayStruct {
         unions: [
             StringUnion {
                 s: "one"
@@ -2082,8 +2059,7 @@ success("EmptyStructUnion") {
 }
 
 success("NoCodingTablesStressor") {
-    bindings_denylist = [transformer],
-    value = NoCodingTablesStressor {
+        value = NoCodingTablesStressor {
         f1: 0x1111111111111111,
         f2: 0x2222222222222222,
         u1: UnionSize36Align4 {
@@ -2279,8 +2255,7 @@ success("NoCodingTablesStressor") {
 }
 
 success("OutOfLineSandwich1Case1") {
-    bindings_denylist = [transformer],
-    value = OutOfLineSandwich1 {
+        value = OutOfLineSandwich1 {
         before: "soft migrations rock!",
         v: [
             Sandwich1 {
@@ -2382,8 +2357,7 @@ success("OutOfLineSandwich1Case1") {
 }
 
 success("OutOfLineSandwich1WithOptUnionPresent") {
-    bindings_denylist = [transformer],
-    value = OutOfLineSandwich1WithOptUnion {
+        value = OutOfLineSandwich1WithOptUnion {
         before: "soft migrations rock!",
         v: [
             Sandwich1WithOptUnion {
@@ -2486,8 +2460,7 @@ success("OutOfLineSandwich1WithOptUnionPresent") {
 }
 
 success("OutOfLineSandwich1WithOptUnionAbsent") {
-    bindings_denylist = [transformer],
-    value = OutOfLineSandwich1WithOptUnion {
+        value = OutOfLineSandwich1WithOptUnion {
         before: "soft migrations rock!",
         v: [
             Sandwich1WithOptUnion {
@@ -2757,8 +2730,7 @@ success("Regression7TableUnionXUnion") {
 }
 
 success("Regression8OptUnionSize12Aligned4") {
-    bindings_denylist = [transformer],
-    value = Regression8OptUnionSize12Align4 {
+        value = Regression8OptUnionSize12Align4 {
         opt_union1: UnionSize12Align4 {
             variant: [0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6],
         },
@@ -2831,8 +2803,7 @@ success("Regression8OptUnionSize12Aligned4") {
 }
 
 success("Regression8VectorOfOptUnionSize12Aligned4") {
-    bindings_denylist = [transformer],
-    value = Regression8VectorOfOptUnionSize12Align4 {
+        value = Regression8VectorOfOptUnionSize12Align4 {
         value: [
             null,
             UnionSize12Align4 {
@@ -3136,8 +3107,7 @@ success("Regression9Response") {
 }
 
 success("Sandwich4Align8") {
-    bindings_denylist = [transformer],
-    value = Sandwich4Align8 {
+        value = Sandwich4Align8 {
         sandwich4: Sandwich4 {
             before: 0x04030201,
             the_union: UnionSize36Align4 {
@@ -3211,8 +3181,7 @@ success("Sandwich4Align8") {
 }
 
 success("Sandwich4Align8WithPointer") {
-    bindings_denylist = [transformer],
-    value = Sandwich4Align8WithPointer {
+        value = Sandwich4Align8WithPointer {
         sandwich4: Sandwich4 {
             before: 0x04030201,
             the_union: UnionSize36Align4 {
@@ -3294,8 +3263,7 @@ success("Sandwich4Align8WithPointer") {
 }
 
 success("Sandwich8Case1") {
-    bindings_denylist = [transformer],
-    value = Sandwich8 {
+        value = Sandwich8 {
         before: 0x04030201,
         union_of_union: UnionOfUnion {
             size8align4: UnionSize8Align4 {
@@ -3350,8 +3318,7 @@ success("Sandwich8Case1") {
 }
 
 success("Sandwich9Case1") {
-    bindings_denylist = [transformer],
-    value = Sandwich9 {
+        value = Sandwich9 {
         before: 0x0201,
         the_union: UnionWithVectorOfVectors {
             v: [[
@@ -3461,8 +3428,7 @@ success("SimpleTableArrayStruct") {
 }
 
 success("StringUnionVector") {
-    bindings_denylist = [transformer],
-    value = StringUnionVector {
+        value = StringUnionVector {
         the_vector: [
             StringUnion {
                 s: "hello",
@@ -3587,8 +3553,7 @@ success("StringUnionStructWrapperResponse") {
 }
 
 success("RegressionNoUnionLauncherCreateComponentRequest") {
-    bindings_denylist = [transformer],
-    value = CreateComponentRequest {
+        value = CreateComponentRequest {
         launch_info: LaunchInfo {
             url: "fuchsia-pkg://fuchsia.com/fidl_compatibility_test_server_rust_write_xunion#meta/fidl_compatibility_test_server_rust_write_xunion.cmx",
             // TODO(fxbug.dev/36441): Support handles in GIDL.

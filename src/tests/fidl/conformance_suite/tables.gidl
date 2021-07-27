@@ -5,13 +5,22 @@
 // Tests tables whose fields are inlined into the envelope in the wire
 // format.
 success("TableFieldInlined") {
-    bindings_allowlist = [go,rust],
+    bindings_allowlist = [go,rust,transformer],
     value = TableFieldInlinedStruct {
         t: TableFieldInlined {
             f: 123,
         },
     },
     bytes = {
+        v1 = [
+            num(1):8,
+            repeat(0xff):8,
+
+            num(8):4, num(0):4,
+            repeat(0xff):8,
+
+            num(123):8,
+        ],
         v2 = [
             num(1):8,
             repeat(0xff):8,
@@ -24,7 +33,7 @@ success("TableFieldInlined") {
 // Tests a table whose handle field is inlined into the envelope in the wire
 // format.
 success("TableFieldInlinedHandle") {
-    bindings_allowlist = [go,rust],
+    bindings_allowlist = [go,rust,transformer],
     handle_defs = {
         #0 = channel(),
     },
@@ -34,6 +43,15 @@ success("TableFieldInlinedHandle") {
         },
     },
     bytes = {
+        v1 = [
+            num(1):8,
+            repeat(0xff):8,
+
+            num(8):4, num(1):4,
+            repeat(0xff):8,
+
+            repeat(0xff):4, padding:4,
+        ],
         v2 = [
             num(1):8,
             repeat(0xff):8,
@@ -42,19 +60,28 @@ success("TableFieldInlinedHandle") {
         ]
     },
     handles = {
-        v2 = [#0],
+        v1, v2 = [#0],
     }
 }
 
 // Tests tables whose fields are stored out of line in the wire format.
 success("TableFieldOutOfLine") {
-    bindings_allowlist = [go,rust],
+    bindings_allowlist = [go,rust,transformer],
     value = TableFieldOutOfLineStruct {
         t: TableFieldOutOfLine {
             f: 123,
         },
     },
     bytes = {
+        v1 = [
+            num(1):8,
+            repeat(0xff):8,
+
+            num(8):4, num(0):4,
+            repeat(0xff):8,
+
+            num(123):8,
+        ],
         v2 = [
             num(1):8,
             repeat(0xff):8,
@@ -68,7 +95,7 @@ success("TableFieldOutOfLine") {
 
 // Tests a table in which a value is inlined into an unknown field.
 success("TableFieldUnknownInlined") {
-    bindings_allowlist = [go,rust],
+    bindings_allowlist = [go,rust,transformer],
     value = TableFieldUnknownStruct {
         t: TableFieldUnknown {
             1: {
@@ -88,7 +115,7 @@ success("TableFieldUnknownInlined") {
 
 // Tests a table in which a handle value is inlined into an unknown field.
 success("TableFieldUnknownInlinedHandle") {
-    bindings_allowlist = [go,rust],
+    bindings_allowlist = [go,rust,transformer],
     handle_defs = {
         #0 = channel(),
     },
@@ -115,7 +142,7 @@ success("TableFieldUnknownInlinedHandle") {
 
 // Tests a table in which a value is stored out of line in an unknown field.
 success("TableFieldUnknownOutOfLine") {
-    bindings_allowlist = [go,rust],
+    bindings_allowlist = [go,rust,transformer],
     value = TableFieldUnknownStruct {
         t: TableFieldUnknown {
             1: {
@@ -124,6 +151,15 @@ success("TableFieldUnknownOutOfLine") {
         },
     },
     bytes = {
+        v1 = [
+            num(1):8,
+            repeat(0xff):8,
+
+            num(8):4, num(0):4,
+            repeat(0xff):8,
+
+            num(123):8,
+        ],
         v2 = [
             num(1):8,
             repeat(0xff):8,
@@ -138,7 +174,7 @@ success("TableFieldUnknownOutOfLine") {
 // Tests decode of a value in a table that can be represented inline in the
 // envelope but is incorrectly using the out of line representation.
 decode_failure("TableOutOfLineEnvelopeWhenInlineRequired") {
-    bindings_allowlist = [go],
+    bindings_allowlist = [go,transformer],
     type = TableFieldInlinedStruct,
     bytes = {
         v2 = [
