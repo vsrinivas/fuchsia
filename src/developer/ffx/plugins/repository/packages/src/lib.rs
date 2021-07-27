@@ -34,11 +34,20 @@ async fn packages_impl<W: Write>(
 ) -> Result<()> {
     let (client, server) = fidl::endpoints::create_endpoints::<RepositoryPackagesIteratorMarker>()?;
 
-    match repos_proxy.list_packages(&cmd.name, server).await? {
+    let repo_name = if let Some(repo_name) = cmd.repository().await? {
+        repo_name
+    } else {
+        ffx_bail!(
+            "Either a default repository must be set, or the --repository flag must be provided.\n\
+            You can set a default repository using: `ffx repository default set <name>`."
+        )
+    };
+
+    match repos_proxy.list_packages(&repo_name, server).await? {
         Ok(()) => {}
         Err(err) => match RepositoryError::from(err) {
             RepositoryError::NoMatchingRepository => {
-                ffx_bail!("repository {:?} does not exist", cmd.name)
+                ffx_bail!("repository {:?} does not exist", repo_name)
             }
             err => ffx_bail!("error listing packages: {}", err),
         },
@@ -176,7 +185,7 @@ mod test {
     #[fasync::run_singlethreaded(test)]
     async fn test_package_list_truncated_hash() {
         assert_eq!(run_impl(PackagesCommand {
-            name: "devhost".to_string(),
+            repository: Some("devhost".to_string()),
             full_hash: false,
         }).await.trim(), "NAME      SIZE  HASH            MODIFIED \n package1  1 B   longhashlon...  Fri, 02 Jan 1970 00:00:00 +0000 \n package2  2 KB  secondhashs...");
     }
@@ -184,7 +193,7 @@ mod test {
     #[fasync::run_singlethreaded(test)]
     async fn test_package_list_full_hash() {
         assert_eq!(run_impl(PackagesCommand {
-            name: "devhost".to_string(),
+            repository: Some("devhost".to_string()),
             full_hash: true,
         }).await.trim(), "NAME      SIZE  HASH                              MODIFIED \n package1  1 B   longhashlonghashlonghashlonghash  Fri, 02 Jan 1970 00:00:00 +0000 \n package2  2 KB  secondhashsecondhashsecondhash");
     }

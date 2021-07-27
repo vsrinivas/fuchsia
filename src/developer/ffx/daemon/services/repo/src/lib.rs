@@ -36,6 +36,7 @@ const MAX_REGISTERED_TARGETS: i64 = 512;
 
 const CONFIG_KEY_REPOSITORIES: &str = "repository.server.repositories";
 const CONFIG_KEY_REGISTRATIONS: &str = "repository.server.registrations";
+const CONFIG_KEY_DEFAULT: &str = "repository.server.default";
 
 fn repository_query(repo_name: &str) -> String {
     format!("{}.{}", CONFIG_KEY_REPOSITORIES, repo_name)
@@ -236,6 +237,21 @@ impl Repo {
             ffx_config::remove((&repository_query(repo_name), ConfigLevel::User)).await
         {
             log::warn!("Failed to remove repository from config: {:#?}", err);
+        }
+
+        // If we are removing the default repository, make sure to remove it from the configuration
+        // as well.
+        match ffx_config::get::<Option<String>, _>(CONFIG_KEY_DEFAULT).await {
+            Ok(Some(default_repo_name)) if repo_name == default_repo_name => {
+                if let Err(err) = ffx_config::remove((CONFIG_KEY_DEFAULT, ConfigLevel::User)).await
+                {
+                    log::warn!("failed to remove default repository: {:#?}", err);
+                }
+            }
+            Ok(_) => {}
+            Err(err) => {
+                log::warn!("failed to determine default repository name: {:#?}", err);
+            }
         }
 
         self.manager.remove(repo_name)
@@ -910,12 +926,12 @@ mod tests {
         EditTransactionCommit,
     }
 
-    async fn add_repo(proxy: &bridge::RepositoryRegistryProxy) {
+    async fn add_repo(proxy: &bridge::RepositoryRegistryProxy, repo_name: &str) {
         let path = fs::canonicalize(EMPTY_REPO_PATH).unwrap();
 
         let spec = RepositorySpec::FileSystem { path };
         proxy
-            .add_repository(REPO_NAME, &mut spec.into())
+            .add_repository(repo_name, &mut spec.into())
             .await
             .expect("communicated with proxy")
             .expect("adding repository to succeed");
@@ -1149,9 +1165,7 @@ mod tests {
             assert_eq!(get_repositories(&proxy).await, vec![]);
             assert_eq!(get_target_registrations(&proxy).await, vec![]);
 
-            let proxy = daemon.open_proxy::<bridge::RepositoryRegistryMarker>().await;
-
-            add_repo(&proxy).await;
+            add_repo(&proxy, REPO_NAME).await;
 
             // We shouldn't have added repositories or rewrite rules to the fuchsia device yet.
 
@@ -1257,7 +1271,7 @@ mod tests {
                 .build();
 
             let proxy = daemon.open_proxy::<bridge::RepositoryRegistryMarker>().await;
-            add_repo(&proxy).await;
+            add_repo(&proxy, REPO_NAME).await;
 
             proxy
                 .register_target(bridge::RepositoryTarget {
@@ -1302,6 +1316,46 @@ mod tests {
 
     #[serial_test::serial]
     #[test]
+    fn test_remove_default_repository() {
+        run_test(async {
+            let (_fake_repo_manager, fake_repo_manager_closure) = FakeRepositoryManager::new();
+
+            let daemon = FakeDaemonBuilder::new()
+                .register_instanced_service_closure::<RepositoryManagerMarker, _>(
+                    fake_repo_manager_closure,
+                )
+                .register_fidl_service::<Repo>()
+                .nodename(TARGET_NODENAME.to_string())
+                .build();
+
+            let proxy = daemon.open_proxy::<bridge::RepositoryRegistryMarker>().await;
+            add_repo(&proxy, REPO_NAME).await;
+
+            let default_repo_name = "default-repo";
+            ffx_config::set((CONFIG_KEY_DEFAULT, ConfigLevel::User), default_repo_name.into())
+                .await
+                .unwrap();
+
+            add_repo(&proxy, default_repo_name).await;
+
+            // Remove the non-default repo, which shouldn't change the default repo.
+            assert!(proxy.remove_repository(REPO_NAME).await.unwrap());
+            assert_eq!(
+                ffx_config::get::<String, _>(CONFIG_KEY_DEFAULT).await.unwrap(),
+                default_repo_name
+            );
+
+            // Removing the default repository should also remove the config setting.
+            assert!(proxy.remove_repository(default_repo_name).await.unwrap());
+            assert_eq!(
+                ffx_config::get::<Option<String>, _>(CONFIG_KEY_DEFAULT).await.unwrap(),
+                None
+            );
+        })
+    }
+
+    #[serial_test::serial]
+    #[test]
     fn test_add_register_default_target() {
         run_test(async {
             let (fake_repo_manager, fake_repo_manager_closure) = FakeRepositoryManager::new();
@@ -1317,8 +1371,7 @@ mod tests {
                 .build();
 
             let proxy = daemon.open_proxy::<bridge::RepositoryRegistryMarker>().await;
-
-            add_repo(&proxy).await;
+            add_repo(&proxy, REPO_NAME).await;
 
             proxy
                 .register_target(bridge::RepositoryTarget {
@@ -1358,8 +1411,7 @@ mod tests {
                 .build();
 
             let proxy = daemon.open_proxy::<bridge::RepositoryRegistryMarker>().await;
-
-            add_repo(&proxy).await;
+            add_repo(&proxy, REPO_NAME).await;
 
             // Make sure there's no repositories or registrations on the device.
             assert_eq!(fake_repo_manager.take_events(), vec![]);
@@ -1418,8 +1470,7 @@ mod tests {
                 .build();
 
             let proxy = daemon.open_proxy::<bridge::RepositoryRegistryMarker>().await;
-
-            add_repo(&proxy).await;
+            add_repo(&proxy, REPO_NAME).await;
 
             proxy
                 .register_target(bridge::RepositoryTarget {
@@ -1469,8 +1520,7 @@ mod tests {
                 .build();
 
             let proxy = daemon.open_proxy::<bridge::RepositoryRegistryMarker>().await;
-
-            add_repo(&proxy).await;
+            add_repo(&proxy, REPO_NAME).await;
 
             assert_eq!(
                 proxy

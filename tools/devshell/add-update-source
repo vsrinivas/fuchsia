@@ -176,7 +176,21 @@ function main {
       return $err
     fi
 
-    fx-command-run ffx --config ffx_repository=true repository target register "${register_args[@]}"
+    # TODO(http://fxbug.dev/81225): Should we be setting the default repository
+    # in the ffx build config environment? It doesn't look like fx doesn't set
+    # up the build environment, so we'll just set this config in the user
+    # environment for now.
+    fx-command-run ffx --config ffx_repository=true repository default set "$source_name"
+    err=$?
+    if [[ $err -ne 0 ]]; then
+      fx-error "Not able to set the default repository to $source_name"
+      return $err
+    fi
+
+    fx-command-run ffx --config ffx_repository=true \
+      repository target register \
+      --repository "$source_name" \
+      "${register_args[@]}"
     err=$?
     if [[ $err -ne 0 ]]; then
       fx-error "The repository was unable to be added to the target device"

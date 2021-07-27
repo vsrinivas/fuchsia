@@ -35,6 +35,8 @@ async fn list_impl<W: Write>(
         table.set_format(fmt);
     }
 
+    let default_repo: Option<String> = ffx_config::get("repository.default").await?;
+
     let mut rows = vec![];
     loop {
         let repos = client.next().await?;
@@ -51,16 +53,20 @@ async fn list_impl<W: Write>(
         for repo in repos {
             let mut row = row!();
 
-            row.add_cell(cell!(repo.name));
+            if default_repo.as_deref() == Some(&repo.name) {
+                row.add_cell(cell!(format!("{}*", repo.name)));
+            } else {
+                row.add_cell(cell!(repo.name));
+            }
 
             match repo.spec {
                 bridge::RepositorySpec::FileSystem(filesystem_spec) => {
                     row.add_cell(cell!("filesystem"));
-                    row.add_cell(cell!(filesystem_spec.path.as_deref().unwrap_or("unknown")));
+                    row.add_cell(cell!(filesystem_spec.path.as_deref().unwrap_or("<unknown>")));
                 }
                 bridge::RepositorySpec::Pm(pm_spec) => {
                     row.add_cell(cell!("pm"));
-                    row.add_cell(cell!(pm_spec.path.as_deref().unwrap_or("unknown")));
+                    row.add_cell(cell!(pm_spec.path.as_deref().unwrap_or("<unknown>")));
                 }
                 bridge::RepositorySpecUnknown!() => {
                     row.add_cell(cell!("<unknown>"));
