@@ -1248,7 +1248,7 @@ impl TargetCollection {
 
         let to_update = self.find_matching_target(&new_target);
 
-        log::info!("Merging target {:?} into {:?}", new_target, to_update);
+        log::trace!("Merging target {:?} into {:?}", new_target, to_update);
 
         // Do not merge unscoped link-local addresses into the target
         // collection, as they are not routable and therefore not safe

@@ -143,7 +143,6 @@ where
                         Some(elem)
                     }
                     Poll::Ready(None) => {
-                        log::debug!("dropping futures (stream complete).");
                         this.stream.set(None);
                         drop(mem::replace(this.futures, FuturesUnordered::new()));
                         return Poll::Ready(Ok(()));
