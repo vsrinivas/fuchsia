@@ -60,11 +60,15 @@ impl Scrutiny {
         {
             logo::print_logo();
         }
-        let _ = WriteLogger::init(
-            log_level,
-            SimpleLogConfig::default(),
-            File::create(config.runtime.logging.path.clone()).unwrap(),
-        );
+
+        if let Ok(log_file) = File::create(config.runtime.logging.path.clone()) {
+            let _ = WriteLogger::init(
+                log_level,
+                SimpleLogConfig::default(),
+                log_file,
+            );
+        }
+
         let model = Arc::new(DataModel::connect(ModelEnvironment {
             uri: config.runtime.model.path.clone(),
             build_path: config.runtime.model.build_path.clone(),
