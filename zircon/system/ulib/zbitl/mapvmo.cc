@@ -10,6 +10,8 @@ namespace zbitl {
 fitx::result<zx_status_t, void*> StorageTraits<MapUnownedVmo>::Map(MapUnownedVmo& zbi,
                                                                    uint64_t payload,
                                                                    uint32_t length, bool write) {
+  ZX_ASSERT_MSG(!write || zbi.writable_, "map-VMO not configured to be written to");
+
   if (length == 0) {
     return fitx::ok(nullptr);
   }
@@ -25,8 +27,9 @@ fitx::result<zx_status_t, void*> StorageTraits<MapUnownedVmo>::Map(MapUnownedVmo
     if (offset_in_mapping < zbi.mapping_.size_ &&
         zbi.mapping_.size_ - offset_in_mapping >= length) {
       if (write && !zbi.mapping_.write_) {
-        zx_status_t status = zbi.vmar().protect(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
-                                                zbi.mapping_.address_, zbi.mapping_.size_);
+        zx_status_t status =
+            zbi.vmar().protect(ZX_VM_PERM_READ | (zbi.writable_ ? ZX_VM_PERM_WRITE : 0),
+                               zbi.mapping_.address_, zbi.mapping_.size_);
         if (status != ZX_OK) {
           return fitx::error{status};
         }
@@ -43,9 +46,8 @@ fitx::result<zx_status_t, void*> StorageTraits<MapUnownedVmo>::Map(MapUnownedVmo
   const uint64_t next_page_boundary = ZX_PAGE_ALIGN(payload + length);
   const size_t size = next_page_boundary - previous_page_boundary;
   const uint64_t offset_in_mapping = payload % ZX_PAGE_SIZE;
-
   if (zx_status_t status =
-          zbi.vmar().map(ZX_VM_PERM_READ | (write ? ZX_VM_PERM_WRITE : 0), 0, zbi.vmo(),
+          zbi.vmar().map(ZX_VM_PERM_READ | (zbi.writable_ ? ZX_VM_PERM_WRITE : 0), 0, zbi.vmo(),
                          previous_page_boundary, size, &zbi.mapping_.address_);
       status != ZX_OK) {
     return fitx::error{status};

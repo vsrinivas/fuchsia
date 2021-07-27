@@ -26,8 +26,9 @@ namespace zbitl {
 // zbitl::ByteView instead.
 class MapUnownedVmo {
  public:
-  explicit MapUnownedVmo(zx::unowned_vmo vmo, zx::unowned_vmar vmar = zx::vmar::root_self())
-      : vmo_(std::move(vmo)), vmar_(std::move(vmar)) {}
+  explicit MapUnownedVmo(zx::unowned_vmo vmo, bool writable = false,
+                         zx::unowned_vmar vmar = zx::vmar::root_self())
+      : vmo_(std::move(vmo)), vmar_(std::move(vmar)), writable_(writable) {}
 
   MapUnownedVmo() = default;
   MapUnownedVmo(MapUnownedVmo&&) = default;
@@ -39,11 +40,14 @@ class MapUnownedVmo {
   // it always holds non-owning references.
 
   MapUnownedVmo(const MapUnownedVmo& other)
-      : vmo_{zx::unowned_vmo{other.vmo_}}, vmar_{zx::unowned_vmar{other.vmar_}} {}
+      : vmo_{zx::unowned_vmo{other.vmo_}},
+        vmar_{zx::unowned_vmar{other.vmar_}},
+        writable_(other.writable_) {}
 
   MapUnownedVmo& operator=(const MapUnownedVmo& other) {
     vmo_ = zx::unowned_vmo{other.vmo_};
     vmar_ = zx::unowned_vmar{other.vmar_};
+    writable_ = other.writable_;
     return *this;
   }
 
@@ -80,14 +84,17 @@ class MapUnownedVmo {
   zx::unowned_vmo vmo_;
   zx::unowned_vmar vmar_;
   Mapping mapping_;
+  bool writable_;
 };
 
 // zbitl::MapOwnedVmo is like zbitl::MapUnownedVmo, but it owns the VMO handle.
 // zbitl::View<zbitl::MapUnownedVmo>::Copy creates a zbitl::MapOwnedVmo.
 class MapOwnedVmo : public MapUnownedVmo {
  public:
-  explicit MapOwnedVmo(zx::vmo vmo, zx::unowned_vmar vmar = zx::vmar::root_self())
-      : MapUnownedVmo(zx::unowned_vmo{vmo}, zx::unowned_vmar{vmar}), owned_vmo_(std::move(vmo)) {}
+  explicit MapOwnedVmo(zx::vmo vmo, bool writable = false,
+                       zx::unowned_vmar vmar = zx::vmar::root_self())
+      : MapUnownedVmo(zx::unowned_vmo{vmo}, writable, zx::unowned_vmar{vmar}),
+        owned_vmo_(std::move(vmo)) {}
 
   MapOwnedVmo() = default;
   MapOwnedVmo(const MapOwnedVmo&) = delete;
@@ -278,7 +285,8 @@ class StorageTraits<MapUnownedVmo> {
     if (result.is_error()) {
       return result.take_error();
     }
-    return fitx::ok(MapOwnedVmo{std::move(result).value(), zx::unowned_vmar{proto.vmar()}});
+    return fitx::ok(
+        MapOwnedVmo{std::move(result).value(), proto.writable_, zx::unowned_vmar{proto.vmar()}});
   }
 
   template <typename SlopCheck>
@@ -292,8 +300,8 @@ class StorageTraits<MapUnownedVmo> {
     }
     if (result.value()) {
       auto [vmo, slop] = std::move(*std::move(result).value());
-      return fitx::ok(
-          std::make_pair(MapOwnedVmo{std::move(vmo), zx::unowned_vmar{zbi.vmar()}}, slop));
+      return fitx::ok(std::make_pair(
+          MapOwnedVmo{std::move(vmo), zbi.writable_, zx::unowned_vmar{zbi.vmar()}}, slop));
     }
     return fitx::ok(std::nullopt);
   }

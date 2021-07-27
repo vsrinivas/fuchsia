@@ -100,8 +100,8 @@ class ScratchAllocator {
 
 zx::vmo GetBootfsFromZbi(const zx::debuglog& log, const zx::vmar& vmar_self,
                          const zx::vmo& zbi_vmo) {
-  zbitl::View<zbitl::MapUnownedVmo> zbi(
-      zbitl::MapUnownedVmo{zx::unowned_vmo{zbi_vmo}, zx::unowned_vmar{vmar_self}});
+  zbitl::View<zbitl::MapUnownedVmo> zbi(zbitl::MapUnownedVmo{
+      zx::unowned_vmo{zbi_vmo}, /*writable=*/true, zx::unowned_vmar{vmar_self}});
 
   for (auto it = zbi.begin(); it != zbi.end(); ++it) {
     if ((*it).header->type == ZBI_TYPE_STORAGE_BOOTFS) {
