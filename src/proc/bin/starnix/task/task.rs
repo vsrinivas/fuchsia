@@ -457,9 +457,6 @@ impl Task {
                 if must_create {
                     return Err(EEXIST);
                 }
-                if nofollow && node.node.info().mode.is_lnk() {
-                    return Err(ELOOP);
-                }
                 node
             }
             Err(errno) => {
@@ -473,11 +470,24 @@ impl Task {
             }
         };
 
-        let file = node.open(flags)?;
+        // Be sure not to reference the mode argument after this point.
+        // Below, we shadow the mode argument with the mode of the file we are
+        // opening. This line of code will hopefully catch future bugs if we
+        // refactor this function.
+        std::mem::drop(mode);
+
+        let mode = node.node.info().mode;
+        if nofollow && mode.is_lnk() {
+            return Err(ELOOP);
+        }
+        if flags.contains(OpenFlags::DIRECTORY) && !mode.is_dir() {
+            return Err(ENOTDIR);
+        }
+        if flags.can_write() && mode.is_dir() {
+            return Err(EISDIR);
+        }
 
         if flags.contains(OpenFlags::TRUNC) {
-            let node = file.node();
-            let mode = node.info().mode;
             match mode.fmt() {
                 FileMode::IFREG => {
                     // You might think we should check file.can_write() at this
@@ -489,7 +499,7 @@ impl Task {
                     // TODO(security): We should really do an access check for whether
                     // this task can write to this file.
                     if mode.contains(FileMode::IWUSR) {
-                        node.truncate(0)?;
+                        node.node.truncate(0)?;
                     }
                 }
                 FileMode::IFDIR => return Err(EISDIR),
@@ -497,7 +507,7 @@ impl Task {
             }
         }
 
-        Ok(file)
+        node.open(flags)
     }
 
     /// A wrapper for FsContext::lookup_parent_at that resolves the given
