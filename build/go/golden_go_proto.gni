@@ -5,6 +5,56 @@
 import("//build/testing/golden_file.gni")
 import("//third_party/protobuf/proto_library.gni")
 
+# Used internally by golden_go_proto() to verify that a generated .pb.go
+# file matches a golden reference. This is similar to the golden_file()
+# template, except that it will intentionally ignore the version numbers
+# for protoc, protoc-gen-go and protoc-gen-go-grpc embedded in the files
+# to make it easier to roll new versions of the sources or the compiler
+# and plugins.
+#
+# Arguments are:
+#
+#   current (required)
+#     Path to the current version of the file. This is typically generated
+#     by another target that would be listed in deps.
+#
+#   golden (required)
+#     Path to reference file to compare with current one.
+#
+#   deps
+#     Usual GN meaning.
+#
+template("_golden_go_proto_file") {
+  assert(defined(invoker.golden), "golden is a required parameter")
+  assert(defined(invoker.current), "current is a required parameter")
+
+  action(target_name) {
+    forward_variables_from(invoker, "*")
+
+    script = "//build/go/verify_golden_go_proto_file.py"
+
+    stamp_file = "$target_gen_dir/$target_name.verified"
+
+    inputs = [
+      current,
+      golden,
+    ]
+
+    outputs = [ stamp_file ]
+
+    args = [
+      "--golden",
+      rebase_path(golden, root_build_dir),
+      "--current",
+      rebase_path(current, root_build_dir),
+      "--stamp",
+      rebase_path(stamp_file, root_build_dir),
+      "--fuchsia-dir",
+      rebase_path("//", root_build_dir),
+    ]
+  }
+}
+
 # Compiles a protocol buffer for Go and defines it as a golden checked-in file
 # in the source tree.
 #
@@ -39,14 +89,10 @@ template("golden_go_proto") {
 
     _output = "${_name}.pb.go"
     _golden_name = "${_name}_pb_go_diff"
-    golden_file(_golden_name) {
+    _golden_go_proto_file(_golden_name) {
       golden = "${_dir}/${_output}"
       current = "${_proto_dir}/${golden}"
       deps = [ ":${_proto_name}" ]
-
-      # The pb.go files contain protoc version strings, so failing on diffs
-      # would make it more difficult to roll updates to it.
-      warn_on_changes = true
     }
     _goldens += [ ":${_golden_name}" ]
   }
