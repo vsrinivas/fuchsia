@@ -105,24 +105,22 @@ TEST_F(TestInstructions, PipeControl) {
   EXPECT_EQ(0u, *vaddr++);
 }
 
-TEST_F(TestInstructions, StoreDataImmediate) {
-  ASSERT_EQ(MiStoreDataImmediate::kDwordCount, 5u);
+TEST_F(TestInstructions, Flush) {
+  ASSERT_EQ(MiFlush::kDwordCount, 5u);
 
-  constexpr uint64_t kSomeAddr = 0xabcd1234cafebef8;
-  constexpr uint64_t kSomeData = 0xfecba09876543210;
+  constexpr uint64_t kSomeAddr = 0xabcd1234cafebef8 & ~(1 << 5);  // bit 5 set not allowed
+  constexpr uint32_t kSomeData = 0xfecba098;
 
   {
     uint32_t tail_start = ringbuffer_->tail();
     uint32_t* vaddr = TestRingbuffer::vaddr(ringbuffer_.get()) + tail_start / sizeof(uint32_t);
 
-    MiStoreDataImmediate::write64(ringbuffer_.get(), ADDRESS_SPACE_GGTT, kSomeAddr, kSomeData);
+    MiFlush::write(ringbuffer_.get(), kSomeData, ADDRESS_SPACE_GGTT, kSomeAddr);
 
-    EXPECT_EQ(ringbuffer_->tail() - tail_start,
-              MiStoreDataImmediate::kDwordCount * sizeof(uint32_t));
-    EXPECT_EQ(*vaddr++,
-              MiStoreDataImmediate::kCommandType | (MiStoreDataImmediate::kDwordCount - 2) |
-                  MiStoreDataImmediate::kUseGlobalGttBit | MiStoreDataImmediate::kStoreQwordBit);
-    EXPECT_EQ(*vaddr++, magma::lower_32_bits(kSomeAddr));
+    EXPECT_EQ(ringbuffer_->tail() - tail_start, MiFlush::kDwordCount * sizeof(uint32_t));
+    EXPECT_EQ(*vaddr++, MiFlush::kCommandType | MiFlush::kCommandOpcode |
+                            MiFlush::kPostSyncWriteImmediateBit | (MiFlush::kDwordCount - 2));
+    EXPECT_EQ(*vaddr++, magma::lower_32_bits(kSomeAddr) | MiFlush::kAddressSpaceGlobalGttBit);
     EXPECT_EQ(*vaddr++, magma::upper_32_bits(kSomeAddr));
     EXPECT_EQ(*vaddr++, magma::lower_32_bits(kSomeData));
     EXPECT_EQ(*vaddr++, magma::upper_32_bits(kSomeData));
@@ -131,13 +129,11 @@ TEST_F(TestInstructions, StoreDataImmediate) {
     uint32_t tail_start = ringbuffer_->tail();
     uint32_t* vaddr = TestRingbuffer::vaddr(ringbuffer_.get()) + tail_start / sizeof(uint32_t);
 
-    MiStoreDataImmediate::write64(ringbuffer_.get(), ADDRESS_SPACE_PPGTT, kSomeAddr, kSomeData);
+    MiFlush::write(ringbuffer_.get(), kSomeData, ADDRESS_SPACE_PPGTT, kSomeAddr);
 
-    EXPECT_EQ(ringbuffer_->tail() - tail_start,
-              MiStoreDataImmediate::kDwordCount * sizeof(uint32_t));
-    EXPECT_EQ(*vaddr++, MiStoreDataImmediate::kCommandType |
-                            (MiStoreDataImmediate::kDwordCount - 2) |
-                            MiStoreDataImmediate::kStoreQwordBit);
+    EXPECT_EQ(ringbuffer_->tail() - tail_start, MiFlush::kDwordCount * sizeof(uint32_t));
+    EXPECT_EQ(*vaddr++, MiFlush::kCommandType | MiFlush::kCommandOpcode |
+                            MiFlush::kPostSyncWriteImmediateBit | (MiFlush::kDwordCount - 2));
     EXPECT_EQ(*vaddr++, magma::lower_32_bits(kSomeAddr));
     EXPECT_EQ(*vaddr++, magma::upper_32_bits(kSomeAddr));
     EXPECT_EQ(*vaddr++, magma::lower_32_bits(kSomeData));

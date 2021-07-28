@@ -56,7 +56,7 @@ bool VideoCommandStreamer::MoveBatchToInflight(std::unique_ptr<MappedBatch> mapp
 
   auto ringbuffer = context->get_ringbuffer(id());
 
-  if (!ringbuffer->HasSpace((MiStoreDataImmediate::kDwordCount + MiUserInterrupt::kDwordCount) *
+  if (!ringbuffer->HasSpace((MiFlush::kDwordCount + MiUserInterrupt::kDwordCount) *
                             sizeof(uint32_t)))
     return DRETF(false, "ringbuffer has insufficient space");
 
@@ -66,10 +66,9 @@ bool VideoCommandStreamer::MoveBatchToInflight(std::unique_ptr<MappedBatch> mapp
     gpu_addr_t gpu_addr = hardware_status_page_mapping()->gpu_addr() +
                           GlobalHardwareStatusPage::kSequenceNumberOffset;
 
-    MiStoreDataImmediate::write64(ringbuffer, ADDRESS_SPACE_GGTT, gpu_addr, sequence_number);
+    MiFlush::write(ringbuffer, sequence_number, ADDRESS_SPACE_GGTT, gpu_addr);
   }
 
-  // Note: unclear if the store is guaranteed to complete by the time this interrupt fires.
   MiUserInterrupt::write(ringbuffer);
 
   mapped_batch->SetSequenceNumber(sequence_number);

@@ -74,24 +74,27 @@ class MiLoadDataImmediate {
   }
 };
 
-class MiStoreDataImmediate {
+// intel-gfx-prm-osrc-kbl-vol02a-commandreference-instructions.pdf p.996
+// "HW implicitly detects the Data size to be Qword or Dword to be
+// written to memory based on the command dword length programmed"
+class MiFlush {
  public:
-  static constexpr uint32_t kCommandType = 0x20 << 23;
-  static constexpr uint32_t kUseGlobalGttBit = 1 << 22;
-  static constexpr uint32_t kStoreQwordBit = 1 << 21;
-
   static constexpr uint32_t kDwordCount = 5;
+  static constexpr uint32_t kCommandType = 0 << 29;
+  static constexpr uint32_t kCommandOpcode = 0x26 << 23;
+  static constexpr uint32_t kPostSyncWriteImmediateBit = 1 << 14;
+  static constexpr uint32_t kAddressSpaceGlobalGttBit = 1 << 2;
 
-  static void write64(magma::InstructionWriter* writer, AddressSpaceType address_space_type,
-                      uint64_t addr, uint64_t data) {
-    DASSERT((addr & 0x7) == 0);
-    writer->Write32(kCommandType | (kDwordCount - 2) |
-                    (address_space_type == ADDRESS_SPACE_GGTT ? kUseGlobalGttBit : 0) |
-                    kStoreQwordBit);
-    writer->Write32(magma::lower_32_bits(addr));
-    writer->Write32(magma::upper_32_bits(addr));
-    writer->Write32(magma::lower_32_bits(data));
-    writer->Write32(magma::upper_32_bits(data));
+  static void write(magma::InstructionWriter* writer, uint32_t sequence_number,
+                    AddressSpaceType address_space_type, uint64_t gpu_addr) {
+    DASSERT((gpu_addr & 0x7) == 0);
+    DASSERT((gpu_addr & (1 << 5)) == 0);  // HW bug
+    writer->Write32(kCommandType | kCommandOpcode | kPostSyncWriteImmediateBit | (kDwordCount - 2));
+    writer->Write32(magma::lower_32_bits(gpu_addr) |
+                    (address_space_type == ADDRESS_SPACE_GGTT ? kAddressSpaceGlobalGttBit : 0));
+    writer->Write32(magma::upper_32_bits(gpu_addr));
+    writer->Write32(sequence_number);
+    writer->Write32(0);
   }
 };
 

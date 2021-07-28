@@ -237,7 +237,8 @@ class TestMsdIntelDevice : public testing::Test {
       uint64_t offset =
           (iteration * sizeof(uint32_t)) % dst_mapping->buffer()->platform_buffer()->size();
 
-      static constexpr uint32_t kScratchRegOffset = 0x02600;
+      // General purpose register 0
+      const uint32_t kScratchRegOffset = command_streamer->mmio_base() + 0x600;
 
       uint32_t i = 0;
       batch_ptr[i++] = load_data_immediate_header(3 /*dword_count*/);
@@ -268,7 +269,8 @@ class TestMsdIntelDevice : public testing::Test {
 
       EXPECT_EQ(ringbuffer->head(), ringbuffer->tail());
 
-      EXPECT_EQ(expected_val, device->register_io()->Read32(kScratchRegOffset));
+      EXPECT_EQ(expected_val, device->register_io()->Read32(kScratchRegOffset))
+          << " iteration " << iteration;
 
       uint32_t target_val = reinterpret_cast<uint32_t*>(dst_cpu_addr)[offset / sizeof(uint32_t)];
       EXPECT_EQ(target_val, expected_val);
@@ -308,7 +310,8 @@ class TestMsdIntelDevice : public testing::Test {
     auto ringbuffer = device->global_context()->get_ringbuffer(command_streamer->id());
     ASSERT_TRUE(ringbuffer);
 
-    static constexpr uint32_t kScratchRegOffset = 0x02600;
+    // General purpose register 0
+    const uint32_t kScratchRegOffset = command_streamer->mmio_base() + 0x600;
     device->register_io()->Write32(kScratchRegOffset, 0xdeadbeef);
 
     static constexpr uint32_t expected_val = 0x8000000;
@@ -322,12 +325,16 @@ class TestMsdIntelDevice : public testing::Test {
     TestEngineCommandStreamer::SubmitContext(command_streamer, device->global_context().get(),
                                              ringbuffer->tail());
 
-    auto start = std::chrono::high_resolution_clock::now();
-    while (command_streamer->GetActiveHeadPointer() != ringbuffer->tail() &&
-           std::chrono::duration_cast<std::chrono::milliseconds>(
-               std::chrono::high_resolution_clock::now() - start)
-                   .count() < 100) {
-      std::this_thread::yield();
+    auto start = std::chrono::steady_clock::now();
+    // Check the register change first, the active head may fluctuate while the
+    // context is loading.
+    while (expected_val != device->register_io()->Read32(kScratchRegOffset)) {
+      if (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() -
+                                                                start)
+              .count() > 100) {
+        break;
+      }
+      std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 
     EXPECT_EQ(ringbuffer->tail(), command_streamer->GetActiveHeadPointer());

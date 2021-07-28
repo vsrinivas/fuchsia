@@ -106,6 +106,7 @@ class EngineCommandStreamer : public HardwareStatusPage::Owner {
   void* hw_status_page_cpu_addr_{};
 
   friend class TestEngineCommandStreamer;
+  friend class TestMsdIntelDevice;
 };
 
 class InflightCommandSequence {
