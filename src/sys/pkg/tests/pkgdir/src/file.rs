@@ -154,7 +154,8 @@ async fn assert_read_at_does_not_affect_seek(
 ) {
     let file = open_file(&root_dir, path, OPEN_RIGHT_READABLE).await.unwrap();
 
-    let (_, bytes) = file.read_at(MAX_BUF, 0).await.unwrap();
+    let (status, bytes) = file.read_at(MAX_BUF, 0).await.unwrap();
+    let () = zx::Status::ok(status).unwrap();
     assert_eq!(std::str::from_utf8(&bytes).unwrap(), path);
 
     let mut rng = rand::thread_rng();
@@ -174,7 +175,8 @@ async fn assert_read_at_does_not_affect_seek(
 async fn assert_read_at_does_not_affect_seek_end_origin(root_dir: &DirectoryProxy, path: &str) {
     let file = open_file(&root_dir, path, OPEN_RIGHT_READABLE).await.unwrap();
 
-    let (_, bytes) = file.read_at(MAX_BUF, 0).await.unwrap();
+    let (status, bytes) = file.read_at(MAX_BUF, 0).await.unwrap();
+    let () = zx::Status::ok(status).unwrap();
     assert_eq!(std::str::from_utf8(&bytes).unwrap(), path);
 
     let mut rng = rand::thread_rng();
@@ -231,10 +233,12 @@ async fn assert_seek_success(root_dir: &DirectoryProxy, path: &str, seek_origin:
 
 async fn assert_seek_affects_read(root_dir: &DirectoryProxy, path: &str) {
     let file = open_file(&root_dir, path, OPEN_RIGHT_READABLE).await.unwrap();
-    let (_, bytes) = file.read(MAX_BUF).await.unwrap();
+    let (status, bytes) = file.read(MAX_BUF).await.unwrap();
+    let () = zx::Status::ok(status).unwrap();
     assert_eq!(std::str::from_utf8(&bytes).unwrap(), path);
 
-    let (_, bytes) = file.read(MAX_BUF).await.unwrap();
+    let (status, bytes) = file.read(MAX_BUF).await.unwrap();
+    let () = zx::Status::ok(status).unwrap();
     assert_eq!(bytes, &[]);
 
     let mut rng = rand::thread_rng();
