@@ -23,6 +23,7 @@ pub use self::types::*;
 use alloc::vec::Vec;
 use core::fmt::{Debug, Display};
 use core::num::NonZeroU8;
+use core::slice::Iter;
 
 use log::{debug, trace};
 use net_types::ip::{
@@ -1581,7 +1582,7 @@ pub(crate) fn del_device_route<D: EventDispatcher, A: IpAddress>(
 /// Returns all the routes for the provided `IpAddress` type.
 pub(crate) fn iter_all_routes<D: EventDispatcher, A: IpAddress>(
     ctx: &Context<D>,
-) -> core::slice::Iter<Entry<A, DeviceId>> {
+) -> Iter<'_, Entry<A, DeviceId>> {
     get_state_inner::<A::Version, _>(ctx.state()).table.iter_installed()
 }
 

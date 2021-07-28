@@ -7,14 +7,13 @@
 // In case we roll the toolchain and something we're using as a feature has been
 // stabilized.
 #![allow(stable_features)]
+// Tracking: https://github.com/rust-lang/rust/issues/31844.
 #![feature(min_specialization)]
 #![deny(missing_docs, unreachable_patterns)]
 // This is a hack until we migrate to a different benchmarking framework. To run
 // benchmarks, edit your Cargo.toml file to add a "benchmark" feature, and then
 // run with that feature enabled.
 #![cfg_attr(feature = "benchmark", feature(test))]
-// TODO: Follow 2018 idioms.
-#![allow(elided_lifetimes_in_paths)]
 #![cfg_attr(not(test), no_std)]
 
 // TODO(https://github.com/rust-lang-nursery/portability-wg/issues/11): remove

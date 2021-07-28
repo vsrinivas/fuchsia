@@ -634,7 +634,7 @@ pub(super) fn get_assigned_ip_addr_subnets<C: EthernetIpDeviceContext, A: IpAddr
 pub(super) fn get_ipv6_addr_subnets<C: EthernetIpDeviceContext>(
     ctx: &C,
     device_id: C::DeviceId,
-) -> Iter<AddressEntry<Ipv6Addr, C::Instant, UnicastAddr<Ipv6Addr>>> {
+) -> Iter<'_, AddressEntry<Ipv6Addr, C::Instant, UnicastAddr<Ipv6Addr>>> {
     let state = ctx.get_state_with(device_id).ip();
 
     state.ipv6_addr_sub.iter()

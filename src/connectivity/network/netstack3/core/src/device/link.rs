@@ -101,7 +101,7 @@ pub(crate) mod testutil {
     pub(crate) struct DummyLinkDeviceId;
 
     impl Display for DummyLinkDeviceId {
-        fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
             write!(f, "{:?}", self)
         }
     }

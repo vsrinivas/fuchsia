@@ -4,6 +4,7 @@
 
 use alloc::collections::HashSet;
 use core::fmt::Debug;
+use core::slice::Iter;
 
 use net_types::ip::{Ip, IpAddress, Subnet};
 use net_types::SpecifiedAddr;
@@ -260,7 +261,7 @@ impl<I: Ip, D: Clone + Debug + PartialEq> ForwardingTable<I, D> {
 
     /// Get an iterator over all of the forwarding entries ([`Entry`]) this
     /// `ForwardingTable` knows about.
-    pub(crate) fn iter_installed(&self) -> core::slice::Iter<Entry<I::Addr, D>> {
+    pub(crate) fn iter_installed(&self) -> Iter<'_, Entry<I::Addr, D>> {
         self.installed.iter()
     }
 
@@ -476,7 +477,7 @@ mod tests {
 
         /// Get an iterator over the active forwarding entries ([`Entry`]) this
         /// `ForwardingTable` knows about.
-        fn iter_active(&self) -> std::slice::Iter<ActiveEntry<I::Addr, D>> {
+        fn iter_active(&self) -> Iter<'_, ActiveEntry<I::Addr, D>> {
             self.active.iter()
         }
     }

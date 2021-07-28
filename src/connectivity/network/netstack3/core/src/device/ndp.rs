@@ -2588,7 +2588,7 @@ fn send_ndp_packet<D: LinkDevice, C: NdpContext<D>, B: ByteSlice, M>(
     src_ip: Ipv6Addr,
     dst_ip: SpecifiedAddr<Ipv6Addr>,
     message: M,
-    options: &[NdpOptionBuilder],
+    options: &[NdpOptionBuilder<'_>],
 ) -> Result<(), ()>
 where
     M: IcmpMessage<Ipv6, B, Code = IcmpUnusedCode>,
