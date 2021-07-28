@@ -9,6 +9,7 @@ use {
         container::{ReadSnapshot, SnapshotData},
         diagnostics::ConnectionStats,
         inspect::container::UnpopulatedInspectDataContainer,
+        moniker_rewriter::OutputRewriter,
     },
     anyhow::Error,
     collector::Moniker,
@@ -83,6 +84,7 @@ impl Into<NodeHierarchyData> for SnapshotData {
 ///               inspect data.
 pub struct ReaderServer {
     selectors: Option<Vec<Arc<Selector>>>,
+    output_rewriter: Option<OutputRewriter>,
 }
 
 fn convert_snapshot_to_node_hierarchy(
@@ -110,9 +112,10 @@ impl ReaderServer {
         unpopulated_diagnostics_sources: Vec<UnpopulatedInspectDataContainer>,
         performance_configuration: PerformanceConfig,
         selectors: Option<Vec<Arc<Selector>>>,
+        output_rewriter: Option<OutputRewriter>,
         stats: Arc<ConnectionStats>,
     ) -> impl Stream<Item = Data<Inspect>> + Send + 'static {
-        let server = Self { selectors };
+        let server = Self { selectors, output_rewriter };
 
         let batch_timeout = performance_configuration.batch_timeout_sec;
 
@@ -287,6 +290,10 @@ impl ReaderServer {
             .map(|s| selectors::sanitize_string_for_selectors(s))
             .collect::<Vec<String>>()
             .join("/");
+        let sanitized_moniker = match &self.output_rewriter {
+            None => sanitized_moniker,
+            Some(rewriter) => rewriter.rewrite_moniker(sanitized_moniker),
+        };
 
         if let Some(configured_selectors) = &self.selectors {
             client_selectors = {
@@ -1139,6 +1146,9 @@ mod tests {
         let reader_server = Box::pin(ReaderServer::stream(
             inspect_pipeline.read().fetch_inspect_data(&None),
             test_performance_config,
+            // No selectors
+            None,
+            // No output rewriter
             None,
             stats.clone(),
         ));
