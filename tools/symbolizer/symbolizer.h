@@ -26,7 +26,9 @@ class Symbolizer {
 
   // {{{reset}}}
   // Resets the internal state and starts processing the stack trace for a new process.
-  virtual void Reset() = 0;
+  // symbolizing_dart indicates whether the next stack stace is from Dart. The behavior could be
+  // slightly different for Dart and other stack traces.
+  virtual void Reset(bool symbolizing_dart) = 0;
 
   // {{{module:%i:%s:%s:...}}}
   // Adds a module to the current process, indexed by id.
@@ -39,7 +41,7 @@ class Symbolizer {
 
   // {{{bt:%u:%p}}}, {{{bt:%u:%p:ra}}}, {{{bt:%u:%p:pc}}}
   // Represents one frame in the backtrace. We'll output the symbolized content for each frame.
-  virtual void Backtrace(int frame_id, uint64_t address, AddressType type,
+  virtual void Backtrace(uint64_t frame_id, uint64_t address, AddressType type,
                          std::string_view message) = 0;
 
   // {{{dumpfile:%s:%s}}}

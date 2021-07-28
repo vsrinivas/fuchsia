@@ -4,6 +4,7 @@
 
 #include "tools/symbolizer/symbolizer_impl.h"
 
+#include <cstdint>
 #include <fstream>
 #include <string>
 
@@ -68,9 +69,9 @@ void SetupCommandLineOptions(const CommandLineOptions& options, zxdb::MapSetting
   }
 }
 
-std::string FormatFrameIndexAndAddress(int frame_index, int inline_index, uint64_t address) {
+std::string FormatFrameIdAndAddress(uint64_t frame_id, uint64_t inline_index, uint64_t address) {
   // Frame number.
-  std::string out = "   #" + std::to_string(frame_index);
+  std::string out = "   #" + std::to_string(frame_id);
 
   // Append a sequence for inline frames, i.e. not the last frame.
   if (inline_index) {
@@ -130,7 +131,9 @@ SymbolizerImpl::~SymbolizerImpl() {
   }
 }
 
-void SymbolizerImpl::Reset() {
+void SymbolizerImpl::Reset(bool symbolizing_dart) {
+  symbolizing_dart_ = symbolizing_dart;
+
   modules_.clear();
   address_to_module_id_.clear();
   if (target_->GetState() == zxdb::Target::State::kRunning) {
@@ -210,7 +213,7 @@ void SymbolizerImpl::MMap(uint64_t address, uint64_t size, uint64_t module_id,
     }
   }
 
-  if (!omit_module_lines_ && !module.printed) {
+  if (!omit_module_lines_ && !symbolizing_dart_ && !module.printed) {
     printer_->OutputWithContext(
         fxl::StringPrintf("[[[ELF module #0x%" PRIx64 " \"%s\" BuildID=%s 0x%" PRIx64 "]]]",
                           module_id, module.name.c_str(), module.build_id.c_str(), base));
@@ -229,7 +232,7 @@ void SymbolizerImpl::MMap(uint64_t address, uint64_t size, uint64_t module_id,
   }
 }
 
-void SymbolizerImpl::Backtrace(int frame_index, uint64_t address, AddressType type,
+void SymbolizerImpl::Backtrace(uint64_t frame_id, uint64_t address, AddressType type,
                                std::string_view message) {
   InitProcess();
   analytics_builder_.IncreaseNumberOfFrames();
@@ -248,7 +251,7 @@ void SymbolizerImpl::Backtrace(int frame_index, uint64_t address, AddressType ty
 
   if (!module) {
     std::string out =
-        FormatFrameIndexAndAddress(frame_index, 0, address) + " is not covered by any module";
+        FormatFrameIdAndAddress(frame_id, 0, address) + " is not covered by any module";
     if (!message.empty()) {
       out += " " + std::string(message);
     }
@@ -274,7 +277,7 @@ void SymbolizerImpl::Backtrace(int frame_index, uint64_t address, AddressType ty
 
   bool symbolized = false;
   for (size_t i = 0; i < stack.size(); i++) {
-    std::string out = FormatFrameIndexAndAddress(frame_index, stack.size() - i - 1, address);
+    std::string out = FormatFrameIdAndAddress(frame_id, stack.size() - i - 1, address);
 
     out += " in";
 
@@ -283,7 +286,8 @@ void SymbolizerImpl::Backtrace(int frame_index, uint64_t address, AddressType ty
     if (location.symbol().is_valid()) {
       symbolized = true;
       auto symbol = location.symbol().Get();
-      if (auto function = symbol->As<zxdb::Function>()) {
+      auto function = symbol->As<zxdb::Function>();
+      if (function && !symbolizing_dart_) {
         out += " " + zxdb::FormatFunctionName(function, {}).AsString();
       } else {
         out += " " + symbol->GetFullName();
@@ -422,7 +426,8 @@ void SymbolizerImpl::ResetDumpfileCurrentObject() {
 
 rapidjson::Value SymbolizerImpl::ToJSONString(std::string_view str) {
   rapidjson::Value string;
-  string.SetString(str.data(), str.size(), dumpfile_document_.GetAllocator());
+  string.SetString(str.data(), static_cast<uint32_t>(str.size()),
+                   dumpfile_document_.GetAllocator());
   return string;
 }
 

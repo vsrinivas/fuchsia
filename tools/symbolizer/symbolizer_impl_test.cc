@@ -31,10 +31,10 @@ class SymbolizerImplTest : public ::testing::Test {
 };
 
 TEST_F(SymbolizerImplTest, Reset) {
-  symbolizer_.Reset();
+  symbolizer_.Reset(false);
   ASSERT_TRUE(ss_.str().empty());
 
-  symbolizer_.Reset();
+  symbolizer_.Reset(false);
   ASSERT_TRUE(ss_.str().empty());
 }
 
@@ -136,12 +136,12 @@ TEST(SymbolizerImpl, Analytics) {
       [&parameters](const analytics::google_analytics::Hit& hit) { parameters = hit.parameters(); };
   SymbolizerImpl symbolizer(&printer, options, sender);
 
-  symbolizer.Reset();
+  symbolizer.Reset(false);
   symbolizer.Module(0, "some_module", "deadbeef");
   symbolizer.MMap(0x1000, 0x2000, 0, "r", 0x0);
   symbolizer.Backtrace(0, 0x1010, Symbolizer::AddressType::kUnknown, "");
   symbolizer.Backtrace(1, 0x7010, Symbolizer::AddressType::kUnknown, "");
-  symbolizer.Reset();
+  symbolizer.Reset(false);
 
   ASSERT_EQ(parameters.size(), 16u);
 

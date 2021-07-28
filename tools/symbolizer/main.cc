@@ -104,7 +104,7 @@ int Main(int argc, const char* argv[]) {
   SymbolizerImpl symbolizer(&printer, options, Analytics::IfEnabledSendGoogleAnalyticsHit);
   LogParser parser(std::cin, &printer, &symbolizer);
 
-  while (parser.ProcessOneLine()) {
+  while (parser.ProcessNextLine()) {
     // until the eof in the input.
   }
 

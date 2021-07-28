@@ -37,7 +37,7 @@ class TestCase : public testing::Test {
     std::ifstream expected_output(kTestCasesDir / (name_ + ".out"));
     symbolizer::LogParser parser(input, &printer, &symbolizer);
 
-    while (parser.ProcessOneLine()) {
+    while (parser.ProcessNextLine()) {
       std::string got;
       while (std::getline(output, got)) {
         std::string expected;
