@@ -517,6 +517,24 @@ Contact fuchsia-build-team@google.com for support.
 
 EOF
     fi
+
+    mapfile -t local_missing_files < <(grep "Status:LocalErrorResultStatus.*: no such file or directory" "$reproxy_errors" | sed -e 's|^.*Err:stat ||' -e 's|: no such file.*$||')
+    test "${#local_missing_files[@]}" = 0 || {
+cat <<EOF
+The following files are expected to exist locally for uploading,
+but were not found:
+
+EOF
+    for f in "${local_missing_files[@]}"
+    do
+      f_rel="$(echo "$f" | sed "s|^$project_root/||")"
+      case "$f_rel" in
+        out/*) echo "  $f_rel (generated file: missing dependency?)" ;;
+        *) echo "  $f_rel (source)" ;;
+      esac
+    done
+    }
   }
+
   exit "$status"
 fi
