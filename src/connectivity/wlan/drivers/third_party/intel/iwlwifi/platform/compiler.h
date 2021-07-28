@@ -7,9 +7,11 @@
 
 // This file contains Fuchsia-specific compiler support code.
 
+#include <endian.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <string.h>
 #include <zircon/compiler.h>
 
 #if defined(__cplusplus)
@@ -28,15 +30,32 @@ typedef uint8_t __u8;
 
 #define DIV_ROUND_UP(num, div) (((num) + (div)-1) / (div))
 
-#define be16_to_cpup(x) ((*(x) >> 8) | ((*(x)&0xff) << 8))
-#define le64_to_cpu(x) (x)
-#define le32_to_cpu(x) (x)
-#define le32_to_cpup(x) (*(x))
-#define le16_to_cpu(x) (x)
-#define le16_to_cpup(x) (*(x))
-#define cpu_to_le64(x) (x)
-#define cpu_to_le32(x) (x)
-#define cpu_to_le16(x) (x)
+// Endianness byteswap macros.
+#define le16_to_cpu(x) le16toh(x)
+#define le32_to_cpu(x) le32toh(x)
+#define le64_to_cpu(x) le64toh(x)
+#define cpu_to_le16(x) htole16(x)
+#define cpu_to_le32(x) htole32(x)
+#define cpu_to_le64(x) htole64(x)
+
+// Endianness access of possibly unaligned data.
+static inline uint16_t le16_to_cpup(const uint16_t* x) {
+  uint16_t val = 0;
+  memcpy(&val, x, sizeof(val));
+  return le16toh(val);
+}
+
+static inline uint32_t le32_to_cpup(const uint32_t* x) {
+  uint32_t val = 0;
+  memcpy(&val, x, sizeof(val));
+  return le32toh(val);
+}
+
+static inline uint16_t be16_to_cpup(const uint16_t* x) {
+  uint16_t val = 0;
+  memcpy(&val, x, sizeof(val));
+  return be16toh(val);
+}
 
 #define lower_32_bits(x) (x & 0xffffffff)
 #define upper_32_bits(x) (x >> 32)
