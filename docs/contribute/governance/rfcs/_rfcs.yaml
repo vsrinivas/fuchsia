@@ -1509,3 +1509,16 @@
   reviewers: []
   submitted: '2021-06-16'
   reviewed: '2021-07-21'
+
+- name: 'RFC-0118'
+  title: 'SWD policy at image assembly'
+  short_description: 'Short-term change to apply SWD policy at image assembly time.'
+  authors: ['arkay@google.com']
+  file: '0118_swd_policy_at_image_assembly_rfc.md'
+  area: ['Software Delivery']
+  issue: ['71476']
+  gerrit_change_id: ['540944']
+  status: 'Accepted'
+  reviewers: ['aaronwood@google.com', 'abarth@google.com', 'ampearce@google.com', 'dhobsd@google.com']
+  submitted: '2021-06-28'
+  reviewed: '2021-07-28'
