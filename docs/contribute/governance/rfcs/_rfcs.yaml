@@ -1443,7 +1443,7 @@
   status: 'Accepted'
   reviewers: ['abarth@google.com', 'johngro@google.com', 'cpu@google.com', 'jsankey@google.com', 'surajmalhotra@google.com']
   submitted: '2021-06-07'
-  reviewed: '20201-07-21'
+  reviewed: '2021-07-21'
 
 - name: 'RFC-0112'
   title: 'ACPI support on x86'
