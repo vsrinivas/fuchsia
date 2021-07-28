@@ -4,7 +4,6 @@
 
 use {
     anyhow::Error,
-    argh::FromArgs,
     carnelian::{
         color::Color,
         drawing::path_for_rectangle,
@@ -15,7 +14,7 @@ use {
             scene::{Scene, SceneBuilder},
             LayerGroup,
         },
-        App, AppAssistant, Point, Rect, RenderOptions, Size, ViewAssistant, ViewAssistantContext,
+        App, AppAssistant, Point, Rect, Size, ViewAssistant, ViewAssistantContext,
         ViewAssistantPtr, ViewKey,
     },
     euclid::{size2, vec2, Transform2D},
@@ -28,33 +27,16 @@ const TRANSLUCENT_COLOR: Color = Color { r: 0, g: 0, b: 0, a: 127 };
 const GRAY_COLOR: Color = Color { r: 187, g: 187, b: 187, a: 255 };
 const WHITE_COLOR: Color = Color { r: 255, g: 255, b: 255, a: 255 };
 
-/// Gamma.
-#[derive(Debug, FromArgs)]
-#[argh(name = "gamma_rs")]
-struct Args {
-    /// use spinel (GPU rendering back-end)
-    #[argh(switch, short = 's')]
-    use_spinel: bool,
-}
-
 #[derive(Default)]
-struct GammaAppAssistant {
-    use_spinel: bool,
-}
+struct GammaAppAssistant;
 
 impl AppAssistant for GammaAppAssistant {
     fn setup(&mut self) -> Result<(), Error> {
-        let args: Args = argh::from_env();
-        self.use_spinel = args.use_spinel;
         Ok(())
     }
 
     fn create_view_assistant(&mut self, _: ViewKey) -> Result<ViewAssistantPtr, Error> {
         Ok(Box::new(GammaViewAssistant::new()))
-    }
-
-    fn get_render_options(&self) -> RenderOptions {
-        RenderOptions { use_spinel: self.use_spinel, ..RenderOptions::default() }
     }
 }
 

@@ -4,7 +4,6 @@
 
 use {
     anyhow::Error,
-    argh::FromArgs,
     carnelian::{
         color::Color,
         input, make_app_assistant,
@@ -13,7 +12,7 @@ use {
             facets::{FacetId, ShedFacet},
             scene::{Scene, SceneBuilder},
         },
-        App, AppAssistant, Point, Rect, RenderOptions, Size, ViewAssistant, ViewAssistantContext,
+        App, AppAssistant, Point, Rect, Size, ViewAssistant, ViewAssistantContext,
         ViewAssistantPtr, ViewKey,
     },
     euclid::{default::Point2D, size2},
@@ -25,33 +24,16 @@ use {
 const BACKGROUND_COLOR: Color = Color { r: 255, g: 255, b: 255, a: 255 };
 const SPACING_FRACTION: f32 = 0.8;
 
-/// Svg.
-#[derive(Debug, FromArgs)]
-#[argh(name = "svg-rs")]
-struct Args {
-    /// use spinel (GPU rendering back-end)
-    #[argh(switch, short = 's')]
-    use_spinel: bool,
-}
-
 #[derive(Default)]
-struct SvgAppAssistant {
-    use_spinel: bool,
-}
+struct SvgAppAssistant;
 
 impl AppAssistant for SvgAppAssistant {
     fn setup(&mut self) -> Result<(), Error> {
-        let args: Args = argh::from_env();
-        self.use_spinel = args.use_spinel;
         Ok(())
     }
 
     fn create_view_assistant(&mut self, _: ViewKey) -> Result<ViewAssistantPtr, Error> {
         Ok(Box::new(SvgViewAssistant::new()))
-    }
-
-    fn get_render_options(&self) -> RenderOptions {
-        RenderOptions { use_spinel: self.use_spinel }
     }
 }
 

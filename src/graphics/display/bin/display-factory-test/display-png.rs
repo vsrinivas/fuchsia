@@ -9,8 +9,7 @@ use {
         color::Color,
         make_app_assistant,
         render::{Composition, Context, CopyRegion, Image, PreClear, PreCopy, RenderExt},
-        App, AppAssistant, IntSize, RenderOptions, ViewAssistant, ViewAssistantContext,
-        ViewAssistantPtr, ViewKey,
+        App, AppAssistant, IntSize, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
     },
     euclid::default::{Point2D, Rect},
     fuchsia_async as fasync,
@@ -191,10 +190,6 @@ impl AppAssistant for DisplayPngAppAssistant {
             self.background.take().unwrap_or(WHITE_COLOR),
             self.position.take(),
         )))
-    }
-
-    fn get_render_options(&self) -> RenderOptions {
-        RenderOptions { ..RenderOptions::default() }
     }
 }
 

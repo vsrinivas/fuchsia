@@ -4,6 +4,7 @@
 
 use anyhow::{Context as _, Error};
 use carnelian::{
+    app::Config,
     color::Color,
     drawing::{path_for_rectangle, path_for_rounded_rectangle},
     input::{self},
@@ -23,7 +24,7 @@ use fidl_test_placeholders::{EchoMarker, EchoRequest, EchoRequestStream};
 use fuchsia_async as fasync;
 use fuchsia_zircon::{Event, Time};
 use futures::prelude::*;
-use std::{any::Any, f32::consts::PI, time::Duration};
+use std::{any::Any, f32::consts::PI};
 
 #[derive(Default)]
 struct SpinningSquareAppAssistant;
@@ -52,8 +53,8 @@ impl AppAssistant for SpinningSquareAppAssistant {
         Ok(())
     }
 
-    fn get_display_resource_release_delay(&self) -> std::time::Duration {
-        Duration::new(0, 0)
+    fn filter_config(&mut self, config: &mut Config) {
+        config.display_resource_release_delay = std::time::Duration::new(0, 0);
     }
 }
 

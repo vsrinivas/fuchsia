@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::{
-    app::{strategies::base::AppStrategy, InternalSender, MessageInternal, RenderOptions},
+    app::{strategies::base::AppStrategy, InternalSender, MessageInternal},
     geometry::IntSize,
     view::{
         strategies::{
@@ -104,7 +104,6 @@ impl AppStrategy for ScenicAppStrategy {
     async fn create_view_strategy(
         &self,
         key: ViewKey,
-        render_options: RenderOptions,
         app_sender: UnboundedSender<MessageInternal>,
         strategy_params: ViewStrategyParams,
     ) -> Result<ViewStrategyPtr, Error> {
@@ -116,7 +115,6 @@ impl AppStrategy for ScenicAppStrategy {
         Ok(ScenicViewStrategy::new(
             key,
             &session,
-            render_options,
             strategy_params.view_token,
             strategy_params.control_ref,
             strategy_params.view_ref,

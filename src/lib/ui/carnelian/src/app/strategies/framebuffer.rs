@@ -3,10 +3,7 @@
 // found in the LICENSE file.
 
 use crate::{
-    app::{
-        strategies::base::AppStrategy, Config, FrameBufferPtr, InternalSender, MessageInternal,
-        RenderOptions,
-    },
+    app::{strategies::base::AppStrategy, Config, FrameBufferPtr, InternalSender, MessageInternal},
     drawing::DisplayRotation,
     geometry::IntSize,
     input::{self, listen_for_user_input, report::InputReportHandler, DeviceId},
@@ -104,7 +101,6 @@ impl<'a> AppStrategy for FrameBufferAppStrategy<'a> {
     async fn create_view_strategy(
         &self,
         key: ViewKey,
-        render_options: RenderOptions,
         app_sender: UnboundedSender<MessageInternal>,
         strategy_params: ViewStrategyParams,
     ) -> Result<ViewStrategyPtr, Error> {
@@ -117,7 +113,6 @@ impl<'a> AppStrategy for FrameBufferAppStrategy<'a> {
         let strat_ptr = FrameBufferViewStrategy::new(
             key,
             strategy_params.display_rotation,
-            render_options,
             &strategy_params.size,
             strategy_params.pixel_format,
             app_sender.clone(),

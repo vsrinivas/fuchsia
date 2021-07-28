@@ -31,27 +31,6 @@ executable("display_detect") {
   ]
 }
 
-rustc_binary("display_color") {
-  source_root = "display-color.rs"
-  deps = [
-    "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia-async",
-    "//src/lib/ui/carnelian",
-    "//src/lib/zircon/rust:fuchsia-zircon",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:argh",
-    "//third_party/rust_crates:euclid",
-    "//third_party/rust_crates:thiserror",
-  ]
-
-  sources = [ "display-color.rs" ]
-}
-
-fuchsia_package_with_single_component("display-color") {
-  manifest = "meta/display-color.cmx"
-  deps = [ ":display_color" ]
-}
-
 rustc_binary("display_png") {
   source_root = "display-png.rs"
   with_unit_tests = true
@@ -83,7 +62,6 @@ fuchsia_package_with_single_component("display-png") {
 
 group("display-factory-test") {
   deps = [
-    ":display-color",
     ":display-detect",
     ":display-png",
   ]

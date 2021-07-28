@@ -5,6 +5,7 @@
 use anyhow::Error;
 use argh::FromArgs;
 use carnelian::{
+    app::Config,
     color::Color,
     drawing::{load_font, measure_text_width, DisplayRotation, FontFace},
     input::{self},
@@ -63,8 +64,8 @@ impl AppAssistant for ButtonAppAssistant {
         Ok(Box::new(ButtonViewAssistant::new()?))
     }
 
-    fn get_display_rotation(&self) -> DisplayRotation {
-        self.display_rotation
+    fn filter_config(&mut self, config: &mut Config) {
+        config.display_rotation = self.display_rotation;
     }
 }
 

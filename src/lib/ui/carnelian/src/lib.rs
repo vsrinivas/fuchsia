@@ -77,7 +77,7 @@ mod view;
 pub use crate::{
     app::{
         make_app_assistant, App, AppAssistant, AppAssistantPtr, AppContext, AssistantCreator,
-        AssistantCreatorFunc, FrameBufferPtr, LocalBoxFuture, RenderOptions,
+        AssistantCreatorFunc, FrameBufferPtr, LocalBoxFuture,
     },
     geometry::{Coord, IntCoord, IntPoint, IntRect, IntSize, Point, Rect, Size},
     message::{make_message, Message},

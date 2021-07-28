@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use crate::{
-    app::{FrameBufferPtr, MessageInternal, RenderOptions},
+    app::{Config, FrameBufferPtr, MessageInternal},
     drawing::DisplayRotation,
     geometry::{IntPoint, IntSize, Size},
     input,
@@ -52,7 +52,6 @@ pub(crate) struct FrameBufferViewStrategy {
     vsync_interval: Duration,
     mouse_cursor_position: Option<IntPoint>,
     drop_display_resources_task: Option<fasync::Task<()>>,
-    render_options: RenderOptions,
     size: IntSize,
     pub collection_id: u64,
     pixel_format: fuchsia_framebuffer::PixelFormat,
@@ -86,7 +85,6 @@ impl FrameBufferViewStrategy {
     pub(crate) async fn new(
         key: ViewKey,
         display_rotation: DisplayRotation,
-        render_options: RenderOptions,
         size: &IntSize,
         pixel_format: fuchsia_framebuffer::PixelFormat,
         app_sender: UnboundedSender<MessageInternal>,
@@ -99,7 +97,7 @@ impl FrameBufferViewStrategy {
 
         let display_resources = Self::allocate_display_resources(
             collection_id,
-            render_options.use_spinel,
+            Config::get().use_spinel,
             *size,
             &frame_buffer,
             pixel_format,
@@ -138,7 +136,6 @@ impl FrameBufferViewStrategy {
             vsync_interval: Duration::from_millis(16),
             mouse_cursor_position: None,
             drop_display_resources_task: None,
-            render_options,
             size: *size,
             pixel_format,
             collection_id,
@@ -269,7 +266,7 @@ impl FrameBufferViewStrategy {
             self.display_resources = Some(
                 Self::allocate_display_resources(
                     self.collection_id,
-                    self.render_options.use_spinel,
+                    Config::get().use_spinel,
                     self.size,
                     &self.frame_buffer,
                     self.pixel_format,

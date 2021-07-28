@@ -4,14 +4,13 @@
 
 use {
     anyhow::Error,
-    argh::FromArgs,
     carnelian::{
         color::Color,
         input::{self},
         make_app_assistant,
         render::*,
-        App, AppAssistant, Point, RenderOptions, Size, ViewAssistant, ViewAssistantContext,
-        ViewAssistantPtr, ViewKey,
+        App, AppAssistant, Point, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr,
+        ViewKey,
     },
     euclid::{
         default::{Rect, Transform2D, Vector2D},
@@ -226,33 +225,16 @@ impl Flower {
     }
 }
 
-/// Ink.
-#[derive(Debug, FromArgs)]
-#[argh(name = "ink_rs")]
-struct Args {
-    /// use spinel (GPU rendering back-end)
-    #[argh(switch, short = 's')]
-    use_spinel: bool,
-}
-
 #[derive(Default)]
-struct InkAppAssistant {
-    use_spinel: bool,
-}
+struct InkAppAssistant;
 
 impl AppAssistant for InkAppAssistant {
     fn setup(&mut self) -> Result<(), Error> {
-        let args: Args = argh::from_env();
-        self.use_spinel = args.use_spinel;
         Ok(())
     }
 
     fn create_view_assistant(&mut self, _: ViewKey) -> Result<ViewAssistantPtr, Error> {
         Ok(Box::new(InkViewAssistant::new()))
-    }
-
-    fn get_render_options(&self) -> RenderOptions {
-        RenderOptions { use_spinel: self.use_spinel, ..RenderOptions::default() }
     }
 }
 

@@ -4,7 +4,6 @@
 
 use {
     anyhow::Error,
-    argh::FromArgs,
     carnelian::{
         color::Color,
         make_app_assistant,
@@ -17,8 +16,8 @@ use {
             scene::{Scene, SceneBuilder},
             LayerGroup,
         },
-        App, AppAssistant, Point, RenderOptions, Size, ViewAssistant, ViewAssistantContext,
-        ViewAssistantPtr, ViewKey,
+        App, AppAssistant, Point, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr,
+        ViewKey,
     },
     chrono::{Local, Timelike},
     euclid::{point2, size2, vec2, Angle, Transform2D},
@@ -29,33 +28,16 @@ use {
 
 const BACKGROUND_COLOR: Color = Color { r: 235, g: 213, b: 179, a: 255 };
 
-/// Clockface.
-#[derive(Debug, FromArgs)]
-#[argh(name = "clockface_rs")]
-struct Args {
-    /// use spinel (GPU rendering back-end)
-    #[argh(switch, short = 's')]
-    use_spinel: bool,
-}
-
 #[derive(Default)]
-struct ClockfaceAppAssistant {
-    use_spinel: bool,
-}
+struct ClockfaceAppAssistant;
 
 impl AppAssistant for ClockfaceAppAssistant {
     fn setup(&mut self) -> Result<(), Error> {
-        let args: Args = argh::from_env();
-        self.use_spinel = args.use_spinel;
         Ok(())
     }
 
     fn create_view_assistant(&mut self, _: ViewKey) -> Result<ViewAssistantPtr, Error> {
         Ok(Box::new(ClockfaceViewAssistant::new()))
-    }
-
-    fn get_render_options(&self) -> RenderOptions {
-        RenderOptions { use_spinel: self.use_spinel, ..RenderOptions::default() }
     }
 }
 

@@ -32,13 +32,6 @@ pub(crate) mod strategies;
 /// Type alias for a non-sync future
 pub type LocalBoxFuture<'a, T> = Pin<Box<dyn Future<Output = T> + 'a>>;
 
-/// Rendering options struct
-#[derive(PartialEq, Debug, Default, Copy, Clone)]
-pub struct RenderOptions {
-    /// use spinel for rendering
-    pub use_spinel: bool,
-}
-
 fn virtcon_mode_from_str(mode_str: &str) -> Result<Option<VirtconMode>, Error> {
     match mode_str {
         "forced" => Ok(Some(VirtconMode::Forced)),
@@ -83,24 +76,53 @@ const fn keyboard_autorepeat_fast_interval_default() -> std::time::Duration {
     KEYBOARD_AUTOREPEAT_FAST_INTERVAL
 }
 
+const fn display_resource_release_delay_default() -> std::time::Duration {
+    const DISPLAY_RESOURCE_RELEASE_DELAY_DEFAULT: std::time::Duration =
+        std::time::Duration::from_secs(5);
+    DISPLAY_RESOURCE_RELEASE_DELAY_DEFAULT
+}
+
 #[derive(Debug, Deserialize)]
 pub struct Config {
     #[serde(default = "keyboard_autorepeat_default")]
+    /// Whether, when running without Scenic, this application should
+    /// receive keyboard repeat events.
     pub keyboard_autorepeat: bool,
     #[serde(
         default = "keyboard_autorepeat_slow_interval_default",
         deserialize_with = "deserialize_millis"
     )]
+    /// The initial and maximum interval between keyboard repeat events, in
+    /// milliseconds, when running without Scenic.
     pub keyboard_autorepeat_slow_interval: std::time::Duration,
     #[serde(
         default = "keyboard_autorepeat_fast_interval_default",
         deserialize_with = "deserialize_millis"
     )]
+    /// The minimum interval between keyboard repeat events, in
+    /// milliseconds, when running without Scenic.
     pub keyboard_autorepeat_fast_interval: std::time::Duration,
     #[serde(default)]
+    /// Whether to try to use hardware rendering (Spinel).
     pub use_spinel: bool,
     #[serde(default, deserialize_with = "deserialize_virtcon_mode")]
     pub virtcon_mode: Option<VirtconMode>,
+    #[serde(default)]
+    /// Application option to exercise transparent rotation.
+    pub display_rotation: DisplayRotation,
+    #[serde(default)]
+    /// Application option to select keymap. If named keymap is not found
+    /// the fallback is US QWERTY.
+    pub keymap_name: Option<String>,
+    #[serde(
+        default = "display_resource_release_delay_default",
+        deserialize_with = "deserialize_millis"
+    )]
+    /// How long should carnelian wait before releasing display resources when
+    /// it loses ownership of the display while running on the framebuffer. The default
+    /// value is five seconds, so that the resource will not be rapidly allocated
+    /// and deallocated when switching quickly between virtcon and the regular display.
+    pub display_resource_release_delay: std::time::Duration,
 }
 
 impl Config {
@@ -119,6 +141,9 @@ impl Default for Config {
             keyboard_autorepeat_fast_interval: keyboard_autorepeat_fast_interval_default(),
             use_spinel: false,
             virtcon_mode: None,
+            display_rotation: DisplayRotation::Deg0,
+            keymap_name: None,
+            display_resource_release_delay: display_resource_release_delay_default(),
         }
     }
 }
@@ -201,30 +226,6 @@ pub trait AppAssistant {
         return Err(format_err!("handle_service_connection_request not implemented"));
     }
 
-    /// Mode options for rendering
-    fn get_render_options(&self) -> RenderOptions {
-        RenderOptions::default()
-    }
-
-    /// Application option to exercise transparent rotation.
-    fn get_display_rotation(&self) -> DisplayRotation {
-        DisplayRotation::Deg0
-    }
-
-    /// Application option to select keymap. If named keymap is not found
-    /// the fallback is US QWERTY.
-    fn get_keymap_name(&self) -> Option<String> {
-        None
-    }
-
-    /// How long should carnelian wait before releasing display resources when
-    /// it loses ownership of the display while running on the framebuffer. The default
-    /// value is five seconds, so that the resource will not be rapidly allocated
-    /// and deallocated when switching quickly between virtcon and the regular display.
-    fn get_display_resource_release_delay(&self) -> std::time::Duration {
-        std::time::Duration::from_secs(5)
-    }
-
     /// Filter Carnelian configuration at runtime, if needed.
     fn filter_config(&mut self, _config: &mut Config) {}
 }
@@ -303,7 +304,7 @@ impl App {
             let assistant_creator = assistant_creator_func(&app_context);
             let mut assistant = assistant_creator.await?;
             Self::load_and_filter_config(&mut assistant)?;
-            let strat = create_app_strategy(&assistant, FIRST_VIEW_KEY, &internal_sender).await?;
+            let strat = create_app_strategy(FIRST_VIEW_KEY, &internal_sender).await?;
             let mut app = App::new(internal_sender, strat, assistant);
             app.app_init_common().await?;
             while let Some(message) = internal_receiver.next().await {
@@ -419,7 +420,7 @@ impl App {
             let assistant_creator = assistant_creator_func(&app_context);
             let mut assistant = assistant_creator.await?;
             Self::load_and_filter_config(&mut assistant)?;
-            let strat = create_app_strategy(&assistant, FIRST_VIEW_KEY, &internal_sender).await?;
+            let strat = create_app_strategy(FIRST_VIEW_KEY, &internal_sender).await?;
             strat.create_view_for_testing(&internal_sender)?;
             let mut app = App::new(internal_sender, strat, assistant);
             let mut frame_count = 0;
@@ -499,15 +500,12 @@ impl App {
     }
 
     async fn create_view_with_params(&mut self, params: ViewStrategyParams) -> Result<(), Error> {
-        let render_options = self.get_render_options();
         let view_assistant = self.create_view_assistant()?;
         let sender = &self.sender;
         let view_strat = {
             let pixel_format = self.strategy.get_pixel_format();
-            let view_strat = self
-                .strategy
-                .create_view_strategy(self.next_key, render_options, sender.clone(), params)
-                .await?;
+            let view_strat =
+                self.strategy.create_view_strategy(self.next_key, sender.clone(), params).await?;
             self.strategy.post_setup(pixel_format, sender).await?;
             view_strat
         };
@@ -551,14 +549,6 @@ impl App {
 
         fasync::Task::local(fs.collect()).detach();
         Ok(())
-    }
-
-    fn get_render_options(&self) -> RenderOptions {
-        let mut render_options = self.assistant.get_render_options();
-        if Config::get().use_spinel {
-            render_options.use_spinel = true;
-        }
-        render_options
     }
 
     pub(crate) fn image_freed(&mut self, view_id: ViewKey, image_id: u64, collection_id: u32) {

@@ -5,6 +5,7 @@
 use anyhow::{format_err, Error};
 use argh::FromArgs;
 use carnelian::{
+    app::Config,
     color::Color,
     drawing::{load_font, path_for_circle, DisplayRotation, FontFace},
     input, make_message,
@@ -145,8 +146,8 @@ impl AppAssistant for RecoveryAppAssistant {
         )?))
     }
 
-    fn get_display_rotation(&self) -> DisplayRotation {
-        self.display_rotation
+    fn filter_config(&mut self, config: &mut Config) {
+        config.display_rotation = self.display_rotation;
     }
 }
 

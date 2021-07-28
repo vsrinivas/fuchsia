@@ -6,6 +6,7 @@ use {
     anyhow::Error,
     argh::FromArgs,
     carnelian::{
+        app::Config,
         color::Color,
         drawing::DisplayRotation,
         input::{self},
@@ -14,8 +15,8 @@ use {
             facets::{FacetId, RiveFacet, SetSizeMessage},
             scene::{Scene, SceneBuilder},
         },
-        App, AppAssistant, AppAssistantPtr, AppContext, AssistantCreatorFunc, LocalBoxFuture,
-        RenderOptions, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
+        App, AppAssistant, AppAssistantPtr, AppContext, AssistantCreatorFunc, LocalBoxFuture, Size,
+        ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
     },
     fuchsia_trace_provider,
     fuchsia_zircon::{Event, Time},
@@ -27,10 +28,6 @@ use {
 #[derive(Debug, FromArgs)]
 #[argh(name = "rive-rs")]
 struct Args {
-    /// use spinel (GPU rendering back-end)
-    #[argh(switch, short = 's')]
-    use_spinel: bool,
-
     /// display rotatation
     #[argh(option)]
     rotation: Option<DisplayRotation>,
@@ -58,7 +55,6 @@ fn color_from_str(value: &str) -> Result<Color, String> {
 
 struct RiveAppAssistant {
     app_context: AppContext,
-    use_spinel: bool,
     display_rotation: DisplayRotation,
     filename: String,
     playback_speed: f32,
@@ -69,7 +65,6 @@ struct RiveAppAssistant {
 impl RiveAppAssistant {
     fn new(app_context: &AppContext) -> Self {
         let args: Args = argh::from_env();
-        let use_spinel = args.use_spinel;
         let display_rotation = args.rotation.unwrap_or(DisplayRotation::Deg0);
         let filename = args.file;
         let playback_speed = args.playback_speed;
@@ -78,7 +73,6 @@ impl RiveAppAssistant {
 
         Self {
             app_context: app_context.clone(),
-            use_spinel,
             display_rotation,
             filename,
             playback_speed,
@@ -109,12 +103,8 @@ impl AppAssistant for RiveAppAssistant {
         )))
     }
 
-    fn get_render_options(&self) -> RenderOptions {
-        RenderOptions { use_spinel: self.use_spinel, ..RenderOptions::default() }
-    }
-
-    fn get_display_rotation(&self) -> DisplayRotation {
-        self.display_rotation
+    fn filter_config(&mut self, config: &mut Config) {
+        config.display_rotation = self.display_rotation;
     }
 }
 

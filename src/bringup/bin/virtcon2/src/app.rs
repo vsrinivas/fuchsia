@@ -10,10 +10,7 @@ use {
     crate::terminal::Terminal,
     crate::view::{EventProxy, ViewMessages, VirtualConsoleViewAssistant},
     anyhow::Error,
-    carnelian::{
-        app::Config, drawing::DisplayRotation, make_message, AppAssistant, AppContext,
-        ViewAssistantPtr, ViewKey,
-    },
+    carnelian::{app::Config, make_message, AppAssistant, AppContext, ViewAssistantPtr, ViewKey},
     fidl::endpoints::ProtocolMarker,
     fidl_fuchsia_virtualconsole::SessionManagerMarker,
     fuchsia_async as fasync, fuchsia_zircon as zx,
@@ -158,10 +155,6 @@ impl AppAssistant for VirtualConsoleAppAssistant {
         Ok(view_assistant)
     }
 
-    fn get_display_rotation(&self) -> DisplayRotation {
-        self.args.display_rotation
-    }
-
     fn outgoing_services_names(&self) -> Vec<&'static str> {
         [SessionManagerMarker::NAME].to_vec()
     }
@@ -183,12 +176,10 @@ impl AppAssistant for VirtualConsoleAppAssistant {
         Ok(())
     }
 
-    fn get_keymap_name(&self) -> Option<String> {
-        Some(self.args.keymap.clone())
-    }
-
     fn filter_config(&mut self, config: &mut Config) {
         config.keyboard_autorepeat = self.args.keyrepeat;
+        config.display_rotation = self.args.display_rotation;
+        config.keymap_name = Some(self.args.keymap.clone());
     }
 }
 

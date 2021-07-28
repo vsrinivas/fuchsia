@@ -8,7 +8,7 @@ use crate::{
             framebuffer::{AutoRepeatContext, FrameBufferAppStrategy},
             scenic::ScenicAppStrategy,
         },
-        AppAssistantPtr, Config, FrameBufferPtr, InternalSender, MessageInternal, RenderOptions,
+        Config, FrameBufferPtr, InternalSender, MessageInternal,
     },
     geometry::IntSize,
     input::{self},
@@ -46,7 +46,6 @@ pub(crate) trait AppStrategy {
     async fn create_view_strategy(
         &self,
         key: ViewKey,
-        render_options: RenderOptions,
         app_sender: UnboundedSender<MessageInternal>,
         strategy_params: ViewStrategyParams,
     ) -> Result<ViewStrategyPtr, Error>;
@@ -96,13 +95,12 @@ pub(crate) type AppStrategyPtr = Box<dyn AppStrategy>;
 
 // Tries to create a framebuffer. If that fails, assume Scenic is running.
 pub(crate) async fn create_app_strategy(
-    assistant: &AppAssistantPtr,
     next_view_key: ViewKey,
     internal_sender: &InternalSender,
 ) -> Result<AppStrategyPtr, Error> {
-    let render_options = assistant.get_render_options();
+    let app_config = Config::get();
 
-    let usage = if render_options.use_spinel { FrameUsage::Gpu } else { FrameUsage::Cpu };
+    let usage = if app_config.use_spinel { FrameUsage::Gpu } else { FrameUsage::Cpu };
 
     let (sender, mut receiver) = unbounded::<fuchsia_framebuffer::Message>();
     let fb = FrameBuffer::new(usage, Config::get().virtcon_mode, None, Some(sender)).await;
@@ -156,12 +154,10 @@ pub(crate) async fn create_app_strategy(
 
         let frame_buffer_ptr = Rc::new(RefCell::new(fb));
 
-        let keymap_name = assistant.get_keymap_name();
-
         let strat = FrameBufferAppStrategy {
             frame_buffer: frame_buffer_ptr.clone(),
-            display_rotation: assistant.get_display_rotation(),
-            keymap: select_keymap(&keymap_name),
+            display_rotation: app_config.display_rotation,
+            keymap: select_keymap(&app_config.keymap_name),
             view_key: next_view_key,
             input_report_handlers: HashMap::new(),
             context: AutoRepeatContext::new(&internal_sender, next_view_key),
@@ -173,8 +169,8 @@ pub(crate) async fn create_app_strategy(
                     frame_buffer: frame_buffer_ptr,
                     pixel_format: strat.get_pixel_format(),
                     size,
-                    display_rotation: assistant.get_display_rotation(),
-                    display_resource_release_delay: assistant.get_display_resource_release_delay(),
+                    display_rotation: app_config.display_rotation,
+                    display_resource_release_delay: app_config.display_resource_release_delay,
                 },
             )))
             .unwrap_or_else(|err| panic!("unbounded send failed: {}", err));

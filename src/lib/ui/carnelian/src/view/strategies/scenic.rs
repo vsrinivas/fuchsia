@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use crate::{
-    app::{MessageInternal, RenderOptions},
+    app::{Config, MessageInternal},
     drawing::DisplayRotation,
     geometry::UintSize,
     input::scenic::ScenicInputHandler,
@@ -54,9 +54,9 @@ impl Plumber {
         buffer_count: usize,
         collection_id: u32,
         first_image_id: u64,
-        render_options: RenderOptions,
     ) -> Result<Plumber, Error> {
-        let usage = if render_options.use_spinel { FrameUsage::Gpu } else { FrameUsage::Cpu };
+        let use_spinel = Config::get().use_spinel;
+        let usage = if use_spinel { FrameUsage::Gpu } else { FrameUsage::Cpu };
         let mut buffer_allocator = BufferCollectionAllocator::new(
             size.width,
             size.height,
@@ -72,7 +72,7 @@ impl Plumber {
 
         let context_token = buffer_allocator.duplicate_token().await?;
         let context = render::Context {
-            inner: if render_options.use_spinel {
+            inner: if use_spinel {
                 ContextInner::Spinel(generic::Spinel::new_context(
                     context_token,
                     size,
@@ -132,8 +132,6 @@ struct PresentationTime {
 
 pub(crate) struct ScenicViewStrategy {
     #[allow(unused)]
-    render_options: RenderOptions,
-    #[allow(unused)]
     view: View,
     #[allow(unused)]
     root_node: EntityNode,
@@ -160,7 +158,6 @@ impl ScenicViewStrategy {
     pub(crate) async fn new(
         key: ViewKey,
         session: &SessionPtr,
-        render_options: RenderOptions,
         view_token: ViewToken,
         control_ref: ViewRefControl,
         view_ref: ViewRef,
@@ -188,7 +185,6 @@ impl ScenicViewStrategy {
             render_timer_scheduled: false,
             missed_frame: false,
             root_node,
-            render_options,
             content_node,
             content_material,
             plumber: None,
@@ -367,7 +363,6 @@ impl ScenicViewStrategy {
                 RENDER_BUFFER_COUNT,
                 buffer_collection_id,
                 next_image_id,
-                self.render_options,
             )
             .await
             .expect("VmoPlumber::new"),

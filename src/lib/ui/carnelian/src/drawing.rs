@@ -18,13 +18,14 @@ use euclid::{
     point2, vec2, Angle,
 };
 use fuchsia_zircon::{self as zx};
+use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, fs::File, path::PathBuf, slice, str::FromStr};
 use ttf_parser::Face;
 
 /// Some Fuchsia device displays are mounted rotated. This value represents
 /// The supported rotations and can be used by views to rotate their content
 /// to display appropriately when running on the frame buffer.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[allow(missing_docs)]
 pub enum DisplayRotation {
     Deg0,

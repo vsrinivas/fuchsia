@@ -14,8 +14,7 @@ use {
             BlendMode, Composition, Context, CopyRegion, Fill, FillRule, Image, Layer, PostCopy,
             PreClear, Raster, RenderExt, Style,
         },
-        App, AppAssistant, RenderOptions, Size, ViewAssistant, ViewAssistantContext,
-        ViewAssistantPtr, ViewKey,
+        App, AppAssistant, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
     },
     euclid::{
         default::{Point2D, Rect},
@@ -32,10 +31,6 @@ const WHITE_COLOR: Color = Color { r: 255, g: 255, b: 255, a: 255 };
 #[derive(Debug, FromArgs)]
 #[argh(name = "png-rs")]
 struct Args {
-    /// use spinel (GPU rendering back-end)
-    #[argh(switch, short = 's')]
-    use_spinel: bool,
-
     /// PNG file to load (default is lenna.png)
     #[argh(option, default = "String::from(\"lenna.png\")")]
     file: String,
@@ -66,7 +61,6 @@ fn parse_point(value: &str) -> Result<Point2D<f32>, String> {
 }
 
 struct PngAppAssistant {
-    use_spinel: bool,
     filename: String,
     background: Option<Color>,
     position: Option<Point2D<f32>>,
@@ -75,12 +69,11 @@ struct PngAppAssistant {
 impl Default for PngAppAssistant {
     fn default() -> Self {
         let args: Args = argh::from_env();
-        let use_spinel = args.use_spinel;
         let filename = args.file;
         let background = args.background;
         let position = args.position;
 
-        Self { use_spinel, filename, background, position }
+        Self { filename, background, position }
     }
 }
 
@@ -95,10 +88,6 @@ impl AppAssistant for PngAppAssistant {
             self.background.take().unwrap_or(WHITE_COLOR),
             self.position.take(),
         )))
-    }
-
-    fn get_render_options(&self) -> RenderOptions {
-        RenderOptions { use_spinel: self.use_spinel, ..RenderOptions::default() }
     }
 }
 

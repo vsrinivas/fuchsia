@@ -6,6 +6,7 @@ use {
     anyhow::Error,
     argh::FromArgs,
     carnelian::{
+        app::Config,
         color::Color,
         drawing::{load_font, DisplayRotation, FontFace, GlyphMap, TextGrid, TextGridCell},
         make_app_assistant,
@@ -15,8 +16,7 @@ use {
             scene::{Scene, SceneBuilder},
             LayerGroup,
         },
-        App, AppAssistant, RenderOptions, Size, ViewAssistant, ViewAssistantContext,
-        ViewAssistantPtr, ViewKey,
+        App, AppAssistant, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
     },
     fuchsia_trace::duration,
     fuchsia_trace_provider,
@@ -37,10 +37,6 @@ use {
 #[derive(Debug, FromArgs)]
 #[argh(name = "textgrid_rs")]
 struct Args {
-    /// use spinel (GPU rendering back-end)
-    #[argh(switch, short = 's')]
-    use_spinel: bool,
-
     /// display rotatation
     #[argh(option)]
     rotation: Option<DisplayRotation>,
@@ -78,7 +74,6 @@ fn size_from_str(value: &str) -> Result<Size, String> {
 }
 
 struct TextGridAppAssistant {
-    use_spinel: bool,
     display_rotation: DisplayRotation,
     filename: String,
     background: Color,
@@ -91,7 +86,6 @@ impl Default for TextGridAppAssistant {
     fn default() -> Self {
         const BLACK_COLOR: Color = Color { r: 0, g: 0, b: 0, a: 255 };
         let args: Args = argh::from_env();
-        let use_spinel = args.use_spinel;
         let display_rotation = args.rotation.unwrap_or(DisplayRotation::Deg0);
         let filename = args.file;
         let background = args.background.unwrap_or(BLACK_COLOR);
@@ -99,15 +93,7 @@ impl Default for TextGridAppAssistant {
         let cell_size = args.cell_size.unwrap_or(Size::new(8.0, 16.0));
         let cell_padding = args.cell_padding;
 
-        Self {
-            use_spinel,
-            display_rotation,
-            filename,
-            background,
-            foreground,
-            cell_size,
-            cell_padding,
-        }
+        Self { display_rotation, filename, background, foreground, cell_size, cell_padding }
     }
 }
 
@@ -132,12 +118,8 @@ impl AppAssistant for TextGridAppAssistant {
         )))
     }
 
-    fn get_render_options(&self) -> RenderOptions {
-        RenderOptions { use_spinel: self.use_spinel, ..RenderOptions::default() }
-    }
-
-    fn get_display_rotation(&self) -> DisplayRotation {
-        self.display_rotation
+    fn filter_config(&mut self, config: &mut Config) {
+        config.display_rotation = self.display_rotation;
     }
 }
 

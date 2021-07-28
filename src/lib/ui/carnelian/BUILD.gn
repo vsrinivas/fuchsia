@@ -20,6 +20,9 @@ declare_args() {
 
   # Point this to the location of external txt files to be included as extras
   carnelian_static_txts_extras = []
+
+  # Include a config in the example packages to attempt to use Spinel
+  use_spinel_for_carnelian_examples = false
 }
 
 rustc_library("carnelian") {
@@ -171,7 +174,6 @@ rustc_binary("clockface") {
     "//src/lib/ui/carnelian",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:argh",
     "//third_party/rust_crates:chrono",
     "//third_party/rust_crates:euclid",
   ]
@@ -258,7 +260,6 @@ rustc_binary("gamma") {
     "//src/lib/ui/carnelian",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:argh",
     "//third_party/rust_crates:euclid",
   ]
 }
@@ -324,7 +325,6 @@ rustc_binary("svg") {
     "//src/lib/ui/carnelian",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:argh",
     "//third_party/rust_crates:euclid",
   ]
 }
@@ -503,6 +503,11 @@ resource("virtcon_config") {
   outputs = [ "data/config/carnelian.toml" ]
 }
 
+resource("spinel_config") {
+  sources = [ "config/spinel_config.toml" ]
+  outputs = [ "data/config/carnelian.toml" ]
+}
+
 # TODO: add example that makes use of a pre-copy shader.
 # resource("shaders") {
 #  sources = [
@@ -517,6 +522,9 @@ template("carnelian_example") {
   example_deps = invoker.deps
   if (carnelian_enable_vulkan_validation) {
     example_deps += [ "//src/lib/vulkan/validation_layers" ]
+  }
+  if (use_spinel_for_carnelian_examples) {
+    example_deps += [ ":spinel_config" ]
   }
   fuchsia_package_with_single_component(target_name) {
     forward_variables_from(invoker, [ "manifest" ])

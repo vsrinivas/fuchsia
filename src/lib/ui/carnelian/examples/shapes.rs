@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use anyhow::Error;
-use argh::FromArgs;
 use carnelian::{
     color::Color,
     drawing::{path_for_circle, path_for_polygon, path_for_rectangle, path_for_rounded_rectangle},
@@ -15,8 +14,8 @@ use carnelian::{
         facets::{FacetId, RasterFacet},
         scene::{Scene, SceneBuilder},
     },
-    App, AppAssistant, Coord, Point, Rect, RenderOptions, Size, ViewAssistant,
-    ViewAssistantContext, ViewAssistantPtr, ViewKey,
+    App, AppAssistant, Coord, Point, Rect, Size, ViewAssistant, ViewAssistantContext,
+    ViewAssistantPtr, ViewKey,
 };
 use euclid::{default::Vector2D, point2, size2, vec2};
 use fuchsia_trace::duration;
@@ -30,15 +29,6 @@ fn make_bounds(context: &ViewAssistantContext) -> Rect {
 
 const SHAPE_SIZE: Size = size2(60.0, 60.0);
 
-/// Shapes
-#[derive(Clone, Debug, FromArgs)]
-#[argh(name = "shapes")]
-struct Args {
-    /// use spinel
-    #[argh(switch, short = 's')]
-    use_spinel: bool,
-}
-
 #[derive(Default)]
 struct ShapeDropAppAssistant;
 
@@ -49,11 +39,6 @@ impl AppAssistant for ShapeDropAppAssistant {
 
     fn create_view_assistant(&mut self, _: ViewKey) -> Result<ViewAssistantPtr, Error> {
         Ok(Box::new(ShapeDropViewAssistant::new()?))
-    }
-
-    fn get_render_options(&self) -> RenderOptions {
-        let args: Args = argh::from_env();
-        RenderOptions { use_spinel: args.use_spinel, ..RenderOptions::default() }
     }
 }
 
