@@ -18,7 +18,9 @@ import("params.gni")
 declare_args() {
   # **TODO(fxbug.dev/32414): This is a temporary switch that will be removed.**
   # If true, use the new "physboot" booting path for the Zircon kernel.
-  use_physboot = false
+  # **Do not set this to `false` without filing a bug!**
+  # **NOTE: This option will be removed soon!**
+  use_physboot = true
 }
 
 if (current_cpu == "x64") {
