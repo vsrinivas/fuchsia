@@ -49,28 +49,24 @@ lazy_static! {
 const FLASH_TIMEOUT_RATE: &str = "fastboot.flash.timeout_rate";
 const MIN_FLASH_TIMEOUT: &str = "fastboot.flash.min_timeout_secs";
 
-#[derive(Default)]
+/// Fastboot Service that handles communicating with a target over the Fastboot protocol.
+///
+/// Since this service can handle establishing communication with a target in any state (Product,
+/// Fastboot, or Zedboot) the service contains both an implementation of the USB transport and
+/// the UDP transport. It is impossible to know which transport will be needed if the target
+/// starts in the Product or Zedboot state so both implementations are present from creation.
 pub(crate) struct Fastboot {
-    usb: Option<FastbootImpl<Interface>>,
-    udp: Option<FastbootImpl<NetworkInterface>>,
+    target: Rc<Target>,
+    usb: FastbootImpl<Interface>,
+    udp: FastbootImpl<NetworkInterface>,
 }
 
 impl Fastboot {
     pub(crate) fn new(target: Rc<Target>) -> Self {
-        // TODO(fxb/79631): handle NUC reboots.
-        // NUC Devices will now only work if they were discovered in fastboot first.
-        // We can't check for serial because it's possible to discover a target in the Product
-        // state without the serial number discovered (RCS connection hasn't happened).  This
-        // causes problems when you reboot but then can't connect to the fastboot address.
-        match target.fastboot_address() {
-            Some(_) => Self {
-                udp: Some(FastbootImpl::new(target, Box::new(NetworkFactory::new()))),
-                ..Default::default()
-            },
-            None => Self {
-                usb: Some(FastbootImpl::new(target, Box::new(UsbFactory::default()))),
-                ..Default::default()
-            },
+        Self {
+            target: target.clone(),
+            udp: FastbootImpl::new(target.clone(), Box::new(NetworkFactory::new())),
+            usb: FastbootImpl::new(target.clone(), Box::new(UsbFactory::default())),
         }
     }
 
@@ -78,10 +74,10 @@ impl Fastboot {
         &mut self,
         stream: FastbootRequestStream,
     ) -> Result<()> {
-        match (self.usb.as_mut(), self.udp.as_mut()) {
-            (Some(fastboot), _) => fastboot.handle_fastboot_requests_from_stream(stream).await,
-            (_, Some(fastboot)) => fastboot.handle_fastboot_requests_from_stream(stream).await,
-            _ => bail!("Could not identify protocol for Fastboot transport"),
+        if let Some(_) = self.target.fastboot_address() {
+            self.udp.handle_fastboot_requests_from_stream(stream).await
+        } else {
+            self.usb.handle_fastboot_requests_from_stream(stream).await
         }
     }
 }
