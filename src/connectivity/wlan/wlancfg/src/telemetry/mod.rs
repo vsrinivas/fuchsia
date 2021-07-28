@@ -6,6 +6,7 @@ mod windowed_stats;
 
 use {
     crate::telemetry::windowed_stats::WindowedStats,
+    fidl_fuchsia_metrics::{MetricEvent, MetricEventPayload},
     fidl_fuchsia_wlan_stats::MlmeStats,
     fuchsia_async as fasync,
     fuchsia_inspect::{Inspector, Node as InspectNode, NumericProperty, UintProperty},
@@ -221,6 +222,17 @@ macro_rules! log_cobalt_1dot1 {
     }};
 }
 
+macro_rules! log_cobalt_1dot1_batch {
+    ($cobalt_proxy:expr, $events:expr, $context:expr $(,)?) => {{
+        let status = $cobalt_proxy.log_metric_events($events).await;
+        match status {
+            Ok(fidl_fuchsia_metrics::Status::Ok) => (),
+            Ok(s) => warn!("Failed logging batch metrics, context: {}, status: {:?}", $context, s),
+            Err(e) => warn!("Failed logging batch metrics, context: {}, error: {}", $context, e),
+        }
+    }};
+}
+
 pub struct Telemetry {
     dev_svc_proxy: fidl_fuchsia_wlan_device_service::DeviceServiceProxy,
     cobalt_1dot1_proxy: fidl_fuchsia_metrics::MetricEventLoggerProxy,
@@ -371,19 +383,19 @@ impl Telemetry {
     }
 
     async fn log_daily_1d_cobalt_metrics(&mut self) {
+        let mut metric_events = vec![];
+
         let c = self.stats_logger.last_1d_stats.lock().windowed_stat();
         let adjusted_downtime =
             max(0.seconds(), c.downtime_duration - c.downtime_no_saved_neighbor_duration);
         let uptime_ratio = c.connected_duration.into_seconds() as f64
             / (c.connected_duration + adjusted_downtime).into_seconds() as f64;
         if uptime_ratio.is_finite() {
-            log_cobalt_1dot1!(
-                self.cobalt_1dot1_proxy,
-                log_integer,
-                metrics::CONNECTED_UPTIME_RATIO_METRIC_ID,
-                float_to_ten_thousandth(uptime_ratio),
-                &[],
-            );
+            metric_events.push(MetricEvent {
+                metric_id: metrics::CONNECTED_UPTIME_RATIO_METRIC_ID,
+                event_codes: vec![],
+                payload: MetricEventPayload::IntegerValue(float_to_ten_thousandth(uptime_ratio)),
+            });
 
             let uptime_ratio_dim = {
                 use metrics::ConnectivityWlanMetricDimensionUptimeRatio::*;
@@ -397,25 +409,21 @@ impl Telemetry {
                     _ => _99_5To100Percent,
                 }
             };
-            log_cobalt_1dot1!(
-                self.cobalt_1dot1_proxy,
-                log_occurrence,
-                metrics::DEVICE_CONNECTED_UPTIME_RATIO_BREAKDOWN_METRIC_ID,
-                1,
-                &[uptime_ratio_dim as u32],
-            );
+            metric_events.push(MetricEvent {
+                metric_id: metrics::DEVICE_CONNECTED_UPTIME_RATIO_BREAKDOWN_METRIC_ID,
+                event_codes: vec![uptime_ratio_dim as u32],
+                payload: MetricEventPayload::Count(1),
+            });
         }
 
         let connected_dur_in_day = c.connected_duration.into_seconds() as f64 / (24 * 3600) as f64;
         let dpdc_ratio = c.disconnect_count as f64 / connected_dur_in_day;
         if dpdc_ratio.is_finite() {
-            log_cobalt_1dot1!(
-                self.cobalt_1dot1_proxy,
-                log_integer,
-                metrics::DISCONNECT_PER_DAY_CONNECTED_METRIC_ID,
-                float_to_ten_thousandth(dpdc_ratio),
-                &[],
-            );
+            metric_events.push(MetricEvent {
+                metric_id: metrics::DISCONNECT_PER_DAY_CONNECTED_METRIC_ID,
+                event_codes: vec![],
+                payload: MetricEventPayload::IntegerValue(float_to_ten_thousandth(dpdc_ratio)),
+            });
 
             let dpdc_ratio_dim = {
                 use metrics::DeviceDisconnectPerDayConnectedBreakdownMetricDimensionDpdcRatio::*;
@@ -428,50 +436,54 @@ impl Telemetry {
                     _ => MoreThan10,
                 }
             };
-            log_cobalt_1dot1!(
-                self.cobalt_1dot1_proxy,
-                log_occurrence,
-                metrics::DEVICE_DISCONNECT_PER_DAY_CONNECTED_BREAKDOWN_METRIC_ID,
-                1,
-                &[dpdc_ratio_dim as u32],
-            );
+            metric_events.push(MetricEvent {
+                metric_id: metrics::DEVICE_DISCONNECT_PER_DAY_CONNECTED_BREAKDOWN_METRIC_ID,
+                event_codes: vec![dpdc_ratio_dim as u32],
+                payload: MetricEventPayload::Count(1),
+            });
         }
 
         let high_rx_drop_time_ratio = c.rx_high_packet_drop_duration.into_seconds() as f64
             / c.connected_duration.into_seconds() as f64;
         if high_rx_drop_time_ratio.is_finite() {
-            log_cobalt_1dot1!(
-                self.cobalt_1dot1_proxy,
-                log_integer,
-                metrics::TIME_RATIO_WITH_HIGH_RX_PACKET_DROP_METRIC_ID,
-                float_to_ten_thousandth(high_rx_drop_time_ratio),
-                &[],
-            )
+            metric_events.push(MetricEvent {
+                metric_id: metrics::TIME_RATIO_WITH_HIGH_RX_PACKET_DROP_METRIC_ID,
+                event_codes: vec![],
+                payload: MetricEventPayload::IntegerValue(float_to_ten_thousandth(
+                    high_rx_drop_time_ratio,
+                )),
+            });
         }
 
         let high_tx_drop_time_ratio = c.tx_high_packet_drop_duration.into_seconds() as f64
             / c.connected_duration.into_seconds() as f64;
         if high_tx_drop_time_ratio.is_finite() {
-            log_cobalt_1dot1!(
-                self.cobalt_1dot1_proxy,
-                log_integer,
-                metrics::TIME_RATIO_WITH_HIGH_TX_PACKET_DROP_METRIC_ID,
-                float_to_ten_thousandth(high_tx_drop_time_ratio),
-                &[],
-            )
+            metric_events.push(MetricEvent {
+                metric_id: metrics::TIME_RATIO_WITH_HIGH_TX_PACKET_DROP_METRIC_ID,
+                event_codes: vec![],
+                payload: MetricEventPayload::IntegerValue(float_to_ten_thousandth(
+                    high_tx_drop_time_ratio,
+                )),
+            });
         }
 
         let no_rx_time_ratio =
             c.no_rx_duration.into_seconds() as f64 / c.connected_duration.into_seconds() as f64;
         if no_rx_time_ratio.is_finite() {
-            log_cobalt_1dot1!(
-                self.cobalt_1dot1_proxy,
-                log_integer,
-                metrics::TIME_RATIO_WITH_NO_RX_METRIC_ID,
-                float_to_ten_thousandth(no_rx_time_ratio),
-                &[],
-            )
+            metric_events.push(MetricEvent {
+                metric_id: metrics::TIME_RATIO_WITH_NO_RX_METRIC_ID,
+                event_codes: vec![],
+                payload: MetricEventPayload::IntegerValue(float_to_ten_thousandth(
+                    no_rx_time_ratio,
+                )),
+            });
         }
+
+        log_cobalt_1dot1_batch!(
+            self.cobalt_1dot1_proxy,
+            &mut metric_events.iter_mut(),
+            "log_daily_1d_cobalt_metrics",
+        );
     }
 
     async fn log_daily_7d_cobalt_metrics(&mut self) {
