@@ -129,20 +129,6 @@ class View {
                   "zbtil::View destroyed after successful iteration without check");
   }
 
-  // Fetches the container header.
-  static fitx::result<typename Traits::error_type,
-                      typename Traits::template LocalizedReadResult<zbi_header_t>>
-  ContainerHeader(Storage& storage) {
-    return Traits::template LocalizedRead<zbi_header_t>(storage, 0);
-  }
-
-  // Fetches an item header at a given offset.
-  static fitx::result<typename Traits::error_type,
-                      typename Traits::template LocalizedReadResult<zbi_header_t>>
-  ItemHeader(Storage& storage, uint32_t offset) {
-    return Traits::template LocalizedRead<zbi_header_t>(storage, offset);
-  }
-
   /// The header is represented by an opaque type that can be dereferenced as
   /// if it were `const zbi_header_t*`, i.e. `*header` or `header->member`.
   /// Either it stores the `zbi_header_t` directly or it holds a pointer into
@@ -177,12 +163,10 @@ class View {
     }
 
    private:
-    using TraitsHeader = decltype(ItemHeader(std::declval<View>().storage(), 0));
-    static constexpr bool kCopy =
-        std::is_same_v<TraitsHeader, fitx::result<typename Traits::error_type, zbi_header_t>>;
+    using TraitsHeader = typename Traits::template LocalizedReadResult<zbi_header_t>;
+    static constexpr bool kCopy = std::is_same_v<TraitsHeader, zbi_header_t>;
     static constexpr bool kReference =
-        std::is_same_v<TraitsHeader, fitx::result<typename Traits::error_type,
-                                                  std::reference_wrapper<const zbi_header_t>>>;
+        std::is_same_v<TraitsHeader, std::reference_wrapper<const zbi_header_t>>;
     static_assert(kCopy || kReference,
                   "zbitl::StorageTraits specialization's Header function returns wrong type");
 
@@ -193,15 +177,12 @@ class View {
     using HeaderStorage = std::conditional_t<kCopy, zbi_header_t, const zbi_header_t*>;
     HeaderStorage stored_;
 
-    // This can only be used by begin(), below - and by Image's Append.
-    template <typename T>
-    explicit header_type(const T& header)
+    // This is only used by begin(), below - and by Image's Append.
+    explicit header_type(const TraitsHeader& header)
         : stored_([&header]() {
             if constexpr (kCopy) {
-              static_assert(std::is_same_v<zbi_header_t, T>);
               return header;
             } else {
-              static_assert(std::is_same_v<std::reference_wrapper<const zbi_header_t>, T>);
               return &(header.get());
             }
           }()) {}
@@ -428,7 +409,7 @@ class View {
         return;
       }
 
-      if (auto header = ItemHeader(view_->storage(), next_item_offset); header.is_error()) {
+      if (auto header = ReadItemHeader(view_->storage(), next_item_offset); header.is_error()) {
         // Failed to read the next header.
         Fail("cannot read item header", std::move(header.error_value()));
         return;
@@ -489,7 +470,7 @@ class View {
     }
 
     // Read and validate the container header.
-    auto header_error = ContainerHeader(storage());
+    auto header_error = ReadContainerHeader(storage());
     if (header_error.is_error()) {
       // Failed to read the container header.
       return fitx::error{
@@ -540,7 +521,7 @@ class View {
       if (capacity_error.is_ok()) {
         uint32_t capacity = capacity_error.value();
         if (capacity >= sizeof(zbi_header_t)) {
-          auto header_error = ContainerHeader(storage());
+          auto header_error = ReadContainerHeader(storage());
           if (header_error.is_ok()) {
             const header_type header(header_error.value());
             if (header->length <= capacity - sizeof(zbi_header_t)) {
@@ -932,6 +913,20 @@ class View {
   }
 
  protected:
+  // Fetches the container header.
+  static fitx::result<typename Traits::error_type,
+                      typename Traits::template LocalizedReadResult<zbi_header_t>>
+  ReadContainerHeader(Storage& storage) {
+    return Traits::template LocalizedRead<zbi_header_t>(storage, 0);
+  }
+
+  // Fetches an item header at a given offset.
+  static fitx::result<typename Traits::error_type,
+                      typename Traits::template LocalizedReadResult<zbi_header_t>>
+  ReadItemHeader(Storage& storage, uint32_t offset) {
+    return Traits::template LocalizedRead<zbi_header_t>(storage, offset);
+  }
+
   // WriteHeader sanitizes and optionally updates the length of a provided
   // header, writes it to the provided offset, and returns the modified header
   // on success.
