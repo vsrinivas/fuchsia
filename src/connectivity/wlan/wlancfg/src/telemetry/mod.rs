@@ -70,17 +70,16 @@ impl TelemetrySender {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum TelemetryEvent {
-    /// Notify the telemetry event loop that network selection has started.
-    StartNetworkSelection {
-        /// Type of network selection. This field is currently unused.
-        network_selection_type: NetworkSelectionType,
-    },
     /// Notify the telemetry event loop that network selection is complete.
     NetworkSelectionDecision {
+        /// Type of network selection. If it's undirected and no candidate network is found,
+        /// telemetry will toggle the `no_saved_neighbor` flag.
+        network_selection_type: NetworkSelectionType,
         /// When there's a scan error, `num_candidates` should be Err.
-        /// When `num_candidates` is `Ok(0)` and the telemetry event loop is tracking downtime,
-        /// the event loop will use the period of network selection to increment the
-        /// `downtime_no_saved_neighbor_duration` counter. This would later be used to
+        /// When `num_candidates` is `Ok(0)` for an undirected network selection, telemetry
+        /// will toggle the `no_saved_neighbor` flag.  If the event loop is tracking downtime,
+        /// the subsequent downtime period will also be used to increment the,
+        /// `downtime_no_saved_neighbor_duration` counter. This counter is used to
         /// adjust the raw downtime.
         num_candidates: Result<usize, ()>,
         /// Whether a network has been selected. This field is currently unused.
@@ -159,8 +158,14 @@ pub fn serve_telemetry(
 enum ConnectionState {
     // Like disconnected, but no downtime is tracked.
     Idle,
-    Connected { iface_id: u16, prev_counters: Option<fidl_fuchsia_wlan_stats::IfaceStats> },
-    Disconnected,
+    Connected {
+        iface_id: u16,
+        prev_counters: Option<fidl_fuchsia_wlan_stats::IfaceStats>,
+    },
+    Disconnected {
+        /// Flag to track whether there's a saved neighbor in vicinity.
+        latest_no_saved_neighbor_time: Option<fasync::Time>,
+    },
 }
 
 fn record_inspect_counters(
@@ -195,7 +200,6 @@ pub struct Telemetry {
     dev_svc_proxy: fidl_fuchsia_wlan_device_service::DeviceServiceProxy,
     connection_state: ConnectionState,
     last_checked_connection_state: fasync::Time,
-    network_selection_start_time: Option<fasync::Time>,
     stats_logger: StatsLogger,
     _inspect_node: InspectNode,
     get_iface_stats_fail_count: UintProperty,
@@ -222,7 +226,6 @@ impl Telemetry {
             dev_svc_proxy,
             connection_state: ConnectionState::Idle,
             last_checked_connection_state: fasync::Time::now(),
-            network_selection_start_time: None,
             stats_logger,
             _inspect_node: inspect_node,
             get_iface_stats_fail_count,
@@ -254,8 +257,13 @@ impl Telemetry {
                     }
                 }
             }
-            ConnectionState::Disconnected => {
+            ConnectionState::Disconnected { latest_no_saved_neighbor_time } => {
                 self.stats_logger.log_stat(StatOp::AddDowntimeDuration(duration));
+                if let Some(prev) = latest_no_saved_neighbor_time.take() {
+                    self.stats_logger
+                        .log_stat(StatOp::AddDowntimeNoSavedNeighborDuration(now - prev));
+                    *latest_no_saved_neighbor_time = Some(now);
+                }
             }
         }
         self.last_checked_connection_state = now;
@@ -264,29 +272,44 @@ impl Telemetry {
     pub fn handle_telemetry_event(&mut self, event: TelemetryEvent) {
         let now = fasync::Time::now();
         match event {
-            TelemetryEvent::StartNetworkSelection { .. } => {
-                let _prev = self.network_selection_start_time.replace(now);
-            }
-            TelemetryEvent::NetworkSelectionDecision { num_candidates, .. } => {
-                if let Some(start_time) = self.network_selection_start_time.take() {
-                    match self.connection_state {
-                        ConnectionState::Disconnected => match num_candidates {
-                            Ok(0) => {
-                                // TODO(fxbug.dev/80699): Track a `no_saved_neighbor` flag and add
-                                //                        all subsequent downtime to this counter.
+            TelemetryEvent::NetworkSelectionDecision {
+                network_selection_type,
+                num_candidates,
+                ..
+            } => {
+                match num_candidates {
+                    Ok(n) if n > 0 => {
+                        // Saved neighbors are seen, so clear the `no_saved_neighbor` flag. Account
+                        // for any untracked time to the `downtime_no_saved_neighbor_duration`
+                        // counter.
+                        if let ConnectionState::Disconnected { latest_no_saved_neighbor_time } =
+                            &mut self.connection_state
+                        {
+                            if let Some(prev) = latest_no_saved_neighbor_time.take() {
                                 self.stats_logger.log_stat(
-                                    StatOp::AddDowntimeNoSavedNeighborDuration(now - start_time),
+                                    StatOp::AddDowntimeNoSavedNeighborDuration(now - prev),
                                 );
                             }
-                            _ => (),
-                        },
-                        _ => (),
+                        }
                     }
+                    Ok(0) if network_selection_type == NetworkSelectionType::Undirected => {
+                        // No saved neighbor is seen. If `no_saved_neighbor` flag isn't set, then
+                        // set it to the current time. Otherwise, do nothing because the telemetry
+                        // loop will account for untracked downtime during periodic telemetry run.
+                        if let ConnectionState::Disconnected { latest_no_saved_neighbor_time } =
+                            &mut self.connection_state
+                        {
+                            if latest_no_saved_neighbor_time.is_none() {
+                                *latest_no_saved_neighbor_time = Some(now);
+                            }
+                        }
+                    }
+                    _ => (),
                 }
             }
             TelemetryEvent::Connected { iface_id } => {
                 let duration = now - self.last_checked_connection_state;
-                if let ConnectionState::Disconnected = self.connection_state {
+                if let ConnectionState::Disconnected { .. } = self.connection_state {
                     self.stats_logger.log_stat(StatOp::AddDowntimeDuration(duration));
                 }
                 self.connection_state =
@@ -301,7 +324,7 @@ impl Telemetry {
                     self.stats_logger.log_stat(StatOp::AddConnectedDuration(duration));
                 }
                 self.connection_state = if track_subsequent_downtime {
-                    ConnectionState::Disconnected
+                    ConnectionState::Disconnected { latest_no_saved_neighbor_time: None }
                 } else {
                     ConnectionState::Idle
                 };
@@ -777,32 +800,67 @@ mod tests {
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(5.seconds(), test_fut.as_mut());
-        test_helper.telemetry_sender.send(TelemetryEvent::StartNetworkSelection {
-            network_selection_type: NetworkSelectionType::Undirected,
-        });
-        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
-
-        test_helper.advance_by(2.seconds(), test_fut.as_mut());
+        // Indicate that there's no saved neighbor in vicinity
         test_helper.telemetry_sender.send(TelemetryEvent::NetworkSelectionDecision {
+            network_selection_type: NetworkSelectionType::Undirected,
             num_candidates: Ok(0),
             selected_any: false,
         });
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
-        let prev = fasync::Time::now();
         test_helper.advance_to_next_telemetry_checkpoint(test_fut.as_mut());
-        let downtime_duration = (7.seconds() + (fasync::Time::now() - prev)).into_nanos();
         assert_data_tree!(test_helper.inspector, root: {
             stats: contains {
                 "1d_counters": contains {
                     connected_duration: 0i64,
-                    downtime_duration: downtime_duration,
-                    downtime_no_saved_neighbor_duration: 2.seconds().into_nanos(),
+                    downtime_duration: TELEMETRY_QUERY_INTERVAL.into_nanos(),
+                    downtime_no_saved_neighbor_duration: (TELEMETRY_QUERY_INTERVAL - 5.seconds()).into_nanos(),
                 },
                 "7d_counters": contains {
                     connected_duration: 0i64,
-                    downtime_duration: downtime_duration,
-                    downtime_no_saved_neighbor_duration: 2.seconds().into_nanos(),
+                    downtime_duration: TELEMETRY_QUERY_INTERVAL.into_nanos(),
+                    downtime_no_saved_neighbor_duration: (TELEMETRY_QUERY_INTERVAL - 5.seconds()).into_nanos(),
+                },
+            }
+        });
+
+        test_helper.advance_to_next_telemetry_checkpoint(test_fut.as_mut());
+        assert_data_tree!(test_helper.inspector, root: {
+            stats: contains {
+                "1d_counters": contains {
+                    connected_duration: 0i64,
+                    downtime_duration: (TELEMETRY_QUERY_INTERVAL * 2).into_nanos(),
+                    downtime_no_saved_neighbor_duration: (TELEMETRY_QUERY_INTERVAL*2 - 5.seconds()).into_nanos(),
+                },
+                "7d_counters": contains {
+                    connected_duration: 0i64,
+                    downtime_duration: (TELEMETRY_QUERY_INTERVAL * 2).into_nanos(),
+                    downtime_no_saved_neighbor_duration: (TELEMETRY_QUERY_INTERVAL*2 - 5.seconds()).into_nanos(),
+                },
+            }
+        });
+
+        test_helper.advance_by(5.seconds(), test_fut.as_mut());
+        // Indicate that saved neighbor has been found
+        test_helper.telemetry_sender.send(TelemetryEvent::NetworkSelectionDecision {
+            network_selection_type: NetworkSelectionType::Undirected,
+            num_candidates: Ok(1),
+            selected_any: false,
+        });
+        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+
+        test_helper.advance_to_next_telemetry_checkpoint(test_fut.as_mut());
+        assert_data_tree!(test_helper.inspector, root: {
+            stats: contains {
+                "1d_counters": contains {
+                    connected_duration: 0i64,
+                    downtime_duration: (TELEMETRY_QUERY_INTERVAL * 3).into_nanos(),
+                    downtime_no_saved_neighbor_duration: (TELEMETRY_QUERY_INTERVAL * 2).into_nanos(),
+                },
+                "7d_counters": contains {
+                    connected_duration: 0i64,
+                    downtime_duration: (TELEMETRY_QUERY_INTERVAL * 3).into_nanos(),
+                    downtime_no_saved_neighbor_duration: (TELEMETRY_QUERY_INTERVAL * 2).into_nanos(),
                 },
             }
         });
@@ -812,15 +870,9 @@ mod tests {
             .telemetry_sender
             .send(TelemetryEvent::Disconnected { track_subsequent_downtime: false });
 
-        // Go through the same sequence of network selection as before
-        test_helper.advance_by(5.seconds(), test_fut.as_mut());
-        test_helper.telemetry_sender.send(TelemetryEvent::StartNetworkSelection {
-            network_selection_type: NetworkSelectionType::Undirected,
-        });
-        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
-
-        test_helper.advance_by(2.seconds(), test_fut.as_mut());
+        // Indicate that there's no saved neighbor in vicinity
         test_helper.telemetry_sender.send(TelemetryEvent::NetworkSelectionDecision {
+            network_selection_type: NetworkSelectionType::Undirected,
             num_candidates: Ok(0),
             selected_any: false,
         });
@@ -832,13 +884,13 @@ mod tests {
             stats: contains {
                 "1d_counters": contains {
                     connected_duration: 0i64,
-                    downtime_duration: downtime_duration,
-                    downtime_no_saved_neighbor_duration: 2.seconds().into_nanos(),
+                    downtime_duration: (TELEMETRY_QUERY_INTERVAL * 3).into_nanos(),
+                    downtime_no_saved_neighbor_duration: (TELEMETRY_QUERY_INTERVAL * 2).into_nanos(),
                 },
                 "7d_counters": contains {
                     connected_duration: 0i64,
-                    downtime_duration: downtime_duration,
-                    downtime_no_saved_neighbor_duration: 2.seconds().into_nanos(),
+                    downtime_duration: (TELEMETRY_QUERY_INTERVAL * 3).into_nanos(),
+                    downtime_no_saved_neighbor_duration: (TELEMETRY_QUERY_INTERVAL * 2).into_nanos(),
                 },
             }
         });

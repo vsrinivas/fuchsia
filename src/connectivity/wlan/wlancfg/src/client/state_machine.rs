@@ -1097,11 +1097,6 @@ mod tests {
         // Run the state machine
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
 
-        // Check that StartNetworkSelection telemetry event is sent
-        assert_variant!(telemetry_receiver.try_next(), Ok(Some(event)) => {
-            assert_variant!(event, TelemetryEvent::StartNetworkSelection { .. });
-        });
-
         // Ensure a scan request is sent to the SME and send back a result
         let expected_scan_request = fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
             ssids: vec![next_network_ssid.as_bytes().to_vec()],

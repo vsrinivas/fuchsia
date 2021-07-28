@@ -338,10 +338,6 @@ impl NetworkSelector {
         iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
         ignore_list: &Vec<types::NetworkIdentifier>,
     ) -> Option<types::ConnectionCandidate> {
-        self.telemetry_sender.send(TelemetryEvent::StartNetworkSelection {
-            network_selection_type: telemetry::NetworkSelectionType::Undirected,
-        });
-
         self.perform_scan(iface_manager.clone()).await;
         let scan_result_guard = self.scan_result_cache.lock().await;
         let networks = merge_saved_networks_and_scan_data(
@@ -363,6 +359,7 @@ impl NetworkSelector {
             };
 
         self.telemetry_sender.send(TelemetryEvent::NetworkSelectionDecision {
+            network_selection_type: telemetry::NetworkSelectionType::Undirected,
             num_candidates,
             selected_any: result.is_some(),
         });
@@ -375,10 +372,6 @@ impl NetworkSelector {
         sme_proxy: fidl_sme::ClientSmeProxy,
         network: types::NetworkIdentifier,
     ) -> Option<types::ConnectionCandidate> {
-        self.telemetry_sender.send(TelemetryEvent::StartNetworkSelection {
-            network_selection_type: telemetry::NetworkSelectionType::Directed,
-        });
-
         // TODO: check if we have recent enough scan results that we can pull from instead?
         let scan_results =
             scan::perform_directed_active_scan(&sme_proxy, &network.ssid, None).await;
@@ -411,6 +404,7 @@ impl NetworkSelector {
         };
 
         self.telemetry_sender.send(TelemetryEvent::NetworkSelectionDecision {
+            network_selection_type: telemetry::NetworkSelectionType::Directed,
             num_candidates,
             selected_any: result.is_some(),
         });
@@ -2086,13 +2080,6 @@ mod tests {
         pin_mut!(network_selection_fut);
         assert_variant!(exec.run_until_stalled(&mut network_selection_fut), Poll::Pending);
 
-        // Verify that StartNetworkSelection telemetry event is sent
-        assert_variant!(telemetry_receiver.try_next(), Ok(Some(event)) => {
-            assert_eq!(event, TelemetryEvent::StartNetworkSelection {
-                network_selection_type: telemetry::NetworkSelectionType::Undirected,
-            });
-        });
-
         // Check that a scan request was sent to the sme and send back results
         let expected_scan_request = fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {});
         let mock_scan_results = vec![
@@ -2287,6 +2274,7 @@ mod tests {
         // Verify that NetworkSelectionDecision telemetry event is sent
         assert_variant!(telemetry_receiver.try_next(), Ok(Some(event)) => {
             assert_eq!(event, TelemetryEvent::NetworkSelectionDecision {
+                network_selection_type: telemetry::NetworkSelectionType::Undirected,
                 num_candidates: Ok(2),
                 selected_any: true,
             });
@@ -2429,13 +2417,6 @@ mod tests {
         pin_mut!(network_selection_fut);
         assert_variant!(exec.run_until_stalled(&mut network_selection_fut), Poll::Pending);
 
-        // Verify that StartNetworkSelection telemetry event is sent
-        assert_variant!(telemetry_receiver.try_next(), Ok(Some(event)) => {
-            assert_eq!(event, TelemetryEvent::StartNetworkSelection {
-                network_selection_type: telemetry::NetworkSelectionType::Directed,
-            });
-        });
-
         // Check that a scan request was sent to the sme and send back results
         let expected_scan_request = fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
             ssids: vec![test_id_1.ssid.clone()],
@@ -2497,6 +2478,7 @@ mod tests {
         // Verify that NetworkSelectionDecision telemetry event is sent
         assert_variant!(telemetry_receiver.try_next(), Ok(Some(event)) => {
             assert_eq!(event, TelemetryEvent::NetworkSelectionDecision {
+                network_selection_type: telemetry::NetworkSelectionType::Directed,
                 num_candidates: Ok(1),
                 selected_any: true,
             });
@@ -2528,13 +2510,6 @@ mod tests {
         pin_mut!(network_selection_fut);
         assert_variant!(exec.run_until_stalled(&mut network_selection_fut), Poll::Pending);
 
-        // Verify that StartNetworkSelection telemetry event is sent
-        assert_variant!(telemetry_receiver.try_next(), Ok(Some(event)) => {
-            assert_eq!(event, TelemetryEvent::StartNetworkSelection {
-                network_selection_type: telemetry::NetworkSelectionType::Directed,
-            });
-        });
-
         // Return an error on the scan
         assert_variant!(
             exec.run_until_stalled(&mut test_values.sme_stream.next()),
@@ -2558,6 +2533,7 @@ mod tests {
         // Verify that NetworkSelectionDecision telemetry event is sent
         assert_variant!(telemetry_receiver.try_next(), Ok(Some(event)) => {
             assert_eq!(event, TelemetryEvent::NetworkSelectionDecision {
+                network_selection_type: telemetry::NetworkSelectionType::Directed,
                 num_candidates: Err(()),
                 selected_any: false,
             });
