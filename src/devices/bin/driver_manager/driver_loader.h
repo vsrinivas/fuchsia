@@ -41,10 +41,16 @@ class DriverLoader {
   // when DriverIndex has loaded the base drivers. When the task completes,
   // `callback` will be called.
   void WaitForBaseDrivers(fit::callback<void()> callback);
+
+  struct MatchDeviceConfig {
+    std::string_view libname;
+    bool ignore_boot_drivers = false;
+  };
+
   std::vector<const Driver*> MatchDeviceDriverIndex(const fbl::RefPtr<Device>& dev,
-                                                    std::string_view libname = "");
+                                                    const MatchDeviceConfig& config);
   std::vector<const Driver*> MatchPropertiesDriverIndex(
-      fidl::VectorView<fdf::wire::NodeProperty> props, std::string_view libname = "");
+      fidl::VectorView<fdf::wire::NodeProperty> props, const MatchDeviceConfig& config);
 
   const Driver* LibnameToDriver(std::string_view libname) const;
 

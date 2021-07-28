@@ -124,12 +124,12 @@ bool DriverLoader::MatchesLibnameDriverIndex(const std::string& driver_url,
 }
 
 std::vector<const Driver*> DriverLoader::MatchDeviceDriverIndex(const fbl::RefPtr<Device>& dev,
-                                                                std::string_view libname) {
+                                                                const MatchDeviceConfig& config) {
   if (!driver_index_.is_valid()) {
     return std::vector<const Driver*>();
   }
 
-  bool autobind = libname.empty();
+  bool autobind = config.libname.empty();
 
   fidl::FidlAllocator allocator;
   auto& props = dev->props();
@@ -146,11 +146,11 @@ std::vector<const Driver*> DriverLoader::MatchDeviceDriverIndex(const fbl::RefPt
                             .set_key(allocator, props[i].id)
                             .set_value(allocator, props[i].value);
   }
-  return MatchPropertiesDriverIndex(fidl_props, libname);
+  return MatchPropertiesDriverIndex(fidl_props, config);
 }
 
 std::vector<const Driver*> DriverLoader::MatchPropertiesDriverIndex(
-    fidl::VectorView<fdf::wire::NodeProperty> props, std::string_view libname) {
+    fidl::VectorView<fdf::wire::NodeProperty> props, const MatchDeviceConfig& config) {
   std::vector<const Driver*> matched_drivers;
   std::vector<const Driver*> matched_fallback_drivers;
   if (!driver_index_.is_valid()) {
@@ -190,10 +190,14 @@ std::vector<const Driver*> DriverLoader::MatchPropertiesDriverIndex(
       continue;
     }
     std::string driver_url(driver.driver_url().get());
+    if (config.ignore_boot_drivers && IsFuchsiaBootScheme(driver_url)) {
+      continue;
+    }
+
     auto loaded_driver = LoadDriverUrlDriverIndex(driver_url);
-    if (libname.empty() || MatchesLibnameDriverIndex(driver_url, libname)) {
+    if (config.libname.empty() || MatchesLibnameDriverIndex(driver_url, config.libname)) {
       if (loaded_driver->fallback) {
-        if (include_fallback_drivers_ || !libname.empty()) {
+        if (include_fallback_drivers_ || !config.libname.empty()) {
           matched_fallback_drivers.push_back(loaded_driver);
         }
       } else {

@@ -18,6 +18,9 @@ zx::status<std::string> GetBasePathFromUrl(const std::string& url);
 //      will return the full path to the my-driver.so file.
 zx::status<std::string> GetPathFromUrl(const std::string& url);
 
+// Returns true if url starts with 'fuchsia-boot://'
+bool IsFuchsiaBootScheme(std::string_view url);
+
 struct DriverManifestEntry {
   std::string driver_url;
 };

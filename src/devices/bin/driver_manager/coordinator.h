@@ -389,8 +389,9 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
   std::unique_ptr<SystemStateManager> system_state_manager_;
   SystemPowerState shutdown_system_state_;
 
-  void BindAllDevicesDriverIndex();
-  zx_status_t MatchAndBindDeviceDriverIndex(const fbl::RefPtr<Device>& dev);
+  void BindAllDevicesDriverIndex(const DriverLoader::MatchDeviceConfig& config);
+  zx_status_t MatchAndBindDeviceDriverIndex(const fbl::RefPtr<Device>& dev,
+                                            const DriverLoader::MatchDeviceConfig& config);
 
   // Given a device, return all of the Drivers whose bind programs match with the device.
   // The returned vector is organized by priority, so if only one driver is being bound it

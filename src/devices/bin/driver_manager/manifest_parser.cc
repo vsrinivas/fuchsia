@@ -18,10 +18,6 @@ bool IsFuchsiaPkgScheme(std::string_view url) {
   return url.compare(0, kFuchsiaPkgPrefix.length(), kFuchsiaPkgPrefix) == 0;
 }
 
-bool IsFuchsiaBootScheme(std::string_view url) {
-  return url.compare(0, kFuchsiaBootPrefix.length(), kFuchsiaBootPrefix) == 0;
-}
-
 zx::status<std::string> GetResourcePath(std::string_view url) {
   size_t seperator = url.find('#');
   if (seperator == std::string::npos) {
@@ -31,6 +27,10 @@ zx::status<std::string> GetResourcePath(std::string_view url) {
 }
 
 }  // namespace
+
+bool IsFuchsiaBootScheme(std::string_view url) {
+  return url.compare(0, kFuchsiaBootPrefix.length(), kFuchsiaBootPrefix) == 0;
+}
 
 zx::status<std::string> GetBasePathFromUrl(const std::string& url) {
   if (IsFuchsiaPkgScheme(url)) {

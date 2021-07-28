@@ -96,8 +96,9 @@ TEST_F(DriverLoaderTest, TestFallbackGetsRemoved) {
   DriverLoader driver_loader(nullptr, std::move(driver_index), &resolver, true);
   loop.StartThread("fidl-thread");
 
+  DriverLoader::MatchDeviceConfig config;
   fidl::VectorView<fuchsia_driver_framework::wire::NodeProperty> props{};
-  auto drivers = driver_loader.MatchPropertiesDriverIndex(std::move(props));
+  auto drivers = driver_loader.MatchPropertiesDriverIndex(std::move(props), config);
   ASSERT_EQ(drivers.size(), 1);
   ASSERT_EQ(drivers[0]->libname, not_fallback_libname);
 }
@@ -126,8 +127,10 @@ TEST_F(DriverLoaderTest, TestFallbackAcceptedAfterBaseLoaded) {
   driver_loader.WaitForBaseDrivers([&base_drivers]() { sync_completion_signal(&base_drivers); });
   sync_completion_wait(&base_drivers, ZX_TIME_INFINITE);
 
+  DriverLoader::MatchDeviceConfig config;
   fidl::VectorView<fuchsia_driver_framework::wire::NodeProperty> props{};
-  auto drivers = driver_loader.MatchPropertiesDriverIndex(std::move(props));
+  auto drivers = driver_loader.MatchPropertiesDriverIndex(std::move(props), config);
+
   ASSERT_EQ(drivers.size(), 2);
   // The non-fallback should always be first.
   ASSERT_EQ(drivers[0]->libname, not_fallback_libname);
@@ -153,8 +156,10 @@ TEST_F(DriverLoaderTest, TestFallbackAcceptedWhenSystemNotRequired) {
   DriverLoader driver_loader(nullptr, std::move(driver_index), &resolver, false);
   loop.StartThread("fidl-thread");
 
+  DriverLoader::MatchDeviceConfig config;
   fidl::VectorView<fuchsia_driver_framework::wire::NodeProperty> props{};
-  auto drivers = driver_loader.MatchPropertiesDriverIndex(std::move(props));
+  auto drivers = driver_loader.MatchPropertiesDriverIndex(std::move(props), config);
+
   ASSERT_EQ(drivers.size(), 2);
   // The non-fallback should always be first.
   ASSERT_EQ(drivers[0]->libname, not_fallback_libname);
@@ -179,8 +184,11 @@ TEST_F(DriverLoaderTest, TestLibname) {
   DriverLoader driver_loader(nullptr, std::move(driver_index), &resolver, true);
   loop.StartThread("fidl-thread");
 
+  DriverLoader::MatchDeviceConfig config;
+  config.libname = name2;
   fidl::VectorView<fuchsia_driver_framework::wire::NodeProperty> props{};
-  auto drivers = driver_loader.MatchPropertiesDriverIndex(std::move(props), name2);
+  auto drivers = driver_loader.MatchPropertiesDriverIndex(std::move(props), config);
+
   ASSERT_EQ(drivers.size(), 1);
   ASSERT_EQ(drivers[0]->libname, name2);
 }
@@ -203,11 +211,40 @@ TEST_F(DriverLoaderTest, TestLibnameConvertToPath) {
   DriverLoader driver_loader(nullptr, std::move(driver_index), &resolver, true);
   loop.StartThread("fidl-thread");
 
-  fidl::VectorView<fuchsia_driver_framework::wire::NodeProperty> props{};
-
   // We can also match libname by the path that the URL turns into.
-  auto drivers =
-      driver_loader.MatchPropertiesDriverIndex(std::move(props), "/boot/driver/driver2.so");
+  DriverLoader::MatchDeviceConfig config;
+  config.libname = "/boot/driver/driver2.so";
+  fidl::VectorView<fuchsia_driver_framework::wire::NodeProperty> props{};
+  auto drivers = driver_loader.MatchPropertiesDriverIndex(std::move(props), config);
+
   ASSERT_EQ(drivers.size(), 1);
   ASSERT_EQ(drivers[0]->libname, name2);
+}
+
+TEST_F(DriverLoaderTest, TestIgnoreBootConfig) {
+  std::string name1 = "fuchsia-pkg://fuchsia.com/my-package#driver/#driver1.so";
+  std::string name2 = "fuchsia-boot:///#driver/driver2.so";
+
+  driver_index_server.driver_urls.push_back(name1);
+  driver_index_server.driver_urls.push_back(name2);
+
+  auto driver1 = std::make_unique<Driver>();
+  driver1->libname = name1;
+  resolver.map[name1] = std::move(driver1);
+
+  auto driver2 = std::make_unique<Driver>();
+  driver2->libname = name2;
+  resolver.map[name2] = std::move(driver2);
+
+  DriverLoader driver_loader(nullptr, std::move(driver_index), &resolver, true);
+  loop.StartThread("fidl-thread");
+
+  // We can also match libname by the path that the URL turns into.
+  DriverLoader::MatchDeviceConfig config;
+  config.ignore_boot_drivers = true;
+  fidl::VectorView<fuchsia_driver_framework::wire::NodeProperty> props{};
+  auto drivers = driver_loader.MatchPropertiesDriverIndex(std::move(props), config);
+
+  ASSERT_EQ(drivers.size(), 1);
+  ASSERT_EQ(drivers[0]->libname, name1);
 }

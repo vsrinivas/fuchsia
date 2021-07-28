@@ -1438,13 +1438,13 @@ zx_status_t Coordinator::MatchDeviceToDriver(const fbl::RefPtr<Device>& dev, con
   return ZX_OK;
 }
 
-void Coordinator::BindAllDevicesDriverIndex() {
-  zx_status_t status = MatchAndBindDeviceDriverIndex(root_device_);
+void Coordinator::BindAllDevicesDriverIndex(const DriverLoader::MatchDeviceConfig& config) {
+  zx_status_t status = MatchAndBindDeviceDriverIndex(root_device_, config);
   if (status != ZX_OK && status != ZX_ERR_NEXT) {
     LOGF(ERROR, "DriverIndex failed to match root_device: %d", status);
     return;
   }
-  status = MatchAndBindDeviceDriverIndex(test_device_);
+  status = MatchAndBindDeviceDriverIndex(test_device_, config);
   if (status != ZX_OK && status != ZX_ERR_NEXT) {
     LOGF(ERROR, "DriverIndex failed to match test_device: %d", status);
     return;
@@ -1452,7 +1452,7 @@ void Coordinator::BindAllDevicesDriverIndex() {
 
   for (auto& dev : devices_) {
     auto dev_ref = fbl::RefPtr(&dev);
-    zx_status_t status = MatchAndBindDeviceDriverIndex(dev_ref);
+    zx_status_t status = MatchAndBindDeviceDriverIndex(dev_ref, config);
     if (status == ZX_ERR_NEXT || status == ZX_ERR_ALREADY_BOUND) {
       continue;
     }
@@ -1463,10 +1463,15 @@ void Coordinator::BindAllDevicesDriverIndex() {
 }
 
 void Coordinator::ScheduleBaseDriverLoading() {
-  driver_loader_.WaitForBaseDrivers([this]() { BindAllDevicesDriverIndex(); });
+  driver_loader_.WaitForBaseDrivers([this]() {
+    DriverLoader::MatchDeviceConfig config;
+    config.ignore_boot_drivers = true;
+    BindAllDevicesDriverIndex(config);
+  });
 }
 
-zx_status_t Coordinator::MatchAndBindDeviceDriverIndex(const fbl::RefPtr<Device>& dev) {
+zx_status_t Coordinator::MatchAndBindDeviceDriverIndex(
+    const fbl::RefPtr<Device>& dev, const DriverLoader::MatchDeviceConfig& config) {
   if ((dev->flags & DEV_CTX_BOUND) && !(dev->flags & DEV_CTX_ALLOW_MULTI_COMPOSITE) &&
       !(dev->flags & DEV_CTX_MULTI_BIND)) {
     return ZX_ERR_ALREADY_BOUND;
@@ -1480,7 +1485,7 @@ zx_status_t Coordinator::MatchAndBindDeviceDriverIndex(const fbl::RefPtr<Device>
     return ZX_ERR_NEXT;
   }
 
-  auto drivers = driver_loader_.MatchDeviceDriverIndex(dev);
+  auto drivers = driver_loader_.MatchDeviceDriverIndex(dev, config);
   for (auto driver : drivers) {
     zx_status_t status = AttemptBind(driver, dev);
     // If we get this here it means we've successfully bound one driver
@@ -1538,7 +1543,9 @@ zx::status<std::vector<const Driver*>> Coordinator::MatchDevice(const fbl::RefPt
 
   // Check the Driver Index for a driver.
   {
-    auto drivers = driver_loader_.MatchDeviceDriverIndex(dev, drvlibname);
+    DriverLoader::MatchDeviceConfig config;
+    config.libname = drvlibname;
+    auto drivers = driver_loader_.MatchDeviceDriverIndex(dev, config);
     for (auto driver : drivers) {
       matched_drivers.push_back(driver);
     }
