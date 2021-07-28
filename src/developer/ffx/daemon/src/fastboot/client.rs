@@ -9,8 +9,8 @@ use {
     crate::target::{ConnectionState, Target, TargetEvent},
     crate::zedboot::reboot_to_bootloader,
     anyhow::{anyhow, bail, Context, Result},
-    async_once::Once,
     async_trait::async_trait,
+    async_utils::async_once::Once,
     fastboot::UploadProgressListener as _,
     fidl::Error as FidlError,
     fidl_fuchsia_developer_bridge::{

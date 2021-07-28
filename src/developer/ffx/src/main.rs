@@ -5,8 +5,8 @@
 use {
     analytics::{add_crash_event, get_notice, opt_out_for_this_invocation},
     anyhow::{Context as _, Result},
-    async_once::Once,
     async_trait::async_trait,
+    async_utils::async_once::Once,
     errors::{ffx_bail, ffx_error, FfxError, ResultExt as _},
     ffx_core::metrics::{add_ffx_launch_and_timing_events, init_metrics_svc},
     ffx_core::Injector,

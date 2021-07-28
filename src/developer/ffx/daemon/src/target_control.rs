@@ -7,7 +7,7 @@ use {
     crate::target::{ConnectionState, Target},
     crate::zedboot::{reboot, reboot_to_bootloader, reboot_to_recovery},
     anyhow::{anyhow, bail, Result},
-    async_once::Once,
+    async_utils::async_once::Once,
     fidl::endpoints::create_endpoints,
     fidl::Error as FidlError,
     fidl_fuchsia_developer_bridge::{

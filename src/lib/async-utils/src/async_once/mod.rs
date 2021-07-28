@@ -2,10 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//! Exposes the OnceCell crate for use in async code.
+
 use async_lock::Mutex;
 use once_cell::sync::OnceCell;
 use std::future::Future;
 
+/// Wrapper presenting an async interface to a OnceCell.
 pub struct Once<T> {
     mutex: Mutex<()>,
     value: OnceCell<T>,
@@ -18,10 +21,12 @@ impl<T> Default for Once<T> {
 }
 
 impl<T> Once<T> {
+    /// Constructor.
     pub fn new() -> Self {
         Self { mutex: Mutex::new(()), value: OnceCell::new() }
     }
 
+    /// Async wrapper around OnceCell's `get_or_init`.
     pub async fn get_or_init<'a, F>(&'a self, fut: F) -> &'a T
     where
         F: Future<Output = T>,
@@ -41,6 +46,7 @@ impl<T> Once<T> {
         }
     }
 
+    /// Async wrapper around OnceCell's `get_or_try_init`.
     pub async fn get_or_try_init<'a, F, E>(&'a self, fut: F) -> Result<&'a T, E>
     where
         F: Future<Output = Result<T, E>>,

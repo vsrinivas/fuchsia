@@ -8,6 +8,7 @@
 
 pub use traits::PollExt;
 
+pub mod async_once;
 pub mod channel;
 pub mod event;
 pub mod fold;

@@ -5,7 +5,6 @@
 if (is_host) {
   libs = [
     "addr",
-    "async-once",
     "errors",
     "fidl-fuchsia-developer-bridge-ext",
     "fms",
