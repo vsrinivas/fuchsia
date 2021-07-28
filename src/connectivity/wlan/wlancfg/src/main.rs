@@ -4,26 +4,7 @@
 
 #![recursion_limit = "1024"]
 
-mod access_point;
-mod client;
-mod config_management;
-mod legacy;
-mod mode_management;
-mod regulatory_manager;
-mod telemetry;
-mod util;
-
 use {
-    crate::{
-        client::network_selection::NetworkSelector,
-        config_management::{SavedNetworksManager, SavedNetworksManagerApi},
-        legacy::{device, IfaceRef},
-        mode_management::{
-            create_iface_manager, iface_manager_api::IfaceManagerApi, phy_manager::PhyManager,
-        },
-        regulatory_manager::RegulatoryManager,
-        telemetry::serve_telemetry,
-    },
     anyhow::{format_err, Context as _, Error},
     fidl::{endpoints::RequestStream, handle::AsyncChannel},
     fidl_fuchsia_location_namedplace::RegulatoryRegionWatcherMarker,
@@ -50,12 +31,24 @@ use {
     std::{process, sync::Arc},
     void::Void,
     wlan_metrics_registry::{self as metrics},
+    wlancfg_lib::{
+        access_point::AccessPoint,
+        client::{self, network_selection::NetworkSelector},
+        config_management::{SavedNetworksManager, SavedNetworksManagerApi},
+        legacy::{self, device, IfaceRef},
+        mode_management::{
+            create_iface_manager, iface_manager_api::IfaceManagerApi, phy_manager::PhyManager,
+        },
+        regulatory_manager::RegulatoryManager,
+        telemetry::serve_telemetry,
+        util,
+    },
 };
 
 const REGULATORY_LISTENER_TIMEOUT_SEC: i64 = 30;
 
 async fn serve_fidl(
-    ap: access_point::AccessPoint,
+    ap: AccessPoint,
     configurator: legacy::deprecated_configuration::DeprecatedConfigurator,
     iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
     legacy_client_ref: IfaceRef,
@@ -298,8 +291,7 @@ async fn run_all_futures() -> Result<(), Error> {
     );
 
     let (regulatory_sender, regulatory_receiver) = oneshot::channel();
-    let ap =
-        access_point::AccessPoint::new(iface_manager.clone(), ap_sender, Arc::new(Mutex::new(())));
+    let ap = AccessPoint::new(iface_manager.clone(), ap_sender, Arc::new(Mutex::new(())));
     let fidl_fut = serve_fidl(
         ap,
         configurator,

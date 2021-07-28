@@ -18,14 +18,14 @@ use {
     std::sync::Arc,
 };
 
-pub(crate) struct Listener {
+pub struct Listener {
     proxy: DeviceServiceProxy,
     legacy_shim: IfaceRef,
     phy_manager: Arc<Mutex<dyn PhyManagerApi + Send>>,
     iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
 }
 
-pub(crate) async fn handle_event(listener: &Listener, evt: DeviceWatcherEvent) {
+pub async fn handle_event(listener: &Listener, evt: DeviceWatcherEvent) {
     info!("got event: {:?}", evt);
     match evt {
         DeviceWatcherEvent::OnPhyAdded { phy_id } => {

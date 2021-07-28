@@ -14,13 +14,13 @@ pub mod device;
 pub mod known_ess_store;
 
 #[derive(Clone)]
-pub(crate) struct Iface {
+pub struct Iface {
     pub sme: fidl_sme::ClientSmeProxy,
     pub iface_id: u16,
 }
 
 #[derive(Clone)]
-pub(crate) struct IfaceRef(Arc<Mutex<Option<Iface>>>);
+pub struct IfaceRef(Arc<Mutex<Option<Iface>>>);
 impl IfaceRef {
     pub fn new() -> Self {
         IfaceRef(Arc::new(Mutex::new(None)))

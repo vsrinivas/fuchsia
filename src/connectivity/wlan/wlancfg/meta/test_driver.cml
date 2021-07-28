@@ -5,7 +5,7 @@
         "syslog/client.shard.cml",
     ],
     program: {
-        binary: "bin/wlancfg_bin_test",
+        binary: "bin/wlancfg_lib_lib_test",
     },
     use: [
         { protocol: "fuchsia.stash.SecureStore" },

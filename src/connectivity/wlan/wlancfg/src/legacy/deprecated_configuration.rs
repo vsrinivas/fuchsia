@@ -12,16 +12,16 @@ use {
 };
 
 #[derive(Clone)]
-pub(crate) struct DeprecatedConfigurator {
+pub struct DeprecatedConfigurator {
     phy_manager: Arc<Mutex<dyn PhyManagerApi + Send>>,
 }
 
 impl DeprecatedConfigurator {
-    pub(crate) fn new(phy_manager: Arc<Mutex<dyn PhyManagerApi + Send>>) -> Self {
+    pub fn new(phy_manager: Arc<Mutex<dyn PhyManagerApi + Send>>) -> Self {
         DeprecatedConfigurator { phy_manager }
     }
 
-    pub(crate) async fn serve_deprecated_configuration(
+    pub async fn serve_deprecated_configuration(
         self,
         mut requests: fidl_deprecated::DeprecatedConfiguratorRequestStream,
     ) {

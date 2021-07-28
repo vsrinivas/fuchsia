@@ -19,7 +19,7 @@ pub mod iface_manager_api;
 mod iface_manager_types;
 pub mod phy_manager;
 
-pub(crate) fn create_iface_manager(
+pub fn create_iface_manager(
     phy_manager: Arc<Mutex<dyn phy_manager::PhyManagerApi + Send>>,
     client_update_sender: listener::ClientListenerMessageSender,
     ap_update_sender: listener::ApListenerMessageSender,

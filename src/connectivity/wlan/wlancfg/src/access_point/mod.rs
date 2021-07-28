@@ -31,7 +31,7 @@ pub mod types;
 // Wrapper around an AP interface allowing a watcher to set the underlying SME and the policy API
 // servicing routines to utilize the SME.
 #[derive(Clone)]
-pub(crate) struct AccessPoint {
+pub struct AccessPoint {
     iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
     update_sender: listener::ApListenerMessageSender,
     ap_provider_lock: Arc<Mutex<()>>,

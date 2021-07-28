@@ -12,7 +12,7 @@ use {
 const MAX_CONCURRENT_WLAN_REQUESTS: usize = 1000;
 
 /// Takes in stream of deprecated client requests and handles each one.
-pub(crate) async fn serve_deprecated_client(
+pub async fn serve_deprecated_client(
     requests: deprecated::DeprecatedClientRequestStream,
     iface: IfaceRef,
 ) -> Result<(), fidl::Error> {

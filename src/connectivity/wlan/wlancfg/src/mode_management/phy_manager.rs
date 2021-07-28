@@ -20,7 +20,7 @@ use {
 
 /// Errors raised while attempting to query information about or configure PHYs and ifaces.
 #[derive(Debug, Error)]
-pub(crate) enum PhyManagerError {
+pub enum PhyManagerError {
     #[error("the requested operation is not supported")]
     Unsupported,
     #[error("unable to query phy information")]
@@ -40,7 +40,7 @@ pub(crate) enum PhyManagerError {
 /// enum allows callers to express their intent when making the call to ensure that internal
 /// PhyManager state remains consistent with the current desired mode of operation.
 #[derive(PartialEq)]
-pub(crate) enum CreateClientIfacesReason {
+pub enum CreateClientIfacesReason {
     StartClientConnections,
     RecoverClientIfaces,
 }
@@ -55,7 +55,7 @@ pub(crate) struct PhyContainer {
 }
 
 #[async_trait]
-pub(crate) trait PhyManagerApi {
+pub trait PhyManagerApi {
     /// Checks to see if this PHY is already accounted for.  If it is not, queries its PHY
     /// attributes and places it in the hash map.
     async fn add_phy(&mut self, phy_id: u16) -> Result<(), PhyManagerError>;
@@ -132,7 +132,7 @@ pub(crate) trait PhyManagerApi {
 }
 
 /// Maintains a record of all PHYs that are present and their associated interfaces.
-pub(crate) struct PhyManager {
+pub struct PhyManager {
     phys: HashMap<u16, PhyContainer>,
     device_service: fidl_service::DeviceServiceProxy,
     device_monitor: fidl_service::DeviceMonitorProxy,

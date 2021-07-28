@@ -47,7 +47,7 @@ type SavedNetworksPtr = Arc<dyn SavedNetworksManagerApi>;
 /// Serves the ClientProvider protocol.
 /// Only one ClientController can be active. Additional requests to register ClientControllers
 /// will result in their channel being immediately closed.
-pub(crate) async fn serve_provider_requests(
+pub async fn serve_provider_requests(
     iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
     update_sender: listener::ClientListenerMessageSender,
     saved_networks: SavedNetworksPtr,

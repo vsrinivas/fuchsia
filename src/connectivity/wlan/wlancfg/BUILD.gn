@@ -5,6 +5,7 @@
 import("//build/components.gni")
 import("//build/config.gni")
 import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
 import("//build/testing/environments.gni")
 import("//src/sys/core/build/core_shard.gni")
 import("//third_party/cobalt/metrics_registry.gni")
@@ -17,10 +18,9 @@ declare_args() {
   wlancfg_config_type = "client"
 }
 
-rustc_binary("bin") {
-  name = "wlancfg"
+rustc_library("lib") {
+  name = "wlancfg_lib"
   with_unit_tests = true
-  edition = "2018"
 
   deps = [
     ":wlan_metrics_registry_rustlib",
@@ -63,7 +63,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:itertools",
     "//third_party/rust_crates:log",
-    "//third_party/rust_crates:maplit",
     "//third_party/rust_crates:num-traits",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:pin-utils",
@@ -95,7 +94,7 @@ rustc_binary("bin") {
     "src/legacy/device.rs",
     "src/legacy/known_ess_store.rs",
     "src/legacy/mod.rs",
-    "src/main.rs",
+    "src/lib.rs",
     "src/mode_management/iface_manager.rs",
     "src/mode_management/iface_manager_api.rs",
     "src/mode_management/iface_manager_types.rs",
@@ -118,6 +117,40 @@ rustc_binary("bin") {
     "src/util/testing/mod.rs",
     "src/util/testing/sme_stream.rs",
   ]
+
+  configs -= [ "//build/config/rust:allow_unused_results" ]
+}
+
+rustc_binary("bin") {
+  name = "wlancfg"
+  edition = "2018"
+
+  deps = [
+    ":lib",
+    ":wlan_metrics_registry_rustlib",
+    "//sdk/fidl/fuchsia.location.namedplace:fuchsia.location.namedplace-rustc",
+    "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle-rustc",
+    "//sdk/fidl/fuchsia.wlan.device.service:fuchsia.wlan.device.service-rustc",
+    "//sdk/fidl/fuchsia.wlan.policy:fuchsia.wlan.policy-rustc",
+    "//sdk/fidl/fuchsia.wlan.product.deprecatedclient:fuchsia.wlan.product.deprecatedclient-rustc",
+    "//sdk/fidl/fuchsia.wlan.product.deprecatedconfiguration:fuchsia.wlan.product.deprecatedconfiguration-rustc",
+    "//src/lib/cobalt/rust:fuchsia-cobalt",
+    "//src/lib/diagnostics/inspect/runtime/rust",
+    "//src/lib/diagnostics/inspect/rust",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-runtime",
+    "//src/lib/syslog/rust:syslog",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:pin-utils",
+    "//third_party/rust_crates:void",
+  ]
+
+  sources = [ "src/main.rs" ]
 
   configs -= [ "//build/config/rust:allow_unused_results" ]
 }
@@ -162,16 +195,16 @@ config_data("config") {
 fuchsia_component("test_driver") {
   testonly = true
   manifest = "meta/test_driver.cml"
-  deps = [ ":bin_test" ]
+  deps = [ ":lib_test" ]
 }
 
-fuchsia_component("wlancfg_bin_test") {
+fuchsia_component("wlancfg_lib_test") {
   testonly = true
-  manifest = "meta/wlancfg_bin_test.cml"
+  manifest = "meta/wlancfg_lib_lib_test.cml"
 }
 
 fuchsia_test_package("wlancfg-tests") {
-  test_components = [ ":wlancfg_bin_test" ]
+  test_components = [ ":wlancfg_lib_test" ]
   deps = [
     ":test_driver",
     "//src/sys/stash:stash_secure_v2",

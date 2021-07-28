@@ -11,7 +11,7 @@ use {
     std::sync::Arc,
 };
 
-pub(crate) struct RegulatoryManager<I: IfaceManagerApi + ?Sized> {
+pub struct RegulatoryManager<I: IfaceManagerApi + ?Sized> {
     regulatory_service: RegulatoryRegionWatcherProxy,
     iface_manager: Arc<Mutex<I>>,
 }

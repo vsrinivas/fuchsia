@@ -16,7 +16,7 @@ use {
 };
 
 #[async_trait]
-pub(crate) trait IfaceManagerApi {
+pub trait IfaceManagerApi {
     /// Finds the client iface with the given network configuration, disconnects from the network,
     /// and removes the client's network configuration information.
     async fn disconnect(
@@ -88,7 +88,7 @@ pub(crate) trait IfaceManagerApi {
 }
 
 #[derive(Clone)]
-pub(crate) struct IfaceManager {
+pub struct IfaceManager {
     pub sender: mpsc::Sender<IfaceManagerRequest>,
 }
 
