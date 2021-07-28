@@ -265,7 +265,7 @@ void sync_completion_signal_requeue(sync_completion_t* completion, zx_futex_t* r
 void sync_completion_reset(sync_completion_t* completion);
 
 // Returns true iff a completion has been signaled.
-bool sync_completion_signaled(sync_completion_t* completion);
+bool sync_completion_signaled(const sync_completion_t* completion);
 
 __END_CDECLS
 

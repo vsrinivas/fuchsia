@@ -183,6 +183,6 @@ void sync_completion_reset(sync_completion_t* completion) {
   }
 }
 
-bool sync_completion_signaled(sync_completion_t* completion) {
+bool sync_completion_signaled(const sync_completion_t* completion) {
   return atomic_load_explicit(&completion->futex, memory_order_acquire) == SIGNALED;
 }
