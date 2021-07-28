@@ -10,19 +10,21 @@ use {
     fuchsia_async as fasync,
     fuchsia_inspect::{Inspector, Node as InspectNode, NumericProperty, UintProperty},
     fuchsia_inspect_contrib::inspect_insert,
-    fuchsia_zircon as zx,
+    fuchsia_zircon::{self as zx, DurationNum},
     futures::{channel::mpsc, select, Future, FutureExt, StreamExt},
     log::{info, warn},
     num_traits::SaturatingAdd,
     parking_lot::Mutex,
     static_assertions::const_assert_eq,
     std::{
+        cmp::max,
         ops::Add,
         sync::{
             atomic::{AtomicBool, Ordering},
             Arc,
         },
     },
+    wlan_metrics_registry as metrics,
 };
 
 #[derive(Clone, Debug)]
@@ -120,6 +122,7 @@ const TELEMETRY_QUERY_INTERVAL: zx::Duration = zx::Duration::from_seconds(15);
 /// the appropriate stats.
 pub fn serve_telemetry(
     dev_svc_proxy: fidl_fuchsia_wlan_device_service::DeviceServiceProxy,
+    cobalt_1dot1_proxy: fidl_fuchsia_metrics::MetricEventLoggerProxy,
     inspect_node: InspectNode,
 ) -> (TelemetrySender, impl Future<Output = ()>) {
     let (sender, mut receiver) = mpsc::channel::<TelemetryEvent>(TELEMETRY_EVENT_BUFFER_SIZE);
@@ -129,8 +132,9 @@ pub fn serve_telemetry(
         const_assert_eq!(ONE_HOUR.into_nanos() % TELEMETRY_QUERY_INTERVAL.into_nanos(), 0);
         const INTERVAL_TICKS_PER_HR: u64 =
             (ONE_HOUR.into_nanos() / TELEMETRY_QUERY_INTERVAL.into_nanos()) as u64;
-        let mut interval_tick = 0;
-        let mut telemetry = Telemetry::new(dev_svc_proxy, inspect_node);
+        const INTERVAL_TICKS_PER_DAY: u64 = INTERVAL_TICKS_PER_HR * 24;
+        let mut interval_tick = 0u64;
+        let mut telemetry = Telemetry::new(dev_svc_proxy, cobalt_1dot1_proxy, inspect_node);
         loop {
             select! {
                 event = receiver.next() => {
@@ -140,11 +144,18 @@ pub fn serve_telemetry(
                 }
                 _ = report_interval_stream.next() => {
                     telemetry.handle_periodic_telemetry().await;
+
+                    interval_tick += 1;
+                    if interval_tick % INTERVAL_TICKS_PER_DAY == 0 {
+                        telemetry.log_daily_cobalt_metrics().await;
+                    }
+
                     // This ensures that `signal_hr_passed` is always called after
-                    // `handle_periodic_telemetry` at the hour mark. This is mainly for ease
-                    // of testing.
-                    interval_tick = (interval_tick + 1) % INTERVAL_TICKS_PER_HR;
-                    if interval_tick == 0 {
+                    // `handle_periodic_telemetry` at the hour mark. This helps with
+                    // ease of testing. Additionally, logging to Cobalt before sliding
+                    // the window ensures that Cobalt uses the last 24 hours of data
+                    // rather than 23 hours.
+                    if interval_tick % INTERVAL_TICKS_PER_HR == 0 {
                         telemetry.signal_hr_passed();
                     }
                 }
@@ -197,8 +208,22 @@ fn record_inspect_counters(
     });
 }
 
+// Macro wrapper for logging simple events (occurrence, integer, histogram, string)
+// and log a warning when the status is not Ok
+macro_rules! log_cobalt_1dot1 {
+    ($cobalt_proxy:expr, $method_name:ident, $metric_id:expr, $value:expr, $event_codes:expr $(,)?) => {{
+        let status = $cobalt_proxy.$method_name($metric_id, $value, $event_codes).await;
+        match status {
+            Ok(fidl_fuchsia_metrics::Status::Ok) => (),
+            Ok(s) => warn!("Failed logging metric: {}, status: {:?}", $metric_id, s),
+            Err(e) => warn!("Failed logging metric: {}, error: {}", $metric_id, e),
+        }
+    }};
+}
+
 pub struct Telemetry {
     dev_svc_proxy: fidl_fuchsia_wlan_device_service::DeviceServiceProxy,
+    cobalt_1dot1_proxy: fidl_fuchsia_metrics::MetricEventLoggerProxy,
     connection_state: ConnectionState,
     last_checked_connection_state: fasync::Time,
     stats_logger: StatsLogger,
@@ -209,6 +234,7 @@ pub struct Telemetry {
 impl Telemetry {
     pub fn new(
         dev_svc_proxy: fidl_fuchsia_wlan_device_service::DeviceServiceProxy,
+        cobalt_1dot1_proxy: fidl_fuchsia_metrics::MetricEventLoggerProxy,
         inspect_node: InspectNode,
     ) -> Self {
         let stats_logger = StatsLogger::new();
@@ -225,6 +251,7 @@ impl Telemetry {
         let get_iface_stats_fail_count = inspect_node.create_uint("get_iface_stats_fail_count", 0);
         Self {
             dev_svc_proxy,
+            cobalt_1dot1_proxy,
             connection_state: ConnectionState::Idle,
             last_checked_connection_state: fasync::Time::now(),
             stats_logger,
@@ -338,9 +365,80 @@ impl Telemetry {
         }
     }
 
+    pub async fn log_daily_cobalt_metrics(&mut self) {
+        let c = self.stats_logger.last_1d_stats.lock().windowed_stat();
+        let adjusted_downtime =
+            max(0.seconds(), c.downtime_duration - c.downtime_no_saved_neighbor_duration);
+        let uptime_ratio = c.connected_duration.into_seconds() as f64
+            / (c.connected_duration + adjusted_downtime).into_seconds() as f64;
+        if uptime_ratio.is_finite() {
+            log_cobalt_1dot1!(
+                self.cobalt_1dot1_proxy,
+                log_integer,
+                metrics::CONNECTED_UPTIME_RATIO_METRIC_ID,
+                float_to_ten_thousandth(uptime_ratio),
+                &[],
+            )
+        }
+
+        let connected_dur_in_day = c.connected_duration.into_seconds() as f64 / (24 * 3600) as f64;
+        let dpdc_ratio = c.disconnect_count as f64 / connected_dur_in_day;
+        if dpdc_ratio.is_finite() {
+            log_cobalt_1dot1!(
+                self.cobalt_1dot1_proxy,
+                log_integer,
+                metrics::DISCONNECT_PER_DAY_CONNECTED_METRIC_ID,
+                float_to_ten_thousandth(dpdc_ratio),
+                &[],
+            )
+        }
+
+        let high_rx_drop_time_ratio = c.rx_high_packet_drop_duration.into_seconds() as f64
+            / c.connected_duration.into_seconds() as f64;
+        if high_rx_drop_time_ratio.is_finite() {
+            log_cobalt_1dot1!(
+                self.cobalt_1dot1_proxy,
+                log_integer,
+                metrics::TIME_RATIO_WITH_HIGH_RX_PACKET_DROP_METRIC_ID,
+                float_to_ten_thousandth(high_rx_drop_time_ratio),
+                &[],
+            )
+        }
+
+        let high_tx_drop_time_ratio = c.tx_high_packet_drop_duration.into_seconds() as f64
+            / c.connected_duration.into_seconds() as f64;
+        if high_tx_drop_time_ratio.is_finite() {
+            log_cobalt_1dot1!(
+                self.cobalt_1dot1_proxy,
+                log_integer,
+                metrics::TIME_RATIO_WITH_HIGH_TX_PACKET_DROP_METRIC_ID,
+                float_to_ten_thousandth(high_tx_drop_time_ratio),
+                &[],
+            )
+        }
+
+        let no_rx_time_ratio =
+            c.no_rx_duration.into_seconds() as f64 / c.connected_duration.into_seconds() as f64;
+        if no_rx_time_ratio.is_finite() {
+            log_cobalt_1dot1!(
+                self.cobalt_1dot1_proxy,
+                log_integer,
+                metrics::TIME_RATIO_WITH_NO_RX_METRIC_ID,
+                float_to_ten_thousandth(no_rx_time_ratio),
+                &[],
+            )
+        }
+    }
+
     pub fn signal_hr_passed(&mut self) {
         self.stats_logger.handle_hr_passed();
     }
+}
+
+// Convert float to an integer in "ten thousandth" unit
+// Example: 0.02f64 (i.e. 2%) -> 200 per ten thousand
+fn float_to_ten_thousandth(value: f64) -> i64 {
+    (value * 10000f64) as i64
 }
 
 const PACKET_DROP_RATE_THRESHOLD: f64 = 0.02;
@@ -534,14 +632,15 @@ mod tests {
     use {
         super::*,
         fidl::endpoints::create_proxy_and_stream,
+        fidl_fuchsia_metrics::{MetricEvent, MetricEventLoggerRequest, MetricEventPayload},
         fidl_fuchsia_wlan_device_service::{
             DeviceServiceGetIfaceStatsResponder, DeviceServiceRequest,
         },
         fidl_fuchsia_wlan_stats::{self, ClientMlmeStats, Counter, PacketCounter},
         fuchsia_inspect::{assert_data_tree, testing::NonZeroUintProperty, Inspector},
-        fuchsia_zircon::DurationNum,
         futures::{pin_mut, task::Poll, TryStreamExt},
-        std::pin::Pin,
+        std::{cmp::min, collections::HashMap, pin::Pin},
+        wlan_common::assert_variant,
     };
 
     const STEP_INCREMENT: zx::Duration = zx::Duration::from_seconds(1);
@@ -1216,20 +1315,165 @@ mod tests {
         });
     }
 
+    #[fuchsia::test]
+    fn test_log_daily_uptime_ratio_cobalt_metric() {
+        let (mut test_helper, mut test_fut) = setup_test();
+        test_helper.telemetry_sender.send(TelemetryEvent::Connected { iface_id: IFACE_ID });
+        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+
+        test_helper.advance_by(12.hours(), test_fut.as_mut());
+
+        test_helper
+            .telemetry_sender
+            .send(TelemetryEvent::Disconnected { track_subsequent_downtime: true });
+        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+
+        test_helper.advance_by(6.hours(), test_fut.as_mut());
+
+        // Indicate that there's no saved neighbor in vicinity
+        test_helper.telemetry_sender.send(TelemetryEvent::NetworkSelectionDecision {
+            network_selection_type: NetworkSelectionType::Undirected,
+            num_candidates: Ok(0),
+            selected_any: false,
+        });
+
+        test_helper.advance_by(6.hours(), test_fut.as_mut());
+
+        let uptime_ratios: Vec<_> = test_helper
+            .cobalt_events
+            .drain(..)
+            .filter(|ev| ev.metric_id == metrics::CONNECTED_UPTIME_RATIO_METRIC_ID)
+            .collect();
+        assert_eq!(uptime_ratios.len(), 1);
+        // 12 hours of uptime, 6 hours of adjusted downtime => 66.66% uptime
+        assert_eq!(uptime_ratios[0].payload, MetricEventPayload::IntegerValue(6666));
+    }
+
+    #[fuchsia::test]
+    fn test_log_daily_disconnect_per_day_connected_cobalt_metric() {
+        let (mut test_helper, mut test_fut) = setup_test();
+        test_helper.telemetry_sender.send(TelemetryEvent::Connected { iface_id: IFACE_ID });
+        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+
+        test_helper.advance_by(6.hours(), test_fut.as_mut());
+
+        test_helper
+            .telemetry_sender
+            .send(TelemetryEvent::Disconnected { track_subsequent_downtime: true });
+        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+
+        test_helper.advance_by(18.hours(), test_fut.as_mut());
+
+        let dpdc_ratios: Vec<_> = test_helper
+            .cobalt_events
+            .drain(..)
+            .filter(|ev| ev.metric_id == metrics::DISCONNECT_PER_DAY_CONNECTED_METRIC_ID)
+            .collect();
+        assert_eq!(dpdc_ratios.len(), 1);
+        // 1 disconnect, 0.25 day connected => 4 disconnects per day connected
+        // (which equals 40_0000 in TenThousandth unit)
+        assert_eq!(dpdc_ratios[0].payload, MetricEventPayload::IntegerValue(40_000));
+    }
+
+    #[fuchsia::test]
+    fn test_log_daily_rx_tx_ratio_cobalt_metrics() {
+        let (mut test_helper, mut test_fut) = setup_test();
+        test_helper.set_iface_stats_req_handler(Box::new(|responder| {
+            let seed = fasync::Time::now().into_nanos() as u64 / 1000_000_000;
+            let mut iface_stats = fake_iface_stats(seed);
+            match &mut iface_stats.mlme_stats {
+                Some(stats) => match **stats {
+                    MlmeStats::ClientMlmeStats(ref mut stats) => {
+                        stats.tx_frame.in_.count = 10 * seed;
+                        // TX drop rate stops increasing at 1 hour + TELEMETRY_QUERY_INTERVAL mark.
+                        // Because the first TELEMETRY_QUERY_INTERVAL doesn't count when
+                        // computing counters, this leads to 1 hour of high TX drop rate.
+                        stats.tx_frame.drop.count = 3 * min(
+                            seed,
+                            (1.hour() + TELEMETRY_QUERY_INTERVAL).into_seconds() as u64,
+                        );
+                        // RX drop rate stops increasing at 2 hour + TELEMETRY_QUERY_INTERVAL mark.
+                        stats.rx_frame.drop.count = 3 * min(
+                            seed,
+                            (2.hour() + TELEMETRY_QUERY_INTERVAL).into_seconds() as u64,
+                        );
+                        // RX total stops increasing at 20 hour mark
+                        stats.rx_frame.in_.count = 10 * min(seed, 20.hours().into_seconds() as u64);
+                    }
+                    _ => panic!("expect ClientMlmeStats"),
+                },
+                _ => panic!("expect mlme_stats to be available"),
+            }
+            responder
+                .send(zx::sys::ZX_OK, Some(&mut iface_stats))
+                .expect("expect sending IfaceStats response to succeed");
+        }));
+
+        test_helper.telemetry_sender.send(TelemetryEvent::Connected { iface_id: IFACE_ID });
+        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+
+        test_helper.advance_by(24.hours(), test_fut.as_mut());
+
+        let ratios: HashMap<_, _> =
+            test_helper.cobalt_events.drain(..).map(|ev| (ev.metric_id, ev.payload)).collect();
+        let high_rx_drop_time_ratio =
+            ratios.get(&metrics::TIME_RATIO_WITH_HIGH_RX_PACKET_DROP_METRIC_ID);
+        // 2 hours of high RX drop rate, 24 hours connected => 8.33% duration
+        assert_variant!(high_rx_drop_time_ratio, Some(&MetricEventPayload::IntegerValue(833)));
+
+        let high_tx_drop_time_ratio =
+            ratios.get(&metrics::TIME_RATIO_WITH_HIGH_TX_PACKET_DROP_METRIC_ID);
+        // 1 hour of high RX drop rate, 24 hours connected => 4.16% duration
+        assert_variant!(high_tx_drop_time_ratio, Some(&MetricEventPayload::IntegerValue(416)));
+
+        // 4 hours of no RX, 24 hours connected => 16.66% duration
+        let no_rx_time_ratio = ratios.get(&metrics::TIME_RATIO_WITH_NO_RX_METRIC_ID);
+        assert_variant!(no_rx_time_ratio, Some(&MetricEventPayload::IntegerValue(1666)));
+    }
+
+    #[fuchsia::test]
+    fn test_log_daily_rx_tx_ratio_cobalt_metrics_zero() {
+        // This test is to verify that when the RX/TX ratios are 0 (there's no issue), we still
+        // log to Cobalt.
+        let (mut test_helper, mut test_fut) = setup_test();
+
+        test_helper.telemetry_sender.send(TelemetryEvent::Connected { iface_id: IFACE_ID });
+        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+
+        test_helper.advance_by(24.hours(), test_fut.as_mut());
+
+        let ratios: HashMap<_, _> =
+            test_helper.cobalt_events.drain(..).map(|ev| (ev.metric_id, ev.payload)).collect();
+        let high_rx_drop_time_ratio =
+            ratios.get(&metrics::TIME_RATIO_WITH_HIGH_RX_PACKET_DROP_METRIC_ID);
+        assert_variant!(high_rx_drop_time_ratio, Some(&MetricEventPayload::IntegerValue(0)));
+
+        let high_tx_drop_time_ratio =
+            ratios.get(&metrics::TIME_RATIO_WITH_HIGH_TX_PACKET_DROP_METRIC_ID);
+        assert_variant!(high_tx_drop_time_ratio, Some(&MetricEventPayload::IntegerValue(0)));
+
+        let no_rx_time_ratio = ratios.get(&metrics::TIME_RATIO_WITH_NO_RX_METRIC_ID);
+        assert_variant!(no_rx_time_ratio, Some(&MetricEventPayload::IntegerValue(0)));
+    }
+
     struct TestHelper {
         telemetry_sender: TelemetrySender,
         inspector: Inspector,
         dev_svc_stream: fidl_fuchsia_wlan_device_service::DeviceServiceRequestStream,
+        cobalt_1dot1_stream: fidl_fuchsia_metrics::MetricEventLoggerRequestStream,
         iface_stats_req_handler: Option<Box<dyn FnMut(DeviceServiceGetIfaceStatsResponder)>>,
+        /// As requests to Cobalt are responded to via `self.drain_cobalt_events()`,
+        /// their payloads are drained to this Vec
+        cobalt_events: Vec<MetricEvent>,
 
         // Note: keep the executor field last in the struct so it gets dropped last.
         exec: fasync::TestExecutor,
     }
 
     impl TestHelper {
-        // Advance executor by `duration`.
-        // This function repeatedly advances the executor by 1 second, triggering any expired timers
-        // and running the test_fut, until `duration` is reached.
+        /// Advance executor by `duration`.
+        /// This function repeatedly advances the executor by 1 second, triggering
+        /// any expired timers and running the test_fut, until `duration` is reached.
         fn advance_by(
             &mut self,
             duration: zx::Duration,
@@ -1279,6 +1523,10 @@ mod tests {
                     }
                 }
 
+                // Respond to any potential Cobalt request, draining their payloads to
+                // `self.cobalt_events`.
+                self.drain_cobalt_events(&mut test_fut);
+
                 assert_eq!(self.exec.run_until_stalled(&mut test_fut), Poll::Pending);
             }
         }
@@ -1290,11 +1538,11 @@ mod tests {
             let _ = self.iface_stats_req_handler.replace(iface_stats_req_handler);
         }
 
-        // Advance executor by some duration until the next time `test_fut` handles periodic
-        // telemetry. This uses `self.advance_by` underneath.
-        //
-        // This function assumes that executor starts test_fut at time 0 (which should be true
-        // if TestHelper is created from `setup_test()`)
+        /// Advance executor by some duration until the next time `test_fut` handles periodic
+        /// telemetry. This uses `self.advance_by` underneath.
+        ///
+        /// This function assumes that executor starts test_fut at time 0 (which should be true
+        /// if TestHelper is created from `setup_test()`)
         fn advance_to_next_telemetry_checkpoint(
             &mut self,
             test_fut: Pin<&mut impl Future<Output = ()>>,
@@ -1303,6 +1551,80 @@ mod tests {
             let remaining_interval = TELEMETRY_QUERY_INTERVAL.into_nanos()
                 - (now.into_nanos() % TELEMETRY_QUERY_INTERVAL.into_nanos());
             self.advance_by(zx::Duration::from_nanos(remaining_interval), test_fut)
+        }
+
+        /// Continually execute the future and respond to any incoming Cobalt request with Ok.
+        /// Append each metric request payload into `self.cobalt_events`.
+        fn drain_cobalt_events(&mut self, test_fut: &mut (impl Future + Unpin)) {
+            let mut made_progress = true;
+            while made_progress {
+                let _result = self.exec.run_until_stalled(test_fut);
+                made_progress = false;
+                while let Poll::Ready(Some(Ok(req))) =
+                    self.exec.run_until_stalled(&mut self.cobalt_1dot1_stream.next())
+                {
+                    self.cobalt_events
+                        .append(&mut req.respond_to_metric_req(fidl_fuchsia_metrics::Status::Ok));
+                    made_progress = true;
+                }
+            }
+        }
+    }
+
+    trait CobaltExt {
+        // Respond to MetricEventLoggerRequest and extract its MetricEvent
+        fn respond_to_metric_req(
+            self,
+            status: fidl_fuchsia_metrics::Status,
+        ) -> Vec<fidl_fuchsia_metrics::MetricEvent>;
+    }
+
+    impl CobaltExt for MetricEventLoggerRequest {
+        fn respond_to_metric_req(
+            self,
+            status: fidl_fuchsia_metrics::Status,
+        ) -> Vec<fidl_fuchsia_metrics::MetricEvent> {
+            match self {
+                Self::LogOccurrence { metric_id, count, event_codes, responder } => {
+                    assert!(responder.send(status).is_ok());
+                    vec![MetricEvent {
+                        metric_id,
+                        event_codes,
+                        payload: MetricEventPayload::Count(count),
+                    }]
+                }
+                Self::LogInteger { metric_id, value, event_codes, responder } => {
+                    assert!(responder.send(status).is_ok());
+                    vec![MetricEvent {
+                        metric_id,
+                        event_codes,
+                        payload: MetricEventPayload::IntegerValue(value),
+                    }]
+                }
+                Self::LogIntegerHistogram { metric_id, histogram, event_codes, responder } => {
+                    assert!(responder.send(status).is_ok());
+                    vec![MetricEvent {
+                        metric_id,
+                        event_codes,
+                        payload: MetricEventPayload::Histogram(histogram),
+                    }]
+                }
+                Self::LogString { metric_id, string_value, event_codes, responder } => {
+                    assert!(responder.send(status).is_ok());
+                    vec![MetricEvent {
+                        metric_id,
+                        event_codes,
+                        payload: MetricEventPayload::StringValue(string_value),
+                    }]
+                }
+                Self::LogMetricEvents { events, responder } => {
+                    assert!(responder.send(status).is_ok());
+                    events
+                }
+                Self::LogCustomEvent { .. } => {
+                    panic!("Testing for Cobalt LogCustomEvent not supported");
+                }
+            }
         }
     }
 
@@ -1313,9 +1635,15 @@ mod tests {
         let (dev_svc_proxy, dev_svc_stream) =
             create_proxy_and_stream::<fidl_fuchsia_wlan_device_service::DeviceServiceMarker>()
                 .expect("failed to create DeviceService proxy");
+
+        let (cobalt_1dot1_proxy, cobalt_1dot1_stream) =
+            create_proxy_and_stream::<fidl_fuchsia_metrics::MetricEventLoggerMarker>()
+                .expect("failed to create MetricsEventLogger proxy");
+
         let inspector = Inspector::new();
         let inspect_node = inspector.root().create_child("stats");
-        let (telemetry_sender, test_fut) = serve_telemetry(dev_svc_proxy, inspect_node);
+        let (telemetry_sender, test_fut) =
+            serve_telemetry(dev_svc_proxy, cobalt_1dot1_proxy, inspect_node);
         let mut test_fut = Box::pin(test_fut);
 
         assert_eq!(exec.run_until_stalled(&mut test_fut), Poll::Pending);
@@ -1324,7 +1652,9 @@ mod tests {
             telemetry_sender,
             inspector,
             dev_svc_stream,
+            cobalt_1dot1_stream,
             iface_stats_req_handler: None,
+            cobalt_events: vec![],
             exec,
         };
         (test_helper, test_fut)

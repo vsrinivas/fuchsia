@@ -245,8 +245,28 @@ async fn run_all_futures() -> Result<(), Error> {
     let (cobalt_api, cobalt_fut) =
         CobaltConnector::default().serve(ConnectionType::project_id(metrics::PROJECT_ID));
 
+    // Cobalt 1.1
+    let cobalt_1dot1_svc = fuchsia_component::client::connect_to_protocol::<
+        fidl_fuchsia_metrics::MetricEventLoggerFactoryMarker,
+    >()
+    .context("failed to connect to metrics service")?;
+    let (cobalt_1dot1_proxy, cobalt_1dot1_server) =
+        fidl::endpoints::create_proxy::<fidl_fuchsia_metrics::MetricEventLoggerMarker>()
+            .context("failed to create MetricEventLoggerMarker endponts")?;
+    let project_spec = fidl_fuchsia_metrics::ProjectSpec {
+        customer_id: None, // defaults to fuchsia
+        project_id: Some(metrics::PROJECT_ID),
+        ..fidl_fuchsia_metrics::ProjectSpec::EMPTY
+    };
+    if let Err(e) =
+        cobalt_1dot1_svc.create_metric_event_logger(project_spec, cobalt_1dot1_server).await
+    {
+        error!("create_metric_event_logger failure: {}", e);
+    }
+
     let (telemetry_sender, telemetry_fut) = serve_telemetry(
         wlan_svc.clone(),
+        cobalt_1dot1_proxy,
         component::inspector().root().create_child("client_stats"),
     );
 

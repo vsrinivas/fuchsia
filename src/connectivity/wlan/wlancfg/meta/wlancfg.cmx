@@ -14,6 +14,7 @@
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.location.namedplace.RegulatoryRegionWatcher",
             "fuchsia.location.sensor.WlanBaseStationWatcher",
+            "fuchsia.metrics.MetricEventLoggerFactory",
             "fuchsia.stash.SecureStore",
             "fuchsia.wlan.device.service.DeviceMonitor",
             "fuchsia.wlan.device.service.DeviceService"
