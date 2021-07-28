@@ -7,10 +7,12 @@
 #include <lib/ddk/driver.h>
 #include <lib/ddk/fragment-device.h>
 #include <lib/syslog/logger.h>
+#include <lib/zx/process.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <zircon/compiler.h>
 #include <zircon/device/vfs.h>
+#include <zircon/errors.h>
 
 #include <utility>
 
@@ -18,6 +20,7 @@
 
 #include "src/devices/bin/driver_host/composite_device.h"
 #include "src/devices/bin/driver_host/driver_host.h"
+#include "src/devices/bin/driver_host/env.h"
 #include "src/devices/bin/driver_host/scheduler_profile.h"
 
 // These are the API entry-points from drivers
@@ -83,8 +86,7 @@ __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* paren
   if (args->flags & ~ALLOWED_FLAGS) {
     return ZX_ERR_INVALID_ARGS;
   }
-  if ((args->flags & DEVICE_ADD_INSTANCE) &&
-      (args->flags & (DEVICE_ADD_MUST_ISOLATE))) {
+  if ((args->flags & DEVICE_ADD_INSTANCE) && (args->flags & (DEVICE_ADD_MUST_ISOLATE))) {
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -394,6 +396,27 @@ __EXPORT bool driver_log_severity_enabled_internal(const zx_driver_t* drv, fx_lo
     // If we have been invoked outside of the context of a driver, return true.
     // Typically, this is due to being run within a test.
     return true;
+  }
+}
+
+__EXPORT zx_status_t driver_log_set_tags_internal(const zx_driver_t* drv, const char* const* tags,
+                                                  size_t num_tags) {
+  if (drv != nullptr) {
+    fbl::AutoLock lock(&internal::ContextForApi()->api_lock());
+    char process_name[ZX_MAX_NAME_LEN] = {};
+    zx::process::self()->get_property(ZX_PROP_NAME, process_name, sizeof(process_name));
+    std::vector<const char*> new_tags = {process_name, "driver"};
+    new_tags.insert(new_tags.end(), tags, tags + num_tags);
+    fx_logger_config_t config{
+        .min_severity = FX_LOG_SEVERITY_DEFAULT,
+        .console_fd = getenv_bool("devmgr.log-to-debuglog", false) ? dup(STDOUT_FILENO) : -1,
+        .log_service_channel = ZX_HANDLE_INVALID,
+        .tags = &new_tags[0],
+        .num_tags = new_tags.size(),
+    };
+    return fx_logger_reconfigure(drv->logger(), &config);
+  } else {
+    return ZX_ERR_INVALID_ARGS;
   }
 }
 

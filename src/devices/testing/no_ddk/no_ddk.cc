@@ -8,6 +8,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <zircon/errors.h>
 #include <zircon/syscalls/log.h>
 #include <zircon/types.h>
 
@@ -135,6 +136,11 @@ void device_fidl_transaction_take_ownership(fidl_txn_t* txn, device_fidl_txn_t* 
 // Please do not use get_root_resource() in new code. See ZX-1467.
 __EXPORT
 zx_handle_t get_root_resource() { return ZX_HANDLE_INVALID; }
+
+__EXPORT zx_status_t driver_log_set_tags_internal(const zx_driver_t* drv, const char* const* tags,
+                                                  size_t num_tags) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
 
 extern "C" bool driver_log_severity_enabled_internal(const zx_driver_t* drv,
                                                      fx_log_severity_t flag) {

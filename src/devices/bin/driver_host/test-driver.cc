@@ -55,20 +55,26 @@ void TestDevhostDriver::GetPid(GetPidRequestView request, GetPidCompleter::Sync&
 }
 
 zx_status_t TestDevhostDriver::Bind() {
+  std::array tags{"my-tag"};
+  zx_status_t status = zxlog_set_tags(tags.data(), tags.size());
+  if (status != ZX_OK) {
+    return status;
+  }
+  zxlogf(INFO, "test-devhost-parent bind");
   size_t size;
-  zx_status_t status = DdkGetMetadataSize(DEVICE_METADATA_TEST, &size);
+  status = DdkGetMetadataSize(DEVICE_METADATA_TEST, &size);
   if (status != ZX_OK) {
     return status;
   }
 
   if (size != sizeof(struct devhost_test_metadata)) {
-    printf("Unable to get the metadata correctly. size is %lu\n", size);
+    zxlogf(ERROR, "Unable to get the metadata correctly. size is %lu\n", size);
     return ZX_ERR_INTERNAL;
   }
 
   status = DdkGetMetadata(DEVICE_METADATA_TEST, &metadata_, size, &metadata_size_);
   if (status != ZX_OK) {
-    printf("Unable to get the metadata. size is %lu\n", size);
+    zxlogf(ERROR, "Unable to get the metadata. size is %lu\n", size);
     return status;
   }
 
@@ -101,4 +107,4 @@ static zx_driver_ops_t test_devhost_driver_ops = []() -> zx_driver_ops_t {
   return ops;
 }();
 
-ZIRCON_DRIVER(test - devhost - parent, test_devhost_driver_ops, "zircon", "0.1");
+ZIRCON_DRIVER(test_devhost_parent, test_devhost_driver_ops, "zircon", "0.1");

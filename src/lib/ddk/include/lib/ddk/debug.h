@@ -73,6 +73,15 @@ bool driver_log_severity_enabled_internal(const zx_driver_t* drv, fx_log_severit
 // }
 #define zxlog_level_enabled(flag) zxlog_level_enabled_etc(DDK_LOG_##flag)
 
+// Do not use this function directly, use zxlog_set_tags() instead.
+zx_status_t driver_log_set_tags_internal(const zx_driver_t* drv, const char* const* tags,
+                                         size_t num_tags);
+
+// zxlog_level_set_tags() provides a way for a driver to set which tags are appended alongside every
+// log written via `zxlogf`.
+#define zxlog_set_tags(tags, num_tags) \
+  driver_log_set_tags_internal(__zircon_driver_rec__.driver, tags, num_tags)
+
 // Do not use this function directly, use zxlogf() instead.
 void driver_logf_internal(const zx_driver_t* drv, fx_log_severity_t flag, const char* file,
                           int line, const char* msg, ...) __PRINTFLIKE(5, 6);
