@@ -7,16 +7,18 @@
         {
             protocol: [
                 "fuchsia.logger.LogSink",
-                "fuchsia.boot.WriteOnlyLog",
                 "fuchsia.process.Launcher",
+
                 // Injected for test
-                "fidl.examples.routing.echo.Echo"
+                "fidl.examples.routing.echo.Echo",
             ],
         },
         {
             directory: "test-pkg",
             path: "/pkg",
-            rights: [ "r*" ],
+            rights: [
+                "r*",
+            ],
         },
     ],
 }

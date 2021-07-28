@@ -110,7 +110,7 @@ impl RealmCapabilityHost {
                 let method_name = request.method_name();
                 let res = self.handle_request(request, &component).await;
                 if let Err(e) = &res {
-                    error!("Error occurred sending Realm response for {}: {}", method_name, e);
+                    warn!("Error occurred sending Realm response for {}: {}", method_name, e);
                 }
                 res
             })
@@ -161,7 +161,7 @@ impl RealmCapabilityHost {
     ) -> Result<(), fcomponent::Error> {
         let component = component.upgrade().map_err(|_| fcomponent::Error::InstanceDied)?;
         cm_fidl_validator::validate_child(&child_decl).map_err(|e| {
-            error!("validate_child() failed: {}", e);
+            debug!("validate_child() failed: {}", e);
             fcomponent::Error::InvalidArguments
         })?;
         if child_decl.environment.is_some() {

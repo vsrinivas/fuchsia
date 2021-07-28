@@ -33,6 +33,7 @@ struct Config {
     out_dir_contents: Option<OutDirContents>,
     root_component_url: Option<Url>,
     component_id_index_path: Option<String>,
+    log_destination: Option<LogDestination>,
     log_all_events: Option<bool>,
     builtin_boot_resolver: Option<BuiltinBootResolver>,
     reboot_on_terminate_enabled: Option<bool>,
@@ -46,6 +47,15 @@ enum BuiltinPkgResolver {
 }
 
 symmetrical_enums!(BuiltinPkgResolver, component_internal::BuiltinPkgResolver, None, AppmgrBridge);
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "snake_case")]
+enum LogDestination {
+    Syslog,
+    Klog,
+}
+
+symmetrical_enums!(LogDestination, component_internal::LogDestination, Syslog, Klog);
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "snake_case")]
@@ -238,6 +248,7 @@ impl TryFrom<Config> for component_internal::Config {
                 None => None,
             },
             component_id_index_path: config.component_id_index_path,
+            log_destination: config.log_destination.map(|d| d.into()),
             log_all_events: config.log_all_events,
             builtin_boot_resolver: match config.builtin_boot_resolver {
                 Some(builtin_boot_resolver) => Some(builtin_boot_resolver.into()),
@@ -367,6 +378,7 @@ impl Config {
         extend_if_unset!(self, another, out_dir_contents);
         extend_if_unset!(self, another, root_component_url);
         extend_if_unset!(self, another, component_id_index_path);
+        extend_if_unset!(self, another, log_destination);
         extend_if_unset!(self, another, log_all_events);
         extend_if_unset!(self, another, builtin_boot_resolver);
         extend_if_unset!(self, another, reboot_on_terminate_enabled);
@@ -517,6 +529,7 @@ mod tests {
             out_dir_contents: "svc",
             root_component_url: "fuchsia-pkg://fuchsia.com/foo#meta/foo.cmx",
             component_id_index_path: "/this/is/an/absolute/path",
+            log_destination: "klog",
             log_all_events: true,
             builtin_boot_resolver: "boot",
             reboot_on_terminate_enabled: true,
@@ -613,6 +626,7 @@ mod tests {
                 out_dir_contents: Some(component_internal::OutDirContents::Svc),
                 root_component_url: Some("fuchsia-pkg://fuchsia.com/foo#meta/foo.cmx".to_string()),
                 component_id_index_path: Some("/this/is/an/absolute/path".to_string()),
+                log_destination: Some(component_internal::LogDestination::Klog),
                 log_all_events: Some(true),
                 builtin_boot_resolver: Some(component_internal::BuiltinBootResolver::Boot),
                 reboot_on_terminate_enabled: Some(true),

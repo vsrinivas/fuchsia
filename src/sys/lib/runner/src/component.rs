@@ -456,7 +456,7 @@ pub fn report_start_error(
     controller_server_end: ServerEnd<fcrunner::ComponentControllerMarker>,
 ) {
     let _ = controller_server_end.into_channel().close_with_epitaph(err);
-    error!("Failed to start component `{}`: {}", resolved_url, err_str,);
+    warn!("Failed to start component `{}`: {}", resolved_url, err_str,);
 }
 
 #[cfg(test)]

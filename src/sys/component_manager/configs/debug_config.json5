@@ -8,7 +8,6 @@
         {
             protocol: [
                 "fuchsia.logger.LogSink",
-                "fuchsia.boot.WriteOnlyLog",
                 "fuchsia.process.Launcher",
             ],
         },

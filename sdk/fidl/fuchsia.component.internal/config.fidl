@@ -66,18 +66,21 @@ type Config = table {
     /// An invalid index causes component_manager to abort.
    11: component_id_index_path string:fuchsia.component.MAX_PATH_LENGTH;
 
+    /// Where to log to.
+   12: log_destination LogDestination;
+
     /// If true, component manager will log all events dispatched in the topology.
-   12: log_all_events bool;
+   13: log_all_events bool;
 
     /// Which builtin resolver to use for the fuchsia-boot scheme.
     /// If not present, interpreted as BuiltinBootResolver.NONE.
-   13: builtin_boot_resolver BuiltinBootResolver;
+   14: builtin_boot_resolver BuiltinBootResolver;
 
     /// If true, allow components to set the `OnTerminate=REBOOT` option.
     ///
     /// This lets a parent copmonent designate that the system should reboot if a child terminates
     /// (except when it's shut down).
-   14: reboot_on_terminate_enabled bool;
+   15: reboot_on_terminate_enabled bool;
 };
 
 /// The builtin resolver to use for the fuchsia-pkg scheme, if any.
@@ -103,6 +106,15 @@ type BuiltinBootResolver = strict enum : uint8 {
     /// Try to use the /pkg directory from the namespace. Typically this is provided
     /// to a nested component manager that a part of a test package.
     PKG = 3;
+};
+
+/// Where to log to.
+type LogDestination = strict enum : uint8 {
+    /// Log to syslog.
+    SYSLOG = 1;
+
+    /// Log to klog.
+    KLOG = 2;
 };
 
 /// Runtime security policy.

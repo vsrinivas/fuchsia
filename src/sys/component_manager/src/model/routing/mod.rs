@@ -398,7 +398,7 @@ pub async fn report_routing_failure(
     };
     target
         .log(
-            Level::Error,
+            Level::Warn,
             format!(
                 "Failed to route {} `{}` with target component `{}`: {}",
                 cap.type_name(),

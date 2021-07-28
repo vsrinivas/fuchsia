@@ -96,7 +96,7 @@ impl DirectoryEntry for ServiceInstanceDirectoryEntry {
             let target = match self.target.upgrade() {
                 Ok(target) => target,
                 Err(_) => {
-                    error!("target of service routing is gone: {}", &self.target.moniker);
+                    warn!("target of service routing is gone: {}", &self.target.moniker);
                     return;
                 }
             };
@@ -107,7 +107,7 @@ impl DirectoryEntry for ServiceInstanceDirectoryEntry {
                     let _ = server_end.close_with_epitaph(err.as_zx_status());
                     target
                         .log(
-                            log::Level::Error,
+                            log::Level::Warn,
                             format!(
                                 "failed to route component instance `{}` from intermediate component {}: {}",
                                 &self.component, &self.intermediate_component, err

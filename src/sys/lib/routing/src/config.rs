@@ -9,7 +9,8 @@ use {
     fidl::encoding::decode_persistent,
     fidl_fuchsia_component_internal::{
         self as component_internal, BuiltinBootResolver, BuiltinPkgResolver,
-        CapabilityPolicyAllowlists, DebugRegistrationPolicyAllowlists, OutDirContents,
+        CapabilityPolicyAllowlists, DebugRegistrationPolicyAllowlists, LogDestination,
+        OutDirContents,
     },
     fidl_fuchsia_sys2 as fsys,
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ExtendedMoniker, MonikerError},
@@ -81,6 +82,9 @@ pub struct RuntimeConfig {
     /// Path to the component ID index, parsed from
     /// `fuchsia.component.internal.RuntimeConfig.component_id_index_path`.
     pub component_id_index_path: Option<String>,
+
+    /// Where to log to.
+    pub log_destination: LogDestination,
 
     /// If true, component manager will log all events dispatched in the topology.
     pub log_all_events: bool,
@@ -205,6 +209,7 @@ impl Default for RuntimeConfig {
             out_dir_contents: OutDirContents::None,
             root_component_url: Default::default(),
             component_id_index_path: None,
+            log_destination: LogDestination::Syslog,
             log_all_events: false,
             builtin_boot_resolver: BuiltinBootResolver::None,
             reboot_on_terminate_enabled: false,
@@ -360,6 +365,7 @@ impl TryFrom<component_internal::Config> for RuntimeConfig {
             out_dir_contents: config.out_dir_contents.unwrap_or(default.out_dir_contents),
             root_component_url,
             component_id_index_path: config.component_id_index_path,
+            log_destination: config.log_destination.unwrap_or(default.log_destination),
             log_all_events,
             builtin_boot_resolver: config
                 .builtin_boot_resolver
@@ -617,12 +623,15 @@ mod tests {
             out_dir_contents: None,
             root_component_url: None,
             component_id_index_path: None,
+            log_destination: None,
             log_all_events: None,
             reboot_on_terminate_enabled: None,
             ..component_internal::Config::EMPTY
         }, RuntimeConfig {
-            debug:false, list_children_batch_size: 5,
-            maintain_utc_clock: false, use_builtin_process_launcher:true,
+            debug: false,
+            list_children_batch_size: 5,
+            maintain_utc_clock: false,
+            use_builtin_process_launcher:true,
             num_threads: 10,
             builtin_pkg_resolver: BuiltinPkgResolver::None,
             ..Default::default() }),
@@ -724,6 +733,7 @@ mod tests {
                 out_dir_contents: Some(component_internal::OutDirContents::Svc),
                 root_component_url: Some(FOO_PKG_URL.to_string()),
                 component_id_index_path: Some("/boot/config/component_id_index".to_string()),
+                log_destination: Some(component_internal::LogDestination::Klog),
                 log_all_events: Some(true),
                 builtin_boot_resolver: Some(component_internal::BuiltinBootResolver::None),
                 reboot_on_terminate_enabled: Some(true),
@@ -818,6 +828,7 @@ mod tests {
                 out_dir_contents: OutDirContents::Svc,
                 root_component_url: Some(Url::new(FOO_PKG_URL.to_string()).unwrap()),
                 component_id_index_path: Some("/boot/config/component_id_index".to_string()),
+                log_destination: LogDestination::Klog,
                 log_all_events: true,
                 builtin_boot_resolver: BuiltinBootResolver::None,
                 reboot_on_terminate_enabled: true,

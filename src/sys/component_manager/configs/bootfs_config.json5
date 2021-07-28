@@ -20,6 +20,7 @@
         },
     ],
     component_id_index_path: "/boot/config/component_id_index",
+    log_destination: "klog",
     builtin_boot_resolver: "boot",
     reboot_on_terminate_enabled: true,
 }

@@ -129,7 +129,7 @@ impl DirectoryReadyNotifier {
             self.create_events(outgoing_node_result, decl, matching_exposes, target).await;
         for directory_ready_event in directory_ready_events {
             target.hooks.dispatch(&directory_ready_event).await.unwrap_or_else(|e| {
-                error!("Error notifying directory ready for {}: {:?}", target.abs_moniker, e)
+                warn!("Error notifying directory ready for {}: {:?}", target.abs_moniker, e)
             });
         }
     }

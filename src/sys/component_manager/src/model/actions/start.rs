@@ -77,7 +77,7 @@ async fn do_start(
 
         // Find the runner to use.
         let runner = component.resolve_runner().await.map_err(|e| {
-            error!("Failed to resolve runner for `{}`: {}", component.abs_moniker, e);
+            warn!("Failed to resolve runner for `{}`: {}", component.abs_moniker, e);
             e
         })?;
 

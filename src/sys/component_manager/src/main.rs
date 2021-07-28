@@ -6,22 +6,22 @@
 #![allow(elided_lifetimes_in_paths)]
 
 use {
-    anyhow::{format_err, Context as _, Error},
+    anyhow::Error,
     component_manager_lib::{
         builtin_environment::{BuiltinEnvironment, BuiltinEnvironmentBuilder},
         config::RuntimeConfig,
         klog, startup,
     },
-    fuchsia_async as fasync,
+    fidl_fuchsia_component_internal as finternal, fuchsia_async as fasync,
     fuchsia_runtime::{job_default, process_self},
-    fuchsia_trace_provider as trace_provider,
+    fuchsia_syslog as syslog, fuchsia_trace_provider as trace_provider,
     fuchsia_zircon::JobCriticalOptions,
     log::*,
     std::path::PathBuf,
     std::{panic, process, thread, time::Duration},
 };
 
-fn main() -> Result<(), Error> {
+fn main() {
     // Make sure we exit if there is a panic. Add this hook before we init the
     // KernelLogger because it installs its own hook and then calls any
     // existing hook.
@@ -49,17 +49,24 @@ fn main() -> Result<(), Error> {
     if let Err(err) =
         job_default().set_critical(JobCriticalOptions::RETCODE_NONZERO, &process_self())
     {
-        panic!("Component manager failed to set itself as critical: {:?}", err);
+        panic!("Component manager failed to set itself as critical: {}", err);
     }
-
-    klog::KernelLogger::init();
-
-    info!("Component manager is starting up...");
 
     // Enable tracing in Component Manager
     trace_provider::trace_provider_create_with_fdio();
 
-    let runtime_config = build_runtime_config()?;
+    let runtime_config = build_runtime_config();
+
+    match runtime_config.log_destination {
+        finternal::LogDestination::Syslog => {
+            syslog::init().expect("failed to init syslog");
+        }
+        finternal::LogDestination::Klog => {
+            klog::KernelLogger::init();
+        }
+    }
+
+    info!("Component manager is starting up...");
 
     let num_threads = runtime_config.num_threads;
 
@@ -67,54 +74,57 @@ fn main() -> Result<(), Error> {
         let mut builtin_environment = match build_environment(runtime_config).await {
             Ok(environment) => environment,
             Err(error) => {
-                error!("Component manager setup failed: {:?}", error);
+                error!("Component manager setup failed: {}", error);
                 process::exit(1);
             }
         };
 
         if let Err(error) = builtin_environment.run_root().await {
-            error!("Failed to bind to root component: {:?}", error);
+            error!("Failed to bind to root component: {}", error);
             process::exit(1);
         }
     };
 
-    let mut executor = fasync::SendExecutor::new(num_threads).context("error creating executor")?;
+    let mut executor = fasync::SendExecutor::new(num_threads).expect("error creating executor");
     executor.run(fut);
-
-    Ok(())
 }
 
-fn build_runtime_config() -> Result<RuntimeConfig, Error> {
+/// Loads component_manager's config.
+///
+/// This function panics on failure because the logger is not initialized yet.
+fn build_runtime_config() -> RuntimeConfig {
     let args = match startup::Arguments::from_args() {
         Ok(args) => args,
         Err(err) => {
-            error!("{}\n{}", err, startup::Arguments::usage());
-            return Err(err);
+            panic!("{}\n{}", err, startup::Arguments::usage());
         }
     };
 
     let path = PathBuf::from(&args.config);
     let mut config = match RuntimeConfig::load_from_file(&path) {
-        Ok(config) => {
-            info!("Loaded runtime config from {}", path.display());
-            config
-        }
+        Ok(config) => config,
         Err(err) => {
-            return Err(format_err!("Failed to load runtime config: {}", err));
+            panic!("Failed to load runtime config: {}", err);
         }
     };
 
     match (config.root_component_url.as_ref(), args.root_component_url.as_ref()) {
-        (Some(_url), None) => Ok(config),
+        (Some(_url), None) => config,
         (None, Some(url)) => {
             config.root_component_url = Some(url.clone());
-            Ok(config)
+            config
         }
         (None, None) => {
-            Err(format_err!("`root_component_url` not provided. This field must be provided either as a command line argument or config file parameter."))
+            panic!(
+                "`root_component_url` not provided. This field must be provided either as a \
+                command line argument or config file parameter."
+            );
         }
         (Some(_), Some(_)) => {
-            Err(format_err!("`root_component_url` set in two places: as a command line argument and a config file parameter. This field can only be set in one of those places."))
+            panic!(
+                "`root_component_url` set in two places: as a command line argument \
+                and a config file parameter. This field can only be set in one of those places."
+            );
         }
     }
 }
