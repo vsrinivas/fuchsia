@@ -45,7 +45,7 @@ lazy_static! {
 lazy_static! {
     /// Reference to a display configuration.
     pub(crate) static ref DISPLAY_CONFIGURATION: Mutex<DefaultSetting<DisplayConfiguration, &'static str>> =
-        Mutex::new(DefaultSetting::new(None, "/config/data/display_configuration.json", None, false));
+        Mutex::new(DefaultSetting::new(None, "/config/data/display_configuration.json"));
 }
 
 /// Returns a default display [`DisplayInfo`] that is derived from
@@ -54,8 +54,9 @@ lazy_static! {
 pub(crate) fn default_display_info() -> DisplayInfo {
     let mut default_display_info = *DEFAULT_DISPLAY_INFO;
 
+    // TODO(fxbug.dev/80754): Report the result of this load.
     if let Ok(Some(display_configuration)) =
-        DISPLAY_CONFIGURATION.lock().unwrap().get_default_value()
+        DISPLAY_CONFIGURATION.lock().unwrap().get_cached_value()
     {
         default_display_info.theme = Some(Theme {
             theme_type: Some(match display_configuration.theme.theme_type {

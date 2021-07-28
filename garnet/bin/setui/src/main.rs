@@ -37,43 +37,35 @@ fn main() -> Result<(), Error> {
     let default_enabled_policy_configuration =
         EnabledPoliciesConfiguration::with_policies(HashSet::default());
 
+    // TODO(fxbug.dev/80754): Report the results of the config loads in this file.
+
     let enabled_service_configuration = DefaultSetting::new(
         Some(default_enabled_service_configuration),
         "/config/data/service_configuration.json",
-        None,
-        false,
     )
-    .get_default_value()
+    .load_default_value()
     .expect("invalid default enabled service configuration")
     .expect("no default enabled service configuration");
 
     let enabled_policy_configuration = DefaultSetting::new(
         Some(default_enabled_policy_configuration),
         "/config/data/policy_configuration.json",
-        None,
-        false,
     )
-    .get_default_value()
+    .load_default_value()
     .expect("invalid default enabled policy configuration")
     .expect("no default enabled policy configuration");
 
-    let flags = DefaultSetting::new(
-        Some(ServiceFlags::default()),
-        "/config/data/service_flags.json",
-        None,
-        false,
-    )
-    .get_default_value()
-    .expect("invalid service flag configuration")
-    .expect("no default service flags");
+    let flags =
+        DefaultSetting::new(Some(ServiceFlags::default()), "/config/data/service_flags.json")
+            .load_default_value()
+            .expect("invalid service flag configuration")
+            .expect("no default service flags");
 
     let agent_types = DefaultSetting::new(
         Some(AgentConfiguration { agent_types: get_default_agent_types() }),
         "/config/data/agent_configuration.json",
-        None,
-        false,
     )
-    .get_default_value()
+    .load_default_value()
     .expect("invalid default agent configuration")
     .expect("no default agent types");
 

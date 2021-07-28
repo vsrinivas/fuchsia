@@ -45,8 +45,6 @@ lazy_static! {
         Mutex::new(DefaultSetting::new(
             Some(DEFAULT_AUDIO_INFO),
             "/config/data/audio_config_data.json",
-            None,
-            false,
         ));
 }
 
@@ -81,7 +79,7 @@ pub(crate) fn default_audio_info() -> AudioInfo {
     AUDIO_DEFAULT_SETTINGS
         .lock()
         .unwrap()
-        .get_default_value()
+        .get_cached_value()
         .expect("invalid audio default settings")
         .expect("no audio default settings")
 }

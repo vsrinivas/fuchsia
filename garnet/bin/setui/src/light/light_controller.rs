@@ -63,14 +63,11 @@ impl DeviceStorageAccess for LightController {
 #[async_trait]
 impl data_controller::Create for LightController {
     async fn create(client: ClientProxy) -> Result<Self, ControllerError> {
-        let messenger = client.get_messenger().await;
         let light_hardware_config = DefaultSetting::<LightHardwareConfiguration, &str>::new(
             None,
             "/config/data/light_hardware_config.json",
-            Some(messenger),
-            true,
         )
-        .get_default_value()
+        .load_default_value_and_report(client.messenger())
         .map_err(|_| {
             ControllerError::InitFailure("Invalid default light hardware config".into())
         })?;

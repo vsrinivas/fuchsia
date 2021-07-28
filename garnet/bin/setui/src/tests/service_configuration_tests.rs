@@ -71,11 +71,10 @@ async fn test_default_configuration_provided() {
     let factory = InMemoryStorageFactory::new();
 
     // Load test configuration, which only has Accessibility, default will not be used.
-    let configuration =
-        DefaultSetting::new(None, "/config/data/service_configuration.json", None, false)
-            .get_default_value()
-            .expect("invalid service configuration")
-            .expect("no enabled service configuration provided");
+    let configuration = DefaultSetting::new(None, "/config/data/service_configuration.json")
+        .load_default_value()
+        .expect("invalid service configuration")
+        .expect("no enabled service configuration provided");
 
     let flags = ServiceFlags::default();
     let configuration = ServiceConfiguration::from(
@@ -103,11 +102,10 @@ async fn test_default_policy_configuration_provided() {
     let factory = InMemoryStorageFactory::new();
 
     // Load test configuration for policy which includes Audio, default will not be used.
-    let policy_configuration =
-        DefaultSetting::new(None, "/config/data/policy_configuration.json", None, false)
-            .get_default_value()
-            .expect("invalid policy configuration provided")
-            .expect("no enabled policy configuration provided");
+    let policy_configuration = DefaultSetting::new(None, "/config/data/policy_configuration.json")
+        .load_default_value()
+        .expect("invalid policy configuration provided")
+        .expect("no enabled policy configuration provided");
 
     let flags = ServiceFlags::default();
     let configuration = ServiceConfiguration::from(

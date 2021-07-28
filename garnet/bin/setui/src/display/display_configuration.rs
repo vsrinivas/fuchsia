@@ -47,10 +47,8 @@ mod test {
         let default_value = DefaultSetting::<DisplayConfiguration, &str>::new(
             None,
             "/config/data/display_configuration.json",
-            None,
-            false,
         )
-        .get_default_value()
+        .load_default_value()
         .expect("Invalid display configuration")
         .expect("Unable to parse configuration");
 

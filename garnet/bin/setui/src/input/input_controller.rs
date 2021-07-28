@@ -392,14 +392,11 @@ impl InputController {
 impl data_controller::Create for InputController {
     /// Creates the controller.
     async fn create(client: ClientProxy) -> Result<Self, ControllerError> {
-        let messenger = client.get_messenger().await;
         if let Ok(Some(config)) = DefaultSetting::<InputConfiguration, &str>::new(
             None,
             "/config/data/input_device_config.json",
-            Some(messenger),
-            true,
         )
-        .get_default_value()
+        .load_default_value_and_report(client.messenger())
         {
             InputController::create_with_config(client, config).await
         } else {

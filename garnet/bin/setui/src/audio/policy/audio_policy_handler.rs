@@ -115,14 +115,11 @@ struct VolumeLimits {
 #[async_trait]
 impl Create for AudioPolicyHandler {
     async fn create(client_proxy: ClientProxy) -> Result<Self, Error> {
-        let messenger = client_proxy.messenger().clone();
         let transform_config = DefaultSetting::<AudioPolicyConfig, &str>::new(
             Some(AudioPolicyConfig { transforms: Default::default() }),
             "/config/data/audio_policy_configuration.json",
-            Some(messenger),
-            true,
         )
-        .get_default_value()
+        .load_default_value_and_report(client_proxy.messenger())
         .map_err(|_| format_err!("Invalid build time policy config"))?;
 
         AudioPolicyHandler::create_with_config(
