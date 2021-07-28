@@ -81,6 +81,11 @@ sources_assignment_filter = []
 python_version = "3.8"
 python_exe_src = "//prebuilt/third_party/python3/${host_platform}/bin/python${python_version}"
 
+# Variables used to refer to the in-tree python pip.
+pip_version = "3.8"
+pip_exe_src =
+    "//prebuilt/third_party/python3/${host_platform}/bin/pip${pip_version}"
+
 declare_args() {
   # *This should never be set as a build argument.*
   # It exists only to be set in `toolchain_args`.

@@ -11,6 +11,13 @@ host_test_data("interpreter") {
   ]
 }
 
+host_test_data("pip") {
+  sources = [
+    "//prebuilt/third_party/python3/${host_platform}/lib",
+    pip_exe_src,
+  ]
+}
+
 # These tests exercise the build rules we want to test.
 group("tests") {
   testonly = true
