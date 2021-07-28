@@ -308,7 +308,7 @@ void SimInterface::StartScan(uint64_t txn_id, bool active) {
   size_t num_channels = kDefaultScanChannels.size();
   wlanif_scan_req_t req = {
       .txn_id = txn_id,
-      .bss_type_selector = fuchsia_wlan_internal_BSS_TYPE_SELECTOR_INFRASTRUCTURE,
+      .bss_type_selector = fuchsia_wlan_internal_BSS_TYPE_SELECTOR_ANY,
       .scan_type = scan_type,
       .num_channels = num_channels,
       .min_channel_time = dwell_time,

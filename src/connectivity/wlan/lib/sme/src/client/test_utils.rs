@@ -48,7 +48,8 @@ pub fn fake_bss_info() -> BssInfo {
 pub fn fake_scan_request() -> fidl_mlme::ScanRequest {
     fidl_mlme::ScanRequest {
         txn_id: 1,
-        bss_type_selector: fidl_internal::BSS_TYPE_SELECTOR_INFRASTRUCTURE,
+        // All supported MLME drivers only support BSS_TYPE_SELECTOR_ANY
+        bss_type_selector: fidl_internal::BSS_TYPE_SELECTOR_ANY,
         bssid: [8, 2, 6, 2, 1, 11],
         ssid: vec![],
         scan_type: fidl_mlme::ScanTypes::Active,

@@ -232,7 +232,8 @@ fn new_scan_request(
 ) -> ScanRequest {
     let scan_req = ScanRequest {
         txn_id: mlme_txn_id,
-        bss_type_selector: fidl_internal::BSS_TYPE_SELECTOR_INFRASTRUCTURE,
+        // All supported MLME drivers only support BSS_TYPE_SELECTOR_ANY
+        bss_type_selector: fidl_internal::BSS_TYPE_SELECTOR_ANY,
         bssid: WILDCARD_BSS_ID.clone(),
         ssid,
         scan_type: fidl_mlme::ScanTypes::Passive,

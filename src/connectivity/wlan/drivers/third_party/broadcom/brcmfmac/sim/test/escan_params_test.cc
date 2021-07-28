@@ -20,7 +20,7 @@ constexpr zx::duration kSimulatedClockDuration = zx::sec(10);
 constexpr uint64_t kScanTxnId = 0x4a65616e6e65;
 const wlanif_scan_req kDefaultScanReq = {
     .txn_id = kScanTxnId,
-    .bss_type_selector = fuchsia_wlan_internal_BSS_TYPE_SELECTOR_INFRASTRUCTURE,
+    .bss_type_selector = fuchsia_wlan_internal_BSS_TYPE_SELECTOR_ANY,
     .scan_type = WLAN_SCAN_TYPE_ACTIVE,
     .num_channels = WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS,
     .min_channel_time = SimInterface::kDefaultActiveScanDwellTimeMs,
@@ -101,6 +101,21 @@ TEST_F(EscanArgsTest, BadScanArgs) {
   // min dwell time > max dwell time
   req = kDefaultScanReq;
   req.min_channel_time = req.max_channel_time + 1;
+  RunScanTest(req);
+  EXPECT_NE(client_ifc_.ScanResult(), WLAN_SCAN_RESULT_SUCCESS);
+
+  // bss_type_selector != fuchsia_wlan_internal_BSS_TYPE_SELECTOR_ANY
+  req = kDefaultScanReq;
+  req.bss_type_selector = fuchsia_wlan_internal_BSS_TYPE_SELECTOR_INFRASTRUCTURE;
+  RunScanTest(req);
+  EXPECT_NE(client_ifc_.ScanResult(), WLAN_SCAN_RESULT_SUCCESS);
+  req.bss_type_selector = fuchsia_wlan_internal_BSS_TYPE_SELECTOR_PERSONAL;
+  RunScanTest(req);
+  EXPECT_NE(client_ifc_.ScanResult(), WLAN_SCAN_RESULT_SUCCESS);
+  req.bss_type_selector = fuchsia_wlan_internal_BSS_TYPE_SELECTOR_INDEPENDENT;
+  RunScanTest(req);
+  EXPECT_NE(client_ifc_.ScanResult(), WLAN_SCAN_RESULT_SUCCESS);
+  req.bss_type_selector = fuchsia_wlan_internal_BSS_TYPE_SELECTOR_MESH;
   RunScanTest(req);
   EXPECT_NE(client_ifc_.ScanResult(), WLAN_SCAN_RESULT_SUCCESS);
 }
