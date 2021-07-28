@@ -382,8 +382,10 @@ __NO_RETURN int arch_idle_thread_routine(void*) {
   struct x86_percpu* percpu = x86_get_percpu();
   if (use_monitor) {
     for (;;) {
+      AutoPreemptDisabler preempt_disabled;
       bool rsb_maybe_empty = false;
-      while (*percpu->monitor) {
+      while (*percpu->monitor &&
+             !Thread::Current::preemption_state().preempts_pending()) {
         X86IdleState* next_state = percpu->idle_states->PickIdleState();
         rsb_maybe_empty |= x86_intel_idle_state_may_empty_rsb(next_state);
         LocalTraceDuration trace{"idle"_stringref, next_state->MwaitHint(), 0u};
@@ -391,7 +393,8 @@ __NO_RETURN int arch_idle_thread_routine(void*) {
         // Check percpu->monitor in case it was cleared between the first check and
         // the monitor being armed. Any writes after arming the monitor will trigger
         // it and cause mwait to return, so there aren't races after this check.
-        if (*percpu->monitor) {
+        if (*percpu->monitor &&
+            !Thread::Current::preemption_state().preempts_pending()) {
           auto start = current_time();
           x86_mwait(next_state->MwaitHint());
           auto duration = zx_time_sub_time(current_time(), start);
@@ -406,7 +409,8 @@ __NO_RETURN int arch_idle_thread_routine(void*) {
       if (x86_cpu_vulnerable_to_rsb_underflow() & rsb_maybe_empty) {
         x86_ras_fill();
       }
-      Thread::Current::Preempt();
+      Thread::Current::Reschedule();
+      // Pending preemptions handled here as preempt_disabled goes out of scope.
     }
   } else {
     for (;;) {
