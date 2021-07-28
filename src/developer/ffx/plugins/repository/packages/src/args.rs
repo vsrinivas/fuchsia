@@ -16,4 +16,8 @@ pub struct PackagesCommand {
     /// if true, package hashes will be displayed in full (i.e. not truncated).
     #[argh(switch)]
     pub full_hash: bool,
+
+    /// toggle whether components in each package will be fetched and shown in the output table
+    #[argh(option, default = "true")]
+    pub include_components: bool,
 }

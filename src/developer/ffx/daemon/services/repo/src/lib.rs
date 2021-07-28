@@ -533,7 +533,12 @@ impl FidlService for Repo {
                 )?;
                 Ok(())
             }
-            bridge::RepositoryRegistryRequest::ListPackages { name, iterator, responder } => {
+            bridge::RepositoryRegistryRequest::ListPackages {
+                name,
+                iterator,
+                responder,
+                include_fields,
+            } => {
                 let mut stream = match iterator.into_stream() {
                     Ok(s) => s,
                     Err(e) => {
@@ -549,7 +554,7 @@ impl FidlService for Repo {
                     return Ok(());
                 };
 
-                let values = repo.list_packages().await?;
+                let values = repo.list_packages(include_fields).await?;
 
                 let mut pos = 0;
 

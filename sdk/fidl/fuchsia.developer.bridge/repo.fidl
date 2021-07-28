@@ -68,6 +68,9 @@ protocol RepositoryRegistry {
     ListPackages(resource struct {
         name string:MAX_NAME;
         iterator server_end:RepositoryPackagesIterator;
+        /// Fields to include. This defaults to being empty (and therefore including none of the
+        /// fields that can be toggled by this parameter).
+        include_fields ListFields;
     }) -> (struct {}) error RepositoryError;
 
     /// Get a list associating repositories with the targets they have been registered to.
@@ -99,6 +102,14 @@ protocol RepositoryTargetsIterator {
     });
 };
 
+type PackageEntry = table {
+    1: path string:MAX_PATH;
+};
+
+type ListFields = flexible bits : uint32 {
+    COMPONENTS = 0x00000001; // If present, component info will be included
+};
+
 type RepositoryPackage = table {
     /// Package name
     1: name string:2048;
@@ -109,7 +120,8 @@ type RepositoryPackage = table {
     /// Last modification timestamp (seconds since UNIX epoch). May be null depending on repository
     /// source.
     4: modified uint64;
-// TODO: add `components` here.
+    /// List of blobs in this package: currently, this is only components.
+    5: entries vector<PackageEntry>:MAX;
 };
 
 type RepositoryTarget = table {

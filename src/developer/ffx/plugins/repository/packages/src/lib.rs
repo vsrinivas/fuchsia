@@ -9,7 +9,9 @@ use {
     ffx_core::ffx_plugin,
     ffx_repository_packages_args::PackagesCommand,
     fidl,
-    fidl_fuchsia_developer_bridge::{RepositoryPackagesIteratorMarker, RepositoryRegistryProxy},
+    fidl_fuchsia_developer_bridge::{
+        ListFields, RepositoryPackagesIteratorMarker, RepositoryRegistryProxy,
+    },
     fidl_fuchsia_developer_bridge_ext::RepositoryError,
     humansize::{file_size_opts, FileSize},
     prettytable::{cell, format::TableFormat, row, Row, Table},
@@ -43,7 +45,14 @@ async fn packages_impl<W: Write>(
         )
     };
 
-    match repos_proxy.list_packages(&repo_name, server).await? {
+    match repos_proxy
+        .list_packages(
+            &repo_name,
+            server,
+            if cmd.include_components { ListFields::Components } else { ListFields::empty() },
+        )
+        .await?
+    {
         Ok(()) => {}
         Err(err) => match RepositoryError::from(err) {
             RepositoryError::NoMatchingRepository => {
@@ -56,16 +65,20 @@ async fn packages_impl<W: Write>(
     let client = client.into_proxy()?;
 
     let mut table = Table::new();
-    table.set_titles(row!("NAME", "SIZE", "HASH", "MODIFIED"));
+    let mut header = row!("NAME", "SIZE", "HASH", "MODIFIED");
+    if cmd.include_components {
+        header.add_cell(cell!("COMPONENTS"));
+    }
+    table.set_titles(header);
     if let Some(fmt) = table_format {
         table.set_format(fmt);
     }
 
     let mut rows = vec![];
     loop {
-        let repos = client.next().await?;
+        let pkgs = client.next().await?;
 
-        if repos.is_empty() {
+        if pkgs.is_empty() {
             rows.sort_by_key(|r: &Row| r.get_cell(0).unwrap().get_content());
             for row in rows.into_iter() {
                 table.add_row(row);
@@ -74,15 +87,15 @@ async fn packages_impl<W: Write>(
             return Ok(());
         }
 
-        for repo in repos {
-            rows.push(row!(
-                repo.name.as_deref().unwrap_or("<unknown>"),
-                repo.size
+        for pkg in pkgs {
+            let mut row = row!(
+                pkg.name.as_deref().unwrap_or("<unknown>"),
+                pkg.size
                     .map(|s| s
                         .file_size(file_size_opts::CONVENTIONAL)
                         .unwrap_or_else(|_| format!("{}b", s)))
                     .unwrap_or_else(|| "<unknown>".to_string()),
-                repo.hash
+                pkg.hash
                     .map(|s| {
                         if cmd.full_hash {
                             s
@@ -94,11 +107,25 @@ async fn packages_impl<W: Write>(
                         }
                     })
                     .unwrap_or_else(|| "<unknown>".to_string()),
-                repo.modified
+                pkg.modified
                     .and_then(|m| SystemTime::UNIX_EPOCH.checked_add(Duration::from_secs(m)))
                     .map(|m| DateTime::<Utc>::from(m).to_rfc2822())
                     .unwrap_or_else(String::new)
-            ));
+            );
+            if cmd.include_components {
+                row.add_cell(cell!(pkg
+                    .entries
+                    .unwrap_or(vec![])
+                    .iter()
+                    .map(|p| p
+                        .path
+                        .as_ref()
+                        .map(|s| s.clone())
+                        .unwrap_or_else(|| String::from("<missing manifest path>")))
+                    .collect::<Vec<_>>()
+                    .join("\n")));
+            }
+            rows.push(row);
         }
     }
 }
@@ -108,17 +135,30 @@ mod test {
     use super::*;
     use {
         fidl_fuchsia_developer_bridge::{
-            RepositoryPackage, RepositoryPackagesIteratorRequest, RepositoryRegistryRequest,
+            PackageEntry, RepositoryPackage, RepositoryPackagesIteratorRequest,
+            RepositoryRegistryRequest,
         },
         fuchsia_async as fasync,
         futures::StreamExt,
         prettytable::format::FormatBuilder,
     };
 
-    async fn setup_repo_proxy() -> RepositoryRegistryProxy {
+    fn component(names: Vec<&str>) -> Vec<PackageEntry> {
+        names
+            .iter()
+            .map(|n| PackageEntry { path: Some(n.to_string()), ..PackageEntry::EMPTY })
+            .collect()
+    }
+    async fn setup_repo_proxy(expected_include_fields: ListFields) -> RepositoryRegistryProxy {
         setup_fake_repos(move |req| match req {
-            RepositoryRegistryRequest::ListPackages { name, iterator, responder } => {
+            RepositoryRegistryRequest::ListPackages {
+                name,
+                iterator,
+                responder,
+                include_fields,
+            } => {
                 assert_eq!(name, "devhost");
+                assert_eq!(include_fields, expected_include_fields);
 
                 fasync::Task::spawn(async move {
                     let mut sent = false;
@@ -128,6 +168,18 @@ mod test {
                             RepositoryPackagesIteratorRequest::Next { responder } => {
                                 if !sent {
                                     sent = true;
+                                    let pkg1_components =
+                                        if include_fields.intersects(ListFields::Components) {
+                                            Some(component(vec!["component1"]))
+                                        } else {
+                                            None
+                                        };
+                                    let pkg2_components =
+                                        if include_fields.intersects(ListFields::Components) {
+                                            Some(component(vec!["component2", "component3"]))
+                                        } else {
+                                            None
+                                        };
                                     responder
                                         .send(
                                             &mut vec![
@@ -139,6 +191,7 @@ mod test {
                                                             .to_string(),
                                                     ),
                                                     modified: Some(60 * 60 * 24),
+                                                    entries: pkg1_components,
                                                     ..RepositoryPackage::EMPTY
                                                 },
                                                 RepositoryPackage {
@@ -148,6 +201,7 @@ mod test {
                                                         "secondhashsecondhashsecondhash"
                                                             .to_string(),
                                                     ),
+                                                    entries: pkg2_components,
                                                     ..RepositoryPackage::EMPTY
                                                 },
                                             ]
@@ -169,7 +223,12 @@ mod test {
     }
 
     async fn run_impl(cmd: PackagesCommand) -> String {
-        let repos = setup_repo_proxy().await;
+        let repos = setup_repo_proxy(if cmd.include_components {
+            ListFields::Components
+        } else {
+            ListFields::empty()
+        })
+        .await;
         let mut out = Vec::<u8>::new();
         timeout::timeout(
             std::time::Duration::from_millis(1000),
@@ -184,17 +243,45 @@ mod test {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_package_list_truncated_hash() {
-        assert_eq!(run_impl(PackagesCommand {
-            repository: Some("devhost".to_string()),
-            full_hash: false,
-        }).await.trim(), "NAME      SIZE  HASH            MODIFIED \n package1  1 B   longhashlon...  Fri, 02 Jan 1970 00:00:00 +0000 \n package2  2 KB  secondhashs...");
+        assert_eq!(
+            run_impl(PackagesCommand {
+                repository: Some("devhost".to_string()),
+                full_hash: false,
+                include_components: false
+            })
+            .await
+            .trim(),
+            "NAME      SIZE  HASH            MODIFIED \n \
+                          package1  1 B   longhashlon...  Fri, 02 Jan 1970 00:00:00 +0000 \n \
+                          package2  2 KB  secondhashs..."
+        );
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_package_list_full_hash() {
+        assert_eq!(
+            run_impl(PackagesCommand {
+                repository: Some("devhost".to_string()),
+                full_hash: true,
+                include_components: false,
+            })
+            .await
+            .trim(),
+            "NAME      SIZE  HASH                              MODIFIED \n \
+            package1  1 B   longhashlonghashlonghashlonghash  Fri, 02 Jan 1970 00:00:00 +0000 \n \
+            package2  2 KB  secondhashsecondhashsecondhash"
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_package_list_including_components() {
         assert_eq!(run_impl(PackagesCommand {
             repository: Some("devhost".to_string()),
-            full_hash: true,
-        }).await.trim(), "NAME      SIZE  HASH                              MODIFIED \n package1  1 B   longhashlonghashlonghashlonghash  Fri, 02 Jan 1970 00:00:00 +0000 \n package2  2 KB  secondhashsecondhashsecondhash");
+            full_hash: false,
+            include_components: true
+        }).await.trim(), "NAME      SIZE  HASH            MODIFIED                         COMPONENTS \n \
+                          package1  1 B   longhashlon...  Fri, 02 Jan 1970 00:00:00 +0000  component1 \n \
+                          package2  2 KB  secondhashs...                                   component2 \n                                                                  \
+                                                                                           component3");
     }
 }

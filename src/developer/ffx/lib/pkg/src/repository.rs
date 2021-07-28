@@ -3,16 +3,19 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Context,
+    anyhow::{Context, Result},
     bytes::Bytes,
-    fidl_fuchsia_developer_bridge::RepositoryPackage,
+    fidl_fuchsia_developer_bridge::{ListFields, PackageEntry, RepositoryPackage},
     fidl_fuchsia_developer_bridge_ext::{RepositorySpec, RepositoryStorageType},
     fidl_fuchsia_pkg as pkg,
+    fuchsia_archive::AsyncReader,
+    fuchsia_pkg::MetaContents,
     futures::{
         future::{join_all, ready},
         stream::{once, BoxStream},
         AsyncReadExt, StreamExt as _,
     },
+    io_util::file::Adapter,
     parking_lot::Mutex,
     serde::{Deserialize, Serialize},
     std::{
@@ -161,6 +164,10 @@ impl TryFrom<RepositoryConfig> for Resource {
         let json = Bytes::from(serde_json::to_vec(&config).map_err(|e| anyhow::anyhow!(e))?);
         Ok(Resource { len: json.len() as u64, stream: once(ready(Ok(json))).boxed() })
     }
+}
+
+fn is_component_manifest(s: &str) -> bool {
+    return s.ends_with(".cm") || s.ends_with(".cmx");
 }
 
 pub struct Repository {
@@ -329,36 +336,98 @@ impl Repository {
         Ok(client)
     }
 
+    async fn get_components_for_package(
+        &self,
+        package: &RepositoryPackage,
+    ) -> Result<Vec<PackageEntry>> {
+        // TODO: use `fetch_blobs` here once fxrev.dev/554888 is submitted.
+        let res = self.fetch_bytes(&format!("blobs/{}", package.hash.as_ref().unwrap())).await?;
+        let mut archive = AsyncReader::new(Adapter::new(futures::io::Cursor::new(res))).await?;
+
+        let mut components = vec![];
+        for item in archive.list() {
+            if is_component_manifest(item.path()) {
+                components.push(PackageEntry {
+                    path: Some(item.path().to_string()),
+                    ..PackageEntry::EMPTY
+                });
+            }
+        }
+
+        match archive.read_file("meta/contents").await {
+            Ok(c) => {
+                let contents = MetaContents::deserialize(c.as_slice())?;
+                for item in contents.contents().keys() {
+                    if is_component_manifest(item) {
+                        components.push(PackageEntry {
+                            path: Some(item.to_string()),
+                            ..PackageEntry::EMPTY
+                        });
+                    }
+                }
+            }
+            Err(e) => {
+                log::warn!(
+                    "failed to read meta/contents for package {}: {}",
+                    package.name.as_ref().unwrap_or(&String::from("<missing name>")),
+                    e
+                );
+            }
+        }
+        Ok(components)
+    }
+
     // TODO(fxbug.dev/79915) add tests for this method.
-    pub async fn list_packages(&self) -> Result<Vec<RepositoryPackage>, Error> {
+    pub async fn list_packages(
+        &self,
+        include_fields: ListFields,
+    ) -> Result<Vec<RepositoryPackage>, Error> {
         let client = self.client.lock();
         let targets = client.trusted_targets().context("missing target information")?;
-        join_all(targets.targets().into_iter().filter_map(|(k, v)| {
-            let custom = v.custom()?;
-            let size = custom.get("size")?.as_u64()?;
-            let hash = custom.get("merkle")?.as_str().unwrap_or("").to_string();
-            let path = format!("blobs/{}", hash);
-            Some(async move {
-                let modified = self
-                    .backend
-                    .target_modification_time(&path)
-                    .await?
-                    .map(|x| -> anyhow::Result<u64> {
-                        Ok(x.duration_since(SystemTime::UNIX_EPOCH)?.as_secs())
+        let packages: Result<Vec<RepositoryPackage>, Error> =
+            join_all(targets.targets().into_iter().filter_map(|(k, v)| {
+                let custom = v.custom()?;
+                let size = custom.get("size")?.as_u64()?;
+                let hash = custom.get("merkle")?.as_str().unwrap_or("").to_string();
+                let path = format!("blobs/{}", hash);
+                Some(async move {
+                    let modified = self
+                        .backend
+                        .target_modification_time(&path)
+                        .await?
+                        .map(|x| -> anyhow::Result<u64> {
+                            Ok(x.duration_since(SystemTime::UNIX_EPOCH)?.as_secs())
+                        })
+                        .transpose()?;
+                    Ok(RepositoryPackage {
+                        name: Some(k.to_string()),
+                        size: Some(size),
+                        hash: Some(hash),
+                        modified,
+                        ..RepositoryPackage::EMPTY
                     })
-                    .transpose()?;
-                Ok(RepositoryPackage {
-                    name: Some(k.to_string()),
-                    size: Some(size),
-                    hash: Some(hash),
-                    modified,
-                    ..RepositoryPackage::EMPTY
                 })
-            })
-        }))
-        .await
-        .into_iter()
-        .collect()
+            }))
+            .await
+            .into_iter()
+            .collect();
+        let mut packages = packages?;
+
+        if include_fields.intersects(ListFields::Components) {
+            for package in packages.iter_mut() {
+                match self.get_components_for_package(&package).await {
+                    Ok(components) => package.entries = Some(components),
+                    Err(e) => {
+                        log::error!(
+                            "failed to get components for package '{}': {}",
+                            package.name.as_ref().unwrap_or(&String::from("<unknown>")),
+                            e
+                        )
+                    }
+                };
+            }
+        }
+        Ok(packages)
     }
 }
 
