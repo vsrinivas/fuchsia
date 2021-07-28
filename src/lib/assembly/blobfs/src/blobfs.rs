@@ -115,10 +115,8 @@ fn build_blobfs_args(
         blob_manifest_path.as_ref().path_to_string()?,
     ]);
 
-    // TODO(fxbug.dev/81353): Remove "padded" and use only "deprecated_padded" for the value once
-    // all uses have been updated.
     match blob_layout.as_str() {
-        "deprecated_padded" | "padded" => {
+        "deprecated_padded" => {
             args.push("--deprecated_padded_format".to_string());
         }
         "compact" => {}

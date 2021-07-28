@@ -41,9 +41,6 @@ enum class BlobLayoutFormat : uint8_t {
 // Returns enum name for |format|.
 const char* BlobLayoutFormatToString(BlobLayoutFormat format);
 
-// Parses the string name of a blob layout format to the enum. Returns an error if |arg| is invalid.
-zx::status<BlobLayoutFormat> ParseBlobLayoutFormatCommandLineArg(const char* arg);
-
 // Returns whether |format| uses the compact Merkle tree format or not.
 bool ShouldUseCompactMerkleTreeFormat(BlobLayoutFormat format);
 

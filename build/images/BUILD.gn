@@ -432,11 +432,8 @@ action("blob.blk") {
     rebase_path(blob_manifest, root_build_dir),
   ]
 
-  # TODO(fxbug.dev/81353): Remove "padded" and use only "deprecated_padded" for the value once
-  # all assignments are updated.
   if (defined(blob_layout_format) &&
-      (blob_layout_format == "padded" ||
-       blob_layout_format == "deprecated_padded")) {
+      blob_layout_format == "deprecated_padded") {
     args += [ "--deprecated_padded_format" ]
   } else {
     # The only other defined value is "compact".

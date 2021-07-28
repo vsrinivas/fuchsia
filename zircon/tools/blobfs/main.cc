@@ -153,29 +153,6 @@ zx_status_t BlobfsCreator::ProcessCustom(int argc, char** argv, uint8_t* process
     return ZX_OK;
   }
 
-  // TODO(fxbug.dev/81353) Remove this flag. It duplicates the --deprecated_padded_format flag
-  // above and is left here to facilitate a soft transition with out-of-tree uses of this script.
-  if (strcmp(argv[0], "--blob_layout_format") == 0) {
-    constexpr uint8_t required_args = 2;
-    if (GetCommand() != Command::kMkfs) {
-      fprintf(stderr, "%s is only valid for mkfs and create\n", argv[0]);
-      return ZX_ERR_INVALID_ARGS;
-    }
-    if (argc < required_args) {
-      fprintf(stderr, "Not enough arguments for %s\n", argv[0]);
-      return ZX_ERR_INVALID_ARGS;
-    }
-    auto format = blobfs::ParseBlobLayoutFormatCommandLineArg(argv[1]);
-    if (format.is_error()) {
-      fprintf(stderr, "Invalid argument to %s, expected \"padded\" or \"compact\" but got \"%s\"\n",
-              argv[0], argv[1]);
-      return format.status_value();
-    }
-    blob_layout_format_ = format.value();
-    *processed = required_args;
-    return ZX_OK;
-  }
-
   fprintf(stderr, "Argument not found: %s\n", argv[0]);
   return ZX_ERR_INVALID_ARGS;
 }

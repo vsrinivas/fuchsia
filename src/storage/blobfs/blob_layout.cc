@@ -24,9 +24,6 @@ using ByteCountType = BlobLayout::ByteCountType;
 using BlockCountType = BlobLayout::BlockCountType;
 using BlockSizeType = BlobLayout::BlockSizeType;
 
-constexpr char kPaddedMerkleTreeAtStartCommandLineArg[] = "padded";
-constexpr char kCompactMerkleTreeAtEndCommandLineArg[] = "compact";
-
 // Rounds up |byte_count| to the next multiple of |blobfs_block_size|.
 ByteCountType RoundUpToBlockMultiple(ByteCountType byte_count, BlockSizeType blobfs_block_size) {
   return fbl::round_up(byte_count, blobfs_block_size);
@@ -254,17 +251,6 @@ const char* BlobLayoutFormatToString(BlobLayoutFormat format) {
     case BlobLayoutFormat::kCompactMerkleTreeAtEnd:
       return "kCompactMerkleTreeAtEnd";
   }
-}
-
-// TODO(fxbug.dev/81353) this function can be removed when the old command-line flag is removed.
-zx::status<BlobLayoutFormat> ParseBlobLayoutFormatCommandLineArg(const char* arg) {
-  if (strcmp(kPaddedMerkleTreeAtStartCommandLineArg, arg) == 0) {
-    return zx::ok(BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart);
-  }
-  if (strcmp(kCompactMerkleTreeAtEndCommandLineArg, arg) == 0) {
-    return zx::ok(BlobLayoutFormat::kCompactMerkleTreeAtEnd);
-  }
-  return zx::error(ZX_ERR_INVALID_ARGS);
 }
 
 bool ShouldUseCompactMerkleTreeFormat(BlobLayoutFormat format) {
