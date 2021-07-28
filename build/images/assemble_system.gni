@@ -428,6 +428,7 @@ template("assemble_system") {
     }
 
     copy(labels.copy_images) {
+      forward_variables_from(invoker, [ "testonly" ])
       sources = [ zbi ]
       outputs = [ "${invoker.output_dir}/${output_name}" ]
       deps = [ ":${labels.image_assembler}" ]
