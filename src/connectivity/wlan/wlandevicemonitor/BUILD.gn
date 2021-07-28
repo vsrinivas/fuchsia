@@ -19,9 +19,13 @@ group("tests") {
   testonly = true
   deps = [
     ":wlandevicemonitor-tests",
-    ":wlandevicemonitor-tests-v2",
     "//src/connectivity/wlan/testing/wlan-devmgr:wlan-devmgr-v2",
   ]
+
+  # TODO(https://fxbug.dev/81652): Add this test back when it's no longer flaky.
+  if (!is_coverage) {
+    deps += [ ":wlandevicemonitor-tests-v2" ]
+  }
 }
 
 metrics_registry("wlan_metrics_registry") {
