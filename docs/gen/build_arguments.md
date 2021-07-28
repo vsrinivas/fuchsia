@@ -47,7 +47,7 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1419
+From //build/config/BUILDCONFIG.gn:1428
 
 ### always_zedboot
 Build boot images that prefer Zedboot over local boot (only for EFI).
@@ -1148,7 +1148,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1176
+From //build/config/BUILDCONFIG.gn:1185
 
 ### extract_minfs_metadata_on_corruption
 If extract_minfs_metadata_on_corruption is true, fshost extracts minfs metadata on finding it
@@ -1889,16 +1889,16 @@ Each element of the list is one variant, which is a scope defining:
   name = "novariant"
 }, {
   configs = ["//build/config/profile:coverage"]
-  tags = ["instrumented", "coverage"]
+  tags = ["instrumented", "coverage", "llvm-profdata"]
 }, {
   configs = ["//build/config/profile:coverage-rust"]
-  tags = ["instrumented", "coverage"]
+  tags = ["instrumented", "coverage", "llvm-profdata"]
 }, {
   configs = ["//build/config/profile"]
-  tags = ["instrumented", "profile"]
+  tags = ["instrumented", "profile", "llvm-profdata"]
 }, {
   configs = ["//build/config/profile:coverage-sdk"]
-  tags = ["instrumented", "coverage"]
+  tags = ["instrumented", "coverage", "llvm-profdata"]
 }, {
   configs = ["//build/config/sanitizers:ubsan"]
   remove_common_configs = ["//build/config:no_rtti"]
@@ -1969,7 +1969,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1020
+From //build/config/BUILDCONFIG.gn:1025
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -3302,7 +3302,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1409
+From //build/config/BUILDCONFIG.gn:1418
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -3311,7 +3311,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1414
+From //build/config/BUILDCONFIG.gn:1423
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -3355,7 +3355,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1222
+From //build/config/BUILDCONFIG.gn:1231
 
 ### size_checker_input
 The input to the size checker.
@@ -3621,7 +3621,7 @@ The other fields are the variant's effects as defined in
 }
 ```
 
-From //build/config/BUILDCONFIG.gn:138
+From //build/config/BUILDCONFIG.gn:143
 
 ### ubsan_default_options
 Default [UndefinedBehaviorSanitizer](https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html)
@@ -3652,7 +3652,7 @@ From //build/config/sanitizers/sanitizer_default_options.gni:47
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1206
+From //build/config/BUILDCONFIG.gn:1215
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
@@ -3727,13 +3727,6 @@ From //src/chromium/build_args.gni:14
 
 From //src/graphics/lib/gbm/gbm.gni:6
 
-### use_cxx_relative_vtables
-Controls if we enable relative-vtables for C++ targets.
-
-**Current value (from the default):** `true`
-
-From //build/config/clang/clang.gni:20
-
 ### use_goma
 Set to true to enable distributed compilation using Goma.
 
@@ -3804,10 +3797,12 @@ From //src/lib/vulkan/build/config.gni:40
 ### use_physboot
 **TODO(fxbug.dev/32414): This is a temporary switch that will be removed.**
 If true, use the new "physboot" booting path for the Zircon kernel.
+**Do not set this to `false` without filing a bug!**
+**NOTE: This option will be removed soon!**
 
-**Current value (from the default):** `false`
+**Current value (from the default):** `true`
 
-From //zircon/kernel/BUILD.gn:21
+From //zircon/kernel/BUILD.gn:23
 
 ### use_prebuilt_ffmpeg
 Use a prebuilt ffmpeg binary rather than building it locally.  See
@@ -4041,7 +4036,7 @@ Selects the wlan configuration type to use. Choices:
 
 **Current value (from the default):** `"client"`
 
-From //src/connectivity/wlan/wlancfg/BUILD.gn:17
+From //src/connectivity/wlan/wlancfg/BUILD.gn:18
 
 ### zbi_compression
 Compression setting for ZBI "storage" items.
@@ -4078,7 +4073,7 @@ From //build/images/args.gni:80
 
 **Current value (from the default):** `false`
 
-From //build/config/fuchsia/BUILD.gn:181
+From //build/config/fuchsia/BUILD.gn:164
 
 ### zircon_b_partition
 
@@ -4140,7 +4135,7 @@ This allows testing for a Zircon-specific toolchain with:
 
 **Current value (from the default):** `false`
 
-From //build/config/BUILDCONFIG.gn:155
+From //build/config/BUILDCONFIG.gn:160
 
 ### zircon_tracelog
 Where to emit a tracelog from Zircon's GN run. No trace will be produced if
@@ -4230,5 +4225,5 @@ be removed after everyone has had a chance to get hold of their machines.
 
 **Current value (from the default):** `false`
 
-From //zircon/kernel/BUILD.gn:33
+From //zircon/kernel/BUILD.gn:35
 
