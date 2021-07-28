@@ -366,6 +366,11 @@ impl Telemetry {
     }
 
     pub async fn log_daily_cobalt_metrics(&mut self) {
+        self.log_daily_1d_cobalt_metrics().await;
+        self.log_daily_7d_cobalt_metrics().await;
+    }
+
+    async fn log_daily_1d_cobalt_metrics(&mut self) {
         let c = self.stats_logger.last_1d_stats.lock().windowed_stat();
         let adjusted_downtime =
             max(0.seconds(), c.downtime_duration - c.downtime_no_saved_neighbor_duration);
@@ -378,7 +383,27 @@ impl Telemetry {
                 metrics::CONNECTED_UPTIME_RATIO_METRIC_ID,
                 float_to_ten_thousandth(uptime_ratio),
                 &[],
-            )
+            );
+
+            let uptime_ratio_dim = {
+                use metrics::ConnectivityWlanMetricDimensionUptimeRatio::*;
+                match uptime_ratio {
+                    x if x < 0.75 => LessThan75Percent,
+                    x if x < 0.90 => _75ToLessThan90Percent,
+                    x if x < 0.95 => _90ToLessThan95Percent,
+                    x if x < 0.98 => _95ToLessThan98Percent,
+                    x if x < 0.99 => _98ToLessThan99Percent,
+                    x if x < 0.995 => _99ToLessThan99_5Percent,
+                    _ => _99_5To100Percent,
+                }
+            };
+            log_cobalt_1dot1!(
+                self.cobalt_1dot1_proxy,
+                log_occurrence,
+                metrics::DEVICE_CONNECTED_UPTIME_RATIO_BREAKDOWN_METRIC_ID,
+                1,
+                &[uptime_ratio_dim as u32],
+            );
         }
 
         let connected_dur_in_day = c.connected_duration.into_seconds() as f64 / (24 * 3600) as f64;
@@ -390,7 +415,26 @@ impl Telemetry {
                 metrics::DISCONNECT_PER_DAY_CONNECTED_METRIC_ID,
                 float_to_ten_thousandth(dpdc_ratio),
                 &[],
-            )
+            );
+
+            let dpdc_ratio_dim = {
+                use metrics::DeviceDisconnectPerDayConnectedBreakdownMetricDimensionDpdcRatio::*;
+                match dpdc_ratio {
+                    x if x == 0.0 => _0,
+                    x if x <= 1.5 => UpTo1_5,
+                    x if x <= 3.0 => UpTo3,
+                    x if x <= 5.0 => UpTo5,
+                    x if x <= 10.0 => UpTo10,
+                    _ => MoreThan10,
+                }
+            };
+            log_cobalt_1dot1!(
+                self.cobalt_1dot1_proxy,
+                log_occurrence,
+                metrics::DEVICE_DISCONNECT_PER_DAY_CONNECTED_BREAKDOWN_METRIC_ID,
+                1,
+                &[dpdc_ratio_dim as u32],
+            );
         }
 
         let high_rx_drop_time_ratio = c.rx_high_packet_drop_duration.into_seconds() as f64
@@ -427,6 +471,33 @@ impl Telemetry {
                 float_to_ten_thousandth(no_rx_time_ratio),
                 &[],
             )
+        }
+    }
+
+    async fn log_daily_7d_cobalt_metrics(&mut self) {
+        let c = self.stats_logger.last_7d_stats.lock().windowed_stat();
+        let connected_dur_in_day = c.connected_duration.into_seconds() as f64 / (24 * 3600) as f64;
+        let dpdc_ratio = c.disconnect_count as f64 / connected_dur_in_day;
+        if dpdc_ratio.is_finite() {
+            let dpdc_ratio_dim = {
+                use metrics::DeviceDisconnectPerDayConnectedBreakdown7dMetricDimensionDpdcRatio::*;
+                match dpdc_ratio {
+                    x if x == 0.0 => _0,
+                    x if x <= 0.2 => UpTo0_2,
+                    x if x <= 0.35 => UpTo0_35,
+                    x if x <= 0.5 => UpTo0_5,
+                    x if x <= 1.0 => UpTo1,
+                    x if x <= 5.0 => UpTo5,
+                    _ => MoreThan5,
+                }
+            };
+            log_cobalt_1dot1!(
+                self.cobalt_1dot1_proxy,
+                log_occurrence,
+                metrics::DEVICE_DISCONNECT_PER_DAY_CONNECTED_BREAKDOWN_7D_METRIC_ID,
+                1,
+                &[dpdc_ratio_dim as u32],
+            );
         }
     }
 
@@ -1341,12 +1412,24 @@ mod tests {
 
         let uptime_ratios: Vec<_> = test_helper
             .cobalt_events
-            .drain(..)
+            .iter()
             .filter(|ev| ev.metric_id == metrics::CONNECTED_UPTIME_RATIO_METRIC_ID)
             .collect();
         assert_eq!(uptime_ratios.len(), 1);
         // 12 hours of uptime, 6 hours of adjusted downtime => 66.66% uptime
         assert_eq!(uptime_ratios[0].payload, MetricEventPayload::IntegerValue(6666));
+
+        let uptime_ratio_breakdowns: Vec<_> = test_helper
+            .cobalt_events
+            .iter()
+            .filter(|ev| ev.metric_id == metrics::DEVICE_CONNECTED_UPTIME_RATIO_BREAKDOWN_METRIC_ID)
+            .collect();
+        assert_eq!(uptime_ratio_breakdowns.len(), 1);
+        assert_eq!(
+            uptime_ratio_breakdowns[0].event_codes,
+            &[metrics::ConnectivityWlanMetricDimensionUptimeRatio::LessThan75Percent as u32]
+        );
+        assert_eq!(uptime_ratio_breakdowns[0].payload, MetricEventPayload::Count(1));
     }
 
     #[fuchsia::test]
@@ -1366,13 +1449,88 @@ mod tests {
 
         let dpdc_ratios: Vec<_> = test_helper
             .cobalt_events
-            .drain(..)
+            .iter()
             .filter(|ev| ev.metric_id == metrics::DISCONNECT_PER_DAY_CONNECTED_METRIC_ID)
             .collect();
         assert_eq!(dpdc_ratios.len(), 1);
         // 1 disconnect, 0.25 day connected => 4 disconnects per day connected
         // (which equals 40_0000 in TenThousandth unit)
         assert_eq!(dpdc_ratios[0].payload, MetricEventPayload::IntegerValue(40_000));
+
+        let dpdc_ratio_breakdowns: Vec<_> = test_helper
+            .cobalt_events
+            .iter()
+            .filter(|ev| {
+                ev.metric_id == metrics::DEVICE_DISCONNECT_PER_DAY_CONNECTED_BREAKDOWN_METRIC_ID
+            })
+            .collect();
+        assert_eq!(dpdc_ratio_breakdowns.len(), 1);
+        assert_eq!(
+            dpdc_ratio_breakdowns[0].event_codes,
+            &[metrics::DeviceDisconnectPerDayConnectedBreakdownMetricDimensionDpdcRatio::UpTo5
+                as u32]
+        );
+        assert_eq!(dpdc_ratio_breakdowns[0].payload, MetricEventPayload::Count(1));
+
+        let dpdc_ratio_7d_breakdowns: Vec<_> = test_helper
+            .cobalt_events
+            .drain(..)
+            .filter(|ev| {
+                ev.metric_id == metrics::DEVICE_DISCONNECT_PER_DAY_CONNECTED_BREAKDOWN_7D_METRIC_ID
+            })
+            .collect();
+        assert_eq!(dpdc_ratio_7d_breakdowns.len(), 1);
+        assert_eq!(
+            dpdc_ratio_7d_breakdowns[0].event_codes,
+            &[metrics::DeviceDisconnectPerDayConnectedBreakdown7dMetricDimensionDpdcRatio::UpTo5
+                as u32]
+        );
+        assert_eq!(dpdc_ratio_7d_breakdowns[0].payload, MetricEventPayload::Count(1));
+
+        // Connect for another 1 day to dilute the 7d ratio
+        test_helper.telemetry_sender.send(TelemetryEvent::Connected { iface_id: IFACE_ID });
+        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+
+        test_helper.advance_by(24.hours(), test_fut.as_mut());
+
+        // No disconnect in the last day, so the 1d ratio would be 0.
+        let dpdc_ratios: Vec<_> = test_helper
+            .cobalt_events
+            .iter()
+            .filter(|ev| ev.metric_id == metrics::DISCONNECT_PER_DAY_CONNECTED_METRIC_ID)
+            .collect();
+        assert_eq!(dpdc_ratios.len(), 1);
+        assert_eq!(dpdc_ratios[0].payload, MetricEventPayload::IntegerValue(0));
+
+        let dpdc_ratio_breakdowns: Vec<_> = test_helper
+            .cobalt_events
+            .iter()
+            .filter(|ev| {
+                ev.metric_id == metrics::DEVICE_DISCONNECT_PER_DAY_CONNECTED_BREAKDOWN_METRIC_ID
+            })
+            .collect();
+        assert_eq!(dpdc_ratio_breakdowns.len(), 1);
+        assert_eq!(
+            dpdc_ratio_breakdowns[0].event_codes,
+            &[metrics::DeviceDisconnectPerDayConnectedBreakdownMetricDimensionDpdcRatio::_0 as u32]
+        );
+        assert_eq!(dpdc_ratio_breakdowns[0].payload, MetricEventPayload::Count(1));
+
+        // In the last 7 days, 1 disconnects and 1.25 days connected => 0.8 dpdc ratio
+        let dpdc_ratio_7d_breakdowns: Vec<_> = test_helper
+            .cobalt_events
+            .iter()
+            .filter(|ev| {
+                ev.metric_id == metrics::DEVICE_DISCONNECT_PER_DAY_CONNECTED_BREAKDOWN_7D_METRIC_ID
+            })
+            .collect();
+        assert_eq!(dpdc_ratio_7d_breakdowns.len(), 1);
+        assert_eq!(
+            dpdc_ratio_7d_breakdowns[0].event_codes,
+            &[metrics::DeviceDisconnectPerDayConnectedBreakdown7dMetricDimensionDpdcRatio::UpTo1
+                as u32]
+        );
+        assert_eq!(dpdc_ratio_7d_breakdowns[0].payload, MetricEventPayload::Count(1));
     }
 
     #[fuchsia::test]
