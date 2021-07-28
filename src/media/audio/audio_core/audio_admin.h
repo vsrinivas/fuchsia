@@ -55,20 +55,22 @@ class AudioAdmin {
         std::bitset<fuchsia::media::CAPTURE_USAGE_COUNT> activity) = 0;
   };
 
+  static constexpr BehaviorGain kDefaultGainBehavior = {
+      .none_gain_db = 0.0f,
+      .duck_gain_db = -35.0f,
+      .mute_gain_db = fuchsia::media::audio::MUTED_GAIN_DB,
+  };
   // Constructs an |AudioAdmin| from a |BehaviorGain| and |GainAdjustment|.
   //
   // The |BehaviorGain| provides the target gain_db values to use when triggering behaviors between
   // usages, simply mapping each behavior to a relative gain value. The |GainAdjustment| is simply
   // an interface that this object will use to apply the target gain values in |BehaviorGain|.
+  // If no parameter is provided for |BehaviorGain|, a default behavior will be used.
   //
   // |gain_adjustment| must be non-null.
-  AudioAdmin(BehaviorGain behavior_gain, StreamVolumeManager* volume_manager,
-             PolicyActionReporter* policy_action_reporter, ActivityDispatcher* activity_dispatcher,
-             async_dispatcher_t* fidl_dispatcher);
-
-  // Constructs an |AudioAdmin| using some default |BehaviorGain| values.
-  AudioAdmin(StreamVolumeManager* volume_manager, async_dispatcher_t* fidl_dispatcher,
-             PolicyActionReporter* policy_action_reporter, ActivityDispatcher* activity_dispatcher);
+  AudioAdmin(StreamVolumeManager* volume_manager, PolicyActionReporter* policy_action_reporter,
+             ActivityDispatcher* activity_dispatcher, async_dispatcher_t* fidl_dispatcher,
+             BehaviorGain behavior_gain = kDefaultGainBehavior);
 
   // Sets the interaction behavior between |active| and |affected| usages.
   void SetInteraction(fuchsia::media::Usage active, fuchsia::media::Usage affected,

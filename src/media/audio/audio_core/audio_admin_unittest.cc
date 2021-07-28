@@ -93,8 +93,8 @@ TEST_F(AudioAdminTest, OnlyUpdateVolumeOnPolicyChange) {
 
   MockPolicyActionReporter policy_action_reporter([](auto _usage, auto _policy_action) {});
   MockActivityDispatcher mock_activity_dispatcher;
-  AudioAdmin admin(kTestBehaviorGain, &stream_volume_manager, &policy_action_reporter,
-                   &mock_activity_dispatcher, dispatcher());
+  AudioAdmin admin(&stream_volume_manager, &policy_action_reporter, &mock_activity_dispatcher,
+                   dispatcher(), kTestBehaviorGain);
   test::NullAudioRenderer r1;
   test::NullAudioCapturer c1;
   test::NullAudioCapturer c2;
@@ -131,8 +131,8 @@ TEST_F(AudioAdminTest, TwoRenderersWithNoInteractions) {
   MockPolicyActionReporter policy_action_reporter([](auto _usage, auto _policy_action) {});
   MockActivityDispatcher mock_activity_dispatcher;
   StreamVolumeManager stream_volume_manager(dispatcher());
-  AudioAdmin admin(kTestBehaviorGain, &stream_volume_manager, &policy_action_reporter,
-                   &mock_activity_dispatcher, dispatcher());
+  AudioAdmin admin(&stream_volume_manager, &policy_action_reporter, &mock_activity_dispatcher,
+                   dispatcher(), kTestBehaviorGain);
   test::NullAudioRenderer r1, r2;
 
   // Set an inintial stream volume.
@@ -166,8 +166,8 @@ TEST_F(AudioAdminTest, TwoRenderersWithDuck) {
   StreamVolumeManager stream_volume_manager(dispatcher());
   MockPolicyActionReporter policy_action_reporter([](auto _usage, auto _policy_action) {});
   MockActivityDispatcher mock_activity_dispatcher;
-  AudioAdmin admin(kTestBehaviorGain, &stream_volume_manager, &policy_action_reporter,
-                   &mock_activity_dispatcher, dispatcher());
+  AudioAdmin admin(&stream_volume_manager, &policy_action_reporter, &mock_activity_dispatcher,
+                   dispatcher(), kTestBehaviorGain);
   test::NullAudioRenderer r1, r2;
 
   // Media should duck when comms is active.
@@ -218,8 +218,8 @@ TEST_F(AudioAdminTest, CapturerDucksRenderer) {
   StreamVolumeManager stream_volume_manager(dispatcher());
   MockPolicyActionReporter policy_action_reporter([](auto _usage, auto _policy_action) {});
   MockActivityDispatcher mock_activity_dispatcher;
-  AudioAdmin admin(kTestBehaviorGain, &stream_volume_manager, &policy_action_reporter,
-                   &mock_activity_dispatcher, dispatcher());
+  AudioAdmin admin(&stream_volume_manager, &policy_action_reporter, &mock_activity_dispatcher,
+                   dispatcher(), kTestBehaviorGain);
   test::NullAudioRenderer r1;
   test::NullAudioCapturer c1;
 
@@ -271,8 +271,8 @@ TEST_F(AudioAdminTest, RendererDucksCapturer) {
   StreamVolumeManager stream_volume_manager(dispatcher());
   MockPolicyActionReporter policy_action_reporter([](auto _usage, auto _policy_action) {});
   MockActivityDispatcher mock_activity_dispatcher;
-  AudioAdmin admin(kTestBehaviorGain, &stream_volume_manager, &policy_action_reporter,
-                   &mock_activity_dispatcher, dispatcher());
+  AudioAdmin admin(&stream_volume_manager, &policy_action_reporter, &mock_activity_dispatcher,
+                   dispatcher(), kTestBehaviorGain);
   test::NullAudioRenderer r1;
   test::NullAudioCapturer c1;
 
@@ -338,8 +338,8 @@ TEST_F(AudioAdminTest, PolicyActionsReported) {
 
     StreamVolumeManager stream_volume_manager(dispatcher());
     MockActivityDispatcher mock_activity_dispatcher;
-    AudioAdmin admin(kTestBehaviorGain, &stream_volume_manager, &policy_action_reporter,
-                     &mock_activity_dispatcher, dispatcher());
+    AudioAdmin admin(&stream_volume_manager, &policy_action_reporter, &mock_activity_dispatcher,
+                     dispatcher(), kTestBehaviorGain);
     test::NullAudioRenderer r1;
     test::NullAudioCapturer c1;
 
@@ -382,8 +382,8 @@ TEST_F(AudioAdminTest, RenderActivityDispatched) {
     StreamVolumeManager stream_volume_manager(dispatcher());
     MockPolicyActionReporter policy_action_reporter([](auto _usage, auto _policy_action) {});
     MockActivityDispatcher mock_activity_dispatcher;
-    AudioAdmin admin(kTestBehaviorGain, &stream_volume_manager, &policy_action_reporter,
-                     &mock_activity_dispatcher, dispatcher());
+    AudioAdmin admin(&stream_volume_manager, &policy_action_reporter, &mock_activity_dispatcher,
+                     dispatcher(), kTestBehaviorGain);
 
     // Trigger the initial activity by registering AudioRenderers.
     std::array<test::NullAudioRenderer, fuchsia::media::RENDER_USAGE_COUNT> rs;
@@ -427,8 +427,8 @@ TEST_F(AudioAdminTest, CaptureActivityDispatched) {
     StreamVolumeManager stream_volume_manager(dispatcher());
     MockPolicyActionReporter policy_action_reporter([](auto _usage, auto _policy_action) {});
     MockActivityDispatcher mock_activity_dispatcher;
-    AudioAdmin admin(kTestBehaviorGain, &stream_volume_manager, &policy_action_reporter,
-                     &mock_activity_dispatcher, dispatcher());
+    AudioAdmin admin(&stream_volume_manager, &policy_action_reporter, &mock_activity_dispatcher,
+                     dispatcher(), kTestBehaviorGain);
 
     // Trigger the initial activity by registering AudioCapturers.
     std::array<test::NullAudioCapturer, fuchsia::media::CAPTURE_USAGE_COUNT> rs;
@@ -469,8 +469,8 @@ TEST_F(AudioAdminTest, PriorityActionsApplied) {
   StreamVolumeManager stream_volume_manager(dispatcher());
   MockPolicyActionReporter policy_action_reporter([](auto _usage, auto _policy_action) {});
   MockActivityDispatcher mock_activity_dispatcher;
-  AudioAdmin admin(kTestBehaviorGain, &stream_volume_manager, &policy_action_reporter,
-                   &mock_activity_dispatcher, dispatcher());
+  AudioAdmin admin(&stream_volume_manager, &policy_action_reporter, &mock_activity_dispatcher,
+                   dispatcher(), kTestBehaviorGain);
   test::NullAudioRenderer r1, r2, r3;
   test::NullAudioCapturer c1;
 
