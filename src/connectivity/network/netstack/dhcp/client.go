@@ -1016,6 +1016,11 @@ func (c *Client) recv(
 				c.stats.PacketDiscardStats.InvalidPacketType[res.LinkPacketInfo.PktType] = counter
 			}
 			counter.Increment()
+			_ = syslog.DebugTf(
+				tag,
+				"PacketDiscardStats.InvalidPacketType[%d]++",
+				res.LinkPacketInfo.PktType,
+			)
 			continue
 		}
 
@@ -1058,6 +1063,11 @@ func (c *Client) recv(
 				c.stats.PacketDiscardStats.InvalidTransProto[ip.TransportProtocol()] = counter
 			}
 			counter.Increment()
+			_ = syslog.DebugTf(
+				tag,
+				"PacketDiscardStats.InvalidTransProto[%d]++",
+				ip.TransportProtocol(),
+			)
 			continue
 		}
 		udp := header.UDP(ip.Payload())
@@ -1081,6 +1091,11 @@ func (c *Client) recv(
 				c.stats.PacketDiscardStats.InvalidPort[udp.DestinationPort()] = counter
 			}
 			counter.Increment()
+			_ = syslog.DebugTf(
+				tag,
+				"PacketDiscardStats.InvalidPort[%d]++",
+				udp.DestinationPort(),
+			)
 			continue
 		}
 		if udp.Length() > uint16(len(udp)) {

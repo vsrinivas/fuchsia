@@ -418,27 +418,31 @@ const DHCP_CLIENT_PORT: NonZeroU16 =
 
 #[variants_test]
 #[test_case(
+    "invalid_trans_proto",
     vec![
         PacketAttributes {
             ip_proto: packet_formats::ip::Ipv4Proto::Proto(packet_formats::ip::IpProto::Tcp),
             port: DHCP_CLIENT_PORT,
         }
-    ]; "invalid trans proto")]
+    ])]
 #[test_case(
+    "invalid_port",
     vec![
         PacketAttributes {
             ip_proto: packet_formats::ip::Ipv4Proto::Proto(packet_formats::ip::IpProto::Udp),
             port: INVALID_PORT,
         }
-    ]; "invalid port")]
+    ])]
 #[test_case(
+    "valid",
     vec![
         PacketAttributes {
             ip_proto: packet_formats::ip::Ipv4Proto::Proto(packet_formats::ip::IpProto::Udp),
             port: DHCP_CLIENT_PORT,
         }
-    ]; "valid")]
+    ])]
 #[test_case(
+    "multiple_invalid_port_and_single_invalid_trans_proto",
     vec![
         PacketAttributes {
             ip_proto: packet_formats::ip::Ipv4Proto::Proto(packet_formats::ip::IpProto::Udp),
@@ -452,9 +456,10 @@ const DHCP_CLIENT_PORT: NonZeroU16 =
             ip_proto: packet_formats::ip::Ipv4Proto::Proto(packet_formats::ip::IpProto::Tcp),
             port: DHCP_CLIENT_PORT,
         }
-    ]; "multiple invalid port and single invalid trans proto")]
+    ])]
 async fn inspect_dhcp<E: netemul::Endpoint>(
-    _test_name: &str,
+    variants_test_name: &str,
+    test_case_name: &str,
     inbound_packets: Vec<PacketAttributes>,
 ) {
     // TODO(https://fxbug.dev/79556): Extend this test to cover the stat tracking frames discarded
@@ -462,7 +467,7 @@ async fn inspect_dhcp<E: netemul::Endpoint>(
     let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
     let network = sandbox.create_network("net").await.expect("failed to create network");
     let realm = sandbox
-        .create_netstack_realm::<Netstack2, _>("inspect_dhcp")
+        .create_netstack_realm::<Netstack2, _>(format!("{}-{}", variants_test_name, test_case_name))
         .expect("failed to create realm");
     let eth = realm
         .join_network::<E, _>(&network, "ep1", &netemul::InterfaceConfig::Dhcp)
