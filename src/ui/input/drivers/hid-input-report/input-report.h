@@ -6,8 +6,11 @@
 #define SRC_UI_INPUT_DRIVERS_HID_INPUT_REPORT_INPUT_REPORT_H_
 
 #include <fuchsia/hardware/hiddevice/cpp/banjo.h>
+#include <lib/inspect/cpp/inspect.h>
+#include <lib/zx/time.h>
 
 #include <list>
+#include <optional>
 #include <vector>
 
 #include <ddktl/device.h>
@@ -68,11 +71,18 @@ class InputReport : public DeviceType,
   // This amount of memory is stack allocated when a client calls GetDescriptor.
   static constexpr size_t kFidlDescriptorBufferSize = 8192;
 
+  static constexpr uint64_t kLatencyBucketCount = 7;
+  static constexpr zx::duration kLatencyFloor = zx::msec(5);
+  static constexpr zx::duration kLatencyInitialStep = kLatencyFloor;
+  static constexpr uint64_t kLatencyStepMultiplier = 3;
+
   bool ParseHidInputReportDescriptor(const hid::ReportDescriptor* report_desc);
 
   // If we have a consumer control device, get a report and send it to the reader,
   // since the reader needs the device's state.
   void SendInitialConsumerControlReport(InputReportsReader* reader);
+
+  std::string GetDeviceTypesString() const;
 
   ddk::HidDeviceProtocolClient hiddev_;
 
@@ -83,6 +93,17 @@ class InputReport : public DeviceType,
   std::list<std::unique_ptr<InputReportsReader>> readers_list_ __TA_GUARDED(readers_lock_);
   std::optional<async::Loop> loop_ __TA_GUARDED(readers_lock_);
   sync_completion_t next_reader_wait_;
+
+  inspect::Inspector inspector_;
+  inspect::Node root_;
+  inspect::ExponentialUintHistogram latency_histogram_usecs_;
+  inspect::UintProperty average_latency_usecs_;
+  inspect::UintProperty max_latency_usecs_;
+  inspect::StringProperty device_types_;
+
+  uint64_t report_count_ = 0;
+  zx::duration total_latency_ = {};
+  zx::duration max_latency_ = {};
 };
 
 }  // namespace hid_input_report_dev

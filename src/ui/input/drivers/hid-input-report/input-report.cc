@@ -10,6 +10,7 @@
 #include <lib/ddk/platform-defs.h>
 #include <lib/fidl/epitaph.h>
 #include <lib/fit/defer.h>
+#include <lib/zx/clock.h>
 #include <threads.h>
 #include <zircon/status.h>
 
@@ -56,6 +57,19 @@ void InputReport::HidReportListenerReceiveReport(const uint8_t* report, size_t r
       reader->ReceiveReport(report, report_size, report_time, device.get());
     }
   }
+
+  const zx::duration latency = zx::clock::get_monotonic() - zx::time(report_time);
+
+  total_latency_ += latency;
+  report_count_++;
+  average_latency_usecs_.Set(total_latency_.to_usecs() / report_count_);
+
+  if (latency > max_latency_) {
+    max_latency_ = latency;
+    max_latency_usecs_.Set(max_latency_.to_usecs());
+  }
+
+  latency_histogram_usecs_.Insert(latency.to_usecs());
 }
 
 bool InputReport::ParseHidInputReportDescriptor(const hid::ReportDescriptor* report_desc) {
@@ -82,6 +96,32 @@ void InputReport::SendInitialConsumerControlReport(InputReportsReader* reader) {
                             device.get());
     }
   }
+}
+
+std::string InputReport::GetDeviceTypesString() const {
+  const char* kDeviceTypeNames[] = {
+      [static_cast<uint32_t>(hid_input_report::DeviceType::kMouse)] = "mouse",
+      [static_cast<uint32_t>(hid_input_report::DeviceType::kSensor)] = "sensor",
+      [static_cast<uint32_t>(hid_input_report::DeviceType::kTouch)] = "touch",
+      [static_cast<uint32_t>(hid_input_report::DeviceType::kKeyboard)] = "keyboard",
+      [static_cast<uint32_t>(hid_input_report::DeviceType::kConsumerControl)] = "consumer-control",
+  };
+
+  std::string device_types;
+  for (size_t i = 0; i < devices_.size(); i++) {
+    if (i > 0) {
+      device_types += ',';
+    }
+
+    const auto type = static_cast<uint32_t>(devices_[i]->GetDeviceType());
+    if (type >= sizeof(kDeviceTypeNames) || !kDeviceTypeNames[type]) {
+      device_types += "unknown";
+    } else {
+      device_types += kDeviceTypeNames[type];
+    }
+  }
+
+  return device_types;
 }
 
 void InputReport::GetInputReportsReader(GetInputReportsReaderRequestView request,
@@ -210,7 +250,17 @@ zx_status_t InputReport::Bind() {
     return status;
   }
 
-  status = DdkAdd("InputReport");
+  const std::string device_types = GetDeviceTypesString();
+
+  root_ = inspector_.GetRoot().CreateChild("hid-input-report-" + device_types);
+  latency_histogram_usecs_ = root_.CreateExponentialUintHistogram(
+      "latency_histogram_usecs", kLatencyFloor.to_usecs(), kLatencyInitialStep.to_usecs(),
+      kLatencyStepMultiplier, kLatencyBucketCount);
+  average_latency_usecs_ = root_.CreateUint("average_latency_usecs", 0);
+  max_latency_usecs_ = root_.CreateUint("max_latency_usecs", 0);
+  device_types_ = root_.CreateString("device_types", device_types);
+
+  status = DdkAdd(ddk::DeviceAddArgs("InputReport").set_inspect_vmo(inspector_.DuplicateVmo()));
   if (status != ZX_OK) {
     hiddev_.UnregisterListener();
     return status;

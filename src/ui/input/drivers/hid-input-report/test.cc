@@ -7,6 +7,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/fidl-async/cpp/bind.h>
+#include <lib/inspect/testing/cpp/zxtest/inspect.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/eventpair.h>
 #include <unistd.h>
@@ -16,6 +17,7 @@
 #include <hid/ambient-light.h>
 #include <hid/boot.h>
 #include <hid/buttons.h>
+#include <hid/gt92xx.h>
 #include <hid/paradise.h>
 #include <hid/usages.h>
 #include <zxtest/zxtest.h>
@@ -50,6 +52,24 @@ const uint8_t boot_mouse_desc[] = {
     0x81, 0x06,  //     Input (Data,Var,Rel,No Wrap,Linear,No Null Position)
     0xC0,        //   End Collection
     0xC0,        // End Collection
+};
+
+class SaveInspectVmoBind : public fake_ddk::Bind {
+ public:
+  zx::vmo TakeInspectVmo() { return std::move(inspect_vmo_); }
+
+ protected:
+  zx_status_t DeviceAdd(zx_driver_t* drv, zx_device_t* parent, device_add_args_t* args,
+                        zx_device_t** out) override {
+    if (args) {
+      inspect_vmo_.reset(args->inspect_vmo);
+      args->inspect_vmo = ZX_HANDLE_INVALID;
+    }
+    return fake_ddk::Bind::DeviceAdd(drv, parent, args, out);
+  }
+
+ private:
+  zx::vmo inspect_vmo_;
 };
 
 class FakeHidDevice : public ddk::HidDeviceProtocol<FakeHidDevice> {
@@ -107,10 +127,12 @@ class FakeHidDevice : public ddk::HidDeviceProtocol<FakeHidDevice> {
 
   void SetReportDesc(std::vector<uint8_t> report_desc) { report_desc_ = report_desc; }
 
-  void SendReport(const std::vector<uint8_t>& report) {
+  void SendReport(const std::vector<uint8_t>& report, zx_time_t timestamp = ZX_TIME_INFINITE) {
+    if (timestamp == ZX_TIME_INFINITE) {
+      timestamp = zx_clock_get_monotonic();
+    }
     if (listener_.has_value()) {
-      listener_->ops->receive_report(listener_->ctx, report.data(), report.size(),
-                                     zx_clock_get_monotonic());
+      listener_->ops->receive_report(listener_->ctx, report.data(), report.size(), timestamp);
     }
   }
 
@@ -141,7 +163,7 @@ class HidDevTest : public zxtest::Test {
     return fidl::BindSyncClient(ddk_.FidlClient<fuchsia_input_report::InputDevice>());
   }
 
-  fake_ddk::Bind ddk_;
+  SaveInspectVmoBind ddk_;
   FakeHidDevice fake_hid_;
   InputReport* device_;
   ddk::HidDeviceProtocolClient client_;
@@ -807,6 +829,83 @@ TEST_F(HidDevTest, ConsumerControlTwoClientsTest) {
     EXPECT_TRUE(report.has_pressed_buttons());
     EXPECT_EQ(0, report.pressed_buttons().count());
   }
+}
+
+TEST_F(HidDevTest, TouchLatencyMeasurements) {
+  const uint8_t* report_desc;
+  const size_t desc_len = get_gt92xx_report_desc(&report_desc);
+  std::vector<uint8_t> desc(report_desc, report_desc + desc_len);
+  fake_hid_.SetReportDesc(desc);
+
+  device_->Bind();
+
+  const zx::vmo inspect_vmo = ddk_.TakeInspectVmo();
+  ASSERT_TRUE(inspect_vmo.is_valid());
+
+  // Send five reports, and verify that the inspect stats make sense.
+  gt92xx_touch_t report = {};
+  const uint8_t* report_ptr = reinterpret_cast<uint8_t*>(&report);
+  const std::vector<uint8_t> report_vector(report_ptr, report_ptr + sizeof(report));
+
+  // Add some additional computed latency to make the results more realistic.
+  const zx_time_t timestamp = zx_clock_get_monotonic() - ZX_MSEC(15);
+
+  fake_hid_.SendReport(report_vector, timestamp);
+  fake_hid_.SendReport(report_vector, timestamp);
+  fake_hid_.SendReport(report_vector, timestamp);
+  fake_hid_.SendReport(report_vector, timestamp);
+  fake_hid_.SendReport(report_vector, timestamp - ZX_MSEC(5));
+
+  inspect::InspectTestHelper inspector;
+  inspector.ReadInspect(inspect_vmo);
+
+  const inspect::Hierarchy* root = inspector.hierarchy().GetByPath({"hid-input-report-touch"});
+  ASSERT_NOT_NULL(root);
+
+  const auto* latency_histogram =
+      root->node().get_property<inspect::UintArrayValue>("latency_histogram_usecs");
+  ASSERT_NOT_NULL(latency_histogram);
+  uint64_t latency_bucket_sum = 0;
+  for (const inspect::UintArrayValue::HistogramBucket& bucket : latency_histogram->GetBuckets()) {
+    latency_bucket_sum += bucket.count;
+  }
+
+  EXPECT_EQ(latency_bucket_sum, 5);
+
+  const auto* average_latency =
+      root->node().get_property<inspect::UintPropertyValue>("average_latency_usecs");
+  ASSERT_NOT_NULL(average_latency);
+
+  const auto* max_latency =
+      root->node().get_property<inspect::UintPropertyValue>("max_latency_usecs");
+  ASSERT_NOT_NULL(max_latency);
+
+  EXPECT_GE(max_latency->value(), average_latency->value());
+}
+
+TEST_F(HidDevTest, InspectDeviceTypes) {
+  size_t desc_len;
+  const uint8_t* report_desc = get_paradise_touch_report_desc(&desc_len);
+  std::vector<uint8_t> desc(report_desc, report_desc + desc_len);
+  fake_hid_.SetReportDesc(desc);
+
+  device_->Bind();
+
+  const zx::vmo inspect_vmo = ddk_.TakeInspectVmo();
+  ASSERT_TRUE(inspect_vmo.is_valid());
+
+  inspect::InspectTestHelper inspector;
+  inspector.ReadInspect(inspect_vmo);
+
+  const inspect::Hierarchy* root =
+      inspector.hierarchy().GetByPath({"hid-input-report-touch,mouse"});
+  ASSERT_NOT_NULL(root);
+
+  const auto* device_types =
+      root->node().get_property<inspect::StringPropertyValue>("device_types");
+  ASSERT_NOT_NULL(device_types);
+
+  EXPECT_STR_EQ(device_types->value().c_str(), "touch,mouse");
 }
 
 }  // namespace hid_input_report_dev
