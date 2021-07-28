@@ -22,7 +22,6 @@ use {
 const DATA_FRAME_INTERVAL_NANOS: i64 = 4_000_000;
 
 const BSS_MINSTL: mac::Bssid = mac::Bssid([0x6d, 0x69, 0x6e, 0x73, 0x74, 0x0a]);
-const SSID_MINSTREL: &[u8] = b"minstrel";
 
 fn create_wlan_tx_status_entry(tx_vec_idx: u16) -> WlanTxStatusEntry {
     fidl_fuchsia_wlan_tap::WlanTxStatusEntry { tx_vec_idx: tx_vec_idx, attempts: 1 }
@@ -113,7 +112,7 @@ async fn eth_and_beacon_sender<'a>(
         // Send a beacon before that to stay connected.
         if (intervals_since_last_beacon * DATA_FRAME_INTERVAL_NANOS).nanos() >= 8765.millis() {
             intervals_since_last_beacon = 0;
-            send_beacon(&CHANNEL, &BSS_MINSTL, SSID_MINSTREL, &Protection::Open, &phy, 0).unwrap();
+            send_beacon(&CHANNEL, &BSS_MINSTL, &AP_SSID, &Protection::Open, &phy, 0).unwrap();
         }
         intervals_since_last_beacon += 1;
 
@@ -145,7 +144,7 @@ async fn rate_selection() {
     .await;
     let () = loop_until_iface_is_found().await;
 
-    let () = connect_open(&mut helper, SSID_MINSTREL, &BSS_MINSTL).await;
+    let () = connect_open(&mut helper, &AP_SSID, &BSS_MINSTL).await;
 
     let phy = helper.proxy();
     let (sender, mut receiver) = mpsc::channel(1);

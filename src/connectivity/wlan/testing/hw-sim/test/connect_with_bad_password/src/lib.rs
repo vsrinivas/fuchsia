@@ -11,7 +11,6 @@ use {
 };
 
 const BSSID: &Bssid = &Bssid(*b"wpa2ok");
-const SSID: &[u8] = b"wpa2ssid";
 const AUTHENTICATOR_PASSWORD: &str = "goodpassword";
 const SUPPLICANT_PASSWORD: &str = "badpassword";
 
@@ -21,9 +20,9 @@ async fn connect_future(
     security_type: fidl_policy::SecurityType,
     password: &str,
 ) {
-    save_network(client_controller, SSID, security_type, Some(password)).await;
+    save_network(client_controller, &AP_SSID, security_type, Some(password)).await;
     let network_identifier =
-        fidl_policy::NetworkIdentifier { ssid: SSID.to_vec(), type_: security_type };
+        fidl_policy::NetworkIdentifier { ssid: AP_SSID.to_vec(), type_: security_type };
     assert_connecting(client_state_update_stream, network_identifier.clone()).await;
     assert_failed(
         client_state_update_stream,
@@ -31,7 +30,7 @@ async fn connect_future(
         fidl_policy::DisconnectStatus::CredentialsFailed,
     )
     .await;
-    remove_network(client_controller, SSID, security_type, Some(password)).await;
+    remove_network(client_controller, &AP_SSID, security_type, Some(password)).await;
 }
 
 /// Test a client fails to connect to a network if the wrong credential type is
@@ -50,7 +49,7 @@ async fn connect_with_bad_password() {
     // returned by policy.
     {
         let mut authenticator =
-            Some(create_wpa2_psk_authenticator(BSSID, SSID, AUTHENTICATOR_PASSWORD));
+            Some(create_wpa2_psk_authenticator(BSSID, &AP_SSID, AUTHENTICATOR_PASSWORD));
         let main_future = connect_future(
             &client_controller,
             &mut client_state_update_stream,
@@ -62,7 +61,7 @@ async fn connect_with_bad_password() {
         connect_to_ap(
             main_future,
             &mut helper,
-            SSID,
+            &AP_SSID,
             BSSID,
             &Protection::Wpa2Personal,
             &mut authenticator,
@@ -77,7 +76,7 @@ async fn connect_with_bad_password() {
     // returned by policy.
     {
         let mut authenticator =
-            Some(create_deprecated_wpa1_psk_authenticator(BSSID, SSID, AUTHENTICATOR_PASSWORD));
+            Some(create_deprecated_wpa1_psk_authenticator(BSSID, &AP_SSID, AUTHENTICATOR_PASSWORD));
         let main_future = connect_future(
             &client_controller,
             &mut client_state_update_stream,
@@ -89,7 +88,7 @@ async fn connect_with_bad_password() {
         connect_to_ap(
             main_future,
             &mut helper,
-            SSID,
+            &AP_SSID,
             BSSID,
             &Protection::Wpa1,
             &mut authenticator,

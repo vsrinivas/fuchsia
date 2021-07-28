@@ -496,6 +496,7 @@ mod tests {
             lock::Mutex,
             task::Poll,
         },
+        ieee80211::Ssid,
         pin_utils::pin_mut,
         wlan_common::{assert_variant, fake_fidl_bss_description},
     };
@@ -573,7 +574,7 @@ mod tests {
             connect_req: client_types::ConnectRequest,
         ) -> Result<oneshot::Receiver<()>, Error> {
             let _ = self.disconnected_ifaces.pop();
-            let ssid = connect_req.target.network.ssid;
+            let ssid: Ssid = connect_req.target.network.ssid.into();
             // SME needs a BssDescription to connect. If none is provided in the connect request,
             // then static testing BSS information is used. Note that this differs from production
             // behavior where join scans are issued as needed and network information is aggregated
@@ -583,7 +584,7 @@ mod tests {
                 .bss_description
                 .unwrap_or_else(|| fake_fidl_bss_description!(Wpa2, ssid: ssid.clone()));
             let mut req = fidl_sme::ConnectRequest {
-                ssid,
+                ssid: ssid.to_vec(),
                 bss_description,
                 credential: sme_credential_from_policy(&connect_req.target.credential),
                 radio_cfg: fidl_sme::RadioConfig {

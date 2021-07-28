@@ -6,11 +6,12 @@ use {
     crate::{
         capabilities::{ClientCapabilities, StaCapabilities},
         client::{rsn::Supplicant, ServingApInfo},
-        Ssid,
     },
     fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_mlme as fidl_mlme,
     fuchsia_zircon as zx,
     futures::channel::mpsc,
+    ieee80211::Ssid,
+    lazy_static::lazy_static,
     std::sync::{
         atomic::{AtomicBool, Ordering},
         Arc, Mutex,
@@ -207,12 +208,13 @@ fn mock_supplicant(auth_cfg: auth::Config) -> (MockSupplicant, MockSupplicantCon
 }
 
 const MOCK_PASS: &str = "dummy_password";
-const MOCK_SSID: &str = "network_ssid";
+lazy_static! {
+    static ref MOCK_SSID: Ssid = Ssid::from("network_ssid");
+}
 
 pub fn mock_psk_supplicant() -> (MockSupplicant, MockSupplicantController) {
     let config = auth::Config::ComputedPsk(
-        psk::compute(MOCK_PASS.as_bytes(), MOCK_SSID.as_bytes())
-            .expect("Failed to create mock psk"),
+        psk::compute(MOCK_PASS.as_bytes(), &MOCK_SSID).expect("Failed to create mock psk"),
     );
     mock_supplicant(config)
 }

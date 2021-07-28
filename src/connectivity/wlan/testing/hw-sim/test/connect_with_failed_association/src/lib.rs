@@ -6,22 +6,19 @@ use {
     fidl_fuchsia_wlan_policy as fidl_policy,
     fidl_fuchsia_wlan_tap::{self as wlantap, WlantapPhyProxy},
     fuchsia_zircon::DurationNum,
+    ieee80211::Ssid,
     pin_utils::pin_mut,
-    wlan_common::{
-        format::SsidFmt as _,
-        mac::{self, Bssid},
-    },
+    wlan_common::mac::{self, Bssid},
     wlan_hw_sim::*,
 };
 
 const BSSID: Bssid = Bssid([0x62, 0x73, 0x73, 0x66, 0x6f, 0x6f]);
-const SSID: &[u8] = b"open";
 
-fn build_event_handler(
-    ssid: Vec<u8>,
+fn build_event_handler<'a>(
+    ssid: &'a Ssid,
     bssid: Bssid,
-    phy: &WlantapPhyProxy,
-) -> impl FnMut(wlantap::WlantapPhyEvent) + '_ {
+    phy: &'a WlantapPhyProxy,
+) -> impl FnMut(wlantap::WlantapPhyEvent) + 'a {
     EventHandlerBuilder::new()
         .on_set_channel(
             Beacon::send_on_primary_channel(CHANNEL.primary, &phy).bssid(bssid).ssid(ssid),
@@ -56,9 +53,9 @@ async fn save_network_and_await_failed_connection(
     client_controller: &mut fidl_policy::ClientControllerProxy,
     client_state_update_stream: &mut fidl_policy::ClientStateUpdatesRequestStream,
 ) {
-    save_network(client_controller, SSID, fidl_policy::SecurityType::None, None).await;
+    save_network(client_controller, &AP_SSID, fidl_policy::SecurityType::None, None).await;
     let network_identifier = fidl_policy::NetworkIdentifier {
-        ssid: SSID.to_vec(),
+        ssid: AP_SSID.to_vec(),
         type_: fidl_policy::SecurityType::None,
     };
     assert_connecting(client_state_update_stream, network_identifier.clone()).await;
@@ -91,8 +88,8 @@ async fn connect_with_failed_association() {
     let () = helper
         .run_until_complete_or_timeout(
             240.seconds(),
-            format!("connecting to {} ({:02X?})", SSID.to_ssid_string_not_redactable(), BSSID),
-            build_event_handler(SSID.to_vec(), BSSID, &proxy),
+            format!("connecting to {} ({:02X?})", AP_SSID.to_string_not_redactable(), BSSID),
+            build_event_handler(&AP_SSID, BSSID, &proxy),
             save_network_fut,
         )
         .await;

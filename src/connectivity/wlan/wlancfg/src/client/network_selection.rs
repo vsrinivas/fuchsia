@@ -26,6 +26,7 @@ use {
     },
     fuchsia_zircon as zx,
     futures::lock::Mutex,
+    ieee80211::Ssid,
     log::{debug, error, info, trace},
     rand::Rng,
     std::{collections::HashMap, convert::TryInto as _, sync::Arc},
@@ -176,7 +177,7 @@ impl InternalBss<'_> {
         let recent_short_connection_count = self.recent_short_connections();
         format!(
             "{}({:4}), {}, {:>4}dBm, channel {:8}, score {:4}{}{}{}{}",
-            self.hasher.hash_ssid(&self.saved_network_info.network_id.ssid),
+            self.hasher.hash_ssid(&Ssid::from(&self.saved_network_info.network_id.ssid)),
             self.saved_security_type_to_string(),
             self.hasher.hash_mac_addr(&self.scanned_bss.bssid),
             rssi,
@@ -200,7 +201,7 @@ impl InternalBss<'_> {
 impl<'a> WriteInspect for InternalBss<'a> {
     fn write_inspect(&self, writer: &InspectNode, key: &str) {
         inspect_insert!(writer, var key: {
-            ssid_hash: self.hasher.hash_ssid(&self.saved_network_info.network_id.ssid),
+            ssid_hash: self.hasher.hash_ssid(&Ssid::from(&self.saved_network_info.network_id.ssid)),
             bssid_hash: self.hasher.hash_mac_addr(&self.scanned_bss.bssid),
             rssi: self.scanned_bss.rssi,
             score: self.score(),
@@ -1733,7 +1734,8 @@ mod tests {
                         },
                     },
                     "selected": {
-                        ssid_hash: networks[2].hasher.hash_ssid(&networks[2].saved_network_info.network_id.ssid),
+                        ssid_hash: networks[2].hasher.hash_ssid(
+                            &Ssid::from(&networks[2].saved_network_info.network_id.ssid)),
                         bssid_hash: networks[2].hasher.hash_mac_addr(&networks[2].scanned_bss.bssid),
                         rssi: i64::from(networks[2].scanned_bss.rssi),
                         score: i64::from(networks[2].score()),

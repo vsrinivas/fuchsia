@@ -8,6 +8,7 @@ use {
     fuchsia_cobalt::CobaltSender,
     fuchsia_zircon::DurationNum,
     futures::channel::mpsc,
+    ieee80211::Ssid,
     wlan_common::{
         bss::Protection as BssProtection,
         channel::{Cbw, Channel},
@@ -85,7 +86,7 @@ pub fn fake_disconnect_info(bssid: [u8; 6]) -> DisconnectInfo {
     DisconnectInfo {
         connected_duration: 30.seconds(),
         bssid,
-        ssid: b"foo".to_vec(),
+        ssid: Ssid::from("foo"),
         wsc: None,
         protection: BssProtection::Open,
         channel: Channel { primary: 1, cbw: Cbw::Cbw20 },

@@ -29,7 +29,7 @@ use {
     std::default::Default,
     std::ops::Sub,
     std::sync::Arc,
-    wlan_common::format::{MacFmt as _, SsidFmt as _},
+    wlan_common::format::MacFmt as _,
     wlan_metrics_registry as metrics,
     wlan_sme::client::{
         info::{
@@ -619,7 +619,7 @@ fn log_connection_gap_time_stats(
     }
 
     let ssid = match &connect_stats.candidate_network {
-        Some(network) => network.bss.ssid(),
+        Some(network) => &network.bss.ssid,
         None => {
             warn!("No candidate_network in successful connect stats");
             return None;
@@ -682,8 +682,8 @@ pub async fn log_disconnect(
         last_snr: info.last_snr,
         bssid: info.bssid.to_mac_string(),
         bssid_hash: inspect_tree.hasher.hash_mac_addr(&info.bssid),
-        ssid: info.ssid.to_ssid_string(),
-        ssid_hash: inspect_tree.hasher.hash_ssid(&info.ssid[..]),
+        ssid: info.ssid.to_string(),
+        ssid_hash: inspect_tree.hasher.hash_ssid(&info.ssid),
         wsc?: match &info.wsc {
             None => None,
             Some(wsc) => Some(make_inspect_loggable!(
@@ -832,6 +832,7 @@ mod tests {
         fuchsia_inspect::{assert_data_tree, testing::AnyProperty},
         fuchsia_zircon as zx,
         futures::channel::mpsc,
+        ieee80211::Ssid,
         maplit::hashset,
         pin_utils::pin_mut,
         std::collections::HashSet,
@@ -1403,7 +1404,7 @@ mod tests {
         let disconnect_info = DisconnectInfo {
             connected_duration: 30.seconds(),
             bssid: [1u8; 6],
-            ssid: b"foo".to_vec(),
+            ssid: Ssid::from("foo"),
             wsc: Some(fake_probe_resp_wsc_ie()),
             protection: BssProtection::Open,
             channel: Channel { primary: 1, cbw: Cbw::Cbw20 },
@@ -1472,7 +1473,7 @@ mod tests {
         let disconnect_info = DisconnectInfo {
             connected_duration: 30.seconds(),
             bssid: [1u8; 6],
-            ssid: b"foo".to_vec(),
+            ssid: Ssid::from("foo"),
             wsc: None,
             protection: BssProtection::Open,
             channel: Channel { primary: 1, cbw: Cbw::Cbw20 },
@@ -1536,7 +1537,7 @@ mod tests {
         let disconnect_info = DisconnectInfo {
             connected_duration: 30.seconds(),
             bssid: [1u8; 6],
-            ssid: b"foo".to_vec(),
+            ssid: Ssid::from("foo"),
             wsc: None,
             protection: BssProtection::Open,
             channel: Channel { primary: 1, cbw: Cbw::Cbw20 },
@@ -1764,7 +1765,7 @@ mod tests {
             attempts: 1,
             last_ten_failures: vec![],
             previous_disconnect_info: Some(PreviousDisconnectInfo {
-                ssid: fake_bss_description!(Open).ssid().to_vec(),
+                ssid: fake_bss_description!(Open).ssid.clone(),
                 disconnect_source: DisconnectSource::User(
                     fidl_sme::UserDisconnectReason::WlanstackUnitTesting,
                 ),

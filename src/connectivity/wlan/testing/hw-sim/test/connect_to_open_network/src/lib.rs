@@ -11,11 +11,10 @@ async fn connect_to_open_network() {
     init_syslog();
 
     const BSS: Bssid = Bssid([0x62, 0x73, 0x73, 0x66, 0x6f, 0x6f]);
-    const SSID: &[u8] = b"open";
 
     let mut helper = test_utils::TestHelper::begin_test(default_wlantap_config_client()).await;
     let () = loop_until_iface_is_found().await;
 
-    let () = connect_open(&mut helper, SSID, &BSS).await;
+    let () = connect_open(&mut helper, &AP_SSID, &BSS).await;
     helper.stop().await;
 }

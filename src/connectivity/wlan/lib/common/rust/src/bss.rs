@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        format::{MacFmt as _, SsidFmt as _},
+        format::MacFmt as _,
         hasher::WlanHasher,
         ie::{
             self,
@@ -16,6 +16,7 @@ use {
     },
     anyhow::format_err,
     fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_sme as fidl_sme,
+    ieee80211::Ssid,
     static_assertions::assert_eq_size,
     std::{cmp::Ordering, collections::HashMap, convert::TryInto, fmt, hash::Hash, ops::Range},
     zerocopy::{AsBytes, LayoutVerified},
@@ -93,6 +94,7 @@ pub enum Standard {
 #[derive(Debug, Clone, PartialEq)]
 pub struct BssDescription {
     // *** Fields originally in fidl_internal::BssDescription
+    pub ssid: Ssid,
     pub bssid: [u8; 6],
     pub bss_type: fidl_internal::BssType,
     pub beacon_period: u16,
@@ -105,7 +107,6 @@ pub struct BssDescription {
     pub ies: Vec<u8>,
 
     // *** Fields parsed out of fidl_internal::BssDescription IEs
-    ssid_range: Range<usize>,
     // IEEE Std 802.11-2016 9.4.2.3
     // in 0.5 Mbps, with MSB indicating basic rate. See Table 9-78 for 126, 127.
     // The rates here may include both the basic rates and extended rates, which are not
@@ -121,10 +122,6 @@ pub struct BssDescription {
 }
 
 impl BssDescription {
-    pub fn ssid(&self) -> &[u8] {
-        &self.ies[self.ssid_range.clone()]
-    }
-
     pub fn rates(&self) -> &[u8] {
         &self.rates[..]
     }
@@ -385,7 +382,7 @@ impl BssDescription {
     pub fn to_string(&self, hasher: &WlanHasher) -> String {
         format!(
             "SSID: {}, BSSID: {}, Protection: {}, Pri Chan: {}, Rx dBm: {}",
-            hasher.hash_ssid(self.ssid()),
+            hasher.hash_ssid(&self.ssid),
             hasher.hash_mac_addr(&self.bssid),
             self.protection(),
             self.channel.primary,
@@ -398,7 +395,7 @@ impl BssDescription {
     pub fn to_non_obfuscated_string(&self) -> String {
         format!(
             "SSID: {}, BSSID: {}, Protection: {}, Pri Chan: {}, Rx dBm: {}",
-            self.ssid().to_ssid_string(),
+            self.ssid.to_string_not_redactable(),
             self.bssid.to_mac_string(),
             self.protection(),
             self.channel.primary,
@@ -458,6 +455,7 @@ impl BssDescription {
         let rates = rates.ok_or_else(|| format_err!("Missing rates IE"))?;
 
         Ok(Self {
+            ssid: Ssid::from(&bss.ies[ssid_range]),
             bssid: bss.bssid,
             bss_type: bss.bss_type,
             beacon_period: bss.beacon_period,
@@ -469,7 +467,6 @@ impl BssDescription {
             snr_db: bss.snr_db,
             ies: bss.ies,
 
-            ssid_range,
             rates,
             tim_range,
             country_range,
@@ -853,7 +850,7 @@ mod tests {
                 .set(IeType::VHT_CAPABILITIES, vht_cap.clone())
                 .set(IeType::VHT_OPERATION, vht_op.clone())
         );
-        assert_eq!(bss.ssid(), b"ssidie");
+        assert_eq!(bss.ssid, Ssid::from("ssidie"));
         assert_eq!(bss.rates(), &[0x81, 0x82, 0x83, 4, 5, 6]);
         assert_eq!(bss.country(), Some(&[1, 2, 3][..]));
         assert_eq!(bss.rsne(), Some(&fake_wpa2_rsne()[..]));

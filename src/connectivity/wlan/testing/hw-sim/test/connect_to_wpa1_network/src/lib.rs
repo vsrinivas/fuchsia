@@ -9,11 +9,10 @@ async fn connect_to_wpa1_network() {
     init_syslog();
 
     const BSS: Bssid = Bssid(*b"wpa1ok");
-    const SSID: &[u8] = b"wpa1ssid";
 
     let mut helper = test_utils::TestHelper::begin_test(default_wlantap_config_client()).await;
     let () = loop_until_iface_is_found().await;
 
-    let () = connect_deprecated_wpa1(&mut helper, SSID, &BSS, "wpa1good").await;
+    let () = connect_deprecated_wpa1(&mut helper, &AP_SSID, &BSS, "wpa1good").await;
     helper.stop().await;
 }

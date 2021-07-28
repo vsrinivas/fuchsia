@@ -13,7 +13,6 @@ use {
     wlan_hw_sim::*,
 };
 
-const SSID: &[u8] = b"fuchsia";
 const PASS_PHRASE: &str = "wpa2duel";
 
 // TODO(fxbug.dev/73871): Encode constants like this in the type system.
@@ -48,7 +47,7 @@ async fn initiate_connect(
 
     // Monitor the update stream for the connected notification.
     wait_until_client_state(&mut update_stream, |update| {
-        has_ssid_and_state(update, SSID, fidl_policy::ConnectionState::Connected)
+        has_ssid_and_state(update, &AP_SSID, fidl_policy::ConnectionState::Connected)
     })
     .await;
     sender.send(()).expect("done connecting, sending message to the other future");
@@ -68,7 +67,7 @@ async fn verify_client_connects_to_ap(
         fidl_policy::SecurityType::Wpa2,
         &PASS_PHRASE.as_bytes().to_vec(),
     )
-    .ssid(&SSID.to_vec());
+    .ssid(&AP_SSID);
 
     // The credentials need to be stored before attempting to connect.
     client_controller
@@ -93,7 +92,7 @@ async fn verify_client_connects_to_ap(
                     send_beacon(
                         &WLANCFG_DEFAULT_AP_CHANNEL,
                         &AP_MAC_ADDR,
-                        SSID,
+                        &AP_SSID,
                         &Wpa2Personal,
                         &client_proxy,
                         0,
@@ -314,7 +313,7 @@ async fn sim_client_vs_sim_ap() {
         fidl_policy::SecurityType::Wpa2,
         &PASS_PHRASE.as_bytes().to_vec(),
     )
-    .ssid(&SSID.to_vec());
+    .ssid(&AP_SSID);
 
     let mut client_helper =
         test_utils::TestHelper::begin_test(default_wlantap_config_client()).await;

@@ -4,11 +4,9 @@
 
 use {
     super::*,
-    crate::{
-        client::{ConnectFailure, ConnectResult},
-        Ssid,
-    },
+    crate::client::{ConnectFailure, ConnectResult},
     fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
+    ieee80211::Ssid,
     std::collections::VecDeque,
     thiserror::Error,
     wlan_rsn::{
@@ -338,11 +336,14 @@ mod tests {
             SelectNetworkFailure,
         },
         anyhow::format_err,
+        lazy_static::lazy_static,
         wlan_common::{assert_variant, fake_bss_description},
         wlan_rsn::auth,
     };
 
-    const SSID: &[u8; 3] = b"foo";
+    lazy_static! {
+        static ref SSID: Ssid = Ssid::from("foo");
+    }
 
     #[test]
     fn test_discovery_scan_stats_lifecycle() {
@@ -373,7 +374,7 @@ mod tests {
             assert!(stats.assoc_time().is_some());
             assert!(stats.rsna_time().is_some());
             assert_eq!(stats.result, ConnectResult::Success);
-            let bss = fake_bss_description!(Wpa2, ssid: SSID.to_vec());
+            let bss = fake_bss_description!(Wpa2, ssid: SSID.clone());
             let candidate_network = CandidateNetwork { bss, multiple_bss_candidates: true };
             assert_eq!(stats.candidate_network, Some(candidate_network));
         });
@@ -383,8 +384,8 @@ mod tests {
     fn test_connect_stats_finalized_midway() {
         let mut stats_collector = StatsCollector::default();
 
-        assert!(stats_collector.report_connect_started(b"foo".to_vec()).is_none());
-        let bss = fake_bss_description!(Wpa2, ssid: SSID.to_vec());
+        assert!(stats_collector.report_connect_started(Ssid::from("foo")).is_none());
+        let bss = fake_bss_description!(Wpa2, ssid: SSID.clone());
         let candidate_network = CandidateNetwork { bss, multiple_bss_candidates: true };
         assert!(stats_collector.report_candidate_network(candidate_network).is_ok());
         assert!(stats_collector.report_auth_started().is_ok());
@@ -407,7 +408,7 @@ mod tests {
     fn test_connect_stats_establish_rsna_failure() {
         let mut stats_collector = StatsCollector::default();
 
-        assert!(stats_collector.report_connect_started(b"foo".to_vec()).is_none());
+        assert!(stats_collector.report_connect_started(Ssid::from("foo")).is_none());
         // Connecting should complete other steps first before starting establish RSNA step,
         // but for testing starting with RSNA step right away is sufficient.
         assert!(stats_collector.report_rsna_started().is_ok());
@@ -441,7 +442,7 @@ mod tests {
     fn test_consecutive_connect_attempts_stats() {
         let mut stats_collector = StatsCollector::default();
 
-        assert!(stats_collector.report_connect_started(b"foo".to_vec()).is_none());
+        assert!(stats_collector.report_connect_started(Ssid::from("foo")).is_none());
         let failure1: ConnectFailure = SelectNetworkFailure::NoScanResultWithSsid.into();
         let stats = stats_collector.report_connect_finished(failure1.clone().into());
         assert_variant!(stats, Ok(stats) => {
@@ -449,7 +450,7 @@ mod tests {
             assert_eq!(stats.last_ten_failures, &[failure1.clone()])
         });
 
-        assert!(stats_collector.report_connect_started(b"foo".to_vec()).is_none());
+        assert!(stats_collector.report_connect_started(Ssid::from("foo")).is_none());
         let failure2: ConnectFailure = EstablishRsnaFailure {
             auth_method: Some(auth::MethodName::Psk),
             reason: EstablishRsnaFailureReason::OverallTimeout,
@@ -461,7 +462,7 @@ mod tests {
             assert_eq!(stats.last_ten_failures, &[failure1.clone(), failure2.clone()]);
         });
 
-        assert!(stats_collector.report_connect_started(b"foo".to_vec()).is_none());
+        assert!(stats_collector.report_connect_started(Ssid::from("foo")).is_none());
         let stats = stats_collector.report_connect_finished(ConnectResult::Success);
         assert_variant!(stats, Ok(stats) => {
             assert_eq!(stats.attempts, 3);
@@ -469,7 +470,7 @@ mod tests {
         });
 
         // After a successful connection, new connect attempts tracking is reset
-        assert!(stats_collector.report_connect_started(b"foo".to_vec()).is_none());
+        assert!(stats_collector.report_connect_started(Ssid::from("foo")).is_none());
         let stats = stats_collector.report_connect_finished(ConnectResult::Success);
         assert_variant!(stats, Ok(stats) => {
             assert_eq!(stats.attempts, 1);
@@ -481,11 +482,11 @@ mod tests {
     fn test_consecutive_connect_attempts_different_ssid_resets_stats() {
         let mut stats_collector = StatsCollector::default();
 
-        assert!(stats_collector.report_connect_started(b"foo".to_vec()).is_none());
+        assert!(stats_collector.report_connect_started(Ssid::from("foo")).is_none());
         let failure1: ConnectFailure = SelectNetworkFailure::NoScanResultWithSsid.into();
         let _stats = stats_collector.report_connect_finished(failure1.clone().into());
 
-        assert!(stats_collector.report_connect_started(b"bar".to_vec()).is_none());
+        assert!(stats_collector.report_connect_started(Ssid::from("bar")).is_none());
         let failure2: ConnectFailure = EstablishRsnaFailure {
             auth_method: Some(auth::MethodName::Psk),
             reason: EstablishRsnaFailureReason::OverallTimeout,
@@ -502,7 +503,7 @@ mod tests {
     fn test_consecutive_connect_attempts_only_ten_failures_are_tracked() {
         let mut stats_collector = StatsCollector::default();
         for i in 1..=20 {
-            assert!(stats_collector.report_connect_started(b"foo".to_vec()).is_none());
+            assert!(stats_collector.report_connect_started(Ssid::from("foo")).is_none());
             let stats = stats_collector
                 .report_connect_finished(SelectNetworkFailure::NoScanResultWithSsid.into());
             assert_variant!(stats, Ok(stats) => {
@@ -519,7 +520,7 @@ mod tests {
         assert_variant!(stats, Ok(stats) => stats.previous_disconnect_info.is_none());
 
         stats_collector.report_disconnect(
-            b"foo".to_vec(),
+            Ssid::from("foo"),
             DisconnectSource::User(fidl_sme::UserDisconnectReason::WlanSmeUnitTesting),
         );
         let stats = simulate_connect_lifecycle(&mut stats_collector);
@@ -538,12 +539,12 @@ mod tests {
         let stats = simulate_connect_lifecycle(&mut stats_collector);
         assert_variant!(stats, Ok(stats) => stats.previous_disconnect_info.is_none());
         stats_collector.report_disconnect(
-            b"foo".to_vec(),
+            Ssid::from("foo"),
             DisconnectSource::User(fidl_sme::UserDisconnectReason::WlanSmeUnitTesting),
         );
 
         // Attempt to connect but fails
-        assert!(stats_collector.report_connect_started(b"foo".to_vec()).is_none());
+        assert!(stats_collector.report_connect_started(Ssid::from("foo")).is_none());
         let failure = ConnectFailure::ScanFailure(fidl_mlme::ScanResultCode::InternalError).into();
         let stats = stats_collector.report_connect_finished(failure);
 
@@ -569,7 +570,7 @@ mod tests {
 
     #[test]
     fn test_no_pending_connect_stats() {
-        let bss = fake_bss_description!(Wpa2, ssid: SSID.to_vec());
+        let bss = fake_bss_description!(Wpa2, ssid: SSID.clone());
         let candidate_network = CandidateNetwork { bss, multiple_bss_candidates: true };
         assert_variant!(
             StatsCollector::default().report_candidate_network(candidate_network),
@@ -604,8 +605,8 @@ mod tests {
     fn simulate_connect_lifecycle(
         stats_collector: &mut StatsCollector,
     ) -> Result<ConnectStats, StatsError> {
-        assert!(stats_collector.report_connect_started(SSID.to_vec()).is_none());
-        let bss = fake_bss_description!(Wpa2, ssid: SSID.to_vec());
+        assert!(stats_collector.report_connect_started(SSID.clone()).is_none());
+        let bss = fake_bss_description!(Wpa2, ssid: SSID.clone());
         let candidate_network = CandidateNetwork { bss, multiple_bss_candidates: true };
         assert!(stats_collector.report_candidate_network(candidate_network).is_ok());
         assert!(stats_collector.report_auth_started().is_ok());

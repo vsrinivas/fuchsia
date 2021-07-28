@@ -15,6 +15,7 @@ use {
     fuchsia_component::client::connect_to_protocol,
     fuchsia_zircon::{self as zx, prelude::*},
     futures::{channel::oneshot, FutureExt, StreamExt, TryStreamExt},
+    ieee80211::Ssid,
     log::{debug, info},
     pin_utils::pin_mut,
     std::{
@@ -271,7 +272,7 @@ impl RetryWithBackoff {
 pub struct ScanTestBeacon {
     pub channel: u8,
     pub bssid: Bssid,
-    pub ssid: Vec<u8>,
+    pub ssid: Ssid,
     pub protection: Protection,
     pub rssi: Option<i8>,
 }
@@ -283,7 +284,7 @@ fn phy_event_from_beacons<'a>(
     for beacon in beacons {
         let mut beacon_to_send = Beacon::send_on_primary_channel(beacon.channel, phy)
             .bssid(beacon.bssid)
-            .ssid(beacon.ssid.clone())
+            .ssid(&beacon.ssid)
             .protection(beacon.protection.clone());
         match beacon.rssi {
             Some(rssi) => {
@@ -295,7 +296,9 @@ fn phy_event_from_beacons<'a>(
     }
     EventHandlerBuilder::new().on_set_channel(beacon_sequence).build()
 }
-pub type ScanResult = (Vec<u8>, [u8; 6], bool, i8);
+
+pub type ScanResult = (Ssid, [u8; 6], bool, i8);
+
 pub async fn scan_for_networks(
     phy: &Arc<wlantap::WlantapPhyProxy>,
     beacons: &[ScanTestBeacon],
@@ -324,10 +327,11 @@ pub async fn scan_for_networks(
     let scanned_networks = helper
         .run_until_complete_or_timeout(10.seconds(), "receive a scan response", scan_event, fut)
         .await;
-    let mut scan_results = Vec::new();
+
+    let mut scan_results: Vec<ScanResult> = Vec::new();
     for result in scanned_networks {
         let id = result.id.expect("empty network ID");
-        let ssid = id.ssid;
+        let ssid = Ssid::from(id.ssid);
         let compatibility = result.compatibility.expect("empty compatibility");
         for entry in result.entries.expect("empty scan entries") {
             let bssid = entry.bssid.expect("empty BSSID");

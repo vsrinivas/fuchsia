@@ -259,6 +259,7 @@ mod tests {
         fuchsia_async::TestExecutor,
         futures::stream::{StreamExt, StreamFuture},
         futures::task::Poll,
+        ieee80211::Ssid,
         pin_utils::pin_mut,
         rand::Rng as _,
         std::convert::TryInto as _,
@@ -1095,7 +1096,7 @@ mod tests {
         // due to restrictions for cloning fidl objects, forced to make a copy of the vector here
         let entry1 = create_scan_result(
             [0, 1, 2, 3, 4, 5],
-            b"foo".to_vec(),
+            Ssid::from("foo"),
             -30,
             20,
             fidl_common::WlanChannel {
@@ -1109,7 +1110,7 @@ mod tests {
         let entry1_copy = clone_scan_result(&entry1);
         let entry2 = create_scan_result(
             [1, 2, 3, 4, 5, 6],
-            b"hello".to_vec(),
+            Ssid::from("hello"),
             -60,
             10,
             fidl_common::WlanChannel {
@@ -1229,7 +1230,7 @@ mod tests {
 
     fn create_scan_result(
         bssid: [u8; 6],
-        ssid: Vec<u8>,
+        ssid: Ssid,
         rssi_dbm: i8,
         snr_db: i8,
         channel: fidl_common::WlanChannel,
@@ -1238,7 +1239,7 @@ mod tests {
     ) -> fidl_sme::ScanResult {
         fidl_sme::ScanResult {
             bssid,
-            ssid: ssid.clone(),
+            ssid: ssid.to_vec(),
             rssi_dbm,
             snr_db,
             channel,

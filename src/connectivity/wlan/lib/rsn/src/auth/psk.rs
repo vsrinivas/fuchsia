@@ -6,6 +6,7 @@ use {
     crate::Error,
     anyhow::ensure,
     fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
+    ieee80211::Ssid,
     std::{num::NonZeroU32, str},
 };
 
@@ -18,8 +19,10 @@ use mundane::insecure::insecure_pbkdf2_hmac_sha1;
 /// are unlikely to prevent attacks.
 pub type Psk = Box<[u8]>;
 
-pub fn compute(passphrase: &[u8], ssid: &[u8]) -> Result<Psk, anyhow::Error> {
+pub fn compute(passphrase: &[u8], ssid: &Ssid) -> Result<Psk, anyhow::Error> {
     // IEEE Std 802.11-2016, 9.4.2.2
+    // TODO(fxbug.dev/81772): Remove this check when Ssid is guaranteed to never
+    // exceed 32 bytes.
     ensure!(
         ssid.len() <= (fidl_ieee80211::MAX_SSID_BYTE_LEN as usize),
         Error::InvalidSsidLen(ssid.len())
@@ -65,7 +68,7 @@ mod tests {
     use hex::FromHex;
 
     fn assert_psk(password: &str, ssid: &str, expected: &str) {
-        let psk = compute(password.as_bytes(), ssid.as_bytes()).expect("computing PSK failed");
+        let psk = compute(password.as_bytes(), &Ssid::from(ssid)).expect("computing PSK failed");
         let expected = Vec::from_hex(expected).unwrap();
         assert_eq!(&psk[..], &expected[..]);
     }
@@ -102,7 +105,7 @@ mod tests {
 
     #[test]
     fn test_psk_too_short_password() {
-        let result = compute("short".as_bytes(), "Some SSID".as_bytes());
+        let result = compute("short".as_bytes(), &Ssid::from("Some SSID"));
         assert!(result.is_err());
     }
 
@@ -110,31 +113,31 @@ mod tests {
     fn test_psk_too_long_password() {
         let result = compute(
             "1234567890123456789012345678901234567890123456789012345678901234".as_bytes(),
-            "Some SSID".as_bytes(),
+            &Ssid::from("Some SSID"),
         );
         assert!(result.is_err());
     }
 
     #[test]
     fn test_psk_ascii_bounds_password() {
-        let result = compute("\x20ASCII Bound Test \x7E".as_bytes(), "Some SSID".as_bytes());
+        let result = compute("\x20ASCII Bound Test \x7E".as_bytes(), &Ssid::from("Some SSID"));
         assert!(result.is_ok());
     }
 
     #[test]
     fn test_psk_non_ascii_password() {
-        assert!(compute("パスワード".as_bytes(), "Some SSID".as_bytes()).is_ok());
+        assert!(compute("パスワード".as_bytes(), &Ssid::from("Some SSID")).is_ok());
     }
 
     #[test]
     fn test_psk_invalid_encoding_password() {
-        assert!(compute(&[0xFFu8; 32], "Some SSID".as_bytes()).is_err());
+        assert!(compute(&[0xFFu8; 32], &Ssid::from("Some SSID")).is_err());
     }
 
     #[test]
     fn test_psk_too_long_ssid() {
         let result =
-            compute("ThisIsAPassword".as_bytes(), "123456789012345678901234567890123".as_bytes());
+            compute("ThisIsAPassword".as_bytes(), &Ssid::from("123456789012345678901234567890123"));
         assert!(result.is_err());
     }
 }
