@@ -40,10 +40,14 @@ func TestCanUnmarshalAttributeValue(t *testing.T) {
 	root := fidlgentest.EndToEndTest{T: t}.Single(`
 		library example;
 
-		[doc="MyUnion", UpperCamelCase, lower_snake_case, CAPS]
-		flexible union MyUnion {
+		@doc("MyUnion")
+		@UpperCamelCase
+		@lower_snake_case
+		@CAPS
+		type MyUnion = flexible union {
 			/// my_union_member
-			[Unknown] 1: bool my_union_member;
+			@unknown
+			1: my_union_member bool;
 		};
 	`)
 

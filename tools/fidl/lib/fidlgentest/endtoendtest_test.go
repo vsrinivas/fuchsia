@@ -11,9 +11,9 @@ import (
 func TestEndToEndExample(t *testing.T) {
 	root := EndToEndTest{T: t}.Single(`library example;
 
-	struct MyStruct {
-		string field1;
-		string field2;
+	type MyStruct = struct {
+		field1 string;
+		field2 string;
 	};`)
 
 	if root.Name != "example" {
@@ -24,19 +24,19 @@ func TestEndToEndExample(t *testing.T) {
 func TestHandleObjType(t *testing.T) {
 	root := EndToEndTest{T: t}.Single(`library example;
 
-	enum obj_type : uint32 {
+	type obj_type = enum : uint32 {
 		NONE = 0;
 		VMO = 3;
 	};
 
 	resource_definition handle : uint32 {
 		properties {
-			obj_type subtype;
+			subtype obj_type;
 		};
 	};
 
-	resource struct MyStruct {
-		handle:VMO field;
+	type MyStruct = resource struct {
+		field handle:VMO;
 	};`)
 
 	if root.Structs[0].Members[0].Type.ObjType != 3 {

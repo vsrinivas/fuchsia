@@ -18,18 +18,18 @@ var (
 	// zxLibrary is a shortened version of zx_common.fidl, for tests.
 	zxLibrary = `
 library zx;
-enum obj_type : uint32 {
+type obj_type = enum : uint32 {
   CHANNEL = 4;
 };
 resource_definition handle : uint32 {
   properties {
-    obj_type subtype;
+    subtype obj_type;
   };
 };
 `
 
 	// l2Library is a sample dependency taken in by some tests.
-	l2Library = `library l2; struct T{};`
+	l2Library = `library l2; type T = struct {};`
 )
 
 type summaryTestCase struct {
@@ -51,8 +51,8 @@ func TestWrite(t *testing.T) {
 			name: "primitives 1",
 			fidl: `
 library l;
-const int8 OFFSET = -33;
-const bool ENABLED_FLAG = true;
+const OFFSET int8 = -33;
+const ENABLED_FLAG bool = true;
 `,
 			expected: `const l/ENABLED_FLAG bool true
 const l/OFFSET int8 -33
@@ -64,8 +64,8 @@ library l
 			name: "primitives 2",
 			fidl: `
 library l;
-const bool ENABLED_FLAG = true;
-const int8 OFFSET = -33;
+const ENABLED_FLAG bool = true;
+const OFFSET int8 = -33;
 `,
 			expected: `const l/ENABLED_FLAG bool true
 const l/OFFSET int8 -33
@@ -76,8 +76,8 @@ library l
 			name: "primitives 3",
 			fidl: `
 library l;
-const uint16 ANSWER = 42;
-const uint16 ANSWER_IN_BINARY = 0b101010;
+const ANSWER uint16 = 42;
+const ANSWER_IN_BINARY uint16 = 0b101010;
 `,
 			expected: `const l/ANSWER uint16 42
 const l/ANSWER_IN_BINARY uint16 42
@@ -88,16 +88,16 @@ library l
 			name: "primitives 4",
 			fidl: `
 library l;
-const bool ENABLED_FLAG = true;
-const int8 OFFSET = -33;
-const uint16 ANSWER = 42;
-const uint16 ANSWER_IN_BINARY = 0b101010;
-const uint32 POPULATION_USA_2018 = 330000000;
-const uint64 DIAMOND = 0x183c7effff7e3c18;
-const uint64 FUCHSIA = 4054509061583223046;
-const string USERNAME = "squeenze";
-const float32 MIN_TEMP = -273.15;
-const float64 CONVERSION_FACTOR = 1.41421358;
+const ENABLED_FLAG bool = true;
+const OFFSET int8 = -33;
+const ANSWER uint16 = 42;
+const ANSWER_IN_BINARY uint16 = 0b101010;
+const POPULATION_USA_2018 uint32 = 330000000;
+const DIAMOND uint64 = 0x183c7effff7e3c18;
+const FUCHSIA uint64 = 4054509061583223046;
+const USERNAME string = "squeenze";
+const MIN_TEMP float32 = -273.15;
+const CONVERSION_FACTOR float64 = 1.41421358;
 `,
 			expected: `const l/ANSWER uint16 42
 const l/ANSWER_IN_BINARY uint16 42
@@ -116,9 +116,9 @@ library l
 			name: "primitives 5, binary operator",
 			fidl: `
 library l;
-const uint8 FOO = 1;
-const uint8 BAR = 2;
-const uint8 BAZ = FOO | BAR;
+const FOO uint8 = 1;
+const BAR uint8 = 2;
+const BAZ uint8 = FOO | BAR;
 `,
 			expected: `const l/BAR uint8 2
 const l/BAZ uint8 3
@@ -130,7 +130,7 @@ library l
 			name: "bits",
 			fidl: `
 library l;
-strict bits Bits1 {
+type Bits1 = strict bits {
   BIT1 = 0x01;
   BIT2 = 0x02;
 };
@@ -145,11 +145,11 @@ library l
 			name: "bits 2",
 			fidl: `
 library l;
-strict bits Bits1 {
+type Bits1 = strict bits {
   BIT1 = 0x01;
   BIT2 = 0x02;
 };
-strict bits Bits2 {
+type Bits2 = strict bits {
   BIT1 = 0x01;
   BIT2 = 0x02;
 };
@@ -167,7 +167,7 @@ library l
 			name: "bits 3",
 			fidl: `
 library l;
-flexible bits Bits : uint8 {
+type Bits = flexible bits : uint8 {
   BIT1 = 0x01;
   BIT2 = 0x02;
 };
@@ -182,7 +182,7 @@ library l
 			name: "enums",
 			fidl: `
 			library l;
-flexible enum Beverage : uint8 {
+type Beverage = flexible enum : uint8 {
     WATER = 0;
     COFFEE = 1;
     TEA = 2;
@@ -190,7 +190,7 @@ flexible enum Beverage : uint8 {
 };
 
 // Underlying type is assumed to be uint32.
-strict enum Vessel {
+type Vessel = strict enum {
     CUP = 0;
     BOWL = 1;
     TUREEN = 2;
@@ -214,8 +214,8 @@ library l
 			name: "struct as precondition for arrays",
 			fidl: `
 library l;
-struct S {
-  float32 x;
+type S = struct {
+  x float32;
 };
 `,
 			expected: `struct/member l/S.x float32
@@ -227,12 +227,12 @@ library l
 			name: "struct with an element with default value",
 			fidl: `
 library l;
-const string VALUE = "booyah!";
-struct S {
-  float32 x = 0.314159;
-  string foo = "huzzah";
-  bool bar = true;
-  string baz = VALUE;
+const VALUE string = "booyah!";
+type S = struct {
+  x float32 = 0.314159;
+  foo string = "huzzah";
+  bar bool = true;
+  baz string = VALUE;
 };
 `,
 			expected: `struct/member l/S.bar bool true
@@ -248,12 +248,12 @@ library l
 			name: "struct with an element with default value",
 			fidl: `
 library l;
-const string VALUE = "booyah!";
-struct S {
-  float32 x = 0.314159;
-  string foo = "huzzah";
-  bool bar = true;
-  string baz = VALUE;
+const VALUE string = "booyah!";
+type S = struct {
+  x float32 = 0.314159;
+  foo string = "huzzah";
+  bar bool = true;
+  baz string = VALUE;
 };
 `,
 			expected: `struct/member l/S.bar bool true
@@ -269,9 +269,9 @@ library l
 			name: "arrays",
 			fidl: `
 library l;
-struct Arrays {
-    array<float32>:16 form;
-    array<array<string>:4>:10 matrix;
+type Arrays = struct {
+    form array<float32, 16>;
+    matrix array<array<string, 4>, 10>;
 };
 `,
 			expected: `struct/member l/Arrays.form array<float32,16>
@@ -284,9 +284,9 @@ library l
 			name: "strings",
 			fidl: `
 library l;
-struct Document {
-    string:40 title;
-    string? description;
+type Document = struct {
+    title string:40;
+    description string:optional;
 };
 `,
 			expected: `struct/member l/Document.description string:optional
@@ -299,12 +299,12 @@ library l
 			name: "vectors",
 			fidl: `
 library l;
-struct Vectors {
-    vector<int32>:10 params;
-    bytes blob;
-    vector<string>:24? nullable_vector_of_strings;
-    vector<string?> vector_of_nullable_strings;
-    vector<vector<array<float32>:16>> complex;
+type Vectors = struct {
+    params vector<int32>:10;
+    blob bytes;
+    nullable_vector_of_strings vector<string>:<24, optional>;
+    vector_of_nullable_strings vector<string:optional>;
+    complex vector<vector<array<float32, 16>>>;
 };
 `,
 			expected: `struct/member l/Vectors.blob vector<uint8>
@@ -322,9 +322,9 @@ library l
 			fidl: `
 library l;
 using zx;
-resource struct Handles {
-    zx.handle h;
-    zx.handle:CHANNEL? c;
+type Handles = resource struct {
+    h zx.handle;
+    c zx.handle:<CHANNEL, optional>;
 };
 `,
 			expected: `struct/member l/Handles.c zx/handle:<CHANNEL,optional>
@@ -337,9 +337,9 @@ library l
 			name: "struct local type reference",
 			fidl: `
 library l;
-struct A {};
-struct B {
-	A a;
+type A = struct {};
+type B = struct {
+	a A;
 };
 `,
 			expected: `struct l/A
@@ -352,21 +352,21 @@ library l
 			name: "structs 2",
 			fidl: `
 library l;
-struct CirclePoint {
-    float32 x;
-    float32 y;
+type CirclePoint = struct {
+    x float32;
+    y float32;
 };
-struct Color {
-    float32 r;
-    float32 g;
-    float32 b;
+type Color = struct {
+    r float32;
+    g float32;
+    b float32;
 };
-struct Circle {
-    bool filled;
-    CirclePoint center;
-    float32 radius;
-    Color? color;
-    bool dashed;
+type Circle = struct {
+    filled bool;
+    center CirclePoint;
+    radius float32;
+    color box<Color>;
+    dashed bool;
 };
 `,
 			expected: `struct/member l/Circle.center l/CirclePoint
@@ -389,10 +389,10 @@ library l
 			name: "tables",
 			fidl: `
 library l;
-table Profile {
-    1: vector<string> locales;
-    2: vector<string> calendars;
-    3: vector<string> time_zones;
+type Profile = table {
+    1: locales vector<string>;
+    2: calendars vector<string>;
+    3: time_zones vector<string>;
 };
 `,
 			expected: `table/member l/Profile.calendars vector<string>
@@ -406,11 +406,11 @@ library l
 			name: "unions",
 			fidl: `
 library l;
-struct Left {};
-struct Right {};
-union Either {
-    1: Left left;
-    2: Right right;
+type Left = struct {};
+type Right = struct {};
+type Either = strict union {
+    1: left Left;
+    2: right Right;
 };
 `,
 			expected: `union/member l/Either.left l/Left
@@ -426,7 +426,7 @@ library l
 			fidl: `
 library l;
 protocol Calculator {
-    Add(int32 a, int32 b) -> (int32 sum);
+    Add(struct { a int32; b int32; }) -> (struct { sum int32; });
 };
 `,
 			expected: `protocol/member l/Calculator.Add(int32 a,int32 b) -> (int32 sum)
@@ -438,10 +438,10 @@ library l
 			name: "protocols 2",
 			fidl: `
 library l;
-struct Foo {};
-struct Bar {};
+type Foo = struct {};
+type Bar = struct {};
 protocol P {
-    M(Bar? b) -> (Foo c);
+    M(struct { b box<Bar>; }) -> (struct { c Foo; });
 };
 `,
 			expected: `struct l/Bar
@@ -455,13 +455,13 @@ library l
 			name: "protocols 3",
 			fidl: `
 library l;
-struct Bar {};
+type Bar = struct {};
 protocol P {};
 protocol P2 {
-    M1(P a);
-    M2(P? a);
-    M3(request<P> a);
-    M4(request<P>? a);
+    M1(resource struct { a client_end:P; });
+    M2(resource struct { a client_end:<P, optional>; });
+    M3(resource struct { a server_end:<P>; });
+    M4(resource struct { a server_end:<P, optional>; });
 };
 `,
 			expected: `struct l/Bar
@@ -479,9 +479,9 @@ library l
 			fidl: `
 library l;
 protocol P {
-    -> F1(int32 a);
-    F2() -> (int32 a);
-	F3() -> () error int32;
+    -> F1(struct { a int32; });
+    F2() -> (struct { a int32; });
+	F3() -> (struct {}) error int32;
 	F4();
 };
 `,
@@ -501,10 +501,10 @@ library l
 			name: "check types",
 			fidl: `
 library l;
-struct S {
-   string f1;
-   string:4 f2;
-   string:4? f3;
+type S = struct {
+   f1 string;
+   f2 string:4;
+   f3 string:<4, optional>;
 };
 `,
 			expected: `struct/member l/S.f1 string
@@ -520,8 +520,8 @@ library l
 			fidl: `
 library l;
 using l2;
-struct A {
-  l2.T a;
+type A = struct {
+  a l2.T;
 };
 `,
 			expected: `struct/member l/A.a l2/T
@@ -535,29 +535,10 @@ library l
 			fidl: `
 library l;
 using l2;
-struct Foo {};
-struct Bar {};
+type Foo = struct {};
+type Bar = struct {};
 protocol Calculator {
-    Add(l2.T a, Bar b) -> (Foo c);
-};
-`,
-			expected: `struct l/Bar
-protocol/member l/Calculator.Add(l2/T a,l/Bar b) -> (l/Foo c)
-protocol l/Calculator
-struct l/Foo
-library l
-`,
-		},
-		{
-			name: "protocol with foreign library",
-			dep:  l2Library,
-			fidl: `
-library l;
-using l2;
-struct Foo {};
-struct Bar {};
-protocol Calculator {
-    Add(l2.T a, Bar b) -> (Foo c);
+    Add(struct { a l2.T; b Bar; }) -> (struct { c Foo; });
 };
 `,
 			expected: `struct l/Bar
@@ -571,13 +552,13 @@ library l
 			name: "reserved keyword",
 			fidl: `
 library l;
-union E {
-1: reserved;
-2: int32 e;
+type E = strict union {
+    1: reserved;
+    2: e int32;
 };
-table T {
-1: reserved;
-2: int32 e;
+type T = table {
+    1: reserved;
+    2: e int32;
 };
 `,
 			expected: `union/member l/E.e int32
@@ -608,8 +589,8 @@ func TestWriteJSON(t *testing.T) {
 			name: "primitives 1",
 			fidl: `
 library l;
-const int8 OFFSET = -33;
-const bool ENABLED_FLAG = true;
+const OFFSET int8 = -33;
+const ENABLED_FLAG bool = true;
 `,
 			expected: `[
     {
@@ -635,9 +616,9 @@ const bool ENABLED_FLAG = true;
 			name: "bits",
 			fidl: `
 library l;
-strict bits Bits1 {
-  BIT1 = 0x01;
-  BIT2 = 0x02;
+type Bits1 = strict bits {
+    BIT1 = 0x01;
+    BIT2 = 0x02;
 };
 `,
 			expected: `[
@@ -668,13 +649,13 @@ strict bits Bits1 {
 			name: "bits 2",
 			fidl: `
 library l;
-strict bits Bits1 {
-  BIT1 = 0x01;
-  BIT2 = 0x02;
+type Bits1 = strict bits {
+    BIT1 = 0x01;
+    BIT2 = 0x02;
 };
-strict bits Bits2 {
-  BIT1 = 0x01;
-  BIT2 = 0x02;
+type Bits2 = strict bits {
+    BIT1 = 0x01;
+    BIT2 = 0x02;
 };
 `,
 			expected: `[
@@ -721,7 +702,7 @@ strict bits Bits2 {
 			name: "bits 3",
 			fidl: `
 library l;
-flexible bits Bits : uint8 {
+type Bits = flexible bits : uint8 {
   BIT1 = 0x01;
   BIT2 = 0x02;
 };
@@ -754,7 +735,7 @@ flexible bits Bits : uint8 {
 			name: "enums",
 			fidl: `
 			library l;
-flexible enum Beverage : uint8 {
+type Beverage = flexible enum : uint8 {
     WATER = 0;
     COFFEE = 1;
     TEA = 2;
@@ -762,7 +743,7 @@ flexible enum Beverage : uint8 {
 };
 
 // Underlying type is assumed to be uint32.
-strict enum Vessel {
+type Vessel = strict enum {
     CUP = 0;
     BOWL = 1;
     TUREEN = 2;
@@ -833,8 +814,8 @@ strict enum Vessel {
 			name: "struct as precondition for arrays",
 			fidl: `
 library l;
-struct S {
-  float32 x;
+type S = struct {
+  x float32;
 };
 `,
 			expected: `[
@@ -858,12 +839,12 @@ struct S {
 			name: "struct with an element with default value",
 			fidl: `
 library l;
-const string VALUE = "booyah!";
-struct S {
-  float32 x = 0.314159;
-  string foo = "huzzah";
-  bool bar = true;
-  string baz = VALUE;
+const VALUE string = "booyah!";
+type S = struct {
+  x float32 = 0.314159;
+  foo string = "huzzah";
+  bar bool = true;
+  baz string = VALUE;
 };
 `,
 			expected: `[
@@ -912,9 +893,9 @@ struct S {
 			name: "arrays",
 			fidl: `
 library l;
-struct Arrays {
-    array<float32>:16 form;
-    array<array<string>:4>:10 matrix;
+type Arrays = struct {
+    form array<float32, 16>;
+    matrix array<array<string, 4>, 10>;
 };
 `,
 			expected: `[
@@ -943,9 +924,9 @@ struct Arrays {
 			name: "strings",
 			fidl: `
 library l;
-struct Document {
-    string:40 title;
-    string? description;
+type Document = struct {
+    title string:40;
+    description string:optional;
 };
 `,
 			expected: `[
@@ -974,12 +955,12 @@ struct Document {
 			name: "vectors",
 			fidl: `
 library l;
-struct Vectors {
-    vector<int32>:10 params;
-    bytes blob;
-    vector<string>:24? nullable_vector_of_strings;
-    vector<string?> vector_of_nullable_strings;
-    vector<vector<array<float32>:16>> complex;
+type Vectors = struct {
+    params vector<int32>:10;
+    blob bytes;
+    nullable_vector_of_strings vector<string>:<24, optional>;
+    vector_of_nullable_strings vector<string:optional>;
+    complex vector<vector<array<float32, 16>>>;
 };
 `,
 			expected: `[
@@ -1025,9 +1006,9 @@ struct Vectors {
 			fidl: `
 library l;
 using zx;
-resource struct Handles {
-    zx.handle h;
-    zx.handle:CHANNEL? c;
+type Handles = resource struct {
+    h zx.handle;
+    c zx.handle:<CHANNEL, optional>;
 };
 `,
 			expected: `[
@@ -1057,9 +1038,9 @@ resource struct Handles {
 			name: "struct local type reference",
 			fidl: `
 library l;
-struct A {};
-struct B {
-	A a;
+type A = struct {};
+type B = struct {
+	a A;
 };
 `,
 			expected: `[
@@ -1087,21 +1068,21 @@ struct B {
 			name: "structs 2",
 			fidl: `
 library l;
-struct CirclePoint {
-    float32 x;
-    float32 y;
+type CirclePoint = struct {
+    x float32;
+    y float32;
 };
-struct Color {
-    float32 r;
-    float32 g;
-    float32 b;
+type Color = struct {
+    r float32;
+    g float32;
+    b float32;
 };
-struct Circle {
-    bool filled;
-    CirclePoint center;
-    float32 radius;
-    Color? color;
-    bool dashed;
+type Circle = struct {
+    filled bool;
+    center CirclePoint;
+    radius float32;
+    color box<Color>;
+    dashed bool;
 };
 `,
 			expected: `[
@@ -1178,10 +1159,10 @@ struct Circle {
 			name: "tables",
 			fidl: `
 library l;
-table Profile {
-    1: vector<string> locales;
-    2: vector<string> calendars;
-    3: vector<string> time_zones;
+type Profile = table {
+    1: locales vector<string>;
+    2: calendars vector<string>;
+    3: time_zones vector<string>;
 };
 `,
 			expected: `[
@@ -1215,11 +1196,11 @@ table Profile {
 			name: "unions",
 			fidl: `
 library l;
-struct Left {};
-struct Right {};
-union Either {
-    1: Left left;
-    2: Right right;
+type Left = struct {};
+type Right = struct {};
+type Either = strict union {
+    1: left Left;
+    2: right Right;
 };
 `,
 			expected: `[
@@ -1258,7 +1239,7 @@ union Either {
 			fidl: `
 library l;
 protocol Calculator {
-    Add(int32 a, int32 b) -> (int32 sum);
+    Add(struct { a int32; b int32; }) -> (struct { sum int32; });
 };
 `,
 			expected: `[
@@ -1282,10 +1263,10 @@ protocol Calculator {
 			name: "protocols 2",
 			fidl: `
 library l;
-struct Foo {};
-struct Bar {};
+type Foo = struct {};
+type Bar = struct {};
 protocol P {
-    M(Bar? b) -> (Foo c);
+    M(struct { b box<Bar>; }) -> (struct { c Foo; });
 };
 `,
 			expected: `[
@@ -1317,13 +1298,13 @@ protocol P {
 			name: "protocols 3",
 			fidl: `
 library l;
-struct Bar {};
+type Bar = struct {};
 protocol P {};
 protocol P2 {
-    M1(P a);
-    M2(P? a);
-    M3(request<P> a);
-    M4(request<P>? a);
+    M1(resource struct { a client_end:P; });
+    M2(resource struct { a client_end:<P, optional>; });
+    M3(resource struct { a server_end:<P>; });
+    M4(resource struct { a server_end:<P, optional>; });
 };
 `,
 			expected: `[
@@ -1371,9 +1352,9 @@ protocol P2 {
 			fidl: `
 library l;
 protocol P {
-    -> F1(int32 a);
-    F2() -> (int32 a);
-	F3() -> () error int32;
+    -> F1(struct { a int32; });
+    F2() -> (struct { a int32; });
+	F3() -> (struct {}) error int32;
 	F4();
 };
 `,
@@ -1432,10 +1413,10 @@ protocol P {
 			name: "check types",
 			fidl: `
 library l;
-struct S {
-   string f1;
-   string:4 f2;
-   string:4? f3;
+type S = struct {
+    f1 string;
+    f2 string:4;
+    f3 string:<4, optional>;
 };
 `,
 			expected: `[
@@ -1471,8 +1452,8 @@ struct S {
 			fidl: `
 library l;
 using l2;
-struct A {
-  l2.T a;
+type A = struct {
+  a l2.T;
 };
 `,
 			expected: `[
@@ -1498,47 +1479,10 @@ struct A {
 			fidl: `
 library l;
 using l2;
-struct Foo {};
-struct Bar {};
+type Foo = struct {};
+type Bar = struct {};
 protocol Calculator {
-    Add(l2.T a, Bar b) -> (Foo c);
-};
-`,
-			expected: `[
-    {
-        "kind": "struct",
-        "name": "l/Bar"
-    },
-    {
-        "declaration": "(l2/T a,l/Bar b) -> (l/Foo c)",
-        "kind": "protocol/member",
-        "name": "l/Calculator.Add"
-    },
-    {
-        "kind": "protocol",
-        "name": "l/Calculator"
-    },
-    {
-        "kind": "struct",
-        "name": "l/Foo"
-    },
-    {
-        "kind": "library",
-        "name": "l"
-    }
-]
-`,
-		},
-		{
-			name: "protocol with foreign library 2",
-			dep:  l2Library,
-			fidl: `
-library l;
-using l2;
-struct Foo {};
-struct Bar {};
-protocol Calculator {
-    Add(l2.T a, Bar b) -> (Foo c);
+    Add(struct { a l2.T; b Bar; }) -> (struct { c Foo; });
 };
 `,
 			expected: `[
@@ -1570,13 +1514,13 @@ protocol Calculator {
 			name: "reserved keyword",
 			fidl: `
 library l;
-union E {
-1: reserved;
-2: int32 e;
+type E = strict union {
+    1: reserved;
+    2: e int32;
 };
-table T {
-1: reserved;
-2: int32 e;
+type T = table {
+    1: reserved;
+    2: e int32;
 };
 `,
 			expected: `[

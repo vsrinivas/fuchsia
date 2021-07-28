@@ -14,12 +14,12 @@ func TestCompileTypeNames(t *testing.T) {
 	root := compile(fidlgentest.EndToEndTest{T: t}.Single(`
 library foo.bar;
 
-union U {
-	1: uint32 a;
+type U = union {
+	1: a uint32;
 };
 
 protocol P {
-	M(array<U?>:3 a, vector<P?> b);
+	M(resource struct { a array<U:optional, 3>; b vector<client_end:<P, optional>>; });
 };
 `), HeaderOptions{})
 	p := onlyProtocol(t, root)

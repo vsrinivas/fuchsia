@@ -43,27 +43,27 @@ func TestBindingsPackageDependency(t *testing.T) {
 		needsBindingsPackage bool
 	}{
 		{
-			fidl:                 "flexible union MyUnion { 1: uint8 foo; };",
+			fidl:                 "type MyUnion = flexible union { 1: foo uint8; };",
 			needsBindingsPackage: true,
 		},
 		{
-			fidl:                 "strict union MyUnion { 1: uint8 foo; };",
+			fidl:                 "type MyUnion = strict union { 1: foo uint8; };",
 			needsBindingsPackage: false,
 		},
 		{
-			fidl:                 "struct MyStruct {};",
+			fidl:                 "type MyStruct = struct {};",
 			needsBindingsPackage: true,
 		},
 		{
-			fidl:                 "table MyTable {};",
+			fidl:                 "type MyTable = table {};",
 			needsBindingsPackage: true,
 		},
 		{
-			fidl:                 "enum MyEnum { FOO = 1; BAR = 2; };",
+			fidl:                 "type MyEnum = enum { FOO = 1; BAR = 2; };",
 			needsBindingsPackage: true,
 		},
 		{
-			fidl:                 "bits MyBits { FOO = 0b01; BAR = 0b10; };",
+			fidl:                 "type MyBits = bits { FOO = 0b01; BAR = 0b10; };",
 			needsBindingsPackage: true,
 		},
 	}

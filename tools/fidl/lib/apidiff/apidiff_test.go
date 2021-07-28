@@ -64,11 +64,11 @@ api_diff:
 			name: "const",
 			before: `
 library l;
-const int32 FOO = 32;
+const FOO int32 = 32;
 `,
 			after: `
 library l;
-const int32 FOO = 32;
+const FOO int32 = 32;
 `,
 			expected: `
 api_diff:
@@ -78,11 +78,11 @@ api_diff:
 			name: "const 2",
 			before: `
 library l;
-const int32 FOO = 32;
+const FOO int32 = 32;
 `,
 			after: `
 library l;
-const string FOO = "fuzzy";
+const FOO string = "fuzzy";
 `,
 			expected: `
 api_diff:
@@ -96,7 +96,7 @@ api_diff:
 			name: "const remove",
 			before: `
 library l;
-const int32 FOO = 32;
+const FOO int32 = 32;
 `,
 			after: `
 library l;
@@ -115,7 +115,7 @@ library l;
 `,
 			after: `
 library l;
-const string FOO = "fuzzy";
+const FOO string = "fuzzy";
 `,
 			expected: `
 api_diff:
@@ -128,11 +128,11 @@ api_diff:
 			name: "const value change",
 			before: `
 library l;
-const int32 FOO = 32;
+const FOO int32 = 32;
 `,
 			after: `
 library l;
-const int32 FOO = 42;
+const FOO int32 = 42;
 `,
 			expected: `
 api_diff:
@@ -148,13 +148,13 @@ api_diff:
 			name: "bits member add to flexible",
 			before: `
 library l;
-flexible bits Bits {
+type Bits = flexible bits {
   BIT1 = 0x01;
 };
 `,
 			after: `
 library l;
-flexible bits Bits {
+type Bits = flexible bits {
   BIT1 = 0x01;
   BIT2 = 0x02;
 };
@@ -170,13 +170,13 @@ api_diff:
 			name: "bits member add to strict",
 			before: `
 library l;
-strict bits Bits {
+type Bits = strict bits {
   BIT1 = 0x01;
 };
 `,
 			after: `
 library l;
-bits Bits {
+type Bits = strict bits {
   BIT1 = 0x01;
   BIT2 = 0x02;
 };
@@ -192,14 +192,14 @@ api_diff:
 			name: "bits member remove",
 			before: `
 library l;
-bits Bits {
+type Bits = bits {
   BIT1 = 0x01;
   BIT2 = 0x02;
 };
 `,
 			after: `
 library l;
-bits Bits {
+type Bits = bits {
   BIT1 = 0x01;
 };
 `,
@@ -217,7 +217,7 @@ library l;
 `,
 			after: `
 library l;
-bits Bits {
+type Bits = strict bits {
   BIT1 = 0x01;
 };
 `,
@@ -235,7 +235,7 @@ api_diff:
 			name: "bits remove",
 			before: `
 library l;
-bits Bits {
+type Bits = strict bits {
   BIT1 = 0x01;
 };
 `,
@@ -256,13 +256,13 @@ api_diff:
 			name: "bits make flexible",
 			before: `
 library l;
-bits Bits {
+type Bits = strict bits {
   BIT1 = 0x01;
 };
 `,
 			after: `
 library l;
-flexible bits Bits {
+type Bits = flexible bits {
   BIT1 = 0x01;
 };
 `,
@@ -278,13 +278,13 @@ api_diff:
 			name: "bits make strict",
 			before: `
 library l;
-flexible bits Bits {
+type Bits = flexible bits {
   BIT1 = 0x01;
 };
 `,
 			after: `
 library l;
-strict bits Bits {
+type Bits = strict bits {
   BIT1 = 0x01;
 };
 `,
@@ -300,13 +300,13 @@ api_diff:
 			name: "bits change underlying type",
 			before: `
 library l;
-bits Bits : uint32 {
+type Bits = strict bits : uint32 {
   BIT1 = 0x01;
 };
 `,
 			after: `
 library l;
-bits Bits : uint8 {
+type Bits = strict bits : uint8 {
   BIT1 = 0x01;
 };
 `,
@@ -322,13 +322,13 @@ api_diff:
 			name: "bits underlying type change",
 			before: `
 library l;
-strict bits Bits : uint32 {
+type Bits = strict bits : uint32 {
   BIT1 = 0x01;
 };
 `,
 			after: `
 library l;
-strict bits Bits : uint8 {
+type Bits = strict bits : uint8 {
   BIT1 = 0x01;
 };
 `,
@@ -344,13 +344,13 @@ api_diff:
 			name: "bits change type and strictness to flexible",
 			before: `
 library l;
-strict bits Bits : uint32 {
+type Bits = strict bits : uint32 {
   BIT1 = 0x01;
 };
 `,
 			after: `
 library l;
-flexible bits Bits : uint8 {
+type Bits = flexible bits : uint8 {
   BIT1 = 0x01;
 };
 `,
@@ -366,13 +366,13 @@ api_diff:
 			name: "bits value change",
 			before: `
 library l;
-flexible bits Bits {
+type Bits = flexible bits {
   BIT1 = 0x01;
 };
 `,
 			after: `
 library l;
-flexible bits Bits {
+type Bits = flexible bits {
   BIT1 = 0x02;
 };
 `,
@@ -393,7 +393,7 @@ library l;
 `,
 			after: `
 library l;
-enum Enum {
+type Enum = strict enum {
   WATER = 1;
 };
 `,
@@ -411,13 +411,13 @@ api_diff:
 			name: "enum value add to flexible",
 			before: `
 library l;
-flexible enum Enum {
+type Enum = flexible enum {
   WATER = 1;
 };
 `,
 			after: `
 library l;
-flexible enum Enum {
+type Enum = flexible enum {
   WATER = 1;
   FIRE = 2;
 };
@@ -433,13 +433,13 @@ api_diff:
 			name: "enum value add to strict",
 			before: `
 library l;
-strict enum Enum {
+type Enum = strict enum {
   WATER = 1;
 };
 `,
 			after: `
 library l;
-strict enum Enum {
+type Enum = strict enum {
   WATER = 1;
   FIRE = 2;
 };
@@ -455,14 +455,14 @@ api_diff:
 			name: "enum value remove",
 			before: `
 library l;
-enum Enum {
+type Enum = enum {
   WATER = 1;
   FIRE = 2;
 };
 `,
 			after: `
 library l;
-enum Enum {
+type Enum = enum {
   WATER = 1;
 };
 `,
@@ -477,13 +477,13 @@ api_diff:
 			name: "enum strictness change to flexible",
 			before: `
 library l;
-strict enum Enum {
+type Enum = strict enum {
   WATER = 1;
 };
 `,
 			after: `
 library l;
-flexible enum Enum {
+type Enum = flexible enum {
   WATER = 1;
 };
 `,
@@ -499,13 +499,13 @@ api_diff:
 			name: "enum strictness change to strict",
 			before: `
 library l;
-flexible enum Enum {
+type Enum = flexible enum {
   WATER = 1;
 };
 `,
 			after: `
 library l;
-strict enum Enum {
+type Enum = strict enum {
   WATER = 1;
 };
 `,
@@ -521,13 +521,13 @@ api_diff:
 			name: "enum underlying type change",
 			before: `
 library l;
-enum Enum : uint32 {
+type Enum = strict enum : uint32 {
   WATER = 1;
 };
 `,
 			after: `
 library l;
-enum Enum : uint8 {
+type Enum = strict enum : uint8 {
   WATER = 1;
 };
 `,
@@ -543,13 +543,13 @@ api_diff:
 			name: "enum value change",
 			before: `
 library l;
-enum Enum {
+type Enum = enum {
   WATER = 1;
 };
 `,
 			after: `
 library l;
-enum Enum {
+type Enum = enum {
   WATER = 2;
 };
 `,
@@ -570,7 +570,7 @@ library l;
 `,
 			after: `
 library l;
-struct Struct {};
+type Struct = struct {};
 `,
 			expected: `
 api_diff:
@@ -583,7 +583,7 @@ api_diff:
 			name: "struct remove",
 			before: `
 library l;
-struct Struct {};
+type Struct = struct {};
 `,
 			after: `
 library l;
@@ -599,11 +599,11 @@ api_diff:
 			name: "struct become resource",
 			before: `
 library l;
-struct Struct {};
+type Struct = struct {};
 `,
 			after: `
 library l;
-resource struct Struct {};
+type Struct = resource struct {};
 `,
 			expected: `
 api_diff:
@@ -617,11 +617,11 @@ api_diff:
 			name: "struct unbecome resource",
 			before: `
 library l;
-resource struct Struct {};
+type Struct = resource struct {};
 `,
 			after: `
 library l;
-struct Struct {};
+type Struct = struct {};
 `,
 			expected: `
 api_diff:
@@ -635,12 +635,12 @@ api_diff:
 			name: "struct add member",
 			before: `
 library l;
-struct Struct {};
+type Struct = struct {};
 `,
 			after: `
 library l;
-struct Struct {
-  int32 foo;
+type Struct = struct {
+  foo int32;
 };
 `,
 			expected: `
@@ -654,13 +654,13 @@ api_diff:
 			name: "struct remove member",
 			before: `
 library l;
-struct Struct {
-  int32 foo;
+type Struct = struct {
+	foo int32;
 };
 `,
 			after: `
 library l;
-struct Struct {
+type Struct = struct {
 };
 `,
 			expected: `
@@ -674,14 +674,14 @@ api_diff:
 			name: "struct change type",
 			before: `
 library l;
-struct Struct {
-  int32 foo;
+type Struct = struct {
+	foo int32;
 };
 `,
 			after: `
 library l;
-struct Struct {
-  string foo;
+type Struct = struct {
+	foo string;
 };
 `,
 			expected: `
@@ -696,14 +696,14 @@ api_diff:
 			name: "struct default value change",
 			before: `
 library l;
-struct Struct {
-  int32 foo = 1;
+type Struct = struct {
+	foo int32 = 1;
 };
 `,
 			after: `
 library l;
-struct Struct {
-  int32 foo = 2;
+type Struct = struct {
+	foo int32 = 2;
 };
 `,
 			expected: `
@@ -723,7 +723,7 @@ library l;
 `,
 			after: `
 library l;
-table T {};
+type T = table {};
 `,
 			expected: `
 api_diff:
@@ -736,7 +736,7 @@ api_diff:
 			name: "table remove",
 			before: `
 library l;
-table T {};
+type T = table {};
 `,
 			after: `
 library l;
@@ -752,11 +752,11 @@ api_diff:
 			name: "table become resource",
 			before: `
 library l;
-table T {};
+type T = table {};
 `,
 			after: `
 library l;
-resource table T {};
+type T = resource table {};
 `,
 			expected: `
 api_diff:
@@ -770,11 +770,11 @@ api_diff:
 			name: "table unbecome resource",
 			before: `
 library l;
-resource table T {};
+type T = resource table {};
 `,
 			after: `
 library l;
-table T {};
+type T = table {};
 `,
 			expected: `
 api_diff:
@@ -788,12 +788,12 @@ api_diff:
 			name: "table add member",
 			before: `
 library l;
-table T {};
+type T = table {};
 `,
 			after: `
 library l;
-table T {
-  1: int32 foo;
+type T = table {
+  1: foo int32;
 };
 `,
 			expected: `
@@ -807,13 +807,13 @@ api_diff:
 			name: "table remove member",
 			before: `
 library l;
-table T {
-  1: int32 foo;
+type T = table {
+  1: foo int32;
 };
 `,
 			after: `
 library l;
-table T {
+type T = table {
 };
 `,
 			expected: `
@@ -827,16 +827,16 @@ api_diff:
 			name: "table make member reserved",
 			before: `
 library l;
-table T {
-  1: int32 foo;
-  2: int32 bar;
+type T = table {
+  1: foo int32;
+  2: bar int32;
 };
 `,
 			after: `
 library l;
-table T {
+type T = table {
   1: reserved;
-  2: int32 bar;
+  2: bar int32;
 };
 `,
 			expected: `
@@ -850,14 +850,14 @@ api_diff:
 			name: "table change type",
 			before: `
 library l;
-table T {
-  1: int32 foo;
+type T = table {
+  1: foo int32;
 };
 `,
 			after: `
 library l;
-table T {
-  1: string foo;
+type T = table {
+  1: foo string;
 };
 `,
 			expected: `
@@ -877,8 +877,8 @@ library l;
 `,
 			after: `
 library l;
-union T {
-  1: int32 foo;
+type T = strict union {
+  1: foo int32;
 };
 `,
 			expected: `
@@ -895,8 +895,8 @@ api_diff:
 			name: "union remove",
 			before: `
 library l;
-union T {
-  1: int32 foo;
+type T = strict union {
+  1: foo int32;
 };
 `,
 			after: `
@@ -916,16 +916,16 @@ api_diff:
 			name: "union make reserved",
 			before: `
 library l;
-union T {
-  1: int32 foo;
-  2: int32 bar;
+type T = union {
+  1: foo int32;
+  2: bar int32;
 };
 `,
 			after: `
 library l;
-union T {
+type T = union {
   1: reserved;
-  2: int32 bar;
+  2: bar int32;
 };
 `,
 			expected: `
@@ -939,16 +939,16 @@ api_diff:
 			name: "union add reserved",
 			before: `
 library l;
-union T {
+type T = union {
   1: reserved;
-  2: int32 foo;
+  2: foo int32;
 };
 `,
 			after: `
 library l;
-union T {
+type T = union {
   1: reserved;
-  2: int32 foo;
+  2: foo int32;
   3: reserved;
 };
 `,
@@ -960,9 +960,9 @@ api_diff:
 			name: "union remove with reserved",
 			before: `
 library l;
-union T {
+type T = strict union {
   1: reserved;
-  2: int32 foo;
+  2: foo int32;
 };
 `,
 			after: `
@@ -982,14 +982,14 @@ api_diff:
 			name: "union become resource",
 			before: `
 library l;
-union T {
-  1: int32 foo;
+type T = strict union {
+  1: foo int32;
 };
 `,
 			after: `
 library l;
-resource union T {
-  1: int32 foo;
+type T = strict resource union {
+  1: foo int32;
 };
 `,
 			expected: `
@@ -1004,14 +1004,14 @@ api_diff:
 			name: "union unbecome resource",
 			before: `
 library l;
-resource union T {
-  1: int32 bar;
+type T = strict resource union {
+  1: bar int32;
 };
 `,
 			after: `
 library l;
-union T {
-  1: int32 bar;
+type T = strict union {
+  1: bar int32;
 };
 `,
 			expected: `
@@ -1026,15 +1026,15 @@ api_diff:
 			name: "flexible union add member",
 			before: `
 library l;
-flexible union T {
-  1: int32 bar;
+type T = flexible union {
+  1: bar int32;
 };
 `,
 			after: `
 library l;
-flexible union T {
-  1: int32 bar;
-  2: int32 foo;
+type T = flexible union {
+  1: bar int32;
+  2: foo int32;
 };
 `,
 			expected: `
@@ -1048,15 +1048,15 @@ api_diff:
 			name: "strict union add member",
 			before: `
 library l;
-union T {
-  1: int32 bar;
+type T = strict union {
+  1: bar int32;
 };
 `,
 			after: `
 library l;
-union T {
-  1: int32 bar;
-  2: int32 foo;
+type T = strict union {
+  1: bar int32;
+  2: foo int32;
 };
 `,
 			expected: `
@@ -1070,15 +1070,15 @@ api_diff:
 			name: "strict union remove member",
 			before: `
 library l;
-union T {
-  1: int32 bar;
-  2: int32 foo;
+type T = strict union {
+  1: bar int32;
+  2: foo int32;
 };
 `,
 			after: `
 library l;
-union T {
-  1: int32 bar;
+type T = strict union {
+  1: bar int32;
 };
 `,
 			expected: `
@@ -1092,14 +1092,14 @@ api_diff:
 			name: "union change type",
 			before: `
 library l;
-union T {
-  1: int32 foo;
+type T = union {
+  1: foo int32;
 };
 `,
 			after: `
 library l;
-union T {
-  1: string foo;
+type T = union {
+  1: foo string;
 };
 `,
 			expected: `
@@ -1154,7 +1154,7 @@ protocol T {
 			after: `
 library l;
 protocol T {
-  Test(int32 t) -> ();
+  Test(struct { t int32; }) -> ();
 };
 `,
 			expected: `
@@ -1169,7 +1169,7 @@ api_diff:
 			before: `
 library l;
 protocol T {
-  Test(int32 t) -> ();
+  Test(struct { t int32; }) -> ();
 };
 `,
 			after: `
@@ -1189,13 +1189,13 @@ api_diff:
 			before: `
 library l;
 protocol T {
-  Test(int32 t) -> ();
+  Test(struct { t int32; }) -> ();
 };
 `,
 			after: `
 library l;
 protocol T {
-  Test(int32 t, int32 u) -> ();
+  Test(struct { t int32; u int32; }) -> ();
 };
 `,
 			expected: `

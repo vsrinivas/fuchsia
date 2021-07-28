@@ -496,15 +496,15 @@ func TestDerivesCalculation(t *testing.T) {
 		expected string
 	}{
 		{
-			fidl:     `struct MyStruct { string field; };`,
+			fidl:     `type MyStruct = struct { field string; };`,
 			expected: "#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]",
 		},
 		{
-			fidl:     `struct MyStruct { float32 field; };`,
+			fidl:     `type MyStruct = struct { field float32; };`,
 			expected: "#[derive(Debug, Copy, Clone, PartialEq, PartialOrd)]",
 		},
 		{
-			fidl:     `resource struct MyStruct {};`,
+			fidl:     `type MyStruct = resource struct {};`,
 			expected: "#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, zerocopy::AsBytes, zerocopy::FromBytes)]",
 		},
 	}
