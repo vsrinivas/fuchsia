@@ -5,6 +5,7 @@
 #ifndef TOOLS_SYMBOLIZER_SYMBOLIZER_IMPL_H_
 #define TOOLS_SYMBOLIZER_SYMBOLIZER_IMPL_H_
 
+#include <cstdint>
 #include <iostream>
 #include <memory>
 #include <string_view>
@@ -37,11 +38,11 @@ class SymbolizerImpl : public Symbolizer,
   ~SymbolizerImpl() override;
 
   // |Symbolizer| implementation.
-  void Reset() override;
+  void Reset(bool symbolizing_dart) override;
   void Module(uint64_t id, std::string_view name, std::string_view build_id) override;
   void MMap(uint64_t address, uint64_t size, uint64_t module_id, std::string_view flags,
             uint64_t module_offset) override;
-  void Backtrace(int frame_id, uint64_t address, AddressType type,
+  void Backtrace(uint64_t frame_id, uint64_t address, AddressType type,
                  std::string_view message) override;
   void DumpFile(std::string_view type, std::string_view name) override;
 
@@ -100,11 +101,11 @@ class SymbolizerImpl : public Symbolizer,
   //
   // module_id is usually a sequence from 0 used to associate "mmap" commands with "module"
   // commands. It's different from build_id.
-  std::unordered_map<int, ModuleInfo> modules_;
+  std::unordered_map<uint64_t, ModuleInfo> modules_;
 
   // Mapping from base address of each module to the module_id.
   // Useful when doing binary search for the module from an address.
-  std::map<uint64_t, int> address_to_module_id_;
+  std::map<uint64_t, uint64_t> address_to_module_id_;
 
   // Whether to omit the [[[ELF module]]] lines.
   bool omit_module_lines_ = false;
@@ -146,6 +147,9 @@ class SymbolizerImpl : public Symbolizer,
   SymbolizationAnalyticsBuilder analytics_builder_;
   bool remote_symbol_lookup_enabled_ = false;
   AnalyticsSender sender_;
+
+  // Whether we're symbolizing a Dart stack trace.
+  bool symbolizing_dart_ = false;
 };
 
 }  // namespace symbolizer
