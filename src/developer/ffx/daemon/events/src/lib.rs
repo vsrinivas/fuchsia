@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use addr::TargetAddr;
+use rcs::RcsConnection;
 use std::net::SocketAddr;
+use std::time::Instant;
 
 pub trait TryIntoTargetInfo: Sized {
     type Error;
@@ -40,4 +42,53 @@ pub enum DaemonEvent {
     OvernetPeer(u64),
     NewTarget(TargetInfo),
     // TODO(awdavies): Stale target event, target shutdown event, etc.
+}
+
+#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+pub enum TargetEvent {
+    RcsActivated,
+    Rediscovered,
+
+    /// LHS is previous state, RHS is current state.
+    ConnectionStateChanged(TargetConnectionState, TargetConnectionState),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum TargetConnectionState {
+    /// Default state: no connection, pending rediscovery.
+    Disconnected,
+    /// Contains the last known ping from mDNS.
+    Mdns(Instant),
+    /// Contains an actual connection to RCS.
+    Rcs(RcsConnection),
+    /// Target was manually added. Targets that are manual never enter
+    /// the "disconnected" state, as they are not discoverable, instead
+    /// they return to the "manual" state on disconnection.
+    Manual,
+    /// Contains the last known interface update with a Fastboot serial number.
+    Fastboot(Instant),
+    /// Contains the last known interface update with a Fastboot serial number.
+    Zedboot(Instant),
+}
+
+impl Default for TargetConnectionState {
+    fn default() -> Self {
+        TargetConnectionState::Disconnected
+    }
+}
+
+impl TargetConnectionState {
+    pub fn is_connected(&self) -> bool {
+        match self {
+            Self::Disconnected => false,
+            _ => true,
+        }
+    }
+
+    pub fn is_rcs(&self) -> bool {
+        match self {
+            TargetConnectionState::Rcs(_) => true,
+            _ => false,
+        }
+    }
 }

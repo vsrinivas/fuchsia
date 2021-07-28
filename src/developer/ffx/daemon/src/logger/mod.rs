@@ -405,7 +405,7 @@ impl Logger {
 mod test {
     use {
         super::*,
-        crate::target::{RcsConnection, Target},
+        crate::target::Target,
         crate::NodeId,
         async_channel::{Receiver, Sender},
         async_lock::Mutex,
@@ -420,6 +420,7 @@ mod test {
         },
         fidl_fuchsia_diagnostics::DataType,
         futures::TryStreamExt,
+        rcs::RcsConnection,
         std::rc::Rc,
         streamer::SessionStream,
     };

@@ -5,9 +5,10 @@
 use {
     crate::constants::RETRY_DELAY,
     crate::ssh::build_ssh_command,
-    crate::target::{ConnectionState, Target},
+    crate::target::Target,
     anyhow::{anyhow, Context, Result},
     async_io::Async,
+    ffx_daemon_events::TargetConnectionState,
     fuchsia_async::{unblock, Task, Timer},
     futures::channel::oneshot,
     futures::future::FutureExt,
@@ -180,7 +181,7 @@ impl HostPipeConnection {
             {
                 Ok(_) => {
                     target.update_connection_state(|s| match s {
-                        ConnectionState::Rcs(_) => ConnectionState::Disconnected,
+                        TargetConnectionState::Rcs(_) => TargetConnectionState::Disconnected,
                         _ => s,
                     });
                     log::debug!("rcs disconnected, exiting");

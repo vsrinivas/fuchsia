@@ -6,12 +6,13 @@ use {
         continue_boot, erase, flash, get_var, oem, reboot, reboot_bootloader, set_active, stage,
         UploadProgressListener,
     },
-    crate::target::{ConnectionState, Target, TargetEvent},
+    crate::target::Target,
     crate::zedboot::reboot_to_bootloader,
     anyhow::{anyhow, bail, Context, Result},
     async_trait::async_trait,
     async_utils::async_once::Once,
     fastboot::UploadProgressListener as _,
+    ffx_daemon_events::{TargetConnectionState, TargetEvent},
     fidl::Error as FidlError,
     fidl_fuchsia_developer_bridge::{
         FastbootError, FastbootRequest, FastbootRequestStream, RebootListenerProxy,
@@ -95,7 +96,7 @@ impl<T: AsyncRead + AsyncWrite + Unpin> FastbootImpl<T> {
 
     fn is_target_in_fastboot(&self) -> bool {
         match self.target.get_connection_state() {
-            ConnectionState::Fastboot(_) => true,
+            TargetConnectionState::Fastboot(_) => true,
             _ => false,
         }
     }
@@ -130,8 +131,8 @@ impl<T: AsyncRead + AsyncWrite + Unpin> FastbootImpl<T> {
 
     async fn prepare_device(&self, listener: &RebootListenerProxy) -> Result<()> {
         match self.target.get_connection_state() {
-            ConnectionState::Fastboot(_) => Ok(()),
-            ConnectionState::Zedboot(_) => self.reboot_from_zedboot(listener).await,
+            TargetConnectionState::Fastboot(_) => Ok(()),
+            TargetConnectionState::Zedboot(_) => self.reboot_from_zedboot(listener).await,
             _ => self.reboot_from_product(listener).await,
         }
     }

@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 
 use {
-    crate::events::{DaemonEvent, TargetInfo, TryIntoTargetInfo, WireTrafficType},
     addr::TargetAddr,
     anyhow::{anyhow, bail, Context as _, Result},
     async_io::Async,
     async_net::UdpSocket,
     byteorder::{ByteOrder, LittleEndian},
     ffx_daemon_core::events,
+    ffx_daemon_events::{DaemonEvent, TargetInfo, TryIntoTargetInfo, WireTrafficType},
     fuchsia_async::{Task, Timer},
     netext::{get_mcast_interfaces, IsLocalAddr},
     std::collections::HashSet,

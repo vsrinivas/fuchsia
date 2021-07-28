@@ -4,7 +4,6 @@
 
 use {
     crate::constants::FASTBOOT_CHECK_INTERVAL,
-    crate::events::{DaemonEvent, TargetInfo, WireTrafficType},
     crate::fastboot::{
         client::{FastbootImpl, InterfaceFactory},
         network::{NetworkFactory, NetworkInterface},
@@ -20,6 +19,7 @@ use {
     },
     ffx_config::get,
     ffx_daemon_core::events,
+    ffx_daemon_events::{DaemonEvent, TargetInfo, WireTrafficType},
     fidl::endpoints::ClientEnd,
     fidl_fuchsia_developer_bridge::{
         FastbootRequestStream, UploadProgressListenerMarker, UploadProgressListenerProxy,

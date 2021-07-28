@@ -19,7 +19,6 @@ use {
 
 mod constants;
 mod daemon;
-mod events;
 mod fastboot;
 mod logger;
 mod manual_targets;

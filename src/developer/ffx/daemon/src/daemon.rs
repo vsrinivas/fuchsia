@@ -4,13 +4,11 @@
 
 use {
     crate::constants::{get_socket, CURRENT_EXE_HASH},
-    crate::events::{DaemonEvent, TargetInfo, WireTrafficType},
     crate::fastboot::{spawn_fastboot_discovery, Fastboot},
     crate::logger::streamer::{DiagnosticsStreamer, GenericDiagnosticsStreamer},
     crate::manual_targets,
     crate::target::{
-        target_addr_info_to_socketaddr, ConnectionState, RcsConnection, Target, TargetAddrEntry,
-        TargetAddrType, TargetCollection, TargetEvent,
+        target_addr_info_to_socketaddr, Target, TargetAddrEntry, TargetAddrType, TargetCollection,
     },
     crate::target_control::TargetControl,
     crate::zedboot::zedboot_discovery,
@@ -21,6 +19,9 @@ use {
     diagnostics_data::Timestamp,
     ffx_core::{build_info, TryStreamUtilExt},
     ffx_daemon_core::events::{self, EventHandler},
+    ffx_daemon_events::{
+        DaemonEvent, TargetConnectionState, TargetEvent, TargetInfo, WireTrafficType,
+    },
     ffx_daemon_services::create_service_register_map,
     fidl::endpoints::{
         ClientEnd, DiscoverableProtocolMarker, ProtocolMarker, Proxy, RequestStream,
@@ -38,6 +39,7 @@ use {
     fuchsia_async::{Task, TimeoutExt, Timer},
     futures::prelude::*,
     hoist::{hoist, OvernetInstance},
+    rcs::RcsConnection,
     services::{DaemonServiceProvider, ServiceError, ServiceRegister},
     std::cell::Cell,
     std::net::SocketAddr,
@@ -85,7 +87,7 @@ impl DaemonEventHandler {
             t.nodename.clone().unwrap_or("<unknown>".to_string())
         );
         let new_target = Target::from_target_info(t.clone());
-        new_target.update_connection_state(|_| ConnectionState::Mdns(Instant::now()));
+        new_target.update_connection_state(|_| TargetConnectionState::Mdns(Instant::now()));
 
         let target = self.target_collection.merge_insert(new_target);
         let nodename = target.nodename();
@@ -134,8 +136,8 @@ impl DaemonEventHandler {
             self.target_collection.merge_insert(Target::from_target_info(t.into()))
         };
         target.update_connection_state(|s| match s {
-            ConnectionState::Disconnected | ConnectionState::Fastboot(_) => {
-                ConnectionState::Fastboot(Instant::now())
+            TargetConnectionState::Disconnected | TargetConnectionState::Fastboot(_) => {
+                TargetConnectionState::Fastboot(Instant::now())
             }
             _ => s,
         });
@@ -148,8 +150,8 @@ impl DaemonEventHandler {
         );
         let target = self.target_collection.merge_insert(Target::from_netsvc_target_info(t.into()));
         target.update_connection_state(|s| match s {
-            ConnectionState::Disconnected | ConnectionState::Zedboot(_) => {
-                ConnectionState::Zedboot(Instant::now())
+            TargetConnectionState::Disconnected | TargetConnectionState::Zedboot(_) => {
+                TargetConnectionState::Zedboot(Instant::now())
             }
             _ => s,
         });
@@ -395,7 +397,7 @@ impl Daemon {
         }
 
         target.update_connection_state(|s| match s {
-            ConnectionState::Disconnected => ConnectionState::Manual,
+            TargetConnectionState::Disconnected => TargetConnectionState::Manual,
             _ => s,
         });
 
@@ -524,7 +526,7 @@ impl Daemon {
                         return Ok(());
                     }
                 };
-                if matches!(target.get_connection_state(), ConnectionState::Fastboot(_)) {
+                if matches!(target.get_connection_state(), TargetConnectionState::Fastboot(_)) {
                     let nodename = target.nodename().unwrap_or("<No Nodename>".to_string());
                     log::warn!("Attempting to connect to RCS on a fastboot target: {}", nodename);
                     responder
@@ -532,7 +534,7 @@ impl Daemon {
                         .context("sending error response")?;
                     return Ok(());
                 }
-                if matches!(target.get_connection_state(), ConnectionState::Zedboot(_)) {
+                if matches!(target.get_connection_state(), TargetConnectionState::Zedboot(_)) {
                     let nodename = target.nodename().unwrap_or("<No Nodename>".to_string());
                     log::warn!("Attempting to connect to RCS on a zedboot target: {}", nodename);
                     responder
@@ -638,12 +640,12 @@ impl Daemon {
                         .await
                     {
                         Ok(t) => match t.get_connection_state() {
-                            ConnectionState::Zedboot(_) => {
+                            TargetConnectionState::Zedboot(_) => {
                                 return responder
                                     .send(&mut Err(DaemonError::TargetInZedboot))
                                     .context("error sending response");
                             }
-                            ConnectionState::Fastboot(_) => {
+                            TargetConnectionState::Fastboot(_) => {
                                 return responder
                                     .send(&mut Err(DaemonError::TargetInFastboot))
                                     .context("error sending response");
@@ -1168,7 +1170,7 @@ mod test {
             .unwrap());
 
         assert!(!t.is_host_pipe_running());
-        assert_matches!(t.get_connection_state(), ConnectionState::Mdns(t) if t > before_update);
+        assert_matches!(t.get_connection_state(), TargetConnectionState::Mdns(t) if t > before_update);
 
         let before_second_update = Instant::now();
         assert!(before_update < before_second_update);
@@ -1191,7 +1193,7 @@ mod test {
             .unwrap());
 
         assert!(t.is_host_pipe_running());
-        assert_matches!(t.get_connection_state(), ConnectionState::Mdns(t) if t > before_second_update);
+        assert_matches!(t.get_connection_state(), TargetConnectionState::Mdns(t) if t > before_second_update);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -1344,17 +1346,17 @@ mod test {
         let mut daemon = Daemon::new();
         let target = Target::new_named("goodbye-world");
         let then = Instant::now() - Duration::from_secs(10);
-        target.update_connection_state(|_| ConnectionState::Mdns(then));
+        target.update_connection_state(|_| TargetConnectionState::Mdns(then));
         daemon.target_collection.merge_insert(target.clone());
 
-        assert_eq!(ConnectionState::Mdns(then), target.get_connection_state());
+        assert_eq!(TargetConnectionState::Mdns(then), target.get_connection_state());
 
         daemon.start_target_expiry(Duration::from_millis(1));
 
-        while target.get_connection_state() == ConnectionState::Mdns(then) {
+        while target.get_connection_state() == TargetConnectionState::Mdns(then) {
             futures_lite::future::yield_now().await
         }
 
-        assert_eq!(ConnectionState::Disconnected, target.get_connection_state());
+        assert_eq!(TargetConnectionState::Disconnected, target.get_connection_state());
     }
 }

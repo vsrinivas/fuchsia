@@ -4,10 +4,11 @@
 
 use {
     crate::fastboot::Fastboot,
-    crate::target::{ConnectionState, Target},
+    crate::target::Target,
     crate::zedboot::{reboot, reboot_to_bootloader, reboot_to_recovery},
     anyhow::{anyhow, bail, Result},
     async_utils::async_once::Once,
+    ffx_daemon_events::TargetConnectionState,
     fidl::endpoints::create_endpoints,
     fidl::Error as FidlError,
     fidl_fuchsia_developer_bridge::{
@@ -58,7 +59,7 @@ impl TargetControl {
         match req {
             TargetControlRequest::Reboot { state, responder } => {
                 match self.target.get_connection_state() {
-                    ConnectionState::Fastboot(_) => match state {
+                    TargetConnectionState::Fastboot(_) => match state {
                         TargetRebootState::Product => {
                             match self.get_fastboot_proxy().await?.reboot().await? {
                                 Ok(_) => responder.send(&mut Ok(()))?,
@@ -104,7 +105,7 @@ impl TargetControl {
                             responder.send(&mut Err(TargetRebootError::FastbootToRecovery))?;
                         }
                     },
-                    ConnectionState::Zedboot(_) => {
+                    TargetConnectionState::Zedboot(_) => {
                         let mut response = if let Some(addr) = self.target.netsvc_address() {
                             match state {
                                 TargetRebootState::Product => {
@@ -378,7 +379,7 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_fastboot_reboot_product() -> Result<()> {
         let (target, proxy) = setup().await;
-        target.set_state(ConnectionState::Fastboot(Instant::now()));
+        target.set_state(TargetConnectionState::Fastboot(Instant::now()));
         proxy
             .reboot(TargetRebootState::Product)
             .await?
@@ -388,7 +389,7 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_fastboot_reboot_recovery() -> Result<()> {
         let (target, proxy) = setup().await;
-        target.set_state(ConnectionState::Fastboot(Instant::now()));
+        target.set_state(TargetConnectionState::Fastboot(Instant::now()));
         assert!(proxy.reboot(TargetRebootState::Recovery).await?.is_err());
         Ok(())
     }
@@ -396,7 +397,7 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_fastboot_reboot_bootloader() -> Result<()> {
         let (target, proxy) = setup().await;
-        target.set_state(ConnectionState::Fastboot(Instant::now()));
+        target.set_state(TargetConnectionState::Fastboot(Instant::now()));
         proxy
             .reboot(TargetRebootState::Bootloader)
             .await?
@@ -406,7 +407,7 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_zedboot_reboot_bootloader() -> Result<()> {
         let (target, proxy) = setup().await;
-        target.set_state(ConnectionState::Zedboot(Instant::now()));
+        target.set_state(TargetConnectionState::Zedboot(Instant::now()));
         assert!(proxy.reboot(TargetRebootState::Bootloader).await?.is_err());
         Ok(())
     }
@@ -414,7 +415,7 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_zedboot_reboot_recovery() -> Result<()> {
         let (target, proxy) = setup().await;
-        target.set_state(ConnectionState::Zedboot(Instant::now()));
+        target.set_state(TargetConnectionState::Zedboot(Instant::now()));
         assert!(proxy.reboot(TargetRebootState::Recovery).await?.is_err());
         Ok(())
     }

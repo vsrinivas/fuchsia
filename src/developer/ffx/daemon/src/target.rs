@@ -4,171 +4,41 @@
 
 use {
     crate::constants::{FASTBOOT_MAX_AGE, MDNS_MAX_AGE, ZEDBOOT_MAX_AGE},
-    crate::events::{DaemonEvent, TargetInfo},
     crate::fastboot::open_interface_with_serial,
     crate::logger::{streamer::DiagnosticsStreamer, Logger},
     crate::onet::HostPipeConnection,
     addr::TargetAddr,
-    anyhow::{anyhow, bail, Context, Error, Result},
+    anyhow::{anyhow, bail, Error, Result},
     async_trait::async_trait,
     bridge::{DaemonError, TargetAddrInfo, TargetIpPort},
     chrono::{DateTime, Utc},
     ffx_daemon_core::events::{self, EventSynthesizer},
-    fidl::endpoints::ProtocolMarker,
+    ffx_daemon_events::{DaemonEvent, TargetConnectionState, TargetEvent, TargetInfo},
     fidl_fuchsia_developer_bridge as bridge,
     fidl_fuchsia_developer_bridge::TargetState,
-    fidl_fuchsia_developer_remotecontrol::{
-        IdentifyHostError, IdentifyHostResponse, RemoteControlMarker, RemoteControlProxy,
-    },
+    fidl_fuchsia_developer_remotecontrol::{IdentifyHostResponse, RemoteControlProxy},
     fidl_fuchsia_net::{IpAddress, Ipv4Address, Ipv6Address},
-    fidl_fuchsia_overnet_protocol::NodeId,
     fuchsia_async::Task,
-    hoist::OvernetInstance,
     netext::IsLocalAddr,
     rand::random,
+    rcs::{RcsConnection, RcsConnectionError},
     std::cell::RefCell,
     std::cmp::Ordering,
     std::collections::{BTreeSet, HashMap, HashSet},
     std::default::Default,
     std::fmt,
-    std::fmt::{Debug, Display},
-    std::hash::{Hash, Hasher},
+    std::fmt::Debug,
+    std::hash::Hash,
     std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr},
     std::rc::{Rc, Weak},
     std::sync::Arc,
     std::time::{Duration, Instant},
-    timeout::{timeout, TimeoutError},
+    timeout::timeout,
     usb_bulk::AsyncInterface as Interface,
 };
 
 const IDENTIFY_HOST_TIMEOUT_MILLIS: u64 = 1000;
 const DEFAULT_SSH_PORT: u16 = 22;
-
-#[derive(Debug, Clone)]
-pub struct RcsConnection {
-    pub proxy: RemoteControlProxy,
-    pub overnet_id: NodeId,
-}
-
-impl Hash for RcsConnection {
-    fn hash<H>(&self, state: &mut H)
-    where
-        H: Hasher,
-    {
-        self.overnet_id.id.hash(state)
-    }
-}
-
-impl PartialEq for RcsConnection {
-    fn eq(&self, other: &Self) -> bool {
-        self.overnet_id == other.overnet_id
-    }
-}
-
-impl Eq for RcsConnection {}
-
-#[derive(Debug, Hash, Clone, PartialEq, Eq)]
-pub enum TargetEvent {
-    RcsActivated,
-    Rediscovered,
-
-    /// LHS is previous state, RHS is current state.
-    ConnectionStateChanged(ConnectionState, ConnectionState),
-}
-
-#[derive(Debug)]
-pub enum RcsConnectionError {
-    /// There is something wrong with the FIDL connection.
-    FidlConnectionError(fidl::Error),
-    /// There was a timeout trying to communicate with RCS.
-    ConnectionTimeoutError(TimeoutError),
-    /// There is an error from within Rcs itself.
-    RemoteControlError(IdentifyHostError),
-
-    /// There is an error with the output from Rcs.
-    TargetError(Error),
-}
-
-impl Display for RcsConnectionError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            RcsConnectionError::FidlConnectionError(ferr) => {
-                write!(f, "fidl connection error: {}", ferr)
-            }
-            RcsConnectionError::ConnectionTimeoutError(_) => write!(f, "timeout error"),
-            RcsConnectionError::RemoteControlError(ierr) => write!(f, "internal error: {:?}", ierr),
-            RcsConnectionError::TargetError(error) => write!(f, "general error: {}", error),
-        }
-    }
-}
-
-impl RcsConnection {
-    pub fn new(id: &mut NodeId) -> Result<Self> {
-        let (s, p) = fidl::Channel::create().context("failed to create zx channel")?;
-        let _result = RcsConnection::connect_to_service(id, s)?;
-        let proxy = RemoteControlProxy::new(
-            fidl::AsyncChannel::from_channel(p).context("failed to make async channel")?,
-        );
-
-        Ok(Self { proxy, overnet_id: id.clone() })
-    }
-
-    pub fn copy_to_channel(&mut self, channel: fidl::Channel) -> Result<()> {
-        RcsConnection::connect_to_service(&mut self.overnet_id, channel)
-    }
-
-    fn connect_to_service(overnet_id: &mut NodeId, channel: fidl::Channel) -> Result<()> {
-        let svc = hoist::hoist().connect_as_service_consumer()?;
-        svc.connect_to_service(overnet_id, RemoteControlMarker::NAME, channel)
-            .map_err(|e| anyhow!("Error connecting to Rcs: {}", e))
-    }
-
-    // For testing.
-    #[cfg(test)]
-    pub fn new_with_proxy(proxy: RemoteControlProxy, id: &NodeId) -> Self {
-        Self { proxy, overnet_id: id.clone() }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub enum ConnectionState {
-    /// Default state: no connection, pending rediscovery.
-    Disconnected,
-    /// Contains the last known ping from mDNS.
-    Mdns(Instant),
-    /// Contains an actual connection to RCS.
-    Rcs(RcsConnection),
-    /// Target was manually added. Targets that are manual never enter
-    /// the "disconnected" state, as they are not discoverable, instead
-    /// they return to the "manual" state on disconnection.
-    Manual,
-    /// Contains the last known interface update with a Fastboot serial number.
-    Fastboot(Instant),
-    /// Contains the last known interface update with a Fastboot serial number.
-    Zedboot(Instant),
-}
-
-impl Default for ConnectionState {
-    fn default() -> Self {
-        ConnectionState::Disconnected
-    }
-}
-
-impl ConnectionState {
-    fn is_connected(&self) -> bool {
-        match self {
-            Self::Disconnected => false,
-            _ => true,
-        }
-    }
-
-    fn is_rcs(&self) -> bool {
-        match self {
-            ConnectionState::Rcs(_) => true,
-            _ => false,
-        }
-    }
-}
 
 #[derive(Debug, Clone, Hash)]
 pub(crate) enum TargetAddrType {
@@ -240,7 +110,7 @@ impl EventSynthesizer<TargetEvent> for TargetEventSynthesizer {
     async fn synthesize_events(&self) -> Vec<TargetEvent> {
         match self.target.borrow().upgrade() {
             Some(target) => match target.get_connection_state() {
-                ConnectionState::Rcs(_) => vec![TargetEvent::RcsActivated],
+                TargetConnectionState::Rcs(_) => vec![TargetEvent::RcsActivated],
                 _ => vec![],
             },
             None => vec![],
@@ -260,7 +130,7 @@ pub struct Target {
     // come from old Daemons, or other Daemons. The set should be used
     ids: RefCell<HashSet<u64>>,
     nodename: RefCell<Option<String>>,
-    state: RefCell<ConnectionState>,
+    state: RefCell<TargetConnectionState>,
     last_response: RefCell<DateTime<Utc>>,
     addrs: RefCell<BTreeSet<TargetAddrEntry>>,
     // ssh_port if set overrides the global default configuration for ssh port,
@@ -362,7 +232,7 @@ impl Target {
                 .map(|e| TargetAddrEntry::new(*e, Utc::now(), TargetAddrType::Fastboot))
                 .collect(),
         );
-        target.update_connection_state(|_| ConnectionState::Fastboot(Instant::now()));
+        target.update_connection_state(|_| TargetConnectionState::Fastboot(Instant::now()));
         target
     }
 
@@ -378,14 +248,14 @@ impl Target {
                 .map(|e| TargetAddrEntry::new(*e, Utc::now(), TargetAddrType::Netsvc))
                 .collect(),
         );
-        target.update_connection_state(|_| ConnectionState::Zedboot(Instant::now()));
+        target.update_connection_state(|_| TargetConnectionState::Zedboot(Instant::now()));
         target
     }
 
     pub fn new_with_serial(serial: &str) -> Rc<Self> {
         let target = Self::new();
         target.serial.replace(Some(serial.to_string()));
-        target.update_connection_state(|_| ConnectionState::Fastboot(Instant::now()));
+        target.update_connection_state(|_| TargetConnectionState::Fastboot(Instant::now()));
         target
     }
 
@@ -420,7 +290,7 @@ impl Target {
             addresses: self.addrs(),
             serial: self.serial(),
             ssh_port: self.ssh_port(),
-            is_fastboot: matches!(self.get_connection_state(), ConnectionState::Fastboot(_)),
+            is_fastboot: matches!(self.get_connection_state(), TargetConnectionState::Fastboot(_)),
         }
     }
 
@@ -567,7 +437,7 @@ impl Target {
 
     fn rcs_state(&self) -> bridge::RemoteControlState {
         match (self.is_host_pipe_running(), self.get_connection_state()) {
-            (true, ConnectionState::Rcs(_)) => bridge::RemoteControlState::Up,
+            (true, TargetConnectionState::Rcs(_)) => bridge::RemoteControlState::Up,
             (true, _) => bridge::RemoteControlState::Down,
             (_, _) => bridge::RemoteControlState::Unknown,
         }
@@ -601,12 +471,12 @@ impl Target {
         self.serial.borrow().clone()
     }
 
-    pub fn state(&self) -> ConnectionState {
+    pub fn state(&self) -> TargetConnectionState {
         self.state.borrow().clone()
     }
 
     #[cfg(test)]
-    pub fn set_state(&self, state: ConnectionState) {
+    pub fn set_state(&self, state: TargetConnectionState) {
         // Note: Do not mark this function non-test, as it does not
         // enforce state transition control, such as ensuring that
         // manual targets do not enter the disconnected state. It must
@@ -614,7 +484,7 @@ impl Target {
         self.state.replace(state);
     }
 
-    pub fn get_connection_state(&self) -> ConnectionState {
+    pub fn get_connection_state(&self) -> TargetConnectionState {
         self.state.borrow().clone()
     }
 
@@ -627,18 +497,18 @@ impl Target {
     ///   *    ->   Disconnected  =>  Manual if the device is manual
     pub fn update_connection_state<F>(&self, func: F)
     where
-        F: FnOnce(ConnectionState) -> ConnectionState + Sized,
+        F: FnOnce(TargetConnectionState) -> TargetConnectionState + Sized,
     {
         let former_state = self.get_connection_state();
         let mut new_state = (func)(former_state.clone());
 
         match &new_state {
-            ConnectionState::Disconnected => {
+            TargetConnectionState::Disconnected => {
                 if self.is_manual() {
-                    new_state = ConnectionState::Manual;
+                    new_state = TargetConnectionState::Manual;
                 }
             }
-            ConnectionState::Mdns(_) => {
+            TargetConnectionState::Mdns(_) => {
                 // Do not transition connection state for RCS -> MDNS.
                 if former_state.is_rcs() {
                     self.update_last_response(Utc::now());
@@ -667,7 +537,7 @@ impl Target {
 
     pub fn rcs(&self) -> Option<RcsConnection> {
         match self.get_connection_state() {
-            ConnectionState::Rcs(conn) => Some(conn),
+            TargetConnectionState::Rcs(conn) => Some(conn),
             _ => None,
         }
     }
@@ -749,8 +619,8 @@ impl Target {
     pub fn new_autoconnected(n: &str) -> Rc<Self> {
         let s = Self::new_named(n);
         s.update_connection_state(|s| {
-            assert_eq!(s, ConnectionState::Disconnected);
-            ConnectionState::Mdns(Instant::now())
+            assert_eq!(s, TargetConnectionState::Disconnected);
+            TargetConnectionState::Mdns(Instant::now())
         });
         s
     }
@@ -865,7 +735,7 @@ impl Target {
         };
         let target =
             Target::from_identify(identify).map_err(|e| RcsConnectionError::TargetError(e))?;
-        target.update_connection_state(move |_| ConnectionState::Rcs(rcs));
+        target.update_connection_state(move |_| TargetConnectionState::Rcs(rcs));
         Ok(target)
     }
 
@@ -923,18 +793,18 @@ impl Target {
     pub fn expire_state(&self) {
         self.update_connection_state(|current_state| {
             let expire_duration = match current_state {
-                ConnectionState::Mdns(_) => MDNS_MAX_AGE,
-                ConnectionState::Fastboot(_) => FASTBOOT_MAX_AGE,
-                ConnectionState::Zedboot(_) => ZEDBOOT_MAX_AGE,
+                TargetConnectionState::Mdns(_) => MDNS_MAX_AGE,
+                TargetConnectionState::Fastboot(_) => FASTBOOT_MAX_AGE,
+                TargetConnectionState::Zedboot(_) => ZEDBOOT_MAX_AGE,
                 _ => Duration::default(),
             };
 
             let new_state = match &current_state {
-                ConnectionState::Mdns(ref last_seen)
-                | ConnectionState::Fastboot(ref last_seen)
-                | ConnectionState::Zedboot(ref last_seen) => {
+                TargetConnectionState::Mdns(ref last_seen)
+                | TargetConnectionState::Fastboot(ref last_seen)
+                | TargetConnectionState::Zedboot(ref last_seen) => {
                     if last_seen.elapsed() > expire_duration {
-                        Some(ConnectionState::Disconnected)
+                        Some(TargetConnectionState::Disconnected)
                     } else {
                         None
                     }
@@ -969,7 +839,7 @@ impl Target {
 
     pub fn disconnect(&self) {
         drop(self.host_pipe.take());
-        self.update_connection_state(|_| ConnectionState::Disconnected);
+        self.update_connection_state(|_| TargetConnectionState::Disconnected);
     }
 }
 
@@ -1002,12 +872,12 @@ impl From<&Target> for bridge::Target {
             board_config,
             rcs_state: Some(target.rcs_state()),
             target_state: Some(match target.state() {
-                ConnectionState::Disconnected => TargetState::Disconnected,
-                ConnectionState::Manual | ConnectionState::Mdns(_) | ConnectionState::Rcs(_) => {
-                    TargetState::Product
-                }
-                ConnectionState::Fastboot(_) => TargetState::Fastboot,
-                ConnectionState::Zedboot(_) => TargetState::Zedboot,
+                TargetConnectionState::Disconnected => TargetState::Disconnected,
+                TargetConnectionState::Manual
+                | TargetConnectionState::Mdns(_)
+                | TargetConnectionState::Rcs(_) => TargetState::Product,
+                TargetConnectionState::Fastboot(_) => TargetState::Fastboot,
+                TargetConnectionState::Zedboot(_) => TargetState::Zedboot,
             }),
             ssh_address: target.ssh_address_info(),
             // TODO(awdavies): Gather more information here when possible.
@@ -1277,7 +1147,9 @@ impl TargetCollection {
                 let new_state = new_target.get_connection_state();
                 match (&current_state, &new_state) {
                     // Don't downgrade a targets connection state / drop RCS
-                    (ConnectionState::Rcs(_), ConnectionState::Mdns(_)) => current_state,
+                    (TargetConnectionState::Rcs(_), TargetConnectionState::Mdns(_)) => {
+                        current_state
+                    }
                     _ => new_state,
                 }
             });
@@ -1390,10 +1262,13 @@ impl TargetCollection {
 mod test {
     use {
         super::*,
+        anyhow::Context as _,
         bridge::TargetIp,
         chrono::offset::TimeZone,
         fidl, fidl_fuchsia_developer_remotecontrol as rcs,
+        fidl_fuchsia_developer_remotecontrol::RemoteControlMarker,
         fidl_fuchsia_net::Subnet,
+        fidl_fuchsia_overnet_protocol::NodeId,
         futures::prelude::*,
         matches::assert_matches,
         std::net::{Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6},
@@ -1454,12 +1329,12 @@ mod test {
         }
         let now = Instant::now();
         other_target.update_connection_state(|s| {
-            assert_eq!(s, ConnectionState::Disconnected);
-            ConnectionState::Mdns(now)
+            assert_eq!(s, TargetConnectionState::Disconnected);
+            TargetConnectionState::Mdns(now)
         });
         t.update_connection_state(|s| {
-            assert_eq!(s, ConnectionState::Disconnected);
-            ConnectionState::Mdns(now)
+            assert_eq!(s, TargetConnectionState::Disconnected);
+            TargetConnectionState::Mdns(now)
         });
         assert_eq!(&tc.get_connected(nodename.clone()).unwrap(), &t);
     }
@@ -1730,12 +1605,12 @@ mod test {
             }
             {
                 *t.state.borrow_mut() = if test.rcs_is_some {
-                    ConnectionState::Rcs(RcsConnection::new_with_proxy(
+                    TargetConnectionState::Rcs(RcsConnection::new_with_proxy(
                         setup_fake_remote_control_service(true, "foobiedoo".to_owned()),
                         &NodeId { id: 123 },
                     ))
                 } else {
-                    ConnectionState::Disconnected
+                    TargetConnectionState::Disconnected
                 };
             }
             assert_eq!(t.rcs_state(), test.expected);
@@ -1779,8 +1654,8 @@ mod test {
         let vec = tc.synthesize_events().await;
         assert_eq!(vec.len(), 0);
         t.update_connection_state(|s| {
-            assert_eq!(s, ConnectionState::Disconnected);
-            ConnectionState::Mdns(Instant::now())
+            assert_eq!(s, TargetConnectionState::Disconnected);
+            TargetConnectionState::Mdns(Instant::now())
         });
         let vec = tc.synthesize_events().await;
         assert_eq!(vec.len(), 1);
@@ -1912,7 +1787,7 @@ mod test {
         );
 
         let fut = t.events.wait_for(None, |e| e == TargetEvent::RcsActivated);
-        t.update_connection_state(|_| ConnectionState::Rcs(conn));
+        t.update_connection_state(|_| TargetConnectionState::Rcs(conn));
         fut.await.unwrap();
     }
 
@@ -1951,22 +1826,23 @@ mod test {
         let instant = Instant::now();
         let instant_clone = instant.clone();
         t.update_connection_state(move |s| {
-            assert_eq!(s, ConnectionState::Disconnected);
+            assert_eq!(s, TargetConnectionState::Disconnected);
 
-            ConnectionState::Mdns(instant_clone)
+            TargetConnectionState::Mdns(instant_clone)
         });
-        assert_eq!(ConnectionState::Mdns(instant), t.get_connection_state());
+        assert_eq!(TargetConnectionState::Mdns(instant), t.get_connection_state());
     }
 
     #[test]
     fn test_target_connection_state_will_not_drop_rcs_on_mdns_events() {
         let t = Target::new_named("hello-kitty");
-        let rcs_state = ConnectionState::Rcs(RcsConnection::new(&mut NodeId { id: 1234 }).unwrap());
+        let rcs_state =
+            TargetConnectionState::Rcs(RcsConnection::new(&mut NodeId { id: 1234 }).unwrap());
         t.set_state(rcs_state.clone());
 
-        // Attempt to set the state to ConnectionState::Mdns, this transition should fail, as in
+        // Attempt to set the state to TargetConnectionState::Mdns, this transition should fail, as in
         // this transition RCS should be retained.
-        t.update_connection_state(|_| ConnectionState::Mdns(Instant::now()));
+        t.update_connection_state(|_| TargetConnectionState::Mdns(Instant::now()));
 
         assert_eq!(t.get_connection_state(), rcs_state);
     }
@@ -1975,15 +1851,15 @@ mod test {
     async fn test_expire_state_mdns() {
         let t = Target::new_named("yo-yo-ma-plays-that-cello-ya-hear");
         let then = Instant::now() - (MDNS_MAX_AGE + Duration::from_secs(1));
-        t.update_connection_state(|_| ConnectionState::Mdns(then));
+        t.update_connection_state(|_| TargetConnectionState::Mdns(then));
 
         t.expire_state();
 
         t.events
             .wait_for(None, move |e| {
                 e == TargetEvent::ConnectionStateChanged(
-                    ConnectionState::Mdns(then),
-                    ConnectionState::Disconnected,
+                    TargetConnectionState::Mdns(then),
+                    TargetConnectionState::Disconnected,
                 )
             })
             .await
@@ -1994,15 +1870,15 @@ mod test {
     async fn test_expire_state_fastboot() {
         let t = Target::new_named("platypodes-are-venomous");
         let then = Instant::now() - (FASTBOOT_MAX_AGE + Duration::from_secs(1));
-        t.update_connection_state(|_| ConnectionState::Fastboot(then));
+        t.update_connection_state(|_| TargetConnectionState::Fastboot(then));
 
         t.expire_state();
 
         t.events
             .wait_for(None, move |e| {
                 e == TargetEvent::ConnectionStateChanged(
-                    ConnectionState::Fastboot(then),
-                    ConnectionState::Disconnected,
+                    TargetConnectionState::Fastboot(then),
+                    TargetConnectionState::Disconnected,
                 )
             })
             .await
@@ -2013,15 +1889,15 @@ mod test {
     async fn test_expire_state_zedboot() {
         let t = Target::new_named("platypodes-are-venomous");
         let then = Instant::now() - (ZEDBOOT_MAX_AGE + Duration::from_secs(1));
-        t.update_connection_state(|_| ConnectionState::Zedboot(then));
+        t.update_connection_state(|_| TargetConnectionState::Zedboot(then));
 
         t.expire_state();
 
         t.events
             .wait_for(None, move |e| {
                 e == TargetEvent::ConnectionStateChanged(
-                    ConnectionState::Zedboot(then),
-                    ConnectionState::Disconnected,
+                    TargetConnectionState::Zedboot(then),
+                    TargetConnectionState::Disconnected,
                 )
             })
             .await
@@ -2312,14 +2188,14 @@ mod test {
     #[test]
     fn test_collection_removal_disconnects_target() {
         let target = Target::new_named("soggy-falafel");
-        target.set_state(ConnectionState::Mdns(Instant::now()));
+        target.set_state(TargetConnectionState::Mdns(Instant::now()));
         target.host_pipe.borrow_mut().replace(Task::local(future::pending()));
 
         let collection = TargetCollection::new();
         collection.merge_insert(target.clone());
         collection.remove_target("soggy-falafel".to_owned());
 
-        assert_eq!(target.get_connection_state(), ConnectionState::Disconnected);
+        assert_eq!(target.get_connection_state(), TargetConnectionState::Disconnected);
         assert!(target.host_pipe.borrow().is_none());
     }
 
@@ -2702,34 +2578,34 @@ mod test {
             Utc::now(),
             TargetAddrType::Manual,
         ));
-        target.set_state(ConnectionState::Manual);
+        target.set_state(TargetConnectionState::Manual);
 
         // Attempting to transition a manual target into the disconnected state remains in manual.
-        target.update_connection_state(|_| ConnectionState::Disconnected);
-        assert_eq!(target.get_connection_state(), ConnectionState::Manual);
+        target.update_connection_state(|_| TargetConnectionState::Disconnected);
+        assert_eq!(target.get_connection_state(), TargetConnectionState::Manual);
 
         let conn = RcsConnection::new_with_proxy(
             setup_fake_remote_control_service(false, "abc".to_owned()),
             &NodeId { id: 1234 },
         );
         // A manual target can enter the RCS state.
-        target.update_connection_state(|_| ConnectionState::Rcs(conn));
-        assert_matches!(target.get_connection_state(), ConnectionState::Rcs(_));
+        target.update_connection_state(|_| TargetConnectionState::Rcs(conn));
+        assert_matches!(target.get_connection_state(), TargetConnectionState::Rcs(_));
 
         // A manual target exiting the RCS state to disconnected returns to manual instead.
-        target.update_connection_state(|_| ConnectionState::Disconnected);
-        assert_eq!(target.get_connection_state(), ConnectionState::Manual);
+        target.update_connection_state(|_| TargetConnectionState::Disconnected);
+        assert_eq!(target.get_connection_state(), TargetConnectionState::Manual);
     }
 
     #[test]
     fn test_target_disconnect() {
         let target = Target::new();
-        target.set_state(ConnectionState::Mdns(Instant::now()));
+        target.set_state(TargetConnectionState::Mdns(Instant::now()));
         target.host_pipe.borrow_mut().replace(Task::local(future::pending()));
 
         target.disconnect();
 
-        assert_eq!(ConnectionState::Disconnected, target.get_connection_state());
+        assert_eq!(TargetConnectionState::Disconnected, target.get_connection_state());
         assert!(target.host_pipe.borrow().is_none());
     }
 }
