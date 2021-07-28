@@ -51,11 +51,10 @@ class SemanticsIntegrationTest : public sys::testing::TestWithEnvironment {
   // Get the transform between the view's local space and the node's local space.
   a11y::SemanticTransform GetTransformForNode(zx_koid_t view_ref_koid, uint32_t node_id);
 
-  // Calculates the point in the view's local space corresponding to the point at
-  // |node->location.min + offset| in the target node's local space.
-  fuchsia::math::PointF CalculateViewTargetPoint(
-      zx_koid_t view_ref_koid, const fuchsia::accessibility::semantics::Node* node,
-      fuchsia::math::PointF offset);
+  // Calculates the point in the view's local space corresponding to the point at the center of the
+  // semantic node's bounding box.
+  fuchsia::math::PointF CalculateCenterOfSemanticNodeBoundingBoxCoordinate(
+      zx_koid_t view_ref_koid, const fuchsia::accessibility::semantics::Node* node);
 
   // Perform a hit test against the target node and return the node ID of the node (if any) that is
   // hit.

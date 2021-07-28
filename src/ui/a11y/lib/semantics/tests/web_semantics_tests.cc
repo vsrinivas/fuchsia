@@ -138,14 +138,16 @@ TEST_F(WebSemanticsTest, DISABLED_HitTesting) {
   // Hit test the plain text
   auto node = FindNodeWithLabel(root, view_ref_koid(), "Test 1 2 3... ");
   ASSERT_TRUE(node);
-  auto hit_node = HitTest(view_ref_koid(), CalculateViewTargetPoint(view_ref_koid(), node, offset));
+  auto hit_node = HitTest(
+      view_ref_koid(), CalculateCenterOfSemanticNodeBoundingBoxCoordinate(view_ref_koid(), node));
   ASSERT_TRUE(hit_node.has_value());
   ASSERT_EQ(*hit_node, node->node_id());
 
   // Hit test the button
   node = FindNodeWithLabel(root, view_ref_koid(), "Click here");
   ASSERT_TRUE(node);
-  hit_node = HitTest(view_ref_koid(), CalculateViewTargetPoint(view_ref_koid(), node, offset));
+  hit_node = HitTest(view_ref_koid(),
+                     CalculateCenterOfSemanticNodeBoundingBoxCoordinate(view_ref_koid(), node));
   ASSERT_TRUE(hit_node.has_value());
   ASSERT_EQ(*hit_node, node->node_id());
 }

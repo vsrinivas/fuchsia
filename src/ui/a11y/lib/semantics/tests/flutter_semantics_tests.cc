@@ -77,7 +77,7 @@ class FlutterSemanticsTests : public SemanticsIntegrationTest {
 };
 
 // Loads ally-demo flutter app and verifies its semantic tree.
-TEST_F(FlutterSemanticsTests, DISABLED_StaticSemantics) {
+TEST_F(FlutterSemanticsTests, StaticSemantics) {
   auto root = view_manager()->GetSemanticNode(view_ref_koid(), 0u);
   auto node = FindNodeWithLabel(root, view_ref_koid(), "Blue tapped 0 times");
   ASSERT_TRUE(node);
@@ -96,26 +96,25 @@ TEST_F(FlutterSemanticsTests, DISABLED_StaticSemantics) {
 TEST_F(FlutterSemanticsTests, DISABLED_HitTesting) {
   auto root = view_manager()->GetSemanticNode(view_ref_koid(), 0u);
 
-  // We'll target all hits just within the bounding box of the nodes.
-  fuchsia::math::PointF offset{1., 1.};
-
   // Hit test something with an action
   auto node = FindNodeWithLabel(root, view_ref_koid(), "Blue");
   ASSERT_TRUE(node);
-  auto hit_node = HitTest(view_ref_koid(), CalculateViewTargetPoint(view_ref_koid(), node, offset));
+  auto hit_node = HitTest(
+      view_ref_koid(), CalculateCenterOfSemanticNodeBoundingBoxCoordinate(view_ref_koid(), node));
   ASSERT_TRUE(hit_node.has_value());
   ASSERT_EQ(*hit_node, node->node_id());
 
   // Hit test a label
   node = FindNodeWithLabel(root, view_ref_koid(), "Yellow tapped 0 times");
   ASSERT_TRUE(node);
-  hit_node = HitTest(view_ref_koid(), CalculateViewTargetPoint(view_ref_koid(), node, offset));
+  hit_node = HitTest(view_ref_koid(),
+                     CalculateCenterOfSemanticNodeBoundingBoxCoordinate(view_ref_koid(), node));
   ASSERT_TRUE(hit_node.has_value());
   ASSERT_EQ(*hit_node, node->node_id());
 }
 
 // Loads ally-demo flutter app and validates triggering actions
-TEST_F(FlutterSemanticsTests, DISABLED_PerformAction) {
+TEST_F(FlutterSemanticsTests, PerformAction) {
   auto root = view_manager()->GetSemanticNode(view_ref_koid(), 0u);
 
   // Verify the counter is currently at 0
@@ -170,6 +169,5 @@ TEST_F(FlutterSemanticsTests, DISABLED_ScrollToMakeVisible) {
            node_corner.z != new_node_corner.z;
   });
 }
-
 }  // namespace
 }  // namespace accessibility_test
