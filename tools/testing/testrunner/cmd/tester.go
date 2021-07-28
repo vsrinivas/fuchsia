@@ -383,9 +383,9 @@ func (t *fuchsiaSSHTester) Test(ctx context.Context, test testsharder.Test, stdo
 		if err := t.serialSocket.runDiagnostics(ctx); err != nil {
 			logger.Warningf(ctx, "failed to run serial diagnostics: %s", err)
 		}
-		// If we experience a connection error then the device has likely become
-		// unresponsive and there's no use in continuing to try to run tests, so
-		// mark the error as fatal.
+		// If we continue to experience a connection error after several retries
+		// then the device has likely become unresponsive and there's no use in
+		// continuing to try to run tests, so mark the error as fatal.
 		return sinks, fatalError{testErr}
 	}
 

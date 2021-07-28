@@ -286,8 +286,14 @@ func (c *Conn) Run(ctx context.Context, command []string, stdout io.Writer, stde
 			level = logger.DebugLevel
 			err = ConnectionError{err}
 		default:
-			log = fmt.Sprintf("ssh command failed with error: %v", err)
-			level = logger.ErrorLevel
+			if errors.Is(err, io.EOF) {
+				log = "got EOF trying to run ssh command, the device likely stopped responding to keep-alive pings"
+				level = logger.DebugLevel
+				err = ConnectionError{err}
+			} else {
+				log = fmt.Sprintf("ssh command failed with error: %s", err)
+				level = logger.ErrorLevel
+			}
 		}
 		logger.Logf(ctx, level, "%s: %v", log, command)
 		return err
