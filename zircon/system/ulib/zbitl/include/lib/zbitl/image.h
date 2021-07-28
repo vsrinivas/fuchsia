@@ -19,7 +19,7 @@ class Image : public View<Storage> {
   using typename View<Storage>::Error;
   using typename View<Storage>::Traits;
   using typename View<Storage>::iterator;
-  using typename View<Storage>::item_header_wrapper;
+  using typename View<Storage>::header_type;
   using View<Storage>::ItemHeader;
 
   static_assert(Traits::CanWrite(), "zbitl::Image requires writable storage");
@@ -91,14 +91,14 @@ class Image : public View<Storage> {
     it.view_ = this;
     it.offset_ = new_item_offset;
 
-    // `item_header_wrapper` needs to be constructed from the return value of the
+    // `header_type` needs to be constructed from the return value of the
     // Header trait, which might be a reference wrapper to the header in memory
     // instead of the raw value.
     if (auto result = ItemHeader(this->storage(), new_item_offset); result.is_error()) {
       return fitx::error{
           Error{"cannot read header", new_item_offset, std::move(result.error_value())}};
     } else {
-      it.value_.header = item_header_wrapper(std::move(result).value());
+      it.value_.header = header_type(std::move(result).value());
     }
 
     if (auto result = Traits::Payload(this->storage(), it.payload_offset(), new_header.length);

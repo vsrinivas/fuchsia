@@ -129,70 +129,36 @@ class View {
                   "zbtil::View destroyed after successful iteration without check");
   }
 
-  // TODO(fxbug.dev/68585): The following types, static members, and static
-  // methods will comprise the "ZBI traits" of a more general container type
-  // that also supports a BOOTFS implementation.
-  using container_header_type = zbi_header_t;
-  using item_header_type = zbi_header_t;
-
-  static constexpr uint32_t kItemAlignment = ZBI_ALIGNMENT;
-  static constexpr uint32_t kPayloadSizeAlignment = ZBI_ALIGNMENT;
-
-  // Returns the length of a container, excluding that of its header.
-  static uint32_t ContainerLength(const container_header_type& header) { return header.length; }
-
-  // Returns the (unaligned) length of an item's payload.
-  static uint32_t PayloadLength(const item_header_type& header) { return header.length; }
-
-  static uint32_t PayloadOffset(const item_header_type& header, uint32_t item_offset) {
-    return item_offset + sizeof(header);
-  }
-
-  static uint32_t NextItemOffset(const item_header_type& header, uint32_t item_offset) {
-    return item_offset + sizeof(header) + ZBI_ALIGN(header.length);
-  }
-
-  // TODO(fxbug.dev/68585): Error is a part of the ZBI trait interface.
-  // Forward-declared for now, its definition will eventually be moved here.
-  struct Error;
-
-  // Converts the context of an iteration failure to an Error.
-  static Error ToError(std::string_view reason, const item_header_type& header,
-                       uint32_t item_offset, uint32_t error_offset,
-                       std::optional<typename Traits::error_type> storage_error = std::nullopt) {
-    return {reason, error_offset, storage_error};
-  }
-
   // Fetches the container header.
   static fitx::result<typename Traits::error_type,
-                      typename Traits::template LocalizedReadResult<container_header_type>>
+                      typename Traits::template LocalizedReadResult<zbi_header_t>>
   ContainerHeader(Storage& storage) {
-    return Traits::template LocalizedRead<container_header_type>(storage, 0);
+    return Traits::template LocalizedRead<zbi_header_t>(storage, 0);
   }
 
   // Fetches an item header at a given offset.
   static fitx::result<typename Traits::error_type,
-                      typename Traits::template LocalizedReadResult<item_header_type>>
+                      typename Traits::template LocalizedReadResult<zbi_header_t>>
   ItemHeader(Storage& storage, uint32_t offset) {
-    return Traits::template LocalizedRead<item_header_type>(storage, offset);
+    return Traits::template LocalizedRead<zbi_header_t>(storage, offset);
   }
 
   /// The header is represented by an opaque type that can be dereferenced as
-  /// if it were `const item_header_t*`, i.e. `*header` or `header->member`.
-  /// Either it stores the `item_header_type` directly or it holds a pointer
-  /// into someplace owned or viewed by the Storage object.  In the latter
-  /// case, i.e. when Storage represents something already in memory,
-  /// `item_header_wrapper` should be no larger than a plain pointer.
-  class item_header_wrapper {
+  /// if it were `const zbi_header_t*`, i.e. `*header` or `header->member`.
+  /// Either it stores the `zbi_header_t` directly or it holds a pointer into
+  /// someplace owned or viewed by the Storage object.  In the latter case,
+  /// i.e. when Storage represents something already in memory, `header_type`
+  /// should be no larger than a plain pointer.
+  class header_type {
    public:
-    item_header_wrapper() = default;
-    item_header_wrapper(const item_header_wrapper&) = default;
-    item_header_wrapper(item_header_wrapper&&) = default;
-    item_header_wrapper& operator=(const item_header_wrapper&) = default;
-    item_header_wrapper& operator=(item_header_wrapper&&) = default;
+    header_type() = default;
+    header_type(const header_type&) = default;
+    header_type(header_type&&) = default;
+    header_type& operator=(const header_type&) = default;
+    header_type& operator=(header_type&&) = default;
 
     /// `*header` always copies, so lifetime of `this` doesn't matter.
-    item_header_type operator*() const {
+    zbi_header_t operator*() const {
       if constexpr (kCopy) {
         return stored_;
       } else {
@@ -202,7 +168,7 @@ class View {
 
     /// `header->member` refers to the header in place, so never do
     /// `&header->member` but always dereference a member directly.
-    const item_header_type* operator->() const {
+    const zbi_header_t* operator->() const {
       if constexpr (kCopy) {
         return &stored_;
       } else {
@@ -210,22 +176,13 @@ class View {
       }
     }
 
-    /// A length accessor that avoids copying.
-    uint32_t length() const {
-      if constexpr (kCopy) {
-        return PayloadLength(stored_);
-      } else {
-        return PayloadLength(*stored_);
-      }
-    }
-
    private:
     using TraitsHeader = decltype(ItemHeader(std::declval<View>().storage(), 0));
     static constexpr bool kCopy =
-        std::is_same_v<TraitsHeader, fitx::result<typename Traits::error_type, item_header_type>>;
+        std::is_same_v<TraitsHeader, fitx::result<typename Traits::error_type, zbi_header_t>>;
     static constexpr bool kReference =
         std::is_same_v<TraitsHeader, fitx::result<typename Traits::error_type,
-                                                  std::reference_wrapper<const item_header_type>>>;
+                                                  std::reference_wrapper<const zbi_header_t>>>;
     static_assert(kCopy || kReference,
                   "zbitl::StorageTraits specialization's Header function returns wrong type");
 
@@ -233,18 +190,18 @@ class View {
     template <typename ImageStorage>
     friend class Image;
 
-    using HeaderStorage = std::conditional_t<kCopy, item_header_type, const item_header_type*>;
+    using HeaderStorage = std::conditional_t<kCopy, zbi_header_t, const zbi_header_t*>;
     HeaderStorage stored_;
 
     // This can only be used by begin(), below - and by Image's Append.
     template <typename T>
-    explicit item_header_wrapper(const T& header)
+    explicit header_type(const T& header)
         : stored_([&header]() {
             if constexpr (kCopy) {
-              static_assert(std::is_same_v<item_header_type, T>);
+              static_assert(std::is_same_v<zbi_header_t, T>);
               return header;
             } else {
-              static_assert(std::is_same_v<std::reference_wrapper<const item_header_type>, T>);
+              static_assert(std::is_same_v<std::reference_wrapper<const zbi_header_t>, T>);
               return &(header.get());
             }
           }()) {}
@@ -258,11 +215,11 @@ class View {
   using payload_type = typename Traits::payload_type;
 
   /// The element type is a trivial struct morally equivalent to
-  /// std::pair<item_header_wrapper, payload_type>.  Both member types are
+  /// std::pair<header_type, payload_type>.  Both member types are
   /// default-constructible, copy-constructible, and copy-assignable, so
   /// value_type as a whole is as well.
   struct value_type {
-    item_header_wrapper header;
+    header_type header;
     payload_type payload;
   };
 
@@ -374,7 +331,8 @@ class View {
     iterator& operator++() {  // prefix
       Assert(__func__);
       view_->StartIteration();
-      const uint32_t next_item_offset = NextItemOffset(*value_.header, offset_);
+      const uint32_t next_item_offset =
+          offset_ + sizeof(zbi_header_t) + ZBI_ALIGN(value_.header->length);
       Update(next_item_offset);
       return *this;
     }
@@ -399,7 +357,7 @@ class View {
 
     uint32_t payload_offset() const {
       Assert(__func__);
-      return PayloadOffset(*(value_.header), offset_);
+      return offset_ + sizeof(zbi_header_t);
     }
 
     View& view() const {
@@ -447,17 +405,17 @@ class View {
       if (is_end) {
         offset_ = kEnd_;
       } else {
-        Update(sizeof(container_header_type));
+        Update(sizeof(zbi_header_t));
       }
     }
 
     // Updates the state of the iterator to reflect a new offset.
     void Update(uint32_t next_item_offset) {
-      ZX_DEBUG_ASSERT(next_item_offset >= sizeof(container_header_type));
+      ZX_DEBUG_ASSERT(next_item_offset >= sizeof(zbi_header_t));
       ZX_DEBUG_ASSERT_MSG(next_item_offset <= view_->limit_,
                           "zbitl::View::iterator next_item_offset %#" PRIx32 " > limit_ %#" PRIx32,
                           next_item_offset, view_->limit_);
-      ZX_DEBUG_ASSERT(next_item_offset % kItemAlignment == 0);
+      ZX_DEBUG_ASSERT(next_item_offset % ZBI_ALIGNMENT == 0);
 
       if (next_item_offset == view_->limit_) {
         // Reached the end.
@@ -465,7 +423,7 @@ class View {
         return;
       }
       if (view_->limit_ < next_item_offset ||
-          view_->limit_ - next_item_offset < sizeof(item_header_type)) {
+          view_->limit_ - next_item_offset < sizeof(zbi_header_t)) {
         Fail("container too short for next item header");
         return;
       }
@@ -478,13 +436,13 @@ class View {
         Fail(header_error.error_value());
         return;
       } else {
-        value_.header = item_header_wrapper(header.value());
+        value_.header = header_type(header.value());
       }
 
-      const uint32_t payload_offset = PayloadOffset(*value_.header, next_item_offset);
-      const uint32_t payload_size = value_.header.length();
-      const uint32_t aligned_payload_size =
-          (payload_size + kPayloadSizeAlignment - 1) & -kPayloadSizeAlignment;
+      const uint32_t payload_offset =
+          next_item_offset + static_cast<uint32_t>(sizeof(zbi_header_t));
+      const uint32_t payload_size = value_.header->length;
+      const uint32_t aligned_payload_size = ZBI_ALIGN(payload_size);
       if (payload_offset > view_->limit_ ||
           aligned_payload_size < payload_size ||  // ensure aligned size didn't overflow
           aligned_payload_size > view_->limit_ - payload_offset) {
@@ -492,7 +450,7 @@ class View {
         return;
       }
 
-      if (auto payload = Traits::Payload(view_->storage(), payload_offset, payload_size);
+      if (auto payload = Traits::Payload(view_->storage(), payload_offset, value_.header->length);
           payload.is_error()) {
         Fail("cannot extract payload view", std::move(payload.error_value()), payload_offset);
         return;
@@ -504,9 +462,8 @@ class View {
 
     void Fail(std::string_view sv,
               std::optional<typename Traits::error_type> storage_error = std::nullopt,
-              std::optional<uint32_t> error_offset = std::nullopt) {
-      view_->Fail(ToError(sv, *value_.header, offset_, error_offset.value_or(offset_),
-                          std::move(storage_error)));
+              std::optional<uint32_t> offset = std::nullopt) {
+      view_->Fail({sv, offset.value_or(offset_), std::move(storage_error)});
       *this = view_->end();
     }
 
@@ -518,7 +475,7 @@ class View {
 
   // This returns its own error state and does not affect the `take_error()`
   // state of the View.
-  fitx::result<Error, container_header_type> container_header() {
+  fitx::result<Error, zbi_header_t> container_header() {
     auto capacity_error = Traits::Capacity(storage());
     if (capacity_error.is_error()) {
       return fitx::error{
@@ -527,7 +484,7 @@ class View {
     uint32_t capacity = capacity_error.value();
 
     // Minimal bounds check before trying to read.
-    if (capacity < sizeof(container_header_type)) {
+    if (capacity < sizeof(zbi_header_t)) {
       return fitx::error(Error{"container header doesn't fit. Truncated?", capacity, {}});
     }
 
@@ -539,18 +496,17 @@ class View {
           Error{"cannot read container header", 0, std::move(header_error.error_value())}};
     }
 
-    container_header_type header = std::move(header_error).value();
-
-    auto check_error = CheckContainerHeader(header);
+    const header_type header(std::move(header_error.value()));
+    auto check_error = CheckContainerHeader(*header);
     if (check_error.is_error()) {
       return fitx::error(Error{check_error.error_value(), 0, {}});
     }
 
-    if (header.length > capacity - sizeof(header)) {
+    if (header->length > capacity - sizeof(*header)) {
       return fitx::error{Error{"container doesn't fit. Truncated?", 0, {}}};
     }
 
-    return fitx::ok(header);
+    return fitx::ok(*header);
   }
 
   /// After calling begin(), it's mandatory to call take_error() before
@@ -569,7 +525,7 @@ class View {
       return end();
     }
     // The container's "payload" is all the items.  Don't scan past it.
-    limit_ = static_cast<uint32_t>(sizeof(container_header_type)) + ContainerLength(header.value());
+    limit_ = static_cast<uint32_t>(sizeof(zbi_header_t) + header->length);
     return {this, false};
   }
 
@@ -583,13 +539,12 @@ class View {
       auto capacity_error = Traits::Capacity(storage());
       if (capacity_error.is_ok()) {
         uint32_t capacity = capacity_error.value();
-        if (capacity >= sizeof(container_header_type)) {
+        if (capacity >= sizeof(zbi_header_t)) {
           auto header_error = ContainerHeader(storage());
           if (header_error.is_ok()) {
-            container_header_type header = std::move(header_error).value();
-            const uint32_t length = ContainerLength(header);
-            if (length <= capacity - sizeof(header)) {
-              return sizeof(header) + length;
+            const header_type header(header_error.value());
+            if (header->length <= capacity - sizeof(zbi_header_t)) {
+              return sizeof(zbi_header_t) + header->length;
             }
           }
         }
@@ -624,7 +579,7 @@ class View {
   fitx::result<typename Traits::error_type> EditHeader(iterator& item, const zbi_header_t& header) {
     item.Assert(__func__);
     auto result = WriteHeader(header, item.item_offset(), item.value_.header->length);
-    if constexpr (item_header_wrapper::kCopy) {
+    if constexpr (header_type::kCopy) {
       if (result.is_ok()) {
         item.value_.header.stored_ = result.value();
       }
