@@ -140,7 +140,7 @@ pub fn serve_telemetry(
             select! {
                 event = receiver.next() => {
                     if let Some(event) = event {
-                        telemetry.handle_telemetry_event(event);
+                        telemetry.handle_telemetry_event(event).await;
                     }
                 }
                 _ = report_interval_stream.next() => {
@@ -157,7 +157,7 @@ pub fn serve_telemetry(
                     // the window ensures that Cobalt uses the last 24 hours of data
                     // rather than 23 hours.
                     if interval_tick % INTERVAL_TICKS_PER_HR == 0 {
-                        telemetry.signal_hr_passed();
+                        telemetry.signal_hr_passed().await;
                     }
                 }
             }
@@ -191,7 +191,7 @@ fn record_inspect_counters(
             let inspector = Inspector::new();
             {
                 let counters_mutex_guard = counters.lock();
-                let counters = counters_mutex_guard.windowed_stat();
+                let counters = counters_mutex_guard.windowed_stat(None);
                 inspect_insert!(inspector.root(), {
                     total_duration: counters.total_duration.into_nanos(),
                     connected_duration: counters.connected_duration.into_nanos(),
@@ -235,7 +235,6 @@ macro_rules! log_cobalt_1dot1_batch {
 
 pub struct Telemetry {
     dev_svc_proxy: fidl_fuchsia_wlan_device_service::DeviceServiceProxy,
-    cobalt_1dot1_proxy: fidl_fuchsia_metrics::MetricEventLoggerProxy,
     connection_state: ConnectionState,
     last_checked_connection_state: fasync::Time,
     stats_logger: StatsLogger,
@@ -249,7 +248,7 @@ impl Telemetry {
         cobalt_1dot1_proxy: fidl_fuchsia_metrics::MetricEventLoggerProxy,
         inspect_node: InspectNode,
     ) -> Self {
-        let stats_logger = StatsLogger::new();
+        let stats_logger = StatsLogger::new(cobalt_1dot1_proxy);
         record_inspect_counters(
             &inspect_node,
             "1d_counters",
@@ -263,7 +262,6 @@ impl Telemetry {
         let get_iface_stats_fail_count = inspect_node.create_uint("get_iface_stats_fail_count", 0);
         Self {
             dev_svc_proxy,
-            cobalt_1dot1_proxy,
             connection_state: ConnectionState::Idle,
             last_checked_connection_state: fasync::Time::now(),
             stats_logger,
@@ -276,13 +274,13 @@ impl Telemetry {
         let now = fasync::Time::now();
         let duration = now - self.last_checked_connection_state;
 
-        self.stats_logger.log_stat(StatOp::AddTotalDuration(duration));
-        self.stats_logger.log_queued_stats();
+        self.stats_logger.log_stat(StatOp::AddTotalDuration(duration)).await;
+        self.stats_logger.log_queued_stats().await;
 
         match &mut self.connection_state {
             ConnectionState::Idle => (),
             ConnectionState::Connected { iface_id, prev_counters } => {
-                self.stats_logger.log_stat(StatOp::AddConnectedDuration(duration));
+                self.stats_logger.log_stat(StatOp::AddConnectedDuration(duration)).await;
                 match self.dev_svc_proxy.get_iface_stats(*iface_id).await {
                     Ok((zx::sys::ZX_OK, Some(stats))) => {
                         if let Some(prev_counters) = prev_counters.as_ref() {
@@ -291,7 +289,8 @@ impl Telemetry {
                                 prev_counters,
                                 &stats,
                                 duration,
-                            );
+                            )
+                            .await;
                         }
                         let _prev = prev_counters.replace(*stats);
                     }
@@ -302,10 +301,11 @@ impl Telemetry {
                 }
             }
             ConnectionState::Disconnected { latest_no_saved_neighbor_time } => {
-                self.stats_logger.log_stat(StatOp::AddDowntimeDuration(duration));
+                self.stats_logger.log_stat(StatOp::AddDowntimeDuration(duration)).await;
                 if let Some(prev) = latest_no_saved_neighbor_time.take() {
                     self.stats_logger
-                        .log_stat(StatOp::AddDowntimeNoSavedNeighborDuration(now - prev));
+                        .log_stat(StatOp::AddDowntimeNoSavedNeighborDuration(now - prev))
+                        .await;
                     *latest_no_saved_neighbor_time = Some(now);
                 }
             }
@@ -313,7 +313,7 @@ impl Telemetry {
         self.last_checked_connection_state = now;
     }
 
-    pub fn handle_telemetry_event(&mut self, event: TelemetryEvent) {
+    pub async fn handle_telemetry_event(&mut self, event: TelemetryEvent) {
         let now = fasync::Time::now();
         match event {
             TelemetryEvent::NetworkSelectionDecision {
@@ -361,7 +361,7 @@ impl Telemetry {
                 self.last_checked_connection_state = now;
             }
             TelemetryEvent::Disconnected { track_subsequent_downtime } => {
-                self.stats_logger.log_stat(StatOp::AddDisconnectCount);
+                self.stats_logger.log_stat(StatOp::AddDisconnectCount).await;
 
                 let duration = now - self.last_checked_connection_state;
                 if let ConnectionState::Connected { .. } = self.connection_state {
@@ -378,6 +378,125 @@ impl Telemetry {
     }
 
     pub async fn log_daily_cobalt_metrics(&mut self) {
+        self.stats_logger.log_daily_cobalt_metrics().await;
+    }
+
+    pub async fn signal_hr_passed(&mut self) {
+        self.stats_logger.handle_hr_passed().await;
+    }
+}
+
+// Convert float to an integer in "ten thousandth" unit
+// Example: 0.02f64 (i.e. 2%) -> 200 per ten thousand
+fn float_to_ten_thousandth(value: f64) -> i64 {
+    (value * 10000f64) as i64
+}
+
+const PACKET_DROP_RATE_THRESHOLD: f64 = 0.02;
+
+async fn diff_and_log_counters(
+    stats_logger: &mut StatsLogger,
+    prev: &fidl_fuchsia_wlan_stats::IfaceStats,
+    current: &fidl_fuchsia_wlan_stats::IfaceStats,
+    duration: zx::Duration,
+) {
+    let (prev, current) = match (&prev.mlme_stats, &current.mlme_stats) {
+        (Some(ref prev), Some(ref current)) => match (prev.as_ref(), current.as_ref()) {
+            (MlmeStats::ClientMlmeStats(prev), MlmeStats::ClientMlmeStats(current)) => {
+                (prev, current)
+            }
+            _ => return,
+        },
+        _ => return,
+    };
+
+    let tx_total = current.tx_frame.in_.count - prev.tx_frame.in_.count;
+    let tx_drop = current.tx_frame.drop.count - prev.tx_frame.drop.count;
+    let rx_total = current.rx_frame.in_.count - prev.rx_frame.in_.count;
+    let rx_drop = current.rx_frame.drop.count - prev.rx_frame.drop.count;
+
+    let tx_drop_rate = if tx_total > 0 { tx_drop as f64 / tx_total as f64 } else { 0f64 };
+    let rx_drop_rate = if rx_total > 0 { rx_drop as f64 / rx_total as f64 } else { 0f64 };
+
+    if tx_drop_rate > PACKET_DROP_RATE_THRESHOLD {
+        stats_logger.log_stat(StatOp::AddTxHighPacketDropDuration(duration)).await;
+    }
+    if rx_drop_rate > PACKET_DROP_RATE_THRESHOLD {
+        stats_logger.log_stat(StatOp::AddRxHighPacketDropDuration(duration)).await;
+    }
+    if rx_total == 0 {
+        stats_logger.log_stat(StatOp::AddNoRxDuration(duration)).await;
+    }
+}
+
+struct StatsLogger {
+    cobalt_1dot1_proxy: fidl_fuchsia_metrics::MetricEventLoggerProxy,
+    last_1d_stats: Arc<Mutex<WindowedStats<StatCounters>>>,
+    last_7d_stats: Arc<Mutex<WindowedStats<StatCounters>>>,
+    stat_ops: Vec<StatOp>,
+    hr_tick: u32,
+}
+
+impl StatsLogger {
+    pub fn new(cobalt_1dot1_proxy: fidl_fuchsia_metrics::MetricEventLoggerProxy) -> Self {
+        Self {
+            cobalt_1dot1_proxy,
+            last_1d_stats: Arc::new(Mutex::new(WindowedStats::new(24))),
+            last_7d_stats: Arc::new(Mutex::new(WindowedStats::new(7))),
+            stat_ops: vec![],
+            hr_tick: 0,
+        }
+    }
+
+    async fn log_stat(&mut self, stat_op: StatOp) {
+        let zero = StatCounters::default();
+        let addition = match stat_op {
+            StatOp::AddTotalDuration(duration) => StatCounters { total_duration: duration, ..zero },
+            StatOp::AddConnectedDuration(duration) => {
+                StatCounters { connected_duration: duration, ..zero }
+            }
+            StatOp::AddDowntimeDuration(duration) => {
+                StatCounters { downtime_duration: duration, ..zero }
+            }
+            StatOp::AddDowntimeNoSavedNeighborDuration(duration) => {
+                StatCounters { downtime_no_saved_neighbor_duration: duration, ..zero }
+            }
+            StatOp::AddDisconnectCount => {
+                log_cobalt_1dot1!(
+                    self.cobalt_1dot1_proxy,
+                    log_occurrence,
+                    metrics::TOTAL_DISCONNECT_COUNT_METRIC_ID,
+                    1,
+                    &[],
+                );
+                StatCounters { disconnect_count: 1, ..zero }
+            }
+            StatOp::AddTxHighPacketDropDuration(duration) => {
+                StatCounters { tx_high_packet_drop_duration: duration, ..zero }
+            }
+            StatOp::AddRxHighPacketDropDuration(duration) => {
+                StatCounters { rx_high_packet_drop_duration: duration, ..zero }
+            }
+            StatOp::AddNoRxDuration(duration) => StatCounters { no_rx_duration: duration, ..zero },
+        };
+        self.last_1d_stats.lock().saturating_add(&addition);
+        self.last_7d_stats.lock().saturating_add(&addition);
+    }
+
+    // Queue stat operation to be logged later. This allows the caller to control the timing of
+    // when stats are logged. This ensures that various counters are not inconsistent with each
+    // other because one is logged early and the other one later.
+    fn queue_stat_op(&mut self, stat_op: StatOp) {
+        self.stat_ops.push(stat_op);
+    }
+
+    async fn log_queued_stats(&mut self) {
+        while let Some(stat_op) = self.stat_ops.pop() {
+            self.log_stat(stat_op).await;
+        }
+    }
+
+    async fn log_daily_cobalt_metrics(&mut self) {
         self.log_daily_1d_cobalt_metrics().await;
         self.log_daily_7d_cobalt_metrics().await;
     }
@@ -385,11 +504,9 @@ impl Telemetry {
     async fn log_daily_1d_cobalt_metrics(&mut self) {
         let mut metric_events = vec![];
 
-        let c = self.stats_logger.last_1d_stats.lock().windowed_stat();
-        let adjusted_downtime =
-            max(0.seconds(), c.downtime_duration - c.downtime_no_saved_neighbor_duration);
+        let c = self.last_1d_stats.lock().windowed_stat(None);
         let uptime_ratio = c.connected_duration.into_seconds() as f64
-            / (c.connected_duration + adjusted_downtime).into_seconds() as f64;
+            / (c.connected_duration + c.adjusted_downtime()).into_seconds() as f64;
         if uptime_ratio.is_finite() {
             metric_events.push(MetricEvent {
                 metric_id: metrics::CONNECTED_UPTIME_RATIO_METRIC_ID,
@@ -487,7 +604,7 @@ impl Telemetry {
     }
 
     async fn log_daily_7d_cobalt_metrics(&mut self) {
-        let c = self.stats_logger.last_7d_stats.lock().windowed_stat();
+        let c = self.last_7d_stats.lock().windowed_stat(None);
         let connected_dur_in_day = c.connected_duration.into_seconds() as f64 / (24 * 3600) as f64;
         let dpdc_ratio = c.disconnect_count as f64 / connected_dur_in_day;
         if dpdc_ratio.is_finite() {
@@ -513,116 +630,55 @@ impl Telemetry {
         }
     }
 
-    pub fn signal_hr_passed(&mut self) {
-        self.stats_logger.handle_hr_passed();
-    }
-}
+    async fn handle_hr_passed(&mut self) {
+        self.log_hourly_fleetwise_quality_cobalt_metrics().await;
 
-// Convert float to an integer in "ten thousandth" unit
-// Example: 0.02f64 (i.e. 2%) -> 200 per ten thousand
-fn float_to_ten_thousandth(value: f64) -> i64 {
-    (value * 10000f64) as i64
-}
-
-const PACKET_DROP_RATE_THRESHOLD: f64 = 0.02;
-
-fn diff_and_log_counters(
-    stats_logger: &mut StatsLogger,
-    prev: &fidl_fuchsia_wlan_stats::IfaceStats,
-    current: &fidl_fuchsia_wlan_stats::IfaceStats,
-    duration: zx::Duration,
-) {
-    let (prev, current) = match (&prev.mlme_stats, &current.mlme_stats) {
-        (Some(ref prev), Some(ref current)) => match (prev.as_ref(), current.as_ref()) {
-            (MlmeStats::ClientMlmeStats(prev), MlmeStats::ClientMlmeStats(current)) => {
-                (prev, current)
-            }
-            _ => return,
-        },
-        _ => return,
-    };
-
-    let tx_total = current.tx_frame.in_.count - prev.tx_frame.in_.count;
-    let tx_drop = current.tx_frame.drop.count - prev.tx_frame.drop.count;
-    let rx_total = current.rx_frame.in_.count - prev.rx_frame.in_.count;
-    let rx_drop = current.rx_frame.drop.count - prev.rx_frame.drop.count;
-
-    let tx_drop_rate = if tx_total > 0 { tx_drop as f64 / tx_total as f64 } else { 0f64 };
-    let rx_drop_rate = if rx_total > 0 { rx_drop as f64 / rx_total as f64 } else { 0f64 };
-
-    if tx_drop_rate > PACKET_DROP_RATE_THRESHOLD {
-        stats_logger.log_stat(StatOp::AddTxHighPacketDropDuration(duration));
-    }
-    if rx_drop_rate > PACKET_DROP_RATE_THRESHOLD {
-        stats_logger.log_stat(StatOp::AddRxHighPacketDropDuration(duration));
-    }
-    if rx_total == 0 {
-        stats_logger.log_stat(StatOp::AddNoRxDuration(duration));
-    }
-}
-
-struct StatsLogger {
-    last_1d_stats: Arc<Mutex<WindowedStats<StatCounters>>>,
-    last_7d_stats: Arc<Mutex<WindowedStats<StatCounters>>>,
-    stat_ops: Vec<StatOp>,
-    hr_tick: u32,
-}
-
-impl StatsLogger {
-    pub fn new() -> Self {
-        Self {
-            last_1d_stats: Arc::new(Mutex::new(WindowedStats::new(24))),
-            last_7d_stats: Arc::new(Mutex::new(WindowedStats::new(7))),
-            stat_ops: vec![],
-            hr_tick: 0,
-        }
-    }
-
-    fn log_stat(&mut self, stat_op: StatOp) {
-        let zero = StatCounters::default();
-        let addition = match stat_op {
-            StatOp::AddTotalDuration(duration) => StatCounters { total_duration: duration, ..zero },
-            StatOp::AddConnectedDuration(duration) => {
-                StatCounters { connected_duration: duration, ..zero }
-            }
-            StatOp::AddDowntimeDuration(duration) => {
-                StatCounters { downtime_duration: duration, ..zero }
-            }
-            StatOp::AddDowntimeNoSavedNeighborDuration(duration) => {
-                StatCounters { downtime_no_saved_neighbor_duration: duration, ..zero }
-            }
-            StatOp::AddDisconnectCount => StatCounters { disconnect_count: 1, ..zero },
-            StatOp::AddTxHighPacketDropDuration(duration) => {
-                StatCounters { tx_high_packet_drop_duration: duration, ..zero }
-            }
-            StatOp::AddRxHighPacketDropDuration(duration) => {
-                StatCounters { rx_high_packet_drop_duration: duration, ..zero }
-            }
-            StatOp::AddNoRxDuration(duration) => StatCounters { no_rx_duration: duration, ..zero },
-        };
-        self.last_1d_stats.lock().saturating_add(&addition);
-        self.last_7d_stats.lock().saturating_add(&addition);
-    }
-
-    // Queue stat operation to be logged later. This allows the caller to control the timing of
-    // when stats are logged. This ensures that various counters are not inconsistent with each
-    // other because one is logged early and the other one later.
-    fn queue_stat_op(&mut self, stat_op: StatOp) {
-        self.stat_ops.push(stat_op);
-    }
-
-    fn log_queued_stats(&mut self) {
-        while let Some(stat_op) = self.stat_ops.pop() {
-            self.log_stat(stat_op);
-        }
-    }
-
-    fn handle_hr_passed(&mut self) {
         self.hr_tick = (self.hr_tick + 1) % 24;
         self.last_1d_stats.lock().slide_window();
         if self.hr_tick == 0 {
             self.last_7d_stats.lock().slide_window();
         }
+    }
+
+    async fn log_hourly_fleetwise_quality_cobalt_metrics(&mut self) {
+        let mut metric_events = vec![];
+
+        // Get stats from the last hour
+        let c = self.last_1d_stats.lock().windowed_stat(Some(1));
+        let total_wlan_uptime = c.connected_duration + c.adjusted_downtime();
+
+        // Log the durations calculated in the last hour
+        metric_events.push(MetricEvent {
+            metric_id: metrics::TOTAL_WLAN_UPTIME_NEAR_SAVED_NETWORK_METRIC_ID,
+            event_codes: vec![],
+            payload: MetricEventPayload::IntegerValue(total_wlan_uptime.into_micros()),
+        });
+        metric_events.push(MetricEvent {
+            metric_id: metrics::TOTAL_CONNECTED_UPTIME_METRIC_ID,
+            event_codes: vec![],
+            payload: MetricEventPayload::IntegerValue(c.connected_duration.into_micros()),
+        });
+        metric_events.push(MetricEvent {
+            metric_id: metrics::TOTAL_TIME_WITH_HIGH_RX_PACKET_DROP_METRIC_ID,
+            event_codes: vec![],
+            payload: MetricEventPayload::IntegerValue(c.rx_high_packet_drop_duration.into_micros()),
+        });
+        metric_events.push(MetricEvent {
+            metric_id: metrics::TOTAL_TIME_WITH_HIGH_TX_PACKET_DROP_METRIC_ID,
+            event_codes: vec![],
+            payload: MetricEventPayload::IntegerValue(c.tx_high_packet_drop_duration.into_micros()),
+        });
+        metric_events.push(MetricEvent {
+            metric_id: metrics::TOTAL_TIME_WITH_NO_RX_METRIC_ID,
+            event_codes: vec![],
+            payload: MetricEventPayload::IntegerValue(c.no_rx_duration.into_micros()),
+        });
+
+        log_cobalt_1dot1_batch!(
+            self.cobalt_1dot1_proxy,
+            &mut metric_events.iter_mut(),
+            "log_hourly_fleetwise_quality_cobalt_metrics",
+        );
     }
 }
 
@@ -648,6 +704,12 @@ struct StatCounters {
     tx_high_packet_drop_duration: zx::Duration,
     rx_high_packet_drop_duration: zx::Duration,
     no_rx_duration: zx::Duration,
+}
+
+impl StatCounters {
+    fn adjusted_downtime(&self) -> zx::Duration {
+        max(0.seconds(), self.downtime_duration - self.downtime_no_saved_neighbor_duration)
+    }
 }
 
 // `Add` implementation is required to implement `SaturatingAdd` down below.
@@ -1183,7 +1245,7 @@ mod tests {
         test_helper
             .telemetry_sender
             .send(TelemetryEvent::Disconnected { track_subsequent_downtime: true });
-        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+        test_helper.drain_cobalt_events(&mut test_fut);
 
         assert_data_tree!(test_helper.inspector, root: {
             stats: contains {
@@ -1199,7 +1261,7 @@ mod tests {
         test_helper
             .telemetry_sender
             .send(TelemetryEvent::Disconnected { track_subsequent_downtime: false });
-        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+        test_helper.drain_cobalt_events(&mut test_fut);
 
         assert_data_tree!(test_helper.inspector, root: {
             stats: contains {
@@ -1624,6 +1686,176 @@ mod tests {
 
         let no_rx_time_ratio = ratios.get(&metrics::TIME_RATIO_WITH_NO_RX_METRIC_ID);
         assert_variant!(no_rx_time_ratio, Some(&MetricEventPayload::IntegerValue(0)));
+    }
+
+    #[fuchsia::test]
+    fn test_log_hourly_fleetwise_uptime_cobalt_metrics() {
+        let (mut test_helper, mut test_fut) = setup_test();
+
+        test_helper.telemetry_sender.send(TelemetryEvent::Connected { iface_id: IFACE_ID });
+        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+
+        test_helper.advance_by(1.hour(), test_fut.as_mut());
+
+        let total_wlan_uptime_durs: Vec<_> = test_helper
+            .cobalt_events
+            .iter()
+            .filter(|ev| ev.metric_id == metrics::TOTAL_WLAN_UPTIME_NEAR_SAVED_NETWORK_METRIC_ID)
+            .collect();
+        assert_eq!(total_wlan_uptime_durs.len(), 1);
+        assert_eq!(
+            total_wlan_uptime_durs[0].payload,
+            MetricEventPayload::IntegerValue(1.hour().into_micros())
+        );
+
+        let connected_durs: Vec<_> = test_helper
+            .cobalt_events
+            .drain(..)
+            .filter(|ev| ev.metric_id == metrics::TOTAL_CONNECTED_UPTIME_METRIC_ID)
+            .collect();
+        assert_eq!(connected_durs.len(), 1);
+        assert_eq!(
+            connected_durs[0].payload,
+            MetricEventPayload::IntegerValue(1.hour().into_micros())
+        );
+
+        test_helper.advance_by(30.minutes(), test_fut.as_mut());
+
+        test_helper
+            .telemetry_sender
+            .send(TelemetryEvent::Disconnected { track_subsequent_downtime: true });
+        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+
+        test_helper.advance_by(15.minutes(), test_fut.as_mut());
+
+        // Indicate that there's no saved neighbor in vicinity
+        test_helper.telemetry_sender.send(TelemetryEvent::NetworkSelectionDecision {
+            network_selection_type: NetworkSelectionType::Undirected,
+            num_candidates: Ok(0),
+            selected_any: false,
+        });
+        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+
+        test_helper.advance_by(15.minutes(), test_fut.as_mut());
+
+        let total_wlan_uptime_durs: Vec<_> = test_helper
+            .cobalt_events
+            .iter()
+            .filter(|ev| ev.metric_id == metrics::TOTAL_WLAN_UPTIME_NEAR_SAVED_NETWORK_METRIC_ID)
+            .collect();
+        assert_eq!(total_wlan_uptime_durs.len(), 1);
+        // 30 minutes connected uptime + 15 minutes downtime near saved network
+        assert_eq!(
+            total_wlan_uptime_durs[0].payload,
+            MetricEventPayload::IntegerValue(45.minutes().into_micros())
+        );
+
+        let connected_durs: Vec<_> = test_helper
+            .cobalt_events
+            .drain(..)
+            .filter(|ev| ev.metric_id == metrics::TOTAL_CONNECTED_UPTIME_METRIC_ID)
+            .collect();
+        assert_eq!(connected_durs.len(), 1);
+        assert_eq!(
+            connected_durs[0].payload,
+            MetricEventPayload::IntegerValue(30.minutes().into_micros())
+        );
+    }
+
+    #[fuchsia::test]
+    fn test_log_hourly_fleetwise_rx_tx_cobalt_metrics() {
+        let (mut test_helper, mut test_fut) = setup_test();
+        test_helper.set_iface_stats_req_handler(Box::new(|responder| {
+            let seed = fasync::Time::now().into_nanos() as u64 / 1000_000_000;
+            let mut iface_stats = fake_iface_stats(seed);
+            match &mut iface_stats.mlme_stats {
+                Some(stats) => match **stats {
+                    MlmeStats::ClientMlmeStats(ref mut stats) => {
+                        stats.tx_frame.in_.count = 10 * seed;
+                        // TX drop rate stops increasing at 10 min + TELEMETRY_QUERY_INTERVAL mark.
+                        // Because the first TELEMETRY_QUERY_INTERVAL doesn't count when
+                        // computing counters, this leads to 10 min of high TX drop rate.
+                        stats.tx_frame.drop.count = 3 * min(
+                            seed,
+                            (10.minutes() + TELEMETRY_QUERY_INTERVAL).into_seconds() as u64,
+                        );
+                        // RX drop rate stops increasing at 20 min + TELEMETRY_QUERY_INTERVAL mark.
+                        stats.rx_frame.drop.count = 3 * min(
+                            seed,
+                            (20.minutes() + TELEMETRY_QUERY_INTERVAL).into_seconds() as u64,
+                        );
+                        // RX total stops increasing at 45 min mark
+                        stats.rx_frame.in_.count =
+                            10 * min(seed, 45.minutes().into_seconds() as u64);
+                    }
+                    _ => panic!("expect ClientMlmeStats"),
+                },
+                _ => panic!("expect mlme_stats to be available"),
+            }
+            responder
+                .send(zx::sys::ZX_OK, Some(&mut iface_stats))
+                .expect("expect sending IfaceStats response to succeed");
+        }));
+
+        test_helper.telemetry_sender.send(TelemetryEvent::Connected { iface_id: IFACE_ID });
+        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+
+        test_helper.advance_by(1.hour(), test_fut.as_mut());
+
+        let rx_high_drop_durs: Vec<_> = test_helper
+            .cobalt_events
+            .iter()
+            .filter(|ev| ev.metric_id == metrics::TOTAL_TIME_WITH_HIGH_RX_PACKET_DROP_METRIC_ID)
+            .collect();
+        assert_eq!(rx_high_drop_durs.len(), 1);
+        assert_eq!(
+            rx_high_drop_durs[0].payload,
+            MetricEventPayload::IntegerValue(20.minutes().into_micros())
+        );
+
+        let tx_high_drop_durs: Vec<_> = test_helper
+            .cobalt_events
+            .iter()
+            .filter(|ev| ev.metric_id == metrics::TOTAL_TIME_WITH_HIGH_TX_PACKET_DROP_METRIC_ID)
+            .collect();
+        assert_eq!(tx_high_drop_durs.len(), 1);
+        assert_eq!(
+            tx_high_drop_durs[0].payload,
+            MetricEventPayload::IntegerValue(10.minutes().into_micros())
+        );
+
+        let no_rx_durs: Vec<_> = test_helper
+            .cobalt_events
+            .iter()
+            .filter(|ev| ev.metric_id == metrics::TOTAL_TIME_WITH_NO_RX_METRIC_ID)
+            .collect();
+        assert_eq!(no_rx_durs.len(), 1);
+        assert_eq!(
+            no_rx_durs[0].payload,
+            MetricEventPayload::IntegerValue(15.minutes().into_micros())
+        );
+    }
+
+    #[fuchsia::test]
+    fn test_log_disconnect_metric() {
+        let (mut test_helper, mut test_fut) = setup_test();
+        test_helper.telemetry_sender.send(TelemetryEvent::Connected { iface_id: IFACE_ID });
+        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+
+        test_helper.advance_by(30.minutes(), test_fut.as_mut());
+
+        test_helper
+            .telemetry_sender
+            .send(TelemetryEvent::Disconnected { track_subsequent_downtime: true });
+        test_helper.drain_cobalt_events(&mut test_fut);
+
+        let disconnect_counts: Vec<_> = test_helper
+            .cobalt_events
+            .iter()
+            .filter(|ev| ev.metric_id == metrics::TOTAL_DISCONNECT_COUNT_METRIC_ID)
+            .collect();
+        assert_eq!(disconnect_counts.len(), 1);
+        assert_eq!(disconnect_counts[0].payload, MetricEventPayload::Count(1));
     }
 
     struct TestHelper {

@@ -18,9 +18,12 @@ impl<T: Default + SaturatingAdd> WindowedStats<T> {
         Self { stats, capacity }
     }
 
-    pub fn windowed_stat(&self) -> T {
+    /// Get stat of all the windows that are still kept if `n` is None.
+    /// Otherwise, get stat for up to `n` windows.
+    pub fn windowed_stat(&self, n: Option<usize>) -> T {
         let mut total = T::default();
-        for item in self.stats.iter() {
+        let n = n.unwrap_or(self.stats.len());
+        for item in self.stats.iter().rev().take(n) {
             total = total.saturating_add(item);
         }
         total
@@ -45,35 +48,35 @@ mod tests {
     use super::*;
 
     #[test]
-    fn windowed_stats_partial_period() {
+    fn windowed_stats_some_windows_populated() {
         let mut windowed_stats = WindowedStats::<u32>::new(3);
         windowed_stats.saturating_add(&1u32);
         windowed_stats.saturating_add(&2u32);
-        assert_eq!(windowed_stats.windowed_stat(), 3u32);
+        assert_eq!(windowed_stats.windowed_stat(None), 3u32);
 
         windowed_stats.slide_window();
         windowed_stats.saturating_add(&3u32);
-        assert_eq!(windowed_stats.windowed_stat(), 6u32);
+        assert_eq!(windowed_stats.windowed_stat(None), 6u32);
     }
 
     #[test]
-    fn windowed_stats_full_period() {
+    fn windowed_stats_all_windows_populated() {
         let mut windowed_stats = WindowedStats::<u32>::new(3);
         windowed_stats.saturating_add(&1u32);
-        assert_eq!(windowed_stats.windowed_stat(), 1u32);
+        assert_eq!(windowed_stats.windowed_stat(None), 1u32);
 
         windowed_stats.slide_window();
         windowed_stats.saturating_add(&2u32);
-        assert_eq!(windowed_stats.windowed_stat(), 3u32);
+        assert_eq!(windowed_stats.windowed_stat(None), 3u32);
 
         windowed_stats.slide_window();
         windowed_stats.saturating_add(&3u32);
-        assert_eq!(windowed_stats.windowed_stat(), 6u32);
+        assert_eq!(windowed_stats.windowed_stat(None), 6u32);
 
         windowed_stats.slide_window();
         windowed_stats.saturating_add(&10u32);
         // Value 1 from the first window is excluded
-        assert_eq!(windowed_stats.windowed_stat(), 15u32);
+        assert_eq!(windowed_stats.windowed_stat(None), 15u32);
     }
 
     #[test]
@@ -86,11 +89,11 @@ mod tests {
 
         windowed_stats.slide_window();
         windowed_stats.saturating_add(&(u32::MAX - 20u32));
-        assert_eq!(windowed_stats.windowed_stat(), u32::MAX);
+        assert_eq!(windowed_stats.windowed_stat(None), u32::MAX);
 
         windowed_stats.slide_window();
         windowed_stats.saturating_add(&9u32);
-        assert_eq!(windowed_stats.windowed_stat(), u32::MAX - 1);
+        assert_eq!(windowed_stats.windowed_stat(None), u32::MAX - 1);
     }
 
     #[test]
@@ -99,16 +102,30 @@ mod tests {
         // Overflow in a single window
         windowed_stats.saturating_add(&u32::MAX);
         windowed_stats.saturating_add(&1u32);
-        assert_eq!(windowed_stats.windowed_stat(), u32::MAX);
+        assert_eq!(windowed_stats.windowed_stat(None), u32::MAX);
 
         windowed_stats.slide_window();
         windowed_stats.saturating_add(&10u32);
-        assert_eq!(windowed_stats.windowed_stat(), u32::MAX);
+        assert_eq!(windowed_stats.windowed_stat(None), u32::MAX);
         windowed_stats.slide_window();
         windowed_stats.saturating_add(&5u32);
-        assert_eq!(windowed_stats.windowed_stat(), u32::MAX);
+        assert_eq!(windowed_stats.windowed_stat(None), u32::MAX);
         windowed_stats.slide_window();
         windowed_stats.saturating_add(&3u32);
-        assert_eq!(windowed_stats.windowed_stat(), 18u32);
+        assert_eq!(windowed_stats.windowed_stat(None), 18u32);
+    }
+
+    #[test]
+    fn windowed_stats_n_arg() {
+        let mut windowed_stats = WindowedStats::<u32>::new(3);
+        windowed_stats.saturating_add(&1u32);
+        assert_eq!(windowed_stats.windowed_stat(Some(0)), 0u32);
+        assert_eq!(windowed_stats.windowed_stat(Some(1)), 1u32);
+        assert_eq!(windowed_stats.windowed_stat(Some(2)), 1u32);
+
+        windowed_stats.slide_window();
+        windowed_stats.saturating_add(&2u32);
+        assert_eq!(windowed_stats.windowed_stat(Some(1)), 2u32);
+        assert_eq!(windowed_stats.windowed_stat(Some(2)), 3u32);
     }
 }
