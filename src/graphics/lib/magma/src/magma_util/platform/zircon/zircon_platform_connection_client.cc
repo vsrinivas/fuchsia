@@ -128,40 +128,25 @@ class ZirconPlatformPerfCountPoolClient : public PlatformPerfCountPoolClient {
   zx::channel server_endpoint_;
 };
 
-class PrimaryWrapper::AsyncHandler
-    : public fidl::WireAsyncEventHandler<fuchsia_gpu_magma::Primary> {
- public:
-  // Parent outlives the object instance.
-  AsyncHandler(PrimaryWrapper* parent) : parent_(parent) {}
+void PrimaryWrapper::on_fidl_error(::fidl::UnbindInfo info) {
+  unbind_info_ = info;
+  loop_.Quit();
+}
 
-  void Unbound(::fidl::UnbindInfo info) override {
-    unbind_info_ = info;
-    parent_->loop_.Shutdown();
-  }
+void PrimaryWrapper::OnNotifyMessagesConsumed(
+    ::fidl::WireResponse<::fuchsia_gpu_magma::Primary::OnNotifyMessagesConsumed>* event) {
+  inflight_count_ -= event->count;
+}
 
-  auto& unbind_info() { return unbind_info_; }
-
-  void OnNotifyMessagesConsumed(
-      ::fidl::WireResponse<::fuchsia_gpu_magma::Primary::OnNotifyMessagesConsumed>* event)
-      override {
-    parent_->inflight_count_ -= event->count;
-  }
-
-  void OnNotifyMemoryImported(
-      ::fidl::WireResponse<::fuchsia_gpu_magma::Primary::OnNotifyMemoryImported>* event) override {
-    parent_->inflight_bytes_ -= event->bytes;
-  }
-
- private:
-  PrimaryWrapper* parent_;
-  std::optional<fidl::UnbindInfo> unbind_info_;
-};
+void PrimaryWrapper::OnNotifyMemoryImported(
+    ::fidl::WireResponse<::fuchsia_gpu_magma::Primary::OnNotifyMemoryImported>* event) {
+  inflight_bytes_ -= event->bytes;
+}
 
 PrimaryWrapper::PrimaryWrapper(zx::channel channel, uint64_t max_inflight_messages,
                                uint64_t max_inflight_bytes)
     : loop_(&kAsyncLoopConfigNeverAttachToThread),
-      async_handler_(std::make_shared<AsyncHandler>(this)),
-      client_(std::move(channel), loop_.dispatcher(), async_handler_),
+      client_(std::move(channel), loop_.dispatcher(), this),
       max_inflight_messages_(max_inflight_messages),
       max_inflight_bytes_(max_inflight_bytes) {
   if (max_inflight_messages == 0 || max_inflight_bytes == 0)
@@ -492,7 +477,7 @@ magma_status_t PrimaryWrapper::GetError() {
     // Run the loop to process the unbind
     loop_.RunUntilIdle();
 
-    auto unbind_info = async_handler_->unbind_info();
+    auto unbind_info = unbind_info_;
     DASSERT(unbind_info);
     if (unbind_info) {
       DMESSAGE("Primary protocol unbind_info: %s", unbind_info->FormatDescription().c_str());

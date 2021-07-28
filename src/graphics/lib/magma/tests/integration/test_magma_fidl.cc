@@ -25,11 +25,11 @@ inline uint64_t page_size() { return sysconf(_SC_PAGESIZE); }
 //
 
 using DeviceClient = fidl::WireSyncClient<fuchsia_gpu_magma::Device>;
-using PrimaryClient = fidl::Client<fuchsia_gpu_magma::Primary>;
+using PrimaryClient = fidl::WireClient<fuchsia_gpu_magma::Primary>;
 
 class TestAsyncHandler : public fidl::WireAsyncEventHandler<fuchsia_gpu_magma::Primary> {
  public:
-  void Unbound(::fidl::UnbindInfo info) override { unbind_info_ = info; }
+  void on_fidl_error(::fidl::UnbindInfo info) override { unbind_info_ = info; }
 
   auto& unbind_info() { return unbind_info_; }
 
@@ -101,10 +101,8 @@ class TestMagmaFidl : public gtest::RealLoopFixture {
     auto wire_result = device_.Connect(client_id);
     ASSERT_TRUE(wire_result.ok());
 
-    async_handler_ = std::make_shared<TestAsyncHandler>();
-
     primary_ = PrimaryClient(std::move(wire_result.Unwrap()->primary_channel), dispatcher(),
-                             async_handler_);
+                             &async_handler_);
     ASSERT_TRUE(primary_.is_valid());
 
     notification_channel_ = std::move(wire_result.Unwrap()->notification_channel);
@@ -117,13 +115,13 @@ class TestMagmaFidl : public gtest::RealLoopFixture {
   bool CheckForUnbind() {
     primary_->Sync_Sync();
     RunLoopUntilIdle();
-    return async_handler_->unbind_info().has_value();
+    return async_handler_.unbind_info().has_value();
   }
 
   DeviceClient device_;
   uint64_t vendor_id_ = 0;
   uint32_t max_inflight_messages_ = 0;
-  std::shared_ptr<TestAsyncHandler> async_handler_;
+  TestAsyncHandler async_handler_;
   PrimaryClient primary_;
   zx::channel notification_channel_;
 };
@@ -506,7 +504,7 @@ TEST_F(TestMagmaFidl, FlowControl) {
       continue;
 
     RunLoopUntil([&messages_inflight, this]() {
-      uint64_t count = async_handler_->get_messages_consumed_and_reset();
+      uint64_t count = async_handler_.get_messages_consumed_and_reset();
       if (count) {
         messages_inflight -= count;
         EXPECT_GE(messages_inflight, 0u);

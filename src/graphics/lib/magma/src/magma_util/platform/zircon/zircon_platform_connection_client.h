@@ -15,9 +15,9 @@
 
 namespace magma {
 
-// This wrapper gates access to the llcpp SyncClient, to ensure that all messages sent
+// This wrapper gates access to the llcpp client, to ensure that all messages sent
 // are subject to flow control.
-class PrimaryWrapper {
+class PrimaryWrapper : public fidl::WireAsyncEventHandler<fuchsia_gpu_magma::Primary> {
  public:
   PrimaryWrapper(zx::channel channel, uint64_t max_inflight_messages, uint64_t max_inflight_bytes);
 
@@ -71,10 +71,15 @@ class PrimaryWrapper {
   void FlowControl(uint64_t new_bytes = 0) MAGMA_REQUIRES(flow_control_mutex_);
   void UpdateFlowControl(uint64_t new_bytes = 0) MAGMA_REQUIRES(flow_control_mutex_);
 
+  void on_fidl_error(::fidl::UnbindInfo info) override;
+  void OnNotifyMessagesConsumed(
+      ::fidl::WireResponse<::fuchsia_gpu_magma::Primary::OnNotifyMessagesConsumed>* event) override;
+  void OnNotifyMemoryImported(
+      ::fidl::WireResponse<::fuchsia_gpu_magma::Primary::OnNotifyMemoryImported>* event) override;
+
   async::Loop loop_;
-  class AsyncHandler;
-  std::shared_ptr<AsyncHandler> async_handler_;
-  fidl::Client<fuchsia_gpu_magma::Primary> client_;
+  fidl::WireSharedClient<fuchsia_gpu_magma::Primary> client_;
+  std::optional<fidl::UnbindInfo> unbind_info_;
 
   const uint64_t max_inflight_messages_;
   const uint64_t max_inflight_bytes_;

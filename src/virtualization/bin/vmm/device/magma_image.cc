@@ -50,10 +50,7 @@ class AsyncHandler : public fidl::WireAsyncEventHandler<fuchsia_sysmem::BufferCo
  public:
   AsyncHandler() : loop_(&kAsyncLoopConfigNeverAttachToThread) {}
 
-  void Unbound(::fidl::UnbindInfo info) override {
-    unbind_info_ = info;
-    loop_.Quit();
-  }
+  void on_fidl_error(::fidl::UnbindInfo info) override { unbind_info_ = info; }
 
   async::Loop& loop() { return loop_; }
 
@@ -93,8 +90,8 @@ class VulkanImageCreator {
   fidl::WireSyncClient<fuchsia_sysmem::BufferCollectionToken> local_token_;
   fidl::WireSyncClient<fuchsia_sysmem::BufferCollectionToken> vulkan_token_;
   fidl::ClientEnd<fuchsia_sysmem::BufferCollectionToken> scenic_token_endpoint_;
-  std::shared_ptr<AsyncHandler> async_handler_;
-  fidl::Client<fuchsia_sysmem::BufferCollection> collection_;
+  std::unique_ptr<AsyncHandler> async_handler_;
+  fidl::WireSharedClient<fuchsia_sysmem::BufferCollection> collection_;
   fuchsia_ui_composition::wire::BufferCollectionImportToken scenic_import_token_;
 };
 
@@ -346,7 +343,7 @@ vk::Result VulkanImageCreator::CreateCollection(vk::ImageCreateInfo* image_creat
   }
 
   // Set local constraints.
-  async_handler_ = std::make_shared<AsyncHandler>();
+  async_handler_ = std::make_unique<AsyncHandler>();
 
   {
     auto endpoints = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
@@ -363,7 +360,8 @@ vk::Result VulkanImageCreator::CreateCollection(vk::ImageCreateInfo* image_creat
     }
 
     collection_.Bind(std::move(endpoints->client), async_handler_->loop().dispatcher(),
-                     async_handler_);
+                     async_handler_.get(),
+                     fidl::ObserveTeardown([&loop = async_handler_->loop()] { loop.Quit(); }));
   }
 
   {
@@ -418,9 +416,10 @@ zx_status_t VulkanImageCreator::GetImageInfo(uint32_t width, uint32_t height, zx
 
   collection_->Close();
 
-  // Run the loop to ensure local unbind completes and async_handler_ is freed
-  collection_.Unbind();
-  async_handler_->loop().RunUntilIdle();
+  // Run the loop to ensure local unbind completes.
+  collection_.AsyncTeardown();
+  // This will be interrupted by `loop.Quit()`.
+  async_handler_->loop().Run();
 
   if (!result.ok()) {
     LOG_VERBOSE("WaitForBuffersAllocated failed: %d", result.status());
