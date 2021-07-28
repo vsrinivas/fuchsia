@@ -23,6 +23,26 @@ executable("config_unittest_exe") {
   ]
 }
 
+executable("device_id_provider_unittest_exe") {
+  testonly = true
+
+  # "device_id_provider_unittest" is used elsewhere in Forensics.
+  output_dir = target_out_dir
+
+  sources = [ "device_id_provider_unittest.cc" ]
+
+  deps = [
+    "//sdk/lib/fit-promise",
+    "//src/developer/forensics/feedback:device_id_provider",
+    "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//src/developer/forensics/testing:unit_test_fixture",
+    "//src/developer/forensics/testing/stubs:device_id_provider",
+    "//src/developer/forensics/utils:errors",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
 executable("feedback_integration_test_exe") {
   testonly = true
 
@@ -235,6 +255,14 @@ fuchsia_component("config_unittest") {
   deps = [ ":config_unittest_exe" ]
 }
 
+fuchsia_component("device_id_provider_unittest") {
+  testonly = true
+
+  manifest = "meta/device_id_provider_unittest.cml"
+
+  deps = [ ":device_id_provider_unittest_exe" ]
+}
+
 fuchsia_component("feedback_integration_test") {
   testonly = true
 
@@ -315,6 +343,7 @@ fuchsia_component("namespace_init_unittest") {
 fuchsia_test_package("feedback-tests") {
   test_components = [
     ":config_unittest",
+    ":device_id_provider_unittest",
     ":feedback_integration_test",
     ":feedback_integration_test_invalid_crash_reports_override_config",
     ":feedback_integration_test_valid_crash_reports_override_config",

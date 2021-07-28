@@ -23,6 +23,7 @@
 #include <gtest/gtest.h>
 
 #include "garnet/public/lib/fostr/fidl/fuchsia/math/formatting.h"
+#include "src/developer/forensics/feedback/device_id_provider.h"
 #include "src/developer/forensics/feedback_data/annotations/types.h"
 #include "src/developer/forensics/feedback_data/attachments/types.h"
 #include "src/developer/forensics/feedback_data/constants.h"
@@ -138,6 +139,8 @@ MATCHER_P(MatchesGetScreenshotResponse, expected, "matches " + std::string(expec
 class DataProviderTest : public UnitTestFixture {
  public:
   void SetUp() override {
+    device_id_provider_ =
+        std::make_unique<feedback::RemoteDeviceIdProvider>(dispatcher(), services());
     cobalt_ = std::make_unique<cobalt::Logger>(dispatcher(), services(), &clock_);
     SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
 
@@ -152,7 +155,8 @@ class DataProviderTest : public UnitTestFixture {
     datastore_ = std::make_unique<Datastore>(
         dispatcher(), services(), cobalt_.get(), annotation_allowlist, attachment_allowlist,
         Error::kMissingValue, Error::kMissingValue, Error::kMissingValue, Error::kMissingValue,
-        Error::kMissingValue, Error::kMissingValue, inspect_data_budget_.get());
+        Error::kMissingValue, Error::kMissingValue, device_id_provider_.get(),
+        inspect_data_budget_.get());
     data_provider_ = std::make_unique<DataProvider>(
         dispatcher(), services(), &clock_, /*is_first_instance=*/true, annotation_allowlist,
         attachment_allowlist, cobalt_.get(), datastore_.get(), inspect_data_budget_.get());
@@ -211,6 +215,7 @@ class DataProviderTest : public UnitTestFixture {
 
  private:
   timekeeper::TestClock clock_;
+  std::unique_ptr<feedback::DeviceIdProvider> device_id_provider_;
   std::unique_ptr<cobalt::Logger> cobalt_;
   std::unique_ptr<Datastore> datastore_;
 

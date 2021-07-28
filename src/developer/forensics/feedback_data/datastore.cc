@@ -9,6 +9,7 @@
 
 #include <utility>
 
+#include "src/developer/forensics/feedback/device_id_provider.h"
 #include "src/developer/forensics/feedback_data/annotations/annotation_provider_factory.h"
 #include "src/developer/forensics/feedback_data/annotations/static_annotations.h"
 #include "src/developer/forensics/feedback_data/annotations/types.h"
@@ -32,7 +33,8 @@ Datastore::Datastore(
     const ErrorOr<std::string>& previous_boot_id, const ErrorOr<std::string>& current_build_version,
     const ErrorOr<std::string>& previous_build_version,
     const ErrorOr<std::string>& last_reboot_reason, const ErrorOr<std::string>& last_reboot_uptime,
-    InspectDataBudget* inspect_data_budget)
+    feedback::DeviceIdProvider* device_id_provider, InspectDataBudget* inspect_data_budget)
+
     : dispatcher_(dispatcher),
       services_(services),
       cobalt_(cobalt),
@@ -42,7 +44,8 @@ Datastore::Datastore(
           annotation_allowlist_, current_boot_id, previous_boot_id, current_build_version,
           previous_build_version, last_reboot_reason, last_reboot_uptime)),
       static_attachments_(feedback_data::GetStaticAttachments(attachment_allowlist_)),
-      reusable_annotation_providers_(GetReusableProviders(dispatcher_, services_, cobalt_)),
+      reusable_annotation_providers_(
+          GetReusableProviders(dispatcher_, services_, device_id_provider, cobalt_)),
       inspect_data_budget_(inspect_data_budget) {
   FX_CHECK(annotation_allowlist_.size() <= kMaxNumPlatformAnnotations)
       << "Requesting more platform annotations than the maximum number of platform annotations "
@@ -60,6 +63,7 @@ Datastore::Datastore(
 
 Datastore::Datastore(async_dispatcher_t* dispatcher,
                      std::shared_ptr<sys::ServiceDirectory> services,
+                     feedback::DeviceIdProvider* device_id_provider,
                      const char* limit_data_flag_path)
     : dispatcher_(dispatcher),
       services_(services),
@@ -70,7 +74,8 @@ Datastore::Datastore(async_dispatcher_t* dispatcher,
       attachment_allowlist_({}),
       static_annotations_({}),
       static_attachments_({}),
-      reusable_annotation_providers_(GetReusableProviders(dispatcher_, services_, cobalt_)) {}
+      reusable_annotation_providers_(
+          GetReusableProviders(dispatcher_, services_, device_id_provider, cobalt_)) {}
 
 ::fpromise::promise<Annotations> Datastore::GetAnnotations(const zx::duration timeout) {
   if (annotation_allowlist_.empty() && non_platform_annotations_.empty()) {

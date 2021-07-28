@@ -53,6 +53,7 @@ class MainService {
   timekeeper::Clock* clock_;
   inspect::Node* inspect_root_;
   cobalt::Logger* cobalt_;
+  RemoteDeviceIdProvider device_id_provider_;
 
   FeedbackData feedback_data_;
   CrashReports crash_reports_;

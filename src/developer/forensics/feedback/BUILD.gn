@@ -45,6 +45,27 @@ source_set("constants") {
   ]
 }
 
+source_set("device_id_provider") {
+  sources = [
+    "device_id_provider.cc",
+    "device_id_provider.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/lib/fit-promise",
+    "//sdk/lib/sys/cpp",
+    "//src/developer/forensics/utils:errors",
+    "//src/developer/forensics/utils/fidl:hanging_get_ptr",
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/zx",
+  ]
+  deps = [
+    "//src/lib/files",
+    "//src/lib/uuid",
+  ]
+}
+
 source_set("main") {
   sources = [
     "main.cc",
@@ -84,6 +105,7 @@ source_set("main_service") {
   public_deps = [
     ":config",
     ":constants",
+    ":device_id_provider",
     ":namespace_init",
     "reboot_log",
     "//sdk/fidl/fuchsia.feedback",

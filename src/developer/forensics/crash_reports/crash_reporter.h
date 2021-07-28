@@ -25,8 +25,8 @@
 #include "src/developer/forensics/crash_reports/report_id.h"
 #include "src/developer/forensics/crash_reports/reporting_policy_watcher.h"
 #include "src/developer/forensics/crash_reports/snapshot_manager.h"
+#include "src/developer/forensics/feedback/device_id_provider.h"
 #include "src/developer/forensics/utils/errors.h"
-#include "src/developer/forensics/utils/fidl/device_id_provider_ptr.h"
 #include "src/developer/forensics/utils/utc_time_provider.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/timekeeper/clock.h"
@@ -40,7 +40,8 @@ class CrashReporter : public fuchsia::feedback::CrashReporter {
                 const std::shared_ptr<sys::ServiceDirectory>& services, timekeeper::Clock* clock,
                 const std::shared_ptr<InfoContext>& info_context, Config config,
                 AnnotationMap default_annotations, CrashRegister* crash_register, LogTags* tags,
-                SnapshotManager* snapshot_manager, CrashServer* crash_server);
+                SnapshotManager* snapshot_manager, CrashServer* crash_server,
+                feedback::DeviceIdProvider* device_id_provider);
 
   // The crash reporter should stop uploading crash reports and persist any future and pending crash
   // reports.
@@ -68,7 +69,7 @@ class CrashReporter : public fuchsia::feedback::CrashReporter {
   CrashReporterInfo info_;
   NetworkWatcher network_watcher_;
   std::unique_ptr<ReportingPolicyWatcher> reporting_policy_watcher_;
-  fidl::DeviceIdProviderPtr device_id_provider_ptr_;
+  feedback::DeviceIdProvider* device_id_provider_;
 
   ReportId next_report_id_;
 };

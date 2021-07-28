@@ -29,6 +29,7 @@
 #include "src/developer/forensics/crash_reports/constants.h"
 #include "src/developer/forensics/crash_reports/info/info_context.h"
 #include "src/developer/forensics/crash_reports/tests/stub_crash_server.h"
+#include "src/developer/forensics/feedback/device_id_provider.h"
 #include "src/developer/forensics/testing/fakes/privacy_settings.h"
 #include "src/developer/forensics/testing/stubs/channel_control.h"
 #include "src/developer/forensics/testing/stubs/cobalt_logger_factory.h"
@@ -158,11 +159,13 @@ class CrashReporterTest : public UnitTestFixture {
         kGarbageCollectedSnapshotsPath, StorageSize::Gigabytes(1u), StorageSize::Gigabytes(1u)),
     crash_server_ =
         std::make_unique<StubCrashServer>(dispatcher(), services(), upload_attempt_results);
+    device_id_provider_ =
+        std::make_unique<feedback::RemoteDeviceIdProvider>(dispatcher(), services());
 
     crash_reporter_ = std::make_unique<CrashReporter>(
         dispatcher(), services(), &clock_, info_context_, config,
         AnnotationMap({{"osName", "Fuchsia"}, {"osVersion", kBuildVersion}}), crash_register_.get(),
-        &tags_, snapshot_manager_.get(), crash_server_.get());
+        &tags_, snapshot_manager_.get(), crash_server_.get(), device_id_provider_.get());
     FX_CHECK(crash_reporter_);
   }
 
@@ -417,6 +420,7 @@ class CrashReporterTest : public UnitTestFixture {
  protected:
   std::unique_ptr<SnapshotManager> snapshot_manager_;
   std::unique_ptr<CrashRegister> crash_register_;
+  std::unique_ptr<feedback::DeviceIdProvider> device_id_provider_;
   std::unique_ptr<CrashReporter> crash_reporter_;
 };
 

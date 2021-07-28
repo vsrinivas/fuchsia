@@ -24,11 +24,11 @@ namespace feedback_data {
 // Get the annotation providers that will collect the annotations in |allowlist_|.
 std::vector<std::unique_ptr<AnnotationProvider>> GetReusableProviders(
     async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-    cobalt::Logger* cobalt) {
+    feedback::DeviceIdProvider* device_id_provider, cobalt::Logger* cobalt) {
   std::vector<std::unique_ptr<AnnotationProvider>> providers;
 
   providers.push_back(std::make_unique<BoardInfoProvider>(dispatcher, services, cobalt));
-  providers.push_back(std::make_unique<DeviceIdProviderClient>(dispatcher, services));
+  providers.push_back(std::make_unique<DeviceIdProviderClient>(device_id_provider));
   providers.push_back(std::make_unique<ProductInfoProvider>(dispatcher, services, cobalt));
   providers.push_back(std::make_unique<TimeProvider>(std::make_unique<timekeeper::SystemClock>()));
 

@@ -19,9 +19,8 @@ const AnnotationKeys kSupportedAnnotations = {
 
 }  // namespace
 
-DeviceIdProviderClient::DeviceIdProviderClient(async_dispatcher_t* dispatcher,
-                                               std::shared_ptr<sys::ServiceDirectory> services)
-    : device_id_provider_ptr_(dispatcher, services) {}
+DeviceIdProviderClient::DeviceIdProviderClient(feedback::DeviceIdProvider* device_id_provider)
+    : device_id_provider_(device_id_provider) {}
 
 ::fpromise::promise<Annotations> DeviceIdProviderClient::GetAnnotations(
     zx::duration timeout, const AnnotationKeys& allowlist) {
@@ -30,7 +29,7 @@ DeviceIdProviderClient::DeviceIdProviderClient(async_dispatcher_t* dispatcher,
     return ::fpromise::make_result_promise<Annotations>(::fpromise::ok<Annotations>({}));
   }
 
-  return device_id_provider_ptr_.GetId(timeout).then(
+  return device_id_provider_->GetId(timeout).then(
       [=](::fpromise::result<std::string, Error>& result) {
         Annotations annotations;
         if (result.is_error()) {

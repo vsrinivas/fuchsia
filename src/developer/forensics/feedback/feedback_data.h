@@ -18,6 +18,7 @@
 #include <memory>
 
 #include "src/developer/forensics/feedback/constants.h"
+#include "src/developer/forensics/feedback/device_id_provider.h"
 #include "src/developer/forensics/feedback_data/config.h"
 #include "src/developer/forensics/feedback_data/data_provider.h"
 #include "src/developer/forensics/feedback_data/data_provider_controller.h"
@@ -50,7 +51,7 @@ class FeedbackData {
 
   FeedbackData(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
                timekeeper::Clock* clock, inspect::Node* inspect_root, cobalt::Logger* cobalt,
-               Options options);
+               DeviceIdProvider* device_id_provider, Options options);
 
   void Handle(::fidl::InterfaceRequest<fuchsia::feedback::ComponentDataRegister> request,
               ::fit::function<void(zx_status_t)> error_handler);

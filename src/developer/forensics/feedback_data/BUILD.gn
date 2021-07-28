@@ -132,6 +132,7 @@ source_set("datastore") {
     ":inspect_budget",
     "//sdk/lib/fit-promise",
     "//sdk/lib/sys/cpp",
+    "//src/developer/forensics/feedback:device_id_provider",
     "//src/developer/forensics/feedback_data/annotations:annotation_providers",
     "//src/developer/forensics/feedback_data/annotations:types",
     "//src/developer/forensics/feedback_data/attachments:types",

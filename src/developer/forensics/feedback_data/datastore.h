@@ -12,6 +12,7 @@
 
 #include <memory>
 
+#include "src/developer/forensics/feedback/device_id_provider.h"
 #include "src/developer/forensics/feedback_data/annotations/annotation_provider.h"
 #include "src/developer/forensics/feedback_data/annotations/types.h"
 #include "src/developer/forensics/feedback_data/attachments/types.h"
@@ -47,7 +48,8 @@ class Datastore {
             const ErrorOr<std::string>& current_build_version,
             const ErrorOr<std::string>& previous_build_version,
             const ErrorOr<std::string>& last_reboot_reason,
-            const ErrorOr<std::string>& last_reboot_uptime, InspectDataBudget* inspect_data_budget);
+            const ErrorOr<std::string>& last_reboot_uptime,
+            feedback::DeviceIdProvider* device_id_provider, InspectDataBudget* inspect_data_budget);
 
   ::fpromise::promise<Annotations> GetAnnotations(zx::duration timeout);
   ::fpromise::promise<Attachments> GetAttachments(zx::duration timeout);
@@ -58,7 +60,7 @@ class Datastore {
 
   // Exposed for testing purposes.
   Datastore(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-            const char* limit_data_flag_path);
+            feedback::DeviceIdProvider* device_id_provider, const char* limit_data_flag_path);
 
   const Annotations& GetStaticAnnotations() const { return static_annotations_; }
   const Attachments& GetStaticAttachments() const { return static_attachments_; }

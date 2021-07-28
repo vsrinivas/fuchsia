@@ -108,7 +108,7 @@ TEST_F(MainServiceTest, LastReboot) {
                                            ProtocolMatcher("ComponentDataRegister", 0u, 0u),
                                            ProtocolMatcher("DataProvider", 0u, 0u),
                                            ProtocolMatcher("DataProviderController", 0u, 0u),
-                                           ProtocolMatcher("DeviceIdProvider", 2u, 2u),
+                                           ProtocolMatcher("DeviceIdProvider", 1u, 1u),
                                        }))),
                              })));
 
@@ -123,7 +123,7 @@ TEST_F(MainServiceTest, LastReboot) {
                                            ProtocolMatcher("ComponentDataRegister", 0u, 0u),
                                            ProtocolMatcher("DataProvider", 0u, 0u),
                                            ProtocolMatcher("DataProviderController", 0u, 0u),
-                                           ProtocolMatcher("DeviceIdProvider", 2u, 2u),
+                                           ProtocolMatcher("DeviceIdProvider", 1u, 1u),
                                        }))),
                              })));
 }
@@ -160,7 +160,7 @@ TEST_F(MainServiceTest, CrashReports) {
                                            ProtocolMatcher("ComponentDataRegister", 0u, 0u),
                                            ProtocolMatcher("DataProvider", 0u, 0u),
                                            ProtocolMatcher("DataProviderController", 0u, 0u),
-                                           ProtocolMatcher("DeviceIdProvider", 2u, 2u),
+                                           ProtocolMatcher("DeviceIdProvider", 1u, 1u),
                                        }))),
                              })));
 
@@ -176,7 +176,7 @@ TEST_F(MainServiceTest, CrashReports) {
                                            ProtocolMatcher("ComponentDataRegister", 0u, 0u),
                                            ProtocolMatcher("DataProvider", 0u, 0u),
                                            ProtocolMatcher("DataProviderController", 0u, 0u),
-                                           ProtocolMatcher("DeviceIdProvider", 2u, 2u),
+                                           ProtocolMatcher("DeviceIdProvider", 1u, 1u),
                                        }))),
                              })));
 }
@@ -225,7 +225,7 @@ TEST_F(MainServiceTest, FeedbackData) {
                                            ProtocolMatcher("ComponentDataRegister", 1u, 1u),
                                            ProtocolMatcher("DataProvider", 1u, 1u),
                                            ProtocolMatcher("DataProviderController", 1u, 1u),
-                                           ProtocolMatcher("DeviceIdProvider", 3u, 3u),
+                                           ProtocolMatcher("DeviceIdProvider", 2u, 2u),
                                        }))),
                              })));
 
@@ -244,7 +244,7 @@ TEST_F(MainServiceTest, FeedbackData) {
                                            ProtocolMatcher("ComponentDataRegister", 1u, 0u),
                                            ProtocolMatcher("DataProvider", 1u, 0u),
                                            ProtocolMatcher("DataProviderController", 1u, 0u),
-                                           ProtocolMatcher("DeviceIdProvider", 3u, 2u),
+                                           ProtocolMatcher("DeviceIdProvider", 2u, 1u),
                                        }))),
                              })));
 }

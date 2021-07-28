@@ -11,6 +11,7 @@
 
 #include <vector>
 
+#include "src/developer/forensics/feedback/device_id_provider.h"
 #include "src/developer/forensics/feedback_data/annotations/annotation_provider.h"
 #include "src/developer/forensics/utils/cobalt/logger.h"
 
@@ -22,7 +23,7 @@ namespace feedback_data {
 // offering dynamic annotations that don't require connecting to a service.
 std::vector<std::unique_ptr<AnnotationProvider>> GetReusableProviders(
     async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-    cobalt::Logger* cobalt);
+    feedback::DeviceIdProvider* device_id_provider, cobalt::Logger* cobalt);
 
 // Get the annotations providers that can only be used once to collect annotations, typically
 // providers that have a one-shot connection to a service.

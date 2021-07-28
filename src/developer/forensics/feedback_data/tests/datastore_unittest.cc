@@ -75,6 +75,8 @@ class DatastoreTest : public UnitTestFixture {
   DatastoreTest() : executor_(dispatcher()) {}
 
   void SetUp() override {
+    device_id_provider_ =
+        std::make_unique<feedback::RemoteDeviceIdProvider>(dispatcher(), services());
     SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
     cobalt_ = std::make_unique<cobalt::Logger>(dispatcher(), services(), &clock_);
 
@@ -93,7 +95,8 @@ class DatastoreTest : public UnitTestFixture {
         ErrorOr<std::string>("current_boot_id"), ErrorOr<std::string>("previous_boot_id"),
         ErrorOr<std::string>("current_build_version"),
         ErrorOr<std::string>("previous_build_version"), ErrorOr<std::string>("last_reboot_reason"),
-        ErrorOr<std::string>("last_reboot_uptime"), inspect_data_budget_.get());
+        ErrorOr<std::string>("last_reboot_uptime"), device_id_provider_.get(),
+        inspect_data_budget_.get());
   }
 
   void SetUpBoardProviderServer(std::unique_ptr<stubs::BoardInfoProviderBase> server) {
@@ -173,6 +176,7 @@ class DatastoreTest : public UnitTestFixture {
  private:
   async::Executor executor_;
   timekeeper::TestClock clock_;
+  std::unique_ptr<feedback::DeviceIdProvider> device_id_provider_;
   std::unique_ptr<cobalt::Logger> cobalt_;
 
  protected:

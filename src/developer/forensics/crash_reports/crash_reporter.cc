@@ -29,6 +29,7 @@
 #include "src/developer/forensics/crash_reports/product.h"
 #include "src/developer/forensics/crash_reports/report.h"
 #include "src/developer/forensics/crash_reports/report_util.h"
+#include "src/developer/forensics/feedback/device_id_provider.h"
 #include "src/developer/forensics/utils/cobalt/metrics.h"
 #include "src/developer/forensics/utils/errors.h"
 #include "src/developer/forensics/utils/fit/timeout.h"
@@ -88,7 +89,8 @@ CrashReporter::CrashReporter(async_dispatcher_t* dispatcher,
                              const std::shared_ptr<InfoContext>& info_context, Config config,
                              AnnotationMap default_annotations, CrashRegister* crash_register,
                              LogTags* tags, SnapshotManager* snapshot_manager,
-                             CrashServer* crash_server)
+                             CrashServer* crash_server,
+                             feedback::DeviceIdProvider* device_id_provider)
     : dispatcher_(dispatcher),
       executor_(dispatcher),
       services_(services),
@@ -103,7 +105,7 @@ CrashReporter::CrashReporter(async_dispatcher_t* dispatcher,
       info_(info_context),
       network_watcher_(dispatcher_, *services_),
       reporting_policy_watcher_(MakeReportingPolicyWatcher(dispatcher_, services, config)),
-      device_id_provider_ptr_(dispatcher_, services_) {
+      device_id_provider_(device_id_provider) {
   FX_CHECK(dispatcher_);
   FX_CHECK(services_);
   FX_CHECK(crash_register_);
@@ -178,7 +180,7 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, const bool is_ho
             product_quotas_.DecrementRemainingQuota(product);
 
             auto snapshot_uuid_promise = snapshot_manager_->GetSnapshotUuid(kSnapshotTimeout);
-            auto device_id_promise = device_id_provider_ptr_.GetId(kChannelOrDeviceIdTimeout);
+            auto device_id_promise = device_id_provider_->GetId(kChannelOrDeviceIdTimeout);
             auto product_promise = ::fpromise::make_ok_promise(std::move(product));
 
             FX_LOGST(INFO, tags_->Get(report_id))

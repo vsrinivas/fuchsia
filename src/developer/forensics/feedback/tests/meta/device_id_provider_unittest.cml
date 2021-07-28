@@ -1,0 +1,16 @@
+{
+    include: [
+        "//src/sys/test_runners/gtest/default.shard.cml",
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/device_id_provider_unittest_exe",
+    },
+    use: [
+        {
+            storage: "tmp",
+            path: "/tmp",
+        },
+    ],
+}

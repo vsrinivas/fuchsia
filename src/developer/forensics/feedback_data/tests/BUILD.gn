@@ -102,6 +102,7 @@ executable("data_provider_unittest_exe") {
     "//sdk/fidl/fuchsia.math",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/fidl/cpp",
+    "//src/developer/forensics/feedback:device_id_provider",
     "//src/developer/forensics/feedback_data:constants",
     "//src/developer/forensics/feedback_data:data_provider",
     "//src/developer/forensics/feedback_data:device_id_provider",

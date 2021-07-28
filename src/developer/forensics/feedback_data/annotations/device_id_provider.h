@@ -5,9 +5,9 @@
 #ifndef SRC_DEVELOPER_FORENSICS_FEEDBACK_DATA_ANNOTATIONS_DEVICE_ID_PROVIDER_H_
 #define SRC_DEVELOPER_FORENSICS_FEEDBACK_DATA_ANNOTATIONS_DEVICE_ID_PROVIDER_H_
 
+#include "src/developer/forensics/feedback/device_id_provider.h"
 #include "src/developer/forensics/feedback_data/annotations/annotation_provider.h"
 #include "src/developer/forensics/feedback_data/annotations/types.h"
-#include "src/developer/forensics/utils/fidl/device_id_provider_ptr.h"
 
 namespace forensics {
 namespace feedback_data {
@@ -16,14 +16,13 @@ namespace feedback_data {
 class DeviceIdProviderClient : public AnnotationProvider {
  public:
   // fuchsia.feedback.DeviceIdProvider is expected to be in |services|.
-  DeviceIdProviderClient(async_dispatcher_t* dispatcher,
-                         std::shared_ptr<sys::ServiceDirectory> services);
+  explicit DeviceIdProviderClient(feedback::DeviceIdProvider* device_id_provider);
 
   ::fpromise::promise<Annotations> GetAnnotations(zx::duration timeout,
                                                   const AnnotationKeys& allowlist) override;
 
  private:
-  fidl::DeviceIdProviderPtr device_id_provider_ptr_;
+  feedback::DeviceIdProvider* device_id_provider_;
 };
 
 }  // namespace feedback_data

@@ -8,6 +8,7 @@
 #include <gtest/gtest.h>
 
 #include "src/developer/forensics/feedback/constants.h"
+#include "src/developer/forensics/feedback/device_id_provider.h"
 #include "src/developer/forensics/feedback_data/config.h"
 #include "src/developer/forensics/testing/stubs/cobalt_logger.h"
 #include "src/developer/forensics/testing/stubs/cobalt_logger_factory.h"
@@ -24,18 +25,23 @@ namespace {
 
 class FeedbackDataTest : public UnitTestFixture {
  public:
-  FeedbackDataTest() : clock_(dispatcher()), cobalt_(dispatcher(), services(), &clock_) {
+  FeedbackDataTest()
+      : clock_(dispatcher()),
+        cobalt_(dispatcher(), services(), &clock_),
+        device_id_provider_(dispatcher(), services()) {
     SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
   }
 
   timekeeper::Clock* Clock() { return &clock_; }
   cobalt::Logger* Cobalt() { return &cobalt_; }
+  DeviceIdProvider* DeviceIdProvider() { return &device_id_provider_; }
 
   ~FeedbackDataTest() { FX_CHECK(files::DeletePath(kPreviousLogsFilePath, /*recursive=*/true)); }
 
  private:
   timekeeper::AsyncTestClock clock_;
   cobalt::Logger cobalt_;
+  RemoteDeviceIdProvider device_id_provider_;
 };
 
 TEST_F(FeedbackDataTest, DeletesPreviousBootLogs) {
@@ -44,6 +50,7 @@ TEST_F(FeedbackDataTest, DeletesPreviousBootLogs) {
   const auto kDeletePreviousBootLogsTime = zx::min(10);
   {
     FeedbackData feedback_data(dispatcher(), services(), Clock(), &InspectRoot(), Cobalt(),
+                               DeviceIdProvider(),
                                FeedbackData::Options{
                                    .config = {},
                                    .is_first_instance = true,
@@ -65,6 +72,7 @@ TEST_F(FeedbackDataTest, DeletesPreviousBootLogs) {
 
   {
     FeedbackData feedback_data(dispatcher(), services(), Clock(), &InspectRoot(), Cobalt(),
+                               DeviceIdProvider(),
                                FeedbackData::Options{
                                    .config = {},
                                    .is_first_instance = true,

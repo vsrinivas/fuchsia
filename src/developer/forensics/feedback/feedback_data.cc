@@ -22,7 +22,8 @@ namespace forensics::feedback {
 FeedbackData::FeedbackData(async_dispatcher_t* dispatcher,
                            std::shared_ptr<sys::ServiceDirectory> services,
                            timekeeper::Clock* clock, inspect::Node* inspect_root,
-                           cobalt::Logger* cobalt, Options options)
+                           cobalt::Logger* cobalt, DeviceIdProvider* device_id_provider,
+                           Options options)
     : dispatcher_(dispatcher),
       services_(services),
       clock_(clock),
@@ -34,7 +35,7 @@ FeedbackData::FeedbackData(async_dispatcher_t* dispatcher,
                  options.config.attachment_allowlist, options.current_boot_id,
                  options.previous_boot_id, options.current_build_version,
                  options.previous_build_version, options.last_reboot_reason,
-                 options.last_reboot_uptime, &inspect_data_budget_),
+                 options.last_reboot_uptime, device_id_provider, &inspect_data_budget_),
       data_provider_(dispatcher_, services_, clock_, options.is_first_instance,
                      options.config.annotation_allowlist, options.config.attachment_allowlist,
                      cobalt_, &datastore_, &inspect_data_budget_),

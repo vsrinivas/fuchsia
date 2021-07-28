@@ -1,8 +1,0 @@
-{
-    "include": [
-        "syslog/client.shard.cmx"
-    ],
-    "program": {
-        "binary": "bin/device_id_provider_ptr_unittest_exe"
-    }
-}

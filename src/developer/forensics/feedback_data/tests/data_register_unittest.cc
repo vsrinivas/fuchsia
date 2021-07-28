@@ -10,6 +10,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "src/developer/forensics/feedback/device_id_provider.h"
 #include "src/developer/forensics/feedback_data/constants.h"
 #include "src/developer/forensics/feedback_data/datastore.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
@@ -27,7 +28,11 @@ using testing::UnorderedElementsAreArray;
 
 class DataRegisterTest : public UnitTestFixture {
  public:
-  DataRegisterTest() : datastore_(dispatcher(), services(), "unused") { MakeNewDataRegister(); }
+  DataRegisterTest()
+      : device_id_provider_(dispatcher(), services()),
+        datastore_(dispatcher(), services(), &device_id_provider_, "unused") {
+    MakeNewDataRegister();
+  }
 
  protected:
   void Upsert(ComponentData data) {
@@ -50,6 +55,7 @@ class DataRegisterTest : public UnitTestFixture {
   }
 
   files::ScopedTempDir tmp_dir_;
+  feedback::RemoteDeviceIdProvider device_id_provider_;
   Datastore datastore_;
   std::unique_ptr<DataRegister> data_register_;
 };
