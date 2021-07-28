@@ -11,12 +11,12 @@
 
 void MsdIntelDevice::Dump(DumpState* dump_out) {
   dump_out->render_cs.sequence_number =
-      global_context_->hardware_status_page(render_engine_cs_->id())->read_sequence_number();
+      render_engine_cs()->hardware_status_page()->read_sequence_number();
   dump_out->render_cs.active_head_pointer = render_engine_cs_->GetActiveHeadPointer();
   dump_out->render_cs.inflight_batches = render_engine_cs_->GetInflightBatches();
 
   dump_out->video_cs.sequence_number =
-      global_context_->hardware_status_page(video_command_streamer_->id())->read_sequence_number();
+      video_command_streamer()->hardware_status_page()->read_sequence_number();
   dump_out->video_cs.active_head_pointer = video_command_streamer_->GetActiveHeadPointer();
 
   DumpFault(dump_out, registers::AllEngineFault::read(register_io_.get()));

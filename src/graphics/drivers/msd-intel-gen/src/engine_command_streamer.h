@@ -20,16 +20,16 @@
 #include "scheduler.h"
 #include "sequencer.h"
 
-class EngineCommandStreamer {
+class EngineCommandStreamer : public HardwareStatusPage::Owner {
  public:
   class Owner {
    public:
     virtual magma::RegisterIo* register_io() = 0;
     virtual Sequencer* sequencer() = 0;
-    virtual HardwareStatusPage* hardware_status_page(EngineCommandStreamerId id) = 0;
   };
 
-  EngineCommandStreamer(Owner* owner, EngineCommandStreamerId id, uint32_t mmio_base);
+  EngineCommandStreamer(Owner* owner, EngineCommandStreamerId id, uint32_t mmio_base,
+                        std::unique_ptr<GpuMapping> hw_status_page);
 
   virtual ~EngineCommandStreamer() {}
 
@@ -38,6 +38,8 @@ class EngineCommandStreamer {
   const char* Name() const;
 
   GpuProgress* progress() { return &progress_; }
+
+  GlobalHardwareStatusPage* hardware_status_page() { return &hw_status_page_; }
 
   // Initialize backing store for the given context on this engine command streamer.
   bool InitContext(MsdIntelContext* context) const;
@@ -81,9 +83,7 @@ class EngineCommandStreamer {
 
   Sequencer* sequencer() { return owner_->sequencer(); }
 
-  HardwareStatusPage* hardware_status_page(EngineCommandStreamerId id) {
-    return owner_->hardware_status_page(id);
-  }
+  GpuMapping* hardware_status_page_mapping() { return hw_status_page_mapping_.get(); }
 
  private:
   virtual uint32_t GetContextSize() const { return PAGE_SIZE * 2; }
@@ -91,10 +91,19 @@ class EngineCommandStreamer {
   bool InitContextBuffer(MsdIntelBuffer* context_buffer, Ringbuffer* ringbuffer,
                          AddressSpace* address_space) const;
 
+  // HardwareStatusPage::Owner
+  void* hardware_status_page_cpu_addr(EngineCommandStreamerId id) override {
+    DASSERT(id == this->id());
+    return hw_status_page_cpu_addr_;
+  }
+
   Owner* owner_;
   EngineCommandStreamerId id_;
   uint32_t mmio_base_;
   GpuProgress progress_;
+  GlobalHardwareStatusPage hw_status_page_;
+  std::unique_ptr<GpuMapping> hw_status_page_mapping_;
+  void* hw_status_page_cpu_addr_{};
 
   friend class TestEngineCommandStreamer;
 };

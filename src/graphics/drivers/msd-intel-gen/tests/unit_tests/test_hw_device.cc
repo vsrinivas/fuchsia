@@ -42,9 +42,7 @@ class TestMsdIntelDevice : public testing::Test {
       constexpr uint32_t kRenderCsDefaultSeqNo = 0x1000;
       constexpr uint32_t kVideoCsDefaultSeqNo = kRenderCsDefaultSeqNo + 1;
       constexpr uint32_t kRenderCsRenderInitBatchSeqNo = kVideoCsDefaultSeqNo + 1;
-      EXPECT_EQ(device->global_context()
-                    ->hardware_status_page(RENDER_COMMAND_STREAMER)
-                    ->read_sequence_number(),
+      EXPECT_EQ(device->render_engine_cs()->hardware_status_page()->read_sequence_number(),
                 kRenderCsRenderInitBatchSeqNo);
 
       // test register access
@@ -86,16 +84,12 @@ class TestMsdIntelDevice : public testing::Test {
     device->Dump(&dump_state);
 
     EXPECT_EQ(dump_state.render_cs.sequence_number,
-              device->global_context()
-                  ->hardware_status_page(RENDER_COMMAND_STREAMER)
-                  ->read_sequence_number());
+              device->render_engine_cs()->hardware_status_page()->read_sequence_number());
     EXPECT_EQ(dump_state.render_cs.active_head_pointer,
               device->render_engine_cs()->GetActiveHeadPointer());
 
     EXPECT_EQ(dump_state.video_cs.sequence_number,
-              device->global_context()
-                  ->hardware_status_page(VIDEO_COMMAND_STREAMER)
-                  ->read_sequence_number());
+              device->video_command_streamer()->hardware_status_page()->read_sequence_number());
     EXPECT_EQ(dump_state.video_cs.active_head_pointer,
               device->video_command_streamer()->GetActiveHeadPointer());
 
@@ -211,6 +205,10 @@ class TestMsdIntelDevice : public testing::Test {
     auto command_streamer = get_command_streamer(device.get(), id);
     ASSERT_TRUE(command_streamer);
 
+    if (!device->global_context()->IsInitializedForEngine(id)) {
+      ASSERT_TRUE(device->InitContextForEngine(device->global_context().get(), command_streamer));
+    }
+
     bool ringbuffer_wrapped = false;
 
     // num_iterations updated after one iteration in case we're wrapping the ringbuffer
@@ -254,6 +252,7 @@ class TestMsdIntelDevice : public testing::Test {
       batch_ptr[i++] = end_of_batch_header();
 
       auto ringbuffer = device->global_context()->get_ringbuffer(command_streamer->id());
+      ASSERT_TRUE(ringbuffer);
 
       uint32_t tail_start = ringbuffer->tail();
 
@@ -302,7 +301,12 @@ class TestMsdIntelDevice : public testing::Test {
     auto command_streamer = get_command_streamer(device.get(), id);
     ASSERT_TRUE(command_streamer);
 
+    if (!device->global_context()->IsInitializedForEngine(id)) {
+      ASSERT_TRUE(device->InitContextForEngine(device->global_context().get(), command_streamer));
+    }
+
     auto ringbuffer = device->global_context()->get_ringbuffer(command_streamer->id());
+    ASSERT_TRUE(ringbuffer);
 
     static constexpr uint32_t kScratchRegOffset = 0x02600;
     device->register_io()->Write32(kScratchRegOffset, 0xdeadbeef);

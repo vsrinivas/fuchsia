@@ -113,10 +113,10 @@ class TestHwCommandBuffer : public ::testing::Test {
 
     switch (id) {
       case RENDER_COMMAND_STREAMER:
-        EXPECT_TRUE(TestCommandBuffer::InitContextForRender(device, context.get()));
+        EXPECT_TRUE(device->InitContextForEngine(context.get(), device->render_engine_cs()));
         break;
       case VIDEO_COMMAND_STREAMER:
-        EXPECT_TRUE(TestCommandBuffer::InitContextForVideo(device, context.get()));
+        EXPECT_TRUE(device->InitContextForEngine(context.get(), device->video_command_streamer()));
         break;
     }
 
@@ -193,7 +193,7 @@ class TestHwCommandBuffer : public ::testing::Test {
     // batch end
     *batch_ptr++ = (0xA << 23);
 
-    TestCommandBuffer::StartDeviceThread(device());
+    device()->StartDeviceThread();
 
     cmd_buf_.reset();
     EXPECT_TRUE(helper_->ExecuteAndWait());

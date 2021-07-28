@@ -9,7 +9,8 @@
 
 class RenderEngineCommandStreamer : public EngineCommandStreamer {
  public:
-  static std::unique_ptr<RenderEngineCommandStreamer> Create(EngineCommandStreamer::Owner* owner);
+  explicit RenderEngineCommandStreamer(EngineCommandStreamer::Owner* owner,
+                                       std::unique_ptr<GpuMapping> hw_status_page);
 
   static std::unique_ptr<RenderInitBatch> CreateRenderInitBatch(uint32_t device_id);
 
@@ -32,8 +33,6 @@ class RenderEngineCommandStreamer : public EngineCommandStreamer {
   std::vector<MappedBatch*> GetInflightBatches();
 
  private:
-  RenderEngineCommandStreamer(EngineCommandStreamer::Owner* owner);
-
   uint32_t GetContextSize() const override { return PAGE_SIZE * 20; }
 
   bool ExecBatch(std::unique_ptr<MappedBatch> mapped_batch) override;

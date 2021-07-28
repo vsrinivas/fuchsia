@@ -16,7 +16,8 @@
 // TODO(fxbug.dev/80907) - refactor common scheduling code.
 class VideoCommandStreamer : public EngineCommandStreamer {
  public:
-  explicit VideoCommandStreamer(EngineCommandStreamer::Owner* owner);
+  explicit VideoCommandStreamer(EngineCommandStreamer::Owner* owner,
+                                std::unique_ptr<GpuMapping> hw_status_page);
 
   void SubmitBatch(std::unique_ptr<MappedBatch> batch) override;
 

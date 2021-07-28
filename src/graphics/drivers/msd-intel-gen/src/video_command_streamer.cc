@@ -6,8 +6,10 @@
 
 #include "instructions.h"
 
-VideoCommandStreamer::VideoCommandStreamer(EngineCommandStreamer::Owner* owner)
-    : EngineCommandStreamer(owner, VIDEO_COMMAND_STREAMER, kVideoEngineMmioBase) {
+VideoCommandStreamer::VideoCommandStreamer(EngineCommandStreamer::Owner* owner,
+                                           std::unique_ptr<GpuMapping> hw_status_page)
+    : EngineCommandStreamer(owner, VIDEO_COMMAND_STREAMER, kVideoEngineMmioBase,
+                            std::move(hw_status_page)) {
   scheduler_ = Scheduler::CreateFifoScheduler();
 }
 
@@ -61,8 +63,8 @@ bool VideoCommandStreamer::MoveBatchToInflight(std::unique_ptr<MappedBatch> mapp
   uint32_t sequence_number = sequencer()->next_sequence_number();
 
   {
-    gpu_addr_t gpu_addr =
-        hardware_status_page(id())->gpu_addr() + HardwareStatusPage::kSequenceNumberOffset;
+    gpu_addr_t gpu_addr = hardware_status_page_mapping()->gpu_addr() +
+                          GlobalHardwareStatusPage::kSequenceNumberOffset;
 
     MiStoreDataImmediate::write64(ringbuffer, ADDRESS_SPACE_GGTT, gpu_addr, sequence_number);
   }

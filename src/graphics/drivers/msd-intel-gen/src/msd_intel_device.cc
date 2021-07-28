@@ -213,24 +213,32 @@ bool MsdIntelDevice::BaseInit(void* device_handle) {
   constexpr uint32_t kFirstSequenceNumber = 0x1000;
   sequencer_ = std::unique_ptr<Sequencer>(new Sequencer(kFirstSequenceNumber));
 
-  render_engine_cs_ = RenderEngineCommandStreamer::Create(this);
+  {
+    auto mapping =
+        AddressSpace::MapBufferGpu(gtt_, MsdIntelBuffer::Create(magma::page_size(), "RCS HWSP"));
+    if (!mapping)
+      return DRETF(false, "MapBufferGpu failed for RCS HWSP");
 
-  video_command_streamer_ = std::make_unique<VideoCommandStreamer>(this);
+    render_engine_cs_ = std::make_unique<RenderEngineCommandStreamer>(this, std::move(mapping));
+  }
+
+  {
+    auto mapping =
+        AddressSpace::MapBufferGpu(gtt_, MsdIntelBuffer::Create(magma::page_size(), "VCS HWSP"));
+    if (!mapping)
+      return DRETF(false, "MapBufferGpu failed for VCS HWSP");
+
+    video_command_streamer_ = std::make_unique<VideoCommandStreamer>(this, std::move(mapping));
+  }
 
   global_context_ = std::shared_ptr<GlobalContext>(new GlobalContext(gtt_));
 
   // Creates the context backing store.
+  // Global context used to execute the render init batch.
   if (!render_engine_cs_->InitContext(global_context_.get()))
     return DRETF(false, "render_engine_cs failed to init global context");
 
   if (!global_context_->Map(gtt_, render_engine_cs_->id()))
-    return DRETF(false, "global context init failed");
-
-  // TODO(fxbug.dev/80905) - separate hw status page from global context
-  if (!video_command_streamer_->InitContext(global_context_.get()))
-    return DRETF(false, "video command streamer failed to init global context");
-
-  if (!global_context_->Map(gtt_, video_command_streamer_->id()))
     return DRETF(false, "global context init failed");
 
   device_request_semaphore_ = magma::PlatformSemaphore::Create();
@@ -536,14 +544,14 @@ void MsdIntelDevice::ProcessCompletedCommandBuffers(EngineCommandStreamerId id) 
   CHECK_THREAD_IS_CURRENT(device_thread_id_);
   TRACE_DURATION("magma", "ProcessCompletedCommandBuffers");
 
-  uint32_t sequence_number = hardware_status_page(id)->read_sequence_number();
-
   switch (id) {
     case RENDER_COMMAND_STREAMER:
-      render_engine_cs_->ProcessCompletedCommandBuffers(sequence_number);
+      render_engine_cs_->ProcessCompletedCommandBuffers(
+          render_engine_cs()->hardware_status_page()->read_sequence_number());
       break;
     case VIDEO_COMMAND_STREAMER:
-      video_command_streamer_->ProcessCompletedCommandBuffers(sequence_number);
+      video_command_streamer_->ProcessCompletedCommandBuffers(
+          video_command_streamer()->hardware_status_page()->read_sequence_number());
       break;
     default:
       DASSERT(false);
@@ -668,31 +676,22 @@ void MsdIntelDevice::HangCheckTimeout(uint64_t timeout_ms, EngineCommandStreamer
   EngineReset(engine);
 }
 
-bool MsdIntelDevice::InitContextForRender(MsdIntelContext* context) {
-  auto engine = render_engine_cs();
-  if (!engine->InitContext(context))
+bool MsdIntelDevice::InitContextForEngine(MsdIntelContext* context,
+                                          EngineCommandStreamer* command_streamer) {
+  if (!command_streamer->InitContext(context))
     return DRETF(false, "failed to initialize context");
 
-  if (!context->Map(gtt(), engine->id()))
+  if (!context->Map(gtt(), command_streamer->id()))
     return DRETF(false, "failed to map context");
 
-  if (!engine->InitContextWorkarounds(context))
-    return DRETF(false, "failed to init workarounds");
+  // TODO(fxbug.dev/80906): any workarounds or cache config for VCS?
+  if (command_streamer->id() == RENDER_COMMAND_STREAMER) {
+    if (!command_streamer->InitContextWorkarounds(context))
+      return DRETF(false, "failed to init workarounds");
 
-  if (!engine->InitContextCacheConfig(context))
-    return DRETF(false, "failed to init cache config");
-
-  return true;
-}
-
-bool MsdIntelDevice::InitContextForVideo(MsdIntelContext* context) {
-  if (!video_command_streamer_->InitContext(context))
-    return DRETF(false, "failed to initialize context");
-
-  if (!context->Map(gtt(), video_command_streamer_->id()))
-    return DRETF(false, "failed to map context");
-
-  // TODO(fxbug.dev/80906): any workarounds or cache config?
+    if (!command_streamer->InitContextCacheConfig(context))
+      return DRETF(false, "failed to init cache config");
+  }
 
   return true;
 }
@@ -713,15 +712,11 @@ magma::Status MsdIntelDevice::ProcessBatch(std::unique_ptr<MappedBatch> batch) {
 
   if (batch->IsCommandBuffer() && (static_cast<CommandBuffer*>(batch.get())->GetFlags() &
                                    kMagmaIntelGenCommandBufferForVideo)) {
-    if (!context->IsInitializedForEngine(video_command_streamer_->id())) {
-      if (!InitContextForVideo(context.get()))
-        return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Failed to initialize context");
-    }
-
     command_streamer = video_command_streamer_.get();
+  }
 
-  } else if (!context->IsInitializedForEngine(render_engine_cs()->id())) {
-    if (!InitContextForRender(context.get()))
+  if (!context->IsInitializedForEngine(command_streamer->id())) {
+    if (!InitContextForEngine(context.get(), command_streamer))
       return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Failed to initialize context");
   }
 
@@ -794,12 +789,6 @@ uint32_t MsdIntelDevice::GetCurrentFrequency() {
 
   DLOG("GetCurrentGraphicsFrequency not implemented");
   return 0;
-}
-
-HardwareStatusPage* MsdIntelDevice::hardware_status_page(EngineCommandStreamerId id) {
-  CHECK_THREAD_IS_CURRENT(device_thread_id_);
-  DASSERT(global_context_);
-  return global_context_->hardware_status_page(id);
 }
 
 void MsdIntelDevice::QuerySliceInfo(uint32_t* subslice_total_out, uint32_t* eu_total_out) {

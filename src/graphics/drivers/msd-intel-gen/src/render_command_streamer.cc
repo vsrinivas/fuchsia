@@ -17,13 +17,10 @@ std::unique_ptr<RenderInitBatch> RenderEngineCommandStreamer::CreateRenderInitBa
   return DRETP(nullptr, "unhandled device id");
 }
 
-std::unique_ptr<RenderEngineCommandStreamer> RenderEngineCommandStreamer::Create(
-    EngineCommandStreamer::Owner* owner) {
-  return std::unique_ptr<RenderEngineCommandStreamer>(new RenderEngineCommandStreamer(owner));
-}
-
-RenderEngineCommandStreamer::RenderEngineCommandStreamer(EngineCommandStreamer::Owner* owner)
-    : EngineCommandStreamer(owner, RENDER_COMMAND_STREAMER, kRenderEngineMmioBase) {
+RenderEngineCommandStreamer::RenderEngineCommandStreamer(EngineCommandStreamer::Owner* owner,
+                                                         std::unique_ptr<GpuMapping> hw_status_page)
+    : EngineCommandStreamer(owner, RENDER_COMMAND_STREAMER, kRenderEngineMmioBase,
+                            std::move(hw_status_page)) {
   scheduler_ = Scheduler::CreateFifoScheduler();
 }
 
@@ -182,7 +179,7 @@ bool RenderEngineCommandStreamer::PipeControl(MsdIntelContext* context, uint32_t
     return DRETF(false, "ringbuffer has insufficient space");
 
   gpu_addr_t gpu_addr =
-      hardware_status_page(id())->gpu_addr() + HardwareStatusPage::kSequenceNumberOffset;
+      hardware_status_page_mapping()->gpu_addr() + GlobalHardwareStatusPage::kSequenceNumberOffset;
 
   uint32_t sequence_number = sequencer()->next_sequence_number();
   DLOG("writing sequence number update to 0x%x", sequence_number);

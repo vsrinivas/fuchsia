@@ -33,22 +33,9 @@ class TestRingbuffer {
   static uint32_t* vaddr(Ringbuffer* ringbuffer) { return ringbuffer->vaddr(); }
 };
 
-class MockStatusPageBuffer {
- public:
-  MockStatusPageBuffer() {
-    cpu_addr = malloc(PAGE_SIZE);
-    gpu_addr = 0x10000;
-  }
-
-  ~MockStatusPageBuffer() { free(cpu_addr); }
-
-  void* cpu_addr;
-  gpu_addr_t gpu_addr;
-};
-
 class TestEngineCommandStreamer : public EngineCommandStreamer::Owner,
                                   public Gtt::Owner,
-                                  public HardwareStatusPage::Owner,
+                                  // public HardwareStatusPage::Owner,
                                   public testing::TestWithParam<EngineCommandStreamerId> {
  public:
   static constexpr uint32_t kFirstSequenceNumber = 5;
@@ -70,28 +57,27 @@ class TestEngineCommandStreamer : public EngineCommandStreamer::Owner,
     context_ =
         std::shared_ptr<MsdIntelContext>(new ClientContext(connection, Gtt::CreateShim(this)));
 
-    mock_status_page_ = std::unique_ptr<MockStatusPageBuffer>(new MockStatusPageBuffer());
-
     address_space_owner_ = std::make_unique<AddressSpaceOwner>();
     address_space_ =
         std::make_shared<AllocatingAddressSpace>(address_space_owner_.get(), 0, PAGE_SIZE * 100);
 
+    sequencer_ = std::unique_ptr<Sequencer>(new Sequencer(kFirstSequenceNumber));
+
     EngineCommandStreamerId id = GetParam();
+
+    auto mapping = AddressSpace::MapBufferGpu(address_space_,
+                                              MsdIntelBuffer::Create(PAGE_SIZE, "global hwsp"));
+    ASSERT_TRUE(mapping);
 
     switch (id) {
       case RENDER_COMMAND_STREAMER:
-        engine_cs_ = RenderEngineCommandStreamer::Create(this);
+        engine_cs_ = std::make_unique<RenderEngineCommandStreamer>(this, std::move(mapping));
         break;
       case VIDEO_COMMAND_STREAMER:
-        engine_cs_ = std::make_unique<VideoCommandStreamer>(this);
+        engine_cs_ = std::make_unique<VideoCommandStreamer>(this, std::move(mapping));
         break;
     }
     ASSERT_TRUE(engine_cs_);
-
-    sequencer_ = std::unique_ptr<Sequencer>(new Sequencer(kFirstSequenceNumber));
-
-    hw_status_page_ =
-        std::unique_ptr<HardwareStatusPage>(new HardwareStatusPage(this, engine_cs_->id()));
   }
 
   EngineCommandStreamerId id() const { return GetParam(); }
@@ -195,11 +181,9 @@ class TestEngineCommandStreamer : public EngineCommandStreamer::Owner,
 
     EXPECT_EQ(register_io()->Read32(engine_cs_->mmio_base() +
                                     registers::HardwareStatusPageAddress::kOffset),
-              mock_status_page_->gpu_addr);
+              engine_cs_->hardware_status_page_mapping()->gpu_addr());
     EXPECT_EQ(register_io()->Read32(engine_cs_->mmio_base() + registers::GraphicsMode::kOffset),
               0x80008000u);
-
-    EXPECT_EQ(hw_status_page_->read_sequence_number(), (uint32_t)kFirstSequenceNumber);
   }
 
   void RenderInit() {
@@ -400,8 +384,8 @@ class TestEngineCommandStreamer : public EngineCommandStreamer::Owner,
   }
 
   uint32_t* ValidatePipeControl(uint32_t* ringbuffer_content, uint32_t sequence_number) {
-    gpu_addr_t seqno_gpu_addr = engine_cs_->hardware_status_page(engine_cs_->id())->gpu_addr() +
-                                HardwareStatusPage::kSequenceNumberOffset;
+    gpu_addr_t seqno_gpu_addr = engine_cs_->hardware_status_page_mapping()->gpu_addr() +
+                                GlobalHardwareStatusPage::kSequenceNumberOffset;
 
     // Subtract 2 from dword count as per the instruction definition
     EXPECT_EQ(*ringbuffer_content++, 0x7A000000u | (MiPipeControl::kDwordCount - 2));
@@ -417,20 +401,6 @@ class TestEngineCommandStreamer : public EngineCommandStreamer::Owner,
 
   Sequencer* sequencer() override { return sequencer_.get(); }
 
-  HardwareStatusPage* hardware_status_page(EngineCommandStreamerId id) override {
-    return hw_status_page_.get();
-  }
-
-  void* hardware_status_page_cpu_addr(EngineCommandStreamerId id) override {
-    EXPECT_EQ(id, engine_cs_->id());
-    return mock_status_page_->cpu_addr;
-  }
-
-  gpu_addr_t hardware_status_page_gpu_addr(EngineCommandStreamerId id) override {
-    EXPECT_EQ(id, engine_cs_->id());
-    return mock_status_page_->gpu_addr;
-  }
-
   magma::PlatformPciDevice* platform_device() override {
     DASSERT(false);
     return nullptr;
@@ -445,10 +415,8 @@ class TestEngineCommandStreamer : public EngineCommandStreamer::Owner,
   std::unique_ptr<AddressSpaceOwner> address_space_owner_;
   std::shared_ptr<AddressSpace> address_space_;
   std::shared_ptr<MsdIntelContext> context_;
-  std::unique_ptr<MockStatusPageBuffer> mock_status_page_;
   std::unique_ptr<EngineCommandStreamer> engine_cs_;
   std::unique_ptr<Sequencer> sequencer_;
-  std::unique_ptr<HardwareStatusPage> hw_status_page_;
 };
 
 TEST_P(TestEngineCommandStreamer, InitContext) { TestEngineCommandStreamer::InitContext(); }

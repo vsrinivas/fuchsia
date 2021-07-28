@@ -13,9 +13,9 @@ class TestHardwareStatusPage : public HardwareStatusPage::Owner {
   TestHardwareStatusPage() : cpu_addr_(malloc(PAGE_SIZE), &free) {}
 
   void ReadWrite() {
-    auto status_page = std::unique_ptr<HardwareStatusPage>(new HardwareStatusPage(this, id_));
+    auto status_page = std::make_unique<GlobalHardwareStatusPage>(this, id_);
 
-    EXPECT_EQ(status_page->gpu_addr(), gpu_addr_);
+    EXPECT_EQ(status_page->hardware_status_page_cpu_addr(), cpu_addr_.get());
 
     uint32_t val = 0xabcd1234;
     status_page->write_sequence_number(val);
@@ -31,14 +31,8 @@ class TestHardwareStatusPage : public HardwareStatusPage::Owner {
     return cpu_addr_.get();
   }
 
-  gpu_addr_t hardware_status_page_gpu_addr(EngineCommandStreamerId id) override {
-    EXPECT_EQ(id, id_);
-    return gpu_addr_;
-  }
-
   unique_ptr_void_free cpu_addr_;
   EngineCommandStreamerId id_ = RENDER_COMMAND_STREAMER;
-  gpu_addr_t gpu_addr_ = 0x10000;
 };
 
 TEST(HardwareStatusPage, ReadWrite) {

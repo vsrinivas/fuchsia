@@ -119,9 +119,6 @@ class MsdIntelDevice : public msd_device_t,
     return sequencer_.get();
   }
 
-  // EngineCommandStreamer::Owner
-  HardwareStatusPage* hardware_status_page(EngineCommandStreamerId id) override;
-
   // MsdIntelConnection::Owner
   magma::Status SubmitBatch(std::unique_ptr<MappedBatch> batch) override;
   void DestroyContext(std::shared_ptr<ClientContext> client_context) override;
@@ -136,8 +133,7 @@ class MsdIntelDevice : public msd_device_t,
   bool RenderInitBatch();
   bool EngineReset(EngineCommandStreamer* engine);
 
-  bool InitContextForRender(MsdIntelContext* context);
-  bool InitContextForVideo(MsdIntelContext* context);
+  bool InitContextForEngine(MsdIntelContext* context, EngineCommandStreamer* command_streamer);
 
   void ProcessCompletedCommandBuffers(EngineCommandStreamerId id);
   void HangCheckTimeout(uint64_t timeout_ms, EngineCommandStreamerId id);
@@ -228,7 +224,7 @@ class MsdIntelDevice : public msd_device_t,
   std::unique_ptr<magma::PlatformTraceObserver> trace_observer_;
 
   friend class TestMsdIntelDevice;
-  friend class TestCommandBuffer;
+  friend class TestHwCommandBuffer;
   friend class TestExec;
 };
 
