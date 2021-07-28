@@ -90,13 +90,13 @@ TEST(ZbitlHeaderTests, ItemMagicAndFlagsMissing) {
   header.magic = 0u;
   header.crc32 = 0u;
 
-  EXPECT_IS_ERROR(zbitl::ZbiTraits::CheckItemHeader(header));
+  EXPECT_IS_ERROR(zbitl::CheckItemHeader(header));
 }
 
 TEST(ZbitlHeaderTests, ValidItemHeader) {
   // * Item fits, magic is correct, and required flags and CRC are set.
   // Expectation: success.
-  EXPECT_IS_OK(zbitl::ZbiTraits::CheckItemHeader(kValidItemHeader));
+  EXPECT_IS_OK(zbitl::CheckItemHeader(kValidItemHeader));
 }
 
 TEST(ZbitlHeaderTests, ItemCrcIsMissing) {
@@ -104,7 +104,7 @@ TEST(ZbitlHeaderTests, ItemCrcIsMissing) {
   // Expectation: failure.
   zbi_header_t header = kValidItemHeader;
   header.flags = ZBI_ITEM_NO_CRC32;
-  EXPECT_IS_OK(zbitl::ZbiTraits::CheckItemHeader(header));
+  EXPECT_IS_OK(zbitl::CheckItemHeader(header));
 }
 
 TEST(ZbitlHeaderTests, ItemFlagsMissing) {
@@ -112,11 +112,11 @@ TEST(ZbitlHeaderTests, ItemFlagsMissing) {
   // Expectation: failure.
   zbi_header_t header = kValidItemHeader;
   header.flags = 0u;
-  EXPECT_IS_ERROR(zbitl::ZbiTraits::CheckItemHeader(header));
+  EXPECT_IS_ERROR(zbitl::CheckItemHeader(header));
 }
 
-TEST(ZbitlHeaderTests, ValidContainerHeader) {
-  EXPECT_IS_OK(zbitl::ZbiTraits::CheckContainerHeader(kValidContainerHeader));
+TEST(ZbitlHeaderTest, ValidContainerHeader) {
+  EXPECT_IS_OK(zbitl::CheckContainerHeader(kValidContainerHeader));
 }
 
 TEST(ZbitlHeaderTests, ContainerMagicMissing) {
@@ -124,40 +124,40 @@ TEST(ZbitlHeaderTests, ContainerMagicMissing) {
   {
     zbi_header_t header = kValidContainerHeader;
     header.magic = 0u;
-    EXPECT_IS_ERROR(zbitl::ZbiTraits::CheckContainerHeader(header));
+    EXPECT_IS_ERROR(zbitl::CheckContainerHeader(header));
   }
   {
     zbi_header_t header = kValidContainerHeader;
     header.extra = 0u;  // Holds container magic
-    EXPECT_IS_ERROR(zbitl::ZbiTraits::CheckContainerHeader(header));
+    EXPECT_IS_ERROR(zbitl::CheckContainerHeader(header));
   }
 }
 
 TEST(ZbitlHeaderTests, ContainerFlagsMissing) {
   zbi_header_t header = kValidContainerHeader;
   header.flags = 0u;
-  EXPECT_IS_ERROR(zbitl::ZbiTraits::CheckContainerHeader(header));
+  EXPECT_IS_ERROR(zbitl::CheckContainerHeader(header));
 }
 
 TEST(ZbitlHeaderTests, BadContainerType) {
   // Must be ZBI_TYPE_CONTAINER.
   zbi_header_t header = kValidContainerHeader;
   header.type = ZBI_TYPE_IMAGE_ARGS;
-  EXPECT_IS_ERROR(zbitl::ZbiTraits::CheckContainerHeader(header));
+  EXPECT_IS_ERROR(zbitl::CheckContainerHeader(header));
 }
 
 TEST(ZbitlHeaderTests, ContainerCrc) {
   // No CRC flag must be set.
   zbi_header_t header = kValidContainerHeader;
   header.flags |= ZBI_FLAG_CRC32;
-  EXPECT_IS_ERROR(zbitl::ZbiTraits::CheckContainerHeader(header));
+  EXPECT_IS_ERROR(zbitl::CheckContainerHeader(header));
 }
 
 TEST(ZbitlHeaderTests, UnalignedContainerLength) {
   // Must be ZBI_ALIGNMENT-aligned.
   zbi_header_t header = kValidContainerHeader;
   header.length = ZBI_ALIGNMENT - 1;
-  EXPECT_IS_ERROR(zbitl::ZbiTraits::CheckContainerHeader(header));
+  EXPECT_IS_ERROR(zbitl::CheckContainerHeader(header));
 }
 
 }  // namespace

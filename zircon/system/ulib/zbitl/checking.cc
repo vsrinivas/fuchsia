@@ -8,7 +8,7 @@ namespace zbitl {
 
 using namespace std::literals;
 
-fitx::result<std::string_view> ZbiTraits::CheckItemHeader(const zbi_header_t& header) {
+fitx::result<std::string_view> CheckItemHeader(const zbi_header_t& header) {
   // Strict mode also checks policy requirements.  Boot loaders do not always
   // bother with setting the fields correctly, but the kernel need not care.
   if (header.magic != ZBI_ITEM_MAGIC) {
@@ -24,7 +24,7 @@ fitx::result<std::string_view> ZbiTraits::CheckItemHeader(const zbi_header_t& he
   return fitx::ok();
 }
 
-fitx::result<std::string_view> ZbiTraits::CheckContainerHeader(const zbi_header_t& header) {
+fitx::result<std::string_view> CheckContainerHeader(const zbi_header_t& header) {
   if (auto result = CheckItemHeader(header); result.is_error()) {
     return result.take_error();
   }

@@ -36,6 +36,8 @@ class BootShimBase : public ItemBase {
 
   bool Check(const char* what, fitx::result<InputZbi::CopyError<WritableBytes>> result) const;
 
+  bool Check(const char* what, fitx::result<DataZbi::Error> result) const;
+
  protected:
   class Cmdline : public ItemBase {
    public:

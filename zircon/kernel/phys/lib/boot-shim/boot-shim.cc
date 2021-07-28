@@ -31,6 +31,15 @@ bool BootShimBase::Check(const char* what,
   return true;
 }
 
+bool BootShimBase::Check(const char* what, fitx::result<DataZbi::Error> result) const {
+  if (result.is_error()) {
+    fprintf(log_, "%s: %s: ", shim_name_, what);
+    zbitl::PrintViewError(result.error_value(), log_);
+    return false;
+  }
+  return true;
+}
+
 void BootShimBase::Log(const Cmdline& cmdline_item, ByteView ramdisk) const {
   std::string_view boot_loader = cmdline_item[Cmdline::kInfo];
   std::string_view cmdline = cmdline_item[Cmdline::kLegacy];

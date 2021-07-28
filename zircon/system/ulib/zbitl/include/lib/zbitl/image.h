@@ -94,7 +94,7 @@ class Image : public View<Storage> {
     // `item_header_wrapper` needs to be constructed from the return value of the
     // Header trait, which might be a reference wrapper to the header in memory
     // instead of the raw value.
-    if (auto result = this->ItemHeader(new_item_offset); result.is_error()) {
+    if (auto result = ItemHeader(this->storage(), new_item_offset); result.is_error()) {
       return fitx::error{
           Error{"cannot read header", new_item_offset, std::move(result.error_value())}};
     } else {
