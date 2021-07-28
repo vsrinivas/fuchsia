@@ -36,6 +36,7 @@
 #include <soc/aml-common/aml-guid.h>
 #include <zxtest/zxtest.h>
 
+#include "fbl/unique_fd.h"
 #include "src/storage/lib/paver/as370.h"
 #include "src/storage/lib/paver/astro.h"
 #include "src/storage/lib/paver/chromebook-x64.h"
@@ -2320,6 +2321,8 @@ TEST(AstroPartitionerTests, ChooseAstroPartitioner) {
   std::unique_ptr<SkipBlockDevice> device;
   ASSERT_NO_FATAL_FAILURES(SkipBlockDevice::Create(kNandInfo, &device));
   auto devfs_root = device->devfs_root();
+  fbl::unique_fd fd;
+  ASSERT_OK(RecursiveWaitForFile(devfs_root, "sys/platform/00:00:2d/ramctl", &fd));
   std::unique_ptr<BlockDevice> zircon_a;
   ASSERT_NO_FATAL_FAILURES(BlockDevice::Create(devfs_root, kZirconAType, &zircon_a));
 
@@ -2379,6 +2382,8 @@ TEST(AstroPartitionerTests, FindPartitionTest) {
   std::unique_ptr<SkipBlockDevice> device;
   ASSERT_NO_FATAL_FAILURES(SkipBlockDevice::Create(kNandInfo, &device));
   auto devfs_root = device->devfs_root();
+  fbl::unique_fd fd;
+  ASSERT_OK(RecursiveWaitForFile(devfs_root, "sys/platform/00:00:2d/ramctl", &fd));
   std::unique_ptr<BlockDevice> fvm;
   ASSERT_NO_FATAL_FAILURES(BlockDevice::Create(devfs_root, kFvmType, &fvm));
 
