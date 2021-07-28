@@ -26,13 +26,36 @@
 
 static zx_handle_t root_resource;
 
-static uint32_t pl1_mw;  // current PL1 value
-
-#define PL1_MIN 2500
-#define PL1_MAX 7000
-
 // degrees Celsius below threshold before we adjust PL value
-static constexpr float COOL_TEMP_THRESHOLD = 5.0f;
+constexpr float kCoolThresholdCelsius = 5.0f;
+
+class PlatformConfiguration {
+ public:
+  static std::unique_ptr<PlatformConfiguration> Create();
+
+  zx_status_t SetMinPL1() { return SetPL1Mw(pl1_min_mw_); }
+  zx_status_t SetMaxPL1() { return SetPL1Mw(pl1_max_mw_); }
+
+  bool IsAtMax() { return current_pl1_mw_ == pl1_max_mw_; }
+  bool IsAtMin() { return current_pl1_mw_ == pl1_min_mw_; }
+
+ private:
+  PlatformConfiguration(uint32_t pl1_min_mw, uint32_t pl1_max_mw)
+      : pl1_min_mw_(pl1_min_mw), pl1_max_mw_(pl1_max_mw) {}
+
+  zx_status_t SetPL1Mw(uint32_t target_mw);
+
+  const uint32_t pl1_min_mw_;
+  const uint32_t pl1_max_mw_;
+
+  static constexpr uint32_t kEvePL1MinMw = 2500;
+  static constexpr uint32_t kEvePL1MaxMw = 7000;
+
+  static constexpr uint32_t kAtlasPL1MinMw = 3000;
+  static constexpr uint32_t kAtlasPL1MaxMw = 7000;
+
+  uint32_t current_pl1_mw_;
+};
 
 static zx_status_t get_root_resource(zx_handle_t* root_resource) {
   zx::channel local, remote;
@@ -48,11 +71,37 @@ static zx_status_t get_root_resource(zx_handle_t* root_resource) {
   return fuchsia_boot_RootResourceGet(local.get(), root_resource);
 }
 
-static zx_status_t set_pl1(uint32_t target) {
+std::unique_ptr<PlatformConfiguration> PlatformConfiguration::Create() {
+  unsigned int a, b, c, d;
+  unsigned int leaf_num = 0x80000002;
+  char brand_string[50];
+  memset(brand_string, 0, sizeof(brand_string));
+  for (int i = 0; i < 3; i++) {
+    if (!__get_cpuid(leaf_num + i, &a, &b, &c, &d)) {
+      return nullptr;
+    }
+    memcpy(brand_string + (i * 16), &a, sizeof(uint32_t));
+    memcpy(brand_string + (i * 16) + 4, &b, sizeof(uint32_t));
+    memcpy(brand_string + (i * 16) + 8, &c, sizeof(uint32_t));
+    memcpy(brand_string + (i * 16) + 12, &d, sizeof(uint32_t));
+  }
+  // Only run thermd for processors used in Pixelbooks. The PL1 min/max settings are specified by
+  // the chipset.
+  if (strstr(brand_string, "i5-7Y57") || strstr(brand_string, "i7-7Y75")) {
+    return std::unique_ptr<PlatformConfiguration>(
+        new PlatformConfiguration(kEvePL1MinMw, kEvePL1MaxMw));
+  } else if (strstr(brand_string, "i5-8200Y") || strstr(brand_string, "i7-8500Y")) {
+    return std::unique_ptr<PlatformConfiguration>(
+        new PlatformConfiguration(kAtlasPL1MinMw, kAtlasPL1MaxMw));
+  }
+  return nullptr;
+}
+
+zx_status_t PlatformConfiguration::SetPL1Mw(uint32_t target_mw) {
   zx_system_powerctl_arg_t arg = {
       .x86_power_limit =
           {
-              .power_limit = target,
+              .power_limit = target_mw,
               .time_window = 0,
               .clamp = 1,
               .enable = 1,
@@ -60,11 +109,11 @@ static zx_status_t set_pl1(uint32_t target) {
   };
   zx_status_t st = zx_system_powerctl(root_resource, ZX_SYSTEM_POWERCTL_X86_SET_PKG_PL1, &arg);
   if (st != ZX_OK) {
-    fprintf(stderr, "ERROR: Failed to set PL1 to %d: %d\n", target, st);
+    fprintf(stderr, "ERROR: Failed to set PL1 to %d: %d\n", target_mw, st);
     return st;
   }
-  pl1_mw = target;
-  TRACE_COUNTER("thermal", "throttle", 0, "pl1", target);
+  current_pl1_mw_ = target_mw;
+  TRACE_COUNTER("thermal", "throttle", 0, "pl1", target_mw);
   return ZX_OK;
 }
 
@@ -92,31 +141,9 @@ static void start_trace(void) {
   }
 }
 
-static bool check_platform() {
-  unsigned int a, b, c, d;
-  unsigned int leaf_num = 0x80000002;
-  char brand_string[50];
-  memset(brand_string, 0, sizeof(brand_string));
-  for (int i = 0; i < 3; i++) {
-    if (!__get_cpuid(leaf_num + i, &a, &b, &c, &d)) {
-      return false;
-    }
-    memcpy(brand_string + (i * 16), &a, sizeof(uint32_t));
-    memcpy(brand_string + (i * 16) + 4, &b, sizeof(uint32_t));
-    memcpy(brand_string + (i * 16) + 8, &c, sizeof(uint32_t));
-    memcpy(brand_string + (i * 16) + 12, &d, sizeof(uint32_t));
-  }
-  // Only run thermd for processors used in Pixelbooks. The PL1 min/max settings
-  // are specified by the chipset.
-  if (strstr(brand_string, "i5-7Y57") || strstr(brand_string, "i7-7Y75")) {
-    return true;
-  } else {
-    return false;
-  }
-}
-
 int main(int argc, char** argv) {
-  if (!check_platform()) {
+  auto config = PlatformConfiguration::Create();
+  if (!config) {
     return 0;
   }
 
@@ -206,8 +233,8 @@ int main(int argc, char** argv) {
   TRACE_COUNTER("thermal", "trip-point", 0, "passive-c", info.passive_temp_celsius, "critical-c",
                 info.critical_temp_celsius, "active0-c", info.active_trip[0]);
 
-  // set PL1 to 7 watts (EDP)
-  set_pl1(PL1_MAX);
+  // Set PL1 to the platform maximum.
+  config->SetMaxPL1();
 
   for (;;) {
     zx_signals_t observed = 0;
@@ -223,7 +250,8 @@ int main(int argc, char** argv) {
         return -1;
       }
       if (info.state) {
-        set_pl1(PL1_MIN);  // decrease power limit
+        // Decrease power limit
+        config->SetMinPL1();
 
         st = fuchsia_hardware_thermal_DeviceGetTemperatureCelsius(caller.borrow_channel(), &status2,
                                                                   &temp);
@@ -244,21 +272,22 @@ int main(int argc, char** argv) {
       }
       TRACE_COUNTER("thermal", "temp", 0, "ambient-c", temp);
 
-      // increase power limit if the temperature dropped enough
-      if ((temp < info.active_trip[0] - COOL_TEMP_THRESHOLD) && (pl1_mw != PL1_MAX)) {
-        // make sure the state is clear
+      // Increase power limit if the temperature dropped enough
+      if (temp < info.active_trip[0] - kCoolThresholdCelsius && !config->IsAtMax()) {
+        // Make sure the state is clear
         st = fuchsia_hardware_thermal_DeviceGetInfo(caller.borrow_channel(), &status2, &info);
         if (st != ZX_OK || status2 != ZX_OK) {
           fprintf(stderr, "ERROR: Failed to get thermal info: %d %d\n", st, status2);
           return -1;
         }
         if (!info.state) {
-          set_pl1(PL1_MAX);
+          config->SetMaxPL1();
         }
       }
 
-      if ((temp > info.active_trip[0]) && (pl1_mw != PL1_MIN)) {
-        set_pl1(PL1_MIN);  // decrease power limit
+      if (temp > info.active_trip[0] && !config->IsAtMin()) {
+        // Decrease power limit
+        config->SetMinPL1();
       }
     }
   }
