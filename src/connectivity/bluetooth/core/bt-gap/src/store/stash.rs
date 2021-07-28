@@ -6,7 +6,8 @@ use {
     anyhow::{format_err, Error},
     fidl::endpoints::create_proxy,
     fidl_fuchsia_stash::{
-        GetIteratorMarker, SecureStoreMarker, StoreAccessorMarker, StoreAccessorProxy, Value,
+        GetIteratorMarker, KeyValue, SecureStoreMarker, StoreAccessorMarker, StoreAccessorProxy,
+        Value,
     },
     fuchsia_async as fasync,
     fuchsia_bluetooth::{
@@ -28,6 +29,7 @@ use {
 #[cfg(test)]
 use {
     fuchsia_bluetooth::types::{LeBondData, OneOrBoth},
+    fuchsia_inspect::testing::DiagnosticsHierarchyGetter,
     std::collections::HashSet,
 };
 
@@ -232,6 +234,10 @@ struct StashInner {
     inspect: fuchsia_inspect::Node,
 }
 
+fn bond_inspect_identifier(peer_id: PeerId) -> String {
+    format!("bond {}", peer_id)
+}
+
 fn insert_inspectable_bonds(
     data: &mut HashMap<Address, HashMap<PeerId, Inspectable<BondingData>>>,
     inspect: &fuchsia_inspect::Node,
@@ -239,7 +245,7 @@ fn insert_inspectable_bonds(
 ) {
     for bond in bonds {
         let (local_address, identifier) = (bond.local_address, bond.identifier);
-        let node = inspect.create_child(format!("bond {}", identifier));
+        let node = inspect.create_child(bond_inspect_identifier(identifier));
         let bond = Inspectable::new(bond, node);
         // Update the in memory cache.
         let host_bonds = data.entry(local_address).or_insert(HashMap::new());
@@ -247,6 +253,13 @@ fn insert_inspectable_bonds(
             warn!("Replaced bond data for {} peer id {}", local_address, identifier);
         }
     }
+}
+
+/// Returns true if the underlying data in `lhs` is equivalent to `rhs`, aside from the
+/// PeerId field, which is a Fuchsia-specific concept.
+fn is_duplicate_bond(lhs: &BondingData, rhs: &BondingData) -> bool {
+    let rhs_with_lhs_id = BondingData { identifier: lhs.identifier.clone(), ..rhs.clone() };
+    *lhs == rhs_with_lhs_id
 }
 
 impl StashInner {
@@ -323,6 +336,38 @@ impl StashInner {
         Ok(StashInner { proxy: accessor, bonding_data, host_data, inspect })
     }
 
+    fn process_loaded_bonds(
+        raw_bonds: Vec<KeyValue>,
+        seen_addresses: &mut HashMap<(Address, Address), BondingData>,
+        duplicate_ids: &mut Vec<PeerId>,
+    ) -> Result<(), Error> {
+        for key_value in raw_bonds {
+            let bond = if let Value::Stringval(json) = key_value.val {
+                BondingDataDeserializer::from_json(&json)
+            } else {
+                error!("stash malformed: bonding data should be a string");
+                Err(format_err!("failed to initialize stash"))
+            }?;
+            if let Some((dupe, dupe_id)) =
+                seen_addresses.get(&(bond.local_address, bond.address)).map(|b| (b, b.identifier))
+            {
+                // Generally, Fuchsia disallows restoration of multiple BondingDatas from the same
+                // local address to the same peer address. However, some system bootstrap flows cause
+                // the same underlying bond (i.e. security keys + local-peer address tuple) to be
+                // restored more than once under different Peer IDs. To be resilient to this flow,
+                // we deduplicate bonds which differ only in their PeerId from the Store as a
+                // special case.
+                if !is_duplicate_bond(&bond, dupe) {
+                    warn!("stash malformed: cannot load multiple distinct bonds for same peer (address: {:?})", bond.address);
+                    return Err(format_err!("multiple distinct bonds for same peer in store"));
+                }
+                duplicate_ids.push(dupe_id);
+            }
+            let _ = seen_addresses.insert((bond.local_address, bond.address), bond);
+        }
+        Ok(())
+    }
+
     async fn load_bonds<'a>(
         accessor: &'a StoreAccessorProxy,
         inspect: &'a fuchsia_inspect::Node,
@@ -332,25 +377,22 @@ impl StashInner {
         accessor.get_prefix(BONDING_DATA_PREFIX, server_end)?;
 
         let mut bonding_map = HashMap::new();
+        let mut seen_addresses = HashMap::new();
+        let mut duplicate_ids = Vec::new();
         loop {
             let next = iter.get_next().await?;
             if next.is_empty() {
                 break;
             }
-            let bonds = next
-                .into_iter()
-                .map(|key_value| {
-                    if let Value::Stringval(json) = key_value.val {
-                        BondingDataDeserializer::from_json(&json)
-                    } else {
-                        error!("stash malformed: bonding data should be a string");
-                        Err(format_err!("failed to initialize stash"))
-                    }
-                })
-                .collect::<Result<Vec<_>, Error>>()?;
-
-            insert_inspectable_bonds(&mut bonding_map, &inspect, bonds);
+            Self::process_loaded_bonds(next, &mut seen_addresses, &mut duplicate_ids)?;
         }
+        let bonds = seen_addresses.into_values().collect();
+        insert_inspectable_bonds(&mut bonding_map, &inspect, bonds);
+        for id in duplicate_ids {
+            info!("removing duplicate bond for peer id {:?} from store", id);
+            accessor.delete_value(&bonding_data_key(id))?;
+        }
+        accessor.flush().await?.map_err(|e| format_err!("Failed to flush to stash: {:?}", e))?;
         Ok(bonding_map)
     }
 
@@ -424,6 +466,7 @@ mod tests {
         fuchsia_component::client::connect_to_protocol, futures::select, pin_utils::pin_mut,
     };
 
+    static TEST_INSPECT_ROOT: &'static str = "test";
     // create_stash_accessor will create a new accessor to stash scoped under the given test name.
     // All preexisting data in stash under this identity is deleted before the accessor is
     // returned.
@@ -446,7 +489,7 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn new_stash_succeeds_with_empty_values() {
-        let inspect = fuchsia_inspect::Inspector::new().root().create_child("test");
+        let inspect = fuchsia_inspect::Inspector::new().root().create_child(TEST_INSPECT_ROOT);
 
         // Create a Stash service interface.
         let accessor = create_stash_accessor("new_stash_succeeds_with_empty_values")
@@ -460,7 +503,7 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn new_stash_fails_with_malformed_key_value_entry() {
-        let inspect = fuchsia_inspect::Inspector::new().root().create_child("test");
+        let inspect = fuchsia_inspect::Inspector::new().root().create_child(TEST_INSPECT_ROOT);
 
         // Create a Stash service interface.
         let accessor = create_stash_accessor("new_stash_fails_with_malformed_key_value_entry")
@@ -483,7 +526,7 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn new_stash_fails_with_malformed_json() {
-        let inspect = fuchsia_inspect::Inspector::new().root().create_child("test");
+        let inspect = fuchsia_inspect::Inspector::new().root().create_child(TEST_INSPECT_ROOT);
 
         // Create a mock Stash service interface.
         let accessor = create_stash_accessor("new_stash_fails_with_malformed_json")
@@ -551,7 +594,7 @@ mod tests {
     fn bond_data_2() -> BondingData {
         BondingData {
             identifier: PeerId(2),
-            address: Address::Random([3, 0, 0, 0, 0, 0]),
+            address: Address::Random([4, 0, 0, 0, 0, 0]),
             local_address: Address::Public([1, 0, 0, 0, 0, 0]),
             name: Some("Test Device 2".to_string()),
             data: OneOrBoth::Left(default_le_data()),
@@ -561,6 +604,16 @@ mod tests {
     fn bond_data_3() -> BondingData {
         BondingData {
             identifier: PeerId(3),
+            address: Address::Random([3, 0, 0, 0, 0, 0]),
+            local_address: Address::Public([2, 0, 0, 0, 0, 0]),
+            name: None,
+            data: OneOrBoth::Left(default_le_data()),
+        }
+    }
+
+    fn bond_data_4_dupes_3() -> BondingData {
+        BondingData {
+            identifier: PeerId(4),
             address: Address::Random([3, 0, 0, 0, 0, 0]),
             local_address: Address::Public([2, 0, 0, 0, 0, 0]),
             name: None,
@@ -606,7 +659,7 @@ mod tests {
                 },
                 "address": {
                     "type": "random",
-                    "value": [3,0,0,0,0,0]
+                    "value": [4,0,0,0,0,0]
                 },
                 "name": "Test Device 2",
                 "le": {
@@ -621,6 +674,7 @@ mod tests {
             .to_string(),
         )
     }
+
     fn bond_entry_3() -> Value {
         Value::Stringval(
             r#"
@@ -648,9 +702,63 @@ mod tests {
         )
     }
 
+    fn bond_entry_4_dupes_3() -> Value {
+        Value::Stringval(
+            r#"
+            {
+                "identifier": 4,
+                "hostAddress": {
+                    "type": "public",
+                    "value": [2,0,0,0,0,0]
+                },
+                "address": {
+                    "type": "random",
+                    "value": [3,0,0,0,0,0]
+                },
+                "name": null,
+                "le": {
+                    "connectionParameters": null,
+                    "peerLtk": null,
+                    "localLtk": null,
+                    "irk": null,
+                    "csrk": null
+                },
+                "bredr": null
+            }"#
+            .to_string(),
+        )
+    }
+
+    // This entry has the same hostAddress and address fields as entry 3, but populates the BR/EDR
+    // bond data field instead of the LE bond data field.
+    fn bond_entry_5_same_addrs_3() -> Value {
+        Value::Stringval(
+            r#"
+            {
+                "identifier": 5,
+                "hostAddress": {
+                    "type": "public",
+                    "value": [2,0,0,0,0,0]
+                },
+                "address": {
+                    "type": "random",
+                    "value": [3,0,0,0,0,0]
+                },
+                "name": null,
+                "le": null,
+                "bredr": {
+                    "rolePreference": null,
+                    "services": [],
+                    "linkKey": null
+                }
+            }"#
+            .to_string(),
+        )
+    }
+
     #[fuchsia_async::run_singlethreaded(test)]
     async fn new_stash_succeeds_with_values() {
-        let inspect = fuchsia_inspect::Inspector::new().root().create_child("test");
+        let inspect = fuchsia_inspect::Inspector::new().root().create_child(TEST_INSPECT_ROOT);
 
         // Create a Stash service interface.
         let accessor = create_stash_accessor("new_stash_succeeds_with_values")
@@ -692,6 +800,97 @@ mod tests {
         assert_eq!(1, local.len());
         let bond: &BondingData = &*local.get(&PeerId(3)).expect("could not find device");
         assert_eq!(&bond_data_3(), bond);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn new_stash_filters_duplicate_bonds() {
+        let inspector = fuchsia_inspect::Inspector::new();
+        let inspect = inspector.root().create_child(TEST_INSPECT_ROOT);
+        // Create a Stash service interface.
+        let accessor = create_stash_accessor("new_stash_filters_duplicate_bonds")
+            .await
+            .expect("failed to create StashAccessor");
+
+        // Insert values into stash that contain bonding data for several devices. Other tests use
+        // simpler identifiers (e.g. `bonding-data:X`), but these cause issues when verifying Stash
+        // interactions with the store, as Stash uses the full 16-bit, zero-padded fmt::Display
+        // PeerId impl to create identifiers for the store.
+        let (id_3_key, id_4_key) = (
+            bonding_data_key(bond_data_3().identifier),
+            bonding_data_key(bond_data_4_dupes_3().identifier),
+        );
+        accessor.set_value(&id_3_key, &mut bond_entry_3()).expect("failed to set value");
+        accessor.set_value(&id_4_key, &mut bond_entry_4_dupes_3()).expect("failed to set value");
+        accessor
+            .flush()
+            .await
+            .expect("failed to flush a bonding data value")
+            .expect("failed to flush a bonding data value");
+
+        // The stash should initialize with bonding data stored in stash
+        let stash =
+            StashInner::new(accessor.clone(), inspect).await.expect("stash failed to initialize");
+
+        // Although we added two bond entries for local host address [2, 0, ...] with distinct peer
+        // IDs, they use the same address, so they should be deduplicated in the store, with no
+        // guarantees about which bond is retained.
+        let local = stash
+            .bonding_data
+            .get(&Address::Public([2, 0, 0, 0, 0, 0]))
+            .expect("could not find local address entries");
+        assert_eq!(1, local.len());
+
+        // The duplicate should also be removed from the store so that the store matches what's in
+        // memory, leaving only one entry.
+        let (iter, server_end) = create_proxy::<GetIteratorMarker>().unwrap();
+        accessor.get_prefix(BONDING_DATA_PREFIX, server_end).expect("failed to fetch bond data");
+        let res = iter.get_next().await.unwrap();
+        assert_eq!(1, res.len());
+        assert!(iter.get_next().await.unwrap().is_empty());
+
+        // The inspect hierarchy should contain exactly one bond node, deduplicated from the two
+        // in the original store.
+        let inspect_hierarchy = inspector.get_diagnostics_hierarchy();
+        let test_hierarchy =
+            inspect_hierarchy.get_child(TEST_INSPECT_ROOT).expect("missing test hierarchy node");
+        let bond_3_record =
+            test_hierarchy.get_child(&bond_inspect_identifier(bond_data_3().identifier));
+        let bond_4_record =
+            test_hierarchy.get_child(&bond_inspect_identifier(bond_data_4_dupes_3().identifier));
+        if bond_3_record.is_some() {
+            assert!(
+                !bond_4_record.is_some(),
+                "expected one deduplicated bond in Inspect, found both"
+            );
+        } else {
+            assert!(bond_4_record.is_some(), "expected one bond record in Inspect, found none");
+        }
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn new_stash_fails_loading_same_addrs_different_bond() {
+        fuchsia_syslog::init().unwrap();
+        let inspect = fuchsia_inspect::Inspector::new().root().create_child(TEST_INSPECT_ROOT);
+
+        // Create a Stash service interface.
+        let accessor = create_stash_accessor("new_stash_fails_loading_same_addrs_different_bond")
+            .await
+            .expect("failed to create StashAccessor");
+
+        accessor.set_value("bonding-data:3", &mut bond_entry_3()).expect("failed to set value");
+        accessor
+            .set_value(&"bonding-data:5", &mut bond_entry_5_same_addrs_3())
+            .expect("failed to set value");
+        accessor
+            .flush()
+            .await
+            .expect("failed to flush a bonding data value")
+            .expect("failed to flush a bonding data value");
+
+        // Bond entry 5 uses the same local and peer addresses as bond entry 3, but the security
+        // data itself differs between the entries. This indicates that the store is in an invalid
+        // state, so we expect to fail initialization of the Stash.
+        assert!(StashInner::new(accessor.clone(), inspect).await.is_err());
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -808,7 +1007,7 @@ mod tests {
     }
 
     async fn setup_stash(name: &'static str, entries: Vec<(&'static str, Value)>) -> StashInner {
-        let inspect = fuchsia_inspect::Inspector::new().root().create_child("test");
+        let inspect = fuchsia_inspect::Inspector::new().root().create_child(TEST_INSPECT_ROOT);
         let accessor = create_stash_accessor(name).await.expect("failed to create StashAccessor");
 
         // Insert intial bonding data values into stash
