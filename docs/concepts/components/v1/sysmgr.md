@@ -259,7 +259,7 @@ Disclaimer: this feature is not intended for general use. Please consult before
 using.
 
 Critical components are a list of components which cause the system to reboot
-if they ever crash. The primary use-case are components which are critical to
+if they ever terminate. The primary use-case are components which are critical to
 the system's functionality and must always be running. Note that listing a
 component under `critical_components` does not mean it will necessarily launch
 when sysmgr starts; the component may initially launch through other means,

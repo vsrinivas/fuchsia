@@ -26,6 +26,8 @@ toc:
   path: /docs/concepts/components/v2/environments.md
 - title: "Component URLs"
   path: /docs/concepts/components/component_urls.md
+- title: "Termination policies"
+  path: /docs/concepts/components/v2/termination_policies.md
 - title: "Capabilities"
   section:
   - include: /docs/concepts/components/v2/capabilities/_toc.yaml

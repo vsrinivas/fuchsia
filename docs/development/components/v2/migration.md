@@ -2,11 +2,10 @@
 
 This document provides instructions for migrating a system component from
 [Components v1][glossary.components-v1] to
-[Components v2][glossary.components-v2].
-A *system component* is a component that exists to provide services to other
-components in the system.
-Typically, in Components v1 the mapping of service to component is registered
-in a [sysmgr configuration file][sysmgr-config].
+[Components v2][glossary.components-v2]. A *system component* is a component
+that exists to provide services to other components in the system. Typically, in
+Components v1 the mapping of service to component is registered in a
+[sysmgr configuration file][sysmgr-config].
 
 To migrate your system component from v1 to v2, do the following:
 
@@ -18,7 +17,7 @@ Depending on the features your component supports, you may need to explore the
 following sections for additional guidance:
 
 -   [Diagnostics capabilities](#diagnostics)
--   [Other common capabilities](#other-capabilities)
+-   [Other common situations](#other-situations)
 -   [Converting CMX features](#cmx-features)
 
 For more details on the components migration effort, see
@@ -29,24 +28,23 @@ For more details on the components migration effort, see
 You should familiarize yourself with the following topics:
 
 -   [Introduction to the Fuchsia Component Framework][components-intro]:
-    Components v2 comprises a set of concepts and APIs that are
-    distinct from Components v1 or traditional OS program models.
--   [Introduction to the Test Runner Framework][trf-intro]:
-    Test Runner Framework is built on the Component Framework. You need to be
-    familiar with these concepts before you migrate tests.
+    Components v2 comprises a set of concepts and APIs that are distinct from
+    Components v1 or traditional OS program models.
+-   [Introduction to the Test Runner Framework][trf-intro]: Test Runner
+    Framework is built on the Component Framework. You need to be familiar with
+    these concepts before you migrate tests.
 
 ## Migrate the component manifest {#create-component-manifest}
 
-Create a minimal CML [CML file][glossary.component-manifest]
-and configure it with GN so that it gets compiled and installed in your package.
+Create a minimal CML [CML file][glossary.component-manifest] and configure it
+with GN so that it gets compiled and installed in your package.
 
-Note: Unlike CMX, CML is JSON5, which allows comments and trailing commas.
-Take advantage of this when writing your CML file!
+Note: Unlike CMX, CML is JSON5, which allows comments and trailing commas. Take
+advantage of this when writing your CML file!
 
-1.  Determine where your CMX file is located in the source tree
-    (for example, [`fonts.cmx`][example-fonts]).
-    Create a file in the same directory that has the same filename but with a `.cml`
-    extension, with the following contents:
+1.  Determine where your CMX file is located in the source tree (for example,
+    [`fonts.cmx`][example-fonts]). Create a file in the same directory that has
+    the same filename but with a `.cml` extension, with the following contents:
 
     ```json5
     // fonts.cml
@@ -58,8 +56,8 @@ Take advantage of this when writing your CML file!
     }
     ```
 
-    Note: Your CML file will live side-by-side with the CMX file for now.
-    Do not delete the CMX file yet.
+    Note: Your CML file will live side-by-side with the CMX file for now. Do not
+    delete the CMX file yet.
 
 1.  Find the build rule that defines your component. Normally, this is a
     `fuchsia_component` rule. For example, see the fonts
@@ -175,16 +173,17 @@ corresponding service `protocol`.
 ### Exposing available services {#available-services}
 
 In [Components v1][glossary.components-v1], you typically declare information
-about services exposed by a component in a [sysmgr configuration file][sysmgr-config].
-These files are referenced by `config_data` targets in the build, and specify
-mappings of services to components in the `sys` [environment][glossary.environment].
+about services exposed by a component in a
+[sysmgr configuration file][sysmgr-config]. These files are referenced by
+`config_data` targets in the build, and specify mappings of services to
+components in the `sys` [environment][glossary.environment].
 
 Note: The most common location of this service mapping is
 [`services.config`][example-services-config], which defines service mappings
 that apply to every product configuration.
 
-1.  Identify all service mappings, if any, for your component.
-    You can use [CodeSearch][code-search] to find service mappings. Here is a
+1.  Identify all service mappings, if any, for your component. You can use
+    [CodeSearch][code-search] to find service mappings. Here is a
     [sample search][sysmgr-config-search].
 
     ```json
@@ -238,8 +237,8 @@ that apply to every product configuration.
     fx build
     ```
 
-1.  Verify that your package includes the compiled v2 component manifest
-    (with a `.cm` extension).
+1.  Verify that your package includes the compiled v2 component manifest (with a
+    `.cm` extension).
 
     ```posix-terminal
     ffx scrutiny shell "search.components --url {{ '<var label="component">my_component.cm</var>' }}$"
@@ -275,22 +274,23 @@ your v1 component:
 -   [Test has no external services](#no-injected-services): The test component's
     manifest is generated by a `fuchsia_unittest_*` GN rule, or the CMX does not
     contain [fuchsia.test facets][fuchsia-test-facets].
--   [Test uses system services](#system-services): The test has a CMX
-    that contains [`system-services`][system-services] test facets.
--   [Test has injected services](#injected-services): The test has a CMX
-    that contains [`injected-services`][fuchsia-test-facets] test facets.
+-   [Test uses system services](#system-services): The test has a CMX that
+    contains [`system-services`][system-services] test facets.
+-   [Test has injected services](#injected-services): The test has a CMX that
+    contains [`injected-services`][fuchsia-test-facets] test facets.
 
-Note: For more details on the services and capabilities provided to components by
-the Test Runner Framework, see the [test manager documentation][trf-test-manager].
+Note: For more details on the services and capabilities provided to components
+by the Test Runner Framework, see the
+[test manager documentation][trf-test-manager].
 
 #### Test with no injected services {#no-injected-services}
 
 For tests that use no injected services, your [test root][trf-roles] can be the
-same component as the [test driver][trf-roles].
-The v2 test's component manifest should be distributed in the same package
-that contains the test binary. Follow the same instructions from
-[Migrate the component manifest](#create-component-manifest)
-that you used to package your component.
+same component as the [test driver][trf-roles]. The v2 test's component manifest
+should be distributed in the same package that contains the test binary. Follow
+the same instructions from
+[Migrate the component manifest](#create-component-manifest) that you used to
+package your component.
 
 Consider the following example test component:
 
@@ -342,10 +342,10 @@ To migrate this test to the Test Runner Framework, do the following:
 
 In the example above, the test component's manifest is simple enough that it can
 be generated for you at build time by `fuchsia_unittest_package` or
-`fuchsia_unittest_component`.
-This is the [preferred practice][unit-tests-with-generated-manifests] for simple
-unit tests. To allow the GN target to generate your CML file, simply edit it to remove
-the `manifest`.
+`fuchsia_unittest_component`. This is the
+[preferred practice][unit-tests-with-generated-manifests] for simple unit tests.
+To allow the GN target to generate your CML file, simply edit it to remove the
+`manifest`.
 
 ```gn
 fuchsia_unittest_package("fonts_test") {
@@ -356,24 +356,25 @@ fuchsia_unittest_package("fonts_test") {
 
 #### Test with system services {#system-services}
 
-For tests that use [`system-services`][system-services] test facets, consider
-if they can be converted to [injected services](#injected-services) instead.
+For tests that use [`system-services`][system-services] test facets, consider if
+they can be converted to [injected services](#injected-services) instead.
 Injecting services is the preferred method because it promotes hermetic test
 behavior.
 
 For certain non-hermetic tests, the Test Runner Framework provides the test
 realm with the following services:
 
-| Service | Description |
-| ------- | ----------- |
-| `fuchsia.hardware.display.Provider` | Provider for display controllers |
-| `fuchsia.scheduler.ProfileProvider` | Profile provider for scheduler |
-| `fuchsia.sysmem.Allocator` | Allocates system memory buffers |
-| `fuchsia.tracing.provider.Registry` | Register to trace provider |
-| `fuchsia.vulkan.loader.Loader` | Vulkan library provider |
-| `fuchsia.sys.Loader` | CFv1 loader service to help with migration. |
-| `fuchsia.sys.Environment` | CFv1 environment service to help with migration. |
-
+| Service                             | Description                           |
+| ----------------------------------- | ------------------------------------- |
+| `fuchsia.hardware.display.Provider` | Provider for display controllers      |
+| `fuchsia.scheduler.ProfileProvider` | Profile provider for scheduler        |
+| `fuchsia.sysmem.Allocator`          | Allocates system memory buffers       |
+| `fuchsia.tracing.provider.Registry` | Register to trace provider            |
+| `fuchsia.vulkan.loader.Loader`      | Vulkan library provider               |
+| `fuchsia.sys.Loader`                | CFv1 loader service to help with      |
+:                                     : migration.                            :
+| `fuchsia.sys.Environment`           | CFv1 environment service to help with |
+:                                     : migration.                            :
 
 Consider the following example test component that uses a single system service,
 `fuchsia.sysmem.Allocator`:
@@ -461,8 +462,8 @@ components topology:
 
 Do the following:
 
-1.  Create a CML file for the test driver that points to the test binary,
-    and includes the appropriate [test runner][trf-test-runners]:
+1.  Create a CML file for the test driver that points to the test binary, and
+    includes the appropriate [test runner][trf-test-runners]:
 
     Note: See [test runners][trf-provided-test-runners] that are provided by the
     framework.
@@ -486,10 +487,10 @@ Do the following:
     }
     ```
 
-1.  You need CML files for each component that provides a capability needed
-    in the test. If there is an existing CML file for the component providing
-    the injected service, you may be able to reuse it.
-    Otherwise, create a new CML file.
+1.  You need CML files for each component that provides a capability needed in
+    the test. If there is an existing CML file for the component providing the
+    injected service, you may be able to reuse it. Otherwise, create a new CML
+    file.
 
     ```json5
     // mock_font_resolver.cml (capability provider).
@@ -514,13 +515,13 @@ Do the following:
 
     Note: The CML files for the capability providers can be distributed in the
     same package that contained the v1 test. Follow the same instructions in
-    [Migrate the component manifest](#create-component-manifest) that you
-    used to package your component.
+    [Migrate the component manifest](#create-component-manifest) that you used
+    to package your component.
 
 1.  Create a new CML file for the test root that includes the test driver and
     capability provider(s) as children and offers the capabilities from the
-    provider(s) to the driver.
-    This component should also expose the [test suite protocol][trf-test-suite].
+    provider(s) to the driver. This component should also expose the
+    [test suite protocol][trf-test-suite].
 
     ```json5
     // font_provider_test.cml (test root)
@@ -583,8 +584,8 @@ Do the following:
 
 ### Verify the migrated tests {#verify-tests}
 
-Build and run your test and verify that it passes. Like any other test, use
-`fx test` to invoke the test:
+Build and run your test and verify that it passes. Like any other test, use `fx
+test` to invoke the test:
 
 ```posix-terminal
 fx build && fx test font_provider_tests
@@ -592,8 +593,8 @@ fx build && fx test font_provider_tests
 
 Your component is now tested in Components v2.
 
-If your test doesn't run correctly or doesn't start at all, try following
-the advice in [Troubleshooting components][troubleshooting-components].
+If your test doesn't run correctly or doesn't start at all, try following the
+advice in [Troubleshooting components][troubleshooting-components].
 
 ## Add the new component {#add-component-to-topology}
 
@@ -603,9 +604,9 @@ between your component and the rest of the system.
 
 Take another look at any sysmgr configuration file(s) that defines service
 mappings to your component, which you identified while
-[migrating the component manifest](#create-component-manifest).
-The steps below refer to the collection of all these services as your
-component’s "exposed services".
+[migrating the component manifest](#create-component-manifest). The steps below
+refer to the collection of all these services as your component’s "exposed
+services".
 
 ```json
 // services.config
@@ -619,20 +620,21 @@ component’s "exposed services".
 ```
 
 ### Add the component to core {#add-component-to-core}
--    [Add a core realm shard](#add-core-shard): Your component is **not**
-     present in *all* products (eg. maybe it is present on workstation,
-     but not terminal). Using a [core realm shard][core-realm-rfc] allows the
-     component to be safely excluded where it isn't available.
--    [Add directly to core](#add-core-direct): Your component is present on all
-     product and test build configurations. In this case you can add the
-     component directly to `core.cml`.
 
+-   [Add a core realm shard](#add-core-shard): Your component is **not** present
+    in *all* products (eg. maybe it is present on workstation, but not
+    terminal). Using a [core realm shard][core-realm-rfc] allows the component
+    to be safely excluded where it isn't available.
+-   [Add directly to core](#add-core-direct): Your component is present on all
+    product and test build configurations. In this case you can add the
+    component directly to `core.cml`.
 
 #### Add a core realm shard {#add-core-shard}
+
 1.  Create a [manifest shard][manifests-shard]. A manifest shard uses generally
-    the syntax as a manifest, but *may* reference objects that don't exist within
-    the manifest itself. In this case we reference the `appmgr` child which is
-    not defined here, but we know is defined in `core`'s manifest.
+    the syntax as a manifest, but *may* reference objects that don't exist
+    within the manifest itself. In this case we reference the `appmgr` child
+    which is not defined here, but we know is defined in `core`'s manifest.
 
     ```json5
     // component.core_shard.cml
@@ -683,10 +685,11 @@ component’s "exposed services".
     ```
 
 #### Add directly to core {#add-core-direct}
+
 Add your component as a child instance of the [`core.cml`][cs-core-cml]
-component, and offer its exposed services to appmgr. You need to choose
-a name for your component instance and identify its component URL (you should
-be able to get this from the config mapping).
+component, and offer its exposed services to appmgr. You need to choose a name
+for your component instance and identify its component URL (you should be able
+to get this from the config mapping).
 
 ```json5
 // core.cml
@@ -712,8 +715,8 @@ be able to get this from the config mapping).
 #### Learn your component moniker {#component-moniker}
 
 If you added your component to `core.cml` as explained here, then it's easy to
-infer your component [moniker][moniker] as `/core/component_name` where `component_name` is
-the name of the child you added to `core.cml`.
+infer your component [moniker][moniker] as `/core/component_name` where
+`component_name` is the name of the child you added to `core.cml`.
 
 You can see this hierarchy using `ffx component list` as well:
 
@@ -740,8 +743,8 @@ You can see this hierarchy using `ffx component list` as well:
 ### Expose services to sys environment {#expose-services}
 
 Declare each of these services in [`appmgr.cml`][cs-appmgr-cml] to make them
-available to v1 components under the `sys` environment.
-Change `appmgr.cml` as follows:
+available to v1 components under the `sys` environment. Change `appmgr.cml` as
+follows:
 
 ```json5
 // appmgr.cml
@@ -758,20 +761,20 @@ Change `appmgr.cml` as follows:
 
 ### Offer services to your component {#offer-services}
 
-To work properly, your component must be offered all services that appear in
-its [`use`][manifests-use] declarations. These services may be provided by
-v1 or v2 components. Look in the sysmgr config files and `core.cml` to find the
+To work properly, your component must be offered all services that appear in its
+[`use`][manifests-use] declarations. These services may be provided by v1 or v2
+components. Look in the sysmgr config files and `core.cml` to find the
 originating components ([example search][sysmgr-config-search]).
 
 There are three possible cases:
 
--   [v1 component provides service](#v1-component-provides-service):
-    The provider of the service is a v1 component.
+-   [v1 component provides service](#v1-component-provides-service): The
+    provider of the service is a v1 component.
 -   [v2 component in `core.cml` provides service](#v2-core-cml-provides-service):
     The provider of the service is a v2 component that's a child of `core.cml`.
--   The provider of the service is a v2 component that's not child of `core.cml`.
-    If this is the case, reach out to [component-framework-dev][cf-dev-list] for
-    assistance.
+-   The provider of the service is a v2 component that's not child of
+    `core.cml`. If this is the case, reach out to
+    [component-framework-dev][cf-dev-list] for assistance.
 
 Note: You must also route all services requested by any manifest shards listed
 in your manifest's [`include`][manifests-include].
@@ -879,9 +882,9 @@ To avoid build-time errors resulting from dependency cycles, apply the
 ```
 
 You can apply `weak_for_migration` to either capability in a dependency cycle.
-Determine which side is most appropriate for your component.
-In most cases, the convention is to apply `weak_for_migration` on the capability
-offered from `appmgr` until everything is migrated out of Components v1.
+Determine which side is most appropriate for your component. In most cases, the
+convention is to apply `weak_for_migration` on the capability offered from
+`appmgr` until everything is migrated out of Components v1.
 
 ### Remove sysmgr configuration entries {#remove-config-entries}
 
@@ -907,12 +910,12 @@ your v1 component instead of using the new capabilities routed to it through
 
 ### Test your component {#test-component}
 
-Manually verify that your component and its dependencies still work.
-Perform manual verification of capability routing as it is usually outside the
-scope of hermetic tests.
-The `verify routes` command built into [scrutiny][fx-scrutiny] reports routing
-errors in the static component topology of the current build. This can help you
-find missing `offer` or `expose` declarations before performing runtime tests.
+Manually verify that your component and its dependencies still work. Perform
+manual verification of capability routing as it is usually outside the scope of
+hermetic tests. The `verify routes` command built into [scrutiny][fx-scrutiny]
+reports routing errors in the static component topology of the current build.
+This can help you find missing `offer` or `expose` declarations before
+performing runtime tests.
 
 ```posix-terminal
 ffx scrutiny verify routes
@@ -922,18 +925,18 @@ Note: Scrutiny can only verify routes in the v2 component topology. It cannot
 look into `appmgr` and the `sys` environment to review usage from v1 components.
 
 If your component manifest contains additional system features that haven't been
-migrated at this point, see [Other common capabilities](#other-capabilities)
-and [Converting CMX features](#cmx-features) for additional guidance.
+migrated at this point, see [Other common situations](#other-situations) and
+[Converting CMX features](#cmx-features) for additional guidance.
 
 If your component or one of the components that depends on it isn't working
 correctly, try following the advice in
 [Troubleshooting components][troubleshooting-components].
 
-Once your component has been registered in the v2 topology and all tests
-have been converted, you can delete the Components v1 definition of your
-component. Find and remove any CMX files for your component and its tests,
-including any remaining references to it from the package rule(s) you modified
-when you [migrated the component manifest](#create-component-manifest).
+Once your component has been registered in the v2 topology and all tests have
+been converted, you can delete the Components v1 definition of your component.
+Find and remove any CMX files for your component and its tests, including any
+remaining references to it from the package rule(s) you modified when you
+[migrated the component manifest](#create-component-manifest).
 
 ## Diagnostics capabilities {#diagnostics}
 
@@ -945,30 +948,29 @@ features to Components v2.
 {% dynamic if user.is_googler %}
 
 Note: If your component shares Inspect data in product feedback reports, you may
-also need to update the approved selectors to reference the new component moniker.
-For more details on updating feedback selectors, see
+also need to update the approved selectors to reference the new component
+moniker. For more details on updating feedback selectors, see
 [go/tq-diagnostics-migration](http://go/tq-diagnostics-migration).
 
 {% dynamic endif %}
 
 If your component is using [Inspect][inspect], you'll need to expose additional
-information to the framework.
-You can quickly determine if your component uses Inspect by looking for one of
-the following library dependencies in the component's `BUILD.gn`:
+information to the framework. You can quickly determine if your component uses
+Inspect by looking for one of the following library dependencies in the
+component's `BUILD.gn`:
 
--  `//sdk/lib/sys/inspect/cpp`
--  `//src/lib/diagnostics/inspect/rust`
--  `dart_package_label.fuchsia_inspect`
+-   `//sdk/lib/sys/inspect/cpp`
+-   `//src/lib/diagnostics/inspect/rust`
+-   `dart_package_label.fuchsia_inspect`
 
 In Components v1, `appmgr` provides access to the component's `/diagnostics`
-directory, which contains Inspect data.
-Components v2 requires a component to explicitly expose `/diagnostics` to the
-framework.
-This allows the [Archivist][archivist] to read Inspect data for snapshots,
-[iquery][iquery], etc.
+directory, which contains Inspect data. Components v2 requires a component to
+explicitly expose `/diagnostics` to the framework. This allows the
+[Archivist][archivist] to read Inspect data for snapshots, [iquery][iquery],
+etc.
 
-Note: For more details on the differences in data collection between
-Components v1 and Components v2, see the [Archivist documentation][archivist].
+Note: For more details on the differences in data collection between Components
+v1 and Components v2, see the [Archivist documentation][archivist].
 
 When [migrating the component manifest](#create-component-manifest), you can add
 Inspect capabilities to your v2 component by including the following manifest
@@ -986,45 +988,46 @@ shard:
 #### Component moniker for selectors
 
 As [explained previously](#component-moniker), it's possible to infer the
-component moniker using `ffx component list`. Alternatively you can
-use `fx iquery list` to see available components for querying inspect data. Your
+component moniker using `ffx component list`. Alternatively you can use `fx
+iquery list` to see available components for querying inspect data. Your
 component moniker should appear in the `iquery` output up after adding the
 `client.shard.cml` above.
 
 #### Inspect data in tests {#inspect-tests}
 
 If your test components read Inspect diagnostics data, migrate to the
-`fuchsia.diagnostics.ArchiveAccessor` service provided by the [Archivist][archivist].
-Consider the following approaches you may be currently using from Components v1 to accomplish this:
+`fuchsia.diagnostics.ArchiveAccessor` service provided by the
+[Archivist][archivist]. Consider the following approaches you may be currently
+using from Components v1 to accomplish this:
 
-- Injected services. The test CMX contains `fuchsia.diagnostics.ArchiveAccessor` as an
-  `injected-service`, reading isolated inspect data from an embedded Archivist limited
-  to test components:
+-   Injected services. The test CMX contains
+    `fuchsia.diagnostics.ArchiveAccessor` as an `injected-service`, reading
+    isolated inspect data from an embedded Archivist limited to test components:
 
-  ```json
-  {
-      "fuchsia.test": {
-          "injected-services": {
-              "fuchsia.diagnostics.ArchiveAccessor":
-                  "fuchsia-pkg://fuchsia.com/archivist-for-embedding#meta/archivist-for-embedding.cmx",
-              ...
-          }
-      },
-      ...
-  }
-  ```
+    ```json
+    {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.diagnostics.ArchiveAccessor":
+                    "fuchsia-pkg://fuchsia.com/archivist-for-embedding#meta/archivist-for-embedding.cmx",
+                ...
+            }
+        },
+        ...
+    }
+    ```
 
-  It means the test is reading isolated inspect data from an embedded Archivist
-  that only sees test components.
+    It means the test is reading isolated inspect data from an embedded
+    Archivist that only sees test components.
 
-- Directly from the [Hub](#hub).
+-   Directly from the [Hub](#hub).
 
-In v2, there's an Archivist running inside each test. Instead of
-instantiating another Archivist in your test, you can use that embedded Archivist
-Accessor protocol directly in your test. Therefore you'll need to do the following:
+In v2, there's an Archivist running inside each test. Instead of instantiating
+another Archivist in your test, you can use that embedded Archivist Accessor
+protocol directly in your test. Therefore you'll need to do the following:
 
-1. When [migrating tests](#migrate-tests), add the protocol capability to your
-   test root or test driver:
+1.  When [migrating tests](#migrate-tests), add the protocol capability to your
+    test root or test driver:
 
     ```json5
     // test_driver.cml (test driver)
@@ -1039,11 +1042,11 @@ Accessor protocol directly in your test. Therefore you'll need to do the followi
     }
     ```
 
-1. Update your program to use the `ArchiveReader` library, which is available
-   in [C++][archive-cpp], [Rust][archive-rust], and [Dart][archive-dart].
+1.  Update your program to use the `ArchiveReader` library, which is available
+    in [C++][archive-cpp], [Rust][archive-rust], and [Dart][archive-dart].
 
-   Note: For components in other languages, use the `ArchiveAccessor`
-   [FIDL protocol][archive-fidl] directly.
+    Note: For components in other languages, use the `ArchiveAccessor`
+    [FIDL protocol][archive-fidl] directly.
 
 ### Logging {#logging}
 
@@ -1064,11 +1067,10 @@ manifest shard:
 }
 ```
 
-Additionally, Components v1 redirects `stderr` and `stdout` to `debuglog`,
-but in Components v2 they have no default destination.
-The `debuglog` is typically used for low-level debugging information from the
-kernel and device drivers. If your component writes log data to these streams,
-consider the following:
+Additionally, Components v1 redirects `stderr` and `stdout` to `debuglog`, but
+in Components v2 they have no default destination. The `debuglog` is typically
+used for low-level debugging information from the kernel and device drivers. If
+your component writes log data to these streams, consider the following:
 
 -   [Redirect to syslog](#syslog-redirect): Forward print statements to use the
     system's standard `syslog` buffer instead. This buffer is larger and capable
@@ -1081,7 +1083,8 @@ consider the following:
 
 To send `stderr` and `stdout` to [syslog][syslog] in your v2 component, you'll
 need to configure the ELF runner to forward the streams. This enables forwarding
-for all print statements, including those generated by libraries or runtime code.
+for all print statements, including those generated by libraries or runtime
+code.
 
 When [migrating your component manifest](#create-component-manifest), include
 the following manifest shard to enable forwarding:
@@ -1142,8 +1145,8 @@ direct log messages back to the `debuglog` buffer.
     }
     ```
 
-1.  Direct `stderr` and `stdout` to `debuglog` in your program.
-    You can use libraries for the initialization if your component is written in
+1.  Direct `stderr` and `stdout` to `debuglog` in your program. You can use
+    libraries for the initialization if your component is written in
     [Rust][debug-log-rust] or [C++][debug-log-cpp].
 
     Note: If the component isn't written in C++ or Rust you can use the existing
@@ -1152,10 +1155,10 @@ direct log messages back to the `debuglog` buffer.
 ### Hub {#hub}
 
 The hub provides access to detailed structural information about component
-instances at runtime.
-In Components v1, `appmgr` provides the [v1 Hub][hub-v1] through a specific
-directory structure populated in your component's namespace under `/hub`.
-In Components v2, many v1 Hub use cases have preferred alternative approaches.
+instances at runtime. In Components v1, `appmgr` provides the [v1 Hub][hub-v1]
+through a specific directory structure populated in your component's namespace
+under `/hub`. In Components v2, many v1 Hub use cases have preferred alternative
+approaches.
 
 When migrating to Components v2, consider the following alternatives:
 
@@ -1163,18 +1166,18 @@ When migrating to Components v2, consider the following alternatives:
     observe component instance changes should use
     [event capabilities][event-capabilities] instead.
 -   [Reading inspect data](#inspect-tests): Clients reading Inspect data from
-    `out/diagnostics` should migrate to the `fuchsia.diagnostics.ArchiveAccessor`
-    service instead.
--   [Connecting to exposed services](#injected-services): Clients connecting
-    to services exposed through a component's `out/svc` directory should route
-    these services and capability providers into their tests instead, similar
-    to `injected-services`.
+    `out/diagnostics` should migrate to the
+    `fuchsia.diagnostics.ArchiveAccessor` service instead.
+-   [Connecting to exposed services](#injected-services): Clients connecting to
+    services exposed through a component's `out/svc` directory should route
+    these services and capability providers into their tests instead, similar to
+    `injected-services`.
 
 For other use cases, follow the instructions in this section to migrate to the
 [v2 Hub][hub-v2] provided by Component Manager.
 
-Note: Features of the Hub are designed to support test components only.
-If you need to access the Hub outside of the test realm, reach out to
+Note: Features of the Hub are designed to support test components only. If you
+need to access the Hub outside of the test realm, reach out to
 [component-framework-dev][cf-dev-list] for assistance.
 
 #### Route the hub directory
@@ -1183,8 +1186,8 @@ When [migrating tests](#migrate-tests), you'll need to route the `hub`
 [directory capability][directory-capabilities] to your test if the test driver
 or any other components in the test realm need to read data from the v2 Hub.
 
-Following the example in [Test uses injected services](#injected-services),
-add the `hub` directory capability to your CML file:
+Following the example in [Test uses injected services](#injected-services), add
+the `hub` directory capability to your CML file:
 
 ```json5
 //test_driver.cml
@@ -1206,26 +1209,37 @@ Update your code to reference the content path from the v2 Hub directory
 structure. Here are some examples of path differences between the Hub
 implementations:
 
-| [v1 Hub][hub-v1] Path | [v2 Hub][hub-v2] Path |
-| --------------------- | --------------------- |
-| `/hub/c/{{ '<var>' }}component-name{{ '</var>' }}/{{ '<var>' }}instance-id{{ '</var>' }}/url` | `/hub/url` |
-| `/hub/c/{{ '<var>' }}component-name{{ '</var>' }}/{{ '<var>' }}instance-id{{ '</var>' }}/in/{{ '<var>' }}svc-path{{ '</var>' }}` | `/hub/exec/in/{{ '<var>' }}svc-path{{ '</var>' }}` |
-| `/hub/c/{{ '<var>' }}component-name{{ '</var>' }}/{{ '<var>' }}instance-id{{ '</var>' }}/process-id` | `/hub/exec/runtime/elf/process-id` |
-| `/hub/c/{{ '<var>' }}child-component{{ '</var>' }}` | `/hub/children/{{ '<var>' }}child-component{{ '</var>' }}` |
+| [v1 Hub][hub-v1] Path             | [v2 Hub][hub-v2] Path                 |
+| --------------------------------- | ------------------------------------- |
+| `/hub/c/{{ '<var>'                | `/hub/url`                            |
+: }}component-name{{ '</var>' }}/{{ :                                       :
+: '<var>' }}instance-id{{ '</var>'  :                                       :
+: }}/url`                           :                                       :
+| `/hub/c/{{ '<var>'                | `/hub/exec/in/{{ '<var>' }}svc-path{{ |
+: }}component-name{{ '</var>' }}/{{ : '</var>' }}`                          :
+: '<var>' }}instance-id{{ '</var>'  :                                       :
+: }}/in/{{ '<var>' }}svc-path{{     :                                       :
+: '</var>' }}`                      :                                       :
+| `/hub/c/{{ '<var>'                | `/hub/exec/runtime/elf/process-id`    |
+: }}component-name{{ '</var>' }}/{{ :                                       :
+: '<var>' }}instance-id{{ '</var>'  :                                       :
+: }}/process-id`                    :                                       :
+| `/hub/c/{{ '<var>'                | `/hub/children/{{ '<var>'             |
+: }}child-component{{ '</var>' }}`  : }}child-component{{ '</var>' }}`      :
 
 Note: The `hub` directory routed to your component is scoped to the current
 realm. To access hub contents from the parent realm, route the hub from `parent`
 instead of `framework`. This feature is not available with the v1 Hub.
 
-## Other common capabilities {#other-capabilities}
+## Other common situations {#other-situations}
 
-This section provides guidance on migrating other capabilities that are common
-to many components.
+This section provides guidance on migrating components that use other common
+capabilities or features.
 
 ### Resolvers
 
-If your component is not part of the `base` package set for your product,
-you must route the `universe` resolver to it. Resolvers are routed to components
+If your component is not part of the `base` package set for your product, you
+must route the `universe` resolver to it. Resolvers are routed to components
 using environments, and `core.cml` has a shared environment named
 `universe-resolver-env` for components outside of `base`.
 
@@ -1291,21 +1305,73 @@ incompatible with being outside the base package set.
 For more details on how `eager` impacts component startup see,
 [lifecycle][eager-lifecycle] and [component manifests][eager-manifest].
 
+### critical_components {#critical-components}
+
+[`critical_components`][sysmgr-critical-components] is a sysmgr feature that
+allows a component to mark itself as critical to system operation:
+
+```json
+{
+  ...
+  "critical_components": [
+    "fuchsia-pkg://fuchsia.com/system-update-checker#meta/system-update-checker.cmx"
+  ]
+}
+```
+
+The equivalent feature in Components v2 is called "reboot-on-terminate". If your
+component appears in `critical_components` you should mark it as `on_terminate:
+reboot` in the parent component's manifest:
+
+```
+// core.cml
+{
+    children: [
+        ...
+        {
+            name: "system-update-checker",
+            url: "fuchsia-pkg://fuchsia.com/system-update-checker#meta/system-update-checker.cm",
+            startup: "eager",
+            on_terminate: "reboot",
+        },
+    ],
+}
+```
+
+Also, you'll need to add the component's moniker to component manager's security
+policy allowlist at
+[`//src/security/policy/component_manager_policy.json5`][src-security-policy]:
+
+```
+// //src/security/policy/component_manager_policy.json5
+{
+    security_policy: {
+        ...
+        child_policy: {
+            reboot_on_terminate: [
+                ...
+                "/core/system-update-checker",
+            ],
+        },
+    },
+}
+```
+
 ### Shell binaries
 
 Your project may contain a `fuchsia_shell_package()` build target designed to
 execute in a shell environment. Many of these packages also contain a CMX file
-to support invoking the binary as a v1 component.
-When [exposing your services](#expose-services) to the `sys` environment,
-include any services required by shell binaries.
+to support invoking the binary as a v1 component. When
+[exposing your services](#expose-services) to the `sys` environment, include any
+services required by shell binaries.
 
 Note: If your component requires `shell-commands` directory access to invoke
 shell binaries, see [directory features](#directory-features) for more details.
 
-Shell binaries are run in the `sys` [environment][glossary.environment],
-and have access to all the capabilities provided there.
-Capabilities are not defined by the CMX manifest file unless shell binaries are
-invoked as a component using the `run` command.
+Shell binaries are run in the `sys` [environment][glossary.environment], and
+have access to all the capabilities provided there. Capabilities are not defined
+by the CMX manifest file unless shell binaries are invoked as a component using
+the `run` command.
 
 When working with shell binaries, consider the following:
 
@@ -1315,9 +1381,9 @@ When working with shell binaries, consider the following:
     topology (such as tests), migrate the functionality into a new v2 component
     instead.
 
-Note: There is no v2 equivalent of using `run` to invoke a shell binary
-**as a component**. If you require this feature for your component,
-reach out to [component-framework-dev][cf-dev-list].
+Note: There is no v2 equivalent of using `run` to invoke a shell binary **as a
+component**. If you require this feature for your component, reach out to
+[component-framework-dev][cf-dev-list].
 
 ### Lifecycle
 
@@ -1325,7 +1391,8 @@ If your component is a client of the `fuchsia.process.lifecycle.Lifecycle`
 protocol, then follow the instructions in this section to migrate lifecycle
 access.
 
-1. Remove your component's entry in the `appmgr` [allowlist][cs-appmgr-allowlist]:
+1.  Remove your component's entry in the `appmgr`
+    [allowlist][cs-appmgr-allowlist]:
 
 ```cpp
 // Remove this entry.
@@ -1333,7 +1400,8 @@ lifecycle_allowlist.insert(component::Moniker{
     .url = "fuchsia-pkg://fuchsia.com/my_package#meta/my_component.cmx", .realm_path = {"app", "sys"}});
 ```
 
-1. When [migrating your component manifest](#create-component-manifest), add the lifecycle stop event:
+1.  When [migrating your component manifest](#create-component-manifest), add
+    the lifecycle stop event:
 
 ```json5
 // my_component.cml
@@ -1352,28 +1420,37 @@ lifecycle_allowlist.insert(component::Moniker{
 
 ## Converting CMX features {:#cmx-features}
 
-This section provides guidance on migrating additional CMX [`sandbox`][cmx-services]
-features. If there's a feature in your CMX file that's not in this list,
-reach out to [component-framework-dev][cf-dev-list].
+This section provides guidance on migrating additional CMX
+[`sandbox`][cmx-services] features. If there's a feature in your CMX file that's
+not in this list, reach out to [component-framework-dev][cf-dev-list].
 
 ### Storage features {#storage-features}
 
 If your component uses any of the following features, follow the instructions in
 this section to migrate storage access:
 
-| Feature | Description | Storage Capability | Path |
-| ------- | ----------- | ------------------ | ---- |
-| `isolated-persistent-storage` | Isolated persistent storage directory | `data` | `/data` |
-| `isolated-cache-storage` | Managed persistent storage directory | `cache` | `/cache` |
-| `isolated-temp` | Managed in-memory storage directory | `temp` | `/tmp` |
+| Feature                       | Description | Storage Capability | Path     |
+| ----------------------------- | ----------- | ------------------ | -------- |
+| `isolated-persistent-storage` | Isolated    | `data`             | `/data`  |
+:                               : persistent  :                    :          :
+:                               : storage     :                    :          :
+:                               : directory   :                    :          :
+| `isolated-cache-storage`      | Managed     | `cache`            | `/cache` |
+:                               : persistent  :                    :          :
+:                               : storage     :                    :          :
+:                               : directory   :                    :          :
+| `isolated-temp`               | Managed     | `temp`             | `/tmp`   |
+:                               : in-memory   :                    :          :
+:                               : storage     :                    :          :
+:                               : directory   :                    :          :
 
 These features are supported in v2 components using
 [storage capabilities][storage-capabilities].
 
 #### Declare the required storage capabilities
 
-When [migrating your component manifest](#create-component-manifest), add
-the following to your CML file:
+When [migrating your component manifest](#create-component-manifest), add the
+following to your CML file:
 
 ```json5
 // my_component.cml
@@ -1390,9 +1467,8 @@ the following to your CML file:
 
 #### Route storage from the parent realm
 
-When [adding your component](#add-component-to-topology),
-you'll need to offer the appropriate storage path to your component from its
-parent realm.
+When [adding your component](#add-component-to-topology), you'll need to offer
+the appropriate storage path to your component from its parent realm.
 
 ```json5
 // core.cml
@@ -1423,9 +1499,9 @@ for assistance.
 
 Components that use storage use a [component ID index][component-id-index] to
 preserve access to persistent storage contents across the migration, such as
-[`core_component_id_index.json5`][example-component-id-index].
-You must update the component index to map the new component moniker to the same
-instance within the component that provides the storage capability.
+[`core_component_id_index.json5`][example-component-id-index]. You must update
+the component index to map the new component moniker to the same instance within
+the component that provides the storage capability.
 
 Find any instances of your current v1 component in component index files:
 
@@ -1501,20 +1577,20 @@ will not persist once the test exits.
 If your component uses any of the following features, follow the instructions in
 this section to migrate directory access:
 
-| Feature | Description | Directory Capability | Path |
-| ------- | ----------- | -------------------- | ---- |
-| `factory-data` | Read-only factory partition data | `factory` |`/factory` |
-| `durable-data` | Persistent data that survives factory reset | `durable` |`/durable` |
-| `shell-commands` | Executable directory of shell binaries | `bin` | `/bin` |
-| `root-ssl-certificates` | Read-only root certificate data | `root-ssl-certificates` | `/config/ssl` |
+Feature                 | Description                                 | Directory Capability    | Path
+----------------------- | ------------------------------------------- | ----------------------- | ----
+`factory-data`          | Read-only factory partition data            | `factory`               | `/factory`
+`durable-data`          | Persistent data that survives factory reset | `durable`               | `/durable`
+`shell-commands`        | Executable directory of shell binaries      | `bin`                   | `/bin`
+`root-ssl-certificates` | Read-only root certificate data             | `root-ssl-certificates` | `/config/ssl`
 
 These features are supported in v2 components using
 [directory capabilities][directory-capabilities].
 
 #### Declare the required directory capabilities
 
-When [migrating your component manifest](#create-component-manifest), add
-the following to your CML file:
+When [migrating your component manifest](#create-component-manifest), add the
+following to your CML file:
 
 ```json5
 // my_component.cml
@@ -1561,21 +1637,21 @@ the directory capabilities to your component.
 ```
 
 Note: If the appropriate directory capability is not currently provided by your
-component's parent realm, reach out to
-[component-framework-dev][cf-dev-list] for assistance.
+component's parent realm, reach out to [component-framework-dev][cf-dev-list]
+for assistance.
 
 #### Inject directory path into tests
 
 When [migrating tests](#migrate-tests), you need to inject the directory
-capabilities in your test if the test driver or any of the other components
-in the test realm require directory access.
+capabilities in your test if the test driver or any of the other components in
+the test realm require directory access.
 
-Test Runner Framework only allows the following directory capabilities
-to be used by non-hermetic tests:
+Test Runner Framework only allows the following directory capabilities to be
+used by non-hermetic tests:
 
-| Capability | Description | Path |
-| ------- | ----------- | ---- |
-| `root-ssl-certificates` | Read-only root certificate data | `/config/ssl` |
+Capability              | Description                     | Path
+----------------------- | ------------------------------- | -------------
+`root-ssl-certificates` | Read-only root certificate data | `/config/ssl`
 
 Following the example in [Test uses injected services](#injected-services), add
 the following to route directory access to your test driver from the test root:
@@ -1609,9 +1685,10 @@ assistance.
 If your component uses any of the following features, follow the instructions in
 this section to migrate directory access:
 
-| Feature | Description | Directory Capability | Path |
-| ------- | ----------- | -------------------- | ---- |
-| `config-data` | Read-only configuration data | `config-data` |`/config/data` |
+| Feature       | Description        | Directory Capability | Path           |
+| ------------- | ------------------ | -------------------- | -------------- |
+| `config-data` | Read-only          | `config-data`        | `/config/data` |
+:               : configuration data :                      :                :
 
 These features are supported in v2 components using
 [directory capabilities][directory-capabilities].
@@ -1621,8 +1698,8 @@ For more details using data files, see
 
 #### Declare the required directory capabilities
 
-When [migrating your component manifest](#create-component-manifest), add
-the following to your CML file:
+When [migrating your component manifest](#create-component-manifest), add the
+following to your CML file:
 
 ```json5
 // my_component.cml
@@ -1637,6 +1714,7 @@ the following to your CML file:
     ],
 }
 ```
+
 #### Route directory from the parent realm
 
 When [adding your component](#add-component-to-topology), you'll need to offer
@@ -1668,9 +1746,9 @@ the directory capability with the appropriate subdirectory to your component.
 
 When [migrating tests](#migrate-tests), you need to inject the directory
 capability with the appropriate subdirectory in your test if the test driver or
-any of the other components in the test realm require directory access.
-The name of the subdirectory should match the name of the package that contains
-the component.
+any of the other components in the test realm require directory access. The name
+of the subdirectory should match the name of the package that contains the
+component.
 
 Following the example in [Test uses injected services](#injected-services), add
 the following to route directory access to your test driver from the test root:
@@ -1701,14 +1779,15 @@ the following to route directory access to your test driver from the test root:
 If your component uses any of the following features, follow the instructions in
 this section to migrate device access:
 
-| Feature | Description | Path |
-| ------- | ----------- | ---- |
-| `dev`   |  Device driver entries in `devfs` | `/dev/class/*` |
+Feature | Description                      | Path
+------- | -------------------------------- | --------------
+`dev`   | Device driver entries in `devfs` | `/dev/class/*`
 
 [Device filesystem][device-model] access is supported in Components v2 using
 [directory capabilities][directory-capabilities].
 
-Consider the following example using Components v1 to access `/dev/class/input-report`:
+Consider the following example using Components v1 to access
+`/dev/class/input-report`:
 
 ```json
 // my_component.cmx
@@ -1724,8 +1803,8 @@ Consider the following example using Components v1 to access `/dev/class/input-r
 
 #### Declare the required device capabilities
 
-When [migrating your component manifest](#create-component-manifest), add
-the device path as a directory capability to your CML file:
+When [migrating your component manifest](#create-component-manifest), add the
+device path as a directory capability to your CML file:
 
 ```json5
 // my_component.cml
@@ -1743,9 +1822,8 @@ the device path as a directory capability to your CML file:
 
 #### Route device subdirectory from the parent realm
 
-When [adding your component](#add-component-to-topology),
-you'll need to offer the appropriate device  path to your component from its
-parent realm.
+When [adding your component](#add-component-to-topology), you'll need to offer
+the appropriate device path to your component from its parent realm.
 
 ```json5
 // core.cml
@@ -1773,20 +1851,20 @@ parent realm.
 #### Inject device directory into tests
 
 When [migrating tests](#migrate-tests), you need to inject the directory
-capabilities in your test if the test driver or any of the other components
-in the test realm require directory access.
+capabilities in your test if the test driver or any of the other components in
+the test realm require directory access.
 
-Test Runner Framework only allows the following device directories
-to be used by non-hermetic tests:
+Test Runner Framework only allows the following device directories to be used by
+non-hermetic tests:
 
-| Capability | Description |
-| ---------- | ----------- |
-| `dev-input-report` | Input method events |
-| `dev-display-controller` | Graphical display controller |
-| `dev-goldfish-address-space` | Goldfish address space device |
-| `dev-goldfish-control` | Goldfish control device |
-| `dev-goldfish-pipe` | Goldfish pipe device |
-| `dev-gpu` | GPU device |
+Capability                   | Description
+---------------------------- | -----------------------------
+`dev-input-report`           | Input method events
+`dev-display-controller`     | Graphical display controller
+`dev-goldfish-address-space` | Goldfish address space device
+`dev-goldfish-control`       | Goldfish control device
+`dev-goldfish-pipe`          | Goldfish pipe device
+`dev-gpu`                    | GPU device
 
 Following the example in [Test uses injected services](#injected-services), add
 the following to route directory access to your test driver from the test root:
@@ -1811,8 +1889,8 @@ the following to route directory access to your test driver from the test root:
 }
 ```
 
-Note: If the appropriate device directory is not currently provided by the
-Test Runner Framework, reach out to [component-framework-dev][cf-dev-list] for
+Note: If the appropriate device directory is not currently provided by the Test
+Runner Framework, reach out to [component-framework-dev][cf-dev-list] for
 assistance.
 
 ### Event capabilities {#events}
@@ -1820,10 +1898,10 @@ assistance.
 If your component uses any of the following features, follow the instructions in
 this section:
 
-| Feature | Description | Path |
-| ------- | ----------- | ---- |
-| `hub` | Observing component path changes | `/hub/c/*` |
-| `hub` | Observing realm path changes | `/hub/r/*` |
+Feature | Description                      | Path
+------- | -------------------------------- | ----------
+`hub`   | Observing component path changes | `/hub/c/*`
+`hub`   | Observing realm path changes     | `/hub/r/*`
 
 These features are supported in v2 components using
 [event capabilities][event-capabilities].
@@ -1889,10 +1967,9 @@ In your test driver, consume the events routed by the test root:
 ### Build Info {#build-info}
 
 When migrating the `build-info` feature, instead use the
-`fuchsia.buildinfo.Provider` [protocol][build-info-fidl].
-This protocol is the only supported method of retrieving build information
-moving forward. To use this protocol, add it
-[while declaring required services](#required-services).
+`fuchsia.buildinfo.Provider` [protocol][build-info-fidl]. This protocol is the
+only supported method of retrieving build information moving forward. To use
+this protocol, add it [while declaring required services](#required-services).
 
 [glossary.component-manifest]: /docs/glossary/README.md#component-manifest
 [glossary.components-v1]: /docs/glossary/README.md#components-v1
@@ -1952,10 +2029,12 @@ moving forward. To use this protocol, add it
 [manifests-use]: /docs/concepts/components/v2/component_manifests.md#use
 [moniker]: /docs/concepts/components/v2/monikers.md
 [protocol-capabilities]: /docs/concepts/components/v2/capabilities/protocol.md
+[src-security-policy]: /src/security/policy/component_manager_policy.json5
 [storage-capabilities]: /docs/concepts/components/v2/capabilities/storage.md
 [syslog]: /docs/development/diagnostics/logs/recording.md#logsinksyslog
 [sysmgr-config-search]: https://cs.opensource.google/search?q=fuchsia-pkg:%2F%2Ffuchsia.com%2F.*%23meta%2Fmy_component.cmx%20-f:.*.cmx$%20%5C%22services%5C%22&ss=fuchsia
 [sysmgr-config]: /docs/concepts/components/v1/sysmgr.md
+[sysmgr-critical-components]: /docs/concepts/components/v1/sysmgr.md#critical_components
 [system-services]: /docs/concepts/testing/v1_test_component.md#services
 [troubleshooting-components]: /docs/development/components/v2/troubleshooting.md
 [unit-tests-with-generated-manifests]: /docs/development/components/build.md#unit-tests

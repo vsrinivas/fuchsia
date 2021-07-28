@@ -82,51 +82,69 @@ See also: [ELF Runner](elf_runner.md), [Component Runners][doc-runners]
 
 Component manifests provide a syntax for routing capabilities between
 components. For a detailed walkthrough about what happens during capability
-routing, see the [Capabilities overview][doc-capabilities]
-and [Life of a protocol open][doc-protocol-open].
+routing, see the [Capabilities overview][doc-capabilities] and
+[Life of a protocol open][doc-protocol-open].
 
 #### Capability names {#capability-names}
 
-Every capability in a `.cml` has a name so that it can be referred to in
-routing declarations. A capability name consists of a string containing the
-characters `a` to `z`, `A` to `Z`, `0` to `9`, underscore (`_`), hyphen (`-`),
-or the full stop character (`.`).
+Every capability in a `.cml` has a name so that it can be referred to in routing
+declarations. A capability name consists of a string containing the characters
+`a` to `z`, `A` to `Z`, `0` to `9`, underscore (`_`), hyphen (`-`), or the full
+stop character (`.`).
 
 #### Capability types {#capability-types}
 
 The following capabilities can be routed:
 
-| type | description | routed to |
-|------|-------------|-----------|
-| `protocol` | A filesystem node that is used to open a channel backed by a FIDL protocol. | components |
-| `service` | A filesystem directory that is used to open a channel to one of several [service][doc-service] instances. | components |
-| `directory` | A filesystem directory. | components |
-| `storage` | A writable filesystem directory that is isolated to the component using it. | components |
-| `resolver` | A capability that, when registered in an [environment](#environments), causes a component with a particular URL scheme to be resolved with that [resolver][doc-resolvers]. | [environments](#environments) |
-| `runner` | A capability that, when registered in an [environment](#environments), allows the framework to use that [runner][doc-runners] when starting components. | [environments](#environments) |
+| type        | description                   | routed to                     |
+| ----------- | ----------------------------- | ----------------------------- |
+| `protocol`  | A filesystem node that is     | components                    |
+:             : used to open a channel backed :                               :
+:             : by a FIDL protocol.           :                               :
+| `service`   | A filesystem directory that   | components                    |
+:             : is used to open a channel to  :                               :
+:             : one of several                :                               :
+:             : [service][doc-service]        :                               :
+:             : instances.                    :                               :
+| `directory` | A filesystem directory.       | components                    |
+| `storage`   | A writable filesystem         | components                    |
+:             : directory that is isolated to :                               :
+:             : the component using it.       :                               :
+| `resolver`  | A capability that, when       | [environments](#environments) |
+:             : registered in an              :                               :
+:             : [environment](#environments), :                               :
+:             : causes a component with a     :                               :
+:             : particular URL scheme to be   :                               :
+:             : resolved with that            :                               :
+:             : [resolver][doc-resolvers].    :                               :
+| `runner`    | A capability that, when       | [environments](#environments) |
+:             : registered in an              :                               :
+:             : [environment](#environments), :                               :
+:             : allows the framework to use   :                               :
+:             : that [runner][doc-runners]    :                               :
+:             : when starting components.     :                               :
 
 #### Routing terminology {#routing-terminology}
 
 Routing terminology divides into the following categories:
 
-1) Declarations of how capabilities are routed between the component, its
-   parent, and its children:
-    - `offer`: Declares that the capability listed is made available to a
-      [child component][doc-children] instance or a
-      [child collection][doc-collection].
-    - `expose`: Declares that the capabilities listed are made available to the
-      parent component or to the framework. It is valid to `expose` from self
-      or from a child component.
-
-2) Declarations of capabilities consumed or provided by the component:
-    - `use`: For executable components, declares that this component
-      requires the capability in its [namespace] at runtime. Used capabilities
-      are assumed to be from `parent` unless otherwise specified. Capabilities
-      used from `parent` must be offered the capability from its parent.
-    - `capabilities`: Declares capabilities that this component. Capabilities
-      that are offered or exposed from `self` must appear here. These
-      capabilities often map to a node in the [outgoing
-      directory][glossary.outgoing directory]
+1.  Declarations of how capabilities are routed between the component, its
+    parent, and its children:
+    -   `offer`: Declares that the capability listed is made available to a
+        [child component][doc-children] instance or a [child
+        collection][doc-collection].
+    -   `expose`: Declares that the capabilities listed are made available to
+        the parent component or to the framework. It is valid to `expose` from
+        self or from a child component.
+1.  Declarations of capabilities consumed or provided by the component:
+    -   `use`: For executable components, declares that this component requires
+        the capability in its [namespace] at runtime. Used capabilities are
+        assumed to be from `parent` unless otherwise specified. Capabilities
+        used from `parent` must be offered the capability from its parent.
+    -   `capabilities`: Declares capabilities that this component. Capabilities
+        that are offered or exposed from `self` must appear here. These
+        capabilities often map to a node in the
+        [outgoing directory][glossary.outgoing directory]
 
 #### Framework protocols {#framework-protocols}
 
@@ -333,6 +351,13 @@ properties:
     assigned to the child component instance, one of
     [`environments`](#environments). If omitted, the child will inherit the same
     environment assigned to this component.
+-   `on_terminate` _(optional)_: Determines the fault recovery policy to apply
+    if this component terminates.
+    -   `none` _(default)_: Do nothing.
+    -   `reboot`: Gracefully reboot the system if the component terminates for
+        any reason. This is a special feature for use only by a narrow set of
+        components; see [Termination policies][doc-reboot-on-terminate] for more
+        information.
 
 Example:
 
@@ -534,8 +559,8 @@ runtime, as explained in [Routing terminology](#routing-terminology).
         an array of names of protocol capabilities.
     -   `directory`: The [name](#capability-names) of a directory capability.
     -   `storage`: The [name](#capability-names) of a storage capability.
--   `from` _(optional)_: The source of the capability. Defaults to `parent`.
-    One of:
+-   `from` _(optional)_: The source of the capability. Defaults to `parent`. One
+    of:
     -   `parent`: The component's parent.
     -   `debug`: One of [`debug_capabilities`][fidl-environment-decl] in the
         environment assigned to this component.
@@ -738,6 +763,7 @@ This section may be omitted.
 [doc-protocol]: /docs/concepts/components/v2/capabilities/protocol.md
 [doc-protocol-open]: /docs/concepts/components/v2/capabilities/life_of_a_protocol_open.md
 [doc-realm-definitions]: realms.md#definitions
+[doc-reboot-on-terminate]: termination_policies.md#reboot-on-terminate
 [doc-resolvers]: /docs/concepts/components/v2/capabilities/resolvers.md
 [doc-runners]: /docs/concepts/components/v2/capabilities/runners.md
 [doc-static-children]: realms.md#static-children
