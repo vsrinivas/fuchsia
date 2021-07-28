@@ -793,27 +793,27 @@ zx::status<fidl::ClientEnd<fio::Directory>> DriverRunner::CreateComponent(std::s
   if (endpoints.is_error()) {
     return endpoints.take_error();
   }
-  auto bind_callback = [name, url](fidl::WireResponse<fsys::Realm::BindChild>* response) {
+  auto open_callback = [name, url](fidl::WireResponse<fsys::Realm::OpenExposedDir>* response) {
     if (response->result.is_err()) {
-      LOGF(ERROR, "Failed to bind component '%s' (%s): %u", name.data(), url.data(),
-           response->result.err());
+      LOGF(ERROR, "Failed to open exposed directory for component '%s' (%s): %u", name.data(),
+           url.data(), response->result.err());
     }
   };
   auto create_callback = [this, name, url, collection, server_end = std::move(endpoints->server),
-                          bind_callback = std::move(bind_callback)](
+                          open_callback = std::move(open_callback)](
                              fidl::WireResponse<fsys::Realm::CreateChild>* response) mutable {
     if (response->result.is_err()) {
       LOGF(ERROR, "Failed to create component '%s' (%s): %u", name.data(), url.data(),
            response->result.err());
       return;
     }
-    auto bind = realm_->BindChild(
+    auto open = realm_->OpenExposedDir(
         fsys::wire::ChildRef{.name = fidl::StringView::FromExternal(name),
                              .collection = fidl::StringView::FromExternal(collection)},
-        std::move(server_end), std::move(bind_callback));
-    if (!bind.ok()) {
-      LOGF(ERROR, "Failed to bind component '%s' (%s): %s", name.data(), url.data(),
-           bind.FormatDescription().c_str());
+        std::move(server_end), std::move(open_callback));
+    if (!open.ok()) {
+      LOGF(ERROR, "Failed to open exposed directory for component '%s' (%s): %s", name.data(),
+           url.data(), open.FormatDescription().c_str());
     }
   };
   fidl::FidlAllocator allocator;
