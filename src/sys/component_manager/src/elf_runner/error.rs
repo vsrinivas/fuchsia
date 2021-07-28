@@ -14,6 +14,12 @@ use {
 /// Errors produced by `ElfRunner`.
 #[derive(Debug, Clone, Error)]
 pub enum ElfRunnerError {
+    #[error("failed to register as exception handler for component with url \"{}\": {}", url, err)]
+    ComponentExceptionRegistrationError {
+        url: String,
+        #[source]
+        err: ClonableError,
+    },
     #[error("failed to retrieve process koid for component with url \"{}\": {}", url, err)]
     ComponentProcessIdError {
         url: String,
@@ -69,6 +75,16 @@ pub enum ElfRunnerError {
 }
 
 impl ElfRunnerError {
+    pub fn component_exception_registration_error(
+        url: impl Into<String>,
+        err: impl Into<Error>,
+    ) -> ElfRunnerError {
+        ElfRunnerError::ComponentExceptionRegistrationError {
+            url: url.into(),
+            err: err.into().into(),
+        }
+    }
+
     pub fn component_process_id_error(
         url: impl Into<String>,
         err: impl Into<Error>,

@@ -29,4 +29,6 @@ type Error = strict enum {
     RESOURCE_UNAVAILABLE = 10;
     /// The component instance died unexpectedly.
     INSTANCE_DIED = 11;
+    /// The requested resource does not exist.
+    RESOURCE_NOT_FOUND = 12;
 };

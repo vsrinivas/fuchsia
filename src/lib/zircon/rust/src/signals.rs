@@ -97,6 +97,7 @@ bitflags! {
         const FIFO_PEER_CLOSED = ZX_FIFO_PEER_CLOSED;
 
         // Job
+        const JOB_TERMINATED   = ZX_JOB_TERMINATED;
         const JOB_NO_JOBS      = ZX_JOB_NO_JOBS;
         const JOB_NO_PROCESSES = ZX_JOB_NO_PROCESSES;
 

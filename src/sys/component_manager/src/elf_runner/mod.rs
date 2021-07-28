@@ -4,6 +4,7 @@
 
 mod component;
 mod config;
+mod crash_handler;
 mod error;
 mod launcher;
 mod runtime_dir;
@@ -16,7 +17,7 @@ use {
         stdout::bind_streams_to_syslog,
     },
     crate::{
-        builtin::runner::BuiltinRunnerFactory,
+        builtin::{crash_records::CrashRecords, runner::BuiltinRunnerFactory},
         config::RuntimeConfig,
         model::{
             policy::ScopedPolicyChecker,
@@ -121,6 +122,8 @@ pub struct ElfRunner {
     /// The latter is typically the case in unit tests and nested
     /// component managers.
     utc_clock: Option<Arc<Clock>>,
+
+    crash_records: CrashRecords,
 }
 
 struct ConfigureLauncherResult {
@@ -132,8 +135,16 @@ struct ConfigureLauncherResult {
 }
 
 impl ElfRunner {
-    pub fn new(config: &RuntimeConfig, utc_clock: Option<Arc<Clock>>) -> ElfRunner {
-        ElfRunner { launcher_connector: ProcessLauncherConnector::new(config), utc_clock }
+    pub fn new(
+        config: &RuntimeConfig,
+        utc_clock: Option<Arc<Clock>>,
+        crash_records: CrashRecords,
+    ) -> ElfRunner {
+        ElfRunner {
+            launcher_connector: ProcessLauncherConnector::new(config),
+            utc_clock,
+            crash_records,
+        }
     }
 
     async fn configure_launcher(
@@ -297,6 +308,15 @@ impl ElfRunner {
         let component_job = job_default()
             .create_child_job()
             .map_err(|e| ElfRunnerError::component_job_creation_error(resolved_url.clone(), e))?;
+
+        crash_handler::run_exceptions_server(
+            &component_job,
+            resolved_url.clone(),
+            self.crash_records.clone(),
+        )
+        .map_err(|e| {
+            ElfRunnerError::component_exception_registration_error(resolved_url.clone(), e)
+        })?;
 
         // Set timer slack.
         //
@@ -605,7 +625,7 @@ mod tests {
         fuchsia_async::{self as fasync, futures::join},
         fuchsia_zircon::{self as zx, Task},
         fuchsia_zircon::{AsHandleRef, Job, Process},
-        futures::{prelude::*, StreamExt},
+        futures::{StreamExt, TryStreamExt},
         io_util,
         matches::assert_matches,
         moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
@@ -620,6 +640,10 @@ mod tests {
         },
         vfs::tree_builder::TreeBuilder,
     };
+
+    fn new_elf_runner_for_test(config: &RuntimeConfig) -> Arc<ElfRunner> {
+        Arc::new(ElfRunner::new(&config, None, CrashRecords::new()))
+    }
 
     // Rust's test harness does not allow passing through arbitrary arguments, so to get coverage
     // for the different LibraryOpts configurations (which would normally be set based on
@@ -904,7 +928,7 @@ mod tests {
             use_builtin_process_launcher: should_use_builtin_process_launcher(),
             ..Default::default()
         };
-        let runner = Arc::new(ElfRunner::new(&config, None));
+        let runner = new_elf_runner_for_test(&config);
         let runner = runner.get_scoped_runner(ScopedPolicyChecker::new(
             Arc::downgrade(&Arc::new(config)),
             AbsoluteMoniker::root(),
@@ -955,7 +979,7 @@ mod tests {
             use_builtin_process_launcher: !should_use_builtin_process_launcher(),
             ..Default::default()
         };
-        let runner = Arc::new(ElfRunner::new(&config, None));
+        let runner = new_elf_runner_for_test(&config);
         let runner = runner.get_scoped_runner(ScopedPolicyChecker::new(
             Arc::downgrade(&Arc::new(config)),
             AbsoluteMoniker::root(),
@@ -1225,7 +1249,7 @@ mod tests {
             use_builtin_process_launcher: should_use_builtin_process_launcher(),
             ..Default::default()
         };
-        let runner = Arc::new(ElfRunner::new(&config, None));
+        let runner = new_elf_runner_for_test(&config);
         let runner = runner.get_scoped_runner(ScopedPolicyChecker::new(
             Arc::downgrade(&Arc::new(config)),
             AbsoluteMoniker::root(),
@@ -1266,7 +1290,7 @@ mod tests {
             use_builtin_process_launcher: should_use_builtin_process_launcher(),
             ..Default::default()
         });
-        let runner = Arc::new(ElfRunner::new(&config, None));
+        let runner = new_elf_runner_for_test(&config);
         let runner = runner.get_scoped_runner(ScopedPolicyChecker::new(
             Arc::downgrade(&config),
             AbsoluteMoniker::from(vec!["foo:0"]),
@@ -1305,7 +1329,7 @@ mod tests {
             use_builtin_process_launcher: should_use_builtin_process_launcher(),
             ..Default::default()
         };
-        let runner = Arc::new(ElfRunner::new(&config, None));
+        let runner = new_elf_runner_for_test(&config);
         let runner = runner.get_scoped_runner(ScopedPolicyChecker::new(
             Arc::downgrade(&Arc::new(config)),
             AbsoluteMoniker::root(),
@@ -1348,7 +1372,7 @@ mod tests {
             },
             ..Default::default()
         });
-        let runner = Arc::new(ElfRunner::new(&config, None));
+        let runner = new_elf_runner_for_test(&config);
         let runner = runner.get_scoped_runner(ScopedPolicyChecker::new(
             Arc::downgrade(&config),
             AbsoluteMoniker::root(),
@@ -1431,7 +1455,7 @@ mod tests {
                 ..Default::default()
             };
 
-            let runner = Arc::new(ElfRunner::new(&config, None));
+            let runner = new_elf_runner_for_test(&config);
             let runner = runner.get_scoped_runner(ScopedPolicyChecker::new(
                 Arc::downgrade(&Arc::new(config)),
                 AbsoluteMoniker::root(),
@@ -1493,7 +1517,7 @@ mod tests {
             use_builtin_process_launcher: should_use_builtin_process_launcher(),
             ..Default::default()
         };
-        let runner = Arc::new(ElfRunner::new(&config, None));
+        let runner = new_elf_runner_for_test(&config);
         let runner = runner.get_scoped_runner(ScopedPolicyChecker::new(
             Arc::downgrade(&Arc::new(config)),
             AbsoluteMoniker::root(),

@@ -282,6 +282,7 @@ multiconst!(zx_signals_t, [
     ZX_FIFO_PEER_CLOSED         = ZX_OBJECT_PEER_CLOSED;
 
     // Job
+    ZX_JOB_TERMINATED           = ZX_OBJECT_SIGNAL_3;
     ZX_JOB_NO_JOBS              = ZX_OBJECT_SIGNAL_4;
     ZX_JOB_NO_PROCESSES         = ZX_OBJECT_SIGNAL_5;
 

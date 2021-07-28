@@ -17,6 +17,7 @@ fidl("fuchsia.sys2") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.component",
+    "//sdk/fidl/fuchsia.component.types",
     "//sdk/fidl/fuchsia.data",
     "//sdk/fidl/fuchsia.io",
     "//sdk/fidl/fuchsia.io2",
@@ -26,6 +27,7 @@ fidl("fuchsia.sys2") {
   ]
 
   sources = [
+    "crash_records.fidl",
     "decls/capability_decl.fidl",
     "decls/child_decl.fidl",
     "decls/collection_decl.fidl",

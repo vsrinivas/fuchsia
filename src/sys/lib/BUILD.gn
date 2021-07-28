@@ -23,5 +23,6 @@ group("tests") {
     "routing:fuchsia-routing-tests",
     "routing:host-routing-tests",
     "runner:tests",
+    "task-exceptions:tests",
   ]
 }

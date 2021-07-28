@@ -8,6 +8,7 @@ use {
         builtin::{
             arguments::Arguments as BootArguments,
             capability::BuiltinCapability,
+            crash_records::{CrashRecords, CrashRecordsSvc},
             debug_resource::DebugResource,
             fuchsia_boot_resolver::{FuchsiaBootResolver, SCHEME as BOOT_SCHEME},
             hypervisor_resource::HypervisorResource,
@@ -89,6 +90,7 @@ pub struct BuiltinEnvironmentBuilder {
     add_environment_resolvers: bool,
     inspector: Option<Inspector>,
     enable_hub: bool,
+    crash_records: CrashRecords,
 }
 
 impl Default for BuiltinEnvironmentBuilder {
@@ -101,6 +103,7 @@ impl Default for BuiltinEnvironmentBuilder {
             add_environment_resolvers: false,
             inspector: None,
             enable_hub: true,
+            crash_records: CrashRecords::new(),
         }
     }
 }
@@ -157,7 +160,11 @@ impl BuiltinEnvironmentBuilder {
             .as_ref()
             .ok_or(format_err!("Runtime config should be set to add elf runner."))?;
 
-        let runner = Arc::new(ElfRunner::new(&runtime_config, self.utc_clock.clone()));
+        let runner = Arc::new(ElfRunner::new(
+            &runtime_config,
+            self.utc_clock.clone(),
+            self.crash_records.clone(),
+        ));
         Ok(self.add_runner("elf".into(), runner))
     }
 
@@ -268,6 +275,7 @@ impl BuiltinEnvironmentBuilder {
             self.utc_clock,
             self.inspector.unwrap_or(component::inspector().clone()),
             self.enable_hub,
+            self.crash_records,
         )
         .await?)
     }
@@ -305,6 +313,7 @@ pub struct BuiltinEnvironment {
     pub system_controller: Arc<SystemController>,
     pub utc_time_maintainer: Option<Arc<UtcTimeMaintainer>>,
     pub vmex_resource: Option<Arc<VmexResource>>,
+    pub crash_records_svc: Arc<CrashRecordsSvc>,
 
     pub work_scheduler: Arc<WorkScheduler>,
     pub binder_capability_host: Arc<BinderCapabilityHost>,
@@ -336,6 +345,7 @@ impl BuiltinEnvironment {
         utc_clock: Option<Arc<Clock>>,
         inspector: Inspector,
         enable_hub: bool,
+        crash_records: CrashRecords,
     ) -> Result<BuiltinEnvironment, Error> {
         let execution_mode = if runtime_config.debug {
             warn!(
@@ -396,6 +406,10 @@ impl BuiltinEnvironment {
         // Set up BootArguments service.
         let boot_args = BootArguments::new();
         model.root().hooks.install(boot_args.hooks()).await;
+
+        // Set up CrashRecords service.
+        let crash_records_svc = CrashRecordsSvc::new(crash_records);
+        model.root().hooks.install(crash_records_svc.hooks()).await;
 
         // Set up KernelStats service.
         let info_resource_handle = system_resource_handle
@@ -683,6 +697,7 @@ impl BuiltinEnvironment {
             #[cfg(target_arch = "aarch64")]
             smc_resource: _smc_resource,
             vmex_resource,
+            crash_records_svc,
             root_resource,
             system_controller,
             utc_time_maintainer,
