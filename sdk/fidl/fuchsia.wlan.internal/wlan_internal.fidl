@@ -4,9 +4,7 @@
 library fuchsia.wlan.internal;
 
 using fuchsia.wlan.common;
-
-@namespaced
-const MAC_ADDR_BYTE_LEN uint8 = 6;
+using fuchsia.wlan.ieee80211 as ieee80211;
 
 // TODO(fxbug.dev/80232): This type should really be `bits`, but since the `bits`
 // type is not supported in Banjo bindings it can't be.
@@ -36,7 +34,7 @@ type BssType = strict enum {
 };
 
 type BssConfig = struct {
-    bssid array<uint8, MAC_ADDR_BYTE_LEN>;
+    bssid ieee80211.MacAddr;
     bss_type BssType;
     remote bool;
 };
@@ -91,7 +89,7 @@ type VhtOperation = struct {
 
 // IEEE Std 802.11-2016 6.3.3.3.2
 type BssDescription = struct {
-    bssid array<uint8, MAC_ADDR_BYTE_LEN>;
+    bssid ieee80211.MacAddr;
 
     bss_type BssType;
     beacon_period uint16; // in TU

@@ -23,8 +23,8 @@ type SignalReportIndication = struct {
 // EAPOL.indication
 
 type EapolIndication = struct {
-    src_addr array<uint8, 6>;
-    dst_addr array<uint8, 6>;
+    src_addr ieee80211.MacAddr;
+    dst_addr ieee80211.MacAddr;
     data bytes;
 };
 
@@ -48,7 +48,7 @@ type BandCapabilities = struct {
 };
 
 type DeviceInfo = struct {
-    mac_addr array<uint8, 6>;
+    mac_addr ieee80211.MacAddr;
     role MacRole;
     bands vector<BandCapabilities>;
     driver_features vector<fuchsia.wlan.common.DriverFeature>:32;
@@ -66,7 +66,7 @@ type MinstrelListResponse = struct {
 };
 
 type MinstrelStatsRequest = struct {
-    mac_addr array<uint8, 6>;
+    mac_addr ieee80211.MacAddr;
 };
 
 type MinstrelStatsResponse = struct {
@@ -76,7 +76,7 @@ type MinstrelStatsResponse = struct {
 // SET_CONTROLLED_PORT.request
 
 type SetControlledPortRequest = struct {
-    peer_sta_address array<uint8, 6>;
+    peer_sta_address ieee80211.MacAddr;
     state ControlledPortState;
 };
 
@@ -148,16 +148,16 @@ type PmkInfo = struct {
 };
 
 type SaeHandshakeIndication = struct {
-    peer_sta_address array<uint8, 6>;
+    peer_sta_address ieee80211.MacAddr;
 };
 
 type SaeHandshakeResponse = struct {
-    peer_sta_address array<uint8, 6>;
+    peer_sta_address ieee80211.MacAddr;
     status_code ieee80211.StatusCode;
 };
 
 type SaeFrame = struct {
-    peer_sta_address array<uint8, 6>;
+    peer_sta_address ieee80211.MacAddr;
     status_code ieee80211.StatusCode;
     seq_num uint16;
     sae_fields bytes;

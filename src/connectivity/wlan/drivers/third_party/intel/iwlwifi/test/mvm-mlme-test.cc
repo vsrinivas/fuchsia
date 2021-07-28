@@ -5,6 +5,7 @@
 // To test PHY and MAC device callback functions.
 
 #include <fuchsia/wlan/common/cpp/banjo.h>
+#include <fuchsia/wlan/ieee80211/c/banjo.h>
 #include <fuchsia/wlan/internal/cpp/banjo.h>
 #include <lib/mock-function/mock-function.h>
 #include <zircon/syscalls.h>
@@ -495,8 +496,9 @@ class MacInterfaceTest : public WlanDeviceTest, public MockTrans {
 
   zx_status_t ClearAssoc() {
     uint32_t option = 0;
-    uint8_t peer_addr[ETH_ALEN];  // Not used since all info were saved in mvmvif_sta_ already.
-    return wlanmac_ops.clear_assoc(&mvmvif_sta_, option, peer_addr, sizeof(peer_addr));
+    uint8_t peer_addr[fuchsia_wlan_ieee80211_MAC_ADDR_LEN];  // Not used since all info were
+                                                             // saved in mvmvif_sta_ already.
+    return wlanmac_ops.clear_assoc(&mvmvif_sta_, option, peer_addr);
   }
 
   // The following functions are for mocking up the firmware commands.

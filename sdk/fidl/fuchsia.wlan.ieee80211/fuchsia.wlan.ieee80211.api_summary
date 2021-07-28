@@ -17,6 +17,7 @@ enum/member fuchsia.wlan.ieee80211/CipherSuiteType.USE_GROUP 0
 enum/member fuchsia.wlan.ieee80211/CipherSuiteType.WEP_104 5
 enum/member fuchsia.wlan.ieee80211/CipherSuiteType.WEP_40 1
 flexible enum fuchsia.wlan.ieee80211/CipherSuiteType uint32
+const fuchsia.wlan.ieee80211/MAC_ADDR_LEN uint8 6
 const fuchsia.wlan.ieee80211/MAX_MESH_ID_BYTE_LEN uint8 32
 const fuchsia.wlan.ieee80211/MAX_SSID_BYTE_LEN uint8 32
 enum/member fuchsia.wlan.ieee80211/ReasonCode.AP_INITIATED 47

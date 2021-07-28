@@ -825,15 +825,7 @@ async fn list_minstrel_peers(
         .await
         .context(format!("Error getting minstrel peer list iface {}", iface_id))?;
     if status == zx::sys::ZX_OK {
-        Ok(resp
-            .peers
-            .into_iter()
-            .map(|v| {
-                let mut arr = [0u8; 6];
-                arr.copy_from_slice(v.as_slice());
-                MacAddr(arr)
-            })
-            .collect())
+        Ok(resp.peers.into_iter().map(|v| MacAddr(v)).collect())
     } else {
         println!("Error getting minstrel peer list from iface {}: {}", iface_id, status);
         Ok(vec![])

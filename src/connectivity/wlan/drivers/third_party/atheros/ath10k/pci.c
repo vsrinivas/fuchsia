@@ -3315,10 +3315,10 @@ static zx_status_t ath10k_pci_configure_assoc(void* ctx, uint32_t options,
   }
 }
 
-static zx_status_t ath10k_pci_clear_assoc(void* ctx, uint32_t options, const uint8_t* peer_addr,
-                                          size_t peer_addr_len) {
+static zx_status_t ath10k_pci_clear_assoc(
+    void* ctx, uint32_t options, const uint8_t peer_addr[fuchsia_wlan_ieee80211_MAC_ADDR_LEN]) {
   struct ath10k* ar = ctx;
-  char buf[ETH_ALEN * 3];
+  char buf[fuchsia_wlan_ieee80211_MAC_ADDR_LEN * 3];
 
   ethaddr_sprintf(buf, peer_addr);
   switch (ar->arvif.vdev_type) {

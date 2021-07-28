@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/wlan/mac/cpp/banjo.h>
+#include <fuchsia/wlan/ieee80211/c/banjo.h>
 #include <fuchsia/wlan/internal/cpp/banjo.h>
 #include <lib/ddk/device.h>
 
@@ -42,8 +43,8 @@ class WlanmacDevice : public WlanmacDeviceType,
   zx_status_t WlanmacConfigureBeacon(uint32_t options, const wlan_tx_packet_t* pkt);
   zx_status_t WlanmacSetKey(uint32_t options, const wlan_key_config_t* key_config);
   zx_status_t WlanmacConfigureAssoc(uint32_t options, const wlan_assoc_ctx_t* assoc_ctx);
-  zx_status_t WlanmacClearAssoc(uint32_t options, const uint8_t* peer_addr_list,
-                                size_t peer_addr_count);
+  zx_status_t WlanmacClearAssoc(uint32_t options,
+                                const uint8_t peer_addr_list[fuchsia_wlan_ieee80211_MAC_ADDR_LEN]);
   zx_status_t WlanmacStartHwScan(const wlan_hw_scan_config_t* scan_config);
   zx_status_t WlanmacUpdateWmmParams(wlan_ac_t ac, const wlan_wmm_params_t* params);
 

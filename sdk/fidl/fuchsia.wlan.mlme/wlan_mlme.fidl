@@ -26,7 +26,8 @@ const MAX_SSIDS_PER_SCAN_REQUEST uint32 = 32;
 type ScanRequest = struct {
     txn_id uint64;
     bss_type_selector internal.BssTypeSelector;
-    bssid array<uint8, 6>;
+    // TODO(fxbug.dev/81918): Rename these to bssid_selector and ssid_selector.
+    bssid ieee80211.MacAddr;
     ssid ieee80211.Ssid;
     scan_type ScanTypes;
     probe_delay uint32; // in TimeUnits
@@ -123,7 +124,7 @@ type AuthenticationTypes = strict enum {
 };
 
 type AuthenticateRequest = struct {
-    peer_sta_address array<uint8, 6>;
+    peer_sta_address ieee80211.MacAddr;
     auth_type AuthenticationTypes;
     auth_failure_timeout uint32;
 
@@ -145,7 +146,7 @@ type AuthenticateResultCode = strict enum {
 };
 
 type AuthenticateConfirm = struct {
-    peer_sta_address array<uint8, 6>;
+    peer_sta_address ieee80211.MacAddr;
     auth_type AuthenticationTypes;
     result_code AuthenticateResultCode;
 
@@ -155,7 +156,7 @@ type AuthenticateConfirm = struct {
 // MLME-AUTHENTICATE.indication (IEEE Std 802.11-2016, 6.3.5.4)
 
 type AuthenticateIndication = struct {
-    peer_sta_address array<uint8, 6>;
+    peer_sta_address ieee80211.MacAddr;
     auth_type AuthenticationTypes;
 
 // etc
@@ -164,7 +165,7 @@ type AuthenticateIndication = struct {
 // MLME-AUTHENTICATE.response (IEEE Std 802.11-2016, 6.3.5.5)
 
 type AuthenticateResponse = struct {
-    peer_sta_address array<uint8, 6>;
+    peer_sta_address ieee80211.MacAddr;
     result_code AuthenticateResultCode;
 
 // etc
@@ -173,7 +174,7 @@ type AuthenticateResponse = struct {
 // MLME-DEAUTHENTICATE.request (IEEE Std 802.11-2016, 6.3.6.2)
 
 type DeauthenticateRequest = struct {
-    peer_sta_address array<uint8, 6>;
+    peer_sta_address ieee80211.MacAddr;
     reason_code ieee80211.ReasonCode;
 // VendorSpecificInfo
 };
@@ -181,13 +182,13 @@ type DeauthenticateRequest = struct {
 // MLME-DEAUTHENTICATE.confirm (IEEE Std 802.11-2016, 6.3.6.3)
 
 type DeauthenticateConfirm = struct {
-    peer_sta_address array<uint8, 6>;
+    peer_sta_address ieee80211.MacAddr;
 };
 
 // MLME-DEAUTHENTICATE.indication (IEEE Std 802.11-2016, 6.3.6.4)
 
 type DeauthenticateIndication = struct {
-    peer_sta_address array<uint8, 6>;
+    peer_sta_address ieee80211.MacAddr;
     reason_code ieee80211.ReasonCode;
     /// locally_initiated is true if deauth is initiated from the device,
     /// and is false if it's initiated remotely (e.g. due to deauth frame)
@@ -198,7 +199,7 @@ type DeauthenticateIndication = struct {
 // MLME-ASSOCIATE.request (IEEE Std 802.11-2016, 6.3.7.2)
 
 type AssociateRequest = struct {
-    peer_sta_address array<uint8, 6>;
+    peer_sta_address ieee80211.MacAddr;
     capability_info internal.CapabilityInfo;
     rates bytes:internal.RATES_MAX_LEN;
     qos_capable bool;
@@ -245,7 +246,7 @@ type AssociateConfirm = struct {
 // MLME-ASSOCIATE.indication (IEEE Std 802.11-2016, 6.3.7.4)
 
 type AssociateIndication = struct {
-    peer_sta_address array<uint8, 6>;
+    peer_sta_address ieee80211.MacAddr;
     capability_info internal.CapabilityInfo;
     listen_interval uint16;
     ssid ieee80211.Ssid:optional;
@@ -259,7 +260,7 @@ type AssociateIndication = struct {
 // MLME-ASSOCIATE.response (IEEE Std 802.11-2016, 6.3.7.5)
 
 type AssociateResponse = struct {
-    peer_sta_address array<uint8, 6>;
+    peer_sta_address ieee80211.MacAddr;
     result_code AssociateResultCode;
 
     association_id uint16;
@@ -278,7 +279,7 @@ type AssociateResponse = struct {
 // MLME-DISASSOCIATE.request (IEEE Std 802.11-2016, 6.3.9.1)
 
 type DisassociateRequest = struct {
-    peer_sta_address array<uint8, 6>;
+    peer_sta_address ieee80211.MacAddr;
     reason_code ieee80211.ReasonCode;
 // VendorSpecificInfo
 };
@@ -292,7 +293,7 @@ type DisassociateConfirm = struct {
 // MLME-DISASSOCIATE.indication (IEEE Std 802.11-2016, 6.3.9.3)
 
 type DisassociateIndication = struct {
-    peer_sta_address array<uint8, 6>;
+    peer_sta_address ieee80211.MacAddr;
     reason_code ieee80211.ReasonCode;
     /// locally_initiated is true if diassoc is initiated from the device,
     /// and is false if it's initiated remotely (e.g. due to disassoc frame)
@@ -303,7 +304,7 @@ type DisassociateIndication = struct {
 // MLME-RESET.request (IEEE Std 802.11-2016, 6.3.10.2)
 
 type ResetRequest = struct {
-    sta_address array<uint8, 6>;
+    sta_address ieee80211.MacAddr;
     set_default_mib bool;
 };
 
@@ -413,7 +414,7 @@ type SetKeyDescriptor = struct {
     key bytes;
     key_id uint16;
     key_type KeyType;
-    address array<uint8, 6>;
+    address ieee80211.MacAddr;
     rsc uint64;
     cipher_suite_oui array<uint8, 3>;
     cipher_suite_type uint8;
@@ -428,7 +429,7 @@ type SetKeysRequest = struct {
 type DeleteKeyDescriptor = struct {
     key_id uint16;
     key_type KeyType;
-    address array<uint8, 6>;
+    address ieee80211.MacAddr;
 };
 
 type DeleteKeysRequest = struct {
@@ -438,8 +439,8 @@ type DeleteKeysRequest = struct {
 // MLME-EAPOL.request (IEEE Std 802.11-2016 6.3.22.1)
 
 type EapolRequest = struct {
-    src_addr array<uint8, 6>;
-    dst_addr array<uint8, 6>;
+    src_addr ieee80211.MacAddr;
+    dst_addr ieee80211.MacAddr;
     data bytes;
 };
 
@@ -456,7 +457,7 @@ type EapolConfirm = struct {
     /// This value corresponds to the dst_addr in the EapolRequest we're confirming.
     /// IEEE 802.11-2016 does not include this field, but we need it to disambiguate
     /// if multiple EAPoL handshakes are ongoing.
-    dst_addr array<uint8, 6>;
+    dst_addr ieee80211.MacAddr;
 };
 
 // IEEE Std 802.11-2016, 9.4.2.98
@@ -472,7 +473,7 @@ type MeshConfiguration = struct {
 
 // Fields that are common between the MPM Open and Confirm actions
 type MeshPeeringCommon = struct {
-    peer_sta_address array<uint8, 6>;
+    peer_sta_address ieee80211.MacAddr;
     protocol_id uint16;
     local_link_id uint16;
     mesh_id bytes:32;
@@ -497,7 +498,7 @@ type MeshPeeringConfirmAction = struct {
 };
 
 type MeshPeeringParams = struct {
-    peer_sta_address array<uint8, 6>;
+    peer_sta_address ieee80211.MacAddr;
     local_aid uint16;
     rates vector<uint8>;
 // TODO(gbonik): HT/VHT caps

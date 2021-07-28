@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 #include <fuchsia/hardware/wlanif/c/banjo.h>
+#include <fuchsia/wlan/ieee80211/c/banjo.h>
 #include <zircon/errors.h>
 
 #include <ddk/hw/wlan/wlaninfo/c/banjo.h>
@@ -33,8 +34,9 @@ TEST_F(SimTest, ClientIfcQuery) {
   env_->Run(kSimulatedClockDuration);
 
   // Mac address returned should match the one we specified when we created the interface
-  ASSERT_EQ(MAC_ARRAY_LENGTH, common::kMacAddrLen);
-  EXPECT_EQ(0, memcmp(kDefaultMac.byte, ifc_query_result.mac_addr, MAC_ARRAY_LENGTH));
+  ASSERT_EQ(fuchsia_wlan_ieee80211_MAC_ADDR_LEN, common::kMacAddrLen);
+  EXPECT_EQ(
+      0, memcmp(kDefaultMac.byte, ifc_query_result.mac_addr, fuchsia_wlan_ieee80211_MAC_ADDR_LEN));
 
   EXPECT_EQ(ifc_query_result.role, WLAN_INFO_MAC_ROLE_CLIENT);
 

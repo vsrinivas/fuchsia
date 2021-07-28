@@ -9,10 +9,6 @@
 ///   802.11-2016.
 library ddk.hw.wlan.ieee80211;
 
-/// IEEE Std 802.11-2016, 9.4.2.2
-// TODO(fxbug.dev/73049): Unify with fuchsia.wlan.ieee80211.MAX_SSID_LEN once ddk migrates to FIDL.
-const IEEE80211_MAX_SSID_LEN uint32 = 32;
-
 /// IEEE Std 802.11-2016, 9.2.4.5
 const IEEE80211_TIDS_MAX uint32 = 16;
 

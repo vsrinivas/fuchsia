@@ -9,5 +9,6 @@ fidl("fuchsia.hardware.wlan.info") {
   public_deps = [
     "//sdk/banjo/ddk.hw.wlan.ieee80211",
     "//sdk/fidl/fuchsia.wlan.common",
+    "//sdk/fidl/fuchsia.wlan.ieee80211",
   ]
 }

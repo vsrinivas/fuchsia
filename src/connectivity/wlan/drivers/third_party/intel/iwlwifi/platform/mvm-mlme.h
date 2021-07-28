@@ -10,6 +10,7 @@
 #include <fuchsia/hardware/wlan/mac/cpp/banjo.h>
 #include <fuchsia/hardware/wlanphyimpl/cpp/banjo.h>
 #include <fuchsia/wlan/common/cpp/banjo.h>
+#include <fuchsia/wlan/ieee80211/c/banjo.h>
 #include <fuchsia/wlan/internal/cpp/banjo.h>
 #include <lib/ddk/device.h>
 
@@ -50,8 +51,8 @@ zx_status_t mac_enable_beaconing(void* ctx, uint32_t options, const wlan_bcn_con
 zx_status_t mac_configure_beacon(void* ctx, uint32_t options, const wlan_tx_packet_t* pkt);
 zx_status_t mac_set_key(void* ctx, uint32_t options, const wlan_key_config_t* key_config);
 zx_status_t mac_configure_assoc(void* ctx, uint32_t options, const wlan_assoc_ctx_t* assoc_ctx);
-zx_status_t mac_clear_assoc(void* ctx, uint32_t options, const uint8_t* peer_addr,
-                            size_t peer_addr_size);
+zx_status_t mac_clear_assoc(void* ctx, uint32_t options,
+                            const uint8_t peer_addr[fuchsia_wlan_ieee80211_MAC_ADDR_LEN]);
 zx_status_t mac_start_hw_scan(void* ctx, const wlan_hw_scan_config_t* scan_config);
 zx_status_t mac_init(void* ctx, struct iwl_trans* drvdata, zx_device_t* zxdev, uint16_t idx);
 void mac_unbind(void* ctx);

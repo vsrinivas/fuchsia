@@ -5,6 +5,7 @@ library fuchsia.wlan.device.service;
 
 using fuchsia.wlan.common;
 using fuchsia.wlan.device;
+using fuchsia.wlan.ieee80211 as ieee80211;
 using fuchsia.wlan.minstrel;
 using fuchsia.wlan.mlme;
 using fuchsia.wlan.sme;
@@ -41,7 +42,7 @@ type QueryIfaceResponse = struct {
     /// Local ID assigned by this iface's PHY.
     phy_assigned_id uint16;
     /// The iface's MAC.
-    mac_addr array<uint8, 6>;
+    mac_addr ieee80211.MacAddr;
     /// The driver features supported on this iface.
     driver_features vector<fuchsia.wlan.common.DriverFeature>:32;
 };
@@ -152,7 +153,7 @@ protocol DeviceService {
     });
     GetMinstrelStats(struct {
         iface_id uint16;
-        peer_addr array<uint8, 6>;
+        peer_addr ieee80211.MacAddr;
     }) -> (struct {
         status int32;
         peer box<fuchsia.wlan.minstrel.Peer>;
