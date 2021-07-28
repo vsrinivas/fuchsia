@@ -78,7 +78,9 @@ where
                 None => new_intervals.push(interval.clone()),
                 Some(remaining_interval) => {
                     remaining = remaining_interval.split_or_merge(&interval, &mut new_intervals);
-                    assert!(remaining.is_some() || (i >= affected_intervals.len() - 2));
+                    assert!(
+                        remaining.is_some() || (i >= affected_intervals.len().saturating_sub(2))
+                    );
                 }
             }
         }
@@ -110,17 +112,38 @@ where
 
     /// Removes all the intervals that overlap with given `range`. Returns removed interval.
     pub fn remove_interval(&mut self, range: &Range<U>) -> Result<Vec<T>, Error> {
+        self.remove_matching_interval(range, |_| true)
+    }
+
+    /// Removes all the intervals that overlap with given `range` and match `predicate`. Returns
+    /// removed interval.
+    pub fn remove_matching_interval<F>(
+        &mut self,
+        range: &Range<U>,
+        predicate: F,
+    ) -> Result<Vec<T>, Error>
+    where
+        F: Fn(&T) -> bool,
+    {
         if !range.is_valid() {
             return Err(Error::InvalidRange);
         }
         let affected_intervals = self.remove_affected(range);
         let mut ret = vec![];
         for interval in &affected_intervals {
-            let (remainings, removed) = interval.difference(range);
-            for remaining in remainings {
-                let _ = self.add_interval(&remaining).unwrap();
+            if predicate(interval) {
+                let (remainings, removed) = interval.difference(range);
+                for remaining in remainings {
+                    let _ = self.add_interval(&remaining)?;
+                }
+                if let Some(removed) = removed {
+                    // remove_affected also removes adjactent (non-overlapping) ranges, so the
+                    // difference might be empty.
+                    ret.push(removed);
+                }
+            } else {
+                self.add_interval(interval)?;
             }
-            ret.push(removed.unwrap());
         }
         Ok(ret)
     }
@@ -633,6 +656,43 @@ mod test {
                     || (interval.range == (inserted_range().end - 4..inserted_range().end))
             );
         }
+    }
+
+    #[test]
+    fn test_remove_adjacent_unaffected() {
+        let mut tree = IntervalTree::new();
+        tree.add_interval(&TestInterval::new(0..1000, 1)).unwrap();
+        tree.add_interval(&TestInterval::new(1000..2000, 1)).unwrap();
+        tree.add_interval(&TestInterval::new(2000..3000, 1)).unwrap();
+
+        let ret = tree.remove_interval(&(1000..2000)).unwrap();
+        assert_eq!(ret, vec![TestInterval::new(1000..2000, 1)]);
+        let remaining = tree.get_iter().values().cloned().collect::<Vec<_>>();
+        assert_eq!(
+            remaining,
+            vec![TestInterval::new(0..1000, 1), TestInterval::new(2000..3000, 1),]
+        );
+    }
+
+    #[test]
+    fn test_remove_matching() {
+        let mut tree = IntervalTree::new();
+        tree.add_interval(&TestInterval::new(0..1, 0)).unwrap();
+        tree.add_interval(&TestInterval::new(1..2, 1)).unwrap();
+        tree.add_interval(&TestInterval::new(2..3, 0)).unwrap();
+        tree.add_interval(&TestInterval::new(3..4, 1)).unwrap();
+
+        let ret = tree.remove_matching_interval(&(0..2), |i| i.state == 0).unwrap();
+        assert_eq!(ret, vec![TestInterval::new(0..1, 0)]);
+        let remaining = tree.get_iter().values().cloned().collect::<Vec<_>>();
+        assert_eq!(
+            remaining,
+            vec![
+                TestInterval::new(1..2, 1),
+                TestInterval::new(2..3, 0),
+                TestInterval::new(3..4, 1),
+            ]
+        );
     }
 
     #[test]
