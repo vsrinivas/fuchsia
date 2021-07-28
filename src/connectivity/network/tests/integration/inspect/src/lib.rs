@@ -413,42 +413,44 @@ struct PacketAttributes {
 }
 
 const INVALID_PORT: NonZeroU16 = unsafe { NonZeroU16::new_unchecked(1234) };
+const DHCP_CLIENT_PORT: NonZeroU16 =
+    unsafe { NonZeroU16::new_unchecked(dhcp::protocol::CLIENT_PORT) };
 
 #[variants_test]
 #[test_case(
     vec![
         PacketAttributes {
             ip_proto: packet_formats::ip::Ipv4Proto::Proto(packet_formats::ip::IpProto::Tcp),
-            port: unsafe { NonZeroU16::new_unchecked(dhcp::protocol::CLIENT_PORT) }
+            port: DHCP_CLIENT_PORT,
         }
     ]; "invalid trans proto")]
 #[test_case(
     vec![
         PacketAttributes {
             ip_proto: packet_formats::ip::Ipv4Proto::Proto(packet_formats::ip::IpProto::Udp),
-            port: INVALID_PORT
+            port: INVALID_PORT,
         }
     ]; "invalid port")]
 #[test_case(
     vec![
         PacketAttributes {
             ip_proto: packet_formats::ip::Ipv4Proto::Proto(packet_formats::ip::IpProto::Udp),
-            port: unsafe { NonZeroU16::new_unchecked(dhcp::protocol::CLIENT_PORT) }
+            port: DHCP_CLIENT_PORT,
         }
     ]; "valid")]
 #[test_case(
     vec![
         PacketAttributes {
             ip_proto: packet_formats::ip::Ipv4Proto::Proto(packet_formats::ip::IpProto::Udp),
-            port: INVALID_PORT
+            port: INVALID_PORT,
         },
         PacketAttributes {
             ip_proto: packet_formats::ip::Ipv4Proto::Proto(packet_formats::ip::IpProto::Udp),
-            port: INVALID_PORT
+            port: INVALID_PORT,
         },
             PacketAttributes {
             ip_proto: packet_formats::ip::Ipv4Proto::Proto(packet_formats::ip::IpProto::Tcp),
-            port: unsafe { NonZeroU16::new_unchecked(dhcp::protocol::CLIENT_PORT) }
+            port: DHCP_CLIENT_PORT,
         }
     ]; "multiple invalid port and single invalid trans proto")]
 async fn inspect_dhcp<E: netemul::Endpoint>(
@@ -502,7 +504,7 @@ async fn inspect_dhcp<E: netemul::Endpoint>(
         if ip_proto != packet_formats::ip::Ipv4Proto::Proto(packet_formats::ip::IpProto::Udp) {
             let _: &mut u64 =
                 invalid_trans_protos.entry(ip_proto.into()).and_modify(|v| *v += 1).or_insert(1);
-        } else if port != unsafe { NonZeroU16::new_unchecked(dhcp::protocol::CLIENT_PORT) } {
+        } else if port != DHCP_CLIENT_PORT {
             let _: &mut u64 = invalid_ports.entry(port.into()).and_modify(|v| *v += 1).or_insert(1);
         }
     }
