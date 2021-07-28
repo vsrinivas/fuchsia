@@ -26,7 +26,6 @@ AsyncBinding::AsyncBinding(async_dispatcher_t* dispatcher, const zx::unowned_cha
                     ZX_CHANNEL_PEER_CLOSED | ZX_CHANNEL_READABLE,
                     0}),
       dispatcher_(dispatcher),
-      threading_policy_(threading_policy),
       thread_checker_(threading_policy) {
   ZX_ASSERT(dispatcher_);
   ZX_ASSERT(handle() != ZX_HANDLE_INVALID);
@@ -352,7 +351,6 @@ void AsyncClientBinding::FinishTeardown(std::shared_ptr<AsyncBinding>&& calling_
   AnyTeardownObserver teardown_observer = std::move(teardown_observer_);
   AsyncEventHandler* event_handler = event_handler_;
   std::shared_ptr<ClientBase> client = std::move(client_);
-  ThreadingPolicy policy = threading_policy();
 
   // Delete the calling reference.
   // We are not returning the channel to the user, so don't wait for transient
@@ -371,16 +369,6 @@ void AsyncClientBinding::FinishTeardown(std::shared_ptr<AsyncBinding>&& calling_
   if (info.reason() != fidl::Reason::kUnbind) {
     if (event_handler != nullptr)
       event_handler->on_fidl_error(info);
-  }
-
-  // Execute the unbound hook if specified.
-  // TODO(fxbug.dev/75485): Remove the unbound hook.
-  // We temporarily use the |policy_| to not call the |Unbound| hook for
-  // |WireClient|, since its teardown is associated with the destruction
-  // of containing user objects.
-  if (policy == ThreadingPolicy::kCreateAndTeardownFromAnyThread) {
-    if (event_handler != nullptr)
-      event_handler->Unbound(info);
   }
 
   // Notify teardown.

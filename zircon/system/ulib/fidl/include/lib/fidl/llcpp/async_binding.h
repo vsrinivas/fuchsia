@@ -149,9 +149,6 @@ class AsyncBinding : private async_wait_t {
                                                   UnbindInfo info) __TA_EXCLUDES(thread_checker_)
       __TA_EXCLUDES(lock_);
 
-  // TODO(fxbug.dev/75485): Only needed during migration to |WireClient|.
-  ThreadingPolicy threading_policy() const { return threading_policy_; }
-
   async_dispatcher_t* dispatcher_ = nullptr;
 
   // A circular reference that represents the dispatcher ownership of the
@@ -197,9 +194,6 @@ class AsyncBinding : private async_wait_t {
   // dispatcher is shutting down.
   virtual void FinishTeardown(std::shared_ptr<AsyncBinding>&& calling_ref, UnbindInfo info)
       __TA_REQUIRES(thread_checker_) = 0;
-
-  // TODO(fxbug.dev/75485): Only needed during migration to |WireClient|.
-  const ThreadingPolicy threading_policy_;
 
   // |thread_checker_| records the thread ID of constructing thread and checks
   // that required operations run on that thread when the threading policy calls
