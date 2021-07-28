@@ -47,12 +47,7 @@ zx_status_t pci_pio_read32(pci_bdf_t bdf, uint8_t offset, uint32_t* val) {
   if (offset & 0x3) {
     return ZX_ERR_INVALID_ARGS;
   }
-  uint32_t _val = 0;
-  zx_status_t status = pci_pio_read(bdf, offset, val);
-  if (status == ZX_OK) {
-    *val = _val;
-  }
-  return status;
+  return pci_pio_read(bdf, offset, val);
 }
 
 zx_status_t pci_pio_read16(pci_bdf_t bdf, uint8_t offset, uint16_t* val) {
