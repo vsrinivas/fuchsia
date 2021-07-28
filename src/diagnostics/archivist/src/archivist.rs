@@ -18,6 +18,7 @@ use {
             },
         },
         logs::{budget::BudgetManager, redact::Redactor, socket::LogMessageSocket},
+        moniker_rewriter::MonikerRewriter,
         pipeline::Pipeline,
         repository::DataRepo,
     },
@@ -228,6 +229,8 @@ impl ArchivistBuilder {
             component::inspector().root().create_child("legacy_metrics_archive_accessor"),
         ));
 
+        let legacy_moniker_rewriter = Arc::new(MonikerRewriter::new());
+
         let sender_for_accessor = listen_sender.clone();
         let sender_for_feedback = listen_sender.clone();
         let sender_for_legacy = listen_sender.clone();
@@ -253,7 +256,8 @@ impl ArchivistBuilder {
                 let legacy_archive_accessor = ArchiveAccessor::new(
                     legacy_metrics_pipeline.clone(),
                     legacy_accessor_stats.clone(),
-                );
+                )
+                .add_moniker_rewriter(legacy_moniker_rewriter.clone());
                 legacy_archive_accessor
                     .spawn_archive_accessor_server(chan, sender_for_legacy.clone());
             });

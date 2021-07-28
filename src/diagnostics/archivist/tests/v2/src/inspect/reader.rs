@@ -18,6 +18,8 @@ const TIMESTAMP_KEY: &str = "timestamp";
 const TEST_ARCHIVIST_MONIKER: &str = "archivist";
 
 lazy_static! {
+    static ref EMPTY_RESULT_GOLDEN: &'static str =
+        include_str!("../../test_data/empty_result_golden.json");
     static ref UNIFIED_SINGLE_VALUE_GOLDEN: &'static str =
         include_str!("../../test_data/unified_reader_single_value_golden.json");
     static ref UNIFIED_ALL_GOLDEN: &'static str =
@@ -30,6 +32,10 @@ lazy_static! {
         include_str!("../../test_data/feedback_reader_all_golden.json");
     static ref FEEDBACK_NONOVERLAPPING_SELECTORS_GOLDEN: &'static str =
         include_str!("../../test_data/feedback_reader_nonoverlapping_selectors_golden.json");
+    static ref MEMORY_MONITOR_V2_MONIKER_GOLDEN: &'static str =
+        include_str!("../../test_data/memory_monitor_v2_moniker_golden.json");
+    static ref MEMORY_MONITOR_LEGACY_MONIKER_GOLDEN: &'static str =
+        include_str!("../../test_data/memory_monitor_legacy_moniker_golden.json");
 }
 
 #[fuchsia::test]
@@ -145,6 +151,70 @@ async fn unified_reader() -> Result<(), Error> {
 }
 
 #[fuchsia::test]
+async fn memory_monitor_moniker_rewrite() -> Result<(), Error> {
+    let mut builder = test_topology::create(test_topology::Options {
+        archivist_url: ARCHIVIST_WITH_LEGACY_METRICS,
+    })
+    .await
+    .expect("create base topology");
+    test_topology::add_eager_component(
+        &mut builder,
+        "core/memory_monitor",
+        IQUERY_TEST_COMPONENT_URL,
+    )
+    .await
+    .expect("add child a");
+    let instance = builder.build().create().await.expect("create instance");
+
+    // Verify that fetching "core/memory_monitor" from ArchiveAccessor produces results with
+    // the correct v2 moniker.
+    let accessor =
+        instance.root.connect_to_protocol_at_exposed_dir::<ArchiveAccessorMarker>().unwrap();
+    retrieve_and_validate_results(
+        accessor,
+        vec!["core/memory_monitor:*:lazy-*"],
+        &MEMORY_MONITOR_V2_MONIKER_GOLDEN,
+        1,
+    )
+    .await;
+
+    // Verify that fetching "memory_monitor.cmx" from ArchiveAccessor does not fetch anything.
+    let accessor =
+        instance.root.connect_to_protocol_at_exposed_dir::<ArchiveAccessorMarker>().unwrap();
+    retrieve_and_validate_results(
+        accessor,
+        vec!["memory_monitor.cmx:*:lazy-*"],
+        &EMPTY_RESULT_GOLDEN,
+        0,
+    )
+    .await;
+
+    // Verify that fetching "core/memory_monitor" from Legacy produces results with the
+    // correct v2 moniker.
+    let accessor = connect_to_legacy_accessor(&instance);
+    retrieve_and_validate_results(
+        accessor,
+        vec!["core/memory_monitor:*:lazy-*"],
+        &MEMORY_MONITOR_V2_MONIKER_GOLDEN,
+        1,
+    )
+    .await;
+
+    // Verify that fetching "memory_monitor.cmx" from Legacy produces results with the
+    // correct (rewritten) v1 moniker.
+    let accessor = connect_to_legacy_accessor(&instance);
+    retrieve_and_validate_results(
+        accessor,
+        vec!["memory_monitor.cmx:*:lazy-*"],
+        &MEMORY_MONITOR_LEGACY_MONIKER_GOLDEN,
+        1,
+    )
+    .await;
+
+    Ok(())
+}
+
+#[fuchsia::test]
 async fn feedback_canonical_reader_test() -> Result<(), Error> {
     let mut builder = test_topology::create(test_topology::Options {
         archivist_url: ARCHIVIST_WITH_FEEDBACK_FILTERING,
@@ -235,22 +305,35 @@ fn connect_to_feedback_accessor(instance: &RealmInstance) -> ArchiveAccessorProx
         .unwrap()
 }
 
+fn connect_to_legacy_accessor(instance: &RealmInstance) -> ArchiveAccessorProxy {
+    instance
+        .root
+        .connect_to_named_protocol_at_exposed_dir::<ArchiveAccessorMarker>(
+            "fuchsia.diagnostics.LegacyMetricsArchiveAccessor",
+        )
+        .unwrap()
+}
+
 // Loop indefinitely snapshotting the archive until we get the expected number of
 // hierarchies, and then validate that the ordered json represetionation of these hierarchies
 // matches the golden file.
+//
+// If the expected number of hierarchies is 0, set a 10-second timeout to ensure nothing is
+// received.
 async fn retrieve_and_validate_results(
     accessor: ArchiveAccessorProxy,
     custom_selectors: Vec<&str>,
     golden: &str,
     expected_results_count: usize,
 ) {
-    let results = ArchiveReader::new()
-        .with_archive(accessor)
-        .add_selectors(custom_selectors.into_iter())
-        .with_minimum_schema_count(expected_results_count)
-        .snapshot_raw::<Inspect>()
-        .await
-        .expect("got result");
+    let mut reader = ArchiveReader::new();
+    reader.with_archive(accessor).add_selectors(custom_selectors.into_iter());
+    if expected_results_count == 0 {
+        reader.with_timeout(fuchsia_zircon::Duration::from_seconds(10));
+    } else {
+        reader.with_minimum_schema_count(expected_results_count);
+    }
+    let results = reader.snapshot_raw::<Inspect>().await.expect("got result");
 
     // Convert the json struct into a "pretty" string rather than converting the
     // golden file into a json struct because deserializing the golden file into a

@@ -4,7 +4,10 @@
 {
     capabilities: [
         {
-            protocol: [ "fuchsia.diagnostics.FeedbackArchiveAccessor" ],
+            protocol: [
+                "fuchsia.diagnostics.FeedbackArchiveAccessor",
+                "fuchsia.diagnostics.LegacyMetricsArchiveAccessor",
+            ],
         },
     ],
     use: [
@@ -20,7 +23,10 @@
     ],
     expose: [
         {
-            protocol: [ "fuchsia.diagnostics.FeedbackArchiveAccessor" ],
+            protocol: [
+                "fuchsia.diagnostics.FeedbackArchiveAccessor",
+                "fuchsia.diagnostics.LegacyMetricsArchiveAccessor",
+            ],
             from: "self",
         },
     ],

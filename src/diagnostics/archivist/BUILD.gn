@@ -131,6 +131,7 @@ rustc_library("lib") {
     "src/logs/socket.rs",
     "src/logs/stats.rs",
     "src/logs/testing.rs",
+    "src/moniker_rewriter.rs",
     "src/pipeline.rs",
     "src/repository.rs",
   ]

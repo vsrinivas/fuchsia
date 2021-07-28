@@ -10,6 +10,7 @@ use {
         formatter::{new_batcher, FormattedStream, JsonPacketSerializer, JsonString},
         inspect,
         lifecycle::LifecycleServer,
+        moniker_rewriter::MonikerRewriter,
         pipeline::Pipeline,
     },
     anyhow::format_err,
@@ -40,6 +41,7 @@ pub struct ArchiveAccessor {
     // all inspect reader instances.
     pipeline: Arc<RwLock<Pipeline>>,
     archive_accessor_stats: Arc<AccessorStats>,
+    moniker_rewriter: Option<Arc<MonikerRewriter>>,
 }
 
 fn validate_and_parse_inspect_selectors(
@@ -72,13 +74,19 @@ impl ArchiveAccessor {
         pipeline: Arc<RwLock<Pipeline>>,
         archive_accessor_stats: Arc<AccessorStats>,
     ) -> Self {
-        ArchiveAccessor { pipeline, archive_accessor_stats }
+        ArchiveAccessor { pipeline, archive_accessor_stats, moniker_rewriter: None }
+    }
+
+    pub fn add_moniker_rewriter(mut self, rewriter: Arc<MonikerRewriter>) -> Self {
+        self.moniker_rewriter = Some(rewriter);
+        self
     }
 
     async fn run_server(
         pipeline: Arc<RwLock<Pipeline>>,
         requests: BatchIteratorRequestStream,
         params: StreamParameters,
+        rewriter: Option<Arc<MonikerRewriter>>,
         accessor_stats: Arc<AccessorStats>,
     ) -> Result<(), AccessorError> {
         let format = params.format.ok_or(AccessorError::MissingFormat)?;
@@ -107,6 +115,12 @@ impl ArchiveAccessor {
                     _ => Err(AccessorError::InvalidSelectors("unrecognized selectors"))?,
                 };
 
+                let (selectors, output_rewriter) = match (selectors, rewriter) {
+                    (Some(selectors), Some(rewriter)) => rewriter.rewrite_selectors(selectors),
+                    // behaves correctly whether selectors is Some(_) or None
+                    (selectors, _) => (selectors, None),
+                };
+
                 let selectors = selectors.map(|s| s.into_iter().map(Arc::new).collect());
 
                 let unpopulated_container_vec = pipeline.read().fetch_inspect_data(&selectors);
@@ -128,6 +142,7 @@ impl ArchiveAccessor {
                         unpopulated_container_vec,
                         performance_config,
                         selectors,
+                        output_rewriter,
                         stats.clone(),
                     ),
                     requests,
@@ -195,6 +210,7 @@ impl ArchiveAccessor {
                     self.archive_accessor_stats.global_stats.stream_diagnostics_requests.add(1);
                     let pipeline = self.pipeline.clone();
                     let accessor_stats = self.archive_accessor_stats.clone();
+                    let moniker_rewriter = self.moniker_rewriter.clone();
                     // Store the batch iterator task so that we can ensure that the client finishes
                     // draining items through it when a Controller#Stop call happens. For example,
                     // this allows tests to fetch all isolated logs before finishing.
@@ -204,6 +220,7 @@ impl ArchiveAccessor {
                                 pipeline,
                                 requests,
                                 stream_parameters,
+                                moniker_rewriter,
                                 accessor_stats,
                             )
                             .await

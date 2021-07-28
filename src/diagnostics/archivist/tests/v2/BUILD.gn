@@ -60,8 +60,11 @@ rustc_test("integration_tests_bin") {
     "src/test_topology.rs",
   ]
   inputs = [
+    "test_data/empty_result_golden.json",
     "test_data/unified_reader_all_golden.json",
     "test_data/feedback_reader_all_golden.json",
+    "test_data/memory_monitor_v2_moniker_golden.json",
+    "test_data/memory_monitor_legacy_moniker_golden.json",
     "test_data/unified_reader_full_filter_golden.json",
     "test_data/feedback_reader_nonoverlapping_selectors_golden.json",
     "test_data/unified_reader_single_value_golden.json",
@@ -104,6 +107,11 @@ resource("do_not_filter_feedback") {
   outputs = [ "data/config/pipelines/feedback/DISABLE_FILTERING.txt" ]
 }
 
+resource("configure_legacy_metrics_pipeline") {
+  sources = [ "configs/legacy_selectors.cfg" ]
+  outputs = [ "data/config/pipelines/legacy_metrics/legacy_selectors.cfg" ]
+}
+
 fuchsia_test_package("archivist-integration-tests-v2") {
   test_components = [ ":archivist_integration_tests" ]
   deps = [
@@ -133,11 +141,21 @@ fuchsia_package("archivist-with-feedback-filtering-disabled") {
   ]
 }
 
+fuchsia_package("archivist-with-legacy-metrics") {
+  testonly = true
+  deps = [
+    ":archivist_for_integration",
+    ":configure_legacy_metrics_pipeline",
+    ":test_archivist_config",
+  ]
+}
+
 group("tests") {
   testonly = true
   deps = [
     ":archivist-integration-tests-v2",
     ":archivist-with-feedback-filtering",
     ":archivist-with-feedback-filtering-disabled",
+    ":archivist-with-legacy-metrics",
   ]
 }
