@@ -5,11 +5,11 @@
     children: [
         {
             name: "driver-manager",
-            url: "fuchsia-pkg://fuchsia.com/ddk-firmware-test#meta/driver-manager-test.cm",
+            url: "#meta/driver-manager.cm",
         },
         {
             name: "driver-manager-support",
-            url: "fuchsia-pkg://fuchsia.com/ddk-firmware-test#meta/driver-manager-support.cm",
+            url: "#meta/driver-manager-support.cm",
         },
         {
             name: "driver-index",
@@ -60,6 +60,11 @@
             directory: "system-delayed",
             from: "parent",
             to: [ "#driver-manager" ],
+        },
+        {
+            directory: "boot",
+            from: "parent",
+            to: [ "#driver-index" ],
         },
     ],
     expose: [

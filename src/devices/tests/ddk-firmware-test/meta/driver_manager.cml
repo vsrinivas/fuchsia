@@ -1,0 +1,68 @@
+{
+    include: [
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/driver_manager",
+        args: [
+            "--use-driver-index",
+            "--path-prefix",
+            "/pkg/",
+            "--driver-search-path",
+            "/pkg/driver",
+        ],
+    },
+    capabilities: [
+        {
+            directory: "dev",
+            rights: [ "rw*" ],
+            path: "/dev",
+        },
+        {
+            protocol: [
+                "fuchsia.device.manager.Administrator",
+                "fuchsia.hardware.pci.DeviceWatcher",
+                "fuchsia.hardware.usb.DeviceWatcher",
+            ],
+        },
+    ],
+    use: [
+        {
+            directory: "system-delayed",
+            rights: [ "rx*" ],
+            path: "/system",
+        },
+        {
+            directory: "pkgfs-delayed",
+            rights: [ "rx*" ],
+            path: "/pkgfs",
+        },
+        {
+            protocol: [
+                "fuchsia.boot.Arguments",
+                "fuchsia.boot.Items",
+                "fuchsia.driver.framework.DriverIndex",
+                "fuchsia.kernel.RootJob",
+                "fuchsia.power.manager.DriverManagerRegistration",
+                "fuchsia.process.Launcher",
+                "fuchsia.sys.Launcher",
+            ],
+        },
+    ],
+    expose: [
+        {
+            directory: "dev",
+            from: "self",
+        },
+        {
+            protocol: [
+                "fuchsia.device.manager.Administrator",
+                "fuchsia.hardware.pci.DeviceWatcher",
+                "fuchsia.hardware.usb.DeviceWatcher",
+            ],
+            from: "self",
+        },
+    ],
+}

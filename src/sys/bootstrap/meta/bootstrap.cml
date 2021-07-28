@@ -184,6 +184,7 @@
             from: "parent",
             to: [
                 "#console-launcher",
+                "#driver_index",
                 "#driver_manager",
                 "#fshost",
                 "#miscsvc",

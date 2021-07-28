@@ -64,6 +64,14 @@ fuchsia_test_component("ddk-firmware-test-component") {
   deps = [ ":ddk_firmware_test" ]
 }
 
+fuchsia_test_component("driver-manager") {
+  manifest = "meta/driver_manager.cml"
+  deps = [
+    "//src/devices/bus/drivers/platform",
+    "//src/lib/isolated_devmgr/v2_component:driver-manager-test",
+  ]
+}
+
 rustc_test("ddk_firmware_test") {
   edition = "2018"
   source_root = "test.rs"
@@ -100,6 +108,7 @@ fuchsia_test_package("ddk-firmware-test-package") {
   test_components = [ ":ddk-firmware-test-component" ]
   deps = [
     ":ddk-firmware-test-driver",
+    ":driver-manager",
     ":driver-manager-realm",
     ":test-firmware-file",
     "//src/devices/bin/driver-index:component",

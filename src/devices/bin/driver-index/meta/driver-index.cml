@@ -20,6 +20,11 @@
             rights: [ "r*" ],
             path: "/pkgfs/packages",
         },
+        {
+            directory: "boot",
+            rights: [ "r*" ],
+            path: "/boot",
+        },
     ],
     expose: [
         {

@@ -78,6 +78,12 @@ const Driver* DriverLoader::LibnameToDriver(std::string_view libname) const {
 }
 
 void DriverLoader::WaitForBaseDrivers(fit::callback<void()> callback) {
+  // TODO(dgilhooley): Change this back to an ERROR once DriverIndex is used in all tests.
+  if (!driver_index_.is_valid()) {
+    LOGF(INFO, "%s: DriverIndex is not initialized", __func__);
+    return;
+  }
+
   auto result = driver_index_->WaitForBaseDrivers(
       [this, callback = std::move(callback)](
           fidl::WireResponse<fdf::DriverIndex::WaitForBaseDrivers>* response) mutable {

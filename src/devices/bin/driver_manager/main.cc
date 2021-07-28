@@ -170,6 +170,10 @@ struct DriverManagerArgs {
   std::string sys_device_driver;
   // If this exists, use the driver runner and launch this driver URL as the root driver.
   std::string driver_runner_root_driver_url;
+  // If true then DriverManager uses DriverIndex for binding rather than
+  // looking in /boot/drivers/. If this is false DriverManager will not
+  // be able to load base packages.
+  bool use_driver_index = false;
 };
 
 DriverManagerArgs ParseDriverManagerArgs(int argc, char** argv) {
@@ -181,6 +185,7 @@ DriverManagerArgs ParseDriverManagerArgs(int argc, char** argv) {
     kPathPrefix,
     kSysDeviceDriver,
     kDriverRunnerRootDriverUrl,
+    kUseDriverIndex,
   };
   option options[] = {
       {"driver-search-path", required_argument, nullptr, kDriverSearchPath},
@@ -190,6 +195,7 @@ DriverManagerArgs ParseDriverManagerArgs(int argc, char** argv) {
       {"path-prefix", required_argument, nullptr, kPathPrefix},
       {"sys-device-driver", required_argument, nullptr, kSysDeviceDriver},
       {"driver-runner-root-driver-url", required_argument, nullptr, kDriverRunnerRootDriverUrl},
+      {"use-driver-index", no_argument, nullptr, kUseDriverIndex},
       {0, 0, 0, 0},
   };
 
@@ -233,6 +239,9 @@ DriverManagerArgs ParseDriverManagerArgs(int argc, char** argv) {
       case kDriverRunnerRootDriverUrl:
         args.driver_runner_root_driver_url = optarg;
         break;
+      case kUseDriverIndex:
+        args.use_driver_index = true;
+        break;
       default:
         print_usage_and_exit();
     }
@@ -269,7 +278,8 @@ int main(int argc, char** argv) {
     }
   }
   // Set up the default values for our arguments if they weren't given.
-  if (driver_manager_args.driver_search_paths.size() == 0) {
+  if (driver_manager_args.driver_search_paths.size() == 0 &&
+      !driver_manager_args.use_driver_index) {
     driver_manager_args.driver_search_paths.push_back(driver_manager_args.path_prefix + "driver");
   }
   if (driver_manager_args.sys_device_driver.empty()) {
@@ -323,16 +333,9 @@ int main(int argc, char** argv) {
     }
   }
 
-  auto driver_index_client = service::Connect<fuchsia_driver_framework::DriverIndex>();
-  if (driver_index_client.is_error()) {
-    return driver_index_client.error_value();
-  }
-
   CoordinatorConfig config;
   SystemInstance system_instance;
   config.boot_args = &boot_args;
-  config.driver_index = fidl::WireSharedClient<fdf::DriverIndex>(
-      std::move(driver_index_client.value()), loop.dispatcher());
   config.require_system = driver_manager_params.require_system;
   config.asan_drivers = driver_manager_params.driver_host_asan;
   config.suspend_fallback = driver_manager_params.suspend_timeout_fallback;
@@ -344,6 +347,15 @@ int main(int argc, char** argv) {
   config.eager_fallback_drivers = std::move(driver_manager_params.eager_fallback_drivers);
   config.enable_ephemeral = driver_manager_params.enable_ephemeral;
   config.crash_policy = driver_manager_params.crash_policy;
+
+  if (driver_manager_args.use_driver_index) {
+    auto driver_index_client = service::Connect<fuchsia_driver_framework::DriverIndex>();
+    if (driver_index_client.is_error()) {
+      return driver_index_client.error_value();
+    }
+    config.driver_index = fidl::WireSharedClient<fdf::DriverIndex>(
+        std::move(driver_index_client.value()), loop.dispatcher());
+  }
 
   // TODO(fxbug.dev/33958): Remove all uses of the root resource.
   status = get_root_resource(&config.root_resource);

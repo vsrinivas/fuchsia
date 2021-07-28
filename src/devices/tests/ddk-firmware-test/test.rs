@@ -28,7 +28,10 @@ async fn serve_fake_filesystem(
     let fs_scope = vfs::execution_scope::ExecutionScope::new();
     let root: Directory = vfs::pseudo_directory! {
         "pkgfs" => pkgfs,
-        "system" => system
+        "system" => system,
+        "boot" => vfs::pseudo_directory! {
+            "meta" => vfs::pseudo_directory! {},
+        },
     };
     root.open(
         fs_scope.clone(),
@@ -140,6 +143,11 @@ async fn create_realm(
     })?;
     builder.add_route(CapabilityRoute {
         capability: Capability::directory("system-delayed", "/system", fio2::RX_STAR_DIR),
+        source: fake_filesystem.clone(),
+        targets: vec![driver_manager.clone()],
+    })?;
+    builder.add_route(CapabilityRoute {
+        capability: Capability::directory("boot", "/boot", fio2::R_STAR_DIR),
         source: fake_filesystem.clone(),
         targets: vec![driver_manager.clone()],
     })?;

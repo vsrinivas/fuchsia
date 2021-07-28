@@ -123,7 +123,6 @@ async fn load_driver(
     }))
 }
 
-#[allow(dead_code)]
 async fn load_boot_drivers(dir: fio::DirectoryProxy) -> Result<Vec<ResolvedDriver>, anyhow::Error> {
     let meta =
         io_util::open_directory(&dir, std::path::Path::new("meta"), fio::OPEN_RIGHT_READABLE)
@@ -391,7 +390,10 @@ async fn main() -> Result<(), anyhow::Error> {
         fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_pkg::PackageResolverMarker>()
             .unwrap();
 
-    let index = Rc::new(Indexer::new(vec![], BaseRepo::NotResolved(std::vec![])));
+    let boot = io_util::open_directory_in_namespace("/boot", fio::OPEN_RIGHT_READABLE)?;
+    let drivers = load_boot_drivers(boot).await?;
+
+    let index = Rc::new(Indexer::new(drivers, BaseRepo::NotResolved(std::vec![])));
     let (res1, res2, _) = futures::future::join3(
         package_resolver::serve(resolver_stream),
         load_base_drivers(index.clone(), resolver),

@@ -1636,7 +1636,12 @@ void Coordinator::BindFallbackDrivers() {
   AddAndBindDrivers(std::move(fallback_drivers_));
 }
 
-void Coordinator::BindDrivers() { AddAndBindDrivers(std::move(drivers_)); }
+void Coordinator::BindDrivers() {
+  AddAndBindDrivers(std::move(drivers_));
+
+  DriverLoader::MatchDeviceConfig config;
+  BindAllDevicesDriverIndex(config);
+}
 
 // TODO(fxbug.dev/42257): Temporary helper to convert state to flags.
 // Will be removed eventually.
