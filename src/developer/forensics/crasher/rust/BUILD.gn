@@ -26,4 +26,8 @@ rustc_binary("crasher_exe") {
   edition = "2018"
 
   sources = [ "src/main.rs" ]
+  deps = [
+    "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:argh",
+  ]
 }

@@ -232,6 +232,11 @@ int port_overflow(volatile unsigned int* arg) {
   return 0;
 }
 
+int call_abort(volatile unsigned int* arg) {
+  abort();
+  return 0;
+}
+
 command_t commands[] = {
     {"write0", blind_write, "write to address 0x0"},  // Default command.
     {"read0", blind_read, "read address 0x0"},
@@ -248,6 +253,7 @@ command_t commands[] = {
     {"use_after_free", use_after_free, "use memory after freeing it"},
     {"write0_mt", blind_write_multithreaded,
      "write to address 0x0 in one thread, sleeping in 5 others"},
+    {"abort", call_abort, "call abort()"},
     {NULL, NULL, NULL},
 };
 
