@@ -11,7 +11,7 @@ use {
     ffx_core::metrics::{add_ffx_launch_and_timing_events, init_metrics_svc},
     ffx_core::Injector,
     ffx_daemon::{get_daemon_proxy_single_link, is_daemon_running},
-    ffx_lib_args::{from_env, Ffx},
+    ffx_lib_args::{from_env, redact_arg_values, Ffx},
     ffx_lib_sub_command::Subcommand,
     fidl::endpoints::create_proxy,
     fidl_fuchsia_developer_bridge::{
@@ -299,7 +299,8 @@ async fn run() -> Result<i32> {
     let timing_in_millis = (command_done - command_start).as_millis().to_string();
 
     let analytics_task = fuchsia_async::Task::local(async move {
-        if let Err(e) = add_ffx_launch_and_timing_events(timing_in_millis).await {
+        let sanitized_args = redact_arg_values::<Ffx>();
+        if let Err(e) = add_ffx_launch_and_timing_events(sanitized_args, timing_in_millis).await {
             log::error!("metrics submission failed: {}", e);
         }
         Instant::now()

@@ -19,14 +19,6 @@ pub async fn init_metrics_svc() {
     init(String::from("ffx"), build_version, GA_PROPERTY_ID.to_string()).await;
 }
 
-fn get_launch_args() -> String {
-    let args: Vec<String> = std::env::args().collect();
-    // drop arg[0]: executable with hard path
-    // TODO(fxb/71028): do we want to break out subcommands for analytics?
-    let args_str = &args[1..].join(" ");
-    format!("{}", &args_str)
-}
-
 fn legacy_discovery_env() -> String {
     let _one = "1".to_string();
     match std::env::var(FUCHSIA_DISCOVERY_LEGACY_ENV_VAR_NAME) {
@@ -36,18 +28,20 @@ fn legacy_discovery_env() -> String {
     .to_string()
 }
 
-pub async fn add_ffx_launch_and_timing_events(time: String) -> Result<()> {
+pub async fn add_ffx_launch_and_timing_events(sanitized_args: String, time: String) -> Result<()> {
     let mut batcher = make_batch().await?;
-    add_ffx_launch_event(&mut batcher).await?;
-    add_ffx_timing_event(time, &mut batcher).await?;
+    add_ffx_launch_event(&sanitized_args, &mut batcher).await?;
+    add_ffx_timing_event(&sanitized_args, time, &mut batcher).await?;
     batcher.send_events().await
 }
 
-async fn add_ffx_launch_event(batcher: &mut MetricsEventBatch) -> Result<()> {
-    let launch_args = get_launch_args();
+async fn add_ffx_launch_event(
+    sanitized_args: &String,
+    batcher: &mut MetricsEventBatch,
+) -> Result<()> {
     let mut custom_dimensions = BTreeMap::new();
     add_legacy_discovery_metrics(&mut custom_dimensions);
-    batcher.add_custom_event(None, Some(&launch_args), None, custom_dimensions).await
+    batcher.add_custom_event(None, Some(&sanitized_args), None, custom_dimensions).await
 }
 
 fn add_legacy_discovery_metrics(custom_dimensions: &mut BTreeMap<&str, String>) {
@@ -55,9 +49,12 @@ fn add_legacy_discovery_metrics(custom_dimensions: &mut BTreeMap<&str, String>) 
         .insert(ANALYTICS_LEGACY_DISCOVERY_CUSTOM_DIMENSION_KEY, legacy_discovery_env());
 }
 
-async fn add_ffx_timing_event(time: String, batcher: &mut MetricsEventBatch) -> Result<()> {
-    let launch_args = get_launch_args();
+async fn add_ffx_timing_event(
+    sanitized_args: &String,
+    time: String,
+    batcher: &mut MetricsEventBatch,
+) -> Result<()> {
     let mut custom_dimensions = BTreeMap::new();
     add_legacy_discovery_metrics(&mut custom_dimensions);
-    batcher.add_timing_event(Some(&launch_args), time, None, None, custom_dimensions).await
+    batcher.add_timing_event(Some(&sanitized_args), time, None, None, custom_dimensions).await
 }

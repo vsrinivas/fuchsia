@@ -57,3 +57,18 @@ pub fn from_env<T: TopLevelCommand>() -> T {
         })
     })
 }
+
+/// Create a string of the current process's `env::args` that replaces user-supplied parameter values with the parameter name to enable safe analytics data collection.
+///
+/// This function will exit early from the current process if argument parsing
+/// was unsuccessful or if information like `--help` was requested.
+pub fn redact_arg_values<T: TopLevelCommand>() -> String {
+    let strings: Vec<String> = std::env::args().collect();
+    let cmd = cmd(&strings[0], &strings[0]);
+    let strs: Vec<&str> = strings.iter().map(|s| s.as_str()).collect();
+    let x = T::redact_arg_values(&[cmd], &strs[1..]);
+    match x {
+        Ok(s) => s[1..].join(" "),
+        Err(e) => e.output,
+    }
+}
