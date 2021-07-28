@@ -420,10 +420,6 @@ impl BlobFsReader {
                 let inode = Inode::parse(&mut self.cursor)?;
                 let merkle = hex::encode(inode.merkle_root_hash.clone());
 
-                if prelude.next_node != 0 {
-                    warn!("Next node not supported: {}", merkle);
-                    continue;
-                }
                 if inode.extent_count > 1 {
                     warn!("Extended containers are not currently supported: {}", merkle);
                     continue;
@@ -628,7 +624,8 @@ mod tests {
     #[test]
     fn test_blobfs_allocations() {
         let block_size: usize = 8192;
-        let header = fake_blobfs_header();
+        let mut header = fake_blobfs_header();
+        header.inode_count = 1;
         let mut blobfs_bytes = bincode::serialize(&header).unwrap();
         let padding_size = block_size - blobfs_bytes.len();
         let mut padding = vec![0u8; padding_size];
