@@ -99,6 +99,24 @@ constexpr char kAsanEnvironment[] =
     // within a single C++ driver won't be caught either.
     "detect_odr_violation=0";
 
+// Currently we check if DriverManager is built using ASAN.
+// If it is, then we assume DriverHost is also ASAN.
+//
+// We currently assume that either the whole system is ASAN or the whole
+// system is non-ASAN. One day we might be able to be more flexible about
+// which drivers must get loaded into the same driver_host and thus be able
+// to use both ASan and non-ASan driver_hosts at the same time when only
+// a subset of drivers use ASan.
+bool driver_host_is_asan() {
+  bool is_asan = false;
+#if defined(__has_feature)
+#if __has_feature(address_sanitizer)
+  is_asan = true;
+#endif
+#endif
+  return is_asan;
+}
+
 }  // namespace
 
 namespace statecontrol_fidl = fuchsia_hardware_power_statecontrol;
@@ -365,19 +383,7 @@ zx_status_t Coordinator::NewDriverHost(const char* name, fbl::RefPtr<DriverHost>
   std::string binary = config_.path_prefix + kDriverHostPath;
   std::string root_driver_path_arg;
   std::vector<const char*> env;
-  if (config_.asan_drivers) {
-    // If there are any ASan drivers, use the ASan-supporting driver_host for
-    // all drivers because even a driver_host launched initially with just a
-    // non-ASan driver might later load an ASan driver.  One day we might be
-    // able to be more flexible about which drivers must get loaded into the
-    // same driver_host and thus be able to use both ASan and non-ASan driver_hosts
-    // at the same time when only a subset of drivers use ASan.
-    //
-    // TODO(fxbug.dev/44814): The build logic to install the asan-ready driver_host
-    // under the alternate name is currently broken.  So things only work
-    // if the build chose an asan-ready variant for the "main" driver_host.
-    // When this is restored in the build, this should select the right name.
-    // binary = kDriverHostAsanPath;
+  if (driver_host_is_asan()) {
     env.push_back(kAsanEnvironment);
   }
 
@@ -1169,6 +1175,12 @@ zx_status_t Coordinator::PrepareProxy(const fbl::RefPtr<Device>& dev,
 }
 
 zx_status_t Coordinator::AttemptBind(const Driver* drv, const fbl::RefPtr<Device>& dev) {
+  if (!driver_host_is_asan() && drv->flags & ZIRCON_DRIVER_NOTE_FLAG_ASAN) {
+    LOGF(ERROR, "%s (%s) requires ASAN, but we are not in an ASAN environment", drv->libname.data(),
+         drv->name.data());
+    return ZX_ERR_BAD_STATE;
+  }
+
   // cannot bind driver to already bound device
   if ((dev->flags & DEV_CTX_BOUND) &&
       !(dev->flags & (DEV_CTX_MULTI_BIND | DEV_CTX_ALLOW_MULTI_COMPOSITE))) {
@@ -1308,18 +1320,6 @@ void Coordinator::Resume(SystemPowerState target_state, ResumeCallback callback)
   Resume(ResumeContext(ResumeContext::Flags::kResume, target_state), std::move(callback));
 }
 
-std::unique_ptr<Driver> Coordinator::ValidateDriver(std::unique_ptr<Driver> drv) {
-  if ((drv->flags & ZIRCON_DRIVER_NOTE_FLAG_ASAN) && !config_.asan_drivers) {
-    if (launched_first_driver_host_) {
-      LOGF(ERROR, "%s (%s) requires ASan, cannot load after boot; use devmgr.devhost.asan=true",
-           drv->libname.data(), drv->name.data());
-      return nullptr;
-    }
-    config_.asan_drivers = true;
-  }
-  return drv;
-}
-
 // DriverAdded is called when a driver is added after the
 // devcoordinator has started.  The driver is added to the new-drivers
 // list and work is queued to process it.
@@ -1337,11 +1337,7 @@ void Coordinator::DriverAdded(Driver* drv, const char* version) {
 //
 // TODO: fancier priorities
 void Coordinator::DriverAddedInit(Driver* drv, const char* version) {
-  auto driver = ValidateDriver(std::unique_ptr<Driver>(drv));
-  if (!driver) {
-    return;
-  }
-
+  auto driver = std::unique_ptr<Driver>(drv);
   // Record the special fragment driver when we see it
   if (driver->libname.data() == GetFragmentDriverPath()) {
     fragment_driver_ = driver.get();
@@ -1611,10 +1607,6 @@ zx_status_t Coordinator::BindDevice(const fbl::RefPtr<Device>& dev, std::string_
 void Coordinator::AddAndBindDrivers(fbl::DoublyLinkedList<std::unique_ptr<Driver>> drivers) {
   std::unique_ptr<Driver> driver;
   while ((driver = drivers.pop_front()) != nullptr) {
-    driver = ValidateDriver(std::move(driver));
-    if (!driver) {
-      continue;
-    }
     Driver* driver_ptr = driver.get();
     drivers_.push_back(std::move(driver));
 

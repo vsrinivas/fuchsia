@@ -144,8 +144,6 @@ struct CoordinatorConfig {
   fidl::WireSharedClient<fdf::DriverIndex> driver_index;
   // Whether we require /system.
   bool require_system = false;
-  // Whether we require ASan drivers.
-  bool asan_drivers = false;
   // Whether to reboot the device when suspend does not finish on time.
   bool suspend_fallback = false;
   // Whether to output logs to debuglog.

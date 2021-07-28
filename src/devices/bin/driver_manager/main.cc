@@ -55,7 +55,6 @@ namespace {
 
 // These are helpers for getting sets of parameters over FIDL
 struct DriverManagerParams {
-  bool driver_host_asan;
   bool enable_ephemeral;
   bool log_to_debuglog;
   bool require_system;
@@ -67,8 +66,6 @@ struct DriverManagerParams {
 
 DriverManagerParams GetDriverManagerParams(fidl::WireSyncClient<fuchsia_boot::Arguments>& client) {
   fuchsia_boot::wire::BoolPair bool_req[]{
-      // TODO(bwb): remove this or figure out how to make it work
-      {"devmgr.devhost.asan", false},
       {"devmgr.enable-ephemeral", false},
       {"devmgr.log-to-debuglog", false},
       {"devmgr.require-system", false},
@@ -111,12 +108,11 @@ DriverManagerParams GetDriverManagerParams(fidl::WireSyncClient<fuchsia_boot::Ar
   }
 
   return {
-      .driver_host_asan = bool_resp->values[0],
-      .enable_ephemeral = bool_resp->values[1],
-      .log_to_debuglog = bool_resp->values[2],
-      .require_system = bool_resp->values[3],
-      .suspend_timeout_fallback = bool_resp->values[4],
-      .verbose = bool_resp->values[5],
+      .enable_ephemeral = bool_resp->values[0],
+      .log_to_debuglog = bool_resp->values[1],
+      .require_system = bool_resp->values[2],
+      .suspend_timeout_fallback = bool_resp->values[3],
+      .verbose = bool_resp->values[4],
       .eager_fallback_drivers = std::move(eager_fallback_drivers),
       .crash_policy = crash_policy,
   };
@@ -337,7 +333,6 @@ int main(int argc, char** argv) {
   SystemInstance system_instance;
   config.boot_args = &boot_args;
   config.require_system = driver_manager_params.require_system;
-  config.asan_drivers = driver_manager_params.driver_host_asan;
   config.suspend_fallback = driver_manager_params.suspend_timeout_fallback;
   config.log_to_debuglog =
       driver_manager_params.log_to_debuglog || driver_manager_args.log_to_debuglog;

@@ -23,7 +23,6 @@ CoordinatorConfig DefaultConfig(async_dispatcher_t* bootargs_dispatcher,
     boot_args->CreateClient(bootargs_dispatcher, client);
   }
   config.require_system = false;
-  config.asan_drivers = false;
   config.boot_args = client;
   config.fs_provider = &dummy_fs_provider;
   config.suspend_fallback = true;
