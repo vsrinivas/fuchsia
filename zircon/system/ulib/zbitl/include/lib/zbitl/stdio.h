@@ -5,47 +5,44 @@
 #ifndef LIB_ZBITL_STDIO_H_
 #define LIB_ZBITL_STDIO_H_
 
+#include <sys/types.h>  // off_t
+
 #include <cstdio>
 #include <string>
+
+#include <fbl/unique_fd.h>
 
 #include "storage_traits.h"
 
 namespace zbitl {
 
-struct ErrnoErrorTraits {
-  /// File I/O errors are represented by an errno value.
-  using error_type = int;
-
-  /// Returns a std::string rather than const char* because strerror can
-  /// sometimes return a reusable buffer instead of a string constant.
-  static std::string error_string(error_type error) { return strerror(error); }
-};
-
 template <>
 class StorageTraits<FILE*> {
  public:
-  using ErrorTraits = ErrnoErrorTraits;
+  /// File I/O errors are represented by an errno value.
+  using error_type = int;
 
   /// Offset into file where the ZBI item payload begins.
   using payload_type = decltype(ftell(nullptr));
 
-  static fitx::result<ErrorTraits::error_type, uint32_t> Capacity(FILE* f);
+  static std::string error_string(error_type error) { return strerror(error); }
 
-  static fitx::result<ErrorTraits::error_type> EnsureCapacity(FILE* f, uint32_t capacity_bytes);
+  static fitx::result<error_type, uint32_t> Capacity(FILE* f);
 
-  static fitx::result<ErrorTraits::error_type, zbi_header_t> Header(FILE* f, uint32_t offset);
+  static fitx::result<error_type> EnsureCapacity(FILE* f, uint32_t capacity_bytes);
 
-  static fitx::result<ErrorTraits::error_type, payload_type> Payload(FILE* f, uint32_t offset,
-                                                                     uint32_t length) {
+  static fitx::result<error_type, zbi_header_t> Header(FILE* f, uint32_t offset);
+
+  static fitx::result<error_type, payload_type> Payload(FILE* f, uint32_t offset, uint32_t length) {
     return fitx::ok(offset);
   }
 
-  static fitx::result<ErrorTraits::error_type> Read(FILE* f, payload_type payload, void* buffer,
-                                                    uint32_t length);
+  static fitx::result<error_type> Read(FILE* f, payload_type payload, void* buffer,
+                                       uint32_t length);
 
   template <typename Callback>
   static auto Read(FILE* f, payload_type payload, uint32_t length, Callback&& callback)
-      -> fitx::result<ErrorTraits::error_type, decltype(callback(ByteView{}))> {
+      -> fitx::result<error_type, decltype(callback(ByteView{}))> {
     std::optional<decltype(callback(ByteView{}))> result;
     auto cb = [&](ByteView chunk) -> bool {
       result = callback(chunk);
@@ -63,14 +60,13 @@ class StorageTraits<FILE*> {
     }
   }
 
-  static fitx::result<ErrorTraits::error_type, uint32_t> Crc32(FILE* f, uint32_t offset,
-                                                               uint32_t length);
+  static fitx::result<error_type, uint32_t> Crc32(FILE* f, uint32_t offset, uint32_t length);
 
-  static fitx::result<ErrorTraits::error_type> Write(FILE* f, uint32_t offset, ByteView data);
+  static fitx::result<error_type> Write(FILE* f, uint32_t offset, ByteView data);
 
  private:
-  static fitx::result<ErrorTraits::error_type> DoRead(FILE* f, payload_type offset, uint32_t length,
-                                                      bool (*)(void*, ByteView), void*);
+  static fitx::result<error_type> DoRead(FILE* f, payload_type offset, uint32_t length,
+                                         bool (*)(void*, ByteView), void*);
 };
 
 }  // namespace zbitl

@@ -16,7 +16,7 @@ namespace {
 
 constexpr size_t kBufferSize = 8192;
 
-using error_type = ErrnoErrorTraits::error_type;
+using error_type = StorageTraits<fbl::unique_fd>::error_type;
 
 }  // namespace
 

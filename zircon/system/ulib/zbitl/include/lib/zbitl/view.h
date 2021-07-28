@@ -54,7 +54,7 @@ class Image;
 //  ```
 ///
 /// zbitl::View satisfies the C++20 std::forward_range concept; it satisfies the
-/// std::view concept if the Storage and the associated error_type types support
+/// std::view concept if the Storage and Storage::error_type types support
 /// constant-time copy/move/assignment.
 ///
 /// ## Error checking
@@ -83,22 +83,21 @@ class Image;
 /// The Storage type is some type that can be abstractly considered to have
 /// non-owning "view" semantics: it doesn't hold the storage of the ZBI, it
 /// just refers to it somehow.  The zbitl::View:Error type describes errors
-/// encountered while iterating.  It uses the associated error_type type to
+/// encountered while iterating.  It uses the Storage::error_type type to
 /// propagate errors caused by access to the underlying storage.
 ///
-/// Usually Storage and error_type types are small and can be copied.
-/// zbitl::View is move-only if Storage is move-only or if error_type is
-/// move-only.  Note that copying zbitl::View copies its error-checking state
-/// exactly, so if the original View needed to be checked for errors before
-/// destruction then both the original and the copy need to be checked before
-/// their respective destructions.  A moved-from zbitl::View can always be
-/// destroyed without checking.
+/// Usually Storage and Storage:error_type types are small and can be copied.
+/// zbitl::View is move-only if Storage is move-only or if Storage::error_type
+/// is move-only.  Note that copying zbitl::View copies its error-checking
+/// state exactly, so if the original View needed to be checked for errors
+/// before destruction then both the original and the copy need to be checked
+/// before their respective destructions.  A moved-from zbitl::View can always
+/// be destroyed without checking.
 template <typename Storage>
 class View {
  public:
   using Traits = ExtendedStorageTraits<Storage>;
   using storage_type = Storage;
-  using storage_error_type = typename Traits::ErrorTraits::error_type;
 
   View() = default;
   View(const View&) = default;
@@ -160,19 +159,19 @@ class View {
   // Converts the context of an iteration failure to an Error.
   static Error ToError(std::string_view reason, const item_header_type& header,
                        uint32_t item_offset, uint32_t error_offset,
-                       std::optional<storage_error_type> storage_error = std::nullopt) {
+                       std::optional<typename Traits::error_type> storage_error = std::nullopt) {
     return {reason, error_offset, storage_error};
   }
 
   // Fetches the container header.
-  static fitx::result<storage_error_type,
+  static fitx::result<typename Traits::error_type,
                       typename Traits::template LocalizedReadResult<container_header_type>>
   ContainerHeader(Storage& storage) {
     return Traits::template LocalizedRead<container_header_type>(storage, 0);
   }
 
   // Fetches an item header at a given offset.
-  static fitx::result<storage_error_type,
+  static fitx::result<typename Traits::error_type,
                       typename Traits::template LocalizedReadResult<item_header_type>>
   ItemHeader(Storage& storage, uint32_t offset) {
     return Traits::template LocalizedRead<item_header_type>(storage, offset);
@@ -223,9 +222,9 @@ class View {
    private:
     using TraitsHeader = decltype(ItemHeader(std::declval<View>().storage(), 0));
     static constexpr bool kCopy =
-        std::is_same_v<TraitsHeader, fitx::result<storage_error_type, item_header_type>>;
+        std::is_same_v<TraitsHeader, fitx::result<typename Traits::error_type, item_header_type>>;
     static constexpr bool kReference =
-        std::is_same_v<TraitsHeader, fitx::result<storage_error_type,
+        std::is_same_v<TraitsHeader, fitx::result<typename Traits::error_type,
                                                   std::reference_wrapper<const item_header_type>>>;
     static_assert(kCopy || kReference,
                   "zbitl::StorageTraits specialization's Header function returns wrong type");
@@ -272,8 +271,8 @@ class View {
   /// the error.  Errors arising from Storage access also provide an error
   /// value defined via StorageTraits; see <lib/zbitl/storage_traits.h>.
   struct Error {
-    static auto storage_error_string(storage_error_type error) {
-      return Traits::ErrorTraits::error_string(error);
+    static auto storage_error_string(typename Traits::error_type error) {
+      return Traits::error_string(error);
     }
 
     /// A string constant describing the error.
@@ -288,7 +287,7 @@ class View {
     /// This reflects the underlying error from accessing the Storage object,
     /// if any.  If storage_error.has_value() is false, then the error is in
     /// the format of the contents of the ZBI, not in accessing the contents.
-    std::optional<storage_error_type> storage_error{};
+    std::optional<typename Traits::error_type> storage_error{};
   };
 
   /// An error type encompassing both read and write failures in accessing the
@@ -299,16 +298,12 @@ class View {
   template <typename CopyStorage>
   struct CopyError {
     using WriteTraits = StorageTraits<std::decay_t<CopyStorage>>;
-    using WriteError = typename WriteTraits::ErrorTraits::error_type;
-    using ReadError = storage_error_type;
+    using WriteError = typename WriteTraits::error_type;
+    using ReadError = typename Traits::error_type;
 
-    static auto read_error_string(ReadError error) {
-      return Traits::ErrorTraits::error_string(error);
-    }
+    static auto read_error_string(ReadError error) { return Traits::error_string(error); }
 
-    static auto write_error_string(WriteError error) {
-      return WriteTraits::ErrorTraits::error_string(error);
-    }
+    static auto write_error_string(WriteError error) { return WriteTraits::error_string(error); }
 
     /// A string constant describing the error.
     std::string_view zbi_error{};
@@ -321,7 +316,7 @@ class View {
     /// This reflects the underlying error from accessing the storage object
     /// that from which the copy was attempted. This field is expected to be
     /// std::nullopt in the case of a write error.
-    std::optional<storage_error_type> read_error{};
+    std::optional<typename Traits::error_type> read_error{};
 
     /// This is the offset into the storage object at which a write error
     /// occured. This field is expected to be unset in the case of a read
@@ -507,7 +502,8 @@ class View {
       offset_ = next_item_offset;
     }
 
-    void Fail(std::string_view sv, std::optional<storage_error_type> storage_error = std::nullopt,
+    void Fail(std::string_view sv,
+              std::optional<typename Traits::error_type> storage_error = std::nullopt,
               std::optional<uint32_t> error_offset = std::nullopt) {
       view_->Fail(ToError(sv, *value_.header, offset_, error_offset.value_or(offset_),
                           std::move(storage_error)));
@@ -611,7 +607,8 @@ class View {
   // This method is not available if zbitl::StorageTraits<storage_type>
   // doesn't support mutation.
   template <typename T = Traits, typename = std::enable_if_t<T::CanWrite()>>
-  fitx::result<storage_error_type> EditHeader(const iterator& item, const zbi_header_t& header) {
+  fitx::result<typename Traits::error_type> EditHeader(const iterator& item,
+                                                       const zbi_header_t& header) {
     item.Assert(__func__);
     if (auto result = WriteHeader(header, item.item_offset(), item.value_.header->length);
         result.error_value()) {
@@ -624,7 +621,7 @@ class View {
   // operator*() consistent with the new header if it worked.  For kReference
   // storage types, the change is reflected intrinsically.
   template <typename T = Traits, typename = std::enable_if_t<T::CanWrite()>>
-  fitx::result<storage_error_type> EditHeader(iterator& item, const zbi_header_t& header) {
+  fitx::result<typename Traits::error_type> EditHeader(iterator& item, const zbi_header_t& header) {
     item.Assert(__func__);
     auto result = WriteHeader(header, item.item_offset(), item.value_.header->length);
     if constexpr (item_header_wrapper::kCopy) {
@@ -680,10 +677,10 @@ class View {
   // Copy a range of the underlying storage into an existing piece of storage,
   // which can be any mutable type with sufficient capacity.  The Error return
   // value is for a read error.  The "success" return value indicates there was
-  // no read error.  It's another fitx::result<storage_error_type> for the
-  // writing side (which may be different than the type used in
-  // Error::storage_error).  The optional `to_offset` argument says where in
-  // `to` the data is written, as a byte offset that is zero by default.
+  // no read error.  It's another fitx::result<error_type> for the writing side
+  // (which may be different than the type used in Error::storage_error).  The
+  // optional `to_offset` argument says where in `to` the data is written, as a
+  // byte offset that is zero by default.
   template <typename CopyStorage>
   fitx::result<CopyError<std::decay_t<CopyStorage>>> Copy(CopyStorage&& to, uint32_t offset,
                                                           uint32_t length, uint32_t to_offset = 0) {
@@ -735,7 +732,7 @@ class View {
       return fitx::ok();
     } else {
       auto write = [&to, to_offset](ByteView chunk) mutable  //
-          -> fitx::result<typename CopyTraits::ErrorTraits::error_type> {
+          -> fitx::result<typename CopyTraits::error_type> {
         if (auto result = CopyTraits::Write(to, to_offset, chunk); result.is_error()) {
           return std::move(result).take_error();
         }
@@ -983,7 +980,7 @@ class View {
   // WriteHeader sanitizes and optionally updates the length of a provided
   // header, writes it to the provided offset, and returns the modified header
   // on success.
-  fitx::result<storage_error_type, zbi_header_t> WriteHeader(
+  fitx::result<typename Traits::error_type, zbi_header_t> WriteHeader(
       zbi_header_t header, uint32_t offset, std::optional<uint32_t> new_length = std::nullopt) {
     header = SanitizeHeader(header);
     if (new_length.has_value()) {
@@ -1017,7 +1014,7 @@ class View {
 
   template <typename Callback>
   auto Read(payload_type payload, uint32_t length, Callback&& callback)
-      -> fitx::result<storage_error_type, decltype(callback(ByteView{}))> {
+      -> fitx::result<typename Traits::error_type, decltype(callback(ByteView{}))> {
     if constexpr (Traits::template CanOneShotRead<std::byte, /*LowLocality=*/false>()) {
       if (auto result = Traits::template Read<std::byte, false>(storage(), payload, length);
           result.is_error()) {
@@ -1065,10 +1062,9 @@ class View {
       }};
     } else {
       auto copy = std::move(result).value();
-      static_assert(
-          std::is_convertible_v<typename StorageTraits<decltype(copy)>::ErrorTraits::error_type,
-                                storage_error_type>,
-          "StorageTraits::Create yields type with incompatible error_type");
+      static_assert(std::is_convertible_v<typename StorageTraits<decltype(copy)>::error_type,
+                                          typename Traits::error_type>,
+                    "StorageTraits::Create yields type with incompatible error_type");
       auto copy_result = Copy(copy, offset, length, to_offset);
       if (copy_result.is_error()) {
         return std::move(copy_result).take_error();
@@ -1078,7 +1074,7 @@ class View {
   }
 
   template <typename SlopCheck, typename T = Traits>
-  fitx::result<storage_error_type, typename T::template CloneResult<>> Clone(
+  fitx::result<typename Traits::error_type, typename T::template CloneResult<>> Clone(
       uint32_t offset, uint32_t length, uint32_t to_offset, SlopCheck&& slopcheck) {
     return Traits::Clone(storage(), offset, length, to_offset, std::forward<SlopCheck>(slopcheck));
   }
@@ -1086,7 +1082,8 @@ class View {
   // This overload is only used if SFINAE detected no Traits::Clone method.
   template <typename T = Traits,  // SFINAE check for Traits::Create method.
             typename CreateStorage = std::decay_t<typename T::template CreateResult<>>>
-  fitx::result<storage_error_type, std::optional<std::pair<CreateStorage, uint32_t>>> Clone(...) {
+  fitx::result<typename Traits::error_type, std::optional<std::pair<CreateStorage, uint32_t>>>
+  Clone(...) {
     return fitx::ok(std::nullopt);  // Can't do it.
   }
 

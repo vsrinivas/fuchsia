@@ -109,42 +109,36 @@ class MapOwnedVmo : public MapUnownedVmo {
   zx::vmo owned_vmo_;
 };
 
-struct ZxErrorTraits {
-  /// Errors from zx::vmo calls.
-  using error_type = zx_status_t;
-
-  static std::string_view error_string(error_type error) { return zx_status_get_string(error); }
-};
-
 template <>
 struct StorageTraits<zx::vmo> {
  public:
-  using ErrorTraits = ZxErrorTraits;
+  /// Errors from zx::vmo calls.
+  using error_type = zx_status_t;
 
   /// Offset into the VMO where the ZBI item payload begins.
   using payload_type = uint64_t;
 
+  static std::string_view error_string(error_type error) { return zx_status_get_string(error); }
+
   // Returns ZX_PROP_VMO_CONTENT_SIZE, if set - or else the page-rounded VMO
   // size.
-  static fitx::result<ErrorTraits::error_type, uint32_t> Capacity(const zx::vmo&);
+  static fitx::result<error_type, uint32_t> Capacity(const zx::vmo&);
 
   // Will enlarge the underlying VMO size if needed, updating
   // ZX_PROP_VMO_CONTENT_SIZE to the new capacity value if so.
-  static fitx::result<ErrorTraits::error_type> EnsureCapacity(const zx::vmo&,
-                                                              uint32_t capacity_bytes);
+  static fitx::result<error_type> EnsureCapacity(const zx::vmo&, uint32_t capacity_bytes);
 
-  static fitx::result<ErrorTraits::error_type, payload_type> Payload(const zx::vmo& zbi,
-                                                                     uint32_t offset,
-                                                                     uint32_t length) {
+  static fitx::result<error_type, payload_type> Payload(const zx::vmo&, uint32_t offset,
+                                                        uint32_t length) {
     return fitx::ok(offset);
   }
 
-  static fitx::result<ErrorTraits::error_type> Read(const zx::vmo& zbi, payload_type payload,
-                                                    void* buffer, uint32_t length);
+  static fitx::result<error_type> Read(const zx::vmo& zbi, payload_type payload, void* buffer,
+                                       uint32_t length);
 
   template <typename Callback>
   static auto Read(const zx::vmo& zbi, payload_type payload, uint32_t length, Callback&& callback)
-      -> fitx::result<ErrorTraits::error_type, decltype(callback(ByteView{}))> {
+      -> fitx::result<error_type, decltype(callback(ByteView{}))> {
     std::optional<decltype(callback(ByteView{}))> result;
     auto cb = [&](ByteView chunk) -> bool {
       result = callback(chunk);
@@ -162,13 +156,13 @@ struct StorageTraits<zx::vmo> {
     }
   }
 
-  static fitx::result<ErrorTraits::error_type> Write(const zx::vmo&, uint32_t offset, ByteView);
+  static fitx::result<error_type> Write(const zx::vmo&, uint32_t offset, ByteView);
 
-  static fitx::result<ErrorTraits::error_type, zx::vmo> Create(const zx::vmo&, uint32_t size,
-                                                               uint32_t initial_zero_size);
+  static fitx::result<error_type, zx::vmo> Create(const zx::vmo&, uint32_t size,
+                                                  uint32_t initial_zero_size);
 
   template <typename SlopCheck>
-  static fitx::result<ErrorTraits::error_type, std::optional<std::pair<zx::vmo, uint32_t>>> Clone(
+  static fitx::result<error_type, std::optional<std::pair<zx::vmo, uint32_t>>> Clone(
       const zx::vmo& zbi, uint32_t offset, uint32_t length, uint32_t to_offset,
       SlopCheck&& slopcheck) {
     if (slopcheck(offset % ZX_PAGE_SIZE)) {
@@ -178,11 +172,10 @@ struct StorageTraits<zx::vmo> {
   }
 
  private:
-  static fitx::result<ErrorTraits::error_type> DoRead(const zx::vmo& zbi, uint64_t offset,
-                                                      uint32_t length, bool (*)(void*, ByteView),
-                                                      void*);
+  static fitx::result<error_type> DoRead(const zx::vmo& zbi, uint64_t offset, uint32_t length,
+                                         bool (*)(void*, ByteView), void*);
 
-  static fitx::result<ErrorTraits::error_type, std::optional<std::pair<zx::vmo, uint32_t>>> DoClone(
+  static fitx::result<error_type, std::optional<std::pair<zx::vmo, uint32_t>>> DoClone(
       const zx::vmo& zbi, uint32_t offset, uint32_t length);
 };
 
@@ -190,8 +183,10 @@ template <>
 struct StorageTraits<zx::unowned_vmo> {
   using Owned = StorageTraits<zx::vmo>;
 
-  using ErrorTraits = Owned::ErrorTraits;
+  using error_type = Owned::error_type;
   using payload_type = Owned::payload_type;
+
+  static auto error_string(error_type error) { return Owned::error_string(error); }
 
   static auto Capacity(const zx::unowned_vmo& vmo) { return Owned::Capacity(*vmo); }
 
@@ -203,9 +198,8 @@ struct StorageTraits<zx::unowned_vmo> {
     return Owned::Payload(*vmo, offset, length);
   }
 
-  static fitx::result<ErrorTraits::error_type> Read(const zx::unowned_vmo& vmo,
-                                                    payload_type payload, void* buffer,
-                                                    uint32_t length) {
+  static fitx::result<error_type> Read(const zx::unowned_vmo& vmo, payload_type payload,
+                                       void* buffer, uint32_t length) {
     return Owned::Read(*vmo, payload, buffer, length);
   }
 
@@ -235,13 +229,15 @@ class StorageTraits<MapUnownedVmo> {
  public:
   using Owned = StorageTraits<zx::vmo>;
 
-  using ErrorTraits = Owned::ErrorTraits;
+  using error_type = Owned::error_type;
   using payload_type = Owned::payload_type;
+
+  static auto error_string(error_type error) { return Owned::error_string(error); }
 
   static auto Capacity(const MapUnownedVmo& zbi) { return Owned::Capacity(zbi.vmo()); }
 
-  static fitx::result<ErrorTraits::error_type> EnsureCapacity(const MapUnownedVmo& zbi,
-                                                              uint32_t capacity_bytes) {
+  static fitx::result<error_type> EnsureCapacity(const MapUnownedVmo& zbi,
+                                                 uint32_t capacity_bytes) {
     return Owned::EnsureCapacity(zbi.vmo(), capacity_bytes);
   }
 
@@ -255,7 +251,7 @@ class StorageTraits<MapUnownedVmo> {
   // case, the unbuffered `Read()` is recommended instead.
   template <typename T, bool LowLocality>
   static std::enable_if_t<(alignof(T) <= kStorageAlignment) && !LowLocality,
-                          fitx::result<ErrorTraits::error_type, cpp20::span<const T>>>
+                          fitx::result<error_type, cpp20::span<const T>>>
   Read(MapUnownedVmo& zbi, payload_type payload, uint32_t length) {
     auto result = Map(zbi, payload, length, false);
     if (result.is_error()) {
@@ -264,8 +260,8 @@ class StorageTraits<MapUnownedVmo> {
     return fitx::ok(AsSpan<const T>(static_cast<const std::byte*>(result.value()), length));
   }
 
-  static fitx::result<ErrorTraits::error_type> Read(const MapUnownedVmo& zbi, payload_type payload,
-                                                    void* buffer, uint32_t length) {
+  static fitx::result<error_type> Read(const MapUnownedVmo& zbi, payload_type payload, void* buffer,
+                                       uint32_t length) {
     return Owned::Read(zbi.vmo(), payload, buffer, length);
   }
 
@@ -273,14 +269,13 @@ class StorageTraits<MapUnownedVmo> {
     return Owned::Write(zbi.vmo(), offset, data);
   }
 
-  static fitx::result<ErrorTraits::error_type, void*> Write(MapUnownedVmo& zbi, uint32_t offset,
-                                                            uint32_t length) {
+  static fitx::result<error_type, void*> Write(MapUnownedVmo& zbi, uint32_t offset,
+                                               uint32_t length) {
     return Map(zbi, offset, length, true);
   }
 
-  static fitx::result<ErrorTraits::error_type, MapOwnedVmo> Create(const MapUnownedVmo& proto,
-                                                                   uint32_t size,
-                                                                   uint32_t initial_zero_size) {
+  static fitx::result<error_type, MapOwnedVmo> Create(const MapUnownedVmo& proto, uint32_t size,
+                                                      uint32_t initial_zero_size) {
     auto result = Owned::Create(proto.vmo(), size, initial_zero_size);
     if (result.is_error()) {
       return result.take_error();
@@ -290,9 +285,9 @@ class StorageTraits<MapUnownedVmo> {
   }
 
   template <typename SlopCheck>
-  static fitx::result<ErrorTraits::error_type, std::optional<std::pair<MapOwnedVmo, uint32_t>>>
-  Clone(const MapUnownedVmo& zbi, uint32_t offset, uint32_t length, uint32_t to_offset,
-        SlopCheck&& slopcheck) {
+  static fitx::result<error_type, std::optional<std::pair<MapOwnedVmo, uint32_t>>> Clone(
+      const MapUnownedVmo& zbi, uint32_t offset, uint32_t length, uint32_t to_offset,
+      SlopCheck&& slopcheck) {
     auto result =
         Owned::Clone(zbi.vmo(), offset, length, to_offset, std::forward<SlopCheck>(slopcheck));
     if (result.is_error()) {
@@ -307,8 +302,8 @@ class StorageTraits<MapUnownedVmo> {
   }
 
  private:
-  static fitx::result<ErrorTraits::error_type, void*> Map(MapUnownedVmo& zbi, uint64_t offset,
-                                                          uint32_t length, bool write);
+  static fitx::result<error_type, void*> Map(MapUnownedVmo& zbi, uint64_t offset, uint32_t length,
+                                             bool write);
 };
 
 template <>

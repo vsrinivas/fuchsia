@@ -75,19 +75,9 @@ template <typename Storage>
 struct StorageTraits {
   static_assert(std::is_same_v<std::tuple<>, Storage>, "missing StorageTraits specialization");
 
-  /// ErrorTraits gives a storage error type and how it can be stringified.
-  struct ErrorTraits {
-    /// This represents an error accessing the storage, either to read a header
-    /// or to access a payload.
-    struct error_type {};
-
-    /// This method is expected to return a type convertible to std::string_view
-    /// (e.g., std::string or const char*) representing the message associated to
-    /// a given error value. The returned object is "owning" and so it is
-    /// expected that the caller keep the returned object alive for as long as
-    /// they use any string_view converted from it.
-    static std::string_view error_string(error_type error) { return {}; }
-  };
+  /// This represents an error accessing the storage, either to read a header
+  /// or to access a payload.
+  struct error_type {};
 
   /// This represents an item payload (does not include the header).  The
   /// corresponding zbi_header_t.length gives its size.  This type is wholly
@@ -96,30 +86,35 @@ struct StorageTraits {
   /// cpp20::span pointing to the contents.
   struct payload_type {};
 
+  /// This method is expected to return a type convertible to std::string_view
+  /// (e.g., std::string or const char*) representing the message associated to
+  /// a given error value. The returned object is "owning" and so it is
+  /// expected that the caller keep the returned object alive for as long as
+  /// they use any string_view converted from it.
+  static std::string_view error_string(error_type error) { return {}; }
+
   /// This returns the upper bound on available space where the ZBI is stored.
   /// The container must fit within this maximum.  Storage past the container's
   /// self-encoded size need not be accessible and will never be accessed.
   /// If the actual upper bound is unknown, this can safely return UINT32_MAX.
-  static fitx::result<typename ErrorTraits::error_type, uint32_t> Capacity(Storage& zbi) {
-    return fitx::error<typename ErrorTraits::error_type>{};
+  static fitx::result<error_type, uint32_t> Capacity(Storage& zbi) {
+    return fitx::error<error_type>{};
   }
 
   /// A specialization must define this if it also defines Write. This method
   /// ensures that the capacity is at least that of the provided value
   /// (possibly larger), for specializations where such an operation is
   /// sensible.
-  static fitx::result<typename ErrorTraits::error_type> EnsureCapacity(Storage& zbi,
-                                                                       uint32_t capacity) {
-    return fitx::error<typename ErrorTraits::error_type>{};
+  static fitx::result<error_type> EnsureCapacity(Storage& zbi, uint32_t capacity) {
+    return fitx::error<error_type>{};
   }
 
   /// This fetches the item payload view object, whatever that means for this
   /// Storage type.  This is not expected to read the contents, just transfer a
   /// pointer or offset around so they can be explicitly read later.
-  static fitx::result<typename ErrorTraits::error_type, payload_type> Payload(Storage& zbi,
-                                                                              uint32_t offset,
-                                                                              uint32_t length) {
-    return fitx::error<typename ErrorTraits::error_type>{};
+  static fitx::result<error_type, payload_type> Payload(Storage& zbi, uint32_t offset,
+                                                        uint32_t length) {
+    return fitx::error<error_type>{};
   }
 
   /// Referred to as the "buffered read".
@@ -130,25 +125,25 @@ struct StorageTraits {
   /// Payload to fetch this payload_type value.
   ///
   /// The callback returns some type fitx::result<E>.  Read returns
-  /// fitx::result<typename ErrorTraits::error_type, fitx::result<E>>>,
-  /// yielding a storage error or the result of the callback.  If a callback
-  /// returns an error, its return value is used immediately.  If a callback
-  /// returns success, another callback may be made for another chunk of the
-  /// payload.  If the payload is empty (`length` == 0), there will always be a
-  /// single callback made with an empty data argument.
+  /// fitx::result<error_type, fitx::result<E>>>, yielding a storage error or
+  /// the result of the callback.  If a callback returns an error, its return
+  /// value is used immediately.  If a callback returns success, another
+  /// callback may be made for another chunk of the payload.  If the payload is
+  /// empty (`length` == 0), there will always be a single callback made with
+  /// an empty data argument.
   template <typename Callback>
   static auto Read(Storage& zbi, payload_type payload, uint32_t length, Callback&& callback)
-      -> fitx::result<typename ErrorTraits::error_type, decltype(callback(ByteView{}))> {
-    return fitx::error<typename ErrorTraits::error_type>{};
+      -> fitx::result<error_type, decltype(callback(ByteView{}))> {
+    return fitx::error<error_type>{};
   }
 
   // Referred to as the "unbuffered read".
   //
   // A specialization provides this overload if the payload can be read
   // directly into a provided buffer for zero-copy operation.
-  static fitx::result<typename ErrorTraits::error_type> Read(Storage& zbi, payload_type payload,
-                                                             void* buffer, uint32_t length) {
-    return fitx::error<typename ErrorTraits::error_type>{};
+  static fitx::result<error_type> Read(Storage& zbi, payload_type payload, void* buffer,
+                                       uint32_t length) {
+    return fitx::error<error_type>{};
   }
 
   // Referred to as the "one-shot read".
@@ -171,9 +166,9 @@ struct StorageTraits {
   // the read differently or not implement the method at all in this case.
   template <typename T, bool LowLocality>
   static std::enable_if_t<(alignof(T) <= kStorageAlignment),
-                          fitx::result<typename ErrorTraits::error_type, cpp20::span<const T>>>
+                          fitx::result<error_type, cpp20::span<const T>>>
   Read(Storage& zbi, payload_type payload, uint32_t length) {
-    return fitx::error<typename ErrorTraits::error_type>{};
+    return fitx::error<error_type>{};
   }
 
   // Referred to as the "buffered write".
@@ -185,9 +180,8 @@ struct StorageTraits {
   // wrote the whole chunk specified.  If it returns an error, any subset of
   // the chunk that failed to write might be corrupted in the image and the
   // container will always revalidate everything.
-  static fitx::result<typename ErrorTraits::error_type> Write(Storage& zbi, uint32_t offset,
-                                                              ByteView data) {
-    return fitx::error<typename ErrorTraits::error_type>{};
+  static fitx::result<error_type> Write(Storage& zbi, uint32_t offset, ByteView data) {
+    return fitx::error<error_type>{};
   }
 
   // Referred to as the "unbuffered write".
@@ -197,9 +191,8 @@ struct StorageTraits {
   // only guaranteed valid until the next use of the same Storage object.  So
   // it could e.g. point into a cache that's repurposed by this or other calls
   // made later using the same object.
-  static fitx::result<typename ErrorTraits::error_type, void*> Write(Storage& zbi, uint32_t offset,
-                                                                     uint32_t length) {
-    return fitx::error<typename ErrorTraits::error_type>{};
+  static fitx::result<error_type, void*> Write(Storage& zbi, uint32_t offset, uint32_t length) {
+    return fitx::error<error_type>{};
   }
 
   // A specialization defines this only if it supports mutation and if creating
@@ -210,9 +203,9 @@ struct StorageTraits {
   // capacity (in bytes) with a provided zero-fill header size.  The old
   // storage object might be used as a prototype in some sense, but the new
   // object is distinct storage.
-  static fitx::result<typename ErrorTraits::error_type, Storage> Create(
-      Storage& zbi, uint32_t capacity, uint32_t initial_zero_size) {
-    return fitx::error<typename ErrorTraits::error_type>{};
+  static fitx::result<error_type, Storage> Create(Storage& zbi, uint32_t capacity,
+                                                  uint32_t initial_zero_size) {
+    return fitx::error<error_type>{};
   }
 
   // A specialization defines this only if it defines Create, and if Clone adds
@@ -236,10 +229,10 @@ struct StorageTraits {
   // If `slopcheck(slop)` returns false, Clone *must* return std::nullopt
   // rather than yielding storage with a rejected slop byte count.
   template <typename SlopCheck>
-  static fitx::result<typename ErrorTraits::error_type, std::optional<std::pair<Storage, uint32_t>>>
-  Clone(Storage& zbi, uint32_t offset, uint32_t length, uint32_t to_offset, SlopCheck&& slopcheck) {
+  static fitx::result<error_type, std::optional<std::pair<Storage, uint32_t>>> Clone(
+      Storage& zbi, uint32_t offset, uint32_t length, uint32_t to_offset, SlopCheck&& slopcheck) {
     static_assert(std::is_invocable_r_v<bool, SlopCheck, uint32_t>);
-    return fitx::error<typename ErrorTraits::error_type>{};
+    return fitx::error<error_type>{};
   }
 };
 
@@ -256,14 +249,13 @@ struct StorageTraits {
 template <typename Storage>
 class ExtendedStorageTraits : public StorageTraits<Storage> {
  public:
-  using storage_type = Storage;
-  using Base = StorageTraits<storage_type>;
-  using typename Base::ErrorTraits;
+  using Base = StorageTraits<Storage>;
+  using typename Base::error_type;
   using typename Base::payload_type;
 
-  static_assert(std::is_default_constructible_v<typename ErrorTraits::error_type>);
-  static_assert(std::is_copy_constructible_v<typename ErrorTraits::error_type>);
-  static_assert(std::is_copy_assignable_v<typename ErrorTraits::error_type>);
+  static_assert(std::is_default_constructible_v<error_type>);
+  static_assert(std::is_copy_constructible_v<error_type>);
+  static_assert(std::is_copy_assignable_v<error_type>);
   static_assert(std::is_default_constructible_v<payload_type>);
   static_assert(std::is_copy_constructible_v<payload_type>);
   static_assert(std::is_copy_assignable_v<payload_type>);
@@ -299,8 +291,7 @@ class ExtendedStorageTraits : public StorageTraits<Storage> {
                          std::reference_wrapper<const Data>, Data>;
 
   template <typename Data, typename T = ExtendedStorageTraits>
-  [[gnu::always_inline]] static fitx::result<typename ErrorTraits::error_type,
-                                             LocalizedReadResult<Data, T>>
+  [[gnu::always_inline]] static fitx::result<error_type, LocalizedReadResult<Data, T>>
   LocalizedRead(Storage& storage, uint32_t offset) {
     static_assert(is_uniquely_representable_pod_v<Data>);
 
@@ -454,19 +445,20 @@ struct StorageTraits<std::basic_string_view<T>> {
 
   static_assert(sizeof(T) == sizeof(uint8_t));
 
-  using ErrorTraits = typename StorageTraits<std::tuple<>>::ErrorTraits;
+  struct error_type {};
 
   using payload_type = Storage;
 
-  static fitx::result<ErrorTraits::error_type, uint32_t> Capacity(Storage& zbi) {
+  static std::string_view error_string(error_type error) { return {}; }
+
+  static fitx::result<error_type, uint32_t> Capacity(Storage& zbi) {
     return fitx::ok(static_cast<uint32_t>(
         std::min(zbi.size(),
                  static_cast<typename Storage::size_type>(std::numeric_limits<uint32_t>::max()))));
   }
 
-  static fitx::result<typename ErrorTraits::error_type, payload_type> Payload(Storage& zbi,
-                                                                              uint32_t offset,
-                                                                              uint32_t length) {
+  static fitx::result<error_type, payload_type> Payload(Storage& zbi, uint32_t offset,
+                                                        uint32_t length) {
     auto payload = zbi.substr(offset, length);
     ZX_DEBUG_ASSERT(payload.size() == length);
     return fitx::ok(std::move(payload));
@@ -474,7 +466,7 @@ struct StorageTraits<std::basic_string_view<T>> {
 
   template <typename U, bool LowLocality>
   static std::enable_if_t<(alignof(U) <= kStorageAlignment),
-                          fitx::result<typename ErrorTraits::error_type, cpp20::span<const U>>>
+                          fitx::result<error_type, cpp20::span<const U>>>
   Read(Storage& zbi, payload_type payload, uint32_t length) {
     ZX_DEBUG_ASSERT(payload.size() == length);
     return fitx::ok(AsSpan<const U>(payload));
@@ -485,27 +477,27 @@ template <typename T, size_t Extent>
 struct StorageTraits<cpp20::span<T, Extent>> {
   using Storage = cpp20::span<T, Extent>;
 
-  using ErrorTraits = typename StorageTraits<std::tuple<>>::ErrorTraits;
+  struct error_type {};
 
   using payload_type = Storage;
 
-  static fitx::result<typename ErrorTraits::error_type, uint32_t> Capacity(Storage& zbi) {
+  static std::string_view error_string(error_type error) { return {}; }
+
+  static fitx::result<error_type, uint32_t> Capacity(Storage& zbi) {
     return fitx::ok(static_cast<uint32_t>(
         std::min(zbi.size_bytes(), static_cast<size_t>(std::numeric_limits<uint32_t>::max()))));
   }
 
   template <typename S = T, typename = std::enable_if_t<!std::is_const_v<S>>>
-  static fitx::result<typename ErrorTraits::error_type> EnsureCapacity(Storage& zbi,
-                                                                       uint32_t capacity_bytes) {
+  static fitx::result<error_type> EnsureCapacity(Storage& zbi, uint32_t capacity_bytes) {
     if (capacity_bytes > zbi.size()) {
-      return fitx::error<ErrorTraits::error_type>{};
+      return fitx::error{error_type{}};
     }
     return fitx::ok();
   }
 
-  static fitx::result<typename ErrorTraits::error_type, payload_type> Payload(Storage& zbi,
-                                                                              uint32_t offset,
-                                                                              uint32_t length) {
+  static fitx::result<error_type, payload_type> Payload(Storage& zbi, uint32_t offset,
+                                                        uint32_t length) {
     auto payload = [&]() {
       if constexpr (std::is_const_v<T>) {
         return cpp20::as_bytes(zbi).subspan(offset, length);
@@ -521,23 +513,21 @@ struct StorageTraits<cpp20::span<T, Extent>> {
 
   template <typename U, bool LowLocality>
   static std::enable_if_t<(alignof(U) <= kStorageAlignment),
-                          fitx::result<typename ErrorTraits::error_type, cpp20::span<const U>>>
+                          fitx::result<error_type, cpp20::span<const U>>>
   Read(Storage& zbi, payload_type payload, uint32_t length) {
     ZX_DEBUG_ASSERT(cpp20::as_bytes(payload).size() == length);
     return fitx::ok(AsSpan<const U>(payload));
   }
 
   template <typename S = T, typename = std::enable_if_t<!std::is_const_v<S>>>
-  static fitx::result<typename ErrorTraits::error_type> Write(Storage& zbi, uint32_t offset,
-                                                              ByteView data) {
+  static fitx::result<error_type> Write(Storage& zbi, uint32_t offset, ByteView data) {
     memcpy(Write(zbi, offset, static_cast<uint32_t>(data.size())).value(), data.data(),
            data.size());
     return fitx::ok();
   }
 
   template <typename S = T, typename = std::enable_if_t<!std::is_const_v<S>>>
-  static fitx::result<typename ErrorTraits::error_type, void*> Write(Storage& zbi, uint32_t offset,
-                                                                     uint32_t length) {
+  static fitx::result<error_type, void*> Write(Storage& zbi, uint32_t offset, uint32_t length) {
     // The caller is supposed to maintain these invariants.
     ZX_DEBUG_ASSERT(offset <= zbi.size_bytes());
     ZX_DEBUG_ASSERT(length <= zbi.size_bytes() - offset);

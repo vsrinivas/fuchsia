@@ -15,7 +15,7 @@ namespace {
 
 constexpr size_t kBufferSize = BUFSIZ;
 
-using error_type = ErrnoErrorTraits::error_type;
+using error_type = StorageTraits<FILE*>::error_type;
 
 }  // namespace
 
