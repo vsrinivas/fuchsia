@@ -54,13 +54,7 @@ rustc_library("lib") {
 fuchsia_component("dhcp_lib_test") {
   testonly = true
   manifest = "meta/dhcp_lib_test.cml"
-}
-
-# TODO(http://fxbug.dev/71088): merge dhcp_lib_test_exec and dhcp_lib_test once its possible.
-fuchsia_component("dhcp_lib_test_exec") {
-  testonly = true
   deps = [ ":lib_test" ]
-  manifest = "meta/dhcp_lib_test_exec.cml"
 }
 
 rustc_binary("bin") {
@@ -106,13 +100,7 @@ rustc_binary("bin") {
 fuchsia_component("dhcpd_bin_test") {
   testonly = true
   manifest = "meta/dhcpd_bin_test.cml"
-}
-
-# TODO(http://fxbug.dev/71088): merge dhcpd_bin_test_exec and dhcpd_bin_test once its possible.
-fuchsia_component("dhcpd_bin_test_exec") {
-  testonly = true
   deps = [ ":bin_test" ]
-  manifest = "meta/dhcpd_bin_test_exec.cml"
 }
 
 fuchsia_test_package("dhcp-tests") {
@@ -121,11 +109,7 @@ fuchsia_test_package("dhcp-tests") {
     ":dhcpd_bin_test",
   ]
 
-  deps = [
-    ":dhcp_lib_test_exec",
-    ":dhcpd_bin_test_exec",
-    "//src/sys/stash:stash_secure_v2",
-  ]
+  deps = [ "//src/sys/stash:stash_secure_v2" ]
 }
 
 fuchsia_component("component-v1") {

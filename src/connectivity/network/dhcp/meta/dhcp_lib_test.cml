@@ -2,14 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
+    include: [
+        "//src/sys/test_runners/rust/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/dhcp_lib_test",
+    },
     children: [
         {
             name: "stash",
             url: "fuchsia-pkg://fuchsia.com/dhcp-tests#meta/stash_secure.cm",
         },
+    ],
+    use: [
         {
-            name: "test",
-            url: "fuchsia-pkg://fuchsia.com/dhcp-tests#meta/dhcp_lib_test_exec.cm",
+            protocol: "fuchsia.stash.SecureStore",
+            from: "#stash",
         },
     ],
     offer: [
@@ -22,17 +31,6 @@
             storage: "data",
             from: "parent",
             to: "#stash",
-        },
-        {
-            protocol: "fuchsia.stash.SecureStore",
-            from: "#stash",
-            to: "#test",
-        },
-    ],
-    expose: [
-        {
-            protocol: "fuchsia.test.Suite",
-            from: "#test",
         },
     ],
 }
