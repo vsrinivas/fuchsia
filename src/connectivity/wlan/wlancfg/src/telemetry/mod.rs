@@ -181,6 +181,7 @@ fn record_inspect_counters(
                 let counters_mutex_guard = counters.lock();
                 let counters = counters_mutex_guard.windowed_stat();
                 inspect_insert!(inspector.root(), {
+                    total_duration: counters.total_duration.into_nanos(),
                     connected_duration: counters.connected_duration.into_nanos(),
                     downtime_duration: counters.downtime_duration.into_nanos(),
                     downtime_no_saved_neighbor_duration: counters.downtime_no_saved_neighbor_duration.into_nanos(),
@@ -236,6 +237,7 @@ impl Telemetry {
         let now = fasync::Time::now();
         let duration = now - self.last_checked_connection_state;
 
+        self.stats_logger.log_stat(StatOp::AddTotalDuration(duration));
         self.stats_logger.log_queued_stats();
 
         match &mut self.connection_state {
@@ -398,6 +400,7 @@ impl StatsLogger {
     fn log_stat(&mut self, stat_op: StatOp) {
         let zero = StatCounters::default();
         let addition = match stat_op {
+            StatOp::AddTotalDuration(duration) => StatCounters { total_duration: duration, ..zero },
             StatOp::AddConnectedDuration(duration) => {
                 StatCounters { connected_duration: duration, ..zero }
             }
@@ -443,6 +446,7 @@ impl StatsLogger {
 }
 
 enum StatOp {
+    AddTotalDuration(zx::Duration),
     AddConnectedDuration(zx::Duration),
     AddDowntimeDuration(zx::Duration),
     // Downtime with no saved network in vicinity
@@ -455,6 +459,7 @@ enum StatOp {
 
 #[derive(Clone, Default)]
 struct StatCounters {
+    total_duration: zx::Duration,
     connected_duration: zx::Duration,
     downtime_duration: zx::Duration,
     downtime_no_saved_neighbor_duration: zx::Duration,
@@ -470,6 +475,7 @@ impl Add for StatCounters {
 
     fn add(self, other: Self) -> Self {
         Self {
+            total_duration: self.total_duration + other.total_duration,
             connected_duration: self.connected_duration + other.connected_duration,
             downtime_duration: self.downtime_duration + other.downtime_duration,
             downtime_no_saved_neighbor_duration: self.downtime_no_saved_neighbor_duration
@@ -487,6 +493,9 @@ impl Add for StatCounters {
 impl SaturatingAdd for StatCounters {
     fn saturating_add(&self, v: &Self) -> Self {
         Self {
+            total_duration: zx::Duration::from_nanos(
+                self.total_duration.into_nanos().saturating_add(v.total_duration.into_nanos()),
+            ),
             connected_duration: zx::Duration::from_nanos(
                 self.connected_duration
                     .into_nanos()
@@ -548,9 +557,11 @@ mod tests {
         assert_data_tree!(test_helper.inspector, root: {
             stats: contains {
                 "1d_counters": contains {
+                    total_duration: (24.hours() - TELEMETRY_QUERY_INTERVAL).into_nanos(),
                     connected_duration: (24.hours() - TELEMETRY_QUERY_INTERVAL).into_nanos(),
                 },
                 "7d_counters": contains {
+                    total_duration: (24.hours() - TELEMETRY_QUERY_INTERVAL).into_nanos(),
                     connected_duration: (24.hours() - TELEMETRY_QUERY_INTERVAL).into_nanos(),
                 },
             }
@@ -561,10 +572,12 @@ mod tests {
             stats: contains {
                 "1d_counters": contains {
                     // The first hour window is now discarded, so it only shows 23 hours
-                    // of connected duration.
+                    // of total and connected duration.
+                    total_duration: 23.hours().into_nanos(),
                     connected_duration: 23.hours().into_nanos(),
                 },
                 "7d_counters": contains {
+                    total_duration: 24.hours().into_nanos(),
                     connected_duration: 24.hours().into_nanos(),
                 },
             }
@@ -574,9 +587,11 @@ mod tests {
         assert_data_tree!(test_helper.inspector, root: {
             stats: contains {
                 "1d_counters": contains {
+                    total_duration: 23.hours().into_nanos(),
                     connected_duration: 23.hours().into_nanos(),
                 },
                 "7d_counters": contains {
+                    total_duration: 26.hours().into_nanos(),
                     connected_duration: 26.hours().into_nanos(),
                 },
             }
@@ -588,42 +603,77 @@ mod tests {
             .send(TelemetryEvent::Disconnected { track_subsequent_downtime: false });
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
-        // Now the 1d counter should decrease
         test_helper.advance_by(8.hours(), test_fut.as_mut());
         assert_data_tree!(test_helper.inspector, root: {
             stats: contains {
                 "1d_counters": contains {
+                    total_duration: 23.hours().into_nanos(),
+                    // Now the 1d connected counter should decrease
                     connected_duration: 15.hours().into_nanos(),
                 },
                 "7d_counters": contains {
+                    total_duration: 34.hours().into_nanos(),
                     connected_duration: 26.hours().into_nanos(),
                 },
             }
         });
 
-        // The 7d counter does not decrease before the 7th day
+        // The 7d counters do not decrease before the 7th day
         test_helper.advance_by(14.hours(), test_fut.as_mut());
         test_helper.advance_by((5 * 24).hours() - TELEMETRY_QUERY_INTERVAL, test_fut.as_mut());
         assert_data_tree!(test_helper.inspector, root: {
             stats: contains {
                 "1d_counters": contains {
+                    total_duration: (24.hours() - TELEMETRY_QUERY_INTERVAL).into_nanos(),
                     connected_duration: 0i64,
                 },
                 "7d_counters": contains {
+                    total_duration: ((7 * 24).hours() - TELEMETRY_QUERY_INTERVAL).into_nanos(),
                     connected_duration: 26.hours().into_nanos(),
                 },
             }
         });
 
-        // On the 7th day, the first 24 hours of connected duration is deducted
+        // On the 7th day, the first window is removed (24 hours of duration is deducted)
         test_helper.advance_to_next_telemetry_checkpoint(test_fut.as_mut());
         assert_data_tree!(test_helper.inspector, root: {
             stats: contains {
                 "1d_counters": contains {
+                    total_duration: 23.hours().into_nanos(),
                     connected_duration: 0i64,
                 },
                 "7d_counters": contains {
+                    total_duration: (6 * 24).hours().into_nanos(),
                     connected_duration: 2.hours().into_nanos(),
+                },
+            }
+        });
+    }
+
+    #[fuchsia::test]
+    fn test_total_duration_counters() {
+        let (mut test_helper, mut test_fut) = setup_test();
+
+        test_helper.advance_by(30.minutes(), test_fut.as_mut());
+        assert_data_tree!(test_helper.inspector, root: {
+            stats: contains {
+                "1d_counters": contains {
+                    total_duration: 30.minutes().into_nanos(),
+                },
+                "7d_counters": contains {
+                    total_duration: 30.minutes().into_nanos(),
+                },
+            }
+        });
+
+        test_helper.advance_by(30.minutes(), test_fut.as_mut());
+        assert_data_tree!(test_helper.inspector, root: {
+            stats: contains {
+                "1d_counters": contains {
+                    total_duration: 1.hour().into_nanos(),
+                },
+                "7d_counters": contains {
+                    total_duration: 1.hour().into_nanos(),
                 },
             }
         });
