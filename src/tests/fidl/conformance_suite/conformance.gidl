@@ -77,7 +77,7 @@ success("EmptyTable") {
         table: EmptyTable {},
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             0, 0, 0, 0, 0, 0, 0, 0, // max ordinal
             255, 255, 255, 255, 255, 255, 255, 255, // alloc present
         ],
@@ -89,7 +89,7 @@ success("SimpleTableEmpty") {
         table: SimpleTable {},
     },
     bytes = {
-        v1 = [
+        v1, v2 = [
             0, 0, 0, 0, 0, 0, 0, 0, // max ordinal
             255, 255, 255, 255, 255, 255, 255, 255, // alloc present
         ],
@@ -120,6 +120,17 @@ success("SimpleTableXAndY") {
             42, 0, 0, 0, 0, 0, 0, 0, // field X
             67, 0, 0, 0, 0, 0, 0, 0, // field Y
         ],
+        v2 = [
+            5, 0, 0, 0, 0, 0, 0, 0, // max ordinal
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num_bytes / num handles / not inlined
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 2: zero envelope
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 3: zero envelope
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 4: zero envelope
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 5: num bytes / num handles / not inlined
+            42, 0, 0, 0, 0, 0, 0, 0, // field X
+            67, 0, 0, 0, 0, 0, 0, 0, // field Y
+        ],
     },
 }
 
@@ -136,6 +147,12 @@ success("SimpleTableJustX") {
             8, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles
             255, 255, 255, 255, 255, 255, 255, 255, // alloc present
             42, 0, 0, 0, 0, 0, 0, 0, // field X
+        ],
+        v2 = [
+             1, 0, 0, 0, 0, 0, 0, 0, // max ordinal
+             255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+             8, 0, 0, 0, 0, 0, 0, 0, // envelope 1: value / num handles / not inlined
+             42, 0, 0, 0, 0, 0, 0, 0, // field X
         ],
     },
 }
@@ -160,6 +177,16 @@ success("SimpleTableJustY") {
             0, 0, 0, 0, 0, 0, 0, 0, // no alloc
             8, 0, 0, 0, 0, 0, 0, 0, // envelope 5: num bytes / num handles
             255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            67, 0, 0, 0, 0, 0, 0, 0, // field Y
+        ],
+        v2 = [
+            5, 0, 0, 0, 0, 0, 0, 0, // max ordinal
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 2: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 3: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 4: num bytes / num handles
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 5: value / num handles / not inlined
             67, 0, 0, 0, 0, 0, 0, 0, // field Y
         ],
     },
@@ -293,6 +320,18 @@ decode_success("ValueTableUnknownReservedDropped") {
             1,  2, 3, 4, 5, 6, 7, 8, // 8 unknown bytes for envelope 3
             67, 0, 0, 0, 0, 0, 0, 0, // field Y
         ],
+        v2 = [
+            5, 0, 0, 0, 0, 0, 0, 0, // max ordinal
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 2: num bytes / num handles
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 3: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 4: num bytes / num handles
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 5: num bytes / num handles
+            42, 0, 0, 0, 0, 0, 0, 0, // field X
+            1,  2, 3, 4, 5, 6, 7, 8, // 8 unknown bytes for envelope 3
+            67, 0, 0, 0, 0, 0, 0, 0, // field Y
+        ],
     },
     value = StructOfSimpleTable {
         table: SimpleTable {
@@ -323,6 +362,18 @@ decode_success("ResourceTableUnknownReservedDropped") {
             1,  2, 3, 4, 5, 6, 7, 8, // 8 unknown bytes for envelope 3
             67, 0, 0, 0, 0, 0, 0, 0, // field Y
         ],
+        v2 = [
+            5, 0, 0, 0, 0, 0, 0, 0, // max ordinal
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 2: num bytes / num handles
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 3: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 4: num bytes / num handles
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 5: num bytes / num handles
+            42, 0, 0, 0, 0, 0, 0, 0, // field X
+            1,  2, 3, 4, 5, 6, 7, 8, // 8 unknown bytes for envelope 3
+            67, 0, 0, 0, 0, 0, 0, 0, // field Y
+        ],
     },
     value = StructOfSimpleResourceTable {
         table: SimpleResourceTable {
@@ -349,6 +400,18 @@ success("ValueTableUnknownReservedStored") {
             0, 0, 0, 0, 0, 0, 0, 0, // no alloc
             8, 0, 0, 0, 0, 0, 0, 0, // envelope 5: num bytes / num handles
             255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            42, 0, 0, 0, 0, 0, 0, 0, // field X
+            1,  2, 3, 4, 5, 6, 7, 8, // 8 unknown bytes for envelope 3
+            67, 0, 0, 0, 0, 0, 0, 0, // field Y
+        ],
+        v2 = [
+            5, 0, 0, 0, 0, 0, 0, 0, // max ordinal
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 2: num bytes / num handles
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 3: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 4: num bytes / num handles
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 5: num bytes / num handles
             42, 0, 0, 0, 0, 0, 0, 0, // field X
             1,  2, 3, 4, 5, 6, 7, 8, // 8 unknown bytes for envelope 3
             67, 0, 0, 0, 0, 0, 0, 0, // field Y
@@ -386,6 +449,18 @@ success("ResourceTableUnknownReservedStored") {
             1,  2, 3, 4, 5, 6, 7, 8, // 8 unknown bytes for envelope 3
             67, 0, 0, 0, 0, 0, 0, 0, // field Y
         ],
+        v2 = [
+            5, 0, 0, 0, 0, 0, 0, 0, // max ordinal
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 2: num bytes / num handles
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 3: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 4: num bytes / num handles
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 5: num bytes / num handles
+            42, 0, 0, 0, 0, 0, 0, 0, // field X
+            1,  2, 3, 4, 5, 6, 7, 8, // 8 unknown bytes for envelope 3
+            67, 0, 0, 0, 0, 0, 0, 0, // field Y
+        ],
     },
     value = StructOfSimpleResourceTable {
         table: SimpleResourceTable {
@@ -419,7 +494,20 @@ decode_success("ValueTableUnknownTrailingDropped") {
             255, 255, 255, 255, 255, 255, 255, 255, // alloc present
             42, 0, 0, 0, 0, 0, 0, 0, // field X
             67, 0, 0, 0, 0, 0, 0, 0, // field Y
-            1,  2, 3, 4, 5, 6, 7, 8, // 8 unknown bytes for envelope 6
+            1, 2, 3, 4, 5, 6, 7, 8, // 8 unknown bytes for envelope 6
+        ],
+        v2 = [
+            6, 0, 0, 0, 0, 0, 0, 0, // max ordinal
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 2: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 3: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 4: num bytes / num handles
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 5: num bytes / num handles
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 6: num bytes / num handles
+            42, 0, 0, 0, 0, 0, 0, 0, // field X
+            67, 0, 0, 0, 0, 0, 0, 0, // field Y
+            1, 2, 3, 4, 5, 6, 7, 8, // 8 unknown bytes for envelope 6
         ],
     },
     value = StructOfSimpleTable {
@@ -451,7 +539,20 @@ decode_success("ResourceTableUnknownTrailingDropped") {
             255, 255, 255, 255, 255, 255, 255, 255, // alloc present
             42, 0, 0, 0, 0, 0, 0, 0, // field X
             67, 0, 0, 0, 0, 0, 0, 0, // field Y
-            1,  2, 3, 4, 5, 6, 7, 8, // 8 unknown bytes for envelope 6
+            1, 2, 3, 4, 5, 6, 7, 8, // 8 unknown bytes for envelope 6
+        ],
+        v2 = [
+            6, 0, 0, 0, 0, 0, 0, 0, // max ordinal
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 2: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 3: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 4: num bytes / num handles
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 5: num bytes / num handles
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 6: num bytes / num handles
+            42, 0, 0, 0, 0, 0, 0, 0, // field X
+            67, 0, 0, 0, 0, 0, 0, 0, // field Y
+            1, 2, 3, 4, 5, 6, 7, 8, // 8 unknown bytes for envelope 6
         ],
     },
     value = StructOfSimpleResourceTable {
@@ -481,6 +582,19 @@ success("ValueTableUnknownTrailingStored") {
             255, 255, 255, 255, 255, 255, 255, 255, // alloc present
             8, 0, 0, 0, 0, 0, 0, 0, // envelope 6: num bytes / num handles
             255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            42, 0, 0, 0, 0, 0, 0, 0, // field X
+            67, 0, 0, 0, 0, 0, 0, 0, // field Y
+            1,  2, 3, 4, 5, 6, 7, 8, // 8 unknown bytes for envelope 6
+        ],
+        v2 = [
+            6, 0, 0, 0, 0, 0, 0, 0, // max ordinal
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 2: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 3: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 4: num bytes / num handles
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 5: num bytes / num handles
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 6: num bytes / num handles
             42, 0, 0, 0, 0, 0, 0, 0, // field X
             67, 0, 0, 0, 0, 0, 0, 0, // field Y
             1,  2, 3, 4, 5, 6, 7, 8, // 8 unknown bytes for envelope 6
@@ -516,6 +630,19 @@ success("ResourceTableUnknownTrailingStored") {
             255, 255, 255, 255, 255, 255, 255, 255, // alloc present
             8, 0, 0, 0, 0, 0, 0, 0, // envelope 6: num bytes / num handles
             255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            42, 0, 0, 0, 0, 0, 0, 0, // field X
+            67, 0, 0, 0, 0, 0, 0, 0, // field Y
+            1,  2, 3, 4, 5, 6, 7, 8, // 8 unknown bytes for envelope 6
+        ],
+        v2 = [
+            6, 0, 0, 0, 0, 0, 0, 0, // max ordinal
+            255, 255, 255, 255, 255, 255, 255, 255, // alloc present
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 1: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 2: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 3: num bytes / num handles
+            0, 0, 0, 0, 0, 0, 0, 0, // envelope 4: num bytes / num handles
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 5: num bytes / num handles
+            8, 0, 0, 0, 0, 0, 0, 0, // envelope 6: num bytes / num handles
             42, 0, 0, 0, 0, 0, 0, 0, // field X
             67, 0, 0, 0, 0, 0, 0, 0, // field Y
             1,  2, 3, 4, 5, 6, 7, 8, // 8 unknown bytes for envelope 6
@@ -558,9 +685,21 @@ decode_success("ValueTableUnknownTrailingHandlesDropped") {
             num(67):8, // field Y
             repeat(0xab):20, padding:4, // unknown bytes
         ],
+        v2 = [
+            num(6):8, // max ordinal
+            repeat(0xff):8, // alloc present
+            num(0):4, num(0):4, // absent envelope 1
+            num(0):4, num(0):4, // absent envelope 2
+            num(0):4, num(0):4, // absent envelope 3
+            num(0):4, num(0):4, // absent envelope 4
+            num(8):4, num(0):4, // envelope 5 (field Y)
+            num(24):4, num(3):4, // envelope 6 (unknown)
+            num(67):8, // field Y
+            repeat(0xab):20, padding:4, // unknown bytes
+        ],
     },
     handles = {
-        v1 = [
+        v1, v2 = [
             #0, #1, #2,
         ]
     }
@@ -592,9 +731,21 @@ decode_success("ResourceTableUnknownTrailingHandlesDropped") {
             num(67):8, // field Y
             repeat(0xab):20, padding:4, // unknown bytes
         ],
+        v2 = [
+            num(6):8, // max ordinal
+            repeat(0xff):8, // alloc present
+            num(0):4, num(0):4, // absent envelope 1
+            num(0):4, num(0):4, // absent envelope 2
+            num(0):4, num(0):4, // absent envelope 3
+            num(0):4, num(0):4, // absent envelope 4
+            num(8):4, num(0):4, // envelope 5 (field Y)
+            num(24):4, num(3):4, // envelope 6 (unknown)
+            num(67):8, // field Y
+            repeat(0xab):20, padding:4, // unknown bytes
+        ],
     },
     handles = {
-        v1 = [
+        v1, v2 = [
             #0, #1, #2,
         ]
     }
@@ -622,9 +773,21 @@ decode_failure("ValueTableUnknownTrailingHandlesRejected") {
             num(67):8, // field Y
             repeat(0xab):20, padding:4, // unknown bytes
         ],
+        v2 = [
+            num(6):8, // max ordinal
+            repeat(0xff):8, // alloc present
+            num(0):4, num(0):4, // absent envelope 1
+            num(0):4, num(0):4, // absent envelope 2
+            num(0):4, num(0):4, // absent envelope 3
+            num(0):4, num(0):4, // absent envelope 4
+            num(8):4, num(0):4, // envelope 5 (field Y)
+            num(24):4, num(3):4, // envelope 6 (unknown)
+            num(67):8, // field Y
+            repeat(0xab):20, padding:4, // unknown bytes
+        ],
     },
     handles = {
-        v1 = [
+        v1, v2 = [
             #0, #1, #2,
         ]
     },
@@ -661,9 +824,21 @@ success("ResourceTableUnknownTrailingHandlesStored") {
             num(67):8, // field Y
             repeat(0xab):20, padding:4, // unknown bytes
         ],
+        v2 = [
+            num(6):8, // max ordinal
+            repeat(0xff):8, // alloc present
+            num(0):4, num(0):4, // absent envelope 1
+            num(0):4, num(0):4, // absent envelope 2
+            num(0):4, num(0):4, // absent envelope 3
+            num(0):4, num(0):4, // absent envelope 4
+            num(8):4, num(0):4, // envelope 5 (field Y)
+            num(24):4, num(3):4, // envelope 6 (unknown)
+            num(67):8, // field Y
+            repeat(0xab):20, padding:4, // unknown bytes
+        ],
     },
     handles = {
-        v1 = [
+        v1, v2 = [
             #0, #1, #2,
         ]
     }
@@ -681,6 +856,13 @@ decode_failure("ValueTableUnknownBytesNonMultipleOf8") {
             num(20):4, num(0):4, repeat(0xff):8, // envelope 2 (unknown)
             repeat(0xab):20, padding:4, // unknown bytes
         ],
+        v2 = [
+            num(2):8, // max ordinal
+            repeat(0xff):8, // alloc present
+            num(0):4, num(0):4, // absent envelope 1
+            num(20):4, num(0):4, // envelope 2 (unknown)
+            repeat(0xab):20, padding:4, // unknown bytes
+        ],
     },
     err = INVALID_NUM_BYTES_IN_ENVELOPE,
 }
@@ -695,6 +877,13 @@ decode_failure("ResourceTableUnknownBytesNonMultipleOf8") {
             repeat(0xff):8, // alloc present
             num(0):4, num(0):4, repeat(0):8, // absent envelope 1
             num(20):4, num(0):4, repeat(0xff):8, // envelope 2 (unknown)
+            repeat(0xab):20, padding:4, // unknown bytes
+        ],
+        v2 = [
+            num(2):8, // max ordinal
+            repeat(0xff):8, // alloc present
+            num(0):4, num(0):4, // absent envelope 1
+            num(20):4, num(0):4, // envelope 2 (unknown)
             repeat(0xab):20, padding:4, // unknown bytes
         ],
     },
