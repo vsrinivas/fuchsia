@@ -235,6 +235,9 @@ impl Telemetry {
     pub async fn handle_periodic_telemetry(&mut self) {
         let now = fasync::Time::now();
         let duration = now - self.last_checked_connection_state;
+
+        self.stats_logger.log_queued_stats();
+
         match &mut self.connection_state {
             ConnectionState::Idle => (),
             ConnectionState::Connected { iface_id, prev_counters } => {
@@ -286,7 +289,7 @@ impl Telemetry {
                             &mut self.connection_state
                         {
                             if let Some(prev) = latest_no_saved_neighbor_time.take() {
-                                self.stats_logger.log_stat(
+                                self.stats_logger.queue_stat_op(
                                     StatOp::AddDowntimeNoSavedNeighborDuration(now - prev),
                                 );
                             }
@@ -310,7 +313,7 @@ impl Telemetry {
             TelemetryEvent::Connected { iface_id } => {
                 let duration = now - self.last_checked_connection_state;
                 if let ConnectionState::Disconnected { .. } = self.connection_state {
-                    self.stats_logger.log_stat(StatOp::AddDowntimeDuration(duration));
+                    self.stats_logger.queue_stat_op(StatOp::AddDowntimeDuration(duration));
                 }
                 self.connection_state =
                     ConnectionState::Connected { iface_id, prev_counters: None };
@@ -321,7 +324,7 @@ impl Telemetry {
 
                 let duration = now - self.last_checked_connection_state;
                 if let ConnectionState::Connected { .. } = self.connection_state {
-                    self.stats_logger.log_stat(StatOp::AddConnectedDuration(duration));
+                    self.stats_logger.queue_stat_op(StatOp::AddConnectedDuration(duration));
                 }
                 self.connection_state = if track_subsequent_downtime {
                     ConnectionState::Disconnected { latest_no_saved_neighbor_time: None }
@@ -378,6 +381,7 @@ fn diff_and_log_counters(
 struct StatsLogger {
     last_1d_stats: Arc<Mutex<WindowedStats<StatCounters>>>,
     last_7d_stats: Arc<Mutex<WindowedStats<StatCounters>>>,
+    stat_ops: Vec<StatOp>,
     hr_tick: u32,
 }
 
@@ -386,6 +390,7 @@ impl StatsLogger {
         Self {
             last_1d_stats: Arc::new(Mutex::new(WindowedStats::new(24))),
             last_7d_stats: Arc::new(Mutex::new(WindowedStats::new(7))),
+            stat_ops: vec![],
             hr_tick: 0,
         }
     }
@@ -413,6 +418,19 @@ impl StatsLogger {
         };
         self.last_1d_stats.lock().saturating_add(&addition);
         self.last_7d_stats.lock().saturating_add(&addition);
+    }
+
+    // Queue stat operation to be logged later. This allows the caller to control the timing of
+    // when stats are logged. This ensures that various counters are not inconsistent with each
+    // other because one is logged early and the other one later.
+    fn queue_stat_op(&mut self, stat_op: StatOp) {
+        self.stat_ops.push(stat_op);
+    }
+
+    fn log_queued_stats(&mut self) {
+        while let Some(stat_op) = self.stat_ops.pop() {
+            self.log_stat(stat_op);
+        }
     }
 
     fn handle_hr_passed(&mut self) {
@@ -752,23 +770,23 @@ mod tests {
             .send(TelemetryEvent::Disconnected { track_subsequent_downtime: true });
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
-        // The 5 seconds connected duration is accounted for right away
+        // The 5 seconds connected duration is not accounted for yet.
         assert_data_tree!(test_helper.inspector, root: {
             stats: contains {
                 "1d_counters": contains {
-                    connected_duration: 5.seconds().into_nanos(),
+                    connected_duration: 0i64,
                     downtime_duration: 0i64,
                     downtime_no_saved_neighbor_duration: 0i64,
                 },
                 "7d_counters": contains {
-                    connected_duration: 5.seconds().into_nanos(),
+                    connected_duration: 0i64,
                     downtime_duration: 0i64,
                     downtime_no_saved_neighbor_duration: 0i64,
                 },
             }
         });
 
-        // At next telemetry checkpoint, `test_fut` updates the downtime duration
+        // At next telemetry checkpoint, `test_fut` updates the connected and downtime durations.
         let downtime_start = fasync::Time::now();
         test_helper.advance_to_next_telemetry_checkpoint(test_fut.as_mut());
         assert_data_tree!(test_helper.inspector, root: {
@@ -849,6 +867,23 @@ mod tests {
         });
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
+        // `downtime_no_saved_neighbor_duration` counter is not updated right away.
+        assert_data_tree!(test_helper.inspector, root: {
+            stats: contains {
+                "1d_counters": contains {
+                    connected_duration: 0i64,
+                    downtime_duration: (TELEMETRY_QUERY_INTERVAL * 2).into_nanos(),
+                    downtime_no_saved_neighbor_duration: (TELEMETRY_QUERY_INTERVAL*2 - 5.seconds()).into_nanos(),
+                },
+                "7d_counters": contains {
+                    connected_duration: 0i64,
+                    downtime_duration: (TELEMETRY_QUERY_INTERVAL * 2).into_nanos(),
+                    downtime_no_saved_neighbor_duration: (TELEMETRY_QUERY_INTERVAL*2 - 5.seconds()).into_nanos(),
+                },
+            }
+        });
+
+        // At the next checkpoint, both downtime counters are updated together.
         test_helper.advance_to_next_telemetry_checkpoint(test_fut.as_mut());
         assert_data_tree!(test_helper.inspector, root: {
             stats: contains {
